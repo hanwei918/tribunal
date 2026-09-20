@@ -1,0 +1,205 @@
+{
+  "policy_id": "POLICY-NO-SHOW",
+  "category": "NO_SHOW_CHARGE",
+  "version": "1.1.1",
+  "jurisdiction": "Singapore",
+  "currency": "SGD",
+  "last_reviewed": "2026-09-04",
+  "confidence_floor": 0.7,
+  "fee_schedule": {
+    "resolution_rule": "The chargeable cancellation fee is the GREATER of the zone-class fee and the vehicle-tier fee. Where the two prescribe different amounts, neither is ignored: the higher governs, and the ruling must say which dimension produced it. The resulting figure is what fare_breakdown.cancellation_fee must reconcile with for the purposes of POL-NS-08(d).",
+    "zone_class_fee_sgd": {
+      "STANDARD": 4.0,
+      "LARGE_VENUE": 4.0,
+      "TRANSPORT_HUB": 6.0,
+      "AIRPORT": 6.0
+    },
+    "vehicle_tier_fee_sgd": {
+      "RYDE_X": 4.0,
+      "RYDE_POOL": 4.0,
+      "RYDE_TAXI": 4.0,
+      "RYDE_PLUS": 6.0,
+      "RYDE_XL": 8.0
+    },
+    "minimum_dwell_sec": {
+      "STANDARD": 300,
+      "LARGE_VENUE": 300,
+      "TRANSPORT_HUB": 300,
+      "AIRPORT": 480
+    },
+    "arrival_radius_m": {
+      "STANDARD": 50,
+      "LARGE_VENUE": 120,
+      "TRANSPORT_HUB": 150,
+      "AIRPORT": 150
+    },
+    "rider_presence_radius_m": {
+      "STANDARD": 100,
+      "LARGE_VENUE": 150,
+      "TRANSPORT_HUB": 200,
+      "AIRPORT": 200
+    },
+    "gps_accuracy_filter_m": 25,
+    "wrong_entrance_ceiling_m": 400,
+    "driver_compensation_rate": 0.8,
+    "pin_ambiguity_goodwill_rate": 0.5,
+    "note": "TRANSPORT_HUB was reduced from 480 s to 300 s on 2026-09-03. An eight-minute hold is operable at an airport terminal, where terminal walk time and meeting-point confusion are real, but not at a bus interchange taxi or private-hire bay, where queue enforcement makes it physically impossible and where hub pickups are the fastest turnarounds on the network. Five minutes is the Singapore industry norm outside airports."
+  },
+  "clauses": [
+    {
+      "id": "POL-NS-01",
+      "title": "Baseline chargeable no-show",
+      "category": "NO_SHOW_CHARGE",
+      "rule": "A cancellation (no-show) fee is legitimately chargeable to the rider ONLY IF all four conditions hold: (a) the trip_record contains a driver 'arrived' event for the trip; (b) the gps_trace places the driver inside the pickup geofence defined in POL-NS-02 at or before the timestamp of that event; (c) the driver held position inside that geofence for a continuous dwell of at least the fee_schedule.minimum_dwell_sec for trip_record.pickup_zone_class - 300 seconds for STANDARD, LARGE_VENUE and TRANSPORT_HUB, 480 seconds for AIRPORT - the dwell being measured from the first qualifying in-geofence GPS fix and not from the 'arrived' event; and (d) the trip_record records no boarding event and shows the trip terminated by the driver with cancellation_reason_code RIDER_NO_SHOW, RIDER_UNREACHABLE or EXCESSIVE_WAIT, at or after the moment the required dwell elapsed. DRIVER_UNABLE_TO_LOCATE is the driver's own admission that he could not find the rider and does not satisfy limb (d); such a trip is decided under POL-NS-03. Where all four conditions hold and no clause from POL-NS-03 to POL-NS-06 displaces them, the cancellation fee stands as itemised in fare_breakdown, in the amount fixed by fee_schedule.resolution_rule: the GREATER of the zone-class fee and the vehicle-tier fee. Where any of (a) to (d) fails, the fee is not chargeable under this clause and the Judge must decide the refund under POL-NS-02, POL-NS-05 or POL-NS-06 as applicable.",
+      "requires": [
+        "gps_trace",
+        "trip_record",
+        "fare_breakdown"
+      ],
+      "licenses": [
+        "NO_ACTION",
+        "DRIVER_COMPENSATION"
+      ],
+      "favours": "DRIVER",
+      "notes": "This is the anchor clause for the category and the Driver Advocate's primary citation. It is deliberately conjunctive: the driver side must carry all four limbs, and the Rider Advocate wins by breaking any single one. Note the drafting choice in limb (c) - the clock runs from GPS entry into the geofence, NOT from the driver tapping 'arrived'. That closes the false-arrival loophole handled in POL-NS-05 at the source. Limb (d) recognises three reason codes rather than one because a no-show driver plausibly picks any of them; recognising only RIDER_NO_SHOW made the fee unchargeable for a driver who told the truth in a slightly different word. Fee amounts come from the fee_schedule block, which resolves the old collision between zone class and vehicle tier; a mismatch with the fare_breakdown line is an integrity defect under POL-NS-08(d), not a licence to invent an amount. Do not cite this clause for the proposition that a fee is refundable - it only licenses NO_ACTION (fee stands) and DRIVER_COMPENSATION."
+    },
+    {
+      "id": "POL-NS-02",
+      "title": "Arrival geofence and GPS proximity test",
+      "category": "NO_SHOW_CHARGE",
+      "rule": "The driver is deemed to have ARRIVED at the pickup point only where the gps_trace contains at least 3 consecutive position fixes, each with reported horizontal accuracy of 25 m or better, falling within the arrival radius of the pickup pin recorded in trip_record. The arrival radius is fee_schedule.arrival_radius_m for the zone class: 50 m for STANDARD, 120 m for LARGE_VENUE (shopping-mall and condominium pickup zones), and 150 m for TRANSPORT_HUB and AIRPORT (the kerbside bays at Changi Terminals 1 to 4, and interchange private-hire bays such as Jurong East, Woodlands and Tampines). Fixes reporting horizontal accuracy worse than 25 m are ignored for this test and count as evidence of neither presence nor absence. SUBJECT TO POL-NS-03, where the gps_trace contains no qualifying in-radius fix at any point in the 15 minutes preceding the cancellation, the driver never arrived, POL-NS-01 limb (b) fails, and the rider is entitled to a full refund of the cancellation fee. Where the driver was nonetheless stationary for the required dwell within 400 m of the pin, POL-NS-03 governs the outcome including the driver's compensation, and this clause yields to it. Where qualifying in-radius fixes exist, this clause is satisfied and the dispute turns on dwell duration under POL-NS-01 limb (c).",
+      "requires": [
+        "gps_trace",
+        "trip_record"
+      ],
+      "licenses": [
+        "FULL_REFUND",
+        "NO_ACTION"
+      ],
+      "favours": "NEUTRAL",
+      "notes": "The single most cited clause in the category, by both advocates, because it converts a vague 'he never showed up' into an arithmetic question. Both sides must state the actual measured distance and the accuracy figure, not just assert proximity. The 25 m accuracy filter matters in Singapore: urban-canyon multipath in Marina Bay, Raffles Place and the Orchard Road corridor routinely produces 40 to 80 m accuracy figures, and a naive nearest-fix reading will place a driver inside a 50 m radius when the true position was across the road. Rider Advocate: check whether the ONLY in-radius fixes are low-accuracy ones, because then there is no admissible arrival. Driver Advocate: the radius widens to 120 m and 150 m for large venues and hubs precisely because pin placement at those sites is unreliable - argue the zone class from trip_record, do not assume STANDARD. The 'subject to POL-NS-03' opening was added because the two clauses otherwise fire together on identical facts and differ on the driver's money. A trace whose fixes are too sparse to establish three consecutive in-radius readings is impaired under POL-NS-08(b) rather than proof of absence."
+    },
+    {
+      "id": "POL-NS-03",
+      "title": "Wrong-entrance and wrong-block arrival",
+      "category": "NO_SHOW_CHARGE",
+      "rule": "Where the gps_trace shows the driver stationary for the required dwell at a point outside the POL-NS-02 arrival radius but not more than 400 m from the pickup pin, the driver did not arrive at the pickup point, POL-NS-01 limb (b) fails, and the cancellation fee is refunded to the rider in full. The 400 m ceiling is the whole test and is measured from trip_record.pickup; it is decidable from coordinates alone. Where the stationary fixes carry a gps_point.venue_id and trip_record.pickup carries one too, a match on venue_id corroborates that this is a wrong-face-of-the-same-venue case rather than a driver who was never at the venue, and a mismatch corroborates the opposite; where either venue_id is null the point is simply not established either way and the distance test governs alone. No advocate and no Judge may assert that two coordinates are the same venue, block or entrance on general geographic knowledge: that assertion must rest on venue_id or on a party statement in the chat_log. Fault is then allocated from the chat_log for the purpose of driver compensation only: (i) where the rider stated the correct entrance, block or tower in the chat_log and the driver did not move to it before cancelling, the driver bears the loss and receives no compensation; (ii) where neither party specified a sub-location and trip_record.registered_pickup_points is 2 or more, the mislocation is attributed to pin ambiguity rather than to either party, and the driver receives a platform-funded goodwill payment of 50 percent of the cancellation fee, which is charged to the platform and never recovered from the rider.",
+      "requires": [
+        "gps_trace",
+        "trip_record",
+        "chat_log"
+      ],
+      "licenses": [
+        "FULL_REFUND",
+        "DRIVER_COMPENSATION"
+      ],
+      "favours": "NEUTRAL",
+      "notes": "This is the highest-frequency genuine no-show in Singapore and the clause that stops the tribunal from treating an honest mistake as fault. Two separate questions live here and must not be collapsed: whether the fee is chargeable (it is not - the rider always gets the full refund on these facts) and who absorbs the cost (decided from the chat_log). The venue-identity language was previously a required test with no field behind it, which forced the agents to geocode from world knowledge; it is now a corroborating field comparison and the 400 m distance test carries the clause. Driver Advocate: limb (ii) is the argument to make - point to registered_pickup_points in trip_record. Rider Advocate: if the rider named the block or entrance in chat, limb (i) removes the driver's compensation entirely. A chat_log that is absent or gapped over the waiting window makes the fault allocation - not the refund - impaired under POL-NS-08(c); the refund still follows from the GPS alone. The classic Singapore instance is a rider at a mall's taxi stand while the driver holds the separately signed private-hire bay at the same mall."
+    },
+    {
+      "id": "POL-NS-04",
+      "title": "Rider contact unanswered by driver",
+      "category": "NO_SHOW_CHARGE",
+      "rule": "The rider is exonerated and the cancellation fee refunded in full, with no driver compensation payable, where all three of the following hold: (a) the chat_log shows the rider sent at least one message during the waiting window whose content is locating or coordinating - their own position, an entrance, block, tower or bay identifier, a request for the driver's position, or a statement that they cannot see the vehicle; (b) the driver neither posted a reply in the chat_log within 120 seconds of that message nor placed an in-app voice call recorded in trip_record.in_app_calls, at any point before terminating the trip; and (c) the gps_trace rider_track places the rider's device within the fee_schedule.rider_presence_radius_m for the zone class - 100 m for STANDARD, 150 m for LARGE_VENUE, 200 m for TRANSPORT_HUB and AIRPORT - for the MAJORITY of qualifying fixes across the waiting window. Rider fixes reporting horizontal accuracy worse than 25 m are ignored for limb (c) exactly as driver fixes are under POL-NS-02, and count as evidence of neither presence nor absence. Where rider_track is absent, or every fix in it is filtered out for accuracy, limb (c) is UNDECIDABLE and neutral: it is neither satisfied nor failed, the artifact is impaired under POL-NS-08(b), and the Judge must say the test could not be run rather than inferring the rider was elsewhere. Where limbs (a) and (b) hold but limb (c) is affirmatively failed on admissible fixes, this clause does not apply and the dispute is decided under POL-NS-01. Where the driver did reply within 120 seconds, this clause does not apply regardless of the content of the reply, and any residual mislocation is decided under POL-NS-03.",
+      "requires": [
+        "chat_log",
+        "gps_trace",
+        "trip_record"
+      ],
+      "licenses": [
+        "FULL_REFUND",
+        "NO_ACTION"
+      ],
+      "favours": "RIDER",
+      "notes": "First of the two rider-exonerating clauses. The rationale is that a rider who is at the pin and actively trying to coordinate has done everything the platform asks of them; an unanswered message converts the failed pickup into a driver-side coordination failure. Limb (c) previously applied a stricter evidential standard to the customer than POL-NS-02 applies to the driver: a flat 100 m with no accuracy filter, no zone scaling and a requirement of continuity that a single stray fix defeated, against a party more likely to be indoors in a mall, an HDB lobby or an airport terminal. It is now symmetrical with POL-NS-02, and an absent or degraded rider_track is expressly neutral rather than adverse. Rider Advocate: quote the message text and its timestamp, then the silence interval to the driver's cancellation - the 120 second window is the whole case. Driver Advocate: attack limb (c) using rider_track, and check trip_record.in_app_calls, which defeats the clause even where the chat shows nothing."
+    },
+    {
+      "id": "POL-NS-05",
+      "title": "False arrival marker",
+      "category": "NO_SHOW_CHARGE",
+      "rule": "Where the trip_record 'arrived' event carries a timestamp at which the gps_trace places the driver more than 300 m from the pickup pin, or shows the driver travelling at 15 km/h or above (that is, still in motion on an expressway such as the PIE, CTE, AYE, ECP or KPE, or on an arterial road), the arrival marker is FALSE and does not start the waiting clock. The waiting clock is recomputed to run from the first qualifying in-geofence fix under POL-NS-02. On that recomputed basis: (i) if the corrected dwell is shorter than the POL-NS-01 minimum for the zone class, the cancellation fee is refunded in full and no driver compensation is payable; (ii) if no qualifying in-geofence fix exists anywhere in the trip, the fee is refunded in full, no compensation is payable, and the trip is recorded as a false-arrival event against the driver in the ruling's referrals list; (iii) if the corrected dwell nonetheless meets the minimum, the false marker does not by itself defeat the fee, and POL-NS-01 governs the outcome. A driver who is stationary within 300 m of the pin but outside the arrival radius when marking arrival is not caught by this clause and is decided under POL-NS-03.",
+      "requires": [
+        "gps_trace",
+        "trip_record"
+      ],
+      "licenses": [
+        "FULL_REFUND",
+        "NO_ACTION"
+      ],
+      "favours": "RIDER",
+      "notes": "Second rider-exonerating clause, and the one that punishes fee-farming by early arrival-tapping. The two independent triggers - distance over 300 m, or speed at or above 15 kph - are both decidable from a single GPS fix matched to the arrival timestamp, so the finding should be stated as a specific pair of numbers. Limb (iii) is important for fairness and the Driver Advocate should reach for it: tapping 'arrived' while turning into the pickup road is sloppy but harmless where the driver then genuinely waited the full 5 or 8 minutes, and the clause is not a technicality that voids an otherwise good fee. The line between this clause and POL-NS-03 is the 300 m mark: a false marker is about a driver who was not yet there, a wrong-entrance case is about a driver who was there but at the wrong face of the building. Where clock skew between trip_record and gps_trace exceeds 90 seconds, the matching of the arrival event to a GPS fix is unsafe and POL-NS-08(a) applies before this clause can be run."
+    },
+    {
+      "id": "POL-NS-06",
+      "title": "Waiting-period shortfall and premature cancellation",
+      "category": "NO_SHOW_CHARGE",
+      "rule": "Where the effective in-geofence dwell, computed under POL-NS-02 and corrected where necessary under POL-NS-05, is shorter than the POL-NS-01 minimum for the zone class (300 seconds for STANDARD, LARGE_VENUE and TRANSPORT_HUB, 480 seconds for AIRPORT), the cancellation fee is not chargeable and is refunded to the rider in full, whether or not the rider was present and whether or not the rider responded to messages. Two qualifications apply to the computation. (i) Dwell may be accumulated across separate in-geofence intervals within a single pickup attempt where the gps_trace shows the driver leaving and re-entering the arrival radius without at any point travelling more than 300 m from the pin, AND a traffic_advisory whose geometry covers the pickup road and whose active window covers the waiting period carries traffic_advisory.type of KERB_RESTRICTION (a no-stopping or bus-lane restriction in force, for example the Orchard Road bus-lane hours), ENFORCEMENT (an enforcement operation on the pickup road), CLOSURE or ACCIDENT (an incident or kerbside closure on the pickup road), such that holding position was not lawfully possible. The advisory must be present and populated: a MISSING traffic_advisory makes limb (i) unavailable, and asserting it against a MISSING artifact triggers POL-NS-09 rather than exonerating anyone. (ii) A traffic_advisory never reduces the required minimum and never excuses a shortfall on its own; it only permits separate in-geofence intervals to be summed. If cumulative dwell still falls short of the minimum, the full refund stands and no driver compensation is payable.",
+      "requires": [
+        "gps_trace",
+        "trip_record",
+        "traffic_advisory",
+        "fare_breakdown"
+      ],
+      "licenses": [
+        "FULL_REFUND",
+        "NO_ACTION"
+      ],
+      "favours": "RIDER",
+      "notes": "Third rider-exonerating route and the cleanest arithmetic win available to the Rider Advocate: state the required minimum, state the measured dwell, state the shortfall in seconds. It is drafted as strict liability on purpose - a rider who was genuinely absent still gets the fee back if the driver cancelled at 4 minutes 10 seconds, because the waiting period is the consideration the rider paid the fee for. Limb (i) is the Driver Advocate's counter and is the only place traffic_advisory bears on this category: a driver circling a no-stopping kerb is complying with the law, not abandoning the pickup, and their time should count. Limb (i) now names advisory TYPE VALUES that exist in the schema; three of the four situations it describes previously had no representable type at all and the limb could only have been reached by keyword-matching free text. The 300 m leash prevents limb (i) from being stretched to cover a driver who took another job and came back. Cite fare_breakdown for the amount actually charged; refund the cancellation-fee line only, not any booking or platform fee that would have been charged on a completed trip."
+    },
+    {
+      "id": "POL-NS-07",
+      "title": "Driver compensation on a verified rider no-show",
+      "category": "NO_SHOW_CHARGE",
+      "rule": "Where POL-NS-01 is satisfied in full and no clause from POL-NS-03 to POL-NS-06 displaces it, the driver is compensated at 80 percent of the cancellation fee itemised in fare_breakdown - SGD 3.20 of SGD 4.00, SGD 4.80 of SGD 6.00, SGD 6.40 of SGD 8.00 - the residual 20 percent being retained as the platform service fee. Compensation is subject to an anti-farming check on driver_profile: where driver_profile.no_show_terminations_30d is 4 or more AND driver_profile.no_show_terminations_30d divided by driver_profile.completed_trips_30d is greater than 0.08, compensation is WITHHELD and the case escalates under POL-NS-09; the escalation packet must DIRECT THE REVIEWER to refund the rider's cancellation fee in full, and the fee is held meanwhile rather than collected or refunded by the automated pipeline, so that the rider does not fund a dispute the platform has not resolved. No other profile field may be used for this check; driver_profile.prior_no_show_flags is a lifetime counter and is not the trailing-30-day figure. Where driver_profile shows no such pattern, compensation is paid and the ruling on the fee is NO_ACTION - meaning, per POL-GEN-03, that the rider's claim is not supported and the charge stands as it presently is. That sentence describes the disposition of the FEE, not the value of the ruling field: where compensation is paid the emitted ruling is DRIVER_COMPENSATION, with amount_sgd mirroring driver_compensation_sgd per POL-GEN-03. A Judge that emits NO_ACTION here has read this sentence as the ruling value and is wrong.",
+      "requires": [
+        "trip_record",
+        "gps_trace",
+        "fare_breakdown",
+        "driver_profile"
+      ],
+      "licenses": [
+        "DRIVER_COMPENSATION",
+        "NO_ACTION",
+        "ESCALATE"
+      ],
+      "favours": "DRIVER",
+      "notes": "This clause exists so the category can rule FOR the driver with a real remedy attached, not merely decline to refund. A driver who drove to Tuas or Changi and waited 8 minutes has borne a genuine cost and the ruling should say so in cash. The Driver Advocate should cite POL-NS-01 and POL-NS-07 together: the first establishes the fee, the second establishes the payout. The anti-farming check is the guard against the obvious exploit - a driver accepting distant bookings, arriving, waiting out the clock and harvesting fees - and it requires BOTH limbs, absolute count and rate, so that a high-volume driver is not flagged merely for driving more trips than average. The anti-farming branch used to order a full refund while POL-NS-09 ordered the fee held, which is a direct contradiction on the same facts; it now writes the refund into the escalation packet as an instruction, and FULL_REFUND has been removed from this clause's licences accordingly. This clause therefore never licenses a monetary ruling in the rider's favour."
+    },
+    {
+      "id": "POL-NS-08",
+      "title": "Evidence integrity: clock skew, trace gaps and truncated chat",
+      "category": "NO_SHOW_CHARGE",
+      "rule": "An evidence artifact is IMPAIRED FOR POLICY PURPOSES under this clause where any of the following holds. (a) Clock skew: the trip_record 'arrived' event timestamp differs by more than 90 seconds from the nearest gps_trace fix timestamp, or trip_record and gps_trace disagree on trip start or trip termination time by more than 90 seconds. (b) Trace defect: the gps_trace contains a sampling gap longer than 120 seconds inside the waiting window, or fewer than 6 fixes across that window, or omits the rider_track where a clause under consideration relies on rider position. (c) Chat defect: the chat_log is missing messages implied by its own msg_id sequence numbering, contains a gap of more than 5 minutes spanning the driver's arrival marker, or holds fewer messages than trip_record.chat_message_count records for the trip. (d) Fare defect: the fare_breakdown cancellation-fee line does not equal the amount produced by fee_schedule.resolution_rule for this trip's zone class and vehicle tier. A claim resting on an artifact impaired under (a) to (d) is DOWN-WEIGHTED: it cannot alone support a ruling against the party it disfavours, and the Judge must name the impairment and its effect on the outcome in the written reasoning. Where the ONLY evidence for the deciding fact is impaired UNDER LIMBS (a) TO (d) OF THIS CLAUSE, the ruling may not exceed PARTIAL_REFUND and the case escalates under POL-NS-09. An artifact tagged IMPAIRED by the admissibility pre-pass but not meeting limbs (a) to (d) is down-weighted in the Judge's confidence under POL-GEN-02 only and does not engage this sentence.",
+      "requires": [
+        "gps_trace",
+        "trip_record",
+        "chat_log",
+        "fare_breakdown"
+      ],
+      "licenses": [
+        "PARTIAL_REFUND",
+        "ESCALATE"
+      ],
+      "favours": "NEUTRAL",
+      "notes": "Consumed by the admissibility pre-pass, which tags artifacts before the debate opens, and then re-cited by the Judge when explaining weight. The scoping of the word 'impaired' to this clause's own limbs is load-bearing: the schema pre-pass fires on tighter thresholds than the policy does, and without the scoping a schema-level LOW_SAMPLE_RATE tag would escalate a case the policy considers perfectly decidable. Clock skew at limb (a) is the dangerous one for this category because almost every clause matches an event timestamp against a GPS fix: at 90 seconds of skew a driver's position at the arrival marker can be misread by a kilometre of expressway, which would flip POL-NS-05 in either direction. Limb (b)'s 120 second gap threshold is set against the corpus's actual 10 s emitted cadence and 5 s nominal cadence; a gap that straddles the moment of cancellation is the classic way a short dwell is made to look complete. Advocates may still argue from an impaired artifact - they must simply say it is impaired and explain why the claim survives anyway, which is POL-GEN-02. PARTIAL_REFUND here means the cancellation fee is split rather than allocated whole, reflecting genuine uncertainty rather than a finding against either party."
+    },
+    {
+      "id": "POL-NS-09",
+      "title": "Escalation to human review",
+      "category": "NO_SHOW_CHARGE",
+      "rule": "The case is escalated to a human reviewer, with a case summary comprising both advocate briefs, the admissibility pre-pass report, every clause ID relied on and the Judge's draft reasoning, where ANY of the following holds. (a) Judge confidence is below 0.70, which is the platform-wide floor and is identical to POL-RD-10(1). (b) Two admissible artifacts contradict each other directly on arrival, dwell or rider presence and no clause resolves the conflict - for example trip_record records a 6 minute dwell while gps_trace places the driver 800 m from the pin throughout the same interval. (c) rider_profile.disputes_with_counterparty_90d and driver_profile.disputes_with_counterparty_90d together show 2 or more no-show disputes between the same rider and driver in the trailing 90 days. (d) The POL-NS-07 anti-farming check trips, or rider_profile.no_show_disputes_30d is 3 or more, indicating possible abuse on either side; rider_profile.prior_no_show_flags is a lifetime counter, is NOT the field this limb reads, and may not be substituted for it. (e) The sole evidence for the deciding fact is impaired under limbs (a) to (d) of POL-NS-08. Escalation under this clause is TERMINAL for the automated pipeline: the Judge issues no monetary ruling, states the escalation trigger and the specific open question the reviewer must settle, records any instruction a displaced clause directs into the packet, and the disputed cancellation fee is placed on hold rather than collected or refunded while review is pending.",
+      "requires": [
+        "trip_record",
+        "fare_breakdown",
+        "rider_profile",
+        "driver_profile"
+      ],
+      "licenses": [
+        "ESCALATE"
+      ],
+      "favours": "NEUTRAL",
+      "notes": "The confidence floor is 0.70 and is the same number in both policy files; the sentence that previously said the Judge's configuration governs where they diverge has been deleted, because it authorised a hardcoded constant to override written policy silently. Trigger (b) is the important one for demo purposes because it is the honest answer to a fabricated or corrupted record: the tribunal should decline to rule rather than pick a side. Trigger (c) previously also carried a SGD 15.00 amount test, which was dead by construction - POL-NS-01 caps the fee at SGD 8.00 - and has been removed rather than lowered, because every value that would bite also catches legitimate RYDE_XL and airport cases. Triggers (c) and (d) exist to catch repeat behaviour that a single-case view cannot fairly assess in either direction. Note that escalation holds the fee rather than refunding it; describing escalation as a rider win in the ruling text would be wrong. This clause licenses ESCALATE and nothing else, so it can never be cited to support a monetary outcome."
+    }
+  ]
+}

@@ -1,0 +1,284 @@
+{
+  "schema_version": "1.2.0",
+  "case_no": 213,
+  "dispute": {
+    "dispute_id": "DSP-00213",
+    "trip_id": "TRP-00213",
+    "case_no": 213,
+    "category": "NO_SHOW_CHARGE",
+    "filed_by": "RIDER",
+    "filed_at": "2026-08-11T18:40:55+08:00",
+    "claim_text": "Same driver as the last two times, same thing again. I was at the Jurong East PHV bay from 5.45 and he never showed up, then charged me $6. I messaged him three times and got nothing back. Support tells me they cannot find the messages or the map. How can you charge me and then not show me anything?",
+    "amount_contested_sgd": 6.0,
+    "evidence_ids": [
+      "EV-TRIP-00213",
+      "EV-GPS-00213",
+      "EV-CHAT-00213",
+      "EV-FARE-00213",
+      "EV-RPROF-00213",
+      "EV-DPROF-00213",
+      "EV-ADVIS-00213-01"
+    ],
+    "counterparty_statement": {
+      "text": "I was at the Jurong East bay from about 5.47 to 5.53, more than the five minutes. I replied to every message she sent. If the system lost the log that is not my fault and I still want the fee.",
+      "submitted_by": "DRIVER",
+      "submitted_at": "2026-08-12T09:30:41+08:00"
+    },
+    "channel": "IN_APP_SUPPORT"
+  },
+  "evidence": [
+    {
+      "evidence_id": "EV-TRIP-00213",
+      "evidence_type": "TRIP_RECORD",
+      "trip_id": "TRP-00213",
+      "source": "PLATFORM_TELEMETRY",
+      "generated_at": "2026-08-12T10:00:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "The one artifact that survived. Cancelled trip record, causally ordered, zone class TRANSPORT_HUB with 2 registered pickup points. in_app_calls is empty. chat_message_count of 3 is what establishes that a chat log existed and is now absent.",
+        "assessed_at": "2026-08-12T10:00:12+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-00213",
+        "rider_id": "RDR-07690",
+        "driver_id": "DRV-04355",
+        "requested_at": "2026-08-11T17:39:35+08:00",
+        "accepted_at": "2026-08-11T17:40:20+08:00",
+        "arrived_at": "2026-08-11T17:47:05+08:00",
+        "started_at": null,
+        "ended_at": null,
+        "cancelled_at": "2026-08-11T17:53:40+08:00",
+        "status": "CANCELLED_BY_DRIVER",
+        "cancelled_by": "DRIVER",
+        "cancellation_reason_code": "RIDER_UNREACHABLE",
+        "pickup": {
+          "label": "Jurong East MRT, PHV Pickup Bay, 10 Jurong Gateway Rd",
+          "lat": 1.333115,
+          "lng": 103.742286,
+          "venue_id": "VEN-JURONG-EAST-MRT"
+        },
+        "dropoff": {
+          "label": "Blk 888 Woodlands Dr 50",
+          "lat": 1.4375,
+          "lng": 103.7929,
+          "venue_id": null
+        },
+        "optimal_distance_km": 21.6,
+        "optimal_duration_min": 28.0,
+        "actual_distance_km": null,
+        "actual_duration_min": null,
+        "vehicle_type": "RYDE_X",
+        "optimal_route_source": "routing-engine-v3.2 (LTA traffic snapshot 17:39)",
+        "deviation_pct": null,
+        "wait_time_min": 6.6,
+        "time_to_arrival_min": 6.8,
+        "pickup_zone_class": "TRANSPORT_HUB",
+        "registered_pickup_points": 2,
+        "in_app_calls": [],
+        "pickup_amended_at": null,
+        "dropoff_amended_at": null,
+        "original_pickup": null,
+        "original_dropoff": null,
+        "optimal_route_erp_sgd": 0.0,
+        "amended_optimal_distance_km": null,
+        "amended_optimal_duration_min": null,
+        "solo_optimal_distance_km": null,
+        "chat_message_count": 3
+      }
+    },
+    {
+      "evidence_id": "EV-GPS-00213",
+      "evidence_type": "GPS_TRACE",
+      "trip_id": "TRP-00213",
+      "source": "DRIVER_DEVICE",
+      "generated_at": "2026-08-12T10:00:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "MISSING",
+        "issues": [
+          "MISSING_ARTIFACT"
+        ],
+        "issue_details": [
+          {
+            "code": "MISSING_ARTIFACT",
+            "severity": "BLOCKING",
+            "detail": "The driver device never uploaded a trace for this trip; the platform's telemetry pipeline has no object under this trip_id. Nothing places either party anywhere at any time, so POL-NS-01 limbs (b) and (c), POL-NS-02, POL-NS-03, POL-NS-05 and POL-NS-06 are all undecidable."
+          }
+        ],
+        "weight_multiplier": 0.0,
+        "notes": "Artifact absent. The identifier is minted anyway so that the absence itself can be cited by either advocate.",
+        "assessed_at": "2026-08-12T10:00:12+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": null
+    },
+    {
+      "evidence_id": "EV-CHAT-00213",
+      "evidence_type": "CHAT_LOG",
+      "trip_id": "TRP-00213",
+      "source": "PLATFORM_TELEMETRY",
+      "generated_at": "2026-08-12T10:00:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "MISSING",
+        "issues": [
+          "MISSING_ARTIFACT"
+        ],
+        "issue_details": [
+          {
+            "code": "MISSING_ARTIFACT",
+            "severity": "BLOCKING",
+            "detail": "The message export is absent for this trip although trip_record.chat_message_count records 3 messages. POL-NS-04's limbs (a) and (b) cannot be run, which is the clause the rider is relying on."
+          }
+        ],
+        "weight_multiplier": 0.0,
+        "notes": "Artifact absent. The identifier is minted anyway so that the absence itself can be cited by either advocate.",
+        "assessed_at": "2026-08-12T10:00:12+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": null
+    },
+    {
+      "evidence_id": "EV-FARE-00213",
+      "evidence_type": "FARE_BREAKDOWN",
+      "trip_id": "TRP-00213",
+      "source": "PAYMENTS_LEDGER",
+      "generated_at": "2026-08-12T10:00:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "The 6.00 cancellation fee is the greater of the TRANSPORT_HUB zone fee of 6.00 and the RYDE_X tier fee of 4.00, so it reconciles and POL-NS-08(d) is not engaged. payment_status is PENDING: the fee is held while the escalation is open, neither collected nor refunded.",
+        "assessed_at": "2026-08-12T10:00:12+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-00213",
+        "currency": "SGD",
+        "fare_model": "METERED",
+        "quoted_fare_sgd": null,
+        "base_fare": 0.0,
+        "distance_fare": 0.0,
+        "time_fare": 0.0,
+        "distance_charged_km": null,
+        "time_charged_min": null,
+        "per_km_rate_sgd": null,
+        "per_min_rate_sgd": null,
+        "surge_multiplier": 1.0,
+        "surge_amount": 0.0,
+        "tolls_erp": 0.0,
+        "erp_gantries": [],
+        "airport_surcharge": 0.0,
+        "platform_fee": 0.0,
+        "promo_discount": 0.0,
+        "cancellation_fee": 6.0,
+        "waiting_time_fee": 0.0,
+        "total_charged": 6.0,
+        "payment_status": "PENDING",
+        "refund_issued_sgd": 0.0,
+        "rate_card_id": "RC-SG-2026Q3-RYDEX",
+        "charged_at": null
+      }
+    },
+    {
+      "evidence_id": "EV-RPROF-00213",
+      "evidence_type": "RIDER_PROFILE",
+      "trip_id": "TRP-00213",
+      "source": "PLATFORM_TELEMETRY",
+      "generated_at": "2026-08-12T10:00:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "disputes_with_counterparty_90d is 2 -- this rider and this driver have been here twice before in the trailing 90 days.",
+        "assessed_at": "2026-08-12T10:00:12+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "RDR-07690",
+        "party_role": "RIDER",
+        "snapshot_at": "2026-08-12T10:00:00+08:00",
+        "account_age_days": 430,
+        "lifetime_trips": 168,
+        "rating": 4.72,
+        "prior_disputes_filed": 3,
+        "prior_disputes_upheld": 1,
+        "cancellation_rate": 0.041,
+        "prior_no_show_flags": 1,
+        "deviation_claims_60d": 0,
+        "deviation_claims_60d_substantiated": 0,
+        "no_show_disputes_30d": 2,
+        "disputes_with_counterparty_90d": 2
+      }
+    },
+    {
+      "evidence_id": "EV-DPROF-00213",
+      "evidence_type": "DRIVER_PROFILE",
+      "trip_id": "TRP-00213",
+      "source": "PLATFORM_TELEMETRY",
+      "generated_at": "2026-08-12T10:00:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "disputes_with_counterparty_90d is 2, matching the rider's counter. Anti-farming: no_show_terminations_30d of 3 against completed_trips_30d of 107, 2.8%; the count limb needs 4, so POL-NS-07 does not trip and (c) rather than (d) is the live trigger.",
+        "assessed_at": "2026-08-12T10:00:12+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "DRV-04355",
+        "party_role": "DRIVER",
+        "snapshot_at": "2026-08-12T10:00:00+08:00",
+        "account_age_days": 615,
+        "lifetime_trips": 744,
+        "rating": 4.58,
+        "prior_disputes_filed": 2,
+        "prior_disputes_upheld": 1,
+        "cancellation_rate": 0.058,
+        "prior_no_show_flags": 2,
+        "prior_deviation_flags": 0,
+        "acceptance_rate": 0.895,
+        "vehicle_type": "RYDE_X",
+        "active_region": "West (Jurong / Clementi / Bukit Batok)",
+        "deviation_flags_90d": 0,
+        "completed_trips_90d": 322,
+        "no_show_terminations_30d": 3,
+        "completed_trips_30d": 107,
+        "disputes_with_counterparty_90d": 2
+      }
+    },
+    {
+      "evidence_id": "EV-ADVIS-00213-01",
+      "evidence_type": "TRAFFIC_ADVISORY",
+      "trip_id": "TRP-00213",
+      "source": "THIRD_PARTY_LTA",
+      "generated_at": "2026-08-12T10:00:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "MISSING",
+        "issues": [
+          "MISSING_ARTIFACT"
+        ],
+        "issue_details": [
+          {
+            "code": "MISSING_ARTIFACT",
+            "severity": "BLOCKING",
+            "detail": "No advisory covers the Jurong East interchange in this window."
+          }
+        ],
+        "weight_multiplier": 0.0,
+        "notes": "Artifact absent. The identifier is minted anyway so that the absence itself can be cited by either advocate.",
+        "assessed_at": "2026-08-12T10:00:12+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": null
+    }
+  ]
+}
