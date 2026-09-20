@@ -1,20 +1,53 @@
-# Start here today / 2026-09-20
+# Start here — WorkBuddy operating procedure
 
-1. Open WorkBuddy and log in with your own account; record the actual balance and expiry time.
-2. Create a new task and set the working directory to `/Users/hanweizhou/Desktop/Tribunal`. The interface label may differ between versions; have it report the current directory first, and confirm the path matches before continuing.
-3. Copy the complete prompt below. This is the workspace acceptance task; application development starts with the Loader and policy reading.
+This is the standing procedure for running a WorkBuddy task on this project. It is not day-one
+onboarding, and there is no prompt to copy.
 
-```text
-Today is 20 September 2026. I am participating in the Tencent Cloud AI Singapore Hackathon. The project is called Tribunal and it will be built primarily with WorkBuddy. Each team member has only 1,000 total hackathon credits, and that member's WorkBuddy and CodeBuddy usage draws from the same credit pool.
-The working directory must be /Users/hanweizhou/Desktop/Tribunal. Report the actual working directory before taking any action.
-Read README.md, WORKBUDDY-SCOPE.md, and WORKBUDDY-HANDOFF.md before doing anything else. Then list only the top-level directories; do not recursively scan the workspace.
-Create a local Python virtual environment named .venv and install requirements.txt. Do not inspect or create any private evaluation dataset, answer key, generator, PDF, or external directory.
-Write the actual directory listing and Python version to docs/notes/2026-09-20-preflight.md. State clearly that the application has not been implemented yet.
-Do not call paid model APIs, implement Agents, initialize or publish a remote repository, or perform external actions.
-Finally, list the files created or changed, the commands actually executed, and the real verification results. I will save a genuine screenshot of this conversation.
-```
+## Working directory
 
-4. After checking the report, capture the real session and save it as `docs/buddy-log/2026-09-18-hanwei-preflight.png`; record the balance before and after the task.
-5. For the next WorkBuddy task, follow `WORKBUDDY-SCOPE.md` and read only the files explicitly listed for that round; before implementing the Loader you should look at the answer-free `data/PUBLIC-CONTRACT.md` and one explicitly designated public case — do not hand-write guessed data structures from the prompt.
+Every task runs in `/Users/hanweizhou/Desktop/Tribunal`, and **every task begins by reporting the
+actual working directory**. If the reported directory is not that path, stop and say so instead of
+continuing.
 
-This directory is the preparation work already completed for this event; there are no fabricated WorkBuddy screenshots or runtime results here.
+## Before acting
+
+1. Read `WORKBUDDY-SCOPE.md` first, on every task. It is the read boundary.
+2. State the file paths you plan to open, before opening anything.
+
+## The shape of a task
+
+- **One acceptance-ready module per round.** Finish and verify one module; do not regenerate the
+  whole project.
+- **Read only the files listed for that round.** Do not scan the workspace recursively, and do not
+  read anything outside it.
+- **Report what actually happened**: the files created or changed, the commands actually run, and
+  the real verification output, copied as-is.
+- **Never describe work that was not done.** If something was not run, say plainly that it was not
+  run.
+
+## Testing
+
+- Run the tests and paste the real output, including the test count.
+- **A failing test is reported as a failure.** Never work around a failure by weakening, deleting or
+  loosening the test to make it pass. If a test encodes a wrong expectation, say so and show the
+  value you computed instead.
+
+## Policy values
+
+- **Policy values are read from the loaded policy and never hardcoded in application code.** No
+  radius, dwell minimum, accuracy filter, distance threshold, fee or rate may appear as a literal in
+  `tribunal/`. Thresholds are passed in by the caller, from `policy/no_show.json` under
+  `fee_schedule` and `policy/route_deviation.json` under `fare_model`.
+
+## Session records
+
+- Screenshot each session into `docs/buddy-log/` and record it as a row in the table in
+  `docs/buddy-log/README.md`.
+- Name screenshots with the pattern already in use: `YYYY-MM-DD-hanwei-NN-<slug>.png`, where `NN`
+  continues that day's sequence.
+
+## Where the current state is recorded
+
+- Sessions and screenshots: `docs/buddy-log/README.md`
+- Credits: `docs/notes/CREDITS.md`
+- Data contract: `data/PUBLIC-CONTRACT.md`
