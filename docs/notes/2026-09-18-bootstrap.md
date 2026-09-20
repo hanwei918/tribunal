@@ -1,13 +1,13 @@
-# 2026-09-18 新项目准备记录
+# 2026-09-18 New project preparation record
 
-执行工具：Codex。此记录不是 WorkBuddy 使用证明。
+Executing tool: Codex. This record is not evidence of WorkBuddy usage.
 
-已新建 `/Users/hanweizhou/Desktop/Tribunal`，复制原 Tencent 目录的公开 data、policy 和 requirements.txt。
-原资料与原仓库保留；没有复制 .git、.claude 或旧手册到正式项目。
+Created `/Users/hanweizhou/Desktop/Tribunal`, copying the public data, policy, and requirements.txt from the original Tencent directory.
+The original material and the original repository are retained; no .git, .claude, or old manuals were copied into the official project.
 
-准备期间曾创建隔离环境并运行私有校验工具；随后已将该环境、校验工具、答案和历史材料全部移到项目外的 `Tribunal-private-eval`。正式 WorkBuddy 项目内不含 `.venv`、`tools/` 或 `data/answers/`。
-在私有评测目录实际运行校验：21/21 通过，0 SKIP。
-数据规模：29 disputes / 204 artifacts / 24 policy clauses。
+During preparation an isolated environment was created and a private verification tool was run; that environment, the verification tool, the answers, and the historical materials were then all moved outside the project to `Tribunal-private-eval`. The official WorkBuddy project contains no `.venv`, `tools/`, or `data/answers/`.
+Verification actually run in the private evaluation directory: 21/21 passed, 0 SKIP.
+Data scale: 29 disputes / 204 artifacts / 24 policy clauses.
 
-应用目录当前为空，尚未生成业务代码、真实模型运行或 WorkBuddy 截图。
-下一步：用户在 WorkBuddy 打开此目录，执行 START-HERE.md 中的第一段任务。
+The application directory is currently empty; no business code, real model runs, or WorkBuddy screenshots have been generated yet.
+Next step: the user opens this directory in WorkBuddy and runs the first task in START-HERE.md.

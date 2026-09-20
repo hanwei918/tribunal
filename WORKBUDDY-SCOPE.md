@@ -23,4 +23,8 @@ Runtime Agents receive the public content of one selected case file and the sele
 
 The forbidden-key safety assertion applies recursively to the final serialised Agent runtime bundle, not to development-time documentation. Path restrictions protect against corpus-generation sources and historical analyses; forbidden-key assertions protect against answer fields leaking into a runtime bundle. These are separate controls.
 
+## Language rule (standing)
+
+Every document in this repository is written in English, and every prompt pasted into WorkBuddy is written in English. No Chinese characters in any tracked text file.
+
 Before every task, WorkBuddy must read this file and state the file paths it plans to open. It must not recursively scan the workspace or refer to sibling directories.

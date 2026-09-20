@@ -1,8 +1,11 @@
-# WorkBuddy 实际使用记录
+# WorkBuddy actual usage record
 
-只填已经发生的会话，不预填成功记录。截图公开前检查账号和敏感信息。
+Fill in only sessions that have already happened; do not pre-fill success records. Check the account and sensitive information before making screenshots public.
 
-| 日期 | 成员 | WorkBuddy 任务 | 产物 | 验证 | 截图 | commit（若有） |
+| Date | Member | WorkBuddy task | Artifact | Verification | Screenshot | commit (if any) |
 |---|---|---|---|---|---|---|
+| 2026-09-20 | Zhou Hanwei | Preflight check of the workspace | `docs/notes/2026-09-20-preflight.md` | Reported the actual working directory, the top-level listing, Python 3.13.12, and that `requirements.txt` declares no dependencies | `2026-09-20-hanwei-01-preflight.png` | `1e7a2c5` |
+| 2026-09-20 | Zhou Hanwei | Initialise the repository under version control | Git repository on `main`; initial commit `1e7a2c5` (52 files) | `git add -A --dry-run` confirmed no private balance path, no `.DS_Store`/`.venv`/`__pycache__`/`.env`/PDF, and all six `.gitkeep` files staged | `2026-09-20-hanwei-02-git-init.png` | `1e7a2c5` |
+| 2026-09-20 | Zhou Hanwei | English documentation pass: rewrite six documents into English and add the standing language rule | `README.md`, `START-HERE.md`, `WORKBUDDY-HANDOFF.md`, `docs/notes/2026-09-18-bootstrap.md`, `docs/notes/CREDITS.md`, `docs/buddy-log/README.md`, `WORKBUDDY-SCOPE.md` | Scan of all 52 tracked files found 0 files containing Chinese characters; a positive control confirmed the pattern detects Chinese | - | - |
 
-当前没有实际 WorkBuddy 会话记录。仓库准备和手册重写由 Codex 协助；后续开发按实际工具归属记录。
+The sessions above are the first actual WorkBuddy session records. Repository preparation and manual rewriting were assisted by Codex; subsequent development is recorded by actual tool attribution.
