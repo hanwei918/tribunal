@@ -1,9 +1,15 @@
 # Credits ledger
 
-Each member has 1,000 activity credits in total; a single member's WorkBuddy and CodeBuddy usage is managed as one shared quota pool and cannot be budgeted as 1,000 each. The team's total nominal allowance is 3,000, but transferability or sharing between members is not assumed. Balances, expiry, and whether Miora is also deducted from the same pool are all determined by the actual changes on each member's account Usage page.
-Suggested combined allocation per person across WorkBuddy and CodeBuddy: kickoff 50, development 500, integration 200, submission 100, contingency 150. Actual consumption is unknown; this is the budget ceiling for the shared pool, not a points-deduction prediction.
+The hackathon handbook states **2,000 credits per person**. That figure is the sum of two **separate** pools:
 
-Basis for the activity credits: the Singapore event material states the allowance as 1,000 credits per registered participant, for use with CodeBuddy, WorkBuddy, and Miora; therefore the budget is not multiplied by three for the three products. The actual deduction relationship is evidenced ultimately by the account Usage page.
+- **1,000 credits shared between CodeBuddy and WorkBuddy.** A single member's CodeBuddy and WorkBuddy usage draws on this one pool, so the two products cannot be budgeted at 1,000 each.
+- **1,000 credits in Miora.** Miora's pool is separate; it is not a further share of the CodeBuddy/WorkBuddy pool.
+
+The two pools are **independent and do not transfer** between each other. The team's total nominal allowance is 6,000 across three members, and transferability or sharing between members is not assumed either.
+
+**The account Usage page is the final evidence for any balance.** Balances, expiry, and which product draws on which pool are determined by the actual changes shown there, not by this note.
+
+Suggested combined allocation per person across WorkBuddy and CodeBuddy, that is, within the shared 1,000: kickoff 50, development 500, integration 200, submission 100, contingency 150. Actual consumption is unknown; this is the budget ceiling for that pool, not a points-deduction prediction. The separate Miora pool is budgeted on its own.
 
 | Date | Member | Product used | Task | Shared pool opening balance | Shared pool closing balance | Actual consumption | Deliverable | Validity |
 |---|---|---|---|---|---|---|---|---|
