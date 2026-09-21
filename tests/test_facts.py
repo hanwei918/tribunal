@@ -321,7 +321,7 @@ class DeviationTests(unittest.TestCase):
         self.assertEqual(five["status"]["value"], facts.MATERIAL)
 
     def test_3_establishment_needs_both_tests(self):
-        """102 clears the km line only, 113 the percentage line only; both are no deviation."""
+        """102 fails the percentage line only; 113 fails both. Either way, no deviation."""
         pct = self.thresholds["threshold_pct"]
         km = self.thresholds["threshold_km"]
 
