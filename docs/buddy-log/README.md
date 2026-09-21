@@ -1,6 +1,18 @@
 # WorkBuddy actual usage record
 
-Fill in only sessions that have already happened; do not pre-fill success records. Check the account and sensitive information before making screenshots public.
+Fill in only sessions that have already happened; do not pre-fill success records.
+
+## Screenshot naming and the credential review
+
+**Naming.** Screenshots use `YYYY-MM-DD-hanwei-NN-<slug>.png`, where `NN` continues that day's
+sequence and `<slug>` names the session. A file still carrying the macOS default name
+(`Screenshot <date> at <time>.png`) is renamed before it is committed.
+
+**The credential rule.** **No screenshot enters this directory until it has been checked for an
+`sk-` prefixed string or any other credential.** The repository is private today and will be made
+public before submission, so a screenshot showing an API key on a console, settings or account page
+would publish that key the moment the repository is flipped. Check the image itself, not only its
+metadata: a byte scan of a PNG cannot see rendered text, so the image has to be opened and read.
 
 | Date | Member | WorkBuddy task | Artifact | Verification | Screenshot | commit (if any) |
 |---|---|---|---|---|---|---|
@@ -20,6 +32,7 @@ Fill in only sessions that have already happened; do not pre-fill success record
 | 2026-09-21 | Zhou Hanwei | Build build-order items 1 and 2: the POL-RD-01 deviation excess and the Decimal money arithmetic | `tribunal/facts.py`; `tribunal/money.py`; `tribunal/brief.py`; `tests/test_facts.py`; `tests/test_money.py` | Full suite passes 65/65 with `python -m unittest discover -s tests -v`; all 15 route-deviation excesses match the measured values to two decimals, case 106 established at 49.72 % and case 105 material at 50.44 %; the deviation block appears on 15/15 route briefs and 0/14 no-show briefs; `Decimal("0.8") * Decimal("6.00")` is exactly `4.80` and a full refund of 65.13 stays 65.13 | - | - |
 | 2026-09-21 | Zhou Hanwei | Harden the loader: extend the manifest cross-check, tighten the path scope to data/cases/, and parse money as Decimal | `tribunal/loader.py`; `tribunal/money.py`; `tribunal/brief.py`; `tests/test_loader.py`; `tests/test_money.py`; `tests/test_facts.py`; `tests/test_prepass.py` | Pre-checked before writing anything: all 29 of 29 cases agree on dispute_id, trip_id and category, 0 mismatches. Full suite passes 85/85 with `python -m unittest discover -s tests -v`; a manifest path reaching `data/answers/` or `PUBLIC-CONTRACT.md` now raises; case 208's `total_charged` is `Decimal("8.0")` and no float survives in a loaded case; the canonical bytes stay deterministic, with the literal `0.70` preserved where a float round-trip had collapsed it to `0.7` | - | - |
 | 2026-09-21 | Zhou Hanwei | Build the TokenHub transport adapter: one client, one result object, secret hygiene and call records | `tribunal/llm.py`; `tests/test_llm.py`; `docs/notes/2026-09-21-tokenhub-api-facts.md` | Full suite passes 116/116 (1 skipped) with `python -m unittest discover -s tests -v`; standard library only, `requirements.txt` unchanged; `model` has no default; a malformed 200 is reported rather than raised; a 402 raises without retrying; 87 calls at 60 rpm span 86 virtual seconds; the API key appears in no produced string | - | - |
-| 2026-09-21 | Zhou Hanwei | Flip the `reasoning_effort` default so reasoning stays on, and record the case 208 advocate measurement behind it | `tribunal/llm.py`; `tests/test_llm.py`; `docs/notes/2026-09-21-tokenhub-api-facts.md` | Full suite passes 121/121 (1 skipped); the default request body now contains no `reasoning_effort` key at all, `"none"` still suppresses reasoning, and `temperature`/`seed` can be left to the provider by passing `None`; the note records six runs per model per side and states that no model has been frozen | - | - |
+| 2026-09-21 | Zhou Hanwei | Flip the `reasoning_effort` default so reasoning stays on, and record the case 208 advocate measurement behind it | `tribunal/llm.py`; `tests/test_llm.py`; `docs/notes/2026-09-21-tokenhub-api-facts.md` | Full suite passes 121/121 (1 skipped); the default request body now contains no `reasoning_effort` key at all, `"none"` still suppresses reasoning, and `temperature`/`seed` can be left to the provider by passing `None`; the note records six runs per model per side and states that no model has been frozen | `2026-09-21-hanwei-02-llm-adapter.png` | - |
+| 2026-09-21 | Zhou Hanwei | Housekeeping in the buddy log: rename a default-named screenshot and record the screenshot naming convention and the credential rule | `docs/buddy-log/2026-09-21-hanwei-02-llm-adapter.png`; `docs/buddy-log/README.md` | The renamed screenshot was opened and read before it entered the directory: no `sk-` string, no key and no `Bearer` token appear in it, and the PNG's only text chunk is XMP image metadata | - | - |
 
 The sessions above are the first actual WorkBuddy session records. Repository preparation and manual rewriting were assisted by Codex; subsequent development is recorded by actual tool attribution.
