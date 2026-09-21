@@ -47,18 +47,20 @@ Your confidence in a ruling is capped by the evidence the ruling actually rests 
 The escalation floor is the `confidence_floor` field on the loaded policy. **Read it from the policy
 you were given; never hardcode it.** Below that floor the ruling is `ESCALATE`.
 
-## Step 3 — the ruling
+## Step 3 — the result object
 
-Return exactly the POL-GEN-03 ruling object:
+Return a **result object** with exactly two top-level fields: `ruling` and `discarded_claims`.
 
 ```json
 {
-  "ruling": "PARTIAL_REFUND",
-  "amount_sgd": 4.35,
-  "driver_compensation_sgd": null,
-  "referrals": [],
-  "confidence": 0.85,
-  "explanation": "Addressed to both parties, in plain language.",
+  "ruling": {
+    "ruling": "PARTIAL_REFUND",
+    "amount_sgd": 4.35,
+    "driver_compensation_sgd": null,
+    "referrals": [],
+    "confidence": 0.85,
+    "explanation": "Addressed to both parties, in plain language."
+  },
   "discarded_claims": [
     {
       "claim": "the claim text as the advocate wrote it",
@@ -69,13 +71,22 @@ Return exactly the POL-GEN-03 ruling object:
 }
 ```
 
-- `ruling` — one of `NO_ACTION`, `PARTIAL_REFUND`, `FULL_REFUND`, `DRIVER_COMPENSATION`, `ESCALATE`.
-- `amount_sgd` — `null` where none.
-- `driver_compensation_sgd` — `null` where none.
-- `referrals` — an array of strings, empty where none.
-- `confidence`.
-- `explanation` — addressed to both parties, in plain language.
-- `discarded_claims` — each with its claim text and the reason it was discarded.
+The `ruling` field is **exactly the POL-GEN-03 ruling object**, unchanged: the six fields `ruling`,
+`amount_sgd`, `driver_compensation_sgd`, `referrals`, `confidence` and `explanation`, and nothing
+else. The `discarded_claims` field is the audit record from Step 1. It is not a POL-GEN-03 field and
+it must not be placed inside the ruling object.
+
+- `ruling.ruling` — one of `NO_ACTION`, `PARTIAL_REFUND`, `FULL_REFUND`, `DRIVER_COMPENSATION`,
+  `ESCALATE`.
+- `ruling.amount_sgd` — `null` where none.
+- `ruling.driver_compensation_sgd` — `null` where none.
+- `ruling.referrals` — an array of strings, empty where none.
+- `ruling.confidence`.
+- `ruling.explanation` — addressed to both parties, in plain language.
+- `discarded_claims` — the audit record, each entry with its claim text and the reason it was
+  discarded.
+
+Do not add any other top-level field.
 
 ## Three things that decide real cases
 
