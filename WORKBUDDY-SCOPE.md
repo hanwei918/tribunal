@@ -17,11 +17,24 @@ Allowed project files:
 - `tribunal/`, `prompts/`, `tests/`, `eval/`, `ui/`, `runs/`
 - `docs/buddy-log/`, `docs/notes/`, `docs/submission/`
 
-The following material is physically outside this workspace and must never be requested, copied, indexed, attached, or used in a runtime prompt: answer keys, offline grading, corpus generation, historical case analyses, prior manuals, old PDFs, render outputs, and private virtual environments.
+The following material is physically outside this workspace and must never be requested, copied, indexed, attached, or used in a runtime prompt: corpus generation sources, historical case analyses, prior manuals, old PDFs, render outputs, private virtual environments, and any offline grading harness or scoring index that is not part of this repository. The evaluation answer key is no longer on this list: it lives at `eval/answers/` and is committed, under the controls stated in the section below.
 
-Runtime Agents receive the public content of one selected case file and the selected policy files only. They never receive `data/PUBLIC-CONTRACT.md`, `data/index.json`, any answer key, generated source corpus, case study, offline grader, or developer handoff containing expected outcomes.
+Runtime Agents receive the public content of one selected case file and the selected policy files only. They never receive `data/PUBLIC-CONTRACT.md`, `data/index.json`, the answer key at `eval/answers/`, generated source corpus, case study, offline grader, or developer handoff containing expected outcomes.
 
 The forbidden-key safety assertion applies recursively to the final serialised Agent runtime bundle, not to development-time documentation. Path restrictions protect against corpus-generation sources and historical analyses; forbidden-key assertions protect against answer fields leaking into a runtime bundle. These are separate controls.
+
+## Evaluation answer key (amended 2026-09-21)
+
+The evaluation answer key lives at `eval/answers/` and **is committed**. This repository is published as the submitted source, and an accuracy claim a judge cannot reproduce is worth nothing, so the key travels with the code it measures. This is the one narrow respect in which the original blanket rule against answer keys has been relaxed, and it is relaxed for exactly this one directory. Nothing else in the paragraph above is relaxed.
+
+Four statements hold. The path controls are kept distinct from the forbidden-key control, as they are above:
+
+- **Path, relaxed for one directory.** The key lives at `eval/answers/` and is committed. No sibling or ancestor directory is affected by this relaxation.
+- **Path, tightened.** Nothing under `tribunal/` may read anything under `eval/`. The package that builds the runtime bundle has no business in the answer key, whichever directory that key sits in.
+- **Forbidden keys, unchanged and still the stronger control.** No answer field may appear in any Agent runtime bundle. This control holds wherever an answer came from, including a case file that was edited by hand, so it is the one that actually protects the run.
+- **Path restrictions, unchanged elsewhere.** Corpus generation sources, historical analyses, prior manuals, old PDFs and render outputs remain outside the workspace and are still never referenced.
+
+`tests/test_answer_isolation.py` asserts both path and content controls, and proves the content check is capable of failing.
 
 ## Language rule (standing)
 

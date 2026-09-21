@@ -41,6 +41,18 @@ already failed this way: asserting the absence of `": "` tripped on policy prose
 colons, and asserting the absence of `rider_track` tripped on a clause that discusses the field by
 name.
 
+### The answer key is frozen
+
+The answer key is frozen. If an agent's ruling disagrees with
+`eval/answers/ground_truth.json`, the answer does not change. Investigate
+the agent, the prompt, the policy or the brief. Editing the expected result
+so a run scores better destroys the only independent measurement this
+project has, and it will be destroyed quietly, under deadline pressure, by
+someone who believes they have found a genuine error in the key. If the key
+really is wrong, the correction is a separate commit that changes only the
+key, states the evidence in its message, and is made before the run it would
+affect — never after.
+
 ## Policy values
 
 - **Policy values are read from the loaded policy and never hardcoded in application code.** No
