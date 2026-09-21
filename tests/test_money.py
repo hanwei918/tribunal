@@ -237,6 +237,48 @@ class MoneySourceTests(unittest.TestCase):
         self.assertNotIn("float", names)
 
 
+class CanonicalSerialisationTests(unittest.TestCase):
+    """The Decimal-aware canonical serialiser the loader and the brief depend on."""
+
+    def test_a_decimal_is_written_as_a_json_number_with_its_own_literal(self):
+        text = money.dumps_canonical({"a": Decimal("8.0"), "b": Decimal("0.70")})
+        self.assertEqual(text, '{"a":8.0,"b":0.70}')
+        self.assertNotIn('"8.0"', text, "a Decimal must not be quoted into a string")
+
+    def test_the_contract_parameters_are_used(self):
+        """ensure_ascii=False, sort_keys=True, separators=(",", ":")."""
+        self.assertEqual(money.dumps_canonical({"b": 1, "a": "x"}), '{"a":"x","b":1}')
+        self.assertEqual(money.dumps_canonical({"a": "café"}), '{"a":"café"}')
+        self.assertEqual(money.dumps_canonical([1, 2]), "[1,2]")
+
+    def test_without_decimals_it_is_exactly_json_dumps(self):
+        plain = {"b": [1, 2.5, None, True], "a": {"c": "x"}}
+        self.assertEqual(
+            money.dumps_canonical(plain),
+            json.dumps(plain, ensure_ascii=False, sort_keys=True, separators=(",", ":")),
+        )
+
+    def test_a_non_finite_decimal_is_refused(self):
+        for bad in (Decimal("NaN"), Decimal("Infinity"), Decimal("-Infinity")):
+            with self.assertRaises(ValueError):
+                money.dumps_canonical({"a": bad})
+
+    def test_the_placeholder_guard_refuses_data_that_collides(self):
+        with self.assertRaises(ValueError):
+            money.dumps_canonical({"a": "x" + money._TOKEN_PREFIX + "y"})
+
+    def test_canonical_sha256_is_stable_and_order_independent(self):
+        obj = {"a": Decimal("8.0"), "b": [Decimal("0.39"), 1]}
+        self.assertEqual(money.canonical_sha256(obj), money.canonical_sha256(obj))
+        self.assertEqual(len(money.canonical_sha256(obj)), 64)
+
+    def test_a_decimal_round_trips_through_the_canonical_text(self):
+        obj = {"a": Decimal("8.0"), "b": Decimal("0.70"), "c": 3}
+        back = json.loads(money.dumps_canonical(obj), parse_float=Decimal)
+        self.assertEqual(back, obj)
+        self.assertIsInstance(back["a"], Decimal)
+
+
 def _as_float(text):
     """The numeric value of a NUMBER token, or None when it is not a plain number."""
     try:

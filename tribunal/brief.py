@@ -25,11 +25,10 @@ from __future__ import annotations
 
 import copy
 import hashlib
-import json
 import re
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
-from . import facts, loader
+from . import facts, loader, money
 
 # The five evaluation-only keys the contract forbids anywhere in a bundle.
 FORBIDDEN_KEYS = loader.FORBIDDEN_KEYS
@@ -427,7 +426,12 @@ def brief_digest(brief: Dict[str, Any]) -> Tuple[str, str]:
 
     Serialisation is fixed by the contract: UTF-8 JSON with
     ``ensure_ascii=False``, ``sort_keys=True`` and ``separators=(",", ":")``.
+
+    The work is done by ``money.dumps_canonical``, because a brief now carries
+    ``Decimal`` amounts and plain ``json.dumps`` cannot write those. Decimals
+    are emitted as JSON numbers carrying their own literal, so the canonical
+    bytes stay stable and reproducible run to run.
     """
-    canonical = json.dumps(brief, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    canonical = money.dumps_canonical(brief)
     digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
     return canonical, digest

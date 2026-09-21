@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import sys
 import unittest
+from decimal import Decimal
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -49,7 +50,11 @@ class WeightForTests(unittest.TestCase):
             checked += 1
             declared = admissibility["weight_multiplier"]
             derived = prepass.weight_for(admissibility["issues"])
-            if derived == declared:
+            # The declared weight now arrives as a Decimal, because the loader
+            # parses every JSON number written with a decimal point that way.
+            # weight_for computes a float, so compare in Decimal: a float
+            # comparison against Decimal("0.3") is exact and would fail.
+            if Decimal(str(derived)) == declared:
                 matched += 1
             else:
                 mismatches.append(

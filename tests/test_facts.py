@@ -14,6 +14,7 @@ import json
 import sys
 import tokenize
 import unittest
+from decimal import Decimal
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -301,7 +302,7 @@ class DeviationTests(unittest.TestCase):
             self.assertTrue(deviation["available"], "case {0}".format(case_no))
             self.assertEqual(
                 round(deviation["excess_km"]["value"], 2),
-                self.MEASURED_EXCESS_KM[case_no],
+                Decimal(str(self.MEASURED_EXCESS_KM[case_no])),
                 "case {0}".format(case_no),
             )
             self.assertEqual(
@@ -311,12 +312,12 @@ class DeviationTests(unittest.TestCase):
     def test_2_case_106_is_established_but_not_material_and_case_105_is_material(self):
         """49.72 % sits under the material line; 50.44 % is over it."""
         six = self.deviation_of(106)
-        self.assertEqual(round(six["excess_pct"]["value"], 2), 49.72)
+        self.assertEqual(round(six["excess_pct"]["value"], 2), Decimal("49.72"))
         self.assertEqual(six["status"]["value"], facts.ESTABLISHED)
         self.assertNotEqual(six["status"]["value"], facts.MATERIAL)
 
         five = self.deviation_of(105)
-        self.assertEqual(round(five["excess_pct"]["value"], 2), 50.44)
+        self.assertEqual(round(five["excess_pct"]["value"], 2), Decimal("50.44"))
         self.assertEqual(five["status"]["value"], facts.MATERIAL)
 
     def test_3_establishment_needs_both_tests(self):
@@ -325,13 +326,13 @@ class DeviationTests(unittest.TestCase):
         km = self.thresholds["threshold_km"]
 
         two = self.deviation_of(102)
-        self.assertEqual(round(two["excess_pct"]["value"], 2), 6.81)
+        self.assertEqual(round(two["excess_pct"]["value"], 2), Decimal("6.81"))
         self.assertGreater(two["excess_km"]["value"], km)
         self.assertLess(two["excess_pct"]["value"], pct)
         self.assertEqual(two["status"]["value"], facts.NO_DEVIATION)
 
         thirteen = self.deviation_of(113)
-        self.assertEqual(round(thirteen["excess_km"]["value"], 2), 0.78)
+        self.assertEqual(round(thirteen["excess_km"]["value"], 2), Decimal("0.78"))
         self.assertLess(thirteen["excess_km"]["value"], km)
         # 113 does not isolate the absolute test: at 4.02 % it fails the
         # percentage test too. 102 is the case that isolates a single failure.

@@ -14,8 +14,10 @@ rule, and ``fee_schedule`` on ``policy/no_show.json`` carries the no-show ones.
 
 from __future__ import annotations
 
+import hashlib
+import json
 from decimal import Decimal, ROUND_CEILING
-from typing import Any, Tuple
+from typing import Any, Dict, Tuple
 
 # POL-RD-02's rounding rule: "the payable figure is rounded UP to the nearest
 # SGD 0.05". Exposed as a default so the one-argument call works, and as a
@@ -161,3 +163,92 @@ def refund_outcome(
 ) -> str:
     """The ruling value POL-RD-02 produces: NO_ACTION, PARTIAL_REFUND or FULL_REFUND."""
     return _refund_decision(charged_total, recomputed_fare, de_minimis, full_refund_ratio)[1]
+
+
+# --------------------------------------------------------------------------
+# Canonical serialisation
+#
+# Once the loader parses JSON numbers with ``parse_float=Decimal``, a bundle or
+# a brief holds Decimals, and ``json.dumps`` raises ``TypeError`` on them. The
+# fix must not be to convert them back to ``float`` — that would undo the whole
+# point of parsing them as Decimals in the first place, and would silently
+# reintroduce binary rounding.
+#
+# So Decimals are emitted as JSON **numbers**, carrying their own literal.
+# ``json.dumps`` cannot do that through ``default=``, because a value returned
+# from ``default`` is then serialised normally (a ``str`` would be quoted, a
+# ``float`` would round). Each Decimal is therefore swapped for a placeholder
+# token before dumping, and the token — in exactly the escaped form
+# ``json.dumps`` gave it — is replaced by the decimal literal afterwards. Every
+# other type is serialised by ``json.dumps`` itself, so escaping, ordering and
+# separators are unchanged.
+# --------------------------------------------------------------------------
+_TOKEN_PREFIX = "\u0000decimal\u0000"
+
+
+def _decimal_literal(value: Decimal) -> str:
+    """The JSON number literal for a Decimal.
+
+    ``str`` gives the shortest exact literal the value was written with:
+    ``Decimal("8.0")`` becomes ``8.0``, not ``8`` and not ``8.000000000000001``.
+    """
+    if not value.is_finite():
+        raise ValueError("cannot serialise a non-finite Decimal: {0!r}".format(value))
+    return str(value)
+
+
+def _assert_prefix_unused(node: Any, prefix: str) -> None:
+    """Refuse to serialise when real data already contains the token prefix."""
+    if isinstance(node, str):
+        if prefix in node:
+            raise ValueError(
+                "a string value contains the Decimal placeholder prefix {0!r}; "
+                "canonical serialisation would corrupt it".format(prefix)
+            )
+    elif isinstance(node, dict):
+        for key, value in node.items():
+            _assert_prefix_unused(key, prefix)
+            _assert_prefix_unused(value, prefix)
+    elif isinstance(node, (list, tuple)):
+        for value in node:
+            _assert_prefix_unused(value, prefix)
+
+
+def _swap_decimals(node: Any, tokens: Dict[str, str], prefix: str) -> Any:
+    """Return a copy of ``node`` with every Decimal replaced by a token string."""
+    if isinstance(node, Decimal):
+        token = "{0}{1}\u0000".format(prefix, len(tokens))
+        tokens[token] = _decimal_literal(node)
+        return token
+    if isinstance(node, dict):
+        return {key: _swap_decimals(value, tokens, prefix) for key, value in node.items()}
+    if isinstance(node, (list, tuple)):
+        return [_swap_decimals(value, tokens, prefix) for value in node]
+    return node
+
+
+def dumps_canonical(obj: Any) -> str:
+    """Serialise ``obj`` exactly as the contract's Deterministic serialisation section requires.
+
+    The contract fixes the parameters: UTF-8 JSON with ``ensure_ascii=False``,
+    ``sort_keys=True`` and ``separators=(",", ":")``. The same inputs must
+    produce the same bytes across repeated runs.
+
+    Decimals are written as JSON numbers carrying their own literal, so a value
+    that was written ``8.0`` in the corpus is serialised as ``8.0`` — not as
+    ``"8.0"`` and not as a float.
+    """
+    _assert_prefix_unused(obj, _TOKEN_PREFIX)
+
+    tokens: Dict[str, str] = {}
+    prepared = _swap_decimals(obj, tokens, _TOKEN_PREFIX)
+    text = json.dumps(prepared, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+    for token, literal in tokens.items():
+        text = text.replace(json.dumps(token), literal)
+    return text
+
+
+def canonical_sha256(obj: Any) -> str:
+    """The SHA-256 hex digest of ``obj``'s canonical serialisation."""
+    return hashlib.sha256(dumps_canonical(obj).encode("utf-8")).hexdigest()

@@ -27,8 +27,11 @@ from __future__ import annotations
 
 import hashlib
 import json
+from decimal import Decimal
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
+
+from . import money
 
 # --------------------------------------------------------------------------
 # Locations. ``tribunal/loader.py`` sits directly under the project root.
@@ -50,6 +53,11 @@ CATEGORY_POLICY_FILES = {
     "ROUTE_DEVIATION": "route_deviation.json",
     "NO_SHOW_CHARGE": "no_show.json",
 }
+
+# Manifest fields that also appear inside the case file's `dispute` object. The
+# contract requires the manifest entry and the case file to agree on all of
+# them, not only on `case_no`.
+MANIFEST_DISPUTE_FIELDS = ("dispute_id", "trip_id", "category")
 
 # Evaluation-only keys that must never appear anywhere inside a runtime bundle.
 FORBIDDEN_KEYS = (
@@ -93,10 +101,21 @@ class ForbiddenKeyError(LoaderError):
 # Internal helpers
 # --------------------------------------------------------------------------
 def _read_json(path: Path) -> Any:
-    """Read one UTF-8 JSON document, translating I/O problems to LoaderError."""
+    """Read one UTF-8 JSON document, translating I/O problems to LoaderError.
+
+    ``parse_float=Decimal`` fixes the money representation at the parse
+    boundary, where the literal is still available. ``WORKBUDDY-HANDOFF.md``
+    says money uses ``Decimal``; without this hook ``json.load`` would hand back
+    the nearest binary float — ``fare_breakdown.total_charged`` for case 208
+    arrives as the float ``8.0`` — and the literal as written would be lost.
+
+    ``Decimal(str_token)`` is called with the raw token, so ``8.0`` becomes
+    ``Decimal("8.0")`` exactly. Integers are untouched: ``parse_int`` is not
+    overridden, so ``case_no`` stays an ``int``.
+    """
     try:
         with path.open("r", encoding="utf-8") as handle:
-            return json.load(handle)
+            return json.load(handle, parse_float=Decimal)
     except FileNotFoundError as exc:
         raise LoaderError("file not found: {0}".format(path)) from exc
     except json.JSONDecodeError as exc:
@@ -127,11 +146,17 @@ def _manifest_entry(case_no: int) -> Dict[str, Any]:
 
 
 def _case_path(entry: Dict[str, Any], case_no: int) -> Path:
-    """Resolve a manifest ``file`` value to a path under ``data/``.
+    """Resolve a manifest ``file`` value to a real path under ``data/cases/``.
 
     The contract states that ``file`` is relative to ``data/`` and always has
     the form ``cases/case-<case_no>.json`` with the case number zero-padded to
     five digits, so the filename can be checked against the case number.
+
+    The resolved path is constrained to ``data/cases/`` specifically, not
+    merely to ``data/``. A manifest entry must never be able to reach
+    ``data/answers/``, ``data/PUBLIC-CONTRACT.md`` or anything else under
+    ``data/``. ``resolve()`` is applied first, so ``..`` segments and symlinks
+    are followed before the containment test and cannot be used to escape.
     """
     relative = entry.get("file")
     if not isinstance(relative, str) or not relative:
@@ -140,9 +165,12 @@ def _case_path(entry: Dict[str, Any], case_no: int) -> Path:
         )
 
     path = (DATA_DIR / relative).resolve()
-    if not path.is_relative_to(DATA_DIR.resolve()):
+    cases_root = CASES_DIR.resolve()
+    if not path.is_relative_to(cases_root):
         raise ManifestMismatchError(
-            "manifest 'file' for case {0} escapes data/: {1!r}".format(case_no, relative)
+            "manifest 'file' for case {0} resolves outside data/cases/: {1!r}".format(
+                case_no, relative
+            )
         )
 
     expected_stem = "case-{0:05d}".format(case_no)
@@ -179,6 +207,29 @@ def _check_case_shape(case: Any, case_no: int) -> Dict[str, Any]:
     return case
 
 
+def _check_manifest_agreement(
+    entry: Dict[str, Any], case: Dict[str, Any], case_no: int
+) -> None:
+    """Every manifest field that also lives inside the case file must agree.
+
+    ``case_no`` is checked by ``_check_case_shape``. The manifest carries three
+    further fields that also appear inside the case file — ``dispute_id``,
+    ``trip_id`` and ``category`` — and a manifest that has drifted from its
+    case file is exactly the kind of silent corruption the cross-check exists
+    to catch. Any disagreement raises, naming the field, the manifest value and
+    the file value.
+    """
+    dispute = case["dispute"]
+    for field in MANIFEST_DISPUTE_FIELDS:
+        manifest_value = entry.get(field)
+        file_value = dispute.get(field)
+        if manifest_value != file_value:
+            raise ManifestMismatchError(
+                "manifest '{0}' for case {1} is {2!r} but the case file's "
+                "dispute.{0} is {3!r}".format(field, case_no, manifest_value, file_value)
+            )
+
+
 def _assert_no_forbidden_keys(node: Any, where: str = "bundle") -> None:
     """Recursively reject evaluation-only keys anywhere inside ``node``."""
     if isinstance(node, dict):
@@ -198,7 +249,9 @@ def load_case(case_no: int) -> Dict[str, Any]:
     """Load one public case, checking every identity the contract names.
 
     The requested ``case_no``, the manifest entry, the filename and the loaded
-    file's own ``case_no`` must all agree; any disagreement raises.
+    file's own ``case_no`` must all agree, and so must every manifest field that
+    also appears inside the case file — ``dispute_id``, ``trip_id`` and
+    ``category``. Any disagreement raises.
     """
     entry = _manifest_entry(case_no)
     if entry.get("case_no") != case_no:
@@ -210,6 +263,7 @@ def load_case(case_no: int) -> Dict[str, Any]:
 
     path = _case_path(entry, case_no)
     case = _check_case_shape(_read_json(path), case_no)
+    _check_manifest_agreement(entry, case, case_no)
 
     # Artifacts are keyed by evidence_id, never by evidence_type: evidence_type
     # repeats inside a case, evidence_id does not. This also rejects duplicates.
@@ -304,7 +358,12 @@ def bundle_digest(bundle: Dict[str, Any]) -> Tuple[str, str]:
     Serialisation is fixed by the contract: UTF-8 JSON with
     ``ensure_ascii=False``, ``sort_keys=True`` and ``separators=(",", ":")``.
     The hex digest of exactly those bytes is the ``bundle_sha256`` value.
+
+    The work is done by ``money.dumps_canonical``, because a bundle now carries
+    ``Decimal`` amounts and plain ``json.dumps`` cannot write those. Decimals
+    are emitted as JSON numbers carrying their own literal, so the canonical
+    bytes are unchanged from before the Decimal change.
     """
-    canonical = json.dumps(bundle, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    canonical = money.dumps_canonical(bundle)
     digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
     return canonical, digest
