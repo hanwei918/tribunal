@@ -32,6 +32,15 @@ continuing.
   loosening the test to make it pass. If a test encodes a wrong expectation, say so and show the
   value you computed instead.
 
+### Never prove a structural property with a string search
+
+This corpus is mostly natural language. Policy clauses, admissibility notes and party statements
+discuss field names, punctuation and numbers as ordinary text. **Never use a string or substring
+search to prove a structural property. Assert on the parsed structure instead.** Two tests have
+already failed this way: asserting the absence of `": "` tripped on policy prose that contains
+colons, and asserting the absence of `rider_track` tripped on a clause that discusses the field by
+name.
+
 ## Policy values
 
 - **Policy values are read from the loaded policy and never hardcoded in application code.** No
