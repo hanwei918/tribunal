@@ -20,7 +20,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from tribunal import facts, loader  # noqa: E402
+from tribunal import brief, facts, loader  # noqa: E402
 
 FACTS_SOURCE = PROJECT_ROOT / "tribunal" / "facts.py"
 
@@ -258,6 +258,123 @@ class AccuracyFilterTests(unittest.TestCase):
         self.assertLess(shorter["fix_count"], run["fix_count"])
         self.assertGreaterEqual(shorter["fix_count"], 1)
         self.assertEqual(shorter["first_ts"], self.driver[first]["ts"])
+
+
+class DeviationTests(unittest.TestCase):
+    """Item 1: POL-RD-01's excess and status, asserted on the real corpus."""
+
+    MEASURED_EXCESS_KM = {
+        101: 6.18, 102: 1.39, 103: 2.98, 104: 7.07, 105: 18.16,
+        106: 3.58, 107: 3.57, 108: 5.17, 109: 7.36, 110: 2.80,
+        111: 5.98, 112: 4.80, 113: 0.78, 114: 5.97, 115: 5.78,
+    }
+
+    @classmethod
+    def setUpClass(cls):
+        with (PROJECT_ROOT / "data" / "index.json").open("r", encoding="utf-8") as handle:
+            entries = json.load(handle)
+        cls.route = [e["case_no"] for e in entries if e["category"] == "ROUTE_DEVIATION"]
+        cls.no_show = [e["case_no"] for e in entries if e["category"] == "NO_SHOW_CHARGE"]
+        cls.thresholds = brief._deviation_thresholds(policy_file("route_deviation.json"))
+
+    @staticmethod
+    def gps_of(case_no):
+        return next(
+            a for a in brief.build_brief(case_no)["case"]["evidence"]
+            if a["evidence_type"] == "GPS_TRACE"
+        )
+
+    @classmethod
+    def deviation_of(cls, case_no):
+        return cls.gps_of(case_no)["payload"]["derived"]["deviation"]
+
+    @classmethod
+    def derived_of(cls, case_no):
+        """The whole derived block, so an absent deviation block is visible."""
+        return cls.gps_of(case_no)["payload"]["derived"]
+
+    def test_1_excess_matches_the_measured_values(self):
+        """All 15 route-deviation excesses reproduce the measured figures to two decimals."""
+        self.assertEqual(len(self.route), 15)
+        for case_no in sorted(self.route):
+            deviation = self.deviation_of(case_no)
+            self.assertTrue(deviation["available"], "case {0}".format(case_no))
+            self.assertEqual(
+                round(deviation["excess_km"]["value"], 2),
+                self.MEASURED_EXCESS_KM[case_no],
+                "case {0}".format(case_no),
+            )
+            self.assertEqual(
+                deviation["excess_km"]["evidence_id"], "EV-GPS-{0:05d}".format(case_no)
+            )
+
+    def test_2_case_106_is_established_but_not_material_and_case_105_is_material(self):
+        """49.72 % sits under the material line; 50.44 % is over it."""
+        six = self.deviation_of(106)
+        self.assertEqual(round(six["excess_pct"]["value"], 2), 49.72)
+        self.assertEqual(six["status"]["value"], facts.ESTABLISHED)
+        self.assertNotEqual(six["status"]["value"], facts.MATERIAL)
+
+        five = self.deviation_of(105)
+        self.assertEqual(round(five["excess_pct"]["value"], 2), 50.44)
+        self.assertEqual(five["status"]["value"], facts.MATERIAL)
+
+    def test_3_establishment_needs_both_tests(self):
+        """102 clears the km line only, 113 the percentage line only; both are no deviation."""
+        pct = self.thresholds["threshold_pct"]
+        km = self.thresholds["threshold_km"]
+
+        two = self.deviation_of(102)
+        self.assertEqual(round(two["excess_pct"]["value"], 2), 6.81)
+        self.assertGreater(two["excess_km"]["value"], km)
+        self.assertLess(two["excess_pct"]["value"], pct)
+        self.assertEqual(two["status"]["value"], facts.NO_DEVIATION)
+
+        thirteen = self.deviation_of(113)
+        self.assertEqual(round(thirteen["excess_km"]["value"], 2), 0.78)
+        self.assertLess(thirteen["excess_km"]["value"], km)
+        # 113 does not isolate the absolute test: at 4.02 % it fails the
+        # percentage test too. 102 is the case that isolates a single failure.
+        self.assertLess(thirteen["excess_pct"]["value"], pct)
+        self.assertEqual(thirteen["status"]["value"], facts.NO_DEVIATION)
+
+        # One test passing on its own is never enough.
+        material_pct = self.thresholds["material_pct"]
+        material_km = self.thresholds["material_km"]
+        self.assertEqual(
+            facts.deviation_status(0.50, 25.0, pct, km, material_pct, material_km),
+            facts.NO_DEVIATION,
+            "percentage passed but the absolute line failed",
+        )
+        self.assertEqual(
+            facts.deviation_status(1.00, 10.0, pct, km, material_pct, material_km),
+            facts.NO_DEVIATION,
+            "absolute line passed but the percentage failed",
+        )
+
+    def test_7_every_route_brief_has_a_deviation_block_and_no_no_show_brief_does(self):
+        """The block is emitted for ROUTE_DEVIATION only."""
+        for case_no in self.route:
+            self.assertIn("deviation", self.derived_of(case_no), "case {0}".format(case_no))
+
+        for case_no in self.no_show:
+            gps = self.gps_of(case_no)
+            if not isinstance(gps["payload"], dict):
+                # Case 213's GPS artifact is MISSING, so there is no derived
+                # block of any kind to inspect.
+                self.assertIsNone(gps["payload"])
+                continue
+            self.assertNotIn(
+                "deviation", gps["payload"]["derived"], "case {0}".format(case_no)
+            )
+
+    def test_thresholds_come_from_the_loaded_clause(self):
+        """The four lines are read from POL-RD-01's own text, not hardcoded."""
+        self.assertEqual(
+            self.thresholds,
+            {"threshold_pct": 20.0, "threshold_km": 0.8, "material_pct": 50.0, "material_km": 8.0},
+        )
+        self.assertIsNone(brief._deviation_thresholds(policy_file("no_show.json")))
 
 
 if __name__ == "__main__":

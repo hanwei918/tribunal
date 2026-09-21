@@ -26,6 +26,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import re
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from . import facts, loader
@@ -58,6 +59,16 @@ RIDER_BLOCK = "rider_presence"
 ARRIVAL_BLOCK = "arrival"
 DERIVED_KEY = "derived"
 
+# POL-RD-01's excess and status. Emitted for ROUTE_DEVIATION cases only.
+DEVIATION_BLOCK = "deviation"
+ROUTE_DEVIATION_CATEGORY = "ROUTE_DEVIATION"
+POL_RD_01 = "POL-RD-01"
+
+NO_DEVIATION_INPUTS_REASON = (
+    "gps_trace.trace_distance_km and trip_record.optimal_distance_km are both required to "
+    "measure the excess, and at least one of them is absent or not positive here"
+)
+
 NO_PICKUP_REASON = "trip_record.pickup is unavailable, so distances to the pickup point cannot be computed"
 NO_ZONE_REASON = (
     "trip_record.pickup_zone_class is null, so the zone-dependent thresholds cannot be "
@@ -82,6 +93,81 @@ def _sourced(value: Any, evidence_id: str) -> Dict[str, Any]:
 def _threshold(value: Any, policy_id: str, zone_class: Optional[str]) -> Dict[str, Any]:
     """Wrap one policy threshold with the policy it was read from."""
     return {"value": value, "policy_id": policy_id, "zone_class": zone_class}
+
+
+def _clause_threshold(value: Any, policy_id: str, clause_id: str) -> Dict[str, Any]:
+    """Wrap a threshold that comes from a named clause rather than a zone class."""
+    return {"value": value, "policy_id": policy_id, "clause_id": clause_id}
+
+
+def _deviation_thresholds(policy: Dict[str, Any]) -> Optional[Dict[str, float]]:
+    """The four POL-RD-01 lines, read from the loaded clause text.
+
+    POL-RD-01 is the one clause whose numbers the policy carries as **prose**.
+    ``fare_model`` holds the fare constants, but nothing in the policy holds the
+    deviation lines as a field — verified against
+    ``policy/route_deviation.json``. They are therefore read out of the loaded
+    clause's own ``rule`` string, so the values still come from the loaded
+    policy and never from a literal here.
+
+    Returns ``None`` when the policy has no POL-RD-01 clause, which is how a
+    NO_SHOW_CHARGE case is recognised.
+    """
+    for clause in policy.get("clauses", []) or []:
+        if clause.get("id") != POL_RD_01:
+            continue
+        rule = clause.get("rule", "")
+        percents = re.findall(r"greater than\s+(\d+(?:\.\d+)?)\s*%", rule)
+        kilometres = re.findall(r"greater than\s+(\d+(?:\.\d+)?)\s*km", rule)
+        if len(percents) < 2 or len(kilometres) < 2:
+            raise loader.LoaderError(
+                "POL-RD-01's rule does not state both establishment and both "
+                "materiality thresholds: found {0} percentage and {1} km "
+                "lines".format(len(percents), len(kilometres))
+            )
+        return {
+            "threshold_pct": float(percents[0]),
+            "threshold_km": float(kilometres[0]),
+            "material_pct": float(percents[1]),
+            "material_km": float(kilometres[1]),
+        }
+    return None
+
+
+def _deviation_block(
+    gps_payload: Dict[str, Any],
+    gps_evidence_id: str,
+    trip_payload: Optional[Dict[str, Any]],
+    trip_evidence_id: Optional[str],
+    thresholds: Dict[str, float],
+    policy_id: str,
+) -> Dict[str, Any]:
+    """The POL-RD-01 excess and status, every value tagged with its source."""
+    trace_km = gps_payload.get("trace_distance_km")
+    optimal_km = trip_payload.get("optimal_distance_km") if isinstance(trip_payload, dict) else None
+
+    block: Dict[str, Any] = {
+        "trace_distance_km": _sourced(trace_km, gps_evidence_id),
+        "optimal_distance_km": _sourced(optimal_km, trip_evidence_id or ""),
+    }
+
+    if trace_km is None or optimal_km is None or optimal_km <= 0:
+        block["available"] = False
+        block["reason"] = NO_DEVIATION_INPUTS_REASON
+        return block
+
+    excess_km, excess_pct = facts.deviation_excess(trace_km, optimal_km)
+    status = facts.deviation_status(excess_km, excess_pct, **thresholds)
+
+    block["available"] = True
+    block["excess_km"] = _sourced(excess_km, gps_evidence_id)
+    block["excess_pct"] = _sourced(excess_pct, gps_evidence_id)
+    block["status"] = _sourced(status, gps_evidence_id)
+    block["thresholds"] = {
+        name: _clause_threshold(value, policy_id, POL_RD_01)
+        for name, value in sorted(thresholds.items())
+    }
+    return block
 
 
 def _track_block(
@@ -225,6 +311,7 @@ def _transform_gps_payload(
     trip_evidence_id: Optional[str],
     fee_schedule: Dict[str, Any],
     policy_id: str,
+    deviation_thresholds: Optional[Dict[str, float]] = None,
 ) -> Dict[str, Any]:
     """Replace one GPS payload's raw point arrays with derived facts."""
     payload = artifact.get("payload")
@@ -241,13 +328,18 @@ def _transform_gps_payload(
         lat = lng = None
 
     transformed = {field: payload[field] for field in GPS_SUMMARY_FIELDS if field in payload}
-    transformed[DERIVED_KEY] = {
+    derived = {
         DRIVER_BLOCK: _track_block(facts.driver_points(payload), lat, lng, evidence_id),
         RIDER_BLOCK: _rider_block(payload, lat, lng, evidence_id),
         ARRIVAL_BLOCK: _arrival_block(
             payload, evidence_id, trip_payload, trip_evidence_id, fee_schedule, policy_id
         ),
     }
+    if deviation_thresholds:
+        derived[DEVIATION_BLOCK] = _deviation_block(
+            payload, evidence_id, trip_payload, trip_evidence_id, deviation_thresholds, policy_id
+        )
+    transformed[DERIVED_KEY] = derived
 
     new_artifact = dict(artifact)
     new_artifact["payload"] = transformed
@@ -293,6 +385,12 @@ def build_brief(case_no: int, include_clause_notes: bool = True) -> Dict[str, An
     policy_id = category_policy.get("policy_id", "")
     fee_schedule = category_policy.get("fee_schedule") or {}
 
+    # POL-RD-01's excess is a ROUTE_DEVIATION fact, so a NO_SHOW_CHARGE case
+    # gets no deviation block at all.
+    deviation_thresholds = (
+        _deviation_thresholds(category_policy) if category == ROUTE_DEVIATION_CATEGORY else None
+    )
+
     trip_payload = None
     trip_evidence_id = None
     for artifact in case["evidence"]:
@@ -302,7 +400,9 @@ def build_brief(case_no: int, include_clause_notes: bool = True) -> Dict[str, An
             break
 
     evidence = [
-        _transform_gps_payload(artifact, trip_payload, trip_evidence_id, fee_schedule, policy_id)
+        _transform_gps_payload(
+            artifact, trip_payload, trip_evidence_id, fee_schedule, policy_id, deviation_thresholds
+        )
         if artifact["evidence_type"] == GPS_EVIDENCE_TYPE
         else artifact
         for artifact in case["evidence"]

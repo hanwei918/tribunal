@@ -28,6 +28,16 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence
 # Mean Earth radius in metres. A geodetic constant, not a policy threshold.
 EARTH_RADIUS_M = 6371000.0
 
+# The three values ``deviation_status`` can return, named once so callers and
+# tests do not repeat the strings.
+NO_DEVIATION = "no deviation"
+ESTABLISHED = "established"
+MATERIAL = "material"
+
+# Percentage scale for expressing a ratio. Not a policy threshold: POL-RD-01's
+# own 20 % and 50 % lines arrive as parameters.
+PERCENT = 100
+
 
 def haversine_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     """Great-circle distance in metres between two WGS-84 points."""
@@ -178,3 +188,74 @@ def rider_points(gps_payload: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
         return []
     track = gps_payload.get("rider_track")
     return list(track) if isinstance(track, list) else []
+
+
+def deviation_excess(trace_distance_km: float, optimal_distance_km: float):
+    """Return ``(excess_km, excess_pct)`` for POL-RD-01.
+
+    POL-RD-01 states the measurement and the arithmetic:
+
+        "Measure actual_distance_km as the length of the gps_trace polyline
+        between the recorded pickup event and the recorded dropoff event; the
+        governing field is gps_trace.trace_distance_km. ... Measure
+        optimal_distance_km as the platform route estimate stored on the
+        trip_record at booking ... Excess = actual_distance_km -
+        optimal_distance_km."
+
+    The governing measurement is ``gps_trace.trace_distance_km``, which the
+    clause says must be used in preference to the trip record's rounded copy.
+    Neither the excess nor the percentage is rounded here; the clause's own
+    thresholds decide what they mean.
+
+    Raises ``ValueError`` when ``optimal_distance_km`` is absent or not
+    positive, because the percentage test is undefined without it.
+    """
+    if optimal_distance_km is None or optimal_distance_km <= 0:
+        raise ValueError(
+            "optimal_distance_km must be present and positive to express the "
+            "excess as a percentage; got {0!r}".format(optimal_distance_km)
+        )
+
+    excess_km = trace_distance_km - optimal_distance_km
+    excess_pct = (excess_km / optimal_distance_km) * PERCENT
+    return excess_km, excess_pct
+
+
+def deviation_status(
+    excess_km: float,
+    excess_pct: float,
+    threshold_pct: float,
+    threshold_km: float,
+    material_pct: float,
+    material_km: float,
+) -> str:
+    """Classify an excess under POL-RD-01 as one of three values.
+
+    POL-RD-01 states both tests:
+
+        "A route deviation is ESTABLISHED only when the excess is greater than
+        20% of optimal_distance_km AND greater than 0.8 km in absolute terms;
+        both tests must pass. An excess greater than 50% of optimal_distance_km,
+        or greater than 8.0 km absolute, is additionally a MATERIAL deviation
+        and requires the driver_profile check in POL-RD-06."
+
+    Two things the wording fixes:
+
+    * **Establishment requires BOTH tests**, not either. An excess that clears
+      the percentage line but not the absolute line is no deviation at all.
+    * **Both comparisons are strict.** "greater than" excludes equality, so an
+      excess exactly on a line does not clear it. This is what separates case
+      106, at 49.72 % against a 50 % line, from case 105 at 50.44 %.
+
+    All four thresholds are parameters; none is a literal here.
+    """
+    if excess_pct is None:
+        raise ValueError("excess_pct is required to apply the percentage tests")
+
+    established = excess_pct > threshold_pct and excess_km > threshold_km
+    if not established:
+        return NO_DEVIATION
+
+    if excess_pct > material_pct or excess_km > material_km:
+        return MATERIAL
+    return ESTABLISHED
