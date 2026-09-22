@@ -1193,7 +1193,12 @@ def grade_run(
             produced[case_no] = document.get("ruling")
 
     subset = {case_no: resolved_key[case_no] for case_no in covered}
-    return grade.grade(produced, subset)
+    # The whole key travels with the subset so the report knows whether the
+    # rates it prints may be compared to the published target. Grading a partial
+    # run over the cases it actually ran is right; printing that subset's
+    # escalation rate beside the corpus base rate is not, and the report can
+    # only withhold the comparison if it is told which set it is describing.
+    return grade.grade(produced, subset, corpus=resolved_key)
 
 
 # --------------------------------------------------------------------------
@@ -1201,12 +1206,19 @@ def grade_run(
 # --------------------------------------------------------------------------
 @dataclass(frozen=True)
 class ComparisonRow:
-    """One model's numbers, read entirely off disk. No model call is made."""
+    """One model's numbers, read entirely off disk. No model call is made.
+
+    ``grades_full_corpus`` and ``graded_cases`` travel with the row because the
+    table's rates are only comparable to the corpus base rate when the graded
+    set *is* the corpus, and the intersection of two partial runs is usually not.
+    """
 
     model: str
     working_tree_clean: Optional[bool]
     cases_graded: int
     cases_cached: int
+    graded_cases: Tuple[int, ...]
+    grades_full_corpus: bool
     exact_matches: int
     field_correct: Dict[str, int]
     escalation_rate: Optional[Decimal]
@@ -1246,6 +1258,8 @@ def _row_from_run(run_dir: Path, cases: Sequence[int], key: Mapping[int, grade.R
         working_tree_clean=metadata.get("working_tree_clean"),
         cases_graded=report.total,
         cases_cached=len(cached),
+        graded_cases=report.graded_cases,
+        grades_full_corpus=report.grades_full_corpus,
         exact_matches=report.exact_matches,
         field_correct={name: report.field_tally(name)[0] for name in grade.GRADED_FIELDS},
         escalation_rate=calibration.rate,
@@ -1380,13 +1394,25 @@ def render_comparison(rows: Sequence[ComparisonRow]) -> str:
         "Cases graded is the set every run has cached in common; each run's own "
         "cached count may be larger."
     )
-    lines.append(
-        "esc is the escalation rate against the {0} target; over and under are "
-        "separate counts and are never summed. A run confident on an "
-        "INDETERMINATE case is wrong in the way that matters most.".format(
-            grade.render_percent(target)
+    if all(row.grades_full_corpus for row in rows):
+        lines.append(
+            "esc is the escalation rate against the {0} target; over and under are "
+            "separate counts and are never summed. A run confident on an "
+            "INDETERMINATE case is wrong in the way that matters most.".format(
+                grade.render_percent(target)
+            )
         )
-    )
+    else:
+        lines.append(
+            "The set graded here is {0}, which is not the whole corpus, so esc, "
+            "prec and rec are rates on that set and the corpus target is not "
+            "printed beside them: every rate moves with the base rate of the set "
+            "it was computed on, and only the counts survive subsetting. over and "
+            "under are separate counts and are never summed. A run confident on "
+            "an INDETERMINATE case is wrong in the way that matters most.".format(
+                ", ".join(str(case_no) for case_no in rows[0].graded_cases) or "empty"
+            )
+        )
     if confidently_wrong:
         lines.append(
             "INDETERMINATE cases ruled confidently instead of escalated: {0} "
@@ -1514,18 +1540,68 @@ def print_summary(summary: RunSummary) -> None:
         calibration = report.calibration
         print("")
         print(
-            "escalation  {0}/{1} = {2}  (target {3})  precision {4}  recall {5}  "
-            "over {6}  under {7}".format(
-                len(calibration.produced_escalations),
+            "cases graded  {0} of {1} in the corpus — {2}".format(
                 calibration.total,
-                grade.render_percent(calibration.rate),
-                grade.render_percent(calibration.target_rate),
-                grade.render_ratio(calibration.precision),
-                grade.render_ratio(calibration.recall),
-                len(calibration.over_escalations),
-                len(calibration.under_escalations),
+                report.corpus_size,
+                "the whole corpus"
+                if report.grades_full_corpus
+                else "a selected subset: {0}".format(
+                    ", ".join(str(case_no) for case_no in report.graded_cases)
+                ),
             )
         )
+        if report.grades_full_corpus:
+            print(
+                "escalation  {0}/{1} = {2}  (target {3})  precision {4}  recall {5}  "
+                "over {6}  under {7}".format(
+                    len(calibration.produced_escalations),
+                    calibration.total,
+                    grade.render_percent(calibration.rate),
+                    grade.render_percent(calibration.target_rate),
+                    grade.render_ratio(calibration.precision),
+                    grade.render_ratio(calibration.recall),
+                    len(calibration.over_escalations),
+                    len(calibration.under_escalations),
+                )
+            )
+        else:
+            # The rate is printed, labelled with the set it was computed on. The
+            # corpus target is not, because a rate moves with the base rate of
+            # the set it was computed on and the set here was selected, not
+            # sampled -- printing 2/3 = 66.7% beside 17.2% reads as
+            # over-escalation when the subset was chosen to contain escalations.
+            # The counts are what a reader can act on.
+            print(
+                "escalation  {0}/{1} = {2}  (on these {1} cases)  precision {3}  "
+                "recall {4}  over {5}  under {6}".format(
+                    len(calibration.produced_escalations),
+                    calibration.total,
+                    grade.render_percent(calibration.rate),
+                    grade.render_ratio(calibration.precision),
+                    grade.render_ratio(calibration.recall),
+                    len(calibration.over_escalations),
+                    len(calibration.under_escalations),
+                )
+            )
+            print(
+                "  rates on a selected subset are not comparable to the corpus "
+                "base rate, so the corpus target is not printed beside them"
+            )
+            print("  raw counts")
+            for label, case_numbers in (
+                ("true positives", calibration.true_positives),
+                ("false positives", calibration.false_positives),
+                ("false negatives", calibration.false_negatives),
+                ("over-escalations", calibration.over_escalations),
+                ("under-escalations", calibration.under_escalations),
+            ):
+                print(
+                    "    {0:<20} {1:>2}  {2}".format(
+                        label,
+                        len(case_numbers),
+                        ", ".join(str(case_no) for case_no in case_numbers) or "none",
+                    )
+                )
         if calibration.indeterminate_ruled_confidently:
             print(
                 "INDETERMINATE cases ruled confidently: {0}".format(

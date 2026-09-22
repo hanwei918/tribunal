@@ -65,6 +65,8 @@ No case failed. Every graded field of every case agrees with the key.
 - produced: "POL-RD-06(c) driver-conduct review"
 - clause keys, expected: POL-RD-06(c)
 - clause keys, produced: POL-RD-06(c)
+- expected clauses matched: 1 of 1
+- additional clauses offered: _(none)_
 
 ### Case 201 — clause match
 
@@ -72,6 +74,8 @@ No case failed. Every graded field of every case agrees with the key.
 - produced: "POL-NS-05(ii) false-arrival event recorded against the driver"
 - clause keys, expected: POL-NS-05(ii)
 - clause keys, produced: POL-NS-05(ii)
+- expected clauses matched: 1 of 1
+- additional clauses offered: _(none)_
 
 ### Case 207 — clause match
 
@@ -79,12 +83,16 @@ No case failed. Every graded field of every case agrees with the key.
 - produced: "POL-NS-07 escalation packet: instruct the reviewer to refund the rider's SGD 4.00 cancellation fee in full"
 - clause keys, expected: POL-NS-07
 - clause keys, produced: POL-NS-07
+- expected clauses matched: 1 of 1
+- additional clauses offered: _(none)_
 
 ## Escalation calibration
 
 | | |
 |---|---|
 | Cases graded | 29 |
+| Cases graded, by number | 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214 |
+| Whole corpus graded | yes — all 29 cases |
 | Expected escalations | 5 |
 | Produced escalations | 5 |
 | **Escalation rate** | **17.2%** |

@@ -256,12 +256,17 @@ class ReferralMatchingTests(unittest.TestCase):
         self.assertTrue(match.matched)
 
     def test_an_empty_expected_set_requires_an_empty_produced_set(self):
+        # The one direction that stays strict under the recall rule. A referral
+        # sends a case to a human, so manufacturing one where the key expects
+        # none is a defect in the same way that dropping one is.
         self.assertTrue(grade.match_referrals([], []).matched)
         spurious = grade.match_referrals([], [SPURIOUS_REFERRAL])
         self.assertFalse(spurious.matched)
         self.assertEqual(
             spurious.unmatched_produced, (grade.ReferralKey("POL-RD-09", "4"),)
         )
+        self.assertEqual(spurious.expected_matched, 0)
+        self.assertIn("where the key expects none", spurious.detail)
 
     def test_a_missing_referral_fails(self):
         match = grade.match_referrals(["POL-NS-07 escalation packet"], [])
@@ -269,14 +274,81 @@ class ReferralMatchingTests(unittest.TestCase):
         self.assertEqual(
             match.unmatched_expected, (grade.ReferralKey("POL-NS-07", None),)
         )
+        # The two counts the report prints per case: none of the expected
+        # clauses were reached, and nothing was offered beyond them.
+        self.assertEqual(match.expected_matched, 0)
+        self.assertEqual(match.additional_clauses, ())
+        self.assertIn("expected referral not produced", match.detail)
 
-    def test_two_produced_referrals_cannot_satisfy_one_expected_one(self):
+    def test_a_repeated_produced_clause_is_a_repeat_not_an_addition(self):
+        # Every expected clause was reached, so the field passes: the test is
+        # whether the key's clauses were reached, not whether the produced set
+        # is the same size. Until 2026-09-22 this was a failure, which is what
+        # made a correct answer to case 207 score as a MISS.
         match = grade.match_referrals(
             ["POL-RD-06(c) review"],
             ["POL-RD-06(c) review", "POL-RD-06(c) review again"],
         )
-        self.assertFalse(match.matched)
+        self.assertTrue(match.matched)
+        self.assertEqual(match.expected_matched, 1)
+        # One reference is left over after matching ...
         self.assertEqual(len(match.unmatched_produced), 1)
+        # ... but it is the same clause again, not a clause the key omits, so
+        # it is not reported as an addition. Calling it one would tell a reader
+        # the model raised something the key had not.
+        self.assertEqual(match.additional_clauses, ())
+        self.assertEqual(match.additions, "")
+
+    def test_an_expected_clause_reached_with_an_extra_clause_matches(self):
+        match = grade.match_referrals(
+            ["POL-NS-07 escalation packet"],
+            ["POL-NS-07 escalation packet", "POL-NS-09(d) anti-farming review"],
+        )
+        self.assertTrue(match.matched)
+        self.assertEqual(match.expected_matched, 1)
+        self.assertEqual(
+            match.additional_clauses, (grade.ReferralKey("POL-NS-09", "d"),)
+        )
+        # A passing case still has something to say: the addition is named.
+        self.assertIn("additional clause(s) offered", match.additions)
+        self.assertIn("POL-NS-09(d)", match.additions)
+        # ... and a passing case has no failure detail to print.
+        self.assertEqual(match.detail, "")
+
+    def test_the_extra_clause_does_not_make_a_missing_expected_clause_pass(self):
+        # The loosening is one-directional: an addition cannot stand in for a
+        # clause the key asked for and did not get.
+        match = grade.match_referrals(
+            ["POL-NS-07 escalation packet"],
+            ["POL-NS-09(d) anti-farming review"],
+        )
+        self.assertFalse(match.matched)
+        self.assertEqual(match.expected_matched, 0)
+        self.assertIn("expected referral not produced", match.detail)
+        self.assertIn("POL-NS-07", match.detail)
+
+    def test_the_answer_that_was_scored_a_miss_on_case_207_now_matches(self):
+        # The defect, as a regression test. This is what deepseek-flash
+        # returned on case 207 -- the quote elides the middle of the second
+        # sentence, so the clause references shown are the ones to check.
+        # It names POL-NS-07, which the key requires, and POL-NS-09(d), the
+        # fuller legal path the key's own rationale for that case describes.
+        # Exact set equality scored it a MISS on referrals; recall does not.
+        produced = (
+            "Escalation packet (POL-NS-09(d), reached via the POL-NS-07 "
+            "anti-farming check): direct the human reviewer to refund the "
+            "rider's SGD 4.00 cancellation fee in full, per POL-NS-07; ... "
+            "Human review should also examine DRV-01948's trailing-30-day "
+            "no-show termination pattern (7 terminations across 61 completed "
+            "trips, 11.5%)."
+        )
+        key = _key()
+        match = grade.match_referrals(key[207].referrals, [produced])
+        self.assertTrue(match.matched)
+        self.assertEqual(match.expected_matched, 1)
+        self.assertEqual(
+            match.additional_clauses, (grade.ReferralKey("POL-NS-09", "d"),)
+        )
 
     def test_a_referral_naming_no_clause_cannot_be_matched(self):
         match = grade.match_referrals([], ["send this to a human reviewer"])
@@ -292,6 +364,192 @@ class ReferralMatchingTests(unittest.TestCase):
             ["POL-NS-05(ii) please log a false arrival against the driver now"],
         )
         self.assertTrue(match.matched)
+
+
+class ReferralFieldScoringTests(unittest.TestCase):
+    """The recall rule as it reaches the graded field, not just the matcher.
+
+    Four behaviours, each named because each is a way of getting the field
+    wrong: reaching every expected clause and adding one must pass, missing an
+    expected clause must fail, producing one where none is expected must fail,
+    and the answer that was scored a MISS on case 207 must pass.
+    """
+
+    def setUp(self):
+        self.key = _key()
+
+    def _report_with(self, case_no, referrals):
+        """The key graded against itself, with one case's referrals replaced."""
+        produced = grade.key_as_produced(self.key)
+        produced[case_no]["ruling"]["referrals"] = list(referrals)
+        return grade.grade(produced, self.key)
+
+    def _score(self, report, case_no):
+        return next(score for score in report.cases if score.case_no == case_no)
+
+    def test_every_expected_clause_plus_one_extra_is_a_correct_field(self):
+        report = self._report_with(
+            207,
+            [
+                "POL-NS-07 escalation packet: refund the rider's SGD 4.00 "
+                "cancellation fee in full; POL-NS-09(d) is the fuller path"
+            ],
+        )
+        score = self._score(report, 207)
+        self.assertTrue(score.correct_on("referrals"))
+        self.assertEqual(score.failed_fields, ())
+        # An addition is not a defect, so the run is still perfect.
+        self.assertEqual(report.exact_matches, report.total)
+
+    def test_the_extra_clause_is_named_even_though_the_field_passed(self):
+        report = self._report_with(
+            207,
+            [
+                "POL-NS-07 escalation packet: refund the rider's SGD 4.00 "
+                "cancellation fee in full; POL-NS-09(d) is the fuller path"
+            ],
+        )
+        text = grade.render_report(report)
+        self.assertIn("expected clauses matched: 1 of 1", text)
+        self.assertIn("additional clauses offered: POL-NS-09(d)", text)
+
+    def test_a_referral_missing_an_expected_clause_still_fails(self):
+        report = self._report_with(207, ["POL-NS-09(d) anti-farming review"])
+        score = self._score(report, 207)
+        self.assertFalse(score.correct_on("referrals"))
+        self.assertEqual(score.failed_fields, ("referrals",))
+        self.assertIn(
+            "expected referral not produced: POL-NS-07",
+            score.by_field["referrals"].detail,
+        )
+        self.assertEqual(report.exact_matches, report.total - 1)
+
+    def test_a_referral_produced_where_none_is_expected_still_fails(self):
+        report = self._report_with(PERTURBATION_CASE, [SPURIOUS_REFERRAL])
+        score = self._score(report, PERTURBATION_CASE)
+        self.assertFalse(score.correct_on("referrals"))
+        self.assertEqual(score.failed_fields, ("referrals",))
+        self.assertIn("where the key expects none", score.by_field["referrals"].detail)
+        self.assertEqual(report.exact_matches, report.total - 1)
+
+    def test_the_case_207_answer_that_was_scored_a_miss_is_now_correct(self):
+        produced_text = (
+            "Escalation packet (POL-NS-09(d), reached via the POL-NS-07 "
+            "anti-farming check): direct the human reviewer to refund the "
+            "rider's SGD 4.00 cancellation fee in full, per POL-NS-07; ... "
+            "Human review should also examine DRV-01948's trailing-30-day "
+            "no-show termination pattern (7 terminations across 61 completed "
+            "trips, 11.5%)."
+        )
+        report = self._report_with(207, [produced_text])
+        self.assertTrue(self._score(report, 207).correct_on("referrals"))
+        self.assertEqual(report.exact_matches, report.total)
+
+
+class SubsetCalibrationTests(unittest.TestCase):
+    """A rate on a hand-picked subset is not comparable to the corpus base rate.
+
+    Every rate in the calibration block moves with the base rate of whatever set
+    was graded, precision and recall included. Only the raw counts survive
+    subsetting intact, so on a subset the target is withheld and the counts are
+    printed instead. On the whole corpus the block is as it always was.
+    """
+
+    def setUp(self):
+        self.key = _key()
+
+    def _subset_report(self, cases):
+        produced = grade.key_as_produced(self.key)
+        subset = {case_no: self.key[case_no] for case_no in cases}
+        return grade.grade(
+            {case_no: produced[case_no] for case_no in cases},
+            subset,
+            corpus=self.key,
+        )
+
+    def _full_report(self):
+        return grade.grade(grade.key_as_produced(self.key), self.key)
+
+    def test_the_whole_corpus_is_recognised_as_the_whole_corpus(self):
+        report = self._full_report()
+        self.assertTrue(report.grades_full_corpus)
+        self.assertEqual(report.corpus_size, 29)
+        self.assertEqual(report.graded_cases, tuple(sorted(self.key)))
+
+    def test_a_subset_is_not_the_whole_corpus(self):
+        report = self._subset_report((110, 207, 213))
+        self.assertFalse(report.grades_full_corpus)
+        self.assertEqual(report.total, 3)
+        self.assertEqual(report.corpus_size, 29)
+        self.assertEqual(report.graded_cases, (110, 207, 213))
+
+    def test_an_unknown_corpus_never_reads_as_the_whole_corpus(self):
+        # A comparability claim that cannot be established must not read as
+        # established -- the same rule the runner applies to a working tree it
+        # could not read.
+        report = grade.GradeReport((), grade.calibrate(()))
+        self.assertEqual(report.corpus_cases, ())
+        self.assertFalse(report.grades_full_corpus)
+
+    @staticmethod
+    def _calibration_section(text):
+        """The escalation block alone, so a check cannot hit unrelated prose.
+
+        The closing "How this was checked" paragraph mentions the self-test's
+        own 17.2% rate, which is a fact about the test suite rather than a
+        target printed beside a run's rate. Slicing the block keeps that
+        paragraph out of the assertion.
+        """
+        start = text.index("## Escalation calibration")
+        end = text.index("## How this was checked")
+        return text[start:end]
+
+    def test_a_full_grading_prints_the_target_and_a_subset_does_not(self):
+        full = self._calibration_section(grade.render_report(self._full_report()))
+        self.assertIn("| Target | 17.2% |", full)
+        self.assertNotIn("not comparable to the corpus base rate", full)
+
+        subset = self._calibration_section(
+            grade.render_report(self._subset_report((110, 207, 213)))
+        )
+        self.assertNotIn("17.2%", subset)
+        self.assertNotIn("| Target |", subset)
+        self.assertIn("not comparable to the corpus base rate", subset)
+
+    def test_a_subset_states_which_cases_were_graded(self):
+        text = grade.render_report(self._subset_report((110, 207, 213)))
+        self.assertIn("Cases graded, by number | 110, 207, 213", text)
+        self.assertIn("Whole corpus graded | no — 3 of 29 cases", text)
+
+    def test_a_subset_prints_the_raw_counts_with_the_cases_behind_them(self):
+        text = grade.render_report(self._subset_report((110, 207, 213)))
+        for label in (
+            "True positives (key and run both ESCALATE)",
+            "False positives (run ESCALATE, key does not)",
+            "False negatives (key ESCALATE, run does not)",
+            "Over-escalations (= false positives)",
+            "Under-escalations (= false negatives)",
+        ):
+            with self.subTest(label=label):
+                self.assertIn(label, text)
+        self.assertIn(
+            "| True positives (key and run both ESCALATE) | 3 | 110, 207, 213 |", text
+        )
+
+    def test_a_subset_labels_its_rates_as_computed_on_that_subset(self):
+        text = grade.render_report(self._subset_report((110, 207, 213)))
+        self.assertIn("**Escalation rate (on these 3 cases)**", text)
+        self.assertIn("Precision on ESCALATE (on these 3 cases)", text)
+        self.assertIn("Recall on ESCALATE (on these 3 cases)", text)
+
+    def test_the_full_corpus_block_keeps_the_target_comparison(self):
+        text = grade.render_report(self._full_report())
+        self.assertIn("| **Escalation rate** | **17.2%** |", text)
+        self.assertIn("| Off target | no |", text)
+        self.assertIn("Precision on ESCALATE |", text)
+        self.assertIn("Whole corpus graded | yes — all 29 cases |", text)
+        self.assertNotIn("(on these", text)
+        self.assertNotIn("Raw counts", text)
 
 
 class KeySelfTestTests(unittest.TestCase):

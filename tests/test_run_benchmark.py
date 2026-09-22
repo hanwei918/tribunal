@@ -1809,6 +1809,38 @@ class CompareTests(unittest.TestCase):
             self.assertEqual(0, row.over_escalations)
             self.assertEqual(0, row.under_escalations)
 
+    def test_the_escalation_block_knows_its_set_is_not_the_whole_corpus(self):
+        # The intersection of two partial runs is a selected set, so its rates
+        # may not be compared to the corpus base rate and the target is not
+        # printed beside them. Only the counts survive subsetting.
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = self._two_runs(tmp)
+            row = runner.collect_comparison(runs)[0]
+
+            self.assertFalse(row.grades_full_corpus)
+            self.assertEqual(WIDER_SET, row.graded_cases)
+
+            table = runner.render_comparison([row])
+            self.assertIn("not the whole corpus", table)
+            self.assertIn("101, 105, 110, 207", table)
+            self.assertIn("never summed", table)
+            self.assertNotIn("17.2%", table)
+            self.assertNotIn("target;", table)
+
+    def test_a_full_corpus_comparison_prints_the_target(self):
+        key = answer_key()
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            bench(tmp, cases=sorted(key), runs_dir=runs)
+            rows = runner.collect_comparison(runs)
+
+            self.assertTrue(rows[0].grades_full_corpus)
+            self.assertEqual(tuple(sorted(key)), rows[0].graded_cases)
+
+            table = runner.render_comparison(rows)
+            self.assertIn("against the 17.2% target", table)
+            self.assertNotIn("not the whole corpus", table)
+
     def test_over_and_under_escalation_are_never_summed_into_one_number(self):
         table = runner.render_comparison([])
         self.assertIn("No cached runs found", table)
@@ -2027,6 +2059,47 @@ class SummaryOutputTests(unittest.TestCase):
             self.assertIn("precision", text)
             self.assertIn("recall", text)
             self.assertIn(runner.REPORT_FILE, text)
+
+    def test_a_subset_summary_does_not_print_the_corpus_target(self):
+        # The defect, as a regression test: a run over a hand-picked set used to
+        # print "escalation  2/3 = 66.7%  (target 17.2%)", comparing the
+        # subset's rate to the whole corpus's base rate and inviting the
+        # conclusion that the system over-escalates when the set was selected
+        # to contain escalations.
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, _ = bench(tmp, cases=WIDER_SET)
+            text = self._printed(summary)
+
+            self.assertFalse(summary.report.grades_full_corpus)
+            self.assertIn("a selected subset", text)
+            self.assertIn(", ".join(str(case_no) for case_no in WIDER_SET), text)
+            self.assertIn("not comparable to the corpus base rate", text)
+            # The target is not printed beside the rate, in either form.
+            self.assertNotIn("(target", text)
+            self.assertNotIn(
+                grade.render_percent(summary.report.calibration.target_rate), text
+            )
+            # The counts are, because they are what survives subsetting.
+            for label in (
+                "true positives",
+                "false positives",
+                "false negatives",
+                "over-escalations",
+                "under-escalations",
+            ):
+                with self.subTest(label=label):
+                    self.assertIn(label, text)
+
+    def test_a_full_corpus_summary_prints_the_target(self):
+        key = answer_key()
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, _ = bench(tmp, cases=sorted(key))
+            text = self._printed(summary)
+
+            self.assertTrue(summary.report.grades_full_corpus)
+            self.assertIn("the whole corpus", text)
+            self.assertIn("(target 17.2%)", text)
+            self.assertNotIn("not comparable to the corpus base rate", text)
 
     def test_a_budget_stop_is_visible_in_the_summary(self):
         with tempfile.TemporaryDirectory() as tmp:

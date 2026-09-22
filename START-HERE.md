@@ -53,6 +53,25 @@ really is wrong, the correction is a separate commit that changes only the
 key, states the evidence in its message, and is made before the run it would
 affect — never after.
 
+### A verdict is not evidence
+
+A verdict is not evidence. When a run reports a failure, read what the model actually returned and
+what the answer key actually says before believing the label. Three defects in one day were invisible
+in the verdict and obvious one level down. The same applies to a number that looks bad: check what set
+it was computed on before drawing a conclusion from it.
+
+All three were ours rather than the model's, and each was visible in exactly one place:
+
+- the `json_object` contradiction that made the advocate contract impossible to satisfy — visible in
+  the raw `response_text`, where 27 fully cited claims had been discarded for their wrapper alone;
+- the referral rule that scored a correct answer to case 207 as a MISS — visible in the key's own
+  rationale for that case, which names the clause the model was penalised for adding;
+- the escalation rate printed beside a corpus target it could not be compared to — visible in the size
+  of the graded set, which the report never stated.
+
+See `docs/notes/2026-09-22-advocate-output-contract.md` and
+`docs/notes/2026-09-22-evaluation-layer-two-defects.md`.
+
 ## Policy values
 
 - **Policy values are read from the loaded policy and never hardcoded in application code.** No

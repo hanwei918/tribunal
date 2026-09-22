@@ -25,6 +25,24 @@ stores 4.8, for which ``Decimal("4.8") == 4.8`` is already ``False`` in Python:
 the naive comparison is wrong on the key itself. ``null`` and ``0`` are
 different answers and never compare equal.
 
+Two rules about what a number means, added 2026-09-22 after both were found to
+mislead on real results.
+
+**Referrals are graded by recall, not by set equality.** Every clause the key
+names must appear on the produced side; clause references offered beyond those
+are reported, not failed. Exact equality scored a correct answer to case 207 as
+a failure, because the model named POL-NS-07 as the key requires *and*
+POL-NS-09(d), which the key's own rationale for that case names. ``ruling``,
+``amount_sgd`` and ``driver_compensation_sgd`` keep exact comparison: they are
+single values rather than sets, and nothing relaxes them.
+
+**A rate is not printed beside the corpus target unless the whole corpus was
+graded.** Every rate in the calibration block -- precision and recall included --
+moves with the base rate of whatever set was graded, so a hand-picked subset's
+rate cannot be compared to the corpus base rate. On a subset the report prints
+the raw counts, labels its rates as computed on that subset, and withholds the
+target. On the whole corpus the block is as it always was.
+
 The five ruling values are read from POL-GEN-03's own ``licenses`` list rather
 than written here, the way ``facts.py`` and ``money.py`` take every threshold
 from the loaded policy. ``tribunal/`` is imported; nothing under ``tribunal/``
@@ -261,6 +279,24 @@ def render_money(value: Any) -> str:
 # included where the expected referral states one. Whether the substance
 # matches is a judgement for a person, which is why the report prints both
 # texts side by side next to the automatic signal.
+#
+# The clause test is RECALL against the expected clauses, not set equality.
+# It was set equality until 2026-09-22, when it scored a correct answer as a
+# failure: deepseek-flash on case 207 named POL-NS-07, which the key requires,
+# and also named POL-NS-09(d) -- the fuller legal path the key's own rationale
+# for that case describes ("Compensation is withheld and the case escalates
+# under POL-NS-09(d)"). Exact set equality called that extra clause spurious.
+# A model that reaches the expected clause and adds another is answering a
+# question about the case, not failing the grader, so the addition is reported
+# and a person judges it.
+#
+# The loosening is one-directional. A referral invented where the key expects
+# none is still a failure: a referral sends a case to a human, so manufacturing
+# one is a defect in the same way that dropping one is.
+#
+# ``ruling``, ``amount_sgd`` and ``driver_compensation_sgd`` keep exact
+# comparison and are untouched by any of this. They are single values rather
+# than sets, and nothing here relaxes them.
 # --------------------------------------------------------------------------
 _CLAUSE_RE = re.compile(r"POL-[A-Z]{2,4}-[0-9]{2}")
 
@@ -350,7 +386,14 @@ def key_matches(expected: ReferralKey, produced: ReferralKey) -> bool:
 
 @dataclass(frozen=True)
 class ReferralMatch:
-    """The outcome of comparing two referral lists by clause reference."""
+    """The outcome of comparing two referral lists by clause reference.
+
+    ``unmatched_produced`` holds the clause references the produced side offered
+    beyond the expected ones. Under the recall rule they are **additional**, not
+    spurious: they are reported so a person can judge them, and they do not by
+    themselves make the field fail. ``expected_matched`` and
+    ``additional_clauses`` are the two counts the report prints per case.
+    """
 
     matched: bool
     expected_keys: Tuple[ReferralKey, ...]
@@ -359,36 +402,90 @@ class ReferralMatch:
     unmatched_produced: Tuple[ReferralKey, ...]
     keyless_expected: Tuple[str, ...]
     keyless_produced: Tuple[str, ...]
+    # True when the key expects no referral at all. This is the one case in
+    # which anything produced is a defect rather than an addition, so it is
+    # carried on the result rather than re-derived by every reader.
+    expected_side_empty: bool = False
+
+    @property
+    def expected_matched(self) -> int:
+        """How many of the expected clause references the produced side reached."""
+        return len(self.expected_keys) - len(self.unmatched_expected)
+
+    @property
+    def additional_clauses(self) -> Tuple[ReferralKey, ...]:
+        """Clauses offered that the key does not name at all.
+
+        Not the same thing as the references left over after matching. A model
+        that names an expected clause twice -- deepseek-flash did exactly that
+        on case 207 -- leaves a leftover that is not an addition: it is the same
+        clause again. Reporting it as one would tell a reader the model raised
+        something the key had not, which is precisely the distinction the report
+        exists to make.
+        """
+        seen: Dict[str, ReferralKey] = {}
+        for produced in self.unmatched_produced:
+            if any(key_matches(expected, produced) for expected in self.expected_keys):
+                continue
+            seen.setdefault(produced.render(), produced)
+        return tuple(seen[key] for key in sorted(seen))
+
+    @property
+    def additions(self) -> str:
+        """The additions, rendered whether or not the field passed.
+
+        A passing case still has something to say here, which is the whole
+        point of the recall rule: the reader is told what was offered beyond
+        the key so they can decide whether it was noise or a better account.
+        """
+        parts: List[str] = []
+        if self.additional_clauses:
+            parts.append(
+                "additional clause(s) offered: {0}".format(
+                    ", ".join(key.render() for key in self.additional_clauses)
+                )
+            )
+        if self.keyless_produced and not self.expected_side_empty:
+            parts.append(
+                "referral names no clause reference, so no clause of it was "
+                "checked: {0}".format("; ".join(self.keyless_produced))
+            )
+        return "; ".join(parts)
 
     @property
     def detail(self) -> str:
-        """Why the lists do not agree, in the terms a reader needs."""
+        """Why the field failed, in the terms a reader needs."""
         if self.matched:
             return ""
         parts: List[str] = []
+
+        if self.expected_side_empty:
+            offered = sorted(key.render() for key in self.produced_keys)
+            if offered:
+                parts.append(
+                    "a referral was produced where the key expects none: {0}".format(
+                        ", ".join(offered)
+                    )
+                )
+            if self.keyless_produced:
+                parts.append(
+                    "a referral was produced where the key expects none, and it "
+                    "names no clause reference: {0}".format(
+                        "; ".join(self.keyless_produced)
+                    )
+                )
+            return "; ".join(parts)
+
         if self.unmatched_expected:
             parts.append(
                 "expected referral not produced: {0}".format(
                     ", ".join(sorted(key.render() for key in self.unmatched_expected))
                 )
             )
-        if self.unmatched_produced:
-            parts.append(
-                "spurious referral: {0}".format(
-                    ", ".join(sorted(key.render() for key in self.unmatched_produced))
-                )
-            )
         if self.keyless_expected:
             parts.append(
-                "expected referral names no clause: {0}".format(
-                    "; ".join(self.keyless_expected)
-                )
-            )
-        if self.keyless_produced:
-            parts.append(
-                "referral names no clause reference, so it cannot be matched: {0}".format(
-                    "; ".join(self.keyless_produced)
-                )
+                "the key's own referral names no clause, so no clause reference "
+                "can be matched against it: {0}".format("; ".join(self.keyless_expected))
             )
         return "; ".join(parts)
 
@@ -396,10 +493,17 @@ class ReferralMatch:
 def match_referrals(expected_referrals: Any, produced_referrals: Any) -> ReferralMatch:
     """Compare two referral lists by the clause references they carry.
 
-    Each expected clause reference must be met by a distinct produced one, and
-    every produced clause reference must be justified by an expected one. An
-    empty expected set therefore requires an empty produced set: a spurious
-    referral is a failure in the same way a missing one is.
+    The test is **recall against the expected clauses**: every clause reference
+    the key names must appear on the produced side, each met by a distinct
+    produced reference. Clause references offered beyond those are recorded as
+    additions and do not fail the field.
+
+    The one direction that stays strict is the empty one. Where the key expects
+    no referral at all, anything produced is an invented referral and fails.
+
+    A key whose own referral names no clause cannot be confirmed automatically,
+    so it does not pass silently. It is a limitation of the grader and is
+    reported as one rather than charged to the model.
     """
     expected_keys = referral_keys_of(expected_referrals)
     produced_keys = referral_keys_of(produced_referrals)
@@ -417,7 +521,18 @@ def match_referrals(expected_referrals: Any, produced_referrals: Any) -> Referra
     keyless_expected = referral_strings_without_a_clause(expected_referrals)
     keyless_produced = referral_strings_without_a_clause(produced_referrals)
 
-    matched = not (unmatched_expected or remaining or keyless_expected or keyless_produced)
+    expected_side_empty = not expected_keys and not keyless_expected
+    produced_side_empty = not produced_keys and not keyless_produced
+
+    if expected_side_empty:
+        # Nothing was expected, so anything at all is invented.
+        matched = produced_side_empty
+    elif keyless_expected:
+        # The key expects a referral but states no clause to check it against.
+        matched = False
+    else:
+        matched = not unmatched_expected
+
     return ReferralMatch(
         matched=matched,
         expected_keys=expected_keys,
@@ -426,6 +541,7 @@ def match_referrals(expected_referrals: Any, produced_referrals: Any) -> Referra
         unmatched_produced=tuple(remaining),
         keyless_expected=keyless_expected,
         keyless_produced=keyless_produced,
+        expected_side_empty=expected_side_empty,
     )
 
 
@@ -887,15 +1003,43 @@ def load_answer_key(path: Path = ANSWER_KEY_PATH) -> Dict[int, Ruling]:
 # --------------------------------------------------------------------------
 @dataclass(frozen=True)
 class GradeReport:
-    """Everything a reader needs to see which field a model actually fails on."""
+    """Everything a reader needs to see which field a model actually fails on.
+
+    ``corpus_cases`` is the whole answer key's case set, which is not the same
+    as the graded set whenever a caller grades a subset. It is carried so the
+    report can say whether the numbers it prints may be compared to the corpus
+    base rate, rather than printing the comparison and hoping.
+    """
 
     cases: Tuple[CaseScore, ...]
     calibration: Calibration
     unexpected_cases: Tuple[int, ...] = ()
+    corpus_cases: Tuple[int, ...] = ()
 
     @property
     def total(self) -> int:
         return len(self.cases)
+
+    @property
+    def graded_cases(self) -> Tuple[int, ...]:
+        """The case numbers actually graded, in the order they were scored."""
+        return tuple(score.case_no for score in self.cases)
+
+    @property
+    def corpus_size(self) -> int:
+        return len(self.corpus_cases)
+
+    @property
+    def grades_full_corpus(self) -> bool:
+        """Whether the graded set is the whole key.
+
+        ``False`` when the corpus is unknown, because a comparability claim that
+        cannot be established must never read as established -- the same rule
+        the runner applies to a working tree it could not read.
+        """
+        if not self.corpus_cases:
+            return False
+        return set(self.graded_cases) == set(self.corpus_cases)
 
     @property
     def unproduced(self) -> Tuple[int, ...]:
@@ -939,15 +1083,26 @@ class GradeReport:
 
 
 def grade(
-    produced: Mapping[int, Any], key: Optional[Mapping[int, Ruling]] = None
+    produced: Mapping[int, Any],
+    key: Optional[Mapping[int, Ruling]] = None,
+    corpus: Optional[Mapping[int, Ruling]] = None,
 ) -> GradeReport:
     """Grade a produced-ruling mapping against the key.
 
     ``produced`` maps a case number to the judge's result object, the bare
     POL-GEN-03 ruling object, or ``None`` where no ruling was produced. Cases
     the key does not carry are reported as unexpected rather than scored.
+
+    ``key`` may be a subset of the answer key, which is what grading a partial
+    run wants: a run that answered three cases should report an accuracy over
+    three rather than over twenty-nine of which it answered three. When it is a
+    subset, ``corpus`` must be the whole key, so the report can tell a reader
+    that the rates it prints were computed on a selected set and are not
+    comparable to the corpus base rate. Omitting ``corpus`` says the graded set
+    *is* the key, which is true for every caller that loads the key itself.
     """
     resolved_key = load_answer_key() if key is None else dict(key)
+    resolved_corpus = resolved_key if corpus is None else dict(corpus)
 
     cases: List[CaseScore] = []
     for case_no in sorted(resolved_key):
@@ -956,7 +1111,12 @@ def grade(
         cases.append(score_case(case_no, resolved_key[case_no], ruling))
 
     unexpected = tuple(sorted(set(produced) - set(resolved_key)))
-    return GradeReport(tuple(cases), calibrate(cases), unexpected)
+    return GradeReport(
+        tuple(cases),
+        calibrate(cases),
+        unexpected,
+        corpus_cases=tuple(sorted(resolved_corpus)),
+    )
 
 
 def _render_referral_list(referrals: Sequence[Any]) -> str:
@@ -1017,6 +1177,12 @@ def _render_referrals(report: GradeReport) -> List[str]:
 
     The clause match is the automatic part. Whether the substance matches is a
     judgement a person makes, and they cannot make it from a boolean.
+
+    Two counts are printed per case, because the recall rule turns on both: how
+    many of the expected clauses were reached, and how many clauses were offered
+    beyond them. A case that reached every expected clause and added one is a
+    pass with something to look at, which is exactly the case the old set
+    equality scored as a failure.
     """
     lines: List[str] = []
     cases = report.referral_cases
@@ -1042,91 +1208,220 @@ def _render_referrals(report: GradeReport) -> List[str]:
                 ", ".join(sorted(key.render() for key in match.produced_keys)) or "_(none)_"
             )
         )
+        lines.append(
+            "- expected clauses matched: {0} of {1}".format(
+                match.expected_matched, len(match.expected_keys)
+            )
+        )
+        lines.append(
+            "- additional clauses offered: {0}".format(
+                ", ".join(sorted(key.render() for key in match.additional_clauses))
+                or "_(none)_"
+            )
+        )
+        if match.additions:
+            lines.append("- {0}".format(match.additions))
         if not match.matched:
             lines.append("- {0}".format(match.detail))
         lines.append("")
     return lines
 
 
+def _plural(count: int, noun: str) -> str:
+    """``1 case`` / ``2 cases``, so a count of one does not read as a typo.
+
+    The full corpus always has four INDETERMINATE escalations, so this never
+    showed there; a subset can have one, and "1 cases" reads like a bug.
+    """
+    return "{0} {1}".format(count, noun if count == 1 else noun + "s")
+
+
+def _render_raw_counts(calibration: Calibration) -> List[str]:
+    """The counts a selected subset can be judged on, with the cases behind each.
+
+    Printed only when the graded set is not the whole corpus. Rates move with
+    the base rate of the set they are computed on; counts do not, so these are
+    the figures that survive subsetting intact.
+    """
+    rows = [
+        (
+            "True positives (key and run both ESCALATE)",
+            calibration.true_positives,
+        ),
+        (
+            "False positives (run ESCALATE, key does not)",
+            calibration.false_positives,
+        ),
+        (
+            "False negatives (key ESCALATE, run does not)",
+            calibration.false_negatives,
+        ),
+        ("Over-escalations (= false positives)", calibration.over_escalations),
+        ("Under-escalations (= false negatives)", calibration.under_escalations),
+        ("Expected escalations in this set", calibration.expected_escalations),
+        ("Produced escalations in this set", calibration.produced_escalations),
+    ]
+
+    lines = [
+        "### Raw counts — these are what survive subsetting",
+        "",
+        "Rates move with the base rate of the set they were computed on, "
+        "precision and recall included. On a selected subset they are not "
+        "comparable to the corpus base rate. The counts below do not move.",
+        "",
+        "| | count | cases |",
+        "|---|---|---|",
+    ]
+    for label, case_numbers in rows:
+        lines.append(
+            "| {0} | {1} | {2} |".format(
+                label,
+                len(case_numbers),
+                ", ".join(str(case_no) for case_no in case_numbers) or "_none_",
+            )
+        )
+    lines.append("")
+    lines.append(
+        "Rates on a selected subset are not comparable to the corpus base rate, "
+        "so the corpus target is deliberately not printed beside them."
+    )
+    lines.append("")
+    return lines
+
+
 def _render_calibration(report: GradeReport) -> List[str]:
-    """The escalation block, with over- and under-escalation counted separately."""
+    """The escalation block, with over- and under-escalation counted separately.
+
+    The block knows what set it is describing. On the whole corpus the rates may
+    be compared to the published target, so the target is printed beside them as
+    it always was. On a selected subset they may not: every rate here --
+    precision and recall included -- moves with the base rate of whatever set
+    was graded, and only the raw counts survive subsetting intact. Printing a
+    hand-picked subset's 66.7% beside the corpus's 17.2% invites the conclusion
+    that the system over-escalates, when the subset was selected to contain
+    escalations. So on a subset the target is withheld, the counts are printed,
+    and the reader is told in one line why.
+    """
     calibration = report.calibration
+    full = report.grades_full_corpus
+    on_these = "" if full else " (on these {0} cases)".format(calibration.total)
+
     lines = [
         "| | |",
         "|---|---|",
         "| Cases graded | {0} |".format(calibration.total),
+        "| Cases graded, by number | {0} |".format(
+            ", ".join(str(case_no) for case_no in report.graded_cases) or "_none_"
+        ),
+        "| Whole corpus graded | {0} |".format(
+            "yes — all {0} cases".format(report.corpus_size)
+            if full
+            else "no — {0} of {1} cases".format(calibration.total, report.corpus_size)
+        ),
         "| Expected escalations | {0} |".format(len(calibration.expected_escalations)),
         "| Produced escalations | {0} |".format(len(calibration.produced_escalations)),
-        "| **Escalation rate** | **{0}** |".format(render_percent(calibration.rate)),
-        "| Target | {0} |".format(render_percent(calibration.target_rate)),
-        "| Off target | {0} |".format("yes" if calibration.rate_off_target else "no"),
-        "| Precision on ESCALATE | {0} |".format(
-            "{0} of {1} = {2}".format(
-                len(calibration.true_positives),
-                len(calibration.true_positives) + len(calibration.false_positives),
-                render_ratio(calibration.precision),
-            )
-        ),
-        "| Recall on ESCALATE | {0} |".format(
-            "{0} of {1} = {2}".format(
-                len(calibration.true_positives),
-                len(calibration.true_positives) + len(calibration.false_negatives),
-                render_ratio(calibration.recall),
-            )
-        ),
-        "",
-        "### Over-escalation and under-escalation, counted separately",
-        "",
-        "These are different failures and are never summed into one figure. "
-        "Over-escalation is a case the run sent to a human that did not need one; "
-        "under-escalation is a case it decided that a human should have decided.",
-        "",
-        "| | count | cases |",
-        "|---|---|---|",
-        "| Over-escalations (produced ESCALATE, key does not) | {0} | {1} |".format(
-            len(calibration.over_escalations),
-            ", ".join(str(case_no) for case_no in calibration.over_escalations) or "_none_",
-        ),
-        "| Under-escalations (key ESCALATE, produced does not) | {0} | {1} |".format(
-            len(calibration.under_escalations),
-            ", ".join(str(case_no) for case_no in calibration.under_escalations) or "_none_",
-        ),
-        "",
-        "### The INDETERMINATE cases, kept out of the rate",
-        "",
-        "The key escalates {0} cases whose record genuinely does not settle the "
-        "question, and {1} case on substantive grounds. A run that answers an "
-        "INDETERMINATE case instead of escalating it has not been decisive; it "
-        "has invented an answer, and that is the failure that matters most. It "
-        "is counted here rather than averaged into the escalation rate.".format(
-            len(calibration.indeterminate_expected),
-            len(calibration.substantive_expected),
-        ),
-        "",
-        "| | |",
-        "|---|---|",
-        "| INDETERMINATE cases the key escalates | {0} |".format(
-            ", ".join(str(case_no) for case_no in calibration.indeterminate_expected)
-            or "_none_"
-        ),
-        "| ... the run escalated | {0} of {1} |".format(
-            len(calibration.indeterminate_escalated),
-            len(calibration.indeterminate_expected),
-        ),
-        "| **... the run ruled confidently instead** | **{0} of {1}** |".format(
-            len(calibration.indeterminate_ruled_confidently),
-            len(calibration.indeterminate_expected),
-        ),
-        "| Substantive escalations the key makes | {0} |".format(
-            ", ".join(str(case_no) for case_no in calibration.substantive_expected)
-            or "_none_"
-        ),
-        "| ... the run escalated | {0} of {1} |".format(
-            len(calibration.substantive_escalated),
-            len(calibration.substantive_expected),
-        ),
-        "",
     ]
+
+    if full:
+        lines.extend(
+            [
+                "| **Escalation rate** | **{0}** |".format(
+                    render_percent(calibration.rate)
+                ),
+                "| Target | {0} |".format(render_percent(calibration.target_rate)),
+                "| Off target | {0} |".format(
+                    "yes" if calibration.rate_off_target else "no"
+                ),
+            ]
+        )
+    else:
+        lines.append(
+            "| **Escalation rate{0}** | **{1}** |".format(
+                on_these, render_percent(calibration.rate)
+            )
+        )
+
+    lines.extend(
+        [
+            "| Precision on ESCALATE{0} | {1} |".format(
+                on_these,
+                "{0} of {1} = {2}".format(
+                    len(calibration.true_positives),
+                    len(calibration.true_positives) + len(calibration.false_positives),
+                    render_ratio(calibration.precision),
+                ),
+            ),
+            "| Recall on ESCALATE{0} | {1} |".format(
+                on_these,
+                "{0} of {1} = {2}".format(
+                    len(calibration.true_positives),
+                    len(calibration.true_positives) + len(calibration.false_negatives),
+                    render_ratio(calibration.recall),
+                ),
+            ),
+            "",
+        ]
+    )
+
+    if not full:
+        lines.extend(_render_raw_counts(calibration))
+
+    lines.extend(
+        [
+            "### Over-escalation and under-escalation, counted separately",
+            "",
+            "These are different failures and are never summed into one figure. "
+            "Over-escalation is a case the run sent to a human that did not need one; "
+            "under-escalation is a case it decided that a human should have decided.",
+            "",
+            "| | count | cases |",
+            "|---|---|---|",
+            "| Over-escalations (produced ESCALATE, key does not) | {0} | {1} |".format(
+                len(calibration.over_escalations),
+                ", ".join(str(case_no) for case_no in calibration.over_escalations) or "_none_",
+            ),
+            "| Under-escalations (key ESCALATE, produced does not) | {0} | {1} |".format(
+                len(calibration.under_escalations),
+                ", ".join(str(case_no) for case_no in calibration.under_escalations) or "_none_",
+            ),
+            "",
+            "### The INDETERMINATE cases, kept out of the rate",
+            "",
+            "{0} {1} whose record genuinely does not settle the "
+            "question, and {2} on substantive grounds. A run that answers an "
+            "INDETERMINATE case instead of escalating it has not been decisive; it "
+            "has invented an answer, and that is the failure that matters most. It "
+            "is counted here rather than averaged into the escalation rate.".format(
+                "The key escalates" if full else "In this set the key escalates",
+                _plural(len(calibration.indeterminate_expected), "case"),
+                _plural(len(calibration.substantive_expected), "case"),
+            ),
+            "",
+            "| | |",
+            "|---|---|",
+            "| INDETERMINATE cases the key escalates | {0} |".format(
+                ", ".join(str(case_no) for case_no in calibration.indeterminate_expected)
+                or "_none_"
+            ),
+            "| ... the run escalated | {0} of {1} |".format(
+                len(calibration.indeterminate_escalated),
+                len(calibration.indeterminate_expected),
+            ),
+            "| **... the run ruled confidently instead** | **{0} of {1}** |".format(
+                len(calibration.indeterminate_ruled_confidently),
+                len(calibration.indeterminate_expected),
+            ),
+            "| Substantive escalations the key makes | {0} |".format(
+                ", ".join(str(case_no) for case_no in calibration.substantive_expected)
+                or "_none_"
+            ),
+            "| ... the run escalated | {0} of {1} |".format(
+                len(calibration.substantive_escalated),
+                len(calibration.substantive_expected),
+            ),
+            "",
+        ]
+    )
     if calibration.indeterminate_ruled_confidently:
         lines.append(
             "Cases ruled confidently where the record does not settle the "
