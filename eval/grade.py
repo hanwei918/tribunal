@@ -35,6 +35,7 @@ ruling already exists -- it must never reach a brief, a prompt or a transcript.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -65,6 +66,7 @@ __all__ = [
     "referral_keys_of",
     "match_referrals",
     "load_answer_key",
+    "answer_key_sha256",
     "expected_from_key",
     "key_as_produced",
     "produced_from_mapping",
@@ -836,6 +838,17 @@ def calibrate(scores: Sequence[CaseScore]) -> Calibration:
 # --------------------------------------------------------------------------
 # The answer key
 # --------------------------------------------------------------------------
+def answer_key_sha256(path: Path = ANSWER_KEY_PATH) -> str:
+    """The SHA-256 of the answer key file's bytes.
+
+    A run's provenance records which key it was scored against. Reading the key
+    is this module's business and nobody else's, so a caller that wants the
+    digest asks for it here rather than opening the file itself — the runner
+    records the digest without ever touching the key.
+    """
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
 def load_answer_key(path: Path = ANSWER_KEY_PATH) -> Dict[int, Ruling]:
     """Load the answer key, keyed by case number.
 

@@ -1,0 +1,1436 @@
+"""The benchmark runner: one model, many cases, resumable.
+
+Runs a set of cases against ONE named model through
+:func:`tribunal.pipeline.run_case` and a real :class:`tribunal.llm.LLMClient`,
+caches every completed result under ``runs/``, and grades the set through
+:mod:`eval.grade`.
+
+Why resumability is the central requirement
+-------------------------------------------
+Measured on 2026-09-21: two HTTP 502 responses in 48 calls, and a single
+``hy4-preview`` advocate call taking 199.9 s and 221.6 s on the real case 208
+brief. A 29-case run is therefore hours long and will meet transport failures on
+the way. An instrument that loses everything when case 27 fails is not an
+instrument. So:
+
+* each completed ``(model, case)`` result is cached under
+  ``runs/<model>/case-<NNNNN>.json``, keyed by model directory and case number,
+  and a re-run skips it unless ``--force``;
+* a case that fails after ``LLMClient`` has exhausted its retries is recorded as
+  a failed case, the run **continues**, and nothing is cached for it — so a
+  later re-run retries exactly the failures and nothing else;
+* every result is written as it completes, through a temporary file and a
+  rename, so an interrupt can lose at most the case in flight and can never
+  leave a half-written cache file behind;
+* the run's metadata file is rewritten after every case, so an interrupted run
+  still has correct provenance and correct totals.
+
+The token budget
+----------------
+Each model carries a 1,000,000-token free allowance and one 29-case run on
+``hy4-preview`` is projected at roughly three times that. ``--token-budget``
+stops the run issuing NEW cases once the spend has reached the limit, lets the
+cases already in flight finish, and says on its face that it stopped on budget
+rather than completing. A partial run whose limit is stated is useful; an
+unexpected bill is not.
+
+The answer key
+--------------
+The key is read by :mod:`eval.grade` and by nothing else. This module asks
+``eval.grade`` to load it, to hash it, and to score with it; it never opens the
+answer key's own directory, and no key value reaches a brief, a prompt or a
+transcript. ``tests/test_run_benchmark.py`` asserts that a completed run's cached
+artifacts and transcripts carry no answer-key field name, reusing the scan in
+``tests/test_answer_isolation.py``.
+
+Concurrency is opt-in and proven
+--------------------------------
+``--concurrency`` defaults to 1 because that is the ordering that is
+deterministic. Above 1 the client's rate limiter becomes shared mutable state
+across threads, so :meth:`tribunal.llm.LLMClient._respect_rate_limit` guards its
+read-modify-write with a lock, and ``tests/test_run_benchmark.py`` proves that N
+threads calling together still do not exceed the configured rate — and that the
+check can fail, by running the same workload against an unguarded limiter.
+
+Nothing here decides which model to use. ``model`` has no default, matching
+``LLMClient``: the choice belongs in one explicit place in the caller.
+"""
+
+from __future__ import annotations
+
+import argparse
+import concurrent.futures
+import hashlib
+import json
+import re
+import subprocess
+import sys
+import threading
+import time
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from decimal import Decimal, ROUND_HALF_UP
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
+
+from eval import grade
+from tribunal import llm, money, pipeline
+
+__all__ = [
+    "BenchmarkError",
+    "CaseOutcome",
+    "ComparisonRow",
+    "RunSummary",
+    "STATUS_COMPLETED",
+    "STATUS_CACHED",
+    "STATUS_FAILED",
+    "STOP_COMPLETED",
+    "STOP_BUDGET",
+    "STOP_INTERRUPTED",
+    "STOP_FATAL",
+    "billed_tokens",
+    "model_slug",
+    "run_directory",
+    "case_cache_path",
+    "transcript_path",
+    "metadata_path",
+    "read_json",
+    "write_json",
+    "load_cached",
+    "cached_case_numbers",
+    "hash_directory",
+    "git_state",
+    "provenance",
+    "run_one_case",
+    "format_progress",
+    "grade_run",
+    "run_benchmark",
+    "collect_comparison",
+    "render_comparison",
+    "parse_cases",
+    "print_summary",
+    "main",
+]
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROMPTS_DIR = PROJECT_ROOT / "prompts" / "v1"
+RUNS_DIR = PROJECT_ROOT / "runs"
+
+# Bumped when the cache layout changes, so an old cache is visibly old rather
+# than silently misread.
+CACHE_SCHEMA_VERSION = 1
+
+METADATA_FILE = "run.json"
+CALLS_FILE = "calls.json"
+REPORT_FILE = "report.md"
+
+DEFAULT_CONCURRENCY = 1
+
+# Where the case cache and its transcript live.
+_CASE_FILE_RE = re.compile(r"^case-([0-9]{5})\.json$")
+_CASE_FILE_FORMAT = "case-{0:05d}.json"
+_TRANSCRIPT_FORMAT = "case-{0:05d}.transcript.json"
+
+# One outcome per case.
+STATUS_COMPLETED = "completed"
+STATUS_CACHED = "cached"
+STATUS_FAILED = "failed"
+
+# Why the run stopped. ``completed`` is the only one that means everything asked
+# for was done.
+STOP_COMPLETED = "completed"
+STOP_BUDGET = "token budget reached"
+STOP_INTERRUPTED = "interrupted"
+STOP_FATAL = "fatal error"
+
+# Files that must never contribute to a digest: they are editor or interpreter
+# artefacts, not prompt content, and one of them appearing would change the
+# digest without any prompt having changed.
+_DIGEST_EXCLUDED_NAMES = (".DS_Store",)
+_DIGEST_EXCLUDED_SUFFIXES = (".pyc",)
+
+GIT_TIMEOUT_SECONDS = 10.0
+
+# A run's provenance status string can be long; this bounds it.
+MAX_STATUS_CHARS = 4000
+
+
+class BenchmarkError(Exception):
+    """The runner was asked for something it cannot do."""
+
+
+# --------------------------------------------------------------------------
+# Cache layout
+# --------------------------------------------------------------------------
+def model_slug(model: str) -> str:
+    """A filesystem-safe directory name for a model id.
+
+    ``deepseek/deepseek-flash`` becomes ``deepseek-deepseek-flash``. Leading and
+    trailing dots are stripped so a model id can never name ``.`` or ``..``.
+    """
+    slug = re.sub(r"[^A-Za-z0-9._-]+", "-", str(model)).strip("-.")
+    if not slug:
+        raise BenchmarkError("model id {0!r} has no usable characters".format(model))
+    return slug
+
+
+def run_directory(runs_dir: Path, model: str) -> Path:
+    """Where one model's run lives: ``runs/<model-slug>/``."""
+    return Path(runs_dir) / model_slug(model)
+
+
+def case_cache_path(run_dir: Path, case_no: int) -> Path:
+    return Path(run_dir) / _CASE_FILE_FORMAT.format(case_no)
+
+
+def transcript_path(run_dir: Path, case_no: int) -> Path:
+    return Path(run_dir) / _TRANSCRIPT_FORMAT.format(case_no)
+
+
+def metadata_path(run_dir: Path) -> Path:
+    return Path(run_dir) / METADATA_FILE
+
+
+def read_json(path: Path) -> Optional[Any]:
+    """Read one JSON document, or ``None`` when it is absent or unreadable.
+
+    ``parse_float=Decimal`` throughout, the hook the loader uses: a money value
+    written with a decimal point must come back as the literal that was written.
+
+    An unreadable or corrupt document is reported as absent rather than raised,
+    because the caller's choice in every case is the same — re-run that case.
+    """
+    try:
+        return json.loads(Path(path).read_text(encoding="utf-8"), parse_float=Decimal)
+    except (OSError, ValueError):
+        return None
+
+
+def _write_text_atomic(path: Path, text: str) -> None:
+    """Write one file through a sibling temporary and a rename.
+
+    A reader therefore never sees a half-written file, and an interrupt can lose
+    at most the write in flight — never a file that exists but is truncated.
+    Both the cache entry and its transcript go through here.
+    """
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.parent / (path.name + ".part")
+    temporary.write_text(text, encoding="utf-8")
+    temporary.replace(path)
+
+
+def write_json(path: Path, document: Any) -> None:
+    """Write one JSON document atomically.
+
+    ``money.dumps_canonical`` because the document holds ``Decimal`` amounts and
+    because the cache should be byte-stable: two identical results must produce
+    two identical files.
+    """
+    _write_text_atomic(path, money.dumps_canonical(document))
+
+
+def load_cached(run_dir: Path, case_no: int) -> Optional[Dict[str, Any]]:
+    """One cached case result, or ``None`` when there is none to reuse."""
+    document = read_json(case_cache_path(run_dir, case_no))
+    if not isinstance(document, dict):
+        return None
+    if document.get("case_no") != case_no:
+        return None
+    if not document.get("ruling"):
+        # A cache entry without a ruling is not a result. Re-running is the only
+        # safe reading of it.
+        return None
+    return document
+
+
+def cached_case_numbers(run_dir: Path) -> List[int]:
+    """Every case number with a cached result, in ascending order.
+
+    The transcript files sit beside the cache files and match the same glob, so
+    the name pattern is matched rather than the suffix.
+    """
+    numbers = []
+    for path in sorted(Path(run_dir).glob("case-*.json")):
+        match = _CASE_FILE_RE.match(path.name)
+        if match:
+            numbers.append(int(match.group(1)))
+    return sorted(numbers)
+
+
+# --------------------------------------------------------------------------
+# Provenance
+# --------------------------------------------------------------------------
+def hash_directory(path: Path) -> str:
+    """A SHA-256 over every file under ``path``, relative names and bytes both.
+
+    The relative path is hashed alongside the bytes, so a rename or a move
+    changes the digest even though no content did. Files are visited in sorted
+    order, so the digest does not depend on directory order.
+    """
+    root = Path(path)
+    if not root.is_dir():
+        raise BenchmarkError("prompts directory does not exist: {0}".format(root))
+
+    digest = hashlib.sha256()
+    for file in sorted(candidate for candidate in root.rglob("*") if candidate.is_file()):
+        if file.name in _DIGEST_EXCLUDED_NAMES or file.suffix in _DIGEST_EXCLUDED_SUFFIXES:
+            continue
+        digest.update(file.relative_to(root).as_posix().encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(file.read_bytes())
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def _default_git_runner(arguments: Sequence[str]) -> Optional[str]:
+    """Run one git command in the project root, or ``None`` when git is not there.
+
+    Never raises: a machine without git, or a checkout without a repository,
+    must still be able to produce a run — one whose provenance says the commit
+    is unknown.
+    """
+    try:
+        completed = subprocess.run(
+            ["git", *arguments],
+            cwd=str(PROJECT_ROOT),
+            capture_output=True,
+            text=True,
+            timeout=GIT_TIMEOUT_SECONDS,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if completed.returncode != 0:
+        return None
+    return completed.stdout
+
+
+def _status_arguments(runs_dir: Path) -> Tuple[str, ...]:
+    """``git status`` arguments that ignore the cache directory.
+
+    The cache lives under ``runs/``, which is not git-ignored, so the first case
+    written makes the working tree dirty and every later run would record itself
+    as dirty for a reason that has nothing to do with the code under test. The
+    flag exists to say whether the **code** that produced the number is
+    committed, so the runner's own output is excluded from the check.
+    """
+    arguments: List[str] = ["status", "--porcelain"]
+    try:
+        relative = Path(runs_dir).resolve().relative_to(PROJECT_ROOT)
+    except ValueError:
+        # A cache outside the repository cannot affect the tree; no exclusion.
+        return tuple(arguments)
+    return tuple(arguments + ["--", ".", ":(exclude){0}".format(relative.as_posix())])
+
+
+def git_state(
+    git_runner: Optional[Callable[[Sequence[str]], Optional[str]]] = None,
+    runs_dir: Path = RUNS_DIR,
+) -> Dict[str, Any]:
+    """The commit, and whether the working tree was clean at the time.
+
+    The clean-tree flag is a tri-state and that matters: ``True`` clean,
+    ``False`` dirty, ``None`` unknown because git could not be asked. A number
+    produced from uncommitted code cannot be reproduced by anyone, including its
+    author, so a report carrying one has to say so on its face — and so does a
+    report whose tree state could not be established.
+    """
+    runner = _default_git_runner if git_runner is None else git_runner
+
+    commit = runner(("rev-parse", "HEAD"))
+    status = runner(_status_arguments(runs_dir))
+
+    if isinstance(status, str):
+        # Only the line terminators come off. ``strip()`` would also eat the
+        # leading space of a porcelain line, and that space is the first of the
+        # two status columns — it is what says whether a change is staged.
+        detail_text = status.rstrip("\n")
+        clean: Optional[bool] = detail_text.strip() == ""
+        detail: Optional[str] = detail_text[:MAX_STATUS_CHARS] or None
+    else:
+        clean = None
+        detail = None
+
+    return {
+        "git_commit": commit.strip() if isinstance(commit, str) else None,
+        "working_tree_clean": clean,
+        "working_tree_status": detail,
+    }
+
+
+def provenance(
+    model: str,
+    *,
+    prompts_dir: Path = PROMPTS_DIR,
+    runs_dir: Path = RUNS_DIR,
+    git_runner: Optional[Callable[[Sequence[str]], Optional[str]]] = None,
+    now: Callable[[], str] = lambda: datetime.now(timezone.utc).isoformat(),
+) -> Dict[str, Any]:
+    """Everything needed to say what produced a number.
+
+    The answer key's digest comes from :mod:`eval.grade`, which is the only
+    module that reads the key, so this function records the digest without
+    opening the key itself.
+    """
+    state = git_state(git_runner, runs_dir)
+    return {
+        "model": model,
+        "git_commit": state["git_commit"],
+        "working_tree_clean": state["working_tree_clean"],
+        "working_tree_status": state["working_tree_status"],
+        "prompts_dir": str(prompts_dir),
+        "prompts_sha256": hash_directory(prompts_dir),
+        "answer_key_sha256": grade.answer_key_sha256(),
+        "recorded_at": now(),
+    }
+
+
+# --------------------------------------------------------------------------
+# One case
+# --------------------------------------------------------------------------
+@dataclass(frozen=True)
+class CaseOutcome:
+    """What happened to one case in one invocation of the runner."""
+
+    case_no: int
+    status: str
+    wall_seconds: float = 0.0
+    total_tokens: int = 0
+    matched: Optional[bool] = None
+    failed_agent: Optional[str] = None
+    failure_reason: Optional[str] = None
+    ruling: Optional[Any] = None
+
+    @property
+    def ok(self) -> bool:
+        return self.status in (STATUS_COMPLETED, STATUS_CACHED)
+
+    @property
+    def verdict(self) -> str:
+        """The short word the progress line prints."""
+        if self.status == STATUS_FAILED:
+            return "FAILED"
+        if self.status == STATUS_CACHED:
+            return "cached"
+        if self.matched:
+            return "match"
+        return "MISS"
+
+
+def billed_tokens(prompt_tokens: Any, completion_tokens: Any) -> int:
+    """The tokens a provider bills for: the prompt plus the completion.
+
+    ``reasoning_tokens`` is reported by the API as a *breakdown* of
+    ``completion_tokens`` rather than something added to it, so counting it
+    again would overstate the spend and trip a budget early. It is recorded
+    separately for exactly that reason.
+    """
+    return int(prompt_tokens or 0) + int(completion_tokens or 0)
+
+
+def _as_seconds(value: Any) -> float:
+    if value is None:
+        return 0.0
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _as_int(value: Any) -> int:
+    if value is None:
+        return 0
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _scoreable(value: Any, case_no: int) -> Optional[grade.Ruling]:
+    """A produced ruling as the grader can score it, or ``None`` when it cannot.
+
+    ``eval.grade`` accepts the judge's result object or the bare POL-GEN-03
+    object and raises on anything else. A model that returned a JSON array or a
+    bare string has broken its output contract, and that is a measurement to
+    report rather than an exception to abort the run with — so an unscoreable
+    record is handed over as ``None``, which the grader scores as four failed
+    fields. The malformed value itself is still in the cache and the raw body is
+    still in the transcript; nothing is thrown away, only declined for scoring.
+    """
+    if value is None:
+        return None
+    try:
+        return grade.produced_from_mapping(value, case_no)
+    except grade.GradeError:
+        return None
+
+
+def _match_for(case_no: int, ruling: Any, expected: Optional[grade.Ruling]) -> Optional[bool]:
+    """Whether a produced ruling is a four-field match, judged by eval.grade."""
+    if ruling is None or expected is None:
+        return None
+    produced = _scoreable(ruling, case_no)
+    if produced is None:
+        return False
+    return grade.score_case(case_no, expected, produced).exact
+
+
+def run_one_case(
+    case_no: int,
+    *,
+    client: Any,
+    prompts_dir: Path,
+    expected: Optional[grade.Ruling],
+) -> Tuple[CaseOutcome, Optional[Dict[str, Any]], Optional[str]]:
+    """Run one case. Returns ``(outcome, cache document, transcript json)``.
+
+    A case that fails after the client exhausted its retries comes back as a
+    failed outcome with no cache document, so the caller can continue and a
+    re-run retries exactly that case. A missing credential or an unprovisioned
+    model is raised instead: those are not case failures, they are the same
+    failure for every case, and continuing would only waste the wall clock.
+    """
+    started = time.monotonic()
+    try:
+        result = pipeline.run_case(case_no, client, prompts_dir=prompts_dir)
+    except (llm.MissingAPIKeyError, llm.ModelNotProvisionedError):
+        raise
+    except Exception as exc:  # noqa: BLE001 - any transport or parse failure is a case failure
+        return (
+            CaseOutcome(
+                case_no=case_no,
+                status=STATUS_FAILED,
+                wall_seconds=time.monotonic() - started,
+                failure_reason="{0}: {1}".format(type(exc).__name__, exc),
+            ),
+            None,
+            None,
+        )
+
+    wall = time.monotonic() - started
+    tokens = billed_tokens(result.prompt_tokens, result.completion_tokens)
+
+    if not result.ok or result.ruling is None:
+        return (
+            CaseOutcome(
+                case_no=case_no,
+                status=STATUS_FAILED,
+                wall_seconds=wall,
+                total_tokens=tokens,
+                failed_agent=result.failed_agent,
+                failure_reason=result.failure_reason or "the run produced no ruling",
+            ),
+            None,
+            result.transcript_json,
+        )
+
+    matched = _match_for(case_no, result.ruling, expected)
+    document = {
+        "schema_version": CACHE_SCHEMA_VERSION,
+        "case_no": case_no,
+        "model": result.model,
+        "recorded_at": datetime.now(timezone.utc).isoformat(),
+        "brief_sha256": result.brief_sha256,
+        "transcript_sha256": result.transcript_sha256,
+        "transcript_file": transcript_path(Path("."), case_no).name,
+        "ruling": result.ruling,
+        "ruling_findings": result.ruling_findings,
+        "stance_differing_ranges": [list(item) for item in result.stance_differing_ranges],
+        "tokens": {
+            "prompt_tokens": result.prompt_tokens,
+            "completion_tokens": result.completion_tokens,
+            "reasoning_tokens": result.reasoning_tokens,
+            "cached_tokens": result.cached_tokens,
+            "total_tokens": tokens,
+        },
+        "wall_seconds": wall,
+        "call_seconds": result.duration_seconds,
+        "matched": matched,
+    }
+    return (
+        CaseOutcome(
+            case_no=case_no,
+            status=STATUS_COMPLETED,
+            wall_seconds=wall,
+            total_tokens=tokens,
+            matched=matched,
+            ruling=result.ruling,
+        ),
+        document,
+        result.transcript_json,
+    )
+
+
+def _outcome_from_cache(
+    case_no: int, document: Mapping[str, Any], expected: Optional[grade.Ruling]
+) -> CaseOutcome:
+    """The outcome of a case that was skipped because its result is cached."""
+    tokens = document.get("tokens") or {}
+    return CaseOutcome(
+        case_no=case_no,
+        status=STATUS_CACHED,
+        wall_seconds=_as_seconds(document.get("wall_seconds")),
+        total_tokens=_as_int(tokens.get("total_tokens")),
+        matched=_match_for(case_no, document.get("ruling"), expected),
+        ruling=document.get("ruling"),
+    )
+
+
+# --------------------------------------------------------------------------
+# Progress
+# --------------------------------------------------------------------------
+def _format_seconds(value: float) -> str:
+    return "{0:>8.1f}s".format(value)
+
+
+def format_progress(outcome: CaseOutcome, position: int, total: int) -> str:
+    """One line per case: number, verdict, wall clock, tokens.
+
+    Printed as each case completes rather than at the end, because a three-hour
+    run that prints nothing until it is over is unusable.
+    """
+    line = "[{0:>3}/{1}] case {2}  {3:<6} {4}  {5:>10} tokens".format(
+        position,
+        total,
+        outcome.case_no,
+        outcome.verdict,
+        _format_seconds(outcome.wall_seconds),
+        "{0:,}".format(outcome.total_tokens),
+    )
+    if outcome.status == STATUS_FAILED:
+        reason = (outcome.failure_reason or "unknown failure").splitlines()[0]
+        if outcome.failed_agent:
+            reason = "{0}: {1}".format(outcome.failed_agent, reason)
+        line += "  — {0}".format(reason[:160])
+    return line
+
+
+# --------------------------------------------------------------------------
+# The run
+# --------------------------------------------------------------------------
+@dataclass
+class RunSummary:
+    """Everything one invocation of the runner produced."""
+
+    model: str
+    run_dir: Path
+    started_at: str
+    ended_at: str
+    stop_reason: str
+    outcomes: List[CaseOutcome] = field(default_factory=list)
+    provenance: Dict[str, Any] = field(default_factory=dict)
+    report: Optional[grade.GradeReport] = None
+    token_budget: Optional[int] = None
+    concurrency: int = DEFAULT_CONCURRENCY
+    tokens_spent: int = 0
+    tokens_reused: int = 0
+
+    @property
+    def completed(self) -> bool:
+        """The runner finished the set it was asked for, stopping early for nothing."""
+        return self.stop_reason == STOP_COMPLETED
+
+    @property
+    def ok(self) -> bool:
+        """The run finished and every case in it produced a ruling.
+
+        Distinct from :attr:`completed` because a run can finish the set while
+        one case failed on the transport. That is a successful run of the runner
+        and a failure of the benchmark, so it exits non-zero without claiming to
+        have stopped early.
+        """
+        return self.completed and not self.failures
+
+    @property
+    def failures(self) -> List[CaseOutcome]:
+        return [outcome for outcome in self.outcomes if outcome.status == STATUS_FAILED]
+
+    @property
+    def completed_cases(self) -> List[int]:
+        return [o.case_no for o in self.outcomes if o.status == STATUS_COMPLETED]
+
+    @property
+    def cached_cases(self) -> List[int]:
+        return [o.case_no for o in self.outcomes if o.status == STATUS_CACHED]
+
+    @property
+    def matched(self) -> int:
+        return sum(1 for outcome in self.outcomes if outcome.matched)
+
+
+def _default_client_factory(model: str) -> Callable[[Callable[[Dict[str, Any]], None]], Any]:
+    """A real client, built with the run's record sink wired in.
+
+    ``LLMClient.model`` has no default and neither does this: the model is the
+    caller's decision and it is passed straight through.
+    """
+
+    def build(sink: Callable[[Dict[str, Any]], None]) -> Any:
+        return llm.LLMClient(model=model, record_sink=sink)
+
+    return build
+
+
+def run_benchmark(
+    model: str,
+    cases: Sequence[int],
+    *,
+    runs_dir: Path = RUNS_DIR,
+    prompts_dir: Path = PROMPTS_DIR,
+    force: bool = False,
+    token_budget: Optional[int] = None,
+    concurrency: int = DEFAULT_CONCURRENCY,
+    client_factory: Optional[Callable[[Callable[[Dict[str, Any]], None]], Any]] = None,
+    key: Optional[Mapping[int, grade.Ruling]] = None,
+    git_runner: Optional[Callable[[Sequence[str]], Optional[str]]] = None,
+    progress: Callable[[str], None] = lambda text: print(text, flush=True),
+    now: Callable[[], str] = lambda: datetime.now(timezone.utc).isoformat(),
+) -> RunSummary:
+    """Run ``cases`` against ``model``, cache the results, and grade them.
+
+    ``model`` is required and has no default. ``client_factory`` exists so a
+    test can drive the whole runner — real ``LLMClient``, real ``pipeline`` —
+    over a fake transport with recorded bodies, and without a network.
+    """
+    if not model:
+        raise BenchmarkError("model is required and has no default; name the model explicitly")
+    if concurrency < 1:
+        raise BenchmarkError("concurrency must be at least 1, got {0}".format(concurrency))
+    if token_budget is not None and token_budget < 0:
+        raise BenchmarkError("token_budget cannot be negative")
+
+    # De-duplicated but order-preserving: the requested order is the order the
+    # progress lines and the report use, and a case named twice is one case.
+    requested = list(dict.fromkeys(cases))
+    if not requested:
+        raise BenchmarkError("no cases were selected")
+
+    resolved_key: Mapping[int, grade.Ruling] = (
+        grade.load_answer_key() if key is None else dict(key)
+    )
+    missing = [case_no for case_no in requested if case_no not in resolved_key]
+    if missing:
+        raise BenchmarkError(
+            "case(s) {0} are not in the answer key, so a run over them could not "
+            "be graded".format(", ".join(str(case_no) for case_no in missing))
+        )
+
+    build_client = _default_client_factory(model) if client_factory is None else client_factory
+
+    run_dir = run_directory(runs_dir, model)
+    run_dir.mkdir(parents=True, exist_ok=True)
+    started_at = now()
+    run_provenance = provenance(
+        model, prompts_dir=prompts_dir, runs_dir=runs_dir, git_runner=git_runner, now=now
+    )
+
+    # A shared sink, because the client is shared across every case and, above
+    # concurrency 1, across threads. The client calls this from whichever thread
+    # is completing a request, so it is the one piece of the runner's state that
+    # needs a lock.
+    records: List[Dict[str, Any]] = []
+    records_lock = threading.Lock()
+
+    def sink(record: Dict[str, Any]) -> None:
+        with records_lock:
+            records.append(record)
+
+    positions = {case_no: index + 1 for index, case_no in enumerate(requested)}
+    total = len(requested)
+
+    # Every other mutation below happens on the thread that called this
+    # function: worker threads run `pipeline.run_case` and return, and the
+    # results are folded in here. So `outcomes`, `state` and the file writes
+    # need no lock — and adding one would suggest a concurrency that is not
+    # there.
+    outcomes: List[CaseOutcome] = []
+    recorded: set = set()
+    pending: List[int] = []
+    tokens_reused = 0
+
+    # Cached first: a re-run should say what it is skipping before it starts.
+    for case_no in requested:
+        document = None if force else load_cached(run_dir, case_no)
+        if document is None:
+            pending.append(case_no)
+            continue
+        outcome = _outcome_from_cache(case_no, document, resolved_key.get(case_no))
+        outcomes.append(outcome)
+        recorded.add(case_no)
+        tokens_reused += outcome.total_tokens
+        progress(format_progress(outcome, positions[case_no], total))
+
+    state = {"spent": 0, "stop_reason": STOP_COMPLETED}
+
+    def write_metadata(stop_reason: str) -> None:
+        write_json(
+            metadata_path(run_dir),
+            _metadata_document(
+                model=model,
+                run_dir=run_dir,
+                started_at=started_at,
+                ended_at=now(),
+                stop_reason=stop_reason,
+                requested=requested,
+                outcomes=outcomes,
+                run_provenance=run_provenance,
+                token_budget=token_budget,
+                concurrency=concurrency,
+                tokens_spent=state["spent"],
+                tokens_reused=tokens_reused,
+            ),
+        )
+
+    def accept(outcome: CaseOutcome) -> None:
+        """Record one outcome, on disk and on the terminal, the moment it lands.
+
+        Idempotent by case number. The interrupt path drains whatever is still
+        in flight after the main loop has stopped, and a case whose result was
+        already folded in must not be counted twice — a double count would
+        double its tokens against the budget and put it in the metadata twice.
+        """
+        if outcome.case_no in recorded:
+            return
+        recorded.add(outcome.case_no)
+        outcomes.append(outcome)
+        if outcome.status == STATUS_COMPLETED:
+            state["spent"] += outcome.total_tokens
+        progress(format_progress(outcome, positions[outcome.case_no], total))
+        # Written after every case, so an interrupted run still has correct
+        # provenance and correct totals rather than nothing at all.
+        write_metadata(state["stop_reason"])
+
+    if pending:
+        # Built lazily, and only when there is work to do: a re-run whose cases
+        # are all cached has no reason to need a credential.
+        client = build_client(sink)
+
+        def execute(case_no: int) -> Tuple[CaseOutcome, Optional[Dict[str, Any]], Optional[str]]:
+            return run_one_case(
+                case_no,
+                client=client,
+                prompts_dir=prompts_dir,
+                expected=resolved_key.get(case_no),
+            )
+
+        workers = max(1, concurrency)
+        pool = concurrent.futures.ThreadPoolExecutor(max_workers=workers)
+        in_flight: Dict[concurrent.futures.Future, int] = {}
+        queue = list(pending)
+        try:
+            while queue or in_flight:
+                while queue and len(in_flight) < workers:
+                    if token_budget is not None and state["spent"] >= token_budget:
+                        # Stop issuing NEW cases. The ones already running are
+                        # allowed to finish, because their tokens are already
+                        # being spent and their answers are already paid for.
+                        state["stop_reason"] = STOP_BUDGET
+                        break
+                    case_no = queue.pop(0)
+                    in_flight[pool.submit(execute, case_no)] = case_no
+
+                if not in_flight:
+                    break
+
+                done, _ = concurrent.futures.wait(
+                    in_flight, return_when=concurrent.futures.FIRST_COMPLETED
+                )
+                for future in done:
+                    outcome, document, transcript_json = future.result()
+                    _persist(run_dir, outcome, document, transcript_json)
+                    accept(outcome)
+                    # Popped only once its result is safely on disk. An
+                    # interrupt between here and the next line would otherwise
+                    # lose a result whose tokens have already been billed.
+                    in_flight.pop(future, None)
+
+        except KeyboardInterrupt:
+            state["stop_reason"] = STOP_INTERRUPTED
+            progress("")
+            progress("interrupted — letting the case(s) already in flight finish")
+        except BaseException:
+            state["stop_reason"] = STOP_FATAL
+            raise
+        finally:
+            # Wait for anything still running and keep its result: those tokens
+            # have already been spent, so losing the answer would be losing
+            # money. This is also what makes an interrupt safe, and why `accept`
+            # has to be idempotent — a case the main loop already folded in is
+            # still in this dictionary.
+            pool.shutdown(wait=True)
+            for future, case_no in list(in_flight.items()):
+                in_flight.pop(future, None)
+                if not future.done() or future.cancelled():
+                    continue
+                try:
+                    outcome, document, transcript_json = future.result()
+                except BaseException as exc:  # noqa: BLE001 - recorded, never raised
+                    outcome = CaseOutcome(
+                        case_no=case_no,
+                        status=STATUS_FAILED,
+                        failure_reason="{0}: {1}".format(type(exc).__name__, exc),
+                    )
+                    document, transcript_json = None, None
+                _persist(run_dir, outcome, document, transcript_json)
+                accept(outcome)
+
+    write_json(run_dir / CALLS_FILE, {"calls": records})
+    write_metadata(state["stop_reason"])
+
+    # Graded over the cases that produced a ruling — whether it was produced by
+    # this invocation or reused from the cache — and not over everything that
+    # was asked for. A run stopped on budget must report an accuracy over what
+    # it ran, not 11/29 for eleven answers.
+    covered = sorted(
+        outcome.case_no
+        for outcome in outcomes
+        if outcome.status in (STATUS_COMPLETED, STATUS_CACHED)
+        and outcome.case_no in resolved_key
+    )
+    report = grade_run(run_dir, resolved_key, covered)
+    (run_dir / REPORT_FILE).write_text(
+        grade.render_report(report, "Benchmark report — {0}".format(model)),
+        encoding="utf-8",
+    )
+
+    return RunSummary(
+        model=model,
+        run_dir=run_dir,
+        started_at=started_at,
+        ended_at=now(),
+        stop_reason=state["stop_reason"],
+        outcomes=outcomes,
+        provenance=run_provenance,
+        report=report,
+        token_budget=token_budget,
+        concurrency=concurrency,
+        tokens_spent=state["spent"],
+        tokens_reused=tokens_reused,
+    )
+
+
+def _persist(
+    run_dir: Path,
+    outcome: CaseOutcome,
+    document: Optional[Dict[str, Any]],
+    transcript_json: Optional[str],
+) -> None:
+    """Write one case's transcript, and its cache entry only when it succeeded.
+
+    A failed case deliberately leaves no ``case-<NNNNN>.json`` behind. That is
+    what makes a re-run retry exactly the failures: the cache is the record of
+    what succeeded, and nothing else.
+    """
+    if transcript_json is not None:
+        _write_text_atomic(transcript_path(run_dir, outcome.case_no), transcript_json)
+
+    if document is not None:
+        write_json(case_cache_path(run_dir, outcome.case_no), document)
+
+
+def _metadata_document(
+    *,
+    model: str,
+    run_dir: Path,
+    started_at: str,
+    ended_at: str,
+    stop_reason: str,
+    requested: Sequence[int],
+    outcomes: Sequence[CaseOutcome],
+    run_provenance: Mapping[str, Any],
+    token_budget: Optional[int],
+    concurrency: int,
+    tokens_spent: int,
+    tokens_reused: int,
+) -> Dict[str, Any]:
+    """The run's own metadata file.
+
+    Every provenance field the run needs is at the top level, so a reader does
+    not have to know the shape to find the commit or the clean-tree flag.
+    """
+    failed = [outcome for outcome in outcomes if outcome.status == STATUS_FAILED]
+    return {
+        "schema_version": CACHE_SCHEMA_VERSION,
+        "model": model,
+        "run_dir": str(run_dir),
+        "started_at": started_at,
+        "ended_at": ended_at,
+        "stop_reason": stop_reason,
+        "completed": stop_reason == STOP_COMPLETED,
+        "concurrency": concurrency,
+        "token_budget": token_budget,
+        "git_commit": run_provenance.get("git_commit"),
+        "working_tree_clean": run_provenance.get("working_tree_clean"),
+        "working_tree_status": run_provenance.get("working_tree_status"),
+        "prompts_dir": run_provenance.get("prompts_dir"),
+        "prompts_sha256": run_provenance.get("prompts_sha256"),
+        "answer_key_sha256": run_provenance.get("answer_key_sha256"),
+        "tokens": {
+            "spent_this_invocation": tokens_spent,
+            "reused_from_cache": tokens_reused,
+            "total_for_the_case_set": tokens_spent + tokens_reused,
+        },
+        "cases": {
+            "requested": list(requested),
+            "completed": [o.case_no for o in outcomes if o.status == STATUS_COMPLETED],
+            "cached": [o.case_no for o in outcomes if o.status == STATUS_CACHED],
+            "failed": [o.case_no for o in failed],
+        },
+        "failures": [
+            {
+                "case_no": outcome.case_no,
+                "failed_agent": outcome.failed_agent,
+                "reason": outcome.failure_reason,
+            }
+            for outcome in failed
+        ],
+    }
+
+
+# --------------------------------------------------------------------------
+# Grading a run off disk
+# --------------------------------------------------------------------------
+def grade_run(
+    run_dir: Path,
+    key: Optional[Mapping[int, grade.Ruling]] = None,
+    cases: Optional[Sequence[int]] = None,
+) -> grade.GradeReport:
+    """Grade a run's cached rulings.
+
+    Graded over the cases the run actually covers, so a partial run reports an
+    accuracy over what it ran rather than over 29 cases of which it produced
+    eleven. The key is loaded and used by :mod:`eval.grade`; this function never
+    opens the key itself.
+    """
+    resolved_key: Mapping[int, grade.Ruling] = (
+        grade.load_answer_key() if key is None else dict(key)
+    )
+    covered = (
+        sorted(case_no for case_no in cached_case_numbers(run_dir) if case_no in resolved_key)
+        if cases is None
+        else sorted(case_no for case_no in cases if case_no in resolved_key)
+    )
+
+    produced: Dict[int, Any] = {}
+    for case_no in covered:
+        document = load_cached(run_dir, case_no)
+        if document is not None:
+            produced[case_no] = document.get("ruling")
+
+    subset = {case_no: resolved_key[case_no] for case_no in covered}
+    return grade.grade(produced, subset)
+
+
+# --------------------------------------------------------------------------
+# Comparing cached runs
+# --------------------------------------------------------------------------
+@dataclass(frozen=True)
+class ComparisonRow:
+    """One model's numbers, read entirely off disk. No model call is made."""
+
+    model: str
+    working_tree_clean: Optional[bool]
+    cases_graded: int
+    cases_cached: int
+    exact_matches: int
+    field_correct: Dict[str, int]
+    escalation_rate: Optional[Decimal]
+    target_rate: Decimal
+    precision: Optional[Decimal]
+    recall: Optional[Decimal]
+    over_escalations: int
+    under_escalations: int
+    indeterminate_ruled_confidently: int
+    mean_latency_seconds: Optional[float]
+    total_tokens: int
+
+
+def _row_from_run(run_dir: Path, cases: Sequence[int], key: Mapping[int, grade.Ruling]) -> ComparisonRow:
+    """Build one comparison row from a run directory."""
+    metadata = read_json(metadata_path(run_dir))
+    if not isinstance(metadata, dict):
+        metadata = {}
+
+    cached = cached_case_numbers(run_dir)
+    covered = [case_no for case_no in cases if case_no in set(cached)]
+
+    report = grade_run(run_dir, key, covered)
+
+    durations: List[float] = []
+    tokens = 0
+    for case_no in covered:
+        document = load_cached(run_dir, case_no)
+        if document is None:
+            continue
+        durations.append(_as_seconds(document.get("wall_seconds")))
+        tokens += _as_int((document.get("tokens") or {}).get("total_tokens"))
+
+    calibration = report.calibration
+    return ComparisonRow(
+        model=str(metadata.get("model") or run_dir.name),
+        working_tree_clean=metadata.get("working_tree_clean"),
+        cases_graded=report.total,
+        cases_cached=len(cached),
+        exact_matches=report.exact_matches,
+        field_correct={name: report.field_tally(name)[0] for name in grade.GRADED_FIELDS},
+        escalation_rate=calibration.rate,
+        target_rate=calibration.target_rate,
+        precision=calibration.precision,
+        recall=calibration.recall,
+        over_escalations=len(calibration.over_escalations),
+        under_escalations=len(calibration.under_escalations),
+        indeterminate_ruled_confidently=len(calibration.indeterminate_ruled_confidently),
+        mean_latency_seconds=(sum(durations) / len(durations)) if durations else None,
+        total_tokens=tokens,
+    )
+
+
+def collect_comparison(
+    runs_dir: Path = RUNS_DIR,
+    key: Optional[Mapping[int, grade.Ruling]] = None,
+) -> List[ComparisonRow]:
+    """One row per cached run, over the case set every run has in common.
+
+    Compared on the intersection rather than each on its own cases, because a
+    table that scores one model over 29 cases and another over 11 is not a
+    comparison. Each row still reports how many cases it has cached, so a
+    model that covered less of the corpus is visible rather than hidden.
+    """
+    resolved_key: Mapping[int, grade.Ruling] = (
+        grade.load_answer_key() if key is None else dict(key)
+    )
+    if not Path(runs_dir).is_dir():
+        return []
+
+    directories = sorted(
+        path
+        for path in Path(runs_dir).iterdir()
+        if path.is_dir() and cached_case_numbers(path)
+    )
+    per_run = {directory: cached_case_numbers(directory) for directory in directories}
+    if not per_run:
+        return []
+
+    common = set.intersection(*(set(numbers) for numbers in per_run.values()))
+    shared = sorted(case_no for case_no in common if case_no in resolved_key)
+
+    return [
+        _row_from_run(directory, shared, resolved_key) for directory in directories
+    ]
+
+
+def _render_tree_flag(clean: Optional[bool]) -> str:
+    """The clean-tree flag, spelled out. ``unknown`` is not ``clean``."""
+    if clean is True:
+        return "clean"
+    if clean is False:
+        return "DIRTY"
+    return "unknown"
+
+
+def render_comparison(rows: Sequence[ComparisonRow]) -> str:
+    """One table: per model, accuracy, calibration, latency and tokens.
+
+    This is the number that decides which model is frozen, so the tree flag is a
+    column rather than a footnote: a row whose tree was dirty carries an
+    accuracy nobody can reproduce, and the table has to say so on its face.
+    """
+    if not rows:
+        return (
+            "No cached runs found. Run a benchmark first, then compare:\n"
+            "  python -m eval.run_benchmark --model MODEL --cases 101,102,103\n"
+        )
+
+    headers = [
+        "model",
+        "tree",
+        "cases",
+        "exact",
+        "ruling",
+        "amount",
+        "driver",
+        "refs",
+        "esc",
+        "prec",
+        "rec",
+        "over",
+        "under",
+        "s/case",
+        "tokens",
+    ]
+
+    cells: List[List[str]] = []
+    for row in rows:
+        denominator = row.cases_graded
+        cells.append(
+            [
+                row.model,
+                _render_tree_flag(row.working_tree_clean),
+                str(denominator),
+                "{0}/{1}".format(row.exact_matches, denominator),
+                "{0}/{1}".format(row.field_correct["ruling"], denominator),
+                "{0}/{1}".format(row.field_correct["amount_sgd"], denominator),
+                "{0}/{1}".format(row.field_correct["driver_compensation_sgd"], denominator),
+                "{0}/{1}".format(row.field_correct["referrals"], denominator),
+                grade.render_percent(row.escalation_rate),
+                grade.render_ratio(row.precision),
+                grade.render_ratio(row.recall),
+                str(row.over_escalations),
+                str(row.under_escalations),
+                "n/a" if row.mean_latency_seconds is None else "{0:.1f}".format(row.mean_latency_seconds),
+                "{0:,}".format(row.total_tokens),
+            ]
+        )
+
+    widths = [
+        max(len(headers[index]), *(len(row[index]) for row in cells))
+        for index in range(len(headers))
+    ]
+
+    def render_row(values: Sequence[str]) -> str:
+        return "  ".join(
+            value.ljust(widths[index]) for index, value in enumerate(values)
+        ).rstrip()
+
+    lines = [
+        render_row(headers),
+        "  ".join("-" * width for width in widths),
+    ]
+    lines.extend(render_row(values) for values in cells)
+
+    target = rows[0].target_rate
+    confidently_wrong = sum(row.indeterminate_ruled_confidently for row in rows)
+    lines.append("")
+    lines.append(
+        "Cases graded is the set every run has cached in common; each run's own "
+        "cached count may be larger."
+    )
+    lines.append(
+        "esc is the escalation rate against the {0} target; over and under are "
+        "separate counts and are never summed. A run confident on an "
+        "INDETERMINATE case is wrong in the way that matters most.".format(
+            grade.render_percent(target)
+        )
+    )
+    if confidently_wrong:
+        lines.append(
+            "INDETERMINATE cases ruled confidently instead of escalated: {0} "
+            "across these runs.".format(confidently_wrong)
+        )
+    lines.append(
+        "tree is the working-tree flag from the run's own metadata: a number "
+        "from a DIRTY tree, or one whose state is unknown, cannot be reproduced."
+    )
+    return "\n".join(lines)
+
+
+# --------------------------------------------------------------------------
+# Command line
+# --------------------------------------------------------------------------
+def parse_cases(text: Optional[str]) -> List[int]:
+    """``"101,102,103"`` as case numbers. An empty selection means "all"."""
+    if text is None or not text.strip():
+        return []
+    numbers: List[int] = []
+    for token in text.replace(" ", "").split(","):
+        if not token:
+            continue
+        if not token.isdigit():
+            raise BenchmarkError(
+                "case selection {0!r} is not a case number; use a comma-separated "
+                "list such as 101,102,103".format(token)
+            )
+        numbers.append(int(token))
+    return numbers
+
+
+def print_summary(summary: RunSummary) -> None:
+    """A short block a person reads at the end of a run."""
+    provenance_ = summary.provenance
+    commit = provenance_.get("git_commit")
+    tree = _render_tree_flag(provenance_.get("working_tree_clean"))
+
+    print("")
+    print("run         {0}  ->  {1}".format(summary.model, summary.run_dir))
+    print(
+        "provenance  commit {0}, tree {1}, prompts {2}, key {3}".format(
+            (commit or "unknown")[:12],
+            tree,
+            str(provenance_.get("prompts_sha256") or "")[:12],
+            str(provenance_.get("answer_key_sha256") or "")[:12],
+        )
+    )
+    print(
+        "cases       {0} completed, {1} cached, {2} failed".format(
+            len(summary.completed_cases),
+            len(summary.cached_cases),
+            len(summary.failures),
+        )
+    )
+    print(
+        "tokens      {0:,} spent this run, {1:,} reused from cache".format(
+            summary.tokens_spent, summary.tokens_reused
+        )
+    )
+    if summary.token_budget is not None:
+        print("budget      {0:,} (stopped on budget: {1})".format(
+            summary.token_budget, summary.stop_reason == STOP_BUDGET
+        ))
+    print("stop        {0}".format(summary.stop_reason))
+
+    if summary.failures:
+        print("")
+        print("failed cases (not cached, so a re-run retries exactly these)")
+        for outcome in summary.failures:
+            print(
+                "  case {0}  {1}".format(
+                    outcome.case_no,
+                    (outcome.failure_reason or "unknown failure").splitlines()[0],
+                )
+            )
+
+    if summary.report is not None:
+        report = summary.report
+        print("")
+        print(
+            "four-field exact match  {0}/{1} = {2}".format(
+                report.exact_matches,
+                report.total,
+                grade.render_percent(
+                    # The rounding mode is named rather than inherited from the
+                    # decimal context, so the printed percentage does not depend
+                    # on a caller having set one.
+                    (
+                        Decimal(report.exact_matches) / Decimal(report.total) * 100
+                    ).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
+                    if report.total
+                    else None
+                ),
+            )
+        )
+        for name in grade.GRADED_FIELDS:
+            correct, total = report.field_tally(name)
+            print("  {0:<24} {1}/{2}".format(name, correct, total))
+
+        calibration = report.calibration
+        print("")
+        print(
+            "escalation  {0}/{1} = {2}  (target {3})  precision {4}  recall {5}  "
+            "over {6}  under {7}".format(
+                len(calibration.produced_escalations),
+                calibration.total,
+                grade.render_percent(calibration.rate),
+                grade.render_percent(calibration.target_rate),
+                grade.render_ratio(calibration.precision),
+                grade.render_ratio(calibration.recall),
+                len(calibration.over_escalations),
+                len(calibration.under_escalations),
+            )
+        )
+        if calibration.indeterminate_ruled_confidently:
+            print(
+                "INDETERMINATE cases ruled confidently: {0}".format(
+                    ", ".join(
+                        str(case_no)
+                        for case_no in calibration.indeterminate_ruled_confidently
+                    )
+                )
+            )
+    print("")
+    print("report written to {0}".format(summary.run_dir / REPORT_FILE))
+
+
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    parser = argparse.ArgumentParser(
+        prog="python -m eval.run_benchmark",
+        description=(
+            "Run cases against one model, cache every result under runs/, and "
+            "grade the set. No model is chosen for you."
+        ),
+    )
+    parser.add_argument(
+        "--model",
+        default=None,
+        help="the model id, e.g. hy4-preview (required unless --compare)",
+    )
+    parser.add_argument(
+        "--compare",
+        action="store_true",
+        help="tabulate the runs already cached under runs/; makes no model call",
+    )
+    parser.add_argument(
+        "--cases",
+        default=None,
+        help="comma-separated case numbers; default is every case in the answer key",
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="re-run cases that are already cached",
+    )
+    parser.add_argument(
+        "--token-budget",
+        type=int,
+        default=None,
+        help="stop issuing new cases once the run has spent this many tokens",
+    )
+    parser.add_argument(
+        "--concurrency",
+        type=int,
+        default=DEFAULT_CONCURRENCY,
+        help="cases to run at once; 1 (the default) is the deterministic order",
+    )
+    parser.add_argument("--runs-dir", type=Path, default=RUNS_DIR)
+    parser.add_argument("--prompts-dir", type=Path, default=PROMPTS_DIR)
+    args = parser.parse_args(argv)
+
+    if args.compare:
+        if args.model is not None:
+            parser.error("--compare reads cached runs and takes no --model")
+        print(render_comparison(collect_comparison(args.runs_dir)))
+        return 0
+
+    if args.model is None:
+        parser.error(
+            "--model is required: which model to run is the caller's decision and "
+            "has no default"
+        )
+
+    try:
+        cases = parse_cases(args.cases)
+    except BenchmarkError as exc:
+        parser.error(str(exc))
+    if not cases:
+        cases = sorted(grade.load_answer_key())
+
+    try:
+        summary = run_benchmark(
+            args.model,
+            cases,
+            runs_dir=args.runs_dir,
+            prompts_dir=args.prompts_dir,
+            force=args.force,
+            token_budget=args.token_budget,
+            concurrency=args.concurrency,
+        )
+    except llm.ModelNotProvisionedError as exc:
+        print("FATAL: {0}".format(exc), file=sys.stderr)
+        return 1
+    except llm.MissingAPIKeyError as exc:
+        print("FATAL: {0}".format(exc), file=sys.stderr)
+        return 1
+    except BenchmarkError as exc:
+        print("FATAL: {0}".format(exc), file=sys.stderr)
+        return 1
+
+    print_summary(summary)
+    # Non-zero when the run stopped early (budget or interrupt) and when it
+    # finished the set but some case produced no ruling. Both mean the number in
+    # the report does not cover everything that was asked for, and a caller in a
+    # shell should be able to see that without reading the report.
+    return 0 if summary.ok else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

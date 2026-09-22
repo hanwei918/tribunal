@@ -32,6 +32,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -306,6 +307,10 @@ class LLMClient:
         self._sleep = sleep
         self._clock = clock
         self._last_request_at: Optional[float] = None
+        # The request interval belongs to the client, not to a caller, so the
+        # limiter is shared state the moment a caller uses this client from more
+        # than one thread. One lock, guarding the read-modify-write below.
+        self._rate_lock = threading.Lock()
 
     # ------------------------------------------------------------------
     # Never let the credential escape through a repr.
@@ -374,15 +379,30 @@ class LLMClient:
         return body
 
     def _respect_rate_limit(self) -> None:
-        """Hold the caller to the published requests-per-minute limit."""
+        """Hold the caller to the published requests-per-minute limit.
+
+        The check and the update are one critical section. The interval being
+        enforced is the gap between consecutive requests *from this client*, so
+        two threads calling :meth:`complete` at the same time must together stay
+        inside the published limit; an unguarded read-modify-write of
+        ``_last_request_at`` would let both of them see a stale timestamp and
+        release together.
+
+        Sleeping while holding the lock is deliberate. The property is the
+        interval between requests, so a second caller arriving mid-wait must
+        wait out its own interval rather than start alongside the first — which
+        is exactly what serialising the wait produces. Nothing slow happens
+        here: the transport call itself is outside the lock.
+        """
         if self._minimum_interval <= 0:
             return
-        if self._last_request_at is not None:
-            elapsed = self._clock() - self._last_request_at
-            remaining = self._minimum_interval - elapsed
-            if remaining > 0:
-                self._sleep(remaining)
-        self._last_request_at = self._clock()
+        with self._rate_lock:
+            if self._last_request_at is not None:
+                elapsed = self._clock() - self._last_request_at
+                remaining = self._minimum_interval - elapsed
+                if remaining > 0:
+                    self._sleep(remaining)
+            self._last_request_at = self._clock()
 
     def _post(self, body: bytes) -> Tuple[int, bytes, int]:
         """POST once, retrying only what is worth retrying."""
