@@ -3,9 +3,10 @@
 Date: 2026-09-22. Commit: the one that adds this file.
 
 The counts in "What the check found" were corrected on the same day, after the first version of
-this note was found to state a figure the implementation cannot produce. What was wrong, and
-why, is recorded below under "Why the earlier version of this note was wrong". The defect, the
-three causes and the change are unaffected.
+this note was found to state a figure measured under the wrong interpreter. What was wrong, and
+why, is recorded below under "Why the earlier version of this note was wrong", together with the
+defect in the brief that the wrong count uncovered. The defect this note is about, the three causes
+and the change are unaffected.
 
 ## The defect
 
@@ -37,7 +38,9 @@ It was the act of checking.
 ## What the check found
 
 The expectation going in was **17 current and 12 stale, the stale ones being 201 through
-212**. That is what the cache holds. Measured:
+212**. That is what the cache holds, measured under Python 3.9.6 — the interpreter that
+produced the cache, and not an incidental detail. The same check under Python 3.13.12 reports
+twenty-one; see "The brief is not stable across Python versions" below.
 
 ```
 deepseek-deepseek-flash   cached=29  current=17  stale=12  unknown=0
@@ -62,9 +65,9 @@ Twelve cases could move, and twelve are stale.
 
 The claim "this digest does not match the current code" is only useful if it can be traced
 to a version. Every commit from `774fc82` — the one that added the runner — through `d06d2ff`
-was checked out with `git worktree add --detach`, and all 29 brief digests computed in each.
-Only `95f0b74` and `d06d2ff` touch `tribunal/`; no commit in the window touches `data/` or
-`policy/`.
+was checked out with `git worktree add --detach`, and all 29 brief digests computed in each,
+every one of them under Python 3.9.6. Only `95f0b74` and `d06d2ff` touch `tribunal/`; no commit
+in the window touches `data/` or `policy/`.
 
 **The method is only sound if the `tribunal` package imported in each worktree is that
 worktree's own.** `loader.PROJECT_ROOT` is `Path(__file__).resolve().parents[1]`, so `data/`,
@@ -86,10 +89,12 @@ Two independent checks confirm the field means what it is taken to mean:
 - **The transcript agrees.** For case 214 the transcript records `user_sha256` for both
   advocates as `fd64cd2b3920…`, identical to the cache entry's `brief_sha256`. The field is
   the digest of what was sent, not a second computation of it.
-- **The brief is deterministic.** `brief.build_brief` returns the same digest under 30
-  different `PYTHONHASHSEED` values, and `brief.brief_digest` is byte-identical to the
-  pipeline's own `money.dumps_canonical` + SHA-256. No set iteration or float round-trip is
-  involved.
+- **The brief is deterministic within one interpreter.** `brief.build_brief` returns the same
+  digest under 30 different `PYTHONHASHSEED` values, and `brief.brief_digest` is byte-identical
+  to the pipeline's own `money.dumps_canonical` + SHA-256. No set iteration is involved. A
+  float is: the mean distance to the pickup point travels unrounded, and `sum()`'s float
+  semantics changed in Python 3.12, so the digest is a function of the interpreter as well as
+  of the repository. That is the whole of the discrepancy recorded below.
 
 ### What this means
 
@@ -110,10 +115,11 @@ the check belongs in the code rather than in a note.
 ### Case 214
 
 Case 214 is not an anomaly. Its cache entry records `fd64cd2b3920…`, which is what `d06d2ff`
-builds for it; its `run.json` records `git_commit: d06d2ff…`, `working_tree_clean: true`,
-`requested: [214]`, started 19:20:05 and ended 19:23:53. It is a single-case re-run made after
-the shortfall-basis change landed, and it is current. It is the only result in the cache that
-the current brief produced.
+builds for it under 3.9.6 — under 3.13.12 the same commit builds `e880457d6c52…` for it, and
+that is the second of the two values this note's first version could not place; its `run.json`
+records `git_commit: d06d2ff…`, `working_tree_clean: true`, `requested: [214]`, started 19:20:05
+and ended 19:23:53. It is a single-case re-run made after the shortfall-basis change landed, and
+it is current. It is the only result in the cache that the current brief produced.
 
 ### Why the earlier version of this note was wrong
 
@@ -122,8 +128,23 @@ said to match no committed version of the brief and case 214 recorded as inexpli
 three statements are false, and how they were produced is worth recording, because the note
 was believed.
 
-**Twenty-one is not reachable.** Under every committed revision from `774fc82` to `d06d2ff`,
-this cache yields 1, 12 or 13 stale results — never 21, and never with case 101 among them:
+**Twenty-one is reachable, and it is what this same check reports under a different
+interpreter.** Under the cache's own Python 3.9.6 the count is twelve. Under the Python 3.13.12
+that `python3` resolves to on this machine it is twenty-one:
+
+```
+python3           3.13.12  ->  cached=29  current=8   stale=21
+/usr/bin/python3  3.9.6    ->  cached=29  current=17  stale=12
+```
+
+So the twenty-one was not a broken worktree method and not a figure typed in by hand: it was
+this check, run correctly, against a brief whose bytes depend on the interpreter. That the
+cache was produced under 3.9.6 is settled by its own digests, since the entries recorded for
+101, 213 and 214 are exactly what 3.9.6 builds and not what 3.13.12 builds. **Twelve is the
+answer for this cache**, and the check has to be run under the interpreter that produced it.
+
+Under every committed revision from `774fc82` to `d06d2ff`, computed under 3.9.6, this cache
+yields 1, 12 or 13 stale results:
 
 ```
 774fc82  stale=1   [214]
@@ -134,12 +155,20 @@ a11285b  stale=1   [214]
 d06d2ff  stale=12  [201..212]
 ```
 
-To reach twenty-one, nine cases that are in fact unchanged — 101, 105, 106, 107, 108, 109,
-112, 114 and 214 — would each have to have been built from something that is not any committed
-brief. No commit produces that. So the twenty-one was not this check's output, and the
-computation that produced it could not be reproduced from anything in the repository. It is
-recorded as unreproducible rather than explained, which is the only honest thing to do with a
-number that cannot be shown.
+And the earlier note's own table comes back exactly by running that same comparison under
+3.13.12 instead of 3.9.6. Its three buckets are the three buckets 3.13 produces, to the case
+number:
+
+| cached digest matches | cases | count |
+|---|---|---|
+| every revision tested | 102, 103, 104, 110, 111, 113, 115, 213 | 8 |
+| `a11285b` only | 204, 211 | 2 |
+| **no committed revision** | 101, 105, 106, 107, 108, 109, 112, 114, 201, 202, 203, 205, 206, 207, 208, 209, 210, 212, 214 | 19 |
+
+That is the first version of this note's table exactly, including the nineteen it could not
+account for and the eight it took for unchanged. Every figure in that version follows from the
+interpreter and from nothing else, which is why the candidates below are not merely unproven —
+they are not needed.
 
 The mechanism suspected at the time was that the worktree digests had been computed with the
 checked-out worktree's `data/` while the main tree's `tribunal/` was still on `sys.path`.
@@ -165,35 +194,97 @@ The other candidate was a serializer mismatch — digests taken from `json.dumps
 as stale, not nine, because every brief in this corpus carries a decimal literal the two
 serialisers render differently.
 
-What survives from the earlier note is its method, which reproduces the figures above, and its
-lesson, which the miscount sharpens rather than weakens: **a number written in a note is a
-claim like any other, and nothing here was comparing it to the code.** The count in "What the
-check found" is now checked against `grade_run` by `NoteCouplingTests` in
-`tests/test_run_benchmark.py`, which reads that block and holds it against the same
-directories. The cache under `runs/` is untracked, so where it is absent the comparison is
-skipped and stated, and only the note's internal consistency is asserted.
+What survives from the earlier note is the shape of its method — a worktree per commit — which,
+run with the module path asserted and under the cache's own interpreter, reproduces the figures
+above. Its lesson survives too, and this correction sharpens rather than weakens it: **a number
+written in a note is a claim like any other, and nothing here was comparing it to the code.**
+Two figures in the earlier version were wrong, one of them because the note never said which
+interpreter had produced it. So the note says now, and the numbers are held against the code by
+`NoteCouplingTests` in `tests/test_run_benchmark.py`: that test reads the block and compares it
+with `grade_run` over the same directories, and separately runs the command the note quotes and
+compares its output with the block. The cache under `runs/` is untracked, and the check is
+interpreter-sensitive, so each comparison is skipped where it cannot be made and the skip names
+which of the two reasons applies.
+
+### The brief is not stable across Python versions
+
+This is the defect the wrong count uncovered, and it is the more serious of the two findings.
+
+`facts.track_summary` computes the mean distance from a trace to the pickup point as
+`sum(distances) / len(distances)`. **Python 3.12 changed `sum()` for floats to use Neumaier
+compensated summation**, so the same distances average to a different last bit under 3.9 and
+under 3.13. Case 101, whose trace carries 229 fixes:
+
+```
+                       sum()                  mean
+3.9.6    1945172.0261218469     8494.200987431646
+3.13.12  1945172.0261218462     8494.200987431643
+```
+
+A left-to-right accumulation returns `1945172.0261218469` under both interpreters, and all 229
+individual distances are bit-identical under both — so the difference is `sum()`'s, not the
+data's.
+
+Comparing the canonical brief of all 29 cases across the two interpreters: **19 of the 29
+differ**, the only field that ever differs is a `value`, and every one of them is a
+`mean_distance_m`. In 9 of those 19 it flips the staleness verdict; in the other 10 the result
+was stale under either interpreter, so the count does not move. Nine is exactly the excess of
+twenty-one over twelve.
+
+The consequence is general, and it is not confined to this cache. **`brief_sha256` is meant to
+be the digest of the bytes the agents were handed, and those bytes are not determined by the
+repository alone.** Two things follow, and neither is done here:
+
+- The interpreter that produced a result is provenance, exactly as the commit and the prompts
+  digest are, and it is not recorded. The argument that put `git_commit` into the case file
+  applies to it unchanged.
+- Or the float is made version-stable — a left-to-right accumulation, or `math.fsum`, either
+  one line — after which the digest is a function of the repository alone and this class of
+  false staleness cannot arise.
+
+**Recorded as an open defect rather than fixed here**, because changing the brief changes what
+every cached result means. That is a decision about the corpus, not a tidy-up.
 
 ### Re-deriving these numbers
 
-One command, from the project root, no network, no model call:
+The block under "What the check found" is not written by hand: it is the output of this command,
+run from the project root **under Python 3.9.6**, the interpreter that produced the cache. Under
+any other interpreter the check reports false staleness and this command will not reproduce the
+block. No network, no model call. It reads every directory the block names.
 
 ```
 python3 - <<'PY'
 import sys, glob, os
+if sys.version_info[:3] != (3, 9, 6):
+    raise SystemExit(
+        "this cache was produced under Python 3.9.6; under %s this check reports "
+        "false staleness -- see 'The brief is not stable across Python versions'"
+        % sys.version.split()[0])
 sys.path[:0] = ["."]
 from eval import run_benchmark as runner
-d = "runs/deepseek-deepseek-flash"
-cases = sorted(int(os.path.basename(p).split("-")[1].split(".")[0])
-               for p in glob.glob(d + "/case-*.json") if not p.endswith(".transcript.json"))
-s = runner.brief_staleness(d, cases)
-print("cached=%d current=%d stale=%d unknown=%d" % (
-    len(cases), len(cases) - len(s.stale) - len(s.unknown), len(s.stale), len(s.unknown)))
-print("stale:", ", ".join(str(c) for c in s.stale))
+for name in ("deepseek-deepseek-flash", "hy4-preview"):
+    run_dir = os.path.join("runs", name)
+    cases = sorted(int(os.path.basename(p).split("-")[1].split(".")[0])
+                   for p in glob.glob(run_dir + "/case-*.json")
+                   if not p.endswith(".transcript.json"))
+    staleness = runner.brief_staleness(run_dir, cases)
+    stale, unknown = set(staleness.stale), set(staleness.unknown)
+    current = [case for case in cases if case not in stale and case not in unknown]
+    print(("%-25s cached=%-2d  current=%-2d  stale=%-2d  unknown=%-2d"
+           % (name, len(cases), len(current), len(staleness.stale),
+              len(staleness.unknown))).rstrip())
+    for label, group in (("current", current), ("stale", list(staleness.stale)),
+                         ("unknown", list(staleness.unknown))):
+        if group:
+            print("  %-8s %s" % (label + ":", ", ".join(str(case) for case in group)))
 PY
 ```
 
-`python3 -m unittest tests.test_run_benchmark.NoteCouplingTests -v` re-derives the same numbers
-and checks the note against them in one step.
+The version guard is not decoration: without it the command silently prints twenty-one under
+the `python3` on this machine's `PATH`. Run it under the interpreter the cache was made with —
+`/usr/bin/python3` here — or it stops and says why. `python3 -m unittest
+tests.test_run_benchmark.NoteCouplingTests -v` re-derives the same numbers and checks the note
+against them in one step, and refuses in the same way.
 
 ## What was changed
 
@@ -233,6 +324,15 @@ earlier code printed, and rewriting them would destroy the comparison.
   file was restored and the suite re-run green.
 - `--compare` over the real cache now names the stale case in each run directory instead of
   printing a bare accuracy.
-- The figures in "What the check found" were re-derived in the three ways this note describes:
-  through `grade_run`, through an independent `money.dumps_canonical` sweep, and through the
-  six worktrees. All three agree on 17 current and 12 stale.
+- The figures in "What the check found" were re-derived four ways: through `grade_run`, through
+  an independent `money.dumps_canonical` sweep, through the six worktrees, and by running the
+  command this note quotes and diffing its output against the block. All four agree on 17
+  current and 12 stale.
+- `NoteCouplingTests` was mutated twice to prove it bites. Restoring the old `8/21` block turns
+  the cache comparison RED, and dropping one directory from the quoted command turns the
+  command comparison RED. Both files were restored from copies and the suite re-run green.
+- The interpreter dependence was measured rather than inferred: 19 of the 29 canonical briefs
+  differ between 3.9.6 and 3.13.12; the only field that ever differs is a `mean_distance_m`; all
+  229 individual distances for case 101 are bit-identical under both interpreters; and a
+  left-to-right accumulation reproduces the 3.9 value under both, which places the change in
+  `sum()` rather than in the data.

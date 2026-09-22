@@ -103,10 +103,17 @@ The whole 29-case set was produced at one commit, `a11285b`, between 15:48 and 1
 landed at 17:45 and `d06d2ff` at 18:57, so the code moved on underneath a finished run rather than
 while it ran. Every cached digest matches a committed version of the brief.
 
+**That count holds only under the interpreter that produced the cache — Python 3.9.6 here.** The
+brief carries an unrounded mean distance, and `sum()`'s float semantics changed in Python 3.12, so
+the same cache reads as 12 stale under 3.9.6 and 21 under 3.13.12. **`brief_sha256` is therefore
+not a function of the repository alone**, and the check is only sound when run under the
+interpreter that produced the result. Recorded as an open defect in the note and not fixed there:
+making the float version-stable changes the brief, and so changes what every cached result means.
+
 An earlier version of this section reported 21 stale and nineteen digests matching no committed
-version. Both were wrong, and neither is reproducible: under every committed revision this cache
-yields 1, 12 or 13 stale results, never 21. That is the argument for the check rather than against
-it — a number written in a note is a claim like any other, and nothing was comparing it to the code.
+version. The nineteen was simply wrong. The 21 was this same check run under the wrong
+interpreter — which is why it turned out to be reproducible once the interpreter was suspected,
+and why "unreproducible" was the wrong thing to write about it.
 
 See `docs/notes/2026-09-22-stale-cached-results.md`.
 

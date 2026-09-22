@@ -63,6 +63,7 @@ import contextlib
 import io
 import json
 import re
+import subprocess
 import sys
 import tempfile
 import threading
@@ -2325,6 +2326,10 @@ _CASES_LINE = re.compile(r"^\s+(?P<label>current|stale|unknown):\s*(?P<cases>.*?
 # than silently stopping at the first, or a wrapped list would be counted short
 # and the count beneath it would be the only thing that noticed.
 _CASES_CONT = re.compile(r"^\s+(?P<cases>\d+(?:\s*,\s*\d+)*)\s*$")
+# The cache's digests are only comparable under the interpreter that produced
+# them: the brief carries an unrounded mean distance, and sum()'s float semantics
+# changed in Python 3.12. The note has to say which interpreter that was.
+_INTERPRETER_LINE = re.compile(r"measured under Python (\d+\.\d+\.\d+)")
 
 
 def _case_numbers(text):
@@ -2372,15 +2377,19 @@ def parse_cached_claim(text):
 class NoteCouplingTests(unittest.TestCase):
     """The note states a count about the cache; the code computes that count.
 
-    Nothing compared them, and the note carried a figure the implementation
-    cannot produce for a day. These tests read the numbers out of the note and
-    hold them against ``grade_run`` over the same directories, so the two cannot
-    drift apart again without a test going red.
+    Nothing compared them, so the note carried a figure nothing checked for a
+    day. These tests read the numbers out of the note and hold them against
+    ``grade_run`` over the same directories, so the two cannot drift apart again
+    without a test going red.
 
-    The cache under ``runs/`` is untracked, so on a checkout without it there is
-    nothing to compare against: that comparison is skipped and the skip says so.
-    What is asserted unconditionally is that the note's own numbers agree with
-    each other — which is the check that would have caught the earlier figure.
+    Two limitations, stated rather than papered over. The cache under ``runs/``
+    is untracked, so on a checkout without it there is nothing to compare against
+    and the comparison is skipped. And the count is only comparable under the
+    interpreter that produced the cache — the brief carries an unrounded mean
+    distance and ``sum()``'s float semantics changed in Python 3.12 — so the note
+    has to name that interpreter and the comparison skips under any other. What
+    is asserted unconditionally is that the note's own numbers agree with each
+    other, and that it names the interpreter.
     """
 
     @classmethod
@@ -2388,10 +2397,27 @@ class NoteCouplingTests(unittest.TestCase):
         cls.text = STALE_NOTE.read_text(encoding="utf-8")
         cls.claim = parse_cached_claim(cls.text)
 
-    def test_the_note_states_a_count_for_at_least_one_directory(self):
+    def _named_interpreter(self):
+        """The interpreter the note says its digests were made under."""
+        match = _INTERPRETER_LINE.search(self.text)
+        self.assertIsNotNone(
+            match,
+            "the note no longer says which interpreter its digests were made under",
+        )
+        return match.group(1)
+
+    def test_the_note_names_a_count_for_at_least_one_directory(self):
         self.assertTrue(
             self.claim, "the note no longer states a cached count for any directory"
         )
+
+    def test_the_note_names_the_interpreter_its_digests_came_from(self):
+        """Without it the numbers cannot be reproduced, only believed.
+
+        The brief is not byte-stable across Python versions, so a count about a
+        cache is meaningless unless the interpreter is stated with it.
+        """
+        self._named_interpreter()
 
     def test_the_counts_add_up_to_the_cached_total(self):
         for directory, block in sorted(self.claim.items()):
@@ -2420,7 +2446,23 @@ class NoteCouplingTests(unittest.TestCase):
                 self.assertEqual(len(set(listed)), len(listed), "a case is in two lists")
 
     def test_the_note_agrees_with_the_grader_over_the_real_cache(self):
-        """The coupling itself: the note's numbers against the code's."""
+        """The coupling itself: the note's numbers against the code's.
+
+        Meaningful only under the interpreter that produced the cache. The brief
+        carries an unrounded mean distance and ``sum()``'s float semantics
+        changed in Python 3.12, so under any other interpreter the check reports
+        false staleness — twenty-one where the cache holds twelve — and a
+        comparison here would report a defect in the interpreter rather than a
+        note that has drifted. That is skipped and said, not passed silently.
+        """
+        named = self._named_interpreter()
+        running = ".".join(str(part) for part in sys.version_info[:3])
+        if named != running:
+            self.skipTest(
+                "the cache was produced under Python {0} and this is {1}; the "
+                "staleness check is interpreter-sensitive".format(named, running)
+            )
+
         compared = []
         absent = []
         for directory, block in sorted(self.claim.items()):
@@ -2450,6 +2492,46 @@ class NoteCouplingTests(unittest.TestCase):
                 "no cached run directory is present ({0}); the note's numbers are "
                 "re-derived by the command it states".format(", ".join(absent))
             )
+
+    def test_the_block_the_note_quotes_is_the_output_of_its_own_command(self):
+        """The note says the block is that command's output; hold it to that.
+
+        A block written by hand and presented as tool output is exactly how the
+        first version of this note went wrong, so the claim is worth running
+        rather than reading. The command is extracted from the note, executed,
+        and its stdout compared with the block above it.
+        """
+        named = self._named_interpreter()
+        running = ".".join(str(part) for part in sys.version_info[:3])
+        if named != running:
+            self.skipTest(
+                "the command refuses under Python {0}; the cache was made under "
+                "{1}".format(running, named)
+            )
+
+        lines = self.text.splitlines(True)
+        first = next(
+            index for index, line in enumerate(lines) if _CACHED_LINE.match(line)
+        )
+        last = next(
+            index for index in range(first, len(lines)) if lines[index].strip() == "```"
+        )
+        block = "".join(lines[first:last])
+
+        section = self.text[self.text.index("### Re-deriving these numbers"):]
+        fenced = section.split("```")[1].strip("\n").splitlines()
+        self.assertEqual("python3 - <<'PY'", fenced[0], "the command's first line moved")
+        self.assertEqual("PY", fenced[-1], "the command's terminator moved")
+        script = "\n".join(fenced[1:-1])
+
+        completed = subprocess.run(
+            [sys.executable, "-c", script],
+            capture_output=True,
+            text=True,
+            cwd=str(PROJECT_ROOT),
+        )
+        self.assertEqual(0, completed.returncode, completed.stderr)
+        self.assertEqual(block, completed.stdout)
 
 
 class IsolationTests(unittest.TestCase):
