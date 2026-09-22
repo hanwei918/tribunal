@@ -18,7 +18,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from tribunal import brief, loader  # noqa: E402
+from tribunal import brief, facts, loader  # noqa: E402
 
 INDEX_PATH = PROJECT_ROOT / "data" / "index.json"
 
@@ -307,6 +307,172 @@ class TokenMeasurementTests(unittest.TestCase):
 
         self.assertLess(len(with_notes), len(baseline))
         self.assertLess(len(without_notes), len(with_notes))
+
+
+class AccumulatedDwellBriefTests(unittest.TestCase):
+    """POL-NS-06(i) reaches the agents: the numbers, and the reason they apply.
+
+    Computing the accumulation without publishing it would leave case 214's
+    defect exactly where it was, so these tests read the brief the agents
+    actually receive rather than the function that computes it.
+    """
+
+    NO_SHOW = "NO_SHOW_CHARGE"
+
+    @classmethod
+    def setUpClass(cls):
+        cls.no_show = [
+            case_no
+            for case_no in case_numbers()
+            if loader.load_case(case_no)["dispute"]["category"] == cls.NO_SHOW
+        ]
+
+    @staticmethod
+    def arrival_of(case_no):
+        """The arrival block of one case's brief, with the accumulated sub-block."""
+        return derived(brief.build_brief(case_no))["arrival"]
+
+    def test_1_case_214_publishes_the_two_holds_and_their_sum(self):
+        """The fact the case turns on, and the single hold that is not enough."""
+        arrival = self.arrival_of(214)
+        block = arrival["accumulated_dwell"]
+
+        self.assertEqual([run["duration_sec"]["value"] for run in block["runs"]], [170.0, 185.0])
+        self.assertEqual([run["fix_count"]["value"] for run in block["runs"]], [18, 20])
+        self.assertEqual(block["accumulated_sec"]["value"], 355.0)
+        self.assertAlmostEqual(block["max_excursion_m"]["value"], 179.0, delta=0.05)
+
+        minimum = block["thresholds"]["minimum_dwell_sec"]["value"]
+        self.assertEqual(minimum, 300)
+        self.assertEqual(arrival["longest_qualifying_run"]["duration_sec"]["value"], 185.0)
+        self.assertLess(
+            block["longest_run_sec"]["value"],
+            minimum,
+            "the longest hold alone must fall short, or the limb decides nothing",
+        )
+        self.assertGreaterEqual(block["accumulated_sec"]["value"], minimum)
+
+    def test_2_case_214_says_why_summing_is_permitted(self):
+        """A judge told 355 without the reason cannot cite the clause."""
+        block = self.arrival_of(214)["accumulated_dwell"]
+
+        self.assertIs(block["limb"]["available"], True)
+        self.assertEqual(block["limb"]["limb"], "i")
+        self.assertEqual(block["limb"]["policy_id"], "POLICY-NO-SHOW")
+        self.assertEqual(block["limb"]["clause_id"], "POL-NS-06")
+
+        reason = block["limb"]["reason"]
+        self.assertIn("EV-ADVIS-00214-01", reason)
+        self.assertIn("KERB_RESTRICTION", reason)
+
+    def test_3_case_211_reports_the_sum_and_refuses_to_use_it(self):
+        """The falsifier: two holds that would clear the minimum and may not be added."""
+        block = self.arrival_of(211)["accumulated_dwell"]
+
+        self.assertEqual([run["duration_sec"]["value"] for run in block["runs"]], [220.0, 112.0])
+        self.assertEqual(block["accumulated_sec"]["value"], 332.0)
+        self.assertGreaterEqual(
+            block["accumulated_sec"]["value"],
+            block["thresholds"]["minimum_dwell_sec"]["value"],
+        )
+
+        self.assertIs(block["limb"]["available"], False)
+        conditions = [entry["condition"] for entry in block["limb"]["unavailable"]]
+        self.assertIn(facts.ADVISORY_MISSING, conditions)
+
+        text = " ".join(entry["reason"] for entry in block["limb"]["unavailable"])
+        self.assertIn("EV-ADVIS-00211-01", text, "the reason must name the missing advisory")
+        self.assertIn("MISSING", text)
+
+    def test_4_case_211_reports_the_hole_between_the_holds(self):
+        """The trace's own gap, and the excursion it makes unmeasurable."""
+        block = self.arrival_of(211)["accumulated_dwell"]
+
+        self.assertEqual(len(block["excursions"]), 1)
+        excursion = block["excursions"][0]
+        self.assertIs(excursion["gap_in_interval"]["value"], True)
+        self.assertIsNone(excursion["max_distance_m"]["value"])
+        self.assertIsNone(block["max_excursion_m"]["value"])
+
+        conditions = [entry["condition"] for entry in block["limb"]["unavailable"]]
+        self.assertIn(facts.EXCURSION_UNMEASURABLE, conditions)
+
+    def test_5_every_derived_value_carries_the_evidence_id_it_came_from(self):
+        """Each value in the block is tagged, exactly as the facts around it are."""
+        block = self.arrival_of(214)["accumulated_dwell"]
+        untagged = []
+
+        def check(node, path):
+            if isinstance(node, dict):
+                if "value" in node:
+                    if "evidence_id" not in node:
+                        untagged.append(path)
+                    return
+                for key, value in node.items():
+                    check(value, "{0}.{1}".format(path, key))
+            elif isinstance(node, list):
+                for position, value in enumerate(node):
+                    check(value, "{0}[{1}]".format(path, position))
+
+        for name in (
+            "accumulated_sec",
+            "longest_run_sec",
+            "run_count",
+            "shortfall_sec",
+            "max_excursion_m",
+            "runs",
+            "excursions",
+        ):
+            check(block[name], name)
+
+        self.assertEqual(untagged, [], "values without a source: {0}".format(untagged))
+
+    def test_6_every_threshold_carries_the_clause_it_came_from(self):
+        """The leash and the types are attributed to POL-NS-06, the motion line to POL-NS-05."""
+        block = self.arrival_of(214)["accumulated_dwell"]
+        thresholds = block["thresholds"]
+
+        self.assertEqual(thresholds["leash_m"]["clause_id"], "POL-NS-06")
+        self.assertEqual(thresholds["admissible_advisory_types"]["clause_id"], "POL-NS-06")
+        self.assertEqual(thresholds["motion_speed_kph"]["clause_id"], "POL-NS-05")
+        self.assertEqual(thresholds["minimum_dwell_sec"]["zone_class"], "LARGE_VENUE")
+
+        for name, entry in thresholds.items():
+            self.assertIn("value", entry, name)
+            self.assertIn("policy_id", entry, name)
+            self.assertTrue(
+                "clause_id" in entry or "zone_class" in entry,
+                "{0} does not say where its number came from".format(name),
+            )
+
+    def test_7_the_block_is_emitted_for_no_show_cases_only(self):
+        """A ROUTE_DEVIATION case has no POL-NS-06 clause, so it has no such block."""
+        for case_no in case_numbers():
+            b = brief.build_brief(case_no)
+            category = b["case"]["dispute"]["category"]
+            gps = gps_artifact(b)
+
+            if not isinstance(gps["payload"], dict):
+                # Case 213's GPS artifact is MISSING; there is no derived block.
+                self.assertIsNone(gps["payload"])
+                continue
+
+            arrival = derived(b)["arrival"]
+            if category == self.NO_SHOW:
+                self.assertIs(arrival.get("available"), True, "case {0}".format(case_no))
+                self.assertIn("accumulated_dwell", arrival, "case {0}".format(case_no))
+            else:
+                self.assertNotIn("accumulated_dwell", arrival, "case {0}".format(case_no))
+
+    def test_8_only_case_214_offers_the_limb(self):
+        """The corpus's one clean test of POL-NS-06(i), read from the brief."""
+        offered = [
+            case_no
+            for case_no in self.no_show
+            if isinstance(gps_artifact(brief.build_brief(case_no))["payload"], dict)
+            and self.arrival_of(case_no)["accumulated_dwell"]["limb"]["available"]
+        ]
+        self.assertEqual(offered, [214])
 
 
 if __name__ == "__main__":

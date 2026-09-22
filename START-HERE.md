@@ -69,8 +69,15 @@ All three were ours rather than the model's, and each was visible in exactly one
 - the escalation rate printed beside a corpus target it could not be compared to — visible in the size
   of the graded set, which the report never stated.
 
-See `docs/notes/2026-09-22-advocate-output-contract.md` and
-`docs/notes/2026-09-22-evaluation-layer-two-defects.md`.
+A fourth kind is worth naming separately, because the verdict gives no hint of it: **a fact the brief
+never computed**. `deepseek/deepseek-flash` ruled FULL_REFUND on case 214 where the answer is
+DRIVER_COMPENSATION, and every number it was given was correct — it was simply never told that
+POL-NS-06(i) permits two separate holds to be added. The model could not see what we never calculated.
+When a case is missed, check what the brief *omitted* as well as what the model did with what it had.
+
+See `docs/notes/2026-09-22-advocate-output-contract.md`,
+`docs/notes/2026-09-22-evaluation-layer-two-defects.md` and
+`docs/notes/2026-09-22-accumulated-dwell.md`.
 
 ## Policy values
 
@@ -78,6 +85,11 @@ See `docs/notes/2026-09-22-advocate-output-contract.md` and
   radius, dwell minimum, accuracy filter, distance threshold, fee or rate may appear as a literal in
   `tribunal/`. Thresholds are passed in by the caller, from `policy/no_show.json` under
   `fee_schedule` and `policy/route_deviation.json` under `fare_model`.
+- **A policy value that exists only as clause prose is still a policy value.** POL-RD-01's four
+  deviation lines, POL-NS-06's leash and its four admissible `traffic_advisory.type` values, and
+  POL-NS-05's motion line are all stated in a clause's `rule` text and nowhere as a field. They are
+  read out of the loaded clause and the reader **raises** if a line cannot be found. A fallback
+  constant would be a policy number hard-coded in `tribunal/`, which is the thing this rule forbids.
 
 ## Session records
 
