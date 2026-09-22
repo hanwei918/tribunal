@@ -60,6 +60,38 @@ transcript. ``tests/test_run_benchmark.py`` asserts that a completed run's cache
 artifacts and transcripts carry no answer-key field name, reusing the scan in
 ``tests/test_answer_isolation.py``.
 
+A cached result is evidence about the code that produced it
+----------------------------------------------------------
+Every case file records the digest of the exact brief bytes its agents were
+handed, so a result can be checked against the brief this code builds now. The
+runner does that check whenever it reads a cached result — in ``grade_run``, and
+therefore in ``--compare`` — and reports what it finds: a case whose brief has
+changed is *stale*, named and counted, and never folded silently into a score.
+
+This is not decoration. The cache under ``runs/`` holds results produced by more
+than one version of the brief, and until this check existed nothing said so:
+``--compare`` tabulated all of them as one run, and a single-case re-run had
+replaced the 29-case run's own ``run.json``, so the commit and the case list
+that produced those results existed nowhere afterwards.
+
+``stale`` is one of three answers and the third is not the first. A brief that
+cannot be rebuilt — a case file that has since moved, a policy that no longer
+parses — is ``unknown``, not current, for the same reason an unreadable working
+tree is not clean.
+
+Per-case provenance, and per-invocation metadata
+------------------------------------------------
+A cache entry records the commit and the prompts digest it was produced under,
+beside the brief digest it already kept. Provenance that lives only in a file
+the next invocation overwrites is not provenance.
+
+``run.json`` still describes the invocation that wrote it, which is right: it is
+rewritten after every case, so an interrupted run has correct totals rather than
+none. That makes it the invocation's record and not the directory's, so the
+directory gets a block of its own saying what it holds, and every invocation's
+record is appended to ``invocations.json`` — keyed by the invocation's start
+time — so an earlier one stays reconstructable after its own file is gone.
+
 Concurrency is opt-in and proven
 --------------------------------
 ``--concurrency`` defaults to 1 because that is the ordering that is
@@ -92,10 +124,11 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from eval import grade
-from tribunal import llm, money, pipeline
+from tribunal import brief, llm, loader, money, pipeline
 
 __all__ = [
     "BenchmarkError",
+    "BriefStaleness",
     "CaseOutcome",
     "ComparisonRow",
     "RunSummary",
@@ -111,6 +144,7 @@ __all__ = [
     "FAILURE_SHAPE",
     "FAILURE_INTERRUPTED",
     "FAILURE_NOTE",
+    "INVOCATIONS_FILE",
     "failure_kind_for",
     "failure_reason_for",
     "billed_tokens",
@@ -123,6 +157,8 @@ __all__ = [
     "write_json",
     "load_cached",
     "cached_case_numbers",
+    "current_brief_sha256",
+    "brief_staleness",
     "hash_directory",
     "git_state",
     "provenance",
@@ -146,6 +182,12 @@ RUNS_DIR = PROJECT_ROOT / "runs"
 CACHE_SCHEMA_VERSION = 1
 
 METADATA_FILE = "run.json"
+# Every invocation's own metadata record, appended to. ``run.json`` is the
+# latest invocation's record and the next invocation overwrites it, so it cannot
+# be the only place an invocation's provenance lives: a run whose commit and
+# token total exist only in a file the next run destroys has no provenance at
+# all. This file is the list of them.
+INVOCATIONS_FILE = "invocations.json"
 CALLS_FILE = "calls.json"
 REPORT_FILE = "report.md"
 
@@ -456,6 +498,91 @@ def provenance(
 
 
 # --------------------------------------------------------------------------
+# Staleness
+# --------------------------------------------------------------------------
+def current_brief_sha256(case_no: int) -> Optional[str]:
+    """The digest of the brief this code builds for ``case_no`` right now.
+
+    The same three steps :func:`tribunal.pipeline.run_case` takes, in the same
+    order: ``brief.build_brief``, ``money.dumps_canonical``, then SHA-256 over
+    those exact bytes. The serialiser is not interchangeable — any other
+    produces a different digest for the same brief, and every cached case would
+    be reported stale.
+
+    ``None`` when the brief cannot be built at all: a case file that has since
+    moved, a policy that no longer parses. That is "cannot tell", and it is not
+    "matches".
+    """
+    try:
+        return brief.brief_digest(brief.build_brief(case_no))[1]
+    except Exception:  # noqa: BLE001 - a brief that cannot be built is not a match
+        return None
+
+
+class BriefStaleness:
+    """Answers "does this cached result still belong to this code?" per case.
+
+    A cached result carries ``brief_sha256``, the digest of the exact bytes its
+    agents were handed, so the question is decidable from the cache plus the
+    current code. It is not decidable from either alone.
+
+    The digest is memoised per case number because one ``--compare`` asks the
+    same question once per run directory and rebuilding a brief is a file read
+    per case.
+    """
+
+    def __init__(self, digest: Optional[Callable[[int], Optional[str]]] = None) -> None:
+        self._digest = current_brief_sha256 if digest is None else digest
+        self._current: Dict[int, Optional[str]] = {}
+
+    def current_digest(self, case_no: int) -> Optional[str]:
+        if case_no not in self._current:
+            self._current[case_no] = self._digest(case_no)
+        return self._current[case_no]
+
+    def status_of(self, case_no: int, document: Mapping[str, Any]) -> str:
+        """``current``, ``stale`` or ``unknown`` for one cache entry."""
+        recorded = document.get("brief_sha256") if isinstance(document, Mapping) else None
+        if not isinstance(recorded, str) or not recorded:
+            # Written before the digest was recorded, so the file cannot say
+            # which brief produced it. Unknown, not current.
+            return grade.STALENESS_UNKNOWN
+        current = self.current_digest(case_no)
+        if current is None:
+            return grade.STALENESS_UNKNOWN
+        if recorded == current:
+            return grade.STALENESS_CURRENT
+        return grade.STALENESS_STALE
+
+
+def brief_staleness(
+    run_dir: Path,
+    cases: Sequence[int],
+    checker: Optional[BriefStaleness] = None,
+) -> grade.Staleness:
+    """Check every cached case in ``cases`` against the brief built now.
+
+    Returns a :class:`eval.grade.Staleness` with ``checked`` set, so a report
+    built from it can say the check happened rather than merely that it found
+    nothing. A case with no cache entry is not checked and is not reported: it
+    produced no result to be stale.
+    """
+    checker = BriefStaleness() if checker is None else checker
+    stale: List[int] = []
+    unknown: List[int] = []
+    for case_no in cases:
+        document = load_cached(run_dir, case_no)
+        if document is None:
+            continue
+        status = checker.status_of(case_no, document)
+        if status == grade.STALENESS_STALE:
+            stale.append(case_no)
+        elif status == grade.STALENESS_UNKNOWN:
+            unknown.append(case_no)
+    return grade.Staleness(True, tuple(sorted(stale)), tuple(sorted(unknown)))
+
+
+# --------------------------------------------------------------------------
 # One case
 # --------------------------------------------------------------------------
 @dataclass(frozen=True)
@@ -472,6 +599,11 @@ class CaseOutcome:
     failure_kind: Optional[str] = None
     failure_detail: Optional[str] = None
     ruling: Optional[Any] = None
+    # Set only for a case whose result was read back from the cache, and only
+    # when the brief this code builds for it is no longer the brief it was
+    # produced from. A cached result the reader is told to trust while the code
+    # has moved on is the whole defect this field exists to prevent.
+    brief_status: Optional[str] = None
 
     @property
     def ok(self) -> bool:
@@ -597,6 +729,7 @@ def run_one_case(
     client: Any,
     prompts_dir: Path,
     expected: Optional[grade.Ruling],
+    case_provenance: Optional[Mapping[str, Any]] = None,
 ) -> Tuple[CaseOutcome, Optional[Dict[str, Any]], Optional[str]]:
     """Run one case. Returns ``(outcome, cache document, transcript json)``.
 
@@ -609,6 +742,10 @@ def run_one_case(
     A failure is classified rather than merely described. A timeout and an
     unusable answer call for opposite responses, so the record says which one
     happened instead of leaving it to be read out of the exception's text.
+
+    ``case_provenance`` is recorded inside the cache entry, beside the brief
+    digest it belongs to. Provenance kept only in the run's own metadata file is
+    provenance the next invocation destroys.
     """
     started = time.monotonic()
     try:
@@ -652,12 +789,19 @@ def run_one_case(
         )
 
     matched = _match_for(case_no, result.ruling, expected)
+    provenance_fields = dict(case_provenance or {})
     document = {
         "schema_version": CACHE_SCHEMA_VERSION,
         "case_no": case_no,
         "model": result.model,
         "recorded_at": datetime.now(timezone.utc).isoformat(),
         "brief_sha256": result.brief_sha256,
+        # The commit and the prompts digest under which THIS result was
+        # produced, beside the digest of the brief it was given. The three
+        # together are what makes the entry self-describing: a later reader can
+        # tell both what produced it and whether the code has since moved on.
+        "git_commit": provenance_fields.get("git_commit"),
+        "prompts_sha256": provenance_fields.get("prompts_sha256"),
         "transcript_sha256": result.transcript_sha256,
         "transcript_file": transcript_path(Path("."), case_no).name,
         "ruling": result.ruling,
@@ -689,9 +833,19 @@ def run_one_case(
 
 
 def _outcome_from_cache(
-    case_no: int, document: Mapping[str, Any], expected: Optional[grade.Ruling]
+    case_no: int,
+    document: Mapping[str, Any],
+    expected: Optional[grade.Ruling],
+    brief_status: Optional[str] = None,
 ) -> CaseOutcome:
-    """The outcome of a case that was skipped because its result is cached."""
+    """The outcome of a case that was skipped because its result is cached.
+
+    ``brief_status`` is the staleness of that cached result, which the caller
+    has already worked out. It travels on the outcome so the progress line says
+    "stale" at the moment the result is reused rather than only in the report at
+    the end — the reader watching the terminal is the one who can still decide
+    to re-run.
+    """
     tokens = document.get("tokens") or {}
     return CaseOutcome(
         case_no=case_no,
@@ -700,6 +854,7 @@ def _outcome_from_cache(
         total_tokens=_as_int(tokens.get("total_tokens")),
         matched=_match_for(case_no, document.get("ruling"), expected),
         ruling=document.get("ruling"),
+        brief_status=brief_status,
     )
 
 
@@ -715,6 +870,11 @@ def format_progress(outcome: CaseOutcome, position: int, total: int) -> str:
 
     Printed as each case completes rather than at the end, because a three-hour
     run that prints nothing until it is over is unusable.
+
+    A reused result whose brief has changed says so here, on the line that
+    announces the reuse. A reader who sees a run skip twenty-nine cases needs to
+    know how many of them the code has moved on from before the report is
+    written, not after.
     """
     line = "[{0:>3}/{1}] case {2}  {3:<6} {4}  {5:>10} tokens".format(
         position,
@@ -724,6 +884,10 @@ def format_progress(outcome: CaseOutcome, position: int, total: int) -> str:
         _format_seconds(outcome.wall_seconds),
         "{0:,}".format(outcome.total_tokens),
     )
+    if outcome.brief_status == grade.STALENESS_STALE:
+        line += "  — stale: produced by an earlier version of the brief"
+    elif outcome.brief_status == grade.STALENESS_UNKNOWN:
+        line += "  — brief not checked: it could not be rebuilt"
     if outcome.status == STATUS_FAILED:
         reason = (outcome.failure_reason or "unknown failure").splitlines()[0]
         if outcome.failed_agent:
@@ -906,13 +1070,22 @@ def run_benchmark(
     pending: List[int] = []
     tokens_reused = 0
 
-    # Cached first: a re-run should say what it is skipping before it starts.
+    # Cached first: a re-run should say what it is skipping before it starts, and
+    # whether what it is skipping still belongs to this code. One checker for the
+    # whole invocation, because the current brief for a case cannot change while
+    # the run is in progress.
+    checker = BriefStaleness()
     for case_no in requested:
         document = None if force else load_cached(run_dir, case_no)
         if document is None:
             pending.append(case_no)
             continue
-        outcome = _outcome_from_cache(case_no, document, resolved_key.get(case_no))
+        outcome = _outcome_from_cache(
+            case_no,
+            document,
+            resolved_key.get(case_no),
+            checker.status_of(case_no, document),
+        )
         outcomes.append(outcome)
         recorded.add(case_no)
         tokens_reused += outcome.total_tokens
@@ -921,24 +1094,26 @@ def run_benchmark(
     state = {"spent": 0, "stop_reason": STOP_COMPLETED}
 
     def write_metadata(stop_reason: str) -> None:
-        write_json(
-            metadata_path(run_dir),
-            _metadata_document(
-                model=model,
-                run_dir=run_dir,
-                started_at=started_at,
-                ended_at=now(),
-                stop_reason=stop_reason,
-                requested=requested,
-                outcomes=outcomes,
-                run_provenance=run_provenance,
-                token_budget=token_budget,
-                concurrency=concurrency,
-                timeout_seconds=timeout_seconds,
-                tokens_spent=state["spent"],
-                tokens_reused=tokens_reused,
-            ),
+        document = _metadata_document(
+            model=model,
+            run_dir=run_dir,
+            started_at=started_at,
+            ended_at=now(),
+            stop_reason=stop_reason,
+            requested=requested,
+            outcomes=outcomes,
+            run_provenance=run_provenance,
+            token_budget=token_budget,
+            concurrency=concurrency,
+            timeout_seconds=timeout_seconds,
+            tokens_spent=state["spent"],
+            tokens_reused=tokens_reused,
         )
+        # Both, and the order matters. ``run.json`` is the latest invocation's
+        # record at the conventional path; the history is what survives the next
+        # invocation overwriting that file.
+        write_json(metadata_path(run_dir), document)
+        _record_invocation(run_dir, document)
 
     def accept(outcome: CaseOutcome) -> None:
         """Record one outcome, on disk and on the terminal, the moment it lands.
@@ -970,6 +1145,7 @@ def run_benchmark(
                 client=client,
                 prompts_dir=prompts_dir,
                 expected=resolved_key.get(case_no),
+                case_provenance=run_provenance,
             )
 
         workers = max(1, concurrency)
@@ -1092,6 +1268,36 @@ def _persist(
         write_json(case_cache_path(run_dir, outcome.case_no), document)
 
 
+def _record_invocation(run_dir: Path, document: Mapping[str, Any]) -> None:
+    """Append one invocation's metadata to the run directory's history.
+
+    ``run.json`` describes the invocation that wrote it and is overwritten by
+    the next one, which is right for that file and useless as a record: a
+    single-case re-run of case 214 replaced a 29-case run's commit, token total
+    and case list, and nothing anywhere held them afterwards. This is the list
+    of invocations, so an earlier one stays reconstructable.
+
+    Keyed by the invocation's own start time and replaced in place, because
+    ``run.json`` is rewritten after every case to keep an interrupted run's
+    totals correct — without that, one run would leave one entry per case.
+    """
+    path = Path(run_dir) / INVOCATIONS_FILE
+    history = read_json(path)
+    if not isinstance(history, list):
+        # Absent, corrupt, or hand-written as an object: the history starts
+        # here rather than the write failing. Losing a history file must not
+        # also lose the run that discovered it.
+        history = []
+    started_at = document.get("started_at")
+    history = [
+        entry
+        for entry in history
+        if not (isinstance(entry, Mapping) and entry.get("started_at") == started_at)
+    ]
+    history.append(dict(document))
+    write_json(path, history)
+
+
 def _metadata_document(
     *,
     model: str,
@@ -1112,8 +1318,15 @@ def _metadata_document(
 
     Every provenance field the run needs is at the top level, so a reader does
     not have to know the shape to find the commit or the clean-tree flag.
+
+    ``cases`` describes **this invocation**, which is what the file is: a
+    single-case re-run sitting in a directory of twenty-nine results says
+    ``requested [214]``, and that is true of the invocation. It is misleading
+    about the directory, so the directory gets its own block saying what it
+    holds. A reader should not have to count files to learn that the two differ.
     """
     failed = [outcome for outcome in outcomes if outcome.status == STATUS_FAILED]
+    directory_cases = cached_case_numbers(run_dir)
     return {
         "schema_version": CACHE_SCHEMA_VERSION,
         "model": model,
@@ -1141,10 +1354,28 @@ def _metadata_document(
             "total_for_the_case_set": tokens_spent + tokens_reused,
         },
         "cases": {
+            "scope": "this invocation only",
             "requested": list(requested),
             "completed": [o.case_no for o in outcomes if o.status == STATUS_COMPLETED],
             "cached": [o.case_no for o in outcomes if o.status == STATUS_CACHED],
             "failed": [o.case_no for o in failed],
+        },
+        # The directory, as opposed to the invocation. These are the results a
+        # grader reading this directory will actually find, whoever produced
+        # them, and they are what the staleness of the set is measured over.
+        "directory": {
+            "path": str(run_dir),
+            "cached_cases": directory_cases,
+            "cached_case_count": len(directory_cases),
+            "holds_results_from_earlier_invocations": sorted(directory_cases)
+            != sorted(set(requested)),
+            "note": (
+                "cached_cases is every result in this directory, whoever "
+                "produced it. cases.requested is only what this invocation was "
+                "asked for, so a directory holding more results than that holds "
+                "results from earlier invocations; their provenance is in "
+                "{0}.".format(INVOCATIONS_FILE)
+            ),
         },
         "failures": [
             {
@@ -1169,13 +1400,21 @@ def grade_run(
     run_dir: Path,
     key: Optional[Mapping[int, grade.Ruling]] = None,
     cases: Optional[Sequence[int]] = None,
+    checker: Optional[BriefStaleness] = None,
 ) -> grade.GradeReport:
-    """Grade a run's cached rulings.
+    """Grade a run's cached rulings, and say which of them the code has moved past.
 
     Graded over the cases the run actually covers, so a partial run reports an
     accuracy over what it ran rather than over 29 cases of which it produced
     eleven. The key is loaded and used by :mod:`eval.grade`; this function never
     opens the key itself.
+
+    The staleness check belongs here rather than with the caller, because this
+    is where a cached result is read as evidence. Each cached case carries the
+    digest of the brief its agents were handed, so rebuilding that case's brief
+    now and comparing the two digests says whether the result still belongs to
+    this code. A case whose brief has changed is reported as stale — named and
+    counted — and never silently folded into a score.
     """
     resolved_key: Mapping[int, grade.Ruling] = (
         grade.load_answer_key() if key is None else dict(key)
@@ -1192,13 +1431,15 @@ def grade_run(
         if document is not None:
             produced[case_no] = document.get("ruling")
 
+    staleness = brief_staleness(run_dir, covered, checker)
+
     subset = {case_no: resolved_key[case_no] for case_no in covered}
     # The whole key travels with the subset so the report knows whether the
     # rates it prints may be compared to the published target. Grading a partial
     # run over the cases it actually ran is right; printing that subset's
     # escalation rate beside the corpus base rate is not, and the report can
     # only withhold the comparison if it is told which set it is describing.
-    return grade.grade(produced, subset, corpus=resolved_key)
+    return grade.grade(produced, subset, corpus=resolved_key, staleness=staleness)
 
 
 # --------------------------------------------------------------------------
@@ -1230,9 +1471,15 @@ class ComparisonRow:
     indeterminate_ruled_confidently: int
     mean_latency_seconds: Optional[float]
     total_tokens: int
+    staleness: grade.Staleness = grade.Staleness()
 
 
-def _row_from_run(run_dir: Path, cases: Sequence[int], key: Mapping[int, grade.Ruling]) -> ComparisonRow:
+def _row_from_run(
+    run_dir: Path,
+    cases: Sequence[int],
+    key: Mapping[int, grade.Ruling],
+    checker: Optional[BriefStaleness] = None,
+) -> ComparisonRow:
     """Build one comparison row from a run directory."""
     metadata = read_json(metadata_path(run_dir))
     if not isinstance(metadata, dict):
@@ -1241,7 +1488,7 @@ def _row_from_run(run_dir: Path, cases: Sequence[int], key: Mapping[int, grade.R
     cached = cached_case_numbers(run_dir)
     covered = [case_no for case_no in cases if case_no in set(cached)]
 
-    report = grade_run(run_dir, key, covered)
+    report = grade_run(run_dir, key, covered, checker)
 
     durations: List[float] = []
     tokens = 0
@@ -1271,6 +1518,7 @@ def _row_from_run(run_dir: Path, cases: Sequence[int], key: Mapping[int, grade.R
         indeterminate_ruled_confidently=len(calibration.indeterminate_ruled_confidently),
         mean_latency_seconds=(sum(durations) / len(durations)) if durations else None,
         total_tokens=tokens,
+        staleness=report.staleness,
     )
 
 
@@ -1303,8 +1551,12 @@ def collect_comparison(
     common = set.intersection(*(set(numbers) for numbers in per_run.values()))
     shared = sorted(case_no for case_no in common if case_no in resolved_key)
 
+    # One checker across every row: the current brief for a case is the same
+    # question whichever run directory is asking it, and rebuilding it once per
+    # directory would be the same answer computed twice.
+    checker = BriefStaleness()
     return [
-        _row_from_run(directory, shared, resolved_key) for directory in directories
+        _row_from_run(directory, shared, resolved_key, checker) for directory in directories
     ]
 
 
@@ -1315,6 +1567,18 @@ def _render_tree_flag(clean: Optional[bool]) -> str:
     if clean is False:
         return "DIRTY"
     return "unknown"
+
+
+def _render_stale_count(staleness: grade.Staleness) -> str:
+    """The ``stale`` cell: how many graded results this code has moved past.
+
+    ``n/a`` when nobody checked, which is not ``0``: a count of zero asserts
+    that every cached brief was rebuilt and matched, and that claim is only
+    available if it was actually made.
+    """
+    if not staleness.checked:
+        return "n/a"
+    return str(len(staleness.stale))
 
 
 def render_comparison(rows: Sequence[ComparisonRow]) -> str:
@@ -1334,6 +1598,7 @@ def render_comparison(rows: Sequence[ComparisonRow]) -> str:
         "model",
         "tree",
         "cases",
+        "stale",
         "exact",
         "ruling",
         "amount",
@@ -1356,6 +1621,7 @@ def render_comparison(rows: Sequence[ComparisonRow]) -> str:
                 row.model,
                 _render_tree_flag(row.working_tree_clean),
                 str(denominator),
+                _render_stale_count(row.staleness),
                 "{0}/{1}".format(row.exact_matches, denominator),
                 "{0}/{1}".format(row.field_correct["ruling"], denominator),
                 "{0}/{1}".format(row.field_correct["amount_sgd"], denominator),
@@ -1418,6 +1684,39 @@ def render_comparison(rows: Sequence[ComparisonRow]) -> str:
             "INDETERMINATE cases ruled confidently instead of escalated: {0} "
             "across these runs.".format(confidently_wrong)
         )
+
+    stale_rows = [row for row in rows if row.staleness.mixed]
+    if stale_rows:
+        lines.append("")
+        lines.append(
+            "stale is how many of the graded results were produced by a brief "
+            "this code no longer builds. Every cached case records the digest of "
+            "the brief its agents were handed, so that case's brief is rebuilt "
+            "now and the two digests compared. A stale result is not wrong; it "
+            "is not a measurement of this code."
+        )
+        for row in stale_rows:
+            if row.staleness.stale:
+                lines.append(
+                    "  {0}  stale: {1}".format(
+                        row.model,
+                        ", ".join(str(case_no) for case_no in row.staleness.stale),
+                    )
+                )
+            if row.staleness.unknown:
+                lines.append(
+                    "  {0}  could not be checked: {1}".format(
+                        row.model,
+                        ", ".join(str(case_no) for case_no in row.staleness.unknown),
+                    )
+                )
+        lines.append(
+            "A mixed set is not one run. The exact-match figure for a row with "
+            "stale cases was computed over results produced by more than one "
+            "version of the brief, so it is not a single measurement of any one "
+            "version of this code."
+        )
+
     lines.append(
         "tree is the working-tree flag from the run's own metadata: a number "
         "from a DIRTY tree, or one whose state is unknown, cannot be reproduced."
@@ -1536,6 +1835,42 @@ def print_summary(summary: RunSummary) -> None:
         for name in grade.GRADED_FIELDS:
             correct, total = report.field_tally(name)
             print("  {0:<24} {1}/{2}".format(name, correct, total))
+
+        # Printed next to the figure it qualifies, and only when the check was
+        # actually made. A run that reused a cached result produced by older
+        # code is not reporting one measurement, and the number above it must
+        # not be read as though it were.
+        staleness = report.staleness
+        if staleness.checked:
+            if staleness.mixed:
+                print("")
+                print(
+                    "stale briefs  {0} of {1} results were produced by a brief "
+                    "this code no longer builds".format(
+                        len(staleness.stale) + len(staleness.unknown), report.total
+                    )
+                )
+                if staleness.stale:
+                    print(
+                        "              stale: {0}".format(
+                            ", ".join(str(case_no) for case_no in staleness.stale)
+                        )
+                    )
+                if staleness.unknown:
+                    print(
+                        "              could not be checked: {0}".format(
+                            ", ".join(str(case_no) for case_no in staleness.unknown)
+                        )
+                    )
+                print(
+                    "              a mixed set is not one run, so the exact-match "
+                    "figure above is not a single measurement"
+                )
+            else:
+                print(
+                    "briefs        all {0} results match the brief this code "
+                    "builds".format(report.total)
+                )
 
         calibration = report.calibration
         print("")

@@ -34,6 +34,18 @@ What is covered
   RED against an unguarded limiter, because a guard nobody has seen fail is not
   evidence of anything;
 * ``--compare``: two cached runs tabulated off disk, making no model call;
+* staleness: a cached result whose brief this code still builds reports current,
+  one whose brief has changed reports stale **and is named**, a brief that
+  cannot be rebuilt is unknown rather than current, and a grading over a mixed
+  set says on its face that its exact-match figure is not one measurement —
+  with the digest shown to be the one the pipeline itself recorded, so the
+  check cannot be satisfied by comparing against a constant;
+* per-case provenance: every cache entry carries the commit and the prompts
+  digest it was produced under, beside the brief digest it already kept;
+* the run record: a second invocation over a different case set leaves the
+  first invocation's own record — its case list and its token total — intact in
+  ``invocations.json``, while ``run.json`` describes only the invocation that
+  wrote it and its directory block says what the directory actually holds;
 * isolation: a completed run's cached artifacts and transcripts carry no
   answer-key field name, scanned with the same needles
   ``tests/test_answer_isolation.py`` uses — and that scan is shown to be capable
@@ -441,8 +453,15 @@ class CleanRunTests(unittest.TestCase):
                         "brief_sha256",
                         "call_seconds",
                         "case_no",
+                        # Per-case provenance, beside the digest it belongs to.
+                        # The commit and the prompts a result was produced under
+                        # must survive in the result's own file: a run-level
+                        # record is overwritten by the next invocation, so
+                        # provenance that lives only there dies with it.
+                        "git_commit",
                         "matched",
                         "model",
+                        "prompts_sha256",
                         "recorded_at",
                         "ruling",
                         "ruling_findings",
@@ -457,6 +476,8 @@ class CleanRunTests(unittest.TestCase):
                 sorted(document),
                 "the cache entry's shape changed; a new field is a deliberate act",
             )
+            self.assertEqual(COMMIT, document["git_commit"])
+            self.assertEqual(runner.hash_directory(PROMPTS_DIR), document["prompts_sha256"])
 
     def test_the_cache_entry_is_the_only_place_the_ruling_lives(self):
         """One copy of the ruling per case, and it is the one the report used.
@@ -1913,6 +1934,380 @@ class CompareTests(unittest.TestCase):
 # --------------------------------------------------------------------------
 # Isolation
 # --------------------------------------------------------------------------
+# --------------------------------------------------------------------------
+# Staleness: a cached result is evidence about the code that produced it
+# --------------------------------------------------------------------------
+class StalenessTests(unittest.TestCase):
+    """A cached result the code has moved past must be labelled, not scored away.
+
+    Nothing here re-runs a case and nothing here touches the real cache under
+    ``runs/``. A bench writes real entries, and one entry's recorded brief
+    digest is then replaced to stand in for a result an earlier version of the
+    brief produced. That is the situation the check exists to name, and it is
+    what the real cache under ``runs/`` holds: results produced by more than one
+    version of the brief, sitting in one directory, with nothing on their face
+    saying so.
+    """
+
+    def _cached_run(self, tmp):
+        bench(tmp, cases=CASE_SET)
+        return run_dir_of(tmp)
+
+    def _make_stale(self, run_dir, case_no):
+        """Give one cached entry the digest of a brief this code does not build."""
+        document = runner.load_cached(run_dir, case_no)
+        document["brief_sha256"] = "0" * 64
+        runner.write_json(runner.case_cache_path(run_dir, case_no), document)
+
+    def test_a_cached_case_whose_brief_still_matches_reports_current(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self._cached_run(tmp)
+            staleness = runner.brief_staleness(run_dir, CASE_SET)
+
+            self.assertTrue(staleness.checked, "the check must say it was made")
+            self.assertEqual((), staleness.stale)
+            self.assertEqual((), staleness.unknown)
+            self.assertFalse(staleness.mixed)
+            for case_no in CASE_SET:
+                with self.subTest(case=case_no):
+                    self.assertEqual(
+                        grade.STALENESS_CURRENT,
+                        runner.BriefStaleness().status_of(
+                            case_no, runner.load_cached(run_dir, case_no)
+                        ),
+                    )
+
+    def test_the_digest_it_rebuilds_is_the_one_the_pipeline_recorded(self):
+        """A check against anything else would report a false staleness."""
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self._cached_run(tmp)
+            for case_no in CASE_SET:
+                with self.subTest(case=case_no):
+                    self.assertEqual(
+                        runner.load_cached(run_dir, case_no)["brief_sha256"],
+                        runner.current_brief_sha256(case_no),
+                    )
+
+    def test_a_cached_case_whose_brief_has_changed_reports_stale(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self._cached_run(tmp)
+            stale_case = CASE_SET[1]
+            self._make_stale(run_dir, stale_case)
+
+            staleness = runner.brief_staleness(run_dir, CASE_SET)
+
+            self.assertEqual((stale_case,), staleness.stale)
+            self.assertEqual((), staleness.unknown)
+            self.assertTrue(staleness.mixed)
+            # The neighbours are untouched by it: a mixed set, not a stale set.
+            self.assertEqual(
+                grade.STALENESS_CURRENT,
+                runner.BriefStaleness().status_of(
+                    CASE_SET[0], runner.load_cached(run_dir, CASE_SET[0])
+                ),
+            )
+
+    def test_the_check_compares_the_brief_it_builds_and_not_a_constant(self):
+        """The digest must come from the builder, or the check proves nothing.
+
+        A checker that answers differently for every case is what "the code has
+        moved on" looks like from the cache's point of view, and every cached
+        entry must then come back stale.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self._cached_run(tmp)
+            checker = runner.BriefStaleness(digest=lambda case_no: "f" * 64)
+
+            staleness = runner.brief_staleness(run_dir, CASE_SET, checker)
+
+            self.assertEqual(tuple(sorted(CASE_SET)), staleness.stale)
+
+    def test_a_brief_that_cannot_be_rebuilt_is_unknown_and_not_current(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self._cached_run(tmp)
+            checker = runner.BriefStaleness(digest=lambda case_no: None)
+
+            staleness = runner.brief_staleness(run_dir, CASE_SET, checker)
+
+            self.assertEqual((), staleness.stale)
+            self.assertEqual(tuple(sorted(CASE_SET)), staleness.unknown)
+            self.assertTrue(
+                staleness.mixed,
+                "an unverifiable result breaks the single-measurement claim too",
+            )
+
+    def test_an_entry_written_before_the_digest_was_recorded_is_unknown(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self._cached_run(tmp)
+            document = runner.load_cached(run_dir, CASE_SET[0])
+            document.pop("brief_sha256")
+            runner.write_json(runner.case_cache_path(run_dir, CASE_SET[0]), document)
+
+            staleness = runner.brief_staleness(run_dir, CASE_SET)
+
+            self.assertEqual((CASE_SET[0],), staleness.unknown)
+            self.assertEqual((), staleness.stale)
+
+    def test_a_case_with_no_cache_entry_is_not_checked_at_all(self):
+        """There is no result to be stale, so it is neither current nor stale."""
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self._cached_run(tmp)
+            staleness = runner.brief_staleness(run_dir, [*CASE_SET, 104])
+
+            self.assertEqual((), staleness.stale)
+            self.assertEqual((), staleness.unknown)
+
+    def test_a_reused_stale_result_says_so_on_its_progress_line(self):
+        """The reader watching the terminal is the one who can still re-run."""
+        with tempfile.TemporaryDirectory() as tmp:
+            bench(tmp, cases=CASE_SET)
+            run_dir = run_dir_of(tmp)
+            self._make_stale(run_dir, CASE_SET[0])
+
+            lines = []
+            summary, _ = bench(tmp, cases=CASE_SET, progress=lines.append)
+
+            stale_lines = [line for line in lines if "stale" in line]
+            self.assertEqual(1, len(stale_lines))
+            self.assertIn(str(CASE_SET[0]), stale_lines[0])
+            self.assertEqual((CASE_SET[0],), summary.report.staleness.stale)
+
+
+class StaleGradingTests(unittest.TestCase):
+    """A mixed set is not one run, and must not be tabulated as though it were.
+
+    The assertions on rendered text below are assertions about the deliverable
+    itself. Naming the stale case and stating the caveat is the requirement, and
+    the rendered report is where that requirement is met or not met.
+    """
+
+    def _cached_run(self, tmp):
+        bench(tmp, cases=CASE_SET)
+        run_dir = run_dir_of(tmp)
+        document = runner.load_cached(run_dir, CASE_SET[1])
+        document["brief_sha256"] = "0" * 64
+        runner.write_json(runner.case_cache_path(run_dir, CASE_SET[1]), document)
+        return run_dir
+
+    def test_the_grader_reports_the_stale_case_by_name_and_count(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self._cached_run(tmp)
+            report = runner.grade_run(run_dir, cases=CASE_SET)
+
+            self.assertEqual((CASE_SET[1],), report.staleness.stale)
+            self.assertEqual((), report.staleness.unknown)
+            self.assertTrue(report.staleness.mixed)
+
+    def test_a_mixed_set_says_its_exact_match_is_not_one_measurement(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self._cached_run(tmp)
+            text = grade.render_report(runner.grade_run(run_dir, cases=CASE_SET))
+
+            self.assertIn("| {0} |".format(CASE_SET[1]), text, "the stale case is not in the table")
+            self.assertIn("| **STALE** |", text)
+            self.assertIn("mixed set is not one run", text)
+            self.assertIn("not a single measurement", text)
+            self.assertIn("**(mixed set — not one measurement)**", text)
+
+    def test_a_set_of_current_results_says_it_is_one_measurement(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            bench(tmp, cases=CASE_SET)
+            text = grade.render_report(runner.grade_run(run_dir_of(tmp), cases=CASE_SET))
+
+            self.assertIn("one measurement", text)
+            self.assertNotIn("mixed set is not one run", text)
+
+    def test_a_report_that_checked_nothing_claims_nothing(self):
+        """Silence, not a reassuring zero, when no brief was rebuilt."""
+        report = grade.grade(grade.key_as_produced(answer_key()), answer_key())
+        text = grade.render_report(report)
+
+        self.assertFalse(report.staleness.checked)
+        self.assertNotIn("one measurement", text)
+        self.assertNotIn("mixed set", text)
+        self.assertNotIn("| exact | brief |", text)
+
+    def test_the_comparison_table_carries_the_stale_count_and_names_the_cases(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            bench(tmp, cases=CASE_SET, runs_dir=runs)
+            run_dir = runner.run_directory(runs, MODEL)
+            document = runner.load_cached(run_dir, CASE_SET[0])
+            document["brief_sha256"] = "0" * 64
+            runner.write_json(runner.case_cache_path(run_dir, CASE_SET[0]), document)
+
+            row = runner.collect_comparison(runs)[0]
+            table = runner.render_comparison([row])
+
+            self.assertEqual((CASE_SET[0],), row.staleness.stale)
+            self.assertIn("stale", table.splitlines()[0])
+            self.assertIn(str(CASE_SET[0]), table)
+            self.assertIn("mixed set is not one run", table)
+
+    def test_the_stale_count_is_not_a_zero_when_nobody_checked(self):
+        row = runner.ComparisonRow(
+            model=MODEL,
+            working_tree_clean=True,
+            cases_graded=1,
+            cases_cached=1,
+            graded_cases=(101,),
+            grades_full_corpus=False,
+            exact_matches=1,
+            field_correct={name: 1 for name in grade.GRADED_FIELDS},
+            escalation_rate=None,
+            target_rate=Decimal("17.2"),
+            precision=None,
+            recall=None,
+            over_escalations=0,
+            under_escalations=0,
+            indeterminate_ruled_confidently=0,
+            mean_latency_seconds=None,
+            total_tokens=0,
+        )
+        self.assertFalse(row.staleness.checked)
+        self.assertIn("n/a", runner.render_comparison([row]))
+
+
+class PerCaseProvenanceTests(unittest.TestCase):
+    """Provenance in a file the next invocation overwrites is not provenance."""
+
+    def test_every_case_file_records_the_commit_and_the_prompts_digest(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, _ = bench(tmp)
+            for case_no in CASE_SET:
+                with self.subTest(case=case_no):
+                    document = runner.load_cached(summary.run_dir, case_no)
+                    self.assertEqual(COMMIT, document["git_commit"])
+                    self.assertEqual(
+                        runner.hash_directory(PROMPTS_DIR), document["prompts_sha256"]
+                    )
+
+    def test_the_case_files_agree_with_the_runs_own_record(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, _ = bench(tmp)
+            metadata = runner.read_json(runner.metadata_path(summary.run_dir))
+            for case_no in CASE_SET:
+                with self.subTest(case=case_no):
+                    document = runner.load_cached(summary.run_dir, case_no)
+                    self.assertEqual(metadata["git_commit"], document["git_commit"])
+                    self.assertEqual(
+                        metadata["prompts_sha256"], document["prompts_sha256"]
+                    )
+
+    def test_a_tree_that_could_not_be_read_is_recorded_as_unknown_per_case(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, _ = bench(tmp, git=git_that_cannot_be_asked())
+            document = runner.load_cached(summary.run_dir, CASE_SET[0])
+            self.assertIsNone(document["git_commit"])
+
+    def test_the_commit_a_case_records_is_the_one_that_was_in_force(self):
+        other = "deadbeef" * 5
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, _ = bench(tmp, git=git_runner(commit=other))
+            document = runner.load_cached(summary.run_dir, CASE_SET[0])
+            self.assertEqual(other, document["git_commit"])
+
+
+class RunRecordTests(unittest.TestCase):
+    """A new invocation must not destroy the record of an earlier one.
+
+    ``run.json`` is the latest invocation's record and is rewritten after every
+    case, so it is right for it to describe only its own invocation. What must
+    not happen is that the earlier invocation's commit, case list and token
+    total exist nowhere afterwards — which is what a single-case re-run of case
+    214 did to a 29-case run.
+    """
+
+    def test_a_second_invocation_leaves_the_first_ones_record_intact(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            first, _ = bench(tmp, cases=CASE_SET, now=lambda: "2026-01-01T00:00:00+00:00")
+            bench(tmp, cases=(105,), now=lambda: "2026-01-02T00:00:00+00:00")
+
+            history = runner.read_json(first.run_dir / runner.INVOCATIONS_FILE)
+
+            self.assertEqual(2, len(history))
+            self.assertEqual(list(CASE_SET), history[0]["cases"]["requested"])
+            self.assertEqual(list(CASE_SET), history[0]["cases"]["completed"])
+            self.assertEqual([105], history[1]["cases"]["requested"])
+            self.assertEqual(
+                3 * TOKENS_PER_CASE, history[0]["tokens"]["spent_this_invocation"]
+            )
+            self.assertEqual(
+                TOKENS_PER_CASE, history[1]["tokens"]["spent_this_invocation"]
+            )
+
+    def test_run_json_describes_the_invocation_and_not_the_directory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            bench(tmp, cases=CASE_SET, now=lambda: "2026-01-01T00:00:00+00:00")
+            second, _ = bench(tmp, cases=(105,), now=lambda: "2026-01-02T00:00:00+00:00")
+
+            metadata = runner.read_json(runner.metadata_path(second.run_dir))
+
+            # True of the invocation. It is the directory block that stops it
+            # being read as a description of the directory.
+            self.assertEqual([105], metadata["cases"]["requested"])
+            self.assertEqual([105], metadata["cases"]["completed"])
+            self.assertEqual("this invocation only", metadata["cases"]["scope"])
+            self.assertEqual(
+                sorted([*CASE_SET, 105]), metadata["directory"]["cached_cases"]
+            )
+            self.assertEqual(
+                len(CASE_SET) + 1, metadata["directory"]["cached_case_count"]
+            )
+            self.assertTrue(
+                metadata["directory"]["holds_results_from_earlier_invocations"]
+            )
+
+    def test_a_directory_holding_only_this_invocations_cases_says_so(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, _ = bench(tmp)
+            metadata = runner.read_json(runner.metadata_path(summary.run_dir))
+
+            self.assertEqual(sorted(CASE_SET), metadata["directory"]["cached_cases"])
+            self.assertFalse(
+                metadata["directory"]["holds_results_from_earlier_invocations"]
+            )
+
+    def test_the_history_holds_one_entry_per_invocation_not_per_case(self):
+        """``run.json`` is rewritten after every case; the history must not be."""
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, _ = bench(tmp)
+            history = runner.read_json(summary.run_dir / runner.INVOCATIONS_FILE)
+
+            self.assertEqual(1, len(history))
+            self.assertEqual(list(CASE_SET), history[0]["cases"]["completed"])
+            self.assertEqual(summary.started_at, history[0]["started_at"])
+
+    def test_a_corrupt_history_is_restarted_rather_than_raised(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = run_dir_of(tmp)
+            run_dir.mkdir(parents=True)
+            (run_dir / runner.INVOCATIONS_FILE).write_text("{ not json", encoding="utf-8")
+
+            summary, _ = bench(tmp)
+            history = runner.read_json(summary.run_dir / runner.INVOCATIONS_FILE)
+
+            self.assertEqual(1, len(history))
+
+    def test_the_summary_says_when_a_reused_result_is_stale(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            bench(tmp, cases=CASE_SET)
+            run_dir = run_dir_of(tmp)
+            document = runner.load_cached(run_dir, CASE_SET[0])
+            document["brief_sha256"] = "0" * 64
+            runner.write_json(runner.case_cache_path(run_dir, CASE_SET[0]), document)
+
+            summary, _ = bench(tmp, cases=CASE_SET)
+            printed = io.StringIO()
+            with contextlib.redirect_stdout(printed):
+                runner.print_summary(summary)
+            text = printed.getvalue()
+
+            self.assertIn("stale briefs", text)
+            self.assertIn(str(CASE_SET[0]), text)
+            self.assertIn("not a single measurement", text)
+
+
 class IsolationTests(unittest.TestCase):
     """The answer key never reaches a brief, a prompt, a transcript or the cache."""
 

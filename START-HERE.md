@@ -79,6 +79,32 @@ See `docs/notes/2026-09-22-advocate-output-contract.md`,
 `docs/notes/2026-09-22-evaluation-layer-two-defects.md` and
 `docs/notes/2026-09-22-accumulated-dwell.md`.
 
+### A cached result is evidence about the code that produced it
+
+Every cached case records the digest of the exact brief bytes its agents were handed, so it can be
+checked against the brief the code builds now. **That check is now made whenever a cached result is
+read, and it is not decoration.** The cache under `runs/` held results produced by more than one
+version of the brief and nothing said so: `--compare` tabulated all of them as one run, and a
+single-case re-run had replaced the 29-case run's own `run.json`, so the commit and the case list
+that produced those results existed nowhere afterwards.
+
+Two rules follow, and both are enforced in code:
+
+- **A result the code has moved past is labelled, not discarded.** It is a real measurement and it is
+  evidence — of what an earlier version of the brief did. Deleting it destroys the record of the
+  change.
+- **Provenance that lives only in a file the next invocation overwrites is not provenance.** Each
+  case file carries its own commit and prompts digest; each invocation's record is appended to
+  `invocations.json`.
+
+When the check was first run over the cache it reported **21 of 29 results stale**, not the twelve
+that were expected. Nineteen of those digests match no committed version of the brief at all, which
+means the 29-case run was made against a working tree that was being edited while it ran. That is
+itself the finding: the number of versions in the cache was not two, and no commit history could
+have told us.
+
+See `docs/notes/2026-09-22-stale-cached-results.md`.
+
 ## Policy values
 
 - **Policy values are read from the loaded policy and never hardcoded in application code.** No

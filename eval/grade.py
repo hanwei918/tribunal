@@ -999,6 +999,58 @@ def load_answer_key(path: Path = ANSWER_KEY_PATH) -> Dict[int, Ruling]:
 
 
 # --------------------------------------------------------------------------
+# Staleness
+# --------------------------------------------------------------------------
+# A cached result is evidence about the code that produced it and about nothing
+# else. These are the three answers to "does this result still belong to the
+# code running now", and the third is not a synonym for the first.
+STALENESS_CURRENT = "current"
+STALENESS_STALE = "stale"
+STALENESS_UNKNOWN = "unknown"
+
+
+@dataclass(frozen=True)
+class Staleness:
+    """Which graded cases were produced by a brief this code no longer builds.
+
+    Supplied by the caller, because only the caller knows what a cached result
+    was produced from: the grader scores rulings and never sees a cache. A
+    cached result carries the digest of the exact brief bytes its agents were
+    handed, so rebuilding that case's brief and comparing the two digests
+    establishes whether the result still belongs to this code -- a fact about
+    the cache, not about the ruling.
+
+    ``checked`` is False when nobody looked, and that is **not** the same as
+    having looked and found nothing. A report printing "0 stale" without having
+    rebuilt a single brief would be inventing evidence. A case whose brief
+    cannot be rebuilt at all is ``unknown`` rather than current, for the same
+    reason an unreadable working tree is not clean.
+    """
+
+    checked: bool = False
+    stale: Tuple[int, ...] = ()
+    unknown: Tuple[int, ...] = ()
+
+    @property
+    def mixed(self) -> bool:
+        """Whether the graded set is not one run.
+
+        A stale result and a result whose staleness could not be established
+        both break the set's claim to be a single measurement, and neither is
+        folded away into a score.
+        """
+        return bool(self.stale) or bool(self.unknown)
+
+    def status_of(self, case_no: int) -> str:
+        """``current``, ``stale`` or ``unknown`` for one graded case."""
+        if case_no in self.stale:
+            return STALENESS_STALE
+        if case_no in self.unknown:
+            return STALENESS_UNKNOWN
+        return STALENESS_CURRENT
+
+
+# --------------------------------------------------------------------------
 # The report
 # --------------------------------------------------------------------------
 @dataclass(frozen=True)
@@ -1009,12 +1061,17 @@ class GradeReport:
     as the graded set whenever a caller grades a subset. It is carried so the
     report can say whether the numbers it prints may be compared to the corpus
     base rate, rather than printing the comparison and hoping.
+
+    ``staleness`` is carried for the same reason and is the stronger claim of
+    the two: a set whose cases were produced by different versions of the brief
+    is not one run at all, so its exact-match figure measures no single thing.
     """
 
     cases: Tuple[CaseScore, ...]
     calibration: Calibration
     unexpected_cases: Tuple[int, ...] = ()
     corpus_cases: Tuple[int, ...] = ()
+    staleness: Staleness = Staleness()
 
     @property
     def total(self) -> int:
@@ -1086,6 +1143,7 @@ def grade(
     produced: Mapping[int, Any],
     key: Optional[Mapping[int, Ruling]] = None,
     corpus: Optional[Mapping[int, Ruling]] = None,
+    staleness: Optional[Staleness] = None,
 ) -> GradeReport:
     """Grade a produced-ruling mapping against the key.
 
@@ -1100,6 +1158,11 @@ def grade(
     that the rates it prints were computed on a selected set and are not
     comparable to the corpus base rate. Omitting ``corpus`` says the graded set
     *is* the key, which is true for every caller that loads the key itself.
+
+    ``staleness`` is the caller's answer to whether each cached result still
+    belongs to the code running now. It is not the grader's to work out, and it
+    defaults to "nobody looked" rather than to "all current", because a report
+    must not claim a check that was never made.
     """
     resolved_key = load_answer_key() if key is None else dict(key)
     resolved_corpus = resolved_key if corpus is None else dict(corpus)
@@ -1116,6 +1179,7 @@ def grade(
         calibrate(cases),
         unexpected,
         corpus_cases=tuple(sorted(resolved_corpus)),
+        staleness=Staleness() if staleness is None else staleness,
     )
 
 
@@ -1129,26 +1193,104 @@ def _render_referral_list(referrals: Sequence[Any]) -> str:
     )
 
 
+def _render_brief_status(staleness: Staleness, case_no: int) -> str:
+    """The ``brief`` cell for one case: does its result belong to this code?
+
+    ``not checked`` is a third answer and is deliberately not spelled ``ok``.
+    """
+    if not staleness.checked:
+        return "not checked"
+    status = staleness.status_of(case_no)
+    if status == STALENESS_STALE:
+        return "**STALE**"
+    if status == STALENESS_UNKNOWN:
+        return "unknown"
+    return "current"
+
+
 def _render_case_table(report: GradeReport) -> List[str]:
-    """One row per case: which fields agreed, and whether the four-field test passed."""
+    """One row per case: which fields agreed, and whether the four-field test passed.
+
+    A ``brief`` column is added only when somebody checked whether each cached
+    result still belongs to this code. That column is about the cache rather
+    than the ruling: a stale row is a result an earlier version of the brief
+    produced, so its agreement with the key says what that earlier version did —
+    which is worth knowing, and is not the same as knowing what the code does
+    now. A report built straight from rulings gets no such column, because it
+    has nothing to put in one.
+    """
+    checked = report.staleness.checked
+    headers = ["case", *GRADED_FIELDS, "exact"] + (["brief"] if checked else [])
     lines = [
-        "| case | ruling | amount_sgd | driver_compensation_sgd | referrals | exact |",
-        "|---|---|---|---|---|---|",
+        "| " + " | ".join(headers) + " |",
+        "|" + "---|" * len(headers),
     ]
     for score in report.cases:
         cells = [
             "ok" if score.correct_on(name) else "**FAIL**" for name in GRADED_FIELDS
         ]
+        row = [str(score.case_no), *cells, "ok" if score.exact else "**FAIL**"]
+        if checked:
+            row.append(_render_brief_status(report.staleness, score.case_no))
+        lines.append("| " + " | ".join(row) + " |")
+    return lines
+
+
+def _render_staleness(report: GradeReport) -> List[str]:
+    """The cached-brief block, and the caveat that follows from a mixed set.
+
+    Empty when nobody looked, because the honest output of a report built
+    straight from rulings is silence about a check that was never made.
+    """
+    staleness = report.staleness
+    if not staleness.checked:
+        return []
+
+    # The leading blank separates this block from the table above it; the
+    # trailing separation is supplied by whatever the caller renders next.
+    lines: List[str] = [""]
+    if not staleness.mixed:
         lines.append(
-            "| {0} | {1} | {2} | {3} | {4} | {5} |".format(
-                score.case_no,
-                cells[0],
-                cells[1],
-                cells[2],
-                cells[3],
-                "ok" if score.exact else "**FAIL**",
+            "Every graded case was produced by the brief this code builds now, "
+            "so the exact-match figure above is one measurement."
+        )
+        return lines
+
+    lines.append("### Cached briefs")
+    lines.append("")
+    lines.append(
+        "A cached result is evidence about the code that produced it and about "
+        "nothing else. Each result records the digest of the exact brief bytes "
+        "its agents were handed, so rebuilding that case's brief and comparing "
+        "the two digests says whether the result still belongs to this code. "
+        "This does not say a stale result is wrong; it says it is not a "
+        "measurement of this code."
+    )
+    lines.append("")
+    if staleness.stale:
+        lines.append(
+            "Produced by an earlier version of the brief ({0} of {1}): {2}.".format(
+                len(staleness.stale),
+                report.total,
+                ", ".join(str(case_no) for case_no in staleness.stale),
             )
         )
+        lines.append("")
+    if staleness.unknown:
+        lines.append(
+            "Staleness could not be established for: {0}. A brief that cannot be "
+            "rebuilt is not a brief that still matches.".format(
+                ", ".join(str(case_no) for case_no in staleness.unknown)
+            )
+        )
+        lines.append("")
+    lines.append(
+        "**A mixed set is not one run.** The {0}/{1} exact-match figure above "
+        "spans results produced by more than one version of the brief, so it is "
+        "not a single measurement of any one version of this code.".format(
+            report.exact_matches, report.total
+        )
+    )
     return lines
 
 
@@ -1455,8 +1597,11 @@ def render_report(report: GradeReport, title: str = DEFAULT_TITLE) -> str:
         "|---|---|",
         "| Cases graded | {0} |".format(total),
         "| Rulings produced | {0} |".format(total - len(report.unproduced)),
-        "| **Four-field exact match** | **{0}/{1} = {2}** |".format(
-            report.exact_matches, total, render_percent(_percent(report.exact_matches, total))
+        "| **Four-field exact match** | **{0}/{1} = {2}**{3} |".format(
+            report.exact_matches,
+            total,
+            render_percent(_percent(report.exact_matches, total)),
+            " **(mixed set — not one measurement)**" if report.staleness.mixed else "",
         ),
         "",
     ]
@@ -1468,6 +1613,8 @@ def render_report(report: GradeReport, title: str = DEFAULT_TITLE) -> str:
                 field, correct, field_total, render_percent(_percent(correct, field_total))
             )
         )
+
+    lines.extend(_render_staleness(report))
 
     lines.extend(
         [
