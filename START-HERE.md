@@ -97,11 +97,16 @@ Two rules follow, and both are enforced in code:
   case file carries its own commit and prompts digest; each invocation's record is appended to
   `invocations.json`.
 
-When the check was first run over the cache it reported **21 of 29 results stale**, not the twelve
-that were expected. Nineteen of those digests match no committed version of the brief at all, which
-means the 29-case run was made against a working tree that was being edited while it ran. That is
-itself the finding: the number of versions in the cache was not two, and no commit history could
-have told us.
+Run over the cache, the check reports **12 of 29 results stale** — cases 201 through 212, the
+NO_SHOW cases carrying a GPS trace, which are exactly the ones the two brief changes could move.
+The whole 29-case set was produced at one commit, `a11285b`, between 15:48 and 17:19; `95f0b74`
+landed at 17:45 and `d06d2ff` at 18:57, so the code moved on underneath a finished run rather than
+while it ran. Every cached digest matches a committed version of the brief.
+
+An earlier version of this section reported 21 stale and nineteen digests matching no committed
+version. Both were wrong, and neither is reproducible: under every committed revision this cache
+yields 1, 12 or 13 stale results, never 21. That is the argument for the check rather than against
+it — a number written in a note is a claim like any other, and nothing was comparing it to the code.
 
 See `docs/notes/2026-09-22-stale-cached-results.md`.
 

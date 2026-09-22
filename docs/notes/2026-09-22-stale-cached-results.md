@@ -2,6 +2,11 @@
 
 Date: 2026-09-22. Commit: the one that adds this file.
 
+The counts in "What the check found" were corrected on the same day, after the first version of
+this note was found to state a figure the implementation cannot produce. What was wrong, and
+why, is recorded below under "Why the earlier version of this note was wrong". The defect, the
+three causes and the change are unaffected.
+
 ## The defect
 
 Three things were wrong with how a cached benchmark result was read, and only the third
@@ -32,81 +37,163 @@ It was the act of checking.
 ## What the check found
 
 The expectation going in was **17 current and 12 stale, the stale ones being 201 through
-212**. That is not what the cache holds. Measured:
+212**. That is what the cache holds. Measured:
 
 ```
-deepseek-deepseek-flash   cached=29  current=8  stale=21  unknown=0
-  current: 102, 103, 104, 110, 111, 113, 115, 213
-  stale:   101, 105, 106, 107, 108, 109, 112, 114, 201, 202, 203, 204, 205, 206, 207,
-           208, 209, 210, 211, 212, 214
-hy4-preview               cached=1   current=0  stale=1   unknown=0
-  stale:   109
+deepseek-deepseek-flash   cached=29  current=17  stale=12  unknown=0
+  current: 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 213, 214
+  stale:   201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212
+hy4-preview               cached=1   current=1   stale=0   unknown=0
+  current: 109
 ```
 
-Cases 201 through 212 are stale, as expected. Nine more are: eight route-deviation cases
-and case 214.
+Twelve of twenty-nine results are stale, and every one of them is a NO_SHOW_CHARGE case
+carrying a GPS trace. Cases 201 through 212 are stale, exactly as expected; nothing else is.
+
+That is also what the reasoning predicts, and the reasoning is worth stating because it is
+what makes the count checkable rather than merely observed. `accumulated_dwell` is published
+only on NO_SHOW traces, so the accumulated-dwell change can move the brief of a NO_SHOW case
+and nothing else: cases 101 through 115 are ROUTE_DEVIATION and cannot be touched by it. Case
+213 is NO_SHOW but its GPS artifact is `MISSING`, so no derived block exists and its brief is
+unchanged. Case 214 was re-run after the shortfall-basis change, so its result is current.
+Twelve cases could move, and twelve are stale.
 
 ### How that was established
 
 The claim "this digest does not match the current code" is only useful if it can be traced
-to a version. Three worktrees were checked out at the three commits that could have changed
-the brief — `a11285b`, `95f0b74`, `d06d2ff` — and all 29 brief digests computed in each.
+to a version. Every commit from `774fc82` — the one that added the runner — through `d06d2ff`
+was checked out with `git worktree add --detach`, and all 29 brief digests computed in each.
 Only `95f0b74` and `d06d2ff` touch `tribunal/`; no commit in the window touches `data/` or
-`policy/`. That gives exactly three possible briefs per case, and each cached digest was
-matched against all three:
+`policy/`.
+
+**The method is only sound if the `tribunal` package imported in each worktree is that
+worktree's own.** `loader.PROJECT_ROOT` is `Path(__file__).resolve().parents[1]`, so `data/`,
+`policy/` and `tribunal/` are resolved from the location of the module actually imported and
+always come from the same checkout — they cannot be split. The script therefore prints
+`brief.__file__` and `loader.PROJECT_ROOT` and they must point inside the worktree; nothing is
+assumed about which one `sys.path` chose. Each cached digest was then matched against all six
+revisions:
 
 | cached digest matches | cases | count |
 |---|---|---|
-| all three commits (the brief never changed) | 102, 103, 104, 110, 111, 113, 115, 213 | 8 |
-| `a11285b` only | 204, 211 | 2 |
-| **no committed version at all** | 101, 105, 106, 107, 108, 109, 112, 114, 201, 202, 203, 205, 206, 207, 208, 209, 210, 212, 214 | 19 |
+| every revision tested — the brief never changed for these | 101–115, 213 | 16 |
+| the four revisions before `95f0b74` | 201–212 | 12 |
+| `d06d2ff` only | 214 | 1 |
+| **no committed revision** | — | 0 |
 
 Two independent checks confirm the field means what it is taken to mean:
 
 - **The transcript agrees.** For case 214 the transcript records `user_sha256` for both
   advocates as `fd64cd2b3920…`, identical to the cache entry's `brief_sha256`. The field is
   the digest of what was sent, not a second computation of it.
-- **The brief is deterministic.** `brief.build_brief(214)` returns the same digest under 30
+- **The brief is deterministic.** `brief.build_brief` returns the same digest under 30
   different `PYTHONHASHSEED` values, and `brief.brief_digest` is byte-identical to the
   pipeline's own `money.dumps_canonical` + SHA-256. No set iteration or float round-trip is
   involved.
 
 ### What this means
 
-**The cache is not a mix of two versions of the brief. It is a mix of at least four**, and
-nineteen of its digests match no committed version of the code at all. The 29-case run began
-at 15:48 Beijing and finished at 19:19; `95f0b74` was committed at 17:45 and `d06d2ff` at
-18:57. The run therefore overlapped the development of the accumulated-dwell work, and the
-results cached at different minutes came from different working-tree states. The run's own
-`run.json` — which would have said the tree was dirty — was destroyed by the case-214 re-run,
-so this can no longer be established directly. It can only be inferred from the digests,
-which is exactly why per-case provenance is the second half of this change.
+**The cache holds two versions of the brief, not four.** Twenty-eight of the twenty-nine
+results were produced by the brief as it stood at `a11285b`; the twenty-ninth, case 214, by
+the brief as it stands now.
 
-### What could not be explained
+The 29-case run began at 15:48 and wrote its last case at 17:19:49. `95f0b74` was committed at
+17:45:41 — after the run had already passed every NO_SHOW case — and `d06d2ff` at 18:57:59.
+So the whole 29-case set predates both changes, and the only stale results are the NO_SHOW
+cases whose brief those changes moved. Case 214 was then re-run on its own at 19:23:53, after
+`d06d2ff`, and is current.
 
-Case 214's re-run is the one case that does not fit. Its `run.json` records commit
-`d06d2ff` and `working_tree_clean: true`; `tribunal/brief.py` has not been written since
-18:56:05, a minute before that commit, and no tracked file under `tribunal/`, `data/`,
-`policy/` or `prompts/` has a modification time inside the run window. A clean tree at
-`d06d2ff` produces `e880457d6c52…` for case 214. The result that was cached, and that the
-transcript confirms was sent, is `fd64cd2b3920…`.
+Nothing here required the tree to be dirty. The run was made at `a11285b` and the code moved
+on underneath it afterwards, which is the ordinary way a cache goes stale and precisely why
+the check belongs in the code rather than in a note.
 
-Ruled out by measurement, not by argument:
+### Case 214
 
-- the runner's clean-tree pathspec works — `git status --porcelain -- . ':(exclude)runs'`
-  reports a modified tracked file, tested directly;
-- there are no `skip-worktree` or `assume-unchanged` index flags and no `.git/info/exclude`
-  entries;
-- `brief.build_brief` is deterministic across hash seeds, and its digest matches the
-  pipeline's own computation exactly;
-- the recorded digest is not a mid-edit variant of the `shortfall_basis` fix: dropping the
-  field reproduces `95f0b74` exactly (`16c71a7d3a24…`), and the six other variants tried
-  match nothing.
+Case 214 is not an anomaly. Its cache entry records `fd64cd2b3920…`, which is what `d06d2ff`
+builds for it; its `run.json` records `git_commit: d06d2ff…`, `working_tree_clean: true`,
+`requested: [214]`, started 19:20:05 and ended 19:23:53. It is a single-case re-run made after
+the shortfall-basis change landed, and it is current. It is the only result in the cache that
+the current brief produced.
 
-**This is recorded as unresolved rather than explained away.** It is also the strongest
-argument for change 2: with the commit and prompts digest written into the case file itself,
-this question would have been answerable from the artifact instead of from forensics on
-mtime.
+### Why the earlier version of this note was wrong
+
+The first version of this note recorded `cached=29 current=8 stale=21`, with nineteen digests
+said to match no committed version of the brief and case 214 recorded as inexplicable. All
+three statements are false, and how they were produced is worth recording, because the note
+was believed.
+
+**Twenty-one is not reachable.** Under every committed revision from `774fc82` to `d06d2ff`,
+this cache yields 1, 12 or 13 stale results — never 21, and never with case 101 among them:
+
+```
+774fc82  stale=1   [214]
+bf1c8dd  stale=1   [214]
+3931406  stale=1   [214]
+a11285b  stale=1   [214]
+95f0b74  stale=13  [201..212, 214]
+d06d2ff  stale=12  [201..212]
+```
+
+To reach twenty-one, nine cases that are in fact unchanged — 101, 105, 106, 107, 108, 109,
+112, 114 and 214 — would each have to have been built from something that is not any committed
+brief. No commit produces that. So the twenty-one was not this check's output, and the
+computation that produced it could not be reproduced from anything in the repository. It is
+recorded as unreproducible rather than explained, which is the only honest thing to do with a
+number that cannot be shown.
+
+The mechanism suspected at the time was that the worktree digests had been computed with the
+checked-out worktree's `data/` while the main tree's `tribunal/` was still on `sys.path`.
+**That cannot happen**, for the reason given above: `PROJECT_ROOT` is derived from the imported
+module, so the two cannot be split by `sys.path` at all. The 3×3 matrix of `tribunal/`
+revision against `data/` and `policy/` revision confirms it — the data revision changes
+nothing, and no cell reaches thirteen:
+
+```
+brief=a11285b  data=a11285b  stale=1   [214]
+brief=a11285b  data=95f0b74  stale=1   [214]
+brief=a11285b  data=d06d2ff  stale=1   [214]
+brief=95f0b74  data=a11285b  stale=13  [201..212, 214]
+brief=95f0b74  data=95f0b74  stale=13  [201..212, 214]
+brief=95f0b74  data=d06d2ff  stale=13  [201..212, 214]
+brief=d06d2ff  data=a11285b  stale=12  [201..212]
+brief=d06d2ff  data=95f0b74  stale=12  [201..212]
+brief=d06d2ff  data=d06d2ff  stale=12  [201..212]
+```
+
+The other candidate was a serializer mismatch — digests taken from `json.dumps` rather than
+`money.dumps_canonical`. That is refuted too: it would report **all seventeen** current cases
+as stale, not nine, because every brief in this corpus carries a decimal literal the two
+serialisers render differently.
+
+What survives from the earlier note is its method, which reproduces the figures above, and its
+lesson, which the miscount sharpens rather than weakens: **a number written in a note is a
+claim like any other, and nothing here was comparing it to the code.** The count in "What the
+check found" is now checked against `grade_run` by `NoteCouplingTests` in
+`tests/test_run_benchmark.py`, which reads that block and holds it against the same
+directories. The cache under `runs/` is untracked, so where it is absent the comparison is
+skipped and stated, and only the note's internal consistency is asserted.
+
+### Re-deriving these numbers
+
+One command, from the project root, no network, no model call:
+
+```
+python3 - <<'PY'
+import sys, glob, os
+sys.path[:0] = ["."]
+from eval import run_benchmark as runner
+d = "runs/deepseek-deepseek-flash"
+cases = sorted(int(os.path.basename(p).split("-")[1].split(".")[0])
+               for p in glob.glob(d + "/case-*.json") if not p.endswith(".transcript.json"))
+s = runner.brief_staleness(d, cases)
+print("cached=%d current=%d stale=%d unknown=%d" % (
+    len(cases), len(cases) - len(s.stale) - len(s.unknown), len(s.stale), len(s.unknown)))
+print("stale:", ", ".join(str(c) for c in s.stale))
+PY
+```
+
+`python3 -m unittest tests.test_run_benchmark.NoteCouplingTests -v` re-derives the same numbers
+and checks the note against them in one step.
 
 ## What was changed
 
@@ -141,8 +228,11 @@ earlier code printed, and rewriting them would destroy the comparison.
 
 ## Verification
 
-- 526 tests pass (24 new), no network.
+- The full suite passes, no network.
 - The new guard was mutated to make a changed brief read as current; 7 tests went RED. The
   file was restored and the suite re-run green.
 - `--compare` over the real cache now names the stale case in each run directory instead of
   printing a bare accuracy.
+- The figures in "What the check found" were re-derived in the three ways this note describes:
+  through `grade_run`, through an independent `money.dumps_canonical` sweep, and through the
+  six worktrees. All three agree on 17 current and 12 stale.

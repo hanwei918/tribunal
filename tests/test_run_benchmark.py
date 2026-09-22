@@ -62,6 +62,7 @@ import ast
 import contextlib
 import io
 import json
+import re
 import sys
 import tempfile
 import threading
@@ -2306,6 +2307,149 @@ class RunRecordTests(unittest.TestCase):
             self.assertIn("stale briefs", text)
             self.assertIn(str(CASE_SET[0]), text)
             self.assertIn("not a single measurement", text)
+
+
+# --------------------------------------------------------------------------
+# The note and the code it describes
+# --------------------------------------------------------------------------
+
+STALE_NOTE = PROJECT_ROOT / "docs" / "notes" / "2026-09-22-stale-cached-results.md"
+
+# The block the note quotes, and the only place its numbers are written down.
+_CACHED_LINE = re.compile(
+    r"^(?P<directory>\S+)\s+cached=(?P<cached>\d+)\s+current=(?P<current>\d+)\s+"
+    r"stale=(?P<stale>\d+)\s+unknown=(?P<unknown>\d+)\s*$"
+)
+_CASES_LINE = re.compile(r"^\s+(?P<label>current|stale|unknown):\s*(?P<cases>.*?)\s*$")
+# A long list may be wrapped over several lines. Read the continuation rather
+# than silently stopping at the first, or a wrapped list would be counted short
+# and the count beneath it would be the only thing that noticed.
+_CASES_CONT = re.compile(r"^\s+(?P<cases>\d+(?:\s*,\s*\d+)*)\s*$")
+
+
+def _case_numbers(text):
+    return tuple(int(part) for part in text.replace(",", " ").split())
+
+
+def parse_cached_claim(text):
+    """Return the counts the note states, as data, keyed by run directory.
+
+    Read rather than searched: the job here is to compare these numbers with what
+    the code computes, so they have to come out as integers and tuples and not as
+    text that happens to appear somewhere in the file.
+    """
+    claim = {}
+    directory = None
+    label = None
+    for line in text.splitlines():
+        head = _CACHED_LINE.match(line)
+        if head:
+            directory = head.group("directory")
+            label = None
+            claim[directory] = {
+                "cached": int(head.group("cached")),
+                "counts": {
+                    "current": int(head.group("current")),
+                    "stale": int(head.group("stale")),
+                    "unknown": int(head.group("unknown")),
+                },
+                "cases": {"current": (), "stale": (), "unknown": ()},
+            }
+            continue
+        if directory is None:
+            continue
+        entry = _CASES_LINE.match(line)
+        if entry:
+            label = entry.group("label")
+            claim[directory]["cases"][label] = _case_numbers(entry.group("cases"))
+            continue
+        cont = _CASES_CONT.match(line)
+        if cont and label is not None:
+            claim[directory]["cases"][label] += _case_numbers(cont.group("cases"))
+    return claim
+
+
+class NoteCouplingTests(unittest.TestCase):
+    """The note states a count about the cache; the code computes that count.
+
+    Nothing compared them, and the note carried a figure the implementation
+    cannot produce for a day. These tests read the numbers out of the note and
+    hold them against ``grade_run`` over the same directories, so the two cannot
+    drift apart again without a test going red.
+
+    The cache under ``runs/`` is untracked, so on a checkout without it there is
+    nothing to compare against: that comparison is skipped and the skip says so.
+    What is asserted unconditionally is that the note's own numbers agree with
+    each other — which is the check that would have caught the earlier figure.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = STALE_NOTE.read_text(encoding="utf-8")
+        cls.claim = parse_cached_claim(cls.text)
+
+    def test_the_note_states_a_count_for_at_least_one_directory(self):
+        self.assertTrue(
+            self.claim, "the note no longer states a cached count for any directory"
+        )
+
+    def test_the_counts_add_up_to_the_cached_total(self):
+        for directory, block in sorted(self.claim.items()):
+            with self.subTest(directory=directory):
+                self.assertEqual(
+                    block["cached"],
+                    sum(block["counts"].values()),
+                    "current + stale + unknown must be the cached total",
+                )
+
+    def test_each_count_matches_the_case_list_beneath_it(self):
+        for directory, block in sorted(self.claim.items()):
+            for label, stated in sorted(block["counts"].items()):
+                with self.subTest(directory=directory, label=label):
+                    self.assertEqual(stated, len(block["cases"][label]))
+
+    def test_no_case_is_listed_twice_or_out_of_order(self):
+        for directory, block in sorted(self.claim.items()):
+            listed = []
+            for label, cases in sorted(block["cases"].items()):
+                with self.subTest(directory=directory, label=label):
+                    self.assertEqual(len(set(cases)), len(cases), "a case is listed twice")
+                    self.assertEqual(tuple(sorted(cases)), cases, "the list is not ordered")
+                listed.extend(cases)
+            with self.subTest(directory=directory, label="every list together"):
+                self.assertEqual(len(set(listed)), len(listed), "a case is in two lists")
+
+    def test_the_note_agrees_with_the_grader_over_the_real_cache(self):
+        """The coupling itself: the note's numbers against the code's."""
+        compared = []
+        absent = []
+        for directory, block in sorted(self.claim.items()):
+            run_dir = PROJECT_ROOT / "runs" / directory
+            if not run_dir.is_dir():
+                absent.append(directory)
+                continue
+            report = runner.grade_run(run_dir)
+            cached = tuple(runner.cached_case_numbers(run_dir))
+            stale = set(report.staleness.stale)
+            unknown = set(report.staleness.unknown)
+            current = tuple(case for case in cached if case not in stale and case not in unknown)
+
+            with self.subTest(directory=directory):
+                self.assertTrue(
+                    report.staleness.checked,
+                    "the note states a count for a directory the check did not read",
+                )
+                self.assertEqual(block["cases"]["stale"], report.staleness.stale)
+                self.assertEqual(block["cases"]["unknown"], report.staleness.unknown)
+                self.assertEqual(block["cases"]["current"], current)
+                self.assertEqual(block["cached"], len(cached))
+            compared.append(directory)
+
+        if not compared:
+            self.skipTest(
+                "no cached run directory is present ({0}); the note's numbers are "
+                "re-derived by the command it states".format(", ".join(absent))
+            )
 
 
 class IsolationTests(unittest.TestCase):
