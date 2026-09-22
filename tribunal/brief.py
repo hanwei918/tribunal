@@ -88,6 +88,17 @@ POL_NS_05 = "POL-NS-05"
 POL_NS_06 = "POL-NS-06"
 TRAFFIC_ADVISORY_EVIDENCE_TYPE = "TRAFFIC_ADVISORY"
 
+# The two dwell figures a shortfall can be measured against, named by the field
+# each one is. Which of them is lawful is decided by limb (i) and is not the
+# reader's to infer: POL-NS-06(i) is what permits the intervals to be summed, so
+# where it is unavailable the operative dwell is the longest continuous run.
+# A shortfall quoted off the sum on such a case reads negative and says "no
+# shortfall" where the driver is in fact short — the arithmetic is right and the
+# number is wrong, because it was computed on a basis the policy does not permit.
+SHORTFALL_BASIS_KEY = "shortfall_basis"
+BASIS_ACCUMULATED = "accumulated_sec"
+BASIS_LONGEST_RUN = "longest_run_sec"
+
 # Why limb (i) is or is not available, in the clause's own terms. A judge told
 # "355 seconds" without being told why summing was permitted cannot cite the
 # clause properly, and a judge told nothing at all repeats case 214.
@@ -304,6 +315,15 @@ def _accumulated_dwell_block(
     it would leave case 214's defect exactly where it was: the model was given
     a 185 second hold against a 300 second minimum and never told that the
     clause permits 170 and 185 to be added.
+
+    ``shortfall_sec`` is measured against the dwell the limb actually permits,
+    and the basis it used is published beside it. Where limb (i) is available
+    that is the accumulated figure; where it is not, the intervals may not be
+    summed and it is the longest continuous run. Both dwell figures stay in the
+    block either way, because an advocate may legitimately argue about whether
+    the limb should have been available, and a refused sum is still worth
+    showing. What must not happen is the shortfall being quoted off a basis the
+    policy disallows.
     """
     result = facts.accumulated_dwell(
         driver,
@@ -324,11 +344,19 @@ def _accumulated_dwell_block(
         if not isinstance(advisory.get("payload"), dict) or not advisory.get("payload")
     ]
 
+    if result["available"]:
+        basis = BASIS_ACCUMULATED
+        operative_dwell = result["accumulated_sec"]
+    else:
+        basis = BASIS_LONGEST_RUN
+        operative_dwell = result["longest_run_sec"]
+
     block: Dict[str, Any] = {
         "accumulated_sec": _sourced(result["accumulated_sec"], gps_evidence_id),
         "longest_run_sec": _sourced(result["longest_run_sec"], gps_evidence_id),
         "run_count": _sourced(result["run_count"], gps_evidence_id),
-        "shortfall_sec": _sourced(minimum_dwell - result["accumulated_sec"], gps_evidence_id),
+        "shortfall_sec": _sourced(minimum_dwell - operative_dwell, gps_evidence_id),
+        SHORTFALL_BASIS_KEY: _sourced(basis, gps_evidence_id),
         "max_excursion_m": _sourced(result["max_excursion_m"], gps_evidence_id),
         "runs": [
             {

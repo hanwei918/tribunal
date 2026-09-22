@@ -352,6 +352,11 @@ class AccumulatedDwellBriefTests(unittest.TestCase):
         )
         self.assertGreaterEqual(block["accumulated_sec"]["value"], minimum)
 
+        # Limb (i) is available here, so the sum is the lawful basis and the
+        # shortfall is measured against it.
+        self.assertEqual(block["shortfall_sec"]["value"], -55.0)
+        self.assertEqual(block["shortfall_basis"]["value"], brief.BASIS_ACCUMULATED)
+
     def test_2_case_214_says_why_summing_is_permitted(self):
         """A judge told 355 without the reason cannot cite the clause."""
         block = self.arrival_of(214)["accumulated_dwell"]
@@ -383,6 +388,17 @@ class AccumulatedDwellBriefTests(unittest.TestCase):
         text = " ".join(entry["reason"] for entry in block["limb"]["unavailable"])
         self.assertIn("EV-ADVIS-00211-01", text, "the reason must name the missing advisory")
         self.assertIn("MISSING", text)
+
+        # The refused sum stays visible, and the shortfall is not measured off it.
+        minimum = block["thresholds"]["minimum_dwell_sec"]["value"]
+        self.assertEqual(block["longest_run_sec"]["value"], 220.0)
+        self.assertEqual(block["shortfall_sec"]["value"], 80.0)
+        self.assertEqual(block["shortfall_basis"]["value"], brief.BASIS_LONGEST_RUN)
+        self.assertNotEqual(
+            block["shortfall_sec"]["value"],
+            minimum - block["accumulated_sec"]["value"],
+            "the shortfall was measured off the sum limb (i) refuses",
+        )
 
     def test_4_case_211_reports_the_hole_between_the_holds(self):
         """The trace's own gap, and the excursion it makes unmeasurable."""
@@ -419,6 +435,7 @@ class AccumulatedDwellBriefTests(unittest.TestCase):
             "longest_run_sec",
             "run_count",
             "shortfall_sec",
+            "shortfall_basis",
             "max_excursion_m",
             "runs",
             "excursions",
@@ -473,6 +490,51 @@ class AccumulatedDwellBriefTests(unittest.TestCase):
             and self.arrival_of(case_no)["accumulated_dwell"]["limb"]["available"]
         ]
         self.assertEqual(offered, [214])
+
+    def test_9_the_shortfall_is_measured_on_the_basis_the_limb_permits(self):
+        """The invariant whose absence let a negative shortfall sit on a refused sum.
+
+        Where limb (i) is available the intervals may be summed and the shortfall
+        is measured against the sum; where it is not, the operative dwell is the
+        longest continuous run and the shortfall is measured against that. Both
+        dwell figures stay in the block either way, so a refused sum remains
+        visible to argue about.
+        """
+        checked = 0
+
+        for case_no in case_numbers():
+            b = brief.build_brief(case_no)
+            gps = gps_artifact(b)
+            if not isinstance(gps["payload"], dict):
+                # Case 213's GPS artifact is MISSING, so it has no derived block.
+                self.assertIsNone(gps["payload"])
+                continue
+
+            arrival = derived(b)["arrival"]
+            if brief.ACCUMULATED_DWELL_KEY not in arrival:
+                # A ROUTE_DEVIATION case has no POL-NS-06 clause and no such block.
+                continue
+
+            block = arrival[brief.ACCUMULATED_DWELL_KEY]
+            minimum = block["thresholds"]["minimum_dwell_sec"]["value"]
+            available = block["limb"]["available"]
+
+            expected = brief.BASIS_ACCUMULATED if available else brief.BASIS_LONGEST_RUN
+            self.assertEqual(
+                block["shortfall_basis"]["value"],
+                expected,
+                "case {0}: limb available={1}".format(case_no, available),
+            )
+
+            source = block["accumulated_sec" if available else "longest_run_sec"]["value"]
+            self.assertEqual(
+                block["shortfall_sec"]["value"],
+                minimum - source,
+                "case {0}: the shortfall is not measured off the basis it names".format(case_no),
+            )
+            checked += 1
+
+        self.assertEqual(checked, 13, "every NO_SHOW case but 213 carries the block")
 
 
 if __name__ == "__main__":

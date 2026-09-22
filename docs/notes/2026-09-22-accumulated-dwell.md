@@ -159,3 +159,40 @@ byte-identical by checksum:
   caveat is the record of why it could not before.
 - **`runs/*/report.md` was not rewritten.** Those files are the evidence of what the run printed. No
   benchmark was executed in this session and no model was called.
+
+## Follow-up, same day — the shortfall was measured on a basis the limb refuses
+
+One field, in `tribunal/brief.py` only. Nothing else in the object was touched.
+
+`shortfall_sec` was computed unconditionally as `minimum_dwell - accumulated_sec`. That basis is
+lawful only where limb (i) is available. Case 211 published:
+
+| field | before | after |
+|---|---|---|
+| `accumulated_sec` | 332.0 | 332.0 — unchanged, so the refused sum stays visible |
+| `longest_run_sec` | 220.0 | 220.0 |
+| `shortfall_sec` | **-32.0** | **+80.0** |
+| `shortfall_basis` | *(absent)* | `longest_run_sec` |
+| `limb.available` | false | false |
+
+A negative shortfall reads as "no shortfall" where the driver is in fact **80 seconds short**, and it
+sat in the block's most directly usable field beside an availability flag saying the sum was refused.
+The arithmetic was right and the number was wrong, because it was computed on a basis the policy does
+not permit — the failure the escalation-rate lesson already records, one layer down.
+
+The shortfall is now measured from the dwell the limb permits, and the basis is published beside the
+number, named by the field it came from: `accumulated_sec` where limb (i) is available,
+`longest_run_sec` where it is not. Both dwell figures stay in the block either way, because an
+advocate may legitimately argue about whether the limb should have been available.
+
+Case 214 is unchanged: `shortfall_sec` **-55.0** on the `accumulated_sec` basis.
+
+The corpus invariant is now asserted, and its absence is why the suite was green: for every case
+carrying the block, `limb.available` decides which figure the shortfall is measured from, and the
+number equals the minimum minus that figure. Case 211's shortfall is asserted at +80 on the
+longest-run basis, case 214's at -55 on the accumulated basis.
+
+Two mutations, each RED with the suite green beforehand, the file restored and verified
+byte-identical by checksum: the shortfall measured off the sum unconditionally (2 failures), and the
+basis always the accumulated figure (2). Suite **501 → 502 tests**, `OK (skipped=1)`. No model was
+called.
