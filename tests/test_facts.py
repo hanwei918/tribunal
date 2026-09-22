@@ -9,6 +9,7 @@ project root with::
 
 from __future__ import annotations
 
+import ast
 import io
 import json
 import sys
@@ -177,6 +178,90 @@ def _as_float(text: str):
         return float(text)
     except ValueError:
         return None
+
+
+def _sum_calls(source: str) -> list:
+    """Every call to the builtin ``sum`` in ``source``, as ``(line, column)``."""
+    found = []
+    for node in ast.walk(ast.parse(source)):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        if isinstance(func, ast.Name) and func.id == "sum":
+            found.append((node.lineno, node.col_offset))
+    return found
+
+
+class VersionStableAccumulationTests(unittest.TestCase):
+    """A mean that travels into the brief must not depend on the interpreter.
+
+    ``brief_sha256`` is the digest of the exact bytes the agents were handed, and
+    a mean distance goes into those bytes unrounded. If the accumulation behind
+    it followed the interpreter, a cached result would be reported stale purely
+    because the check ran under a different Python -- which is what happened:
+    the same cache reported 21 stale under 3.13 and 12 under the 3.9.6 that
+    produced it, over one field and nothing else.
+    """
+
+    # 1e16 has an ulp of 2, so 1e16 + 1.0 is 1e16 and a plain left-to-right
+    # total comes out at 0.0. Compensated summation keeps the 1.0 it would
+    # otherwise have dropped.
+    CANCELLING = [1e16, 1.0, -1e16]
+
+    def test_the_accumulator_keeps_the_naive_left_to_right_result(self):
+        self.assertEqual(0.0, facts._sum_in_order(self.CANCELLING))
+
+    def test_the_accumulator_disagrees_with_the_builtin_where_it_compensates(self):
+        """Reverting the accumulation to ``sum()`` turns this RED.
+
+        On Python 3.12 and later the builtin compensates and returns 1.0 here,
+        where ours returns 0.0. On 3.9 the builtin is already a plain loop and
+        agrees with ours, so this guard is at its strongest on a newer
+        interpreter -- which is an argument for running the suite on one.
+        """
+        self.assertEqual(0.0, facts._sum_in_order(self.CANCELLING))
+        if sum(self.CANCELLING) != 0.0:
+            self.assertEqual(1.0, sum(self.CANCELLING))
+            self.assertNotEqual(
+                sum(self.CANCELLING), facts._sum_in_order(self.CANCELLING)
+            )
+
+    def test_the_accumulator_adds_in_the_order_it_is_given(self):
+        values = [0.1] * 10
+        total = 0.0
+        for value in values:
+            total = total + value
+        self.assertEqual(total, facts._sum_in_order(values))
+
+    def test_no_float_total_in_the_module_is_left_to_the_builtin(self):
+        """The guard that does not depend on which interpreter runs the suite.
+
+        The two tests above can only catch a revert on 3.12 or later. This one
+        reads the module and refuses any call to ``sum`` at all, so a revert is
+        caught wherever the suite runs. Integers are exact under either rule, so
+        an integer total would be a deliberate exception rather than an
+        oversight -- and this test is where that would have to be argued.
+        """
+        calls = _sum_calls(FACTS_SOURCE.read_text(encoding="utf-8"))
+        self.assertEqual([], calls, "sum() calls at {0}".format(calls))
+
+    def test_the_mean_for_a_real_case_is_a_plain_left_to_right_average(self):
+        """Over a real case, the mean equals an explicit loop over the distances."""
+        rider = facts.rider_points(artifact_payload(208, "GPS_TRACE"))
+        self.assertTrue(rider, "case 208 should carry a rider track")
+
+        trip = artifact_payload(208, "TRIP_RECORD")
+        lat, lng = trip["pickup"]["lat"], trip["pickup"]["lng"]
+
+        distances = facts.distances_to_point(rider, lat, lng)
+        total = 0.0
+        for distance in distances:
+            total = total + distance
+        expected = total / len(distances)
+
+        summary = facts.track_summary(rider, lat, lng)
+        self.assertEqual(expected, summary["mean_distance_m"])
+        self.assertEqual(len(rider), summary["fix_count"])
 
 
 class AccuracyFilterTests(unittest.TestCase):

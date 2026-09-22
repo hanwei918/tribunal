@@ -161,6 +161,7 @@ __all__ = [
     "brief_staleness",
     "hash_directory",
     "git_state",
+    "interpreter_version",
     "provenance",
     "run_one_case",
     "format_progress",
@@ -470,6 +471,24 @@ def git_state(
     }
 
 
+def interpreter_version() -> str:
+    """The Python that built a digest, as ``major.minor.micro``.
+
+    Recorded beside ``git_commit`` because ``brief_sha256`` was once a function
+    of the interpreter as well as of the repository: Python 3.12 changed
+    ``sum()`` for floats to compensated summation, which moved the last bit of
+    a mean that travels unrounded into the brief. Two caches whose digests
+    disagree can be read against this field to tell code drift from interpreter
+    drift.
+
+    It is provenance and not a gate. The accumulation behind the brief is now
+    pinned to a plain left-to-right sum, so a brief no longer varies with the
+    interpreter and a mismatch does not make two digests incomparable — it only
+    says which of them came from where.
+    """
+    return "{0}.{1}.{2}".format(*sys.version_info[:3])
+
+
 def provenance(
     model: str,
     *,
@@ -493,6 +512,7 @@ def provenance(
         "prompts_dir": str(prompts_dir),
         "prompts_sha256": hash_directory(prompts_dir),
         "answer_key_sha256": grade.answer_key_sha256(),
+        "python_version": interpreter_version(),
         "recorded_at": now(),
     }
 
@@ -796,12 +816,16 @@ def run_one_case(
         "model": result.model,
         "recorded_at": datetime.now(timezone.utc).isoformat(),
         "brief_sha256": result.brief_sha256,
-        # The commit and the prompts digest under which THIS result was
-        # produced, beside the digest of the brief it was given. The three
-        # together are what makes the entry self-describing: a later reader can
-        # tell both what produced it and whether the code has since moved on.
+        # The commit, the prompts digest and the interpreter under which THIS
+        # result was produced, beside the digest of the brief it was given. The
+        # four together are what makes the entry self-describing: a later reader
+        # can tell both what produced it and whether the code has since moved
+        # on. The interpreter earns its place because the brief's bytes were
+        # once a function of it, so a digest that disagrees may be interpreter
+        # drift rather than code drift.
         "git_commit": provenance_fields.get("git_commit"),
         "prompts_sha256": provenance_fields.get("prompts_sha256"),
+        "python_version": provenance_fields.get("python_version"),
         "transcript_sha256": result.transcript_sha256,
         "transcript_file": transcript_path(Path("."), case_no).name,
         "ruling": result.ruling,
@@ -1348,6 +1372,9 @@ def _metadata_document(
         "prompts_dir": run_provenance.get("prompts_dir"),
         "prompts_sha256": run_provenance.get("prompts_sha256"),
         "answer_key_sha256": run_provenance.get("answer_key_sha256"),
+        # Recorded here as well as per case, so a run whose per-case entries
+        # have been lost still says what built its briefs.
+        "python_version": run_provenance.get("python_version"),
         "tokens": {
             "spent_this_invocation": tokens_spent,
             "reused_from_cache": tokens_reused,
@@ -1471,6 +1498,12 @@ class ComparisonRow:
     indeterminate_ruled_confidently: int
     mean_latency_seconds: Optional[float]
     total_tokens: int
+    # The interpreters that produced the results in this directory, as each
+    # cached case recorded them. Empty when the cache predates the field.
+    # Carried on the row because a digest comparison is only readable against
+    # it: the brief's bytes were once a function of the interpreter, so a
+    # disagreement may be interpreter drift rather than code drift.
+    python_versions: Tuple[str, ...] = ()
     staleness: grade.Staleness = grade.Staleness()
 
 
@@ -1492,12 +1525,16 @@ def _row_from_run(
 
     durations: List[float] = []
     tokens = 0
+    interpreters: List[str] = []
     for case_no in covered:
         document = load_cached(run_dir, case_no)
         if document is None:
             continue
         durations.append(_as_seconds(document.get("wall_seconds")))
         tokens += _as_int((document.get("tokens") or {}).get("total_tokens"))
+        recorded = document.get("python_version")
+        if isinstance(recorded, str) and recorded:
+            interpreters.append(recorded)
 
     calibration = report.calibration
     return ComparisonRow(
@@ -1518,6 +1555,7 @@ def _row_from_run(
         indeterminate_ruled_confidently=len(calibration.indeterminate_ruled_confidently),
         mean_latency_seconds=(sum(durations) / len(durations)) if durations else None,
         total_tokens=tokens,
+        python_versions=tuple(sorted(set(interpreters))),
         staleness=report.staleness,
     )
 
@@ -1684,6 +1722,29 @@ def render_comparison(rows: Sequence[ComparisonRow]) -> str:
             "INDETERMINATE cases ruled confidently instead of escalated: {0} "
             "across these runs.".format(confidently_wrong)
         )
+
+    # Which interpreter produced these results, when it is not the one checking.
+    # The brief's bytes were once a function of the interpreter, so a reader
+    # deciding whether a disagreement is code drift needs this beside it. A
+    # cache that predates the field says nothing here rather than guessing.
+    running = interpreter_version()
+    elsewhere = [
+        row for row in rows if row.python_versions and running not in row.python_versions
+    ]
+    if elsewhere:
+        lines.append("")
+        lines.append(
+            "This check is running under Python {0}; these results were produced "
+            "under another interpreter. The brief's accumulation is pinned, so the "
+            "digests are still comparable -- but a disagreement between them may be "
+            "interpreter drift rather than code drift.".format(running)
+        )
+        for row in elsewhere:
+            lines.append(
+                "  {0}  produced under: {1}".format(
+                    row.model, ", ".join(row.python_versions)
+                )
+            )
 
     stale_rows = [row for row in rows if row.staleness.mixed]
     if stale_rows:

@@ -466,7 +466,7 @@ def accumulated_dwell(
         "runs": runs,
         "run_count": len(runs),
         "longest_run_sec": max([run["duration_sec"] for run in runs], default=0.0),
-        "accumulated_sec": sum(run["duration_sec"] for run in runs),
+        "accumulated_sec": _sum_in_order(run["duration_sec"] for run in runs),
         "excursions": spans,
         "max_excursion_m": max(measured) if measured else None,
         "excursions_measurable": all(span["max_distance_m"] is not None for span in spans),
@@ -474,6 +474,30 @@ def accumulated_dwell(
         "unavailable_reasons": reasons,
         "advisory_candidates": candidates,
     }
+
+
+def _sum_in_order(values: Iterable[float]) -> float:
+    """Sum left to right, in the order given, with no compensation.
+
+    Deliberately not the builtin. Python 3.12 changed ``sum()`` for floats to
+    Neumaier compensated summation, so the same distances average to a different
+    last bit under 3.9 and under 3.13. A mean travels unrounded into the brief,
+    so with the builtin the brief's bytes — and therefore ``brief_sha256`` —
+    would depend on the interpreter that built it, and a cached result would be
+    reported stale purely because the check ran under a different Python.
+
+    This is the accumulation CPython performed before 3.12, so it reproduces the
+    value every brief already cached was built from instead of introducing a
+    third one. ``math.fsum`` is correctly rounded and is the wrong repair here
+    for exactly that reason: it is not what the cache encodes.
+
+    Integers are exact under either rule, so a caller summing counts does not
+    need this. Only a float total does.
+    """
+    total = 0.0
+    for value in values:
+        total = total + value
+    return total
 
 
 def track_summary(
@@ -485,6 +509,9 @@ def track_summary(
 
     An empty or missing trace yields an empty summary rather than raising.
     Distances and the time span are unrounded.
+
+    The mean goes through :func:`_sum_in_order` rather than ``sum()`` so that it
+    does not depend on the interpreter. See that function for why.
     """
     trace = list(points or [])
     if not trace:
@@ -504,7 +531,7 @@ def track_summary(
         "fix_count": len(trace),
         "min_distance_m": min(distances),
         "max_distance_m": max(distances),
-        "mean_distance_m": sum(distances) / len(distances),
+        "mean_distance_m": _sum_in_order(distances) / len(distances),
         "distinct_speeds_kph": speeds,
         "first_ts": trace[0].get("ts"),
         "last_ts": trace[-1].get("ts"),

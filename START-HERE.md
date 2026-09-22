@@ -94,8 +94,8 @@ Two rules follow, and both are enforced in code:
   evidence — of what an earlier version of the brief did. Deleting it destroys the record of the
   change.
 - **Provenance that lives only in a file the next invocation overwrites is not provenance.** Each
-  case file carries its own commit and prompts digest; each invocation's record is appended to
-  `invocations.json`.
+  case file carries its own commit, prompts digest and interpreter; each invocation's record is
+  appended to `invocations.json`.
 
 Run over the cache, the check reports **12 of 29 results stale** — cases 201 through 212, the
 NO_SHOW cases carrying a GPS trace, which are exactly the ones the two brief changes could move.
@@ -103,12 +103,15 @@ The whole 29-case set was produced at one commit, `a11285b`, between 15:48 and 1
 landed at 17:45 and `d06d2ff` at 18:57, so the code moved on underneath a finished run rather than
 while it ran. Every cached digest matches a committed version of the brief.
 
-**That count holds only under the interpreter that produced the cache — Python 3.9.6 here.** The
-brief carries an unrounded mean distance, and `sum()`'s float semantics changed in Python 3.12, so
-the same cache reads as 12 stale under 3.9.6 and 21 under 3.13.12. **`brief_sha256` is therefore
-not a function of the repository alone**, and the check is only sound when run under the
-interpreter that produced the result. Recorded as an open defect in the note and not fixed there:
-making the float version-stable changes the brief, and so changes what every cached result means.
+**That count is the same under any interpreter now, and it was not always.** The brief carries an
+unrounded mean distance, and `sum()`'s float semantics changed in Python 3.12, so the same cache
+used to read as 12 stale under the 3.9.6 that produced it and 21 under 3.13.12 —
+**`brief_sha256` was not a function of the repository alone.** `facts._sum_in_order` now sums left
+to right with no compensation, which is what 3.9's `sum()` already did, so the brief is
+interpreter-stable and the check agrees with itself wherever it runs. The repair was measured
+before it was made and changes no byte of the existing cache under 3.9.6. The interpreter is
+recorded per case beside the commit and the prompts digest, and the comparison table names it when
+it differs, so a digest that disagrees can be read against the interpreter that produced it.
 
 An earlier version of this section reported 21 stale and nineteen digests matching no committed
 version. The nineteen was simply wrong. The 21 was this same check run under the wrong

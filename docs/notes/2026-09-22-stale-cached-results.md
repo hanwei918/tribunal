@@ -5,8 +5,9 @@ Date: 2026-09-22. Commit: the one that adds this file.
 The counts in "What the check found" were corrected on the same day, after the first version of
 this note was found to state a figure measured under the wrong interpreter. What was wrong, and
 why, is recorded below under "Why the earlier version of this note was wrong", together with the
-defect in the brief that the wrong count uncovered. The defect this note is about, the three causes
-and the change are unaffected.
+defect in the brief that the wrong count uncovered — a defect that has since been fixed, the fix
+being recorded under "The brief is not stable across Python versions". The defect this note is
+about, the three causes and the change are unaffected.
 
 ## The defect
 
@@ -39,8 +40,10 @@ It was the act of checking.
 
 The expectation going in was **17 current and 12 stale, the stale ones being 201 through
 212**. That is what the cache holds, measured under Python 3.9.6 — the interpreter that
-produced the cache, and not an incidental detail. The same check under Python 3.13.12 reports
-twenty-one; see "The brief is not stable across Python versions" below.
+produced it. Before the accumulation behind the brief was pinned to a plain left-to-right sum,
+that same check reported twenty-one under Python 3.13.12 and the interpreter was the whole of
+the difference; it now reports the same twelve under any interpreter. See "The brief is not
+stable across Python versions" below.
 
 ```
 deepseek-deepseek-flash   cached=29  current=17  stale=12  unknown=0
@@ -92,9 +95,10 @@ Two independent checks confirm the field means what it is taken to mean:
 - **The brief is deterministic within one interpreter.** `brief.build_brief` returns the same
   digest under 30 different `PYTHONHASHSEED` values, and `brief.brief_digest` is byte-identical
   to the pipeline's own `money.dumps_canonical` + SHA-256. No set iteration is involved. A
-  float is: the mean distance to the pickup point travels unrounded, and `sum()`'s float
-  semantics changed in Python 3.12, so the digest is a function of the interpreter as well as
-  of the repository. That is the whole of the discrepancy recorded below.
+  float was: the mean distance to the pickup point travels unrounded, and `sum()`'s float
+  semantics changed in Python 3.12, so the digest was a function of the interpreter as well as
+  of the repository. That was the whole of the discrepancy recorded below, and it is why the
+  accumulation is now pinned.
 
 ### What this means
 
@@ -115,11 +119,13 @@ the check belongs in the code rather than in a note.
 ### Case 214
 
 Case 214 is not an anomaly. Its cache entry records `fd64cd2b3920…`, which is what `d06d2ff`
-builds for it under 3.9.6 — under 3.13.12 the same commit builds `e880457d6c52…` for it, and
-that is the second of the two values this note's first version could not place; its `run.json`
-records `git_commit: d06d2ff…`, `working_tree_clean: true`, `requested: [214]`, started 19:20:05
-and ended 19:23:53. It is a single-case re-run made after the shortfall-basis change landed, and
-it is current. It is the only result in the cache that the current brief produced.
+builds for it under 3.9.6 — and, checked out at that revision, `e880457d6c52…` under 3.13.12,
+which is the second of the two values this note's first version could not place. That divergence
+was a property of the revision rather than of the case: the accumulation is pinned now, so at the
+current commit both interpreters build `fd64cd2b3920…` for it. Its `run.json` records
+`git_commit: d06d2ff…`, `working_tree_clean: true`, `requested: [214]`, started 19:20:05 and
+ended 19:23:53. It is a single-case re-run made after the shortfall-basis change landed, and it
+is current. It is the only result in the cache that the current brief produced.
 
 ### Why the earlier version of this note was wrong
 
@@ -138,10 +144,11 @@ python3           3.13.12  ->  cached=29  current=8   stale=21
 ```
 
 So the twenty-one was not a broken worktree method and not a figure typed in by hand: it was
-this check, run correctly, against a brief whose bytes depend on the interpreter. That the
+this check, run correctly, against a brief whose bytes depended on the interpreter. That the
 cache was produced under 3.9.6 is settled by its own digests, since the entries recorded for
 101, 213 and 214 are exactly what 3.9.6 builds and not what 3.13.12 builds. **Twelve is the
-answer for this cache**, and the check has to be run under the interpreter that produced it.
+answer for this cache** — and since the accumulation was pinned it is the answer under either
+interpreter, which is the property that was missing when this section was first written.
 
 Under every committed revision from `774fc82` to `d06d2ff`, computed under 3.9.6, this cache
 yields 1, 12 or 13 stale results:
@@ -202,17 +209,18 @@ Two figures in the earlier version were wrong, one of them because the note neve
 interpreter had produced it. So the note says now, and the numbers are held against the code by
 `NoteCouplingTests` in `tests/test_run_benchmark.py`: that test reads the block and compares it
 with `grade_run` over the same directories, and separately runs the command the note quotes and
-compares its output with the block. The cache under `runs/` is untracked, and the check is
-interpreter-sensitive, so each comparison is skipped where it cannot be made and the skip names
-which of the two reasons applies.
+compares its output with the block. The cache under `runs/` is untracked, so where a run directory
+is absent the comparison is skipped and the skip says so. The count itself is no longer
+interpreter-sensitive: that was the defect below, and it is fixed.
 
 ### The brief is not stable across Python versions
 
-This is the defect the wrong count uncovered, and it is the more serious of the two findings.
+This is the defect the wrong count uncovered, and it was the more serious of the two findings. It
+is now fixed. What follows is the measurement that found it and the repair.
 
-`facts.track_summary` computes the mean distance from a trace to the pickup point as
+`facts.track_summary` computed the mean distance from a trace to the pickup point as
 `sum(distances) / len(distances)`. **Python 3.12 changed `sum()` for floats to use Neumaier
-compensated summation**, so the same distances average to a different last bit under 3.9 and
+compensated summation**, so the same distances averaged to a different last bit under 3.9 and
 under 3.13. Case 101, whose trace carries 229 fixes:
 
 ```
@@ -226,40 +234,57 @@ individual distances are bit-identical under both — so the difference is `sum(
 data's.
 
 Comparing the canonical brief of all 29 cases across the two interpreters: **19 of the 29
-differ**, the only field that ever differs is a `value`, and every one of them is a
-`mean_distance_m`. In 9 of those 19 it flips the staleness verdict; in the other 10 the result
-was stale under either interpreter, so the count does not move. Nine is exactly the excess of
-twenty-one over twelve.
+differed**, the only field that ever differed was a `mean_distance_m` — specifically
+`derived.driver_track.mean_distance_m.value` in 17 cases and
+`derived.rider_presence.mean_distance_m.value` in 5 — and in 9 of those 19 it flipped the
+staleness verdict. Nine is exactly the excess of twenty-one over twelve.
 
-The consequence is general, and it is not confined to this cache. **`brief_sha256` is meant to
-be the digest of the bytes the agents were handed, and those bytes are not determined by the
-repository alone.** Two things follow, and neither is done here:
+The consequence was general, and it was not confined to this cache. **`brief_sha256` is meant to
+be the digest of the bytes the agents were handed, and those bytes were not determined by the
+repository alone.**
 
-- The interpreter that produced a result is provenance, exactly as the commit and the prompts
-  digest are, and it is not recorded. The argument that put `git_commit` into the case file
-  applies to it unchanged.
-- Or the float is made version-stable — a left-to-right accumulation, or `math.fsum`, either
-  one line — after which the digest is a function of the repository alone and this class of
-  false staleness cannot arise.
+**The repair is one function.** `facts._sum_in_order` accumulates left to right with no
+compensation — the accumulation CPython performed before 3.12 — and both float `sum()` calls in
+the module now go through it. `math.fsum` was considered and rejected: it is correctly rounded, so
+it would produce a *third* value and invalidate all 29 cached results. The naive loop is right
+precisely because it reproduces what 3.9's `sum()` already did.
 
-**Recorded as an open defect rather than fixed here**, because changing the brief changes what
-every cached result means. That is a decision about the corpus, not a tidy-up.
+**The repair was measured before it was made.** Shadowing the module-global `sum` with a plain
+loop, without editing anything:
+
+```
+interpreter                        3.9.6        3.13.12
+the builtin, as it was            17 current     8 current
+a left-to-right loop              17 current    17 current
+canonical briefs the loop changes        0 of 29   (under 3.9.6)
+```
+
+Under 3.9.6 the loop changes **no** brief, so no cached result changes meaning and the cache stays
+byte-for-byte valid. Under 3.13.12 it turns nine from stale to current — 101, 105, 106, 107, 108,
+109, 112, 114, 214 — loses none, and converges the check onto the cache's own answer. The twelve
+that remain are genuine code drift. `accumulated_sec` was checked too: it is the other float
+`sum()` in the module, it never differed across the corpus, and it was changed anyway so that the
+class is closed rather than the instance. The integer sums in `transcript.py` are exact under
+either rule and were left alone. `mean_latency_seconds` in the comparison table is also a float
+`sum()`, but it is a rendered latency formatted to one decimal and reaches no digest, so it is
+left as it is and recorded here rather than silently changed.
+
+**The interpreter is now recorded as provenance**, beside `git_commit` and `prompts_sha256`, in
+every cache entry and in the run's own `run.json`. It is provenance and not a gate: the brief no
+longer varies with the interpreter, so a mismatch does not make two digests incomparable — it says
+which of them came from where. The comparison table names both interpreters when they differ, so a
+digest that disagrees can be read against the interpreter that produced it instead of being called
+code drift by default. A cache that predates the field reports nothing rather than guessing.
 
 ### Re-deriving these numbers
 
 The block under "What the check found" is not written by hand: it is the output of this command,
-run from the project root **under Python 3.9.6**, the interpreter that produced the cache. Under
-any other interpreter the check reports false staleness and this command will not reproduce the
-block. No network, no model call. It reads every directory the block names.
+run from the project root. No network, no model call. It reads every directory the block names,
+and because the accumulation is pinned it reproduces the block under any interpreter.
 
 ```
 python3 - <<'PY'
 import sys, glob, os
-if sys.version_info[:3] != (3, 9, 6):
-    raise SystemExit(
-        "this cache was produced under Python 3.9.6; under %s this check reports "
-        "false staleness -- see 'The brief is not stable across Python versions'"
-        % sys.version.split()[0])
 sys.path[:0] = ["."]
 from eval import run_benchmark as runner
 for name in ("deepseek-deepseek-flash", "hy4-preview"):
@@ -280,11 +305,11 @@ for name in ("deepseek-deepseek-flash", "hy4-preview"):
 PY
 ```
 
-The version guard is not decoration: without it the command silently prints twenty-one under
-the `python3` on this machine's `PATH`. Run it under the interpreter the cache was made with —
-`/usr/bin/python3` here — or it stops and says why. `python3 -m unittest
+Before the accumulation was pinned this command carried a version guard that stopped it under any
+interpreter but 3.9.6, because under the `python3` on this machine's `PATH` it printed
+twenty-one. The guard is gone because the reason for it is gone. `python3 -m unittest
 tests.test_run_benchmark.NoteCouplingTests -v` re-derives the same numbers and checks the note
-against them in one step, and refuses in the same way.
+against them in one step.
 
 ## What was changed
 
@@ -300,8 +325,10 @@ against them in one step, and refuses in the same way.
    not current, for the same reason an unreadable working tree is not clean. A report that
    checked nothing prints nothing — silence rather than a reassuring zero.
 
-2. **Per-case provenance.** Every cache entry now records `git_commit` and
-   `prompts_sha256` beside the `brief_sha256` it already kept.
+2. **Per-case provenance.** Every cache entry now records `git_commit`, `prompts_sha256` and
+   `python_version` beside the `brief_sha256` it already kept. The run's own `run.json` carries
+   the interpreter too, so a run whose per-case entries have been lost still says what built
+   its briefs.
 
 3. **The run record is no longer destroyed.** `run.json` still describes the invocation that
    wrote it — it is rewritten after every case, which is what keeps an interrupted run's
@@ -310,16 +337,27 @@ against them in one step, and refuses in the same way.
    time and replaced in place, so an earlier invocation stays reconstructable after its
    `run.json` is gone.
 
+4. **The accumulation behind the brief is pinned.** `facts._sum_in_order` sums left to right
+   with no compensation, and both float `sum()` calls in `facts.py` go through it. A brief is
+   now a function of the repository alone, so this class of false staleness cannot arise. The
+   repair was measured first: it changes no byte of the existing cache under 3.9.6, so no
+   cached result changes meaning.
+
 ## What was not done
 
 Nothing was re-run and no model call was made. No stale result was deleted, moved or
-rewritten: they are real measurements and they are the evidence for this finding. The
-`report.md` files under `runs/` were not regenerated — they are the record of what the
-earlier code printed, and rewriting them would destroy the comparison.
+rewritten: they are real measurements and they are the evidence for this finding, and the
+twelve stay stale because the code they measured really has moved. The `report.md` files under
+`runs/` were not regenerated — they are the record of what the earlier code printed, and
+rewriting them would destroy the comparison.
+
+Two things were deliberately left alone, each recorded above with its reason: `math.fsum` was
+not used, because it would invalidate all 29 cached results rather than reproduce them; and
+`mean_latency_seconds` in the comparison table was not changed, because it reaches no digest.
 
 ## Verification
 
-- The full suite passes, no network.
+- The full suite passes under both interpreters, no network.
 - The new guard was mutated to make a changed brief read as current; 7 tests went RED. The
   file was restored and the suite re-run green.
 - `--compare` over the real cache now names the stale case in each run directory instead of
@@ -336,3 +374,18 @@ earlier code printed, and rewriting them would destroy the comparison.
   229 individual distances for case 101 are bit-identical under both interpreters; and a
   left-to-right accumulation reproduces the 3.9 value under both, which places the change in
   `sum()` rather than in the data.
+- **The repair was measured before it was made**, by shadowing the module-global `sum` with a
+  plain loop rather than editing the file: under 3.9.6 it changes 0 of 29 canonical briefs, and
+  under 3.13.12 it turns nine from stale to current and loses none. The check was then run for
+  real under both interpreters and reports 17 current and 12 stale under each — where before it
+  reported 12 under one and 21 under the other.
+- **The accumulation guard was mutated to prove it bites.** Pointing `_sum_in_order` at the
+  builtin turns five tests RED under 3.13.12 — and one under 3.9.6, the source-level test, which
+  is the guard that does not depend on which interpreter runs the suite. The file was restored
+  from a copy, confirmed byte-identical, and the suite re-run green.
+- **The comparison-table surface was mutated too.** Making the interpreter note unreachable
+  turns `test_the_comparison_table_names_the_interpreter_when_it_differs` RED. Restored and
+  re-run green.
+- `NoteCouplingTests` no longer skips: all seven run under 3.9.6 and under 3.13.12. The two
+  comparisons used to be skipped under any interpreter but the cache's own, which is what the
+  repair removed.

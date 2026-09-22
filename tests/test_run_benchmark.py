@@ -40,8 +40,9 @@ What is covered
   set says on its face that its exact-match figure is not one measurement —
   with the digest shown to be the one the pipeline itself recorded, so the
   check cannot be satisfied by comparing against a constant;
-* per-case provenance: every cache entry carries the commit and the prompts
-  digest it was produced under, beside the brief digest it already kept;
+* per-case provenance: every cache entry carries the commit, the prompts digest
+  and the interpreter it was produced under, beside the brief digest it already
+  kept -- the interpreter because that digest was once a function of it;
 * the run record: a second invocation over a different case set leaves the
   first invocation's own record — its case list and its token total — intact in
   ``invocations.json``, while ``run.json`` describes only the invocation that
@@ -456,14 +457,16 @@ class CleanRunTests(unittest.TestCase):
                         "call_seconds",
                         "case_no",
                         # Per-case provenance, beside the digest it belongs to.
-                        # The commit and the prompts a result was produced under
-                        # must survive in the result's own file: a run-level
-                        # record is overwritten by the next invocation, so
-                        # provenance that lives only there dies with it.
+                        # The commit, the prompts and the interpreter a result
+                        # was produced under must survive in the result's own
+                        # file: a run-level record is overwritten by the next
+                        # invocation, so provenance that lives only there dies
+                        # with it.
                         "git_commit",
                         "matched",
                         "model",
                         "prompts_sha256",
+                        "python_version",
                         "recorded_at",
                         "ruling",
                         "ruling_findings",
@@ -2210,6 +2213,117 @@ class PerCaseProvenanceTests(unittest.TestCase):
             self.assertEqual(other, document["git_commit"])
 
 
+def _comparison_row(**overrides):
+    """A minimal comparison row, for rendering tests that need no run on disk."""
+    fields = dict(
+        model=MODEL,
+        working_tree_clean=True,
+        cases_graded=1,
+        cases_cached=1,
+        graded_cases=(101,),
+        grades_full_corpus=False,
+        exact_matches=1,
+        field_correct={name: 1 for name in grade.GRADED_FIELDS},
+        escalation_rate=None,
+        target_rate=Decimal("17.2"),
+        precision=None,
+        recall=None,
+        over_escalations=0,
+        under_escalations=0,
+        indeterminate_ruled_confidently=0,
+        mean_latency_seconds=None,
+        total_tokens=0,
+    )
+    fields.update(overrides)
+    return runner.ComparisonRow(**fields)
+
+
+class InterpreterProvenanceTests(unittest.TestCase):
+    """Which Python built a brief, recorded beside the digest of that brief.
+
+    The brief carries an unrounded mean distance, so before the accumulation in
+    ``facts.track_summary`` was pinned to a plain left-to-right sum, its bytes --
+    and therefore ``brief_sha256`` -- were a function of the interpreter as well
+    as of the repository. A cache that does not say which interpreter produced
+    it cannot be read afterwards: a digest disagreement may be code drift or
+    interpreter drift, and once the run is over there is nothing left to tell
+    them apart.
+    """
+
+    def test_interpreter_version_is_major_dot_minor_dot_micro(self):
+        expected = "{0}.{1}.{2}".format(*sys.version_info[:3])
+        self.assertEqual(expected, runner.interpreter_version())
+        self.assertRegex(runner.interpreter_version(), r"^\d+\.\d+\.\d+$")
+
+    def test_every_case_file_records_the_interpreter_that_built_its_brief(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, _ = bench(tmp)
+            for case_no in CASE_SET:
+                with self.subTest(case=case_no):
+                    document = runner.load_cached(summary.run_dir, case_no)
+                    self.assertEqual(
+                        runner.interpreter_version(), document["python_version"]
+                    )
+
+    def test_the_runs_own_record_carries_the_interpreter_too(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, _ = bench(tmp)
+            metadata = runner.read_json(runner.metadata_path(summary.run_dir))
+            self.assertEqual(runner.interpreter_version(), metadata["python_version"])
+
+    def test_the_row_collects_the_interpreters_the_cache_records(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            bench(tmp, cases=CASE_SET, runs_dir=runs)
+            run_dir = runner.run_directory(runs, MODEL)
+
+            self.assertEqual(
+                (runner.interpreter_version(),),
+                runner.collect_comparison(runs)[0].python_versions,
+            )
+
+            # A cache that names an older interpreter says so, rather than
+            # being silently read as the one running now.
+            for case_no in CASE_SET:
+                document = runner.load_cached(run_dir, case_no)
+                document["python_version"] = "3.9.6"
+                runner.write_json(runner.case_cache_path(run_dir, case_no), document)
+
+            self.assertEqual(
+                ("3.9.6",), runner.collect_comparison(runs)[0].python_versions
+            )
+
+    def test_a_cache_predating_the_field_reports_no_interpreter(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            bench(tmp, cases=CASE_SET, runs_dir=runs)
+            run_dir = runner.run_directory(runs, MODEL)
+            for case_no in CASE_SET:
+                document = runner.load_cached(run_dir, case_no)
+                document.pop("python_version")
+                runner.write_json(runner.case_cache_path(run_dir, case_no), document)
+
+            self.assertEqual((), runner.collect_comparison(runs)[0].python_versions)
+
+    def test_the_comparison_table_names_the_interpreter_when_it_differs(self):
+        table = runner.render_comparison([_comparison_row(python_versions=("2.7.18",))])
+
+        self.assertIn("2.7.18", table)
+        self.assertIn(runner.interpreter_version(), table)
+        self.assertIn("interpreter drift", table)
+
+    def test_the_comparison_table_is_silent_when_nothing_was_recorded(self):
+        """A cache that predates the field says nothing rather than guessing."""
+        table = runner.render_comparison([_comparison_row(python_versions=())])
+
+        self.assertNotIn("interpreter drift", table)
+        self.assertNotIn("produced under", table)
+
+    def test_the_comparison_table_is_silent_when_the_interpreter_agrees(self):
+        row = _comparison_row(python_versions=(runner.interpreter_version(),))
+        self.assertNotIn("interpreter drift", runner.render_comparison([row]))
+
+
 class RunRecordTests(unittest.TestCase):
     """A new invocation must not destroy the record of an earlier one.
 
@@ -2382,14 +2496,16 @@ class NoteCouplingTests(unittest.TestCase):
     ``grade_run`` over the same directories, so the two cannot drift apart again
     without a test going red.
 
-    Two limitations, stated rather than papered over. The cache under ``runs/``
-    is untracked, so on a checkout without it there is nothing to compare against
-    and the comparison is skipped. And the count is only comparable under the
-    interpreter that produced the cache — the brief carries an unrounded mean
-    distance and ``sum()``'s float semantics changed in Python 3.12 — so the note
-    has to name that interpreter and the comparison skips under any other. What
-    is asserted unconditionally is that the note's own numbers agree with each
-    other, and that it names the interpreter.
+    One limitation, stated rather than papered over: the cache under ``runs/`` is
+    untracked, so on a checkout without it there is nothing to compare against
+    and the comparison is skipped, naming the directories it wanted.
+
+    The comparisons used to be skipped under any interpreter but the one that
+    produced the cache, because the brief carried an unrounded mean distance and
+    ``sum()``'s float semantics changed in Python 3.12. The accumulation is now
+    pinned, so they run everywhere. The note still has to name the interpreter
+    the cache came from: that is provenance, and a count about a cache is weaker
+    without it.
     """
 
     @classmethod
@@ -2412,10 +2528,12 @@ class NoteCouplingTests(unittest.TestCase):
         )
 
     def test_the_note_names_the_interpreter_its_digests_came_from(self):
-        """Without it the numbers cannot be reproduced, only believed.
+        """Provenance, and still required even though it is no longer a precondition.
 
-        The brief is not byte-stable across Python versions, so a count about a
-        cache is meaningless unless the interpreter is stated with it.
+        The brief is byte-stable across Python versions now, so the count no
+        longer depends on this. What the note records is where the cache came
+        from: a result's own file says which interpreter produced it, and a note
+        about that cache should be able to say so too.
         """
         self._named_interpreter()
 
@@ -2448,21 +2566,14 @@ class NoteCouplingTests(unittest.TestCase):
     def test_the_note_agrees_with_the_grader_over_the_real_cache(self):
         """The coupling itself: the note's numbers against the code's.
 
-        Meaningful only under the interpreter that produced the cache. The brief
-        carries an unrounded mean distance and ``sum()``'s float semantics
-        changed in Python 3.12, so under any other interpreter the check reports
-        false staleness — twenty-one where the cache holds twelve — and a
-        comparison here would report a defect in the interpreter rather than a
-        note that has drifted. That is skipped and said, not passed silently.
+        Run under whatever interpreter the suite is running. This comparison was
+        meaningless under anything but the one that produced the cache — the
+        brief carried an unrounded mean distance and ``sum()``'s float semantics
+        changed in Python 3.12, so the check reported twenty-one where the cache
+        holds twelve — and it is the repair of that which lets the comparison be
+        made unconditionally. A comparison that only runs under one interpreter
+        is a comparison that quietly stops being made.
         """
-        named = self._named_interpreter()
-        running = ".".join(str(part) for part in sys.version_info[:3])
-        if named != running:
-            self.skipTest(
-                "the cache was produced under Python {0} and this is {1}; the "
-                "staleness check is interpreter-sensitive".format(named, running)
-            )
-
         compared = []
         absent = []
         for directory, block in sorted(self.claim.items()):
@@ -2500,15 +2611,11 @@ class NoteCouplingTests(unittest.TestCase):
         first version of this note went wrong, so the claim is worth running
         rather than reading. The command is extracted from the note, executed,
         and its stdout compared with the block above it.
-        """
-        named = self._named_interpreter()
-        running = ".".join(str(part) for part in sys.version_info[:3])
-        if named != running:
-            self.skipTest(
-                "the command refuses under Python {0}; the cache was made under "
-                "{1}".format(running, named)
-            )
 
+        Run under whatever interpreter the suite is running. The note's command
+        used to refuse under anything but the one that produced the cache; the
+        accumulation behind the brief is now pinned, so it no longer does.
+        """
         lines = self.text.splitlines(True)
         first = next(
             index for index, line in enumerate(lines) if _CACHED_LINE.match(line)
