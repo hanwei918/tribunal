@@ -110,6 +110,7 @@ otherwise.
 | 429 and 5xx | retried with exponential backoff, bounded by `max_attempts` |
 | usage fields | surfaced on `LLMResult` as `prompt_tokens`, `completion_tokens`, `reasoning_tokens`, `cached_tokens` |
 | malformed 200 | `parse_outcome = MALFORMED`, `parse_error` set, raw text preserved |
+| per-call latency | `timeout_seconds`, default `600.0` (`DEFAULT_TIMEOUT_SECONDS`) — see the timeout section below; a read timeout escapes as a bare `TimeoutError` and is classified as such by the runner |
 | the key | read from the environment or `.env`; never written to a log, a `repr`, an exception or a call record |
 
 ## Not measured
@@ -169,4 +170,69 @@ runs over one case cannot separate a model's behaviour from that case's particul
 spread above — 5 to 15 claims, 41 s to 222 s — is exactly the variation a larger sample would need
 to characterise. The transport therefore requires `model` with no default, so the choice stays
 visible and undecided rather than being settled by an implementation detail.
+
+## Per-call durations and the request timeout — the evidence behind the 600-second default
+
+### The measurements
+
+**MEASURED**, all on the real case 208 brief, which is the largest prompt this project sends. These
+are the numbers the default timeout is derived from; the default is not a taste.
+
+| Measurement | Model | Call | Wall clock | How |
+|---|---|---|---|---|
+| second run | `hy3` | advocate, one side | **38.7 s** | **MEASURED** 2026-09-21, reported in the task brief |
+| second run | `hy3` | advocate, other side | **68.9 s** | **MEASURED** 2026-09-21, reported in the task brief |
+| first run | `hy4-preview` | advocate, rider | **199.9 s** | **MEASURED** 2026-09-21, table above |
+| first run | `hy4-preview` | advocate, driver | **221.6 s** | **MEASURED** 2026-09-21, table above |
+
+The two `hy3` figures are a **second measurement of the same calls**, not a correction of the first.
+The earlier table records `hy3` at 55.2 s and 44.8 s for the same two calls. Recorded side by side
+rather than merged, because the spread is the useful fact: the same model on the same brief and the
+same prompt ranged from **38.7 s to 68.9 s**, so a single figure would understate the tail.
+
+The judge call is **not** in the table and is **larger than any of them**: it carries the same brief
+plus both advocates' claim arrays.
+
+### What it cost, before the default was fixed
+
+**MEASURED**: case 109 on `hy3` failed with `TimeoutError: The read operation timed out` at
+**120.1 s**, against the then-default of 120 s. Recorded in `runs/hy3/run.json` as
+`{"case_no": 109, "failed_agent": null, "reason": "TimeoutError: The read operation timed out"}`.
+
+`failed_agent` is `null` because the timeout happened inside a client call, so no agent had been
+identified yet — the failure is not attributable to a side.
+
+At that default, `hy4-preview` would time out on **substantially every call**: both measured
+advocate calls exceed 120 s, and the judge call is larger still.
+
+### Why the default is 600 s
+
+**The two errors are not symmetric.** A timeout that is too long costs *waiting*. A timeout that is
+too short costs *the tokens already spent generating a response that is then discarded* — the
+provider produced the response whether or not the client stayed to read it, and it is billed either
+way. Paying for an answer and throwing it away is strictly worse than waiting for it.
+
+So the default sits **well above** the slowest measured call rather than close to it. 600 s is
+roughly 2.7× the slowest advocate call measured (221.6 s) and leaves room for the judge call, which
+is larger than any advocate call. It is a constructor argument, not a constant, so a caller can
+shorten it deliberately; `eval/run_benchmark.py` exposes it as `--timeout`, defaulting to the
+client's own default so the two cannot drift.
+
+**VERIFIED**: a read timeout escapes `response.read()` as a bare `TimeoutError`, *not* wrapped in
+`urllib.error.URLError`, so `_urllib_transport` never converts it. A *connect* timeout does arrive
+as a `TransportError` wrapping a `URLError` whose reason is a timeout — and that is deliberately
+left classified as a transport failure rather than a timeout, because a connect timeout means
+nothing was generated, nothing was wasted, and "wait longer" would be the wrong advice. The
+distinction stays visible because the reason string still contains "timed out".
+
+**One version trap, measured.** `socket.timeout` is not `TimeoutError` on every interpreter:
+
+| Interpreter | `socket.timeout is TimeoutError` |
+|---|---|
+| 3.9.6 (system) | **`False`** — two separate `OSError` subclasses |
+| 3.13.12 | `True` — `socket.timeout` is an alias |
+
+Both measured directly. A read timeout from `urlopen` is the *socket* one, so classifying on
+`TimeoutError` alone would let a real timeout fall through to the transport kind on 3.9. The
+classifier checks both, and a test pins each.
 

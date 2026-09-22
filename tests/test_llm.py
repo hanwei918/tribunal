@@ -582,10 +582,88 @@ class ConstructorContractTests(unittest.TestCase):
         self.assertIsNone(parameters["reasoning_effort"].default)
         self.assertEqual(parameters["requests_per_minute"].default, 60)
         self.assertEqual(parameters["endpoint"].default, "https://tokenhub-intl.tencentcloudmaas.com/v1/chat/completions")
+        # 600 s, and it is a constructor argument rather than a constant so a
+        # caller can shorten it deliberately. The number is derived from
+        # measurement; TimeoutContractTests asserts the derivation.
+        self.assertEqual(parameters["timeout_seconds"].default, 600.0)
+        self.assertEqual(parameters["timeout_seconds"].default, llm.DEFAULT_TIMEOUT_SECONDS)
 
     def test_an_empty_model_is_refused(self):
         with self.assertRaises(llm.LLMError):
             llm.LLMClient(model="")
+
+
+class TimeoutContractTests(unittest.TestCase):
+    """The request timeout: what it is, why, and what a timeout looks like.
+
+    The default is derived from measurement rather than taste, so these tests
+    assert the derivation instead of restating the number. The two errors are
+    not symmetric — a timeout that is too long costs *waiting*, one that is too
+    short costs *the tokens already spent generating a response that is then
+    discarded*, because the provider produced it whether or not the client
+    stayed to read it. So the default has to sit well above the slowest call
+    anyone has observed rather than close to it.
+    """
+
+    # The slowest single call measured on the real case 208 brief, which is the
+    # largest prompt this project sends. Recorded with its method, alongside the
+    # other per-call durations, in
+    # docs/notes/2026-09-21-tokenhub-api-facts.md.
+    SLOWEST_MEASURED_CALL_SECONDS = 221.6
+
+    # The limit that actually lost a case: case 109 on hy3 died at 120.1 s.
+    THE_LIMIT_THAT_LOST_A_CASE_SECONDS = 120.1
+
+    def test_the_default_is_not_close_to_the_slowest_measured_call(self):
+        self.assertGreaterEqual(
+            llm.DEFAULT_TIMEOUT_SECONDS, 2 * self.SLOWEST_MEASURED_CALL_SECONDS
+        )
+
+    def test_the_default_clears_the_limit_that_cost_us_a_case(self):
+        """120 s is a measured failure, not a hypothetical one."""
+        self.assertGreater(
+            llm.DEFAULT_TIMEOUT_SECONDS, self.THE_LIMIT_THAT_LOST_A_CASE_SECONDS
+        )
+
+    def test_the_timeout_is_passed_to_the_transport_unchanged(self):
+        """The default reaches the socket, rather than being shadowed inside."""
+        transport = FakeTransport(http(200, usage_body()))
+        client, _ = make_client(transport)
+
+        client.complete("sys", "user")
+
+        self.assertEqual(transport.calls[0]["timeout"], llm.DEFAULT_TIMEOUT_SECONDS)
+
+    def test_a_read_timeout_reaches_the_caller_as_a_timeout(self):
+        """A read timeout is NOT converted, so the caller can classify it.
+
+        This is the fact the runner's failure kinds rest on. A read timeout
+        escapes ``response.read()`` as a bare ``TimeoutError`` rather than being
+        wrapped in ``urllib.error.URLError``, so ``_urllib_transport`` never
+        turns it into a ``TransportError`` and the distinction survives.
+        """
+        transport = FakeTransport(TimeoutError("The read operation timed out"))
+        client, _ = make_client(transport, max_attempts=1)
+
+        with self.assertRaises(TimeoutError):
+            client.complete("sys", "user")
+
+    def test_a_connect_timeout_arrives_as_a_transport_error(self):
+        """A connect timeout is deliberately grouped as transport, not timeout.
+
+        Nothing was generated, so nothing was wasted, and "wait longer" would be
+        the wrong advice. The distinction stays visible because the reason still
+        contains the word "timed out".
+        """
+        import urllib.error
+        from unittest import mock
+
+        connect_timeout = urllib.error.URLError(TimeoutError("timed out"))
+        with mock.patch("urllib.request.urlopen", side_effect=connect_timeout):
+            with self.assertRaises(llm.TransportError) as caught:
+                llm._urllib_transport("https://example.invalid/v1", {}, b"{}", 1.0)
+
+        self.assertIn("timed out", str(caught.exception))
 
 
 class RequestBodyTests(unittest.TestCase):

@@ -548,7 +548,13 @@ class ProgressTests(unittest.TestCase):
                 self.assertIn("tokens", line)
                 self.assertIn("s", line)
 
-    def test_a_failed_case_prints_the_agent_and_the_reason(self):
+    def test_a_failed_case_prints_its_kind_the_agent_and_the_reason(self):
+        """The line names the KIND, not a generic FAILED.
+
+        A reader watching the terminal has to be able to tell a case the client
+        stopped waiting for from a case the model answered badly — the two call
+        for opposite responses, and a single word for both hides that.
+        """
         lines = []
         key = answer_key()
         transport = ScriptedTransport(
@@ -557,10 +563,23 @@ class ProgressTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             bench(tmp, transport=transport, progress=lines.append)
 
-        failed = [line for line in lines if "FAILED" in line]
+        failed = [line for line in lines if runner.FAILURE_SHAPE in line]
         self.assertEqual(1, len(failed), "the failure did not print one line")
         self.assertIn("case 102", failed[0])
         self.assertIn(transcript.ROLE_JUDGE, failed[0])
+        self.assertNotIn("FAILED", failed[0], "the kind should stand in for the generic word")
+
+    def test_the_verdict_word_names_the_failure_kind_when_there_is_one(self):
+        """``FAILED`` is only the fallback for a failure nobody classified."""
+        classified = runner.CaseOutcome(
+            case_no=109,
+            status=runner.STATUS_FAILED,
+            failure_kind=runner.FAILURE_TIMEOUT,
+        )
+        unclassified = runner.CaseOutcome(case_no=109, status=runner.STATUS_FAILED)
+
+        self.assertEqual(runner.FAILURE_TIMEOUT, classified.verdict)
+        self.assertEqual("FAILED", unclassified.verdict)
 
     def test_a_cached_case_is_printed_before_the_run_starts(self):
         lines = []
@@ -783,6 +802,295 @@ class FailureTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             with self.assertRaises(llm.MissingAPIKeyError):
                 bench(tmp, client_factory=build)
+
+
+# --------------------------------------------------------------------------
+# The request timeout
+# --------------------------------------------------------------------------
+class ReadTimeoutTransport:
+    """A transport whose every call raises a read timeout.
+
+    This is the shape the real failure took. ``TimeoutError: The read operation
+    timed out`` escapes ``response.read()`` as a bare ``TimeoutError`` rather
+    than being wrapped in a ``URLError``, so the adapter's ``TransportError``
+    conversion never sees it and it reaches the runner unconverted. It is the
+    failure that cost case 109 on ``hy3`` at 120.1 s.
+    """
+
+    def __init__(
+        self,
+        exception=TimeoutError,
+        message: str = "The read operation timed out",
+    ) -> None:
+        self.exception = exception
+        self.message = message
+        self.timeouts = 0
+
+    def __call__(self, url, headers, body, timeout):
+        self.timeouts += 1
+        raise self.exception(self.message)
+
+
+class UnreachableTransport:
+    """A transport that never reaches the endpoint, for a reason that is not waiting.
+
+    The contrast case. A transport failure is retried; a timeout is answered
+    with a longer timeout or a faster model. If these two collapsed into one
+    reason the record would be telling a reader to do the wrong thing.
+    """
+
+    def __call__(self, url, headers, body, timeout):
+        raise llm.TransportError("could not reach the endpoint: connection refused")
+
+
+class RequestTimeoutTests(unittest.TestCase):
+    """The timeout is derived from measurement, threaded through, and classified.
+
+    A real benchmark run lost a case to the 120-second default, so there are
+    three things to hold in place: the default itself, the flag that reaches the
+    client, and the failure kind that lets a reader tell a case the client
+    stopped waiting for from a case the model answered unusably.
+    """
+
+    def test_the_runner_defaults_to_the_clients_own_default(self):
+        """One source for the number, so the runner cannot drift from the client."""
+        import inspect
+
+        parameters = inspect.signature(runner.run_benchmark).parameters
+        self.assertEqual(
+            llm.DEFAULT_TIMEOUT_SECONDS, parameters["timeout_seconds"].default
+        )
+        self.assertEqual(600.0, llm.DEFAULT_TIMEOUT_SECONDS)
+
+    def test_the_timeout_in_force_is_recorded_in_the_run_metadata(self):
+        """A run under 120 s is not the same measurement as one under 600 s."""
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, _ = bench(tmp)
+            metadata = runner.read_json(runner.metadata_path(summary.run_dir))
+
+        self.assertEqual(llm.DEFAULT_TIMEOUT_SECONDS, metadata["timeout_seconds"])
+        self.assertEqual(llm.DEFAULT_TIMEOUT_SECONDS, summary.timeout_seconds)
+
+    def test_a_shortened_timeout_is_recorded_as_the_one_in_force(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, _ = bench(tmp, timeout_seconds=15.0)
+            metadata = runner.read_json(runner.metadata_path(summary.run_dir))
+
+        self.assertEqual(15.0, metadata["timeout_seconds"])
+
+    def test_the_factory_builds_the_client_with_the_timeout_it_was_given(self):
+        """The flag is not decorative: it is what the client is constructed with."""
+        built = {}
+
+        def fake_client(**kwargs):
+            built.update(kwargs)
+            return mock.Mock()
+
+        with mock.patch.object(runner.llm, "LLMClient", side_effect=fake_client):
+            runner._default_client_factory(MODEL, 12.5)(lambda record: None)
+
+        self.assertEqual(12.5, built["timeout_seconds"])
+        self.assertEqual(MODEL, built["model"])
+
+    def test_a_shortened_timeout_reaches_the_client_end_to_end(self):
+        """Through ``run_benchmark``, not only through the factory directly."""
+        built = []
+
+        def fake_client(**kwargs):
+            built.append(kwargs)
+            client = mock.Mock()
+            client.complete.side_effect = RuntimeError("this test never calls a model")
+            return client
+
+        with tempfile.TemporaryDirectory() as tmp:
+            with mock.patch.object(runner.llm, "LLMClient", side_effect=fake_client):
+                bench(tmp, cases=(101,), timeout_seconds=9.0, client_factory=None)
+
+        self.assertEqual([9.0], [item["timeout_seconds"] for item in built])
+
+    def test_the_timeout_flag_overrides_the_default(self):
+        """A caller can shorten it deliberately for a probe without editing code."""
+        built = []
+
+        def fake_client(**kwargs):
+            built.append(kwargs)
+            client = mock.Mock()
+            client.complete.side_effect = RuntimeError("this test never calls a model")
+            return client
+
+        with tempfile.TemporaryDirectory() as tmp:
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                with mock.patch.object(runner.llm, "LLMClient", side_effect=fake_client):
+                    status = runner.main(
+                        [
+                            "--model", MODEL,
+                            "--cases", "101",
+                            "--timeout", "5",
+                            "--runs-dir", str(Path(tmp) / "runs"),
+                        ]
+                    )
+
+        self.assertEqual([5.0], [item["timeout_seconds"] for item in built])
+        self.assertEqual(1, status, "a run whose only case failed exits non-zero")
+
+    def test_the_timeout_flag_defaults_to_the_clients_default(self):
+        built = []
+
+        def fake_client(**kwargs):
+            built.append(kwargs)
+            client = mock.Mock()
+            client.complete.side_effect = RuntimeError("this test never calls a model")
+            return client
+
+        with tempfile.TemporaryDirectory() as tmp:
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                with mock.patch.object(runner.llm, "LLMClient", side_effect=fake_client):
+                    runner.main(
+                        [
+                            "--model", MODEL,
+                            "--cases", "101",
+                            "--runs-dir", str(Path(tmp) / "runs"),
+                        ]
+                    )
+
+        self.assertEqual(
+            [llm.DEFAULT_TIMEOUT_SECONDS], [item["timeout_seconds"] for item in built]
+        )
+
+    def test_a_timeout_is_recorded_under_its_own_kind(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, _ = bench(tmp, cases=(101,), transport=ReadTimeoutTransport())
+            metadata = runner.read_json(runner.metadata_path(summary.run_dir))
+
+        failure = summary.failures[0]
+        self.assertEqual(runner.FAILURE_TIMEOUT, failure.failure_kind)
+        self.assertEqual(
+            runner.FAILURE_TIMEOUT, metadata["failures"][0]["failure_kind"]
+        )
+        # The kind and the note lead, and the exception's own text still follows
+        # as the evidence. Both are in the one reason string on purpose.
+        self.assertIn("TimeoutError", failure.failure_detail or "")
+        self.assertIn("The read operation timed out", failure.failure_reason or "")
+        self.assertIn(runner.FAILURE_NOTE[runner.FAILURE_TIMEOUT], failure.failure_reason)
+
+    def test_a_timeout_and_a_transport_failure_are_told_apart(self):
+        """The whole point of the kind: these two call for opposite responses."""
+        with tempfile.TemporaryDirectory() as tmp:
+            timed_out, _ = bench(tmp, cases=(101,), transport=ReadTimeoutTransport())
+
+        with tempfile.TemporaryDirectory() as tmp:
+            unreachable, _ = bench(tmp, cases=(101,), transport=UnreachableTransport())
+
+        self.assertEqual(runner.FAILURE_TIMEOUT, timed_out.failures[0].failure_kind)
+        self.assertEqual(
+            runner.FAILURE_TRANSPORT, unreachable.failures[0].failure_kind
+        )
+        self.assertNotEqual(
+            timed_out.failures[0].failure_reason,
+            unreachable.failures[0].failure_reason,
+            "a timeout and a dead connection must not read alike",
+        )
+        self.assertEqual(1, len(timed_out.timeouts))
+        self.assertEqual([], unreachable.timeouts)
+
+    def test_a_shape_failure_is_not_recorded_as_a_timeout(self):
+        """The run already contains one of each, so they must not collapse."""
+        key = answer_key()
+        transport = ScriptedTransport(
+            produced_from_key(key), fail={(101, transcript.ROLE_JUDGE)}
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, _ = bench(tmp, cases=(101,), transport=transport)
+
+        self.assertEqual(runner.FAILURE_SHAPE, summary.failures[0].failure_kind)
+        self.assertEqual([], summary.timeouts)
+
+    def test_the_run_continues_after_a_timed_out_case(self):
+        """A timeout is a failed case, not a failed run — the same as any other."""
+        key = answer_key()
+        scripted = ScriptedTransport(produced_from_key(key))
+
+        def times_out_for_102(url, headers, body, timeout):
+            request = json.loads(body.decode("utf-8"))
+            if role_of(request)[0] == 102:
+                raise TimeoutError("The read operation timed out")
+            return scripted(url, headers, body, timeout)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, _ = bench(tmp, cases=CASE_SET, transport=times_out_for_102)
+            cached = runner.cached_case_numbers(summary.run_dir)
+
+        self.assertEqual(runner.STOP_COMPLETED, summary.stop_reason)
+        self.assertEqual([102], [outcome.case_no for outcome in summary.timeouts])
+        self.assertEqual([101, 103], sorted(summary.completed_cases))
+        self.assertEqual([101, 103], sorted(cached))
+        self.assertNotIn(102, cached, "a timed-out case must not be cached")
+        self.assertFalse(summary.ok, "a run with a failed case is not ok")
+
+    def test_a_timeout_is_visible_in_the_summary_block(self):
+        """A reader of the terminal should not have to open the metadata."""
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, _ = bench(tmp, cases=(101,), transport=ReadTimeoutTransport())
+
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            runner.print_summary(summary)
+        text = output.getvalue()
+
+        self.assertIn("timeout", text)
+        self.assertIn(runner.FAILURE_TIMEOUT, text)
+        self.assertIn("case 101", text)
+        self.assertIn("The read operation timed out", text)
+
+    def test_a_socket_timeout_is_a_timeout_too(self):
+        """``socket.timeout`` is not ``TimeoutError`` on every interpreter.
+
+        On 3.10 and later the two are the same class; on 3.9 they are separate
+        ``OSError`` subclasses, and ``urlopen``'s read timeout is the socket one.
+        Checking only ``TimeoutError`` would quietly demote a real timeout to
+        the transport kind on 3.9 — the very confusion this change exists to
+        remove.
+
+        **Measured**: dropping ``socket.timeout`` from the classifier turns this
+        test RED on 3.9.6 (2 failures) and changes nothing on 3.13.12, where the
+        two names are one class. So this guard is only falsifiable on 3.9, and
+        the suite has to be run there to demonstrate it.
+        """
+        import socket
+
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, _ = bench(
+                tmp,
+                cases=(101,),
+                transport=ReadTimeoutTransport(exception=socket.timeout),
+            )
+
+        self.assertEqual(runner.FAILURE_TIMEOUT, summary.failures[0].failure_kind)
+
+    def test_the_kind_is_read_off_the_exception_type(self):
+        """The classifier itself, without a run in the way."""
+        import socket
+
+        cases = [
+            (TimeoutError("read timed out"), runner.FAILURE_TIMEOUT),
+            (socket.timeout("read timed out"), runner.FAILURE_TIMEOUT),
+            (llm.TransportError("could not reach the endpoint"), runner.FAILURE_TRANSPORT),
+            (ConnectionResetError("connection reset"), runner.FAILURE_TRANSPORT),
+            (KeyboardInterrupt(), runner.FAILURE_INTERRUPTED),
+        ]
+        for exc, expected in cases:
+            with self.subTest(exception=type(exc).__name__):
+                self.assertEqual(expected, runner.failure_kind_for(exc))
+
+    def test_a_non_positive_timeout_is_refused(self):
+        """Refused rather than clamped: a caller who passed one meant something else."""
+        for value in (0.0, -1.0):
+            with self.subTest(value=value):
+                with tempfile.TemporaryDirectory() as tmp:
+                    with self.assertRaises(runner.BenchmarkError):
+                        bench(tmp, cases=(101,), timeout_seconds=value)
 
 
 # --------------------------------------------------------------------------

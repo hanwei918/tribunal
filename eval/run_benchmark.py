@@ -34,6 +34,23 @@ cases already in flight finish, and says on its face that it stopped on budget
 rather than completing. A partial run whose limit is stated is useful; an
 unexpected bill is not.
 
+The request timeout
+-------------------
+``--timeout`` defaults to ``llm.DEFAULT_TIMEOUT_SECONDS`` — the client's own
+default, not a second copy of the number — and is passed through to the client
+this module builds. Before that parameter existed the runner had no way to set
+it, so every call inherited the client default of 120 s and a slow model lost
+cases to it: case 109 on ``hy3`` died at 120.1 s with ``TimeoutError: The read
+operation timed out``, while ``hy4-preview`` advocate calls on the same brief
+took 199.9 s and 221.6 s. The default is now 600 s and the flag exists so a
+caller can shorten it deliberately for a quick probe without editing code.
+
+A timeout is recorded as its own failure kind rather than as transport text, so
+``runs/<model>/run.json`` distinguishes a case the client stopped waiting for
+from a case the model answered unusably. The two call for opposite responses —
+a longer timeout or a faster model, against a prompt or model change — and the
+first real run contains one of each.
+
 The answer key
 --------------
 The key is read by :mod:`eval.grade` and by nothing else. This module asks
@@ -63,6 +80,7 @@ import concurrent.futures
 import hashlib
 import json
 import re
+import socket
 import subprocess
 import sys
 import threading
@@ -88,6 +106,13 @@ __all__ = [
     "STOP_BUDGET",
     "STOP_INTERRUPTED",
     "STOP_FATAL",
+    "FAILURE_TIMEOUT",
+    "FAILURE_TRANSPORT",
+    "FAILURE_SHAPE",
+    "FAILURE_INTERRUPTED",
+    "FAILURE_NOTE",
+    "failure_kind_for",
+    "failure_reason_for",
     "billed_tokens",
     "model_slug",
     "run_directory",
@@ -142,6 +167,50 @@ STOP_COMPLETED = "completed"
 STOP_BUDGET = "token budget reached"
 STOP_INTERRUPTED = "interrupted"
 STOP_FATAL = "fatal error"
+
+# Why a case failed. These are separate kinds because they call for opposite
+# responses, and a run can contain one of each: the real hy3 run recorded case
+# 108 as a shape failure and case 109 as a timeout.
+#
+# A timeout says the client stopped waiting for an answer the provider may have
+# generated anyway, and whose tokens are billed whether or not anyone read it —
+# the response is a longer timeout, or a faster model. A shape failure says the
+# run finished without a usable ruling — the response is in the prompt or the
+# model, and raising the timeout would change nothing. A transport failure says
+# no answer was ever produced, for some other reason, so retrying is the obvious
+# move.
+#
+# The grouping is by what a reader should DO, not by who is at fault, which is
+# why one case that looks like it belongs elsewhere is grouped deliberately: a
+# server error that exhausts the client's own retries reaches the runner as a
+# run with no ruling, so it lands in SHAPE. Waiting longer would not fix it, and
+# that is the property the grouping exists to express.
+FAILURE_TIMEOUT = "TIMEOUT"
+FAILURE_TRANSPORT = "TRANSPORT"
+FAILURE_SHAPE = "SHAPE"
+FAILURE_INTERRUPTED = "INTERRUPTED"
+
+# What each kind means, in the words the record carries. Short, because a reader
+# scanning a failures list needs to tell the three apart at a glance.
+FAILURE_NOTE = {
+    FAILURE_TIMEOUT: (
+        "the client stopped waiting for a response; the provider may have "
+        "generated the answer anyway, and its tokens are billed either way, so "
+        "the response is a longer timeout rather than a retry"
+    ),
+    FAILURE_TRANSPORT: (
+        "the request produced no response for a reason other than waiting too "
+        "long"
+    ),
+    FAILURE_SHAPE: (
+        "the run finished without a usable ruling; the response is in the "
+        "prompt or the model, and a longer timeout would change nothing"
+    ),
+    FAILURE_INTERRUPTED: (
+        "the run was interrupted while this case was in flight, so it says "
+        "nothing about the model"
+    ),
+}
 
 # Files that must never contribute to a digest: they are editor or interpreter
 # artefacts, not prompt content, and one of them appearing would change the
@@ -400,6 +469,8 @@ class CaseOutcome:
     matched: Optional[bool] = None
     failed_agent: Optional[str] = None
     failure_reason: Optional[str] = None
+    failure_kind: Optional[str] = None
+    failure_detail: Optional[str] = None
     ruling: Optional[Any] = None
 
     @property
@@ -408,9 +479,15 @@ class CaseOutcome:
 
     @property
     def verdict(self) -> str:
-        """The short word the progress line prints."""
+        """The short word the progress line prints.
+
+        A failure prints its KIND rather than the word FAILED, because the kind
+        is the thing a person watching the terminal needs: ``TIMEOUT`` and
+        ``SHAPE`` look identical under a generic label and call for opposite
+        responses.
+        """
         if self.status == STATUS_FAILED:
-            return "FAILED"
+            return self.failure_kind or "FAILED"
         if self.status == STATUS_CACHED:
             return "cached"
         if self.matched:
@@ -476,6 +553,44 @@ def _match_for(case_no: int, ruling: Any, expected: Optional[grade.Ruling]) -> O
     return grade.score_case(case_no, expected, produced).exact
 
 
+def failure_kind_for(exc: BaseException) -> str:
+    """Which kind of failure an exception raised by the transport represents.
+
+    A read timeout surfaces as a bare ``TimeoutError`` — ``urlopen`` raises it
+    from ``response.read()``, where it is not wrapped in a ``URLError`` and so
+    is not converted into a ``TransportError``.
+
+    ``socket.timeout`` is checked as well, and that is not belt-and-braces: on
+    Python 3.10 and later it *is* ``TimeoutError``, but on 3.9 it is a separate
+    ``OSError`` subclass, so ``isinstance(exc, TimeoutError)`` alone would let a
+    real read timeout fall through to the transport kind on an interpreter this
+    project still runs on. Measured on 3.9.6: ``socket.timeout is TimeoutError``
+    is ``False`` there and ``True`` on 3.13.
+
+    A *connect* timeout arrives as a ``TransportError`` wrapping a ``URLError``
+    whose reason is a timeout. It is classified as a transport failure on
+    purpose: nothing was generated, so nothing was wasted, and the advice a
+    timeout carries — wait longer — would be wrong. The message still says
+    "timed out", so the distinction is visible even where the kind does not
+    separate it.
+    """
+    if isinstance(exc, KeyboardInterrupt):
+        return FAILURE_INTERRUPTED
+    if isinstance(exc, (TimeoutError, socket.timeout)):
+        return FAILURE_TIMEOUT
+    return FAILURE_TRANSPORT
+
+
+def failure_reason_for(kind: str, detail: str) -> str:
+    """The recorded reason for a failure: the kind leads, the evidence follows.
+
+    The kind leads so a reader scanning a failures list can tell the three apart
+    without parsing the message. The detail follows unchanged, because it is the
+    evidence and must not be replaced by a summary of it.
+    """
+    return "{0}: {1}. {2}".format(kind, FAILURE_NOTE[kind], detail)
+
+
 def run_one_case(
     case_no: int,
     *,
@@ -490,6 +605,10 @@ def run_one_case(
     re-run retries exactly that case. A missing credential or an unprovisioned
     model is raised instead: those are not case failures, they are the same
     failure for every case, and continuing would only waste the wall clock.
+
+    A failure is classified rather than merely described. A timeout and an
+    unusable answer call for opposite responses, so the record says which one
+    happened instead of leaving it to be read out of the exception's text.
     """
     started = time.monotonic()
     try:
@@ -497,12 +616,16 @@ def run_one_case(
     except (llm.MissingAPIKeyError, llm.ModelNotProvisionedError):
         raise
     except Exception as exc:  # noqa: BLE001 - any transport or parse failure is a case failure
+        kind = failure_kind_for(exc)
+        detail = "{0}: {1}".format(type(exc).__name__, exc)
         return (
             CaseOutcome(
                 case_no=case_no,
                 status=STATUS_FAILED,
                 wall_seconds=time.monotonic() - started,
-                failure_reason="{0}: {1}".format(type(exc).__name__, exc),
+                failure_kind=kind,
+                failure_detail=detail,
+                failure_reason=failure_reason_for(kind, detail),
             ),
             None,
             None,
@@ -512,6 +635,7 @@ def run_one_case(
     tokens = billed_tokens(result.prompt_tokens, result.completion_tokens)
 
     if not result.ok or result.ruling is None:
+        detail = result.failure_reason or "the run produced no ruling"
         return (
             CaseOutcome(
                 case_no=case_no,
@@ -519,7 +643,9 @@ def run_one_case(
                 wall_seconds=wall,
                 total_tokens=tokens,
                 failed_agent=result.failed_agent,
-                failure_reason=result.failure_reason or "the run produced no ruling",
+                failure_kind=FAILURE_SHAPE,
+                failure_detail=detail,
+                failure_reason=failure_reason_for(FAILURE_SHAPE, detail),
             ),
             None,
             result.transcript_json,
@@ -623,6 +749,7 @@ class RunSummary:
     report: Optional[grade.GradeReport] = None
     token_budget: Optional[int] = None
     concurrency: int = DEFAULT_CONCURRENCY
+    timeout_seconds: float = llm.DEFAULT_TIMEOUT_SECONDS
     tokens_spent: int = 0
     tokens_reused: int = 0
 
@@ -647,6 +774,16 @@ class RunSummary:
         return [outcome for outcome in self.outcomes if outcome.status == STATUS_FAILED]
 
     @property
+    def timeouts(self) -> List[CaseOutcome]:
+        """The failures the client stopped waiting for, as opposed to other kinds.
+
+        Kept separate because the two call for opposite responses: a timeout is
+        answered with a longer timeout or a faster model, and an unusable answer
+        is answered in the prompt or the model. Neither is answered by the other.
+        """
+        return [outcome for outcome in self.failures if outcome.failure_kind == FAILURE_TIMEOUT]
+
+    @property
     def completed_cases(self) -> List[int]:
         return [o.case_no for o in self.outcomes if o.status == STATUS_COMPLETED]
 
@@ -659,15 +796,21 @@ class RunSummary:
         return sum(1 for outcome in self.outcomes if outcome.matched)
 
 
-def _default_client_factory(model: str) -> Callable[[Callable[[Dict[str, Any]], None]], Any]:
+def _default_client_factory(
+    model: str, timeout_seconds: float = llm.DEFAULT_TIMEOUT_SECONDS
+) -> Callable[[Callable[[Dict[str, Any]], None]], Any]:
     """A real client, built with the run's record sink wired in.
 
     ``LLMClient.model`` has no default and neither does this: the model is the
-    caller's decision and it is passed straight through.
+    caller's decision and it is passed straight through. The timeout defaults to
+    the client's own default rather than repeating the number, so the two cannot
+    drift apart.
     """
 
     def build(sink: Callable[[Dict[str, Any]], None]) -> Any:
-        return llm.LLMClient(model=model, record_sink=sink)
+        return llm.LLMClient(
+            model=model, record_sink=sink, timeout_seconds=timeout_seconds
+        )
 
     return build
 
@@ -681,6 +824,7 @@ def run_benchmark(
     force: bool = False,
     token_budget: Optional[int] = None,
     concurrency: int = DEFAULT_CONCURRENCY,
+    timeout_seconds: float = llm.DEFAULT_TIMEOUT_SECONDS,
     client_factory: Optional[Callable[[Callable[[Dict[str, Any]], None]], Any]] = None,
     key: Optional[Mapping[int, grade.Ruling]] = None,
     git_runner: Optional[Callable[[Sequence[str]], Optional[str]]] = None,
@@ -697,6 +841,12 @@ def run_benchmark(
         raise BenchmarkError("model is required and has no default; name the model explicitly")
     if concurrency < 1:
         raise BenchmarkError("concurrency must be at least 1, got {0}".format(concurrency))
+    if timeout_seconds <= 0:
+        # Refused rather than clamped. A zero or negative timeout would fail
+        # every call, and a caller who passed one meant something else.
+        raise BenchmarkError(
+            "timeout_seconds must be positive, got {0}".format(timeout_seconds)
+        )
     if token_budget is not None and token_budget < 0:
         raise BenchmarkError("token_budget cannot be negative")
 
@@ -716,7 +866,14 @@ def run_benchmark(
             "be graded".format(", ".join(str(case_no) for case_no in missing))
         )
 
-    build_client = _default_client_factory(model) if client_factory is None else client_factory
+    # The timeout is threaded through to the client the runner builds, which is
+    # the whole point of the parameter: before it existed every call inherited
+    # the client's default and a slow model lost cases to it.
+    build_client = (
+        _default_client_factory(model, timeout_seconds)
+        if client_factory is None
+        else client_factory
+    )
 
     run_dir = run_directory(runs_dir, model)
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -777,6 +934,7 @@ def run_benchmark(
                 run_provenance=run_provenance,
                 token_budget=token_budget,
                 concurrency=concurrency,
+                timeout_seconds=timeout_seconds,
                 tokens_spent=state["spent"],
                 tokens_reused=tokens_reused,
             ),
@@ -866,10 +1024,14 @@ def run_benchmark(
                 try:
                     outcome, document, transcript_json = future.result()
                 except BaseException as exc:  # noqa: BLE001 - recorded, never raised
+                    kind = failure_kind_for(exc)
+                    detail = "{0}: {1}".format(type(exc).__name__, exc)
                     outcome = CaseOutcome(
                         case_no=case_no,
                         status=STATUS_FAILED,
-                        failure_reason="{0}: {1}".format(type(exc).__name__, exc),
+                        failure_kind=kind,
+                        failure_detail=detail,
+                        failure_reason=failure_reason_for(kind, detail),
                     )
                     document, transcript_json = None, None
                 _persist(run_dir, outcome, document, transcript_json)
@@ -905,6 +1067,7 @@ def run_benchmark(
         report=report,
         token_budget=token_budget,
         concurrency=concurrency,
+        timeout_seconds=timeout_seconds,
         tokens_spent=state["spent"],
         tokens_reused=tokens_reused,
     )
@@ -941,6 +1104,7 @@ def _metadata_document(
     run_provenance: Mapping[str, Any],
     token_budget: Optional[int],
     concurrency: int,
+    timeout_seconds: float,
     tokens_spent: int,
     tokens_reused: int,
 ) -> Dict[str, Any]:
@@ -959,6 +1123,11 @@ def _metadata_document(
         "stop_reason": stop_reason,
         "completed": stop_reason == STOP_COMPLETED,
         "concurrency": concurrency,
+        # Recorded because it changes what the run's failures mean. A case that
+        # timed out under a 120-second limit and the same case under a
+        # 600-second limit are not the same measurement, and a reader comparing
+        # two runs has to be able to see that the limit moved.
+        "timeout_seconds": timeout_seconds,
         "token_budget": token_budget,
         "git_commit": run_provenance.get("git_commit"),
         "working_tree_clean": run_provenance.get("working_tree_clean"),
@@ -981,6 +1150,11 @@ def _metadata_document(
             {
                 "case_no": outcome.case_no,
                 "failed_agent": outcome.failed_agent,
+                # The kind is a field of its own, not a word inside the reason,
+                # so a reader can group and count failures without parsing
+                # prose. `reason` still leads with the same word and still
+                # carries the exception's own text as evidence.
+                "failure_kind": outcome.failure_kind,
                 "reason": outcome.failure_reason,
             }
             for outcome in failed
@@ -1268,6 +1442,21 @@ def print_summary(summary: RunSummary) -> None:
             len(summary.failures),
         )
     )
+    # The limit is printed on every run, not only when it was hit. A result
+    # produced under a 600-second timeout is not the same measurement as one
+    # produced under 120 seconds, and the reader should not have to open the
+    # metadata to find out which they are looking at.
+    print(
+        "limits      timeout {0:g}s, concurrency {1}".format(
+            summary.timeout_seconds, summary.concurrency
+        )
+    )
+    if summary.timeouts:
+        print(
+            "            {0} of the failures were timeouts: the client stopped "
+            "waiting, which is answered with a longer timeout or a faster model "
+            "rather than a retry".format(len(summary.timeouts))
+        )
     print(
         "tokens      {0:,} spent this run, {1:,} reused from cache".format(
             summary.tokens_spent, summary.tokens_reused
@@ -1283,10 +1472,19 @@ def print_summary(summary: RunSummary) -> None:
         print("")
         print("failed cases (not cached, so a re-run retries exactly these)")
         for outcome in summary.failures:
+            # The kind leads, because that is what the reader acts on, and it is
+            # what distinguishes a case the client gave up on from a case the
+            # model answered badly. The composed reason, note and all, is in the
+            # metadata file; the terminal gets the evidence instead.
             print(
-                "  case {0}  {1}".format(
+                "  case {0}  {1:<12} {2}".format(
                     outcome.case_no,
-                    (outcome.failure_reason or "unknown failure").splitlines()[0],
+                    outcome.failure_kind or "FAILED",
+                    (
+                        outcome.failure_detail
+                        or outcome.failure_reason
+                        or "unknown failure"
+                    ).splitlines()[0],
                 )
             )
 
@@ -1381,6 +1579,17 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         default=DEFAULT_CONCURRENCY,
         help="cases to run at once; 1 (the default) is the deterministic order",
     )
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        default=llm.DEFAULT_TIMEOUT_SECONDS,
+        metavar="SECONDS",
+        help=(
+            "per-request read timeout for the client this run builds "
+            "(default {0:g}, the client's own default; lower it deliberately for "
+            "a quick probe)".format(llm.DEFAULT_TIMEOUT_SECONDS)
+        ),
+    )
     parser.add_argument("--runs-dir", type=Path, default=RUNS_DIR)
     parser.add_argument("--prompts-dir", type=Path, default=PROMPTS_DIR)
     args = parser.parse_args(argv)
@@ -1413,6 +1622,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             force=args.force,
             token_budget=args.token_budget,
             concurrency=args.concurrency,
+            timeout_seconds=args.timeout,
         )
     except llm.ModelNotProvisionedError as exc:
         print("FATAL: {0}".format(exc), file=sys.stderr)

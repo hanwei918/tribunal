@@ -18,6 +18,26 @@ values recorded in ``docs/notes/2026-09-21-tokenhub-api-facts.md`` as documented
 defaults. This mirrors the rule that policy numbers are injected rather than
 written as literals.
 
+Why the timeout is 600 seconds
+------------------------------
+Measured on the real case 208 brief, which is the largest prompt this project
+sends: advocate calls took 38.7 s and 68.9 s on ``hy3``, and 199.9 s and 221.6 s
+on ``hy4-preview``. The judge call carries that same brief plus both claim
+arrays, so it is larger than either advocate call. Under a 120-second default
+``hy4-preview`` would time out on substantially every call, and the default did
+cost a case: case 109 on ``hy3`` died at 120.1 s with ``TimeoutError: The read
+operation timed out``.
+
+The two errors are not symmetric. A timeout that is too long costs waiting. A
+timeout that is too short costs the tokens already spent generating a response
+that is then discarded — the provider produced it whether or not the client
+stayed to read it. So the default belongs well above the slowest measured call
+rather than close to it, and it stays a constructor argument for a caller who
+wants to shorten it deliberately for a quick probe.
+
+Every figure above is a measurement, recorded with how it was taken in
+``docs/notes/2026-09-21-tokenhub-api-facts.md``.
+
 Secret hygiene
 --------------
 The API key is read from ``TOKENHUB_API_KEY``, falling back to the
@@ -62,7 +82,15 @@ DEFAULT_SEED = 42
 # its own default. The explicit string "none" still suppresses reasoning.
 DEFAULT_REASONING_EFFORT: Optional[str] = None
 
-DEFAULT_TIMEOUT_SECONDS = 120.0
+# 600 s, not 120 s. Measured on the real case 208 brief: hy3 advocate calls took
+# 38.7 s and 68.9 s, hy4-preview 199.9 s and 221.6 s, and the judge call is
+# larger than either because it carries both claim arrays as well. A timeout
+# that is too long costs waiting; one that is too short costs the tokens already
+# spent generating a response that is then discarded, and the provider produced
+# it either way. The default therefore sits well above the slowest measured
+# call. See the module docstring, and the measurements with their method in
+# docs/notes/2026-09-21-tokenhub-api-facts.md.
+DEFAULT_TIMEOUT_SECONDS = 600.0
 DEFAULT_REQUESTS_PER_MINUTE = 60
 DEFAULT_MAX_ATTEMPTS = 4
 DEFAULT_BACKOFF_SECONDS = 1.0
