@@ -239,13 +239,15 @@ class PromptContractTests(unittest.TestCase):
         self.assertIn(pipeline.ADVOCATE_CLAIMS_KEY, example)
 
     def test_no_prompt_asks_for_a_json_array_under_json_object(self):
-        """A text check, and the only one in this file.
+        """A text check, and one of only two in this file.
 
         Everything above asserts on parsed structure. This one cannot: the thing
         under test is prose, and there is no structural way to ask what a
         paragraph instructs a model to do. So it is kept as narrow as it can be —
         it looks for the phrase "JSON array" in a prompt whose request forces an
-        object, which is the exact instruction that was wrong.
+        object, which is the exact instruction that was wrong. The other text
+        check, ``DecidingFactCarrierTests``, cannot assert on structure for the
+        same reason, and is confined to one subsection for the same narrowness.
 
         It is a backstop, not the guard. A prompt that asked for an array in
         other words but shipped an array example is caught above by the example
@@ -302,6 +304,131 @@ class PromptContractTests(unittest.TestCase):
             )
             with self.assertRaises(AssertionError):
                 worked_example(pipeline.ADVOCATE_TEMPLATE, base)
+
+
+# --------------------------------------------------------------------------
+# What can carry a deciding fact
+# --------------------------------------------------------------------------
+JUDGE_PROMPT_FILE = pipeline.AGENT_PROMPT_FILES[JUDGE]
+
+# The Step 2 subsection that says what kind of artifact can carry a fact, and the
+# sentence that ends it. Both are read out of the prompt rather than assumed, so
+# a reordering shows up as a failure rather than as a check that stopped looking.
+_CARRIER_HEADING = "### What can carry a deciding fact"
+_CARRIER_ENDS_AT = "The escalation floor is the"
+
+
+def carrier_section(text=None):
+    """The Step 2 subsection, from its heading up to the escalation floor."""
+    if text is None:
+        text = (pipeline.PROMPTS_DIR / JUDGE_PROMPT_FILE).read_text(encoding="utf-8")
+    start = text.index(_CARRIER_HEADING)
+    return text[start : text.index(_CARRIER_ENDS_AT, start)]
+
+
+class DecidingFactCarrierTests(unittest.TestCase):
+    """Step 2 must say what kind of artifact can carry a deciding fact.
+
+    A text check, and one of only two in this file, for the same reason as the
+    other: what is under test is prose that instructs a model, and there is no
+    structural way to ask what a paragraph tells a model to do. It is kept to the
+    one subsection, so a sentence elsewhere in the prompt cannot satisfy it.
+
+    Step 2 stated the MINIMUM and MAXIMUM rules but never said what could carry a
+    fact, and a real run shows the judge reading that as instrument evidence
+    only — GPS traces, trip records, fare breakdowns — excluding what the parties
+    said. It cost two cases. Case 211 capped on an impaired trace alone and
+    escalated at 0.39 where a complete chat artifact at weight 1.00 carried the
+    fact and cleared the floor; case 107 escalated at 0.30 with two independent
+    admissions in the record and nothing else to look at.
+
+    The other direction is the harder one to test and the one that matters more.
+    Loosening Step 2 carelessly trades the safe failure — over-escalation — for
+    the dangerous one: a confident ruling on a fact that nothing independent
+    supports. So the removal test that bounds the principle is required, the
+    independence rule is required to survive, and the prompt is required *not*
+    to become a list of cases to match against.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = (pipeline.PROMPTS_DIR / JUDGE_PROMPT_FILE).read_text(encoding="utf-8")
+        cls.section = carrier_section(cls.text)
+
+    def test_step_two_carries_the_subsection_at_all(self):
+        self.assertIn(_CARRIER_HEADING, self.text)
+
+    def test_every_artifact_is_a_candidate_carrier_not_only_the_instruments(self):
+        self.assertIn("case.evidence", self.section)
+        self.assertIn("chat log", self.section)
+        self.assertIn("counterparty", self.section)
+
+    def test_the_admission_against_the_speakers_own_interest_is_stated(self):
+        self.assertIn("against the speaker's own interest", self.section)
+
+    def test_the_contemporaneous_record_from_inside_the_window_is_stated(self):
+        self.assertIn("from inside the disputed window", self.section)
+
+    def test_a_message_that_merely_exists_is_not_a_carrier(self):
+        self.assertIn("merely exists", self.section)
+        self.assertIn("only repeats what the", self.section)
+
+    def test_the_removal_test_bounds_the_principle(self):
+        """Without this sentence the subsection licenses counting any message."""
+        self.assertIn(
+            "would still support the finding if the instrument", self.section
+        )
+
+    def test_the_independence_rule_survives_unchanged(self):
+        """Two records from one measurement are one carrier, however they arrive."""
+        self.assertIn("derived from the same", self.section)
+        self.assertIn("one carrier, not two", self.section)
+        self.assertIn("trip record and a fare", self.section)
+
+    def test_the_patterns_are_stated_as_illustrations_and_not_a_list(self):
+        self.assertIn("illustrations of one principle", self.section)
+        self.assertIn("not a list to match against", self.section)
+
+    def test_the_prompt_does_not_name_the_two_cases_it_was_written_for(self):
+        """A prompt that listed them would be a checklist rather than a principle.
+
+        The cases are what produced the change; they are not the rule. A model
+        handed the case numbers would match on those and stop, and the next case
+        shaped like them would escalate exactly as before.
+        """
+        for case_no in ("211", "107"):
+            with self.subTest(case=case_no):
+                self.assertNotIn(case_no, self.section)
+        # And no floor: it is read from the policy, never restated in a prompt.
+        self.assertNotIn("0.70", self.section)
+
+    def test_the_amended_prompt_keeps_the_output_contract(self):
+        """Change 1 edits prose; it must not disturb the shape the prompt asks for."""
+        example = worked_example(JUDGE_PROMPT_FILE)
+        self.assertIn(
+            pipeline.json_shape(example),
+            pipeline.RESPONSE_FORMAT_SHAPES[
+                pipeline.AGENT_RESPONSE_FORMAT[JUDGE]["type"]
+            ],
+        )
+        value, shape, reason = pipeline.normalise_judge_result(example)
+        self.assertEqual("", reason, "the validator refuses the amended prompt's example")
+        self.assertEqual(pipeline.SHAPE_OBJECT, shape)
+        self.assertIsNotNone(value)
+
+    def test_the_prompt_contract_holds_for_every_agent_after_the_edit(self):
+        """Stated here as well as in ``PromptContractTests``, because this edit is
+        the reason to look: a prose change to one prompt must leave every agent's
+        declared shape and its shipped example in agreement."""
+        for role, filename in pipeline.AGENT_PROMPT_FILES.items():
+            with self.subTest(role=role):
+                example = worked_example(filename)
+                self.assertIn(
+                    pipeline.json_shape(example),
+                    pipeline.RESPONSE_FORMAT_SHAPES[
+                        pipeline.AGENT_RESPONSE_FORMAT[role]["type"]
+                    ],
+                )
 
 
 class CleanRunTests(unittest.TestCase):

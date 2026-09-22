@@ -158,6 +158,7 @@ __all__ = [
     "load_cached",
     "cached_case_numbers",
     "current_brief_sha256",
+    "current_prompts_sha256",
     "brief_staleness",
     "hash_directory",
     "git_state",
@@ -539,40 +540,136 @@ def current_brief_sha256(case_no: int) -> Optional[str]:
         return None
 
 
+def current_prompts_sha256(prompts_dir: Path = PROMPTS_DIR) -> Optional[str]:
+    """The digest of the prompt directory as it stands.
+
+    The same value a run records as ``prompts_sha256``, computed the same way
+    over the same directory, so the two are comparable. The directory rather than
+    one file, because what an agent was given is the prompt set: the advocate
+    template, both stances and the judge prompt. Editing any of them changes what
+    an agent was told to do.
+
+    ``None`` when the directory cannot be read. That is "cannot tell", and it is
+    not "matches".
+    """
+    try:
+        return hash_directory(prompts_dir)
+    except Exception:  # noqa: BLE001 - a prompt set that cannot be read is not a match
+        return None
+
+
 class BriefStaleness:
     """Answers "does this cached result still belong to this code?" per case.
 
-    A cached result carries ``brief_sha256``, the digest of the exact bytes its
-    agents were handed, so the question is decidable from the cache plus the
-    current code. It is not decidable from either alone.
+    Two recorded digests answer it, not one. ``brief_sha256`` is the digest of
+    the exact bytes the agents were handed, so a moved brief means the facts
+    changed. ``prompts_sha256`` is the digest of the prompt directory, so a moved
+    prompt means the instructions changed. Either one takes the result out of
+    this code's measurements, and they are kept apart because they call for
+    different responses.
 
-    The digest is memoised per case number because one ``--compare`` asks the
-    same question once per run directory and rebuilding a brief is a file read
-    per case.
+    Both are memoised: the brief digest per case, because rebuilding a brief is a
+    file read per case, and the prompts digest once for the whole directory,
+    however many cases are asked about.
     """
 
-    def __init__(self, digest: Optional[Callable[[int], Optional[str]]] = None) -> None:
+    def __init__(
+        self,
+        digest: Optional[Callable[[int], Optional[str]]] = None,
+        prompts_digest: Optional[Callable[[], Optional[str]]] = None,
+    ) -> None:
         self._digest = current_brief_sha256 if digest is None else digest
+        self._prompts_digest = (
+            current_prompts_sha256 if prompts_digest is None else prompts_digest
+        )
         self._current: Dict[int, Optional[str]] = {}
+        self._current_prompts: Optional[str] = None
 
     def current_digest(self, case_no: int) -> Optional[str]:
         if case_no not in self._current:
             self._current[case_no] = self._digest(case_no)
         return self._current[case_no]
 
-    def status_of(self, case_no: int, document: Mapping[str, Any]) -> str:
-        """``current``, ``stale`` or ``unknown`` for one cache entry."""
-        recorded = document.get("brief_sha256") if isinstance(document, Mapping) else None
+    def current_prompts_digest(self) -> Optional[str]:
+        if self._current_prompts is None:
+            self._current_prompts = self._prompts_digest()
+        return self._current_prompts
+
+    def brief_moved(self, case_no: int, document: Mapping[str, Any]) -> bool:
+        """Whether the brief digest was recorded and no longer matches."""
+        if not isinstance(document, Mapping):
+            return False
+        recorded = document.get("brief_sha256")
         if not isinstance(recorded, str) or not recorded:
-            # Written before the digest was recorded, so the file cannot say
-            # which brief produced it. Unknown, not current.
-            return grade.STALENESS_UNKNOWN
+            return False
         current = self.current_digest(case_no)
-        if current is None:
+        return current is not None and recorded != current
+
+    def prompts_moved(self, document: Mapping[str, Any]) -> bool:
+        """Whether the prompts digest was recorded and no longer matches."""
+        if not isinstance(document, Mapping):
+            return False
+        recorded = document.get("prompts_sha256")
+        if not isinstance(recorded, str) or not recorded:
+            return False
+        current = self.current_prompts_digest()
+        return current is not None and recorded != current
+
+    def brief_unchecked(self, case_no: int, document: Mapping[str, Any]) -> bool:
+        """Whether the brief half of the check could not be made for this entry.
+
+        Either the entry records no brief digest, so the file cannot say what it
+        was built from, or the brief cannot be rebuilt now.
+        """
+        if not isinstance(document, Mapping):
+            return True
+        recorded = document.get("brief_sha256")
+        if not isinstance(recorded, str) or not recorded:
+            return True
+        return self.current_digest(case_no) is None
+
+    def prompts_unchecked(self, document: Mapping[str, Any]) -> bool:
+        """Whether the prompt half of the check could not be made for this entry.
+
+        Either the entry records no prompts digest -- it was written before one
+        was kept, so the file cannot say which prompts produced it -- or the
+        prompt directory cannot be read now. Both are "cannot tell", and neither
+        is a match.
+        """
+        if not isinstance(document, Mapping):
+            return True
+        recorded = document.get("prompts_sha256")
+        if not isinstance(recorded, str) or not recorded:
+            return True
+        return self.current_prompts_digest() is None
+
+    def moved_for(self, case_no: int, document: Mapping[str, Any]) -> Tuple[str, ...]:
+        """Which recorded digests moved, named, in a fixed order.
+
+        Empty when nothing recorded has moved. Both may be present: a result
+        produced by an older brief under older prompts is stale for both reasons.
+        """
+        moved: List[str] = []
+        if self.brief_moved(case_no, document):
+            moved.append(grade.MOVED_BRIEF)
+        if self.prompts_moved(document):
+            moved.append(grade.MOVED_PROMPTS)
+        return tuple(moved)
+
+    def status_of(self, case_no: int, document: Mapping[str, Any]) -> str:
+        """``current``, ``stale`` or ``unknown`` for one cache entry.
+
+        A moved digest is a finding, whichever channel it is in, and a finding
+        beats not being able to tell. Only when nothing recorded has moved does
+        the question become whether every channel could actually be checked -- an
+        entry that never recorded a prompts digest is not an entry whose prompts
+        are known to match.
+        """
+        if self.moved_for(case_no, document):
+            return grade.STALENESS_STALE
+        if self.brief_unchecked(case_no, document) or self.prompts_unchecked(document):
             return grade.STALENESS_UNKNOWN
-        if recorded == current:
-            return grade.STALENESS_CURRENT
-        return grade.STALENESS_STALE
+        return grade.STALENESS_CURRENT
 
 
 def brief_staleness(
@@ -580,26 +677,46 @@ def brief_staleness(
     cases: Sequence[int],
     checker: Optional[BriefStaleness] = None,
 ) -> grade.Staleness:
-    """Check every cached case in ``cases`` against the brief built now.
+    """Check every cached case in ``cases`` against the code as it stands now.
 
     Returns a :class:`eval.grade.Staleness` with ``checked`` set, so a report
     built from it can say the check happened rather than merely that it found
     nothing. A case with no cache entry is not checked and is not reported: it
     produced no result to be stale.
+
+    The two channels are collected separately as well as as a union, so a report
+    can say which of the two moved rather than only that something did.
     """
     checker = BriefStaleness() if checker is None else checker
     stale: List[int] = []
     unknown: List[int] = []
+    stale_brief: List[int] = []
+    stale_prompts: List[int] = []
+    unchecked_prompts: List[int] = []
     for case_no in cases:
         document = load_cached(run_dir, case_no)
         if document is None:
             continue
+        if checker.prompts_unchecked(document):
+            unchecked_prompts.append(case_no)
         status = checker.status_of(case_no, document)
         if status == grade.STALENESS_STALE:
             stale.append(case_no)
+            moved = checker.moved_for(case_no, document)
+            if grade.MOVED_BRIEF in moved:
+                stale_brief.append(case_no)
+            if grade.MOVED_PROMPTS in moved:
+                stale_prompts.append(case_no)
         elif status == grade.STALENESS_UNKNOWN:
             unknown.append(case_no)
-    return grade.Staleness(True, tuple(sorted(stale)), tuple(sorted(unknown)))
+    return grade.Staleness(
+        True,
+        tuple(sorted(stale)),
+        tuple(sorted(unknown)),
+        tuple(sorted(stale_brief)),
+        tuple(sorted(stale_prompts)),
+        tuple(sorted(unchecked_prompts)),
+    )
 
 
 # --------------------------------------------------------------------------
@@ -620,10 +737,15 @@ class CaseOutcome:
     failure_detail: Optional[str] = None
     ruling: Optional[Any] = None
     # Set only for a case whose result was read back from the cache, and only
-    # when the brief this code builds for it is no longer the brief it was
-    # produced from. A cached result the reader is told to trust while the code
-    # has moved on is the whole defect this field exists to prevent.
+    # when the code this builds for it is no longer the code it was produced
+    # from. A cached result the reader is told to trust while the code has moved
+    # on is the whole defect this field exists to prevent.
     brief_status: Optional[str] = None
+    # Which recorded digests moved, named. Carried beside the status rather than
+    # folded into it, because "the brief changed" and "the prompt changed" call
+    # for different responses, and a progress line that blamed the brief for a
+    # moved prompt would send the reader to the wrong file.
+    stale_moved: Tuple[str, ...] = ()
 
     @property
     def ok(self) -> bool:
@@ -861,14 +983,16 @@ def _outcome_from_cache(
     document: Mapping[str, Any],
     expected: Optional[grade.Ruling],
     brief_status: Optional[str] = None,
+    stale_moved: Tuple[str, ...] = (),
 ) -> CaseOutcome:
     """The outcome of a case that was skipped because its result is cached.
 
-    ``brief_status`` is the staleness of that cached result, which the caller
-    has already worked out. It travels on the outcome so the progress line says
-    "stale" at the moment the result is reused rather than only in the report at
-    the end — the reader watching the terminal is the one who can still decide
-    to re-run.
+    ``brief_status`` and ``stale_moved`` are the staleness of that cached result,
+    which the caller has already worked out. They travel on the outcome so the
+    progress line says "stale" at the moment the result is reused rather than
+    only in the report at the end — the reader watching the terminal is the one
+    who can still decide to re-run. ``stale_moved`` names which digest moved, so
+    that line can send the reader to the brief or to the prompts.
     """
     tokens = document.get("tokens") or {}
     return CaseOutcome(
@@ -879,6 +1003,7 @@ def _outcome_from_cache(
         matched=_match_for(case_no, document.get("ruling"), expected),
         ruling=document.get("ruling"),
         brief_status=brief_status,
+        stale_moved=tuple(stale_moved),
     )
 
 
@@ -889,16 +1014,38 @@ def _format_seconds(value: float) -> str:
     return "{0:>8.1f}s".format(value)
 
 
+# Which digest moved, as a reader needs to hear it. Two phrases rather than one
+# word, because they send the reader to different files: a moved brief means
+# re-read the case, a moved prompt means re-read what the agents were told.
+_STALE_PHRASES = (
+    (grade.MOVED_BRIEF, "the brief has moved"),
+    (grade.MOVED_PROMPTS, "the prompts have moved"),
+)
+
+
+def _describe_moved(moved: Sequence[str]) -> str:
+    """``the brief has moved``, ``the prompts have moved``, or both, joined.
+
+    When nothing was named -- an older cache entry, or a caller that supplied
+    only a status -- the fallback says what is known and no more, rather than
+    picking one of the two and being wrong half the time.
+    """
+    named = [phrase for name, phrase in _STALE_PHRASES if name in moved]
+    if not named:
+        return "produced by an earlier version of this code"
+    return " and ".join(named)
+
+
 def format_progress(outcome: CaseOutcome, position: int, total: int) -> str:
     """One line per case: number, verdict, wall clock, tokens.
 
     Printed as each case completes rather than at the end, because a three-hour
     run that prints nothing until it is over is unusable.
 
-    A reused result whose brief has changed says so here, on the line that
-    announces the reuse. A reader who sees a run skip twenty-nine cases needs to
-    know how many of them the code has moved on from before the report is
-    written, not after.
+    A reused result the code has moved past says so here, on the line that
+    announces the reuse, and names which digest moved. A reader who sees a run
+    skip twenty-nine cases needs to know how many of them the code has moved on
+    from — and why — before the report is written, not after.
     """
     line = "[{0:>3}/{1}] case {2}  {3:<6} {4}  {5:>10} tokens".format(
         position,
@@ -909,9 +1056,9 @@ def format_progress(outcome: CaseOutcome, position: int, total: int) -> str:
         "{0:,}".format(outcome.total_tokens),
     )
     if outcome.brief_status == grade.STALENESS_STALE:
-        line += "  — stale: produced by an earlier version of the brief"
+        line += "  — stale: {0}".format(_describe_moved(outcome.stale_moved))
     elif outcome.brief_status == grade.STALENESS_UNKNOWN:
-        line += "  — brief not checked: it could not be rebuilt"
+        line += "  — not checked: this result cannot be placed against this code"
     if outcome.status == STATUS_FAILED:
         reason = (outcome.failure_reason or "unknown failure").splitlines()[0]
         if outcome.failed_agent:
@@ -1109,6 +1256,7 @@ def run_benchmark(
             document,
             resolved_key.get(case_no),
             checker.status_of(case_no, document),
+            checker.moved_for(case_no, document),
         )
         outcomes.append(outcome)
         recorded.add(case_no)
@@ -1607,16 +1755,40 @@ def _render_tree_flag(clean: Optional[bool]) -> str:
     return "unknown"
 
 
-def _render_stale_count(staleness: grade.Staleness) -> str:
-    """The ``stale`` cell: how many graded results this code has moved past.
+def _render_cached_cell(staleness: grade.Staleness) -> str:
+    """The ``cached`` cell: what this code can say about the results it reads.
 
     ``n/a`` when nobody checked, which is not ``0``: a count of zero asserts
     that every cached brief was rebuilt and matched, and that claim is only
     available if it was actually made.
+
+    The cell names which digest moved rather than printing a bare count. A row
+    reading ``12`` would be read as "twelve briefs moved", and a result whose
+    prompts moved instead is not that: one means the facts the agents were
+    handed changed, the other that their instructions did. It reports the
+    uncheckable results too, for the same reason -- a row that could say nothing
+    about its prompts must not show a bare ``0`` and read as though it had.
     """
     if not staleness.checked:
         return "n/a"
-    return str(len(staleness.stale))
+    parts: List[str] = []
+    if staleness.stale:
+        moved: List[str] = []
+        for case_no in staleness.stale:
+            for name in staleness.moved_for(case_no):
+                if name not in moved:
+                    moved.append(name)
+        parts.append(
+            "{0} stale{1}".format(
+                len(staleness.stale),
+                " ({0})".format(", ".join(moved)) if moved else "",
+            )
+        )
+    if staleness.unknown:
+        parts.append("{0} unknown".format(len(staleness.unknown)))
+    if not parts:
+        return "current"
+    return ", ".join(parts)
 
 
 def render_comparison(rows: Sequence[ComparisonRow]) -> str:
@@ -1636,7 +1808,7 @@ def render_comparison(rows: Sequence[ComparisonRow]) -> str:
         "model",
         "tree",
         "cases",
-        "stale",
+        "cached",
         "exact",
         "ruling",
         "amount",
@@ -1659,7 +1831,7 @@ def render_comparison(rows: Sequence[ComparisonRow]) -> str:
                 row.model,
                 _render_tree_flag(row.working_tree_clean),
                 str(denominator),
-                _render_stale_count(row.staleness),
+                _render_cached_cell(row.staleness),
                 "{0}/{1}".format(row.exact_matches, denominator),
                 "{0}/{1}".format(row.field_correct["ruling"], denominator),
                 "{0}/{1}".format(row.field_correct["amount_sgd"], denominator),
@@ -1746,22 +1918,40 @@ def render_comparison(rows: Sequence[ComparisonRow]) -> str:
                 )
             )
 
-    stale_rows = [row for row in rows if row.staleness.mixed]
-    if stale_rows:
+    mixed_rows = [row for row in rows if row.staleness.mixed]
+    if mixed_rows:
         lines.append("")
         lines.append(
-            "stale is how many of the graded results were produced by a brief "
-            "this code no longer builds. Every cached case records the digest of "
-            "the brief its agents were handed, so that case's brief is rebuilt "
-            "now and the two digests compared. A stale result is not wrong; it "
-            "is not a measurement of this code."
+            "cached says what this code can establish about the results it read. "
+            "Every cached case records the digest of the brief its agents were "
+            "handed and the digest of the prompts they were given; both are "
+            "rebuilt now and compared with what was recorded. The two are "
+            "different findings -- the facts changed, or the instructions did -- "
+            "and they are named apart below rather than merged into one word."
         )
-        for row in stale_rows:
-            if row.staleness.stale:
+        for row in mixed_rows:
+            if row.staleness.stale_brief:
                 lines.append(
-                    "  {0}  stale: {1}".format(
+                    "  {0}  brief moved: {1}".format(
                         row.model,
-                        ", ".join(str(case_no) for case_no in row.staleness.stale),
+                        ", ".join(str(case_no) for case_no in row.staleness.stale_brief),
+                    )
+                )
+            if row.staleness.stale_prompts:
+                lines.append(
+                    "  {0}  prompts moved: {1}".format(
+                        row.model,
+                        ", ".join(str(case_no) for case_no in row.staleness.stale_prompts),
+                    )
+                )
+            if row.staleness.unchecked_prompts:
+                lines.append(
+                    "  {0}  no prompts digest recorded, so the prompt half of the "
+                    "check could not be made: {1}".format(
+                        row.model,
+                        ", ".join(
+                            str(case_no) for case_no in row.staleness.unchecked_prompts
+                        ),
                     )
                 )
             if row.staleness.unknown:
@@ -1773,9 +1963,9 @@ def render_comparison(rows: Sequence[ComparisonRow]) -> str:
                 )
         lines.append(
             "A mixed set is not one run. The exact-match figure for a row with "
-            "stale cases was computed over results produced by more than one "
-            "version of the brief, so it is not a single measurement of any one "
-            "version of this code."
+            "stale or uncheckable cases was computed over results produced by more "
+            "than one version of the brief or the prompts, so it is not a single "
+            "measurement of any one version of this code."
         )
 
     lines.append(
@@ -1906,15 +2096,29 @@ def print_summary(summary: RunSummary) -> None:
             if staleness.mixed:
                 print("")
                 print(
-                    "stale briefs  {0} of {1} results were produced by a brief "
-                    "this code no longer builds".format(
+                    "cached        {0} of {1} results this code cannot vouch for".format(
                         len(staleness.stale) + len(staleness.unknown), report.total
                     )
                 )
-                if staleness.stale:
+                if staleness.stale_brief:
                     print(
-                        "              stale: {0}".format(
-                            ", ".join(str(case_no) for case_no in staleness.stale)
+                        "              brief moved: {0}".format(
+                            ", ".join(str(case_no) for case_no in staleness.stale_brief)
+                        )
+                    )
+                if staleness.stale_prompts:
+                    print(
+                        "              prompts moved: {0}".format(
+                            ", ".join(str(case_no) for case_no in staleness.stale_prompts)
+                        )
+                    )
+                if staleness.unchecked_prompts:
+                    print(
+                        "              no prompts digest recorded, so the prompt "
+                        "half of the check could not be made: {0}".format(
+                            ", ".join(
+                                str(case_no) for case_no in staleness.unchecked_prompts
+                            )
                         )
                     )
                 if staleness.unknown:
@@ -1929,8 +2133,8 @@ def print_summary(summary: RunSummary) -> None:
                 )
             else:
                 print(
-                    "briefs        all {0} results match the brief this code "
-                    "builds".format(report.total)
+                    "cached        all {0} results match the brief and the prompts "
+                    "this code builds".format(report.total)
                 )
 
         calibration = report.calibration

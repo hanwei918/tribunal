@@ -80,7 +80,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from eval import grade  # noqa: E402
 from eval import run_benchmark as runner  # noqa: E402
 from tests import test_answer_isolation as isolation  # noqa: E402
-from tribunal import llm, money, transcript  # noqa: E402
+from tribunal import llm, money, pipeline, transcript  # noqa: E402
 
 PROMPTS_DIR = PROJECT_ROOT / "prompts" / "v1"
 
@@ -2109,7 +2109,10 @@ class StaleGradingTests(unittest.TestCase):
             text = grade.render_report(runner.grade_run(run_dir, cases=CASE_SET))
 
             self.assertIn("| {0} |".format(CASE_SET[1]), text, "the stale case is not in the table")
-            self.assertIn("| **STALE** |", text)
+            # The cell names which digest moved. A bare "**STALE**" here would
+            # be the merge the report is required not to make: the facts and the
+            # instructions are different findings.
+            self.assertIn("| **STALE (brief)** |", text)
             self.assertIn("mixed set is not one run", text)
             self.assertIn("not a single measurement", text)
             self.assertIn("**(mixed set — not one measurement)**", text)
@@ -2145,7 +2148,11 @@ class StaleGradingTests(unittest.TestCase):
             table = runner.render_comparison([row])
 
             self.assertEqual((CASE_SET[0],), row.staleness.stale)
-            self.assertIn("stale", table.splitlines()[0])
+            # The column is headed for what it answers about the cache rather
+            # than for one of the two channels. A heading naming the brief, or
+            # naming the prompts, would be the merge this report must not make.
+            self.assertIn("cached", table.splitlines()[0])
+            self.assertIn("brief moved", table)
             self.assertIn(str(CASE_SET[0]), table)
             self.assertIn("mixed set is not one run", table)
 
@@ -2171,6 +2178,164 @@ class StaleGradingTests(unittest.TestCase):
         )
         self.assertFalse(row.staleness.checked)
         self.assertIn("n/a", runner.render_comparison([row]))
+
+
+class TwoChannelStalenessTests(unittest.TestCase):
+    """The brief and the prompts are two findings, and never one word.
+
+    A moved brief means the facts the agents were handed changed. A moved prompt
+    means their instructions changed. They call for different responses — go and
+    re-read the case, or go and re-read what the agents were told to do with it —
+    so a report saying only "stale" leaves the reader unable to tell which one to
+    look at. These tests pin the separation on every surface that reports it.
+
+    The third answer is the one that changes most when the prompt channel is
+    added: an entry written before the field was kept records no prompts digest,
+    and a result whose instructions cannot be established is not a result this
+    code can call current. It is `unknown`, which is not a synonym for `current`.
+
+    Nothing here re-runs a case and nothing here touches the real cache under
+    ``runs/``.
+    """
+
+    def _cached_run(self, tmp):
+        bench(tmp, cases=CASE_SET)
+        return run_dir_of(tmp)
+
+    def _set_digest(self, run_dir, case_no, field, value):
+        """Record a digest this code does not compute, in one channel only."""
+        document = runner.load_cached(run_dir, case_no)
+        document[field] = value
+        runner.write_json(runner.case_cache_path(run_dir, case_no), document)
+
+    def test_a_prompt_that_moved_reports_stale_and_names_the_prompt(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self._cached_run(tmp)
+            case_no = CASE_SET[1]
+            self._set_digest(run_dir, case_no, "prompts_sha256", "0" * 64)
+
+            staleness = runner.brief_staleness(run_dir, CASE_SET)
+
+            self.assertEqual((case_no,), staleness.stale)
+            self.assertEqual((), staleness.stale_brief)
+            self.assertEqual((case_no,), staleness.stale_prompts)
+            self.assertEqual((grade.MOVED_PROMPTS,), staleness.moved_for(case_no))
+
+            text = grade.render_report(runner.grade_run(run_dir, cases=CASE_SET))
+            self.assertIn("| **STALE (prompt)** |", text)
+            self.assertIn("The prompts have moved for 1 of 3: {0}".format(case_no), text)
+            self.assertNotIn(
+                "The brief has moved",
+                text,
+                "a moved prompt was reported as a moved brief",
+            )
+
+    def test_a_brief_that_moved_reports_stale_and_names_the_brief(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self._cached_run(tmp)
+            case_no = CASE_SET[1]
+            self._set_digest(run_dir, case_no, "brief_sha256", "0" * 64)
+
+            staleness = runner.brief_staleness(run_dir, CASE_SET)
+
+            self.assertEqual((case_no,), staleness.stale_brief)
+            self.assertEqual((), staleness.stale_prompts)
+            self.assertEqual((grade.MOVED_BRIEF,), staleness.moved_for(case_no))
+
+            text = grade.render_report(runner.grade_run(run_dir, cases=CASE_SET))
+            self.assertIn("| **STALE (brief)** |", text)
+            self.assertNotIn(
+                "The prompts have moved",
+                text,
+                "a moved brief was reported as a moved prompt",
+            )
+
+    def test_a_run_where_both_digests_moved_reports_both(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            bench(tmp, cases=CASE_SET, runs_dir=runs)
+            run_dir = runner.run_directory(runs, MODEL)
+            case_no = CASE_SET[1]
+            self._set_digest(run_dir, case_no, "brief_sha256", "0" * 64)
+            self._set_digest(run_dir, case_no, "prompts_sha256", "1" * 64)
+
+            staleness = runner.brief_staleness(run_dir, CASE_SET)
+
+            self.assertEqual((case_no,), staleness.stale)
+            self.assertEqual((case_no,), staleness.stale_brief)
+            self.assertEqual((case_no,), staleness.stale_prompts)
+            self.assertEqual(
+                (grade.MOVED_BRIEF, grade.MOVED_PROMPTS), staleness.moved_for(case_no)
+            )
+
+            text = grade.render_report(runner.grade_run(run_dir, cases=CASE_SET))
+            self.assertIn("| **STALE (brief, prompt)** |", text)
+            self.assertIn("The brief has moved for 1 of 3", text)
+            self.assertIn("The prompts have moved for 1 of 3", text)
+
+            table = runner.render_comparison(runner.collect_comparison(runs))
+            self.assertIn("1 stale (brief, prompt)", table)
+            self.assertIn("brief moved: {0}".format(case_no), table)
+            self.assertIn("prompts moved: {0}".format(case_no), table)
+
+    def test_an_entry_with_no_prompts_digest_reports_unknown_not_current(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self._cached_run(tmp)
+            case_no = CASE_SET[0]
+            document = runner.load_cached(run_dir, case_no)
+            document.pop("prompts_sha256")
+            runner.write_json(runner.case_cache_path(run_dir, case_no), document)
+
+            staleness = runner.brief_staleness(run_dir, CASE_SET)
+
+            self.assertEqual((), staleness.stale)
+            self.assertEqual((case_no,), staleness.unknown)
+            self.assertEqual((case_no,), staleness.unchecked_prompts)
+            self.assertTrue(
+                staleness.mixed,
+                "a result whose prompts cannot be established is not a current one",
+            )
+            self.assertEqual((), staleness.moved_for(case_no))
+
+            text = grade.render_report(runner.grade_run(run_dir, cases=CASE_SET))
+            self.assertIn("| unknown |", text)
+            self.assertIn(
+                "The prompts digest was not recorded for 1 of 3 results", text
+            )
+            self.assertIn("mixed set", text)
+
+    def test_the_prompts_digest_is_taken_over_the_whole_directory(self):
+        """Editing any prompt in the set changes what an agent was told to do.
+
+        The judge prompt is the one that moved this time, but the digest is over
+        the directory precisely so that the advocate template and the two stances
+        are covered by the same check. The names are read from the pipeline rather
+        than written here, so a prompt added to the set is covered without anyone
+        remembering to add it to this list.
+        """
+        self.assertEqual(
+            runner.hash_directory(PROMPTS_DIR), runner.current_prompts_sha256(PROMPTS_DIR)
+        )
+        names = sorted(
+            set(pipeline.AGENT_PROMPT_FILES.values()) | set(pipeline.STANCE_FILES.values())
+        )
+        self.assertGreater(
+            len(names), 1, "the digest is taken over a set, not over one file"
+        )
+        for name in names:
+            with self.subTest(prompt=name):
+                self.assertTrue((PROMPTS_DIR / name).is_file(), name)
+
+    def test_a_prompts_digest_that_cannot_be_taken_is_unknown_not_current(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self._cached_run(tmp)
+            checker = runner.BriefStaleness(prompts_digest=lambda: None)
+
+            staleness = runner.brief_staleness(run_dir, CASE_SET, checker)
+
+            self.assertEqual((), staleness.stale)
+            self.assertEqual(tuple(sorted(CASE_SET)), staleness.unknown)
+            self.assertEqual(tuple(sorted(CASE_SET)), staleness.unchecked_prompts)
 
 
 class PerCaseProvenanceTests(unittest.TestCase):
@@ -2405,7 +2570,7 @@ class RunRecordTests(unittest.TestCase):
 
             self.assertEqual(1, len(history))
 
-    def test_the_summary_says_when_a_reused_result_is_stale(self):
+    def test_the_summary_says_which_digest_moved_for_a_reused_result(self):
         with tempfile.TemporaryDirectory() as tmp:
             bench(tmp, cases=CASE_SET)
             run_dir = run_dir_of(tmp)
@@ -2419,7 +2584,11 @@ class RunRecordTests(unittest.TestCase):
                 runner.print_summary(summary)
             text = printed.getvalue()
 
-            self.assertIn("stale briefs", text)
+            # The channel, not a generic "stale": a summary that said only
+            # "stale" would leave the reader unable to tell whether to go and
+            # re-read the case or go and re-read what the agents were told.
+            self.assertIn("brief moved", text)
+            self.assertNotIn("prompts moved", text)
             self.assertIn(str(CASE_SET[0]), text)
             self.assertIn("not a single measurement", text)
 

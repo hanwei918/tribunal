@@ -97,11 +97,21 @@ Two rules follow, and both are enforced in code:
   case file carries its own commit, prompts digest and interpreter; each invocation's record is
   appended to `invocations.json`.
 
-Run over the cache, the check reports **12 of 29 results stale** — cases 201 through 212, the
-NO_SHOW cases carrying a GPS trace, which are exactly the ones the two brief changes could move.
-The whole 29-case set was produced at one commit, `a11285b`, between 15:48 and 17:19; `95f0b74`
-landed at 17:45 and `d06d2ff` at 18:57, so the code moved on underneath a finished run rather than
-while it ran. Every cached digest matches a committed version of the brief.
+Run over the cache, the **brief** channel reports **12 of 29 results stale** — cases 201 through
+212, the NO_SHOW cases carrying a GPS trace, which are exactly the ones the two brief changes could
+move. The whole 29-case set was produced at one commit, `a11285b`, between 15:48 and 17:19;
+`95f0b74` landed at 17:45 and `d06d2ff` at 18:57, so the code moved on underneath a finished run
+rather than while it ran. Every cached digest matches a committed version of the brief.
+
+**The check reads two digests and reports which of the two moved.** A moved *brief* means the facts
+the agents were handed changed; a moved *prompt* means their instructions changed. They call for
+different responses, so no report merges them into one word: the per-case cell reads
+`**STALE (brief)**` or `**STALE (prompt)**`, and the progress line names the digest that moved. The
+**prompt** channel can be answered for none of the cached results — no per-case entry records a
+prompts digest, so all twenty-nine are `unknown` there rather than `current`, which is why the
+note's block reads `current=0`. `unknown` is not `current`. The prompt set has in fact already
+moved twice: the run records carry two different digests and neither is what the directory hashes
+to now, and until the channel existed nothing said so.
 
 **That count is the same under any interpreter now, and it was not always.** The brief carries an
 unrounded mean distance, and `sum()`'s float semantics changed in Python 3.12, so the same cache

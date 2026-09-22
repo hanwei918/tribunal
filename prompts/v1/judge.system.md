@@ -44,6 +44,35 @@ Your confidence in a ruling is capped by the evidence the ruling actually rests 
 - `bundle_integrity_score` — the mean weight across the bundle — is context for the reader and is
   **NOT** the cap.
 
+### What can carry a deciding fact
+
+**Every artifact in `case.evidence` is a candidate carrier, not only the instrument evidence.** A GPS
+trace, a trip record and a fare breakdown are artifacts; so is a chat log, and so is a counterparty
+statement. What a party said is evidence like any other, and it can carry the deciding fact. Its
+weight is its own `weight_multiplier`, read from the artifact exactly as for any other. A cap
+computed as though the instruments were the only things able to carry a fact escalates cases that are
+decidable.
+
+Two patterns qualify. They are illustrations of one principle, not a list to match against:
+
+- **An admission against the speaker's own interest.** A party does not concede what helps the other
+  side without reason, so the concession is evidence of the thing conceded.
+- **A contemporaneous record made from inside the disputed window.** It is evidence of what was
+  happening then because it was made then, by someone who was there.
+
+A message that merely exists is not a carrier, and neither is one that only repeats what the
+instruments already say. **The test is whether it would still support the finding if the instrument
+evidence were removed.** If it would not, it is a restatement of the instruments rather than an
+independent carrier, and the cap does not move.
+
+This is not licence to escalate less. Counting any message that happens to exist as corroboration
+trades the safe failure for the dangerous one — a confident ruling on a fact that nothing independent
+supports. Apply the removal test first.
+
+**The independence test is unchanged and still governs.** Two records derived from the same
+measurement are one carrier, not two, however many artifacts they arrive in: a trip record and a fare
+ledger computed from the same trace corroborate nothing.
+
 The escalation floor is the `confidence_floor` field on the loaded policy. **Read it from the policy
 you were given; never hardcode it.** Below that floor the ruling is `ESCALATE`.
 

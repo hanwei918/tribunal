@@ -9,6 +9,15 @@ defect in the brief that the wrong count uncovered — a defect that has since b
 being recorded under "The brief is not stable across Python versions". The defect this note is
 about, the three causes and the change are unaffected.
 
+**The block was corrected a second time, later the same day, when the check gained a second
+channel.** It now compares the recorded *prompts* digest as well as the recorded brief digest, and
+it names which of the two moved, because "the facts changed" and "the instructions changed" are
+different findings that call for different responses. The cache records only a brief digest, so
+the prompt half of the check cannot be made for any of its entries: those results are reported
+`unknown`, not `current`. **That is the new channel working, and it is the reason the block reads
+`current=0` where it read `current=17`.** What the brief channel found is unchanged, and the three
+causes, the changes and the defect this note is about are unaffected.
+
 ## The defect
 
 Three things were wrong with how a cached benchmark result was read, and only the third
@@ -38,19 +47,31 @@ It was the act of checking.
 
 ## What the check found
 
-The expectation going in was **17 current and 12 stale, the stale ones being 201 through
-212**. That is what the cache holds, measured under Python 3.9.6 — the interpreter that
-produced it. Before the accumulation behind the brief was pinned to a plain left-to-right sum,
-that same check reported twenty-one under Python 3.13.12 and the interpreter was the whole of
-the difference; it now reports the same twelve under any interpreter. See "The brief is not
-stable across Python versions" below.
+The check reads **two** recorded digests, and the block below is its own output. What each channel
+answers has to be said first, because the two are not the same finding and the block no longer lets
+them be read as one.
+
+- **The brief channel** — the digest of the exact bytes the agents were handed. This is the channel
+  this note is about, and its answer is unchanged: **twelve results were produced by a brief this
+  code no longer builds, and they are 201 through 212.**
+- **The prompt channel** — the digest of the prompt directory. This channel is new. **Not one
+  cached entry records a prompts digest**, because the field did not exist when these results were
+  written, so for all twenty-nine the prompt half of the check cannot be made at all.
+
+A result whose prompt half cannot be checked is not stale for it — nothing moved — and it is not
+current either. It is **unknown**, the third answer, deliberately not a synonym for the first. That
+is why the block reads `current=0` where it used to read `current=17`: those seventeen have a brief
+this code still builds, and what they cannot say is which prompts produced them. Seventeen is still
+the brief channel's answer, and it is stated above in those terms rather than as a verdict.
+
+The block, measured under Python 3.9.6 — the interpreter that produced this cache:
 
 ```
-deepseek-deepseek-flash   cached=29  current=17  stale=12  unknown=0
-  current: 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 213, 214
+deepseek-deepseek-flash   cached=29  current=0   stale=12  unknown=17
   stale:   201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212
-hy4-preview               cached=1   current=1   stale=0   unknown=0
-  current: 109
+  unknown: 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 213, 214
+hy4-preview               cached=1   current=0   stale=0   unknown=1
+  unknown: 109
 ```
 
 Twelve of twenty-nine results are stale, and every one of them is a NO_SHOW_CHARGE case
@@ -313,22 +334,33 @@ against them in one step.
 
 ## What was changed
 
-1. **Staleness is checked whenever a cached result is read.** `grade_run` — and therefore
-   `--compare`, which reads through it — rebuilds each cached case's brief with
-   `brief.brief_digest`, compares the digest with the one the entry recorded, and marks any
-   case whose brief has changed. A stale case is named and counted in the report, carries a
-   `brief` column in the per-case table, appears in the comparison table's `stale` column,
-   and is announced on its own progress line when the result is reused. A mixed set says on
-   its face that its exact-match figure is not a single measurement.
+1. **Staleness is checked whenever a cached result is read, on two channels.** `grade_run` — and
+   therefore `--compare`, which reads through it — rebuilds each cached case's brief with
+   `brief.brief_digest` and the prompt directory with `hash_directory`, compares both with what
+   the entry recorded, and names which of the two moved. A stale case is named and counted in the
+   report, carries a `cached` column in the per-case table reading `**STALE (brief)**` or
+   `**STALE (prompt)**`, appears in the comparison table's `cached` column, and is announced on
+   its own progress line when the result is reused — where the line says *which* digest moved, so
+   the reader is sent to the brief or to the prompts rather than to whichever one the code
+   happened to check first. A mixed set says on its face that its exact-match figure is not a
+   single measurement.
 
-   Three states, and the third is not the first: a brief that cannot be rebuilt is `unknown`,
-   not current, for the same reason an unreadable working tree is not clean. A report that
-   checked nothing prints nothing — silence rather than a reassuring zero.
+   The two are never merged into one word, because they are not interchangeable: a moved brief is
+   answered by re-reading the case, a moved prompt by re-reading what the agents were told to do
+   with it.
+
+   Three states, and the third is not the first. A brief that cannot be rebuilt is `unknown`, not
+   current, for the same reason an unreadable working tree is not clean — and so is an entry that
+   records no prompts digest, since a result whose instructions cannot be established is not a
+   result this code can call current. A report that checked nothing prints nothing — silence
+   rather than a reassuring zero.
 
 2. **Per-case provenance.** Every cache entry now records `git_commit`, `prompts_sha256` and
    `python_version` beside the `brief_sha256` it already kept. The run's own `run.json` carries
    the interpreter too, so a run whose per-case entries have been lost still says what built
-   its briefs.
+   its briefs. **The entries already under `runs/` predate the field**, which is why the prompt
+   channel reports them `unknown` and why `current=0` above is the honest reading rather than a
+   regression.
 
 3. **The run record is no longer destroyed.** `run.json` still describes the invocation that
    wrote it — it is rewritten after every case, which is what keeps an interrupted run's
@@ -342,6 +374,15 @@ against them in one step.
    now a function of the repository alone, so this class of false staleness cannot arise. The
    repair was measured first: it changes no byte of the existing cache under 3.9.6, so no
    cached result changes meaning.
+
+5. **The prompt digest is compared too, and the two findings are kept apart.** The prompts digest
+   is taken over the whole directory — `prompts/v1/` — because what an agent was given is the
+   prompt set: the advocate template, both stances and the judge prompt. Editing any of them
+   changes what an agent was told to do, so every cached result reports stale on the prompt
+   channel. `Staleness` carries `stale_brief`, `stale_prompts` and `unchecked_prompts` beside the
+   `stale` union, and every surface that reports staleness — the report, the per-case table, the
+   comparison table and the progress line — reports the channel rather than the union. An entry
+   that records no prompts digest is `unknown` for that channel, and `unknown` is not `current`.
 
 ## What was not done
 
@@ -389,3 +430,15 @@ not used, because it would invalidate all 29 cached results rather than reproduc
 - `NoteCouplingTests` no longer skips: all seven run under 3.9.6 and under 3.13.12. The two
   comparisons used to be skipped under any interpreter but the cache's own, which is what the
   repair removed.
+- **Both new guards were mutated to prove they bite.** Five mutations were made one at a time, each
+  restored from a copy and confirmed byte-identical afterwards.
+
+  | mutation | what went RED |
+  |---|---|
+  | `prompts_moved` answers "nothing moved" | `test_a_prompt_that_moved_reports_stale_and_names_the_prompt`, `test_a_run_where_both_digests_moved_reports_both` |
+  | `status_of` drops the uncheckable-prompt clause | `test_an_entry_with_no_prompts_digest_reports_unknown_not_current`, `test_a_prompts_digest_that_cannot_be_taken_is_unknown_not_current` |
+  | the per-case cell prints a bare `**STALE**` | all three channel-naming tests |
+  | the removal-test sentence is deleted from the judge prompt | `test_the_removal_test_bounds_the_principle` |
+  | the judge prompt is turned into a list naming case 211 | `test_the_prompt_does_not_name_the_two_cases_it_was_written_for` |
+
+  No mutation turned anything else red, and no file was left changed.

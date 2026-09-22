@@ -1008,28 +1008,49 @@ STALENESS_CURRENT = "current"
 STALENESS_STALE = "stale"
 STALENESS_UNKNOWN = "unknown"
 
+# A result can be stale because the facts its agents were given changed or
+# because the instructions they were given changed, and those are not the same
+# finding. The first means the brief moved, the second that the prompts did.
+# They are named apart everywhere they are reported, because they call for
+# different responses: a moved brief is answered by re-reading the case, a moved
+# prompt by re-reading what the agents were told to do with it.
+MOVED_BRIEF = "brief"
+MOVED_PROMPTS = "prompt"
+
 
 @dataclass(frozen=True)
 class Staleness:
-    """Which graded cases were produced by a brief this code no longer builds.
+    """Which graded cases were produced by code this code is no longer.
 
     Supplied by the caller, because only the caller knows what a cached result
     was produced from: the grader scores rulings and never sees a cache. A
     cached result carries the digest of the exact brief bytes its agents were
-    handed, so rebuilding that case's brief and comparing the two digests
-    establishes whether the result still belongs to this code -- a fact about
-    the cache, not about the ruling.
+    handed and the digest of the prompts they were given, so rebuilding both and
+    comparing establishes whether the result still belongs to this code -- a
+    fact about the cache, not about the ruling.
 
     ``checked`` is False when nobody looked, and that is **not** the same as
     having looked and found nothing. A report printing "0 stale" without having
     rebuilt a single brief would be inventing evidence. A case whose brief
     cannot be rebuilt at all is ``unknown`` rather than current, for the same
     reason an unreadable working tree is not clean.
+
+    ``stale`` is the union of ``stale_brief`` and ``stale_prompts``, so a caller
+    that only asks "has this result been moved past" need not know there are two
+    channels. A caller that *reports* must use the two rather than the union:
+    merging them into one word is the thing those fields exist to prevent.
     """
 
     checked: bool = False
     stale: Tuple[int, ...] = ()
     unknown: Tuple[int, ...] = ()
+    # Recorded, and no longer matching.
+    stale_brief: Tuple[int, ...] = ()
+    stale_prompts: Tuple[int, ...] = ()
+    # No prompts digest was recorded, so the prompt half of the check could not
+    # be made for this case at all. A result written before the field was kept
+    # is not a result whose prompts are known to match.
+    unchecked_prompts: Tuple[int, ...] = ()
 
     @property
     def mixed(self) -> bool:
@@ -1042,12 +1063,32 @@ class Staleness:
         return bool(self.stale) or bool(self.unknown)
 
     def status_of(self, case_no: int) -> str:
-        """``current``, ``stale`` or ``unknown`` for one graded case."""
+        """``current``, ``stale`` or ``unknown`` for one graded case.
+
+        Stale wins over unknown, deliberately: a digest that was recorded and no
+        longer matches is a finding, and reporting it as merely unestablished
+        would hide it.
+        """
         if case_no in self.stale:
             return STALENESS_STALE
         if case_no in self.unknown:
             return STALENESS_UNKNOWN
         return STALENESS_CURRENT
+
+    def moved_for(self, case_no: int) -> Tuple[str, ...]:
+        """Which recorded digests moved for one case, named, in a fixed order.
+
+        Empty unless the case is stale. Both may be present: a result produced
+        by an older brief under older prompts is stale for both reasons, and a
+        report that said only "stale" would leave the reader unable to tell
+        which response the result calls for.
+        """
+        moved: List[str] = []
+        if case_no in self.stale_brief:
+            moved.append(MOVED_BRIEF)
+        if case_no in self.stale_prompts:
+            moved.append(MOVED_PROMPTS)
+        return tuple(moved)
 
 
 # --------------------------------------------------------------------------
@@ -1194,15 +1235,23 @@ def _render_referral_list(referrals: Sequence[Any]) -> str:
 
 
 def _render_brief_status(staleness: Staleness, case_no: int) -> str:
-    """The ``brief`` cell for one case: does its result belong to this code?
+    """The ``cached`` cell for one case: does its result belong to this code?
 
     ``not checked`` is a third answer and is deliberately not spelled ``ok``.
+
+    A stale cell names which digest moved rather than saying only "stale". The
+    two are different findings -- the facts changed, or the instructions did --
+    and a reader who cannot tell them apart cannot tell which one to go and look
+    at.
     """
     if not staleness.checked:
         return "not checked"
     status = staleness.status_of(case_no)
     if status == STALENESS_STALE:
-        return "**STALE**"
+        moved = staleness.moved_for(case_no)
+        if not moved:
+            return "**STALE**"
+        return "**STALE ({0})**".format(", ".join(moved))
     if status == STALENESS_UNKNOWN:
         return "unknown"
     return "current"
@@ -1211,16 +1260,20 @@ def _render_brief_status(staleness: Staleness, case_no: int) -> str:
 def _render_case_table(report: GradeReport) -> List[str]:
     """One row per case: which fields agreed, and whether the four-field test passed.
 
-    A ``brief`` column is added only when somebody checked whether each cached
+    A ``cached`` column is added only when somebody checked whether each cached
     result still belongs to this code. That column is about the cache rather
-    than the ruling: a stale row is a result an earlier version of the brief
-    produced, so its agreement with the key says what that earlier version did —
-    which is worth knowing, and is not the same as knowing what the code does
-    now. A report built straight from rulings gets no such column, because it
-    has nothing to put in one.
+    than the ruling: a stale row is a result earlier code produced, so its
+    agreement with the key says what that earlier code did — which is worth
+    knowing, and is not the same as knowing what the code does now. A report
+    built straight from rulings gets no such column, because it has nothing to
+    put in one.
+
+    The column is not headed ``brief`` any more. It answers for the prompt
+    digest as well, and a heading naming one of the two would be the merge this
+    report is required not to make.
     """
     checked = report.staleness.checked
-    headers = ["case", *GRADED_FIELDS, "exact"] + (["brief"] if checked else [])
+    headers = ["case", *GRADED_FIELDS, "exact"] + (["cached"] if checked else [])
     lines = [
         "| " + " | ".join(headers) + " |",
         "|" + "---|" * len(headers),
@@ -1237,10 +1290,15 @@ def _render_case_table(report: GradeReport) -> List[str]:
 
 
 def _render_staleness(report: GradeReport) -> List[str]:
-    """The cached-brief block, and the caveat that follows from a mixed set.
+    """The cached-results block, and the caveat that follows from a mixed set.
 
     Empty when nobody looked, because the honest output of a report built
     straight from rulings is silence about a check that was never made.
+
+    The brief and the prompt are reported as two separate findings. They are not
+    interchangeable -- one means the facts the agents were given changed, the
+    other that their instructions did -- and a reader deciding what to do next
+    needs to know which of the two happened.
     """
     staleness = report.staleness
     if not staleness.checked:
@@ -1251,28 +1309,48 @@ def _render_staleness(report: GradeReport) -> List[str]:
     lines: List[str] = [""]
     if not staleness.mixed:
         lines.append(
-            "Every graded case was produced by the brief this code builds now, "
-            "so the exact-match figure above is one measurement."
+            "Every graded case was produced by the brief and the prompts this "
+            "code builds now, so the exact-match figure above is one measurement."
         )
         return lines
 
-    lines.append("### Cached briefs")
+    lines.append("### Cached results")
     lines.append("")
     lines.append(
         "A cached result is evidence about the code that produced it and about "
         "nothing else. Each result records the digest of the exact brief bytes "
-        "its agents were handed, so rebuilding that case's brief and comparing "
-        "the two digests says whether the result still belongs to this code. "
-        "This does not say a stale result is wrong; it says it is not a "
-        "measurement of this code."
+        "its agents were handed and the digest of the prompts they were given, "
+        "so both are rebuilt now and compared with what was recorded. This does "
+        "not say a stale result is wrong; it says it is not a measurement of "
+        "this code."
     )
     lines.append("")
-    if staleness.stale:
+    if staleness.stale_brief:
         lines.append(
-            "Produced by an earlier version of the brief ({0} of {1}): {2}.".format(
-                len(staleness.stale),
+            "The brief has moved for {0} of {1}: {2}. The facts these agents were "
+            "handed are not the facts this code builds.".format(
+                len(staleness.stale_brief),
                 report.total,
-                ", ".join(str(case_no) for case_no in staleness.stale),
+                ", ".join(str(case_no) for case_no in staleness.stale_brief),
+            )
+        )
+        lines.append("")
+    if staleness.stale_prompts:
+        lines.append(
+            "The prompts have moved for {0} of {1}: {2}. These agents were told "
+            "to do something other than what this code now asks of them.".format(
+                len(staleness.stale_prompts),
+                report.total,
+                ", ".join(str(case_no) for case_no in staleness.stale_prompts),
+            )
+        )
+        lines.append("")
+    if staleness.unchecked_prompts:
+        lines.append(
+            "The prompts digest was not recorded for {0} of {1} results, so "
+            "whether the prompts they were given are the ones this code ships "
+            "cannot be established for them at all.".format(
+                len(staleness.unchecked_prompts), report.total
             )
         )
         lines.append("")
@@ -1286,10 +1364,9 @@ def _render_staleness(report: GradeReport) -> List[str]:
         lines.append("")
     lines.append(
         "**A mixed set is not one run.** The {0}/{1} exact-match figure above "
-        "spans results produced by more than one version of the brief, so it is "
-        "not a single measurement of any one version of this code.".format(
-            report.exact_matches, report.total
-        )
+        "spans results produced by more than one version of the brief or the "
+        "prompts, so it is not a single measurement of any one version of this "
+        "code.".format(report.exact_matches, report.total)
     )
     return lines
 
