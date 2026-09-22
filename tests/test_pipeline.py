@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import re
 import sys
 import tempfile
 import unittest
@@ -148,6 +149,161 @@ class StanceOnlyDifferenceTests(unittest.TestCase):
                 pipeline.render_advocate_prompts(base)
 
 
+def worked_example(filename: str, prompts_dir: Path = pipeline.PROMPTS_DIR):
+    """The one worked JSON example a prompt ships, parsed.
+
+    A prompt's example is the shape it asks for, stated in the form a model is
+    most likely to copy verbatim. Parsing it is what makes the prompt's request
+    checkable without reading its prose, and requiring exactly one keeps the
+    question "which example is the contract" from having two answers.
+    """
+    text = (Path(prompts_dir) / filename).read_text(encoding="utf-8")
+    blocks = re.findall(r"```json\n(.*?)```", text, re.S)
+    if len(blocks) != 1:
+        raise AssertionError(
+            "{0} must carry exactly one ```json example of what the agent returns; "
+            "found {1}".format(filename, len(blocks))
+        )
+    return json.loads(blocks[0])
+
+
+class PromptContractTests(unittest.TestCase):
+    """The shape a prompt asks for must be one the request can produce.
+
+    A prompt that asks for a bare JSON array while the request carries
+    ``response_format: json_object`` states a contract no model can satisfy. The
+    API-level constraint wins, every answer is rejected as the wrong shape, and
+    the failures look like a model problem: they were recorded as SHAPE failures
+    against the advocate, twice per case, and a paid benchmark run was spent
+    before anyone read what the models had actually returned. These tests are
+    the check whose absence let that happen.
+    """
+
+    def test_every_agent_is_sent_a_format_this_module_declares(self):
+        for role in (RIDER, DRIVER, JUDGE):
+            with self.subTest(role=role):
+                self.assertIn(role, pipeline.AGENT_RESPONSE_FORMAT)
+                self.assertIn(role, pipeline.AGENT_PROMPT_FILES)
+                fmt = pipeline.AGENT_RESPONSE_FORMAT[role]["type"]
+                self.assertIn(
+                    fmt,
+                    pipeline.RESPONSE_FORMAT_SHAPES,
+                    "the format sent to {0} has no declared top-level shape".format(role),
+                )
+
+    def test_json_object_permits_an_object_and_nothing_else(self):
+        """A guard on the guard: if this widens, the checks below stop meaning anything."""
+        self.assertEqual(
+            pipeline.RESPONSE_FORMAT_SHAPES["json_object"], (pipeline.SHAPE_OBJECT,)
+        )
+
+    def test_the_worked_example_matches_the_shape_the_request_permits(self):
+        """The primary check, and it is structural: the prompt's own example is parsed."""
+        for role, filename in pipeline.AGENT_PROMPT_FILES.items():
+            with self.subTest(role=role):
+                example = worked_example(filename)
+                asked = pipeline.json_shape(example)
+                permitted = pipeline.RESPONSE_FORMAT_SHAPES[
+                    pipeline.AGENT_RESPONSE_FORMAT[role]["type"]
+                ]
+                self.assertIn(
+                    asked,
+                    permitted,
+                    "{0}'s prompt asks for the shape {1!r} while its request forces "
+                    "{2!r}".format(role, asked, pipeline.AGENT_RESPONSE_FORMAT[role]["type"]),
+                )
+
+    def test_the_pipeline_accepts_the_example_its_own_prompt_ships(self):
+        """Prompt and validator cannot disagree either.
+
+        The example is a fixture here, not documentation: if what the prompt
+        tells the model to copy is something the validator refuses, the two have
+        drifted and every model that obeys the prompt fails.
+        """
+        for role in (RIDER, DRIVER):
+            with self.subTest(role=role):
+                example = worked_example(pipeline.AGENT_PROMPT_FILES[role])
+                claims, shape, reason = pipeline.normalise_claims(example)
+                self.assertEqual(reason, "", "the validator refuses the prompt's own example")
+                self.assertEqual(shape, pipeline.SHAPE_OBJECT)
+                self.assertTrue(claims, "the example carries no claims")
+
+        example = worked_example(pipeline.AGENT_PROMPT_FILES[JUDGE])
+        value, shape, reason = pipeline.normalise_judge_result(example)
+        self.assertEqual(reason, "", "the validator refuses the judge prompt's own example")
+        self.assertEqual(shape, pipeline.SHAPE_OBJECT)
+        self.assertIsNotNone(value)
+
+    def test_the_advocate_example_uses_the_key_the_validator_reads(self):
+        example = worked_example(pipeline.AGENT_PROMPT_FILES[RIDER])
+        self.assertIn(pipeline.ADVOCATE_CLAIMS_KEY, example)
+
+    def test_no_prompt_asks_for_a_json_array_under_json_object(self):
+        """A text check, and the only one in this file.
+
+        Everything above asserts on parsed structure. This one cannot: the thing
+        under test is prose, and there is no structural way to ask what a
+        paragraph instructs a model to do. So it is kept as narrow as it can be —
+        it looks for the phrase "JSON array" in a prompt whose request forces an
+        object, which is the exact instruction that was wrong.
+
+        It is a backstop, not the guard. A prompt that asked for an array in
+        other words but shipped an array example is caught above by the example
+        check. A prompt that asked for an array in other words and shipped an
+        object example would be contradicting itself, and no test settles that
+        for a model.
+        """
+        for role, filename in pipeline.AGENT_PROMPT_FILES.items():
+            with self.subTest(role=role):
+                text = (pipeline.PROMPTS_DIR / filename).read_text(encoding="utf-8")
+                self.assertNotIn(
+                    "json array",
+                    text.lower(),
+                    "{0}'s prompt asks for a JSON array while its request forces an "
+                    "object".format(role),
+                )
+
+    def test_the_format_check_catches_the_prompt_that_was_actually_shipped(self):
+        """Falsifiability, on the real thing rather than an invented one.
+
+        The prompt this project shipped until 2026-09-22 is reconstructed here,
+        and the format check must reject it. Note what does *not* reject it: the
+        validator accepts a bare array, because that is one of the two shapes a
+        model is allowed to answer with. Tolerating the array in the validator
+        does not make a prompt that asks for one consistent with a request that
+        forces an object, and only the format check sees the difference.
+        """
+        shipped = (
+            "## What you return\n\n"
+            "A JSON array of claim objects. Each claim is one point.\n\n"
+            "```json\n[{\"text\": \"x\", \"evidence_ids\": [\"EV-1\"]}]\n```\n"
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            (base / pipeline.ADVOCATE_TEMPLATE).write_text(shipped, encoding="utf-8")
+            example = worked_example(pipeline.ADVOCATE_TEMPLATE, base)
+
+        asked = pipeline.json_shape(example)
+        permitted = pipeline.RESPONSE_FORMAT_SHAPES["json_object"]
+
+        self.assertEqual(asked, pipeline.SHAPE_ARRAY)
+        self.assertNotIn(asked, permitted, "the format check failed to catch it")
+        # ...and the validator is deliberately blind to this, which is why the
+        # format check has to exist.
+        claims, _shape, _reason = pipeline.normalise_claims(example)
+        self.assertIsNotNone(claims, "a bare array is still an accepted shape")
+
+    def test_a_prompt_with_two_examples_is_refused_rather_than_guessed_at(self):
+        """With two examples, "which shape is asked for" has no single answer."""
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            (base / pipeline.ADVOCATE_TEMPLATE).write_text(
+                '```json\n{"claims": []}\n```\n\n```json\n[]\n```\n', encoding="utf-8"
+            )
+            with self.assertRaises(AssertionError):
+                worked_example(pipeline.ADVOCATE_TEMPLATE, base)
+
+
 class CleanRunTests(unittest.TestCase):
     """A clean run, end to end."""
 
@@ -268,12 +424,24 @@ class BriefIdentityTests(unittest.TestCase):
 
 
 class UnusableResponseTests(unittest.TestCase):
-    """A model that answers with the wrong shape is retried once, then reported."""
+    """A model that answers with the wrong shape is retried once, then reported.
 
-    def test_an_advocate_returning_an_object_is_retried_once_then_succeeds(self):
+    Two shapes are *usable* for an advocate — an object carrying ``claims``, and
+    a bare array — so a wrong shape here means something genuinely unusable: an
+    object with no ``claims`` key, a ``claims`` value that is not an array, a
+    claim that is not an object, or a body that never parsed at all.
+    """
+
+    def test_an_object_carrying_claims_is_accepted_without_a_retry(self):
+        """The shape the prompt asks for, and the one ``json_object`` can produce.
+
+        This is the case the defect turned into a failure: the hy4-preview driver
+        advocate on case 207 returned eleven claims, every one of them cited and
+        every clause id well formed, inside exactly this wrapper, and the run
+        discarded them for the wrapper.
+        """
         transport = FakeTransport(
-            envelope('{"claims": []}'),
-            envelope(RIDER_CLAIMS),
+            envelope('{"claims": ' + RIDER_CLAIMS + "}"),
             envelope(DRIVER_CLAIMS),
             envelope(GOOD_RULING),
         )
@@ -284,14 +452,41 @@ class UnusableResponseTests(unittest.TestCase):
         result = pipeline.run_case(CASE, client, now=lambda: PINNED_NOW)
 
         self.assertTrue(result.ok)
-        self.assertEqual(roles_of(result), [RIDER, RIDER, DRIVER, JUDGE])
-        # both raw bodies are on the record
-        self.assertEqual(result.transcript.entries[0].response_text, '{"claims": []}')
-        self.assertIsNotNone(result.transcript.entries[0].note)
-        self.assertEqual(result.transcript.entries[1].response_text, RIDER_CLAIMS)
+        self.assertEqual(roles_of(result), [RIDER, DRIVER, JUDGE])
+        self.assertIsNone(result.transcript.entries[0].note, "the object shape was retried")
+        self.assertEqual(result.transcript.entries[0].shape, pipeline.SHAPE_OBJECT)
 
-    def test_an_advocate_failing_twice_gives_a_failed_result_not_an_exception(self):
-        transport = FakeTransport(envelope('{"claims": []}'), envelope('{"claims": []}'))
+    def test_a_bare_array_is_accepted_too(self):
+        """A model that returns the array directly has answered the question."""
+        result = run(envelope(RIDER_CLAIMS), envelope(DRIVER_CLAIMS), envelope(GOOD_RULING))
+
+        self.assertTrue(result.ok)
+        self.assertEqual(roles_of(result), [RIDER, DRIVER, JUDGE])
+        self.assertEqual(result.transcript.entries[0].shape, pipeline.SHAPE_ARRAY)
+        self.assertIsNone(result.transcript.entries[0].note)
+
+    def test_the_wrapper_is_unwrapped_before_the_judge_sees_it(self):
+        """Normalising is not cosmetic: the judge gets the claims, not the wrapper."""
+        transport = FakeTransport(
+            envelope('{"claims": ' + RIDER_CLAIMS + "}"),
+            envelope(DRIVER_CLAIMS),
+            envelope(GOOD_RULING),
+        )
+        client = llm.LLMClient(
+            model="hy4-preview", api_key=FAKE_KEY, transport=transport,
+            sleep=lambda seconds: None, clock=lambda: 0.0,
+        )
+        pipeline.run_case(CASE, client, now=lambda: PINNED_NOW)
+
+        judge_user = json.loads(
+            json.loads(transport.calls[2]["body"].decode("utf-8"))["messages"][1]["content"]
+        )
+        self.assertEqual(judge_user["claims"][RIDER], json.loads(RIDER_CLAIMS))
+
+    def test_an_object_with_no_claims_key_is_retried_once_then_fails(self):
+        transport = FakeTransport(
+            envelope('{"arguments": []}'), envelope('{"arguments": []}')
+        )
         client = llm.LLMClient(
             model="hy4-preview", api_key=FAKE_KEY, transport=transport,
             sleep=lambda seconds: None, clock=lambda: 0.0,
@@ -300,14 +495,53 @@ class UnusableResponseTests(unittest.TestCase):
 
         self.assertFalse(result.ok)
         self.assertEqual(result.failed_agent, RIDER)
-        self.assertIn("JSON array", result.failure_reason)
+        self.assertIn("claims", result.failure_reason)
+        self.assertEqual(roles_of(result), [RIDER, RIDER])
+        self.assertEqual(result.transcript.entries[0].shape, pipeline.SHAPE_OBJECT)
+
+    def test_the_shape_is_recorded_per_attempt_so_a_switch_is_visible(self):
+        """A model can answer with one shape and the other on the retry.
+
+        Recorded per attempt rather than per case, because "which shape does this
+        model choose" is the question, and a per-case field would average the two
+        answers into one.
+        """
+        transport = FakeTransport(
+            envelope('{"claims": {}}'),
+            envelope(RIDER_CLAIMS),
+            envelope(DRIVER_CLAIMS),
+            envelope(GOOD_RULING),
+        )
+        client = llm.LLMClient(
+            model="hy4-preview", api_key=FAKE_KEY, transport=transport,
+            sleep=lambda seconds: None, clock=lambda: 0.0,
+        )
+        result = pipeline.run_case(CASE, client, now=lambda: PINNED_NOW)
+
+        shapes = [entry.shape for entry in result.transcript.entries]
+        self.assertEqual(shapes[0], pipeline.SHAPE_OBJECT)
+        self.assertEqual(shapes[1], pipeline.SHAPE_ARRAY)
+        self.assertTrue(result.ok, "the retry was accepted")
+
+    def test_an_advocate_failing_twice_gives_a_failed_result_not_an_exception(self):
+        bad = '{"claims": "not an array"}'
+        transport = FakeTransport(envelope(bad), envelope(bad))
+        client = llm.LLMClient(
+            model="hy4-preview", api_key=FAKE_KEY, transport=transport,
+            sleep=lambda seconds: None, clock=lambda: 0.0,
+        )
+        result = pipeline.run_case(CASE, client, now=lambda: PINNED_NOW)
+
+        self.assertFalse(result.ok)
+        self.assertEqual(result.failed_agent, RIDER)
+        self.assertIn("not a JSON array", result.failure_reason)
         self.assertIsNone(result.ruling)
         # the run stopped at the failure: no driver call, no judge call
         self.assertEqual(roles_of(result), [RIDER, RIDER])
         self.assertEqual(len(transport.calls), 2)
         # both raw bodies preserved, and no empty claim list was substituted
-        self.assertEqual(result.transcript.entries[0].response_text, '{"claims": []}')
-        self.assertEqual(result.transcript.entries[1].response_text, '{"claims": []}')
+        self.assertEqual(result.transcript.entries[0].response_text, bad)
+        self.assertEqual(result.transcript.entries[1].response_text, bad)
 
     def test_a_judge_missing_a_required_field_is_retried_then_fails(self):
         incomplete = json.dumps({"ruling": {"ruling": "NO_ACTION"}})
@@ -342,6 +576,96 @@ class UnusableResponseTests(unittest.TestCase):
         self.assertTrue(result.ok)
         self.assertEqual(roles_of(result), [RIDER, DRIVER, JUDGE, JUDGE])
         self.assertEqual(result.transcript.entries[2].parse_outcome, "MALFORMED")
+
+
+class ClaimShapeTests(unittest.TestCase):
+    """The advocate normaliser: two accepted shapes in, one list of claims out.
+
+    Tested directly rather than only through a run, because the interesting cases
+    are the refusals — and a refusal that says the wrong thing sends the next
+    reader looking in the wrong place, which is how the wrapper came to be read
+    as a model failure in the first place.
+    """
+
+    CLAIMS = [{"text": "a point", "evidence_ids": ["EV-1"], "clause_ids": ["POL-NS-01"]}]
+
+    def test_an_object_carrying_claims_normalises_to_the_array(self):
+        claims, shape, reason = pipeline.normalise_claims({"claims": self.CLAIMS})
+        self.assertEqual(claims, self.CLAIMS)
+        self.assertEqual(shape, pipeline.SHAPE_OBJECT)
+        self.assertEqual(reason, "")
+
+    def test_a_bare_array_normalises_to_itself(self):
+        claims, shape, reason = pipeline.normalise_claims(self.CLAIMS)
+        self.assertEqual(claims, self.CLAIMS)
+        self.assertEqual(shape, pipeline.SHAPE_ARRAY)
+        self.assertEqual(reason, "")
+
+    def test_an_empty_claim_array_is_a_usable_answer(self):
+        """Zero claims is a poor answer, but it is an answer and not a wrong shape."""
+        for value in ([], {"claims": []}):
+            with self.subTest(value=value):
+                claims, _shape, reason = pipeline.normalise_claims(value)
+                self.assertEqual(claims, [])
+                self.assertEqual(reason, "")
+
+    def test_extra_keys_beside_claims_are_tolerated_rather_than_policed(self):
+        """The prompt states "exactly one key"; the validator does not enforce it.
+
+        Enforcing one contract in two places is how the two places come to
+        disagree, and that is the defect this change exists to fix. The raw body
+        is on the transcript in full, so a stray key is still visible to a reader
+        without the validator having to be the thing that catches it.
+        """
+        claims, shape, reason = pipeline.normalise_claims(
+            {"claims": self.CLAIMS, "notes": "an extra key"}
+        )
+        self.assertEqual(claims, self.CLAIMS)
+        self.assertEqual(shape, pipeline.SHAPE_OBJECT)
+        self.assertEqual(reason, "")
+
+    def test_an_object_with_no_claims_key_is_refused_and_says_so(self):
+        claims, shape, reason = pipeline.normalise_claims({"arguments": self.CLAIMS})
+        self.assertIsNone(claims)
+        self.assertEqual(shape, pipeline.SHAPE_OBJECT)
+        self.assertIn("claims", reason)
+
+    def test_a_claims_value_that_is_not_an_array_is_refused(self):
+        claims, _shape, reason = pipeline.normalise_claims({"claims": "a string"})
+        self.assertIsNone(claims)
+        self.assertIn("not a JSON array", reason)
+
+    def test_a_claim_that_is_not_an_object_is_refused(self):
+        claims, _shape, reason = pipeline.normalise_claims([{"text": "fine"}, "not an object"])
+        self.assertIsNone(claims)
+        self.assertIn("claim 1", reason)
+
+    def test_a_body_that_never_parsed_is_neither_shape(self):
+        """A malformed body is its own outcome, not a wrong wrapper.
+
+        Folding it into one of the two shapes would make a model that returned
+        nonsense indistinguishable in the record from a model that returned a
+        well-formed answer in the other wrapper.
+        """
+        claims, shape, reason = pipeline.normalise_claims(None)
+        self.assertIsNone(claims)
+        self.assertEqual(shape, "NoneType")
+        self.assertNotIn(shape, (pipeline.SHAPE_OBJECT, pipeline.SHAPE_ARRAY))
+        self.assertIn("NoneType", reason)
+
+    def test_the_judge_normaliser_names_the_object_shape(self):
+        value, shape, reason = pipeline.normalise_judge_result(
+            {"ruling": {"ruling": "NO_ACTION"}, "discarded_claims": []}
+        )
+        self.assertIsNotNone(value)
+        self.assertEqual(shape, pipeline.SHAPE_OBJECT)
+        self.assertEqual(reason, "")
+
+    def test_the_judge_normaliser_still_requires_both_fields(self):
+        """The judge's contract is unchanged by this fix, and still enforced."""
+        value, _shape, reason = pipeline.normalise_judge_result({"ruling": {}})
+        self.assertIsNone(value)
+        self.assertIn("discarded_claims", reason)
 
 
 class RulingShapeTests(unittest.TestCase):
@@ -474,7 +798,8 @@ class TranscriptAndSecretTests(unittest.TestCase):
         self.assertNotIn("sk-", text)
 
     def test_the_transcript_carries_every_call_including_the_failed_ones(self):
-        transport = FakeTransport(envelope('{"claims": []}'), envelope('{"claims": []}'))
+        bad = '{"claims": "not an array"}'
+        transport = FakeTransport(envelope(bad), envelope(bad))
         client = llm.LLMClient(
             model="hy4-preview", api_key=FAKE_KEY, transport=transport,
             sleep=lambda seconds: None, clock=lambda: 0.0,
@@ -485,8 +810,9 @@ class TranscriptAndSecretTests(unittest.TestCase):
 
         self.assertEqual(len(parsed["entries"]), 2)
         for entry in parsed["entries"]:
-            self.assertEqual(entry["response_text"], '{"claims": []}')
+            self.assertEqual(entry["response_text"], bad)
             self.assertIsNotNone(entry["note"])
+            self.assertEqual(entry["shape"], pipeline.SHAPE_OBJECT)
         self.assertNotIn(FAKE_KEY, text)
 
 

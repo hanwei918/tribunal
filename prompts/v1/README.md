@@ -24,7 +24,10 @@ into two files with small edits, and the two rendered prompts differ only inside
 2. **Send both renders the same `brief`.** Build the brief once for the case and pass the identical
    object to both advocates. Both read the same evidence, the same derived facts and the same
    policies; only the stance differs.
-3. **Collect both claim arrays.** Each advocate returns a JSON array of claim objects.
+3. **Collect both claim arrays.** Each advocate returns a JSON object with one key, `claims`, whose
+   value is the array of claim objects. The object is what the request's `response_format` can
+   actually produce; the pipeline also accepts a bare array from a model that returns one anyway,
+   and records which shape arrived.
 4. **Send the judge the two arrays and the same brief**, together with the full policy the brief
    carries.
 5. **The judge returns the POL-GEN-03 ruling object.**

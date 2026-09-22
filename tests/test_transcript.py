@@ -58,7 +58,7 @@ class TranscriptShapeTests(unittest.TestCase):
             role=RIDER, model="hy4-preview", system_prompt="sys", user_message="brief",
             response_text="[]", parsed=[], parse_outcome="PARSED",
             prompt_tokens=11, completion_tokens=2, reasoning_tokens=1, cached_tokens=0,
-            duration_seconds=1.5, attempts=2, status=200,
+            duration_seconds=1.5, attempts=2, status=200, shape="object",
         )
         self.assertEqual(entry.role, RIDER)
         self.assertEqual(entry.system_sha256, transcript_module.sha256_text("sys"))
@@ -73,6 +73,29 @@ class TranscriptShapeTests(unittest.TestCase):
         self.assertEqual(entry.attempts, 2)
         self.assertEqual(entry.status, 200)
         self.assertEqual(entry.timestamp, PINNED_NOW)
+        self.assertEqual(entry.shape, "object")
+
+    def test_the_shape_is_optional_and_serialised_when_present(self):
+        """The judge's shape is not interesting; an advocate's is the measurement.
+
+        Optional rather than required, so a caller that has no shape to report
+        does not have to invent one — an invented value would be worse than an
+        absent one in a record meant to be evidence.
+        """
+        record = pinned()
+        absent = record.add(
+            role=RIDER, model="hy4-preview", system_prompt="sys", user_message="brief",
+            response_text="[]", parsed=[], parse_outcome="PARSED",
+        )
+        present = record.add(
+            role=RIDER, model="hy4-preview", system_prompt="sys", user_message="brief",
+            response_text="[]", parsed=[], parse_outcome="PARSED", shape="array",
+        )
+
+        self.assertIsNone(absent.shape)
+        self.assertEqual("array", present.shape)
+        self.assertIsNone(record.as_dict()["entries"][0]["shape"])
+        self.assertEqual("array", record.as_dict()["entries"][1]["shape"])
 
     def test_the_prompts_are_digested_and_never_inlined(self):
         """A transcript that inlines the brief three times is unreadable."""

@@ -5,8 +5,14 @@ of what each agent was told and what it answered.
 
 One entry per call, in order. An entry carries the agent's role, the system
 prompt's sha256, the user message's sha256, the raw response text, the parsed
-value when there was one, the usage figures, the duration, the attempt count and
-the timestamp.
+value when there was one, the top-level JSON shape the body arrived in, the
+usage figures, the duration, the attempt count and the timestamp.
+
+**The shape is recorded, not left to be inferred.** The pipeline accepts an
+advocate's claims either inside an object under ``claims`` or as a bare array, so
+which of the two a model chose is a measurement about that model. It is recorded
+per attempt rather than per case, because a model can switch shape between the
+first attempt and the retry — one shipped run shows exactly that.
 
 **Digests, not bodies, for the prompts.** The brief is large and already on disk,
 and a transcript that inlines it three times is unreadable. The response text is
@@ -66,6 +72,7 @@ class TranscriptEntry:
     status: int
     timestamp: str
     note: Optional[str] = None
+    shape: Optional[str] = None
 
     def as_dict(self) -> Dict[str, Any]:
         """The entry as a plain dict, for serialisation."""
@@ -77,6 +84,7 @@ class TranscriptEntry:
             "response_text": self.response_text,
             "parsed": self.parsed,
             "parse_outcome": self.parse_outcome,
+            "shape": self.shape,
             "prompt_tokens": self.prompt_tokens,
             "completion_tokens": self.completion_tokens,
             "reasoning_tokens": self.reasoning_tokens,
@@ -118,6 +126,7 @@ class Transcript:
         attempts: int = 1,
         status: int = 0,
         note: Optional[str] = None,
+        shape: Optional[str] = None,
     ) -> TranscriptEntry:
         """Append one entry, digesting the prompts rather than storing them."""
         entry = TranscriptEntry(
@@ -137,11 +146,21 @@ class Transcript:
             status=status,
             timestamp=self._now(),
             note=note,
+            shape=shape,
         )
         self._entries.append(entry)
         return entry
 
-    def record(self, *, role: str, system_prompt: str, user_message: str, result: Any, note=None):
+    def record(
+        self,
+        *,
+        role: str,
+        system_prompt: str,
+        user_message: str,
+        result: Any,
+        note=None,
+        shape=None,
+    ):
         """Append one entry straight from an :class:`tribunal.llm.LLMResult`."""
         return self.add(
             role=role,
@@ -159,6 +178,7 @@ class Transcript:
             attempts=result.attempts,
             status=result.status,
             note=note,
+            shape=shape,
         )
 
     @property

@@ -62,19 +62,25 @@ names the policy the number came from. When you rely on a threshold, cite the cl
 
 ## What you return
 
-A JSON array of claim objects. Each claim is one point, argued in plain English:
+A JSON **object** with exactly one key, `claims`. The value of `claims` is the array of claim
+objects. Each claim is one point, argued in plain English:
 
 ```json
-[
-  {
-    "text": "The driver's own trace places him inside the arrival radius for a continuous 585 seconds, well past the 300 second minimum for this zone class.",
-    "evidence_ids": ["EV-GPS-00208"],
-    "clause_ids": ["POL-NS-01"],
-    "relies_on": "derived.arrival.longest_qualifying_run.duration_sec",
-    "asserted_weight": 1.0
-  }
-]
+{
+  "claims": [
+    {
+      "text": "The driver's own trace places him inside the arrival radius for a continuous 585 seconds, well past the 300 second minimum for this zone class.",
+      "evidence_ids": ["EV-GPS-00208"],
+      "clause_ids": ["POL-NS-01"],
+      "relies_on": "derived.arrival.longest_qualifying_run.duration_sec",
+      "asserted_weight": 1.0
+    }
+  ]
+}
 ```
+
+The object carries `claims` and nothing else beside it. The claim array goes **inside** that key,
+never at the top level on its own.
 
 - `text` — the argument, in plain English. One point per claim.
 - `evidence_ids` — at least one, and each must exist in this case's evidence.

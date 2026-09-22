@@ -33,6 +33,34 @@ a ruling that breaks its own output contract is recorded and never repaired. See
 the module body for both. The run **stops at the first failed agent**: the judge
 cannot be called without both claim arrays, so there is nothing to gain by
 calling the second advocate once the first has failed.
+
+The advocate output contract
+----------------------------
+Every agent is called with ``response_format: {"type": "json_object"}``. That is
+what buys bare JSON with no markdown fence and no surrounding prose, measured
+across all three models, and it constrains the response to a top-level **object**.
+The judge already returns an object, so for the judge the constraint and the
+prompt agree.
+
+The advocates did not. Their prompt asked for "a JSON array of claim objects"
+while the request forced an object, so the two requirements could not both be
+met and the API-level constraint won: every advocate answer was rejected as
+unusable, twice, and the case failed. A paid benchmark run was lost to it before
+anyone read what the models had actually returned — ``hy4-preview`` on case 207
+answered with ``{"claims": [ ... ]}``, eleven claims with no citation missing,
+and was discarded for the wrapper.
+
+The prompt was changed to ask for the object the request can produce, and the
+validator now accepts **both** an object carrying a ``claims`` array and a bare
+array, normalising either to a list of claims. A model that returns the array
+directly has answered the question, and rejecting the wrapper would be measuring
+the wrapper. Which shape arrived is recorded per call, so the choice each model
+makes is a measurement rather than something a reader has to infer.
+
+``AGENT_RESPONSE_FORMAT`` and ``AGENT_PROMPT_FILES`` exist so that consistency is
+checkable: ``tests/test_pipeline.py`` parses each prompt's own worked example and
+fails if the shape it asks for is not one the format it is sent can produce. That
+is the check whose absence let this reach a paid run.
 """
 
 from __future__ import annotations
@@ -61,8 +89,40 @@ STANCE_FILES = {
 JUDGE_PROMPT_FILE = "judge.system.md"
 STANCE_PLACEHOLDER = "{{STANCE}}"
 
-# The judge asks for a bare JSON object; the advocates for a bare JSON array.
+# Every agent is sent `json_object`. It is what guarantees bare JSON with no
+# markdown fence and no surrounding prose, measured across all three models on
+# 2026-09-21, and it constrains the top level to a JSON OBJECT. The judge already
+# returns an object, so for the judge this and its prompt agree. The advocates
+# had to be brought into line rather than the format given up.
 JSON_OBJECT_FORMAT: Dict[str, str] = {"type": "json_object"}
+
+# The top-level shapes a response body can arrive in, named so the record can
+# count them instead of leaving each model's choice invisible.
+SHAPE_OBJECT = "object"
+SHAPE_ARRAY = "array"
+
+# The key the advocate's claim array travels under.
+ADVOCATE_CLAIMS_KEY = "claims"
+
+# What each response_format permits at the top level. A prompt that asks for a
+# shape absent from this table is asking for something the request cannot
+# produce, which is a contract no model can satisfy.
+RESPONSE_FORMAT_SHAPES: Dict[str, Tuple[str, ...]] = {
+    "json_object": (SHAPE_OBJECT,),
+}
+
+# Which format each agent is sent, and which file states what it must return.
+# The two together are the contract; `tests/test_pipeline.py` checks they agree.
+AGENT_RESPONSE_FORMAT: Dict[str, Dict[str, str]] = {
+    transcript_module.ROLE_RIDER_ADVOCATE: JSON_OBJECT_FORMAT,
+    transcript_module.ROLE_DRIVER_ADVOCATE: JSON_OBJECT_FORMAT,
+    transcript_module.ROLE_JUDGE: JSON_OBJECT_FORMAT,
+}
+AGENT_PROMPT_FILES: Dict[str, str] = {
+    transcript_module.ROLE_RIDER_ADVOCATE: ADVOCATE_TEMPLATE,
+    transcript_module.ROLE_DRIVER_ADVOCATE: ADVOCATE_TEMPLATE,
+    transcript_module.ROLE_JUDGE: JUDGE_PROMPT_FILE,
+}
 
 # The invariants judge.system.md states, spelled out so they can be checked.
 RESULT_FIELDS = ("ruling", "discarded_claims")
@@ -362,22 +422,87 @@ class PipelineResult:
 # --------------------------------------------------------------------------
 # One agent call, with a single retry when the answer is unusable
 # --------------------------------------------------------------------------
-def _is_claim_array(parsed: Any) -> Tuple[bool, str]:
-    if not isinstance(parsed, list):
-        return False, "the advocate did not return a JSON array of claims"
-    for position, claim in enumerate(parsed):
+# --------------------------------------------------------------------------
+# The two response contracts, and the shape each answer arrived in
+# --------------------------------------------------------------------------
+def json_shape(parsed: Any) -> str:
+    """The top-level JSON shape a body arrived in, named so the record can count it.
+
+    A body that never parsed is ``None``, and its shape is reported as the type
+    name rather than being folded into one of the two JSON shapes. That keeps a
+    malformed answer countable as its own outcome instead of being counted as a
+    wrong wrapper.
+    """
+    if isinstance(parsed, dict):
+        return SHAPE_OBJECT
+    if isinstance(parsed, list):
+        return SHAPE_ARRAY
+    return type(parsed).__name__
+
+
+def normalise_claims(parsed: Any) -> Tuple[Optional[List[Any]], str, str]:
+    """The claims in an advocate's answer, the shape they arrived in, and why not.
+
+    Two shapes are accepted, and both normalise to a list of claim objects:
+
+    * an object carrying a ``claims`` array — what the prompt asks for, and the
+      only thing ``json_object`` can actually produce;
+    * a bare array — accepted because a model that returns one has answered the
+      question, and rejecting it would be measuring the wrapper instead of the
+      work. The request constrains the top level, but that constraint is the
+      provider's to enforce, and a project should not fail a correct answer on
+      the strength of a guarantee it does not itself control.
+
+    An object is accepted as long as its ``claims`` value is an array of objects.
+    Extra keys beside ``claims`` are deliberately not policed here: the raw body
+    is on the transcript in full, so anything this function declines to look at
+    is still recoverable, and "exactly one key" is the prompt's contract to
+    state. Policing it in two places is how the two places come to disagree.
+
+    Returns ``(claims, shape, reason)``. ``claims`` is ``None`` when the answer
+    is unusable, and then ``reason`` says why; otherwise ``reason`` is empty.
+    """
+    shape = json_shape(parsed)
+
+    if isinstance(parsed, list):
+        claims = parsed
+    elif isinstance(parsed, dict):
+        if ADVOCATE_CLAIMS_KEY not in parsed:
+            return None, shape, (
+                "the advocate returned a JSON object with no {0!r} key; the claim "
+                "array must travel under that key".format(ADVOCATE_CLAIMS_KEY)
+            )
+        claims = parsed[ADVOCATE_CLAIMS_KEY]
+        if not isinstance(claims, list):
+            return None, shape, (
+                "the advocate's {0!r} value is not a JSON array".format(ADVOCATE_CLAIMS_KEY)
+            )
+    else:
+        return None, shape, (
+            "the advocate returned {0}, not a JSON object carrying a {1!r} array".format(
+                type(parsed).__name__, ADVOCATE_CLAIMS_KEY
+            )
+        )
+
+    for position, claim in enumerate(claims):
         if not isinstance(claim, dict):
-            return False, "claim {0} is not a JSON object".format(position)
-    return True, ""
+            return None, shape, "claim {0} is not a JSON object".format(position)
+    return claims, shape, ""
 
 
-def _is_judge_result(parsed: Any) -> Tuple[bool, str]:
+def normalise_judge_result(parsed: Any) -> Tuple[Optional[Any], str, str]:
+    """The judge's result object, its shape, and why not.
+
+    The judge's contract is unchanged and already matches ``json_object``: one
+    object carrying ``ruling`` and ``discarded_claims``.
+    """
+    shape = json_shape(parsed)
     if not isinstance(parsed, dict):
-        return False, "the judge did not return a JSON object"
+        return None, shape, "the judge did not return a JSON object"
     missing = [name for name in RESULT_FIELDS if name not in parsed]
     if missing:
-        return False, "the judge's object is missing {0}".format(", ".join(missing))
-    return True, ""
+        return None, shape, "the judge's object is missing {0}".format(", ".join(missing))
+    return parsed, shape, ""
 
 
 def _call_agent(
@@ -386,29 +511,35 @@ def _call_agent(
     role: str,
     system_prompt: str,
     user_message: str,
-    validate: Callable[[Any], Tuple[bool, str]],
+    normalise: Callable[[Any], Tuple[Optional[Any], str, str]],
     transcript: Any,
 ) -> Tuple[Optional[Any], Optional[str]]:
     """One agent call, retried once when the answer is unusable.
 
     Each attempt is its own transcript entry, so when both attempts are unusable
-    **both raw bodies stay on the record**. Returns ``(parsed, None)`` on success
-    and ``(None, reason)`` when the second attempt is unusable too.
+    **both raw bodies stay on the record**. The shape each attempt arrived in is
+    recorded alongside it, which is what makes a model's choice between the two
+    accepted advocate shapes a measurement rather than something to be inferred
+    from the raw text. It is not returned: the transcript entry is where a shape
+    belongs, and returning it as well would give two copies to keep in step.
+
+    Returns ``(value, None)`` on success and ``(None, reason)`` when the second
+    attempt is unusable too.
     """
     reason = ""
-    for attempt in (1, 2):
+    for _attempt in (1, 2):
         result = client.complete(system_prompt, user_message, response_format=JSON_OBJECT_FORMAT)
-        parsed = result.json_body
-        usable, reason = validate(parsed)
+        value, shape, reason = normalise(result.json_body)
         transcript.record(
             role=role,
             system_prompt=system_prompt,
             user_message=user_message,
             result=result,
-            note=None if usable else UNUSABLE_RESPONSE_NOTE,
+            note=None if value is not None else UNUSABLE_RESPONSE_NOTE,
+            shape=shape,
         )
-        if usable:
-            return parsed, None
+        if value is not None:
+            return value, None
     return None, reason
 
 
@@ -456,7 +587,7 @@ def run_case(
         role=transcript_module.ROLE_RIDER_ADVOCATE,
         system_prompt=rider_prompt,
         user_message=advocate_user_message,
-        validate=_is_claim_array,
+        normalise=normalise_claims,
         transcript=transcript,
     )
 
@@ -472,7 +603,7 @@ def run_case(
             role=transcript_module.ROLE_DRIVER_ADVOCATE,
             system_prompt=driver_prompt,
             user_message=advocate_user_message,
-            validate=_is_claim_array,
+            normalise=normalise_claims,
             transcript=transcript,
         )
 
@@ -509,7 +640,7 @@ def run_case(
             role=transcript_module.ROLE_JUDGE,
             system_prompt=judge_prompt,
             user_message=judge_user,
-            validate=_is_judge_result,
+            normalise=normalise_judge_result,
             transcript=transcript,
         )
         if judge_failure is not None:
