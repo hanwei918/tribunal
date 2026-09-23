@@ -56,9 +56,10 @@ Each item is one check, with the observed result.
   #view=stance&case=208&projector=1
   ```
 
-  The brief's `#case-N/step-K` shape was superseded by the inline `@`- and
-  `query`-style form during implementation; the format used here is the one
-  the viewer produces.
+  The form originally specified was `#case-N/step-K`. The viewer does not
+  produce that; it produces the query-style form above, and that is the
+  one a presenter must use. Recorded here because the difference is
+  invisible until a slide is prepared with the wrong one.
 
 * **Reloading on the same path with only the hash changed shows the
   previously loaded page rather than a rebuilt one, so a check after a
