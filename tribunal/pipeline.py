@@ -221,10 +221,6 @@ class CaseDeadline:
     def elapsed_seconds(self) -> float:
         return self.clock() - self.started_at
 
-    @property
-    def remaining_seconds(self) -> float:
-        return self.limit_seconds - self.elapsed_seconds
-
     def check(self) -> None:
         """Raise if the budget is gone. Called before every agent call."""
         elapsed = self.elapsed_seconds
