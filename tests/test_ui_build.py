@@ -41,6 +41,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from eval import grade  # noqa: E402
 from tribunal import brief  # noqa: E402
+from tribunal import pipeline  # noqa: E402
 from ui import build  # noqa: E402
 
 # The data block, by the id the page's own script reads it with. The match is
@@ -693,17 +694,30 @@ class PresentationTests(unittest.TestCase):
             with self.subTest(call=call):
                 self.assertNotIn(call, self.script)
 
-    def test_the_deep_link_is_read_back_so_the_back_button_walks_the_steps(self):
+    def test_the_script_listens_for_hashchange(self):
+        """Only that the listener is named.
+
+        Whether the browser's back button actually walks the steps is a browser
+        behaviour, and this suite runs no browser. It was checked by hand and is
+        recorded in ``docs/notes/2026-09-23-viewer-manual-check.md``.
+        """
         self.assertIn("hashchange", self.script)
 
-    def test_the_deep_link_is_shown_where_a_presenter_can_copy_it(self):
+    def test_the_page_carries_a_link_input_element(self):
         self.assertIn("link-input", self.ids)
 
-    def test_the_keyboard_is_bound(self):
+    def test_a_keydown_handler_is_attached(self):
+        """Only that a handler is wired, not that a key press does anything."""
         self.assertIn('addEventListener("keydown"', self.script)
 
-    def test_there_is_a_key_for_every_step_and_every_view(self):
-        """Nothing on stage should need a mouse."""
+    def test_the_script_names_a_key_for_every_step_and_view(self):
+        """An honest name for a weak check.
+
+        This asserts the key names occur in the script. It cannot tell you that
+        pressing them moves anything -- a string literal ``"o"`` anywhere would
+        satisfy it. What the keys do was checked by hand and is recorded in
+        ``docs/notes/2026-09-23-viewer-manual-check.md``.
+        """
         for key in ("ArrowRight", "ArrowLeft", '"["', '"]"', '"o"', '"c"', '"s"', '"f"', '"?"'):
             with self.subTest(key=key):
                 self.assertIn(key, self.script)
@@ -750,6 +764,173 @@ class PresentationTests(unittest.TestCase):
                 one_sided += 1
         self.assertGreater(shared, 0, "no case has the two sides on one artifact")
         self.assertGreater(one_sided, 0, "no case has an artifact only one side cited")
+
+
+class StanceProofTests(unittest.TestCase):
+    """The proof itself, not its surroundings.
+
+    The side-by-side view shows what each advocate argued. The proof is why
+    their disagreement is evidence of anything: they were handed the same bytes
+    and differed only in stance. These read the data the built page carries and
+    assert the three facts for every case, against the run's own transcript and
+    result files -- so they compare two computations rather than one
+    computation against a number typed in here.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.document = build.build_document()
+        cls.page = build.render_html(cls.document)
+        cls.embedded = embedded_document(cls.page)
+
+    @staticmethod
+    def _stored_ranges(case_no: int):
+        result = json.loads(
+            (build.RUN_DIR / ("case-%05d.json" % case_no)).read_text(encoding="utf-8")
+        )
+        return result.get("stance_differing_ranges")
+
+    def test_every_case_carries_a_proof(self):
+        self.assertEqual(29, len(self.embedded["cases"]))
+        for case in self.embedded["cases"]:
+            with self.subTest(case=case["case_no"]):
+                self.assertIn("stance_proof", case)
+
+    def test_the_two_advocates_were_handed_the_same_evidence(self):
+        """Fact 1: one value, three times."""
+        for case in self.embedded["cases"]:
+            proof = case["stance_proof"]
+            with self.subTest(case=case["case_no"]):
+                self.assertEqual(
+                    proof["rider"]["user_sha256"], proof["driver"]["user_sha256"]
+                )
+                self.assertEqual(proof["brief_sha256"], proof["rider"]["user_sha256"])
+                self.assertEqual(proof["brief_sha256"], proof["driver"]["user_sha256"])
+
+    def test_the_two_advocates_were_given_different_instructions(self):
+        """Fact 2: their system prompts are not identical."""
+        for case in self.embedded["cases"]:
+            proof = case["stance_proof"]
+            with self.subTest(case=case["case_no"]):
+                self.assertNotEqual(
+                    proof["rider"]["system_sha256"], proof["driver"]["system_sha256"]
+                )
+
+    def test_the_embedded_ranges_are_the_ones_the_run_recorded(self):
+        """Fact 3: recomputed at build time and equal to what the run stored."""
+        for case in self.embedded["cases"]:
+            with self.subTest(case=case["case_no"]):
+                stored = self._stored_ranges(case["case_no"])
+                self.assertEqual(stored, case["stance_proof"]["recorded_differing_ranges"])
+                self.assertEqual(stored, case["stance_proof"]["differing_ranges"])
+
+    def test_the_difference_falls_inside_the_stance_block(self):
+        region = self.embedded["stance_prompts"]["stance_region"]
+        for case in self.embedded["cases"]:
+            for lo, hi in case["stance_proof"]["differing_ranges"]:
+                with self.subTest(case=case["case_no"], lines=(lo, hi)):
+                    self.assertGreaterEqual(lo, region[0])
+                    self.assertLessEqual(hi, region[1])
+
+    def test_the_prompts_are_the_ones_the_pipeline_renders(self):
+        """Rendered at build time, not quoted into the page.
+
+        If the prompt files change and nothing else does, this fails -- which is
+        the point. A proof that quotes a prompt is a proof about the quotation.
+        """
+        rider, driver, region = pipeline.render_advocate_prompts()
+        shared = self.embedded["stance_prompts"]
+        self.assertEqual(rider.splitlines(), shared["rider_lines"])
+        self.assertEqual(driver.splitlines(), shared["driver_lines"])
+        self.assertEqual([region[0], region[1]], shared["stance_region"])
+
+    def test_the_shared_prompts_differ_and_neither_is_empty(self):
+        shared = self.embedded["stance_prompts"]
+        self.assertGreater(len(shared["rider_lines"]), 0)
+        self.assertGreater(len(shared["driver_lines"]), 0)
+        self.assertNotEqual(shared["rider_lines"], shared["driver_lines"])
+
+    def test_the_digests_are_carried_in_full(self):
+        """A digest you can only partly see is not evidence of equality."""
+        for case in self.embedded["cases"]:
+            proof = case["stance_proof"]
+            for value in (
+                proof["brief_sha256"],
+                proof["rider"]["user_sha256"],
+                proof["driver"]["user_sha256"],
+                proof["rider"]["system_sha256"],
+                proof["driver"]["system_sha256"],
+            ):
+                with self.subTest(case=case["case_no"]):
+                    self.assertIsInstance(value, str)
+                    self.assertEqual(
+                        64, len(value), "a truncated digest reached the page"
+                    )
+
+
+class StanceProofRefusalTests(unittest.TestCase):
+    """The build stops rather than publish a proof it cannot back."""
+
+    # The case the fixture alters, and the one beside it that must still be
+    # admitted -- without which a builder that refused everything would pass.
+    ALTERED = 208
+    ADMITTED = 209
+
+    def _fixture_run_directory(self, root: Path) -> Path:
+        run_dir = root / "run"
+        run_dir.mkdir()
+        for name in ("run.json", "invocations.json"):
+            shutil.copy2(build.RUN_DIR / name, run_dir / name)
+        for case_no in (self.ALTERED, self.ADMITTED):
+            for suffix in (".json", ".transcript.json"):
+                shutil.copy2(
+                    build.RUN_DIR / ("case-%05d%s" % (case_no, suffix)),
+                    run_dir / ("case-%05d%s" % (case_no, suffix)),
+                )
+        return run_dir
+
+    def test_a_case_whose_stored_ranges_were_altered_stops_the_build(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self._fixture_run_directory(Path(tmp))
+            result_path = run_dir / ("case-%05d.json" % self.ALTERED)
+            result = json.loads(result_path.read_text(encoding="utf-8"))
+            result["stance_differing_ranges"] = [[1, 2]]
+            result_path.write_text(json.dumps(result), encoding="utf-8")
+
+            with self.assertRaises(build.BuildError) as caught:
+                build.build_document(run_dir=run_dir)
+
+        message = str(caught.exception)
+        self.assertIn(str(self.ALTERED), message, "the error does not name the case")
+        self.assertIn("[[1, 2]]", message, "the error does not say what was recorded")
+
+    def test_a_case_whose_advocate_was_handed_another_brief_stops_the_build(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self._fixture_run_directory(Path(tmp))
+            transcript_path = run_dir / ("case-%05d.transcript.json" % self.ALTERED)
+            transcript = json.loads(transcript_path.read_text(encoding="utf-8"))
+            for entry in transcript["entries"]:
+                if entry.get("role") == "RIDER_ADVOCATE":
+                    entry["user_sha256"] = "0" * 64
+            transcript_path.write_text(json.dumps(transcript), encoding="utf-8")
+
+            with self.assertRaises(build.BuildError) as caught:
+                build.build_document(run_dir=run_dir)
+
+        message = str(caught.exception)
+        self.assertIn(str(self.ALTERED), message, "the error does not name the case")
+        self.assertIn("RIDER_ADVOCATE", message, "the error does not name the side")
+
+    def test_the_unaltered_case_still_builds_beside_the_altered_one(self):
+        """A build that refuses everything would also raise; it must not."""
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self._fixture_run_directory(Path(tmp))
+            document = build.build_document(run_dir=run_dir)
+        self.assertEqual(
+            [self.ALTERED, self.ADMITTED],
+            sorted(case["case_no"] for case in document["cases"]),
+        )
+        self.assertEqual([], document["refused_cases"])
 
 
 if __name__ == "__main__":

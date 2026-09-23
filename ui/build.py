@@ -59,6 +59,29 @@ one figure the grader does not compute -- the total of discarded claims across
 all judges -- is summed here from the run's own judge outputs, and the test
 recomputes that too.
 
+The stance proof, which is the claim the viewer exists to show
+--------------------------------------------------------------
+The project's central claim is that both advocates read the same evidence and
+differ only in stance. A side-by-side view of their claims is not that proof: it
+shows what each side argued, not that they were handed the same bytes. The proof
+is three facts the run already records, and the viewer shows all three for every
+case:
+
+* the two advocates' ``user_sha256`` are equal to each other **and** equal to
+  the case's ``brief_sha256`` -- they were handed the same bytes;
+* their ``system_sha256`` differ -- their instructions are not identical;
+* the lines on which the two rendered system prompts differ all fall inside the
+  stance block, which is what ``stance_differing_ranges`` records.
+
+Nothing here is typed in. The prompts are rendered at build time with
+:func:`tribunal.pipeline.render_advocate_prompts`, the differing line ranges are
+recomputed from that render, and both are compared against what the run stored.
+If the recomputed ranges disagree with the stored ones for any case, or if an
+advocate's ``user_sha256`` is not the case's ``brief_sha256``, **the build stops
+and names the case** -- a proof view that can display an unbacked claim is worse
+than no proof view at all. The digests are shown in full, never truncated,
+because a digest you cannot compare is not evidence of equality.
+
 Money is carried as its own decimal literal
 -------------------------------------------
 The pipeline keeps every amount in :class:`decimal.Decimal`. Embedded in the
@@ -93,6 +116,7 @@ from tribunal import brief as brief_module  # noqa: E402
 from tribunal import llm  # noqa: E402
 from tribunal import model as model_module  # noqa: E402
 from tribunal import money  # noqa: E402
+from tribunal import pipeline as pipeline_module  # noqa: E402
 from tribunal import transcript as transcript_module  # noqa: E402
 
 __all__ = [
@@ -217,6 +241,11 @@ def _agent_block(transcript: Optional[Mapping[str, Any]], role: str) -> Dict[str
 
     calls: List[Dict[str, Any]] = []
     parsed: Optional[Any] = None
+    # The digests of the two prompts the answer that was used came from. They
+    # are carried because they *are* the stance proof: two advocates handed the
+    # same user prompt differed only in the system prompt they were given.
+    system_digest: Optional[str] = None
+    user_digest: Optional[str] = None
     for entry in entries:
         outcome = entry.get("parse_outcome")
         calls.append(
@@ -244,9 +273,15 @@ def _agent_block(transcript: Optional[Mapping[str, Any]], role: str) -> Dict[str
             # The last one that parsed is the answer that was used; an earlier
             # malformed attempt stays in ``calls`` as evidence of the retry.
             parsed = entry.get("parsed")
+            system_digest = entry.get("system_sha256")
+            user_digest = entry.get("user_sha256")
 
     return {
         "role": role,
+        # None when this role produced nothing that parsed, which the page has
+        # to be able to say rather than silently printing "null" as evidence.
+        "system_sha256": system_digest,
+        "user_sha256": user_digest,
         "calls": calls,
         # Normalised here rather than at each use: the transcript is read with
         # ``parse_float=Decimal`` for the same reason the loader is, so an
@@ -276,6 +311,120 @@ def _claims_of(agent: Mapping[str, Any]) -> List[Dict[str, Any]]:
     if not isinstance(claims, list):
         return []
     return [claim for claim in claims if isinstance(claim, Mapping)]
+
+
+# --------------------------------------------------------------------------
+# The stance proof
+# --------------------------------------------------------------------------
+def _rendered_advocate_prompts() -> Dict[str, Any]:
+    """Both advocate system prompts, rendered now, and where they differ.
+
+    Rendered from the prompt files with the pipeline's own renderer rather than
+    carried as text: a proof that quotes a prompt is a proof about whatever was
+    quoted, and the prompt files are the thing that can change under it.
+
+    ``assert_stance_only`` performs the containment check as well as returning
+    the ranges, so reaching the end of this function already means every
+    differing line falls inside the stance block.
+    """
+    rider, driver, region = pipeline_module.render_advocate_prompts()
+    ranges = pipeline_module.assert_stance_only(rider, driver, region)
+    return {
+        "rider_lines": rider.splitlines(),
+        "driver_lines": driver.splitlines(),
+        # Half-open, 0-indexed, as ``differing_line_ranges`` reports them.
+        "stance_region": [int(region[0]), int(region[1])],
+        "differing_ranges": [[int(lo), int(hi)] for lo, hi in ranges],
+    }
+
+
+def _stance_proof(
+    case_no: int,
+    brief_digest: str,
+    rider: Mapping[str, Any],
+    driver: Mapping[str, Any],
+    stored_ranges: Any,
+    computed_ranges: List[List[int]],
+) -> Dict[str, Any]:
+    """The three facts of the stance proof for one case, checked not assumed.
+
+    Every fact is recomputed here and compared against what the run recorded,
+    and a disagreement raises :class:`BuildError` naming the case. That is the
+    whole reason the proof belongs to the build and not to the view: a proof
+    view able to display a claim this repository does not back is worse than no
+    proof view, because it looks like evidence and is not.
+    """
+    rider_user = rider.get("user_sha256")
+    driver_user = driver.get("user_sha256")
+    rider_system = rider.get("system_sha256")
+    driver_system = driver.get("system_sha256")
+
+    # 1. Same evidence: both advocates' user prompt is the verified brief.
+    for role, digest in (
+        (transcript_module.ROLE_RIDER_ADVOCATE, rider_user),
+        (transcript_module.ROLE_DRIVER_ADVOCATE, driver_user),
+    ):
+        if digest is None:
+            raise BuildError(
+                "case {0}: the {1}'s user prompt digest is not in the "
+                "transcript, so same-evidence cannot be shown for this "
+                "case".format(case_no, role)
+            )
+        if digest != brief_digest:
+            raise BuildError(
+                "case {0}: the {1} was handed user prompt {2}, which is not the "
+                "brief this build verified ({3}). What they were handed is not "
+                "what the page would claim they were handed.".format(
+                    case_no, role, digest, brief_digest
+                )
+            )
+    if rider_user != driver_user:
+        raise BuildError(
+            "case {0}: the two advocates were handed different user prompts "
+            "(rider {1}, driver {2}), so the same-evidence claim is false for "
+            "this case".format(case_no, rider_user, driver_user)
+        )
+
+    # 2. Different instructions: their system prompts are not identical.
+    for role, digest in (
+        (transcript_module.ROLE_RIDER_ADVOCATE, rider_system),
+        (transcript_module.ROLE_DRIVER_ADVOCATE, driver_system),
+    ):
+        if digest is None:
+            raise BuildError(
+                "case {0}: the {1}'s system prompt digest is not in the "
+                "transcript, so the stance-only claim cannot be shown for this "
+                "case".format(case_no, role)
+            )
+    if rider_system == driver_system:
+        raise BuildError(
+            "case {0}: the two advocates were handed the same system prompt "
+            "({1}), so nothing but the evidence distinguishes them and the "
+            "stance-only claim is untestable for this case".format(
+                case_no, rider_system
+            )
+        )
+
+    # 3. Stance only: the difference is where the run said it was.
+    stored = (
+        []
+        if stored_ranges is None
+        else [[int(lo), int(hi)] for lo, hi in stored_ranges]
+    )
+    if stored != computed_ranges:
+        raise BuildError(
+            "case {0}: the run recorded differing ranges {1} but the prompts "
+            "this build renders differ on {2}. The proof would be a claim this "
+            "repository no longer backs.".format(case_no, stored, computed_ranges)
+        )
+
+    return {
+        "brief_sha256": brief_digest,
+        "rider": {"system_sha256": rider_system, "user_sha256": rider_user},
+        "driver": {"system_sha256": driver_system, "user_sha256": driver_user},
+        "differing_ranges": computed_ranges,
+        "recorded_differing_ranges": stored,
+    }
 
 
 # --------------------------------------------------------------------------
@@ -670,33 +819,51 @@ def build_document(
         for case_no in numbers
     }
 
+    # The stance proof's shared half is rendered once, before any case: the
+    # advocate template is the same for every case, so the two renders and the
+    # ranges where they differ belong to the document, while each case carries
+    # the digests proving *its* agents were the ones handed them. Verifying
+    # against every case below is what stops the shared block from being a
+    # claim about a template nobody checked against this run.
+    stance_prompts = _rendered_advocate_prompts()
+    computed_ranges = stance_prompts["differing_ranges"]
+
     cases: List[Dict[str, Any]] = []
     for case_no in sorted(built_by_case):
         built = built_by_case[case_no]
         result = raw_by_case[case_no]
         transcript = _read_json(run_dir / ("case-%05d.transcript.json" % case_no))
+        rider_agent = _agent_block(transcript, transcript_module.ROLE_RIDER_ADVOCATE)
+        driver_agent = _agent_block(transcript, transcript_module.ROLE_DRIVER_ADVOCATE)
         judge = _agent_block(transcript, transcript_module.ROLE_JUDGE)
         judge_output = result.get("ruling") or {}
         score = scores[case_no]
         expected = _expected_side(key_records[case_no])
+        brief_digest = result.get("brief_sha256")
 
         cases.append(
             {
                 "case_no": case_no,
                 "category": category_by_case[case_no],
                 "difficulty": expected["difficulty"],
-                "brief_sha256": result.get("brief_sha256"),
+                "brief_sha256": brief_digest,
                 "brief_rebuilt_sha256": _brief_digest(built),
                 "dispute": _normalise(built["case"]["dispute"]),
                 "evidence": _normalise(built["case"]["evidence"]),
                 "advocates": {
-                    transcript_module.ROLE_RIDER_ADVOCATE: _advocate_payload(
-                        _agent_block(transcript, transcript_module.ROLE_RIDER_ADVOCATE)
-                    ),
+                    transcript_module.ROLE_RIDER_ADVOCATE: _advocate_payload(rider_agent),
                     transcript_module.ROLE_DRIVER_ADVOCATE: _advocate_payload(
-                        _agent_block(transcript, transcript_module.ROLE_DRIVER_ADVOCATE)
+                        driver_agent
                     ),
                 },
+                "stance_proof": _stance_proof(
+                    case_no,
+                    brief_digest,
+                    rider_agent,
+                    driver_agent,
+                    result.get("stance_differing_ranges"),
+                    computed_ranges,
+                ),
                 "judge": {
                     "agent": judge,
                     "discarded_claims": _normalise(
@@ -733,6 +900,7 @@ def build_document(
         "headline": _headline(report, case_facts),
         "policies": policies,
         "policy_sha256": policy_digests,
+        "stance_prompts": stance_prompts,
         "cases": cases,
         "refused_cases": refused,
     }
@@ -966,6 +1134,51 @@ kbd { font-family: var(--mono); font-size: 11.5px; background: var(--panel-2);
   border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px;
   padding: 1px 6px; color: var(--text); white-space: nowrap; }
 
+/* ---- the stance proof ------------------------------------------------- */
+.proof { border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px;
+  background: var(--panel); margin-top: 12px; }
+.proof > h3 { margin-top: 0; }
+.fact { border-left: 3px solid var(--ok); padding: 2px 0 2px 12px; margin: 12px 0; }
+.fact .what { font-weight: 600; }
+.fact .why { color: var(--muted); font-size: 12.5px; margin-top: 3px; max-width: 84ch; }
+dl.digests { display: grid; grid-template-columns: max-content 1fr; gap: 5px 12px;
+  margin: 9px 0 0 0; }
+dl.digests > dt { color: var(--muted); font-size: 12px; white-space: nowrap; }
+dl.digests > dd { margin: 0; }
+/* The digest is shown whole. A digest you can only see part of is not
+   evidence of equality, it is an assertion that there is equality. */
+.digest { font-family: var(--mono); font-size: 11.5px; word-break: break-all;
+  padding: 2px 7px; border-radius: 4px; border: 1px solid var(--line);
+  background: var(--panel-2); color: var(--text); }
+.digest.same { border-color: rgba(74,194,107,0.55); background: rgba(74,194,107,0.10); }
+.digest.differ { border-color: rgba(240,163,94,0.55); background: rgba(240,163,94,0.09); }
+.tag { display: inline-block; margin-left: 8px; font-size: 11px; padding: 0 6px;
+  border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.tag.ok { color: var(--ok); border-color: rgba(74,194,107,0.5); }
+
+.prompt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+@media (max-width: 940px) { .prompt-grid { grid-template-columns: 1fr; } }
+.prompt-col { border: 1px solid var(--line); border-radius: 8px; overflow: hidden;
+  background: var(--panel-2); }
+.prompt-col > h4 { margin: 0; padding: 7px 10px; border-bottom: 1px solid var(--line);
+  background: var(--panel); text-transform: none; letter-spacing: 0; font-size: 13px; }
+.plines { margin: 0; padding: 0; list-style: none; font-family: var(--mono);
+  font-size: 11px; max-height: 480px; overflow: auto; }
+.plines li { display: flex; gap: 8px; padding: 1px 8px 1px 5px; white-space: pre-wrap;
+  word-break: break-word; border-left: 3px solid transparent; }
+.plines li .n { color: #5d6b78; min-width: 28px; text-align: right; flex: none; }
+.plines li.stance { background: rgba(121,192,255,0.05); border-left-color: rgba(121,192,255,0.35); }
+.plines li.stance .n { color: var(--muted); }
+.plines li.diff { background: rgba(216,167,42,0.15); border-left-color: var(--warn); }
+.plines li.diff .t { color: #ffe6b0; }
+.marker { display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted);
+  font-size: 12px; margin-top: 10px; }
+.marker span { display: inline-flex; align-items: center; gap: 6px; }
+.swatch { display: inline-block; width: 11px; height: 11px; border-radius: 2px;
+  border: 1px solid var(--line); }
+.swatch.stance { background: rgba(121,192,255,0.05); border-color: rgba(121,192,255,0.55); }
+.swatch.diff { background: rgba(216,167,42,0.15); border-color: var(--warn); }
+
 /* ---- projector -------------------------------------------------------- */
 /* A room is not a laptop: everything scales, and the contrast goes up so a
    pale projector does not swallow the muted text. */
@@ -999,6 +1212,17 @@ body.projector .artifact .id { font-size: 16px; }
 body.projector footer.prov { font-size: 14px; padding: 11px 24px; gap: 6px 22px; }
 body.projector .stance-grid { gap: 18px; }
 body.projector .modal .box { max-width: 980px; }
+/* A digest in 11px mono is unreadable from the back of a room, and the
+   stance proof is precisely the thing a room is meant to be able to check. */
+body.projector .digest { font-size: 14px; padding: 3px 10px; }
+body.projector dl.digests > dt { font-size: 14px; }
+body.projector .tag { font-size: 13px; }
+body.projector .fact .why { font-size: 15px; max-width: 92ch; }
+body.projector .plines { font-size: 14px; max-height: none; }
+body.projector .plines li { padding: 2px 10px 2px 7px; }
+body.projector .plines li .n { min-width: 34px; }
+body.projector .prompt-col > h4 { font-size: 16px; padding: 9px 12px; }
+body.projector .marker { font-size: 14px; }
 """
 
 _JS = r"""
@@ -1883,6 +2107,11 @@ _JS = r"""
       "Both advocates were handed the same brief and the same " + caseDoc.evidence.length +
       " artifacts. What follows is what each of them chose to stand on." }));
 
+    // The proof comes first, above the side-by-side claims: the claims are what
+    // each side argued, and the proof is why their disagreement is evidence of
+    // anything at all.
+    root.appendChild(stanceProof(caseDoc));
+
     var grid = h("div", { class: "stance-grid" });
     grid.appendChild(stanceColumn(caseDoc, "RIDER_ADVOCATE"));
     grid.appendChild(stanceColumn(caseDoc, "DRIVER_ADVOCATE"));
@@ -2020,6 +2249,136 @@ _JS = r"""
       });
     });
     return box;
+  }
+
+  // ---- the stance proof -------------------------------------------------
+  // The claim this viewer exists to show is not that the two advocates argued
+  // differently -- any two agents will. It is that they were handed the same
+  // evidence and differed only in stance. Three facts, all read from the
+  // transcript and the result, all recomputed by the build, which refuses to
+  // publish a page on which any of them fails.
+  function fact(what, why, rows) {
+    var node = h("div", { class: "fact" });
+    node.appendChild(h("div", { class: "what", text: what }));
+    node.appendChild(h("p", { class: "why", text: why }));
+    var dl = h("dl", { class: "digests" });
+    rows.forEach(function (row) {
+      dl.appendChild(h("dt", { text: row[0] }));
+      dl.appendChild(h("dd", null, [
+        h("code", { class: "digest " + row[2], text: text(row[1]) }),
+        row[3] ? h("span", { class: "tag", text: row[3] }) : null
+      ]));
+    });
+    node.appendChild(dl);
+    return node;
+  }
+
+  function differingAsLines(ranges) {
+    return ranges.map(function (pair) {
+      return pair[1] - pair[0] === 1 ? String(pair[0]) : pair[0] + "-" + String(pair[1] - 1);
+    }).join(", ");
+  }
+
+  function stanceProof(caseDoc) {
+    var proof = caseDoc.stance_proof;
+    var region = DATA.stance_prompts.stance_region;
+    var box = h("section", { class: "panel proof" });
+    box.appendChild(h("h2", { text: "The stance proof" }));
+    box.appendChild(h("p", { class: "lead", text:
+      "Both advocates read the same evidence and differ only in stance. These are the three facts " +
+      "that back it. Every digest is shown whole, because a digest you can only partly see is an " +
+      "assertion that two things are equal rather than evidence that they are." }));
+
+    // 1. Same evidence. The same value is printed three times, which is the
+    //    point: equality is the thing being shown, so it is shown three times.
+    box.appendChild(fact(
+      "1. They were handed the same evidence.",
+      "The two advocates' user prompts are byte-identical to each other and to the brief this "
+        + "build rebuilt from the repository and verified against the digest the run recorded. "
+        + "One value, three times.",
+      [
+        ["rider advocate, user prompt", proof.rider.user_sha256, "same", "identical"],
+        ["driver advocate, user prompt", proof.driver.user_sha256, "same", "identical"],
+        ["the brief this build verified", proof.brief_sha256, "same", "identical"]
+      ]
+    ));
+
+    // 2. Different instructions.
+    box.appendChild(fact(
+      "2. Their instructions differ.",
+      "Their system prompts are not identical, so whatever they disagree about comes from the "
+        + "stance each was given rather than from the record they read.",
+      [
+        ["rider advocate, system prompt", proof.rider.system_sha256, "differ", "not equal"],
+        ["driver advocate, system prompt", proof.driver.system_sha256, "differ", "not equal"]
+      ]
+    ));
+
+    // 3. The difference is confined to the stance block.
+    var why3 = "The two rendered system prompts differ on lines " + differingAsLines(proof.differing_ranges)
+      + ", and the stance block occupies lines " + region[0] + " to " + (region[1] - 1)
+      + ". Every differing line falls inside it, which is what the run recorded in "
+      + "stance_differing_ranges and what this build recomputed before writing this page.";
+    box.appendChild(fact(
+      "3. The difference is confined to the stance block.",
+      why3,
+      [
+        ["differing line ranges", JSON.stringify(proof.differing_ranges), "differ", "recomputed"],
+        ["recorded by the run", JSON.stringify(proof.recorded_differing_ranges), "differ", "matches"],
+        ["stance block", "[" + region[0] + ", " + region[1] + ")", "same", "half-open"]
+      ]
+    ));
+
+    box.appendChild(promptPair());
+    return box;
+  }
+
+  function promptPair() {
+    var sp = DATA.stance_prompts;
+    var wrap = h("div");
+    wrap.appendChild(h("h3", { text: "The two system prompts, as rendered" }));
+    wrap.appendChild(h("p", { class: "lead", text:
+      "Rendered at build time from the prompt files, not quoted into this page, so what is shown " +
+      "is what the run was handed. The differing lines are highlighted and the stance block's " +
+      "extent is marked. The template is the same for every case, so this pair is shared." }));
+    var grid = h("div", { class: "prompt-grid" });
+    grid.appendChild(promptColumn("RIDER_ADVOCATE", sp.rider_lines));
+    grid.appendChild(promptColumn("DRIVER_ADVOCATE", sp.driver_lines));
+    wrap.appendChild(grid);
+    wrap.appendChild(h("div", { class: "marker" }, [
+      h("span", null, [h("i", { class: "swatch diff" }), "a line where the two renders differ"]),
+      h("span", null, [h("i", { class: "swatch stance" }), "inside the stance block"])
+    ]));
+    return wrap;
+  }
+
+  function promptColumn(role, lines) {
+    var sp = DATA.stance_prompts;
+    var region = sp.stance_region;
+    var ranges = sp.differing_ranges;
+    var col = h("div", { class: "prompt-col" });
+    col.appendChild(h("h4", null, [
+      h("span", {
+        class: "badge " + (role === "RIDER_ADVOCATE" ? "rider" : "driver"),
+        text: role
+      }),
+      " system prompt, " + lines.length + " lines"
+    ]));
+    var list = h("ol", { class: "plines" });
+    lines.forEach(function (line, index) {
+      var differs = ranges.some(function (pair) {
+        return index >= pair[0] && index < pair[1];
+      });
+      var inStance = index >= region[0] && index < region[1];
+      list.appendChild(h("li", {
+        class: (differs ? "diff " : "") + (inStance ? "stance" : "")
+      }, [
+        h("span", { class: "n", text: String(index) }),
+        h("span", { class: "t", text: line })
+      ]));
+    });
+    col.appendChild(list);
+    return col;
   }
 
   // ---- keyboard ----------------------------------------------------------
