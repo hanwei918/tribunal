@@ -635,6 +635,22 @@ def _trip_record(
             "Null: the source records no amendment to either end of the trip.",
         )
 
+    # The one deviation from the corpus's own shape that is worth stating in
+    # full, because a reader comparing the two would otherwise have to find it.
+    decisions.judged(
+        "evidence.EV-TRIP-00901.payload.optimal_distance_km, optimal_duration_min, "
+        "optimal_route_source, optimal_route_erp_sgd",
+        None,
+        "These four are null here, and are null in NO corpus trip record: all 29 carry "
+        "a quoted route. The deviation is deliberate and is NOT marked as an "
+        "admissibility defect. No limb of POL-NS-01 to POL-NS-09 reads a route field on "
+        "a no-show, because the trip was cancelled before it ran; the absence is a "
+        "property of the source platform's export rather than of the record; and no "
+        "issue code is minted for it, because the corpus's PARTIAL_RECORD was applied to "
+        "a ledger missing its itemisation, not to a field the source platform does not "
+        "export. Filling them with a plausible route would be inventing the quote.",
+    )
+
     notes = (
         "The source's own trip record, causally ordered. Arrival marker 08:43:00 is "
         "the nearest GPS fix timestamp to the second, so the POL-NS-08(a) 90 s clock "
