@@ -1,8 +1,9 @@
 # `runs/` — what the benchmark wrote
 
 This directory is the benchmark's own output. Three subdirectories are **committed deliberately**, as
-evidence for two findings recorded under `docs/notes/`. Everything else here — the suite logs — is
-untracked.
+evidence for two findings recorded under `docs/notes/`. A fourth, `external/`, is where a converted
+external case is written, and nothing is committed there yet. Everything else here — the suite logs —
+is untracked.
 
 ## Which directory holds what
 
@@ -29,6 +30,32 @@ prompt asked for a JSON array — two requirements no model can satisfy at once.
 was rejected and every case failed. Those two directories are the transcripts that prove it, and they
 are committed so the per-attempt table in that note can be checked against the recorded
 `response_text` rather than taken on trust.
+
+## `external/` — where a converted external case runs
+
+`external/<name>/` holds the output of
+
+    python -m eval.run_benchmark --external data/external/ryde/case-00901.json
+
+one directory per converted case, named after the case's own directory, so the above writes into
+`external/ryde/`. The files are the ones listed in the next section, with one difference: there is
+**no `report.md` and no score**. An external case has no entry in `eval/answers/ground_truth.json` and
+is not graded against one — giving it an entry would put a case into the frozen key that the key does
+not measure. What the run prints instead is the produced ruling beside the organisers' own stated
+expectation, read from `eval/external/ryde/expected.json` and labelled as a stated expectation rather
+than a verified answer.
+
+**It is not a model's run directory, and must never be merged into one.** A run directory is named
+after the model id and holds the corpus the submission reports; `deepseek-deepseek-flash/` is 29
+cases. An external case is not one of the 29, so writing it there would change what that directory
+means while leaving every file a reader looks at apparently intact. `assert_external_run_directory`
+refuses any destination outside `runs/external/` before a single call is made, so this is checked
+rather than merely intended.
+
+**Nothing is committed under `external/` yet.** The organisers' sample case has been converted —
+`data/external/ryde/case-00901.json`, with every decision the conversion made recorded in
+`data/external/ryde/mapping.json` — but it has not been arbitrated, so there is no run to commit. When
+one is made, the credential rule below applies to it unchanged.
 
 ## How to read one run directory
 
