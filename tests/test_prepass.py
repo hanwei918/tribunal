@@ -67,6 +67,39 @@ class WeightForTests(unittest.TestCase):
         )
         self.assertEqual(matched, 45, "matched {0} of 45".format(matched))
 
+    def test_weight_for_reproduces_every_declared_corpus_weight(self):
+        """All 204 artifacts, in one place, with the count.
+
+        The two tests around this one cover the 45 non-COMPLETE artifacts and
+        the 159 COMPLETE ones separately. This states the whole-corpus claim
+        once, because 204 is the figure the Decimal change had to leave exactly
+        where it was: if it moved, the corpus's own arithmetic would have been
+        rewritten rather than reproduced.
+        """
+        checked, mismatches = 0, []
+        for case_no, artifact in all_artifacts():
+            admissibility = artifact["admissibility"]
+            checked += 1
+            declared = admissibility["weight_multiplier"]
+            derived = prepass.weight_for(admissibility["issues"])
+            if Decimal(str(derived)) != declared:
+                mismatches.append(
+                    (
+                        case_no,
+                        artifact["evidence_id"],
+                        admissibility["issues"],
+                        declared,
+                        derived,
+                    )
+                )
+
+        self.assertEqual(204, checked, "the corpus is not the expected 204 artifacts")
+        self.assertEqual(
+            [],
+            mismatches,
+            "weight_for disagreed with the corpus on: {0}".format(mismatches),
+        )
+
     def test_a_dirty_binary_product_is_quantised_to_the_corpus_convention(self):
         """The combination that exposed the floating-point residue.
 
