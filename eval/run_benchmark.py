@@ -158,6 +158,8 @@ __all__ = [
     "write_json",
     "load_cached",
     "cached_case_numbers",
+    "CACHE_FINGERPRINT_FIELDS",
+    "cache_fingerprint",
     "current_brief_sha256",
     "current_prompts_sha256",
     "brief_staleness",
@@ -383,6 +385,44 @@ def cached_case_numbers(run_dir: Path) -> List[int]:
         if match:
             numbers.append(int(match.group(1)))
     return sorted(numbers)
+
+
+# What identifies a cache: each case's own provenance, never a count. A note that
+# states counts about a cache can record this beside them and a reader can then
+# ask whether the cache in front of them is the one the note describes. The
+# counts cannot answer that question -- comparing a note's counts with the counts
+# they are meant to be checked against assumes the answer.
+CACHE_FINGERPRINT_FIELDS = ("brief_sha256", "prompts_sha256")
+
+
+def cache_fingerprint(run_dir: Path, cases: Optional[Sequence[int]] = None) -> str:
+    """A SHA-256 over every cached case's brief and prompts digest.
+
+    The cache under ``runs/`` is untracked and mutable: every full run rewrites
+    its counts. Anything a note records about those counts is therefore a dated
+    statement about one particular cache, and it can only be checked against that
+    cache. This is the value that says which cache a statement is about.
+
+    It reads provenance and nothing else. A case whose entry predates a field
+    contributes ``None`` for that field rather than dropping out, so the same
+    digest set cannot be reached by two caches that recorded different things.
+    """
+    if cases is None:
+        cases = cached_case_numbers(run_dir)
+
+    entries = []
+    for case_no in cases:
+        document = load_cached(run_dir, case_no)
+        if document is None:
+            entries.append({"case_no": case_no, "cached": False})
+            continue
+        entry: Dict[str, Any] = {"case_no": case_no, "cached": True}
+        for field_name in CACHE_FINGERPRINT_FIELDS:
+            entry[field_name] = document.get(field_name)
+        entries.append(entry)
+
+    text = json.dumps(entries, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 # --------------------------------------------------------------------------

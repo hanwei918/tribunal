@@ -2887,6 +2887,213 @@ def parse_cached_claim(text):
     return claim
 
 
+# Where the note records which cache its counts describe, and the shape of a
+# line in that block. Read out of the fenced block under that heading rather
+# than searched for in the file: a stray 64-hex string elsewhere in the note is
+# not a statement about a cache.
+_FINGERPRINT_HEADING = "### Which cache this note describes"
+_FINGERPRINT_LINE = re.compile(r"^(?P<directory>\S+)\s+(?P<fingerprint>[0-9a-f]{64})\s*$")
+
+# Where the note quotes the command that re-derives its numbers.
+_REDERIVE_HEADING = "### Re-deriving these numbers"
+
+
+def parse_cache_fingerprints(text):
+    """The fingerprint the note records for each run directory, as data.
+
+    A fingerprint is a statement that the cache it describes is one particular
+    cache, so it has to be read structurally: an empty result means the note
+    makes no such statement, and the caller can then decline to compare rather
+    than assume a match.
+    """
+    if _FINGERPRINT_HEADING not in text:
+        return {}
+    section = text.split(_FINGERPRINT_HEADING, 1)[1]
+    parts = section.split("```")
+    if len(parts) < 2:
+        return {}
+    recorded = {}
+    for line in parts[1].splitlines():
+        match = _FINGERPRINT_LINE.match(line)
+        if match:
+            recorded[match.group("directory")] = match.group("fingerprint")
+    return recorded
+
+
+def note_rederivation_lines(text):
+    """The command block the note quotes, as its lines.
+
+    Returned whole -- shell invocation and terminator included -- so a caller can
+    check the boundaries as well as run the body. Extracted rather than
+    duplicated: a copy in the tests would be a second statement of the same
+    command, free to drift from the one the note prints.
+    """
+    section = text[text.index(_REDERIVE_HEADING):]
+    return section.split("```")[1].strip("\n").splitlines()
+
+
+class CacheIdentity:
+    """Whether the cache on disk is the one a note describes.
+
+    ``state`` is one of:
+
+    ``same``        a cache is present and its fingerprint is the recorded one;
+    ``absent``      no cached case is present under that directory;
+    ``moved``       a cache is present and its fingerprint differs from the
+                    recorded one -- the note describes a cache that is gone;
+    ``unrecorded``  a cache is present and the note records no fingerprint for
+                    it, so the two cannot be shown to be the same.
+
+    ``absent`` and ``unrecorded`` are deliberately not ``same``. The point of
+    the value is to withhold a comparison that cannot be made, and a comparison
+    made against the wrong cache is worse than one not made at all.
+    """
+
+    __slots__ = ("state", "recorded", "present")
+
+    def __init__(self, state, recorded=None, present=None):
+        self.state = state
+        self.recorded = recorded
+        self.present = present
+
+
+def note_cache_identity(note_text, directory, runs_root):
+    """Is the cache under ``runs/<directory>`` the one the note describes?
+
+    Identity comes from the per-case provenance the cache itself recorded -- each
+    case's brief digest and its prompts digest -- and never from the counts.
+    Taking it from the counts would make the comparison circular: it would assume
+    the answer to the question the comparison exists to ask.
+    """
+    run_dir = Path(runs_root) / directory
+    recorded = parse_cache_fingerprints(note_text).get(directory)
+    if not run_dir.is_dir() or not runner.cached_case_numbers(run_dir):
+        return CacheIdentity("absent", recorded)
+    if recorded is None:
+        return CacheIdentity("unrecorded")
+    present = runner.cache_fingerprint(run_dir)
+    if present == recorded:
+        return CacheIdentity("same", recorded, present)
+    return CacheIdentity("moved", recorded, present)
+
+
+def note_cache_is_wholly_compared(identities):
+    """Whether every directory the note names is the cache the note describes.
+
+    All or nothing on purpose. The note's block is the output of one command over
+    every directory it names, so a cache that has changed anywhere in the set is
+    enough to stop the block describing the set.
+    """
+    return bool(identities) and all(
+        identity.state == "same" for identity in identities.values()
+    )
+
+
+def cache_mismatch_reasons(identities):
+    """Why the cache present is not the one the note describes, as sentences.
+
+    One sentence per directory that is not the note's cache, so a skip says which
+    directory to look at rather than that something, somewhere, differs.
+    """
+    reasons = []
+    for directory, identity in sorted(identities.items()):
+        if identity.state == "moved":
+            reasons.append(
+                "the cache under runs/{0} has changed since the note was written: the note "
+                "describes {1}, the cache present is {2}".format(
+                    directory, identity.recorded, identity.present
+                )
+            )
+        elif identity.state == "absent":
+            reasons.append("no cached run directory is present under runs/{0}".format(directory))
+        elif identity.state == "unrecorded":
+            reasons.append(
+                "the note records no fingerprint for runs/{0}, so the cache present cannot "
+                "be shown to be the one it describes".format(directory)
+            )
+    return reasons
+
+
+def note_cache_skip_message(text, identities):
+    """The reason a comparison was withheld, and how to re-derive the numbers.
+
+    The command is the note's own, extracted rather than restated. A reader told
+    the cache has moved on needs something to run, and the one command that
+    re-derives the note's numbers for whatever the cache holds now is the command
+    the note already quotes.
+    """
+    return (
+        "{0}. The note's counts are a dated statement about the cache runs/ held on "
+        "2026-09-22, so they are re-derived for whatever the cache now holds rather than "
+        "held against a cache they do not describe:\n\n{1}".format(
+            "; ".join(cache_mismatch_reasons(identities)),
+            "\n".join(note_rederivation_lines(text)),
+        )
+    )
+
+
+# --------------------------------------------------------------------------
+# Fixtures for the note-identity tests
+# --------------------------------------------------------------------------
+def write_provenance_cache(runs_root, name, entries):
+    """A cache directory whose entries carry the provenance given.
+
+    ``entries`` is a sequence of ``(case_no, brief_sha256, prompts_sha256)``. A
+    ruling is written beside them so each entry reads as a result rather than as
+    an unusable file; nothing about the ruling reaches a fingerprint, which is
+    the property one of the tests below pins.
+    """
+    run_dir = Path(runs_root) / name
+    run_dir.mkdir(parents=True, exist_ok=True)
+    for case_no, brief, prompts in entries:
+        runner.write_json(
+            runner.case_cache_path(run_dir, case_no),
+            {
+                "case_no": case_no,
+                "ruling": {"value": "NO_ACTION"},
+                "brief_sha256": brief,
+                "prompts_sha256": prompts,
+            },
+        )
+    return run_dir
+
+
+def note_with_fingerprints(text, fingerprints):
+    """The note with the fingerprint for the directories given replaced.
+
+    Used to put a cache built for a test in the place of the note's own, so the
+    gate can be exercised on each of its answers without touching ``runs/``. A
+    directory the mapping does not name keeps the fingerprint it had.
+    """
+    out = []
+    for line in text.splitlines(True):
+        match = _FINGERPRINT_LINE.match(line.rstrip("\n"))
+        if match and match.group("directory") in fingerprints:
+            out.append(
+                "{0}  {1}\n".format(
+                    match.group("directory"), fingerprints[match.group("directory")]
+                )
+            )
+        else:
+            out.append(line)
+    return "".join(out)
+
+
+def note_without_fingerprint(text, directory):
+    """The note with one directory's fingerprint line removed.
+
+    Dropping the record is how a note could quietly stop being checked, so the
+    gate has an answer for it rather than reading a missing record as a match.
+    """
+    kept = []
+    for line in text.splitlines(True):
+        match = _FINGERPRINT_LINE.match(line.rstrip("\n"))
+        if match and match.group("directory") == directory:
+            continue
+        kept.append(line)
+    return "".join(kept)
+
+
 class NoteCouplingTests(unittest.TestCase):
     """The note states a count about the cache; the code computes that count.
 
@@ -2898,6 +3105,18 @@ class NoteCouplingTests(unittest.TestCase):
     One limitation, stated rather than papered over: the cache under ``runs/`` is
     untracked, so on a checkout without it there is nothing to compare against
     and the comparison is skipped, naming the directories it wanted.
+
+    **The note's numbers describe one cache, and the comparison is made only
+    against that one.** ``runs/`` is mutable: the next full run rewrites every
+    count in the block, at which point holding the note's numbers against the
+    directory beneath them compares a dated snapshot with present state and goes
+    red for a reason that is not a defect. So the note records a fingerprint of
+    the cache it describes -- the set of per-case brief and prompts digests,
+    which is provenance rather than a count -- and these tests compare only when
+    the cache present is that cache. Otherwise they skip, naming which directory
+    has moved on and quoting the command that re-derives the note's numbers for
+    whatever the cache holds now. An absent cache skips for the reason it always
+    did.
 
     The comparisons used to be skipped under any interpreter but the one that
     produced the cache, because the brief carried an unrounded mean distance and
@@ -2920,6 +3139,26 @@ class NoteCouplingTests(unittest.TestCase):
             "the note no longer says which interpreter its digests were made under",
         )
         return match.group(1)
+
+    def _the_notes_own_cache(self):
+        """The directories whose cache is the one the note describes.
+
+        Skips, naming why, when any directory the note counts is not that cache.
+        The gate is all-or-nothing on purpose: the note's block is the output of
+        one command over every directory it names, so a cache that has moved on
+        anywhere in the set is enough to make the block stop describing the set.
+        """
+        if not self.claim:
+            self.skipTest("the note states no cached count, so there is nothing to compare")
+
+        identities = {
+            directory: note_cache_identity(self.text, directory, PROJECT_ROOT / "runs")
+            for directory in sorted(self.claim)
+        }
+        if note_cache_is_wholly_compared(identities):
+            return sorted(identities)
+
+        self.skipTest(note_cache_skip_message(self.text, identities))
 
     def test_the_note_names_a_count_for_at_least_one_directory(self):
         self.assertTrue(
@@ -2970,16 +3209,18 @@ class NoteCouplingTests(unittest.TestCase):
         brief carried an unrounded mean distance and ``sum()``'s float semantics
         changed in Python 3.12, so the check reported twenty-one where the cache
         holds twelve — and it is the repair of that which lets the comparison be
-        made unconditionally. A comparison that only runs under one interpreter
-        is a comparison that quietly stops being made.
+        made under any interpreter. A comparison that only runs under one
+        interpreter is a comparison that quietly stops being made.
+
+        It is not unconditional in the other direction. The cache is mutable, so
+        the comparison is made only against the cache the note describes, and
+        skipped with the reason named otherwise: a note's count is a claim about
+        one cache, and holding it against another measures the calendar.
         """
-        compared = []
-        absent = []
-        for directory, block in sorted(self.claim.items()):
+        directories = self._the_notes_own_cache()
+        for directory in directories:
+            block = self.claim[directory]
             run_dir = PROJECT_ROOT / "runs" / directory
-            if not run_dir.is_dir():
-                absent.append(directory)
-                continue
             report = runner.grade_run(run_dir)
             cached = tuple(runner.cached_case_numbers(run_dir))
             stale = set(report.staleness.stale)
@@ -2995,13 +3236,6 @@ class NoteCouplingTests(unittest.TestCase):
                 self.assertEqual(block["cases"]["unknown"], report.staleness.unknown)
                 self.assertEqual(block["cases"]["current"], current)
                 self.assertEqual(block["cached"], len(cached))
-            compared.append(directory)
-
-        if not compared:
-            self.skipTest(
-                "no cached run directory is present ({0}); the note's numbers are "
-                "re-derived by the command it states".format(", ".join(absent))
-            )
 
     def test_the_block_the_note_quotes_is_the_output_of_its_own_command(self):
         """The note says the block is that command's output; hold it to that.
@@ -3014,7 +3248,13 @@ class NoteCouplingTests(unittest.TestCase):
         Run under whatever interpreter the suite is running. The note's command
         used to refuse under anything but the one that produced the cache; the
         accumulation behind the brief is now pinned, so it no longer does.
+
+        Gated on the same fingerprint as the comparison above, and for the same
+        reason: the command reads the cache under ``runs/``, so its output can be
+        the note's block only while the cache it reads is the note's.
         """
+        self._the_notes_own_cache()
+
         lines = self.text.splitlines(True)
         first = next(
             index for index, line in enumerate(lines) if _CACHED_LINE.match(line)
@@ -3024,11 +3264,10 @@ class NoteCouplingTests(unittest.TestCase):
         )
         block = "".join(lines[first:last])
 
-        section = self.text[self.text.index("### Re-deriving these numbers"):]
-        fenced = section.split("```")[1].strip("\n").splitlines()
-        self.assertEqual("python3 - <<'PY'", fenced[0], "the command's first line moved")
-        self.assertEqual("PY", fenced[-1], "the command's terminator moved")
-        script = "\n".join(fenced[1:-1])
+        command = note_rederivation_lines(self.text)
+        self.assertEqual("python3 - <<'PY'", command[0], "the command's first line moved")
+        self.assertEqual("PY", command[-1], "the command's terminator moved")
+        script = "\n".join(command[1:-1])
 
         completed = subprocess.run(
             [sys.executable, "-c", script],
@@ -3038,6 +3277,225 @@ class NoteCouplingTests(unittest.TestCase):
         )
         self.assertEqual(0, completed.returncode, completed.stderr)
         self.assertEqual(block, completed.stdout)
+
+
+class CacheFingerprintTests(unittest.TestCase):
+    """What says whether a statement about a cache is about *this* cache.
+
+    The cache under ``runs/`` is untracked and every run rewrites it, so a note
+    that states counts about it is stating something about one particular cache.
+    A fingerprint taken from per-case provenance is what lets a reader ask whether
+    the cache in front of them is the one the note describes.
+
+    The property it must not have is a dependence on the counts. Taking identity
+    from the numbers the comparison is about would assume the answer to the
+    question the comparison exists to ask.
+    """
+
+    def test_a_brief_digest_alone_distinguishes_two_caches(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            one = write_provenance_cache(tmp, "one", [(101, "a" * 64, "b" * 64)])
+            two = write_provenance_cache(tmp, "two", [(101, "c" * 64, "b" * 64)])
+
+            self.assertNotEqual(runner.cache_fingerprint(one), runner.cache_fingerprint(two))
+
+    def test_a_prompts_digest_alone_distinguishes_two_caches(self):
+        """The second channel is part of the identity, not a decoration on it."""
+        with tempfile.TemporaryDirectory() as tmp:
+            one = write_provenance_cache(tmp, "one", [(101, "a" * 64, "b" * 64)])
+            two = write_provenance_cache(tmp, "two", [(101, "a" * 64, "c" * 64)])
+
+            self.assertNotEqual(runner.cache_fingerprint(one), runner.cache_fingerprint(two))
+
+    def test_an_entry_that_recorded_no_prompts_digest_is_not_one_that_did(self):
+        """An entry written before the field existed records nothing, and that
+        absence is part of what the cache is rather than a value to skip over."""
+        with tempfile.TemporaryDirectory() as tmp:
+            one = write_provenance_cache(tmp, "one", [(101, "a" * 64, None)])
+            two = write_provenance_cache(tmp, "two", [(101, "a" * 64, "b" * 64)])
+
+            self.assertNotEqual(runner.cache_fingerprint(one), runner.cache_fingerprint(two))
+
+    def test_the_set_of_cases_is_part_of_the_identity(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            one = write_provenance_cache(tmp, "one", [(101, "a" * 64, "b" * 64)])
+            two = write_provenance_cache(
+                tmp, "two", [(101, "a" * 64, "b" * 64), (102, "c" * 64, "d" * 64)]
+            )
+
+            self.assertNotEqual(runner.cache_fingerprint(one), runner.cache_fingerprint(two))
+
+    def test_the_fingerprint_ignores_the_counts_it_stands_beside(self):
+        """The anti-circularity property, pinned as a test.
+
+        Two caches with the same provenance and different results are the same
+        cache as far as identity goes: the fingerprint is about where the bytes
+        came from, not about what they said. A fingerprint that moved with the
+        counts would make the comparison it gates circular.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            one = write_provenance_cache(tmp, "one", [(101, "a" * 64, "b" * 64)])
+            two = write_provenance_cache(tmp, "two", [(101, "a" * 64, "b" * 64)])
+            document = runner.load_cached(two, 101)
+            document["ruling"] = {"value": "FULL_REFUND", "confidence": 0.99}
+            document["match"] = False
+            runner.write_json(runner.case_cache_path(two, 101), document)
+
+            self.assertEqual(
+                runner.cache_fingerprint(one),
+                runner.cache_fingerprint(two),
+                "the fingerprint moved with the counts, which is what makes it circular",
+            )
+
+    def test_the_same_cache_fingerprints_the_same_way_every_time(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = write_provenance_cache(
+                tmp, "one", [(101, "a" * 64, "b" * 64), (102, "c" * 64, "d" * 64)]
+            )
+            first = runner.cache_fingerprint(run_dir)
+
+            self.assertEqual(first, runner.cache_fingerprint(run_dir))
+            self.assertRegex(first, r"^[0-9a-f]{64}$")
+
+
+class NoteCacheIdentityTests(unittest.TestCase):
+    """The note's comparisons run only against the cache the note describes.
+
+    A note's counts describe one cache. ``runs/`` is untracked and every full run
+    rewrites it, so the comparison has to be withheld when the cache present is
+    not the one the note was written about: otherwise the test goes red for the
+    calendar rather than for a defect, and a test that goes red for the calendar
+    is a test someone deletes.
+
+    What each answer means, and that each is reached, is pinned here on caches
+    built for the purpose. The real cache under ``runs/`` is not touched.
+    """
+
+    NOTE = STALE_NOTE.read_text(encoding="utf-8")
+    DIRECTORY = "deepseek-deepseek-flash"
+
+    def test_a_cache_that_is_the_notes_is_compared(self):
+        """The comparison runs when the cache present is the note's own."""
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = write_provenance_cache(tmp, self.DIRECTORY, [(101, "a" * 64, "b" * 64)])
+            fingerprint = runner.cache_fingerprint(run_dir)
+            text = note_with_fingerprints(self.NOTE, {self.DIRECTORY: fingerprint})
+
+            identity = note_cache_identity(text, self.DIRECTORY, tmp)
+
+            self.assertEqual("same", identity.state)
+            self.assertEqual(fingerprint, identity.recorded)
+            self.assertEqual(fingerprint, identity.present)
+            self.assertTrue(note_cache_is_wholly_compared({self.DIRECTORY: identity}))
+
+    def test_a_cache_that_moved_on_is_not_compared_and_the_skip_says_so(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = write_provenance_cache(tmp, self.DIRECTORY, [(101, "a" * 64, "c" * 64)])
+            present = runner.cache_fingerprint(run_dir)
+
+            identity = note_cache_identity(self.NOTE, self.DIRECTORY, tmp)
+
+            self.assertEqual("moved", identity.state)
+            self.assertNotEqual(identity.recorded, identity.present)
+            self.assertEqual(present, identity.present)
+            self.assertFalse(note_cache_is_wholly_compared({self.DIRECTORY: identity}))
+
+            message = note_cache_skip_message(self.NOTE, {self.DIRECTORY: identity})
+            self.assertIn("has changed since the note was written", message)
+            self.assertIn(identity.recorded, message)
+            self.assertIn(present, message)
+            self.assertIn("re-derived", message)
+            self.assertIn(
+                "\n".join(note_rederivation_lines(self.NOTE)),
+                message,
+                "the skip does not hand the reader the command that re-derives the numbers",
+            )
+
+    def test_an_absent_cache_is_not_compared(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            identity = note_cache_identity(self.NOTE, self.DIRECTORY, tmp)
+
+            self.assertEqual("absent", identity.state)
+            self.assertIsNone(identity.present)
+            self.assertFalse(note_cache_is_wholly_compared({self.DIRECTORY: identity}))
+
+            message = note_cache_skip_message(self.NOTE, {self.DIRECTORY: identity})
+            self.assertIn("no cached run directory is present", message)
+
+    def test_a_run_directory_with_no_cached_case_is_absent_rather_than_moved(self):
+        """An empty directory holds no cache, so there is nothing to call moved."""
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / self.DIRECTORY).mkdir()
+
+            identity = note_cache_identity(self.NOTE, self.DIRECTORY, tmp)
+
+            self.assertEqual("absent", identity.state)
+
+    def test_a_cache_the_note_records_no_fingerprint_for_is_not_compared(self):
+        """Dropping the record must not read as a match."""
+        with tempfile.TemporaryDirectory() as tmp:
+            write_provenance_cache(tmp, self.DIRECTORY, [(101, "a" * 64, "b" * 64)])
+            text = note_without_fingerprint(self.NOTE, self.DIRECTORY)
+            self.assertNotIn(self.DIRECTORY, parse_cache_fingerprints(text))
+
+            identity = note_cache_identity(text, self.DIRECTORY, tmp)
+
+            self.assertEqual("unrecorded", identity.state)
+            message = note_cache_skip_message(text, {self.DIRECTORY: identity})
+            self.assertIn("records no fingerprint", message)
+
+    def test_the_gate_is_all_or_nothing_over_the_directories_the_note_names(self):
+        """One directory that has moved on withholds the comparison for the set.
+
+        The block is the output of one command over every directory it names, so
+        a cache that has changed anywhere in the set stops the block describing
+        the set.
+        """
+        same = CacheIdentity("same", "a" * 64, "a" * 64)
+        moved = CacheIdentity("moved", "a" * 64, "b" * 64)
+        absent = CacheIdentity("absent", "a" * 64)
+
+        self.assertTrue(note_cache_is_wholly_compared({"one": same, "two": same}))
+        self.assertFalse(
+            note_cache_is_wholly_compared({"one": same, "two": moved}),
+            "one directory that has moved on must withhold the comparison for the set",
+        )
+        self.assertFalse(note_cache_is_wholly_compared({"one": absent}))
+        self.assertFalse(
+            note_cache_is_wholly_compared({}),
+            "no directory is not the same as every directory being the note's",
+        )
+
+    def test_the_note_records_a_fingerprint_for_every_directory_it_counts(self):
+        """The coupling is only as good as the record that gates it."""
+        claim = parse_cached_claim(self.NOTE)
+        recorded = parse_cache_fingerprints(self.NOTE)
+
+        self.assertTrue(claim, "the note states no cached count for any directory")
+        for directory in sorted(claim):
+            with self.subTest(directory=directory):
+                self.assertIn(
+                    directory,
+                    recorded,
+                    "the note states a count for a directory it does not fingerprint, so "
+                    "the comparison cannot tell whether the cache is the one it describes",
+                )
+
+    def test_the_note_says_its_numbers_are_a_dated_statement(self):
+        """A count about a mutable cache is a claim about a date, and must say so.
+
+        This repository is published, and a reader who does not know that
+        ``runs/`` is rewritten by every run would otherwise take a historical
+        count for a live one.
+        """
+        self.assertIn(_FINGERPRINT_HEADING, self.NOTE)
+        self.assertIn(_REDERIVE_HEADING, self.NOTE)
+        section = self.NOTE.split(_FINGERPRINT_HEADING, 1)[1].split("\n### ", 1)[0]
+
+        self.assertIn("2026-09-22", section, "the section does not date the counts it describes")
+        self.assertIn(
+            "re-derive", section, "the section does not say how to re-derive the counts"
+        )
 
 
 class IsolationTests(unittest.TestCase):

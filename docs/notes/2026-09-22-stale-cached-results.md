@@ -2,6 +2,14 @@
 
 Date: 2026-09-22. Commit: the one that adds this file.
 
+**Every count in this note is a dated statement about one cache, not a live measurement.** The
+block under "What the check found" says what `runs/` held on 2026-09-22, the day this was written.
+`runs/` is untracked and every full run rewrites it, so those numbers describe that cache and
+nothing else, and a reader opening this repository later must not read them as a count of what
+`runs/` holds now. "Which cache this note describes" records the fingerprints that say whether the
+cache in front of you is the one these counts are about, and "Re-deriving these numbers" gives the
+command that re-derives them for whatever `runs/` holds at the time it is run.
+
 The counts in "What the check found" were corrected on the same day, after the first version of
 this note was found to state a figure measured under the wrong interpreter. What was wrong, and
 why, is recorded below under "Why the earlier version of this note was wrong", together with the
@@ -111,6 +119,48 @@ The prompt channel is not predicted by that reasoning and should not be. The dig
 the whole directory, so editing any prompt moves every result that recorded one — including results
 whose brief is untouched, which is exactly what happened to 101, 102 and 103. That is the channel
 working, not a finding about those cases.
+
+### Which cache this note describes
+
+The counts above are a statement about one cache: what `runs/` held on 2026-09-22. The cache is
+untracked and the next full run overwrites it case by case, so every count in the block becomes
+wrong about the directory it names as soon as that happens — not because anything here was mistaken,
+but because it describes a moment. A count about a mutable cache is meaningful only beside the
+identity of the cache it is about.
+
+**Identity is taken from provenance, never from the counts.** Every cached case records the digest of
+the brief its agents were handed and the digest of the prompt directory they were handed it from, so
+the set of those per-case digests is a fingerprint of the cache itself. It is recorded below, and it
+is what `tests/test_run_benchmark.py` uses to decide whether the cache under `runs/` is the one this
+note describes: if it is, the note's counts are compared with what the code computes for that cache;
+if it is not, the comparison is skipped and says so, rather than holding a historical snapshot
+against present state. Reading identity off the counts instead would make the check circular —
+comparing the note's numbers with the numbers they are meant to be checked against assumes the
+answer.
+
+```
+deepseek-deepseek-flash  c5bc5645a6aaea424daa0f81a2daa4e694aefe86c65a3ce7d2700f2959dae158
+hy4-preview              09a6d3f15b3164c541f66af8d4e191d30c0408e0950302ba1c4c915b348f96ea
+```
+
+Print them for whatever `runs/` holds now:
+
+```
+python3 - <<'PY'
+import sys, os
+sys.path[:0] = ["."]
+from eval import run_benchmark as runner
+for name in ("deepseek-deepseek-flash", "hy4-preview"):
+    print("%-25s %s" % (name, runner.cache_fingerprint(os.path.join("runs", name))))
+PY
+```
+
+If either line differs from the one recorded above, the cache has moved on since this note was
+written and the counts in "What the check found" no longer describe the directory beneath them. They
+are then re-derived rather than corrected: the command under "Re-deriving these numbers" prints the
+counts for whatever `runs/` holds at the time it is run, and the block above is superseded by
+whatever it prints. The finding this note records is unaffected — the code that produced it has
+moved, and a cache produced by it stays stale however the directory is later rewritten.
 
 ### How that was established
 
