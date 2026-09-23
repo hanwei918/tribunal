@@ -4,7 +4,9 @@ Date: 2026-09-22. Commit: the one that adds this file.
 
 **Every count in this note is a dated statement about one cache, not a live measurement.** The
 block under "What the check found" says what `runs/` held on 2026-09-22, the day this was written.
-`runs/` is untracked and every full run rewrites it, so those numbers describe that cache and
+Every full run rewrites that cache — and since 2026-09-23 the three run directories under `runs/`
+are committed as snapshots of the runs they record, so a run made later shows up as a modification
+to tracked files rather than as nothing at all. Either way those numbers describe one cache and
 nothing else, and a reader opening this repository later must not read them as a count of what
 `runs/` holds now. "Which cache this note describes" records the fingerprints that say whether the
 cache in front of you is the one these counts are about, and "Re-deriving these numbers" gives the
@@ -122,8 +124,8 @@ working, not a finding about those cases.
 
 ### Which cache this note describes
 
-The counts above are a statement about one cache: what `runs/` held on 2026-09-22. The cache is
-untracked and the next full run overwrites it case by case, so every count in the block becomes
+The counts above are a statement about one cache: what `runs/` held on 2026-09-22. The next full run
+overwrites that cache case by case, so every count in the block becomes
 wrong about the directory it names as soon as that happens — not because anything here was mistaken,
 but because it describes a moment. A count about a mutable cache is meaningful only beside the
 identity of the cache it is about.
@@ -307,8 +309,9 @@ Two figures in the earlier version were wrong, one of them because the note neve
 interpreter had produced it. So the note says now, and the numbers are held against the code by
 `NoteCouplingTests` in `tests/test_run_benchmark.py`: that test reads the block and compares it
 with `grade_run` over the same directories, and separately runs the command the note quotes and
-compares its output with the block. The cache under `runs/` is untracked, so where a run directory
-is absent the comparison is skipped and the skip says so. The count itself is no longer
+compares its output with the block. Where a run directory is absent, or holds a cache other than the
+one this note describes, the comparison is skipped and the skip says so — a count about a mutable
+cache may only be checked against the cache it is about. The count itself is no longer
 interpreter-sensitive: that was the defect below, and it is fixed.
 
 ### The brief is not stable across Python versions

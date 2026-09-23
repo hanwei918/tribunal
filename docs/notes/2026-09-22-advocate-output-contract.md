@@ -11,11 +11,13 @@ twice per case, and the case failed.
 **Both runs under `runs/` are invalidated.** They were produced under this configuration. They are
 kept because they are the evidence for this finding, not because any number in them is usable.
 
-They are **untracked** — not deleted, and not committed either. The raw bodies that prove the finding
-therefore live on the machine that produced them and not in this repository, which is a decision this
-note records rather than hides. The per-attempt table below is the part of the evidence that travels
-with the note, and the digests section lets a reader tell a future run from these without needing the
-files.
+They are **committed**, deliberately, as of 2026-09-23 — see `runs/README.md`, which names the
+headline run and marks these two as produced by an invalidated configuration. Until then they were
+untracked, and the raw bodies that prove the finding lived only on the machine that produced them.
+Committing them is what makes the per-attempt table below checkable rather than merely asserted:
+every "shape the model actually returned" in it can now be read out of the recorded `response_text`
+in the transcripts beside it. The digests section still lets a reader tell a future run from these
+without opening them.
 
 ## How it was found
 

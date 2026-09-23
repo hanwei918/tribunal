@@ -101,8 +101,12 @@ read-modify-write with a lock, and ``tests/test_run_benchmark.py`` proves that N
 threads calling together still do not exceed the configured rate — and that the
 check can fail, by running the same workload against an unguarded limiter.
 
-Nothing here decides which model to use. ``model`` has no default, matching
-``LLMClient``: the choice belongs in one explicit place in the caller.
+Which model to use is decided in ``tribunal/model.py`` and nowhere else. The
+library entry point :func:`run_benchmark` still takes ``model`` as a required
+argument — a caller that drives this function directly must say which model it
+means — while the command line reads the decided one when ``--model`` is
+omitted. ``LLMClient`` keeps no default of its own, so the transport stays
+model-agnostic and the decision lives in one place a reader can find.
 """
 
 from __future__ import annotations
@@ -125,6 +129,7 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from eval import grade
 from tribunal import brief, llm, loader, money, pipeline
+from tribunal.model import resolve_model
 
 __all__ = [
     "BenchmarkError",
@@ -777,13 +782,88 @@ def brief_staleness(
 # One case
 # --------------------------------------------------------------------------
 @dataclass(frozen=True)
+class TokenSplit:
+    """One measurement's tokens, by kind, as the provider reports them.
+
+    A single total cannot cost a run. Output is priced at four times input on
+    the decided model, so two runs that consumed the same number of tokens can
+    differ by a factor in what they cost, and only the split tells them apart.
+    The split is therefore what is recorded wherever a total is needed, and the
+    total is derived from it rather than stored beside it — a stored total is a
+    second place the same arithmetic can be wrong.
+
+    ``reasoning_tokens`` is reported by this provider as a *breakdown* of
+    ``completion_tokens`` rather than a third quantity, so it is never added in:
+    counting it again would overstate the spend and trip a budget early.
+    ``cached_tokens`` is a breakdown of the prompt and is likewise not added.
+    """
+
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    reasoning_tokens: int = 0
+    cached_tokens: int = 0
+
+    @property
+    def billed(self) -> int:
+        """The tokens the provider charges for: the prompt plus the completion.
+
+        Delegated rather than re-implemented, because a rule stated twice is a
+        rule that can disagree with itself. :func:`billed_tokens` is the one
+        statement of it.
+        """
+        return billed_tokens(self.prompt_tokens, self.completion_tokens)
+
+    def __add__(self, other: "TokenSplit") -> "TokenSplit":
+        """Two measurements as one, so a run's total is a sum of its parts."""
+        return TokenSplit(
+            prompt_tokens=self.prompt_tokens + other.prompt_tokens,
+            completion_tokens=self.completion_tokens + other.completion_tokens,
+            reasoning_tokens=self.reasoning_tokens + other.reasoning_tokens,
+            cached_tokens=self.cached_tokens + other.cached_tokens,
+        )
+
+    def as_dict(self) -> Dict[str, int]:
+        """The shape written to disk, with the derived total included.
+
+        ``total_tokens`` keeps the name the per-case cache entries already use,
+        so a reader of either file is not made to learn a second name for the
+        same number.
+        """
+        return {
+            "prompt_tokens": self.prompt_tokens,
+            "completion_tokens": self.completion_tokens,
+            "reasoning_tokens": self.reasoning_tokens,
+            "cached_tokens": self.cached_tokens,
+            "total_tokens": self.billed,
+        }
+
+    @classmethod
+    def from_mapping(cls, mapping: Optional[Mapping[str, Any]]) -> "TokenSplit":
+        """Read back what :meth:`as_dict` wrote, tolerating an older record.
+
+        A record written before one of these fields was kept contributes zero
+        for it rather than dropping out, so a cache holding entries of two ages
+        still totals.
+        """
+        values = mapping or {}
+        return cls(
+            prompt_tokens=_as_int(values.get("prompt_tokens")),
+            completion_tokens=_as_int(values.get("completion_tokens")),
+            reasoning_tokens=_as_int(values.get("reasoning_tokens")),
+            cached_tokens=_as_int(values.get("cached_tokens")),
+        )
+
+
+@dataclass(frozen=True)
 class CaseOutcome:
     """What happened to one case in one invocation of the runner."""
 
     case_no: int
     status: str
     wall_seconds: float = 0.0
-    total_tokens: int = 0
+    # The split, not a bare total. A case that failed after its calls were made
+    # consumed tokens too, and only the split says how much of that was output.
+    tokens: TokenSplit = field(default_factory=TokenSplit)
     matched: Optional[bool] = None
     failed_agent: Optional[str] = None
     failure_reason: Optional[str] = None
@@ -800,6 +880,11 @@ class CaseOutcome:
     # for different responses, and a progress line that blamed the brief for a
     # moved prompt would send the reader to the wrong file.
     stale_moved: Tuple[str, ...] = ()
+
+    @property
+    def total_tokens(self) -> int:
+        """Every token this case was billed for, prompt and completion together."""
+        return self.tokens.billed
 
     @property
     def ok(self) -> bool:
@@ -995,7 +1080,12 @@ def run_one_case(
         )
 
     wall = time.monotonic() - started
-    tokens = billed_tokens(result.prompt_tokens, result.completion_tokens)
+    tokens = TokenSplit(
+        prompt_tokens=_as_int(result.prompt_tokens),
+        completion_tokens=_as_int(result.completion_tokens),
+        reasoning_tokens=_as_int(result.reasoning_tokens),
+        cached_tokens=_as_int(result.cached_tokens),
+    )
 
     if not result.ok or result.ruling is None:
         detail = result.failure_reason or "the run produced no ruling"
@@ -1004,7 +1094,11 @@ def run_one_case(
                 case_no=case_no,
                 status=STATUS_FAILED,
                 wall_seconds=wall,
-                total_tokens=tokens,
+                # Recorded although this case produced no ruling. Its calls were
+                # made and billed before the answer turned out to be unusable,
+                # so a run recording nothing here would understate what it cost
+                # — and the split is what says how much of that was output.
+                tokens=tokens,
                 failed_agent=result.failed_agent,
                 failure_kind=FAILURE_SHAPE,
                 failure_detail=detail,
@@ -1037,13 +1131,10 @@ def run_one_case(
         "ruling": result.ruling,
         "ruling_findings": result.ruling_findings,
         "stance_differing_ranges": [list(item) for item in result.stance_differing_ranges],
-        "tokens": {
-            "prompt_tokens": result.prompt_tokens,
-            "completion_tokens": result.completion_tokens,
-            "reasoning_tokens": result.reasoning_tokens,
-            "cached_tokens": result.cached_tokens,
-            "total_tokens": tokens,
-        },
+        # Written from the split rather than from the raw fields, so what lands
+        # on disk and what the runner charged against the budget are one piece
+        # of arithmetic rather than two copies of it.
+        "tokens": tokens.as_dict(),
         "wall_seconds": wall,
         "call_seconds": result.duration_seconds,
         "matched": matched,
@@ -1053,7 +1144,7 @@ def run_one_case(
             case_no=case_no,
             status=STATUS_COMPLETED,
             wall_seconds=wall,
-            total_tokens=tokens,
+            tokens=tokens,
             matched=matched,
             ruling=result.ruling,
         ),
@@ -1077,13 +1168,18 @@ def _outcome_from_cache(
     only in the report at the end — the reader watching the terminal is the one
     who can still decide to re-run. ``stale_moved`` names which digest moved, so
     that line can send the reader to the brief or to the prompts.
+
+    The token split is read back rather than only the total, so a case reused
+    from the cache can be costed the same way a case run now can. A reused case
+    costs nothing *this invocation*, but the run's record still has to be able
+    to say what the set cost to produce.
     """
-    tokens = document.get("tokens") or {}
+    tokens = TokenSplit.from_mapping(document.get("tokens"))
     return CaseOutcome(
         case_no=case_no,
         status=STATUS_CACHED,
         wall_seconds=_as_seconds(document.get("wall_seconds")),
-        total_tokens=_as_int(tokens.get("total_tokens")),
+        tokens=tokens,
         matched=_match_for(case_no, document.get("ruling"), expected),
         ruling=document.get("ruling"),
         brief_status=brief_status,
@@ -1189,8 +1285,24 @@ class RunSummary:
     # same reason: a case that stopped at a 2400-second deadline and one that
     # stopped at a 241-minute one are not the same measurement.
     case_deadline_seconds: float = pipeline.DEFAULT_CASE_DEADLINE_SECONDS
-    tokens_spent: int = 0
+    # The two figures are not the same question. ``tokens_charged`` is what the
+    # budget was spent against — the completed cases, which is what the run has
+    # always stopped on. ``tokens_failed`` is what this invocation's own
+    # failures cost. Their sum is what the invocation consumed, and the two are
+    # kept apart so a run cannot look cheap by having thrown answers away.
+    tokens_charged: TokenSplit = field(default_factory=TokenSplit)
+    tokens_failed: TokenSplit = field(default_factory=TokenSplit)
     tokens_reused: int = 0
+
+    @property
+    def tokens_spent(self) -> int:
+        """The figure the budget was spent against: the completed cases only."""
+        return self.tokens_charged.billed
+
+    @property
+    def tokens_consumed(self) -> TokenSplit:
+        """Every token this invocation was billed for, failed cases included."""
+        return self.tokens_charged + self.tokens_failed
 
     @property
     def completed(self) -> bool:
@@ -1285,9 +1397,12 @@ def run_benchmark(
 ) -> RunSummary:
     """Run ``cases`` against ``model``, cache the results, and grade them.
 
-    ``model`` is required and has no default. ``client_factory`` exists so a
-    test can drive the whole runner — real ``LLMClient``, real ``pipeline`` —
-    over a fake transport with recorded bodies, and without a network.
+    ``model`` is required here and has no default, so a caller that drives this
+    function directly must say which model it means; the command line resolves
+    the decided one from ``tribunal/model.py`` before calling in. ``client_factory``
+    exists so a test can drive the whole runner — real ``LLMClient``, real
+    ``pipeline`` — over a fake transport with recorded bodies, and without a
+    network.
 
     Two time limits are in force and they are not the same limit.
     ``timeout_seconds`` bounds one HTTP attempt; ``case_deadline_seconds``
@@ -1368,7 +1483,22 @@ def run_benchmark(
     outcomes: List[CaseOutcome] = []
     recorded: set = set()
     pending: List[int] = []
-    tokens_reused = 0
+    # Three ledgers, and the first two are not the same ledger.
+    #
+    # ``charged`` is what the budget is spent against: the cases this invocation
+    # completed. The run has always stopped on this figure and it still does —
+    # changing it would change when a run stops rather than only what it
+    # records.
+    #
+    # ``failed`` is the cost of this invocation's own failures. A case that
+    # failed after its calls were made was billed for them, so a record counting
+    # only the completed cases would say a run that burned a third of its budget
+    # on unusable answers was cheap.
+    #
+    # ``reused`` is what the cached cases cost, which is nothing now and was
+    # something when they were produced. Kept apart so a re-run is not mistaken
+    # for a spend.
+    reused = TokenSplit()
 
     # Cached first: a re-run should say what it is skipping before it starts, and
     # whether what it is skipping still belongs to this code. One checker for the
@@ -1389,10 +1519,14 @@ def run_benchmark(
         )
         outcomes.append(outcome)
         recorded.add(case_no)
-        tokens_reused += outcome.total_tokens
+        reused = reused + outcome.tokens
         progress(format_progress(outcome, positions[case_no], total))
 
-    state = {"spent": 0, "stop_reason": STOP_COMPLETED}
+    state = {
+        "stop_reason": STOP_COMPLETED,
+        "charged": TokenSplit(),
+        "failed": TokenSplit(),
+    }
 
     def write_metadata(stop_reason: str) -> None:
         document = _metadata_document(
@@ -1408,8 +1542,9 @@ def run_benchmark(
             concurrency=concurrency,
             timeout_seconds=timeout_seconds,
             case_deadline_seconds=case_deadline_seconds,
-            tokens_spent=state["spent"],
-            tokens_reused=tokens_reused,
+            tokens_charged=state["charged"],
+            tokens_failed=state["failed"],
+            tokens_reused=reused,
         )
         # Both, and the order matters. ``run.json`` is the latest invocation's
         # record at the conventional path; the history is what survives the next
@@ -1429,8 +1564,13 @@ def run_benchmark(
             return
         recorded.add(outcome.case_no)
         outcomes.append(outcome)
+        # Every case that reached the transport was billed for its calls, so
+        # every one of them counts towards what this invocation cost. Only a
+        # completed case counts towards what the budget was spent on.
         if outcome.status == STATUS_COMPLETED:
-            state["spent"] += outcome.total_tokens
+            state["charged"] = state["charged"] + outcome.tokens
+        elif outcome.status == STATUS_FAILED:
+            state["failed"] = state["failed"] + outcome.tokens
         progress(format_progress(outcome, positions[outcome.case_no], total))
         # Written after every case, so an interrupted run still has correct
         # provenance and correct totals rather than nothing at all.
@@ -1458,7 +1598,7 @@ def run_benchmark(
         try:
             while queue or in_flight:
                 while queue and len(in_flight) < workers:
-                    if token_budget is not None and state["spent"] >= token_budget:
+                    if token_budget is not None and state["charged"].billed >= token_budget:
                         # Stop issuing NEW cases. The ones already running are
                         # allowed to finish, because their tokens are already
                         # being spent and their answers are already paid for.
@@ -1554,8 +1694,9 @@ def run_benchmark(
         concurrency=concurrency,
         timeout_seconds=timeout_seconds,
         case_deadline_seconds=case_deadline_seconds,
-        tokens_spent=state["spent"],
-        tokens_reused=tokens_reused,
+        tokens_charged=state["charged"],
+        tokens_failed=state["failed"],
+        tokens_reused=reused.billed,
     )
 
 
@@ -1622,8 +1763,9 @@ def _metadata_document(
     concurrency: int,
     timeout_seconds: float,
     case_deadline_seconds: float,
-    tokens_spent: int,
-    tokens_reused: int,
+    tokens_charged: TokenSplit,
+    tokens_failed: TokenSplit,
+    tokens_reused: TokenSplit,
 ) -> Dict[str, Any]:
     """The run's own metadata file.
 
@@ -1635,8 +1777,16 @@ def _metadata_document(
     ``requested [214]``, and that is true of the invocation. It is misleading
     about the directory, so the directory gets its own block saying what it
     holds. A reader should not have to count files to learn that the two differ.
+
+    The token figures are given as splits rather than as totals, because a total
+    cannot be costed: output is priced at four times input on the decided model.
+    ``tokens_charged`` is what the budget was spent against, ``tokens_failed``
+    is what this invocation's own failures cost, and the two together are what
+    the invocation consumed. ``tokens_reused`` is what the cached cases cost
+    when they were produced, which is nothing now.
     """
     failed = [outcome for outcome in outcomes if outcome.status == STATUS_FAILED]
+    consumed = tokens_charged + tokens_failed
     directory_cases = cached_case_numbers(run_dir)
     return {
         "schema_version": CACHE_SCHEMA_VERSION,
@@ -1667,9 +1817,36 @@ def _metadata_document(
         # have been lost still says what built its briefs.
         "python_version": run_provenance.get("python_version"),
         "tokens": {
-            "spent_this_invocation": tokens_spent,
-            "reused_from_cache": tokens_reused,
-            "total_for_the_case_set": tokens_spent + tokens_reused,
+            # Kept at this name and this meaning: the figure the budget was
+            # spent against, which is the cases this invocation completed.
+            "spent_this_invocation": tokens_charged.billed,
+            # Every token the provider billed, failed cases included. A case
+            # that failed after its calls were made cost money, so a record
+            # counting only the completed cases would report a run that burned a
+            # third of its budget on unusable answers as a cheap one.
+            "consumed_this_invocation": consumed.billed,
+            "of_which_failed": tokens_failed.billed,
+            "reused_from_cache": tokens_reused.billed,
+            "total_for_the_case_set": consumed.billed + tokens_reused.billed,
+            # The split, and it is not decoration. Output is priced at four
+            # times input on the decided model, so a total cannot be turned into
+            # a cost without it, and two runs of the same total can differ by a
+            # factor in what they cost. ``reasoning_tokens`` is a breakdown of
+            # ``completion_tokens`` and ``cached_tokens`` a breakdown of the
+            # prompt, so neither is added to the billed figure.
+            "prompt_tokens": consumed.prompt_tokens,
+            "completion_tokens": consumed.completion_tokens,
+            "reasoning_tokens": consumed.reasoning_tokens,
+            "cached_tokens": consumed.cached_tokens,
+            "failed": tokens_failed.as_dict(),
+            # And the same for the results that were reused rather than run. A
+            # re-run consumes nothing, so without this the figures that turn
+            # those results into a price would be gone from the record that
+            # describes the invocation reading them.
+            "reused": tokens_reused.as_dict(),
+            # The window this invocation ran in is ``started_at``/``ended_at``
+            # above, which is what says which price band applied: peak hours are
+            # 09:00-12:00 and 14:00-18:00 Singapore time on weekdays.
         },
         "cases": {
             "scope": "this invocation only",
@@ -2187,10 +2364,30 @@ def print_summary(summary: RunSummary) -> None:
             )
         )
     print(
-        "tokens      {0:,} spent this run, {1:,} reused from cache".format(
+        "tokens      {0:,} charged to the budget, {1:,} reused from cache".format(
             summary.tokens_spent, summary.tokens_reused
         )
     )
+    # The split, because it is what a cost is computed from: output is priced at
+    # four times input on the decided model, so the total alone says nothing
+    # about what the run cost.
+    print(
+        "            {0:,} in, {1:,} out ({2:,} of the output was reasoning)".format(
+            summary.tokens_consumed.prompt_tokens,
+            summary.tokens_consumed.completion_tokens,
+            summary.tokens_consumed.reasoning_tokens,
+        )
+    )
+    # Printed only when it is not zero. A line reporting zero on every clean run
+    # would train the reader to skip the line that matters on the run where it
+    # is not zero.
+    if summary.tokens_failed.billed:
+        print(
+            "            plus {0:,} on cases that failed after their calls were "
+            "made, which were billed all the same".format(
+                summary.tokens_failed.billed
+            )
+        )
     if summary.token_budget is not None:
         print("budget      {0:,} (stopped on budget: {1})".format(
             summary.token_budget, summary.stop_reason == STOP_BUDGET
@@ -2373,13 +2570,17 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         prog="python -m eval.run_benchmark",
         description=(
             "Run cases against one model, cache every result under runs/, and "
-            "grade the set. No model is chosen for you."
+            "grade the set. The model is the one recorded in tribunal/model.py "
+            "unless --model names another."
         ),
     )
     parser.add_argument(
         "--model",
         default=None,
-        help="the model id, e.g. hy4-preview (required unless --compare)",
+        help=(
+            "the model id; when omitted the runtime model recorded in "
+            "tribunal/model.py is used, and naming one here overrides it"
+        ),
     )
     parser.add_argument(
         "--compare",
@@ -2441,11 +2642,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print(render_comparison(collect_comparison(args.runs_dir)))
         return 0
 
-    if args.model is None:
-        parser.error(
-            "--model is required: which model to run is the caller's decision and "
-            "has no default"
-        )
+    # Which model to run is decided in one place, and this is the boundary that
+    # reads it. A caller who names one still overrides it, so a probe or a
+    # comparison run is unaffected.
+    model_id = resolve_model(args.model)
 
     try:
         cases = parse_cases(args.cases)
@@ -2456,7 +2656,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     try:
         summary = run_benchmark(
-            args.model,
+            model_id,
             cases,
             runs_dir=args.runs_dir,
             prompts_dir=args.prompts_dir,

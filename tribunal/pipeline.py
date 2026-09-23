@@ -77,6 +77,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 from . import brief, llm, loader, money, transcript as transcript_module
+from .model import resolve_model
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 PROMPTS_DIR = PROJECT_ROOT / "prompts" / "v1"
@@ -876,8 +877,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--case", type=int, required=True, help="the case number, e.g. 208")
     parser.add_argument(
         "--model",
-        required=True,
-        help="the model id, e.g. hy4-preview (there is no default: the choice is the caller's)",
+        default=None,
+        help=(
+            "the model id; when omitted the runtime model recorded in "
+            "tribunal/model.py is used, and naming one here overrides it"
+        ),
     )
     parser.add_argument("--out", help="write the full transcript JSON to this path")
     parser.add_argument(
@@ -885,7 +889,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    client = llm.LLMClient(model=args.model)
+    client = llm.LLMClient(model=resolve_model(args.model))
     result = run_case(args.case, client, prompts_dir=Path(args.prompts_dir))
     _print_result(result, args.out)
     return 0 if result.ok else 1

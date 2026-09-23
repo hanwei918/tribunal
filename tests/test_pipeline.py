@@ -18,12 +18,14 @@ import unittest
 from contextlib import redirect_stdout
 from decimal import Decimal
 from pathlib import Path
+from unittest import mock
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from tribunal import brief, llm, money, pipeline, transcript as transcript_module  # noqa: E402
+from tribunal.model import RUNTIME_MODEL  # noqa: E402
 
 FAKE_KEY = "tok-live-FAKEKEY-0123456789abcdef-DO-NOT-LEAK"
 PINNED_NOW = "2026-09-21T12:00:00+00:00"
@@ -1277,6 +1279,67 @@ class TranscriptAndSecretTests(unittest.TestCase):
             self.assertIsNotNone(entry["note"])
             self.assertEqual(entry["shape"], pipeline.SHAPE_OBJECT)
         self.assertNotIn(FAKE_KEY, text)
+
+
+class RuntimeModelWiringTests(unittest.TestCase):
+    """The CLI reads the decided model; the transport still keeps no default.
+
+    Two separate claims, and they are separate on purpose. ``--model`` is an
+    override rather than a demand, so the decision recorded in
+    ``tribunal/model.py`` is load-bearing; and ``LLMClient`` still refuses to
+    invent a model of its own, so the decision cannot drift into the transport.
+    """
+
+    def _model_the_cli_built_a_client_with(self, argv):
+        """Run the CLI with the client and the case both stubbed out.
+
+        The stubs are the point: this asserts what the command line decides, and
+        a test that reached a real model to find out would be measuring
+        something else, slowly and at a price.
+        """
+        captured = []
+
+        def fake_client(*args, **kwargs):
+            captured.append(kwargs.get("model"))
+            return object()
+
+        result = pipeline.PipelineResult(
+            case_no=CASE,
+            model=RUNTIME_MODEL,
+            ok=True,
+            brief_sha256="0" * 64,
+            transcript=transcript_module.Transcript(now=lambda: PINNED_NOW),
+        )
+
+        with mock.patch.object(llm, "LLMClient", fake_client):
+            with mock.patch.object(pipeline, "run_case", lambda *a, **k: result):
+                with redirect_stdout(io.StringIO()):
+                    status = pipeline.main(argv)
+
+        self.assertEqual(1, len(captured), "the CLI did not build exactly one client")
+        return captured[0], status
+
+    def test_the_cli_without_a_model_uses_the_decided_one(self):
+        model, status = self._model_the_cli_built_a_client_with(["--case", str(CASE)])
+
+        self.assertEqual(RUNTIME_MODEL, model)
+        self.assertEqual(0, status)
+
+    def test_a_named_model_overrides_the_decision(self):
+        model, status = self._model_the_cli_built_a_client_with(
+            ["--case", str(CASE), "--model", "hy4-preview"]
+        )
+
+        self.assertEqual("hy4-preview", model)
+        self.assertNotEqual(RUNTIME_MODEL, model)
+        self.assertEqual(0, status)
+
+    def test_the_transport_still_refuses_to_invent_a_model(self):
+        """The decision lives in one module, not as a convenience in the client."""
+        with self.assertRaises(llm.LLMError):
+            llm.LLMClient(model="")
+        with self.assertRaises(TypeError):
+            llm.LLMClient()
 
 
 if __name__ == "__main__":

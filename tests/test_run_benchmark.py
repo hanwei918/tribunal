@@ -47,6 +47,14 @@ What is covered
   first invocation's own record — its case list and its token total — intact in
   ``invocations.json``, while ``run.json`` describes only the invocation that
   wrote it and its directory block says what the directory actually holds;
+* the cost record: every invocation writes its prompt and completion tokens
+  separately rather than as a single total, because output is priced at four
+  times input and a total cannot be turned into a price; reasoning is inside the
+  completion rather than added to it; a case that failed after its calls were
+  made counts towards what the invocation consumed and not towards what the
+  budget bought; and the window it ran in is carried into the history as well as
+  into ``run.json``, so which price band applied is still recoverable after the
+  next invocation has overwritten that file;
 * isolation: a completed run's cached artifacts and transcripts carry no
   answer-key field name, scanned with the same needles
   ``tests/test_answer_isolation.py`` uses — and that scan is shown to be capable
@@ -81,6 +89,7 @@ from eval import grade  # noqa: E402
 from eval import run_benchmark as runner  # noqa: E402
 from tests import test_answer_isolation as isolation  # noqa: E402
 from tribunal import llm, money, pipeline, transcript  # noqa: E402
+from tribunal.model import RUNTIME_MODEL  # noqa: E402
 
 PROMPTS_DIR = PROJECT_ROOT / "prompts" / "v1"
 
@@ -1564,6 +1573,227 @@ class TokenAccountingTests(unittest.TestCase):
             self.assertEqual(
                 len(CASE_SET) * TOKENS_PER_CASE, metadata["tokens"]["total_for_the_case_set"]
             )
+
+
+class TokenSplitTests(unittest.TestCase):
+    """The split is the record and the total is derived from it, never stored.
+
+    A total cannot be costed. Output is priced at four times input on the
+    decided model, so two runs of the same total can differ by a factor in what
+    they cost, and a stored total is also a second place the same arithmetic can
+    be wrong.
+    """
+
+    def test_billed_is_the_prompt_plus_the_completion(self):
+        """Reasoning is a breakdown of the completion, not a third quantity."""
+        split = runner.TokenSplit(
+            prompt_tokens=100,
+            completion_tokens=40,
+            reasoning_tokens=25,
+            cached_tokens=60,
+        )
+
+        self.assertEqual(140, split.billed)
+        self.assertNotEqual(
+            split.prompt_tokens + split.completion_tokens + split.reasoning_tokens,
+            split.billed,
+        )
+
+    def test_two_splits_add_componentwise(self):
+        first = runner.TokenSplit(
+            prompt_tokens=1, completion_tokens=2, reasoning_tokens=3, cached_tokens=4
+        )
+        second = runner.TokenSplit(
+            prompt_tokens=10, completion_tokens=20, reasoning_tokens=30, cached_tokens=40
+        )
+
+        self.assertEqual(
+            runner.TokenSplit(
+                prompt_tokens=11,
+                completion_tokens=22,
+                reasoning_tokens=33,
+                cached_tokens=44,
+            ),
+            first + second,
+        )
+
+    def test_a_split_round_trips_through_what_is_written(self):
+        split = runner.TokenSplit(
+            prompt_tokens=7, completion_tokens=8, reasoning_tokens=9, cached_tokens=10
+        )
+        written = split.as_dict()
+
+        self.assertEqual(split.billed, written["total_tokens"])
+        self.assertEqual(split, runner.TokenSplit.from_mapping(written))
+
+    def test_an_absent_usage_block_is_zero_rather_than_an_error(self):
+        self.assertEqual(runner.TokenSplit(), runner.TokenSplit.from_mapping(None))
+        self.assertEqual(runner.TokenSplit(), runner.TokenSplit.from_mapping({}))
+
+    def test_a_record_predating_a_field_contributes_zero_for_it(self):
+        """An older entry must not drop out of the total it belongs to."""
+        older = {"prompt_tokens": 5, "completion_tokens": 6, "total_tokens": 11}
+
+        self.assertEqual(
+            runner.TokenSplit(prompt_tokens=5, completion_tokens=6),
+            runner.TokenSplit.from_mapping(older),
+        )
+
+
+class InvocationTokenRecordTests(unittest.TestCase):
+    """What one invocation cost, split by kind and by how its cases ended.
+
+    Two figures, and they answer different questions. ``spent_this_invocation``
+    is what the budget was spent against — the cases that produced a ruling.
+    ``consumed_this_invocation`` is every token the provider billed, the cases
+    that failed included, because a case that fails at the judge has already had
+    both its advocates paid for. A record counting only the first would report a
+    run that burned part of its budget on unusable answers as a cheap one.
+    """
+
+    def _tokens(self, summary):
+        return runner.read_json(runner.metadata_path(summary.run_dir))["tokens"]
+
+    def _judge_failure(self, cases):
+        """A transport that fails the named case at the judge, after both advocates."""
+        transport = ScriptedTransport(
+            produced_from_key(answer_key()),
+            fail={(case_no, transcript.ROLE_JUDGE) for case_no in cases},
+        )
+        return transport
+
+    def test_the_prompt_and_completion_totals_are_recorded_separately(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, _ = bench(tmp)
+            tokens = self._tokens(summary)
+
+            self.assertEqual(
+                len(CASE_SET) * CALLS_PER_CASE * PROMPT_TOKENS, tokens["prompt_tokens"]
+            )
+            self.assertEqual(
+                len(CASE_SET) * CALLS_PER_CASE * COMPLETION_TOKENS,
+                tokens["completion_tokens"],
+            )
+
+    def test_the_split_sums_to_the_consumed_total_and_not_past_it(self):
+        """Reasoning is inside the completion, so adding it would overstate."""
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, _ = bench(tmp)
+            tokens = self._tokens(summary)
+
+            self.assertEqual(
+                tokens["consumed_this_invocation"],
+                tokens["prompt_tokens"] + tokens["completion_tokens"],
+            )
+            self.assertEqual(
+                len(CASE_SET) * CALLS_PER_CASE * REASONING_TOKENS,
+                tokens["reasoning_tokens"],
+            )
+            self.assertNotEqual(
+                tokens["prompt_tokens"]
+                + tokens["completion_tokens"]
+                + tokens["reasoning_tokens"],
+                tokens["consumed_this_invocation"],
+            )
+
+    def test_a_clean_run_consumes_exactly_what_it_charged(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, _ = bench(tmp)
+            tokens = self._tokens(summary)
+
+            self.assertEqual(0, tokens["of_which_failed"])
+            self.assertEqual(
+                tokens["spent_this_invocation"], tokens["consumed_this_invocation"]
+            )
+
+    def test_a_failed_case_is_consumed_but_not_charged_to_the_budget(self):
+        """Its calls were made and billed before the answer was rejected.
+
+        Case 101 fails at the judge, so both its advocates ran and were paid
+        for. Those tokens are part of what the invocation consumed and are not
+        part of what the budget was spent on.
+        """
+        transport = self._judge_failure((101,))
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, _ = bench(tmp, cases=(101, 102), transport=transport)
+            tokens = self._tokens(summary)
+
+            self.assertEqual(1, len(summary.failures))
+            # Two advocate calls were billed; the judge's failed call carried no
+            # usage block, so it contributed nothing.
+            self.assertEqual(2 * PROMPT_TOKENS, tokens["failed"]["prompt_tokens"])
+            self.assertEqual(2 * COMPLETION_TOKENS, tokens["failed"]["completion_tokens"])
+            self.assertEqual(2 * TOKENS_PER_CALL, tokens["of_which_failed"])
+            self.assertEqual(TOKENS_PER_CASE, tokens["spent_this_invocation"])
+            self.assertEqual(
+                tokens["spent_this_invocation"] + tokens["of_which_failed"],
+                tokens["consumed_this_invocation"],
+            )
+
+    def test_the_failure_is_on_the_outcome_as_well_as_in_the_file(self):
+        """A caller driving the runner should not have to read the file back."""
+        transport = self._judge_failure((101,))
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, _ = bench(tmp, cases=(101,), transport=transport)
+
+            failed = summary.failures[0]
+            self.assertEqual(2 * PROMPT_TOKENS, failed.tokens.prompt_tokens)
+            self.assertEqual(2 * TOKENS_PER_CALL, failed.total_tokens)
+            self.assertEqual(summary.tokens_failed.billed, failed.total_tokens)
+            self.assertEqual(
+                summary.tokens_consumed.billed,
+                summary.tokens_charged.billed + summary.tokens_failed.billed,
+            )
+
+    def test_a_reused_case_is_not_charged_and_is_still_costable(self):
+        """A re-run consumes nothing, and the set's own cost is still readable.
+
+        The split under ``reused`` is what stops a re-run erasing what the
+        results cost to produce: this invocation consumed no tokens, so its own
+        prompt and completion totals are zero, and the figures that turn the
+        reused results into a price are carried beside them.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            bench(tmp)
+            second, _ = bench(tmp)
+            tokens = self._tokens(second)
+
+            self.assertEqual(0, tokens["spent_this_invocation"])
+            self.assertEqual(0, tokens["consumed_this_invocation"])
+            self.assertEqual(0, tokens["prompt_tokens"])
+            self.assertEqual(
+                len(CASE_SET) * TOKENS_PER_CASE, tokens["reused_from_cache"]
+            )
+            self.assertEqual(
+                len(CASE_SET) * CALLS_PER_CASE * PROMPT_TOKENS,
+                tokens["reused"]["prompt_tokens"],
+            )
+            self.assertEqual(
+                len(CASE_SET) * CALLS_PER_CASE * COMPLETION_TOKENS,
+                tokens["reused"]["completion_tokens"],
+            )
+
+    def test_each_invocation_records_the_window_it_ran_in(self):
+        """Peak hours are a property of when the calls were made.
+
+        The window has to survive in the history as well as in ``run.json``,
+        because ``run.json`` is overwritten by the next invocation — and it is
+        the earlier invocation whose price band can no longer be worked out any
+        other way.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            first, _ = bench(
+                tmp, cases=CASE_SET, now=lambda: "2026-01-01T00:00:00+00:00"
+            )
+            bench(tmp, cases=(105,), now=lambda: "2026-01-02T00:00:00+00:00")
+
+            history = runner.read_json(first.run_dir / runner.INVOCATIONS_FILE)
+
+            self.assertEqual(2, len(history))
+            for entry in history:
+                with self.subTest(started_at=entry["started_at"]):
+                    self.assertTrue(entry["started_at"])
+                    self.assertTrue(entry["ended_at"])
 
 
 # --------------------------------------------------------------------------
@@ -3786,13 +4016,47 @@ class CommandLineTests(unittest.TestCase):
         self.assertEqual(2, raised.exception.code)
         self.assertIn("--compare", errors.getvalue())
 
-    def test_a_run_without_a_model_is_refused(self):
-        errors = io.StringIO()
-        with contextlib.redirect_stderr(errors):
-            with self.assertRaises(SystemExit) as raised:
-                runner.main(["--cases", "101"])
-        self.assertEqual(2, raised.exception.code)
-        self.assertIn("--model is required", errors.getvalue())
+    def _model_the_cli_resolved(self, argv):
+        """Run the CLI with the runner stubbed out, and report the model it chose.
+
+        The stub is the point: this asserts what the command line decides, and a
+        test that reached a real model to find out would be measuring something
+        else, slowly and at a price.
+        """
+        captured = []
+        summary = runner.RunSummary(
+            model="(stub)",
+            run_dir=Path("/nonexistent"),
+            started_at="2026-01-01T00:00:00+00:00",
+            ended_at="2026-01-01T00:00:01+00:00",
+            stop_reason=runner.STOP_COMPLETED,
+        )
+
+        def fake_run_benchmark(model, cases, **kwargs):
+            captured.append(model)
+            return summary
+
+        output = io.StringIO()
+        with mock.patch.object(runner, "run_benchmark", fake_run_benchmark):
+            with contextlib.redirect_stdout(output):
+                status = runner.main(argv)
+
+        self.assertEqual(1, len(captured), "the runner was not driven exactly once")
+        return captured[0], status
+
+    def test_a_run_without_a_model_uses_the_decided_one(self):
+        """The decision is load-bearing: the flag is an override, not a demand."""
+        model, status = self._model_the_cli_resolved(["--cases", "101"])
+
+        self.assertEqual(RUNTIME_MODEL, model)
+        self.assertEqual(0, status)
+
+    def test_a_named_model_overrides_the_decision(self):
+        model, status = self._model_the_cli_resolved(["--cases", "101", "--model", MODEL])
+
+        self.assertEqual(MODEL, model)
+        self.assertNotEqual(RUNTIME_MODEL, model)
+        self.assertEqual(0, status)
 
     def test_the_model_flag_has_no_default_in_the_parser(self):
         import inspect
