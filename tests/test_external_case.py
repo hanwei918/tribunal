@@ -5,7 +5,7 @@ ruling and its Evidence Summary argues for one side. Only the fenced JSON block
 inside it is case material, and the whole point of these tests is that the other
 two parts cannot reach the converted case.
 
-Four properties, in the order they matter:
+Five properties, in the order they matter:
 
 * **The converter reads exactly the block.** Its input is located by parsing the
   Markdown fences, and the parse is required to find exactly one block.
@@ -14,6 +14,11 @@ Four properties, in the order they matter:
 * **Nothing was invented.** No fix carries an accuracy value, there is no rider
   track, no admissibility code is outside ``CODE_WEIGHTS``, and every weight is
   what ``prepass.weight_for`` produces for the codes beside it.
+* **Nothing is dropped in silence.** Every item in the block is either carried
+  into the converted case or recorded in the mapping with the reason it is not,
+  and the converter refuses to write a mapping that fails that. The one item
+  that was neither -- the source's account of how the arrival marker was made --
+  is now carried, and carried as what it is.
 * **The benchmark is undisturbed.** The corpus, the manifest and the answer key
   are byte-identical across a conversion, and the corpus loader still refuses a
   manifest entry that points outside ``data/cases/``.
@@ -233,6 +238,27 @@ class ConvertedCaseTests(unittest.TestCase):
         gps = self._artifact("GPS_TRACE")
         self.assertEqual([], gps["payload"]["rider_track"])
 
+    def test_the_trace_note_counts_the_gaps_the_payload_lists(self):
+        """The note's fraction and the payload's own list are the same count.
+
+        They disagreed. The note said three of the seven intervals exceeded
+        POL-NS-08(b)'s 120 s limb while ``payload.gaps`` held five, and the
+        mapping repeated the typed figure. Both counts are now derived from the
+        list of intervals, and this reads the rendered artifact back to check
+        that what it says and what it carries agree.
+        """
+        gps = self._artifact("GPS_TRACE")
+        expected = "{0} of the {1} exceed".format(
+            len(gps["payload"]["gaps"]), len(gps["payload"]["points"]) - 1
+        )
+        self.assertIn(expected, gps["admissibility"]["notes"])
+        entry = next(
+            item
+            for item in self.mapping["fields"]
+            if item["target"] == "evidence.EV-GPS-00901.payload.gaps"
+        )
+        self.assertIn(expected, entry["reason"])
+
     def test_the_counterparty_statement_is_null(self):
         """The source carries no statement from the driver."""
         self.assertIsNone(self.case["dispute"]["counterparty_statement"])
@@ -388,6 +414,212 @@ class MappingRecordTests(unittest.TestCase):
             with self.subTest(assumption=item["assumption"]):
                 self.assertTrue(item["depends_on_it"], "an assumption names no dependants")
                 self.assertTrue(item["reason"].strip())
+
+
+class SourceCoverageTests(unittest.TestCase):
+    """Nothing in the source is dropped in silence.
+
+    The converter's contract is that every item in the fenced block is either
+    carried into the converted case or recorded in the mapping record with the
+    reason it is not. A drop is a decision, and a decision that leaves no trace
+    is indistinguishable from an oversight -- which is what happened here. The
+    source's ``driver_arrived`` details are the one record that says the arrival
+    marker was auto-confirmed from a GPS measurement, and they were in neither
+    the case nor the mapping.
+
+    The check is the converter's own, ``unrecorded_items``, rather than a second
+    implementation in the test: a test that re-derived the answer could agree
+    with a converter that was wrong in the same way.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.block = convert.conversion_input(SOURCE_PATH.read_text(encoding="utf-8"))
+        cls.source = convert.parse_source(cls.block)
+        cls.case = loader.load_external_case(CASE_PATH)
+        cls.mapping = json.loads(MAPPING_PATH.read_text(encoding="utf-8"))
+
+    def test_every_source_item_is_carried_or_recorded(self):
+        self.assertEqual([], convert.unrecorded_items(self.source, self.mapping))
+
+    def test_the_walk_finds_the_items_the_source_actually_has(self):
+        """A walk that found nothing would satisfy the check above vacuously.
+
+        The count is a literal because the source is a fixed document: an item
+        added to it should show up here rather than pass unnoticed.
+        """
+        items = convert.source_items(self.source)
+        self.assertEqual(86, len(items))
+        # One of each shape, so a walk that stopped at the top level fails here.
+        for path in (
+            "dispute_ticket.filed_at",
+            "rider_profile.dispute_history.upheld",
+            "trip_data.pickup_location.lat",
+            "gps_telemetry[*].status",
+            "chat_logs[*].content",
+            "cancellation_policy.fee_goes_to",
+            "app_events[driver_arrived].details",
+        ):
+            with self.subTest(path=path):
+                self.assertIn(path, items)
+
+    def test_the_check_fails_when_an_item_is_left_unrecorded(self):
+        """Falsifiability, on the item that was actually dropped.
+
+        Every entry that names the path is removed, which is what the check
+        itself asks: the item is recorded once by the trip record and again by
+        the per-event audit, and leaving either one standing would be a record.
+        """
+        stripped = {
+            "fields": [
+                entry
+                for entry in self.mapping["fields"]
+                if "app_events[driver_arrived].details"
+                not in [part.strip() for part in (entry.get("source") or "").split(",")]
+            ]
+        }
+        self.assertIn(
+            "app_events[driver_arrived].details",
+            convert.unrecorded_items(self.source, stripped),
+        )
+
+    def test_the_writer_refuses_a_mapping_that_drops_an_item(self):
+        """The guard is at the write, not only in this file.
+
+        A mapping with a hole in it is wrong the moment it is written, so the
+        refusal is checked where it happens. It fires before the output
+        directory is created, so this writes nothing.
+        """
+        with mock.patch.object(
+            convert, "convert", return_value=(self.case, {"fields": []})
+        ):
+            with self.assertRaises(convert.ConversionError) as caught:
+                convert.write_outputs()
+        self.assertIn("neither carried nor recorded", str(caught.exception))
+
+    # -- the record that was dropped, and what carrying it means ------------
+    def test_the_auto_arrival_claim_is_carried_verbatim(self):
+        """The dropped text is now in the trip record's admissibility notes."""
+        arrival = self._event("driver_arrived")
+        self.assertIn(arrival["details"], self._trip()["admissibility"]["notes"])
+
+    def test_the_auto_arrival_claim_is_carried_as_what_it_is(self):
+        """Labelled: a platform distance claim, not a reported accuracy.
+
+        "Within 10m" is a distance the platform reports between two things it
+        measured. It is not a horizontal accuracy the device reported, and the
+        difference is the whole of POL-NS-02: writing it into an accuracy field
+        would invent the very value that clause tests.
+        """
+        notes = self._trip()["admissibility"]["notes"]
+        self.assertIn("distance claim", notes)
+        self.assertIn("a reported horizontal accuracy", notes)
+        self.assertIn("measurable under POL-NS-02", notes)
+
+    def test_the_auto_arrival_claim_became_neither_a_fix_nor_an_accuracy(self):
+        """It is a statement about the record, and it stays one."""
+        gps = self._artifact("GPS_TRACE")
+        self.assertEqual(
+            len(self.source["gps_telemetry"]), gps["payload"]["point_count"]
+        )
+        self.assertEqual(len(self.source["gps_telemetry"]), len(gps["payload"]["points"]))
+        for point in gps["payload"]["points"]:
+            with self.subTest(ts=point["ts"]):
+                self.assertNotIn("accuracy_m", point)
+
+    def test_the_independence_consequence_is_recorded(self):
+        """The marker and the trace are one measurement, so one carrier.
+
+        This is the fact a reader needs and would not otherwise have: the source
+        states that the arrival marker was produced from the GPS reading, so the
+        trip record and the trace corroborate nothing. Both the case and the
+        mapping say so.
+        """
+        self.assertIn("one carrier", self._trip()["admissibility"]["notes"])
+        entry = next(
+            item
+            for item in self.mapping["fields"]
+            if item.get("source") == "app_events[driver_arrived].details"
+        )
+        self.assertIn("ONE carrier", entry["reason"])
+        self.assertEqual("judged", entry["kind"])
+
+    # -- the rest of the block, item by item -------------------------------
+    def test_every_app_event_is_recorded_one_by_one(self):
+        """A wildcard entry would hide an event nobody read."""
+        for event in self.source["app_events"]:
+            kind = event["event_type"]
+            with self.subTest(event=kind):
+                entry = next(
+                    (
+                        item
+                        for item in self.mapping["fields"]
+                        if item["target"] == "app_events[{0}]".format(kind)
+                    ),
+                    None,
+                )
+                self.assertIsNotNone(entry, "the event is not on the record")
+                for field in ("timestamp", "event_type", "details"):
+                    self.assertIn("app_events[{0}].{1}".format(kind, field), entry["source"])
+
+    def test_every_app_event_type_has_a_disposition(self):
+        kinds = {event["event_type"] for event in self.source["app_events"]}
+        self.assertEqual(set(), kinds - set(convert._APP_EVENT_DISPOSITION))
+
+    def test_an_unrecognised_app_event_is_refused_rather_than_dropped(self):
+        """A source that grew an event must not lose it quietly."""
+        source = json.loads(self.block)
+        source["app_events"].append(
+            {
+                "timestamp": "2026-09-13T08:51:10+08:00",
+                "event_type": "something_this_converter_has_never_seen",
+                "details": "Not an event this converter knows what to do with.",
+            }
+        )
+        with self.assertRaises(convert.ConversionError) as caught:
+            convert.convert(json.dumps(source))
+        self.assertIn("something_this_converter_has_never_seen", str(caught.exception))
+
+    def test_the_source_policy_block_is_recorded_as_dropped(self):
+        """The source's own policy is not this system's, and that is recorded."""
+        sources = {entry.get("source") for entry in self.mapping["fields"]}
+        for field in self.source["cancellation_policy"]:
+            with self.subTest(field=field):
+                self.assertIn("cancellation_policy." + field, sources)
+
+    def test_the_records_that_are_read_and_not_carried_say_which_they_are(self):
+        """A drop and a read-but-not-carried are both decisions, both stated."""
+        for path in (
+            "trip_data.scheduled_time",
+            "chat_logs[*].type",
+            "rider_profile.fraud_flag_details",
+            "driver_profile.name",
+            "driver_profile.dispute_history.rejected",
+        ):
+            with self.subTest(path=path):
+                entry = next(
+                    item for item in self.mapping["fields"] if item.get("source") == path
+                )
+                self.assertEqual("judged", entry["kind"])
+                self.assertTrue(entry["reason"].strip())
+
+    # -- helpers -----------------------------------------------------------
+    def _artifact(self, evidence_type):
+        return next(
+            artifact
+            for artifact in self.case["evidence"]
+            if artifact["evidence_type"] == evidence_type
+        )
+
+    def _trip(self):
+        return self._artifact("TRIP_RECORD")
+
+    def _event(self, event_type):
+        return next(
+            event
+            for event in self.source["app_events"]
+            if event["event_type"] == event_type
+        )
 
 
 class AnswerIsolationTests(unittest.TestCase):

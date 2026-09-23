@@ -241,16 +241,16 @@ class PromptContractTests(unittest.TestCase):
         self.assertIn(pipeline.ADVOCATE_CLAIMS_KEY, example)
 
     def test_no_prompt_asks_for_a_json_array_under_json_object(self):
-        """A text check, and one of only three in this file.
+        """A text check, and one of only four in this file.
 
         Everything above asserts on parsed structure. This one cannot: the thing
         under test is prose, and there is no structural way to ask what a
         paragraph instructs a model to do. So it is kept as narrow as it can be —
         it looks for the phrase "JSON array" in a prompt whose request forces an
         object, which is the exact instruction that was wrong. The other text
-        checks, ``DecidingFactCarrierTests`` and ``ReferralContractTests``, cannot
-        assert on structure for the same reason, and each is confined to one
-        subsection for the same narrowness.
+        checks, ``DecidingFactCarrierTests``, ``ExplanationAnswersTheSurvivingClaimsTests``
+        and ``ReferralContractTests``, cannot assert on structure for the same
+        reason, and each is confined to one subsection for the same narrowness.
 
         It is a backstop, not the guard. A prompt that asked for an array in
         other words but shipped an array example is caught above by the example
@@ -322,17 +322,24 @@ _CARRIER_ENDS_AT = "The escalation floor is the"
 
 
 def carrier_section(text=None):
-    """The Step 2 subsection, from its heading up to the escalation floor."""
+    """The Step 2 subsection, from its heading up to the escalation floor.
+
+    Whitespace is collapsed to single spaces, as in ``referral_section``. The
+    assertion is about what the prompt instructs a model to do, and a re-wrapped
+    line is not a change of instruction; collapsing is what lets a check span a
+    line break without also pinning the wrapping.
+    """
     if text is None:
         text = (pipeline.PROMPTS_DIR / JUDGE_PROMPT_FILE).read_text(encoding="utf-8")
     start = text.index(_CARRIER_HEADING)
-    return text[start : text.index(_CARRIER_ENDS_AT, start)]
+    section = text[start : text.index(_CARRIER_ENDS_AT, start)]
+    return " ".join(section.split())
 
 
 class DecidingFactCarrierTests(unittest.TestCase):
     """Step 2 must say what kind of artifact can carry a deciding fact.
 
-    A text check, and one of only three in this file, for the same reason as the
+    A text check, and one of only four in this file, for the same reason as the
     other: what is under test is prose that instructs a model, and there is no
     structural way to ask what a paragraph tells a model to do. It is kept to the
     one subsection, so a sentence elsewhere in the prompt cannot satisfy it.
@@ -351,6 +358,19 @@ class DecidingFactCarrierTests(unittest.TestCase):
     supports. So the removal test that bounds the principle is required, the
     independence rule is required to survive, and the prompt is required *not*
     to become a list of cases to match against.
+
+    The second amendment is the converse of the first, and it is what most of
+    the checks below are for. Saying a message can carry a fact left open
+    whether it can *meet a limb*, and a real run read it as yes: a driver's own
+    "I've arrived" messages were taken as satisfying a proximity test whose
+    clause names the GPS trace, on a trace where no fix qualified at all. The
+    three ways that reading goes wrong are each a check here — a message never
+    records where anyone was (which would remove the admissions the first
+    amendment depends on), a limb whose test could not run is a failed limb
+    (which would refund a fee the policy holds), and a limb's own test is the
+    only thing that can decide it (which would miss the case where the summing
+    rule comes from a different clause). So the subsection now separates the two
+    questions, and the checks pin both halves of each sentence.
     """
 
     @classmethod
@@ -432,6 +452,94 @@ class DecidingFactCarrierTests(unittest.TestCase):
                         pipeline.AGENT_RESPONSE_FORMAT[role]["type"]
                     ],
                 )
+
+
+    # -- the second amendment: carrying a fact is not meeting a limb --------
+    def test_meeting_a_limb_is_not_carrying_a_fact(self):
+        """(a) The two questions are separated, and the limb's own test decides."""
+        self.assertIn("Deciding a limb is not carrying a fact", self.section)
+        self.assertIn("the test its own clause states for it", self.section)
+        self.assertIn("including a test the clause takes from another clause", self.section)
+        self.assertIn("in either direction", self.section)
+        self.assertIn("unless the policy names what may stand in for it", self.section)
+
+    def test_a_party_account_of_position_is_not_a_measurement(self):
+        """(b) An account carries facts; it does not run a measurement test.
+
+        Both halves are required. Saying a message never records where anyone
+        was would remove the admissions against interest the subsection above
+        depends on; saying nothing leaves the judge free to let a message
+        satisfy a proximity test its clause never gave it.
+        """
+        self.assertIn("that party's account, not a measurement", self.section)
+        self.assertIn("it may carry a fact for the cap", self.section)
+        self.assertIn("does not satisfy a limb whose test is a measurement", self.section)
+        self.assertIn("records only that the party set it", self.section)
+        self.assertIn("a record the platform generates is the platform's record", self.section)
+        self.assertIn("concedes against the speaker's own interest", self.section)
+        self.assertIn("reads the log or the statement as its own test", self.section)
+
+    def test_an_untested_limb_is_neither_met_nor_failed(self):
+        """(c) A test that could not run is not a test that failed.
+
+        And the converse, which is the harder half and the one the draft got
+        wrong: a test that ran and found nothing qualifying *has* run, and its
+        limb fails. Without that sentence a trace whose fixes are all filtered
+        out would be treated as untested, and the fee would stand on nothing.
+        """
+        self.assertIn("is neither met nor failed", self.section)
+        self.assertIn("impaired for policy under the category's own integrity limbs", self.section)
+        self.assertIn("rather than merely flagged by the pre-pass", self.section)
+        self.assertIn("the test has not run", self.section)
+        self.assertIn("finds nothing qualifying has run", self.section)
+
+    def test_bridging_is_not_substituting(self):
+        """(d) A record from inside an unobserved stretch is not a stand-in."""
+        self.assertIn("Bridging is not substituting", self.section)
+        self.assertIn("inside a stretch the test left unobserved", self.section)
+        self.assertIn("between readings the test admitted", self.section)
+        self.assertIn("whether something is the only evidence", self.section)
+        self.assertIn("standing in for the test", self.section)
+
+    def test_a_contradiction_the_policy_escalates_on_stays_one(self):
+        """(e) The amendment does not resolve a contradiction the policy names."""
+        self.assertIn("stays a contradiction", self.section)
+
+    def test_the_counterparty_statement_is_placed_where_it_lives(self):
+        """(f) It is in `case.dispute`, and it has no weight to enter the cap with.
+
+        The prompt said its weight was its own `weight_multiplier`, which is not
+        a field it has: a judge following that sentence on a statement-only
+        finding would look for a weight that does not exist.
+        """
+        self.assertIn("sits in `case.dispute` rather than `case.evidence`", self.section)
+        self.assertIn("carries no `weight_multiplier`", self.section)
+        self.assertNotIn("so is a counterparty statement", self.section)
+
+    def test_the_section_contains_no_digit(self):
+        """A digit is a figure the policy owns, and the prompt owns none.
+
+        The floor is the one that matters: it is read from the loaded policy,
+        and a threshold or a count written here would go stale against the
+        policy the judge is actually handed.
+        """
+        self.assertEqual([], re.findall(r"[0-9]", self.section))
+
+    def test_the_section_names_nothing_from_the_organisers_sample(self):
+        """The sample is what prompted the amendment; it is not the rule."""
+        for term in (
+            "RydeResolve", "DISP-002", "Tiong Bahru", "VivoCity", "Michael Wong",
+            "Lim Wei Ming", "Honda", "SGP 4521", "R-7823", "D-2398",
+            "TRIP-2026-09945", "no_show_charge",
+        ):
+            with self.subTest(term=term):
+                self.assertNotIn(term, self.section)
+
+    def test_the_section_collapses_whitespace_the_way_the_referral_one_does(self):
+        """So a re-wrapped line is not read as a change of instruction."""
+        self.assertNotIn("\n", self.section)
+        self.assertNotIn("  ", self.section)
+        self.assertEqual(self.section, " ".join(self.section.split()))
 
 
 # --------------------------------------------------------------------------
@@ -562,6 +670,85 @@ class ReferralContractTests(unittest.TestCase):
                         pipeline.AGENT_RESPONSE_FORMAT[role]["type"]
                     ],
                 )
+
+
+# --------------------------------------------------------------------------
+# What the explanation owes the claims that survived
+# --------------------------------------------------------------------------
+# Read out of the prompt rather than assumed, as above, so a reordering shows up
+# as a failure rather than as a check that stopped looking.
+_STEP_THREE_HEADING = "## Step 3 — the result object"
+_STEP_THREE_ENDS_AT = "## Three things that decide real cases"
+
+
+def step_three_section(text=None):
+    """The Step 3 section, whitespace collapsed as in ``referral_section``."""
+    if text is None:
+        text = (pipeline.PROMPTS_DIR / JUDGE_PROMPT_FILE).read_text(encoding="utf-8")
+    start = text.index(_STEP_THREE_HEADING)
+    section = text[start : text.index(_STEP_THREE_ENDS_AT, start)]
+    return " ".join(section.split())
+
+
+class ExplanationAnswersTheSurvivingClaimsTests(unittest.TestCase):
+    """Step 3 must say what the explanation owes the claims that survived.
+
+    A text check, and the fourth in this file. The gap it closes is the other
+    half of the one above it: Step 1 discards a claim and records why, and Step 2
+    says how a fact may be carried, but nothing said what becomes of a claim that
+    passes the citation check and is then outweighed, or rejected on its merits.
+    Those claims went unanswered, which reads to the party who made them as
+    though the arbitrator never considered them.
+
+    The distinction the prompt has to keep is that a merits rejection is not a
+    Step 1 discard. ``discarded_claims`` is the citation audit, and filing a
+    weighed-and-rejected claim there would misreport the audit. So the prompt
+    says where the answer goes, and says the claim does not go in that field.
+    It adds no field of its own: the answer goes in `ruling.explanation`.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = (pipeline.PROMPTS_DIR / JUDGE_PROMPT_FILE).read_text(encoding="utf-8")
+        cls.section = step_three_section(cls.text)
+
+    def test_the_step_three_section_is_present_at_all(self):
+        self.assertIn(_STEP_THREE_HEADING, self.text)
+
+    def test_it_sits_beside_the_explanation_field(self):
+        """It is about `ruling.explanation`, so it belongs in that list."""
+        field = "- `ruling.explanation` — addressed to both parties"
+        self.assertIn(field, self.section)
+        self.assertLess(
+            self.section.index(field),
+            self.section.index("is answered in `ruling.explanation`"),
+            "the instruction does not follow the field it is about",
+        )
+
+    def test_a_surviving_claim_that_would_change_the_outcome_is_answered(self):
+        self.assertIn("survived Step 1", self.section)
+        self.assertIn("is answered in `ruling.explanation`", self.section)
+        self.assertIn("change the ruling, an amount, the driver's compensation", self.section)
+
+    def test_the_two_ways_of_answering_are_stated(self):
+        self.assertIn("accepted but outweighed", self.section)
+        self.assertIn("saying by what", self.section)
+        self.assertIn("rejected, saying why", self.section)
+
+    def test_claims_on_the_same_point_are_answered_together(self):
+        self.assertIn("Claims on the same point are answered together", self.section)
+
+    def test_a_merits_rejection_is_not_a_step_one_discard(self):
+        self.assertIn("is not a Step 1 discard", self.section)
+        self.assertIn("does not go in `discarded_claims`", self.section)
+
+    def test_it_adds_no_field(self):
+        """The answer goes in a field that already exists, not in a new one."""
+        self.assertIn("Do not add any other top-level field.", self.section)
+
+    def test_the_section_collapses_whitespace(self):
+        self.assertNotIn("\n", self.section)
+        self.assertEqual(self.section, " ".join(self.section.split()))
 
 
 class CleanRunTests(unittest.TestCase):

@@ -41,6 +41,30 @@ in the mapping record written beside the case. Four in particular:
   explicitly stated assumption, never inferred from the place name, and the
   mapping records which figures depend on it.
 
+What it will not drop in silence
+--------------------------------
+Every item in the block is either carried into the converted case or recorded in
+the mapping record with the reason it is not. That is a contract, not an
+intention: :func:`source_items` names every item in the block,
+:func:`unrecorded_items` reports the ones no mapping entry names, and
+:func:`write_outputs` **refuses to write a mapping that fails it** rather than
+emitting a record with a hole in it.
+
+Two of those records are about evidence rather than bookkeeping, and are worth
+naming here.
+
+* The source's ``driver_arrived`` event says the arrival marker was
+  auto-confirmed from a GPS measurement within ten metres of the pickup point.
+  That text is carried into the trip record's admissibility notes, verbatim and
+  labelled for what it is: a platform **distance** claim, not a reported
+  horizontal accuracy. So it is not written to ``accuracy_m`` on any fix, it
+  does not make any fix qualifying under POL-NS-02, and it is not a GPS fix of
+  its own.
+* It also means the arrival marker and the trace are the **same measurement**.
+  Under POL-GEN-02's independence rule the two are one carrier rather than two,
+  and the notes say so, because a reader comparing the marker with the trace
+  would otherwise take them for corroborating each other.
+
 Run with ``python eval/external/ryde/convert.py``. It is idempotent: the same
 source produces the same bytes.
 """
@@ -243,6 +267,194 @@ def _plain(value: Any) -> Any:
 
 
 # --------------------------------------------------------------------------
+# Coverage: every source item is carried, or recorded as dropped
+# --------------------------------------------------------------------------
+def source_items(source: Dict[str, Any]) -> List[str]:
+    """Every item in the source block, named the way the mapping names it.
+
+    Scalars inside ``gps_telemetry`` and ``chat_logs`` are named once with a
+    wildcard selector, because the conversion carries every element of those
+    arrays through one code path: covering the key covers each element.
+
+    ``app_events`` is different, and that is the point of this function. The
+    conversion reads *named* events, so an event nobody read would hide behind a
+    wildcard. Each event is therefore named individually, by its own
+    ``event_type``.
+    """
+    items: List[str] = []
+
+    def walk(node: Any, prefix: str) -> None:
+        if isinstance(node, dict):
+            for key, value in node.items():
+                walk(value, "{0}.{1}".format(prefix, key) if prefix else key)
+        else:
+            items.append(prefix)
+
+    for key, value in source.items():
+        if key in ("gps_telemetry", "chat_logs"):
+            for element in value:
+                walk(element, key + "[*]")
+        elif key == "app_events":
+            for element in value:
+                walk(element, "app_events[{0}]".format(element["event_type"]))
+        else:
+            walk(value, key)
+    return sorted(set(items))
+
+
+def named_items(mapping: Dict[str, Any]) -> List[str]:
+    """Every source path the mapping record names.
+
+    One entry may name several paths in its ``source``, separated by commas,
+    which is how a value drawn from two places is recorded.
+    """
+    named: List[str] = []
+    for entry in mapping["fields"]:
+        source = entry.get("source")
+        if isinstance(source, str):
+            named.extend(part.strip() for part in source.split(","))
+    return sorted(set(named))
+
+
+def unrecorded_items(source: Dict[str, Any], mapping: Dict[str, Any]) -> List[str]:
+    """Source items that are neither carried nor recorded as dropped."""
+    named = set(named_items(mapping))
+    return [item for item in source_items(source) if item not in named]
+
+
+# What became of each app event the source records. The events the conversion
+# reads are carried somewhere in the converted case; the rest have no field in
+# either payload schema that can hold them and are dropped with the reason.
+# An event type absent from this table is refused rather than dropped, so a
+# source that grew an event cannot lose it quietly.
+_APP_EVENT_DISPOSITION = {
+    "booking_confirmed": (
+        "Carried: its timestamp is EV-TRIP-00901.payload.requested_at."
+    ),
+    "driver_assigned": (
+        "Carried: its timestamp is EV-TRIP-00901.payload.accepted_at."
+    ),
+    "driver_en_route": (
+        "Read, not carried: EV-TRIP-00901.payload.time_to_arrival_min is measured "
+        "from its timestamp, and no field holds the event itself."
+    ),
+    "driver_arrived": (
+        "Carried: its timestamp is EV-TRIP-00901.payload.arrived_at, and its details "
+        "are carried into EV-TRIP-00901's admissibility notes."
+    ),
+    "rider_notified": (
+        "Dropped: no field in either payload schema holds a notification, and no limb "
+        "of POL-NS-01 to POL-NS-09 reads one. It records the platform's act, not the "
+        "rider's."
+    ),
+    "wait_timer_started": (
+        "Dropped: no field holds a timer. The free-wait period it starts is the "
+        "source platform's own rule rather than this system's, and POL-NS-01(c) "
+        "measures the dwell from a GPS fix instead."
+    ),
+    "driver_called_rider": (
+        "Carried: EV-TRIP-00901.payload.in_app_calls[0] holds the call it records, "
+        "with its time, initiator and duration."
+    ),
+    "wait_timer_expired": (
+        "Dropped, for the same reason as wait_timer_started: no field holds a timer."
+    ),
+    "cancellation_fee_applied": (
+        "Carried: its timestamp is EV-FARE-00901.payload.charged_at and its amount is "
+        "EV-FARE-00901.payload.cancellation_fee."
+    ),
+    "driver_released": (
+        "Dropped as an event: EV-TRIP-00901.payload.status and cancelled_by carry the "
+        "fact it records, and no field holds a release."
+    ),
+}
+
+
+def _audit(decisions: Decisions, source: Dict[str, Any]) -> None:
+    """Record every source item the conversion reads and does not carry.
+
+    A drop is a decision, so it goes on the record with its reason rather than
+    disappearing. The events are recorded one at a time because the conversion
+    reads them one at a time; a wildcard entry would hide an event nobody read.
+    """
+    decisions.judged(
+        "trip_data.scheduled_time", None,
+        "Dropped: no field in this corpus's trip-record payload holds a scheduled "
+        "pickup time, and no limb of POL-NS-01 to POL-NS-09 reads one. The source's "
+        "08:45 schedule is quoted in policy_divergences, where the question it raises "
+        "- whether a waiting clock runs from arrival or from the scheduled time - is "
+        "recorded and left open rather than resolved here.",
+        source="trip_data.scheduled_time",
+    )
+
+    for field, reason in (
+        ("free_wait_time_min",
+         "the source platform's own free-wait period, not this system's"),
+        ("cancellation_fee_after_wait",
+         "the source's own fee figure; the amount itself is carried on EV-FARE-00901, "
+         "and policy_divergences records that it does not reconcile with fee_schedule"),
+        ("no_show_threshold_min",
+         "the source's own threshold; this system's dwell minimum is read from "
+         "fee_schedule at arbitration time, as policy_divergences records"),
+        ("fee_goes_to",
+         "the source's own instruction about where the fee goes; this system "
+         "compensates the driver under POL-NS-07 at its own rate"),
+    ):
+        decisions.judged(
+            "cancellation_policy." + field, None,
+            "Dropped: {0}. No field of the converted case holds a source policy "
+            "figure.".format(reason),
+            source="cancellation_policy." + field,
+        )
+
+    decisions.judged(
+        "chat_logs[*].type", None,
+        "Read, not carried: the type is what separates the log's messages from its "
+        "call and from the platform's own entry, and each is carried where it belongs "
+        "- the call as EV-TRIP-00901.payload.in_app_calls[0], the rest as messages on "
+        "EV-CHAT-00901. Neither payload schema has a field for the type itself.",
+        source="chat_logs[*].type",
+    )
+    decisions.judged(
+        "rider_profile.fraud_flag_details", None,
+        "Read, not carried: the text ('flagged_for_frequent_late_cancellations') is "
+        "what identifies the rider's flag counter as belonging to the no-show family, "
+        "which is why the counter is carried as prior_no_show_flags. This corpus's "
+        "profile schema has no field for the detail text.",
+        source="rider_profile.fraud_flag_details",
+    )
+    decisions.judged(
+        "driver_profile.name", None,
+        "Dropped: this corpus's profile schema has no field for a name, and no clause "
+        "reads one. The same decision is recorded for the rider's name.",
+        source="driver_profile.name",
+    )
+    decisions.judged(
+        "driver_profile.dispute_history.rejected", None,
+        "Dropped: this corpus's profile schema has no counterpart field. "
+        "total_disputes and upheld_against carry the rest of the driver's history.",
+        source="driver_profile.dispute_history.rejected",
+    )
+
+    for event in source["app_events"]:
+        kind = event["event_type"]
+        disposition = _APP_EVENT_DISPOSITION.get(kind)
+        if disposition is None:
+            raise ConversionError(
+                "the source records an app event this converter has no disposition "
+                "for, and it will not be dropped in silence: {0!r}".format(kind)
+            )
+        decisions.judged(
+            "app_events[{0}]".format(kind), None,
+            "This event is accounted for here, field by field. " + disposition,
+            source=", ".join(
+                "app_events[{0}].{1}".format(kind, field)
+                for field in ("timestamp", "event_type", "details")
+            ),
+        )
+
+
+# --------------------------------------------------------------------------
 # Admissibility
 # --------------------------------------------------------------------------
 def admissibility(
@@ -312,13 +524,18 @@ def convert(block_text: str) -> Tuple[Dict[str, Any], Dict[str, Any]]:
 
     artifacts = [
         _trip_record(decisions, trip, events, chats, ticket, export_at, assessed_at),
-        _gps_trace(decisions, fixes, trip_id, export_at, assessed_at),
+        _gps_trace(decisions, fixes, trip, trip_id, export_at, assessed_at),
         _chat_log(decisions, chats, trip_id, export_at, assessed_at),
         _fare(decisions, trip, export_at, assessed_at),
         _rider(decisions, rider_profile, trip_id, export_at, assessed_at),
         _driver(decisions, driver_profile, trip_id, export_at, assessed_at),
         _advisory(decisions, trip_id, export_at, assessed_at),
     ]
+
+    # Everything the conversion read and did not carry, recorded rather than
+    # dropped in silence. It runs after the artifacts so the mapping reads as
+    # the case first and the audit of what it left out second.
+    _audit(decisions, source)
 
     evidence_ids = [artifact["evidence_id"] for artifact in artifacts]
 
@@ -469,7 +686,11 @@ def _trip_record(
     )
     arrived_at = decisions.copied(
         "evidence.EV-TRIP-00901.payload.arrived_at",
-        "trip_data.driver_arrival_time", trip["driver_arrival_time"],
+        "trip_data.driver_arrival_time, app_events[driver_arrived].timestamp",
+        trip["driver_arrival_time"],
+        "Copied from the source's own arrival time. The driver_arrived event states "
+        "the same instant, so both are named here rather than the second being left "
+        "unrecorded.",
     )
     cancelled_at = decisions.copied(
         "evidence.EV-TRIP-00901.payload.cancelled_at",
@@ -481,6 +702,7 @@ def _trip_record(
         round(_seconds_between(trip["driver_wait_start"], trip["cancellation_time"]) / 60.0, 1),
         "Computed from the source's own wait start (08:43) and cancellation (08:51), "
         "which is 480 s. The source states no wait figure.",
+        source="trip_data.driver_wait_start, trip_data.cancellation_time",
     )
     to_arrival = decisions.judged(
         "evidence.EV-TRIP-00901.payload.time_to_arrival_min",
@@ -651,12 +873,36 @@ def _trip_record(
         "export. Filling them with a plausible route would be inventing the quote.",
     )
 
+    # The one app event whose text is case material rather than a duplicate of a
+    # timestamp: the platform's own account of how the arrival marker was made.
+    # Carried, and carried as what it is -- a distance claim, not an accuracy.
+    arrival_details = by_type["driver_arrived"]["details"]
+    decisions.judged(
+        "evidence.EV-TRIP-00901.admissibility.notes", None,
+        "The source's driver_arrived details are carried into this artifact's "
+        "admissibility notes, verbatim and labelled. The text is {0!r}. It is the "
+        "platform's own DISTANCE claim and NOT a reported horizontal accuracy: it "
+        "supplies no fix with a reported accuracy, it is not turned into a GPS fix of "
+        "its own, and it makes no fix qualifying under POL-NS-02. Its consequence is "
+        "recorded too, because it bears on independence: the arrival marker was "
+        "produced from the same GPS measurement the trace is built from, so under "
+        "POL-GEN-02 the marker and the trace are ONE carrier and not two.".format(
+            arrival_details
+        ),
+        source="app_events[driver_arrived].details",
+    )
+
     notes = (
         "The source's own trip record, causally ordered. Arrival marker 08:43:00 is "
         "the nearest GPS fix timestamp to the second, so the POL-NS-08(a) 90 s clock "
-        "limb is not engaged. pickup_zone_class and vehicle_type are stated "
-        "assumptions, recorded in the mapping record; the source gives neither."
-    )
+        "limb is not engaged. The source's own driver_arrived event reads {0!r}: the "
+        "marker was auto-confirmed from a GPS measurement, so under POL-GEN-02 the "
+        "marker and the trace are one carrier rather than two, and the ten-metre "
+        "figure is the platform's distance claim rather than a reported horizontal "
+        "accuracy, so no fix here is measurable under POL-NS-02 and none establishes "
+        "arrival. pickup_zone_class and vehicle_type are stated assumptions, recorded "
+        "in the mapping record; the source gives neither."
+    ).format(arrival_details)
     return _artifact(
         decisions, "EV-TRIP-00901", "TRIP_RECORD", "PLATFORM_TELEMETRY",
         trip["trip_id"], export_at, payload, [], notes, assessed_at,
@@ -706,8 +952,8 @@ def _rang_seconds(content: str) -> Optional[int]:
 
 
 def _gps_trace(
-    decisions: Decisions, fixes: List[Dict[str, Any]], trip_id: str,
-    export_at: str, assessed_at: str,
+    decisions: Decisions, fixes: List[Dict[str, Any]], trip: Dict[str, Any],
+    trip_id: str, export_at: str, assessed_at: str,
 ) -> Dict[str, Any]:
     """GPS_TRACE, with the accuracy the source does not have left absent."""
     timestamps = [fix["timestamp"] for fix in fixes]
@@ -716,6 +962,16 @@ def _gps_trace(
         for index in range(len(timestamps) - 1)
     ]
     median = statistics.median(intervals)
+    # Both counts are derived here and read from these two lists everywhere the
+    # note and the mapping state them. They were once typed into the prose, and
+    # the typed figure was wrong: the note said three of the seven intervals
+    # exceeded the limb while the payload's own list held five.
+    over_limb = [interval for interval in intervals if interval > 120]
+    in_window = [
+        fix
+        for fix in fixes
+        if trip["driver_wait_start"] <= fix["timestamp"] <= trip["cancellation_time"]
+    ]
 
     points = []
     for fix in fixes:
@@ -788,7 +1044,9 @@ def _gps_trace(
                 if interval > 120
             ],
             "Intervals longer than POL-NS-08(b)'s own 120 s limb, measured from the "
-            "source's timestamps. Three of the seven intervals exceed it.",
+            "source's timestamps: {0} of the {1} exceed it.".format(
+                len(over_limb), len(intervals)
+            ),
         ),
         "max_gap_sec": decisions.judged(
             "evidence.EV-GPS-00901.payload.max_gap_sec", float(max(intervals)),
@@ -815,13 +1073,16 @@ def _gps_trace(
     }
     notes = (
         "Sparse telemetry with no reported accuracy. The intervals between the "
-        "source's own timestamps are {0} s, so three of the seven exceed POL-NS-08(b)'s "
-        "120 s gap limb and the trace is impaired for policy, not merely for "
-        "admissibility; POL-NS-08(b)'s rider_track limb is also engaged, because no "
-        "rider track was supplied. No fix carries accuracy_m, so under POL-NS-02 every "
-        "one of them is evidence of neither presence nor absence and none establishes "
-        "arrival. The fixes are the driver's alone; the driver's own arrival marker "
-        "still comes from trip_record.".format(intervals)
+        "source's own timestamps are {0} s, {1} of the {2} exceeding POL-NS-08(b)'s "
+        "120 s gap limb, and the waiting window from arrival to cancellation holds "
+        "{3} fixes, fewer than the six that limb requires. The trace is impaired for "
+        "policy, not merely for admissibility, and POL-NS-08(b)'s rider_track limb is "
+        "engaged too, because no rider track was supplied. No fix carries accuracy_m, "
+        "so under POL-NS-02 every one of them is evidence of neither presence nor "
+        "absence and none establishes arrival. The fixes are the driver's alone; the "
+        "driver's own arrival marker still comes from trip_record.".format(
+            intervals, len(over_limb), len(intervals), len(in_window)
+        )
     )
     return _artifact(
         decisions, "EV-GPS-00901", "GPS_TRACE", "DRIVER_DEVICE",
@@ -1447,10 +1708,22 @@ def expected_outcome(source_text: str) -> Dict[str, Any]:
 # Entry point
 # --------------------------------------------------------------------------
 def write_outputs() -> Tuple[Path, Path, Path]:
-    """Read the source, convert it, and write the three output files."""
+    """Read the source, convert it, and write the three output files.
+
+    Refuses to write a mapping that drops a source item in silence. The check is
+    made here as well as in the test suite because a mapping with a hole in it
+    is wrong the moment it is written, not only when something reads it back.
+    """
     markdown = SOURCE_PATH.read_text(encoding="utf-8")
     block = conversion_input(markdown)
     case, mapping = convert(block)
+
+    missing = unrecorded_items(parse_source(block), mapping)
+    if missing:
+        raise ConversionError(
+            "the source carries {0} item(s) the conversion neither carried nor "
+            "recorded: {1}".format(len(missing), ", ".join(missing))
+        )
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     CASE_PATH.write_text(

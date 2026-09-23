@@ -43,9 +43,9 @@
     {
       "target": "evidence.EV-TRIP-00901.payload.arrived_at",
       "kind": "copied",
-      "source": "trip_data.driver_arrival_time",
+      "source": "trip_data.driver_arrival_time, app_events[driver_arrived].timestamp",
       "value": "2026-09-13T08:43:00+08:00",
-      "reason": "the source states this value and the converted case carries it"
+      "reason": "Copied from the source's own arrival time. The driver_arrived event states the same instant, so both are named here rather than the second being left unrecorded."
     },
     {
       "target": "evidence.EV-TRIP-00901.payload.cancelled_at",
@@ -57,7 +57,7 @@
     {
       "target": "evidence.EV-TRIP-00901.payload.wait_time_min",
       "kind": "judged",
-      "source": null,
+      "source": "trip_data.driver_wait_start, trip_data.cancellation_time",
       "value": 8.0,
       "reason": "Computed from the source's own wait start (08:43) and cancellation (08:51), which is 480 s. The source states no wait figure."
     },
@@ -362,6 +362,13 @@
       "source": null,
       "value": null,
       "reason": "These four are null here, and are null in NO corpus trip record: all 29 carry a quoted route. The deviation is deliberate and is NOT marked as an admissibility defect. No limb of POL-NS-01 to POL-NS-09 reads a route field on a no-show, because the trip was cancelled before it ran; the absence is a property of the source platform's export rather than of the record; and no issue code is minted for it, because the corpus's PARTIAL_RECORD was applied to a ledger missing its itemisation, not to a field the source platform does not export. Filling them with a plausible route would be inventing the quote."
+    },
+    {
+      "target": "evidence.EV-TRIP-00901.admissibility.notes",
+      "kind": "judged",
+      "source": "app_events[driver_arrived].details",
+      "value": null,
+      "reason": "The source's driver_arrived details are carried into this artifact's admissibility notes, verbatim and labelled. The text is 'Driver GPS within 10m of pickup point. Speed 0 km/h. Auto-arrival confirmed.'. It is the platform's own DISTANCE claim and NOT a reported horizontal accuracy: it supplies no fix with a reported accuracy, it is not turned into a GPS fix of its own, and it makes no fix qualifying under POL-NS-02. Its consequence is recorded too, because it bears on independence: the arrival marker was produced from the same GPS measurement the trace is built from, so under POL-GEN-02 the marker and the trace are ONE carrier and not two."
     },
     {
       "target": "evidence.EV-TRIP-00901.admissibility.issues",
@@ -716,7 +723,7 @@
           "gap_sec": 180.0
         }
       ],
-      "reason": "Intervals longer than POL-NS-08(b)'s own 120 s limb, measured from the source's timestamps. Three of the seven intervals exceed it."
+      "reason": "Intervals longer than POL-NS-08(b)'s own 120 s limb, measured from the source's timestamps: 5 of the 7 exceed it."
     },
     {
       "target": "evidence.EV-GPS-00901.payload.max_gap_sec",
@@ -1667,6 +1674,139 @@
       "source": null,
       "value": "MISSING",
       "reason": "The source carries no traffic advisory. A MISSING artifact asserts absence, not presence, and is this corpus's convention: 25 of its 30 advisories are MISSING with a null payload. Minting it keeps the converted case in the same shape as every corpus case, and POL-NS-06(i) is explicitly unavailable against a MISSING advisory, which is the correct state here."
+    },
+    {
+      "target": "trip_data.scheduled_time",
+      "kind": "judged",
+      "source": "trip_data.scheduled_time",
+      "value": null,
+      "reason": "Dropped: no field in this corpus's trip-record payload holds a scheduled pickup time, and no limb of POL-NS-01 to POL-NS-09 reads one. The source's 08:45 schedule is quoted in policy_divergences, where the question it raises - whether a waiting clock runs from arrival or from the scheduled time - is recorded and left open rather than resolved here."
+    },
+    {
+      "target": "cancellation_policy.free_wait_time_min",
+      "kind": "judged",
+      "source": "cancellation_policy.free_wait_time_min",
+      "value": null,
+      "reason": "Dropped: the source platform's own free-wait period, not this system's. No field of the converted case holds a source policy figure."
+    },
+    {
+      "target": "cancellation_policy.cancellation_fee_after_wait",
+      "kind": "judged",
+      "source": "cancellation_policy.cancellation_fee_after_wait",
+      "value": null,
+      "reason": "Dropped: the source's own fee figure; the amount itself is carried on EV-FARE-00901, and policy_divergences records that it does not reconcile with fee_schedule. No field of the converted case holds a source policy figure."
+    },
+    {
+      "target": "cancellation_policy.no_show_threshold_min",
+      "kind": "judged",
+      "source": "cancellation_policy.no_show_threshold_min",
+      "value": null,
+      "reason": "Dropped: the source's own threshold; this system's dwell minimum is read from fee_schedule at arbitration time, as policy_divergences records. No field of the converted case holds a source policy figure."
+    },
+    {
+      "target": "cancellation_policy.fee_goes_to",
+      "kind": "judged",
+      "source": "cancellation_policy.fee_goes_to",
+      "value": null,
+      "reason": "Dropped: the source's own instruction about where the fee goes; this system compensates the driver under POL-NS-07 at its own rate. No field of the converted case holds a source policy figure."
+    },
+    {
+      "target": "chat_logs[*].type",
+      "kind": "judged",
+      "source": "chat_logs[*].type",
+      "value": null,
+      "reason": "Read, not carried: the type is what separates the log's messages from its call and from the platform's own entry, and each is carried where it belongs - the call as EV-TRIP-00901.payload.in_app_calls[0], the rest as messages on EV-CHAT-00901. Neither payload schema has a field for the type itself."
+    },
+    {
+      "target": "rider_profile.fraud_flag_details",
+      "kind": "judged",
+      "source": "rider_profile.fraud_flag_details",
+      "value": null,
+      "reason": "Read, not carried: the text ('flagged_for_frequent_late_cancellations') is what identifies the rider's flag counter as belonging to the no-show family, which is why the counter is carried as prior_no_show_flags. This corpus's profile schema has no field for the detail text."
+    },
+    {
+      "target": "driver_profile.name",
+      "kind": "judged",
+      "source": "driver_profile.name",
+      "value": null,
+      "reason": "Dropped: this corpus's profile schema has no field for a name, and no clause reads one. The same decision is recorded for the rider's name."
+    },
+    {
+      "target": "driver_profile.dispute_history.rejected",
+      "kind": "judged",
+      "source": "driver_profile.dispute_history.rejected",
+      "value": null,
+      "reason": "Dropped: this corpus's profile schema has no counterpart field. total_disputes and upheld_against carry the rest of the driver's history."
+    },
+    {
+      "target": "app_events[booking_confirmed]",
+      "kind": "judged",
+      "source": "app_events[booking_confirmed].timestamp, app_events[booking_confirmed].event_type, app_events[booking_confirmed].details",
+      "value": null,
+      "reason": "This event is accounted for here, field by field. Carried: its timestamp is EV-TRIP-00901.payload.requested_at."
+    },
+    {
+      "target": "app_events[driver_assigned]",
+      "kind": "judged",
+      "source": "app_events[driver_assigned].timestamp, app_events[driver_assigned].event_type, app_events[driver_assigned].details",
+      "value": null,
+      "reason": "This event is accounted for here, field by field. Carried: its timestamp is EV-TRIP-00901.payload.accepted_at."
+    },
+    {
+      "target": "app_events[driver_en_route]",
+      "kind": "judged",
+      "source": "app_events[driver_en_route].timestamp, app_events[driver_en_route].event_type, app_events[driver_en_route].details",
+      "value": null,
+      "reason": "This event is accounted for here, field by field. Read, not carried: EV-TRIP-00901.payload.time_to_arrival_min is measured from its timestamp, and no field holds the event itself."
+    },
+    {
+      "target": "app_events[driver_arrived]",
+      "kind": "judged",
+      "source": "app_events[driver_arrived].timestamp, app_events[driver_arrived].event_type, app_events[driver_arrived].details",
+      "value": null,
+      "reason": "This event is accounted for here, field by field. Carried: its timestamp is EV-TRIP-00901.payload.arrived_at, and its details are carried into EV-TRIP-00901's admissibility notes."
+    },
+    {
+      "target": "app_events[rider_notified]",
+      "kind": "judged",
+      "source": "app_events[rider_notified].timestamp, app_events[rider_notified].event_type, app_events[rider_notified].details",
+      "value": null,
+      "reason": "This event is accounted for here, field by field. Dropped: no field in either payload schema holds a notification, and no limb of POL-NS-01 to POL-NS-09 reads one. It records the platform's act, not the rider's."
+    },
+    {
+      "target": "app_events[wait_timer_started]",
+      "kind": "judged",
+      "source": "app_events[wait_timer_started].timestamp, app_events[wait_timer_started].event_type, app_events[wait_timer_started].details",
+      "value": null,
+      "reason": "This event is accounted for here, field by field. Dropped: no field holds a timer. The free-wait period it starts is the source platform's own rule rather than this system's, and POL-NS-01(c) measures the dwell from a GPS fix instead."
+    },
+    {
+      "target": "app_events[driver_called_rider]",
+      "kind": "judged",
+      "source": "app_events[driver_called_rider].timestamp, app_events[driver_called_rider].event_type, app_events[driver_called_rider].details",
+      "value": null,
+      "reason": "This event is accounted for here, field by field. Carried: EV-TRIP-00901.payload.in_app_calls[0] holds the call it records, with its time, initiator and duration."
+    },
+    {
+      "target": "app_events[wait_timer_expired]",
+      "kind": "judged",
+      "source": "app_events[wait_timer_expired].timestamp, app_events[wait_timer_expired].event_type, app_events[wait_timer_expired].details",
+      "value": null,
+      "reason": "This event is accounted for here, field by field. Dropped, for the same reason as wait_timer_started: no field holds a timer."
+    },
+    {
+      "target": "app_events[cancellation_fee_applied]",
+      "kind": "judged",
+      "source": "app_events[cancellation_fee_applied].timestamp, app_events[cancellation_fee_applied].event_type, app_events[cancellation_fee_applied].details",
+      "value": null,
+      "reason": "This event is accounted for here, field by field. Carried: its timestamp is EV-FARE-00901.payload.charged_at and its amount is EV-FARE-00901.payload.cancellation_fee."
+    },
+    {
+      "target": "app_events[driver_released]",
+      "kind": "judged",
+      "source": "app_events[driver_released].timestamp, app_events[driver_released].event_type, app_events[driver_released].details",
+      "value": null,
+      "reason": "This event is accounted for here, field by field. Dropped as an event: EV-TRIP-00901.payload.status and cancelled_by carry the fact it records, and no field holds a release."
     },
     {
       "target": "dispute.dispute_id",
