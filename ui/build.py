@@ -933,6 +933,72 @@ footer.prov b { color: var(--text); font-weight: 600; }
   border-radius: 8px; background: rgba(216,167,42,0.07); font-size: 13.5px; }
 .lead { color: var(--muted); max-width: 78ch; }
 .hint { color: var(--muted); font-size: 12.5px; margin-top: 10px; }
+
+/* ---- stance view: the two advocates against the same record ------------ */
+.stance-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px; }
+@media (max-width: 940px) { .stance-grid { grid-template-columns: 1fr; } }
+.stance-col { background: var(--panel); border: 1px solid var(--line); border-top-width: 3px;
+  border-radius: 10px; padding: 14px 16px; }
+.stance-col.RIDER_ADVOCATE { border-top-color: var(--rider); }
+.stance-col.DRIVER_ADVOCATE { border-top-color: var(--driver); }
+.stance-col > h3 { margin-top: 0; display: flex; align-items: baseline; gap: 8px; }
+.stance-col > h3 .count { color: var(--muted); font-size: 13px; font-weight: 400; }
+.record-row { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap;
+  border: 1px solid var(--line); border-left-width: 4px; border-radius: 8px;
+  padding: 9px 12px; margin: 8px 0; background: var(--panel-2); }
+.record-row.both { border-left-color: var(--accent); }
+.record-row.one { border-left-color: var(--warn); }
+.record-row .id { font-family: var(--mono); font-weight: 650; font-size: 13px; }
+.record-row .sides { color: var(--muted); font-size: 12.5px; margin-top: 5px; flex-basis: 100%; }
+
+/* ---- deep link -------------------------------------------------------- */
+.linkbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.linkbar input { flex: 1 1 320px; min-width: 220px; font-family: var(--mono); font-size: 12px;
+  color: var(--text); background: var(--panel-2); border: 1px solid var(--line);
+  border-radius: 6px; padding: 5px 9px; }
+.linkbar .what { color: var(--muted); font-size: 12.5px; }
+
+/* ---- keyboard help ---------------------------------------------------- */
+dl.keys { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin-top: 12px; }
+dl.keys > dt { margin: 0; }
+dl.keys > dd { margin: 0; color: var(--muted); }
+kbd { font-family: var(--mono); font-size: 11.5px; background: var(--panel-2);
+  border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px;
+  padding: 1px 6px; color: var(--text); white-space: nowrap; }
+
+/* ---- projector -------------------------------------------------------- */
+/* A room is not a laptop: everything scales, and the contrast goes up so a
+   pale projector does not swallow the muted text. */
+body.projector {
+  --text: #f5f9fd;
+  --muted: #c2cfdc;
+  --line: #3d4a57;
+  font-size: 19px; line-height: 1.62;
+}
+body.projector main { max-width: 1560px; padding: 24px; }
+body.projector h1 { font-size: 27px; }
+body.projector h2 { font-size: 31px; }
+body.projector h3 { font-size: 22px; margin-top: 26px; }
+body.projector h4 { font-size: 17px; }
+body.projector p, body.projector .lead { max-width: 92ch; }
+body.projector .card .value { font-size: 35px; }
+body.projector .card .label { font-size: 13px; }
+body.projector .card .sub { font-size: 15px; }
+body.projector table { font-size: 17px; }
+body.projector th, body.projector td { padding: 10px 14px; }
+body.projector th { font-size: 13px; }
+body.projector code, body.projector .mono, body.projector .scalar, body.projector .bool,
+body.projector pre.raw { font-size: 15px; }
+body.projector .chip { font-size: 14px; padding: 2px 9px; }
+body.projector .badge { font-size: 13.5px; padding: 2px 9px; }
+body.projector button { padding: 8px 15px; }
+body.projector .stepper .step { font-size: 16px; }
+body.projector .case-picker button { font-size: 15px; padding: 5px 11px; }
+body.projector .artifact, body.projector .claim, body.projector .record-row { padding: 16px 18px; }
+body.projector .artifact .id { font-size: 16px; }
+body.projector footer.prov { font-size: 14px; padding: 11px 24px; gap: 6px 22px; }
+body.projector .stance-grid { gap: 18px; }
+body.projector .modal .box { max-width: 980px; }
 """
 
 _JS = r"""
@@ -973,7 +1039,61 @@ _JS = r"""
     { id: "key",      label: "6. Against the answer key" }
   ];
 
-  var state = { view: "overview", caseNo: DATA.default_case, step: 0, highlight: null };
+  var state = {
+    view: "overview",
+    caseNo: DATA.default_case,
+    step: 0,
+    highlight: null,
+    projector: false,
+    help: false
+  };
+
+  // ---- deep links ------------------------------------------------------
+  // The address bar is the only place a link can live in a page opened from
+  // file:// with no server behind it, so the whole view state is written
+  // there. It reads back on load and on hashchange, which is what lets the
+  // browser's own back button walk through a case at Demo Day.
+  function parseHash(hash) {
+    var out = {};
+    String(hash || "").replace(/^#/, "").split("&").forEach(function (pair) {
+      if (!pair) { return; }
+      var bits = pair.split("=");
+      out[decodeURIComponent(bits[0])] = decodeURIComponent(bits.slice(1).join("="));
+    });
+    return out;
+  }
+  function formatHash() {
+    var parts = ["view=" + state.view];
+    if (state.view !== "overview") {
+      parts.push("case=" + state.caseNo);
+      if (state.view === "case") { parts.push("step=" + (state.step + 1)); }
+    }
+    if (state.projector) { parts.push("projector=1"); }
+    return "#" + parts.join("&");
+  }
+  function hashState(hash) {
+    var parts = parseHash(hash);
+    var caseNo = parseInt(parts["case"], 10);
+    var step = parseInt(parts["step"], 10);
+    var view = parts["view"];
+    return {
+      caseNo: Object.prototype.hasOwnProperty.call(BY_CASE, caseNo) ? caseNo : state.caseNo,
+      view: (view === "case" || view === "stance") ? view : "overview",
+      step: isNaN(step) ? 0 : Math.max(0, Math.min(STEPS.length - 1, step - 1)),
+      projector: parts["projector"] === "1"
+    };
+  }
+  function sameHashState(a, b) {
+    return a.caseNo === b.caseNo && a.view === b.view && a.step === b.step &&
+      a.projector === b.projector;
+  }
+  function applyHashState(next) {
+    state.caseNo = next.caseNo;
+    state.view = next.view;
+    state.step = next.step;
+    state.projector = next.projector;
+    state.highlight = null;
+  }
 
   // ---- DOM helpers -------------------------------------------------------
   function h(tag, attrs, children) {
@@ -1090,30 +1210,83 @@ _JS = r"""
   }
 
   // ---- navigation --------------------------------------------------------
+  // One function owns every rendering of the state, so a clicked row, a key
+  // press and a pasted link all end up in exactly the same place and cannot
+  // disagree about what is on screen.
+  function refresh() {
+    state.step = Math.max(0, Math.min(STEPS.length - 1, state.step));
+    document.body.classList.toggle("projector", state.projector);
+    document.getElementById("view-overview").hidden = state.view !== "overview";
+    document.getElementById("view-case").hidden = state.view !== "case";
+    document.getElementById("view-stance").hidden = state.view !== "stance";
+    ["overview", "case", "stance"].forEach(function (name) {
+      document.getElementById("nav-" + name).classList.toggle("on", state.view === name);
+    });
+    document.getElementById("toggle-projector").classList.toggle("on", state.projector);
+    if (state.view === "case") { renderCase(); }
+    if (state.view === "stance") { renderStance(); }
+    syncLinkBar();
+    syncHash();
+  }
+  function syncHash() {
+    var next = formatHash();
+    if (window.location.hash === next) { return; }
+    // Writing the hash fires hashchange. That handler re-reads the hash and
+    // stops when it already agrees with the state, rather than trusting a flag
+    // that a slow event loop could leave set at the wrong moment.
+    window.location.hash = next;
+  }
+  function syncLinkBar() {
+    var input = document.getElementById("link-input");
+    if (input) { input.value = formatHash(); }
+  }
   function showView(name) {
     state.view = name;
-    document.getElementById("view-overview").hidden = name !== "overview";
-    document.getElementById("view-case").hidden = name !== "case";
-    document.getElementById("nav-overview").classList.toggle("on", name === "overview");
-    document.getElementById("nav-case").classList.toggle("on", name === "case");
-    if (name === "case") { renderCase(); }
+    refresh();
   }
   function openCase(caseNo) {
     state.caseNo = caseNo;
     state.step = 0;
     state.highlight = null;
-    showView("case");
+    state.view = "case";
+    refresh();
+    window.scrollTo(0, 0);
+  }
+  function openStance(caseNo) {
+    if (caseNo !== undefined && caseNo !== null) { state.caseNo = caseNo; }
+    state.highlight = null;
+    state.view = "stance";
+    refresh();
     window.scrollTo(0, 0);
   }
   function goToStep(index) {
     state.step = Math.max(0, Math.min(STEPS.length - 1, index));
     state.highlight = null;
-    renderCase();
+    refresh();
+  }
+  // Next and previous case, in the order the run lists them, so a presenter
+  // can walk the corpus without going back to the grid.
+  function stepCase(delta) {
+    var order = DATA.cases.map(function (c) { return c.case_no; });
+    var at = order.indexOf(state.caseNo);
+    if (at < 0) { return; }
+    var next = order[Math.max(0, Math.min(order.length - 1, at + delta))];
+    if (next === state.caseNo) { return; }
+    state.caseNo = next;
+    state.step = 0;
+    state.highlight = null;
+    refresh();
+    window.scrollTo(0, 0);
+  }
+  function toggleProjector() {
+    state.projector = !state.projector;
+    refresh();
   }
   function jumpToEvidence(evidenceId) {
     state.step = 1;
     state.highlight = evidenceId;
-    renderCase();
+    state.view = "case";
+    refresh();
     var node = byData("data-artifact", evidenceId);
     if (node && node.scrollIntoView) { node.scrollIntoView({ block: "center" }); }
   }
@@ -1315,15 +1488,7 @@ _JS = r"""
     clear(root);
     if (!caseDoc) { root.appendChild(h("p", { text: "no such case" })); return; }
 
-    var picker = h("div", { class: "case-picker" });
-    DATA.cases.forEach(function (c) {
-      picker.appendChild(h("button", {
-        class: (c.case_no === state.caseNo ? "on" : (c.grading.exact ? "" : "miss")),
-        text: String(c.case_no),
-        onclick: function () { openCase(c.case_no); }
-      }));
-    });
-    root.appendChild(picker);
+    root.appendChild(casePicker());
 
     root.appendChild(h("div", { class: "case-head" }, [
       h("span", { class: "title", text: "Case " + caseDoc.case_no }),
@@ -1357,7 +1522,8 @@ _JS = r"""
     render(caseDoc, panel);
     body.appendChild(panel);
     root.appendChild(h("p", { class: "hint", text: "Step " + (state.step + 1) + " of " + STEPS.length +
-      ". Clicking an evidence chip on a claim opens the artifact it cites; clicking a clause chip shows the clause's rule text." }));
+      ". Clicking an evidence chip on a claim opens the artifact it cites; clicking a clause chip shows the " +
+      "clause's rule text. Left and right arrows move between steps, [ and ] between cases, and ? lists the keys." }));
   }
 
   function renderDispute(caseDoc, panel) {
@@ -1679,6 +1845,249 @@ _JS = r"""
     }));
   }
 
+  // ---- View 3: the two advocates against the same record -----------------
+  // The stance view is not about who won. It is about what each side chose to
+  // build an argument on: which artifacts it reached for, which it left alone,
+  // and what the judge then threw away.
+  function casePicker() {
+    var picker = h("div", { class: "case-picker" });
+    DATA.cases.forEach(function (c) {
+      picker.appendChild(h("button", {
+        class: (c.case_no === state.caseNo ? "on" : (c.grading.exact ? "" : "miss")),
+        text: String(c.case_no),
+        onclick: function () {
+          if (state.view === "stance") { openStance(c.case_no); } else { openCase(c.case_no); }
+        }
+      }));
+    });
+    return picker;
+  }
+
+  function renderStance() {
+    var root = document.getElementById("view-stance");
+    var caseDoc = BY_CASE[state.caseNo];
+    clear(root);
+    if (!caseDoc) { root.appendChild(h("p", { text: "no such case" })); return; }
+
+    root.appendChild(casePicker());
+    root.appendChild(h("div", { class: "case-head" }, [
+      h("span", { class: "title", text: "Case " + caseDoc.case_no + ", both sides at once" }),
+      h("span", { class: "badge", text: caseDoc.category }),
+      h("span", { class: "badge", text: text(caseDoc.difficulty) }),
+      h("span", {
+        class: caseDoc.grading.exact ? "badge ok" : "badge miss",
+        text: caseDoc.grading.exact ? "four-field match" : "MISS on " + caseDoc.grading.failed_fields.join(", ")
+      })
+    ]));
+    root.appendChild(h("p", { class: "lead", text:
+      "Both advocates were handed the same brief and the same " + caseDoc.evidence.length +
+      " artifacts. What follows is what each of them chose to stand on." }));
+
+    var grid = h("div", { class: "stance-grid" });
+    grid.appendChild(stanceColumn(caseDoc, "RIDER_ADVOCATE"));
+    grid.appendChild(stanceColumn(caseDoc, "DRIVER_ADVOCATE"));
+    root.appendChild(grid);
+
+    root.appendChild(contestedRecord(caseDoc));
+    root.appendChild(discardedBySide(caseDoc));
+  }
+
+  function stanceColumn(caseDoc, role) {
+    var agent = caseDoc.advocates[role] || {};
+    var claims = agent.claims || [];
+    var isRider = role === "RIDER_ADVOCATE";
+    var col = h("div", { class: "stance-col " + role });
+    col.appendChild(h("h3", null, [
+      h("span", { class: "badge " + (isRider ? "rider" : "driver"), text: role }),
+      h("span", { class: "count", text: claims.length + (claims.length === 1 ? " claim" : " claims") })
+    ]));
+    if (!claims.length) {
+      col.appendChild(h("p", { class: "empty", text:
+        agent.parsed ? "this side made no claims" : "this agent produced no parsable answer" }));
+      return col;
+    }
+    claims.forEach(function (claim, index) {
+      var evidenceIds = claim.evidence_ids || [];
+      var clauseIds = claim.clause_ids || [];
+      var box = h("div", { class: "claim" });
+      box.appendChild(h("div", { class: "claim-head" }, [
+        h("span", { class: "claim-no", text: "#" + (index + 1) }),
+        claim.asserted_weight !== undefined ? h("span", { text: "asserted weight " + text(claim.asserted_weight) }) : null,
+        claim.relies_on ? h("span", null, ["relies on ", h("code", { text: claim.relies_on })]) : null
+      ]));
+      box.appendChild(h("p", { class: "text", text: text(claim.text) }));
+      box.appendChild(chips("evidence", evidenceIds.map(function (id) { return evidenceChip(caseDoc, id); })));
+      box.appendChild(chips("clauses", clauseIds.map(clauseChip)));
+      if (!evidenceIds.length || !clauseIds.length) {
+        box.appendChild(h("p", { class: "miss-note", text:
+          "This claim is missing a citation. No citation, no claim." }));
+      }
+      col.appendChild(box);
+    });
+    return col;
+  }
+
+  // Which artifacts each side reached for. An artifact both sides cite is a
+  // disagreement about what the same record means; an artifact only one side
+  // cites is a choice about what to stand on.
+  function contestedRecord(caseDoc) {
+    var bySide = { RIDER_ADVOCATE: {}, DRIVER_ADVOCATE: {} };
+    Object.keys(bySide).forEach(function (role) {
+      var claims = (caseDoc.advocates[role] || {}).claims || [];
+      claims.forEach(function (claim, index) {
+        (claim.evidence_ids || []).forEach(function (id) {
+          if (!bySide[role][id]) { bySide[role][id] = []; }
+          bySide[role][id].push(index + 1);
+        });
+      });
+    });
+    var seen = {};
+    Object.keys(bySide.RIDER_ADVOCATE).forEach(function (id) { seen[id] = true; });
+    Object.keys(bySide.DRIVER_ADVOCATE).forEach(function (id) { seen[id] = true; });
+    // Artifacts in the order the brief lists them, so what the reader sees
+    // here matches step 2, with anything unrecognised appended rather than lost.
+    var ordered = (caseDoc.evidence || [])
+      .map(function (a) { return a.evidence_id; })
+      .filter(function (id) { return Object.prototype.hasOwnProperty.call(seen, id); });
+    Object.keys(seen).forEach(function (id) {
+      if (ordered.indexOf(id) < 0) { ordered.push(id); }
+    });
+
+    var box = h("section", { class: "panel" });
+    box.appendChild(h("h2", { text: "The record they argued over" }));
+    box.appendChild(h("p", { class: "lead", text:
+      "The badge on each row is the admissibility pre-pass's own verdict on that artifact, not " +
+      "either advocate's opinion of it." }));
+    if (!ordered.length) {
+      box.appendChild(h("p", { class: "empty", text: "Neither advocate cited an artifact in this case." }));
+      return box;
+    }
+    ordered.forEach(function (id) {
+      var rider = bySide.RIDER_ADVOCATE[id] || [];
+      var driver = bySide.DRIVER_ADVOCATE[id] || [];
+      var both = rider.length > 0 && driver.length > 0;
+      var artifact = null;
+      (caseDoc.evidence || []).forEach(function (a) { if (a.evidence_id === id) { artifact = a; } });
+      var status = (artifact && artifact.admissibility && artifact.admissibility.status) || "COMPLETE";
+      var row = h("div", { class: "record-row " + (both ? "both" : "one") });
+      row.appendChild(h("span", { class: "id", text: id }));
+      row.appendChild(h("span", { class: "badge " + status.toLowerCase(), text: status }));
+      if (artifact) { row.appendChild(h("span", { class: "badge", text: artifact.evidence_type })); }
+      row.appendChild(h("span", { class: "badge", text:
+        both ? "both sides" : (rider.length ? "rider only" : "driver only") }));
+      row.appendChild(h("span", { class: "sides", text:
+        "rider: " + (rider.length ? "claims " + rider.join(", ") : "not cited") +
+        "   |   driver: " + (driver.length ? "claims " + driver.join(", ") : "not cited") }));
+      box.appendChild(row);
+    });
+    return box;
+  }
+
+  function discardedBySide(caseDoc) {
+    var discarded = caseDoc.judge.discarded_claims || [];
+    var box = h("section", { class: "panel" });
+    box.appendChild(h("h2", { text: "What the judge threw out, by side" }));
+    if (!discarded.length) {
+      box.appendChild(h("p", { class: "lead", text:
+        "The judge discarded no claims in this case: every claim it was given carried its citations correctly." }));
+      return box;
+    }
+    var grouped = { rider: [], driver: [], other: [] };
+    discarded.forEach(function (entry) {
+      var key = String(entry.side || "").toLowerCase();
+      if (!Object.prototype.hasOwnProperty.call(grouped, key)) { key = "other"; }
+      grouped[key].push(entry);
+    });
+    ["rider", "driver", "other"].forEach(function (key) {
+      var items = grouped[key];
+      box.appendChild(h("h3", null, [
+        h("span", { class: "badge " + (key === "rider" ? "rider" : (key === "driver" ? "driver" : "")),
+          text: key === "other" ? "side not recorded" : key }),
+        h("span", { class: "count", text: items.length + (items.length === 1 ? " discarded" : " discarded") })
+      ]));
+      if (!items.length) {
+        box.appendChild(h("p", { class: "empty", text: "nothing discarded from this side" }));
+        return;
+      }
+      items.forEach(function (entry, index) {
+        var claim = h("div", { class: "claim discarded" });
+        claim.appendChild(h("div", { class: "claim-head" }, [
+          h("span", { class: "claim-no", text: "#" + (index + 1) })
+        ]));
+        claim.appendChild(h("p", { class: "text", text: text(entry.claim) }));
+        claim.appendChild(h("p", { class: "notes", text: "reason: " + text(entry.reason) }));
+        box.appendChild(claim);
+      });
+    });
+    return box;
+  }
+
+  // ---- keyboard ----------------------------------------------------------
+  var KEYS = [
+    ["right  or  l", "next step"],
+    ["left  or  h", "previous step"],
+    ["1 to " + String(STEPS.length), "jump straight to a step"],
+    ["[  /  ]", "previous / next case"],
+    ["o", "overview"],
+    ["c", "one case, stepped through"],
+    ["s", "stance: both sides at once"],
+    ["f", "projector: scale everything up"],
+    ["?", "this list"],
+    ["esc", "close a clause or this list"]
+  ];
+  function helpOpen() { return !!document.getElementById("keys-modal"); }
+  function renderHelp() {
+    if (helpOpen()) { return; }
+    var box = h("div", { class: "box" });
+    box.appendChild(h("div", { class: "head" }, [
+      h("span", { class: "id", text: "Keyboard" }),
+      h("button", { class: "close", text: "close", onclick: closeHelp })
+    ]));
+    var dl = h("dl", { class: "keys" });
+    KEYS.forEach(function (pair) {
+      dl.appendChild(h("dt", null, h("kbd", { text: pair[0] })));
+      dl.appendChild(h("dd", { text: pair[1] }));
+    });
+    box.appendChild(dl);
+    box.appendChild(h("p", { class: "hint", text:
+      "The address bar always carries a link to exactly what is on screen, so one step can be sent to someone." }));
+    var overlay = h("div", { class: "modal", id: "keys-modal", onclick: function (event) {
+      if (event.target === overlay) { closeHelp(); }
+    } }, box);
+    document.body.appendChild(overlay);
+  }
+  function closeHelp() {
+    var modal = document.getElementById("keys-modal");
+    if (modal) { modal.parentNode.removeChild(modal); }
+  }
+  function modalOpen() { return helpOpen() || !!document.getElementById("clause-modal"); }
+
+  function onKeyDown(event) {
+    // A modal owns the keyboard while it is open: escape closes it and nothing
+    // else reaches the view behind it.
+    if (modalOpen()) {
+      if (event.key === "Escape") { closeHelp(); closeModal(); event.preventDefault(); }
+      return;
+    }
+    var tag = String((event.target && event.target.tagName) || "").toLowerCase();
+    if (tag === "input" || tag === "textarea" || tag === "select") { return; }
+    if (event.metaKey || event.ctrlKey || event.altKey) { return; }
+
+    var key = event.key;
+    if (key === "ArrowRight" || key === "l") { goToStep(state.step + 1); }
+    else if (key === "ArrowLeft" || key === "h") { goToStep(state.step - 1); }
+    else if (key === "[") { stepCase(-1); }
+    else if (key === "]") { stepCase(1); }
+    else if (key >= "1" && key <= String(STEPS.length)) { goToStep(parseInt(key, 10) - 1); }
+    else if (key === "o") { showView("overview"); }
+    else if (key === "c") { openCase(state.caseNo); }
+    else if (key === "s") { openStance(); }
+    else if (key === "f") { toggleProjector(); }
+    else if (key === "?" || key === "/") { renderHelp(); }
+    else { return; }
+    event.preventDefault();
+  }
+
   // ---- provenance --------------------------------------------------------
   function renderProvenance() {
     var footer = document.getElementById("provenance");
@@ -1709,9 +2118,27 @@ _JS = r"""
   // ---- start -------------------------------------------------------------
   document.getElementById("nav-overview").addEventListener("click", function () { showView("overview"); });
   document.getElementById("nav-case").addEventListener("click", function () { showView("case"); });
+  document.getElementById("nav-stance").addEventListener("click", function () { openStance(); });
+  document.getElementById("toggle-projector").addEventListener("click", toggleProjector);
+  document.getElementById("show-keys").addEventListener("click", renderHelp);
+  document.addEventListener("keydown", onKeyDown);
+
+  // The browser's own back button walks the steps: every navigation writes the
+  // hash, and a hash this code did not write is applied exactly as asked.
+  window.addEventListener("hashchange", function () {
+    var next = hashState(window.location.hash);
+    if (sameHashState(next, state)) { return; }
+    applyHashState(next);
+    refresh();
+  });
+
   renderProvenance();
   renderOverview();
-  showView("overview");
+
+  // A link someone pasted wins over the default case. If the address bar
+  // carries a view, that is the view being asked for.
+  applyHashState(hashState(window.location.hash));
+  refresh();
 })();
 """
 
@@ -1721,8 +2148,11 @@ _BODY = """
   <nav class="views">
     <button id="nav-overview" class="on">Overview</button>
     <button id="nav-case">One case</button>
+    <button id="nav-stance">Stance</button>
   </nav>
   <span class="spacer"></span>
+  <button id="toggle-projector" title="scale everything up for a projector">Projector</button>
+  <button id="show-keys" title="keyboard shortcuts">?</button>
   <span class="badge">replay of a committed run</span>
 </header>
 <main>
@@ -1730,8 +2160,13 @@ _BODY = """
     <p>This viewer renders itself from data embedded in this file, so it needs
     JavaScript enabled. It makes no network request of any kind.</p>
   </noscript>
+  <div class="linkbar">
+    <span class="what">A link to exactly this view, for the address bar or a slide:</span>
+    <input id="link-input" readonly spellcheck="false" aria-label="link to this view">
+  </div>
   <section id="view-overview"></section>
   <section id="view-case" hidden></section>
+  <section id="view-stance" hidden></section>
 </main>
 <footer class="prov" id="provenance"></footer>
 """

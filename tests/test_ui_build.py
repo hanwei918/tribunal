@@ -621,5 +621,136 @@ class ProvenanceTests(unittest.TestCase):
                 )
 
 
+# The script that renders the views, as opposed to the data block. The data
+# block carries an id and a type, so a bare <script> cannot match it.
+_BEHAVIOUR_SCRIPT_RE = re.compile(r"<script>(.*?)</script>", re.S)
+
+
+def behaviour_script(page: str) -> str:
+    """The page's behavioural script, parsed out of the page."""
+    match = _BEHAVIOUR_SCRIPT_RE.search(page)
+    if match is None:
+        raise AssertionError("the page carries no behavioural script")
+    return match.group(1)
+
+
+class _IdScan(HTMLParser):
+    """Every id on the page, so a view can be required to exist by name."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.ids = set()
+
+    def handle_starttag(self, tag, attrs):
+        for name, value in attrs:
+            if name == "id" and value:
+                self.ids.add(value)
+
+
+def ids_of(page: str) -> set:
+    scan = _IdScan()
+    scan.feed(page)
+    return scan.ids
+
+
+class PresentationTests(unittest.TestCase):
+    """What a presenter needs: a link to this step, the keys, and a room page.
+
+    Deep links, keyboard navigation, the stance view and projector styling. They
+    are tested against the same committed page and in the same spirit as the
+    rest: a property is asserted where it can be asserted -- a view exists as an
+    element, the stylesheet carries the projector rules, the stance view's two
+    kinds of record occur in the data -- and the script's own body is searched
+    only for the calls that would break the one guarantee the page makes, that
+    it fetches nothing at all.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.document = build.build_document()
+        cls.page = build.render_html(cls.document)
+        cls.script = behaviour_script(cls.page)
+        cls.ids = ids_of(cls.page)
+
+    def test_the_page_carries_three_views(self):
+        """Overview, one case stepped through, and both sides at once."""
+        for name in (
+            "view-overview", "view-case", "view-stance",
+            "nav-overview", "nav-case", "nav-stance",
+        ):
+            with self.subTest(id=name):
+                self.assertIn(name, self.ids)
+
+    def test_the_deep_link_is_a_fragment_and_never_a_navigation(self):
+        """A deep link that navigated would be a request, and the page makes none.
+
+        The hash is the one part of a URL a page may write without the browser
+        going anywhere, which is why the link to a step lives there and nowhere
+        else.
+        """
+        self.assertIn("location.hash", self.script)
+        for call in ("location.href", "location.assign", "location.replace", "window.open"):
+            with self.subTest(call=call):
+                self.assertNotIn(call, self.script)
+
+    def test_the_deep_link_is_read_back_so_the_back_button_walks_the_steps(self):
+        self.assertIn("hashchange", self.script)
+
+    def test_the_deep_link_is_shown_where_a_presenter_can_copy_it(self):
+        self.assertIn("link-input", self.ids)
+
+    def test_the_keyboard_is_bound(self):
+        self.assertIn('addEventListener("keydown"', self.script)
+
+    def test_there_is_a_key_for_every_step_and_every_view(self):
+        """Nothing on stage should need a mouse."""
+        for key in ("ArrowRight", "ArrowLeft", '"["', '"]"', '"o"', '"c"', '"s"', '"f"', '"?"'):
+            with self.subTest(key=key):
+                self.assertIn(key, self.script)
+
+    def test_the_projector_is_a_stylesheet_state_not_another_page(self):
+        """Scaling the page up must not mean building, or fetching, a second one."""
+        styles = _STYLE_RE.findall(self.page)
+        self.assertTrue(styles, "the page carries no stylesheet")
+        self.assertIn("body.projector", "\n".join(styles))
+        self.assertIn('classList.toggle("projector"', self.script)
+
+    def test_every_case_has_both_sides_for_the_stance_view(self):
+        for case in self.document["cases"]:
+            with self.subTest(case=case["case_no"]):
+                for role in ("RIDER_ADVOCATE", "DRIVER_ADVOCATE"):
+                    self.assertIn(role, case["advocates"])
+                    self.assertIsInstance(
+                        case["advocates"][role]["claims"],
+                        list,
+                        "the stance view reads each side's claims as a list",
+                    )
+
+    def test_the_stance_view_has_both_kinds_of_record_to_point_at(self):
+        """Shared and one-sided, which is the distinction the view exists to show.
+
+        If no case had the two sides on one artifact, or no case had an artifact
+        only one side reached for, the view would have nothing to point at.
+        """
+        shared = 0
+        one_sided = 0
+
+        def cited(case, role):
+            found = set()
+            for claim in case["advocates"][role]["claims"]:
+                found.update(claim.get("evidence_ids") or [])
+            return found
+
+        for case in self.document["cases"]:
+            rider = cited(case, "RIDER_ADVOCATE")
+            driver = cited(case, "DRIVER_ADVOCATE")
+            if rider & driver:
+                shared += 1
+            if rider ^ driver:
+                one_sided += 1
+        self.assertGreater(shared, 0, "no case has the two sides on one artifact")
+        self.assertGreater(one_sided, 0, "no case has an artifact only one side cited")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
