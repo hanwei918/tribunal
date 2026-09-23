@@ -788,6 +788,54 @@ class ExternalRunTests(unittest.TestCase):
             with contextlib.redirect_stderr(io.StringIO()):
                 runner.main(["--external", str(CASE_PATH), "--cases", "208"])
 
+    # -- the token budget, which is the corpus runner's --------------------
+    def test_a_budget_that_cannot_cover_the_case_is_refused_not_ignored(self):
+        """The corpus runner would issue nothing on a spent budget.
+
+        There is no later case here for the budget to be saved for, so running
+        the case anyway and ignoring the flag would be the one thing worse than
+        refusing: it would look as though the budget had been applied.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(runner.BenchmarkError) as caught:
+                self._run(tmp, token_budget=0)
+            self.assertIn("token budget of 0", str(caught.exception))
+            self.assertFalse(
+                (Path(tmp) / "external").exists(),
+                "the run directory was created before the budget was checked",
+            )
+            self.assertEqual(0, self.transport.calls(), "a call was made anyway")
+
+    def test_a_negative_budget_is_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(runner.BenchmarkError) as caught:
+                self._run(tmp, token_budget=-1)
+        self.assertIn("cannot be negative", str(caught.exception))
+
+    def test_a_budget_that_covers_the_case_is_recorded(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            _outcome, run_dir = self._run(tmp, token_budget=10_000_000)
+            metadata = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
+        self.assertEqual(10_000_000, metadata["token_budget"])
+
+    def test_the_cli_refuses_a_budget_of_zero_rather_than_running(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with contextlib.redirect_stdout(io.StringIO()) as out:
+                with contextlib.redirect_stderr(io.StringIO()) as err:
+                    code = runner.main(
+                        [
+                            "--external", str(CASE_PATH),
+                            "--runs-dir", str(Path(tmp)),
+                            "--token-budget", "0",
+                            "--model", self.model,
+                        ]
+                    )
+            self.assertEqual(1, code)
+            self.assertIn("token budget of 0", err.getvalue())
+            self.assertFalse((Path(tmp) / "external").exists())
+            self.assertEqual(0, self.transport.calls(), "a call was made anyway")
+            self.assertEqual("", out.getvalue())
+
     # -- the benchmark is untouched ---------------------------------------
     def test_an_external_run_leaves_the_benchmark_byte_identical(self):
         before = _fingerprint(_benchmark_files())

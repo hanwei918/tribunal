@@ -2718,6 +2718,7 @@ def run_external_case(
     prompts_dir: Path = PROMPTS_DIR,
     timeout_seconds: float = llm.DEFAULT_TIMEOUT_SECONDS,
     case_deadline_seconds: float = pipeline.DEFAULT_CASE_DEADLINE_SECONDS,
+    token_budget: Optional[int] = None,
     expected_path: Path = EXTERNAL_EXPECTED_PATH,
     client_factory: Optional[Callable[[Callable[[Dict[str, Any]], None]], Any]] = None,
     git_runner: Optional[Callable[[Sequence[str]], Optional[str]]] = None,
@@ -2744,12 +2745,29 @@ def run_external_case(
     ``client_factory`` exists for the same reason it does on
     :func:`run_benchmark`: a test can drive this end to end over a fake
     transport, with no network.
+
+    ``token_budget`` is the same budget the corpus runner honours, applied the
+    same way: it is checked before a case is issued. With one case there is no
+    later case for the budget to be saved for, so a budget that cannot cover the
+    case at all is refused rather than quietly ignored, and a budget that can
+    cover it is recorded beside what the case spent.
     """
     if not model:
         raise BenchmarkError("model is required and has no default; name the model explicitly")
     if case_deadline_seconds <= 0:
         raise BenchmarkError(
             "case_deadline_seconds must be positive, got {0}".format(case_deadline_seconds)
+        )
+    if token_budget is not None and token_budget < 0:
+        raise BenchmarkError("token_budget cannot be negative")
+    if token_budget == 0:
+        # The corpus runner would issue nothing and stop with STOP_BUDGET. There
+        # is no later case here for the budget to be saved for, so the honest
+        # answer is to say so rather than to run the case and ignore the flag.
+        raise BenchmarkError(
+            "a token budget of 0 cannot cover a case, and an external run is a single "
+            "case: there is no later case to save the budget for. Pass a positive "
+            "budget, or none."
         )
 
     case = loader.load_external_case(Path(case_path))
@@ -2797,6 +2815,7 @@ def run_external_case(
             "external_case_path": str(Path(case_path)),
             "expected_outcome_path": str(Path(expected_path)),
             "cases": [case_no],
+            "token_budget": token_budget,
             "graded": False,
             "note": (
                 "One converted external case, run into runs/external/ and never into a "
@@ -2922,6 +2941,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 prompts_dir=args.prompts_dir,
                 timeout_seconds=args.timeout,
                 case_deadline_seconds=args.case_deadline,
+                token_budget=args.token_budget,
             )
         except llm.ModelNotProvisionedError as exc:
             print("FATAL: {0}".format(exc), file=sys.stderr)
