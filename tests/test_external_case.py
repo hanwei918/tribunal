@@ -788,6 +788,38 @@ class ExternalRunTests(unittest.TestCase):
             with contextlib.redirect_stderr(io.StringIO()):
                 runner.main(["--external", str(CASE_PATH), "--cases", "208"])
 
+    def test_the_cli_refuses_compare_with_external(self):
+        """``--compare`` reads cached runs; ``--external`` runs a case."""
+        with self.assertRaises(SystemExit) as caught:
+            with contextlib.redirect_stderr(io.StringIO()):
+                runner.main(["--compare", "--external", str(CASE_PATH)])
+        self.assertEqual(2, caught.exception.code)
+
+    def test_the_cli_exits_non_zero_when_it_cannot_run_the_case(self):
+        """A caller in a shell has to be able to tell, so the code is pinned.
+
+        Both of these fail before a client is built, so neither reaches the
+        network: the first resolves outside ``data/external/`` and the second is
+        not there at all. The exit code is what a script reads, and it is not
+        implied by the message being printed.
+        """
+        for argv, expected in (
+            (["--external", "/etc/passwd"], 1),
+            (["--external", "data/external/ryde/does-not-exist.json"], 1),
+        ):
+            with self.subTest(argv=argv):
+                with contextlib.redirect_stdout(io.StringIO()):
+                    with contextlib.redirect_stderr(io.StringIO()):
+                        code = runner.main(argv + ["--model", self.model])
+                self.assertEqual(expected, code)
+
+    def test_the_compare_path_still_works(self):
+        """The edit to main added guards beside --compare; it must still run."""
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            code = runner.main(["--compare"])
+        self.assertEqual(0, code)
+        self.assertIn("deepseek/deepseek-flash", out.getvalue())
+
     # -- the token budget, which is the corpus runner's --------------------
     def test_a_budget_that_cannot_cover_the_case_is_refused_not_ignored(self):
         """The corpus runner would issue nothing on a spent budget.
