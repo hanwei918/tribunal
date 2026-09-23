@@ -2,8 +2,8 @@
 
 This directory is the benchmark's own output. Three subdirectories are **committed deliberately**, as
 evidence for two findings recorded under `docs/notes/`. A fourth, `external/`, is where a converted
-external case is written, and nothing is committed there yet. Everything else here — the suite logs —
-is untracked.
+external case is written, and one run of one converted case is committed there. Everything else here —
+the suite logs — is untracked.
 
 ## Which directory holds what
 
@@ -52,10 +52,19 @@ means while leaving every file a reader looks at apparently intact. `assert_exte
 refuses any destination outside `runs/external/` before a single call is made, so this is checked
 rather than merely intended.
 
-**Nothing is committed under `external/` yet.** The organisers' sample case has been converted —
-`data/external/ryde/case-00901.json`, with every decision the conversion made recorded in
-`data/external/ryde/mapping.json` — but it has not been arbitrated, so there is no run to commit. When
-one is made, the credential rule below applies to it unchanged.
+**One run is committed under `external/`, and it is the organisers' sample case.** The organisers'
+sample case has been converted — `data/external/ryde/case-00901.json`, with every decision the
+conversion made recorded in `data/external/ryde/mapping.json` — and arbitrated once.
+`external/ryde/` holds that one run, committed at `b2556e8` **exactly as produced**: it is the record
+of what the system did before anything about it was changed, so no file in it has been edited and the
+case has not been re-run. Read it as evidence of what that run did, not as a score — there is no
+answer-key entry for it.
+
+**What that ruling did, and where it departs from this repository's own policy, is recorded in
+`docs/notes/2026-09-23-external-sample-case.md`.** That note checks each point against the transcript
+and the clause text, records the tokens billed and the wall clock, and names the part of
+`prompts/v1/judge.system.md` that let the ruling be written as it was. No prompt was changed. The
+credential rule below applies to this run unchanged.
 
 ## How to read one run directory
 
@@ -99,3 +108,10 @@ A byte scan of a PNG cannot see rendered text, so for an image the check has to 
 itself — open it and read it — not only of its bytes. Nothing in this directory is an image.
 
 The scan that cleared these three directories covered all 81 files under `runs/` and found no match.
+
+The one committed external run was scanned the same way as it entered the directory. The `sk-`
+pattern was run over all 5 files under `runs/external/` and matched none, with a positive control
+that fires on a fabricated `sk-` string. **The two environment variables were not set in the shell
+that ran the scan, so the literal-value half of the check could not be made there and is not claimed
+here.** The pattern half is the half that catches a key the file itself carries, which is how a
+credential would arrive in a run record; the literal half is a belt on top of it.

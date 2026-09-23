@@ -55,6 +55,14 @@ EXTERNAL_DIR = PROJECT_ROOT / "data" / "external"
 CASE_PATH = EXTERNAL_DIR / "ryde" / "case-00901.json"
 MAPPING_PATH = EXTERNAL_DIR / "ryde" / "mapping.json"
 
+# The one committed run of the converted case. It is read by the summary test
+# below, which checks the printed fields against the artifact's own values: the
+# defect it guards against was a property of this stored shape, not of a
+# scripted one.
+EXTERNAL_RESULT_PATH = (
+    PROJECT_ROOT / "runs" / "external" / "ryde" / "case-00901.json"
+)
+
 CASES_DIR = PROJECT_ROOT / "data" / "cases"
 INDEX_PATH = PROJECT_ROOT / "data" / "index.json"
 ANSWER_KEY_PATH = PROJECT_ROOT / "eval" / "answers" / "ground_truth.json"
@@ -752,6 +760,65 @@ class ExternalRunTests(unittest.TestCase):
         self.assertIsNotNone(expected, "eval/external/ryde/expected.json is missing")
         self.assertIn("not_the_answer_key", expected)
         self.assertEqual("DISP-002", expected["dispute_id"])
+
+    def test_a_ruling_of_the_stored_shape_prints_its_own_four_fields(self):
+        """The stored result nests the four fields, and the printer must go in.
+
+        ``case-00901.json`` holds the result object the judge returns --
+        ``{"discarded_claims": [...], "ruling": {...}}`` -- so ``amount_sgd``,
+        ``driver_compensation_sgd``, ``referrals`` and ``confidence`` are one
+        level down from the object the printer is handed. The printer read them
+        off the outer object, where they do not exist, and printed ``None`` for
+        all four while still printing ``PARTIAL_REFUND``. Asserting the ruling
+        word therefore proves nothing, which is why the existing test above did
+        not catch it; this one reads the four values back out of the printed
+        summary and compares each with the committed artifact's own value.
+
+        Both sides are read from the artifact rather than typed, so this cannot
+        pass by the printer and the expectation being wrong together. The
+        artifact is the committed run, not a scripted one, because the defect
+        was a property of the real stored shape.
+        """
+        stored = json.loads(EXTERNAL_RESULT_PATH.read_text(encoding="utf-8"))
+        inner = stored["ruling"]["ruling"]
+
+        outcome = runner.CaseOutcome(
+            case_no=901,
+            status=runner.STATUS_COMPLETED,
+            ruling=stored["ruling"],
+            tokens=runner.TokenSplit.from_mapping(stored["tokens"]),
+            wall_seconds=stored["wall_seconds"],
+        )
+        text = runner.format_external_result(
+            outcome, loader.load_external_case(CASE_PATH), None, Path("runs/external/ryde")
+        )
+
+        # The summary prints two labels on one line and aligns the rest with
+        # spaces, so a value is read as what follows its label, cut at the run
+        # of spaces that introduces the next label on that line.
+        def printed_value(label):
+            for line in text.splitlines():
+                stripped = line.strip()
+                at = stripped.find(label)
+                if at == -1:
+                    continue
+                remainder = (
+                    stripped[at + len(label) :].lstrip().lstrip(":").strip()
+                )
+                return remainder.split("   ")[0].strip()
+            return None
+
+        for label in (
+            "amount_sgd",
+            "driver_compensation_sgd",
+            "referrals",
+            "confidence",
+        ):
+            with self.subTest(label=label):
+                self.assertEqual(str(inner[label]), printed_value(label))
+        self.assertEqual(
+            "ruling {0}".format(inner["ruling"]), printed_value("produced")
+        )
 
     # -- the CLI -----------------------------------------------------------
     def test_the_cli_writes_only_under_runs_external(self):

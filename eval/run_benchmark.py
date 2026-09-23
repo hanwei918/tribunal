@@ -2662,6 +2662,14 @@ def format_external_result(
     whole value is that it is independent of the cases it grades. What is
     printed instead is what the run produced and what the organisers said they
     expected, labelled so the second cannot be read as a verified answer.
+
+    The judge returns a **result object**, ``{"ruling": {...},
+    "discarded_claims": [...]}``, so the four fields a reader wants are one
+    level down from the object that arrives here. Reading them off the outer
+    object printed ``None`` for all four while still printing the ruling word,
+    which is why the ruling word alone is not evidence that they arrived. The
+    unwrapping is ``eval.grade``'s, so the fields this prints and the fields the
+    grader scores cannot come from different places.
     """
     lines = [
         "external case {0}  ({1})".format(case["case_no"], case["dispute"]["dispute_id"]),
@@ -2677,14 +2685,19 @@ def format_external_result(
             )
         )
     else:
-        lines.append("  produced      : ruling {0}".format(ruling.get("ruling")))
+        # One level down, and through the grader's own unwrapping: the result
+        # object nests the POL-GEN-03 ruling under ``ruling``. The isinstance
+        # guard above is what keeps ``produced_from_mapping`` from raising --
+        # it raises only on a record that is not an object.
+        produced = grade.produced_from_mapping(ruling, case["case_no"])
+        lines.append("  produced      : ruling {0}".format(produced.ruling))
         lines.append(
             "                  amount_sgd {0}   driver_compensation_sgd {1}".format(
-                ruling.get("amount_sgd"), ruling.get("driver_compensation_sgd")
+                produced.amount_sgd, produced.driver_compensation_sgd
             )
         )
-        lines.append("                  referrals {0}".format(ruling.get("referrals")))
-        lines.append("                  confidence {0}".format(ruling.get("confidence")))
+        lines.append("                  referrals {0}".format(list(produced.referrals)))
+        lines.append("                  confidence {0}".format(produced.confidence))
 
     lines.append("  tokens billed : {0}".format(outcome.total_tokens))
     lines.append("  wall seconds  : {0:.1f}".format(outcome.wall_seconds))
