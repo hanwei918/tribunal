@@ -68,6 +68,15 @@ No case failed. Every graded field of every case agrees with the key.
 - expected clauses matched: 1 of 1
 - additional clauses offered: _(none)_
 
+### Case 115 — clause match
+
+- expected: "POL-RD-09(4) billing-integrity finding: phantom AYE Alexandra Road gantry line of SGD 2.00 on EV-FARE-00115 that the trace never approaches"
+- produced: "POL-RD-09(4) billing-integrity finding: phantom AYE Alexandra Road gantry line of SGD 2.00 on EV-FARE-00115 that the trace never approaches"
+- clause keys, expected: POL-RD-09(4)
+- clause keys, produced: POL-RD-09(4)
+- expected clauses matched: 1 of 1
+- additional clauses offered: _(none)_
+
 ### Case 201 — clause match
 
 - expected: "POL-NS-05(ii) false-arrival event recorded against the driver"

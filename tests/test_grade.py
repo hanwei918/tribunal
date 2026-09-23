@@ -31,11 +31,16 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 GRADE_SOURCE = PROJECT_ROOT / "eval" / "grade.py"
 TRIBUNAL_DIR = PROJECT_ROOT / "tribunal"
 
-# The three cases whose rulings carry a referral, and the clause reference each
+# The four cases whose rulings carry a referral, and the clause reference each
 # leads with. Recorded here as facts about the corpus, not as a specification of
 # the grader: the grader reads them out of the key.
-REFERRAL_CASES = (105, 201, 207)
-REFERRAL_CLAUSES = {105: "POL-RD-06", 201: "POL-NS-05", 207: "POL-NS-07"}
+REFERRAL_CASES = (105, 115, 201, 207)
+REFERRAL_CLAUSES = {
+    105: "POL-RD-06",
+    115: "POL-RD-09",
+    201: "POL-NS-05",
+    207: "POL-NS-07",
+}
 
 # The perturbation target. Case 101 is a PARTIAL_REFUND carrying money and no
 # referral, so a single-field change to it cannot disturb the escalation counts.
@@ -678,6 +683,95 @@ class KeySelfTestTests(unittest.TestCase):
         key_share = Decimal(5) / Decimal(29)
         self.assertEqual(key_share.quantize(Decimal("0.001")), Decimal("0.172"))
         self.assertNotEqual(key_share, grade.TARGET_ESCALATION_RATE)
+
+
+class CorrectedKeyTests(unittest.TestCase):
+    """Case 115's referral, and the proof that nothing else in the key moved.
+
+    The key is frozen, and a correction to it is a separate commit that states
+    its evidence. Case 115's own rationale says twice that the answer includes a
+    referral -- "refunded in full under POL-RD-09(4) as a standalone correction
+    with a billing-integrity referral recorded in the ruling", and "The answer is
+    2.00 and a referral" -- and POL-GEN-03 names POL-RD-09(4) among the clauses
+    that PRODUCES one. The key carried an empty list, so it contradicted both its
+    own rationale and the policy.
+
+    The digest test is what makes the correction safe to make. It pins every
+    other case, so an edit that moved a second thing fails here instead of
+    passing as a one-entry change -- and the rationales, which nothing else
+    pins, are inside that figure too.
+    """
+
+    # ``eval/answers/ground_truth.json`` with case 115's ``expected_referrals``
+    # put back to the empty list it held before the correction, canonically
+    # serialised. Every other field of every other case is in this figure.
+    KEY_WITHOUT_THE_CORRECTION = (
+        "a49234f9ab7bd02e2e4973372e3ed14bd62747b54860536cb0d916b25431a690"
+    )
+
+    def test_case_115_carries_exactly_one_referral(self):
+        self.assertEqual(len(_key()[115].referrals), 1)
+
+    def test_the_referral_leads_with_the_clause_that_produces_it(self):
+        """Structural: the clause reference is parsed out, not searched for."""
+        keys = grade.referral_keys_of(_key()[115].referrals)
+        self.assertEqual(keys, (grade.ReferralKey("POL-RD-09", "4"),))
+
+    def test_the_referral_names_the_phantom_line_it_records(self):
+        """A text check, because what is under test is a sentence.
+
+        There is no structural way to ask what a referral says, so this asserts
+        the facts a human reviewer acts on: the gantry, its amount, the artifact
+        that itemises it, and that the finding is a billing-integrity one.
+        """
+        referral = _key()[115].referrals[0]
+        self.assertTrue(referral.startswith("POL-RD-09(4) "), referral)
+        self.assertIn("billing-integrity", referral)
+        for fact in ("AYE", "Alexandra Road", "2.00", "EV-FARE-00115"):
+            with self.subTest(fact=fact):
+                self.assertIn(fact, referral)
+
+    def test_no_other_case_gained_or_lost_a_referral(self):
+        key = _key()
+        carrying = tuple(
+            sorted(case_no for case_no, entry in key.items() if entry.referrals)
+        )
+        self.assertEqual(carrying, REFERRAL_CASES)
+        self.assertEqual(
+            {
+                case_no: grade.referral_keys_of(key[case_no].referrals)[0].clause
+                for case_no in carrying
+            },
+            REFERRAL_CLAUSES,
+        )
+
+    def test_nothing_else_in_the_key_moved(self):
+        raw = grade.ANSWER_KEY_PATH.read_bytes()
+        restored = []
+        for entry in json.loads(raw, parse_float=Decimal):
+            inner = dict(entry["ground_truth"])
+            if entry["case_no"] == 115:
+                inner["expected_referrals"] = []
+            restored.append(
+                {
+                    "case_no": entry["case_no"],
+                    "dispute_id": entry["dispute_id"],
+                    "ground_truth": inner,
+                }
+            )
+        self.assertEqual(
+            money.canonical_sha256(restored),
+            self.KEY_WITHOUT_THE_CORRECTION,
+            "the correction disturbed something other than case 115's referrals",
+        )
+
+    def test_the_corrected_key_still_grades_itself_perfectly(self):
+        key = _key()
+        report = grade.grade(grade.key_as_produced(key), key)
+        self.assertEqual(report.field_tally("referrals"), (29, 29))
+        self.assertEqual(report.exact_matches, 29)
+        self.assertEqual(report.total, 29)
+        self.assertEqual(report.failures, ())
 
 
 class PerturbationTests(unittest.TestCase):
