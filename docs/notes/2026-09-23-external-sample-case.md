@@ -147,7 +147,7 @@ assumptions rather than on anything the source states.
 ## 3. Which part of the judge prompt allowed it
 
 `prompts/v1/judge.system.md`, **Step 2, the subsection "### What can carry a deciding fact"** (lines
-47–70). It reads, in the relevant part:
+47–74). It reads, in the relevant part:
 
 > **Every artifact in `case.evidence` is a candidate carrier, not only the instrument evidence.** A GPS
 > trace, a trip record and a fare breakdown are artifacts; so is a chat log, and so is a counterparty
@@ -158,7 +158,8 @@ assumptions rather than on anything the source states.
 
 > Two patterns qualify. They are illustrations of one principle, not a list to match against:
 >
-> - **An admission against the speaker's own interest.** …
+> - **An admission against the speaker's own interest.** A party does not concede what helps the other
+>   side without reason, so the concession is evidence of the thing conceded.
 > - **A contemporaneous record made from inside the disputed window.** It is evidence of what was
 >   happening then because it was made then, by someone who was there.
 
