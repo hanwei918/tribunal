@@ -651,6 +651,42 @@ def _headline(
     }
 
 
+def _repository_relative(value: Any) -> Optional[str]:
+    """A path from the run, as this repository expresses it, or ``None``.
+
+    The run records absolute paths from the machine that produced it. Only the
+    part that is a fact about *this* repository may reach the page. A path from
+    another checkout is a stranger's filesystem layout, and publishing it would
+    both leak it and make the built page depend on where the build ran -- which
+    is the one thing a committed artefact must not do, because it then cannot be
+    reproduced from the code by anybody else.
+
+    So: a path under the project root is relativised directly; a path that is
+    not, but whose trailing components name a directory this repository has, is
+    reported as this repository names it; anything else is dropped rather than
+    published.
+
+    This is not a nicety. The committed run was made in one checkout, and in
+    that checkout its recorded prompts path sat under the project root and was
+    relativised. In every other checkout it did not, and the absolute path was
+    published instead -- so the committed page differed from a fresh build
+    everywhere except the single directory it was built in, and a judge cloning
+    the repository would have seen the artefact-versus-build test go red.
+    """
+    if not isinstance(value, str) or not value:
+        return None
+    path = Path(value)
+    try:
+        return path.resolve().relative_to(PROJECT_ROOT).as_posix()
+    except ValueError:
+        pass
+    for known in (RUN_DIR, pipeline_module.PROMPTS_DIR):
+        tail = known.resolve().relative_to(PROJECT_ROOT).parts
+        if len(path.parts) >= len(tail) and path.parts[-len(tail) :] == tail:
+            return "/".join(tail)
+    return None
+
+
 def _provenance(
     run: Mapping[str, Any],
     invocations: Sequence[Mapping[str, Any]],
@@ -658,17 +694,13 @@ def _provenance(
 ) -> Dict[str, Any]:
     """Which run this page is showing, on the page and not in a footnote.
 
-    Every path is relative to the project root. The run records absolute paths,
-    and this repository is published before submission: an absolute path carries
-    a username into the artifact, which is a small leak with no upside.
+    Every path is relative to the project root, because the run records absolute
+    paths and this repository is published before submission: an absolute path
+    carries a username into the artifact, which is a small leak with no upside.
+    ``_repository_relative`` is what makes that hold in every checkout rather
+    than only in the one the run happened to be made in.
     """
-    def relative(value: Any) -> Optional[str]:
-        if not isinstance(value, str) or not value:
-            return None
-        try:
-            return Path(value).resolve().relative_to(PROJECT_ROOT).as_posix()
-        except ValueError:
-            return value
+    relative = _repository_relative
 
     history = []
     for entry in invocations:
@@ -691,7 +723,12 @@ def _provenance(
         )
 
     return {
-        "run_directory": relative(str(run_dir)) or str(run_dir),
+        # No ``or str(run_dir)`` fallback. That would publish an absolute path
+        # whenever relativisation failed, which is the same leak in the same
+        # field. The run directory is always inside the repository, so the
+        # fallback was unreachable -- which is exactly why it would have gone
+        # unnoticed until the day it was not.
+        "run_directory": relative(str(run_dir)),
         "model": run.get("model"),
         "runtime_model": model_module.RUNTIME_MODEL,
         "model_provider": model_module.MODEL_PROVIDER,

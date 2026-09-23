@@ -180,6 +180,41 @@ class CommittedPageTests(unittest.TestCase):
         second = build.render_html(build.build_document())
         self.assertEqual(first, second, "the build is not deterministic")
 
+    def test_the_page_does_not_depend_on_where_the_run_was_made(self):
+        """The strongest form of the checkout-independence property.
+
+        The run is copied to a temporary directory laid out the way a fresh
+        clone's is -- ``<tmp>/runs/deepseek-deepseek-flash`` -- and its recorded
+        prompts path is moved somewhere that does not exist on this machine. The
+        page built from that copy must be byte-identical to the committed one,
+        because the page is meant to be a function of the repository alone.
+
+        A fresh clone broke exactly this. The run records its prompts directory
+        as an absolute path from the machine that produced it; in the author's
+        checkout that path sits under the project root and was relativised, and
+        in any other checkout it did not, so the absolute path was published
+        instead. Both ``test_the_committed_page_equals_a_fresh_build`` and
+        ``test_no_absolute_path_is_published`` went red in the clone.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            moved_run = Path(tmp) / "runs" / "deepseek-deepseek-flash"
+            moved_run.parent.mkdir(parents=True)
+            shutil.copytree(build.RUN_DIR, moved_run)
+
+            run_json = moved_run / "run.json"
+            recorded = json.loads(run_json.read_text(encoding="utf-8"))
+            recorded["prompts_dir"] = "/somewhere/else/entirely/prompts/v1"
+            run_json.write_text(json.dumps(recorded), encoding="utf-8")
+
+            moved = build.render_html(build.build_document(run_dir=moved_run))
+
+        self.assertEqual(
+            self.page,
+            moved,
+            "the page depends on where the run was made, so it cannot be "
+            "reproduced from the code by anyone else",
+        )
+
     def test_the_page_carries_its_data_css_and_javascript_inline(self):
         """One file, and everything it needs is in it."""
         self.assertIn("<style>", self.page)
@@ -620,6 +655,58 @@ class ProvenanceTests(unittest.TestCase):
                 self.assertFalse(
                     str(value).startswith("/"), "an absolute path reached the page"
                 )
+
+    def test_a_prompts_path_from_another_checkout_is_not_published(self):
+        """The page must be a function of the repository, not of where it was built.
+
+        The run records an absolute prompts path from the machine that produced
+        it. In this checkout that path happens to sit under the project root and
+        is relativised; in any other checkout it does not. The fallback used to
+        return the recorded path unchanged, so a page built anywhere else both
+        differed from the committed artefact and carried the author's username
+        into a page destined to be published.
+
+        A fresh clone of this repository showed exactly that, and this test is
+        the reproduction: ``test_the_committed_page_equals_a_fresh_build`` went
+        red, and ``test_no_absolute_path_is_published`` went red naming
+        ``/Users/<name>/Desktop/Tribunal/prompts/v1``.
+        """
+        for foreign in (
+            "/somewhere/else/entirely/prompts/v1",
+            "/Users/someone/Desktop/Tribunal/prompts/v1",
+            "/private/tmp/some-clone/prompts/v1",
+        ):
+            with self.subTest(prompts_dir=foreign):
+                provenance = build._provenance(
+                    {"prompts_dir": foreign}, [], build.RUN_DIR
+                )
+                self.assertEqual("prompts/v1", provenance["prompts_directory"])
+
+    def test_the_runs_own_prompts_path_still_relativises(self):
+        """The real run's recorded path yields the value the committed page holds."""
+        run = json.loads((build.RUN_DIR / "run.json").read_text(encoding="utf-8"))
+        self.assertEqual("prompts/v1", build._repository_relative(run["prompts_dir"]))
+
+    def test_a_path_that_is_not_this_repository_is_dropped_not_published(self):
+        """A path from another machine is not this repository's to publish."""
+        for value in ("/someone/elses/private/notes", "/etc/passwd", "/var/tmp/x"):
+            with self.subTest(value=value):
+                self.assertIsNone(build._repository_relative(value))
+
+    def test_no_relative_path_comes_back_absolute(self):
+        """The property the leak broke, asserted over every shape that occurs."""
+        for value in (
+            "/Users/someone/Desktop/Tribunal/prompts/v1",
+            "/private/tmp/some-clone/runs/deepseek-deepseek-flash",
+            "prompts/v1",
+            "runs/deepseek-deepseek-flash",
+            "/somewhere/else/private/notes",
+        ):
+            with self.subTest(value=value):
+                result = build._repository_relative(value)
+                if result is not None:
+                    self.assertFalse(result.startswith("/"), result)
+                    self.assertNotIn("\\", result)
 
 
 # The script that renders the views, as opposed to the data block. The data
