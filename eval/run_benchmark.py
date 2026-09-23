@@ -188,6 +188,18 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 PROMPTS_DIR = PROJECT_ROOT / "prompts" / "v1"
 RUNS_DIR = PROJECT_ROOT / "runs"
 
+# Where a converted external case runs. **Never** into a model's run directory:
+# ``runs/deepseek-deepseek-flash/`` holds the 29-case result the submission
+# reports, and an external case has no answer-key entry and is not one of the
+# 29, so writing it there would silently change what that directory means -- a
+# reader would find a thirtieth case in a run that reports 29.
+EXTERNAL_RUNS_SUBDIR = "external"
+
+# The organisers' own stated expectation for their sample case. Read only to
+# print beside the produced ruling, never as a grade: it is not an entry in the
+# frozen answer key and must never be merged into one.
+EXTERNAL_EXPECTED_PATH = PROJECT_ROOT / "eval" / "external" / "ryde" / "expected.json"
+
 # Bumped when the cache layout changes, so an old cache is visibly old rather
 # than silently misread.
 CACHE_SCHEMA_VERSION = 1
@@ -1029,6 +1041,7 @@ def run_one_case(
     expected: Optional[grade.Ruling],
     case_provenance: Optional[Mapping[str, Any]] = None,
     case_deadline_seconds: float = pipeline.DEFAULT_CASE_DEADLINE_SECONDS,
+    loaded_case: Optional[Mapping[str, Any]] = None,
 ) -> Tuple[CaseOutcome, Optional[Dict[str, Any]], Optional[str]]:
     """Run one case. Returns ``(outcome, cache document, transcript json)``.
 
@@ -1052,15 +1065,33 @@ def run_one_case(
     ``case_provenance`` is recorded inside the cache entry, beside the brief
     digest it belongs to. Provenance kept only in the run's own metadata file is
     provenance the next invocation destroys.
+
+    ``loaded_case`` is a case already in hand, which is how a converted external
+    case is arbitrated: it is loaded through its own explicit path and is absent
+    from the manifest, so it cannot be named by number. Only the source of the
+    case changes. :func:`tribunal.pipeline.run_loaded_case` is the same body
+    :func:`tribunal.pipeline.run_case` runs, so every guard is the same guard and
+    there is no second, weaker path through this runner.
     """
     started = time.monotonic()
     try:
-        result = pipeline.run_case(
-            case_no,
-            client,
-            prompts_dir=prompts_dir,
-            case_deadline_seconds=case_deadline_seconds,
-        )
+        if loaded_case is None:
+            result = pipeline.run_case(
+                case_no,
+                client,
+                prompts_dir=prompts_dir,
+                case_deadline_seconds=case_deadline_seconds,
+            )
+        else:
+            # A converted external case, already loaded through its own explicit
+            # path. Same pipeline body, same guards: run_loaded_case is the
+            # function run_case delegates to, not a parallel implementation.
+            result = pipeline.run_loaded_case(
+                loaded_case,
+                client,
+                prompts_dir=prompts_dir,
+                case_deadline_seconds=case_deadline_seconds,
+            )
     except (llm.MissingAPIKeyError, llm.ModelNotProvisionedError):
         raise
     except Exception as exc:  # noqa: BLE001 - any transport or parse failure is a case failure
@@ -2565,6 +2596,225 @@ def print_summary(summary: RunSummary) -> None:
     print("report written to {0}".format(summary.run_dir / REPORT_FILE))
 
 
+# --------------------------------------------------------------------------
+# One converted external case, in its own place
+# --------------------------------------------------------------------------
+def external_run_name(case_path: Path) -> str:
+    """The directory one external case runs into, under ``runs/external/``.
+
+    A converted case lives at ``data/external/<name>/case-<n>.json`` and runs
+    into ``runs/external/<name>/``. The name is taken from the case's own
+    directory rather than minted, so a run directory and the case it came from
+    are recognisable as each other. A case sitting directly in
+    ``data/external/`` falls back to its own filename stem, which keeps two such
+    cases from colliding in one directory.
+    """
+    path = Path(case_path)
+    if path.parent.name == loader.EXTERNAL_DIR.name:
+        return path.stem
+    return path.parent.name
+
+
+def assert_external_run_directory(run_dir: Path, runs_dir: Path) -> Path:
+    """Refuse any external run directory that is not under ``runs/external/``.
+
+    ``runs/deepseek-deepseek-flash/`` holds the 29-case result the submission
+    reports. An external case is not one of the 29 and has no answer-key entry,
+    so a case written there would change what that directory means while leaving
+    every file a reader would look at apparently intact. The check is made
+    rather than intended, so a caller cannot ask for the headline directory by
+    accident and get it.
+    """
+    resolved = Path(run_dir).resolve()
+    external_root = (Path(runs_dir) / EXTERNAL_RUNS_SUBDIR).resolve()
+    if not resolved.is_relative_to(external_root):
+        raise BenchmarkError(
+            "an external case may only be written under runs/{0}/, and this one "
+            "would go to {1}".format(EXTERNAL_RUNS_SUBDIR, resolved)
+        )
+    return resolved
+
+
+def external_run_directory(runs_dir: Path, case_path: Path) -> Path:
+    """``runs/external/<name>/`` for one case, checked before it is used."""
+    return assert_external_run_directory(
+        Path(runs_dir) / EXTERNAL_RUNS_SUBDIR / external_run_name(case_path), runs_dir
+    )
+
+
+def read_expected_outcome(path: Path = EXTERNAL_EXPECTED_PATH) -> Optional[Dict[str, Any]]:
+    """The organisers' stated expectation, or ``None`` when it is not on disk."""
+    document = read_json(Path(path))
+    return document if isinstance(document, Mapping) else None
+
+
+def format_external_result(
+    outcome: CaseOutcome,
+    case: Mapping[str, Any],
+    expected: Optional[Mapping[str, Any]],
+    run_dir: Path,
+) -> str:
+    """The produced ruling beside the stated expectation, and no score.
+
+    There is no four-field grading here and there must not be one. An external
+    case has no entry in ``eval/answers/ground_truth.json``; giving it one would
+    put a case into the frozen key that the key does not measure, and the key's
+    whole value is that it is independent of the cases it grades. What is
+    printed instead is what the run produced and what the organisers said they
+    expected, labelled so the second cannot be read as a verified answer.
+    """
+    lines = [
+        "external case {0}  ({1})".format(case["case_no"], case["dispute"]["dispute_id"]),
+        "  run directory : {0}".format(run_dir),
+        "  status        : {0}".format(outcome.status),
+    ]
+
+    ruling = outcome.ruling
+    if not isinstance(ruling, Mapping):
+        lines.append(
+            "  produced      : no ruling ({0})".format(
+                outcome.failure_reason or outcome.failure_detail or "the case failed"
+            )
+        )
+    else:
+        lines.append("  produced      : ruling {0}".format(ruling.get("ruling")))
+        lines.append(
+            "                  amount_sgd {0}   driver_compensation_sgd {1}".format(
+                ruling.get("amount_sgd"), ruling.get("driver_compensation_sgd")
+            )
+        )
+        lines.append("                  referrals {0}".format(ruling.get("referrals")))
+        lines.append("                  confidence {0}".format(ruling.get("confidence")))
+
+    lines.append("  tokens billed : {0}".format(outcome.total_tokens))
+    lines.append("  wall seconds  : {0:.1f}".format(outcome.wall_seconds))
+
+    if expected is None:
+        lines.append(
+            "  organisers    : no stated expectation on disk at {0}".format(
+                EXTERNAL_EXPECTED_PATH
+            )
+        )
+    else:
+        lines.append("  organisers    : {0}".format(expected.get("expected_outcome_as_stated")))
+        lines.append(
+            "                  ^ THE ORGANISERS' STATED EXPECTATION, NOT A VERIFIED ANSWER. "
+            "This case has no entry in eval/answers/ground_truth.json and is not scored "
+            "against one."
+        )
+
+    lines.append(
+        "  score         : none. No answer-key entry exists for an external case, so no "
+        "four-field grade is computed and none is reported."
+    )
+    return "\n".join(lines)
+
+
+def run_external_case(
+    case_path: Path,
+    model: str,
+    *,
+    runs_dir: Path = RUNS_DIR,
+    prompts_dir: Path = PROMPTS_DIR,
+    timeout_seconds: float = llm.DEFAULT_TIMEOUT_SECONDS,
+    case_deadline_seconds: float = pipeline.DEFAULT_CASE_DEADLINE_SECONDS,
+    expected_path: Path = EXTERNAL_EXPECTED_PATH,
+    client_factory: Optional[Callable[[Callable[[Dict[str, Any]], None]], Any]] = None,
+    git_runner: Optional[Callable[[Sequence[str]], Optional[str]]] = None,
+    progress: Callable[[str], None] = lambda text: print(text, flush=True),
+    now: Callable[[], str] = lambda: datetime.now(timezone.utc).isoformat(),
+) -> Tuple[CaseOutcome, Path]:
+    """Arbitrate one converted external case, into ``runs/external/<name>/``.
+
+    The case is loaded through its own explicit path, because it is deliberately
+    absent from ``data/index.json``: the manifest indexes the 29-case corpus the
+    submission reports, and adding a converted case to it would change that
+    corpus. Everything after loading is the machinery a corpus case goes
+    through -- the same single-case runner, the same cache document and
+    transcript, the same provenance, the same case deadline, the same token
+    accounting -- because it *is* that machinery, reached with a case in hand
+    rather than a case number.
+
+    Two things differ, and only two. The run directory is under
+    ``runs/external/`` and is checked before anything is written, so an external
+    case cannot land in a model's headline run directory. And the case is not
+    graded: it has no answer-key entry, so the produced ruling is printed beside
+    the organisers' stated expectation instead of being scored.
+
+    ``client_factory`` exists for the same reason it does on
+    :func:`run_benchmark`: a test can drive this end to end over a fake
+    transport, with no network.
+    """
+    if not model:
+        raise BenchmarkError("model is required and has no default; name the model explicitly")
+    if case_deadline_seconds <= 0:
+        raise BenchmarkError(
+            "case_deadline_seconds must be positive, got {0}".format(case_deadline_seconds)
+        )
+
+    case = loader.load_external_case(Path(case_path))
+    case_no = case["case_no"]
+
+    # Checked and created before a single call is made, so a bad destination
+    # costs nothing and cannot be discovered after a paid run.
+    run_dir = external_run_directory(runs_dir, Path(case_path))
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    run_provenance = provenance(
+        model, prompts_dir=prompts_dir, runs_dir=runs_dir, git_runner=git_runner, now=now
+    )
+    build_client = (
+        _default_client_factory(model, timeout_seconds)
+        if client_factory is None
+        else client_factory
+    )
+
+    # The client reports each call to this sink, exactly as it does for a corpus
+    # case; the records are written to calls.json beside the result.
+    records: List[Dict[str, Any]] = []
+    client = build_client(records.append)
+
+    outcome, document, transcript_json = run_one_case(
+        case_no,
+        client=client,
+        prompts_dir=prompts_dir,
+        # No expected ruling, so no match is computed and none is recorded.
+        expected=None,
+        case_provenance=run_provenance,
+        case_deadline_seconds=case_deadline_seconds,
+        loaded_case=case,
+    )
+    _persist(run_dir, outcome, document, transcript_json)
+
+    metadata = dict(run_provenance)
+    # _record_invocation keys its history on started_at, so the invocation's own
+    # start is carried under that name; recorded_at means the same instant here.
+    metadata.setdefault("started_at", metadata.get("recorded_at"))
+    metadata.update(
+        {
+            "external": True,
+            "external_case_no": case_no,
+            "external_case_path": str(Path(case_path)),
+            "expected_outcome_path": str(Path(expected_path)),
+            "cases": [case_no],
+            "graded": False,
+            "note": (
+                "One converted external case, run into runs/external/ and never into a "
+                "model's run directory. It has no entry in "
+                "eval/answers/ground_truth.json, so it is not scored: the organisers' "
+                "stated expectation is printed beside the produced ruling and is not an "
+                "answer."
+            ),
+        }
+    )
+    write_json(metadata_path(run_dir), metadata)
+    _record_invocation(run_dir, metadata)
+    write_json(Path(run_dir) / CALLS_FILE, records)
+
+    progress(format_external_result(outcome, case, read_expected_outcome(expected_path), run_dir))
+    return outcome, run_dir
+
+
 def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = argparse.ArgumentParser(
         prog="python -m eval.run_benchmark",
@@ -2632,6 +2882,18 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             "continues)".format(pipeline.DEFAULT_CASE_DEADLINE_SECONDS)
         ),
     )
+    parser.add_argument(
+        "--external",
+        type=Path,
+        default=None,
+        metavar="PATH",
+        help=(
+            "arbitrate one converted external case from PATH, writing it under "
+            "runs/external/<name>/ and never into a model's run directory. The case "
+            "has no answer-key entry, so the produced ruling is printed beside the "
+            "organisers' stated expectation and no score is made"
+        ),
+    )
     parser.add_argument("--runs-dir", type=Path, default=RUNS_DIR)
     parser.add_argument("--prompts-dir", type=Path, default=PROMPTS_DIR)
     args = parser.parse_args(argv)
@@ -2639,6 +2901,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     if args.compare:
         if args.model is not None:
             parser.error("--compare reads cached runs and takes no --model")
+        if args.external is not None:
+            parser.error("--compare reads cached runs and takes no --external")
         print(render_comparison(collect_comparison(args.runs_dir)))
         return 0
 
@@ -2646,6 +2910,34 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     # reads it. A caller who names one still overrides it, so a probe or a
     # comparison run is unaffected.
     model_id = resolve_model(args.model)
+
+    if args.external is not None:
+        if args.cases is not None:
+            parser.error("--external arbitrates one named case and takes no --cases")
+        try:
+            outcome, _run_dir = run_external_case(
+                args.external,
+                model_id,
+                runs_dir=args.runs_dir,
+                prompts_dir=args.prompts_dir,
+                timeout_seconds=args.timeout,
+                case_deadline_seconds=args.case_deadline,
+            )
+        except llm.ModelNotProvisionedError as exc:
+            print("FATAL: {0}".format(exc), file=sys.stderr)
+            return 1
+        except llm.MissingAPIKeyError as exc:
+            print("FATAL: {0}".format(exc), file=sys.stderr)
+            return 1
+        except loader.LoaderError as exc:
+            print("FATAL: {0}".format(exc), file=sys.stderr)
+            return 1
+        except BenchmarkError as exc:
+            print("FATAL: {0}".format(exc), file=sys.stderr)
+            return 1
+        # Non-zero when the case produced no ruling, for the same reason the
+        # corpus runner does: the caller should see it without reading the text.
+        return 0 if outcome.ok else 1
 
     try:
         cases = parse_cases(args.cases)

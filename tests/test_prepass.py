@@ -67,6 +67,47 @@ class WeightForTests(unittest.TestCase):
         )
         self.assertEqual(matched, 45, "matched {0} of 45".format(matched))
 
+    def test_a_dirty_binary_product_is_quantised_to_the_corpus_convention(self):
+        """The combination that exposed the floating-point residue.
+
+        ``0.8 * 0.75`` is ``0.6000000000000001`` in binary floating point. Every
+        multi-code weight the corpus declares is a clean two-decimal figure --
+        0.39, 0.3, 0.25 -- and the float product reproduced them only because
+        none of those particular combinations happens to leave a residue. The
+        corpus carries no artifact with this pair, so none of the 45 caught it;
+        the first converted external case to use it did.
+        """
+        derived = prepass.weight_for(["LOW_SAMPLE_RATE", "PARTIAL_RECORD"])
+        self.assertEqual(0.6, derived)
+        self.assertNotEqual(
+            0.8 * 0.75,
+            derived,
+            "the raw binary product is not the number the corpus would write",
+        )
+
+    def test_every_derived_weight_is_a_two_decimal_figure(self):
+        """No combination of codes may produce a weight carrying a residue.
+
+        Exhaustive over every one-, two- and three-code combination, which is
+        what a spot check on the one combination that was known to be dirty
+        would not have covered.
+        """
+        from itertools import combinations  # noqa: PLC0415 - used once, here
+
+        codes = sorted(prepass.CODE_WEIGHTS)
+        checked = 0
+        for size in (1, 2, 3):
+            for combo in combinations(codes, size):
+                with self.subTest(codes=combo):
+                    value = prepass.weight_for(combo)
+                    checked += 1
+                    self.assertEqual(
+                        Decimal(str(value)),
+                        Decimal(str(value)).quantize(prepass.TWO_PLACES),
+                        "a derived weight carries a floating-point residue",
+                    )
+        self.assertGreater(checked, 800, "too few combinations checked to be a proof")
+
     def test_weight_for_is_full_weight_for_no_issues(self):
         """An empty issue list weighs 1.0, matching all 159 COMPLETE artifacts."""
         self.assertEqual(prepass.weight_for([]), 1.0)

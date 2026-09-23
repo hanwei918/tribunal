@@ -23,8 +23,10 @@ No network, no browser. Run with ``python -m unittest discover -s tests -v``.
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import importlib.util
+import io
 import json
 import shutil
 import sys
@@ -37,6 +39,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from eval import run_benchmark as runner  # noqa: E402
 from tribunal import brief, loader, prepass  # noqa: E402
 
 # The converter is a script under eval/, not a package module. It is loaded by
@@ -541,6 +544,264 @@ class BenchmarkUndisturbedTests(unittest.TestCase):
 
     def test_the_answer_key_still_holds_29_records(self):
         self.assertEqual(29, len(json.loads(ANSWER_KEY_PATH.read_text(encoding="utf-8"))))
+
+
+class ExternalRunTests(unittest.TestCase):
+    """An external case runs through the same machinery, into its own place.
+
+    The transport is the one the corpus runner's own tests use, so "the same
+    guards" is checked with the same instrument that checks them for a corpus
+    case, rather than with a second fake written to agree with a second
+    implementation.
+    """
+
+    # A ruling in the shape POL-GEN-03 asks for, produced by the scripted
+    # transport rather than by a model. It is never compared with the
+    # organisers' expectation: an external case has no answer-key entry to
+    # compare against, and inventing one would put a case into the frozen key
+    # that the key does not measure.
+    RULING = {
+        "ruling": "DRIVER_COMPENSATION",
+        "amount_sgd": None,
+        "driver_compensation_sgd": 4.0,
+        "referrals": [],
+        "confidence": 0.82,
+        "explanation": "Produced by a scripted transport; no model was called.",
+    }
+
+    def setUp(self):
+        from tests.test_run_benchmark import (  # noqa: PLC0415 - one shared fake
+            MODEL,
+            ScriptedTransport,
+            client_factory,
+            git_runner,
+        )
+
+        self.model = MODEL
+        self.transport = ScriptedTransport({901: {"ruling": self.RULING}})
+        self.factory = client_factory(MODEL, self.transport)
+        self.git_runner = git_runner
+
+    def _run(self, runs_dir, **overrides):
+        kwargs = {
+            "runs_dir": Path(runs_dir),
+            "client_factory": self.factory,
+            "git_runner": self.git_runner,
+            "progress": lambda text: None,
+        }
+        kwargs.update(overrides)
+        return runner.run_external_case(CASE_PATH, self.model, **kwargs)
+
+    # -- where it is written ----------------------------------------------
+    def test_the_run_lands_under_runs_external(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            _outcome, run_dir = self._run(tmp)
+            # run_dir comes back resolved, and on macOS the temporary root is
+            # reached through a symlink, so the comparison is made resolved too.
+            self.assertEqual("external", run_dir.parent.name)
+            self.assertEqual("ryde", run_dir.name)
+            self.assertTrue(run_dir.is_relative_to(Path(tmp).resolve()))
+            self.assertTrue(run_dir.is_dir())
+
+    def test_the_guard_refuses_a_model_run_directory(self):
+        """The headline directory holds the 29-case result the submission reports."""
+        with tempfile.TemporaryDirectory() as tmp:
+            headline = Path(tmp) / "deepseek-deepseek-flash"
+            with self.assertRaises(runner.BenchmarkError) as caught:
+                runner.assert_external_run_directory(headline, Path(tmp))
+        self.assertIn("runs/external/", str(caught.exception))
+
+    def test_an_external_run_leaves_a_headline_directory_alone(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runs_dir = Path(tmp)
+            headline = runs_dir / "deepseek-deepseek-flash"
+            headline.mkdir()
+            sentinel = headline / "case-00208.json"
+            sentinel.write_text('{"case_no": 208}\n', encoding="utf-8")
+            before = (sentinel.read_bytes(), sorted(p.name for p in headline.iterdir()))
+
+            self._run(runs_dir)
+
+            after = (sentinel.read_bytes(), sorted(p.name for p in headline.iterdir()))
+            self.assertEqual(before, after, "the headline run directory was disturbed")
+            self.assertFalse((headline / "case-00901.json").exists())
+
+    # -- the guards, which are the corpus runner's -------------------------
+    def test_the_case_is_arbitrated_by_the_same_pipeline(self):
+        """Both advocates, then the judge, in that order -- as for any case."""
+        with tempfile.TemporaryDirectory() as tmp:
+            outcome, run_dir = self._run(tmp)
+            self.assertEqual("completed", outcome.status)
+            self.assertEqual(
+                ["RIDER_ADVOCATE", "DRIVER_ADVOCATE", "JUDGE"],
+                self.transport.roles_for(901),
+            )
+            self.assertTrue((run_dir / "case-00901.json").is_file())
+            self.assertTrue((run_dir / "case-00901.transcript.json").is_file())
+
+    def test_the_brief_identity_proof_holds_for_the_external_case(self):
+        """One brief, one serialisation, both advocates handed those bytes."""
+        with tempfile.TemporaryDirectory() as tmp:
+            _outcome, run_dir = self._run(tmp)
+
+            document = json.loads(
+                (run_dir / "case-00901.json").read_text(encoding="utf-8")
+            )
+            transcript = json.loads(
+                (run_dir / "case-00901.transcript.json").read_text(encoding="utf-8")
+            )
+            by_role = {entry["role"]: entry for entry in transcript["entries"]}
+            rider = by_role["RIDER_ADVOCATE"]
+            driver = by_role["DRIVER_ADVOCATE"]
+
+            self.assertEqual(rider["user_sha256"], driver["user_sha256"])
+            self.assertEqual(rider["user_sha256"], document["brief_sha256"])
+            self.assertEqual(driver["user_sha256"], document["brief_sha256"])
+            self.assertNotEqual(rider["system_sha256"], driver["system_sha256"])
+
+            # And the brief those bytes are is the one this repository builds for
+            # the external case, not some other case's.
+            case = loader.load_external_case(CASE_PATH)
+            self.assertEqual(
+                brief.brief_digest(brief.build_brief_for_case(case))[1],
+                document["brief_sha256"],
+            )
+
+    def test_the_stance_only_check_ran(self):
+        from tribunal import pipeline
+
+        with tempfile.TemporaryDirectory() as tmp:
+            _outcome, run_dir = self._run(tmp)
+            document = json.loads(
+                (run_dir / "case-00901.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(
+                [list(item) for item in pipeline.check_stance_only_difference()],
+                document["stance_differing_ranges"],
+            )
+
+    def test_the_cache_entry_carries_provenance_and_the_token_split(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            _outcome, run_dir = self._run(tmp)
+            document = json.loads(
+                (run_dir / "case-00901.json").read_text(encoding="utf-8")
+            )
+
+            for field in (
+                "schema_version", "case_no", "model", "recorded_at", "brief_sha256",
+                "git_commit", "prompts_sha256", "python_version", "transcript_sha256",
+                "transcript_file", "ruling", "ruling_findings",
+                "stance_differing_ranges", "tokens", "wall_seconds", "call_seconds",
+                "matched",
+            ):
+                with self.subTest(field=field):
+                    self.assertIn(field, document)
+
+            self.assertEqual(901, document["case_no"])
+            self.assertGreater(document["tokens"]["prompt_tokens"], 0)
+            self.assertGreater(document["tokens"]["completion_tokens"], 0)
+
+    def test_the_run_metadata_says_it_is_external_and_ungraded(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            _outcome, run_dir = self._run(tmp)
+            metadata = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
+
+            self.assertTrue(metadata["external"])
+            self.assertFalse(metadata["graded"])
+            self.assertEqual([901], metadata["cases"])
+            self.assertIn("answer_key_sha256", metadata)
+            self.assertIn("prompts_sha256", metadata)
+
+    def test_the_calls_are_recorded(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            _outcome, run_dir = self._run(tmp)
+            calls = json.loads((run_dir / "calls.json").read_text(encoding="utf-8"))
+        self.assertIsInstance(calls, list)
+        self.assertGreaterEqual(len(calls), 3)
+
+    # -- no score ----------------------------------------------------------
+    def test_no_four_field_score_is_computed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            _outcome, run_dir = self._run(tmp)
+            document = json.loads(
+                (run_dir / "case-00901.json").read_text(encoding="utf-8")
+            )
+            self.assertIsNone(
+                document["matched"],
+                "an external case was scored against a key that has no entry for it",
+            )
+
+    def test_the_answer_key_has_no_entry_for_the_external_case(self):
+        key = json.loads(ANSWER_KEY_PATH.read_text(encoding="utf-8"))
+        self.assertNotIn(901, [record["case_no"] for record in key])
+
+    def test_the_ruling_is_printed_beside_the_stated_expectation(self):
+        printed = []
+        with tempfile.TemporaryDirectory() as tmp:
+            self._run(tmp, progress=printed.append)
+        text = "\n".join(printed)
+
+        self.assertIn("DRIVER_COMPENSATION", text)
+        self.assertIn("Cancellation charge UPHELD", text)
+        self.assertIn("NOT A VERIFIED ANSWER", text)
+        self.assertIn("no four-field grade is computed", text)
+        self.assertIn("case 901", text)
+
+    def test_the_stated_expectation_is_read_from_under_eval(self):
+        expected = runner.read_expected_outcome()
+        self.assertIsNotNone(expected, "eval/external/ryde/expected.json is missing")
+        self.assertIn("not_the_answer_key", expected)
+        self.assertEqual("DISP-002", expected["dispute_id"])
+
+    # -- the CLI -----------------------------------------------------------
+    def test_the_cli_writes_only_under_runs_external(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runs_dir = Path(tmp)
+            with mock.patch.object(
+                runner, "_default_client_factory", return_value=self.factory
+            ):
+                with contextlib.redirect_stdout(io.StringIO()):
+                    code = runner.main(
+                        [
+                            "--external", str(CASE_PATH),
+                            "--runs-dir", str(runs_dir),
+                            "--model", self.model,
+                        ]
+                    )
+            written = sorted(
+                path.relative_to(runs_dir).as_posix()
+                for path in runs_dir.rglob("*")
+                if path.is_file()
+            )
+
+        self.assertEqual(0, code)
+        self.assertTrue(written, "the external run wrote nothing")
+        for name in written:
+            with self.subTest(path=name):
+                self.assertTrue(
+                    name.startswith("external/"),
+                    "an external run wrote outside runs/external/: {0}".format(name),
+                )
+
+    def test_the_cli_refuses_to_mix_external_with_the_corpus_selection(self):
+        with self.assertRaises(SystemExit):
+            with contextlib.redirect_stderr(io.StringIO()):
+                runner.main(["--external", str(CASE_PATH), "--cases", "208"])
+
+    # -- the benchmark is untouched ---------------------------------------
+    def test_an_external_run_leaves_the_benchmark_byte_identical(self):
+        before = _fingerprint(_benchmark_files())
+        with tempfile.TemporaryDirectory() as tmp:
+            self._run(tmp)
+        self.assertEqual(before, _fingerprint(_benchmark_files()))
+
+    def test_an_external_run_never_writes_into_the_real_runs_tree(self):
+        """The test above proves the files did not change; this proves no new ones."""
+        before = sorted(p.as_posix() for p in runner.RUNS_DIR.rglob("*") if p.is_file())
+        with tempfile.TemporaryDirectory() as tmp:
+            self._run(tmp)
+        after = sorted(p.as_posix() for p in runner.RUNS_DIR.rglob("*") if p.is_file())
+        self.assertEqual(before, after, "an external run wrote into the real runs/ tree")
 
 
 if __name__ == "__main__":

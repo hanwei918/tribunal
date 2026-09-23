@@ -23,7 +23,7 @@ no derivable rule and the evidence each would need.
 
 from __future__ import annotations
 
-import math
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any, Dict, Iterable, List
 
 # --------------------------------------------------------------------------
@@ -98,6 +98,14 @@ class UnknownIssueCodeError(PrepassError):
     """
 
 
+# The corpus writes every weight to two decimal places. The product is computed
+# in Decimal and quantised to the same convention, because the binary product is
+# not the corpus's number: 0.8 * 0.75 is 0.6000000000000001 as a float, and a
+# weight of 0.6000000000000001 would reach a brief, and a ruling, as if it were
+# a measurement. This is the same defect as 0.8 * 6.00 == 4.800000000000001.
+TWO_PLACES = Decimal("0.01")
+
+
 def weight_for(issue_codes: Iterable[str]) -> float:
     """Return the weight multiplier the corpus assigns to these issue codes.
 
@@ -105,18 +113,28 @@ def weight_for(issue_codes: Iterable[str]) -> float:
 
     * no codes -> ``1.0`` (the 159 COMPLETE artifacts);
     * a single code -> that code's own weight;
-    * several codes -> the product of their weights, floored at ``0.25``;
+    * several codes -> the product of their weights, quantised to two decimal
+      places and floored at ``0.25``;
     * a ``BLOCKING`` code (only ``MISSING_ARTIFACT``, weight ``0.0``) returns
       ``0.0`` without being floored.
+
+    The product is taken in :class:`decimal.Decimal`, not in binary floating
+    point. Every multi-code weight the corpus declares is a clean two-decimal
+    figure -- 0.39, 0.3, 0.25 -- and the float product reproduces them only
+    because none of those particular combinations happens to leave a residue.
+    ``0.8 * 0.75`` does: it returns ``0.6000000000000001``, which is not the
+    corpus's number and was not a number the corpus would ever have written.
+    Quantising to the corpus's own two places removes the residue without
+    moving any figure the corpus already declares.
     """
     codes = list(issue_codes)
     if not codes:
         return FULL_WEIGHT
 
-    weights: List[float] = []
+    weights: List[Decimal] = []
     for code in codes:
         try:
-            weights.append(CODE_WEIGHTS[code])
+            weights.append(Decimal(str(CODE_WEIGHTS[code])))
         except KeyError as exc:
             raise UnknownIssueCodeError(
                 "issue code {0!r} has never been observed in this corpus, so its "
@@ -126,10 +144,15 @@ def weight_for(issue_codes: Iterable[str]) -> float:
     # BLOCKING dominates. No artifact in the corpus combines MISSING_ARTIFACT
     # with another code, so this branch is unobserved; it is the only reading
     # consistent with a missing artifact weighing 0.0.
-    if 0.0 in weights:
+    if any(weight == 0 for weight in weights):
         return 0.0
 
-    return max(FLOOR, math.prod(weights))
+    product = Decimal(1)
+    for weight in weights:
+        product *= weight
+    product = product.quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
+
+    return float(max(Decimal(str(FLOOR)), product))
 
 
 def detect_schema_version_mismatch(case: Dict[str, Any]) -> List[str]:

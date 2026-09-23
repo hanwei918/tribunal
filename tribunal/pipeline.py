@@ -647,24 +647,60 @@ def run_case(
     case_deadline_seconds: float = DEFAULT_CASE_DEADLINE_SECONDS,
     clock: Callable[[], float] = time.monotonic,
 ) -> PipelineResult:
-    """Perform one full arbitration and return the ruling with the transcript.
+    """Perform one full arbitration of a case named by its manifest number.
 
+    The case is loaded from the manifest and handed to
+    :func:`run_loaded_case`, which holds the whole of the arbitration. This
+    function exists only to name a case by number and has no logic of its own,
+    so there cannot be a second path that applies a weaker guard.
+    """
+    return run_loaded_case(
+        loader.load_case(case_no),
+        client,
+        prompts_dir=prompts_dir,
+        now=now,
+        case_deadline_seconds=case_deadline_seconds,
+        clock=clock,
+    )
+
+
+def run_loaded_case(
+    case: Dict[str, Any],
+    client: Any,
+    *,
+    prompts_dir: Path = PROMPTS_DIR,
+    now: Optional[Callable[[], str]] = None,
+    case_deadline_seconds: float = DEFAULT_CASE_DEADLINE_SECONDS,
+    clock: Callable[[], float] = time.monotonic,
+) -> PipelineResult:
+    """Perform one full arbitration of a case already in hand.
+
+    Every guard is the one :func:`run_case` has always applied, because this is
+    the body that function runs. The brief is serialised exactly once and those
+    same bytes are handed to both advocates and embedded in the judge's message;
+    the stance-only difference is checked before the first call is made; and
     ``case_deadline_seconds`` bounds the whole case -- all three agent calls and
     any shape retry -- where ``LLMClient``'s own deadline bounds one call. The
     budget is checked before each call and a case that has spent it raises
-    :class:`CaseDeadlineExceeded`, which carries the elapsed seconds. The runner
-    turns that into a failed case and moves on to the next one, so a hung case
-    costs its own budget rather than the run.
+    :class:`CaseDeadlineExceeded`, which carries the elapsed seconds.
+
+    Split out so a converted external case can be arbitrated without being added
+    to ``data/index.json``. It is loaded through its own explicit path by
+    ``loader.load_external_case``, and adding it to the manifest would change the
+    29-case corpus the submission reports. The alternative -- a second entry
+    point carrying its own copy of these guards -- is what this split exists to
+    avoid: there is one implementation, and both callers run it.
 
     ``clock`` is injectable so the deadline can be exercised without waiting.
     """
+    case_no = case["case_no"]
     prompts_dir = Path(prompts_dir)
 
     # The project's second structural claim, checked before any call is made.
     stance_ranges = check_stance_only_difference(prompts_dir)
 
     # ONE serialisation of the brief, and one digest of those exact bytes.
-    case_brief = brief.build_brief(case_no)
+    case_brief = brief.build_brief_for_case(case)
     brief_json = money.dumps_canonical(case_brief)
     brief_sha256 = hashlib.sha256(brief_json.encode("utf-8")).hexdigest()
     advocate_user_message = brief_json
