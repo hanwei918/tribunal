@@ -1,0 +1,1461 @@
+"""Convert the organisers' sample case (DISP-002) into this system's case format.
+
+What this reads, and what it refuses to read
+--------------------------------------------
+``eval/external/ryde/DISP-002.md`` is the sample the organisers gave every team.
+It is **answer-bearing**: a title states the expected ruling, and an
+"Evidence Summary" argues for one side. Only the fenced JSON block inside it is
+case material.
+
+So the block is located by *parsing* the Markdown -- a line scanner over the
+fences, not a regular expression over the whole document -- and the parse is
+required to find exactly one fenced JSON block. That block, and nothing else,
+is the converter's input: :func:`conversion_input` is the only function that
+reads the document, and it returns the block text alone. A reader can check that
+by looking at what the rest of this module is able to see, which is one string.
+
+The title and the Evidence Summary reach nothing. They are not parsed, not
+searched, and not available to any function here.
+
+Why the converter lives under ``eval/``
+---------------------------------------
+It has to read answer-bearing material, and ``tests/test_answer_isolation.py``
+forbids any module under ``tribunal/`` from naming a path under ``eval/``. A
+converter in the package would be a path from the runtime code to the answer.
+So it sits beside the source it reads. It writes to ``data/external/`` and never
+the other way; nothing here writes into ``eval/``.
+
+What it will not invent
+-----------------------
+The source is thinner than this corpus. Where it is silent, the converted case
+carries ``null`` rather than a plausible value, and every such place is recorded
+in the mapping record written beside the case. Four in particular:
+
+* the GPS fixes carry **no** ``accuracy_m``. None is added. Under POL-NS-02 a
+  fix without reported accuracy is evidence of neither presence nor absence, so
+  these fixes do not establish arrival. That is the intended consequence.
+* there is **no** rider GPS track, so ``rider_track`` is empty.
+* there is **no** statement from the driver as counterparty, so the field is
+  ``null``.
+* the source states **no** pickup zone class. ``STANDARD`` is used as an
+  explicitly stated assumption, never inferred from the place name, and the
+  mapping records which figures depend on it.
+
+Run with ``python eval/external/ryde/convert.py``. It is idempotent: the same
+source produces the same bytes.
+"""
+
+from __future__ import annotations
+
+import json
+import statistics
+import sys
+from decimal import Decimal
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+# --------------------------------------------------------------------------
+# Locations
+# --------------------------------------------------------------------------
+# This file sits at <root>/eval/external/ryde/convert.py, so the project root is
+# three directories up. It goes on the path because the converter needs
+# ``tribunal.prepass`` for the corpus's weight arithmetic -- the one package
+# import here, made at call time rather than at module scope.
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+SOURCE_PATH = PROJECT_ROOT / "eval" / "external" / "ryde" / "DISP-002.md"
+EXPECTED_PATH = PROJECT_ROOT / "eval" / "external" / "ryde" / "expected.json"
+OUTPUT_DIR = PROJECT_ROOT / "data" / "external" / "ryde"
+CASE_PATH = OUTPUT_DIR / "case-00901.json"
+MAPPING_PATH = OUTPUT_DIR / "mapping.json"
+
+# The case number. The corpus occupies 101-115 and 201-214; a converted case is
+# drawn from outside both ranges so it can never be mistaken for a corpus case.
+CASE_NO = 901
+
+# The contract's version string. All 29 corpus cases carry it.
+SCHEMA_VERSION = "1.2.0"
+
+# The corpus's assessor label, so a reader can tell the converted case's
+# admissibility blocks were produced the same way as the corpus's.
+ASSESSOR_VERSION = "prepass-1.0.0"
+
+# The category. The source calls this a "no_show_charge"; this system's
+# vocabulary for that is NO_SHOW_CHARGE, which is what selects policy/no_show.json.
+CATEGORY = "NO_SHOW_CHARGE"
+
+# The zone class the source does not state. Recorded as an assumption, not
+# inferred: this repository's prompts forbid world knowledge about places.
+ASSUMED_ZONE_CLASS = "STANDARD"
+
+# The vehicle tier the source does not state. The source names a Honda HR-V,
+# which is a tier name nowhere in this corpus; RYDE_X is this corpus's base tier.
+ASSUMED_VEHICLE_TIER = "RYDE_X"
+
+# Every top-level key the source's fenced block is required to carry. A block
+# with a different key set is not the document this converter was written for,
+# and is refused rather than partly read.
+SOURCE_KEYS = (
+    "dispute_ticket",
+    "rider_profile",
+    "driver_profile",
+    "trip_data",
+    "gps_telemetry",
+    "chat_logs",
+    "app_events",
+    "cancellation_policy",
+)
+
+
+class ConversionError(Exception):
+    """The source is not the shape this converter can read."""
+
+
+# --------------------------------------------------------------------------
+# Parsing the Markdown: fences, structurally
+# --------------------------------------------------------------------------
+def fenced_blocks(markdown: str) -> List[Dict[str, Any]]:
+    """Every fenced code block in a Markdown document.
+
+    A line scanner over the fence markers, not a regular expression over the
+    document. A regex for ```json ... ``` would match the *text* of a fence
+    wherever it appeared, including inside prose about fences; walking the lines
+    and tracking whether a fence is open is what makes this a parse.
+    """
+    blocks: List[Dict[str, Any]] = []
+    opener: Optional[Tuple[int, str]] = None
+    body: List[str] = []
+
+    for number, line in enumerate(markdown.splitlines(), start=1):
+        stripped = line.strip()
+        if stripped.startswith("```"):
+            if opener is None:
+                opener = (number, stripped[3:].strip())
+                body = []
+            else:
+                blocks.append(
+                    {
+                        "language": opener[1],
+                        "open_line": opener[0],
+                        "close_line": number,
+                        "lines": body,
+                    }
+                )
+                opener = None
+                body = []
+            continue
+        if opener is not None:
+            body.append(line)
+
+    if opener is not None:
+        raise ConversionError(
+            "unclosed code fence opened at line {0}".format(opener[0])
+        )
+    return blocks
+
+
+def conversion_input(markdown: str) -> str:
+    """Exactly the fenced JSON block, and nothing else.
+
+    This is the whole of the converter's input. The document's title and its
+    Evidence Summary are never returned, never parsed and never seen by any
+    other function here, so no argument for one side and no expected ruling can
+    reach the converted case.
+
+    Raises unless the document holds exactly one fenced JSON block, so a
+    document that grew a second block fails loudly rather than having one of
+    them chosen for it.
+    """
+    json_blocks = [block for block in fenced_blocks(markdown) if block["language"] == "json"]
+    if len(json_blocks) != 1:
+        raise ConversionError(
+            "expected exactly one fenced json block, found {0}".format(len(json_blocks))
+        )
+    return "\n".join(json_blocks[0]["lines"])
+
+
+def parse_source(block_text: str) -> Dict[str, Any]:
+    """Parse the fenced block and require the key set it is supposed to have."""
+    try:
+        parsed = json.loads(block_text)
+    except json.JSONDecodeError as exc:
+        raise ConversionError("the fenced block is not valid JSON: {0}".format(exc)) from exc
+    if not isinstance(parsed, dict):
+        raise ConversionError("the fenced block is not a JSON object")
+    missing = [key for key in SOURCE_KEYS if key not in parsed]
+    if missing:
+        raise ConversionError(
+            "the fenced block is missing keys: {0}".format(", ".join(missing))
+        )
+    return parsed
+
+
+# --------------------------------------------------------------------------
+# The decision log
+# --------------------------------------------------------------------------
+class Decisions:
+    """Every field of the converted case, and how it got its value.
+
+    ``copied`` is used where the source states the value and the converted case
+    carries it; ``judged`` is used where the conversion had to choose. The two
+    are kept apart because the point of the mapping record is that a reader can
+    see the choices and not only their results.
+    """
+
+    def __init__(self) -> None:
+        self.entries: List[Dict[str, Any]] = []
+
+    def copied(self, target: str, source: str, value: Any, reason: str = "") -> Any:
+        self.entries.append(
+            {
+                "target": target,
+                "kind": "copied",
+                "source": source,
+                "value": _plain(value),
+                "reason": reason or "the source states this value and the converted case carries it",
+            }
+        )
+        return value
+
+    def judged(self, target: str, value: Any, reason: str, source: Any = None) -> Any:
+        self.entries.append(
+            {
+                "target": target,
+                "kind": "judged",
+                "source": source,
+                "value": _plain(value),
+                "reason": reason,
+            }
+        )
+        return value
+
+
+def _plain(value: Any) -> Any:
+    """A value as the mapping record should show it."""
+    if isinstance(value, Decimal):
+        return str(value)
+    if isinstance(value, (list, tuple)):
+        return [_plain(item) for item in value]
+    if isinstance(value, dict):
+        return {str(key): _plain(item) for key, item in value.items()}
+    return value
+
+
+# --------------------------------------------------------------------------
+# Admissibility
+# --------------------------------------------------------------------------
+def admissibility(
+    codes: List[str], notes: str, assessed_at: str
+) -> Dict[str, Any]:
+    """One admissibility block, with the weight derived from the codes.
+
+    The weight is not written down here. It comes from
+    ``prepass.weight_for``, the same function the corpus's own arithmetic was
+    derived from, so a converted artifact cannot carry a weight the corpus's
+    rule would not produce for the same codes.
+
+    The import is deferred to call time on purpose: ``prepass`` lives under
+    ``tribunal/``, and importing it at module scope would put a package import
+    in a module that also names a path under ``eval/``.
+    """
+    from tribunal import prepass  # noqa: PLC0415 - see the docstring
+
+    weight = prepass.weight_for(codes)
+    if codes:
+        status = "MISSING" if weight == 0.0 else "IMPAIRED"
+    else:
+        status = "COMPLETE"
+    return {
+        "status": status,
+        "issues": list(codes),
+        "weight_multiplier": weight,
+        "notes": notes,
+        "assessed_at": assessed_at,
+        "assessor_version": ASSESSOR_VERSION,
+    }
+
+
+# --------------------------------------------------------------------------
+# The conversion
+# --------------------------------------------------------------------------
+def convert(block_text: str) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    """Build the converted case and its mapping record from the fenced block."""
+    source = parse_source(block_text)
+    decisions = Decisions()
+
+    ticket = source["dispute_ticket"]
+    rider_profile = source["rider_profile"]
+    driver_profile = source["driver_profile"]
+    trip = source["trip_data"]
+    fixes = source["gps_telemetry"]
+    chats = source["chat_logs"]
+    events = source["app_events"]
+    policy = source["cancellation_policy"]
+
+    trip_id = decisions.copied("trip_id", "dispute_ticket.trip_id", ticket["trip_id"])
+    export_at = decisions.judged(
+        "evidence[*].generated_at",
+        ticket["filed_at"],
+        "The source states no export time. The dispute's own filing time is used, "
+        "because it is a real timestamp from the source and falls after every event "
+        "the records describe, which is what an export time has to be.",
+        source="dispute_ticket.filed_at",
+    )
+    assessed_at = decisions.judged(
+        "evidence[*].admissibility.assessed_at",
+        _plus_seconds(ticket["filed_at"], 5),
+        "The admissibility pre-pass runs when the records are assembled. The corpus "
+        "stamps its own blocks five seconds after generated_at, so the same offset is "
+        "used rather than a second invented instant.",
+    )
+
+    artifacts = [
+        _trip_record(decisions, trip, events, chats, ticket, export_at, assessed_at),
+        _gps_trace(decisions, fixes, trip_id, export_at, assessed_at),
+        _chat_log(decisions, chats, trip_id, export_at, assessed_at),
+        _fare(decisions, trip, export_at, assessed_at),
+        _rider(decisions, rider_profile, trip_id, export_at, assessed_at),
+        _driver(decisions, driver_profile, trip_id, export_at, assessed_at),
+        _advisory(decisions, trip_id, export_at, assessed_at),
+    ]
+
+    evidence_ids = [artifact["evidence_id"] for artifact in artifacts]
+
+    dispute = {
+        "dispute_id": decisions.copied(
+            "dispute.dispute_id", "dispute_ticket.dispute_id", ticket["dispute_id"]
+        ),
+        "trip_id": trip_id,
+        "case_no": decisions.judged(
+            "dispute.case_no",
+            CASE_NO,
+            "A converted case is numbered outside the corpus range (101-115, "
+            "201-214) so it can never be mistaken for a corpus case.",
+        ),
+        "category": decisions.judged(
+            "dispute.category",
+            CATEGORY,
+            "The source calls this dispute_type 'no_show_charge'. NO_SHOW_CHARGE is "
+            "this system's token for that, and it is what selects policy/no_show.json.",
+            source="dispute_ticket.dispute_type",
+        ),
+        "filed_by": decisions.judged(
+            "dispute.filed_by",
+            ticket["filed_by"].upper(),
+            "Copied in substance and upper-cased: the source writes 'rider' and this "
+            "corpus's vocabulary is RIDER.",
+            source="dispute_ticket.filed_by",
+        ),
+        "filed_at": decisions.copied(
+            "dispute.filed_at", "dispute_ticket.filed_at", ticket["filed_at"]
+        ),
+        "claim_text": decisions.copied(
+            "dispute.claim_text", "dispute_ticket.description", ticket["description"]
+        ),
+        "amount_contested_sgd": decisions.judged(
+            "dispute.amount_contested_sgd",
+            float(trip["cancellation_fee"]),
+            "The source has no 'amount contested' field. The cancellation fee is what "
+            "the rider's claim asks to have reversed, and it is the figure the fare "
+            "breakdown charges, so it is the figure contested.",
+            source="trip_data.cancellation_fee",
+        ),
+        "counterparty_statement": decisions.judged(
+            "dispute.counterparty_statement",
+            None,
+            "The source carries no statement from the driver. It is left null rather "
+            "than substituted with an empty string or reconstructed from the chat log, "
+            "which is a different artifact.",
+        ),
+        "channel": decisions.judged(
+            "dispute.channel",
+            "IN_APP_SUPPORT",
+            "The source states no filing channel. IN_APP_SUPPORT is this corpus's value "
+            "in 28 of 29 cases and the dispute is an in-app dispute; the field is "
+            "presentation and no clause in either policy reads it.",
+        ),
+        "evidence_ids": decisions.judged(
+            "dispute.evidence_ids",
+            evidence_ids,
+            "The ids are minted by this conversion. The corpus cites every artifact the "
+            "case holds, so every minted artifact is cited.",
+        ),
+    }
+
+    case = {
+        "schema_version": decisions.copied(
+            "schema_version", "the corpus contract", SCHEMA_VERSION,
+            "data/PUBLIC-CONTRACT.md fixes the top-level value as \"1.2.0\" in all 29 "
+            "corpus cases; a converted case is not a corpus case and may differ.",
+        ),
+        "case_no": CASE_NO,
+        "dispute": dispute,
+        "evidence": artifacts,
+    }
+
+    mapping = {
+        "source_document": "eval/external/ryde/DISP-002.md",
+        "source_dispute_id": ticket["dispute_id"],
+        "converted_case_no": CASE_NO,
+        "converted_case_file": "external/ryde/case-00901.json",
+        "note": (
+            "Every field of the converted case, with whether the conversion copied it "
+            "or judged it, and why. The source's title and Evidence Summary are not "
+            "listed anywhere here because nothing in them reached the conversion."
+        ),
+        "fields": decisions.entries,
+        "policy_divergences": _divergences(trip, policy),
+        "assumptions": [
+            {
+                "assumption": "pickup zone class is STANDARD",
+                "depends_on_it": [
+                    "fee_schedule.zone_class_fee_sgd for STANDARD (4.00)",
+                    "fee_schedule.minimum_dwell_sec for STANDARD (300 s)",
+                    "fee_schedule.arrival_radius_m for STANDARD (50 m)",
+                    "fee_schedule.rider_presence_radius_m for STANDARD (100 m)",
+                    "the POL-NS-01 dwell comparison and the POL-NS-08(d) fee comparison",
+                ],
+                "reason": (
+                    "The source gives a pickup place name and no zone class. Inferring "
+                    "one from what the place is would be world knowledge about places, "
+                    "which this repository's prompts forbid."
+                ),
+            },
+            {
+                "assumption": "vehicle tier is RYDE_X",
+                "depends_on_it": [
+                    "fee_schedule.vehicle_tier_fee_sgd for RYDE_X (4.00)",
+                    "the POL-NS-08(d) fee comparison",
+                ],
+                "reason": (
+                    "The source names a Honda HR-V, which is not a tier name in this "
+                    "corpus. RYDE_X is this corpus's base tier; the choice is recorded "
+                    "because the fee comparison turns on it."
+                ),
+            },
+        ],
+    }
+    return case, mapping
+
+
+def _plus_seconds(stamp: str, seconds: int) -> str:
+    """An ISO-8601 stamp moved by whole seconds, keeping its offset text."""
+    from datetime import datetime, timedelta
+
+    parsed = datetime.fromisoformat(stamp)
+    return (parsed + timedelta(seconds=seconds)).isoformat()
+
+
+def _trip_record(
+    decisions: Decisions, trip: Dict[str, Any], events: List[Dict[str, Any]],
+    chats: List[Dict[str, Any]], ticket: Dict[str, Any], export_at: str,
+    assessed_at: str,
+) -> Dict[str, Any]:
+    """TRIP_RECORD, assembled from trip_data and the app events."""
+    by_type = {event["event_type"]: event for event in events}
+
+    def at(event_type: str) -> Optional[str]:
+        event = by_type.get(event_type)
+        return event["timestamp"] if event else None
+
+    requested_at = decisions.copied(
+        "evidence.EV-TRIP-00901.payload.requested_at",
+        "app_events[booking_confirmed].timestamp", at("booking_confirmed"),
+    )
+    accepted_at = decisions.copied(
+        "evidence.EV-TRIP-00901.payload.accepted_at",
+        "app_events[driver_assigned].timestamp", at("driver_assigned"),
+    )
+    arrived_at = decisions.copied(
+        "evidence.EV-TRIP-00901.payload.arrived_at",
+        "trip_data.driver_arrival_time", trip["driver_arrival_time"],
+    )
+    cancelled_at = decisions.copied(
+        "evidence.EV-TRIP-00901.payload.cancelled_at",
+        "trip_data.cancellation_time", trip["cancellation_time"],
+    )
+
+    wait_min = decisions.judged(
+        "evidence.EV-TRIP-00901.payload.wait_time_min",
+        round(_seconds_between(trip["driver_wait_start"], trip["cancellation_time"]) / 60.0, 1),
+        "Computed from the source's own wait start (08:43) and cancellation (08:51), "
+        "which is 480 s. The source states no wait figure.",
+    )
+    to_arrival = decisions.judged(
+        "evidence.EV-TRIP-00901.payload.time_to_arrival_min",
+        round(_seconds_between(at("driver_en_route"), trip["driver_arrival_time"]) / 60.0, 1),
+        "Computed from the source's own en-route event (08:30:20) to arrival (08:43), "
+        "which is 760 s. The source states no arrival-time figure.",
+    )
+
+    payload = {
+        "trip_id": decisions.copied(
+            "evidence.EV-TRIP-00901.payload.trip_id", "trip_data.trip_id", trip["trip_id"]
+        ),
+        "rider_id": decisions.copied(
+            "evidence.EV-TRIP-00901.payload.rider_id",
+            "trip_data.rider_id", trip["rider_id"],
+            "Copied unchanged. The source's id form (R-7823) differs from this "
+            "corpus's (RDR-02073); the value is carried as given rather than "
+            "re-formatted, because the form is not this converter's to change.",
+        ),
+        "driver_id": decisions.copied(
+            "evidence.EV-TRIP-00901.payload.driver_id",
+            "trip_data.driver_id", trip["driver_id"],
+            "Copied unchanged, for the same reason as rider_id (source form D-2398).",
+        ),
+        "requested_at": requested_at,
+        "accepted_at": accepted_at,
+        "arrived_at": arrived_at,
+        "started_at": decisions.judged(
+            "evidence.EV-TRIP-00901.payload.started_at", None,
+            "The trip never started: it was cancelled on a rider no-show. Null is what "
+            "the corpus records for a trip that did not run.",
+        ),
+        "ended_at": decisions.judged(
+            "evidence.EV-TRIP-00901.payload.ended_at", None,
+            "The trip never ended because it never started.",
+        ),
+        "cancelled_at": cancelled_at,
+        "status": decisions.judged(
+            "evidence.EV-TRIP-00901.payload.status",
+            "CANCELLED_BY_DRIVER",
+            "The source's system message says 'Trip cancelled by driver'. "
+            "CANCELLED_BY_DRIVER is this corpus's token for that.",
+            source="chat_logs[system].content",
+        ),
+        "cancelled_by": decisions.judged(
+            "evidence.EV-TRIP-00901.payload.cancelled_by",
+            "DRIVER",
+            "Same fact as status, in the corpus's separate field.",
+            source="chat_logs[system].content",
+        ),
+        "cancellation_reason_code": decisions.judged(
+            "evidence.EV-TRIP-00901.payload.cancellation_reason_code",
+            "RIDER_NO_SHOW",
+            "The source writes 'rider_no_show'; RIDER_NO_SHOW is this corpus's token. "
+            "It is one of the three codes POL-NS-01(d) admits.",
+            source="trip_data.cancellation_reason",
+        ),
+        "pickup": {
+            "label": decisions.copied(
+                "evidence.EV-TRIP-00901.payload.pickup.label",
+                "trip_data.pickup_location.name", trip["pickup_location"]["name"],
+            ),
+            "lat": decisions.copied(
+                "evidence.EV-TRIP-00901.payload.pickup.lat",
+                "trip_data.pickup_location.lat", trip["pickup_location"]["lat"],
+            ),
+            "lng": decisions.copied(
+                "evidence.EV-TRIP-00901.payload.pickup.lng",
+                "trip_data.pickup_location.lng", trip["pickup_location"]["lng"],
+            ),
+            "venue_id": decisions.judged(
+                "evidence.EV-TRIP-00901.payload.pickup.venue_id", None,
+                "The source carries no venue identifier. Minting one would let "
+                "POL-NS-03's venue_id corroboration test run on a value nobody "
+                "recorded, which is the one thing that test must not do.",
+            ),
+        },
+        "dropoff": {
+            "label": decisions.copied(
+                "evidence.EV-TRIP-00901.payload.dropoff.label",
+                "trip_data.dropoff_location.name", trip["dropoff_location"]["name"],
+            ),
+            "lat": decisions.copied(
+                "evidence.EV-TRIP-00901.payload.dropoff.lat",
+                "trip_data.dropoff_location.lat", trip["dropoff_location"]["lat"],
+            ),
+            "lng": decisions.copied(
+                "evidence.EV-TRIP-00901.payload.dropoff.lng",
+                "trip_data.dropoff_location.lng", trip["dropoff_location"]["lng"],
+            ),
+            "venue_id": decisions.judged(
+                "evidence.EV-TRIP-00901.payload.dropoff.venue_id", None,
+                "The source carries no venue identifier, for the same reason as pickup.",
+            ),
+        },
+        "vehicle_type": decisions.judged(
+            "evidence.EV-TRIP-00901.payload.vehicle_type",
+            ASSUMED_VEHICLE_TIER,
+            "The source names a Honda HR-V, which is not a tier in this corpus. "
+            "RYDE_X is the base tier; the fee comparison under POL-NS-08(d) depends "
+            "on this choice and it is recorded as an assumption.",
+            source="driver_profile.vehicle",
+        ),
+        "pickup_zone_class": decisions.judged(
+            "evidence.EV-TRIP-00901.payload.pickup_zone_class",
+            ASSUMED_ZONE_CLASS,
+            "The source states no zone class. STANDARD is used as an explicitly stated "
+            "assumption and not inferred from the place name, because inferring it "
+            "would be world knowledge about places. The dwell minimum, the arrival "
+            "radius and the zone fee all depend on it.",
+        ),
+        "chat_message_count": decisions.judged(
+            "evidence.EV-TRIP-00901.payload.chat_message_count",
+            len(chats),
+            "The count of chat_logs entries the source supplies, which is what "
+            "POL-NS-08(c) compares the chat artifact against.",
+        ),
+        "registered_pickup_points": decisions.judged(
+            "evidence.EV-TRIP-00901.payload.registered_pickup_points", None,
+            "The source does not say how many registered pickup points the location "
+            "has. POL-NS-03(ii) reads this field, so a minted 1 or 2 would decide a "
+            "limb on a value nobody recorded.",
+        ),
+        "in_app_calls": decisions.judged(
+            "evidence.EV-TRIP-00901.payload.in_app_calls",
+            [_call_record(decisions, chats)],
+            "The source records one in-app call in chat_logs. POL-NS-04(b) reads this "
+            "field, so the call the source does describe is carried rather than left "
+            "out of the trip record.",
+        ),
+    }
+
+    for field, reason in (
+        ("optimal_distance_km", "no route was quoted in the source"),
+        ("optimal_duration_min", "no route was quoted in the source"),
+        ("optimal_route_source", "no routing engine is named in the source"),
+        ("optimal_route_erp_sgd", "no ERP figure is given in the source"),
+        ("actual_distance_km", "the trip was cancelled before it ran"),
+        ("actual_duration_min", "the trip was cancelled before it ran"),
+        ("deviation_pct", "a route-deviation figure has no meaning on a no-show"),
+        ("amended_optimal_distance_km", "the pickup was never amended"),
+        ("amended_optimal_duration_min", "the pickup was never amended"),
+        ("solo_optimal_distance_km", "there is no co-rider data in the source"),
+    ):
+        payload[field] = decisions.judged(
+            "evidence.EV-TRIP-00901.payload." + field, None,
+            "Null rather than a plausible figure: {0}.".format(reason),
+        )
+    for field in ("pickup_amended_at", "dropoff_amended_at", "original_pickup", "original_dropoff"):
+        payload[field] = decisions.judged(
+            "evidence.EV-TRIP-00901.payload." + field, None,
+            "Null: the source records no amendment to either end of the trip.",
+        )
+
+    notes = (
+        "The source's own trip record, causally ordered. Arrival marker 08:43:00 is "
+        "the nearest GPS fix timestamp to the second, so the POL-NS-08(a) 90 s clock "
+        "limb is not engaged. pickup_zone_class and vehicle_type are stated "
+        "assumptions, recorded in the mapping record; the source gives neither."
+    )
+    return _artifact(
+        decisions, "EV-TRIP-00901", "TRIP_RECORD", "PLATFORM_TELEMETRY",
+        trip["trip_id"], export_at, payload, [], notes, assessed_at,
+    )
+
+
+def _call_record(decisions: Decisions, chats: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """The one in-app call the source describes, in the corpus's call shape."""
+    call = next(entry for entry in chats if entry["type"] == "call")
+    return {
+        "call_id": decisions.judged(
+            "evidence.EV-TRIP-00901.payload.in_app_calls[0].call_id",
+            "CALL-00901-001",
+            "Minted. The source describes the call but gives it no identifier.",
+        ),
+        "initiated_at": decisions.copied(
+            "evidence.EV-TRIP-00901.payload.in_app_calls[0].initiated_at",
+            "chat_logs[call].timestamp", call["timestamp"],
+        ),
+        "initiated_by": decisions.judged(
+            "evidence.EV-TRIP-00901.payload.in_app_calls[0].initiated_by",
+            "DRIVER",
+            "The source says 'Outgoing call to rider' and the sender is the driver.",
+            source="chat_logs[call].sender",
+        ),
+        "answered": decisions.judged(
+            "evidence.EV-TRIP-00901.payload.in_app_calls[0].answered", False,
+            "The source says the call was not answered.",
+            source="chat_logs[call].content",
+        ),
+        "duration_sec": decisions.judged(
+            "evidence.EV-TRIP-00901.payload.in_app_calls[0].duration_sec",
+            _rang_seconds(call["content"]),
+            "Read out of the source's own description ('rang 22s, no response'), "
+            "because the source states it only in prose and nowhere as a field.",
+            source="chat_logs[call].content",
+        ),
+    }
+
+
+def _rang_seconds(content: str) -> Optional[int]:
+    """The seconds in 'rang 22s', or None when the prose does not say."""
+    import re
+
+    match = re.search(r"rang\s+(\d+)\s*s", content)
+    return int(match.group(1)) if match else None
+
+
+def _gps_trace(
+    decisions: Decisions, fixes: List[Dict[str, Any]], trip_id: str,
+    export_at: str, assessed_at: str,
+) -> Dict[str, Any]:
+    """GPS_TRACE, with the accuracy the source does not have left absent."""
+    timestamps = [fix["timestamp"] for fix in fixes]
+    intervals = [
+        _seconds_between(timestamps[index], timestamps[index + 1])
+        for index in range(len(timestamps) - 1)
+    ]
+    median = statistics.median(intervals)
+
+    points = []
+    for fix in fixes:
+        point = {
+            "lat": decisions.copied(
+                "evidence.EV-GPS-00901.payload.points[*].lat", "gps_telemetry[*].lat", fix["lat"]
+            ),
+            "lng": decisions.copied(
+                "evidence.EV-GPS-00901.payload.points[*].lng", "gps_telemetry[*].lng", fix["lng"]
+            ),
+            "ts": decisions.copied(
+                "evidence.EV-GPS-00901.payload.points[*].ts",
+                "gps_telemetry[*].timestamp", fix["timestamp"],
+            ),
+            "speed_kph": decisions.copied(
+                "evidence.EV-GPS-00901.payload.points[*].speed_kph",
+                "gps_telemetry[*].speed_kmh", fix["speed_kmh"],
+            ),
+        }
+        # NOT added: accuracy_m. The source has no accuracy value for any fix, and
+        # supplying one would be inventing the very field POL-NS-02 tests. Under
+        # that clause a fix without reported accuracy is evidence of neither
+        # presence nor absence, so none of these fixes establishes arrival. That
+        # is the intended consequence, not a defect to repair.
+        # NOT added: heading_deg. The source carries no heading; the corpus's point
+        # schema has the field but this converter does not invent a value for it.
+        decisions.judged(
+            "evidence.EV-GPS-00901.payload.points[*].status",
+            None,
+            "The source's per-fix 'status' (en_route / arrived / waiting / cancelled) "
+            "has no counterpart in this corpus's point schema. It is dropped rather "
+            "than carried as a ninth key, and the drop is recorded here. The "
+            "information is not lost: speed_kph separates moving from stationary.",
+            source="gps_telemetry[*].status",
+        )
+        points.append(point)
+
+    payload = {
+        "trip_id": trip_id,
+        "points": points,
+        "point_count": decisions.judged(
+            "evidence.EV-GPS-00901.payload.point_count", len(points),
+            "The number of fixes the source supplies.",
+        ),
+        "first_fix_at": decisions.judged(
+            "evidence.EV-GPS-00901.payload.first_fix_at", timestamps[0],
+            "The first fix timestamp the source supplies.",
+        ),
+        "last_fix_at": decisions.judged(
+            "evidence.EV-GPS-00901.payload.last_fix_at", timestamps[-1],
+            "The last fix timestamp the source supplies.",
+        ),
+        "sample_interval_sec": decisions.judged(
+            "evidence.EV-GPS-00901.payload.sample_interval_sec", float(median),
+            "Measured from the source's own timestamps: the intervals between "
+            "consecutive fixes are {0} s, whose median is {1} s. The source states no "
+            "nominal rate.".format(intervals, median),
+        ),
+        "expected_interval_sec": decisions.judged(
+            "evidence.EV-GPS-00901.payload.expected_interval_sec", None,
+            "The source names no nominal sampling rate, so there is nothing to call "
+            "expected. Setting one would make the measured interval look like a "
+            "deviation from a standard the source never claimed.",
+        ),
+        "gaps": decisions.judged(
+            "evidence.EV-GPS-00901.payload.gaps",
+            [
+                {"from": timestamps[index], "to": timestamps[index + 1], "gap_sec": float(interval)}
+                for index, interval in enumerate(intervals)
+                if interval > 120
+            ],
+            "Intervals longer than POL-NS-08(b)'s own 120 s limb, measured from the "
+            "source's timestamps. Three of the seven intervals exceed it.",
+        ),
+        "max_gap_sec": decisions.judged(
+            "evidence.EV-GPS-00901.payload.max_gap_sec", float(max(intervals)),
+            "The longest interval measured from the source's timestamps.",
+        ),
+        "coverage_pct": decisions.judged(
+            "evidence.EV-GPS-00901.payload.coverage_pct", None,
+            "Coverage is a ratio against an expected rate. The source names no rate, "
+            "so a percentage would be computed against a denominator nobody supplied.",
+        ),
+        "trace_distance_km": decisions.judged(
+            "evidence.EV-GPS-00901.payload.trace_distance_km", None,
+            "The source gives no distance, and summing eight fixes three minutes apart "
+            "would understate the driven path by an unknown amount.",
+        ),
+        "rider_track": decisions.judged(
+            "evidence.EV-GPS-00901.payload.rider_track", [],
+            "There is no rider GPS track in the source. An empty list is carried "
+            "rather than points minted, because minting them would decide POL-NS-04(c) "
+            "and the rider-presence test on evidence nobody recorded. The consequence "
+            "is intended: POL-NS-04(c) is UNDECIDABLE on this trace, and POL-NS-08(b) "
+            "is engaged because the trace omits a rider_track.",
+        ),
+    }
+    notes = (
+        "Sparse telemetry with no reported accuracy. The intervals between the "
+        "source's own timestamps are {0} s, so three of the seven exceed POL-NS-08(b)'s "
+        "120 s gap limb and the trace is impaired for policy, not merely for "
+        "admissibility; POL-NS-08(b)'s rider_track limb is also engaged, because no "
+        "rider track was supplied. No fix carries accuracy_m, so under POL-NS-02 every "
+        "one of them is evidence of neither presence nor absence and none establishes "
+        "arrival. The fixes are the driver's alone; the driver's own arrival marker "
+        "still comes from trip_record.".format(intervals)
+    )
+    return _artifact(
+        decisions, "EV-GPS-00901", "GPS_TRACE", "DRIVER_DEVICE",
+        trip_id, export_at, payload, ["LOW_SAMPLE_RATE", "PARTIAL_RECORD"],
+        notes, assessed_at,
+    )
+
+
+def _chat_log(
+    decisions: Decisions, chats: List[Dict[str, Any]], trip_id: str,
+    export_at: str, assessed_at: str,
+) -> Dict[str, Any]:
+    """CHAT_LOG, with the six entries the source supplies."""
+    sender_map = {"driver": "DRIVER", "rider": "RIDER", "system": "SYSTEM"}
+    messages = []
+    for index, entry in enumerate(chats, start=1):
+        sender = sender_map.get(entry["sender"])
+        if sender is None:
+            raise ConversionError("unknown chat sender {0!r}".format(entry["sender"]))
+        messages.append(
+            {
+                "msg_id": decisions.judged(
+                    "evidence.EV-CHAT-00901.payload.messages[*].msg_id",
+                    "MSG-00901-{0:03d}".format(index),
+                    "Minted consecutively. POL-NS-08(c) tests the chat for gaps in its "
+                    "own msg_id sequence, so a minted sequence must be contiguous and "
+                    "this one is.",
+                ),
+                "sender": decisions.judged(
+                    "evidence.EV-CHAT-00901.payload.messages[*].sender", sender,
+                    "The source's lower-case sender, upper-cased to this corpus's "
+                    "vocabulary.",
+                    source="chat_logs[*].sender",
+                ),
+                "text": decisions.copied(
+                    "evidence.EV-CHAT-00901.payload.messages[*].text",
+                    "chat_logs[*].content", entry["content"],
+                ),
+                "sent_at": decisions.copied(
+                    "evidence.EV-CHAT-00901.payload.messages[*].sent_at",
+                    "chat_logs[*].timestamp", entry["timestamp"],
+                ),
+                "read_at": decisions.judged(
+                    "evidence.EV-CHAT-00901.payload.messages[*].read_at", None,
+                    "The source carries no read receipt for any message. Null rather "
+                    "than a copy of sent_at, which would assert a read that was never "
+                    "recorded.",
+                ),
+                "delivered_at": decisions.judged(
+                    "evidence.EV-CHAT-00901.payload.messages[*].delivered_at", None,
+                    "The source carries no delivery receipt, for the same reason.",
+                ),
+                "channel": decisions.judged(
+                    "evidence.EV-CHAT-00901.payload.messages[*].channel", "IN_APP",
+                    "The source's chat log is the in-app log; it carries no channel "
+                    "field.",
+                ),
+                "language": decisions.judged(
+                    "evidence.EV-CHAT-00901.payload.messages[*].language", "en",
+                    "The source's messages are written in English. The field is "
+                    "carried because POL-NS-08 and the language-ambiguity code read it.",
+                ),
+                "redacted": decisions.judged(
+                    "evidence.EV-CHAT-00901.payload.messages[*].redacted", False,
+                    "Nothing in the source is marked as redacted, and no text is "
+                    "withheld.",
+                ),
+                "waypoint_hint": decisions.judged(
+                    "evidence.EV-CHAT-00901.payload.messages[*].waypoint_hint", None,
+                    "The source names no waypoint. POL-NS-03 reads this field, so "
+                    "minting a hint would decide a fault allocation.",
+                ),
+            }
+        )
+
+    payload = {
+        "trip_id": trip_id,
+        "messages": messages,
+        "message_count": decisions.judged(
+            "evidence.EV-CHAT-00901.payload.message_count", len(messages),
+            "The number of chat_logs entries the source supplies, including the "
+            "system entry, which is how the corpus counts them.",
+        ),
+        "first_message_at": decisions.judged(
+            "evidence.EV-CHAT-00901.payload.first_message_at", chats[0]["timestamp"],
+            "The first chat_logs timestamp the source supplies.",
+        ),
+        "last_message_at": decisions.judged(
+            "evidence.EV-CHAT-00901.payload.last_message_at", chats[-1]["timestamp"],
+            "The last chat_logs timestamp the source supplies.",
+        ),
+        "truncated": decisions.judged(
+            "evidence.EV-CHAT-00901.payload.truncated", False,
+            "Nothing in the source indicates the log was cut short, and its msg_id "
+            "sequence is contiguous by construction.",
+        ),
+    }
+    notes = (
+        "The source's own chat log, six entries, contiguous by construction. The "
+        "largest interval between entries is 140 s, so no gap of more than 5 minutes "
+        "spans the arrival marker and POL-NS-08(c) is not engaged. The in-app call is "
+        "carried as a message here and as a call record on trip_record, which is where "
+        "POL-NS-04(b) reads it."
+    )
+    return _artifact(
+        decisions, "EV-CHAT-00901", "CHAT_LOG", "PLATFORM_TELEMETRY",
+        trip_id, export_at, payload, [], notes, assessed_at,
+    )
+
+
+def _fare(
+    decisions: Decisions, trip: Dict[str, Any], export_at: str, assessed_at: str
+) -> Dict[str, Any]:
+    """FARE_BREAKDOWN, carrying only the one line the source itemises."""
+    fee = float(trip["cancellation_fee"])
+    payload = {
+        "trip_id": decisions.copied(
+            "evidence.EV-FARE-00901.payload.trip_id", "trip_data.trip_id", trip["trip_id"]
+        ),
+        "currency": decisions.judged(
+            "evidence.EV-FARE-00901.payload.currency", "SGD",
+            "The source's amounts are in Singapore dollars, which is also this "
+            "corpus's currency and the policy's.",
+        ),
+        "fare_model": decisions.judged(
+            "evidence.EV-FARE-00901.payload.fare_model", "METERED",
+            "The source states no fare model. METERED is used because the source "
+            "quotes no upfront fare, and UPFRONT_QUOTE would assert a quote that does "
+            "not exist here.",
+        ),
+        "cancellation_fee": decisions.copied(
+            "evidence.EV-FARE-00901.payload.cancellation_fee",
+            "trip_data.cancellation_fee", fee,
+        ),
+        "total_charged": decisions.judged(
+            "evidence.EV-FARE-00901.payload.total_charged", fee,
+            "The cancellation fee is the only amount the source charges, so it is the "
+            "whole of what was charged.",
+            source="trip_data.cancellation_fee",
+        ),
+        "payment_status": decisions.judged(
+            "evidence.EV-FARE-00901.payload.payment_status", "CHARGED",
+            "The source says the fee was applied to the rider's e-wallet and the "
+            "dispute is a request to reverse it, so the charge stands as CHARGED.",
+            source="chat_logs[system].content",
+        ),
+        "refund_issued_sgd": decisions.judged(
+            "evidence.EV-FARE-00901.payload.refund_issued_sgd", 0.0,
+            "No refund has been issued: the dispute is open and the rider is asking "
+            "for one.",
+            source="dispute_ticket.status",
+        ),
+        "charged_at": decisions.copied(
+            "evidence.EV-FARE-00901.payload.charged_at",
+            "trip_data.cancellation_time", trip["cancellation_time"],
+        ),
+        "surge_multiplier": decisions.judged(
+            "evidence.EV-FARE-00901.payload.surge_multiplier", 1.0,
+            "The source records no surge. 1.0 is no surge, and no amount in the source "
+            "reflects one.",
+        ),
+        "rate_card_id": decisions.judged(
+            "evidence.EV-FARE-00901.payload.rate_card_id", None,
+            "The source names no rate card. The corpus's ids encode a quarter and a "
+            "tier; minting one would assert a rate card that was never issued.",
+        ),
+    }
+
+    # The source itemises nothing else. Every other money line the corpus's fare
+    # artifact carries is absent here, and is written as null or zero rather than
+    # filled with a plausible figure.
+    zero_fields = (
+        "base_fare", "distance_fare", "time_fare", "surge_amount", "tolls_erp",
+        "airport_surcharge", "platform_fee", "promo_discount", "waiting_time_fee",
+    )
+    for field in zero_fields:
+        payload[field] = decisions.judged(
+            "evidence.EV-FARE-00901.payload." + field, 0.0,
+            "Zero, not null: the source itemises no such line, and this trip ran no "
+            "metered distance, so there is no amount for it to carry.",
+        )
+    null_fields = (
+        "quoted_fare_sgd", "distance_charged_km", "time_charged_min",
+        "per_km_rate_sgd", "per_min_rate_sgd",
+    )
+    for field in null_fields:
+        payload[field] = decisions.judged(
+            "evidence.EV-FARE-00901.payload." + field, None,
+            "Null: the trip never ran, so there is no distance, duration or rate to "
+            "state. The source supplies none.",
+        )
+    payload["erp_gantries"] = decisions.judged(
+        "evidence.EV-FARE-00901.payload.erp_gantries", [],
+        "The trip never ran, so it passed no gantries. The source names none.",
+    )
+
+    notes = (
+        "The ledger carries one line: the 5.00 cancellation fee. It itemises nothing "
+        "else, which is a PARTIAL_RECORD, and the 5.00 does not reconcile with this "
+        "system's fee_schedule, so POL-NS-08(d) IS engaged: the greater of the STANDARD "
+        "zone fee (4.00) and the RYDE_X tier fee (4.00) is 4.00. Both figures depend on "
+        "the stated zone-class and vehicle-tier assumptions recorded in the mapping "
+        "record. No issue code is minted for the POL-NS-08(d) mismatch, because no code "
+        "in the corpus's vocabulary covers it and this conversion may not invent one; "
+        "the engagement is stated here in prose instead."
+    )
+    return _artifact(
+        decisions, "EV-FARE-00901", "FARE_BREAKDOWN", "PAYMENTS_LEDGER",
+        trip["trip_id"], export_at, payload, ["PARTIAL_RECORD"], notes, assessed_at,
+    )
+
+
+def _rider(
+    decisions: Decisions, profile: Dict[str, Any], trip_id: str, export_at: str,
+    assessed_at: str,
+) -> Dict[str, Any]:
+    """RIDER_PROFILE, with this corpus's field set filled only where the source speaks."""
+    history = profile["dispute_history"]
+    payload = {
+        "party_id": decisions.copied(
+            "evidence.EV-RPROF-00901.payload.party_id", "rider_profile.rider_id",
+            profile["rider_id"],
+        ),
+        "party_role": decisions.judged(
+            "evidence.EV-RPROF-00901.payload.party_role", "RIDER",
+            "This is the rider's profile; the corpus's token is RIDER.",
+        ),
+        "snapshot_at": decisions.judged(
+            "evidence.EV-RPROF-00901.payload.snapshot_at", export_at,
+            "The source gives no snapshot time. The case's export time is used, which "
+            "is when these counters were read.",
+        ),
+        "account_age_days": decisions.copied(
+            "evidence.EV-RPROF-00901.payload.account_age_days",
+            "rider_profile.account_age_days", profile["account_age_days"],
+        ),
+        "lifetime_trips": decisions.copied(
+            "evidence.EV-RPROF-00901.payload.lifetime_trips",
+            "rider_profile.total_trips", profile["total_trips"],
+            "The source calls this total_trips; lifetime_trips is this corpus's name for "
+            "the same counter.",
+        ),
+        "rating": decisions.copied(
+            "evidence.EV-RPROF-00901.payload.rating", "rider_profile.avg_rating",
+            profile["avg_rating"],
+            "The source calls this avg_rating; rating is this corpus's name for it.",
+        ),
+        "prior_disputes_filed": decisions.copied(
+            "evidence.EV-RPROF-00901.payload.prior_disputes_filed",
+            "rider_profile.dispute_history.total_disputes", history["total_disputes"],
+        ),
+        "prior_disputes_upheld": decisions.copied(
+            "evidence.EV-RPROF-00901.payload.prior_disputes_upheld",
+            "rider_profile.dispute_history.upheld", history["upheld"],
+        ),
+        "prior_no_show_flags": decisions.judged(
+            "evidence.EV-RPROF-00901.payload.prior_no_show_flags",
+            profile["fraud_flags"],
+            "The source's fraud_flags counter is carried here, because its own detail "
+            "text describes the flag as 'frequent late cancellations', which is the "
+            "no-show family. POL-NS-09(d) explicitly does NOT read this field - it reads "
+            "no_show_disputes_30d - so carrying it here decides no limb.",
+            source="rider_profile.fraud_flags",
+        ),
+    }
+
+    # The source's dispute_history also carries a 'rejected' count, which this
+    # corpus has no field for. It is dropped, and the drop is recorded.
+    decisions.judged(
+        "rider_profile.dispute_history.rejected", None,
+        "The source's 'rejected' count has no counterpart in this corpus's profile "
+        "schema. It is dropped rather than mapped onto a field that means something "
+        "else. prior_disputes_filed and prior_disputes_upheld carry the rest of the "
+        "history.",
+        source="rider_profile.dispute_history.rejected",
+    )
+    decisions.judged(
+        "rider_profile.name / payment_method", None,
+        "The source carries the rider's name and payment method. This corpus's profile "
+        "schema has no field for either, and the name is personal data that no clause "
+        "reads, so neither is carried.",
+        source="rider_profile.name, rider_profile.payment_method",
+    )
+
+    for field, reason in (
+        ("cancellation_rate", "the source states no cancellation rate"),
+        ("no_show_disputes_30d", "the source gives four disputes over an unstated window; a 30-day figure cannot be derived from it"),
+        ("deviation_claims_60d", "a route-deviation counter has no meaning on a no-show"),
+        ("deviation_claims_60d_substantiated", "a route-deviation counter has no meaning on a no-show"),
+        ("disputes_with_counterparty_90d", "the source does not say how many of these disputes were with this same driver"),
+    ):
+        payload[field] = decisions.judged(
+            "evidence.EV-RPROF-00901.payload." + field, None,
+            "Null rather than zero: {0}, and zero would assert there were none.".format(reason),
+        )
+
+    notes = (
+        "The rider's own counters, complete for every field the source states. The "
+        "corpus's schema has five fields the source does not speak to "
+        "(cancellation_rate, no_show_disputes_30d, the two deviation counters, and "
+        "disputes_with_counterparty_90d); each is null, and none is zero, because zero "
+        "would assert a count nobody recorded. No issue code in the corpus's vocabulary "
+        "covers a profile field the source is silent on, so none is minted."
+    )
+    return _artifact(
+        decisions, "EV-RPROF-00901", "RIDER_PROFILE", "PLATFORM_TELEMETRY",
+        trip_id, export_at, payload, [], notes, assessed_at,
+    )
+
+
+def _driver(
+    decisions: Decisions, profile: Dict[str, Any], trip_id: str, export_at: str,
+    assessed_at: str,
+) -> Dict[str, Any]:
+    """DRIVER_PROFILE, on the same rule as the rider's."""
+    history = profile["dispute_history"]
+    payload = {
+        "party_id": decisions.copied(
+            "evidence.EV-DPROF-00901.payload.party_id", "driver_profile.driver_id",
+            profile["driver_id"],
+        ),
+        "party_role": decisions.judged(
+            "evidence.EV-DPROF-00901.payload.party_role", "DRIVER",
+            "This is the driver's profile; the corpus's token is DRIVER.",
+        ),
+        "snapshot_at": decisions.judged(
+            "evidence.EV-DPROF-00901.payload.snapshot_at", export_at,
+            "The source gives no snapshot time; the case's export time is used.",
+        ),
+        "account_age_days": decisions.copied(
+            "evidence.EV-DPROF-00901.payload.account_age_days",
+            "driver_profile.account_age_days", profile["account_age_days"],
+        ),
+        "lifetime_trips": decisions.copied(
+            "evidence.EV-DPROF-00901.payload.lifetime_trips",
+            "driver_profile.total_trips", profile["total_trips"],
+            "The source calls this total_trips; lifetime_trips is this corpus's name.",
+        ),
+        "rating": decisions.copied(
+            "evidence.EV-DPROF-00901.payload.rating", "driver_profile.avg_rating",
+            profile["avg_rating"],
+            "The source calls this avg_rating; rating is this corpus's name.",
+        ),
+        "prior_disputes_filed": decisions.copied(
+            "evidence.EV-DPROF-00901.payload.prior_disputes_filed",
+            "driver_profile.dispute_history.total_disputes", history["total_disputes"],
+        ),
+        "prior_disputes_upheld": decisions.copied(
+            "evidence.EV-DPROF-00901.payload.prior_disputes_upheld",
+            "driver_profile.dispute_history.upheld_against", history["upheld_against"],
+            "The source's upheld_against is the count of disputes decided against the "
+            "driver, which is what prior_disputes_upheld records here.",
+        ),
+        "prior_no_show_flags": decisions.judged(
+            "evidence.EV-DPROF-00901.payload.prior_no_show_flags",
+            profile["fraud_flags"],
+            "The driver's fraud_flags counter is carried, as with the rider's. It is a "
+            "lifetime counter and POL-NS-07 explicitly does not read it.",
+            source="driver_profile.fraud_flags",
+        ),
+        "vehicle_type": decisions.judged(
+            "evidence.EV-DPROF-00901.payload.vehicle_type", ASSUMED_VEHICLE_TIER,
+            "The source names a Honda HR-V, which is not a tier in this corpus; RYDE_X "
+            "is the base tier. The assumption is stated in the mapping record and the "
+            "POL-NS-08(d) fee comparison depends on it.",
+            source="driver_profile.vehicle",
+        ),
+    }
+
+    decisions.judged(
+        "driver_profile.vehicle", None,
+        "The source's vehicle string ('Honda HR-V (SGP 4521 M)') carries a plate and a "
+        "model. The corpus's schema has a tier, not a model; the tier is assumed and "
+        "the string itself is dropped rather than carried into a field that means "
+        "something else.",
+        source="driver_profile.vehicle",
+    )
+
+    for field, reason in (
+        ("cancellation_rate", "the source states no cancellation rate"),
+        ("prior_deviation_flags", "the source states no deviation flags"),
+        ("acceptance_rate", "the source states no acceptance rate"),
+        ("active_region", "inferring a region from the pickup place name would be world knowledge about places, which this repository forbids"),
+        ("deviation_flags_90d", "a route-deviation counter has no meaning on a no-show"),
+        ("completed_trips_90d", "the source gives a lifetime trip count only"),
+        ("no_show_terminations_30d", "the source states no 30-day termination count; POL-NS-07's anti-farming check therefore cannot be run on this case and is undecidable, not passed"),
+        ("completed_trips_30d", "the source states no 30-day trip count"),
+        ("disputes_with_counterparty_90d", "the source does not say how many disputes were with this same rider"),
+    ):
+        payload[field] = decisions.judged(
+            "evidence.EV-DPROF-00901.payload." + field, None,
+            "Null rather than zero: {0}, and zero would assert there were none.".format(reason),
+        )
+
+    notes = (
+        "The driver's own counters, complete for every field the source states. Nine "
+        "corpus fields the source does not speak to are null, not zero. "
+        "no_show_terminations_30d being null makes POL-NS-07's anti-farming check "
+        "undecidable on this case rather than passed, which is the honest state and is "
+        "recorded in the mapping. No issue code is minted for the gaps, because no code "
+        "in the corpus's vocabulary covers a field the source is silent on."
+    )
+    return _artifact(
+        decisions, "EV-DPROF-00901", "DRIVER_PROFILE", "PLATFORM_TELEMETRY",
+        trip_id, export_at, payload, [], notes, assessed_at,
+    )
+
+
+def _advisory(
+    decisions: Decisions, trip_id: str, export_at: str, assessed_at: str
+) -> Dict[str, Any]:
+    """TRAFFIC_ADVISORY, absent, minted so that its absence can be cited.
+
+    The source carries no advisory at all. This corpus's convention for "no
+    advisory" is a MISSING artifact with a null payload, and it is the corpus's
+    own documented practice: the note on all 25 such artifacts reads "Artifact
+    absent. The identifier is minted anyway so that the absence itself can be
+    cited by either advocate." So this mints an identifier and asserts absence.
+    It asserts nothing that is not true, and it is the shape every case in this
+    corpus has.
+    """
+    decisions.judged(
+        "evidence.EV-ADVIS-00901-01",
+        "MISSING",
+        "The source carries no traffic advisory. A MISSING artifact asserts absence, "
+        "not presence, and is this corpus's convention: 25 of its 30 advisories are "
+        "MISSING with a null payload. Minting it keeps the converted case in the same "
+        "shape as every corpus case, and POL-NS-06(i) is explicitly unavailable against "
+        "a MISSING advisory, which is the correct state here.",
+    )
+    return {
+        "evidence_id": "EV-ADVIS-00901-01",
+        "evidence_type": "TRAFFIC_ADVISORY",
+        "trip_id": trip_id,
+        "source": "THIRD_PARTY_LTA",
+        "generated_at": export_at,
+        "schema_version": SCHEMA_VERSION,
+        "admissibility": {
+            "status": "MISSING",
+            "issues": ["MISSING_ARTIFACT"],
+            "weight_multiplier": 0.0,
+            "notes": (
+                "Artifact absent. The identifier is minted anyway so that the absence "
+                "itself can be cited by either advocate."
+            ),
+            "assessed_at": assessed_at,
+            "assessor_version": ASSESSOR_VERSION,
+        },
+        "payload": None,
+    }
+
+
+def _artifact(
+    decisions: Decisions, evidence_id: str, evidence_type: str, source: str,
+    trip_id: str, generated_at: str, payload: Dict[str, Any], codes: List[str],
+    notes: str, assessed_at: str,
+) -> Dict[str, Any]:
+    """One evidence artifact in the contract's eight-key shape."""
+    decisions.judged(
+        "evidence.{0}.admissibility.issues".format(evidence_id), codes,
+        "Codes chosen only from prepass.CODE_WEIGHTS, and the weight is computed by "
+        "prepass.weight_for rather than written here.",
+    )
+    return {
+        "evidence_id": evidence_id,
+        "evidence_type": evidence_type,
+        "trip_id": trip_id,
+        "source": source,
+        "generated_at": generated_at,
+        "schema_version": SCHEMA_VERSION,
+        "admissibility": admissibility(codes, notes, assessed_at),
+        "payload": payload,
+    }
+
+
+def _divergences(trip: Dict[str, Any], policy: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Where the source's policy and this system's policy disagree.
+
+    Recorded, not resolved. The case runs under this system's loaded policy
+    unchanged, so each divergence is a fact about the conversion rather than
+    something the converted case can express.
+    """
+    return [
+        {
+            "finding": "The source's cancellation fee of SGD 5.00 matches no entry in fee_schedule.",
+            "source_policy": "cancellation_fee_after_wait: 5.00",
+            "this_system": (
+                "fee_schedule.zone_class_fee_sgd for STANDARD is 4.00 and "
+                "vehicle_tier_fee_sgd for RYDE_X is 4.00; the greater is 4.00. No "
+                "combination of zone class and vehicle tier in the schedule produces "
+                "5.00."
+            ),
+            "effect": (
+                "The converted case carries the source's 5.00 unchanged, because "
+                "changing it would be editing the evidence. POL-NS-08(d) is therefore "
+                "engaged on the converted case."
+            ),
+            "depends_on_assumptions": ["pickup zone class is STANDARD", "vehicle tier is RYDE_X"],
+        },
+        {
+            "finding": "The source's 8-minute no-show threshold has no counterpart in POL-NS.",
+            "source_policy": "no_show_threshold_min: 8",
+            "this_system": (
+                "POL-NS-01(c) sets the dwell minimum from fee_schedule.minimum_dwell_sec: "
+                "300 s (5 min) for STANDARD, LARGE_VENUE and TRANSPORT_HUB, 480 s (8 min) "
+                "for AIRPORT. The source's flat 8 minutes is not this system's rule, and "
+                "this system's figure varies by zone class where the source's does not."
+            ),
+            "effect": (
+                "The converted case carries no threshold of its own: the threshold is "
+                "read from the loaded policy at arbitration time, as it is for every "
+                "case."
+            ),
+            "depends_on_assumptions": ["pickup zone class is STANDARD"],
+        },
+        {
+            "finding": (
+                "Whether the waiting clock runs from arrival or from the scheduled time "
+                "is a question this system's policy does not address."
+            ),
+            "source_policy": (
+                "scheduled_time 08:45, driver_arrival_time 08:43; the source's own app "
+                "events start the free-wait timer at arrival (wait_timer_started at "
+                "08:43:10), and the cancellation at 08:51:00 falls exactly on an "
+                "8-minute threshold measured from arrival."
+            ),
+            "this_system": (
+                "POL-NS-01(c) measures the dwell 'from the first qualifying in-geofence "
+                "GPS fix and not from the arrived event'. That answers a different "
+                "question from the one the source's timers answer: it fixes the start of "
+                "the dwell, and is silent on whether a scheduled time could start "
+                "anything."
+            ),
+            "effect": (
+                "Recorded and NOT resolved. On this case the point does not bite, because "
+                "no fix carries an accuracy value and POL-NS-02 therefore yields no "
+                "qualifying in-geofence fix at all, so the dwell cannot be measured "
+                "either way."
+            ),
+            "depends_on_assumptions": [],
+        },
+        {
+            "finding": "The source's fee goes to driver_compensation without the platform share this system applies.",
+            "source_policy": "fee_goes_to: driver_compensation",
+            "this_system": (
+                "POL-NS-07 compensates the driver at 80 percent of the fee, the residual "
+                "20 percent being retained as the platform service fee."
+            ),
+            "effect": (
+                "The converted case carries no compensation figure; POL-NS-07 computes "
+                "it from the fee at arbitration time."
+            ),
+            "depends_on_assumptions": [],
+        },
+        {
+            "finding": "The source's dispute vocabulary is not this system's.",
+            "source_policy": (
+                "dispute_id DISP-002, status 'open', dispute_type 'no_show_charge', "
+                "cancellation_reason 'rider_no_show'"
+            ),
+            "this_system": (
+                "This corpus's dispute ids are DSP-<case_no>, its reason code token is "
+                "RIDER_NO_SHOW, and it has no 'status' key. The source's tokens are "
+                "translated where this system has an equivalent and recorded where it "
+                "does not."
+            ),
+            "effect": (
+                "dispute_id is carried unchanged as DISP-002, so the converted case can "
+                "be traced back to the organisers' document; status is dropped."
+            ),
+            "depends_on_assumptions": [],
+        },
+    ]
+
+
+def _seconds_between(start: str, end: str) -> float:
+    """Whole seconds between two ISO-8601 stamps, as a float."""
+    from datetime import datetime
+
+    return (datetime.fromisoformat(end) - datetime.fromisoformat(start)).total_seconds()
+
+
+# --------------------------------------------------------------------------
+# The expected outcome, kept apart
+# --------------------------------------------------------------------------
+def expected_outcome(source_text: str) -> Dict[str, Any]:
+    """The organisers' stated expected outcome, recorded where it cannot leak.
+
+    This is written to ``eval/external/ryde/expected.json``, never under
+    ``data/``. It is **not** part of the frozen answer key at
+    ``eval/answers/ground_truth.json`` and is never merged into it: that key is
+    frozen, and the sample case is not one of the 29 cases it measures.
+
+    The stated outcome is quoted from the source's title, which is why this
+    function -- and only this function -- reads the document other than through
+    :func:`conversion_input`. Its result never enters the case.
+    """
+    return {
+        "source_document": "eval/external/ryde/DISP-002.md",
+        "dispute_id": "DISP-002",
+        "expected_outcome_as_stated": "Cancellation charge UPHELD",
+        "stated_reasons": [
+            "driver showed up",
+            "waited the full free-wait + no-show window",
+            "attempted contact",
+            "rider has a pattern of late cancellations",
+        ],
+        "not_the_answer_key": (
+            "This is the organisers' stated outcome for their own sample case. It is "
+            "NOT part of eval/answers/ground_truth.json, it is not merged into that "
+            "key, and it is not an input to any agent. The key is frozen and measures "
+            "the 29-case corpus, which this case is not part of."
+        ),
+        "upheld_is_not_a_token_here": (
+            "'UPHELD' is the source's word. This system's ruling vocabulary is "
+            "POL-GEN-03's; the source's word is recorded as stated rather than "
+            "translated into a token this system did not emit."
+        ),
+    }
+
+
+# --------------------------------------------------------------------------
+# Entry point
+# --------------------------------------------------------------------------
+def write_outputs() -> Tuple[Path, Path, Path]:
+    """Read the source, convert it, and write the three output files."""
+    markdown = SOURCE_PATH.read_text(encoding="utf-8")
+    block = conversion_input(markdown)
+    case, mapping = convert(block)
+
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    CASE_PATH.write_text(
+        json.dumps(case, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
+    MAPPING_PATH.write_text(
+        json.dumps(mapping, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
+    EXPECTED_PATH.write_text(
+        json.dumps(expected_outcome(markdown), indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    return CASE_PATH, MAPPING_PATH, EXPECTED_PATH
+
+
+def main() -> int:
+    case_path, mapping_path, expected_path = write_outputs()
+    for path in (case_path, mapping_path, expected_path):
+        print("wrote {0}".format(path.relative_to(PROJECT_ROOT)))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

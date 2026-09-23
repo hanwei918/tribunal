@@ -5,6 +5,7 @@ This directory is the complete permitted workspace for WorkBuddy.
 Allowed development-time data references:
 
 - `data/cases/`
+- `data/external/`
 - `data/index.json`
 - `data/PUBLIC-CONTRACT.md`
 - `policy/`
@@ -35,6 +36,41 @@ Four statements hold. The path controls are kept distinct from the forbidden-key
 - **Path restrictions, unchanged elsewhere.** Corpus generation sources, historical analyses, prior manuals, old PDFs and render outputs remain outside the workspace and are still never referenced.
 
 `tests/test_answer_isolation.py` asserts both path and content controls, and proves the content check is capable of failing.
+
+## External material (amended 2026-09-23)
+
+The organisers supplied a sample case to every team. It lives at
+`eval/external/` and it is **answer-bearing**: it states an expected ruling and
+carries an argument for one side. It therefore sits under the same boundary as
+`eval/answers/`, for the same reason and with the same force.
+
+Four statements, kept distinct as above:
+
+- **Path.** `eval/external/` holds answer-bearing external material. Nothing
+  under `tribunal/` may read anything under `eval/`, and that includes
+  `eval/external/`. The material is not agent input and must never be attached
+  to, copied into, or serialised inside a runtime bundle.
+- **Converted cases.** `data/external/` holds cases converted from that
+  material. They are **answer-free** and agent-visible under the same contract
+  as `data/cases/`: a converted case carries no expected ruling, no answer
+  field, and no argument for either side. Only the source's own case facts
+  cross the boundary.
+- **One direction.** Conversion runs `eval/external/` to `data/external/` and
+  never the other way. Nothing writes into `eval/`, and the frozen answer key
+  at `eval/answers/` is not a conversion target.
+- **Where the converter lives.** The converter sits under `eval/external/`,
+  beside the source it must read. It cannot sit under `tribunal/`, because a
+  module in the package that names a path under `eval/` is exactly what
+  `tests/test_answer_isolation.py` forbids.
+
+`data/external/` is **not** in `data/index.json`. The manifest indexes the
+29-case corpus the benchmark measures, and adding a converted case to it would
+change that corpus. An external case is loaded through its own explicit path,
+under every constraint that does not depend on a manifest entry.
+
+Every place the conversion had to judge rather than copy is recorded in a
+mapping record committed beside the converted case, so a reader can see the
+choices and not only their results.
 
 ## Language rule (standing)
 

@@ -25,6 +25,33 @@ Measured over the 29 case files in this workspace: every file carries exactly th
 - `category`: dispute category. Measured values: `ROUTE_DEVIATION` (15 cases) and `NO_SHOW_CHARGE` (14 cases).
 - `file`: the case file path, **relative to `data/`** — not to the repository root. Every value has the form `cases/case-<case_no>.json` with the case number zero-padded to five digits, so it resolves to `data/cases/...`.
 
+## Converted external cases (`data/external/`)
+
+`data/external/` is a second case root. It holds cases converted from material
+the organisers supplied, and it is answer-free: the same controls that make a
+case under `data/cases/` safe to hand an agent apply here unchanged.
+
+- **Shape.** A converted case has the same four top-level keys, the same
+  eight-key evidence artifacts and the same eleven-key `dispute` object as a
+  case under `data/cases/`. Nothing about the shape is relaxed.
+- **Not in the manifest.** `data/index.json` indexes the 29-case corpus the
+  benchmark measures, and it stays that. A converted case is deliberately
+  absent from it, so a converted case is named by its **path**, never by a
+  manifest lookup.
+- **Path.** An external case path must resolve inside `data/external/`. The
+  same containment rule that keeps a manifest entry out of the rest of `data/`
+  applies, and `..` segments and symlinks are followed before the test.
+- **Filename.** The filename is `case-<case_no>.json`, with the case number
+  zero-padded to five digits, and it must agree with the `case_no` the file
+  itself declares. A converted case therefore cannot be loaded under another
+  case's number.
+- **Forbidden keys.** The recursive rejection of the five evaluation-only keys
+  applies to a converted case exactly as it does to a corpus case.
+
+Case numbers for converted cases are drawn from outside the corpus range
+(`101`-`115` and `201`-`214`), so a converted case can never be mistaken for a
+corpus case.
+
 ## Evidence artifact shape
 
 An evidence artifact has exactly these eight keys, and all 204 artifacts in this workspace share the same set:

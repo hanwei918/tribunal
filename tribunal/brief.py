@@ -700,7 +700,25 @@ def build_brief(case_no: int, include_clause_notes: bool = True) -> Dict[str, An
     controls whether each clause's drafting commentary is carried; it is a flag
     so the cost can be measured later rather than decided here.
     """
-    case = loader.load_case(case_no)
+    return build_brief_for_case(
+        loader.load_case(case_no), include_clause_notes=include_clause_notes
+    )
+
+
+def build_brief_for_case(
+    case: Dict[str, Any], include_clause_notes: bool = True
+) -> Dict[str, Any]:
+    """The same brief, from a case already in hand.
+
+    Split out so a case that is not in the manifest can be briefed without
+    being added to ``data/index.json``. A converted external case is loaded
+    through its own explicit path by ``loader.load_external_case``, and adding
+    it to the manifest would change the 29-case corpus the benchmark measures.
+
+    Everything below is the body :func:`build_brief` has always had, moved
+    rather than copied, so the two entry points cannot drift apart: there is
+    only one of them.
+    """
     category = case["dispute"].get("category")
     policies = loader.load_policies(category)
 

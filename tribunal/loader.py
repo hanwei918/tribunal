@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
@@ -41,6 +42,14 @@ DATA_DIR = PROJECT_ROOT / "data"
 CASES_DIR = DATA_DIR / "cases"
 POLICY_DIR = PROJECT_ROOT / "policy"
 INDEX_PATH = DATA_DIR / "index.json"
+
+# Converted external cases, under their own root and never in the manifest. See
+# ``data/PUBLIC-CONTRACT.md``; the corpus is 29 cases and stays 29.
+EXTERNAL_DIR = DATA_DIR / "external"
+
+# The filename a case file must carry, for the number it declares. Applied to
+# external cases as well as to corpus cases.
+_CASE_FILENAME_RE = re.compile(r"^case-(\d{5})$")
 
 # The contract fixes the four top-level case keys; all four must be retained.
 CASE_KEYS = ("schema_version", "case_no", "dispute", "evidence")
@@ -367,3 +376,45 @@ def bundle_digest(bundle: Dict[str, Any]) -> Tuple[str, str]:
     canonical = money.dumps_canonical(bundle)
     digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
     return canonical, digest
+
+
+def load_external_case(path: Any) -> Dict[str, Any]:
+    """Load one converted external case from an explicit path.
+
+    External cases are converted from material the organisers supplied and live
+    under ``data/external/``. They are deliberately **not** in
+    ``data/index.json``: the manifest indexes the 29-case corpus the benchmark
+    measures, and adding a converted case to it would change that corpus. So
+    the case is named by its path, and every constraint that does not depend on
+    a manifest entry is enforced here instead:
+
+    * the resolved path must stay inside ``data/external/``, so ``..`` segments
+      and symlinks are followed and cannot walk out of the root — the same
+      containment rule ``_case_path`` applies to ``data/cases/``;
+    * the filename must be ``case-<case_no>.json`` for the number the file
+      itself declares, so a case cannot be loaded under another case's name;
+    * the same four top-level keys, the same shape checks and the same
+      duplicate-``evidence_id`` rejection that :func:`load_case` applies.
+
+    What is **not** checked is the manifest cross-check, because there is no
+    manifest entry to check against. That is the whole of the difference.
+    """
+    resolved = Path(path).resolve()
+    external_root = EXTERNAL_DIR.resolve()
+    if not resolved.is_relative_to(external_root):
+        raise ManifestMismatchError(
+            "external case path resolves outside data/external/: {0!r}".format(str(resolved))
+        )
+    if not resolved.is_file():
+        raise LoaderError("file not found: {0}".format(resolved))
+
+    match = _CASE_FILENAME_RE.match(resolved.stem)
+    if match is None:
+        raise ManifestMismatchError(
+            "external case filename {0!r} is not case-<five digits>.json".format(resolved.name)
+        )
+    case_no = int(match.group(1))
+
+    case = _check_case_shape(_read_json(resolved), case_no)
+    index_artifacts(case)
+    return case
