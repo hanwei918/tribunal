@@ -107,11 +107,12 @@ rather than while it ran. Every cached digest matches a committed version of the
 the agents were handed changed; a moved *prompt* means their instructions changed. They call for
 different responses, so no report merges them into one word: the per-case cell reads
 `**STALE (brief)**` or `**STALE (prompt)**`, and the progress line names the digest that moved. The
-**prompt** channel can be answered for none of the cached results — no per-case entry records a
-prompts digest, so all twenty-nine are `unknown` there rather than `current`, which is why the
-note's block reads `current=0`. `unknown` is not `current`. The prompt set has in fact already
-moved twice: the run records carry two different digests and neither is what the directory hashes
-to now, and until the channel existed nothing said so.
+**prompt** channel can be answered for three of the cached results — cases 101, 102 and 103, which
+the 2026-09-22 re-run rewrote after the field existed — and the other twenty-six are `unknown`
+there rather than `current`, which is why the note's block reads `current=3`. `unknown` is not
+`current`. The prompt set has in fact already moved twice: the run records carry two different
+digests and neither is what the directory hashes to now, and until the channel existed nothing said
+so.
 
 **That count is the same under any interpreter now, and it was not always.** The brief carries an
 unrounded mean distance, and `sum()`'s float semantics changed in Python 3.12, so the same cache
@@ -141,6 +142,44 @@ See `docs/notes/2026-09-22-stale-cached-results.md`.
   POL-NS-05's motion line are all stated in a clause's `rule` text and nowhere as a field. They are
   read out of the loaded clause and the reader **raises** if a line cannot be found. A fallback
   constant would be a policy number hard-coded in `tribunal/`, which is the thing this rule forbids.
+
+## Bounds on time
+
+Two limits are in force and they are not the same limit. Neither existed before 2026-09-22, and the
+defect was found by measurement rather than by reading: a real run wrote its last case at 07:25 and
+was still alive at 09:13 with no output, 1 h 48 m, while a direct probe of the endpoint answered
+HTTP 200 in 0.95 s.
+
+- **`llm.DEFAULT_TOTAL_DEADLINE_SECONDS` = 1200 s** bounds one **call**: every attempt and all
+  backoff. `llm.DEFAULT_TIMEOUT_SECONDS` = 600 s bounds one **attempt**, and `max_attempts` = 4
+  multiplies it, so without the second limit the product is about 40 minutes for a single call.
+- **`pipeline.DEFAULT_CASE_DEADLINE_SECONDS` = 2400 s** bounds one **case**: all three agent calls
+  and any shape retry. Without it the worst case is 6 calls x 40 minutes — the 241 minutes that let
+  the run sit silent for nearly two hours while it was inside its limits the whole time.
+
+Both are checked **before** the work they bound, not after it. An attempt needs a whole
+`timeout_seconds` of remaining budget, so one that cannot finish is refused rather than begun. That
+ordering is what keeps a deadline tellable apart from a timeout: beginning an attempt that overruns
+would surface as a `TimeoutError`, which is a different event with different advice. Both defaults
+are derived from measurement — 1200 s is two full attempts, because the 605.8-second TIMEOUT failure
+shows a real attempt does consume the whole per-attempt timeout; 2400 s clears the slowest case
+actually seen (978.8 s) and the three-full-timeout bound (1818 s) while bounding the 241-minute
+worst case at 40. The derivation is asserted in the tests rather than the number.
+
+A deadline is its **own failure kind**, `FAILURE_DEADLINE`, beside TIMEOUT, TRANSPORT and SHAPE.
+`failure_kind_for` is the single classification point and maps both deadline exceptions to it — the
+one raised by the client and the one raised by the case. A case that exceeds its deadline is
+recorded as a failed case, named with its elapsed time, and the run continues to the next one. Both
+limits are recorded in the run metadata and printed on the summary block, because a `DEADLINE`
+failure is only interpretable against the limit that produced it.
+
+**A hang must be visible while it happens.** Each case prints a line when it *starts*, emitted from
+the thread that owns the queue and before the work is submitted, so the last line on the terminal
+always names what is in flight. The original run's last line named a case that had already
+finished, which is why nothing on screen could distinguish a hung case from a long one and the
+process had to be probed by hand to find out.
+
+See `docs/notes/2026-09-22-bounded-call-and-case-deadlines.md`.
 
 ## Session records
 

@@ -96,6 +96,23 @@ DEFAULT_MAX_ATTEMPTS = 4
 DEFAULT_BACKOFF_SECONDS = 1.0
 DEFAULT_BACKOFF_FACTOR = 2.0
 
+# 1200 s, and derived rather than chosen. ``timeout_seconds`` bounds ONE
+# attempt and ``max_attempts`` multiplies it, so before this limit existed the
+# worst case for a single call was 4 x 600 s plus backoff -- about 40 minutes,
+# for one call. Measured on 2026-09-22: a real run wrote its last case at 07:25
+# and was still alive at 09:13, 1 h 48 m with no output, while a direct probe of
+# the endpoint answered HTTP 200 in 0.95 s. Nothing was wrong with the provider;
+# the limits simply did not multiply to anything bounded.
+#
+# Two full attempts is the floor, not a round number: the 605.8-second TIMEOUT
+# failure recorded that day shows a real attempt does run into the per-attempt
+# timeout, and a retry after one such attempt is exactly what ``max_attempts``
+# exists for. 2 x 600 s = 1200 s bounds one call at 20 minutes instead of 40,
+# while still letting a single slow call -- the slowest completed call measured
+# is 305.7 s -- finish with room to spare. See
+# docs/notes/2026-09-22-bounded-call-and-case-deadlines.md.
+DEFAULT_TOTAL_DEADLINE_SECONDS = 1200.0
+
 # The credential. The name of the variable is fixed by the workspace; the value
 # is never held anywhere but on the client instance.
 API_KEY_ENV_VAR = "TOKENHUB_API_KEY"
@@ -135,6 +152,24 @@ class ModelNotProvisionedError(LLMError):
 
 class TransportError(LLMError):
     """The request never produced an HTTP response."""
+
+
+class DeadlineExceededError(LLMError):
+    """The client's own total deadline for one call ran out before an attempt.
+
+    Distinct from a timeout on purpose, and the distinction is what makes the
+    failure actionable. A timeout says one request waited too long, and the
+    answer is a longer timeout or a faster model. This says the client had
+    already spent its whole budget for this call and refused to begin an attempt
+    it had no time to finish, so the answer is a shorter per-attempt timeout, a
+    smaller request, or a different model — waiting longer would only move the
+    same wall.
+    """
+
+    def __init__(self, message: str, *, elapsed_seconds: float, attempts: int) -> None:
+        super().__init__(message)
+        self.elapsed_seconds = elapsed_seconds
+        self.attempts = attempts
 
 
 @dataclass(frozen=True)
@@ -298,6 +333,7 @@ class LLMClient:
         seed: Optional[int] = DEFAULT_SEED,
         reasoning_effort: Optional[str] = DEFAULT_REASONING_EFFORT,
         timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
+        total_deadline_seconds: float = DEFAULT_TOTAL_DEADLINE_SECONDS,
         requests_per_minute: int = DEFAULT_REQUESTS_PER_MINUTE,
         max_attempts: int = DEFAULT_MAX_ATTEMPTS,
         backoff_seconds: float = DEFAULT_BACKOFF_SECONDS,
@@ -316,6 +352,17 @@ class LLMClient:
             raise LLMError("requests_per_minute must be positive")
         if max_attempts < 1:
             raise LLMError("max_attempts must be at least 1")
+        if total_deadline_seconds < timeout_seconds:
+            # Refused rather than clamped. The deadline is checked before an
+            # attempt begins and an attempt needs a whole ``timeout_seconds`` of
+            # remaining budget, so a deadline below one attempt is a client that
+            # can never make a call at all -- and clamping it to the timeout
+            # would silently turn every call into a single-attempt one.
+            raise LLMError(
+                "total_deadline_seconds must be at least timeout_seconds, got {0} < {1}".format(
+                    total_deadline_seconds, timeout_seconds
+                )
+            )
 
         self._model = model
         self._endpoint = endpoint
@@ -323,6 +370,7 @@ class LLMClient:
         self._seed = seed
         self._reasoning_effort = reasoning_effort
         self._timeout_seconds = timeout_seconds
+        self._total_deadline_seconds = total_deadline_seconds
         self._max_attempts = max_attempts
         self._backoff_seconds = backoff_seconds
         self._backoff_factor = backoff_factor
@@ -346,9 +394,9 @@ class LLMClient:
     def __repr__(self) -> str:
         return (
             "LLMClient(model={0!r}, endpoint={1!r}, temperature={2!r}, seed={3!r}, "
-            "reasoning_effort={4!r}, timeout_seconds={5!r}, requests_per_minute={6!r}, "
-            "max_attempts={7!r}, backoff_seconds={8!r}, backoff_factor={9!r}, "
-            "api_key=<redacted>)"
+            "reasoning_effort={4!r}, timeout_seconds={5!r}, total_deadline_seconds={6!r}, "
+            "requests_per_minute={7!r}, max_attempts={8!r}, backoff_seconds={9!r}, "
+            "backoff_factor={10!r}, api_key=<redacted>)"
         ).format(
             self._model,
             self._endpoint,
@@ -356,6 +404,7 @@ class LLMClient:
             self._seed,
             self._reasoning_effort,
             self._timeout_seconds,
+            self._total_deadline_seconds,
             SECONDS_PER_MINUTE / self._minimum_interval,
             self._max_attempts,
             self._backoff_seconds,
@@ -433,11 +482,44 @@ class LLMClient:
             self._last_request_at = self._clock()
 
     def _post(self, body: bytes) -> Tuple[int, bytes, int]:
-        """POST once, retrying only what is worth retrying."""
+        """POST once, retrying only what is worth retrying.
+
+        Two limits are enforced here and they are deliberately not the same
+        limit. ``timeout_seconds`` bounds **one attempt**;
+        ``total_deadline_seconds`` bounds **the call**, every attempt and all
+        backoff included. Before the second one existed the first one was the
+        only bound, and four attempts of it is about 40 minutes for a single
+        call.
+
+        The deadline is checked *before* each attempt rather than after the last
+        one, because an attempt needs a whole ``timeout_seconds`` of remaining
+        budget. Beginning one that cannot finish would run past the deadline and
+        reach the caller as a ``TimeoutError`` — the same event as a request that
+        waited too long, which it is not. Refusing the attempt is what keeps
+        :class:`DeadlineExceededError` and a timeout tellable apart.
+        """
         delay = self._backoff_seconds
         status, payload, attempts = 0, b"", 0
+        started_at = self._clock()
+        deadline_at = started_at + self._total_deadline_seconds
 
         for attempt in range(1, self._max_attempts + 1):
+            remaining = deadline_at - self._clock()
+            if remaining < self._timeout_seconds:
+                elapsed = self._clock() - started_at
+                raise DeadlineExceededError(
+                    "stopped after {0:.1f} s of a {1:g} s deadline with {2:.1f} s left: "
+                    "{3} of {4} attempts were made, and the next one needs {5:g} s".format(
+                        elapsed,
+                        self._total_deadline_seconds,
+                        remaining,
+                        attempt - 1,
+                        self._max_attempts,
+                        self._timeout_seconds,
+                    ),
+                    elapsed_seconds=elapsed,
+                    attempts=attempt - 1,
+                )
             attempts = attempt
             self._respect_rate_limit()
             outcome = self._transport(self._endpoint, self._headers(), body, self._timeout_seconds)

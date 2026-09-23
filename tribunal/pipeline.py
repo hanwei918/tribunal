@@ -101,6 +101,23 @@ JSON_OBJECT_FORMAT: Dict[str, str] = {"type": "json_object"}
 SHAPE_OBJECT = "object"
 SHAPE_ARRAY = "array"
 
+# 2400 s, derived rather than chosen. A case is three agent calls, and each of
+# them can be retried once when its answer is unusable, so ``LLMClient``'s own
+# per-call deadline bounds one call but not the case: three calls at the
+# per-call deadline is 3600 s, and before this limit existed the measured worst
+# case was 241 minutes. That is what actually happened on 2026-09-22 -- a run
+# wrote its last case at 07:25 and was still alive at 09:13 with nothing in
+# flight a reader could see.
+#
+# The floor is what has been measured, not a round number. The slowest completed
+# case in the corpus is 978.8 s (case 109 on ``hy4-preview``), so a limit at or
+# below that would fail the slowest thing actually seen -- the opposite defect.
+# Three calls each running into the per-attempt timeout is 3 x 606 s = 1818 s,
+# measured from the 605.8-second TIMEOUT failure recorded that day. 2400 s
+# covers both with margin and bounds a case at 40 minutes instead of 241. See
+# docs/notes/2026-09-22-bounded-call-and-case-deadlines.md.
+DEFAULT_CASE_DEADLINE_SECONDS = 2400.0
+
 # The key the advocate's claim array travels under.
 ADVOCATE_CLAIMS_KEY = "claims"
 
@@ -158,6 +175,67 @@ class StanceLeakError(PipelineError):
 
 class BriefIdentityError(PipelineError):
     """The three agents were not handed the same brief bytes."""
+
+
+class CaseDeadlineExceeded(PipelineError):
+    """One case spent its whole time budget before it was finished.
+
+    Raised rather than returned as an unusable-answer result, because it is a
+    different event: nothing was answered badly, the case simply ran out of
+    time. It carries the elapsed seconds so the record can name the figure the
+    limit was measured against instead of only the limit.
+
+    This is deliberately *not* the same class as
+    :class:`tribunal.llm.DeadlineExceededError`, which is one call giving up.
+    Both are classified as the same failure kind by the runner, because a
+    reader acts on them the same way, but they are raised from different layers
+    and a caller that catches one should not accidentally catch the other.
+    """
+
+    def __init__(self, message: str, *, elapsed_seconds: float, case_no: int) -> None:
+        super().__init__(message)
+        self.elapsed_seconds = elapsed_seconds
+        self.case_no = case_no
+
+
+@dataclass(frozen=True)
+class CaseDeadline:
+    """One case's total time budget, and the check that enforces it.
+
+    A case is three agent calls and each may be retried once, so the check runs
+    **before each call**, not only after the last one: a case stops before it
+    starts work it has no time to finish, and what reaches the record is this
+    deadline rather than a timeout from the call inside it. The two would
+    otherwise be indistinguishable, and they call for different responses.
+
+    ``clock`` is injectable for the same reason it is on ``LLMClient``: a test
+    has to be able to move time without waiting for it.
+    """
+
+    case_no: int
+    started_at: float
+    limit_seconds: float
+    clock: Callable[[], float] = time.monotonic
+
+    @property
+    def elapsed_seconds(self) -> float:
+        return self.clock() - self.started_at
+
+    @property
+    def remaining_seconds(self) -> float:
+        return self.limit_seconds - self.elapsed_seconds
+
+    def check(self) -> None:
+        """Raise if the budget is gone. Called before every agent call."""
+        elapsed = self.elapsed_seconds
+        if elapsed >= self.limit_seconds:
+            raise CaseDeadlineExceeded(
+                "case {0} exceeded its {1:g} s deadline after {2:.1f} s".format(
+                    self.case_no, self.limit_seconds, elapsed
+                ),
+                elapsed_seconds=elapsed,
+                case_no=self.case_no,
+            )
 
 
 # --------------------------------------------------------------------------
@@ -513,6 +591,7 @@ def _call_agent(
     user_message: str,
     normalise: Callable[[Any], Tuple[Optional[Any], str, str]],
     transcript: Any,
+    deadline: Optional["CaseDeadline"] = None,
 ) -> Tuple[Optional[Any], Optional[str]]:
     """One agent call, retried once when the answer is unusable.
 
@@ -523,11 +602,19 @@ def _call_agent(
     from the raw text. It is not returned: the transcript entry is where a shape
     belongs, and returning it as well would give two copies to keep in step.
 
+    ``deadline`` is checked **before each attempt**, the shape retry included, so
+    a case that has run out of time stops instead of starting a call it cannot
+    finish. It is passed in rather than held as module state because the budget
+    belongs to one case.
+
     Returns ``(value, None)`` on success and ``(None, reason)`` when the second
-    attempt is unusable too.
+    attempt is unusable too. A spent deadline is not an unusable answer, so it
+    raises :class:`CaseDeadlineExceeded` instead of returning a reason.
     """
     reason = ""
     for _attempt in (1, 2):
+        if deadline is not None:
+            deadline.check()
         result = client.complete(system_prompt, user_message, response_format=JSON_OBJECT_FORMAT)
         value, shape, reason = normalise(result.json_body)
         transcript.record(
@@ -560,8 +647,20 @@ def run_case(
     *,
     prompts_dir: Path = PROMPTS_DIR,
     now: Optional[Callable[[], str]] = None,
+    case_deadline_seconds: float = DEFAULT_CASE_DEADLINE_SECONDS,
+    clock: Callable[[], float] = time.monotonic,
 ) -> PipelineResult:
-    """Perform one full arbitration and return the ruling with the transcript."""
+    """Perform one full arbitration and return the ruling with the transcript.
+
+    ``case_deadline_seconds`` bounds the whole case -- all three agent calls and
+    any shape retry -- where ``LLMClient``'s own deadline bounds one call. The
+    budget is checked before each call and a case that has spent it raises
+    :class:`CaseDeadlineExceeded`, which carries the elapsed seconds. The runner
+    turns that into a failed case and moves on to the next one, so a hung case
+    costs its own budget rather than the run.
+
+    ``clock`` is injectable so the deadline can be exercised without waiting.
+    """
     prompts_dir = Path(prompts_dir)
 
     # The project's second structural claim, checked before any call is made.
@@ -580,7 +679,15 @@ def run_case(
     judge_prompt = _read(prompts_dir / JUDGE_PROMPT_FILE)
 
     transcript = transcript_module.Transcript(now=now)
-    started = time.monotonic()
+    # One budget for the whole case, started before the first call. Before this
+    # existed the only bound was the client's per-attempt timeout, and the
+    # product of that with the retries is what let a case hang for 1 h 48 m.
+    deadline = CaseDeadline(
+        case_no=case_no,
+        started_at=clock(),
+        limit_seconds=case_deadline_seconds,
+        clock=clock,
+    )
 
     rider_claims, rider_failure = _call_agent(
         client,
@@ -589,6 +696,7 @@ def run_case(
         user_message=advocate_user_message,
         normalise=normalise_claims,
         transcript=transcript,
+        deadline=deadline,
     )
 
     driver_claims = None
@@ -605,6 +713,7 @@ def run_case(
             user_message=advocate_user_message,
             normalise=normalise_claims,
             transcript=transcript,
+            deadline=deadline,
         )
 
         # PROOF 1 — one brief, byte-identical. Both advocates were handed the
@@ -642,6 +751,7 @@ def run_case(
             user_message=judge_user,
             normalise=normalise_judge_result,
             transcript=transcript,
+            deadline=deadline,
         )
         if judge_failure is not None:
             failed_agent, failure_reason = transcript_module.ROLE_JUDGE, judge_failure

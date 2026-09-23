@@ -705,6 +705,211 @@ class UnusableResponseTests(unittest.TestCase):
         self.assertEqual(result.transcript.entries[2].parse_outcome, "MALFORMED")
 
 
+class VirtualClock:
+    """A clock that only moves when a call spends time.
+
+    The pipeline reads it before each agent call and the client reads it for the
+    call's own duration, so one clock serves both. Advancing it inside the
+    transport is what makes a case "take" minutes without the test waiting for
+    them.
+    """
+
+    def __init__(self) -> None:
+        self.now = 0.0
+
+    def __call__(self) -> float:
+        return self.now
+
+    def spend(self, seconds: float) -> None:
+        self.now += seconds
+
+
+class SpendingTransport:
+    """A transport that spends wall time on each call, then answers.
+
+    It exists so a case can be driven past its deadline in virtual time. Every
+    request is recorded, which is how a test shows that a call the deadline had
+    no room for was never made.
+    """
+
+    def __init__(self, clock: VirtualClock, per_call_seconds: float, *responses) -> None:
+        self.clock = clock
+        self.per_call_seconds = per_call_seconds
+        self.responses = list(responses)
+        self.calls = []
+
+    def __call__(self, url, headers, body, timeout):
+        self.calls.append({"url": url, "headers": dict(headers), "body": body})
+        self.clock.spend(self.per_call_seconds)
+        if not self.responses:
+            raise AssertionError("SpendingTransport ran out of scripted responses")
+        nxt = self.responses.pop(0)
+        if isinstance(nxt, Exception):
+            raise nxt
+        return nxt
+
+
+def client_on(clock: VirtualClock, transport) -> llm.LLMClient:
+    """A client wired to the same clock as the case, so both see one timeline."""
+    return llm.LLMClient(
+        model="hy4-preview",
+        api_key=FAKE_KEY,
+        transport=transport,
+        sleep=lambda seconds: None,
+        clock=clock,
+    )
+
+
+class CaseDeadlineTests(unittest.TestCase):
+    """The bound on one whole case: three agent calls and any shape retry.
+
+    The client's own deadline bounds one call. Nothing bounded the case, and on
+    2026-09-22 that is exactly what happened: a run wrote its last case at 07:25
+    and was still alive at 09:13 with no output, 1 h 48 m with nothing on the
+    terminal, while the provider answered a direct probe in 0.95 s. These tests
+    drive the case through an injected clock, so the budget is spent without
+    anything waiting.
+    """
+
+    DEADLINE_SECONDS = 100.0
+    PER_CALL_SECONDS = 60.0
+
+    def case_over(self, per_call_seconds, *responses, deadline=None):
+        clock = VirtualClock()
+        transport = SpendingTransport(clock, per_call_seconds, *responses)
+        kwargs = {}
+        if deadline is not None:
+            kwargs["case_deadline_seconds"] = deadline
+        return transport, lambda: pipeline.run_case(
+            CASE,
+            client_on(clock, transport),
+            now=lambda: PINNED_NOW,
+            clock=clock,
+            **kwargs
+        )
+
+    def test_a_spent_budget_stops_the_case_before_the_call_it_cannot_finish(self):
+        """The third call is never made, though the case is not yet over.
+
+        Two 60-second calls inside a 100-second budget leave 40 s, so the judge
+        call cannot finish. Refusing it here is what makes the deadline a
+        deadline rather than a post-mortem: an after-the-fact check would have
+        made the third call and only noticed when it was done.
+        """
+        transport, run = self.case_over(
+            self.PER_CALL_SECONDS,
+            envelope(RIDER_CLAIMS),
+            envelope(DRIVER_CLAIMS),
+            envelope(GOOD_RULING),
+            deadline=self.DEADLINE_SECONDS,
+        )
+
+        with self.assertRaises(pipeline.CaseDeadlineExceeded) as caught:
+            run()
+
+        self.assertEqual(2, len(transport.calls), "the judge call must not start")
+        self.assertEqual(2 * self.PER_CALL_SECONDS, caught.exception.elapsed_seconds)
+        self.assertEqual(CASE, caught.exception.case_no)
+        self.assertIsInstance(caught.exception, pipeline.PipelineError)
+        self.assertNotIsInstance(caught.exception, TimeoutError)
+        # Named, with the elapsed time, so the record carries the figure the
+        # limit was measured against and not only the limit.
+        self.assertIn(str(CASE), str(caught.exception))
+        self.assertIn("100", str(caught.exception))
+
+    def test_the_shape_retry_is_inside_the_budget_too(self):
+        """An unusable answer is retried, but not with time the case does not have.
+
+        The rider's first answer is unusable, so the retry would normally be
+        made. The budget is exactly one call, so the retry is refused — and the
+        transport shows it was never sent.
+        """
+        transport, run = self.case_over(
+            self.PER_CALL_SECONDS,
+            envelope('{"no_claims_key": []}'),
+            envelope(RIDER_CLAIMS),
+            deadline=self.PER_CALL_SECONDS,
+        )
+
+        with self.assertRaises(pipeline.CaseDeadlineExceeded):
+            run()
+
+        self.assertEqual(1, len(transport.calls), "the retry must not be sent")
+
+    def test_an_unusable_answer_within_the_budget_is_still_a_failed_result(self):
+        """The contrast: without a spent budget the same script does not raise.
+
+        A deadline is not a rename of "the model answered badly". The two are
+        different events, so the one must not be reported as the other.
+        """
+        transport, run = self.case_over(
+            self.PER_CALL_SECONDS,
+            envelope('{"no_claims_key": []}'),
+            envelope('{"no_claims_key": []}'),
+            deadline=self.DEADLINE_SECONDS,
+        )
+
+        result = run()
+
+        self.assertFalse(result.ok)
+        self.assertEqual(RIDER, result.failed_agent)
+        self.assertEqual(2, len(transport.calls), "the retry is made when there is time")
+
+    def test_a_budget_of_zero_stops_the_case_before_any_call(self):
+        """The boundary, stated: a case with no budget makes no call at all."""
+        transport, run = self.case_over(
+            self.PER_CALL_SECONDS,
+            envelope(RIDER_CLAIMS),
+            deadline=0.0,
+        )
+
+        with self.assertRaises(pipeline.CaseDeadlineExceeded):
+            run()
+
+        self.assertEqual([], transport.calls)
+
+    def test_a_budget_that_is_never_spent_changes_nothing(self):
+        """A case inside its deadline behaves exactly as it did before."""
+        transport, run = self.case_over(
+            0.0,
+            envelope(RIDER_CLAIMS),
+            envelope(DRIVER_CLAIMS),
+            envelope(GOOD_RULING),
+            deadline=self.DEADLINE_SECONDS,
+        )
+
+        result = run()
+
+        self.assertTrue(result.ok)
+        self.assertEqual([RIDER, DRIVER, JUDGE], roles_of(result))
+        self.assertEqual(3, len(transport.calls))
+
+    def test_the_default_is_a_bound_and_still_clears_the_slowest_case(self):
+        """Derived from measurement, so the derivation is asserted, not the number.
+
+        Three things have to hold at once, and each one has bitten. The limit
+        must clear the slowest case actually seen (978.8 s) or it fails the
+        thing it is meant to protect. It must accommodate three calls each
+        running into the per-attempt timeout (3 x 606 s = 1818 s, from the
+        605.8-second TIMEOUT failure recorded on 2026-09-22). And it must be a
+        bound on the 241-minute worst case it was added to remove.
+        """
+        self.assertGreater(pipeline.DEFAULT_CASE_DEADLINE_SECONDS, 978.8)
+        self.assertGreaterEqual(
+            pipeline.DEFAULT_CASE_DEADLINE_SECONDS, 3 * llm.DEFAULT_TIMEOUT_SECONDS
+        )
+        self.assertLess(pipeline.DEFAULT_CASE_DEADLINE_SECONDS, 241 * 60)
+
+    def test_the_default_spans_a_shape_retry_on_every_agent(self):
+        """Six calls is the worst case the limit has to be able to bound.
+
+        Three agents, each retried once, at the per-call deadline each: the case
+        limit has to be tighter than that product or it bounds nothing.
+        """
+        worst_case_of_calls = 6 * llm.DEFAULT_TOTAL_DEADLINE_SECONDS
+        self.assertLess(pipeline.DEFAULT_CASE_DEADLINE_SECONDS, worst_case_of_calls)
+
+
 class ClaimShapeTests(unittest.TestCase):
     """The advocate normaliser: two accepted shapes in, one list of claims out.
 

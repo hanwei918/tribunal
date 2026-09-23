@@ -54,25 +54,36 @@ them be read as one.
 - **The brief channel** — the digest of the exact bytes the agents were handed. This is the channel
   this note is about, and its answer is unchanged: **twelve results were produced by a brief this
   code no longer builds, and they are 201 through 212.**
-- **The prompt channel** — the digest of the prompt directory. This channel is new. **Not one
-  cached entry records a prompts digest**, because the field did not exist when these results were
-  written, so for all twenty-nine the prompt half of the check cannot be made at all.
+- **The prompt channel** — the digest of the prompt directory. This channel is new, so the entries
+  that predate it record nothing: **fourteen of the twenty-nine cannot have the prompt half of the
+  check made at all.** The other three were rewritten after the field existed and can, and all three
+  agree with the code as it stands.
 
 A result whose prompt half cannot be checked is not stale for it — nothing moved — and it is not
 current either. It is **unknown**, the third answer, deliberately not a synonym for the first. That
-is why the block reads `current=0` where it used to read `current=17`: those seventeen have a brief
-this code still builds, and what they cannot say is which prompts produced them. Seventeen is still
-the brief channel's answer, and it is stated above in those terms rather than as a verdict.
+is why the block reads `current=3` where the brief channel alone would say seventeen: those
+seventeen have a brief this code still builds, and fourteen of them cannot say which prompts
+produced them. Seventeen is still the brief channel's answer, and it is stated above in those terms
+rather than as a verdict.
 
 The block, measured under Python 3.9.6 — the interpreter that produced this cache:
 
 ```
-deepseek-deepseek-flash   cached=29  current=0   stale=12  unknown=17
+deepseek-deepseek-flash   cached=29  current=3   stale=12  unknown=14
+  current: 101, 102, 103
   stale:   201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212
-  unknown: 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 213, 214
+  unknown: 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 213, 214
 hy4-preview               cached=1   current=0   stale=0   unknown=1
   unknown: 109
 ```
+
+**Three of the twenty-nine are current, and that is a change to the cache rather than to this code.**
+Cases 101, 102 and 103 were rewritten by the 29-case re-run of 2026-09-22, twenty-one minutes after
+this block was first written, and that run's code recorded a prompts digest. Their briefs still
+match, their prompts now match, and the prompt channel can be answered for them. The figure this
+note was originally written to report — `current=0` — was the honest reading of the cache as it
+stood at 21:27; the re-run moved it, and the block above is re-derived from the cache rather than
+edited by hand.
 
 Twelve of twenty-nine results are stale, and every one of them is a NO_SHOW_CHARGE case
 carrying a GPS trace. Cases 201 through 212 are stale, exactly as expected; nothing else is.
@@ -82,8 +93,10 @@ what makes the count checkable rather than merely observed. `accumulated_dwell` 
 only on NO_SHOW traces, so the accumulated-dwell change can move the brief of a NO_SHOW case
 and nothing else: cases 101 through 115 are ROUTE_DEVIATION and cannot be touched by it. Case
 213 is NO_SHOW but its GPS artifact is `MISSING`, so no derived block exists and its brief is
-unchanged. Case 214 was re-run after the shortfall-basis change, so its result is current.
-Twelve cases could move, and twelve are stale.
+unchanged. Case 214 was re-run after the shortfall-basis change, so its brief is current — and its
+result still reads `unknown`, because the brief channel agreeing says nothing about which prompts
+produced it. Cases 101, 102 and 103 were re-run later still, which is why they read `current`
+above. Twelve cases could move, and twelve are stale.
 
 ### How that was established
 
@@ -359,8 +372,9 @@ against them in one step.
    `python_version` beside the `brief_sha256` it already kept. The run's own `run.json` carries
    the interpreter too, so a run whose per-case entries have been lost still says what built
    its briefs. **The entries already under `runs/` predate the field**, which is why the prompt
-   channel reports them `unknown` and why `current=0` above is the honest reading rather than a
-   regression.
+   channel reports fourteen of them `unknown` rather than a regression. The three that do not are
+   the three the 2026-09-22 re-run rewrote after the field existed, and they are the only ones
+   the prompt channel can answer at all.
 
 3. **The run record is no longer destroyed.** `run.json` still describes the invocation that
    wrote it — it is rewritten after every case, which is what keeps an interrupted run's

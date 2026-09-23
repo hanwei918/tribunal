@@ -143,6 +143,7 @@ __all__ = [
     "FAILURE_TRANSPORT",
     "FAILURE_SHAPE",
     "FAILURE_INTERRUPTED",
+    "FAILURE_DEADLINE",
     "FAILURE_NOTE",
     "INVOCATIONS_FILE",
     "failure_kind_for",
@@ -166,6 +167,7 @@ __all__ = [
     "provenance",
     "run_one_case",
     "format_progress",
+    "format_start",
     "grade_run",
     "run_benchmark",
     "collect_comparison",
@@ -233,6 +235,11 @@ FAILURE_TIMEOUT = "TIMEOUT"
 FAILURE_TRANSPORT = "TRANSPORT"
 FAILURE_SHAPE = "SHAPE"
 FAILURE_INTERRUPTED = "INTERRUPTED"
+# A fourth kind, because "the client gave up after its deadline" is a different
+# event from "one request waited too long" and the run metadata must not merge
+# them. A timeout is a property of one request; a deadline is a bound the run
+# put on itself, so the response is to change the bound rather than the model.
+FAILURE_DEADLINE = "DEADLINE"
 
 # What each kind means, in the words the record carries. Short, because a reader
 # scanning a failures list needs to tell the three apart at a glance.
@@ -253,6 +260,13 @@ FAILURE_NOTE = {
     FAILURE_INTERRUPTED: (
         "the run was interrupted while this case was in flight, so it says "
         "nothing about the model"
+    ),
+    FAILURE_DEADLINE: (
+        "the client or the case reached its own total deadline and stopped "
+        "rather than starting work it had no time to finish; this is a bound the "
+        "run put on itself and not a property of the model, so the answer is a "
+        "larger deadline or a faster model, and neither a retry nor a longer "
+        "per-attempt timeout would change it"
     ),
 }
 
@@ -847,9 +861,26 @@ def failure_kind_for(exc: BaseException) -> str:
     timeout carries — wait longer — would be wrong. The message still says
     "timed out", so the distinction is visible even where the kind does not
     separate it.
+
+    A **deadline** is its own kind, and it is checked first. Two layers raise
+    one — ``llm.DeadlineExceededError`` when one call spends its budget, and
+    ``pipeline.CaseDeadlineExceeded`` when a whole case does — and a reader acts
+    on both the same way. Neither is a timeout: nothing waited too long, the run
+    stopped itself, so "wait longer" is the wrong advice and the limit is the
+    thing to change. They are also deliberately not subclasses of
+    ``TimeoutError``; the isinstance order here is written out anyway so that a
+    future subclass of both cannot be demoted into the kind whose advice is
+    exactly wrong for it.
     """
     if isinstance(exc, KeyboardInterrupt):
         return FAILURE_INTERRUPTED
+    # Both deadlines before the timeout, and deliberately. A deadline is an
+    # ``LLMError`` or a ``PipelineError`` rather than a ``TimeoutError``, but the
+    # order is stated anyway so a future subclass of either that also inherits
+    # from ``TimeoutError`` cannot be demoted into the kind whose advice --
+    # "wait longer" -- is exactly wrong for it.
+    if isinstance(exc, (llm.DeadlineExceededError, pipeline.CaseDeadlineExceeded)):
+        return FAILURE_DEADLINE
     if isinstance(exc, (TimeoutError, socket.timeout)):
         return FAILURE_TIMEOUT
     return FAILURE_TRANSPORT
@@ -872,6 +903,7 @@ def run_one_case(
     prompts_dir: Path,
     expected: Optional[grade.Ruling],
     case_provenance: Optional[Mapping[str, Any]] = None,
+    case_deadline_seconds: float = pipeline.DEFAULT_CASE_DEADLINE_SECONDS,
 ) -> Tuple[CaseOutcome, Optional[Dict[str, Any]], Optional[str]]:
     """Run one case. Returns ``(outcome, cache document, transcript json)``.
 
@@ -883,7 +915,14 @@ def run_one_case(
 
     A failure is classified rather than merely described. A timeout and an
     unusable answer call for opposite responses, so the record says which one
-    happened instead of leaving it to be read out of the exception's text.
+    happened instead of leaving it to be read out of the exception's text. A
+    deadline is a third kind for the same reason: the client or the case gave up
+    at a bound the run set for itself, which is answered by changing the bound.
+
+    ``case_deadline_seconds`` is passed straight through to
+    :func:`tribunal.pipeline.run_case`. It is a parameter here rather than a
+    module constant so a test can shorten it and see the failure the deadline
+    produces.
 
     ``case_provenance`` is recorded inside the cache entry, beside the brief
     digest it belongs to. Provenance kept only in the run's own metadata file is
@@ -891,7 +930,12 @@ def run_one_case(
     """
     started = time.monotonic()
     try:
-        result = pipeline.run_case(case_no, client, prompts_dir=prompts_dir)
+        result = pipeline.run_case(
+            case_no,
+            client,
+            prompts_dir=prompts_dir,
+            case_deadline_seconds=case_deadline_seconds,
+        )
     except (llm.MissingAPIKeyError, llm.ModelNotProvisionedError):
         raise
     except Exception as exc:  # noqa: BLE001 - any transport or parse failure is a case failure
@@ -1067,6 +1111,22 @@ def format_progress(outcome: CaseOutcome, position: int, total: int) -> str:
     return line
 
 
+def format_start(case_no: int, position: int, total: int) -> str:
+    """The line printed when a case **starts**, not when it finishes.
+
+    A run that prints only on completion cannot say what is in flight. That is
+    not hypothetical: the run of 2026-09-22 wrote its last line at 07:25 and then
+    produced nothing for 1 h 48 m, and the last line of output named a case that
+    had already finished — so the terminal could not distinguish a hung case from
+    a long one, and the process had to be probed by hand to find out which it
+    was. This line makes the last line of output name the case being worked on.
+
+    Deliberately shorter than the completion line: it is emitted before a result
+    exists, so it carries only what is known at that moment.
+    """
+    return "[{0:>3}/{1}] case {2}  started".format(position, total, case_no)
+
+
 # --------------------------------------------------------------------------
 # The run
 # --------------------------------------------------------------------------
@@ -1085,6 +1145,10 @@ class RunSummary:
     token_budget: Optional[int] = None
     concurrency: int = DEFAULT_CONCURRENCY
     timeout_seconds: float = llm.DEFAULT_TIMEOUT_SECONDS
+    # The bound on one CASE, beside the bound on one ATTEMPT. Recorded for the
+    # same reason: a case that stopped at a 2400-second deadline and one that
+    # stopped at a 241-minute one are not the same measurement.
+    case_deadline_seconds: float = pipeline.DEFAULT_CASE_DEADLINE_SECONDS
     tokens_spent: int = 0
     tokens_reused: int = 0
 
@@ -1117,6 +1181,18 @@ class RunSummary:
         is answered in the prompt or the model. Neither is answered by the other.
         """
         return [outcome for outcome in self.failures if outcome.failure_kind == FAILURE_TIMEOUT]
+
+    @property
+    def deadlines(self) -> List[CaseOutcome]:
+        """The failures where the run stopped itself at a bound it had set.
+
+        Separate from :attr:`timeouts` for the same reason a timeout is separate
+        from a shape failure: the two read alike under a generic label and call
+        for different responses. A timeout is a property of one request; a
+        deadline is a property of the run's own configuration, so the answer is
+        to change the configuration.
+        """
+        return [outcome for outcome in self.failures if outcome.failure_kind == FAILURE_DEADLINE]
 
     @property
     def completed_cases(self) -> List[int]:
@@ -1160,6 +1236,7 @@ def run_benchmark(
     token_budget: Optional[int] = None,
     concurrency: int = DEFAULT_CONCURRENCY,
     timeout_seconds: float = llm.DEFAULT_TIMEOUT_SECONDS,
+    case_deadline_seconds: float = pipeline.DEFAULT_CASE_DEADLINE_SECONDS,
     client_factory: Optional[Callable[[Callable[[Dict[str, Any]], None]], Any]] = None,
     key: Optional[Mapping[int, grade.Ruling]] = None,
     git_runner: Optional[Callable[[Sequence[str]], Optional[str]]] = None,
@@ -1171,6 +1248,12 @@ def run_benchmark(
     ``model`` is required and has no default. ``client_factory`` exists so a
     test can drive the whole runner — real ``LLMClient``, real ``pipeline`` —
     over a fake transport with recorded bodies, and without a network.
+
+    Two time limits are in force and they are not the same limit.
+    ``timeout_seconds`` bounds one HTTP attempt; ``case_deadline_seconds``
+    bounds one whole case, all three agent calls and any shape retry included.
+    Both default to the value the layer below declares, rather than repeating
+    the number here, so the two cannot drift apart.
     """
     if not model:
         raise BenchmarkError("model is required and has no default; name the model explicitly")
@@ -1181,6 +1264,12 @@ def run_benchmark(
         # every call, and a caller who passed one meant something else.
         raise BenchmarkError(
             "timeout_seconds must be positive, got {0}".format(timeout_seconds)
+        )
+    if case_deadline_seconds <= 0:
+        # Same rule, and for the same reason: a non-positive deadline would fail
+        # every case at its first check, which is never what a caller meant.
+        raise BenchmarkError(
+            "case_deadline_seconds must be positive, got {0}".format(case_deadline_seconds)
         )
     if token_budget is not None and token_budget < 0:
         raise BenchmarkError("token_budget cannot be negative")
@@ -1278,6 +1367,7 @@ def run_benchmark(
             token_budget=token_budget,
             concurrency=concurrency,
             timeout_seconds=timeout_seconds,
+            case_deadline_seconds=case_deadline_seconds,
             tokens_spent=state["spent"],
             tokens_reused=tokens_reused,
         )
@@ -1318,6 +1408,7 @@ def run_benchmark(
                 prompts_dir=prompts_dir,
                 expected=resolved_key.get(case_no),
                 case_provenance=run_provenance,
+                case_deadline_seconds=case_deadline_seconds,
             )
 
         workers = max(1, concurrency)
@@ -1334,6 +1425,12 @@ def run_benchmark(
                         state["stop_reason"] = STOP_BUDGET
                         break
                     case_no = queue.pop(0)
+                    # Announced here, on the thread that owns the queue, and
+                    # before the work is handed to a worker. A line printed from
+                    # inside the worker could be scheduled after a later case's
+                    # completion line, and the point of the line is that the
+                    # last one on the terminal names what is still in flight.
+                    progress(format_start(case_no, positions[case_no], total))
                     in_flight[pool.submit(execute, case_no)] = case_no
 
                 if not in_flight:
@@ -1416,6 +1513,7 @@ def run_benchmark(
         token_budget=token_budget,
         concurrency=concurrency,
         timeout_seconds=timeout_seconds,
+        case_deadline_seconds=case_deadline_seconds,
         tokens_spent=state["spent"],
         tokens_reused=tokens_reused,
     )
@@ -1483,6 +1581,7 @@ def _metadata_document(
     token_budget: Optional[int],
     concurrency: int,
     timeout_seconds: float,
+    case_deadline_seconds: float,
     tokens_spent: int,
     tokens_reused: int,
 ) -> Dict[str, Any]:
@@ -1513,6 +1612,10 @@ def _metadata_document(
         # 600-second limit are not the same measurement, and a reader comparing
         # two runs has to be able to see that the limit moved.
         "timeout_seconds": timeout_seconds,
+        # And the bound on the whole case, beside the bound on one attempt. A
+        # DEADLINE failure is only interpretable against the limit that produced
+        # it, so the limit travels with the result.
+        "case_deadline_seconds": case_deadline_seconds,
         "token_budget": token_budget,
         "git_commit": run_provenance.get("git_commit"),
         "working_tree_clean": run_provenance.get("working_tree_clean"),
@@ -2018,13 +2121,15 @@ def print_summary(summary: RunSummary) -> None:
             len(summary.failures),
         )
     )
-    # The limit is printed on every run, not only when it was hit. A result
+    # The limits are printed on every run, not only when one was hit. A result
     # produced under a 600-second timeout is not the same measurement as one
-    # produced under 120 seconds, and the reader should not have to open the
-    # metadata to find out which they are looking at.
+    # produced under 120 seconds, and a case stopped at a 2400-second deadline is
+    # not the same measurement as one stopped at 241 minutes. The reader should
+    # not have to open the metadata to find out which they are looking at.
     print(
-        "limits      timeout {0:g}s, concurrency {1}".format(
-            summary.timeout_seconds, summary.concurrency
+        "limits      timeout {0:g}s per attempt, case deadline {1:g}s, "
+        "concurrency {2}".format(
+            summary.timeout_seconds, summary.case_deadline_seconds, summary.concurrency
         )
     )
     if summary.timeouts:
@@ -2032,6 +2137,14 @@ def print_summary(summary: RunSummary) -> None:
             "            {0} of the failures were timeouts: the client stopped "
             "waiting, which is answered with a longer timeout or a faster model "
             "rather than a retry".format(len(summary.timeouts))
+        )
+    if summary.deadlines:
+        print(
+            "            {0} of the failures hit a deadline: the run stopped "
+            "itself rather than starting work it had no time to finish, which is "
+            "answered by raising the deadline or using a faster model".format(
+                len(summary.deadlines)
+            )
         )
     print(
         "tokens      {0:,} spent this run, {1:,} reused from cache".format(
@@ -2266,6 +2379,18 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             "a quick probe)".format(llm.DEFAULT_TIMEOUT_SECONDS)
         ),
     )
+    parser.add_argument(
+        "--case-deadline",
+        type=float,
+        default=pipeline.DEFAULT_CASE_DEADLINE_SECONDS,
+        metavar="SECONDS",
+        help=(
+            "total time one case may consume, all three agent calls and any "
+            "retry included (default {0:g}, the pipeline's own default; a case "
+            "that exceeds it is recorded as a DEADLINE failure and the run "
+            "continues)".format(pipeline.DEFAULT_CASE_DEADLINE_SECONDS)
+        ),
+    )
     parser.add_argument("--runs-dir", type=Path, default=RUNS_DIR)
     parser.add_argument("--prompts-dir", type=Path, default=PROMPTS_DIR)
     args = parser.parse_args(argv)
@@ -2299,6 +2424,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             token_budget=args.token_budget,
             concurrency=args.concurrency,
             timeout_seconds=args.timeout,
+            case_deadline_seconds=args.case_deadline,
         )
     except llm.ModelNotProvisionedError as exc:
         print("FATAL: {0}".format(exc), file=sys.stderr)

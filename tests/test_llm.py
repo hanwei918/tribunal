@@ -666,6 +666,153 @@ class TimeoutContractTests(unittest.TestCase):
         self.assertIn("timed out", str(caught.exception))
 
 
+class SlowTransport:
+    """A transport that spends time and then answers.
+
+    It advances the injected clock by the wall time the call "took" and returns
+    the next scripted response. Advancing the clock here rather than sleeping
+    keeps the test instant while leaving the client's arithmetic real: a real
+    attempt spends wall time waiting, and that is what a deadline has to count.
+    """
+
+    def __init__(self, clock, per_call_seconds, *responses) -> None:
+        self.clock = clock
+        self.per_call_seconds = per_call_seconds
+        self.responses = list(responses)
+        self.calls = []
+
+    def __call__(self, url, headers, body, timeout):
+        self.calls.append({"url": url, "headers": dict(headers), "body": body, "timeout": timeout})
+        self.clock.now += self.per_call_seconds
+        if not self.responses:
+            raise AssertionError("SlowTransport ran out of scripted responses")
+        nxt = self.responses.pop(0)
+        if isinstance(nxt, Exception):
+            raise nxt
+        return nxt
+
+
+class CallDeadlineTests(unittest.TestCase):
+    """The total deadline for one call, beside the per-attempt timeout.
+
+    ``timeout_seconds`` bounds **one attempt** and ``max_attempts`` multiplies
+    it, so before a second limit existed the worst case for a single call was
+    four attempts of it plus backoff. Measured on 2026-09-22: a real run wrote
+    its last case at 07:25 and was still alive at 09:13 with no output, while a
+    direct probe of the endpoint answered HTTP 200 in 0.95 s. The provider was
+    fine; the limits simply did not multiply to anything bounded.
+
+    These tests drive the client through its injected transport and clock, so
+    the deadline is reached in virtual time.
+    """
+
+    # Chosen so the arithmetic is legible: two attempts fit inside the deadline,
+    # and the third never could.
+    ATTEMPT_SECONDS = 600.0
+    DEADLINE_SECONDS = 1200.0
+
+    def client_with(self, per_call_seconds, *responses, **overrides):
+        """A client whose transport spends ``per_call_seconds`` per attempt."""
+        clock = VirtualClock()
+        transport = SlowTransport(clock, per_call_seconds, *responses)
+        kwargs = dict(
+            timeout_seconds=self.ATTEMPT_SECONDS,
+            total_deadline_seconds=self.DEADLINE_SECONDS,
+            clock=clock.clock,
+            sleep=clock.sleep,
+        )
+        kwargs.update(overrides)
+        client, _ = make_client(transport, **kwargs)
+        return client, transport, clock
+
+    def test_no_attempt_starts_that_cannot_finish_inside_the_deadline(self):
+        """The discriminating case: the deadline has NOT passed, yet it refuses.
+
+        After a 700-second attempt the clock reads 700 of 1200, so an
+        after-the-fact check would happily begin a second attempt and run to
+        1400. A pre-attempt check refuses it, because a whole
+        ``timeout_seconds`` no longer fits. That is the difference the
+        requirement asks for, and this is the only arrangement where the two
+        behave differently.
+        """
+        client, transport, _ = self.client_with(
+            700.0, *[http(503, b"") for _ in range(4)]
+        )
+
+        with self.assertRaises(llm.DeadlineExceededError) as caught:
+            client.complete("sys", "user")
+
+        self.assertEqual(1, len(transport.calls), "no attempt may start that cannot finish")
+        self.assertEqual(1, caught.exception.attempts)
+        # The clock also carries the 1-second backoff slept after the attempt,
+        # so the assertion is on the property that matters -- the deadline had
+        # not yet passed when the refusal happened -- rather than on the figure.
+        self.assertGreaterEqual(caught.exception.elapsed_seconds, 700.0)
+        self.assertLess(caught.exception.elapsed_seconds, self.DEADLINE_SECONDS)
+
+    def test_a_call_that_reaches_the_deadline_raises_the_deadline_failure(self):
+        """Not the timeout kind: nothing waited too long, the budget ran out."""
+        client, transport, _ = self.client_with(
+            self.DEADLINE_SECONDS, *[http(503, b"") for _ in range(4)]
+        )
+
+        with self.assertRaises(llm.DeadlineExceededError) as caught:
+            client.complete("sys", "user")
+
+        self.assertIsInstance(caught.exception, llm.LLMError)
+        self.assertNotIsInstance(caught.exception, TimeoutError)
+        self.assertEqual(1, len(transport.calls), "the retries stop at the deadline")
+        self.assertLess(len(transport.calls), llm.DEFAULT_MAX_ATTEMPTS)
+        self.assertGreaterEqual(caught.exception.elapsed_seconds, self.DEADLINE_SECONDS)
+        # The reason names the limit and the budget left, so a reader does not
+        # have to open the code to learn what was hit.
+        self.assertIn("deadline", str(caught.exception))
+
+    def test_the_per_attempt_timeout_still_behaves_as_before(self):
+        """Inside the deadline the retry logic is untouched."""
+        client, transport, clock = self.client_with(
+            0.0, http(503, b""), http(503, b""), http(200, usage_body())
+        )
+
+        result = client.complete("sys", "user")
+
+        self.assertEqual(result.status, 200)
+        self.assertEqual(result.attempts, 3)
+        self.assertEqual(len(transport.calls), 3)
+        # The per-attempt timeout still reaches the socket unchanged, which is
+        # what makes the two limits separable rather than one replacing the other.
+        self.assertEqual(
+            [self.ATTEMPT_SECONDS] * 3, [call["timeout"] for call in transport.calls]
+        )
+        self.assertEqual([1.0, 2.0], clock.sleeps, "backoff is unchanged")
+
+    def test_a_deadline_below_one_attempt_is_refused_not_clamped(self):
+        """Clamping would silently turn every call into a single-attempt one."""
+        with self.assertRaises(llm.LLMError):
+            make_client(FakeTransport(), timeout_seconds=600.0, total_deadline_seconds=599.0)
+
+    def test_the_default_leaves_room_for_a_full_retry(self):
+        """The derivation, asserted instead of the number restated.
+
+        A retry after an attempt that ran into the per-attempt timeout is the
+        one thing ``max_attempts`` exists for, so the default has to be at least
+        two of them -- and a default below one attempt would be a client that
+        cannot make a call at all.
+        """
+        self.assertGreaterEqual(llm.DEFAULT_TOTAL_DEADLINE_SECONDS, llm.DEFAULT_TIMEOUT_SECONDS)
+        self.assertGreaterEqual(
+            llm.DEFAULT_TOTAL_DEADLINE_SECONDS, 2 * llm.DEFAULT_TIMEOUT_SECONDS
+        )
+        # And it must be a bound rather than a restatement of the unbounded
+        # worst case it was added to remove.
+        unbounded = llm.DEFAULT_MAX_ATTEMPTS * llm.DEFAULT_TIMEOUT_SECONDS
+        self.assertLess(llm.DEFAULT_TOTAL_DEADLINE_SECONDS, unbounded)
+
+    def test_the_deadline_is_not_a_hidden_value(self):
+        client, _, _ = self.client_with(0.0, http(200, usage_body()))
+        self.assertIn("total_deadline_seconds=1200.0", repr(client))
+
+
 class RequestBodyTests(unittest.TestCase):
     """Reasoning is ON by default, and any optional key can be left to the provider."""
 

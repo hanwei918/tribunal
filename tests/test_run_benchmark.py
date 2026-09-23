@@ -559,15 +559,22 @@ class CleanRunTests(unittest.TestCase):
 # Progress
 # --------------------------------------------------------------------------
 class ProgressTests(unittest.TestCase):
-    """One line per case, printed as it lands rather than at the end."""
+    """One result line per case, printed as it lands rather than at the end."""
 
     def test_one_line_per_case_names_the_number_verdict_clock_and_tokens(self):
         lines = []
         with tempfile.TemporaryDirectory() as tmp:
             bench(tmp, progress=lines.append)
 
-        self.assertEqual(len(CASE_SET), len(lines), "a case printed no line")
-        for case_no, line in zip(CASE_SET, lines):
+        # Two lines per case: one when it starts and one when it lands. The
+        # result line is the one carrying the verdict, the clock and the tokens,
+        # so it is the one held to all three; the start line carries what is
+        # known before a result exists, which is only the case and its position.
+        started = [line for line in lines if line.endswith("started")]
+        done = [line for line in lines if not line.endswith("started")]
+        self.assertEqual(len(CASE_SET), len(started), "a case was not announced as starting")
+        self.assertEqual(len(CASE_SET), len(done), "a case printed no result line")
+        for case_no, line in zip(CASE_SET, done):
             with self.subTest(case_no=case_no):
                 self.assertIn("case {0}".format(case_no), line)
                 self.assertIn("match", line)
@@ -1120,6 +1127,216 @@ class RequestTimeoutTests(unittest.TestCase):
 
 
 # --------------------------------------------------------------------------
+# The deadline
+# --------------------------------------------------------------------------
+class DeadlineTests(unittest.TestCase):
+    """The bound on one case, and the failure kind it produces.
+
+    Two limits are in force and the runner must not merge them: the per-attempt
+    timeout says one request waited too long, and the deadline says the run
+    stopped itself before starting work it had no time to finish. On 2026-09-22
+    a run wrote its last case at 07:25 and was still alive at 09:13 with no
+    output, while the provider answered a direct probe in 0.95 s -- so this is a
+    defect found by measurement, not a hypothetical one.
+    """
+
+    def test_both_deadlines_are_classified_under_their_own_kind(self):
+        """Two layers raise it and a reader acts on them the same way."""
+        cases = [
+            (
+                llm.DeadlineExceededError(
+                    "gave up", elapsed_seconds=1201.0, attempts=1
+                ),
+                runner.FAILURE_DEADLINE,
+            ),
+            (
+                pipeline.CaseDeadlineExceeded(
+                    "case 106 exceeded its deadline", elapsed_seconds=2401.0, case_no=106
+                ),
+                runner.FAILURE_DEADLINE,
+            ),
+        ]
+        for exc, expected in cases:
+            with self.subTest(exception=type(exc).__name__):
+                self.assertEqual(expected, runner.failure_kind_for(exc))
+                self.assertNotEqual(
+                    runner.FAILURE_TIMEOUT,
+                    runner.failure_kind_for(exc),
+                    "the client giving up is not one request waiting too long",
+                )
+
+    def test_the_deadline_kind_has_its_own_note(self):
+        """The note is what tells a reader what to DO, so it must not be shared."""
+        self.assertIn(runner.FAILURE_DEADLINE, runner.FAILURE_NOTE)
+        self.assertNotEqual(
+            runner.FAILURE_NOTE[runner.FAILURE_DEADLINE],
+            runner.FAILURE_NOTE[runner.FAILURE_TIMEOUT],
+        )
+        reason = runner.failure_reason_for(runner.FAILURE_DEADLINE, "detail")
+        self.assertTrue(reason.startswith(runner.FAILURE_DEADLINE + ": "))
+
+    def test_a_case_that_hit_its_deadline_is_failed_and_the_run_continues(self):
+        """A deadline is a failed case, not a failed run, and it carries the time."""
+        key = answer_key()
+        scripted = ScriptedTransport(produced_from_key(key))
+
+        def deadline_for_102(url, headers, body, timeout):
+            request = json.loads(body.decode("utf-8"))
+            if role_of(request)[0] == 102:
+                raise pipeline.CaseDeadlineExceeded(
+                    "case 102 exceeded its 2400 s deadline after 2401.0 s",
+                    elapsed_seconds=2401.0,
+                    case_no=102,
+                )
+            return scripted(url, headers, body, timeout)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, _ = bench(tmp, cases=CASE_SET, transport=deadline_for_102)
+            cached = runner.cached_case_numbers(summary.run_dir)
+
+        self.assertEqual(runner.STOP_COMPLETED, summary.stop_reason)
+        self.assertEqual([102], [outcome.case_no for outcome in summary.failures])
+        self.assertEqual(runner.FAILURE_DEADLINE, summary.failures[0].failure_kind)
+        self.assertEqual([], summary.timeouts, "a deadline is not a timeout")
+        self.assertEqual([101, 103], sorted(summary.completed_cases))
+        self.assertEqual([101, 103], sorted(cached))
+        self.assertNotIn(102, cached, "a case that ran out of time must not be cached")
+        # Named, with the elapsed time: the figure the limit was measured
+        # against, not only the limit.
+        self.assertIn("2401.0 s", summary.failures[0].failure_reason or "")
+        self.assertFalse(summary.ok, "a run with a failed case is not ok")
+
+    def test_the_pipelines_own_deadline_reaches_the_runner(self):
+        """End to end, through the real pipeline, with no model call at all.
+
+        A deadline already spent when the case begins stops it at its first
+        check, so the transport is never called. That is the property the
+        pre-attempt check exists for, and it is visible here as zero requests.
+        """
+        key = answer_key()
+        transport = ScriptedTransport(produced_from_key(key))
+
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, _ = bench(
+                tmp, cases=(101,), transport=transport, case_deadline_seconds=1e-9
+            )
+            cached = runner.cached_case_numbers(summary.run_dir)
+
+        self.assertEqual(runner.FAILURE_DEADLINE, summary.failures[0].failure_kind)
+        self.assertEqual(0, transport.calls(), "no call may start once the budget is gone")
+        self.assertEqual([], cached)
+        self.assertEqual([], summary.completed_cases)
+
+    def test_the_runner_defaults_to_the_pipelines_own_default(self):
+        """One source for the number, so the two layers cannot drift apart."""
+        import inspect
+
+        parameters = inspect.signature(runner.run_benchmark).parameters
+        self.assertEqual(
+            pipeline.DEFAULT_CASE_DEADLINE_SECONDS,
+            parameters["case_deadline_seconds"].default,
+        )
+        self.assertEqual(
+            pipeline.DEFAULT_CASE_DEADLINE_SECONDS,
+            inspect.signature(runner.run_one_case).parameters["case_deadline_seconds"].default,
+        )
+
+    def test_the_deadline_in_force_is_recorded_in_the_run_metadata(self):
+        """A case stopped at 2400 s is not the same measurement as one stopped at 241 minutes."""
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, _ = bench(tmp, case_deadline_seconds=99.0)
+            metadata = runner.read_json(runner.metadata_path(summary.run_dir))
+
+        self.assertEqual(99.0, metadata["case_deadline_seconds"])
+        self.assertEqual(99.0, summary.case_deadline_seconds)
+
+    def test_a_non_positive_case_deadline_is_refused(self):
+        """Refused rather than clamped: it would fail every case at the first check."""
+        for value in (0.0, -1.0):
+            with self.subTest(value=value):
+                with tempfile.TemporaryDirectory() as tmp:
+                    with self.assertRaises(runner.BenchmarkError):
+                        bench(tmp, cases=(101,), case_deadline_seconds=value)
+
+    def test_the_default_is_a_bound_and_still_clears_the_slowest_case(self):
+        """Derived from measurement, asserted as the derivation rather than the number.
+
+        The slowest completed case in the corpus is 978.8 s, so a default at or
+        below that would fail the slowest thing actually seen. It also has to
+        accommodate three calls each running into the per-attempt timeout, and
+        still be a bound on the 241-minute worst case it was added to remove.
+        """
+        self.assertGreater(pipeline.DEFAULT_CASE_DEADLINE_SECONDS, 978.8)
+        self.assertGreaterEqual(
+            pipeline.DEFAULT_CASE_DEADLINE_SECONDS, 3 * llm.DEFAULT_TIMEOUT_SECONDS
+        )
+        self.assertLess(pipeline.DEFAULT_CASE_DEADLINE_SECONDS, 241 * 60)
+
+
+class StartLineTests(unittest.TestCase):
+    """A hang must be visible while it is happening, not after."""
+
+    def test_the_start_line_names_the_case_and_its_position(self):
+        self.assertEqual("[  2/30] case 106  started", runner.format_start(106, 2, 30))
+
+    def test_the_start_line_is_printed_before_the_case_runs(self):
+        """The ordering is the whole feature: the last line must name what is in flight.
+
+        On 2026-09-22 the terminal's last line named a case that had already
+        finished, so nothing on screen distinguished a hung case from a long one
+        and the process had to be probed by hand. A line emitted from inside the
+        worker could be scheduled after a later case's completion line, so it is
+        emitted on the queue's own thread, before the work is submitted.
+        """
+        key = answer_key()
+        events = []
+        scripted = ScriptedTransport(produced_from_key(key))
+
+        def recording_transport(url, headers, body, timeout):
+            request = json.loads(body.decode("utf-8"))
+            events.append(("call", role_of(request)[0]))
+            return scripted(url, headers, body, timeout)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            bench(
+                tmp,
+                cases=CASE_SET,
+                transport=recording_transport,
+                progress=events.append,
+            )
+
+        lines = [event for event in events if isinstance(event, str)]
+        # One start and one completion line per case, and nothing else.
+        self.assertEqual(2 * len(CASE_SET), len(lines))
+        for position, case_no in enumerate(CASE_SET, start=1):
+            with self.subTest(case_no=case_no):
+                start_line = runner.format_start(case_no, position, len(CASE_SET))
+                self.assertIn(start_line, lines)
+                first_call = min(
+                    index
+                    for index, event in enumerate(events)
+                    if event == ("call", case_no)
+                )
+                self.assertLess(
+                    events.index(start_line),
+                    first_call,
+                    "the line must be on the terminal before the work starts",
+                )
+
+    def test_the_start_line_is_not_printed_for_a_case_already_cached(self):
+        """Nothing starts, so nothing is announced as starting."""
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            bench(tmp, runs_dir=runs)
+            events = []
+            bench(tmp, runs_dir=runs, progress=events.append)
+
+        lines = [event for event in events if isinstance(event, str)]
+        self.assertEqual([], [line for line in lines if line.endswith("started")])
+        self.assertEqual(len(CASE_SET), len(lines), "the reuse lines are still printed")
+
+
+# --------------------------------------------------------------------------
 # Interrupting
 # --------------------------------------------------------------------------
 class InterruptTests(unittest.TestCase):
@@ -1626,11 +1843,24 @@ class ConcurrencyTests(unittest.TestCase):
             self.assertEqual(len(cases), summary.report.exact_matches)
 
     def test_concurrent_cases_print_one_line_each(self):
+        """Two per case at any concurrency: announced once, reported once.
+
+        The start line is emitted on the thread that owns the queue rather than
+        from inside a worker, which is what keeps the count exact however many
+        cases are in flight at once.
+        """
         lines = []
         cases = (101, 102, 103, 105)
         with tempfile.TemporaryDirectory() as tmp:
             bench(tmp, cases=cases, concurrency=4, progress=lines.append)
-        self.assertEqual(len(cases), len(lines))
+        started = [line for line in lines if line.endswith("started")]
+        done = [line for line in lines if not line.endswith("started")]
+        self.assertEqual(len(cases), len(started))
+        self.assertEqual(len(cases), len(done))
+        self.assertEqual(
+            sorted(cases),
+            sorted(int(line.split("case ")[1].split()[0]) for line in done),
+        )
 
     # -- the limiter itself ------------------------------------------------
     def _run_together(self, client, threads):
