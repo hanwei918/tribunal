@@ -109,10 +109,12 @@ different responses, so no report merges them into one word: the per-case cell r
 `**STALE (brief)**` or `**STALE (prompt)**`, and the progress line names the digest that moved. The
 **prompt** channel can be answered for three of the cached results — cases 101, 102 and 103, which
 the 2026-09-22 re-run rewrote after the field existed — and the other twenty-six are `unknown`
-there rather than `current`, which is why the note's block reads `current=3`. `unknown` is not
-`current`. The prompt set has in fact already moved twice: the run records carry two different
-digests and neither is what the directory hashes to now, and until the channel existed nothing said
-so.
+there rather than `current`. `unknown` is not `current`, and `current` is not a standing property
+either: the note's block read `current=3` while those three agreed with the directory, and it reads
+`current=0` now that the judge prompt has been amended. Fifteen results are stale — twelve on the
+brief channel and three on the prompt channel. The prompt set has in fact already moved three times:
+the run records carry two different digests, three per-case entries carry a third, and none of them
+is what the directory hashes to now.
 
 **That count is the same under any interpreter now, and it was not always.** The brief carries an
 unrounded mean distance, and `sum()`'s float semantics changed in Python 3.12, so the same cache

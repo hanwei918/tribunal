@@ -126,6 +126,19 @@ amount is held rather than collected or refunded.
 it. A case can be `ESCALATE` and still carry a non-empty referral instructing the human reviewer
 what to do.
 
+**A referral exists only where a clause produces one.** POL-GEN-03 defines a referral as what a
+clause adds to a ruling, so it is not a place to put a request of your own. **Every referral leads
+with the clause reference that produces it.** The clauses POL-GEN-03 names are POL-RD-06(c)
+driver-conduct review, POL-RD-09(4) billing integrity and POL-NS-05(ii) false-arrival record;
+POL-NS-07 is a fourth, because that clause directs its escalation packet to instruct the reviewer.
+Read the governing clause text to decide whether one fires. Do not infer a referral from a desire to
+be helpful: a case that leaves you with an open question is not thereby a case that produces a
+referral.
+
+**An open question belongs in `explanation`.** `referrals` is a list of clause-mandated instructions
+that a platform acts on, so it carries only what a clause requires. A question for the human reviewer
+is useful and costs nothing in the ruling's `explanation`, where it belongs.
+
 **On a `DRIVER_COMPENSATION` ruling, `amount_sgd` carries the SAME figure as
 `driver_compensation_sgd`.** It is the amount the ruling moves, not a second payment and not a refund
 to the filing party. POL-GEN-03 states this.

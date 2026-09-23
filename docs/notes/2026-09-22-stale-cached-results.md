@@ -12,11 +12,18 @@ about, the three causes and the change are unaffected.
 **The block was corrected a second time, later the same day, when the check gained a second
 channel.** It now compares the recorded *prompts* digest as well as the recorded brief digest, and
 it names which of the two moved, because "the facts changed" and "the instructions changed" are
-different findings that call for different responses. The cache records only a brief digest, so
-the prompt half of the check cannot be made for any of its entries: those results are reported
-`unknown`, not `current`. **That is the new channel working, and it is the reason the block reads
-`current=0` where it read `current=17`.** What the brief channel found is unchanged, and the three
-causes, the changes and the defect this note is about are unaffected.
+different findings that call for different responses. The entries written before the field existed
+record no prompts digest, so the prompt half of the check cannot be made for them: those results are
+reported `unknown`, not `current`. **That is the new channel working, and it is the reason the block
+stopped reading `current=17`.** What the brief channel found is unchanged, and the three causes, the
+changes and the defect this note is about are unaffected.
+
+**The block was corrected a third time when the judge prompt was amended**, which moved the prompt
+directory's digest from `457c896b07b3da23…` to `b131e63f046aecc6…`. That turned the three results
+which had recorded the older one — the only three whose prompt channel can be answered at all —
+from `current` into `**STALE (prompt)**`, so the block now reads `current=0 stale=15 unknown=14`.
+Nothing in the cache moved and nothing about the brief channel changed: editing a prompt is supposed
+to do this, and the channel reported it.
 
 ## The defect
 
@@ -57,11 +64,12 @@ them be read as one.
 - **The prompt channel** — the digest of the prompt directory. This channel is new, so the entries
   that predate it record nothing: **fourteen of the twenty-nine cannot have the prompt half of the
   check made at all.** The other three were rewritten after the field existed and can, and all three
-  agree with the code as it stands.
+  now read `**STALE (prompt)**`: they recorded a digest of the prompt directory as it stood then,
+  and the judge prompt has been amended since.
 
 A result whose prompt half cannot be checked is not stale for it — nothing moved — and it is not
 current either. It is **unknown**, the third answer, deliberately not a synonym for the first. That
-is why the block reads `current=3` where the brief channel alone would say seventeen: those
+is why the block reads `current=0` where the brief channel alone would say seventeen: those
 seventeen have a brief this code still builds, and fourteen of them cannot say which prompts
 produced them. Seventeen is still the brief channel's answer, and it is stated above in those terms
 rather than as a verdict.
@@ -69,34 +77,40 @@ rather than as a verdict.
 The block, measured under Python 3.9.6 — the interpreter that produced this cache:
 
 ```
-deepseek-deepseek-flash   cached=29  current=3   stale=12  unknown=14
-  current: 101, 102, 103
-  stale:   201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212
+deepseek-deepseek-flash   cached=29  current=0   stale=15  unknown=14
+  stale:   101, 102, 103, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212
   unknown: 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 213, 214
 hy4-preview               cached=1   current=0   stale=0   unknown=1
   unknown: 109
 ```
 
-**Three of the twenty-nine are current, and that is a change to the cache rather than to this code.**
-Cases 101, 102 and 103 were rewritten by the 29-case re-run of 2026-09-22, twenty-one minutes after
-this block was first written, and that run's code recorded a prompts digest. Their briefs still
-match, their prompts now match, and the prompt channel can be answered for them. The figure this
-note was originally written to report — `current=0` — was the honest reading of the cache as it
-stood at 21:27; the re-run moved it, and the block above is re-derived from the cache rather than
-edited by hand.
+**Nothing is current any more, and the last three moved for a different reason.** Cases 101, 102 and
+103 were the only results whose prompt channel could be answered: they were rewritten by the
+29-case re-run of 2026-09-22, twenty-one minutes after this block was first written, and that run's
+code recorded a prompts digest. It recorded `457c896b07b3da23…`, which is what the prompt directory
+hashed to then and not what it hashes to now, so those three read `**STALE (prompt)**`. Nothing
+about them changed in the cache; the judge prompt did. The block above is re-derived from the cache
+rather than edited by hand.
 
-Twelve of twenty-nine results are stale, and every one of them is a NO_SHOW_CHARGE case
-carrying a GPS trace. Cases 201 through 212 are stale, exactly as expected; nothing else is.
+Fifteen of twenty-nine results are stale, and they are stale for two different reasons that the
+report keeps apart. **Twelve are stale on the brief channel** — cases 201 through 212, every one of
+them a NO_SHOW_CHARGE case carrying a GPS trace. **Three are stale on the prompt channel** — cases
+101, 102 and 103, whose briefs this code still builds. The remaining fourteen are `unknown`, which
+is not `current`.
 
-That is also what the reasoning predicts, and the reasoning is worth stating because it is
+The brief channel is what the reasoning predicts, and the reasoning is worth stating because it is
 what makes the count checkable rather than merely observed. `accumulated_dwell` is published
 only on NO_SHOW traces, so the accumulated-dwell change can move the brief of a NO_SHOW case
 and nothing else: cases 101 through 115 are ROUTE_DEVIATION and cannot be touched by it. Case
 213 is NO_SHOW but its GPS artifact is `MISSING`, so no derived block exists and its brief is
 unchanged. Case 214 was re-run after the shortfall-basis change, so its brief is current — and its
 result still reads `unknown`, because the brief channel agreeing says nothing about which prompts
-produced it. Cases 101, 102 and 103 were re-run later still, which is why they read `current`
-above. Twelve cases could move, and twelve are stale.
+produced it. Twelve cases could move, and twelve are stale.
+
+The prompt channel is not predicted by that reasoning and should not be. The digest is taken over
+the whole directory, so editing any prompt moves every result that recorded one — including results
+whose brief is untouched, which is exactly what happened to 101, 102 and 103. That is the channel
+working, not a finding about those cases.
 
 ### How that was established
 
@@ -373,8 +387,9 @@ against them in one step.
    the interpreter too, so a run whose per-case entries have been lost still says what built
    its briefs. **The entries already under `runs/` predate the field**, which is why the prompt
    channel reports fourteen of them `unknown` rather than a regression. The three that do not are
-   the three the 2026-09-22 re-run rewrote after the field existed, and they are the only ones
-   the prompt channel can answer at all.
+   the three the 2026-09-22 re-run rewrote after the field existed, and they are the only ones the
+   prompt channel can answer at all — and all three read `**STALE (prompt)**`, because the judge
+   prompt has been amended since they were written.
 
 3. **The run record is no longer destroyed.** `run.json` still describes the invocation that
    wrote it — it is rewritten after every case, which is what keeps an interrupted run's
@@ -419,8 +434,8 @@ not used, because it would invalidate all 29 cached results rather than reproduc
   printing a bare accuracy.
 - The figures in "What the check found" were re-derived four ways: through `grade_run`, through
   an independent `money.dumps_canonical` sweep, through the six worktrees, and by running the
-  command this note quotes and diffing its output against the block. All four agree on 17
-  current and 12 stale.
+  command this note quotes and diffing its output against the block. All four agree on the brief
+  channel: 17 results whose brief this code still builds, 12 of them stale.
 - `NoteCouplingTests` was mutated twice to prove it bites. Restoring the old `8/21` block turns
   the cache comparison RED, and dropping one directory from the quoted command turns the
   command comparison RED. Both files were restored from copies and the suite re-run green.
@@ -432,8 +447,8 @@ not used, because it would invalidate all 29 cached results rather than reproduc
 - **The repair was measured before it was made**, by shadowing the module-global `sum` with a
   plain loop rather than editing the file: under 3.9.6 it changes 0 of 29 canonical briefs, and
   under 3.13.12 it turns nine from stale to current and loses none. The check was then run for
-  real under both interpreters and reports 17 current and 12 stale under each — where before it
-  reported 12 under one and 21 under the other.
+  real under both interpreters and gives the same brief-channel answer under each — 17 with a brief
+  this code still builds, 12 stale — where before it reported 12 under one and 21 under the other.
 - **The accumulation guard was mutated to prove it bites.** Pointing `_sum_in_order` at the
   builtin turns five tests RED under 3.13.12 — and one under 3.9.6, the source-level test, which
   is the guard that does not depend on which interpreter runs the suite. The file was restored

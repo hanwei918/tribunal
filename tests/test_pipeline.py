@@ -239,15 +239,16 @@ class PromptContractTests(unittest.TestCase):
         self.assertIn(pipeline.ADVOCATE_CLAIMS_KEY, example)
 
     def test_no_prompt_asks_for_a_json_array_under_json_object(self):
-        """A text check, and one of only two in this file.
+        """A text check, and one of only three in this file.
 
         Everything above asserts on parsed structure. This one cannot: the thing
         under test is prose, and there is no structural way to ask what a
         paragraph instructs a model to do. So it is kept as narrow as it can be —
         it looks for the phrase "JSON array" in a prompt whose request forces an
         object, which is the exact instruction that was wrong. The other text
-        check, ``DecidingFactCarrierTests``, cannot assert on structure for the
-        same reason, and is confined to one subsection for the same narrowness.
+        checks, ``DecidingFactCarrierTests`` and ``ReferralContractTests``, cannot
+        assert on structure for the same reason, and each is confined to one
+        subsection for the same narrowness.
 
         It is a backstop, not the guard. A prompt that asked for an array in
         other words but shipped an array example is caught above by the example
@@ -329,7 +330,7 @@ def carrier_section(text=None):
 class DecidingFactCarrierTests(unittest.TestCase):
     """Step 2 must say what kind of artifact can carry a deciding fact.
 
-    A text check, and one of only two in this file, for the same reason as the
+    A text check, and one of only three in this file, for the same reason as the
     other: what is under test is prose that instructs a model, and there is no
     structural way to ask what a paragraph tells a model to do. It is kept to the
     one subsection, so a sentence elsewhere in the prompt cannot satisfy it.
@@ -404,6 +405,136 @@ class DecidingFactCarrierTests(unittest.TestCase):
 
     def test_the_amended_prompt_keeps_the_output_contract(self):
         """Change 1 edits prose; it must not disturb the shape the prompt asks for."""
+        example = worked_example(JUDGE_PROMPT_FILE)
+        self.assertIn(
+            pipeline.json_shape(example),
+            pipeline.RESPONSE_FORMAT_SHAPES[
+                pipeline.AGENT_RESPONSE_FORMAT[JUDGE]["type"]
+            ],
+        )
+        value, shape, reason = pipeline.normalise_judge_result(example)
+        self.assertEqual("", reason, "the validator refuses the amended prompt's example")
+        self.assertEqual(pipeline.SHAPE_OBJECT, shape)
+        self.assertIsNotNone(value)
+
+    def test_the_prompt_contract_holds_for_every_agent_after_the_edit(self):
+        """Stated here as well as in ``PromptContractTests``, because this edit is
+        the reason to look: a prose change to one prompt must leave every agent's
+        declared shape and its shipped example in agreement."""
+        for role, filename in pipeline.AGENT_PROMPT_FILES.items():
+            with self.subTest(role=role):
+                example = worked_example(filename)
+                self.assertIn(
+                    pipeline.json_shape(example),
+                    pipeline.RESPONSE_FORMAT_SHAPES[
+                        pipeline.AGENT_RESPONSE_FORMAT[role]["type"]
+                    ],
+                )
+
+
+# --------------------------------------------------------------------------
+# What produces a referral
+# --------------------------------------------------------------------------
+# The judge prompt's referral paragraphs, read out of the prompt rather than
+# assumed, so a reordering shows up as a failure rather than as a check that
+# stopped looking.
+_REFERRAL_HEADING = "**A REFERRAL is not an escalation.**"
+_REFERRAL_ENDS_AT = "**On a `DRIVER_COMPENSATION` ruling"
+
+
+def referral_section(text=None):
+    """The referral paragraphs, from the ESCALATE sentence to the next paragraph.
+
+    Whitespace is collapsed to single spaces on purpose: the assertion is about
+    what the prompt instructs a model to do, and a re-wrapped line is not a
+    change of instruction.
+    """
+    if text is None:
+        text = (pipeline.PROMPTS_DIR / JUDGE_PROMPT_FILE).read_text(encoding="utf-8")
+    start = text.index(_REFERRAL_HEADING)
+    section = text[start : text.index(_REFERRAL_ENDS_AT, start)]
+    return " ".join(section.split())
+
+
+class ReferralContractTests(unittest.TestCase):
+    """The prompt must say a referral is clause-produced, and nothing looser.
+
+    The prompt said a referral instructs the human reviewer what to do and
+    stopped there, which invites free-form reviewer instructions. On case 213 the
+    judge wrote one -- asking the reviewer to recover the driver-device trace and
+    the chat log -- and the answer key expects none. The prompt and the key
+    disagreed, and POL-GEN-03 settles it: a referral is something a CLAUSE
+    produces.
+
+    The other direction matters as much. A referral rides on an ESCALATE ruling
+    on case 207, and that sentence is what makes it legal, so it is required to
+    survive here. And the prompt must not become a list of case numbers: the
+    clauses are named because they are the policy, the cases are not.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = (pipeline.PROMPTS_DIR / JUDGE_PROMPT_FILE).read_text(encoding="utf-8")
+        cls.section = referral_section(cls.text)
+
+    def test_the_referral_paragraph_is_present_at_all(self):
+        self.assertIn(_REFERRAL_HEADING, self.text)
+
+    def test_a_referral_exists_only_where_a_clause_produces_one(self):
+        self.assertIn("A referral exists only where a clause produces one.", self.section)
+
+    def test_every_referral_leads_with_the_clause_that_produces_it(self):
+        self.assertIn(
+            "Every referral leads with the clause reference that produces it.", self.section
+        )
+
+    def test_the_three_clauses_pol_gen_03_names_are_stated(self):
+        """The policy's own list, not a list of cases to match against."""
+        for clause in ("POL-RD-06(c)", "POL-RD-09(4)", "POL-NS-05(ii)"):
+            with self.subTest(clause=clause):
+                self.assertIn(clause, self.section)
+
+    def test_pol_ns_07_is_named_as_a_fourth(self):
+        """It directs its own escalation packet, so the clause produces it too."""
+        self.assertIn("POL-NS-07 is a fourth", self.section)
+
+    def test_the_prompt_says_to_read_the_clause_text(self):
+        self.assertIn(
+            "Read the governing clause text to decide whether one fires.", self.section
+        )
+
+    def test_the_prompt_forbids_inferring_a_referral_from_helpfulness(self):
+        self.assertIn(
+            "Do not infer a referral from a desire to be helpful", self.section
+        )
+
+    def test_an_open_question_goes_in_the_explanation(self):
+        self.assertIn("belongs in `explanation`", self.section)
+        self.assertIn(
+            "clause-mandated instructions that a platform acts on", self.section
+        )
+
+    def test_the_sentence_that_a_referral_can_ride_on_an_escalate_survives(self):
+        """Case 207 is exactly that, and it must keep working."""
+        self.assertIn(
+            "A case can be `ESCALATE` and still carry a non-empty referral "
+            "instructing the human reviewer what to do.",
+            self.section,
+        )
+
+    def test_the_prompt_does_not_name_the_cases_it_was_written_for(self):
+        """Case numbers would make it a checklist rather than a principle.
+
+        The two cases behind this edit are 213, where the judge invented a
+        referral, and 207, where the referral is real. Neither belongs in the
+        prompt: a model handed the numbers would match on those and stop.
+        """
+        for case_no in ("213", "207"):
+            with self.subTest(case=case_no):
+                self.assertNotIn(case_no, self.section)
+
+    def test_the_amended_prompt_keeps_the_output_contract(self):
+        """Change 2 edits prose; it must not disturb the shape the prompt asks for."""
         example = worked_example(JUDGE_PROMPT_FILE)
         self.assertIn(
             pipeline.json_shape(example),

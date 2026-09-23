@@ -97,10 +97,13 @@ The run-level records do carry a prompts digest, and they disagree with the dire
 | `runs/hy3/run.json` | `5c1f58a3cb00a30b…` |
 | `runs/hy4-preview/run.json` | `5c1f58a3cb00a30b…` |
 | `runs/deepseek-deepseek-flash/run.json` | `faa3da27c5fbd750…` |
-| the directory now | `457c896b07b3da23…` |
+| three per-case entries, written by the 2026-09-22 re-run | `457c896b07b3da23…` |
+| the directory now | `b131e63f046aecc6…` |
 
-**Three values, so the prompt set has already moved twice, and until now nothing said so.** That is
-the defect the prompt channel closes, and this change is the first movement it can report.
+**Four values, so the prompt set has moved three times, and until the prompt channel existed nothing
+said so.** The fourth is the judge prompt amendment of 2026-09-23, which moved the directory from
+`457c896b07b3da23…` to `b131e63f046aecc6…`; the three cached results that had recorded the older
+value read `**STALE (prompt)**` because of it, which is the channel doing the job it was added for.
 
 ## What was not done
 
