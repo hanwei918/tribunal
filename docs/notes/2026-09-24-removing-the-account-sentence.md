@@ -74,6 +74,16 @@ as safe as the sentences that now carry them.
 Read-only. The judge's words are quoted from the result files; the prompt sentences are quoted from
 `prompts/v1/judge.system.md` as it now stands. Nothing was run.
 
+**How the quotations are made**, here and in the §4 table: whitespace is collapsed, because the prompt
+and this note wrap at different columns; the prompt's own emphasis markers are not reproduced, though
+they are present in the file; an elision is marked with "…"; and a quotation that ends mid-sentence
+stops before the source's punctuation. Every quotation below was then checked programmatically against
+its source — the prompt file, or the result file the judge's words came from — and **three were not
+literal**, each in the same way: a full stop where the source has a comma (901, second step), a full
+stop where the source has a colon (901, first step), and a comma dropped inside the 211 sentence. All
+three are corrected here. 23 quotations were checked and the check now reports none outstanding; the
+one it still flags is the previous note's misquotation, which is shown as wrong on purpose.
+
 ### 107 — the threshold fact is a magnitude, and the cap stays on the trace
 
 The judge's decisive sentence:
@@ -103,7 +113,7 @@ distance, so remove the trace and nothing left supports it.
 
 The judge's sentence:
 
-> **It is his account, not a measurement** and fixes no position; it therefore cannot satisfy a limb
+> **It is his account, not a measurement,** and fixes no position; it therefore cannot satisfy a limb
 > whose test is the GPS measurement, and **it does not stop the impaired trace being the only
 > measurement evidence of the dwell**.
 
@@ -126,10 +136,13 @@ bridging paragraph, which the removal does not touch.
    procedure: *"Is what the test reads impaired over the stretch the defect covers? ... Impaired means
    under the category's own integrity limbs, not merely flagged by the pre-pass."* and *"If it is
    impaired, the limb is undecided over that stretch. An undecided limb supports neither a payment
-   that needs the clause to hold nor a refund that needs it to fail."*
+   that needs the clause to hold nor a refund that needs it to fail: say so, and apply what the
+   integrity and escalation clauses give for uncertainty, including how they say an impaired stretch
+   is read."*
 2. **The arrival marker is one carrier with the trace** — the judge: *"the trip record's arrival
    marker is auto-confirmed from the same GPS measurement, so marker and trace are one carrier and not
-   two."* Supported by the independence rule, which names that pair: *"Two records derived from the
+   two"* (the source continues with a comma; the quotation stops where the sentence it is offered for
+   ends). Supported by the independence rule, which names that pair: *"Two records derived from the
    same measurement are one carrier, not two ... a trip record and a fare ledger computed from the
    same trace corroborate nothing."*
 3. **The driver's messages stand in where the test admitted no reading at all** — the judge: *"the
