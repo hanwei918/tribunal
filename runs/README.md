@@ -71,18 +71,20 @@ supports, because the deciding fact's only evidence is the trace impaired under 
 POL-NS-09(e) holds the fee. No prompt was changed in the re-run. The credential rule below applies to
 both unchanged.
 
-**Both channels are now current for 901.** The converted case was amended after the first run — it
-gained the source's own account of how the arrival marker was made — and `judge.system.md` moved
-twice, first gaining the rule that carrying a fact is not the same as meeting a limb and then having
-that rule revised into an ordered procedure after a read-only review found wording in it that could
-move cases the answer key has right today. All three moves are recorded in
-`docs/notes/2026-09-24-meeting-a-limb-and-the-dropped-record.md` and
-`docs/notes/2026-09-24-the-limb-procedure-revised.md`. The first run's files still read as they were
-produced and are stale on both channels; the second invocation's `brief_sha256` rebuilds identically
-and its `prompts_sha256` is the current one. One caution when checking either: the staleness report
-can see only the prompt half for an external case, because it rebuilds *corpus* briefs by case number
-and 901 is not a corpus case — so its brief half reads `unknown`, which is "cannot tell" and not
-"unmoved".
+**901's brief channel is current and its prompt channel is not.** The converted case was amended after
+the first run — it gained the source's own account of how the arrival marker was made — and
+`judge.system.md` has moved three times since: first gaining the rule that carrying a fact is not the
+same as meeting a limb, then having that rule revised into an ordered procedure after a read-only review
+found wording in it that could move cases the answer key has right today, and then losing the account
+sentence, which that review had found read as "it may carry the limb". All three moves are recorded in
+`docs/notes/2026-09-24-meeting-a-limb-and-the-dropped-record.md`,
+`docs/notes/2026-09-24-the-limb-procedure-revised.md` and
+`docs/notes/2026-09-24-removing-the-account-sentence.md`. The first run's files still read as they were
+produced and are stale on both channels; the second invocation's `brief_sha256` rebuilds identically,
+and its `prompts_sha256` was the current one until the third move, so it is now stale on the prompt
+channel alone. One caution when checking either: the staleness report can see only the prompt half for
+an external case, because it rebuilds *corpus* briefs by case number and 901 is not a corpus case — so
+its brief half reads `unknown`, which is "cannot tell" and not "unmoved".
 
 ## How to read one run directory
 

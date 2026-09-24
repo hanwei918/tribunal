@@ -188,6 +188,15 @@ digest, and this note is where the removal is recorded.
   --check` reports the committed page identical to a fresh build at 1,619,262 bytes: the page reads
   `prompts_sha256` from each run's provenance rather than embedding the current digest, so a prompt
   change does not reach it.
+- **`runs/README.md` said 901's two channels were both current, and this change made that false.** It
+  now says the brief channel is current and the prompt channel is not, and lists three prompt moves
+  since the first run rather than two.
+- **The repository was checked from a fresh clone**, which is the only way to see a page that depends
+  on the checkout. A clone of `87ccccb` into `/tmp` runs the suite green — 839, OK, skipped=4, the
+  fourth being the `.env` test, which skips because `.env` is gitignored and exists only in the
+  author's working tree — and `python -m ui.build --check` there reports the committed page identical
+  to a fresh build at the same 1,619,262 bytes. The clone's prompts digest is `829ccc8f…`, the same
+  value, so the change is a function of the repository and not of the directory it was made in.
 
 ## 6. The standing rule
 
