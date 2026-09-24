@@ -69,6 +69,13 @@ invocation ran, the 27/29 is what grading all 29 cached results gives — and `r
 invocation's file for the same reason. Read the report's case count before comparing it with anything.
 Neither file was edited; both are what the runner wrote.
 
+**The repository was verified on both interpreters and from a fresh clone.** The suite is 839 tests,
+OK (skipped=3) under Python 3.13.12 and under 3.9.6, and a fresh clone of `e4608a5` — the commit this
+note is written against — runs it green as well, with one extra skip because `.env` is gitignored and
+exists only in the author's working tree. In that clone `python -m ui.build --check` reports the
+committed page identical to a fresh build at 1,619,262 bytes, so the page this run rebuilt is a
+function of the repository rather than of the checkout it was built in.
+
 ## 3. Every case, before and after
 
 Before is the headline run's result at `493beea` (28/29 exact, 211 the single miss). Now is this run.
