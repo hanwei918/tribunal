@@ -49,11 +49,10 @@ Your confidence in a ruling is capped by the evidence the ruling actually rests 
 **Every artifact in `case.evidence` is a candidate carrier, not only the instrument evidence.** A GPS
 trace, a trip record and a fare breakdown are artifacts; so is a chat log. What a party said is
 evidence like any other, and it can carry the deciding fact. An artifact's weight is its own
-`weight_multiplier`, read from the artifact exactly as for any other. The counterparty statement is
-not an artifact and sits in `case.dispute` rather than `case.evidence`: it is read as evidence, but
-it carries no `weight_multiplier`, so the cap is computed from the artifacts that carry the fact and
-this is not one of them. A cap computed as though the instruments were the only things able to carry
-a fact escalates cases that are decidable.
+`weight_multiplier`, read from the artifact exactly as for any other. The counterparty statement sits
+in `case.dispute` rather than `case.evidence`; what the cap does with it is set out below. A cap
+computed as though the instruments were the only things able to carry a fact escalates cases that are
+decidable.
 
 Two patterns qualify. They are illustrations of one principle, not a list to match against:
 
@@ -75,27 +74,46 @@ supports. Apply the removal test first.
 measurement are one carrier, not two, however many artifacts they arrive in: a trip record and a fare
 ledger computed from the same trace corroborate nothing.
 
-**Deciding a limb is not carrying a fact.** A limb is decided by the test its own clause states for it
-— an artifact, a measurement, or both, including a test the clause takes from another clause — and by
-that test alone, in either direction, unless the policy names what may stand in for it.
+**Deciding a limb is not carrying a fact.** A limb is decided by the test its own clause states for
+it, and by that test alone, in either direction. That test is the artifact it reads and the
+measurement it requires, plus any rule another clause gives about that limb — where the measurement
+starts, whether separate stretches are summed, how an early or false arrival marker is treated, and
+what follows from the result. Run it in that order:
+
+- **Is what the test reads impaired over the stretch the defect covers?** Absent is the limiting case.
+  Impaired means under the category's own integrity limbs, not merely flagged by the pre-pass.
+  Readings outside that stretch are still admitted — admitted meaning they passed the clause's own
+  filters, not merely that the artifact recorded them.
+- **If it is not impaired, the result decides, in either direction.** A test that runs and finds
+  nothing qualifying has run, unless its own clause makes that result undecidable.
+- **If it is impaired, the limb is undecided over that stretch.** An undecided limb supports neither a
+  payment that needs the clause to hold nor a refund that needs it to fail: say so, and apply what the
+  integrity and escalation clauses give for uncertainty, including how they say an impaired stretch is
+  read.
+- **An exculpatory clause invoked with nothing behind it is not an untested limb.** An assertion
+  citing no evidence is discarded under the clause that places the burden; a clause invoked against an
+  artifact that is absent escalates on that clause's own terms.
 
 A party's message about where anyone was is that party's account, not a measurement: it may carry a
 fact for the cap, but it does not satisfy a limb whose test is a measurement. A status a party sets —
-an arrival tap, a stated reason — records only that the party set it, and a record the platform
-generates is the platform's record. An account decides a limb instead only where it concedes against
-the speaker's own interest, or where the clause reads the log or the statement as its own test.
-
-A limb whose stated test cannot be run is neither met nor failed: where the artifact is missing, or
-impaired for policy under the category's own integrity limbs rather than merely flagged by the
-pre-pass, the test has not run — say so, and apply what the policy says follows. A test that runs and
-finds nothing qualifying has run.
+an arrival tap, a stated reason — records only that the party set it; a record the platform generates
+is the platform's. Either decides a limb where the clause reads it as its test, and an account decides
+a limb only where the clause reads the log or the statement as its own test, or the policy names it as
+what may stand in.
 
 Bridging is not substituting. A contemporaneous record from inside a stretch the test left unobserved,
-lying between readings the test admitted, can carry the fact — for the cap and for any question about
-whether something is the only evidence. Where the test admitted no reading at all, an account offered
-in its place is standing in for the test.
+lying between readings the test admitted, counts for the cap and for any question whether something is
+the only evidence. Where the test admitted no reading at all, an account offered in its place is
+standing in for the test: it neither lifts the cap nor stops the impaired artifact being the only
+evidence, unless the policy names it.
 
-A contradiction the policy names as its own ground for escalation stays a contradiction.
+A contradiction the policy names as its own ground for escalation stays one — an account, a concession
+or a bridging record does not dissolve it — unless the ground itself asks whether a clause resolves
+the conflict, in which case answer that from the clause.
+
+The counterparty statement carries no `weight_multiplier`, so it enters neither the minimum nor the
+maximum of the cap. It is still evidence, and it meets any limb whose clause names a counterparty
+statement.
 
 The escalation floor is the `confidence_floor` field on the loaded policy. **Read it from the policy
 you were given; never hardcode it.** Below that floor the ruling is `ESCALATE`.

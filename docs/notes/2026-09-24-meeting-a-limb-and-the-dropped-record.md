@@ -132,6 +132,16 @@ accuracy fix and not a change of outcome.
 
 # Part 2 — the judge prompt: carrying a fact is not meeting a limb
 
+> **Corrected by `docs/notes/2026-09-24-the-limb-procedure-revised.md`.** A read-only review of the
+> amendment described here found wording that could move cases the answer key has right today, and
+> wording that did not compel what this part claims for it. Four claims below are wrong: the 214
+> walk credits the wrong phrase, the 112 walk credits a distinction that does not apply to that case
+> because its trace is not impaired for policy under the route-deviation integrity limbs, the 107
+> walk credits an admission exception that case does not need, and the 211 and 901 conclusions were
+> not compelled by the text as committed. The text has since been revised and now runs as an ordered
+> procedure. Everything else here — the converter work in Part 1, the digests, and the fact that
+> Part 2's amendment was committed as `fb1af67` — stands.
+
 ## The defect
 
 Step 2's "What can carry a deciding fact" was written on 2026-09-22 to stop the judge reading

@@ -67,13 +67,16 @@ and the clause text, records the tokens billed and the wall clock, and names the
 credential rule below applies to this run unchanged.
 
 **The converted case has since been amended, so this run's `brief_sha256` no longer matches the brief
-this repository rebuilds for it, and the prompts digest has moved as well.** Both moves are expected,
-and are recorded in `docs/notes/2026-09-24-meeting-a-limb-and-the-dropped-record.md`: the converted
-case gained the source's own account of how the arrival marker was made, and `judge.system.md` gained
-the rule that carrying a fact is not the same as meeting a limb. The run itself is untouched and
-still reads as it was produced. One caution when checking it: the staleness report can see only the
-prompt half for an external case, because it rebuilds *corpus* briefs by case number and 901 is not a
-corpus case — so its brief half reads `unknown`, which is "cannot tell" and not "unmoved".
+this repository rebuilds for it, and the prompts digest has moved twice.** All three moves are
+expected, and are recorded in `docs/notes/2026-09-24-meeting-a-limb-and-the-dropped-record.md` and
+`docs/notes/2026-09-24-the-limb-procedure-revised.md`: the converted case gained the source's own
+account of how the arrival marker was made, `judge.system.md` gained the rule that carrying a fact is
+not the same as meeting a limb, and that rule was then revised into an ordered procedure after a
+read-only review found wording in it that could move cases the answer key has right today. The run
+itself is untouched and still reads as it was produced. One caution when checking it: the staleness
+report can see only the prompt half for an external case, because it rebuilds *corpus* briefs by case
+number and 901 is not a corpus case — so its brief half reads `unknown`, which is "cannot tell" and
+not "unmoved".
 
 ## How to read one run directory
 

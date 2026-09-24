@@ -363,14 +363,19 @@ class DecidingFactCarrierTests(unittest.TestCase):
     the checks below are for. Saying a message can carry a fact left open
     whether it can *meet a limb*, and a real run read it as yes: a driver's own
     "I've arrived" messages were taken as satisfying a proximity test whose
-    clause names the GPS trace, on a trace where no fix qualified at all. The
-    three ways that reading goes wrong are each a check here — a message never
-    records where anyone was (which would remove the admissions the first
-    amendment depends on), a limb whose test could not run is a failed limb
-    (which would refund a fee the policy holds), and a limb's own test is the
-    only thing that can decide it (which would miss the case where the summing
-    rule comes from a different clause). So the subsection now separates the two
-    questions, and the checks pin both halves of each sentence.
+    clause names the GPS trace, on a trace where no fix qualified at all.
+
+    A read-only review of that amendment then found wording that could move
+    cases the key has right today, and wording that did not compel what the note
+    claimed for it. It is now an ordered procedure rather than paragraphs of
+    principle, because the failures were all of one shape: a sentence true of
+    the confidence cap, read as a rule about the limb. The checks below pin each
+    step, and both halves of each step, so that neither direction can be read
+    out of it — impairment judged on the part of the artifact the test reads and
+    over the stretch the defect covers; an undecided limb that moves no money
+    either way; an account standing in for a test only where the policy names
+    it; and an uncited excuse that is a discarded assertion, not an untested
+    limb.
     """
 
     @classmethod
@@ -459,9 +464,23 @@ class DecidingFactCarrierTests(unittest.TestCase):
         """(a) The two questions are separated, and the limb's own test decides."""
         self.assertIn("Deciding a limb is not carrying a fact", self.section)
         self.assertIn("the test its own clause states for it", self.section)
-        self.assertIn("including a test the clause takes from another clause", self.section)
         self.assertIn("in either direction", self.section)
-        self.assertIn("unless the policy names what may stand in for it", self.section)
+        self.assertIn("or the policy names it as what may stand in", self.section)
+
+    def test_the_stated_test_includes_a_counting_rule_from_another_clause(self):
+        """(a) The limb's quantity may be counted by a rule stated elsewhere.
+
+        The draft said a test "taken from another clause", which reads as the
+        limb borrowing a test rather than as another clause saying how the
+        limb's own quantity is counted. One case's dwell is a sum of separate
+        holds that another clause permits to be added, and the rule is about
+        counting, not about which test applies.
+        """
+        self.assertIn("plus any rule another clause gives about that limb", self.section)
+        self.assertIn("where the measurement starts", self.section)
+        self.assertIn("whether separate stretches are summed", self.section)
+        self.assertIn("how an early or false arrival marker is treated", self.section)
+        self.assertIn("what follows from the result", self.section)
 
     def test_a_party_account_of_position_is_not_a_measurement(self):
         """(b) An account carries facts; it does not run a measurement test.
@@ -474,24 +493,72 @@ class DecidingFactCarrierTests(unittest.TestCase):
         self.assertIn("that party's account, not a measurement", self.section)
         self.assertIn("it may carry a fact for the cap", self.section)
         self.assertIn("does not satisfy a limb whose test is a measurement", self.section)
-        self.assertIn("records only that the party set it", self.section)
-        self.assertIn("a record the platform generates is the platform's record", self.section)
-        self.assertIn("concedes against the speaker's own interest", self.section)
-        self.assertIn("reads the log or the statement as its own test", self.section)
 
-    def test_an_untested_limb_is_neither_met_nor_failed(self):
-        """(c) A test that could not run is not a test that failed.
+    def test_a_status_a_party_sets_is_read_for_what_the_clause_reads_it_as(self):
+        """(b) An arrival tap and a reason code are what two limbs read.
 
-        And the converse, which is the harder half and the one the draft got
-        wrong: a test that ran and found nothing qualifying *has* run, and its
-        limb fails. Without that sentence a trace whose fixes are all filtered
-        out would be treated as untested, and the fee would stand on nothing.
+        "Records only that the party set it" is true and, left alone, makes the
+        limbs that read one look unproven. The sentence has to say what decides
+        them as well as what does not.
         """
-        self.assertIn("is neither met nor failed", self.section)
-        self.assertIn("impaired for policy under the category's own integrity limbs", self.section)
-        self.assertIn("rather than merely flagged by the pre-pass", self.section)
-        self.assertIn("the test has not run", self.section)
+        self.assertIn("records only that the party set it", self.section)
+        self.assertIn("a record the platform generates is the platform's", self.section)
+        self.assertIn("decides a limb where the clause reads it as its test", self.section)
+
+    def test_an_account_decides_a_limb_only_where_the_policy_says_so(self):
+        """(d) The admission exception was too strong, and is gone.
+
+        "An account decides a limb where it concedes against interest" lets an
+        admission replace a measured test, and the proximity test is written
+        "only where". What the cases need is the policy naming the account,
+        which it does for the corroboration list.
+        """
+        self.assertIn("reads the log or the statement as its own test", self.section)
+        self.assertNotIn("concedes against the speaker's own interest", self.section)
+
+    def test_an_impaired_test_is_undecided_over_the_stretch_it_covers(self):
+        """(c) A test that cannot run is not a test that failed.
+
+        Two things the draft left open are pinned here. Impairment is judged on
+        the part of the artifact the test reads, over the stretch the defect
+        covers, and it is the policy's own integrity limbs that count rather
+        than a pre-pass tag. And an undecided limb is not a licence to refund:
+        it moves no money either way, which is what stops it becoming one.
+        """
+        self.assertIn("impaired over the stretch the defect covers", self.section)
+        self.assertIn("Absent is the limiting case", self.section)
+        self.assertIn("under the category's own integrity limbs", self.section)
+        self.assertIn("not merely flagged by the pre-pass", self.section)
+        self.assertIn("the limb is undecided over that stretch", self.section)
+        self.assertIn("neither a payment that needs the clause to hold", self.section)
+        self.assertIn("nor a refund that needs it to fail", self.section)
+
+    def test_a_test_that_ran_and_found_nothing_has_run(self):
+        """(c) The converse, and the half the draft got wrong.
+
+        Without it a trace whose fixes are all filtered out reads as untested
+        and the fee stands on nothing. With it, the one clause that makes that
+        result undecidable is an exception, and it is named as one.
+        """
         self.assertIn("finds nothing qualifying has run", self.section)
+        self.assertIn("unless its own clause makes that result undecidable", self.section)
+        self.assertIn("passed the clause's own filters", self.section)
+
+    def test_a_missing_artifact_is_not_an_uncited_excuse(self):
+        """(e) The draft's "the artifact is missing, so the test has not run".
+
+        Read literally that turns a driver's uncited traffic excuse into an
+        untested limb and then into an escalation, where the key discards it and
+        decides on the clause that carries the burden. It would also stop a
+        clause invoked against a genuinely absent artifact from escalating on
+        its own terms, which several clauses require.
+        """
+        self.assertIn("invoked with nothing behind it is not an untested limb", self.section)
+        self.assertIn(
+            "citing no evidence is discarded under the clause that places the burden",
+            self.section,
+        )
+        self.assertIn("escalates on that clause's own terms", self.section)
 
     def test_bridging_is_not_substituting(self):
         """(d) A record from inside an unobserved stretch is not a stand-in."""
@@ -499,22 +566,63 @@ class DecidingFactCarrierTests(unittest.TestCase):
         self.assertIn("inside a stretch the test left unobserved", self.section)
         self.assertIn("between readings the test admitted", self.section)
         self.assertIn("whether something is the only evidence", self.section)
+
+    def test_a_stand_in_neither_lifts_the_cap_nor_is_the_only_evidence(self):
+        """(d) The half the draft left open, and the one that moves a case.
+
+        Where the test admitted no reading at all, the driver's own account was
+        still allowed to lift the cap, which defeats the clause that makes an
+        impaired trace the only evidence. Standing in for the test is not
+        bridging it.
+        """
+        self.assertIn("admitted no reading at all", self.section)
         self.assertIn("standing in for the test", self.section)
+        self.assertIn("neither lifts the cap", self.section)
+        self.assertIn("nor stops the impaired artifact being the only evidence", self.section)
 
     def test_a_contradiction_the_policy_escalates_on_stays_one(self):
-        """(e) The amendment does not resolve a contradiction the policy names."""
-        self.assertIn("stays a contradiction", self.section)
+        """(f) The amendment does not resolve a contradiction the policy names.
+
+        Unqualified, the sentence blocks the clause that resolves the conflict —
+        and the escalation ground itself asks whether a clause resolves it, so
+        the answer has to come from the clause.
+        """
+        self.assertIn("stays one", self.section)
+        self.assertIn("does not dissolve it", self.section)
+        self.assertIn(
+            "unless the ground itself asks whether a clause resolves the conflict",
+            self.section,
+        )
 
     def test_the_counterparty_statement_is_placed_where_it_lives(self):
-        """(f) It is in `case.dispute`, and it has no weight to enter the cap with.
+        """(g) It is in `case.dispute`, and it is still evidence.
 
         The prompt said its weight was its own `weight_multiplier`, which is not
-        a field it has: a judge following that sentence on a statement-only
-        finding would look for a weight that does not exist.
+        a field it has. Saying "this is not one of them" then read as "it does
+        not carry the fact", which is wrong the other way: it is evidence, and a
+        corroboration list names it.
         """
         self.assertIn("sits in `case.dispute` rather than `case.evidence`", self.section)
         self.assertIn("carries no `weight_multiplier`", self.section)
+        self.assertIn("enters neither the minimum nor the maximum of the cap", self.section)
+        self.assertIn("meets any limb whose clause names a counterparty statement", self.section)
         self.assertNotIn("so is a counterparty statement", self.section)
+
+    def test_the_readings_the_review_found_defective_are_gone(self):
+        """Four sentences that could move a case the key has right today.
+
+        Each is asserted absent rather than merely superseded: each reads well
+        and decides wrongly, and a later edit could put one back without
+        noticing that it had been taken out.
+        """
+        for phrase in (
+            "is neither met nor failed",
+            "the test has not run",
+            "concedes against the speaker's own interest",
+            "including a test the clause takes from another clause",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, self.section)
 
     def test_the_section_contains_no_digit(self):
         """A digit is a figure the policy owns, and the prompt owns none.
