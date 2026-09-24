@@ -52,6 +52,11 @@ transcript** — unless every one of these holds:
 A run that did not record a prompt digest is **refused**, not assumed to match: "no recorded digest" is
 `unknown`, the same rule the staleness report applies, and it must never read as `current`.
 
+A replay **into** a directory that already holds a case's result needs `--force`. That is the runner's
+ordinary rule — a cached case is reused rather than re-run — applied to replay and not a special case
+of it, and it is stated here because the one directory a reader is most likely to replay into is the
+one the advocates came from.
+
 Two further properties are code rather than intention. The judge's user message is built by **the same
 function a full run uses** (`_judge_user_message`), not by a second copy of it, and the two brief-identity
 checks that guard a full run are repeated on the replay path — so a replay cannot hand the judge

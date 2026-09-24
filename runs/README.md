@@ -113,7 +113,9 @@ the viewer say the advocates were replayed and from which run.
 so is `--compare`, because a run whose advocates came from elsewhere is not the same measurement and a
 comparison must not silently mix the two. `--replay-check RUN_DIR` answers the question without
 running anything: it reads the source and reports, per case, whether a replay would be accepted and
-why not. See `docs/notes/2026-09-24-replaying-the-advocates.md`.
+why not. A replay **into** a directory that already holds a case's result needs `--force`: without it
+the cached result is reused rather than replayed, which is the runner's ordinary rule and not a
+special case of replay. See `docs/notes/2026-09-24-replaying-the-advocates.md`.
 
 ## Two cautions about the invalidated runs
 
