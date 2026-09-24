@@ -482,17 +482,27 @@ class DecidingFactCarrierTests(unittest.TestCase):
         self.assertIn("how an early or false arrival marker is treated", self.section)
         self.assertIn("what follows from the result", self.section)
 
-    def test_a_party_account_of_position_is_not_a_measurement(self):
+    def test_an_account_is_not_a_measurement_and_both_halves_survive(self):
         """(b) An account carries facts; it does not run a measurement test.
 
-        Both halves are required. Saying a message never records where anyone
-        was would remove the admissions against interest the subsection above
-        depends on; saying nothing leaves the judge free to let a message
-        satisfy a proximity test its clause never gave it.
+        Both halves are required, and after the account sentence was removed
+        they are carried by two places rather than one. Saying a message never
+        records where anyone was would remove the admissions against interest
+        the subsection above depends on, so the carrier half is that
+        subsection's own grant that what a party said can carry the deciding
+        fact; saying nothing leaves the judge free to let a message satisfy a
+        proximity test its clause never gave it, so the limb half is that an
+        account decides a limb only where the clause reads the log or the
+        statement as its own test. The sentence that used to say both in one
+        breath — "it may carry a fact for the cap" — was removed, because that
+        clause read as "it may carry the limb" and lifted the cap on an impaired
+        trace; both halves are asserted present here so the removal cannot take
+        one of them with it.
         """
-        self.assertIn("that party's account, not a measurement", self.section)
-        self.assertIn("it may carry a fact for the cap", self.section)
-        self.assertIn("does not satisfy a limb whose test is a measurement", self.section)
+        self.assertIn("can carry the deciding fact", self.section)
+        self.assertIn("reads the log or the statement as its own test", self.section)
+        self.assertNotIn("not a measurement", self.section)
+        self.assertNotIn("it may carry a fact for the cap", self.section)
 
     def test_a_status_a_party_sets_is_read_for_what_the_clause_reads_it_as(self):
         """(b) An arrival tap and a reason code are what two limbs read.
@@ -609,17 +619,22 @@ class DecidingFactCarrierTests(unittest.TestCase):
         self.assertNotIn("so is a counterparty statement", self.section)
 
     def test_the_readings_the_review_found_defective_are_gone(self):
-        """Four sentences that could move a case the key has right today.
+        """Five readings that could move a case the key has right today.
 
         Each is asserted absent rather than merely superseded: each reads well
         and decides wrongly, and a later edit could put one back without
-        noticing that it had been taken out.
+        noticing that it had been taken out. The fifth is the middle clause of
+        the account sentence, which read as "it may carry the limb" and lifted
+        the cap on an impaired trace. Only that clause is pinned absent: the
+        sentence's other half — that an account does not run a measurement test
+        — is still required, and is asserted present above.
         """
         for phrase in (
             "is neither met nor failed",
             "the test has not run",
             "concedes against the speaker's own interest",
             "including a test the clause takes from another clause",
+            "it may carry a fact for the cap",
         ):
             with self.subTest(phrase=phrase):
                 self.assertNotIn(phrase, self.section)

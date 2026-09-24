@@ -94,12 +94,10 @@ what follows from the result. Run it in that order:
   citing no evidence is discarded under the clause that places the burden; a clause invoked against an
   artifact that is absent escalates on that clause's own terms.
 
-A party's message about where anyone was is that party's account, not a measurement: it may carry a
-fact for the cap, but it does not satisfy a limb whose test is a measurement. A status a party sets —
-an arrival tap, a stated reason — records only that the party set it; a record the platform generates
-is the platform's. Either decides a limb where the clause reads it as its test, and an account decides
-a limb only where the clause reads the log or the statement as its own test, or the policy names it as
-what may stand in.
+A status a party sets — an arrival tap, a stated reason — records only that the party set it; a record
+the platform generates is the platform's. Either decides a limb where the clause reads it as its test,
+and an account decides a limb only where the clause reads the log or the statement as its own test, or
+the policy names it as what may stand in.
 
 Bridging is not substituting. A contemporaneous record from inside a stretch the test left unobserved,
 lying between readings the test admitted, counts for the cap and for any question whether something is

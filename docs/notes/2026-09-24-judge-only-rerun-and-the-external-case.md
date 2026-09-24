@@ -148,11 +148,16 @@ The judge's own sentence:
 > The driver's chat and counterparty statement admit the route and satisfy the POL-RD-08 corroboration
 > requirement, but **they are not a measurement of the excess and cannot carry the threshold fact**.
 
-The sentence of the amended prompt it was applying is the account/measurement rule added to Step 2:
-*"a party's message about position is an account, not a measurement, unless it concedes against
-interest or the clause reads it as its own test"*, read with the removal test that governs carrier
-status — *"The test is whether it would still support the finding if the instrument evidence were
-removed."*
+The sentence of the amended prompt it was applying is the account/measurement rule added to Step 2,
+quoted here exactly as it stood at `eece65ee…`:
+
+> A party's message about where anyone was is that party's account, not a measurement: it may carry a
+> fact for the cap, but it does not satisfy a limb whose test is a measurement.
+
+It is read with the removal test that governs carrier status — *"The test is whether it would still
+support the finding if the instrument evidence were removed."* This note records the prompt as this
+run's judge was handed it; the account sentence was removed on 2026-09-24, after the run, in
+`docs/notes/2026-09-24-removing-the-account-sentence.md`.
 
 **Applied as written.** The POL-RD-01 threshold needs a magnitude: an excess greater than 20 % of
 `optimal_distance_km` (14.0 km, so 2.8 km) *and* greater than 0.8 km. The measured excess is 3.57 km
@@ -161,9 +166,11 @@ driver's chat ("cte very jam tonight boss") and the counterparty statement ("I w
 Seng to avoid it") are concessions, and the carrier section names an admission against the speaker's
 own interest as a qualifying carrier — but the thing conceded is the *route*, and neither artifact
 carries a distance. Remove the trace and nothing left supports the threshold finding, so under the
-text the cap stays at the trace's 0.30 and POL-RD-10(1) escalates. The exception the sentence carries
-("unless it concedes against interest") is about the speaker's *position*, which is not what 107
-disputes.
+text the cap stays at the trace's 0.30 and POL-RD-10(1) escalates. The sentence carried no exception:
+the admission-against-interest pattern is in the carrier subsection, and it is about what can carry a
+fact, not about a limb. What the judge leaned on is the sentence's own "not a measurement", and the
+removal test is what makes that reading stick here — the thing conceded is the route, and neither
+artifact carries a distance.
 
 The key reads the admission as an independent artifact carrying the deciding fact, which under
 POL-GEN-02(2) would take the cap to the **maximum** of the weights (1.0) rather than the minimum, and
