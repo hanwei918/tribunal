@@ -4176,6 +4176,61 @@ class ReplayTests(unittest.TestCase):
             "these advocates",
         )
 
+    def test_the_run_record_names_the_commit_that_made_the_advocates(self):
+        """The run-level block carries both commits, and the summary prints both.
+
+        The defect, as a regression test, and the run-level half of the one
+        above. ``ReplayCheck.provenance`` fills its ``git_commit`` from the
+        source directory's ``run.json``, which a replay into that directory
+        rewrites before the next replay reads it -- so the block named the
+        commit that *copied* the advocates, and the printed summary said
+        "advocates from ... (commit <that one>)", which reads as the run that
+        made them. On the real run every case's entry recorded ``493beea`` as
+        the commit that made its advocates while the block said ``c4c9a06``.
+
+        The fixture is that sequence: a full run, then two replays into the same
+        directory under two later commits, the second of them taking the case
+        the first did not reach.
+        """
+        made = "a" * 40
+        first = "b" * 40
+        second = "c" * 40
+        with tempfile.TemporaryDirectory() as tmp:
+            made_run, _ = bench(tmp, git=git_runner(made))
+            source = made_run.run_dir
+            self._replay(
+                tmp,
+                source,
+                runs_dir=source.parent,
+                cases=CASE_SET[:2],
+                git=git_runner(first),
+            )
+            summary, _ = self._replay(
+                tmp,
+                source,
+                runs_dir=source.parent,
+                cases=CASE_SET[2:3],
+                git=git_runner(second),
+            )
+
+            metadata = runner.read_json(runner.metadata_path(summary.run_dir))
+            replay = metadata["replay"]
+
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                runner.print_summary(summary)
+            text = output.getvalue()
+
+        # The source directory records the *first replay's* commit by the time
+        # the second one reads it, and that is what the block has always named.
+        self.assertEqual(first, replay["git_commit"])
+        # The run that made them is neither replay's, and the block says so.
+        self.assertEqual([made], replay["advocate_commits"])
+        # Both are printed, so the one commit a reader sees first cannot read as
+        # the advocates' own provenance.
+        self.assertIn(made[:12], text, "the run that made the advocates is not printed")
+        self.assertIn(first[:12], text, "the source directory's commit is not printed")
+
     def test_a_run_that_stopped_early_counts_the_cases_it_replayed(self):
         """The summary counts this invocation's cases, not the ones it accepted.
 

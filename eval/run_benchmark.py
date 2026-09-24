@@ -544,11 +544,22 @@ def replay_block(
     advocates had been borrowed. A file and a summary that disagree about how
     many cases were replayed give a reader two answers to one question, and the
     summary is the one they see first.
+
+    ``advocate_commits`` is the same correction applied to the other commit in
+    the block. ``git_commit`` is what the source directory recorded, and a
+    replay into that directory makes it the commit of the run that *copied* the
+    advocates; the commit that *made* them travels per case, so the run-level
+    block has to carry it or a reader has only the copying run's name. It is
+    collected from the same outcomes as the case list, so the two describe one
+    set of cases and a run stopped on its budget names no commit for the cases
+    it never reached.
     """
     block = check.provenance()
-    block["replayed_cases"] = [
-        outcome.case_no for outcome in outcomes if outcome.replayed
-    ]
+    replayed = [outcome for outcome in outcomes if outcome.replayed]
+    block["replayed_cases"] = [outcome.case_no for outcome in replayed]
+    block["advocate_commits"] = sorted(
+        {outcome.replayed_made_at for outcome in replayed if outcome.replayed_made_at}
+    )
     return block
 
 
@@ -1230,6 +1241,13 @@ class CaseOutcome:
     # run for tokens it did not spend.
     replayed_from: Optional[str] = None
     replayed_tokens: TokenSplit = field(default_factory=TokenSplit)
+    # The commit whose run *made* the advocates this case reused, which is not
+    # always the commit ``replayed_from`` names. A replay into the directory it
+    # reads from rewrites that directory's metadata before the next replay reads
+    # it, so the directory's recorded commit is then the commit that *copied*
+    # them; a reader told only that one would conclude the advocates were
+    # produced by the copying run.
+    replayed_made_at: Optional[str] = None
 
     @property
     def replayed(self) -> bool:
@@ -1491,6 +1509,10 @@ def run_one_case(
     # both branches: the run's bill and the run's provenance are different
     # questions and a failure is not a reason to answer only one of them.
     replayed_from = result.replay.run_dir if result.replay is not None else None
+    # Recorded apart from ``replayed_from`` because a replay into its own source
+    # directory makes the directory's recorded commit the copying run's. The
+    # commit that made these advocates is the one the source entry recorded.
+    replayed_made_at = result.replay.git_commit if result.replay is not None else None
     replayed_tokens = (
         TokenSplit(
             prompt_tokens=_as_int(result.replay.prompt_tokens),
@@ -1520,6 +1542,7 @@ def run_one_case(
                 failure_reason=failure_reason_for(FAILURE_SHAPE, detail),
                 replayed_from=replayed_from,
                 replayed_tokens=replayed_tokens,
+                replayed_made_at=replayed_made_at,
             ),
             None,
             result.transcript_json,
@@ -1571,6 +1594,7 @@ def run_one_case(
             ruling=result.ruling,
             replayed_from=replayed_from,
             replayed_tokens=replayed_tokens,
+            replayed_made_at=replayed_made_at,
         ),
         document,
         result.transcript_json,
@@ -1606,10 +1630,16 @@ def _outcome_from_cache(
     tokens = TokenSplit.from_mapping(document.get("tokens"))
     replay = document.get("replay")
     replayed_from: Optional[str] = None
+    replayed_made_at: Optional[str] = None
     replayed_tokens = TokenSplit()
     if isinstance(replay, Mapping):
         recorded_from = replay.get("run_dir")
         replayed_from = recorded_from if isinstance(recorded_from, str) else None
+        # The entry's own commit is the run that made these advocates. A cached
+        # result is the only record of it left, because ``run.json`` may since
+        # have been rewritten by a replay into this very directory.
+        recorded_made_at = replay.get("git_commit")
+        replayed_made_at = recorded_made_at if isinstance(recorded_made_at, str) else None
         replayed_tokens = TokenSplit.from_mapping(replay.get("tokens"))
     return CaseOutcome(
         case_no=case_no,
@@ -1622,6 +1652,7 @@ def _outcome_from_cache(
         stale_moved=tuple(stale_moved),
         replayed_from=replayed_from,
         replayed_tokens=replayed_tokens,
+        replayed_made_at=replayed_made_at,
     )
 
 
@@ -2969,12 +3000,26 @@ def print_summary(summary: RunSummary) -> None:
         # cases it did not reach. Counting those printed "29 of 25 cases reused
         # them" on a twenty-five-case run: more cases reused than were run.
         print(
-            "replay      advocates from {0} (commit {1}): {2} of {3} cases reused "
+            "replay      advocates from {0}: {1} of {2} cases reused "
             "them and only the judge was called".format(
                 source.get("run_dir"),
-                str(source.get("git_commit") or "unknown")[:12],
                 len(summary.replayed_cases),
                 len(summary.outcomes),
+            )
+        )
+        # Two commits, because the source directory's is not the advocates'.
+        # ``git_commit`` is what that directory recorded, and a replay into the
+        # directory it reads from makes it the commit of the run that *copied*
+        # them; printed alone it would read as the run that made them. The
+        # commit that made them travels per case, and this is where the run
+        # level collects it.
+        made = source.get("advocate_commits") or []
+        print(
+            "            those advocates were made at commit {0}; the directory "
+            "they were copied from records commit {1}".format(
+                ", ".join(str(commit)[:12] for commit in made)
+                or "an unrecorded commit",
+                str(source.get("git_commit") or "unknown")[:12],
             )
         )
         if source.get("refused_cases"):

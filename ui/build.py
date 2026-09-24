@@ -756,19 +756,38 @@ def _case_replay(record: Any) -> Optional[Dict[str, Any]]:
     }
 
 
-def _run_replay(record: Any) -> Optional[Dict[str, Any]]:
+def _run_replay(
+    record: Any, raw_by_case: Mapping[int, Mapping[str, Any]]
+) -> Optional[Dict[str, Any]]:
     """The run's own replay provenance, as the page's footer shows it.
 
     ``None`` when ``run.json`` records no replay, which is what a run that
     called every agent itself writes. The footer then says so in words rather
     than printing an empty field: a reader looking for the answer to "did this
     run ask its own agents" has to be able to find one either way.
+
+    ``git_commit`` is the commit the source directory recorded, and a replay
+    into that same directory makes it the commit of the run that *copied* the
+    advocates rather than the one that made them. ``advocate_commits`` names the
+    run that made them, read per case from the entries for the same reason
+    ``replay_sources`` is: the entries describe the results, and ``run.json``
+    describes the last invocation. Without it the footer's one commit would read
+    as the advocates' provenance, which is the run that copied them.
     """
     if not isinstance(record, Mapping):
         return None
+    made: List[str] = []
+    for case_no in sorted(raw_by_case):
+        case_replay = raw_by_case[case_no].get("replay")
+        if not isinstance(case_replay, Mapping):
+            continue
+        commit = case_replay.get("git_commit")
+        if isinstance(commit, str) and commit and commit not in made:
+            made.append(commit)
     return {
         "run_directory": _source_directory(record.get("run_dir")),
         "git_commit": record.get("git_commit"),
+        "advocate_commits": made,
         "model": record.get("model"),
         "replayed_cases": len(record.get("replayed_cases") or []),
         "refused_cases": len(record.get("refused_cases") or []),
@@ -796,8 +815,14 @@ def _provenance(
     run: Mapping[str, Any],
     invocations: Sequence[Mapping[str, Any]],
     run_dir: Path,
+    raw_by_case: Mapping[int, Mapping[str, Any]],
 ) -> Dict[str, Any]:
     """Which run this page is showing, on the page and not in a footnote.
+
+    ``raw_by_case`` is passed through to the footer's replay block, which reads
+    the commit that made the advocates from the entries rather than from
+    ``run.json``: a replay into the directory it reads from makes the two
+    different, and the footer is the one place on the page that names a commit.
 
     Every path is relative to the project root, because the run records absolute
     paths and this repository is published before submission: an absolute path
@@ -856,7 +881,7 @@ def _provenance(
         # otherwise, so "this run called every agent itself" is a fact the page
         # states rather than one a reader infers from an absent field. The footer
         # renders the negative case in words for that reason.
-        "replay": _run_replay(run.get("replay")),
+        "replay": _run_replay(run.get("replay"), raw_by_case),
     }
 
 
@@ -1051,7 +1076,7 @@ def build_document(
         ),
         "decision_note": model_module.DECISION_NOTE,
         "decision_note_link": _DECISION_NOTE_LINK,
-        "provenance": _provenance(run, invocations, run_dir),
+        "provenance": _provenance(run, invocations, run_dir, raw_by_case),
         "headline": _headline(report, case_facts),
         "policies": policies,
         "policy_sha256": policy_digests,
@@ -2651,7 +2676,16 @@ _JS = r"""
           // every case on the page. Without the two words the page answers the
           // same question twice, with two different numbers and no way to tell
           // them apart.
-          " for " + p.replay.replayed_cases + " case(s) in this invocation; only the judge was called"
+          " for " + p.replay.replayed_cases + " case(s) in this invocation; only the judge was called" +
+          // The commit named above is the source directory's, and for a replay
+          // into that same directory it is the run that *copied* the advocates.
+          // Naming the run that made them is what stops that one commit reading
+          // as the advocates' own provenance.
+          (p.replay.advocate_commits.length
+            ? "; those advocates were made at " + p.replay.advocate_commits.map(function (commit) {
+                return short(commit);
+              }).join(", ")
+            : "")
         : "called by this run"],
       ["invocations", String(p.invocation_count)]
     ];

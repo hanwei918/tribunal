@@ -9,7 +9,7 @@ the suite logs — is untracked.
 
 | Directory | What it is | Read it as |
 |---|---|---|
-| **`deepseek-deepseek-flash/`** | **The headline run**, and on top of it a **judge-only re-run** of that same run. Four invocations: two full runs (`97dbb9c`, `493beea`) and two replays that reused `493beea`'s advocates and called only the judge. Every cached result is current on both channels and all 29 carry a `replay` block; the graded figure over the 29 is **27/29**, failing 107 and 211. The runtime model decision rests on the `493beea` measurement. | A measurement, and a replay of one. Read each result's `replay` block before reading its tokens. |
+| **`deepseek-deepseek-flash/`** | **The headline run**, and on top of it **five judge-only re-runs** of that same run. Seven invocations: two full runs (`97dbb9c`, `493beea`) and five replays that reused `493beea`'s advocates and called only the judge — two measuring the prompt after its first amendment, three measuring the frozen prompt. Every cached result is current on both channels and all 29 carry a `replay` block; the graded figure over the 29 is **27/29**, failing 105 and 211, and that figure is the frozen prompt's. The runtime model decision rests on the `493beea` measurement. | A measurement, and a replay of one. Read each result's `replay` block before reading its tokens. |
 | `hy3/` | Produced under an invalidated configuration. | Evidence for a defect. No number in it is usable. |
 | `hy4-preview/` | Produced under the same invalidated configuration. | Evidence for a defect. No number in it is usable. |
 
@@ -54,12 +54,13 @@ rather than merely intended.
 
 **One case is committed under `external/`, and it is the organisers' sample case.** The organisers'
 sample case has been converted — `data/external/ryde/case-00901.json`, with every decision the
-conversion made recorded in `data/external/ryde/mapping.json` — and arbitrated **twice**.
-`external/ryde/` holds both invocations, each committed **exactly as produced**: the first at
+conversion made recorded in `data/external/ryde/mapping.json` — and arbitrated **three times**.
+`external/ryde/` holds all three invocations, each committed **exactly as produced**: the first at
 `b2556e8`, whose PARTIAL_REFUND 1.00 is the record of what the system did before anything about it was
-changed, and the second at `74881db`, after both the converted case and the judge prompt had moved. No
-file in the directory has been edited. Read it as evidence of what those runs did, not as a score —
-there is no answer-key entry for it.
+changed; the second at `74881db`, after both the converted case and the judge prompt had moved; and the
+third at `c4c9a06`, under the frozen prompt, which escalated again at confidence 0.6. No file in the
+directory has been edited. Read it as evidence of what those runs did, not as a score — there is no
+answer-key entry for it.
 
 **What each ruling did, and where the first departs from this repository's own policy, is recorded in
 `docs/notes/2026-09-23-external-sample-case.md` and
@@ -71,20 +72,20 @@ supports, because the deciding fact's only evidence is the trace impaired under 
 POL-NS-09(e) holds the fee. No prompt was changed in the re-run. The credential rule below applies to
 both unchanged.
 
-**901's brief channel is current and its prompt channel is not.** The converted case was amended after
-the first run — it gained the source's own account of how the arrival marker was made — and
-`judge.system.md` has moved three times since: first gaining the rule that carrying a fact is not the
-same as meeting a limb, then having that rule revised into an ordered procedure after a read-only review
-found wording in it that could move cases the answer key has right today, and then losing the account
-sentence, which that review had found read as "it may carry the limb". All three moves are recorded in
-`docs/notes/2026-09-24-meeting-a-limb-and-the-dropped-record.md`,
+**901's two channels are both current, and its last invocation is the frozen prompt's.** The converted
+case was amended after the first run — it gained the source's own account of how the arrival marker was
+made — and `judge.system.md` has moved three times since: first gaining the rule that carrying a fact is
+not the same as meeting a limb, then having that rule revised into an ordered procedure after a
+read-only review found wording in it that could move cases the answer key has right today, and then
+losing the account sentence, which that review had found read as "it may carry the limb". All three
+moves are recorded in `docs/notes/2026-09-24-meeting-a-limb-and-the-dropped-record.md`,
 `docs/notes/2026-09-24-the-limb-procedure-revised.md` and
 `docs/notes/2026-09-24-removing-the-account-sentence.md`. The first run's files still read as they were
-produced and are stale on both channels; the second invocation's `brief_sha256` rebuilds identically,
-and its `prompts_sha256` was the current one until the third move, so it is now stale on the prompt
-channel alone. One caution when checking either: the staleness report can see only the prompt half for
-an external case, because it rebuilds *corpus* briefs by case number and 901 is not a corpus case — so
-its brief half reads `unknown`, which is "cannot tell" and not "unmoved".
+produced and are stale on both channels; the second and third invocations' `brief_sha256` rebuilds
+identically, and the third records the current `prompts_sha256`, so it is current on both. One caution
+when checking any of them: the staleness report can see only the prompt half for an external case,
+because it rebuilds *corpus* briefs by case number and 901 is not a corpus case — so its brief half
+reads `unknown`, which is "cannot tell" and not "unmoved".
 
 ## How to read one run directory
 
@@ -140,17 +141,22 @@ special case of replay. See `docs/notes/2026-09-24-replaying-the-advocates.md`.
   evidence that a run finished its loop is the presence of `report.md` and `calls.json`, which are
   written only after the loop ends.
 
-The headline run directory now carries four invocations, and only the second is a full measurement.
+The headline run directory now carries seven invocations, and only the second is a full measurement.
 The first (`97dbb9c`, 2026-09-22) was stopped after 5 of its 29 cases; its two case failures are among
 the findings recorded in `docs/notes/`. The second (`493beea`, 2026-09-23) completed all 29 and is the
 measurement the runtime model decision rests on. The third and fourth (`74881db`, 2026-09-24) are the
-judge-only re-run: each reused the second's advocates and called only the judge — the third stopped on
-its token budget after 25 of 29 cases, the fourth took the four it had not reached — and both are
-recorded in `docs/notes/2026-09-24-judge-only-rerun-and-the-external-case.md`.
+first judge-only re-run, measured through the judge alone against the second's advocates — the third
+stopped on its token budget after 25 of 29 cases, the fourth took the four it had not reached — and
+both are recorded in `docs/notes/2026-09-24-judge-only-rerun-and-the-external-case.md`. The fifth,
+sixth and seventh (`c4c9a06`, 2026-09-24) are the second: the same replay against the frozen prompt,
+the fifth stopped on its budget after 22 of 29 cases, the sixth taking six of the seven it had not
+reached and timing out on 208, the seventh re-running 208 alone. They are recorded in
+`docs/notes/2026-09-24-the-frozen-prompt-run.md`, which is where the frozen prompt's corpus figure
+lives.
 
-**`run.json` and `report.md` describe the last invocation, and after this run that is the fourth.** The
+**`run.json` and `report.md` describe the last invocation, and after this run that is the seventh.** The
 report is graded over the cases *that invocation* handled, by design, so the committed `report.md` is a
-four-case report reading 3/4 = 75.0% and marked "(advocates replayed)"; the directory-wide figure,
+one-case report reading 1/1 = 100.0% and marked "(advocates replayed)"; the directory-wide figure,
 **27/29**, is what grading all 29 cached results gives and is the one the viewer shows. Read the
 report's case count before comparing it with anything.
 

@@ -340,23 +340,31 @@ class TheRunTests(unittest.TestCase):
 
         The list is a pin about the run committed under ``runs/`` at the commit
         this test last ran against, and the next run moves it -- the run before
-        this one had a single miss, and this one has two. What is not dated is
-        the rest: that each miss carries its expected ruling, the ruling the
-        judge produced and the two fields that differ, which is what makes the
-        miss legible on the page rather than merely counted.
+        this one missed 107 and 211, and the frozen-prompt run misses 105 and
+        211. What is not dated is the rest: that each miss carries its expected
+        ruling, the ruling the judge produced and the fields that differ, which
+        is what makes the miss legible on the page rather than merely counted.
         """
         misses = sorted(
             case_no for case_no, case in self.cases.items() if not case["grading"]["exact"]
         )
-        self.assertEqual([107, 211], misses, "the run's four-field misses moved")
+        self.assertEqual([105, 211], misses, "the run's four-field misses moved")
 
-        for case_no in (107, 211):
+        # The dated facts per miss: the key's ruling, the ruling the judge
+        # produced, and the fields that differ.
+        dated = {
+            105: ("FULL_REFUND", "ESCALATE", ["ruling", "amount_sgd"]),
+            211: (
+                "PARTIAL_REFUND",
+                "DRIVER_COMPENSATION",
+                ["ruling", "amount_sgd", "driver_compensation_sgd"],
+            ),
+        }
+        for case_no, (key_ruling, judge_ruling, failed) in dated.items():
             case = self.cases[case_no]
-            self.assertEqual("PARTIAL_REFUND", case["expected"]["ruling"])
-            self.assertEqual("ESCALATE", case["judge"]["verdict"]["ruling"])
-            self.assertEqual(
-                ["ruling", "amount_sgd"], case["grading"]["failed_fields"]
-            )
+            self.assertEqual(key_ruling, case["expected"]["ruling"])
+            self.assertEqual(judge_ruling, case["judge"]["verdict"]["ruling"])
+            self.assertEqual(failed, case["grading"]["failed_fields"])
 
         self.assertIn("decision_note", self.document)
         self.assertTrue(
@@ -485,7 +493,7 @@ class HeadlineTests(unittest.TestCase):
         # a fact about the run committed under ``runs/``, and the next run moves
         # it. What is not dated is the equality above, that the page's figure is
         # the run's own sum, which is the thing under test.
-        self.assertEqual(35, total, "the run's judges discarded 35 claims")
+        self.assertEqual(25, total, "the run's judges discarded 25 claims")
 
     def test_the_seconds_and_tokens_are_summed_from_the_run(self):
         seconds = []
@@ -696,7 +704,7 @@ class ProvenanceTests(unittest.TestCase):
         ):
             with self.subTest(prompts_dir=foreign):
                 provenance = build._provenance(
-                    {"prompts_dir": foreign}, [], build.RUN_DIR
+                    {"prompts_dir": foreign}, [], build.RUN_DIR, {}
                 )
                 self.assertEqual("prompts/v1", provenance["prompts_directory"])
 
@@ -1066,7 +1074,13 @@ class ReplayTests(unittest.TestCase):
     CALLED = 209
 
     SOURCE = "runs/an-earlier-run"
+    # The commit whose run *made* the advocates, which each case's entry records.
     COMMIT = "493beeaf94953943116a25cb74353b3dd2279499"
+    # And the commit the source directory records, which after a replay into
+    # that directory is the run that *copied* them. The two are different on the
+    # committed run, and a footer carrying only the second named the copier as
+    # the advocates' provenance.
+    COPIED_FROM = "c4c9a06c30bc630e52305a8bf09a14bda83771d5"
     TOKENS = 61753
     OUTSIDE = "/private/tmp/some-clone/runs/an-earlier-run"
 
@@ -1126,11 +1140,16 @@ class ReplayTests(unittest.TestCase):
 
     @classmethod
     def _mark_run(cls, path: Path, source: str) -> None:
-        """The run-level block, in the shape ``write_metadata`` writes it."""
+        """The run-level block, in the shape ``write_metadata`` writes it.
+
+        ``git_commit`` is the source directory's and ``advocate_commits`` is the
+        run that made them, which is the pair the footer has to tell apart.
+        """
         document = json.loads(path.read_text(encoding="utf-8"))
         document["replay"] = {
             "run_dir": source,
-            "git_commit": cls.COMMIT,
+            "git_commit": cls.COPIED_FROM,
+            "advocate_commits": [cls.COMMIT],
             "model": document["model"],
             "prompts_sha256": document["prompts_sha256"],
             "replayed_cases": [cls.REPLAYED],
@@ -1166,10 +1185,45 @@ class ReplayTests(unittest.TestCase):
         replay = document["provenance"]["replay"]
         self.assertIsNotNone(replay, "the footer does not say this run replayed")
         self.assertEqual(self.SOURCE, replay["run_directory"])
-        self.assertEqual(self.COMMIT, replay["git_commit"])
+        self.assertEqual(self.COPIED_FROM, replay["git_commit"])
         self.assertEqual(1, replay["replayed_cases"])
         self.assertEqual(0, replay["refused_cases"])
         self.assertEqual(self.TOKENS, replay["tokens"])
+
+    def test_the_footer_names_the_run_that_made_the_advocates(self):
+        """The commit the source directory records is the copying run's.
+
+        The defect, as a regression test. The footer read ``run.json``'s
+        ``git_commit`` alone, and a replay into the directory it reads from
+        rewrites that file before the next replay reads it: the one commit on
+        the page therefore named the run that *copied* the advocates as though
+        it were the run that made them. On the committed run the block says
+        ``c4c9a06`` while every case's entry says ``493beea``.
+
+        Asserted the way this class asserts everything else -- the value in the
+        data block, and the sentence that reads it in the script -- because
+        there is no DOM until a browser builds one.
+        """
+        document = self._document()
+        replay = document["provenance"]["replay"]
+        page = build.render_html(document)
+        script = behaviour_script(page)
+
+        self.assertEqual(self.COPIED_FROM, replay["git_commit"])
+        self.assertEqual(
+            [self.COMMIT],
+            replay["advocate_commits"],
+            "the footer does not carry the run that made the advocates",
+        )
+        self.assertIn(
+            self.COMMIT, page, "the run that made the advocates is not on the page"
+        )
+        self.assertRegex(
+            script,
+            r"p\.replay\.advocate_commits",
+            "the footer does not read the commit that made the advocates",
+        )
+        self.assertRegex(script, r"were made at ", "no sentence says who made them")
 
     def test_the_headline_qualifies_the_figure_with_the_replay_and_its_cost(self):
         """The figure is the judge's, and the card a reader sees first has to say so.
