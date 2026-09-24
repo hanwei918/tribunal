@@ -76,6 +76,24 @@ exists only in the author's working tree. In that clone `python -m ui.build --ch
 committed page identical to a fresh build at 1,619,262 bytes, so the page this run rebuilt is a
 function of the repository rather than of the checkout it was built in.
 
+**The cache this note describes has a fingerprint, and it is recorded here so the claims above can be
+checked against it rather than taken on trust.** `runner.cache_fingerprint` over
+`runs/deepseek-deepseek-flash` is `e2231efb0cbcd1434582320445d75f0479422d02316959397a7c5df18a079356`
+— the set of per-case brief and prompts digests, which is provenance and not a count — and over that
+cache the staleness report reads **29 cached, 29 current, 0 stale, 0 unknown** on the brief channel,
+with every case's recorded `prompts_sha256` equal to the current `eece65ee…` on the prompt channel.
+That is the same fingerprint the suite's skip messages name as the cache present.
+
+**Two checks in `test_run_benchmark.py` are currently inert, and it is worth knowing why.** They
+compare `docs/notes/2026-09-22-stale-cached-results.md`'s counts against the live cache, and skip while
+that note's fingerprint does not match; they have been skipping since 2026-09-23, when this cache
+moved. That is the behaviour the note's own design asks for — a count about one cache held against
+another measures the calendar — so it is not a defect and nothing here changes it. It does mean the
+suite's `skipped=3` reads as one number for three different reasons — one opt-in network test and these
+two structural skips — and the fresh clone's `skipped=4` adds the gitignored-`.env` test on top of
+them. Re-arming the two is a change of design rather than a repair: it needs a note carrying that block
+format and `STALE_NOTE` pointed at it, which is the owner's call and not this session's.
+
 ## 3. Every case, before and after
 
 Before is the headline run's result at `493beea` (28/29 exact, 211 the single miss). Now is this run.
