@@ -9,7 +9,7 @@ the suite logs — is untracked.
 
 | Directory | What it is | Read it as |
 |---|---|---|
-| **`deepseek-deepseek-flash/`** | **The headline run.** 29 of 29 cases, 0 failed, every cached result current. This is the run the runtime model decision rests on. | A measurement. |
+| **`deepseek-deepseek-flash/`** | **The headline run**, and on top of it a **judge-only re-run** of that same run. Four invocations: two full runs (`97dbb9c`, `493beea`) and two replays that reused `493beea`'s advocates and called only the judge. Every cached result is current on both channels and all 29 carry a `replay` block; the graded figure over the 29 is **27/29**, failing 107 and 211. The runtime model decision rests on the `493beea` measurement. | A measurement, and a replay of one. Read each result's `replay` block before reading its tokens. |
 | `hy3/` | Produced under an invalidated configuration. | Evidence for a defect. No number in it is usable. |
 | `hy4-preview/` | Produced under the same invalidated configuration. | Evidence for a defect. No number in it is usable. |
 
@@ -52,31 +52,37 @@ means while leaving every file a reader looks at apparently intact. `assert_exte
 refuses any destination outside `runs/external/` before a single call is made, so this is checked
 rather than merely intended.
 
-**One run is committed under `external/`, and it is the organisers' sample case.** The organisers'
+**One case is committed under `external/`, and it is the organisers' sample case.** The organisers'
 sample case has been converted — `data/external/ryde/case-00901.json`, with every decision the
-conversion made recorded in `data/external/ryde/mapping.json` — and arbitrated once.
-`external/ryde/` holds that one run, committed at `b2556e8` **exactly as produced**: it is the record
-of what the system did before anything about it was changed, so no file in it has been edited and the
-case has not been re-run. Read it as evidence of what that run did, not as a score — there is no
-answer-key entry for it.
+conversion made recorded in `data/external/ryde/mapping.json` — and arbitrated **twice**.
+`external/ryde/` holds both invocations, each committed **exactly as produced**: the first at
+`b2556e8`, whose PARTIAL_REFUND 1.00 is the record of what the system did before anything about it was
+changed, and the second at `74881db`, after both the converted case and the judge prompt had moved. No
+file in the directory has been edited. Read it as evidence of what those runs did, not as a score —
+there is no answer-key entry for it.
 
-**What that ruling did, and where it departs from this repository's own policy, is recorded in
-`docs/notes/2026-09-23-external-sample-case.md`.** That note checks each point against the transcript
-and the clause text, records the tokens billed and the wall clock, and names the part of
-`prompts/v1/judge.system.md` that let the ruling be written as it was. No prompt was changed. The
-credential rule below applies to this run unchanged.
+**What each ruling did, and where the first departs from this repository's own policy, is recorded in
+`docs/notes/2026-09-23-external-sample-case.md` and
+`docs/notes/2026-09-24-judge-only-rerun-and-the-external-case.md`.** The first note checks each point
+against the transcript and the clause text, records the tokens billed and the wall clock, and names the
+part of `prompts/v1/judge.system.md` that let the ruling be written as it was. The second records the
+re-run, which produced **ESCALATE at confidence 0.6** — the ruling this repository's policy text
+supports, because the deciding fact's only evidence is the trace impaired under POL-NS-08(b) and
+POL-NS-09(e) holds the fee. No prompt was changed in the re-run. The credential rule below applies to
+both unchanged.
 
-**The converted case has since been amended, so this run's `brief_sha256` no longer matches the brief
-this repository rebuilds for it, and the prompts digest has moved twice.** All three moves are
-expected, and are recorded in `docs/notes/2026-09-24-meeting-a-limb-and-the-dropped-record.md` and
-`docs/notes/2026-09-24-the-limb-procedure-revised.md`: the converted case gained the source's own
-account of how the arrival marker was made, `judge.system.md` gained the rule that carrying a fact is
-not the same as meeting a limb, and that rule was then revised into an ordered procedure after a
-read-only review found wording in it that could move cases the answer key has right today. The run
-itself is untouched and still reads as it was produced. One caution when checking it: the staleness
-report can see only the prompt half for an external case, because it rebuilds *corpus* briefs by case
-number and 901 is not a corpus case — so its brief half reads `unknown`, which is "cannot tell" and
-not "unmoved".
+**Both channels are now current for 901.** The converted case was amended after the first run — it
+gained the source's own account of how the arrival marker was made — and `judge.system.md` moved
+twice, first gaining the rule that carrying a fact is not the same as meeting a limb and then having
+that rule revised into an ordered procedure after a read-only review found wording in it that could
+move cases the answer key has right today. All three moves are recorded in
+`docs/notes/2026-09-24-meeting-a-limb-and-the-dropped-record.md` and
+`docs/notes/2026-09-24-the-limb-procedure-revised.md`. The first run's files still read as they were
+produced and are stale on both channels; the second invocation's `brief_sha256` rebuilds identically
+and its `prompts_sha256` is the current one. One caution when checking either: the staleness report
+can see only the prompt half for an external case, because it rebuilds *corpus* briefs by case number
+and 901 is not a corpus case — so its brief half reads `unknown`, which is "cannot tell" and not
+"unmoved".
 
 ## How to read one run directory
 
@@ -87,7 +93,7 @@ not "unmoved".
 | `case-<NNNNN>.json` | The cached result for one case: the ruling, its provenance (commit, prompts digest, interpreter, brief digest) and the token split. Written only for a case that produced a ruling. A `replay` block is added when that case's advocates were replayed rather than called here. |
 | `case-<NNNNN>.transcript.json` | Every call made for that case, with the raw response body, the parse outcome, and the per-call token split. A replayed case carries its advocates' entries as they were recorded, each marked as replayed, and only the judge's entry is a call this run made. |
 | `calls.json` | Every call this invocation made, in one file. |
-| `report.md` | The graded result, produced by `eval/grade.py`. |
+| `report.md` | The graded result **for this invocation's cases only** — those it produced a ruling for, whether by calling or from the cache — rendered by `eval/grade.py`. Overwritten by the next invocation, like `run.json`, so a replay of four cases leaves a four-case report beside a twenty-nine-case directory. Read its case count first. |
 
 ## Replaying the advocates
 
@@ -132,10 +138,19 @@ special case of replay. See `docs/notes/2026-09-24-replaying-the-advocates.md`.
   evidence that a run finished its loop is the presence of `report.md` and `calls.json`, which are
   written only after the loop ends.
 
-The headline run carries two invocations, and only the second is a measurement. The first
-(`97dbb9c`, 2026-09-22) was stopped after 5 of its 29 cases; its two case failures are among the
-findings recorded in `docs/notes/`. `run.json` and `report.md` describe the second
-(`493beea`, 2026-09-23), which completed all 29.
+The headline run directory now carries four invocations, and only the second is a full measurement.
+The first (`97dbb9c`, 2026-09-22) was stopped after 5 of its 29 cases; its two case failures are among
+the findings recorded in `docs/notes/`. The second (`493beea`, 2026-09-23) completed all 29 and is the
+measurement the runtime model decision rests on. The third and fourth (`74881db`, 2026-09-24) are the
+judge-only re-run: each reused the second's advocates and called only the judge — the third stopped on
+its token budget after 25 of 29 cases, the fourth took the four it had not reached — and both are
+recorded in `docs/notes/2026-09-24-judge-only-rerun-and-the-external-case.md`.
+
+**`run.json` and `report.md` describe the last invocation, and after this run that is the fourth.** The
+report is graded over the cases *that invocation* handled, by design, so the committed `report.md` is a
+four-case report reading 3/4 = 75.0% and marked "(advocates replayed)"; the directory-wide figure,
+**27/29**, is what grading all 29 cached results gives and is the one the viewer shows. Read the
+report's case count before comparing it with anything.
 
 ## The rule for putting anything here
 
@@ -147,7 +162,9 @@ it. The check is: any `sk-` followed by eight or more identifier characters, and
 A byte scan of a PNG cannot see rendered text, so for an image the check has to be of the image
 itself — open it and read it — not only of its bytes. Nothing in this directory is an image.
 
-The scan that cleared these three directories covered all 81 files under `runs/` and found no match.
+The scan that cleared these directories covered all 125 files under `runs/` at this commit — the three
+committed run directories, `external/`, and the untracked suite logs — and found no match, with a
+positive control that fires on a fabricated `sk-` string.
 
 The one committed external run was scanned the same way as it entered the directory. The `sk-`
 pattern was run over all 5 files under `runs/external/` and matched none, with a positive control

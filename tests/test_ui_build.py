@@ -335,16 +335,29 @@ class TheRunTests(unittest.TestCase):
                     self.assertIn("weight_multiplier", artifact["admissibility"])
                     self.assertIn("issues", artifact["admissibility"])
 
-    def test_the_single_miss_is_shown_as_a_miss(self):
+    def test_the_misses_are_shown_as_misses(self):
+        """Which cases miss is dated; that every miss is carried as one is not.
+
+        The list is a pin about the run committed under ``runs/`` at the commit
+        this test last ran against, and the next run moves it -- the run before
+        this one had a single miss, and this one has two. What is not dated is
+        the rest: that each miss carries its expected ruling, the ruling the
+        judge produced and the two fields that differ, which is what makes the
+        miss legible on the page rather than merely counted.
+        """
         misses = sorted(
             case_no for case_no, case in self.cases.items() if not case["grading"]["exact"]
         )
-        self.assertEqual([211], misses, "the run has one four-field miss and it is 211")
+        self.assertEqual([107, 211], misses, "the run's four-field misses moved")
 
-        case = self.cases[211]
-        self.assertEqual("PARTIAL_REFUND", case["expected"]["ruling"])
-        self.assertEqual("ESCALATE", case["judge"]["verdict"]["ruling"])
-        self.assertEqual(["ruling", "amount_sgd"], case["grading"]["failed_fields"])
+        for case_no in (107, 211):
+            case = self.cases[case_no]
+            self.assertEqual("PARTIAL_REFUND", case["expected"]["ruling"])
+            self.assertEqual("ESCALATE", case["judge"]["verdict"]["ruling"])
+            self.assertEqual(
+                ["ruling", "amount_sgd"], case["grading"]["failed_fields"]
+            )
+
         self.assertIn("decision_note", self.document)
         self.assertTrue(
             self.document["decision_note_link"].endswith(self.document["decision_note"]),
@@ -468,7 +481,11 @@ class HeadlineTests(unittest.TestCase):
         self.assertEqual(
             per_case, self.document["headline"]["discarded_claims"]["per_case"]
         )
-        self.assertEqual(37, total, "the run's judges discarded 37 claims")
+        # A dated pin, not a derivation: which claims these judges discarded is
+        # a fact about the run committed under ``runs/``, and the next run moves
+        # it. What is not dated is the equality above, that the page's figure is
+        # the run's own sum, which is the thing under test.
+        self.assertEqual(35, total, "the run's judges discarded 35 claims")
 
     def test_the_seconds_and_tokens_are_summed_from_the_run(self):
         seconds = []
@@ -1069,6 +1086,23 @@ class ReplayTests(unittest.TestCase):
                     build.RUN_DIR / ("case-%05d%s" % (case_no, suffix)),
                     run_dir / ("case-%05d%s" % (case_no, suffix)),
                 )
+        # The committed run is itself a replay now, so every copied case arrives
+        # already carrying a replay block, and so does its ``run.json``. The
+        # fixture therefore starts from a known state: nothing is marked
+        # replayed until a test marks it. Without this the negative case -- a
+        # run that called its own advocates -- could not be built from the
+        # committed run at all, and the positive case would count two replays
+        # where it asked for one.
+        for name in (
+            "run.json",
+            "case-%05d.json" % self.REPLAYED,
+            "case-%05d.json" % self.CALLED,
+        ):
+            path = run_dir / name
+            document = json.loads(path.read_text(encoding="utf-8"))
+            document.pop("replay", None)
+            path.write_text(json.dumps(document), encoding="utf-8")
+
         if source is not None:
             self._mark_replayed(run_dir / ("case-%05d.json" % self.REPLAYED), source)
             self._mark_run(run_dir / "run.json", source)

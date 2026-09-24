@@ -2645,7 +2645,13 @@ _JS = r"""
       // for its answer must be able to find one whether the answer is yes or no.
       ["advocates", p.replay
         ? "replayed from " + text(p.replay.run_directory) + " at " + short(p.replay.git_commit) +
-          " for " + p.replay.replayed_cases + " case(s); only the judge was called"
+          // "in this invocation", because the count beside it is the last
+          // invocation's and not the directory's: a run directory can hold
+          // results from more than one, and the overview's own figure counts
+          // every case on the page. Without the two words the page answers the
+          // same question twice, with two different numbers and no way to tell
+          // them apart.
+          " for " + p.replay.replayed_cases + " case(s) in this invocation; only the judge was called"
         : "called by this run"],
       ["invocations", String(p.invocation_count)]
     ];

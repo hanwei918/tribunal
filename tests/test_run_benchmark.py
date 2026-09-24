@@ -4130,6 +4130,143 @@ class ReplayTests(unittest.TestCase):
                 len(CASE_SET) * 2 * TOKENS_PER_CALL, summary.report.replay.tokens
             )
 
+    def test_two_replays_into_one_directory_both_name_the_commit_that_made_the_advocates(self):
+        """The source commit is the run that produced them, not the one that copied them.
+
+        The defect, as a regression test. The source commit was read from the
+        source directory's ``run.json``, which is the last invocation's file, and
+        a replay into the directory it reads from rewrites it before the next
+        replay reads it. The second of two replays therefore named the first's
+        commit -- on the real run, four cases recorded ``74881db`` instead of
+        ``493beea``, a commit whose judge produced nothing those cases reused.
+
+        The fixture is the real sequence: a full run, then two replays into that
+        same directory under two later commits, the second of them taking the
+        cases the first did not reach.
+        """
+        made = "a" * 40
+        first = "b" * 40
+        second = "c" * 40
+        with tempfile.TemporaryDirectory() as tmp:
+            made_run, _ = bench(tmp, git=git_runner(made))
+            source = made_run.run_dir
+            # Into the source's own directory: runs_dir is the runs root, so the
+            # source's parent is what makes the destination the source.
+            self._replay(
+                tmp,
+                source,
+                runs_dir=source.parent,
+                cases=CASE_SET[:2],
+                git=git_runner(first),
+            )
+            self._replay(
+                tmp,
+                source,
+                runs_dir=source.parent,
+                cases=CASE_SET[2:3],
+                git=git_runner(second),
+            )
+
+            document = runner.read_json(runner.case_cache_path(source, CASE_SET[2]))
+
+        self.assertEqual(
+            made,
+            document["replay"]["git_commit"],
+            "a case names as its source the commit of a run that only copied "
+            "these advocates",
+        )
+
+    def test_a_run_that_stopped_early_counts_the_cases_it_replayed(self):
+        """The summary counts this invocation's cases, not the ones it accepted.
+
+        The defect, as a regression test. The line read the source block's
+        ``replayed_cases``, which is every case the acceptance check accepted
+        *before* the run began, and printed it over the number of outcomes the
+        run produced. A replay stopped by its token budget therefore reported
+        more cases reused than cases run: on the first real one, "29 of 25 cases
+        reused them", where four of the twenty-nine were never reached.
+
+        The fixture asserts the precondition as well as the line. A budget that
+        stops the run is only a reproduction while the check accepted more cases
+        than the run reached, and a test that could pass with the two equal
+        would not have caught this.
+        """
+        requested = CASE_SET[:3]
+        with tempfile.TemporaryDirectory() as tmp:
+            source, _ = self._source(tmp)
+            summary, _ = self._replay(
+                tmp, source, cases=requested, token_budget=TOKENS_PER_CALL
+            )
+
+            # The precondition is that the run did not reach every case it asked
+            # about. All three were accepted, so three is also the number the
+            # old line printed over the one case that actually ran.
+            self.assertLess(
+                len(summary.outcomes),
+                len(requested),
+                "the fixture does not reproduce it: the run reached every case "
+                "it asked about, so the two counts agree",
+            )
+
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                runner.print_summary(summary)
+            text = output.getvalue()
+
+            self.assertIn(
+                "{0} of {1} cases reused them".format(
+                    len(summary.replayed_cases), len(summary.outcomes)
+                ),
+                text,
+            )
+            self.assertNotIn(
+                "{0} of {1} cases reused them".format(
+                    len(requested), len(summary.outcomes)
+                ),
+                text,
+                "the summary counts cases the run never reached",
+            )
+
+    def test_the_record_lists_the_cases_this_invocation_replayed(self):
+        """The file and the summary must not disagree about how many were replayed.
+
+        The viewer's footer reads this list out of ``run.json``, so a block left
+        as the acceptance check's own would have the page saying the advocates
+        were replayed for cases the run never reached.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            source, _ = self._source(tmp)
+            summary, _ = self._replay(
+                tmp, source, cases=CASE_SET[:3], token_budget=TOKENS_PER_CALL
+            )
+            metadata = runner.read_json(summary.run_dir / runner.METADATA_FILE)
+
+        self.assertEqual(
+            [o.case_no for o in summary.outcomes if o.replayed],
+            metadata["replay"]["replayed_cases"],
+            "the file lists cases the run never reached",
+        )
+        self.assertEqual(
+            metadata["replay"]["replayed_cases"], summary.replay["replayed_cases"]
+        )
+
+    def test_every_case_a_completed_replay_ran_is_counted(self):
+        """The same line on a run that finished: the count is the run's, and agrees."""
+        with tempfile.TemporaryDirectory() as tmp:
+            source, _ = self._source(tmp)
+            summary, _ = self._replay(tmp, source)
+
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                runner.print_summary(summary)
+            text = output.getvalue()
+
+            self.assertEqual(tuple(CASE_SET), tuple(summary.replayed_cases))
+            self.assertIn(
+                "{0} of {1} cases reused them".format(len(CASE_SET), len(CASE_SET)),
+                text,
+            )
+
     def test_a_run_that_replayed_nothing_says_nothing_about_replay(self):
         """A report built from a run that asked its own agents claims nothing."""
         with tempfile.TemporaryDirectory() as tmp:

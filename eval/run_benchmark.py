@@ -206,6 +206,7 @@ __all__ = [
     "current_prompts_sha256",
     "brief_staleness",
     "read_replay_source",
+    "source_advocate_commit",
     "check_replay",
     "render_replay_check",
     "hash_directory",
@@ -511,16 +512,44 @@ class ReplayCheck:
         return bool(self.accepted)
 
     def provenance(self) -> Dict[str, Any]:
-        """The source run, as the metadata and the cache entries carry it."""
+        """The source run, as the metadata and the cache entries carry it.
+
+        ``replayed_cases`` here is every case the check **accepted**, which is
+        not the same as every case a run replayed: the check runs before the run
+        does, and a run stopped on its budget never reaches the rest. Callers
+        that know what the run actually did pass the result through
+        :func:`replay_block`, which is what the file and the summary carry.
+        """
         return {
             "run_dir": str(self.source_dir),
             "git_commit": self.git_commit,
             "model": self.model,
             "prompts_sha256": self.prompts_sha256,
-            "replayed_cases": self.accepted_cases,
-            "refused_cases": self.refused_cases,
+            "replayed_cases": list(self.accepted_cases),
+            "refused_cases": list(self.refused_cases),
             "note": pipeline.REPLAY_NOTE,
         }
+
+
+def replay_block(
+    check: "ReplayCheck", outcomes: Sequence["CaseOutcome"]
+) -> Dict[str, Any]:
+    """The source block, with the case list this invocation actually replayed.
+
+    One place for the correction, because three places read the list: the run's
+    own metadata file, the printed summary and the viewer's footer. Left as the
+    check's own list it named cases this run never reached -- on the first real
+    replay, twenty-nine cases reused on a run that ran twenty-five before its
+    token budget stopped it, with the four unrun cases still listed as if their
+    advocates had been borrowed. A file and a summary that disagree about how
+    many cases were replayed give a reader two answers to one question, and the
+    summary is the one they see first.
+    """
+    block = check.provenance()
+    block["replayed_cases"] = [
+        outcome.case_no for outcome in outcomes if outcome.replayed
+    ]
+    return block
 
 
 def read_replay_source(
@@ -561,6 +590,42 @@ def read_replay_source(
         recorded_transcript_sha256=document.get("transcript_sha256"),
         entries=entries,
     )
+
+
+def source_advocate_commit(
+    source_dir: Path, case_no: int, *, fallback: Optional[str] = None
+) -> Optional[str]:
+    """The commit whose run produced this case's recorded advocates.
+
+    Read from the invocation history and not from ``run.json``. ``run.json`` is
+    the **last** invocation's file, and a replay into the directory it reads from
+    rewrites it before the next replay reads it: the second of two replays into
+    one directory therefore records the first's commit as the source -- the
+    commit that *copied* the advocates rather than the one that made them. That
+    is how four cases came to name a commit whose judge produced nothing they
+    reused. The history is append-only and is the file that survives, which is
+    why it is the one that can answer this.
+
+    An invocation that replayed did not produce the advocates it copied, so the
+    answer is the last invocation that completed this case **without** replaying.
+    ``fallback`` is used when the history cannot answer -- no such invocation, or
+    a directory written before the history existed.
+    """
+    history = read_json(Path(source_dir) / INVOCATIONS_FILE)
+    if not isinstance(history, list):
+        return fallback
+    found: Optional[str] = None
+    for entry in history:
+        if not isinstance(entry, Mapping):
+            continue
+        if entry.get("replay"):
+            continue
+        completed = (entry.get("cases") or {}).get("completed") or []
+        if case_no in completed:
+            commit = entry.get("git_commit")
+            if isinstance(commit, str) and commit:
+                found = commit
+    return found if found is not None else fallback
 
 
 def check_replay(
@@ -608,7 +673,9 @@ def check_replay(
         source = read_replay_source(
             source_dir,
             case_no,
-            git_commit=check.git_commit,
+            git_commit=source_advocate_commit(
+                source_dir, case_no, fallback=check.git_commit
+            ),
             model=check.model,
         )
         try:
@@ -1984,7 +2051,7 @@ def run_benchmark(
             tokens_failed=state["failed"],
             tokens_reused=reused,
             tokens_replayed=state["replayed"],
-            replay=None if replay is None else replay.provenance(),
+            replay=None if replay is None else replay_block(replay, outcomes),
         )
         # Both, and the order matters. ``run.json`` is the latest invocation's
         # record at the conventional path; the history is what survives the next
@@ -2165,7 +2232,7 @@ def run_benchmark(
         tokens_failed=state["failed"],
         tokens_reused=reused.billed,
         tokens_replayed=state["replayed"],
-        replay=None if replay is None else replay.provenance(),
+        replay=None if replay is None else replay_block(replay, outcomes),
     )
 
 
@@ -2895,12 +2962,18 @@ def print_summary(summary: RunSummary) -> None:
     # already read the accuracy as a whole-pipeline number.
     if summary.replay is not None:
         source = summary.replay
+        # The count is this invocation's own, read off its outcomes and not off
+        # the source block beside it. The block's ``replayed_cases`` is every
+        # case the acceptance check accepted before the run started, and a run
+        # that stopped early -- on its token budget, say -- never replayed the
+        # cases it did not reach. Counting those printed "29 of 25 cases reused
+        # them" on a twenty-five-case run: more cases reused than were run.
         print(
             "replay      advocates from {0} (commit {1}): {2} of {3} cases reused "
             "them and only the judge was called".format(
                 source.get("run_dir"),
                 str(source.get("git_commit") or "unknown")[:12],
-                len(source.get("replayed_cases") or []),
+                len(summary.replayed_cases),
                 len(summary.outcomes),
             )
         )
