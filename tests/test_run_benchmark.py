@@ -477,6 +477,12 @@ class CleanRunTests(unittest.TestCase):
                         "prompts_sha256",
                         "python_version",
                         "recorded_at",
+                        # Present only when another run's advocates were reused,
+                        # and ``None`` otherwise. A reader has to be able to tell
+                        # "this run called all three agents" from "this file does
+                        # not say", which is exactly what an absent key leaves
+                        # open.
+                        "replay",
                         "ruling",
                         "ruling_findings",
                         "schema_version",
@@ -3847,6 +3853,632 @@ class IsolationTests(unittest.TestCase):
 # --------------------------------------------------------------------------
 # The block a person reads at the end
 # --------------------------------------------------------------------------
+class RefusingTransport:
+    """Answers every case but the refused one, and fails if that one is called.
+
+    A refusal is only a refusal if no call was made **for that case**. The other
+    cases in the same invocation are replayed normally, so a rig that raised on
+    any call at all would also fail a correct run of the other cases -- and
+    would pass for a runner that quietly ran the refused one in full. The case
+    is read off the request, exactly as the scripted transport reads it.
+    """
+
+    def __init__(self, refused=(), produced=None) -> None:
+        self.refused = {refused} if isinstance(refused, int) else set(refused)
+        self._scripted = ScriptedTransport(
+            produced_from_key(answer_key()) if produced is None else produced
+        )
+        self.refused_calls = 0
+
+    def __call__(self, url, headers, body, timeout):
+        case_no, _role = role_of(json.loads(body.decode("utf-8")))
+        if case_no in self.refused:
+            self.refused_calls += 1
+            raise AssertionError(
+                "a model call was made for case {0}, which replay should have "
+                "refused".format(case_no)
+            )
+        return self._scripted(url, headers, body, timeout)
+
+    def calls(self) -> int:
+        return self._scripted.calls()
+
+
+class ReplayTests(unittest.TestCase):
+    """Replaying the advocates, and re-running only the judge.
+
+    Every test drives the real runner, the real pipeline and the real client
+    over the scripted transport, with no network. The acceptance conditions are
+    broken one at a time, and each refusal is asserted with a transport that
+    raises if it is reached, so "no model call" is a property of the rig rather
+    than a count taken afterwards.
+    """
+
+    def _source(self, tmp, **overrides):
+        """A completed run to replay from: its directory, and its transport."""
+        summary, transport = bench(tmp, **overrides)
+        return summary.run_dir, transport
+
+    def _replay(self, tmp, source, *, transport=None, runs_dir=None, **overrides):
+        """A replay of ``source``, into its own directory by default."""
+        if transport is None:
+            transport = ScriptedTransport(produced_from_key(answer_key()))
+        arguments = dict(
+            runs_dir=Path(runs_dir) if runs_dir is not None else Path(tmp) / "replayed",
+            force=True,
+            replay_dir=source,
+            transport=transport,
+        )
+        arguments.update(overrides)
+        summary, _ = bench(tmp, **arguments)
+        return summary, transport
+
+    def _refused(self, tmp, source, case_no, break_it, *, refused=None, **overrides):
+        """Break the source for one case, replay, and require a refusal.
+
+        The transport raises if the refused case is reached, so a runner that
+        called the judge for it anyway fails here rather than being recorded
+        under some other failure kind. The rest of the set is replayed normally,
+        which is what shows the run continues past a refusal.
+        """
+        break_it(source, case_no)
+        transport = RefusingTransport(refused if refused is not None else case_no)
+        summary, _ = self._replay(tmp, source, transport=transport, **overrides)
+        self.assertEqual(
+            0,
+            transport.refused_calls,
+            "a refused case reached the transport",
+        )
+        return summary
+
+    def _rewrite_transcript(self, source, case_no, change):
+        """Change one case's recorded transcript, and keep the source's own record of it.
+
+        The cache entry's ``transcript_sha256`` is updated too. Without that the
+        transcript-digest condition fires first and the condition under test is
+        never exercised -- the two would be indistinguishable, and a test that
+        cannot tell them apart does not test either.
+        """
+        path = runner.transcript_path(source, case_no)
+        document = json.loads(path.read_text(encoding="utf-8"))
+        change(document["entries"])
+        path.write_text(json.dumps(document), encoding="utf-8")
+        record = runner.read_json(runner.case_cache_path(source, case_no))
+        record["transcript_sha256"] = runner.file_sha256(path)
+        runner.write_json(runner.case_cache_path(source, case_no), record)
+
+    # -- what a replay does -----------------------------------------------
+    def test_a_replayed_case_makes_one_call_and_it_is_the_judge(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source, first = self._source(tmp)
+            self.assertEqual(len(CASE_SET) * CALLS_PER_CASE, first.calls())
+
+            summary, transport = self._replay(tmp, source)
+
+            self.assertEqual([], summary.failures)
+            self.assertEqual(list(CASE_SET), summary.completed_cases)
+            self.assertEqual(list(CASE_SET), summary.replayed_cases)
+            # One call per case, and the advocates are not among them.
+            self.assertEqual(len(CASE_SET), transport.calls())
+            for case_no in CASE_SET:
+                with self.subTest(case_no=case_no):
+                    self.assertEqual([transcript.ROLE_JUDGE], transport.roles_for(case_no))
+
+    def test_the_judge_is_handed_the_bytes_a_full_run_would_build(self):
+        """The replay builds the judge's input through the pipeline's own code.
+
+        Compared against what a full run of the same cases sends, not against a
+        string this test composes: a second copy of the message's shape in the
+        replay would pass a test written the other way while the two drifted
+        apart, which is the whole failure this comparison exists to catch.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            source, first = self._source(tmp)
+            full = {}
+            for request, (case_no, role) in zip(first.requests, first.roles):
+                if role == transcript.ROLE_JUDGE:
+                    full[case_no] = request["messages"]
+            self.assertEqual(sorted(CASE_SET), sorted(full))
+
+            summary, transport = self._replay(tmp, source)
+
+            self.assertEqual(len(CASE_SET), transport.calls())
+            for request, (case_no, role) in zip(transport.requests, transport.roles):
+                with self.subTest(case_no=case_no):
+                    self.assertEqual(transcript.ROLE_JUDGE, role)
+                    self.assertEqual(full[case_no], request["messages"])
+
+    def test_the_recorded_advocate_entries_are_copied_and_marked_replayed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source, _ = self._source(tmp)
+            summary, _ = self._replay(tmp, source)
+
+            for case_no in CASE_SET:
+                with self.subTest(case_no=case_no):
+                    before = json.loads(
+                        runner.transcript_path(source, case_no).read_text(encoding="utf-8")
+                    )["entries"]
+                    after = json.loads(
+                        runner.transcript_path(summary.run_dir, case_no).read_text(
+                            encoding="utf-8"
+                        )
+                    )["entries"]
+
+                    recorded = [
+                        entry for entry in before if entry["role"] != transcript.ROLE_JUDGE
+                    ]
+                    copied = [
+                        entry for entry in after if entry["role"] != transcript.ROLE_JUDGE
+                    ]
+                    self.assertEqual(len(recorded), len(copied))
+                    for original, carried in zip(recorded, copied):
+                        # Verbatim but for the note: the digests, the timestamp,
+                        # the usage figures and the response are the record of a
+                        # call that really happened, and re-deriving any of them
+                        # would be inventing evidence rather than copying it.
+                        for field in (
+                            "role",
+                            "model",
+                            "system_sha256",
+                            "user_sha256",
+                            "response_text",
+                            "parse_outcome",
+                            "shape",
+                            "prompt_tokens",
+                            "completion_tokens",
+                            "reasoning_tokens",
+                            "cached_tokens",
+                            "duration_seconds",
+                            "attempts",
+                            "status",
+                            "timestamp",
+                        ):
+                            self.assertEqual(original[field], carried[field], field)
+                        self.assertIn("replayed", carried["note"])
+                        self.assertIn(str(source), carried["note"])
+                        self.assertIn("did not call", carried["note"])
+
+                    judge = [entry for entry in after if entry["role"] == transcript.ROLE_JUDGE]
+                    self.assertEqual(1, len(judge))
+                    self.assertIsNone(
+                        judge[0]["note"],
+                        "the judge's own entry is this run's and carries no replay note",
+                    )
+
+    def test_the_cache_entry_names_the_source_its_commit_and_its_transcript(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source, _ = self._source(tmp)
+            summary, _ = self._replay(tmp, source)
+
+            document = runner.load_cached(summary.run_dir, 101)
+            replay = document["replay"]
+            self.assertEqual(str(source), replay["run_dir"])
+            self.assertEqual(COMMIT, replay["git_commit"])
+            self.assertEqual(
+                runner.file_sha256(runner.transcript_path(source, 101)),
+                replay["transcript_sha256"],
+            )
+            self.assertEqual(document["brief_sha256"], replay["brief_sha256"])
+            self.assertEqual(MODEL, replay["model"])
+            self.assertEqual(2, replay["advocate_calls"])
+            self.assertIn("replayed", replay["note"])
+            # And the result's own tokens are the judge's alone.
+            self.assertEqual(
+                TOKENS_PER_CALL, document["tokens"]["total_tokens"]
+            )
+
+    def test_the_run_record_says_the_advocates_were_replayed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source, _ = self._source(tmp)
+            summary, _ = self._replay(tmp, source)
+
+            metadata = runner.read_json(runner.metadata_path(summary.run_dir))
+            replay = metadata["replay"]
+            self.assertEqual(str(source), replay["run_dir"])
+            self.assertEqual(COMMIT, replay["git_commit"])
+            self.assertEqual(list(CASE_SET), replay["replayed_cases"])
+            self.assertEqual([], replay["refused_cases"])
+            self.assertEqual(
+                len(CASE_SET) * 2 * TOKENS_PER_CALL, replay["tokens"]["total_tokens"]
+            )
+            self.assertIn("only the judge was called", replay["note"])
+            self.assertEqual(
+                len(CASE_SET) * 2 * TOKENS_PER_CALL,
+                metadata["tokens"]["billed_to_another_run"],
+            )
+            # The invocation's own figures, which the borrowed tokens are not in.
+            self.assertEqual(
+                len(CASE_SET) * TOKENS_PER_CALL, metadata["tokens"]["spent_this_invocation"]
+            )
+
+    def test_the_borrowed_tokens_are_reported_and_never_charged(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source, _ = self._source(tmp)
+            summary, _ = self._replay(tmp, source)
+
+            # This run's bill: the judge, one call per case.
+            self.assertEqual(len(CASE_SET) * TOKENS_PER_CALL, summary.tokens_spent)
+            # The two advocates per case, reported beside it.
+            self.assertEqual(
+                len(CASE_SET) * 2 * TOKENS_PER_CALL, summary.tokens_replayed.billed
+            )
+            # And never added to it. A run that summed them would claim to have
+            # spent tokens it never spent, which is the one thing this split
+            # exists to prevent.
+            self.assertEqual(
+                len(CASE_SET) * TOKENS_PER_CALL, summary.tokens_consumed.billed
+            )
+            self.assertNotEqual(
+                summary.tokens_spent + summary.tokens_replayed.billed,
+                summary.tokens_spent,
+            )
+
+    def test_the_report_says_the_advocates_were_replayed_and_from_where(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source, _ = self._source(tmp)
+            summary, _ = self._replay(tmp, source)
+
+            text = (summary.run_dir / runner.REPORT_FILE).read_text(encoding="utf-8")
+            self.assertIn("Advocates replayed", text)
+            self.assertIn(str(source), text)
+            self.assertIn("rather than a measurement of the whole pipeline", text)
+            self.assertIn("reused from another run", text)
+            self.assertIn("**(advocates replayed)**", text)
+            self.assertEqual(tuple(CASE_SET), summary.report.replay.cases)
+            self.assertEqual((str(source),), summary.report.replay.sources)
+            self.assertEqual(
+                len(CASE_SET) * 2 * TOKENS_PER_CALL, summary.report.replay.tokens
+            )
+
+    def test_a_run_that_replayed_nothing_says_nothing_about_replay(self):
+        """A report built from a run that asked its own agents claims nothing."""
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, _ = bench(tmp)
+            text = (summary.run_dir / runner.REPORT_FILE).read_text(encoding="utf-8")
+            self.assertNotIn("Advocates replayed", text)
+            self.assertNotIn("advocates replayed", text)
+            self.assertFalse(summary.report.replay.any)
+            self.assertEqual((), summary.report.replay.sources)
+
+    # -- what a replay refuses --------------------------------------------
+    def test_a_brief_that_moved_refuses_the_case_and_makes_no_call(self):
+        def break_it(source, case_no):
+            path = runner.case_cache_path(source, case_no)
+            document = runner.read_json(path)
+            document["brief_sha256"] = "0" * 64
+            runner.write_json(path, document)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            source, _ = self._source(tmp)
+            summary = self._refused(tmp, source, 102, break_it)
+
+            self.assertEqual([102], [outcome.case_no for outcome in summary.refusals])
+            self.assertEqual([101, 103], summary.completed_cases)
+            self.assertIn("brief this code builds", summary.refusals[0].failure_detail)
+            self.assertEqual(runner.FAILURE_REPLAY, summary.refusals[0].failure_kind)
+
+    def test_an_advocate_prompt_that_moved_refuses_the_case_and_makes_no_call(self):
+        def break_it(source, case_no):
+            def change(entries):
+                for entry in entries:
+                    if entry["role"] == transcript.ROLE_RIDER_ADVOCATE:
+                        entry["system_sha256"] = "b" * 64
+
+            self._rewrite_transcript(source, case_no, change)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            source, _ = self._source(tmp)
+            summary = self._refused(tmp, source, 101, break_it)
+
+            self.assertEqual([101], [outcome.case_no for outcome in summary.refusals])
+            self.assertIn(
+                "system prompt as rendered now", summary.refusals[0].failure_detail
+            )
+
+    def test_a_prompt_the_source_never_recorded_refuses_rather_than_assuming(self):
+        """The file not saying is not the same as the file saying it matches."""
+
+        def break_it(source, case_no):
+            def change(entries):
+                for entry in entries:
+                    if entry["role"] == transcript.ROLE_DRIVER_ADVOCATE:
+                        entry.pop("system_sha256", None)
+
+            self._rewrite_transcript(source, case_no, change)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            source, _ = self._source(tmp)
+            summary = self._refused(tmp, source, 103, break_it)
+
+            self.assertEqual([103], [outcome.case_no for outcome in summary.refusals])
+            self.assertIn(
+                "recorded no system prompt digest", summary.refusals[0].failure_detail
+            )
+
+    def test_a_model_mismatch_refuses_the_case_and_makes_no_call(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            # The source was produced by another model, so its advocates answer
+            # for that model and not for the one this run would use. Every case
+            # is refused, so the transport may not be reached at all.
+            source, _ = self._source(tmp, model=OTHER_MODEL)
+            transport = RefusingTransport(refused=CASE_SET)
+            summary, _ = bench(
+                tmp,
+                runs_dir=Path(tmp) / "replayed",
+                force=True,
+                replay_dir=source,
+                transport=transport,
+                model=MODEL,
+            )
+            self.assertEqual(0, transport.refused_calls)
+            self.assertEqual(0, transport.calls())
+            self.assertEqual(list(CASE_SET), [o.case_no for o in summary.refusals])
+            self.assertIn("was made on", summary.refusals[0].failure_detail)
+            self.assertIn(OTHER_MODEL, summary.refusals[0].failure_detail)
+
+    def test_an_unparsed_recorded_answer_refuses_the_case_and_makes_no_call(self):
+        def break_it(source, case_no):
+            def change(entries):
+                for entry in entries:
+                    if entry["role"] == transcript.ROLE_RIDER_ADVOCATE:
+                        entry["parsed"] = None
+                        entry["parse_outcome"] = "NO_JSON"
+
+            self._rewrite_transcript(source, case_no, change)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            source, _ = self._source(tmp)
+            summary = self._refused(tmp, source, 102, break_it)
+
+            self.assertEqual([102], [outcome.case_no for outcome in summary.refusals])
+            self.assertIn("did not parse", summary.refusals[0].failure_detail)
+
+    def test_a_source_transcript_edited_since_it_was_written_is_refused(self):
+        """The source's own record of its transcript is checked, not assumed."""
+
+        def break_it(source, case_no):
+            path = runner.transcript_path(source, case_no)
+            path.write_text(
+                path.read_text(encoding="utf-8") + "\n", encoding="utf-8"
+            )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            source, _ = self._source(tmp)
+            summary = self._refused(tmp, source, 101, break_it)
+
+            self.assertEqual([101], [outcome.case_no for outcome in summary.refusals])
+            self.assertIn(
+                "does not hash to what that run recorded",
+                summary.refusals[0].failure_detail,
+            )
+
+    def test_a_case_the_source_never_ran_is_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source, _ = self._source(tmp, cases=(101, 102))
+            transport = RefusingTransport(refused=103)
+            summary, _ = bench(
+                tmp,
+                runs_dir=Path(tmp) / "replayed",
+                force=True,
+                replay_dir=source,
+                transport=transport,
+                cases=(101, 102, 103),
+            )
+            self.assertEqual(0, transport.refused_calls)
+            self.assertEqual([103], [outcome.case_no for outcome in summary.refusals])
+            self.assertEqual([101, 102], summary.completed_cases)
+
+    def test_a_refused_case_leaves_no_cache_entry_and_no_transcript(self):
+        """Nothing is written for a refusal, so a later run refuses it the same way."""
+
+        def break_it(source, case_no):
+            path = runner.case_cache_path(source, case_no)
+            document = runner.read_json(path)
+            document["brief_sha256"] = "0" * 64
+            runner.write_json(path, document)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            source, _ = self._source(tmp)
+            summary = self._refused(tmp, source, 102, break_it)
+
+            self.assertFalse(
+                runner.case_cache_path(summary.run_dir, 102).is_file(),
+                "a refused case was cached",
+            )
+            self.assertFalse(
+                runner.transcript_path(summary.run_dir, 102).is_file(),
+                "a refused case left a transcript",
+            )
+
+    def test_a_missing_source_directory_is_refused_rather_than_reported_case_by_case(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(runner.BenchmarkError):
+                runner.check_replay(
+                    Path(tmp) / "no-such-run", (101, 102, 103), model=MODEL
+                )
+
+    # -- the check itself --------------------------------------------------
+    def test_the_check_reads_only_and_reports_each_case(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source, _ = self._source(tmp)
+            before = sorted(path.name for path in source.iterdir())
+
+            check = runner.check_replay(source, CASE_SET, model=MODEL)
+
+            self.assertEqual(list(CASE_SET), check.accepted_cases)
+            self.assertEqual([], check.refused_cases)
+            self.assertTrue(check.replayable)
+            self.assertEqual(str(source), check.provenance()["run_dir"])
+            self.assertEqual(COMMIT, check.provenance()["git_commit"])
+            # Nothing was written anywhere: the check reads.
+            self.assertEqual(before, sorted(path.name for path in source.iterdir()))
+            self.assertFalse((Path(tmp) / "replayed").exists())
+
+            text = runner.render_replay_check(check)
+            for case_no in CASE_SET:
+                self.assertIn("case {0}  accepted".format(case_no), text)
+            self.assertIn("3 accepted, 0 refused", text)
+            self.assertIn("No model was called and nothing was written", text)
+
+    def test_the_check_names_a_refusal_and_its_reason(self):
+        def break_it(source, case_no):
+            path = runner.case_cache_path(source, case_no)
+            document = runner.read_json(path)
+            document["brief_sha256"] = "0" * 64
+            runner.write_json(path, document)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            source, _ = self._source(tmp)
+            break_it(source, 102)
+
+            check = runner.check_replay(source, CASE_SET, model=MODEL)
+
+            self.assertEqual([101, 103], check.accepted_cases)
+            self.assertEqual([102], check.refused_cases)
+            text = runner.render_replay_check(check)
+            self.assertIn("case 102  REFUSED", text)
+            self.assertIn("brief this code builds", text)
+            self.assertIn("2 accepted, 1 refused", text)
+
+    def test_every_source_is_read_before_anything_is_written(self):
+        """The check completes before the first write, which is what makes a
+        replay into the source run's own directory safe."""
+        with tempfile.TemporaryDirectory() as tmp:
+            source, _ = self._source(tmp)
+            order = []
+            real_check = runner.check_replay
+            real_write = runner._write_text_atomic
+
+            def check(*args, **kwargs):
+                order.append("check")
+                return real_check(*args, **kwargs)
+
+            def write(*args, **kwargs):
+                order.append("write")
+                return real_write(*args, **kwargs)
+
+            with mock.patch.object(runner, "check_replay", check), mock.patch.object(
+                runner, "_write_text_atomic", write
+            ):
+                # ``runs_dir`` is the runs *root*, so passing the source's own
+                # parent is what makes this a replay into the directory it reads
+                # from rather than into a nested one.
+                summary, transport = self._replay(
+                    tmp, source, runs_dir=source.parent, cases=CASE_SET
+                )
+
+            self.assertEqual("check", order[0], "something was written before the check")
+            self.assertIn("write", order)
+            self.assertEqual(list(CASE_SET), summary.completed_cases)
+            self.assertEqual(len(CASE_SET), transport.calls())
+
+    def test_a_replay_into_its_own_directory_reads_the_original_entries(self):
+        """Replayed in place, the run still reuses the advocates it recorded.
+
+        If the check ran after the first case was rewritten, the later cases
+        would be reading this run's output rather than the run it was asked to
+        replay -- and the transcripts would be a copy of a copy.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            source, _ = self._source(tmp)
+            original = {
+                case_no: runner.file_sha256(runner.transcript_path(source, case_no))
+                for case_no in CASE_SET
+            }
+
+            summary, transport = self._replay(tmp, source, runs_dir=source.parent)
+
+            self.assertEqual(list(CASE_SET), summary.completed_cases)
+            self.assertEqual([], summary.failures)
+            self.assertEqual(len(CASE_SET), transport.calls())
+            for case_no in CASE_SET:
+                with self.subTest(case_no=case_no):
+                    document = runner.load_cached(source, case_no)
+                    self.assertEqual(
+                        original[case_no], document["replay"]["transcript_sha256"]
+                    )
+                    # The entry the replay recorded is the one it read, not the
+                    # one it had just written.
+                    self.assertNotEqual(
+                        document["replay"]["transcript_sha256"],
+                        document["transcript_sha256"],
+                    )
+
+    def test_an_external_case_is_never_replayed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source, _ = self._source(tmp)
+            check = runner.check_replay(source, (101,), model=MODEL)
+
+            with self.assertRaises(runner.BenchmarkError):
+                runner.run_one_case(
+                    101,
+                    client=None,
+                    prompts_dir=PROMPTS_DIR,
+                    expected=None,
+                    loaded_case={"case_no": 101},
+                    replay=check.accepted[101],
+                )
+
+    def test_the_command_line_refuses_replay_for_an_external_case(self):
+        with self.assertRaises(SystemExit):
+            with contextlib.redirect_stderr(io.StringIO()):
+                runner.main(
+                    [
+                        "--external",
+                        "data/external/ryde/case-901.json",
+                        "--replay-advocates",
+                        "runs/deepseek-deepseek-flash",
+                    ]
+                )
+
+    def test_the_check_flag_reports_the_list_and_exits_non_zero_on_a_refusal(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source, _ = self._source(tmp)
+
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                code = runner.main(
+                    [
+                        "--model",
+                        MODEL,
+                        "--replay-check",
+                        str(source),
+                        "--cases",
+                        "101,102,103",
+                    ]
+                )
+            self.assertEqual(0, code)
+            self.assertIn("3 accepted, 0 refused", out.getvalue())
+
+            path = runner.case_cache_path(source, 102)
+            document = runner.read_json(path)
+            document["brief_sha256"] = "0" * 64
+            runner.write_json(path, document)
+
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                code = runner.main(
+                    [
+                        "--model",
+                        MODEL,
+                        "--replay-check",
+                        str(source),
+                        "--cases",
+                        "101,102,103",
+                    ]
+                )
+            # Non-zero, because a partial acceptance means those cases would be
+            # run in full rather than replayed, and a caller gating a paid run on
+            # this must be able to see that without reading the text.
+            self.assertEqual(1, code)
+            self.assertIn("2 accepted, 1 refused", out.getvalue())
+
+    def test_compare_takes_no_replay_arguments(self):
+        with self.assertRaises(SystemExit):
+            with contextlib.redirect_stderr(io.StringIO()):
+                runner.main(["--compare", "--replay-advocates", "runs/x"])
+
+
 class SummaryOutputTests(unittest.TestCase):
     """The run's own summary, printed rather than only written to a file."""
 

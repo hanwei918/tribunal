@@ -593,6 +593,24 @@ def _headline(
 
     return {
         "cases_graded": total,
+        # Present only when the advocates were replayed, and ``None`` otherwise.
+        # It sits beside the figure it qualifies rather than in the footer: a
+        # reader who reads only the cards must still learn that the number is the
+        # judge's and not the pipeline's, and a reader of a run that replayed
+        # nothing must not be shown a field that reads like a finding.
+        "replay": (
+            {
+                "cases": len(report.replay.cases),
+                "total": total,
+                "sources": [
+                    _source_directory(source) or "an unrecorded source"
+                    for source in report.replay.sources
+                ],
+                "tokens": report.replay.tokens,
+            }
+            if report.replay.any
+            else None
+        ),
         "exact": {
             "matched": report.exact_matches,
             "total": total,
@@ -687,6 +705,93 @@ def _repository_relative(value: Any) -> Optional[str]:
     return None
 
 
+def _replay_facts(raw_by_case: Mapping[int, Mapping[str, Any]]) -> grade.ReplayFacts:
+    """The replay provenance the run's own case entries record.
+
+    Read from the per-case entries rather than from ``run.json``, because
+    ``run.json`` describes the last invocation and the entries describe the
+    results -- which is the question the figures on this page are asking. A
+    directory can hold results from more than one invocation, and only the
+    entries say which of them reused another run's advocates.
+
+    ``checked`` is True because every entry was read, so "nothing was replayed"
+    is a finding rather than an absence.
+    """
+    cases: List[int] = []
+    sources: List[str] = []
+    tokens = 0
+    for case_no in sorted(raw_by_case):
+        record = raw_by_case[case_no].get("replay")
+        if not isinstance(record, Mapping):
+            continue
+        cases.append(case_no)
+        source = record.get("run_dir")
+        if isinstance(source, str) and source and source not in sources:
+            sources.append(source)
+        tokens += int((record.get("tokens") or {}).get("total_tokens") or 0)
+    return grade.ReplayFacts(
+        checked=True,
+        sources=tuple(sources),
+        cases=tuple(cases),
+        tokens=tokens,
+    )
+
+
+def _case_replay(record: Any) -> Optional[Dict[str, Any]]:
+    """One case's replay provenance, as the page shows it.
+
+    ``None`` when this run called that case's advocates itself, so the case view
+    can say which of the two happened rather than printing an empty block. The
+    source path is relativised like every other path on this page: the page is
+    committed, and a path from another checkout would both leak it and make the
+    built artefact depend on where the build ran.
+    """
+    if not isinstance(record, Mapping):
+        return None
+    return {
+        "run_directory": _source_directory(record.get("run_dir")),
+        "git_commit": record.get("git_commit"),
+        "advocate_calls": record.get("advocate_calls"),
+        "tokens": record.get("tokens"),
+    }
+
+
+def _run_replay(record: Any) -> Optional[Dict[str, Any]]:
+    """The run's own replay provenance, as the page's footer shows it.
+
+    ``None`` when ``run.json`` records no replay, which is what a run that
+    called every agent itself writes. The footer then says so in words rather
+    than printing an empty field: a reader looking for the answer to "did this
+    run ask its own agents" has to be able to find one either way.
+    """
+    if not isinstance(record, Mapping):
+        return None
+    return {
+        "run_directory": _source_directory(record.get("run_dir")),
+        "git_commit": record.get("git_commit"),
+        "model": record.get("model"),
+        "replayed_cases": len(record.get("replayed_cases") or []),
+        "refused_cases": len(record.get("refused_cases") or []),
+        "tokens": (record.get("tokens") or {}).get("total_tokens"),
+    }
+
+
+def _source_directory(value: Any) -> Optional[str]:
+    """A replay source, as this repository can express it.
+
+    Relativised when it is inside the checkout, named as such when it is not,
+    and ``None`` when there is no path at all. The middle case matters: dropping
+    a foreign path would leave the page saying the advocates were replayed
+    without saying from where, which is half the fact.
+    """
+    relative = _repository_relative(value)
+    if relative is not None:
+        return relative
+    if isinstance(value, str) and value:
+        return "a run outside this repository"
+    return None
+
+
 def _provenance(
     run: Mapping[str, Any],
     invocations: Sequence[Mapping[str, Any]],
@@ -747,6 +852,11 @@ def _provenance(
         "tokens": run.get("tokens"),
         "invocation_count": len(history),
         "invocations": history,
+        # Present only when the run's advocates were replayed, and ``None``
+        # otherwise, so "this run called every agent itself" is a fact the page
+        # states rather than one a reader infers from an absent field. The footer
+        # renders the negative case in words for that reason.
+        "replay": _run_replay(run.get("replay")),
     }
 
 
@@ -839,7 +949,11 @@ def build_document(
     # folded into them.
     produced = {case_no: raw_by_case[case_no]["ruling"] for case_no in numbers
                 if "ruling" in raw_by_case[case_no]}
-    report = grade.grade(produced)
+    # The replay facts travel into the report so the headline figures and the
+    # page's own statement about them come from one place. A page that said the
+    # advocates were replayed while the report it is graded by did not would be
+    # two answers to one question.
+    report = grade.grade(produced, replay=_replay_facts(raw_by_case))
     scores = {score.case_no: score for score in report.cases}
 
     # What the headline figures need per case, taken from the run's own result
@@ -915,6 +1029,10 @@ def build_document(
                 "expected": expected,
                 "grading": _grading_of(score),
                 "recorded_matched": result.get("matched"),
+                # ``None`` when this run asked this case's advocates itself, so
+                # the case view can say which of the two happened rather than
+                # leaving a reader to infer it from a missing field.
+                "replay": _case_replay(result.get("replay")),
                 "tokens": _normalise(result.get("tokens")),
                 "wall_seconds": result.get("wall_seconds"),
                 "call_seconds": result.get("call_seconds"),
@@ -1697,6 +1815,14 @@ _JS = r"""
     root.appendChild(h("p", { class: "lead", text:
       "Every figure here is computed from the committed run " + DATA.provenance.run_directory +
       " and the same grading code that produces eval/grade.py's report. Nothing on this page is typed in." }));
+    if (DATA.headline.replay) {
+      root.appendChild(h("p", { class: "lead", text:
+        "The advocates' outputs for " + DATA.headline.replay.cases + " of " + DATA.headline.replay.total +
+        " cases were replayed from " + DATA.headline.replay.sources.join(", ") +
+        " and not regenerated here: only the judge was called for those cases, so every figure on this page is the " +
+        "judge's behaviour on fixed inputs rather than a measurement of the whole pipeline. Those calls cost " +
+        DATA.headline.replay.tokens.toLocaleString() + " tokens, billed to the run that made them." }));
+    }
     root.appendChild(headlineCards());
     root.appendChild(h("h3", { text: "Per-field accuracy" }));
     root.appendChild(h("p", { class: "lead", text:
@@ -1759,7 +1885,12 @@ _JS = r"""
         class: caseDoc.grading.exact ? "badge ok" : "badge miss",
         text: caseDoc.grading.exact ? "four-field match" : "MISS on " + caseDoc.grading.failed_fields.join(", ")
       }),
-      h("span", { class: "badge", text: "brief " + String(caseDoc.brief_sha256).slice(0, 12) })
+      h("span", { class: "badge", text: "brief " + String(caseDoc.brief_sha256).slice(0, 12) }),
+      // Said per case, not only once for the run: a reader stepping through one
+      // case has to know whether these advocate outputs were asked for here, and
+      // a run can hold both kinds.
+      caseDoc.replay ? h("span", { class: "badge", text: "advocates replayed" }) : null,
+      caseDoc.replay ? h("span", { class: "badge", text: "from " + text(caseDoc.replay.run_directory) }) : null
     ]));
 
     var stepper = h("div", { class: "stepper" });
@@ -1935,6 +2066,15 @@ _JS = r"""
       }
       section.appendChild(box);
     });
+    // Stated on the panel that carries the token figures, not only in the case
+    // head: a reader looking at these calls has to know this run did not make
+    // them, and the figures below were billed to the run that did.
+    if (caseDoc.replay) {
+      section.appendChild(h("p", { class: "miss-note", text:
+        "These advocate outputs were replayed from " + text(caseDoc.replay.run_directory) +
+        " and were not regenerated by this run: only the judge was called, so the token figures below were billed " +
+        "to the run that made these calls and not to this one." }));
+    }
     panel.appendChild(section);
     panel.appendChild(callBar(agent));
   }
@@ -2500,6 +2640,13 @@ _JS = r"""
       ["python", text(p.python_version)],
       ["run", text(p.started_at) + " to " + text(p.ended_at)],
       ["run dir", p.run_directory],
+      // Said either way, and never left blank. "Did this run ask its own
+      // advocates" is a question about the figures above, and a reader looking
+      // for its answer must be able to find one whether the answer is yes or no.
+      ["advocates", p.replay
+        ? "replayed from " + text(p.replay.run_directory) + " at " + short(p.replay.git_commit) +
+          " for " + p.replay.replayed_cases + " case(s); only the judge was called"
+        : "called by this run"],
       ["invocations", String(p.invocation_count)]
     ];
     clear(footer);

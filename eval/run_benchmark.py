@@ -107,6 +107,40 @@ argument — a caller that drives this function directly must say which model it
 means — while the command line reads the decided one when ``--model`` is
 omitted. ``LLMClient`` keeps no default of its own, so the transport stays
 model-agnostic and the decision lives in one place a reader can find.
+
+Replaying the advocates
+-----------------------
+A case costs three agent calls, and the two advocate calls are the expensive
+half: on the shipped run they are about 62% of the tokens. When the only thing
+that has changed is ``prompts/v1/judge.system.md``, re-asking the advocates
+spends that money regenerating inputs the judge already has, and adds advocate
+sampling variance to a comparison whose whole purpose is to isolate one change.
+
+``--replay-advocates RUN_DIR`` therefore reads the recorded rider and driver
+answers out of another run's transcripts, refuses any case whose recorded inputs
+no longer agree with this code, and calls only the judge. What is refused is
+refused *before* anything is written, and that is not a nicety: the obvious use
+is to replay a run back into its own directory, where every source entry is a
+file this run is about to overwrite. Every source is read and verified first, so
+a case that cannot be replayed is still on disk afterwards to be run in full.
+
+The acceptance conditions are each a different way for the recorded answers to
+be answers to a different question: the brief this code builds must hash to the
+brief that run recorded, each advocate's system prompt as rendered now must hash
+to what that run recorded *for that role*, the recorded calls must have been
+made on the model this run would use, and both answers must have parsed. A run
+that recorded no prompt digest is refused rather than assumed — "the file does
+not say" is not "the same".
+
+Replay is for the corpus. A converted external case is never replayed, and
+``--external`` runs it in full as it always has: that case's own brief has
+changed, so there is nothing byte-identical left to reuse.
+
+The tokens are counted twice and never added. A replayed case's result carries
+only the judge's usage; the borrowed calls' own usage is reported beside it as
+provenance, because a run that summed them would claim to have spent tokens it
+never spent. Everywhere the figures appear — the terminal summary, the report,
+the page — says that the advocates were replayed and from which run.
 """
 
 from __future__ import annotations
@@ -136,6 +170,7 @@ __all__ = [
     "BriefStaleness",
     "CaseOutcome",
     "ComparisonRow",
+    "ReplayCheck",
     "RunSummary",
     "STATUS_COMPLETED",
     "STATUS_CACHED",
@@ -149,6 +184,7 @@ __all__ = [
     "FAILURE_SHAPE",
     "FAILURE_INTERRUPTED",
     "FAILURE_DEADLINE",
+    "FAILURE_REPLAY",
     "FAILURE_NOTE",
     "INVOCATIONS_FILE",
     "failure_kind_for",
@@ -161,6 +197,7 @@ __all__ = [
     "metadata_path",
     "read_json",
     "write_json",
+    "file_sha256",
     "load_cached",
     "cached_case_numbers",
     "CACHE_FINGERPRINT_FIELDS",
@@ -168,6 +205,9 @@ __all__ = [
     "current_brief_sha256",
     "current_prompts_sha256",
     "brief_staleness",
+    "read_replay_source",
+    "check_replay",
+    "render_replay_check",
     "hash_directory",
     "git_state",
     "interpreter_version",
@@ -259,6 +299,13 @@ FAILURE_INTERRUPTED = "INTERRUPTED"
 # them. A timeout is a property of one request; a deadline is a bound the run
 # put on itself, so the response is to change the bound rather than the model.
 FAILURE_DEADLINE = "DEADLINE"
+# A fifth kind, and unlike the other four it says nothing about the model. A case
+# refused for replay produced no ruling because the recorded run could not
+# supply its advocates: the brief, a prompt, the model or an answer no longer
+# agrees. That is a statement about the source run and this code, so the
+# response is to run the case in full rather than to change anything about the
+# model under measurement.
+FAILURE_REPLAY = "REPLAY"
 
 # What each kind means, in the words the record carries. Short, because a reader
 # scanning a failures list needs to tell the three apart at a glance.
@@ -286,6 +333,11 @@ FAILURE_NOTE = {
         "run put on itself and not a property of the model, so the answer is a "
         "larger deadline or a faster model, and neither a retry nor a longer "
         "per-attempt timeout would change it"
+    ),
+    FAILURE_REPLAY: (
+        "the advocates were to be replayed from an earlier run and that run "
+        "could not supply them, so no model was called and this says nothing "
+        "about the model; the response is to run the case in full"
     ),
 }
 
@@ -402,6 +454,218 @@ def cached_case_numbers(run_dir: Path) -> List[int]:
         if match:
             numbers.append(int(match.group(1)))
     return sorted(numbers)
+
+
+# --------------------------------------------------------------------------
+# Replaying the advocates
+# --------------------------------------------------------------------------
+def file_sha256(path: Path) -> Optional[str]:
+    """The SHA-256 of one file's bytes, or ``None`` when it cannot be read.
+
+    Over the file rather than over a re-serialisation of it, because the claim
+    is about the file. A transcript is written once, in this package's canonical
+    form, and any other reading of "its digest" would be a claim about a round
+    trip rather than about what is on disk.
+    """
+    try:
+        return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+    except OSError:
+        return None
+
+
+@dataclass(frozen=True)
+class ReplayCheck:
+    """What one run directory can supply, case by case, before anything is written.
+
+    ``accepted`` holds a :class:`tribunal.pipeline.Replayable` per case -- the
+    proof that every condition was checked and holds -- and ``refused`` holds
+    the reason per case. A case in neither is one the source run never ran.
+
+    The whole set is worked out before the caller writes or calls anything, so a
+    replay into its own source directory has already read every entry it needs
+    by the time the first file is touched.
+    """
+
+    source_dir: Path
+    git_commit: Optional[str] = None
+    model: Optional[str] = None
+    prompts_sha256: Optional[str] = None
+    accepted: Dict[int, Any] = field(default_factory=dict)
+    refused: Dict[int, str] = field(default_factory=dict)
+
+    @property
+    def accepted_cases(self) -> List[int]:
+        return sorted(self.accepted)
+
+    @property
+    def refused_cases(self) -> List[int]:
+        return sorted(self.refused)
+
+    @property
+    def asked_about(self) -> List[int]:
+        return sorted(set(self.accepted) | set(self.refused))
+
+    @property
+    def replayable(self) -> bool:
+        """Whether any case at all can be replayed."""
+        return bool(self.accepted)
+
+    def provenance(self) -> Dict[str, Any]:
+        """The source run, as the metadata and the cache entries carry it."""
+        return {
+            "run_dir": str(self.source_dir),
+            "git_commit": self.git_commit,
+            "model": self.model,
+            "prompts_sha256": self.prompts_sha256,
+            "replayed_cases": self.accepted_cases,
+            "refused_cases": self.refused_cases,
+            "note": pipeline.REPLAY_NOTE,
+        }
+
+
+def read_replay_source(
+    source_dir: Path,
+    case_no: int,
+    *,
+    git_commit: Optional[str] = None,
+    model: Optional[str] = None,
+) -> pipeline.ReplaySource:
+    """One case's recorded advocates, as the source directory holds them.
+
+    Every field is read as it stands, and a missing file contributes ``None`` or
+    an empty entry list rather than raising: "that run cannot supply this case"
+    is a refusal with a reason, which is what the caller needs, and an exception
+    would only move the same decision somewhere less visible.
+
+    ``recorded_transcript_sha256`` comes from the source run's own cache entry
+    and ``transcript_sha256`` from the file as it stands now, so a transcript
+    edited after it was written is refused rather than replayed.
+    """
+    source_dir = Path(source_dir)
+    document = load_cached(source_dir, case_no) or {}
+    transcript_file = transcript_path(source_dir, case_no)
+
+    transcript = read_json(transcript_file)
+    entries: Tuple[Mapping[str, Any], ...] = ()
+    if isinstance(transcript, Mapping):
+        recorded = transcript.get("entries")
+        if isinstance(recorded, list):
+            entries = tuple(entry for entry in recorded if isinstance(entry, Mapping))
+
+    return pipeline.ReplaySource(
+        run_dir=str(source_dir),
+        git_commit=git_commit,
+        model=model,
+        brief_sha256=document.get("brief_sha256"),
+        transcript_sha256=file_sha256(transcript_file),
+        recorded_transcript_sha256=document.get("transcript_sha256"),
+        entries=entries,
+    )
+
+
+def check_replay(
+    source_dir: Path,
+    cases: Sequence[int],
+    *,
+    model: str,
+    prompts_dir: Path = PROMPTS_DIR,
+    case_loader: Optional[Callable[[int], Mapping[str, Any]]] = None,
+) -> ReplayCheck:
+    """Ask, per case, whether a recorded run can supply this run's advocates.
+
+    Reads only. No model is called and nothing is written, which is what makes
+    this the question a caller can ask before it spends anything -- and what
+    makes :func:`run_benchmark` able to ask it once, for every requested case,
+    before the first file is written. A replay into the source run's own
+    directory therefore reads everything it needs before it overwrites anything.
+
+    ``case_loader`` is injectable so a test can drive the check without the
+    manifest, the same way the brief builder is injectable in ``ui/build.py``.
+    """
+    source_dir = Path(source_dir)
+    load = loader.load_case if case_loader is None else case_loader
+
+    if not source_dir.is_dir():
+        # Refused rather than reported case by case. A missing source would
+        # otherwise produce one identical refusal per case, which reads as
+        # twenty-nine findings about the corpus instead of one about a path.
+        raise BenchmarkError(
+            "there is no run directory at {0} to replay from".format(source_dir)
+        )
+
+    metadata = read_json(metadata_path(source_dir))
+    if not isinstance(metadata, Mapping):
+        metadata = {}
+
+    check = ReplayCheck(
+        source_dir=source_dir,
+        git_commit=metadata.get("git_commit"),
+        model=metadata.get("model"),
+        prompts_sha256=metadata.get("prompts_sha256"),
+    )
+
+    for case_no in cases:
+        source = read_replay_source(
+            source_dir,
+            case_no,
+            git_commit=check.git_commit,
+            model=check.model,
+        )
+        try:
+            replayable, reason = pipeline.replay_verdict(
+                load(case_no), source, model=model, prompts_dir=prompts_dir
+            )
+        except Exception as exc:  # noqa: BLE001 - a case that cannot even be
+            # loaded is a refusal with a reason, not an abort. The run continues
+            # and runs that case in full, which is the whole point of refusing.
+            check.refused[case_no] = "{0}: {1}".format(type(exc).__name__, exc)
+            continue
+        if replayable is None:
+            check.refused[case_no] = reason
+        else:
+            check.accepted[case_no] = replayable
+
+    return check
+
+
+def render_replay_check(check: ReplayCheck) -> str:
+    """The dry check: one line per case, then the totals.
+
+    Printed before a paid replay, because asking costs a file read and not
+    asking costs a run that discovers halfway through that it is running cases
+    in full for reasons the caller never saw.
+    """
+    lines = [
+        "replay check  {0}".format(check.source_dir),
+        "  source commit   {0}".format(check.git_commit or "unrecorded"),
+        "  source model    {0}".format(check.model or "unrecorded"),
+        "  source prompts  {0}".format(str(check.prompts_sha256 or "unrecorded")[:16]),
+        "",
+    ]
+    for case_no in check.asked_about:
+        if case_no in check.accepted:
+            replayable = check.accepted[case_no]
+            lines.append(
+                "  case {0}  accepted  {1} advocate call(s), brief {2}".format(
+                    case_no,
+                    len(replayable.rider_entries) + len(replayable.driver_entries),
+                    replayable.brief_sha256[:16],
+                )
+            )
+        else:
+            lines.append(
+                "  case {0}  REFUSED   {1}".format(case_no, check.refused[case_no])
+            )
+    lines.append("")
+    lines.append(
+        "  {0} accepted, {1} refused, of {2} asked about. No model was called and "
+        "nothing was written.".format(
+            len(check.accepted),
+            len(check.refused),
+            len(check.asked_about),
+        )
+    )
+    return "\n".join(lines)
 
 
 # What identifies a cache: each case's own provenance, never a count. A note that
@@ -892,6 +1156,17 @@ class CaseOutcome:
     # for different responses, and a progress line that blamed the brief for a
     # moved prompt would send the reader to the wrong file.
     stale_moved: Tuple[str, ...] = ()
+    # Set only for a case whose advocates came from another run. ``tokens`` above
+    # is then this run's own bill, which is the judge's alone, and
+    # ``replayed_tokens`` is what the borrowed calls cost the run that made them.
+    # The two are reported apart and never summed: adding them would charge this
+    # run for tokens it did not spend.
+    replayed_from: Optional[str] = None
+    replayed_tokens: TokenSplit = field(default_factory=TokenSplit)
+
+    @property
+    def replayed(self) -> bool:
+        return self.replayed_from is not None
 
     @property
     def total_tokens(self) -> int:
@@ -1042,6 +1317,7 @@ def run_one_case(
     case_provenance: Optional[Mapping[str, Any]] = None,
     case_deadline_seconds: float = pipeline.DEFAULT_CASE_DEADLINE_SECONDS,
     loaded_case: Optional[Mapping[str, Any]] = None,
+    replay: Optional[Any] = None,
 ) -> Tuple[CaseOutcome, Optional[Dict[str, Any]], Optional[str]]:
     """Run one case. Returns ``(outcome, cache document, transcript json)``.
 
@@ -1072,10 +1348,34 @@ def run_one_case(
     case changes. :func:`tribunal.pipeline.run_loaded_case` is the same body
     :func:`tribunal.pipeline.run_case` runs, so every guard is the same guard and
     there is no second, weaker path through this runner.
+
+    ``replay`` is a :class:`tribunal.pipeline.Replayable`, which only
+    :func:`check_replay` produces and which carries the proof that the source
+    run's brief, prompts, model and recorded answers all agree with this code.
+    When it is given, the advocates are not called and only the judge is, through
+    :func:`tribunal.pipeline.replay_case`.
     """
+    if replay is not None and loaded_case is not None:
+        # Refused, not merely unused. Replay reuses another run's advocates for
+        # a corpus case whose brief is byte-identical to theirs; an external
+        # case has no answer-key entry and its own brief has changed, so there
+        # is nothing byte-identical to reuse and no key to score the result
+        # against. Saying so is better than silently running it in full, which
+        # would look like a replay that found nothing to do.
+        raise BenchmarkError(
+            "an external case cannot be replayed: replay reuses a recorded "
+            "run's advocates, and this case is arbitrated in full"
+        )
+
     started = time.monotonic()
     try:
-        if loaded_case is None:
+        if replay is not None:
+            result = pipeline.replay_case(
+                client,
+                replay=replay,
+                case_deadline_seconds=case_deadline_seconds,
+            )
+        elif loaded_case is None:
             result = pipeline.run_case(
                 case_no,
                 client,
@@ -1118,6 +1418,23 @@ def run_one_case(
         cached_tokens=_as_int(result.cached_tokens),
     )
 
+    # The borrowed advocates' usage, kept apart from ``tokens`` at the moment
+    # they are read rather than at the moment they are totalled. A case whose
+    # judge failed still had its advocates replayed, so this is filled in for
+    # both branches: the run's bill and the run's provenance are different
+    # questions and a failure is not a reason to answer only one of them.
+    replayed_from = result.replay.run_dir if result.replay is not None else None
+    replayed_tokens = (
+        TokenSplit(
+            prompt_tokens=_as_int(result.replay.prompt_tokens),
+            completion_tokens=_as_int(result.replay.completion_tokens),
+            reasoning_tokens=_as_int(result.replay.reasoning_tokens),
+            cached_tokens=_as_int(result.replay.cached_tokens),
+        )
+        if result.replay is not None
+        else TokenSplit()
+    )
+
     if not result.ok or result.ruling is None:
         detail = result.failure_reason or "the run produced no ruling"
         return (
@@ -1134,6 +1451,8 @@ def run_one_case(
                 failure_kind=FAILURE_SHAPE,
                 failure_detail=detail,
                 failure_reason=failure_reason_for(FAILURE_SHAPE, detail),
+                replayed_from=replayed_from,
+                replayed_tokens=replayed_tokens,
             ),
             None,
             result.transcript_json,
@@ -1166,6 +1485,11 @@ def run_one_case(
         # on disk and what the runner charged against the budget are one piece
         # of arithmetic rather than two copies of it.
         "tokens": tokens.as_dict(),
+        # ``None`` when this run called all three agents, so "the advocates were
+        # called here" is a fact the file states rather than one a reader infers
+        # from a missing key. The entry travels with the result because a result
+        # whose advocates came from elsewhere is not the same measurement.
+        "replay": None if result.replay is None else result.replay.as_dict(),
         "wall_seconds": wall,
         "call_seconds": result.duration_seconds,
         "matched": matched,
@@ -1178,6 +1502,8 @@ def run_one_case(
             tokens=tokens,
             matched=matched,
             ruling=result.ruling,
+            replayed_from=replayed_from,
+            replayed_tokens=replayed_tokens,
         ),
         document,
         result.transcript_json,
@@ -1204,8 +1530,20 @@ def _outcome_from_cache(
     from the cache can be costed the same way a case run now can. A reused case
     costs nothing *this invocation*, but the run's record still has to be able
     to say what the set cost to produce.
+
+    A cached result whose advocates were replayed says so here too, so a re-run
+    that skips the case does not lose the fact that its figures are not a
+    whole-pipeline measurement. The borrowed tokens are read back as the split
+    they were written as, and stay out of ``tokens``.
     """
     tokens = TokenSplit.from_mapping(document.get("tokens"))
+    replay = document.get("replay")
+    replayed_from: Optional[str] = None
+    replayed_tokens = TokenSplit()
+    if isinstance(replay, Mapping):
+        recorded_from = replay.get("run_dir")
+        replayed_from = recorded_from if isinstance(recorded_from, str) else None
+        replayed_tokens = TokenSplit.from_mapping(replay.get("tokens"))
     return CaseOutcome(
         case_no=case_no,
         status=STATUS_CACHED,
@@ -1215,6 +1553,8 @@ def _outcome_from_cache(
         ruling=document.get("ruling"),
         brief_status=brief_status,
         stale_moved=tuple(stale_moved),
+        replayed_from=replayed_from,
+        replayed_tokens=replayed_tokens,
     )
 
 
@@ -1257,6 +1597,11 @@ def format_progress(outcome: CaseOutcome, position: int, total: int) -> str:
     announces the reuse, and names which digest moved. A reader who sees a run
     skip twenty-nine cases needs to know how many of them the code has moved on
     from — and why — before the report is written, not after.
+
+    The token count on this line is this run's own bill. A replayed case says
+    beside it that its advocates came from another run, because the alternative
+    is a line whose tokens silently mean something different from every other
+    line's.
     """
     line = "[{0:>3}/{1}] case {2}  {3:<6} {4}  {5:>10} tokens".format(
         position,
@@ -1266,6 +1611,10 @@ def format_progress(outcome: CaseOutcome, position: int, total: int) -> str:
         _format_seconds(outcome.wall_seconds),
         "{0:,}".format(outcome.total_tokens),
     )
+    if outcome.replayed:
+        line += "  — advocates replayed from {0} (+{1:,} not charged here)".format(
+            outcome.replayed_from, outcome.replayed_tokens.billed
+        )
     if outcome.brief_status == grade.STALENESS_STALE:
         line += "  — stale: {0}".format(_describe_moved(outcome.stale_moved))
     elif outcome.brief_status == grade.STALENESS_UNKNOWN:
@@ -1324,6 +1673,15 @@ class RunSummary:
     tokens_charged: TokenSplit = field(default_factory=TokenSplit)
     tokens_failed: TokenSplit = field(default_factory=TokenSplit)
     tokens_reused: int = 0
+    # The third ledger, and the one that is never added to the other two. This is
+    # what the borrowed advocates cost the run that made them: reported because a
+    # reader needs to know what the replayed half of the case cost, and kept out
+    # of every bill because this invocation did not spend it.
+    tokens_replayed: TokenSplit = field(default_factory=TokenSplit)
+    # The source run, when there was one, and ``None`` otherwise -- so "this
+    # invocation called all three agents for every case" is a fact the record
+    # states rather than one a reader infers from a zero.
+    replay: Optional[Dict[str, Any]] = None
 
     @property
     def tokens_spent(self) -> int:
@@ -1386,6 +1744,27 @@ class RunSummary:
         return [o.case_no for o in self.outcomes if o.status == STATUS_CACHED]
 
     @property
+    def replayed_cases(self) -> List[int]:
+        """The cases whose advocates came from another run, whether they succeeded.
+
+        Read off the outcomes rather than off the source run's own case list, so
+        a case that was refused for replay is not counted as replayed: it was
+        not replayed, and it is reported in :attr:`refusals` instead.
+        """
+        return [o.case_no for o in self.outcomes if o.replayed]
+
+    @property
+    def refusals(self) -> List[CaseOutcome]:
+        """The cases replay would not accept, each with the reason it gave.
+
+        A kind of its own rather than a timeout or a transport failure, because
+        it says nothing about the model: no call was made. Kept beside
+        :attr:`failures` rather than inside a generic count so a reader can see
+        that a run which produced 24 rulings refused 5 rather than lost them.
+        """
+        return [o for o in self.failures if o.failure_kind == FAILURE_REPLAY]
+
+    @property
     def matched(self) -> int:
         return sum(1 for outcome in self.outcomes if outcome.matched)
 
@@ -1420,6 +1799,7 @@ def run_benchmark(
     concurrency: int = DEFAULT_CONCURRENCY,
     timeout_seconds: float = llm.DEFAULT_TIMEOUT_SECONDS,
     case_deadline_seconds: float = pipeline.DEFAULT_CASE_DEADLINE_SECONDS,
+    replay_dir: Optional[Path] = None,
     client_factory: Optional[Callable[[Callable[[Dict[str, Any]], None]], Any]] = None,
     key: Optional[Mapping[int, grade.Ruling]] = None,
     git_runner: Optional[Callable[[Sequence[str]], Optional[str]]] = None,
@@ -1440,6 +1820,13 @@ def run_benchmark(
     bounds one whole case, all three agent calls and any shape retry included.
     Both default to the value the layer below declares, rather than repeating
     the number here, so the two cannot drift apart.
+
+    ``replay_dir`` names another run whose recorded advocates are to be reused,
+    and only the judge called. It is checked in full before the run directory is
+    touched, so a replay into the source run's own directory has read every entry
+    it needs before it overwrites anything; a case the source cannot supply is
+    recorded as a :data:`FAILURE_REPLAY` failure with the reason the check gave,
+    and no call is made for it.
     """
     if not model:
         raise BenchmarkError("model is required and has no default; name the model explicitly")
@@ -1484,6 +1871,21 @@ def run_benchmark(
         if client_factory is None
         else client_factory
     )
+
+    # The replay check, and it is made HERE: before the run directory is touched,
+    # before a client exists and before any case is issued. That ordering is the
+    # whole reason it is a separate pass. The natural way to use replay is to
+    # point it at the directory it will write into, and a check interleaved with
+    # the writing would overwrite the entry it was about to read. Every source
+    # entry is therefore in memory before the first file is.
+    replay: Optional[ReplayCheck] = None
+    if replay_dir is not None:
+        replay = check_replay(
+            Path(replay_dir),
+            requested,
+            model=model,
+            prompts_dir=prompts_dir,
+        )
 
     run_dir = run_directory(runs_dir, model)
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -1531,6 +1933,16 @@ def run_benchmark(
     # for a spend.
     reused = TokenSplit()
 
+    # The fourth ledger, and it is filled in for cases that succeeded and cases
+    # that failed alike. It is what the borrowed advocates cost the run that made
+    # them. It is reported wherever a figure is, and added to nothing.
+    state = {
+        "stop_reason": STOP_COMPLETED,
+        "charged": TokenSplit(),
+        "failed": TokenSplit(),
+        "replayed": TokenSplit(),
+    }
+
     # Cached first: a re-run should say what it is skipping before it starts, and
     # whether what it is skipping still belongs to this code. One checker for the
     # whole invocation, because the current brief for a case cannot change while
@@ -1551,13 +1963,8 @@ def run_benchmark(
         outcomes.append(outcome)
         recorded.add(case_no)
         reused = reused + outcome.tokens
+        state["replayed"] = state["replayed"] + outcome.replayed_tokens
         progress(format_progress(outcome, positions[case_no], total))
-
-    state = {
-        "stop_reason": STOP_COMPLETED,
-        "charged": TokenSplit(),
-        "failed": TokenSplit(),
-    }
 
     def write_metadata(stop_reason: str) -> None:
         document = _metadata_document(
@@ -1576,6 +1983,8 @@ def run_benchmark(
             tokens_charged=state["charged"],
             tokens_failed=state["failed"],
             tokens_reused=reused,
+            tokens_replayed=state["replayed"],
+            replay=None if replay is None else replay.provenance(),
         )
         # Both, and the order matters. ``run.json`` is the latest invocation's
         # record at the conventional path; the history is what survives the next
@@ -1602,6 +2011,10 @@ def run_benchmark(
             state["charged"] = state["charged"] + outcome.tokens
         elif outcome.status == STATUS_FAILED:
             state["failed"] = state["failed"] + outcome.tokens
+        # And the borrowed half, which no branch above touches: a replayed case's
+        # own ``tokens`` are this run's judge call, and its ``replayed_tokens``
+        # were billed to the run the advocates came from.
+        state["replayed"] = state["replayed"] + outcome.replayed_tokens
         progress(format_progress(outcome, positions[outcome.case_no], total))
         # Written after every case, so an interrupted run still has correct
         # provenance and correct totals rather than nothing at all.
@@ -1613,6 +2026,28 @@ def run_benchmark(
         client = build_client(sink)
 
         def execute(case_no: int) -> Tuple[CaseOutcome, Optional[Dict[str, Any]], Optional[str]]:
+            replayable = None if replay is None else replay.accepted.get(case_no)
+            if replay is not None and replayable is None:
+                # Refused by the check that ran before anything was written, and
+                # turned into an outcome here rather than there so that it lands
+                # in the record like every other way a case produces nothing: a
+                # failure with a kind and a reason, and no transcript. Nothing is
+                # cached for it, so a later run against the same source refuses it
+                # in the same words instead of silently skipping it.
+                reason = replay.refused.get(
+                    case_no, "the source run never ran this case"
+                )
+                return (
+                    CaseOutcome(
+                        case_no=case_no,
+                        status=STATUS_FAILED,
+                        failure_kind=FAILURE_REPLAY,
+                        failure_detail=reason,
+                        failure_reason=failure_reason_for(FAILURE_REPLAY, reason),
+                    ),
+                    None,
+                    None,
+                )
             return run_one_case(
                 case_no,
                 client=client,
@@ -1620,6 +2055,7 @@ def run_benchmark(
                 expected=resolved_key.get(case_no),
                 case_provenance=run_provenance,
                 case_deadline_seconds=case_deadline_seconds,
+                replay=replayable,
             )
 
         workers = max(1, concurrency)
@@ -1728,6 +2164,8 @@ def run_benchmark(
         tokens_charged=state["charged"],
         tokens_failed=state["failed"],
         tokens_reused=reused.billed,
+        tokens_replayed=state["replayed"],
+        replay=None if replay is None else replay.provenance(),
     )
 
 
@@ -1797,6 +2235,8 @@ def _metadata_document(
     tokens_charged: TokenSplit,
     tokens_failed: TokenSplit,
     tokens_reused: TokenSplit,
+    tokens_replayed: TokenSplit,
+    replay: Optional[Mapping[str, Any]] = None,
 ) -> Dict[str, Any]:
     """The run's own metadata file.
 
@@ -1815,10 +2255,22 @@ def _metadata_document(
     is what this invocation's own failures cost, and the two together are what
     the invocation consumed. ``tokens_reused`` is what the cached cases cost
     when they were produced, which is nothing now.
+
+    ``tokens_replayed`` is the one figure here that is not part of what this
+    invocation consumed at all: it is what the borrowed advocates cost the run
+    that made them. It is reported because a reader has to be able to see what
+    the replayed half of the case cost, and it is named so that no reader adds it
+    to a total. ``replay`` is the source run itself, and ``None`` when this
+    invocation called every agent itself.
     """
     failed = [outcome for outcome in outcomes if outcome.status == STATUS_FAILED]
     consumed = tokens_charged + tokens_failed
     directory_cases = cached_case_numbers(run_dir)
+    replay_block: Optional[Dict[str, Any]] = None
+    if replay is not None:
+        replay_block = dict(replay)
+        replay_block["tokens"] = tokens_replayed.as_dict()
+        replay_block["note"] = pipeline.REPLAY_NOTE
     return {
         "schema_version": CACHE_SCHEMA_VERSION,
         "model": model,
@@ -1875,10 +2327,22 @@ def _metadata_document(
             # those results into a price would be gone from the record that
             # describes the invocation reading them.
             "reused": tokens_reused.as_dict(),
+            # The borrowed advocates' own usage, which was billed to the run that
+            # made the calls. Named apart from every figure above because it is
+            # the one number in this block that this invocation did not spend, and
+            # a reader who added it to the others would overstate the run.
+            "replayed": tokens_replayed.as_dict(),
+            "billed_to_another_run": tokens_replayed.billed,
             # The window this invocation ran in is ``started_at``/``ended_at``
             # above, which is what says which price band applied: peak hours are
             # 09:00-12:00 and 14:00-18:00 Singapore time on weekdays.
         },
+        # Present only when the advocates were replayed, and ``None`` otherwise so
+        # that "this invocation called every agent itself" is a fact this file
+        # states rather than one a reader infers from an absent key. It sits at
+        # the top level rather than inside the token block because it is not a
+        # figure: it is what this run is.
+        "replay": replay_block,
         "cases": {
             "scope": "this invocation only",
             "requested": list(requested),
@@ -1941,6 +2405,12 @@ def grade_run(
     now and comparing the two digests says whether the result still belongs to
     this code. A case whose brief has changed is reported as stale — named and
     counted — and never silently folded into a score.
+
+    The replay facts are collected here for the same reason and from the same
+    place: a cached entry says whether its advocates were reused from another
+    run, and the report has to be able to say so beside every figure it prints.
+    ``checked`` is True whenever this function ran at all -- it read every entry,
+    so "nothing was replayed" is a finding rather than an absence.
     """
     resolved_key: Mapping[int, grade.Ruling] = (
         grade.load_answer_key() if key is None else dict(key)
@@ -1952,10 +2422,22 @@ def grade_run(
     )
 
     produced: Dict[int, Any] = {}
+    replayed_cases: List[int] = []
+    replay_sources: List[str] = []
+    replay_tokens = 0
     for case_no in covered:
         document = load_cached(run_dir, case_no)
-        if document is not None:
-            produced[case_no] = document.get("ruling")
+        if document is None:
+            continue
+        produced[case_no] = document.get("ruling")
+        replay = document.get("replay")
+        if not isinstance(replay, Mapping):
+            continue
+        replayed_cases.append(case_no)
+        source = replay.get("run_dir")
+        if isinstance(source, str) and source and source not in replay_sources:
+            replay_sources.append(source)
+        replay_tokens += _as_int((replay.get("tokens") or {}).get("total_tokens"))
 
     staleness = brief_staleness(run_dir, covered, checker)
 
@@ -1965,7 +2447,18 @@ def grade_run(
     # run over the cases it actually ran is right; printing that subset's
     # escalation rate beside the corpus base rate is not, and the report can
     # only withhold the comparison if it is told which set it is describing.
-    return grade.grade(produced, subset, corpus=resolved_key, staleness=staleness)
+    return grade.grade(
+        produced,
+        subset,
+        corpus=resolved_key,
+        staleness=staleness,
+        replay=grade.ReplayFacts(
+            checked=True,
+            sources=tuple(replay_sources),
+            cases=tuple(replayed_cases),
+            tokens=replay_tokens,
+        ),
+    )
 
 
 # --------------------------------------------------------------------------
@@ -2004,6 +2497,11 @@ class ComparisonRow:
     # disagreement may be interpreter drift rather than code drift.
     python_versions: Tuple[str, ...] = ()
     staleness: grade.Staleness = grade.Staleness()
+    # The runs whose advocates these results reused, read off the cache entries
+    # rather than off ``run.json``: ``run.json`` describes the last invocation and
+    # the entries describe the results, which is the question a table of figures
+    # is asking. Empty when this run's advocates were all called by it.
+    replay_sources: Tuple[str, ...] = ()
 
 
 def _row_from_run(
@@ -2025,6 +2523,7 @@ def _row_from_run(
     durations: List[float] = []
     tokens = 0
     interpreters: List[str] = []
+    replay_sources: List[str] = []
     for case_no in covered:
         document = load_cached(run_dir, case_no)
         if document is None:
@@ -2034,6 +2533,14 @@ def _row_from_run(
         recorded = document.get("python_version")
         if isinstance(recorded, str) and recorded:
             interpreters.append(recorded)
+        # Read per case rather than once from the metadata, because a directory
+        # can hold results from more than one invocation and only the entries say
+        # which of them reused another run's advocates.
+        replayed = document.get("replay")
+        if isinstance(replayed, Mapping):
+            source = replayed.get("run_dir")
+            if isinstance(source, str) and source and source not in replay_sources:
+                replay_sources.append(source)
 
     calibration = report.calibration
     return ComparisonRow(
@@ -2056,6 +2563,7 @@ def _row_from_run(
         total_tokens=tokens,
         python_versions=tuple(sorted(set(interpreters))),
         staleness=report.staleness,
+        replay_sources=tuple(replay_sources),
     )
 
 
@@ -2319,6 +2827,26 @@ def render_comparison(rows: Sequence[ComparisonRow]) -> str:
             "measurement of any one version of this code."
         )
 
+    # Beside the table, not in a footnote, and for the same reason the tree flag
+    # is a column: a row whose advocates came from another run is a different
+    # measurement, and the numbers above it must not be read as the same kind.
+    replayed_rows = [row for row in rows if row.replay_sources]
+    if replayed_rows:
+        lines.append("")
+        lines.append(
+            "advocates replayed: for these rows the rider and driver outputs were "
+            "reused from another run and only the judge was called, so their "
+            "figures measure the judge on fixed inputs and not the whole pipeline. "
+            "The borrowed calls' own tokens are not in the token column, which is "
+            "this run's own bill."
+        )
+        for row in replayed_rows:
+            lines.append(
+                "  {0}  advocates from: {1}".format(
+                    row.model, ", ".join(row.replay_sources)
+                )
+            )
+
     lines.append(
         "tree is the working-tree flag from the run's own metadata: a number "
         "from a DIRTY tree, or one whose state is unknown, cannot be reproduced."
@@ -2362,6 +2890,26 @@ def print_summary(summary: RunSummary) -> None:
             str(provenance_.get("answer_key_sha256") or "")[:12],
         )
     )
+    # Stated before the figures rather than after them, because it changes what
+    # every figure below is a measurement of. A reader who learns it last has
+    # already read the accuracy as a whole-pipeline number.
+    if summary.replay is not None:
+        source = summary.replay
+        print(
+            "replay      advocates from {0} (commit {1}): {2} of {3} cases reused "
+            "them and only the judge was called".format(
+                source.get("run_dir"),
+                str(source.get("git_commit") or "unknown")[:12],
+                len(source.get("replayed_cases") or []),
+                len(summary.outcomes),
+            )
+        )
+        if source.get("refused_cases"):
+            print(
+                "            refused, and no call made for them: {0}".format(
+                    ", ".join(str(case_no) for case_no in source["refused_cases"])
+                )
+            )
     print(
         "cases       {0} completed, {1} cached, {2} failed".format(
             len(summary.completed_cases),
@@ -2369,6 +2917,12 @@ def print_summary(summary: RunSummary) -> None:
             len(summary.failures),
         )
     )
+    if summary.refusals:
+        print(
+            "            {0} of the failures were replay refusals: the source run "
+            "could not supply those advocates, so no model was called and they "
+            "say nothing about the model".format(len(summary.refusals))
+        )
     # The limits are printed on every run, not only when one was hit. A result
     # produced under a 600-second timeout is not the same measurement as one
     # produced under 120 seconds, and a case stopped at a 2400-second deadline is
@@ -2409,6 +2963,17 @@ def print_summary(summary: RunSummary) -> None:
             summary.tokens_consumed.reasoning_tokens,
         )
     )
+    # The fourth figure, and the one no total above contains. A replayed case's
+    # advocates were billed to the run they came from, so a reader comparing what
+    # this run cost with what the case cost has to be able to see both — and the
+    # line says which totals it is not part of, rather than leaving it to be
+    # worked out.
+    if summary.tokens_replayed.billed:
+        print(
+            "            plus {0:,} billed to the run the advocates came from, "
+            "which this invocation did not spend and no figure above "
+            "includes".format(summary.tokens_replayed.billed)
+        )
     # Printed only when it is not zero. A line reporting zero on every clean run
     # would train the reader to skip the line that matters on the run where it
     # is not zero.
@@ -2464,6 +3029,16 @@ def print_summary(summary: RunSummary) -> None:
                 ),
             )
         )
+        # Beside the figure rather than in a footnote, because a replayed run's
+        # accuracy is the judge's: it was computed over inputs another run
+        # produced, and it is not a measurement of the whole pipeline.
+        if summary.replay is not None:
+            print(
+                "              advocates replayed from {0}: this is the judge's "
+                "figure on fixed inputs, not a whole-pipeline measurement".format(
+                    summary.replay.get("run_dir")
+                )
+            )
         for name in grade.GRADED_FIELDS:
             correct, total = report.field_tally(name)
             print("  {0:<24} {1}/{2}".format(name, correct, total))
@@ -2915,6 +3490,34 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         ),
     )
     parser.add_argument(
+        "--replay-advocates",
+        type=Path,
+        default=None,
+        metavar="RUN_DIR",
+        help=(
+            "reuse the rider and driver advocate outputs recorded in RUN_DIR's "
+            "transcripts and call only the judge. Every case is checked first -- "
+            "the brief this code builds, each advocate's rendered system prompt, "
+            "the model and both recorded answers -- and a case the source cannot "
+            "supply is recorded as a REPLAY failure with no call made. The tokens "
+            "this run is billed are the judge's alone; the borrowed calls' own "
+            "tokens are reported and never added to them. Replaying into a "
+            "directory that already holds the results needs --force, because a "
+            "cached case is reused rather than replayed"
+        ),
+    )
+    parser.add_argument(
+        "--replay-check",
+        type=Path,
+        default=None,
+        metavar="RUN_DIR",
+        help=(
+            "report, case by case, whether --replay-advocates RUN_DIR would "
+            "accept it and why not. Reads only: no model is called and nothing "
+            "is written"
+        ),
+    )
+    parser.add_argument(
         "--external",
         type=Path,
         default=None,
@@ -2935,6 +3538,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             parser.error("--compare reads cached runs and takes no --model")
         if args.external is not None:
             parser.error("--compare reads cached runs and takes no --external")
+        if args.replay_advocates is not None or args.replay_check is not None:
+            parser.error("--compare reads cached runs and takes no replay arguments")
         print(render_comparison(collect_comparison(args.runs_dir)))
         return 0
 
@@ -2943,7 +3548,36 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     # comparison run is unaffected.
     model_id = resolve_model(args.model)
 
+    if args.replay_check is not None:
+        if args.external is not None:
+            parser.error("--replay-check reads a run and takes no --external")
+        try:
+            cases = parse_cases(args.cases) or sorted(grade.load_answer_key())
+        except BenchmarkError as exc:
+            parser.error(str(exc))
+        try:
+            check = check_replay(
+                args.replay_check,
+                cases,
+                model=model_id,
+                prompts_dir=args.prompts_dir,
+            )
+        except BenchmarkError as exc:
+            print("FATAL: {0}".format(exc), file=sys.stderr)
+            return 1
+        print(render_replay_check(check))
+        # Non-zero when anything was refused, so a caller can gate a paid replay
+        # on this without reading the text. A partial acceptance is a finding,
+        # not a success: those cases would be run in full, not replayed.
+        return 0 if not check.refused else 1
+
     if args.external is not None:
+        if args.replay_advocates is not None:
+            parser.error(
+                "--external arbitrates a converted case in full and takes no "
+                "--replay-advocates: an external case is not one of the recorded "
+                "corpus cases a replay reads from"
+            )
         if args.cases is not None:
             parser.error("--external arbitrates one named case and takes no --cases")
         try:
@@ -2990,6 +3624,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             concurrency=args.concurrency,
             timeout_seconds=args.timeout,
             case_deadline_seconds=args.case_deadline,
+            replay_dir=args.replay_advocates,
         )
     except llm.ModelNotProvisionedError as exc:
         print("FATAL: {0}".format(exc), file=sys.stderr)

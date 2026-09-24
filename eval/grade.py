@@ -1091,6 +1091,53 @@ class Staleness:
         return tuple(moved)
 
 
+# A graded result's advocates were either asked by the run that reports it or
+# borrowed from another run, and those are the only two answers. Named rather
+# than written as literals in the two places that render them, so the table cell
+# and the block below it cannot come to disagree.
+ADVOCATES_CALLED_HERE = "called here"
+ADVOCATES_REPLAYED = "replayed"
+
+
+@dataclass(frozen=True)
+class ReplayFacts:
+    """Which graded results came from a run that reused another run's advocates.
+
+    Not a synonym for staleness, and not a weaker version of it. Staleness asks
+    whether a result still belongs to this code. This says that part of the
+    arbitration was not performed by the run that reports it: the rider and
+    driver outputs are another run's, so the figure is the judge's behaviour on
+    fixed inputs rather than the whole pipeline's, and a reader who takes it for
+    a pipeline number has the wrong model of what was measured.
+
+    ``sources`` is every run directory the advocates came from, as the cache
+    entries recorded it, and ``cases`` is which graded cases reused them. Both,
+    because a reader needs to know how much of the figure is affected *and* where
+    the borrowed half came from.
+
+    ``checked`` is False when nobody looked, which is not the same as having
+    looked and found none: a report built straight from rulings must render
+    nothing about a question it was never asked.
+    """
+
+    checked: bool = False
+    sources: Tuple[str, ...] = ()
+    cases: Tuple[int, ...] = ()
+    # What the borrowed calls cost the run that made them. Reported because a
+    # reader comparing runs needs it, and added to nothing: this is not part of
+    # what the run being reported spent.
+    tokens: int = 0
+
+    @property
+    def any(self) -> bool:
+        """Whether any graded result reused another run's advocates."""
+        return bool(self.cases)
+
+    def status_of(self, case_no: int) -> str:
+        """``replayed`` or ``called here`` for one graded case."""
+        return ADVOCATES_REPLAYED if case_no in self.cases else ADVOCATES_CALLED_HERE
+
+
 # --------------------------------------------------------------------------
 # The report
 # --------------------------------------------------------------------------
@@ -1106,6 +1153,11 @@ class GradeReport:
     ``staleness`` is carried for the same reason and is the stronger claim of
     the two: a set whose cases were produced by different versions of the brief
     is not one run at all, so its exact-match figure measures no single thing.
+
+    ``replay`` is carried because it changes what the figures are figures *of*.
+    A graded set whose advocates were reused from another run measures the judge
+    on fixed inputs; the report says so wherever it prints a number, and it says
+    nothing at all when nobody asked.
     """
 
     cases: Tuple[CaseScore, ...]
@@ -1113,6 +1165,7 @@ class GradeReport:
     unexpected_cases: Tuple[int, ...] = ()
     corpus_cases: Tuple[int, ...] = ()
     staleness: Staleness = Staleness()
+    replay: ReplayFacts = ReplayFacts()
 
     @property
     def total(self) -> int:
@@ -1185,6 +1238,7 @@ def grade(
     key: Optional[Mapping[int, Ruling]] = None,
     corpus: Optional[Mapping[int, Ruling]] = None,
     staleness: Optional[Staleness] = None,
+    replay: Optional[ReplayFacts] = None,
 ) -> GradeReport:
     """Grade a produced-ruling mapping against the key.
 
@@ -1204,6 +1258,12 @@ def grade(
     belongs to the code running now. It is not the grader's to work out, and it
     defaults to "nobody looked" rather than to "all current", because a report
     must not claim a check that was never made.
+
+    ``replay`` is the caller's answer to whether the advocates were asked by the
+    run that produced these results. It is not the grader's to work out either,
+    and it defaults to "nobody looked", which renders nothing -- so a report
+    built straight from rulings, as the grader's own self-test is, is unchanged
+    by its existence.
     """
     resolved_key = load_answer_key() if key is None else dict(key)
     resolved_corpus = resolved_key if corpus is None else dict(corpus)
@@ -1221,6 +1281,7 @@ def grade(
         unexpected,
         corpus_cases=tuple(sorted(resolved_corpus)),
         staleness=Staleness() if staleness is None else staleness,
+        replay=ReplayFacts() if replay is None else replay,
     )
 
 
@@ -1271,9 +1332,20 @@ def _render_case_table(report: GradeReport) -> List[str]:
     The column is not headed ``brief`` any more. It answers for the prompt
     digest as well, and a heading naming one of the two would be the merge this
     report is required not to make.
+
+    An ``advocates`` column is added only when some result reused another run's
+    advocates, and it says which. It is a third question again -- not whether the
+    result belongs to this code, but whether this code asked the agents -- and it
+    is answered per row so a reader can see how much of the table is affected
+    without counting a sentence above it.
     """
     checked = report.staleness.checked
-    headers = ["case", *GRADED_FIELDS, "exact"] + (["cached"] if checked else [])
+    replayed = report.replay.any
+    headers = ["case", *GRADED_FIELDS, "exact"]
+    if checked:
+        headers.append("cached")
+    if replayed:
+        headers.append("advocates")
     lines = [
         "| " + " | ".join(headers) + " |",
         "|" + "---|" * len(headers),
@@ -1285,6 +1357,8 @@ def _render_case_table(report: GradeReport) -> List[str]:
         row = [str(score.case_no), *cells, "ok" if score.exact else "**FAIL**"]
         if checked:
             row.append(_render_brief_status(report.staleness, score.case_no))
+        if replayed:
+            row.append(report.replay.status_of(score.case_no))
         lines.append("| " + " | ".join(row) + " |")
     return lines
 
@@ -1369,6 +1443,43 @@ def _render_staleness(report: GradeReport) -> List[str]:
         "code.".format(report.exact_matches, report.total)
     )
     return lines
+
+
+def _render_replay(report: GradeReport) -> List[str]:
+    """The advocates-replayed block, and what it makes the figures measure.
+
+    Empty when nobody looked, for the same reason the staleness block is: the
+    honest output of a report built straight from rulings is silence about a
+    question it was never asked.
+
+    A replayed run is not a stale run and must not be reported as one. Staleness
+    says a result came from older code; this says the run reporting it did not
+    perform part of the arbitration at all. Both change what a figure measures,
+    which is why both are printed beside the figures, and neither is a reason to
+    withhold the number.
+    """
+    replay = report.replay
+    if not replay.checked or not replay.any:
+        return []
+
+    sources = ", ".join("`{0}`".format(source) for source in replay.sources)
+    return [
+        "",
+        "### Advocates replayed",
+        "",
+        "For {0} of {1} graded cases the rider and driver outputs were **reused "
+        "from another run** and were not regenerated by the run that produced "
+        "these results: only the judge was called for those cases. Every figure "
+        "in this report is therefore the judge's behaviour on fixed inputs rather "
+        "than a measurement of the whole pipeline. The brief and both advocate "
+        "prompts were checked against what that run recorded, and against the "
+        "model, before any case was accepted.".format(len(replay.cases), report.total),
+        "",
+        "The advocates came from {0}.".format(sources or "an unrecorded source"),
+        "",
+        "Those calls cost {0:,} tokens, billed to the run that made them and not "
+        "to this one. No figure in this report includes them.".format(replay.tokens),
+    ]
 
 
 def _render_failures(report: GradeReport) -> List[str]:
@@ -1661,6 +1772,17 @@ def render_report(report: GradeReport, title: str = DEFAULT_TITLE) -> str:
     lets a committed report be checked against the module rather than trusted.
     """
     total = report.total
+
+    # Both qualifiers are appended to the headline figure rather than left to the
+    # blocks below it. A reader who reads only the summary must still learn that
+    # the number is not a single whole-pipeline measurement, and the two reasons
+    # it might not be are different findings.
+    qualifiers = ""
+    if report.staleness.mixed:
+        qualifiers += " **(mixed set — not one measurement)**"
+    if report.replay.any:
+        qualifiers += " **(advocates replayed)**"
+
     lines: List[str] = [
         "# {0}".format(title),
         "",
@@ -1678,10 +1800,23 @@ def render_report(report: GradeReport, title: str = DEFAULT_TITLE) -> str:
             report.exact_matches,
             total,
             render_percent(_percent(report.exact_matches, total)),
-            " **(mixed set — not one measurement)**" if report.staleness.mixed else "",
+            qualifiers,
         ),
         "",
     ]
+
+    # Named here as well as in the block below, because this is the table a
+    # reader reads when they read only one thing.
+    if report.replay.any:
+        lines.append(
+            "| Advocates | replayed from {0} for {1} of {2} cases |".format(
+                ", ".join("`{0}`".format(source) for source in report.replay.sources)
+                or "an unrecorded source",
+                len(report.replay.cases),
+                total,
+            )
+        )
+        lines.append("")
 
     for field in GRADED_FIELDS:
         correct, field_total = report.field_tally(field)
@@ -1692,6 +1827,7 @@ def render_report(report: GradeReport, title: str = DEFAULT_TITLE) -> str:
         )
 
     lines.extend(_render_staleness(report))
+    lines.extend(_render_replay(report))
 
     lines.extend(
         [

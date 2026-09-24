@@ -34,6 +34,7 @@ import tempfile
 import unittest
 from html.parser import HTMLParser
 from pathlib import Path
+from typing import Any, Dict, Optional
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -1018,6 +1019,203 @@ class StanceProofRefusalTests(unittest.TestCase):
             sorted(case["case_no"] for case in document["cases"]),
         )
         self.assertEqual([], document["refused_cases"])
+
+
+class ReplayTests(unittest.TestCase):
+    """A run that reused another run's advocates says so wherever it shows a figure.
+
+    The replay block is written into a copy of the headline run rather than read
+    from it. That run called all three agents itself -- it predates the mode that
+    borrows another run's advocates -- so a test that waited for a run holding one
+    would assert nothing until such a run existed, and would then be asserting
+    about whichever run happened to be committed. What is under test is the
+    viewer's handling of the block, and the block is written in the shape the
+    runner produces.
+
+    The page is a template plus data, and the two halves are asserted separately:
+    the source path appears only in the data block, and the sentence that says
+    what it means only in the script. A page that carried the fact and never
+    rendered it, or rendered a sentence with nothing behind it, fails one half or
+    the other. That is why the assertions here are a data check and a script
+    check rather than a search for a rendered sentence -- there is no DOM until a
+    browser builds one, and a viewer whose behaviour is only in its script can
+    only be tested through the script.
+    """
+
+    # The case the fixture marks as replayed, and the case beside it that must
+    # still be shown as this run's own work -- without which a viewer that
+    # labelled every case replayed would pass.
+    REPLAYED = 208
+    CALLED = 209
+
+    SOURCE = "runs/an-earlier-run"
+    COMMIT = "493beeaf94953943116a25cb74353b3dd2279499"
+    TOKENS = 61753
+    OUTSIDE = "/private/tmp/some-clone/runs/an-earlier-run"
+
+    def _fixture_run_directory(self, root: Path, *, source: Optional[str] = SOURCE) -> Path:
+        """A two-case run directory, copied from the headline run.
+
+        ``source`` of ``None`` leaves both files as the committed run wrote them,
+        which is the "this run called every agent itself" case.
+        """
+        run_dir = root / "run"
+        run_dir.mkdir()
+        for name in ("run.json", "invocations.json"):
+            shutil.copy2(build.RUN_DIR / name, run_dir / name)
+        for case_no in (self.REPLAYED, self.CALLED):
+            for suffix in (".json", ".transcript.json"):
+                shutil.copy2(
+                    build.RUN_DIR / ("case-%05d%s" % (case_no, suffix)),
+                    run_dir / ("case-%05d%s" % (case_no, suffix)),
+                )
+        if source is not None:
+            self._mark_replayed(run_dir / ("case-%05d.json" % self.REPLAYED), source)
+            self._mark_run(run_dir / "run.json", source)
+        return run_dir
+
+    @classmethod
+    def _mark_replayed(cls, path: Path, source: str) -> None:
+        """The per-case block, in the shape ``ReplayProvenance.as_dict`` writes it."""
+        document = json.loads(path.read_text(encoding="utf-8"))
+        document["replay"] = {
+            "run_dir": source,
+            "git_commit": cls.COMMIT,
+            "transcript_sha256": "0" * 64,
+            "brief_sha256": document["brief_sha256"],
+            "model": document["model"],
+            "advocate_calls": 2,
+            "tokens": {"total_tokens": cls.TOKENS},
+            "note": pipeline.REPLAY_NOTE,
+        }
+        path.write_text(json.dumps(document), encoding="utf-8")
+
+    @classmethod
+    def _mark_run(cls, path: Path, source: str) -> None:
+        """The run-level block, in the shape ``write_metadata`` writes it."""
+        document = json.loads(path.read_text(encoding="utf-8"))
+        document["replay"] = {
+            "run_dir": source,
+            "git_commit": cls.COMMIT,
+            "model": document["model"],
+            "prompts_sha256": document["prompts_sha256"],
+            "replayed_cases": [cls.REPLAYED],
+            "refused_cases": [],
+            "tokens": {"total_tokens": cls.TOKENS},
+            "note": pipeline.REPLAY_NOTE,
+        }
+        path.write_text(json.dumps(document), encoding="utf-8")
+
+    def _document(self, *, source: Optional[str] = SOURCE) -> Dict[str, Any]:
+        with tempfile.TemporaryDirectory() as tmp:
+            return build.build_document(
+                run_dir=self._fixture_run_directory(Path(tmp), source=source)
+            )
+
+    def test_a_replayed_case_carries_the_source_and_what_it_borrowed(self):
+        document = self._document()
+        cases = {case["case_no"]: case for case in document["cases"]}
+
+        replayed = cases[self.REPLAYED]["replay"]
+        self.assertIsNotNone(replayed, "the replayed case does not say so")
+        self.assertEqual(self.SOURCE, replayed["run_directory"])
+        self.assertEqual(self.COMMIT, replayed["git_commit"])
+        self.assertEqual(2, replayed["advocate_calls"])
+        self.assertEqual(self.TOKENS, replayed["tokens"]["total_tokens"])
+        self.assertIsNone(
+            cases[self.CALLED]["replay"],
+            "a case this run called itself is shown as replayed",
+        )
+
+    def test_the_footer_says_which_run_and_how_many_cases(self):
+        document = self._document()
+        replay = document["provenance"]["replay"]
+        self.assertIsNotNone(replay, "the footer does not say this run replayed")
+        self.assertEqual(self.SOURCE, replay["run_directory"])
+        self.assertEqual(self.COMMIT, replay["git_commit"])
+        self.assertEqual(1, replay["replayed_cases"])
+        self.assertEqual(0, replay["refused_cases"])
+        self.assertEqual(self.TOKENS, replay["tokens"])
+
+    def test_the_headline_qualifies_the_figure_with_the_replay_and_its_cost(self):
+        """The figure is the judge's, and the card a reader sees first has to say so.
+
+        The denominator is asserted against the headline's own, not against a
+        number typed here: the point is that the replay block and the figure it
+        qualifies are computed over the same set of cases, which is what would
+        break if the two were summed from different places.
+        """
+        document = self._document()
+        replay = document["headline"]["replay"]
+        self.assertIsNotNone(replay, "the headline does not qualify the figure")
+        self.assertEqual(1, replay["cases"])
+        self.assertEqual(document["headline"]["cases_graded"], replay["total"])
+        self.assertEqual([self.SOURCE], replay["sources"])
+        self.assertEqual(self.TOKENS, replay["tokens"])
+
+    def test_the_page_carries_the_source_and_the_sentence_that_reads_it(self):
+        document = self._document()
+        page = build.render_html(document)
+        script = behaviour_script(page)
+
+        self.assertIn(self.SOURCE, page, "the source run is not on the page")
+        self.assertIn(str(self.TOKENS), page, "what the borrowed calls cost is not shown")
+        self.assertRegex(
+            script,
+            r"if \(DATA\.headline\.replay\)",
+            "the overview does not branch on the replay",
+        )
+        self.assertRegex(script, r'replayed from "', "no sentence says where from")
+        self.assertRegex(
+            script, r'"advocates replayed"', "no badge marks the case as replayed"
+        )
+
+    def test_a_run_that_called_its_own_advocates_states_that_too(self):
+        """An absent field is not an answer; the page needs a branch that answers no."""
+        document = self._document(source=None)
+        page = build.render_html(document)
+        script = behaviour_script(page)
+
+        self.assertIsNone(document["headline"]["replay"])
+        self.assertIsNone(document["provenance"]["replay"])
+        for case in document["cases"]:
+            with self.subTest(case_no=case["case_no"]):
+                self.assertIsNone(case["replay"], "a case is shown as replayed")
+        self.assertRegex(
+            script,
+            r'(?s)p\.replay\s*\?\s*"replayed from ".*?:\s*"called by this run"',
+            "the footer has no branch that answers no",
+        )
+
+    def test_a_source_outside_the_repository_is_named_and_not_published(self):
+        """The page is committed; a path from another checkout is not ours to print."""
+        document = self._document(source=self.OUTSIDE)
+        page = build.render_html(document)
+
+        self.assertEqual(
+            ["a run outside this repository"], document["headline"]["replay"]["sources"]
+        )
+        self.assertNotIn(self.OUTSIDE, page, "a foreign path reached the page")
+        self.assertIn("a run outside this repository", page)
+
+    def test_the_source_is_read_from_the_cases_not_from_the_invocation(self):
+        """The entries describe the results; ``run.json`` describes the last invocation.
+
+        A directory can hold results from more than one invocation, and only the
+        entries say which of them borrowed another run's advocates. Marking the
+        run-level block and no case is the state a run.json-only reader would get
+        wrong, so it is the state this asserts.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self._fixture_run_directory(Path(tmp), source=None)
+            self._mark_run(run_dir / "run.json", self.SOURCE)
+            document = build.build_document(run_dir=run_dir)
+
+        self.assertIsNotNone(document["provenance"]["replay"], "the footer lost the block")
+        self.assertIsNone(
+            document["headline"]["replay"],
+            "a case was called replayed because the invocation said so",
+        )
 
 
 if __name__ == "__main__":

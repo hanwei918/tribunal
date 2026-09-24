@@ -82,12 +82,38 @@ not "unmoved".
 
 | File | What it holds |
 |---|---|
-| `run.json` | The metadata of the **last** invocation: its commit, clean-tree flag, prompts digest, answer key digest, interpreter, case list, failures and token figures. Overwritten by the next invocation. |
+| `run.json` | The metadata of the **last** invocation: its commit, clean-tree flag, prompts digest, answer key digest, interpreter, case list, failures and token figures. Overwritten by the next invocation. A `replay` block is added when this invocation reused another run's advocates instead of calling its own. |
 | `invocations.json` | One entry per invocation, keyed by start time. **This is the file that survives.** `run.json` describes only the invocation that wrote it; this is the history, so an earlier invocation's commit and token totals are still there afterwards. |
-| `case-<NNNNN>.json` | The cached result for one case: the ruling, its provenance (commit, prompts digest, interpreter, brief digest) and the token split. Written only for a case that produced a ruling. |
-| `case-<NNNNN>.transcript.json` | Every call made for that case, with the raw response body, the parse outcome, and the per-call token split. |
+| `case-<NNNNN>.json` | The cached result for one case: the ruling, its provenance (commit, prompts digest, interpreter, brief digest) and the token split. Written only for a case that produced a ruling. A `replay` block is added when that case's advocates were replayed rather than called here. |
+| `case-<NNNNN>.transcript.json` | Every call made for that case, with the raw response body, the parse outcome, and the per-call token split. A replayed case carries its advocates' entries as they were recorded, each marked as replayed, and only the judge's entry is a call this run made. |
 | `calls.json` | Every call this invocation made, in one file. |
 | `report.md` | The graded result, produced by `eval/grade.py`. |
+
+## Replaying the advocates
+
+`--replay-advocates RUN_DIR` reads a case's two advocate outputs out of an earlier run's transcript and
+calls **only the judge**. It exists because a prompt change that touches one agent should not be
+measured through two agents' sampling variance: in the headline run the two advocates billed
+1,732,682 of the run's 2,804,061 tokens, 61.8 %, so re-running them would regenerate inputs the judge
+already has and pay about 62 % of the run for the privilege.
+
+It is not a shortcut around the checks. A case is **refused** — recorded as a failure with its reason,
+no model call, no cache entry — unless all four hold: the brief this repository builds now hashes to
+the digest the result recorded; each advocate's system prompt as rendered now hashes to what that run
+recorded for that role; the model is the same; and the recorded answer parsed. The judge's own input
+is then built by the same code path a full run uses, not by a second copy of it.
+
+Two figures are kept apart and neither is folded into the other. The cache entry and `run.json` record
+what the borrowed calls cost the run that made them — reported, because a reader has to see what the
+replayed half of the case cost, and named `billed_to_another_run` so that no reader adds it to a total
+— and the result's own token figures are the judge's alone. Wherever the figures appear, the report and
+the viewer say the advocates were replayed and from which run.
+
+**An external case is never replayed.** `--replay-advocates` and `--external` together are refused, and
+so is `--compare`, because a run whose advocates came from elsewhere is not the same measurement and a
+comparison must not silently mix the two. `--replay-check RUN_DIR` answers the question without
+running anything: it reads the source and reports, per case, whether a replay would be accepted and
+why not. See `docs/notes/2026-09-24-replaying-the-advocates.md`.
 
 ## Two cautions about the invalidated runs
 

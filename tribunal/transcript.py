@@ -33,7 +33,7 @@ from __future__ import annotations
 import hashlib
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence
 
 from . import money
 
@@ -188,15 +188,85 @@ class Transcript:
     def __len__(self) -> int:
         return len(self._entries)
 
-    def totals(self) -> Dict[str, Any]:
-        """The token and wall-clock totals across every entry."""
+    def add_recorded(self, entry: Mapping[str, Any], *, note: str) -> TranscriptEntry:
+        """Append an entry copied from another transcript, carrying a new note.
+
+        Every other field is carried across as it stands -- the digests, the
+        timestamp, the usage figures and the response -- because the entry is
+        the record of a call that really happened, and re-deriving any of it
+        here would be inventing evidence rather than copying it. ``note`` is the
+        one field replaced, and it is replaced rather than added beside because
+        the note is where an entry says what this run did; an original note is
+        not lost, since it travels inside the new one.
+
+        Raises ``ValueError`` when the mapping is not an entry, so a caller that
+        skipped its own checks hears about it here rather than producing a
+        transcript with a hole in it.
+        """
+        missing = [
+            name
+            for name in (
+                "role",
+                "model",
+                "system_sha256",
+                "user_sha256",
+                "response_text",
+                "parse_outcome",
+            )
+            if not isinstance(entry.get(name), str) or not entry.get(name)
+        ]
+        if missing:
+            raise ValueError(
+                "a recorded entry cannot be copied: {0} is missing or is not a "
+                "non-empty string".format(", ".join(missing))
+            )
+
+        original_note = entry.get("note")
+        carried_note = note
+        if isinstance(original_note, str) and original_note:
+            carried_note = "{0} (the source run's own note: {1})".format(
+                note, original_note
+            )
+
+        copied = TranscriptEntry(
+            role=entry["role"],
+            model=entry["model"],
+            system_sha256=entry["system_sha256"],
+            user_sha256=entry["user_sha256"],
+            response_text=entry["response_text"],
+            parsed=entry.get("parsed"),
+            parse_outcome=entry["parse_outcome"],
+            prompt_tokens=int(entry.get("prompt_tokens") or 0),
+            completion_tokens=int(entry.get("completion_tokens") or 0),
+            reasoning_tokens=int(entry.get("reasoning_tokens") or 0),
+            cached_tokens=int(entry.get("cached_tokens") or 0),
+            duration_seconds=float(entry.get("duration_seconds") or 0.0),
+            attempts=int(entry.get("attempts") or 1),
+            status=int(entry.get("status") or 0),
+            timestamp=str(entry.get("timestamp") or ""),
+            note=carried_note,
+            shape=entry.get("shape"),
+        )
+        self._entries.append(copied)
+        return copied
+
+    def totals(self, entries: Optional[Sequence[TranscriptEntry]] = None) -> Dict[str, Any]:
+        """The token and wall-clock totals across the entries given.
+
+        ``entries`` defaults to every entry on the transcript. It is passed when
+        a transcript holds entries this run did not make: a replayed advocate
+        call belongs to the run that made it, and its usage was billed there.
+        Summing the whole transcript in that case would report a bill this run
+        never paid.
+        """
+        chosen = self._entries if entries is None else list(entries)
         return {
-            "calls": len(self._entries),
-            "prompt_tokens": sum(e.prompt_tokens for e in self._entries),
-            "completion_tokens": sum(e.completion_tokens for e in self._entries),
-            "reasoning_tokens": sum(e.reasoning_tokens for e in self._entries),
-            "cached_tokens": sum(e.cached_tokens for e in self._entries),
-            "duration_seconds": sum(e.duration_seconds for e in self._entries),
+            "calls": len(chosen),
+            "prompt_tokens": sum(e.prompt_tokens for e in chosen),
+            "completion_tokens": sum(e.completion_tokens for e in chosen),
+            "reasoning_tokens": sum(e.reasoning_tokens for e in chosen),
+            "cached_tokens": sum(e.cached_tokens for e in chosen),
+            "duration_seconds": sum(e.duration_seconds for e in chosen),
         }
 
     def as_dict(self) -> Dict[str, Any]:
