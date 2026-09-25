@@ -115,7 +115,7 @@ CALLS_PER_CASE = 3
 TOKENS_PER_CASE = TOKENS_PER_CALL * CALLS_PER_CASE
 
 # A bare claim array, which is all the pipeline's advocate validator asks for.
-CLAIM_ARRAY = '[{"claim_id": "C1", "evidence_id": "E1", "clause_id": "POL-GEN-03"}]'
+CLAIM_ARRAY = '[{"claim_id": "C1", "evidence_id": "EV-GPS-00101", "clause_id": "POL-RD-01"}]'
 
 COMMIT = "0b20a66deadbeefcafe0123456789abcdef01234"
 DIRTY_STATUS = " M eval/run_benchmark.py\n?? tests/test_run_benchmark.py"
@@ -165,7 +165,7 @@ def role_of(request):
     system = request["messages"][0]["content"]
     parsed = json.loads(request["messages"][1]["content"])
 
-    if isinstance(parsed, dict) and set(parsed) == {"brief", "claims"}:
+    if isinstance(parsed, dict) and "brief" in parsed and "claims" in parsed:
         return parsed["brief"]["case"]["case_no"], transcript.ROLE_JUDGE
 
     case_no = parsed["case"]["case_no"]
@@ -490,6 +490,7 @@ class CleanRunTests(unittest.TestCase):
                         # not say", which is exactly what an absent key leaves
                         # open.
                         "replay",
+                        "referee",
                         "ruling",
                         "ruling_findings",
                         "schema_version",

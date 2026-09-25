@@ -76,7 +76,7 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
-from . import brief, llm, loader, money, transcript as transcript_module
+from . import brief, llm, loader, money, referee, transcript as transcript_module
 from .model import resolve_model
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -484,6 +484,10 @@ class PipelineResult:
     cached_tokens: int = 0
     duration_seconds: float = 0.0
     stance_differing_ranges: List[Tuple[int, int]] = field(default_factory=list)
+    # The deterministic mechanical citation ledger handed to the judge and
+    # carried into the cache/viewer. It is empty only when an advocate failed
+    # before the referee could run.
+    referee: Dict[str, Any] = field(default_factory=dict)
     # Set only by :func:`replay_case`, and ``None`` for every arbitration this
     # invocation performed in full. Its presence is the whole difference between
     # "these agents were asked and answered" and "these answers were borrowed":
@@ -497,11 +501,16 @@ class PipelineResult:
 
     @property
     def transcript_json(self) -> str:
-        return self.transcript.to_json()
+        """The call record plus the deterministic referee ledger."""
+        payload = self.transcript.as_dict()
+        if self.referee:
+            payload["referee"] = self.referee
+        return money.dumps_canonical(payload)
 
     @property
     def transcript_sha256(self) -> str:
-        return self.transcript.sha256()
+        """The digest of the exact transcript bytes this result writes."""
+        return hashlib.sha256(self.transcript_json.encode("utf-8")).hexdigest()
 
 
 # --------------------------------------------------------------------------
@@ -786,9 +795,18 @@ def run_loaded_case(
 
     ruling = None
     findings: List[Dict[str, Any]] = []
+    referee_record: Dict[str, Any] = {}
 
     if failed_agent is None:
-        judge_user = _judge_user_message(rider_claims, driver_claims, brief_json)
+        referee_result = referee.referee(case_brief, rider_claims, driver_claims)
+        referee_record = referee_result.as_dict()
+        judge_user = _judge_user_message(
+            referee_result.kept_claims[referee.SIDE_RIDER],
+            referee_result.kept_claims[referee.SIDE_DRIVER],
+            brief_json,
+            referee_result.discards,
+            referee_result.flags,
+        )
 
         # The judge's message must embed those same brief bytes, and be canonical.
         parsed_judge_user = _parse(judge_user)
@@ -809,7 +827,10 @@ def run_loaded_case(
         if judge_failure is not None:
             failed_agent, failure_reason = transcript_module.ROLE_JUDGE, judge_failure
         else:
-            ruling = normalise_ruling(judge_parsed)
+            assembled = dict(judge_parsed)
+            judge_additions = assembled.get("discarded_claims") or []
+            assembled["discarded_claims"] = list(referee_result.discards) + list(judge_additions)
+            ruling = normalise_ruling(assembled)
             findings = validate_ruling_shape(ruling)
 
     totals = transcript.totals()
@@ -829,6 +850,7 @@ def run_loaded_case(
         cached_tokens=totals["cached_tokens"],
         duration_seconds=totals["duration_seconds"],
         stance_differing_ranges=stance_ranges,
+        referee=referee_record,
     )
 
 
@@ -836,12 +858,20 @@ def _parse(text: str) -> Any:
     return json.loads(text, parse_float=Decimal)
 
 
-def _judge_user_message(rider_claims: Any, driver_claims: Any, brief_json: str) -> str:
-    """The judge's user message: the same brief bytes plus both claim arrays.
+def _judge_user_message(
+    rider_claims: Any,
+    driver_claims: Any,
+    brief_json: str,
+    referee_discards: Optional[Sequence[Mapping[str, Any]]] = None,
+    referee_flags: Optional[Sequence[Mapping[str, Any]]] = None,
+) -> str:
+    """Build the judge input from kept claims and the referee audit.
 
     The brief is spliced in as the exact characters the advocates received,
-    rather than re-serialised, so the identity is literal. The result is itself
-    canonical JSON, which ``run_case`` checks by parsing and re-serialising.
+    rather than re-serialised, so the identity is literal. The judge sees no
+    mechanically discarded claim in ``claims``; it sees that claim only in the
+    referee ledger. The result is itself canonical JSON, which the pipeline
+    checks by parsing and re-serialising.
     """
     claims_json = money.dumps_canonical(
         {
@@ -849,7 +879,16 @@ def _judge_user_message(rider_claims: Any, driver_claims: Any, brief_json: str) 
             transcript_module.ROLE_DRIVER_ADVOCATE: driver_claims,
         }
     )
-    return '{"brief":' + brief_json + ',"claims":' + claims_json + "}"
+    referee_json = money.dumps_canonical(
+        {
+            "ledger": list(referee_discards or []),
+            "flags": list(referee_flags or []),
+        }
+    )
+    return (
+        '{"brief":' + brief_json + ',"claims":' + claims_json
+        + ',"referee":' + referee_json + "}"
+    )
 
 
 # --------------------------------------------------------------------------
@@ -1169,8 +1208,18 @@ def replay_case(
         clock=clock,
     )
 
+    replay_brief = _parse(replay.brief_json)
+    referee_result = referee.referee(
+        replay_brief,
+        replay.rider_claims,
+        replay.driver_claims,
+    )
     judge_user = _judge_user_message(
-        replay.rider_claims, replay.driver_claims, replay.brief_json
+        referee_result.kept_claims[referee.SIDE_RIDER],
+        referee_result.kept_claims[referee.SIDE_DRIVER],
+        replay.brief_json,
+        referee_result.discards,
+        referee_result.flags,
     )
 
     # The judge's message must embed those same brief bytes, and be canonical.
@@ -1194,10 +1243,14 @@ def replay_case(
     failure_reason = None
     ruling = None
     findings: List[Dict[str, Any]] = []
+    referee_record = referee_result.as_dict()
     if judge_failure is not None:
         failed_agent, failure_reason = transcript_module.ROLE_JUDGE, judge_failure
     else:
-        ruling = normalise_ruling(judge_parsed)
+        assembled = dict(judge_parsed)
+        judge_additions = assembled.get("discarded_claims") or []
+        assembled["discarded_claims"] = list(referee_result.discards) + list(judge_additions)
+        ruling = normalise_ruling(assembled)
         findings = validate_ruling_shape(ruling)
 
     # Two sums, and they are never added. The identity comparison is what keeps
@@ -1229,6 +1282,7 @@ def replay_case(
         cached_tokens=totals["cached_tokens"],
         duration_seconds=totals["duration_seconds"],
         stance_differing_ranges=list(replay.stance_differing_ranges),
+        referee=referee_record,
         replay=ReplayProvenance(
             run_dir=replay.source.run_dir,
             git_commit=replay.source.git_commit,

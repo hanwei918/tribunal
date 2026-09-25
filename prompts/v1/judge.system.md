@@ -17,22 +17,34 @@ have had their raw coordinate arrays replaced by a `derived` object of computed 
 value carries the `evidence_id` it came from, and every threshold carries the `policy_id` it came
 from. Both advocates read this same object. Geometry is already computed — do not recompute it.
 
-## Step 1 — the citation check
+## Step 1 — the referee's mechanical citation check
 
-Apply this to **every** claim from **both** sides, before any claim is weighed. Each failure
-**DISCARDS** the claim and records a reason:
+A deterministic code referee has already applied the mechanical checks to **every** claim from
+**both** sides. The `claims` arrays in your input contain only the claims the referee kept. The
+`referee_ledger` contains the discarded claims, each with the side, the claim text, a closed-set
+reason code and a detail explaining the check that fired. The `referee_flags` contains non-discarding
+flags, including a context-only profile field mentioned in claim text.
 
-- **(a)** every `evidence_id` in the claim resolves in this case's `evidence`.
-- **(b)** every `clause_id` in the claim resolves in the loaded policy **and** is well-formed. A
-  well-formed id matches `^POL-[A-Z]{2,4}-\d{2}$`. A sub-limb reference such as `POL-NS-09(d)` is
-  malformed as an id and discards the claim.
-- **(c)** a claim resting on an artifact whose `weight_multiplier` is below 1.0 discloses that
-  impairment and names the issue codes (POL-GEN-02(1)). Silence discards the claim.
-- **(d)** a claim citing a profile field outside the nine permitted (role, field) pairs, as a ground
-  of decision, is rejected under POL-GEN-01.
+The referee's ledger is authoritative. You may **not reinstate** a discarded claim, cite it as a
+surviving ground, or retype its entry in your own `discarded_claims`. The code assembles the final
+`discarded_claims` by copying the referee's entries verbatim first.
 
-The **number** of discarded claims, and the **reason for each**, is part of your output. It is not
-an internal step and it is not summarised away.
+The referee checks, in order, that:
+
+- a claim has at least one `evidence_id`;
+- a claim has at least one `clause_id`;
+- every `evidence_id` resolves in this case's `evidence`;
+- every clause id matches `^POL-[A-Z]{2,4}-\d{2}$` and resolves in the loaded policy;
+- a claim resting on an artifact whose `weight_multiplier` is below 1.0 discloses that impairment
+  and names the artifact's issue codes, as POL-GEN-02(1) requires;
+- `relies_on` does not name a profile field that POL-GEN-01 makes context-only.
+
+These are code checks, not matters for your judgment. A text mention of a context-only profile field
+is only a `referee_flags` warning and is **not** a discard: a claim may correctly argue that the
+field cannot be used. If you discard a further kept claim, it must be for a reason the referee
+cannot check (for example, using a context-only profile field as a ground in the claim's reasoning),
+and you must add the side, claim text, a clear reason code and detail. Such additions come after the
+referee's copied entries in the code-assembled `discarded_claims`.
 
 ## Step 2 — confidence (POL-GEN-02(2))
 
@@ -134,7 +146,8 @@ Return a **result object** with exactly two top-level fields: `ruling` and `disc
     {
       "claim": "the claim text as the advocate wrote it",
       "side": "RIDER",
-      "reason": "why it was discarded"
+      "reason_code": "JUDGE_ADDED",
+      "detail": "why the judge discarded it"
     }
   ]
 }
@@ -152,8 +165,9 @@ it must not be placed inside the ruling object.
 - `ruling.referrals` — an array of strings, empty where none.
 - `ruling.confidence`.
 - `ruling.explanation` — addressed to both parties, in plain language.
-- `discarded_claims` — the audit record, each entry with its claim text and the reason it was
-  discarded.
+- `discarded_claims` — the audit record. The code copies the referee's entries verbatim first;
+  any further judge-added entry has the side, claim text, `reason_code` and `detail` explaining why
+  a kept claim was discarded after the mechanical check.
 
 Every claim that survived Step 1 and would, if accepted, change the ruling, an amount, the driver's
 compensation or a referral is answered in `ruling.explanation` — accepted but outweighed, saying by

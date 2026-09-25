@@ -991,6 +991,10 @@ class BriefIdentityTests(unittest.TestCase):
         parsed = json.loads(judge_user)
         self.assertEqual(parsed["claims"][RIDER], json.loads(RIDER_CLAIMS))
         self.assertEqual(parsed["claims"][DRIVER], json.loads(DRIVER_CLAIMS))
+        self.assertEqual(parsed["referee"]["ledger"], [])
+        self.assertEqual(parsed["referee"]["flags"], [])
+        self.assertEqual(self.result.referee["discards"], [])
+        self.assertEqual(self.result.referee["discards"], [])
 
 
 class UnusableResponseTests(unittest.TestCase):

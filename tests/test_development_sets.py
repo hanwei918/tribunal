@@ -63,7 +63,7 @@ def role_of(request):
     system = request["messages"][0]["content"]
     parsed = json.loads(request["messages"][1]["content"])
 
-    if isinstance(parsed, dict) and set(parsed) == {"brief", "claims"}:
+    if isinstance(parsed, dict) and "brief" in parsed and "claims" in parsed:
         return parsed["brief"]["case"]["case_no"], transcript.ROLE_JUDGE
 
     case_no = parsed["case"]["case_no"]

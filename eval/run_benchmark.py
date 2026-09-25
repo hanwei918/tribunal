@@ -1624,6 +1624,7 @@ def run_one_case(
         "transcript_file": transcript_path(Path("."), case_no).name,
         "ruling": result.ruling,
         "ruling_findings": result.ruling_findings,
+        "referee": result.referee,
         "stance_differing_ranges": [list(item) for item in result.stance_differing_ranges],
         # Written from the split rather than from the raw fields, so what lands
         # on disk and what the runner charged against the budget are one piece
