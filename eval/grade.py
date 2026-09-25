@@ -1765,11 +1765,67 @@ def _render_calibration(report: GradeReport) -> List[str]:
     return lines
 
 
-def render_report(report: GradeReport, title: str = DEFAULT_TITLE) -> str:
+def _display_path(path: Path) -> str:
+    """A path as this repository names it.
+
+    Relative to the project root, so a rendered report is the same bytes from
+    any checkout and carries no absolute path and no user name. A path that is
+    not inside the repository is reduced to its final component rather than
+    published.
+    """
+    resolved = Path(path).resolve()
+    try:
+        return resolved.relative_to(PROJECT_ROOT).as_posix()
+    except ValueError:
+        return resolved.name
+
+
+def _render_how_checked(key_path: Optional[Path] = None) -> List[str]:
+    """The closing note, for the key this report was graded against.
+
+    The corpus paragraph is a set of facts about ``tests/test_grade.py`` and the
+    corpus key -- 29/29, five escalations, 17.2% -- and every figure in it is a
+    fact about a different key when the report is of a development set. A report
+    carrying it would assert the corpus self-test as though it covered a set that
+    self-test never touches, so a set gets its own sentence instead.
+    """
+    if key_path is None:
+        return [
+            "`tests/test_grade.py` feeds each case's own `ground_truth` block back "
+            "in as though a perfect judge had produced it and requires 29/29 on "
+            "every field, five escalations, a rate of 17.2%, and precision and "
+            "recall of 1.0. It then perturbs one field at a time — a ruling, an "
+            "amount by 0.05, a `null` driver compensation replaced by 0, case "
+            "207's referral dropped, a referral added where the key expects none "
+            "— and requires each perturbation to fail on its own field and on "
+            "the four-field match, without disturbing the other fields' counts. "
+            "No model is involved at any point.",
+            "",
+        ]
+    return [
+        "This report is of the development set `{0}`, whose own answer key is "
+        "`{1}`. The grader's self-test is written against the corpus key and does "
+        "not cover this set, so the figures above are a measurement against this "
+        "set's own key and of nothing else. No model is involved in the grading "
+        "at any point.".format(Path(key_path).parent.name, _display_path(key_path)),
+        "",
+    ]
+
+
+def render_report(
+    report: GradeReport, title: str = DEFAULT_TITLE, key_path: Optional[Path] = None
+) -> str:
     """Render the whole report as Markdown.
 
     Deterministic: the same graded set renders the same bytes, which is what
     lets a committed report be checked against the module rather than trusted.
+
+    ``key_path`` names the key this report is of, and defaults to the corpus
+    key. Two passages below are written about the corpus -- the path in the
+    header and the closing note on how the grader was checked -- and both are
+    false of a second development set, which has its own key and is not covered
+    by the corpus self-test. Passing that set's key replaces them, so a report
+    never asserts a fact about a key it did not grade against.
     """
     total = report.total
 
@@ -1786,9 +1842,11 @@ def render_report(report: GradeReport, title: str = DEFAULT_TITLE) -> str:
     lines: List[str] = [
         "# {0}".format(title),
         "",
-        "Produced by `eval/grade.py`. Regenerate with `python -m eval.grade`. "
-        "The answer key is `eval/answers/ground_truth.json`; the five ruling "
-        "values are read from POL-GEN-03 on the loaded general policy.",
+        (
+            "Produced by `eval/grade.py`. Regenerate with `python -m eval.grade`. "
+            "The answer key is `{0}`; the five ruling values are read from "
+            "POL-GEN-03 on the loaded general policy."
+        ).format(_display_path(ANSWER_KEY_PATH if key_path is None else key_path)),
         "",
         "## Summary",
         "",
@@ -1895,22 +1953,8 @@ def render_report(report: GradeReport, title: str = DEFAULT_TITLE) -> str:
     lines.extend(["## Escalation calibration", ""])
     lines.extend(_render_calibration(report))
 
-    lines.extend(
-        [
-            "## How this was checked",
-            "",
-            "`tests/test_grade.py` feeds each case's own `ground_truth` block back "
-            "in as though a perfect judge had produced it and requires 29/29 on "
-            "every field, five escalations, a rate of 17.2%, and precision and "
-            "recall of 1.0. It then perturbs one field at a time — a ruling, an "
-            "amount by 0.05, a `null` driver compensation replaced by 0, case "
-            "207's referral dropped, a referral added where the key expects none "
-            "— and requires each perturbation to fail on its own field and on "
-            "the four-field match, without disturbing the other fields' counts. "
-            "No model is involved at any point.",
-            "",
-        ]
-    )
+    lines.extend(["## How this was checked", ""])
+    lines.extend(_render_how_checked(key_path))
     return "\n".join(lines)
 
 

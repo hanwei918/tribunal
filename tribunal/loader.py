@@ -418,3 +418,150 @@ def load_external_case(path: Any) -> Dict[str, Any]:
     case = _check_case_shape(_read_json(resolved), case_no)
     index_artifacts(case)
     return case
+
+
+# --------------------------------------------------------------------------
+# A whole set of external cases, named by number
+# --------------------------------------------------------------------------
+# A set is a directory under ``data/external/`` carrying its own ``index.json``
+# and its case files. It is not the corpus manifest and is never merged into it.
+EXTERNAL_INDEX_FILE = "index.json"
+
+# An external set's index may record the digest of each case file. The corpus
+# manifest does not carry this field; where it is present it is checked, because
+# an index that states a digest and is not held to it is a comment.
+INDEX_DIGEST_FIELD = "sha256"
+
+
+def external_set_directory(set_dir: Any) -> Path:
+    """Resolve one external set's directory, constrained to ``data/external/``.
+
+    The containment rule is :func:`load_external_case`'s, applied one level up:
+    ``..`` segments and symlinks are followed before the test, so a set cannot
+    be pointed at the corpus, at ``policy/`` or anywhere else outside the
+    external root. ``data/external/`` itself is refused, because a set is a
+    named directory under it and the root holds no index of its own.
+    """
+    resolved = Path(set_dir).resolve()
+    external_root = EXTERNAL_DIR.resolve()
+    if not resolved.is_relative_to(external_root) or resolved == external_root:
+        raise ManifestMismatchError(
+            "external set directory resolves outside data/external/: {0!r}".format(str(resolved))
+        )
+    if not resolved.is_dir():
+        raise LoaderError("external set directory not found: {0}".format(resolved))
+    return resolved
+
+
+def load_external_index(set_dir: Any) -> List[Dict[str, Any]]:
+    """Return one external set's ``index.json``, which must be an array."""
+    entries = _read_json(external_set_directory(set_dir) / EXTERNAL_INDEX_FILE)
+    if not isinstance(entries, list):
+        raise LoaderError(
+            "{0} must be a JSON array".format(
+                external_set_directory(set_dir) / EXTERNAL_INDEX_FILE
+            )
+        )
+    return entries
+
+
+def _external_case_path(set_root: Path, entry: Dict[str, Any], case_no: int) -> Path:
+    """Resolve one set entry's ``file`` to a real path inside the set.
+
+    The same two constraints ``_case_path`` applies to the corpus, with the set
+    directory as the root instead of ``data/cases/``: the resolved path must
+    stay inside the set, and the filename must be ``case-<case_no>.json`` for
+    the number the entry declares. A manifest that names a path outside its own
+    directory, or a case under another case's name, is refused rather than
+    followed.
+    """
+    relative = entry.get("file")
+    if not isinstance(relative, str) or not relative:
+        raise ManifestMismatchError(
+            "set entry for case {0} has no 'file' string".format(case_no)
+        )
+
+    path = (set_root / relative).resolve()
+    if not path.is_relative_to(set_root):
+        raise ManifestMismatchError(
+            "set entry 'file' for case {0} resolves outside the set directory: {1!r}".format(
+                case_no, relative
+            )
+        )
+
+    expected_stem = "case-{0:05d}".format(case_no)
+    if path.stem != expected_stem:
+        raise ManifestMismatchError(
+            "set entry 'file' for case {0} is {1!r}; expected filename {2!r}".format(
+                case_no, path.name, expected_stem + ".json"
+            )
+        )
+    return path
+
+
+def _check_recorded_digest(entry: Dict[str, Any], path: Path, case_no: int) -> None:
+    """Hold an entry to the digest it records, where it records one.
+
+    Over the file's bytes and not over a re-serialisation of it: the entry makes
+    a claim about the file, so the file is what the claim is checked against.
+    The field is optional, because the corpus manifest does not carry it; an
+    index without one is silent rather than wrong, and is not refused.
+    """
+    recorded = entry.get(INDEX_DIGEST_FIELD)
+    if not isinstance(recorded, str) or not recorded:
+        return
+    actual = hashlib.sha256(path.read_bytes()).hexdigest()
+    if actual != recorded:
+        raise ManifestMismatchError(
+            "set entry for case {0} records {1} {2!r} but the file's is {3!r}".format(
+                case_no, INDEX_DIGEST_FIELD, recorded, actual
+            )
+        )
+
+
+def load_external_set_case(set_dir: Any, case_no: int) -> Dict[str, Any]:
+    """Load one case of an external set, named by number, from the set's index.
+
+    The set's own ``index.json`` stands in for the corpus manifest, and every
+    check :func:`load_case` makes that does not depend on ``data/index.json`` is
+    made here: the number appears exactly once, the entry's ``file`` resolves
+    inside the set and is named for that number, the loaded document has the
+    four top-level keys and declares the number that was asked for, the
+    duplicate-``evidence_id`` rejection applies, and the three manifest fields
+    that also live inside the case file -- ``dispute_id``, ``trip_id`` and
+    ``category`` -- must agree.
+
+    Where the entry records a ``sha256`` the file's bytes are held to it. That
+    check has no counterpart in :func:`load_case`, because the corpus manifest
+    records no digests; it is enforced here because the set's index does record
+    them.
+
+    This is what lets a whole external set be run by the same runner as the
+    corpus: the runner loads cases by number, and this is that load for a set
+    that is deliberately absent from ``data/index.json``. Adding the set to the
+    manifest instead would change the 29-case corpus the submission reports.
+    """
+    root = external_set_directory(set_dir)
+
+    matches = [entry for entry in load_external_index(root) if entry.get("case_no") == case_no]
+    if not matches:
+        raise CaseNotFoundError(
+            "case {0} is not listed in {1}".format(case_no, root / EXTERNAL_INDEX_FILE)
+        )
+    if len(matches) > 1:
+        raise ManifestMismatchError(
+            "case {0} appears {1} times in {2}".format(
+                case_no, len(matches), root / EXTERNAL_INDEX_FILE
+            )
+        )
+    entry = matches[0]
+
+    path = _external_case_path(root, entry, case_no)
+    if not path.is_file():
+        raise LoaderError("file not found: {0}".format(path))
+    _check_recorded_digest(entry, path, case_no)
+
+    case = _check_case_shape(_read_json(path), case_no)
+    _check_manifest_agreement(entry, case, case_no)
+    index_artifacts(case)
+    return case

@@ -656,6 +656,7 @@ def run_case(
     now: Optional[Callable[[], str]] = None,
     case_deadline_seconds: float = DEFAULT_CASE_DEADLINE_SECONDS,
     clock: Callable[[], float] = time.monotonic,
+    case_loader: Optional[Callable[[int], Dict[str, Any]]] = None,
 ) -> PipelineResult:
     """Perform one full arbitration of a case named by its manifest number.
 
@@ -663,9 +664,18 @@ def run_case(
     :func:`run_loaded_case`, which holds the whole of the arbitration. This
     function exists only to name a case by number and has no logic of its own,
     so there cannot be a second path that applies a weaker guard.
+
+    ``case_loader`` is how a case that is deliberately not in the manifest is
+    still named by number. It defaults to ``loader.load_case``, so the corpus
+    path is unchanged; a development set carrying its own index passes its own
+    loader, and everything below the load is the same code either way. The
+    alternative -- a set that reaches :func:`run_loaded_case` directly -- would
+    be a second by-number entry point, which is what this parameter exists to
+    avoid.
     """
+    load = loader.load_case if case_loader is None else case_loader
     return run_loaded_case(
-        loader.load_case(case_no),
+        load(case_no),
         client,
         prompts_dir=prompts_dir,
         now=now,

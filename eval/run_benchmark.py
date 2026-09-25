@@ -241,6 +241,12 @@ EXTERNAL_RUNS_SUBDIR = "external"
 # frozen answer key and must never be merged into one.
 EXTERNAL_EXPECTED_PATH = PROJECT_ROOT / "eval" / "external" / "ryde" / "expected.json"
 
+# The expectation belonging to an external case lives beside that case's own
+# name under eval/external/. One file per case set, so a case is printed beside
+# the expectation that belongs to it and never beside another case's.
+EXTERNAL_EXPECTED_DIR = PROJECT_ROOT / "eval" / "external"
+EXTERNAL_EXPECTED_FILE = "expected.json"
+
 # Bumped when the cache layout changes, so an old cache is visibly old rather
 # than silently misread.
 CACHE_SCHEMA_VERSION = 1
@@ -910,12 +916,18 @@ def provenance(
     runs_dir: Path = RUNS_DIR,
     git_runner: Optional[Callable[[Sequence[str]], Optional[str]]] = None,
     now: Callable[[], str] = lambda: datetime.now(timezone.utc).isoformat(),
+    key_path: Optional[Path] = None,
 ) -> Dict[str, Any]:
     """Everything needed to say what produced a number.
 
     The answer key's digest comes from :mod:`eval.grade`, which is the only
     module that reads the key, so this function records the digest without
     opening the key itself.
+
+    ``key_path`` is the key this run is graded against, and defaults to the
+    corpus key. A run of a second development set records that set's digest
+    instead: recording the corpus key's beside results graded against a
+    different key would be provenance for the wrong measurement.
     """
     state = git_state(git_runner, runs_dir)
     return {
@@ -925,7 +937,9 @@ def provenance(
         "working_tree_status": state["working_tree_status"],
         "prompts_dir": str(prompts_dir),
         "prompts_sha256": hash_directory(prompts_dir),
-        "answer_key_sha256": grade.answer_key_sha256(),
+        "answer_key_sha256": (
+            grade.answer_key_sha256() if key_path is None else grade.answer_key_sha256(key_path)
+        ),
         "python_version": interpreter_version(),
         "recorded_at": now(),
     }
@@ -934,7 +948,9 @@ def provenance(
 # --------------------------------------------------------------------------
 # Staleness
 # --------------------------------------------------------------------------
-def current_brief_sha256(case_no: int) -> Optional[str]:
+def current_brief_sha256(
+    case_no: int, case_loader: Optional[Callable[[int], Mapping[str, Any]]] = None
+) -> Optional[str]:
     """The digest of the brief this code builds for ``case_no`` right now.
 
     The same three steps :func:`tribunal.pipeline.run_case` takes, in the same
@@ -943,14 +959,37 @@ def current_brief_sha256(case_no: int) -> Optional[str]:
     produces a different digest for the same brief, and every cached case would
     be reported stale.
 
+    ``case_loader`` is how the case is named, and defaults to the corpus
+    manifest loader, which is what ``brief.build_brief`` uses. A development set
+    passes its own, or the manifest refuses every one of its cases and the
+    digest comes back ``None`` for all of them -- which reads as a set whose
+    briefs cannot be rebuilt rather than as a set that has been checked.
+
     ``None`` when the brief cannot be built at all: a case file that has since
     moved, a policy that no longer parses. That is "cannot tell", and it is not
     "matches".
     """
+    load = loader.load_case if case_loader is None else case_loader
     try:
-        return brief.brief_digest(brief.build_brief(case_no))[1]
+        return brief.brief_digest(brief.build_brief_for_case(load(case_no)))[1]
     except Exception:  # noqa: BLE001 - a brief that cannot be built is not a match
         return None
+
+
+def brief_digest_for(
+    case_loader: Optional[Callable[[int], Mapping[str, Any]]] = None,
+) -> Optional[Callable[[int], Optional[str]]]:
+    """The current-brief digest function for one set's cases.
+
+    ``None`` means the corpus loader, which is what :class:`BriefStaleness`
+    already defaults to. A development set needs its own: the manifest cannot
+    load a case it does not list, so every one of the set's cached results would
+    read as a brief that cannot be rebuilt, and the set would report itself as a
+    mixed set -- not one measurement -- when in fact every brief matches.
+    """
+    if case_loader is None:
+        return None
+    return lambda case_no: current_brief_sha256(case_no, case_loader=case_loader)
 
 
 def current_prompts_sha256(prompts_dir: Path = PROMPTS_DIR) -> Optional[str]:
@@ -1401,6 +1440,7 @@ def run_one_case(
     expected: Optional[grade.Ruling],
     case_provenance: Optional[Mapping[str, Any]] = None,
     case_deadline_seconds: float = pipeline.DEFAULT_CASE_DEADLINE_SECONDS,
+    case_loader: Optional[Callable[[int], Mapping[str, Any]]] = None,
     loaded_case: Optional[Mapping[str, Any]] = None,
     replay: Optional[Any] = None,
 ) -> Tuple[CaseOutcome, Optional[Dict[str, Any]], Optional[str]]:
@@ -1434,6 +1474,13 @@ def run_one_case(
     :func:`tribunal.pipeline.run_case` runs, so every guard is the same guard and
     there is no second, weaker path through this runner.
 
+    ``case_loader`` is the other half of that: a case that is absent from the
+    manifest but *is* named by number, because it belongs to a set carrying its
+    own index. It is passed straight to :func:`tribunal.pipeline.run_case` and
+    defaults to ``None``, which is the corpus loader, so a corpus case is loaded
+    exactly as before. A replayed case takes this path too -- only its advocates
+    come from elsewhere.
+
     ``replay`` is a :class:`tribunal.pipeline.Replayable`, which only
     :func:`check_replay` produces and which carries the proof that the source
     run's brief, prompts, model and recorded answers all agree with this code.
@@ -1466,6 +1513,7 @@ def run_one_case(
                 client,
                 prompts_dir=prompts_dir,
                 case_deadline_seconds=case_deadline_seconds,
+                case_loader=case_loader,
             )
         else:
             # A converted external case, already loaded through its own explicit
@@ -1566,6 +1614,12 @@ def run_one_case(
         "git_commit": provenance_fields.get("git_commit"),
         "prompts_sha256": provenance_fields.get("prompts_sha256"),
         "python_version": provenance_fields.get("python_version"),
+        # Which development set this result belongs to, or ``None`` for the
+        # corpus. Per case and not only in the run's metadata, because the
+        # metadata file describes the last invocation while this entry describes
+        # this result, and a result read out of its directory has to be able to
+        # say which key it was graded against.
+        "development_set": provenance_fields.get("development_set"),
         "transcript_sha256": result.transcript_sha256,
         "transcript_file": transcript_path(Path("."), case_no).name,
         "ruling": result.ruling,
@@ -1901,6 +1955,9 @@ def run_benchmark(
     client_factory: Optional[Callable[[Callable[[Dict[str, Any]], None]], Any]] = None,
     key: Optional[Mapping[int, grade.Ruling]] = None,
     git_runner: Optional[Callable[[Sequence[str]], Optional[str]]] = None,
+    case_loader: Optional[Callable[[int], Mapping[str, Any]]] = None,
+    label: Optional[str] = None,
+    key_path: Optional[Path] = None,
     progress: Callable[[str], None] = lambda text: print(text, flush=True),
     now: Callable[[], str] = lambda: datetime.now(timezone.utc).isoformat(),
 ) -> RunSummary:
@@ -1925,6 +1982,17 @@ def run_benchmark(
     it needs before it overwrites anything; a case the source cannot supply is
     recorded as a :data:`FAILURE_REPLAY` failure with the reason the check gave,
     and no call is made for it.
+
+    ``case_loader``, ``key``, ``label`` and ``key_path`` are what let this same
+    function run a second development set. ``case_loader`` names those cases by
+    number for a set deliberately absent from the manifest; ``key`` is that
+    set's own key, so the four graded fields are compared against the answers
+    belonging to those cases; ``label`` names the set in the report's title and
+    in the run's metadata; and ``key_path`` records that set's key digest as
+    this run's provenance rather than the corpus key's. Everything else this
+    function does -- the cache, the provenance, both deadlines, the token budget
+    and the replay check -- is unchanged and shared, because a set is run by
+    this function and not by a second copy of it.
     """
     if not model:
         raise BenchmarkError("model is required and has no default; name the model explicitly")
@@ -1983,14 +2051,38 @@ def run_benchmark(
             requested,
             model=model,
             prompts_dir=prompts_dir,
+            case_loader=case_loader,
         )
 
     run_dir = run_directory(runs_dir, model)
+    if label is not None and run_dir.resolve() == run_directory(RUNS_DIR, model).resolve():
+        # A development set's results are not corpus results, and
+        # runs/<model>/ is where the corpus result lives. Refused rather than
+        # trusted: a set that reached this directory would change what the
+        # reported figure covers while leaving every file a reader looks at
+        # apparently intact. The check is against the corpus directory itself
+        # and not against the runs root, so a set run in a scratch root is
+        # unaffected and only the reported directory is protected.
+        raise BenchmarkError(
+            "development set {0!r} must be given its own runs directory; "
+            "{1} holds the corpus results and a set written there would change "
+            "what the reported figure covers".format(label, run_dir)
+        )
     run_dir.mkdir(parents=True, exist_ok=True)
     started_at = now()
     run_provenance = provenance(
-        model, prompts_dir=prompts_dir, runs_dir=runs_dir, git_runner=git_runner, now=now
+        model,
+        prompts_dir=prompts_dir,
+        runs_dir=runs_dir,
+        git_runner=git_runner,
+        now=now,
+        key_path=key_path,
     )
+    if label is not None:
+        # On the provenance rather than only in the metadata writer, because the
+        # per-case cache entries copy these fields and a cached case has to be
+        # able to say which set it belongs to without its directory.
+        run_provenance = dict(run_provenance, development_set=label)
 
     # A shared sink, because the client is shared across every case and, above
     # concurrency 1, across threads. The client calls this from whichever thread
@@ -2045,7 +2137,7 @@ def run_benchmark(
     # whether what it is skipping still belongs to this code. One checker for the
     # whole invocation, because the current brief for a case cannot change while
     # the run is in progress.
-    checker = BriefStaleness()
+    checker = BriefStaleness(brief_digest_for(case_loader))
     for case_no in requested:
         document = None if force else load_cached(run_dir, case_no)
         if document is None:
@@ -2153,6 +2245,7 @@ def run_benchmark(
                 expected=resolved_key.get(case_no),
                 case_provenance=run_provenance,
                 case_deadline_seconds=case_deadline_seconds,
+                case_loader=case_loader,
                 replay=replayable,
             )
 
@@ -2240,9 +2333,14 @@ def run_benchmark(
         if outcome.status in (STATUS_COMPLETED, STATUS_CACHED)
         and outcome.case_no in resolved_key
     )
-    report = grade_run(run_dir, resolved_key, covered)
+    report = grade_run(run_dir, resolved_key, covered, checker)
+    report_title = "Benchmark report — {0}".format(model)
+    if label is not None:
+        report_title = "Benchmark report — {0} — development set {1}".format(
+            model, label
+        )
     (run_dir / REPORT_FILE).write_text(
-        grade.render_report(report, "Benchmark report — {0}".format(model)),
+        grade.render_report(report, report_title, key_path=key_path),
         encoding="utf-8",
     )
 
@@ -2394,6 +2492,10 @@ def _metadata_document(
         "prompts_dir": run_provenance.get("prompts_dir"),
         "prompts_sha256": run_provenance.get("prompts_sha256"),
         "answer_key_sha256": run_provenance.get("answer_key_sha256"),
+        # Which development set this run is of, or ``None`` for the corpus. A
+        # digest alone does not say whose key it is, and a reader who cannot tell
+        # a corpus run from a set run cannot read either figure correctly.
+        "development_set": run_provenance.get("development_set"),
         # Recorded here as well as per case, so a run whose per-case entries
         # have been lost still says what built its briefs.
         "python_version": run_provenance.get("python_version"),
@@ -3308,6 +3410,23 @@ def external_run_name(case_path: Path) -> str:
     return path.parent.name
 
 
+def external_expected_path(case_path: Path) -> Path:
+    """The stated expectation belonging to one external case.
+
+    ``eval/external/<name>/expected.json`` for the case at
+    ``data/external/<name>/case-<n>.json`` -- the same name the run directory
+    takes, so a case, its run and its stated expectation are recognisable as
+    each other.
+
+    Until a second external set existed there was one expectation file and it was
+    printed beside every external case, which was right by accident because there
+    was only one case. With fifteen more it would attribute the Ryde sample's
+    stated answer to all of them, so the path is derived from the case and a case
+    with no expectation of its own is reported as having none.
+    """
+    return EXTERNAL_EXPECTED_DIR / external_run_name(Path(case_path)) / EXTERNAL_EXPECTED_FILE
+
+
 def assert_external_run_directory(run_dir: Path, runs_dir: Path) -> Path:
     """Refuse any external run directory that is not under ``runs/external/``.
 
@@ -3346,6 +3465,7 @@ def format_external_result(
     case: Mapping[str, Any],
     expected: Optional[Mapping[str, Any]],
     run_dir: Path,
+    expected_path: Optional[Path] = None,
 ) -> str:
     """The produced ruling beside the stated expectation, and no score.
 
@@ -3398,7 +3518,7 @@ def format_external_result(
     if expected is None:
         lines.append(
             "  organisers    : no stated expectation on disk at {0}".format(
-                EXTERNAL_EXPECTED_PATH
+                EXTERNAL_EXPECTED_PATH if expected_path is None else expected_path
             )
         )
     else:
@@ -3425,7 +3545,7 @@ def run_external_case(
     timeout_seconds: float = llm.DEFAULT_TIMEOUT_SECONDS,
     case_deadline_seconds: float = pipeline.DEFAULT_CASE_DEADLINE_SECONDS,
     token_budget: Optional[int] = None,
-    expected_path: Path = EXTERNAL_EXPECTED_PATH,
+    expected_path: Optional[Path] = None,
     client_factory: Optional[Callable[[Callable[[Dict[str, Any]], None]], Any]] = None,
     git_runner: Optional[Callable[[Sequence[str]], Optional[str]]] = None,
     progress: Callable[[str], None] = lambda text: print(text, flush=True),
@@ -3447,6 +3567,11 @@ def run_external_case(
     case cannot land in a model's headline run directory. And the case is not
     graded: it has no answer-key entry, so the produced ruling is printed beside
     the organisers' stated expectation instead of being scored.
+
+    The expectation printed is the one belonging to this case, found beside the
+    case's own name under ``eval/external/``; a case with no expectation of its
+    own is reported as having none. One sample's stated answer is not evidence
+    about another case.
 
     ``client_factory`` exists for the same reason it does on
     :func:`run_benchmark`: a test can drive this end to end over a fake
@@ -3478,6 +3603,11 @@ def run_external_case(
 
     case = loader.load_external_case(Path(case_path))
     case_no = case["case_no"]
+    # The expectation belonging to THIS case, unless the caller named one. A
+    # second external set has no expectation of its own yet, and the honest
+    # output for it is "none on disk", not the Ryde sample's.
+    if expected_path is None:
+        expected_path = external_expected_path(Path(case_path))
 
     # Checked and created before a single call is made, so a bad destination
     # costs nothing and cannot be discovered after a paid run.
@@ -3536,7 +3666,15 @@ def run_external_case(
     _record_invocation(run_dir, metadata)
     write_json(Path(run_dir) / CALLS_FILE, records)
 
-    progress(format_external_result(outcome, case, read_expected_outcome(expected_path), run_dir))
+    progress(
+        format_external_result(
+            outcome,
+            case,
+            read_expected_outcome(expected_path),
+            run_dir,
+            expected_path=Path(expected_path),
+        )
+    )
     return outcome, run_dir
 
 

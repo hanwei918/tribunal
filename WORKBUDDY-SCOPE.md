@@ -72,6 +72,39 @@ Every place the conversion had to judge rather than copy is recorded in a
 mapping record committed beside the converted case, so a reader can see the
 choices and not only their results.
 
+## Second development set (amended 2026-09-25)
+
+A second development set was added: fifteen cases drafted by OpenAI Codex on
+2026-09-24, copied in by the owner. Two new paths, and they sit on opposite
+sides of the boundary above.
+
+- **`data/external/codex/` — agent-visible, answer-free.** Fifteen case files
+  (`case-09101.json` to `case-09115.json`) and the set's own `index.json`. The
+  cases are answer-free under the same contract as `data/cases/`: no expected
+  ruling, no answer field, and no argument for either side. The set's index is
+  **not** `data/index.json` and is never merged into it — `data/index.json` still
+  indexes the 29-case corpus the benchmark reports, and adding a case to it
+  would change that corpus. The set is loaded by number through
+  `tribunal.loader.load_external_set_case`, which enforces the same constraints
+  that do not depend on the corpus manifest, and additionally holds each file to
+  the digest its index entry records.
+- **`eval/answers/codex/ground_truth.json` — answer-bearing.** The set's own
+  key, under the same boundary as `eval/answers/ground_truth.json`, for the same
+  reason and with the same force. It is a second answer key and therefore a
+  second way for an answer to reach a brief, so nothing under `tribunal/` may
+  read it; `tests/test_answer_isolation.py` asserts that over this key as well
+  as over the corpus key.
+
+The two keys are separate files and are never merged. A run of the second set is
+graded against its own key, records that key's digest as its provenance, and is
+written under `runs/codex/` — never into `runs/<model>/`, which holds the corpus
+result the submission reports. Both checks are made rather than intended.
+
+The set's own stated expectation, if it ever has one, belongs at
+`eval/external/codex/expected.json`. The organisers' sample case keeps its own
+at `eval/external/ryde/expected.json`, and a case is printed beside the
+expectation belonging to it and never beside another case's.
+
 ## Language rule (standing)
 
 Every document in this repository is written in English, and every prompt pasted into WorkBuddy is written in English. No Chinese characters in any tracked text file.

@@ -465,6 +465,13 @@ class CleanRunTests(unittest.TestCase):
                         "brief_sha256",
                         "call_seconds",
                         "case_no",
+                        # Which development set the result belongs to, or
+                        # ``None`` for the corpus. Per case and not only in the
+                        # run's metadata, because the metadata file describes
+                        # the last invocation while this entry describes this
+                        # result: a result read out of its directory has to be
+                        # able to say which key it was graded against.
+                        "development_set",
                         # Per-case provenance, beside the digest it belongs to.
                         # The commit, the prompts and the interpreter a result
                         # was produced under must survive in the result's own
