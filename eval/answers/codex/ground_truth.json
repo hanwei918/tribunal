@@ -170,9 +170,11 @@
     "dispute_id": "DSP-09111",
     "ground_truth": {
       "expected_ruling": "PARTIAL_REFUND",
-      "expected_amount_sgd": 9.15,
+      "expected_amount_sgd": 10.15,
       "expected_driver_compensation_sgd": null,
-      "expected_referrals": [],
+      "expected_referrals": [
+        "POL-RD-09(4) billing-integrity referral: phantom ERP gantry lines on EV-FARE-09111, Pioneer Road inbound SGD 1.00 and Tuas South Avenue 8 loop SGD 2.00, neither within 250 m of any GPS fix"
+      ],
       "governing_clauses": [
         "POL-RD-01",
         "POL-RD-02",
@@ -181,7 +183,7 @@
         "POL-GEN-03"
       ],
       "difficulty": "HARD",
-      "rationale": "The GPS trace is 16.20 km against a 12.00 km booked optimum: excess = 4.20 km and 35.0%, so both POL-RD-01 thresholds are met. There is no rider request or qualifying advisory. POL-RD-02 recomputation: ((SGD 3.80 + 0.75 x 12.00 + 0.28 x 24.0) x 1.20) + 0.80 platform fee + 1.00 optimal-route ERP - 1.00 promo = SGD 24.224. Refund before rounding = 33.36 - 24.224 = SGD 9.136. Apply upward SGD 0.05 rounding only now: SGD 9.15. The off-route ERP is already comprehended by the total-versus-recomputed difference, so POL-RD-09 forbids adding it again."
+      "rationale": "The GPS trace is 16.20 km against a 12.00 km booked optimum: excess = 4.20 km and 35.0%, so both POL-RD-01 thresholds are met. There is no rider request or qualifying advisory. Two ERP lines were charged. Pioneer Road inbound (SGD 1.00) is 912 m from the nearest fix and Tuas South Avenue 8 loop (SGD 2.00) is 1646 m from the nearest fix. POL-RD-09(4) matches a gantry to the trace by comparing its coordinates against the fixes and treats any fix within 250 m as a crossing; neither line is crossed, so both are billing-integrity failures, and the rule makes no exception for the on_optimal_route flag the first line carries. POL-RD-02 recomputation with the phantom on-optimal gantry removed: ((SGD 3.80 + 0.75 x 12.00 + 0.28 x 24.0) x 1.20) + 0.80 platform fee + 0.00 optimal-route ERP - 1.00 promo = SGD 23.224. Refund before rounding = 33.36 - 23.224 = SGD 10.136. Apply upward SGD 0.05 rounding only now: SGD 10.15. The SGD 2.00 Tuas South Avenue 8 loop line is NOT added on top: it was already excluded from the recomputed fare as off-optimal, so its value is comprehended in the total-versus-recomputed difference and POL-RD-09(1) forbids counting it twice. The SGD 1.00 Pioneer Road inbound line is the opposite case, because it was credited into the recomputed fare as an on-optimal gantry; removing it is what raises the refund by SGD 1.00. Both lines are named in one POL-RD-09(4) referral."
     }
   },
   {
@@ -206,9 +208,11 @@
     "dispute_id": "DSP-09113",
     "ground_truth": {
       "expected_ruling": "PARTIAL_REFUND",
-      "expected_amount_sgd": 8.05,
+      "expected_amount_sgd": 9.05,
       "expected_driver_compensation_sgd": null,
-      "expected_referrals": [],
+      "expected_referrals": [
+        "POL-RD-09(4) billing-integrity referral: phantom ERP gantry line on EV-FARE-09113, Pelton lawful diversion entry SGD 1.00, not within 250 m of any GPS fix"
+      ],
       "governing_clauses": [
         "POL-RD-01",
         "POL-RD-02",
@@ -217,14 +221,14 @@
         "POL-GEN-03"
       ],
       "difficulty": "HARD",
-      "rationale": "Measured excess is 18.00 - 10.00 = 8.00 km. POL-RD-03 permits at most min(8.00, 1.30 x (12.00 - 10.00) + 1.00) = min(8.00, 3.60) = 3.60 km, so the cap binds. Adjusted optimum = 10.00 + 3.60 = 13.60 km; adjusted duration = 20.0 x 13.60 / 10.00 = 27.2 minutes. Residual excess is 4.40 km, or 32.4%, and remains above both POL-RD-01 thresholds. POL-RD-02 recomputation: SGD 3.80 + (0.75 x 13.60) + (0.28 x 27.2) + 0.80 platform fee + 1.00 optimal-route ERP = SGD 23.416. Refund before rounding = 31.42 - 23.416 = SGD 8.004. Apply upward SGD 0.05 rounding only to the final figure: SGD 8.05. Do not separately add the off-route ERP because it is already in the difference."
+      "rationale": "Measured excess is 18.00 - 10.00 = 8.00 km. POL-RD-03 permits at most min(8.00, 1.30 x (12.00 - 10.00) + 1.00) = min(8.00, 3.60) = 3.60 km, so the cap binds. Adjusted optimum = 10.00 + 3.60 = 13.60 km; adjusted duration = 20.0 x 13.60 / 10.00 = 27.2 minutes. Residual excess is 4.40 km, or 32.4%, and remains above both POL-RD-01 thresholds. Of the two ERP lines charged, Industrial loop exit (SGD 2.80) is 223 m from the nearest fix and is a genuine crossing, but Pelton lawful diversion entry (SGD 1.00) is 834 m from the nearest fix, so the trace never passes it. POL-RD-09(4) matches by coordinates and makes no exception for the on_optimal_route flag that line carries, so it is a billing-integrity failure; corpus case 115 applies the same test to the same kind of line. POL-RD-02 recomputation with the phantom gantry removed: SGD 3.80 + (0.75 x 13.60) + (0.28 x 27.2) + 0.80 platform fee + 0.00 optimal-route ERP = SGD 22.416. Refund before rounding = 31.42 - 22.416 = SGD 9.004. Apply upward SGD 0.05 rounding only to the final figure: SGD 9.05. The SGD 2.80 line is not added separately because it was already excluded from the recomputed fare and is comprehended in the difference."
     }
   },
   {
     "case_no": 9114,
     "dispute_id": "DSP-09114",
     "ground_truth": {
-      "expected_ruling": "PARTIAL_REFUND",
+      "expected_ruling": "FULL_REFUND",
       "expected_amount_sgd": 3.2,
       "expected_driver_compensation_sgd": null,
       "expected_referrals": [
@@ -236,7 +240,7 @@
         "POL-GEN-03"
       ],
       "difficulty": "REVERSAL",
-      "rationale": "POL-RD-11 controls because this is an UPFRONT_QUOTE trip: distance and time components are fixed and POL-RD-02 does not run. The properly chargeable amount is the SGD 22.00 quote plus valid pass-through lines. The only extra line is SGD 3.20 for a gantry whose coordinates are more than 250 m from every GPS fix; the optimal route also carries SGD 0.00 ERP. POL-RD-09(4) therefore refunds the full phantom line and requires a billing-integrity referral. Arithmetic: 25.20 charged - 22.00 quote = SGD 3.20; it is already a multiple of SGD 0.05, so final upward rounding remains SGD 3.20."
+      "rationale": "POL-RD-11 controls because this is an UPFRONT_QUOTE trip: distance and time components are fixed and POL-RD-02 does not run. The properly chargeable amount is the SGD 22.00 quote plus valid pass-through lines. The only extra line is SGD 3.20 for a gantry whose coordinates are 7482 m from the nearest GPS fix, far beyond POL-RD-09(4)'s 250 m crossing test; the optimal route also carries SGD 0.00 ERP. POL-RD-09(4) therefore refunds the full phantom line and requires a billing-integrity referral. Arithmetic: 25.20 charged - 22.00 quote = SGD 3.20; it is already a multiple of SGD 0.05, so final upward rounding remains SGD 3.20. The contested amount is SGD 3.20 and all of it is returned, which POL-GEN-03 defines as FULL_REFUND: the filing party is entirely right and the whole contested amount is returned. The ruling label is corrected from PARTIAL_REFUND to FULL_REFUND; the amount, the null driver compensation and the referral are unchanged."
     }
   },
   {
