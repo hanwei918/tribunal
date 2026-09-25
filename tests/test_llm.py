@@ -875,6 +875,64 @@ class RequestBodyTests(unittest.TestCase):
         self.assertIn("reasoning_effort='none'", repr(client_none))
 
 
+class PerCallSettingTests(unittest.TestCase):
+    """One client, several calls, and the seed is a property of the call.
+
+    The judge's vote asks the same question under several seeds, so one client
+    has to be able to vary a setting per call without its own configuration
+    being rewritten between them. The default has to leave the body alone,
+    which is what keeps a single-draft run the request it always was.
+    """
+
+    def sent_body(self, transport):
+        return json.loads(transport.calls[-1]["body"].decode("utf-8"))
+
+    def test_a_call_that_names_neither_sends_the_clients_own_settings(self):
+        transport = FakeTransport(http(200, usage_body()))
+        client, _ = make_client(transport)
+
+        client.complete("sys", "user")
+
+        sent = self.sent_body(transport)
+        self.assertEqual(sent["temperature"], llm.DEFAULT_TEMPERATURE)
+        self.assertEqual(sent["seed"], llm.DEFAULT_SEED)
+
+    def test_a_per_call_override_wins_without_rewriting_the_client(self):
+        transport = FakeTransport(http(200, usage_body()), http(200, usage_body()))
+        client, _ = make_client(transport)
+
+        client.complete("sys", "user", temperature=0.7, seed=101)
+        first = self.sent_body(transport)
+        client.complete("sys", "user")
+        second = self.sent_body(transport)
+
+        self.assertEqual(first["temperature"], 0.7)
+        self.assertEqual(first["seed"], 101)
+        # The client's own settings survived the override untouched.
+        self.assertEqual(second["temperature"], llm.DEFAULT_TEMPERATURE)
+        self.assertEqual(second["seed"], llm.DEFAULT_SEED)
+
+    def test_two_calls_under_two_seeds_are_two_different_requests(self):
+        transport = FakeTransport(http(200, usage_body()), http(200, usage_body()))
+        client, _ = make_client(transport)
+
+        client.complete("sys", "user", seed=101)
+        client.complete("sys", "user", seed=202)
+
+        seeds = [json.loads(call["body"].decode("utf-8"))["seed"] for call in transport.calls]
+        self.assertEqual([101, 202], seeds)
+
+    def test_an_override_of_none_omits_the_key_entirely(self):
+        transport = FakeTransport(http(200, usage_body()))
+        client, _ = make_client(transport)
+
+        client.complete("sys", "user", temperature=None, seed=None)
+
+        sent = self.sent_body(transport)
+        self.assertNotIn("temperature", sent)
+        self.assertNotIn("seed", sent)
+
+
 @unittest.skipUnless(
     os.environ.get(NETWORK_ENV_VAR) == "1",
     "set {0}=1 to run the live TokenHub call".format(NETWORK_ENV_VAR),

@@ -70,6 +70,13 @@ DEFAULT_ENDPOINT = "https://tokenhub-intl.tencentcloudmaas.com/v1/chat/completio
 DEFAULT_TEMPERATURE = 0.0
 DEFAULT_SEED = 42
 
+# A per-call override that has not been given. It is deliberately not ``None``,
+# because ``None`` already means something here: "leave this key out of the
+# request body". A caller that passes nothing must get the value this client
+# was built with, which is what keeps the body byte-identical to what it was
+# before a per-call override existed.
+_UNSET = object()
+
 # Reasoning is left ON by default, because the case 208 measurement recorded in
 # docs/notes/2026-09-21-tokenhub-api-facts.md showed the reasoning budget is
 # where the answer quality comes from: with reasoning on, "hy4-preview" spent
@@ -428,7 +435,12 @@ class LLMClient:
         }
 
     def _request_body(
-        self, system: str, user: str, response_format: Optional[Dict[str, Any]]
+        self,
+        system: str,
+        user: str,
+        response_format: Optional[Dict[str, Any]],
+        temperature: Any = _UNSET,
+        seed: Any = _UNSET,
     ) -> Dict[str, Any]:
         """The request body, with every optional key omitted when it is None.
 
@@ -437,7 +449,16 @@ class LLMClient:
         provider's own behaviour on any of the three rather than being pinned to
         a value. Omitting ``reasoning_effort`` leaves reasoning ON; passing the
         explicit string ``"none"`` suppresses it.
+
+        ``temperature`` and ``seed`` here are **per-call overrides**. Left at
+        ``_UNSET`` -- the default -- each falls back to the value this client
+        was built with, so a caller that says nothing gets exactly the body it
+        got before these parameters existed. A caller that passes one overrides
+        it for that call alone; the client's own settings are not modified,
+        because two calls of one client under two seeds is the whole point.
         """
+        effective_temperature = self._temperature if temperature is _UNSET else temperature
+        effective_seed = self._seed if seed is _UNSET else seed
         body: Dict[str, Any] = {
             "model": self._model,
             "messages": [
@@ -445,10 +466,10 @@ class LLMClient:
                 {"role": "user", "content": user},
             ],
         }
-        if self._temperature is not None:
-            body["temperature"] = self._temperature
-        if self._seed is not None:
-            body["seed"] = self._seed
+        if effective_temperature is not None:
+            body["temperature"] = effective_temperature
+        if effective_seed is not None:
+            body["seed"] = effective_seed
         if self._reasoning_effort is not None:
             body["reasoning_effort"] = self._reasoning_effort
         if response_format is not None:
@@ -609,8 +630,15 @@ class LLMClient:
         user: str,
         *,
         response_format: Optional[Dict[str, Any]] = None,
+        temperature: Any = _UNSET,
+        seed: Any = _UNSET,
     ) -> LLMResult:
         """Send one request and return everything it produced.
+
+        ``temperature`` and ``seed`` override this client's own settings for
+        this call alone; left unset, the client's values are used and the body
+        is the one it has always sent. A caller that needs several samples of
+        one prompt with different seeds therefore needs one client, not several.
 
         Raises :class:`MissingAPIKeyError` when there is no credential and
         :class:`ModelNotProvisionedError` when the model is not provisioned.
@@ -618,7 +646,7 @@ class LLMClient:
         ``parse_outcome == PARSE_MALFORMED``, ``parse_error`` and the raw text,
         so the caller can decide whether to retry.
         """
-        request_body = self._request_body(system, user, response_format)
+        request_body = self._request_body(system, user, response_format, temperature, seed)
         encoded = json.dumps(request_body, ensure_ascii=False).encode("utf-8")
         digest = hashlib.sha256(encoded).hexdigest()
 
