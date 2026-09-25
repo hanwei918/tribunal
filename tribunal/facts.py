@@ -16,10 +16,14 @@ from the loaded policy: ``policy/no_show.json`` under ``fee_schedule``
 ``fare_model``. If a value came from a clause, it belongs in the caller.
 
 The literals here are ``EARTH_RADIUS_M``, a geodetic constant of the
-haversine formula, and ``MIN_RUN_FIXES``, the two ends an interval needs.
-Neither is a policy value. POL-NS-06(i)'s leash and its four admissible
+haversine formula, ``MIN_RUN_FIXES``, the two ends an interval needs, and the
+``[-1, 1]`` bounds of a sine, which is the domain of ``math.asin``. None is a
+policy value. POL-NS-06(i)'s leash and its four admissible
 ``traffic_advisory.type`` values, and POL-NS-05's line between holding
-position and being in motion, all arrive as parameters for that reason.
+position and being in motion, all arrive as parameters for that reason. So does
+POL-RD-09(4)'s radius: :func:`gantry_proximity` reports distances and decides
+no match, because the threshold that turns a distance into a match is the
+clause's.
 """
 
 from __future__ import annotations
@@ -75,6 +79,155 @@ def haversine_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
 def distances_to_point(points: Optional[Sequence[Dict[str, Any]]], lat: float, lng: float) -> List[float]:
     """Distance in metres from each fix to ``(lat, lng)``, one per fix, same order."""
     return [haversine_m(fix["lat"], fix["lng"], lat, lng) for fix in points or []]
+
+
+def _unit(value: float) -> float:
+    """A sine held inside ``[-1, 1]``, where floating point can put it just outside.
+
+    ``math.asin`` raises on an argument outside its domain, and a sine that
+    should be exactly 1 comes back as 1 + 1e-16 on a degenerate segment. The
+    two bounds are the range of the sine, not a policy value.
+    """
+    return max(-1.0, min(1.0, value))
+
+
+def initial_bearing_rad(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    """The initial great-circle bearing, in radians, from the first point to the second."""
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    d_lambda = math.radians(lng2 - lng1)
+    y = math.sin(d_lambda) * math.cos(phi2)
+    x = math.cos(phi1) * math.sin(phi2) - math.sin(phi1) * math.cos(phi2) * math.cos(d_lambda)
+    return math.atan2(y, x)
+
+
+def point_to_segment_m(
+    lat: float, lng: float, lat1: float, lng1: float, lat2: float, lng2: float
+) -> float:
+    """Closest distance in metres from a point to the great-circle segment A -> B.
+
+    This is the distance from a gantry to the straight line a trace would have
+    followed across a hole in it: the two ends are the fixes either side of the
+    gap, and the path between them is not recorded.
+
+    The perpendicular is taken on the sphere rather than on a local flat
+    projection, so the figure is the same one :func:`haversine_m` gives for a
+    point that happens to lie on the segment. Where the foot falls beyond an
+    end, the nearest point is that end and the distance is the haversine to it.
+    """
+    span = haversine_m(lat1, lng1, lat2, lng2)
+    to_a = haversine_m(lat1, lng1, lat, lng)
+    to_b = haversine_m(lat2, lng2, lat, lng)
+
+    if span == 0.0:
+        return to_a
+    if to_a == 0.0:
+        return 0.0
+
+    offset = initial_bearing_rad(lat1, lng1, lat, lng) - initial_bearing_rad(lat1, lng1, lat2, lng2)
+    along = to_a * math.cos(offset)
+    if along <= 0.0:
+        return to_a
+    if along >= span:
+        return to_b
+
+    return abs(math.asin(_unit(math.sin(to_a / EARTH_RADIUS_M) * math.sin(offset))) * EARTH_RADIUS_M)
+
+
+def gantry_proximity(
+    points: Optional[Sequence[Dict[str, Any]]],
+    lines: Optional[Sequence[Mapping[str, Any]]],
+    gaps: Optional[Sequence[Mapping[str, Any]]] = None,
+) -> List[Dict[str, Any]]:
+    """How close a trace came to each ERP gantry line on a fare breakdown.
+
+    POL-RD-09(4) matches a gantry to the trace by comparing the gantry's
+    coordinates against the trace, and it treats a line with no coordinates as
+    matched. The clause's radius is a threshold and stays in the clause, so
+    nothing here decides whether a gantry was crossed: this returns distances
+    only, and the judge applies the clause.
+
+    One record per line, in the order given:
+
+    * ``nearest_fix`` -- the fix closest to the gantry, its index in the
+      trace's own order, its ``ts``, and the distance in metres, computed with
+      :func:`haversine_m`, the same function the other derived facts use.
+    * ``gap_brackets_closest_approach`` and ``across_gap_distance_m`` -- whether
+      a recorded gap in the trace brackets the closest approach, and the
+      closest distance from the gantry to the straight line across any such
+      gap. A crossing that happened inside a gap must not read as a gantry the
+      trace never passed.
+    * ``coordinates`` -- ``None`` where the line carries no coordinates, in
+      which case nothing is derived from it.
+
+    A gap brackets the closest approach under either of two conditions, both of
+    which mean the trace cannot bound how close the vehicle came: the nearest
+    observed fix is one of the gap's two bounding fixes, so the observed
+    minimum sits at the edge of a hole; or the straight segment across the gap
+    passes at least as close to the gantry as the nearest observed fix does, so
+    the unobserved stretch could contain an approach at least as close.
+    """
+    trace = list(points or [])
+    gap_list = [gap for gap in (gaps or []) if isinstance(gap, Mapping)]
+    fix_by_ts = {fix.get("ts"): fix for fix in trace}
+
+    records: List[Dict[str, Any]] = []
+    for line in lines or []:
+        if not isinstance(line, Mapping):
+            continue
+
+        lat, lng = line.get("lat"), line.get("lng")
+        located = lat is not None and lng is not None
+
+        record: Dict[str, Any] = {
+            "gantry_name": line.get("gantry_name"),
+            "amount_sgd": line.get("amount_sgd"),
+            "charged_at": line.get("charged_at"),
+            "on_optimal_route": line.get("on_optimal_route"),
+            "coordinates": {"lat": lat, "lng": lng} if located else None,
+            "nearest_fix": None,
+            "gap_brackets_closest_approach": False,
+            "across_gap_distance_m": None,
+            "bracketing_gaps": [],
+        }
+
+        if not located or not trace:
+            records.append(record)
+            continue
+
+        distances = distances_to_point(trace, lat, lng)
+        nearest = min(range(len(distances)), key=distances.__getitem__)
+        nearest_ts = trace[nearest].get("ts")
+        record["nearest_fix"] = {
+            "index": nearest,
+            "ts": nearest_ts,
+            "distance_m": distances[nearest],
+        }
+
+        bracketing: List[Dict[str, Any]] = []
+        for gap in gap_list:
+            from_ts, to_ts = gap.get("from_ts"), gap.get("to_ts")
+            start, end = fix_by_ts.get(from_ts), fix_by_ts.get(to_ts)
+            if start is None or end is None:
+                continue
+            across = point_to_segment_m(lat, lng, start["lat"], start["lng"], end["lat"], end["lng"])
+            if nearest_ts not in (from_ts, to_ts) and across > distances[nearest]:
+                continue
+            bracketing.append({
+                "from_ts": from_ts,
+                "to_ts": to_ts,
+                "duration_sec": gap.get("duration_sec"),
+                "distance_m": across,
+            })
+
+        if bracketing:
+            record["gap_brackets_closest_approach"] = True
+            record["across_gap_distance_m"] = min(item["distance_m"] for item in bracketing)
+            record["bracketing_gaps"] = bracketing
+
+        records.append(record)
+
+    return records
 
 
 def _is_qualifying(fix: Dict[str, Any], lat: float, lng: float, radius_m: float, accuracy_max_m: float) -> bool:

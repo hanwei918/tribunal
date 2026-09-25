@@ -12,6 +12,7 @@ from __future__ import annotations
 import ast
 import io
 import json
+import math
 import sys
 import tokenize
 import unittest
@@ -150,10 +151,13 @@ class Case208Tests(unittest.TestCase):
     def test_8_no_policy_number_appears_as_a_literal(self):
         """facts.py must not carry any of the policy numbers as a numeric literal."""
         source = FACTS_SOURCE.read_text(encoding="utf-8")
-        # The arrival radii, the dwell minimums, the accuracy filter and the
-        # leash come from the policy; 15 is POL-NS-05's line between holding
-        # position and being in motion, which POL-NS-06(i) borrows.
-        forbidden_text = {"120", "150", "300", "480", "25", "50", "15"}
+        # The arrival radii, the dwell minimums, the accuracy filter, the leash
+        # and POL-RD-09(4)'s radius all come from the policy; 15 is POL-NS-05's
+        # line between holding position and being in motion, which POL-NS-06(i)
+        # borrows. 250 is POL-RD-09(4)'s, and it must not appear here: that
+        # clause is what turns a distance into a match, and this module reports
+        # the distance and decides nothing.
+        forbidden_text = {"120", "150", "300", "480", "25", "50", "15", "250"}
         forbidden_values = {float(text) for text in forbidden_text}
 
         literals = [
@@ -857,6 +861,398 @@ class AccumulatedDwellTests(unittest.TestCase):
         source = (PROJECT_ROOT / "tribunal" / "brief.py").read_text(encoding="utf-8")
         for value in self.thresholds["admissible_types"]:
             self.assertNotIn(value, source, "{0} is hard-coded in brief.py".format(value))
+
+
+class GantryProximityTests(unittest.TestCase):
+    """POL-RD-09(4): how close the trace came to each ERP gantry line.
+
+    The clause decides a gantry line by geometry: it compares
+    ``erp_gantry.lat`` and ``erp_gantry.lng`` against the trace and treats a fix
+    within a stated distance of the gantry as a crossing. The brief replaces the
+    trace's coordinates with derived facts, so until this block existed the judge
+    held the gantry's coordinates and no way to measure them against the trace.
+    Case 9111's judge filled that gap by asserting a crossing the record could
+    not show; both of the second development set's two misses are that error.
+
+    Every figure below is checked twice: against a value pinned here, and against
+    a haversine this test computes itself from the raw fixes. No threshold is
+    asserted anywhere -- the clause's radius is the clause's, and the block
+    reports distances and decides no match.
+    """
+
+    CODEX_DIR = PROJECT_ROOT / "data" / "external" / "codex"
+    GANTRY = {"lat": 1.35, "lng": 103.85}
+
+    # --------------------------------------------------------------- helpers
+
+    @staticmethod
+    def _corpus_cases():
+        with (PROJECT_ROOT / "data" / "index.json").open("r", encoding="utf-8") as handle:
+            return [entry["case_no"] for entry in json.load(handle)]
+
+    @classmethod
+    def _codex_cases(cls):
+        with (cls.CODEX_DIR / "index.json").open("r", encoding="utf-8") as handle:
+            return [entry["case_no"] for entry in json.load(handle)]
+
+    @staticmethod
+    def _load(case_no):
+        if case_no >= 9000:
+            return loader.load_external_set_case(GantryProximityTests.CODEX_DIR, case_no)
+        return loader.load_case(case_no)
+
+    @staticmethod
+    def _artifact(case, evidence_type):
+        for artifact in case["evidence"]:
+            if artifact["evidence_type"] == evidence_type:
+                return artifact
+        return None
+
+    @classmethod
+    def _raw_lines(cls, case_no):
+        """The fare breakdown's ``erp_gantries``, straight from the case file."""
+        artifact = cls._artifact(cls._load(case_no), "FARE_BREAKDOWN")
+        payload = artifact.get("payload") if artifact else None
+        if not isinstance(payload, dict):
+            return []
+        return payload.get("erp_gantries") or []
+
+    @classmethod
+    def _raw_fixes(cls, case_no):
+        """The trace's fixes, straight from the case file, unsummarised."""
+        artifact = cls._artifact(cls._load(case_no), "GPS_TRACE")
+        return facts.driver_points(artifact.get("payload")) if artifact else []
+
+    @classmethod
+    def _derived(cls, case_no):
+        built = brief.build_brief_for_case(cls._load(case_no))
+        artifact = next(
+            a for a in built["case"]["evidence"] if a["evidence_type"] == "GPS_TRACE"
+        )
+        payload = artifact.get("payload")
+        if not isinstance(payload, dict):
+            # Case 213's GPS artifact is MISSING, so there is no derived block
+            # of any kind to inspect, and therefore none carrying this key.
+            return {}
+        return payload.get("derived", {})
+
+    @classmethod
+    def _block(cls, case_no):
+        """The block as the brief publishes it."""
+        return cls._derived(case_no)[brief.ERP_GANTRY_PROXIMITY_KEY]
+
+    @classmethod
+    def _with_lines(cls, case_no, lines, trace=None, gaps=None):
+        """A real case with its fare lines -- and optionally its trace -- replaced."""
+        case = cls._load(case_no)
+        evidence = []
+        for artifact in case["evidence"]:
+            artifact = dict(artifact)
+            if artifact["evidence_type"] == "FARE_BREAKDOWN":
+                payload = dict(artifact["payload"])
+                payload["erp_gantries"] = lines
+                artifact["payload"] = payload
+            elif artifact["evidence_type"] == "GPS_TRACE" and trace is not None:
+                payload = dict(artifact["payload"])
+                payload["points"] = trace
+                if gaps is not None:
+                    payload["gaps"] = gaps
+                artifact["payload"] = payload
+            evidence.append(artifact)
+        return dict(case, evidence=evidence)
+
+    @staticmethod
+    def _block_of(built):
+        artifact = next(
+            a for a in built["case"]["evidence"] if a["evidence_type"] == "GPS_TRACE"
+        )
+        return artifact["payload"]["derived"][brief.ERP_GANTRY_PROXIMITY_KEY]
+
+    @staticmethod
+    def _fix(ts, lat, lng):
+        return {"ts": ts, "lat": lat, "lng": lng, "speed_kph": 40.0, "accuracy_m": 8.0}
+
+    @staticmethod
+    def _haversine_m(lat1, lng1, lat2, lng2):
+        """The haversine formula in its ``atan2`` form, written out here.
+
+        Deliberately not ``facts.haversine_m``, which uses the ``asin`` form:
+        the point of the check is that the figure the brief publishes is the
+        distance the raw fixes give, computed by arithmetic this test does
+        itself. The radius is the same geodetic constant, not a threshold.
+        """
+        phi1, phi2 = math.radians(lat1), math.radians(lat2)
+        d_phi = phi2 - phi1
+        d_lambda = math.radians(lng2 - lng1)
+        a = (
+            math.sin(d_phi / 2) ** 2
+            + math.cos(phi1) * math.cos(phi2) * math.sin(d_lambda / 2) ** 2
+        )
+        return 2 * facts.EARTH_RADIUS_M * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+    def assertFigure(self, case_no, gantry_name, expected_m):
+        """One line's published distance, against the pin and against the raw fixes."""
+        line = next(
+            item
+            for item in self._block(case_no)["lines"]
+            if item["gantry_name"] == gantry_name
+        )
+        self.assertTrue(line["available"], "case {0}: {1}".format(case_no, gantry_name))
+        published = line["nearest_fix"]["distance_m"]["value"]
+        self.assertEqual(round(published, 1), expected_m, "case {0}".format(case_no))
+
+        raw = next(
+            item for item in self._raw_lines(case_no) if item["gantry_name"] == gantry_name
+        )
+        fixes = self._raw_fixes(case_no)
+        distances = [
+            self._haversine_m(fix["lat"], fix["lng"], raw["lat"], raw["lng"]) for fix in fixes
+        ]
+        nearest = min(range(len(distances)), key=distances.__getitem__)
+
+        # The published distance is the raw fixes' own nearest distance ...
+        self.assertAlmostEqual(published, distances[nearest], places=6)
+        # ... at the fix the block points at, by index and by timestamp.
+        self.assertEqual(line["nearest_fix"]["index"]["value"], nearest)
+        self.assertEqual(line["nearest_fix"]["ts"]["value"], fixes[nearest]["ts"])
+        return line
+
+    def _synthetic_line(self, case_no, trace, gaps):
+        """One real fare line measured against a trace this test supplies.
+
+        The coordinates are ``Decimal``, because that is what the loader gives
+        the real cases, and mixing the two types inside one haversine raises.
+        """
+        trace = [
+            dict(fix, lat=Decimal(str(fix["lat"])), lng=Decimal(str(fix["lng"])))
+            for fix in trace
+        ]
+        lines = [
+            dict(
+                self.GANTRY,
+                gantry_name="synthetic",
+                lat=Decimal(str(self.GANTRY["lat"])),
+                lng=Decimal(str(self.GANTRY["lng"])),
+            )
+        ]
+        built = brief.build_brief_for_case(self._with_lines(case_no, lines, trace, gaps))
+        return self._block_of(built)["lines"][0]
+
+    # ----------------------------------------------------------------- tests
+
+    def test_1_case_115_crosses_the_kpe_line_and_never_approaches_the_aye_line(self):
+        """44.5 m against 5419.3 m: one line the trace passes, one it does not."""
+        kpe = self.assertFigure(115, "KPE (Defu Flyover towards ECP)", 44.5)
+        aye = self.assertFigure(115, "AYE (Alexandra Rd towards Tuas)", 5419.3)
+        self.assertLess(
+            kpe["nearest_fix"]["distance_m"]["value"],
+            aye["nearest_fix"]["distance_m"]["value"],
+        )
+
+    def test_2_case_9111_both_lines_are_hundreds_of_metres_from_every_fix(self):
+        """912.0 m and 1645.7 m -- the two lines the key calls phantom.
+
+        One is flagged ``on_optimal_route`` true and the other false, so the flag
+        alone would have separated them. The clause does not read the flag, it
+        measures the distance, and neither line is near the trace.
+        """
+        pioneer = self.assertFigure(9111, "Pioneer Road inbound", 912.0)
+        tuas = self.assertFigure(9111, "Tuas South Avenue 8 loop", 1645.7)
+        self.assertIs(pioneer["on_optimal_route"]["value"], True)
+        self.assertIs(tuas["on_optimal_route"]["value"], False)
+
+    def test_3_case_9113_the_pelton_line_is_834_2_metres_despite_the_flag(self):
+        """The line the key calls phantom is flagged ``on_optimal_route`` true."""
+        pelton = self.assertFigure(9113, "Pelton lawful diversion entry", 834.2)
+        self.assertIs(pelton["on_optimal_route"]["value"], True)
+        # The other line on the same breakdown is much closer, and the key does
+        # not call it phantom: the block separates the two by distance alone.
+        self.assertFigure(9113, "Industrial loop exit", 223.2)
+
+    def test_4_case_9114_the_line_is_seven_and_a_half_kilometres_away(self):
+        """7482.1 m: the driver conceded he never went there."""
+        self.assertFigure(9114, "Bukit Merah Central westbound", 7482.1)
+
+    def test_5_a_gantry_the_trace_genuinely_crosses(self):
+        """Three corpus cases carry a line the trace passes over."""
+        for case_no, name in (
+            (103, "CTE (Braddell Rd towards City)"),
+            (106, "CTE (Braddell Rd towards City)"),
+            (114, "PIE (Kim Keat Link towards Tuas)"),
+        ):
+            # The flag does not track the geometry: 103's and 106's crossed lines
+            # are flagged off-route and 114's is flagged on-route, and the trace
+            # passes over all three.
+            line = self.assertFigure(case_no, name, 0.0)
+            self.assertIs(line["gap_brackets_closest_approach"]["value"], False)
+
+        # The second line on each is close but not passed over: 40.2 m, 24.1 m
+        # and 8.8 m.
+        self.assertFigure(103, "CTE (Moulmein Rd towards City)", 40.2)
+        self.assertFigure(106, "CTE (Chin Swee Rd tunnel, towards City)", 24.1)
+        self.assertFigure(114, "PIE (Adam Rd towards Tuas)", 8.8)
+
+    def test_6_the_block_is_emitted_for_exactly_the_cases_with_a_gantry_line(self):
+        """Read from the files: seven of the forty-four cases, and no others."""
+        every = self._corpus_cases() + self._codex_cases()
+        with_lines = {case_no for case_no in every if self._raw_lines(case_no)}
+        self.assertEqual(with_lines, {103, 106, 114, 115, 9111, 9113, 9114})
+
+        for case_no in every:
+            derived = self._derived(case_no)
+            if case_no in with_lines:
+                self.assertIn(
+                    brief.ERP_GANTRY_PROXIMITY_KEY, derived, "case {0}".format(case_no)
+                )
+            else:
+                # No line means no block, which is what keeps every other brief
+                # byte-identical to the one this change did not touch.
+                self.assertNotIn(
+                    brief.ERP_GANTRY_PROXIMITY_KEY, derived, "case {0}".format(case_no)
+                )
+
+    def test_7_every_published_figure_carries_the_evidence_id_it_came_from(self):
+        """A distance is sourced to the trace, a line's own fields to the fare breakdown."""
+        for case_no in (103, 106, 114, 115, 9111, 9113, 9114):
+            block = self._block(case_no)
+            self.assertEqual(block["clause_id"], "POL-RD-09")
+            self.assertEqual(block["policy_id"], "POLICY-ROUTE-DEVIATION")
+            fare = "EV-FARE-{0:05d}".format(case_no)
+            gps = "EV-GPS-{0:05d}".format(case_no)
+            for line in block["lines"]:
+                for name in ("amount_sgd", "charged_at", "on_optimal_route", "coordinates"):
+                    self.assertEqual(line[name]["evidence_id"], fare, name)
+                for name in ("distance_m", "ts", "index"):
+                    self.assertEqual(line["nearest_fix"][name]["evidence_id"], gps, name)
+                self.assertEqual(line["gap_brackets_closest_approach"]["evidence_id"], gps)
+                self.assertEqual(line["across_gap_distance_m"]["evidence_id"], gps)
+
+                # None of these seven traces has a hole in it, so the gap fields
+                # are present and say "no" rather than being absent.
+                self.assertIs(line["gap_brackets_closest_approach"]["value"], False)
+                self.assertIsNone(line["across_gap_distance_m"]["value"])
+                self.assertEqual(line["bracketing_gaps"], [])
+
+    def test_8_the_block_carries_distances_and_no_verdict(self):
+        """No field of the block says whether a gantry was crossed."""
+        block = self._block(115)
+        self.assertEqual(sorted(block), ["clause_id", "lines", "policy_id"])
+        for line in block["lines"]:
+            self.assertEqual(
+                sorted(line),
+                [
+                    "across_gap_distance_m",
+                    "amount_sgd",
+                    "available",
+                    "bracketing_gaps",
+                    "charged_at",
+                    "coordinates",
+                    "gantry_name",
+                    "gap_brackets_closest_approach",
+                    "nearest_fix",
+                    "on_optimal_route",
+                ],
+            )
+            self.assertEqual(sorted(line["nearest_fix"]), ["distance_m", "index", "ts"])
+
+    def test_9_a_line_without_coordinates_is_reported_and_nothing_is_computed(self):
+        """The clause treats such a line as matched, so the brief derives nothing."""
+        lines = [dict(line) for line in self._raw_lines(115)]
+        for line in lines:
+            line.pop("lat", None)
+            line.pop("lng", None)
+        block = self._block_of(brief.build_brief_for_case(self._with_lines(115, lines)))
+
+        self.assertEqual(len(block["lines"]), 2)
+        for line in block["lines"]:
+            self.assertIs(line["available"], False)
+            self.assertEqual(line["reason"], brief.NO_GANTRY_COORDINATES_REASON)
+            self.assertIsNone(line["coordinates"]["value"])
+            self.assertNotIn("nearest_fix", line)
+            self.assertNotIn("across_gap_distance_m", line)
+
+    def test_10_a_trace_with_no_fixes_derives_no_distance(self):
+        """Nothing is computed from a trace that carries no fix."""
+        line = self._synthetic_line(115, [], [])
+        self.assertIs(line["available"], False)
+        self.assertEqual(line["reason"], brief.NO_TRACE_FIXES_REASON)
+        self.assertNotIn("nearest_fix", line)
+        self.assertNotIn("across_gap_distance_m", line)
+
+    def test_11_a_hole_in_the_trace_is_measured_across(self):
+        """A crossing that happened inside a gap must not read as never passed."""
+        stamp = "2026-09-25T10:{0:02d}:00+08:00"
+
+        # The nearest fix sits at the edge of the hole, so the observed minimum
+        # is not a bound on the path: the chord across the hole passes over the
+        # gantry, while every fix is half a kilometre away.
+        line = self._synthetic_line(
+            115,
+            [
+                self._fix(stamp.format(0), 1.35, 103.830),
+                self._fix(stamp.format(1), 1.35, 103.8455),
+                self._fix(stamp.format(2), 1.35, 103.8545),
+                self._fix(stamp.format(3), 1.35, 103.870),
+            ],
+            [{"from_ts": stamp.format(1), "to_ts": stamp.format(2), "duration_sec": 300.0}],
+        )
+        self.assertAlmostEqual(
+            line["nearest_fix"]["distance_m"]["value"], 500.2382803177052, places=6
+        )
+        self.assertIs(line["gap_brackets_closest_approach"]["value"], True)
+        self.assertAlmostEqual(
+            line["across_gap_distance_m"]["value"], 0.0004628153590947916, places=6
+        )
+        self.assertEqual(len(line["bracketing_gaps"]), 1)
+        self.assertEqual(line["bracketing_gaps"][0]["from_ts"]["value"], stamp.format(1))
+        self.assertEqual(line["bracketing_gaps"][0]["to_ts"]["value"], stamp.format(2))
+        self.assertEqual(line["bracketing_gaps"][0]["duration_sec"]["value"], 300.0)
+
+        # The nearest fix is nowhere near the hole, but the chord across it still
+        # passes closer than any fix does.
+        line = self._synthetic_line(
+            115,
+            [
+                self._fix(stamp.format(0), 1.35, 103.8446),
+                self._fix(stamp.format(1), 1.35, 103.8554),
+                self._fix(stamp.format(2), 1.3527, 103.85),
+            ],
+            [{"from_ts": stamp.format(0), "to_ts": stamp.format(1), "duration_sec": 200.0}],
+        )
+        self.assertAlmostEqual(
+            line["nearest_fix"]["distance_m"]["value"], 300.22630194029523, places=6
+        )
+        self.assertIs(line["gap_brackets_closest_approach"]["value"], True)
+        self.assertAlmostEqual(
+            line["across_gap_distance_m"]["value"], 0.0006664541104241851, places=6
+        )
+
+        # A hole a kilometre from the gantry brackets nothing: the nearest fix is
+        # not one of its ends and the chord across it is further than that fix.
+        line = self._synthetic_line(
+            115,
+            [
+                self._fix(stamp.format(0), 1.34, 103.830),
+                self._fix(stamp.format(1), 1.34, 103.870),
+                self._fix(stamp.format(2), 1.35, 103.8495),
+                self._fix(stamp.format(3), 1.35, 103.8505),
+            ],
+            [{"from_ts": stamp.format(0), "to_ts": stamp.format(1), "duration_sec": 400.0}],
+        )
+        self.assertAlmostEqual(
+            line["nearest_fix"]["distance_m"]["value"], 55.58203114519084, places=6
+        )
+        self.assertIs(line["gap_brackets_closest_approach"]["value"], False)
+        self.assertIsNone(line["across_gap_distance_m"]["value"])
+        self.assertEqual(line["bracketing_gaps"], [])
+
+    def test_12_the_clauses_radius_is_not_in_either_module(self):
+        """The radius belongs to the clause; the code reports distances only."""
+        for name in ("facts.py", "brief.py"):
+            source = (PROJECT_ROOT / "tribunal" / name).read_text(encoding="utf-8")
+            self.assertNotIn(
+                "250", source, "{0} carries POL-RD-09(4)'s radius".format(name)
+            )
 
 
 if __name__ == "__main__":

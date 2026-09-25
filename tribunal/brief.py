@@ -79,6 +79,25 @@ INCOMPLETE_POLICY_REASON = (
     "so no zone-dependent fact was computed"
 )
 
+# POL-RD-09(4): how close the trace came to each ERP gantry line on the fare
+# breakdown. The block is emitted only where the fare breakdown carries gantry
+# lines, the same way the deviation block is emitted for ROUTE_DEVIATION cases
+# only. The clause's radius is a threshold and stays in the clause, so the
+# block carries distances and decides no match.
+ERP_GANTRY_PROXIMITY_KEY = "erp_gantry_proximity"
+FARE_EVIDENCE_TYPE = "FARE_BREAKDOWN"
+POL_RD_09 = "POL-RD-09"
+
+NO_GANTRY_COORDINATES_REASON = (
+    "this erp_gantry carries no coordinates, so how close the trace came to it is not "
+    "computable from the record; POL-RD-09(4) provides that where an erp_gantry carries no "
+    "coordinates the match is undecidable on the record and the line is treated as matched"
+)
+NO_TRACE_FIXES_REASON = (
+    "the gps_trace carries no fixes, so how close the trace came to any gantry line is not "
+    "computable from the record"
+)
+
 # POL-NS-06(i) and the two clauses it borrows a threshold from. The block below
 # is emitted for NO_SHOW_CHARGE cases only, the same way the deviation block is
 # emitted for ROUTE_DEVIATION cases only.
@@ -619,6 +638,88 @@ def _arrival_block(
     return block
 
 
+def _gantry_proximity_line(
+    record: Dict[str, Any],
+    gps_evidence_id: str,
+    fare_evidence_id: str,
+) -> Dict[str, Any]:
+    """One ERP line's proximity record, every value tagged with its source.
+
+    The line's own fields come from the fare breakdown and the distances come
+    from the trace, so both evidence ids appear in the one record: an advocate
+    has to be able to cite the artifact behind each figure it quotes.
+    """
+    line: Dict[str, Any] = {
+        "gantry_name": record["gantry_name"],
+        "amount_sgd": _sourced(record["amount_sgd"], fare_evidence_id),
+        "charged_at": _sourced(record["charged_at"], fare_evidence_id),
+        "on_optimal_route": _sourced(record["on_optimal_route"], fare_evidence_id),
+        "coordinates": _sourced(record["coordinates"], fare_evidence_id),
+    }
+
+    if record["coordinates"] is None:
+        line["available"] = False
+        line["reason"] = NO_GANTRY_COORDINATES_REASON
+        return line
+
+    if record["nearest_fix"] is None:
+        line["available"] = False
+        line["reason"] = NO_TRACE_FIXES_REASON
+        return line
+
+    line["available"] = True
+    line["nearest_fix"] = {
+        "index": _sourced(record["nearest_fix"]["index"], gps_evidence_id),
+        "ts": _sourced(record["nearest_fix"]["ts"], gps_evidence_id),
+        "distance_m": _sourced(record["nearest_fix"]["distance_m"], gps_evidence_id),
+    }
+    line["gap_brackets_closest_approach"] = _sourced(
+        record["gap_brackets_closest_approach"], gps_evidence_id
+    )
+    line["across_gap_distance_m"] = _sourced(record["across_gap_distance_m"], gps_evidence_id)
+    line["bracketing_gaps"] = [
+        {
+            "from_ts": _sourced(gap["from_ts"], gps_evidence_id),
+            "to_ts": _sourced(gap["to_ts"], gps_evidence_id),
+            "duration_sec": _sourced(gap["duration_sec"], gps_evidence_id),
+            "distance_m": _sourced(gap["distance_m"], gps_evidence_id),
+        }
+        for gap in record["bracketing_gaps"]
+    ]
+    return line
+
+
+def _gantry_proximity_block(
+    gps_payload: Dict[str, Any],
+    gps_evidence_id: str,
+    gantry_lines: Any,
+    fare_evidence_id: str,
+    policy_id: str,
+) -> Dict[str, Any]:
+    """POL-RD-09(4): how close the trace came to each ERP gantry line.
+
+    The clause matches a gantry to the trace by comparing coordinates, and this
+    module replaces the trace's coordinates with derived facts. Without this
+    block the judge holds the gantry's coordinates and no way to measure them
+    against the trace, which is how case 9111's judge came to assert a crossing
+    the record could not show. Nothing here decides a match: the clause's
+    radius is the clause's, and the block reports distances.
+    """
+    records = facts.gantry_proximity(
+        facts.driver_points(gps_payload),
+        gantry_lines,
+        gps_payload.get("gaps"),
+    )
+    return {
+        "policy_id": policy_id,
+        "clause_id": POL_RD_09,
+        "lines": [
+            _gantry_proximity_line(record, gps_evidence_id, fare_evidence_id)
+            for record in records
+        ],
+    }
+
+
 def _transform_gps_payload(
     artifact: Dict[str, Any],
     trip_payload: Optional[Dict[str, Any]],
@@ -628,6 +729,8 @@ def _transform_gps_payload(
     deviation_thresholds: Optional[Dict[str, float]] = None,
     no_show_thresholds: Optional[Dict[str, Any]] = None,
     advisories: Optional[List[Dict[str, Any]]] = None,
+    gantry_lines: Any = None,
+    fare_evidence_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Replace one GPS payload's raw point arrays with derived facts."""
     payload = artifact.get("payload")
@@ -661,6 +764,10 @@ def _transform_gps_payload(
     if deviation_thresholds:
         derived[DEVIATION_BLOCK] = _deviation_block(
             payload, evidence_id, trip_payload, trip_evidence_id, deviation_thresholds, policy_id
+        )
+    if gantry_lines:
+        derived[ERP_GANTRY_PROXIMITY_KEY] = _gantry_proximity_block(
+            payload, evidence_id, gantry_lines, fare_evidence_id or "", policy_id
         )
     transformed[DERIVED_KEY] = derived
 
@@ -744,6 +851,21 @@ def build_brief_for_case(
             trip_evidence_id = artifact["evidence_id"]
             break
 
+    # POL-RD-09(4) measures each ERP gantry line against the trace, so the fare
+    # breakdown's lines travel into the GPS trace's derived facts. A case whose
+    # fare breakdown carries no gantry line gets no block at all, which is what
+    # keeps every other brief byte-identical.
+    gantry_lines = None
+    fare_evidence_id = None
+    for artifact in case["evidence"]:
+        if artifact["evidence_type"] != FARE_EVIDENCE_TYPE:
+            continue
+        payload = artifact.get("payload")
+        if isinstance(payload, dict) and payload.get("erp_gantries"):
+            gantry_lines = payload["erp_gantries"]
+            fare_evidence_id = artifact["evidence_id"]
+        break
+
     # Every advisory travels, including a MISSING one: limb (i) turns on
     # whether the artifact is present and populated, so the block has to be
     # able to name the one that is not.
@@ -763,6 +885,8 @@ def build_brief_for_case(
             deviation_thresholds,
             no_show_thresholds,
             advisories,
+            gantry_lines,
+            fare_evidence_id,
         )
         if artifact["evidence_type"] == GPS_EVIDENCE_TYPE
         else artifact
