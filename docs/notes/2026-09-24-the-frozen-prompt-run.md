@@ -298,6 +298,17 @@ same corpus under earlier prompts and are historical; they belong to §3 and to 
 them, not to the frozen prompt. The per-invocation figures (21/22, 5/6, 1/1) are those invocations'
 own case sets and are not corpus figures at all.
 
+**Amended 2026-09-25 — the rule above no longer holds.** Its premise was that
+every further change could only be informed by the same 29 cases, and on
+2026-09-25 that stopped being true: a second development set was added. The rule
+that replaces it — the prompt may change until 6 October 2026 and only in
+response to failures seen across both development sets, with every change
+regression-run on all of them; it is frozen after 6 October; and a fresh sealed
+set, drafted without access to this repository and run exactly once after the
+10 October freeze, is the only figure the submission reports as generalisation —
+is recorded in `docs/notes/2026-09-25-the-standing-rule-change.md`. This note is
+left as it was written; it records the rule that was in force on 2026-09-24.
+
 ## 10. What this does not establish
 
 It does not measure the last change against the one before it on the corpus — 27/29 against 27/29, with
