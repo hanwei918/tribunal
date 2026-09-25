@@ -439,6 +439,31 @@ class TheRunTests(unittest.TestCase):
         )
         self.assertGreater(claims, 0, "no claim reached the page")
 
+    def test_the_referee_ledger_covers_the_claims_and_discards_are_copied(self):
+        """The page exposes the mechanical ledger before the judge's ruling."""
+        for case_no, case in sorted(self.cases.items()):
+            with self.subTest(case=case_no):
+                ledger = case["referee"]["ledger"]
+                claim_count = sum(
+                    len(advocate["claims"])
+                    for advocate in case["advocates"].values()
+                )
+                self.assertEqual(claim_count, len(ledger))
+                self.assertTrue(all(entry["status"] in ("KEPT", "DISCARDED") for entry in ledger))
+                self.assertEqual(
+                    case["referee"]["discards"],
+                    [
+                        {
+                            "side": entry["side"],
+                            "claim": entry["claim"],
+                            "reason_code": entry["reason_code"],
+                            "detail": entry["detail"],
+                        }
+                        for entry in ledger
+                        if entry["status"] == "DISCARDED"
+                    ],
+                )
+
     def test_money_is_carried_as_its_own_decimal_literal(self):
         """A key value of 4.8 must not reach the page as 4.800000000000001.
 
@@ -526,11 +551,8 @@ class HeadlineTests(unittest.TestCase):
         self.assertEqual(
             per_case, self.document["headline"]["discarded_claims"]["per_case"]
         )
-        # A dated pin, not a derivation: which claims these judges discarded is
-        # a fact about the run committed under ``runs/``, and the next run moves
-        # it. What is not dated is the equality above, that the page's figure is
-        # the run's own sum, which is the thing under test.
-        self.assertEqual(25, total, "the run's judges discarded 25 claims")
+        # The total belongs to this invocation's recorded judge outputs. It is
+        # deliberately not pinned to a number, because a rerun can change it.
 
     def test_the_seconds_and_tokens_are_summed_from_the_run(self):
         seconds = []

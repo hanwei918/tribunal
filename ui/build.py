@@ -117,6 +117,7 @@ from tribunal import llm  # noqa: E402
 from tribunal import model as model_module  # noqa: E402
 from tribunal import money  # noqa: E402
 from tribunal import pipeline as pipeline_module  # noqa: E402
+from tribunal import referee as referee_module  # noqa: E402
 from tribunal import transcript as transcript_module  # noqa: E402
 
 __all__ = [
@@ -1012,6 +1013,11 @@ def build_document(
         rider_agent = _agent_block(transcript, transcript_module.ROLE_RIDER_ADVOCATE)
         driver_agent = _agent_block(transcript, transcript_module.ROLE_DRIVER_ADVOCATE)
         judge = _agent_block(transcript, transcript_module.ROLE_JUDGE)
+        referee_result = referee_module.referee(
+            built,
+            _claims_of(rider_agent),
+            _claims_of(driver_agent),
+        )
         judge_output = result.get("ruling") or {}
         score = scores[case_no]
         expected = _expected_side(key_records[case_no])
@@ -1040,6 +1046,7 @@ def build_document(
                     result.get("stance_differing_ranges"),
                     computed_ranges,
                 ),
+                "referee": _normalise(referee_result.as_dict()),
                 "judge": {
                     "agent": judge,
                     "discarded_claims": _normalise(
@@ -2143,13 +2150,37 @@ _JS = r"""
     section.appendChild(h("h2", { text: "The judge" }));
     section.appendChild(h("span", { class: "badge judge", text: "JUDGE" }));
 
+    var refereeLedger = (caseDoc.referee || {}).ledger || [];
+    section.appendChild(h("h3", { text: "Referee ledger" }));
+    section.appendChild(h("p", { class: "lead", text:
+      refereeLedger.length
+        ? "The code referee checked " + refereeLedger.length + " claims before the judge. Kept claims remain available to the judge; discarded claims are authoritative and cannot be reinstated."
+        : "No referee ledger was recorded for this case." }));
+    refereeLedger.forEach(function (entry, index) {
+      var kept = entry.status === "KEPT";
+      var box = h("div", { class: "claim " + (kept ? "" : "discarded") });
+      box.appendChild(h("div", { class: "claim-head" }, [
+        h("span", { class: "claim-no", text: "#" + (index + 1) }),
+        h("span", { class: "badge " + (String(entry.side).toLowerCase() === "rider" ? "rider" : "driver"),
+          text: "side: " + text(entry.side) }),
+        h("span", { class: "badge " + (kept ? "complete" : "missing"),
+          text: text(entry.status) })
+      ]));
+      box.appendChild(h("p", { class: "text", text: text(entry.claim) }));
+      box.appendChild(h("p", { class: "notes", text:
+        text(entry.reason_code) + ": " + text(entry.detail) }));
+      if (entry.flags && entry.flags.length) {
+        box.appendChild(h("p", { class: "notes", text: "flag: " + entry.flags.join("; ") }));
+      }
+      section.appendChild(box);
+    });
+
     var discarded = judge.discarded_claims || [];
-    section.appendChild(h("h3", { text: "Discarded claims first" }));
+    section.appendChild(h("h3", { text: "Code-assembled discarded claims" }));
     section.appendChild(h("p", { class: "lead", text:
       discarded.length
-        ? "The judge threw out " + discarded.length + (discarded.length === 1 ? " claim" : " claims") +
-          " before deciding. A discarded claim is a claim that cited an impaired artifact without disclosing the impairment, as POL-GEN-02(1) requires."
-        : "The judge discarded no claims in this case: every claim it was given carried its citations correctly." }));
+        ? "The final list starts with the referee's entries copied verbatim, followed by any further judge additions."
+        : "The code-assembled list is empty." }));
     discarded.forEach(function (entry, index) {
       var box = h("div", { class: "claim discarded" });
       box.appendChild(h("div", { class: "claim-head" }, [
@@ -2158,7 +2189,9 @@ _JS = r"""
           text: "side: " + text(entry.side) })
       ]));
       box.appendChild(h("p", { class: "text", text: text(entry.claim) }));
-      box.appendChild(h("p", { class: "notes", text: "reason: " + text(entry.reason) }));
+      box.appendChild(h("p", { class: "notes", text:
+        "reason: " + text(entry.reason_code || entry.reason) +
+        (entry.detail ? ": " + text(entry.detail) : "") }));
       section.appendChild(box);
     });
 
