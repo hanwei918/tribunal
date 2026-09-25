@@ -319,6 +319,11 @@ def bench(
         key=key,
         git_runner=git_runner() if git is None else git,
         progress=lambda text: None,
+        # One judge draft. The rig pins the single-draft configuration so that
+        # every test in this file measures what it always measured -- one judge
+        # call per case, and the role sequence, call counts and token totals that
+        # follow from it. The vote has its own tests, which ask for it by name.
+        judge_votes=1,
     )
     arguments.update(overrides)
     return runner.run_benchmark(model, cases, **arguments), transport
@@ -498,6 +503,11 @@ class CleanRunTests(unittest.TestCase):
                         "tokens",
                         "transcript_file",
                         "transcript_sha256",
+                        # How many of the judge's drafts agreed on the ruling
+                        # this entry carries, or ``None`` for a single-draft
+                        # run. Its own field beside the ruling, never folded
+                        # into the judge's own confidence.
+                        "vote_agreement",
                         "wall_seconds",
                     ]
                 ),

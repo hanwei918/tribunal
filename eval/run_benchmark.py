@@ -248,8 +248,10 @@ EXTERNAL_EXPECTED_DIR = PROJECT_ROOT / "eval" / "external"
 EXTERNAL_EXPECTED_FILE = "expected.json"
 
 # Bumped when the cache layout changes, so an old cache is visibly old rather
-# than silently misread.
-CACHE_SCHEMA_VERSION = 1
+# than silently misread. 2 adds ``vote_agreement`` to the entry: a result now
+# says how many of the judge's drafts agreed on the ruling it carries, which a
+# schema-1 entry cannot answer at all.
+CACHE_SCHEMA_VERSION = 2
 
 METADATA_FILE = "run.json"
 # Every invocation's own metadata record, appended to. ``run.json`` is the
@@ -1443,6 +1445,7 @@ def run_one_case(
     case_loader: Optional[Callable[[int], Mapping[str, Any]]] = None,
     loaded_case: Optional[Mapping[str, Any]] = None,
     replay: Optional[Any] = None,
+    judge_votes: int = pipeline.DEFAULT_JUDGE_VOTES,
 ) -> Tuple[CaseOutcome, Optional[Dict[str, Any]], Optional[str]]:
     """Run one case. Returns ``(outcome, cache document, transcript json)``.
 
@@ -1506,6 +1509,7 @@ def run_one_case(
                 client,
                 replay=replay,
                 case_deadline_seconds=case_deadline_seconds,
+                judge_votes=judge_votes,
             )
         elif loaded_case is None:
             result = pipeline.run_case(
@@ -1514,6 +1518,7 @@ def run_one_case(
                 prompts_dir=prompts_dir,
                 case_deadline_seconds=case_deadline_seconds,
                 case_loader=case_loader,
+                judge_votes=judge_votes,
             )
         else:
             # A converted external case, already loaded through its own explicit
@@ -1524,6 +1529,7 @@ def run_one_case(
                 client,
                 prompts_dir=prompts_dir,
                 case_deadline_seconds=case_deadline_seconds,
+                judge_votes=judge_votes,
             )
     except (llm.MissingAPIKeyError, llm.ModelNotProvisionedError):
         raise
@@ -1625,6 +1631,12 @@ def run_one_case(
         "ruling": result.ruling,
         "ruling_findings": result.ruling_findings,
         "referee": result.referee,
+        # The share of the judge's drafts that agreed on the published ruling,
+        # or ``None`` for a single-draft run. Its own field beside the ruling
+        # and never folded into the judge's own confidence: a ruling that four
+        # drafts agreed on and a ruling one draft reached confidently are two
+        # different things, and a reader has to be able to tell them apart.
+        "vote_agreement": result.vote_agreement,
         "stance_differing_ranges": [list(item) for item in result.stance_differing_ranges],
         # Written from the split rather than from the raw fields, so what lands
         # on disk and what the runner charged against the budget are one piece
@@ -1953,6 +1965,7 @@ def run_benchmark(
     timeout_seconds: float = llm.DEFAULT_TIMEOUT_SECONDS,
     case_deadline_seconds: float = pipeline.DEFAULT_CASE_DEADLINE_SECONDS,
     replay_dir: Optional[Path] = None,
+    judge_votes: int = pipeline.DEFAULT_JUDGE_VOTES,
     client_factory: Optional[Callable[[Callable[[Dict[str, Any]], None]], Any]] = None,
     key: Optional[Mapping[int, grade.Ruling]] = None,
     git_runner: Optional[Callable[[Sequence[str]], Optional[str]]] = None,
@@ -1963,6 +1976,12 @@ def run_benchmark(
     now: Callable[[], str] = lambda: datetime.now(timezone.utc).isoformat(),
 ) -> RunSummary:
     """Run ``cases`` against ``model``, cache the results, and grade them.
+
+    ``judge_votes`` is how many times each case's judge is asked, on the same
+    inputs, with the majority deciding. It defaults to the value the layer below
+    declares rather than repeating the number here, so the two cannot drift
+    apart, and 1 is the single-draft behaviour every run before the vote used.
+    Every draft is a call, so every draft is billed and every draft is recorded.
 
     ``model`` is required here and has no default, so a caller that drives this
     function directly must say which model it means; the command line resolves
@@ -2248,6 +2267,7 @@ def run_benchmark(
                 case_deadline_seconds=case_deadline_seconds,
                 case_loader=case_loader,
                 replay=replayable,
+                judge_votes=judge_votes,
             )
 
         workers = max(1, concurrency)
@@ -3545,6 +3565,7 @@ def run_external_case(
     prompts_dir: Path = PROMPTS_DIR,
     timeout_seconds: float = llm.DEFAULT_TIMEOUT_SECONDS,
     case_deadline_seconds: float = pipeline.DEFAULT_CASE_DEADLINE_SECONDS,
+    judge_votes: int = pipeline.DEFAULT_JUDGE_VOTES,
     token_budget: Optional[int] = None,
     expected_path: Optional[Path] = None,
     client_factory: Optional[Callable[[Callable[[Dict[str, Any]], None]], Any]] = None,
@@ -3638,6 +3659,7 @@ def run_external_case(
         case_provenance=run_provenance,
         case_deadline_seconds=case_deadline_seconds,
         loaded_case=case,
+        judge_votes=judge_votes,
     )
     _persist(run_dir, outcome, document, transcript_json)
 
@@ -3747,6 +3769,20 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         ),
     )
     parser.add_argument(
+        "--judge-votes",
+        type=int,
+        default=pipeline.DEFAULT_JUDGE_VOTES,
+        metavar="K",
+        help=(
+            "how many times to ask each case's judge on the same inputs, with the "
+            "majority deciding (default {0}, the pipeline's own default). K = 1 is "
+            "the single-draft behaviour every run before the vote used. Every "
+            "draft is a call, so every draft is billed".format(
+                pipeline.DEFAULT_JUDGE_VOTES
+            )
+        ),
+    )
+    parser.add_argument(
         "--replay-advocates",
         type=Path,
         default=None,
@@ -3845,6 +3881,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 prompts_dir=args.prompts_dir,
                 timeout_seconds=args.timeout,
                 case_deadline_seconds=args.case_deadline,
+                judge_votes=args.judge_votes,
                 token_budget=args.token_budget,
             )
         except llm.ModelNotProvisionedError as exc:
@@ -3882,6 +3919,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             timeout_seconds=args.timeout,
             case_deadline_seconds=args.case_deadline,
             replay_dir=args.replay_advocates,
+            judge_votes=args.judge_votes,
         )
     except llm.ModelNotProvisionedError as exc:
         print("FATAL: {0}".format(exc), file=sys.stderr)

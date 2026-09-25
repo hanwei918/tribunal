@@ -106,7 +106,7 @@ def client_for(*responses: llm.HttpResult) -> llm.LLMClient:
 
 
 def run(*responses: llm.HttpResult) -> pipeline.PipelineResult:
-    return pipeline.run_case(CASE, client_for(*responses), now=lambda: PINNED_NOW)
+    return pipeline.run_case(CASE, client_for(*responses), now=lambda: PINNED_NOW, judge_votes=1)
 
 
 def roles_of(result) -> list:
@@ -887,7 +887,7 @@ class CleanRunTests(unittest.TestCase):
             model="hy4-preview", api_key=FAKE_KEY, transport=self.transport,
             sleep=lambda seconds: None, clock=lambda: 0.0,
         )
-        self.result = pipeline.run_case(CASE, self.client, now=lambda: PINNED_NOW)
+        self.result = pipeline.run_case(CASE, self.client, now=lambda: PINNED_NOW, judge_votes=1)
 
     def test_the_run_succeeds_and_returns_the_ruling(self):
         self.assertTrue(self.result.ok)
@@ -963,7 +963,7 @@ class BriefIdentityTests(unittest.TestCase):
             model="hy4-preview", api_key=FAKE_KEY, transport=self.transport,
             sleep=lambda seconds: None, clock=lambda: 0.0,
         )
-        self.result = pipeline.run_case(CASE, self.client, now=lambda: PINNED_NOW)
+        self.result = pipeline.run_case(CASE, self.client, now=lambda: PINNED_NOW, judge_votes=1)
         self.brief_json = money.dumps_canonical(brief.build_brief(CASE))
         self.brief_sha = hashlib.sha256(self.brief_json.encode("utf-8")).hexdigest()
 
@@ -1023,7 +1023,7 @@ class UnusableResponseTests(unittest.TestCase):
             model="hy4-preview", api_key=FAKE_KEY, transport=transport,
             sleep=lambda seconds: None, clock=lambda: 0.0,
         )
-        result = pipeline.run_case(CASE, client, now=lambda: PINNED_NOW)
+        result = pipeline.run_case(CASE, client, now=lambda: PINNED_NOW, judge_votes=1)
 
         self.assertTrue(result.ok)
         self.assertEqual(roles_of(result), [RIDER, DRIVER, JUDGE])
@@ -1050,7 +1050,7 @@ class UnusableResponseTests(unittest.TestCase):
             model="hy4-preview", api_key=FAKE_KEY, transport=transport,
             sleep=lambda seconds: None, clock=lambda: 0.0,
         )
-        pipeline.run_case(CASE, client, now=lambda: PINNED_NOW)
+        pipeline.run_case(CASE, client, now=lambda: PINNED_NOW, judge_votes=1)
 
         judge_user = json.loads(
             json.loads(transport.calls[2]["body"].decode("utf-8"))["messages"][1]["content"]
@@ -1065,7 +1065,7 @@ class UnusableResponseTests(unittest.TestCase):
             model="hy4-preview", api_key=FAKE_KEY, transport=transport,
             sleep=lambda seconds: None, clock=lambda: 0.0,
         )
-        result = pipeline.run_case(CASE, client, now=lambda: PINNED_NOW)
+        result = pipeline.run_case(CASE, client, now=lambda: PINNED_NOW, judge_votes=1)
 
         self.assertFalse(result.ok)
         self.assertEqual(result.failed_agent, RIDER)
@@ -1090,7 +1090,7 @@ class UnusableResponseTests(unittest.TestCase):
             model="hy4-preview", api_key=FAKE_KEY, transport=transport,
             sleep=lambda seconds: None, clock=lambda: 0.0,
         )
-        result = pipeline.run_case(CASE, client, now=lambda: PINNED_NOW)
+        result = pipeline.run_case(CASE, client, now=lambda: PINNED_NOW, judge_votes=1)
 
         shapes = [entry.shape for entry in result.transcript.entries]
         self.assertEqual(shapes[0], pipeline.SHAPE_OBJECT)
@@ -1104,7 +1104,7 @@ class UnusableResponseTests(unittest.TestCase):
             model="hy4-preview", api_key=FAKE_KEY, transport=transport,
             sleep=lambda seconds: None, clock=lambda: 0.0,
         )
-        result = pipeline.run_case(CASE, client, now=lambda: PINNED_NOW)
+        result = pipeline.run_case(CASE, client, now=lambda: PINNED_NOW, judge_votes=1)
 
         self.assertFalse(result.ok)
         self.assertEqual(result.failed_agent, RIDER)
@@ -1127,7 +1127,7 @@ class UnusableResponseTests(unittest.TestCase):
             model="hy4-preview", api_key=FAKE_KEY, transport=transport,
             sleep=lambda seconds: None, clock=lambda: 0.0,
         )
-        result = pipeline.run_case(CASE, client, now=lambda: PINNED_NOW)
+        result = pipeline.run_case(CASE, client, now=lambda: PINNED_NOW, judge_votes=1)
 
         self.assertFalse(result.ok)
         self.assertEqual(result.failed_agent, JUDGE)
@@ -1145,7 +1145,7 @@ class UnusableResponseTests(unittest.TestCase):
             model="hy4-preview", api_key=FAKE_KEY, transport=transport,
             sleep=lambda seconds: None, clock=lambda: 0.0,
         )
-        result = pipeline.run_case(CASE, client, now=lambda: PINNED_NOW)
+        result = pipeline.run_case(CASE, client, now=lambda: PINNED_NOW, judge_votes=1)
 
         self.assertTrue(result.ok)
         self.assertEqual(roles_of(result), [RIDER, DRIVER, JUDGE, JUDGE])
@@ -1232,6 +1232,7 @@ class CaseDeadlineTests(unittest.TestCase):
             client_on(clock, transport),
             now=lambda: PINNED_NOW,
             clock=clock,
+            judge_votes=1,
             **kwargs
         )
 
@@ -1583,7 +1584,7 @@ class TranscriptAndSecretTests(unittest.TestCase):
             model="hy4-preview", api_key=FAKE_KEY, transport=transport,
             sleep=lambda seconds: None, clock=lambda: 0.0,
         )
-        result = pipeline.run_case(CASE, client, now=lambda: PINNED_NOW)
+        result = pipeline.run_case(CASE, client, now=lambda: PINNED_NOW, judge_votes=1)
         text = result.transcript_json
         parsed = json.loads(text)
 
@@ -1654,6 +1655,426 @@ class RuntimeModelWiringTests(unittest.TestCase):
             llm.LLMClient(model="")
         with self.assertRaises(TypeError):
             llm.LLMClient()
+
+
+# --------------------------------------------------------------------------
+# The judge's vote
+# --------------------------------------------------------------------------
+def vote_ruling(
+    ruling_value="PARTIAL_REFUND",
+    amount=4.35,
+    compensation=None,
+    referrals=(),
+    confidence=0.85,
+    explanation="because",
+) -> str:
+    """One judge answer, as the scripted transport should hand it back."""
+    return json.dumps(
+        {
+            "ruling": {
+                "ruling": ruling_value,
+                "amount_sgd": amount,
+                "driver_compensation_sgd": compensation,
+                "referrals": list(referrals),
+                "confidence": confidence,
+                "explanation": explanation,
+            },
+            "discarded_claims": [],
+        }
+    )
+
+
+def run_vote(*responses, votes=4):
+    """A full run at a named number of judge drafts, with the transport returned."""
+    transport = FakeTransport(*responses)
+    client = llm.LLMClient(
+        model="hy4-preview",
+        api_key=FAKE_KEY,
+        transport=transport,
+        sleep=lambda seconds: None,
+        clock=lambda: 0.0,
+    )
+    return pipeline.run_case(CASE, client, now=lambda: PINNED_NOW, judge_votes=votes), transport
+
+
+def judge_messages(transport) -> list:
+    """Every judge request the transport received, in order, as request bodies.
+
+    Identified by its user message rather than by counting calls, because a
+    draft whose answer is unusable makes two calls and a counter would misalign.
+    """
+    found = []
+    for call in transport.calls:
+        body = json.loads(call["body"].decode("utf-8"))
+        try:
+            parsed = json.loads(body["messages"][1]["content"])
+        except ValueError:
+            continue
+        if isinstance(parsed, dict) and "brief" in parsed and "claims" in parsed:
+            found.append(body)
+    return found
+
+
+class JudgeVoteTests(unittest.TestCase):
+    """The judge is asked K times on the same inputs and the majority decides.
+
+    The judge is sampled, so one call is one sample and cannot report that about
+    itself. Three corpus cases (105, 107 and 211) each flipped between runs whose
+    prompts differed in ways unrelated to those cases, which is the measurement
+    this exists to make visible. Every test here scripts the transport: no
+    network, and no model call.
+    """
+
+    ADVOCATES = (envelope(RIDER_CLAIMS), envelope(DRIVER_CLAIMS))
+
+    def drafts(self, *answers):
+        return (*self.ADVOCATES, *answers)
+
+    # -- the vote ----------------------------------------------------------
+    def test_four_drafts_in_agreement_carry_the_ruling(self):
+        result, _ = run_vote(*self.drafts(*[envelope(vote_ruling())] * 4))
+
+        self.assertTrue(result.ok)
+        self.assertEqual("PARTIAL_REFUND", result.ruling["ruling"]["ruling"])
+        self.assertEqual(Decimal("4.35"), result.ruling["ruling"]["amount_sgd"])
+        self.assertEqual(1.0, result.vote_agreement)
+        self.assertEqual("carried", result.judge_vote["outcome"])
+        self.assertTrue(result.judge_vote["unanimous"])
+        self.assertEqual(4, result.judge_vote["valid"])
+
+    def test_three_of_four_carries_it_and_is_not_unanimous(self):
+        result, _ = run_vote(
+            *self.drafts(
+                envelope(vote_ruling()),
+                envelope(vote_ruling()),
+                envelope(vote_ruling()),
+                envelope(vote_ruling("NO_ACTION", amount=None)),
+            )
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual("PARTIAL_REFUND", result.ruling["ruling"]["ruling"])
+        self.assertEqual(0.75, result.vote_agreement)
+        self.assertEqual("carried_not_unanimous", result.judge_vote["outcome"])
+        self.assertFalse(result.judge_vote["unanimous"])
+        # The published explanation is the first majority draft's, with the
+        # vote result stated at its end.
+        explanation = result.ruling["ruling"]["explanation"]
+        self.assertTrue(explanation.startswith("because"))
+        self.assertIn("carried, not unanimous", explanation)
+        self.assertIn("3 of the 4 drafts", explanation)
+
+    def test_a_four_way_unanimous_vote_says_so_at_the_end(self):
+        result, _ = run_vote(*self.drafts(*[envelope(vote_ruling())] * 4))
+
+        explanation = result.ruling["ruling"]["explanation"]
+        self.assertTrue(explanation.startswith("because"))
+        self.assertIn("carried unanimously", explanation)
+
+    def test_two_and_two_escalates_with_both_amounts_null(self):
+        result, _ = run_vote(
+            *self.drafts(
+                envelope(vote_ruling()),
+                envelope(vote_ruling()),
+                envelope(vote_ruling("NO_ACTION", amount=None)),
+                envelope(vote_ruling("NO_ACTION", amount=None)),
+            )
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual("ESCALATE", result.ruling["ruling"]["ruling"])
+        self.assertIsNone(result.ruling["ruling"]["amount_sgd"])
+        self.assertIsNone(result.ruling["ruling"]["driver_compensation_sgd"])
+        self.assertEqual(0.5, result.vote_agreement)
+        self.assertEqual("escalated", result.judge_vote["outcome"])
+        # The explanation says they disagreed, and shows what each proposed.
+        explanation = result.ruling["ruling"]["explanation"]
+        self.assertIn("did not agree", explanation)
+        self.assertIn("PARTIAL_REFUND, amount_sgd 4.35", explanation)
+        self.assertIn("NO_ACTION", explanation)
+
+    def test_a_split_between_escalate_and_money_still_escalates(self):
+        result, _ = run_vote(
+            *self.drafts(
+                envelope(vote_ruling("ESCALATE", amount=None, confidence=0.2)),
+                envelope(vote_ruling("ESCALATE", amount=None, confidence=0.2)),
+                envelope(vote_ruling()),
+                envelope(vote_ruling()),
+            )
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual("ESCALATE", result.ruling["ruling"]["ruling"])
+        self.assertIsNone(result.ruling["ruling"]["amount_sgd"])
+        self.assertEqual("escalated", result.judge_vote["outcome"])
+
+    def test_one_unparseable_draft_abstains_and_the_other_three_carry(self):
+        result, _ = run_vote(
+            *self.drafts(
+                envelope("not JSON at all"),
+                envelope("not JSON at all"),
+                envelope(vote_ruling()),
+                envelope(vote_ruling()),
+                envelope(vote_ruling()),
+            )
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual("PARTIAL_REFUND", result.ruling["ruling"]["ruling"])
+        vote = result.judge_vote
+        self.assertEqual(3, vote["valid"])
+        abstained = [draft for draft in vote["drafts"] if not draft["valid"]]
+        self.assertEqual(1, len(abstained))
+        self.assertIsNotNone(abstained[0]["abstention"])
+        self.assertIsNone(abstained[0]["agrees"])
+        self.assertIsNone(abstained[0]["proposal"])
+        # Both attempts are the draft's, so an unusable draft occupies two
+        # transcript entries and the record says which.
+        self.assertEqual([2, 3], abstained[0]["entries"])
+        self.assertFalse(vote["unanimous"])
+        self.assertEqual(0.75, vote["agreement"])
+
+    def test_two_unparseable_drafts_leave_too_few_votes_and_escalate(self):
+        result, _ = run_vote(
+            *self.drafts(
+                envelope("nope"),
+                envelope("nope"),
+                envelope("nope"),
+                envelope("nope"),
+                envelope(vote_ruling()),
+                envelope(vote_ruling()),
+            )
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual("ESCALATE", result.ruling["ruling"]["ruling"])
+        self.assertEqual(2, result.judge_vote["valid"])
+        self.assertEqual("escalated", result.judge_vote["outcome"])
+        self.assertIsNone(result.ruling["ruling"]["amount_sgd"])
+
+    def test_no_usable_draft_at_all_is_the_failure_it_has_always_been(self):
+        """Nothing was answered, so nothing disagreed: the judge failed.
+
+        Publishing an ESCALATE here would invent a ruling the judge never gave.
+        """
+        result, _ = run_vote(*self.drafts(*[envelope("nope")] * 8))
+
+        self.assertFalse(result.ok)
+        self.assertEqual(JUDGE, result.failed_agent)
+        self.assertIsNone(result.ruling)
+        self.assertEqual("no_valid_drafts", result.judge_vote["outcome"])
+        self.assertEqual(0, result.judge_vote["valid"])
+        self.assertIsNone(result.vote_agreement)
+
+    def test_a_k_larger_than_the_declared_seeds_is_refused(self):
+        with self.assertRaises(pipeline.PipelineError):
+            run_vote(*self.ADVOCATES, votes=len(pipeline.JUDGE_VOTE_SEEDS) + 2)
+
+    def test_a_single_draft_is_refused_as_a_vote(self):
+        with self.assertRaises(pipeline.PipelineError):
+            run_vote(*self.ADVOCATES, votes=0)
+
+    def test_k_is_configurable(self):
+        result, _ = run_vote(
+            *self.drafts(envelope(vote_ruling()), envelope(vote_ruling())), votes=2
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual(2, result.judge_vote["votes"])
+        self.assertEqual(2, result.judge_vote["threshold"])
+        self.assertEqual(1.0, result.vote_agreement)
+
+    # -- the four graded fields, together ----------------------------------
+    def test_the_vote_selects_an_answer_rather_than_averaging_one(self):
+        result, _ = run_vote(
+            *self.drafts(
+                envelope(vote_ruling(amount=4.35)),
+                envelope(vote_ruling(amount=4.35)),
+                envelope(vote_ruling(amount=4.35)),
+                envelope(vote_ruling(amount=9.99)),
+            )
+        )
+
+        self.assertEqual(Decimal("4.35"), result.ruling["ruling"]["amount_sgd"])
+
+    def test_a_referral_difference_is_a_difference(self):
+        """The four fields are voted on together, so a referral splits a vote."""
+        result, _ = run_vote(
+            *self.drafts(
+                envelope(vote_ruling(referrals=["POL-RD-09(4): refund the rider"])),
+                envelope(vote_ruling(referrals=["POL-RD-09(4): refund the rider"])),
+                envelope(vote_ruling(referrals=["POL-NS-05(ii): flag the record"])),
+                envelope(vote_ruling(referrals=["POL-NS-05(ii): flag the record"])),
+            )
+        )
+
+        self.assertEqual("ESCALATE", result.ruling["ruling"]["ruling"])
+
+    def test_the_same_clause_referred_to_in_different_prose_is_the_same_referral(self):
+        result, _ = run_vote(
+            *self.drafts(
+                envelope(vote_ruling(referrals=["POL-RD-09(4): refund the rider"])),
+                envelope(vote_ruling(referrals=["refer the billing question to POL-RD-09(4)"])),
+                envelope(vote_ruling(referrals=["POL-RD-09(4): check the fare again"])),
+                envelope(vote_ruling(referrals=["POL-RD-09(4): check the fare again"])),
+            )
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual("carried", result.judge_vote["outcome"])
+        self.assertTrue(result.judge_vote["unanimous"])
+
+    def test_the_vote_does_not_change_what_confidence_means(self):
+        result, _ = run_vote(*self.drafts(*[envelope(vote_ruling(confidence=0.42))] * 4))
+
+        self.assertEqual(Decimal("0.42"), result.ruling["ruling"]["confidence"])
+        self.assertEqual(1.0, result.vote_agreement)
+
+    # -- the drafts --------------------------------------------------------
+    def test_the_swapped_draft_differs_from_a_normal_one_only_in_side_order(self):
+        """The three sampled drafts read DRIVER first; the swapped one does not.
+
+        Canonical JSON sorts an object's keys, and it sorts ``DRIVER_ADVOCATE``
+        before ``RIDER_ADVOCATE``, so the object shape the single-draft run uses
+        cannot express a swap at all: it would serialise straight back to the
+        bytes it started from. The vote therefore carries the two sides as an
+        ordered array, and this is what makes the swap a real difference.
+        """
+        _, transport = run_vote(*self.drafts(*[envelope(vote_ruling())] * 4))
+        bodies = judge_messages(transport)
+        self.assertEqual(4, len(bodies))
+        parsed = [json.loads(body["messages"][1]["content"]) for body in bodies]
+
+        for body in parsed[:-1]:
+            self.assertIsInstance(body["claims"], list)
+            self.assertEqual(
+                [DRIVER, RIDER], [entry["side"] for entry in body["claims"]]
+            )
+        self.assertEqual([RIDER, DRIVER], [entry["side"] for entry in parsed[-1]["claims"]])
+        # Only the order differs: the same two entries, byte for byte.
+        self.assertEqual(
+            sorted(json.dumps(entry, sort_keys=True) for entry in parsed[0]["claims"]),
+            sorted(json.dumps(entry, sort_keys=True) for entry in parsed[-1]["claims"]),
+        )
+        # And every other part of the message is identical across the drafts.
+        for body in parsed[1:]:
+            self.assertEqual(parsed[0]["brief"], body["brief"])
+            self.assertEqual(parsed[0]["referee"], body["referee"])
+
+    def test_the_swapped_draft_runs_at_the_clients_own_settings(self):
+        result, _ = run_vote(*self.drafts(*[envelope(vote_ruling())] * 4))
+        drafts = result.judge_vote["drafts"]
+
+        self.assertEqual(
+            [pipeline.DRAFT_SAMPLED] * 3 + [pipeline.DRAFT_POSITION_SWAPPED],
+            [draft["kind"] for draft in drafts],
+        )
+        self.assertEqual(list(pipeline.DRIVER_FIRST), drafts[0]["sides"])
+        self.assertEqual(list(pipeline.RIDER_FIRST), drafts[-1]["sides"])
+        # The swap is the only thing that differs about it, so it is not sampled.
+        self.assertEqual(llm.DEFAULT_TEMPERATURE, drafts[-1]["temperature"])
+        self.assertEqual(llm.DEFAULT_SEED, drafts[-1]["seed"])
+
+    def test_the_drafts_carry_different_seeds_and_both_are_recorded(self):
+        result, transport = run_vote(*self.drafts(*[envelope(vote_ruling())] * 4))
+        bodies = judge_messages(transport)
+
+        seeds = [body["seed"] for body in bodies]
+        self.assertEqual(len(seeds), len(set(seeds)), "two drafts shared a seed")
+        recorded = [draft["seed"] for draft in result.judge_vote["drafts"]]
+        self.assertEqual(seeds, recorded)
+        for draft, body in zip(result.judge_vote["drafts"], bodies):
+            self.assertEqual(body["temperature"], draft["temperature"])
+        # The three sampled drafts are sampled; the swapped one is not, so it
+        # runs at the client's own temperature and its seed is the client's.
+        for draft in result.judge_vote["drafts"][:3]:
+            self.assertGreater(draft["temperature"], 0)
+        self.assertEqual(llm.DEFAULT_TEMPERATURE, result.judge_vote["drafts"][-1]["temperature"])
+
+    def test_every_draft_is_on_the_transcript_in_full(self):
+        result, _ = run_vote(*self.drafts(*[envelope(vote_ruling())] * 4))
+        entries = result.transcript.entries
+
+        self.assertEqual([RIDER, DRIVER, JUDGE, JUDGE, JUDGE, JUDGE], roles_of(result))
+        for draft in result.judge_vote["drafts"]:
+            self.assertEqual(1, len(draft["entries"]))
+            recorded = entries[draft["entries"][0]]
+            self.assertEqual(JUDGE, recorded.role)
+            self.assertEqual(vote_ruling(), recorded.response_text)
+
+    def test_every_draft_is_billed(self):
+        """Four drafts are four calls, and the totals say so.
+
+        The judge is asked more than once, so it costs more than once. A record
+        that charged a single draft would understate what the vote costs.
+        """
+        result, _ = run_vote(*self.drafts(*[envelope(vote_ruling())] * 4))
+
+        # Two advocates and four drafts, each envelope reporting 10 and 5.
+        self.assertEqual(6, len(result.transcript.entries))
+        self.assertEqual(60, result.prompt_tokens)
+        self.assertEqual(30, result.completion_tokens)
+
+    def test_the_vote_is_written_into_the_transcript(self):
+        result, _ = run_vote(*self.drafts(*[envelope(vote_ruling())] * 4))
+
+        payload = json.loads(result.transcript_json)
+        self.assertIn("vote", payload)
+        self.assertEqual(4, payload["vote"]["votes"])
+        self.assertEqual(1.0, payload["vote"]["agreement"])
+        self.assertEqual(4, len(payload["vote"]["drafts"]))
+        # The amount stays a JSON number, not a string.
+        self.assertIn('"amount_sgd":4.35', result.transcript_json)
+
+    # -- K = 1 is today ----------------------------------------------------
+    def test_the_default_is_four_drafts(self):
+        """A caller who names nothing gets the vote, not one sample."""
+        transport = FakeTransport(*self.drafts(*[envelope(vote_ruling())] * 4))
+        client = llm.LLMClient(
+            model="hy4-preview",
+            api_key=FAKE_KEY,
+            transport=transport,
+            sleep=lambda seconds: None,
+            clock=lambda: 0.0,
+        )
+        result = pipeline.run_case(CASE, client, now=lambda: PINNED_NOW)
+
+        self.assertEqual(4, pipeline.DEFAULT_JUDGE_VOTES)
+        self.assertEqual([RIDER, DRIVER, JUDGE, JUDGE, JUDGE, JUDGE], roles_of(result))
+
+    def test_a_single_draft_behaves_exactly_as_it_did_before(self):
+        """One call, the object shape, no vote, and nothing added to the record."""
+        result, transport = run_vote(*self.drafts(envelope(GOOD_RULING)), votes=1)
+
+        self.assertTrue(result.ok)
+        self.assertEqual([RIDER, DRIVER, JUDGE], roles_of(result))
+        self.assertIsNone(result.judge_vote)
+        self.assertIsNone(result.vote_agreement)
+        self.assertEqual(GOOD_RULING, result.transcript.entries[2].response_text)
+        # The explanation is the judge's own, with no vote sentence appended.
+        self.assertEqual("because", result.ruling["ruling"]["explanation"])
+
+        # The message is the object shape it has always been, not the array.
+        body = json.loads(transport.calls[2]["body"].decode("utf-8"))
+        parsed = json.loads(body["messages"][1]["content"])
+        self.assertIsInstance(parsed["claims"], dict)
+        self.assertEqual([DRIVER, RIDER], sorted(parsed["claims"]))
+        self.assertEqual(json.loads(RIDER_CLAIMS), parsed["claims"][RIDER])
+        self.assertEqual(json.loads(DRIVER_CLAIMS), parsed["claims"][DRIVER])
+
+        # The request carries the client's own settings, unmodified.
+        self.assertEqual(llm.DEFAULT_TEMPERATURE, body["temperature"])
+        self.assertEqual(llm.DEFAULT_SEED, body["seed"])
+
+        # And no vote is written into the transcript.
+        self.assertNotIn("vote", json.loads(result.transcript_json))
+
+    def test_a_single_draft_still_reports_an_unusable_answer_as_a_failure(self):
+        result, _ = run_vote(*self.drafts(envelope("nope"), envelope("nope")), votes=1)
+
+        self.assertFalse(result.ok)
+        self.assertEqual(JUDGE, result.failed_agent)
+        self.assertIsNone(result.judge_vote)
 
 
 if __name__ == "__main__":

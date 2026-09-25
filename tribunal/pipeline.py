@@ -34,6 +34,20 @@ the module body for both. The run **stops at the first failed agent**: the judge
 cannot be called without both claim arrays, so there is nothing to gain by
 calling the second advocate once the first has failed.
 
+The judge's vote
+----------------
+The judge is called ``judge_votes`` times on the same inputs and the majority
+decides, because one sample of a sampled model is a sample. Three corpus cases
+(105, 107 and 211) each flipped between runs whose prompts differed in ways
+unrelated to those cases, which is what a single call cannot tell you about
+itself. The drafts are reduced over the four graded fields together -- ruling,
+both amounts, and the set of referral clause references -- because a panel that
+agreed on the label while disagreeing on the money has not agreed on anything.
+
+At ``judge_votes == 1`` none of this applies: the judge is called once with the
+message it has always been handed and no vote is recorded, so a single-draft run
+is byte for byte what it was before the vote existed. See :func:`_run_judge_vote`.
+
 The advocate output contract
 ----------------------------
 Every agent is called with ``response_format: {"type": "json_object"}``. That is
@@ -69,6 +83,7 @@ import argparse
 import difflib
 import hashlib
 import json
+import re
 import sys
 import time
 from dataclasses import dataclass, field
@@ -164,6 +179,66 @@ DRIVER_COMPENSATION = "DRIVER_COMPENSATION"
 MONEY_FIELDS = ("amount_sgd", "driver_compensation_sgd")
 
 UNUSABLE_RESPONSE_NOTE = "response was not the shape the prompt asked for; retried once"
+
+# --------------------------------------------------------------------------
+# The judge's vote
+# --------------------------------------------------------------------------
+# The judge is called K times on the same inputs and the majority decides. The
+# reason is measured rather than theoretical: cases 105, 107 and 211 each
+# flipped between runs whose prompts differed in ways unrelated to those cases,
+# so one sample of the judge is a sample and not the answer.
+DEFAULT_JUDGE_VOTES = 4
+
+# The sampled drafts are sampled: a temperature above 0 and a distinct seed
+# each, and both are recorded per draft. The position-swapped draft is *not*
+# sampled -- it runs at the client's own settings, so the one thing that
+# differs about it is the order in which it reads the two sides.
+JUDGE_VOTE_TEMPERATURE = 0.7
+JUDGE_VOTE_SEEDS = (101, 202, 303, 404, 505, 606)
+
+# The two shapes the judge's ``claims`` value can take.
+#
+# ``object`` is what every run before the vote produced, and it is still what
+# K = 1 produces, byte for byte. ``array`` is what a vote uses: the two sides
+# travel as an ordered array of side-tagged claim arrays, so the order the judge
+# reads them in is a property of the message rather than something the canonical
+# serialiser decides. That is the only way a position-swapped draft can differ
+# from a normal one -- canonical JSON sorts an object's keys, and it sorts
+# ``DRIVER_ADVOCATE`` before ``RIDER_ADVOCATE``, so a swap written as an object
+# would serialise straight back to the same bytes and would not be a swap.
+JUDGE_CLAIMS_OBJECT = "object"
+JUDGE_CLAIMS_ARRAY = "array"
+CLAIMS_SIDE_KEY = "side"
+
+# The order the two sides' kept claims are presented in. A normal draft is
+# today's order -- the one canonical JSON already produces -- and the swapped
+# draft is the reverse of it.
+DRIVER_FIRST = (
+    transcript_module.ROLE_DRIVER_ADVOCATE,
+    transcript_module.ROLE_RIDER_ADVOCATE,
+)
+RIDER_FIRST = (
+    transcript_module.ROLE_RIDER_ADVOCATE,
+    transcript_module.ROLE_DRIVER_ADVOCATE,
+)
+
+# What each draft is, so the record can say which draft was which.
+DRAFT_SAMPLED = "sampled"
+DRAFT_POSITION_SWAPPED = "position_swapped"
+
+# A referral is free prose, so the machine-checkable part of it is the clause
+# reference it leads with -- the limb included, because a referral to the right
+# clause with the wrong limb is a different referral. This is the vote's own
+# notion of a referral reference; the grader's notion lives in ``eval``, which
+# this package does not read.
+REFERRAL_CLAUSE_RE = re.compile(r"POL-[A-Z]{2,4}-\d{2}(?:\([a-z0-9]+\))?")
+
+# What a vote's outcome is called, so a reader of the record is not left to
+# infer it from the counts.
+VOTE_CARRIED = "carried"
+VOTE_CARRIED_NOT_UNANIMOUS = "carried_not_unanimous"
+VOTE_ESCALATED = "escalated"
+VOTE_NO_VALID_DRAFTS = "no_valid_drafts"
 
 
 class PipelineError(Exception):
@@ -494,6 +569,17 @@ class PipelineResult:
     # the token figures above then describe the judge alone, and the borrowed
     # calls' own usage travels here instead of being added to this run's bill.
     replay: Optional["ReplayProvenance"] = None
+    # The judge's vote, present only when the judge was asked more than once.
+    # ``None`` for a single-draft run, which is one of the things that makes a
+    # K = 1 result exactly the result it was before the vote existed. It travels
+    # into the transcript bytes as ``vote``, beside the referee ledger, so a
+    # result read out of its directory can say how many drafts it rests on.
+    judge_vote: Optional[Dict[str, Any]] = None
+    # The share of the drafts that agreed on the published ruling -- 0.75 for
+    # three of four. It is recorded as its own field and never in place of
+    # ``confidence``: the two answer different questions, and folding the vote
+    # into the confidence would make the judge's own number unreadable.
+    vote_agreement: Optional[float] = None
 
     @property
     def replayed(self) -> bool:
@@ -501,10 +587,12 @@ class PipelineResult:
 
     @property
     def transcript_json(self) -> str:
-        """The call record plus the deterministic referee ledger."""
+        """The call record, the deterministic referee ledger, and the vote."""
         payload = self.transcript.as_dict()
         if self.referee:
             payload["referee"] = self.referee
+        if self.judge_vote:
+            payload["vote"] = self.judge_vote
         return money.dumps_canonical(payload)
 
     @property
@@ -608,6 +696,8 @@ def _call_agent(
     normalise: Callable[[Any], Tuple[Optional[Any], str, str]],
     transcript: Any,
     deadline: Optional["CaseDeadline"] = None,
+    temperature: Any = llm._UNSET,
+    seed: Any = llm._UNSET,
 ) -> Tuple[Optional[Any], Optional[str]]:
     """One agent call, retried once when the answer is unusable.
 
@@ -623,6 +713,13 @@ def _call_agent(
     finish. It is passed in rather than held as module state because the budget
     belongs to one case.
 
+    ``temperature`` and ``seed`` are per-call overrides handed straight to the
+    client. Both default to ``llm._UNSET``, which means "use whatever this client
+    was built with", so a call that names neither is the same request it has
+    always been -- byte for byte. They exist so that one client can be asked the
+    same question under several seeds without its own settings being rewritten
+    between calls.
+
     Returns ``(value, None)`` on success and ``(None, reason)`` when the second
     attempt is unusable too. A spent deadline is not an unusable answer, so it
     raises :class:`CaseDeadlineExceeded` instead of returning a reason.
@@ -631,7 +728,13 @@ def _call_agent(
     for _attempt in (1, 2):
         if deadline is not None:
             deadline.check()
-        result = client.complete(system_prompt, user_message, response_format=JSON_OBJECT_FORMAT)
+        result = client.complete(
+            system_prompt,
+            user_message,
+            response_format=JSON_OBJECT_FORMAT,
+            temperature=temperature,
+            seed=seed,
+        )
         value, shape, reason = normalise(result.json_body)
         transcript.record(
             role=role,
@@ -644,6 +747,445 @@ def _call_agent(
         if value is not None:
             return value, None
     return None, reason
+
+
+# --------------------------------------------------------------------------
+# The judge's vote: K drafts, and the majority decides
+# --------------------------------------------------------------------------
+def referral_clause_references(referrals: Any) -> Tuple[str, ...]:
+    """The clause references a referral list carries, as a sorted tuple.
+
+    A referral is free prose, so two of them cannot be compared as strings. What
+    can be compared is the set of clause references they lead with, the limb
+    included, because a referral to the right clause with the wrong limb is a
+    different referral. Order is dropped and duplicates collapse: two drafts that
+    cite the same clauses in a different order have proposed the same referral.
+    """
+    if not isinstance(referrals, (list, tuple)):
+        return ()
+    found = set()
+    for item in referrals:
+        if isinstance(item, str):
+            found.update(REFERRAL_CLAUSE_RE.findall(item))
+    return tuple(sorted(found))
+
+
+def vote_key(ruling: Any) -> Optional[Tuple[Any, ...]]:
+    """One draft's four graded fields, together, as a single comparable value.
+
+    The four are voted on as a unit rather than one at a time. A ruling of
+    ``PARTIAL_REFUND`` carrying the wrong amount is not three-quarters of an
+    answer, and a panel that agreed on the label while disagreeing on the money
+    has not agreed on anything a reader can act on.
+
+    ``None`` when the draft carries no POL-GEN-03 object at all, which is how an
+    unshaped answer is kept out of the vote instead of being counted as a
+    proposal of "nothing".
+    """
+    if not isinstance(ruling, Mapping):
+        return None
+    inner = ruling.get("ruling")
+    if not isinstance(inner, Mapping):
+        return None
+    return (
+        inner.get("ruling"),
+        as_money(inner.get("amount_sgd")),
+        as_money(inner.get("driver_compensation_sgd")),
+        referral_clause_references(inner.get("referrals")),
+    )
+
+
+def render_vote_key(key: Optional[Tuple[Any, ...]]) -> str:
+    """One draft's four graded fields, as a person reads them."""
+    if key is None:
+        return "no ruling"
+    ruling, amount, compensation, referrals = key
+
+    def text(value: Any) -> str:
+        return "null" if value is None else str(value)
+
+    return "{0}, amount_sgd {1}, driver_compensation_sgd {2}, referrals {3}".format(
+        ruling, text(amount), text(compensation), list(referrals)
+    )
+
+
+@dataclass(frozen=True)
+class JudgeDraft:
+    """One draft of the judge's ruling, and what the vote made of it."""
+
+    index: int
+    kind: str
+    temperature: Optional[Any]
+    seed: Optional[Any]
+    sides: Tuple[str, ...]
+    entries: Tuple[int, ...]
+    ruling: Optional[Any] = None
+    key: Optional[Tuple[Any, ...]] = None
+    abstention: Optional[str] = None
+
+    @property
+    def valid(self) -> bool:
+        return self.key is not None
+
+    def as_dict(self, agreeing: bool) -> Dict[str, Any]:
+        proposal = None
+        if self.key is not None:
+            proposal = {
+                "ruling": self.key[0],
+                "amount_sgd": self.key[1],
+                "driver_compensation_sgd": self.key[2],
+                "referrals": list(self.key[3]),
+            }
+        return {
+            "draft": self.index,
+            "kind": self.kind,
+            "temperature": self.temperature,
+            "seed": self.seed,
+            "sides": list(self.sides),
+            # The transcript entries this draft occupies. An entry index rather
+            # than a copy of the call, because the call is already on the
+            # transcript in full and a second copy is a second thing to keep in
+            # step. A draft whose first answer was unusable occupies two.
+            "entries": list(self.entries),
+            "valid": self.valid,
+            "abstention": self.abstention,
+            "proposal": proposal,
+            "agrees": agreeing if self.valid else None,
+        }
+
+
+@dataclass(frozen=True)
+class JudgeVote:
+    """What a panel of judge drafts produced: one ruling, or the reason for none."""
+
+    ruling: Optional[Any] = None
+    findings: Tuple[Dict[str, Any], ...] = ()
+    failure_reason: Optional[str] = None
+    record: Dict[str, Any] = field(default_factory=dict)
+
+
+def _recorded_setting(client: Any, name: str, requested: Any) -> Any:
+    """The value a draft's request really carried, read rather than assumed.
+
+    A draft that named no override ran at whatever the client was built with, so
+    the record has to read that value off the client. Recording the absence
+    instead would leave a reader unable to tell what the draft actually ran at.
+    """
+    if requested is llm._UNSET:
+        return getattr(client, name, None)
+    return requested
+
+
+def _assemble_ruling(judge_result: Any, referee_result: Any) -> Any:
+    """One judge answer as the result object the record carries.
+
+    The referee's entries are copied verbatim **first**, then whatever the judge
+    added on its own authority, and the money fields are normalised to
+    ``Decimal``. This is the single place that assembly happens, so a
+    single-draft run and every draft of a vote cannot assemble it two ways.
+    """
+    assembled = dict(judge_result)
+    additions = assembled.get("discarded_claims") or []
+    assembled["discarded_claims"] = list(referee_result.discards) + list(additions)
+    return normalise_ruling(assembled)
+
+
+def _checked_judge_message(
+    rider_claims: Any,
+    driver_claims: Any,
+    brief_json: str,
+    referee_result: Any,
+    *,
+    shape: str,
+    sides: Sequence[str],
+) -> str:
+    """The judge's user message, built and then proved: same brief, canonical.
+
+    Both proofs are the ones a single-draft run has always made. They are made
+    here for every shape so that the ordered-array message is held to the same
+    standard as the object one, and the brief bytes are spliced rather than
+    re-serialised in either case.
+    """
+    message = _judge_user_message(
+        rider_claims,
+        driver_claims,
+        brief_json,
+        referee_result.discards,
+        referee_result.flags,
+        shape=shape,
+        sides=sides,
+    )
+    parsed = _parse(message)
+    if money.dumps_canonical(parsed["brief"]) != brief_json:
+        raise BriefIdentityError("the judge was not handed the same brief bytes")
+    if money.dumps_canonical(parsed) != message:
+        raise BriefIdentityError("the judge's user message is not canonical JSON")
+    return message
+
+
+def _vote_record(
+    drafts: Sequence[JudgeDraft],
+    votes: int,
+    threshold: int,
+    agreement: Optional[float],
+    agreeing: Sequence[int],
+    outcome: str,
+) -> Dict[str, Any]:
+    """The vote as it is written into the transcript, beside the ledger."""
+    agreed = set(agreeing)
+    return {
+        "votes": votes,
+        "threshold": threshold,
+        "valid": sum(1 for draft in drafts if draft.valid),
+        "agreement": agreement,
+        "outcome": outcome,
+        "unanimous": outcome == VOTE_CARRIED,
+        "drafts": [draft.as_dict(draft.index in agreed) for draft in drafts],
+    }
+
+
+def _with_vote_sentence(ruling: Any, votes: int, agreeing: int, agreement: float) -> Any:
+    """The winning draft's ruling, with the vote result stated at its end.
+
+    Nothing but the explanation is touched. The amounts, the referrals and the
+    confidence are the draft's own, because the vote selects an answer rather
+    than averaging one, and a confidence that had been blended across drafts
+    would no longer be the number the judge's own Step 2 produced.
+    """
+    if not isinstance(ruling, Mapping):
+        return ruling
+    inner = ruling.get("ruling")
+    if not isinstance(inner, Mapping):
+        return ruling
+    if agreeing == votes:
+        sentence = (
+            "The judge was asked {0} times on the same inputs and every draft "
+            "agreed on this ruling, so it is carried unanimously (vote agreement "
+            "{1:.2f}).".format(votes, agreement)
+        )
+    else:
+        sentence = (
+            "The judge was asked {0} times on the same inputs and {1} of the {0} "
+            "drafts agreed on this ruling, so it is carried, not unanimous (vote "
+            "agreement {2:.2f}).".format(votes, agreeing, agreement)
+        )
+    amended = dict(inner)
+    existing = amended.get("explanation")
+    text = existing if isinstance(existing, str) else ""
+    amended["explanation"] = (text + "\n\n" + sentence) if text else sentence
+    outer = dict(ruling)
+    outer["ruling"] = amended
+    return outer
+
+
+def _vote_escalation(
+    drafts: Sequence[JudgeDraft],
+    valid: Sequence[JudgeDraft],
+    referee_result: Any,
+    votes: int,
+    agreeing: int,
+    agreement: float,
+    threshold: int,
+) -> Any:
+    """The ruling a panel that could not agree produces, and why.
+
+    Both money fields are ``null`` because the vote carried no ruling for an
+    amount to attach to, and ``referrals`` is empty for the same reason: a
+    referral is a clause-mandated instruction, and the panel agreed on none.
+    ``confidence`` is 0.0, because no draft's confidence attaches to a ruling
+    the panel did not reach -- the vote's own agreement is recorded separately,
+    as ``vote_agreement``, and the two must not be confused.
+
+    ``discarded_claims`` carries the referee's entries and nothing else. The
+    referee's ledger is code-assembled and identical for every draft; the
+    judge's own additions belong to a ruling, and there is no ruling. They are
+    not lost: each draft's raw answer, additions included, is on the transcript.
+
+    Every draft's proposal is named, because "the drafts disagreed" is only
+    actionable if a reader can see what they disagreed about.
+    """
+    lines = [
+        "The judge was asked {0} times on the same inputs and the drafts did not "
+        "agree, so no ruling was carried and the dispute is escalated. Each "
+        "draft proposed:".format(votes)
+    ]
+    for draft in drafts:
+        if draft.valid:
+            lines.append(
+                "- draft {0} ({1}): {2}".format(
+                    draft.index, draft.kind, render_vote_key(draft.key)
+                )
+            )
+        else:
+            lines.append(
+                "- draft {0} ({1}): abstained -- {2}".format(
+                    draft.index, draft.kind, draft.abstention or "no reason recorded"
+                )
+            )
+    lines.append(
+        "At most {0} of {1} valid drafts agreed and {2} were needed. The best "
+        "supported answer is not published as a ruling: a ruling has to be the "
+        "panel's, not one draft's.".format(agreeing, len(valid), threshold)
+    )
+    return {
+        "ruling": {
+            "ruling": ESCALATE,
+            "amount_sgd": None,
+            "driver_compensation_sgd": None,
+            "referrals": [],
+            "confidence": 0.0,
+            "explanation": "\n".join(lines),
+        },
+        "discarded_claims": list(referee_result.discards),
+    }
+
+
+def _reduce_vote(drafts: Sequence[JudgeDraft], votes: int, referee_result: Any) -> JudgeVote:
+    """Reduce K drafts to one ruling, or to the reason there is none.
+
+    The quorum and the threshold are both a strict majority of the panel --
+    ``K // 2 + 1``, which is three of four. At least that many drafts must have
+    produced a usable ruling, and at least that many must agree, before an
+    answer is published. Anything less escalates, because a plurality of a
+    panel that could not sit is not a decision.
+
+    Zero valid drafts is not a disagreement and is not reported as one. Nothing
+    was answered, so there is nothing to disagree about, and the judge failed --
+    the event this pipeline has always reported as a failure. Publishing an
+    ESCALATE there would invent a ruling the judge never gave.
+    """
+    valid = [draft for draft in drafts if draft.valid]
+    threshold = votes // 2 + 1
+
+    if not valid:
+        first = drafts[0].abstention or "no reason recorded"
+        return JudgeVote(
+            failure_reason=(
+                "all {0} judge drafts were unusable, so no ruling was produced; "
+                "the first said: {1}".format(votes, first)
+            ),
+            record=_vote_record(
+                drafts, votes, threshold, None, (), VOTE_NO_VALID_DRAFTS
+            ),
+        )
+
+    groups: Dict[Tuple[Any, ...], List[JudgeDraft]] = {}
+    for draft in valid:
+        groups.setdefault(draft.key, []).append(draft)
+
+    # The most votes wins; on a tie the answer whose first draft came earliest,
+    # so the reduction is a function of the drafts and not of dict ordering.
+    winner_key, winner_drafts = max(
+        groups.items(), key=lambda item: (len(item[1]), -item[1][0].index)
+    )
+    agreeing = len(winner_drafts)
+    agreement = round(agreeing / votes, 6)
+    carried = agreeing >= threshold and len(valid) >= threshold
+    agreed_indexes = tuple(draft.index for draft in winner_drafts)
+
+    if carried:
+        outcome = VOTE_CARRIED if agreeing == votes else VOTE_CARRIED_NOT_UNANIMOUS
+        published = _with_vote_sentence(winner_drafts[0].ruling, votes, agreeing, agreement)
+    else:
+        outcome = VOTE_ESCALATED
+        published = _vote_escalation(
+            drafts, valid, referee_result, votes, agreeing, agreement, threshold
+        )
+
+    return JudgeVote(
+        ruling=published,
+        findings=tuple(validate_ruling_shape(published)),
+        record=_vote_record(drafts, votes, threshold, agreement, agreed_indexes, outcome),
+    )
+
+
+def _run_judge_vote(
+    *,
+    client: Any,
+    judge_prompt: str,
+    referee_result: Any,
+    brief_json: str,
+    transcript: Any,
+    deadline: Optional["CaseDeadline"],
+    votes: int,
+) -> JudgeVote:
+    """Ask the judge ``votes`` times on the same inputs and reduce the answers.
+
+    ``votes - 1`` drafts are sampled -- a temperature above 0 and a distinct
+    seed each, both recorded -- and the last is the position-swapped draft: the
+    same content with the two sides' kept claims presented in the opposite
+    order, run at the client's own settings so that order is the only thing that
+    differs about it.
+
+    Every draft goes through the checks a single call goes through: the message
+    is built by :func:`_judge_user_message` and proved by
+    :func:`_checked_judge_message`, the answer is parsed and shape-checked by
+    :func:`normalise_judge_result`, and the referee's entries are copied into its
+    ``discarded_claims`` by :func:`_assemble_ruling`. A draft whose answer is
+    unusable after its retry is recorded as an abstention and votes for nothing.
+
+    Every draft is a real call, so every draft is billed and every draft is on
+    the transcript in full.
+    """
+    sampled = votes - 1
+    if sampled > len(JUDGE_VOTE_SEEDS):
+        raise PipelineError(
+            "a judge vote of {0} needs {1} distinct seeds and JUDGE_VOTE_SEEDS "
+            "declares {2}".format(votes, sampled, len(JUDGE_VOTE_SEEDS))
+        )
+
+    rider_claims = referee_result.kept_claims[referee.SIDE_RIDER]
+    driver_claims = referee_result.kept_claims[referee.SIDE_DRIVER]
+    drafts: List[JudgeDraft] = []
+
+    for position in range(votes):
+        if position < sampled:
+            kind = DRAFT_SAMPLED
+            sides: Tuple[str, ...] = DRIVER_FIRST
+            temperature: Any = JUDGE_VOTE_TEMPERATURE
+            seed: Any = JUDGE_VOTE_SEEDS[position]
+        else:
+            kind = DRAFT_POSITION_SWAPPED
+            sides = RIDER_FIRST
+            temperature = llm._UNSET
+            seed = llm._UNSET
+
+        message = _checked_judge_message(
+            rider_claims,
+            driver_claims,
+            brief_json,
+            referee_result,
+            shape=JUDGE_CLAIMS_ARRAY,
+            sides=sides,
+        )
+        started = len(transcript)
+        parsed, failure = _call_agent(
+            client,
+            role=transcript_module.ROLE_JUDGE,
+            system_prompt=judge_prompt,
+            user_message=message,
+            normalise=normalise_judge_result,
+            transcript=transcript,
+            deadline=deadline,
+            temperature=temperature,
+            seed=seed,
+        )
+        entries = tuple(range(started, len(transcript)))
+        common = dict(
+            index=position + 1,
+            kind=kind,
+            temperature=_recorded_setting(client, "_temperature", temperature),
+            seed=_recorded_setting(client, "_seed", seed),
+            sides=sides,
+            entries=entries,
+        )
+        if parsed is None:
+            drafts.append(JudgeDraft(abstention=failure, **common))
+        else:
+            ruling = _assemble_ruling(parsed, referee_result)
+            drafts.append(JudgeDraft(ruling=ruling, key=vote_key(ruling), **common))
+
+    return _reduce_vote(drafts, votes, referee_result)
 
 
 # --------------------------------------------------------------------------
@@ -666,6 +1208,7 @@ def run_case(
     case_deadline_seconds: float = DEFAULT_CASE_DEADLINE_SECONDS,
     clock: Callable[[], float] = time.monotonic,
     case_loader: Optional[Callable[[int], Dict[str, Any]]] = None,
+    judge_votes: int = DEFAULT_JUDGE_VOTES,
 ) -> PipelineResult:
     """Perform one full arbitration of a case named by its manifest number.
 
@@ -681,6 +1224,10 @@ def run_case(
     alternative -- a set that reaches :func:`run_loaded_case` directly -- would
     be a second by-number entry point, which is what this parameter exists to
     avoid.
+
+    ``judge_votes`` is how many times the judge is asked, and it is passed
+    straight through for the same reason: there is one arbitration body and this
+    is not a second one.
     """
     load = loader.load_case if case_loader is None else case_loader
     return run_loaded_case(
@@ -690,6 +1237,7 @@ def run_case(
         now=now,
         case_deadline_seconds=case_deadline_seconds,
         clock=clock,
+        judge_votes=judge_votes,
     )
 
 
@@ -701,6 +1249,7 @@ def run_loaded_case(
     now: Optional[Callable[[], str]] = None,
     case_deadline_seconds: float = DEFAULT_CASE_DEADLINE_SECONDS,
     clock: Callable[[], float] = time.monotonic,
+    judge_votes: int = DEFAULT_JUDGE_VOTES,
 ) -> PipelineResult:
     """Perform one full arbitration of a case already in hand.
 
@@ -708,8 +1257,8 @@ def run_loaded_case(
     the body that function runs. The brief is serialised exactly once and those
     same bytes are handed to both advocates and embedded in the judge's message;
     the stance-only difference is checked before the first call is made; and
-    ``case_deadline_seconds`` bounds the whole case -- all three agent calls and
-    any shape retry -- where ``LLMClient``'s own deadline bounds one call. The
+    ``case_deadline_seconds`` bounds the whole case -- every agent call and any
+    shape retry -- where ``LLMClient``'s own deadline bounds one call. The
     budget is checked before each call and a case that has spent it raises
     :class:`CaseDeadlineExceeded`, which carries the elapsed seconds.
 
@@ -721,9 +1270,18 @@ def run_loaded_case(
     avoid: there is one implementation, and both callers run it.
 
     ``clock`` is injectable so the deadline can be exercised without waiting.
+
+    ``judge_votes`` is how many times the judge is asked. At 1 -- what every run
+    before the vote used, and what a caller who wants a single sample still gets
+    -- the judge is called once with the message it has always been handed and
+    the result carries no vote at all, so a single-draft run is byte for byte
+    what it was. At 2 or more the judge is called that many times on the same
+    inputs and the majority decides; see :func:`_run_judge_vote`.
     """
     case_no = case["case_no"]
     prompts_dir = Path(prompts_dir)
+    if judge_votes < 1:
+        raise PipelineError("judge_votes must be at least 1, got {0}".format(judge_votes))
 
     # The project's second structural claim, checked before any call is made.
     stance_ranges = check_stance_only_difference(prompts_dir)
@@ -796,42 +1354,59 @@ def run_loaded_case(
     ruling = None
     findings: List[Dict[str, Any]] = []
     referee_record: Dict[str, Any] = {}
+    vote_record: Optional[Dict[str, Any]] = None
 
     if failed_agent is None:
         referee_result = referee.referee(case_brief, rider_claims, driver_claims)
         referee_record = referee_result.as_dict()
-        judge_user = _judge_user_message(
-            referee_result.kept_claims[referee.SIDE_RIDER],
-            referee_result.kept_claims[referee.SIDE_DRIVER],
-            brief_json,
-            referee_result.discards,
-            referee_result.flags,
-        )
 
-        # The judge's message must embed those same brief bytes, and be canonical.
-        parsed_judge_user = _parse(judge_user)
-        if money.dumps_canonical(parsed_judge_user["brief"]) != brief_json:
-            raise BriefIdentityError("the judge was not handed the same brief bytes")
-        if money.dumps_canonical(parsed_judge_user) != judge_user:
-            raise BriefIdentityError("the judge's user message is not canonical JSON")
-
-        judge_parsed, judge_failure = _call_agent(
-            client,
-            role=transcript_module.ROLE_JUDGE,
-            system_prompt=judge_prompt,
-            user_message=judge_user,
-            normalise=normalise_judge_result,
-            transcript=transcript,
-            deadline=deadline,
-        )
-        if judge_failure is not None:
-            failed_agent, failure_reason = transcript_module.ROLE_JUDGE, judge_failure
+        if judge_votes == 1:
+            # The single-draft path, unchanged: one call, one message, and the
+            # object shape the judge has always been handed.
+            judge_user = _checked_judge_message(
+                referee_result.kept_claims[referee.SIDE_RIDER],
+                referee_result.kept_claims[referee.SIDE_DRIVER],
+                brief_json,
+                referee_result,
+                shape=JUDGE_CLAIMS_OBJECT,
+                sides=DRIVER_FIRST,
+            )
+            judge_parsed, judge_failure = _call_agent(
+                client,
+                role=transcript_module.ROLE_JUDGE,
+                system_prompt=judge_prompt,
+                user_message=judge_user,
+                normalise=normalise_judge_result,
+                transcript=transcript,
+                deadline=deadline,
+            )
+            if judge_failure is not None:
+                failed_agent, failure_reason = transcript_module.ROLE_JUDGE, judge_failure
+            else:
+                ruling = _assemble_ruling(judge_parsed, referee_result)
+                findings = validate_ruling_shape(ruling)
         else:
-            assembled = dict(judge_parsed)
-            judge_additions = assembled.get("discarded_claims") or []
-            assembled["discarded_claims"] = list(referee_result.discards) + list(judge_additions)
-            ruling = normalise_ruling(assembled)
-            findings = validate_ruling_shape(ruling)
+            vote = _run_judge_vote(
+                client=client,
+                judge_prompt=judge_prompt,
+                referee_result=referee_result,
+                brief_json=brief_json,
+                transcript=transcript,
+                deadline=deadline,
+                votes=judge_votes,
+            )
+            vote_record = vote.record
+            if vote.failure_reason is not None:
+                # Not one draft was usable, so there is no ruling and no
+                # disagreement: the judge failed, which is the event this
+                # pipeline has always reported as a failure.
+                failed_agent, failure_reason = (
+                    transcript_module.ROLE_JUDGE,
+                    vote.failure_reason,
+                )
+            else:
+                ruling = vote.ruling
+                findings = list(vote.findings)
 
     totals = transcript.totals()
     return PipelineResult(
@@ -851,6 +1426,8 @@ def run_loaded_case(
         duration_seconds=totals["duration_seconds"],
         stance_differing_ranges=stance_ranges,
         referee=referee_record,
+        judge_vote=vote_record,
+        vote_agreement=None if vote_record is None else vote_record.get("agreement"),
     )
 
 
@@ -864,6 +1441,9 @@ def _judge_user_message(
     brief_json: str,
     referee_discards: Optional[Sequence[Mapping[str, Any]]] = None,
     referee_flags: Optional[Sequence[Mapping[str, Any]]] = None,
+    *,
+    shape: str = JUDGE_CLAIMS_OBJECT,
+    sides: Sequence[str] = DRIVER_FIRST,
 ) -> str:
     """Build the judge input from kept claims and the referee audit.
 
@@ -872,13 +1452,33 @@ def _judge_user_message(
     mechanically discarded claim in ``claims``; it sees that claim only in the
     referee ledger. The result is itself canonical JSON, which the pipeline
     checks by parsing and re-serialising.
+
+    ``shape`` says how the two sides travel. ``JUDGE_CLAIMS_OBJECT`` is the
+    object keyed by role that every run before the vote produced, and it is what
+    K = 1 still produces, byte for byte. ``JUDGE_CLAIMS_ARRAY`` is an ordered
+    array of ``{"side": ..., "claims": [...]}`` entries in the order ``sides``
+    gives, and it exists because canonical JSON sorts an object's keys: it sorts
+    ``DRIVER_ADVOCATE`` before ``RIDER_ADVOCATE``, so a position swap written as
+    an object would serialise straight back to the bytes it started from. In an
+    array, order is content.
     """
-    claims_json = money.dumps_canonical(
-        {
-            transcript_module.ROLE_RIDER_ADVOCATE: rider_claims,
-            transcript_module.ROLE_DRIVER_ADVOCATE: driver_claims,
-        }
-    )
+    by_side = {
+        transcript_module.ROLE_RIDER_ADVOCATE: rider_claims,
+        transcript_module.ROLE_DRIVER_ADVOCATE: driver_claims,
+    }
+    if shape == JUDGE_CLAIMS_OBJECT:
+        claims_json = money.dumps_canonical(by_side)
+    elif shape == JUDGE_CLAIMS_ARRAY:
+        claims_json = money.dumps_canonical(
+            [
+                {CLAIMS_SIDE_KEY: side, ADVOCATE_CLAIMS_KEY: by_side[side]}
+                for side in sides
+            ]
+        )
+    else:
+        raise PipelineError(
+            "the judge's claims value has no shape called {0!r}".format(shape)
+        )
     referee_json = money.dumps_canonical(
         {
             "ledger": list(referee_discards or []),
@@ -1173,6 +1773,7 @@ def replay_case(
     now: Optional[Callable[[], str]] = None,
     case_deadline_seconds: float = DEFAULT_CASE_DEADLINE_SECONDS,
     clock: Callable[[], float] = time.monotonic,
+    judge_votes: int = DEFAULT_JUDGE_VOTES,
 ) -> PipelineResult:
     """Arbitrate one case from a recorded run's advocates, calling only the judge.
 
@@ -1182,16 +1783,26 @@ def replay_case(
     note replaced by one that says this run did not make them.
 
     Everything from the judge onward is the code path a full arbitration takes:
-    the message is built by the same :func:`_judge_user_message`, the same two
-    identity checks are made on it, the same single retry and the same deadline
-    guard apply, and the ruling is normalised and validated by the same two
+    the message is built by the same :func:`_judge_user_message` and proved by
+    the same :func:`_checked_judge_message`, the same single retry and the same
+    deadline guard apply, and the ruling is normalised and validated by the same
     functions. What differs is only which agents were asked.
+
+    ``judge_votes`` is the parameter :func:`run_loaded_case` takes, and it means
+    the same thing here: only the judge side changes, so a replay votes exactly
+    as a full run would. Every draft is a call this run makes, so every draft is
+    on this run's bill -- and a case whose judge never produced a usable draft
+    still had its advocates replayed, which is why the borrowed totals are
+    filled in for both branches.
 
     The token figures on the result are this run's bill, which is the judge's
     alone. The borrowed calls' usage is reported separately on
     :class:`ReplayProvenance`, because a run that reported the sum would claim
     to have spent tokens it never spent.
     """
+    if judge_votes < 1:
+        raise PipelineError("judge_votes must be at least 1, got {0}".format(judge_votes))
+
     transcript = transcript_module.Transcript(now=now)
     copied = [
         transcript.add_recorded(entry, note=replay.note)
@@ -1200,7 +1811,7 @@ def replay_case(
 
     # One budget for the case, and it starts before the judge is called. The
     # advocates cost this run no time, so the whole of the bound is available to
-    # the call that is actually made.
+    # the calls that are actually made.
     deadline = CaseDeadline(
         case_no=replay.case_no,
         started_at=clock(),
@@ -1214,44 +1825,53 @@ def replay_case(
         replay.rider_claims,
         replay.driver_claims,
     )
-    judge_user = _judge_user_message(
-        referee_result.kept_claims[referee.SIDE_RIDER],
-        referee_result.kept_claims[referee.SIDE_DRIVER],
-        replay.brief_json,
-        referee_result.discards,
-        referee_result.flags,
-    )
-
-    # The judge's message must embed those same brief bytes, and be canonical.
-    parsed_judge_user = _parse(judge_user)
-    if money.dumps_canonical(parsed_judge_user["brief"]) != replay.brief_json:
-        raise BriefIdentityError("the judge was not handed the same brief bytes")
-    if money.dumps_canonical(parsed_judge_user) != judge_user:
-        raise BriefIdentityError("the judge's user message is not canonical JSON")
-
-    judge_parsed, judge_failure = _call_agent(
-        client,
-        role=transcript_module.ROLE_JUDGE,
-        system_prompt=replay.judge_prompt,
-        user_message=judge_user,
-        normalise=normalise_judge_result,
-        transcript=transcript,
-        deadline=deadline,
-    )
 
     failed_agent = None
     failure_reason = None
     ruling = None
     findings: List[Dict[str, Any]] = []
     referee_record = referee_result.as_dict()
-    if judge_failure is not None:
-        failed_agent, failure_reason = transcript_module.ROLE_JUDGE, judge_failure
+    vote_record: Optional[Dict[str, Any]] = None
+
+    if judge_votes == 1:
+        judge_user = _checked_judge_message(
+            referee_result.kept_claims[referee.SIDE_RIDER],
+            referee_result.kept_claims[referee.SIDE_DRIVER],
+            replay.brief_json,
+            referee_result,
+            shape=JUDGE_CLAIMS_OBJECT,
+            sides=DRIVER_FIRST,
+        )
+        judge_parsed, judge_failure = _call_agent(
+            client,
+            role=transcript_module.ROLE_JUDGE,
+            system_prompt=replay.judge_prompt,
+            user_message=judge_user,
+            normalise=normalise_judge_result,
+            transcript=transcript,
+            deadline=deadline,
+        )
+        if judge_failure is not None:
+            failed_agent, failure_reason = transcript_module.ROLE_JUDGE, judge_failure
+        else:
+            ruling = _assemble_ruling(judge_parsed, referee_result)
+            findings = validate_ruling_shape(ruling)
     else:
-        assembled = dict(judge_parsed)
-        judge_additions = assembled.get("discarded_claims") or []
-        assembled["discarded_claims"] = list(referee_result.discards) + list(judge_additions)
-        ruling = normalise_ruling(assembled)
-        findings = validate_ruling_shape(ruling)
+        vote = _run_judge_vote(
+            client=client,
+            judge_prompt=replay.judge_prompt,
+            referee_result=referee_result,
+            brief_json=replay.brief_json,
+            transcript=transcript,
+            deadline=deadline,
+            votes=judge_votes,
+        )
+        vote_record = vote.record
+        if vote.failure_reason is not None:
+            failed_agent, failure_reason = transcript_module.ROLE_JUDGE, vote.failure_reason
+        else:
+            ruling = vote.ruling
+            findings = list(vote.findings)
 
     # Two sums, and they are never added. The identity comparison is what keeps
     # a copied entry out of this run's bill: equality would be enough for these
@@ -1283,6 +1903,8 @@ def replay_case(
         duration_seconds=totals["duration_seconds"],
         stance_differing_ranges=list(replay.stance_differing_ranges),
         referee=referee_record,
+        judge_vote=vote_record,
+        vote_agreement=None if vote_record is None else vote_record.get("agreement"),
         replay=ReplayProvenance(
             run_dir=replay.source.run_dir,
             git_commit=replay.source.git_commit,
@@ -1365,6 +1987,37 @@ def _print_result(result: PipelineResult, out_path: Optional[str]) -> None:
             for finding in result.ruling_findings:
                 print("  - {0}: {1}".format(finding["invariant"], finding["detail"]))
 
+    if result.judge_vote:
+        vote = result.judge_vote
+        agreed = sum(1 for draft in vote["drafts"] if draft.get("agrees"))
+        print("")
+        print(
+            "judge vote     {0} of {1} drafts agreed, {2} needed, {3}{4}".format(
+                agreed,
+                vote["votes"],
+                vote["threshold"],
+                vote["outcome"],
+                " (unanimous)" if vote["unanimous"] else "",
+            )
+        )
+        for draft in vote["drafts"]:
+            if not draft["valid"]:
+                verdict = "abstained"
+            elif draft["agrees"]:
+                verdict = "agrees"
+            else:
+                verdict = "differs"
+            print(
+                "  draft {0} {1:<16} temp {2} seed {3} {4}".format(
+                    draft["draft"],
+                    draft["kind"],
+                    draft["temperature"],
+                    draft["seed"],
+                    verdict,
+                )
+            )
+        print("vote agreement {0}".format(result.vote_agreement))
+
     if out_path:
         Path(out_path).write_text(result.transcript_json, encoding="utf-8")
         print("")
@@ -1389,10 +2042,26 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument(
         "--prompts-dir", default=str(PROMPTS_DIR), help="the prompt directory to use"
     )
+    parser.add_argument(
+        "--judge-votes",
+        type=int,
+        default=DEFAULT_JUDGE_VOTES,
+        help=(
+            "how many times to ask the judge on the same inputs; the majority "
+            "decides, and 1 is the single-draft behaviour (default {0})".format(
+                DEFAULT_JUDGE_VOTES
+            )
+        ),
+    )
     args = parser.parse_args(argv)
 
     client = llm.LLMClient(model=resolve_model(args.model))
-    result = run_case(args.case, client, prompts_dir=Path(args.prompts_dir))
+    result = run_case(
+        args.case,
+        client,
+        prompts_dir=Path(args.prompts_dir),
+        judge_votes=args.judge_votes,
+    )
     _print_result(result, args.out)
     return 0 if result.ok else 1
 

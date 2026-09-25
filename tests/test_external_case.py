@@ -828,6 +828,8 @@ class ExternalRunTests(unittest.TestCase):
             "client_factory": self.factory,
             "git_runner": self.git_runner,
             "progress": lambda text: None,
+            # One judge draft, as every run before the vote used.
+            "judge_votes": 1,
         }
         kwargs.update(overrides)
         return runner.run_external_case(CASE_PATH, self.model, **kwargs)

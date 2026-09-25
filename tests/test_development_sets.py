@@ -151,6 +151,9 @@ def run_codex(tmp_path, *, cases=None, transport=None, runs_dir=None, **override
         client_factory=client_factory(transport),
         git_runner=git_runner(),
         progress=lambda text: None,
+        # One judge draft, so every test here measures the single-draft runner it
+        # always measured. The vote has its own tests, which ask for it by name.
+        judge_votes=1,
     )
     arguments.update(overrides)
     if cases is not None:

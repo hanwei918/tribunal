@@ -439,6 +439,16 @@ def _build_parser() -> argparse.ArgumentParser:
         default=run_benchmark.pipeline.DEFAULT_CASE_DEADLINE_SECONDS,
     )
     parser.add_argument(
+        "--judge-votes",
+        type=int,
+        default=run_benchmark.pipeline.DEFAULT_JUDGE_VOTES,
+        metavar="K",
+        help=(
+            "how many times to ask each case's judge on the same inputs; the "
+            "majority decides, and 1 is the single-draft behaviour"
+        ),
+    )
+    parser.add_argument(
         "--replay-advocates",
         type=Path,
         default=None,
@@ -522,6 +532,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 concurrency=args.concurrency,
                 timeout_seconds=args.timeout,
                 case_deadline_seconds=args.case_deadline,
+                judge_votes=args.judge_votes,
                 replay_dir=args.replay_advocates,
             )
         except run_benchmark.llm.ModelNotProvisionedError as exc:
