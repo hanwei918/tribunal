@@ -363,24 +363,24 @@ class TheRunTests(unittest.TestCase):
 
         The list is a pin about the run committed under ``runs/`` at the commit
         this test last ran against, and the next run moves it -- the run before
-        this one missed 107 and 211, and the frozen-prompt run misses 105 and
-        211. What is not dated is the rest: that each miss carries its expected
-        ruling, the ruling the judge produced and the fields that differ, which
-        is what makes the miss legible on the page rather than merely counted.
+        this one missed 107 and 211, the frozen-prompt run missed 105 and 211,
+        and the referee run misses 211 alone. What is not dated is the rest:
+        that each miss carries its expected ruling, the ruling the judge
+        produced and the fields that differ, which is what makes the miss
+        legible on the page rather than merely counted.
         """
         misses = sorted(
             case_no for case_no, case in self.cases.items() if not case["grading"]["exact"]
         )
-        self.assertEqual([105, 211], misses, "the run's four-field misses moved")
+        self.assertEqual([211], misses, "the run's four-field misses moved")
 
         # The dated facts per miss: the key's ruling, the ruling the judge
         # produced, and the fields that differ.
         dated = {
-            105: ("FULL_REFUND", "ESCALATE", ["ruling", "amount_sgd"]),
             211: (
                 "PARTIAL_REFUND",
-                "DRIVER_COMPENSATION",
-                ["ruling", "amount_sgd", "driver_compensation_sgd"],
+                "ESCALATE",
+                ["ruling", "amount_sgd"],
             ),
         }
         for case_no, (key_ruling, judge_ruling, failed) in dated.items():
