@@ -65,7 +65,7 @@ Failed on: amount_sgd, referrals
 ### Case 9104 — clause match
 
 - expected: "POL-NS-05(ii) false-arrival event recorded against the driver"
-- produced: "POL-NS-05(ii): record a false-arrival event against driver DRV-09104 on trip TRP-09104 — the driver's 07:25:20 'arrived' marker was set 559.37 m from the pickup pin (beyond the 300 m threshold) and no qualifying in-geofence fix exists anywhere in the trip."
+- produced: "POL-NS-05(ii) false-arrival record: record trip TRP-09104 as a false-arrival event against driver DRV-09104."
 - clause keys, expected: POL-NS-05(ii)
 - clause keys, produced: POL-NS-05(ii)
 - expected clauses matched: 1 of 1
@@ -74,7 +74,7 @@ Failed on: amount_sgd, referrals
 ### Case 9108 — clause match
 
 - expected: "POL-NS-07 escalation packet: instruct the reviewer to refund the rider's SGD 4.00 cancellation fee in full"
-- produced: "POL-NS-07 — direct the human reviewer to refund the rider's cancellation fee of SGD 4.00 in full; the disputed fee is held rather than collected or refunded while the review is pending."
+- produced: "POL-NS-07 (anti-farming branch): direct the human reviewer to refund the rider's SGD 4.00 cancellation fee in full; the fee is held, not collected or refunded, while review is pending."
 - clause keys, expected: POL-NS-07
 - clause keys, produced: POL-NS-07
 - expected clauses matched: 1 of 1
@@ -93,7 +93,7 @@ Failed on: amount_sgd, referrals
 ### Case 9113 — clause match
 
 - expected: "POL-RD-09(4) billing-integrity referral: phantom ERP gantry line on EV-FARE-09113, Pelton lawful diversion entry SGD 1.00, not within 250 m of any GPS fix"
-- produced: "POL-RD-09(4) billing integrity: the SGD 1.00 'Pelton lawful diversion entry' ERP line charged at 2026-09-20 18:29 is a charge for a gantry the GPS trace never passes (nearest fix 834.18 m, outside the 250 m match radius); refunded in full as a standalone correction."
+- produced: "POL-RD-09(4) billing integrity: the SGD 1.00 'Pelton lawful diversion entry' ERP line on EV-FARE-09113 is charged for a gantry the GPS trace EV-GPS-09113 never passes (nearest fix 834.18 m, beyond the 250 m crossing radius); refunded in full as a standalone correction and referred for billing-integrity review."
 - clause keys, expected: POL-RD-09(4)
 - clause keys, produced: POL-RD-09(4)
 - expected clauses matched: 1 of 1
@@ -102,7 +102,7 @@ Failed on: amount_sgd, referrals
 ### Case 9114 — clause match
 
 - expected: "POL-RD-09(4) billing-integrity referral for a phantom ERP gantry line"
-- produced: "POL-RD-09(4) billing integrity: the SGD 3.20 'Bukit Merah Central westbound' ERP line is charged for a gantry the vehicle never passed (nearest fix 7,482 m away, on_optimal_route false). Recorded as a billing-integrity finding."
+- produced: "POL-RD-09(4) — billing-integrity finding: the SGD 3.20 'Bukit Merah Central westbound' ERP line on EV-FARE-09114 was charged although the vehicle never crossed that gantry. Referred for billing-integrity review of how the phantom line was raised."
 - clause keys, expected: POL-RD-09(4)
 - clause keys, produced: POL-RD-09(4)
 - expected clauses matched: 1 of 1
