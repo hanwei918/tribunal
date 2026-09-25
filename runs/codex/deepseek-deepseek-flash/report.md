@@ -6,47 +6,79 @@ Produced by `eval/grade.py`. Regenerate with `python -m eval.grade`. The answer 
 
 | | |
 |---|---|
-| Cases graded | 1 |
-| Rulings produced | 1 |
-| **Four-field exact match** | **1/1 = 100.0%** |
+| Cases graded | 3 |
+| Rulings produced | 3 |
+| **Four-field exact match** | **2/3 = 66.7%** |
 
-| `ruling` | 1/1 = 100.0% |
-| `amount_sgd` | 1/1 = 100.0% |
-| `driver_compensation_sgd` | 1/1 = 100.0% |
-| `referrals` | 1/1 = 100.0% |
+| `ruling` | 3/3 = 100.0% |
+| `amount_sgd` | 2/3 = 66.7% |
+| `driver_compensation_sgd` | 3/3 = 100.0% |
+| `referrals` | 3/3 = 100.0% |
 
 Every graded case was produced by the brief and the prompts this code builds now, so the exact-match figure above is one measurement.
 
 A ruling counts only when **all four** fields agree. The per-field figures above are there so a reader can see which field a model actually fails on; they are not alternative scores.
 
-Reported as a contrast only, and not as a result: `ruling` and `amount_sgd` alone would give **1/1 = 100.0%**. Case 207 is `ESCALATE` with both money fields `null` and a referral instructing the reviewer to refund the rider's SGD 4.00 in full, so a two-field grader awards it full marks while a real rider does not get their money back. The gap between this line and the four-field line is the size of that mistake on this run.
+Reported as a contrast only, and not as a result: `ruling` and `amount_sgd` alone would give **2/3 = 66.7%**. Case 207 is `ESCALATE` with both money fields `null` and a referral instructing the reviewer to refund the rider's SGD 4.00 in full, so a two-field grader awards it full marks while a real rider does not get their money back. The gap between this line and the four-field line is the size of that mistake on this run.
 
 ## Per case
 
 | case | ruling | amount_sgd | driver_compensation_sgd | referrals | exact | cached |
 |---|---|---|---|---|---|---|
-| 9115 | ok | ok | ok | ok | ok | current |
+| 9111 | ok | **FAIL** | ok | ok | **FAIL** | current |
+| 9113 | ok | ok | ok | ok | ok | current |
+| 9114 | ok | ok | ok | ok | ok | current |
 
 ## Failures
 
-No case failed. Every graded field of every case agrees with the key.
+### Case 9111
+
+Failed on: amount_sgd
+
+- **amount_sgd** — expected 10.15, produced 9.15
 
 ## Referrals — expected against produced
 
-No case carries a referral on either side.
+### Case 9111 — clause match
+
+- expected: "POL-RD-09(4) billing-integrity referral: phantom ERP gantry lines on EV-FARE-09111, Pioneer Road inbound SGD 1.00 and Tuas South Avenue 8 loop SGD 2.00, neither within 250 m of any GPS fix"
+- produced: "POL-RD-09(4) billing integrity: the SGD 2.00 "Tuas South Avenue 8 loop" ERP line on TRP-09111 is charged for a gantry the GPS trace never passes (nearest fix 1,646 m, well outside the 250 m crossing test in POL-RD-09); the line is refunded within the SGD 9.15 and is referred for billing-integrity review."
+- clause keys, expected: POL-RD-09(4)
+- clause keys, produced: POL-RD-09, POL-RD-09(4)
+- expected clauses matched: 1 of 1
+- additional clauses offered: POL-RD-09
+- additional clause(s) offered: POL-RD-09
+
+### Case 9113 — clause match
+
+- expected: "POL-RD-09(4) billing-integrity referral: phantom ERP gantry line on EV-FARE-09113, Pelton lawful diversion entry SGD 1.00, not within 250 m of any GPS fix"
+- produced: "POL-RD-09(4) billing integrity: the SGD 1.00 'Pelton lawful diversion entry' ERP line charges a gantry the GPS trace never passes (nearest fix 834.18 m, outside the 250 m crossing radius); refund it in full as a standalone correction and review the fare build."
+- clause keys, expected: POL-RD-09(4)
+- clause keys, produced: POL-RD-09(4)
+- expected clauses matched: 1 of 1
+- additional clauses offered: _(none)_
+
+### Case 9114 — clause match
+
+- expected: "POL-RD-09(4) billing-integrity referral for a phantom ERP gantry line"
+- produced: "POL-RD-09(4) billing integrity — refund the phantom SGD 3.20 'Bukit Merah Central westbound' ERP line in full as a standalone pass-through correction and record the billing defect for review; the trace's nearest fix to the gantry is 7,482 m, far outside the 250 m crossing radius, and the fare ledger marks the gantry on_optimal_route = false."
+- clause keys, expected: POL-RD-09(4)
+- clause keys, produced: POL-RD-09(4)
+- expected clauses matched: 1 of 1
+- additional clauses offered: _(none)_
 
 ## Escalation calibration
 
 | | |
 |---|---|
-| Cases graded | 1 |
-| Cases graded, by number | 9115 |
-| Whole corpus graded | no — 1 of 15 cases |
-| Expected escalations | 1 |
-| Produced escalations | 1 |
-| **Escalation rate (on these 1 cases)** | **100.0%** |
-| Precision on ESCALATE (on these 1 cases) | 1 of 1 = 1.0 |
-| Recall on ESCALATE (on these 1 cases) | 1 of 1 = 1.0 |
+| Cases graded | 3 |
+| Cases graded, by number | 9111, 9113, 9114 |
+| Whole corpus graded | no — 3 of 15 cases |
+| Expected escalations | 0 |
+| Produced escalations | 0 |
+| **Escalation rate (on these 3 cases)** | **0.0%** |
+| Precision on ESCALATE (on these 3 cases) | 0 of 0 = n/a |
+| Recall on ESCALATE (on these 3 cases) | 0 of 0 = n/a |
 
 ### Raw counts — these are what survive subsetting
 
@@ -54,13 +86,13 @@ Rates move with the base rate of the set they were computed on, precision and re
 
 | | count | cases |
 |---|---|---|
-| True positives (key and run both ESCALATE) | 1 | 9115 |
+| True positives (key and run both ESCALATE) | 0 | _none_ |
 | False positives (run ESCALATE, key does not) | 0 | _none_ |
 | False negatives (key ESCALATE, run does not) | 0 | _none_ |
 | Over-escalations (= false positives) | 0 | _none_ |
 | Under-escalations (= false negatives) | 0 | _none_ |
-| Expected escalations in this set | 1 | 9115 |
-| Produced escalations in this set | 1 | 9115 |
+| Expected escalations in this set | 0 | _none_ |
+| Produced escalations in this set | 0 | _none_ |
 
 Rates on a selected subset are not comparable to the corpus base rate, so the corpus target is deliberately not printed beside them.
 
@@ -75,13 +107,13 @@ These are different failures and are never summed into one figure. Over-escalati
 
 ### The INDETERMINATE cases, kept out of the rate
 
-In this set the key escalates 1 case whose record genuinely does not settle the question, and 0 cases on substantive grounds. A run that answers an INDETERMINATE case instead of escalating it has not been decisive; it has invented an answer, and that is the failure that matters most. It is counted here rather than averaged into the escalation rate.
+In this set the key escalates 0 cases whose record genuinely does not settle the question, and 0 cases on substantive grounds. A run that answers an INDETERMINATE case instead of escalating it has not been decisive; it has invented an answer, and that is the failure that matters most. It is counted here rather than averaged into the escalation rate.
 
 | | |
 |---|---|
-| INDETERMINATE cases the key escalates | 9115 |
-| ... the run escalated | 1 of 1 |
-| **... the run ruled confidently instead** | **0 of 1** |
+| INDETERMINATE cases the key escalates | _none_ |
+| ... the run escalated | 0 of 0 |
+| **... the run ruled confidently instead** | **0 of 0** |
 | Substantive escalations the key makes | _none_ |
 | ... the run escalated | 0 of 0 |
 
