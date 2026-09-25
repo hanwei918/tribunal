@@ -1,0 +1,262 @@
+[
+  {
+    "case_no": 9101,
+    "dispute_id": "DSP-09101",
+    "ground_truth": {
+      "expected_ruling": "DRIVER_COMPENSATION",
+      "expected_amount_sgd": 3.2,
+      "expected_driver_compensation_sgd": 3.2,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-01",
+        "POL-NS-02",
+        "POL-NS-07"
+      ],
+      "difficulty": "BASIC",
+      "rationale": "Three or more accurate fixes place the stationary driver inside the STANDARD radius from the start of the observed hold through cancellation, exceeding 300 seconds. The reason code is permitted, the SGD 4 fee reconciles, and no anti-farming trigger applies; 80% is SGD 3.20."
+    }
+  },
+  {
+    "case_no": 9102,
+    "dispute_id": "DSP-09102",
+    "ground_truth": {
+      "expected_ruling": "DRIVER_COMPENSATION",
+      "expected_amount_sgd": 4.8,
+      "expected_driver_compensation_sgd": 4.8,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-01",
+        "POL-NS-02",
+        "POL-NS-04",
+        "POL-NS-07"
+      ],
+      "difficulty": "HARD",
+      "rationale": "The AIRPORT minimum is 480 seconds and the accurate in-radius hold lasts 500 seconds. The driver replies within 120 seconds, so POL-NS-04 does not apply. The SGD 6 fee reconciles and 80% compensation is SGD 4.80."
+    }
+  },
+  {
+    "case_no": 9103,
+    "dispute_id": "DSP-09103",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 8.0,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-01",
+        "POL-NS-06"
+      ],
+      "difficulty": "BASIC",
+      "rationale": "The driver is accurately located inside the LARGE_VENUE radius, but the effective continuous dwell is only 240 seconds against the required 300. POL-NS-06 requires a full refund of the SGD 8 fee and no driver compensation."
+    }
+  },
+  {
+    "case_no": 9104,
+    "dispute_id": "DSP-09104",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 4.0,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [
+        "POL-NS-05(ii) false-arrival event recorded against the driver"
+      ],
+      "governing_clauses": [
+        "POL-NS-02",
+        "POL-NS-05"
+      ],
+      "difficulty": "INTERMEDIATE",
+      "rationale": "At the arrival marker and throughout the trip, accurate GPS fixes remain about 560 m from the pin. No qualifying in-geofence fix exists, so POL-NS-05(ii) requires a full refund, no compensation and a false-arrival referral."
+    }
+  },
+  {
+    "case_no": 9105,
+    "dispute_id": "DSP-09105",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 4.0,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-02",
+        "POL-NS-03"
+      ],
+      "difficulty": "INTERMEDIATE",
+      "rationale": "The driver is stationary for the required dwell about 220 m from the pin: outside the LARGE_VENUE arrival radius but within 400 m. The rider names the correct entrance and the driver does not move, so the fee is fully refunded and the driver receives no compensation."
+    }
+  },
+  {
+    "case_no": 9106,
+    "dispute_id": "DSP-09106",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 6.0,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-04"
+      ],
+      "difficulty": "INTERMEDIATE",
+      "rationale": "The rider sends locating messages during the wait, the driver neither replies within 120 seconds nor places an in-app call, and the rider's accurate track is within the 200 m TRANSPORT_HUB presence radius for the majority of fixes. All three POL-NS-04 limbs hold."
+    }
+  },
+  {
+    "case_no": 9107,
+    "dispute_id": "DSP-09107",
+    "ground_truth": {
+      "expected_ruling": "DRIVER_COMPENSATION",
+      "expected_amount_sgd": 3.2,
+      "expected_driver_compensation_sgd": 3.2,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-01",
+        "POL-NS-06",
+        "POL-NS-07"
+      ],
+      "difficulty": "ADVANCED",
+      "rationale": "The trace records two stationary in-radius holds of 170 and 160 seconds, separated by an excursion that remains within 300 m. A populated CLOSURE advisory covers the road and waiting window, so POL-NS-06(i) permits 330 seconds to be accumulated. The fee stands and 80% compensation is SGD 3.20."
+    }
+  },
+  {
+    "case_no": 9108,
+    "dispute_id": "DSP-09108",
+    "ground_truth": {
+      "expected_ruling": "ESCALATE",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [
+        "POL-NS-07 escalation packet: instruct the reviewer to refund the rider's SGD 4.00 cancellation fee in full"
+      ],
+      "governing_clauses": [
+        "POL-NS-07",
+        "POL-NS-09"
+      ],
+      "difficulty": "ADVANCED",
+      "rationale": "The trip-level no-show conditions hold, but the driver has 7 no-show terminations in 70 completed trips over 30 days: at least 4 and 10%, above 8%. The anti-farming check triggers terminal escalation, holds the fee and directs the reviewer to refund SGD 4.00."
+    }
+  },
+  {
+    "case_no": 9109,
+    "dispute_id": "DSP-09109",
+    "ground_truth": {
+      "expected_ruling": "ESCALATE",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-08",
+        "POL-NS-09"
+      ],
+      "difficulty": "ADVANCED",
+      "rationale": "The GPS artifact is missing, so the measured arrival and dwell tests cannot run. Party messages cannot replace the measurement required by POL-NS-02. The sole evidence for the deciding location and dwell facts is unavailable, triggering terminal escalation under POL-NS-09(e)."
+    }
+  },
+  {
+    "case_no": 9110,
+    "dispute_id": "DSP-09110",
+    "ground_truth": {
+      "expected_ruling": "ESCALATE",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-09"
+      ],
+      "difficulty": "ADVANCED",
+      "rationale": "The trip-level evidence otherwise supports a no-show, but both profiles record 2 no-show disputes with this same counterparty in the trailing 90 days. POL-NS-09(c) requires terminal human review of the repeat pairing."
+    }
+  },
+  {
+    "case_no": 9111,
+    "dispute_id": "DSP-09111",
+    "ground_truth": {
+      "expected_ruling": "PARTIAL_REFUND",
+      "expected_amount_sgd": 9.15,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-01",
+        "POL-RD-02",
+        "POL-RD-08",
+        "POL-RD-09",
+        "POL-GEN-03"
+      ],
+      "difficulty": "HARD",
+      "rationale": "The GPS trace is 16.20 km against a 12.00 km booked optimum: excess = 4.20 km and 35.0%, so both POL-RD-01 thresholds are met. There is no rider request or qualifying advisory. POL-RD-02 recomputation: ((SGD 3.80 + 0.75 x 12.00 + 0.28 x 24.0) x 1.20) + 0.80 platform fee + 1.00 optimal-route ERP - 1.00 promo = SGD 24.224. Refund before rounding = 33.36 - 24.224 = SGD 9.136. Apply upward SGD 0.05 rounding only now: SGD 9.15. The off-route ERP is already comprehended by the total-versus-recomputed difference, so POL-RD-09 forbids adding it again."
+    }
+  },
+  {
+    "case_no": 9112,
+    "dispute_id": "DSP-09112",
+    "ground_truth": {
+      "expected_ruling": "NO_ACTION",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-01",
+        "POL-RD-02",
+        "POL-GEN-03"
+      ],
+      "difficulty": "EASY",
+      "rationale": "The trace is 11.50 km against a 10.00 km optimum. The 1.50 km absolute excess exceeds 0.8 km, but the percentage excess is only 15.0%, not more than 20%; POL-RD-01 therefore does not establish a deviation. For transparency, the POL-RD-02 reference figure would be (SGD 3.80 + 0.75 x 10.00 + 0.28 x 20.0) + 0.80 = SGD 17.70, and 19.39 - 17.70 = SGD 1.69, but POL-RD-02 is not legally triggered. The correct ruling is NO_ACTION for SGD 0.00."
+    }
+  },
+  {
+    "case_no": 9113,
+    "dispute_id": "DSP-09113",
+    "ground_truth": {
+      "expected_ruling": "PARTIAL_REFUND",
+      "expected_amount_sgd": 8.05,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-01",
+        "POL-RD-02",
+        "POL-RD-03",
+        "POL-RD-09",
+        "POL-GEN-03"
+      ],
+      "difficulty": "HARD",
+      "rationale": "Measured excess is 18.00 - 10.00 = 8.00 km. POL-RD-03 permits at most min(8.00, 1.30 x (12.00 - 10.00) + 1.00) = min(8.00, 3.60) = 3.60 km, so the cap binds. Adjusted optimum = 10.00 + 3.60 = 13.60 km; adjusted duration = 20.0 x 13.60 / 10.00 = 27.2 minutes. Residual excess is 4.40 km, or 32.4%, and remains above both POL-RD-01 thresholds. POL-RD-02 recomputation: SGD 3.80 + (0.75 x 13.60) + (0.28 x 27.2) + 0.80 platform fee + 1.00 optimal-route ERP = SGD 23.416. Refund before rounding = 31.42 - 23.416 = SGD 8.004. Apply upward SGD 0.05 rounding only to the final figure: SGD 8.05. Do not separately add the off-route ERP because it is already in the difference."
+    }
+  },
+  {
+    "case_no": 9114,
+    "dispute_id": "DSP-09114",
+    "ground_truth": {
+      "expected_ruling": "PARTIAL_REFUND",
+      "expected_amount_sgd": 3.2,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [
+        "POL-RD-09(4) billing-integrity referral for a phantom ERP gantry line"
+      ],
+      "governing_clauses": [
+        "POL-RD-09",
+        "POL-RD-11",
+        "POL-GEN-03"
+      ],
+      "difficulty": "REVERSAL",
+      "rationale": "POL-RD-11 controls because this is an UPFRONT_QUOTE trip: distance and time components are fixed and POL-RD-02 does not run. The properly chargeable amount is the SGD 22.00 quote plus valid pass-through lines. The only extra line is SGD 3.20 for a gantry whose coordinates are more than 250 m from every GPS fix; the optimal route also carries SGD 0.00 ERP. POL-RD-09(4) therefore refunds the full phantom line and requires a billing-integrity referral. Arithmetic: 25.20 charged - 22.00 quote = SGD 3.20; it is already a multiple of SGD 0.05, so final upward rounding remains SGD 3.20."
+    }
+  },
+  {
+    "case_no": 9115,
+    "dispute_id": "DSP-09115",
+    "ground_truth": {
+      "expected_ruling": "ESCALATE",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-GEN-02",
+        "POL-RD-02",
+        "POL-RD-07",
+        "POL-RD-08",
+        "POL-RD-10",
+        "POL-GEN-03"
+      ],
+      "difficulty": "INDETERMINATE",
+      "rationale": "EV-GPS-09115 has a 160-second gap on the disputed segment and is therefore impaired with issue GPS_GAP and weight 0.60. The correction from 0.65 to 0.60 does not change the answer: under POL-GEN-02 the deciding evidence is still below the 0.70 escalation floor, and under POL-RD-07 the gap still exceeds 90 seconds. No permitted independent evidence corroborates the path across that segment: the chat contains no admission, there is no ERP item or advisory, and the platform distance and metered distance are copies of the same telemetry rather than independent proof. POL-RD-10 therefore makes ESCALATE terminal. For audit only, the provisional POL-RD-02 computation is ((SGD 3.80 + 0.75 x 11.00 + 0.28 x 22.0) x 1.10) + 0.80 = SGD 20.831; 26.60 - 20.831 = SGD 5.769; upward rounding only at the end would give SGD 5.80, but no refund amount is issued because escalation is terminal."
+    }
+  }
+]

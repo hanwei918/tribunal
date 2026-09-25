@@ -1,0 +1,771 @@
+{
+  "schema_version": "1.2.0",
+  "case_no": 9105,
+  "dispute": {
+    "dispute_id": "DSP-09105",
+    "trip_id": "TRP-09105",
+    "case_no": 9105,
+    "category": "NO_SHOW_CHARGE",
+    "filed_by": "RIDER",
+    "filed_at": "2026-09-06T10:00:00+08:00",
+    "claim_text": "I gave the correct Tower B pickup location, but the driver stayed at another entrance and cancelled.",
+    "amount_contested_sgd": 4.0,
+    "evidence_ids": [
+      "EV-TRIP-09105",
+      "EV-GPS-09105",
+      "EV-CHAT-09105",
+      "EV-FARE-09105",
+      "EV-RPROF-09105",
+      "EV-DPROF-09105",
+      "EV-ADVIS-09105-01"
+    ],
+    "counterparty_statement": {
+      "text": "I waited at a mall entrance for the full timer but did not move to Tower B.",
+      "submitted_by": "DRIVER",
+      "submitted_at": "2026-09-06T11:00:00+08:00"
+    },
+    "channel": "IN_APP_SUPPORT"
+  },
+  "evidence": [
+    {
+      "evidence_id": "EV-TRIP-09105",
+      "evidence_type": "TRIP_RECORD",
+      "trip_id": "TRP-09105",
+      "source": "PLATFORM_TELEMETRY",
+      "generated_at": "2026-09-06T13:05:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Artifact parsed successfully; required fields are present.",
+        "assessed_at": "2026-09-24T12:00:00+08:00",
+        "assessor_version": "question-author-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-09105",
+        "rider_id": "RDR-09105",
+        "driver_id": "DRV-09105",
+        "requested_at": "2026-09-05T12:53:00+08:00",
+        "accepted_at": "2026-09-05T12:54:00+08:00",
+        "arrived_at": "2026-09-05T13:05:20+08:00",
+        "started_at": null,
+        "ended_at": null,
+        "cancelled_at": "2026-09-05T13:10:30+08:00",
+        "status": "CANCELLED_BY_DRIVER",
+        "cancelled_by": "DRIVER",
+        "cancellation_reason_code": "RIDER_NO_SHOW",
+        "pickup": {
+          "label": "NEX Serangoon, Tower B ride-hail pickup",
+          "lat": 1.3508,
+          "lng": 103.8723,
+          "venue_id": "VEN-NEX-SERANGOON"
+        },
+        "dropoff": {
+          "label": "Punggol Waterway Point",
+          "lat": 1.36158,
+          "lng": 103.90375,
+          "venue_id": null
+        },
+        "optimal_distance_km": 7.4,
+        "optimal_duration_min": 19.0,
+        "actual_distance_km": null,
+        "actual_duration_min": null,
+        "vehicle_type": "RYDE_X",
+        "optimal_route_source": "routing-engine-v3.2 (question-set snapshot)",
+        "deviation_pct": null,
+        "wait_time_min": 5.2,
+        "time_to_arrival_min": 11.3,
+        "pickup_zone_class": "LARGE_VENUE",
+        "registered_pickup_points": 3,
+        "in_app_calls": [],
+        "pickup_amended_at": null,
+        "dropoff_amended_at": null,
+        "original_pickup": null,
+        "original_dropoff": null,
+        "optimal_route_erp_sgd": 0.0,
+        "amended_optimal_distance_km": null,
+        "amended_optimal_duration_min": null,
+        "solo_optimal_distance_km": null,
+        "chat_message_count": 4
+      }
+    },
+    {
+      "evidence_id": "EV-GPS-09105",
+      "evidence_type": "GPS_TRACE",
+      "trip_id": "TRP-09105",
+      "source": "PLATFORM_TELEMETRY",
+      "generated_at": "2026-09-06T13:05:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Artifact parsed successfully; required fields are present.",
+        "assessed_at": "2026-09-24T12:00:00+08:00",
+        "assessor_version": "question-author-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-09105",
+        "points": [
+          {
+            "lat": 1.3508,
+            "lng": 103.874277,
+            "ts": "2026-09-05T13:05:00+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.0,
+            "venue_id": "VEN-NEX-SERANGOON"
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.874277,
+            "ts": "2026-09-05T13:05:10+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.0,
+            "venue_id": "VEN-NEX-SERANGOON"
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.874277,
+            "ts": "2026-09-05T13:05:20+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.0,
+            "venue_id": "VEN-NEX-SERANGOON"
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.874277,
+            "ts": "2026-09-05T13:05:30+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.0,
+            "venue_id": "VEN-NEX-SERANGOON"
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.874277,
+            "ts": "2026-09-05T13:05:40+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.0,
+            "venue_id": "VEN-NEX-SERANGOON"
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.874277,
+            "ts": "2026-09-05T13:05:50+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.0,
+            "venue_id": "VEN-NEX-SERANGOON"
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.874277,
+            "ts": "2026-09-05T13:06:00+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.0,
+            "venue_id": "VEN-NEX-SERANGOON"
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.874277,
+            "ts": "2026-09-05T13:06:10+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.0,
+            "venue_id": "VEN-NEX-SERANGOON"
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.874277,
+            "ts": "2026-09-05T13:06:20+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.0,
+            "venue_id": "VEN-NEX-SERANGOON"
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.874277,
+            "ts": "2026-09-05T13:06:30+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.0,
+            "venue_id": "VEN-NEX-SERANGOON"
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.874277,
+            "ts": "2026-09-05T13:06:40+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.0,
+            "venue_id": "VEN-NEX-SERANGOON"
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.874277,
+            "ts": "2026-09-05T13:06:50+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.0,
+            "venue_id": "VEN-NEX-SERANGOON"
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.874277,
+            "ts": "2026-09-05T13:07:00+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.0,
+            "venue_id": "VEN-NEX-SERANGOON"
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.874277,
+            "ts": "2026-09-05T13:07:10+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.0,
+            "venue_id": "VEN-NEX-SERANGOON"
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.874277,
+            "ts": "2026-09-05T13:07:20+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.0,
+            "venue_id": "VEN-NEX-SERANGOON"
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.874277,
+            "ts": "2026-09-05T13:07:30+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.0,
+            "venue_id": "VEN-NEX-SERANGOON"
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.874277,
+            "ts": "2026-09-05T13:07:40+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.0,
+            "venue_id": "VEN-NEX-SERANGOON"
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.874277,
+            "ts": "2026-09-05T13:07:50+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.0,
+            "venue_id": "VEN-NEX-SERANGOON"
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.874277,
+            "ts": "2026-09-05T13:08:00+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.0,
+            "venue_id": "VEN-NEX-SERANGOON"
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.874277,
+            "ts": "2026-09-05T13:08:10+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.0,
+            "venue_id": "VEN-NEX-SERANGOON"
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.874277,
+            "ts": "2026-09-05T13:08:20+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.0,
+            "venue_id": "VEN-NEX-SERANGOON"
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.874277,
+            "ts": "2026-09-05T13:08:30+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.0,
+            "venue_id": "VEN-NEX-SERANGOON"
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.874277,
+            "ts": "2026-09-05T13:08:40+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.0,
+            "venue_id": "VEN-NEX-SERANGOON"
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.874277,
+            "ts": "2026-09-05T13:08:50+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.0,
+            "venue_id": "VEN-NEX-SERANGOON"
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.874277,
+            "ts": "2026-09-05T13:09:00+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.0,
+            "venue_id": "VEN-NEX-SERANGOON"
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.874277,
+            "ts": "2026-09-05T13:09:10+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.0,
+            "venue_id": "VEN-NEX-SERANGOON"
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.874277,
+            "ts": "2026-09-05T13:09:20+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.0,
+            "venue_id": "VEN-NEX-SERANGOON"
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.874277,
+            "ts": "2026-09-05T13:09:30+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.0,
+            "venue_id": "VEN-NEX-SERANGOON"
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.874277,
+            "ts": "2026-09-05T13:09:40+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.0,
+            "venue_id": "VEN-NEX-SERANGOON"
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.874277,
+            "ts": "2026-09-05T13:09:50+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.0,
+            "venue_id": "VEN-NEX-SERANGOON"
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.874277,
+            "ts": "2026-09-05T13:10:00+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.0,
+            "venue_id": "VEN-NEX-SERANGOON"
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.874277,
+            "ts": "2026-09-05T13:10:10+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.0,
+            "venue_id": "VEN-NEX-SERANGOON"
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.874277,
+            "ts": "2026-09-05T13:10:20+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.0,
+            "venue_id": "VEN-NEX-SERANGOON"
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.874277,
+            "ts": "2026-09-05T13:10:30+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.0,
+            "venue_id": "VEN-NEX-SERANGOON"
+          }
+        ],
+        "point_count": 34,
+        "first_fix_at": "2026-09-05T13:05:00+08:00",
+        "last_fix_at": "2026-09-05T13:10:30+08:00",
+        "expected_interval_sec": 10.0,
+        "sample_interval_sec": 10.0,
+        "gaps": [],
+        "max_gap_sec": 0.0,
+        "coverage_pct": 100.0,
+        "trace_distance_km": 0.0,
+        "rider_track": [
+          {
+            "lat": 1.3508,
+            "lng": 103.872525,
+            "ts": "2026-09-05T13:05:30+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 10.0
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.872525,
+            "ts": "2026-09-05T13:05:50+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 10.0
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.872525,
+            "ts": "2026-09-05T13:06:10+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 10.0
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.872525,
+            "ts": "2026-09-05T13:06:30+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 10.0
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.872525,
+            "ts": "2026-09-05T13:06:50+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 10.0
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.872525,
+            "ts": "2026-09-05T13:07:10+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 10.0
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.872525,
+            "ts": "2026-09-05T13:07:30+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 10.0
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.872525,
+            "ts": "2026-09-05T13:07:50+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 10.0
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.872525,
+            "ts": "2026-09-05T13:08:10+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 10.0
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.872525,
+            "ts": "2026-09-05T13:08:30+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 10.0
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.872525,
+            "ts": "2026-09-05T13:08:50+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 10.0
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.872525,
+            "ts": "2026-09-05T13:09:10+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 10.0
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.872525,
+            "ts": "2026-09-05T13:09:30+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 10.0
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.872525,
+            "ts": "2026-09-05T13:09:50+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 10.0
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.872525,
+            "ts": "2026-09-05T13:10:10+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 10.0
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.872525,
+            "ts": "2026-09-05T13:10:30+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 10.0
+          }
+        ]
+      }
+    },
+    {
+      "evidence_id": "EV-CHAT-09105",
+      "evidence_type": "CHAT_LOG",
+      "trip_id": "TRP-09105",
+      "source": "PLATFORM_TELEMETRY",
+      "generated_at": "2026-09-06T13:05:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Artifact parsed successfully; required fields are present.",
+        "assessed_at": "2026-09-24T12:00:00+08:00",
+        "assessor_version": "question-author-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-09105",
+        "messages": [
+          {
+            "msg_id": "MSG-09105-001",
+            "sender": "RIDER",
+            "text": "I am at Tower B ride-hail pickup, beside the blue sign.",
+            "sent_at": "2026-09-05T13:05:05+08:00",
+            "read_at": "2026-09-05T13:05:20+08:00",
+            "delivered_at": "2026-09-05T13:05:06+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-09105-002",
+            "sender": "SYSTEM",
+            "text": "Your driver has arrived",
+            "sent_at": "2026-09-05T13:05:21+08:00",
+            "read_at": "2026-09-05T13:05:31+08:00",
+            "delivered_at": "2026-09-05T13:05:22+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-09105-003",
+            "sender": "DRIVER",
+            "text": "I am waiting at the mall taxi stand.",
+            "sent_at": "2026-09-05T13:06:00+08:00",
+            "read_at": "2026-09-05T13:06:15+08:00",
+            "delivered_at": "2026-09-05T13:06:01+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-09105-004",
+            "sender": "RIDER",
+            "text": "That is the other entrance. Please come to Tower B.",
+            "sent_at": "2026-09-05T13:06:35+08:00",
+            "read_at": "2026-09-05T13:06:50+08:00",
+            "delivered_at": "2026-09-05T13:06:36+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          }
+        ],
+        "message_count": 4,
+        "first_message_at": "2026-09-05T13:05:05+08:00",
+        "last_message_at": "2026-09-05T13:06:35+08:00",
+        "truncated": false
+      }
+    },
+    {
+      "evidence_id": "EV-FARE-09105",
+      "evidence_type": "FARE_BREAKDOWN",
+      "trip_id": "TRP-09105",
+      "source": "PAYMENTS_LEDGER",
+      "generated_at": "2026-09-06T13:05:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Artifact parsed successfully; required fields are present.",
+        "assessed_at": "2026-09-24T12:00:00+08:00",
+        "assessor_version": "question-author-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-09105",
+        "currency": "SGD",
+        "fare_model": "METERED",
+        "quoted_fare_sgd": null,
+        "base_fare": 0.0,
+        "distance_fare": 0.0,
+        "time_fare": 0.0,
+        "distance_charged_km": null,
+        "time_charged_min": null,
+        "per_km_rate_sgd": null,
+        "per_min_rate_sgd": null,
+        "surge_multiplier": 1.0,
+        "surge_amount": 0.0,
+        "tolls_erp": 0.0,
+        "erp_gantries": [],
+        "airport_surcharge": 0.0,
+        "platform_fee": 0.0,
+        "promo_discount": 0.0,
+        "cancellation_fee": 4.0,
+        "waiting_time_fee": 0.0,
+        "total_charged": 4.0,
+        "payment_status": "CHARGED",
+        "refund_issued_sgd": 0.0,
+        "rate_card_id": "RC-SG-2026Q3-RYDEX",
+        "charged_at": "2026-09-05T13:10:32+08:00"
+      }
+    },
+    {
+      "evidence_id": "EV-RPROF-09105",
+      "evidence_type": "RIDER_PROFILE",
+      "trip_id": "TRP-09105",
+      "source": "PLATFORM_TELEMETRY",
+      "generated_at": "2026-09-06T13:05:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Artifact parsed successfully; required fields are present.",
+        "assessed_at": "2026-09-24T12:00:00+08:00",
+        "assessor_version": "question-author-1.0.0"
+      },
+      "payload": {
+        "party_id": "RDR-09105",
+        "party_role": "RIDER",
+        "snapshot_at": "2026-09-06T13:05:00+08:00",
+        "account_age_days": 420,
+        "lifetime_trips": 96,
+        "rating": 4.71,
+        "prior_disputes_filed": 1,
+        "prior_disputes_upheld": 0,
+        "cancellation_rate": 0.031,
+        "prior_no_show_flags": 1,
+        "deviation_claims_60d": 0,
+        "deviation_claims_60d_substantiated": 0,
+        "no_show_disputes_30d": 0,
+        "disputes_with_counterparty_90d": 0
+      }
+    },
+    {
+      "evidence_id": "EV-DPROF-09105",
+      "evidence_type": "DRIVER_PROFILE",
+      "trip_id": "TRP-09105",
+      "source": "PLATFORM_TELEMETRY",
+      "generated_at": "2026-09-06T13:05:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Artifact parsed successfully; required fields are present.",
+        "assessed_at": "2026-09-24T12:00:00+08:00",
+        "assessor_version": "question-author-1.0.0"
+      },
+      "payload": {
+        "party_id": "DRV-09105",
+        "party_role": "DRIVER",
+        "snapshot_at": "2026-09-06T13:05:00+08:00",
+        "account_age_days": 880,
+        "lifetime_trips": 2140,
+        "rating": 4.89,
+        "prior_disputes_filed": 1,
+        "prior_disputes_upheld": 0,
+        "cancellation_rate": 0.024,
+        "prior_no_show_flags": 2,
+        "prior_deviation_flags": 0,
+        "acceptance_rate": 0.94,
+        "vehicle_type": "RYDE_X",
+        "active_region": "North-East",
+        "deviation_flags_90d": 0,
+        "completed_trips_90d": 610,
+        "no_show_terminations_30d": 1,
+        "completed_trips_30d": 120,
+        "disputes_with_counterparty_90d": 0
+      }
+    },
+    {
+      "evidence_id": "EV-ADVIS-09105-01",
+      "evidence_type": "TRAFFIC_ADVISORY",
+      "trip_id": "TRP-09105",
+      "source": "THIRD_PARTY_LTA",
+      "generated_at": "2026-09-06T13:05:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "MISSING",
+        "issues": [
+          "MISSING_ARTIFACT"
+        ],
+        "issue_details": [
+          {
+            "code": "MISSING_ARTIFACT",
+            "severity": "BLOCKING",
+            "detail": "No traffic advisory matched this pickup road and waiting window."
+          }
+        ],
+        "weight_multiplier": 0.0,
+        "notes": "Artifact identifier retained; no payload was available.",
+        "assessed_at": "2026-09-24T12:00:00+08:00",
+        "assessor_version": "question-author-1.0.0"
+      },
+      "payload": null
+    }
+  ]
+}
