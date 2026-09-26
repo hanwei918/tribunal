@@ -251,9 +251,11 @@ show the same mechanism doing less damage:
   gains `POL-NS-09` and it is counted as disagreeing.
 
 So three of the six non-unanimous cases — 105, 207 and 9111 — are non-unanimous
-**only** because of this extraction, and one of them escalated for it. In the
-previous voting run the same mechanism produced 105 and 207's splits too, and
-207's dissenting draft added `POL-NS-09(d)` where it now adds `POL-NS-09`.
+**only** because of this extraction, and one of them escalated for it. Of those
+three, the mechanism split **207** in the previous voting run as well, whose
+dissenting draft then added `POL-NS-09(d)` where it now adds `POL-NS-09`;
+**105**'s split is new to this run, and its dissenting draft adds the parent
+clause `POL-RD-06` while the agreeing drafts do not.
 
 **This is evidence, not a change.** Nothing about the referral comparison was
 altered in this session.
@@ -330,3 +332,41 @@ the literal was replaced by the invariant it promised: the page's contested set
 is exactly the cases the run's own record marks not unanimous, the run records at
 least one, and a case is contested exactly when the run recorded an agreement
 below 1 for it. That holds on both sides of a re-run, which a dated list cannot.
+
+## The suite
+
+Green on both interpreters, and the seven conditional skips are gone:
+
+```
+Ran 980 tests in 1462.006s
+
+OK (skipped=4)
+```
+
+```
+Ran 980 tests in 1406.734s
+
+OK (skipped=4)
+```
+
+**980 is the whole tree.** The seven classes that were skipped whole while the
+run was stale run again, and since a class skipped in `setUpClass` is not counted
+at all, the 54 tests they hold are back in the total: the previous session's 926
+was 980 minus those 54.
+
+The four skips are three that were already there plus one that is the conditional
+mechanism's other half:
+
+- `tests/test_llm.py` — the workspace `.env` test, which skips when there is no
+  `.env` in the working directory;
+- `tests/test_run_benchmark.py::NoteCouplingTests` — two tests that skip when the
+  note whose cached count they compare has itself moved on;
+- `tests/test_ui_build.py::RunCurrencyTests` — the new one. It asserts positively
+  that a run whose briefs have all moved is refused whole, so while the run was
+  stale it ran, and now that the re-run has made every brief current it skips,
+  saying there is nothing to refuse. It is the mirror of the seven, and it holds
+  on both sides of a re-run for the same reason they do.
+
+So the suite reports the skips that existed before the conditional mechanism, plus
+that one. Nothing was unskipped by hand, and the builder's refusal guard is still
+covered by the tests that build their own run directory.
