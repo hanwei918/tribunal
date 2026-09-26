@@ -756,11 +756,16 @@ class JudgeVoteTests(unittest.TestCase):
     def test_the_contested_cases_are_the_ones_the_run_marked(self):
         """Which cases those are is dated; that the page follows the run is not.
 
-        The pin below is about the run committed under ``runs/`` now: 107 and
-        207 carried on a 3-of-4 vote, and 211 escalated because its drafts split
-        two and two. A later run moves it. What must hold either way is the
-        check above it -- a case is contested on the page exactly when the run's
-        own record says its vote was not unanimous.
+        The run committed under ``runs/`` now contests 105, 107, 207 and 211 --
+        three at 3 of 4 and 211 at 2 of 4 -- where the voting run before it
+        contested only 107, 207 and 211. A dated list here is red on one side of
+        every re-run, so there is none. What is asserted instead is the check
+        above it -- a case is contested on the page exactly when the run's own
+        record says its vote was not unanimous -- plus the two facts that hold of
+        any run: that it records at least one contested case, and that a
+        contested case is one the run recorded an agreement below 1 for. The
+        agreement is read from the run's own transcript through
+        ``recorded_vote``, because the page carries the figure as its literal.
         """
         contested = sorted(
             case_no
@@ -774,7 +779,14 @@ class JudgeVoteTests(unittest.TestCase):
                     case_no in contested,
                     "a case is contested for something other than its own vote",
                 )
-        self.assertEqual([107, 207, 211], contested, "the run's contested cases moved")
+        self.assertTrue(contested, "the run records no contested case at all")
+        for case_no in sorted(self.cases):
+            with self.subTest(case=case_no):
+                self.assertEqual(
+                    self.recorded_vote(case_no)["agreement"] < 1,
+                    case_no in contested,
+                    "a case is contested for something other than its agreement",
+                )
 
     def test_the_drafts_and_the_result_reach_the_page(self):
         """An honest name for a weak check, in the manner of the key test.
