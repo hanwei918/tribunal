@@ -10,15 +10,17 @@ from __future__ import annotations
 
 import inspect
 import json
+import re
 import sys
 import unittest
+from decimal import Decimal
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from tribunal import brief, facts, loader  # noqa: E402
+from tribunal import brief, facts, loader, money  # noqa: E402
 
 INDEX_PATH = PROJECT_ROOT / "data" / "index.json"
 
@@ -535,6 +537,355 @@ class AccumulatedDwellBriefTests(unittest.TestCase):
             checked += 1
 
         self.assertEqual(checked, 13, "every NO_SHOW case but 213 carries the block")
+
+
+def money_artifact(brief_obj):
+    """The FARE_BREAKDOWN artifact, which carries the money block."""
+    for artifact in brief_obj["case"]["evidence"]:
+        if artifact["evidence_type"] == "FARE_BREAKDOWN":
+            return artifact
+    raise AssertionError("brief has no FARE_BREAKDOWN artifact")
+
+
+def money_block(brief_obj):
+    """The money block the brief publishes, attached to the fare breakdown."""
+    return money_artifact(brief_obj)["payload"]["derived"][brief.MONEY_KEY]
+
+
+def walk_nodes(node):
+    """Yield every node found anywhere inside nested dicts and lists."""
+    yield node
+    if isinstance(node, dict):
+        for value in node.values():
+            yield from walk_nodes(value)
+    elif isinstance(node, list):
+        for value in node:
+            yield from walk_nodes(value)
+
+
+def figure(block, *path):
+    """One money figure's value, by its path inside the block."""
+    node = block
+    for key in path:
+        node = node[key]
+    return node["value"]
+
+
+class MoneyBlockTests(unittest.TestCase):
+    """The policy's arithmetic, computed by code and published in the brief.
+
+    The first principle is that money comes from a calculator. These tests hold
+    the brief to it: the figures are published, each carries the artifact and
+    the policy it came from, the payable figures are decimal strings with two
+    places, the figures agree with ``tribunal.money`` recomputed here, and the
+    two figures the policy states only in prose are read from the clause text
+    rather than typed into the code.
+    """
+
+    NO_SHOW = "NO_SHOW_CHARGE"
+    ROUTE_DEVIATION = "ROUTE_DEVIATION"
+
+    # The figures a ruling states in currency form: a charge, a payable, a fee
+    # or a compensation. The intermediate fare arithmetic is not one of these,
+    # because POL-RD-02 says intermediate values are not rounded.
+    CURRENCY = re.compile(r"^-?\d+\.\d{2}$")
+
+    def test_every_case_publishes_a_money_block(self):
+        for case_no in case_numbers():
+            b = brief.build_brief(case_no)
+            block = money_block(b)
+            self.assertIs(block["available"], True, "case {0}".format(case_no))
+            self.assertEqual(
+                block["policy_id"],
+                b["policies"]["category"]["policy_id"],
+                "case {0}".format(case_no),
+            )
+
+    def test_every_figure_carries_its_evidence_and_its_policy(self):
+        """A figure with no source is a figure an advocate cannot cite."""
+        checked = 0
+        for case_no in case_numbers():
+            for node in walk_nodes(money_block(brief.build_brief(case_no))):
+                if not (isinstance(node, dict) and "value" in node):
+                    continue
+                self.assertIn("evidence_id", node, "case {0}".format(case_no))
+                self.assertIn("policy_id", node, "case {0}".format(case_no))
+                checked += 1
+        self.assertGreater(checked, 0)
+
+    def test_the_recomputed_fare_is_the_calculator_s_total(self):
+        """The brief's figure is what ``money`` computes from the brief's own figures."""
+        checked = 0
+        for case_no in case_numbers():
+            block = money_block(brief.build_brief(case_no))
+            if "recomputed_fare" not in block:
+                continue
+            recomputed = money.recompute_metered_fare(
+                base_fare=figure(block, "constants", "base_fare"),
+                per_km=figure(block, "constants", "per_km"),
+                per_min=figure(block, "constants", "per_min"),
+                optimal_distance_km=figure(block, "optimal_distance_km"),
+                optimal_duration_min=figure(block, "optimal_duration_min"),
+                surge_multiplier=figure(block, "surge_multiplier"),
+                platform_fee=figure(block, "constants", "platform_fee"),
+                optimal_route_erp=figure(block, "erp_lines", "on_optimal_route_total"),
+                fixed_surcharges=figure(block, "components", "fixed_surcharges"),
+                waiting_time_fee=figure(block, "components", "waiting_time_fee"),
+                promo_discount=figure(block, "components", "promo_discount"),
+            )
+            self.assertEqual(
+                recomputed, figure(block, "recomputed_fare"), "case {0}".format(case_no)
+            )
+            checked += 1
+        self.assertGreater(checked, 0)
+
+    def test_the_refund_figures_are_the_calculator_s(self):
+        for case_no in case_numbers():
+            block = money_block(brief.build_brief(case_no))
+            if "refund" not in block:
+                continue
+            working = money.refund_working(
+                figure(block, "charged_total"),
+                figure(block, "recomputed_fare"),
+                figure(block, "constants", "de_minimis_refund"),
+            )
+            refund = block["refund"]
+            self.assertEqual(
+                refund["refund_before_rounding"]["value"],
+                working["refund_before_rounding"],
+                "case {0}".format(case_no),
+            )
+            self.assertEqual(
+                refund["below_de_minimis"]["value"],
+                working["below_de_minimis"],
+                "case {0}".format(case_no),
+            )
+            self.assertEqual(
+                refund["payable"]["value"],
+                money.payable_string(working["payable"]),
+                "case {0}".format(case_no),
+            )
+            self.assertEqual(
+                refund["full_refund"]["value"],
+                money.payable_string(working["full_refund"]),
+                "case {0}".format(case_no),
+            )
+
+    def test_each_erp_line_carries_the_trace_s_own_proximity_figures(self):
+        """A line's amount and the geometry that decides its match sit together.
+
+        POL-RD-09(4) matches a gantry to the trace by distance, so the amount a
+        line was charged at is not enough to decide it: a reader needs how close
+        the trace came. The money block carries that beside the amount, read out
+        of the trace's own published record rather than recomputed, and this
+        holds every figure equal to the trace's for the same line so the two
+        cannot drift apart. The trace's artifact stays the figure's source; the
+        policy is added because every figure in this block carries one.
+        """
+        checked = 0
+        for case_no in case_numbers():
+            b = brief.build_brief(case_no)
+            block = money_block(b)
+            lines = (block.get("erp_lines") or {}).get("lines") or []
+            if not lines:
+                continue
+
+            payload = gps_artifact(b)["payload"]
+            published = (
+                derived(b).get(brief.ERP_GANTRY_PROXIMITY_KEY)
+                if isinstance(payload, dict)
+                else None
+            )
+            for index, line in enumerate(lines):
+                proximity = line["trace_proximity"]
+                if published is None:
+                    self.assertIsNone(
+                        proximity,
+                        "case {0}: the trace published no proximity".format(case_no),
+                    )
+                    continue
+
+                record = published["lines"][index]
+                self.assertEqual(
+                    line["gantry_name"],
+                    record["gantry_name"],
+                    "case {0}: line {1} is not the trace's line".format(case_no, index),
+                )
+                self.assertIs(
+                    proximity["available"],
+                    record["available"],
+                    "case {0}: line {1} disagrees about availability".format(case_no, index),
+                )
+                if not record["available"]:
+                    self.assertEqual(proximity["reason"], record["reason"])
+                    continue
+
+                nearest = record["nearest_fix"]
+                self.assertEqual(
+                    {
+                        "index": proximity["nearest_fix"]["index"]["value"],
+                        "ts": proximity["nearest_fix"]["ts"]["value"],
+                        "distance_m": proximity["nearest_fix"]["distance_m"]["value"],
+                        "gap_brackets_closest_approach": proximity[
+                            "gap_brackets_closest_approach"
+                        ]["value"],
+                        "across_gap_distance_m": proximity["across_gap_distance_m"]["value"],
+                    },
+                    {
+                        "index": nearest["index"]["value"],
+                        "ts": nearest["ts"]["value"],
+                        "distance_m": nearest["distance_m"]["value"],
+                        "gap_brackets_closest_approach": record[
+                            "gap_brackets_closest_approach"
+                        ]["value"],
+                        "across_gap_distance_m": record["across_gap_distance_m"]["value"],
+                    },
+                    "case {0}: line {1} is not the trace's geometry".format(case_no, index),
+                )
+                self.assertEqual(
+                    proximity["nearest_fix"]["distance_m"]["evidence_id"],
+                    nearest["distance_m"]["evidence_id"],
+                    "case {0}: line {1} lost the trace as its source".format(case_no, index),
+                )
+                self.assertEqual(
+                    proximity["nearest_fix"]["distance_m"]["policy_id"],
+                    block["policy_id"],
+                    "case {0}: line {1} is not tagged with its policy".format(case_no, index),
+                )
+                checked += 1
+
+        self.assertEqual(
+            8, checked, "the corpus carries eight ERP lines across four cases"
+        )
+
+    def test_payable_figures_are_decimal_strings_with_two_places(self):
+        checked = 0
+        for case_no in case_numbers():
+            block = money_block(brief.build_brief(case_no))
+            paths = [("charged_total",)] if "charged_total" in block else []
+            if "refund" in block:
+                paths += [("refund", "payable"), ("refund", "full_refund")]
+            for position in range(len(block.get("closure") or [])):
+                paths += [
+                    ("closure", position, "refund", "payable"),
+                    ("closure", position, "refund", "full_refund"),
+                ]
+            for key in ("quoted_fare", "charged_over_quote", "schedule_fee", "fee_charged",
+                        "difference", "driver_compensation", "goodwill"):
+                if key in block:
+                    paths.append((key,))
+            for path in paths:
+                value = figure(block, *path)
+                self.assertIsInstance(value, str, "case {0}: {1}".format(case_no, path))
+                self.assertRegex(value, self.CURRENCY, "case {0}: {1}".format(case_no, path))
+                checked += 1
+        self.assertGreater(checked, 0)
+
+    def test_case_104_caps_the_excess_at_the_clause_s_cap(self):
+        """POL-RD-03: min(7.07 measured, 1.30 x (30.10 - 27.10) + 1.00) = 4.90."""
+        block = money_block(brief.build_brief(104))
+        closure = block["closure"][0]
+        self.assertEqual(figure(closure, "measured_excess_km"), Decimal("7.07"))
+        self.assertEqual(figure(closure, "cap_km"), Decimal("4.9"))
+        self.assertEqual(figure(closure, "justified_excess_km"), Decimal("4.9"))
+        self.assertEqual(figure(closure, "adjusted_optimal_distance_km"), Decimal("32.00"))
+        self.assertEqual(figure(closure, "adjusted_optimal_duration_min"), Decimal("40.1"))
+        self.assertEqual(figure(closure, "refund", "payable"), "3.60")
+
+    def test_case_9113_caps_the_excess_and_adjusts_the_route(self):
+        """POL-RD-03: min(8.00 measured, 1.30 x (12.00 - 10.00) + 1.00) = 3.60."""
+        case = loader.load_external_set_case(
+            PROJECT_ROOT / "data" / "external" / "codex", 9113
+        )
+        block = money_block(brief.build_brief_for_case(case))
+        closure = block["closure"][0]
+        self.assertEqual(figure(closure, "cap_km"), Decimal("3.6"))
+        self.assertEqual(figure(closure, "justified_excess_km"), Decimal("3.6"))
+        self.assertEqual(figure(closure, "adjusted_optimal_distance_km"), Decimal("13.60"))
+        self.assertEqual(figure(closure, "adjusted_optimal_duration_min"), Decimal("27.2"))
+        self.assertEqual(figure(closure, "refund", "payable"), "8.05")
+
+    def test_an_upfront_quote_is_compared_with_the_charge_and_no_refund_is_computed(self):
+        """POL-RD-11: the quote against the charge, and no distance refund at all."""
+        block = money_block(brief.build_brief(115))
+        self.assertEqual(block["fare_model"]["value"], brief.UPFRONT_QUOTE_MODEL)
+        self.assertEqual(figure(block, "quoted_fare"), "34.50")
+        self.assertEqual(figure(block, "charged_total"), "39.00")
+        self.assertEqual(figure(block, "charged_over_quote"), "4.50")
+        self.assertNotIn("refund", block)
+        self.assertNotIn("recomputed_fare", block)
+
+    def test_the_no_show_fee_is_the_greater_fee_and_names_its_dimension(self):
+        cases = {
+            201: ("4.00", brief.money.DIMENSION_TIE),
+            202: ("6.00", brief.money.DIMENSION_ZONE_CLASS),
+            208: ("8.00", brief.money.DIMENSION_VEHICLE_TIER),
+        }
+        for case_no, (amount, dimension) in cases.items():
+            block = money_block(brief.build_brief(case_no))
+            self.assertEqual(figure(block, "schedule_fee"), amount, "case {0}".format(case_no))
+            self.assertEqual(
+                figure(block, "schedule_fee_dimension"), dimension, "case {0}".format(case_no)
+            )
+
+    def test_the_no_show_payments_are_computed_on_the_charged_figure(self):
+        cases = {206: ("3.20", "2.00"), 208: ("6.40", "4.00")}
+        for case_no, (compensation, goodwill) in cases.items():
+            block = money_block(brief.build_brief(case_no))
+            self.assertEqual(
+                figure(block, "driver_compensation"), compensation, "case {0}".format(case_no)
+            )
+            self.assertEqual(figure(block, "goodwill"), goodwill, "case {0}".format(case_no))
+            self.assertEqual(
+                figure(block, "driver_compensation"),
+                money.payable_string(
+                    money._dec(figure(block, "constants", "driver_compensation_rate"))
+                    * money._dec(figure(block, "fee_charged"))
+                ),
+                "case {0}".format(case_no),
+            )
+
+    def test_the_prose_constants_are_marked_not_structured(self):
+        """A figure the policy states only in prose says so, and names its clause."""
+        block = money_block(brief.build_brief(104))
+        constants = block["constants"]
+        self.assertIs(constants[brief.FULL_REFUND_SHARE]["structured"], False)
+        self.assertEqual(constants[brief.FULL_REFUND_SHARE]["clause_id"], brief.POL_RD_02)
+        self.assertIs(constants[brief.CAP_RATIO]["structured"], False)
+        self.assertEqual(constants[brief.CAP_RATIO]["clause_id"], brief.POL_RD_03)
+        self.assertIs(constants[brief.TOLERANCE_KM]["structured"], False)
+        # The structured fare constants are marked as such, not lumped in with them.
+        self.assertIs(constants["base_fare"]["structured"], True)
+        self.assertIs(constants["de_minimis_refund"]["structured"], True)
+
+    def test_the_block_names_the_prose_only_figures_it_does_not_compute(self):
+        """POL-RD-04's rate, POL-RD-09's cap and radius, POL-RD-10's ceiling."""
+        block = money_block(brief.build_brief(104))
+        named = {entry["clause_id"]: entry for entry in block["not_structured"]}
+        self.assertIn(brief.POL_RD_04, named)
+        self.assertIn(brief.POL_RD_09, named)
+        self.assertIn(brief.POL_RD_10, named)
+        for entry in block["not_structured"]:
+            self.assertIn("not a structured field", entry["note"])
+
+    def test_the_prose_constants_are_read_from_the_clause_text(self):
+        """A figure that came from a clause must move when the clause moves."""
+        with (PROJECT_ROOT / "policy" / "route_deviation.json").open("r", encoding="utf-8") as handle:
+            policy = json.load(handle)
+        for clause in policy["clauses"]:
+            if clause["id"] == brief.POL_RD_03:
+                clause["rule"] = clause["rule"].replace("130%", "140%")
+        constants = brief._money_prose_constants(policy)
+        self.assertEqual(str(constants[brief.CAP_RATIO]), "1.4")
+
+    def test_a_missing_prose_line_raises_rather_than_defaulting(self):
+        with (PROJECT_ROOT / "policy" / "route_deviation.json").open("r", encoding="utf-8") as handle:
+            policy = json.load(handle)
+        for clause in policy["clauses"]:
+            if clause["id"] == brief.POL_RD_03:
+                clause["rule"] = "the cap is stated nowhere in this sentence"
+        with self.assertRaises(loader.LoaderError):
+            brief._money_prose_constants(policy)
 
 
 if __name__ == "__main__":

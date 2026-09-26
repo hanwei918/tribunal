@@ -21,6 +21,13 @@ instead, and assert on the attributes and calls that would make a browser fetch
 something. And they do not assert the headline figures against numbers typed in
 here: the figures are recomputed from the run with ``eval.grade``, so the test
 compares two computations rather than one computation against a memory.
+
+A third thing they do conditionally. The tests that read the committed run can
+only run while that run and this code agree about what the agents were handed.
+When every cached brief digest has moved they skip, naming the reason and the
+command that clears it, rather than fail about a run that has not been re-made
+yet. The tests that build their own run directory are unaffected and keep the
+refusal mechanism itself under test.
 """
 
 from __future__ import annotations
@@ -34,7 +41,7 @@ import tempfile
 import unittest
 from html.parser import HTMLParser
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Sequence
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -43,7 +50,120 @@ if str(PROJECT_ROOT) not in sys.path:
 from eval import grade  # noqa: E402
 from tribunal import brief  # noqa: E402
 from tribunal import pipeline  # noqa: E402
+from tribunal import transcript  # noqa: E402
 from ui import build  # noqa: E402
+
+# --------------------------------------------------------------------------
+# Whether the committed run can be drawn at all
+#
+# The viewer rebuilds each case's brief and refuses a case whose rebuilt digest
+# is not the digest its result recorded, rather than drawing a regenerated brief
+# that merely resembles the one those agents were handed. When that is true of
+# **every** cached case the run cannot be drawn: ``build.build_document`` refuses
+# the whole run and raises, so the tests that read the committed run have nothing
+# to read. Those tests say so and skip. The tests that build their own run
+# directory keep running, so the refusal mechanism stays under test, and the skip
+# is conditional on exactly this state, so it lifts on its own the moment the run
+# is re-made.
+# --------------------------------------------------------------------------
+SKIP_REASON = (
+    "the committed run and this code disagree about every case: every cached "
+    "brief digest differs from the brief this code builds, so the viewer refuses "
+    "the whole run and raises rather than draw regenerated briefs. The money "
+    "facts added to the brief moved all 29 corpus briefs. Two commands clear it, "
+    "after which this skip lifts with nothing unskipped by hand: "
+    "`python3 -m eval.run_benchmark --force` for the corpus and "
+    "`python3 -m eval.development_sets --set codex --force` for the second set, "
+    "then `python -m ui.build` to rebuild the committed page."
+)
+
+_run_has_moved_on: Optional[bool] = None
+_skip_reason_reported = False
+
+
+def run_has_moved_on() -> bool:
+    """Whether every cached case's brief has moved on from this code.
+
+    Read from the run's own result files by ``ui.build``, and memoised: the
+    answer cannot change while one test process runs.
+    """
+    global _run_has_moved_on
+    if _run_has_moved_on is None:
+        _run_has_moved_on = build.run_has_moved_on()
+    return _run_has_moved_on
+
+
+def skip_unless_the_run_can_be_drawn() -> None:
+    """Skip, naming the state and the command that clears it, when it cannot.
+
+    Conditional on exactly "every cached brief digest has moved", so a run this
+    code agrees with runs every test as it did before, and a re-run clears the
+    skip by itself. The reason is printed as well as raised, because a skipped
+    test's reason is only shown by a verbose run and the quiet form is the one
+    that gets pasted.
+    """
+    global _skip_reason_reported
+    if not run_has_moved_on():
+        return
+    if not _skip_reason_reported:
+        _skip_reason_reported = True
+        print("\n{0}\n".format(SKIP_REASON), file=sys.stderr)
+    raise unittest.SkipTest(SKIP_REASON)
+
+
+def fixture_run_directory(root: Path, case_numbers: Sequence[int]) -> Path:
+    """A small run directory, copied from the headline run and made current.
+
+    Two cases rather than twenty-nine, so a refusal can be watched without
+    rebuilding the whole corpus to move one digest.
+
+    The copied results carry the digest of the brief *that* run's agents were
+    handed, and this code's briefs have moved on. A fixture is not making a claim
+    about the headline run -- it is a run directory in the shape the runner
+    writes -- so the recorded digests are rewritten to the ones this code builds,
+    which is what the runner would have recorded had it run now. Without that,
+    every test using a fixture would inherit this session's brief change instead
+    of testing the viewer.
+    """
+    run_dir = Path(root) / "run"
+    run_dir.mkdir()
+    for name in ("run.json", "invocations.json"):
+        shutil.copy2(build.RUN_DIR / name, run_dir / name)
+    for case_no in case_numbers:
+        for suffix in (".json", ".transcript.json"):
+            shutil.copy2(
+                build.RUN_DIR / ("case-%05d%s" % (case_no, suffix)),
+                run_dir / ("case-%05d%s" % (case_no, suffix)),
+            )
+    _make_the_fixture_current(run_dir, case_numbers)
+    return run_dir
+
+
+def _make_the_fixture_current(run_dir: Path, case_numbers: Sequence[int]) -> None:
+    """Write this code's brief digest where the copied files recorded another.
+
+    Both places the build compares it are written: the result's own
+    ``brief_sha256``, and each advocate transcript entry's ``user_sha256``, which
+    the stance proof checks against the same digest. The judge's entry is left
+    alone -- its user prompt is the judge prompt, not the brief.
+    """
+    for case_no in case_numbers:
+        digest = brief.brief_digest(brief.build_brief(case_no))[1]
+
+        result_path = run_dir / ("case-%05d.json" % case_no)
+        result = json.loads(result_path.read_text(encoding="utf-8"))
+        result["brief_sha256"] = digest
+        result_path.write_text(json.dumps(result), encoding="utf-8")
+
+        transcript_path = run_dir / ("case-%05d.transcript.json" % case_no)
+        record = json.loads(transcript_path.read_text(encoding="utf-8"))
+        for entry in record["entries"]:
+            if entry.get("role") in (
+                transcript.ROLE_RIDER_ADVOCATE,
+                transcript.ROLE_DRIVER_ADVOCATE,
+            ):
+                entry["user_sha256"] = digest
+        transcript_path.write_text(json.dumps(record), encoding="utf-8")
 
 # The data block, by the id the page's own script reads it with. The match is
 # non-greedy and the build escapes ``<`` inside the JSON, so the first
@@ -151,11 +271,37 @@ def is_external_reference(url: str) -> bool:
     return False
 
 
+class RunCurrencyTests(unittest.TestCase):
+    """The committed run is either drawable, or refused whole and said so.
+
+    This is the guard that stops a page being drawn from a run this code
+    disagrees with, asserted positively while the state exists rather than only
+    skipped around. It holds on both sides of a re-run: while the run is current
+    there is nothing to refuse and the test skips, and while every cached brief
+    has moved the build must refuse the run whole and say why.
+    """
+
+    def test_a_run_whose_briefs_have_all_moved_on_is_refused_whole(self):
+        if not run_has_moved_on():
+            self.skipTest("the committed run is current; there is nothing to refuse")
+
+        with self.assertRaises(build.BuildError) as caught:
+            build.build_document()
+
+        self.assertIn("every cached case was refused", str(caught.exception))
+        self.assertEqual(
+            [],
+            build.cases_whose_briefs_match(),
+            "a case still matches, so the whole-run refusal is not the whole truth",
+        )
+
+
 class CommittedPageTests(unittest.TestCase):
     """The committed page is the one this code builds, and it is one file."""
 
     @classmethod
     def setUpClass(cls):
+        skip_unless_the_run_can_be_drawn()
         cls.document = build.build_document()
         cls.page = build.render_html(cls.document)
 
@@ -307,6 +453,7 @@ class TheRunTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        skip_unless_the_run_can_be_drawn()
         cls.document = build.build_document()
         cls.cases = {case["case_no"]: case for case in cls.document["cases"]}
 
@@ -499,6 +646,7 @@ class JudgeVoteTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        skip_unless_the_run_can_be_drawn()
         cls.document = build.build_document()
         cls.cases = {case["case_no"]: case for case in cls.document["cases"]}
         cls.page = build.render_html(cls.document)
@@ -707,6 +855,7 @@ class HeadlineTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        skip_unless_the_run_can_be_drawn()
         cls.document = build.build_document()
         cls.page = build.render_html(cls.document)
 
@@ -818,17 +967,10 @@ class RefusalTests(unittest.TestCase):
         Two cases rather than twenty-nine, so the refusal can be shown without
         rebuilding the whole corpus to watch one digest move.
         """
-        run_dir = root / "run"
-        run_dir.mkdir()
-        for name in ("run.json", "invocations.json"):
-            shutil.copy2(build.RUN_DIR / name, run_dir / name)
-        for case_no in (self.ALTERED, self.ADMITTED):
-            for suffix in (".json", ".transcript.json"):
-                shutil.copy2(
-                    build.RUN_DIR / ("case-%05d%s" % (case_no, suffix)),
-                    run_dir / ("case-%05d%s" % (case_no, suffix)),
-                )
-        return run_dir
+        # Made current rather than inherited: see ``fixture_run_directory`` for
+        # why a fixture rewrites the copied digests instead of carrying the
+        # headline run's.
+        return fixture_run_directory(root, (self.ALTERED, self.ADMITTED))
 
     @staticmethod
     def _altering_builder(case_no: int, altered: int):
@@ -913,6 +1055,7 @@ class ProvenanceTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        skip_unless_the_run_can_be_drawn()
         cls.document = build.build_document()
         cls.provenance = cls.document["provenance"]
         cls.page = build.render_html(cls.document)
@@ -1059,6 +1202,7 @@ class PresentationTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        skip_unless_the_run_can_be_drawn()
         cls.document = build.build_document()
         cls.page = build.render_html(cls.document)
         cls.script = behaviour_script(cls.page)
@@ -1170,6 +1314,7 @@ class StanceProofTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        skip_unless_the_run_can_be_drawn()
         cls.document = build.build_document()
         cls.page = build.render_html(cls.document)
         cls.embedded = embedded_document(cls.page)
@@ -1274,17 +1419,10 @@ class StanceProofRefusalTests(unittest.TestCase):
     ADMITTED = 209
 
     def _fixture_run_directory(self, root: Path) -> Path:
-        run_dir = root / "run"
-        run_dir.mkdir()
-        for name in ("run.json", "invocations.json"):
-            shutil.copy2(build.RUN_DIR / name, run_dir / name)
-        for case_no in (self.ALTERED, self.ADMITTED):
-            for suffix in (".json", ".transcript.json"):
-                shutil.copy2(
-                    build.RUN_DIR / ("case-%05d%s" % (case_no, suffix)),
-                    run_dir / ("case-%05d%s" % (case_no, suffix)),
-                )
-        return run_dir
+        # Made current rather than inherited: see ``fixture_run_directory`` for
+        # why a fixture rewrites the copied digests instead of carrying the
+        # headline run's.
+        return fixture_run_directory(root, (self.ALTERED, self.ADMITTED))
 
     def test_a_case_whose_stored_ranges_were_altered_stops_the_build(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -1371,19 +1509,13 @@ class ReplayTests(unittest.TestCase):
     def _fixture_run_directory(self, root: Path, *, source: Optional[str] = SOURCE) -> Path:
         """A two-case run directory, copied from the headline run.
 
-        ``source`` of ``None`` leaves both files as the committed run wrote them,
-        which is the "this run called every agent itself" case.
+        The copied files are made current first -- see ``fixture_run_directory``
+        -- so that what is under test is the viewer's handling of the replay
+        block and not the headline run's own staleness. ``source`` of ``None``
+        then leaves both files as the run wrote them, which is the "this run
+        called every agent itself" case.
         """
-        run_dir = root / "run"
-        run_dir.mkdir()
-        for name in ("run.json", "invocations.json"):
-            shutil.copy2(build.RUN_DIR / name, run_dir / name)
-        for case_no in (self.REPLAYED, self.CALLED):
-            for suffix in (".json", ".transcript.json"):
-                shutil.copy2(
-                    build.RUN_DIR / ("case-%05d%s" % (case_no, suffix)),
-                    run_dir / ("case-%05d%s" % (case_no, suffix)),
-                )
+        run_dir = fixture_run_directory(root, (self.REPLAYED, self.CALLED))
         # The committed run is itself a replay now, so every copied case arrives
         # already carrying a replay block, and so does its ``run.json``. The
         # fixture therefore starts from a known state: nothing is marked

@@ -127,6 +127,8 @@ __all__ = [
     "OUTPUT_PATH",
     "DEFAULT_CASE",
     "cached_cases",
+    "cases_whose_briefs_match",
+    "run_has_moved_on",
     "build_document",
     "render_html",
     "main",
@@ -886,39 +888,25 @@ def _provenance(
     }
 
 
-def build_document(
-    run_dir: Path = RUN_DIR,
-    brief_builder: Optional[Callable[[int], Mapping[str, Any]]] = None,
-    key_path: Path = grade.ANSWER_KEY_PATH,
-) -> Dict[str, Any]:
-    """The whole data model of the viewer, as a plain dict.
+def _rebuild_cached_cases(
+    run_dir: Path,
+    builder: Callable[[int], Mapping[str, Any]],
+    numbers: Sequence[int],
+) -> Tuple[
+    Dict[int, Mapping[str, Any]], Dict[int, Mapping[str, Any]], List[Dict[str, Any]]
+]:
+    """Rebuild each cached case's brief, and say which ones the run agrees with.
 
-    ``brief_builder`` is injectable so a test can hand in a brief that does not
-    match the recorded digest and watch the case be refused rather than shown.
-    The default is the real one, and there is no other way to change what is
-    rebuilt.
+    The one place the comparison is made. :func:`build_document` turns the answer
+    into a page and raises when nothing is left to draw; :func:`run_has_moved_on`
+    reads the same answer without building anything, so the two cannot disagree
+    about a case.
 
-    A case whose rebuilt brief does not match the digest its result recorded is
-    refused: named, with both digests, and left out of the cases the viewer can
-    open. The refusal is reported rather than swallowed, because a viewer that
-    silently drops a case is indistinguishable from a run that never had one.
+    A case is refused when its rebuilt digest is not the digest its result
+    recorded, and also when the brief cannot be rebuilt at all: "cannot build it"
+    is not "it matches", which is the rule the runner applies to the same
+    question.
     """
-    run_dir = Path(run_dir)
-    builder = brief_module.build_brief if brief_builder is None else brief_builder
-
-    run = _read_json(run_dir / "run.json")
-    invocations = _read_json(run_dir / "invocations.json")
-    if not isinstance(invocations, list):
-        raise BuildError("invocations.json is not a list")
-
-    key_records: Dict[int, Mapping[str, Any]] = {}
-    for record in _read_json(key_path):
-        key_records[int(record["case_no"])] = record
-
-    numbers = cached_cases(run_dir)
-    if not numbers:
-        raise BuildError("no cached case results under {0}".format(run_dir))
-
     refused: List[Dict[str, Any]] = []
     built_by_case: Dict[int, Mapping[str, Any]] = {}
     raw_by_case: Dict[int, Mapping[str, Any]] = {}
@@ -956,6 +944,79 @@ def build_document(
             )
             continue
         built_by_case[case_no] = rebuilt
+    return built_by_case, raw_by_case, refused
+
+
+def cases_whose_briefs_match(run_dir: Path = RUN_DIR) -> List[int]:
+    """The cached cases whose rebuilt brief is the brief their result recorded.
+
+    Asked without building a page, and answered by the same comparison
+    :func:`build_document` makes, so a caller reading this list and the build
+    acting on it are reading one answer.
+    """
+    run_dir = Path(run_dir)
+    built_by_case, _, _ = _rebuild_cached_cases(
+        run_dir, brief_module.build_brief, cached_cases(run_dir)
+    )
+    return sorted(built_by_case)
+
+
+def run_has_moved_on(run_dir: Path = RUN_DIR) -> bool:
+    """Whether **every** cached case's brief has moved on from this code.
+
+    True only when the run holds at least one cached case and this code agrees
+    with none of them -- the state in which the viewer refuses the whole run and
+    :func:`build_document` raises, because a page drawn from it would show
+    regenerated briefs that merely resemble the ones those agents were handed.
+    One matching case makes it False: the page can be built, and that case can be
+    shown.
+
+    It is a question about the run rather than about the viewer, and it answers
+    itself from the run's own result files, so a run made by this code reads
+    False with nothing reset by hand.
+    """
+    run_dir = Path(run_dir)
+    if not cached_cases(run_dir):
+        return False
+    return not cases_whose_briefs_match(run_dir)
+
+
+def build_document(
+    run_dir: Path = RUN_DIR,
+    brief_builder: Optional[Callable[[int], Mapping[str, Any]]] = None,
+    key_path: Path = grade.ANSWER_KEY_PATH,
+) -> Dict[str, Any]:
+    """The whole data model of the viewer, as a plain dict.
+
+    ``brief_builder`` is injectable so a test can hand in a brief that does not
+    match the recorded digest and watch the case be refused rather than shown.
+    The default is the real one, and there is no other way to change what is
+    rebuilt.
+
+    A case whose rebuilt brief does not match the digest its result recorded is
+    refused: named, with both digests, and left out of the cases the viewer can
+    open. The refusal is reported rather than swallowed, because a viewer that
+    silently drops a case is indistinguishable from a run that never had one.
+    """
+    run_dir = Path(run_dir)
+    builder = brief_module.build_brief if brief_builder is None else brief_builder
+
+    run = _read_json(run_dir / "run.json")
+    invocations = _read_json(run_dir / "invocations.json")
+    if not isinstance(invocations, list):
+        raise BuildError("invocations.json is not a list")
+
+    key_records: Dict[int, Mapping[str, Any]] = {}
+    for record in _read_json(key_path):
+        key_records[int(record["case_no"])] = record
+
+    numbers = cached_cases(run_dir)
+    if not numbers:
+        raise BuildError("no cached case results under {0}".format(run_dir))
+
+    built_by_case, raw_by_case, refused = _rebuild_cached_cases(
+        run_dir, builder, numbers
+    )
 
     if not built_by_case:
         raise BuildError(
