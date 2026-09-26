@@ -174,3 +174,59 @@ the record alone cannot tell this run's four-draft result from a single-draft
 one; only the `vote` block inside each transcript does. This is reported and
 **not** fixed here — the run is committed exactly as produced, and the runner
 was not changed in this session.
+
+## The viewer
+
+The vote is invisible in a result object: a unanimous ruling and one that
+carried 3 of 4 are the same shape. So the viewer was extended to show it, from
+the run's own records and from nothing else.
+
+**The judge step of one case** now ends with *How the judge's drafts voted* —
+one box per draft giving its kind (`sampled` or `position-swapped`), its seed
+and temperature, the four graded fields it proposed, and whether it `agreed`,
+`dissented` or `abstained`; then the vote result, naming the outcome
+(`carried`, `carried_not_unanimous` or `escalated`), the agreeing count, the
+`vote_agreement`, and whether the vote was unanimous.
+
+**The overview** gains a `Vote` column on the all-cases grid, giving each case
+its agreeing count and, where the vote was not unanimous, the outcome as a
+`contested` badge; a *Where the judge's drafts disagreed* table above the grid,
+listing the non-unanimous cases with the drafts that did not agree and the whole
+four-field proposal each of them made; and a **Contested only** toggle on the
+grid that narrows it to those cases.
+
+The dissent line names all four graded fields rather than the ruling alone,
+because on this run 207's four drafts all proposed `ESCALATE` and still
+disagreed — on a referral. A line showing only the ruling would have called that
+vote unanimous.
+
+Three things are deliberate:
+
+- **The page derives no vote.** Each draft's verdict is read from the run's own
+  `valid` and `agrees` booleans; the outcome, the agreement and the unanimous
+  flag are the run's own fields. A page that recomputed the vote could agree
+  with itself while disagreeing with the run, and the two would then be
+  indistinguishable from the page alone.
+- **The filter is view state, not part of the link.** It stays out of the hash,
+  so a shared link opens the same run and whoever follows it decides for
+  themselves whether to narrow the grid.
+- **The colours are keyed by the outcome string itself**
+  (`.vote-result.carried`, `.vote-result.carried_not_unanimous`,
+  `.vote-result.escalated`), and a test pins those three against
+  `pipeline.VOTE_CARRIED`, `pipeline.VOTE_CARRIED_NOT_UNANIMOUS` and
+  `pipeline.VOTE_ESCALATED`, so the stylesheet cannot drift away from the words
+  the pipeline can emit.
+
+**How it was checked.** The committed page is verified from
+`tests/test_ui_build.py`'s `JudgeVoteTests`, which read the vote out of
+`runs/deepseek-deepseek-flash/case-NNNNN.transcript.json` and require the page's
+document to carry exactly that, draft by draft, and from a static read of the
+built `ui/dist/index.html` — its script, its data block and its stylesheet —
+with `python -m ui.build --check` confirming the committed bytes equal a fresh
+build. Ten tests were added. On this run the vote reaches the page for all 29
+corpus cases, and the three contested ones are 107, 207 and 211.
+
+One rendering was also opened once in a headless browser during the session,
+before the check was narrowed to the built page and the tests; it drew case
+211's four drafts and its `escalated` result as recorded above. No browser is
+part of the verification the repository relies on.

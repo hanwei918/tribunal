@@ -483,6 +483,225 @@ class TheRunTests(unittest.TestCase):
                         )
 
 
+class JudgeVoteTests(unittest.TestCase):
+    """The vote the judge's drafts took, shown from the run's own record.
+
+    A case's result object looks the same whether four drafts agreed or only
+    two did, so the page has to carry the vote itself or a reader cannot tell a
+    unanimous ruling from a contested one. These tests read the vote out of the
+    transcripts the run wrote and require the page to carry exactly that: the
+    drafts, how each was drawn, how each voted, and the outcome.
+
+    Nothing here re-derives a vote. That is the point of the class: a page that
+    recomputed the vote could agree with itself while disagreeing with the run,
+    and the two would then be indistinguishable from the page alone.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.document = build.build_document()
+        cls.cases = {case["case_no"]: case for case in cls.document["cases"]}
+        cls.page = build.render_html(cls.document)
+        cls.script = behaviour_script(cls.page)
+        cls.stylesheet = "\n".join(_STYLE_RE.findall(cls.page))
+
+    def recorded_vote(self, case_no: int) -> dict:
+        """The vote as the run wrote it, read the way the builder reads it.
+
+        ``parse_float=Decimal`` matters here. The document turns a ``Decimal``
+        into its literal, so reading the transcript with the default float hook
+        would compare a page literal against a binary approximation of it and
+        the comparison would be about the reader rather than about the page.
+        """
+        path = build.RUN_DIR / ("case-%05d.transcript.json" % case_no)
+        return build._read_json(path)["vote"]
+
+    def test_every_case_carries_the_vote_the_run_recorded(self):
+        """Draft by draft: kind, seed, temperature, proposal and verdict."""
+        drafts_seen = 0
+        for case_no, case in sorted(self.cases.items()):
+            with self.subTest(case=case_no):
+                vote = case["vote"]
+                self.assertIsNotNone(vote, "an admitted case carries no vote")
+                written = self.recorded_vote(case_no)
+                for field in ("votes", "threshold", "valid", "outcome", "unanimous"):
+                    self.assertEqual(written[field], vote[field], field)
+                # A float is carried as its literal, which is what the page
+                # shows; the value is still the run's own number.
+                self.assertEqual(str(written["agreement"]), vote["agreement"])
+                self.assertEqual(len(written["drafts"]), len(vote["drafts"]))
+                for source, shown in zip(written["drafts"], vote["drafts"]):
+                    for field in ("draft", "kind", "seed"):
+                        self.assertEqual(source[field], shown[field], field)
+                    self.assertEqual(str(source["temperature"]), shown["temperature"])
+                    self.assertEqual(
+                        build._normalise(source["proposal"]), shown["proposal"]
+                    )
+                    # The verdict is the run's own two booleans, not a second
+                    # judgement made on the page about what agreeing means.
+                    self.assertEqual(
+                        "abstained"
+                        if not source["valid"]
+                        else ("agreed" if source["agrees"] else "dissented"),
+                        shown["verdict"],
+                    )
+                    drafts_seen += 1
+        self.assertGreater(drafts_seen, 0, "no draft reached the page")
+
+    def test_the_agreeing_count_is_the_drafts_that_agreed(self):
+        for case_no, case in sorted(self.cases.items()):
+            vote = case["vote"]
+            with self.subTest(case=case_no):
+                self.assertEqual(vote["votes"], len(vote["drafts"]))
+                self.assertEqual(
+                    sum(1 for draft in vote["drafts"] if draft["verdict"] == "agreed"),
+                    vote["agreeing"],
+                )
+
+    def test_the_two_records_of_the_agreement_are_the_same_number(self):
+        """The cache records vote_agreement; the transcript records the vote.
+
+        Both are this run's own files. A page that read one of them and a reader
+        who read the other must not be told different numbers.
+        """
+        for case_no, case in sorted(self.cases.items()):
+            record = build._read_json(build.RUN_DIR / ("case-%05d.json" % case_no))
+            with self.subTest(case=case_no):
+                self.assertIn("vote_agreement", record)
+                self.assertEqual(str(record["vote_agreement"]), case["vote"]["agreement"])
+
+    def test_unanimous_is_the_carried_outcome_and_nothing_else(self):
+        """The page cannot call a split vote unanimous, or a full house split."""
+        for case_no, case in sorted(self.cases.items()):
+            vote = case["vote"]
+            with self.subTest(case=case_no):
+                self.assertEqual(vote["unanimous"], vote["outcome"] == pipeline.VOTE_CARRIED)
+                self.assertEqual(
+                    vote["agreeing"] == vote["votes"],
+                    vote["unanimous"],
+                    "the run called a vote unanimous for something other than a full house",
+                )
+
+    def test_no_outcome_reaches_the_page_without_a_rule_for_it(self):
+        outcomes = {case["vote"]["outcome"] for case in self.cases.values()}
+        self.assertTrue(outcomes, "no vote reached the page")
+        self.assertLessEqual(
+            outcomes,
+            {pipeline.VOTE_CARRIED, pipeline.VOTE_CARRIED_NOT_UNANIMOUS, pipeline.VOTE_ESCALATED},
+            "the run recorded an outcome the viewer's stylesheet has no rule for",
+        )
+
+    def test_the_stylesheet_colours_every_outcome(self):
+        """Three outcomes, three colours, named by the outcome string itself.
+
+        The class is the outcome the run recorded rather than a synonym picked
+        on the page, so this assertion is what stops the two drifting apart.
+        """
+        for outcome in (
+            pipeline.VOTE_CARRIED,
+            pipeline.VOTE_CARRIED_NOT_UNANIMOUS,
+            pipeline.VOTE_ESCALATED,
+        ):
+            with self.subTest(outcome=outcome):
+                self.assertIn(".vote-result." + outcome + " {", self.stylesheet)
+
+    def test_the_contested_cases_are_the_ones_the_run_marked(self):
+        """Which cases those are is dated; that the page follows the run is not.
+
+        The pin below is about the run committed under ``runs/`` now: 107 and
+        207 carried on a 3-of-4 vote, and 211 escalated because its drafts split
+        two and two. A later run moves it. What must hold either way is the
+        check above it -- a case is contested on the page exactly when the run's
+        own record says its vote was not unanimous.
+        """
+        contested = sorted(
+            case_no
+            for case_no, case in self.cases.items()
+            if case["vote"]["unanimous"] is False
+        )
+        for case_no, case in sorted(self.cases.items()):
+            with self.subTest(case=case_no):
+                self.assertEqual(
+                    not case["vote"]["unanimous"],
+                    case_no in contested,
+                    "a case is contested for something other than its own vote",
+                )
+        self.assertEqual([107, 207, 211], contested, "the run's contested cases moved")
+
+    def test_the_drafts_and_the_result_reach_the_page(self):
+        """An honest name for a weak check, in the manner of the key test.
+
+        The document carries the vote and the stylesheet colours it; this
+        asserts only that the two render paths are wired to that payload -- the
+        judge step calls the vote panel, the overview calls the summary, and
+        both read the run's own field names. It cannot tell you the panel draws
+        anything. What it draws was checked from the built page, and that check
+        is recorded in ``docs/notes/2026-09-26-the-voting-run.md``.
+        """
+        self.assertIn("votePanel(caseDoc)", self.script)
+        self.assertIn("voteSummary()", self.script)
+        for field in ("vote.drafts", "vote.agreement", "vote.outcome", "vote.unanimous"):
+            with self.subTest(field=field):
+                self.assertIn(field, self.script)
+
+    def test_a_case_with_no_vote_yields_no_vote_rather_than_a_blank_one(self):
+        """A single judge call records no vote; the page must not invent one.
+
+        Every case in this run was decided by four drafts, so this branch is
+        exercised directly rather than through the run.
+        """
+        self.assertIsNone(build._vote_payload(None))
+        self.assertIsNone(build._vote_payload("not a vote"))
+
+    def test_an_unusable_draft_is_shown_as_abstaining(self):
+        """A draft that could not be parsed votes for nothing, and says so.
+
+        Also a branch this run does not reach: no draft here abstained, so the
+        record for one is built by hand.
+        """
+        raw = {
+            "votes": 2,
+            "threshold": 2,
+            "valid": 1,
+            "agreement": 1.0,
+            "outcome": pipeline.VOTE_CARRIED,
+            "unanimous": True,
+            "drafts": [
+                {
+                    "draft": 1,
+                    "kind": "sampled",
+                    "seed": 101,
+                    "temperature": 0.7,
+                    "valid": True,
+                    "agrees": True,
+                    "abstention": None,
+                    "proposal": {
+                        "ruling": "ESCALATE",
+                        "amount_sgd": None,
+                        "driver_compensation_sgd": None,
+                        "referrals": [],
+                    },
+                },
+                {
+                    "draft": 2,
+                    "kind": "sampled",
+                    "seed": 202,
+                    "temperature": 0.7,
+                    "valid": False,
+                    "agrees": False,
+                    "abstention": "malformed answer",
+                    "proposal": None,
+                },
+            ],
+        }
+        payload = build._vote_payload(raw)
+        self.assertEqual(
+            ["agreed", "abstained"], [draft["verdict"] for draft in payload["drafts"]]
+        )
+        self.assertEqual(1, payload["agreeing"])
+        self.assertEqual("malformed answer", payload["drafts"][1]["abstention"])
+
+
 class HeadlineTests(unittest.TestCase):
     """The figures are computed, and they are the grader's own figures."""
 

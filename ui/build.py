@@ -1060,6 +1060,12 @@ def build_document(
                 },
                 "expected": expected,
                 "grading": _grading_of(score),
+                # The judge's vote, read out of this case's own transcript. It is
+                # how the ruling above was reached, so it travels beside the
+                # judge rather than being recomputed from the ruling -- which
+                # could not recover it, since a 2-of-4 split and a unanimous
+                # panel can produce the same ruling.
+                "vote": _vote_payload(transcript.get("vote")),
                 "recorded_matched": result.get("matched"),
                 # ``None`` when this run asked this case's advocates itself, so
                 # the case view can say which of the two happened rather than
@@ -1103,6 +1109,56 @@ def _advocate_payload(agent: Mapping[str, Any]) -> Dict[str, Any]:
     payload = dict(agent)
     payload["claims"] = _claims_of(agent)
     return payload
+
+
+def _vote_payload(raw: Any) -> Optional[Dict[str, Any]]:
+    """The judge's vote as the run recorded it, ready for the page.
+
+    ``None`` when the run recorded no vote at all -- a single-draft run. The page
+    then says so rather than drawing a panel of nothing.
+
+    Every value here is the run's own: the drafts, their kinds, seeds and
+    temperatures, and their proposals are copied out of the transcript's ``vote``
+    block unchanged. The only thing derived is each draft's ``verdict``, and it
+    is derived from the run's own two fields and nothing else -- a draft that
+    produced no usable ruling abstained, one the run marked as agreeing agreed,
+    and one that produced a usable ruling the run did not mark dissented. The
+    count of agreeing drafts is derived the same way, so a reader can see the
+    majority the run reported rather than recomputing a rounded fraction.
+    """
+    if not isinstance(raw, Mapping):
+        return None
+    drafts: List[Dict[str, Any]] = []
+    for draft in raw.get("drafts") or []:
+        if not isinstance(draft, Mapping):
+            continue
+        if not draft.get("valid"):
+            verdict = "abstained"
+        elif draft.get("agrees"):
+            verdict = "agreed"
+        else:
+            verdict = "dissented"
+        drafts.append(
+            {
+                "draft": draft.get("draft"),
+                "kind": draft.get("kind"),
+                "seed": draft.get("seed"),
+                "temperature": draft.get("temperature"),
+                "verdict": verdict,
+                "abstention": draft.get("abstention"),
+                "proposal": draft.get("proposal"),
+            }
+        )
+    return {
+        "votes": raw.get("votes"),
+        "threshold": raw.get("threshold"),
+        "valid": raw.get("valid"),
+        "agreement": raw.get("agreement"),
+        "agreeing": sum(1 for draft in drafts if draft["verdict"] == "agreed"),
+        "outcome": raw.get("outcome"),
+        "unanimous": raw.get("unanimous"),
+        "drafts": drafts,
+    }
 
 
 # --------------------------------------------------------------------------
@@ -1289,6 +1345,40 @@ footer.prov b { color: var(--text); font-weight: 600; }
 .lead { color: var(--muted); max-width: 78ch; }
 .hint { color: var(--muted); font-size: 12.5px; margin-top: 10px; }
 
+/* ---- the judge's vote ------------------------------------------------- */
+/* A ruling one draft reached and a ruling four drafts agreed on look the same
+   in the result object; this panel is what tells them apart. */
+.vote-result { border: 1px solid var(--line); border-left-width: 4px; border-radius: 8px;
+  padding: 11px 14px; margin: 10px 0; background: var(--panel-2); }
+/* The class is the outcome string the run recorded, spelled out here once so
+   the colour cannot drift away from the word. */
+.vote-result.carried { border-left-color: var(--ok); }
+.vote-result.carried_not_unanimous { border-left-color: var(--warn); }
+.vote-result.escalated { border-left-color: var(--bad); }
+.vote-result .headline { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; }
+.vote-result .headline .what { font-weight: 600; }
+.draft { border: 1px solid var(--line); border-left-width: 4px; border-radius: 8px;
+  padding: 10px 13px; margin: 9px 0; background: var(--panel-2); }
+.draft.agreed { border-left-color: var(--ok); }
+.draft.dissented { border-left-color: var(--warn); }
+.draft.abstained { border-left-color: #5d6b78; background: rgba(157,171,185,0.05); }
+.draft .draft-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  color: var(--muted); font-size: 12px; }
+.draft .draft-no { font-family: var(--mono); color: var(--text); font-weight: 650; }
+.draft .notes { color: var(--muted); font-size: 12.5px; margin: 6px 0 0 0; }
+.badge.sampled { color: var(--accent); border-color: rgba(121,192,255,0.5); }
+.badge.swapped { color: var(--judge); border-color: rgba(185,162,255,0.5); }
+.badge.agreed { color: var(--ok); border-color: rgba(74,194,107,0.5); }
+.badge.dissented { color: var(--warn); border-color: rgba(216,167,42,0.6); background: rgba(216,167,42,0.10); }
+.badge.abstained { color: var(--muted); }
+.badge.contested { color: var(--warn); border-color: rgba(216,167,42,0.6); }
+.vote-filter { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
+.vote-filter .count { color: var(--muted); font-size: 12.5px; }
+td.vote-cell { white-space: nowrap; }
+td.vote-cell .who { color: var(--muted); font-size: 12px; margin-left: 6px; }
+tr.contested { background: rgba(216,167,42,0.06); }
+tr.contested:hover { background: rgba(216,167,42,0.12); }
+
 /* ---- stance view: the two advocates against the same record ------------ */
 .stance-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px; }
 @media (max-width: 940px) { .stance-grid { grid-template-columns: 1fr; } }
@@ -1456,7 +1546,11 @@ _JS = r"""
     step: 0,
     highlight: null,
     projector: false,
-    help: false
+    help: false,
+    // The vote filter is a reading aid, not part of the run, so it stays out
+    // of the hash: a shared link opens the same run, and whoever follows it
+    // decides for themselves whether to narrow the grid.
+    contestedOnly: false
   };
 
   // ---- deep links ------------------------------------------------------
@@ -1793,11 +1887,11 @@ _JS = r"""
     ]);
   }
 
-  function caseGrid() {
+  function caseGridTable(rows) {
     var body = h("tbody");
-    DATA.cases.forEach(function (c) {
+    rows.forEach(function (c) {
       var row = h("tr", {
-        class: (c.grading.exact ? "clickable" : "clickable miss"),
+        class: (c.grading.exact ? "clickable" : "clickable miss") + (isContested(c) ? " contested" : ""),
         title: "open case " + c.case_no,
         onclick: function () { openCase(c.case_no); }
       });
@@ -1806,6 +1900,13 @@ _JS = r"""
       row.appendChild(h("td", { text: text(c.difficulty) }));
       row.appendChild(h("td", { text: text(c.judge.verdict.ruling) }));
       row.appendChild(h("td", { text: text(c.expected.ruling) }));
+      // The vote column is the run's own vote_agreement, shown beside the
+      // result rather than instead of it: a case can be a four-field match and
+      // still be one the drafts only just agreed on.
+      row.appendChild(h("td", { class: "vote-cell" }, c.vote ? [
+        h("span", { text: c.vote.agreeing + " of " + c.vote.votes }),
+        c.vote.unanimous ? null : h("span", { class: "badge contested", text: text(c.vote.outcome) })
+      ] : h("span", { class: "null", text: "no vote" })));
       row.appendChild(h("td", null, h("span", {
         class: c.grading.exact ? "badge ok" : "badge miss",
         text: c.grading.exact ? "match" : "MISS"
@@ -1815,9 +1916,43 @@ _JS = r"""
     return h("table", null, [
       h("thead", null, h("tr", null, [
         h("th", { text: "#" }), h("th", { text: "Category" }), h("th", { text: "Difficulty" }),
-        h("th", { text: "Produced" }), h("th", { text: "Expected" }), h("th", { text: "Result" })
+        h("th", { text: "Produced" }), h("th", { text: "Expected" }), h("th", { text: "Vote" }),
+        h("th", { text: "Result" })
       ])),
       body
+    ]);
+  }
+
+  // The whole grid, with a filter for the cases the drafts did not agree on.
+  // The filter is view state and stays out of the hash: a link should open the
+  // same run, and the filter is a reading aid on top of it.
+  function caseGrid() {
+    var holder = h("div", { class: "grid-holder" });
+    var count = h("span", { class: "count" });
+    function paint() {
+      var contested = contestedCases();
+      var rows = state.contestedOnly ? contested : DATA.cases;
+      clear(holder);
+      holder.appendChild(caseGridTable(rows));
+      count.textContent = state.contestedOnly
+        ? "showing the " + contested.length + " case" + (contested.length === 1 ? "" : "s") +
+          " the drafts did not agree on, of " + DATA.cases.length
+        : "showing all " + DATA.cases.length + " cases; " + contested.length +
+          " of them were not unanimous";
+    }
+    var toggle = h("button", {
+      text: "Contested only",
+      onclick: function () {
+        state.contestedOnly = !state.contestedOnly;
+        toggle.classList.toggle("on", state.contestedOnly);
+        paint();
+      }
+    });
+    toggle.classList.toggle("on", state.contestedOnly);
+    paint();
+    return h("div", { class: "grid-wrap" }, [
+      h("div", { class: "vote-filter" }, [toggle, count]),
+      holder
     ]);
   }
 
@@ -1862,6 +1997,7 @@ _JS = r"""
     root.appendChild(fieldTable());
     root.appendChild(h("h3", { text: "Escalation" }));
     root.appendChild(escalationTable());
+    root.appendChild(voteSummary());
     root.appendChild(h("h3", { text: "All " + DATA.cases.length + " cases" }));
     root.appendChild(h("p", { class: "lead", text: "Click any row to open the case stepped through in order." }));
     root.appendChild(caseGrid());
@@ -1897,6 +2033,144 @@ _JS = r"""
         " records why this is a contested reading rather than a defect, and why the answer key is not changed for it."
       ]));
     });
+    return box;
+  }
+
+  // ---- the judge's vote --------------------------------------------------
+  // Four drafts can reach one ruling, or three can outvote a fourth, or the
+  // drafts can split so evenly that nothing carries. The result object looks
+  // the same in all three cases, so these functions are the only place on the
+  // page that says which one happened -- and they say it from the run's own
+  // vote record, never from a re-derivation of the vote.
+  function isContested(c) { return !!(c.vote && c.vote.unanimous === false); }
+
+  function contestedCases() { return DATA.cases.filter(isContested); }
+
+  var VOTE_OUTCOME_LABEL = {
+    carried: "carried unanimously",
+    carried_not_unanimous: "carried, not unanimous",
+    escalated: "no majority, escalated"
+  };
+  var VOTE_OUTCOME_TEXT = {
+    carried: "Every draft proposed the same four graded fields, so the ruling is the one they agreed on.",
+    carried_not_unanimous: "One proposal reached the threshold and the others did not, so the ruling is the " +
+      "proposal that carried rather than the one a single draft preferred.",
+    escalated: "No proposal reached the threshold. Because the judge's own drafts disagreed, the case is " +
+      "escalated with no amount set, instead of the code choosing one of the proposals for it."
+  };
+
+  // The whole four-field proposal, not just the ruling. On this run one case's
+  // drafts all proposed ESCALATE and still disagreed, because they differed on
+  // a referral -- a line that showed only the ruling would have called that
+  // vote unanimous.
+  function proposalLine(proposal) {
+    var p = proposal || {};
+    return text(p.ruling) + ", amount " + text(p.amount_sgd) +
+      ", driver " + text(p.driver_compensation_sgd) +
+      ", referrals " + ((p.referrals && p.referrals.length) ? p.referrals.join(" ") : "none");
+  }
+
+  function draftLine(draft) {
+    return "draft " + draft.draft + " (" + text(draft.kind) + ", seed " + text(draft.seed) + ") " +
+      text(draft.verdict) + ": " + proposalLine(draft.proposal);
+  }
+
+  function draftBox(draft) {
+    var swapped = draft.kind === "position_swapped";
+    var box = h("div", { class: "draft " + text(draft.verdict) });
+    box.appendChild(h("div", { class: "draft-head" }, [
+      h("span", { class: "draft-no", text: "Draft " + text(draft.draft) }),
+      h("span", { class: "badge " + (swapped ? "swapped" : "sampled"),
+        text: swapped ? "position-swapped" : "sampled" }),
+      h("span", { class: "badge", text: "seed " + text(draft.seed) }),
+      h("span", { class: "badge", text: "temperature " + text(draft.temperature) }),
+      h("span", { class: "badge " + text(draft.verdict), text: text(draft.verdict) })
+    ]));
+    var proposal = draft.proposal || {};
+    box.appendChild(definitionList([
+      ["ruling", h("span", { class: "badge judge", text: text(proposal.ruling) })],
+      ["amount_sgd", text(proposal.amount_sgd)],
+      ["driver_compensation_sgd", text(proposal.driver_compensation_sgd)],
+      ["referrals", (proposal.referrals && proposal.referrals.length)
+        ? h("ul", null, proposal.referrals.map(function (item) {
+            return h("li", null, [h("span", { text: String(item) }), " ", clauseChipsInText(String(item))]);
+          }))
+        : h("span", { class: "null", text: "none" })]
+    ]));
+    if (draft.abstention) {
+      box.appendChild(h("p", { class: "notes", text: "abstained, and voted for nothing: " + text(draft.abstention) }));
+    }
+    return box;
+  }
+
+  function votePanel(caseDoc) {
+    var vote = caseDoc.vote;
+    var section = h("div", { class: "vote-panel" });
+    section.appendChild(h("h3", { text: "How the judge's drafts voted" }));
+    if (!vote) {
+      section.appendChild(h("p", { class: "lead", text:
+        "This case was decided by a single judge call. No vote was recorded for it, so there is nothing to show here." }));
+      return section;
+    }
+    section.appendChild(h("p", { class: "lead", text:
+      "The judge was asked the same question " + vote.votes + " times. A proposal becomes this case's ruling " +
+      "only when at least " + vote.threshold + " of the " + vote.votes + " drafts propose the same four graded " +
+      "fields together; the drafts are drawn differently, and the run records how, per draft, below." }));
+
+    var result = h("div", { class: "vote-result " + text(vote.outcome) });
+    result.appendChild(h("div", { class: "headline" }, [
+      h("span", { class: "what", text: VOTE_OUTCOME_LABEL[vote.outcome] || text(vote.outcome) }),
+      h("span", { class: "badge", text: vote.agreeing + " of " + vote.votes + " agreed" }),
+      h("span", { class: "badge", text: "vote_agreement " + text(vote.agreement) }),
+      vote.unanimous ? h("span", { class: "badge ok", text: "unanimous" })
+                     : h("span", { class: "badge contested", text: "not unanimous" })
+    ]));
+    result.appendChild(h("p", { class: "notes", text: VOTE_OUTCOME_TEXT[vote.outcome] || "" }));
+    section.appendChild(result);
+
+    section.appendChild(h("h4", { text: "The drafts" }));
+    vote.drafts.forEach(function (draft) { section.appendChild(draftBox(draft)); });
+    return section;
+  }
+
+  // The cases a reader most needs to find are the ones the judge's own drafts
+  // did not agree on: their ruling came from a majority, or from a refusal to
+  // pick, and nothing else on the overview would say so.
+  function voteSummary() {
+    var contested = contestedCases();
+    var box = h("div", { class: "vote-summary" });
+    box.appendChild(h("h3", { text: "Where the judge's drafts disagreed" }));
+    if (!contested.length) {
+      box.appendChild(h("p", { class: "lead", text:
+        "Every case in this run was decided by a unanimous vote: all " + DATA.cases.length +
+        " cases had every draft propose the same four graded fields." }));
+      return box;
+    }
+    box.appendChild(h("p", { class: "lead", text:
+      contested.length + " of " + DATA.cases.length + " cases were not unanimous. Every case's vote agreement " +
+      "is a column in the grid below, and the grid can be narrowed to just these cases." }));
+    var body = h("tbody");
+    contested.forEach(function (c) {
+      var dissenters = c.vote.drafts.filter(function (draft) { return draft.verdict !== "agreed"; });
+      var row = h("tr", {
+        class: "clickable",
+        title: "open case " + c.case_no,
+        onclick: function () { openCase(c.case_no); }
+      });
+      row.appendChild(h("td", { class: "case-no", text: String(c.case_no) }));
+      row.appendChild(h("td", { text: c.category }));
+      row.appendChild(h("td", { class: "vote-cell", text: c.vote.agreeing + " of " + c.vote.votes }));
+      row.appendChild(h("td", null, h("span", { class: "badge contested", text: text(c.vote.outcome) })));
+      row.appendChild(h("td", { text: dissenters.map(draftLine).join("; ") }));
+      body.appendChild(row);
+    });
+    box.appendChild(h("table", null, [
+      h("thead", null, h("tr", null, [
+        h("th", { text: "#" }), h("th", { text: "Category" }), h("th", { text: "Agreed" }),
+        h("th", { text: "Vote outcome" }), h("th", { text: "The drafts that did not agree" })
+      ])),
+      body
+    ]));
     return box;
   }
 
@@ -2217,6 +2491,11 @@ _JS = r"""
 
     section.appendChild(h("h4", { text: "Explanation" }));
     section.appendChild(h("div", null, paragraphs(verdict.explanation)));
+
+    // The ruling above is the vote's outcome; this is the vote itself. It is
+    // shown per case rather than once for the run because the drafts are a
+    // property of the case: some cases carry a unanimous vote, some do not.
+    section.appendChild(votePanel(caseDoc));
 
     panel.appendChild(section);
     panel.appendChild(callBar(judge.agent));
