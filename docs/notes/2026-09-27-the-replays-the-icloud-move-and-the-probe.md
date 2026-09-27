@@ -55,14 +55,40 @@ non-unanimous votes: {107: 0.75, 211: 0.75, 9113: 0.75}
 unanimous: 41
 ```
 
-**The corpus figure is 28 of the 29 results being replays.** Only **207** is a full
-run: every other corpus case had its advocates replayed out of an earlier
-transcript and only the judge called. The codex set is the same shape — 9115's
-advocates were replayed from `runs/codex/deepseek-deepseek-flash`.
+**Twenty-eight of the 29 corpus results are replays.** Only **207** is a full run:
+every other corpus case had its advocates replayed out of an earlier transcript and
+only the judge called. The second set is replays all the way through — all fifteen,
+including 9115 — for the same reason, and the advocate outputs came from
+`runs/codex/deepseek-deepseek-flash`.
 
 Every one of the 44 results records `prompts_sha256 83a74310…`, and every brief
 rebuilds to the `brief_sha256` the result stored. So the whole set is current on
 both staleness channels, and the figure above is one measurement of one prompt.
+
+### What moved, against the previous commit
+
+Diffing every `case-*.json` at `b25b743` — the commit the evening started from —
+against the working tree, on the four fields the vote compares — `ruling`,
+`amount_sgd`, `driver_compensation_sgd` and the sorted referral **clause
+references** — exactly **two** cases moved, and both moved the same way:
+
+| case | key | at `b25b743` | now | grade |
+|---|---|---|---|---|
+| corpus **211** | `PARTIAL_REFUND`, 2.00 | `ESCALATE`, null, null | `PARTIAL_REFUND`, 2.00 | miss → **match** |
+| second set **9111** | `PARTIAL_REFUND`, 10.15 | `ESCALATE`, null, null | `PARTIAL_REFUND`, 9.15, plus `POL-RD-09(4)` | miss → **miss**, different field |
+
+Both left escalation for a money ruling. 211's new ruling and amount are the key's
+exactly, which is where the corpus's 28/29 became 29/29. 9111 now gets the ruling
+right and the amount wrong — 9.15 against the key's 10.15, a difference of exactly
+1.00 — so the second set stays at 14/15 and its single miss simply changes field
+from `ruling` to `amount_sgd`. The v4.1 probe's three 9111 drafts, made by a
+different model on the same case, all proposed `PARTIAL_REFUND` at `amount_sgd
+9.15` too (§4), so the figure is not one model's accident.
+
+No other case's ruling, money or referral clause reference moved, on either set.
+The referral **prose** is free text and was rewritten on eight further cases — 105,
+115, 201, 207, 9104, 9108, 9113 and 9114 — which is exactly the kind of change the
+vote does not compare and the grader does not score.
 
 **One caveat about `report.md`.** `runs/<model>/report.md` is the **last
 invocation's** report, not the directory's. Tonight the corpus invocation ended
@@ -114,10 +140,27 @@ each invocation's log is an `invocation_end` whose `detail` is a `LoaderError`:
 LoaderError: file not found: /Users/hanweizhou/Desktop/Tribunal/policy/general.json
 ```
 
-The corpus invocation reports `cases_seen 6` — 101 to 106 done, then 107 and 108
-both attempted and both failed. The codex invocation reports `cases_seen 12` —
-9101 to 9112 done, then 9113 and 9114. Neither got a further case, and neither
-billed anything for the two it lost.
+That line survives only in a fragment (§2). The live `invocations.json` entry for
+each of these two invocations is an intermediate snapshot that still says
+`completed`, because `write_metadata` runs after every accepted case and the fatal
+error came after the last one.
+
+The corpus invocation's `invocation_end` reports `cases_seen 6` — 101 to 106 done —
+and its fragment's `invocations.json` lists **`failed [107, 108]`**. The codex
+invocation reports `cases_seen 12` — 9101 to 9112 — and lists **`failed [9113,
+9114]`**. In both cases the two cases the invocation was on when it died are the two
+it names.
+
+That is not the same as those cases having no result, and it is not the same as
+nothing being spent. The fragment's log shows both 107 and 108 reaching a `ruling`
+— 108 a `NO_ACTION` at a unanimous 4/4, 107 an `ESCALATE` on a 2/2 split — and the
+current `case-00107.json` and `case-00108.json` are **not** the 19:10 run's: their
+judge calls are stamped 12:06–12:17 UTC, which is the 20:03 replay, and 107's vote
+there is 0.75 against the 19:10 run's 0.5. A result written by a run that then died
+is a result the next run overwrote. And all four fragments record `of_which_failed
+0`, so the invocation records count **no tokens** against the cases they list as
+failed, although the logs show judge calls being made for them — those calls are
+recorded nowhere.
 
 That is the first half of §2.
 
@@ -200,19 +243,20 @@ wrote outside the repository.
 
 ### The 14 files, as found
 
-Fourteen run-level files were written outside the repository, under the iCloud
-path. They are collected, **exactly as found and not merged into the live logs**,
-under `runs/_icloud-incident-2026-09-27/`, in three groups named for where each
-file was found:
+Fourteen files were written outside the repository, under the iCloud path. They
+are collected, **exactly as found and not merged into the live logs**, under
+`runs/_icloud-incident-2026-09-27/`, in three groups named for where each file was
+found:
 
-| group | files | holds |
+| group | run-level files | holds |
 |---|---|---|
 | `from-desktop-subfolder/` | 6 | codex `…83887` seq 368–384; v4.1 `…83013` seq 83–89 |
 | `from-tribunal-run/` | 6 | corpus `…76652` seq 214–221; v4.1 `…76654` seq 33–37 |
 | `from-icloud-root/` | 1 | corpus `…76652` seq 209–213 |
 
-Plus one `.DS_Store`, which `.gitignore` clears. Fourteen files: **five**
-`events.jsonl`, **four** `invocations.json`, **four** `run.json`, one `.DS_Store`.
+Plus one `.DS_Store` under `from-tribunal-run/`, which `.gitignore` clears. Fourteen
+files in all: **five** `events.jsonl`, **four** `invocations.json`, **four**
+`run.json`, one `.DS_Store`.
 
 They are committed as evidence, not as history. Merging them would put a second,
 contradictory line at sequence numbers the live logs already use.
@@ -250,8 +294,8 @@ runs/_icloud-incident-2026-09-27/from-tribunal-run/runs/deepseek-v4.1-flash/even
   TAMPERED: the chain first breaks at line 1: chain (prev does not name the previous line)
 ```
 
-Two of the four live logs verify clean; one breaks; the five fragments all break at
-their first line. Each case is diagnosed below.
+Three of the four live logs verify clean; one breaks; the five fragments all break
+at their first line. Each case is diagnosed below.
 
 #### `runs/codex/deepseek-deepseek-flash/events.jsonl` — one real hole
 
@@ -281,7 +325,7 @@ from there.
 neither this file nor any collected fragment; they are lost, and this note says so
 rather than reconstructing them.
 
-#### The four clean logs, and what they are missing
+#### The three clean logs, and what they are missing
 
 A clean `--verify` means the chain is unbroken **as written**. It does not mean
 every line a run produced is present.
@@ -409,9 +453,9 @@ is a non-empty string.
 
 ### Which entry, and why
 
-The source transcript is the one committed at `HEAD`, recorded by the 2026-09-26
-full run (`bc92487`, "Record the full re-run exactly as produced"). It has seven
-entries, and the offending one is **index 1**:
+The source transcript is the one the 2026-09-26 full run wrote, last touched by
+`bc92487` ("Record the full re-run exactly as produced") and unchanged by tonight.
+It has seven entries, and the offending one is **index 1**:
 
 | field | value |
 |---|---|
@@ -492,34 +536,48 @@ failure belongs to the earlier invocation, not to the one that produced 105.
 
 ### The "about three times the wall time" claim
 
-The comparison the owner made was against **deepseek-flash on the same case**. The
-figures available for 105, all read from the files:
+The comparison the owner made was against **deepseek-flash on the same case**. Three
+figures for 105 are available, and they are three different things, which matters
+for reading them:
 
-| run | wall (s) | call (s) | tokens | shape |
-|---|---|---|---|---|
-| deepseek-v4.1-flash, 22:xx | **737.955** | 737.880 | 264,993 | full run, 4 drafts |
-| deepseek-flash, committed `HEAD` (2026-09-26 full run) | 971.053 | 970.988 | 367,729 | full run, 4 drafts |
-| deepseek-flash, current worktree (replay, judge only) | 622.503 | 622.449 | 237,802 | **judge only** |
+| run | wall (s) | call (s) | judge calls | tokens | vote |
+|---|---|---|---|---|---|
+| deepseek-v4.1-flash, full run, 19:30 | **737.955** | 737.880 | 4 | 264,993 | 0.75 |
+| deepseek-flash, full run, 2026-09-26 (committed) | 971.053 | 970.988 | 5 (4 drafts, one retried) | 367,729 | 0.75 |
+| deepseek-flash, judge-only replay, 19:10 (current) | 622.503 | 622.449 | 4 | 237,802 | 1.00 |
 
 Against the corpus as a whole: median **252.2 s**, mean **292.9 s**, max
 **1009.3 s** (case 211). So "about three times" holds against the **median** and
 the mean — 738 s is 2.9× the median — and it does **not** hold against this case's
 own deepseek-flash figures, where it is 0.76× of the committed full run and 1.19×
-of the current replay.
+of the current replay. On this case v4.1 was **faster** than deepseek-flash's full
+run and used **fewer** tokens: 737.9 s against 971.0 s, and 264,993 against
+367,729.
 
-The honest shape of the difference is not the total, which is close (737.9 s of
-call time for v4.1 against 749.5 s for the committed deepseek-flash full run), but
-the **distribution**. v4.1's fourth judge draft, the position-swapped one, took
-**349.265 s** on its own — 47 % of the whole case — while its first three drafts
-took 90.5 s, 88.1 s and 100.2 s. And token use rose from 237,802 (deepseek-flash,
-current) to 264,993, with reasoning at 146,772 of the 154,495 completion tokens.
+**Do not sum a replay's transcript.** The current 105 transcript's six entries sum
+to 749.45 s, but two of them — the rider advocate's 43.529 s and the driver
+advocate's 83.472 s — are **copied from the 2026-09-26 transcript, timestamps
+included**, because that is what a replay is. The 749.45 s therefore adds 127.0 s
+of borrowed time to 622.4 s of this run's judge time, and `call_seconds` (622.449)
+is the judge's four calls alone: 192.276 + 184.894 + 129.671 + 115.608. A figure
+that mixes the two runs is not a call time, which is why every comparison here
+names which run and which part of it is being measured.
 
-**One case cannot compare two models.** There is a single case here, it is a case
-whose advocate outputs were regenerated rather than replayed, the two runs were
-made on different days under different system conditions, and the deepseek-flash
-figure it is being held against is a judge-only replay while the v4.1 figure is a
-full run. The corpus has a spread from 252 s to 1009 s on one model alone, which is
-wider than the difference being attributed to the model.
+The honest difference is the **distribution**, not the total. v4.1's four judge
+drafts took 90.5 s, 88.1 s, 100.2 s and **349.3 s** — the fourth, the
+position-swapped one, is 47 % of the whole case. deepseek-flash's four on the
+committed full run took 172.7 s, 132.3 s, 146.3 s and 277.9 s, plus a 114.8 s retry
+after the fourth came back `MALFORMED` (the same empty-response failure that later
+made 207 un-replayable, §3). So v4.1's first three drafts are roughly **half**
+deepseek-flash's, and its fourth is 1.26× — one long draft decides the case either
+way. And reasoning is 146,772 of v4.1's 154,495 completion tokens (95.0 %), against
+150,095 of 156,090 (96.2 %) for deepseek-flash's replay.
+
+**One case cannot compare two models.** There is a single case here; the two runs
+were made on different days; and the three figures above are two full runs and one
+judge-only replay, so no two of them measure the same thing. The corpus alone
+spreads from 252 s to 1009 s, which is wider than the difference being attributed
+to the model.
 
 **The runtime model stays `deepseek/deepseek-flash`.** `tribunal/model.py` is
 unchanged; `RUNTIME_MODEL` is still `"deepseek/deepseek-flash"` and this probe
@@ -573,16 +631,17 @@ recorded nowhere.
 ## 5. The viewer, and the one figure the submission may quote
 
 `ui/dist/index.html` was rebuilt with `python -m ui.build`. It went from
-**2,326,444** to **2,371,908** bytes, and `python -m ui.build --check` reports:
+**2,326,444** to **2,371,908** bytes — the page embeds every result, its transcript
+and the run-level provenance, so re-running the whole corpus and both sets moves it
+— and `python -m ui.build --check` reports:
 
 ```
 /Users/hanweizhou/Desktop/Tribunal/ui/dist/index.html is identical to a fresh build (2371908 bytes)
 ```
 
-The page grew because the viewer rebuilds each brief and **refuses** a case whose
-digest moved rather than drawing a regenerated brief, and every one of the 29
-corpus cases now carries the re-run's result. The 25-of-29 figure the page held
-before is stale; 29 of 29 cases are current now, and no case is refused by name.
+The viewer rebuilds each brief and **refuses** a case whose digest moved rather than
+drawing a regenerated brief. The built page's `refused_cases` is `[]`, so no case is
+refused by name, and all 29 corpus cases are current under `83a74310`.
 
 The viewer's own totals are computed from `eval.grade` and from the files, never
 typed in, so the page and this note cannot disagree about a case.
