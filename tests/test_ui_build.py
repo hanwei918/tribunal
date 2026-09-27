@@ -508,33 +508,51 @@ class TheRunTests(unittest.TestCase):
     def test_the_misses_are_shown_as_misses(self):
         """Which cases miss is dated; that every miss is carried as one is not.
 
-        The list is a pin about the run committed under ``runs/`` at the commit
-        this test last ran against, and the next run moves it -- the run before
-        this one missed 107 and 211, the frozen-prompt run missed 105 and 211,
-        and the referee run misses 211 alone. What is not dated is the rest:
-        that each miss carries its expected ruling, the ruling the judge
-        produced and the fields that differ, which is what makes the miss
-        legible on the page rather than merely counted.
+        Which cases miss is a fact about the run committed under ``runs/``, and
+        the next run moves it: the run before the frozen-prompt run missed 107
+        and 211, the frozen-prompt run missed 105 and 211, the referee run missed
+        211 alone, and the 2026-09-27 re-run under digest ``83a74310`` misses
+        none -- 29 of 29 on all four fields. So the assertion below compares the
+        page's miss set with the grader's own, recomputed from the run, rather
+        than with a list typed in here, and it holds whether the run misses
+        nothing or misses several.
+
+        What is not dated is the rest: that each case carries its expected
+        ruling, the ruling the judge produced and the fields that differ, which
+        is what makes a miss legible on the page rather than merely counted.
+        That legibility is asserted for **every** case rather than for the
+        misses, so it cannot pass by having nothing to check.
         """
+        produced = {
+            case_no: json.loads(
+                (build.RUN_DIR / ("case-%05d.json" % case_no)).read_text(encoding="utf-8")
+            )["ruling"]
+            for case_no in build.cached_cases(build.RUN_DIR)
+        }
+        report = grade.grade(produced)
+
         misses = sorted(
             case_no for case_no, case in self.cases.items() if not case["grading"]["exact"]
         )
-        self.assertEqual([211], misses, "the run's four-field misses moved")
+        self.assertEqual(
+            sorted(score.case_no for score in report.failures),
+            misses,
+            "the page's misses are not the grader's",
+        )
 
-        # The dated facts per miss: the key's ruling, the ruling the judge
-        # produced, and the fields that differ.
-        dated = {
-            211: (
-                "PARTIAL_REFUND",
-                "ESCALATE",
-                ["ruling", "amount_sgd"],
-            ),
-        }
-        for case_no, (key_ruling, judge_ruling, failed) in dated.items():
-            case = self.cases[case_no]
-            self.assertEqual(key_ruling, case["expected"]["ruling"])
-            self.assertEqual(judge_ruling, case["judge"]["verdict"]["ruling"])
-            self.assertEqual(failed, case["grading"]["failed_fields"])
+        # The legibility of every case, recomputed: the key's ruling, the ruling
+        # the judge produced, and the fields that differ.
+        self.assertEqual(sorted(report.graded_cases), sorted(self.cases))
+        for score in report.cases:
+            case = self.cases[score.case_no]
+            with self.subTest(case=score.case_no):
+                self.assertEqual(score.expected.ruling, case["expected"]["ruling"])
+                self.assertEqual(
+                    score.produced.ruling, case["judge"]["verdict"]["ruling"]
+                )
+                self.assertEqual(
+                    list(score.failed_fields), case["grading"]["failed_fields"]
+                )
 
         self.assertIn("decision_note", self.document)
         self.assertTrue(
