@@ -1662,13 +1662,21 @@ class RuntimeModelWiringTests(unittest.TestCase):
 # --------------------------------------------------------------------------
 def vote_ruling(
     ruling_value="PARTIAL_REFUND",
-    amount=4.35,
+    amount=4.0,
     compensation=None,
     referrals=(),
     confidence=0.85,
     explanation="because",
 ) -> str:
-    """One judge answer, as the scripted transport should hand it back."""
+    """One judge answer, as the scripted transport should hand it back.
+
+    ``amount`` defaults to ``4.0`` because that is a figure the brief for
+    :data:`CASE` publishes -- the POL-NS-03(ii) pin-ambiguity goodwill of 4.00 --
+    and a draft is now held to the brief's own calculator before it may vote.
+    The fixture has to be a draft that can vote, or every vote test would be
+    measuring the check instead of the vote. One test holds the fixture's amount
+    and the brief's own published figures together.
+    """
     return json.dumps(
         {
             "ruling": {
@@ -1736,7 +1744,7 @@ class JudgeVoteTests(unittest.TestCase):
 
         self.assertTrue(result.ok)
         self.assertEqual("PARTIAL_REFUND", result.ruling["ruling"]["ruling"])
-        self.assertEqual(Decimal("4.35"), result.ruling["ruling"]["amount_sgd"])
+        self.assertEqual(Decimal("4.0"), result.ruling["ruling"]["amount_sgd"])
         self.assertEqual(1.0, result.vote_agreement)
         self.assertEqual("carried", result.judge_vote["outcome"])
         self.assertTrue(result.judge_vote["unanimous"])
@@ -1790,7 +1798,7 @@ class JudgeVoteTests(unittest.TestCase):
         # The explanation says they disagreed, and shows what each proposed.
         explanation = result.ruling["ruling"]["explanation"]
         self.assertIn("did not agree", explanation)
-        self.assertIn("PARTIAL_REFUND, amount_sgd 4.35", explanation)
+        self.assertIn("PARTIAL_REFUND, amount_sgd 4.0", explanation)
         self.assertIn("NO_ACTION", explanation)
 
     def test_a_split_between_escalate_and_money_still_escalates(self):
@@ -1886,25 +1894,38 @@ class JudgeVoteTests(unittest.TestCase):
 
     # -- the four graded fields, together ----------------------------------
     def test_the_vote_selects_an_answer_rather_than_averaging_one(self):
+        """Both amounts are figures the brief publishes, so both drafts vote.
+
+        The dissenting amount has to be a real figure too: a draft whose money
+        does not read off the brief abstains rather than dissents, and a test
+        about selecting between answers would then be measuring the check.
+        """
         result, _ = run_vote(
             *self.drafts(
-                envelope(vote_ruling(amount=4.35)),
-                envelope(vote_ruling(amount=4.35)),
-                envelope(vote_ruling(amount=4.35)),
-                envelope(vote_ruling(amount=9.99)),
+                envelope(vote_ruling(amount=4.0)),
+                envelope(vote_ruling(amount=4.0)),
+                envelope(vote_ruling(amount=4.0)),
+                envelope(vote_ruling(amount=6.4)),
             )
         )
 
-        self.assertEqual(Decimal("4.35"), result.ruling["ruling"]["amount_sgd"])
+        self.assertEqual(Decimal("4.0"), result.ruling["ruling"]["amount_sgd"])
+        self.assertEqual("carried_not_unanimous", result.judge_vote["outcome"])
+        self.assertEqual(4, result.judge_vote["valid"])
 
     def test_a_referral_difference_is_a_difference(self):
-        """The four fields are voted on together, so a referral splits a vote."""
+        """The four fields are voted on together, so a referral splits a vote.
+
+        Both clauses are ones the policy loaded for :data:`CASE` carries: a
+        referral to a clause the loaded policy does not carry abstains before
+        the vote, which is a different test.
+        """
         result, _ = run_vote(
             *self.drafts(
-                envelope(vote_ruling(referrals=["POL-RD-09(4): refund the rider"])),
-                envelope(vote_ruling(referrals=["POL-RD-09(4): refund the rider"])),
                 envelope(vote_ruling(referrals=["POL-NS-05(ii): flag the record"])),
                 envelope(vote_ruling(referrals=["POL-NS-05(ii): flag the record"])),
+                envelope(vote_ruling(referrals=["POL-NS-07: direct the reviewer"])),
+                envelope(vote_ruling(referrals=["POL-NS-07: direct the reviewer"])),
             )
         )
 
@@ -1913,10 +1934,10 @@ class JudgeVoteTests(unittest.TestCase):
     def test_the_same_clause_referred_to_in_different_prose_is_the_same_referral(self):
         result, _ = run_vote(
             *self.drafts(
-                envelope(vote_ruling(referrals=["POL-RD-09(4): refund the rider"])),
-                envelope(vote_ruling(referrals=["refer the billing question to POL-RD-09(4)"])),
-                envelope(vote_ruling(referrals=["POL-RD-09(4): check the fare again"])),
-                envelope(vote_ruling(referrals=["POL-RD-09(4): check the fare again"])),
+                envelope(vote_ruling(referrals=["POL-NS-07: refund the rider"])),
+                envelope(vote_ruling(referrals=["refer the billing question to POL-NS-07"])),
+                envelope(vote_ruling(referrals=["POL-NS-07: check the fare again"])),
+                envelope(vote_ruling(referrals=["POL-NS-07: check the fare again"])),
             )
         )
 
@@ -2024,7 +2045,7 @@ class JudgeVoteTests(unittest.TestCase):
         self.assertEqual(1.0, payload["vote"]["agreement"])
         self.assertEqual(4, len(payload["vote"]["drafts"]))
         # The amount stays a JSON number, not a string.
-        self.assertIn('"amount_sgd":4.35', result.transcript_json)
+        self.assertIn('"amount_sgd":4.0', result.transcript_json)
 
     # -- K = 1 is today ----------------------------------------------------
     def test_the_default_is_four_drafts(self):
@@ -2075,6 +2096,396 @@ class JudgeVoteTests(unittest.TestCase):
         self.assertFalse(result.ok)
         self.assertEqual(JUDGE, result.failed_agent)
         self.assertIsNone(result.judge_vote)
+
+
+# --------------------------------------------------------------------------
+# What the vote compares, and what a draft must pass first
+# --------------------------------------------------------------------------
+# The four referrals case 9111's judge drafts actually wrote, as the run
+# recorded them. Each proposes one referral, the same one, led by POL-RD-09(4);
+# two of the four mention POL-RD-02 in passing.
+_RECORDED_9111_REFERRALS = (
+    "POL-RD-09(4) billing integrity: review the SGD 2.00 'Tuas South Avenue 8 loop' ERP line charged on TRP-09111 — the GPS trace never passes that gantry (nearest fix 1,645.7 m, outside the 250 m match radius, with no gap bracketing the closest approach), so the line is recorded as a billing-integrity finding.",
+    "POL-RD-09(4) billing integrity: the SGD 2.00 Tuas South Avenue 8 loop ERP line is charged for a gantry the GPS trace never passes (nearest fix 1,645.7 m; no fix within the 250 m match radius, no gap bracketing the closest approach), so the line is recorded as a billing-integrity finding and referred for correction; the amount is returned once, inside the POL-RD-02 figure, and is not added on top of it.",
+    "POL-RD-09(4) billing-integrity finding: the SGD 2.00 'Tuas South Avenue 8 loop' ERP line on fare breakdown EV-FARE-09111 is unmatched — the nearest GPS fix on EV-GPS-09111 is about 1,646 m away, outside POL-RD-09's 250 m crossing radius, so no fix shows the vehicle crossing that gantry. The amount is already comprehended in the POL-RD-02 refund below and is not paid a second time.",
+    "POL-RD-09(4) billing integrity: the fare_breakdown ERP line 'Tuas South Avenue 8 loop' (SGD 2.00) is charged for a gantry the trip never passed - the nearest GPS fix is 1,645.7 m away, far outside the 250 m match radius POL-RD-09 sets for a crossing, and no GPS gap brackets the closest approach. Record this as a billing-integrity finding. The SGD 2.00 is returned to the rider inside the POL-RD-02 refund and is not added again.",
+)
+
+
+class ReferralComparisonTests(unittest.TestCase):
+    """The vote compares a referral by the clause it leads with.
+
+    A referral is free prose, so the vote has always compared the clause
+    references in it rather than the string. It compared the **union** of every
+    clause reference the prose carries, which counted a clause named in passing
+    as part of the referral. 9111's four drafts each propose exactly one
+    referral, the same one, and the vote split them 2-2 because two of the four
+    write "inside the POL-RD-02 figure". A referral's subject is the clause it
+    leads with -- the one the judge prompt already requires it to lead with --
+    and that is what is compared now.
+    """
+
+    def test_the_four_recorded_9111_drafts_now_agree(self):
+        keys = {
+            pipeline.referral_clause_references([item])
+            for item in _RECORDED_9111_REFERRALS
+        }
+
+        self.assertEqual({("POL-RD-09(4)",)}, keys)
+
+    def test_the_union_of_every_clause_in_the_prose_is_what_split_them(self):
+        """The old reading, computed here so the finding is not just prose."""
+        unioned = {
+            tuple(sorted(set(pipeline.REFERRAL_CLAUSE_RE.findall(item))))
+            for item in _RECORDED_9111_REFERRALS
+        }
+
+        self.assertEqual(3, len(unioned), "the record no longer shows the split")
+        self.assertIn(("POL-RD-02", "POL-RD-09(4)"), unioned)
+
+    def test_two_drafts_whose_referrals_lead_with_different_clauses_do_not_agree(self):
+        result, _ = run_vote(
+            envelope(RIDER_CLAIMS),
+            envelope(DRIVER_CLAIMS),
+            envelope(vote_ruling(referrals=["POL-NS-05(ii): flag the record"])),
+            envelope(vote_ruling(referrals=["POL-NS-05(ii): flag the record"])),
+            envelope(vote_ruling(referrals=["POL-NS-07: direct the reviewer"])),
+            envelope(vote_ruling(referrals=["POL-NS-07: direct the reviewer"])),
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual("ESCALATE", result.ruling["ruling"]["ruling"])
+        self.assertEqual("escalated", result.judge_vote["outcome"])
+
+    def test_a_clause_mentioned_in_passing_does_not_split_the_vote(self):
+        """The 9111 shape, on the test case's own policy."""
+        result, _ = run_vote(
+            envelope(RIDER_CLAIMS),
+            envelope(DRIVER_CLAIMS),
+            envelope(vote_ruling(referrals=["POL-NS-07: refund the rider"])),
+            envelope(vote_ruling(referrals=["POL-NS-07: refund the rider"])),
+            envelope(
+                vote_ruling(
+                    referrals=[
+                        "POL-NS-07: refund the rider; the fee is held under POL-NS-05 "
+                        "pending that review"
+                    ]
+                )
+            ),
+            envelope(
+                vote_ruling(
+                    referrals=[
+                        "POL-NS-07: refund the rider; the fee is held under POL-NS-05 "
+                        "pending that review"
+                    ]
+                )
+            ),
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual("carried", result.judge_vote["outcome"])
+        self.assertTrue(result.judge_vote["unanimous"])
+
+    def test_a_referral_that_leads_with_no_clause_is_its_own_value(self):
+        """It never silently matches a referral that does lead with one."""
+        bare = pipeline.referral_clause_references(["refund the rider in full"])
+        cited = pipeline.referral_clause_references(["POL-NS-07: refund the rider in full"])
+
+        self.assertNotEqual(bare, cited)
+        self.assertEqual(bare, pipeline.referral_clause_references(["a different instruction"]))
+        self.assertIsNone(pipeline.REFERRAL_CLAUSE_RE.fullmatch(pipeline.NO_LEADING_CLAUSE))
+
+    def test_the_limb_is_part_of_the_referral(self):
+        self.assertNotEqual(
+            pipeline.referral_clause_references(["POL-NS-05(ii): flag the record"]),
+            pipeline.referral_clause_references(["POL-NS-05: flag the record"]),
+        )
+
+    def test_an_empty_referral_list_is_no_referral_at_all(self):
+        self.assertEqual((), pipeline.referral_clause_references([]))
+        self.assertEqual((), pipeline.referral_clause_references(None))
+
+
+class JudgeDraftCheckTests(unittest.TestCase):
+    """A draft must pass code checks before it may vote.
+
+    The vote counts answers, and a draft whose ruling value is unknown, whose
+    money is not a figure the brief's own calculator publishes, or whose
+    referrals send the reviewer to a clause the loaded policy does not carry is
+    not an answer a panel can be asked to agree with. It abstains with a reason
+    code, exactly as an unparseable one does, and the quorum is taken over the
+    drafts that remain. Every test here scripts the transport: no network, and
+    no model call.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.brief = brief.build_brief(CASE)
+        cls.figures = pipeline.published_money_figures(pipeline.money_block(cls.brief))
+
+    def check(self, **overrides):
+        """The checks, run on the vote fixture as the vote would run them."""
+        return pipeline.check_judge_draft(json.loads(vote_ruling(**overrides)), self.brief)
+
+    # -- the block ---------------------------------------------------------
+    def test_the_money_block_is_found_on_the_fare_breakdown(self):
+        block = pipeline.money_block(self.brief)
+
+        self.assertEqual("NO_SHOW_CHARGE", block["category"])
+        self.assertIsNone(pipeline.money_block({"case": {"evidence": []}}))
+
+    def test_the_fixture_amount_is_one_the_brief_publishes(self):
+        """The fixture has to be a draft that can vote, or the vote tests lie."""
+        self.assertIsNotNone(
+            pipeline.amount_reads_off(Decimal("4.0"), self.figures),
+            "the vote fixture's amount is not a figure case 208 publishes",
+        )
+
+    def test_the_published_figures_exclude_the_policy_constants(self):
+        paths = [path for path, _ in self.figures]
+
+        self.assertIn("goodwill.value", paths)
+        self.assertFalse([path for path in paths if path.startswith("constants.")])
+
+    def test_the_required_amounts_cover_every_ruling_value(self):
+        self.assertEqual(set(pipeline.RULING_VALUES), set(pipeline.REQUIRED_AMOUNTS))
+
+    # -- the checks --------------------------------------------------------
+    def test_a_well_formed_draft_passes(self):
+        self.assertEqual(((), ()), self.check())
+
+    def test_a_ruling_that_is_not_an_object_fails(self):
+        failures, _ = pipeline.check_judge_draft(
+            {"ruling": "PARTIAL_REFUND", "discarded_claims": []}, self.brief
+        )
+
+        self.assertEqual(1, len(failures))
+        self.assertTrue(failures[0].startswith(pipeline.DRAFT_RULING_NOT_AN_OBJECT))
+
+    def test_an_unknown_ruling_value_fails(self):
+        failures, _ = self.check(ruling_value="REFUND")
+
+        self.assertTrue(failures[0].startswith(pipeline.DRAFT_UNKNOWN_RULING))
+
+    def test_escalate_carrying_money_fails(self):
+        failures, _ = self.check(ruling_value="ESCALATE", amount=4.0)
+
+        self.assertTrue(failures[0].startswith(pipeline.DRAFT_ESCALATE_WITH_MONEY))
+
+    def test_a_money_ruling_with_a_null_amount_fails(self):
+        failures, _ = self.check(amount=None)
+
+        self.assertTrue(failures[0].startswith(pipeline.DRAFT_AMOUNT_REQUIRED_MISSING))
+
+    def test_a_driver_compensation_that_does_not_mirror_its_amount_fails(self):
+        """POL-GEN-03's one exception is a requirement on an amount field."""
+        failures, _ = self.check(
+            ruling_value="DRIVER_COMPENSATION", amount=None, compensation=6.4
+        )
+
+        self.assertTrue(failures[0].startswith(pipeline.DRAFT_AMOUNT_DOES_NOT_MIRROR))
+
+    def test_a_ruling_missing_a_pol_gen_03_money_field_fails(self):
+        payload = json.loads(vote_ruling())
+        del payload["ruling"]["driver_compensation_sgd"]
+
+        failures, _ = pipeline.check_judge_draft(payload, self.brief)
+
+        self.assertTrue(failures[0].startswith(pipeline.DRAFT_AMOUNT_FIELD_ABSENT))
+
+    def test_a_malformed_clause_reference_fails(self):
+        failures, _ = self.check(referrals=["POL-NS-7: refund the rider"])
+
+        self.assertTrue(failures[0].startswith(pipeline.DRAFT_CLAUSE_MALFORMED))
+
+    def test_a_clause_reference_the_loaded_policy_does_not_carry_fails(self):
+        """A referral sends a reviewer to a clause; a clause it was not given
+        is nowhere to send them. Case 208 is a no-show dispute, so POL-RD-09 is
+        not in its loaded policy."""
+        failures, _ = self.check(referrals=["POL-RD-09(4): review the billing"])
+
+        self.assertTrue(failures[0].startswith(pipeline.DRAFT_CLAUSE_UNRESOLVED))
+
+    def test_an_amount_the_block_does_not_publish_fails(self):
+        failures, unverifiable = self.check(amount=9.99)
+
+        self.assertEqual((), unverifiable)
+        self.assertTrue(failures[0].startswith(pipeline.DRAFT_AMOUNT_NOT_READ_OFF))
+
+    def test_an_amount_that_is_a_sum_of_two_published_figures_passes(self):
+        # 6.40 driver compensation + 4.00 goodwill.
+        self.assertEqual(((), ()), self.check(amount=10.4))
+        self.assertEqual(
+            "driver_compensation.value + goodwill.value",
+            pipeline.amount_reads_off(Decimal("10.4"), self.figures),
+        )
+
+    def test_an_amount_that_is_a_sum_of_three_published_figures_passes(self):
+        # 8.00 schedule fee + 6.40 driver compensation + 4.00 goodwill.
+        self.assertEqual(((), ()), self.check(amount=18.4))
+
+    def test_an_amount_that_needs_four_figures_does_not_read_off(self):
+        """Three is the bound, and it is the bound the answer-key check used."""
+        failures, _ = self.check(amount=26.4)
+
+        self.assertTrue(failures[0].startswith(pipeline.DRAFT_AMOUNT_NOT_READ_OFF))
+
+    def test_every_failure_names_a_code_from_the_closed_set(self):
+        probes = (
+            {"ruling_value": "REFUND"},
+            {"ruling_value": "ESCALATE", "amount": 4.0},
+            {"amount": None},
+            {"ruling_value": "DRIVER_COMPENSATION", "amount": None, "compensation": 6.4},
+            {"referrals": ["POL-NS-7: refund the rider"]},
+            {"referrals": ["POL-RD-09(4): review the billing"]},
+            {"amount": 9.99},
+        )
+
+        for probe in probes:
+            failures, _ = self.check(**probe)
+            self.assertTrue(failures, probe)
+            for failure in failures:
+                self.assertIn(failure.split(":", 1)[0], pipeline.DRAFT_CHECK_CODES)
+
+    # -- the prose-only figure ---------------------------------------------
+    def test_a_prose_only_governing_figure_is_recorded_and_the_draft_still_votes(self):
+        """Case 109's driver compensation, which POL-RD-04 states only in prose.
+
+        The block publishes no figure for it and says so in ``not_structured``,
+        so there is nothing to hold the amount against. The draft is recorded as
+        unverifiable and still votes: rejecting it would be measuring the brief.
+        """
+        draft = json.loads(
+            vote_ruling(ruling_value="DRIVER_COMPENSATION", amount=3.15, compensation=3.15)
+        )
+
+        failures, unverifiable = pipeline.check_judge_draft(draft, brief.build_brief(109))
+
+        self.assertEqual((), failures)
+        self.assertEqual(
+            (
+                "amount_sgd=3.15 (unverifiable: not structured)",
+                "driver_compensation_sgd=3.15 (unverifiable: not structured)",
+            ),
+            unverifiable,
+        )
+
+    def test_the_same_draft_fails_on_a_case_whose_block_publishes_the_figure(self):
+        """The exemption is narrow: it is the block's silence, not the ruling."""
+        draft = json.loads(
+            vote_ruling(ruling_value="DRIVER_COMPENSATION", amount=3.15, compensation=3.15)
+        )
+
+        failures, unverifiable = pipeline.check_judge_draft(draft, self.brief)
+
+        self.assertEqual((), unverifiable)
+        self.assertTrue(failures[0].startswith(pipeline.DRAFT_AMOUNT_NOT_READ_OFF))
+
+    def test_the_record_carries_the_note_and_the_draft_still_votes(self):
+        ruling = json.loads(vote_ruling())
+        draft = pipeline.JudgeDraft(
+            index=1,
+            kind=pipeline.DRAFT_SAMPLED,
+            temperature=0.7,
+            seed=101,
+            sides=pipeline.DRIVER_FIRST,
+            entries=(0,),
+            ruling=ruling,
+            key=pipeline.vote_key(ruling),
+            unverifiable=("amount_sgd=4.0 (unverifiable: not structured)",),
+        )
+
+        written = draft.as_dict(agreeing=True)
+
+        self.assertTrue(written["valid"])
+        self.assertEqual(
+            ["amount_sgd=4.0 (unverifiable: not structured)"], written["unverifiable"]
+        )
+        self.assertIsNotNone(written["proposal"])
+
+    # -- the vote it feeds -------------------------------------------------
+    def test_a_draft_that_fails_a_check_abstains_and_the_others_carry(self):
+        result, _ = run_vote(
+            envelope(RIDER_CLAIMS),
+            envelope(DRIVER_CLAIMS),
+            envelope(vote_ruling()),
+            envelope(vote_ruling()),
+            envelope(vote_ruling()),
+            envelope(vote_ruling(amount=9.99)),
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual("PARTIAL_REFUND", result.ruling["ruling"]["ruling"])
+        vote = result.judge_vote
+        self.assertEqual(3, vote["valid"])
+        self.assertEqual("carried_not_unanimous", vote["outcome"])
+        abstained = [draft for draft in vote["drafts"] if not draft["valid"]]
+        self.assertEqual(1, len(abstained))
+        self.assertTrue(
+            abstained[0]["abstention"].startswith(pipeline.DRAFT_AMOUNT_NOT_READ_OFF)
+        )
+        self.assertEqual([], abstained[0]["unverifiable"])
+        self.assertIsNone(abstained[0]["proposal"])
+        self.assertIsNone(abstained[0]["agrees"])
+        # It is a real call, so it is still on the transcript and still billed.
+        self.assertEqual(1, len(abstained[0]["entries"]))
+
+    def test_two_failing_drafts_leave_too_few_and_escalate(self):
+        result, _ = run_vote(
+            envelope(RIDER_CLAIMS),
+            envelope(DRIVER_CLAIMS),
+            envelope(vote_ruling()),
+            envelope(vote_ruling()),
+            envelope(vote_ruling(amount=9.99)),
+            envelope(vote_ruling(amount=9.99)),
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual("ESCALATE", result.ruling["ruling"]["ruling"])
+        self.assertEqual(2, result.judge_vote["valid"])
+        self.assertEqual("escalated", result.judge_vote["outcome"])
+
+    def test_four_failing_drafts_are_the_failure_they_have_always_been(self):
+        """Nothing was answered, so nothing disagreed: the judge failed."""
+        result, _ = run_vote(
+            envelope(RIDER_CLAIMS),
+            envelope(DRIVER_CLAIMS),
+            *[envelope(vote_ruling(amount=9.99))] * 4,
+        )
+
+        self.assertFalse(result.ok)
+        self.assertEqual(JUDGE, result.failed_agent)
+        self.assertIsNone(result.ruling)
+        self.assertEqual("no_valid_drafts", result.judge_vote["outcome"])
+
+
+class JudgePromptAmountsTests(unittest.TestCase):
+    """Step 3 tells the judge where an amount comes from.
+
+    A draft's money is now checked against the brief's own calculator, so the
+    prompt has to say where the calculator publishes its figures. Otherwise the
+    judge is held to a standard it was never told about, which is the failure
+    mode this repository has already paid for once.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = (pipeline.PROMPTS_DIR / JUDGE_PROMPT_FILE).read_text(encoding="utf-8")
+        cls.section = step_three_section(cls.text)
+
+    def test_the_money_block_is_named(self):
+        self.assertIn("read off the brief's money block", self.section)
+
+    def test_a_stated_sum_of_its_figures_is_allowed(self):
+        self.assertIn("a stated sum of its figures", self.section)
+
+    def test_the_explanation_names_the_figures_used(self):
+        self.assertIn("names the figures you used", self.section)
+
+    def test_it_sits_inside_step_three_and_adds_no_field(self):
+        self.assertIn(_STEP_THREE_HEADING, self.text)
+        self.assertIn("exactly two top-level fields", self.section)
+        self.assertIn("Do not add any other top-level field", self.section)
 
 
 if __name__ == "__main__":

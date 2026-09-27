@@ -169,6 +169,9 @@ it must not be placed inside the ruling object.
   any further judge-added entry has the side, claim text, `reason_code` and `detail` explaining why
   a kept claim was discarded after the mechanical check.
 
+Every amount you state is read off the brief's money block, or given as a stated sum of its figures,
+and `ruling.explanation` names the figures you used.
+
 Every claim that survived Step 1 and would, if accepted, change the ruling, an amount, the driver's
 compensation or a referral is answered in `ruling.explanation` — accepted but outweighed, saying by
 what, or rejected, saying why. Claims on the same point are answered together. Rejecting a claim on

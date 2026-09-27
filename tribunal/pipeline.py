@@ -752,21 +752,41 @@ def _call_agent(
 # --------------------------------------------------------------------------
 # The judge's vote: K drafts, and the majority decides
 # --------------------------------------------------------------------------
+def leading_clause_reference(referral: Any) -> str:
+    """The clause reference one referral string leads with.
+
+    ``judge.system.md`` requires every referral to lead with the clause that
+    produces it, so the leading reference is the referral's subject and a clause
+    named later in the same sentence is a passing mention. A string that leads
+    with no clause reference at all answers :data:`NO_LEADING_CLAUSE`, which is a
+    value of its own rather than an absence, so it never silently matches a
+    referral that does lead with one.
+    """
+    if not isinstance(referral, str):
+        return NO_LEADING_CLAUSE
+    match = REFERRAL_CLAUSE_RE.search(referral)
+    return match.group(0) if match else NO_LEADING_CLAUSE
+
+
 def referral_clause_references(referrals: Any) -> Tuple[str, ...]:
-    """The clause references a referral list carries, as a sorted tuple.
+    """The clause references a referral list leads with, as a sorted tuple.
 
     A referral is free prose, so two of them cannot be compared as strings. What
-    can be compared is the set of clause references they lead with, the limb
+    can be compared is the clause reference each one **leads with**, the limb
     included, because a referral to the right clause with the wrong limb is a
-    different referral. Order is dropped and duplicates collapse: two drafts that
-    cite the same clauses in a different order have proposed the same referral.
+    different referral.
+
+    One value per referral string, rather than the union of every clause the
+    string mentions. A referral whose prose cites a second clause in passing --
+    "the amount is already comprehended in the POL-RD-02 figure" -- is still a
+    referral about the clause it leads with, and two drafts proposing the same
+    referral must not be split by the mention. Order is dropped and duplicates
+    collapse: two drafts that propose the same referrals in a different order
+    have proposed the same referrals.
     """
     if not isinstance(referrals, (list, tuple)):
         return ()
-    found = set()
-    for item in referrals:
-        if isinstance(item, str):
-            found.update(REFERRAL_CLAUSE_RE.findall(item))
+    found = {leading_clause_reference(item) for item in referrals}
     return tuple(sorted(found))
 
 
@@ -809,6 +829,403 @@ def render_vote_key(key: Optional[Tuple[Any, ...]]) -> str:
     )
 
 
+# --------------------------------------------------------------------------
+# The code checks a draft must pass before it may vote
+#
+# A draft is a model's answer, and the vote counts answers. A draft whose ruling
+# is not one of the five POL-GEN-03 values, whose money is not a figure the
+# brief's own calculator publishes, or whose referrals send the reviewer to a
+# clause the loaded policy does not carry is not an answer a panel can be asked
+# to agree with. It abstains -- with a reason code, exactly like an unparseable
+# one -- and the majority is taken over the drafts that remain, so a majority of
+# a panel that could not sit is still not a decision.
+#
+# This is the same division of labour the referee makes for the advocates'
+# claims: code checks what code can check, and the judge decides the rest.
+# Nothing here reads ``eval``, which this package must not import.
+# --------------------------------------------------------------------------
+
+# A referral with no clause reference in it at all. It is a value rather than an
+# empty set so that a draft which leads with nothing cannot pass for a draft
+# which leads with a clause.
+NO_LEADING_CLAUSE = "(no leading clause reference)"
+
+# The block's two non-money keys. ``constants`` are the policy's own numbers,
+# copied into the block rather than computed by it, and ``not_structured`` names
+# the figures the policy states only in prose, for which the calculator computes
+# nothing.
+MONEY_BLOCK_CONSTANTS = "constants"
+MONEY_BLOCK_NOT_STRUCTURED = "not_structured"
+
+# The numeric leaves of the block that are not amounts: kilometres, minutes, a
+# multiplier, a share, a quantum, a distance in metres, a fix index. Adding
+# kilometres to dollars is not reading an amount off a calculator. The list is
+# the one the answer-key check used, so a draft is held to the standard the
+# answer keys were.
+NOT_MONEY_FIGURES = frozenset(
+    (
+        "optimal_distance_km",
+        "optimal_duration_min",
+        "adjusted_optimal_distance_km",
+        "adjusted_optimal_duration_min",
+        "amended_optimal_duration_min",
+        "measured_excess_km",
+        "additional_distance_km",
+        "cap_km",
+        "justified_excess_km",
+        "shortest_lawful_alternative_km",
+        "surge_multiplier",
+        "cap_ratio",
+        "tolerance_km",
+        "full_refund_share",
+        "refund_share_of_charged",
+        "quantum",
+        "on_optimal_route",
+        "distance_m",
+        "across_gap_distance_m",
+        "index",
+    )
+)
+
+# The figure a DRIVER_COMPENSATION ruling's amounts are governed by, as the
+# block names it. POL-GEN-03 makes ``amount_sgd`` carry the same figure as
+# ``driver_compensation_sgd`` on that ruling, so one name covers both fields.
+# Every other money field is a refund, and the block computes the refunds it
+# publishes.
+DRIVER_COMPENSATION_FIGURE = "driver_compensation"
+
+# What a money field is recorded as when the figure governing it is one the
+# block marks as prose-only. It is **not** a failure: the block publishes no
+# figure to check the draft against, so the draft still votes and the record
+# says why the amount could not be checked.
+UNVERIFIABLE_NOT_STRUCTURED = "unverifiable: not structured"
+
+# The reason codes a draft can abstain on, as a closed set so a reader of the
+# record is not left to parse the prose.
+DRAFT_RULING_NOT_AN_OBJECT = "DRAFT_RULING_NOT_AN_OBJECT"
+DRAFT_UNKNOWN_RULING = "DRAFT_UNKNOWN_RULING"
+DRAFT_ESCALATE_WITH_MONEY = "DRAFT_ESCALATE_WITH_MONEY"
+DRAFT_AMOUNT_FIELD_ABSENT = "DRAFT_AMOUNT_FIELD_ABSENT"
+DRAFT_AMOUNT_REQUIRED_MISSING = "DRAFT_AMOUNT_REQUIRED_MISSING"
+DRAFT_AMOUNT_DOES_NOT_MIRROR = "DRAFT_AMOUNT_DOES_NOT_MIRROR"
+DRAFT_CLAUSE_MALFORMED = "DRAFT_CLAUSE_MALFORMED"
+DRAFT_CLAUSE_UNRESOLVED = "DRAFT_CLAUSE_UNRESOLVED"
+DRAFT_AMOUNT_NOT_READ_OFF = "DRAFT_AMOUNT_NOT_READ_OFF"
+DRAFT_CHECK_CODES = (
+    DRAFT_RULING_NOT_AN_OBJECT,
+    DRAFT_UNKNOWN_RULING,
+    DRAFT_ESCALATE_WITH_MONEY,
+    DRAFT_AMOUNT_FIELD_ABSENT,
+    DRAFT_AMOUNT_REQUIRED_MISSING,
+    DRAFT_AMOUNT_DOES_NOT_MIRROR,
+    DRAFT_CLAUSE_MALFORMED,
+    DRAFT_CLAUSE_UNRESOLVED,
+    DRAFT_AMOUNT_NOT_READ_OFF,
+)
+
+# Which amount fields POL-GEN-03 requires each ruling to populate. ESCALATE is
+# terminal and carries neither amount; NO_ACTION leaves the present state
+# standing and moves no money. A key for every ruling value, so a value added to
+# RULING_VALUES without a decision here fails the test that pins the two
+# together rather than silently skipping the check.
+REQUIRED_AMOUNTS: Dict[str, Tuple[str, ...]] = {
+    "NO_ACTION": (),
+    "PARTIAL_REFUND": ("amount_sgd",),
+    "FULL_REFUND": ("amount_sgd",),
+    DRIVER_COMPENSATION: ("driver_compensation_sgd",),
+    ESCALATE: (),
+}
+
+# A clause reference as the judge writes one, which may be malformed: the strict
+# form is ``referee.CLAUSE_ID_RE``. Finding the loose form first is what lets a
+# malformed reference be reported instead of silently not being seen.
+CLAUSE_MENTION_RE = re.compile(r"POL-[A-Za-z]{1,6}-\d+")
+
+
+def money_block(brief_object: Any) -> Optional[Mapping[str, Any]]:
+    """The money block the brief publishes, or ``None`` when it publishes none.
+
+    The block hangs off the fare breakdown, the artifact the money was charged
+    on. A case with no fare breakdown gets no block, because there is nothing to
+    compute on -- and then no amount can be checked against a calculator, which
+    the caller has to handle rather than treat as a failure.
+    """
+    if not isinstance(brief_object, Mapping):
+        return None
+    case = brief_object.get("case")
+    if not isinstance(case, Mapping):
+        return None
+    for artifact in case.get("evidence") or []:
+        if not isinstance(artifact, Mapping):
+            continue
+        if artifact.get("evidence_type") != brief.FARE_EVIDENCE_TYPE:
+            continue
+        payload = artifact.get("payload")
+        if not isinstance(payload, Mapping):
+            continue
+        derived = payload.get(brief.DERIVED_KEY)
+        if not isinstance(derived, Mapping):
+            continue
+        block = derived.get(brief.MONEY_KEY)
+        if isinstance(block, Mapping):
+            return block
+    return None
+
+
+def _money_leaves(node: Any, path: str = "") -> List[Tuple[str, Decimal]]:
+    """Every numeric leaf of the block, with the path it sits at.
+
+    A payable is a two-place decimal string and a computed amount is a number,
+    so both are read; a string that does not parse as a number is not a figure,
+    which is what keeps a currency code, a fare model and a timestamp out.
+    """
+    found: List[Tuple[str, Decimal]] = []
+    if isinstance(node, Mapping):
+        for key, value in node.items():
+            found.extend(_money_leaves(value, "{0}.{1}".format(path, key) if path else str(key)))
+    elif isinstance(node, (list, tuple)):
+        for index, value in enumerate(node):
+            found.extend(_money_leaves(value, "{0}[{1}]".format(path, index)))
+    else:
+        amount = as_money(node)
+        if amount is not None:
+            found.append((path, amount))
+    return found
+
+
+def _figure_name(path: str) -> str:
+    """``closure[0].refund.payable.value`` -> ``payable``."""
+    stem = path[:-6] if path.endswith(".value") else path
+    return stem.split(".")[-1].split("[")[0]
+
+
+def published_money_figures(block: Any) -> Tuple[Tuple[str, Decimal], ...]:
+    """The money figures a block publishes, as ``(path, amount)`` pairs.
+
+    A figure is a numeric leaf that is not under ``constants`` and is not one of
+    the named quantities that are not amounts. A block that is absent or is not
+    a mapping publishes nothing, which is a fact about the brief and not about
+    the draft.
+    """
+    if not isinstance(block, Mapping):
+        return ()
+    found: List[Tuple[str, Decimal]] = []
+    for path, amount in _money_leaves(block):
+        if path.startswith(MONEY_BLOCK_CONSTANTS + "."):
+            continue
+        if path.startswith(MONEY_BLOCK_NOT_STRUCTURED + "."):
+            continue
+        if _figure_name(path) in NOT_MONEY_FIGURES:
+            continue
+        found.append((path, amount))
+    return tuple(found)
+
+
+def amount_reads_off(
+    amount: Decimal, figures: Sequence[Tuple[str, Decimal]]
+) -> Optional[str]:
+    """How an amount is read off the block's figures, or ``None``.
+
+    A published figure on its own, or the sum of two or three of them, and
+    nothing else. Three is the bound the answer-key check used: a figure that
+    needs four published operands added together is not a figure the block
+    publishes. The path -- or the sum of paths -- is returned so the record can
+    say which figures the amount came from.
+    """
+    for path, value in figures:
+        if value == amount:
+            return path
+    for first in range(len(figures)):
+        for second in range(first + 1, len(figures)):
+            if figures[first][1] + figures[second][1] == amount:
+                return "{0} + {1}".format(figures[first][0], figures[second][0])
+    for first in range(len(figures)):
+        for second in range(first + 1, len(figures)):
+            for third in range(second + 1, len(figures)):
+                total = figures[first][1] + figures[second][1] + figures[third][1]
+                if total == amount:
+                    return "{0} + {1} + {2}".format(
+                        figures[first][0], figures[second][0], figures[third][0]
+                    )
+    return None
+
+
+def governing_figure_prefix(ruling_value: Any) -> Optional[str]:
+    """The block's name for the figure that governs a ruling's amounts.
+
+    ``None`` for every ruling but DRIVER_COMPENSATION. Only the driver
+    compensation figure can be one the policy states only in prose: a refund is
+    computed by the calculator, and the prose-only figures around a refund are
+    the caps and the ceiling that bound one, not the refund itself.
+    """
+    if ruling_value == DRIVER_COMPENSATION:
+        return DRIVER_COMPENSATION_FIGURE
+    return None
+
+
+def unverifiable_amount_reason(
+    ruling_value: Any,
+    block: Any,
+    figures: Sequence[Tuple[str, Decimal]],
+) -> Optional[str]:
+    """``UNVERIFIABLE_NOT_STRUCTURED`` where the governing figure is prose-only.
+
+    POL-RD-04's per-kilometre driver compensation is the figure this exists for:
+    the policy states the rate and its cap only in prose, so the calculator
+    computes nothing for it and the block publishes no figure to hold a draft's
+    amount against. The block says as much in ``not_structured``, and both halves
+    must hold -- the block publishes no driver compensation **and** names the
+    figure as prose-only -- before an unreadable amount is recorded rather than
+    rejected. Where the block does publish one, as POL-NS-07's compensation is
+    published on a no-show dispute, the amount is checkable and an unreadable one
+    is the draft's own.
+    """
+    prefix = governing_figure_prefix(ruling_value)
+    if prefix is None:
+        return None
+    for path, _ in figures:
+        if prefix in path:
+            return None
+    for entry in (block or {}).get(MONEY_BLOCK_NOT_STRUCTURED) or []:
+        figure = entry.get("figure") if isinstance(entry, Mapping) else None
+        if isinstance(figure, str) and prefix in figure:
+            return UNVERIFIABLE_NOT_STRUCTURED
+    return None
+
+
+def _clause_mentions(inner: Mapping[str, Any]) -> List[str]:
+    """Every clause reference a ruling states, the referrals first.
+
+    The referrals are where a ruling states a clause as an instruction and the
+    explanation is where it states one as a reason. Both are checked: a ruling
+    that sends the reviewer to a clause the loaded policy does not carry has
+    referred to nothing, and one that reasons from such a clause has read
+    nothing.
+    """
+    texts: List[Any] = []
+    referrals = inner.get("referrals")
+    if isinstance(referrals, (list, tuple)):
+        texts.extend(referrals)
+    texts.append(inner.get("explanation"))
+    found: List[str] = []
+    for text in texts:
+        if isinstance(text, str):
+            found.extend(CLAUSE_MENTION_RE.findall(text))
+    return found
+
+
+def check_judge_draft(
+    ruling: Any, brief_object: Any
+) -> Tuple[Tuple[str, ...], Tuple[str, ...]]:
+    """The code checks one draft must pass before it may vote.
+
+    Returns the reasons it failed -- each ``"CODE: detail"`` -- and the money
+    fields recorded as unverifiable, which are not failures. An empty first
+    tuple means the draft votes.
+
+    The four checks are the ruling value, the amount fields the ruling value
+    requires and the ones it forbids, the clause references it states, and the
+    amounts it states against the brief's own calculator. Nothing here judges
+    the reasoning: a draft that passes has not been found right, only found
+    well-formed.
+    """
+    failures: List[str] = []
+    unverifiable: List[str] = []
+
+    inner = ruling.get("ruling") if isinstance(ruling, Mapping) else None
+    if not isinstance(inner, Mapping):
+        return (
+            (
+                "{0}: the ruling field is not a POL-GEN-03 object".format(
+                    DRAFT_RULING_NOT_AN_OBJECT
+                ),
+            ),
+            (),
+        )
+
+    value = inner.get("ruling")
+    if value not in RULING_VALUES:
+        failures.append(
+            "{0}: {1!r} is not one of the five POL-GEN-03 values".format(
+                DRAFT_UNKNOWN_RULING, value
+            )
+        )
+
+    if value == ESCALATE:
+        carried = [name for name in MONEY_FIELDS if inner.get(name) is not None]
+        if carried:
+            failures.append(
+                "{0}: ESCALATE must carry both amounts null; non-null: {1}".format(
+                    DRAFT_ESCALATE_WITH_MONEY, ", ".join(carried)
+                )
+            )
+    elif value in RULING_VALUES:
+        absent = [name for name in MONEY_FIELDS if name not in inner]
+        if absent:
+            failures.append(
+                "{0}: POL-GEN-03 requires {1} on the ruling object".format(
+                    DRAFT_AMOUNT_FIELD_ABSENT, ", ".join(absent)
+                )
+            )
+        missing = [
+            name for name in REQUIRED_AMOUNTS[value] if as_money(inner.get(name)) is None
+        ]
+        if missing:
+            failures.append(
+                "{0}: {1} requires {2} and the field is null".format(
+                    DRAFT_AMOUNT_REQUIRED_MISSING, value, ", ".join(missing)
+                )
+            )
+        if value == DRIVER_COMPENSATION:
+            # POL-GEN-03's one exception, and it is a requirement on an amount
+            # field: on this ruling the two carry the same figure, because it is
+            # the amount the ruling moves rather than a refund and a payment.
+            amount = as_money(inner.get("amount_sgd"))
+            compensation = as_money(inner.get("driver_compensation_sgd"))
+            if amount != compensation:
+                failures.append(
+                    "{0}: POL-GEN-03 makes amount_sgd carry the same figure as "
+                    "driver_compensation_sgd on a DRIVER_COMPENSATION ruling; they are "
+                    "{1} and {2}".format(DRAFT_AMOUNT_DOES_NOT_MIRROR, amount, compensation)
+                )
+
+    clauses = referee.policy_clauses(brief_object)
+    for token in _clause_mentions(inner):
+        if referee.CLAUSE_ID_RE.fullmatch(token) is None:
+            failures.append(
+                "{0}: {1!r} is not a well-formed clause id".format(
+                    DRAFT_CLAUSE_MALFORMED, token
+                )
+            )
+        elif token not in clauses:
+            failures.append(
+                "{0}: {1!r} does not resolve in the loaded policy".format(
+                    DRAFT_CLAUSE_UNRESOLVED, token
+                )
+            )
+
+    block = money_block(brief_object)
+    figures = published_money_figures(block)
+    for field_name in MONEY_FIELDS:
+        amount = as_money(inner.get(field_name))
+        if amount is None:
+            continue
+        if amount_reads_off(amount, figures) is not None:
+            continue
+        reason = unverifiable_amount_reason(value, block, figures)
+        if reason is not None:
+            unverifiable.append("{0}={1} ({2})".format(field_name, amount, reason))
+        else:
+            failures.append(
+                "{0}: {1}={2} is not a figure the brief's money block publishes, "
+                "nor the sum of two or three of them".format(
+                    DRAFT_AMOUNT_NOT_READ_OFF, field_name, amount
+                )
+            )
+
+    return (tuple(failures), tuple(unverifiable))
+
+
 @dataclass(frozen=True)
 class JudgeDraft:
     """One draft of the judge's ruling, and what the vote made of it."""
@@ -822,6 +1239,7 @@ class JudgeDraft:
     ruling: Optional[Any] = None
     key: Optional[Tuple[Any, ...]] = None
     abstention: Optional[str] = None
+    unverifiable: Tuple[str, ...] = ()
 
     @property
     def valid(self) -> bool:
@@ -849,9 +1267,14 @@ class JudgeDraft:
             "entries": list(self.entries),
             "valid": self.valid,
             "abstention": self.abstention,
+            # The amounts whose governing figure the block marks as prose-only.
+            # Recorded rather than acted on: the draft still votes, and the
+            # record says which of its figures could not be checked.
+            "unverifiable": list(self.unverifiable),
             "proposal": proposal,
             "agrees": agreeing if self.valid else None,
         }
+
 
 
 @dataclass(frozen=True)
@@ -1124,6 +1547,15 @@ def _run_judge_vote(
     ``discarded_claims`` by :func:`_assemble_ruling`. A draft whose answer is
     unusable after its retry is recorded as an abstention and votes for nothing.
 
+    A draft that parses is then held to :func:`check_judge_draft` before it may
+    vote, because the vote counts answers and a malformed one is not an answer
+    the panel can be asked to agree with. It abstains with its reason codes,
+    exactly as an unparseable one does, and the quorum is taken over the drafts
+    that remain. An amount whose governing figure the money block marks as
+    prose-only is recorded as unverifiable and the draft still votes: the block
+    publishes no figure to hold it against, and rejecting the draft would be
+    measuring the brief rather than the answer.
+
     Every draft is a real call, so every draft is billed and every draft is on
     the transcript in full.
     """
@@ -1136,6 +1568,7 @@ def _run_judge_vote(
 
     rider_claims = referee_result.kept_claims[referee.SIDE_RIDER]
     driver_claims = referee_result.kept_claims[referee.SIDE_DRIVER]
+    brief_object = _parse(brief_json)
     drafts: List[JudgeDraft] = []
 
     for position in range(votes):
@@ -1183,7 +1616,27 @@ def _run_judge_vote(
             drafts.append(JudgeDraft(abstention=failure, **common))
         else:
             ruling = _assemble_ruling(parsed, referee_result)
-            drafts.append(JudgeDraft(ruling=ruling, key=vote_key(ruling), **common))
+            failures, unverifiable = check_judge_draft(ruling, brief_object)
+            if failures:
+                # A malformed draft abstains with its reason codes, which is
+                # what an unparseable one does: it is not an answer the panel
+                # can be asked to agree with.
+                drafts.append(
+                    JudgeDraft(
+                        abstention="; ".join(failures),
+                        unverifiable=unverifiable,
+                        **common
+                    )
+                )
+            else:
+                drafts.append(
+                    JudgeDraft(
+                        ruling=ruling,
+                        key=vote_key(ruling),
+                        unverifiable=unverifiable,
+                        **common
+                    )
+                )
 
     return _reduce_vote(drafts, votes, referee_result)
 

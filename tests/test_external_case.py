@@ -800,9 +800,14 @@ class ExternalRunTests(unittest.TestCase):
     # organisers' expectation: an external case has no answer-key entry to
     # compare against, and inventing one would put a case into the frozen key
     # that the key does not measure.
+    #
+    # Both money fields carry 4.00 because POL-GEN-03 requires a
+    # DRIVER_COMPENSATION ruling to mirror them, and because 4.00 is a figure
+    # case 901's brief publishes. A draft is held to code before it may vote,
+    # and this one has to be a draft that can vote.
     RULING = {
         "ruling": "DRIVER_COMPENSATION",
-        "amount_sgd": None,
+        "amount_sgd": 4.0,
         "driver_compensation_sgd": 4.0,
         "referrals": [],
         "confidence": 0.82,

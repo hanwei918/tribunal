@@ -60,7 +60,14 @@ class RefereeResult:
         }
 
 
-def _policy_clauses(brief: Mapping[str, Any]) -> Dict[str, Mapping[str, Any]]:
+def policy_clauses(brief: Mapping[str, Any]) -> Dict[str, Mapping[str, Any]]:
+    """Every clause of the loaded policy, by id.
+
+    Public because two checks read it: this module's claim check and the
+    pipeline's ruling check. They ask the same question -- does this clause id
+    resolve in the policy the case was decided under -- and it must not have two
+    answers.
+    """
     policies = brief.get("policies")
     if not isinstance(policies, Mapping):
         return {}
@@ -319,7 +326,7 @@ def run(
 ) -> RefereeResult:
     """Run the mechanical checks in a fixed order over both claim arrays."""
     evidence = _evidence_index(brief)
-    clauses = _policy_clauses(brief)
+    clauses = policy_clauses(brief)
     context_fields = context_only_profile_fields(brief)
     ledger: List[Dict[str, Any]] = []
     discards: List[Dict[str, Any]] = []
