@@ -75,6 +75,9 @@ __all__ = [
     "Ruling",
     "FieldOutcome",
     "CaseScore",
+    "CaseFacts",
+    "EXPLANATION_TAG_NAMES",
+    "explanation_tags",
     "Calibration",
     "GradeReport",
     "ruling_values",
@@ -93,6 +96,9 @@ __all__ = [
     "calibrate",
     "grade",
     "render_report",
+    "CASE_FACTS_COLUMNS",
+    "case_fact_rows",
+    "render_case_facts",
     "main",
 ]
 
@@ -699,6 +705,12 @@ class CaseScore:
     expected: Ruling
     produced: Optional[Ruling]
     outcomes: Tuple[FieldOutcome, ...]
+    # What the case cost, how long it took, whether the panel agreed and what
+    # its ruling reads like, when the caller had an artifact to read them from.
+    # ``None`` when nobody supplied them, which is not the same as a case with
+    # no cost: a report built straight from rulings has no facts to print and
+    # prints no columns for them, exactly as it prints no ``cached`` column.
+    facts: Optional[CaseFacts] = None
 
     @property
     def by_field(self) -> Dict[str, FieldOutcome]:
@@ -739,12 +751,17 @@ class CaseScore:
 
 
 def score_case(
-    case_no: int, expected: Ruling, produced: Optional[Ruling]
+    case_no: int,
+    expected: Ruling,
+    produced: Optional[Ruling],
+    facts: Optional[CaseFacts] = None,
 ) -> CaseScore:
     """Score one produced ruling against one expected ruling.
 
     A case with no produced ruling fails every field: an absent ruling is not a
-    blank to be skipped, it is four wrong answers.
+    blank to be skipped, it is four wrong answers. ``facts`` travels onto the
+    score untouched and is never consulted here: the grading and the reporting
+    are separate questions and this function answers only the first.
     """
     vocabulary = set(ruling_values())
 
@@ -752,7 +769,7 @@ def score_case(
         outcomes = tuple(
             FieldOutcome(name, False, "no ruling produced") for name in GRADED_FIELDS
         )
-        return CaseScore(case_no, expected, None, outcomes)
+        return CaseScore(case_no, expected, None, outcomes, facts)
 
     # ruling -- exact string, one of the five POL-GEN-03 values.
     produced_ruling = produced.ruling
@@ -792,13 +809,108 @@ def score_case(
         money_outcomes[1],
         FieldOutcome("referrals", match.matched, referral_detail),
     )
-    return CaseScore(case_no, expected, produced, outcomes)
+    return CaseScore(case_no, expected, produced, outcomes, facts)
 
 
 def _with_notes(detail: str, notes: Sequence[str]) -> str:
     """Join a failure detail with any contract notes, without inventing one."""
     parts = [part for part in [detail, *notes] if part]
     return "; ".join(parts)
+
+
+# --------------------------------------------------------------------------
+# Per-case facts the report prints beside the grade
+#
+# None of this is a grade. It is what the run cost, how long it took, whether
+# the panel agreed, where each amount came from and what the explanation does,
+# and every value is computed by code from an artifact the run wrote. It is
+# carried on the score rather than recomputed by the renderer, so the numbers a
+# reader sees and the numbers the tests check are the same numbers.
+#
+# One value is computed elsewhere and travels in filled: the amount provenance
+# is read off a brief, and this module may not import the package that builds
+# one -- its whole dependency on ``tribunal`` is the ruling vocabulary, which is
+# what keeps a key value from ever reaching a prompt. ``eval.run_benchmark``
+# fills it, beside the code that rebuilds the brief. The four explanation tags
+# are decided here because a regular expression needs nothing from the package.
+# --------------------------------------------------------------------------
+# The four patterns the explanation tags are decided by. They are regular
+# expressions and keywords and never a model, so a reader can reproduce every
+# tag from the ruling text alone. What each one is known to miss and to mistake
+# is recorded in docs/notes/2026-09-27-the-event-log-and-the-report-columns.md,
+# because a pattern with undocumented edges is a number a reader cannot use.
+EVIDENCE_ID_RE = re.compile(r"\bEV-[A-Z]{2,8}-\d{3,6}(?:-\d{1,3})?\b")
+CLAUSE_REFERENCE_RE = re.compile(r"\bPOL-[A-Z]{2,4}-\d{2}(?:\([a-z0-9]+\))?")
+# A worked sum or product **with its result**: numbers joined by operators, then
+# ``=``, then the result. Requiring the ``=`` is what keeps a sentence that
+# merely contains several numbers out, and it is the pattern's largest known
+# false negative -- see the note.
+ARITHMETIC_RE = re.compile(
+    r"(?<![\w.])\d+(?:\.\d+)?(?:\s*(?:[+\-*/×x÷])\s*\d+(?:\.\d+)?)+\s*=\s*-?\d+(?:\.\d+)?"
+)
+# A named gap or limitation in the evidence. The words are deliberately the
+# vocabulary this corpus uses; the note lists the negations the pattern cannot
+# see, such as "there is no gap in the trace".
+GAP_RE = re.compile(
+    r"\b(gap|missing|absent|unavailable|unresolved|undisclosed|impaired|"
+    r"insufficient|incomplete|not recorded|no record|never recorded|no evidence|"
+    r"not in the record|silent|limitation|does not settle|indeterminate|"
+    r"cannot be (?:verified|established|determined)|no qualifying)\b",
+    re.IGNORECASE,
+)
+
+EXPLANATION_TAG_NAMES = (
+    "cites_evidence",
+    "cites_clause",
+    "shows_arithmetic",
+    "names_gap",
+)
+
+
+def explanation_tags(explanation: Any) -> Dict[str, bool]:
+    """The four yes/no tags of one ruling's explanation, by pattern.
+
+    A tag is a claim about the *text*, not about the ruling. An explanation
+    tagged as citing an evidence id is tagged whether or not the id resolves,
+    which is a different check made elsewhere and one this report does not
+    repeat.
+    """
+    text = explanation if isinstance(explanation, str) else ""
+    return {
+        "cites_evidence": bool(EVIDENCE_ID_RE.search(text)),
+        "cites_clause": bool(CLAUSE_REFERENCE_RE.search(text)),
+        "shows_arithmetic": bool(ARITHMETIC_RE.search(text)),
+        "names_gap": bool(GAP_RE.search(text)),
+    }
+
+
+@dataclass(frozen=True)
+class CaseFacts:
+    """What one case cost, how long it took and what its ruling reads like.
+
+    ``None`` for a figure means the artifacts do not record it, which is not
+    the same as a recorded zero: a case with no transcript has no token split
+    to report, and reporting ``0 / 0`` would claim it does. ``wall_seconds`` is
+    the case's own wall clock as the cache entry recorded it, not the sum of
+    its calls' durations.
+
+    ``wall_seconds`` and ``vote_agreement`` are ``Decimal`` rather than the
+    binary numbers the cache holds them as, because this module never handles a
+    binary value: the caller converts, through the same ``Decimal(str(value))``
+    every other number in this module arrives by. That is about the report
+    printing a value a reader can copy, not about a duration being money.
+
+    ``amount_provenance`` is filled by the caller, not here, and the reason is
+    in :func:`eval.run_benchmark.amount_provenance`: answering it means reading
+    a brief, and this module may not import the package that builds one.
+    """
+
+    advocate_tokens: Optional[int]
+    judge_tokens: Optional[int]
+    wall_seconds: Optional[Decimal]
+    vote_agreement: Optional[Decimal]
+    amount_provenance: Mapping[str, str]
+    explanation_tags: Mapping[str, bool]
 
 
 # --------------------------------------------------------------------------
@@ -1196,6 +1308,17 @@ class GradeReport:
     def unproduced(self) -> Tuple[int, ...]:
         return tuple(score.case_no for score in self.cases if score.produced is None)
 
+    @property
+    def facts_checked(self) -> bool:
+        """Whether any case carries the cost and provenance facts.
+
+        A report built straight from rulings carries none, and prints no
+        columns for them -- the same rule the ``cached`` column follows. One
+        case with facts is enough: the table is per case, and a case without
+        them prints its own gaps rather than suppressing the table.
+        """
+        return any(score.facts is not None for score in self.cases)
+
     def field_tally(self, field: str) -> Tuple[int, int]:
         correct = sum(1 for score in self.cases if score.correct_on(field))
         return correct, self.total
@@ -1239,6 +1362,7 @@ def grade(
     corpus: Optional[Mapping[int, Ruling]] = None,
     staleness: Optional[Staleness] = None,
     replay: Optional[ReplayFacts] = None,
+    facts: Optional[Mapping[int, "CaseFacts"]] = None,
 ) -> GradeReport:
     """Grade a produced-ruling mapping against the key.
 
@@ -1264,15 +1388,25 @@ def grade(
     and it defaults to "nobody looked", which renders nothing -- so a report
     built straight from rulings, as the grader's own self-test is, is unchanged
     by its existence.
+
+    ``facts`` is the caller's per-case cost and provenance, keyed by case
+    number. It is not the grader's to work out either: reading a token split
+    means reading a transcript and reading an amount's provenance means
+    rebuilding the brief, and a grader handed rulings alone has neither. When
+    it is absent the report prints no columns for it, which is the same rule
+    the ``cached`` column follows.
     """
     resolved_key = load_answer_key() if key is None else dict(key)
     resolved_corpus = resolved_key if corpus is None else dict(corpus)
 
+    resolved_facts = {} if facts is None else dict(facts)
     cases: List[CaseScore] = []
     for case_no in sorted(resolved_key):
         raw = produced.get(case_no)
         ruling = None if raw is None else produced_from_mapping(raw, case_no)
-        cases.append(score_case(case_no, resolved_key[case_no], ruling))
+        cases.append(
+            score_case(case_no, resolved_key[case_no], ruling, resolved_facts.get(case_no))
+        )
 
     unexpected = tuple(sorted(set(produced) - set(resolved_key)))
     return GradeReport(
@@ -1812,6 +1946,103 @@ def _render_how_checked(key_path: Optional[Path] = None) -> List[str]:
     ]
 
 
+# The columns of the per-case facts table, in the order every report prints
+# them. One tuple rather than a literal in each renderer, so a run's
+# ``report.md`` and the development-sets report cannot drift into showing
+# different columns under the same heading.
+CASE_FACTS_COLUMNS = (
+    "case",
+    "advocate tokens",
+    "judge tokens",
+    "wall s",
+    "escalated",
+    "vote agreement",
+    "amount_sgd from",
+    "driver_compensation_sgd from",
+    "cites evidence",
+    "cites clause",
+    "shows arithmetic",
+    "names a gap",
+)
+
+
+def _render_tokens(value: Optional[int]) -> str:
+    return "-" if value is None else str(value)
+
+
+def case_fact_rows(report: GradeReport) -> List[Tuple[str, ...]]:
+    """One row per case: what it cost, where its money came from, what its explanation does.
+
+    The values and not the layout, because the same rows are printed two ways:
+    as the markdown table in a run's ``report.md`` and as the development-sets
+    report's own table. Rendering both from one list is what keeps the two
+    reports showing the same figures.
+
+    A case the caller supplied no facts for prints a dash in every column but
+    its number, which is what the ``cached`` column does too: absent is not
+    zero, and the table says which of the two it is.
+
+    The four tags are printed as ``yes``/``no`` rather than as ticks, because a
+    tick renders differently in every viewer and a reader checking a claim
+    against the pattern needs a value that survives a copy and paste.
+    """
+    rows: List[Tuple[str, ...]] = []
+    for score in report.cases:
+        facts = score.facts
+        if facts is None:
+            rows.append((str(score.case_no),) + ("-",) * (len(CASE_FACTS_COLUMNS) - 1))
+            continue
+        cells = [
+            _render_tokens(facts.advocate_tokens),
+            _render_tokens(facts.judge_tokens),
+            "-" if facts.wall_seconds is None else "{0:.1f}".format(facts.wall_seconds),
+            "yes" if score.produced_escalates else "no",
+            "-" if facts.vote_agreement is None else "{0:.2f}".format(facts.vote_agreement),
+            facts.amount_provenance.get("amount_sgd", "-"),
+            facts.amount_provenance.get("driver_compensation_sgd", "-"),
+        ]
+        for name in EXPLANATION_TAG_NAMES:
+            cells.append("yes" if facts.explanation_tags.get(name) else "no")
+        rows.append((str(score.case_no),) + tuple(cells))
+    return rows
+
+
+def render_case_facts(report: GradeReport) -> List[str]:
+    """The per-case facts table of a run report, as markdown.
+
+    Rendered only when the caller supplied the facts, and every value is code's:
+    the token split is summed off the case's transcript by role, the wall clock
+    and the vote are read off its cache entry, the amount provenance is computed
+    from the brief this code builds, and the four tags are pattern matches over
+    the ruling's explanation. Nothing here reads a model's judgement.
+    """
+    lines = [
+        "## Per case — cost, provenance and explanation tags",
+        "",
+        "Computed by code from each case's own artifacts: the token split summed "
+        "off its transcript by role, the wall clock and the vote agreement read "
+        "off its cache entry, the amount provenance computed from the brief this "
+        "code builds, and the four tags matched over the ruling's explanation by "
+        "regular expression and keyword. No model is involved. A dash means the "
+        "artifact does not record the figure. The patterns, and what each is "
+        "known to miss and to mistake, are documented in "
+        "`docs/notes/2026-09-27-the-event-log-and-the-report-columns.md`.",
+        "",
+        "`vote agreement` is the share of the judge's drafts that agreed on the "
+        "published ruling -- `1.00` for a unanimous panel, `0.75` for three of "
+        "four, and a dash for a run that asked the judge once and so held no "
+        "vote. It is not the judge's own `confidence`, and the two are never "
+        "folded together.",
+        "",
+        "| {0} |".format(" | ".join(CASE_FACTS_COLUMNS)),
+        "|{0}|".format("|".join("---" for _ in CASE_FACTS_COLUMNS)),
+    ]
+    for row in case_fact_rows(report):
+        lines.append("| {0} |".format(" | ".join(row)))
+    lines.append("")
+    return lines
+
+
 def render_report(
     report: GradeReport, title: str = DEFAULT_TITLE, key_path: Optional[Path] = None
 ) -> str:
@@ -1943,6 +2174,9 @@ def render_report(
     lines.extend(["## Per case", ""])
     lines.extend(_render_case_table(report))
     lines.append("")
+
+    if report.facts_checked:
+        lines.extend(render_case_facts(report))
 
     lines.extend(["## Failures", ""])
     lines.extend(_render_failures(report))

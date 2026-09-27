@@ -162,11 +162,12 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from eval import grade
-from tribunal import brief, llm, loader, money, pipeline
+from tribunal import brief, events, llm, loader, money, pipeline, transcript
 from tribunal.model import resolve_model
 
 __all__ = [
     "BenchmarkError",
+    "case_facts",
     "BriefStaleness",
     "CaseOutcome",
     "ComparisonRow",
@@ -1446,6 +1447,7 @@ def run_one_case(
     loaded_case: Optional[Mapping[str, Any]] = None,
     replay: Optional[Any] = None,
     judge_votes: int = pipeline.DEFAULT_JUDGE_VOTES,
+    events_log: Optional[Any] = None,
 ) -> Tuple[CaseOutcome, Optional[Dict[str, Any]], Optional[str]]:
     """Run one case. Returns ``(outcome, cache document, transcript json)``.
 
@@ -1510,6 +1512,7 @@ def run_one_case(
                 replay=replay,
                 case_deadline_seconds=case_deadline_seconds,
                 judge_votes=judge_votes,
+                events_log=events_log,
             )
         elif loaded_case is None:
             result = pipeline.run_case(
@@ -1519,6 +1522,7 @@ def run_one_case(
                 case_deadline_seconds=case_deadline_seconds,
                 case_loader=case_loader,
                 judge_votes=judge_votes,
+                events_log=events_log,
             )
         else:
             # A converted external case, already loaded through its own explicit
@@ -1530,12 +1534,34 @@ def run_one_case(
                 prompts_dir=prompts_dir,
                 case_deadline_seconds=case_deadline_seconds,
                 judge_votes=judge_votes,
+                events_log=events_log,
             )
-    except (llm.MissingAPIKeyError, llm.ModelNotProvisionedError):
+    except (llm.MissingAPIKeyError, llm.ModelNotProvisionedError) as exc:
+        # Not provisioned and no credential are the same failure for every
+        # case, so the runner lets them out rather than recording twenty-nine
+        # identical failures. They are logged first: the log is the record of
+        # what this invocation hit, and a run that died at its first case must
+        # still be able to say why. The 2026-09-27 replay died this way.
+        if events_log is not None:
+            events_log.record(
+                events.EVENT_CASE_FAILED,
+                case_no=case_no,
+                failure_kind=failure_kind_for(exc),
+                failed_agent=None,
+                detail="{0}: {1}".format(type(exc).__name__, exc),
+            )
         raise
     except Exception as exc:  # noqa: BLE001 - any transport or parse failure is a case failure
         kind = failure_kind_for(exc)
         detail = "{0}: {1}".format(type(exc).__name__, exc)
+        if events_log is not None:
+            events_log.record(
+                events.EVENT_CASE_FAILED,
+                case_no=case_no,
+                failure_kind=kind,
+                failed_agent=None,
+                detail=detail,
+            )
         return (
             CaseOutcome(
                 case_no=case_no,
@@ -1580,6 +1606,14 @@ def run_one_case(
 
     if not result.ok or result.ruling is None:
         detail = result.failure_reason or "the run produced no ruling"
+        if events_log is not None:
+            events_log.record(
+                events.EVENT_CASE_FAILED,
+                case_no=case_no,
+                failure_kind=FAILURE_SHAPE,
+                failed_agent=result.failed_agent,
+                detail=detail,
+            )
         return (
             CaseOutcome(
                 case_no=case_no,
@@ -2104,6 +2138,33 @@ def run_benchmark(
         # able to say which set it belongs to without its directory.
         run_provenance = dict(run_provenance, development_set=label)
 
+    # The invocation's own id, and the append-only log every case appends to.
+    # The id is written on every event line and on the invocation's metadata, so
+    # a reader can join the two without guessing which invocation a line belongs
+    # to. The log is opened in append mode and is never truncated, ``--force``
+    # included: forcing a re-run skips the cache, it does not erase the record
+    # of the run that filled it.
+    invocation_id = events.new_invocation_id(now)
+    events_log = events.EventLog(
+        run_dir / events.EVENTS_FILE,
+        invocation_id=invocation_id,
+        git_commit=run_provenance.get("git_commit"),
+        prompts_sha256=run_provenance.get("prompts_sha256"),
+        now=now,
+    )
+    events_log.record(
+        events.EVENT_INVOCATION_START,
+        model=model,
+        cases=list(requested),
+        concurrency=concurrency,
+        timeout_seconds=timeout_seconds,
+        case_deadline_seconds=case_deadline_seconds,
+        token_budget=token_budget,
+        judge_votes=judge_votes,
+        development_set=label,
+        replay_dir=None if replay_dir is None else str(replay_dir),
+    )
+
     # A shared sink, because the client is shared across every case and, above
     # concurrency 1, across threads. The client calls this from whichever thread
     # is completing a request, so it is the one piece of the runner's state that
@@ -2172,6 +2233,17 @@ def run_benchmark(
         )
         outcomes.append(outcome)
         recorded.add(case_no)
+        # This invocation began this case and found it already decided, which is
+        # a fact about the invocation and belongs on the log beside the cases it
+        # ran. ``cached`` is what keeps the two apart: a reader following one
+        # case sees that it was begun and reused, not that work was done.
+        events_log.record(
+            events.EVENT_CASE_START,
+            case_no=case_no,
+            position=positions[case_no],
+            total=total,
+            cached=True,
+        )
         reused = reused + outcome.tokens
         state["replayed"] = state["replayed"] + outcome.replayed_tokens
         progress(format_progress(outcome, positions[case_no], total))
@@ -2180,6 +2252,7 @@ def run_benchmark(
         document = _metadata_document(
             model=model,
             run_dir=run_dir,
+            invocation_id=invocation_id,
             started_at=started_at,
             ended_at=now(),
             stop_reason=stop_reason,
@@ -2230,10 +2303,40 @@ def run_benchmark(
         # provenance and correct totals rather than nothing at all.
         write_metadata(state["stop_reason"])
 
+    def end_fatally(exc: BaseException) -> None:
+        """Close the invocation's log when it is leaving on an exception.
+
+        Two places can raise out of an invocation before it finishes: building
+        the client, and anything a case does. Both call this, because a log whose
+        last line is ``invocation_start`` cannot tell a reader whether the run is
+        still in flight or died -- which is the question the log exists to
+        answer. ``stop_reason`` is set as well as recorded, so the metadata the
+        ``finally`` writes agrees with the log.
+        """
+        state["stop_reason"] = STOP_FATAL
+        events_log.record(
+            events.EVENT_INVOCATION_END,
+            stop_reason=STOP_FATAL,
+            detail="{0}: {1}".format(type(exc).__name__, exc),
+            cases_seen=len(outcomes),
+            cases_completed=len(
+                [item for item in outcomes if item.status == STATUS_COMPLETED]
+            ),
+            cases_failed=len(
+                [item for item in outcomes if item.status == STATUS_FAILED]
+            ),
+        )
+
     if pending:
         # Built lazily, and only when there is work to do: a re-run whose cases
-        # are all cached has no reason to need a credential.
-        client = build_client(sink)
+        # are all cached has no reason to need a credential. Built inside a
+        # guard because a machine with no credential raises here rather than
+        # inside a case, and that is still a run that has to end its own log.
+        try:
+            client = build_client(sink)
+        except BaseException as exc:  # noqa: BLE001 - logged, then re-raised
+            end_fatally(exc)
+            raise
 
         def execute(case_no: int) -> Tuple[CaseOutcome, Optional[Dict[str, Any]], Optional[str]]:
             replayable = None if replay is None else replay.accepted.get(case_no)
@@ -2246,6 +2349,13 @@ def run_benchmark(
                 # in the same words instead of silently skipping it.
                 reason = replay.refused.get(
                     case_no, "the source run never ran this case"
+                )
+                events_log.record(
+                    events.EVENT_CASE_FAILED,
+                    case_no=case_no,
+                    failure_kind=FAILURE_REPLAY,
+                    failed_agent=None,
+                    detail=reason,
                 )
                 return (
                     CaseOutcome(
@@ -2268,6 +2378,7 @@ def run_benchmark(
                 case_loader=case_loader,
                 replay=replayable,
                 judge_votes=judge_votes,
+                events_log=events_log,
             )
 
         workers = max(1, concurrency)
@@ -2290,6 +2401,18 @@ def run_benchmark(
                     # completion line, and the point of the line is that the
                     # last one on the terminal names what is still in flight.
                     progress(format_start(case_no, positions[case_no], total))
+                    # And on the event log, from the same thread and at the same
+                    # moment, so the log's case_start for a case precedes every
+                    # event that case produces -- which is what makes a case's
+                    # history readable in the order it happened rather than in
+                    # the order two workers happened to finish.
+                    events_log.record(
+                        events.EVENT_CASE_START,
+                        case_no=case_no,
+                        position=positions[case_no],
+                        total=total,
+                        cached=False,
+                    )
                     in_flight[pool.submit(execute, case_no)] = case_no
 
                 if not in_flight:
@@ -2311,8 +2434,12 @@ def run_benchmark(
             state["stop_reason"] = STOP_INTERRUPTED
             progress("")
             progress("interrupted — letting the case(s) already in flight finish")
-        except BaseException:
-            state["stop_reason"] = STOP_FATAL
+        except BaseException as exc:  # noqa: BLE001 - logged, then re-raised
+            # Recorded before the exception leaves, because a run that died must
+            # still be able to say so from its own log. The 2026-09-27 replay
+            # ended this way, on an unprovisioned model, and its log's last line
+            # is where that is written down.
+            end_fatally(exc)
             raise
         finally:
             # Wait for anything still running and keep its result: those tokens
@@ -2354,7 +2481,7 @@ def run_benchmark(
         if outcome.status in (STATUS_COMPLETED, STATUS_CACHED)
         and outcome.case_no in resolved_key
     )
-    report = grade_run(run_dir, resolved_key, covered, checker)
+    report = grade_run(run_dir, resolved_key, covered, checker, case_loader)
     report_title = "Benchmark report — {0}".format(model)
     if label is not None:
         report_title = "Benchmark report — {0} — development set {1}".format(
@@ -2363,6 +2490,37 @@ def run_benchmark(
     (run_dir / REPORT_FILE).write_text(
         grade.render_report(report, report_title, key_path=key_path),
         encoding="utf-8",
+    )
+
+    # The grade, one event per case, and then the end of the invocation. The
+    # grade is recorded here rather than inside the grading code because it is
+    # this invocation's finding about the cases it covered, and the log is where
+    # a reader looks for it. It is written for a case that produced nothing as
+    # well as for one that did, so "this case was graded and failed" is on the
+    # log beside the failure that produced it.
+    for score in report.cases:
+        events_log.record(
+            events.EVENT_GRADE,
+            case_no=score.case_no,
+            matched=score.exact,
+            expected=score.expected.ruling,
+            produced=None if score.produced is None else score.produced.ruling,
+            fields={
+                name: score.correct_on(name) for name in grade.GRADED_FIELDS
+            },
+        )
+    events_log.record(
+        events.EVENT_INVOCATION_END,
+        stop_reason=state["stop_reason"],
+        cases_graded=report.total,
+        exact_matches=report.exact_matches,
+        # The two ledgers, named as the metadata file names them and never added
+        # together here: ``consumed`` is what was billed, ``reused`` is what the
+        # cached cases cost when they were produced, and the second is nothing
+        # this invocation spent.
+        tokens_consumed=(state["charged"] + state["failed"]).billed,
+        tokens_reused=reused.billed,
+        tokens_replayed=state["replayed"].billed,
     )
 
     return RunSummary(
@@ -2439,6 +2597,7 @@ def _metadata_document(
     *,
     model: str,
     run_dir: Path,
+    invocation_id: str,
     started_at: str,
     ended_at: str,
     stop_reason: str,
@@ -2491,6 +2650,10 @@ def _metadata_document(
     return {
         "schema_version": CACHE_SCHEMA_VERSION,
         "model": model,
+        # The invocation's own id, which every line of this invocation's event
+        # log carries. Written here so a reader can join the metadata to the log
+        # without matching timestamps, which two invocations can share.
+        "invocation_id": invocation_id,
         "run_dir": str(run_dir),
         "started_at": started_at,
         "ended_at": ended_at,
@@ -2607,11 +2770,149 @@ def _metadata_document(
 # --------------------------------------------------------------------------
 # Grading a run off disk
 # --------------------------------------------------------------------------
+def amount_provenance(ruling: Any, brief_object: Any) -> Dict[str, str]:
+    """Where each money field's figure came from, as the brief knows it.
+
+    Four answers, and they are kept apart rather than folded together:
+
+    * the path of the money-block figure the amount equals, or the paths of the
+      two or three figures it is the sum of -- the figure or figures it reads
+      off;
+    * ``"unverifiable: not structured"`` when the figure governing the amount
+      is one the block names as prose-only, so there is nothing to read it off;
+    * ``"n/a"`` when the field carries no amount at all, which is what an
+      ``ESCALATE`` and a ``NO_ACTION`` both do;
+    * ``"not a published figure"`` when the amount is a number and reads off
+      nothing. That is not one of the three answers the report asks for, and it
+      is the answer that matters most: it is a draft's own number, and the
+      record says so rather than leaving the cell blank.
+
+    It is here rather than beside the explanation tags in :mod:`eval.grade`
+    because answering it means reading the money block of a brief, and the
+    grader may not import the package that builds one -- its whole dependency
+    on ``tribunal`` is the ruling vocabulary, which is what keeps a key value
+    from ever reaching a prompt, a brief or a transcript. The tags stay in the
+    grader because deciding one needs nothing but a regular expression.
+    """
+    inner = ruling.get("ruling") if isinstance(ruling, Mapping) else None
+    if not isinstance(inner, Mapping):
+        return {name: "n/a" for name in pipeline.MONEY_FIELDS}
+    block = pipeline.money_block(brief_object)
+    figures = pipeline.published_money_figures(block)
+    value = inner.get("ruling")
+    found: Dict[str, str] = {}
+    for name in pipeline.MONEY_FIELDS:
+        amount = pipeline.as_money(inner.get(name))
+        if amount is None:
+            found[name] = "n/a"
+            continue
+        read = pipeline.amount_reads_off(amount, figures)
+        if read is not None:
+            found[name] = read
+            continue
+        reason = pipeline.unverifiable_amount_reason(value, block, figures)
+        found[name] = reason if reason is not None else "not a published figure"
+    return found
+
+
+def _decimal_or_none(value: Any) -> Optional[Decimal]:
+    """A recorded number as the ``Decimal`` the report renders, or ``None``.
+
+    A wall clock and a vote agreement come off the cache as binary numbers. The
+    report carries them as ``Decimal`` -- the same type, and the same single
+    conversion path, every other number in this report arrives by. That is not
+    a claim that a duration is money; it is what keeps the printed value a
+    value a reader can copy. A value that is not a finite number is ``None``
+    rather than ``0``: "not recorded" and "recorded as zero" are different
+    findings and the report keeps them apart.
+    """
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        converted = Decimal(str(value))
+    except (ArithmeticError, ValueError, TypeError):
+        return None
+    return converted if converted.is_finite() else None
+
+
+def case_facts(
+    run_dir: Path,
+    case_no: int,
+    document: Mapping[str, Any],
+    case_loader: Optional[Callable[[int], Mapping[str, Any]]] = None,
+) -> grade.CaseFacts:
+    """The cost, the wall clock, the vote and the provenance of one cached case.
+
+    Everything here is read off an artifact the case wrote, and everything is
+    computed by code:
+
+    * the token split is summed off the case's own transcript, by role, so the
+      advocates' share and the judge's share are the transcript's own figures
+      rather than a second accounting of them. A case with no transcript has no
+      split, which is ``None`` and not ``0 / 0``;
+    * the wall clock and the vote agreement are read off the cache entry, which
+      is where the case recorded them;
+    * the amount provenance is computed from the brief **this code builds now**,
+      so it describes the brief the case would be decided under rather than a
+      copy of one. A brief that cannot be built answers so explicitly rather
+      than answering a wrong provenance;
+    * the explanation tags are matched over the ruling's own explanation text.
+
+    For a replayed case the advocate share is what those calls cost the run that
+    made them, because the copied entries carry the usage figures they were
+    recorded with. The report's replay block is what says the run did not pay
+    for them.
+    """
+    advocate_tokens = 0
+    judge_tokens = 0
+    seen = False
+    transcript_document = read_json(transcript_path(run_dir, case_no))
+    if isinstance(transcript_document, Mapping):
+        for entry in transcript_document.get("entries") or []:
+            if not isinstance(entry, Mapping):
+                continue
+            seen = True
+            tokens = billed_tokens(
+                entry.get("prompt_tokens"), entry.get("completion_tokens")
+            )
+            if entry.get("role") == transcript.ROLE_JUDGE:
+                judge_tokens += tokens
+            else:
+                advocate_tokens += tokens
+
+    ruling = document.get("ruling")
+    inner = ruling.get("ruling") if isinstance(ruling, Mapping) else None
+    explanation = inner.get("explanation") if isinstance(inner, Mapping) else None
+
+    load = loader.load_case if case_loader is None else case_loader
+    try:
+        brief_object: Optional[Mapping[str, Any]] = brief.build_brief_for_case(load(case_no))
+    except Exception:  # noqa: BLE001 - a brief that cannot be built yields no provenance
+        brief_object = None
+
+    if brief_object is None:
+        # Named rather than left blank: a reader must be able to tell "the brief
+        # could not be rebuilt" from "the ruling carried no amount".
+        provenance = {name: "brief not available" for name in pipeline.MONEY_FIELDS}
+    else:
+        provenance = amount_provenance(ruling, brief_object)
+
+    return grade.CaseFacts(
+        advocate_tokens=advocate_tokens if seen else None,
+        judge_tokens=judge_tokens if seen else None,
+        wall_seconds=_decimal_or_none(document.get("wall_seconds")),
+        vote_agreement=_decimal_or_none(document.get("vote_agreement")),
+        amount_provenance=provenance,
+        explanation_tags=grade.explanation_tags(explanation),
+    )
+
+
 def grade_run(
     run_dir: Path,
     key: Optional[Mapping[int, grade.Ruling]] = None,
     cases: Optional[Sequence[int]] = None,
     checker: Optional[BriefStaleness] = None,
+    case_loader: Optional[Callable[[int], Mapping[str, Any]]] = None,
 ) -> grade.GradeReport:
     """Grade a run's cached rulings, and say which of them the code has moved past.
 
@@ -2632,6 +2933,14 @@ def grade_run(
     run, and the report has to be able to say so beside every figure it prints.
     ``checked`` is True whenever this function ran at all -- it read every entry,
     so "nothing was replayed" is a finding rather than an absence.
+
+    The per-case facts are collected here too, and for the same reason: this is
+    the one place every artifact a case wrote is already being read, so the
+    report's cost, wall-clock, vote, provenance and explanation columns are
+    filled from the same pass that reads the ruling. ``case_loader`` is how a
+    development set's cases are named when the brief is rebuilt for the amount
+    provenance; the corpus loader is the default, and a set that does not pass
+    its own would have every one of its cases report an unavailable brief.
     """
     resolved_key: Mapping[int, grade.Ruling] = (
         grade.load_answer_key() if key is None else dict(key)
@@ -2643,6 +2952,7 @@ def grade_run(
     )
 
     produced: Dict[int, Any] = {}
+    facts: Dict[int, grade.CaseFacts] = {}
     replayed_cases: List[int] = []
     replay_sources: List[str] = []
     replay_tokens = 0
@@ -2651,6 +2961,10 @@ def grade_run(
         if document is None:
             continue
         produced[case_no] = document.get("ruling")
+        # Before the replay branch's ``continue``: a replayed case has facts of
+        # its own -- a wall clock, a vote, an explanation -- and skipping them
+        # would blank its row for a reason that has nothing to do with them.
+        facts[case_no] = case_facts(run_dir, case_no, document, case_loader)
         replay = document.get("replay")
         if not isinstance(replay, Mapping):
             continue
@@ -2679,6 +2993,7 @@ def grade_run(
             cases=tuple(replayed_cases),
             tokens=replay_tokens,
         ),
+        facts=facts,
     )
 
 
@@ -3639,6 +3954,32 @@ def run_external_case(
     run_provenance = provenance(
         model, prompts_dir=prompts_dir, runs_dir=runs_dir, git_runner=git_runner, now=now
     )
+
+    # The same append-only log a corpus run keeps, under this case's own run
+    # directory. An external case is not scored, so no ``grade`` event is
+    # written; everything else -- the invocation, the case, every call, the
+    # referee's decisions, the drafts, the vote and the final ruling -- is, and
+    # in the same shape, because this is the same machinery.
+    invocation_id = events.new_invocation_id(now)
+    events_log = events.EventLog(
+        run_dir / events.EVENTS_FILE,
+        invocation_id=invocation_id,
+        git_commit=run_provenance.get("git_commit"),
+        prompts_sha256=run_provenance.get("prompts_sha256"),
+        now=now,
+    )
+    events_log.record(
+        events.EVENT_INVOCATION_START,
+        model=model,
+        cases=[case_no],
+        external=True,
+        timeout_seconds=timeout_seconds,
+        case_deadline_seconds=case_deadline_seconds,
+        token_budget=token_budget,
+        judge_votes=judge_votes,
+    )
+    events_log.record(events.EVENT_CASE_START, case_no=case_no, position=1, total=1)
+
     build_client = (
         _default_client_factory(model, timeout_seconds)
         if client_factory is None
@@ -3660,8 +4001,17 @@ def run_external_case(
         case_deadline_seconds=case_deadline_seconds,
         loaded_case=case,
         judge_votes=judge_votes,
+        events_log=events_log,
     )
     _persist(run_dir, outcome, document, transcript_json)
+    events_log.record(
+        events.EVENT_INVOCATION_END,
+        stop_reason=STOP_COMPLETED if outcome.ok else STOP_FATAL,
+        cases_graded=0,
+        external=True,
+        status=outcome.status,
+        tokens_consumed=outcome.total_tokens,
+    )
 
     metadata = dict(run_provenance)
     # _record_invocation keys its history on started_at, so the invocation's own
@@ -3669,6 +4019,9 @@ def run_external_case(
     metadata.setdefault("started_at", metadata.get("recorded_at"))
     metadata.update(
         {
+            # The id every line of this case's event log carries, so the
+            # metadata and the log can be joined without matching timestamps.
+            "invocation_id": invocation_id,
             "external": True,
             "external_case_no": case_no,
             "external_case_path": str(Path(case_path)),

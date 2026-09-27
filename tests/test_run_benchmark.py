@@ -4990,5 +4990,111 @@ class ContractTests(unittest.TestCase):
             self.assertIsNone(outcome.matched)
 
 
+class AmountProvenanceTests(unittest.TestCase):
+    """Where an amount came from, kept apart from how much it was."""
+
+    def test_a_ruling_that_carries_no_amount_answers_not_applicable(self):
+        found = runner.amount_provenance(
+            {
+                "ruling": {
+                    "ruling": "NO_ACTION",
+                    "amount_sgd": None,
+                    "driver_compensation_sgd": None,
+                }
+            },
+            None,
+        )
+        self.assertEqual(
+            {name: "n/a" for name in pipeline.MONEY_FIELDS}, dict(found)
+        )
+
+    def test_no_ruling_object_at_all_answers_not_applicable(self):
+        """``ESCALATE`` and a case that produced nothing both carry no amount,
+        and neither is a figure that failed to read off."""
+        self.assertEqual(
+            {name: "n/a" for name in pipeline.MONEY_FIELDS},
+            dict(runner.amount_provenance(None, None)),
+        )
+
+
+class DecimalColumnTests(unittest.TestCase):
+    """A duration and a vote are carried as ``Decimal``; a non-number is ``None``."""
+
+    def test_a_number_becomes_the_decimal_it_prints_as(self):
+        self.assertEqual(Decimal("0.75"), runner._decimal_or_none(0.75))
+        self.assertEqual(Decimal("12.3"), runner._decimal_or_none("12.3"))
+        self.assertEqual(Decimal("0"), runner._decimal_or_none(0))
+
+    def test_a_figure_that_was_not_recorded_is_none_rather_than_zero(self):
+        for value in (None, "", "n/a", True, False, [1], {"a": 1}, float("nan")):
+            self.assertIsNone(runner._decimal_or_none(value), repr(value))
+
+
+class PerCaseColumnTests(unittest.TestCase):
+    """The new columns, over a run the runner actually made."""
+
+    def test_the_token_split_is_the_transcript_s_own_by_role(self):
+        """Two advocate calls and one judge call per case at K = 1."""
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, _ = bench(tmp)
+            document = runner.load_cached(summary.run_dir, 102)
+            facts = runner.case_facts(summary.run_dir, 102, document)
+
+            self.assertEqual(2 * TOKENS_PER_CALL, facts.advocate_tokens)
+            self.assertEqual(TOKENS_PER_CALL, facts.judge_tokens)
+
+    def test_a_case_with_no_transcript_has_no_split_rather_than_zero(self):
+        """A replayed case's advocates were never called here, and ``0 / 0``
+        would claim they were called and cost nothing."""
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, _ = bench(tmp)
+            document = runner.load_cached(summary.run_dir, 102)
+            runner.transcript_path(summary.run_dir, 102).unlink()
+            facts = runner.case_facts(summary.run_dir, 102, document)
+
+            self.assertIsNone(facts.advocate_tokens)
+            self.assertIsNone(facts.judge_tokens)
+
+    def test_the_duration_is_a_decimal_and_the_provenance_is_computed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, _ = bench(tmp)
+            document = runner.load_cached(summary.run_dir, 102)
+            facts = runner.case_facts(summary.run_dir, 102, document)
+
+            self.assertIsInstance(facts.wall_seconds, Decimal)
+            self.assertEqual(
+                set(grade.EXPLANATION_TAG_NAMES), set(facts.explanation_tags)
+            )
+            self.assertNotIn("brief not available", set(facts.amount_provenance.values()))
+
+    def test_a_run_that_asked_the_judge_once_holds_no_vote(self):
+        """The column prints a dash, which is not the same as agreement 0.00."""
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, _ = bench(tmp)
+            document = runner.load_cached(summary.run_dir, 102)
+            facts = runner.case_facts(summary.run_dir, 102, document)
+
+            self.assertIsNone(facts.vote_agreement)
+
+    def test_the_columns_are_in_the_report_the_runner_writes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, _ = bench(tmp)
+            text = (summary.run_dir / runner.REPORT_FILE).read_text(encoding="utf-8")
+
+            self.assertIn("cost, provenance and explanation tags", text)
+            for column in grade.CASE_FACTS_COLUMNS:
+                self.assertIn(column, text)
+
+    def test_the_escalated_column_follows_the_ruling(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, _ = bench(tmp, cases=WIDER_SET)
+            rows = {row[0]: row for row in grade.case_fact_rows(summary.report)}
+
+            # 0 case, 1 advocates, 2 judge, 3 wall, 4 escalated, 5 vote.
+            self.assertEqual("yes", rows["110"][4])
+            self.assertEqual("no", rows["101"][4])
+            self.assertEqual("-", rows["101"][5])
+
+
 if __name__ == "__main__":
     unittest.main()

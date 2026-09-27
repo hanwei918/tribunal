@@ -268,7 +268,16 @@ def figures_for(
             produced=0,
             report=None,
         )
-    report = run_benchmark.grade_run(run_dir, development_set.key(), produced_cases)
+    report = run_benchmark.grade_run(
+        run_dir,
+        development_set.key(),
+        produced_cases,
+        # The set's own loader, so each case's brief can be rebuilt for the
+        # amount provenance the report prints. Without it every case of this set
+        # would report an unavailable brief, because the corpus manifest cannot
+        # name a case it does not list.
+        case_loader=development_set.load_case,
+    )
     return SetFigures(
         name=development_set.name,
         run_dir=run_dir,
@@ -345,14 +354,66 @@ def _relative(path: Path) -> str:
         return Path(path).name
 
 
+def _render_case_facts_section(figures: Sequence[SetFigures]) -> List[str]:
+    """The per-case cost, provenance and tag table, one per set that has one.
+
+    The same columns a run report prints, filled from the same rows:
+    :func:`eval.grade.case_fact_rows` is the one place the values are computed,
+    so the two reports cannot come to show different figures under the same
+    heading. Every value is code's -- a token split summed off a transcript, a
+    wall clock and a vote read off a cache entry, a provenance computed from the
+    brief this code builds, and four pattern matches over an explanation.
+
+    A set that has not been run has no report and contributes nothing, which is
+    what keeps an unrun set from printing a table of dashes that a reader could
+    mistake for a run that produced nothing.
+    """
+    populated = [
+        item
+        for item in figures
+        if item.report is not None and item.report.facts_checked
+    ]
+    if not populated:
+        return []
+    lines = [
+        "",
+        "Per case — cost, provenance and explanation tags",
+        "",
+        "Computed by code from each case's own artifacts: the token split summed "
+        "off its transcript by role, the wall clock and the vote agreement read "
+        "off its cache entry, the amount provenance computed from the brief this "
+        "code builds, and the four tags matched over the ruling's explanation by "
+        "regular expression and keyword. No model is involved. A dash means the "
+        "artifact does not record the figure. `vote agreement` is the share of "
+        "the judge's drafts that agreed on the published ruling, and it is not "
+        "the judge's own `confidence`. The patterns, and what each is known to "
+        "miss and to mistake, are documented in "
+        "`docs/notes/2026-09-27-the-event-log-and-the-report-columns.md`.",
+    ]
+    for item in populated:
+        lines.append("")
+        lines.append("{0} — {1}".format(item.name, _relative(item.run_dir)))
+        lines.append("")
+        lines.append("| {0} |".format(" | ".join(grade.CASE_FACTS_COLUMNS)))
+        lines.append("|{0}|".format("|".join("---" for _ in grade.CASE_FACTS_COLUMNS)))
+        for row in grade.case_fact_rows(item.report):
+            lines.append("| {0} |".format(" | ".join(row)))
+    return lines
+
+
 def render_development_sets(model: str, runs_dir: Path = RUNS_DIR) -> str:
-    """The two sets separately, then combined. Reads cached runs only.
+    """The two sets separately, then combined, then per case. Reads cached runs only.
 
     The corpus figure and the combined figure are different claims and the text
     says so. The combined figure sums two sets that were drafted differently and
     share one template; it is not a generalisation figure and it does not
     replace the corpus number. The only generalisation figure belongs to the
     sealed set, which is run once after the 10 October freeze.
+
+    The per-case block at the end carries the same cost, provenance and
+    explanation columns a run's own ``report.md`` carries, for every case of
+    every set that has been run, so a figure in the summary can be traced to the
+    case it came from without opening a cache entry.
     """
     lines = [
         "Development sets — {0}".format(model),
@@ -388,6 +449,7 @@ def render_development_sets(model: str, runs_dir: Path = RUNS_DIR) -> str:
                 combined.exact_matches, combined.total
             )
         )
+    lines.extend(_render_case_facts_section(figures))
     lines.append("")
     lines.append(
         "The corpus line above is the figure the submission reports. The combined "

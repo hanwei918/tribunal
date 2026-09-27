@@ -91,7 +91,7 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
-from . import brief, llm, loader, money, referee, transcript as transcript_module
+from . import brief, events, llm, loader, money, referee, transcript as transcript_module
 from .model import resolve_model
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -225,6 +225,10 @@ RIDER_FIRST = (
 # What each draft is, so the record can say which draft was which.
 DRAFT_SAMPLED = "sampled"
 DRAFT_POSITION_SWAPPED = "position_swapped"
+# A judge asked once is a panel of one. The event log names that kind too, so
+# a reader of the log is not left to infer from an absent ``vote`` event that
+# the case ran at K = 1.
+SINGLE_DRAFT = "single"
 
 # A referral is free prose, so the machine-checkable part of it is the clause
 # reference it leads with -- the limb included, because a referral to the right
@@ -698,6 +702,8 @@ def _call_agent(
     deadline: Optional["CaseDeadline"] = None,
     temperature: Any = llm._UNSET,
     seed: Any = llm._UNSET,
+    events_log: Optional[Any] = None,
+    case_no: Optional[int] = None,
 ) -> Tuple[Optional[Any], Optional[str]]:
     """One agent call, retried once when the answer is unusable.
 
@@ -720,6 +726,15 @@ def _call_agent(
     same question under several seeds without its own settings being rewritten
     between calls.
 
+    ``events_log`` is the run's append-only event log, and it is optional so
+    that every existing caller -- and every test that drives this function
+    directly -- keeps working without one. When it is given, each attempt
+    appends one ``agent_call`` event carrying the role, the request digest, the
+    usage split, the seconds and the parse outcome, read off the transcript
+    entry the attempt just wrote. Recording it here rather than at the call
+    site is what makes a retried call two events instead of one, which is the
+    distinction the transcript has always drawn.
+
     Returns ``(value, None)`` on success and ``(None, reason)`` when the second
     attempt is unusable too. A spent deadline is not an unusable answer, so it
     raises :class:`CaseDeadlineExceeded` instead of returning a reason.
@@ -736,7 +751,7 @@ def _call_agent(
             seed=seed,
         )
         value, shape, reason = normalise(result.json_body)
-        transcript.record(
+        entry = transcript.record(
             role=role,
             system_prompt=system_prompt,
             user_message=user_message,
@@ -744,6 +759,29 @@ def _call_agent(
             note=None if value is not None else UNUSABLE_RESPONSE_NOTE,
             shape=shape,
         )
+        if events_log is not None:
+            events_log.record(
+                events.EVENT_AGENT_CALL,
+                case_no=case_no,
+                role=role,
+                attempt=_attempt,
+                # The digest of the user message this attempt was actually
+                # handed, not of the message the caller meant to send: the two
+                # are the same bytes by construction, and recording the one the
+                # entry carries is what lets the event be checked against the
+                # transcript rather than against an intention.
+                request_sha256=entry.user_sha256,
+                system_sha256=entry.system_sha256,
+                shape=shape,
+                parse_outcome=entry.parse_outcome,
+                status=entry.status,
+                prompt_tokens=entry.prompt_tokens,
+                completion_tokens=entry.completion_tokens,
+                reasoning_tokens=entry.reasoning_tokens,
+                cached_tokens=entry.cached_tokens,
+                total_tokens=entry.prompt_tokens + entry.completion_tokens,
+                seconds=entry.duration_seconds,
+            )
         if value is not None:
             return value, None
     return None, reason
@@ -827,6 +865,24 @@ def render_vote_key(key: Optional[Tuple[Any, ...]]) -> str:
     return "{0}, amount_sgd {1}, driver_compensation_sgd {2}, referrals {3}".format(
         ruling, text(amount), text(compensation), list(referrals)
     )
+
+
+def proposal_from_key(key: Optional[Tuple[Any, ...]]) -> Optional[Dict[str, Any]]:
+    """A draft's proposal as the event log writes it, from its vote key.
+
+    One function rather than three copies: a full run's single draft, every
+    draft of a vote and a replayed draft all propose the same four fields, and
+    the record they write must be the same shape in all three. ``None`` for a
+    draft that proposed nothing, which is a fact and not an empty object.
+    """
+    if key is None:
+        return None
+    return {
+        "ruling": key[0],
+        "amount_sgd": key[1],
+        "driver_compensation_sgd": key[2],
+        "referrals": list(key[3]),
+    }
 
 
 # --------------------------------------------------------------------------
@@ -1531,6 +1587,8 @@ def _run_judge_vote(
     transcript: Any,
     deadline: Optional["CaseDeadline"],
     votes: int,
+    events_log: Optional[Any] = None,
+    case_no: Optional[int] = None,
 ) -> JudgeVote:
     """Ask the judge ``votes`` times on the same inputs and reduce the answers.
 
@@ -1571,6 +1629,27 @@ def _run_judge_vote(
     brief_object = _parse(brief_json)
     drafts: List[JudgeDraft] = []
 
+    def _proposal(item: JudgeDraft) -> Optional[Dict[str, Any]]:
+        """What a draft proposed, as the record writes it."""
+        return proposal_from_key(item.key)
+
+    def _checks(parsed_ok: bool, failures: Sequence[str]) -> Dict[str, bool]:
+        """Every code the draft checks for, and whether this draft tripped it.
+
+        The codes that are ``False`` are recorded as well as the ones that are
+        ``True``. "The check ran and passed" and "the check never ran" are
+        different findings, and only one of them is evidence about the draft.
+        """
+        tripped = {
+            code
+            for code in DRAFT_CHECK_CODES
+            if any(item.startswith(code + ":") for item in failures)
+        }
+        result: Dict[str, bool] = {"parse": parsed_ok}
+        for code in DRAFT_CHECK_CODES:
+            result[code] = code in tripped
+        return result
+
     for position in range(votes):
         if position < sampled:
             kind = DRAFT_SAMPLED
@@ -1602,6 +1681,8 @@ def _run_judge_vote(
             deadline=deadline,
             temperature=temperature,
             seed=seed,
+            events_log=events_log,
+            case_no=case_no,
         )
         entries = tuple(range(started, len(transcript)))
         common = dict(
@@ -1612,8 +1693,9 @@ def _run_judge_vote(
             sides=sides,
             entries=entries,
         )
+        failures: Tuple[str, ...] = ()
         if parsed is None:
-            drafts.append(JudgeDraft(abstention=failure, **common))
+            draft = JudgeDraft(abstention=failure, **common)
         else:
             ruling = _assemble_ruling(parsed, referee_result)
             failures, unverifiable = check_judge_draft(ruling, brief_object)
@@ -1621,24 +1703,49 @@ def _run_judge_vote(
                 # A malformed draft abstains with its reason codes, which is
                 # what an unparseable one does: it is not an answer the panel
                 # can be asked to agree with.
-                drafts.append(
-                    JudgeDraft(
-                        abstention="; ".join(failures),
-                        unverifiable=unverifiable,
-                        **common
-                    )
+                draft = JudgeDraft(
+                    abstention="; ".join(failures),
+                    unverifiable=unverifiable,
+                    **common
                 )
             else:
-                drafts.append(
-                    JudgeDraft(
-                        ruling=ruling,
-                        key=vote_key(ruling),
-                        unverifiable=unverifiable,
-                        **common
-                    )
+                draft = JudgeDraft(
+                    ruling=ruling,
+                    key=vote_key(ruling),
+                    unverifiable=unverifiable,
+                    **common
                 )
+        drafts.append(draft)
+        if events_log is not None:
+            events_log.record(
+                events.EVENT_JUDGE_DRAFT,
+                case_no=case_no,
+                draft=draft.index,
+                kind=draft.kind,
+                seed=draft.seed,
+                temperature=draft.temperature,
+                sides=list(draft.sides),
+                proposal=_proposal(draft),
+                checks=_checks(parsed is not None, failures),
+                abstention=draft.abstention,
+                unverifiable=list(draft.unverifiable),
+                valid=draft.valid,
+            )
 
-    return _reduce_vote(drafts, votes, referee_result)
+    vote = _reduce_vote(drafts, votes, referee_result)
+    if events_log is not None:
+        events_log.record(
+            events.EVENT_VOTE,
+            case_no=case_no,
+            votes=vote.record.get("votes"),
+            threshold=vote.record.get("threshold"),
+            valid=vote.record.get("valid"),
+            agreement=vote.record.get("agreement"),
+            outcome=vote.record.get("outcome"),
+            unanimous=vote.record.get("unanimous"),
+            proposals=[_proposal(draft) for draft in drafts if draft.valid],
+        )
+    return vote
 
 
 # --------------------------------------------------------------------------
@@ -1662,6 +1769,7 @@ def run_case(
     clock: Callable[[], float] = time.monotonic,
     case_loader: Optional[Callable[[int], Dict[str, Any]]] = None,
     judge_votes: int = DEFAULT_JUDGE_VOTES,
+    events_log: Optional[Any] = None,
 ) -> PipelineResult:
     """Perform one full arbitration of a case named by its manifest number.
 
@@ -1691,6 +1799,7 @@ def run_case(
         case_deadline_seconds=case_deadline_seconds,
         clock=clock,
         judge_votes=judge_votes,
+        events_log=events_log,
     )
 
 
@@ -1703,6 +1812,7 @@ def run_loaded_case(
     case_deadline_seconds: float = DEFAULT_CASE_DEADLINE_SECONDS,
     clock: Callable[[], float] = time.monotonic,
     judge_votes: int = DEFAULT_JUDGE_VOTES,
+    events_log: Optional[Any] = None,
 ) -> PipelineResult:
     """Perform one full arbitration of a case already in hand.
 
@@ -1770,6 +1880,8 @@ def run_loaded_case(
         normalise=normalise_claims,
         transcript=transcript,
         deadline=deadline,
+        events_log=events_log,
+        case_no=case_no,
     )
 
     driver_claims = None
@@ -1787,6 +1899,8 @@ def run_loaded_case(
             normalise=normalise_claims,
             transcript=transcript,
             deadline=deadline,
+            events_log=events_log,
+            case_no=case_no,
         )
 
         # PROOF 1 — one brief, byte-identical. Both advocates were handed the
@@ -1812,6 +1926,20 @@ def run_loaded_case(
     if failed_agent is None:
         referee_result = referee.referee(case_brief, rider_claims, driver_claims)
         referee_record = referee_result.as_dict()
+        if events_log is not None:
+            # One event per claim, in the order the referee checked them. The
+            # ledger is the referee's own record and it travels on the result;
+            # the event log is where the same decisions can be read in the
+            # order they happened, beside the calls that produced the claims.
+            for entry in referee_result.ledger:
+                events_log.record(
+                    events.EVENT_REFEREE_DECISION,
+                    case_no=case_no,
+                    side=entry.get("side"),
+                    status=entry.get("status"),
+                    reason_code=entry.get("reason_code"),
+                    detail=entry.get("detail"),
+                )
 
         if judge_votes == 1:
             # The single-draft path, unchanged: one call, one message, and the
@@ -1832,12 +1960,34 @@ def run_loaded_case(
                 normalise=normalise_judge_result,
                 transcript=transcript,
                 deadline=deadline,
+                events_log=events_log,
+                case_no=case_no,
             )
             if judge_failure is not None:
                 failed_agent, failure_reason = transcript_module.ROLE_JUDGE, judge_failure
             else:
                 ruling = _assemble_ruling(judge_parsed, referee_result)
                 findings = validate_ruling_shape(ruling)
+            if events_log is not None:
+                events_log.record(
+                    events.EVENT_JUDGE_DRAFT,
+                    case_no=case_no,
+                    draft=1,
+                    kind=SINGLE_DRAFT,
+                    seed=None,
+                    temperature=None,
+                    sides=list(DRIVER_FIRST),
+                    proposal=proposal_from_key(vote_key(ruling)),
+                    # The pre-vote code checks are a property of the vote. At
+                    # K = 1 there is no panel for a malformed draft to abstain
+                    # from and the ruling is recorded exactly as the judge gave
+                    # it, so the checks are ``None`` -- which says they did not
+                    # run, rather than reporting every one of them as passed.
+                    checks=None,
+                    abstention=judge_failure,
+                    unverifiable=[],
+                    valid=judge_failure is None,
+                )
         else:
             vote = _run_judge_vote(
                 client=client,
@@ -1847,6 +1997,8 @@ def run_loaded_case(
                 transcript=transcript,
                 deadline=deadline,
                 votes=judge_votes,
+                events_log=events_log,
+                case_no=case_no,
             )
             vote_record = vote.record
             if vote.failure_reason is not None:
@@ -1860,6 +2012,20 @@ def run_loaded_case(
             else:
                 ruling = vote.ruling
                 findings = list(vote.findings)
+
+    if events_log is not None:
+        # The final ruling, whatever became of it. A case whose judge failed
+        # records the failure here as well as on the outcome, so a reader
+        # following one case through the log sees where it stopped.
+        inner = ruling.get("ruling") if isinstance(ruling, Mapping) else None
+        events_log.record(
+            events.EVENT_RULING,
+            case_no=case_no,
+            failed_agent=failed_agent,
+            failure_reason=failure_reason,
+            ruling=inner if isinstance(inner, Mapping) else None,
+            findings=len(findings),
+        )
 
     totals = transcript.totals()
     return PipelineResult(
@@ -2227,6 +2393,7 @@ def replay_case(
     case_deadline_seconds: float = DEFAULT_CASE_DEADLINE_SECONDS,
     clock: Callable[[], float] = time.monotonic,
     judge_votes: int = DEFAULT_JUDGE_VOTES,
+    events_log: Optional[Any] = None,
 ) -> PipelineResult:
     """Arbitrate one case from a recorded run's advocates, calling only the judge.
 
@@ -2278,6 +2445,20 @@ def replay_case(
         replay.rider_claims,
         replay.driver_claims,
     )
+    if events_log is not None:
+        # The referee's decisions are recorded here exactly as a full run
+        # records them, because a replay runs the same referee over the same
+        # claims. The advocates' own calls are not recorded: they were not made
+        # by this invocation, and the log says what this invocation did.
+        for entry in referee_result.ledger:
+            events_log.record(
+                events.EVENT_REFEREE_DECISION,
+                case_no=replay.case_no,
+                side=entry.get("side"),
+                status=entry.get("status"),
+                reason_code=entry.get("reason_code"),
+                detail=entry.get("detail"),
+            )
 
     failed_agent = None
     failure_reason = None
@@ -2303,12 +2484,31 @@ def replay_case(
             normalise=normalise_judge_result,
             transcript=transcript,
             deadline=deadline,
+            events_log=events_log,
+            case_no=replay.case_no,
         )
         if judge_failure is not None:
             failed_agent, failure_reason = transcript_module.ROLE_JUDGE, judge_failure
         else:
             ruling = _assemble_ruling(judge_parsed, referee_result)
             findings = validate_ruling_shape(ruling)
+        if events_log is not None:
+            events_log.record(
+                events.EVENT_JUDGE_DRAFT,
+                case_no=replay.case_no,
+                draft=1,
+                kind=SINGLE_DRAFT,
+                seed=None,
+                temperature=None,
+                sides=list(DRIVER_FIRST),
+                proposal=proposal_from_key(vote_key(ruling)),
+                # ``None`` for the same reason a full single-draft run records
+                # ``None``: the pre-vote checks are a property of the vote.
+                checks=None,
+                abstention=judge_failure,
+                unverifiable=[],
+                valid=judge_failure is None,
+            )
     else:
         vote = _run_judge_vote(
             client=client,
@@ -2318,6 +2518,8 @@ def replay_case(
             transcript=transcript,
             deadline=deadline,
             votes=judge_votes,
+            events_log=events_log,
+            case_no=replay.case_no,
         )
         vote_record = vote.record
         if vote.failure_reason is not None:
@@ -2325,6 +2527,17 @@ def replay_case(
         else:
             ruling = vote.ruling
             findings = list(vote.findings)
+
+    if events_log is not None:
+        inner = ruling.get("ruling") if isinstance(ruling, Mapping) else None
+        events_log.record(
+            events.EVENT_RULING,
+            case_no=replay.case_no,
+            failed_agent=failed_agent,
+            failure_reason=failure_reason,
+            ruling=inner if isinstance(inner, Mapping) else None,
+            findings=len(findings),
+        )
 
     # Two sums, and they are never added. The identity comparison is what keeps
     # a copied entry out of this run's bill: equality would be enough for these

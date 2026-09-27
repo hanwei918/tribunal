@@ -626,5 +626,43 @@ class ExternalExpectationTests(unittest.TestCase):
         self.assertIn("NOT A VERIFIED ANSWER", text)
 
 
+class PerCaseColumnTests(unittest.TestCase):
+    """The set report carries the same per-case columns a run report carries."""
+
+    def test_the_columns_appear_for_a_set_that_has_been_run(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            run_codex(tmp, runs_dir=runs)
+            text = sets.render_development_sets(MODEL, runs)
+
+            self.assertIn("Per case — cost, provenance and explanation tags", text)
+            for column in grade.CASE_FACTS_COLUMNS:
+                self.assertIn(column, text)
+            # The set that was run is named over its own table; the corpus was
+            # not run here, so it contributes no table rather than a table of
+            # dashes a reader could mistake for a run that produced nothing.
+            self.assertIn("codex —", text)
+            self.assertNotIn("corpus —", text)
+
+    def test_a_set_that_has_not_been_run_contributes_no_table(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            text = sets.render_development_sets(MODEL, Path(tmp) / "runs")
+            self.assertNotIn("cost, provenance and explanation tags", text)
+
+    def test_the_set_table_is_graded_against_the_set_s_own_key(self):
+        """The columns are per case and the cases are this set's, so a corpus
+        case appearing here would mean the wrong loader had been used."""
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            run_codex(tmp, runs_dir=runs)
+            figures = sets.figures_for(sets.SECOND_SET, MODEL, runs)
+
+            rows = grade.case_fact_rows(figures.report)
+            self.assertEqual(
+                [str(case_no) for case_no in sets.SECOND_SET.cases],
+                [row[0] for row in rows],
+            )
+
+
 if __name__ == "__main__":
     unittest.main()

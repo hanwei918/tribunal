@@ -1256,5 +1256,116 @@ class BoundaryTests(unittest.TestCase):
         self.assertIsNone(re.search(r"sk-[A-Za-z0-9]{16,}", source))
 
 
+class ExplanationTagTests(unittest.TestCase):
+    """The four tags are patterns over the text, and their edges are pinned.
+
+    Each case here is a shape the corpus actually contains, so a future edit to
+    a pattern that silently widens or narrows a tag is caught rather than
+    discovered by a reader of the report.
+    """
+
+    def test_a_worked_sum_is_seen(self):
+        tags = grade.explanation_tags("The refund is 24.0 + 5.98 = 29.98 under POL-RD-01.")
+        self.assertTrue(tags["shows_arithmetic"])
+
+    def test_an_anchored_sum_is_not_seen(self):
+        """The largest known false negative. The model writes most of its
+        arithmetic with a unit or a field name beside the number, and the
+        pattern requires a bare number on the left."""
+        tags = grade.explanation_tags("the total is ...surge_multiplier) + 0.80 platform fee = 43.36")
+        self.assertFalse(tags["shows_arithmetic"])
+
+    def test_a_parenthesised_sum_is_not_seen(self):
+        tags = grade.explanation_tags("min(7.07, 1.30 x (30.1 - 27.1) + 1.00) = 4.90")
+        self.assertFalse(tags["shows_arithmetic"])
+
+    def test_an_equality_between_two_names_is_not_arithmetic(self):
+        """The guard that keeps a metavariable sentence out of the tag."""
+        tags = grade.explanation_tags("the governing distance is gps_trace.trace_distance_km = 18.0 km")
+        self.assertFalse(tags["shows_arithmetic"])
+
+    def test_an_evidence_id_and_a_clause_reference_are_seen(self):
+        tags = grade.explanation_tags("EV-FARE-09113-01 supports POL-RD-09(4).")
+        self.assertTrue(tags["cites_evidence"])
+        self.assertTrue(tags["cites_clause"])
+
+    def test_a_denied_gap_is_reported_as_a_gap(self):
+        """The largest known false positive, pinned. The pattern matches the
+        vocabulary of a gap and cannot see the negation in front of it."""
+        tags = grade.explanation_tags("The trace is not impaired: there is no gap in it.")
+        self.assertTrue(tags["names_gap"])
+
+    def test_an_absent_explanation_carries_no_tag(self):
+        self.assertEqual(
+            {name: False for name in grade.EXPLANATION_TAG_NAMES},
+            grade.explanation_tags(None),
+        )
+
+
+class CaseFactsTableTests(unittest.TestCase):
+    """The per-case columns are code's, and print only when they were supplied."""
+
+    def setUp(self):
+        self.key = grade.load_answer_key()
+        self.without = grade.grade(grade.key_as_produced(self.key), self.key)
+        facts = {
+            case_no: grade.CaseFacts(
+                advocate_tokens=100 + case_no,
+                judge_tokens=200 + case_no,
+                wall_seconds=Decimal("12.34"),
+                vote_agreement=Decimal("0.75"),
+                amount_provenance={
+                    "amount_sgd": "refund.payable.value",
+                    "driver_compensation_sgd": "n/a",
+                },
+                explanation_tags={name: True for name in grade.EXPLANATION_TAG_NAMES},
+            )
+            for case_no in self.key
+        }
+        self.with_facts = grade.grade(
+            grade.key_as_produced(self.key), self.key, facts=facts
+        )
+
+    def test_a_report_built_from_rulings_alone_prints_no_columns_for_them(self):
+        """The same rule the ``cached`` column follows: a report that was not
+        given the facts does not pretend to have them."""
+        self.assertFalse(self.without.facts_checked)
+        text = grade.render_report(self.without)
+        self.assertNotIn("cost, provenance and explanation tags", text)
+
+    def test_the_columns_appear_when_the_facts_were_supplied(self):
+        self.assertTrue(self.with_facts.facts_checked)
+        text = grade.render_report(self.with_facts)
+        self.assertIn("cost, provenance and explanation tags", text)
+        for column in grade.CASE_FACTS_COLUMNS:
+            self.assertIn(column, text)
+
+    def test_one_row_per_case_with_one_cell_per_column(self):
+        rows = grade.case_fact_rows(self.with_facts)
+        self.assertEqual(len(self.key), len(rows))
+        for row in rows:
+            self.assertEqual(len(grade.CASE_FACTS_COLUMNS), len(row))
+
+    def test_a_case_with_no_facts_prints_a_dash_in_every_column_but_its_number(self):
+        for row in grade.case_fact_rows(self.without):
+            self.assertTrue(row[0].isdigit())
+            self.assertEqual(["-"] * (len(grade.CASE_FACTS_COLUMNS) - 1), list(row[1:]))
+
+    def test_the_row_carries_the_values_the_code_computed(self):
+        """One row, in full, so a change to the order of the columns is caught
+        rather than read as a change to the figures."""
+        text = grade.render_report(self.with_facts)
+        self.assertIn(
+            "| 101 | 201 | 301 | 12.3 | no | 0.75 | refund.payable.value | n/a "
+            "| yes | yes | yes | yes |",
+            text,
+        )
+
+    def test_the_rendering_is_deterministic(self):
+        self.assertEqual(
+            grade.render_report(self.with_facts), grade.render_report(self.with_facts)
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
