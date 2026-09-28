@@ -19,6 +19,7 @@ import tempfile
 import threading
 import unittest
 from pathlib import Path
+from unittest import mock
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -159,6 +160,25 @@ def run_codex(tmp_path, *, cases=None, transport=None, runs_dir=None, **override
     if cases is not None:
         arguments["cases"] = cases
     return sets.run_set(sets.SECOND_SET, MODEL, **arguments), transport
+
+
+# The two headline run directories: the corpus result the submission reports
+# and the second development set's. A refusal must leave every byte of both
+# alone, so a refusal test reads them before and after.
+HEADLINE_DIRS = (
+    run_benchmark.RUNS_DIR / "deepseek-deepseek-flash",
+    run_benchmark.RUNS_DIR / "codex" / "deepseek-deepseek-flash",
+)
+
+
+def headline_digests():
+    """The sha256 of every file under both headline directories."""
+    digests = {}
+    for directory in HEADLINE_DIRS:
+        for path in sorted(Path(directory).rglob("*")):
+            if path.is_file():
+                digests[str(path)] = run_benchmark.file_sha256(path)
+    return digests
 
 
 # --------------------------------------------------------------------------
@@ -447,22 +467,67 @@ class CorpusDirectoryGuardTests(unittest.TestCase):
     """A set's results must never land in the reported run directory."""
 
     def test_a_labelled_run_cannot_use_the_corpus_run_directory(self):
-        before = sorted(path.name for path in run_benchmark.RUNS_DIR.iterdir())
-        with self.assertRaises(run_benchmark.BenchmarkError) as caught:
-            run_benchmark.run_benchmark(
-                MODEL,
-                [9101],
-                runs_dir=run_benchmark.RUNS_DIR,
-                key=codex_key(),
-                key_path=sets.SECOND_SET.key_path,
-                case_loader=sets.SECOND_SET.load_case,
-                label="codex",
-                progress=lambda text: None,
-                client_factory=lambda sink: None,
-            )
-        self.assertIn("corpus results", str(caught.exception))
-        # Refused before the directory was created, so nothing was touched.
-        self.assertEqual(before, sorted(path.name for path in run_benchmark.RUNS_DIR.iterdir()))
+        """A set aimed at ``runs/<model>/`` is refused, and nothing is written.
+
+        ``RUNS_DIR`` is patched to a scratch root and that same path is passed
+        as ``runs_dir``, so the check is exercised without the repository's own
+        ``runs/`` being any invocation's destination. Both headline directories
+        are hashed before and after, so a refusal that quietly wrote something
+        would be caught rather than assumed away.
+        """
+        before = headline_digests()
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            with mock.patch.object(run_benchmark, "RUNS_DIR", runs):
+                with self.assertRaises(run_benchmark.BenchmarkError) as caught:
+                    run_benchmark.run_benchmark(
+                        MODEL,
+                        [9101],
+                        runs_dir=runs,
+                        key=codex_key(),
+                        key_path=sets.SECOND_SET.key_path,
+                        case_loader=sets.SECOND_SET.load_case,
+                        label="codex",
+                        progress=lambda text: None,
+                        client_factory=lambda sink: None,
+                    )
+            self.assertIn("corpus results", str(caught.exception))
+            # Refused before the directory was created, so nothing was touched.
+            self.assertFalse(runs.exists())
+        self.assertEqual(before, headline_digests())
+
+    def test_the_corpus_set_runs_into_its_own_directory_like_a_plain_run(self):
+        """The set runner may run the corpus, and its case files say so.
+
+        The corpus *is* ``runs/<model>/``, so labelling it made the set that
+        owns the directory the one set that could not run into it. It is run
+        unlabelled now, exactly as ``python -m eval.run_benchmark`` runs it, and
+        each case file records ``development_set: null``.
+        """
+        before = headline_digests()
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            transport = ScriptedTransport(grade.key_as_produced(sets.CORPUS.key()))
+            with mock.patch.object(run_benchmark, "RUNS_DIR", runs):
+                summary = sets.run_set(
+                    sets.CORPUS,
+                    MODEL,
+                    runs_dir=runs,
+                    cases=[101, 102, 103],
+                    client_factory=client_factory(transport),
+                    git_runner=git_runner(),
+                    progress=lambda text: None,
+                    judge_votes=1,
+                )
+            self.assertTrue(summary.ok)
+            self.assertEqual(runs / "deepseek-deepseek-flash", summary.run_dir)
+            for case_no in (101, 102, 103):
+                with self.subTest(case_no=case_no):
+                    document = run_benchmark.load_cached(summary.run_dir, case_no)
+                    self.assertIsNotNone(document)
+                    self.assertIsNone(document["development_set"])
+                    self.assertIn("configuration", document)
+        self.assertEqual(before, headline_digests())
 
     def test_the_set_run_directory_check_refuses_a_directory_that_is_not_the_sets(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -495,6 +560,28 @@ class CorpusDirectoryGuardTests(unittest.TestCase):
 # --------------------------------------------------------------------------
 class DevelopmentSetReportTests(unittest.TestCase):
     """The two sets separately, then combined."""
+
+    def test_each_set_is_checked_for_currency_with_its_own_loader(self):
+        """Both sets read all current, and the report prints the four counts."""
+        report = sets.render_development_sets(MODEL)
+        self.assertIn(
+            "Currency, each set checked with its own loader and its own briefs:", report
+        )
+        for development_set in sets.DEVELOPMENT_SETS:
+            with self.subTest(development_set=development_set.name):
+                produced = len(sets.cached_cases(development_set, MODEL))
+                staleness = sets.currency_for(development_set, MODEL)
+                self.assertTrue(staleness.checked)
+                self.assertEqual((), staleness.stale)
+                self.assertEqual((), staleness.unknown)
+                self.assertEqual((), staleness.stale_brief)
+                self.assertEqual((), staleness.stale_prompts)
+                self.assertGreater(produced, 0)
+                expected = (
+                    "  {0:<8} current {1:>3}, stale_brief {2:>3}, "
+                    "stale_prompts {3:>3}, unknown {4:>3}"
+                ).format(development_set.name, produced, 0, 0, 0)
+                self.assertIn(expected, report)
 
     def test_a_set_that_has_not_been_run_reports_nothing_rather_than_zero(self):
         with tempfile.TemporaryDirectory() as tmp:

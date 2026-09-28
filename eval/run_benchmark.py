@@ -188,6 +188,10 @@ __all__ = [
     "FAILURE_REPLAY",
     "FAILURE_NOTE",
     "INVOCATIONS_FILE",
+    "CONFIGURATION_FIELDS",
+    "DEFAULT_POLICY_VERSION",
+    "configuration_document",
+    "configuration_of",
     "failure_kind_for",
     "failure_reason_for",
     "billed_tokens",
@@ -361,6 +365,82 @@ GIT_TIMEOUT_SECONDS = 10.0
 
 # A run's provenance status string can be long; this bounds it.
 MAX_STATUS_CHARS = 4000
+
+
+# --------------------------------------------------------------------------
+# The run's configuration
+# --------------------------------------------------------------------------
+# What produced a result, as opposed to what it was produced from. Every
+# artifact a run writes carries it: the run's metadata, each invocation's entry
+# in the history, and each case file. It is written whether or not any switch is
+# on, so a reader of one case file can say what produced that case without the
+# run directory around it.
+#
+# ``ablation``, ``precedents`` and ``policy_version`` name the three switches
+# that change what an agent is given. All three are written at their defaults
+# here -- no ablation, no precedents, policy version 1 -- so the object's shape
+# does not move when a later switch is added.
+CONFIGURATION_FIELDS = (
+    "judge_votes",
+    "verify_drafts",
+    "ablation",
+    "precedents",
+    "policy_version",
+)
+
+# Version 1 is the three policy files exactly as committed, with no amendment
+# applied. A file that records no configuration at all was produced under it.
+DEFAULT_POLICY_VERSION = 1
+
+
+def configuration_document(
+    *,
+    judge_votes: int,
+    verify_drafts: bool,
+    ablation: Optional[str] = None,
+    precedents: Optional[Any] = None,
+    policy_version: int = DEFAULT_POLICY_VERSION,
+) -> Dict[str, Any]:
+    """The configuration object every artifact a run writes carries.
+
+    ``judge_votes`` and ``verify_drafts`` used to appear only on the
+    ``invocation_start`` event, which is a line in a log rather than something a
+    case file can be read against. They are here so one case file says how many
+    drafts its judge was asked for and whether the verifier ran, without the
+    reader needing the invocation that produced it.
+    """
+    return {
+        "judge_votes": judge_votes,
+        "verify_drafts": verify_drafts,
+        "ablation": ablation,
+        "precedents": precedents,
+        "policy_version": policy_version,
+    }
+
+
+def configuration_of(document: Any) -> Dict[str, Any]:
+    """The configuration a file was produced under, read two ways.
+
+    A file written before the object existed is not an error and not a blank.
+    For staleness, replay and reports it counts as what it in fact was: no
+    ablation, no precedents, policy version 1. Its ``judge_votes`` and
+    ``verify_drafts`` are ``None``, which is "unknown" rather than a value --
+    nothing in the file says how many drafts that judge was asked for, and
+    reporting a default there would invent a fact about the run.
+    """
+    raw = document.get("configuration") if isinstance(document, Mapping) else None
+    if not isinstance(raw, Mapping):
+        raw = {}
+    policy_version = raw.get("policy_version")
+    if policy_version is None:
+        policy_version = DEFAULT_POLICY_VERSION
+    return {
+        "judge_votes": raw.get("judge_votes"),
+        "verify_drafts": raw.get("verify_drafts"),
+        "ablation": raw.get("ablation"),
+        "precedents": raw.get("precedents"),
+        "policy_version": policy_version,
+    }
 
 
 class BenchmarkError(Exception):
@@ -1501,6 +1581,7 @@ def run_one_case(
     replay: Optional[Any] = None,
     judge_votes: int = pipeline.DEFAULT_JUDGE_VOTES,
     verify_drafts: bool = False,
+    configuration: Optional[Mapping[str, Any]] = None,
     events_log: Optional[Any] = None,
 ) -> Tuple[CaseOutcome, Optional[Dict[str, Any]], Optional[str]]:
     """Run one case. Returns ``(outcome, cache document, transcript json)``.
@@ -1696,10 +1777,16 @@ def run_one_case(
 
     matched = _match_for(case_no, result.ruling, expected)
     provenance_fields = dict(case_provenance or {})
+    if configuration is None:
+        # What this case was run under, so the entry says it on its own.
+        configuration = configuration_document(
+            judge_votes=judge_votes, verify_drafts=verify_drafts
+        )
     document = {
         "schema_version": CACHE_SCHEMA_VERSION,
         "case_no": case_no,
         "model": result.model,
+        "configuration": dict(configuration),
         "recorded_at": datetime.now(timezone.utc).isoformat(),
         "brief_sha256": result.brief_sha256,
         # The commit, the prompts digest and the interpreter under which THIS
@@ -2203,6 +2290,13 @@ def run_benchmark(
         # able to say which set it belongs to without its directory.
         run_provenance = dict(run_provenance, development_set=label)
 
+    # What this invocation is, recorded on every artifact it writes. Built
+    # once here rather than per case, so the case files and the run's own
+    # metadata cannot come to disagree about the run that made them.
+    configuration = configuration_document(
+        judge_votes=judge_votes, verify_drafts=verify_drafts
+    )
+
     # The invocation's own id, and the append-only log every case appends to.
     # The id is written on every event line and on the invocation's metadata, so
     # a reader can join the two without guessing which invocation a line belongs
@@ -2336,6 +2430,7 @@ def run_benchmark(
             tokens_reused=reused,
             tokens_replayed=state["replayed"],
             replay=None if replay is None else replay_block(replay, outcomes),
+            configuration=configuration,
         )
         # Both, and the order matters. ``run.json`` is the latest invocation's
         # record at the conventional path; the history is what survives the next
@@ -2447,6 +2542,7 @@ def run_benchmark(
                 replay=replayable,
                 judge_votes=judge_votes,
                 verify_drafts=verify_drafts,
+                configuration=configuration,
                 events_log=events_log,
             )
 
@@ -2682,6 +2778,7 @@ def _metadata_document(
     tokens_reused: TokenSplit,
     tokens_replayed: TokenSplit,
     replay: Optional[Mapping[str, Any]] = None,
+    configuration: Mapping[str, Any],
 ) -> Dict[str, Any]:
     """The run's own metadata file.
 
@@ -2719,6 +2816,9 @@ def _metadata_document(
     return {
         "schema_version": CACHE_SCHEMA_VERSION,
         "model": model,
+        # What produced this invocation's results. Always written, so a run
+        # whose case files have been lost still says what the run was.
+        "configuration": dict(configuration),
         # The invocation's own id, which every line of this invocation's event
         # log carries. Written here so a reader can join the metadata to the log
         # without matching timestamps, which two invocations can share.
@@ -4107,6 +4207,9 @@ def run_external_case(
             # The id every line of this case's event log carries, so the
             # metadata and the log can be joined without matching timestamps.
             "invocation_id": invocation_id,
+            "configuration": configuration_document(
+                judge_votes=judge_votes, verify_drafts=verify_drafts
+            ),
             "external": True,
             "external_case_no": case_no,
             "external_case_path": str(Path(case_path)),

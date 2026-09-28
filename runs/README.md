@@ -1,14 +1,17 @@
 # `runs/` — what the benchmark wrote
 
-This directory is the benchmark's own output. Three subdirectories are **committed deliberately**, as
-evidence for two findings recorded under `docs/notes/`. A fourth, `external/`, is where a converted
-external case is written, and one run of one converted case is committed there. Everything else here —
-the suite logs — is untracked.
+This directory is the benchmark's own output. Every subdirectory named in the table below is
+**committed deliberately**, either as a measurement or as evidence for a finding recorded under
+`docs/notes/`. Everything else here — the suite logs — is untracked.
 
 ## Which directory holds what
 
 | Directory | What it is | Read it as |
 |---|---|---|
+| `codex/` | The second development set's runs. `codex/deepseek-deepseek-flash/` holds the fifteen-case set's own run, keyed by `eval/answers/codex/ground_truth.json`; `codex/deepseek-v4.1-flash/` holds that probe's event log alone. | A measurement of the fifteen cases, never of the corpus. Never merged into `deepseek-deepseek-flash/`. |
+| `deepseek-v4.1-flash/` | A probe of a different model — case 105 at `b25b743`, which stopped after one of the two cases it requested — committed as it was left. | Not a measurement of the submission's model, and no corpus figure is computed from it. |
+| `external/` | Where a converted external case is written, one directory per case. It has its own section below. | Evidence of what those runs did. There is no answer-key entry for it, so it is not a score. |
+| `_icloud-incident-2026-09-27/` | The run-level files (`events.jsonl`, `invocations.json`, `run.json`) recovered from the three places iCloud's Desktop & Documents move left them, committed exactly as found. | Evidence for the incident recorded in `docs/notes/2026-09-27-the-replays-the-icloud-move-and-the-probe.md`. Not a run. |
 | **`deepseek-deepseek-flash/`** | **The headline run**, and on top of it **five judge-only re-runs** of that same run. Seven invocations: two full runs (`97dbb9c`, `493beea`) and five replays that reused `493beea`'s advocates and called only the judge — two measuring the prompt after its first amendment, three measuring the frozen prompt. Every cached result is current on both channels and all 29 carry a `replay` block; the graded figure over the 29 is **27/29**, failing 105 and 211, and that figure is the frozen prompt's. The runtime model decision rests on the `493beea` measurement. | A measurement, and a replay of one. Read each result's `replay` block before reading its tokens. |
 | `hy3/` | Produced under an invalidated configuration. | Evidence for a defect. No number in it is usable. |
 | `hy4-preview/` | Produced under the same invalidated configuration. | Evidence for a defect. No number in it is usable. |

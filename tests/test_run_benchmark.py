@@ -474,6 +474,10 @@ class CleanRunTests(unittest.TestCase):
                         "brief_sha256",
                         "call_seconds",
                         "case_no",
+                        # The run's own configuration: how many drafts the
+                        # judge was asked for, whether the verifier ran, and
+                        # the three switches, each at its default today.
+                        "configuration",
                         # Which development set the result belongs to, or
                         # ``None`` for the corpus. Per case and not only in the
                         # run's metadata, because the metadata file describes
@@ -590,6 +594,81 @@ class CleanRunTests(unittest.TestCase):
             verdicts = {outcome.case_no: outcome.verdict for outcome in summary.outcomes}
             self.assertEqual("MISS", verdicts[103])
             self.assertEqual("match", verdicts[101])
+
+
+# --------------------------------------------------------------------------
+# The configuration object
+# --------------------------------------------------------------------------
+class ConfigurationTests(unittest.TestCase):
+    """What produced a result, written on every artifact and read two ways.
+
+    ``judge_votes`` and ``verify_drafts`` used to appear only on the
+    ``invocation_start`` event, which is a line in a log. They are on the run's
+    metadata, on each invocation's entry in the history and on each case file
+    now, so one case file says what produced it without the invocation around
+    it. A file written before the object existed is read as the run it in fact
+    was -- no ablation, no precedents, policy version 1 -- and its two switches
+    as unknown rather than as defaults, because nothing in the file says them.
+    """
+
+    def test_a_case_file_carries_the_configuration_it_was_run_under(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, _ = bench(tmp, judge_votes=1)
+            document = runner.load_cached(summary.run_dir, 101)
+            self.assertEqual(
+                runner.configuration_document(judge_votes=1, verify_drafts=False),
+                document["configuration"],
+            )
+            self.assertEqual(
+                sorted(runner.CONFIGURATION_FIELDS),
+                sorted(document["configuration"]),
+            )
+
+    def test_the_run_record_and_every_invocation_entry_carry_it_too(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, _ = bench(tmp, judge_votes=1)
+            expected = runner.configuration_document(judge_votes=1, verify_drafts=False)
+            run = runner.read_json(summary.run_dir / runner.METADATA_FILE)
+            self.assertEqual(expected, run["configuration"])
+            history = runner.read_json(summary.run_dir / runner.INVOCATIONS_FILE)
+            self.assertEqual(1, len(history))
+            self.assertEqual(expected, history[0]["configuration"])
+
+    def test_the_draft_count_in_force_is_the_one_recorded(self):
+        """Not a constant: a run asked for two drafts records two."""
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, _ = bench(tmp, judge_votes=2)
+            document = runner.load_cached(summary.run_dir, 101)
+            self.assertEqual(2, document["configuration"]["judge_votes"])
+            run = runner.read_json(summary.run_dir / runner.METADATA_FILE)
+            self.assertEqual(2, run["configuration"]["judge_votes"])
+
+    def test_a_file_without_the_object_reads_as_the_run_it_was(self):
+        """The dirty fixture: a record written before the object existed."""
+        old = {"case_no": 101, "ruling": {"ruling": {}}}
+        read = runner.configuration_of(old)
+        self.assertIsNone(read["ablation"])
+        self.assertIsNone(read["precedents"])
+        self.assertEqual(runner.DEFAULT_POLICY_VERSION, read["policy_version"])
+        # For display the two switches are unknown, not a default.
+        self.assertIsNone(read["judge_votes"])
+        self.assertIsNone(read["verify_drafts"])
+
+    def test_the_object_is_read_back_exactly_as_written(self):
+        """The clean fixture: every field present and read as itself."""
+        written = runner.configuration_document(
+            judge_votes=4,
+            verify_drafts=True,
+            ablation="clause-notes",
+            precedents={"chain_head": "abc"},
+            policy_version=2,
+        )
+        self.assertEqual(written, runner.configuration_of({"configuration": written}))
+
+    def test_a_configuration_that_is_not_an_object_is_not_trusted(self):
+        read = runner.configuration_of({"configuration": ["not", "an", "object"]})
+        self.assertEqual(runner.DEFAULT_POLICY_VERSION, read["policy_version"])
+        self.assertIsNone(read["ablation"])
 
 
 # --------------------------------------------------------------------------

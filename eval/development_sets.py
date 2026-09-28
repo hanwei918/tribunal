@@ -179,7 +179,9 @@ def run_set(
     and the replay check all come from :func:`run_benchmark.run_benchmark` and
     are not reimplemented. Four things are supplied that the corpus run does not
     supply -- the set's cases, its own key, its own loader and its own runs
-    directory -- and a label, so the report and the metadata name the set.
+    directory -- and, for a set with a subdirectory of its own, a label, so the
+    metadata names the set. The corpus carries none: ``runs/<model>/`` *is* its
+    directory, and the runner refuses a labelled run aimed there.
 
     The destination is checked before anything is written.
     """
@@ -203,7 +205,13 @@ def run_set(
         key=development_set.key(),
         key_path=development_set.key_path,
         case_loader=development_set.load_case,
-        label=development_set.name,
+        # The corpus is run unlabelled, exactly as ``python -m
+        # eval.run_benchmark`` runs it, and its case files record
+        # ``development_set: null``. Labelling it "corpus" made the set that
+        # owns ``runs/<model>/`` the one set that could not run into it: the
+        # runner refuses a labelled run whose destination is the corpus
+        # directory, and that refusal is right for every other set.
+        label=None if development_set.runs_subdir is None else development_set.name,
         **kwargs,
     )
 
@@ -323,6 +331,53 @@ def combined_figures(
     return len(produced), grade.grade(produced, subset, corpus=key)
 
 
+def currency_for(
+    development_set: DevelopmentSet,
+    model: str,
+    runs_dir: Path = RUNS_DIR,
+    prompts_dir: Path = run_benchmark.PROMPTS_DIR,
+) -> grade.Staleness:
+    """Whether one set's cached results still belong to this code.
+
+    Checked with **this set's own loader**, because a development set handed the
+    corpus loader reads ``unknown`` on every one of its cases: the manifest
+    cannot name a case it does not list, so no brief is rebuilt and nothing is
+    established. The prompt channel is answered from each case's own transcript
+    by :class:`run_benchmark.BriefStaleness`, the same checker the runner builds
+    for a set it is about to run.
+    """
+    run_dir = development_set.run_dir(model, runs_dir)
+    checker = run_benchmark.BriefStaleness(
+        run_benchmark.brief_digest_for(development_set.load_case),
+        run_dir=run_dir,
+        prompts_dir=prompts_dir,
+    )
+    return run_benchmark.brief_staleness(
+        run_dir, cached_cases(development_set, model, runs_dir), checker
+    )
+
+
+def currency_line(
+    development_set: DevelopmentSet, model: str, runs_dir: Path = RUNS_DIR
+) -> str:
+    """One set's currency, as the four counts the report prints.
+
+    ``current`` is the rest of what the set has produced. The two stale counts
+    are the two channels and are never merged, and ``unknown`` is a result this
+    code could not answer for -- which is not a result it agrees with.
+    """
+    produced = len(cached_cases(development_set, model, runs_dir))
+    staleness = currency_for(development_set, model, runs_dir)
+    current = produced - len(staleness.stale) - len(staleness.unknown)
+    return "  {0:<8} current {1:>3}, stale_brief {2:>3}, stale_prompts {3:>3}, unknown {4:>3}".format(
+        development_set.name,
+        current,
+        len(staleness.stale_brief),
+        len(staleness.stale_prompts),
+        len(staleness.unknown),
+    )
+
+
 def _render_row(figures: SetFigures) -> str:
     if figures.report is None:
         return "  {0:<8} {1:<40} {2:>5}  {3:>9}".format(
@@ -427,6 +482,12 @@ def render_development_sets(model: str, runs_dir: Path = RUNS_DIR) -> str:
     figures = [figures_for(development_set, model, runs_dir) for development_set in DEVELOPMENT_SETS]
     for item in figures:
         lines.append(_render_row(item))
+
+    lines.append("")
+    lines.append("Currency, each set checked with its own loader and its own briefs:")
+    lines.append("")
+    for development_set in DEVELOPMENT_SETS:
+        lines.append(currency_line(development_set, model, runs_dir))
 
     total_expected = sum(item.expected for item in figures)
     produced_total, combined = combined_figures(model, runs_dir)
