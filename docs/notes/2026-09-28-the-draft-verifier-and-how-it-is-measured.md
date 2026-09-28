@@ -176,6 +176,26 @@ files' own recorded provenance, not the prompts directory, so adding
 bytes — because the viewer displays the recorded prompts digest and never
 recomputes staleness.
 
+**But the new prompt file does move the prompt channel, and that is a real
+consequence of this session.** `current_prompts_sha256()` hashes the `prompts/`
+**directory**, so adding a file to it moves the digest:
+
+    current_prompts_sha256()            a101e07cedef2c4b781e86fa511818c88f4c0345127ad2d3fbc4056b05b7f813
+    recorded by all 44 cached results   83a7431029da37e216d82b75f91349c610e02a314ed9cff22c4a5e4fa59a9ac0
+
+Measured with `runner.brief_staleness` over both caches, every result now reads
+stale on the **prompt** channel and none on the brief channel — corpus 29 of 29
+stale (`stale_prompts` 29, `stale_brief` 0, `unknown` 0), second set 15 of 15.
+The label is broad on purpose and the comparison that matters is not: nothing
+about the **judge's** instruction changed, and the narrower per-agent checks
+still accept — `check_replay` compares the rendered *advocate* prompts and
+`verify_drafts` compares the recorded judge entries' own `system_sha256`, and
+both pass on all 44. So the cached results remain usable as evidence and the
+staleness label now says "a prompt file in this directory is not the one this
+run recorded", which is true, rather than "the judge was told something else",
+which is not. Anyone reading a staleness report after this commit should read
+the channel and not the word.
+
 **No model call was intended in this session, and one was made.** While checking
 that `--verify-recorded-drafts` reported a missing run directory as a refusal
 rather than a traceback, the probe was pointed at a **real** run directory
