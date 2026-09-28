@@ -8,6 +8,7 @@ This directory is the benchmark's own output. Every subdirectory named in the ta
 
 | Directory | What it is | Read it as |
 |---|---|---|
+| `baselines/` | The baselines scored off the recorded runs — `python3 -m eval.baselines --set all`. Two files, `report.md` and `baselines.json`, and it has its own section below. | A comparison that says what the headline figure is worth. Not a measurement of the model, and not a generalisation figure. |
 | `codex/` | The second development set's runs. `codex/deepseek-deepseek-flash/` holds the fifteen-case set's own run, keyed by `eval/answers/codex/ground_truth.json`; `codex/deepseek-v4.1-flash/` holds that probe's event log alone. | A measurement of the fifteen cases, never of the corpus. Never merged into `deepseek-deepseek-flash/`. |
 | `deepseek-v4.1-flash/` | A probe of a different model — case 105 at `b25b743`, which stopped after one of the two cases it requested — committed as it was left. | Not a measurement of the submission's model, and no corpus figure is computed from it. |
 | `external/` | Where a converted external case is written, one directory per case. It has its own section below. | Evidence of what those runs did. There is no answer-key entry for it, so it is not a score. |
@@ -130,6 +131,40 @@ either development set, so there is nothing to commit, and the commands above
 are the ones that would produce it. Nothing in this directory may be merged into
 a model's run directory for the reason `external/` may not: those figures would
 then read as that run's.
+
+## `baselines/` — what a score is worth
+
+`baselines/` holds the output of
+
+    python3 -m eval.baselines --set all
+
+and it is not a run. A baseline is a rule that answers every case without reading
+it, and the file exists to say what the headline figure is worth: a number no
+better than "always ESCALATE" is not evidence that the panel is doing anything.
+Every row is computed from what a run already recorded — the judge drafts on its
+transcripts and the rulings it published — so producing this file calls no model
+at all and costs nothing.
+
+| File | What it holds |
+|---|---|
+| `report.md` | One section per set, plus a combined section for `--set all`, each a table of rows with a note saying what the row is and where its figure comes from. Every refused case is listed with its reason. |
+| `baselines.json` | The same figures as parsed values: per section, the cases analysed, the cases refused with their reasons, and every row's counts. |
+
+The rows are: always ESCALATE; the majority ruling, which is the ruling the
+section's cases most often require and is chosen on the set it is scored on; each
+of the four recorded drafts scored alone, and their mean; the best single draft
+per case, which is an upper bound for any rule that publishes one of the drafts'
+answers and which a no-majority escalation can exceed; and the carried vote, for
+comparison. A case that is stale, unknown or holds no panel of drafts is refused
+with its reason and left out of every denominator rather than counted as a miss,
+so each section's denominators are the cases that could be scored and not the
+size of the set.
+
+**It is never written into a model's run directory.** The destination is checked
+in code before anything is written, and so is every directory above it: a
+directory holding a run's own `run.json`, or its `case-*.json` files, is a run
+directory whichever model it belongs to, and everything under `runs/external/` is
+refused whole. Read a row here as a comparison for a figure, never as that figure.
 
 ## How to read one run directory
 

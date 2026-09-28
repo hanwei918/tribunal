@@ -137,6 +137,23 @@ def named(name: str) -> DevelopmentSet:
         ) from None
 
 
+# The development-data caveat, in one place because two reports print it: this
+# module's own and the baselines'. It is a paragraph rather than two sentences
+# because it has to read correctly wherever it lands, and it names the corpus
+# figure as the reported one and denies that either figure is the generalisation
+# number. A reader who took a combined or a baseline figure for the submission's
+# generalisation figure would be reading a number the submission does not make.
+DEVELOPMENT_DATA_CAVEAT = (
+    "Both development sets are development data, and neither is a test set. The "
+    "corpus figure is the figure the submission reports; the combined figure is "
+    "a sum over two sets that were drafted differently and share one template, "
+    "so it is not a generalisation figure and does not replace the corpus "
+    "number. The only generalisation figure the submission reports belongs to "
+    "the sealed set, drafted without access to this repository and run exactly "
+    "once after the 10 October freeze. Neither figure here is that figure."
+)
+
+
 def assert_set_run_directory(
     run_dir: Path, development_set: DevelopmentSet, runs_dir: Path = RUNS_DIR
 ) -> Path:
@@ -512,17 +529,7 @@ def render_development_sets(model: str, runs_dir: Path = RUNS_DIR) -> str:
         )
     lines.extend(_render_case_facts_section(figures))
     lines.append("")
-    lines.append(
-        "The corpus line above is the figure the submission reports. The combined "
-        "figure is a sum over two sets that were drafted differently and share one "
-        "template; it is not a generalisation figure and does not replace the "
-        "corpus number."
-    )
-    lines.append(
-        "The only generalisation figure the submission reports belongs to the "
-        "sealed set, drafted without access to this repository and run exactly "
-        "once after the 10 October freeze. Neither line above is that figure."
-    )
+    lines.append(DEVELOPMENT_DATA_CAVEAT)
     return "\n".join(lines)
 
 
