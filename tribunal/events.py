@@ -100,6 +100,10 @@ EVENT_AGENT_CALL = "agent_call"
 EVENT_REFEREE_DECISION = "referee_decision"
 EVENT_JUDGE_DRAFT = "judge_draft"
 EVENT_VOTE = "vote"
+# The draft verifier's one call and the verdicts it returned, recorded beside
+# the vote rather than inside it: the verifier is a separate question about the
+# drafts and its outcome is a fact about the case in its own right.
+EVENT_VERIFICATION = "verification"
 EVENT_RULING = "ruling"
 EVENT_CASE_FAILED = "case_failed"
 EVENT_GRADE = "grade"
@@ -112,6 +116,7 @@ EVENT_TYPES = (
     EVENT_REFEREE_DECISION,
     EVENT_JUDGE_DRAFT,
     EVENT_VOTE,
+    EVENT_VERIFICATION,
     EVENT_RULING,
     EVENT_CASE_FAILED,
     EVENT_GRADE,
@@ -381,6 +386,11 @@ _SUMMARY_KEYS = (
     "votes",
     "agreement",
     "outcome",
+    "called",
+    "statements",
+    "supported",
+    "contradicted",
+    "not_in_evidence",
     "ruling",
     "matched",
     "failure_kind",

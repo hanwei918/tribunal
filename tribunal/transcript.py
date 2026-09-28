@@ -41,6 +41,11 @@ from . import money
 ROLE_RIDER_ADVOCATE = "RIDER_ADVOCATE"
 ROLE_DRIVER_ADVOCATE = "DRIVER_ADVOCATE"
 ROLE_JUDGE = "JUDGE"
+# The draft verifier. It is a role of its own and not a judge call: it is asked
+# once per case, over every valid draft at once, and it decides no part of the
+# ruling. Keeping it apart is what lets its tokens be counted separately from
+# the judge's and lets a reader of the transcript tell the two questions apart.
+ROLE_VERIFIER = "VERIFIER"
 
 
 def sha256_text(text: str) -> str:

@@ -8,6 +8,7 @@
 | `stance.rider.md` | The block substituted into `{{STANCE}}` when the RIDER argues. |
 | `stance.driver.md` | The block substituted into `{{STANCE}}` when the DRIVER argues. |
 | `judge.system.md` | The system prompt for the impartial judge. |
+| `verifier.system.md` | The system prompt for the draft verifier. Off by default; asked once per case, over every valid draft, to say whether the brief supports each factual statement. It judges statements, never the ruling. |
 
 ## One advocate prompt, not two
 

@@ -103,6 +103,12 @@ STANCE_FILES = {
     transcript_module.ROLE_DRIVER_ADVOCATE: "stance.driver.md",
 }
 JUDGE_PROMPT_FILE = "judge.system.md"
+# The draft verifier's prompt. It is a file of its own rather than a section of
+# the judge's, because the verifier is a different question asked of a different
+# thing: the judge decides the case, the verifier only says whether the brief
+# supports the facts a draft states. Reading it is deferred until the verifier
+# is switched on, so a run with the switch off never opens it.
+VERIFIER_PROMPT_FILE = "verifier.system.md"
 STANCE_PLACEHOLDER = "{{STANCE}}"
 
 # Every agent is sent `json_object`. It is what guarantees bare JSON with no
@@ -150,11 +156,13 @@ AGENT_RESPONSE_FORMAT: Dict[str, Dict[str, str]] = {
     transcript_module.ROLE_RIDER_ADVOCATE: JSON_OBJECT_FORMAT,
     transcript_module.ROLE_DRIVER_ADVOCATE: JSON_OBJECT_FORMAT,
     transcript_module.ROLE_JUDGE: JSON_OBJECT_FORMAT,
+    transcript_module.ROLE_VERIFIER: JSON_OBJECT_FORMAT,
 }
 AGENT_PROMPT_FILES: Dict[str, str] = {
     transcript_module.ROLE_RIDER_ADVOCATE: ADVOCATE_TEMPLATE,
     transcript_module.ROLE_DRIVER_ADVOCATE: ADVOCATE_TEMPLATE,
     transcript_module.ROLE_JUDGE: JUDGE_PROMPT_FILE,
+    transcript_module.ROLE_VERIFIER: VERIFIER_PROMPT_FILE,
 }
 
 # The invariants judge.system.md states, spelled out so they can be checked.
@@ -584,6 +592,11 @@ class PipelineResult:
     # ``confidence``: the two answer different questions, and folding the vote
     # into the confidence would make the judge's own number unreadable.
     vote_agreement: Optional[float] = None
+    # The draft verifier's one call and its verdicts, or ``None`` when the
+    # verifier was not switched on. ``None`` is the whole of the difference a
+    # run with the switch off shows: no entry, no event and no field, so every
+    # existing behaviour is byte for byte what it was.
+    verification: Optional[Dict[str, Any]] = None
 
     @property
     def replayed(self) -> bool:
@@ -591,12 +604,14 @@ class PipelineResult:
 
     @property
     def transcript_json(self) -> str:
-        """The call record, the deterministic referee ledger, and the vote."""
+        """The call record, the deterministic referee ledger, the vote, the verdicts."""
         payload = self.transcript.as_dict()
         if self.referee:
             payload["referee"] = self.referee
         if self.judge_vote:
             payload["vote"] = self.judge_vote
+        if self.verification is not None:
+            payload["verification"] = self.verification
         return money.dumps_canonical(payload)
 
     @property
@@ -1296,6 +1311,12 @@ class JudgeDraft:
     key: Optional[Tuple[Any, ...]] = None
     abstention: Optional[str] = None
     unverifiable: Tuple[str, ...] = ()
+    # The verifier's findings about this draft's own factual statements, or
+    # ``None`` when the verifier was not switched on. It is carried per draft
+    # rather than only in the vote's own block because a contradiction is
+    # charged to the draft that stated it, and the record has to be able to show
+    # which draft that was.
+    verification: Optional[Dict[str, Any]] = None
 
     @property
     def valid(self) -> bool:
@@ -1310,7 +1331,7 @@ class JudgeDraft:
                 "driver_compensation_sgd": self.key[2],
                 "referrals": list(self.key[3]),
             }
-        return {
+        written = {
             "draft": self.index,
             "kind": self.kind,
             "temperature": self.temperature,
@@ -1330,6 +1351,13 @@ class JudgeDraft:
             "proposal": proposal,
             "agrees": agreeing if self.valid else None,
         }
+        if self.verification is not None:
+            # Written only when the verifier ran. "The verifier read this
+            # draft's facts and found nothing wrong" and "the verifier was
+            # never asked" are different findings, and a run with the switch
+            # off has to stay byte for byte what it was.
+            written["verification"] = self.verification
+        return written
 
 
 
@@ -1589,6 +1617,8 @@ def _run_judge_vote(
     votes: int,
     events_log: Optional[Any] = None,
     case_no: Optional[int] = None,
+    verify: bool = False,
+    verifier_prompt: str = "",
 ) -> JudgeVote:
     """Ask the judge ``votes`` times on the same inputs and reduce the answers.
 
@@ -1732,7 +1762,32 @@ def _run_judge_vote(
                 valid=draft.valid,
             )
 
+    # The verifier runs here, after every draft has been checked and before the
+    # vote is reduced, so a contradiction can keep a draft out of the count. It
+    # is one call over all the valid drafts, whatever their number.
+    verification: Optional[Dict[str, Any]] = None
+    if verify:
+        drafts, verification = verify_draft_statements(
+            client,
+            brief_json=brief_json,
+            drafts=drafts,
+            verifier_prompt=verifier_prompt,
+            transcript=transcript,
+            deadline=deadline,
+            events_log=events_log,
+            case_no=case_no,
+        )
+
     vote = _reduce_vote(drafts, votes, referee_result)
+    if verification is not None:
+        # The verdicts ride on the vote's own record, beside the drafts they
+        # were charged to, so a reader of the transcript sees the two together.
+        vote = JudgeVote(
+            ruling=vote.ruling,
+            findings=vote.findings,
+            failure_reason=vote.failure_reason,
+            record=dict(vote.record, verification=verification),
+        )
     if events_log is not None:
         events_log.record(
             events.EVENT_VOTE,
@@ -1746,6 +1801,570 @@ def _run_judge_vote(
             proposals=[_proposal(draft) for draft in drafts if draft.valid],
         )
     return vote
+
+
+# --------------------------------------------------------------------------
+# The draft verifier
+#
+# Off by default. When it is on, one extra call per case -- never one per draft
+# and never one per statement -- asks whether the brief supports the facts a
+# draft states. Code extracts the statements; the model only judges them, and it
+# judges them against the brief and nothing else. It decides no part of the
+# ruling: a draft whose facts are contradicted abstains, and a draft whose facts
+# are merely absent from the record is recorded and still votes.
+# --------------------------------------------------------------------------
+VERIFIER_TEMPERATURE = 0.0
+
+# The three verdicts a statement can receive.
+VERDICT_SUPPORTED = "supported"
+VERDICT_CONTRADICTED = "contradicted"
+VERDICT_NOT_IN_EVIDENCE = "not_in_evidence"
+VERDICTS = (VERDICT_SUPPORTED, VERDICT_CONTRADICTED, VERDICT_NOT_IN_EVIDENCE)
+
+# The reason a draft abstains when the verifier contradicts one of its facts.
+ABSTENTION_CONTRADICTED = "CONTRADICTED_BY_EVIDENCE"
+
+# What kind of checkable fact a sentence carries. A sentence with none of these
+# is not a factual statement and is never sent to the verifier.
+STATEMENT_KIND_NUMBER = "number"
+STATEMENT_KIND_TIME = "time"
+STATEMENT_KIND_DISTANCE = "distance"
+STATEMENT_KIND_MONEY = "money"
+STATEMENT_KIND_EVIDENCE_ID = "evidence_id"
+STATEMENT_KINDS = (
+    STATEMENT_KIND_NUMBER,
+    STATEMENT_KIND_TIME,
+    STATEMENT_KIND_DISTANCE,
+    STATEMENT_KIND_MONEY,
+    STATEMENT_KIND_EVIDENCE_ID,
+)
+
+# The detectors, one per kind. Each is deliberately narrow: a sentence with no
+# fact in it is better left out than sent, because every statement sent is a
+# line the model must answer and a reader must read. They are code, not the
+# model's, so which statements are checked is reproducible from the text alone.
+_EVIDENCE_ID_RE = re.compile(r"\bEV-[A-Za-z0-9]+-\d+\b")
+_CLOCK_TIME_RE = re.compile(r"\b\d{1,2}:\d{2}\b")
+_DATE_RE = re.compile(r"\b\d{4}-\d{2}-\d{2}\b")
+_DURATION_RE = re.compile(
+    r"\b\d+(?:\.\d+)?\s*(?:s|sec|secs|seconds|min|mins|minute|minutes|h|hr|hrs|hour|hours)\b",
+    re.IGNORECASE,
+)
+_DISTANCE_RE = re.compile(
+    r"\b\d+(?:\.\d+)?\s*(?:m|km|metres?|meters?|miles?|mi)\b", re.IGNORECASE
+)
+_MONEY_RE = re.compile(
+    r"(?:SGD|S\$|\$)\s*\d+(?:\.\d+)?|\b\d+(?:\.\d+)?\s*(?:SGD|dollars?|cents?)\b",
+    re.IGNORECASE,
+)
+_NUMBER_RE = re.compile(r"\b\d+(?:\.\d+)?\b")
+
+# A sentence ends at terminal punctuation followed by whitespace. The lookbehind
+# keeps the decimal point inside a number ("4.35 SGD") from being read as the
+# end of a sentence, because the character after that period is a digit.
+_SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+")
+
+
+def split_sentences(text: str) -> List[str]:
+    """The sentences of a passage, in order, with whitespace stripped.
+
+    Split on newlines first, then on terminal punctuation followed by
+    whitespace, so a paragraph, a bulleted list and a single line are all read
+    the same way. An empty fragment is dropped rather than returned.
+    """
+    if not isinstance(text, str):
+        return []
+    found: List[str] = []
+    for line in re.split(r"[\r\n]+", text):
+        for piece in _SENTENCE_SPLIT_RE.split(line):
+            piece = piece.strip()
+            if piece:
+                found.append(piece)
+    return found
+
+
+def statement_kinds(sentence: str) -> Tuple[str, ...]:
+    """Which kinds of checkable fact a sentence carries, in a fixed order.
+
+    The kinds are the ones the verifier exists for: a number, a time, a
+    distance, a money figure and an evidence id. They overlap on purpose -- an
+    evidence id and a money figure are also numbers -- because the question here
+    is only whether the sentence states a fact at all, and the named kinds are
+    what the record shows a reader about why it was sent.
+    """
+    kinds: List[str] = []
+    if _NUMBER_RE.search(sentence):
+        kinds.append(STATEMENT_KIND_NUMBER)
+    if _MONEY_RE.search(sentence):
+        kinds.append(STATEMENT_KIND_MONEY)
+    if _EVIDENCE_ID_RE.search(sentence):
+        kinds.append(STATEMENT_KIND_EVIDENCE_ID)
+    if (
+        _CLOCK_TIME_RE.search(sentence)
+        or _DATE_RE.search(sentence)
+        or _DURATION_RE.search(sentence)
+    ):
+        kinds.append(STATEMENT_KIND_TIME)
+    if _DISTANCE_RE.search(sentence):
+        kinds.append(STATEMENT_KIND_DISTANCE)
+    return tuple(kinds)
+
+
+def extract_factual_statements(text: str) -> List[Tuple[str, Tuple[str, ...]]]:
+    """Every sentence that states a checkable fact, with the kinds it states.
+
+    A sentence is returned only when at least one detector matches it. A
+    sentence with no number, time, distance, money figure or evidence id states
+    no fact this verifier can check, so it is not returned and is never sent.
+    """
+    found: List[Tuple[str, Tuple[str, ...]]] = []
+    for sentence in split_sentences(text):
+        kinds = statement_kinds(sentence)
+        if kinds:
+            found.append((sentence, kinds))
+    return found
+
+
+def numbered_statements(drafts: Sequence[JudgeDraft]) -> List[Dict[str, Any]]:
+    """The statements of every valid draft, numbered once across the case.
+
+    The numbering is global so a verdict names exactly one statement, and each
+    entry carries the draft it came from so a contradiction can be charged to
+    the draft that stated it. Only valid drafts contribute: a draft that already
+    abstained is not an answer the panel is weighing, and there is nothing to
+    verify about it.
+    """
+    numbered: List[Dict[str, Any]] = []
+    for draft in drafts:
+        if not draft.valid:
+            continue
+        inner = draft.ruling.get("ruling") if isinstance(draft.ruling, Mapping) else None
+        text = inner.get("explanation") if isinstance(inner, Mapping) else None
+        for sentence, kinds in extract_factual_statements(text if isinstance(text, str) else ""):
+            numbered.append(
+                {
+                    "n": len(numbered) + 1,
+                    "draft": draft.index,
+                    "text": sentence,
+                    "kinds": list(kinds),
+                }
+            )
+    return numbered
+
+
+def verifier_user_message(brief_json: str, statements: Sequence[Mapping[str, Any]]) -> str:
+    """The verifier's user message: the judge's own brief bytes and the list.
+
+    The brief is spliced rather than re-serialised, so the verifier reads the
+    same characters the judge read. Only the number, the draft and the text
+    travel: the kinds are this package's own bookkeeping and are not part of
+    what the model is asked.
+    """
+    listed = [
+        {"n": item["n"], "draft": item["draft"], "text": item["text"]}
+        for item in statements
+    ]
+    return (
+        '{"brief":' + brief_json + ',"statements":' + money.dumps_canonical(listed) + "}"
+    )
+
+
+def normalise_verifier_result(parsed: Any) -> Tuple[Optional[List[Dict[str, Any]]], str, str]:
+    """The verdicts in the verifier's answer, the shape it arrived in, and why not.
+
+    Strict on purpose. The contract is one entry per statement, so a body that
+    is not an object, that has no ``verdicts`` list, or whose every entry does
+    not carry an integer ``statement``, one of the three verdicts and a string
+    ``evidence`` is unusable -- and an unusable body is treated as no
+    verification at all rather than as a partial one, because a verdict set with
+    a hole in it is not a check.
+    """
+    shape = json_shape(parsed)
+    if not isinstance(parsed, dict):
+        return None, shape, "the verifier did not return a JSON object"
+    if "verdicts" not in parsed:
+        return None, shape, "the verifier's object has no 'verdicts' key"
+    entries = parsed["verdicts"]
+    if not isinstance(entries, list):
+        return None, shape, "the verifier's 'verdicts' value is not a list"
+    verdicts: List[Dict[str, Any]] = []
+    for position, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            return None, shape, "verdict {0} is not a JSON object".format(position)
+        number = entry.get("statement")
+        if isinstance(number, bool) or not isinstance(number, int):
+            return None, shape, (
+                "verdict {0} carries no integer 'statement'".format(position)
+            )
+        verdict = entry.get("verdict")
+        if verdict not in VERDICTS:
+            return None, shape, (
+                "verdict {0} names {1!r}, which is not one of {2}".format(
+                    position, verdict, ", ".join(VERDICTS)
+                )
+            )
+        evidence = entry.get("evidence")
+        if evidence is None:
+            evidence = ""
+        if not isinstance(evidence, str):
+            return None, shape, (
+                "verdict {0}'s 'evidence' is not a string".format(position)
+            )
+        verdicts.append(
+            {"statement": number, "verdict": verdict, "evidence": evidence}
+        )
+    return verdicts, shape, ""
+
+
+def _verifier_call(
+    client: Any,
+    *,
+    system_prompt: str,
+    user_message: str,
+    transcript: Any,
+    deadline: Optional["CaseDeadline"],
+    events_log: Optional[Any],
+    case_no: Optional[int],
+) -> Tuple[Optional[List[Dict[str, Any]]], str, Any]:
+    """Ask the verifier once. Returns ``(verdicts, reason, entry)``.
+
+    Exactly one call and no retry, which is the difference between this and
+    every other agent: the verifier's contract is one call per case, and a
+    malformed answer is treated as no verification rather than chased with a
+    second call. The call is on the transcript and on the event log like any
+    other, so a reader can see what was asked and what came back.
+    """
+    if deadline is not None:
+        deadline.check()
+    result = client.complete(
+        system_prompt,
+        user_message,
+        response_format=JSON_OBJECT_FORMAT,
+        temperature=VERIFIER_TEMPERATURE,
+    )
+    verdicts, shape, reason = normalise_verifier_result(result.json_body)
+    entry = transcript.record(
+        role=transcript_module.ROLE_VERIFIER,
+        system_prompt=system_prompt,
+        user_message=user_message,
+        result=result,
+        note=None if verdicts is not None else UNUSABLE_RESPONSE_NOTE,
+        shape=shape,
+    )
+    if events_log is not None:
+        events_log.record(
+            events.EVENT_AGENT_CALL,
+            case_no=case_no,
+            role=transcript_module.ROLE_VERIFIER,
+            attempt=1,
+            request_sha256=entry.user_sha256,
+            system_sha256=entry.system_sha256,
+            shape=shape,
+            parse_outcome=entry.parse_outcome,
+            status=entry.status,
+            prompt_tokens=entry.prompt_tokens,
+            completion_tokens=entry.completion_tokens,
+            reasoning_tokens=entry.reasoning_tokens,
+            cached_tokens=entry.cached_tokens,
+            total_tokens=entry.prompt_tokens + entry.completion_tokens,
+            seconds=entry.duration_seconds,
+        )
+    return verdicts, reason, entry
+
+
+def _tokens_of(entry: Any) -> Dict[str, int]:
+    """One transcript entry's usage, as the split the record writes."""
+    return {
+        "prompt_tokens": entry.prompt_tokens,
+        "completion_tokens": entry.completion_tokens,
+        "reasoning_tokens": entry.reasoning_tokens,
+        "cached_tokens": entry.cached_tokens,
+        "total_tokens": entry.prompt_tokens + entry.completion_tokens,
+    }
+
+
+def apply_verification(
+    drafts: Sequence[JudgeDraft],
+    statements: Sequence[Mapping[str, Any]],
+    verdicts: Sequence[Mapping[str, Any]],
+) -> Tuple[List[JudgeDraft], List[Dict[str, Any]]]:
+    """Charge every verdict to the draft that stated it.
+
+    A draft with any contradicted statement abstains, with the reason code and
+    the statement quoted, so a reader can see which fact was rejected. A draft
+    whose statements are merely absent from the record keeps its vote; the
+    ``not_in_evidence`` statements are recorded on the draft as flags. A draft
+    with no statements is untouched.
+
+    Returns the drafts and the flat list of judged statements, each carrying its
+    verdict, which is what the record and the report read.
+    """
+    by_number = {item["statement"]: item for item in verdicts}
+    judged: List[Dict[str, Any]] = []
+    for item in statements:
+        verdict = by_number.get(item["n"])
+        judged.append(
+            {
+                "n": item["n"],
+                "draft": item["draft"],
+                "text": item["text"],
+                "kinds": list(item["kinds"]),
+                "verdict": None if verdict is None else verdict["verdict"],
+                "evidence": "" if verdict is None else verdict["evidence"],
+            }
+        )
+
+    by_draft: Dict[int, List[Dict[str, Any]]] = {}
+    for item in judged:
+        by_draft.setdefault(item["draft"], []).append(item)
+
+    updated: List[JudgeDraft] = []
+    for draft in drafts:
+        items = by_draft.get(draft.index)
+        if not items:
+            updated.append(draft)
+            continue
+        contradicted = [item for item in items if item["verdict"] == VERDICT_CONTRADICTED]
+        not_in_evidence = [
+            item for item in items if item["verdict"] == VERDICT_NOT_IN_EVIDENCE
+        ]
+        verification = {
+            "statements": len(items),
+            "contradicted": contradicted,
+            "not_in_evidence": not_in_evidence,
+        }
+        if contradicted:
+            updated.append(
+                JudgeDraft(
+                    index=draft.index,
+                    kind=draft.kind,
+                    temperature=draft.temperature,
+                    seed=draft.seed,
+                    sides=draft.sides,
+                    entries=draft.entries,
+                    ruling=draft.ruling,
+                    key=None,
+                    abstention='{0}: "{1}"'.format(
+                        ABSTENTION_CONTRADICTED, contradicted[0]["text"]
+                    ),
+                    unverifiable=draft.unverifiable,
+                    verification=verification,
+                )
+            )
+        else:
+            updated.append(
+                JudgeDraft(
+                    index=draft.index,
+                    kind=draft.kind,
+                    temperature=draft.temperature,
+                    seed=draft.seed,
+                    sides=draft.sides,
+                    entries=draft.entries,
+                    ruling=draft.ruling,
+                    key=draft.key,
+                    abstention=draft.abstention,
+                    unverifiable=draft.unverifiable,
+                    verification=verification,
+                )
+            )
+    return updated, judged
+
+
+def verify_draft_statements(
+    client: Any,
+    *,
+    brief_json: str,
+    drafts: Sequence[JudgeDraft],
+    verifier_prompt: str,
+    transcript: Any,
+    deadline: Optional["CaseDeadline"],
+    events_log: Optional[Any] = None,
+    case_no: Optional[int] = None,
+) -> Tuple[List[JudgeDraft], Dict[str, Any]]:
+    """One verifier call over every valid draft, and the drafts it leaves.
+
+    Called once per case, after the drafts have passed the code checks and
+    before the vote is reduced. Returns the drafts with the verdicts applied and
+    the record the transcript, the event log and the cache all carry.
+
+    Three outcomes, and the record says which happened. No statements at all:
+    no call is made, because there is nothing to ask. A call whose answer is
+    unusable: every draft keeps its vote and the record says the verification
+    could not be made, so a broken verifier cannot silently change a ruling. A
+    usable answer: the verdicts are applied.
+    """
+    statements = numbered_statements(drafts)
+    if not statements:
+        return list(drafts), {
+            "called": False,
+            "usable": False,
+            "reason": "the valid drafts state no checkable facts",
+            "statements": [],
+            "judged": [],
+            "counts": {
+                VERDICT_SUPPORTED: 0,
+                VERDICT_CONTRADICTED: 0,
+                VERDICT_NOT_IN_EVIDENCE: 0,
+            },
+            "abstained": [],
+            "entry": None,
+            "tokens": {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "reasoning_tokens": 0,
+                "cached_tokens": 0,
+                "total_tokens": 0,
+            },
+        }
+
+    message = verifier_user_message(brief_json, statements)
+    verdicts, reason, entry = _verifier_call(
+        client,
+        system_prompt=verifier_prompt,
+        user_message=message,
+        transcript=transcript,
+        deadline=deadline,
+        events_log=events_log,
+        case_no=case_no,
+    )
+    entry_index = len(transcript) - 1
+    tokens = _tokens_of(entry)
+
+    expected = [item["n"] for item in statements]
+    if verdicts is not None:
+        returned = [item["statement"] for item in verdicts]
+        if len(set(returned)) != len(returned) or sorted(returned) != sorted(expected):
+            # One entry per statement is the contract. A set that does not cover
+            # every statement exactly once is not a check, so it is treated like
+            # an unparseable answer rather than applied to part of the drafts.
+            verdicts = None
+            reason = (
+                "the verifier answered statements {0} where {1} were asked".format(
+                    sorted(returned), expected
+                )
+            )
+
+    if verdicts is None:
+        return list(drafts), {
+            "called": True,
+            "usable": False,
+            "reason": reason,
+            "statements": statements,
+            "judged": [],
+            "counts": {
+                VERDICT_SUPPORTED: 0,
+                VERDICT_CONTRADICTED: 0,
+                VERDICT_NOT_IN_EVIDENCE: 0,
+            },
+            "abstained": [],
+            "entry": entry_index,
+            "tokens": tokens,
+        }
+
+    updated, judged = apply_verification(drafts, statements, verdicts)
+    counts = {
+        verdict: sum(1 for item in judged if item["verdict"] == verdict)
+        for verdict in VERDICTS
+    }
+    abstained = [
+        draft.index
+        for draft in updated
+        if draft.abstention is not None
+        and draft.abstention.startswith(ABSTENTION_CONTRADICTED + ":")
+    ]
+    record: Dict[str, Any] = {
+        "called": True,
+        "usable": True,
+        "reason": "",
+        "statements": statements,
+        "judged": judged,
+        "counts": counts,
+        "abstained": abstained,
+        "entry": entry_index,
+        "tokens": tokens,
+    }
+    if events_log is not None:
+        events_log.record(
+            events.EVENT_VERIFICATION,
+            case_no=case_no,
+            called=True,
+            usable=True,
+            statements=len(statements),
+            supported=counts[VERDICT_SUPPORTED],
+            contradicted=counts[VERDICT_CONTRADICTED],
+            not_in_evidence=counts[VERDICT_NOT_IN_EVIDENCE],
+            abstained=abstained,
+        )
+    return updated, record
+
+
+def reduce_vote(
+    drafts: Sequence[JudgeDraft], votes: int, referee_result: Any
+) -> JudgeVote:
+    """The public name for the reduction, so a caller outside this module can
+    reduce a set of drafts it rebuilt rather than one it just called for."""
+    return _reduce_vote(drafts, votes, referee_result)
+
+
+def recorded_judge_drafts(
+    vote_block: Mapping[str, Any],
+    entries: Sequence[Mapping[str, Any]],
+    referee_result: Any,
+    brief_object: Any,
+) -> List[JudgeDraft]:
+    """Rebuild the drafts a recorded vote was reduced from.
+
+    The recorded transcript carries the vote it produced, and the vote names the
+    transcript entries each draft occupies. This reads those entries back and
+    runs each through the same assembly and the same code checks a live draft
+    runs through, so the drafts a recorded-drafts measurement verifies are the
+    drafts the recorded vote counted -- not a second reconstruction that could
+    differ from them.
+    """
+    rebuilt: List[JudgeDraft] = []
+    for record in vote_block.get("drafts") or []:
+        if not isinstance(record, Mapping):
+            continue
+        indices = tuple(
+            int(item) for item in (record.get("entries") or []) if isinstance(item, int)
+        )
+        parsed = None
+        if indices and 0 <= indices[-1] < len(entries):
+            parsed = entries[indices[-1]].get("parsed")
+        common: Dict[str, Any] = dict(
+            index=record.get("draft"),
+            kind=record.get("kind"),
+            temperature=record.get("temperature"),
+            seed=record.get("seed"),
+            sides=tuple(record.get("sides") or ()),
+            entries=indices,
+        )
+        if parsed is None:
+            rebuilt.append(
+                JudgeDraft(
+                    abstention=record.get("abstention") or "no reason recorded",
+                    **common
+                )
+            )
+            continue
+        ruling = _assemble_ruling(parsed, referee_result)
+        failures, unverifiable = check_judge_draft(ruling, brief_object)
+        if failures:
+            rebuilt.append(
+                JudgeDraft(
+                    abstention="; ".join(failures), unverifiable=unverifiable, **common
+                )
+            )
+        else:
+            rebuilt.append(
+                JudgeDraft(
+                    ruling=ruling,
+                    key=vote_key(ruling),
+                    unverifiable=unverifiable,
+                    **common
+                )
+            )
+    return rebuilt
 
 
 # --------------------------------------------------------------------------
@@ -1770,6 +2389,7 @@ def run_case(
     case_loader: Optional[Callable[[int], Dict[str, Any]]] = None,
     judge_votes: int = DEFAULT_JUDGE_VOTES,
     events_log: Optional[Any] = None,
+    verify_drafts: bool = False,
 ) -> PipelineResult:
     """Perform one full arbitration of a case named by its manifest number.
 
@@ -1800,6 +2420,7 @@ def run_case(
         clock=clock,
         judge_votes=judge_votes,
         events_log=events_log,
+        verify_drafts=verify_drafts,
     )
 
 
@@ -1813,6 +2434,7 @@ def run_loaded_case(
     clock: Callable[[], float] = time.monotonic,
     judge_votes: int = DEFAULT_JUDGE_VOTES,
     events_log: Optional[Any] = None,
+    verify_drafts: bool = False,
 ) -> PipelineResult:
     """Perform one full arbitration of a case already in hand.
 
@@ -1845,9 +2467,22 @@ def run_loaded_case(
     prompts_dir = Path(prompts_dir)
     if judge_votes < 1:
         raise PipelineError("judge_votes must be at least 1, got {0}".format(judge_votes))
+    if verify_drafts and judge_votes < 2:
+        # Refused rather than ignored. The verifier is asked over the drafts of
+        # a panel; a single-draft run has no panel to verify and its one call is
+        # preserved byte for byte as it always was, so naming the verifier here
+        # is a request this pipeline cannot honour and says so.
+        raise PipelineError(
+            "verify_drafts needs a judge vote of at least 2, got {0}: the verifier "
+            "is asked over a panel of drafts".format(judge_votes)
+        )
 
     # The project's second structural claim, checked before any call is made.
     stance_ranges = check_stance_only_difference(prompts_dir)
+
+    # Read only when the verifier is on, so a run with the switch off never
+    # opens the file and is byte for byte what it was.
+    verifier_prompt = _read(prompts_dir / VERIFIER_PROMPT_FILE) if verify_drafts else ""
 
     # ONE serialisation of the brief, and one digest of those exact bytes.
     case_brief = brief.build_brief_for_case(case)
@@ -1922,6 +2557,7 @@ def run_loaded_case(
     findings: List[Dict[str, Any]] = []
     referee_record: Dict[str, Any] = {}
     vote_record: Optional[Dict[str, Any]] = None
+    verification_record: Optional[Dict[str, Any]] = None
 
     if failed_agent is None:
         referee_result = referee.referee(case_brief, rider_claims, driver_claims)
@@ -1999,6 +2635,8 @@ def run_loaded_case(
                 votes=judge_votes,
                 events_log=events_log,
                 case_no=case_no,
+                verify=verify_drafts,
+                verifier_prompt=verifier_prompt,
             )
             vote_record = vote.record
             if vote.failure_reason is not None:
@@ -2012,6 +2650,11 @@ def run_loaded_case(
             else:
                 ruling = vote.ruling
                 findings = list(vote.findings)
+
+    if vote_record is not None:
+        # Read back off the vote so the result and the transcript cannot say two
+        # different things about what the verifier found.
+        verification_record = vote_record.get("verification")
 
     if events_log is not None:
         # The final ruling, whatever became of it. A case whose judge failed
@@ -2047,6 +2690,7 @@ def run_loaded_case(
         referee=referee_record,
         judge_vote=vote_record,
         vote_agreement=None if vote_record is None else vote_record.get("agreement"),
+        verification=verification_record,
     )
 
 
@@ -2394,6 +3038,8 @@ def replay_case(
     clock: Callable[[], float] = time.monotonic,
     judge_votes: int = DEFAULT_JUDGE_VOTES,
     events_log: Optional[Any] = None,
+    prompts_dir: Path = PROMPTS_DIR,
+    verify_drafts: bool = False,
 ) -> PipelineResult:
     """Arbitrate one case from a recorded run's advocates, calling only the judge.
 
@@ -2422,6 +3068,14 @@ def replay_case(
     """
     if judge_votes < 1:
         raise PipelineError("judge_votes must be at least 1, got {0}".format(judge_votes))
+    if verify_drafts and judge_votes < 2:
+        raise PipelineError(
+            "verify_drafts needs a judge vote of at least 2, got {0}: the verifier "
+            "is asked over a panel of drafts".format(judge_votes)
+        )
+    verifier_prompt = (
+        _read(Path(prompts_dir) / VERIFIER_PROMPT_FILE) if verify_drafts else ""
+    )
 
     transcript = transcript_module.Transcript(now=now)
     copied = [
@@ -2466,6 +3120,7 @@ def replay_case(
     findings: List[Dict[str, Any]] = []
     referee_record = referee_result.as_dict()
     vote_record: Optional[Dict[str, Any]] = None
+    verification_record: Optional[Dict[str, Any]] = None
 
     if judge_votes == 1:
         judge_user = _checked_judge_message(
@@ -2520,6 +3175,8 @@ def replay_case(
             votes=judge_votes,
             events_log=events_log,
             case_no=replay.case_no,
+            verify=verify_drafts,
+            verifier_prompt=verifier_prompt,
         )
         vote_record = vote.record
         if vote.failure_reason is not None:
@@ -2527,6 +3184,9 @@ def replay_case(
         else:
             ruling = vote.ruling
             findings = list(vote.findings)
+
+    if vote_record is not None:
+        verification_record = vote_record.get("verification")
 
     if events_log is not None:
         inner = ruling.get("ruling") if isinstance(ruling, Mapping) else None
@@ -2571,6 +3231,7 @@ def replay_case(
         referee=referee_record,
         judge_vote=vote_record,
         vote_agreement=None if vote_record is None else vote_record.get("agreement"),
+        verification=verification_record,
         replay=ReplayProvenance(
             run_dir=replay.source.run_dir,
             git_commit=replay.source.git_commit,
@@ -2706,6 +3367,16 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     )
     parser.add_argument("--out", help="write the full transcript JSON to this path")
     parser.add_argument(
+        "--verify-drafts",
+        action="store_true",
+        help=(
+            "after the drafts pass the code checks, ask a verifier once per case "
+            "whether the brief supports each factual statement a draft states; a "
+            "draft with a contradicted statement abstains. Off by default, and it "
+            "needs --judge-votes of at least 2"
+        ),
+    )
+    parser.add_argument(
         "--prompts-dir", default=str(PROMPTS_DIR), help="the prompt directory to use"
     )
     parser.add_argument(
@@ -2727,6 +3398,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         client,
         prompts_dir=Path(args.prompts_dir),
         judge_votes=args.judge_votes,
+        verify_drafts=args.verify_drafts,
     )
     _print_result(result, args.out)
     return 0 if result.ok else 1

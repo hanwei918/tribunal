@@ -2488,5 +2488,664 @@ class JudgePromptAmountsTests(unittest.TestCase):
         self.assertIn("Do not add any other top-level field", self.section)
 
 
+# --------------------------------------------------------------------------
+# The draft verifier
+#
+# Off by default, and one call per case when it is on. Every test here scripts
+# the transport: no network, and no model call. The verifier is answered from
+# the statements it was handed rather than from a fixed script, because which
+# statements exist is the extraction's decision -- a test that wants "draft 1's
+# fact is contradicted" cannot know that statement's number until it has run.
+# --------------------------------------------------------------------------
+VERIFIER_EVIDENCE = "EV-GPS-00208"
+
+# One sentence carrying every kind the extractor knows: a money figure, an
+# evidence id, a bare number, a distance and a clock time.
+FACTUAL_EXPLANATION = "The fare was S$4.35 per EV-GPS-00208, 229 fixes over 250 m at 14:32."
+# No number, time, distance, money figure or evidence id: not a statement of
+# fact, so it is never sent.
+PLAIN_EXPLANATION = "The driver was at fault and no figure settles it."
+
+
+class VerifierTransport:
+    """Scripted advocate and judge answers, and a verifier that answers itself.
+
+    ``verdict_for`` receives one statement as the verifier is shown it -- ``n``,
+    ``draft`` and ``text`` -- so a test can contradict one draft's fact without
+    knowing its number. ``raw`` scripts a body verbatim and ``numbers`` scripts
+    the statement numbers answered, which are the two ways the answer can be
+    unusable: a body the prompt's shape does not admit, and a body that does not
+    cover every statement exactly once.
+    """
+
+    def __init__(self, *responses, verdict_for=None, raw=None, numbers=None):
+        self.responses = list(responses)
+        self.verdict_for = verdict_for or (lambda item: pipeline.VERDICT_SUPPORTED)
+        self.raw = raw
+        self.numbers = numbers
+        self.calls = []
+        self.verifier_requests = []
+
+    def __call__(self, url, headers, body, timeout):
+        self.calls.append({"url": url, "headers": dict(headers), "body": body})
+        request = json.loads(body.decode("utf-8"))
+        parsed = json.loads(request["messages"][1]["content"])
+        if isinstance(parsed, dict) and "brief" in parsed and "statements" in parsed:
+            self.verifier_requests.append(parsed)
+            return envelope(self._answer(parsed["statements"]))
+        if not self.responses:
+            raise AssertionError("VerifierTransport ran out of scripted responses")
+        return self.responses.pop(0)
+
+    def _answer(self, statements):
+        if self.raw is not None:
+            return self.raw
+        by_number = {item["n"]: item for item in statements}
+        numbers = (
+            [item["n"] for item in statements] if self.numbers is None else self.numbers
+        )
+        return json.dumps(
+            {
+                "verdicts": [
+                    {
+                        "statement": number,
+                        "verdict": self.verdict_for(
+                            by_number.get(number, {"n": number, "draft": 0, "text": ""})
+                        ),
+                        "evidence": VERIFIER_EVIDENCE,
+                    }
+                    for number in numbers
+                ]
+            }
+        )
+
+
+def run_verified(*responses, votes=4, **options):
+    """A full run with the verifier switched on, and the transport it used."""
+    transport = VerifierTransport(*responses, **options)
+    client = llm.LLMClient(
+        model="hy4-preview",
+        api_key=FAKE_KEY,
+        transport=transport,
+        sleep=lambda seconds: None,
+        clock=lambda: 0.0,
+    )
+    result = pipeline.run_case(
+        CASE, client, now=lambda: PINNED_NOW, judge_votes=votes, verify_drafts=True
+    )
+    return result, transport
+
+
+def judge_drafts(*explanations):
+    """One judge answer per explanation, in the order the drafts are made."""
+    return tuple(envelope(vote_ruling(explanation=text)) for text in explanations)
+
+
+class VerifierCallTests(unittest.TestCase):
+    """One call per case, whatever the number of drafts or statements."""
+
+    ADVOCATES = (envelope(RIDER_CLAIMS), envelope(DRIVER_CLAIMS))
+
+    def test_one_call_covers_four_drafts(self):
+        result, transport = run_verified(
+            *self.ADVOCATES, *judge_drafts(*[FACTUAL_EXPLANATION] * 4)
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual(4, result.judge_vote["valid"])
+        self.assertEqual(1, len(transport.verifier_requests))
+        self.assertEqual(4, len(transport.verifier_requests[0]["statements"]))
+
+    def test_one_call_covers_two_drafts(self):
+        result, transport = run_verified(
+            *self.ADVOCATES, *judge_drafts(*[FACTUAL_EXPLANATION] * 2), votes=2
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual(2, result.judge_vote["valid"])
+        self.assertEqual(1, len(transport.verifier_requests))
+
+    def test_one_call_covers_every_statement_the_drafts_state(self):
+        rich = (
+            "The fare was S$4.35 per EV-GPS-00208. "
+            "The trace ran 250 m. The pickup was at 14:32."
+        )
+        result, transport = run_verified(
+            *self.ADVOCATES, *judge_drafts(*[rich] * 3), votes=3
+        )
+
+        self.assertEqual(1, len(transport.verifier_requests))
+        asked = transport.verifier_requests[0]["statements"]
+        self.assertEqual(9, len(asked), "three drafts, three facts each")
+        self.assertEqual([1, 2, 3, 4, 5, 6, 7, 8, 9], [item["n"] for item in asked])
+        self.assertEqual([1, 1, 1, 2, 2, 2, 3, 3, 3], [item["draft"] for item in asked])
+        # The kinds are this package's own bookkeeping: they stay out of the ask.
+        self.assertEqual({"n", "draft", "text"}, set(asked[0]))
+
+    def test_the_verifier_is_asked_once_and_after_every_draft(self):
+        result, transport = run_verified(
+            *self.ADVOCATES, *judge_drafts(*[FACTUAL_EXPLANATION] * 4)
+        )
+
+        self.assertEqual(
+            [RIDER, DRIVER, JUDGE, JUDGE, JUDGE, JUDGE, transcript_module.ROLE_VERIFIER],
+            roles_of(result),
+        )
+        self.assertEqual(1, roles_of(result).count(transcript_module.ROLE_VERIFIER))
+
+    def test_no_call_is_made_when_the_drafts_state_no_checkable_fact(self):
+        result, transport = run_verified(
+            *self.ADVOCATES, *judge_drafts(*[PLAIN_EXPLANATION] * 4)
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual([], transport.verifier_requests)
+        self.assertEqual([RIDER, DRIVER, JUDGE, JUDGE, JUDGE, JUDGE], roles_of(result))
+        self.assertFalse(result.verification["called"])
+        self.assertEqual([], result.verification["statements"])
+        self.assertTrue(result.verification["reason"], "a reason is recorded")
+
+    def test_a_draft_that_already_abstained_is_not_asked_about(self):
+        # Three usable drafts, then a fourth whose answer is not a POL-GEN-03
+        # object. An unusable answer is retried once, so it takes two scripted
+        # responses.
+        result, transport = run_verified(
+            *self.ADVOCATES,
+            *judge_drafts(*[FACTUAL_EXPLANATION] * 3),
+            envelope("{}"),
+            envelope("{}"),
+        )
+
+        self.assertEqual(3, result.judge_vote["valid"])
+        self.assertEqual(1, len(transport.verifier_requests))
+        asked = transport.verifier_requests[0]["statements"]
+        self.assertEqual(3, len(asked), "the abstaining draft states nothing")
+        self.assertEqual([1, 2, 3], sorted({item["draft"] for item in asked}))
+
+    def test_the_verifier_is_handed_the_prompt_file(self):
+        result, transport = run_verified(
+            *self.ADVOCATES, *judge_drafts(*[FACTUAL_EXPLANATION] * 4)
+        )
+
+        request = json.loads(transport.calls[-1]["body"].decode("utf-8"))
+        self.assertEqual(
+            (pipeline.PROMPTS_DIR / pipeline.VERIFIER_PROMPT_FILE).read_text(
+                encoding="utf-8"
+            ),
+            request["messages"][0]["content"],
+        )
+
+    def test_the_verifier_reads_the_same_brief_bytes_the_judge_read(self):
+        """The input is the brief the judge saw, not a re-serialisation of it."""
+        result, transport = run_verified(
+            *self.ADVOCATES, *judge_drafts(*[FACTUAL_EXPLANATION] * 4)
+        )
+
+        bodies = [
+            json.loads(call["body"].decode("utf-8"))["messages"][1]["content"]
+            for call in transport.calls
+        ]
+        judge = next(text for text in bodies if ',"claims":' in text)
+        verifier = bodies[-1]
+
+        # Both messages are built as '{"brief":' + brief_json + ..., so the brief
+        # is the same characters exactly when the two slices are equal.
+        self.assertEqual(
+            judge[len('{"brief":') : judge.index(',"claims":')],
+            verifier[len('{"brief":') : verifier.index(',"statements":')],
+        )
+
+
+class VerifierMessageTests(unittest.TestCase):
+    """What the verifier is asked, built by code and checkable as text."""
+
+    STATEMENT = {"n": 1, "draft": 1, "text": "The fare was S$4.35.", "kinds": ["money"]}
+
+    def test_the_brief_is_spliced_rather_than_re_serialised(self):
+        brief_json = '{"case":{"case_no":208}}'
+
+        message = pipeline.verifier_user_message(brief_json, [self.STATEMENT])
+
+        self.assertTrue(message.startswith('{"brief":' + brief_json + ',"statements":'))
+
+    def test_only_the_number_the_draft_and_the_text_travel(self):
+        sent = json.loads(pipeline.verifier_user_message("{}", [self.STATEMENT]))
+
+        self.assertEqual(
+            {"n": 1, "draft": 1, "text": "The fare was S$4.35."},
+            sent["statements"][0],
+        )
+        self.assertNotIn("kinds", sent["statements"][0])
+
+
+class VerifierVerdictTests(unittest.TestCase):
+    """A contradiction stops its draft voting; an absent fact does not."""
+
+    ADVOCATES = (envelope(RIDER_CLAIMS), envelope(DRIVER_CLAIMS))
+
+    @staticmethod
+    def drafts(count=4):
+        return judge_drafts(*[FACTUAL_EXPLANATION] * count)
+
+    @staticmethod
+    def draft_record(result, index):
+        return next(
+            draft for draft in result.judge_vote["drafts"] if draft["draft"] == index
+        )
+
+    def test_a_contradicted_statement_makes_its_draft_abstain(self):
+        result, _ = run_verified(
+            *self.ADVOCATES,
+            *self.drafts(),
+            verdict_for=lambda item: (
+                pipeline.VERDICT_CONTRADICTED
+                if item["draft"] == 1
+                else pipeline.VERDICT_SUPPORTED
+            ),
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual([1], result.verification["abstained"])
+        self.assertEqual(3, result.judge_vote["valid"])
+        self.assertEqual("carried_not_unanimous", result.judge_vote["outcome"])
+        self.assertEqual(0.75, result.vote_agreement)
+        # The verifier decides no part of the ruling.
+        self.assertEqual("PARTIAL_REFUND", result.ruling["ruling"]["ruling"])
+
+        record = self.draft_record(result, 1)
+        self.assertFalse(record["valid"])
+        self.assertIsNone(record["proposal"])
+        self.assertIsNone(record["agrees"])
+        # The statement it was charged with is quoted, so a reader can see which
+        # fact was rejected.
+        self.assertTrue(
+            record["abstention"].startswith(
+                pipeline.ABSTENTION_CONTRADICTED + ": "
+            ),
+            record["abstention"],
+        )
+        self.assertIn(FACTUAL_EXPLANATION, record["abstention"])
+
+    def test_a_contradiction_on_three_drafts_leaves_too_few_and_escalates(self):
+        result, _ = run_verified(
+            *self.ADVOCATES,
+            *self.drafts(),
+            verdict_for=lambda item: (
+                pipeline.VERDICT_CONTRADICTED
+                if item["draft"] <= 3
+                else pipeline.VERDICT_SUPPORTED
+            ),
+        )
+
+        self.assertEqual([1, 2, 3], result.verification["abstained"])
+        self.assertEqual(1, result.judge_vote["valid"])
+        self.assertEqual("escalated", result.judge_vote["outcome"])
+        self.assertEqual("ESCALATE", result.ruling["ruling"]["ruling"])
+        self.assertIsNone(result.ruling["ruling"]["amount_sgd"])
+
+    def test_a_contradiction_on_every_draft_leaves_no_ruling_at_all(self):
+        result, _ = run_verified(
+            *self.ADVOCATES,
+            *self.drafts(),
+            verdict_for=lambda item: pipeline.VERDICT_CONTRADICTED,
+        )
+
+        self.assertEqual([1, 2, 3, 4], result.verification["abstained"])
+        self.assertEqual(0, result.judge_vote["valid"])
+        self.assertEqual("no_valid_drafts", result.judge_vote["outcome"])
+        self.assertIsNone(result.vote_agreement)
+        self.assertIsNone(result.ruling)
+
+    def test_a_statement_not_in_evidence_is_recorded_and_the_draft_still_votes(self):
+        result, _ = run_verified(
+            *self.ADVOCATES,
+            *self.drafts(),
+            verdict_for=lambda item: pipeline.VERDICT_NOT_IN_EVIDENCE,
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual([], result.verification["abstained"])
+        self.assertEqual(4, result.judge_vote["valid"])
+        self.assertEqual("carried", result.judge_vote["outcome"])
+        self.assertEqual(1.0, result.vote_agreement)
+        self.assertEqual(
+            {pipeline.VERDICT_NOT_IN_EVIDENCE},
+            {item["verdict"] for item in result.verification["judged"]},
+        )
+
+        # Recorded and flagged, and nothing else: the draft is still an answer.
+        record = self.draft_record(result, 1)
+        self.assertTrue(record["valid"])
+        self.assertIsNone(record["abstention"])
+        self.assertEqual([], record["verification"]["contradicted"])
+        self.assertEqual(1, len(record["verification"]["not_in_evidence"]))
+
+    def test_every_verdict_is_charged_to_the_draft_that_stated_it(self):
+        result, _ = run_verified(
+            *self.ADVOCATES,
+            *self.drafts(),
+            verdict_for=lambda item: pipeline.VERDICT_SUPPORTED,
+        )
+
+        judged = result.verification["judged"]
+        self.assertEqual([1, 2, 3, 4], [item["n"] for item in judged])
+        self.assertEqual([1, 2, 3, 4], [item["draft"] for item in judged])
+        for item in judged:
+            with self.subTest(statement=item["n"]):
+                self.assertEqual(FACTUAL_EXPLANATION, item["text"])
+                self.assertEqual(VERIFIER_EVIDENCE, item["evidence"])
+
+
+class VerifierUnusableAnswerTests(unittest.TestCase):
+    """A verifier that cannot answer is no verification, never a silent change."""
+
+    ADVOCATES = (envelope(RIDER_CLAIMS), envelope(DRIVER_CLAIMS))
+
+    def unchanged(self, **options):
+        """Run with the verifier on, and hold it to changing nothing."""
+        result, transport = run_verified(
+            *self.ADVOCATES,
+            *judge_drafts(*[FACTUAL_EXPLANATION] * 4),
+            **options,
+        )
+
+        self.assertTrue(result.verification["called"], "the verifier was called")
+        self.assertFalse(result.verification["usable"])
+        self.assertTrue(result.verification["reason"], "a reason is recorded")
+        self.assertEqual([], result.verification["abstained"])
+        self.assertEqual([], result.verification["judged"])
+        # Every draft keeps its vote.
+        self.assertEqual(4, result.judge_vote["valid"])
+        self.assertEqual("carried", result.judge_vote["outcome"])
+        self.assertEqual(1.0, result.vote_agreement)
+        self.assertTrue(result.ok)
+        return result, transport
+
+    def test_a_body_that_is_not_json_is_no_verification(self):
+        result, transport = self.unchanged(raw="the verifier did not answer in JSON")
+
+        self.assertEqual(1, len(transport.verifier_requests))
+
+    def test_a_json_body_of_the_wrong_shape_is_no_verification(self):
+        for raw in ("[]", '{"verdicts": {}}', '{"verdicts": [{"statement": "one"}]}'):
+            with self.subTest(raw=raw):
+                self.unchanged(raw=raw)
+
+    def test_a_body_that_misses_a_statement_is_no_verification(self):
+        # The control: the same body, covering every statement, is usable. Only
+        # the coverage differs, so the coverage is what the refusal is about.
+        complete, _ = run_verified(
+            *self.ADVOCATES, *judge_drafts(*[FACTUAL_EXPLANATION] * 4)
+        )
+        self.assertTrue(complete.verification["usable"])
+
+        result, transport = self.unchanged(numbers=[1, 2, 3])
+
+        self.assertEqual(4, len(transport.verifier_requests[0]["statements"]))
+
+    def test_a_body_that_answers_a_statement_twice_is_no_verification(self):
+        self.unchanged(numbers=[1, 1, 2, 3])
+
+
+class StatementExtractionTests(unittest.TestCase):
+    """Code, not the model, decides which sentences are checkable facts."""
+
+    def kinds_of(self, sentence):
+        found = pipeline.extract_factual_statements(sentence)
+        self.assertEqual(1, len(found), "one sentence in, one statement out")
+        return found[0][1]
+
+    def test_a_money_figure_is_a_fact(self):
+        self.assertIn(
+            pipeline.STATEMENT_KIND_MONEY, self.kinds_of("The fare was S$4.35.")
+        )
+
+    def test_a_bare_number_is_a_fact(self):
+        self.assertIn(
+            pipeline.STATEMENT_KIND_NUMBER, self.kinds_of("The trace holds 229 fixes.")
+        )
+
+    def test_a_distance_is_a_fact(self):
+        self.assertIn(
+            pipeline.STATEMENT_KIND_DISTANCE, self.kinds_of("The gantry was 250 m away.")
+        )
+
+    def test_a_clock_time_is_a_fact(self):
+        self.assertIn(
+            pipeline.STATEMENT_KIND_TIME, self.kinds_of("The pickup was at 14:32.")
+        )
+
+    def test_a_duration_is_a_fact(self):
+        self.assertIn(
+            pipeline.STATEMENT_KIND_TIME, self.kinds_of("It sampled every 10 s.")
+        )
+
+    def test_a_date_is_a_fact(self):
+        self.assertIn(
+            pipeline.STATEMENT_KIND_TIME, self.kinds_of("It happened on 2026-09-21.")
+        )
+
+    def test_an_evidence_id_is_a_fact(self):
+        self.assertIn(
+            pipeline.STATEMENT_KIND_EVIDENCE_ID,
+            self.kinds_of("The trace is EV-GPS-00101."),
+        )
+
+    def test_a_sentence_with_no_fact_is_not_extracted(self):
+        text = "The driver was at fault and the rider did nothing wrong."
+
+        self.assertEqual([], pipeline.extract_factual_statements(text))
+
+    def test_the_factless_sentence_between_two_facts_is_dropped(self):
+        text = (
+            "The fare was S$4.35.\n"
+            "The driver was at fault.\n"
+            "The trace is EV-GPS-00101."
+        )
+
+        found = pipeline.extract_factual_statements(text)
+
+        self.assertEqual(
+            ["The fare was S$4.35.", "The trace is EV-GPS-00101."],
+            [item[0] for item in found],
+        )
+
+    def test_a_passage_that_is_not_text_states_nothing(self):
+        self.assertEqual([], pipeline.extract_factual_statements(""))
+        self.assertEqual([], pipeline.extract_factual_statements(None))
+
+
+class StatementNumberingTests(unittest.TestCase):
+    """The numbering runs across the drafts, and each entry names its own."""
+
+    @staticmethod
+    def draft(index, explanation, usable=True):
+        return pipeline.JudgeDraft(
+            index=index,
+            kind=pipeline.DRAFT_SAMPLED,
+            temperature=0.7,
+            seed=100 + index,
+            sides=pipeline.DRIVER_FIRST,
+            entries=(index,),
+            ruling={"ruling": {"explanation": explanation}},
+            key=("PARTIAL_REFUND", Decimal("4.0"), None, ()) if usable else None,
+            abstention=None if usable else "unusable",
+        )
+
+    def test_the_numbering_runs_across_drafts_and_names_each_one(self):
+        numbered = pipeline.numbered_statements(
+            [
+                self.draft(1, "The fare was S$4.35."),
+                self.draft(2, "The trace is EV-GPS-00101."),
+            ]
+        )
+
+        self.assertEqual([1, 2], [item["n"] for item in numbered])
+        self.assertEqual([1, 2], [item["draft"] for item in numbered])
+        self.assertEqual("The fare was S$4.35.", numbered[0]["text"])
+        self.assertEqual(["number", "money"], numbered[0]["kinds"])
+
+    def test_a_draft_that_already_abstained_states_nothing(self):
+        numbered = pipeline.numbered_statements(
+            [
+                self.draft(1, "The fare was S$4.35.", usable=False),
+                self.draft(2, "The trace is EV-GPS-00101."),
+            ]
+        )
+
+        self.assertEqual([1], [item["n"] for item in numbered])
+        self.assertEqual([2], [item["draft"] for item in numbered])
+
+    def test_a_draft_with_no_explanation_states_nothing(self):
+        self.assertEqual([], pipeline.numbered_statements([self.draft(1, None)]))
+
+
+class VerifierTokenTests(unittest.TestCase):
+    """The verifier's usage is its own, on its own entry and under its own role."""
+
+    ADVOCATES = (envelope(RIDER_CLAIMS), envelope(DRIVER_CLAIMS))
+
+    def test_the_verifier_tokens_are_recorded_apart_from_the_judges(self):
+        result, _ = run_verified(
+            *self.ADVOCATES, *judge_drafts(*[FACTUAL_EXPLANATION] * 4)
+        )
+
+        entries = result.transcript.entries
+        verifier = [e for e in entries if e.role == transcript_module.ROLE_VERIFIER]
+        judges = [e for e in entries if e.role == JUDGE]
+
+        self.assertEqual(1, len(verifier))
+        self.assertEqual(4, len(judges))
+        # The rig scripts 10 prompt and 5 completion tokens per call.
+        self.assertEqual(10, verifier[0].prompt_tokens)
+        self.assertEqual(5, verifier[0].completion_tokens)
+        self.assertEqual(
+            {
+                "prompt_tokens": 10,
+                "completion_tokens": 5,
+                "reasoning_tokens": 0,
+                "cached_tokens": 0,
+                "total_tokens": 15,
+            },
+            result.verification["tokens"],
+        )
+        # Counted apart: the judges' own total does not carry the verifier's.
+        self.assertEqual(40, result.transcript.totals(judges)["prompt_tokens"])
+        self.assertEqual(10, result.transcript.totals(verifier)["prompt_tokens"])
+        # And it is in the case's bill, because the call was made.
+        self.assertEqual(70, result.prompt_tokens)
+
+
+class VerifierSwitchTests(unittest.TestCase):
+    """Off is the default, and off adds nothing to a run's own record."""
+
+    ADVOCATES = (envelope(RIDER_CLAIMS), envelope(DRIVER_CLAIMS))
+
+    def off(self):
+        return run_vote(*self.ADVOCATES, *judge_drafts(*[FACTUAL_EXPLANATION] * 4))
+
+    def on(self):
+        return run_verified(*self.ADVOCATES, *judge_drafts(*[FACTUAL_EXPLANATION] * 4))
+
+    def test_the_switch_off_asks_no_verifier_and_records_none(self):
+        result, transport = self.off()
+
+        self.assertIsNone(result.verification)
+        self.assertEqual([RIDER, DRIVER, JUDGE, JUDGE, JUDGE, JUDGE], roles_of(result))
+        self.assertEqual(6, len(transport.calls))
+
+    def test_the_switch_off_puts_no_verification_key_anywhere(self):
+        result, _ = self.off()
+        payload = json.loads(result.transcript_json)
+
+        self.assertNotIn("verification", payload)
+        self.assertNotIn("verification", payload["vote"])
+        for draft in payload["vote"]["drafts"]:
+            with self.subTest(draft=draft["draft"]):
+                self.assertNotIn("verification", draft)
+
+    def test_the_switch_off_writes_the_keys_the_record_had_before_it_existed(self):
+        """The draft record is the one the committed transcripts carry.
+
+        These key sets are read off the transcripts under ``runs/``, which were
+        written before the verifier existed. A key added here would move every
+        recorded transcript digest, so a new one has to be a deliberate act.
+        """
+        result, _ = self.off()
+        payload = json.loads(result.transcript_json)
+
+        self.assertEqual(
+            {"entries", "referee", "vote"},
+            set(payload),
+        )
+        self.assertEqual(
+            {
+                "abstention",
+                "agrees",
+                "draft",
+                "entries",
+                "kind",
+                "proposal",
+                "seed",
+                "sides",
+                "temperature",
+                "unverifiable",
+                "valid",
+            },
+            set(payload["vote"]["drafts"][0]),
+        )
+
+    def test_the_switch_on_adds_exactly_one_key_and_one_entry(self):
+        off_result, _ = self.off()
+        on_result, _ = self.on()
+        off_payload = json.loads(off_result.transcript_json)
+        on_payload = json.loads(on_result.transcript_json)
+
+        self.assertEqual({"verification"}, set(on_payload) - set(off_payload))
+        self.assertEqual(set(), set(off_payload) - set(on_payload))
+        self.assertEqual(
+            {"verification"}, set(on_payload["vote"]) - set(off_payload["vote"])
+        )
+        self.assertEqual(
+            {"verification"},
+            set(on_payload["vote"]["drafts"][0]) - set(off_payload["vote"]["drafts"][0]),
+        )
+        # The verifier's entry is appended, so the run's own entries are byte for
+        # byte what they were.
+        self.assertEqual(
+            off_payload["entries"],
+            on_payload["entries"][: len(off_payload["entries"])],
+        )
+        self.assertEqual(len(off_payload["entries"]) + 1, len(on_payload["entries"]))
+
+    def test_the_switch_off_reaches_the_same_ruling_and_agreement(self):
+        off_result, _ = self.off()
+        on_result, _ = self.on()
+
+        self.assertEqual(off_result.ruling, on_result.ruling)
+        self.assertEqual(off_result.vote_agreement, on_result.vote_agreement)
+        # The one difference in the bill is the verifier's own call.
+        self.assertEqual(off_result.prompt_tokens, on_result.prompt_tokens - 10)
+
+    def test_the_switch_needs_a_panel_to_verify(self):
+        transport = VerifierTransport(*self.ADVOCATES, envelope(vote_ruling()))
+        client = llm.LLMClient(
+            model="hy4-preview",
+            api_key=FAKE_KEY,
+            transport=transport,
+            sleep=lambda seconds: None,
+            clock=lambda: 0.0,
+        )
+
+        with self.assertRaises(pipeline.PipelineError):
+            pipeline.run_case(
+                CASE,
+                client,
+                now=lambda: PINNED_NOW,
+                judge_votes=1,
+                verify_drafts=True,
+            )
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

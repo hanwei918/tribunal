@@ -1447,6 +1447,7 @@ def run_one_case(
     loaded_case: Optional[Mapping[str, Any]] = None,
     replay: Optional[Any] = None,
     judge_votes: int = pipeline.DEFAULT_JUDGE_VOTES,
+    verify_drafts: bool = False,
     events_log: Optional[Any] = None,
 ) -> Tuple[CaseOutcome, Optional[Dict[str, Any]], Optional[str]]:
     """Run one case. Returns ``(outcome, cache document, transcript json)``.
@@ -1513,6 +1514,8 @@ def run_one_case(
                 case_deadline_seconds=case_deadline_seconds,
                 judge_votes=judge_votes,
                 events_log=events_log,
+                prompts_dir=prompts_dir,
+                verify_drafts=verify_drafts,
             )
         elif loaded_case is None:
             result = pipeline.run_case(
@@ -1523,6 +1526,7 @@ def run_one_case(
                 case_loader=case_loader,
                 judge_votes=judge_votes,
                 events_log=events_log,
+                verify_drafts=verify_drafts,
             )
         else:
             # A converted external case, already loaded through its own explicit
@@ -1535,6 +1539,7 @@ def run_one_case(
                 case_deadline_seconds=case_deadline_seconds,
                 judge_votes=judge_votes,
                 events_log=events_log,
+                verify_drafts=verify_drafts,
             )
     except (llm.MissingAPIKeyError, llm.ModelNotProvisionedError) as exc:
         # Not provisioned and no credential are the same failure for every
@@ -1685,6 +1690,12 @@ def run_one_case(
         "call_seconds": result.duration_seconds,
         "matched": matched,
     }
+    if result.verification is not None:
+        # Present only when the verifier ran, so a cache entry produced with the
+        # switch off is the entry it always was. The verdicts travel with the
+        # result because a reader of one case file has to be able to see what
+        # the verifier found without opening the transcript.
+        document["verification"] = result.verification
     return (
         CaseOutcome(
             case_no=case_no,
@@ -2000,6 +2011,7 @@ def run_benchmark(
     case_deadline_seconds: float = pipeline.DEFAULT_CASE_DEADLINE_SECONDS,
     replay_dir: Optional[Path] = None,
     judge_votes: int = pipeline.DEFAULT_JUDGE_VOTES,
+    verify_drafts: bool = False,
     client_factory: Optional[Callable[[Callable[[Dict[str, Any]], None]], Any]] = None,
     key: Optional[Mapping[int, grade.Ruling]] = None,
     git_runner: Optional[Callable[[Sequence[str]], Optional[str]]] = None,
@@ -2163,6 +2175,9 @@ def run_benchmark(
         judge_votes=judge_votes,
         development_set=label,
         replay_dir=None if replay_dir is None else str(replay_dir),
+        # Recorded only when the verifier is on, so a run with the switch off
+        # appends the same line it always appended.
+        **({"verify_drafts": True} if verify_drafts else {}),
     )
 
     # A shared sink, because the client is shared across every case and, above
@@ -2378,6 +2393,7 @@ def run_benchmark(
                 case_loader=case_loader,
                 replay=replayable,
                 judge_votes=judge_votes,
+                verify_drafts=verify_drafts,
                 events_log=events_log,
             )
 
@@ -3881,6 +3897,7 @@ def run_external_case(
     timeout_seconds: float = llm.DEFAULT_TIMEOUT_SECONDS,
     case_deadline_seconds: float = pipeline.DEFAULT_CASE_DEADLINE_SECONDS,
     judge_votes: int = pipeline.DEFAULT_JUDGE_VOTES,
+    verify_drafts: bool = False,
     token_budget: Optional[int] = None,
     expected_path: Optional[Path] = None,
     client_factory: Optional[Callable[[Callable[[Dict[str, Any]], None]], Any]] = None,
@@ -4001,6 +4018,7 @@ def run_external_case(
         case_deadline_seconds=case_deadline_seconds,
         loaded_case=case,
         judge_votes=judge_votes,
+        verify_drafts=verify_drafts,
         events_log=events_log,
     )
     _persist(run_dir, outcome, document, transcript_json)
@@ -4164,6 +4182,30 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         ),
     )
     parser.add_argument(
+        "--verify-drafts",
+        action="store_true",
+        help=(
+            "after each case's drafts pass the code checks, ask a verifier once "
+            "per case whether the brief supports every factual statement the "
+            "drafts state; a draft with a contradicted statement abstains. Off by "
+            "default, needs a judge vote of at least 2, and every verifier call is "
+            "billed"
+        ),
+    )
+    parser.add_argument(
+        "--verify-recorded-drafts",
+        type=Path,
+        default=None,
+        metavar="RUN_DIR",
+        help=(
+            "reuse RUN_DIR's recorded judge drafts and call only the verifier, so "
+            "that on and off are compared on the same drafts. A case whose "
+            "recorded drafts were produced under a different brief or judge prompt "
+            "is refused. Results go to runs/verify-recorded-drafts/<model>/, never "
+            "into the headline run directory"
+        ),
+    )
+    parser.add_argument(
         "--external",
         type=Path,
         default=None,
@@ -4186,6 +4228,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             parser.error("--compare reads cached runs and takes no --external")
         if args.replay_advocates is not None or args.replay_check is not None:
             parser.error("--compare reads cached runs and takes no replay arguments")
+        if args.verify_drafts or args.verify_recorded_drafts is not None:
+            parser.error("--compare reads cached runs and takes no verification argument")
         print(render_comparison(collect_comparison(args.runs_dir)))
         return 0
 
@@ -4194,9 +4238,65 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     # comparison run is unaffected.
     model_id = resolve_model(args.model)
 
+    if args.verify_recorded_drafts is not None:
+        # Its own mode, and it refuses the flags it cannot combine with rather
+        # than ignoring them: every one of them would otherwise look applied.
+        for present, name in (
+            (args.replay_check is not None, "--replay-check"),
+            (args.replay_advocates is not None, "--replay-advocates"),
+            (args.external is not None, "--external"),
+            (args.force, "--force"),
+        ):
+            if present:
+                parser.error(
+                    "--verify-recorded-drafts reuses a run's recorded drafts and "
+                    "takes no {0}".format(name)
+                )
+        try:
+            cases = parse_cases(args.cases) or sorted(grade.load_answer_key())
+        except BenchmarkError as exc:
+            parser.error(str(exc))
+        # Imported here rather than at module load: the module reads this one,
+        # and a top-level import would make the two circular.
+        #
+        # ``python -m eval.run_benchmark`` makes this module ``__main__``, so a
+        # plain ``from eval import run_benchmark`` inside the imported module
+        # would import a *second* copy of this file -- with its own
+        # ``BenchmarkError``, which the ``except`` clauses below would then fail
+        # to catch. Aliasing this module under its canonical name first keeps
+        # one copy, so a refusal raised inside the measurement is reported as a
+        # refusal rather than as a traceback.
+        sys.modules.setdefault("eval.run_benchmark", sys.modules[__name__])
+        from eval import verify_drafts
+
+        try:
+            report = verify_drafts.verify_recorded_run(
+                args.verify_recorded_drafts,
+                cases,
+                model=model_id,
+                runs_dir=args.runs_dir,
+                prompts_dir=args.prompts_dir,
+                timeout_seconds=args.timeout,
+            )
+        except llm.ModelNotProvisionedError as exc:
+            print("FATAL: {0}".format(exc), file=sys.stderr)
+            return 1
+        except llm.MissingAPIKeyError as exc:
+            print("FATAL: {0}".format(exc), file=sys.stderr)
+            return 1
+        except BenchmarkError as exc:
+            print("FATAL: {0}".format(exc), file=sys.stderr)
+            return 1
+        print(verify_drafts.render_report(report))
+        # Non-zero when any case was refused or any draft was contradicted, so a
+        # caller can gate on the finding without reading the text.
+        return 0 if report.ok else 1
+
     if args.replay_check is not None:
         if args.external is not None:
             parser.error("--replay-check reads a run and takes no --external")
+        if args.verify_drafts or args.verify_recorded_drafts is not None:
+            parser.error("--replay-check reads a run and takes no verification argument")
         try:
             cases = parse_cases(args.cases) or sorted(grade.load_answer_key())
         except BenchmarkError as exc:
@@ -4235,6 +4335,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 timeout_seconds=args.timeout,
                 case_deadline_seconds=args.case_deadline,
                 judge_votes=args.judge_votes,
+                verify_drafts=args.verify_drafts,
                 token_budget=args.token_budget,
             )
         except llm.ModelNotProvisionedError as exc:
@@ -4273,6 +4374,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             case_deadline_seconds=args.case_deadline,
             replay_dir=args.replay_advocates,
             judge_votes=args.judge_votes,
+            verify_drafts=args.verify_drafts,
         )
     except llm.ModelNotProvisionedError as exc:
         print("FATAL: {0}".format(exc), file=sys.stderr)

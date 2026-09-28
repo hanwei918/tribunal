@@ -525,6 +525,27 @@ def _build_parser() -> argparse.ArgumentParser:
         help="report whether --replay-advocates RUN_DIR would accept each case; reads only",
     )
     parser.add_argument(
+        "--verify-drafts",
+        action="store_true",
+        help=(
+            "after each case's drafts pass the code checks, ask a verifier once per "
+            "case whether the brief supports every factual statement the drafts "
+            "state; a draft with a contradicted statement abstains"
+        ),
+    )
+    parser.add_argument(
+        "--verify-recorded-drafts",
+        type=Path,
+        default=None,
+        metavar="RUN_DIR",
+        help=(
+            "reuse RUN_DIR's recorded judge drafts and call only the verifier, so on "
+            "and off are compared on the same drafts. The set's results go to "
+            "runs/<set>/verify-recorded-drafts/<model>/, never into the set's own "
+            "run directory"
+        ),
+    )
+    parser.add_argument(
         "--report",
         action="store_true",
         help="print the sets separately and combined from cached runs; makes no model call",
@@ -540,6 +561,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         if args.replay_advocates is not None or args.replay_check is not None:
             print("FATAL: --report reads cached runs and takes no replay arguments", file=sys.stderr)
             return 1
+        if args.verify_drafts or args.verify_recorded_drafts is not None:
+            print(
+                "FATAL: --report reads cached runs and takes no verification argument",
+                file=sys.stderr,
+            )
+            return 1
         print(render_development_sets(model, args.runs_dir))
         return 0
 
@@ -551,7 +578,55 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print("FATAL: {0}".format(exc), file=sys.stderr)
         return 1
 
+    if args.verify_recorded_drafts is not None:
+        if args.replay_advocates is not None or args.replay_check is not None:
+            print(
+                "FATAL: --verify-recorded-drafts reuses recorded drafts and takes "
+                "no replay arguments",
+                file=sys.stderr,
+            )
+            return 1
+        from eval import verify_drafts
+
+        status = 0
+        for development_set in selected:
+            subset = [
+                case_no
+                for case_no in development_set.cases
+                if not cases or case_no in cases
+            ]
+            if not subset:
+                continue
+            try:
+                report = verify_drafts.verify_recorded_run(
+                    args.verify_recorded_drafts,
+                    subset,
+                    model=model,
+                    runs_dir=development_set.runs_dir(args.runs_dir),
+                    prompts_dir=args.prompts_dir,
+                    timeout_seconds=args.timeout,
+                    case_loader=development_set.load_case,
+                    label=development_set.name,
+                )
+            except run_benchmark.llm.ModelNotProvisionedError as exc:
+                print("FATAL: {0}".format(exc), file=sys.stderr)
+                return 1
+            except run_benchmark.llm.MissingAPIKeyError as exc:
+                print("FATAL: {0}".format(exc), file=sys.stderr)
+                return 1
+            except run_benchmark.BenchmarkError as exc:
+                print("FATAL: {0}".format(exc), file=sys.stderr)
+                return 1
+            print("development set {0}".format(development_set.name))
+            print(verify_drafts.render_report(report))
+            if not report.ok:
+                status = 1
+        return status
+
     if args.replay_check is not None:
+        if args.verify_drafts:
+            print("FATAL: --replay-check reads a run and takes no --verify-drafts", file=sys.stderr)
+            return 1
         # One check per set, because the cases of two sets are loaded by two
         # different loaders and a replay is only replayable if this code builds
         # the same brief for the case.
@@ -596,6 +671,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 case_deadline_seconds=args.case_deadline,
                 judge_votes=args.judge_votes,
                 replay_dir=args.replay_advocates,
+                verify_drafts=args.verify_drafts,
             )
         except run_benchmark.llm.ModelNotProvisionedError as exc:
             print("FATAL: {0}".format(exc), file=sys.stderr)

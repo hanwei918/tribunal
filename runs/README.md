@@ -87,6 +87,47 @@ when checking any of them: the staleness report can see only the prompt half for
 because it rebuilds *corpus* briefs by case number and 901 is not a corpus case — so its brief half
 reads `unknown`, which is "cannot tell" and not "unmoved".
 
+## `verify-recorded-drafts/` — where the verifier is measured, not the model
+
+`verify-recorded-drafts/<model>/` holds the output of
+
+    python -m eval.run_benchmark --verify-recorded-drafts RUN_DIR
+
+with the same thing available on a development set through
+`python -m eval.development_sets --verify-recorded-drafts RUN_DIR`, which writes
+`runs/<set>/verify-recorded-drafts/<model>/`. It is where the **draft verifier**
+is measured: the source run's recorded judge drafts are rebuilt exactly as they
+were, and only the verifier is called over them, so the same drafts are read
+with the pass off and on and the difference between the two readings is the
+verifier's and not a second sampling of the judge.
+
+The directory name is not the model id, and that is the point: "never the
+headline directory" is then a property of the path rather than a promise. A
+destination that is a model's own run directory is refused in code before
+anything is written, and so is a case whose recorded drafts answer a different
+brief, a different set of advocate prompts or a different judge prompt — the
+same four conditions `--replay-advocates` enforces, plus the judge side, because
+this mode reads the judge's drafts as well. A source run that asked the judge
+once has no panel to verify and is refused too.
+
+Three files are written, and the files a model's run directory carries are not
+among them. There is no `run.json`, no `invocations.json` and no `case-*.json`,
+because this is not a measurement of the model: the advocate and judge calls
+were made by the source run and cost nothing here, so the only token figures
+recorded are the verifier's own.
+
+| File | What it holds |
+|---|---|
+| `verify-recorded.json` | One entry per case: the vote's outcome and agreement **without** the verifier, read from the source run, and the same two **with** it, beside every statement the verifier judged `contradicted` and the reason the call was unusable if it was. |
+| `verify-recorded.md` | The same thing rendered for reading, one case per block. |
+| `events.jsonl` | The run's event log, in the same append-only hash-chained form as any other run's — `agent_call` entries for the verifier's calls and one `verification` event per case. |
+
+**No such directory is committed here.** The verifier has not been run over
+either development set, so there is nothing to commit, and the commands above
+are the ones that would produce it. Nothing in this directory may be merged into
+a model's run directory for the reason `external/` may not: those figures would
+then read as that run's.
+
 ## How to read one run directory
 
 | File | What it holds |
