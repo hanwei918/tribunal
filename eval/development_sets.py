@@ -530,7 +530,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help=(
             "after each case's drafts pass the code checks, ask a verifier once per "
             "case whether the brief supports every factual statement the drafts "
-            "state; a draft with a contradicted statement abstains"
+            "state; only a material contradiction makes a draft abstain"
         ),
     )
     parser.add_argument(

@@ -1016,39 +1016,100 @@ def current_prompts_sha256(prompts_dir: Path = PROMPTS_DIR) -> Optional[str]:
 class BriefStaleness:
     """Answers "does this cached result still belong to this code?" per case.
 
-    Two recorded digests answer it, not one. ``brief_sha256`` is the digest of
-    the exact bytes the agents were handed, so a moved brief means the facts
-    changed. ``prompts_sha256`` is the digest of the prompt directory, so a moved
-    prompt means the instructions changed. Either one takes the result out of
-    this code's measurements, and they are kept apart because they call for
-    different responses.
+    Two channels answer it, not one. The **brief** channel compares
+    ``brief_sha256``, the digest of the exact bytes the agents were handed, so a
+    moved brief means the facts changed. The **prompt** channel compares, per
+    role, the ``system_sha256`` and ``user_sha256`` the recorded calls carry
+    against what this code renders now, so a moved prompt means an agent's
+    instructions changed. Either one takes the result out of this code's
+    measurements, and they are kept apart because they call for different
+    responses.
 
-    Both are memoised: the brief digest per case, because rebuilding a brief is a
-    file read per case, and the prompts digest once for the whole directory,
-    however many cases are asked about.
+    The cache entry's own ``prompts_sha256`` is a third thing and is neither
+    channel: it digests the prompt **directory**, so it moves when a file is
+    added that no recorded call ever used. It stays in the record as history and
+    is deliberately not what the prompt channel asks.
+
+    Both channels are memoised: the brief digest per case, because rebuilding a
+    brief is a file read per case, and each case's transcript entries once,
+    however many questions are asked about that case.
     """
 
     def __init__(
         self,
         digest: Optional[Callable[[int], Optional[str]]] = None,
-        prompts_digest: Optional[Callable[[], Optional[str]]] = None,
+        run_dir: Optional[Path] = None,
+        entries_for: Optional[
+            Callable[[int], Optional[Sequence[Mapping[str, Any]]]]
+        ] = None,
+        prompts_dir: Path = PROMPTS_DIR,
     ) -> None:
         self._digest = current_brief_sha256 if digest is None else digest
-        self._prompts_digest = (
-            current_prompts_sha256 if prompts_digest is None else prompts_digest
-        )
+        self._run_dir = None if run_dir is None else Path(run_dir)
+        self._entries_for = entries_for
+        self._prompts_dir = Path(prompts_dir)
         self._current: Dict[int, Optional[str]] = {}
-        self._current_prompts: Optional[str] = None
+        self._entries: Dict[int, Optional[Sequence[Mapping[str, Any]]]] = {}
 
     def current_digest(self, case_no: int) -> Optional[str]:
         if case_no not in self._current:
             self._current[case_no] = self._digest(case_no)
         return self._current[case_no]
 
-    def current_prompts_digest(self) -> Optional[str]:
-        if self._current_prompts is None:
-            self._current_prompts = self._prompts_digest()
-        return self._current_prompts
+    def recorded_entries(self, case_no: int) -> Optional[Sequence[Mapping[str, Any]]]:
+        """The transcript entries recorded for one case, memoised.
+
+        ``None`` when they cannot be read at all, which is a different answer
+        from an empty transcript and is kept different: the first is "cannot
+        tell", the second is a finding.
+        """
+        if case_no not in self._entries:
+            self._entries[case_no] = self._read_entries(case_no)
+        return self._entries[case_no]
+
+    def _read_entries(self, case_no: int) -> Optional[Sequence[Mapping[str, Any]]]:
+        if self._entries_for is not None:
+            return self._entries_for(case_no)
+        if self._run_dir is None:
+            return None
+        payload = read_json(transcript_path(self._run_dir, case_no))
+        entries = payload.get("entries") if isinstance(payload, Mapping) else None
+        return entries if isinstance(entries, list) else None
+
+    def prompt_comparison(self, case_no: int) -> Tuple[str, str]:
+        """The prompt channel for one case, read from what its calls recorded.
+
+        The recorded calls carry the digest of the system prompt each was given,
+        and the advocates carry the digest of the brief beside it. Those are
+        compared, **per role**, with what this code renders now -- the same
+        comparison a replay makes for the advocates and the recorded-drafts
+        measurement makes for the judge. A prompt file no recorded call used is
+        therefore not a finding about this case, while a one-byte change to any
+        prompt a recorded call did use is.
+        """
+        entries = self.recorded_entries(case_no)
+        if entries is None:
+            return pipeline.PROMPT_UNCHECKED, (
+                "no transcript for case {0} could be read, so the prompts its "
+                "calls were given cannot be compared".format(case_no)
+            )
+        return pipeline.compare_recorded_prompts(
+            entries,
+            prompts_dir=self._prompts_dir,
+            advocate_user_sha256=self.current_digest(case_no),
+        )
+
+    def prompts_moved(self, case_no: int, document: Mapping[str, Any]) -> bool:
+        """Whether a prompt a recorded call was given has moved since.
+
+        The cache entry's own ``prompts_sha256`` is deliberately not consulted.
+        That is a digest of the prompt **directory**, so it moves when a file is
+        merely added to the directory -- which is not a statement about what any
+        agent was given. It is still recorded, as history.
+        """
+        if not isinstance(document, Mapping):
+            return False
+        return self.prompt_comparison(case_no)[0] == pipeline.PROMPT_MOVED
 
     def brief_moved(self, case_no: int, document: Mapping[str, Any]) -> bool:
         """Whether the brief digest was recorded and no longer matches."""
@@ -1058,16 +1119,6 @@ class BriefStaleness:
         if not isinstance(recorded, str) or not recorded:
             return False
         current = self.current_digest(case_no)
-        return current is not None and recorded != current
-
-    def prompts_moved(self, document: Mapping[str, Any]) -> bool:
-        """Whether the prompts digest was recorded and no longer matches."""
-        if not isinstance(document, Mapping):
-            return False
-        recorded = document.get("prompts_sha256")
-        if not isinstance(recorded, str) or not recorded:
-            return False
-        current = self.current_prompts_digest()
         return current is not None and recorded != current
 
     def brief_unchecked(self, case_no: int, document: Mapping[str, Any]) -> bool:
@@ -1083,20 +1134,17 @@ class BriefStaleness:
             return True
         return self.current_digest(case_no) is None
 
-    def prompts_unchecked(self, document: Mapping[str, Any]) -> bool:
+    def prompts_unchecked(self, case_no: int, document: Mapping[str, Any]) -> bool:
         """Whether the prompt half of the check could not be made for this entry.
 
-        Either the entry records no prompts digest -- it was written before one
-        was kept, so the file cannot say which prompts produced it -- or the
-        prompt directory cannot be read now. Both are "cannot tell", and neither
-        is a match.
+        Not the same question as whether the entry recorded a directory digest.
+        What an agent was given lives in the transcript, so a result whose calls
+        carry no digest, or whose transcript cannot be read, is one this code
+        cannot answer for. That is "cannot tell", and it is not a match.
         """
         if not isinstance(document, Mapping):
             return True
-        recorded = document.get("prompts_sha256")
-        if not isinstance(recorded, str) or not recorded:
-            return True
-        return self.current_prompts_digest() is None
+        return self.prompt_comparison(case_no)[0] == pipeline.PROMPT_UNCHECKED
 
     def moved_for(self, case_no: int, document: Mapping[str, Any]) -> Tuple[str, ...]:
         """Which recorded digests moved, named, in a fixed order.
@@ -1107,7 +1155,7 @@ class BriefStaleness:
         moved: List[str] = []
         if self.brief_moved(case_no, document):
             moved.append(grade.MOVED_BRIEF)
-        if self.prompts_moved(document):
+        if self.prompts_moved(case_no, document):
             moved.append(grade.MOVED_PROMPTS)
         return tuple(moved)
 
@@ -1117,12 +1165,14 @@ class BriefStaleness:
         A moved digest is a finding, whichever channel it is in, and a finding
         beats not being able to tell. Only when nothing recorded has moved does
         the question become whether every channel could actually be checked -- an
-        entry that never recorded a prompts digest is not an entry whose prompts
-        are known to match.
+        entry whose transcript cannot be read is not an entry whose prompts are
+        known to match.
         """
         if self.moved_for(case_no, document):
             return grade.STALENESS_STALE
-        if self.brief_unchecked(case_no, document) or self.prompts_unchecked(document):
+        if self.brief_unchecked(case_no, document) or self.prompts_unchecked(
+            case_no, document
+        ):
             return grade.STALENESS_UNKNOWN
         return grade.STALENESS_CURRENT
 
@@ -1140,9 +1190,12 @@ def brief_staleness(
     produced no result to be stale.
 
     The two channels are collected separately as well as as a union, so a report
-    can say which of the two moved rather than only that something did.
+    can say which of the two moved rather than only that something did. The
+    prompt channel is answered from each case's own transcript -- from the
+    ``system_sha256`` and ``user_sha256`` its calls recorded -- so the default
+    checker is built with the run directory it is reading.
     """
-    checker = BriefStaleness() if checker is None else checker
+    checker = BriefStaleness(run_dir=run_dir) if checker is None else checker
     stale: List[int] = []
     unknown: List[int] = []
     stale_brief: List[int] = []
@@ -1152,7 +1205,7 @@ def brief_staleness(
         document = load_cached(run_dir, case_no)
         if document is None:
             continue
-        if checker.prompts_unchecked(document):
+        if checker.prompts_unchecked(case_no, document):
             unchecked_prompts.append(case_no)
         status = checker.status_of(case_no, document)
         if status == grade.STALENESS_STALE:
@@ -2233,7 +2286,7 @@ def run_benchmark(
     # whether what it is skipping still belongs to this code. One checker for the
     # whole invocation, because the current brief for a case cannot change while
     # the run is in progress.
-    checker = BriefStaleness(brief_digest_for(case_loader))
+    checker = BriefStaleness(brief_digest_for(case_loader), run_dir=run_dir)
     for case_no in requested:
         document = None if force else load_cached(run_dir, case_no)
         if document is None:
@@ -3148,12 +3201,26 @@ def collect_comparison(
     common = set.intersection(*(set(numbers) for numbers in per_run.values()))
     shared = sorted(case_no for case_no in common if case_no in resolved_key)
 
-    # One checker across every row: the current brief for a case is the same
-    # question whichever run directory is asking it, and rebuilding it once per
-    # directory would be the same answer computed twice.
-    checker = BriefStaleness()
+    # One checker per row, because the prompt channel is answered from each
+    # directory's own transcripts -- but one **shared** brief memo across them
+    # all: the current brief for a case is the same question whichever run
+    # directory is asking it, and rebuilding it once per directory would be the
+    # same answer computed twice.
+    memo: Dict[int, Optional[str]] = {}
+
+    def shared_digest(case_no: int) -> Optional[str]:
+        if case_no not in memo:
+            memo[case_no] = current_brief_sha256(case_no)
+        return memo[case_no]
+
     return [
-        _row_from_run(directory, shared, resolved_key, checker) for directory in directories
+        _row_from_run(
+            directory,
+            shared,
+            resolved_key,
+            BriefStaleness(shared_digest, run_dir=directory),
+        )
+        for directory in directories
     ]
 
 
@@ -4187,9 +4254,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         help=(
             "after each case's drafts pass the code checks, ask a verifier once "
             "per case whether the brief supports every factual statement the "
-            "drafts state; a draft with a contradicted statement abstains. Off by "
-            "default, needs a judge vote of at least 2, and every verifier call is "
-            "billed"
+            "drafts state; only a material contradiction makes a draft abstain. "
+            "Off by default, needs a judge vote of at least 2, and every verifier "
+            "call is billed"
         ),
     )
     parser.add_argument(

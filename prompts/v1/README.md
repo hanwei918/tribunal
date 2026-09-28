@@ -8,7 +8,7 @@
 | `stance.rider.md` | The block substituted into `{{STANCE}}` when the RIDER argues. |
 | `stance.driver.md` | The block substituted into `{{STANCE}}` when the DRIVER argues. |
 | `judge.system.md` | The system prompt for the impartial judge. |
-| `verifier.system.md` | The system prompt for the draft verifier. Off by default; asked once per case, over every valid draft, to say whether the brief supports each factual statement. It judges statements, never the ruling. |
+| `verifier.system.md` | The system prompt for the draft verifier. Off by default; asked once per case, over every valid draft, to say whether the brief supports each factual statement. It judges statements, never the ruling. A `contradicted` verdict must also carry a boolean `material`: only a contradiction whose difference **could change a conclusion the statement draws** stops its draft, while a difference of rounding or precision is recorded, flagged, and the draft keeps its vote. |
 
 ## One advocate prompt, not two
 

@@ -93,11 +93,25 @@ class SourceTransport:
     """
 
     def __init__(
-        self, produced, explanation=FACTUAL_EXPLANATION, verdict_for=None, raw=None
+        self,
+        produced,
+        explanation=FACTUAL_EXPLANATION,
+        verdict_for=None,
+        material_for=None,
+        brief_value_for=None,
+        raw=None,
     ):
         self.produced = produced
         self.explanation = explanation
         self.verdict_for = verdict_for or (lambda item: pipeline.VERDICT_SUPPORTED)
+        # A contradiction stops its draft only when it is said to be able to
+        # change a conclusion, so a scripted verdict carries that answer too. The
+        # default is the stricter reading, which is what this pass measured
+        # before materiality existed.
+        self.material_for = material_for or (lambda item: True)
+        self.brief_value_for = brief_value_for or (
+            lambda item: "the figure the brief holds"
+        )
         self.raw = raw
         self.roles = []
         self.verifier_requests = []
@@ -129,18 +143,19 @@ class SourceTransport:
     def _verifier_answer(self, statements):
         if self.raw is not None:
             return self.raw
-        return json.dumps(
-            {
-                "verdicts": [
-                    {
-                        "statement": item["n"],
-                        "verdict": self.verdict_for(item),
-                        "evidence": "EV-GPS-00101",
-                    }
-                    for item in statements
-                ]
+        verdicts = []
+        for item in statements:
+            verdict = self.verdict_for(item)
+            entry = {
+                "statement": item["n"],
+                "verdict": verdict,
+                "evidence": "EV-GPS-00101",
             }
-        )
+            if verdict == pipeline.VERDICT_CONTRADICTED:
+                entry[pipeline.VERDICT_MATERIAL] = bool(self.material_for(item))
+                entry[pipeline.VERDICT_BRIEF_VALUE] = self.brief_value_for(item)
+            verdicts.append(entry)
+        return json.dumps({"verdicts": verdicts})
 
     def verifier_calls(self) -> int:
         return sum(
@@ -262,36 +277,69 @@ class RecordedDraftMeasurementTests(unittest.TestCase):
             [item["text"] for item in report.cases[0].judged],
         )
 
-    def test_the_vote_is_reported_without_and_with_the_verifier(self):
+    def test_one_set_of_verdicts_yields_all_three_votes(self):
+        """The rule, read three ways on one call's verdicts.
+
+        Draft 1's fact is contradicted **materially** and draft 2's **not**, so
+        the two rules part company on this case and the report has to show both:
+        the strict rule stops two drafts and leaves too few to carry a ruling,
+        while the pipeline's own stops one and the ruling survives. Nothing is
+        sampled twice -- the three readings are three reductions of one answer.
+        """
         with tempfile.TemporaryDirectory() as tmp:
             runs, source, _ = source_run(tmp)
 
-            report, _ = measure(
+            report, transport = measure(
                 runs,
                 source,
                 transport=SourceTransport(
                     produced_from_key(answer_key()),
                     verdict_for=lambda item: (
                         pipeline.VERDICT_CONTRADICTED
-                        if item["draft"] == 1
+                        if item["draft"] <= 2
                         else pipeline.VERDICT_SUPPORTED
                     ),
+                    material_for=lambda item: item["draft"] == 1,
                 ),
             )
 
-        case = report.cases[0]
-        # The source run's own vote, and the vote the verifier leaves.
-        self.assertEqual("carried", case.recorded_outcome)
-        self.assertEqual(1.0, case.recorded_agreement)
-        self.assertEqual("carried_not_unanimous", case.verified_outcome)
-        self.assertEqual(0.75, case.verified_agreement)
-        self.assertTrue(case.matches_recorded, "the recorded vote was reproduced")
-        self.assertTrue(case.changed)
-        self.assertEqual(list(CASE_SET), report.changed_cases)
-        self.assertEqual((1,), case.abstained)
-        self.assertEqual(1, len(case.contradicted))
+        self.assertEqual(len(CASE_SET), transport.verifier_calls(), "one call per case")
 
-    def test_the_report_quotes_every_contradicted_statement(self):
+        for case in report.cases:
+            with self.subTest(case=case.case_no):
+                # Without the verifier: the source run's own vote.
+                self.assertEqual("carried", case.without.outcome)
+                self.assertEqual(1.0, case.without.agreement)
+                # The strict rule: every contradiction stops its draft, so two
+                # stand and the threshold of three is not met. The agreement is
+                # still the winner's share of the whole panel, which is why it
+                # reads 0.5 rather than nothing.
+                self.assertEqual("escalated", case.any_contradiction.outcome)
+                self.assertEqual(0.5, case.any_contradiction.agreement)
+                self.assertEqual("ESCALATE", case.any_contradiction.ruling)
+                # Materiality only: the pipeline's own rule.
+                self.assertEqual("carried_not_unanimous", case.material_only.outcome)
+                self.assertEqual(0.75, case.material_only.agreement)
+                self.assertEqual(case.without.ruling, case.material_only.ruling)
+
+                self.assertTrue(case.matches_recorded, "the recorded vote was reproduced")
+                self.assertTrue(case.changed, "the verifier moved the vote")
+                self.assertTrue(case.strict_changed)
+                self.assertEqual((1,), case.abstained)
+                self.assertEqual(2, len(case.contradicted))
+                self.assertEqual(1, len(case.material))
+
+        self.assertEqual(list(CASE_SET), report.changed_cases)
+        self.assertEqual(list(CASE_SET), report.strict_changed_cases)
+        self.assertEqual([], report.saved_cases, "materiality changed no case here")
+
+    def test_materiality_alone_keeps_the_vote_the_strict_rule_would_have_moved(self):
+        """The case the field exists for, and the one the report must name.
+
+        Every draft is contradicted and every contradiction is immaterial, so
+        the strict rule leaves no draft standing while the pipeline's own rule
+        leaves the vote exactly as the run recorded it.
+        """
         with tempfile.TemporaryDirectory() as tmp:
             runs, source, _ = source_run(tmp)
 
@@ -301,6 +349,45 @@ class RecordedDraftMeasurementTests(unittest.TestCase):
                 transport=SourceTransport(
                     produced_from_key(answer_key()),
                     verdict_for=lambda item: pipeline.VERDICT_CONTRADICTED,
+                    material_for=lambda item: False,
+                ),
+            )
+            text = verify_drafts.render_report(report)
+
+        for case in report.cases:
+            with self.subTest(case=case.case_no):
+                self.assertEqual("carried", case.without.outcome)
+                self.assertEqual(1.0, case.without.agreement)
+                self.assertEqual("no_valid_drafts", case.any_contradiction.outcome)
+                self.assertIsNone(case.any_contradiction.ruling)
+                self.assertEqual("carried", case.material_only.outcome)
+                self.assertEqual(1.0, case.material_only.agreement)
+
+                self.assertFalse(case.changed, "materiality kept the vote")
+                self.assertTrue(case.strict_changed, "the strict rule would not have")
+                self.assertEqual((), case.abstained)
+                self.assertEqual(4, len(case.contradicted))
+                self.assertEqual(0, len(case.material))
+
+        self.assertEqual([], report.changed_cases)
+        self.assertEqual(list(CASE_SET), report.strict_changed_cases)
+        self.assertEqual(list(CASE_SET), report.saved_cases)
+        self.assertIn("materiality alone keeps the vote on:", text)
+        self.assertIn("the verifier moved the vote on: no case", text)
+
+    def test_the_report_quotes_every_contradicted_statement(self):
+        """Quoted with the draft, the materiality, and what the brief holds."""
+        with tempfile.TemporaryDirectory() as tmp:
+            runs, source, _ = source_run(tmp)
+
+            report, _ = measure(
+                runs,
+                source,
+                transport=SourceTransport(
+                    produced_from_key(answer_key()),
+                    verdict_for=lambda item: pipeline.VERDICT_CONTRADICTED,
+                    material_for=lambda item: item["draft"] % 2 == 1,
+                    brief_value_for=lambda item: "the figure the brief holds",
                 ),
             )
             text = verify_drafts.render_report(report)
@@ -308,12 +395,17 @@ class RecordedDraftMeasurementTests(unittest.TestCase):
         for case in report.cases:
             with self.subTest(case=case.case_no):
                 self.assertEqual(4, len(case.contradicted))
-                self.assertEqual(4, len(case.abstained))
+                self.assertEqual(2, len(case.material))
+                self.assertEqual(2, len(case.abstained))
         self.assertIn(FACTUAL_EXPLANATION, text)
+        self.assertIn("draft 1, material", text)
+        self.assertIn("draft 2, not material", text)
+        self.assertIn('the brief holds: "the figure the brief holds"', text)
         for case_no in CASE_SET:
             self.assertIn(str(case_no), text)
 
     def test_a_malformed_answer_leaves_every_draft_voting(self):
+        """All three readings coincide, because there is nothing to reduce."""
         with tempfile.TemporaryDirectory() as tmp:
             runs, source, _ = source_run(tmp)
 
@@ -327,12 +419,13 @@ class RecordedDraftMeasurementTests(unittest.TestCase):
 
         self.assertFalse(report.ok, "a case whose verifier could not answer is not ok")
         self.assertEqual([], report.changed_cases)
+        self.assertEqual([], report.strict_changed_cases)
         for case in report.cases:
             with self.subTest(case=case.case_no):
                 self.assertTrue(case.called)
                 self.assertFalse(case.usable)
-                self.assertEqual(case.recorded_outcome, case.verified_outcome)
-                self.assertEqual(case.recorded_agreement, case.verified_agreement)
+                self.assertEqual(case.without, case.material_only)
+                self.assertEqual(case.without, case.any_contradiction)
                 self.assertEqual((), case.abstained)
 
     def test_the_verifier_tokens_are_the_measurements_own(self):
@@ -386,6 +479,8 @@ class RecordedDraftMeasurementTests(unittest.TestCase):
                 self.assertTrue(line["usable"])
                 self.assertEqual(4, line["statements"])
                 self.assertEqual(1, line["contradicted"])
+                self.assertEqual(1, line["material"])
+                self.assertEqual(0, line["not_material"])
                 self.assertEqual([1], line["abstained"])
 
 

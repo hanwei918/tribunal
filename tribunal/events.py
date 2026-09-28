@@ -390,6 +390,8 @@ _SUMMARY_KEYS = (
     "statements",
     "supported",
     "contradicted",
+    "material",
+    "not_material",
     "not_in_evidence",
     "ruling",
     "matched",

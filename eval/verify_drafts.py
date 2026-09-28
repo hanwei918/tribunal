@@ -106,23 +106,48 @@ def _add_tokens(left: Mapping[str, int], right: Mapping[str, int]) -> Dict[str, 
 
 
 @dataclass(frozen=True)
+class VoteReading:
+    """One reading of a case's vote: how it came out, and on what ruling."""
+
+    outcome: Optional[str]
+    agreement: Optional[float]
+    ruling: Optional[str]
+
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            "outcome": self.outcome,
+            "agreement": self.agreement,
+            "ruling": self.ruling,
+        }
+
+
+@dataclass(frozen=True)
 class CaseVerification:
-    """One case's vote without and with the verifier, and what it found."""
+    """One case's vote read **three ways**, on the same drafts and the same verdicts.
+
+    ``without`` is the vote the run already recorded, re-derived from the
+    recorded drafts with no verification applied. ``any_contradiction`` applies
+    the verdicts and lets **every** contradiction stop its draft -- what the pass
+    did before materiality existed. ``material_only`` lets only a contradiction
+    that could change a conclusion stop a draft, which is what the pipeline does.
+
+    All three come from one verifier call. Two of them are reductions of the same
+    verdicts, which is the point: the difference between them is the rule, and
+    nothing else.
+    """
 
     case_no: int
     statements: int
     called: bool
     usable: bool
     reason: str
-    recorded_outcome: Optional[str]
-    recorded_agreement: Optional[float]
-    recorded_ruling: Optional[str]
-    verified_outcome: Optional[str]
-    verified_agreement: Optional[float]
-    verified_ruling: Optional[str]
+    without: VoteReading
+    any_contradiction: VoteReading
+    material_only: VoteReading
     matches_recorded: bool
     abstained: Tuple[int, ...] = ()
     contradicted: Tuple[Mapping[str, Any], ...] = ()
+    material: Tuple[Mapping[str, Any], ...] = ()
     not_in_evidence: Tuple[Mapping[str, Any], ...] = ()
     judged: Tuple[Mapping[str, Any], ...] = ()
     tokens: Mapping[str, int] = field(default_factory=lambda: dict(ZERO_TOKENS))
@@ -130,10 +155,23 @@ class CaseVerification:
 
     @property
     def changed(self) -> bool:
-        """Whether the verifier moved this case's ruling or its agreement."""
-        return (self.recorded_outcome, self.recorded_agreement) != (
-            self.verified_outcome,
-            self.verified_agreement,
+        """Whether the verifier moved the vote under the pipeline's own reading."""
+        return (self.without.outcome, self.without.agreement) != (
+            self.material_only.outcome,
+            self.material_only.agreement,
+        )
+
+    @property
+    def strict_changed(self) -> bool:
+        """Whether reading every contradiction as material would have moved it.
+
+        A case where this is true and :attr:`changed` is false is the case
+        materiality exists for: a correct draft that the stricter rule would have
+        stopped.
+        """
+        return (self.without.outcome, self.without.agreement) != (
+            self.any_contradiction.outcome,
+            self.any_contradiction.agreement,
         )
 
     def as_dict(self) -> Dict[str, Any]:
@@ -143,20 +181,15 @@ class CaseVerification:
             "called": self.called,
             "usable": self.usable,
             "reason": self.reason,
-            "recorded": {
-                "outcome": self.recorded_outcome,
-                "agreement": self.recorded_agreement,
-                "ruling": self.recorded_ruling,
-            },
-            "verified": {
-                "outcome": self.verified_outcome,
-                "agreement": self.verified_agreement,
-                "ruling": self.verified_ruling,
-            },
+            "without": self.without.as_dict(),
+            "any_contradiction": self.any_contradiction.as_dict(),
+            "material_only": self.material_only.as_dict(),
             "matches_recorded": self.matches_recorded,
             "changed": self.changed,
+            "strict_changed": self.strict_changed,
             "abstained": list(self.abstained),
             "contradicted": [dict(item) for item in self.contradicted],
+            "material": [dict(item) for item in self.material],
             "not_in_evidence": [dict(item) for item in self.not_in_evidence],
             "judged": [dict(item) for item in self.judged],
             "tokens": dict(self.tokens),
@@ -189,8 +222,25 @@ class RecordedReport:
         return sum(len(case.contradicted) for case in self.cases)
 
     @property
+    def material_statements(self) -> int:
+        return sum(len(case.material) for case in self.cases)
+
+    @property
     def changed_cases(self) -> List[int]:
         return [case.case_no for case in self.cases if case.changed]
+
+    @property
+    def strict_changed_cases(self) -> List[int]:
+        return [case.case_no for case in self.cases if case.strict_changed]
+
+    @property
+    def saved_cases(self) -> List[int]:
+        """Cases the stricter rule would have moved and this one does not."""
+        return [
+            case.case_no
+            for case in self.cases
+            if case.strict_changed and not case.changed
+        ]
 
     @property
     def ok(self) -> bool:
@@ -204,19 +254,17 @@ def _recorded_judge_prompt_matches(
     """Whether every recorded judge entry answers the judge prompt rendered now.
 
     The judge entries' own ``system_sha256`` is compared with the digest of the
-    prompt this code holds. A transcript that recorded no judge entry, or an
+    prompt this code holds, through the one comparison the prompt channel of the
+    staleness check also uses. A transcript that recorded no judge entry, or an
     entry with no digest, cannot be shown to answer this prompt, so it is a
     mismatch and not a pass.
     """
-    expected = transcript_module.sha256_text(judge_prompt)
-    found = False
-    for entry in entries:
-        if entry.get("role") != transcript_module.ROLE_JUDGE:
-            continue
-        found = True
-        if entry.get("system_sha256") != expected:
-            return False
-    return found
+    state, _reason = pipeline.compare_recorded_system_prompts(
+        entries,
+        role=transcript_module.ROLE_JUDGE,
+        rendered_sha256=transcript_module.sha256_text(judge_prompt),
+    )
+    return state == pipeline.PROMPT_MATCH
 
 
 def _verifier_prompt(prompts_dir: Path) -> str:
@@ -227,6 +275,16 @@ def _ruling_of(vote: Any) -> Optional[str]:
     ruling = vote.ruling
     inner = ruling.get("ruling") if isinstance(ruling, Mapping) else None
     return inner.get("ruling") if isinstance(inner, Mapping) else None
+
+
+def _reading_of(vote: Any) -> VoteReading:
+    """One vote as the report reads it: outcome, agreement and ruling."""
+    record = vote.record
+    return VoteReading(
+        outcome=record.get("outcome"),
+        agreement=record.get("agreement"),
+        ruling=_ruling_of(vote),
+    )
 
 
 def recorded_drafts_for_case(
@@ -332,18 +390,44 @@ def verify_recorded_case(
         events_log=events_log,
         case_no=case_no,
     )
-    with_vote = pipeline.reduce_vote(updated, votes, found["referee_result"])
+    material_vote = pipeline.reduce_vote(updated, votes, found["referee_result"])
 
-    recorded = without.record
-    verified = with_vote.record
     entry = transcript.entries[-1] if len(transcript) else None
     judged = verification.get("judged") or []
     contradicted = [
         item for item in judged if item["verdict"] == pipeline.VERDICT_CONTRADICTED
     ]
+    material = [item for item in contradicted if item[pipeline.VERDICT_MATERIAL]]
     not_in_evidence = [
         item for item in judged if item["verdict"] == pipeline.VERDICT_NOT_IN_EVIDENCE
     ]
+
+    # The second reading of the same verdicts, and no call is made for it: it is
+    # the strict rule this pass used before materiality existed, applied to the
+    # answer the one call returned, so the readings differ in the rule and in
+    # nothing else. With no usable verdicts there is nothing to re-apply, and all
+    # three readings are then the same vote.
+    if judged:
+        strict, _ignored = pipeline.apply_verification(
+            drafts,
+            verification.get("statements") or [],
+            [
+                {
+                    "statement": item["n"],
+                    "verdict": item["verdict"],
+                    "evidence": item["evidence"],
+                    pipeline.VERDICT_MATERIAL: item[pipeline.VERDICT_MATERIAL],
+                    pipeline.VERDICT_BRIEF_VALUE: item[pipeline.VERDICT_BRIEF_VALUE],
+                }
+                for item in judged
+            ],
+            abstain_on=pipeline.ABSTAIN_ON_ANY,
+        )
+        any_vote = pipeline.reduce_vote(strict, votes, found["referee_result"])
+    else:
+        any_vote = without
+
+    recorded = without.record
 
     return (
         CaseVerification(
@@ -352,18 +436,16 @@ def verify_recorded_case(
             called=bool(verification.get("called")),
             usable=bool(verification.get("usable")),
             reason=verification.get("reason") or "",
-            recorded_outcome=recorded.get("outcome"),
-            recorded_agreement=recorded.get("agreement"),
-            recorded_ruling=_ruling_of(without),
-            verified_outcome=verified.get("outcome"),
-            verified_agreement=verified.get("agreement"),
-            verified_ruling=_ruling_of(with_vote),
+            without=_reading_of(without),
+            any_contradiction=_reading_of(any_vote),
+            material_only=_reading_of(material_vote),
             matches_recorded=(
                 recorded.get("outcome") == found["vote"].get("outcome")
                 and recorded.get("agreement") == found["vote"].get("agreement")
             ),
             abstained=tuple(verification.get("abstained") or ()),
             contradicted=tuple(contradicted),
+            material=tuple(material),
             not_in_evidence=tuple(not_in_evidence),
             judged=tuple(judged),
             tokens=verification.get("tokens") or dict(ZERO_TOKENS),
@@ -484,6 +566,8 @@ def verify_recorded_run(
         verified_cases=len(results),
         refused_cases=len(refused),
         contradicted_statements=sum(len(case.contradicted) for case in results),
+        material_statements=sum(len(case.material) for case in results),
+        changed_cases=[case.case_no for case in results if case.changed],
         tokens_consumed=totals.get("total_tokens", 0),
     )
 
@@ -535,23 +619,25 @@ def render_report(report: RecordedReport) -> str:
         "  results       {0}".format(report.run_dir),
         "  prompts       {0}".format(str(report.prompts_sha256 or "unrecorded")[:16]),
         "",
-        "Per case — the vote without and with the verifier, on the same drafts:",
+        "Per case — three readings of the vote, on the same drafts and the same",
+        "verdicts: without the verifier, abstaining on any contradiction, and",
+        "abstaining on material contradictions only (what the pipeline does).",
         "",
     ]
 
-    def describe(outcome: Any, agreement: Any, ruling: Any) -> str:
+    def describe(reading: VoteReading) -> str:
         return "{0} (agreement {1}, {2})".format(
-            outcome or "none", agreement, ruling or "no ruling"
+            reading.outcome or "none", reading.agreement, reading.ruling or "no ruling"
         )
 
     for case in report.cases:
-        lines.append(
-            "  case {0}  without: {1}  with: {2}".format(
-                case.case_no,
-                describe(case.recorded_outcome, case.recorded_agreement, case.recorded_ruling),
-                describe(case.verified_outcome, case.verified_agreement, case.verified_ruling),
-            )
-        )
+        lines.append("  case {0}".format(case.case_no))
+        for label, reading in (
+            ("without the verifier", case.without),
+            ("abstaining on any contradiction", case.any_contradiction),
+            ("abstaining on material only", case.material_only),
+        ):
+            lines.append("    {0:<34} {1}".format(label + ":", describe(reading)))
         if not case.usable:
             lines.append(
                 "    verification not usable: {0}".format(
@@ -560,19 +646,25 @@ def render_report(report: RecordedReport) -> str:
             )
         if case.abstained:
             lines.append(
-                "    abstained on a contradicted fact: draft(s) {0}".format(
+                "    abstained on a material contradiction: draft(s) {0}".format(
                     ", ".join(str(item) for item in case.abstained)
                 )
             )
         if case.contradicted:
             for item in case.contradicted:
                 lines.append(
-                    '    contradicted (draft {0}): "{1}" [{2}]'.format(
+                    '    contradicted (draft {0}, {1}): "{2}" [{3}]'.format(
                         item["draft"],
+                        "material"
+                        if item[pipeline.VERDICT_MATERIAL]
+                        else "not material",
                         item["text"],
                         item.get("evidence") or "no evidence named",
                     )
                 )
+                held = item.get(pipeline.VERDICT_BRIEF_VALUE)
+                if held:
+                    lines.append('      the brief holds: "{0}"'.format(held))
         else:
             lines.append("    contradicted: none")
 
@@ -581,25 +673,40 @@ def render_report(report: RecordedReport) -> str:
 
     lines.append("")
     lines.append(
-        "  {0} case(s) verified, {1} refused, {2} contradicted statement(s), "
-        "{3} verifier token(s).".format(
+        "  {0} case(s) verified, {1} refused, {2} contradicted statement(s) "
+        "({3} material, {4} not), {5} verifier token(s).".format(
             len(report.cases),
             len(report.refused),
             report.contradicted_statements,
+            report.material_statements,
+            report.contradicted_statements - report.material_statements,
             report.tokens.get("total_tokens", 0),
         )
     )
-    if report.changed_cases:
+    lines.append(
+        "  the verifier moved the vote on: {0}".format(
+            ", ".join(str(case_no) for case_no in report.changed_cases)
+            if report.changed_cases
+            else "no case"
+        )
+    )
+    lines.append(
+        "  abstaining on any contradiction would have moved: {0}".format(
+            ", ".join(str(case_no) for case_no in report.strict_changed_cases)
+            if report.strict_changed_cases
+            else "no case"
+        )
+    )
+    if report.saved_cases:
         lines.append(
-            "  the verifier changed the vote on: {0}".format(
-                ", ".join(str(case_no) for case_no in report.changed_cases)
+            "  materiality alone keeps the vote on: {0}".format(
+                ", ".join(str(case_no) for case_no in report.saved_cases)
             )
         )
-    else:
-        lines.append("  the verifier changed no case's vote.")
     lines.append("")
     lines.append(
-        "The drafts are the source run's, so a difference here is the verifier's "
-        "and not a second sampling of the judge."
+        "All three readings are of the source run's own drafts and of one set of "
+        "verdicts, so a difference between them is the rule and not a second "
+        "sampling of the judge."
     )
     return "\n".join(lines)

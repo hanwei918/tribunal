@@ -35,6 +35,35 @@ from `current` into `**STALE (prompt)**`, so the block now reads `current=0 stal
 Nothing in the cache moved and nothing about the brief channel changed: editing a prompt is supposed
 to do this, and the channel reported it.
 
+**The prompt channel was corrected a fourth time, on 2026-09-28.** It no longer compares the
+recorded `prompts_sha256` — the digest of the whole prompt **directory** — against the directory as
+it stands now. It compares, **per role**, the `system_sha256` (and, for the advocates, the
+`user_sha256`) that each recorded **call** carries against what this code renders now: the same
+comparison a replay makes for the advocates and the recorded-drafts measurement makes for the judge.
+The reason is stated above as this channel's virtue and was in fact its defect — a digest taken over
+the directory moves when a file is merely **added**, which is not a statement about what any agent
+was given. So a prompt no recorded call used cannot make a result stale, while a one-byte change to
+any prompt a call did use still does. The cache entry's `prompts_sha256` is still recorded, as
+history, and `tests/test_run_benchmark.py` still asserts that it is.
+
+Under the corrected channel the corpus cache reads **29 of 29 current** — no stale, no unknown — and
+the second development set **15 of 15**, each measured with its own loader. The fourteen `unknown`
+in the block below were an artefact of the directory digest being absent from results written before
+that field was kept, not of anything missing from those runs; and the three the block calls
+`**STALE (prompt)**` were read as stale because a file in the prompt directory had moved, not because
+the judge had been told something else. Nothing in the cache moved and no brief changed.
+
+Two things are left exactly as they were, and deliberately. The block below is the output of the
+command beneath it as that command stood on 2026-09-22, and it is not rewritten: the fingerprint gate
+above withholds the comparison anyway, because the cache under `runs/deepseek-deepseek-flash` has
+moved on from the fingerprint recorded below — so the block is unchecked history rather than a live
+claim, which is the state the gate exists to produce. And the block's `hy4-preview` line reads
+`stale=0 unknown=1` for case 109, which the committed code does not reproduce: that entry records a
+`brief_sha256` this code does not build, so the brief channel answers `**STALE (brief)**` for it and
+did so before this change too. The fingerprint gate is why nothing caught that; it is recorded here
+rather than silently corrected, because the note's numbers are re-derived and not edited. The change
+itself is recorded in `docs/notes/2026-09-28-the-draft-verifier-and-how-it-is-measured.md`.
+
 ## The defect
 
 Three things were wrong with how a cached benchmark result was read, and only the third

@@ -36,7 +36,11 @@ What is covered
 * ``--compare``: two cached runs tabulated off disk, making no model call;
 * staleness: a cached result whose brief this code still builds reports current,
   one whose brief has changed reports stale **and is named**, a brief that
-  cannot be rebuilt is unknown rather than current, and a grading over a mixed
+  cannot be rebuilt is unknown rather than current, and so is a result whose
+  recorded calls cannot say which prompts they were given: the prompt channel
+  compares, per role, the digests those calls carry against what this code
+  renders now, so a prompt no recorded call used is not a finding about any case
+  while a one-byte change to one a call did use is, and a grading over a mixed
   set says on its face that its exact-match figure is not one measurement —
   with the digest shown to be the one the pipeline itself recorded, so the
   check cannot be satisfied by comparing against a constant;
@@ -2449,9 +2453,15 @@ class StalenessTests(unittest.TestCase):
         runner.write_json(runner.case_cache_path(run_dir, case_no), document)
 
     def test_a_cached_case_whose_brief_still_matches_reports_current(self):
+        """The check is per case, and the checker has to be able to answer both
+        channels: the brief digest comes from the builder, and the prompt digests
+        come from the case's own transcript, so it is built with the directory it
+        is reading.
+        """
         with tempfile.TemporaryDirectory() as tmp:
             run_dir = self._cached_run(tmp)
             staleness = runner.brief_staleness(run_dir, CASE_SET)
+            checker = runner.BriefStaleness(run_dir=run_dir)
 
             self.assertTrue(staleness.checked, "the check must say it was made")
             self.assertEqual((), staleness.stale)
@@ -2461,9 +2471,7 @@ class StalenessTests(unittest.TestCase):
                 with self.subTest(case=case_no):
                     self.assertEqual(
                         grade.STALENESS_CURRENT,
-                        runner.BriefStaleness().status_of(
-                            case_no, runner.load_cached(run_dir, case_no)
-                        ),
+                        checker.status_of(case_no, runner.load_cached(run_dir, case_no)),
                     )
 
     def test_the_digest_it_rebuilds_is_the_one_the_pipeline_recorded(self):
@@ -2491,7 +2499,7 @@ class StalenessTests(unittest.TestCase):
             # The neighbours are untouched by it: a mixed set, not a stale set.
             self.assertEqual(
                 grade.STALENESS_CURRENT,
-                runner.BriefStaleness().status_of(
+                runner.BriefStaleness(run_dir=run_dir).status_of(
                     CASE_SET[0], runner.load_cached(run_dir, CASE_SET[0])
                 ),
             )
@@ -2673,13 +2681,23 @@ class TwoChannelStalenessTests(unittest.TestCase):
     so a report saying only "stale" leaves the reader unable to tell which one to
     look at. These tests pin the separation on every surface that reports it.
 
-    The third answer is the one that changes most when the prompt channel is
-    added: an entry written before the field was kept records no prompts digest,
-    and a result whose instructions cannot be established is not a result this
-    code can call current. It is `unknown`, which is not a synonym for `current`.
+    What each channel reads is what makes them two. The brief channel reads the
+    cache entry's own ``brief_sha256``. The prompt channel reads the **calls**:
+    every transcript entry records the digest of the system prompt that call was
+    given, and an advocate's entry records the brief's digest beside it, so what
+    an agent was handed is compared per role against what this code renders now.
+    That is why a prompt file no recorded call used is not a finding about any
+    case, and why the cache entry's own ``prompts_sha256`` -- a digest of the
+    whole directory -- is deliberately not consulted. It is still recorded, as
+    history.
+
+    The third answer is the one that matters most here: a call whose system
+    prompt digest was never recorded, or whose transcript cannot be read at all,
+    is not a call whose instructions are known to match. It is `unknown`, which
+    is not a synonym for `current`.
 
     Nothing here re-runs a case and nothing here touches the real cache under
-    ``runs/``.
+    ``runs/`` or the real prompt files under ``prompts/``.
     """
 
     def _cached_run(self, tmp):
@@ -2692,22 +2710,67 @@ class TwoChannelStalenessTests(unittest.TestCase):
         document[field] = value
         runner.write_json(runner.case_cache_path(run_dir, case_no), document)
 
+    def _checker(self, run_dir, prompts_dir=PROMPTS_DIR):
+        """A checker that can answer both channels for one run directory."""
+        return runner.BriefStaleness(run_dir=run_dir, prompts_dir=prompts_dir)
+
+    def _move_recorded_prompt(self, run_dir, case_no, value="0" * 64):
+        """Give every recorded judge call a prompt digest this code does not render.
+
+        This is what a moved prompt looks like from the transcript's point of
+        view, and the transcript is where what an agent was given is recorded.
+        """
+        path = runner.transcript_path(run_dir, case_no)
+        payload = runner.read_json(path)
+        for entry in payload["entries"]:
+            if entry["role"] == transcript.ROLE_JUDGE:
+                entry["system_sha256"] = value
+        runner.write_json(path, payload)
+
+    def _drop_recorded_prompt_digest(self, run_dir, case_no):
+        """Remove the digest a recorded judge call would have carried."""
+        path = runner.transcript_path(run_dir, case_no)
+        payload = runner.read_json(path)
+        for entry in payload["entries"]:
+            if entry["role"] == transcript.ROLE_JUDGE:
+                entry.pop("system_sha256", None)
+        runner.write_json(path, payload)
+
     def test_a_prompt_that_moved_reports_stale_and_names_the_prompt(self):
+        """A one-byte change to a prompt a recorded call was given.
+
+        The change is made to a **copy** of the prompt set and the run is made
+        against that copy, so the prompt the recorded call was given really is
+        the one that moved. The shipped files are not touched.
+
+        The judge prompt is one file every case's judge call was given, so the
+        byte that moved moves it for all three cases, not for one: the prompt
+        channel asks what each recorded call was handed, and all three were
+        handed the same file.
+        """
         with tempfile.TemporaryDirectory() as tmp:
-            run_dir = self._cached_run(tmp)
+            prompts = prompts_copy(tmp)
+            bench(tmp, cases=CASE_SET, prompts_dir=prompts)
+            run_dir = run_dir_of(tmp)
             case_no = CASE_SET[1]
-            self._set_digest(run_dir, case_no, "prompts_sha256", "0" * 64)
+            move_one_byte(prompts / pipeline.JUDGE_PROMPT_FILE)
 
-            staleness = runner.brief_staleness(run_dir, CASE_SET)
+            checker = self._checker(run_dir, prompts)
+            staleness = runner.brief_staleness(run_dir, CASE_SET, checker)
 
-            self.assertEqual((case_no,), staleness.stale)
+            self.assertEqual(tuple(sorted(CASE_SET)), staleness.stale)
             self.assertEqual((), staleness.stale_brief)
-            self.assertEqual((case_no,), staleness.stale_prompts)
+            self.assertEqual(tuple(sorted(CASE_SET)), staleness.stale_prompts)
             self.assertEqual((grade.MOVED_PROMPTS,), staleness.moved_for(case_no))
 
-            text = grade.render_report(runner.grade_run(run_dir, cases=CASE_SET))
+            text = grade.render_report(
+                runner.grade_run(run_dir, cases=CASE_SET, checker=checker)
+            )
             self.assertIn("| **STALE (prompt)** |", text)
-            self.assertIn("The prompts have moved for 1 of 3: {0}".format(case_no), text)
+            self.assertIn(
+                "The prompts have moved for 3 of 3: 101, 102, 103",
+                text,
+            )
             self.assertNotIn(
                 "The brief has moved",
                 text,
@@ -2735,13 +2798,20 @@ class TwoChannelStalenessTests(unittest.TestCase):
             )
 
     def test_a_run_where_both_digests_moved_reports_both(self):
+        """One case, both channels, and the report keeps them apart.
+
+        The brief is moved through the cache entry that records it. The prompt is
+        moved through the **transcript** entry the call is recorded in, so the
+        comparison table -- which reads the shipped prompt set through its own
+        checker -- sees it too.
+        """
         with tempfile.TemporaryDirectory() as tmp:
             runs = Path(tmp) / "runs"
             bench(tmp, cases=CASE_SET, runs_dir=runs)
             run_dir = runner.run_directory(runs, MODEL)
             case_no = CASE_SET[1]
             self._set_digest(run_dir, case_no, "brief_sha256", "0" * 64)
-            self._set_digest(run_dir, case_no, "prompts_sha256", "1" * 64)
+            self._move_recorded_prompt(run_dir, case_no)
 
             staleness = runner.brief_staleness(run_dir, CASE_SET)
 
@@ -2762,13 +2832,17 @@ class TwoChannelStalenessTests(unittest.TestCase):
             self.assertIn("brief moved: {0}".format(case_no), table)
             self.assertIn("prompts moved: {0}".format(case_no), table)
 
-    def test_an_entry_with_no_prompts_digest_reports_unknown_not_current(self):
+    def test_a_recorded_call_with_no_prompt_digest_reports_unknown_not_current(self):
+        """An entry whose instructions cannot be established is not a current one.
+
+        The cache entry is untouched. What is missing is the digest the call
+        itself would have carried, and that is the only thing that can say which
+        prompt it was given.
+        """
         with tempfile.TemporaryDirectory() as tmp:
             run_dir = self._cached_run(tmp)
             case_no = CASE_SET[0]
-            document = runner.load_cached(run_dir, case_no)
-            document.pop("prompts_sha256")
-            runner.write_json(runner.case_cache_path(run_dir, case_no), document)
+            self._drop_recorded_prompt_digest(run_dir, case_no)
 
             staleness = runner.brief_staleness(run_dir, CASE_SET)
 
@@ -2783,19 +2857,32 @@ class TwoChannelStalenessTests(unittest.TestCase):
 
             text = grade.render_report(runner.grade_run(run_dir, cases=CASE_SET))
             self.assertIn("| unknown |", text)
-            self.assertIn(
-                "The prompts digest was not recorded for 1 of 3 results", text
-            )
+            self.assertIn("The prompts digest was not recorded for 1 of 3 results", text)
             self.assertIn("mixed set", text)
 
-    def test_the_prompts_digest_is_taken_over_the_whole_directory(self):
-        """Editing any prompt in the set changes what an agent was told to do.
+    def test_a_prompt_comparison_that_cannot_be_made_is_unknown_not_current(self):
+        """A transcript that cannot be read is "cannot tell", not a match."""
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self._cached_run(tmp)
+            checker = runner.BriefStaleness(
+                run_dir=run_dir, entries_for=lambda case_no: None
+            )
 
-        The judge prompt is the one that moved this time, but the digest is over
-        the directory precisely so that the advocate template and the two stances
-        are covered by the same check. The names are read from the pipeline rather
-        than written here, so a prompt added to the set is covered without anyone
-        remembering to add it to this list.
+            staleness = runner.brief_staleness(run_dir, CASE_SET, checker)
+
+            self.assertEqual((), staleness.stale)
+            self.assertEqual(tuple(sorted(CASE_SET)), staleness.unknown)
+            self.assertEqual(tuple(sorted(CASE_SET)), staleness.unchecked_prompts)
+
+    def test_the_directory_digest_is_still_recorded_over_the_whole_prompt_set(self):
+        """Kept as history, and it still covers every prompt in the set.
+
+        The prompt channel no longer asks this question -- it compares what each
+        recorded call was given -- but the directory digest is what a run still
+        records, so a reader of an older cache can see which prompt set produced
+        it. The names are read from the pipeline rather than written here, so a
+        prompt added to the set is covered without anyone remembering to add it
+        to this list.
         """
         self.assertEqual(
             runner.hash_directory(PROMPTS_DIR), runner.current_prompts_sha256(PROMPTS_DIR)
@@ -2810,16 +2897,85 @@ class TwoChannelStalenessTests(unittest.TestCase):
             with self.subTest(prompt=name):
                 self.assertTrue((PROMPTS_DIR / name).is_file(), name)
 
-    def test_a_prompts_digest_that_cannot_be_taken_is_unknown_not_current(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            run_dir = self._cached_run(tmp)
-            checker = runner.BriefStaleness(prompts_digest=lambda: None)
+    def test_an_unused_prompt_file_leaves_every_result_current(self):
+        """A file no recorded call used is not a finding about any case.
 
+        This is the whole reason the channel compares per role instead of over
+        the directory: a prompt added to the set is not a change to what any
+        recorded agent was told, so nothing becomes stale because of it.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            prompts = prompts_copy(tmp)
+            bench(tmp, cases=CASE_SET, prompts_dir=prompts)
+            run_dir = run_dir_of(tmp)
+            (prompts / "unused.system.md").write_text(
+                "A prompt no run has ever asked for.\n", encoding="utf-8"
+            )
+
+            checker = self._checker(run_dir, prompts)
             staleness = runner.brief_staleness(run_dir, CASE_SET, checker)
 
             self.assertEqual((), staleness.stale)
-            self.assertEqual(tuple(sorted(CASE_SET)), staleness.unknown)
-            self.assertEqual(tuple(sorted(CASE_SET)), staleness.unchecked_prompts)
+            self.assertEqual((), staleness.unknown)
+            for case_no in CASE_SET:
+                with self.subTest(case=case_no):
+                    self.assertEqual(
+                        grade.STALENESS_CURRENT,
+                        checker.status_of(case_no, runner.load_cached(run_dir, case_no)),
+                    )
+
+    def test_a_one_byte_change_to_any_prompt_a_call_was_given_makes_it_stale(self):
+        """The judge prompt, and each stance, on its own.
+
+        The advocate prompt is the template with one stance substituted, so a
+        change to either stance file moves the digest of that side's advocate
+        prompt only -- and the transcript holds a call for that side, so the
+        change is seen.
+        """
+        names = [pipeline.JUDGE_PROMPT_FILE] + sorted(set(pipeline.STANCE_FILES.values()))
+        self.assertGreater(len(names), 1, "the check is over more than one prompt")
+        for name in names:
+            with self.subTest(prompt=name), tempfile.TemporaryDirectory() as tmp:
+                prompts = prompts_copy(tmp)
+                bench(tmp, cases=CASE_SET, prompts_dir=prompts)
+                run_dir = run_dir_of(tmp)
+                move_one_byte(prompts / name)
+
+                staleness = runner.brief_staleness(
+                    run_dir, CASE_SET, self._checker(run_dir, prompts)
+                )
+
+                self.assertEqual(tuple(sorted(CASE_SET)), staleness.stale)
+                self.assertEqual((), staleness.stale_brief)
+                self.assertEqual(tuple(sorted(CASE_SET)), staleness.stale_prompts)
+
+
+def prompts_copy(root, name="prompts"):
+    """A byte-identical copy of the shipped prompt set, under ``root``.
+
+    The shipped files are tracked, so a test that edited one would leave the
+    repository changed. The run is made against the copy instead, which is what
+    makes "the recorded call was given this prompt" true of the copy.
+    """
+    destination = Path(root) / name
+    destination.mkdir(parents=True)
+    for source in sorted(PROMPTS_DIR.iterdir()):
+        (destination / source.name).write_bytes(source.read_bytes())
+    return destination
+
+
+def move_one_byte(path):
+    """Change exactly one byte of a prompt file, and leave it readable text."""
+    path = Path(path)
+    text = path.read_text(encoding="utf-8")
+    index = next(
+        position
+        for position, character in enumerate(text)
+        if character.isascii() and character.isalpha()
+    )
+    path.write_text(
+        text[:index] + text[index].swapcase() + text[index + 1 :], encoding="utf-8"
+    )
 
 
 class PerCaseProvenanceTests(unittest.TestCase):

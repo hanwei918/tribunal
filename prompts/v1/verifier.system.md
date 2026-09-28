@@ -26,18 +26,37 @@ given them.
 - `evidence` — the `evidence_id` or derived-fact path your verdict rests on, as a string; for
   `not_in_evidence`, name the part of the brief you looked in and found nothing.
 
-`supported` — the brief states or entails the statement. `contradicted` — the brief states
-something that cannot both be true with it. `not_in_evidence` — the brief neither supports nor
-contradicts it. When the brief is silent, answer `not_in_evidence` rather than `contradicted`.
+`supported` — the brief states or entails the statement. `not_in_evidence` — the brief neither
+supports nor contradicts it. When the brief is silent, answer `not_in_evidence` rather than
+`contradicted`.
+
+`contradicted` — the brief states something that cannot both be true with the statement. A
+`contradicted` verdict carries two more fields, and both are about the difference rather than about
+the statement:
+
+- `brief_value` — what the brief holds where the statement differs, as text.
+- `material` — `true` or `false`. **This field is required on every `contradicted` verdict**, and a
+  verdict that leaves it out is unusable.
+
+`material` is `true` when the brief's value would change a conclusion the statement draws: which
+side of a threshold a figure falls, an amount in the ruling, whether an event happened, who did it,
+or the order of events. It is `false` when the difference changes none of those — a matter of
+rounding or precision only. A figure that the brief carries more precisely, where every threshold,
+amount and ordering the statement draws comes out the same either way, is contradicted and **not
+material**. Say so, rather than calling it `supported`: the difference is real and worth recording,
+and it is not a reason to set the draft aside.
 
 Answer every statement, add no other key, and do not answer anything else.
 
 ```json
 {
   "verdicts": [
-    {"statement": 1, "verdict": "supported", "evidence": "EV-GPS-00208"},
-    {"statement": 2, "verdict": "contradicted", "evidence": "erp_gantry_proximity"},
-    {"statement": 3, "verdict": "not_in_evidence", "evidence": "no artifact records this"}
+    {"statement": 1, "verdict": "supported", "evidence": "EV-DEMO-00042"},
+    {"statement": 2, "verdict": "contradicted", "evidence": "demo_totals.billable_units",
+     "brief_value": "18 units", "material": false},
+    {"statement": 3, "verdict": "contradicted", "evidence": "EV-DEMO-00051",
+     "brief_value": "no consignee signature recorded", "material": true},
+    {"statement": 4, "verdict": "not_in_evidence", "evidence": "no artifact records this"}
   ]
 }
 ```

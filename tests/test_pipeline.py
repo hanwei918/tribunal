@@ -2518,9 +2518,26 @@ class VerifierTransport:
     cover every statement exactly once.
     """
 
-    def __init__(self, *responses, verdict_for=None, raw=None, numbers=None):
+    def __init__(
+        self,
+        *responses,
+        verdict_for=None,
+        material_for=None,
+        brief_value_for=None,
+        raw=None,
+        numbers=None,
+    ):
         self.responses = list(responses)
         self.verdict_for = verdict_for or (lambda item: pipeline.VERDICT_SUPPORTED)
+        # Materiality is one of the two inputs the rule is applied from, so a
+        # scripted contradiction that did not say which it was would be testing
+        # the rule with an input missing. The default is the stricter reading --
+        # every contradiction stops its draft -- so the tests written before
+        # materiality existed still measure what they measured.
+        self.material_for = material_for or (lambda item: True)
+        self.brief_value_for = brief_value_for or (
+            lambda item: "the figure the brief holds"
+        )
         self.raw = raw
         self.numbers = numbers
         self.calls = []
@@ -2544,20 +2561,20 @@ class VerifierTransport:
         numbers = (
             [item["n"] for item in statements] if self.numbers is None else self.numbers
         )
-        return json.dumps(
-            {
-                "verdicts": [
-                    {
-                        "statement": number,
-                        "verdict": self.verdict_for(
-                            by_number.get(number, {"n": number, "draft": 0, "text": ""})
-                        ),
-                        "evidence": VERIFIER_EVIDENCE,
-                    }
-                    for number in numbers
-                ]
+        verdicts = []
+        for number in numbers:
+            item = by_number.get(number, {"n": number, "draft": 0, "text": ""})
+            verdict = self.verdict_for(item)
+            entry = {
+                "statement": number,
+                "verdict": verdict,
+                "evidence": VERIFIER_EVIDENCE,
             }
-        )
+            if verdict == pipeline.VERDICT_CONTRADICTED:
+                entry[pipeline.VERDICT_MATERIAL] = bool(self.material_for(item))
+                entry[pipeline.VERDICT_BRIEF_VALUE] = self.brief_value_for(item)
+            verdicts.append(entry)
+        return json.dumps({"verdicts": verdicts})
 
 
 def run_verified(*responses, votes=4, **options):
@@ -2766,6 +2783,86 @@ class VerifierVerdictTests(unittest.TestCase):
         )
         self.assertIn(FACTUAL_EXPLANATION, record["abstention"])
 
+    def test_materiality_is_what_decides_whether_a_contradicted_draft_votes(self):
+        """The same verdicts twice, one boolean apart.
+
+        The two runs send identical verdicts -- draft 1's fact contradicted,
+        every other draft supported -- and differ only in whether that
+        contradiction is said to be able to change a conclusion. So the
+        difference in the vote is the rule and nothing else.
+        """
+        contradiction = lambda item: (
+            pipeline.VERDICT_CONTRADICTED
+            if item["draft"] == 1
+            else pipeline.VERDICT_SUPPORTED
+        )
+
+        material, _ = run_verified(
+            *self.ADVOCATES,
+            *self.drafts(),
+            verdict_for=contradiction,
+            material_for=lambda item: True,
+        )
+        immaterial, _ = run_verified(
+            *self.ADVOCATES,
+            *self.drafts(),
+            verdict_for=contradiction,
+            material_for=lambda item: False,
+        )
+
+        # A material contradiction stops its draft, exactly as before.
+        self.assertEqual([1], material.verification["abstained"])
+        self.assertEqual(3, material.judge_vote["valid"])
+        self.assertEqual("carried_not_unanimous", material.judge_vote["outcome"])
+        self.assertEqual(0.75, material.vote_agreement)
+
+        # A contradiction that changes no conclusion is recorded and the draft
+        # keeps its vote, which is the whole point of the field.
+        self.assertEqual([], immaterial.verification["abstained"])
+        self.assertEqual(4, immaterial.judge_vote["valid"])
+        self.assertEqual("carried", immaterial.judge_vote["outcome"])
+        self.assertEqual(1.0, immaterial.vote_agreement)
+
+        # The verifier decides no part of the ruling, in either direction.
+        for result in (material, immaterial):
+            with self.subTest(abstained=result.verification["abstained"]):
+                self.assertEqual("PARTIAL_REFUND", result.ruling["ruling"]["ruling"])
+
+    def test_a_non_material_contradiction_is_recorded_and_flagged_on_the_draft(self):
+        """Kept rather than discarded: a reader has to see what was found."""
+        result, _ = run_verified(
+            *self.ADVOCATES,
+            *self.drafts(),
+            verdict_for=lambda item: (
+                pipeline.VERDICT_CONTRADICTED
+                if item["draft"] == 1
+                else pipeline.VERDICT_SUPPORTED
+            ),
+            material_for=lambda item: False,
+            brief_value_for=lambda item: "S$4.35, the figure the brief carries",
+        )
+
+        self.assertEqual(0, result.verification["material"])
+        self.assertEqual(1, result.verification["not_material"])
+
+        judged = [
+            item
+            for item in result.verification["judged"]
+            if item["verdict"] == pipeline.VERDICT_CONTRADICTED
+        ]
+        self.assertEqual(1, len(judged))
+        self.assertFalse(judged[0][pipeline.VERDICT_MATERIAL])
+        self.assertEqual(
+            "S$4.35, the figure the brief carries",
+            judged[0][pipeline.VERDICT_BRIEF_VALUE],
+        )
+
+        record = self.draft_record(result, 1)
+        self.assertTrue(record["valid"], "the draft keeps its vote")
+        self.assertIsNone(record["abstention"])
+        self.assertEqual(1, len(record["verification"]["contradicted"]))
+        self.assertEqual([], record["verification"]["material"])
+
     def test_a_contradiction_on_three_drafts_leaves_too_few_and_escalates(self):
         result, _ = run_verified(
             *self.ADVOCATES,
@@ -2885,6 +2982,54 @@ class VerifierUnusableAnswerTests(unittest.TestCase):
 
     def test_a_body_that_answers_a_statement_twice_is_no_verification(self):
         self.unchanged(numbers=[1, 1, 2, 3])
+
+    def test_a_contradiction_that_does_not_say_whether_it_matters_is_no_verification(
+        self,
+    ):
+        """The one field the rule cannot be applied without.
+
+        A contradiction whose materiality is not stated cannot be read either
+        way, so the answer is unusable rather than guessed at -- and a bare ``1``
+        is not a boolean, so it does not state it either.
+        """
+        for material in (None, 1, "yes"):
+            entry = {
+                "statement": 0,
+                "verdict": pipeline.VERDICT_CONTRADICTED,
+                "evidence": VERIFIER_EVIDENCE,
+            }
+            if material is not None:
+                entry["material"] = material
+            raw = json.dumps(
+                {"verdicts": [dict(entry, statement=n) for n in (1, 2, 3, 4)]}
+            )
+            with self.subTest(material=material):
+                self.unchanged(raw=raw)
+
+    def test_a_contradiction_carrying_material_is_usable_where_the_same_body_is_not(
+        self,
+    ):
+        """The control: only the one field differs, so that field is the refusal."""
+        complete = {
+            "verdicts": [
+                {
+                    "statement": n,
+                    "verdict": pipeline.VERDICT_CONTRADICTED,
+                    "evidence": VERIFIER_EVIDENCE,
+                    "material": True,
+                }
+                for n in (1, 2, 3, 4)
+            ]
+        }
+
+        result, _ = run_verified(
+            *self.ADVOCATES,
+            *judge_drafts(*[FACTUAL_EXPLANATION] * 4),
+            raw=json.dumps(complete),
+        )
+
+        self.assertTrue(result.verification["usable"])
+        self.assertEqual([1, 2, 3, 4], result.verification["abstained"])
 
 
 class StatementExtractionTests(unittest.TestCase):

@@ -386,6 +386,151 @@ def render_advocate_prompts(
     )
 
 
+def rendered_prompt_digests(prompts_dir: Path = PROMPTS_DIR) -> Dict[str, str]:
+    """The digest of each agent's system prompt as this code renders it now.
+
+    One entry per role a recorded call can carry, rendered through the same
+    functions a run uses, so the value compared with a recorded
+    ``system_sha256`` is the value a run would have recorded for that role.
+    """
+    prompts_dir = Path(prompts_dir)
+    rider, driver, _region = render_advocate_prompts(prompts_dir)
+    return {
+        transcript_module.ROLE_RIDER_ADVOCATE: transcript_module.sha256_text(rider),
+        transcript_module.ROLE_DRIVER_ADVOCATE: transcript_module.sha256_text(driver),
+        transcript_module.ROLE_JUDGE: transcript_module.sha256_text(
+            _read(prompts_dir / JUDGE_PROMPT_FILE)
+        ),
+    }
+
+
+# The three answers a prompt comparison can give. ``MATCH`` and ``MOVED`` are
+# findings; ``UNCHECKED`` is "cannot tell", and it is not a match.
+PROMPT_MATCH = "match"
+PROMPT_MOVED = "moved"
+PROMPT_UNCHECKED = "unchecked"
+PROMPT_COMPARISONS = (PROMPT_MATCH, PROMPT_MOVED, PROMPT_UNCHECKED)
+
+# The roles a transcript can hold a call for, in the order a report reads them.
+PROMPT_ROLES = (
+    transcript_module.ROLE_RIDER_ADVOCATE,
+    transcript_module.ROLE_DRIVER_ADVOCATE,
+    transcript_module.ROLE_JUDGE,
+)
+
+# The two whose ``user_sha256`` is the brief rather than a prompt.
+ADVOCATE_ROLES = (
+    transcript_module.ROLE_RIDER_ADVOCATE,
+    transcript_module.ROLE_DRIVER_ADVOCATE,
+)
+
+
+def compare_recorded_system_prompts(
+    entries: Sequence[Mapping[str, Any]],
+    *,
+    role: str,
+    rendered_sha256: str,
+) -> Tuple[str, str]:
+    """Whether every recorded call for one role carries the digest rendered now.
+
+    The one comparison, in one place: :func:`replay_verdict` makes it for each
+    advocate, the recorded-drafts measurement makes it for the judge, and
+    :func:`compare_recorded_prompts` makes it per role over a whole transcript.
+
+    ``PROMPT_MATCH`` when a call for that role was recorded and every one of them
+    carries the digest rendered now. ``PROMPT_UNCHECKED`` when no call for that
+    role was recorded, or one carries no digest -- neither can be shown to match.
+    ``PROMPT_MOVED`` when one carries a different digest.
+    """
+    found = False
+    for entry in entries:
+        if entry.get("role") != role:
+            continue
+        found = True
+        recorded = entry.get("system_sha256")
+        if not isinstance(recorded, str) or not recorded:
+            return PROMPT_UNCHECKED, (
+                "the recorded {0} call carries no system prompt digest, so it "
+                "cannot be shown that the prompt rendered now is the one that "
+                "call was given".format(role)
+            )
+        if recorded != rendered_sha256:
+            return PROMPT_MOVED, (
+                "the {0} system prompt as rendered now is not the one the recorded "
+                "call was given (recorded {1}, rendered {2})".format(
+                    role, recorded[:16], rendered_sha256[:16]
+                )
+            )
+    if not found:
+        return PROMPT_UNCHECKED, (
+            "the transcript holds no {0} call, so no prompt it was given can be "
+            "compared".format(role)
+        )
+    return PROMPT_MATCH, ""
+
+
+def compare_recorded_prompts(
+    entries: Sequence[Mapping[str, Any]],
+    *,
+    prompts_dir: Path = PROMPTS_DIR,
+    advocate_user_sha256: Optional[str] = None,
+) -> Tuple[str, str]:
+    """Whether the prompt digests a transcript recorded are what this code renders now.
+
+    Compared **per role**, and only for the roles the transcript holds a call
+    for: a prompt file no recorded call used cannot make a result stale, while a
+    one-byte change to any prompt a recorded call did use must. The directory
+    digest a run also records is kept for history and is deliberately not what
+    this asks -- it moves when a file is merely added to the directory, which is
+    not a statement about what any agent was given.
+
+    Each role's system prompt is compared through
+    :func:`compare_recorded_system_prompts`, and an advocate's recorded
+    ``user_sha256`` is compared with the digest of the brief this code builds.
+    ``advocate_user_sha256`` is that brief digest; when it is omitted, only the
+    system prompts are compared.
+
+    Returns ``(state, reason)``, with the state one of
+    :data:`PROMPT_COMPARISONS`. The first role that does not match decides it.
+    """
+    by_role: Dict[str, List[Mapping[str, Any]]] = {}
+    for entry in entries:
+        role = entry.get("role")
+        if role in PROMPT_ROLES:
+            by_role.setdefault(role, []).append(entry)
+    if not by_role:
+        return PROMPT_UNCHECKED, (
+            "the transcript holds no call for any of {0}, so no prompt an agent "
+            "was given can be compared".format(", ".join(PROMPT_ROLES))
+        )
+
+    rendered = rendered_prompt_digests(prompts_dir)
+    for role in PROMPT_ROLES:
+        recorded_entries = by_role.get(role)
+        if not recorded_entries:
+            # A role this transcript never called. Nothing was given that
+            # prompt, so nothing about it can make this result stale.
+            continue
+        state, reason = compare_recorded_system_prompts(
+            recorded_entries, role=role, rendered_sha256=rendered[role]
+        )
+        if state != PROMPT_MATCH:
+            return state, reason
+        if role in ADVOCATE_ROLES and advocate_user_sha256 is not None:
+            for entry in recorded_entries:
+                recorded_user = entry.get("user_sha256")
+                if recorded_user != advocate_user_sha256:
+                    return PROMPT_MOVED, (
+                        "the recorded {0} call was not handed the brief this code "
+                        "builds (recorded {1}, built {2})".format(
+                            role,
+                            str(recorded_user or "nothing")[:16],
+                            advocate_user_sha256[:16],
+                        )
+                    )
+    return PROMPT_MATCH, ""
+
+
 def assert_stance_only(rider: str, driver: str, region: Tuple[int, int]) -> List[Tuple[int, int]]:
     """Raise unless two rendered advocate prompts differ only inside ``region``.
 
@@ -1824,6 +1969,24 @@ VERDICTS = (VERDICT_SUPPORTED, VERDICT_CONTRADICTED, VERDICT_NOT_IN_EVIDENCE)
 # The reason a draft abstains when the verifier contradicts one of its facts.
 ABSTENTION_CONTRADICTED = "CONTRADICTED_BY_EVIDENCE"
 
+# A contradicted verdict also says what the brief holds and whether the
+# difference could change a conclusion. Rounding is not material: a draft
+# writing "22.6%" where the brief holds 22.47% leaves every threshold, amount,
+# ordering and question of who did what exactly where it was, and stopping a
+# correct draft over it turns a unanimous ruling into an escalation. Material
+# means the brief's value would move a conclusion the statement draws.
+VERDICT_MATERIAL = "material"
+VERDICT_BRIEF_VALUE = "brief_value"
+
+# Which contradictions stop a draft. ``ABSTAIN_ON_MATERIAL`` is what the
+# pipeline does. ``ABSTAIN_ON_ANY`` exists so the recorded-drafts report can
+# show both readings of one set of verdicts without asking the verifier twice,
+# and it is the stricter of the two: it is what the pass did before materiality
+# existed.
+ABSTAIN_ON_MATERIAL = "material"
+ABSTAIN_ON_ANY = "any"
+ABSTAIN_ON = (ABSTAIN_ON_MATERIAL, ABSTAIN_ON_ANY)
+
 # What kind of checkable fact a sentence carries. A sentence with none of these
 # is not a factual statement and is never sent to the verifier.
 STATEMENT_KIND_NUMBER = "number"
@@ -1978,6 +2141,14 @@ def normalise_verifier_result(parsed: Any) -> Tuple[Optional[List[Dict[str, Any]
     ``evidence`` is unusable -- and an unusable body is treated as no
     verification at all rather than as a partial one, because a verdict set with
     a hole in it is not a check.
+
+    A ``contradicted`` verdict carries two more things, and one of them is
+    required: a boolean ``material``, because whether the difference could move
+    a conclusion is the whole of what decides whether the draft keeps its vote,
+    and an answer that leaves it out cannot be guessed at. ``brief_value`` is
+    what the brief holds instead; it is recorded rather than required, since a
+    contradiction whose evidence is a derived-fact path may have no single value
+    to quote.
     """
     shape = json_shape(parsed)
     if not isinstance(parsed, dict):
@@ -2010,8 +2181,36 @@ def normalise_verifier_result(parsed: Any) -> Tuple[Optional[List[Dict[str, Any]
             return None, shape, (
                 "verdict {0}'s 'evidence' is not a string".format(position)
             )
+        material: Any = None
+        brief_value: Any = ""
+        if verdict == VERDICT_CONTRADICTED:
+            material = entry.get(VERDICT_MATERIAL)
+            # ``isinstance(True, int)`` is true, so the check is for a real
+            # boolean and not for something merely truthy: "material": 1 is an
+            # answer that does not say whether the difference matters.
+            if not isinstance(material, bool):
+                return None, shape, (
+                    "verdict {0} contradicts statement {1} without a boolean "
+                    "'{2}', so whether the difference could change a conclusion "
+                    "is not stated".format(position, number, VERDICT_MATERIAL)
+                )
+            brief_value = entry.get(VERDICT_BRIEF_VALUE)
+            if brief_value is None:
+                brief_value = ""
+            elif not isinstance(brief_value, (str, int, float)):
+                # A JSON number arrives as a ``Decimal`` here, and a value the
+                # record's encoder cannot write would break the record rather
+                # than the check. This is a display value, so rendering it as
+                # text loses nothing a reader needs.
+                brief_value = str(brief_value)
         verdicts.append(
-            {"statement": number, "verdict": verdict, "evidence": evidence}
+            {
+                "statement": number,
+                "verdict": verdict,
+                "evidence": evidence,
+                VERDICT_MATERIAL: material,
+                VERDICT_BRIEF_VALUE: brief_value,
+            }
         )
     return verdicts, shape, ""
 
@@ -2087,22 +2286,40 @@ def apply_verification(
     drafts: Sequence[JudgeDraft],
     statements: Sequence[Mapping[str, Any]],
     verdicts: Sequence[Mapping[str, Any]],
+    *,
+    abstain_on: str = ABSTAIN_ON_MATERIAL,
 ) -> Tuple[List[JudgeDraft], List[Dict[str, Any]]]:
     """Charge every verdict to the draft that stated it.
 
-    A draft with any contradicted statement abstains, with the reason code and
-    the statement quoted, so a reader can see which fact was rejected. A draft
-    whose statements are merely absent from the record keeps its vote; the
-    ``not_in_evidence`` statements are recorded on the draft as flags. A draft
-    with no statements is untouched.
+    A draft with a contradiction that could change a conclusion abstains, with
+    the reason code and the statement quoted, so a reader can see which fact was
+    rejected. A contradiction that changes nothing -- a difference of rounding
+    or precision, where every threshold, amount, ordering and question of who did
+    what comes out the same either way -- is recorded on the draft and the draft
+    **keeps its vote**. A draft whose statements are merely absent from the
+    record keeps its vote too, and those are recorded as flags. A draft with no
+    statements is untouched.
+
+    ``abstain_on`` chooses which contradictions stop a draft. The default is
+    what the pipeline does. ``ABSTAIN_ON_ANY`` is the stricter reading the
+    recorded-drafts report shows beside it, so one set of verdicts can be read
+    both ways without a second call.
 
     Returns the drafts and the flat list of judged statements, each carrying its
-    verdict, which is what the record and the report read.
+    verdict, its materiality and the value the brief holds, which is what the
+    record and the report read.
     """
+    if abstain_on not in ABSTAIN_ON:
+        raise PipelineError(
+            "abstain_on must be one of {0}; found {1!r}".format(
+                ", ".join(ABSTAIN_ON), abstain_on
+            )
+        )
     by_number = {item["statement"]: item for item in verdicts}
     judged: List[Dict[str, Any]] = []
     for item in statements:
         verdict = by_number.get(item["n"])
+        contradicted = verdict is not None and verdict["verdict"] == VERDICT_CONTRADICTED
         judged.append(
             {
                 "n": item["n"],
@@ -2111,6 +2328,12 @@ def apply_verification(
                 "kinds": list(item["kinds"]),
                 "verdict": None if verdict is None else verdict["verdict"],
                 "evidence": "" if verdict is None else verdict["evidence"],
+                VERDICT_MATERIAL: (
+                    bool(verdict[VERDICT_MATERIAL]) if contradicted else None
+                ),
+                VERDICT_BRIEF_VALUE: (
+                    "" if verdict is None else verdict.get(VERDICT_BRIEF_VALUE, "")
+                ),
             }
         )
 
@@ -2124,16 +2347,21 @@ def apply_verification(
         if not items:
             updated.append(draft)
             continue
-        contradicted = [item for item in items if item["verdict"] == VERDICT_CONTRADICTED]
+        contradicted = [
+            item for item in items if item["verdict"] == VERDICT_CONTRADICTED
+        ]
+        material = [item for item in contradicted if item[VERDICT_MATERIAL]]
         not_in_evidence = [
             item for item in items if item["verdict"] == VERDICT_NOT_IN_EVIDENCE
         ]
+        stops = contradicted if abstain_on == ABSTAIN_ON_ANY else material
         verification = {
             "statements": len(items),
             "contradicted": contradicted,
+            "material": material,
             "not_in_evidence": not_in_evidence,
         }
-        if contradicted:
+        if stops:
             updated.append(
                 JudgeDraft(
                     index=draft.index,
@@ -2145,7 +2373,7 @@ def apply_verification(
                     ruling=draft.ruling,
                     key=None,
                     abstention='{0}: "{1}"'.format(
-                        ABSTENTION_CONTRADICTED, contradicted[0]["text"]
+                        ABSTENTION_CONTRADICTED, stops[0]["text"]
                     ),
                     unverifiable=draft.unverifiable,
                     verification=verification,
@@ -2191,7 +2419,8 @@ def verify_draft_statements(
     no call is made, because there is nothing to ask. A call whose answer is
     unusable: every draft keeps its vote and the record says the verification
     could not be made, so a broken verifier cannot silently change a ruling. A
-    usable answer: the verdicts are applied.
+    usable answer: the verdicts are applied, and only a contradiction that could
+    change a conclusion stops a draft.
     """
     statements = numbered_statements(drafts)
     if not statements:
@@ -2206,7 +2435,10 @@ def verify_draft_statements(
                 VERDICT_CONTRADICTED: 0,
                 VERDICT_NOT_IN_EVIDENCE: 0,
             },
+            "material": 0,
+            "not_material": 0,
             "abstained": [],
+            "abstain_on": ABSTAIN_ON_MATERIAL,
             "entry": None,
             "tokens": {
                 "prompt_tokens": 0,
@@ -2256,7 +2488,10 @@ def verify_draft_statements(
                 VERDICT_CONTRADICTED: 0,
                 VERDICT_NOT_IN_EVIDENCE: 0,
             },
+            "material": 0,
+            "not_material": 0,
             "abstained": [],
+            "abstain_on": ABSTAIN_ON_MATERIAL,
             "entry": entry_index,
             "tokens": tokens,
         }
@@ -2266,6 +2501,11 @@ def verify_draft_statements(
         verdict: sum(1 for item in judged if item["verdict"] == verdict)
         for verdict in VERDICTS
     }
+    material = sum(
+        1
+        for item in judged
+        if item["verdict"] == VERDICT_CONTRADICTED and item[VERDICT_MATERIAL]
+    )
     abstained = [
         draft.index
         for draft in updated
@@ -2279,7 +2519,10 @@ def verify_draft_statements(
         "statements": statements,
         "judged": judged,
         "counts": counts,
+        "material": material,
+        "not_material": counts[VERDICT_CONTRADICTED] - material,
         "abstained": abstained,
+        "abstain_on": ABSTAIN_ON_MATERIAL,
         "entry": entry_index,
         "tokens": tokens,
     }
@@ -2292,6 +2535,8 @@ def verify_draft_statements(
             statements=len(statements),
             supported=counts[VERDICT_SUPPORTED],
             contradicted=counts[VERDICT_CONTRADICTED],
+            material=material,
+            not_material=counts[VERDICT_CONTRADICTED] - material,
             not_in_evidence=counts[VERDICT_NOT_IN_EVIDENCE],
             abstained=abstained,
         )

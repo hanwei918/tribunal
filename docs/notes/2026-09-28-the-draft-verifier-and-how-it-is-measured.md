@@ -10,6 +10,16 @@ Two things were built, and one of them is a measurement harness rather than a
 feature. The verifier is off by default; a run that does not ask for it is the
 run it was before, byte for byte.
 
+**Two corrections were made on the same day, before this pass was measured on
+either development set, and they supersede parts of this note.** A
+`contradicted` verdict now carries a required boolean `material`, and only a
+contradiction that could change a conclusion a statement draws stops its draft;
+the recorded-drafts report therefore shows **three** readings of one vote rather
+than two. And the prompt channel of the staleness check no longer compares the
+digest of the prompt **directory**; it compares, per role, the digests the
+recorded calls carry against what this code renders now. Section 6 records both,
+and sections 1, 2 and 4 are to be read with it. Section 5 is unaffected.
+
 ## 1. The verifier
 
 **One call per case.** `--verify-drafts` on either entry point. The call happens
@@ -225,3 +235,142 @@ produce the measurement. No figure for either set is claimed in this note.
   It can abstain a draft that was right. The measurement mode exists because
   that has to be looked at on drafts that were not resampled, and the on/off
   comparison over both development sets has not yet been run.
+
+## 6. Two corrections, before either set was measured
+
+Both were made on 2026-09-28, after this note was written and before the
+recorded-drafts pass was run on either development set. **No model call was made
+in either session, not even a probe**: the refusal paths were exercised against
+a directory that does not exist and through scripted transports. Nothing here
+changes what the verifier is for, and nothing here was run over a development
+set.
+
+### 6.1 Only a material contradiction stops a draft
+
+The one live verifier call this work had made — case 101, disclosed in section 4
+— showed the rule was too strict. Two of that case's drafts wrote a share as
+`22.6%` where the brief's own block carries `22.47%`; both were recorded
+`contradicted`, both abstained, and a unanimous and correct ruling became
+`ESCALATE`. The rounding changed no conclusion those statements drew: the share
+is below the 90% test either way, and the refund is above SGD 0.50 either way.
+
+So a `contradicted` verdict now carries two more fields, one of them required:
+
+- `material` — a **boolean**, and required. It is `true` when the brief's value
+  would change a conclusion the statement draws: which side of a threshold a
+  figure falls, an amount in the ruling, whether an event happened, who did it,
+  or the order of events. It is `false` when the difference changes none of
+  those, which is what a difference of rounding or precision does.
+- `brief_value` — what the brief holds instead, as text. Recorded rather than
+  required, because a contradiction whose evidence is a derived-fact path may
+  have no single value to quote.
+
+`normalise_verifier_result` refuses a `contradicted` verdict whose `material` is
+absent **or is not a real boolean**. `isinstance(True, int)` is true in Python,
+so `"material": 1` is an answer that does not say whether the difference matters,
+and it is treated exactly like leaving the field out. A refused verdict set is
+still no verification at all: every draft keeps its vote and the record says so
+with a reason. The rule that a broken verifier cannot change a ruling, in either
+direction, is unchanged.
+
+The prompt is updated to match, and its worked example is **invented**: it names
+placeholder ids (`EV-DEMO-00042`, `EV-DEMO-00051`) and a placeholder path
+(`demo_totals.billable_units`), and none of those appears in either development
+set or anywhere else in the repository. The example carries one non-material
+contradiction and one material one, so the distinction the rule turns on is in
+the example and not only in the prose.
+
+`apply_verification` takes an `abstain_on` switch. The pipeline's own value is
+`ABSTAIN_ON_MATERIAL`; `ABSTAIN_ON_ANY` is the stricter reading, kept so that one
+set of verdicts can be read both ways without a second call.
+
+### 6.2 The report shows three readings of one vote
+
+`CaseVerification` now carries three `VoteReading`s — `without`,
+`any_contradiction` and `material_only` — and **one measurement run produces all
+three**, because two of them are reductions of the same verdicts and the third is
+the recorded vote itself. `changed` is `without` against `material_only`, which is
+what the pipeline does; `strict_changed` is `without` against
+`any_contradiction`, which is what this pass did before materiality existed; and
+`saved_cases` names the cases where the second is true and the first is not — the
+cases materiality exists for.
+
+A case with no usable verdicts has nothing to re-apply, so all three readings are
+then the same vote. That is stated rather than papered over: the three-reading
+feature is only meaningful when a verdict set exists.
+
+### 6.3 The prompt channel compares what the calls were given
+
+`BriefStaleness`'s prompt channel used to compare the recorded `prompts_sha256` —
+the digest of the whole prompt **directory** — against the directory as it stands
+now. Adding `verifier.system.md` to that directory moved it, so every cached
+result read stale on the prompt channel although no agent's instructions had
+changed.
+
+The channel now compares, **per role**, the `system_sha256` (and, for the
+advocates, the `user_sha256`) that the recorded calls carry against what this
+code renders now, through the same comparison `check_replay` makes for the
+advocates and this module's own judge-side check makes for the judge. A prompt
+file no recorded call used cannot make a result stale; a one-byte change to any
+prompt a recorded call did use still does. The directory digest is still recorded
+as `prompts_sha256`, for history, and `tests/test_run_benchmark.py` still asserts
+that it is.
+
+`unknown` is unchanged and still means what it meant: a result whose transcript
+cannot be read, or whose calls carry no digest, is one this code cannot answer
+for, and that is not `current`.
+
+The consequence is measurable and was measured. **All 44 cached results read
+current** — corpus 29 of 29 and second development set 15 of 15, each set with its
+own loader — and the development-set report is unchanged at corpus 29/29, second
+set 14/15, combined 43/44. The counts in section 4 above are superseded on this
+point.
+
+One qualification, recorded rather than fixed. `eval.development_sets.figures_for`
+reaches a `GradeReport` through `grade_run`, which hands `case_loader` to the
+per-case facts but leaves the staleness checker at its default — the corpus
+loader — so its `staleness` object reports the second set's fifteen cases as
+`unknown` on the brief channel where the run path reports them current. That is
+pre-existing and unchanged here: at `b0f2948`, `brief_staleness` built
+`BriefStaleness()` with the same default, so the same fifteen read `unknown`
+before these corrections too. The measurement above uses each set's own loader,
+which is what the run summary uses; `render_development_sets` renders no
+staleness block, so no printed figure depends on the difference.
+
+### 6.4 The tests
+
+`tests/test_pipeline.py`'s scripted verifier now scripts materiality as well as
+the verdict, and defaults it to the stricter reading so that the tests written
+before the field existed still measure what they measured. Three tests were added:
+a material contradiction stops its draft and a non-material one does not, on
+otherwise identical verdicts; a non-material contradiction is recorded and flagged
+with the value the brief holds; and a `contradicted` verdict with no boolean
+`material` — absent, `1`, or a string — is no verification, with a positive
+control on the same body carrying `true`.
+
+`tests/test_verify_drafts.py` was migrated to the three readings: one set of
+verdicts with one material and one immaterial contradiction yields three different
+votes from the one call, and a case whose contradictions are all immaterial is
+named in `saved_cases`, because the strict rule would have moved it and the
+pipeline's rule does not.
+
+`tests/test_run_benchmark.py`'s prompt-channel tests now move a **prompt** rather
+than a cache field. A run is made against a byte-identical copy of the prompt set
+and one byte of one file in that copy is then changed, so the shipped files are
+never touched: a one-byte change to the judge prompt or to either stance file
+makes the result stale, while adding a file that no recorded call used leaves it
+current.
+
+**One defect in this file was found only by counting, not by reading.** The two
+module-level helpers above had been written **inside** `TwoChannelStalenessTests`,
+between the class's last helper and its first test. A `def` at column zero ends the
+class body, so `move_one_byte` became a module-level function whose body then
+absorbed all eight `def test_` methods as nested functions: the class kept its five
+helpers and no test at all, the eight were never collected, and the suite reported
+`OK` at **1140 tests** where the file defines 1148. The helpers now sit below the
+class and the eight tests are in it. One assertion was wrong once they ran: the
+test changed one byte of the **shared** judge prompt file and expected one case
+stale, where a file every case's judge call was given moves for all three — it now
+reads `(101, 102, 103)` and `The prompts have moved for 3 of 3`. The count is the
+guard: a suite cannot fail on a test it never collects, so a green run reporting
+fewer tests than the files define is the failure mode to watch.
