@@ -91,7 +91,16 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
-from . import brief, events, llm, loader, money, referee, transcript as transcript_module
+from . import (
+    brief,
+    events,
+    llm,
+    loader,
+    money,
+    policy_versions,
+    referee,
+    transcript as transcript_module,
+)
 from .model import resolve_model
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -2658,6 +2667,7 @@ def run_case(
     verify_drafts: bool = False,
     ablate: Optional[str] = None,
     precedents: Optional[Any] = None,
+    policy_version: int = policy_versions.BASE_VERSION,
 ) -> PipelineResult:
     """Perform one full arbitration of a case named by its manifest number.
 
@@ -2687,6 +2697,11 @@ def run_case(
     when the switch is off. It is passed straight through as well: the matching
     needs the brief and the claims the referee kept, both of which exist only
     inside :func:`run_loaded_case`, so the block is chosen there and not here.
+
+    ``policy_version`` is the policy version the brief is built against, and it
+    is passed straight through for the same reason again. Version 1 is the
+    three files as committed, so the default is the policy every run before the
+    switch used and the brief is byte-identical to that one.
     """
     load = loader.load_case if case_loader is None else case_loader
     return run_loaded_case(
@@ -2701,6 +2716,7 @@ def run_case(
         verify_drafts=verify_drafts,
         ablate=ablate,
         precedents=precedents,
+        policy_version=policy_version,
     )
 
 
@@ -2717,6 +2733,7 @@ def run_loaded_case(
     verify_drafts: bool = False,
     ablate: Optional[str] = None,
     precedents: Optional[Any] = None,
+    policy_version: int = policy_versions.BASE_VERSION,
 ) -> PipelineResult:
     """Perform one full arbitration of a case already in hand.
 
@@ -2794,7 +2811,9 @@ def run_loaded_case(
     # ablation is applied here and nowhere else: this is the one builder, and
     # ``ablate=None`` -- what every caller before the switch passed, and what
     # :func:`build_brief` still passes -- builds the bytes it always built.
-    case_brief = brief.build_brief_for_case(case, ablate=ablate)
+    case_brief = brief.build_brief_for_case(
+        case, ablate=ablate, policy_version=policy_version
+    )
     brief_json = money.dumps_canonical(case_brief)
     brief_sha256 = hashlib.sha256(brief_json.encode("utf-8")).hexdigest()
     advocate_user_message = brief_json
@@ -3140,12 +3159,19 @@ class ReplaySource:
     result, and it is compared with ``transcript_sha256``, the digest of the
     file as it stands now. The second is computed rather than assumed, so a
     transcript edited since it was written is refused rather than replayed.
+
+    ``policy_version`` is the version the source run's brief was built at, read
+    from that run's recorded configuration. It travels with the recorded
+    advocates because it is part of what they were given: a replay rebuilds the
+    case's brief to compare against ``brief_sha256``, and rebuilding it at
+    version 1 would refuse every case of a run that was not.
     """
 
     run_dir: str
     git_commit: Optional[str] = None
     model: Optional[str] = None
     brief_sha256: Optional[str] = None
+    policy_version: int = policy_versions.BASE_VERSION
     transcript_sha256: Optional[str] = None
     recorded_transcript_sha256: Optional[str] = None
     entries: Tuple[Mapping[str, Any], ...] = ()
@@ -3270,7 +3296,9 @@ def replay_verdict(
     # them on trust.
     stance_ranges = tuple(check_stance_only_difference(prompts_dir))
 
-    case_brief = brief.build_brief_for_case(case)
+    case_brief = brief.build_brief_for_case(
+        case, policy_version=source.policy_version
+    )
     brief_json = money.dumps_canonical(case_brief)
     brief_sha256 = hashlib.sha256(brief_json.encode("utf-8")).hexdigest()
 

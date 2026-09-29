@@ -16,6 +16,7 @@ This directory is the benchmark's own output. Every subdirectory named in the ta
 | **`deepseek-deepseek-flash/`** | **The headline run**, and on top of it **five judge-only re-runs** of that same run. Seven invocations: two full runs (`97dbb9c`, `493beea`) and five replays that reused `493beea`'s advocates and called only the judge — two measuring the prompt after its first amendment, three measuring the frozen prompt. Every cached result is current on both channels and all 29 carry a `replay` block; the graded figure over the 29 is **27/29**, failing 105 and 211, and that figure is the frozen prompt's. The runtime model decision rests on the `493beea` measurement. | A measurement, and a replay of one. Read each result's `replay` block before reading its tokens. |
 | `hy3/` | Produced under an invalidated configuration. | Evidence for a defect. No number in it is usable. |
 | `hy4-preview/` | Produced under the same invalidated configuration. | Evidence for a defect. No number in it is usable. |
+| `policy-v<N>/` | Where a run at a later policy version goes: `policy-v<N>/<model>/`, and `codex/policy-v<N>/<model>/` under the second set's root. No such run is committed here, because no amendment has been approved and the repository is at version 1. It has its own section below. | A different measurement from the headline: those briefs were built from an amended policy, so a figure here answers a question about a policy that is not the committed one. |
 | `precedents/` | Where a run with `--precedents` on goes: `precedents/<model>/`, and `codex/precedents/<model>/` under the second set's root. No such run is committed here. It has its own section below. | A different measurement from the headline, and not comparable to it: the precedent library is built from closures made by people who have seen these development sets. |
 
 **These are snapshots, and a later run moves them.** A run directory is named after the model id, so
@@ -238,16 +239,37 @@ library holds a closure for is material the system has been shown before. Those
 cases are left out of every figure in `report.md` and named there, and the
 printed summary and the `invocation_end` event name them too.
 
-**It is never written into a model's run directory.** The destination is chosen
-under the runs root's `precedents/` directory and then checked in code before
-anything is written, and `--precedents` is refused together with
-`--replay-advocates`, `--replay-check`, `--verify-recorded-drafts` and
-`--external`, and with `--ablate`, because every one of those reads or produces a
-run whose judge saw no block.
+## `policy-v<N>/` — where a run at a later policy version goes
 
-**No such directory is committed here.** No run has been made with the block on,
-so there is nothing to commit, and the commands above are the ones that would
-produce it.
+`policy-v<N>/<model>/` holds the output of
+
+    python3 -m eval.run_benchmark --policy-version 2
+    python3 -m eval.development_sets --set codex --policy-version 2
+
+one directory per version per model, under the runs root the run was given — so
+the second set's go to `runs/codex/policy-v<N>/<model>/`. The files are the ones
+any run directory carries; what changes is the policy the briefs were built from.
+
+A **policy version** is an integer. Version 1 is the three files in `policy/`
+exactly as committed, and it is what every run before the switch used, so
+version 1 writes to the ordinary run directory and never here. Version N is
+those files with the amendments `0001` through `N-1` from `policy/amendments/`
+applied — one added clause each, never an edit and never a removal. The version
+is recorded in the `configuration` object of `run.json`, of every
+`invocations.json` entry and of every case file, and the staleness check rebuilds
+each case's brief at the same version — otherwise every case of such a run would
+report its brief moved.
+
+**It is never written into a model's run directory.** The destination is chosen
+under the runs root's `policy-v<N>/` directory and then checked in code before
+anything is written, against *that version's* directory rather than against
+`policy-v*`, so a version-2 run cannot land in version 3's. `--policy-version
+N>=2` is refused together with `--ablate`, `--precedents`, `--report`,
+`--replay-advocates`, `--replay-check` and `--verify-recorded-drafts`.
+
+**No such directory is committed here.** No amendment has been approved, so the
+repository is at version 1, there is no later version to run, and the commands
+above are the ones that would produce the output once one has been.
 
 ## How to read one run directory
 

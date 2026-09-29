@@ -162,7 +162,16 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from eval import grade
-from tribunal import brief, events, llm, loader, money, pipeline, transcript
+from tribunal import (
+    brief,
+    events,
+    llm,
+    loader,
+    money,
+    pipeline,
+    policy_versions,
+    transcript,
+)
 from tribunal import precedents as precedents_library
 from tribunal.model import resolve_model
 
@@ -204,6 +213,10 @@ __all__ = [
     "PRECEDENTS_DIRNAME",
     "precedents_run_directory",
     "assert_precedents_destination",
+    "POLICY_V_DIRNAME",
+    "policy_v_directory_name",
+    "policy_v_run_directory",
+    "assert_policy_v_destination",
     "case_cache_path",
     "transcript_path",
     "metadata_path",
@@ -557,6 +570,61 @@ def assert_precedents_destination(run_dir: Path, runs_dir: Path) -> Path:
     return Path(run_dir)
 
 
+# Where a run at a later policy version lives, one level under the runs root and
+# named for the version. The same rule the ablation and the precedent block
+# follow, for the same reason: a brief built from amended policy is a different
+# measurement from the headline, and it must not be able to land where the
+# headline figure lives. Under the second set's root the rule gives
+# ``runs/codex/policy-v<N>/<model-slug>/``.
+POLICY_V_DIRNAME = "policy-v"
+
+
+def policy_v_directory_name(policy_version: int) -> str:
+    """The one directory name a version's results live under."""
+    return "{0}{1}".format(POLICY_V_DIRNAME, policy_version)
+
+
+def policy_v_run_directory(
+    runs_dir: Path, policy_version: int, model: str
+) -> Path:
+    """Where a run at version N lives: ``runs/policy-v<N>/<model-slug>/``.
+
+    The version is a path component and not a flag, so two versions of one model
+    are two directories and neither can be mistaken for the other's results.
+    """
+    return (
+        Path(runs_dir)
+        / policy_v_directory_name(policy_version)
+        / model_slug(model)
+    )
+
+
+def assert_policy_v_destination(
+    run_dir: Path, runs_dir: Path, policy_version: int
+) -> Path:
+    """Refuse a version-N run's directory that is not under that version's root.
+
+    ``runs/<model-slug>/`` and ``runs/codex/<model-slug>/`` hold the figures the
+    submission reports, and a run briefed from amended policy is a different
+    measurement: one written there would change what that directory means while
+    leaving every file a reader looks at apparently intact. The destination is
+    therefore checked rather than merely chosen, so a name that resolved outside
+    ``<runs root>/policy-v<N>/`` cannot put such a result where the headline
+    figure lives. It is checked against *this version's* directory rather than
+    against ``policy-v*``, so a version-2 run cannot land in version 3's.
+
+    Returns the directory unchanged when it is where it should be.
+    """
+    resolved = Path(run_dir).resolve()
+    root = (Path(runs_dir) / policy_v_directory_name(policy_version)).resolve()
+    if not resolved.is_relative_to(root):
+        raise BenchmarkError(
+            "a run at policy version {0} may only be written under {1}, and this "
+            "one would go to {2}".format(policy_version, root, resolved)
+        )
+    return Path(run_dir)
+
+
 def case_cache_path(run_dir: Path, case_no: int) -> Path:
     return Path(run_dir) / _CASE_FILE_FORMAT.format(case_no)
 
@@ -776,6 +844,7 @@ def read_replay_source(
         git_commit=git_commit,
         model=model,
         brief_sha256=document.get("brief_sha256"),
+        policy_version=configuration_of(document)["policy_version"],
         transcript_sha256=file_sha256(transcript_file),
         recorded_transcript_sha256=document.get("transcript_sha256"),
         entries=entries,
@@ -1125,6 +1194,7 @@ def current_brief_sha256(
     case_no: int,
     case_loader: Optional[Callable[[int], Mapping[str, Any]]] = None,
     ablate: Optional[str] = None,
+    policy_version: int = policy_versions.BASE_VERSION,
 ) -> Optional[str]:
     """The digest of the brief this code builds for ``case_no`` right now.
 
@@ -1147,6 +1217,13 @@ def current_brief_sha256(
     case of it stale, which is a false finding about the run rather than a
     statement about this code.
 
+    ``policy_version`` is the same kind of parameter for the same reason: a run
+    at version N was given a brief built from the amended policy, so its
+    staleness check has to rebuild that brief rather than version 1's. The
+    default is version 1, which is what every caller before the switch asked
+    for and what :class:`BriefStaleness` still asks for when no version is
+    named.
+
     ``None`` when the brief cannot be built at all: a case file that has since
     moved, a policy that no longer parses. That is "cannot tell", and it is not
     "matches".
@@ -1154,7 +1231,9 @@ def current_brief_sha256(
     load = loader.load_case if case_loader is None else case_loader
     try:
         return brief.brief_digest(
-            brief.build_brief_for_case(load(case_no), ablate=ablate)
+            brief.build_brief_for_case(
+                load(case_no), ablate=ablate, policy_version=policy_version
+            )
         )[1]
     except Exception:  # noqa: BLE001 - a brief that cannot be built is not a match
         return None
@@ -1163,6 +1242,7 @@ def current_brief_sha256(
 def brief_digest_for(
     case_loader: Optional[Callable[[int], Mapping[str, Any]]] = None,
     ablate: Optional[str] = None,
+    policy_version: int = policy_versions.BASE_VERSION,
 ) -> Optional[Callable[[int], Optional[str]]]:
     """The current-brief digest function for one set's cases.
 
@@ -1174,14 +1254,22 @@ def brief_digest_for(
 
     ``ablate`` travels with the loader rather than being applied afterwards, for
     the reason :func:`current_brief_sha256` gives: the digest has to be of the
-    brief that run's agents were given. Both default to nothing, and the pair of
-    defaults is the only case that returns ``None`` -- "use the built-in corpus
-    digest" -- so a caller naming either one gets a function.
+    brief that run's agents were given. ``policy_version`` travels with it for
+    that same reason. All three default to nothing, and the triple of defaults
+    is the only case that returns ``None`` -- "use the built-in corpus digest"
+    -- so a caller naming any one of them gets a function.
     """
-    if case_loader is None and ablate is None:
+    if (
+        case_loader is None
+        and ablate is None
+        and policy_version == policy_versions.BASE_VERSION
+    ):
         return None
     return lambda case_no: current_brief_sha256(
-        case_no, case_loader=case_loader, ablate=ablate
+        case_no,
+        case_loader=case_loader,
+        ablate=ablate,
+        policy_version=policy_version,
     )
 
 
@@ -1222,7 +1310,10 @@ class BriefStaleness:
 
     Both channels are memoised: the brief digest per case, because rebuilding a
     brief is a file read per case, and each case's transcript entries once,
-    however many questions are asked about that case.
+    however many questions are asked about that case. The brief digest's memo is
+    keyed by the case **and the policy version** together, because the digest is
+    of a brief built at one version and serving it to a question asked at
+    another would answer the wrong question.
     """
 
     def __init__(
@@ -1234,8 +1325,17 @@ class BriefStaleness:
         ] = None,
         prompts_dir: Path = PROMPTS_DIR,
         precedents: Optional[Mapping[str, Any]] = None,
+        policy_version: int = policy_versions.BASE_VERSION,
     ) -> None:
-        self._digest = current_brief_sha256 if digest is None else digest
+        # An injected digest has the version already closed over -- that is what
+        # :func:`brief_digest_for` builds -- so it is used as it stands. The
+        # built-in one takes the version as an argument, so it is bound here.
+        self._digest = (
+            (lambda case_no: current_brief_sha256(case_no, policy_version=policy_version))
+            if digest is None
+            else digest
+        )
+        self._policy_version = policy_version
         self._run_dir = None if run_dir is None else Path(run_dir)
         self._entries_for = entries_for
         self._prompts_dir = Path(prompts_dir)
@@ -1244,13 +1344,14 @@ class BriefStaleness:
         # plain run's staleness reading exactly what it was: the third channel
         # is silent rather than empty.
         self._precedents = None if precedents is None else dict(precedents)
-        self._current: Dict[int, Optional[str]] = {}
+        self._current: Dict[Tuple[int, int], Optional[str]] = {}
         self._entries: Dict[int, Optional[Sequence[Mapping[str, Any]]]] = {}
 
     def current_digest(self, case_no: int) -> Optional[str]:
-        if case_no not in self._current:
-            self._current[case_no] = self._digest(case_no)
-        return self._current[case_no]
+        key = (case_no, self._policy_version)
+        if key not in self._current:
+            self._current[key] = self._digest(case_no)
+        return self._current[key]
 
     def recorded_entries(self, case_no: int) -> Optional[Sequence[Mapping[str, Any]]]:
         """The transcript entries recorded for one case, memoised.
@@ -1717,6 +1818,7 @@ def run_one_case(
     verify_drafts: bool = False,
     ablate: Optional[str] = None,
     precedents: Optional[Any] = None,
+    policy_version: int = policy_versions.BASE_VERSION,
     configuration: Optional[Mapping[str, Any]] = None,
     events_log: Optional[Any] = None,
 ) -> Tuple[CaseOutcome, Optional[Dict[str, Any]], Optional[str]]:
@@ -1818,6 +1920,7 @@ def run_one_case(
                 verify_drafts=verify_drafts,
                 ablate=ablate,
                 precedents=precedents,
+                policy_version=policy_version,
             )
         else:
             # A converted external case, already loaded through its own explicit
@@ -1833,6 +1936,7 @@ def run_one_case(
                 verify_drafts=verify_drafts,
                 ablate=ablate,
                 precedents=precedents,
+                policy_version=policy_version,
             )
     except (llm.MissingAPIKeyError, llm.ModelNotProvisionedError) as exc:
         # Not provisioned and no credential are the same failure for every
@@ -1939,7 +2043,10 @@ def run_one_case(
     if configuration is None:
         # What this case was run under, so the entry says it on its own.
         configuration = configuration_document(
-            judge_votes=judge_votes, verify_drafts=verify_drafts, ablation=ablate
+            judge_votes=judge_votes,
+            verify_drafts=verify_drafts,
+            ablation=ablate,
+            policy_version=policy_version,
         )
     document = {
         "schema_version": CACHE_SCHEMA_VERSION,
@@ -2374,6 +2481,7 @@ def run_benchmark(
     verify_drafts: bool = False,
     ablation: Optional[str] = None,
     precedents: Optional[Any] = None,
+    policy_version: int = policy_versions.BASE_VERSION,
     client_factory: Optional[Callable[[Callable[[Dict[str, Any]], None]], Any]] = None,
     key: Optional[Mapping[int, grade.Ruling]] = None,
     git_runner: Optional[Callable[[Sequence[str]], Optional[str]]] = None,
@@ -2469,7 +2577,16 @@ def run_benchmark(
             "advocates, which were given the brief without the ablation, and the "
             "judge would then be handed an unablated brief"
         )
-    if ablation is not None and precedents is not None:
+    switches_on = [
+        name
+        for name, on in (
+            ("--ablate", ablation is not None),
+            ("--precedents", precedents is not None),
+            ("--policy-version N>=2", policy_version != policy_versions.BASE_VERSION),
+        )
+        if on
+    ]
+    if len(switches_on) > 1:
         # At most one of the switches that change what an agent is given may be
         # on per invocation. A run with two of them on measures neither, and the
         # directory it wrote to would name only one of them.
@@ -2487,6 +2604,37 @@ def run_benchmark(
             "run's advocates, and the judge that produced them never saw the "
             "precedents block"
         )
+    if policy_version != policy_versions.BASE_VERSION and replay_dir is not None:
+        # A replay rebuilds the case's brief and compares it with the digest the
+        # source run recorded, then hands the judge that rebuilt brief. A run
+        # named at a later version would rebuild at that version while the
+        # advocates it reuses were given the brief of the version their run
+        # recorded, so the two halves of the case would have been produced under
+        # different policy. A replay is how a recorded run is reproduced, and it
+        # is the source run's version that does the reproducing.
+        raise BenchmarkError(
+            "a run at a later policy version cannot replay: a replay rebuilds the "
+            "brief at the version the source run recorded, and the advocates it "
+            "reuses were given that brief, not this version's"
+        )
+    if policy_version != policy_versions.BASE_VERSION:
+        # Refused here, before a client exists and before any case is issued, so
+        # a version this repository does not have is one clear refusal rather
+        # than a run directory full of cases that each failed to build a brief.
+        # ``apply_amendments`` makes the same check; this one is here because the
+        # message belongs to the command line that asked, and because the
+        # staleness check would otherwise swallow it into ``None`` per case.
+        try:
+            available = policy_versions.current_version()
+        except policy_versions.AmendmentError as exc:
+            raise BenchmarkError(str(exc))
+        if policy_version > available:
+            raise BenchmarkError(
+                "there is no policy version {0}; this repository is at version "
+                "{1}, so version {1} is the highest that can be run".format(
+                    policy_version, available
+                )
+            )
     # Loaded once, before anything is written. The chain head travels into the
     # run's configuration, and the staleness check has to compare every cached
     # case against the same head the whole invocation was shown against.
@@ -2537,24 +2685,33 @@ def run_benchmark(
             case_loader=case_loader,
         )
 
-    # An ablated run gets a directory of its own, under the runs root it was
-    # given. That root is ``runs/`` for the corpus and ``runs/codex/`` for the
-    # second set, so the same rule puts an ablated corpus run at
-    # ``runs/ablation/<name>/<model-slug>/`` and an ablated second-set run at
-    # ``runs/codex/ablation/<name>/<model-slug>/``. Neither can land where an
-    # unablated result lives, which is what makes the two measurements
-    # distinguishable by their paths and not only by their contents.
-    run_dir = (
-        run_directory(runs_dir, model)
-        if ablation is None and precedents is None
-        else assert_ablation_destination(
+    # A run with a switch on gets a directory of its own, under the runs root it
+    # was given. That root is ``runs/`` for the corpus and ``runs/codex/`` for
+    # the second set, so the same rule puts an ablated corpus run at
+    # ``runs/ablation/<name>/<model-slug>/``, a precedents corpus run at
+    # ``runs/precedents/<model-slug>/`` and a version-N corpus run at
+    # ``runs/policy-v<N>/<model-slug>/`` -- and the same three under
+    # ``runs/codex/`` for the second set. None of them can land where an
+    # unswitched result lives, which is what makes the measurements
+    # distinguishable by their paths and not only by their contents. At most one
+    # switch can be on -- checked above -- so the order here decides only which
+    # directory a run that cannot happen would have gone to.
+    if ablation is not None:
+        run_dir = assert_ablation_destination(
             ablation_run_directory(runs_dir, ablation, model), runs_dir
         )
-        if ablation is not None
-        else assert_precedents_destination(
+    elif precedents is not None:
+        run_dir = assert_precedents_destination(
             precedents_run_directory(runs_dir, model), runs_dir
         )
-    )
+    elif policy_version != policy_versions.BASE_VERSION:
+        run_dir = assert_policy_v_destination(
+            policy_v_run_directory(runs_dir, policy_version, model),
+            runs_dir,
+            policy_version,
+        )
+    else:
+        run_dir = run_directory(runs_dir, model)
     if label is not None and run_dir.resolve() == run_directory(RUNS_DIR, model).resolve():
         # A development set's results are not corpus results, and
         # runs/<model>/ is where the corpus result lives. Refused rather than
@@ -2594,6 +2751,7 @@ def run_benchmark(
         verify_drafts=verify_drafts,
         ablation=ablation,
         precedents=None if library is None else library.configuration(),
+        policy_version=policy_version,
     )
 
     # The invocation's own id, and the append-only log every case appends to.
@@ -2632,6 +2790,14 @@ def run_benchmark(
         # invocation's own line when the switch is on, and absent from it when it
         # is not, so the line a plain run appends is the line it always appended.
         **({"precedents": library.chain_head} if library is not None else {}),
+        # And the policy version, on the same rule again: named only when it is
+        # not version 1, so the line a plain run appends is the line it always
+        # appended.
+        **(
+            {"policy_version": policy_version}
+            if policy_version != policy_versions.BASE_VERSION
+            else {}
+        ),
     )
 
     # A shared sink, because the client is shared across every case and, above
@@ -2691,13 +2857,16 @@ def run_benchmark(
     # against an ablated brief and not against the plain one -- which would
     # report every case of it stale.
     checker = BriefStaleness(
-        brief_digest_for(case_loader, ablate=ablation),
+        brief_digest_for(case_loader, ablate=ablation, policy_version=policy_version),
         run_dir=run_dir,
         # The library as this invocation has it, so the third staleness channel
         # compares each cached case against the head the whole run was shown
         # against. ``None`` when the switch is off, and the channel is then
         # silent rather than empty.
         precedents=None if library is None else library.configuration(),
+        # The version this run briefs at, so a cached case is compared against
+        # the brief this invocation would build and not against version 1's.
+        policy_version=policy_version,
     )
     for case_no in requested:
         document = None if force else load_cached(run_dir, case_no)
@@ -2862,6 +3031,7 @@ def run_benchmark(
                 verify_drafts=verify_drafts,
                 ablate=ablation,
                 precedents=library,
+                policy_version=policy_version,
                 configuration=configuration,
                 events_log=events_log,
             )
@@ -4786,6 +4956,20 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             "seen these sets".format(PRECEDENTS_STORE)
         ),
     )
+    parser.add_argument(
+        "--policy-version",
+        type=int,
+        default=DEFAULT_POLICY_VERSION,
+        metavar="N",
+        help=(
+            "brief every case against policy version N: version 1 is the three "
+            "policy files exactly as committed, and version N adds the amendments "
+            "0001..N-1 from policy/amendments/. Off by default (version 1). "
+            "Results for N >= 2 go to runs/policy-v<N>/<model>/, never into "
+            "runs/<model>/ where the submission's figure lives, and the version "
+            "is recorded in every artifact the run writes"
+        ),
+    )
     parser.add_argument("--runs-dir", type=Path, default=RUNS_DIR)
     parser.add_argument("--prompts-dir", type=Path, default=PROMPTS_DIR)
     args = parser.parse_args(argv)
@@ -4856,6 +5040,45 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 parser.error(
                     "--precedents shows the judge earlier closures and takes no "
                     "{0}, which {1}".format(name, why)
+                )
+
+    if args.policy_version != DEFAULT_POLICY_VERSION:
+        # A later policy version changes what every agent is given, so the same
+        # refusals apply for the same reasons: each mode below reads or produces
+        # a run briefed at version 1, and naming the version beside one would
+        # look as though the briefs had been built from amended policy. This
+        # block comes after the other two, so it is the one that catches a
+        # version named beside --ablate or --precedents as well as one alone.
+        if args.ablate is not None or args.precedents:
+            parser.error(
+                "at most one of --ablate, --precedents and --policy-version N>=2 "
+                "may be given per invocation: each changes what the agents are "
+                "given, and a run with two of them on measures neither"
+            )
+        for present, name, why in (
+            (args.compare, "--compare", "reads cached runs produced at version 1"),
+            (
+                args.replay_advocates is not None,
+                "--replay-advocates",
+                "reuses a recorded run's advocates, which were given their own "
+                "run's policy version's brief",
+            ),
+            (args.replay_check is not None, "--replay-check", "reads a recorded run"),
+            (
+                args.verify_recorded_drafts is not None,
+                "--verify-recorded-drafts",
+                "reuses a recorded run's drafts",
+            ),
+            (
+                args.external is not None,
+                "--external",
+                "arbitrates a converted case in full, outside the corpus",
+            ),
+        ):
+            if present:
+                parser.error(
+                    "--policy-version N>=2 briefs every case against the amended "
+                    "policy and takes no {0}, which {1}".format(name, why)
                 )
 
     if args.compare:
@@ -5012,6 +5235,16 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             replay_dir=args.replay_advocates,
             judge_votes=args.judge_votes,
             verify_drafts=args.verify_drafts,
+            # The three switches that change what an agent is given. The first
+            # two were parsed and refused in combination here but never reached
+            # the runner on this command line, so ``--ablate`` and
+            # ``--precedents`` ran an unswitched set and wrote it into the
+            # headline run directory -- the opposite of what their help text and
+            # ``runs/README.md`` say. They are named here beside the third, so
+            # the flags this command line accepts are the flags it honours.
+            ablation=args.ablate,
+            precedents=(PRECEDENTS_STORE if args.precedents else None),
+            policy_version=args.policy_version,
         )
     except llm.ModelNotProvisionedError as exc:
         print("FATAL: {0}".format(exc), file=sys.stderr)

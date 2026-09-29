@@ -631,6 +631,21 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--policy-version",
+        type=int,
+        default=run_benchmark.DEFAULT_POLICY_VERSION,
+        metavar="N",
+        help=(
+            "brief every case against policy version N: version 1 is the three "
+            "policy files exactly as committed, and version N adds the "
+            "amendments 0001..N-1 from policy/amendments/. Off by default "
+            "(version 1). The run writes to runs/policy-v<N>/<model>/ -- under "
+            "the set's own root, so the second set's go to "
+            "runs/codex/policy-v<N>/<model>/ -- and never into a run directory "
+            "holding a version-1 result"
+        ),
+    )
+    parser.add_argument(
         "--verify-recorded-drafts",
         type=Path,
         default=None,
@@ -697,6 +712,36 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 print(
                     "FATAL: --precedents shows the judge earlier closures and "
                     "takes no {0}".format(name),
+                    file=sys.stderr,
+                )
+                return 1
+
+    if args.policy_version != run_benchmark.DEFAULT_POLICY_VERSION:
+        # A later policy version changes what every agent is given, so it follows
+        # the rule the ablation and the precedent block follow: it cannot be
+        # combined with another switch that changes the agents' input, nor with a
+        # mode that reads or reports a run produced without it. This block runs
+        # after the other two, so it is the one that catches a version named
+        # beside either of them as well as one named alone.
+        if args.ablate is not None or args.precedents:
+            print(
+                "FATAL: at most one of --ablate, --precedents and "
+                "--policy-version N>=2 may be given per invocation: each changes "
+                "what the agents are given, and a run with two of them on "
+                "measures neither",
+                file=sys.stderr,
+            )
+            return 1
+        for present, name in (
+            (args.report, "--report"),
+            (args.replay_advocates is not None, "--replay-advocates"),
+            (args.replay_check is not None, "--replay-check"),
+            (args.verify_recorded_drafts is not None, "--verify-recorded-drafts"),
+        ):
+            if present:
+                print(
+                    "FATAL: --policy-version N>=2 briefs every case against the "
+                    "amended policy and takes no {0}".format(name),
                     file=sys.stderr,
                 )
                 return 1
@@ -820,6 +865,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 precedents=(
                     run_benchmark.PRECEDENTS_STORE if args.precedents else None
                 ),
+                policy_version=args.policy_version,
             )
         except run_benchmark.llm.ModelNotProvisionedError as exc:
             print("FATAL: {0}".format(exc), file=sys.stderr)

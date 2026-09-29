@@ -28,7 +28,7 @@ import hashlib
 import re
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
-from . import facts, loader, money
+from . import facts, loader, money, policy_versions
 
 # The five evaluation-only keys the contract forbids anywhere in a bundle.
 FORBIDDEN_KEYS = loader.FORBIDDEN_KEYS
@@ -1539,6 +1539,7 @@ def build_brief_for_case(
     include_clause_notes: bool = True,
     *,
     ablate: Optional[str] = None,
+    policy_version: int = policy_versions.BASE_VERSION,
 ) -> Dict[str, Any]:
     """The same brief, from a case already in hand.
 
@@ -1562,6 +1563,15 @@ def build_brief_for_case(
     named so that a run can record which ablation it was; ``admissibility``
     removes the admissibility object from every artifact. Neither touches the
     derived blocks, the money block or the policies' structured fields.
+
+    ``policy_version`` is the version of the policy to brief against, and it is
+    passed straight to :func:`tribunal.loader.load_policies`: version 1 is the
+    three files as committed, version N is those files with amendments ``0001``
+    through ``N-1`` applied. It is keyword-only and defaults to version 1, so
+    the brief is byte-identical to the one every caller produced before the
+    parameter existed. It is deliberately **not** on :func:`build_brief`, whose
+    signature is pinned by a test: that entry point briefs the corpus, and the
+    corpus is measured at version 1.
     """
     if ablate is not None and not ablation_known(ablate):
         raise AblationError(
@@ -1573,7 +1583,7 @@ def build_brief_for_case(
         include_clause_notes = False
 
     category = case["dispute"].get("category")
-    policies = loader.load_policies(category)
+    policies = loader.load_policies(category, policy_version)
 
     category_policy = policies["category"]
     policy_id = category_policy.get("policy_id", "")

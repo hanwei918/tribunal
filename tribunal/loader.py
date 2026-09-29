@@ -10,9 +10,11 @@ The four public entry points are:
     that the requested case number, the manifest entry, the filename and the
     loaded file's own ``case_no`` all agree.
 
-``load_policies(category)``
+``load_policies(category, policy_version=1)``
     Return the general policy plus the policy for ``category``, as whole files
-    (metadata included), so the arithmetic constants reach the agents.
+    (metadata included), so the arithmetic constants reach the agents. A version
+    above 1 applies the approved amendments numbered below it; version 1 is the
+    three files as committed and is returned untouched.
 
 ``build_bundle(case_no)``
     Return the runtime bundle: the selected public case content plus the
@@ -32,7 +34,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
-from . import money
+from . import money, policy_versions
 
 # --------------------------------------------------------------------------
 # Locations. ``tribunal/loader.py`` sits directly under the project root.
@@ -325,12 +327,21 @@ def issue_details_of(artifact: Dict[str, Any]) -> List[Dict[str, Any]]:
     return details if isinstance(details, list) else []
 
 
-def load_policies(category: str) -> Dict[str, Any]:
+def load_policies(
+    category: str, policy_version: int = policy_versions.BASE_VERSION
+) -> Dict[str, Any]:
     """Return the general policy plus the policy for ``category``.
 
     Both are returned as whole policy files, metadata included, so the
     arithmetic constants (for example ``fare_model`` and ``fee_schedule``)
     reach the agents. An unsupported category raises rather than defaulting.
+
+    ``policy_version`` is the version to build: version 1 is the three files
+    exactly as committed, and a higher version applies the approved amendments
+    numbered below it. Version 1 returns the files as they were read, without a
+    copy, and does not read ``policy/amendments/`` at all -- so a plain run
+    builds the bytes it always built, and a broken amendment cannot stop the
+    version-1 measurement.
     """
     filename = CATEGORY_POLICY_FILES.get(category)
     if filename is None:
@@ -339,10 +350,17 @@ def load_policies(category: str) -> Dict[str, Any]:
                 category, ", ".join(sorted(CATEGORY_POLICY_FILES))
             )
         )
-    return {
+    policies = {
         "general": _read_json(POLICY_DIR / GENERAL_POLICY_FILE),
         "category": _read_json(POLICY_DIR / filename),
     }
+    if policy_version == policy_versions.BASE_VERSION:
+        return policies
+    return policy_versions.apply_amendments(
+        policies,
+        policy_version,
+        files={"general": GENERAL_POLICY_FILE, "category": filename},
+    )
 
 
 def build_bundle(case_no: int) -> Dict[str, Any]:
