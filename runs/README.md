@@ -17,6 +17,7 @@ This directory is the benchmark's own output. Every subdirectory named in the ta
 | `hy3/` | Produced under an invalidated configuration. | Evidence for a defect. No number in it is usable. |
 | `hy4-preview/` | Produced under the same invalidated configuration. | Evidence for a defect. No number in it is usable. |
 | `policy-v<N>/` | Where a run at a later policy version goes: `policy-v<N>/<model>/`, and `codex/policy-v<N>/<model>/` under the second set's root. No such run is committed here, because no amendment has been approved and the repository is at version 1. It has its own section below. | A different measurement from the headline: those briefs were built from an amended policy, so a figure here answers a question about a policy that is not the committed one. |
+| `policy-gaps/` | The policy-gap loop's report — `python3 -m eval.policy_gaps report --run-dir … --run-dir …`. Two files, `report.json` and `report.md`, and it has its own section below. | **Not a run and not a score.** It names the cases the policy could not decide and groups them, read off the recorded runs. No model call is made to produce it, and nothing in it changes the policy. |
 | `precedents/` | Where a run with `--precedents` on goes: `precedents/<model>/`, and `codex/precedents/<model>/` under the second set's root. No such run is committed here. It has its own section below. | A different measurement from the headline, and not comparable to it: the precedent library is built from closures made by people who have seen these development sets. |
 
 **These are snapshots, and a later run moves them.** A run directory is named after the model id, so
@@ -238,6 +239,63 @@ closures made by people who have seen these development sets, so a case the
 library holds a closure for is material the system has been shown before. Those
 cases are left out of every figure in `report.md` and named there, and the
 printed summary and the `invocation_end` event name them too.
+
+## `policy-gaps/` — where the policy ran out
+
+`policy-gaps/` holds the output of
+
+    python3 -m eval.policy_gaps report --run-dir runs/deepseek-deepseek-flash \
+        --run-dir runs/codex/deepseek-deepseek-flash
+
+and it is not a run. The loop finds the cases the policy could not decide,
+groups them into clusters, and — for a cluster a person has closed at least
+twice — asks a model to draft one clause that would decide them. Nothing it
+drafts takes effect on its own.
+
+**The report is computed and calls no model.** Every figure is read out of the
+recorded runs: each case's transcript **vote block**, its rebuilt brief, and the
+precedent library. Of a case file it reads five fields and no others —
+`case_no`, `ruling`, `brief_sha256`, `development_set` and `configuration` —
+which are exactly the five `tribunal/precedents.py` reads, through that module's
+own reader. It never reads `matched`, a grade event or the answer key, and the
+report says so in its own text.
+
+| File | What it holds |
+|---|---|
+| `report.md` | One section per cluster, each a table of its cases with the ruling the system produced, the confidence, the clause its first referral leads with, and the human closure if the library holds one. Then the pairs dropped as noise, and the cases that could not be analysed with the reason. |
+| `report.json` | The same figures as parsed values: per run the cases cached and the cases that were gaps; the dropped signature pairs; every case that could not be analysed with its reason; and every cluster with its cases, its level, its flag and its per-case detail. |
+
+A case is a **gap** when the policy left it undecided, and the trigger names
+which way: `no_majority` (the vote escalated with a quorum of valid drafts),
+`too_few_valid_drafts` and `too_few_valid_drafts:verifier` (it escalated without
+one), `below_confidence_floor` (it escalated at a confidence under the floor the
+loaded policy states), `clause:<id>` (it escalated at or above the floor with a
+referral), and `judge_no_clause` (it escalated at or above the floor with no
+referral). A file with no vote block — one the judge was asked once for — is
+classified by the last three rows and its trigger is prefixed `single_draft:`.
+A confidence that was **not recorded** counts as under the floor: "not recorded"
+is not "at or above".
+
+Clusters form at two levels, `(category, trigger)` and `(category, trigger,
+signature)`, where a signature is the sorted `type:issue` pairs of the artifacts
+the brief holds as `IMPAIRED` or `MISSING`. A pair present on at least 80 % of
+the given runs' cases is dropped from **every** signature first: it
+distinguishes none of them, and leaving it in would cluster the whole set
+together. A fine cluster whose signature is empty is not emitted, because it
+holds exactly its coarse cluster's cases and would name one set of cases twice.
+
+**A cluster is flagged at three cases, and only a flagged cluster can be
+drafted.** The threshold is a parameter, `--min-cases`, and the report states
+the value it used. A cluster is drafted from only when the library holds at
+least two closures on its cases, so the report's per-case closure column is what
+says whether a cluster is ready.
+
+**It is never written into a model's run directory.** The destination is checked
+in code before anything is written, and so is every directory above it: a
+directory holding a run's own `run.json`, or its `case-*.json` files, is a run
+directory whichever model it belongs to, and everything under `runs/external/`
+is refused whole. A cluster's own cases are still named by the run they came
+from, and a case whose set cannot be established is refused rather than guessed.
 
 ## `policy-v<N>/` — where a run at a later policy version goes
 

@@ -46,6 +46,12 @@ ROLE_JUDGE = "JUDGE"
 # ruling. Keeping it apart is what lets its tokens be counted separately from
 # the judge's and lets a reader of the transcript tell the two questions apart.
 ROLE_VERIFIER = "VERIFIER"
+# The policy drafter. It belongs to no run: it is an offline tool that reads a
+# cluster of undecided cases and the human closures on them and answers with a
+# clause, which is a proposal until a person approves it. It is a role here so
+# that the role name is one string in one place, the same as the three agents',
+# and so a transcript of its one call can be read beside a run's.
+ROLE_POLICY_DRAFTER = "POLICY_DRAFTER"
 
 
 def sha256_text(text: str) -> str:

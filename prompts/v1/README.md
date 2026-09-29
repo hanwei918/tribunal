@@ -9,6 +9,7 @@
 | `stance.driver.md` | The block substituted into `{{STANCE}}` when the DRIVER argues. |
 | `judge.system.md` | The system prompt for the impartial judge. |
 | `verifier.system.md` | The system prompt for the draft verifier. Off by default; asked once per case, over every valid draft, to say whether the brief supports each factual statement. It judges statements, never the ruling. A `contradicted` verdict must also carry a boolean `material`: only a contradiction whose difference **could change a conclusion the statement draws** stops its draft, while a difference of rounding or precision is recorded, flagged, and the draft keeps its vote. |
+| `policy_drafter.system.md` | The system prompt for the policy drafter. It belongs to no run and no runtime agent: it is an offline tool a human runs, and it drafts one clause for a cluster of cases the policy could not decide. Its answer is a **proposal** under `policy/proposals/` and changes nothing until a person approves it. It carries exactly one worked example, which is invented and taken from no case in either development set. |
 
 ## One advocate prompt, not two
 

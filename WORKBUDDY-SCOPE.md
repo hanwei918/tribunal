@@ -125,6 +125,46 @@ key and it is not policy.
   is recursive and runs before anything is written, and the same walk is applied
   to the parsed judge message at runtime whenever the key is present.
 
+## Policy-gap loop (amended 2026-09-29)
+
+A loop was added that finds the cases the policy could not decide, groups them,
+and — for a group a person has closed at least twice — asks a model to draft one
+clause that would decide them. It is the only thing in this repository that can
+add to the policy, and it can do so only through a person.
+
+- **Path.** `policy/proposals/` holds drafts; `policy/amendments/` holds the
+  approved ones. Both sit under `policy/`, which is already an allowed
+  development-time reference, and that is deliberate: an approved amendment is
+  *meant* to change what every later brief says, so it must be agent-visible
+  and it must be committed. A **proposal** is not applied by anything — no
+  loader reads `policy/proposals/`, and the drafter's answer changes no run
+  until a person runs `approve`.
+- **What crosses the boundary, and in one direction.** `eval/policy_gaps.py` is
+  a module under `eval/`, so it may read `eval/answers/`; the scope rule that
+  binds `tribunal/` does not bind it. Exactly one of its commands reads the
+  frozen key, `diff`, and it reads it to grade each development-set case before
+  and after and says so in its own output. Nothing in it writes to `eval/`, and
+  the key is never edited. `report` and `draft` are shown to work with the key
+  loader made to fail.
+- **What the drafter is given.** The loaded policy, a cluster's cases with each
+  artifact's `evidence_id`, `evidence_type`, `admissibility` and `derived`
+  facts, and the human closures on those cases. No raw payload, no `matched`, no
+  grade event, no answer key. The same recursive forbidden-field check the
+  precedent library applies to an entry is applied to the assembled document
+  before it leaves the module, so the control is one function in one place.
+- **What a draft may not do.** It carries one clause of exactly the eight clause
+  fields, an id that is the next free number for its prefix, a category that
+  agrees with both the prefix's file and the cluster, `licenses` within what
+  POL-GEN-03 licenses, and clause references that all resolve in the loaded
+  policy. An amendment adds one clause and can never edit or remove one — the
+  key set is exact, so there is nowhere to write one. A draft that fails any
+  check is recorded as `REJECTED_BY_CODE` beside its transcript and never
+  becomes an amendment.
+- **Where its figures go.** `runs/policy-gaps/` holds the report; a re-run at a
+  new version goes to `runs/policy-v<N>/` like any other version-N run. The
+  report's destination is refused if it is a run directory or lies under one,
+  and a run directory under `runs/external/` is refused as a source.
+
 ## Language rule (standing)
 
 Every document in this repository is written in English, and every prompt pasted into WorkBuddy is written in English. No Chinese characters in any tracked text file.
