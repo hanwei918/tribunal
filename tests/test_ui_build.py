@@ -22,6 +22,16 @@ something. And they do not assert the headline figures against numbers typed in
 here: the figures are recomputed from the run with ``eval.grade``, so the test
 compares two computations rather than one computation against a memory.
 
+One thing they do that they did not, and the reason is worth recording. The
+page's script is never executed by these tests -- there is no browser in the
+suite -- and that is how a defect that drew *nothing at all* reached a real
+browser: two panels answer "this run recorded no data" with ``null``, and
+``appendChild`` throws on anything that is not a node, so the step they are
+appended to is lost from that point on. So the script is now parsed as text for
+the one property that needs no browser, and no function whose own body can
+answer ``null`` may be handed straight to ``appendChild``. See
+``ChildAdderTests``.
+
 A third thing they do conditionally. The tests that read the committed run can
 only run while that run and this code agree about what the agents were handed.
 When every cached brief digest has moved they skip, naming the reason and the
@@ -2021,6 +2031,316 @@ class PanelTests(unittest.TestCase):
         self.assertEqual(
             build._normalise(VERIFICATION_BLOCK), case["vote"]["verification"]
         )
+
+
+# --------------------------------------------------------------------------
+# The page's script, parsed: which functions can answer "nothing"
+#
+# ``appendChild`` throws when it is handed anything that is not a node, and a
+# function that has nothing to draw is the natural place to answer with null.
+# Those two facts together cost the owner the whole of step "5. Judge" on all 29
+# cases, and the tail of the Overview on every load, in a real browser at
+# ``a0fd43e``. No test here could have caught it, because none of them executes
+# the page's script.
+#
+# The guard is therefore a reading of the script rather than a run of it, and it
+# cannot be a search for the string ``appendChild(null)``: the call sites name a
+# function, not the value it returns. So the script is parsed. Comments and
+# string literals are blanked out first, because a brace inside a string or a
+# ``//`` inside a comment would move every boundary after it. Function bodies
+# are then found by matching brackets, and a nested body is taken out of its
+# caller's, so that a callback's ``return null`` is not charged to the function
+# that contains it. Argument lists are removed before the returns are read, so
+# that the null ``return h("table", null, rows)`` passes to ``h`` is not
+# mistaken for a returned one. What remains is the function's own returns.
+# --------------------------------------------------------------------------
+
+_RETURNS_NULL = re.compile(r"\breturn\b[^;{}]*\bnull\b")
+_DIRECT_CALL = re.compile(r"^([A-Za-z_$][\w$]*)\s*\(")
+
+
+def blanked(script: str) -> str:
+    """The script with every comment and string literal blanked out.
+
+    Blanked rather than removed: one space per character, so an index into the
+    result is the same index in the script and a reported line number is the
+    line the reader will find.
+    """
+    out = list(script)
+    index, length = 0, len(script)
+    while index < length:
+        char = script[index]
+        if char == "/" and script.startswith("//", index):
+            while index < length and script[index] != "\n":
+                out[index] = " "
+                index += 1
+        elif char == "/" and script.startswith("/*", index):
+            while index < length and not script.startswith("*/", index):
+                if script[index] != "\n":
+                    out[index] = " "
+                index += 1
+            for _ in range(2):
+                if index < length:
+                    if script[index] != "\n":
+                        out[index] = " "
+                    index += 1
+        elif char in "\"'`":
+            quote = char
+            out[index] = " "
+            index += 1
+            while index < length:
+                if script[index] == "\\":
+                    out[index] = " "
+                    if index + 1 < length:
+                        out[index + 1] = " "
+                    index += 2
+                elif script[index] == quote:
+                    out[index] = " "
+                    index += 1
+                    break
+                else:
+                    if script[index] != "\n":
+                        out[index] = " "
+                    index += 1
+        else:
+            index += 1
+    return "".join(out)
+
+
+def closing_bracket(text: str, start: int) -> int:
+    """The index just past the bracket that closes the one at ``start``."""
+    depth = 0
+    for index in range(start, len(text)):
+        char = text[index]
+        if char in "([{":
+            depth += 1
+        elif char in ")]}":
+            depth -= 1
+            if depth == 0:
+                return index + 1
+    raise AssertionError("the page's script has unbalanced brackets")
+
+
+def function_bodies(clean: str):
+    """``(name, body start, body end)`` for every function that has a body.
+
+    An anonymous callback is yielded with a name of ``None``. It cannot be named
+    at a call site, but its body still has to be found, because otherwise the
+    ``return null`` inside it would be read as its caller's.
+    """
+    found = []
+    patterns = (
+        r"\bfunction\b\s*([A-Za-z_$][\w$]*)?\s*\(",
+        r"\b([A-Za-z_$][\w$]*)\s*=\s*function\b\s*\(",
+    )
+    for pattern in patterns:
+        for match in re.finditer(pattern, clean):
+            opening = match.end() - 1
+            brace = clean.find("{", closing_bracket(clean, opening))
+            if brace == -1:
+                continue
+            found.append((match.group(1), brace, closing_bracket(clean, brace)))
+    return found
+
+
+def own_body(clean: str, spans, start: int, end: int) -> str:
+    """A function's body with every nested function body taken out of it."""
+    pieces = []
+    cursor = start
+    for inner_start, inner_end in sorted(spans):
+        if start < inner_start and inner_end <= end:
+            pieces.append(clean[cursor:inner_start])
+            cursor = inner_end
+    pieces.append(clean[cursor:end])
+    return "".join(pieces)
+
+
+def without_arguments(text: str) -> str:
+    """The text with every balanced ``(...)`` group removed, contents and all.
+
+    ``return h("table", null, rows)`` hands a null to ``h``; it does not return
+    one. Removing argument lists before the returns are read keeps the two
+    apart, and it is the difference between a guard that names the three real
+    call sites and one that also names every table on the page.
+    """
+    out = []
+    index = 0
+    while index < len(text):
+        if text[index] == "(":
+            index = closing_bracket(text, index)
+            continue
+        out.append(text[index])
+        index += 1
+    return "".join(out)
+
+
+def nullable_functions(script: str) -> set:
+    """Every named function whose own body can answer ``null``."""
+    clean = blanked(script)
+    functions = function_bodies(clean)
+    spans = [(start, end) for _, start, end in functions]
+    return {
+        name
+        for name, start, end in functions
+        if name and _RETURNS_NULL.search(without_arguments(own_body(clean, spans, start, end)))
+    }
+
+
+def function_body(script: str, name: str) -> str:
+    """The own body of the named function, with its nested bodies removed."""
+    clean = blanked(script)
+    functions = function_bodies(clean)
+    spans = [(start, end) for _, start, end in functions]
+    for found, start, end in functions:
+        if found == name:
+            return own_body(clean, spans, start, end)
+    raise AssertionError("the page's script has no function named " + name)
+
+
+def _arguments(text: str):
+    """The top-level comma-separated arguments of a call's argument list."""
+    parts = []
+    depth = 0
+    current = []
+    for char in text:
+        if char in "([{":
+            depth += 1
+        elif char in ")]}":
+            depth -= 1
+        if char == "," and depth == 0:
+            parts.append("".join(current).strip())
+            current = []
+            continue
+        current.append(char)
+    parts.append("".join(current).strip())
+    return parts
+
+
+def called_name(argument: str):
+    """The function named by ``name(...)``, or ``None`` for anything else."""
+    match = _DIRECT_CALL.match(argument)
+    return match.group(1) if match else None
+
+
+def call_arguments(script: str, name: str):
+    """``(line, argument)`` for every call of ``name``, as a method or as a function.
+
+    Both forms have to be seen. ``appendChild`` is a DOM method and the helper
+    that replaced it at the three call sites is a free function, so a scan that
+    knew only one of the two would be a guard over half the page -- and the half
+    it missed would be the half the fix is made of.
+    """
+    clean = blanked(script)
+    pattern = re.compile(r"(?:\.|\b)" + re.escape(name) + r"\s*\(")
+    found = []
+    for match in pattern.finditer(clean):
+        opening = clean.index("(", match.end() - 1)
+        argument = clean[opening + 1:closing_bracket(clean, opening) - 1].strip()
+        found.append((clean[:match.start()].count("\n") + 1, argument))
+    return found
+
+
+def handed_to(script: str, name: str):
+    """``(line, function name)`` for every nullable function handed to ``name``.
+
+    A call site counts when a function that can answer null is the whole of one
+    of that call's arguments, which is what "handed straight to" means: an
+    assignment, a ternary or an array element is a different thing, and the page
+    uses all three on purpose.
+    """
+    nullable = nullable_functions(script)
+    found = []
+    for line, argument in call_arguments(script, name):
+        for part in _arguments(argument):
+            called = called_name(part)
+            if called in nullable:
+                found.append((line, called))
+    return found
+
+
+class ChildAdderTests(unittest.TestCase):
+    """Nothing on the page may hand ``appendChild`` a value that can be null.
+
+    This is the defect the owner found in a real browser at ``a0fd43e``, and no
+    test in this file could have found it: **the unit tests never execute the
+    page's script.** On all 29 cases step "5. Judge" drew nothing, because
+    ``verifierPanel`` and ``precedentsPanel`` answer "this run recorded no data"
+    with null and ``section.appendChild(null)`` throws. The same throw cut the
+    Overview short on every load, from ``root.appendChild(missNote())``, since
+    the corpus reached 29/29 and there has been no miss left to note.
+
+    The guard reads the committed page, not a fresh build, because the committed
+    page is the artefact a browser loads. A script edited without rebuilding is
+    caught by ``CommittedPageTests`` instead, so the two together leave no way
+    for the page to keep a call this test would have refused.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        if not build.OUTPUT_PATH.is_file():
+            raise AssertionError("ui/dist/index.html is not committed; run `python -m ui.build`")
+        cls.page = build.OUTPUT_PATH.read_text(encoding="utf-8")
+        cls.script = behaviour_script(cls.page)
+
+    def test_the_committed_page_carries_a_script_to_scan(self):
+        """The scan is worth nothing unless it is reading the real script."""
+        self.assertGreater(len(self.script), 10000)
+        self.assertGreater(len(call_arguments(self.script, "appendChild")), 100)
+
+    def test_the_scan_finds_the_functions_that_can_answer_null(self):
+        """The scan's own control: it must see the functions the fix is about."""
+        nullable = nullable_functions(self.script)
+        for name in ("missNote", "verifierPanel", "precedentsPanel"):
+            with self.subTest(function=name):
+                self.assertIn(name, nullable)
+
+    def test_the_scan_can_fire(self):
+        """A positive control: a script written to be caught is caught.
+
+        Without this the guard could pass by finding nothing at all, which is
+        the failure it exists to prevent one level up. The script below is not
+        in the repository; it is written here in exactly the shape that broke.
+        """
+        script = (
+            "function panel(record) {\n"
+            "  if (!record) { return null; }\n"
+            "  return h('div');\n"
+            "}\n"
+            "function draw(root) { root.appendChild(panel(record)); }\n"
+        )
+        self.assertEqual([(5, "panel")], handed_to(script, "appendChild"))
+        self.assertEqual([], handed_to(script, "appendNode"))
+        self.assertEqual(
+            [(5, "panel")], handed_to(script.replace("appendChild", "appendNode"), "appendNode")
+        )
+
+    def test_no_nullable_function_is_handed_to_append_child(self):
+        """The guard itself, over the page that is committed."""
+        self.assertEqual(
+            [],
+            handed_to(self.script, "appendChild"),
+            "a function that can answer null is handed straight to appendChild; "
+            "appendChild throws on anything that is not a node, so the one case "
+            "where it answers null takes the rest of the step with it",
+        )
+
+    def test_every_nullable_function_is_appended_through_the_one_helper(self):
+        """Where the three null-answering functions are appended, and by what."""
+        self.assertEqual(
+            ["missNote", "precedentsPanel", "verifierPanel"],
+            sorted({name for _, name in handed_to(self.script, "appendNode")}),
+        )
+
+    def test_the_helper_appends_only_a_real_node(self):
+        """``appendNode`` must test for a node before it appends one.
+
+        Asserted on the parsed body of that one function rather than on the
+        script at large, so that another function's ``instanceof Node`` cannot
+        stand in for it.
+        """
+        body = function_body(self.script, "appendNode")
+        self.assertIn("instanceof Node", body)
+        self.assertIn("appendChild", body)
 
 
 if __name__ == "__main__":

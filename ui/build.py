@@ -1714,6 +1714,14 @@ _JS = r"""
     if (children instanceof Node) { node.appendChild(children); return; }
     node.appendChild(document.createTextNode(String(children)));
   }
+  // ``appendChild`` throws when it is handed anything that is not a node, and a
+  // section that has nothing to draw answers with null rather than an empty box.
+  // Every append of such a function's result goes through here, so a null child
+  // is skipped instead of thrown on.
+  function appendNode(node, child) {
+    if (!(child instanceof Node)) { return; }
+    node.appendChild(child);
+  }
   function clear(node) { while (node.firstChild) { node.removeChild(node.firstChild); } }
   function byData(attr, value) {
     var all = document.querySelectorAll("[" + attr + "]");
@@ -2087,7 +2095,7 @@ _JS = r"""
     root.appendChild(h("h3", { text: "All " + DATA.cases.length + " cases" }));
     root.appendChild(h("p", { class: "lead", text: "Click any row to open the case stepped through in order." }));
     root.appendChild(caseGrid());
-    root.appendChild(missNote());
+    appendNode(root, missNote());
     var refused = refusedBlock();
     if (refused) { root.appendChild(refused); }
   }
@@ -2739,10 +2747,11 @@ _JS = r"""
 
     // Both of these are drawn only when the run recorded their data -- the
     // verifier's findings, and the precedents the judge was shown. Each returns
-    // null when it has nothing, and a null child is not appended, so a run with
-    // either switch off shows neither heading rather than an empty panel.
-    section.appendChild(verifierPanel(caseDoc));
-    section.appendChild(precedentsPanel(caseDoc));
+    // null when it has nothing, and appendNode appends only a real node, so a
+    // run with either switch off shows neither heading rather than an empty
+    // panel.
+    appendNode(section, verifierPanel(caseDoc));
+    appendNode(section, precedentsPanel(caseDoc));
 
     panel.appendChild(section);
     panel.appendChild(callBar(judge.agent));
