@@ -602,16 +602,25 @@ class RunBenchmarkCommandLineTests(unittest.TestCase):
         self.assertIn("--compare", message)
 
     def test_a_version_the_repository_does_not_have_is_refused_before_a_client(self):
-        with mock.patch.object(
-            runner,
-            "_default_client_factory",
-            side_effect=AssertionError("a client was built"),
-        ):
-            with contextlib.redirect_stdout(io.StringIO()):
-                with contextlib.redirect_stderr(io.StringIO()) as errors:
-                    code = runner.main(
-                        ["--model", MODEL, "--cases", "101", "--policy-version", "2"]
-                    )
+        # The same shape as the development-set test below: the runs root is a
+        # scratch one, so nothing here resolves a destination under the
+        # repository's own runs/.
+        with tempfile.TemporaryDirectory() as tmp:
+            with mock.patch.object(
+                runner,
+                "_default_client_factory",
+                side_effect=AssertionError("a client was built"),
+            ):
+                with contextlib.redirect_stdout(io.StringIO()):
+                    with contextlib.redirect_stderr(io.StringIO()) as errors:
+                        code = runner.main(
+                            [
+                                "--model", MODEL,
+                                "--cases", "101",
+                                "--policy-version", "2",
+                                "--runs-dir", str(Path(tmp) / "runs"),
+                            ]
+                        )
         self.assertEqual(1, code)
         self.assertIn("there is no policy version 2", errors.getvalue())
 
@@ -679,10 +688,22 @@ class DevelopmentSetsCommandLineTests(unittest.TestCase):
     def test_an_unknown_version_is_reachable_and_says_so(self):
         # The flag is a plain integer, so a version that does not exist is not a
         # parser error: it is refused by the runner with a message naming the
-        # version the repository is actually at.
-        code, message = self.refuse(
-            ["--set", "codex", "--policy-version", "2", "--cases", "9101"]
-        )
+        # version the repository is actually at. The runs root is a scratch one,
+        # so the refusal is about the version and this test never resolves a
+        # destination under the repository's own runs/.
+        with tempfile.TemporaryDirectory() as tmp:
+            code, message = self.refuse(
+                [
+                    "--set",
+                    "codex",
+                    "--policy-version",
+                    "2",
+                    "--cases",
+                    "9101",
+                    "--runs-dir",
+                    str(Path(tmp) / "runs"),
+                ]
+            )
         self.assertEqual(1, code)
         self.assertIn("there is no policy version 2", message)
 
@@ -734,6 +755,214 @@ class NothingGlobsThePolicyDirectoryTests(unittest.TestCase):
         for filename in policy_versions.PREFIX_FILES.values():
             with self.subTest(filename=filename):
                 self.assertIn(filename, source)
+
+
+# --------------------------------------------------------------------------
+# A replay may not mix two policy versions
+# --------------------------------------------------------------------------
+CLAUSE_NOTES = "clause-notes"
+
+
+def version_two_amendments(tmp):
+    """One real amendment under ``<tmp>/amendments``, and the patch that finds it.
+
+    ``loader.load_policies`` calls ``apply_amendments`` with no root, so the
+    amendments directory is resolved from the repository -- which is at version
+    1 and holds none. This points that one lookup at a temporary directory
+    holding one valid amendment, which is what makes a *genuine* version-2 run
+    possible without adding an amendment to the repository or weakening the
+    refusal that a version with no amendments behind it gets.
+    """
+    write_amendment(tmp, "0001-example.json", amendment_document("POL-RD-13"))
+    directory = Path(tmp) / policy_versions.AMENDMENTS_DIRNAME
+    return mock.patch.object(
+        policy_versions, "amendments_dir", lambda root=None: directory
+    )
+
+
+def version_two_run(tmp, cases=(101,)):
+    """A genuine version-2 run of ``cases`` under ``<tmp>/runs``.
+
+    Returns ``(run directory, summary)``. Every case's brief is built from
+    policy version 2, so the run's own artifacts record version 2 and its
+    destination is ``runs/policy-v2/<model>/``.
+    """
+    transport = rig.ScriptedTransport(rig.produced_from_key(rig.answer_key()))
+    with version_two_amendments(tmp):
+        summary = runner.run_benchmark(
+            MODEL,
+            list(cases),
+            runs_dir=Path(tmp) / "runs",
+            prompts_dir=PROMPTS_DIR,
+            client_factory=rig.client_factory(MODEL, transport),
+            key=rig.answer_key(),
+            git_runner=rig.git_runner(),
+            progress=lambda text: None,
+            judge_votes=1,
+            policy_version=2,
+        )
+    landed = (
+        Path(tmp)
+        / "runs"
+        / runner.policy_v_directory_name(2)
+        / runner.model_slug(MODEL)
+    )
+    return landed, summary
+
+
+class ReplayAcrossVersionsTests(unittest.TestCase):
+    """A replay may not hand the judge one version's brief and record another.
+
+    ``replay_verdict`` rebuilds each case's brief at the version the **source**
+    run recorded and hands the judge that brief. The only refusal was about the
+    version this run was *given*, so a plain run pointed at a version-2 source
+    handed the judge a version-2 brief, wrote ``policy_version: 1`` into every
+    artifact, and -- because a plain run's destination is ``runs/<model>/`` --
+    put the result in the headline directory. The two halves of every case would
+    then have been produced under different policy while the run said they had
+    not.
+    """
+
+    def test_a_version_2_source_replayed_into_a_plain_run_is_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source, summary = version_two_run(tmp)
+            self.assertEqual([101], summary.completed_cases)
+            self.assertTrue((source / "case-00101.json").is_file())
+            self.assertEqual(
+                2,
+                runner.configuration_of(
+                    runner.read_json(runner.case_cache_path(source, 101))
+                )["policy_version"],
+            )
+
+            # ``LLMClient`` patched to raise, not the factory: the factory only
+            # closes over the model, and what must not happen is a *client*.
+            with mock.patch.object(
+                runner.llm,
+                "LLMClient",
+                side_effect=AssertionError("a model was called"),
+            ):
+                with contextlib.redirect_stdout(io.StringIO()):
+                    with contextlib.redirect_stderr(io.StringIO()) as errors:
+                        code = runner.main(
+                            [
+                                "--model", MODEL,
+                                "--cases", "101",
+                                "--runs-dir", str(Path(tmp) / "runs"),
+                                "--replay-advocates", str(source),
+                            ]
+                        )
+            self.assertEqual(1, code)
+            message = errors.getvalue()
+            self.assertIn("policy version 2", message)
+            self.assertIn("version 1", message)
+            # Refused before anything was written: no headline directory, and no
+            # model called -- the patch above would have raised.
+            self.assertFalse((Path(tmp) / "runs" / runner.model_slug(MODEL)).exists())
+
+    def test_the_check_refuses_it_without_a_command_line(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source, _summary = version_two_run(tmp)
+            with self.assertRaises(runner.BenchmarkError) as caught:
+                runner.check_replay(
+                    source,
+                    (101,),
+                    model=MODEL,
+                    prompts_dir=PROMPTS_DIR,
+                    policy_version=policy_versions.BASE_VERSION,
+                )
+        self.assertIn("policy version 2", str(caught.exception))
+
+    def test_a_check_with_no_version_of_its_own_is_left_alone(self):
+        """The two read-only analyses pass no version, and must keep working.
+
+        ``eval.baselines`` and ``eval.verify_drafts`` read a recorded run rather
+        than producing one, so they have no version of their own to compare the
+        source against -- and a version-2 source has to stay analysable by them.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            source, _summary = version_two_run(tmp)
+            with version_two_amendments(tmp):
+                check = runner.check_replay(
+                    source, (101,), model=MODEL, prompts_dir=PROMPTS_DIR
+                )
+        self.assertEqual([101], check.accepted_cases)
+
+
+# --------------------------------------------------------------------------
+# The switches the command line accepts are the switches it honours
+# --------------------------------------------------------------------------
+class SwitchForwardingTests(unittest.TestCase):
+    """Every switch the command line accepts has to reach the runner.
+
+    ``--ablate`` and ``--precedents`` were parsed, refused in combination with
+    the modes they cannot be combined with, and then never passed to
+    :func:`run_benchmark` at all. ``--ablate clause-notes`` therefore ran an
+    *unablated* set and wrote it into ``runs/<model>/`` -- the opposite of what
+    the flag's own help text and ``runs/README.md`` say. The forwarding was
+    fixed and nothing held it, so removing one keyword would put the defect back
+    with the suite still green. The first test below is what holds it, at the
+    boundary where the keyword would be lost; the second makes the same claim
+    from the outside, in where the files land.
+    """
+
+    SWITCHES = (
+        (["--ablate", CLAUSE_NOTES], "ablation", CLAUSE_NOTES),
+        (["--precedents"], "precedents", runner.PRECEDENTS_STORE),
+        (["--policy-version", "2"], "policy_version", 2),
+    )
+
+    def test_each_switch_reaches_the_runner(self):
+        for switch, keyword, value in self.SWITCHES:
+            with self.subTest(switch=switch):
+                seen = {}
+
+                def stub(model, cases, **kwargs):
+                    seen.update(kwargs)
+                    return mock.Mock(ok=True)
+
+                with mock.patch.object(runner, "run_benchmark", side_effect=stub):
+                    with mock.patch.object(runner, "print_summary"):
+                        with contextlib.redirect_stdout(io.StringIO()):
+                            runner.main(
+                                ["--model", MODEL, "--cases", "101"] + switch
+                            )
+                self.assertIn(keyword, seen)
+                self.assertEqual(value, seen[keyword])
+
+    def test_each_switch_writes_under_the_directory_its_help_text_names(self):
+        for switch, expected in (
+            (["--ablate", CLAUSE_NOTES], ("ablation", CLAUSE_NOTES)),
+            (["--precedents"], ("precedents",)),
+            (["--policy-version", "2"], ("policy-v2",)),
+        ):
+            with self.subTest(switch=switch):
+                with tempfile.TemporaryDirectory() as tmp:
+                    runs = Path(tmp) / "runs"
+                    transport = rig.ScriptedTransport(
+                        rig.produced_from_key(rig.answer_key())
+                    )
+                    with version_two_amendments(tmp):
+                        with mock.patch.object(
+                            runner,
+                            "_default_client_factory",
+                            return_value=rig.client_factory(MODEL, transport),
+                        ):
+                            with contextlib.redirect_stdout(io.StringIO()):
+                                code = runner.main(
+                                    [
+                                        "--model", MODEL,
+                                        "--cases", "101",
+                                        "--judge-votes", "1",
+                                        "--runs-dir", str(runs),
+                                    ] + switch
+                                )
+                    self.assertEqual(0, code)
+                    landed = runs.joinpath(*expected, runner.model_slug(MODEL))
+                    self.assertTrue((landed / "case-00101.json").is_file())
+                    self.assertTrue((landed / runner.METADATA_FILE).is_file())
+                    # And nothing at all in the headline directory.
+                    self.assertFalse((runs / runner.model_slug(MODEL)).exists())
 
 
 if __name__ == "__main__":

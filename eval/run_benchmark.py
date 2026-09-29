@@ -893,6 +893,7 @@ def check_replay(
     *,
     model: str,
     prompts_dir: Path = PROMPTS_DIR,
+    policy_version: Optional[int] = None,
     case_loader: Optional[Callable[[int], Mapping[str, Any]]] = None,
 ) -> ReplayCheck:
     """Ask, per case, whether a recorded run can supply this run's advocates.
@@ -902,6 +903,22 @@ def check_replay(
     makes :func:`run_benchmark` able to ask it once, for every requested case,
     before the first file is written. A replay into the source run's own
     directory therefore reads everything it needs before it overwrites anything.
+
+    ``policy_version`` is the version **this** run briefs at, and every source
+    case's recorded version is compared with it. A replay rebuilds the case's
+    brief at the version the source run recorded and hands the judge that brief,
+    so the two must agree: a plain run pointed at a version-2 source would hand
+    the judge a version-2 brief, record version 1, and write the result into the
+    headline directory. The mismatch is a refusal of the whole replay rather
+    than one reason per case, for the reason a missing source is -- twenty-nine
+    identical findings would read as a property of the corpus instead of one of
+    a path.
+
+    ``None`` means the caller is not producing a run of its own -- the two
+    read-only analyses of a recorded run, ``eval.baselines`` and
+    ``eval.verify_drafts``, pass nothing -- and there is no version of its own to
+    compare the source against. Every caller that would *write* a run passes its
+    version, and :func:`run_benchmark` always does.
 
     ``case_loader`` is injectable so a test can drive the check without the
     manifest, the same way the brief builder is injectable in ``ui/build.py``.
@@ -937,6 +954,21 @@ def check_replay(
             ),
             model=check.model,
         )
+        if policy_version is not None and source.policy_version != policy_version:
+            # Refused here rather than as one reason per case, and refused for
+            # the whole replay: the source's version is a property of the run
+            # being read, so every case would give the same finding. Left to
+            # ``replay_verdict`` the refusal would be per case and the run would
+            # then run those cases in full -- which is a different measurement
+            # again, and the one thing a caller who asked for a replay did not
+            # ask for.
+            raise BenchmarkError(
+                "the run at {0} was briefed at policy version {1} and this run "
+                "briefs at version {2}: a replay rebuilds each case's brief at the "
+                "version the source run recorded and hands the judge that brief, so "
+                "the judge would see version {1} while this run recorded version "
+                "{2}".format(source_dir, source.policy_version, policy_version)
+            )
         try:
             replayable, reason = pipeline.replay_verdict(
                 load(case_no), source, model=model, prompts_dir=prompts_dir
@@ -2682,6 +2714,7 @@ def run_benchmark(
             requested,
             model=model,
             prompts_dir=prompts_dir,
+            policy_version=policy_version,
             case_loader=case_loader,
         )
 
@@ -5167,6 +5200,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 cases,
                 model=model_id,
                 prompts_dir=args.prompts_dir,
+                policy_version=args.policy_version,
             )
         except BenchmarkError as exc:
             print("FATAL: {0}".format(exc), file=sys.stderr)

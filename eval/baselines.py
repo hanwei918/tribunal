@@ -113,36 +113,48 @@ def assert_not_a_run_directory(
     model it belongs to. The current model's own run directory is refused by
     name as well, so the refusal is the same whether or not that run has been
     made yet.
+
+    **Two roots are walked, not one.** ``--runs-dir`` and ``--out-dir`` are
+    separate arguments, so a caller who points ``--runs-dir`` at a scratch root
+    has not thereby made the repository's own run directories safe to write
+    into -- and asking only about the given root accepted a destination under
+    ``runs/<model-slug>/`` for exactly that reason. Every headline directory
+    under either root is refused, so the guard no longer depends on the two
+    arguments agreeing about where the runs are.
     """
     resolved = Path(destination).resolve()
-    root = Path(runs_dir).resolve()
+    roots = [Path(runs_dir).resolve()]
+    repository = Path(RUNS_DIR).resolve()
+    if repository not in roots:
+        roots.append(repository)
 
-    if resolved == run_benchmark.run_directory(runs_dir, model).resolve():
-        raise BaselineError(
-            "the baselines may not be written to the headline run directory "
-            "{0}; they are not that run's figures".format(resolved)
-        )
-
-    external = (root / run_benchmark.EXTERNAL_RUNS_SUBDIR).resolve()
-    if resolved == external or external in resolved.parents:
-        raise BaselineError(
-            "the baselines may not be written under {0}; every directory there "
-            "is a headline directory".format(external)
-        )
-
-    # Every directory from the destination up to the runs root, so a
-    # destination *inside* a run directory is refused as well as the directory
-    # itself.
-    candidate = resolved
-    while candidate != root and root in candidate.parents:
-        if (candidate / run_benchmark.METADATA_FILE).is_file() or any(
-            candidate.glob("case-*.json")
-        ):
+    for root in roots:
+        if resolved == run_benchmark.run_directory(root, model).resolve():
             raise BaselineError(
-                "the baselines may not be written to {0}, which holds a run's "
-                "own results".format(candidate)
+                "the baselines may not be written to the headline run directory "
+                "{0}; they are not that run's figures".format(resolved)
             )
-        candidate = candidate.parent
+
+        external = (root / run_benchmark.EXTERNAL_RUNS_SUBDIR).resolve()
+        if resolved == external or external in resolved.parents:
+            raise BaselineError(
+                "the baselines may not be written under {0}; every directory "
+                "there is a headline directory".format(external)
+            )
+
+        # Every directory from the destination up to this runs root, so a
+        # destination *inside* a run directory is refused as well as the
+        # directory itself.
+        candidate = resolved
+        while candidate != root and root in candidate.parents:
+            if (candidate / run_benchmark.METADATA_FILE).is_file() or any(
+                candidate.glob("case-*.json")
+            ):
+                raise BaselineError(
+                    "the baselines may not be written to {0}, which holds a run's "
+                    "own results".format(candidate)
+                )
+            candidate = candidate.parent
     return resolved
 
 

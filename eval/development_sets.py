@@ -830,6 +830,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                     subset,
                     model=model,
                     prompts_dir=args.prompts_dir,
+                    policy_version=args.policy_version,
                     case_loader=development_set.load_case,
                 )
             except run_benchmark.BenchmarkError as exc:

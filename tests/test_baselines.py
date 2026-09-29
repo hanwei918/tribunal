@@ -421,6 +421,42 @@ class DestinationTests(unittest.TestCase):
             with self.assertRaises(baselines.BaselineError):
                 baselines.assert_not_a_run_directory(external, runs, MODEL)
 
+    def test_a_scratch_runs_root_does_not_make_another_root_safe(self):
+        """``--runs-dir`` and ``--out-dir`` are separate arguments.
+
+        Pointing the runs root at a scratch directory used to be enough to write
+        into a headline directory under the repository's own ``runs/``: the
+        guard asked only about the root it was given, and a destination that
+        resolved under the other one was accepted. Both roots are walked now.
+        The second root here is a temporary one rather than the repository's, so
+        the guard is shown to be about the *other* root and nothing in this test
+        reads or writes the committed run.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            scratch = Path(tmp) / "scratch"
+            repository = Path(tmp) / "repository-runs"
+            headline = run_benchmark.run_directory(repository, MODEL)
+            headline.mkdir(parents=True)
+            (headline / run_benchmark.METADATA_FILE).write_text("{}", encoding="utf-8")
+
+            with mock.patch.object(baselines, "RUNS_DIR", repository):
+                # The headline directory itself, refused by name.
+                with self.assertRaises(baselines.BaselineError):
+                    baselines.assert_not_a_run_directory(headline, scratch, MODEL)
+                # And a destination inside it, refused by what that directory
+                # holds -- which is the structural half of the same guard.
+                with self.assertRaises(baselines.BaselineError):
+                    baselines.assert_not_a_run_directory(
+                        headline / "baselines", scratch, MODEL
+                    )
+                # The scratch root's own baselines directory is still fine, so
+                # the refusal is about the other root and not about the argument.
+                clean = baselines.baselines_directory(scratch)
+                self.assertEqual(
+                    clean.resolve(),
+                    baselines.assert_not_a_run_directory(clean, scratch, MODEL),
+                )
+
     def test_a_refused_run_writes_nothing_and_leaves_the_headline_dirs_alone(self):
         before = headline_digests()
         with tempfile.TemporaryDirectory() as tmp:
