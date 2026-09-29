@@ -247,6 +247,37 @@ untouched.
   quotations of the brief is wrong; `docs/notes/2026-09-29-the-verifier-measured.md`
   says which and why.
 
+## The admissibility ablation measurement (amended 2026-09-29)
+
+The `admissibility` ablation was measured on both development sets and the output
+is committed. **No path this workspace may read was added**, and the answer key is
+untouched.
+
+- **What was read.** The two committed ablation directories themselves
+  (`runs/ablation/admissibility/deepseek-deepseek-flash/` and
+  `runs/codex/ablation/admissibility/deepseek-deepseek-flash/`), the two headline
+  runs they are compared against, `data/cases/` and `data/external/codex/` for the
+  impaired and missing artifacts, `policy/`, and `tribunal/brief.py` to rebuild
+  each case's brief. The answer key was read **only** through
+  `eval.grade.load_answer_key`, for grading the four run directories and for
+  quoting each differing case's expected ruling. Nothing under `tribunal/` reads
+  `eval/`, and the key stays frozen.
+- **What was written.** `runs/ablation/admissibility/<model>/` and
+  `runs/codex/ablation/admissibility/<model>/` — written by the owner outside this
+  workspace, not by it — plus the note and this section. No case file, policy file
+  or prompt was changed by this work, and the ablation switch itself is unchanged:
+  it applies only in `build_brief_for_case`, is off by default, and is refused
+  together with every replay flag.
+- **What the committed files are.** The owner's output, committed exactly as
+  produced: two invocations per directory, with the first pass's failures left in
+  each `events.jsonl` and the 900-second retry beside them.
+- **One figure the note refuses to over-read.** The corpus drop from 29/29 to
+  26/29 is three cases, but only 112 moved unanimously. On 107 and 211 the
+  headline panel was already split 3 of 4, so one sampled run per condition cannot
+  separate the ablation's effect from sampling variation on those two, and 9111's
+  amount was already wrong before the ablation ran.
+  `docs/notes/2026-09-29-the-admissibility-ablation.md` says so in its own words.
+
 ## Language rule (standing)
 
 Every document in this repository is written in English, and every prompt pasted into WorkBuddy is written in English. No Chinese characters in any tracked text file.

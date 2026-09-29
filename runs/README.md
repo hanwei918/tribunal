@@ -8,6 +8,7 @@ This directory is the benchmark's own output. Every subdirectory named in the ta
 
 | Directory | What it is | Read it as |
 |---|---|---|
+| `ablation/` | An ablated run — `ablation/<name>/<model>/`, and `codex/ablation/<name>/<model>/` under the second set's root. **One is committed here**: the `admissibility` ablation over both development sets, run by the owner on 2026-09-29 and committed as `35eead2`. It has its own section below. | A different measurement from the headline: those briefs had the `admissibility` object removed from every artifact, so a figure here answers a question about a brief the pipeline does not otherwise build. Never merged into a model's run directory. |
 | `baselines/` | The baselines scored off the recorded runs — `python3 -m eval.baselines --set all`. Two files, `report.md` and `baselines.json`, and it has its own section below. | A comparison that says what the headline figure is worth. Not a measurement of the model, and not a generalisation figure. |
 | `codex/` | The second development set's runs. `codex/deepseek-deepseek-flash/` holds the fifteen-case set's own run, keyed by `eval/answers/codex/ground_truth.json`; `codex/deepseek-v4.1-flash/` holds that probe's event log alone. | A measurement of the fifteen cases, never of the corpus. Never merged into `deepseek-deepseek-flash/`. |
 | `deepseek-v4.1-flash/` | A probe of a different model — case 105 at `b25b743`, which stopped after one of the two cases it requested — committed as it was left. | Not a measurement of the submission's model, and no corpus figure is computed from it. |
@@ -219,9 +220,18 @@ of every case file, and the staleness check rebuilds each case's brief the same
 ablated way — otherwise every case of an ablated run would report its brief
 moved.
 
-**No such directory is committed here.** No ablation has been run over either
-development set, so there is nothing to commit, and the commands above are the
-ones that would produce it. Nothing in this directory may be merged into a
+**One ablation is committed here.** `runs/ablation/admissibility/deepseek-deepseek-flash/`
+holds the corpus run — 29 cases — and
+`runs/codex/ablation/admissibility/deepseek-deepseek-flash/` the second set's 15,
+both run by the owner outside the sandbox on 2026-09-29 and committed as
+`35eead2`, byte for byte as produced. Each directory holds two invocations: the
+first pass at the default 600-second timeout lost seven corpus cases and three
+codex cases, and every failure was re-run with `--timeout 900`. The corpus scored
+**26/29** against the headline's **29/29**; the second set **14/15** against
+**14/15**. Four cases moved — 107, 112 and 211 on the corpus, 9111 on the second
+set. The per-case figures, the failures, the tokens and what the ablated brief
+still carries are in `docs/notes/2026-09-29-the-admissibility-ablation.md`. No
+`clause-notes` run is committed. Nothing in this directory may be merged into a
 model's run directory for the reason `external/` may not: an ablated result is a
 different measurement, and a reader finding it beside an unablated one would read
 it as that run's.
