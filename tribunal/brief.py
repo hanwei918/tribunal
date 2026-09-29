@@ -1440,6 +1440,76 @@ def _assert_no_forbidden_keys(node: Any, where: str = "brief") -> None:
             _assert_no_forbidden_keys(value, "{0}[{1}]".format(where, position))
 
 
+# --------------------------------------------------------------------------
+# The ablations
+# --------------------------------------------------------------------------
+# An ablation takes something out of what the agents are given, so a run with
+# one on measures the pipeline without it. Each is a NAME rather than a flag:
+# a run records which one it was, and two ablations cannot be confused for one
+# another in a record or in a directory path.
+ABLATION_CLAUSE_NOTES = "clause-notes"
+ABLATION_ADMISSIBILITY = "admissibility"
+ABLATIONS = (ABLATION_CLAUSE_NOTES, ABLATION_ADMISSIBILITY)
+
+# What each ablation did, in the words a report and a note have to use. They are
+# here rather than in the reporting code so a report cannot describe an ablation
+# the brief module does not implement, and so the admissibility note can say
+# what the ablated brief still carries as well as what it lost.
+ABLATION_NOTES = {
+    ABLATION_CLAUSE_NOTES: (
+        "every clause's drafting `notes` has been removed from the brief's "
+        "policies. The clause ids, the `rule` text and the structured fields are "
+        "unchanged, so a limb still reads as it read; what is gone is the "
+        "commentary around it."
+    ),
+    ABLATION_ADMISSIBILITY: (
+        "the `admissibility` object has been removed from every artifact in the "
+        "brief. The referee reads an artifact with no admissibility object as one "
+        "with no impairment, so no claim is discarded for citing an impaired "
+        "artifact at a weight below 1. A MISSING artifact keeps its `evidence_id` "
+        "and its null payload, and derived text computed from a null payload still "
+        "says MISSING -- so the ablated brief carries no admissibility OBJECT, "
+        "which is not the same as carrying no admissibility information."
+    ),
+}
+
+
+class AblationError(ValueError):
+    """An ablation name this module does not implement."""
+
+
+def ablation_known(name: Any) -> bool:
+    """Whether ``name`` is one of the ablations this module implements."""
+    return isinstance(name, str) and name in ABLATIONS
+
+
+def ablation_note(name: str) -> str:
+    """What one ablation did, in one sentence a report can print."""
+    try:
+        return ABLATION_NOTES[name]
+    except KeyError:
+        raise AblationError(
+            "no ablation called {0!r}; the ablations are {1}".format(
+                name, ", ".join(ABLATIONS)
+            )
+        ) from None
+
+
+def _without_admissibility(artifact: Any) -> Any:
+    """One artifact with its ``admissibility`` object removed, and nothing else.
+
+    The ``evidence_id`` and the payload stay exactly as they were, including a
+    null payload: the ablation removes what was *assessed* about an artifact, not
+    the artifact. A node that is not an artifact is returned untouched, so this
+    cannot quietly reshape something else in the brief.
+    """
+    if not isinstance(artifact, dict):
+        return artifact
+    trimmed = dict(artifact)
+    trimmed.pop("admissibility", None)
+    return trimmed
+
+
 def _policies_without_notes(policies: Dict[str, Any]) -> Dict[str, Any]:
     """Return the policies with every clause's ``notes`` removed."""
     trimmed = copy.deepcopy(policies)
@@ -1465,7 +1535,10 @@ def build_brief(case_no: int, include_clause_notes: bool = True) -> Dict[str, An
 
 
 def build_brief_for_case(
-    case: Dict[str, Any], include_clause_notes: bool = True
+    case: Dict[str, Any],
+    include_clause_notes: bool = True,
+    *,
+    ablate: Optional[str] = None,
 ) -> Dict[str, Any]:
     """The same brief, from a case already in hand.
 
@@ -1477,7 +1550,28 @@ def build_brief_for_case(
     Everything below is the body :func:`build_brief` has always had, moved
     rather than copied, so the two entry points cannot drift apart: there is
     only one of them.
+
+    ``ablate`` names one ablation, or ``None`` for none, and it is applied HERE
+    and nowhere else -- there is one brief, and an ablation is one brief built
+    without part of it rather than a second builder that could differ from the
+    first. It is keyword-only and defaults to ``None``, so every existing caller
+    and :func:`build_brief` itself -- whose signature is pinned by a test and
+    which takes no ablation -- produce the bytes they always produced.
+
+    ``clause-notes`` is the ``include_clause_notes`` flag that already existed,
+    named so that a run can record which ablation it was; ``admissibility``
+    removes the admissibility object from every artifact. Neither touches the
+    derived blocks, the money block or the policies' structured fields.
     """
+    if ablate is not None and not ablation_known(ablate):
+        raise AblationError(
+            "no ablation called {0!r}; the ablations are {1}".format(
+                ablate, ", ".join(ABLATIONS)
+            )
+        )
+    if ablate == ABLATION_CLAUSE_NOTES:
+        include_clause_notes = False
+
     category = case["dispute"].get("category")
     policies = loader.load_policies(category)
 
@@ -1598,6 +1692,13 @@ def build_brief_for_case(
             else artifact
             for artifact in evidence
         ]
+
+    # The admissibility ablation is applied last, over the assembled evidence
+    # rather than inside any one block, so every artifact is treated the same way
+    # whether it came through the GPS transform, through the money block's
+    # attachment, or through untouched.
+    if ablate == ABLATION_ADMISSIBILITY:
+        evidence = [_without_admissibility(artifact) for artifact in evidence]
 
     brief = {
         "case": {

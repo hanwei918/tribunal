@@ -166,6 +166,48 @@ directory holding a run's own `run.json`, or its `case-*.json` files, is a run
 directory whichever model it belongs to, and everything under `runs/external/` is
 refused whole. Read a row here as a comparison for a figure, never as that figure.
 
+## `ablation/` — where an ablated run goes
+
+`ablation/<name>/<model>/` holds the output of
+
+    python3 -m eval.run_benchmark --ablate clause-notes
+    python3 -m eval.development_sets --set codex --ablate admissibility
+
+one directory per ablation per model, under the runs root the run was given. So
+an ablated corpus run goes to `runs/ablation/<name>/<model>/` and an ablated run
+of the second set to `runs/codex/ablation/<name>/<model>/`. The files are the
+ones any run directory carries, listed below; what changes is the brief the
+agents were handed.
+
+An **ablation** is one thing removed from every case's brief, so a run with it on
+measures the pipeline without that thing. Two exist. `clause-notes` builds the
+brief with `include_clause_notes=False` — the flag that already existed, given a
+name a run can record. `admissibility` removes the `admissibility` object from
+every artifact. The second one is worth stating carefully: the ablated brief
+carries no admissibility **object**, which is not the same as carrying no
+admissibility information. A MISSING artifact keeps its `evidence_id` and its
+null payload, the referee reads an artifact with no admissibility object as one
+with no impairment, and derived text computed from a null payload still says
+MISSING.
+
+**It is never written into a model's run directory.** The destination is chosen
+under the runs root's `ablation/` directory and then checked in code before
+anything is written, so a name that resolved outside it is refused rather than
+merely discouraged; and `--ablate` is refused together with `--replay-advocates`,
+`--replay-check`, `--verify-recorded-drafts` and `--external`, because every one
+of those reads a run recorded without the ablation. The ablation is recorded in
+the `configuration` object of `run.json`, of every `invocations.json` entry and
+of every case file, and the staleness check rebuilds each case's brief the same
+ablated way — otherwise every case of an ablated run would report its brief
+moved.
+
+**No such directory is committed here.** No ablation has been run over either
+development set, so there is nothing to commit, and the commands above are the
+ones that would produce it. Nothing in this directory may be merged into a
+model's run directory for the reason `external/` may not: an ablated result is a
+different measurement, and a reader finding it beside an unablated one would read
+it as that run's.
+
 ## How to read one run directory
 
 | File | What it holds |

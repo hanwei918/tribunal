@@ -2635,6 +2635,7 @@ def run_case(
     judge_votes: int = DEFAULT_JUDGE_VOTES,
     events_log: Optional[Any] = None,
     verify_drafts: bool = False,
+    ablate: Optional[str] = None,
 ) -> PipelineResult:
     """Perform one full arbitration of a case named by its manifest number.
 
@@ -2654,6 +2655,11 @@ def run_case(
     ``judge_votes`` is how many times the judge is asked, and it is passed
     straight through for the same reason: there is one arbitration body and this
     is not a second one.
+
+    ``ablate`` names one ablation of the brief, or ``None`` for none, and it is
+    passed straight through for that same reason. It is applied in exactly one
+    place -- :func:`tribunal.brief.build_brief_for_case` -- so an ablated run
+    differs from a plain one in what the agents were given and in nothing else.
     """
     load = loader.load_case if case_loader is None else case_loader
     return run_loaded_case(
@@ -2666,6 +2672,7 @@ def run_case(
         judge_votes=judge_votes,
         events_log=events_log,
         verify_drafts=verify_drafts,
+        ablate=ablate,
     )
 
 
@@ -2680,6 +2687,7 @@ def run_loaded_case(
     judge_votes: int = DEFAULT_JUDGE_VOTES,
     events_log: Optional[Any] = None,
     verify_drafts: bool = False,
+    ablate: Optional[str] = None,
 ) -> PipelineResult:
     """Perform one full arbitration of a case already in hand.
 
@@ -2707,6 +2715,15 @@ def run_loaded_case(
     the result carries no vote at all, so a single-draft run is byte for byte
     what it was. At 2 or more the judge is called that many times on the same
     inputs and the majority decides; see :func:`_run_judge_vote`.
+
+    ``ablate`` names one ablation of the brief, or ``None`` for none. It is
+    checked here rather than only inside the builder, so an unknown name is one
+    refusal naming the names that do exist instead of a per-case failure; and it
+    is applied in exactly one place, the single call to
+    :func:`tribunal.brief.build_brief_for_case` below, so there is one brief and
+    an ablated run is that brief built without part of it rather than a second
+    builder that could differ from the first. The bytes are still serialised
+    once and handed to both advocates and the judge, ablated or not.
     """
     case_no = case["case_no"]
     prompts_dir = Path(prompts_dir)
@@ -2721,6 +2738,12 @@ def run_loaded_case(
             "verify_drafts needs a judge vote of at least 2, got {0}: the verifier "
             "is asked over a panel of drafts".format(judge_votes)
         )
+    if ablate is not None and not brief.ablation_known(ablate):
+        raise PipelineError(
+            "no ablation called {0!r}; the ablations are {1}".format(
+                ablate, ", ".join(brief.ABLATIONS)
+            )
+        )
 
     # The project's second structural claim, checked before any call is made.
     stance_ranges = check_stance_only_difference(prompts_dir)
@@ -2729,8 +2752,11 @@ def run_loaded_case(
     # opens the file and is byte for byte what it was.
     verifier_prompt = _read(prompts_dir / VERIFIER_PROMPT_FILE) if verify_drafts else ""
 
-    # ONE serialisation of the brief, and one digest of those exact bytes.
-    case_brief = brief.build_brief_for_case(case)
+    # ONE serialisation of the brief, and one digest of those exact bytes. The
+    # ablation is applied here and nowhere else: this is the one builder, and
+    # ``ablate=None`` -- what every caller before the switch passed, and what
+    # :func:`build_brief` still passes -- builds the bytes it always built.
+    case_brief = brief.build_brief_for_case(case, ablate=ablate)
     brief_json = money.dumps_canonical(case_brief)
     brief_sha256 = hashlib.sha256(brief_json.encode("utf-8")).hexdigest()
     advocate_user_message = brief_json

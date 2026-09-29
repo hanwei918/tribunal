@@ -602,6 +602,21 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--ablate",
+        choices=list(run_benchmark.brief.ABLATIONS),
+        default=None,
+        metavar="NAME",
+        help=(
+            "build every case's brief with one thing removed, so the run measures "
+            "the pipeline without it: {0}. Off by default. The run writes to "
+            "runs/ablation/<name>/<model>/ -- under the set's own root, so the "
+            "second set's go to runs/codex/ablation/<name>/<model>/ -- and never "
+            "into a run directory holding an unablated result".format(
+                ", ".join(run_benchmark.brief.ABLATIONS)
+            )
+        ),
+    )
+    parser.add_argument(
         "--verify-recorded-drafts",
         type=Path,
         default=None,
@@ -624,6 +639,25 @@ def _build_parser() -> argparse.ArgumentParser:
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = _build_parser().parse_args(argv)
     model = run_benchmark.resolve_model(args.model)
+
+    if args.ablate is not None:
+        # An ablation changes what every agent is given, so it cannot be
+        # combined with a mode that reads a recorded run or reports one: those
+        # modes would be describing results produced without the ablation, and
+        # naming the switch beside them would look as though it had been
+        # applied. Refused before any of them runs, and before any call.
+        for present, name in (
+            (args.report, "--report"),
+            (args.replay_advocates is not None, "--replay-advocates"),
+            (args.replay_check is not None, "--replay-check"),
+            (args.verify_recorded_drafts is not None, "--verify-recorded-drafts"),
+        ):
+            if present:
+                print(
+                    "FATAL: --ablate builds an ablated brief and takes no {0}".format(name),
+                    file=sys.stderr,
+                )
+                return 1
 
     if args.report:
         if args.replay_advocates is not None or args.replay_check is not None:
@@ -740,6 +774,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 judge_votes=args.judge_votes,
                 replay_dir=args.replay_advocates,
                 verify_drafts=args.verify_drafts,
+                ablation=args.ablate,
             )
         except run_benchmark.llm.ModelNotProvisionedError as exc:
             print("FATAL: {0}".format(exc), file=sys.stderr)

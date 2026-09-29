@@ -197,6 +197,9 @@ __all__ = [
     "billed_tokens",
     "model_slug",
     "run_directory",
+    "ABLATION_DIRNAME",
+    "ablation_run_directory",
+    "assert_ablation_destination",
     "case_cache_path",
     "transcript_path",
     "metadata_path",
@@ -465,6 +468,49 @@ def model_slug(model: str) -> str:
 def run_directory(runs_dir: Path, model: str) -> Path:
     """Where one model's run lives: ``runs/<model-slug>/``."""
     return Path(runs_dir) / model_slug(model)
+
+
+# Where an ablated run lives, one level under the runs root. An ablated result
+# is a different measurement from the plain one, and ``runs/<model-slug>/`` is
+# where the submission's figure lives: a run with an ablation on must not be
+# able to land there, and a directory of its own is what makes that checkable
+# rather than merely intended. Under the second set's root the same rule gives
+# ``runs/codex/ablation/<name>/<model-slug>/``.
+ABLATION_DIRNAME = "ablation"
+
+
+def ablation_run_directory(runs_dir: Path, ablation: str, model: str) -> Path:
+    """Where one ablated run lives: ``runs/ablation/<name>/<model-slug>/``.
+
+    The ablation's name is a path component, so it is the name and not a flag:
+    two ablations of one model are two directories, and neither can be mistaken
+    for the other's results.
+    """
+    return Path(runs_dir) / ABLATION_DIRNAME / str(ablation) / model_slug(model)
+
+
+def assert_ablation_destination(run_dir: Path, runs_dir: Path) -> Path:
+    """Refuse an ablated run's directory that is not under the ablation root.
+
+    ``runs/<model-slug>/`` and ``runs/codex/<model-slug>/`` hold the figures the
+    submission reports, and an ablated result is a different measurement: one
+    written there would change what that directory means while leaving every file
+    a reader looks at apparently intact. The destination is therefore checked
+    rather than merely chosen, so a name that resolved outside
+    ``<runs root>/ablation/`` -- ``..``, an absolute path, an empty string --
+    cannot put an ablated result where an unablated one lives.
+
+    Returns the directory unchanged when it is where it should be, so a caller
+    can build and check it in one expression.
+    """
+    resolved = Path(run_dir).resolve()
+    root = (Path(runs_dir) / ABLATION_DIRNAME).resolve()
+    if not resolved.is_relative_to(root):
+        raise BenchmarkError(
+            "an ablated run may only be written under {0}, and this one would go "
+            "to {1}".format(root, resolved)
+        )
+    return Path(run_dir)
 
 
 def case_cache_path(run_dir: Path, case_no: int) -> Path:
@@ -1032,7 +1078,9 @@ def provenance(
 # Staleness
 # --------------------------------------------------------------------------
 def current_brief_sha256(
-    case_no: int, case_loader: Optional[Callable[[int], Mapping[str, Any]]] = None
+    case_no: int,
+    case_loader: Optional[Callable[[int], Mapping[str, Any]]] = None,
+    ablate: Optional[str] = None,
 ) -> Optional[str]:
     """The digest of the brief this code builds for ``case_no`` right now.
 
@@ -1048,19 +1096,29 @@ def current_brief_sha256(
     digest comes back ``None`` for all of them -- which reads as a set whose
     briefs cannot be rebuilt rather than as a set that has been checked.
 
+    ``ablate`` names one ablation, or ``None`` for none, and it is passed to the
+    builder so an ablated run's staleness check asks the question that run
+    actually asked: the digest of the brief **with** the ablation applied.
+    Comparing an ablated result against the unablated brief would report every
+    case of it stale, which is a false finding about the run rather than a
+    statement about this code.
+
     ``None`` when the brief cannot be built at all: a case file that has since
     moved, a policy that no longer parses. That is "cannot tell", and it is not
     "matches".
     """
     load = loader.load_case if case_loader is None else case_loader
     try:
-        return brief.brief_digest(brief.build_brief_for_case(load(case_no)))[1]
+        return brief.brief_digest(
+            brief.build_brief_for_case(load(case_no), ablate=ablate)
+        )[1]
     except Exception:  # noqa: BLE001 - a brief that cannot be built is not a match
         return None
 
 
 def brief_digest_for(
     case_loader: Optional[Callable[[int], Mapping[str, Any]]] = None,
+    ablate: Optional[str] = None,
 ) -> Optional[Callable[[int], Optional[str]]]:
     """The current-brief digest function for one set's cases.
 
@@ -1069,10 +1127,18 @@ def brief_digest_for(
     load a case it does not list, so every one of the set's cached results would
     read as a brief that cannot be rebuilt, and the set would report itself as a
     mixed set -- not one measurement -- when in fact every brief matches.
+
+    ``ablate`` travels with the loader rather than being applied afterwards, for
+    the reason :func:`current_brief_sha256` gives: the digest has to be of the
+    brief that run's agents were given. Both default to nothing, and the pair of
+    defaults is the only case that returns ``None`` -- "use the built-in corpus
+    digest" -- so a caller naming either one gets a function.
     """
-    if case_loader is None:
+    if case_loader is None and ablate is None:
         return None
-    return lambda case_no: current_brief_sha256(case_no, case_loader=case_loader)
+    return lambda case_no: current_brief_sha256(
+        case_no, case_loader=case_loader, ablate=ablate
+    )
 
 
 def current_prompts_sha256(prompts_dir: Path = PROMPTS_DIR) -> Optional[str]:
@@ -1581,6 +1647,7 @@ def run_one_case(
     replay: Optional[Any] = None,
     judge_votes: int = pipeline.DEFAULT_JUDGE_VOTES,
     verify_drafts: bool = False,
+    ablate: Optional[str] = None,
     configuration: Optional[Mapping[str, Any]] = None,
     events_log: Optional[Any] = None,
 ) -> Tuple[CaseOutcome, Optional[Dict[str, Any]], Optional[str]]:
@@ -1621,6 +1688,12 @@ def run_one_case(
     exactly as before. A replayed case takes this path too -- only its advocates
     come from elsewhere.
 
+    ``ablate`` names one ablation of the brief, or ``None`` for none, and it is
+    passed straight through for the same reason ``judge_votes`` is: there is one
+    arbitration body and this is not a second one. It is refused together with
+    ``replay`` below, because a replay hands the judge the brief this code builds
+    for the case, and that brief would not be ablated.
+
     ``replay`` is a :class:`tribunal.pipeline.Replayable`, which only
     :func:`check_replay` produces and which carries the proof that the source
     run's brief, prompts, model and recorded answers all agree with this code.
@@ -1637,6 +1710,19 @@ def run_one_case(
         raise BenchmarkError(
             "an external case cannot be replayed: replay reuses a recorded "
             "run's advocates, and this case is arbitrated in full"
+        )
+    if replay is not None and ablate is not None:
+        # Refused for the reason the ablation is refused with the replay flags
+        # on the command line, and checked here as well because this is the
+        # layer that would otherwise do the wrong thing quietly.
+        # :func:`tribunal.pipeline.replay_case` builds the case's brief with no
+        # ablation -- it must, because the advocates it reuses were given the
+        # unablated brief -- so a replay of an ablated run would hand the judge a
+        # brief that is not the one the run is measuring.
+        raise BenchmarkError(
+            "an ablated run cannot replay: replay hands the judge the brief this "
+            "code builds for the case, which is not ablated, while the advocates "
+            "it reuses were given an ablated brief"
         )
 
     started = time.monotonic()
@@ -1661,6 +1747,7 @@ def run_one_case(
                 judge_votes=judge_votes,
                 events_log=events_log,
                 verify_drafts=verify_drafts,
+                ablate=ablate,
             )
         else:
             # A converted external case, already loaded through its own explicit
@@ -1674,6 +1761,7 @@ def run_one_case(
                 judge_votes=judge_votes,
                 events_log=events_log,
                 verify_drafts=verify_drafts,
+                ablate=ablate,
             )
     except (llm.MissingAPIKeyError, llm.ModelNotProvisionedError) as exc:
         # Not provisioned and no credential are the same failure for every
@@ -1780,7 +1868,7 @@ def run_one_case(
     if configuration is None:
         # What this case was run under, so the entry says it on its own.
         configuration = configuration_document(
-            judge_votes=judge_votes, verify_drafts=verify_drafts
+            judge_votes=judge_votes, verify_drafts=verify_drafts, ablation=ablate
         )
     document = {
         "schema_version": CACHE_SCHEMA_VERSION,
@@ -2152,6 +2240,7 @@ def run_benchmark(
     replay_dir: Optional[Path] = None,
     judge_votes: int = pipeline.DEFAULT_JUDGE_VOTES,
     verify_drafts: bool = False,
+    ablation: Optional[str] = None,
     client_factory: Optional[Callable[[Callable[[Dict[str, Any]], None]], Any]] = None,
     key: Optional[Mapping[int, grade.Ruling]] = None,
     git_runner: Optional[Callable[[Sequence[str]], Optional[str]]] = None,
@@ -2199,6 +2288,17 @@ def run_benchmark(
     function does -- the cache, the provenance, both deadlines, the token budget
     and the replay check -- is unchanged and shared, because a set is run by
     this function and not by a second copy of it.
+
+    ``ablation`` names one ablation of the brief, or ``None`` for none, and it
+    is applied in exactly one place below and passed straight to the layer under
+    this one. Three things follow from it and none of them is optional: the run
+    directory moves to ``runs/ablation/<name>/<model-slug>/`` so an ablated
+    result cannot land where the submission's figure lives; the ``configuration``
+    every artifact carries records which ablation it was; and the staleness
+    checker rebuilds each case's brief **the same ablated way**, because
+    comparing an ablated result against the unablated brief would report every
+    case of it stale. It is refused together with ``replay_dir``: a replay hands
+    the judge the brief this code builds, which is not ablated.
     """
     if not model:
         raise BenchmarkError("model is required and has no default; name the model explicitly")
@@ -2218,6 +2318,24 @@ def run_benchmark(
         )
     if token_budget is not None and token_budget < 0:
         raise BenchmarkError("token_budget cannot be negative")
+    if ablation is not None and not brief.ablation_known(ablation):
+        # Refused here as well as at the command line, so a caller driving this
+        # function directly is told which names exist rather than getting a
+        # directory named after a typo.
+        raise BenchmarkError(
+            "no ablation called {0!r}; the ablations are {1}".format(
+                ablation, ", ".join(brief.ABLATIONS)
+            )
+        )
+    if ablation is not None and replay_dir is not None:
+        # The same refusal :func:`run_one_case` makes, one layer up and before
+        # anything is written, because this is the layer that decides the run
+        # directory and it must not create one for a run that cannot be honest.
+        raise BenchmarkError(
+            "an ablated run cannot replay: a replay reuses a recorded run's "
+            "advocates, which were given the brief without the ablation, and the "
+            "judge would then be handed an unablated brief"
+        )
 
     # De-duplicated but order-preserving: the requested order is the order the
     # progress lines and the report use, and a case named twice is one case.
@@ -2260,7 +2378,20 @@ def run_benchmark(
             case_loader=case_loader,
         )
 
-    run_dir = run_directory(runs_dir, model)
+    # An ablated run gets a directory of its own, under the runs root it was
+    # given. That root is ``runs/`` for the corpus and ``runs/codex/`` for the
+    # second set, so the same rule puts an ablated corpus run at
+    # ``runs/ablation/<name>/<model-slug>/`` and an ablated second-set run at
+    # ``runs/codex/ablation/<name>/<model-slug>/``. Neither can land where an
+    # unablated result lives, which is what makes the two measurements
+    # distinguishable by their paths and not only by their contents.
+    run_dir = (
+        run_directory(runs_dir, model)
+        if ablation is None
+        else assert_ablation_destination(
+            ablation_run_directory(runs_dir, ablation, model), runs_dir
+        )
+    )
     if label is not None and run_dir.resolve() == run_directory(RUNS_DIR, model).resolve():
         # A development set's results are not corpus results, and
         # runs/<model>/ is where the corpus result lives. Refused rather than
@@ -2294,7 +2425,7 @@ def run_benchmark(
     # once here rather than per case, so the case files and the run's own
     # metadata cannot come to disagree about the run that made them.
     configuration = configuration_document(
-        judge_votes=judge_votes, verify_drafts=verify_drafts
+        judge_votes=judge_votes, verify_drafts=verify_drafts, ablation=ablation
     )
 
     # The invocation's own id, and the append-only log every case appends to.
@@ -2325,6 +2456,10 @@ def run_benchmark(
         # Recorded only when the verifier is on, so a run with the switch off
         # appends the same line it always appended.
         **({"verify_drafts": True} if verify_drafts else {}),
+        # And the ablation, on the same rule: named on the invocation's own line
+        # when there is one, and absent from it when there is not, so the line a
+        # plain run appends is the line it always appended.
+        **({"ablation": ablation} if ablation is not None else {}),
     )
 
     # A shared sink, because the client is shared across every case and, above
@@ -2379,8 +2514,14 @@ def run_benchmark(
     # Cached first: a re-run should say what it is skipping before it starts, and
     # whether what it is skipping still belongs to this code. One checker for the
     # whole invocation, because the current brief for a case cannot change while
-    # the run is in progress.
-    checker = BriefStaleness(brief_digest_for(case_loader), run_dir=run_dir)
+    # the run is in progress. The checker rebuilds each case's brief the same
+    # ablated way this run builds it, so a cached ablated result is compared
+    # against an ablated brief and not against the plain one -- which would
+    # report every case of it stale.
+    checker = BriefStaleness(
+        brief_digest_for(case_loader, ablate=ablation),
+        run_dir=run_dir,
+    )
     for case_no in requested:
         document = None if force else load_cached(run_dir, case_no)
         if document is None:
@@ -2542,6 +2683,7 @@ def run_benchmark(
                 replay=replayable,
                 judge_votes=judge_votes,
                 verify_drafts=verify_drafts,
+                ablate=ablation,
                 configuration=configuration,
                 events_log=events_log,
             )
@@ -4387,9 +4529,54 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             "organisers' stated expectation and no score is made"
         ),
     )
+    parser.add_argument(
+        "--ablate",
+        choices=list(brief.ABLATIONS),
+        default=None,
+        metavar="NAME",
+        help=(
+            "build every case's brief with one thing removed, so the run measures "
+            "the pipeline without it: {0}. Off by default. Results go to "
+            "runs/ablation/<name>/<model>/, never into runs/<model>/ where the "
+            "submission's figure lives, and the ablation is recorded in every "
+            "artifact the run writes".format(", ".join(brief.ABLATIONS))
+        ),
+    )
     parser.add_argument("--runs-dir", type=Path, default=RUNS_DIR)
     parser.add_argument("--prompts-dir", type=Path, default=PROMPTS_DIR)
     args = parser.parse_args(argv)
+
+    if args.ablate is not None:
+        # An ablation changes what every agent is given, so it cannot be
+        # combined with a mode that reads a run recorded without it or that
+        # arbitrates a case outside the corpus. Every one of those would look as
+        # though the ablation had been applied when it had not, so each is
+        # refused here, before anything is read or written.
+        for present, name, why in (
+            (args.compare, "--compare", "reads cached runs produced without it"),
+            (
+                args.replay_advocates is not None,
+                "--replay-advocates",
+                "reuses a recorded run's advocates, which were given the brief "
+                "without it",
+            ),
+            (args.replay_check is not None, "--replay-check", "reads a recorded run"),
+            (
+                args.verify_recorded_drafts is not None,
+                "--verify-recorded-drafts",
+                "reuses a recorded run's drafts",
+            ),
+            (
+                args.external is not None,
+                "--external",
+                "arbitrates a converted case in full, outside the corpus",
+            ),
+        ):
+            if present:
+                parser.error(
+                    "--ablate builds an ablated brief and takes no {0}, which "
+                    "{1}".format(name, why)
+                )
 
     if args.compare:
         if args.model is not None:
