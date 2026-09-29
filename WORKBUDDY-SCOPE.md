@@ -165,6 +165,26 @@ add to the policy, and it can do so only through a person.
   report's destination is refused if it is a run directory or lies under one,
   and a run directory under `runs/external/` is refused as a source.
 
+## Viewer (amended 2026-09-29)
+
+The viewer — `ui/build.py` and the page it commits at `ui/dist/index.html` — is
+unchanged in what it may read, and two rules about it are now written down.
+
+- **Money is formatted at display time and only there.** The data block keeps
+  the literals the run recorded, as strings, and the page's own script turns
+  them into two decimals when it renders them. `eval.grade.render_money` is
+  unchanged, and so is every money value in the document; a change that moved
+  the rounding into Python would be a change to the data and is not what the
+  page's rule is.
+- **It reads no new file.** The viewer newly shows two blocks that already
+  travel on a case file under `runs/`: the vote's `verification` (present only
+  when the draft verifier ran) and the case's `precedents_shown` (present only
+  when the precedents switch was on). The precedents panel shows the ids the run
+  recorded it put in front of the judge; the viewer does **not** read
+  `precedents/precedents.jsonl`, and nothing in `ui/` reaches it. Both panels
+  are drawn only when their block is present, so a run with either switch off
+  shows neither.
+
 ## Language rule (standing)
 
 Every document in this repository is written in English, and every prompt pasted into WorkBuddy is written in English. No Chinese characters in any tracked text file.

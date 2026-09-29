@@ -1127,6 +1127,12 @@ def build_document(
                 # could not recover it, since a 2-of-4 split and a unanimous
                 # panel can produce the same ruling.
                 "vote": _vote_payload(transcript.get("vote")),
+                # The precedents the judge was shown, read from the case's own
+                # top-level field rather than from the vote's payload: the runner
+                # writes it on the case file, and an empty list means the switch
+                # was on and nothing matched. A case decided with the switch off
+                # carries no key at all, and the two are different findings.
+                "precedents_shown": result.get("precedents_shown"),
                 "recorded_matched": result.get("matched"),
                 # ``None`` when this run asked this case's advocates itself, so
                 # the case view can say which of the two happened rather than
@@ -1210,7 +1216,7 @@ def _vote_payload(raw: Any) -> Optional[Dict[str, Any]]:
                 "proposal": draft.get("proposal"),
             }
         )
-    return {
+    payload: Dict[str, Any] = {
         "votes": raw.get("votes"),
         "threshold": raw.get("threshold"),
         "valid": raw.get("valid"),
@@ -1220,6 +1226,14 @@ def _vote_payload(raw: Any) -> Optional[Dict[str, Any]]:
         "unanimous": raw.get("unanimous"),
         "drafts": drafts,
     }
+    if raw.get("verification") is not None:
+        # The verifier's findings ride on the vote's own record, and they are
+        # carried here only when the run recorded them: a case decided with the
+        # verifier off must not gain a key claiming the verifier read it. The
+        # page draws its verifier panel exactly when this key is present, which
+        # is why the key is added rather than always written as null.
+        payload["verification"] = raw["verification"]
+    return payload
 
 
 # --------------------------------------------------------------------------
@@ -1433,6 +1447,16 @@ footer.prov b { color: var(--text); font-weight: 600; }
 .badge.dissented { color: var(--warn); border-color: rgba(216,167,42,0.6); background: rgba(216,167,42,0.10); }
 .badge.abstained { color: var(--muted); }
 .badge.contested { color: var(--warn); border-color: rgba(216,167,42,0.6); }
+/* The verifier's findings and the precedents the judge was shown. Both panels
+   are drawn only when the run recorded them, so a case decided with either
+   switch off shows neither and carries no empty heading. */
+.verifier-panel, .precedents-panel { margin-top: 18px; }
+.draft.verification { background: var(--panel); }
+.draft .verdicts { margin: 8px 0 0 0; padding-left: 18px; }
+.draft .verdicts li { margin: 5px 0; }
+.draft .verdicts li .src { margin-left: 8px; }
+.badge.material { color: var(--bad); border-color: rgba(255,107,107,0.5); }
+.badge.not_material { color: var(--muted); }
 .vote-filter { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
 .vote-filter .count { color: var(--muted); font-size: 12.5px; }
 td.vote-cell { white-space: nowrap; }
@@ -1965,8 +1989,9 @@ _JS = r"""
       // result rather than instead of it: a case can be a four-field match and
       // still be one the drafts only just agreed on.
       row.appendChild(h("td", { class: "vote-cell" }, c.vote ? [
-        h("span", { text: c.vote.agreeing + " of " + c.vote.votes }),
-        c.vote.unanimous ? null : h("span", { class: "badge contested", text: text(c.vote.outcome) })
+        h("span", { text: agreementLabel(c.vote.agreeing, c.vote.votes) }),
+        c.vote.unanimous ? null : h("span", { class: "badge contested " + text(c.vote.outcome),
+          text: outcomeLabel(c.vote.outcome) })
       ] : h("span", { class: "null", text: "no vote" })));
       row.appendChild(h("td", null, h("span", {
         class: c.grading.exact ? "badge ok" : "badge miss",
@@ -2120,19 +2145,75 @@ _JS = r"""
       "escalated with no amount set, instead of the code choosing one of the proposals for it."
   };
 
+  // ---- how a value is written --------------------------------------------
+  // Money is shown with two decimals here, at the moment it reaches the page,
+  // and nowhere else. The document keeps the literal the run recorded -- the
+  // tests pin every money value in the data as a string -- so the one rounding
+  // rule lives in one place and never touches the data. ``"null"`` is what the
+  // grader writes for an amount that was never set, and a reader should see
+  // ``none``. Anything that is not a number at all is shown as it came, because
+  // inventing a figure for it would be worse than showing the one that is
+  // there.
+  function money(value) {
+    if (value === null || value === undefined) { return "none"; }
+    var raw = String(value);
+    if (raw === "null") { return "none"; }
+    if (raw.trim() === "" || !isFinite(Number(raw))) { return raw; }
+    return Number(raw).toFixed(2);
+  }
+
+  // The run's own tokens stay as class names -- the stylesheet colours the vote
+  // outcomes and the draft kinds by those names -- so these maps only say what
+  // a reader is shown in place of the token.
+  var DRAFT_KIND_LABEL = {
+    sampled: "sampled",
+    position_swapped: "position-swapped"
+  };
+  function draftKindLabel(kind) {
+    return DRAFT_KIND_LABEL[kind] || text(kind);
+  }
+  function outcomeLabel(outcome) {
+    return VOTE_OUTCOME_LABEL[outcome] || text(outcome);
+  }
+  function agreementLabel(agreeing, votes) {
+    return agreeing + " of " + votes + (votes === 1 ? " draft agrees" : " drafts agree");
+  }
+
+  // An abstention is recorded as a reason code, and one of the codes carries
+  // the statement the verifier rejected. The code is what the run wrote, so it
+  // stays on the element as its title; the sentence in front of a reader says
+  // what kind of thing the code means.
+  function abstentionSentence(reason) {
+    var raw = String(reason);
+    var code = raw.split(":")[0].trim();
+    if (code === "CONTRADICTED_BY_EVIDENCE") {
+      return "abstained: the verifier found the evidence contradicts a statement this draft relied on.";
+    }
+    if (code === "no reason recorded") {
+      return "abstained, and the run recorded no reason.";
+    }
+    if (code.indexOf("DRAFT_") === 0) {
+      return "abstained: the draft did not pass the code checks a voting draft must pass.";
+    }
+    if (raw.indexOf(":") < 0) {
+      return "abstained: the answer could not be read as a ruling.";
+    }
+    return "abstained: the run recorded a reason this page does not classify.";
+  }
+
   // The whole four-field proposal, not just the ruling. On this run one case's
   // drafts all proposed ESCALATE and still disagreed, because they differed on
   // a referral -- a line that showed only the ruling would have called that
   // vote unanimous.
   function proposalLine(proposal) {
     var p = proposal || {};
-    return text(p.ruling) + ", amount " + text(p.amount_sgd) +
-      ", driver " + text(p.driver_compensation_sgd) +
+    return text(p.ruling) + ", amount " + money(p.amount_sgd) +
+      ", driver " + money(p.driver_compensation_sgd) +
       ", referrals " + ((p.referrals && p.referrals.length) ? p.referrals.join(" ") : "none");
   }
 
   function draftLine(draft) {
-    return "draft " + draft.draft + " (" + text(draft.kind) + ", seed " + text(draft.seed) + ") " +
+    return "draft " + draft.draft + " (" + draftKindLabel(draft.kind) + ", seed " + text(draft.seed) + ") " +
       text(draft.verdict) + ": " + proposalLine(draft.proposal);
   }
 
@@ -2142,7 +2223,7 @@ _JS = r"""
     box.appendChild(h("div", { class: "draft-head" }, [
       h("span", { class: "draft-no", text: "Draft " + text(draft.draft) }),
       h("span", { class: "badge " + (swapped ? "swapped" : "sampled"),
-        text: swapped ? "position-swapped" : "sampled" }),
+        text: draftKindLabel(draft.kind) }),
       h("span", { class: "badge", text: "seed " + text(draft.seed) }),
       h("span", { class: "badge", text: "temperature " + text(draft.temperature) }),
       h("span", { class: "badge " + text(draft.verdict), text: text(draft.verdict) })
@@ -2150,8 +2231,8 @@ _JS = r"""
     var proposal = draft.proposal || {};
     box.appendChild(definitionList([
       ["ruling", h("span", { class: "badge judge", text: text(proposal.ruling) })],
-      ["amount_sgd", text(proposal.amount_sgd)],
-      ["driver_compensation_sgd", text(proposal.driver_compensation_sgd)],
+      ["amount_sgd", money(proposal.amount_sgd)],
+      ["driver_compensation_sgd", money(proposal.driver_compensation_sgd)],
       ["referrals", (proposal.referrals && proposal.referrals.length)
         ? h("ul", null, proposal.referrals.map(function (item) {
             return h("li", null, [h("span", { text: String(item) }), " ", clauseChipsInText(String(item))]);
@@ -2159,7 +2240,8 @@ _JS = r"""
         : h("span", { class: "null", text: "none" })]
     ]));
     if (draft.abstention) {
-      box.appendChild(h("p", { class: "notes", text: "abstained, and voted for nothing: " + text(draft.abstention) }));
+      box.appendChild(h("p", { class: "notes", title: text(draft.abstention),
+        text: abstentionSentence(draft.abstention) }));
     }
     return box;
   }
@@ -2180,8 +2262,8 @@ _JS = r"""
 
     var result = h("div", { class: "vote-result " + text(vote.outcome) });
     result.appendChild(h("div", { class: "headline" }, [
-      h("span", { class: "what", text: VOTE_OUTCOME_LABEL[vote.outcome] || text(vote.outcome) }),
-      h("span", { class: "badge", text: vote.agreeing + " of " + vote.votes + " agreed" }),
+      h("span", { class: "what", text: outcomeLabel(vote.outcome) }),
+      h("span", { class: "badge", text: agreementLabel(vote.agreeing, vote.votes) }),
       h("span", { class: "badge", text: "vote_agreement " + text(vote.agreement) }),
       vote.unanimous ? h("span", { class: "badge ok", text: "unanimous" })
                      : h("span", { class: "badge contested", text: "not unanimous" })
@@ -2192,6 +2274,102 @@ _JS = r"""
     section.appendChild(h("h4", { text: "The drafts" }));
     vote.drafts.forEach(function (draft) { section.appendChild(draftBox(draft)); });
     return section;
+  }
+
+  // The verifier's own findings, drawn only when the run recorded them. The
+  // counts are grouped by the draft each statement was charged to, read off the
+  // run's own ``draft`` field on every judged item: no verdict is recomputed
+  // here, and a case decided with the verifier off carries no block at all, so
+  // the panel is absent rather than empty.
+  function verifierPanel(caseDoc) {
+    var vote = caseDoc.vote;
+    var verification = vote && vote.verification;
+    if (!verification) { return null; }
+    var counts = verification.counts || {};
+    var box = h("div", { class: "verifier-panel" });
+    box.appendChild(h("h3", { text: "The verifier" }));
+    box.appendChild(h("p", { class: "lead", text: verification.usable
+      ? "One verifier call read " + text(verification.statements) + " factual statement" +
+        (verification.statements === 1 ? "" : "s") + " the drafts made and checked each against this case's " +
+        "brief. A statement the brief contradicts is recorded below; one marked material could change a " +
+        "conclusion, and it stops the draft that stated it."
+      : "The verifier was called but its answer could not be used (" + text(verification.reason) +
+        "), so no statement was judged and the vote below stands as the drafts left it." }));
+    box.appendChild(definitionList([
+      ["statements judged", text(verification.statements)],
+      ["supported", text(counts.supported)],
+      ["contradicted", text(counts.contradicted)],
+      ["not in evidence", text(counts.not_in_evidence)],
+      ["contradictions that matter", text(verification.material)],
+      ["contradictions that do not", text(verification.not_material)]
+    ]));
+    if (verification.abstained && verification.abstained.length) {
+      box.appendChild(h("p", { class: "notes", text:
+        "Drafts a material contradiction stopped: " + verification.abstained.join(", ") + "." }));
+    }
+    var byDraft = {};
+    (verification.judged || []).forEach(function (item) {
+      var list = byDraft[item.draft] || (byDraft[item.draft] = []);
+      list.push(item);
+    });
+    var numbers = Object.keys(byDraft).map(Number).sort(function (a, b) { return a - b; });
+    if (!numbers.length) {
+      box.appendChild(h("p", { class: "notes", text:
+        "No draft stated a fact the verifier could check against the brief." }));
+      return box;
+    }
+    numbers.forEach(function (number) {
+      var items = byDraft[number];
+      var tally = { supported: 0, contradicted: 0, not_in_evidence: 0 };
+      items.forEach(function (item) {
+        if (Object.prototype.hasOwnProperty.call(tally, item.verdict)) { tally[item.verdict] += 1; }
+      });
+      var draft = h("div", { class: "draft verification" });
+      draft.appendChild(h("div", { class: "draft-head" }, [
+        h("span", { class: "draft-no", text: "Draft " + number }),
+        h("span", { class: "badge ok", text: tally.supported + " supported" }),
+        h("span", { class: "badge miss", text: tally.contradicted + " contradicted" }),
+        h("span", { class: "badge", text: tally.not_in_evidence + " not in evidence" })
+      ]));
+      var contradicted = items.filter(function (item) { return item.verdict === "contradicted"; });
+      if (contradicted.length) {
+        draft.appendChild(h("ul", { class: "verdicts" }, contradicted.map(function (item) {
+          return h("li", null, [
+            h("span", { class: "badge " + (item.material ? "material" : "not_material"),
+              text: item.material ? "material" : "not material" }),
+            h("span", { text: text(item.text) }),
+            item.brief_value ? h("span", { class: "src", text: "brief holds " + text(item.brief_value) }) : null
+          ]);
+        })));
+      }
+      box.appendChild(draft);
+    });
+    return box;
+  }
+
+  // The precedents the judge was shown, read from the case's own top-level
+  // field rather than from the vote's payload. An empty list means the switch
+  // was on and nothing matched; a case with no key at all was decided without
+  // the question being asked. Those are different findings, so the panel is
+  // drawn for the first and not the second.
+  function precedentsPanel(caseDoc) {
+    var shown = caseDoc.precedents_shown;
+    if (shown === null || shown === undefined) { return null; }
+    var box = h("div", { class: "precedents-panel" });
+    box.appendChild(h("h3", { text: "Precedents shown to the judge" }));
+    box.appendChild(h("p", { class: "lead", text: shown.length
+      ? "The precedents switch was on and " + shown.length + " earlier closure" +
+        (shown.length === 1 ? "" : "s") + " from the library went to the judge with this case. They are not " +
+        "evidence and not policy: the judge was told to rest every finding on this case's own evidence ids " +
+        "and clause ids."
+      : "The precedents switch was on and no entry in the library matched this case, so the judge was shown " +
+        "no precedents. That is not the same as the switch being off." }));
+    if (shown.length) {
+      box.appendChild(chips("precedent ids", shown.map(function (id) {
+        return h("span", { class: "chip", text: String(id) });
+      })));
+    }
+    return box;
   }
 
   // The cases a reader most needs to find are the ones the judge's own drafts
@@ -2220,8 +2398,9 @@ _JS = r"""
       });
       row.appendChild(h("td", { class: "case-no", text: String(c.case_no) }));
       row.appendChild(h("td", { text: c.category }));
-      row.appendChild(h("td", { class: "vote-cell", text: c.vote.agreeing + " of " + c.vote.votes }));
-      row.appendChild(h("td", null, h("span", { class: "badge contested", text: text(c.vote.outcome) })));
+      row.appendChild(h("td", { class: "vote-cell", text: agreementLabel(c.vote.agreeing, c.vote.votes) }));
+      row.appendChild(h("td", null, h("span", { class: "badge contested " + text(c.vote.outcome),
+        text: outcomeLabel(c.vote.outcome) })));
       row.appendChild(h("td", { text: dissenters.map(draftLine).join("; ") }));
       body.appendChild(row);
     });
@@ -2296,7 +2475,7 @@ _JS = r"""
       ["filed by", text(dispute.filed_by)],
       ["filed at", text(dispute.filed_at)],
       ["channel", text(dispute.channel)],
-      ["amount contested", "SGD " + text(dispute.amount_contested_sgd)]
+      ["amount contested", "SGD " + money(dispute.amount_contested_sgd)]
     ]));
 
     panel.appendChild(h("h4", { text: "The claim, as filed" }));
@@ -2534,8 +2713,8 @@ _JS = r"""
     section.appendChild(h("h3", { text: "The ruling" }));
     section.appendChild(definitionList([
       ["ruling", h("span", { class: "badge judge", text: text(verdict.ruling) })],
-      ["amount_sgd", text(verdict.amount_sgd)],
-      ["driver_compensation_sgd", text(verdict.driver_compensation_sgd)],
+      ["amount_sgd", money(verdict.amount_sgd)],
+      ["driver_compensation_sgd", money(verdict.driver_compensation_sgd)],
       ["confidence", text(verdict.confidence)]
     ]));
 
@@ -2557,6 +2736,13 @@ _JS = r"""
     // shown per case rather than once for the run because the drafts are a
     // property of the case: some cases carry a unanimous vote, some do not.
     section.appendChild(votePanel(caseDoc));
+
+    // Both of these are drawn only when the run recorded their data -- the
+    // verifier's findings, and the precedents the judge was shown. Each returns
+    // null when it has nothing, and a null child is not appended, so a run with
+    // either switch off shows neither heading rather than an empty panel.
+    section.appendChild(verifierPanel(caseDoc));
+    section.appendChild(precedentsPanel(caseDoc));
 
     panel.appendChild(section);
     panel.appendChild(callBar(judge.agent));
@@ -2591,8 +2777,8 @@ _JS = r"""
         expectedValue = h("code", { text: text(caseDoc.expected.ruling) });
         producedValue = h("code", { text: text(caseDoc.judge.verdict.ruling) });
       } else {
-        expectedValue = h("span", { class: "mono", text: text(caseDoc.expected[outcome.field]) });
-        producedValue = h("span", { class: "mono", text: text(caseDoc.judge.verdict[outcome.field]) });
+        expectedValue = h("span", { class: "mono", text: money(caseDoc.expected[outcome.field]) });
+        producedValue = h("span", { class: "mono", text: money(caseDoc.judge.verdict[outcome.field]) });
       }
       body.appendChild(h("tr", null, [
         h("td", null, h("code", { text: outcome.field })),

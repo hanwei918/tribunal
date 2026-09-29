@@ -1752,5 +1752,276 @@ class ReplayTests(unittest.TestCase):
         )
 
 
+# A verification block in the shape the pipeline records: the counts over every
+# judged statement, and one entry per statement naming the draft it was charged
+# to. Written by hand because the committed run was made with the verifier off,
+# so no case in it carries one, and the panel that reads it would otherwise be
+# a thing hoped for rather than a thing tested.
+VERIFICATION_BLOCK = {
+    "called": True,
+    "usable": True,
+    "reason": "",
+    "statements": 3,
+    "judged": [
+        {
+            "n": 1,
+            "draft": 1,
+            "text": "the driver braked late",
+            "kinds": ["fact"],
+            "verdict": "supported",
+            "evidence": "EV-2",
+            "material": None,
+            "brief_value": "",
+        },
+        {
+            "n": 2,
+            "draft": 1,
+            "text": "the fare was 30.00",
+            "kinds": ["money"],
+            "verdict": "contradicted",
+            "evidence": "EV-3",
+            "material": True,
+            "brief_value": "35.64",
+        },
+        {
+            "n": 3,
+            "draft": 2,
+            "text": "the rider waited an hour",
+            "kinds": ["fact"],
+            "verdict": "not_in_evidence",
+            "evidence": "",
+            "material": None,
+            "brief_value": "",
+        },
+    ],
+    "counts": {"supported": 1, "contradicted": 1, "not_in_evidence": 1},
+    "material": 1,
+    "not_material": 0,
+    "abstained": [1],
+    "abstain_on": "material",
+    "entry": 7,
+    "tokens": {"prompt_tokens": 10, "completion_tokens": 5},
+}
+
+# Two closure ids, in the shape the runner writes them on the case file when the
+# precedents switch is on.
+PRECEDENTS_SHOWN = ["P-0001", "P-0002"]
+
+
+class MoneyAndLabelTests(unittest.TestCase):
+    """What the page writes in place of the run's own raw values.
+
+    Money is formatted at display time and nowhere else, so the data block keeps
+    the literals the run recorded -- that half is pinned by
+    ``TheRunTests.test_money_is_carried_as_its_own_decimal_literal`` and by the
+    check below. This class asserts the other half: that every money site on the
+    page passes its value through the one formatter, that the string ``"null"``
+    reads as ``none``, and that the run's raw tokens survive as class names while
+    a reader is shown a label.
+
+    The checks are on the script's own text, which is the limit of what a suite
+    that runs no browser can say about a panel drawn in JavaScript. What the
+    formatter actually returns for each kind of value was read by running it, and
+    the transcript of that run is recorded in
+    ``docs/notes/2026-09-29-the-viewer-panels-and-the-money.md``.
+    """
+
+    # The run this class reads its page from. Two cases, built by the test, so
+    # the class never skips: what it asserts is a property of the code, and it
+    # must hold whether or not the committed run is still current.
+    CASES = (208, 209)
+
+    # Every money the page shows, as the expression the site holds it in. Each
+    # one must be wrapped in ``money(...)`` and none may go straight to
+    # ``text(...)``, which is what the page did before and what a reverted site
+    # would silently do again.
+    MONEY_SITES = (
+        "p.amount_sgd",
+        "p.driver_compensation_sgd",
+        "proposal.amount_sgd",
+        "proposal.driver_compensation_sgd",
+        "dispute.amount_contested_sgd",
+        "verdict.amount_sgd",
+        "verdict.driver_compensation_sgd",
+        "caseDoc.expected[outcome.field]",
+        "caseDoc.judge.verdict[outcome.field]",
+    )
+
+    @classmethod
+    def setUpClass(cls):
+        temporary = tempfile.TemporaryDirectory()
+        cls.addClassCleanup(temporary.cleanup)
+        run_dir = fixture_run_directory(Path(temporary.name), cls.CASES)
+        cls.page = build.render_html(build.build_document(run_dir=run_dir))
+        cls.script = behaviour_script(cls.page)
+
+    def test_every_money_site_goes_through_the_one_formatter(self):
+        for site in self.MONEY_SITES:
+            with self.subTest(site=site):
+                self.assertIn(
+                    "money(" + site + ")",
+                    self.script,
+                    "this money site does not use the page's formatter",
+                )
+                self.assertNotIn(
+                    "text(" + site + ")",
+                    self.script,
+                    "this money site still shows the run's literal as it came",
+                )
+
+    def test_the_formatter_rounds_to_two_decimals(self):
+        self.assertIn("function money(", self.script)
+        self.assertIn("toFixed(2)", self.script)
+
+    def test_a_null_amount_reads_as_none(self):
+        """``"null"`` is the grader's word for an unset amount; a reader gets ``none``.
+
+        Read out of the formatter's own body: the literal it compares against and
+        the string it returns for it. That the body does what it says was checked
+        by running the function, and the note records the run.
+        """
+        formatter = self.script.split("function money(", 1)[1].split("\n  }", 1)[0]
+        self.assertIn('raw === "null"', formatter)
+        self.assertIn('return "none"', formatter)
+
+    def test_the_data_still_carries_money_as_its_own_literal(self):
+        """The other half of the rule: the formatting is on the page, not in the data."""
+        document = embedded_document(self.page)
+        self.assertTrue(document["cases"], "the fixture drew no case")
+        for case in document["cases"]:
+            with self.subTest(case=case["case_no"]):
+                for field in ("amount_sgd", "driver_compensation_sgd"):
+                    self.assertIsInstance(case["expected"][field], str)
+                    self.assertIsInstance(case["judge"]["verdict"][field], str)
+                self.assertIsInstance(case["dispute"]["amount_contested_sgd"], str)
+
+    def test_the_outcome_label_replaces_the_token_where_a_reader_looks(self):
+        """The grid and the summary show the label; the token stays the class."""
+        self.assertIn("text: outcomeLabel(c.vote.outcome)", self.script)
+        self.assertNotIn("text: text(c.vote.outcome)", self.script)
+        self.assertIn('class: "badge contested " + text(c.vote.outcome)', self.script)
+
+    def test_the_agreement_badge_counts_drafts(self):
+        self.assertIn("agreementLabel(vote.agreeing, vote.votes)", self.script)
+        self.assertIn("agreementLabel(c.vote.agreeing, c.vote.votes)", self.script)
+        self.assertIn('" drafts agree"', self.script)
+
+    def test_the_draft_kind_is_a_label_and_the_token_is_a_class(self):
+        self.assertIn("draftKindLabel(draft.kind)", self.script)
+        self.assertIn('"badge " + (swapped ? "swapped" : "sampled")', self.script)
+
+    def test_an_abstention_keeps_its_code_as_the_title(self):
+        """The code is what the run wrote, so it is kept; the sentence is for a reader."""
+        self.assertIn("title: text(draft.abstention)", self.script)
+        self.assertIn("abstentionSentence(draft.abstention)", self.script)
+        self.assertNotIn('"abstained, and voted for nothing: "', self.script)
+
+
+class PanelTests(unittest.TestCase):
+    """The verifier panel and the precedents panel, and when each is drawn.
+
+    Neither switch is on for the committed run, so no case in it carries the data
+    either panel reads. These build their own run directory instead: a copy of the
+    committed one with the two blocks the runner would have written added by
+    hand. That is what makes each panel a thing under test rather than a thing
+    hoped for -- and the state where the data is absent is tested too, because a
+    panel drawn for a run that never recorded its data would be a claim about the
+    run that the run did not make.
+    """
+
+    CASE = 101
+
+    def _fixture(self, *, verification: bool = True, precedents: bool = True) -> Path:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        run_dir = fixture_run_directory(Path(temporary.name), [self.CASE])
+        if verification:
+            path = run_dir / ("case-%05d.transcript.json" % self.CASE)
+            record = json.loads(path.read_text(encoding="utf-8"))
+            record["vote"]["verification"] = VERIFICATION_BLOCK
+            path.write_text(json.dumps(record), encoding="utf-8")
+        if precedents:
+            path = run_dir / ("case-%05d.json" % self.CASE)
+            record = json.loads(path.read_text(encoding="utf-8"))
+            record["precedents_shown"] = PRECEDENTS_SHOWN
+            path.write_text(json.dumps(record), encoding="utf-8")
+        return run_dir
+
+    def _case(self, run_dir: Path) -> Dict[str, Any]:
+        document = build.build_document(run_dir=run_dir)
+        return {case["case_no"]: case for case in document["cases"]}[self.CASE]
+
+    def test_a_recorded_verification_reaches_the_case(self):
+        case = self._case(self._fixture())
+        self.assertEqual(
+            build._normalise(VERIFICATION_BLOCK), case["vote"]["verification"]
+        )
+
+    def test_a_recorded_precedents_list_reaches_the_case(self):
+        case = self._case(self._fixture())
+        self.assertEqual(PRECEDENTS_SHOWN, case["precedents_shown"])
+
+    def test_a_case_that_recorded_neither_carries_neither(self):
+        """The absent state, which is the state every case in the committed run is in.
+
+        Both keys must be *absent* rather than present and empty: the page draws
+        a panel exactly when its key is there, so an empty key would put a
+        verifier panel on a case the verifier never read.
+        """
+        case = self._case(self._fixture(verification=False, precedents=False))
+        self.assertNotIn("verification", case["vote"])
+        self.assertIsNone(case["precedents_shown"])
+
+    def test_the_vote_payload_carries_the_verification_only_when_it_is_there(self):
+        """The rule the verifier panel's presence rests on, asserted at the payload."""
+        raw = {
+            "votes": 1,
+            "threshold": 1,
+            "valid": 1,
+            "agreement": 1.0,
+            "outcome": pipeline.VOTE_CARRIED,
+            "unanimous": True,
+            "drafts": [],
+        }
+        self.assertNotIn("verification", build._vote_payload(raw))
+        carried = build._vote_payload(dict(raw, verification=VERIFICATION_BLOCK))
+        self.assertEqual(VERIFICATION_BLOCK, carried["verification"])
+
+    def test_the_committed_run_records_neither_panel(self):
+        """The committed page carries no panel, because the run it is built from has none."""
+        skip_unless_the_run_can_be_drawn()
+        for case in build.build_document()["cases"]:
+            with self.subTest(case=case["case_no"]):
+                self.assertNotIn("verification", case["vote"])
+                self.assertIsNone(case["precedents_shown"])
+
+    def test_the_page_draws_each_panel_from_the_run_s_own_data(self):
+        """Each panel is wired to its own key, and answers "nothing" with null.
+
+        A panel is appended whether or not it has anything to draw, so the
+        function has to return null for the absent case and ``h`` has to skip a
+        null child -- otherwise a run with a switch off would show an empty
+        heading claiming a panel it never had.
+        """
+        page = build.render_html(build.build_document(run_dir=self._fixture()))
+        script = behaviour_script(page)
+        self.assertIn("verifierPanel(caseDoc)", script)
+        self.assertIn("precedentsPanel(caseDoc)", script)
+        self.assertIn("vote.verification", script)
+        self.assertIn("caseDoc.precedents_shown", script)
+        self.assertIn("if (!verification) { return null; }", script)
+        self.assertIn("if (shown === null || shown === undefined) { return null; }", script)
+
+    def test_the_page_carries_both_blocks(self):
+        """The data the panels read is on the page, not only in the document object."""
+        page = build.render_html(build.build_document(run_dir=self._fixture()))
+        document = embedded_document(page)
+        case = {item["case_no"]: item for item in document["cases"]}[self.CASE]
+        self.assertEqual(PRECEDENTS_SHOWN, case["precedents_shown"])
+        self.assertEqual(
+            build._normalise(VERIFICATION_BLOCK), case["vote"]["verification"]
+        )
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
