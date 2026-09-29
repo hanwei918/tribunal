@@ -185,6 +185,41 @@ unchanged in what it may read, and two rules about it are now written down.
   are drawn only when their block is present, so a run with either switch off
   shows neither.
 
+## Review fixes (amended 2026-09-29)
+
+An independent review at `db1846c` traced five groups of defects through the
+code and tried, and failed, to refute them. All five are fixed. **The review
+changed no path this workspace may read**, and the four statements below are
+about where a result may be written, which is the part of the boundary that is
+held by code rather than by convention.
+
+- **The headline run directory stays the headline.** `runs/<model>/` holds the
+  result the submission reports, and three ways in were closed. A replay now
+  refuses a source briefed at a policy version other than the new run's, in both
+  command lines and in `check_replay` — before this, replaying a version-2 source
+  into a plain run briefed the judge at version 2, wrote into `runs/<model>/` and
+  recorded version 1. A baselines destination is now checked against the runs
+  root it was given **and** the repository's own, because `--runs-dir` and
+  `--out-dir` are separate arguments and a scratch root made the repository's
+  `runs/` look safe. And `--policy-version` below 1 is refused while the command
+  line is read, so a version that names nothing never reaches a client or a
+  destination.
+- **A switch that is on says so.** With `--precedents` on and nothing matched,
+  the transcript omitted `precedents_shown` while the case file wrote `[]`. Both
+  records now carry the empty list. `None` still means the switch was off, and
+  the judge's message is unchanged — with nothing matching there is no
+  `precedents` key on it, exactly as with the switch off.
+- **The viewer reads no new file.** Reaffirmed: the fix to its Judge step adds
+  one helper that appends only a real node. It still reads nothing but a case
+  file under `runs/`, and it still does not read `precedents/precedents.jsonl`.
+- **No test writes under `runs/`.** The standing rule, restated because this
+  work broke it: the two command-line tests holding the `--policy-version`
+  refusal ran without `--runs-dir`, so with that guard removed they created
+  `runs/policy-v0/<model>/` in the repository. Both now pass a scratch root.
+
+Nothing under `tribunal/` reads anything under `eval/`; that control is
+unchanged by all of this.
+
 ## Language rule (standing)
 
 Every document in this repository is written in English, and every prompt pasted into WorkBuddy is written in English. No Chinese characters in any tracked text file.
