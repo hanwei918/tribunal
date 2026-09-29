@@ -15,7 +15,7 @@ Allowed development-time data references:
 Allowed project files:
 
 - `README.md`, `START-HERE.md`, `WORKBUDDY-HANDOFF.md`, this file, `.gitignore`, `requirements.txt`
-- `tribunal/`, `prompts/`, `tests/`, `eval/`, `ui/`, `runs/`
+- `tribunal/`, `prompts/`, `tests/`, `eval/`, `ui/`, `runs/`, `precedents/`
 - `docs/buddy-log/`, `docs/notes/`, `docs/submission/`
 
 The following material is physically outside this workspace and must never be requested, copied, indexed, attached, or used in a runtime prompt: corpus generation sources, historical case analyses, prior manuals, old PDFs, render outputs, private virtual environments, and any offline grading harness or scoring index that is not part of this repository. The evaluation answer key is no longer on this list: it lives at `eval/answers/` and is committed, under the controls stated in the section below.
@@ -104,6 +104,26 @@ The set's own stated expectation, if it ever has one, belongs at
 `eval/external/codex/expected.json`. The organisers' sample case keeps its own
 at `eval/external/ryde/expected.json`, and a case is printed beside the
 expectation belonging to it and never beside another case's.
+
+## Precedent library (amended 2026-09-28)
+
+A precedent library was added: `precedents/precedents.jsonl`, an append-only,
+hash-chained store of decisions a human reviewer has closed. It is not an answer
+key and it is not policy.
+
+- **Path.** `precedents/` joins the allowed project files above. It holds a store
+  built from closures a person made, and nothing in it is derived from `eval/`.
+- **What changes at runtime, and only when asked.** With `--precedents` on, the
+  judge's user message carries one more key, `precedents`: a fixed note and up to
+  three items, each naming a `precedent_id`, a `category`, clause ids and a
+  ruling. **No amount and no summary travel in the block.** With the switch off
+  the key is absent entirely and the judge's message is the message it always
+  was.
+- **What does not change.** No answer field reaches the block. An entry may carry
+  no field name from `loader.FORBIDDEN_KEYS` and none of `rationale`,
+  `difficulty`, `governing_clauses`, `matched`, `expected` or `grade`; the check
+  is recursive and runs before anything is written, and the same walk is applied
+  to the parsed judge message at runtime whenever the key is present.
 
 ## Language rule (standing)
 

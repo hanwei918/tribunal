@@ -163,6 +163,7 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from eval import grade
 from tribunal import brief, events, llm, loader, money, pipeline, transcript
+from tribunal import precedents as precedents_library
 from tribunal.model import resolve_model
 
 __all__ = [
@@ -200,6 +201,9 @@ __all__ = [
     "ABLATION_DIRNAME",
     "ablation_run_directory",
     "assert_ablation_destination",
+    "PRECEDENTS_DIRNAME",
+    "precedents_run_directory",
+    "assert_precedents_destination",
     "case_cache_path",
     "transcript_path",
     "metadata_path",
@@ -509,6 +513,46 @@ def assert_ablation_destination(run_dir: Path, runs_dir: Path) -> Path:
         raise BenchmarkError(
             "an ablated run may only be written under {0}, and this one would go "
             "to {1}".format(root, resolved)
+        )
+    return Path(run_dir)
+
+
+# Where a run with precedents on lives, one level under the runs root. The same
+# rule the ablation uses, for the same reason: the library is built by people who
+# have seen these development sets, so a figure measured with it on is not
+# comparable to the headline, and it must not be able to land where the headline
+# figure lives. Under the second set's root the rule gives
+# ``runs/codex/precedents/<model-slug>/``.
+PRECEDENTS_DIRNAME = "precedents"
+
+# The store a run uses when the switch is on and no other store is named. It is
+# a parameter everywhere it is read, so a test can point it at a temporary
+# directory; this is only the default the command line passes.
+PRECEDENTS_STORE = PROJECT_ROOT / PRECEDENTS_DIRNAME
+
+
+def precedents_run_directory(runs_dir: Path, model: str) -> Path:
+    """Where a run with precedents on lives: ``runs/precedents/<model-slug>/``."""
+    return Path(runs_dir) / PRECEDENTS_DIRNAME / model_slug(model)
+
+
+def assert_precedents_destination(run_dir: Path, runs_dir: Path) -> Path:
+    """Refuse a precedents run's directory that is not under the precedents root.
+
+    ``runs/<model-slug>/`` and ``runs/codex/<model-slug>/`` hold the figures the
+    submission reports, and a run the judge was given precedents in is a
+    different measurement. The destination is checked rather than merely chosen,
+    so a name that resolved outside ``<runs root>/precedents/`` cannot put such a
+    result where the headline figure lives.
+
+    Returns the directory unchanged when it is where it should be.
+    """
+    resolved = Path(run_dir).resolve()
+    root = (Path(runs_dir) / PRECEDENTS_DIRNAME).resolve()
+    if not resolved.is_relative_to(root):
+        raise BenchmarkError(
+            "a run with precedents on may only be written under {0}, and this one "
+            "would go to {1}".format(root, resolved)
         )
     return Path(run_dir)
 
@@ -1189,11 +1233,17 @@ class BriefStaleness:
             Callable[[int], Optional[Sequence[Mapping[str, Any]]]]
         ] = None,
         prompts_dir: Path = PROMPTS_DIR,
+        precedents: Optional[Mapping[str, Any]] = None,
     ) -> None:
         self._digest = current_brief_sha256 if digest is None else digest
         self._run_dir = None if run_dir is None else Path(run_dir)
         self._entries_for = entries_for
         self._prompts_dir = Path(prompts_dir)
+        # The precedent library's chain head and note digest as this run knows
+        # them, or ``None`` when the switch is off. ``None`` is what keeps a
+        # plain run's staleness reading exactly what it was: the third channel
+        # is silent rather than empty.
+        self._precedents = None if precedents is None else dict(precedents)
         self._current: Dict[int, Optional[str]] = {}
         self._entries: Dict[int, Optional[Sequence[Mapping[str, Any]]]] = {}
 
@@ -1292,17 +1342,35 @@ class BriefStaleness:
             return True
         return self.prompt_comparison(case_no)[0] == pipeline.PROMPT_UNCHECKED
 
+    def precedents_moved(self, case_no: int, document: Mapping[str, Any]) -> bool:
+        """Whether the precedent library this result was produced against moved.
+
+        ``None`` -- the switch off -- never moves, so every cached result in a
+        plain run reads exactly as it read before this channel existed. With the
+        switch on, a case is stale unless the library it recorded is the library
+        this run has, and that includes a case that recorded none at all: a
+        result produced without the block is not a result produced with it.
+        """
+        if self._precedents is None:
+            return False
+        if not isinstance(document, Mapping):
+            return False
+        return configuration_of(document)["precedents"] != self._precedents
+
     def moved_for(self, case_no: int, document: Mapping[str, Any]) -> Tuple[str, ...]:
         """Which recorded digests moved, named, in a fixed order.
 
-        Empty when nothing recorded has moved. Both may be present: a result
-        produced by an older brief under older prompts is stale for both reasons.
+        Empty when nothing recorded has moved. More than one may be present: a
+        result produced by an older brief under older prompts, against an
+        earlier library, is stale for all three reasons.
         """
         moved: List[str] = []
         if self.brief_moved(case_no, document):
             moved.append(grade.MOVED_BRIEF)
         if self.prompts_moved(case_no, document):
             moved.append(grade.MOVED_PROMPTS)
+        if self.precedents_moved(case_no, document):
+            moved.append(grade.MOVED_PRECEDENTS)
         return tuple(moved)
 
     def status_of(self, case_no: int, document: Mapping[str, Any]) -> str:
@@ -1648,6 +1716,7 @@ def run_one_case(
     judge_votes: int = pipeline.DEFAULT_JUDGE_VOTES,
     verify_drafts: bool = False,
     ablate: Optional[str] = None,
+    precedents: Optional[Any] = None,
     configuration: Optional[Mapping[str, Any]] = None,
     events_log: Optional[Any] = None,
 ) -> Tuple[CaseOutcome, Optional[Dict[str, Any]], Optional[str]]:
@@ -1748,6 +1817,7 @@ def run_one_case(
                 events_log=events_log,
                 verify_drafts=verify_drafts,
                 ablate=ablate,
+                precedents=precedents,
             )
         else:
             # A converted external case, already loaded through its own explicit
@@ -1762,6 +1832,7 @@ def run_one_case(
                 events_log=events_log,
                 verify_drafts=verify_drafts,
                 ablate=ablate,
+                precedents=precedents,
             )
     except (llm.MissingAPIKeyError, llm.ModelNotProvisionedError) as exc:
         # Not provisioned and no credential are the same failure for every
@@ -1924,6 +1995,12 @@ def run_one_case(
         # result because a reader of one case file has to be able to see what
         # the verifier found without opening the transcript.
         document["verification"] = result.verification
+    if result.precedents_shown is not None:
+        # Present only when the precedents switch was on, on the same rule: a
+        # case file produced with the switch off is the file it always was. The
+        # ids travel with the result because a reader of one case file has to be
+        # able to see which earlier closures its judge was reading.
+        document["precedents_shown"] = list(result.precedents_shown)
     return (
         CaseOutcome(
             case_no=case_no,
@@ -2003,21 +2080,27 @@ def _format_seconds(value: float) -> str:
     return "{0:>8.1f}s".format(value)
 
 
-# Which digest moved, as a reader needs to hear it. Two phrases rather than one
-# word, because they send the reader to different files: a moved brief means
-# re-read the case, a moved prompt means re-read what the agents were told.
+# Which digest moved, as a reader needs to hear it. A phrase rather than one
+# word, because they send the reader to different places: a moved brief means
+# re-read the case, a moved prompt means re-read what the agents were told, and
+# a moved library means re-read the closures the judge was shown. One entry per
+# ``grade.MOVED_*``, and a test holds the three together, so a channel added
+# later cannot fall through to the fallback below and be described as though the
+# code had moved when it had not.
 _STALE_PHRASES = (
     (grade.MOVED_BRIEF, "the brief has moved"),
     (grade.MOVED_PROMPTS, "the prompts have moved"),
+    (grade.MOVED_PRECEDENTS, "the library has moved"),
 )
 
 
 def _describe_moved(moved: Sequence[str]) -> str:
-    """``the brief has moved``, ``the prompts have moved``, or both, joined.
+    """``the brief has moved``, ``the prompts have moved``, ``the library has
+    moved``, or any of them joined.
 
     When nothing was named -- an older cache entry, or a caller that supplied
     only a status -- the fallback says what is known and no more, rather than
-    picking one of the two and being wrong half the time.
+    picking one of the three and being wrong two times in three.
     """
     named = [phrase for name, phrase in _STALE_PHRASES if name in moved]
     if not named:
@@ -2120,6 +2203,11 @@ class RunSummary:
     # invocation called all three agents for every case" is a fact the record
     # states rather than one a reader infers from a zero.
     replay: Optional[Dict[str, Any]] = None
+    # The cases left out of every figure because the precedent library holds a
+    # closure for them, or ``None`` when the switch was off. ``None`` and an
+    # empty list are different findings: the first says the judge was never shown
+    # a block, the second that it was and no covered case is a source.
+    precedents_excluded: Optional[List[int]] = None
 
     @property
     def tokens_spent(self) -> int:
@@ -2226,6 +2314,50 @@ def _default_client_factory(
     return build
 
 
+# One sentence, stated once, for every place the record has to say that a run
+# with precedents on is not the headline measurement. The library is built from
+# closures made by people who have read these development sets, so a case whose
+# closure is in it is material the system has been shown before, and a figure
+# over such cases is in-sample.
+PRECEDENTS_INCOMPARABLE_NOTE = (
+    "Figures with precedents on are not comparable to the headline figure. The "
+    "precedent library is built from closures made by people who have seen these "
+    "development sets, so a case the library holds a closure for is material the "
+    "system has been shown before."
+)
+
+
+def render_precedents_exclusions(
+    excluded: Sequence[int], measured: Sequence[int]
+) -> str:
+    """The report's own section for a run with precedents on.
+
+    It says two things and neither is optional: which cases were left out of
+    every figure above and why, and that the figures are not comparable to the
+    headline. A report that dropped the cases silently would report a figure
+    over a set it never named.
+    """
+    lines = ["", "## Precedents", "", PRECEDENTS_INCOMPARABLE_NOTE, ""]
+    if excluded:
+        lines.append(
+            "Left out of every figure above: {0} -- {1} of the {2} covered cases. "
+            "The library holds a closure for each of them, so they are cases a "
+            "human has already decided and a figure over them is in-sample.".format(
+                ", ".join(str(case_no) for case_no in excluded),
+                len(excluded),
+                len(excluded) + len(measured),
+            )
+        )
+    else:
+        lines.append(
+            "No covered case is the source of a library entry, so every figure "
+            "above is over the whole covered set. The incomparability stands all "
+            "the same: the library was built by people who have seen this set."
+        )
+    lines.append("")
+    return "\n".join(lines)
+
+
 def run_benchmark(
     model: str,
     cases: Sequence[int],
@@ -2241,6 +2373,7 @@ def run_benchmark(
     judge_votes: int = pipeline.DEFAULT_JUDGE_VOTES,
     verify_drafts: bool = False,
     ablation: Optional[str] = None,
+    precedents: Optional[Any] = None,
     client_factory: Optional[Callable[[Callable[[Dict[str, Any]], None]], Any]] = None,
     key: Optional[Mapping[int, grade.Ruling]] = None,
     git_runner: Optional[Callable[[Sequence[str]], Optional[str]]] = None,
@@ -2336,6 +2469,32 @@ def run_benchmark(
             "advocates, which were given the brief without the ablation, and the "
             "judge would then be handed an unablated brief"
         )
+    if ablation is not None and precedents is not None:
+        # At most one of the switches that change what an agent is given may be
+        # on per invocation. A run with two of them on measures neither, and the
+        # directory it wrote to would name only one of them.
+        raise BenchmarkError(
+            "at most one of --ablate, --precedents and --policy-version N>=2 may "
+            "be given per invocation: each changes what the agents are given, and "
+            "a run with two of them on measures neither"
+        )
+    if precedents is not None and replay_dir is not None:
+        # A replay reuses a recorded run's advocates, and the judge of the run
+        # they came from never saw the block, so the two halves of the case would
+        # have been produced under different instructions.
+        raise BenchmarkError(
+            "a run with precedents on cannot replay: a replay reuses a recorded "
+            "run's advocates, and the judge that produced them never saw the "
+            "precedents block"
+        )
+    # Loaded once, before anything is written. The chain head travels into the
+    # run's configuration, and the staleness check has to compare every cached
+    # case against the same head the whole invocation was shown against.
+    library: Optional[Any] = None
+    if precedents is not None:
+        library = precedents_library.Library.load(
+            precedents, set_name=precedents_library.set_from_run_directory(runs_dir)
+        )
 
     # De-duplicated but order-preserving: the requested order is the order the
     # progress lines and the report use, and a case named twice is one case.
@@ -2387,9 +2546,13 @@ def run_benchmark(
     # distinguishable by their paths and not only by their contents.
     run_dir = (
         run_directory(runs_dir, model)
-        if ablation is None
+        if ablation is None and precedents is None
         else assert_ablation_destination(
             ablation_run_directory(runs_dir, ablation, model), runs_dir
+        )
+        if ablation is not None
+        else assert_precedents_destination(
+            precedents_run_directory(runs_dir, model), runs_dir
         )
     )
     if label is not None and run_dir.resolve() == run_directory(RUNS_DIR, model).resolve():
@@ -2423,9 +2586,14 @@ def run_benchmark(
 
     # What this invocation is, recorded on every artifact it writes. Built
     # once here rather than per case, so the case files and the run's own
-    # metadata cannot come to disagree about the run that made them.
+    # metadata cannot come to disagree about the run that made them. The
+    # precedents half is the library's chain head and note digest, not a flag:
+    # "the block was on" says nothing about which closures the judge read.
     configuration = configuration_document(
-        judge_votes=judge_votes, verify_drafts=verify_drafts, ablation=ablation
+        judge_votes=judge_votes,
+        verify_drafts=verify_drafts,
+        ablation=ablation,
+        precedents=None if library is None else library.configuration(),
     )
 
     # The invocation's own id, and the append-only log every case appends to.
@@ -2460,6 +2628,10 @@ def run_benchmark(
         # when there is one, and absent from it when there is not, so the line a
         # plain run appends is the line it always appended.
         **({"ablation": ablation} if ablation is not None else {}),
+        # And the library's chain head, on the same rule: named on the
+        # invocation's own line when the switch is on, and absent from it when it
+        # is not, so the line a plain run appends is the line it always appended.
+        **({"precedents": library.chain_head} if library is not None else {}),
     )
 
     # A shared sink, because the client is shared across every case and, above
@@ -2521,6 +2693,11 @@ def run_benchmark(
     checker = BriefStaleness(
         brief_digest_for(case_loader, ablate=ablation),
         run_dir=run_dir,
+        # The library as this invocation has it, so the third staleness channel
+        # compares each cached case against the head the whole run was shown
+        # against. ``None`` when the switch is off, and the channel is then
+        # silent rather than empty.
+        precedents=None if library is None else library.configuration(),
     )
     for case_no in requested:
         document = None if force else load_cached(run_dir, case_no)
@@ -2684,6 +2861,7 @@ def run_benchmark(
                 judge_votes=judge_votes,
                 verify_drafts=verify_drafts,
                 ablate=ablation,
+                precedents=library,
                 configuration=configuration,
                 events_log=events_log,
             )
@@ -2788,16 +2966,37 @@ def run_benchmark(
         if outcome.status in (STATUS_COMPLETED, STATUS_CACHED)
         and outcome.case_no in resolved_key
     )
-    report = grade_run(run_dir, resolved_key, covered, checker, case_loader)
+    # A case the library holds a closure for is a case a human has already
+    # decided, and it is exactly the case a precedent block is drawn from. Its
+    # own result is in-sample in a way no other case's is, so it is left out of
+    # every figure and named in the report, rather than quietly counted.
+    precedents_excluded: List[int] = []
+    if library is not None:
+        sources = {
+            (
+                str((entry.get("source") or {}).get("set")),
+                (entry.get("source") or {}).get("case_no"),
+            )
+            for entry in library.entries
+        }
+        precedents_excluded = sorted(
+            case_no
+            for case_no in covered
+            if (library.set_name, case_no) in sources
+        )
+    measured = [
+        case_no for case_no in covered if case_no not in set(precedents_excluded)
+    ]
+    report = grade_run(run_dir, resolved_key, measured, checker, case_loader)
     report_title = "Benchmark report — {0}".format(model)
     if label is not None:
         report_title = "Benchmark report — {0} — development set {1}".format(
             model, label
         )
-    (run_dir / REPORT_FILE).write_text(
-        grade.render_report(report, report_title, key_path=key_path),
-        encoding="utf-8",
-    )
+    report_text = grade.render_report(report, report_title, key_path=key_path)
+    if library is not None:
+        report_text += render_precedents_exclusions(precedents_excluded, measured)
+    (run_dir / REPORT_FILE).write_text(report_text, encoding="utf-8")
 
     # The grade, one event per case, and then the end of the invocation. The
     # grade is recorded here rather than inside the grading code because it is
@@ -2828,6 +3027,15 @@ def run_benchmark(
         tokens_consumed=(state["charged"] + state["failed"]).billed,
         tokens_reused=reused.billed,
         tokens_replayed=state["replayed"].billed,
+        # Recorded only when the block was on, so a plain run's last line is the
+        # line it always appended. ``cases_graded`` above counts the cases the
+        # figures were computed from, and the excluded ones are named here so a
+        # reader can reconcile the two counts rather than wonder at the gap.
+        **(
+            {"precedents_excluded": list(precedents_excluded)}
+            if library is not None
+            else {}
+        ),
     )
 
     return RunSummary(
@@ -2848,6 +3056,7 @@ def run_benchmark(
         tokens_reused=reused.billed,
         tokens_replayed=state["replayed"],
         replay=None if replay is None else replay_block(replay, outcomes),
+        precedents_excluded=None if library is None else precedents_excluded,
     )
 
 
@@ -3798,6 +4007,21 @@ def print_summary(summary: RunSummary) -> None:
             len(summary.failures),
         )
     )
+    if summary.precedents_excluded is not None:
+        # Printed on every run with the block on, not only when something was
+        # left out: a reader has to be able to tell a figure over the whole set
+        # from a figure over a subset, and "no case was left out" is a finding
+        # rather than silence.
+        print(
+            "precedents  the judge was shown earlier human closures; {0}".format(
+                "no covered case is the source of one"
+                if not summary.precedents_excluded
+                else "left out of every figure above: {0}".format(
+                    ", ".join(str(case_no) for case_no in summary.precedents_excluded)
+                )
+            )
+        )
+        print("            {0}".format(PRECEDENTS_INCOMPARABLE_NOTE))
     if summary.refusals:
         print(
             "            {0} of the failures were replay refusals: the source run "
@@ -3947,6 +4171,14 @@ def print_summary(summary: RunSummary) -> None:
                     print(
                         "              prompts moved: {0}".format(
                             ", ".join(str(case_no) for case_no in staleness.stale_prompts)
+                        )
+                    )
+                if staleness.stale_precedents:
+                    print(
+                        "              library moved: {0}".format(
+                            ", ".join(
+                                str(case_no) for case_no in staleness.stale_precedents
+                            )
                         )
                     )
                 if staleness.unchecked_prompts:
@@ -4542,6 +4774,18 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             "artifact the run writes".format(", ".join(brief.ABLATIONS))
         ),
     )
+    parser.add_argument(
+        "--precedents",
+        action="store_true",
+        help=(
+            "show the judge up to three earlier human closures from "
+            "{0}, chosen because they share clauses with the case. Off by "
+            "default. Results go to runs/precedents/<model>/, never into "
+            "runs/<model>/ where the submission's figure lives, and the figures "
+            "are not comparable to it: the library is built by people who have "
+            "seen these sets".format(PRECEDENTS_STORE)
+        ),
+    )
     parser.add_argument("--runs-dir", type=Path, default=RUNS_DIR)
     parser.add_argument("--prompts-dir", type=Path, default=PROMPTS_DIR)
     args = parser.parse_args(argv)
@@ -4552,6 +4796,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         # arbitrates a case outside the corpus. Every one of those would look as
         # though the ablation had been applied when it had not, so each is
         # refused here, before anything is read or written.
+        if args.precedents:
+            parser.error(
+                "--ablate and --precedents cannot both be given: each changes "
+                "what the agents are given, and a run with both on measures "
+                "neither"
+            )
         for present, name, why in (
             (args.compare, "--compare", "reads cached runs produced without it"),
             (
@@ -4576,6 +4826,36 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 parser.error(
                     "--ablate builds an ablated brief and takes no {0}, which "
                     "{1}".format(name, why)
+                )
+
+    if args.precedents:
+        # The block changes what the judge is given, so the same refusals apply
+        # for the same reasons: every mode below reads or produces a run whose
+        # judge saw no block, and naming the switch beside them would look as
+        # though it had been shown.
+        for present, name, why in (
+            (args.compare, "--compare", "reads cached runs produced without it"),
+            (
+                args.replay_advocates is not None,
+                "--replay-advocates",
+                "reuses a recorded run's advocates, whose judge saw no block",
+            ),
+            (args.replay_check is not None, "--replay-check", "reads a recorded run"),
+            (
+                args.verify_recorded_drafts is not None,
+                "--verify-recorded-drafts",
+                "reuses a recorded run's drafts",
+            ),
+            (
+                args.external is not None,
+                "--external",
+                "arbitrates a converted case in full, outside the corpus",
+            ),
+        ):
+            if present:
+                parser.error(
+                    "--precedents shows the judge earlier closures and takes no "
+                    "{0}, which {1}".format(name, why)
                 )
 
     if args.compare:

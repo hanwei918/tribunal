@@ -55,6 +55,16 @@ agent, and the cases it grades are briefed by the same
 against that key too, and the second set gets its own falsifiability check for
 the same reason the corpus has one -- a guard nobody has seen fail is not
 evidence of anything.
+
+The precedent library
+---------------------
+``tribunal/precedents.py`` is a fourth place an answer could reach an agent: it
+reads a run's case file, and a case file is where a grade lives. It is covered
+by Layer 1 like every other package module, and it gets three further checks of
+its own. No forbidden field name appears in a store it writes; the case being
+judged never appears in its own block; and a judge message that carries a
+precedents block carries no answer field either. Each check is shown to go RED
+on a deliberately dirty fixture before it is shown to be GREEN on the clean one.
 """
 
 from __future__ import annotations
@@ -73,7 +83,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from tribunal import brief, loader  # noqa: E402
+from tribunal import brief, events, loader, pipeline, precedents  # noqa: E402
 
 PACKAGE_DIR = PROJECT_ROOT / "tribunal"
 DATA_DIR = PROJECT_ROOT / "data"
@@ -476,6 +486,251 @@ class SecondDevelopmentSetTest(unittest.TestCase):
         # GREEN again, on the real case.
         self.assertEqual({}, _brief_violations_for_case(real))
         self.assertEqual(15, len(_second_set_case_numbers()), "the real index changed")
+
+
+# --------------------------------------------------------------------------
+# The precedent library
+# --------------------------------------------------------------------------
+# The names a precedents store, a precedents block, or a judge message carrying
+# one may never carry. ``rationale`` is deliberately not among them: the clause
+# notes that reach every brief contain that word as ordinary prose, and a needle
+# on it would be red on a clean message.
+PRECEDENT_NEEDLES = (
+    DISTINCTIVE_ANSWER_FIELDS
+    + tuple(loader.FORBIDDEN_KEYS)
+    + ("matched", "expected", "grade")
+)
+
+PRECEDENTS_MODULE = PACKAGE_DIR / "precedents.py"
+
+# The case whose closure is in the store, and the case it is matched against.
+PRECEDENT_SOURCE_CASE = 102
+PRECEDENT_TARGET_CASE = 101
+
+
+def _keys_in(node, path=""):
+    """Every key of a parsed document, with its path."""
+    if isinstance(node, dict):
+        for key, value in node.items():
+            here = "{0}.{1}".format(path, key)
+            yield here
+            yield from _keys_in(value, here)
+    elif isinstance(node, list):
+        for position, value in enumerate(node):
+            yield from _keys_in(value, "{0}[{1}]".format(path, position))
+
+
+def _needles_in(text):
+    """Which answer-field needles occur as a KEY in the parsed document.
+
+    Asserted over the parsed keys rather than over the raw text. This corpus is
+    natural language that discusses field names as ordinary prose -- ``expected``
+    and ``matched`` both occur inside policy wording -- so a substring search
+    would be red on a clean message. The needles are field *names* and never
+    values, which is the same narrow reading Layer 2 makes.
+    """
+    parsed = json.loads(text)
+    return sorted(
+        key.rsplit(".", 1)[-1]
+        for key in _keys_in(parsed)
+        if key.rsplit(".", 1)[-1] in PRECEDENT_NEEDLES
+    )
+
+
+def _eval_paths_in_module(path):
+    """Every string literal in one module that names a location under ``eval/``."""
+    return [
+        (value, lineno)
+        for value, lineno in _string_literals(path)
+        if _is_eval_path(value)
+    ]
+
+
+def _forbidden_keys_in(entries):
+    """The forbidden names that occur as a key anywhere in ``entries``."""
+    return sorted(
+        key.rsplit(".", 1)[-1]
+        for key in _keys_in(entries)
+        if key.rsplit(".", 1)[-1] in precedents.FORBIDDEN_FIELD_NAMES
+    )
+
+
+def _precedent_entry(case_no, clause_id="POL-RD-02"):
+    """One closure entry, shaped as ``close`` builds it."""
+    return {
+        "precedent_id": "P-0001",
+        "source": {
+            "set": precedents.SET_CORPUS,
+            "case_no": case_no,
+            "dispute_id": "DSP-{0:05d}".format(case_no),
+            "run_dir": "runs/<model>",
+            "case_sha256": "0" * 64,
+        },
+        "category": "ROUTE_DEVIATION",
+        "system_outcome": {
+            "ruling": "ESCALATE",
+            "amount_sgd": None,
+            "driver_compensation_sgd": None,
+            "referrals": [],
+        },
+        "decision": {
+            "ruling": "PARTIAL_REFUND",
+            "amount_sgd": None,
+            "driver_compensation_sgd": None,
+            "referrals": [],
+        },
+        "clause_ids": [clause_id],
+        "amount_contested_sgd": None,
+        "summary": "A reviewer closed this case.",
+        "closed_by": "A Reviewer",
+        "policy_version": 1,
+        "supersedes": None,
+    }
+
+
+def _store_with(tmp, entries):
+    store = Path(tmp) / precedents.PRECEDENTS_DIRNAME
+    for item in entries:
+        precedents.append_entry(item, store=store)
+    return store
+
+
+def _kept_referee(clause_id):
+    """The one attribute the matching reads: the claims the referee kept."""
+
+    class _Kept:
+        kept_claims = {"RIDER": [{"clause_ids": [clause_id]}], "DRIVER": []}
+
+    return _Kept()
+
+
+def _block_for(store, case_no, dispute_id):
+    brief_object = brief.build_brief_for_case(loader.load_case(PRECEDENT_TARGET_CASE))
+    library = precedents.Library.load(store)
+    return library.block_for(
+        brief_object,
+        _kept_referee("POL-RD-02"),
+        case_no=case_no,
+        dispute_id=dispute_id,
+    )
+
+
+class PrecedentIsolationTest(unittest.TestCase):
+    """A store, a block and a judge message carry no answer field."""
+
+    def test_the_detector_fires_on_a_real_eval_path_and_not_on_prose(self):
+        """A detector that can never fire would make the check below vacuous."""
+        for text in ("eval", "eval/answers/ground_truth.json"):
+            with self.subTest(text=text):
+                self.assertTrue(_is_eval_path(text))
+        for text in ("evaluation-only", "precedents/precedents.jsonl", "the harness"):
+            with self.subTest(text=text):
+                self.assertFalse(_is_eval_path(text))
+
+    def test_the_precedents_module_names_no_path_under_eval(self):
+        self.assertTrue(PRECEDENTS_MODULE.is_file(), "tribunal/precedents.py is missing")
+        self.assertEqual([], _eval_paths_in_module(PRECEDENTS_MODULE))
+
+    def test_that_check_goes_red_on_a_dirty_fixture(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dirty = Path(tmp) / "dirty.py"
+            dirty.write_text(
+                'GROUND_TRUTH = "eval/answers/ground_truth.json"\n', encoding="utf-8"
+            )
+            self.assertEqual(1, len(_eval_paths_in_module(dirty)))
+
+    def test_no_forbidden_field_name_appears_in_the_store(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = _store_with(tmp, [_precedent_entry(PRECEDENT_SOURCE_CASE)])
+            entries = precedents.read_entries(precedents.store_path(store))
+            self.assertEqual(1, len(entries))
+            self.assertEqual([], _forbidden_keys_in(entries))
+
+    def test_the_store_check_goes_red_on_a_spliced_entry(self):
+        # The dirty fixture. The entry is written past ``append_entry`` -- which
+        # is what refuses it -- so what is seen to fail here is the walk's own
+        # check and not the writer's.
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Path(tmp) / precedents.PRECEDENTS_DIRNAME
+            dirty = _precedent_entry(PRECEDENT_SOURCE_CASE)
+            dirty["matched"] = True
+            log = events.EventLog(
+                precedents.store_path(store), invocation_id="a-dirty-fixture"
+            )
+            log.record(
+                precedents.EVENT_CLOSURE,
+                case_no=PRECEDENT_SOURCE_CASE,
+                **dirty
+            )
+            entries = precedents.read_entries(precedents.store_path(store))
+            self.assertEqual(["matched"], _forbidden_keys_in(entries))
+
+    def test_the_case_being_judged_never_appears_in_its_own_block(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = _store_with(tmp, [_precedent_entry(PRECEDENT_TARGET_CASE)])
+            block, ids = _block_for(store, PRECEDENT_TARGET_CASE, "DSP-00101")
+            self.assertIsNone(block)
+            self.assertEqual((), ids)
+
+    def test_another_case_resting_on_the_same_clause_is_shown(self):
+        # The clean fixture's other half: the block is empty for the case itself
+        # and not empty for a different case resting on the same clause, so the
+        # test above is about the exclusion rather than about the matching
+        # having failed for some other reason.
+        with tempfile.TemporaryDirectory() as tmp:
+            store = _store_with(tmp, [_precedent_entry(PRECEDENT_SOURCE_CASE)])
+            block, ids = _block_for(store, PRECEDENT_TARGET_CASE, "DSP-00101")
+            self.assertEqual(("P-0001",), ids)
+            self.assertEqual("ROUTE_DEVIATION", block["items"][0]["category"])
+            self.assertEqual("PARTIAL_REFUND", block["items"][0]["ruling"])
+
+    def test_a_judge_message_with_the_switch_on_carries_no_answer_field(self):
+        brief_object = brief.build_brief_for_case(loader.load_case(PRECEDENT_TARGET_CASE))
+        brief_json, _ = brief.brief_digest(brief_object)
+        claims = [
+            {
+                "claim_id": "C1",
+                "evidence_id": "EV-GPS-00101",
+                "clause_ids": ["POL-RD-02"],
+            }
+        ]
+        without = pipeline._judge_user_message(claims, [], brief_json)
+        block = precedents.block([_precedent_entry(PRECEDENT_SOURCE_CASE)])
+        with_block = pipeline._judge_user_message(
+            claims, [], brief_json, precedents=block
+        )
+
+        # The precondition: every needle is absent from the message WITHOUT the
+        # block, so a needle that started colliding with clean prose would fail
+        # here rather than passing silently below.
+        self.assertEqual([], _needles_in(without))
+        self.assertEqual([], _needles_in(with_block))
+
+        # And the block really is in the message, so the assertion above is
+        # about the block's own content and not about it being missing.
+        parsed = json.loads(with_block)
+        self.assertIn("precedents", parsed)
+        self.assertEqual(precedents.NOTE, parsed["precedents"]["note"])
+        self.assertEqual(
+            ["P-0001"], [item["precedent_id"] for item in parsed["precedents"]["items"]]
+        )
+
+    def test_that_check_goes_red_on_a_block_carrying_an_answer_field(self):
+        brief_object = brief.build_brief_for_case(loader.load_case(PRECEDENT_TARGET_CASE))
+        brief_json, _ = brief.brief_digest(brief_object)
+        claims = [
+            {
+                "claim_id": "C1",
+                "evidence_id": "EV-GPS-00101",
+                "clause_ids": ["POL-RD-02"],
+            }
+        ]
+        spliced = precedents.block([_precedent_entry(PRECEDENT_SOURCE_CASE)])
+        spliced["items"][0]["matched"] = True
+        message = pipeline._judge_user_message(
+            claims, [], brief_json, precedents=spliced
+        )
+        self.assertEqual(["matched"], _needles_in(message))
 
 
 if __name__ == "__main__":

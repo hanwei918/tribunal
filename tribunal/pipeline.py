@@ -742,6 +742,11 @@ class PipelineResult:
     # run with the switch off shows: no entry, no event and no field, so every
     # existing behaviour is byte for byte what it was.
     verification: Optional[Dict[str, Any]] = None
+    # The precedent ids the judge was shown for this case, or ``None`` when the
+    # precedents switch was off. Empty is a finding -- the switch was on and
+    # nothing matched -- and it is not the same as ``None``, which says the
+    # judge was never shown a precedent block at all.
+    precedents_shown: Optional[Tuple[str, ...]] = None
 
     @property
     def replayed(self) -> bool:
@@ -1550,6 +1555,7 @@ def _checked_judge_message(
     *,
     shape: str,
     sides: Sequence[str],
+    precedents: Optional[Mapping[str, Any]] = None,
 ) -> str:
     """The judge's user message, built and then proved: same brief, canonical.
 
@@ -1557,6 +1563,13 @@ def _checked_judge_message(
     here for every shape so that the ordered-array message is held to the same
     standard as the object one, and the brief bytes are spliced rather than
     re-serialised in either case.
+
+    When a precedents block is present a third proof is made: the parsed message
+    is walked for a forbidden key. The library refuses a forbidden field name
+    when it writes an entry, but this is the runtime bundle boundary and the
+    control is asserted at it rather than trusted to an upstream module. With no
+    block the walk does not run, so a run with the switch off makes exactly the
+    checks it always made.
     """
     message = _judge_user_message(
         rider_claims,
@@ -1566,12 +1579,18 @@ def _checked_judge_message(
         referee_result.flags,
         shape=shape,
         sides=sides,
+        precedents=precedents,
     )
     parsed = _parse(message)
     if money.dumps_canonical(parsed["brief"]) != brief_json:
         raise BriefIdentityError("the judge was not handed the same brief bytes")
     if money.dumps_canonical(parsed) != message:
         raise BriefIdentityError("the judge's user message is not canonical JSON")
+    if precedents is not None:
+        # ``brief``'s own recursive walk, and not a second copy of it: the
+        # control is one function and the judge's message is one more place it
+        # is applied.
+        brief._assert_no_forbidden_keys(parsed, "judge message")
     return message
 
 
@@ -1764,6 +1783,7 @@ def _run_judge_vote(
     case_no: Optional[int] = None,
     verify: bool = False,
     verifier_prompt: str = "",
+    precedents: Optional[Mapping[str, Any]] = None,
 ) -> JudgeVote:
     """Ask the judge ``votes`` times on the same inputs and reduce the answers.
 
@@ -1844,6 +1864,7 @@ def _run_judge_vote(
             referee_result,
             shape=JUDGE_CLAIMS_ARRAY,
             sides=sides,
+            precedents=precedents,
         )
         started = len(transcript)
         parsed, failure = _call_agent(
@@ -2636,6 +2657,7 @@ def run_case(
     events_log: Optional[Any] = None,
     verify_drafts: bool = False,
     ablate: Optional[str] = None,
+    precedents: Optional[Any] = None,
 ) -> PipelineResult:
     """Perform one full arbitration of a case named by its manifest number.
 
@@ -2660,6 +2682,11 @@ def run_case(
     passed straight through for that same reason. It is applied in exactly one
     place -- :func:`tribunal.brief.build_brief_for_case` -- so an ablated run
     differs from a plain one in what the agents were given and in nothing else.
+
+    ``precedents`` is a loaded :class:`tribunal.precedents.Library`, or ``None``
+    when the switch is off. It is passed straight through as well: the matching
+    needs the brief and the claims the referee kept, both of which exist only
+    inside :func:`run_loaded_case`, so the block is chosen there and not here.
     """
     load = loader.load_case if case_loader is None else case_loader
     return run_loaded_case(
@@ -2673,6 +2700,7 @@ def run_case(
         events_log=events_log,
         verify_drafts=verify_drafts,
         ablate=ablate,
+        precedents=precedents,
     )
 
 
@@ -2688,6 +2716,7 @@ def run_loaded_case(
     events_log: Optional[Any] = None,
     verify_drafts: bool = False,
     ablate: Optional[str] = None,
+    precedents: Optional[Any] = None,
 ) -> PipelineResult:
     """Perform one full arbitration of a case already in hand.
 
@@ -2724,6 +2753,15 @@ def run_loaded_case(
     an ablated run is that brief built without part of it rather than a second
     builder that could differ from the first. The bytes are still serialised
     once and handed to both advocates and the judge, ablated or not.
+
+    ``precedents`` is a loaded :class:`tribunal.precedents.Library`, or ``None``
+    when the switch is off. When it is given, the case's matching closures are
+    chosen here -- after the referee has kept its claims, because the choice
+    rests on the clauses those claims cite -- and the judge's user message
+    carries them between ``claims`` and ``referee``. Code chooses them and never
+    the model, and the ids travel on the transcript at the top level, so what
+    the judge was reading is a fact the record states rather than one a reader
+    infers from the ruling.
     """
     case_no = case["case_no"]
     prompts_dir = Path(prompts_dir)
@@ -2829,6 +2867,11 @@ def run_loaded_case(
     referee_record: Dict[str, Any] = {}
     vote_record: Optional[Dict[str, Any]] = None
     verification_record: Optional[Dict[str, Any]] = None
+    # The precedents block the judge is shown, and the ids it names. ``None``
+    # and ``()`` when the switch is off, which is what keeps a run without
+    # precedents byte for byte the run it was.
+    precedents_block: Optional[Dict[str, Any]] = None
+    precedents_shown: Tuple[str, ...] = ()
 
     if failed_agent is None:
         referee_result = referee.referee(case_brief, rider_claims, driver_claims)
@@ -2848,6 +2891,31 @@ def run_loaded_case(
                     detail=entry.get("detail"),
                 )
 
+        # Which earlier human closures the judge is shown, chosen here because
+        # the two things the choice needs -- the brief and the claims the
+        # referee kept -- exist only inside this function. Code chooses them and
+        # never the model, and the choice is a deterministic function of the
+        # library and the case, so the same run over the same store shows the
+        # same block.
+        if precedents is not None:
+            precedents_block, precedents_shown = precedents.block_for(
+                case_brief,
+                referee_result,
+                case_no=case_no,
+                dispute_id=case["dispute"].get("dispute_id"),
+            )
+            if precedents_shown:
+                # Set on the transcript so the ids travel at the top level of
+                # the record, beside the entries, rather than inside a call: the
+                # whole panel read the same block and no single call owns it.
+                transcript.precedents_shown = precedents_shown
+            if events_log is not None:
+                events_log.record(
+                    events.EVENT_PRECEDENTS_SHOWN,
+                    case_no=case_no,
+                    precedents=list(precedents_shown),
+                )
+
         if judge_votes == 1:
             # The single-draft path, unchanged: one call, one message, and the
             # object shape the judge has always been handed.
@@ -2858,6 +2926,7 @@ def run_loaded_case(
                 referee_result,
                 shape=JUDGE_CLAIMS_OBJECT,
                 sides=DRIVER_FIRST,
+                precedents=precedents_block,
             )
             judge_parsed, judge_failure = _call_agent(
                 client,
@@ -2908,6 +2977,7 @@ def run_loaded_case(
                 case_no=case_no,
                 verify=verify_drafts,
                 verifier_prompt=verifier_prompt,
+                precedents=precedents_block,
             )
             vote_record = vote.record
             if vote.failure_reason is not None:
@@ -2962,6 +3032,9 @@ def run_loaded_case(
         judge_vote=vote_record,
         vote_agreement=None if vote_record is None else vote_record.get("agreement"),
         verification=verification_record,
+        # ``None`` when the switch was off, so "the judge was shown no
+        # precedent" is a sentence only a run that asked the question can say.
+        precedents_shown=None if precedents is None else tuple(precedents_shown),
     )
 
 
@@ -2978,6 +3051,7 @@ def _judge_user_message(
     *,
     shape: str = JUDGE_CLAIMS_OBJECT,
     sides: Sequence[str] = DRIVER_FIRST,
+    precedents: Optional[Mapping[str, Any]] = None,
 ) -> str:
     """Build the judge input from kept claims and the referee audit.
 
@@ -2995,6 +3069,14 @@ def _judge_user_message(
     ``DRIVER_ADVOCATE`` before ``RIDER_ADVOCATE``, so a position swap written as
     an object would serialise straight back to the bytes it started from. In an
     array, order is content.
+
+    ``precedents`` is the block of earlier human closures the judge is shown, or
+    ``None`` when the switch is off or nothing matched. It travels between
+    ``claims`` and ``referee``, which is the canonical order: the message is
+    assembled here as literal text, so the order in the literal is the order in
+    the bytes. When it is ``None`` the key is absent entirely rather than sent
+    empty, so the message a run without precedents produces is the message it
+    always produced.
     """
     by_side = {
         transcript_module.ROLE_RIDER_ADVOCATE: rider_claims,
@@ -3019,9 +3101,14 @@ def _judge_user_message(
             "flags": list(referee_flags or []),
         }
     )
+    precedents_json = (
+        ""
+        if precedents is None
+        else ',"precedents":' + money.dumps_canonical(dict(precedents))
+    )
     return (
         '{"brief":' + brief_json + ',"claims":' + claims_json
-        + ',"referee":' + referee_json + "}"
+        + precedents_json + ',"referee":' + referee_json + "}"
     )
 
 

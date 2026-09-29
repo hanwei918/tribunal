@@ -1128,6 +1128,15 @@ STALENESS_UNKNOWN = "unknown"
 # prompt by re-reading what the agents were told to do with it.
 MOVED_BRIEF = "brief"
 MOVED_PROMPTS = "prompt"
+# A third thing a cached result was produced against: the precedent library. A
+# run with the precedents switch on records the library's chain head in its
+# configuration, so a case whose recorded head is not the current one was shown
+# a different set of earlier decisions. It is named apart for the same reason as
+# the other two -- a reader has to be able to tell which of the three moved --
+# and it is answered the same way the other two are: a stale cached result is
+# reported and reused, never re-run behind the operator's back, and ``--force``
+# is what runs it again.
+MOVED_PRECEDENTS = "precedents"
 
 
 @dataclass(frozen=True)
@@ -1163,6 +1172,12 @@ class Staleness:
     # be made for this case at all. A result written before the field was kept
     # is not a result whose prompts are known to match.
     unchecked_prompts: Tuple[int, ...] = ()
+    # The precedent library moved, or the case was produced without one while
+    # this run has one. Either way the judge that produced the cached result was
+    # reading a different set of earlier decisions from the one this run shows.
+    # Empty for every run with the precedents switch off, which is what keeps a
+    # plain run's staleness reading exactly what it was.
+    stale_precedents: Tuple[int, ...] = ()
 
     @property
     def mixed(self) -> bool:
@@ -1190,16 +1205,19 @@ class Staleness:
     def moved_for(self, case_no: int) -> Tuple[str, ...]:
         """Which recorded digests moved for one case, named, in a fixed order.
 
-        Empty unless the case is stale. Both may be present: a result produced
-        by an older brief under older prompts is stale for both reasons, and a
-        report that said only "stale" would leave the reader unable to tell
-        which response the result calls for.
+        Empty unless the case is stale. More than one may be present: a result
+        produced by an older brief under older prompts, against an earlier
+        library, is stale for all three reasons, and a report that said only
+        "stale" would leave the reader unable to tell which response the result
+        calls for.
         """
         moved: List[str] = []
         if case_no in self.stale_brief:
             moved.append(MOVED_BRIEF)
         if case_no in self.stale_prompts:
             moved.append(MOVED_PROMPTS)
+        if case_no in self.stale_precedents:
+            moved.append(MOVED_PRECEDENTS)
         return tuple(moved)
 
 
@@ -1550,6 +1568,18 @@ def _render_staleness(report: GradeReport) -> List[str]:
                 len(staleness.stale_prompts),
                 report.total,
                 ", ".join(str(case_no) for case_no in staleness.stale_prompts),
+            )
+        )
+        lines.append("")
+    if staleness.stale_precedents:
+        lines.append(
+            "The precedent library has moved for {0} of {1}: {2}. These results "
+            "were produced against an earlier set of human closures, so the judge "
+            "that produced them was reading different earlier decisions from the "
+            "ones this run would show.".format(
+                len(staleness.stale_precedents),
+                report.total,
+                ", ".join(str(case_no) for case_no in staleness.stale_precedents),
             )
         )
         lines.append("")

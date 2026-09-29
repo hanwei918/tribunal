@@ -104,6 +104,11 @@ EVENT_VOTE = "vote"
 # the vote rather than inside it: the verifier is a separate question about the
 # drafts and its outcome is a fact about the case in its own right.
 EVENT_VERIFICATION = "verification"
+# Which precedents the judge was shown for one case, recorded when the switch is
+# on. It is a fact about what the judge was given, and it belongs beside the
+# calls rather than inside the ruling: the ruling says what the judge decided,
+# and this says one of the things it was reading.
+EVENT_PRECEDENTS_SHOWN = "precedents_shown"
 EVENT_RULING = "ruling"
 EVENT_CASE_FAILED = "case_failed"
 EVENT_GRADE = "grade"
@@ -117,6 +122,7 @@ EVENT_TYPES = (
     EVENT_JUDGE_DRAFT,
     EVENT_VOTE,
     EVENT_VERIFICATION,
+    EVENT_PRECEDENTS_SHOWN,
     EVENT_RULING,
     EVENT_CASE_FAILED,
     EVENT_GRADE,
@@ -393,6 +399,7 @@ _SUMMARY_KEYS = (
     "material",
     "not_material",
     "not_in_evidence",
+    "precedents",
     "ruling",
     "matched",
     "failure_kind",

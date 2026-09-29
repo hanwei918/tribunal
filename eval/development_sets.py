@@ -617,6 +617,20 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--precedents",
+        action="store_true",
+        help=(
+            "show the judge up to three earlier human closures from the "
+            "precedent library, chosen because they share clauses with the case. "
+            "Off by default. Results go to runs/precedents/<model>/ -- under the "
+            "set's own root, so the second set's go to "
+            "runs/codex/precedents/<model>/ -- and never into a run directory "
+            "holding a run whose judge saw no block. Figures with precedents on "
+            "are not comparable to the headline: the library is built by people "
+            "who have seen these sets"
+        ),
+    )
+    parser.add_argument(
         "--verify-recorded-drafts",
         type=Path,
         default=None,
@@ -655,6 +669,34 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             if present:
                 print(
                     "FATAL: --ablate builds an ablated brief and takes no {0}".format(name),
+                    file=sys.stderr,
+                )
+                return 1
+
+    if args.precedents:
+        # The same rule the ablation follows: a run that shows the judge earlier
+        # closures cannot be combined with a mode that reads a run recorded
+        # without them or that reports one, because each of those would look as
+        # though the block had been shown when it had not. Refused before any of
+        # them runs, and before any call.
+        if args.ablate is not None:
+            print(
+                "FATAL: at most one of --ablate and --precedents may be given per "
+                "invocation: each changes what the agents are given, and a run "
+                "with both on measures neither",
+                file=sys.stderr,
+            )
+            return 1
+        for present, name in (
+            (args.report, "--report"),
+            (args.replay_advocates is not None, "--replay-advocates"),
+            (args.replay_check is not None, "--replay-check"),
+            (args.verify_recorded_drafts is not None, "--verify-recorded-drafts"),
+        ):
+            if present:
+                print(
+                    "FATAL: --precedents shows the judge earlier closures and "
+                    "takes no {0}".format(name),
                     file=sys.stderr,
                 )
                 return 1
@@ -775,6 +817,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 replay_dir=args.replay_advocates,
                 verify_drafts=args.verify_drafts,
                 ablation=args.ablate,
+                precedents=(
+                    run_benchmark.PRECEDENTS_STORE if args.precedents else None
+                ),
             )
         except run_benchmark.llm.ModelNotProvisionedError as exc:
             print("FATAL: {0}".format(exc), file=sys.stderr)

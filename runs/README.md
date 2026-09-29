@@ -16,6 +16,7 @@ This directory is the benchmark's own output. Every subdirectory named in the ta
 | **`deepseek-deepseek-flash/`** | **The headline run**, and on top of it **five judge-only re-runs** of that same run. Seven invocations: two full runs (`97dbb9c`, `493beea`) and five replays that reused `493beea`'s advocates and called only the judge — two measuring the prompt after its first amendment, three measuring the frozen prompt. Every cached result is current on both channels and all 29 carry a `replay` block; the graded figure over the 29 is **27/29**, failing 105 and 211, and that figure is the frozen prompt's. The runtime model decision rests on the `493beea` measurement. | A measurement, and a replay of one. Read each result's `replay` block before reading its tokens. |
 | `hy3/` | Produced under an invalidated configuration. | Evidence for a defect. No number in it is usable. |
 | `hy4-preview/` | Produced under the same invalidated configuration. | Evidence for a defect. No number in it is usable. |
+| `precedents/` | Where a run with `--precedents` on goes: `precedents/<model>/`, and `codex/precedents/<model>/` under the second set's root. No such run is committed here. It has its own section below. | A different measurement from the headline, and not comparable to it: the precedent library is built from closures made by people who have seen these development sets. |
 
 **These are snapshots, and a later run moves them.** A run directory is named after the model id, so
 a future run of the same model writes into the same directory and rewrites these files case by case.
@@ -207,6 +208,46 @@ ones that would produce it. Nothing in this directory may be merged into a
 model's run directory for the reason `external/` may not: an ablated result is a
 different measurement, and a reader finding it beside an unablated one would read
 it as that run's.
+
+## `precedents/` — where a run whose judge was shown earlier closures goes
+
+`precedents/<model>/` holds the output of
+
+    python3 -m eval.run_benchmark --precedents
+    python3 -m eval.development_sets --set codex --precedents
+
+one directory per model, under the runs root the run was given — so the second
+set's go to `runs/codex/precedents/<model>/`. The files are the ones any run
+directory carries; what changes is what the judge was given.
+
+With the switch on, the judge's user message carries a `precedents` key: a fixed
+note and up to three items chosen from `precedents/precedents.jsonl`, each naming
+a `precedent_id`, a `category`, clause ids and a ruling. **No amount and no
+summary travel in it.** The ids shown for a case are recorded at the top level of
+that case's transcript and of its case file, and the library's chain head and
+note digest are recorded in the run's `configuration` — so a cached result
+produced against an earlier library is recognisable as such: it reads stale on a
+third channel, its progress line names the library as what moved, and `report.md`
+lists the cases. Stale is a finding and not an action — the result is still
+reused, exactly as a moved brief or a moved prompt is, and `--force` is what runs
+it again.
+
+**The figures are not comparable to the headline.** The library is built from
+closures made by people who have seen these development sets, so a case the
+library holds a closure for is material the system has been shown before. Those
+cases are left out of every figure in `report.md` and named there, and the
+printed summary and the `invocation_end` event name them too.
+
+**It is never written into a model's run directory.** The destination is chosen
+under the runs root's `precedents/` directory and then checked in code before
+anything is written, and `--precedents` is refused together with
+`--replay-advocates`, `--replay-check`, `--verify-recorded-drafts` and
+`--external`, and with `--ablate`, because every one of those reads or produces a
+run whose judge saw no block.
+
+**No such directory is committed here.** No run has been made with the block on,
+so there is nothing to commit, and the commands above are the ones that would
+produce it.
 
 ## How to read one run directory
 

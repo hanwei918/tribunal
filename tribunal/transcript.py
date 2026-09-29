@@ -33,7 +33,7 @@ from __future__ import annotations
 import hashlib
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from . import money
 
@@ -112,6 +112,13 @@ class Transcript:
     def __init__(self, now: Optional[Callable[[], str]] = None) -> None:
         self._entries: List[TranscriptEntry] = []
         self._now = now if now is not None else _default_timestamp
+        # Which precedents the judge was shown for this case, or ``None`` when
+        # the switch was off. It sits at the top level rather than on an entry
+        # because it is not something a call did: it is part of what the judge
+        # was reading, and the whole panel read the same block. ``as_dict``
+        # writes the key only when it is set, so a run with the switch off
+        # serialises to exactly the bytes it always did.
+        self.precedents_shown: Optional[Tuple[str, ...]] = None
 
     def add(
         self,
@@ -275,7 +282,14 @@ class Transcript:
         }
 
     def as_dict(self) -> Dict[str, Any]:
-        return {"entries": [entry.as_dict() for entry in self._entries]}
+        document: Dict[str, Any] = {"entries": [entry.as_dict() for entry in self._entries]}
+        if self.precedents_shown is not None:
+            # Written only when the switch was on. "The judge was shown no
+            # precedent because none matched" and "the judge was never shown a
+            # precedent block at all" are different findings, and a run with the
+            # switch off has to stay byte for byte what it was.
+            document["precedents_shown"] = list(self.precedents_shown)
+        return document
 
     def to_json(self) -> str:
         """The canonical JSON for this transcript."""

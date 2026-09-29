@@ -238,6 +238,14 @@ Before serialisation, recursively reject these evaluation-only keys anywhere in 
 
 This assertion applies to the final runtime bundle only. Development documentation must never be embedded in that bundle.
 
+### The precedents key in the judge's message (2026-09-28)
+
+The loader does not build the judge's message; the pipeline does. One switch adds a key to it, and this paragraph is the boundary's own statement of that.
+
+With `--precedents` on, the judge's user message carries one more key, `precedents`, between `claims` and `referee`: a fixed note and up to three items, each naming a `precedent_id`, a `category`, clause ids and a ruling. **No amount and no summary travel in the block.** The key is absent when the switch is off and absent when nothing matched, so with the switch off the message is the message it always was.
+
+The rejection above is unchanged by it, and it is applied in two places rather than one: when a precedent entry is written, and again to the parsed judge message at runtime whenever the key is present.
+
 ## Deterministic serialisation
 
 Serialise the runtime bundle as UTF-8 JSON using `ensure_ascii=False`, `sort_keys=True`, and `separators=(",", ":")`. Expose the SHA-256 digest as `bundle_sha256`. The same inputs must produce the same bytes and digest across repeated runs.
