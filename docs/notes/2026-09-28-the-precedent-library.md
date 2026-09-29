@@ -222,6 +222,12 @@ channel added to a place that knew two — and all four are now fixed:
    precedents phrase removed.
 3. **The printed summary named two channels.** It printed `brief moved:` and
    `prompts moved:` and stopped. It prints `library moved:` too.
+   **Correction, 2026-09-29.** The line could not print. `print_summary` had
+   printed `library moved:` since it was written, but `brief_staleness` never
+   collected the channel — `stale_precedents` was left `()` however far the
+   library had moved — so neither that line nor the `The precedent library has
+   moved for N of M` line in `report.md` was reachable. The field is filled now,
+   and a test walks a case whose only change is the library through both.
 4. **Two documents claimed a stale case is re-run.** `grade.py`'s comment on
    `MOVED_PRECEDENTS` said "the case is re-run", and `runs/README.md` said a
    cached result produced against an earlier library "is re-run rather than

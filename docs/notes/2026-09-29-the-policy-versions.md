@@ -163,6 +163,13 @@ back before committing rather than by a test:
 - The `policy-v<N>/` section of `runs/README.md` ended with a paragraph
   duplicated from the `precedents/` section, which named `precedents/` as the
   destination inside the policy-version section. Removed.
+  **Correction, 2026-09-29.** Nothing was a duplicate and nothing was removed
+  from the `policy-v<N>/` section. The new section's two closing paragraphs
+  were written by rewriting the `precedents/` section's in place, so the
+  precedents section lost its isolation paragraph ("It is never written into a
+  model's run directory") and its "No such directory is committed here"
+  paragraph, and the policy-version section gained them. Both are restored to
+  the precedents section, which keeps them alongside the version section's own.
 - The directory table in the same file had no `policy-v<N>/` row, which rule 1f
   asks every task that creates a directory to add. Added, in the alphabetical
   position the table keeps.

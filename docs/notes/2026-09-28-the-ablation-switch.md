@@ -91,6 +91,16 @@ path, an empty string — cannot put an ablated result where an unablated one
 lives. The test is seen to fail on a deliberately dirty fixture (the plain run
 directory, and a name of `..`) before it is seen to pass on the real one.
 
+**Correction, 2026-09-29.** The path above is the path the *runner* chooses, and
+for a while the runner was never asked. `eval.run_benchmark`'s `main()` parsed
+`--ablate` and never passed it to `run_benchmark(...)`, so
+`python3 -m eval.run_benchmark --ablate clause-notes` built **unablated** briefs
+and wrote them into `runs/<model>/` — the one directory this section says an
+ablated result may never reach, and exactly what the destination assertion above
+exists to prevent. The `--precedents` path was the same. Both are named at the
+call site now (`2be9ec6`). A run started through `eval.development_sets` was
+never affected: it forwards its switches through `run_set(**kwargs)`.
+
 ## What an ablated run records
 
 The ablation is written into the `configuration` object of `run.json`, of every
@@ -130,13 +140,16 @@ ablated run would therefore accept the headline advocates and hand the judge a
 brief that is not the one the run is measuring, and the result would look like an
 ablated run while being neither one thing nor the other.
 
-So `--ablate` is refused with `--replay-advocates`, `--replay-check`,
-`--verify-recorded-drafts` and `--external`, in **both** CLIs, each with a test.
-The runner refuses the combination as well, before it computes the run directory,
-because that is the layer that would otherwise create a directory for a run that
-cannot be honest; and `run_one_case` refuses it a third time, because that is the
-layer that would otherwise make the wrong call. `--compare` and `--report` are
-refused too: both read a run recorded without the ablation.
+So `--ablate` is refused with `--replay-advocates`, `--replay-check` and
+`--verify-recorded-drafts` on **both** command lines, each with a test. Two more
+refusals belong to one command line each, because each flag exists on one:
+`--compare` and `--external` on `eval.run_benchmark`, and `--report` on
+`eval.development_sets`, which has neither of those two. Every one of them reads
+a run recorded without the ablation. The runner refuses the combination as well,
+before it computes the run directory, because that is the layer that would
+otherwise create a directory for a run that cannot be honest; and `run_one_case`
+refuses it a third time, because that is the layer that would otherwise make the
+wrong call.
 
 The refusal happens at the argument layer, before anything is read or written. In
 `eval.run_benchmark` that is `parser.error`, which is how every refusal in that

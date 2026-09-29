@@ -36,7 +36,14 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from eval import development_sets, run_benchmark as runner  # noqa: E402
 from tests import test_run_benchmark as rig  # noqa: E402
-from tribunal import loader, policy_versions, precedents  # noqa: E402
+from tribunal import (  # noqa: E402
+    brief,
+    loader,
+    money,
+    policy_versions,
+    precedents,
+    referee,
+)
 from tribunal.model import resolve_model  # noqa: E402
 
 # The id the rig runs its scripted transports under. It is deliberately not the
@@ -239,9 +246,27 @@ class VersionOneIsUnchangedTests(unittest.TestCase):
                 )
 
     def test_the_whole_point_is_that_all_forty_four_agree(self):
-        # Stated on its own so the count is visible in the test list and not only
-        # inside a loop over two dictionaries.
-        self.assertEqual(CORPUS_CASES + CODEX_CASES, 44)
+        """The forty-four is a count of the repository's cases.
+
+        The test this replaces asserted ``CORPUS_CASES + CODEX_CASES == 44``,
+        which is a claim about arithmetic: 29 and 15 are written four lines
+        above it and nothing in it reads the repository. Here the counts come
+        off the two run directories, so a case that leaves either one moves the
+        number; the two sets are asserted to name different cases, so the 44 is
+        not 29 counted twice; and every one of them is asserted to have a
+        digest for the test above to have compared.
+        """
+        corpus = recorded_digests(CORPUS_RUN_DIR)
+        codex = recorded_digests(CODEX_RUN_DIR)
+        self.assertEqual(CORPUS_CASES, len(corpus))
+        self.assertEqual(CODEX_CASES, len(codex))
+        self.assertEqual(44, len(corpus) + len(codex))
+        self.assertEqual(set(), set(corpus) & set(codex))
+        for set_name, digests in (("corpus", corpus), ("codex", codex)):
+            for case_no, digest in sorted(digests.items()):
+                with self.subTest(set_name=set_name, case_no=case_no):
+                    self.assertIsInstance(digest, str)
+                    self.assertEqual(64, len(digest))
 
 
 # --------------------------------------------------------------------------
@@ -1039,26 +1064,56 @@ class PolicyVersionArgumentTests(unittest.TestCase):
         self.assertIn("is an integer", str(caught.exception))
 
     def test_the_run_benchmark_command_line_refuses_it_before_a_client(self):
-        with mock.patch.object(
-            runner.llm, "LLMClient", side_effect=AssertionError("a model was called")
-        ):
-            with contextlib.redirect_stderr(io.StringIO()) as errors:
-                with self.assertRaises(SystemExit) as caught:
-                    runner.main(
-                        ["--model", MODEL, "--cases", "101", "--policy-version", "0"]
-                    )
+        # The runs root is a scratch directory rather than the repository's own.
+        # The refusal happens while the line is read, so nothing is written
+        # either way -- but a guard that is removed again must not leave residue
+        # in ``runs/``, and the sabotage that proved this one left exactly that:
+        # ``runs/policy-v0/hy4-preview/events.jsonl``, written before the mocked
+        # client raised.
+        with tempfile.TemporaryDirectory() as tmp:
+            with mock.patch.object(
+                runner.llm,
+                "LLMClient",
+                side_effect=AssertionError("a model was called"),
+            ):
+                with contextlib.redirect_stderr(io.StringIO()) as errors:
+                    with self.assertRaises(SystemExit) as caught:
+                        runner.main(
+                            [
+                                "--model",
+                                MODEL,
+                                "--cases",
+                                "101",
+                                "--runs-dir",
+                                tmp,
+                                "--policy-version",
+                                "0",
+                            ]
+                        )
         self.assertEqual(2, caught.exception.code)
         self.assertIn("lowest policy version is 1", errors.getvalue())
 
     def test_the_development_sets_command_line_refuses_it_too(self):
-        with mock.patch.object(
-            runner.llm, "LLMClient", side_effect=AssertionError("a model was called")
-        ):
-            with contextlib.redirect_stderr(io.StringIO()) as errors:
-                with self.assertRaises(SystemExit) as caught:
-                    development_sets.main(
-                        ["--set", "corpus", "--cases", "101", "--policy-version", "0"]
-                    )
+        with tempfile.TemporaryDirectory() as tmp:
+            with mock.patch.object(
+                runner.llm,
+                "LLMClient",
+                side_effect=AssertionError("a model was called"),
+            ):
+                with contextlib.redirect_stderr(io.StringIO()) as errors:
+                    with self.assertRaises(SystemExit) as caught:
+                        development_sets.main(
+                            [
+                                "--set",
+                                "corpus",
+                                "--cases",
+                                "101",
+                                "--runs-dir",
+                                tmp,
+                                "--policy-version",
+                                "0",
+                            ]
+                        )
         self.assertEqual(2, caught.exception.code)
         self.assertIn("lowest policy version is 1", errors.getvalue())
 
@@ -1091,6 +1146,66 @@ class AmendmentNumberTests(unittest.TestCase):
         self.assertIsInstance(value, Decimal)
         self.assertNotIsInstance(value, float)
         self.assertEqual(Decimal("250.0"), value)
+
+
+# --------------------------------------------------------------------------
+# The switch off, and a version-2 run end to end
+# --------------------------------------------------------------------------
+class SwitchOffByteIdentityTests(unittest.TestCase):
+    """With the version switch off, the brief is the brief it always was.
+
+    ``policy_version`` defaults to 1 and every run before the switch used
+    version 1, so a brief built without the argument and one built with it named
+    have to be the same bytes -- and the same bytes the recorded runs digested.
+    Compared as canonical JSON, because that is what ``brief_sha256`` is a
+    digest of, over cases from both development sets.
+    """
+
+    def test_the_default_and_version_one_build_the_recorded_bytes(self):
+        second_set = development_sets.named("codex")
+        for set_name, run_dir, cases, load in (
+            ("corpus", CORPUS_RUN_DIR, (101, 201, 214), loader.load_case),
+            ("codex", CODEX_RUN_DIR, (9101, 9111), second_set.load_case),
+        ):
+            recorded = recorded_digests(run_dir)
+            for case_no in cases:
+                with self.subTest(set_name=set_name, case_no=case_no):
+                    case = load(case_no)
+                    default = brief.build_brief_for_case(case)
+                    named = brief.build_brief_for_case(
+                        case, policy_version=policy_versions.BASE_VERSION
+                    )
+                    self.assertEqual(
+                        money.dumps_canonical(default), money.dumps_canonical(named)
+                    )
+                    self.assertEqual(recorded[case_no], brief.brief_digest(default)[1])
+                    self.assertEqual(recorded[case_no], brief.brief_digest(named)[1])
+
+
+class VersionTwoRunTests(unittest.TestCase):
+    """One genuine version-2 run, end to end, on a scripted transport."""
+
+    def test_the_added_clause_reaches_the_brief_the_run_records(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir, summary = version_two_run(tmp, cases=(101,))
+            self.assertEqual([101], summary.completed_cases)
+            self.assertEqual(
+                runner.policy_v_directory_name(2),
+                run_dir.parent.name,
+                "a version-2 run has a directory of its own",
+            )
+            document = runner.read_json(runner.case_cache_path(run_dir, 101))
+            self.assertEqual(2, runner.configuration_of(document)["policy_version"])
+            # The brief really is the amended one: the clause the amendment adds
+            # resolves in the policy this case was briefed against, and the
+            # digest the case file records is the digest of that brief.
+            with version_two_amendments(tmp):
+                brief_object = brief.build_brief_for_case(
+                    loader.load_case(101), policy_version=2
+                )
+                rebuilt = brief.brief_digest(brief_object)[1]
+            self.assertIn("POL-RD-13", referee.policy_clauses(brief_object))
+            self.assertEqual(document["brief_sha256"], rebuilt)
 
 
 if __name__ == "__main__":

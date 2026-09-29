@@ -240,6 +240,19 @@ library holds a closure for is material the system has been shown before. Those
 cases are left out of every figure in `report.md` and named there, and the
 printed summary and the `invocation_end` event name them too.
 
+**It is never written into a model's run directory.** The destination is chosen
+under the runs root's `precedents/` directory and then checked in code before
+anything is written, so a name that resolved outside it is refused rather than
+merely discouraged. `--precedents` is refused together with `--ablate` -- each
+changes what the agents are given, and a run with both on measures neither --
+and with `--compare`, `--replay-advocates`, `--replay-check`,
+`--verify-recorded-drafts` and `--external`, because every one of those reads or
+produces a run whose judge saw no block.
+
+**No such directory is committed here.** No run has been made with the block on,
+so there is nothing to commit, and the commands above are the ones that would
+produce it.
+
 ## `policy-gaps/` — where the policy ran out
 
 `policy-gaps/` holds the output of
@@ -353,6 +366,12 @@ no model call, no cache entry — unless all four hold: the brief this repositor
 the digest the result recorded; each advocate's system prompt as rendered now hashes to what that run
 recorded for that role; the model is the same; and the recorded answer parsed. The judge's own input
 is then built by the same code path a full run uses, not by a second copy of it.
+
+**A replay is refused whole, not per case, when the source was briefed at another policy version.**
+Each brief is rebuilt at the version its *source* recorded, so replaying a version-2 source into a run
+at version 1 would hand the judge a version-2 brief and then write the result into the version-1 run's
+directory — the headline one — recording version 1. The refusal is made in both command lines and in
+`check_replay`, and it covers the whole replay on the same argument a missing source directory does.
 
 Two figures are kept apart and neither is folded into the other. The cache entry and `run.json` record
 what the borrowed calls cost the run that made them — reported, because a reader has to see what the

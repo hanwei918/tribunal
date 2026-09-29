@@ -1509,14 +1509,16 @@ class ShippedStoreTests(unittest.TestCase):
         self.assertFalse((directory / precedents.PRECEDENTS_FILE).exists())
 
     def test_the_module_reads_a_run_and_never_the_harness(self):
-        # The path check itself lives in ``tests/test_answer_isolation.py``,
-        # where it is made against the parsed AST rather than the raw text --
-        # this module's own docstring says it may name no path under the
-        # harness, so a substring search here would fail on that sentence.
-        # What is asserted here is the other half: the reader takes five fields
-        # from a case file and opens no run directory's log.
-        source = (PROJECT_ROOT / "tribunal" / "precedents.py").read_text(encoding="utf-8")
-        self.assertIn("events.jsonl", source)
+        """Five fields from a case file, and no run's event log is ever opened.
+
+        The test this replaces asserted that the string ``events.jsonl`` appears
+        in the module's source. It does -- in the docstring four lines above the
+        code, which says the module never reads one -- so the assertion could
+        not have failed on a module that read one. A substring search cannot see
+        a read. This runs a real closure with ``Path.read_text`` patched to
+        raise on any file called ``events.jsonl``: a closure that opened a run's
+        log would not return 0.
+        """
         self.assertEqual(
             ("case_no", "ruling", "brief_sha256", "development_set", "configuration"),
             precedents.CASE_FIELDS_READ,
@@ -1524,6 +1526,37 @@ class ShippedStoreTests(unittest.TestCase):
         for name in ("matched", "expected", "grade"):
             with self.subTest(name=name):
                 self.assertNotIn(name, precedents.CASE_FIELDS_READ)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            rig.bench(tmp, cases=(TARGET_CASE,))
+            run_dir = rig.run_dir_of(tmp)
+            # The log is there to be opened, which is what makes the guard mean
+            # something: a directory holding none would pass for the wrong
+            # reason.
+            self.assertTrue((run_dir / "events.jsonl").is_file())
+            real_read_text = Path.read_text
+
+            def guarded(path, *args, **kwargs):
+                if path.name == "events.jsonl":
+                    raise AssertionError("a closure opened {0}".format(path))
+                return real_read_text(path, *args, **kwargs)
+
+            with mock.patch.object(Path, "read_text", guarded):
+                with contextlib.redirect_stdout(io.StringIO()) as out:
+                    code = precedents.main(
+                        [
+                            "--store", str(store_dir(tmp)),
+                            "close",
+                            "--run-dir", str(run_dir),
+                            "--case", str(TARGET_CASE),
+                            "--ruling", "PARTIAL_REFUND",
+                            "--clause", RD_02,
+                            "--closed-by", "A Reviewer",
+                            "--summary", "A reviewer closed this case.",
+                        ]
+                    )
+        self.assertEqual(0, code)
+        self.assertIn("P-0001", out.getvalue())
 
     def test_the_default_store_is_the_repository_one(self):
         self.assertEqual(
