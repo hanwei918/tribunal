@@ -243,3 +243,41 @@ finished before the other session's first edit.
 tree is quiet again, re-run the suite on the frozen tree, then commit this task's
 seven paths and put the hash in the row's commit cell. Rule 1's "finished" test
 is not met yet, and the row says so.
+
+## How it was finished
+
+The next session found the other writer gone by 00:23 and the tree quiet from
+00:37. It did the three things asked above.
+
+**The separation was rebuilt, not re-guessed.** The four files this task shares
+with task 4 were reconstructed from the tree as it stood, by deleting task 4's
+hunks and nothing else. The result was then checked against `HEAD`: every
+remaining change is one of this task's, and none of task 4's identifiers —
+`precedents_library`, `precedents_run_directory`, `MOVED_PRECEDENTS`,
+`precedents_moved`, `precedents_excluded`, `--precedents` — appears anywhere in
+it. `tribunal/brief.py` and `tests/test_ablation.py` were confirmed byte-identical
+to the working tree, so the commit carries exactly what this task wrote. No
+`git checkout -- <file>` was used, per the standing rule: the files were restored
+from copies.
+
+**The commit landed.** Seven paths, committed as `8a1cdc0`, and the row's commit
+cell now names it.
+
+**The frozen-tree run.** The full suite was run on 3.13.12 against a tree that
+was not written to while it ran: `Ran 1343 tests in 3710.620s` /
+`FAILED (failures=1, errors=1, skipped=4)`. **Both results are the sandbox this
+session runs in and not the code** — a refused `mkdir` in WorkBuddy's
+`sitecustomize` shim, `PermissionError: Brokered mkdir refused by resolved path
+policy: deny`, raised inside `EventLog.record` at `tribunal/events.py:335`. The
+two are
+`tests.test_run_benchmark.ReplayTests.test_the_report_says_the_advocates_were_replayed_and_from_where`
+and
+`tests.test_run_benchmark.ResumptionTests.test_a_case_not_yet_cached_is_the_only_one_run`;
+outside the sandbox both modules pass — 38 tests — on 3.11.14 and 3.13.12, and
+no code was changed for either. The full account is in
+`docs/notes/2026-09-28-the-precedent-library.md`, which is the note whose task
+ran the suite and which quotes the error line.
+
+The two long runs recorded earlier in this note are therefore superseded: this
+one imported its modules against a tree nobody was writing to, and its 1341
+remaining results are clean.
