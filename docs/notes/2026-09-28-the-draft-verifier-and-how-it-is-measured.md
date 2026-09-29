@@ -10,6 +10,17 @@ Two things were built, and one of them is a measurement harness rather than a
 feature. The verifier is off by default; a run that does not ask for it is the
 run it was before, byte for byte.
 
+**Correction, 2026-09-29.** The run this note says had not happened has now
+happened. Both development sets were measured with the two commands in section 2
+and the output is committed; the figures are in
+`docs/notes/2026-09-29-the-verifier-measured.md`. So section 4's last paragraph
+("The commands above were **not** run over either development set") and section
+5's last bullet ("the on/off comparison over both development sets has not yet
+been run") are superseded: the comparison has been run, the material rule moved
+the vote on 5 of 42 usable cases and no ruling, and every material contradiction
+was checked against its brief. Nothing else here is affected — the verifier and
+its prompt are unchanged.
+
 **Two corrections were made on the same day, before this pass was measured on
 either development set, and they supersede parts of this note.** A
 `contradicted` verdict now carries a required boolean `material`, and only a

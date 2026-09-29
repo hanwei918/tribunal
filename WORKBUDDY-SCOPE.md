@@ -220,6 +220,33 @@ held by code rather than by convention.
 Nothing under `tribunal/` reads anything under `eval/`; that control is
 unchanged by all of this.
 
+## The verifier measurement (amended 2026-09-29)
+
+The draft verifier was measured on both development sets and the output is
+committed. **No path this workspace may read was added**, and the answer key is
+untouched.
+
+- **What was read.** `runs/deepseek-deepseek-flash/` and
+  `runs/codex/deepseek-deepseek-flash/` — the source runs' own recorded
+  transcripts — plus the case files, `policy/` and `prompts/`. Nothing under
+  `eval/` was read: the measurement compares a draft against the **brief** it was
+  handed, which is a runtime artifact, and never against `eval/answers/`. The key
+  stays frozen.
+- **What was written.** Only
+  `runs/verify-recorded-drafts/<model>/` and
+  `runs/<set>/verify-recorded-drafts/<model>/`, three files each. The headline
+  run directories were not written to, and the destination check that makes that
+  a property of the path is unchanged.
+- **What the committed files are.** The verifier's own output, committed exactly
+  as produced, with the one killed invocation left in each `events.jsonl` as it
+  was found. No case file, policy file or prompt was changed by this work, and
+  the verifier and its prompt are unchanged.
+- **One recorded figure is not the brief's.** The verifier's `brief_value` is
+  what the *verifier* holds the brief to say, and three of the fifteen material
+  contradictions quote a value the brief does not contain. Reading them as
+  quotations of the brief is wrong; `docs/notes/2026-09-29-the-verifier-measured.md`
+  says which and why.
+
 ## Language rule (standing)
 
 Every document in this repository is written in English, and every prompt pasted into WorkBuddy is written in English. No Chinese characters in any tracked text file.

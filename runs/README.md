@@ -129,11 +129,26 @@ recorded are the verifier's own.
 | `verify-recorded.md` | The same thing rendered for reading, one case per block. |
 | `events.jsonl` | The run's event log, in the same append-only hash-chained form as any other run's — `agent_call` entries for the verifier's calls and one `verification` event per case. |
 
-**No such directory is committed here.** The verifier has not been run over
-either development set, so there is nothing to commit, and the commands above
-are the ones that would produce it. Nothing in this directory may be merged into
-a model's run directory for the reason `external/` may not: those figures would
+**Both sets have now been measured, and both directories are committed.**
+`runs/verify-recorded-drafts/deepseek-deepseek-flash/` and
+`runs/codex/verify-recorded-drafts/deepseek-deepseek-flash/` were produced by the
+two commands above against `runs/deepseek-deepseek-flash/` and
+`runs/codex/deepseek-deepseek-flash/` and are committed as produced, under the
+first two rows of the table below. Read them with
+`docs/notes/2026-09-29-the-verifier-measured.md`, which is where the figures are
+checked against the briefs. Nothing in this directory may be merged into a
+model's run directory for the reason `external/` may not: those figures would
 then read as that run's.
+
+| Set | Source run | Cases | Usable | Contradicted | Material | Tokens |
+|---|---|---|---|---|---|---|
+| corpus | `runs/deepseek-deepseek-flash/` | 29 | 27 | 19 | 8 | 1,479,451 |
+| second set | `runs/codex/deepseek-deepseek-flash/` | 15 | 15 | 38 | 7 | 752,852 |
+
+Two corpus cases, 203 and 211, produced no usable answer — the verifier returned
+no JSON object, so every draft kept its vote and the case is recorded unusable
+with a reason. That is the designed fallback, and it is why the corpus command
+exits 1: `report.ok` is false when any case is unusable.
 
 ## `baselines/` — what a score is worth
 
