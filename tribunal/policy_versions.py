@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import json
 import re
+from decimal import Decimal
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
@@ -181,7 +182,12 @@ def load_amendment(path: Any) -> Dict[str, Any]:
     """
     source = Path(path)
     try:
-        document = json.loads(source.read_text(encoding="utf-8"))
+        # ``parse_float=Decimal``, the hook every other JSON read in this
+        # repository uses for a document that may hold a money value. Read
+        # without it, an amendment carrying an amount would be the one place a
+        # policy number arrived as a binary float -- and the amendment's clause
+        # is copied straight into the brief the agents are handed.
+        document = json.loads(source.read_text(encoding="utf-8"), parse_float=Decimal)
     except FileNotFoundError:
         raise AmendmentError("there is no amendment file at {0}".format(source))
     except (json.JSONDecodeError, UnicodeDecodeError) as exc:

@@ -2923,11 +2923,15 @@ def run_loaded_case(
                 case_no=case_no,
                 dispute_id=case["dispute"].get("dispute_id"),
             )
-            if precedents_shown:
-                # Set on the transcript so the ids travel at the top level of
-                # the record, beside the entries, rather than inside a call: the
-                # whole panel read the same block and no single call owns it.
-                transcript.precedents_shown = precedents_shown
+            # Set whether or not anything matched, so the transcript says what
+            # the judge was shown: with the switch on and nothing matching, that
+            # is an empty list rather than no key at all -- which is what the
+            # case file writes for the same case, and the two records of one
+            # case have to agree. ``None``, no key, means the switch was off and
+            # only that. The ids travel at the top level of the record, beside
+            # the entries, rather than inside a call: the whole panel read the
+            # same block and no single call owns it.
+            transcript.precedents_shown = precedents_shown
             if events_log is not None:
                 events_log.record(
                     events.EVENT_PRECEDENTS_SHOWN,

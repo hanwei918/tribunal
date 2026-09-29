@@ -632,7 +632,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--policy-version",
-        type=int,
+        type=run_benchmark.policy_version_argument,
         default=run_benchmark.DEFAULT_POLICY_VERSION,
         metavar="N",
         help=(

@@ -18,6 +18,7 @@ Nothing here reaches a real model.
 
 from __future__ import annotations
 
+import argparse
 import contextlib
 import io
 import json
@@ -25,6 +26,7 @@ import re
 import sys
 import tempfile
 import unittest
+from decimal import Decimal
 from pathlib import Path
 from unittest import mock
 
@@ -34,7 +36,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from eval import development_sets, run_benchmark as runner  # noqa: E402
 from tests import test_run_benchmark as rig  # noqa: E402
-from tribunal import loader, policy_versions  # noqa: E402
+from tribunal import loader, policy_versions, precedents  # noqa: E402
 from tribunal.model import resolve_model  # noqa: E402
 
 # The id the rig runs its scripted transports under. It is deliberately not the
@@ -963,6 +965,132 @@ class SwitchForwardingTests(unittest.TestCase):
                     self.assertTrue((landed / runner.METADATA_FILE).is_file())
                     # And nothing at all in the headline directory.
                     self.assertFalse((runs / runner.model_slug(MODEL)).exists())
+
+
+# --------------------------------------------------------------------------
+# A closure of a case from a later-version run
+# --------------------------------------------------------------------------
+class ClosingAtARecordedVersionTests(unittest.TestCase):
+    """``precedents close`` rebuilds the brief at the version the case records.
+
+    ``close`` checks the rebuilt brief's digest against the one the case file
+    records, and it rebuilt at version 1 unconditionally. A case from a run
+    briefed at version 2 therefore rebuilt to a different digest and was
+    refused -- so no case of a later-version run could be closed at all, which
+    is the one thing the library exists to collect.
+    """
+
+    def test_a_case_of_a_version_two_run_can_be_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir, summary = version_two_run(tmp, cases=(101,))
+            self.assertEqual([101], summary.completed_cases)
+            store = Path(tmp) / precedents.PRECEDENTS_DIRNAME
+            # The patch is held open across the closure: ``close`` rebuilds the
+            # brief, so it resolves the amendments directory the way the run
+            # that wrote the case file did.
+            with version_two_amendments(tmp):
+                with contextlib.redirect_stdout(io.StringIO()) as out:
+                    code = precedents.main(
+                        [
+                            "--store", str(store),
+                            "close",
+                            "--run-dir", str(run_dir),
+                            "--case", "101",
+                            "--ruling", "PARTIAL_REFUND",
+                            "--clause", "POL-RD-02",
+                            "--closed-by", "A Reviewer",
+                            "--summary", "A reviewer closed this case.",
+                        ]
+                    )
+            self.assertEqual(0, code)
+            self.assertIn("P-0001", out.getvalue())
+            entries = precedents.read_entries(precedents.store_path(store))
+            self.assertEqual(1, len(entries))
+            self.assertEqual(2, entries[0]["policy_version"])
+
+
+# --------------------------------------------------------------------------
+# A policy version below the lowest one
+# --------------------------------------------------------------------------
+class PolicyVersionArgumentTests(unittest.TestCase):
+    """A version below 1 is refused while the command line is read.
+
+    The refusal used to come from the runner, after the value had been parsed
+    and carried on the namespace: 0 or -1 was a namespace field like any other
+    until something asked the policy for it. It is refused at parse time now, in
+    both runners, so no client is built and no destination is named for a
+    version that names nothing.
+    """
+
+    def test_the_validator_accepts_the_versions_the_repository_has(self):
+        self.assertEqual(1, runner.policy_version_argument("1"))
+        self.assertEqual(2, runner.policy_version_argument("2"))
+
+    def test_the_validator_refuses_a_version_below_one(self):
+        for text in ("0", "-1", "-99"):
+            with self.subTest(text=text):
+                with self.assertRaises(argparse.ArgumentTypeError) as caught:
+                    runner.policy_version_argument(text)
+                self.assertIn("lowest policy version is 1", str(caught.exception))
+
+    def test_the_validator_refuses_something_that_is_not_an_integer(self):
+        with self.assertRaises(argparse.ArgumentTypeError) as caught:
+            runner.policy_version_argument("banana")
+        self.assertIn("is an integer", str(caught.exception))
+
+    def test_the_run_benchmark_command_line_refuses_it_before_a_client(self):
+        with mock.patch.object(
+            runner.llm, "LLMClient", side_effect=AssertionError("a model was called")
+        ):
+            with contextlib.redirect_stderr(io.StringIO()) as errors:
+                with self.assertRaises(SystemExit) as caught:
+                    runner.main(
+                        ["--model", MODEL, "--cases", "101", "--policy-version", "0"]
+                    )
+        self.assertEqual(2, caught.exception.code)
+        self.assertIn("lowest policy version is 1", errors.getvalue())
+
+    def test_the_development_sets_command_line_refuses_it_too(self):
+        with mock.patch.object(
+            runner.llm, "LLMClient", side_effect=AssertionError("a model was called")
+        ):
+            with contextlib.redirect_stderr(io.StringIO()) as errors:
+                with self.assertRaises(SystemExit) as caught:
+                    development_sets.main(
+                        ["--set", "corpus", "--cases", "101", "--policy-version", "0"]
+                    )
+        self.assertEqual(2, caught.exception.code)
+        self.assertIn("lowest policy version is 1", errors.getvalue())
+
+
+# --------------------------------------------------------------------------
+# A number in an amendment file
+# --------------------------------------------------------------------------
+class AmendmentNumberTests(unittest.TestCase):
+    """A number in an amendment file arrives as a ``Decimal``.
+
+    The amendment's clause is copied straight into the brief the agents are
+    handed, so a float here would be the one place a policy number reached the
+    brief as a binary float. Every field a clause carries is a string or a list
+    of strings today, so there is no amount for the schema to hold; the read is
+    pinned on a number inside ``requires``, which is the list a structured
+    requirement would go in.
+    """
+
+    def test_a_number_in_an_amendment_is_read_as_a_decimal(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            document = amendment_document("POL-RD-13")
+            document["clause"]["requires"] = [
+                {"clause": "POL-RD-02", "threshold": 250.0}
+            ]
+            path = write_amendment(tmp, "0001-example.json", document)
+            # The file itself carries a float: the point is how it is read.
+            self.assertIn("250.0", path.read_text(encoding="utf-8"))
+            loaded = policy_versions.load_amendment(path)
+        value = loaded["clause"]["requires"][0]["threshold"]
+        self.assertIsInstance(value, Decimal)
+        self.assertNotIsInstance(value, float)
+        self.assertEqual(Decimal("250.0"), value)
 
 
 if __name__ == "__main__":

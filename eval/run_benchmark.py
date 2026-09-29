@@ -4857,6 +4857,35 @@ def run_external_case(
     return outcome, run_dir
 
 
+def policy_version_argument(text: str) -> int:
+    """``--policy-version`` as an integer, refused below 1 while it is read.
+
+    Handed to ``argparse`` as the argument's ``type``, so a version below the
+    lowest one is refused while the command line is being parsed -- before a
+    client is built and before any destination is named. Version 0 is not a
+    version this repository has ever had: version 1 is the three policy files
+    exactly as committed, and version N applies the amendments ``0001``..``N-1``
+    from ``policy/amendments/``.
+
+    ``argparse.ArgumentTypeError`` rather than a ``ValueError`` because argparse
+    prints that exception's message verbatim, and the message has to name the
+    lowest version rather than the name of this function.
+    """
+    try:
+        version = int(text)
+    except (TypeError, ValueError):
+        raise argparse.ArgumentTypeError(
+            "--policy-version is an integer, and {0!r} is not".format(text)
+        )
+    if version < policy_versions.BASE_VERSION:
+        raise argparse.ArgumentTypeError(
+            "the lowest policy version is {0}, and {1} was asked for".format(
+                policy_versions.BASE_VERSION, version
+            )
+        )
+    return version
+
+
 def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = argparse.ArgumentParser(
         prog="python -m eval.run_benchmark",
@@ -5029,7 +5058,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     )
     parser.add_argument(
         "--policy-version",
-        type=int,
+        type=policy_version_argument,
         default=DEFAULT_POLICY_VERSION,
         metavar="N",
         help=(

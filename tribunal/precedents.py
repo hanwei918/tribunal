@@ -48,7 +48,7 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
-from . import brief, events, loader, money, referee
+from . import brief, events, loader, money, policy_versions, referee
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -230,6 +230,28 @@ def next_precedent_id(entries: Sequence[Mapping[str, Any]]) -> str:
     return "{0}{1:0{2}d}".format(PRECEDENT_ID_PREFIX, highest + 1, PRECEDENT_ID_WIDTH)
 
 
+def latest_by_source_with_positions(
+    entries: Sequence[Mapping[str, Any]],
+) -> List[Tuple[int, Dict[str, Any]]]:
+    """The latest entry per source case, each with its own position in the log.
+
+    The position is the entry's index in the chain as it was written, and it is
+    what :func:`matches` means by "the earlier entry" when two candidates score
+    alike. It is the position of the entry that was **chosen** -- the latest
+    closure for that source case -- and not where its source case first
+    appeared: a case closed twice has one latest entry, and its position is the
+    line that closure was written on.
+    """
+    latest: Dict[Tuple[str, Any], Tuple[int, Dict[str, Any]]] = {}
+    for position, entry in enumerate(entries):
+        source = entry.get("source")
+        if not isinstance(source, Mapping):
+            continue
+        key = (str(source.get("set")), source.get("case_no"))
+        latest[key] = (position, dict(entry))
+    return list(latest.values())
+
+
 def latest_by_source(
     entries: Sequence[Mapping[str, Any]],
 ) -> List[Dict[str, Any]]:
@@ -238,14 +260,7 @@ def latest_by_source(
     A superseded entry stays in the chain -- the store is append-only -- and is
     simply not what a later run is shown.
     """
-    latest: Dict[Tuple[str, Any], Dict[str, Any]] = {}
-    for entry in entries:
-        source = entry.get("source")
-        if not isinstance(source, Mapping):
-            continue
-        key = (str(source.get("set")), source.get("case_no"))
-        latest[key] = dict(entry)
-    return list(latest.values())
+    return [entry for _position, entry in latest_by_source_with_positions(entries)]
 
 
 def _assert_no_forbidden_field_names(node: Any, where: str = "entry") -> None:
@@ -434,6 +449,26 @@ def _as_decimal(value: Any) -> Optional[Decimal]:
         return None
 
 
+def _entry_clause_ids(entry: Mapping[str, Any]) -> Optional[List[str]]:
+    """An entry's clause ids with limbs dropped, or ``None`` when it cannot match.
+
+    ``None`` means the entry is excluded whole, and there are two ways to earn
+    it: an entry that rests on an id that is not a clause id, and an entry that
+    rests on no clause id at all. Dropping the unparseable id instead would
+    leave the entry resting on whichever ids happened to parse, which is a
+    different entry from the one a human closed -- and the matching scores an
+    entry by how many of its clause ids a kept claim cites, so a shortened list
+    is a different score as well.
+    """
+    ids: List[str] = []
+    for item in entry.get("clause_ids") or []:
+        base = base_clause_id(item)
+        if base is None:
+            return None
+        ids.append(base)
+    return ids or None
+
+
 def matches(
     entries: Sequence[Mapping[str, Any]],
     *,
@@ -453,17 +488,22 @@ def matches(
     2. entries of the same category;
     3. everything except the case being judged, matched by set and case number
        and, separately, by ``dispute_id``;
-    4. everything whose clause ids all resolve in this case's brief;
+    4. everything whose clause ids **all** resolve in this case's brief. An
+       entry resting on one id that is not a clause id is excluded **whole**:
+       dropping the bad id would leave it resting on whichever ids happened to
+       parse, and that is not the entry a human closed;
     5. entries that share at least one clause with a claim the referee kept,
        scored by how many;
     6. ties broken by the relative amount difference and then by the earlier
-       entry;
+       entry -- "earlier" being the chosen entry's own position in the log, the
+       line the latest closure for its source case was written on, and not
+       where its source case first appeared;
     7. the top three.
     """
     resolvable = set(referee.policy_clauses(brief_object))
     kept = set(kept_clause_ids_)
     scored: List[Tuple[int, Decimal, int, Dict[str, Any]]] = []
-    for position, entry in enumerate(latest_by_source(entries)):
+    for position, entry in latest_by_source_with_positions(entries):
         source = entry.get("source") or {}
         if entry.get("category") != category:
             continue
@@ -471,12 +511,8 @@ def matches(
             continue
         if dispute_id is not None and source.get("dispute_id") == dispute_id:
             continue
-        clause_ids = [
-            base
-            for base in (base_clause_id(item) for item in entry.get("clause_ids") or [])
-            if base is not None
-        ]
-        if not clause_ids:
+        clause_ids = _entry_clause_ids(entry)
+        if clause_ids is None:
             continue
         if any(base not in resolvable for base in clause_ids):
             # A clause that does not resolve in this case's policy cannot be
@@ -648,7 +684,17 @@ def close(args: argparse.Namespace) -> int:
     if not isinstance(configuration, Mapping):
         configuration = {}
     ablation = configuration.get("ablation")
-    brief_object = brief.build_brief_for_case(case, ablate=ablation)
+    # The version the case file records, not the version this process happens
+    # to default to. ``pipeline.replay_verdict`` rebuilds a replayed case's
+    # brief at the version its source recorded for the same reason: a brief
+    # rebuilt at another version is a different brief, and the digest check
+    # below would refuse every case of a run briefed at a later policy version
+    # -- which is every case of such a run, so the closure could not be made at
+    # all.
+    policy_version = configuration.get("policy_version") or policy_versions.BASE_VERSION
+    brief_object = brief.build_brief_for_case(
+        case, ablate=ablation, policy_version=policy_version
+    )
     rebuilt = brief.brief_digest(brief_object)[1]
     recorded = document.get("brief_sha256")
     if not isinstance(recorded, str) or not recorded:
@@ -745,7 +791,7 @@ def close(args: argparse.Namespace) -> int:
         "amount_contested_sgd": dispute.get("amount_contested_sgd"),
         "summary": summary,
         "closed_by": args.closed_by,
-        "policy_version": configuration.get("policy_version") or 1,
+        "policy_version": policy_version,
         "supersedes": args.supersedes,
     }
     append_entry(entry, store=args.store, invocation_id=args.invocation_id)

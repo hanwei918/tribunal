@@ -740,6 +740,16 @@ class MatchingTests(unittest.TestCase):
     def test_an_entry_resting_on_no_clause_at_all_is_excluded(self):
         self.assertEqual([], self.choose([entry(clause_ids=())]))
 
+    def test_an_entry_resting_on_an_id_that_is_not_a_clause_is_excluded_whole(self):
+        # It shares RD_02 with the kept claim and also rests on a string that is
+        # not a clause id. Dropping the bad id would have chosen it -- on a
+        # shorter clause list than the one a human closed it on, and with a
+        # different score, because the score is how many of its ids a kept claim
+        # cites.
+        self.assertEqual(
+            [], self.choose([entry(clause_ids=(RD_02, "not-a-clause-id"))])
+        )
+
     def test_the_ranking_is_by_how_many_kept_clauses_are_shared(self):
         one = entry("P-0001", case_no=201, clause_ids=(RD_02,))
         two = entry("P-0002", case_no=202, clause_ids=(RD_01, RD_02))
@@ -765,6 +775,19 @@ class MatchingTests(unittest.TestCase):
         first = entry("P-0001", case_no=201, amount="10.0")
         second = entry("P-0002", case_no=202, amount="10.0")
         self.assertEqual(["P-0001", "P-0002"], self.ids(self.choose([first, second])))
+
+    def test_the_tie_break_is_the_chosen_entry_s_own_position_in_the_log(self):
+        # Case 201 is closed twice: the first entry is superseded by the third,
+        # so 201's *chosen* entry is written after case 202's. With equal scores
+        # the earlier line wins, and that is 202's entry. Ordering by where each
+        # source case first appeared would have put 201 first instead, because
+        # 201's case number is the first one the log names.
+        superseded = entry("P-0001", case_no=201, clause_ids=(RD_06,))
+        other = entry("P-0002", case_no=202, amount="10.0")
+        chosen = entry("P-0003", case_no=201, amount="10.0")
+        self.assertEqual(
+            ["P-0002", "P-0003"], self.ids(self.choose([superseded, other, chosen]))
+        )
 
     def test_at_most_three_are_chosen(self):
         entries = [
@@ -902,15 +925,35 @@ class PipelinePrecedentsTests(unittest.TestCase):
         self.assertEqual(1, len(messages))
         self.assertEqual({"brief", "claims", "referee"}, set(messages[0]))
 
-    def test_nothing_named_is_byte_identical_to_a_library_that_matches_nothing(self):
+    def test_a_library_that_matches_nothing_shows_the_judge_the_same_bytes(self):
+        """The judge's message is unchanged; the record now says ``[]``.
+
+        The switch on with nothing matched wrote no ``precedents_shown`` key on
+        the transcript while the case file wrote ``[]`` -- two records of one
+        case disagreeing about whether the question had been asked. What must
+        not change is the judge's message, and it does not: with nothing
+        matching there is no ``precedents`` key on it, byte for byte, exactly as
+        with the switch off.
+        """
         case = loader.load_case(TARGET_CASE)
+        plain_transport = transport_for()
+        empty_transport = transport_for()
         with claiming(claims_citing(TARGET_CASE)):
-            plain = run_pipeline_once(case)
-            empty = run_pipeline_once(case, precedents_sentinel=StubLibrary())
-        self.assertEqual(
-            canonical(plain.transcript.as_dict()), canonical(empty.transcript.as_dict())
-        )
+            plain = run_pipeline_once(case, transport=plain_transport)
+            empty = run_pipeline_once(
+                case, precedents_sentinel=StubLibrary(), transport=empty_transport
+            )
+        plain_message = judge_messages(plain_transport)[0]
+        empty_message = judge_messages(empty_transport)[0]
+        self.assertEqual(canonical(plain_message), canonical(empty_message))
+        self.assertNotIn("precedents", plain_message)
+        self.assertNotIn("precedents", empty_message)
+        # The switch off: no key at all, which is the bytes it always wrote.
+        self.assertNotIn("precedents_shown", plain.transcript.as_dict())
         self.assertIsNone(plain.precedents_shown)
+        # The switch on with nothing matched: an empty list, which is what the
+        # case file writes for the same case.
+        self.assertEqual([], empty.transcript.as_dict()["precedents_shown"])
         self.assertEqual((), empty.precedents_shown)
 
     def test_the_key_is_present_and_canonically_ordered_when_a_block_is_shown(self):
