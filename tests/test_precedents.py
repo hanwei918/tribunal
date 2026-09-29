@@ -1214,6 +1214,53 @@ class StalenessPrecedentsTests(unittest.TestCase):
             )
             self.assertTrue(switched.precedents_moved(TARGET_CASE, document))
 
+    def test_a_moved_library_reaches_the_report_and_the_summary(self):
+        """The channel has to survive the trip out of the checker.
+
+        ``BriefStaleness.precedents_moved`` answered correctly from the day the
+        channel was added, and the tests above prove it. What they could not see
+        is that ``brief_staleness`` -- the function that turns the checker into
+        the ``grade.Staleness`` a report is built from -- collected the brief and
+        the prompt channels and not this one, so ``stale_precedents`` was ``()``
+        in every report ever written and both lines asserted below were
+        unreachable. A case could be stale for the library alone and the report
+        would name no channel at all.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            store = write_entries(store_dir(tmp), [entry("P-0001")])
+            with claiming(claims_citing(TARGET_CASE)):
+                rig.bench(tmp, cases=(TARGET_CASE,), precedents=store)
+                # One more closure moves the chain head, and nothing else moves:
+                # the brief and the prompts are this code's, so the library is
+                # the only channel this case is stale on.
+                precedents.append_entry(entry("P-0002", case_no=103), store=store)
+                summary, transport = rig.bench(
+                    tmp, cases=(TARGET_CASE,), precedents=store
+                )
+
+            staleness = summary.report.staleness
+            self.assertEqual((TARGET_CASE,), staleness.stale_precedents)
+            self.assertEqual((), staleness.stale_brief)
+            self.assertEqual((), staleness.stale_prompts)
+            self.assertEqual((TARGET_CASE,), staleness.stale)
+
+            # Reused, not re-run: a stale cached result is reported, and only
+            # ``--force`` re-runs it.
+            self.assertEqual([], summary.completed_cases)
+            self.assertEqual([TARGET_CASE], sorted(summary.cached_cases))
+            self.assertEqual(0, transport.calls())
+
+            report_text = (precedents_run_dir(tmp) / runner.REPORT_FILE).read_text(
+                encoding="utf-8"
+            )
+            self.assertIn("The precedent library has moved for 1 of 1", report_text)
+            self.assertIn(str(TARGET_CASE), report_text)
+
+            printed = io.StringIO()
+            with contextlib.redirect_stdout(printed):
+                runner.print_summary(summary)
+            self.assertIn("library moved: {0}".format(TARGET_CASE), printed.getvalue())
+
     def test_every_channel_that_can_move_has_a_phrase_of_its_own(self):
         # The progress line names which digest moved. A channel with no phrase
         # falls through to the fallback -- "produced by an earlier version of

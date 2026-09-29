@@ -520,6 +520,64 @@ class ConfigurationTests(unittest.TestCase):
 
 
 # --------------------------------------------------------------------------
+# What an ablated run's report says
+# --------------------------------------------------------------------------
+class AblatedReportTests(unittest.TestCase):
+    """An ablated run's report has to say it was ablated, in the brief's words.
+
+    ``report.md`` is what a reader is given, and an ablated run's report was
+    indistinguishable from a headline one: the same title, the same tables, and
+    no word anywhere that something had been taken out of what the agents were
+    given. The only place that said so was the directory name, which is not in
+    the report -- so two runs of one model under one set of prompts produced two
+    reports that opened identically, and a reader comparing them was comparing
+    two different measurements without being told.
+
+    The sentence printed comes from :func:`tribunal.brief.ablation_note`, which
+    had no caller at all before this. Taking the words from the module that
+    implements the ablation is what stops a report describing an ablation the
+    brief module does not have, and for ``admissibility`` it is what carries the
+    sentence that derived text from a null payload still says MISSING.
+    """
+
+    def report_for(self, tmp, name):
+        rig.bench(tmp, cases=(101,), ablation=name)
+        run_dir = ablated_run_dir(tmp, name)
+        return (run_dir / runner.REPORT_FILE).read_text(encoding="utf-8")
+
+    def test_an_ablated_report_names_the_ablation_and_prints_its_note(self):
+        for name in brief.ABLATIONS:
+            with self.subTest(ablation=name):
+                with tempfile.TemporaryDirectory() as tmp:
+                    text = self.report_for(tmp, name)
+                self.assertEqual(
+                    "# Benchmark report — {0} — ablation {1}".format(MODEL, name),
+                    text.splitlines()[0],
+                )
+                self.assertIn(brief.ablation_note(name), text)
+                if name == ADMISSIBILITY:
+                    # The sentence the note exists for: the ablated brief
+                    # carries no admissibility *object*, which is not the same
+                    # as carrying no admissibility *information*.
+                    self.assertIn(
+                        "derived text computed from a null payload still says MISSING",
+                        text,
+                    )
+
+    def test_a_plain_run_s_report_says_nothing_about_an_ablation(self):
+        """The other half: the heading is for ablated runs, not for every run."""
+        with tempfile.TemporaryDirectory() as tmp:
+            rig.bench(tmp, cases=(101,))
+            text = (rig.run_dir_of(tmp) / runner.REPORT_FILE).read_text(
+                encoding="utf-8"
+            )
+        self.assertEqual(
+            "# Benchmark report — {0}".format(MODEL), text.splitlines()[0]
+        )
+        self.assertNotIn("## Ablation", text)
+
+
+# --------------------------------------------------------------------------
 # The staleness check rebuilds the ablated brief
 # --------------------------------------------------------------------------
 class StalenessTests(unittest.TestCase):

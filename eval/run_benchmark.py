@@ -1536,17 +1536,22 @@ def brief_staleness(
     nothing. A case with no cache entry is not checked and is not reported: it
     produced no result to be stale.
 
-    The two channels are collected separately as well as as a union, so a report
-    can say which of the two moved rather than only that something did. The
+    The three channels are collected separately as well as as a union, so a
+    report can say which of them moved rather than only that something did. The
     prompt channel is answered from each case's own transcript -- from the
     ``system_sha256`` and ``user_sha256`` its calls recorded -- so the default
-    checker is built with the run directory it is reading.
+    checker is built with the run directory it is reading. The precedents
+    channel is filled from the checker like the other two: leaving it empty made
+    ``stale_precedents`` always ``()``, so the "library has moved" line and the
+    ``library moved:`` summary line were unreachable however far the library had
+    moved.
     """
     checker = BriefStaleness(run_dir=run_dir) if checker is None else checker
     stale: List[int] = []
     unknown: List[int] = []
     stale_brief: List[int] = []
     stale_prompts: List[int] = []
+    stale_precedents: List[int] = []
     unchecked_prompts: List[int] = []
     for case_no in cases:
         document = load_cached(run_dir, case_no)
@@ -1562,15 +1567,18 @@ def brief_staleness(
                 stale_brief.append(case_no)
             if grade.MOVED_PROMPTS in moved:
                 stale_prompts.append(case_no)
+            if grade.MOVED_PRECEDENTS in moved:
+                stale_precedents.append(case_no)
         elif status == grade.STALENESS_UNKNOWN:
             unknown.append(case_no)
     return grade.Staleness(
-        True,
-        tuple(sorted(stale)),
-        tuple(sorted(unknown)),
-        tuple(sorted(stale_brief)),
-        tuple(sorted(stale_prompts)),
-        tuple(sorted(unchecked_prompts)),
+        checked=True,
+        stale=tuple(sorted(stale)),
+        unknown=tuple(sorted(unknown)),
+        stale_brief=tuple(sorted(stale_brief)),
+        stale_prompts=tuple(sorted(stale_prompts)),
+        unchecked_prompts=tuple(sorted(unchecked_prompts)),
+        stale_precedents=tuple(sorted(stale_precedents)),
     )
 
 
@@ -2497,6 +2505,29 @@ def render_precedents_exclusions(
     return "\n".join(lines)
 
 
+def render_ablation_note(ablation: str) -> str:
+    """The report's own section for an ablated run.
+
+    An ablated run's ``report.md`` was indistinguishable from a headline one:
+    the same title, the same tables, and no word anywhere that something had
+    been taken out of what the agents were given. The ablation is a property of
+    the *inputs*, so a reader who compares two reports has to be told which of
+    them measured the pipeline without part of it -- and the run's directory
+    name, which did say so, is not in the report.
+
+    The sentence itself comes from :func:`tribunal.brief.ablation_note`, so the
+    words a report prints are the words of the module that implements the
+    ablation, and a report cannot describe an ablation the brief module does not
+    have. For ``admissibility`` that includes the sentence that derived text
+    computed from a null payload still says MISSING -- the difference between
+    the ablated brief carrying no admissibility *object* and carrying no
+    admissibility *information*.
+    """
+    return "\n## Ablation\n\n{0}\n\n{1}\n".format(
+        ablation, brief.ablation_note(ablation)
+    )
+
+
 def run_benchmark(
     model: str,
     cases: Sequence[int],
@@ -3196,7 +3227,14 @@ def run_benchmark(
         report_title = "Benchmark report — {0} — development set {1}".format(
             model, label
         )
+    if ablation is not None:
+        # The title is the first line a reader sees, and an ablated report's
+        # title said nothing about the ablation: two runs of the same model under
+        # the same prompts produced two reports that opened identically.
+        report_title = "{0} — ablation {1}".format(report_title, ablation)
     report_text = grade.render_report(report, report_title, key_path=key_path)
+    if ablation is not None:
+        report_text += render_ablation_note(ablation)
     if library is not None:
         report_text += render_precedents_exclusions(precedents_excluded, measured)
     (run_dir / REPORT_FILE).write_text(report_text, encoding="utf-8")
