@@ -416,14 +416,19 @@ class DestinationTests(unittest.TestCase):
             runs = Path(tmp) / "runs"
             dirty = runner.run_directory(runs, MODEL)
             with self.assertRaises(runner.BenchmarkError):
-                runner.assert_ablation_destination(dirty, runs)
+                runner.assert_ablation_destination(dirty, runs, MODEL)
             # And a name that climbs out of the ablation root, which is what a
-            # ``..`` would be if the name were ever allowed to be one.
-            climbing = runner.ablation_run_directory(runs, "..", MODEL)
-            with self.assertRaises(runner.BenchmarkError):
-                runner.assert_ablation_destination(climbing, runs)
+            # ``..`` would be if the name were ever allowed to be one. It climbs
+            # to a directory that is not a headline one, so what refuses it here
+            # is the ablation root rather than the headline check that runs
+            # first -- a plain ``..`` lands on the model's own run directory and
+            # is refused for being that.
+            climbing = runner.ablation_run_directory(runs, "../elsewhere", MODEL)
+            with self.assertRaises(runner.BenchmarkError) as caught:
+                runner.assert_ablation_destination(climbing, runs, MODEL)
+            self.assertIn("may only be written under", str(caught.exception))
             clean = runner.ablation_run_directory(runs, CLAUSE_NOTES, MODEL)
-            self.assertEqual(clean, runner.assert_ablation_destination(clean, runs))
+            self.assertEqual(clean, runner.assert_ablation_destination(clean, runs, MODEL))
 
     def test_an_ablated_corpus_run_writes_under_the_ablation_directory(self):
         with tempfile.TemporaryDirectory() as tmp:

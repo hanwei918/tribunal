@@ -193,8 +193,9 @@ def amendments_directory(root: Optional[Any] = None) -> Path:
 def assert_not_a_run_directory(destination: Path, runs_dir: Path, model: str) -> Path:
     """Refuse a destination that is a headline run directory, or lies inside one.
 
-    ``runs/<model-slug>/``, ``runs/codex/<model-slug>/`` and everything under
-    ``runs/external/`` hold the results the submission reports. The policy-gap
+    ``runs/<model-slug>/``, ``runs/codex/<model-slug>/``,
+    ``runs/wild/<model-slug>/`` and everything under ``runs/external/`` hold
+    the results the submission reports. The policy-gap
     report is not a run, and a reader who found these figures there would read
     them as that run's, so the destination is refused before anything is
     written. The check is structural as well as by name: a directory holding a
@@ -204,11 +205,12 @@ def assert_not_a_run_directory(destination: Path, runs_dir: Path, model: str) ->
     resolved = Path(destination).resolve()
     root = Path(runs_dir).resolve()
 
-    if resolved == run_benchmark.run_directory(runs_dir, model).resolve():
-        raise PolicyGapError(
-            "the policy-gap report may not be written to the headline run "
-            "directory {0}; it is not that run's figures".format(resolved)
-        )
+    for headline in run_benchmark.headline_run_directories(runs_dir, model):
+        if resolved == headline.resolve():
+            raise PolicyGapError(
+                "the policy-gap report may not be written to the headline run "
+                "directory {0}; it is not that run's figures".format(resolved)
+            )
 
     external = (root / run_benchmark.EXTERNAL_RUNS_SUBDIR).resolve()
     if resolved == external or external in resolved.parents:

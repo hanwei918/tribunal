@@ -1068,12 +1068,25 @@ class RunDestinationTests(unittest.TestCase):
             runs = Path(tmp) / "runs"
             dirty = runner.run_directory(runs, MODEL)
             with self.assertRaises(runner.BenchmarkError):
-                runner.assert_precedents_destination(dirty, runs)
-            climbing = runner.precedents_run_directory(runs, MODEL) / ".." / ".."
+                runner.assert_precedents_destination(dirty, runs, MODEL)
+            # The sealed set's run directory is a headline one too, so a
+            # precedents run must not be able to land there either.
+            sealed = runs / runner.SEALED_SET_RUNS_SUBDIR / runner.model_slug(MODEL)
             with self.assertRaises(runner.BenchmarkError):
-                runner.assert_precedents_destination(climbing, runs)
+                runner.assert_precedents_destination(sealed, runs, MODEL)
+            # And a name that climbs out of the precedents root, which is what
+            # a ``..`` would be if the name were ever allowed to be one. It
+            # climbs to the runs root, which is not a headline directory, so
+            # what refuses it here is the precedents root rather than the
+            # headline check that runs first.
+            climbing = runner.precedents_run_directory(runs, MODEL) / ".." / ".."
+            with self.assertRaises(runner.BenchmarkError) as caught:
+                runner.assert_precedents_destination(climbing, runs, MODEL)
+            self.assertIn("may only be written under", str(caught.exception))
             clean = runner.precedents_run_directory(runs, MODEL)
-            self.assertEqual(clean, runner.assert_precedents_destination(clean, runs))
+            self.assertEqual(
+                clean, runner.assert_precedents_destination(clean, runs, MODEL)
+            )
 
     def test_a_run_with_precedents_on_writes_under_its_own_root(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -12,10 +12,13 @@ There are two of them, and they are not the same kind of thing:
 
 Both are **development data**. Neither is a test set. A test set has to be
 drafted without access to this repository and seen beforehand by nobody who
-works on the prompt, and the sealed set that meets that description does not
-exist yet: it is run exactly once, after the 10 October freeze, and that single
-run is the only figure the submission reports as generalisation. Nothing here
-produces that figure.
+works on the prompt, and the set that meets that description is now in the
+repository: the sealed set, 64 cases under ``data/external/wild/``, keyed by
+``eval/answers/wild/ground_truth.json``. It is **not** a third development
+set and it is never combined with the two above. It is run exactly once, from
+the commit tagged ``freeze-2026-09-30``, and that single run is the only
+figure the submission reports as generalisation. Nothing here produces that
+figure.
 
 What this module is for
 -----------------------
@@ -60,6 +63,11 @@ class DevelopmentSet:
     ``runs/<model>/``. A second set is never given ``None``: its results must
     not land in a model's corpus run directory, and a distinct subdirectory is
     what makes that checkable rather than merely intended.
+
+    ``sealed`` marks the one set that is run **once** and whose single run is
+    the generalisation figure. It is the only field a set carries because of
+    what its results *mean* rather than where they live, and it is what lets a
+    switch that would replace that run be refused for this set and no other.
     """
 
     name: str
@@ -68,6 +76,7 @@ class DevelopmentSet:
     runs_subdir: Optional[str]
     case_root: Optional[Path]
     summary: str
+    sealed: bool = False
 
     def key(self) -> Dict[int, grade.Ruling]:
         """This set's own answer key. Never the corpus key."""
@@ -110,19 +119,47 @@ SECOND_SET = DevelopmentSet(
     name="codex",
     cases=tuple(
         entry["case_no"]
-        for entry in loader.load_external_index(loader.EXTERNAL_DIR / "codex")
+        for entry in loader.load_external_index(
+            loader.EXTERNAL_DIR / run_benchmark.SECOND_SET_RUNS_SUBDIR
+        )
     ),
     key_path=ANSWER_DIR / "codex" / "ground_truth.json",
-    runs_subdir="codex",
-    case_root=loader.EXTERNAL_DIR / "codex",
+    runs_subdir=run_benchmark.SECOND_SET_RUNS_SUBDIR,
+    case_root=loader.EXTERNAL_DIR / run_benchmark.SECOND_SET_RUNS_SUBDIR,
     summary=(
         "fifteen cases drafted by OpenAI Codex on 2026-09-24, copied in by the "
         "owner; development data, not a test set"
     ),
 )
 
+# The sealed set. It is deliberately **not** in ``DEVELOPMENT_SETS``: that
+# tuple is what ``--report`` combines and what ``--set all`` runs, and neither
+# may include a set that is run once. Its runs root is
+# ``runs/wild/<model-slug>/`` and its key is its own file, so nothing of it is
+# ever written into, or graded against, the two development sets' own.
+SEALED_SET = DevelopmentSet(
+    name="wild",
+    cases=tuple(
+        entry["case_no"]
+        for entry in loader.load_external_index(
+            loader.EXTERNAL_DIR / run_benchmark.SEALED_SET_RUNS_SUBDIR
+        )
+    ),
+    key_path=ANSWER_DIR / run_benchmark.SEALED_SET_RUNS_SUBDIR / "ground_truth.json",
+    runs_subdir=run_benchmark.SEALED_SET_RUNS_SUBDIR,
+    case_root=loader.EXTERNAL_DIR / run_benchmark.SEALED_SET_RUNS_SUBDIR,
+    summary=(
+        "the sealed set: 64 cases drafted without access to this repository, "
+        "run once from the frozen commit; that single run is the only "
+        "generalisation figure the submission reports"
+    ),
+    sealed=True,
+)
+
 DEVELOPMENT_SETS: Tuple[DevelopmentSet, ...] = (CORPUS, SECOND_SET)
-BY_NAME = {development_set.name: development_set for development_set in DEVELOPMENT_SETS}
+SEALED_SETS: Tuple[DevelopmentSet, ...] = (SEALED_SET,)
+ALL_SETS: Tuple[DevelopmentSet, ...] = DEVELOPMENT_SETS + SEALED_SETS
+BY_NAME = {development_set.name: development_set for development_set in ALL_SETS}
 
 
 def named(name: str) -> DevelopmentSet:
@@ -150,7 +187,22 @@ DEVELOPMENT_DATA_CAVEAT = (
     "so it is not a generalisation figure and does not replace the corpus "
     "number. The only generalisation figure the submission reports belongs to "
     "the sealed set, drafted without access to this repository and run exactly "
-    "once after the 10 October freeze. Neither figure here is that figure."
+    "once from the commit tagged freeze-2026-09-30. Neither figure here is "
+    "that figure."
+)
+
+# The sealed set is printed on its own, and this is why. A sum of a
+# development figure and the generalisation figure is neither, so the two are
+# never added; and the sealed figure is a single run that has not happened when
+# the development figures are read, so it is reported as ``not run`` rather
+# than as zero.
+SEALED_SET_CAVEAT = (
+    "The sealed set is not a development set and is never added to the "
+    "combined figure above. It was drafted without access to this repository "
+    "and is run exactly once from the commit tagged freeze-2026-09-30; that "
+    "single run is the only generalisation figure the submission reports. It "
+    "is absent from data/index.json and is graded against "
+    "eval/answers/wild/ground_truth.json, which is neither development key."
 )
 
 
@@ -181,12 +233,31 @@ def assert_set_run_directory(
     return resolved
 
 
+def assert_not_sealed(development_set: DevelopmentSet, switch: str) -> None:
+    """Refuse a switch that would replace or re-take the sealed set's single run.
+
+    The sealed set is run once from the frozen commit and that run is the only
+    generalisation figure the submission reports. A switch that overwrote a
+    case's result, or that produced one from a run already recorded, would make
+    the figure a different measurement from the one the freeze names. It is
+    refused by name rather than left to convention, and it is refused for this
+    set and for no other.
+    """
+    if development_set.sealed:
+        raise run_benchmark.BenchmarkError(
+            "the sealed set is run once, so {0} is refused for it: its single "
+            "run is the only generalisation figure the submission reports and "
+            "must not be replaced".format(switch)
+        )
+
+
 def run_set(
     development_set: DevelopmentSet,
     model: str,
     *,
     runs_dir: Path = RUNS_DIR,
     cases: Optional[Sequence[int]] = None,
+    force: bool = False,
     **kwargs: Any,
 ) -> "run_benchmark.RunSummary":
     """Run one development set through the corpus runner.
@@ -200,8 +271,12 @@ def run_set(
     metadata names the set. The corpus carries none: ``runs/<model>/`` *is* its
     directory, and the runner refuses a labelled run aimed there.
 
-    The destination is checked before anything is written.
+    The destination is checked before anything is written, and ``force`` is
+    refused outright for the sealed set, whose single run must not be replaced.
     """
+    if force:
+        assert_not_sealed(development_set, "--force")
+
     selected = list(development_set.cases if cases is None else cases)
     unknown = [case_no for case_no in selected if case_no not in set(development_set.cases)]
     if unknown:
@@ -222,6 +297,7 @@ def run_set(
         key=development_set.key(),
         key_path=development_set.key_path,
         case_loader=development_set.load_case,
+        force=force,
         # The corpus is run unlabelled, exactly as ``python -m
         # eval.run_benchmark`` runs it, and its case files record
         # ``development_set: null``. Labelling it "corpus" made the set that
@@ -473,28 +549,37 @@ def _render_case_facts_section(figures: Sequence[SetFigures]) -> List[str]:
     return lines
 
 
+# The column header both set tables carry. One string, so the development table
+# and the sealed set's cannot come to show different columns under the same
+# heading.
+_SET_TABLE_HEADER = "  {0:<8} {1:<40} {2:>5}  {3:>9}  {4:>6} {5:>6} {6:>6} {7:>6}".format(
+    "set", "run directory", "cases", "exact", "ruling", "amount", "driver", "refs"
+)
+
+
 def render_development_sets(model: str, runs_dir: Path = RUNS_DIR) -> str:
-    """The two sets separately, then combined, then per case. Reads cached runs only.
+    """The two sets separately, then combined, then the sealed set on its own.
 
-    The corpus figure and the combined figure are different claims and the text
-    says so. The combined figure sums two sets that were drafted differently and
-    share one template; it is not a generalisation figure and it does not
-    replace the corpus number. The only generalisation figure belongs to the
-    sealed set, which is run once after the 10 October freeze.
+    Reads cached runs only. The corpus figure and the combined figure are
+    different claims and the text says so. The combined figure sums two sets that
+    were drafted differently and share one template; it is not a generalisation
+    figure and it does not replace the corpus number. The only generalisation
+    figure belongs to the sealed set, run once from the commit tagged
+    ``freeze-2026-09-30``, and the sealed set is therefore printed in a section of
+    its own -- never as a third row of the table above, and never inside the
+    combined line.
 
-    The per-case block at the end carries the same cost, provenance and
-    explanation columns a run's own ``report.md`` carries, for every case of
-    every set that has been run, so a figure in the summary can be traced to the
-    case it came from without opening a cache entry.
+    The per-case block carries the same cost, provenance and explanation columns
+    a run's own ``report.md`` carries, for every case of every set that has been
+    run, so a figure in the summary can be traced to the case it came from
+    without opening a cache entry.
     """
     lines = [
         "Development sets — {0}".format(model),
         "",
         "Separately, each set graded against its own key:",
         "",
-        "  {0:<8} {1:<40} {2:>5}  {3:>9}  {4:>6} {5:>6} {6:>6} {7:>6}".format(
-            "set", "run directory", "cases", "exact", "ruling", "amount", "driver", "refs"
-        ),
+        _SET_TABLE_HEADER,
     ]
     figures = [figures_for(development_set, model, runs_dir) for development_set in DEVELOPMENT_SETS]
     for item in figures:
@@ -528,6 +613,29 @@ def render_development_sets(model: str, runs_dir: Path = RUNS_DIR) -> str:
             )
         )
     lines.extend(_render_case_facts_section(figures))
+
+    # The sealed set is printed on its own and never inside the combined figure
+    # above. It is not a third development set: that line is a sum over two sets
+    # that were drafted the same way, and adding the one set whose single run is
+    # the generalisation figure would make it a sum of two different claims.
+    sealed_figures = [
+        figures_for(development_set, model, runs_dir) for development_set in SEALED_SETS
+    ]
+    lines.append("")
+    lines.append("The sealed set, on its own and never in the combined figure:")
+    lines.append("")
+    lines.append(_SET_TABLE_HEADER)
+    for item in sealed_figures:
+        lines.append(_render_row(item))
+    lines.append("")
+    lines.append("Currency, checked with the set's own loader and its own briefs:")
+    lines.append("")
+    for development_set in SEALED_SETS:
+        lines.append(currency_line(development_set, model, runs_dir))
+    lines.append("")
+    lines.append(SEALED_SET_CAVEAT)
+    lines.extend(_render_case_facts_section(sealed_figures))
+
     lines.append("")
     lines.append(DEVELOPMENT_DATA_CAVEAT)
     return "\n".join(lines)
@@ -542,7 +650,10 @@ def _build_parser() -> argparse.ArgumentParser:
         description=(
             "Run a development set through the corpus runner, or report the sets "
             "from their cached runs. The second development set is the fifteen "
-            "cases under data/external/codex/, keyed separately from the corpus."
+            "cases under data/external/codex/, keyed separately from the corpus. "
+            "The sealed set -- the 64 cases under data/external/wild/ -- is "
+            "registered here as well, but it is run once: it is never part of "
+            "--set all and never part of the combined figure."
         ),
     )
     parser.add_argument("--model", default=None, help="the model id; defaults to tribunal/model.py")
@@ -550,7 +661,12 @@ def _build_parser() -> argparse.ArgumentParser:
         "--set",
         dest="set_name",
         default="all",
-        help="which development set: {0}, or all".format(", ".join(sorted(BY_NAME))),
+        help=(
+            "which set: {0}, or all. all means the development sets and never "
+            "includes the sealed set, which is run once and only by name".format(
+                ", ".join(sorted(BY_NAME))
+            )
+        ),
     )
     parser.add_argument(
         "--cases",
@@ -759,7 +875,23 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print(render_development_sets(model, args.runs_dir))
         return 0
 
+    # "all" is the two development sets. The sealed set is deliberately not in
+    # that list: it is run once, and an invocation that ran it as a side effect
+    # of running everything would be a run nobody chose to make.
     selected = [named(args.set_name)] if args.set_name != "all" else list(DEVELOPMENT_SETS)
+
+    try:
+        for development_set in selected:
+            for present, name in (
+                (args.replay_advocates is not None, "--replay-advocates"),
+                (args.replay_check is not None, "--replay-check"),
+                (args.verify_recorded_drafts is not None, "--verify-recorded-drafts"),
+            ):
+                if present:
+                    assert_not_sealed(development_set, name)
+    except run_benchmark.BenchmarkError as exc:
+        print("FATAL: {0}".format(exc), file=sys.stderr)
+        return 1
 
     try:
         cases = run_benchmark.parse_cases(args.cases)

@@ -517,26 +517,39 @@ class PolicyVersionDestinationTests(unittest.TestCase):
     def test_a_later_version_cannot_land_in_the_headline_directory(self):
         with tempfile.TemporaryDirectory() as tmp:
             runs = Path(tmp) / "runs"
+            headline = runs / runner.model_slug(MODEL)
             with self.assertRaises(runner.BenchmarkError) as caught:
-                runner.assert_policy_v_destination(runs / runner.model_slug(MODEL), runs, 2)
-        self.assertIn("may only be written under", str(caught.exception))
+                runner.assert_policy_v_destination(headline, runs, 2, MODEL)
+            self.assertIn("is the headline run directory", str(caught.exception))
+            # The sealed set's run directory is a headline one too, so a
+            # version-2 run must not be able to land there either.
+            sealed = runs / runner.SEALED_SET_RUNS_SUBDIR / runner.model_slug(MODEL)
+            with self.assertRaises(runner.BenchmarkError):
+                runner.assert_policy_v_destination(sealed, runs, 2, MODEL)
+            # A destination outside this version's root that is not a headline
+            # directory is refused by the root check rather than by the
+            # headline one.
+            elsewhere = runs / "policy-v2" / ".." / ".." / "elsewhere"
+            with self.assertRaises(runner.BenchmarkError) as root_caught:
+                runner.assert_policy_v_destination(elsewhere, runs, 2, MODEL)
+            self.assertIn("may only be written under", str(root_caught.exception))
 
     def test_one_version_cannot_land_in_another_versions_directory(self):
         with tempfile.TemporaryDirectory() as tmp:
             runs = Path(tmp) / "runs"
             version2 = runner.policy_v_run_directory(runs, 2, MODEL)
             self.assertEqual(
-                version2, runner.assert_policy_v_destination(version2, runs, 2)
+                version2, runner.assert_policy_v_destination(version2, runs, 2, MODEL)
             )
             with self.assertRaises(runner.BenchmarkError):
-                runner.assert_policy_v_destination(version2, runs, 3)
+                runner.assert_policy_v_destination(version2, runs, 3, MODEL)
 
     def test_a_dot_dot_name_is_refused(self):
         with tempfile.TemporaryDirectory() as tmp:
             runs = Path(tmp) / "runs"
             escaped = runs / "policy-v2" / ".." / runner.model_slug(MODEL)
             with self.assertRaises(runner.BenchmarkError):
-                runner.assert_policy_v_destination(escaped, runs, 2)
+                runner.assert_policy_v_destination(escaped, runs, 2, MODEL)
 
 
 # --------------------------------------------------------------------------

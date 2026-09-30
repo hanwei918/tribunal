@@ -311,6 +311,50 @@ untouched.
   removed. `docs/notes/2026-09-30-the-clause-notes-ablation-and-901.md` says so
   in its own words.
 
+## The sealed set (amended 2026-09-30)
+
+A sealed set was added: 64 cases under `data/external/wild/`, keyed by
+`eval/answers/wild/ground_truth.json`. It is **not** a third development set. It
+was drafted without access to this repository, it is run **exactly once** from
+the commit tagged `freeze-2026-09-30`, and that single run is the only
+generalisation figure the submission reports.
+
+- **`data/external/wild/` — agent-visible, answer-free.** Sixty-four case files,
+  `case-00501.json` to `case-00627.json` and not contiguous, plus the set's own
+  `index.json`. Answer-free under the same contract as `data/cases/`: no expected
+  ruling, no answer field, and no argument for either side. The set's index is
+  **not** `data/index.json` and is never merged into it — the manifest still
+  indexes the 29-case corpus the benchmark reports. The set is loaded by number
+  through `tribunal.loader.load_external_set_case`, the loader the second
+  development set already uses.
+- **`eval/answers/wild/ground_truth.json` — answer-bearing.** The set's own key,
+  under the same boundary as `eval/answers/ground_truth.json` and
+  `eval/answers/codex/ground_truth.json`, for the same reason and with the same
+  force. It is a third answer key and therefore a third way for an answer to
+  reach a brief, so nothing under `tribunal/` may read it.
+- **`eval/external/wild/` — answer-bearing.** The set's own generator, its
+  manifest, its evaluation index, its seed map, its summary table and its
+  author's README. Nothing under `tribunal/` may read any of it. It is
+  answer-bearing at case level: the README names cases and the outcome the
+  policy gives for each.
+- **One direction.** Nothing writes into `eval/`. The key is frozen from the
+  moment it is imported, under the standing rule in `START-HERE.md`.
+- **Where its run goes.** `runs/wild/<model-slug>/` — never `runs/<model-slug>/`
+  and never `runs/codex/<model-slug>/`. All six destinations that must not write
+  into a reported result refuse it: the ablation, the precedents block, a later
+  policy version, the baselines, the policy-gap report and the recorded-drafts
+  measurement. `--force`, `--replay-advocates`, `--replay-check` and
+  `--verify-recorded-drafts` are refused for this set in code, because a case
+  that has a result must never be re-run.
+- **A conflict, recorded rather than resolved.** The archive's own README calls
+  this 64-case set a development and regression set, and names a **different,
+  24-case** set as the sealed one. `docs/notes/2026-09-30-the-freeze-and-the-sealed-run.md`
+  records that in its own words, and it is the owner's to settle before any
+  figure from the run is reported as generalisation. The same README is the
+  eleventh tracked file that holds Chinese characters, and the standing language
+  rule below does not govern it: it is imported byte for byte, because the rule
+  for handling these files is to re-serialise nothing.
+
 ## Language rule (standing)
 
 Every document in this repository is written in English, and every prompt pasted into WorkBuddy is written in English. No Chinese characters in any tracked text file.

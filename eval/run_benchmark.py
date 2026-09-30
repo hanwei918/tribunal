@@ -207,6 +207,11 @@ __all__ = [
     "billed_tokens",
     "model_slug",
     "run_directory",
+    "SECOND_SET_RUNS_SUBDIR",
+    "SEALED_SET_RUNS_SUBDIR",
+    "SET_RUNS_SUBDIRS",
+    "headline_run_directories",
+    "assert_not_a_headline_directory",
     "ABLATION_DIRNAME",
     "ablation_run_directory",
     "assert_ablation_destination",
@@ -487,6 +492,61 @@ def run_directory(runs_dir: Path, model: str) -> Path:
     return Path(runs_dir) / model_slug(model)
 
 
+# The run subdirectory each development set keeps its results under, one
+# level below the runs root. The corpus is the exception: ``runs/<model-slug>/``
+# *is* its directory. This pair is the one place the layout is named, and
+# ``eval.development_sets`` builds its sets from these two names, so a set
+# cannot be added without its run directory being a headline directory here.
+SECOND_SET_RUNS_SUBDIR = "codex"
+SEALED_SET_RUNS_SUBDIR = "wild"
+SET_RUNS_SUBDIRS: Tuple[str, ...] = (SECOND_SET_RUNS_SUBDIR, SEALED_SET_RUNS_SUBDIR)
+
+
+def headline_run_directories(runs_dir: Path, model: str) -> Tuple[Path, ...]:
+    """Every run directory under one runs root that holds a reported figure.
+
+    The corpus keeps its result at ``<root>/<model-slug>/`` and each set that
+    has a directory of its own keeps its at ``<root>/<subdir>/<model-slug>/`` --
+    ``runs/codex/`` for the second development set and ``runs/wild/`` for the
+    sealed set, whose single run is the only generalisation figure the
+    submission reports. Called with ``runs/`` the three are the corpus's, the
+    second set's and the sealed set's; called with a set's own root the first
+    is that set's and the other two are names no run of that root uses, which
+    is harmless because every destination these are checked against lives
+    under a subdirectory of its own and so can equal none of them.
+
+    One function rather than six lists. The ablation, the precedents block, a
+    later policy version, the baselines, the policy-gap report and the
+    recorded-drafts measurement all refuse a headline directory, and they must
+    refuse the same ones; a set added to :data:`SET_RUNS_SUBDIRS` is refused by
+    all six without any of them being edited.
+    """
+    root = Path(runs_dir)
+    return tuple(
+        [run_directory(root, model)]
+        + [root / subdir / model_slug(model) for subdir in SET_RUNS_SUBDIRS]
+    )
+
+
+def assert_not_a_headline_directory(
+    destination: Path, runs_dir: Path, model: str
+) -> Path:
+    """Refuse a destination that is one of the run directories the submission reports.
+
+    The check the three switched runs, the baselines and the policy-gap report
+    share. Each of those writes somewhere of its own, and this is what says so
+    in one place rather than in six that can drift apart.
+    """
+    resolved = Path(destination).resolve()
+    for headline in headline_run_directories(runs_dir, model):
+        if resolved == headline.resolve():
+            raise BenchmarkError(
+                "{0} is the headline run directory {1}, which holds a figure "
+                "the submission reports".format(resolved, headline.resolve())
+            )
+    return Path(destination)
+
+
 # Where an ablated run lives, one level under the runs root. An ablated result
 # is a different measurement from the plain one, and ``runs/<model-slug>/`` is
 # where the submission's figure lives: a run with an ablation on must not be
@@ -506,11 +566,12 @@ def ablation_run_directory(runs_dir: Path, ablation: str, model: str) -> Path:
     return Path(runs_dir) / ABLATION_DIRNAME / str(ablation) / model_slug(model)
 
 
-def assert_ablation_destination(run_dir: Path, runs_dir: Path) -> Path:
+def assert_ablation_destination(run_dir: Path, runs_dir: Path, model: str) -> Path:
     """Refuse an ablated run's directory that is not under the ablation root.
 
-    ``runs/<model-slug>/`` and ``runs/codex/<model-slug>/`` hold the figures the
-    submission reports, and an ablated result is a different measurement: one
+    ``runs/<model-slug>/``, ``runs/codex/<model-slug>/`` and
+    ``runs/wild/<model-slug>/`` hold the figures the submission reports, and an
+    ablated result is a different measurement: one
     written there would change what that directory means while leaving every file
     a reader looks at apparently intact. The destination is therefore checked
     rather than merely chosen, so a name that resolved outside
@@ -521,6 +582,7 @@ def assert_ablation_destination(run_dir: Path, runs_dir: Path) -> Path:
     can build and check it in one expression.
     """
     resolved = Path(run_dir).resolve()
+    assert_not_a_headline_directory(resolved, runs_dir, model)
     root = (Path(runs_dir) / ABLATION_DIRNAME).resolve()
     if not resolved.is_relative_to(root):
         raise BenchmarkError(
@@ -549,11 +611,12 @@ def precedents_run_directory(runs_dir: Path, model: str) -> Path:
     return Path(runs_dir) / PRECEDENTS_DIRNAME / model_slug(model)
 
 
-def assert_precedents_destination(run_dir: Path, runs_dir: Path) -> Path:
+def assert_precedents_destination(run_dir: Path, runs_dir: Path, model: str) -> Path:
     """Refuse a precedents run's directory that is not under the precedents root.
 
-    ``runs/<model-slug>/`` and ``runs/codex/<model-slug>/`` hold the figures the
-    submission reports, and a run the judge was given precedents in is a
+    ``runs/<model-slug>/``, ``runs/codex/<model-slug>/`` and
+    ``runs/wild/<model-slug>/`` hold the figures the submission reports, and a
+    run the judge was given precedents in is a
     different measurement. The destination is checked rather than merely chosen,
     so a name that resolved outside ``<runs root>/precedents/`` cannot put such a
     result where the headline figure lives.
@@ -561,6 +624,7 @@ def assert_precedents_destination(run_dir: Path, runs_dir: Path) -> Path:
     Returns the directory unchanged when it is where it should be.
     """
     resolved = Path(run_dir).resolve()
+    assert_not_a_headline_directory(resolved, runs_dir, model)
     root = (Path(runs_dir) / PRECEDENTS_DIRNAME).resolve()
     if not resolved.is_relative_to(root):
         raise BenchmarkError(
@@ -600,12 +664,13 @@ def policy_v_run_directory(
 
 
 def assert_policy_v_destination(
-    run_dir: Path, runs_dir: Path, policy_version: int
+    run_dir: Path, runs_dir: Path, policy_version: int, model: str
 ) -> Path:
     """Refuse a version-N run's directory that is not under that version's root.
 
-    ``runs/<model-slug>/`` and ``runs/codex/<model-slug>/`` hold the figures the
-    submission reports, and a run briefed from amended policy is a different
+    ``runs/<model-slug>/``, ``runs/codex/<model-slug>/`` and
+    ``runs/wild/<model-slug>/`` hold the figures the submission reports, and a
+    run briefed from amended policy is a different
     measurement: one written there would change what that directory means while
     leaving every file a reader looks at apparently intact. The destination is
     therefore checked rather than merely chosen, so a name that resolved outside
@@ -616,6 +681,7 @@ def assert_policy_v_destination(
     Returns the directory unchanged when it is where it should be.
     """
     resolved = Path(run_dir).resolve()
+    assert_not_a_headline_directory(resolved, runs_dir, model)
     root = (Path(runs_dir) / policy_v_directory_name(policy_version)).resolve()
     if not resolved.is_relative_to(root):
         raise BenchmarkError(
@@ -2762,17 +2828,18 @@ def run_benchmark(
     # directory a run that cannot happen would have gone to.
     if ablation is not None:
         run_dir = assert_ablation_destination(
-            ablation_run_directory(runs_dir, ablation, model), runs_dir
+            ablation_run_directory(runs_dir, ablation, model), runs_dir, model
         )
     elif precedents is not None:
         run_dir = assert_precedents_destination(
-            precedents_run_directory(runs_dir, model), runs_dir
+            precedents_run_directory(runs_dir, model), runs_dir, model
         )
     elif policy_version != policy_versions.BASE_VERSION:
         run_dir = assert_policy_v_destination(
             policy_v_run_directory(runs_dir, policy_version, model),
             runs_dir,
             policy_version,
+            model,
         )
     else:
         run_dir = run_directory(runs_dir, model)

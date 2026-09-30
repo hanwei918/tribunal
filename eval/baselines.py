@@ -102,16 +102,18 @@ def assert_not_a_run_directory(
 ) -> Path:
     """Refuse a destination that is a run directory, or lies inside one.
 
-    ``runs/<model-slug>/`` holds the corpus result the submission reports and
-    ``runs/codex/<model-slug>/`` the second set's; everything under
+    ``runs/<model-slug>/`` holds the corpus result the submission reports,
+    ``runs/codex/<model-slug>/`` the second development set's and
+    ``runs/wild/<model-slug>/`` the sealed set's; everything under
     ``runs/external/`` is a headline directory too. Baselines are not a run, and
     a reader who found these figures there would read them as that run's, so the
     destination is refused before anything is written.
 
     The check is structural rather than a list of names: a directory that holds
     a run's own ``run.json``, or its case files, is a run directory whichever
-    model it belongs to. The current model's own run directory is refused by
-    name as well, so the refusal is the same whether or not that run has been
+    model it belongs to. Every headline directory for this model is refused by
+    name as well -- the corpus's, the second development set's and the sealed
+    set's -- so the refusal is the same whether or not those runs have been
     made yet.
 
     **Two roots are walked, not one.** ``--runs-dir`` and ``--out-dir`` are
@@ -129,11 +131,12 @@ def assert_not_a_run_directory(
         roots.append(repository)
 
     for root in roots:
-        if resolved == run_benchmark.run_directory(root, model).resolve():
-            raise BaselineError(
-                "the baselines may not be written to the headline run directory "
-                "{0}; they are not that run's figures".format(resolved)
-            )
+        for headline in run_benchmark.headline_run_directories(root, model):
+            if resolved == headline.resolve():
+                raise BaselineError(
+                    "the baselines may not be written to the headline run "
+                    "directory {0}; they are not that run's figures".format(resolved)
+                )
 
         external = (root / run_benchmark.EXTERNAL_RUNS_SUBDIR).resolve()
         if resolved == external or external in resolved.parents:

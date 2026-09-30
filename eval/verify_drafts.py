@@ -78,6 +78,41 @@ def verify_recorded_directory(runs_dir: Path, model: str) -> Path:
     return Path(runs_dir) / VERIFY_RECORDED_SUBDIR / run_benchmark.model_slug(model)
 
 
+def assert_recorded_drafts_destination(runs_dir: Path, model: str) -> Path:
+    """The recorded-drafts directory for ``model``, refused if it is a reported one.
+
+    The destination is always ``<runs-dir>/verify-recorded-drafts/<model-slug>/``
+    -- a directory of its own, which is what makes "never the headline
+    directory" a property of the path. But ``--runs-dir`` is the caller's to
+    choose, and pointing it at a run directory the submission reports
+    (``runs/wild/<model-slug>/`` for the sealed set, ``runs/codex/<model-slug>/``
+    for the second development set, ``runs/<model-slug>/`` for the corpus)
+    would put this measurement inside that result. So the destination is
+    refused if it is a headline run directory or lies inside one, and the run
+    is refused before anything is read or written.
+
+    **Two roots are asked, not one.** A runs root that is itself a reported run
+    directory is caught by asking about the directory the runs root sits in as
+    well as about the root itself: the destination then lies inside that run
+    directory rather than merely beside it. Asking only about the root -- which
+    is what the check used to do -- could never refuse anything, because the
+    destination always goes through ``verify-recorded-drafts/`` while the
+    headline directories are named after the model. Returns the destination
+    when nothing refuses it.
+    """
+    run_dir = verify_recorded_directory(runs_dir, model)
+    resolved = run_dir.resolve()
+    for root in (Path(runs_dir), Path(runs_dir).parent):
+        for headline in run_benchmark.headline_run_directories(root, model):
+            headline = headline.resolve()
+            if resolved == headline or headline in resolved.parents:
+                raise run_benchmark.BenchmarkError(
+                    "the recorded-drafts results may not be written to the "
+                    "headline run directory {0} or inside it".format(headline)
+                )
+    return run_dir
+
+
 def _default_client_factory(model: str, timeout_seconds: float):
     """A real client over the real transport, built the way the runner builds it."""
 
@@ -486,13 +521,13 @@ def verify_recorded_run(
     if not requested:
         raise run_benchmark.BenchmarkError("no cases were selected")
 
-    run_dir = verify_recorded_directory(runs_dir, model)
-    headline = run_benchmark.run_directory(runs_dir, model).resolve()
-    if run_dir.resolve() == headline:
-        raise run_benchmark.BenchmarkError(
-            "the recorded-drafts results may not be written to the headline run "
-            "directory {0}".format(headline)
-        )
+    # Refused before anything is read or written if the destination is a
+    # headline run directory or lies inside one, so pointing --runs-dir at a
+    # run directory cannot put this measurement inside the result that
+    # directory holds. The sealed set's own directory is one of the three
+    # headline directories, which is what keeps this measurement out of the
+    # generalisation figure as well as out of the corpus result.
+    run_dir = assert_recorded_drafts_destination(runs_dir, model)
 
     # Read every source entry this run needs before anything is written, exactly
     # as a replay does, so a run pointed at its own directory has read
