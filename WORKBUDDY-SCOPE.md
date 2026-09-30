@@ -278,6 +278,39 @@ untouched.
   amount was already wrong before the ablation ran.
   `docs/notes/2026-09-29-the-admissibility-ablation.md` says so in its own words.
 
+## The clause-notes ablation and the sample-case re-run (amended 2026-09-30)
+
+The `clause-notes` ablation was measured on both development sets, and the
+organisers' sample case was re-run under the current pipeline. Both outputs are
+committed. **No path this workspace may read was added**, and the answer key is
+untouched.
+
+- **What was read.** The three committed directories themselves
+  (`runs/ablation/clause-notes/deepseek-deepseek-flash/`,
+  `runs/codex/ablation/clause-notes/deepseek-deepseek-flash/` and
+  `runs/rerun-2026-09-29/external/ryde/`), the four runs they are compared
+  against, `data/external/ryde/case-00901.json`, `policy/`, `prompts/`, and
+  `tribunal/brief.py` to rebuild each case's brief. The answer key was read
+  **only** through `eval.grade.load_answer_key`, for grading the six directories
+  and for quoting each differing case's expected ruling. Nothing under
+  `tribunal/` reads `eval/`, and the key stays frozen.
+- **What was written.** The two `runs/ablation/clause-notes/<model>/`
+  directories and `runs/rerun-2026-09-29/external/ryde/` — written by the owner
+  outside this workspace, not by it — plus the note and this section. No case
+  file, policy file or prompt was changed by this work, and the ablation switch
+  itself is unchanged.
+- **What the committed files are.** The owner's output, committed exactly as
+  produced: one invocation per directory, all 44 ablation cases completed on the
+  first pass, and the sample case re-run in a runs root of its own so the
+  committed schema-1 result stayed as it was.
+- **One figure the note refuses to over-read.** The corpus drop from 29/29 to
+  27/29 is two cases, and both were already carried 3 of 4 in the headline, so
+  one run per condition cannot separate the clause-notes ablation's effect from
+  sampling variation on 107 and 211. Only 112 moves cleanly, and it moves under
+  the *other* ablation — it misses only when the admissibility precheck is
+  removed. `docs/notes/2026-09-30-the-clause-notes-ablation-and-901.md` says so
+  in its own words.
+
 ## Language rule (standing)
 
 Every document in this repository is written in English, and every prompt pasted into WorkBuddy is written in English. No Chinese characters in any tracked text file.

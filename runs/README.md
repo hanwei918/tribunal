@@ -8,7 +8,7 @@ This directory is the benchmark's own output. Every subdirectory named in the ta
 
 | Directory | What it is | Read it as |
 |---|---|---|
-| `ablation/` | An ablated run — `ablation/<name>/<model>/`, and `codex/ablation/<name>/<model>/` under the second set's root. **One is committed here**: the `admissibility` ablation over both development sets, run by the owner on 2026-09-29 and committed as `35eead2`. It has its own section below. | A different measurement from the headline: those briefs had the `admissibility` object removed from every artifact, so a figure here answers a question about a brief the pipeline does not otherwise build. Never merged into a model's run directory. |
+| `ablation/` | An ablated run — `ablation/<name>/<model>/`, and `codex/ablation/<name>/<model>/` under the second set's root. **Both ablations are committed here**: the `admissibility` one over both development sets (`35eead2`, 2026-09-29) and the `clause-notes` one over both (`89c616e`, 2026-09-29). The directory has its own section below. | A different measurement from the headline: the `admissibility` briefs had that object removed from every artifact and the `clause-notes` briefs had every clause's drafting notes removed, so a figure here answers a question about a brief the pipeline does not otherwise build. Never merged into a model's run directory. |
 | `baselines/` | The baselines scored off the recorded runs — `python3 -m eval.baselines --set all`. Two files, `report.md` and `baselines.json`, and it has its own section below. | A comparison that says what the headline figure is worth. Not a measurement of the model, and not a generalisation figure. |
 | `codex/` | The second development set's runs. `codex/deepseek-deepseek-flash/` holds the fifteen-case set's own run, keyed by `eval/answers/codex/ground_truth.json`; `codex/deepseek-v4.1-flash/` holds that probe's event log alone. | A measurement of the fifteen cases, never of the corpus. Never merged into `deepseek-deepseek-flash/`. |
 | `deepseek-v4.1-flash/` | A probe of a different model — case 105 at `b25b743`, which stopped after one of the two cases it requested — committed as it was left. | Not a measurement of the submission's model, and no corpus figure is computed from it. |
@@ -20,6 +20,7 @@ This directory is the benchmark's own output. Every subdirectory named in the ta
 | `policy-v<N>/` | Where a run at a later policy version goes: `policy-v<N>/<model>/`, and `codex/policy-v<N>/<model>/` under the second set's root. No such run is committed here, because no amendment has been approved and the repository is at version 1. It has its own section below. | A different measurement from the headline: those briefs were built from an amended policy, so a figure here answers a question about a policy that is not the committed one. |
 | `policy-gaps/` | The policy-gap loop's report — `python3 -m eval.policy_gaps report --run-dir … --run-dir …`. Two files, `report.json` and `report.md`, and it has its own section below. | **Not a run and not a score.** It names the cases the policy could not decide and groups them, read off the recorded runs. No model call is made to produce it, and nothing in it changes the policy. |
 | `precedents/` | Where a run with `--precedents` on goes: `precedents/<model>/`, and `codex/precedents/<model>/` under the second set's root. No such run is committed here. It has its own section below. | A different measurement from the headline, and not comparable to it: the precedent library is built from closures made by people who have seen these development sets. |
+| `rerun-2026-09-29/` | A runs root of its own, holding one re-run of the organisers' sample case: `rerun-2026-09-29/external/ryde/`, committed as `23589e1`. It went to its own root so that the committed `external/ryde/` result, which `docs/notes/2026-09-23-external-sample-case.md` is about, stayed as it was. It has its own section below. | Evidence of what that run did, not a score — there is no answer-key entry for 901. It is an external case like any other, so it is refused outside `runs/external/` and must never be merged into a model's run directory. |
 
 **These are snapshots, and a later run moves them.** A run directory is named after the model id, so
 a future run of the same model writes into the same directory and rewrites these files case by case.
@@ -89,11 +90,60 @@ losing the account sentence, which that review had found read as "it may carry t
 moves are recorded in `docs/notes/2026-09-24-meeting-a-limb-and-the-dropped-record.md`,
 `docs/notes/2026-09-24-the-limb-procedure-revised.md` and
 `docs/notes/2026-09-24-removing-the-account-sentence.md`. The first run's files still read as they were
-produced and are stale on both channels; the second and third invocations' `brief_sha256` rebuilds
-identically, and the third records the current `prompts_sha256`, so it is current on both. One caution
+produced and are stale on both channels. **Corrected 2026-09-30:** this paragraph used to add that the
+second and third invocations' `brief_sha256` rebuilds identically and that the third records the current
+`prompts_sha256`, so it was current on both. That was true when it was written on 2026-09-24 and is not
+true now — rebuilding 901's brief from the committed converted case hashes to `79403092…` where the third
+invocation recorded `db5b6b95…`, and the code renders `5b8510cd…` where the third recorded `829ccc8f…`.
+So the third invocation is stale on both channels too, and the re-run under
+`rerun-2026-09-29/` is what was taken against the current ones. One caution
 when checking any of them: the staleness report can see only the prompt half for an external case,
 because it rebuilds *corpus* briefs by case number and 901 is not a corpus case — so its brief half
 reads `unknown`, which is "cannot tell" and not "unmoved".
+
+## `rerun-2026-09-29/` — the sample case re-run, in a root of its own
+
+`rerun-2026-09-29/external/ryde/` holds the output of
+
+    python3 -m eval.run_benchmark --external data/external/ryde/case-00901.json \
+        --runs-dir runs/rerun-2026-09-29 --timeout 900
+
+run by the owner off-peak on 2026-09-29 and committed as `23589e1`, six files,
+byte for byte as produced. It is a re-run of the same converted case the section
+above is about, under the pipeline as it now stands.
+
+**It went to its own root on purpose.** A run directory is named after the model
+id, so re-running 901 into `external/ryde/` would have overwritten the committed
+schema-1 result that `docs/notes/2026-09-23-external-sample-case.md` reads. A
+separate root keeps that result as it was and gives the new one its own
+`invocations.json`. The directory is still an external case directory:
+`assert_external_run_directory` requires the destination to sit under
+`<runs root>/external/`, and with `--runs-dir runs/rerun-2026-09-29` that root is
+`runs/rerun-2026-09-29/external/`, so the case landed in its own
+`rerun-2026-09-29/external/ryde/` rather than in a model's run directory. It
+holds no `report.md` and no score, and it must never be merged into a model's run
+directory.
+
+**What it produced.** `ESCALATE`, both money fields `null`, at confidence 0.6,
+with a unanimous four-draft panel (4 of 4 valid, threshold 3, `carried`,
+`vote_agreement` 1.00) and 226,880 tokens over 434.1 seconds of call time. The
+committed schema-1 result published the same `ESCALATE` at the same confidence
+0.6, asking the judge once, for 106,661 tokens over 232.7 seconds. The ruling is
+stable; what has moved is everything around it. The re-run's brief rebuilds from
+the committed converted case to `79403092…`, while the schema-1 result recorded
+`db5b6b95…` and does not rebuild, so `tribunal/brief.py` has moved since
+2026-09-24; and the re-run records the current `prompts_sha256 5b8510cd…` where
+the schema-1 result recorded `829ccc8f…`. The committed result is therefore stale
+on both channels. The re-run's own brief channel reads `unknown`, because the
+staleness check rebuilds *corpus* briefs by case number and 901 is not a corpus
+case.
+
+**The organisers' stated expectation is printed beside the ruling and is not an
+answer.** `eval/external/ryde/expected.json` records "Cancellation charge
+UPHELD" and says in its own text that it is not part of the key, not merged into
+it, not an input to any agent, and that "UPHELD" is the source's word rather than
+a token this system emits. `docs/notes/2026-09-30-the-clause-notes-ablation-and-901.md`
+compares the two runs against each other and against that expectation.
 
 ## `verify-recorded-drafts/` — where the verifier is measured, not the model
 
@@ -220,7 +270,7 @@ of every case file, and the staleness check rebuilds each case's brief the same
 ablated way — otherwise every case of an ablated run would report its brief
 moved.
 
-**One ablation is committed here.** `runs/ablation/admissibility/deepseek-deepseek-flash/`
+**Both ablations are committed here.** `runs/ablation/admissibility/deepseek-deepseek-flash/`
 holds the corpus run — 29 cases — and
 `runs/codex/ablation/admissibility/deepseek-deepseek-flash/` the second set's 15,
 both run by the owner outside the sandbox on 2026-09-29 and committed as
@@ -230,11 +280,25 @@ codex cases, and every failure was re-run with `--timeout 900`. The corpus score
 **26/29** against the headline's **29/29**; the second set **14/15** against
 **14/15**. Four cases moved — 107, 112 and 211 on the corpus, 9111 on the second
 set. The per-case figures, the failures, the tokens and what the ablated brief
-still carries are in `docs/notes/2026-09-29-the-admissibility-ablation.md`. No
-`clause-notes` run is committed. Nothing in this directory may be merged into a
-model's run directory for the reason `external/` may not: an ablated result is a
-different measurement, and a reader finding it beside an unablated one would read
-it as that run's.
+still carries are in `docs/notes/2026-09-29-the-admissibility-ablation.md`.
+
+**The `clause-notes` ablation is committed beside it**, as `89c616e`:
+`runs/ablation/clause-notes/deepseek-deepseek-flash/` (63 files) and
+`runs/codex/ablation/clause-notes/deepseek-deepseek-flash/` (35 files), the same
+two commands with `--ablate clause-notes`, run by the owner off-peak on
+2026-09-29. Each holds **one** invocation: all 44 cases completed on the first
+pass, so there is no retry in either. The corpus scored **27/29** against the
+headline's 29/29 and the admissibility ablation's 26/29; the second set **14/15**,
+the same four-field figure as both others but not the same failure. Four cases
+differ from the key — 107 and 211 on the corpus, 9111 on the second set — and 112
+is the one case only the `admissibility` ablation moves.
+`docs/notes/2026-09-30-the-clause-notes-ablation-and-901.md` reads the two
+ablations side by side and says why 107 and 211 cannot separate either one from
+sampling variation.
+
+Nothing in this directory may be merged into a model's run directory for the
+reason `external/` may not: an ablated result is a different measurement, and a
+reader finding it beside an unablated one would read it as that run's.
 
 ## `precedents/` — where a run whose judge was shown earlier closures goes
 
