@@ -21,7 +21,7 @@ This directory is the benchmark's own output. Every subdirectory named in the ta
 | `policy-gaps/` | The policy-gap loop's report — `python3 -m eval.policy_gaps report --run-dir … --run-dir …`. Two files, `report.json` and `report.md`, and it has its own section below. | **Not a run and not a score.** It names the cases the policy could not decide and groups them, read off the recorded runs. No model call is made to produce it, and nothing in it changes the policy. |
 | `precedents/` | Where a run with `--precedents` on goes: `precedents/<model>/`, and `codex/precedents/<model>/` under the second set's root. No such run is committed here. It has its own section below. | A different measurement from the headline, and not comparable to it: the precedent library is built from closures made by people who have seen these development sets. |
 | `rerun-2026-09-29/` | A runs root of its own, holding one re-run of the organisers' sample case: `rerun-2026-09-29/external/ryde/`, committed as `23589e1`. It went to its own root so that the committed `external/ryde/` result, which `docs/notes/2026-09-23-external-sample-case.md` is about, stayed as it was. It has its own section below. | Evidence of what that run did, not a score — there is no answer-key entry for 901. It is an external case like any other, so it is refused outside `runs/external/` and must never be merged into a model's run directory. |
-| `wild/` | The sealed set's run, once it has been made: `wild/deepseek-deepseek-flash/`. **No such run is committed here.** The set is run once, by the owner, from the commit tagged `freeze-2026-09-30`, and the directory is named here before the run rather than after it. It has its own section below. | The submission's **only generalisation figure**, once the run exists — and never a development figure. It is never merged into a model's run directory, never summed with the corpus and second-set figures, and never produced by `--set all`. |
+| `wild/` | **The sealed set's single run**, committed at `2e527d6`: `wild/deepseek-deepseek-flash/`, 131 files, run once by the owner from the commit tagged `freeze-2026-09-30` and committed byte for byte as produced. **62 of the 64 cases produced a ruling** — 517 and 533 failed with `SHAPE` and are recorded as misses — and the four-field figure is **55/62 = 88.7%** over the cases that produced a ruling, **55/64 = 85.9%** over the set. It has its own section below. | The submission's **only generalisation figure**, and never a development figure. It is never merged into a model's run directory, never summed with the corpus and second-set figures, and never produced by `--set all`. |
 
 **These are snapshots, and a later run moves them.** A run directory is named after the model id, so
 a future run of the same model writes into the same directory and rewrites these files case by case.
@@ -432,7 +432,7 @@ N>=2` is refused together with `--ablate`, `--precedents`, `--report`,
 repository is at version 1, there is no later version to run, and the commands
 above are the ones that would produce the output once one has been.
 
-## `wild/` — where the sealed set's single run goes
+## `wild/` — the sealed set's single run
 
 `wild/<model>/` holds the output of
 
@@ -443,9 +443,34 @@ ones any run directory carries, and its `report.md` is graded against
 `eval/answers/wild/ground_truth.json` — the set's own key, which is neither
 development key.
 
-**No such directory is committed here.** The set is run exactly once, by the
-owner, from the commit tagged `freeze-2026-09-30`, and this section names the
-command and the directory before the run rather than after it.
+**The directory is committed, and it is the run this section named before it
+existed.** `runs/wild/deepseek-deepseek-flash/` is the output of that command,
+run by the owner outside this sandbox from `d275ef8`, with a clean tree and
+`git diff --quiet freeze-2026-09-30 -- tribunal prompts policy` holding, between
+13:04 and 16:46 SGT on 2026-09-30. Two invocations are recorded: a full pass over
+the 64 cases and one retry of the two that failed. All 131 files are committed
+byte for byte as produced at `2e527d6`; **no model call was made in this
+repository** to produce or to read them.
+
+**62 of the 64 cases produced a ruling; 517 and 533 produced none.** Both failed
+with `SHAPE`: the draft check `DRAFT_AMOUNT_NOT_READ_OFF` rejected all four judge
+drafts in each, because the drafts computed an amount the brief's money block
+does not publish — and the drafts were right about the money. Both were retried
+once with the same command and failed the same way. That is a deviation from the
+protocol below ("retried until every case has a result"), recorded with its
+reason in `docs/notes/2026-09-30-the-sealed-run.md`: the failure is not
+transient, and a further retry would re-sample the judge until one draft passed,
+which is choosing a result rather than recovering from a fault.
+
+**The figures.** Four-field exact **55/62 = 88.7%** over the cases that produced
+a ruling and **55/64 = 85.9%** over the set. Per field, over the 62: `ruling`
+56/62, `amount_sgd` 56/62, `driver_compensation_sgd` 62/62, `referrals` 60/62.
+Per category: `ROUTE_DEVIATION` 30/35 produced (37 in the set) and
+`NO_SHOW_CHARGE` 25/27. Escalation precision 3/7 = 0.429 and recall 3/4 = 0.75,
+with over-escalations 501, 504, 508 and 530 and under-escalation 627.
+13,536,023 tokens over 404 agent calls across both invocations, read from
+`events.jsonl`. Every figure, and the cause of each miss, is in
+`docs/notes/2026-09-30-the-sealed-run.md`.
 
 **It is the generalisation figure, and it is never added to anything.** The
 corpus figure and the second set's figure are development figures: they were
@@ -466,12 +491,13 @@ the same command until every case has a result, as the protocol in
 `docs/notes/2026-09-30-the-freeze-and-the-sealed-run.md` says. A failure here is
 `TRANSPORT`, `TIMEOUT`, `DEADLINE` or `SHAPE`.
 
-**One thing to settle before the run.** The set's own README, committed at
-`eval/external/wild/README.md`, calls this 64-case set a development and
-regression set and names a different, 24-case set as the sealed one.
-`docs/notes/2026-09-30-the-freeze-and-the-sealed-run.md` records that conflict in
-full. Nothing was changed on the strength of it, and it is the owner's to settle
-before a figure from this directory is reported as generalisation.
+**One thing still to settle, and the run did not settle it.** The set's own
+README, committed at `eval/external/wild/README.md`, calls this 64-case set a
+development and regression set and names a different, 24-case set as the sealed
+one. `docs/notes/2026-09-30-the-freeze-and-the-sealed-run.md` records that
+conflict in full. Nothing was changed on the strength of it — not by the import
+and not by the run — and it is still the owner's to settle before the 55/64
+figure above is reported as generalisation.
 
 ## How to read one run directory
 
@@ -565,6 +591,13 @@ itself — open it and read it — not only of its bytes. Nothing in this direct
 The scan that cleared these directories covered all 125 files under `runs/` at this commit — the three
 committed run directories, `external/`, and the untracked suite logs — and found no match, with a
 positive control that fires on a fabricated `sk-` string.
+
+**The sealed run was scanned the same way as it entered the directory (2026-09-30).** The `sk-`
+pattern and the literal `TOKENHUB_API_KEY` were run over all **131** files under `runs/wild/` and
+matched none, a positive control fired on a fabricated `sk-` string, and the same scan found **no
+character outside ASCII** in any of them. Both environment variables were unset in the shell that ran
+the scan, so the literal-value half of the check could not be made there and is not claimed here; the
+pattern half — the half that catches a key a file itself carries — is the half that was made.
 
 The one committed external run was scanned the same way as it entered the directory. The `sk-`
 pattern was run over all 5 files under `runs/external/` and matched none, with a positive control
