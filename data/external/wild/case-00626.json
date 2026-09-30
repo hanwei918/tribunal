@@ -1,0 +1,295 @@
+{
+  "schema_version": "1.2.0",
+  "case_no": 626,
+  "dispute": {
+    "dispute_id": "DSP-00626",
+    "trip_id": "TRP-00626",
+    "case_no": 626,
+    "category": "NO_SHOW_CHARGE",
+    "filed_by": "RIDER",
+    "filed_at": "2026-09-26T14:35:40+08:00",
+    "claim_text": "He was three minutes away, then further, then he just stopped somewhere. When he finally called back he asked who I was! Said he was offline and it was the app's fault. Then why was he driving toward me at first? He didn't want a short trip, simple as that. And I paid for it.",
+    "amount_contested_sgd": 4.0,
+    "evidence_ids": [
+      "EV-TRIP-00626",
+      "EV-GPS-00626",
+      "EV-CHAT-00626",
+      "EV-FARE-00626",
+      "EV-RPROF-00626",
+      "EV-DPROF-00626",
+      "EV-ADVIS-00626-01"
+    ],
+    "counterparty_statement": {
+      "text": "I had gone offline for a break. The app must have kept me online. I didn't see the booking until she called. I never accepted it knowingly.",
+      "submitted_by": "DRIVER",
+      "submitted_at": "2026-09-27T06:35:40+08:00"
+    },
+    "channel": "IN_APP_SUPPORT"
+  },
+  "evidence": [
+    {
+      "evidence_id": "EV-TRIP-00626",
+      "evidence_type": "TRIP_RECORD",
+      "trip_id": "TRP-00626",
+      "source": "PLATFORM_TELEMETRY",
+      "generated_at": "2026-09-27T08:35:40+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Trip record, causally ordered.",
+        "assessed_at": "2026-09-27T08:35:48+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-00626",
+        "rider_id": "RDR-30626",
+        "driver_id": "DRV-32641",
+        "requested_at": "2026-09-26T12:20:00+08:00",
+        "accepted_at": "2026-09-26T12:20:40+08:00",
+        "arrived_at": "2026-09-26T12:26:40+08:00",
+        "started_at": null,
+        "ended_at": null,
+        "cancelled_at": "2026-09-26T12:35:40+08:00",
+        "status": "CANCELLED_BY_DRIVER",
+        "cancelled_by": "DRIVER",
+        "cancellation_reason_code": "RIDER_NO_SHOW",
+        "pickup": {
+          "label": "Blk 236 Yishun Ring Rd",
+          "lat": 1.4285,
+          "lng": 103.8395,
+          "venue_id": null
+        },
+        "dropoff": {
+          "label": "AMK Hub, 53 Ang Mo Kio Ave 3",
+          "lat": 1.3691,
+          "lng": 103.8484,
+          "venue_id": null
+        },
+        "optimal_distance_km": 9.0,
+        "optimal_duration_min": 14.0,
+        "actual_distance_km": null,
+        "actual_duration_min": null,
+        "vehicle_type": "RYDE_X",
+        "optimal_route_source": "routing-engine-v3.2 (LTA traffic snapshot 12:20)",
+        "deviation_pct": null,
+        "wait_time_min": 9.0,
+        "time_to_arrival_min": 6.0,
+        "pickup_zone_class": "STANDARD",
+        "registered_pickup_points": 1,
+        "in_app_calls": [
+          {
+            "placed_by": "RIDER",
+            "placed_at": "2026-09-26T12:25:40+08:00",
+            "duration_sec": 20,
+            "answered": false
+          },
+          {
+            "placed_by": "DRIVER",
+            "placed_at": "2026-09-26T12:32:40+08:00",
+            "duration_sec": 40,
+            "answered": true
+          }
+        ],
+        "pickup_amended_at": null,
+        "dropoff_amended_at": null,
+        "original_pickup": null,
+        "original_dropoff": null,
+        "optimal_route_erp_sgd": 0.0,
+        "amended_optimal_distance_km": null,
+        "amended_optimal_duration_min": null,
+        "solo_optimal_distance_km": null,
+        "chat_message_count": 0
+      }
+    },
+    {
+      "evidence_id": "EV-GPS-00626",
+      "evidence_type": "GPS_TRACE",
+      "trip_id": "TRP-00626",
+      "source": "PLATFORM_TELEMETRY",
+      "generated_at": "2026-09-27T08:35:40+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "MISSING",
+        "issues": [
+          "MISSING_ARTIFACT"
+        ],
+        "issue_details": [
+          {
+            "code": "MISSING_ARTIFACT",
+            "severity": "BLOCKING",
+            "detail": "No driver telemetry was retained for this trip."
+          }
+        ],
+        "weight_multiplier": 0.0,
+        "notes": "Artifact absent. The identifier is minted so that the absence itself is citable.",
+        "assessed_at": "2026-09-27T08:35:48+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": null
+    },
+    {
+      "evidence_id": "EV-CHAT-00626",
+      "evidence_type": "CHAT_LOG",
+      "trip_id": "TRP-00626",
+      "source": "PLATFORM_TELEMETRY",
+      "generated_at": "2026-09-27T08:35:40+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "In-app chat export for the trip.",
+        "assessed_at": "2026-09-27T08:35:48+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-00626",
+        "messages": [],
+        "message_count": 0,
+        "first_message_at": null,
+        "last_message_at": null,
+        "truncated": false
+      }
+    },
+    {
+      "evidence_id": "EV-FARE-00626",
+      "evidence_type": "FARE_BREAKDOWN",
+      "trip_id": "TRP-00626",
+      "source": "PAYMENTS_LEDGER",
+      "generated_at": "2026-09-27T08:35:40+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Ledger line items for the trip.",
+        "assessed_at": "2026-09-27T08:35:48+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-00626",
+        "currency": "SGD",
+        "fare_model": "METERED",
+        "quoted_fare_sgd": null,
+        "base_fare": 0.0,
+        "distance_fare": 0.0,
+        "time_fare": 0.0,
+        "distance_charged_km": null,
+        "time_charged_min": null,
+        "per_km_rate_sgd": null,
+        "per_min_rate_sgd": null,
+        "surge_multiplier": 1.0,
+        "surge_amount": 0.0,
+        "tolls_erp": 0.0,
+        "erp_gantries": [],
+        "airport_surcharge": 0.0,
+        "platform_fee": 0.0,
+        "promo_discount": 0.0,
+        "cancellation_fee": 4.0,
+        "waiting_time_fee": 0.0,
+        "total_charged": 4.0,
+        "payment_status": "CHARGED",
+        "refund_issued_sgd": 0.0,
+        "rate_card_id": "RC-SG-2026Q3-RYDEX",
+        "charged_at": "2026-09-26T12:36:00+08:00"
+      }
+    },
+    {
+      "evidence_id": "EV-RPROF-00626",
+      "evidence_type": "RIDER_PROFILE",
+      "trip_id": "TRP-00626",
+      "source": "PLATFORM_TELEMETRY",
+      "generated_at": "2026-09-27T08:35:40+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "",
+        "assessed_at": "2026-09-27T08:35:48+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "RDR-30626",
+        "party_role": "RIDER",
+        "snapshot_at": "2026-09-27T08:35:40+08:00",
+        "account_age_days": 800,
+        "lifetime_trips": 260,
+        "rating": 4.8,
+        "prior_disputes_filed": 1,
+        "prior_disputes_upheld": 0,
+        "cancellation_rate": 0.04,
+        "prior_no_show_flags": 0,
+        "deviation_claims_60d": 0,
+        "deviation_claims_60d_substantiated": 0,
+        "no_show_disputes_30d": 0,
+        "disputes_with_counterparty_90d": 0
+      }
+    },
+    {
+      "evidence_id": "EV-DPROF-00626",
+      "evidence_type": "DRIVER_PROFILE",
+      "trip_id": "TRP-00626",
+      "source": "PLATFORM_TELEMETRY",
+      "generated_at": "2026-09-27T08:35:40+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "",
+        "assessed_at": "2026-09-27T08:35:48+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "DRV-32641",
+        "party_role": "DRIVER",
+        "snapshot_at": "2026-09-27T08:35:40+08:00",
+        "account_age_days": 1000,
+        "lifetime_trips": 1700,
+        "rating": 4.86,
+        "prior_disputes_filed": 1,
+        "prior_disputes_upheld": 0,
+        "cancellation_rate": 0.03,
+        "prior_no_show_flags": 0,
+        "prior_deviation_flags": 0,
+        "acceptance_rate": 0.91,
+        "vehicle_type": "RYDE_X",
+        "active_region": "North (Yishun)",
+        "deviation_flags_90d": 0,
+        "completed_trips_90d": 250,
+        "no_show_terminations_30d": 1,
+        "completed_trips_30d": 110,
+        "disputes_with_counterparty_90d": 0
+      }
+    },
+    {
+      "evidence_id": "EV-ADVIS-00626-01",
+      "evidence_type": "TRAFFIC_ADVISORY",
+      "trip_id": "TRP-00626",
+      "source": "THIRD_PARTY_LTA",
+      "generated_at": "2026-09-27T08:35:40+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "MISSING",
+        "issues": [
+          "MISSING_ARTIFACT"
+        ],
+        "issue_details": [
+          {
+            "code": "MISSING_ARTIFACT",
+            "severity": "BLOCKING",
+            "detail": "No advisory covers the pickup road in this window."
+          }
+        ],
+        "weight_multiplier": 0.0,
+        "notes": "Artifact absent. The identifier is minted so that the absence itself is citable.",
+        "assessed_at": "2026-09-27T08:35:48+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": null
+    }
+  ]
+}

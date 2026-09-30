@@ -1,0 +1,32 @@
+{
+  "set": "wild-v1",
+  "cases": 64,
+  "case_set_sha256": "77bc2dbb603393a4eea252136a0936623854cc42a05b445ab34466a019188bea",
+  "answer_key_sha256": "d8037d23e5aab93ba90e8cc28644ec2fb48a6661c1c43979dc12589f86e3ffde",
+  "rulings": {
+    "PARTIAL_REFUND": 20,
+    "FULL_REFUND": 23,
+    "NO_ACTION": 14,
+    "ESCALATE": 4,
+    "DRIVER_COMPENSATION": 3
+  },
+  "difficulty": {
+    "HARD": 37,
+    "REVERSAL": 12,
+    "EASY": 11,
+    "INDETERMINATE": 4
+  },
+  "categories": {
+    "ROUTE_DEVIATION": 37,
+    "NO_SHOW_CHARGE": 27
+  },
+  "case_numbers": {
+    "ROUTE_DEVIATION": "501-537",
+    "NO_SHOW_CHARGE": "601-627"
+  },
+  "protocol": [
+    "derived from real complaints (seed_map.json -> en/cases.jsonl -> source posts)",
+    "schema 1.2.0; gen/validate.py passes all cross checks",
+    "gen/semcheck.py re-derives 61/64 rulings independently; the 3 differences are the RD-06(b) uplift (502, 515) and the RD-04 compensation limb (520), which the checker does not model by design"
+  ]
+}
