@@ -507,10 +507,10 @@ def headline_run_directories(runs_dir: Path, model: str) -> Tuple[Path, ...]:
 
     The corpus keeps its result at ``<root>/<model-slug>/`` and each set that
     has a directory of its own keeps its at ``<root>/<subdir>/<model-slug>/`` --
-    ``runs/codex/`` for the second development set and ``runs/wild/`` for the
-    sealed set, whose single run is the only generalisation figure the
-    submission reports. Called with ``runs/`` the three are the corpus's, the
-    second set's and the sealed set's; called with a set's own root the first
+``runs/codex/`` for the second development set and ``runs/wild/`` for the
+held-out set, whose single run is the only generalisation figure the
+submission reports. Called with ``runs/`` the three are the corpus's, the
+second set's and the held-out set's; called with a set's own root the first
     is that set's and the other two are names no run of that root uses, which
     is harmless because every destination these are checked against lives
     under a subdirectory of its own and so can equal none of them.

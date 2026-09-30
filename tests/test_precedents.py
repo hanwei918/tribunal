@@ -1069,7 +1069,7 @@ class RunDestinationTests(unittest.TestCase):
             dirty = runner.run_directory(runs, MODEL)
             with self.assertRaises(runner.BenchmarkError):
                 runner.assert_precedents_destination(dirty, runs, MODEL)
-            # The sealed set's run directory is a headline one too, so a
+            # The held-out set's run directory is a headline one too, so a
             # precedents run must not be able to land there either.
             sealed = runs / runner.SEALED_SET_RUNS_SUBDIR / runner.model_slug(MODEL)
             with self.assertRaises(runner.BenchmarkError):

@@ -56,7 +56,7 @@ against that key too, and the second set gets its own falsifiability check for
 the same reason the corpus has one -- a guard nobody has seen fail is not
 evidence of anything.
 
-The sealed set
+The held-out set
 --------------
 There is a third answer key, ``eval/answers/wild/ground_truth.json``, for the 64
 cases under ``data/external/wild/``. It is not a development set: it was drafted
@@ -67,7 +67,7 @@ is about *any* answer key reaching *any* brief and this is the key whose run the
 submission's headline claim rests on. Its answer-bearing material sits under
 ``eval/external/wild/``, which is a fourth way for an answer to reach the agent,
 and the two paths are named in the tests rather than left to Layer 1's general
-rule. The sealed set gets its own falsifiability checks for the same reason the
+rule. The held-out set gets its own falsifiability checks for the same reason the
 other two have them.
 
 The precedent library
@@ -111,7 +111,7 @@ ANSWER_KEY_PATH = EVAL_DIR / "answers" / "ground_truth.json"
 SECOND_KEY_PATH = EVAL_DIR / "answers" / "codex" / "ground_truth.json"
 SECOND_SET_DIR = DATA_DIR / "external" / "codex"
 
-# The sealed set, and its own key. It is not a development set: it is run once
+# The held-out set, and its own key. It is not a development set: it is run once
 # from the commit tagged ``freeze-2026-09-30`` and that single run is the only
 # generalisation figure the submission reports. Its key is a third way for an
 # answer to reach a brief, so it is guarded by the same layers -- and its
@@ -209,13 +209,13 @@ def _second_set_case(case_no):
 
 
 def _sealed_key_records():
-    """The sealed set's answer key, as a list of records."""
+    """The held-out set's answer key, as a list of records."""
     with SEALED_KEY_PATH.open("r", encoding="utf-8") as handle:
         return json.load(handle)
 
 
 def _sealed_set_case_numbers():
-    """Every case number the sealed set's own index lists, in index order."""
+    """Every case number the held-out set's own index lists, in index order."""
     with (SEALED_SET_DIR / "index.json").open("r", encoding="utf-8") as handle:
         return [entry["case_no"] for entry in json.load(handle)]
 
@@ -535,9 +535,9 @@ class SecondDevelopmentSetTest(unittest.TestCase):
 
 
 class SealedSetIsolationTest(unittest.TestCase):
-    """The guard covers the sealed set's key as well as the two above it.
+    """The guard covers the held-out set's key as well as the two above it.
 
-    The sealed set is the one set whose single run is the generalisation figure
+    The held-out set is the one set whose single run is the generalisation figure
     the submission reports, so an answer reaching one of its briefs would
     corrupt the figure that matters most. Its key is a third key and its cases
     are briefed by the same ``brief.build_brief_for_case``, so the same layers
@@ -570,7 +570,7 @@ class SealedSetIsolationTest(unittest.TestCase):
     def test_no_sealed_case_file_carries_an_answer_field(self):
         """The set arrived answer-free, and is still answer-free here."""
         paths = sorted(SEALED_SET_DIR.glob("case-*.json"))
-        self.assertEqual(64, len(paths), "the sealed set is not the expected 64 files")
+        self.assertEqual(64, len(paths), "the held-out set is not the expected 64 files")
         for path in paths:
             file_text = path.read_text(encoding="utf-8")
             with self.subTest(case=path.name):
@@ -579,7 +579,7 @@ class SealedSetIsolationTest(unittest.TestCase):
 
     def test_no_sealed_brief_carries_an_answer_key_field_name(self):
         case_numbers = _sealed_set_case_numbers()
-        self.assertEqual(64, len(case_numbers), "the sealed set is not the expected 64 cases")
+        self.assertEqual(64, len(case_numbers), "the held-out set is not the expected 64 cases")
         for case_no in case_numbers:
             with self.subTest(case_no=case_no):
                 self.assertEqual({}, _brief_violations_for_case(_sealed_set_case(case_no)))
@@ -597,7 +597,7 @@ class SealedSetIsolationTest(unittest.TestCase):
         """The two paths, named, over and above Layer 1's general rule.
 
         Layer 1 already forbids *any* path under ``eval/`` in a package module.
-        This states the same property over the two directories the sealed set's
+        This states the same property over the two directories the held-out set's
         answers actually live in, so the set's own contribution to the boundary
         is visible rather than only implied.
         """
@@ -632,7 +632,7 @@ class SealedSetIsolationTest(unittest.TestCase):
             self.assertEqual(2, len(offenders), "the dirty fixture was not seen as two paths")
 
     def test_layer_two_goes_red_on_a_spliced_sealed_case(self):
-        """The scan is shown capable of failing over the sealed set as well.
+        """The scan is shown capable of failing over the held-out set as well.
 
         Both splices are made in memory, so no file is written and there is
         nothing to restore. The real case is asked last, and must be clean

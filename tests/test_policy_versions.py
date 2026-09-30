@@ -521,7 +521,7 @@ class PolicyVersionDestinationTests(unittest.TestCase):
             with self.assertRaises(runner.BenchmarkError) as caught:
                 runner.assert_policy_v_destination(headline, runs, 2, MODEL)
             self.assertIn("is the headline run directory", str(caught.exception))
-            # The sealed set's run directory is a headline one too, so a
+            # The held-out set's run directory is a headline one too, so a
             # version-2 run must not be able to land there either.
             sealed = runs / runner.SEALED_SET_RUNS_SUBDIR / runner.model_slug(MODEL)
             with self.assertRaises(runner.BenchmarkError):

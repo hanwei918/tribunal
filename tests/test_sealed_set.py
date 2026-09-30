@@ -1,6 +1,6 @@
-"""The sealed set: registering it, and the guards around its single run.
+"""The held-out set: registering it, and the guards around its single run.
 
-The sealed set is 64 cases under ``data/external/wild/``, keyed by
+The held-out set is 64 cases under ``data/external/wild/``, keyed by
 ``eval/answers/wild/ground_truth.json``. It is **not** a third development set:
 it was drafted without access to this repository, it is run exactly once from
 the commit tagged ``freeze-2026-09-30``, and that single run is the only
@@ -87,7 +87,7 @@ def _run_cli(arguments):
 
 
 def _scratch_runs_with_the_sealed_result(tmp):
-    """A dirty fixture: a runs root that already holds the sealed set's result.
+    """A dirty fixture: a runs root that already holds the held-out set's result.
 
     This is what ``--force`` would overwrite and what a recorded-run switch
     would re-take, so it is the fixture each refusal is shown on. The file's
@@ -98,7 +98,7 @@ def _scratch_runs_with_the_sealed_result(tmp):
     run_dir.mkdir(parents=True)
     sentinel = run_dir / "case-{0:05d}.json".format(SENTINEL_CASE)
     sentinel.write_text(
-        json.dumps({"case_no": SENTINEL_CASE, "sentinel": "the sealed result"}, indent=2),
+        json.dumps({"case_no": SENTINEL_CASE, "sentinel": "the held-out result"}, indent=2),
         encoding="utf-8",
     )
     return runs, run_dir, sentinel, sentinel.read_bytes()
@@ -117,12 +117,12 @@ def _state(directory):
 # The registry
 # --------------------------------------------------------------------------
 class SealedSetRegistryTests(unittest.TestCase):
-    """The sealed set is registered, and it is not a development set."""
+    """The held-out set is registered, and it is not a development set."""
 
     def test_it_is_registered_by_name_and_marked_sealed(self):
         self.assertIn("wild", sets.BY_NAME)
         self.assertIs(SEALED, sets.BY_NAME["wild"])
-        self.assertTrue(SEALED.sealed, "the sealed set is not marked sealed")
+        self.assertTrue(SEALED.sealed, "the held-out set is not marked sealed")
         self.assertEqual("wild", SEALED.runs_subdir)
         self.assertIsNone(sets.CORPUS.runs_subdir)
 
@@ -158,7 +158,7 @@ class SealedSetRegistryTests(unittest.TestCase):
                 self.assertEqual(
                     set(),
                     set(other.cases) & set(SEALED.cases),
-                    "the sealed set shares a case number with a development set",
+                    "the held-out set shares a case number with a development set",
                 )
 
     def test_its_runs_go_to_its_own_root(self):
@@ -172,9 +172,10 @@ class SealedSetRegistryTests(unittest.TestCase):
         self.assertNotEqual(sets.CORPUS.run_dir(MODEL), SEALED.run_dir(MODEL))
         self.assertNotEqual(sets.SECOND_SET.run_dir(MODEL), SEALED.run_dir(MODEL))
 
-    def test_its_summary_names_it_the_sealed_set_run_once(self):
+    def test_its_summary_names_it_the_held_out_set_run_once(self):
         summary = SEALED.summary
-        self.assertIn("sealed set", summary)
+        self.assertIn("held-out set", summary)
+        self.assertIn("wild-v1", summary)
         self.assertIn("run once", summary)
         self.assertIn("generalisation figure", summary)
 
@@ -215,7 +216,7 @@ class SealedSetReportTests(unittest.TestCase):
             text = sets.render_development_sets(MODEL, runs)
 
             self.assertIn(
-                "The sealed set, on its own and never in the combined figure:", text
+                "The held-out set (wild-v1), on its own and never in the combined figure:", text
             )
             self.assertIn("wild", text)
             self.assertIn("0/64", text)
@@ -231,7 +232,7 @@ class SealedSetReportTests(unittest.TestCase):
                 "Combined, every case graded against the key it belongs to:", 1
             )[1]
             combined = combined.split(
-                "The sealed set, on its own and never in the combined figure:", 1
+                "The held-out set (wild-v1), on its own and never in the combined figure:", 1
             )[0]
             self.assertIn("no case of any development set has been run", combined)
             self.assertNotIn("wild", combined)
@@ -245,7 +246,7 @@ class SealedSetSwitchGuardTests(unittest.TestCase):
     """``--force`` and the three recorded-run switches are refused for this set.
 
     Each refusal is shown on a dirty fixture first: a scratch runs root that
-    already holds the sealed set's result, which is exactly what the switch
+    already holds the held-out set's result, which is exactly what the switch
     would replace or re-take. The fixture is compared byte for byte afterwards.
     """
 
@@ -255,10 +256,10 @@ class SealedSetSwitchGuardTests(unittest.TestCase):
 
             code, _, err = _run_cli(["--set", "wild", "--force", "--runs-dir", str(runs)])
 
-            self.assertEqual(1, code, "a sealed run accepted --force")
-            self.assertIn("sealed set", err)
+            self.assertEqual(1, code, "a held-out run accepted --force")
+            self.assertIn("held-out set", err)
             self.assertIn("--force", err)
-            self.assertEqual(before, sentinel.read_bytes(), "the sealed result was rewritten")
+            self.assertEqual(before, sentinel.read_bytes(), "the held-out result was rewritten")
             self.assertEqual(
                 {sentinel.name: before}, _state(run_dir), "the run directory gained a file"
             )
@@ -277,11 +278,11 @@ class SealedSetSwitchGuardTests(unittest.TestCase):
                     code, _, err = _run_cli(
                         ["--set", "wild", flag, value, "--runs-dir", str(runs)]
                     )
-                    self.assertEqual(1, code, "{0} was accepted for the sealed set".format(flag))
-                    self.assertIn("sealed set", err)
+                    self.assertEqual(1, code, "{0} was accepted for the held-out set".format(flag))
+                    self.assertIn("held-out set", err)
                     self.assertIn(flag, err)
                     self.assertEqual(
-                        before, sentinel.read_bytes(), "{0} rewrote the sealed result".format(flag)
+                        before, sentinel.read_bytes(), "{0} rewrote the held-out result".format(flag)
                     )
                     self.assertEqual({sentinel.name: before}, _state(run_dir))
 
@@ -296,7 +297,7 @@ class SealedSetSwitchGuardTests(unittest.TestCase):
             with self.subTest(switch=switch):
                 with self.assertRaises(run_benchmark.BenchmarkError) as caught:
                     sets.assert_not_sealed(SEALED, switch)
-                self.assertIn("sealed set", str(caught.exception))
+                self.assertIn("held-out set", str(caught.exception))
                 self.assertIn(switch, str(caught.exception))
 
 
@@ -462,11 +463,11 @@ class SealedRunDirectoryIsHeadlineTests(unittest.TestCase):
         self.assertEqual((self.runs / "policy-gaps").resolve(), accepted)
 
     def test_the_recorded_drafts_destination_refuses_it_and_takes_its_own(self):
-        """Pointed at the sealed run directory, the measurement is refused.
+        """Pointed at the held-out run directory, the measurement is refused.
 
         The destination is always ``<runs-dir>/verify-recorded-drafts/<model>/``,
         so the way it lands inside a reported result is by being given a run
-        directory as its runs root -- the sealed set's own, here. Nothing is
+        directory as its runs root -- the held-out set's own, here. Nothing is
         read before the refusal, so no source run has to exist.
         """
         with self.assertRaises(run_benchmark.BenchmarkError) as caught:
@@ -482,7 +483,7 @@ class SealedRunDirectoryIsHeadlineTests(unittest.TestCase):
         self.assertEqual(
             {},
             _state(self.sealed_run_dir),
-            "a refused recorded-drafts run wrote into the sealed run directory",
+            "a refused recorded-drafts run wrote into the held-out run directory",
         )
 
         # And the same guard takes the destination of its own, so a check that

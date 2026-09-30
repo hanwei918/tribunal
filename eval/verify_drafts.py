@@ -85,7 +85,7 @@ def assert_recorded_drafts_destination(runs_dir: Path, model: str) -> Path:
     -- a directory of its own, which is what makes "never the headline
     directory" a property of the path. But ``--runs-dir`` is the caller's to
     choose, and pointing it at a run directory the submission reports
-    (``runs/wild/<model-slug>/`` for the sealed set, ``runs/codex/<model-slug>/``
+    (``runs/wild/<model-slug>/`` for the held-out set, ``runs/codex/<model-slug>/``
     for the second development set, ``runs/<model-slug>/`` for the corpus)
     would put this measurement inside that result. So the destination is
     refused if it is a headline run directory or lies inside one, and the run
@@ -524,7 +524,7 @@ def verify_recorded_run(
     # Refused before anything is read or written if the destination is a
     # headline run directory or lies inside one, so pointing --runs-dir at a
     # run directory cannot put this measurement inside the result that
-    # directory holds. The sealed set's own directory is one of the three
+    # directory holds. The held-out set's own directory is one of the three
     # headline directories, which is what keeps this measurement out of the
     # generalisation figure as well as out of the corpus result.
     run_dir = assert_recorded_drafts_destination(runs_dir, model)

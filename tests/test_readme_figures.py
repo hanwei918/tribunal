@@ -313,35 +313,35 @@ class ReadmeFigureTests(unittest.TestCase):
         sealed = self.sealed
         calibration = sealed.calibration
         return {
-            "Sealed set — four-field exact, of the cases that produced a ruling": fraction(
+            "Held-out set (wild-v1) — four-field exact, of the cases that produced a ruling": fraction(
                 sealed.exact_matches, sealed.total
             ),
-            "Sealed set — four-field exact, over all 64 cases": fraction(
+            "Held-out set (wild-v1) — four-field exact, over all 64 cases": fraction(
                 sealed.exact_matches, 64
             ),
-            "Sealed set — ruling alone, of the cases that produced a ruling": fraction(
+            "Held-out set (wild-v1) — ruling alone, of the cases that produced a ruling": fraction(
                 sealed.field_tally("ruling")[0], sealed.total
             ),
-            "Sealed set — escalation precision": ratio(
+            "Held-out set (wild-v1) — escalation precision": ratio(
                 len(
                     set(calibration.produced_escalations)
                     & set(calibration.expected_escalations)
                 ),
                 len(calibration.produced_escalations),
             ),
-            "Sealed set — escalation recall": ratio(
+            "Held-out set (wild-v1) — escalation recall": ratio(
                 len(
                     set(calibration.produced_escalations)
                     & set(calibration.expected_escalations)
                 ),
                 len(calibration.expected_escalations),
             ),
-            "Sealed set — over-escalations": case_list(calibration.over_escalations),
-            "Sealed set — under-escalation": case_list(calibration.under_escalations),
-            "Sealed set — cases with no ruling": case_list(
+            "Held-out set (wild-v1) — over-escalations": case_list(calibration.over_escalations),
+            "Held-out set (wild-v1) — under-escalation": case_list(calibration.under_escalations),
+            "Held-out set (wild-v1) — cases with no ruling": case_list(
                 cases_with_no_ruling(development_sets.named("wild"), sealed)
             ),
-            "Sealed set — cases that differ from the key": case_list(
+            "Held-out set (wild-v1) — cases that differ from the key": case_list(
                 sorted(score.case_no for score in sealed.failures)
             ),
             "Corpus — four-field exact (development)": fraction(

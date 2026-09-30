@@ -33,8 +33,8 @@ not name ``LLMClient``, ``_default_client_factory``, ``verify_recorded_case`` or
 The two development sets are development data, not test sets, and the caveat
 that says so is carried from :mod:`eval.development_sets` rather than written a
 second time here. Neither a section below nor the combined section is a
-generalisation figure; the only one the submission reports belongs to the sealed
-set, run once after the 10 October freeze.
+generalisation figure; the only one the submission reports belongs to the
+held-out set, run once from the commit tagged ``freeze-2026-09-30``.
 """
 
 from __future__ import annotations
@@ -104,7 +104,7 @@ def assert_not_a_run_directory(
 
     ``runs/<model-slug>/`` holds the corpus result the submission reports,
     ``runs/codex/<model-slug>/`` the second development set's and
-    ``runs/wild/<model-slug>/`` the sealed set's; everything under
+    ``runs/wild/<model-slug>/`` the held-out set's; everything under
     ``runs/external/`` is a headline directory too. Baselines are not a run, and
     a reader who found these figures there would read them as that run's, so the
     destination is refused before anything is written.
@@ -112,7 +112,7 @@ def assert_not_a_run_directory(
     The check is structural rather than a list of names: a directory that holds
     a run's own ``run.json``, or its case files, is a run directory whichever
     model it belongs to. Every headline directory for this model is refused by
-    name as well -- the corpus's, the second development set's and the sealed
+    name as well -- the corpus's, the second development set's and the held-out
     set's -- so the refusal is the same whether or not those runs have been
     made yet.
 

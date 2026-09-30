@@ -382,7 +382,7 @@ carries the `invocation_end` that names the move:
 
 | fragment | invocation | `stop_reason` | `cases_seen` | `detail` |
 |---|---|---|---|---|
-| `from-desktop-subfolder/…/codex` | `…83887` | fatal error | 12 | `LoaderError: file not found: …/Desktop - HANWEI的MacBook Pro/Tribunal/policy/general.json` |
+| `from-desktop-subfolder/…/codex` | `…83887` | fatal error | 12 | `LoaderError: file not found: …/Desktop - HANWEI U+7684 MacBook Pro/Tribunal/policy/general.json` |
 | `from-desktop-subfolder/…/v4.1` | `…83013` | fatal error | 1 | same iCloud path |
 | `from-icloud-root/…/corpus` | `…76652` | fatal error | 6 | `LoaderError: file not found: /Users/hanweizhou/Desktop/Tribunal/policy/general.json` |
 | `from-tribunal-run/…/v4.1` | `…76654` | fatal error | 0 | `LoaderError: file not found: /Users/hanweizhou/Desktop/Tribunal/policy/general.json` |
@@ -391,6 +391,34 @@ Note the two directions. The fragments found **inside the iCloud tree** report t
 **Desktop** path as the one that was not found, and the fragments found **under the
 Desktop subfolder** report the **iCloud** path. The move ran both ways inside the
 window, and the logs record both.
+
+#### The one Chinese character, and the nine run files that keep it (2026-09-30)
+
+The path above was recorded by the machine with one Han character inside it,
+`U+7684`, which sits in the folder name between `HANWEI` and `MacBook`. **This
+note now writes it as `U+7684`**, so the note itself carries no Chinese.
+
+The same character is inside **nine tracked files under `runs/`**, where it is
+part of the path the machine recorded. Those files are records produced by a run,
+and they are **left unedited**: rewriting a recorded run so a scan comes back
+clean would be editing the evidence. The nine, found by scanning every tracked
+file for a code point in the CJK ranges and counting the code points found:
+
+| file | code points |
+|---|---|
+| `runs/_icloud-incident-2026-09-27/from-desktop-subfolder/runs/codex/deepseek-deepseek-flash/events.jsonl` | 1 |
+| `runs/_icloud-incident-2026-09-27/from-desktop-subfolder/runs/codex/deepseek-deepseek-flash/invocations.json` | 5 |
+| `runs/_icloud-incident-2026-09-27/from-desktop-subfolder/runs/codex/deepseek-deepseek-flash/run.json` | 5 |
+| `runs/_icloud-incident-2026-09-27/from-desktop-subfolder/runs/deepseek-v4.1-flash/events.jsonl` | 1 |
+| `runs/_icloud-incident-2026-09-27/from-desktop-subfolder/runs/deepseek-v4.1-flash/invocations.json` | 4 |
+| `runs/_icloud-incident-2026-09-27/from-desktop-subfolder/runs/deepseek-v4.1-flash/run.json` | 4 |
+| `runs/codex/deepseek-deepseek-flash/invocations.json` | 3 |
+| `runs/deepseek-v4.1-flash/invocations.json` | 3 |
+| `runs/deepseek-v4.1-flash/run.json` | 3 |
+
+That is 29 code points in total, all of them this one character. No file outside
+`runs/` holds a CJK character any more:
+`tests/test_language.py` fails on one, and it is the check that keeps it that way.
 
 #### The fragments also carry the true final `invocations.json`
 

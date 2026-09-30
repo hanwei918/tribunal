@@ -1,5 +1,12 @@
 # The sealed set's single run
 
+> **Correction, 2026-09-30, later the same day.** "The sealed set" in this note
+> means `wild-v1`, now called **the held-out set (`wild-v1`)**: 64 cases derived
+> from real complaints, prepared by their author as a development set, which
+> nobody who changed the system opened before the freeze tagged
+> `freeze-2026-09-30` and which was run once from that tag. The title above and
+> every sentence below are kept as written; nothing in this note changes.
+
 **2026-09-30.** The sealed set was run once, by the owner, outside this sandbox,
 from the commit tagged `freeze-2026-09-30`. The output is committed exactly as
 produced at `2e527d6`, 131 files under `runs/wild/deepseek-deepseek-flash/`, and
@@ -265,6 +272,10 @@ which is the shape POL-RD-11(a) gives when a pass-through is chargeable and the
 refund is therefore a difference. The check never met that shape before the
 sealed run.
 
+> **Correction, 2026-09-30, later the same day.** "The sealed run" is the single
+> run of `wild-v1`, now called **the held-out set (`wild-v1`)**. The paragraph
+> above is kept as written.
+
 The sealed set is where it stops holding. Over its 64 keys, 61 read off. The
 three that do not are 517, 533 and 520. 520 is the same prose-only
 `DRIVER_COMPENSATION` case as corpus 109 and is skipped the same way — its four
@@ -279,6 +290,10 @@ other nine upfront-quote route cases in the sealed set (501, 506, 510, 516, 521,
 again lands on a published figure — the excess over the quote, or a single gantry
 line. Only the two where a properly chargeable pass-through has to be subtracted
 from that excess fall outside the block's arithmetic.
+
+> **Correction, 2026-09-30, later the same day.** "The sealed set" in this
+> paragraph means `wild-v1`, now called **the held-out set (`wild-v1`)**. The
+> paragraph is kept as written.
 
 ### The same check rejected three wrong 8.50 drafts in 501
 
@@ -478,3 +493,6 @@ the generalisation figure was produced by a system that is no longer the system.
 The repair, when it is made, is measured on the development sets, and the
 generalisation figure is taken again from a set that has not been read. This run
 is closed as it stands.
+
+> **Correction, 2026-09-30, later the same day.** "A new sealed set" means a
+> further held-out set, not `wild-v1`. The paragraph above is kept as written.

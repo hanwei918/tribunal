@@ -21,7 +21,7 @@ This directory is the benchmark's own output. Every subdirectory named in the ta
 | `policy-gaps/` | The policy-gap loop's report — `python3 -m eval.policy_gaps report --run-dir … --run-dir …`. Two files, `report.json` and `report.md`, and it has its own section below. | **Not a run and not a score.** It names the cases the policy could not decide and groups them, read off the recorded runs. No model call is made to produce it, and nothing in it changes the policy. |
 | `precedents/` | Where a run with `--precedents` on goes: `precedents/<model>/`, and `codex/precedents/<model>/` under the second set's root. No such run is committed here. It has its own section below. | A different measurement from the headline, and not comparable to it: the precedent library is built from closures made by people who have seen these development sets. |
 | `rerun-2026-09-29/` | A runs root of its own, holding one re-run of the organisers' sample case: `rerun-2026-09-29/external/ryde/`, committed as `23589e1`. It went to its own root so that the committed `external/ryde/` result, which `docs/notes/2026-09-23-external-sample-case.md` is about, stayed as it was. It has its own section below. | Evidence of what that run did, not a score — there is no answer-key entry for 901. It is an external case like any other, so it is refused outside `runs/external/` and must never be merged into a model's run directory. |
-| `wild/` | **The sealed set's single run**, committed at `2e527d6`: `wild/deepseek-deepseek-flash/`, 131 files, run once by the owner from the commit tagged `freeze-2026-09-30` and committed byte for byte as produced. **62 of the 64 cases produced a ruling** — 517 and 533 failed with `SHAPE` and are recorded as misses — and the four-field figure is **55/62 = 88.7%** over the cases that produced a ruling, **55/64 = 85.9%** over the set. It has its own section below. | The submission's **only generalisation figure**, and never a development figure. It is never merged into a model's run directory, never summed with the corpus and second-set figures, and never produced by `--set all`. |
+| `wild/` | **The single run of the held-out set (`wild-v1`)**, committed at `2e527d6`: `wild/deepseek-deepseek-flash/`, 131 files, run once by the owner from the commit tagged `freeze-2026-09-30` and committed byte for byte as produced. **62 of the 64 cases produced a ruling** — 517 and 533 failed with `SHAPE` and are recorded as misses — and the four-field figure is **55/62 = 88.7%** over the cases that produced a ruling, **55/64 = 85.9%** over the set. It has its own section below. | The submission's **only generalisation figure**, and never a development figure. It is never merged into a model's run directory, never summed with the corpus and second-set figures, and never produced by `--set all`. |
 
 **These are snapshots, and a later run moves them.** A run directory is named after the model id, so
 a future run of the same model writes into the same directory and rewrites these files case by case.
@@ -432,7 +432,7 @@ N>=2` is refused together with `--ablate`, `--precedents`, `--report`,
 repository is at version 1, there is no later version to run, and the commands
 above are the ones that would produce the output once one has been.
 
-## `wild/` — the sealed set's single run
+## `wild/` — the single run of the held-out set (`wild-v1`)
 
 `wild/<model>/` holds the output of
 
@@ -474,7 +474,7 @@ with over-escalations 501, 504, 508 and 530 and under-escalation 627.
 
 **It is the generalisation figure, and it is never added to anything.** The
 corpus figure and the second set's figure are development figures: they were
-produced by people who had seen those cases. The sealed set was not, which is the
+produced by people who had seen those cases. The held-out set was not, which is the
 whole of what makes its run a measurement of generalisation — so a sum of it and
 a development figure would be neither. `--report` prints it in a section of its
 own and never inside the combined line, `--set all` does not run it, and
@@ -592,7 +592,7 @@ The scan that cleared these directories covered all 125 files under `runs/` at t
 committed run directories, `external/`, and the untracked suite logs — and found no match, with a
 positive control that fires on a fabricated `sk-` string.
 
-**The sealed run was scanned the same way as it entered the directory (2026-09-30).** The `sk-`
+**The held-out run was scanned the same way as it entered the directory (2026-09-30).** The `sk-`
 pattern and the literal `TOKENHUB_API_KEY` were run over all **131** files under `runs/wild/` and
 matched none, a positive control fired on a fabricated `sk-` string, and the same scan found **no
 character outside ASCII** in any of them. Both environment variables were unset in the shell that ran

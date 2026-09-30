@@ -972,7 +972,7 @@ class OutputTests(unittest.TestCase):
             data = json.loads((out / baselines.DATA_FILE).read_text(encoding="utf-8"))
             self.assertEqual(sets.DEVELOPMENT_DATA_CAVEAT, data["caveat"])
             self.assertIn("the figure the submission reports", data["caveat"])
-            self.assertIn("sealed set", data["caveat"])
+            self.assertIn("held-out set", data["caveat"])
             text = (out / baselines.REPORT_FILE).read_text(encoding="utf-8")
             self.assertIn(sets.DEVELOPMENT_DATA_CAVEAT, text)
             self.assertIn("No model call was made", text)

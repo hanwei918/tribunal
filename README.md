@@ -27,23 +27,26 @@ fee held** rather than collected or refunded.
 Read this table from the top. The first block is the submission's claim; every
 block below it is context that says what that claim is worth.
 
-The sealed set is the only **generalisation** figure. The corpus and the second
-set are **development** data: the system was built against them, so a figure over
-them measures fit, not generalisation. The two are never summed — one figure over
-64 cases plus another over 44 is not a measurement of 108 cases — and the sealed
-set is never produced by `--set all`.
+The held-out set (`wild-v1`) is the only **generalisation** figure. It is 64 cases
+derived from real complaints, prepared by their author as a development set;
+nobody who changed the system opened them before the freeze tagged
+`freeze-2026-09-30`, and they were run once from that tag. The corpus and the
+second set are **development** data the system was built against, so a figure over
+them measures fit, not generalisation. No two of the three are ever summed — one
+figure over 64 cases plus another over 44 is not a measurement of 108 cases — and
+the held-out set is never produced by `--set all`.
 
 | figure | value | read from | recompute with | model call |
 |---|---|---|---|---|
-| Sealed set — four-field exact, of the cases that produced a ruling | 55/62 = 88.7% | `runs/wild/deepseek-deepseek-flash/case-*.json`, `eval/answers/wild/ground_truth.json` | `python3 -m eval.development_sets --report` | no |
-| Sealed set — four-field exact, over all 64 cases | 55/64 = 85.9% | `runs/wild/deepseek-deepseek-flash/`, `eval/answers/wild/ground_truth.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
-| Sealed set — ruling alone, of the cases that produced a ruling | 56/62 = 90.3% | `runs/wild/deepseek-deepseek-flash/case-*.json`, `eval/answers/wild/ground_truth.json` | `python3 -m eval.development_sets --report` | no |
-| Sealed set — escalation precision | 3/7 = 0.429 | `runs/wild/deepseek-deepseek-flash/case-*.json`, `eval/answers/wild/ground_truth.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
-| Sealed set — escalation recall | 3/4 = 0.75 | `runs/wild/deepseek-deepseek-flash/case-*.json`, `eval/answers/wild/ground_truth.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
-| Sealed set — over-escalations | 501, 504, 508, 530 | `runs/wild/deepseek-deepseek-flash/case-*.json`, `eval/answers/wild/ground_truth.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
-| Sealed set — under-escalation | 627 | `runs/wild/deepseek-deepseek-flash/case-*.json`, `eval/answers/wild/ground_truth.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
-| Sealed set — cases with no ruling | 517, 533 | `runs/wild/deepseek-deepseek-flash/run.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
-| Sealed set — cases that differ from the key | 501, 504, 508, 523, 530, 622, 627 | `runs/wild/deepseek-deepseek-flash/case-*.json`, `eval/answers/wild/ground_truth.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
+| Held-out set (`wild-v1`) — four-field exact, of the cases that produced a ruling | 55/62 = 88.7% | `runs/wild/deepseek-deepseek-flash/case-*.json`, `eval/answers/wild/ground_truth.json` | `python3 -m eval.development_sets --report` | no |
+| Held-out set (`wild-v1`) — four-field exact, over all 64 cases | 55/64 = 85.9% | `runs/wild/deepseek-deepseek-flash/`, `eval/answers/wild/ground_truth.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
+| Held-out set (`wild-v1`) — ruling alone, of the cases that produced a ruling | 56/62 = 90.3% | `runs/wild/deepseek-deepseek-flash/case-*.json`, `eval/answers/wild/ground_truth.json` | `python3 -m eval.development_sets --report` | no |
+| Held-out set (`wild-v1`) — escalation precision | 3/7 = 0.429 | `runs/wild/deepseek-deepseek-flash/case-*.json`, `eval/answers/wild/ground_truth.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
+| Held-out set (`wild-v1`) — escalation recall | 3/4 = 0.75 | `runs/wild/deepseek-deepseek-flash/case-*.json`, `eval/answers/wild/ground_truth.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
+| Held-out set (`wild-v1`) — over-escalations | 501, 504, 508, 530 | `runs/wild/deepseek-deepseek-flash/case-*.json`, `eval/answers/wild/ground_truth.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
+| Held-out set (`wild-v1`) — under-escalation | 627 | `runs/wild/deepseek-deepseek-flash/case-*.json`, `eval/answers/wild/ground_truth.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
+| Held-out set (`wild-v1`) — cases with no ruling | 517, 533 | `runs/wild/deepseek-deepseek-flash/run.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
+| Held-out set (`wild-v1`) — cases that differ from the key | 501, 504, 508, 523, 530, 622, 627 | `runs/wild/deepseek-deepseek-flash/case-*.json`, `eval/answers/wild/ground_truth.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
 | Corpus — four-field exact (development) | 29/29 = 100.0% | `runs/deepseek-deepseek-flash/`, `eval/answers/ground_truth.json` | `python3 -m eval.development_sets --report` | no |
 | Second set — four-field exact (development) | 14/15 = 93.3% | `runs/codex/deepseek-deepseek-flash/`, `eval/answers/codex/ground_truth.json` | `python3 -m eval.development_sets --report` | no |
 | Ablation — admissibility precheck removed, both sets | 40/44 = 90.9% | `runs/ablation/admissibility/`, `runs/codex/ablation/admissibility/` | `python3 -m unittest tests.test_readme_figures -v` | no |
@@ -79,14 +82,14 @@ produced. The commands that made them, and which of them were paid for, are:
 
 | run | command | when |
 |---|---|---|
-| sealed set | `python3 -m eval.development_sets --set wild --concurrency 2 --timeout 900` | once, 2026-09-30, from the commit tagged `freeze-2026-09-30` |
+| held-out set (`wild-v1`) | `python3 -m eval.development_sets --set wild --concurrency 2 --timeout 900` | once, 2026-09-30, from the commit tagged `freeze-2026-09-30` |
 | development sets | `python3 -m eval.run_benchmark`, `python3 -m eval.development_sets --set codex` | 2026-09-22 to 2026-09-24 |
 | ablations | the same two with `--ablate admissibility` or `--ablate clause-notes` | 2026-09-29 |
 | sample case | `python3 -m eval.run_benchmark --external data/external/ryde/case-00901.json --runs-dir runs/rerun-2026-09-29 --timeout 900` | 2026-09-29 |
 
-## What went wrong on the sealed set
+## What went wrong on the held-out set
 
-The sealed run is the submission's only generalisation figure and it is reported
+The held-out run is the submission's only generalisation figure and it is reported
 as it came out, misses included. Three things are worth a reader's attention.
 
 **One miss pays money the policy does not authorise.** Case 523 is the dangerous
@@ -118,22 +121,23 @@ upfront-quoted fare's remedy under `POL-RD-11(a)` is a difference by constructio
 533's 19.30 is `51.30 − 29.00 − 3.00`. The money block was built around the
 development sets, where 43 of 44 key amounts read off it, and the only two
 upfront-quote route cases there both happened to land on a single published
-figure — so this shape was never met before the sealed run. The same check was
+figure — so this shape was never met before the held-out run. The same check was
 **right** in 501, where it rejected three drafts that deducted an airport
 surcharge of 6.00 the ledger never charged. This is a real defect in the draft
 check and it is deliberately not fixed here: fixing it would change the system
 that produced the figure, so the repair belongs to a later version measured on a
-new sealed set. `docs/notes/2026-09-30-the-sealed-run.md`.
+new held-out set. `docs/notes/2026-09-30-the-sealed-run.md`.
 
 **Nothing in the answer key changed because of this run**, and nothing in
 `tribunal/`, `prompts/` or `policy/` did either. The key is frozen; see
-`START-HERE.md`. One case in the sealed key looks wrong — 622 differs from the run
-only by a `POL-NS-07` referral the policy requires and the key omits — and it is
-recorded rather than acted on, because editing the expected result so a run scores
-better destroys the only independent measurement this project has.
+`START-HERE.md`. One case in the held-out key looks wrong — 622 differs from the
+run only by a `POL-NS-07` referral the policy requires and the key omits — and it
+is recorded rather than acted on, because editing the expected result so a run
+scores better destroys the only independent measurement this project has.
 
-**One thing the run did not settle.** The sealed set's own README, committed at
-`eval/external/wild/README.md`, calls this 64-case set a development and
+**One thing the run did not settle.** The held-out set's own README, committed at
+`eval/external/wild/README.md` — translated from the author's Chinese original,
+whose sha256 the note records — calls this 64-case set a development and
 regression set and names a different, 24-case set as the sealed one. The conflict
 is recorded in full in `docs/notes/2026-09-30-the-freeze-and-the-sealed-run.md`
 and is still the owner's to settle before 55/64 is reported as generalisation.
@@ -184,7 +188,7 @@ and `SHAPE`.
 
 | path | what it holds |
 |---|---|
-| `data/` | The 29-case corpus (`data/cases/`), its manifest (`data/index.json`), the data contract (`data/PUBLIC-CONTRACT.md`), and the external sets under `data/external/`: the organisers' sample, the second development set (`codex/`, 15 cases) and the sealed set (`wild/`, 64 cases). |
+| `data/` | The 29-case corpus (`data/cases/`), its manifest (`data/index.json`), the data contract (`data/PUBLIC-CONTRACT.md`), and the external sets under `data/external/`: the organisers' sample, the second development set (`codex/`, 15 cases) and the held-out set (`wild/`, 64 cases). |
 | `policy/` | The policy the agents are briefed against, as three JSON files. `policy/amendments/` is empty: the repository is at policy version 1. |
 | `prompts/v1/` | The six prompts: the advocate template with its two stance blocks, the judge, the verifier and the policy drafter. |
 | `tribunal/` | The pipeline — loader, prepass, facts, brief, referee, pipeline, transcript, money, events, llm, model, precedents, policy versions. |

@@ -1,5 +1,12 @@
 # The freeze moved to this commit
 
+> **Correction, 2026-09-30, later the same day.** "The sealed set" in this note
+> means `wild-v1`, now called **the held-out set (`wild-v1`)**: 64 cases derived
+> from real complaints, prepared by their author as a development set, which
+> nobody who changed the system opened before the freeze tagged
+> `freeze-2026-09-30` and which was run once from that tag. Every sentence below
+> is kept as written; nothing in this note changes.
+
 **2026-09-30.** The sealed set is run once, and the rule that dates it says
 "after the 10 October freeze" (`docs/notes/2026-09-25-the-standing-rule-change.md`,
 *The rule that is*). This note **moves that freeze to this commit** and records
@@ -31,6 +38,10 @@ records a date and a set of digests.
   the note it amended. The 2026-09-25 note is not rewritten and neither is any
   other: each records the rule in force on its own date.
 
+> **Correction, 2026-09-30, later the same day.** "The sealed set" in this
+> section means `wild-v1`, now called **the held-out set (`wild-v1`)**. The
+> section is kept as written.
+
 ## What is frozen
 
 The `tribunal/`, `prompts/` and `policy/` trees at the tag `freeze-2026-09-30`.
@@ -58,6 +69,10 @@ A non-empty diff means the code that would be measured is not the code that was
 frozen, and the run is not the frozen run. The run's own `run.json` records its
 commit and whether the working tree was clean, so the check is made twice — once
 by hand before the run and once by the record the run leaves behind.
+
+> **Correction, 2026-09-30, later the same day.** "The sealed run" is the single
+> run of `wild-v1`, now called **the held-out set (`wild-v1`)**. The paragraph
+> above is kept as written.
 
 ## The configuration
 
@@ -108,6 +123,10 @@ development run has ever measured, which is the one thing the freeze exists to
 prevent. The defect is recorded here so that it is a known property of the
 frozen system rather than a discovery made afterwards.
 
+> **Correction, 2026-09-30, later the same day.** "The sealed run" is the single
+> run of `wild-v1`, now called **the held-out set (`wild-v1`)**. The paragraph
+> above is kept as written.
+
 ## The provenance the set's author stated
 
 As she stated it on 2026-09-29 and 2026-09-30:
@@ -125,6 +144,10 @@ These are the author's statements, recorded as stated. This repository has not
 verified them and cannot: verifying the generator would mean reading it against
 its cases, which is the reading the sealed set exists to keep out of the
 development process.
+
+> **Correction, 2026-09-30, later the same day.** "The sealed set" in this
+> paragraph means `wild-v1`, now called **the held-out set (`wild-v1`)**. The
+> paragraph above is kept as written.
 
 ## What the owner's structure-only check found
 
@@ -151,6 +174,10 @@ guards — follows in a later commit, after this note is committed and the tag i
 pushed. Until the sealed run is committed, no case content and no answer value
 is printed, quoted or summarised anywhere in this repository.
 
+> **Correction, 2026-09-30, later the same day.** "The sealed run" is the single
+> run of `wild-v1`, now called **the held-out set (`wild-v1`)**. The paragraph
+> above is kept as written.
+
 ---
 
 ## The import, recorded (added after the tag)
@@ -162,6 +189,10 @@ the last paragraph above promised.
 
 **Still no case content and no answer value.** Structure, counts and digests
 only, until the sealed run is committed.
+
+> **Correction, 2026-09-30, later the same day.** "The sealed run" is the single
+> run of `wild-v1`, now called **the held-out set (`wild-v1`)**. The paragraph
+> above is kept as written.
 
 ### Where the files went
 
@@ -223,6 +254,30 @@ Three things follow, and each is stated rather than acted on:
 
 The README is answer-bearing at case level: it names cases and the outcome the
 policy gives for them. Nothing from it is quoted or summarised here.
+
+> **Correction, 2026-09-30, later the same day.** Two things in this section have
+> since changed, and the section above is kept as written.
+>
+> - **The name.** The task that produced this note called this archive "the sealed
+>   set". The repository now calls it **the held-out set (`wild-v1`)**: 64 cases
+>   derived from real complaints, prepared by their author as a development set,
+>   which nobody who changed the system opened before the freeze tagged
+>   `freeze-2026-09-30` and which was run once from that tag. "The sealed set" in
+>   the section above therefore means `wild-v1` wherever the task's own naming is
+>   being reported, and the author's **24-case** set wherever her README is being
+>   reported. The distinction the section draws — her README names a different,
+>   24-case set as the sealed one — stands either way, and the conflict is still
+>   the owner's to settle.
+> - **The language.** `eval/external/wild/README.md` has since been **translated
+>   into English**, so it is no longer the eleventh tracked file that holds
+>   Chinese. The translation says on its first line that it is a translation, and
+>   the sha256 of the author's original bytes —
+>   `8761344077eb9ef2a238c047a18b71b0f6b8f1855d1baeb63ab0ba89e1c9befb` — is
+>   recorded in `docs/notes/2026-09-30-the-names-and-the-chinese-text.md`. The
+>   original is recoverable byte for byte from `3cb059a`, which is why the
+>   section's argument that "a translation is not that evidence" is preserved by
+>   keeping the original in the repository's history rather than by keeping it in
+>   the working tree.
 
 ### The digest of every imported file
 

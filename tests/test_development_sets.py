@@ -605,7 +605,7 @@ class DevelopmentSetReportTests(unittest.TestCase):
             # The corpus figure is named as the reported one, and neither figure
             # is offered as the generalisation number.
             self.assertIn("the figure the submission reports", text)
-            self.assertIn("sealed set", text)
+            self.assertIn("held-out set", text)
 
     def test_the_combined_figure_is_scored_over_what_has_been_produced(self):
         """An unrun set's cases are not counted as misses."""

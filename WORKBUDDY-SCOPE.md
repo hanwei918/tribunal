@@ -311,9 +311,9 @@ untouched.
   removed. `docs/notes/2026-09-30-the-clause-notes-ablation-and-901.md` says so
   in its own words.
 
-## The sealed set (amended 2026-09-30)
+## The held-out set (`wild-v1`) (amended 2026-09-30)
 
-A sealed set was added: 64 cases under `data/external/wild/`, keyed by
+A held-out set was added: 64 cases under `data/external/wild/`, keyed by
 `eval/answers/wild/ground_truth.json`. It is **not** a third development set. It
 was drafted without access to this repository, it is run **exactly once** from
 the commit tagged `freeze-2026-09-30`, and that single run is the only
@@ -350,13 +350,18 @@ generalisation figure the submission reports.
   this 64-case set a development and regression set, and names a **different,
   24-case** set as the sealed one. `docs/notes/2026-09-30-the-freeze-and-the-sealed-run.md`
   records that in its own words, and it is the owner's to settle before any
-  figure from the run is reported as generalisation. The same README is the
-  eleventh tracked file that holds Chinese characters, and the standing language
-  rule below does not govern it: it is imported byte for byte, because the rule
-  for handling these files is to re-serialise nothing.
+  figure from the run is reported as generalisation. That README arrived in
+  Chinese and was for a time the eleventh tracked file holding Chinese
+  characters; on 2026-09-30 it was **translated into English**, and the standing
+  language rule below now governs every tracked text file outside `runs/`. The
+  author's original bytes are kept in the repository's history at `3cb059a` and
+  hash to
+  `8761344077eb9ef2a238c047a18b71b0f6b8f1855d1baeb63ab0ba89e1c9befb`.
 
 ## Language rule (standing)
 
 Every document in this repository is written in English, and every prompt pasted into WorkBuddy is written in English. No Chinese characters in any tracked text file.
+
+*Amended 2026-09-30.* The rule governs every tracked text file **outside `runs/`**. Nine files under `runs/` carry one Han character, `U+7684`, because it sits in the macOS path the machine recorded when it wrote them. Those files are records produced by a run and are left unedited: rewriting one so that a scan comes back clean would be editing the evidence. `tests/test_language.py` enforces the rule outside `runs/` and names `runs/` as the one exemption.
 
 Before every task, WorkBuddy must read this file and state the file paths it plans to open. It must not recursively scan the workspace or refer to sibling directories.

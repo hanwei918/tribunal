@@ -13,7 +13,7 @@ There are two of them, and they are not the same kind of thing:
 Both are **development data**. Neither is a test set. A test set has to be
 drafted without access to this repository and seen beforehand by nobody who
 works on the prompt, and the set that meets that description is now in the
-repository: the sealed set, 64 cases under ``data/external/wild/``, keyed by
+repository: the held-out set, 64 cases under ``data/external/wild/``, keyed by
 ``eval/answers/wild/ground_truth.json``. It is **not** a third development
 set and it is never combined with the two above. It is run exactly once, from
 the commit tagged ``freeze-2026-09-30``, and that single run is the only
@@ -132,7 +132,7 @@ SECOND_SET = DevelopmentSet(
     ),
 )
 
-# The sealed set. It is deliberately **not** in ``DEVELOPMENT_SETS``: that
+# The held-out set. It is deliberately **not** in ``DEVELOPMENT_SETS``: that
 # tuple is what ``--report`` combines and what ``--set all`` runs, and neither
 # may include a set that is run once. Its runs root is
 # ``runs/wild/<model-slug>/`` and its key is its own file, so nothing of it is
@@ -149,9 +149,11 @@ SEALED_SET = DevelopmentSet(
     runs_subdir=run_benchmark.SEALED_SET_RUNS_SUBDIR,
     case_root=loader.EXTERNAL_DIR / run_benchmark.SEALED_SET_RUNS_SUBDIR,
     summary=(
-        "the sealed set: 64 cases drafted without access to this repository, "
-        "run once from the frozen commit; that single run is the only "
-        "generalisation figure the submission reports"
+        "the held-out set (wild-v1): 64 cases derived from real complaints, "
+        "prepared by their author as a development set; nobody who changed the "
+        "system opened them before the freeze tagged freeze-2026-09-30, and they "
+        "were run once from that tag; that single run is the only generalisation "
+        "figure the submission reports"
     ),
     sealed=True,
 )
@@ -186,18 +188,18 @@ DEVELOPMENT_DATA_CAVEAT = (
     "a sum over two sets that were drafted differently and share one template, "
     "so it is not a generalisation figure and does not replace the corpus "
     "number. The only generalisation figure the submission reports belongs to "
-    "the sealed set, drafted without access to this repository and run exactly "
+    "the held-out set, drafted without access to this repository and run exactly "
     "once from the commit tagged freeze-2026-09-30. Neither figure here is "
     "that figure."
 )
 
-# The sealed set is printed on its own, and this is why. A sum of a
+# The held-out set is printed on its own, and this is why. A sum of a
 # development figure and the generalisation figure is neither, so the two are
 # never added; and the sealed figure is a single run that has not happened when
 # the development figures are read, so it is reported as ``not run`` rather
 # than as zero.
 SEALED_SET_CAVEAT = (
-    "The sealed set is not a development set and is never added to the "
+    "The held-out set is not a development set and is never added to the "
     "combined figure above. It was drafted without access to this repository "
     "and is run exactly once from the commit tagged freeze-2026-09-30; that "
     "single run is the only generalisation figure the submission reports. It "
@@ -234,9 +236,9 @@ def assert_set_run_directory(
 
 
 def assert_not_sealed(development_set: DevelopmentSet, switch: str) -> None:
-    """Refuse a switch that would replace or re-take the sealed set's single run.
+    """Refuse a switch that would replace or re-take the held-out set's single run.
 
-    The sealed set is run once from the frozen commit and that run is the only
+    The held-out set is run once from the frozen commit and that run is the only
     generalisation figure the submission reports. A switch that overwrote a
     case's result, or that produced one from a run already recorded, would make
     the figure a different measurement from the one the freeze names. It is
@@ -245,7 +247,7 @@ def assert_not_sealed(development_set: DevelopmentSet, switch: str) -> None:
     """
     if development_set.sealed:
         raise run_benchmark.BenchmarkError(
-            "the sealed set is run once, so {0} is refused for it: its single "
+            "the held-out set is run once, so {0} is refused for it: its single "
             "run is the only generalisation figure the submission reports and "
             "must not be replaced".format(switch)
         )
@@ -272,7 +274,7 @@ def run_set(
     directory, and the runner refuses a labelled run aimed there.
 
     The destination is checked before anything is written, and ``force`` is
-    refused outright for the sealed set, whose single run must not be replaced.
+    refused outright for the held-out set, whose single run must not be replaced.
     """
     if force:
         assert_not_sealed(development_set, "--force")
@@ -550,7 +552,7 @@ def _render_case_facts_section(figures: Sequence[SetFigures]) -> List[str]:
 
 
 # The column header both set tables carry. One string, so the development table
-# and the sealed set's cannot come to show different columns under the same
+# and the held-out set's cannot come to show different columns under the same
 # heading.
 _SET_TABLE_HEADER = "  {0:<8} {1:<40} {2:>5}  {3:>9}  {4:>6} {5:>6} {6:>6} {7:>6}".format(
     "set", "run directory", "cases", "exact", "ruling", "amount", "driver", "refs"
@@ -558,14 +560,14 @@ _SET_TABLE_HEADER = "  {0:<8} {1:<40} {2:>5}  {3:>9}  {4:>6} {5:>6} {6:>6} {7:>6
 
 
 def render_development_sets(model: str, runs_dir: Path = RUNS_DIR) -> str:
-    """The two sets separately, then combined, then the sealed set on its own.
+    """The two sets separately, then combined, then the held-out set on its own.
 
     Reads cached runs only. The corpus figure and the combined figure are
     different claims and the text says so. The combined figure sums two sets that
     were drafted differently and share one template; it is not a generalisation
     figure and it does not replace the corpus number. The only generalisation
-    figure belongs to the sealed set, run once from the commit tagged
-    ``freeze-2026-09-30``, and the sealed set is therefore printed in a section of
+    figure belongs to the held-out set, run once from the commit tagged
+    ``freeze-2026-09-30``, and the held-out set is therefore printed in a section of
     its own -- never as a third row of the table above, and never inside the
     combined line.
 
@@ -614,7 +616,7 @@ def render_development_sets(model: str, runs_dir: Path = RUNS_DIR) -> str:
         )
     lines.extend(_render_case_facts_section(figures))
 
-    # The sealed set is printed on its own and never inside the combined figure
+    # The held-out set is printed on its own and never inside the combined figure
     # above. It is not a third development set: that line is a sum over two sets
     # that were drafted the same way, and adding the one set whose single run is
     # the generalisation figure would make it a sum of two different claims.
@@ -622,7 +624,9 @@ def render_development_sets(model: str, runs_dir: Path = RUNS_DIR) -> str:
         figures_for(development_set, model, runs_dir) for development_set in SEALED_SETS
     ]
     lines.append("")
-    lines.append("The sealed set, on its own and never in the combined figure:")
+    lines.append(
+        "The held-out set (wild-v1), on its own and never in the combined figure:"
+    )
     lines.append("")
     lines.append(_SET_TABLE_HEADER)
     for item in sealed_figures:
@@ -651,7 +655,7 @@ def _build_parser() -> argparse.ArgumentParser:
             "Run a development set through the corpus runner, or report the sets "
             "from their cached runs. The second development set is the fifteen "
             "cases under data/external/codex/, keyed separately from the corpus. "
-            "The sealed set -- the 64 cases under data/external/wild/ -- is "
+            "The held-out set -- the 64 cases under data/external/wild/ -- is "
             "registered here as well, but it is run once: it is never part of "
             "--set all and never part of the combined figure."
         ),
@@ -663,7 +667,7 @@ def _build_parser() -> argparse.ArgumentParser:
         default="all",
         help=(
             "which set: {0}, or all. all means the development sets and never "
-            "includes the sealed set, which is run once and only by name".format(
+            "includes the held-out set, which is run once and only by name".format(
                 ", ".join(sorted(BY_NAME))
             )
         ),
@@ -875,7 +879,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print(render_development_sets(model, args.runs_dir))
         return 0
 
-    # "all" is the two development sets. The sealed set is deliberately not in
+    # "all" is the two development sets. The held-out set is deliberately not in
     # that list: it is run once, and an invocation that ran it as a side effect
     # of running everything would be a run nobody chose to make.
     selected = [named(args.set_name)] if args.set_name != "all" else list(DEVELOPMENT_SETS)
