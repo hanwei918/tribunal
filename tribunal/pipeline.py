@@ -1153,6 +1153,27 @@ DRAFT_CHECK_CODES = (
     DRAFT_AMOUNT_NOT_READ_OFF,
 )
 
+# The rule an amount is read off the brief's money block by.
+#
+# ``published`` is the rule every run so far was judged by: the amount is a
+# figure the block publishes, or the **sum** of two or three of them. It is the
+# default and the rule the committed runs were produced under.
+#
+# ``signed`` is the same rule with a sign on every term after the first: the
+# amount is a published figure, a sum, or a **difference** of two or three
+# published figures with the leading term positive and the result greater than
+# zero. It exists because an upfront-quoted fare's remedy is a difference by
+# construction -- POL-RD-11(a) refunds what was charged over the quote once the
+# pass-throughs inside that charge are subtracted -- and the sum-only rule
+# cannot read such an amount off at all.
+#
+# It is off by default. Nothing here adopts it; whether to is the owner's to
+# decide on the measurement ``eval/amount_rule.py`` produces.
+AMOUNT_RULE_PUBLISHED = "published"
+AMOUNT_RULE_SIGNED = "signed"
+AMOUNT_RULES: Tuple[str, ...] = (AMOUNT_RULE_PUBLISHED, AMOUNT_RULE_SIGNED)
+DEFAULT_AMOUNT_RULE = AMOUNT_RULE_PUBLISHED
+
 # Which amount fields POL-GEN-03 requires each ruling to populate. ESCALATE is
 # terminal and carries neither amount; NO_ACTION leaves the present state
 # standing and moves no money. A key for every ruling value, so a value added to
@@ -1252,16 +1273,38 @@ def published_money_figures(block: Any) -> Tuple[Tuple[str, Decimal], ...]:
 
 
 def amount_reads_off(
-    amount: Decimal, figures: Sequence[Tuple[str, Decimal]]
+    amount: Decimal,
+    figures: Sequence[Tuple[str, Decimal]],
+    rule: str = DEFAULT_AMOUNT_RULE,
 ) -> Optional[str]:
     """How an amount is read off the block's figures, or ``None``.
 
-    A published figure on its own, or the sum of two or three of them, and
-    nothing else. Three is the bound the answer-key check used: a figure that
-    needs four published operands added together is not a figure the block
-    publishes. The path -- or the sum of paths -- is returned so the record can
-    say which figures the amount came from.
+    Under the default rule, ``published``: a published figure on its own, or the
+    sum of two or three of them, and nothing else. Three is the bound the
+    answer-key check used: a figure that needs four published operands added
+    together is not a figure the block publishes. The path -- or the sum of
+    paths -- is returned so the record can say which figures the amount came
+    from.
+
+    Under ``signed``: the same, plus a signed combination of two or three
+    published figures. The leading term is positive and the others carry either
+    sign, and the result must be greater than zero, so the amount is a
+    difference the block's own figures state rather than a number the draft
+    invented. The sum is searched first, so an amount both rules accept is
+    reported with the same path under either.
+
+    The sum is deliberately tried before the difference. 501's 8.50 is
+    ``14.50 - 6.00`` of two published figures, and it is also nothing else, so
+    the order does not matter there; but where a block publishes both a total
+    and the terms of a difference, the total is the simpler reading and the one
+    the record should name.
     """
+    if rule not in AMOUNT_RULES:
+        raise PipelineError(
+            "no amount rule called {0!r}; the rules are {1}".format(
+                rule, ", ".join(AMOUNT_RULES)
+            )
+        )
     for path, value in figures:
         if value == amount:
             return path
@@ -1277,6 +1320,61 @@ def amount_reads_off(
                     return "{0} + {1} + {2}".format(
                         figures[first][0], figures[second][0], figures[third][0]
                     )
+    if rule != AMOUNT_RULE_SIGNED or amount <= 0:
+        return None
+    return _signed_read_off(amount, figures)
+
+
+def _signed_read_off(
+    amount: Decimal, figures: Sequence[Tuple[str, Decimal]]
+) -> Optional[str]:
+    """A difference of two or three published figures, or ``None``.
+
+    Ordered and with the leading term fixed positive, so ``51.30 - 29.00`` and
+    not ``29.00 - 51.30``: the first form is the one the policy states, and a
+    rule that accepted both would report a negative reading of a positive
+    amount as though the block published it. The search is by index order and
+    returns the first match, so two runs of the same block name the same
+    figures.
+    """
+    count = len(figures)
+    for first in range(count):
+        for second in range(count):
+            if second == first:
+                continue
+            if figures[first][1] - figures[second][1] == amount:
+                return "{0} - {1}".format(figures[first][0], figures[second][0])
+    for first in range(count):
+        for second in range(count):
+            if second == first:
+                continue
+            for third in range(count):
+                if third == first or third == second:
+                    continue
+                for middle, last in (
+                    (" - ", " - "),
+                    (" - ", " + "),
+                    (" + ", " - "),
+                ):
+                    total = (
+                        figures[first][1]
+                        - figures[second][1]
+                        if middle == " - "
+                        else figures[first][1] + figures[second][1]
+                    )
+                    total = (
+                        total - figures[third][1]
+                        if last == " - "
+                        else total + figures[third][1]
+                    )
+                    if total == amount:
+                        return "{0}{1}{2}{3}{4}".format(
+                            figures[first][0],
+                            middle,
+                            figures[second][0],
+                            last,
+                            figures[third][0],
+                        )
     return None
 
 
@@ -1345,7 +1443,9 @@ def _clause_mentions(inner: Mapping[str, Any]) -> List[str]:
 
 
 def check_judge_draft(
-    ruling: Any, brief_object: Any
+    ruling: Any,
+    brief_object: Any,
+    amount_rule: str = DEFAULT_AMOUNT_RULE,
 ) -> Tuple[Tuple[str, ...], Tuple[str, ...]]:
     """The code checks one draft must pass before it may vote.
 
@@ -1358,6 +1458,12 @@ def check_judge_draft(
     amounts it states against the brief's own calculator. Nothing here judges
     the reasoning: a draft that passes has not been found right, only found
     well-formed.
+
+    ``amount_rule`` names the rule an amount is read off the money block by --
+    see :data:`AMOUNT_RULES`. The default is the rule every run so far was
+    judged by, and the refusal names the rule it was made under, so a signed
+    run's record says which rule rejected a draft rather than leaving a reader
+    to infer it from a directory name.
     """
     failures: List[str] = []
     unverifiable: List[str] = []
@@ -1440,7 +1546,7 @@ def check_judge_draft(
         amount = as_money(inner.get(field_name))
         if amount is None:
             continue
-        if amount_reads_off(amount, figures) is not None:
+        if amount_reads_off(amount, figures, amount_rule) is not None:
             continue
         reason = unverifiable_amount_reason(value, block, figures)
         if reason is not None:
@@ -1448,8 +1554,13 @@ def check_judge_draft(
         else:
             failures.append(
                 "{0}: {1}={2} is not a figure the brief's money block publishes, "
-                "nor the sum of two or three of them".format(
-                    DRAFT_AMOUNT_NOT_READ_OFF, field_name, amount
+                "nor {3}".format(
+                    DRAFT_AMOUNT_NOT_READ_OFF,
+                    field_name,
+                    amount,
+                    "the sum of two or three of them"
+                    if amount_rule == AMOUNT_RULE_PUBLISHED
+                    else "a signed combination of two or three of them",
                 )
             )
 
@@ -1788,6 +1899,7 @@ def _run_judge_vote(
     transcript: Any,
     deadline: Optional["CaseDeadline"],
     votes: int,
+    amount_rule: str = DEFAULT_AMOUNT_RULE,
     events_log: Optional[Any] = None,
     case_no: Optional[int] = None,
     verify: bool = False,
@@ -1903,7 +2015,9 @@ def _run_judge_vote(
             draft = JudgeDraft(abstention=failure, **common)
         else:
             ruling = _assemble_ruling(parsed, referee_result)
-            failures, unverifiable = check_judge_draft(ruling, brief_object)
+            failures, unverifiable = check_judge_draft(
+                ruling, brief_object, amount_rule
+            )
             if failures:
                 # A malformed draft abstains with its reason codes, which is
                 # what an unparseable one does: it is not an answer the panel
@@ -2586,6 +2700,7 @@ def recorded_judge_drafts(
     entries: Sequence[Mapping[str, Any]],
     referee_result: Any,
     brief_object: Any,
+    amount_rule: str = DEFAULT_AMOUNT_RULE,
 ) -> List[JudgeDraft]:
     """Rebuild the drafts a recorded vote was reduced from.
 
@@ -2595,6 +2710,13 @@ def recorded_judge_drafts(
     runs through, so the drafts a recorded-drafts measurement verifies are the
     drafts the recorded vote counted -- not a second reconstruction that could
     differ from them.
+
+    ``amount_rule`` is the rule the amounts are held to, and it is a parameter
+    for the same reason it is one on :func:`check_judge_draft`: a measurement
+    that asks what a different rule would have made of these drafts has to be
+    able to rebuild them under it. The default is the rule they were rebuilt
+    under before this parameter existed, so a caller that does not name one gets
+    exactly what it got before.
     """
     rebuilt: List[JudgeDraft] = []
     for record in vote_block.get("drafts") or []:
@@ -2623,7 +2745,7 @@ def recorded_judge_drafts(
             )
             continue
         ruling = _assemble_ruling(parsed, referee_result)
-        failures, unverifiable = check_judge_draft(ruling, brief_object)
+        failures, unverifiable = check_judge_draft(ruling, brief_object, amount_rule)
         if failures:
             rebuilt.append(
                 JudgeDraft(
@@ -2668,6 +2790,7 @@ def run_case(
     ablate: Optional[str] = None,
     precedents: Optional[Any] = None,
     policy_version: int = policy_versions.BASE_VERSION,
+    amount_rule: str = DEFAULT_AMOUNT_RULE,
 ) -> PipelineResult:
     """Perform one full arbitration of a case named by its manifest number.
 
@@ -2717,6 +2840,7 @@ def run_case(
         ablate=ablate,
         precedents=precedents,
         policy_version=policy_version,
+        amount_rule=amount_rule,
     )
 
 
@@ -2734,6 +2858,7 @@ def run_loaded_case(
     ablate: Optional[str] = None,
     precedents: Optional[Any] = None,
     policy_version: int = policy_versions.BASE_VERSION,
+    amount_rule: str = DEFAULT_AMOUNT_RULE,
 ) -> PipelineResult:
     """Perform one full arbitration of a case already in hand.
 
@@ -2797,6 +2922,15 @@ def run_loaded_case(
         raise PipelineError(
             "no ablation called {0!r}; the ablations are {1}".format(
                 ablate, ", ".join(brief.ABLATIONS)
+            )
+        )
+    if amount_rule not in AMOUNT_RULES:
+        # Refused here as well as at the command line, so a caller driving this
+        # function directly is told which rules exist rather than silently
+        # getting the default and a record that does not say which rule it used.
+        raise PipelineError(
+            "no amount rule called {0!r}; the rules are {1}".format(
+                amount_rule, ", ".join(AMOUNT_RULES)
             )
         )
 
@@ -2996,6 +3130,7 @@ def run_loaded_case(
                 transcript=transcript,
                 deadline=deadline,
                 votes=judge_votes,
+                amount_rule=amount_rule,
                 events_log=events_log,
                 case_no=case_no,
                 verify=verify_drafts,
@@ -3430,6 +3565,7 @@ def replay_case(
     events_log: Optional[Any] = None,
     prompts_dir: Path = PROMPTS_DIR,
     verify_drafts: bool = False,
+    amount_rule: str = DEFAULT_AMOUNT_RULE,
 ) -> PipelineResult:
     """Arbitrate one case from a recorded run's advocates, calling only the judge.
 
@@ -3455,9 +3591,22 @@ def replay_case(
     alone. The borrowed calls' usage is reported separately on
     :class:`ReplayProvenance`, because a run that reported the sum would claim
     to have spent tokens it never spent.
+
+    ``amount_rule`` is the rule the judge's drafts are held to -- see
+    :data:`AMOUNT_RULES` -- and it is a parameter here for the same reason it is
+    one on :func:`run_loaded_case`: only the judge is called, so a replay is
+    exactly where a different rule has something to say, and a switch named on
+    the command line that did not reach this path would be a switch that was
+    accepted and not applied.
     """
     if judge_votes < 1:
         raise PipelineError("judge_votes must be at least 1, got {0}".format(judge_votes))
+    if amount_rule not in AMOUNT_RULES:
+        raise PipelineError(
+            "no amount rule called {0!r}; the rules are {1}".format(
+                amount_rule, ", ".join(AMOUNT_RULES)
+            )
+        )
     if verify_drafts and judge_votes < 2:
         raise PipelineError(
             "verify_drafts needs a judge vote of at least 2, got {0}: the verifier "
@@ -3563,6 +3712,7 @@ def replay_case(
             transcript=transcript,
             deadline=deadline,
             votes=judge_votes,
+            amount_rule=amount_rule,
             events_log=events_log,
             case_no=replay.case_no,
             verify=verify_drafts,

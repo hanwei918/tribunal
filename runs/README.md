@@ -9,6 +9,7 @@ This directory is the benchmark's own output. Every subdirectory named in the ta
 | Directory | What it is | Read it as |
 |---|---|---|
 | `ablation/` | An ablated run — `ablation/<name>/<model>/`, and `codex/ablation/<name>/<model>/` under the second set's root. **Both ablations are committed here**: the `admissibility` one over both development sets (`35eead2`, 2026-09-29) and the `clause-notes` one over both (`89c616e`, 2026-09-29). The directory has its own section below. | A different measurement from the headline: the `admissibility` briefs had that object removed from every artifact and the `clause-notes` briefs had every clause's drafting notes removed, so a figure here answers a question about a brief the pipeline does not otherwise build. Never merged into a model's run directory. |
+| `amount-rule/` | The **measurement** of the amount read-off rule — `runs/amount-rule/report.md` and `runs/amount-rule/amount-rule.json` — and, one level down, where a **run** judged by a non-default rule goes: `amount-rule/<rule>/<model>/`, and `codex/amount-rule/<rule>/<model>/` under the second set's root. It has its own section below. | The measurement is **not a run and not a score**: it re-reduces the judge drafts three recorded runs already hold, under two rules, and makes no model call. A run under `amount-rule/signed/` is a different measurement from the headline, judged by a rule the headline was not. |
 | `baselines/` | The baselines scored off the recorded runs — `python3 -m eval.baselines --set all`. Two files, `report.md` and `baselines.json`, and it has its own section below. | A comparison that says what the headline figure is worth. Not a measurement of the model, and not a generalisation figure. |
 | `codex/` | The second development set's runs. `codex/deepseek-deepseek-flash/` holds the fifteen-case set's own run, keyed by `eval/answers/codex/ground_truth.json`; `codex/deepseek-v4.1-flash/` holds that probe's event log alone. | A measurement of the fifteen cases, never of the corpus. Never merged into `deepseek-deepseek-flash/`. |
 | `deepseek-v4.1-flash/` | A probe of a different model — case 105 at `b25b743`, which stopped after one of the two cases it requested — committed as it was left. | Not a measurement of the submission's model, and no corpus figure is computed from it. |
@@ -300,6 +301,81 @@ sampling variation.
 Nothing in this directory may be merged into a model's run directory for the
 reason `external/` may not: an ablated result is a different measurement, and a
 reader finding it beside an unablated one would read it as that run's.
+
+## `amount-rule/` — where a run judged by another rule goes, and the measurement of the rule
+
+`amount-rule/<rule>/<model>/` holds the output of
+
+    python3 -m eval.run_benchmark --amount-rule signed
+    python3 -m eval.development_sets --set wild --amount-rule signed
+
+one directory per rule per model, under the runs root the run was given — so the
+second set's go to `runs/codex/amount-rule/<rule>/<model>/`. The files are the
+ones any run directory carries; what changes is the rule a draft's amount is held
+to. `amount-rule/` itself holds the **measurement** of that rule, which is not a
+run at all.
+
+**An amount rule is how a draft's amount is read off the brief's money block.**
+`published` is the default and what every run so far was judged by: a figure the
+block publishes, or the **sum** of two or three of them. `signed` is the same
+rule with a sign on every term after the first — a difference of two or three
+published figures, leading term positive, result above zero. It exists because
+two of the held-out set's cases produced no ruling when the drafts computed the
+right refund and the published rule could not read it: on an upfront-quoted fare
+the remedy POL-RD-11(a) gives is a difference by construction.
+
+**The switch is off, and off is byte-identical.** A run that names `published`
+writes the same bytes it wrote before the switch existed, and `published` is not
+counted as one of the switches that change what a run measures. `--amount-rule
+signed` is refused together with `--ablate`, `--precedents`, `--policy-version
+N>=2`, `--report`, `--compare`, `--replay-check`, `--verify-recorded-drafts` and
+`--external`, each because it reads or produces a run judged by the published
+rule. `--replay-advocates` is deliberately **not** refused: a replay calls only
+the judge, and the rule is what a draft's amount is held to, so it is a request
+the pipeline can honour rather than one it would drop.
+
+**It is never written into a model's run directory.** The destination is chosen
+under the runs root's `amount-rule/<rule>/` directory and then checked in code
+before anything is written, against *that rule's* directory rather than against
+`amount-rule/*`, so a signed run cannot land in the published one's.
+
+**The measurement is committed, and it is not a run.**
+
+    python3 -m eval.amount_rule
+
+re-reduces the drafts three recorded runs already hold — the corpus's 29 cases,
+the second set's 15 and the held-out set's 64 — under both rules, through the
+same reconstruction `eval/verify_drafts.py` and `eval/baselines.py` use, and
+writes the two files below. **No model call is made.** All 108 panels were
+rebuilt, no case was refused, and the published reading reproduces the ruling
+each run itself published for every one of them.
+
+| File | What it holds |
+|---|---|
+| `report.md` | The per-case table for all three runs — the published reading, the signed reading and the key, with the direction each case moved — then the movement counts, then every case the signed rule changes or newly decides wrongly. |
+| `amount-rule.json` | The same figures as parsed values: per set the cases read, the refused cases with their reasons, the movement counts, the cases with no cached result, and the cases whose published reading is not the run's own. |
+
+| | |
+|---|---|
+| cases read | **108** (29 + 15 + 64), 0 refused |
+| matching both ways | **98** |
+| matching → missing | **0** |
+| missing → matching | **1** — 533 |
+| missing both ways | **9** |
+| a safe outcome turned into a monetary ruling that differs from the key | **1** — 501 |
+
+**The default rule is unchanged, and nothing here adopts the signed one.** The
+figures, the cases and the recommendation are in
+`docs/notes/2026-09-30-the-amount-read-off-rule.md`. One consequence is recorded
+there in full: the owner's check `git diff --quiet freeze-2026-09-30 -- tribunal
+prompts policy` no longer holds, because the second rule lives in
+`tribunal/pipeline.py`. The held-out run is committed as produced and the switch
+is off, so the 55/64 figure is what it was — but `wild-v1` is run once and cannot
+be run again to price the change.
+
+The measurement is refused a destination that is a run directory or lies inside
+one, for the reason `external/` is: a reader finding these figures beside a run's
+own would read them as that run's.
 
 ## `precedents/` — where a run whose judge was shown earlier closures goes
 

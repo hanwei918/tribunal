@@ -766,6 +766,23 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--amount-rule",
+        choices=list(run_benchmark.pipeline.AMOUNT_RULES),
+        default=run_benchmark.pipeline.DEFAULT_AMOUNT_RULE,
+        metavar="RULE",
+        help=(
+            "which rule reads a draft's amount off the brief's money block: "
+            "published (the default) accepts a published figure or the sum of two "
+            "or three of them, and signed also accepts a signed combination of "
+            "two or three with the leading term positive and the result above "
+            "zero. Off by default -- signed is measured, not adopted. The run "
+            "writes to runs/amount-rule/<rule>/<model>/ -- under the set's own "
+            "root, so the second set's go to "
+            "runs/codex/amount-rule/<rule>/<model>/ -- and never into a run "
+            "directory holding a result judged by another rule"
+        ),
+    )
+    parser.add_argument(
         "--verify-recorded-drafts",
         type=Path,
         default=None,
@@ -845,10 +862,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         # beside either of them as well as one named alone.
         if args.ablate is not None or args.precedents:
             print(
-                "FATAL: at most one of --ablate, --precedents and "
-                "--policy-version N>=2 may be given per invocation: each changes "
-                "what the agents are given, and a run with two of them on "
-                "measures neither",
+                "FATAL: at most one of --ablate, --precedents, "
+                "--policy-version N>=2 and --amount-rule may be given per "
+                "invocation: each changes what the run measures, and a run with "
+                "two of them on measures neither",
                 file=sys.stderr,
             )
             return 1
@@ -865,6 +882,47 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                     file=sys.stderr,
                 )
                 return 1
+
+    if args.amount_rule != run_benchmark.pipeline.DEFAULT_AMOUNT_RULE:
+        # The amount rule is the fourth switch that changes what a run measures,
+        # and it follows the rule the other three follow. It changes what a
+        # draft's amount is held to rather than what an agent is given, so a mode
+        # that reads or reports a run judged by the published rule cannot be
+        # combined with it: naming the switch beside one would look as though it
+        # had been applied. This block runs last, so it is the one that catches a
+        # rule named beside any of the other switches as well as one alone.
+        if (
+            args.ablate is not None
+            or args.precedents
+            or args.policy_version != run_benchmark.DEFAULT_POLICY_VERSION
+        ):
+            print(
+                "FATAL: at most one of --ablate, --precedents, "
+                "--policy-version N>=2 and --amount-rule may be given per "
+                "invocation: each changes what the run measures, and a run with "
+                "two of them on measures neither",
+                file=sys.stderr,
+            )
+            return 1
+        for present, name in (
+            (args.report, "--report"),
+            (args.replay_check is not None, "--replay-check"),
+            (args.verify_recorded_drafts is not None, "--verify-recorded-drafts"),
+        ):
+            if present:
+                print(
+                    "FATAL: --amount-rule names the rule a draft's amount is read "
+                    "off the brief's money block by and takes no {0}".format(name),
+                    file=sys.stderr,
+                )
+                return 1
+        # ``--replay-advocates`` is deliberately not in that list. A replay
+        # calls only the judge, and the rule is passed down the replay path like
+        # every other path that judges a panel, so naming it there is a request
+        # this pipeline can honour rather than one it would silently drop. The
+        # other three read a run, or reuse recorded drafts, without judging
+        # anything: the rule would not be applied and would look as though it
+        # had been.
 
     if args.report:
         if args.replay_advocates is not None or args.replay_check is not None:
@@ -1003,6 +1061,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                     run_benchmark.PRECEDENTS_STORE if args.precedents else None
                 ),
                 policy_version=args.policy_version,
+                amount_rule=args.amount_rule,
             )
         except run_benchmark.llm.ModelNotProvisionedError as exc:
             print("FATAL: {0}".format(exc), file=sys.stderr)

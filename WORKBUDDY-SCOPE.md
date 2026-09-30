@@ -358,6 +358,55 @@ generalisation figure the submission reports.
   hash to
   `8761344077eb9ef2a238c047a18b71b0f6b8f1855d1baeb63ab0ba89e1c9befb`.
 
+## The amount read-off rule (amended 2026-09-30)
+
+An amount in a draft is read off a brief when it is a figure the brief's money
+block publishes, or the **sum** of two or three of them. That rule is why two
+cases of the held-out run produced no ruling at all: 517 and 533 each drafted the
+key's amount as a **difference** — `51.30 - 29.00 - 3.00` for 533 — so
+`DRAFT_AMOUNT_NOT_READ_OFF` rejected every draft and the panel had nothing left to
+reduce.
+
+- **The second rule.** `--amount-rule signed` accepts a published figure or a
+  **signed** combination of two or three: the leading term positive, the result
+  above zero, two-term differences tried before three-term combinations. It is a
+  second reading of the same drafts, not a second policy. `AMOUNT_RULE_PUBLISHED`
+  is the default; `AMOUNT_RULE_SIGNED` is opt-in and `AMOUNT_RULES` names both.
+- **Off is byte-identical.** A run without the switch writes exactly what it wrote
+  before, file for file. The rule reaches the artifacts only as a sixth key of the
+  configuration document, and only when it is not the default.
+- **Where a signed run goes.** `runs/amount-rule/<rule>/<model-slug>/`, by
+  `run_benchmark.amount_rule_run_directory`, guarded by
+  `assert_amount_rule_destination`, which checks the destination against *this
+  rule's* root rather than against `amount-rule/*` so that a signed run cannot land
+  in the published one's. The three directories that hold the reported figures —
+  `runs/<model-slug>/`, `runs/codex/<model-slug>/` and `runs/wild/<model-slug>/` —
+  are refused, as they are for the ablation, the precedent block and a later policy
+  version. `--compare`, `--replay-check`, `--verify-recorded-drafts` and
+  `--external` are refused beside the switch in code, and it is mutually exclusive
+  with `--ablate`, `--precedents` and `--policy-version N>=2`.
+- **The measurement.** `eval/amount_rule.py` re-reduces each run's **recorded**
+  drafts under both rules with no model call, reusing the assembly
+  `eval/verify_drafts.py` and `eval/baselines.py` already use. Its output is
+  committed at `runs/amount-rule/report.md` and `runs/amount-rule/amount-rule.json`,
+  and `runs/README.md` describes the directory. Over the 108 cases read across the
+  three runs, 0 refused: 98 match the key under both rules, **no case** is turned
+  from a match into a miss, 533 is turned from a miss into a match, and **501 is a
+  safe outcome turned into a monetary ruling that differs from the key** —
+  `ESCALATE` under the published rule, `PARTIAL_REFUND 8.5` under the signed one,
+  against a key of `PARTIAL_REFUND 14.5`.
+- **What the freeze check now says.** The owner's check
+  `git diff --quiet freeze-2026-09-30 -- tribunal prompts policy` no longer comes
+  back clean, because the second rule lives in `tribunal/pipeline.py`. The tag is
+  unchanged and the run recorded from it stands; what has moved is the working tree
+  beneath it. `prompts/` and `policy/` are untouched, and the default path is
+  byte-identical by test, so a run made from the tree and the run made from the tag
+  agree on every case the default rule reaches.
+- **The default is not changed.** `docs/notes/2026-09-30-the-amount-read-off-rule.md`
+  gives the table and the recommendation: adopt `signed` in a later policy version,
+  but close the 501 shape first and then re-measure on a fresh held-out set. Nothing
+  in this repository adopts it yet.
+
 ## Language rule (standing)
 
 Every document in this repository is written in English, and every prompt pasted into WorkBuddy is written in English. No Chinese characters in any tracked text file.

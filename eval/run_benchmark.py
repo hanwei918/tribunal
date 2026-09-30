@@ -222,6 +222,9 @@ __all__ = [
     "policy_v_directory_name",
     "policy_v_run_directory",
     "assert_policy_v_destination",
+    "AMOUNT_RULE_DIRNAME",
+    "amount_rule_run_directory",
+    "assert_amount_rule_destination",
     "case_cache_path",
     "transcript_path",
     "metadata_path",
@@ -687,6 +690,58 @@ def assert_policy_v_destination(
         raise BenchmarkError(
             "a run at policy version {0} may only be written under {1}, and this "
             "one would go to {2}".format(policy_version, root, resolved)
+        )
+    return Path(run_dir)
+
+
+# Where a run judged by a non-default amount rule lives, one level under the runs
+# root and named for the rule. The same rule the ablation, the precedent block
+# and a later policy version follow, for the same reason: a run that read the
+# drafts' amounts off by a different rule is a different measurement from the
+# headline, and it must not be able to land where the headline figure lives.
+# Under the second set's root the rule gives
+# ``runs/codex/amount-rule/<rule>/<model-slug>/``.
+AMOUNT_RULE_DIRNAME = "amount-rule"
+
+
+def amount_rule_run_directory(runs_dir: Path, amount_rule: str, model: str) -> Path:
+    """Where a run under one amount rule lives: ``runs/amount-rule/<rule>/<model-slug>/``.
+
+    The rule is a path component and not a flag, so two rules are two
+    directories and neither can be mistaken for the other's results.
+    """
+    return (
+        Path(runs_dir) / AMOUNT_RULE_DIRNAME / str(amount_rule) / model_slug(model)
+    )
+
+
+def assert_amount_rule_destination(
+    run_dir: Path, runs_dir: Path, amount_rule: str, model: str
+) -> Path:
+    """Refuse an amount-rule run's directory that is not under that rule's root.
+
+    ``runs/<model-slug>/``, ``runs/codex/<model-slug>/`` and
+    ``runs/wild/<model-slug>/`` hold the figures the submission reports, and a
+    run judged by another amount rule is a different measurement: one written
+    there would change what that directory means while leaving every file a
+    reader looks at apparently intact. The destination is therefore checked
+    rather than merely chosen, so a name that resolved outside
+    ``<runs root>/amount-rule/<rule>/`` cannot put such a result where the
+    headline figure lives. It is checked against *this rule's* directory rather
+    than against ``amount-rule/*``, so a signed run cannot land in the published
+    one's.
+
+    Returns the directory unchanged when it is where it should be.
+    """
+    resolved = Path(run_dir).resolve()
+    assert_not_a_headline_directory(resolved, runs_dir, model)
+    root = (
+        Path(runs_dir) / AMOUNT_RULE_DIRNAME / str(amount_rule)
+    ).resolve()
+    if not resolved.is_relative_to(root):
+        raise BenchmarkError(
+            "a run under the {0!r} amount rule may only be written under {1}, and "
+            "this one would go to {2}".format(amount_rule, root, resolved)
         )
     return Path(run_dir)
 
@@ -1925,6 +1980,7 @@ def run_one_case(
     ablate: Optional[str] = None,
     precedents: Optional[Any] = None,
     policy_version: int = policy_versions.BASE_VERSION,
+    amount_rule: str = pipeline.DEFAULT_AMOUNT_RULE,
     configuration: Optional[Mapping[str, Any]] = None,
     events_log: Optional[Any] = None,
 ) -> Tuple[CaseOutcome, Optional[Dict[str, Any]], Optional[str]]:
@@ -2013,6 +2069,11 @@ def run_one_case(
                 events_log=events_log,
                 prompts_dir=prompts_dir,
                 verify_drafts=verify_drafts,
+                # Only the judge is called here, so the rule is passed on rather
+                # than dropped: a switch accepted on the command line and not
+                # applied on this path would be a run whose directory names a
+                # rule its drafts were not held to.
+                amount_rule=amount_rule,
             )
         elif loaded_case is None:
             result = pipeline.run_case(
@@ -2027,6 +2088,7 @@ def run_one_case(
                 ablate=ablate,
                 precedents=precedents,
                 policy_version=policy_version,
+                amount_rule=amount_rule,
             )
         else:
             # A converted external case, already loaded through its own explicit
@@ -2043,6 +2105,7 @@ def run_one_case(
                 ablate=ablate,
                 precedents=precedents,
                 policy_version=policy_version,
+                amount_rule=amount_rule,
             )
     except (llm.MissingAPIKeyError, llm.ModelNotProvisionedError) as exc:
         # Not provisioned and no credential are the same failure for every
@@ -2214,6 +2277,15 @@ def run_one_case(
         # ids travel with the result because a reader of one case file has to be
         # able to see which earlier closures its judge was reading.
         document["precedents_shown"] = list(result.precedents_shown)
+    if amount_rule != pipeline.DEFAULT_AMOUNT_RULE:
+        # Present only when the rule is not the published one, on the same rule
+        # the verifier's and the library's blocks follow: a case file produced
+        # with the switch off is the file it always was. The rule travels with
+        # the result because a reader of one case file has to be able to see
+        # what its amounts were held to without the directory around it -- and
+        # because the abstention text a rejected draft carries names the rule it
+        # was rejected under, which is otherwise a claim the file cannot support.
+        document["amount_rule"] = amount_rule
     return (
         CaseOutcome(
             case_no=case_no,
@@ -2611,6 +2683,7 @@ def run_benchmark(
     ablation: Optional[str] = None,
     precedents: Optional[Any] = None,
     policy_version: int = policy_versions.BASE_VERSION,
+    amount_rule: str = pipeline.DEFAULT_AMOUNT_RULE,
     client_factory: Optional[Callable[[Callable[[Dict[str, Any]], None]], Any]] = None,
     key: Optional[Mapping[int, grade.Ruling]] = None,
     git_runner: Optional[Callable[[Sequence[str]], Optional[str]]] = None,
@@ -2706,23 +2779,33 @@ def run_benchmark(
             "advocates, which were given the brief without the ablation, and the "
             "judge would then be handed an unablated brief"
         )
+    if amount_rule not in pipeline.AMOUNT_RULES:
+        # Refused here as well as at the command line, so a caller driving this
+        # function directly is told which rules exist rather than getting a
+        # directory named after a typo.
+        raise BenchmarkError(
+            "no amount rule called {0!r}; the rules are {1}".format(
+                amount_rule, ", ".join(pipeline.AMOUNT_RULES)
+            )
+        )
     switches_on = [
         name
         for name, on in (
             ("--ablate", ablation is not None),
             ("--precedents", precedents is not None),
             ("--policy-version N>=2", policy_version != policy_versions.BASE_VERSION),
+            ("--amount-rule", amount_rule != pipeline.DEFAULT_AMOUNT_RULE),
         )
         if on
     ]
     if len(switches_on) > 1:
-        # At most one of the switches that change what an agent is given may be
-        # on per invocation. A run with two of them on measures neither, and the
+        # At most one of the switches that change what a run measures may be on
+        # per invocation. A run with two of them on measures neither, and the
         # directory it wrote to would name only one of them.
         raise BenchmarkError(
-            "at most one of --ablate, --precedents and --policy-version N>=2 may "
-            "be given per invocation: each changes what the agents are given, and "
-            "a run with two of them on measures neither"
+            "at most one of --ablate, --precedents, --policy-version N>=2 and "
+            "--amount-rule may be given per invocation: each changes what the run "
+            "measures, and a run with two of them on measures neither"
         )
     if precedents is not None and replay_dir is not None:
         # A replay reuses a recorded run's advocates, and the judge of the run
@@ -2819,8 +2902,9 @@ def run_benchmark(
     # was given. That root is ``runs/`` for the corpus and ``runs/codex/`` for
     # the second set, so the same rule puts an ablated corpus run at
     # ``runs/ablation/<name>/<model-slug>/``, a precedents corpus run at
-    # ``runs/precedents/<model-slug>/`` and a version-N corpus run at
-    # ``runs/policy-v<N>/<model-slug>/`` -- and the same three under
+    # ``runs/precedents/<model-slug>/``, a version-N corpus run at
+    # ``runs/policy-v<N>/<model-slug>/`` and a signed-rule corpus run at
+    # ``runs/amount-rule/<rule>/<model-slug>/`` -- and the same four under
     # ``runs/codex/`` for the second set. None of them can land where an
     # unswitched result lives, which is what makes the measurements
     # distinguishable by their paths and not only by their contents. At most one
@@ -2839,6 +2923,13 @@ def run_benchmark(
             policy_v_run_directory(runs_dir, policy_version, model),
             runs_dir,
             policy_version,
+            model,
+        )
+    elif amount_rule != pipeline.DEFAULT_AMOUNT_RULE:
+        run_dir = assert_amount_rule_destination(
+            amount_rule_run_directory(runs_dir, amount_rule, model),
+            runs_dir,
+            amount_rule,
             model,
         )
     else:
@@ -2884,6 +2975,13 @@ def run_benchmark(
         precedents=None if library is None else library.configuration(),
         policy_version=policy_version,
     )
+    if amount_rule != pipeline.DEFAULT_AMOUNT_RULE:
+        # Added rather than declared in :func:`configuration_document`, so a run
+        # with the switch off writes the configuration object it always wrote.
+        # The five declared fields are written at their defaults whether or not
+        # a switch is on; this one is a sixth only where it is not the default,
+        # which is what keeps the plain run's artifacts byte-identical.
+        configuration = dict(configuration, amount_rule=amount_rule)
 
     # The invocation's own id, and the append-only log every case appends to.
     # The id is written on every event line and on the invocation's metadata, so
@@ -2927,6 +3025,14 @@ def run_benchmark(
         **(
             {"policy_version": policy_version}
             if policy_version != policy_versions.BASE_VERSION
+            else {}
+        ),
+        # And the amount rule, on the same rule once more: named on the
+        # invocation's own line only when it is not the published one, so the
+        # line a plain run appends is the line it always appended.
+        **(
+            {"amount_rule": amount_rule}
+            if amount_rule != pipeline.DEFAULT_AMOUNT_RULE
             else {}
         ),
     )
@@ -3163,6 +3269,7 @@ def run_benchmark(
                 ablate=ablation,
                 precedents=library,
                 policy_version=policy_version,
+                amount_rule=amount_rule,
                 configuration=configuration,
                 events_log=events_log,
             )
@@ -5137,6 +5244,21 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             "is recorded in every artifact the run writes"
         ),
     )
+    parser.add_argument(
+        "--amount-rule",
+        choices=list(pipeline.AMOUNT_RULES),
+        default=pipeline.DEFAULT_AMOUNT_RULE,
+        metavar="RULE",
+        help=(
+            "which rule reads a draft's amount off the brief's money block: "
+            "published (the default) accepts a published figure or the sum of two "
+            "or three of them, and signed also accepts a signed combination of "
+            "two or three with the leading term positive and the result above "
+            "zero. Off by default -- signed is measured, not adopted. A run under "
+            "a non-default rule goes to runs/amount-rule/<rule>/<model>/, never "
+            "into runs/<model>/ where the submission's figure lives"
+        ),
+    )
     parser.add_argument("--runs-dir", type=Path, default=RUNS_DIR)
     parser.add_argument("--prompts-dir", type=Path, default=PROMPTS_DIR)
     args = parser.parse_args(argv)
@@ -5218,9 +5340,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         # version named beside --ablate or --precedents as well as one alone.
         if args.ablate is not None or args.precedents:
             parser.error(
-                "at most one of --ablate, --precedents and --policy-version N>=2 "
-                "may be given per invocation: each changes what the agents are "
-                "given, and a run with two of them on measures neither"
+                "at most one of --ablate, --precedents, --policy-version N>=2 "
+                "and --amount-rule may be given per invocation: each changes "
+                "what the run measures, and a run with two of them on measures "
+                "neither"
             )
         for present, name, why in (
             (args.compare, "--compare", "reads cached runs produced at version 1"),
@@ -5246,6 +5369,55 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 parser.error(
                     "--policy-version N>=2 briefs every case against the amended "
                     "policy and takes no {0}, which {1}".format(name, why)
+                )
+
+    if args.amount_rule != pipeline.DEFAULT_AMOUNT_RULE:
+        # The amount rule is the fourth switch that changes what a run measures,
+        # and it follows the rule the other three follow. It changes what a
+        # draft's amount is held to rather than what an agent is given, so every
+        # mode below reads or produces a run judged by the published rule, and
+        # naming another rule beside one would look as though it had been
+        # applied. This block comes last, so it is the one that catches a rule
+        # named beside any of the other switches as well as one named alone.
+        if (
+            args.ablate is not None
+            or args.precedents
+            or args.policy_version != DEFAULT_POLICY_VERSION
+        ):
+            parser.error(
+                "at most one of --ablate, --precedents, --policy-version N>=2 "
+                "and --amount-rule may be given per invocation: each changes "
+                "what the run measures, and a run with two of them on measures "
+                "neither"
+            )
+        for present, name, why in (
+            (
+                args.compare,
+                "--compare",
+                "reads cached runs judged by the published rule",
+            ),
+            (
+                args.replay_check is not None,
+                "--replay-check",
+                "reads a recorded run",
+            ),
+            (
+                args.verify_recorded_drafts is not None,
+                "--verify-recorded-drafts",
+                "reuses a recorded run's drafts and holds them to the published "
+                "rule",
+            ),
+            (
+                args.external is not None,
+                "--external",
+                "arbitrates a converted case in full, outside the corpus",
+            ),
+        ):
+            if present:
+                parser.error(
+                    "--amount-rule names the rule a draft's amount is read off "
+                    "the brief's money block by and takes no {0}, which "
+                    "{1}".format(name, why)
                 )
 
     if args.compare:
@@ -5413,6 +5585,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             ablation=args.ablate,
             precedents=(PRECEDENTS_STORE if args.precedents else None),
             policy_version=args.policy_version,
+            # The fourth switch, named here for the same reason the first three
+            # are: a flag this command line accepts is a flag it honours, and a
+            # parsed-but-dropped switch would run the published rule while its
+            # own help text said otherwise.
+            amount_rule=args.amount_rule,
         )
     except llm.ModelNotProvisionedError as exc:
         print("FATAL: {0}".format(exc), file=sys.stderr)
