@@ -779,6 +779,277 @@ UPFRONT_QUOTE_NOTE = (
     "computed. What is published is the quoted fare against the charged total and the ERP lines"
 )
 
+# POL-RD-11's remedy is published from the first policy version above the base.
+# Version 1 is the three policy files as committed and every run recorded so far
+# was made at it, so the figure is gated on the version rather than always
+# published: a version-1 brief stays byte-identical, which is what keeps every
+# recorded ``brief_sha256`` current.
+UPFRONT_REMEDY_VERSION = policy_versions.BASE_VERSION + 1
+
+# The remedy's own keys. None of them contains "refund": POL-RD-11(a) is an
+# overcharge the rider never lost rather than a fare handed back, and a reader
+# searching the block for a refund must not find this figure.
+UPFRONT_REMEDY_KEY = "pol_rd_11_remedy"
+UPFRONT_REMEDY_BEFORE_ROUNDING_KEY = "pol_rd_11_remedy_before_rounding"
+UPFRONT_REMEDY_AVAILABLE_KEY = "pol_rd_11_remedy_available"
+UPFRONT_REMEDY_REASON_KEY = "pol_rd_11_remedy_reason"
+PROPERLY_CHARGEABLE_KEY = "properly_chargeable"
+GANTRY_MATCH_RADIUS_KEY = "gantry_match_radius"
+
+NO_QUOTED_FARE_REASON = (
+    "fare_breakdown.quoted_fare_sgd is null, so POL-RD-11 has no quote to measure the charge "
+    "against and no remedy is published"
+)
+NO_CROSSING_REASON = (
+    "the trace's closest approach to this line is further away than the POL-RD-09(4) crossing "
+    "radius, so the line was not crossed"
+)
+
+# What the figure assumes, in the two things a reader has to know to use it: who
+# it assumes was at fault, and how narrow the reading of "crossed" is. The clause
+# says the remedy is limited to the charge over the quote "plus the pass-through
+# and statutory lines properly chargeable under POL-RD-09 - ERP and tolls
+# actually crossed, a properly chargeable airport surcharge, and
+# fare_breakdown.waiting_time_fee"; the note says what was counted and what was
+# left out.
+UPFRONT_REMEDY_NOTE = (
+    "pol_rd_11_remedy is POL-RD-11(a): charged_total less quoted_fare_sgd less the pass-through "
+    "and statutory lines properly chargeable under POL-RD-09 - each ERP line on the optimal "
+    "route that the trace crossed, the itemised airport surcharge where the trip originates at "
+    "an airport the clause names, and the waiting-time fee - floored at zero and rounded UP to "
+    "the nearest SGD 0.05. Two things it assumes. First, it assumes no rider-caused exoneration "
+    "under POL-RD-09(3): nothing here reads the chat_log, and a detour the rider asked for is "
+    "compensated under POL-RD-04 instead. Second, 'crossed' means the line is on the optimal "
+    "route and the trace passed it - the reading of every key on the 13 upfront cases, and "
+    "narrower than POL-RD-09(4)'s literal words, which match a gantry to the trace by "
+    "coordinates alone and would also count a line the trace merely came near. POL-RD-11(b) is "
+    "not added on top of (a): an off-route or phantom line is already excluded from "
+    "properly_chargeable, so counting it again would refund it twice."
+)
+
+
+def _gantry_match_radius(policy: Dict[str, Any]) -> Any:
+    """POL-RD-09(4)'s crossing radius, read out of the clause's own prose.
+
+    The clause states the radius only in prose -- "treating any fix within 250 m
+    of the gantry as a crossing" -- and it is not a structured field, which
+    ``NOT_STRUCTURED_MONEY`` says of it. POL-RD-11(a) counts the ERP and tolls
+    "actually crossed", so the remedy needs the radius the clause uses, and it
+    takes the route ``_money_prose_constants`` already takes for POL-RD-02's and
+    POL-RD-03's prose figures: read it from the loaded clause, and raise rather
+    than fall back when the line is not there exactly once.
+    """
+    clauses = {
+        clause.get("id"): clause
+        for clause in policy.get("clauses", []) or []
+        if isinstance(clause, dict)
+    }
+    rule = clauses.get(POL_RD_09, {}).get("rule", "")
+    found = re.findall(r"within\s+(\d+(?:\.\d+)?)\s*m of the gantry", rule)
+    if len(found) != 1:
+        raise loader.LoaderError(
+            "POL-RD-11(a) counts the ERP lines actually crossed, and POL-RD-09(4) states the "
+            "crossing radius only in prose: found {0} such lines".format(len(found))
+        )
+    return money._dec(found[0])
+
+
+def _surcharge_airports(policy: Dict[str, Any]) -> List[str]:
+    """The airports the fare model surcharges, read out of its ``applies_to``.
+
+    ``fare_model.airport_surcharge.applies_to`` names them in prose -- "Trips
+    ORIGINATING at Changi Airport or Seletar Airport" -- and the trip's own
+    pickup label is what says where the trip started. Reading the names out of
+    the loaded policy keeps them a policy fact rather than a literal here.
+    """
+    prose = ((policy.get("fare_model") or {}).get("airport_surcharge") or {}).get("applies_to")
+    if not isinstance(prose, str):
+        return []
+    return re.findall(r"\b([A-Z][A-Za-z]*(?: [A-Z][A-Za-z]*)* Airport)\b", prose)
+
+
+def _originates_at_an_airport(trip: Dict[str, Any], airports: List[str]) -> bool:
+    """Whether the trip's own pickup is at one of the airports the clause names.
+
+    The clause surcharges a trip that ORIGINATES at the airport, so the pickup
+    is the end that decides it. The record identifies the pickup by its label,
+    which is the field that says which terminal the rider was collected from.
+    """
+    pickup = trip.get("pickup")
+    label = pickup.get("label") if isinstance(pickup, dict) else None
+    if not isinstance(label, str):
+        return False
+    return any(name in label for name in airports)
+
+
+def _crossed_erp_line(
+    line: Dict[str, Any],
+    record: Optional[Dict[str, Any]],
+    raw: Any,
+    radius: Any,
+    fare_evidence_id: str,
+    gps_evidence_id: Optional[str],
+    policy_id: str,
+) -> Dict[str, Any]:
+    """One ERP line with POL-RD-09(4)'s crossing test applied to it.
+
+    ``line`` is the itemised line -- its amount and its route flag -- ``record``
+    the trace's own proximity record for it, and ``raw`` the fare's own line,
+    which is where the coordinates are. The geometry is the trace's and is never
+    recomputed; the test is the clause's, with the radius the caller read out of
+    the clause.
+
+    A line the trace never came near is a phantom line, and a line that is not on
+    the optimal route is off-route: neither is properly chargeable, and both are
+    published with ``crossed`` false so a reader can see which line was left out.
+    A line that carries no coordinates is the clause's third case -- the match is
+    undecidable on the record and the line is treated as matched -- and it is
+    published with the trace's own reason beside it.
+    """
+    entry: Dict[str, Any] = {
+        "gantry_name": line["gantry_name"],
+        "amount_sgd": _money(
+            money.payable_string(line["amount_sgd"]), fare_evidence_id, policy_id
+        ),
+        "on_optimal_route": _money(line["on_optimal_route"], fare_evidence_id, policy_id),
+    }
+
+    # The trace's record is the one the trace published, so each of its figures
+    # is a sourced ``{"value": ..., "evidence_id": ...}`` node rather than a bare
+    # number: the value is read out of the node and the node itself is left where
+    # it is, so nothing here is recomputed and nothing loses its source.
+    coordinates = record.get("coordinates") if isinstance(record, dict) else None
+    if isinstance(coordinates, dict):
+        coordinates = coordinates.get("value")
+    if coordinates is None and isinstance(raw, dict):
+        if raw.get("lat") is not None and raw.get("lng") is not None:
+            coordinates = {"lat": raw.get("lat"), "lng": raw.get("lng")}
+
+    if coordinates is None:
+        entry["crossed"] = True
+        entry["reason"] = NO_GANTRY_COORDINATES_REASON
+        return entry
+
+    nearest = record.get("nearest_fix") if isinstance(record, dict) else None
+    distance = nearest.get("distance_m") if isinstance(nearest, dict) else None
+    if isinstance(distance, dict):
+        distance = distance.get("value")
+    bracketed = record.get("gap_brackets_closest_approach") if isinstance(record, dict) else None
+    if isinstance(bracketed, dict):
+        bracketed = bracketed.get("value")
+    bracketed = bool(bracketed)
+    across = record.get("across_gap_distance_m") if isinstance(record, dict) else None
+    if isinstance(across, dict):
+        across = across.get("value")
+
+    if distance is not None:
+        entry["distance_m"] = _money(distance, gps_evidence_id or "", policy_id)
+    entry["gap_brackets_closest_approach"] = _money(bracketed, gps_evidence_id or "", policy_id)
+    if across is not None:
+        entry["across_gap_distance_m"] = _money(across, gps_evidence_id or "", policy_id)
+
+    crossed = (distance is not None and money._dec(distance) <= radius) or (
+        bracketed and across is not None and money._dec(across) <= radius
+    )
+    entry["crossed"] = crossed
+    if not crossed:
+        entry["reason"] = (
+            record.get("reason")
+            if isinstance(record, dict) and record.get("available") is False
+            else NO_CROSSING_REASON
+        )
+    return entry
+
+
+def _upfront_remedy(
+    fare_payload: Dict[str, Any],
+    fare_evidence_id: str,
+    trip_payload: Optional[Dict[str, Any]],
+    gps_evidence_id: Optional[str],
+    policy: Dict[str, Any],
+    policy_id: str,
+    erp: Dict[str, Any],
+    proximity: Optional[List[Dict[str, Any]]],
+) -> Dict[str, Any]:
+    """POL-RD-11(a): the charge over the quote, less the properly chargeable lines.
+
+    The clause limits the rider's remedies on an upfront-quoted trip to "(a) any
+    amount by which charged_total exceeds quoted_fare_sgd plus the pass-through
+    and statutory lines properly chargeable under POL-RD-09 - ERP and tolls
+    actually crossed, a properly chargeable airport surcharge, and
+    fare_breakdown.waiting_time_fee - which is refunded in full; and (b) a
+    pass-through correction under POL-RD-09 for off-route or phantom gantries".
+    This publishes (a) as a figure and (b) as the lines (a) already excluded, so
+    a ruling has both without a reader adding them together: the clause's own
+    note says limb (1) of POL-RD-09 exists to stop exactly that double count.
+
+    A null quote publishes no figure and the reason instead, because the clause
+    turns on the quote and there is nothing to measure the charge against.
+    """
+    quoted = fare_payload.get("quoted_fare_sgd")
+    if quoted is None:
+        return {
+            UPFRONT_REMEDY_AVAILABLE_KEY: False,
+            UPFRONT_REMEDY_REASON_KEY: NO_QUOTED_FARE_REASON,
+        }
+
+    trip = trip_payload if isinstance(trip_payload, dict) else {}
+    radius = _gantry_match_radius(policy)
+    raw_lines = [
+        line for line in (fare_payload.get("erp_gantries") or []) if isinstance(line, dict)
+    ]
+    records = list(proximity or [])
+
+    lines = [
+        _crossed_erp_line(
+            line,
+            records[index] if index < len(records) else None,
+            raw_lines[index] if index < len(raw_lines) else None,
+            radius,
+            fare_evidence_id,
+            gps_evidence_id,
+            policy_id,
+        )
+        for index, line in enumerate(erp["lines"])
+    ]
+    erp_total = money.ZERO
+    for entry in lines:
+        if entry["crossed"] and entry["on_optimal_route"]["value"]:
+            erp_total += money._dec(entry["amount_sgd"]["value"])
+
+    surcharge = (
+        money._dec(fare_payload.get("airport_surcharge"))
+        if _originates_at_an_airport(trip, _surcharge_airports(policy))
+        else money.ZERO
+    )
+    waiting = money._dec(fare_payload.get("waiting_time_fee"))
+
+    chargeable = erp_total + surcharge + waiting
+    before = money._dec(fare_payload.get("total_charged")) - money._dec(quoted) - chargeable
+    if before < money.ZERO:
+        before = money.ZERO
+
+    return {
+        UPFRONT_REMEDY_AVAILABLE_KEY: True,
+        UPFRONT_REMEDY_KEY: _money(
+            money.payable_string(money.round_up_005(before)), fare_evidence_id, policy_id
+        ),
+        UPFRONT_REMEDY_BEFORE_ROUNDING_KEY: _money(before, fare_evidence_id, policy_id),
+        PROPERLY_CHARGEABLE_KEY: {
+            "total": _money(money.payable_string(chargeable), fare_evidence_id, policy_id),
+            "erp_total": _money(money.payable_string(erp_total), fare_evidence_id, policy_id),
+            "airport_surcharge": _money(
+                money.payable_string(surcharge), fare_evidence_id, policy_id
+            ),
+            "waiting_time_fee": _money(money.payable_string(waiting), fare_evidence_id, policy_id),
+            "erp_lines": lines,
+        },
+        GANTRY_MATCH_RADIUS_KEY: {
+            "clause_id": POL_RD_09,
+            "distance_m": _money(radius, None, policy_id, clause_id=POL_RD_09, structured=False),
+        },
+    }
+
 # Prose-only policy figures the money arithmetic could reach for and this module
 # deliberately does not compute with, each named with the clause that states it.
 # Saying so is the point: a figure the policy states only in prose is not a
@@ -1148,8 +1419,16 @@ def _route_deviation_money(
     policy: Dict[str, Any],
     policy_id: str,
     prose: Dict[str, Any],
+    *,
+    policy_version: int = policy_versions.BASE_VERSION,
 ) -> Dict[str, Any]:
-    """The money arithmetic for a ROUTE_DEVIATION case, itemised."""
+    """The money arithmetic for a ROUTE_DEVIATION case, itemised.
+
+    ``policy_version`` decides whether the UPFRONT_QUOTE branch publishes
+    POL-RD-11's remedy as well as the quote comparison. It is keyword-only and
+    defaults to version 1, so every caller that does not pass it gets the block
+    it always got, byte for byte.
+    """
     trip = trip_payload if isinstance(trip_payload, dict) else {}
     constants = policy.get("fare_model") or {}
     fare_model = fare_payload.get("fare_model")
@@ -1189,6 +1468,23 @@ def _route_deviation_money(
             money.payable_string(comparison["difference"]), fare_evidence_id, policy_id
         )
         block["note"] = UPFRONT_QUOTE_NOTE
+        if policy_version >= UPFRONT_REMEDY_VERSION:
+            # The remedy's note is appended whether or not a figure was
+            # published: a null quote gives its own reason, and the note still
+            # says what the figure would have assumed.
+            block.update(
+                _upfront_remedy(
+                    fare_payload,
+                    fare_evidence_id,
+                    trip_payload,
+                    gps_evidence_id,
+                    policy,
+                    policy_id,
+                    erp,
+                    proximity,
+                )
+            )
+            block["note"] = UPFRONT_QUOTE_NOTE + " " + UPFRONT_REMEDY_NOTE
         return block
 
     if fare_model != METERED_MODEL:
@@ -1334,8 +1630,14 @@ def _money_block(
     gps_payload: Optional[Dict[str, Any]],
     gps_evidence_id: Optional[str],
     advisories: List[Dict[str, Any]],
+    *,
+    policy_version: int = policy_versions.BASE_VERSION,
 ) -> Optional[Dict[str, Any]]:
-    """The money block for one case, or ``None`` where there is no fare to compute on."""
+    """The money block for one case, or ``None`` where there is no fare to compute on.
+
+    ``policy_version`` travels through to the route-deviation arithmetic, which
+    publishes POL-RD-11's remedy only from version 2 on.
+    """
     if not isinstance(fare_payload, dict) or fare_evidence_id is None:
         return None
     if category == ROUTE_DEVIATION_CATEGORY:
@@ -1350,6 +1652,7 @@ def _money_block(
             category_policy,
             policy_id,
             _money_prose_constants(category_policy),
+            policy_version=policy_version,
         )
     return _no_show_money(
         fare_payload,
@@ -1694,6 +1997,7 @@ def build_brief_for_case(
         derived_trace if isinstance(derived_trace, dict) else gps_payload,
         gps_evidence_id,
         advisories,
+        policy_version=policy_version,
     )
     if money_block is not None:
         evidence = [
