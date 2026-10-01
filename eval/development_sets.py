@@ -20,6 +20,14 @@ the commit tagged ``freeze-2026-09-30``, and that single run is the only
 figure the submission reports as generalisation. Nothing here produces that
 figure.
 
+From 2026-10-01 those same 64 cases are registered a second time as
+``wild-dev``: the same cases and the same key, run into
+``runs/wild-dev/<model-slug>/`` and **runnable again**. Its answers were read so
+that the system could be changed to fix what the held-out run exposed, so it is
+development data from that date and no figure from it is a generalisation
+figure. It is in neither of the two tuples the combined figure and ``--set all``
+read.
+
 What this module is for
 -----------------------
 Running either set through the *same* runner the corpus goes through --
@@ -158,10 +166,45 @@ SEALED_SET = DevelopmentSet(
     sealed=True,
 )
 
+# ``wild-dev`` -- the same 64 cases and the same key as the held-out set, as
+# **development data**. From 2026-10-01 its answers may be read and the system
+# may be changed to fix what they exposed, so it needs a set that can be run
+# again. It is deliberately not a third development set and not a second sealed
+# one: it is in neither ``DEVELOPMENT_SETS`` (what ``--set all`` runs and what
+# the combined figure sums) nor ``ALL_SETS`` (what the recorded-drafts
+# measurement reads), and its runs go to ``runs/wild-dev/<model-slug>/`` so that
+# the single run under ``runs/wild/`` is never written again.
+#
+# It carries ``sealed=False``, and that is the whole of what makes re-running,
+# ``--force`` and the advocate replay allowed for it: every one of those is
+# refused by :func:`assert_not_sealed`, which refuses by name and for the one
+# set marked sealed.
+WILD_DEV = DevelopmentSet(
+    name="wild-dev",
+    cases=SEALED_SET.cases,
+    key_path=SEALED_SET.key_path,
+    runs_subdir="wild-dev",
+    case_root=SEALED_SET.case_root,
+    summary=(
+        "wild-v1 as development data: the same 64 cases and the same key as the "
+        "held-out set, whose answers were read on 2026-10-01; it may be run "
+        "again, and it is never combined with the development sets or with the "
+        "held-out set's single run"
+    ),
+)
+
 DEVELOPMENT_SETS: Tuple[DevelopmentSet, ...] = (CORPUS, SECOND_SET)
 SEALED_SETS: Tuple[DevelopmentSet, ...] = (SEALED_SET,)
+# The sets that exist to be run again. They are registered by name and are
+# deliberately outside the two tuples above: ``--set all``, the combined figure
+# and the recorded-drafts measurement each read one of those, and a set whose
+# cases are development data must not enter any of them by being named here.
+RERUN_SETS: Tuple[DevelopmentSet, ...] = (WILD_DEV,)
 ALL_SETS: Tuple[DevelopmentSet, ...] = DEVELOPMENT_SETS + SEALED_SETS
-BY_NAME = {development_set.name: development_set for development_set in ALL_SETS}
+BY_NAME = {
+    development_set.name: development_set
+    for development_set in ALL_SETS + RERUN_SETS
+}
 
 
 def named(name: str) -> DevelopmentSet:
@@ -205,6 +248,22 @@ SEALED_SET_CAVEAT = (
     "single run is the only generalisation figure the submission reports. It "
     "is absent from data/index.json and is graded against "
     "eval/answers/wild/ground_truth.json, which is neither development key."
+)
+
+# The re-runnable set is printed on its own for the same reason the held-out set
+# is, and with one more that only it has: its cases *are* the held-out set's
+# cases, so a reader who found its figure beside the held-out set's could take
+# the second reading of one set for a second measurement of it.
+RERUN_SET_CAVEAT = (
+    "The re-runnable set is development data. It holds the held-out set's own "
+    "64 cases and grades them against the held-out set's own key, whose answers "
+    "were read on 2026-10-01 so that the system could be changed to fix what "
+    "they exposed; a figure here is a reading of a set the system has now seen, "
+    "and it is not a generalisation figure. Its runs go to "
+    "runs/wild-dev/<model>/, which is not the directory holding the held-out "
+    "set's single run. Re-running it, --force and the advocate replay are all "
+    "allowed for it. It is never part of the combined figure and never part of "
+    "--set all."
 )
 
 
@@ -560,7 +619,7 @@ _SET_TABLE_HEADER = "  {0:<8} {1:<40} {2:>5}  {3:>9}  {4:>6} {5:>6} {6:>6} {7:>6
 
 
 def render_development_sets(model: str, runs_dir: Path = RUNS_DIR) -> str:
-    """The two sets separately, then combined, then the held-out set on its own.
+    """The sets separately, then combined, then each separate set on its own.
 
     Reads cached runs only. The corpus figure and the combined figure are
     different claims and the text says so. The combined figure sums two sets that
@@ -569,7 +628,8 @@ def render_development_sets(model: str, runs_dir: Path = RUNS_DIR) -> str:
     figure belongs to the held-out set, run once from the commit tagged
     ``freeze-2026-09-30``, and the held-out set is therefore printed in a section of
     its own -- never as a third row of the table above, and never inside the
-    combined line.
+    combined line. The re-runnable set is printed in a section of its own too,
+    because it holds the held-out set's own cases read as development data.
 
     The per-case block carries the same cost, provenance and explanation columns
     a run's own ``report.md`` carries, for every case of every set that has been
@@ -640,6 +700,33 @@ def render_development_sets(model: str, runs_dir: Path = RUNS_DIR) -> str:
     lines.append(SEALED_SET_CAVEAT)
     lines.extend(_render_case_facts_section(sealed_figures))
 
+    # The re-runnable set, printed on its own and for the same reason. It is not
+    # a third development set -- the combined line above is a sum over two sets
+    # that were drafted the same way -- and it is not the held-out set either:
+    # it is the held-out set's cases read as development data, in a run
+    # directory of its own, so the two figures are never added and never
+    # presented as one set measured twice.
+    rerun_figures = [
+        figures_for(development_set, model, runs_dir) for development_set in RERUN_SETS
+    ]
+    lines.append("")
+    lines.append(
+        "The re-runnable set, on its own, never in the combined figure and never "
+        "in the held-out set's section:"
+    )
+    lines.append("")
+    lines.append(_SET_TABLE_HEADER)
+    for item in rerun_figures:
+        lines.append(_render_row(item))
+    lines.append("")
+    lines.append("Currency, checked with the set's own loader and its own briefs:")
+    lines.append("")
+    for development_set in RERUN_SETS:
+        lines.append(currency_line(development_set, model, runs_dir))
+    lines.append("")
+    lines.append(RERUN_SET_CAVEAT)
+    lines.extend(_render_case_facts_section(rerun_figures))
+
     lines.append("")
     lines.append(DEVELOPMENT_DATA_CAVEAT)
     return "\n".join(lines)
@@ -657,7 +744,11 @@ def _build_parser() -> argparse.ArgumentParser:
             "cases under data/external/codex/, keyed separately from the corpus. "
             "The held-out set -- the 64 cases under data/external/wild/ -- is "
             "registered here as well, but it is run once: it is never part of "
-            "--set all and never part of the combined figure."
+            "--set all and never part of the combined figure. The re-runnable "
+            "set, wild-dev, holds those same 64 cases and that same key as "
+            "development data and may be run again, into runs/wild-dev/; it is "
+            "likewise never part of --set all and never part of the combined "
+            "figure."
         ),
     )
     parser.add_argument("--model", default=None, help="the model id; defaults to tribunal/model.py")

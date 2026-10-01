@@ -138,6 +138,83 @@ class SealedSetRegistryTests(unittest.TestCase):
             any(item.sealed for item in sets.DEVELOPMENT_SETS),
             "a development set is marked sealed",
         )
+        # ``wild-dev`` holds the held-out set's own cases as development data,
+        # and it is in **neither** tuple above. Being in ``RERUN_SETS`` is what
+        # makes it reachable by name while keeping it out of ``--set all``, the
+        # combined figure and the recorded-drafts measurement, each of which
+        # reads one of those tuples rather than the name table.
+        self.assertEqual(("wild-dev",), tuple(item.name for item in sets.RERUN_SETS))
+        self.assertIs(sets.WILD_DEV, sets.BY_NAME["wild-dev"])
+        self.assertNotIn("wild-dev", [item.name for item in sets.DEVELOPMENT_SETS])
+        self.assertNotIn("wild-dev", [item.name for item in sets.ALL_SETS])
+        self.assertNotIn("wild-dev", [item.name for item in sets.SEALED_SETS])
+        self.assertEqual(
+            {item.name for item in sets.ALL_SETS + sets.RERUN_SETS},
+            set(sets.BY_NAME),
+            "the name table is not exactly the registered sets",
+        )
+
+    def test_wild_dev_is_excluded_from_the_combined_figure_and_from_set_all(self):
+        """Registered and reachable by name, and outside both aggregated readings.
+
+        Two readings aggregate sets: :func:`sets.combined_figures` sums
+        ``DEVELOPMENT_SETS``, and ``--set all`` runs them. A set holding the
+        held-out set's own cases must be in neither, so the combined figure is
+        shown not reading a ``runs/wild-dev/`` directory that does hold a case,
+        and ``--set all`` is shown not running a case only that set holds.
+
+        ``LLMClient`` is patched to raise, so a ``--set all`` that did select
+        the set fails here instead of making a paid call.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            dev_dir = runs / "wild-dev" / run_benchmark.model_slug(MODEL)
+            dev_dir.mkdir(parents=True)
+            (dev_dir / "case-{0:05d}.json".format(SENTINEL_CASE)).write_text(
+                "{}", encoding="utf-8"
+            )
+
+            # The set's own reading sees the case...
+            self.assertEqual(
+                [SENTINEL_CASE], sets.cached_cases(sets.WILD_DEV, MODEL, runs)
+            )
+            # ...and the combined figure does not, because it reads only the two
+            # development sets, neither of which has been run in this root.
+            self.assertEqual((0, None), sets.combined_figures(MODEL, runs))
+
+            original = run_benchmark.llm.LLMClient
+
+            def refuse(*arguments, **keywords):
+                raise AssertionError(
+                    "--set all built a client, so it ran a case it must not"
+                )
+
+            run_benchmark.llm.LLMClient = refuse
+            try:
+                code, out, err = _run_cli(
+                    [
+                        "--set",
+                        "all",
+                        "--cases",
+                        str(SENTINEL_CASE),
+                        "--runs-dir",
+                        str(runs),
+                    ]
+                )
+            finally:
+                run_benchmark.llm.LLMClient = original
+            self.assertEqual(0, code, err)
+            self.assertEqual("", err)
+            # Case 501 is a held-out case and nothing else in the selection
+            # holds it, so no case ran and the scratch root is as it was.
+            self.assertEqual(
+                ["case-{0:05d}.json".format(SENTINEL_CASE)],
+                sorted(path.name for path in dev_dir.iterdir()),
+            )
+            self.assertFalse(
+                (runs / run_benchmark.SEALED_SET_RUNS_SUBDIR).exists(),
+                "--set all wrote into the held-out set's own run root",
+            )
 
     def test_its_cases_are_the_64_it_was_imported_with(self):
         self.assertEqual(64, len(SEALED.cases))
@@ -160,6 +237,17 @@ class SealedSetRegistryTests(unittest.TestCase):
                     set(other.cases) & set(SEALED.cases),
                     "the held-out set shares a case number with a development set",
                 )
+        # ``wild-dev`` is the one registered set that deliberately **shares** the
+        # held-out set's key and case root: it is those 64 cases read as
+        # development data, and grading them against anything else would grade a
+        # reading of one set against another's answers. What it must not share is
+        # the run directory, which is what leaves the single run under
+        # ``runs/wild/`` unread.
+        self.assertEqual(SEALED.key_path, sets.WILD_DEV.key_path)
+        self.assertEqual(SEALED.case_root, sets.WILD_DEV.case_root)
+        self.assertEqual(SEALED.cases, sets.WILD_DEV.cases)
+        self.assertNotEqual(SEALED.runs_subdir, sets.WILD_DEV.runs_subdir)
+        self.assertNotEqual(SEALED.run_dir(MODEL), sets.WILD_DEV.run_dir(MODEL))
 
     def test_its_runs_go_to_its_own_root(self):
         self.assertEqual(
