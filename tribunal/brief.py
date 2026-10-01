@@ -831,8 +831,9 @@ UPFRONT_REMEDY_NOTE = (
 def _gantry_match_radius(policy: Dict[str, Any]) -> Any:
     """POL-RD-09(4)'s crossing radius, read out of the clause's own prose.
 
-    The clause states the radius only in prose -- "treating any fix within 250 m
-    of the gantry as a crossing" -- and it is not a structured field, which
+    The clause states the radius only in prose -- it treats any fix within the
+    clause's radius of the gantry as a crossing -- and it is not a structured
+    field, which
     ``NOT_STRUCTURED_MONEY`` says of it. POL-RD-11(a) counts the ERP and tolls
     "actually crossed", so the remedy needs the radius the clause uses, and it
     takes the route ``_money_prose_constants`` already takes for POL-RD-02's and
