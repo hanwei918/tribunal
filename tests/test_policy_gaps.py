@@ -320,6 +320,34 @@ def build_run(tmp, *, cases=GAP_CASES, judge_votes=4, name="runs", transport=Non
     return runner.run_directory(Path(tmp) / name, MODEL), used
 
 
+# Two of the held-out set's own cases, for the tests that need a run whose path
+# says ``wild``. They are the held-out set's and not the corpus's, so a run of
+# them read as the corpus cannot find them: the manifest does not list them.
+WILD_CASES = (501, 506)
+
+
+def wild_shaped_run(tmp, *, cases=WILD_CASES, judge_votes=4):
+    """One run of the held-out set's cases, under ``runs/wild/<model-slug>/``.
+
+    Drafted through the scripted transport over the held-out set's own key and
+    its own loader, so what a test asks about is the run directory's *shape* and
+    not the answers a model gave. Nothing here reads the committed held-out run.
+    """
+    held_out = development_sets.named("wild")
+    runs_dir = Path(tmp) / "runs" / held_out.runs_subdir
+    rig.bench(
+        tmp,
+        cases=cases,
+        judge_votes=judge_votes,
+        runs_dir=runs_dir,
+        key=held_out.key(),
+        case_loader=held_out.load_case,
+        label=held_out.name,
+        key_path=held_out.key_path,
+    )
+    return runner.run_directory(runs_dir, MODEL)
+
+
 def write_report_file(path, report, store=None):
     """Write the report the way ``report`` writes it, and return the path."""
     path = Path(path)
@@ -951,6 +979,67 @@ class ReportTests(unittest.TestCase):
         run = gaps.read_run(CODEX_RUN)
         self.assertEqual("codex", run.set_name)
         self.assertEqual(set(development_sets.SECOND_SET.cases), set(run.cached_cases))
+
+    def test_a_wild_shaped_run_is_read_as_the_held_out_set(self):
+        """``runs/wild/<model>/`` is read with the held-out set's own loader.
+
+        The set is derived from the run directory's own path, and the held-out
+        set's cases are not in the corpus manifest: read as the corpus, every
+        brief fails to rebuild and the run analyses nothing at all. Read as
+        ``wild``, the cases it holds are the cases that ran.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = wild_shaped_run(tmp)
+            run = gaps.read_run(run_dir)
+            self.assertEqual("wild", run.set_name)
+            self.assertEqual(set(WILD_CASES), set(run.cached_cases))
+            self.assertEqual(
+                [],
+                [item.reason for item in run.not_analysed],
+                "the held-out set's cases did not rebuild against their own loader",
+            )
+
+    def test_a_run_that_analysed_nothing_says_so(self):
+        """A run with no analysed case never reads as a run with no gap.
+
+        The two are different findings and a reader must not be able to take one
+        for the other: "nothing could be analysed" says the report has no
+        reading at all, and "no case was left undecided" says the policy decided
+        everything it was asked. An entry whose brief digest cannot be checked is
+        the first, not the second.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            runs_dir = Path(tmp) / "runs"
+            run_dir = runner.run_directory(runs_dir, MODEL)
+            run_dir.mkdir(parents=True)
+            (run_dir / "case-00101.json").write_text("{}", encoding="utf-8")
+
+            report = gaps.build_report([run_dir], min_cases=2)
+            self.assertEqual(0, sum(len(run.readings) for run in report.runs))
+            rendered = gaps.render_report(report, {})
+            self.assertIn("nothing could be analysed", rendered)
+            self.assertNotIn("was left undecided", rendered)
+
+            out_dir = Path(tmp) / "policy-gaps"
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                status = gaps.main(
+                    [
+                        "report",
+                        "--run-dir", str(run_dir),
+                        "--runs-dir", str(runs_dir),
+                        "--model", MODEL,
+                        "--min-cases", "2",
+                        "--out-dir", str(out_dir),
+                    ]
+                )
+            self.assertEqual(0, status)
+            self.assertIn("nothing could be analysed", stdout.getvalue())
+            self.assertNotIn("was left undecided", stdout.getvalue())
+            self.assertIn(
+                "nothing could be analysed",
+                (out_dir / gaps.REPORT_MD).read_text(encoding="utf-8"),
+            )
 
 
 class ReportDestinationTests(unittest.TestCase):

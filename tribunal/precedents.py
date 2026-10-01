@@ -74,9 +74,30 @@ MAX_SUMMARY_CHARS = 300
 # The block the judge receives carries at most this many items.
 MAX_ITEMS = 3
 
-# The two development sets, named as the run directory path names them.
+# The sets a run directory can belong to, named as the run directory path names
+# them. The corpus is the exception and has no component of its own:
+# ``runs/<model-slug>/`` *is* its directory, so it is the answer for a path that
+# names no set at all.
 SET_CORPUS = "corpus"
 SET_CODEX = "codex"
+SET_WILD = "wild"
+SET_WILD_DEV = "wild-dev"
+
+# The directory under ``data/external/`` each set's cases are loaded from. Two
+# sets share one: ``wild-dev`` holds the held-out set's own 64 cases as
+# development data, so it is loaded from ``data/external/wild`` while a closure
+# of it records ``wild-dev`` as the set it came from. Naming the directory here
+# rather than deriving it from the set name is what lets the two disagree on
+# purpose.
+#
+# Nothing from ``eval/`` may be imported into this package, so this table and
+# the registry in ``eval.development_sets`` are two statements of one layout;
+# ``tests/test_precedents.py`` asserts that they agree.
+EXTERNAL_SET_DIRS: Dict[str, str] = {
+    SET_CODEX: SET_CODEX,
+    SET_WILD: SET_WILD,
+    SET_WILD_DEV: SET_WILD,
+}
 
 # The path component that identifies a runs root. The set is derived from the
 # run directory's own path rather than from the case file's ``development_set``,
@@ -319,34 +340,45 @@ def case_file_for(run_dir: Any, case_no: int) -> Path:
 
 
 def set_from_run_directory(run_dir: Any) -> str:
-    """Which development set a run directory belongs to, read off its path.
+    """Which set a run directory belongs to, read off its path.
 
-    The rule is one component: the part that follows the last ``runs`` segment.
-    ``runs/codex/<model>/`` is the second set wherever the runs root sits, and
-    everything else -- ``runs/<model>/``, ``runs/precedents/<model>/``,
-    ``runs/ablation/<name>/<model>/`` -- is the corpus. A schema-1 case file has
-    no ``development_set`` to consult, which is why the path decides.
+    The rule is one component: the part that follows the last ``runs`` segment,
+    where that component names a set this module knows. ``runs/codex/<model>/``
+    is the second development set, ``runs/wild/<model>/`` is the held-out set,
+    and ``runs/wild-dev/<model>/`` is the same 64 cases as development data.
+    Everything else -- ``runs/<model>/``, ``runs/precedents/<model>/``,
+    ``runs/ablation/<name>/<model>/``, ``runs/policy-v2/<model>/`` -- is the
+    corpus. A schema-1 case file has no ``development_set`` to consult, which is
+    why the path decides.
+
+    The corpus is the fallback rather than a name looked up, because its run
+    directory carries no component of its own. The two wild sets are told apart
+    here and share a case directory one level down, in
+    :data:`EXTERNAL_SET_DIRS`.
     """
     parts = Path(run_dir).resolve().parts
     indices = [index for index, part in enumerate(parts) if part == RUNS_DIRNAME]
     if not indices:
         return SET_CORPUS
     following = indices[-1] + 1
-    if following < len(parts) and parts[following] == SET_CODEX:
-        return SET_CODEX
+    if following < len(parts) and parts[following] in EXTERNAL_SET_DIRS:
+        return parts[following]
     return SET_CORPUS
 
 
 def load_case_for_run(run_dir: Any, case_no: int) -> Dict[str, Any]:
     """The case itself, through the loader its set uses.
 
-    The corpus is loaded from the manifest and the second set from its own
-    index, exactly as a run of that set loads it. Nothing here reads the run's
-    result: the case is what the brief is rebuilt from.
+    The corpus is loaded from the manifest and every other set from the external
+    directory it is filed under, exactly as a run of that set loads it -- and
+    ``wild-dev`` is filed under ``wild``'s, because it holds the held-out set's
+    own cases. Nothing here reads the run's result: the case is what the brief
+    is rebuilt from.
     """
-    if set_from_run_directory(run_dir) == SET_CODEX:
-        return loader.load_external_set_case(loader.EXTERNAL_DIR / SET_CODEX, case_no)
-    return loader.load_case(case_no)
+    external = EXTERNAL_SET_DIRS.get(set_from_run_directory(run_dir))
+    if external is None:
+        return loader.load_case(case_no)
+    return loader.load_external_set_case(loader.EXTERNAL_DIR / external, case_no)
 
 
 def repository_relative(path: Any) -> str:

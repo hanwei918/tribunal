@@ -944,6 +944,45 @@ def report_document(
     }
 
 
+# What a report says about a run it could not read at all, and about one it read
+# and found no gap in. The two are different findings and a reader must not be
+# able to take one for the other: "nothing could be analysed" says the report has
+# no reading of the run, and "no case was left undecided" says the policy decided
+# every case the report could read. A run whose briefs will not rebuild, whose
+# recorded digests have moved, or which holds no case file at all is the first.
+NOTHING_ANALYSED = "nothing could be analysed"
+NO_UNDECIDED_CASE = "no case in the given runs was left undecided"
+
+
+def analysed_cases(run: RunReading) -> int:
+    """How many of a run's cached cases this report could analyse.
+
+    A case is analysed when its brief rebuilds and its recorded digests have not
+    moved; every other case is in ``not_analysed`` with the reason, so the two
+    counts partition the cache. Zero is a finding about the report and not about
+    the policy, which is why it is reported in those words rather than as an
+    absence of gaps.
+    """
+    return len(run.cached_cases) - len(run.not_analysed)
+
+
+def _run_line(run: RunReading) -> str:
+    """One run's line in the report, in the words its own reading calls for."""
+    if analysed_cases(run) == 0:
+        return "- `{0}` ({1}) — {2} case(s) cached, and {3}".format(
+            _relative(run.run_dir),
+            run.set_name,
+            len(run.cached_cases),
+            NOTHING_ANALYSED,
+        )
+    return "- `{0}` ({1}) — {2} case(s) cached, {3} of them undecided".format(
+        _relative(run.run_dir),
+        run.set_name,
+        len(run.cached_cases),
+        len(run.readings),
+    )
+
+
 def render_report(
     report: PolicyGapReport, closures: Mapping[Tuple[str, int], Dict[str, Any]]
 ) -> str:
@@ -964,14 +1003,7 @@ def render_report(
         "",
     ]
     for run in report.runs:
-        lines.append(
-            "- `{0}` ({1}) — {2} case(s) cached, {3} of them undecided".format(
-                _relative(run.run_dir),
-                run.set_name,
-                len(run.cached_cases),
-                len(run.readings),
-            )
-        )
+        lines.append(_run_line(run))
     lines.append("")
     lines.append(
         "A cluster is flagged when it holds at least {0} case(s).".format(
@@ -994,10 +1026,16 @@ def render_report(
         lines.append("")
 
     if not report.clusters:
-        lines.append(
-            "**No case in the given runs was left undecided, so there is no "
-            "cluster to report.**"
-        )
+        if sum(analysed_cases(run) for run in report.runs) == 0:
+            lines.append(
+                "**Nothing could be analysed in the given runs, so there is no "
+                "cluster to report.**"
+            )
+        else:
+            lines.append(
+                "**No case in the given runs was left undecided, so there is no "
+                "cluster to report.**"
+            )
         lines.append("")
     for cluster in report.clusters:
         lines.extend(_cluster_lines(cluster, report, closures))
@@ -2284,16 +2322,29 @@ def _main_report(args: argparse.Namespace) -> int:
 
     print("Policy gaps — {0}".format(model))
     for run in report.runs:
-        print(
-            "  {0} ({1}): {2} cached, {3} undecided".format(
-                _relative(run.run_dir),
-                run.set_name,
-                len(run.cached_cases),
-                len(run.readings),
+        if analysed_cases(run) == 0:
+            print(
+                "  {0} ({1}): {2} cached, and {3}".format(
+                    _relative(run.run_dir),
+                    run.set_name,
+                    len(run.cached_cases),
+                    NOTHING_ANALYSED,
+                )
             )
-        )
+        else:
+            print(
+                "  {0} ({1}): {2} cached, {3} undecided".format(
+                    _relative(run.run_dir),
+                    run.set_name,
+                    len(run.cached_cases),
+                    len(run.readings),
+                )
+            )
     if not report.clusters:
-        print("  no case in the given runs was left undecided")
+        if sum(analysed_cases(run) for run in report.runs) == 0:
+            print("  {0} in the given runs".format(NOTHING_ANALYSED))
+        else:
+            print("  {0}".format(NO_UNDECIDED_CASE))
     for cluster in report.clusters:
         print(
             "  {0} level {1} {2} / {3}: {4} case(s){5}".format(

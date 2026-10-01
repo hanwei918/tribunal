@@ -67,6 +67,11 @@ OMIT = object()
 SOURCE_CASE = 102
 TARGET_CASE = 101
 
+# One of the held-out set's own cases, for the test that closes a case out of a
+# run directory shaped like ``runs/wild/<model-slug>/``. It is ROUTE_DEVIATION
+# and its policy carries ``POL-RD-02``, so the closure's clause resolves.
+WILD_CASE = 501
+
 # Real clause ids, so the matching is asked about ids the loaded policy holds.
 # ``POL-RD-02`` is kept for the target case by the claims built below, which is
 # what makes an entry resting on it a precedent for it.
@@ -449,6 +454,26 @@ class CliCloseTests(unittest.TestCase):
         rig.bench(tmp, cases=cases)
         return rig.run_dir_of(tmp)
 
+    def wild_run(self, tmp, cases=(WILD_CASE,)):
+        """A run of the held-out set's own cases, under ``runs/wild/<model>/``.
+
+        The set is the held-out set's, so the run directory's *shape* is what a
+        test asks about: the cases, the key and the loader are that set's own and
+        nothing here reads the committed held-out run.
+        """
+        held_out = development_sets.named("wild")
+        runs_dir = Path(tmp) / "runs" / held_out.runs_subdir
+        rig.bench(
+            tmp,
+            cases=cases,
+            runs_dir=runs_dir,
+            key=held_out.key(),
+            case_loader=held_out.load_case,
+            label=held_out.name,
+            key_path=held_out.key_path,
+        )
+        return runner.run_directory(runs_dir, MODEL)
+
     def close(self, tmp, run_dir, arguments=(), **options):
         command = [
             "--store",
@@ -525,6 +550,26 @@ class CliCloseTests(unittest.TestCase):
             code, _out, err = self.close(tmp, run_dir)
             self.assertEqual(1, code)
             self.assertIn("FATAL", err)
+
+    def test_a_wild_shaped_run_closes_against_the_held_out_sets_loader(self):
+        """``close`` on ``runs/wild/<model>/`` reads the case the run actually ran.
+
+        ``close`` derives the set from the run directory's own path and loads the
+        case through that set's loader. The held-out set's cases are not in the
+        corpus manifest, so a wild run read as the corpus cannot find its own
+        case and every closure of it fails with ``CaseNotFoundError``. The set
+        the closure records is the one the path names.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self.wild_run(tmp)
+            code, out, err = self.close(tmp, run_dir, case=WILD_CASE)
+            self.assertEqual(0, code, err)
+            self.assertIn("P-0001", out)
+
+            entries = precedents.read_entries(precedents.store_path(store_dir(tmp)))
+            self.assertEqual(1, len(entries))
+            self.assertEqual("wild", entries[0]["source"]["set"])
+            self.assertEqual(WILD_CASE, entries[0]["source"]["case_no"])
 
     def test_a_brief_that_does_not_rebuild_is_refused(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -1048,6 +1093,80 @@ class PipelinePrecedentsTests(unittest.TestCase):
 # --------------------------------------------------------------------------
 # Where a run with the switch on writes
 # --------------------------------------------------------------------------
+class SetFromRunDirectoryTests(unittest.TestCase):
+    """Which set a run directory belongs to, and where its cases are loaded from.
+
+    The set is derived from the run directory's own path, and nothing from
+    ``eval/`` may be imported into ``tribunal/``, so this module's table and the
+    set registry in ``eval.development_sets`` are two statements of one layout.
+    Both are asserted here, which is what keeps them from drifting: a set whose
+    cases are loaded from the wrong directory is a set whose briefs are rebuilt
+    from cases that did not run.
+    """
+
+    def test_every_registered_set_is_derived_from_its_own_component(self):
+        for development_set in development_sets.ALL_SETS + development_sets.RERUN_SETS:
+            if development_set.runs_subdir is None:
+                continue
+            with self.subTest(development_set=development_set.name):
+                run_dir = Path("/tmp/runs") / development_set.runs_subdir / "a-model"
+                self.assertEqual(
+                    development_set.name, precedents.set_from_run_directory(run_dir)
+                )
+
+    def test_every_registered_set_is_filed_under_the_directory_it_loads_from(self):
+        for development_set in development_sets.ALL_SETS + development_sets.RERUN_SETS:
+            if development_set.case_root is None:
+                continue
+            with self.subTest(development_set=development_set.name):
+                self.assertEqual(
+                    development_set.case_root,
+                    loader.EXTERNAL_DIR / precedents.EXTERNAL_SET_DIRS[development_set.name],
+                )
+
+    def test_the_corpus_is_the_fallback(self):
+        """A run directory naming no set is the corpus, whatever else it holds.
+
+        The corpus's own run directory carries no component of its own, and every
+        switched run lives under a directory of its own: read as a set, an
+        ablated run's cases would be loaded from the wrong place.
+        """
+        for run_dir in (
+            Path("/tmp/runs/a-model"),
+            Path("/tmp/runs/precedents/a-model"),
+            Path("/tmp/runs/ablation/no_precedents/a-model"),
+            Path("/tmp/runs/policy-v2/a-model"),
+            Path("/tmp/runs/amount-rule/signed/a-model"),
+        ):
+            with self.subTest(run_dir=str(run_dir)):
+                self.assertEqual(
+                    precedents.SET_CORPUS, precedents.set_from_run_directory(run_dir)
+                )
+
+    def test_the_two_wild_sets_are_told_apart_and_share_one_case_directory(self):
+        """``wild-dev`` records itself and loads the held-out set's own cases."""
+        wild = Path("/tmp/runs") / precedents.SET_WILD / "a-model"
+        wild_dev = Path("/tmp/runs") / precedents.SET_WILD_DEV / "a-model"
+        self.assertEqual(precedents.SET_WILD, precedents.set_from_run_directory(wild))
+        self.assertEqual(
+            precedents.SET_WILD_DEV, precedents.set_from_run_directory(wild_dev)
+        )
+        self.assertEqual(
+            precedents.EXTERNAL_SET_DIRS[precedents.SET_WILD],
+            precedents.EXTERNAL_SET_DIRS[precedents.SET_WILD_DEV],
+        )
+
+    def test_a_wild_shaped_run_loads_the_held_out_sets_own_case(self):
+        run_dir = Path("/tmp/runs") / precedents.SET_WILD / "a-model"
+        case = precedents.load_case_for_run(run_dir, WILD_CASE)
+        self.assertEqual(WILD_CASE, case["case_no"])
+
+    def test_a_corpus_shaped_run_loads_the_manifest(self):
+        run_dir = Path("/tmp/runs/a-model")
+        case = precedents.load_case_for_run(run_dir, TARGET_CASE)
+        self.assertEqual(TARGET_CASE, case["case_no"])
+
+
 class RunDestinationTests(unittest.TestCase):
     def test_the_precedents_directory_is_built_from_the_runs_root(self):
         runs = Path("/tmp/scratch/runs")
