@@ -32,7 +32,10 @@ transcript, the rebuilt brief, and the precedent library. It never reads
 which grades the before and after rulings against the frozen version-1 key and
 states in its own output that it does so; the key is loaded there and nowhere
 else. ``rerun``'s cost estimate reads one further field, ``tokens``, which is a
-cost and not an answer, and the queue asks for exactly that.
+cost and not an answer, and the queue asks for exactly that -- or, for a case
+the run recorded only a transcript for, the ``prompt_tokens`` and
+``completion_tokens`` of that transcript's entries, which is the same cost by
+another name and is likewise not an answer.
 
 The stores are parameters
 -------------------------
@@ -89,6 +92,43 @@ REJECTED_BY_CODE = "REJECTED_BY_CODE"
 RERUN_FILE = "rerun.json"
 DIFF_MD = "diff.md"
 DIFF_JSON = "diff.json"
+
+# A held-out set is run once and nothing is created under it again. Its cases
+# are development data from 2026-10-01, so this loop re-runs them as the set's
+# own re-runnable twin: a source under ``runs/wild/<model>/`` is re-run as
+# ``wild-dev``, into ``runs/wild-dev/policy-v<N>/<model>/``. The mapping is
+# named once, here, and every source in ``rerun.json`` records both halves of
+# it -- the set it was read as and the set it was run as -- because a reader of
+# the record has to be able to tell a re-run of development data from the
+# held-out measurement it was read from.
+RERUN_SET_FOR = {
+    development_sets.SEALED_SET.name: development_sets.WILD_DEV.name,
+}
+
+# The two names that are one set of 64 cases. A command given both would read
+# one set twice and count it twice, and no figure it printed could say which of
+# the two it came from.
+TWIN_SETS = (development_sets.SEALED_SET.name, development_sets.WILD_DEV.name)
+
+# How a re-run's cost estimate was arrived at, in the words the plan prints. A
+# case whose only record is its transcript is still costed, and the plan says
+# which of the two the number came from.
+TOKENS_FROM = {
+    "case_file": "from the case file",
+    "transcript": "from the transcript, which is all this run recorded",
+}
+
+# A diff at policy version 2 measures two things at once. Version 2 carries the
+# amendment *and* part B's POL-RD-11 upfront-quote remedy, which changes the
+# money block of every UPFRONT_QUOTE fare's brief, so a case that moved between
+# version 1 and version 2 may have moved for either reason.
+VERSION_TWO_NOTE = (
+    "**This diff is at policy version 2, which carries two changes.** Version 2 "
+    "holds this amendment and part B's POL-RD-11 upfront-quote remedy, which "
+    "changes the money block of every UPFRONT_QUOTE fare's brief. A case that "
+    "moved between version 1 and version 2 may have moved for either reason, so "
+    "these gains cannot be attributed to the amendment alone."
+)
 
 # --------------------------------------------------------------------------
 # The triggers
@@ -264,6 +304,34 @@ def assert_not_an_external_run_directory(run_dir: Path, runs_dir: Path) -> Path:
             )
         )
     return resolved
+
+
+def _set_of_run_directory(run_dir: Any) -> str:
+    """Which set a run directory belongs to, by the one rule that decides it."""
+    return precedents.set_from_run_directory(Path(run_dir))
+
+
+def _refuse_both_wild_sets(set_names: Sequence[str], *, command: str) -> None:
+    """Refuse a command that was given both of the two wild run directories.
+
+    ``wild`` is the held-out record -- made once and never written to again --
+    and ``wild-dev`` is those same 64 cases as development data. Reading both
+    would read one set twice and count it twice, and worse, no figure the
+    command printed could say which of the two it came from, which is the only
+    thing the two names exist to say. So the command is refused rather than
+    silently deduplicated: which run a number came from is not a detail a reader
+    can be left to guess.
+    """
+    names = set(set_names)
+    if all(name in names for name in TWIN_SETS):
+        raise PolicyGapError(
+            "this {0} was given both a `{1}` and a `{2}` run directory. They are "
+            "the same 64 cases under two names -- `{1}` is the held-out record "
+            "and `{2}` is those cases as development data -- so reading both "
+            "would read one set twice. Give one of them.".format(
+                command, TWIN_SETS[0], TWIN_SETS[1]
+            )
+        )
 
 
 # --------------------------------------------------------------------------
@@ -843,6 +911,9 @@ def build_report(
     """Read every run, drop the noise pairs, and cluster what is left."""
     if not run_dirs:
         raise PolicyGapError("at least one --run-dir is required")
+    _refuse_both_wild_sets(
+        (_set_of_run_directory(run_dir) for run_dir in run_dirs), command="report"
+    )
     runs = tuple(read_run(Path(run_dir), prompts_dir=prompts_dir) for run_dir in run_dirs)
 
     combined: Dict[int, Tuple[str, ...]] = {}
@@ -1705,6 +1776,59 @@ def recorded_tokens(document: Mapping[str, Any]) -> int:
         return 0
 
 
+def transcript_recorded_tokens(path: Path) -> int:
+    """The tokens a transcript records, summed the way a case file sums them.
+
+    A case file's ``tokens.total_tokens`` is the prompt plus the completion of
+    every call the case made, so a case whose only record is its transcript is
+    costed the same way and the estimate stays comparable across the two. Like
+    ``tokens``, this is a cost and not an answer.
+    """
+    payload = run_benchmark.read_json(Path(path))
+    entries = payload.get("entries") if isinstance(payload, Mapping) else None
+    total = 0
+    for entry in entries or ():
+        if not isinstance(entry, Mapping):
+            continue
+        total += run_benchmark.billed_tokens(
+            entry.get("prompt_tokens"), entry.get("completion_tokens")
+        )
+    return total
+
+
+def recorded_cases(
+    run_dir: Path, development_set: development_sets.DevelopmentSet
+) -> List[Tuple[int, int, str]]:
+    """The cases one run recorded, and how each one's cost was recorded.
+
+    The list comes from the **set's own case list** and not from the case files
+    on disk. A case the run recorded only a transcript for is still a case the
+    run produced -- the held-out set has two of them, 517 and 533 -- and a
+    listing taken from the files would leave them out of a re-run entirely. A
+    case the set does not hold is never included, whichever file happens to be
+    sitting in the directory.
+
+    Each case's cost is read from its case file when there is one and from its
+    transcript when that is all there is, and the third element says which, so a
+    reader can tell an estimate read off a recorded result from one summed out
+    of a transcript.
+    """
+    recorded: List[Tuple[int, int, str]] = []
+    for case_no in development_set.cases:
+        document = run_benchmark.read_json(
+            run_benchmark.case_cache_path(run_dir, case_no)
+        )
+        if isinstance(document, Mapping):
+            recorded.append((case_no, recorded_tokens(document), "case_file"))
+            continue
+        transcript_file = run_benchmark.transcript_path(run_dir, case_no)
+        if transcript_file.is_file():
+            recorded.append(
+                (case_no, transcript_recorded_tokens(transcript_file), "transcript")
+            )
+    return recorded
+
+
 def plan_rerun(
     number: int,
     run_dirs: Sequence[Path],
@@ -1712,7 +1836,16 @@ def plan_rerun(
     amendments_root: Optional[Any] = None,
     runs_dir: Path = RUNS_DIR,
 ) -> Dict[str, Any]:
-    """The case list and the token estimate, with nothing run and nothing written."""
+    """The case list and the token estimate, with nothing run and nothing written.
+
+    A source under the held-out set's root is planned as its re-runnable twin:
+    the same cases, run into ``runs/wild-dev/policy-v<N>/<model>/``. The record
+    keeps both names, so a reader can tell which set a source was read as from
+    which set it will be run as.
+    """
+    _refuse_both_wild_sets(
+        (_set_of_run_directory(run_dir) for run_dir in run_dirs), command="rerun"
+    )
     amendment = load_amendment_file(number, amendments_root)
     clause = amendment.get("clause") or {}
     category = clause.get("category")
@@ -1722,16 +1855,13 @@ def plan_rerun(
     per_case: Dict[int, Dict[str, Any]] = {}
     for run_dir in run_dirs:
         run_dir = assert_not_an_external_run_directory(run_dir, runs_dir)
-        set_name = precedents.set_from_run_directory(run_dir)
+        source_set = precedents.set_from_run_directory(run_dir)
+        # A source that is the held-out record is re-run as its re-runnable
+        # twin: the same cases, under a root that may be written to.
+        set_name = RERUN_SET_FOR.get(source_set, source_set)
         development_set = development_sets.named(set_name)
-        cached = run_benchmark.cached_case_numbers(run_dir)
         regression: List[int] = []
-        for case_no in cached:
-            document = run_benchmark.read_json(
-                run_benchmark.case_cache_path(run_dir, case_no)
-            )
-            if not isinstance(document, Mapping):
-                continue
+        for case_no, tokens, origin in recorded_cases(run_dir, development_set):
             case = development_set.load_case(case_no)
             if (case.get("dispute") or {}).get("category") != category:
                 continue
@@ -1740,13 +1870,16 @@ def plan_rerun(
                 per_case[case_no] = {
                     "case_no": case_no,
                     "set": set_name,
+                    "source_set": source_set,
                     "source_dir": run_dir,
-                    "recorded_tokens": recorded_tokens(document),
+                    "recorded_tokens": tokens,
+                    "recorded_tokens_from": origin,
                 }
         sources.append(
             {
                 "run_dir": run_dir,
                 "set": set_name,
+                "source_set": source_set,
                 "regression_cases": sorted(regression),
             }
         )
@@ -1760,8 +1893,10 @@ def plan_rerun(
         per_case[case_no] = {
             "case_no": case_no,
             "set": None,
+            "source_set": None,
             "source_dir": None,
             "recorded_tokens": 0,
+            "recorded_tokens_from": None,
             "in_cluster": True,
         }
     for case_no, item in per_case.items():
@@ -1816,10 +1951,13 @@ def rerun_amendment(
     )
     for item in plan["cases"]:
         progress(
-            "  case {0} ({1}) — {2} recorded token(s){3}".format(
+            "  case {0} ({1}) — {2} recorded token(s){3}{4}".format(
                 item["case_no"],
                 item["set"] or "unnamed run",
                 item["recorded_tokens"],
+                ""
+                if item["recorded_tokens_from"] is None
+                else ", {0}".format(TOKENS_FROM[item["recorded_tokens_from"]]),
                 " [cluster]" if item["in_cluster"] else " [regression]",
             )
         )
@@ -1894,6 +2032,7 @@ def rerun_amendment(
     record["created_at"] = stamp
     record["sources"] = [
         {"run_dir": _relative(item["run_dir"]), "set": item["set"],
+         "source_set": item["source_set"],
          "regression_cases": item["regression_cases"]}
         for item in plan["sources"]
     ]
@@ -1901,9 +2040,11 @@ def rerun_amendment(
         {
             "case_no": item["case_no"],
             "set": item["set"],
+            "source_set": item["source_set"],
             "source_dir": None if item["source_dir"] is None else _relative(item["source_dir"]),
             "destination": destinations.get(item["set"]),
             "recorded_tokens": item["recorded_tokens"],
+            "recorded_tokens_from": item["recorded_tokens_from"],
             "in_cluster": item["in_cluster"],
         }
         for item in plan["cases"]
@@ -2038,6 +2179,14 @@ def build_diff(
             "there is no rerun record at {0}; run the amendment first".format(rerun_path)
         )
     cluster_cases = [int(item) for item in amendment.get("cases") or []]
+    _refuse_both_wild_sets(
+        (
+            _set_of_run_directory(item["run_dir"])
+            for item in record.get("sources") or ()
+            if isinstance(item, Mapping) and item.get("run_dir")
+        ),
+        command="diff",
+    )
 
     keys: Dict[str, Mapping[int, grade.Ruling]] = {}
     cases: List[Dict[str, Any]] = []
@@ -2067,6 +2216,13 @@ def build_diff(
         old_fields = {name: old_inner.get(name) for name in RULING_FIELDS}
         new_fields = {name: new_inner.get(name) for name in RULING_FIELDS}
 
+        # A destination case file that is not there is a **miss**, not a blank.
+        # The held-out set has two cases that recorded only a transcript, and a
+        # re-run that wrote no file for a case is a case the new version left
+        # without a ruling -- which is a finding about the amendment. Reading it
+        # as "nothing to compare" would hide exactly what the diff is for.
+        new_no_ruling = bool(destination) and not isinstance(new_document, Mapping)
+
         key: Mapping[int, grade.Ruling] = {}
         if set_name and set_name not in keys:
             keys[set_name] = development_sets.named(set_name).key()
@@ -2074,7 +2230,10 @@ def build_diff(
             key = keys[set_name]
 
         old_exact = _exact(case_no, key, old_document.get("ruling")) if old_document else None
-        new_exact = _exact(case_no, key, new_document.get("ruling")) if new_document else None
+        if isinstance(new_document, Mapping):
+            new_exact = _exact(case_no, key, new_document.get("ruling"))
+        else:
+            new_exact = False if destination else None
 
         cases.append(
             {
@@ -2086,6 +2245,7 @@ def build_diff(
                 "new": _render_fields(new_fields),
                 "old_exact": old_exact,
                 "new_exact": new_exact,
+                "new_no_ruling": new_no_ruling,
                 "old_escalated": old_fields.get("ruling") == ESCALATE,
                 "new_escalated": new_fields.get("ruling") == ESCALATE,
             }
@@ -2102,6 +2262,10 @@ def build_diff(
             "development-set case before and after. No other command in this "
             "module reads it, and the keys are never edited."
         ),
+        # Version 2 carries two changes, not one, so a gain measured here is not
+        # the amendment's alone. Empty at any other version: a later diff says
+        # what *it* carries when it is written, rather than borrowing this.
+        "version_note": VERSION_TWO_NOTE if version == 2 else "",
         "totals": _totals(cases, exclude=set()),
         "totals_without_the_cluster": _totals(cases, exclude=set(cluster_cases)),
         "cases": cases,
@@ -2158,9 +2322,15 @@ def render_diff(document: Mapping[str, Any]) -> str:
         "",
         document["key_note"],
         "",
-        "| case | set | changed | old | new |",
-        "|---|---|---|---|---|",
     ]
+    if document.get("version_note"):
+        lines.extend([document["version_note"], ""])
+    lines.extend(
+        [
+            "| case | set | changed | old | new |",
+            "|---|---|---|---|---|",
+        ]
+    )
     for case in document["cases"]:
         lines.append(
             "| `{0}` | {1} | {2} | {3} | {4} |".format(
@@ -2168,7 +2338,7 @@ def render_diff(document: Mapping[str, Any]) -> str:
                 case["set"] or "-",
                 "yes" if case["changed"] else "no",
                 _summarise(case["old"]),
-                _summarise(case["new"]),
+                "no ruling" if case.get("new_no_ruling") else _summarise(case["new"]),
             )
         )
     lines.append("")
