@@ -550,6 +550,62 @@ def assert_not_a_headline_directory(
     return Path(destination)
 
 
+# The re-runnable set's own root, one component below a runs root. It is
+# deliberately **not** in :data:`SET_RUNS_SUBDIRS`: that tuple is the run
+# directories a reported figure comes from, and ``wild-dev`` holds the held-out
+# set's cases as development data. It is named here because the guard below has
+# to tell it apart from the held-out set's root, which is one character away.
+WILD_DEV_RUNS_SUBDIR = "wild-dev"
+
+# What to do instead, in the words every refusal of this rule ends with.
+HELD_OUT_REMEDY = (
+    "The same cases are runnable as development data: --set wild-dev writes "
+    "under runs/wild-dev/, which is a different directory."
+)
+
+
+def held_out_runs_root(runs_root: Path = RUNS_DIR) -> Path:
+    """``<runs root>/wild/``: the held-out set's own runs root."""
+    return Path(runs_root) / SEALED_SET_RUNS_SUBDIR
+
+
+def assert_not_under_the_held_out_root(
+    destination: Path,
+    runs_root: Path = RUNS_DIR,
+    *,
+    remedy: Optional[str] = None,
+) -> Path:
+    """Refuse any destination that lies under ``<runs root>/wild/``.
+
+    The held-out set was run **once**, from the commit tagged
+    ``freeze-2026-09-30``, and that single run is the only generalisation figure
+    the submission reports. Nothing may be created under its root again -- not a
+    case, not an ablated run, not a run at a later policy version, not a report
+    -- because a second thing written there changes what the directory means
+    while leaving every file a reader would look at apparently intact.
+
+    The comparison is **component by component**, not a prefix test on the
+    string: ``runs/wild-dev/`` is a different directory from ``runs/wild/`` and
+    is deliberately not caught, because it is where a re-run of the same 64
+    cases is meant to go. A prefix test would refuse it.
+
+    Returns the destination unchanged when it is outside, so a caller can build
+    and check it in one expression.
+    """
+    root = held_out_runs_root(runs_root).resolve()
+    resolved = Path(destination).resolve()
+    if resolved == root or root in resolved.parents:
+        raise BenchmarkError(
+            "{0} lies under {1}, which holds the held-out set's single run: it was "
+            "made once from the commit tagged freeze-2026-09-30 and is the only "
+            "generalisation figure the submission reports, so nothing is created "
+            "under it again. {2}".format(
+                resolved, root, HELD_OUT_REMEDY if remedy is None else remedy
+            )
+        )
+    return Path(destination)
+
+
 # Where an ablated run lives, one level under the runs root. An ablated result
 # is a different measurement from the plain one, and ``runs/<model-slug>/`` is
 # where the submission's figure lives: a run with an ablation on must not be
@@ -2672,6 +2728,11 @@ def run_benchmark(
     *,
     runs_dir: Path = RUNS_DIR,
     prompts_dir: Path = PROMPTS_DIR,
+    # The top-level runs root this invocation was asked for, which is where the
+    # held-out set's own root lives. ``runs_dir`` is the *set's* root and for the
+    # held-out set it *is* the held-out root, so the guard cannot read the
+    # top-level one off it. ``None`` means this repository's own ``runs/``.
+    held_out_root: Optional[Path] = None,
     force: bool = False,
     token_budget: Optional[int] = None,
     concurrency: int = DEFAULT_CONCURRENCY,
@@ -2947,6 +3008,12 @@ def run_benchmark(
             "{1} holds the corpus results and a set written there would change "
             "what the reported figure covers".format(label, run_dir)
         )
+    # The held-out set's own root is closed. A plain run, an ablated run, a run
+    # at a later policy version and a report all refuse a destination under it,
+    # and this is the one place a run's own destination is decided, so the check
+    # is made here and before the directory exists: a refused run leaves nothing
+    # behind.
+    assert_not_under_the_held_out_root(run_dir, held_out_root or RUNS_DIR)
     run_dir.mkdir(parents=True, exist_ok=True)
     started_at = now()
     run_provenance = provenance(

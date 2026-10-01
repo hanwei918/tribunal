@@ -219,6 +219,22 @@ def assert_not_a_run_directory(destination: Path, runs_dir: Path, model: str) ->
             "directory there is a headline directory".format(external)
         )
 
+    # The whole of the held-out set's root, not only its run directory: that run
+    # was made once and nothing is created under it again, report included. The
+    # rule itself lives in the runner, so the loop and every run refuse the same
+    # paths; only the closing sentence is this command's own.
+    try:
+        run_benchmark.assert_not_under_the_held_out_root(
+            resolved,
+            runs_dir,
+            remedy=(
+                "A policy-gap report over those cases belongs in a directory of "
+                "its own, not under the run it read."
+            ),
+        )
+    except run_benchmark.BenchmarkError as exc:
+        raise PolicyGapError(str(exc)) from None
+
     candidate = resolved
     while candidate != root and root in candidate.parents:
         if (candidate / run_benchmark.METADATA_FILE).is_file() or any(
@@ -2201,6 +2217,14 @@ def write_diff(
 ) -> Tuple[Path, Path]:
     document = build_diff(number, runs_dir=runs_dir, amendments_root=amendments_root)
     out_dir = Path(runs_dir) / run_benchmark.policy_v_directory_name(document["policy_version"])
+    # A diff is a file about the run, and the held-out set's run is not written
+    # about under its own root either: a version directory beside it would change
+    # what that root means. The rule is the runner's, so both refuse the same
+    # paths.
+    try:
+        run_benchmark.assert_not_under_the_held_out_root(out_dir, runs_dir)
+    except run_benchmark.BenchmarkError as exc:
+        raise PolicyGapError(str(exc)) from None
     out_dir.mkdir(parents=True, exist_ok=True)
     md = out_dir / DIFF_MD
     js = out_dir / DIFF_JSON

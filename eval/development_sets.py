@@ -183,7 +183,7 @@ WILD_DEV = DevelopmentSet(
     name="wild-dev",
     cases=SEALED_SET.cases,
     key_path=SEALED_SET.key_path,
-    runs_subdir="wild-dev",
+    runs_subdir=run_benchmark.WILD_DEV_RUNS_SUBDIR,
     case_root=SEALED_SET.case_root,
     summary=(
         "wild-v1 as development data: the same 64 cases and the same key as the "
@@ -355,6 +355,10 @@ def run_set(
         model,
         selected,
         runs_dir=set_runs_dir,
+        # The top-level root, not the set's: the guard that closes the held-out
+        # set's own root has to compare against ``<runs root>/wild``, and for the
+        # held-out set ``set_runs_dir`` *is* that root.
+        held_out_root=Path(runs_dir),
         key=development_set.key(),
         key_path=development_set.key_path,
         case_loader=development_set.load_case,
@@ -1032,6 +1036,35 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     # that list: it is run once, and an invocation that ran it as a side effect
     # of running everything would be a run nobody chose to make.
     selected = [named(args.set_name)] if args.set_name != "all" else list(DEVELOPMENT_SETS)
+
+    # The four switches that move a set's run one level down under the set's own
+    # root. For the held-out set every one of them would write under
+    # ``runs/wild/``, which holds the single run the submission reports and is
+    # never written again. Refused here as well as at the destination, so that
+    # the message can name the set to use instead of it.
+    for present, switch in (
+        (args.ablate is not None, "--ablate"),
+        (args.precedents, "--precedents"),
+        (args.policy_version != run_benchmark.DEFAULT_POLICY_VERSION, "--policy-version"),
+        (args.amount_rule != run_benchmark.pipeline.DEFAULT_AMOUNT_RULE, "--amount-rule"),
+    ):
+        if not present:
+            continue
+        for development_set in selected:
+            try:
+                run_benchmark.assert_not_under_the_held_out_root(
+                    development_set.runs_dir(args.runs_dir),
+                    args.runs_dir,
+                    remedy=(
+                        "{0} is the switch that moves a run one level down under "
+                        "its own set's root. Name --set wild-dev instead: those "
+                        "are the same 64 cases as development data, and their "
+                        "runs go under runs/wild-dev/".format(switch)
+                    ),
+                )
+            except run_benchmark.BenchmarkError as exc:
+                print("FATAL: {0}".format(exc), file=sys.stderr)
+                return 1
 
     try:
         for development_set in selected:

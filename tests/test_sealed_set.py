@@ -583,5 +583,170 @@ class SealedRunDirectoryIsHeadlineTests(unittest.TestCase):
         )
 
 
+# --------------------------------------------------------------------------
+# Nothing is created under the held-out set's root again
+# --------------------------------------------------------------------------
+class HeldOutRootGuardTests(unittest.TestCase):
+    """One guard refuses every destination that lies under ``runs/wild/``.
+
+    The held-out set's single run is the only generalisation figure the
+    submission reports and it was made once, so nothing may be created under its
+    root again: not a case, not an ablated run, not a run at a later policy
+    version, not a report. The re-runnable set's own root, ``runs/wild-dev/``, is
+    a **different path component** and is deliberately not caught -- a prefix
+    test on the string would refuse it -- so the half that matters is asserted
+    rather than described.
+    """
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.runs = Path(self._tmp.name) / "runs"
+        self.slug = run_benchmark.model_slug(MODEL)
+        self.held_out = self.runs / run_benchmark.SEALED_SET_RUNS_SUBDIR
+
+    def test_every_destination_under_the_held_out_root_is_refused(self):
+        for relative in (
+            (),
+            (self.slug,),
+            (run_benchmark.ABLATION_DIRNAME, "clause-notes", self.slug),
+            (run_benchmark.PRECEDENTS_DIRNAME, self.slug),
+            (run_benchmark.policy_v_directory_name(2), self.slug),
+            (run_benchmark.AMOUNT_RULE_DIRNAME, "signed", self.slug),
+            ("verify-recorded-drafts", self.slug),
+            ("anything", "at", "all"),
+        ):
+            destination = self.held_out.joinpath(*relative)
+            with self.subTest(destination=str(destination)):
+                with self.assertRaises(run_benchmark.BenchmarkError) as caught:
+                    run_benchmark.assert_not_under_the_held_out_root(
+                        destination, self.runs
+                    )
+                self.assertIn("nothing is created under it again", str(caught.exception))
+                self.assertIn("--set wild-dev", str(caught.exception))
+
+    def test_the_re_runnable_sets_root_is_not_caught(self):
+        """``runs/wild-dev`` is a different component from ``runs/wild``.
+
+        The same 64 cases are runnable as development data and their runs root is
+        one character away from the one that is closed, so a guard that compared
+        the paths as strings would refuse the only place a re-run may go.
+        """
+        for relative in (
+            (),
+            (self.slug,),
+            (run_benchmark.policy_v_directory_name(2), self.slug),
+        ):
+            destination = (self.runs / run_benchmark.WILD_DEV_RUNS_SUBDIR).joinpath(
+                *relative
+            )
+            with self.subTest(destination=str(destination)):
+                self.assertEqual(
+                    destination,
+                    run_benchmark.assert_not_under_the_held_out_root(
+                        destination, self.runs
+                    ),
+                )
+
+    def test_every_other_destination_is_not_caught(self):
+        for relative in (
+            (self.slug,),
+            ("codex", self.slug),
+            (run_benchmark.ABLATION_DIRNAME, "clause-notes", self.slug),
+            (run_benchmark.PRECEDENTS_DIRNAME, self.slug),
+            (run_benchmark.policy_v_directory_name(2), self.slug),
+            (run_benchmark.AMOUNT_RULE_DIRNAME, "signed", self.slug),
+            ("policy-gaps",),
+        ):
+            destination = self.runs.joinpath(*relative)
+            with self.subTest(destination=str(destination)):
+                self.assertEqual(
+                    destination,
+                    run_benchmark.assert_not_under_the_held_out_root(
+                        destination, self.runs
+                    ),
+                )
+
+    def test_the_run_refuses_a_destination_under_the_held_out_root(self):
+        """A run aimed at the held-out set's own root is refused before it writes.
+
+        Shown on the dirty fixture: a scratch runs root that already holds the
+        held-out set's result. The client factory fails the test if it is ever
+        called, so a refusal that came after a call would be caught rather than
+        assumed away, and the fixture is compared byte for byte afterwards.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            runs, run_dir, sentinel, before = _scratch_runs_with_the_sealed_result(tmp)
+
+            def must_not_be_built(sink):
+                raise AssertionError(
+                    "a client was built for a run that should have been refused"
+                )
+
+            with self.assertRaises(run_benchmark.BenchmarkError) as caught:
+                sets.run_set(
+                    SEALED,
+                    MODEL,
+                    runs_dir=runs,
+                    cases=(SENTINEL_CASE,),
+                    client_factory=must_not_be_built,
+                    progress=lambda text: None,
+                )
+            self.assertIn("nothing is created under it again", str(caught.exception))
+            self.assertEqual(
+                before, sentinel.read_bytes(), "the held-out result was rewritten"
+            )
+            self.assertEqual(
+                {sentinel.name: before}, _state(run_dir), "the run directory gained a file"
+            )
+
+    def test_the_command_line_refuses_set_wild_with_each_switch(self):
+        """``--set wild`` plus any of the four switches, refused, naming wild-dev.
+
+        Each of the four moves a set's run one level down under the set's own
+        root, so each of them would write under ``runs/wild/``. The refusal names
+        the set to use instead of it, and the dirty fixture is byte-identical
+        after each one.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            runs, run_dir, sentinel, before = _scratch_runs_with_the_sealed_result(tmp)
+
+            # A switch that got past the refusal would build a client and start
+            # running cases, so the client is patched to fail the test instead.
+            # Without this the test would make a real call on the tree the guard
+            # is meant to be added to.
+            original = run_benchmark.llm.LLMClient
+
+            def refuse(*arguments, **keywords):
+                raise AssertionError(
+                    "--set wild built a client, so it accepted a switch it must not"
+                )
+
+            run_benchmark.llm.LLMClient = refuse
+            try:
+                for arguments in (
+                    ["--ablate", "clause-notes"],
+                    ["--precedents"],
+                    ["--policy-version", "2"],
+                    ["--amount-rule", "signed"],
+                ):
+                    with self.subTest(arguments=arguments):
+                        code, _out, err = _run_cli(
+                            ["--set", "wild", "--runs-dir", str(runs)] + arguments
+                        )
+                        self.assertEqual(
+                            1, code, "{0} was accepted for --set wild".format(arguments)
+                        )
+                        self.assertIn("--set wild-dev", err)
+                        self.assertEqual(
+                            before,
+                            sentinel.read_bytes(),
+                            "{0} rewrote the held-out result".format(arguments),
+                        )
+                        self.assertEqual({sentinel.name: before}, _state(run_dir))
+            finally:
+                run_benchmark.llm.LLMClient = original
+
+
 if __name__ == "__main__":
     unittest.main()
