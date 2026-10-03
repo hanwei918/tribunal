@@ -358,6 +358,59 @@ generalisation figure the submission reports.
   hash to
   `8761344077eb9ef2a238c047a18b71b0f6b8f1855d1baeb63ab0ba89e1c9befb`.
 
+## The second sealed set (`wild-v2`) (amended 2026-10-03)
+
+A second sealed set was imported on 2026-10-03: 20 cases under
+`data/external/wild-v2/`, keyed by `eval/answers/wild-v2/ground_truth.json`. It is
+**not** a third development set and **not** the held-out set. It was prepared by
+OpenAI Codex for the owner and imported from the archive whose sha256
+`docs/notes/2026-10-03-the-second-freeze.md` records; it is run **exactly once**
+from the commit tagged `freeze-2026-10-03`, and that single run is the
+submission's generalisation figure. Its registration fixes policy version 2.
+
+- **`data/external/wild-v2/` — agent-visible, answer-free.** Twenty case files,
+  `case-00701.json` to `case-00720.json`, plus the set's own `index.json`. The
+  files are byte-identical to the ones the archive shipped and are answer-free
+  under the same contract as `data/cases/`: no expected ruling, no answer field
+  and no argument for either side. The index's only change on import is its
+  `file` field, which names the flat layout `wild-v1` uses. The index is **not**
+  `data/index.json` and is never merged into it. The set is loaded by number
+  through `tribunal.loader.load_external_set_case`.
+- **`eval/answers/wild-v2/ground_truth.json` — answer-bearing.** The set's own
+  key, under the same boundary as the other three, for the same reason and with
+  the same force. It is a fourth answer key and therefore a fourth way for an
+  answer to reach a brief, so nothing under `tribunal/` may read it. It arrived
+  as an object keyed by case number and was re-wrapped into the array the grader
+  reads in a commit of its own; every record's four graded fields and its
+  difficulty were compared, parsed, before and after.
+- **`eval/external/wild-v2/` — answer-bearing.** The author's README and
+  manifest, the seed map and seed selection, the semantic check and its legacy
+  companion, the validation output and the generator. Nothing under `tribunal/`
+  may read any of it. It is answer-bearing at case level: the seed map carries
+  each case's author ruling, the semantic check carries a derivation and a
+  calculation for each of the 20, and the legacy difference report names the
+  five cases it differs on. The README itself names only the case range.
+- **One direction.** Nothing writes into `eval/`. The key is frozen from the
+  moment it is imported, under the standing rule in `START-HERE.md`.
+- **Where its run goes.** `runs/wild-v2/<model-slug>/`, and **never** a
+  `policy-v2` directory inside it: its registration fixes policy version 2, so
+  the version briefs every case at version 2 without moving the run one level
+  down. `--policy-version` is refused for this set in code, as are `--force`,
+  `--replay-advocates`, `--replay-check`, `--verify-recorded-drafts`,
+  `--ablate`, `--precedents` and `--amount-rule`. The component-wise path guard
+  closes `runs/wild-v2/` to everything but the plain sealed run's own directory,
+  so nothing else can be created under it.
+- **Four headline directories now, not three.** `SET_RUNS_SUBDIRS` names
+  `codex`, `wild` and `wild-v2`, so `runs/wild-v2/<model-slug>/` is refused by
+  every destination that must not write into a reported result — the ablation,
+  the precedents block, a later policy version, the baselines, the policy-gap
+  report and the recorded-drafts measurement — exactly as the other three are.
+- **It is never combined.** It is not in `DEVELOPMENT_SETS`, so `--set all` does
+  not run it and the combined figure does not sum it; it is not in `ALL_SETS`, so
+  the recorded-drafts measurement does not read it, because it has not been run.
+  It is printed in a section of its own, beside the held-out set's and never
+  inside it.
+
 ## The amount read-off rule (amended 2026-09-30)
 
 An amount in a draft is read off a brief when it is a figure the brief's money

@@ -23,6 +23,7 @@ This directory is the benchmark's own output. Every subdirectory named in the ta
 | `precedents/` | Where a run with `--precedents` on goes: `precedents/<model>/`, and `codex/precedents/<model>/` under the second set's root. No such run is committed here. It has its own section below. | A different measurement from the headline, and not comparable to it: the precedent library is built from closures made by people who have seen these development sets. |
 | `rerun-2026-09-29/` | A runs root of its own, holding one re-run of the organisers' sample case: `rerun-2026-09-29/external/ryde/`, committed as `23589e1`. It went to its own root so that the committed `external/ryde/` result, which `docs/notes/2026-09-23-external-sample-case.md` is about, stayed as it was. It has its own section below. | Evidence of what that run did, not a score — there is no answer-key entry for 901. It is an external case like any other, so it is refused outside `runs/external/` and must never be merged into a model's run directory. |
 | `wild/` | **The single run of the held-out set (`wild-v1`)**, committed at `2e527d6`: `wild/deepseek-deepseek-flash/`, 131 files, run once by the owner from the commit tagged `freeze-2026-09-30` and committed byte for byte as produced. **62 of the 64 cases produced a ruling** — 517 and 533 failed with `SHAPE` and are recorded as misses — and the four-field figure is **55/62 = 88.7%** over the cases that produced a ruling, **55/64 = 85.9%** over the set. It has its own section below. | The submission's **only generalisation figure**, and never a development figure. It is never merged into a model's run directory, never summed with the corpus and second-set figures, and never produced by `--set all`. |
+| `wild-v2/` | **The second sealed set's single run, not yet made**: `wild-v2/<model-slug>/`, where `python3 -m eval.development_sets --set wild-v2 --concurrency 2 --timeout 900` will write, once, from the commit tagged `freeze-2026-10-03`. The set is 20 cases, 701–720, keyed by `eval/answers/wild-v2/ground_truth.json`, and **no such directory is committed here** because the owner has not run it. It has its own section below. | A **second generalisation figure**, and never a development figure. It is never merged into a model's run directory, never summed with the corpus, second-set or `wild-v1` figures, and never produced by `--set all`. |
 
 **These are snapshots, and a later run moves them.** A run directory is named after the model id, so
 a future run of the same model writes into the same directory and rewrites these files case by case.
@@ -574,6 +575,55 @@ one. `docs/notes/2026-09-30-the-freeze-and-the-sealed-run.md` records that
 conflict in full. Nothing was changed on the strength of it — not by the import
 and not by the run — and it is still the owner's to settle before the 55/64
 figure above is reported as generalisation.
+
+## `wild-v2/` — the second sealed set's single run
+
+`wild-v2/<model>/` holds the output of
+
+    python3 -m eval.development_sets --set wild-v2 --concurrency 2 --timeout 900
+
+one directory per model, under the runs root the run was given. The files are the
+ones any run directory carries, and its `report.md` is graded against
+`eval/answers/wild-v2/ground_truth.json` — the set's own key, which is neither
+development key.
+
+**No such directory is committed here, and there is nothing to commit.** The set
+was imported and registered on 2026-10-03 from the commit tagged
+`freeze-2026-10-03`, and the owner runs it afterwards, once, outside this
+sandbox. The command above is the one that produces it, and `--force` cannot be
+added to it: it is refused for this set in code.
+
+**The set is 20 cases, numbered 701 to 720**, held under
+`data/external/wild-v2/` with its own `index.json`. Twelve are
+`ROUTE_DEVIATION` and eight `NO_SHOW_CHARGE`. `docs/notes/2026-10-03-wild-v2-imported.md`
+records the import, the digest of every imported file, and the registration.
+
+**The registration fixes the policy version at 2.** The amendment
+`0001-pol-rd-13` is approved, so the repository is at version 2, and this set is
+the one that measures it: `--set wild-v2` uses version 2 with no flag and still
+writes into `runs/wild-v2/<model>/`, never into a `policy-v2` directory. An
+explicit `--policy-version` on this set is refused, because the version is part
+of what the set is rather than a switch on top of it.
+
+**It is the second generalisation figure, and it is never added to anything.**
+It is reported beside the corpus, the second set and the held-out set's figures
+and never inside the combined line, `--set all` does not run it, and
+`runs/wild-v2/<model>/` is refused by every destination that must not write into
+a reported result: the ablation, the precedents block, a later policy version,
+the amount-rule measurement, the baselines, the policy-gap report and the
+recorded-drafts measurement. **Four headline directories now, not three.**
+
+**Nothing but the plain sealed run is created under its root.** The held-out
+set's root is closed outright; this one accepts exactly one destination, the
+plain run's own directory, and refuses every other path beneath it — the ablation
+directory, the precedents directory, a `policy-v<N>/` directory, anything else.
+The set has not been run, so the refusal is made before anything exists to
+protect, which is the point: the guard is in place when the run that matters is.
+
+**A case that has a result is never re-run.** `--force` is refused for this set
+inside `run_set`, and `--replay-advocates`, `--replay-check` and
+`--verify-recorded-drafts` are refused while the command line is read, because
+every one of those produces a result from a run already recorded.
 
 ## How to read one run directory
 
