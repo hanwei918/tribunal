@@ -413,6 +413,39 @@ submission's generalisation figure. Its registration fixes policy version 2.
   It is printed in a section of its own, beside the held-out set's and never
   inside it.
 
+## The new rule that comes first (amended 2026-10-03)
+
+**Nobody runs the sealed set.** It is run once, by the owner, outside this
+workspace, and that single run is the figure the submission reports. Everything
+below is what keeps that true rather than intended.
+
+- **The command needs an opt-in.** A `--set wild-v2` invocation that would run
+  anything is refused unless `TRIBUNAL_SEALED_RUN=wild-v2` is in its environment.
+  The check comes after every other refusal, so an invocation that names a
+  refused switch is told about the switch, and before any client is built and
+  before any directory is created. The message names the variable and says the
+  run is made by the owner only. **Nothing in this repository sets that
+  variable**, and the owner sets it for that one command:
+  `TRIBUNAL_SEALED_RUN=wild-v2 python3 -m eval.development_sets --set wild-v2 --concurrency 2 --timeout 900`.
+- **`--check` is how anyone else looks at it.** It applies every refusal and
+  every frozen-argument check, then applies the sealed protocol to the existing
+  `events.jsonl` if there is one and prints the cases a plain invocation would
+  run and the cases it would not, each with its reason. It exits 0, builds no
+  client, writes nothing, creates no directory and needs no opt-in:
+  `python3 -m eval.development_sets --set wild-v2 --concurrency 2 --timeout 900 --check`.
+- **No probe and no test may reach the network for it.** A test may reach the
+  command line only with `LLMClient` patched to raise, or a raising
+  `client_factory` passed, and only over a temporary runs root. The tests that
+  invoke it do so through one helper that patches the class, so a test that
+  would build a client fails instead of calling a model.
+- **The one partial run is recorded.** A probe started the run for real on
+  2026-10-03 at 14:14, was stopped at 14:17:31, and its `events.jsonl` was
+  deleted. The facts, the deletion and the owner's decision that `wild-v2` stays
+  the sealed set are in
+  `docs/notes/2026-10-03-the-sealed-protocol-made-executable.md`, under *The
+  partial run of 14:14, and the owner's decision*. Under the sealed protocol that
+  attempt does not count, because it ended with no terminal event.
+
 ## The amount read-off rule (amended 2026-09-30)
 
 An amount in a draft is read off a brief when it is a figure the brief's money

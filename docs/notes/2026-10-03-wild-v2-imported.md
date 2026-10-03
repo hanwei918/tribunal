@@ -5,8 +5,11 @@ it produced. Part 1 — the freeze at the tag `freeze-2026-10-03`, its note and 
 digests — is `docs/notes/2026-10-03-the-second-freeze.md`, and it was committed
 and pushed before the archive below was opened.
 
-**No model call was made.** The set is run afterwards, once, by the owner,
-outside this sandbox.
+**No model call was made by this import.** The set is run afterwards, once, by
+the owner, outside this sandbox; the one partial run that was made on
+2026-10-03, and the owner's decision that `wild-v2` stays the sealed set, are in
+`docs/notes/2026-10-03-the-sealed-protocol-made-executable.md`, section *The
+partial run of 14:14, and the owner's decision*.
 
 **Structure, counts and digests only.** Until the sealed run is committed, no
 case content and no answer value is printed, quoted or summarised anywhere in
@@ -507,7 +510,7 @@ not in `_write_text_atomic`.
 
 ## The command the owner will run
 
-    python3 -m eval.development_sets --set wild-v2 --concurrency 2 --timeout 900
+    TRIBUNAL_SEALED_RUN=wild-v2 python3 -m eval.development_sets --set wild-v2 --concurrency 2 --timeout 900
 
 The flags are the second freeze's and they are the ones this command line takes:
 `--set wild-v2` is accepted, `--concurrency` and `--timeout` are both arguments
@@ -517,6 +520,13 @@ of it, and the policy version needs no flag because the registration fixes it at
 recorded as "no ruling". `--force` cannot be added to it: it is refused for this
 set in code. The run is made only if
 `git diff --quiet freeze-2026-10-03 -- tribunal prompts policy` holds.
+
+`TRIBUNAL_SEALED_RUN=wild-v2` is the opt-in, and it is what makes this run the
+owner's: without it the invocation is refused before any client is built, and
+nothing in this repository sets that variable. To see what a plain invocation
+would run without running it, put `--check` in place of the run:
+
+    python3 -m eval.development_sets --set wild-v2 --concurrency 2 --timeout 900 --check
 
 ## Recorded, not fixed
 

@@ -23,7 +23,7 @@ This directory is the benchmark's own output. Every subdirectory named in the ta
 | `precedents/` | Where a run with `--precedents` on goes: `precedents/<model>/`, and `codex/precedents/<model>/` under the second set's root. No such run is committed here. It has its own section below. | A different measurement from the headline, and not comparable to it: the precedent library is built from closures made by people who have seen these development sets. |
 | `rerun-2026-09-29/` | A runs root of its own, holding one re-run of the organisers' sample case: `rerun-2026-09-29/external/ryde/`, committed as `23589e1`. It went to its own root so that the committed `external/ryde/` result, which `docs/notes/2026-09-23-external-sample-case.md` is about, stayed as it was. It has its own section below. | Evidence of what that run did, not a score — there is no answer-key entry for 901. It is an external case like any other, so it is refused outside `runs/external/` and must never be merged into a model's run directory. |
 | `wild/` | **The single run of the held-out set (`wild-v1`)**, committed at `2e527d6`: `wild/deepseek-deepseek-flash/`, 131 files, run once by the owner from the commit tagged `freeze-2026-09-30` and committed byte for byte as produced. **62 of the 64 cases produced a ruling** — 517 and 533 failed with `SHAPE` and are recorded as misses — and the four-field figure is **55/62 = 88.7%** over the cases that produced a ruling, **55/64 = 85.9%** over the set. It has its own section below. | The submission's **only generalisation figure**, and never a development figure. It is never merged into a model's run directory, never summed with the corpus and second-set figures, and never produced by `--set all`. |
-| `wild-v2/` | **The second sealed set's single run, not yet made**: `wild-v2/<model-slug>/`, where `python3 -m eval.development_sets --set wild-v2 --concurrency 2 --timeout 900` will write, once, from a commit whose `tribunal/`, `prompts/` and `policy/` trees equal those at `freeze-2026-10-03`. The set is 20 cases, 701–720, keyed by `eval/answers/wild-v2/ground_truth.json`, and **no such directory is committed here** because the owner has not run it. It has its own section below. | A **second generalisation figure**, and never a development figure. It is never merged into a model's run directory, never summed with the corpus, second-set or `wild-v1` figures, and never produced by `--set all`. |
+| `wild-v2/` | **The second sealed set's single run, not yet made**: `wild-v2/<model-slug>/`, where `TRIBUNAL_SEALED_RUN=wild-v2 python3 -m eval.development_sets --set wild-v2 --concurrency 2 --timeout 900` will write, once, from a commit whose `tribunal/`, `prompts/` and `policy/` trees equal those at `freeze-2026-10-03`. The set is 20 cases, 701–720, keyed by `eval/answers/wild-v2/ground_truth.json`, and **no such directory is committed here** because the owner has not run it. It has its own section below. | A **second generalisation figure**, and never a development figure. It is never merged into a model's run directory, never summed with the corpus, second-set or `wild-v1` figures, and never produced by `--set all`. |
 
 **These are snapshots, and a later run moves them.** A run directory is named after the model id, so
 a future run of the same model writes into the same directory and rewrites these files case by case.
@@ -580,12 +580,20 @@ figure above is reported as generalisation.
 
 `wild-v2/<model>/` holds the output of
 
-    python3 -m eval.development_sets --set wild-v2 --concurrency 2 --timeout 900
+    TRIBUNAL_SEALED_RUN=wild-v2 python3 -m eval.development_sets --set wild-v2 --concurrency 2 --timeout 900
 
 one directory per model, under the runs root the run was given. The files are the
 ones any run directory carries, and its `report.md` is graded against
 `eval/answers/wild-v2/ground_truth.json` — the set's own key, which is neither
 development key.
+
+**The opt-in is what makes the run the owner's.** Without
+`TRIBUNAL_SEALED_RUN=wild-v2` in the environment the invocation is refused before
+any client is built and before any directory is created, and nothing in this
+repository sets that variable. `--check` prints the plan without running
+anything, needs no opt-in, and creates nothing:
+
+    python3 -m eval.development_sets --set wild-v2 --concurrency 2 --timeout 900 --check
 
 **No such directory is committed here, and there is nothing to commit.** The set
 was imported and registered on 2026-10-03, and the owner runs it afterwards,
@@ -593,6 +601,13 @@ once, from a commit whose `tribunal/`, `prompts/` and `policy/` trees equal thos
 at `freeze-2026-10-03` — the commit the run's own events record — outside this
 sandbox. The command above is the one that produces it, and `--force` cannot be
 added to it: it is refused for this set in code.
+
+**One partial run was made and deleted.** On 2026-10-03 at 14:14 a probe started
+the command above with a real client, and it was stopped at 14:17:31; its
+`events.jsonl` (22,722 bytes) was removed with `git clean -fd runs/wild-v2` at
+14:19:36, and the owner decided that `wild-v2` stays the sealed set.
+`docs/notes/2026-10-03-the-sealed-protocol-made-executable.md` records the facts
+and the decision under *The partial run of 14:14, and the owner's decision*.
 
 **The set is 20 cases, numbered 701 to 720**, held under
 `data/external/wild-v2/` with its own `index.json`. Twelve are

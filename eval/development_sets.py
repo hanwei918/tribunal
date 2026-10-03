@@ -43,6 +43,7 @@ Nothing here makes a model call. ``--report`` reads cached runs only.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -54,6 +55,19 @@ EVAL_DIR = Path(__file__).resolve().parent
 RUNS_DIR = PROJECT_ROOT / "runs"
 ANSWER_DIR = EVAL_DIR / "answers"
 CORPUS_KEY_PATH = ANSWER_DIR / "ground_truth.json"
+
+# The one thing that unlocks a sealed run, and the only thing that does.
+#
+# A sealed set is run by the owner, once, and the run is the measurement the
+# submission reports. An invocation that reached the runner by accident -- a
+# probe, a test, a mistyped command -- must not be able to start it, so a
+# ``--set <sealed set>`` invocation that would run anything is refused unless
+# this variable names that set. It is checked in ``main`` after every refusal
+# and before any client is built or any directory is created, so the refusal
+# costs nothing and writes nothing.
+#
+# Nothing in this repository sets it. The owner sets it for the one command.
+SEALED_RUN_ENV_VAR = "TRIBUNAL_SEALED_RUN"
 
 # Imported after the paths, and only for the runner the sets are run through.
 if str(PROJECT_ROOT) not in sys.path:
@@ -685,6 +699,76 @@ def cases_the_sealed_protocol_will_not_retry(
                 )
             )
     return keep
+
+
+def sealed_protocol_plan(
+    development_set: DevelopmentSet,
+    selected: Sequence[int],
+    model: str,
+    runs_dir: Path = RUNS_DIR,
+) -> Tuple[List[int], List[Tuple[int, str]], List[int]]:
+    """The one implementation of the rule, as data rather than as printed lines.
+
+    Returns ``(would_run, not_retried, do_not_count)``: the cases a plain
+    invocation runs; the cases it drops, each with the reason, in set order; and
+    the cases with an attempt that ended with no terminal event. The caller
+    decides what to do with the three -- a run prints them, ``--check`` renders
+    them as the plan -- so the plan a reader is shown and the run that follows it
+    are the same predicate and cannot drift apart.
+    """
+    run_dir = development_set.run_dir(model, runs_dir)
+    would_run: List[int] = []
+    not_retried: List[Tuple[int, str]] = []
+    do_not_count: List[int] = []
+    for case_no in selected:
+        attempts = _sealed_attempts(run_dir, case_no)
+        for attempt in attempts:
+            if attempt.terminal is None:
+                do_not_count.append(case_no)
+        verdict = _sealed_verdict(attempts)
+        if verdict is None:
+            would_run.append(case_no)
+        else:
+            not_retried.append((case_no, verdict))
+    return would_run, not_retried, do_not_count
+
+
+def render_sealed_plan(
+    development_set: DevelopmentSet,
+    would_run: Sequence[int],
+    not_retried: Sequence[Tuple[int, str]],
+    do_not_count: Sequence[int],
+) -> str:
+    """The plan ``--check`` prints, as one string, so a test can assert all of it."""
+    lines = [
+        "sealed set {0} -- what one plain invocation would run".format(
+            development_set.name
+        ),
+        "  would run ({0}): {1}".format(
+            len(would_run),
+            ", ".join(str(case_no) for case_no in would_run) or "nothing",
+        ),
+        "  would not run ({0}):".format(len(not_retried)),
+    ]
+    if not_retried:
+        lines.extend(
+            "    not retried under the sealed protocol: {0} ({1})".format(
+                case_no, verdict
+            )
+            for case_no, verdict in not_retried
+        )
+    else:
+        lines.append("    nothing")
+    lines.append("  attempts that do not count ({0}):".format(len(do_not_count)))
+    if do_not_count:
+        lines.extend(
+            "    attempt with no terminal event, so it does not count under the "
+            "sealed protocol: {0}".format(case_no)
+            for case_no in do_not_count
+        )
+    else:
+        lines.append("    nothing")
+    return "\n".join(lines)
 
 
 def _nothing_left_to_run(
@@ -1352,6 +1436,17 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="print the sets separately and combined from cached runs; makes no model call",
     )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help=(
+            "for a sealed set, print what one plain invocation would run and what "
+            "it would not, applying the sealed protocol to the existing "
+            "events.jsonl if there is one. Runs every refusal and every "
+            "frozen-argument check first, builds no client, writes nothing, "
+            "creates no directory, and does not need the sealed-run opt-in"
+        ),
+    )
     return parser
 
 
@@ -1679,6 +1774,58 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 "FATAL: --set {0} is run at the arguments its registration "
                 "fixes, and this invocation asks for something else: {1}".format(
                     development_set.name, "; ".join(differences)
+                ),
+                file=sys.stderr,
+            )
+            return 1
+
+    # ``--check``: every refusal above has now been applied, so what is left is
+    # the plan. It applies the sealed protocol to the run's own event log if
+    # there is one, prints the cases this invocation would run and the cases it
+    # would not with their reasons, and returns. It builds no client, writes
+    # nothing and creates no directory, so the owner can run it as often as they
+    # like before the one run.
+    if args.check:
+        for development_set in selected:
+            if not development_set.sealed:
+                continue
+            subset = [
+                case_no for case_no in development_set.cases if not cases or case_no in cases
+            ]
+            if not subset:
+                continue
+            would_run, not_retried, do_not_count = sealed_protocol_plan(
+                development_set, subset, model, args.runs_dir
+            )
+            print(
+                render_sealed_plan(
+                    development_set, would_run, not_retried, do_not_count
+                )
+            )
+        return 0
+
+    # The lock on a sealed run, and the last thing before any call. A sealed set
+    # is run by the owner, once, and that run is the figure the submission
+    # reports; this is what makes "by the owner" true rather than intended. It
+    # is checked after every refusal above, so an invocation that names a switch
+    # the set refuses is told about the switch, and before ``run_set``, so no
+    # client is built and no directory is created for an invocation that is not
+    # the owner's.
+    opt_in = os.environ.get(SEALED_RUN_ENV_VAR)
+    for development_set in selected:
+        if not development_set.sealed:
+            continue
+        subset = [
+            case_no for case_no in development_set.cases if not cases or case_no in cases
+        ]
+        if not subset:
+            continue
+        if opt_in != development_set.name:
+            print(
+                "FATAL: {0} is a sealed set, and its single run is made by the "
+                "owner only. To make it, set {1}={0} for that one command; "
+                "nothing else may set it, and nothing in this repository does".format(
+                    development_set.name, SEALED_RUN_ENV_VAR
                 ),
                 file=sys.stderr,
             )

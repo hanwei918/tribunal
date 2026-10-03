@@ -113,3 +113,72 @@ run of `wild-v2` was made. The run is made once from a commit whose `tribunal/`,
 `prompts/` and `policy/` trees equal those at `freeze-2026-10-03`; the events
 that run writes record the commit it was made from. No choice recorded here was
 made after seeing a result.
+
+## The partial run of 14:14, and the owner's decision
+
+**2026-10-03. Recorded before the sealed run of `wild-v2`.** This section exists
+because the run that must not have happened did happen, once, for about three
+minutes, during round 1 — and because the file that recorded it was then
+deleted.
+
+### What happened
+
+During Part C of round 1, a probe called
+`development_sets.main(["--set", "wild-v2", "--concurrency", "2", "--timeout",
+"900"])` with the real runs root and a real client, in the background, at
+**14:14:17**. It was stopped with TaskStop at **14:17:31**. Its `events.jsonl`
+held:
+
+- 1 `invocation_start`;
+- 2 `case_start` (701 and 702);
+- 5 `agent_call`: 2 `RIDER_ADVOCATE`, 2 `DRIVER_ADVOCATE` and 1 `JUDGE`, every
+  one status 200;
+- 31 `referee_decision`;
+- 1 `judge_draft`;
+- no `ruling` and no `case_failed`.
+
+The probe's stdout was captured into a buffer and never printed, because the
+process was stopped first. The only things read from the file were event counts,
+statuses, roles, case numbers, field names and the `invocation_start`
+configuration. The file (**22,722 bytes**) was deleted with
+`git clean -fd runs/wild-v2` at **14:19:36**. These facts come from the
+WorkBuddy session record of that task.
+
+**The deletion destroyed the run's own record of that attempt.** After
+`git clean -fd runs/wild-v2` there is no `events.jsonl`, no transcript and no
+case file from 14:14 anywhere; what survives of it is this section and the
+buddy-log row for Part C. That is why the facts above are written down here
+instead of being left to be read out of the run directory, and it is the reason
+this section is dated rather than folded into the prose above.
+
+### The owner's decision
+
+**`wild-v2` stays the sealed set.** The owner decided this on 2026-10-03, before
+the run, for three reasons:
+
+- no model output from that attempt was printed or read by anyone;
+- the system's three trees were frozen at the tag **before** the set was
+  imported, and are unchanged;
+- no change made afterwards could have been informed by an output nobody saw.
+
+### Under the protocol, the attempt does not count
+
+The 14:14 attempt ended with **no terminal event**: `agent_call` events for 701
+and 702 and neither a `case_failed` nor a `ruling`. The rule above — "an attempt
+that ended with no terminal event does not count" — is what makes that decisive.
+Neither case spent an attempt, so 701 and 702 each still have both of theirs and
+the sealed run is still the set's first counted attempt.
+
+### What the owner's run may show
+
+Cached tokens that the owner's run reports on 701 or 702 may come from that
+attempt: the five calls above were answered 200, so the provider's cache may
+serve part of the same prefix. That is a note about cost and nothing else —
+nothing about either case was decided, printed or read.
+
+The invocation that did this can no longer be made by accident: since this part,
+a `--set wild-v2` command that would run anything is refused unless
+`TRIBUNAL_SEALED_RUN=wild-v2` is in its environment, and `--check` prints the
+plan without running it. `WORKBUDDY-SCOPE.md` records the rule, and the import
+note `docs/notes/2026-10-03-wild-v2-imported.md` and `runs/README.md` point
+here.

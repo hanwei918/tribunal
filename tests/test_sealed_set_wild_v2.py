@@ -43,6 +43,7 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -117,10 +118,22 @@ def _digests_the_import_note_states():
 
 
 def _run_cli(arguments):
-    """``sets.main``, with both streams captured. Returns ``(code, out, err)``."""
+    """``sets.main``, with both streams captured and no client buildable.
+
+    Every invocation of the command line for ``wild-v2`` is refused before a
+    client is built, so no test here may be able to build one: the class is
+    patched to raise for the duration of the call, and a guard that let a run
+    start fails the test instead of reaching the network. Returns
+    ``(code, out, err)``.
+    """
     stdout, stderr = io.StringIO(), io.StringIO()
-    with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
-        code = sets.main(arguments)
+    original, refuse = _refuse_to_build_a_client()
+    run_benchmark.llm.LLMClient = refuse
+    try:
+        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+            code = sets.main(arguments)
+    finally:
+        run_benchmark.llm.LLMClient = original
     return code, stdout.getvalue(), stderr.getvalue()
 
 
@@ -522,6 +535,164 @@ class WildV2SwitchGuardTests(unittest.TestCase):
                         str(caught.exception),
                     )
                     self.assertIn(switch, str(caught.exception))
+
+
+# --------------------------------------------------------------------------
+# The lock on the sealed run
+# --------------------------------------------------------------------------
+def _scripted_events_log(runs):
+    """A scratch ``events.jsonl`` with three interesting cases and no others.
+
+    One case whose only attempt is a judge ``SHAPE`` with every call answered
+    200, one whose two attempts are both ``TRANSPORT``, and one whose single
+    attempt ended with no terminal event. Written with the real event log, so the
+    protocol reads the file a run would have written. Only case numbers, event
+    names and failure kinds appear -- no case content and no answer value.
+    """
+    run_dir = (
+        runs / run_benchmark.WILD_V2_SET_RUNS_SUBDIR / run_benchmark.model_slug(MODEL)
+    )
+    run_dir.mkdir(parents=True)
+
+    first = events.EventLog(run_dir / events.EVENTS_FILE, invocation_id="invocation-1")
+    first.record(events.EVENT_CASE_START, case_no=CASE_JUDGE_SHAPE, position=1, total=3)
+    first.record(
+        events.EVENT_AGENT_CALL,
+        case_no=CASE_JUDGE_SHAPE,
+        role=transcript.ROLE_JUDGE,
+        status=200,
+    )
+    first.record(
+        events.EVENT_CASE_FAILED,
+        case_no=CASE_JUDGE_SHAPE,
+        failure_kind=run_benchmark.FAILURE_SHAPE,
+    )
+    first.record(events.EVENT_CASE_START, case_no=CASE_TRANSPORT, position=2, total=3)
+    first.record(
+        events.EVENT_CASE_FAILED,
+        case_no=CASE_TRANSPORT,
+        failure_kind=run_benchmark.FAILURE_TRANSPORT,
+    )
+    first.record(events.EVENT_CASE_START, case_no=CASE_KILLED, position=3, total=3)
+    first.record(
+        events.EVENT_AGENT_CALL,
+        case_no=CASE_KILLED,
+        role=transcript.ROLE_JUDGE,
+        status=200,
+    )
+
+    second = events.EventLog(run_dir / events.EVENTS_FILE, invocation_id="invocation-2")
+    second.record(events.EVENT_CASE_START, case_no=CASE_TRANSPORT, position=1, total=1)
+    second.record(
+        events.EVENT_CASE_FAILED,
+        case_no=CASE_TRANSPORT,
+        failure_kind=run_benchmark.FAILURE_TRANSPORT,
+    )
+
+
+# The plan ``--check`` prints for the log above, written out rather than computed
+# here, so a change to the rendering is a failing test and not a test that agrees
+# with itself. Cases 701 and 704 are the two the log decides; 705 has an attempt
+# that does not count, so it is still run; 702, 703 and 706 to 720 have no events.
+EXPECTED_CHECK_PLAN = (
+    "sealed set wild-v2 -- what one plain invocation would run\n"
+    "  would run (18): 702, 703, 705, 706, 707, 708, 709, 710, 711, 712, 713, "
+    "714, 715, 716, 717, 718, 719, 720\n"
+    "  would not run (2):\n"
+    "    not retried under the sealed protocol: 701 (SHAPE, every call answered 200)\n"
+    "    not retried under the sealed protocol: 704 (two attempts)\n"
+    "  attempts that do not count (1):\n"
+    "    attempt with no terminal event, so it does not count under the sealed "
+    "protocol: 705\n"
+)
+
+
+class WildV2SealedRunLockTests(unittest.TestCase):
+    """The sealed run is the owner's, and only the owner's.
+
+    Two locks. An opt-in the owner sets in the environment for the one command,
+    and ``--check``, which runs every refusal and every frozen-argument check and
+    then prints the plan without running anything. No test here can build a
+    client -- ``_run_cli`` patches the class to raise -- and none of them writes:
+    the runs root is a temporary directory, and both modules are made to believe
+    it is the repository's own, so the default ``--runs-dir`` is the scratch one.
+    """
+
+    def _invocation(self, tmp, *extra):
+        runs = Path(tmp) / "runs"
+        with mock.patch.object(sets, "RUNS_DIR", runs), mock.patch.object(
+            run_benchmark, "RUNS_DIR", runs
+        ):
+            code, out, err = _run_cli(
+                ["--set", "wild-v2", "--concurrency", "2", "--timeout", "900"]
+                + list(extra)
+            )
+        return runs, code, out, err
+
+    def test_without_the_opt_in_the_invocation_is_refused_and_writes_nothing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with mock.patch.dict(os.environ):
+                os.environ.pop(sets.SEALED_RUN_ENV_VAR, None)
+                runs, code, _out, err = self._invocation(tmp)
+
+            self.assertEqual(1, code, "the sealed run was not locked")
+            self.assertIn(sets.SEALED_RUN_ENV_VAR, err)
+            self.assertIn("owner only", err)
+            self.assertFalse(runs.exists(), "the refused invocation created the runs root")
+
+    def test_the_opt_in_set_to_any_other_value_is_refused(self):
+        for value in ("wild", "wild-dev", "", "1", "wild-v2x", "WILD-V2"):
+            with self.subTest(value=value):
+                with tempfile.TemporaryDirectory() as tmp:
+                    with mock.patch.dict(os.environ, {sets.SEALED_RUN_ENV_VAR: value}):
+                        runs, code, _out, err = self._invocation(tmp)
+                    self.assertEqual(
+                        1, code, "{0!r} unlocked the sealed run".format(value)
+                    )
+                    self.assertIn(sets.SEALED_RUN_ENV_VAR, err)
+                    self.assertFalse(runs.exists())
+
+    def test_check_creates_nothing_even_when_the_runs_root_does_not_exist(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runs, code, out, err = self._invocation(tmp, "--check")
+
+            self.assertEqual(0, code, err)
+            self.assertFalse(runs.exists(), "--check created the runs root")
+            self.assertIn("would run (20): 701", out)
+
+    def test_check_prints_exactly_the_plan_for_a_scripted_events_log(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            _scripted_events_log(runs)
+            before = _state(runs)
+
+            with mock.patch.object(sets, "RUNS_DIR", runs), mock.patch.object(
+                run_benchmark, "RUNS_DIR", runs
+            ):
+                code, out, err = _run_cli(
+                    [
+                        "--set",
+                        "wild-v2",
+                        "--concurrency",
+                        "2",
+                        "--timeout",
+                        "900",
+                        "--check",
+                    ]
+                )
+
+            self.assertEqual(0, code, err)
+            self.assertEqual(EXPECTED_CHECK_PLAN, out)
+            self.assertEqual(before, _state(runs), "--check wrote under the runs root")
+
+    def test_check_does_not_need_the_opt_in(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with mock.patch.dict(os.environ):
+                os.environ.pop(sets.SEALED_RUN_ENV_VAR, None)
+                runs, code, _out, err = self._invocation(tmp, "--check")
+
+            self.assertEqual(0, code, err)
+            self.assertFalse(runs.exists())
 
 
 # --------------------------------------------------------------------------
@@ -1398,8 +1569,41 @@ class ProtocolTransport:
         return len(self.requests)
 
 
+# The fixed placeholder ruling the protocol tests feed the judge.
+#
+# These tests are about *which invocations call an agent*, not about what an
+# agent answered, so the ruling never needs to be the case's own. It is a
+# well-formed POL-GEN-03 draft -- ``NO_ACTION`` requires neither amount, so both
+# are null, and it names no clause -- which is all ``check_judge_draft`` asks of
+# a draft before it may vote. Feeding the real key here would make the suite read
+# the sealed key for tests that are not about the key at all.
+PLACEHOLDER_RULING = {
+    "ruling": "NO_ACTION",
+    "amount_sgd": None,
+    "driver_compensation_sgd": None,
+    "referrals": [],
+    "confidence": 0.5,
+    "explanation": "A fixed placeholder ruling for the sealed-protocol tests.",
+}
+
+# Every case the protocol tests use, so the transport can answer each of them
+# without being handed a key.
+PROTOCOL_CASES = (
+    CASE_JUDGE_SHAPE,
+    CASE_ADVOCATE_SHAPE,
+    CASE_GATEWAY,
+    CASE_TRANSPORT,
+    CASE_KILLED,
+    CASE_SUCCEEDS,
+)
+
+
 def _protocol_transport(behaviour):
-    return ProtocolTransport(grade.key_as_produced(WILD_V2.key()), behaviour)
+    produced = {
+        case_no: {"case_no": case_no, "ruling": dict(PLACEHOLDER_RULING)}
+        for case_no in PROTOCOL_CASES
+    }
+    return ProtocolTransport(produced, behaviour)
 
 
 def _invoke(runs, cases, transport):
