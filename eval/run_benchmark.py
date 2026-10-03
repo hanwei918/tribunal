@@ -2636,6 +2636,14 @@ class RunSummary:
     # empty list are different findings: the first says the judge was never shown
     # a block, the second that it was and no covered case is a source.
     precedents_excluded: Optional[List[int]] = None
+    # Two facts about a *sealed set's* invocation, and both default to False so a
+    # development run's summary is exactly what it was. ``sealed_protocol`` says
+    # the sealed protocol chose this invocation's cases, so the failures header
+    # points at the protocol rather than at the plain cache line. The other says
+    # the protocol left nothing to run, and the printer answers that with one line
+    # instead of a summary whose only content would be this invocation's limits.
+    sealed_protocol: bool = False
+    sealed_nothing_to_run: bool = False
 
     @property
     def tokens_spent(self) -> int:
@@ -4570,8 +4578,21 @@ def parse_cases(text: Optional[str]) -> List[int]:
     return numbers
 
 
+# What a sealed set's invocation says when the protocol left it nothing to run.
+# One line, because there is nothing else to say: no case was called, and the
+# summary below would be a list of the limits this invocation was given.
+NOTHING_LEFT_TO_RUN = "nothing left to run under the sealed protocol"
+
+
 def print_summary(summary: RunSummary) -> None:
     """A short block a person reads at the end of a run."""
+    if summary.sealed_nothing_to_run:
+        # Before anything else, and instead of everything else: an invocation
+        # that ran nothing because the sealed protocol left nothing is a
+        # different statement from a run that produced nothing, and the block
+        # below cannot make it.
+        print(NOTHING_LEFT_TO_RUN)
+        return
     provenance_ = summary.provenance
     commit = provenance_.get("git_commit")
     tree = _render_tree_flag(provenance_.get("working_tree_clean"))
@@ -4723,7 +4744,17 @@ def print_summary(summary: RunSummary) -> None:
 
     if summary.failures:
         print("")
-        print("failed cases (not cached, so a re-run retries exactly these)")
+        if summary.sealed_protocol:
+            # A sealed set's re-run is not a plain cache retry: the protocol
+            # decides which failures are retried, and only the ones the
+            # infrastructure caused are. "A re-run retries exactly these" would
+            # promise the opposite of what this set's re-run does.
+            print(
+                "failed cases (a re-run applies the sealed protocol, which retries "
+                "only the failures the infrastructure caused)"
+            )
+        else:
+            print("failed cases (not cached, so a re-run retries exactly these)")
         for outcome in summary.failures:
             # The kind leads, because that is what the reader acts on, and it is
             # what distinguishes a case the client gave up on from a case the

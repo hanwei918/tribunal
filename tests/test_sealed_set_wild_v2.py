@@ -1579,6 +1579,12 @@ class ProtocolTransport:
 
         if mode == "transport":
             raise llm.TransportError("no answer was produced")
+        if mode == "not_provisioned":
+            # A model that is not provisioned fails every call the same way and
+            # nothing reaches a model. The runner records it as a case failure
+            # with no agent call and then lets it out of the invocation, which is
+            # what makes it a *terminal-only* attempt.
+            raise llm.ModelNotProvisionedError("the model is not provisioned")
         if mode == "gateway":
             return llm.HttpResult(status=502, body=b'{"error": "bad gateway"}')
 
@@ -1894,6 +1900,347 @@ class SealedProtocolTests(unittest.TestCase):
                 ]
             ),
         )
+
+
+# --------------------------------------------------------------------------
+# The sealed protocol, second pass
+# --------------------------------------------------------------------------
+ADDENDUM_NOTE = PROJECT_ROOT / "docs/notes/2026-10-03-the-sealed-protocol-addendum.md"
+
+# The four rules the addendum note states, each as a phrase the note carries.
+# Pairing them here is what makes "the note states them, before the run"
+# something a test checks rather than something a reader assumes. The phrases
+# are lower-case and the note sets two of them at the head of a sentence, so the
+# test compares case-insensitively rather than forbidding the capital.
+ADDENDUM_RULES = (
+    "a SHAPE failure with zero agent calls is retried once",
+    "a `ruling` event with no case file is retried once",
+    "an unparseable last line makes that attempt one that does not count",
+    "the owner runs at most two invocations, plus as many `--check` runs as needed",
+)
+
+
+def _protocol_run_dir(runs):
+    """The scratch run directory every protocol test writes into."""
+    return runs / run_benchmark.WILD_V2_SET_RUNS_SUBDIR / run_benchmark.model_slug(MODEL)
+
+
+def _report_text(runs):
+    """The invocation's own ``report.md``, as text."""
+    return (_protocol_run_dir(runs) / run_benchmark.REPORT_FILE).read_text(
+        encoding="utf-8"
+    )
+
+
+def _row_for(text, case_no):
+    """The one case-table row of a report for a case, or the empty string."""
+    for line in text.splitlines():
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if cells and cells[0] == str(case_no):
+            return line
+    return ""
+
+
+def _write_a_failure(runs, case_no, kind, detail=None):
+    """One terminal-only attempt of a case, in an invocation of its own.
+
+    No ``agent_call``, which is what makes it terminal-only: a call that raised
+    before the transcript entry existed records its ``case_failed`` and nothing
+    else.
+    """
+    run_dir = _protocol_run_dir(runs)
+    run_dir.mkdir(parents=True, exist_ok=True)
+    log = events.EventLog(
+        run_dir / events.EVENTS_FILE,
+        invocation_id="a-terminal-only-attempt-{0}".format(kind),
+    )
+    log.record(events.EVENT_CASE_START, case_no=case_no, position=1, total=1)
+    log.record(
+        events.EVENT_CASE_FAILED, case_no=case_no, failure_kind=kind, detail=detail
+    )
+
+
+class SealedProtocolSecondPassTests(unittest.TestCase):
+    """The cases the protocol's first pass did not meet, and the lines it prints.
+
+    The rule is unchanged. What is added here is what the first pass left out: a
+    case the run already holds a result for, a failure that never reached a
+    model, "last" when a killed attempt is in the way, a failure kind the code
+    does not know, a log whose chain does not verify, and what an invocation says
+    when there is nothing left for it to do.
+
+    No model is called and no sealed set is run: every invocation goes through
+    ``_invoke``, which passes a scripted transport, over a scratch runs root.
+    """
+
+    def test_a_case_with_a_result_is_kept_and_reported_as_cached(self):
+        """A case the run already holds a result for is never dropped by the rule.
+
+        Two attempts and a result is exactly the shape the rule calls "two
+        attempts" and drops. The cache is what says otherwise, and the invocation
+        has to keep the case, so that its own record says "cached" rather than
+        saying nothing about it at all.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            flaky = _protocol_transport({CASE_TRANSPORT: "transport"})
+            _invoke(runs, [CASE_TRANSPORT], flaky)
+            self.assertGreater(flaky.calls(), 0, "the first invocation made no call")
+
+            working = _protocol_transport({})
+            _invoke(runs, [CASE_TRANSPORT], working)
+            calls_after_the_result = working.calls()
+            self.assertGreater(calls_after_the_result, 0, "the retry made no call")
+
+            summary, out = _invoke(runs, [CASE_TRANSPORT], working)
+
+            self.assertEqual(
+                calls_after_the_result,
+                working.calls(),
+                "a case the run already has a result for was called again",
+            )
+            self.assertNotIn(
+                "not retried under the sealed protocol",
+                out,
+                "a case with a result was dropped instead of kept",
+            )
+            self.assertIn(
+                CASE_TRANSPORT,
+                summary.cached_cases,
+                "the invocation did not report the case as cached",
+            )
+            row = _row_for(_report_text(runs), CASE_TRANSPORT)
+            self.assertNotEqual("", row, "the report has no row for the case")
+            self.assertIn("current", row, "the report's cached cell is not current")
+
+    def test_two_configuration_errors_are_not_two_attempts(self):
+        """A failure that never reached a model does not use up an attempt."""
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            broken = _protocol_transport({CASE_SUCCEEDS: "not_provisioned"})
+
+            for number in (1, 2):
+                with self.subTest(invocation=number):
+                    with self.assertRaises(llm.ModelNotProvisionedError):
+                        _invoke(runs, [CASE_SUCCEEDS], broken)
+
+            self.assertEqual(
+                [],
+                sets._sealed_attempts(_protocol_run_dir(runs), CASE_SUCCEEDS),
+                "a configuration error was read as an attempt",
+            )
+
+            working = _protocol_transport({})
+            _, out = _invoke(runs, [CASE_SUCCEEDS], working)
+            self.assertGreater(
+                working.calls(), 0, "two configuration errors used up the two"
+            )
+            self.assertNotIn("not retried under the sealed protocol", out)
+
+    def test_the_command_line_refuses_a_sealed_run_when_no_api_key_loads(self):
+        """A keyless sealed run records a configuration error for every case."""
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            arguments = ["--set", "wild-v2", "--concurrency", "2", "--timeout", "900"]
+
+            with mock.patch.dict(
+                os.environ, {sets.SEALED_RUN_ENV_VAR: "wild-v2"}
+            ), mock.patch.object(
+                run_benchmark.llm, "load_api_key", return_value=None
+            ), mock.patch.object(sets, "RUNS_DIR", runs), mock.patch.object(
+                run_benchmark, "RUNS_DIR", runs
+            ):
+                code, _out, err = _run_cli(arguments)
+
+            self.assertEqual(1, code, "a keyless sealed run was accepted")
+            self.assertIn("no API key loads", err)
+            self.assertFalse(
+                runs.exists(), "the refused invocation created the runs root"
+            )
+
+            # It is the key that is missing and not the opt-in: with a key the
+            # invocation gets past this check and reaches the client, which this
+            # module refuses to build.
+            with mock.patch.dict(
+                os.environ, {sets.SEALED_RUN_ENV_VAR: "wild-v2"}
+            ), mock.patch.object(
+                run_benchmark.llm, "load_api_key", return_value="a-key"
+            ), mock.patch.object(sets, "RUNS_DIR", runs), mock.patch.object(
+                run_benchmark, "RUNS_DIR", runs
+            ):
+                with self.assertRaises(AssertionError) as caught:
+                    _run_cli(arguments)
+            self.assertIn("a client was built", str(caught.exception))
+
+    def test_a_killed_attempt_does_not_stop_a_transport_retry(self):
+        """TRANSPORT, then a killed attempt: the case is still called."""
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            flaky = _protocol_transport({CASE_KILLED: "transport"})
+            _invoke(runs, [CASE_KILLED], flaky)
+            self.assertGreater(flaky.calls(), 0, "the first invocation made no call")
+
+            _killed_attempt(runs, CASE_KILLED)
+
+            working = _protocol_transport({})
+            _, out = _invoke(runs, [CASE_KILLED], working)
+            self.assertGreater(
+                working.calls(), 0, "a killed attempt stopped a transport retry"
+            )
+            self.assertNotIn("not retried under the sealed protocol", out)
+
+    def test_a_shape_failure_after_a_killed_attempt_is_still_not_retried(self):
+        """A killed attempt, then SHAPE with every status 200: not called."""
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            _killed_attempt(runs, CASE_KILLED)
+
+            shaping = _protocol_transport({CASE_KILLED: "judge_shape"})
+            _invoke(runs, [CASE_KILLED], shaping)
+            self.assertGreater(shaping.calls(), 0, "the SHAPE invocation made no call")
+
+            working = _protocol_transport({})
+            _, out = _invoke(runs, [CASE_KILLED], working)
+            self.assertEqual(0, working.calls(), "a SHAPE failure was re-sampled")
+            self.assertIn(
+                "not retried under the sealed protocol: {0} (SHAPE, every call "
+                "answered 200)".format(CASE_KILLED),
+                out,
+            )
+
+    def test_a_failure_kind_the_code_does_not_retry_names_itself(self):
+        """Every kind that is not retried is refused, and the reason says which."""
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            _write_a_failure(runs, CASE_SUCCEEDS, run_benchmark.FAILURE_REPLAY)
+            run_dir = _protocol_run_dir(runs)
+
+            self.assertEqual(
+                "{0}, which is not a retried kind".format(run_benchmark.FAILURE_REPLAY),
+                sets._sealed_verdict(sets._sealed_attempts(run_dir, CASE_SUCCEEDS)),
+            )
+
+            printed = []
+            keep = sets.cases_the_sealed_protocol_will_not_retry(
+                WILD_V2, [CASE_SUCCEEDS], MODEL, runs, progress=printed.append
+            )
+            self.assertEqual([], keep, "a kind that is not retried was retried")
+            self.assertEqual(
+                [
+                    "not retried under the sealed protocol: {0} ({1}, which is not "
+                    "a retried kind)".format(
+                        CASE_SUCCEEDS, run_benchmark.FAILURE_REPLAY
+                    )
+                ],
+                printed,
+            )
+
+    def test_a_broken_chain_refuses_the_protocol_and_names_the_line(self):
+        """The protocol reads the record, so a record that does not verify is refused."""
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            _write_a_failure(runs, CASE_SUCCEEDS, run_benchmark.FAILURE_TRANSPORT)
+            path = _protocol_run_dir(runs) / events.EVENTS_FILE
+            text = path.read_text(encoding="utf-8")
+            # The last line appended a second time: the copy's ``prev`` does not
+            # name the line before it, so the chain stops agreeing there.
+            path.write_text(text + text.splitlines()[-1] + "\n", encoding="utf-8")
+
+            with self.assertRaises(run_benchmark.BenchmarkError) as caught:
+                sets.cases_the_sealed_protocol_will_not_retry(
+                    WILD_V2, [CASE_SUCCEEDS], MODEL, runs
+                )
+            message = str(caught.exception)
+            self.assertIn("does not verify", message)
+            self.assertIn("line 3", message)
+
+    def test_a_truncated_last_line_is_not_a_break(self):
+        """A killed writer ends the file mid-record; that is not an edited log.
+
+        The partial line is left out of the reading, so the attempt it belonged to
+        is one that ended with no terminal event -- printed, and not counted --
+        rather than a reason to refuse to apply the protocol at all.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            run_dir = _protocol_run_dir(runs)
+            run_dir.mkdir(parents=True, exist_ok=True)
+            log = events.EventLog(
+                run_dir / events.EVENTS_FILE, invocation_id=KILLED_INVOCATION
+            )
+            log.record(events.EVENT_CASE_START, case_no=CASE_KILLED, position=1, total=1)
+            log.record(
+                events.EVENT_AGENT_CALL,
+                case_no=CASE_KILLED,
+                role=transcript.ROLE_RIDER_ADVOCATE,
+                status=200,
+            )
+            log.record(
+                events.EVENT_AGENT_CALL,
+                case_no=CASE_KILLED,
+                role=transcript.ROLE_JUDGE,
+                status=200,
+            )
+
+            path = run_dir / events.EVENTS_FILE
+            lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
+            path.write_text(
+                "".join(lines[:-1]) + lines[-1][: len(lines[-1]) // 2],
+                encoding="utf-8",
+            )
+
+            printed = []
+            keep = sets.cases_the_sealed_protocol_will_not_retry(
+                WILD_V2, [CASE_KILLED], MODEL, runs, progress=printed.append
+            )
+            self.assertEqual([CASE_KILLED], keep)
+            self.assertEqual(
+                [
+                    "attempt with no terminal event, so it does not count under "
+                    "the sealed protocol: {0}".format(CASE_KILLED)
+                ],
+                printed,
+            )
+
+    def test_an_invocation_with_nothing_left_to_run_prints_one_line(self):
+        """A no-op sealed invocation says so in one line, not with a summary."""
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            transport = _protocol_transport({CASE_JUDGE_SHAPE: "judge_shape"})
+            _invoke(runs, [CASE_JUDGE_SHAPE], transport)
+
+            # The rule drops the case, so this invocation has nothing to run.
+            summary, _ = _invoke(runs, [CASE_JUDGE_SHAPE], transport)
+            buffer = io.StringIO()
+            with contextlib.redirect_stdout(buffer):
+                run_benchmark.print_summary(summary)
+
+            self.assertEqual(run_benchmark.NOTHING_LEFT_TO_RUN + "\n", buffer.getvalue())
+
+    def test_the_failed_cases_header_points_at_the_protocol_for_a_sealed_set(self):
+        """A sealed re-run is not a plain cache retry, and the header says so."""
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            transport = _protocol_transport({CASE_TRANSPORT: "transport"})
+            summary, _ = _invoke(runs, [CASE_TRANSPORT], transport)
+
+            buffer = io.StringIO()
+            with contextlib.redirect_stdout(buffer):
+                run_benchmark.print_summary(summary)
+
+            self.assertIn("the sealed protocol", buffer.getvalue())
+            self.assertNotIn("retries exactly these", buffer.getvalue())
+
+
+class TheAddendumNoteTests(unittest.TestCase):
+    """The note states the rules the code applies, before the run."""
+
+    def test_the_note_states_the_four_rules(self):
+        self.assertTrue(ADDENDUM_NOTE.is_file(), "the addendum note is not there")
+        text = ADDENDUM_NOTE.read_text(encoding="utf-8").lower()
+        for rule in ADDENDUM_RULES:
+            with self.subTest(rule=rule):
+                self.assertIn(rule.lower(), text)
 
 
 if __name__ == "__main__":

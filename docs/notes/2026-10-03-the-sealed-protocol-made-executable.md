@@ -37,7 +37,9 @@ had to be executable before `wild-v2` ran rather than merely intended.
 > infrastructure is retried once; a failure in which the model answered is not
 > retried, because retrying it only re-samples the model.**
 >
-> Code and an addendum note state it in these exact terms:
+> Code and the addendum note
+> `docs/notes/2026-10-03-the-sealed-protocol-addendum.md` state it in these
+> exact terms:
 >
 > - An **attempt** of a case is one invocation in which that case has at least
 >   one `agent_call` event in the run's `events.jsonl`.

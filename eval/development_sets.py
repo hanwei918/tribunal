@@ -559,7 +559,8 @@ def run_argument_differences(
 # with no ``case-<NNNNN>.json``, SHAPE failures included: that is exactly what
 # ``wild-v1``'s second invocation did to 517 and 533.
 #
-# The rule, in the terms the addendum note states it:
+# The rule, in the terms ``docs/notes/2026-10-03-the-sealed-protocol-addendum.md``
+# states it:
 #
 # * an **attempt** of a case is one invocation in which that case has at least
 #   one ``agent_call`` event -- or, for the failures that make no call at all, one
@@ -591,6 +592,16 @@ RETRYABLE_FAILURE_KINDS = frozenset(
     }
 )
 
+# The two errors that say no model was reached: the key was absent, or the model
+# was not provisioned. A ``case_failed`` whose ``detail`` starts with one of these
+# names a configuration error and not an attempt -- nothing was called and
+# nothing was sampled, so retrying re-samples nothing. The detail is written by
+# the runner as ``"<type name>: <message>"``, so the type name is what is read.
+CONFIGURATION_ERROR_TYPES = (
+    "MissingAPIKeyError",
+    "ModelNotProvisionedError",
+)
+
 
 @dataclass(frozen=True)
 class _SealedAttempt:
@@ -602,6 +613,25 @@ class _SealedAttempt:
     # for the case: the process was killed and this attempt does not count.
     terminal: Optional[str]
     failure_kind: Optional[str]
+    # The ``case_failed`` detail, read for its leading type name alone.
+    detail: Optional[str] = None
+
+    @property
+    def is_a_configuration_error(self) -> bool:
+        """True when this attempt never reached a model.
+
+        A terminal-only attempt -- no ``agent_call`` at all -- whose failure is
+        one of the two configuration errors says the key was absent or the model
+        was not provisioned. Nothing was called, so this is not an attempt: it is
+        not counted toward a case's two, and it is not printed as an attempt that
+        does not count either, because it reached a decision rather than being
+        interrupted.
+        """
+        if self.terminal != events.EVENT_CASE_FAILED or self.statuses:
+            return False
+        return any(
+            (self.detail or "").startswith(name) for name in CONFIGURATION_ERROR_TYPES
+        )
 
 
 def _sealed_attempts(run_dir: Path, case_no: int) -> List["_SealedAttempt"]:
@@ -613,6 +643,9 @@ def _sealed_attempts(run_dir: Path, case_no: int) -> List["_SealedAttempt"]:
     transcript entry existed -- so its ``case_failed`` is the only thing that
     says the invocation tried the case. An invocation that only began the case,
     because it found it cached, is neither and is not an attempt.
+
+    A configuration error is not an attempt and is left out of the list
+    entirely, so neither the two-attempt cap nor the printed record sees it.
     """
     order: List[Any] = []
     buckets: Dict[Any, Dict[str, Any]] = {}
@@ -622,7 +655,12 @@ def _sealed_attempts(run_dir: Path, case_no: int) -> List["_SealedAttempt"]:
         invocation = event.get("invocation")
         bucket = buckets.get(invocation)
         if bucket is None:
-            bucket = {"statuses": [], "terminal": None, "failure_kind": None}
+            bucket = {
+                "statuses": [],
+                "terminal": None,
+                "failure_kind": None,
+                "detail": None,
+            }
             buckets[invocation] = bucket
             order.append(invocation)
         name = event.get("event")
@@ -633,41 +671,102 @@ def _sealed_attempts(run_dir: Path, case_no: int) -> List["_SealedAttempt"]:
         elif name == events.EVENT_CASE_FAILED:
             bucket["terminal"] = events.EVENT_CASE_FAILED
             bucket["failure_kind"] = event.get("failure_kind")
+            bucket["detail"] = event.get("detail")
     attempts: List["_SealedAttempt"] = []
     for invocation in order:
         bucket = buckets[invocation]
         if not bucket["statuses"] and bucket["terminal"] is None:
             continue
-        attempts.append(
-            _SealedAttempt(
-                invocation=invocation,
-                statuses=tuple(bucket["statuses"]),
-                terminal=bucket["terminal"],
-                failure_kind=bucket["failure_kind"],
-            )
+        attempt = _SealedAttempt(
+            invocation=invocation,
+            statuses=tuple(bucket["statuses"]),
+            terminal=bucket["terminal"],
+            failure_kind=bucket["failure_kind"],
+            detail=bucket["detail"],
         )
+        if attempt.is_a_configuration_error:
+            continue
+        attempts.append(attempt)
     return attempts
+
+
+def _sealed_case_has_a_result(run_dir: Path, case_no: int) -> bool:
+    """True when the run already holds this case's result.
+
+    Asked of the cache, and asked *before* the events, because the cache is what
+    the runner itself consults: a case with a case file is one the runner will not
+    call, so the protocol keeps it in ``selected`` and the invocation's own
+    reporting says it was cached. A case the protocol had dropped instead would
+    be reported as absent rather than as cached, which is a different statement
+    about the run.
+    """
+    return run_benchmark.load_cached(Path(run_dir), case_no) is not None
+
+
+def _refuse_a_broken_sealed_chain(run_dir: Path) -> None:
+    """Refuse to apply the protocol to a log whose chain does not verify.
+
+    The protocol is a reading of the run's own record, so a record that does not
+    verify is not a record to decide from: a line could have been added, removed
+    or edited, and the decision would rest on it. The broken line is named, so a
+    reader can look at it rather than being told only that something is wrong.
+
+    One break is tolerated, and it is the one a killed run leaves: a **last** line
+    that is not a JSON object at all. A process stopped mid-write ends the file
+    part-way through a record, and that is an incomplete write rather than an
+    edited record -- the attempt it belongs to has no terminal event, which the
+    protocol already reads as an attempt that does not count. An edited line
+    still parses, so it is never tolerated, and neither is anything in the middle
+    of the file.
+    """
+    path = Path(run_dir) / events.EVENTS_FILE
+    if not path.exists():
+        return
+    broken = events.verify_chain(path)
+    if broken is None:
+        return
+    if broken.kind == "malformed" and broken.line_number == len(
+        events.read_lines(path)
+    ):
+        return
+    raise run_benchmark.BenchmarkError(
+        "the sealed run's event log does not verify, so the sealed protocol "
+        "is not applied to it: {0}".format(broken.describe())
+    )
 
 
 def _sealed_verdict(attempts: Sequence["_SealedAttempt"]) -> Optional[str]:
     """Why a case is **not** run again, or ``None`` when it is.
 
-    The reason is one of the two the protocol prints. An attempt with no
+    The reason is one of the ones the protocol prints. An attempt with no
     terminal event does not count toward the two, so a case killed mid-call is
-    run again.
+    run again; a configuration error is not in ``attempts`` at all.
     """
     counted = [attempt for attempt in attempts if attempt.terminal is not None]
     if len(counted) >= 2:
         return "two attempts"
     if len(counted) == 1:
         last = counted[0]
-        if (
-            last.terminal == events.EVENT_CASE_FAILED
-            and last.failure_kind == run_benchmark.FAILURE_SHAPE
-            and last.statuses
-            and all(status == HTTP_OK for status in last.statuses)
-        ):
-            return "SHAPE, every call answered 200"
+        if last.terminal == events.EVENT_RULING:
+            # A ``ruling`` event with no case file. A case file holding a result
+            # is kept before this is reached, so this is a record that a ruling
+            # was made and nothing was written for it: the model answered, so it
+            # is not re-sampled twice -- it is retried once, and the two-attempt
+            # cap is what stops the second retry.
+            return None
+        if last.failure_kind == run_benchmark.FAILURE_SHAPE:
+            if last.statuses and all(status == HTTP_OK for status in last.statuses):
+                return "SHAPE, every call answered 200"
+            # A server error that exhausted the client's own retries reaches the
+            # runner as SHAPE with a call that was not answered 200, and it is
+            # retried once.
+            return None
+        if last.failure_kind in RETRYABLE_FAILURE_KINDS:
+            return None
+        # Everything else, including a kind this code does not know, is not
+        # retried: the model answered, so retrying would only re-sample it, and
+        # the reason names the kind so the record says which one it was.
+        return "{0}, which is not a retried kind".format(last.failure_kind or "FAILED")
     return None
 
 
@@ -684,27 +783,32 @@ def cases_the_sealed_protocol_will_not_retry(
     Reads the run's own ``events.jsonl``, read-only, and applies the rule above.
     Every case it drops, and every attempt it does not count, is printed so the
     record shows what happened.
+
+    The decision itself is :func:`sealed_protocol_plan`'s, and it is called
+    rather than copied: ``--check`` renders that function's data and this
+    function prints it, so the plan a reader is shown and the run that follows it
+    are one predicate. A second copy of the loop here would be a second place for
+    the two to disagree, and the disagreement would be silent -- a run whose plan
+    said one thing and whose selection said another.
+
+    A case the run already holds a result for is kept without being looked at:
+    the cache is what the runner consults, and a case the protocol dropped would
+    be reported as absent rather than as cached. A log whose chain does not
+    verify is refused rather than read.
     """
-    run_dir = development_set.run_dir(model, runs_dir)
-    keep: List[int] = []
-    for case_no in selected:
-        attempts = _sealed_attempts(run_dir, case_no)
-        for attempt in attempts:
-            if attempt.terminal is None:
-                progress(
-                    "attempt with no terminal event, so it does not count under "
-                    "the sealed protocol: {0}".format(case_no)
-                )
-        verdict = _sealed_verdict(attempts)
-        if verdict is None:
-            keep.append(case_no)
-        else:
-            progress(
-                "not retried under the sealed protocol: {0} ({1})".format(
-                    case_no, verdict
-                )
-            )
-    return keep
+    would_run, not_retried, do_not_count = sealed_protocol_plan(
+        development_set, selected, model, runs_dir
+    )
+    for case_no in do_not_count:
+        progress(
+            "attempt with no terminal event, so it does not count under "
+            "the sealed protocol: {0}".format(case_no)
+        )
+    for case_no, verdict in not_retried:
+        progress(
+            "not retried under the sealed protocol: {0} ({1})".format(case_no, verdict)
+        )
+    return would_run
 
 
 def sealed_protocol_plan(
@@ -721,12 +825,20 @@ def sealed_protocol_plan(
     decides what to do with the three -- a run prints them, ``--check`` renders
     them as the plan -- so the plan a reader is shown and the run that follows it
     are the same predicate and cannot drift apart.
+
+    A case the run already holds a result for is in ``would_run``, because the
+    invocation does select it and the runner's cache is what then reports it as
+    cached, and it prints no reason of its own.
     """
     run_dir = development_set.run_dir(model, runs_dir)
+    _refuse_a_broken_sealed_chain(run_dir)
     would_run: List[int] = []
     not_retried: List[Tuple[int, str]] = []
     do_not_count: List[int] = []
     for case_no in selected:
+        if _sealed_case_has_a_result(run_dir, case_no):
+            would_run.append(case_no)
+            continue
         attempts = _sealed_attempts(run_dir, case_no)
         for attempt in attempts:
             if attempt.terminal is None:
@@ -784,8 +896,10 @@ def _nothing_left_to_run(
 
     A second or third invocation can find every case already decided, already
     out of attempts, or answered by the model. Nothing is called and nothing is
-    written; the summary says so, so the caller's own reporting is unchanged and
-    a no-op invocation is not mistaken for a run that produced nothing.
+    written, and the summary carries ``sealed_nothing_to_run`` so the printer
+    says that in one line: the ordinary summary would show this invocation's
+    limits and no case at all, which reads as a run that produced nothing rather
+    than as one that correctly called nothing.
     """
     stamp = datetime.now(timezone.utc).isoformat()
     return run_benchmark.RunSummary(
@@ -794,6 +908,8 @@ def _nothing_left_to_run(
         started_at=stamp,
         ended_at=stamp,
         stop_reason=run_benchmark.STOP_COMPLETED,
+        sealed_protocol=True,
+        sealed_nothing_to_run=True,
     )
 
 
@@ -866,7 +982,7 @@ def run_set(
     if development_set.policy_version != run_benchmark.DEFAULT_POLICY_VERSION:
         kwargs["policy_version"] = development_set.policy_version
         kwargs["policy_version_moves_the_run"] = False
-    return run_benchmark.run_benchmark(
+    summary = run_benchmark.run_benchmark(
         model,
         selected,
         runs_dir=set_runs_dir,
@@ -897,6 +1013,12 @@ def run_set(
         label=None if development_set.runs_subdir is None else development_set.name,
         **kwargs,
     )
+    # The sealed protocol is what chose this invocation's cases, so the summary
+    # says so and the end-of-run failures header points at the protocol instead of
+    # at the plain cache line. For a development set the flag is False and that
+    # header is what it always was.
+    summary.sealed_protocol = development_set.sealed
+    return summary
 
 
 # --------------------------------------------------------------------------
@@ -1833,6 +1955,21 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 "nothing else may set it, and nothing in this repository does".format(
                     development_set.name, SEALED_RUN_ENV_VAR
                 ),
+                file=sys.stderr,
+            )
+            return 1
+        # And the run must be able to call a model at all. Checked after the
+        # opt-in, so an invocation that is not the owner's is still told about the
+        # opt-in, and before ``run_set``, so a keyless invocation writes nothing.
+        # Without a key every case would fail with a configuration error, and a
+        # configuration error is not an attempt under the protocol, so the run
+        # would leave the sealed root as it found it while reporting that it had
+        # run -- the one outcome the sealed set cannot survive.
+        if not run_benchmark.llm.load_api_key():
+            print(
+                "FATAL: {0} is a sealed set and no API key loads, so a run would "
+                "call no model and record a configuration error for every case; "
+                "nothing has been written".format(development_set.name),
                 file=sys.stderr,
             )
             return 1
