@@ -3572,7 +3572,17 @@ def run_benchmark(
     measured = [
         case_no for case_no in covered if case_no not in set(precedents_excluded)
     ]
-    report = grade_run(run_dir, resolved_key, measured, checker, case_loader)
+    report = grade_run(
+        run_dir,
+        resolved_key,
+        measured,
+        checker,
+        case_loader,
+        # The version this run briefed at, so the report's provenance column
+        # describes the brief the cases were decided under rather than the
+        # version-1 brief of the same cases.
+        policy_version=policy_version,
+    )
     report_title = "Benchmark report — {0}".format(model)
     if label is not None:
         report_title = "Benchmark report — {0} — development set {1}".format(
@@ -3952,6 +3962,7 @@ def case_facts(
     case_no: int,
     document: Mapping[str, Any],
     case_loader: Optional[Callable[[int], Mapping[str, Any]]] = None,
+    policy_version: int = policy_versions.BASE_VERSION,
 ) -> grade.CaseFacts:
     """The cost, the wall clock, the vote and the provenance of one cached case.
 
@@ -3969,6 +3980,13 @@ def case_facts(
       copy of one. A brief that cannot be built answers so explicitly rather
       than answering a wrong provenance;
     * the explanation tags are matched over the ruling's own explanation text.
+
+    ``policy_version`` is the version that brief is built at, and it is the
+    caller's to give: a set whose registration fixes a later version records its
+    cases at that version, and a provenance computed from a version-1 brief
+    would be the provenance of a brief no agent of that run ever saw. It
+    defaults to the base version, which is what every corpus caller passes by
+    passing nothing.
 
     For a replayed case the advocate share is what those calls cost the run that
     made them, because the copied entries carry the usage figures they were
@@ -3998,7 +4016,9 @@ def case_facts(
 
     load = loader.load_case if case_loader is None else case_loader
     try:
-        brief_object: Optional[Mapping[str, Any]] = brief.build_brief_for_case(load(case_no))
+        brief_object: Optional[Mapping[str, Any]] = brief.build_brief_for_case(
+            load(case_no), policy_version=policy_version
+        )
     except Exception:  # noqa: BLE001 - a brief that cannot be built yields no provenance
         brief_object = None
 
@@ -4025,6 +4045,7 @@ def grade_run(
     cases: Optional[Sequence[int]] = None,
     checker: Optional[BriefStaleness] = None,
     case_loader: Optional[Callable[[int], Mapping[str, Any]]] = None,
+    policy_version: int = policy_versions.BASE_VERSION,
 ) -> grade.GradeReport:
     """Grade a run's cached rulings, and say which of them the code has moved past.
 
@@ -4053,6 +4074,14 @@ def grade_run(
     development set's cases are named when the brief is rebuilt for the amount
     provenance; the corpus loader is the default, and a set that does not pass
     its own would have every one of its cases report an unavailable brief.
+
+    ``policy_version`` is the version those briefs are rebuilt at, and it is
+    passed on to :func:`case_facts` for the reason it is given there: the
+    provenance column has to describe the brief the run was actually decided
+    under. The base version is the default, so a corpus caller passes nothing.
+    The *staleness* channel is not read off this parameter -- it is the
+    checker's own -- which is why a caller that wants a later version compared
+    passes a checker built at it as well.
     """
     resolved_key: Mapping[int, grade.Ruling] = (
         grade.load_answer_key() if key is None else dict(key)
@@ -4076,7 +4105,9 @@ def grade_run(
         # Before the replay branch's ``continue``: a replayed case has facts of
         # its own -- a wall clock, a vote, an explanation -- and skipping them
         # would blank its row for a reason that has nothing to do with them.
-        facts[case_no] = case_facts(run_dir, case_no, document, case_loader)
+        facts[case_no] = case_facts(
+            run_dir, case_no, document, case_loader, policy_version
+        )
         replay = document.get("replay")
         if not isinstance(replay, Mapping):
             continue

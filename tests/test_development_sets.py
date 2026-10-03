@@ -8,6 +8,10 @@ neither its cases nor its results can reach the corpus.
 
 No model is called: the transport below answers from the key, as the corpus
 runner's own tests do.
+
+The last class is about the other thing a set's registration can fix besides
+its cases: the policy version its briefs are built at. It runs a temporary
+one-case set registered at version 2, over the same scripted transport.
 """
 
 from __future__ import annotations
@@ -25,8 +29,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from eval import development_sets as sets  # noqa: E402
+from eval import baselines, development_sets as sets  # noqa: E402
 from eval import grade, run_benchmark  # noqa: E402
+from tests import test_upfront_remedy as upfront_rig  # noqa: E402
 from tribunal import llm, loader, money, transcript  # noqa: E402
 
 MODEL = "deepseek/deepseek-flash"
@@ -749,6 +754,189 @@ class PerCaseColumnTests(unittest.TestCase):
                 [str(case_no) for case_no in sets.SECOND_SET.cases],
                 [row[0] for row in rows],
             )
+
+
+# --------------------------------------------------------------------------
+# A set whose registration fixes the policy version
+# --------------------------------------------------------------------------
+# The one case the temporary set below holds, and the figure POL-RD-11
+# publishes at policy version 2 for it: 25.83 charged against a 22.00 quote.
+VERSION_TWO_CASE = 9901
+VERSION_TWO_AMOUNT = "3.85"
+
+
+def a_version_two_set(tmp):
+    """A one-case set registered at policy version 2, under a temporary root.
+
+    ``wild-v2`` is the only registered set whose policy version is fixed by its
+    registration, and it is run once and must not be run for a test. This set is
+    the same kind of thing in every respect that matters to the code under test
+    -- a case root of its own, a key of its own, and version 2 in the
+    registration -- so the three places the version has to travel can be
+    exercised without a model call and without touching a committed run.
+
+    The case is the synthetic upfront one from ``tests.test_upfront_remedy``: a
+    fare breakdown whose model is ``UPFRONT_QUOTE`` and whose charge exceeds its
+    quote, which is the arithmetic POL-RD-11's remedy is stated over. The key's
+    amount is that remedy, so at version 2 the draft's amount reads off
+    ``pol_rd_11_remedy.value`` and at version 1 the same amount reads off nothing
+    the money block publishes.
+
+    Call this inside ``test_upfront_remedy.version_two_amendments()`` and with
+    ``loader.EXTERNAL_DIR`` patched to ``<tmp>/external``: the amendment is what
+    makes version 2 exist, and the patch is what lets a case root live outside
+    the repository.
+    """
+    root = Path(tmp) / "external" / "policy-v2-probe"
+    (root / "cases").mkdir(parents=True)
+    (root / "cases" / "case-09901.json").write_text(
+        json.dumps(upfront_rig.synthetic_upfront_case("22.00")), encoding="utf-8"
+    )
+    (root / "index.json").write_text(
+        json.dumps(
+            [
+                {
+                    "case_no": VERSION_TWO_CASE,
+                    "dispute_id": "DSP-09901",
+                    "trip_id": "TRP-09901",
+                    "category": "ROUTE_DEVIATION",
+                    "file": "cases/case-09901.json",
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+    key_path = Path(tmp) / "policy-v2-probe-key.json"
+    key_path.write_text(
+        json.dumps(
+            [
+                {
+                    "case_no": VERSION_TWO_CASE,
+                    "dispute_id": "DSP-09901",
+                    "ground_truth": {
+                        "expected_ruling": "PARTIAL_REFUND",
+                        "expected_amount_sgd": VERSION_TWO_AMOUNT,
+                        "expected_driver_compensation_sgd": None,
+                        "expected_referrals": [],
+                    },
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+    return sets.DevelopmentSet(
+        name="policy-v2-probe",
+        cases=(VERSION_TWO_CASE,),
+        key_path=key_path,
+        runs_subdir="policy-v2-probe",
+        case_root=root,
+        summary="a temporary one-case set registered at policy version 2",
+        policy_version=2,
+    )
+
+
+class PolicyVersionTests(unittest.TestCase):
+    """A set registered at version 2 is checked, graded and read at version 2.
+
+    The registration is where a fixed version comes from, so a function that
+    takes the set and then briefs at the base version anyway measures something
+    other than the set. Three things go wrong when one does, and all three are
+    asserted here over one temporary set and one scripted run:
+
+    * ``currency_for`` reports the run's one correct case as a moved brief,
+      because the checker rebuilds version-1 briefs and compares them with the
+      version-2 digests the run recorded;
+    * ``figures_for`` computes the amount provenance from the version-1 brief,
+      so the report's provenance column describes a money block no agent of that
+      run was ever handed;
+    * ``baselines.build_section`` refuses the case for the moved brief, and its
+      replay check refuses the whole run a second time by name.
+
+    No model is called and nothing committed is read or written: the set lives
+    in a temporary directory and its case is synthetic. The run is made with the
+    default judge vote count, because a baselines panel needs more than one
+    draft to verify.
+    """
+
+    def run_the_set(self, tmp):
+        """The temporary set, run once, and the runs root it went into."""
+        development_set = a_version_two_set(tmp)
+        runs = Path(tmp) / "runs"
+        transport = ScriptedTransport(grade.key_as_produced(development_set.key()))
+        sets.run_set(
+            development_set,
+            MODEL,
+            runs_dir=runs,
+            client_factory=client_factory(transport),
+            git_runner=git_runner(),
+            progress=lambda text: None,
+        )
+        return development_set, runs
+
+    def test_a_set_registered_at_version_two_reads_current_and_grades_at_it(self):
+        with tempfile.TemporaryDirectory() as tmp, \
+                upfront_rig.version_two_amendments(), \
+                mock.patch.object(loader, "EXTERNAL_DIR", Path(tmp) / "external"):
+            development_set, runs = self.run_the_set(tmp)
+            run_dir = development_set.run_dir(MODEL, runs)
+
+            # It produced a ruling at all, which is what version 2 buys this
+            # case: the remedy is a figure the draft's amount reads off, so the
+            # judge's draft passes the code checks and votes.
+            self.assertIsNotNone(run_benchmark.load_cached(run_dir, VERSION_TWO_CASE))
+
+            # Read current. This is the reading the version travels for: with the
+            # base version the checker rebuilds the other brief, and the one
+            # correct case of this run is reported as stale.
+            staleness = sets.currency_for(development_set, MODEL, runs)
+            self.assertTrue(staleness.checked)
+            self.assertEqual((), staleness.stale)
+            self.assertEqual((), staleness.stale_brief)
+            self.assertEqual((), staleness.unknown)
+
+            # And the two versions really are two briefs, so the reading above
+            # is a finding rather than a check that could not have failed. A
+            # version-1 checker over the same run names the case and the channel.
+            version_one = run_benchmark.BriefStaleness(
+                run_benchmark.brief_digest_for(
+                    development_set.load_case,
+                    policy_version=run_benchmark.DEFAULT_POLICY_VERSION,
+                ),
+                run_dir=run_dir,
+                prompts_dir=run_benchmark.PROMPTS_DIR,
+                policy_version=run_benchmark.DEFAULT_POLICY_VERSION,
+            )
+            self.assertEqual(
+                (VERSION_TWO_CASE,),
+                run_benchmark.brief_staleness(
+                    run_dir, [VERSION_TWO_CASE], version_one
+                ).stale_brief,
+            )
+
+            # The provenance is read off the version-2 brief, which is the one
+            # this run's judge was handed. The version-1 block publishes no
+            # figure for this amount, so the version-1 answer is a different
+            # string rather than the same one by accident.
+            figures = sets.figures_for(development_set, MODEL, runs)
+            self.assertEqual(1, figures.produced)
+            self.assertEqual(1, figures.exact)
+            self.assertEqual(
+                "pol_rd_11_remedy.value",
+                figures.report.cases[0].facts.amount_provenance["amount_sgd"],
+            )
+
+    def test_the_baselines_section_reads_a_version_two_case_rather_than_refusing_it(self):
+        with tempfile.TemporaryDirectory() as tmp, \
+                upfront_rig.version_two_amendments(), \
+                mock.patch.object(loader, "EXTERNAL_DIR", Path(tmp) / "external"):
+            development_set, runs = self.run_the_set(tmp)
+            section = baselines.build_section(development_set, MODEL, runs)
+
+            # Analysed, not refused: with the base version the staleness checker
+            # refuses it as a moved brief, and the replay check raises on the
+            # version the recorded run was briefed at.
+            self.assertEqual((VERSION_TWO_CASE,), section.analysed)
+            self.assertEqual((), section.refusals)
 
 
 if __name__ == "__main__":

@@ -219,14 +219,25 @@ def build_section(
     runs_dir: Path = RUNS_DIR,
     prompts_dir: Path = run_benchmark.PROMPTS_DIR,
 ) -> Section:
-    """Read one set's cached run and rebuild every case's panel of drafts."""
+    """Read one set's cached run and rebuild every case's panel of drafts.
+
+    The set's **registered policy version** travels into both checks that read
+    its cases. The staleness checker rebuilds each case's brief, and the replay
+    check compares the version the recorded run was briefed at with the version
+    this read is briefed at; a set whose registration fixes a later version
+    records its cases at that version, so a version-1 checker would call every
+    correct case stale and a version-1 replay check would refuse the whole run.
+    """
     run_dir = development_set.run_dir(model, runs_dir)
     key = development_set.key()
     cases = development_sets.cached_cases(development_set, model, runs_dir)
     checker = run_benchmark.BriefStaleness(
-        run_benchmark.brief_digest_for(development_set.load_case),
+        run_benchmark.brief_digest_for(
+            development_set.load_case, policy_version=development_set.policy_version
+        ),
         run_dir=run_dir,
         prompts_dir=prompts_dir,
+        policy_version=development_set.policy_version,
     )
     check = None
     if cases:
@@ -235,6 +246,7 @@ def build_section(
             cases,
             model=model,
             prompts_dir=prompts_dir,
+            policy_version=development_set.policy_version,
             case_loader=development_set.load_case,
         )
 

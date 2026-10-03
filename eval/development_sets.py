@@ -870,6 +870,9 @@ def figures_for(
         # would report an unavailable brief, because the corpus manifest cannot
         # name a case it does not list.
         case_loader=development_set.load_case,
+        # And at the set's own registered version, so that brief is the one the
+        # run was decided under rather than the version-1 brief of the same case.
+        policy_version=development_set.policy_version,
     )
     return SetFigures(
         name=development_set.name,
@@ -930,12 +933,21 @@ def currency_for(
     established. The prompt channel is answered from each case's own transcript
     by :class:`run_benchmark.BriefStaleness`, the same checker the runner builds
     for a set it is about to run.
+
+    Checked at **this set's registered policy version** too, and for the same
+    reason: a set whose registration fixes a later version briefs every case at
+    that version, so a checker that rebuilt the briefs at version 1 would report
+    every case of a correct run as a moved brief -- a set that reads as stale
+    when nothing has moved.
     """
     run_dir = development_set.run_dir(model, runs_dir)
     checker = run_benchmark.BriefStaleness(
-        run_benchmark.brief_digest_for(development_set.load_case),
+        run_benchmark.brief_digest_for(
+            development_set.load_case, policy_version=development_set.policy_version
+        ),
         run_dir=run_dir,
         prompts_dir=prompts_dir,
+        policy_version=development_set.policy_version,
     )
     return run_benchmark.brief_staleness(
         run_dir, cached_cases(development_set, model, runs_dir), checker
