@@ -164,6 +164,12 @@ class TheRepositoryTests(unittest.TestCase):
             "eval/development_sets.py",
             "tests/test_language.py",
             "ui/dist/index.html",
+            # One file from each of the three directories the second sealed
+            # set's files sit in: the rule covers its cases, its key and its
+            # answer-bearing authoring bundle as much as any other file.
+            "data/external/wild-v2/index.json",
+            "eval/answers/wild-v2/ground_truth.json",
+            "eval/external/wild-v2/README.md",
         ):
             self.assertIn(required, found, "{0} was not walked".format(required))
         self.assertFalse(

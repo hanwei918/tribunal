@@ -80,6 +80,40 @@ ALL_WILD_V2_CASES = tuple(range(701, 721))
 # for. It is a number, never a value.
 SENTINEL_CASE = 701
 
+# The import note, whose digest table is the record of every imported file as
+# committed. Reading it is reading a document this repository wrote, not the set.
+IMPORT_NOTE = PROJECT_ROOT / "docs" / "notes" / "2026-10-03-wild-v2-imported.md"
+
+
+def _digests_the_import_note_states():
+    """``{repository path: sha256}`` from the import note's digest table.
+
+    The table is a Markdown table of ``| ``path`` | ``digest`` |`` rows under one
+    heading. It is parsed rather than hard-coded here, so the test reads the
+    same record a reader does; the test that uses it asserts the count, so a
+    parse that silently found nothing fails there rather than passing.
+    """
+    text = IMPORT_NOTE.read_text(encoding="utf-8")
+    heading = "## The digest of every imported file"
+    section = text.split(heading, 1)[1].split("\n## ", 1)[0]
+    stated = {}
+    for line in section.splitlines():
+        cells = [cell.strip() for cell in line.split("|")]
+        if len(cells) != 4:
+            continue
+        path_cell, digest_cell = cells[1], cells[2]
+        if not (path_cell.startswith("`") and path_cell.endswith("`")):
+            continue
+        if not (digest_cell.startswith("`") and digest_cell.endswith("`")):
+            continue
+        path, digest = path_cell[1:-1], digest_cell[1:-1]
+        if len(digest) != 64 or any(
+            character not in "0123456789abcdef" for character in digest
+        ):
+            continue
+        stated[path] = digest
+    return stated
+
 
 def _run_cli(arguments):
     """``sets.main``, with both streams captured. Returns ``(code, out, err)``."""
@@ -440,11 +474,17 @@ class WildV2SwitchGuardTests(unittest.TestCase):
                 run_benchmark.llm.LLMClient = original
 
     def test_the_policy_version_flag_is_refused(self):
-        """Its version is fixed by registration, so the flag is not its to take."""
+        """Its version is fixed by registration, so the flag is not its to take.
+
+        Version 1 is in the list with the others. A parser default of
+        ``DEFAULT_POLICY_VERSION`` would make ``--policy-version 1``
+        indistinguishable from no flag at all, and that is exactly the flag this
+        set must refuse, so the case is named here rather than left out.
+        """
         with tempfile.TemporaryDirectory() as tmp:
             runs, run_dir, sentinel, before = _scratch_runs_with_the_wild_v2_result(tmp)
 
-            for version in ("2", "3"):
+            for version in ("1", "2", "3"):
                 with self.subTest(version=version):
                     code, _out, err = _run_cli(
                         [
@@ -575,12 +615,26 @@ class WildV2RunDirectoryIsHeadlineTests(unittest.TestCase):
         self.assertEqual((self.runs / "policy-gaps").resolve(), accepted)
 
     def test_the_recorded_drafts_destination_refuses_it_and_takes_its_own(self):
+        """The refusal, with a client factory that raises behind it.
+
+        ``client_factory`` is the one ``verify_recorded_run`` builds its client
+        with, and it is built after the destination check. A factory that raises
+        is therefore what turns a refusal that stopped happening into this test's
+        failure rather than into a call against the real key.
+        """
+
+        def refuse_to_build_a_client(_sink):
+            raise AssertionError(
+                "a client was built, so the recorded-drafts destination was accepted"
+            )
+
         with self.assertRaises(run_benchmark.BenchmarkError) as caught:
             verify_drafts.verify_recorded_run(
                 self.sealed_run_dir,
                 [SENTINEL_CASE],
                 model=MODEL,
                 runs_dir=self.sealed_run_dir,
+                client_factory=refuse_to_build_a_client,
                 progress=lambda text: None,
             )
         self.assertIn("headline run directory", str(caught.exception))
@@ -872,17 +926,37 @@ class WildV2RootGuardTests(unittest.TestCase):
                 )
 
     def test_the_command_line_refuses_set_wild_v2_with_each_switch(self):
-        """``--set wild-v2`` plus any of the three input switches, refused."""
+        """``--set wild-v2`` plus any of the four switches, refused, with a message.
+
+        The message asserted is the command-line layer's own. For the three path
+        switches that layer asks the guard about the *set's runs directory*, so
+        the destination its message names is the sealed root itself, and the
+        expected text below is that shape. A refusal raised later, by the runner,
+        names a deeper destination -- or the runner's own switch conflict --
+        which is what makes this assertion fail if the command-line layer is
+        removed. ``--policy-version`` is refused one block earlier, by the
+        registration, and its message is that block's.
+        """
         with tempfile.TemporaryDirectory() as tmp:
             runs, run_dir, sentinel, before = _scratch_runs_with_the_wild_v2_result(tmp)
+            sealed_root = (runs / run_benchmark.WILD_V2_SET_RUNS_SUBDIR).resolve()
             original, refuse = _refuse_to_build_a_client()
             run_benchmark.llm.LLMClient = refuse
             try:
-                for arguments in (
-                    ["--ablate", "clause-notes"],
-                    ["--precedents"],
-                    ["--policy-version", "2"],
-                    ["--amount-rule", "signed"],
+                for arguments, expected in (
+                    (
+                        ["--ablate", "clause-notes"],
+                        "{0} lies under {0}".format(sealed_root),
+                    ),
+                    (["--precedents"], "{0} lies under {0}".format(sealed_root)),
+                    (
+                        ["--policy-version", "2"],
+                        "wild-v2 fixes policy version 2 in its registration",
+                    ),
+                    (
+                        ["--amount-rule", "signed"],
+                        "{0} lies under {0}".format(sealed_root),
+                    ),
                 ):
                     with self.subTest(arguments=arguments):
                         code, _out, err = _run_cli(
@@ -891,6 +965,8 @@ class WildV2RootGuardTests(unittest.TestCase):
                         self.assertEqual(
                             1, code, "{0} was accepted for --set wild-v2".format(arguments)
                         )
+                        self.assertIn("FATAL: ", err)
+                        self.assertIn(expected, err)
                         self.assertEqual(
                             before,
                             sentinel.read_bytes(),
@@ -1097,9 +1173,11 @@ class WildV2RunArgumentsTests(unittest.TestCase):
 class WildV2StructureTests(unittest.TestCase):
     """20 cases load and brief at version 2; the key holds 20 complete records.
 
-    Counts and keys only. No expected ruling, amount, compensation or referral
-    is read, compared or printed anywhere in this class -- the key is asserted
-    to be *well formed*, not to say anything in particular.
+    Counts, keys and file names only. No expected ruling, amount, compensation or
+    referral is read, compared or printed anywhere in this class -- the key is
+    asserted to be *well formed*, not to say anything in particular, and its four
+    graded fields are asked for as keys of the raw JSON rather than through a
+    reader that would answer ``None`` for a field that is not there.
     """
 
     def test_all_20_cases_load_through_the_sets_own_loader(self):
@@ -1113,14 +1191,38 @@ class WildV2StructureTests(unittest.TestCase):
                     {"case_no", "dispute", "evidence", "schema_version"}, set(case)
                 )
 
-    def test_all_20_briefs_build_at_version_2(self):
+    def test_all_20_briefs_build_at_version_2_and_12_of_them_differ_from_version_1(self):
+        """The count the import note records: 12 differ at the two versions, 8 do not.
+
+        The twelve are the twelve route-deviation cases and the eight are the
+        no-show ones, because the amendment ``0001-pol-rd-13`` adds a clause to
+        ``policy/route_deviation.json`` and to nothing else. Only the count is
+        asserted here; which cases they are is a number, never a brief.
+        """
+        differing = []
         for case_no in WILD_V2.cases:
             with self.subTest(case_no=case_no):
+                case = WILD_V2.load_case(case_no)
                 built = brief.build_brief_for_case(
-                    WILD_V2.load_case(case_no), policy_version=WILD_V2.policy_version
+                    case, policy_version=WILD_V2.policy_version
                 )
-                self.assertIsInstance(built, dict)
-                self.assertTrue(built)
+                self.assertTrue(
+                    isinstance(built, dict),
+                    "case {0} did not build a brief object".format(case_no),
+                )
+                self.assertTrue(built, "case {0} built an empty brief".format(case_no))
+                at_version_one, _ = brief.brief_digest(
+                    brief.build_brief_for_case(case, policy_version=1)
+                )
+                at_this_version, _ = brief.brief_digest(built)
+                if at_version_one != at_this_version:
+                    differing.append(case_no)
+        self.assertEqual(
+            12,
+            len(differing),
+            "the number of briefs the amendment moves is not the import note's 12",
+        )
+        self.assertEqual(8, len(WILD_V2.cases) - len(differing))
 
     def test_the_index_names_20_cases_and_the_key_agrees_with_it(self):
         entries = loader.load_external_index(WILD_V2.case_root)
@@ -1128,21 +1230,53 @@ class WildV2StructureTests(unittest.TestCase):
         self.assertEqual([case_no for case_no in WILD_V2.cases], [e["case_no"] for e in entries])
         self.assertEqual(set(WILD_V2.cases), set(WILD_V2.key()))
 
-    def test_the_key_loads_and_each_record_carries_all_four_graded_fields(self):
-        key = grade.load_answer_key(WILD_V2.key_path)
-        self.assertEqual(20, len(key))
-        self.assertEqual(set(WILD_V2.cases), set(key))
+    def test_every_record_of_the_key_carries_all_four_graded_fields(self):
+        """The four fields, read off the raw JSON rather than through the loader.
+
+        ``grade.load_answer_key`` reads a field with ``.get()``, so a record that
+        had lost one would come back with a ``None`` rather than a missing key and
+        the property would pass for the wrong reason. The records are read here as
+        JSON and each ``ground_truth`` is asked for its keys directly -- the
+        ``expected_`` names, which is what the key's own record holds; the four
+        graded names are the grader's view of them, and the tie between the two is
+        asserted rather than assumed. A failure names the case and the field,
+        never a value.
+        """
+        expected_fields = tuple("expected_" + name for name in grade.GRADED_FIELDS)
+        self.assertEqual(
+            (
+                "expected_ruling",
+                "expected_amount_sgd",
+                "expected_driver_compensation_sgd",
+                "expected_referrals",
+            ),
+            expected_fields,
+        )
+        records = json.loads(WILD_V2.key_path.read_text(encoding="utf-8"))
+        self.assertEqual(20, len(records), "the second sealed key is not 20 records")
+        self.assertEqual(ALL_WILD_V2_CASES, tuple(record["case_no"] for record in records))
         self.assertEqual(
             ("ruling", "amount_sgd", "driver_compensation_sgd", "referrals"),
             tuple(grade.GRADED_FIELDS),
         )
-        for case_no, expected in sorted(key.items()):
+        for record in records:
+            case_no = record["case_no"]
             with self.subTest(case_no=case_no):
-                for field in grade.GRADED_FIELDS:
-                    # The field exists and can be read; its value is never
-                    # compared here, and never printed.
-                    expected.field(field)
-                self.assertIsNotNone(expected.field("ruling"))
+                truth = record.get("ground_truth")
+                self.assertTrue(
+                    isinstance(truth, dict),
+                    "the record for case {0} carries no ground_truth object".format(case_no),
+                )
+                for field in expected_fields:
+                    self.assertTrue(
+                        field in truth,
+                        "case {0} is missing {1}".format(case_no, field),
+                    )
+        # And the loader the run grades with reads the same 20 records, so the
+        # raw reading above is of the file that grader actually opens.
+        key = grade.load_answer_key(WILD_V2.key_path)
+        self.assertEqual(20, len(key))
+        self.assertEqual(set(WILD_V2.cases), set(key))
 
     def test_no_answer_field_appears_in_any_case_file(self):
         """The needles, walked recursively over every case, never a value."""
@@ -1170,19 +1304,24 @@ class WildV2StructureTests(unittest.TestCase):
         )
 
     def test_the_imported_bundle_is_the_one_the_archive_shipped(self):
-        """The authoring bundle's own files are where the import put them."""
-        for name in (
-            "README.md",
-            "MANIFEST.json",
-            "seed_map.json",
-            "semantic_check.json",
-            "validation.txt",
-        ):
-            with self.subTest(name=name):
-                self.assertTrue((WILD_V2_EXTERNAL_DIR / name).is_file())
-        for name in ("validate.py", "semcheck.py", "build_v2.py"):
-            with self.subTest(name=name):
-                self.assertTrue((WILD_V2_EXTERNAL_DIR / "gen" / name).is_file())
+        """Every imported file hashes to the digest the import note's table states.
+
+        The table is the note's own record of all 45 files as committed, so
+        comparing the two is what makes "imported as shipped" a measurement
+        rather than a list of file names. A failure names the file and nothing
+        else: a digest of a case file or of the key is a property of sealed
+        bytes, and a test's output is not where those belong.
+        """
+        stated = _digests_the_import_note_states()
+        self.assertEqual(45, len(stated), "the import note's table is not 45 files")
+        for relative, digest in sorted(stated.items()):
+            path = PROJECT_ROOT / relative
+            with self.subTest(path=relative):
+                self.assertTrue(path.is_file(), "{0} was not imported".format(relative))
+                self.assertTrue(
+                    run_benchmark.file_sha256(path) == digest,
+                    "{0} does not hash to the digest the import note states".format(relative),
+                )
 
 
 # --------------------------------------------------------------------------
