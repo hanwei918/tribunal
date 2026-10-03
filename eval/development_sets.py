@@ -1730,6 +1730,51 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     # of running everything would be a run nobody chose to make.
     selected = [named(args.set_name)] if args.set_name != "all" else list(DEVELOPMENT_SETS)
 
+    # The run root, for a set whose registration fixes its command line. Its
+    # single run has to land in the directory the six destinations read, and
+    # ``--runs-dir`` is what would put it somewhere nothing reads while the
+    # invocation still looked like the sealed run. It is checked **before**
+    # anything that reasons about the destination, because the switch refusals
+    # below compare ``args.runs_dir`` with the sealed roots: a root that is not
+    # the repository's own would make them answer about the wrong tree. The
+    # comparison is case-folded, because this volume is case-insensitive and
+    # ``runs/`` and ``RUNS/`` are one directory here.
+    #
+    # A set that registers no arguments keeps the flag, as it always has: the
+    # held-out set's single run is already made and committed, and the guard
+    # that protects it is the sealed root's own.
+    for development_set in selected:
+        if development_set.run_arguments is None:
+            continue
+        if (
+            run_benchmark.path_components(args.runs_dir)
+            == run_benchmark.path_components(RUNS_DIR)
+        ):
+            continue
+        print(
+            "FATAL: --set {0} is run at the arguments its registration fixes, and "
+            "--runs-dir is one of them: {1} is not the repository's own {2}, which "
+            "is where its single run is read from".format(
+                development_set.name, args.runs_dir, RUNS_DIR
+            ),
+            file=sys.stderr,
+        )
+        return 1
+
+    # ``--cases`` too: the run is one command over the set's whole case list, and
+    # a subset of a sealed set is a different measurement under the same name.
+    # ``--check`` is not a run, but it applies every refusal before it prints its
+    # plan, so this is refused for it as well.
+    for development_set in selected:
+        if development_set.run_arguments is None or args.cases is None:
+            continue
+        print(
+            "FATAL: --set {0} is run as one command over all of its cases, so "
+            "--cases is refused for it".format(development_set.name),
+            file=sys.stderr,
+        )
+        return 1
+
     # A set whose registration fixes the policy version refuses the flag. The
     # version is part of what the set *is* -- ``wild-v2`` is version 2 by
     # registration, and briefing its cases at another version would measure a
@@ -1800,6 +1845,24 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         cases = run_benchmark.parse_cases(args.cases)
     except run_benchmark.BenchmarkError as exc:
         print("FATAL: {0}".format(exc), file=sys.stderr)
+        return 1
+
+    # A selection that names no case of any selected set runs nothing, and the
+    # run loop below would then find every subset empty and report success --
+    # exit 0 with no case run and nothing said. That is an error about the
+    # selection, so it is refused here for every set, before a client exists.
+    known = {
+        case_no for development_set in selected for case_no in development_set.cases
+    }
+    unknown = [case_no for case_no in cases if case_no not in known]
+    if unknown:
+        print(
+            "FATAL: --cases names case(s) {0}, which {1} does not hold".format(
+                ", ".join(str(case_no) for case_no in unknown),
+                " and ".join(development_set.name for development_set in selected),
+            ),
+            file=sys.stderr,
+        )
         return 1
 
     if args.verify_recorded_drafts is not None:

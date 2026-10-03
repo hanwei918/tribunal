@@ -596,6 +596,21 @@ SEALED_RUNS_SUBDIRS: Tuple[str, ...] = (
 )
 
 
+def path_components(path: Path) -> Tuple[str, ...]:
+    """A path's resolved components, case-folded, for comparison on this volume.
+
+    The volume this repository lives on is case-insensitive, so ``runs/WILD-V2``
+    and ``runs/wild-v2`` are one directory. Comparing paths as they are written
+    would let a guard be walked around by changing a letter's case: the same
+    place would be refused under one spelling and accepted under the other, and
+    the guard would be answering about the spelling rather than about the
+    directory. Every comparison between a destination and a guarded root goes
+    through here, and it is a tuple of components rather than a string so that
+    ``runs/wild-dev`` is still a different directory from ``runs/wild``.
+    """
+    return tuple(part.casefold() for part in Path(path).resolve().parts)
+
+
 def assert_not_under_the_held_out_root(
     destination: Path,
     runs_root: Path = RUNS_DIR,
@@ -637,7 +652,9 @@ def assert_not_under_the_held_out_root(
     The comparison is **component by component**, not a prefix test on the
     string: ``runs/wild-dev/`` is a different directory from ``runs/wild/`` and
     is deliberately not caught, because it is where a re-run of the same 64
-    cases is meant to go. A prefix test would refuse it.
+    cases is meant to go. A prefix test would refuse it. The components are
+    compared case-folded, because this volume is case-insensitive and
+    ``runs/WILD-V2`` names the same directory as ``runs/wild-v2``.
 
     **Two roots are walked, not one**, and for the reason
     :func:`baselines.assert_not_a_run_directory` walks two: ``--runs-dir`` and
@@ -649,24 +666,28 @@ def assert_not_under_the_held_out_root(
     Returns the destination unchanged when it is outside, so a caller can build
     and check it in one expression.
     """
+    folded = path_components(destination)
     resolved = Path(destination).resolve()
-    permitted = None if permit is None else Path(permit).resolve()
+    permitted = None if permit is None else path_components(permit)
     roots = [Path(runs_root).resolve()]
     repository = Path(RUNS_DIR).resolve()
     if repository not in roots:
         roots.append(repository)
+    sealed_names = tuple(name.casefold() for name in SEALED_RUNS_SUBDIRS)
     for base in roots:
+        base_parts = path_components(base)
         # A runs root whose own name is a sealed root is a sealed root, not a
         # runs root, so nothing below it is the plain sealed run's directory.
-        sealed_base = base.name in SEALED_RUNS_SUBDIRS
+        sealed_base = base_parts[-1] in sealed_names
         for subdir in SEALED_RUNS_SUBDIRS:
             root = (base / subdir).resolve()
-            if not (resolved == root or root in resolved.parents):
+            root_parts = base_parts + (subdir.casefold(),)
+            if not (folded == root_parts or folded[: len(root_parts)] == root_parts):
                 continue
             if (
                 subdir in UNRUN_SEALED_RUNS_SUBDIRS
                 and permitted is not None
-                and resolved == permitted
+                and folded == permitted
                 and not sealed_base
             ):
                 # The one destination an un-run sealed root still accepts, and

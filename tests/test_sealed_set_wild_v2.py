@@ -137,6 +137,21 @@ def _run_cli(arguments):
     return code, stdout.getvalue(), stderr.getvalue()
 
 
+def _run_cli_over(runs, arguments):
+    """``_run_cli`` with both modules' ``RUNS_DIR`` moved to ``runs``.
+
+    The sealed set's run root is fixed at the repository's own ``runs/``, so a
+    test that wants a scratch root moves the constant rather than passing the
+    flag: ``--runs-dir`` is refused for this set, and that refusal is what
+    ``WildV2RunsRootLockTests`` shows. Both modules are moved, because the
+    command line reads one and the runner reads the other.
+    """
+    with mock.patch.object(sets, "RUNS_DIR", runs), mock.patch.object(
+        run_benchmark, "RUNS_DIR", runs
+    ):
+        return _run_cli(arguments)
+
+
 def _scratch_runs_with_the_wild_v2_result(tmp):
     """A dirty fixture: a runs root that already holds wild-v2's result.
 
@@ -218,7 +233,9 @@ class WildV2RegistryTests(unittest.TestCase):
         ``DEVELOPMENT_SETS``, and ``--set all`` runs them. A sealed set must be
         in neither, so the combined figure is shown not reading a
         ``runs/wild-v2/`` directory that does hold a case, and ``--set all`` is
-        shown not running a case only that set holds.
+        shown not running a case only that set holds -- by refusing the
+        selection, because a selection that names no case of any selected set
+        runs nothing and an empty run is not a result.
 
         ``LLMClient`` is patched to raise, so a ``--set all`` that did select the
         set fails here instead of making a paid call.
@@ -245,10 +262,14 @@ class WildV2RegistryTests(unittest.TestCase):
                 )
             finally:
                 run_benchmark.llm.LLMClient = original
-            self.assertEqual(0, code, err)
-            self.assertEqual("", err)
+            self.assertEqual(1, code, "a selection that runs nothing was accepted")
             # Case 701 is a wild-v2 case and nothing else in the selection holds
-            # it, so no case ran and the scratch root is as it was.
+            # it, so the selection names no case of any selected set. That is an
+            # error about the selection rather than a run that produced nothing,
+            # and it is refused before a client exists.
+            self.assertIn("--cases names case(s) {0}".format(SENTINEL_CASE), err)
+            self.assertIn("does not hold", err)
+            self.assertEqual("", out, "the refused invocation printed a summary")
             self.assertEqual(
                 ["case-{0:05d}.json".format(SENTINEL_CASE)],
                 sorted(path.name for path in set_dir.iterdir()),
@@ -422,9 +443,7 @@ class WildV2SwitchGuardTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             runs, run_dir, sentinel, before = _scratch_runs_with_the_wild_v2_result(tmp)
 
-            code, _, err = _run_cli(
-                ["--set", "wild-v2", "--force", "--runs-dir", str(runs)]
-            )
+            code, _, err = _run_cli_over(runs, ["--set", "wild-v2", "--force"])
 
             self.assertEqual(1, code, "a sealed run accepted --force")
             self.assertIn("the sealed set {0} is run once".format(WILD_V2.name), err)
@@ -440,8 +459,8 @@ class WildV2SwitchGuardTests(unittest.TestCase):
 
             for flag in ("--replay-advocates", "--replay-check", "--verify-recorded-drafts"):
                 with self.subTest(flag=flag):
-                    code, _, err = _run_cli(
-                        ["--set", "wild-v2", flag, str(run_dir), "--runs-dir", str(runs)]
+                    code, _, err = _run_cli_over(
+                        runs, ["--set", "wild-v2", flag, str(run_dir)]
                     )
                     self.assertEqual(1, code, "{0} was accepted for the sealed set".format(flag))
                     self.assertIn("the sealed set {0} is run once".format(WILD_V2.name), err)
@@ -470,8 +489,8 @@ class WildV2SwitchGuardTests(unittest.TestCase):
                     ["--amount-rule", "signed"],
                 ):
                     with self.subTest(arguments=arguments):
-                        code, _out, err = _run_cli(
-                            ["--set", "wild-v2", "--runs-dir", str(runs)] + arguments
+                        code, _out, err = _run_cli_over(
+                            runs, ["--set", "wild-v2"] + arguments
                         )
                         self.assertEqual(
                             1, code, "{0} was accepted for --set wild-v2".format(arguments)
@@ -500,15 +519,8 @@ class WildV2SwitchGuardTests(unittest.TestCase):
 
             for version in ("1", "2", "3"):
                 with self.subTest(version=version):
-                    code, _out, err = _run_cli(
-                        [
-                            "--set",
-                            "wild-v2",
-                            "--policy-version",
-                            version,
-                            "--runs-dir",
-                            str(runs),
-                        ]
+                    code, _out, err = _run_cli_over(
+                        runs, ["--set", "wild-v2", "--policy-version", version]
                     )
                     self.assertEqual(
                         1, code, "--policy-version {0} was accepted for wild-v2".format(version)
@@ -693,6 +705,189 @@ class WildV2SealedRunLockTests(unittest.TestCase):
 
             self.assertEqual(0, code, err)
             self.assertFalse(runs.exists())
+
+
+class WildV2RunsRootLockTests(unittest.TestCase):
+    """``--runs-dir`` is fixed at the repository's own ``runs/``.
+
+    The single run has to land in the directory the six destinations read, so a
+    scratch root is refused rather than accepted: an invocation that pointed it
+    somewhere else would produce a run nothing reads while looking exactly like
+    the sealed run. The comparison is case-folded, because this volume is
+    case-insensitive and ``runs/`` and ``RUNS/`` are one directory here.
+    """
+
+    def test_a_scratch_runs_dir_is_refused_and_named(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            scratch = Path(tmp) / "elsewhere"
+            with mock.patch.dict(os.environ, {sets.SEALED_RUN_ENV_VAR: "wild-v2"}):
+                code, out, err = _run_cli(
+                    [
+                        "--set",
+                        "wild-v2",
+                        "--concurrency",
+                        "2",
+                        "--timeout",
+                        "900",
+                        "--runs-dir",
+                        str(scratch),
+                    ]
+                )
+
+            self.assertEqual(1, code, "a scratch runs root was accepted for the sealed run")
+            self.assertIn("--runs-dir", err)
+            self.assertIn(str(scratch), err)
+            self.assertIn("is not the repository's own", err)
+            self.assertEqual("", out, "the refused invocation printed something")
+            self.assertFalse(scratch.exists(), "the refused invocation created the root")
+
+    def test_the_runs_root_is_accepted_whatever_its_case(self):
+        """``RUNS/`` is ``runs/`` here, so the flag is accepted for it.
+
+        Both modules' ``RUNS_DIR`` are moved to a scratch root, which is what
+        makes that root *the repository's own* for the duration of the call. The
+        flag then names the same path in another case, and the invocation gets
+        past the lock and reaches the client -- which this module refuses to
+        build, so nothing is run and nothing is written.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            other_case = Path(str(runs).replace("/runs", "/RUNS"))
+            self.assertNotEqual(str(runs), str(other_case))
+            with mock.patch.dict(
+                os.environ, {sets.SEALED_RUN_ENV_VAR: "wild-v2"}
+            ), mock.patch.object(sets, "RUNS_DIR", runs), mock.patch.object(
+                run_benchmark, "RUNS_DIR", runs
+            ), mock.patch.object(
+                run_benchmark.llm, "load_api_key", return_value="a-key"
+            ):
+                with self.assertRaises(AssertionError) as caught:
+                    _run_cli(
+                        [
+                            "--set",
+                            "wild-v2",
+                            "--concurrency",
+                            "2",
+                            "--timeout",
+                            "900",
+                            "--runs-dir",
+                            str(other_case),
+                        ]
+                    )
+            self.assertIn("a client was built", str(caught.exception))
+
+    def test_a_set_that_registers_no_arguments_keeps_the_flag(self):
+        """The lock is the registration's, so a development set is not caught.
+
+        The runner is replaced by a stub that raises, so the invocation is shown
+        reaching it with the scratch root rather than being refused before it.
+        """
+        sentinel = "the development run was reached"
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+
+            def stub(*arguments, **keywords):
+                raise AssertionError(sentinel)
+
+            with mock.patch.object(sets, "run_set", stub):
+                with self.assertRaises(AssertionError) as caught:
+                    _run_cli(
+                        [
+                            "--set",
+                            "codex",
+                            "--cases",
+                            str(sets.BY_NAME["codex"].cases[0]),
+                            "--runs-dir",
+                            str(runs),
+                        ]
+                    )
+            self.assertEqual(sentinel, str(caught.exception))
+
+
+class WildV2CaseSelectionTests(unittest.TestCase):
+    """``--cases`` is refused for this set, and an empty selection is an error."""
+
+    def test_cases_is_refused_for_this_set(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            with mock.patch.dict(
+                os.environ, {sets.SEALED_RUN_ENV_VAR: "wild-v2"}
+            ), mock.patch.object(sets, "RUNS_DIR", runs), mock.patch.object(
+                run_benchmark, "RUNS_DIR", runs
+            ), mock.patch.object(
+                run_benchmark.llm, "load_api_key", return_value="a-key"
+            ):
+                code, out, err = _run_cli(
+                    ["--set", "wild-v2", "--cases", str(WILD_V2.cases[0])]
+                )
+
+            self.assertEqual(1, code, "--cases was accepted for the sealed set")
+            self.assertIn("--cases is refused for it", err)
+            self.assertIn("one command", err)
+            self.assertEqual("", out)
+            self.assertFalse(runs.exists(), "the refused invocation created the root")
+
+    def test_an_unknown_case_is_an_error_for_every_set(self):
+        """Never a silent exit 0, whichever set is named.
+
+        A selection that names no case of any selected set runs nothing, and the
+        run loop would then find every subset empty and report success. It is an
+        error about the selection instead, refused before a client exists.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            for name in ("all", "corpus", "codex", "wild", "wild-dev"):
+                with self.subTest(development_set=name):
+                    code, out, err = _run_cli_over(
+                        runs, ["--set", name, "--cases", "999999"]
+                    )
+                    self.assertEqual(
+                        1, code, "{0} accepted a case it does not hold".format(name)
+                    )
+                    self.assertIn("--cases names case(s) 999999", err)
+                    self.assertEqual("", out, "a refused selection printed a summary")
+            self.assertFalse(runs.exists(), "a refused invocation created the root")
+
+
+class CaseFoldedSealedRootTests(unittest.TestCase):
+    """The sealed-root guard compares path components case-folded.
+
+    This volume is case-insensitive, so ``runs/WILD-V2`` names the same
+    directory as ``runs/wild-v2``. A guard that compared the paths as they are
+    written would answer about the spelling rather than about the directory: the
+    same place refused under one spelling and accepted under the other.
+    """
+
+    def test_a_sealed_root_spelled_in_another_case_is_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            slug = run_benchmark.model_slug(MODEL)
+            for destination in (
+                runs / "WILD-V2",
+                runs / "Wild",
+                runs / "WILD" / slug,
+                runs / "wild-V2" / slug,
+            ):
+                with self.subTest(destination=str(destination.relative_to(runs))):
+                    with self.assertRaises(run_benchmark.BenchmarkError) as caught:
+                        run_benchmark.assert_not_under_the_held_out_root(
+                            destination, runs
+                        )
+                    self.assertIn("lies under", str(caught.exception))
+
+    def test_the_folded_comparison_keeps_wild_dev_distinct(self):
+        """Case-folding must not merge two directories that differ by a word."""
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            slug = run_benchmark.model_slug(MODEL)
+            for destination in (runs / "Wild-Dev" / slug, runs / "WILD-DEV"):
+                with self.subTest(destination=str(destination.relative_to(runs))):
+                    self.assertEqual(
+                        destination,
+                        run_benchmark.assert_not_under_the_held_out_root(
+                            destination, runs
+                        ),
+                    )
 
 
 # --------------------------------------------------------------------------
@@ -1134,8 +1329,8 @@ class WildV2RootGuardTests(unittest.TestCase):
                     ),
                 ):
                     with self.subTest(arguments=arguments):
-                        code, _out, err = _run_cli(
-                            ["--set", "wild-v2", "--runs-dir", str(runs)] + arguments
+                        code, _out, err = _run_cli_over(
+                            runs, ["--set", "wild-v2"] + arguments
                         )
                         self.assertEqual(
                             1, code, "{0} was accepted for --set wild-v2".format(arguments)
@@ -1180,35 +1375,98 @@ def _frozen_arguments(**overrides):
 # freeze in that one setting, the same difference as a keyword argument, and the
 # two values the refusal must name. A table rather than eight tests, so "test
 # each one" is a loop over all eight and not a sentence claiming eight.
+# The owner's command line, argument by argument: the switch, the setting's name
+# in the registration, and the value the freeze note fixes, as the command line
+# spells it. ``None`` is a setting the owner's command line does not carry at
+# all -- the verifier is a flag whose presence is the value, and the three the
+# note fixes as "the default" are the defaults themselves.
+FROZEN_COMMAND_LINE_ARGUMENTS = (
+    ("--model", "model", "deepseek/deepseek-flash"),
+    ("--judge-votes", "judge_votes", "4"),
+    ("--concurrency", "concurrency", "2"),
+    ("--timeout", "timeout", "900"),
+    ("--verify-drafts", "verify_drafts", None),
+    ("--prompts-dir", "prompts_dir", None),
+    ("--case-deadline", "case_deadline", None),
+    ("--token-budget", "token_budget", None),
+)
+
+
+def _owners_command_line(**replaced):
+    """The owner's command line, with the named settings given other values.
+
+    Every argument the registration fixes is on the line, at its frozen value
+    unless ``replaced`` names it, so a row built from it differs in the one
+    argument it names and in nothing else. ``verify_drafts`` is a flag: ``True``
+    puts it on the line and ``False`` leaves it off. A setting the owner's
+    command line does not carry -- the three the note fixes as "the default" --
+    is added by ``replaced``.
+    """
+    line = ["--set", "wild-v2"]
+    for switch, setting, frozen in FROZEN_COMMAND_LINE_ARGUMENTS:
+        asked = replaced.pop(setting, frozen)
+        if asked is False or asked is None:
+            continue
+        line.append(switch)
+        if asked is not True:
+            line.append(str(asked))
+    assert not replaced, "no switch for {0}".format(sorted(replaced))
+    return line
+
+
 FROZEN_ARGUMENT_DIFFERENCES = (
     (
         "--model",
-        ["--model", "deepseek/deepseek-chat"],
+        _owners_command_line(model="deepseek/deepseek-chat"),
         {"model": "deepseek/deepseek-chat"},
         "deepseek/deepseek-chat",
         "deepseek/deepseek-flash",
     ),
-    ("--judge-votes", ["--judge-votes", "1"], {"judge_votes": 1}, "1", "4"),
-    ("--verify-drafts", ["--verify-drafts"], {"verify_drafts": True}, "on", "off"),
-    ("--timeout", ["--timeout", "600"], {"timeout_seconds": 600.0}, "600.0", "900.0"),
-    ("--concurrency", ["--concurrency", "1"], {"concurrency": 1}, "1", "2"),
+    (
+        "--judge-votes",
+        _owners_command_line(judge_votes=1),
+        {"judge_votes": 1},
+        "1",
+        "4",
+    ),
+    (
+        "--verify-drafts",
+        _owners_command_line(verify_drafts=True),
+        {"verify_drafts": True},
+        "on",
+        "off",
+    ),
+    (
+        "--timeout",
+        _owners_command_line(timeout=300),
+        {"timeout_seconds": 300.0},
+        "300.0",
+        "900.0",
+    ),
+    (
+        "--concurrency",
+        _owners_command_line(concurrency=3),
+        {"concurrency": 3},
+        "3",
+        "2",
+    ),
     (
         "--prompts-dir",
-        ["--prompts-dir", "/tmp/not-the-default"],
+        _owners_command_line(prompts_dir=Path("/tmp/not-the-default")),
         {"prompts_dir": Path("/tmp/not-the-default")},
         "/tmp/not-the-default",
         "the default",
     ),
     (
         "--case-deadline",
-        ["--case-deadline", "1200"],
+        _owners_command_line(case_deadline=1200),
         {"case_deadline_seconds": 1200.0},
         "1200.0",
         "the default",
     ),
     (
         "--token-budget",
-        ["--token-budget", "100000"],
+        _owners_command_line(token_budget=100000),
         {"token_budget": 100000},
         "100000",
         "the default",
@@ -1341,9 +1599,16 @@ class WildV2RunArgumentsTests(unittest.TestCase):
     def test_the_command_line_refuses_each_differing_argument(self):
         """Each one on the command line, refused, naming the argument and the value.
 
-        A scratch runs root is given, so the assertion that nothing was created
-        is made on a directory this test owns rather than on the repository's
-        own ``runs/wild-v2/``, which the sealed run is going to fill.
+        Each row gives every other argument its frozen value, so the invocation
+        differs from the registration in the one argument the row names. A row
+        that left the others to the parser's defaults would differ wherever a
+        default happened to disagree with the note, and the refusal it asserts
+        would then be about a different argument than the one it is named for.
+
+        Both modules' ``RUNS_DIR`` are moved to a scratch root, so the assertion
+        that nothing was created is made on a directory this test owns rather
+        than on the repository's own ``runs/wild-v2/``, which the sealed run is
+        going to fill. ``--runs-dir`` is not passed: it is refused for this set.
         """
         with tempfile.TemporaryDirectory() as tmp:
             runs = Path(tmp) / "runs"
@@ -1351,9 +1616,7 @@ class WildV2RunArgumentsTests(unittest.TestCase):
                 FROZEN_ARGUMENT_DIFFERENCES
             ):
                 with self.subTest(switch=switch):
-                    code, _out, err = _run_cli(
-                        ["--set", "wild-v2", "--runs-dir", str(runs)] + arguments
-                    )
+                    code, _out, err = _run_cli_over(runs, arguments)
                     self.assertEqual(
                         1,
                         code,
@@ -1367,6 +1630,77 @@ class WildV2RunArgumentsTests(unittest.TestCase):
             self.assertFalse(
                 runs.exists(), "a refused invocation created a run directory"
             )
+
+    def test_the_owners_command_reaches_the_runner_with_the_frozen_arguments(self):
+        """The whole command line, end to end, against a stub that raises.
+
+        The eight arguments the registration fixes are read off the call ``main``
+        makes rather than off a summary: the stub raises a sentinel before
+        anything is run, so no client is built, nothing is written, and what the
+        test reads is the invocation itself. The opt-in is set, because without
+        it the command is refused, and both modules' ``RUNS_DIR`` are moved to a
+        scratch root, because the run root is fixed at the repository's own
+        ``runs/`` and the sealed run is going to fill it.
+        """
+        sentinel = "the sealed run's arguments"
+        recorded = {}
+
+        def stub(development_set, model, **keywords):
+            recorded["set"] = development_set
+            recorded["model"] = model
+            recorded["keywords"] = keywords
+            raise AssertionError(sentinel)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            with mock.patch.dict(
+                os.environ, {sets.SEALED_RUN_ENV_VAR: "wild-v2"}
+            ), mock.patch.object(sets, "RUNS_DIR", runs), mock.patch.object(
+                run_benchmark, "RUNS_DIR", runs
+            ), mock.patch.object(
+                run_benchmark.llm, "load_api_key", return_value="a-key"
+            ), mock.patch.object(
+                sets, "run_set", stub
+            ):
+                with self.assertRaises(AssertionError) as caught:
+                    _run_cli(_owners_command_line())
+
+        self.assertEqual(sentinel, str(caught.exception), "the runner was not reached")
+        self.assertIs(WILD_V2, recorded["set"])
+        keywords = recorded["keywords"]
+        frozen = WILD_V2.run_arguments
+        # The eight the registration fixes, each against the registration.
+        self.assertEqual(frozen.model, recorded["model"])
+        self.assertEqual(frozen.judge_votes, keywords["judge_votes"])
+        self.assertEqual(frozen.verify_drafts, keywords["verify_drafts"])
+        self.assertEqual(frozen.timeout_seconds, keywords["timeout_seconds"])
+        self.assertEqual(frozen.concurrency, keywords["concurrency"])
+        self.assertEqual(run_benchmark.PROMPTS_DIR, keywords["prompts_dir"])
+        self.assertEqual(
+            run_benchmark.pipeline.DEFAULT_CASE_DEADLINE_SECONDS,
+            keywords["case_deadline_seconds"],
+        )
+        self.assertIsNone(keywords["token_budget"])
+        # And the run is the set's whole case list, at the version the
+        # registration fixes, in the run root the command line was given, with
+        # nothing switched on beside it.
+        self.assertEqual(list(WILD_V2.cases), keywords["cases"])
+        # The command line's own version, which is ``run_set``'s to replace with
+        # the registration's 2 before the runner sees it: the version is part of
+        # what the set is, and the layer that applies it is the one that knows
+        # the registration. ``test_a_run_of_it_briefs_at_version_2...`` is where
+        # that half is asserted.
+        self.assertEqual(
+            run_benchmark.DEFAULT_POLICY_VERSION, keywords["policy_version"]
+        )
+        self.assertEqual(runs, keywords["runs_dir"])
+        self.assertIs(False, keywords["force"])
+        self.assertIsNone(keywords["replay_dir"])
+        self.assertIsNone(keywords["ablation"])
+        self.assertIsNone(keywords["precedents"])
+        self.assertEqual(
+            run_benchmark.pipeline.DEFAULT_AMOUNT_RULE, keywords["amount_rule"]
+        )
 
     def test_the_read_only_report_is_not_a_run_and_is_not_refused(self):
         """``--report`` judges nothing, so the frozen arguments are not its business.

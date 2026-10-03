@@ -1053,6 +1053,33 @@ class ReportDestinationTests(unittest.TestCase):
             with self.assertRaises(gaps.PolicyGapError):
                 gaps.assert_not_a_run_directory(destination, runs_dir, MODEL)
 
+    def test_a_headline_directory_spelled_in_another_case_is_refused(self):
+        """This volume is case-insensitive, so the guard compares folded.
+
+        ``runs/WILD/<slug>`` names the same directory as ``runs/wild/<slug>``,
+        and ``runs/External/`` names the same directory as ``runs/external/``. A
+        guard that answered about the spelling would refuse one and accept the
+        other while both name the same place, so the comparison is made on
+        case-folded components.
+
+        ``runs/<SLUG>/`` is in the list as well as the sealed roots, and it is
+        the one destination only this guard covers: the sealed roots are refused
+        a second time by the runner's own guard, so a case-folded spelling of
+        *those* would be caught even if this comparison were not folded.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            runs_dir = Path(tmp) / "runs"
+            for destination in (
+                runs_dir / "WILD" / runner.model_slug(MODEL),
+                runs_dir / "Wild" / runner.model_slug(MODEL),
+                runs_dir / runner.model_slug(MODEL).upper(),
+                runs_dir / "External" / "anything",
+                runs_dir / "EXTERNAL",
+            ):
+                with self.subTest(destination=str(destination.relative_to(runs_dir))):
+                    with self.assertRaises(gaps.PolicyGapError):
+                        gaps.assert_not_a_run_directory(destination, runs_dir, MODEL)
+
     def test_a_directory_holding_a_runs_own_results_is_refused(self):
         with tempfile.TemporaryDirectory() as tmp:
             runs_dir = Path(tmp) / "runs"

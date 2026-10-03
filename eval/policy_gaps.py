@@ -241,19 +241,27 @@ def assert_not_a_run_directory(destination: Path, runs_dir: Path, model: str) ->
     written. The check is structural as well as by name: a directory holding a
     run's own ``run.json`` or case files is a run directory whichever model it
     belongs to.
+
+    The comparisons are case-folded, through
+    :func:`eval.run_benchmark.path_components`, because this volume is
+    case-insensitive: ``runs/WILD/<slug>`` names the same directory as
+    ``runs/wild/<slug>``, and a guard that answered about the spelling rather
+    than the directory could be walked around by changing one letter's case.
     """
     resolved = Path(destination).resolve()
     root = Path(runs_dir).resolve()
+    folded = run_benchmark.path_components(destination)
 
     for headline in run_benchmark.headline_run_directories(runs_dir, model):
-        if resolved == headline.resolve():
+        if folded == run_benchmark.path_components(headline):
             raise PolicyGapError(
                 "the policy-gap report may not be written to the headline run "
                 "directory {0}; it is not that run's figures".format(resolved)
             )
 
     external = (root / run_benchmark.EXTERNAL_RUNS_SUBDIR).resolve()
-    if resolved == external or external in resolved.parents:
+    external_parts = run_benchmark.path_components(external)
+    if folded == external_parts or folded[: len(external_parts)] == external_parts:
         raise PolicyGapError(
             "the policy-gap report may not be written under {0}; every "
             "directory there is a headline directory".format(external)

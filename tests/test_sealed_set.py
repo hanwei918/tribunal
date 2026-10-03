@@ -171,7 +171,9 @@ class SealedSetRegistryTests(unittest.TestCase):
         ``DEVELOPMENT_SETS``, and ``--set all`` runs them. A set holding the
         held-out set's own cases must be in neither, so the combined figure is
         shown not reading a ``runs/wild-dev/`` directory that does hold a case,
-        and ``--set all`` is shown not running a case only that set holds.
+        and ``--set all`` is shown not running a case only that set holds -- by
+        refusing the selection, because a selection that names no case of any
+        selected set runs nothing and an empty run is not a result.
 
         ``LLMClient`` is patched to raise, so a ``--set all`` that did select
         the set fails here instead of making a paid call.
@@ -213,10 +215,14 @@ class SealedSetRegistryTests(unittest.TestCase):
                 )
             finally:
                 run_benchmark.llm.LLMClient = original
-            self.assertEqual(0, code, err)
-            self.assertEqual("", err)
+            self.assertEqual(1, code, "a selection that runs nothing was accepted")
             # Case 501 is a held-out case and nothing else in the selection
-            # holds it, so no case ran and the scratch root is as it was.
+            # holds it, so the selection names no case of any selected set. That
+            # is an error about the selection rather than a run that produced
+            # nothing, and it is refused before a client exists.
+            self.assertIn("--cases names case(s) {0}".format(SENTINEL_CASE), err)
+            self.assertIn("does not hold", err)
+            self.assertEqual("", out, "the refused invocation printed a summary")
             self.assertEqual(
                 ["case-{0:05d}.json".format(SENTINEL_CASE)],
                 sorted(path.name for path in dev_dir.iterdir()),
