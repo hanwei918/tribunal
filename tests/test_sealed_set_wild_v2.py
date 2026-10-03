@@ -1216,6 +1216,25 @@ FROZEN_ARGUMENT_DIFFERENCES = (
 )
 
 
+FREEZE_NOTE = PROJECT_ROOT / "docs/notes/2026-10-03-the-second-freeze.md"
+
+
+def _the_freeze_notes_model():
+    """The model the freeze note's configuration table states, from its text.
+
+    The table is a two-column markdown table whose rows are ``| setting | value
+    |``; the model's row is the one whose first cell is exactly ``model``, and its
+    value is written in backticks. Read from the note's text rather than imported
+    from the module that decides it, because the note is the statement the owner
+    runs against and the point of the test below is to compare the two records.
+    """
+    for line in FREEZE_NOTE.read_text(encoding="utf-8").splitlines():
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if len(cells) == 2 and cells[0] == "model":
+            return cells[1].strip().strip("`")
+    return None
+
+
 class WildV2RunArgumentsTests(unittest.TestCase):
     """``--set wild-v2`` runs at the arguments its registration fixes, or not at all.
 
@@ -1230,6 +1249,25 @@ class WildV2RunArgumentsTests(unittest.TestCase):
     before the run, and the one invocation that is accepted is asserted through
     the refusal function rather than by running it.
     """
+
+    def test_the_registered_model_is_the_one_the_freeze_note_states(self):
+        """The registration and the note are two records of one decision.
+
+        The run is made from a commit whose trees equal the note's tag, and the
+        note's configuration table is the statement the owner runs against: a
+        registration naming a different model would brief every case with one
+        model while the note said another, and nothing would say so. The note is
+        read, not imported, so the two records are actually compared.
+        """
+        stated = _the_freeze_notes_model()
+        self.assertIsNotNone(
+            stated, "the freeze note's configuration table states no model"
+        )
+        self.assertEqual(
+            stated,
+            WILD_V2.run_arguments.model,
+            "the model wild-v2 registers is not the model the freeze note states",
+        )
 
     def test_the_registration_records_the_freezes_eight_settings(self):
         frozen = WILD_V2.run_arguments

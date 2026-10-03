@@ -13,6 +13,12 @@ key, and the set's own ``index.json`` for each case's category. No model is
 called and no case content is printed -- the output is case numbers, counts and
 ratios.
 
+**Which run directory it reads** is decided by :func:`model_for`: a sealed set
+that registers the arguments its run is fixed at names the model that run was
+made with, and that is the default here, because the run directory is named after
+it. ``--model`` overrides it, and a set that registers no arguments -- ``wild-v1``
+-- falls back to the runtime model.
+
 **It prints no corpus target beside a sealed set.** ``TARGET_ESCALATION_RATE``
 is a property of the 29-case corpus, the set the policy was drafted against. A
 sealed set's escalation figures printed beside it would invite a comparison the
@@ -292,9 +298,34 @@ def _build_parser() -> argparse.ArgumentParser:
             ", ".join(sorted(sealed.name for sealed in development_sets.SEALED_SETS))
         ),
     )
-    parser.add_argument("--model", default=None, help="the model id; defaults to tribunal/model.py")
+    parser.add_argument(
+        "--model",
+        default=None,
+        help=(
+            "the model id; defaults to the model the set registers, or to "
+            "tribunal/model.py for a set that registers none"
+        ),
+    )
     parser.add_argument("--runs-dir", type=Path, default=run_benchmark.RUNS_DIR)
     return parser
+
+
+def model_for(
+    development_set: development_sets.DevelopmentSet, requested: Optional[str]
+) -> str:
+    """The model to report on: the one asked for, else the set's own.
+
+    A sealed set that registers the arguments its run is fixed at names the model
+    its single run was made with, and its run directory is named after that model.
+    Reading the runtime default instead would look in a directory named after a
+    model the set never ran, which is how a sealed report would print "has not
+    been run" for a set that has been. An explicit ``--model`` still wins, so the
+    command can be pointed at another model's directory deliberately.
+    """
+    chosen = (requested or "").strip()
+    if not chosen and development_set.run_arguments is not None:
+        chosen = development_set.run_arguments.model
+    return run_benchmark.resolve_model(chosen)
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
@@ -307,7 +338,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             )
         )
     development_set = development_sets.named(args.set_name)
-    model = run_benchmark.resolve_model(args.model)
+    model = model_for(development_set, args.model)
     sys.stdout.write(render(development_set, model, args.runs_dir))
     return 0
 

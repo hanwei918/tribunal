@@ -14,6 +14,7 @@ rather than quietly doing what the rule forbids.
 
 from __future__ import annotations
 
+import dataclasses
 import io
 import sys
 import unittest
@@ -25,7 +26,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from eval import grade, run_benchmark, sealed_report  # noqa: E402
+from eval import development_sets, grade, run_benchmark, sealed_report  # noqa: E402
+from tribunal import model  # noqa: E402
 
 MODEL = "deepseek/deepseek-flash"
 
@@ -111,6 +113,69 @@ class UnRunSealedSetTests(unittest.TestCase):
         with self.assertRaises(run_benchmark.BenchmarkError) as caught:
             sealed_report.main(["--set", "codex"])
         self.assertIn("not a sealed set", str(caught.exception))
+
+
+class ModelDefaultTests(unittest.TestCase):
+    """Which model's run directory a sealed report reads, when none is named.
+
+    A sealed set that registers the arguments its run is fixed at names the model
+    its single run was made with, and its run directory is named after that
+    model. The set is given a registration naming a different model below, so the
+    test can tell the registration from the runtime default -- which are the same
+    string today, and would make a test that only asserted the printed model
+    agree with a command that never read the registration at all.
+    """
+
+    @staticmethod
+    def _registered_as_elsewhere():
+        """``wild-v2`` with its registration naming another model."""
+        return dataclasses.replace(
+            development_sets.WILD_V2,
+            run_arguments=dataclasses.replace(
+                development_sets.WILD_V2.run_arguments, model="a/registered-model"
+            ),
+        )
+
+    def test_the_default_model_is_the_one_the_set_registers(self):
+        elsewhere = self._registered_as_elsewhere()
+        self.assertEqual(
+            "a/registered-model",
+            sealed_report.model_for(elsewhere, None),
+            "the default model is not the one the set registers",
+        )
+
+    def test_a_set_that_registers_no_arguments_uses_the_runtime_model(self):
+        """``wild-v1`` fixes no run arguments, so the decision is the default."""
+        self.assertIsNone(development_sets.SEALED_SET.run_arguments)
+        self.assertEqual(
+            model.RUNTIME_MODEL,
+            sealed_report.model_for(development_sets.SEALED_SET, None),
+        )
+
+    def test_a_named_model_still_wins(self):
+        elsewhere = self._registered_as_elsewhere()
+        for development_set in (development_sets.WILD_V2, elsewhere):
+            with self.subTest(development_set=development_set.name):
+                self.assertEqual(
+                    "asked/for", sealed_report.model_for(development_set, "asked/for")
+                )
+
+    def test_the_command_looks_in_the_directory_the_registration_names(self):
+        """The end of the same road, through the command line.
+
+        The set's registration names another model, and the command must look in
+        *that* model's run directory: reading the runtime default instead would
+        look in a directory named after a model the set never ran, which is how a
+        sealed report would print "has not been run" for a set that has been.
+        Nothing is written -- the not-run path prints one line and this test only
+        reads it.
+        """
+        elsewhere = self._registered_as_elsewhere()
+        with mock.patch.object(development_sets, "named", return_value=elsewhere):
+            code, text = run_report("--set", "wild-v2")
+
+        self.assertEqual(0, code)
+        self.assertIn("runs/wild-v2/a-registered-model", text)
 
 
 if __name__ == "__main__":

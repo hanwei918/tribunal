@@ -76,6 +76,12 @@ if str(PROJECT_ROOT) not in sys.path:
 from eval import grade, run_benchmark  # noqa: E402
 from tribunal import events, loader  # noqa: E402
 
+# The model id is a live value in exactly one module, and this is not it: the
+# registration below names the model its run is fixed at by reading the decision
+# rather than by repeating it, so there is one place to change it and
+# ``tests/test_model.py`` can see that there is.
+from tribunal.model import RUNTIME_MODEL  # noqa: E402
+
 
 # --------------------------------------------------------------------------
 # The arguments a run is fixed at, for the sets whose single run is a figure
@@ -301,7 +307,7 @@ WILD_V2 = DevelopmentSet(
     # are "the default" there, so they are ``None`` here and are compared
     # against whatever the default is at the time of the run.
     run_arguments=RunArguments(
-        model="deepseek/deepseek-flash",
+        model=RUNTIME_MODEL,
         judge_votes=4,
         verify_drafts=False,
         timeout_seconds=900.0,
