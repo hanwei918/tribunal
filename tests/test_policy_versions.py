@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import hashlib
 import io
 import json
 import re
@@ -38,6 +39,7 @@ from eval import development_sets, run_benchmark as runner  # noqa: E402
 from tests import test_run_benchmark as rig  # noqa: E402
 from tribunal import (  # noqa: E402
     brief,
+    events,
     loader,
     money,
     policy_versions,
@@ -136,10 +138,21 @@ def recorded_digests(run_dir, case_loader=None):
 # The vocabulary
 # --------------------------------------------------------------------------
 class PolicyVocabularyTests(unittest.TestCase):
-    def test_the_repository_is_at_version_1_and_has_no_amendments(self):
+    def test_the_repository_is_at_version_2_with_one_amendment(self):
+        """The repository shipped at version 1 until 2026-10-01.
+
+        The policy-gap loop's first full pass drafted POL-RD-13 for cluster C4
+        and the owner approved it as amendment 0001, so the repository is at
+        version 2 and ``amendment_files`` names that one file. Version 1 is
+        still the three policy files exactly as committed, which is what
+        ``BASE_VERSION`` says.
+        """
         self.assertEqual(1, policy_versions.BASE_VERSION)
-        self.assertEqual(1, policy_versions.current_version())
-        self.assertEqual([], policy_versions.amendment_files())
+        self.assertEqual(2, policy_versions.current_version())
+        self.assertEqual(
+            ["0001-pol-rd-13.json"],
+            [path.name for path in policy_versions.amendment_files()],
+        )
 
     def test_the_prefix_maps_agree_with_each_other_and_with_the_id_pattern(self):
         self.assertEqual(
@@ -179,23 +192,55 @@ class PolicyVocabularyTests(unittest.TestCase):
                 )
                 self.assertEqual(expected, numbers[-1] + 1)
 
-    def test_each_shipped_store_holds_only_a_readme(self):
+    def test_each_shipped_store_is_the_store_it_claims_to_be(self):
         # Rule 7 asks for **one** test over the three stores the repository
         # ships, so it is made here rather than split by whichever task added
-        # which directory. The precedent store belongs to task 4; the other two
-        # are this task's, and they ship empty for the same reason: an amendment
-        # is written by a human through ``approve``, which task 6 builds.
-        stores = (
-            PROJECT_ROOT / "precedents",
-            POLICY_DIR / policy_versions.AMENDMENTS_DIRNAME,
-            POLICY_DIR / "proposals",
-        )
-        for directory in stores:
+        # which directory. Until 2026-10-01 all three shipped empty and this
+        # asserted that. The policy-gap loop's first full pass then closed two
+        # cases and approved one amendment, so each store now ships the thing
+        # it is a store of, and the assertions are about that instead:
+        #
+        # * ``precedents/`` holds a hash-chained store, and the chain verifies
+        #   -- an edited or reordered line is reported at that line;
+        # * ``policy/amendments/`` holds the approved amendment, and its
+        #   recorded ``proposal_sha256`` is the digest of the proposal file it
+        #   names, so the amendment traces to the draft a person read;
+        # * ``policy/proposals/`` holds that draft and its transcript.
+        #
+        # A store that shipped a *different* file, or an amendment whose
+        # proposal had moved since approval, would pass the old emptiness check
+        # for the wrong reason or not at all; neither passes these.
+        precedents_dir = PROJECT_ROOT / "precedents"
+        amendments_dir = POLICY_DIR / policy_versions.AMENDMENTS_DIRNAME
+        proposals_dir = POLICY_DIR / "proposals"
+
+        for directory in (precedents_dir, amendments_dir, proposals_dir):
             with self.subTest(directory=str(directory.relative_to(PROJECT_ROOT))):
                 self.assertTrue(directory.is_dir())
+                self.assertTrue((directory / policy_versions.README_FILE).is_file())
+
+        # The precedent store is a chain, and the chain verifies.
+        store = precedents.store_path(precedents_dir)
+        self.assertTrue(store.is_file(), "the shipped precedent store is missing")
+        self.assertIsNone(
+            events.verify_chain(store),
+            "the shipped precedent store's chain does not verify",
+        )
+
+        # Every amendment's recorded proposal digest matches its proposal file.
+        amendments = policy_versions.amendment_files(POLICY_DIR)
+        self.assertTrue(amendments, "the shipped amendment store is empty")
+        for path in amendments:
+            with self.subTest(amendment=path.name):
+                amendment = policy_versions.load_amendment(path)
+                proposal_file = PROJECT_ROOT / amendment["proposal_file"]
+                self.assertTrue(
+                    proposal_file.is_file(), "no proposal at {0}".format(proposal_file)
+                )
                 self.assertEqual(
-                    [policy_versions.README_FILE],
-                    sorted(path.name for path in directory.iterdir()),
+                    hashlib.sha256(proposal_file.read_bytes()).hexdigest(),
+                    amendment["proposal_sha256"],
+                    "{0} records a digest its proposal no longer has".format(path.name),
                 )
 
 
@@ -644,7 +689,8 @@ class RunBenchmarkCommandLineTests(unittest.TestCase):
     def test_a_version_the_repository_does_not_have_is_refused_before_a_client(self):
         # The same shape as the development-set test below: the runs root is a
         # scratch one, so nothing here resolves a destination under the
-        # repository's own runs/.
+        # repository's own runs/. The repository is at version 2 since
+        # 2026-10-01, so the version it does not have is 3.
         with tempfile.TemporaryDirectory() as tmp:
             with mock.patch.object(
                 runner,
@@ -657,12 +703,12 @@ class RunBenchmarkCommandLineTests(unittest.TestCase):
                             [
                                 "--model", MODEL,
                                 "--cases", "101",
-                                "--policy-version", "2",
+                                "--policy-version", "3",
                                 "--runs-dir", str(Path(tmp) / "runs"),
                             ]
                         )
         self.assertEqual(1, code)
-        self.assertIn("there is no policy version 2", errors.getvalue())
+        self.assertIn("there is no policy version 3", errors.getvalue())
 
     def test_version_1_is_accepted_and_writes_to_the_ordinary_directory(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -728,16 +774,17 @@ class DevelopmentSetsCommandLineTests(unittest.TestCase):
     def test_an_unknown_version_is_reachable_and_says_so(self):
         # The flag is a plain integer, so a version that does not exist is not a
         # parser error: it is refused by the runner with a message naming the
-        # version the repository is actually at. The runs root is a scratch one,
-        # so the refusal is about the version and this test never resolves a
-        # destination under the repository's own runs/.
+        # version the repository is actually at. The repository is at version 2
+        # since 2026-10-01, so the version that names nothing is 3. The runs root
+        # is a scratch one, so the refusal is about the version and this test
+        # never resolves a destination under the repository's own runs/.
         with tempfile.TemporaryDirectory() as tmp:
             code, message = self.refuse(
                 [
                     "--set",
                     "codex",
                     "--policy-version",
-                    "2",
+                    "3",
                     "--cases",
                     "9101",
                     "--runs-dir",
@@ -745,7 +792,7 @@ class DevelopmentSetsCommandLineTests(unittest.TestCase):
                 ]
             )
         self.assertEqual(1, code)
-        self.assertIn("there is no policy version 2", message)
+        self.assertIn("there is no policy version 3", message)
 
 
 # --------------------------------------------------------------------------
@@ -807,11 +854,11 @@ def version_two_amendments(tmp):
     """One real amendment under ``<tmp>/amendments``, and the patch that finds it.
 
     ``loader.load_policies`` calls ``apply_amendments`` with no root, so the
-    amendments directory is resolved from the repository -- which is at version
-    1 and holds none. This points that one lookup at a temporary directory
-    holding one valid amendment, which is what makes a *genuine* version-2 run
-    possible without adding an amendment to the repository or weakening the
-    refusal that a version with no amendments behind it gets.
+    amendments directory is resolved from the repository -- which since
+    2026-10-01 is at version 2 and holds amendment ``0001``. This points that
+    one lookup at a temporary directory holding one valid amendment, which is
+    what makes a *genuine* version-2 run possible against a fixture of this
+    file's own rather than the repository's approved clause.
     """
     write_amendment(tmp, "0001-example.json", amendment_document("POL-RD-13"))
     directory = Path(tmp) / policy_versions.AMENDMENTS_DIRNAME

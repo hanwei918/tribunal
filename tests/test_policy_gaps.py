@@ -1265,7 +1265,18 @@ class DrafterPromptTests(unittest.TestCase):
         carried = set(policy_versions.PREFIX_CATEGORY.values())
         self.assertNotIn(example["clause"]["category"], carried)
 
-    def test_the_worked_example_precedent_ids_are_not_in_the_library(self):
+    def test_the_worked_example_is_marked_as_invented(self):
+        """The example is invented, and the prompt says so.
+
+        The prompt calls its precedent ids fictitious. Until 2026-10-01 the
+        library was empty and that could be asserted as "the example names no
+        id the library holds"; the first full pass then closed 508 and 530 and
+        minted ``P-0001`` and ``P-0002``, so the example's ``P-0001`` is now a
+        real closure. What still holds, and is what makes the block read as a
+        shape rather than as real decisions, is that at least one id the
+        example names is not in the library and that its clause id resolves in
+        no loaded policy.
+        """
         example = self._example()
         named = set(example["reproduces"])
         named.update(item["precedent_id"] for item in example["does_not_reproduce"])
@@ -1273,7 +1284,8 @@ class DrafterPromptTests(unittest.TestCase):
         library = {entry.get("precedent_id") for entry in precedents.read_entries(
             precedents.store_path(None)
         )}
-        self.assertEqual(set(), named & library)
+        self.assertTrue(named - library)
+        self.assertIsNone(policy_versions.CLAUSE_ID_RE.match(example["clause"]["id"]))
 
     def _example(self):
         fences = [index for index, line in enumerate(self.lines) if line.strip() == "```json"]
@@ -2021,10 +2033,14 @@ class RerunPlanTests(unittest.TestCase):
         # The amendment is under a temporary root, and a brief is built from the
         # repository's own policy/amendments/. The loop must say so once, naming
         # both directories, rather than let the runner refuse it once per case.
+        # The repository has been at version 2 since 2026-10-01, so an amendment
+        # it cannot build now has to name version 3: a second amendment is
+        # written under the temporary root and the rerun is planned from it.
+        number = self._second_amendment()
         destination_root = self.tmp / "rerun-runs"
         with self.assertRaises(gaps.PolicyGapError) as caught:
             gaps.rerun_amendment(
-                self.number,
+                number,
                 [self.run_dir],
                 model=MODEL,
                 runs_dir=destination_root,
@@ -2037,6 +2053,35 @@ class RerunPlanTests(unittest.TestCase):
         self.assertIn(str(policy_versions.amendments_dir(self.amendments_root)), message)
         self.assertIn(str(policy_versions.amendments_dir(None)), message)
         self.assertFalse(destination_root.exists())
+
+    def _second_amendment(self):
+        """One more amendment under the temporary root, naming version 3.
+
+        ``_approve`` writes ``0001`` there; this writes ``0002`` beside it with
+        the next free no-show clause and returns its number. The loop's new
+        version is then 3 while the repository is at 2, which is the branch
+        under test.
+        """
+        directory = policy_versions.amendments_dir(self.amendments_root)
+        directory.mkdir(parents=True, exist_ok=True)
+        clause = dict(a_draft()["clause"])
+        clause["id"] = "POL-NS-{0:02d}".format(NEXT_FREE["NS"] + 1)
+        document = {
+            "base_version": policy_versions.BASE_VERSION + 1,
+            "proposal_file": "policy/proposals/0002-proposal.json",
+            "proposal_sha256": "0" * 64,
+            "report_file": "runs/policy-gaps/report.json",
+            "report_sha256": "0" * 64,
+            "cluster_id": "C1",
+            "cases": list(NO_SHOW_GAPS[:2]),
+            "approved_by": "reviewer",
+            "approved_at": FIXED_NOW,
+            "clause": clause,
+        }
+        (directory / "0002-second.json").write_text(
+            canonical(document) + "\n", encoding="utf-8"
+        )
+        return 2
 
 
 # --------------------------------------------------------------------------
@@ -2062,10 +2107,11 @@ class RerunTests(unittest.TestCase):
         self._tmp = tempfile.TemporaryDirectory()
         self.tmp = Path(self._tmp.name)
         self.repository_amendments = policy_versions.amendments_dir(None)
-        self.assertEqual(
-            [policy_versions.README_FILE],
-            sorted(path.name for path in self.repository_amendments.iterdir()),
-            "the repository's amendments directory is not in its committed state",
+        # The repository ships amendment 0001 now, so the guard is a snapshot
+        # rather than an emptiness check: whatever the directory holds when the
+        # test starts, it must hold the same when the test ends.
+        self.repository_before = sorted(
+            path.name for path in self.repository_amendments.iterdir()
         )
         self.amendments = self._redirect_amendments()
         self.run_dir, _ = build_run(self.tmp, cases=NO_SHOW_GAPS)
@@ -2091,7 +2137,7 @@ class RerunTests(unittest.TestCase):
     def _assert_the_repository_is_untouched(self):
         """The one thing this class must not have done: write to policy/."""
         self.assertEqual(
-            [policy_versions.README_FILE],
+            self.repository_before,
             sorted(path.name for path in self.repository_amendments.iterdir()),
             "a test wrote into the repository's policy/amendments/",
         )

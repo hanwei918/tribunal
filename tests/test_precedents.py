@@ -1632,13 +1632,31 @@ class DevelopmentSetsCommandLineTests(unittest.TestCase):
 # The shipped store
 # --------------------------------------------------------------------------
 class ShippedStoreTests(unittest.TestCase):
-    def test_the_repository_ships_a_readme_and_no_entries(self):
+    def test_the_repository_ships_the_store_the_owner_closed(self):
+        """The store shipped empty until 2026-10-01.
+
+        The policy-gap loop's first full pass closed two held-out cases -- 508
+        and 530 -- and the owner wrote them here as ``P-0001`` and ``P-0002``.
+        The directory therefore holds a README and a chain now, and the claims
+        that matter are that the chain verifies and that the sequence runs
+        ``0001`` upward with no hole -- the shape ``append_entry`` keeps.
+        """
         directory = PROJECT_ROOT / precedents.PRECEDENTS_DIRNAME
         self.assertTrue(directory.is_dir())
         self.assertEqual(
-            ["README.md"], sorted(path.name for path in directory.iterdir())
+            ["README.md", precedents.PRECEDENTS_FILE],
+            sorted(path.name for path in directory.iterdir()),
         )
-        self.assertFalse((directory / precedents.PRECEDENTS_FILE).exists())
+        store = precedents.store_path(directory)
+        self.assertTrue(store.is_file())
+        self.assertIsNone(events.verify_chain(store))
+        entries = precedents.read_entries(store)
+        self.assertEqual(
+            ["P-0001", "P-0002"], [entry["precedent_id"] for entry in entries]
+        )
+        self.assertEqual(
+            [508, 530], [entry["source"]["case_no"] for entry in entries]
+        )
 
     def test_the_module_reads_a_run_and_never_the_harness(self):
         """Five fields from a case file, and no run's event log is ever opened.

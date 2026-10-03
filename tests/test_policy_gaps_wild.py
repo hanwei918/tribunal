@@ -133,6 +133,9 @@ class LoopCase(unittest.TestCase):
         exercised without ``policy/amendments/`` being written to at all.
         """
         self.repository_amendments = policy_versions.amendments_dir(None)
+        self.repository_before = sorted(
+            path.name for path in self.repository_amendments.iterdir()
+        )
         temporary = self.amendments_root / policy_versions.AMENDMENTS_DIRNAME
         temporary.mkdir(parents=True, exist_ok=True)
         original = policy_versions.amendments_dir
@@ -146,9 +149,14 @@ class LoopCase(unittest.TestCase):
         self.addCleanup(self._assert_the_repository_is_untouched)
 
     def _assert_the_repository_is_untouched(self):
-        """The one thing these tests must not have done: write into policy/."""
+        """The one thing these tests must not have done: write into policy/.
+
+        The repository ships one approved amendment now, so "untouched" cannot
+        mean "holds only README.md"; it means the listing is the one it had
+        when the test started.
+        """
         self.assertEqual(
-            [policy_versions.README_FILE],
+            self.repository_before,
             sorted(path.name for path in self.repository_amendments.iterdir()),
             "a test wrote into the repository's policy/amendments/",
         )
