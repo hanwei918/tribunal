@@ -45,8 +45,9 @@ from __future__ import annotations
 import argparse
 import sys
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 EVAL_DIR = Path(__file__).resolve().parent
@@ -59,7 +60,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from eval import grade, run_benchmark  # noqa: E402
-from tribunal import loader  # noqa: E402
+from tribunal import events, loader  # noqa: E402
 
 
 @dataclass(frozen=True)
@@ -399,6 +400,184 @@ def assert_not_sealed(development_set: DevelopmentSet, switch: str) -> None:
         )
 
 
+# --------------------------------------------------------------------------
+# The sealed protocol: which cases a second invocation retries
+# --------------------------------------------------------------------------
+# A sealed set is run once, plainly. A failure caused by the infrastructure is
+# retried once -- re-running the same command is the retry -- and a failure in
+# which the model answered is not retried, because retrying it only re-samples
+# the model. Before this existed, a second invocation re-attempted every case
+# with no ``case-<NNNNN>.json``, SHAPE failures included: that is exactly what
+# ``wild-v1``'s second invocation did to 517 and 533.
+#
+# The rule, in the terms the addendum note states it:
+#
+# * an **attempt** of a case is one invocation in which that case has at least
+#   one ``agent_call`` event -- or, for the failures that make no call at all, one
+#   in which it recorded a terminal event. A transport failure raises before the
+#   transcript entry exists, so its ``case_failed`` is the only marker the
+#   invocation tried the case, and without this the third-attempt cap could never
+#   bind on TRANSPORT, TIMEOUT, DEADLINE or INTERRUPTED;
+# * a case is **not retried** when its last attempt ended in a ``case_failed``
+#   event with ``failure_kind`` SHAPE **and** every ``agent_call`` of that case
+#   in that invocation has ``status`` 200;
+# * a case is **retried once** when its last attempt ended in TRANSPORT,
+#   TIMEOUT, DEADLINE or INTERRUPTED, or in SHAPE with any ``agent_call``
+#   ``status`` other than 200;
+# * no case gets a third attempt -- two attempts and no result is no ruling;
+# * an attempt that ended with no terminal event does not count: the process was
+#   killed, so this invocation cannot say the case failed. It is printed, so the
+#   record shows it;
+# * a case with a result is never re-run, which the cache already enforces.
+#
+# Nothing here reaches ``tribunal/``: the rule reads the run's own event log,
+# and the package that builds the runtime bundle never sees a run.
+HTTP_OK = 200
+RETRYABLE_FAILURE_KINDS = frozenset(
+    {
+        run_benchmark.FAILURE_TRANSPORT,
+        run_benchmark.FAILURE_TIMEOUT,
+        run_benchmark.FAILURE_DEADLINE,
+        run_benchmark.FAILURE_INTERRUPTED,
+    }
+)
+
+
+@dataclass(frozen=True)
+class _SealedAttempt:
+    """One invocation of a case, as that case's own events describe it."""
+
+    invocation: Any
+    statuses: Tuple[Any, ...]
+    # ``None`` when the invocation recorded neither a ruling nor a case_failed
+    # for the case: the process was killed and this attempt does not count.
+    terminal: Optional[str]
+    failure_kind: Optional[str]
+
+
+def _sealed_attempts(run_dir: Path, case_no: int) -> List["_SealedAttempt"]:
+    """Every attempt of one case, oldest first, read off the run's event log.
+
+    An attempt is an invocation that called an agent for this case, or that
+    recorded a terminal event for it. The second half is not a convenience: a
+    transport failure makes **no** ``agent_call`` -- the call raised before the
+    transcript entry existed -- so its ``case_failed`` is the only thing that
+    says the invocation tried the case. An invocation that only began the case,
+    because it found it cached, is neither and is not an attempt.
+    """
+    order: List[Any] = []
+    buckets: Dict[Any, Dict[str, Any]] = {}
+    for event in events.read_events(Path(run_dir) / events.EVENTS_FILE):
+        if event.get("case") != case_no:
+            continue
+        invocation = event.get("invocation")
+        bucket = buckets.get(invocation)
+        if bucket is None:
+            bucket = {"statuses": [], "terminal": None, "failure_kind": None}
+            buckets[invocation] = bucket
+            order.append(invocation)
+        name = event.get("event")
+        if name == events.EVENT_AGENT_CALL:
+            bucket["statuses"].append(event.get("status"))
+        elif name == events.EVENT_RULING:
+            bucket["terminal"] = events.EVENT_RULING
+        elif name == events.EVENT_CASE_FAILED:
+            bucket["terminal"] = events.EVENT_CASE_FAILED
+            bucket["failure_kind"] = event.get("failure_kind")
+    attempts: List["_SealedAttempt"] = []
+    for invocation in order:
+        bucket = buckets[invocation]
+        if not bucket["statuses"] and bucket["terminal"] is None:
+            continue
+        attempts.append(
+            _SealedAttempt(
+                invocation=invocation,
+                statuses=tuple(bucket["statuses"]),
+                terminal=bucket["terminal"],
+                failure_kind=bucket["failure_kind"],
+            )
+        )
+    return attempts
+
+
+def _sealed_verdict(attempts: Sequence["_SealedAttempt"]) -> Optional[str]:
+    """Why a case is **not** run again, or ``None`` when it is.
+
+    The reason is one of the two the protocol prints. An attempt with no
+    terminal event does not count toward the two, so a case killed mid-call is
+    run again.
+    """
+    counted = [attempt for attempt in attempts if attempt.terminal is not None]
+    if len(counted) >= 2:
+        return "two attempts"
+    if len(counted) == 1:
+        last = counted[0]
+        if (
+            last.terminal == events.EVENT_CASE_FAILED
+            and last.failure_kind == run_benchmark.FAILURE_SHAPE
+            and last.statuses
+            and all(status == HTTP_OK for status in last.statuses)
+        ):
+            return "SHAPE, every call answered 200"
+    return None
+
+
+def cases_the_sealed_protocol_will_not_retry(
+    development_set: DevelopmentSet,
+    selected: Sequence[int],
+    model: str,
+    runs_dir: Path = RUNS_DIR,
+    *,
+    progress: Callable[[str], None] = lambda text: print(text, flush=True),
+) -> List[int]:
+    """The cases of ``selected`` a second sealed invocation runs again.
+
+    Reads the run's own ``events.jsonl``, read-only, and applies the rule above.
+    Every case it drops, and every attempt it does not count, is printed so the
+    record shows what happened.
+    """
+    run_dir = development_set.run_dir(model, runs_dir)
+    keep: List[int] = []
+    for case_no in selected:
+        attempts = _sealed_attempts(run_dir, case_no)
+        for attempt in attempts:
+            if attempt.terminal is None:
+                progress(
+                    "attempt with no terminal event, so it does not count under "
+                    "the sealed protocol: {0}".format(case_no)
+                )
+        verdict = _sealed_verdict(attempts)
+        if verdict is None:
+            keep.append(case_no)
+        else:
+            progress(
+                "not retried under the sealed protocol: {0} ({1})".format(
+                    case_no, verdict
+                )
+            )
+    return keep
+
+
+def _nothing_left_to_run(
+    development_set: DevelopmentSet, model: str, runs_dir: Path = RUNS_DIR
+) -> "run_benchmark.RunSummary":
+    """An empty summary for an invocation of a sealed set that had nothing to run.
+
+    A second or third invocation can find every case already decided, already
+    out of attempts, or answered by the model. Nothing is called and nothing is
+    written; the summary says so, so the caller's own reporting is unchanged and
+    a no-op invocation is not mistaken for a run that produced nothing.
+    """
+    stamp = datetime.now(timezone.utc).isoformat()
+    return run_benchmark.RunSummary(
+        model=model,
+        run_dir=development_set.run_dir(model, runs_dir),
+        started_at=stamp,
+        ended_at=stamp,
+        stop_reason=run_benchmark.STOP_COMPLETED,
+    )
+
+
 def run_set(
     development_set: DevelopmentSet,
     model: str,
@@ -421,6 +600,15 @@ def run_set(
 
     The destination is checked before anything is written, and ``force`` is
     refused outright for the held-out set, whose single run must not be replaced.
+
+    For a **sealed** set with ``force`` false, the sealed protocol decides which
+    of ``selected`` this invocation runs: a failure caused by the infrastructure
+    is retried once, a failure in which the model answered is not, no case gets a
+    third attempt, and an attempt that ended with no terminal event does not
+    count. It is stated in
+    ``docs/notes/2026-10-03-the-sealed-protocol-made-executable.md`` and applied
+    by :func:`cases_the_sealed_protocol_will_not_retry`. When nothing is left,
+    no call is made and an empty summary is returned.
     """
     if force:
         assert_not_sealed(development_set, "--force")
@@ -433,6 +621,19 @@ def run_set(
                 ", ".join(str(case_no) for case_no in unknown), development_set.name
             )
         )
+
+    if development_set.sealed and not force:
+        # The sealed protocol, and it is applied here rather than in the runner
+        # because it is a property of a *sealed set's second invocation* and not
+        # of a run: re-running the same command retries only what the
+        # infrastructure failed, and a case the model answered is not
+        # re-sampled. A case the rule keeps is run by the runner below exactly as
+        # before, and the cache still skips a case that already has a result.
+        selected = cases_the_sealed_protocol_will_not_retry(
+            development_set, selected, model, runs_dir
+        )
+        if not selected:
+            return _nothing_left_to_run(development_set, model, runs_dir)
 
     set_runs_dir = development_set.runs_dir(runs_dir)
     assert_set_run_directory(

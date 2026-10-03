@@ -60,7 +60,8 @@ from eval import (  # noqa: E402
     run_benchmark,
     verify_drafts,
 )
-from tribunal import brief, loader  # noqa: E402
+from tests import test_development_sets as dev_rig  # noqa: E402
+from tribunal import brief, events, llm, loader, money, transcript  # noqa: E402
 
 MODEL = "deepseek/deepseek-flash"
 HELD_OUT = sets.SEALED_SET
@@ -802,6 +803,332 @@ class WildV2StructureTests(unittest.TestCase):
         for name in ("validate.py", "semcheck.py", "build_v2.py"):
             with self.subTest(name=name):
                 self.assertTrue((WILD_V2_EXTERNAL_DIR / "gen" / name).is_file())
+
+
+# --------------------------------------------------------------------------
+# The sealed protocol: what a second invocation retries, and what it does not
+# --------------------------------------------------------------------------
+# Six cases, one behaviour each. The numbers are the set's own; the behaviour is
+# named, never a ruling, and nothing here reads a value out of the key: the
+# transport is handed the key's produced mapping so a case it is meant to let
+# through produces a real ruling, and the assertions are on call counts and on
+# the protocol's own printed lines.
+CASE_JUDGE_SHAPE = 701
+CASE_ADVOCATE_SHAPE = 702
+CASE_GATEWAY = 703
+CASE_TRANSPORT = 704
+CASE_KILLED = 705
+CASE_SUCCEEDS = 706
+
+KILLED_INVOCATION = "an-invocation-that-was-killed"
+
+
+class ProtocolTransport:
+    """Answers by case and role, so each case can be given one failure.
+
+    The behaviour of a case is one of ``ok`` (a real ruling for the judge, a
+    claim array for an advocate, HTTP 200), ``judge_shape`` (the judge answers an
+    object the contract rejects), ``advocate_shape`` (an advocate does),
+    ``gateway`` (every call answers 502, which the client does not retry at
+    ``max_attempts`` 1) and ``transport`` (the call raises, so nothing was
+    produced).
+    """
+
+    def __init__(self, produced, behaviour) -> None:
+        self.produced = produced
+        self.behaviour = dict(behaviour)
+        self.requests = []
+
+    def __call__(self, url, headers, body, timeout):
+        request = json.loads(body.decode("utf-8"))
+        case_no, role = dev_rig.role_of(request)
+        self.requests.append((case_no, role))
+        mode = self.behaviour.get(case_no, "ok")
+
+        if mode == "transport":
+            raise llm.TransportError("no answer was produced")
+        if mode == "gateway":
+            return llm.HttpResult(status=502, body=b'{"error": "bad gateway"}')
+
+        if mode == "judge_shape" and role == transcript.ROLE_JUDGE:
+            content = "{}"
+        elif mode == "advocate_shape" and role != transcript.ROLE_JUDGE:
+            content = "{}"
+        elif role == transcript.ROLE_JUDGE:
+            ruling = dict(self.produced[case_no]["ruling"])
+            content = money.dumps_canonical({"ruling": ruling, "discarded_claims": []})
+        else:
+            content = dev_rig.CLAIM_ARRAY
+
+        payload = {
+            "choices": [{"message": {"content": content}}],
+            "usage": {
+                "prompt_tokens": dev_rig.PROMPT_TOKENS,
+                "completion_tokens": dev_rig.COMPLETION_TOKENS,
+                "completion_tokens_details": {"reasoning_tokens": 8},
+                "prompt_tokens_details": {"cached_tokens": 0},
+            },
+        }
+        return llm.HttpResult(status=200, body=json.dumps(payload).encode("utf-8"))
+
+    def calls(self) -> int:
+        return len(self.requests)
+
+
+def _protocol_transport(behaviour):
+    return ProtocolTransport(grade.key_as_produced(WILD_V2.key()), behaviour)
+
+
+def _invoke(runs, cases, transport):
+    """One invocation of the same call, with both streams captured.
+
+    The runner's own progress is silenced, so what is captured is the sealed
+    protocol's own lines and nothing else.
+    """
+    stdout = io.StringIO()
+    with contextlib.redirect_stdout(stdout):
+        summary = sets.run_set(
+            WILD_V2,
+            MODEL,
+            runs_dir=runs,
+            cases=cases,
+            client_factory=dev_rig.client_factory(transport),
+            git_runner=dev_rig.git_runner(),
+            progress=lambda text: None,
+            judge_votes=1,
+        )
+    return summary, stdout.getvalue()
+
+
+def _killed_attempt(runs, case_no):
+    """An attempt that ended with no terminal event: agent calls, and nothing after.
+
+    A process killed mid-case leaves ``agent_call`` events and neither a
+    ``ruling`` nor a ``case_failed``. It is written here with a distinct
+    invocation id, so it is an attempt of its own and not this invocation's.
+    """
+    run_dir = runs / run_benchmark.WILD_V2_SET_RUNS_SUBDIR / run_benchmark.model_slug(MODEL)
+    run_dir.mkdir(parents=True, exist_ok=True)
+    log = events.EventLog(
+        run_dir / events.EVENTS_FILE, invocation_id=KILLED_INVOCATION
+    )
+    log.record(events.EVENT_CASE_START, case_no=case_no, position=1, total=1)
+    log.record(
+        events.EVENT_AGENT_CALL,
+        case_no=case_no,
+        role=transcript.ROLE_RIDER_ADVOCATE,
+        status=200,
+    )
+
+
+class SealedProtocolTests(unittest.TestCase):
+    """What a second and third invocation of the same sealed call run again.
+
+    The rule: an infrastructure failure is retried once, a failure in which the
+    model answered is not, no case gets a third attempt, and an attempt that
+    ended with no terminal event does not count. Each is shown by calling the
+    same invocation up to three times over a scratch runs root and counting what
+    the transport was asked for.
+    """
+
+    def test_a_judge_shape_case_with_all_200s_is_not_called_again(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            transport = _protocol_transport({CASE_JUDGE_SHAPE: "judge_shape"})
+
+            _invoke(runs, [CASE_JUDGE_SHAPE], transport)
+            first = transport.calls()
+            self.assertGreater(first, 0, "the first invocation made no call")
+
+            _, out = _invoke(runs, [CASE_JUDGE_SHAPE], transport)
+            self.assertEqual(first, transport.calls(), "a judge SHAPE case was re-sampled")
+            self.assertIn(
+                "not retried under the sealed protocol: {0} (SHAPE, every call "
+                "answered 200)".format(CASE_JUDGE_SHAPE),
+                out,
+            )
+
+            _invoke(runs, [CASE_JUDGE_SHAPE], transport)
+            self.assertEqual(first, transport.calls(), "a judge SHAPE case was re-sampled")
+
+    def test_an_advocate_shape_case_with_all_200s_is_not_called_again(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            transport = _protocol_transport({CASE_ADVOCATE_SHAPE: "advocate_shape"})
+
+            _invoke(runs, [CASE_ADVOCATE_SHAPE], transport)
+            first = transport.calls()
+            self.assertGreater(first, 0, "the first invocation made no call")
+
+            _, out = _invoke(runs, [CASE_ADVOCATE_SHAPE], transport)
+            self.assertEqual(first, transport.calls(), "an advocate SHAPE case was re-sampled")
+            self.assertIn(
+                "not retried under the sealed protocol: {0} (SHAPE, every call "
+                "answered 200)".format(CASE_ADVOCATE_SHAPE),
+                out,
+            )
+
+    def test_a_shape_case_with_an_exhausted_gateway_is_called_once_more(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            transport = _protocol_transport({CASE_GATEWAY: "gateway"})
+
+            _invoke(runs, [CASE_GATEWAY], transport)
+            first = transport.calls()
+            self.assertGreater(first, 0, "the first invocation made no call")
+
+            # A 5xx that exhausted the client's retries is SHAPE, but a call
+            # answered with something other than 200: the server did not answer,
+            # so the case is retried once.
+            _, out = _invoke(runs, [CASE_GATEWAY], transport)
+            self.assertGreater(transport.calls(), first, "a server error was not retried")
+            self.assertNotIn("not retried under the sealed protocol", out)
+            second = transport.calls()
+
+            # It failed again, so this is its second attempt and there is no
+            # third.
+            _, out = _invoke(runs, [CASE_GATEWAY], transport)
+            self.assertEqual(second, transport.calls(), "a case got a third attempt")
+            self.assertIn(
+                "not retried under the sealed protocol: {0} (two attempts)".format(
+                    CASE_GATEWAY
+                ),
+                out,
+            )
+
+    def test_a_transport_case_is_called_once_more_and_then_not_at_all(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            transport = _protocol_transport({CASE_TRANSPORT: "transport"})
+
+            _invoke(runs, [CASE_TRANSPORT], transport)
+            first = transport.calls()
+            self.assertGreater(first, 0, "the first invocation made no call")
+
+            _invoke(runs, [CASE_TRANSPORT], transport)
+            self.assertGreater(transport.calls(), first, "a transport failure was not retried")
+            second = transport.calls()
+
+            _, out = _invoke(runs, [CASE_TRANSPORT], transport)
+            self.assertEqual(second, transport.calls(), "a case got a third attempt")
+            self.assertIn(
+                "not retried under the sealed protocol: {0} (two attempts)".format(
+                    CASE_TRANSPORT
+                ),
+                out,
+            )
+
+    def test_an_attempt_with_no_terminal_event_does_not_count(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            _killed_attempt(runs, CASE_KILLED)
+            transport = _protocol_transport({})
+
+            _, out = _invoke(runs, [CASE_KILLED], transport)
+
+            self.assertGreater(
+                transport.calls(), 0, "a killed attempt stopped the case being run"
+            )
+            self.assertIn(
+                "attempt with no terminal event, so it does not count under the "
+                "sealed protocol: {0}".format(CASE_KILLED),
+                out,
+            )
+            self.assertNotIn("not retried under the sealed protocol", out)
+
+    def test_a_case_with_a_result_is_never_called_again(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            transport = _protocol_transport({})
+
+            _invoke(runs, [CASE_SUCCEEDS], transport)
+            first = transport.calls()
+            self.assertGreater(first, 0, "the first invocation made no call")
+
+            _invoke(runs, [CASE_SUCCEEDS], transport)
+            _invoke(runs, [CASE_SUCCEEDS], transport)
+            self.assertEqual(first, transport.calls(), "a decided case was run again")
+
+    def test_the_rule_is_stated_once_and_is_the_one_that_runs(self):
+        """The predicate the code applies, exercised directly on its own facts."""
+        attempt = sets._SealedAttempt(
+            invocation="a",
+            statuses=(200, 200),
+            terminal=events.EVENT_CASE_FAILED,
+            failure_kind=run_benchmark.FAILURE_SHAPE,
+        )
+        self.assertEqual(
+            "SHAPE, every call answered 200", sets._sealed_verdict([attempt])
+        )
+        self.assertIsNone(
+            sets._sealed_verdict(
+                [
+                    sets._SealedAttempt(
+                        invocation="a",
+                        statuses=(200, 502),
+                        terminal=events.EVENT_CASE_FAILED,
+                        failure_kind=run_benchmark.FAILURE_SHAPE,
+                    )
+                ]
+            )
+        )
+        self.assertEqual(
+            "two attempts",
+            sets._sealed_verdict(
+                [
+                    attempt,
+                    sets._SealedAttempt(
+                        invocation="b",
+                        statuses=(200,),
+                        terminal=events.EVENT_CASE_FAILED,
+                        failure_kind=run_benchmark.FAILURE_TRANSPORT,
+                    ),
+                ]
+            ),
+        )
+        # A killed attempt does not count toward the two, so on its own it is no
+        # reason to stop, and it does not overturn the verdict a counted attempt
+        # already gave.
+        killed = sets._SealedAttempt(
+            invocation="c", statuses=(200,), terminal=None, failure_kind=None
+        )
+        self.assertIsNone(sets._sealed_verdict([killed]))
+        self.assertEqual(
+            "SHAPE, every call answered 200", sets._sealed_verdict([attempt, killed])
+        )
+        # A transport failure makes no agent_call; its case_failed is what makes
+        # the invocation an attempt, and it is one to retry.
+        self.assertIsNone(
+            sets._sealed_verdict(
+                [
+                    sets._SealedAttempt(
+                        invocation="d",
+                        statuses=(),
+                        terminal=events.EVENT_CASE_FAILED,
+                        failure_kind=run_benchmark.FAILURE_TRANSPORT,
+                    )
+                ]
+            )
+        )
+        self.assertEqual(
+            "two attempts",
+            sets._sealed_verdict(
+                [
+                    sets._SealedAttempt(
+                        invocation="d",
+                        statuses=(),
+                        terminal=events.EVENT_CASE_FAILED,
+                        failure_kind=run_benchmark.FAILURE_TRANSPORT,
+                    ),
+                    sets._SealedAttempt(
+                        invocation="e",
+                        statuses=(),
+                        terminal=events.EVENT_CASE_FAILED,
+                        failure_kind=run_benchmark.FAILURE_TRANSPORT,
+                    ),
+                ]
+            ),
+        )
 
 
 if __name__ == "__main__":
