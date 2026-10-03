@@ -82,13 +82,15 @@ SET_CORPUS = "corpus"
 SET_CODEX = "codex"
 SET_WILD = "wild"
 SET_WILD_DEV = "wild-dev"
+SET_WILD_V2 = "wild-v2"
 
 # The directory under ``data/external/`` each set's cases are loaded from. Two
 # sets share one: ``wild-dev`` holds the held-out set's own 64 cases as
 # development data, so it is loaded from ``data/external/wild`` while a closure
 # of it records ``wild-dev`` as the set it came from. Naming the directory here
 # rather than deriving it from the set name is what lets the two disagree on
-# purpose.
+# purpose. The second sealed set has a directory of its own and needs no such
+# sharing.
 #
 # Nothing from ``eval/`` may be imported into this package, so this table and
 # the registry in ``eval.development_sets`` are two statements of one layout;
@@ -97,6 +99,7 @@ EXTERNAL_SET_DIRS: Dict[str, str] = {
     SET_CODEX: SET_CODEX,
     SET_WILD: SET_WILD,
     SET_WILD_DEV: SET_WILD,
+    SET_WILD_V2: SET_WILD_V2,
 }
 
 # The path component that identifies a runs root. The set is derived from the

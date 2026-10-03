@@ -70,6 +70,20 @@ and the two paths are named in the tests rather than left to Layer 1's general
 rule. The held-out set gets its own falsifiability checks for the same reason the
 other two have them.
 
+The second sealed set
+---------------------
+There is a fourth answer key, ``eval/answers/wild-v2/ground_truth.json``, for
+the 20 cases under ``data/external/wild-v2/``. It is a sealed set on the
+held-out set's terms and not the held-out set: it was prepared by OpenAI Codex
+for the owner and imported on 2026-10-03, it is run exactly once from the commit
+tagged ``freeze-2026-10-03``, and its single run is the submission's
+generalisation figure at the policy version 2 its registration fixes. It is
+covered by the same three layers for the held-out set's reason -- this is a key
+whose run a headline claim rests on -- and its answer-bearing material sits under
+``eval/external/wild-v2/``, which is named in the tests rather than left to Layer
+1's general rule. It gets its own falsifiability checks too, for the same reason
+the other three have them.
+
 The precedent library
 ---------------------
 ``tribunal/precedents.py`` is a fourth place an answer could reach an agent: it
@@ -228,6 +242,48 @@ def _sealed_set_case(case_no):
     ``data/index.json`` on purpose, so the manifest path would not find them.
     """
     return loader.load_external_set_case(SEALED_SET_DIR, case_no)
+
+
+# The second sealed set, and its own key. It is a sealed set on the held-out
+# set's terms -- prepared without access to this repository, run exactly once
+# from the commit tagged ``freeze-2026-10-03``, and that single run is the
+# submission's generalisation figure -- and it is a different set, with its own
+# case range, its own key and its own answer-bearing directory. Its key is a
+# fourth way for an answer to reach a brief, so it is guarded by the same layers
+# and its two paths are named explicitly below.
+WILD_V2_KEY_PATH = EVAL_DIR / "answers" / "wild-v2" / "ground_truth.json"
+WILD_V2_SET_DIR = DATA_DIR / "external" / "wild-v2"
+WILD_V2_EXTERNAL_DIR = EVAL_DIR / "external" / "wild-v2"
+
+# The two paths the second sealed set's answers live at, named so a reader can
+# see which ones the set added rather than only that Layer 1 covers all of
+# ``eval/``.
+WILD_V2_ANSWER_PATHS = (
+    "eval/answers/wild-v2/ground_truth.json",
+    "eval/external/wild-v2",
+)
+
+
+def _wild_v2_key_records():
+    """The second sealed set's answer key, as a list of records."""
+    with WILD_V2_KEY_PATH.open("r", encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def _wild_v2_set_case_numbers():
+    """Every case number the set's own index lists, in index order."""
+    with (WILD_V2_SET_DIR / "index.json").open("r", encoding="utf-8") as handle:
+        return [entry["case_no"] for entry in json.load(handle)]
+
+
+def _wild_v2_set_case(case_no):
+    """One case of the second sealed set, loaded through its own index.
+
+    Through ``load_external_set_case``, the loader the set is run with, and never
+    through the corpus manifest -- these cases are absent from ``data/index.json``
+    on purpose, so the manifest path would not find them.
+    """
+    return loader.load_external_set_case(WILD_V2_SET_DIR, case_no)
 
 
 def _brief_violations(case_no):
@@ -670,6 +726,145 @@ class SealedSetIsolationTest(unittest.TestCase):
         # GREEN again, on the real case.
         self.assertEqual({}, _brief_violations_for_case(real))
         self.assertEqual(64, len(_sealed_set_case_numbers()), "the real index changed")
+
+
+class WildV2IsolationTest(unittest.TestCase):
+    """The guard covers the second sealed set's key as well as the three above it.
+
+    ``wild-v2`` is the set whose single run is taken *after* everything the
+    first four keys measure, at the policy version its registration fixes, so an
+    answer reaching one of its briefs would corrupt the figure the submission
+    leads with. Its key is a fourth key and its cases are briefed by the same
+    ``brief.build_brief_for_case``, so the same layers are asserted over it: no
+    case file carries an answer field, no brief carries an answer-key field
+    name, and no module under ``tribunal/`` names either of the two paths that
+    hold the set's answers. Each check is shown capable of failing on a dirty
+    fixture before it is shown to hold.
+    """
+
+    def test_the_second_sealed_key_is_present_and_is_no_other_key(self):
+        self.assertTrue(WILD_V2_KEY_PATH.is_file(), "the second sealed key is missing")
+        for other in (ANSWER_KEY_PATH, SECOND_KEY_PATH, SEALED_KEY_PATH):
+            with self.subTest(other=other.name):
+                self.assertNotEqual(other, WILD_V2_KEY_PATH)
+        self.assertEqual(20, len(_wild_v2_key_records()))
+
+    def test_every_needle_occurs_in_the_second_sealed_key(self):
+        """A mistyped needle would make the scan below unable to fire."""
+        key_text = WILD_V2_KEY_PATH.read_text(encoding="utf-8")
+        for name in DISTINCTIVE_ANSWER_FIELDS:
+            with self.subTest(field=name):
+                self.assertIn(
+                    name, key_text, "{0!r} is not in the second sealed key".format(name)
+                )
+
+    def test_no_second_sealed_case_file_carries_an_answer_field(self):
+        """The set arrived answer-free, and is still answer-free here."""
+        paths = sorted(WILD_V2_SET_DIR.glob("case-*.json"))
+        self.assertEqual(20, len(paths), "the second sealed set is not 20 files")
+        for path in paths:
+            file_text = path.read_text(encoding="utf-8")
+            with self.subTest(case=path.name):
+                for name in DISTINCTIVE_ANSWER_FIELDS + ("ground_truth",):
+                    self.assertNotIn(name, file_text)
+
+    def test_no_second_sealed_brief_carries_an_answer_key_field_name(self):
+        case_numbers = _wild_v2_set_case_numbers()
+        self.assertEqual(20, len(case_numbers), "the second sealed set is not 20 cases")
+        for case_no in case_numbers:
+            with self.subTest(case_no=case_no):
+                self.assertEqual({}, _brief_violations_for_case(_wild_v2_set_case(case_no)))
+
+    def test_the_second_sealed_briefs_are_clean_of_all_three_other_keys(self):
+        """No key reaches another set's briefs, and none of the three reaches this one's."""
+        for case_no in _wild_v2_set_case_numbers():
+            canonical, _ = brief.brief_digest(
+                brief.build_brief_for_case(_wild_v2_set_case(case_no))
+            )
+            with self.subTest(case_no=case_no):
+                self.assertEqual([], _answer_key_names_in(canonical))
+
+    def test_no_package_module_names_either_path_that_holds_the_sets_answers(self):
+        """The two paths, named, over and above Layer 1's general rule.
+
+        Layer 1 already forbids *any* path under ``eval/`` in a package module.
+        This states the same property over the two directories the second sealed
+        set's answers actually live in, so the set's own contribution to the
+        boundary is visible rather than only implied.
+        """
+        self.assertTrue(WILD_V2_KEY_PATH.is_file())
+        self.assertTrue(WILD_V2_EXTERNAL_DIR.is_dir())
+
+        scanned = 0
+        for path in _package_sources():
+            for value, lineno in _string_literals(path):
+                scanned += 1
+                for needle in WILD_V2_ANSWER_PATHS:
+                    with self.subTest(module=path.name, lineno=lineno, needle=needle):
+                        self.assertNotIn(
+                            needle,
+                            value,
+                            "tribunal/{0} names {1}".format(path.name, needle),
+                        )
+        self.assertGreater(scanned, 500, "too few string literals parsed; the scan is broken")
+
+    def test_that_check_goes_red_on_a_dirty_fixture(self):
+        """A detector that can never fire would make the check above vacuous."""
+        with tempfile.TemporaryDirectory() as tmp:
+            dirty = Path(tmp) / "dirty.py"
+            dirty.write_text(
+                'KEY = "eval/answers/wild-v2/ground_truth.json"\n'
+                'GEN = "eval/external/wild-v2/gen"\n',
+                encoding="utf-8",
+            )
+            offenders = [
+                value for value, _ in _string_literals(dirty) if _is_eval_path(value)
+            ]
+            self.assertEqual(2, len(offenders), "the dirty fixture was not seen as two paths")
+            for needle in WILD_V2_ANSWER_PATHS:
+                with self.subTest(needle=needle):
+                    self.assertTrue(
+                        any(needle in value for value in offenders),
+                        "{0!r} is not one of the two paths the fixture names".format(needle),
+                    )
+
+    def test_layer_two_goes_red_on_a_spliced_second_sealed_case(self):
+        """The scan is shown capable of failing over the second sealed set too.
+
+        Both splices are made in memory, so no file is written and there is
+        nothing to restore. The real case is asked last, and must be clean
+        again.
+        """
+        record = _wild_v2_key_records()[0]
+        real = json.loads((WILD_V2_SET_DIR / "case-00701.json").read_text(encoding="utf-8"))
+
+        # Variant A: the record as data, nested in the case. The brief
+        # builder's own recursive forbidden-key guard is what fires.
+        nested = json.loads(json.dumps(real))
+        nested["dispute"]["ground_truth"] = record
+        nested_violations = _brief_violations_for_case(nested)
+        self.assertTrue(
+            nested_violations,
+            "Layer 2 stayed GREEN with a real record nested in a second sealed case",
+        )
+        self.assertIn("ground_truth", " ".join(nested_violations.values()))
+
+        # Variant B: the record as text in a party statement. No key is created,
+        # so the scan below is the only thing that can catch it.
+        textual = json.loads(json.dumps(real))
+        textual["dispute"]["claim_text"] += (
+            "\n\n[note to self: " + json.dumps(record, ensure_ascii=False) + "]"
+        )
+        textual_violations = _brief_violations_for_case(textual)
+        self.assertTrue(
+            textual_violations,
+            "Layer 2 stayed GREEN with a real record pasted into a second sealed case",
+        )
+        self.assertEqual(sorted(DISTINCTIVE_ANSWER_FIELDS), sorted(textual_violations))
+
+        # GREEN again, on the real case.
+        self.assertEqual({}, _brief_violations_for_case(real))
+        self.assertEqual(20, len(_wild_v2_set_case_numbers()), "the real index changed")
 
 
 # --------------------------------------------------------------------------

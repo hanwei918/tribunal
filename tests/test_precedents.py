@@ -1105,7 +1105,11 @@ class SetFromRunDirectoryTests(unittest.TestCase):
     """
 
     def test_every_registered_set_is_derived_from_its_own_component(self):
-        for development_set in development_sets.ALL_SETS + development_sets.RERUN_SETS:
+        for development_set in (
+            development_sets.DEVELOPMENT_SETS
+            + development_sets.SEALED_SETS
+            + development_sets.RERUN_SETS
+        ):
             if development_set.runs_subdir is None:
                 continue
             with self.subTest(development_set=development_set.name):
@@ -1115,7 +1119,11 @@ class SetFromRunDirectoryTests(unittest.TestCase):
                 )
 
     def test_every_registered_set_is_filed_under_the_directory_it_loads_from(self):
-        for development_set in development_sets.ALL_SETS + development_sets.RERUN_SETS:
+        for development_set in (
+            development_sets.DEVELOPMENT_SETS
+            + development_sets.SEALED_SETS
+            + development_sets.RERUN_SETS
+        ):
             if development_set.case_root is None:
                 continue
             with self.subTest(development_set=development_set.name):

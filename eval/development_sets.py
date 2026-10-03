@@ -76,6 +76,13 @@ class DevelopmentSet:
     the generalisation figure. It is the only field a set carries because of
     what its results *mean* rather than where they live, and it is what lets a
     switch that would replace that run be refused for this set and no other.
+
+    ``policy_version`` is the version the set's **registration** fixes, and it
+    is 1 for every set whose version is the command line's to choose. A set
+    registered at a later version briefs every case at that version without a
+    flag, refuses an explicit ``--policy-version``, and keeps its own run
+    directory rather than moving one level down into a ``policy-v<N>`` one: its
+    version is part of what the set *is*, not a switch on the invocation.
     """
 
     name: str
@@ -85,6 +92,7 @@ class DevelopmentSet:
     case_root: Optional[Path]
     summary: str
     sealed: bool = False
+    policy_version: int = 1
 
     def key(self) -> Dict[int, grade.Ruling]:
         """This set's own answer key. Never the corpus key."""
@@ -194,16 +202,64 @@ WILD_DEV = DevelopmentSet(
 )
 
 DEVELOPMENT_SETS: Tuple[DevelopmentSet, ...] = (CORPUS, SECOND_SET)
-SEALED_SETS: Tuple[DevelopmentSet, ...] = (SEALED_SET,)
+
+# The second sealed set, imported on 2026-10-03 and run once from the commit
+# tagged ``freeze-2026-10-03``. It is the same kind of thing as the held-out
+# set -- drafted without access to this repository, keyed by its own file, run
+# once, and reported on its own -- and it is **not** the held-out set: 20 cases
+# over a range of its own, and its single run is never added to ``wild``'s, to
+# the combined figure or to ``--set all``.
+#
+# Its registration fixes policy version 2, which the held-out set's did not:
+# ``POL-RD-13`` was approved through the policy-gap loop and the ``POL-RD-11``
+# upfront remedy was published from version 2 on, so version 2 is the policy the
+# submission now stands behind. Running ``--set wild-v2`` therefore uses version
+# 2 without any flag, an explicit ``--policy-version`` is refused for it, and
+# its runs go to ``runs/wild-v2/<model>/`` rather than to a ``policy-v2``
+# directory inside that root.
+WILD_V2 = DevelopmentSet(
+    name="wild-v2",
+    cases=tuple(
+        entry["case_no"]
+        for entry in loader.load_external_index(
+            loader.EXTERNAL_DIR / run_benchmark.WILD_V2_SET_RUNS_SUBDIR
+        )
+    ),
+    key_path=ANSWER_DIR / run_benchmark.WILD_V2_SET_RUNS_SUBDIR / "ground_truth.json",
+    runs_subdir=run_benchmark.WILD_V2_SET_RUNS_SUBDIR,
+    case_root=loader.EXTERNAL_DIR / run_benchmark.WILD_V2_SET_RUNS_SUBDIR,
+    summary=(
+        "the second sealed set (wild-v2): 20 cases prepared by OpenAI Codex for "
+        "the owner and imported on 2026-10-03; nobody who changed the system has "
+        "seen them, they are run once from the commit tagged freeze-2026-10-03, "
+        "at the policy version 2 this registration fixes, and that single run is "
+        "the submission's generalisation figure"
+    ),
+    sealed=True,
+    policy_version=2,
+)
+
+# The sets that are run **once**, in the order the report prints them. Each is
+# printed in a section of its own and is never part of ``--set all`` or of the
+# combined figure.
+SEALED_SETS: Tuple[DevelopmentSet, ...] = (SEALED_SET, WILD_V2)
+
 # The sets that exist to be run again. They are registered by name and are
-# deliberately outside the two tuples above: ``--set all``, the combined figure
+# deliberately outside the tuples above: ``--set all``, the combined figure
 # and the recorded-drafts measurement each read one of those, and a set whose
 # cases are development data must not enter any of them by being named here.
 RERUN_SETS: Tuple[DevelopmentSet, ...] = (WILD_DEV,)
-ALL_SETS: Tuple[DevelopmentSet, ...] = DEVELOPMENT_SETS + SEALED_SETS
+
+# The sets whose **recorded runs** the measurements read: the three that have
+# been run. ``wild-v2`` is deliberately not one of them -- it has not been run,
+# so it has no drafts, no brief digests and no amount to re-reduce, and a
+# measurement that counted its cases as misses would be reporting a run nobody
+# made.
+ALL_SETS: Tuple[DevelopmentSet, ...] = DEVELOPMENT_SETS + (SEALED_SET,)
+
 BY_NAME = {
     development_set.name: development_set
-    for development_set in ALL_SETS + RERUN_SETS
+    for development_set in DEVELOPMENT_SETS + SEALED_SETS + RERUN_SETS
 }
 
 
@@ -230,10 +286,12 @@ DEVELOPMENT_DATA_CAVEAT = (
     "corpus figure is the figure the submission reports; the combined figure is "
     "a sum over two sets that were drafted differently and share one template, "
     "so it is not a generalisation figure and does not replace the corpus "
-    "number. The only generalisation figure the submission reports belongs to "
-    "the held-out set, drafted without access to this repository and run exactly "
-    "once from the commit tagged freeze-2026-09-30. Neither figure here is "
-    "that figure."
+    "number. The generalisation figures the submission reports belong to the "
+    "two sealed sets, each drafted without access to this repository and each "
+    "run exactly once: the held-out set's, from the commit tagged "
+    "freeze-2026-09-30, and the second sealed set's, from the commit tagged "
+    "freeze-2026-10-03. Neither figure here is either of them, and the two are "
+    "never added to each other either."
 )
 
 # The held-out set is printed on its own, and this is why. A sum of a
@@ -249,6 +307,35 @@ SEALED_SET_CAVEAT = (
     "is absent from data/index.json and is graded against "
     "eval/answers/wild/ground_truth.json, which is neither development key."
 )
+
+# The second sealed set is printed on its own for the held-out set's reasons and
+# with two of its own: it is run once too, and its registration fixes the policy
+# version it is run at, so its figure is a measurement of version 2 and of
+# nothing else.
+WILD_V2_CAVEAT = (
+    "The second sealed set is not a development set and is never added to the "
+    "combined figure above or to the held-out set's figure. It was prepared by "
+    "OpenAI Codex for the owner and imported on 2026-10-03; it is run exactly "
+    "once from the commit tagged freeze-2026-10-03, at the policy version 2 its "
+    "registration fixes, and that single run is the submission's generalisation "
+    "figure. It is absent from data/index.json and is graded against "
+    "eval/answers/wild-v2/ground_truth.json, which is neither development key "
+    "and not the held-out set's key either."
+)
+
+# The heading and the caveat each sealed set is printed under, so a set added to
+# ``SEALED_SETS`` cannot be printed without both.
+SEALED_SET_SECTIONS = {
+    SEALED_SET.name: (
+        "The held-out set (wild-v1), on its own and never in the combined figure:",
+        SEALED_SET_CAVEAT,
+    ),
+    WILD_V2.name: (
+        "The second sealed set (wild-v2), on its own and never in the combined "
+        "figure:",
+        WILD_V2_CAVEAT,
+    ),
+}
 
 # The re-runnable set is printed on its own for the same reason the held-out set
 # is, and with one more that only it has: its cases *are* the held-out set's
@@ -351,6 +438,14 @@ def run_set(
     assert_set_run_directory(
         development_set.run_dir(model, runs_dir), development_set, runs_dir
     )
+    # A set whose registration fixes the policy version briefs at that version
+    # whatever the invocation says, and its run keeps the set's own directory
+    # rather than moving one level down into a ``policy-v<N>`` one: the version
+    # is part of what the set is, not a switch on the run. ``wild-v2`` is the one
+    # set that uses this.
+    if development_set.policy_version != run_benchmark.DEFAULT_POLICY_VERSION:
+        kwargs["policy_version"] = development_set.policy_version
+        kwargs["policy_version_moves_the_run"] = False
     return run_benchmark.run_benchmark(
         model,
         selected,
@@ -628,12 +723,14 @@ def render_development_sets(model: str, runs_dir: Path = RUNS_DIR) -> str:
     Reads cached runs only. The corpus figure and the combined figure are
     different claims and the text says so. The combined figure sums two sets that
     were drafted differently and share one template; it is not a generalisation
-    figure and it does not replace the corpus number. The only generalisation
-    figure belongs to the held-out set, run once from the commit tagged
-    ``freeze-2026-09-30``, and the held-out set is therefore printed in a section of
-    its own -- never as a third row of the table above, and never inside the
-    combined line. The re-runnable set is printed in a section of its own too,
-    because it holds the held-out set's own cases read as development data.
+    figure and it does not replace the corpus number. The generalisation figures
+    belong to the two sealed sets -- the held-out set, run once from the commit
+    tagged ``freeze-2026-09-30``, and the second sealed set, run once from the
+    commit tagged ``freeze-2026-10-03`` -- and each is therefore printed in a
+    section of its own, never as a third row of the table above, never inside the
+    combined line and never added to the other. The re-runnable set is printed in
+    a section of its own too, because it holds the held-out set's own cases read
+    as development data.
 
     The per-case block carries the same cost, provenance and explanation columns
     a run's own ``report.md`` carries, for every case of every set that has been
@@ -684,25 +781,26 @@ def render_development_sets(model: str, runs_dir: Path = RUNS_DIR) -> str:
     # above. It is not a third development set: that line is a sum over two sets
     # that were drafted the same way, and adding the one set whose single run is
     # the generalisation figure would make it a sum of two different claims.
-    sealed_figures = [
-        figures_for(development_set, model, runs_dir) for development_set in SEALED_SETS
-    ]
-    lines.append("")
-    lines.append(
-        "The held-out set (wild-v1), on its own and never in the combined figure:"
-    )
-    lines.append("")
-    lines.append(_SET_TABLE_HEADER)
-    for item in sealed_figures:
-        lines.append(_render_row(item))
-    lines.append("")
-    lines.append("Currency, checked with the set's own loader and its own briefs:")
-    lines.append("")
+    #
+    # Each sealed set gets a section of its own. They are two different sets --
+    # two case ranges, two keys, two freeze tags, two policy versions -- and one
+    # table under one heading would read as one set measured twice.
     for development_set in SEALED_SETS:
+        heading, caveat = SEALED_SET_SECTIONS[development_set.name]
+        sealed_figures = [figures_for(development_set, model, runs_dir)]
+        lines.append("")
+        lines.append(heading)
+        lines.append("")
+        lines.append(_SET_TABLE_HEADER)
+        for item in sealed_figures:
+            lines.append(_render_row(item))
+        lines.append("")
+        lines.append("Currency, checked with the set's own loader and its own briefs:")
+        lines.append("")
         lines.append(currency_line(development_set, model, runs_dir))
-    lines.append("")
-    lines.append(SEALED_SET_CAVEAT)
-    lines.extend(_render_case_facts_section(sealed_figures))
+        lines.append("")
+        lines.append(caveat)
+        lines.extend(_render_case_facts_section(sealed_figures))
 
     # The re-runnable set, printed on its own and for the same reason. It is not
     # a third development set -- the combined line above is a sum over two sets
@@ -752,7 +850,11 @@ def _build_parser() -> argparse.ArgumentParser:
             "set, wild-dev, holds those same 64 cases and that same key as "
             "development data and may be run again, into runs/wild-dev/; it is "
             "likewise never part of --set all and never part of the combined "
-            "figure."
+            "figure. The second sealed set, wild-v2 -- the 20 cases under "
+            "data/external/wild-v2/ -- is registered here too and is run once "
+            "from the commit tagged freeze-2026-10-03, at the policy version 2 "
+            "its registration fixes and with no --policy-version flag; it is "
+            "never part of --set all and never part of the combined figure."
         ),
     )
     parser.add_argument("--model", default=None, help="the model id; defaults to tribunal/model.py")
@@ -848,14 +950,16 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--policy-version",
         type=run_benchmark.policy_version_argument,
-        default=run_benchmark.DEFAULT_POLICY_VERSION,
+        default=None,
         metavar="N",
         help=(
             "brief every case against policy version N: version 1 is the three "
             "policy files exactly as committed, and version N adds the "
             "amendments 0001..N-1 from policy/amendments/. Off by default "
-            "(version 1). The run writes to runs/policy-v<N>/<model>/ -- under "
-            "the set's own root, so the second set's go to "
+            "(version 1), and refused outright for a set whose registration "
+            "fixes its version -- wild-v2 is version 2 by registration and takes "
+            "no flag. The run writes to runs/policy-v<N>/<model>/ -- under the "
+            "set's own root, so the second set's go to "
             "runs/codex/policy-v<N>/<model>/ -- and never into a run directory "
             "holding a version-1 result"
         ),
@@ -900,6 +1004,18 @@ def _build_parser() -> argparse.ArgumentParser:
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = _build_parser().parse_args(argv)
     model = run_benchmark.resolve_model(args.model)
+
+    # ``--policy-version`` defaults to ``None`` rather than to version 1, so
+    # "not given" is told apart from "given as version 1": a set whose
+    # registration fixes its version refuses the flag outright, and a default of
+    # 1 would make an explicit ``--policy-version 1`` indistinguishable from no
+    # flag at all.
+    explicit_policy_version = args.policy_version
+    policy_version = (
+        run_benchmark.DEFAULT_POLICY_VERSION
+        if explicit_policy_version is None
+        else explicit_policy_version
+    )
 
     if args.ablate is not None:
         # An ablation changes what every agent is given, so it cannot be
@@ -948,7 +1064,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 )
                 return 1
 
-    if args.policy_version != run_benchmark.DEFAULT_POLICY_VERSION:
+    if policy_version != run_benchmark.DEFAULT_POLICY_VERSION:
         # A later policy version changes what every agent is given, so it follows
         # the rule the ablation and the precedent block follow: it cannot be
         # combined with another switch that changes the agents' input, nor with a
@@ -989,7 +1105,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         if (
             args.ablate is not None
             or args.precedents
-            or args.policy_version != run_benchmark.DEFAULT_POLICY_VERSION
+            or policy_version != run_benchmark.DEFAULT_POLICY_VERSION
         ):
             print(
                 "FATAL: at most one of --ablate, --precedents, "
@@ -1037,6 +1153,23 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     # of running everything would be a run nobody chose to make.
     selected = [named(args.set_name)] if args.set_name != "all" else list(DEVELOPMENT_SETS)
 
+    # A set whose registration fixes the policy version refuses the flag. The
+    # version is part of what the set *is* -- ``wild-v2`` is version 2 by
+    # registration, and briefing its cases at another version would measure a
+    # set that does not exist -- so naming the flag beside it is refused rather
+    # than silently ignored.
+    if explicit_policy_version is not None:
+        for development_set in selected:
+            if development_set.policy_version != run_benchmark.DEFAULT_POLICY_VERSION:
+                print(
+                    "FATAL: {0} fixes policy version {1} in its registration, so "
+                    "--policy-version is refused for it".format(
+                        development_set.name, development_set.policy_version
+                    ),
+                    file=sys.stderr,
+                )
+                return 1
+
     # The four switches that move a set's run one level down under the set's own
     # root. For the held-out set every one of them would write under
     # ``runs/wild/``, which holds the single run the submission reports and is
@@ -1045,7 +1178,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     for present, switch in (
         (args.ablate is not None, "--ablate"),
         (args.precedents, "--precedents"),
-        (args.policy_version != run_benchmark.DEFAULT_POLICY_VERSION, "--policy-version"),
+        (policy_version != run_benchmark.DEFAULT_POLICY_VERSION, "--policy-version"),
         (args.amount_rule != run_benchmark.pipeline.DEFAULT_AMOUNT_RULE, "--amount-rule"),
     ):
         if not present:
@@ -1148,7 +1281,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                     subset,
                     model=model,
                     prompts_dir=args.prompts_dir,
-                    policy_version=args.policy_version,
+                    policy_version=policy_version,
                     case_loader=development_set.load_case,
                 )
             except run_benchmark.BenchmarkError as exc:
@@ -1184,7 +1317,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 precedents=(
                     run_benchmark.PRECEDENTS_STORE if args.precedents else None
                 ),
-                policy_version=args.policy_version,
+                policy_version=policy_version,
                 amount_rule=args.amount_rule,
             )
         except run_benchmark.llm.ModelNotProvisionedError as exc:
