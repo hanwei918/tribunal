@@ -618,44 +618,75 @@ def assert_not_under_the_held_out_root(
     version, an amount-rule run -- is deeper than that and is refused, so the
     set's single run is the only thing that can be written there.
 
+    ``permit`` is **not** a licence any caller may issue for itself. It is
+    passed by :func:`eval.development_sets.run_set` alone, and only when the set
+    it is running is the one whose registration owns that root -- see
+    ``run_benchmark``'s ``sealed_permit_set``. A direct invocation of the runner
+    and a run of any other set pass no permit at all, so
+    ``--runs-dir runs/wild-v2`` is refused however it is reached.
+
+    The permit opens **the plain run directory of a runs root**, and a runs root
+    that is itself a sealed root is not one: ``--set wild-v2 --runs-dir
+    runs/wild-v2`` would otherwise have the permit open
+    ``runs/wild-v2/wild-v2/<slug>/``, a second directory under the sealed root,
+    which is the one thing the permit exists to prevent. A base named like a
+    sealed root is therefore skipped rather than honoured.
+
     The comparison is **component by component**, not a prefix test on the
     string: ``runs/wild-dev/`` is a different directory from ``runs/wild/`` and
     is deliberately not caught, because it is where a re-run of the same 64
     cases is meant to go. A prefix test would refuse it.
+
+    **Two roots are walked, not one**, and for the reason
+    :func:`baselines.assert_not_a_run_directory` walks two: ``--runs-dir`` and
+    the repository's own ``runs/`` are separate arguments, so a caller who
+    points the first at a scratch root has not thereby made the repository's
+    sealed roots safe to write into. Every sealed root under either is refused,
+    so the guard no longer depends on the two agreeing about where the runs are.
 
     Returns the destination unchanged when it is outside, so a caller can build
     and check it in one expression.
     """
     resolved = Path(destination).resolve()
     permitted = None if permit is None else Path(permit).resolve()
-    for subdir in SEALED_RUNS_SUBDIRS:
-        root = (Path(runs_root) / subdir).resolve()
-        if not (resolved == root or root in resolved.parents):
-            continue
-        if (
-            subdir in UNRUN_SEALED_RUNS_SUBDIRS
-            and permitted is not None
-            and resolved == permitted
-        ):
-            # The one destination an un-run sealed root still accepts.
-            continue
-        if subdir in MADE_SEALED_RUNS_SUBDIRS:
-            detail = (
-                "which holds the held-out set's single run: it was made once from "
-                "the commit tagged freeze-2026-09-30 and is the only generalisation "
-                "figure the submission reports, so nothing is created under it "
-                "again. {0}".format(HELD_OUT_REMEDY if remedy is None else remedy)
+    roots = [Path(runs_root).resolve()]
+    repository = Path(RUNS_DIR).resolve()
+    if repository not in roots:
+        roots.append(repository)
+    for base in roots:
+        # A runs root whose own name is a sealed root is a sealed root, not a
+        # runs root, so nothing below it is the plain sealed run's directory.
+        sealed_base = base.name in SEALED_RUNS_SUBDIRS
+        for subdir in SEALED_RUNS_SUBDIRS:
+            root = (base / subdir).resolve()
+            if not (resolved == root or root in resolved.parents):
+                continue
+            if (
+                subdir in UNRUN_SEALED_RUNS_SUBDIRS
+                and permitted is not None
+                and resolved == permitted
+                and not sealed_base
+            ):
+                # The one destination an un-run sealed root still accepts, and
+                # only for the caller that named the set it belongs to.
+                continue
+            if subdir in MADE_SEALED_RUNS_SUBDIRS:
+                detail = (
+                    "which holds the held-out set's single run: it was made once from "
+                    "the commit tagged freeze-2026-09-30 and is the only generalisation "
+                    "figure the submission reports, so nothing is created under it "
+                    "again. {0}".format(HELD_OUT_REMEDY if remedy is None else remedy)
+                )
+            else:
+                detail = (
+                    "which holds the sealed set wild-v2's single run: the set is run "
+                    "once, plainly, from the commit tagged freeze-2026-10-03, and its "
+                    "single run is the submission's generalisation figure, so nothing "
+                    "else is created under it"
+                )
+            raise BenchmarkError(
+                "{0} lies under {1}, {2}".format(resolved, root, detail)
             )
-        else:
-            detail = (
-                "which holds the sealed set wild-v2's single run: the set is run "
-                "once, plainly, from the commit tagged freeze-2026-10-03, and its "
-                "single run is the submission's generalisation figure, so nothing "
-                "else is created under it"
-            )
-        raise BenchmarkError(
-            "{0} lies under {1}, {2}".format(resolved, root, detail)
-        )
     return Path(destination)
 
 
@@ -2786,6 +2817,11 @@ def run_benchmark(
     # held-out set it *is* the held-out root, so the guard cannot read the
     # top-level one off it. ``None`` means this repository's own ``runs/``.
     held_out_root: Optional[Path] = None,
+    # The set whose registration owns an un-run sealed root, and the only thing
+    # that lets a plain run be written there. ``None`` means no permit: every
+    # destination under a sealed root is refused, which is what a direct
+    # invocation of this runner and a run of any other set get.
+    sealed_permit_set: Optional[str] = None,
     force: bool = False,
     token_budget: Optional[int] = None,
     concurrency: int = DEFAULT_CONCURRENCY,
@@ -3057,10 +3093,15 @@ def run_benchmark(
     else:
         run_dir = run_directory(runs_dir, model)
         # The one destination a sealed root that has not been run yet still
-        # accepts. It is offered only here, on the plain branch, so a switched
-        # destination can never claim it: the plain run of ``wild-v2`` is the
-        # thing that is allowed under ``runs/wild-v2/``, and nothing else is.
-        sealed_permit = run_dir
+        # accepts, and only for the caller that named the set which owns it.
+        # ``sealed_permit_set`` is passed by ``eval.development_sets.run_set``
+        # alone and only for the set whose registration names that root, so a
+        # direct invocation of this runner -- ``python3 -m eval.run_benchmark
+        # --runs-dir runs/wild-v2`` -- issues no permit and is refused, as is
+        # any other set pointed at the same root.
+        sealed_permit = (
+            run_dir if sealed_permit_set in UNRUN_SEALED_RUNS_SUBDIRS else None
+        )
     if label is not None and run_dir.resolve() == run_directory(RUNS_DIR, model).resolve():
         # A development set's results are not corpus results, and
         # runs/<model>/ is where the corpus result lives. Refused rather than

@@ -644,6 +644,196 @@ class WildV2RootGuardTests(unittest.TestCase):
             ),
         )
 
+    def test_a_direct_invocation_of_the_runner_issues_no_permit(self):
+        """``python3 -m eval.run_benchmark --runs-dir <root>/wild-v2`` is refused.
+
+        The permit is issued by ``eval.development_sets.run_set`` and by nothing
+        else, so the runner's own command line -- which is not how the plain
+        sealed run is made -- reaches its destination with no permit at all and
+        is refused, with and without ``--force``.
+
+        The repository's own runs root is replaced by a scratch one for the
+        duration, so what is shown is ``<runs root>/wild-v2`` exactly as
+        ``runs/wild-v2`` is, without the test ever naming the real path.
+        ``LLMClient`` is patched to raise, so a guard that let this run start
+        fails here rather than making a paid call, and the scratch root is
+        asserted to have gained nothing.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            original_root = run_benchmark.RUNS_DIR
+            original, refuse = _refuse_to_build_a_client()
+            run_benchmark.RUNS_DIR = runs
+            run_benchmark.llm.LLMClient = refuse
+            try:
+                for extra in ([], ["--force"]):
+                    with self.subTest(arguments=extra):
+                        stderr = io.StringIO()
+                        with contextlib.redirect_stdout(
+                            io.StringIO()
+                        ), contextlib.redirect_stderr(stderr):
+                            code = run_benchmark.main(
+                                ["--model", MODEL, "--runs-dir", str(runs / "wild-v2")]
+                                + extra
+                            )
+                        self.assertEqual(
+                            1,
+                            code,
+                            "a direct invocation of the runner was accepted for "
+                            "wild-v2 with {0}".format(extra or "no switch"),
+                        )
+                        self.assertIn(
+                            "nothing else is created under it", stderr.getvalue()
+                        )
+                        self.assertIn(
+                            str((runs / "wild-v2").resolve()), stderr.getvalue()
+                        )
+                        self.assertFalse(
+                            (runs / "wild-v2").exists(),
+                            "a refused direct invocation created the sealed root",
+                        )
+            finally:
+                run_benchmark.llm.LLMClient = original
+                run_benchmark.RUNS_DIR = original_root
+
+    def test_another_set_given_that_runs_root_is_refused(self):
+        """The permit names a set, so every other set is refused on that path.
+
+        ``run_set`` puts a set's runs under ``<runs root>/<subdir>``, so pointing
+        a set at ``<runs root>/wild-v2`` aims it at the sealed set's own root.
+        The repository's own runs root is replaced by a scratch one for the
+        duration, so what is shown is ``--runs-dir runs/wild-v2`` exactly as the
+        command line spells it. It is the second root that refuses the corpus and
+        the second development set -- neither destination is one component below
+        the root the caller named -- which is why they are in the list.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            sealed_root = runs / run_benchmark.WILD_V2_SET_RUNS_SUBDIR
+            original_root = run_benchmark.RUNS_DIR
+            run_benchmark.RUNS_DIR = runs
+            try:
+                for development_set in (
+                    sets.CORPUS,
+                    sets.SECOND_SET,
+                    sets.SEALED_SET,
+                ):
+                    with self.subTest(development_set=development_set.name):
+                        original, refuse = _refuse_to_build_a_client()
+                        run_benchmark.llm.LLMClient = refuse
+                        try:
+                            with self.assertRaises(
+                                run_benchmark.BenchmarkError
+                            ) as caught:
+                                sets.run_set(
+                                    development_set,
+                                    MODEL,
+                                    runs_dir=sealed_root,
+                                    cases=(development_set.cases[0],),
+                                    progress=lambda text: None,
+                                )
+                        finally:
+                            run_benchmark.llm.LLMClient = original
+                        self.assertIn(
+                            str(sealed_root.resolve()), str(caught.exception)
+                        )
+            finally:
+                run_benchmark.RUNS_DIR = original_root
+            self.assertFalse(
+                sealed_root.exists(),
+                "a refused set created the un-run sealed root",
+            )
+
+    def test_a_runs_root_that_is_itself_a_sealed_root_opens_nothing(self):
+        """``--set wild-v2 --runs-dir <root>/wild-v2`` must be refused too.
+
+        The permit opens the plain run directory of a *runs root*. A runs root
+        that is itself a sealed root would have the permit open
+        ``<root>/wild-v2/wild-v2/<slug>/`` -- a second directory under the
+        sealed root, which is the one thing the permit exists to prevent -- so
+        the permit is not honoured there and the run is refused before it
+        writes. ``<root>/wild`` is the same shape one root over.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            for subdir in run_benchmark.SEALED_RUNS_SUBDIRS:
+                with self.subTest(subdir=subdir):
+                    original, refuse = _refuse_to_build_a_client()
+                    run_benchmark.llm.LLMClient = refuse
+                    try:
+                        with self.assertRaises(run_benchmark.BenchmarkError):
+                            sets.run_set(
+                                WILD_V2,
+                                MODEL,
+                                runs_dir=runs / subdir,
+                                cases=(SENTINEL_CASE,),
+                                progress=lambda text: None,
+                            )
+                    finally:
+                        run_benchmark.llm.LLMClient = original
+            self.assertFalse(
+                runs.exists(), "a refused run created a sealed root"
+            )
+
+    def test_a_scratch_root_does_not_excuse_the_repositorys_own(self):
+        """Both roots are walked, so ``--runs-dir`` cannot move the guard aside.
+
+        ``--runs-dir`` and the repository's own ``runs/`` are separate arguments,
+        so a caller who points the first at a scratch root has not thereby made
+        the repository's sealed roots safe to write into. Both are walked, as
+        :func:`baselines.assert_not_a_run_directory` walks them, and the check is
+        on paths alone: nothing is created and nothing is read.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            elsewhere = Path(tmp) / "elsewhere"
+            for subdir in run_benchmark.SEALED_RUNS_SUBDIRS:
+                destination = run_benchmark.RUNS_DIR / subdir / self.slug
+                with self.subTest(subdir=subdir):
+                    with self.assertRaises(
+                        run_benchmark.BenchmarkError
+                    ) as caught:
+                        run_benchmark.assert_not_under_the_held_out_root(
+                            destination, elsewhere
+                        )
+                    self.assertIn(
+                        str((run_benchmark.RUNS_DIR / subdir).resolve()),
+                        str(caught.exception),
+                    )
+
+    def test_the_plain_sealed_run_of_this_set_is_still_accepted(self):
+        """The other half of every refusal above: the set that owns the root runs.
+
+        One case, a fake transport and a scratch runs root, so what is asserted
+        is that the permit ``run_set`` issues for ``wild-v2`` reaches the
+        destination and the run writes there -- and no value out of the key is
+        read, compared or printed.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            transport = _protocol_transport({})
+            sets.run_set(
+                WILD_V2,
+                MODEL,
+                runs_dir=runs,
+                cases=(SENTINEL_CASE,),
+                client_factory=dev_rig.client_factory(transport),
+                git_runner=dev_rig.git_runner(),
+                progress=lambda text: None,
+                judge_votes=1,
+            )
+            run_dir = (
+                runs / run_benchmark.WILD_V2_SET_RUNS_SUBDIR / self.slug
+            )
+            self.assertTrue(
+                run_dir.is_dir(),
+                "the plain sealed run was refused its own run directory",
+            )
+            self.assertTrue(
+                any(run_dir.glob("case-*.json")),
+                "the plain sealed run wrote no case",
+            )
+            self.assertGreater(transport.calls(), 0, "the plain sealed run made no call")
+
     def test_the_permit_does_not_open_the_held_out_root(self):
         """``wild`` has been run; nothing opens it, not even its own directory."""
         destination = self.held_out / self.slug
@@ -709,6 +899,196 @@ class WildV2RootGuardTests(unittest.TestCase):
                         self.assertEqual({sentinel.name: before}, _state(run_dir))
             finally:
                 run_benchmark.llm.LLMClient = original
+
+
+# --------------------------------------------------------------------------
+# The run arguments, frozen in the registration
+# --------------------------------------------------------------------------
+def _frozen_arguments(**overrides):
+    """The arguments the owner's command gives, with one of them replaced.
+
+    The values are the ones the freeze note fixes; the three the note fixes as
+    "the default" are given here as the default itself, because that is what
+    the command line gives when the flag is absent.
+    """
+    arguments = dict(
+        model="deepseek/deepseek-flash",
+        prompts_dir=run_benchmark.PROMPTS_DIR,
+        judge_votes=4,
+        verify_drafts=False,
+        timeout_seconds=900.0,
+        concurrency=2,
+        case_deadline_seconds=run_benchmark.pipeline.DEFAULT_CASE_DEADLINE_SECONDS,
+        token_budget=None,
+    )
+    arguments.update(overrides)
+    return arguments
+
+
+# One row per frozen setting: the switch, the command line that differs from the
+# freeze in that one setting, the same difference as a keyword argument, and the
+# two values the refusal must name. A table rather than eight tests, so "test
+# each one" is a loop over all eight and not a sentence claiming eight.
+FROZEN_ARGUMENT_DIFFERENCES = (
+    (
+        "--model",
+        ["--model", "deepseek/deepseek-chat"],
+        {"model": "deepseek/deepseek-chat"},
+        "deepseek/deepseek-chat",
+        "deepseek/deepseek-flash",
+    ),
+    ("--judge-votes", ["--judge-votes", "1"], {"judge_votes": 1}, "1", "4"),
+    ("--verify-drafts", ["--verify-drafts"], {"verify_drafts": True}, "on", "off"),
+    ("--timeout", ["--timeout", "600"], {"timeout_seconds": 600.0}, "600.0", "900.0"),
+    ("--concurrency", ["--concurrency", "1"], {"concurrency": 1}, "1", "2"),
+    (
+        "--prompts-dir",
+        ["--prompts-dir", "/tmp/not-the-default"],
+        {"prompts_dir": Path("/tmp/not-the-default")},
+        "/tmp/not-the-default",
+        "the default",
+    ),
+    (
+        "--case-deadline",
+        ["--case-deadline", "1200"],
+        {"case_deadline_seconds": 1200.0},
+        "1200.0",
+        "the default",
+    ),
+    (
+        "--token-budget",
+        ["--token-budget", "100000"],
+        {"token_budget": 100000},
+        "100000",
+        "the default",
+    ),
+)
+
+
+class WildV2RunArgumentsTests(unittest.TestCase):
+    """``--set wild-v2`` runs at the arguments its registration fixes, or not at all.
+
+    The freeze note fixes the model, the judge vote count, the verifier, the
+    prompts directory, the case deadline, the token budget, the timeout and the
+    concurrency. Each is fixed as a *value* or as "the default", and an
+    invocation that differs in one of them would produce a different measurement
+    under the same name, so it is refused with the argument and the registered
+    value named.
+
+    No model is called anywhere here: every differing invocation is refused
+    before the run, and the one invocation that is accepted is asserted through
+    the refusal function rather than by running it.
+    """
+
+    def test_the_registration_records_the_freezes_eight_settings(self):
+        frozen = WILD_V2.run_arguments
+        self.assertIsNotNone(frozen, "wild-v2 fixes no run arguments")
+        self.assertEqual("deepseek/deepseek-flash", frozen.model)
+        self.assertEqual(4, frozen.judge_votes)
+        self.assertFalse(frozen.verify_drafts)
+        self.assertEqual(900.0, frozen.timeout_seconds)
+        self.assertEqual(2, frozen.concurrency)
+        # "The default" is recorded as the default rather than as today's
+        # number, so the registration cannot start refusing the default.
+        self.assertIsNone(frozen.prompts_dir)
+        self.assertIsNone(frozen.case_deadline_seconds)
+        self.assertIsNone(frozen.token_budget)
+        for development_set in (
+            sets.DEVELOPMENT_SETS + sets.SEALED_SETS + sets.RERUN_SETS
+        ):
+            if development_set is WILD_V2:
+                continue
+            with self.subTest(development_set=development_set.name):
+                self.assertIsNone(
+                    development_set.run_arguments,
+                    "a set that is not wild-v2 fixes run arguments",
+                )
+
+    def test_the_judge_vote_default_agrees_with_the_freezes_four(self):
+        """The note fixes 4 and the command line's default is also 4.
+
+        ``--judge-votes`` is a *value* in the registration and not "the default",
+        so a command that omits the flag is accepted only while the default
+        agrees with the note. That agreement is asserted here rather than left
+        to be discovered on the day the default moves.
+        """
+        self.assertEqual(4, WILD_V2.run_arguments.judge_votes)
+        self.assertEqual(
+            4,
+            run_benchmark.pipeline.DEFAULT_JUDGE_VOTES,
+            "the judge vote default no longer agrees with the freeze note's 4, so "
+            "the owner's command would now be refused",
+        )
+
+    def test_the_invocation_the_owner_will_run_differs_in_nothing(self):
+        self.assertEqual(
+            [],
+            sets.run_argument_differences(WILD_V2, **_frozen_arguments()),
+            "the frozen invocation is refused",
+        )
+
+    def test_each_differing_argument_is_named_with_its_registered_value(self):
+        for switch, _arguments, overrides, asked_text, registered_text in (
+            FROZEN_ARGUMENT_DIFFERENCES
+        ):
+            with self.subTest(switch=switch):
+                differences = sets.run_argument_differences(
+                    WILD_V2, **_frozen_arguments(**overrides)
+                )
+                self.assertEqual(
+                    1,
+                    len(differences),
+                    "{0} did not give exactly one difference: {1}".format(
+                        switch, differences
+                    ),
+                )
+                self.assertIn(switch, differences[0])
+                self.assertIn(asked_text, differences[0])
+                self.assertIn(
+                    "wild-v2 is registered at {0}".format(registered_text),
+                    differences[0],
+                )
+
+    def test_the_command_line_refuses_each_differing_argument(self):
+        """Each one on the command line, refused, naming the argument and the value.
+
+        A scratch runs root is given, so the assertion that nothing was created
+        is made on a directory this test owns rather than on the repository's
+        own ``runs/wild-v2/``, which the sealed run is going to fill.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            for switch, arguments, _overrides, asked_text, registered_text in (
+                FROZEN_ARGUMENT_DIFFERENCES
+            ):
+                with self.subTest(switch=switch):
+                    code, _out, err = _run_cli(
+                        ["--set", "wild-v2", "--runs-dir", str(runs)] + arguments
+                    )
+                    self.assertEqual(
+                        1,
+                        code,
+                        "{0} was accepted for --set wild-v2".format(switch),
+                    )
+                    self.assertIn(switch, err)
+                    self.assertIn(asked_text, err)
+                    self.assertIn(
+                        "wild-v2 is registered at {0}".format(registered_text), err
+                    )
+            self.assertFalse(
+                runs.exists(), "a refused invocation created a run directory"
+            )
+
+    def test_the_read_only_report_is_not_a_run_and_is_not_refused(self):
+        """``--report`` judges nothing, so the frozen arguments are not its business.
+
+        The sealed figures are printed by a read-only command that makes no
+        model call and writes nothing, and that command takes no run arguments:
+        a check that refused it would make the figures unreadable.
+        """
+        code, out, err = _run_cli(["--set", "wild-v2", "--report"])
+        self.assertEqual(0, code, err)
+        self.assertNotIn("is registered at", err)
 
 
 # --------------------------------------------------------------------------

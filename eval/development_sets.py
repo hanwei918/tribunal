@@ -63,6 +63,38 @@ from eval import grade, run_benchmark  # noqa: E402
 from tribunal import events, loader  # noqa: E402
 
 
+# --------------------------------------------------------------------------
+# The arguments a run is fixed at, for the sets whose single run is a figure
+# --------------------------------------------------------------------------
+@dataclass(frozen=True)
+class RunArguments:
+    """The arguments one set's run is fixed at, as its registration records them.
+
+    Only ``wild-v2`` carries one, and only because its single run is the
+    submission's generalisation figure: the freeze note fixes the arguments the
+    run is made with, so an invocation that differed in one of them would
+    produce a *different* measurement under the same name. It is refused by
+    name rather than silently honoured, which is the rule ``--force`` and the
+    switches that change what a run measures already follow for a sealed set.
+
+    ``None`` means **the default**. The note fixes the prompts directory, the
+    case deadline and the token budget as "the default" rather than as a value,
+    and a registration that recorded today's number would be refusing the
+    default the day the default moved. Every other field is a value, because
+    the note fixes it as one -- ``judge_votes`` is the number 4, not "whatever
+    the default happens to be".
+    """
+
+    model: str
+    judge_votes: int
+    verify_drafts: bool
+    timeout_seconds: float
+    concurrency: int
+    prompts_dir: Optional[Path] = None
+    case_deadline_seconds: Optional[float] = None
+    token_budget: Optional[int] = None
+
+
 @dataclass(frozen=True)
 class DevelopmentSet:
     """One set of development cases, its key, and where its results live.
@@ -84,6 +116,12 @@ class DevelopmentSet:
     flag, refuses an explicit ``--policy-version``, and keeps its own run
     directory rather than moving one level down into a ``policy-v<N>`` one: its
     version is part of what the set *is*, not a switch on the invocation.
+
+    ``run_arguments`` is the configuration the set's run is fixed at, and it is
+    ``None`` for every set whose run may be made with whatever arguments the
+    invocation gives. Where it is set, the freeze note has fixed the arguments
+    and an invocation that differs in one of them is refused by name: the run
+    is one measurement, and the arguments are part of what the measurement is.
     """
 
     name: str
@@ -94,6 +132,7 @@ class DevelopmentSet:
     summary: str
     sealed: bool = False
     policy_version: int = 1
+    run_arguments: Optional[RunArguments] = None
 
     def key(self) -> Dict[int, grade.Ruling]:
         """This set's own answer key. Never the corpus key."""
@@ -238,6 +277,19 @@ WILD_V2 = DevelopmentSet(
     ),
     sealed=True,
     policy_version=2,
+    # The arguments the run is made with, from the configuration table in
+    # ``docs/notes/2026-10-03-the-second-freeze.md``. The model, the judge vote
+    # count, the timeout and the concurrency are values there, so they are
+    # values here; the prompts directory, the case deadline and the token budget
+    # are "the default" there, so they are ``None`` here and are compared
+    # against whatever the default is at the time of the run.
+    run_arguments=RunArguments(
+        model="deepseek/deepseek-flash",
+        judge_votes=4,
+        verify_drafts=False,
+        timeout_seconds=900.0,
+        concurrency=2,
+    ),
 )
 
 # The sets that are run **once**, in the order the report prints them. Each is
@@ -398,6 +450,75 @@ def assert_not_sealed(development_set: DevelopmentSet, switch: str) -> None:
             "run is the only generalisation figure the submission reports and "
             "must not be replaced".format(switch)
         )
+
+
+def _render_argument(value: Any) -> str:
+    """One argument's value, as the refusal message spells it."""
+    if value is True:
+        return "on"
+    if value is False:
+        return "off"
+    return str(value)
+
+
+def run_argument_differences(
+    development_set: DevelopmentSet,
+    *,
+    model: str,
+    prompts_dir: Path,
+    judge_votes: int,
+    verify_drafts: bool,
+    timeout_seconds: float,
+    concurrency: int,
+    case_deadline_seconds: float,
+    token_budget: Optional[int],
+) -> List[str]:
+    """Every argument this invocation gives that the set is not registered for.
+
+    Empty when the set fixes no arguments (every set but ``wild-v2``) and empty
+    when the invocation is the one the set is registered for. Each entry names
+    the argument, the value asked for and the registered value, because the
+    point of the refusal is that a reader can see *which* argument would have
+    made this a different measurement.
+
+    The three settings the freeze note fixes as "the default" are stored as
+    ``None`` and compared against the default itself, so the message says "the
+    default" rather than repeating a number that is not the frozen thing.
+    """
+    frozen = development_set.run_arguments
+    if frozen is None:
+        return []
+
+    differences = []
+    for switch, asked, registered, default in (
+        ("--model", model, frozen.model, None),
+        ("--judge-votes", judge_votes, frozen.judge_votes, None),
+        ("--verify-drafts", verify_drafts, frozen.verify_drafts, None),
+        ("--timeout", timeout_seconds, frozen.timeout_seconds, None),
+        ("--concurrency", concurrency, frozen.concurrency, None),
+        ("--prompts-dir", prompts_dir, frozen.prompts_dir, run_benchmark.PROMPTS_DIR),
+        (
+            "--case-deadline",
+            case_deadline_seconds,
+            frozen.case_deadline_seconds,
+            run_benchmark.pipeline.DEFAULT_CASE_DEADLINE_SECONDS,
+        ),
+        ("--token-budget", token_budget, frozen.token_budget, None),
+    ):
+        if registered is None:
+            registered, registered_text = default, "the default"
+        else:
+            registered_text = _render_argument(registered)
+        if asked != registered:
+            differences.append(
+                "{0} is {1} and {2} is registered at {3}".format(
+                    switch,
+                    _render_argument(asked),
+                    development_set.name,
+                    registered_text,
+                )
+            )
+    return differences
 
 
 # --------------------------------------------------------------------------
@@ -655,6 +776,16 @@ def run_set(
         # set's own root has to compare against ``<runs root>/wild``, and for the
         # held-out set ``set_runs_dir`` *is* that root.
         held_out_root=Path(runs_dir),
+        # The permit for an un-run sealed root is issued *here* and nowhere else,
+        # and only for the set whose registration names that root. The runner
+        # compares this name against the sealed root it is about to write under,
+        # so ``python3 -m eval.run_benchmark --runs-dir runs/wild-v2`` issues no
+        # permit at all and is refused, and so is any other set pointed at the
+        # same root. Passing the name rather than a boolean is what makes the
+        # permit a statement about *which set* is running, so the runner cannot
+        # be talked into opening a sealed root by a caller that merely wants it
+        # open -- and a name that matches no sealed root opens nothing.
+        sealed_permit_set=development_set.name,
         key=development_set.key(),
         key_path=development_set.key_path,
         case_loader=development_set.load_case,
@@ -1403,6 +1534,13 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     try:
         for development_set in selected:
             for present, name in (
+                # ``--force`` is named here as well as in ``run_set``, because it
+                # is the one switch in this family that the run loop used to
+                # refuse rather than this list: the frozen-arguments check below
+                # would otherwise answer first, and "this invocation asks for a
+                # different timeout" is not what a reader who typed ``--force``
+                # against a sealed set needs to be told.
+                (args.force, "--force"),
                 (args.replay_advocates is not None, "--replay-advocates"),
                 (args.replay_check is not None, "--replay-check"),
                 (args.verify_recorded_drafts is not None, "--verify-recorded-drafts"),
@@ -1493,6 +1631,36 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             if check.refused:
                 status = 1
         return status
+
+    # The arguments the run is fixed at, for a set whose registration records
+    # them. A sealed set's single run is one measurement and the arguments are
+    # part of what the measurement is, so an invocation that differed in one of
+    # them would produce a different figure under the same name. Refused here
+    # rather than in ``run_set``, because it is the *command line* that is
+    # frozen: the read-only modes above judge nothing and are not runs, and a
+    # caller who runs a set through ``run_set`` directly is writing a test or a
+    # measurement of its own and is not claiming to be the sealed run.
+    for development_set in selected:
+        differences = run_argument_differences(
+            development_set,
+            model=model,
+            prompts_dir=args.prompts_dir,
+            judge_votes=args.judge_votes,
+            verify_drafts=args.verify_drafts,
+            timeout_seconds=args.timeout,
+            concurrency=args.concurrency,
+            case_deadline_seconds=args.case_deadline,
+            token_budget=args.token_budget,
+        )
+        if differences:
+            print(
+                "FATAL: --set {0} is run at the arguments its registration "
+                "fixes, and this invocation asks for something else: {1}".format(
+                    development_set.name, "; ".join(differences)
+                ),
+                file=sys.stderr,
+            )
+            return 1
 
     summaries = []
     for development_set in selected:
