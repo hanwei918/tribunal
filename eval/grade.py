@@ -1783,6 +1783,16 @@ def _render_raw_counts(calibration: Calibration) -> List[str]:
     return lines
 
 
+def corpus_case_numbers() -> Tuple[int, ...]:
+    """The repository corpus key's own case numbers, read from the key.
+
+    Read rather than written down as a literal, because this is the identity of
+    the set ``TARGET_ESCALATION_RATE`` is a property of, and a case added to the
+    corpus must not leave a stale list here.
+    """
+    return tuple(sorted(load_answer_key()))
+
+
 def _render_calibration(report: GradeReport) -> List[str]:
     """The escalation block, with over- and under-escalation counted separately.
 
@@ -1795,9 +1805,22 @@ def _render_calibration(report: GradeReport) -> List[str]:
     that the system over-escalates, when the subset was selected to contain
     escalations. So on a subset the target is withheld, the counts are printed,
     and the reader is told in one line why.
+
+    "The whole corpus" is the 29-case corpus key and not merely a key every case
+    of which was graded: a development set's own key is a key of its own, and a
+    complete run of it is not a corpus run. Both questions are asked below.
     """
     calibration = report.calibration
-    full = report.grades_full_corpus
+    # Two different questions, and the target is printed only when both are
+    # answered yes. ``grades_full_corpus`` says the run graded every case of the
+    # key it was graded against -- which is true of a one-case development set
+    # graded against its own one-case key. ``TARGET_ESCALATION_RATE`` is a
+    # property of the 29-case corpus, so the key graded has to *be* that key: a
+    # development set's key is a key of its own, and printing the corpus target
+    # beside its rate would compare two different sets.
+    full = report.grades_full_corpus and (
+        tuple(sorted(report.corpus_cases)) == corpus_case_numbers()
+    )
     on_these = "" if full else " (on these {0} cases)".format(calibration.total)
 
     lines = [

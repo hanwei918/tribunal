@@ -835,6 +835,31 @@ def a_version_two_set(tmp):
     )
 
 
+def case_facts_row(report_text, case_no):
+    """One case's row of the per-case facts table, keyed by its own header.
+
+    Read out of the table's own header rather than by counting columns from the
+    left, because the row is what a reader reads: a column inserted into the
+    table would silently move the cell this returns, and the assertion would
+    then be about a different column than the one it names.
+    """
+    lines = report_text.splitlines()
+    header_index = next(
+        index for index, line in enumerate(lines) if "amount_sgd from" in line
+    )
+    columns = [
+        cell.strip()
+        for cell in lines[header_index].strip().strip("|").split("|")
+    ]
+    row = next(
+        line
+        for line in lines[header_index:]
+        if line.startswith("| {0} |".format(case_no))
+    )
+    cells = [cell.strip() for cell in row.strip().strip("|").split("|")]
+    return dict(zip(columns, cells))
+
+
 class PolicyVersionTests(unittest.TestCase):
     """A set registered at version 2 is checked, graded and read at version 2.
 
@@ -937,6 +962,55 @@ class PolicyVersionTests(unittest.TestCase):
             # version the recorded run was briefed at.
             self.assertEqual((VERSION_TWO_CASE,), section.analysed)
             self.assertEqual((), section.refusals)
+
+    def test_the_run_s_own_report_records_the_version_two_provenance(self):
+        """The report the run writes, not only the one the report command builds.
+
+        ``figures_for`` reads the figures back off the cache, so a version that
+        never reached the writer would still satisfy the assertion above. This
+        reads the file the run itself left: the provenance column of a run's own
+        ``report.md`` has to describe the brief that run's judge was handed.
+        """
+        with tempfile.TemporaryDirectory() as tmp, \
+                upfront_rig.version_two_amendments(), \
+                mock.patch.object(loader, "EXTERNAL_DIR", Path(tmp) / "external"):
+            development_set, runs = self.run_the_set(tmp)
+            run_dir = development_set.run_dir(MODEL, runs)
+            written = (run_dir / run_benchmark.REPORT_FILE).read_text(
+                encoding="utf-8"
+            )
+
+            cells = case_facts_row(written, VERSION_TWO_CASE)
+            self.assertEqual(
+                "pol_rd_11_remedy.value",
+                cells["amount_sgd from"],
+                "the run's own report describes a brief no agent of it was handed",
+            )
+
+    def test_the_run_s_own_report_prints_no_corpus_target(self):
+        """The target is the 29-case corpus's, and this set is one case.
+
+        ``grades_full_corpus`` is true here -- the run graded every case of the
+        key it was graded against -- and that is a different question from
+        whether the key *is* the corpus key. Printing the corpus target beside
+        this set's rate would compare two different sets.
+        """
+        with tempfile.TemporaryDirectory() as tmp, \
+                upfront_rig.version_two_amendments(), \
+                mock.patch.object(loader, "EXTERNAL_DIR", Path(tmp) / "external"):
+            development_set, runs = self.run_the_set(tmp)
+            run_dir = development_set.run_dir(MODEL, runs)
+            written = (run_dir / run_benchmark.REPORT_FILE).read_text(
+                encoding="utf-8"
+            )
+
+            self.assertNotIn("| Target |", written)
+            self.assertNotIn("| Off target |", written)
+            # The counts and the reason are printed instead, and the rate is
+            # labelled as computed on this set rather than as the corpus's.
+            self.assertIn("**Escalation rate (on these 1 cases)**", written)
+            self.assertIn("not comparable to the corpus base rate", written)
+            self.assertIn("| True positives (key and run both ESCALATE) |", written)
 
 
 if __name__ == "__main__":

@@ -25,10 +25,19 @@ sealed set's escalation figures printed beside it would invite a comparison the
 set cannot support: the sealed sets are what the policy was *measured* on, and
 the corpus target is not a figure they are answerable to.
 
-**A set that has not been run prints one line and nothing else.** Its key is not
-read either -- there is nothing to grade with it -- so this command is safe to
-run before the sealed run is committed, and safe on a set whose key is under the
-sealed-content rule.
+**It reports only sealed sets.** ``--set`` naming anything else -- the corpus, a
+development set -- prints one ``FATAL:`` line to standard error and exits 1
+without writing anything. What is wrong there is what the caller typed, so it is
+answered with a status rather than with a traceback.
+
+**A set that has not been run prints one line and nothing else.** "Has not been
+run" means the run directory holds none of the three things a run leaves -- no
+cached case file, no ``events.jsonl`` and no ``run.json``. A run in which every
+case failed left the log and the metadata and no result, and it is reported as
+what it is: a run with a no-ruling list and not a set that has never been run.
+Its key is not read on the not-run path either -- there is nothing to grade with
+it -- so this command is safe to run before the sealed run is committed, and
+safe on a set whose key is under the sealed-content rule.
 """
 
 from __future__ import annotations
@@ -61,6 +70,23 @@ def not_run_line(
         development_set.name,
         _relative(development_set.run_dir(model, runs_dir)),
     )
+
+
+def _has_a_run(run_dir: Path) -> bool:
+    """Whether anything at all was left under this run directory.
+
+    Three artifacts, and any one of them is a run: a cached case file, the
+    invocation's event log, and the metadata file. Deciding on the case files
+    alone reads a run in which every case failed -- which writes the log and
+    ``run.json`` and no result -- as a set that has never been run, and that is
+    the opposite of what such a directory records.
+    """
+    run_dir = Path(run_dir)
+    if run_benchmark.cached_case_numbers(run_dir):
+        return True
+    if (run_dir / events.EVENTS_FILE).exists():
+        return True
+    return (run_dir / run_benchmark.METADATA_FILE).exists()
 
 
 def _relative(path: Path) -> str:
@@ -177,7 +203,7 @@ def render(
     # Decided before the key is loaded, so a set that has not been run costs
     # nothing and, for a sealed set under the sealed-content rule, reads nothing
     # it is not allowed to read.
-    if not run_benchmark.cached_case_numbers(run_dir):
+    if not _has_a_run(run_dir):
         return not_run_line(development_set, model, runs_dir) + "\n"
 
     key = development_set.key()
@@ -332,11 +358,16 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     args = _build_parser().parse_args(argv)
     sealed_names = {sealed.name for sealed in development_sets.SEALED_SETS}
     if args.set_name not in sealed_names:
-        raise run_benchmark.BenchmarkError(
-            "{0!r} is not a sealed set; the sealed sets are {1}".format(
+        # Printed and returned rather than raised: what is wrong here is what the
+        # caller typed, and the command's contract is a status. A traceback is
+        # not an answer to a bad argument.
+        print(
+            "FATAL: {0!r} is not a sealed set; the sealed sets are {1}".format(
                 args.set_name, ", ".join(sorted(sealed_names))
-            )
+            ),
+            file=sys.stderr,
         )
+        return 1
     development_set = development_sets.named(args.set_name)
     model = model_for(development_set, args.model)
     sys.stdout.write(render(development_set, model, args.runs_dir))

@@ -10,15 +10,24 @@ nothing else.
 The second of those is also the sealed-content rule made checkable: the key is
 patched to raise, so a command that read it on the not-run path would fail here
 rather than quietly doing what the rule forbids.
+
+What "not run" means is a third thing, and it is not "no case files". A run in
+which every case failed leaves the event log and ``run.json`` and no result, and
+the last classes below write such a run by hand -- under a temporary root, on a
+set shaped like a sealed one -- to check that the command reports it as a run
+with a no-ruling list rather than as a set that has never been run. Nothing
+there runs a set, calls a model or writes under ``runs/``.
 """
 
 from __future__ import annotations
 
 import dataclasses
 import io
+import json
 import sys
+import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest import mock
 
@@ -27,7 +36,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from eval import development_sets, grade, run_benchmark, sealed_report  # noqa: E402
-from tribunal import model  # noqa: E402
+from tribunal import events, loader, model  # noqa: E402
 
 MODEL = "deepseek/deepseek-flash"
 
@@ -68,10 +77,18 @@ class HeldOutFiguresTests(unittest.TestCase):
             "  over the 62 cases that produced a ruling: 56/62",
             "  over the 64 cases in the set: 56/64",
             # Per category, both bases, from the set's own index.json.
+            # Per category, both bases and both fields, from the set's own
+            # index.json. The ruling cells are asserted beside the four-field
+            # ones because they are not the same figure: NO_SHOW_CHARGE loses a
+            # case on a field other than the ruling, and ROUTE_DEVIATION does
+            # not, so a per-category line that printed one cell twice would
+            # agree with itself and disagree with the run.
             "  ROUTE_DEVIATION: 37 in the set, 35 produced; four-field 30/35 over "
-            "produced and 30/37 over all",
+            "produced and 30/37 over all; ruling 30/35 over produced and 30/37 "
+            "over all",
             "  NO_SHOW_CHARGE: 27 in the set, 27 produced; four-field 25/27 over "
-            "produced and 25/27 over all",
+            "produced and 25/27 over all; ruling 26/27 over produced and 26/27 "
+            "over all",
             # Escalation, both bases.
             "  over the 62 cases that produced a ruling: 7 produced, 4 expected, "
             "3 true positives; precision 3/7, recall 3/4",
@@ -98,6 +115,14 @@ class UnRunSealedSetTests(unittest.TestCase):
     """The second sealed set, before its run."""
 
     def test_the_un_run_second_sealed_set_prints_one_line_and_nothing_else(self):
+        """The state of the second sealed set today, and a test with an expiry.
+
+        This one is written to go red the moment the sealed run exists: it
+        asserts the whole of the output is the not-run line, so a committed run
+        directory makes it fail rather than pass quietly. When that happens it is
+        replaced by a figures test for ``wild-v2``, beside the one for
+        ``wild-v1`` -- not deleted and not relaxed.
+        """
         # The key is patched to raise, so the whole-output assertion below is
         # also the proof that the not-run path reads no key: a command that
         # loaded it would fail here rather than print this line.
@@ -109,10 +134,22 @@ class UnRunSealedSetTests(unittest.TestCase):
         self.assertEqual(NOT_RUN_WILD_V2, text)
 
     def test_a_development_set_is_refused_rather_than_reported(self):
-        """The command prints no corpus target, so it is sealed sets only."""
-        with self.assertRaises(run_benchmark.BenchmarkError) as caught:
-            sealed_report.main(["--set", "codex"])
-        self.assertIn("not a sealed set", str(caught.exception))
+        """The command prints no corpus target, so it is sealed sets only.
+
+        Refused at the command-line layer, with a status and nothing on standard
+        output: what is wrong is what the caller typed, and a traceback is not an
+        answer to it.
+        """
+        errors = io.StringIO()
+        with redirect_stderr(errors):
+            code, text = run_report("--set", "codex")
+
+        self.assertEqual(1, code)
+        self.assertEqual("", text)
+        self.assertIn(
+            "FATAL: 'codex' is not a sealed set; the sealed sets are wild, wild-v2",
+            errors.getvalue(),
+        )
 
 
 class ModelDefaultTests(unittest.TestCase):
@@ -176,6 +213,184 @@ class ModelDefaultTests(unittest.TestCase):
 
         self.assertEqual(0, code)
         self.assertIn("runs/wild-v2/a-registered-model", text)
+
+
+# --------------------------------------------------------------------------
+# A sealed-shaped set under a temporary root
+# --------------------------------------------------------------------------
+# A sealed set is a set with ``sealed=True``, its own case root, its own key and
+# its own runs subdirectory. Nothing below runs one: the run directories are
+# written by hand, so no client is built, no model is called, and nothing under
+# ``runs/`` is read or written.
+
+
+def _entry(case_no, ruling, amount=None, compensation=None, referrals=(),
+           category="ROUTE_DEVIATION"):
+    """One case's key entry, in the shape a set's own key is written in."""
+    return {
+        "case_no": case_no,
+        "category": category,
+        "ground_truth": {
+            "expected_ruling": ruling,
+            "expected_amount_sgd": amount,
+            "expected_driver_compensation_sgd": compensation,
+            "expected_referrals": list(referrals),
+        },
+    }
+
+
+def _sealed_shaped(tmp, entries, name="wild-shaped"):
+    """A temporary sealed-shaped set, its key and index written, and its runs root.
+
+    The case root is written with an index and no case files: what these tests
+    read is a run directory, and no case file is opened on any path they take.
+    """
+    root = Path(tmp) / "external" / name
+    (root / "cases").mkdir(parents=True)
+    (root / "index.json").write_text(
+        json.dumps(
+            [
+                {
+                    "case_no": entry["case_no"],
+                    "dispute_id": "DSP-{0}".format(entry["case_no"]),
+                    "trip_id": "TRP-{0}".format(entry["case_no"]),
+                    "category": entry["category"],
+                    "file": "cases/case-{0:05d}.json".format(entry["case_no"]),
+                }
+                for entry in entries
+            ]
+        ),
+        encoding="utf-8",
+    )
+    key_path = Path(tmp) / "{0}-key.json".format(name)
+    key_path.write_text(
+        json.dumps(
+            [
+                {
+                    "case_no": entry["case_no"],
+                    "dispute_id": "DSP-{0}".format(entry["case_no"]),
+                    "ground_truth": entry["ground_truth"],
+                }
+                for entry in entries
+            ]
+        ),
+        encoding="utf-8",
+    )
+    development_set = development_sets.DevelopmentSet(
+        name=name,
+        cases=tuple(entry["case_no"] for entry in entries),
+        key_path=key_path,
+        runs_subdir=name,
+        case_root=root,
+        summary="a temporary sealed-shaped set",
+        sealed=True,
+    )
+    return development_set, Path(tmp) / "runs"
+
+
+class RunGateTests(unittest.TestCase):
+    """What "has not been run" means.
+
+    Three artifacts and any one of them is a run: a cached case file, the event
+    log, and ``run.json``. A run in which every case failed leaves the last two
+    and no result, and reporting that directory as a set that has never been run
+    would say the opposite of what it holds.
+    """
+
+    ENTRIES = (_entry(701, "PARTIAL_REFUND", "12.00"), _entry(702, "ESCALATE"))
+
+    def _empty_run_dir(self, tmp):
+        """The set, its runs root, and its run directory, created and empty.
+
+        The loader refuses a case root outside ``data/external/``, so the root
+        below is named as the one under the temporary directory -- the same
+        patch the version-2 probe uses, and the reason it is needed.
+        """
+        development_set, runs = _sealed_shaped(tmp, self.ENTRIES)
+        run_dir = development_set.run_dir(MODEL, runs)
+        run_dir.mkdir(parents=True)
+        return development_set, runs, run_dir
+
+    def test_an_empty_run_directory_is_not_a_run(self):
+        """A directory with nothing in it is not a run, and says so."""
+        with tempfile.TemporaryDirectory() as tmp, \
+                mock.patch.object(loader, "EXTERNAL_DIR", Path(tmp) / "external"):
+            development_set, runs, _ = self._empty_run_dir(tmp)
+            text = sealed_report.render(development_set, MODEL, runs)
+            self.assertIn("has not been run", text)
+            self.assertNotIn("No ruling", text)
+
+    def test_a_run_that_left_only_its_metadata_is_a_run(self):
+        with tempfile.TemporaryDirectory() as tmp, \
+                mock.patch.object(loader, "EXTERNAL_DIR", Path(tmp) / "external"):
+            development_set, runs, run_dir = self._empty_run_dir(tmp)
+            (run_dir / run_benchmark.METADATA_FILE).write_text("{}", encoding="utf-8")
+            text = sealed_report.render(development_set, MODEL, runs)
+            self.assertNotIn("has not been run", text)
+            self.assertIn("No ruling (2)", text)
+
+    def test_a_run_that_left_only_its_event_log_is_a_run(self):
+        """And the failure kind it reports is the one off that log."""
+        with tempfile.TemporaryDirectory() as tmp, \
+                mock.patch.object(loader, "EXTERNAL_DIR", Path(tmp) / "external"):
+            development_set, runs, run_dir = self._empty_run_dir(tmp)
+            log = events.EventLog(run_dir / events.EVENTS_FILE, invocation_id="a-test")
+            log.record(events.EVENT_CASE_FAILED, case_no=701, failure_kind="SHAPE")
+            log.record(events.EVENT_CASE_FAILED, case_no=702, failure_kind="TRANSPORT")
+
+            text = sealed_report.render(development_set, MODEL, runs)
+
+            self.assertNotIn("has not been run", text)
+            self.assertIn("No ruling (2)", text)
+            self.assertIn("  701: last failure kind SHAPE", text)
+            self.assertIn("  702: last failure kind TRANSPORT", text)
+
+
+class EscalationOnBothBasesTests(unittest.TestCase):
+    """An expected escalation with no ruling moves one basis and not the other.
+
+    The two bases are printed side by side and neither is offered as the one to
+    quote. A case that produced no ruling is a miss over the set and is not part
+    of the run's precision at all, so a set with an expected escalation among
+    its no-ruling cases is where the two come apart -- and a renderer that
+    printed one basis twice would be self-consistent and wrong.
+    """
+
+    ENTRIES = (
+        _entry(701, "ESCALATE"),
+        _entry(702, "ESCALATE"),
+        _entry(703, "PARTIAL_REFUND", "12.00"),
+    )
+
+    def test_recall_differs_between_the_two_bases(self):
+        with tempfile.TemporaryDirectory() as tmp, \
+                mock.patch.object(loader, "EXTERNAL_DIR", Path(tmp) / "external"):
+            development_set, runs = _sealed_shaped(tmp, self.ENTRIES)
+            run_dir = development_set.run_dir(MODEL, runs)
+            run_dir.mkdir(parents=True)
+            # 701 is the expected escalation that produced nothing, so it is a
+            # false negative over the set and absent from the produced basis.
+            produced = grade.key_as_produced(development_set.key())
+            for case_no in (702, 703):
+                run_benchmark.write_json(
+                    run_benchmark.case_cache_path(run_dir, case_no), produced[case_no]
+                )
+            (run_dir / run_benchmark.METADATA_FILE).write_text("{}", encoding="utf-8")
+
+            text = sealed_report.render(development_set, MODEL, runs)
+
+            self.assertIn(
+                "  over the 2 cases that produced a ruling: 1 produced, 1 expected, "
+                "1 true positives; precision 1/1, recall 1/1",
+                text,
+            )
+            self.assertIn(
+                "  over the 3 cases in the set: 1 produced, 2 expected, "
+                "1 true positives; precision 1/1, recall 1/2",
+                text,
+            )
+            self.assertIn("No ruling (1)", text)
+            self.assertIn("  701: last failure kind not recorded", text)
 
 
 if __name__ == "__main__":
