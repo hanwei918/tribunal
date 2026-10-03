@@ -1120,6 +1120,58 @@ class ReportDestinationTests(unittest.TestCase):
             self.assertIn("headline run directory", stderr.getvalue())
             self.assertFalse((destination / gaps.REPORT_FILE).exists())
 
+    def test_an_unrun_sealed_run_directory_is_refused_as_a_source(self):
+        """The sealed set that has not been run is refused by name, component-wise.
+
+        ``runs/wild-v2/<model>/`` is a run directory of the second sealed set,
+        which has not been run. The loop refuses it before reading anything,
+        because with the set absent from the frozen ``tribunal`` table a run
+        directory under that root reads as the corpus and the report would say
+        "nothing could be analysed". The two look-alikes are not caught:
+        ``runs/wild-v2x/`` is a different component, and ``runs/wild-dev/`` is
+        the re-runnable twin of the held-out set.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            runs_dir = Path(tmp) / "runs"
+            sealed = runs_dir / runner.WILD_V2_SET_RUNS_SUBDIR / runner.model_slug(MODEL)
+            sealed.mkdir(parents=True)
+            with self.assertRaises(gaps.PolicyGapError):
+                gaps.assert_not_an_unrun_sealed_run_directory(sealed)
+            # The component after the last ``runs`` is what is compared, so a
+            # directory deeper under the same set is refused too.
+            with self.assertRaises(gaps.PolicyGapError):
+                gaps.assert_not_an_unrun_sealed_run_directory(sealed / "nested")
+            for lookalike in (
+                runs_dir / (runner.WILD_V2_SET_RUNS_SUBDIR + "x") / runner.model_slug(MODEL),
+                runs_dir / runner.WILD_DEV_RUNS_SUBDIR / runner.model_slug(MODEL),
+            ):
+                with self.subTest(lookalike=str(lookalike)):
+                    self.assertEqual(
+                        lookalike.resolve(),
+                        gaps.assert_not_an_unrun_sealed_run_directory(lookalike),
+                    )
+
+    def test_the_report_command_refuses_the_unrun_sealed_run_before_loading_a_case(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runs_dir = Path(tmp) / "runs"
+            sealed = runs_dir / runner.WILD_V2_SET_RUNS_SUBDIR / runner.model_slug(MODEL)
+            sealed.mkdir(parents=True)
+            out_dir = runs_dir / gaps.POLICY_GAPS_DIRNAME
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                status = gaps.main(
+                    [
+                        "report",
+                        "--run-dir", str(sealed),
+                        "--runs-dir", str(runs_dir),
+                        "--model", MODEL,
+                        "--out-dir", str(out_dir),
+                    ]
+                )
+            self.assertEqual(1, status)
+            self.assertIn("sealed", stderr.getvalue())
+            self.assertFalse((out_dir / gaps.REPORT_FILE).exists())
+
 
 # --------------------------------------------------------------------------
 # The drafter's input

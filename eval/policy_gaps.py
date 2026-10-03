@@ -306,6 +306,40 @@ def assert_not_an_external_run_directory(run_dir: Path, runs_dir: Path) -> Path:
     return resolved
 
 
+def assert_not_an_unrun_sealed_run_directory(run_dir: Path) -> Path:
+    """Refuse a run directory under a sealed set's root that has not been run.
+
+    ``runs/wild-v2/`` holds the second sealed set's single run, and that run has
+    not been made. The set is deliberately absent from
+    ``tribunal.precedents.EXTERNAL_SET_DIRS`` until the run is committed, so a
+    run directory under that root reads as the corpus -- and the report would
+    then say "nothing could be analysed", which is a statement about this loop
+    rather than about the set. So the loop refuses the directory by name.
+
+    The test is **component by component**: the component after the last
+    ``runs`` segment must be one of :data:`run_benchmark.UNRUN_SEALED_RUNS_SUBDIRS`.
+    That catches ``runs/wild-v2/<model>/`` and nothing else -- ``runs/wild-dev/``
+    is a different component and is not caught, and neither is a sibling whose
+    name merely starts the same way.
+    """
+    resolved = Path(run_dir).resolve()
+    parts = resolved.parts
+    indices = [
+        index for index, part in enumerate(parts) if part == precedents.RUNS_DIRNAME
+    ]
+    if not indices:
+        return resolved
+    following = indices[-1] + 1
+    if following < len(parts) and parts[following] in run_benchmark.UNRUN_SEALED_RUNS_SUBDIRS:
+        raise PolicyGapError(
+            "{0} is a run directory of the sealed set {1}, which is sealed and "
+            "has not been run yet; the policy-gap loop does not read it".format(
+                resolved, parts[following]
+            )
+        )
+    return resolved
+
+
 def _set_of_run_directory(run_dir: Any) -> str:
     """Which set a run directory belongs to, by the one rule that decides it."""
     return precedents.set_from_run_directory(Path(run_dir))
@@ -914,6 +948,11 @@ def build_report(
     _refuse_both_wild_sets(
         (_set_of_run_directory(run_dir) for run_dir in run_dirs), command="report"
     )
+    # Before any case is loaded: the sealed set that has not been run yet is
+    # refused by name, so the report cannot read its un-run directory as the
+    # corpus and call that "nothing could be analysed".
+    for run_dir in run_dirs:
+        assert_not_an_unrun_sealed_run_directory(run_dir)
     runs = tuple(read_run(Path(run_dir), prompts_dir=prompts_dir) for run_dir in run_dirs)
 
     combined: Dict[int, Tuple[str, ...]] = {}
@@ -1855,6 +1894,10 @@ def plan_rerun(
     per_case: Dict[int, Dict[str, Any]] = {}
     for run_dir in run_dirs:
         run_dir = assert_not_an_external_run_directory(run_dir, runs_dir)
+        # And the sealed set that has not been run yet, refused before any case
+        # of it is loaded: its root holds a single run that does not exist yet,
+        # and reading it as the corpus would plan a rerun of nothing.
+        run_dir = assert_not_an_unrun_sealed_run_directory(run_dir)
         source_set = precedents.set_from_run_directory(run_dir)
         # A source that is the held-out record is re-run as its re-runnable
         # twin: the same cases, under a root that may be written to.
@@ -2187,6 +2230,19 @@ def build_diff(
         ),
         command="diff",
     )
+    # Before any case is loaded: a source or a destination that is a run
+    # directory of the sealed set that has not been run is refused by name, so a
+    # hand-made record cannot make this command read a directory the loop is not
+    # allowed to read.
+    for item in record.get("sources") or ():
+        if isinstance(item, Mapping) and item.get("run_dir"):
+            assert_not_an_unrun_sealed_run_directory(Path(item["run_dir"]))
+    for item in record.get("cases") or ():
+        if not isinstance(item, Mapping):
+            continue
+        for key in ("source_dir", "destination"):
+            if item.get(key):
+                assert_not_an_unrun_sealed_run_directory(Path(item[key]))
 
     keys: Dict[str, Mapping[int, grade.Ruling]] = {}
     cases: List[Dict[str, Any]] = []
