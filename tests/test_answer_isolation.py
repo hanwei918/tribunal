@@ -61,9 +61,10 @@ The held-out set
 There is a third answer key, ``eval/answers/wild/ground_truth.json``, for the 64
 cases under ``data/external/wild/``. It is not a development set: it was drafted
 without access to this repository, it is run exactly once from the commit tagged
-``freeze-2026-09-30``, and that single run is the only generalisation figure the
-submission reports. It is covered by the same three layers, because the property
-is about *any* answer key reaching *any* brief and this is the key whose run the
+``freeze-2026-09-30``, and that single run is one of the two generalisation
+figures the submission reports -- the second sealed set's single run is the
+other. It is covered by the same three layers, because the property is about
+*any* answer key reaching *any* brief and this is the key whose run the
 submission's headline claim rests on. Its answer-bearing material sits under
 ``eval/external/wild/``, which is a fourth way for an answer to reach the agent,
 and the two paths are named in the tests rather than left to Layer 1's general
@@ -128,8 +129,9 @@ SECOND_KEY_PATH = EVAL_DIR / "answers" / "codex" / "ground_truth.json"
 SECOND_SET_DIR = DATA_DIR / "external" / "codex"
 
 # The held-out set, and its own key. It is not a development set: it is run once
-# from the commit tagged ``freeze-2026-09-30`` and that single run is the only
-# generalisation figure the submission reports. Its key is a third way for an
+# from the commit tagged ``freeze-2026-09-30`` and that single run is one of the
+# two generalisation figures the submission reports -- the second sealed set's
+# single run is the other. Its key is a third way for an
 # answer to reach a brief, so it is guarded by the same layers -- and its
 # answer-bearing material sits under ``eval/external/wild/``, which Layer 1
 # covers for every package module and which is named explicitly below.
@@ -213,16 +215,18 @@ def _named_paths_in_package(needles):
     ``violations`` is ``(module name, needle, lineno)``; ``scanned`` is the
     number of string literals parsed, so a caller can assert the scan is not
     silently empty.
+
+    The predicate is :func:`_named_paths_in_module`, which is the one the dirty
+    fixtures ask, so a fixture that fires shows that *this* scan can fire rather
+    than one that resembles it. A second copy of the loop would leave each
+    fixture proving a detector nobody runs.
     """
     violations = []
     scanned = 0
     for path in _package_sources():
-        literals = _string_literals(path)
-        scanned += len(literals)
-        for value, lineno in literals:
-            for needle in needles:
-                if needle in value:
-                    violations.append((path.name, needle, lineno))
+        scanned += len(_string_literals(path))
+        for needle, lineno in _named_paths_in_module(path, needles):
+            violations.append((path.name, needle, lineno))
     return sorted(violations), scanned
 
 
@@ -347,6 +351,15 @@ def _brief_violations_for_case(case, policy_version=None):
     when it is given, so a set whose registration fixes a version is asked the
     question about the brief its run will actually be handed rather than about
     version 1's.
+
+    **Every** loader refusal counts, not only the forbidden-key one: a case that
+    cannot be loaded has not been briefed either, and a check that recognised one
+    kind of refusal would read the others as a brief that carried nothing. What
+    comes back is the exception's type and nothing else -- a loader error's
+    message can quote the field it choked on, the path it read or the value it
+    found, which is the case file's own content, and this value is rendered into
+    a failure message. The case number is the caller's half of what a failure
+    says.
     """
     try:
         if policy_version is None:
@@ -354,8 +367,8 @@ def _brief_violations_for_case(case, policy_version=None):
         else:
             built = brief.build_brief_for_case(case, policy_version=policy_version)
         canonical, _ = brief.brief_digest(built)
-    except loader.ForbiddenKeyError as exc:
-        return {"<brief build refused>": str(exc)}
+    except loader.LoaderError as exc:
+        return {"<brief build refused>": type(exc).__name__}
     return {name: name for name in _answer_key_names_in(canonical)}
 
 
@@ -507,10 +520,10 @@ class Layer3FalsifiabilityTest(unittest.TestCase):
                     nested,
                     "Layer 2 stayed GREEN with a real ground-truth record nested in a case file",
                 )
-                self.assertIn(
-                    "ground_truth",
-                    " ".join(nested.values()),
-                    "Layer 2 went red for a reason other than the spliced record: {0}".format(nested),
+                self.assertEqual(
+                    {"<brief build refused>": "ForbiddenKeyError"},
+                    nested,
+                    "the refusal was reported as something other than the exception type",
                 )
             self.assertEqual(written, target.read_bytes(), "the spliced file was rewritten")
 
@@ -616,7 +629,11 @@ class SecondDevelopmentSetTest(unittest.TestCase):
             nested_violations,
             "Layer 2 stayed GREEN with a real record nested in a second-set case",
         )
-        self.assertIn("ground_truth", " ".join(nested_violations.values()))
+        self.assertEqual(
+            {"<brief build refused>": "ForbiddenKeyError"},
+            nested_violations,
+            "the refusal was reported as something other than the exception type",
+        )
 
         # Variant B: the record as text in a party statement. No key is created,
         # so the scan below is the only thing that can catch it.
@@ -756,7 +773,11 @@ class SealedSetIsolationTest(unittest.TestCase):
             nested_violations,
             "Layer 2 stayed GREEN with a real record nested in a sealed case",
         )
-        self.assertIn("ground_truth", " ".join(nested_violations.values()))
+        self.assertEqual(
+            {"<brief build refused>": "ForbiddenKeyError"},
+            nested_violations,
+            "the refusal was reported as something other than the exception type",
+        )
 
         # Variant B: the record as text in a party statement. No key is created,
         # so the scan below is the only thing that can catch it.
@@ -904,7 +925,11 @@ class WildV2IsolationTest(unittest.TestCase):
             nested_violations,
             "Layer 2 stayed GREEN with a real record nested in a second sealed case",
         )
-        self.assertIn("ground_truth", " ".join(nested_violations.values()))
+        self.assertEqual(
+            {"<brief build refused>": "ForbiddenKeyError"},
+            nested_violations,
+            "the refusal was reported as something other than the exception type",
+        )
 
         # Variant B: the record as text in a party statement. No key is created,
         # so the scan below is the only thing that can catch it.

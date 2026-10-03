@@ -222,11 +222,19 @@ def build_section(
     """Read one set's cached run and rebuild every case's panel of drafts.
 
     The set's **registered policy version** travels into both checks that read
-    its cases. The staleness checker rebuilds each case's brief, and the replay
-    check compares the version the recorded run was briefed at with the version
-    this read is briefed at; a set whose registration fixes a later version
-    records its cases at that version, so a version-1 checker would call every
-    correct case stale and a version-1 replay check would refuse the whole run.
+    its cases. The staleness checker rebuilds each case's brief, so a set whose
+    registration fixes a later version records its cases at that version and a
+    version-1 checker would call every correct case stale.
+
+    The replay check is the second channel, and what it needs is the version
+    rather than a version-1 one: it compares the version the recorded run was
+    briefed at with the version this read is briefed at, and refuses the whole
+    replay when the two differ. Passing no version at all -- which is what this
+    call did before the registration's version travelled into it -- is a
+    different finding and refuses nothing: the comparison is skipped, and every
+    case is read as though its version agreed. So the version here is not a
+    second refusal of a case the staleness check already refused; it is what
+    keeps the replay channel answering at all.
     """
     run_dir = development_set.run_dir(model, runs_dir)
     key = development_set.key()

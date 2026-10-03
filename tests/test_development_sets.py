@@ -874,8 +874,10 @@ class PolicyVersionTests(unittest.TestCase):
     * ``figures_for`` computes the amount provenance from the version-1 brief,
       so the report's provenance column describes a money block no agent of that
       run was ever handed;
-    * ``baselines.build_section`` refuses the case for the moved brief, and its
-      replay check refuses the whole run a second time by name.
+    * ``baselines.build_section`` refuses the case for the moved brief. Its
+      replay check is the second channel and refuses nothing at all when it is
+      given no version -- which is what the call did before the set's version
+      travelled into it, so that read refused the case **once** and not twice.
 
     No model is called and nothing committed is read or written: the set lives
     in a temporary directory and its case is synthetic. The run is made with the
@@ -957,9 +959,12 @@ class PolicyVersionTests(unittest.TestCase):
             development_set, runs = self.run_the_set(tmp)
             section = baselines.build_section(development_set, MODEL, runs)
 
-            # Analysed, not refused: with the base version the staleness checker
-            # refuses it as a moved brief, and the replay check raises on the
-            # version the recorded run was briefed at.
+            # Analysed, not refused. The staleness checker is the channel that
+            # refuses this case with the base version: it calls it a moved brief.
+            # The replay check raises on the version as well, but only now that
+            # it is given one -- with no version passed the comparison is
+            # skipped, which is why the read before this part refused the case
+            # once and not twice.
             self.assertEqual((VERSION_TWO_CASE,), section.analysed)
             self.assertEqual((), section.refusals)
 

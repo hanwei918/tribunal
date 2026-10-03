@@ -1889,10 +1889,19 @@ def plan_rerun(
     the same cases, run into ``runs/wild-dev/policy-v<N>/<model>/``. The record
     keeps both names, so a reader can tell which set a source was read as from
     which set it will be run as.
+
+    A run directory of the sealed set that has not been run is refused **before
+    the amendment is read**, the way :func:`build_report` refuses it: the
+    refusal is about the directory the caller named, so it must not depend on
+    the amendment file being loadable.
     """
     _refuse_both_wild_sets(
         (_set_of_run_directory(run_dir) for run_dir in run_dirs), command="rerun"
     )
+    # Before the amendment: its root holds a single run that does not exist yet,
+    # and reading it as the corpus would plan a rerun of nothing.
+    for run_dir in run_dirs:
+        assert_not_an_unrun_sealed_run_directory(run_dir)
     amendment = load_amendment_file(number, amendments_root)
     clause = amendment.get("clause") or {}
     category = clause.get("category")
@@ -1902,10 +1911,6 @@ def plan_rerun(
     per_case: Dict[int, Dict[str, Any]] = {}
     for run_dir in run_dirs:
         run_dir = assert_not_an_external_run_directory(run_dir, runs_dir)
-        # And the sealed set that has not been run yet, refused before any case
-        # of it is loaded: its root holds a single run that does not exist yet,
-        # and reading it as the corpus would plan a rerun of nothing.
-        run_dir = assert_not_an_unrun_sealed_run_directory(run_dir)
         source_set = precedents.set_from_run_directory(run_dir)
         # A source that is the held-out record is re-run as its re-runnable
         # twin: the same cases, under a root that may be written to.

@@ -1199,6 +1199,67 @@ class ReportDestinationTests(unittest.TestCase):
             self.assertIn("sealed", stderr.getvalue())
             self.assertFalse((out_dir / gaps.REPORT_FILE).exists())
 
+    def test_the_rerun_plan_refuses_the_unrun_sealed_run_before_the_amendment(self):
+        """``rerun`` refuses the directory before it reads the amendment file.
+
+        The refusal is about the directory the caller named, so it must not be
+        something a caller reaches only once the amendment has loaded. The
+        second half is what makes the order observable: the amendment number
+        there names no file, and the directory is still what comes back.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            runs_dir = Path(tmp) / "runs"
+            sealed = (
+                runs_dir / runner.WILD_V2_SET_RUNS_SUBDIR / runner.model_slug(MODEL)
+            )
+            sealed.mkdir(parents=True)
+
+            with self.assertRaises(gaps.PolicyGapError) as caught:
+                gaps.plan_rerun(1, [sealed], runs_dir=runs_dir)
+            self.assertIn("sealed", str(caught.exception))
+
+            with self.assertRaises(gaps.PolicyGapError) as caught:
+                gaps.plan_rerun(9999, [sealed], runs_dir=runs_dir)
+            self.assertIn("sealed", str(caught.exception))
+            self.assertNotIn(
+                "amendment",
+                str(caught.exception),
+                "the amendment was read before the directory was refused",
+            )
+
+    def test_the_diff_refuses_a_record_that_names_the_unrun_sealed_run(self):
+        """A hand-made record cannot make ``diff`` read a directory it must not.
+
+        ``diff`` takes its run directories from the rerun record rather than
+        from the command line, so the guard is asked of the record's own paths
+        -- and the record below is written by hand, which is the case the guard
+        exists for.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            runs_dir = Path(tmp) / "runs"
+            sealed = (
+                runs_dir / runner.WILD_V2_SET_RUNS_SUBDIR / runner.model_slug(MODEL)
+            )
+            sealed.mkdir(parents=True)
+            record_path = (
+                runs_dir / runner.policy_v_directory_name(2) / gaps.RERUN_FILE
+            )
+            record_path.parent.mkdir(parents=True)
+            record_path.write_text(
+                json.dumps(
+                    {
+                        "number": 1,
+                        "sources": [{"run_dir": str(sealed), "set": "corpus"}],
+                        "cases": [],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            with self.assertRaises(gaps.PolicyGapError) as caught:
+                gaps.build_diff(1, runs_dir=runs_dir)
+            self.assertIn("sealed", str(caught.exception))
+
 
 # --------------------------------------------------------------------------
 # The drafter's input

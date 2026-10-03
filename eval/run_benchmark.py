@@ -523,8 +523,8 @@ def headline_run_directories(runs_dir: Path, model: str) -> Tuple[Path, ...]:
     The corpus keeps its result at ``<root>/<model-slug>/`` and each set that
     has a directory of its own keeps its at ``<root>/<subdir>/<model-slug>/`` --
 ``runs/codex/`` for the second development set, ``runs/wild/`` for the
-held-out set, whose single run is the only generalisation figure the
-submission reports, and ``runs/wild-v2/`` for the second sealed set. Called
+held-out set and ``runs/wild-v2/`` for the second sealed set, whose single
+runs are the submission's two generalisation figures. Called
 with ``runs/`` the four are the corpus's, the second set's and the two sealed
 sets'; called with a set's own root the first is that set's and the other
     three are names no run of that root uses, which is harmless because every
@@ -622,8 +622,9 @@ def assert_not_under_the_held_out_root(
 
     Two roots hold a single sealed run: ``<runs root>/wild/`` and
     ``<runs root>/wild-v2/``. ``wild`` was run **once**, from the commit tagged
-    ``freeze-2026-09-30``, and that single run is the only generalisation figure
-    the submission reports, so nothing may be created under its root again -- not
+    ``freeze-2026-09-30``, and that run is one of the submission's two
+    generalisation figures -- ``wild-v2``'s single run, which has not been made
+    yet, is the other -- so nothing may be created under its root again -- not
     a case, not an ablated run, not a run at a later policy version, not a
     report -- because a second thing written there changes what the directory
     means while leaving every file a reader would look at apparently intact.
@@ -696,9 +697,10 @@ def assert_not_under_the_held_out_root(
             if subdir in MADE_SEALED_RUNS_SUBDIRS:
                 detail = (
                     "which holds the held-out set's single run: it was made once from "
-                    "the commit tagged freeze-2026-09-30 and is the only generalisation "
-                    "figure the submission reports, so nothing is created under it "
-                    "again. {0}".format(HELD_OUT_REMEDY if remedy is None else remedy)
+                    "the commit tagged freeze-2026-09-30 and is one of the two "
+                    "generalisation figures the submission reports -- the other is "
+                    "the second sealed set's single run -- so nothing is created "
+                    "under it again. {0}".format(HELD_OUT_REMEDY if remedy is None else remedy)
                 )
             else:
                 detail = (
@@ -1199,11 +1201,14 @@ def check_replay(
     identical findings would read as a property of the corpus instead of one of
     a path.
 
-    ``None`` means the caller is not producing a run of its own -- the two
-    read-only analyses of a recorded run, ``eval.baselines`` and
-    ``eval.verify_drafts``, pass nothing -- and there is no version of its own to
-    compare the source against. Every caller that would *write* a run passes its
-    version, and :func:`run_benchmark` always does.
+    ``None`` means the caller has no version of its own to compare the source
+    against: the comparison is **skipped** rather than made, which is a different
+    finding from a mismatch and refuses nothing. ``eval.verify_drafts`` passes
+    nothing today; ``eval.baselines`` passes the registered set's version,
+    because a set whose registration fixes a later version records its cases at
+    that version and reading it as version 1 would be reading it as a run it is
+    not. Every caller that would *write* a run passes its version, and
+    :func:`run_benchmark` always does.
 
     ``case_loader`` is injectable so a test can drive the check without the
     manifest, the same way the brief builder is injectable in ``ui/build.py``.

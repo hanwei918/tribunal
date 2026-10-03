@@ -610,13 +610,14 @@ class SealedRunDirectoryIsHeadlineTests(unittest.TestCase):
 class HeldOutRootGuardTests(unittest.TestCase):
     """One guard refuses every destination that lies under ``runs/wild/``.
 
-    The held-out set's single run is the only generalisation figure the
-    submission reports and it was made once, so nothing may be created under its
-    root again: not a case, not an ablated run, not a run at a later policy
-    version, not a report. The re-runnable set's own root, ``runs/wild-dev/``, is
-    a **different path component** and is deliberately not caught -- a prefix
-    test on the string would refuse it -- so the half that matters is asserted
-    rather than described.
+    The held-out set's single run is one of the two generalisation figures the
+    submission reports -- the second sealed set's single run is the other -- and
+    it was made once, so nothing may be created under its root again: not a
+    case, not an ablated run, not a run at a later policy version, not a report.
+    The re-runnable set's own root, ``runs/wild-dev/``, is a **different path
+    component** and is deliberately not caught -- a prefix test on the string
+    would refuse it -- so the half that matters is asserted rather than
+    described.
     """
 
     def setUp(self):
@@ -758,7 +759,11 @@ class HeldOutRootGuardTests(unittest.TestCase):
                         self.assertEqual(
                             1, code, "{0} was accepted for --set wild".format(arguments)
                         )
-                        self.assertIn("--set wild-dev", err)
+                        # The command-line layer's own sentence rather than the
+                        # shared guard's: the guard names ``--set wild-dev`` too,
+                        # so that phrase alone would also be satisfied by a
+                        # message that never came through this layer.
+                        self.assertIn("Name --set wild-dev instead", err)
                         self.assertEqual(
                             before,
                             sentinel.read_bytes(),

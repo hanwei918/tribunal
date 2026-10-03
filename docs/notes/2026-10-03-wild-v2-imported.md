@@ -444,7 +444,7 @@ it, and the difference is the point:
 | the set's own run directory, for the set | accepted | accepted, unchanged |
 | the plain corpus directory, for the set | refused | refused, unchanged |
 
-The two rows that matter are the second, third and fourth: **before the change
+The rows that matter are the second, third and fourth: **before the change
 those destinations were accepted**, because there was no root to guard them. The
 guards are the difference, and the new test module cannot even be imported
 against the old tree — `eval.development_sets` has no `WILD_V2` — which is the
@@ -515,11 +515,15 @@ not in `_write_text_atomic`.
 The flags are the second freeze's and they are the ones this command line takes:
 `--set wild-v2` is accepted, `--concurrency` and `--timeout` are both arguments
 of it, and the policy version needs no flag because the registration fixes it at
-2. A case that fails is retried once with the same command if the failure is
-`TRANSPORT`, `TIMEOUT` or `DEADLINE`; a `SHAPE` failure is **not** retried and is
-recorded as "no ruling". `--force` cannot be added to it: it is refused for this
-set in code. The run is made only if
-`git diff --quiet freeze-2026-10-03 -- tribunal prompts policy` holds.
+2. Which failures are retried, what counts as an attempt and what the loop does
+with an attempt that ended with no terminal event are **not** restated here: the
+rule is in `docs/notes/2026-10-03-the-sealed-protocol-made-executable.md`, its
+second pass is in `docs/notes/2026-10-03-the-sealed-protocol-addendum.md`, and
+that pair is the text the code implements. The sentence that used to stand here
+restated the rule as it was first written, and the second pass changed it.
+`--force` cannot be added to it: it is refused for this set in code. The run is
+made only if `git diff --quiet freeze-2026-10-03 -- tribunal prompts policy`
+holds.
 
 `TRIBUNAL_SEALED_RUN=wild-v2` is the opt-in, and it is what makes this run the
 owner's: without it the invocation is refused before any client is built, and
