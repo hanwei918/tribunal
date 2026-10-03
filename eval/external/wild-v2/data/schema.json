@@ -1,0 +1,2857 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tribunal.local/schemas/tribunal-evidence-1.0.0.json",
+  "title": "Tribunal Evidence Schema",
+  "description": "Data contract for Tribunal, a multi-agent ride-hailing dispute adjudicator (Tencent Cloud AI Singapore Hackathon 2026, Digital Native track / Ryde). Scope is two dispute categories: ROUTE_DEVIATION and NO_SHOW_CHARGE. Text and structured data only. Human-readable companion: data/SCHEMA.md — that document is normative prose, this file is the normative machine contract.",
+  "version": "1.2.0",
+  "type": "object",
+  "$ref": "#/$defs/case_file",
+  "$defs": {
+    "sgt_timestamp": {
+      "$comment": "ISO 8601 with an explicit +08:00 offset. Singapore is UTC+8 year-round, no DST. Clock skew is NEVER encoded by changing the offset; it is declared via the CLOCK_SKEW issue code.",
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,3})?\\+08:00$",
+      "examples": [
+        "2026-07-14T06:14:02+08:00",
+        "2026-07-14T06:14:02.250+08:00"
+      ]
+    },
+    "sgd_amount": {
+      "$comment": "SGD, exactly 2 decimal places. Enforced in tools/validate.py rather than via multipleOf, which produces float-modulo false positives in most validators.",
+      "type": "number",
+      "minimum": 0,
+      "maximum": 10000,
+      "examples": [
+        3.2,
+        18.55,
+        0.0
+      ]
+    },
+    "latitude": {
+      "type": "number",
+      "minimum": 1.2,
+      "maximum": 1.48,
+      "description": "Decimal degrees WGS84, 6dp. Constrained to the Singapore bounding box.",
+      "examples": [
+        1.333115
+      ]
+    },
+    "longitude": {
+      "type": "number",
+      "minimum": 103.6,
+      "maximum": 104.1,
+      "description": "Decimal degrees WGS84, 6dp. Constrained to the Singapore bounding box.",
+      "examples": [
+        103.742286
+      ]
+    },
+    "geo_point": {
+      "type": "object",
+      "description": "A named place in Singapore. The label must be specific enough for a human to picture the spot.",
+      "properties": {
+        "label": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 200,
+          "examples": [
+            "Jurong East MRT (Exit B), 10 Jurong Gateway Rd",
+            "Changi Airport Terminal 3, Arrival Level Door 5",
+            "Marina Bay Sands, Tower 1 Lobby",
+            "Blk 118 Rivervale Dr, Sengkang"
+          ]
+        },
+        "lat": {
+          "$ref": "#/$defs/latitude"
+        },
+        "lng": {
+          "$ref": "#/$defs/longitude"
+        },
+        "venue_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 64,
+          "description": "ADDENDUM A21 (1.2.0). Stable identifier of the venue or estate this point belongs to, where the platform has one. Two points sharing a venue_id are different faces of the SAME venue; differing non-null venue_ids are different venues. Null means the platform could not resolve one, which establishes nothing either way. POL-NS-03 reads this field so that 'same venue, wrong entrance' is a field comparison rather than an act of geographic world knowledge.",
+          "examples": [
+            "VEN-VIVOCITY",
+            "VEN-CHANGI-T3",
+            "VEN-RIVERVALE-DR"
+          ]
+        }
+      },
+      "required": [
+        "label",
+        "lat",
+        "lng"
+      ],
+      "additionalProperties": false
+    },
+    "trip_id": {
+      "type": "string",
+      "pattern": "^TRP-\\d{5}$",
+      "examples": [
+        "TRP-00041"
+      ]
+    },
+    "dispute_id": {
+      "type": "string",
+      "pattern": "^DSP-\\d{5}$",
+      "examples": [
+        "DSP-00041"
+      ]
+    },
+    "rider_id": {
+      "type": "string",
+      "pattern": "^RDR-\\d{5}$",
+      "examples": [
+        "RDR-01847"
+      ]
+    },
+    "driver_id": {
+      "type": "string",
+      "pattern": "^DRV-\\d{5}$",
+      "examples": [
+        "DRV-00932"
+      ]
+    },
+    "msg_id": {
+      "type": "string",
+      "pattern": "^MSG-\\d{5}-\\d{3}$",
+      "description": "Case number then a dense 3-digit ordinal from 001 in send order.",
+      "examples": [
+        "MSG-00041-003"
+      ]
+    },
+    "advisory_natural_id": {
+      "type": "string",
+      "pattern": "^ADV-\\d{8}-\\d{3}$",
+      "description": "ADV-YYYYMMDD-KKK, the natural key carried over from the source feed.",
+      "examples": [
+        "ADV-20260714-018"
+      ]
+    },
+    "policy_clause_id": {
+      "type": "string",
+      "pattern": "^POL-[A-Z]{2,4}-\\d{2}$",
+      "description": "Policy clause identifier. Category tokens in use: RD (route deviation), NS (no-show), GEN (general adjudication), EV (evidence and admissibility), ESC (escalation). Owned by the policy authors; this schema only fixes the shape.",
+      "examples": [
+        "POL-RD-03",
+        "POL-NS-01",
+        "POL-EV-02",
+        "POL-GEN-04",
+        "POL-ESC-01"
+      ]
+    },
+    "evidence_id": {
+      "$comment": "LOAD-BEARING. Format EV-<TYPE>-<NNNNN>[-<KK>]. NNNNN is the 5-digit case number, identical to the numeric part of trip_id. The 2-digit ordinal is present if and only if the type is multi-cardinality (currently only ADVIS). Singleton IDs are therefore reconstructible from the case number alone, with no lookup. IDs are immutable once written and are never reused or renumbered. A MISSING artifact still gets an ID so that the absence itself is citable.",
+      "type": "string",
+      "pattern": "^EV-(TRIP|GPS|CHAT|FARE|RPROF|DPROF|ADVIS)-\\d{5}(-\\d{2})?$",
+      "examples": [
+        "EV-TRIP-00041",
+        "EV-GPS-00041",
+        "EV-CHAT-00041",
+        "EV-FARE-00041",
+        "EV-RPROF-00041",
+        "EV-DPROF-00041",
+        "EV-ADVIS-00041-01"
+      ]
+    },
+    "evidence_type": {
+      "type": "string",
+      "enum": [
+        "TRIP_RECORD",
+        "GPS_TRACE",
+        "CHAT_LOG",
+        "FARE_BREAKDOWN",
+        "RIDER_PROFILE",
+        "DRIVER_PROFILE",
+        "TRAFFIC_ADVISORY"
+      ]
+    },
+    "evidence_source": {
+      "type": "string",
+      "enum": [
+        "PLATFORM_TELEMETRY",
+        "DRIVER_DEVICE",
+        "RIDER_DEVICE",
+        "PAYMENTS_LEDGER",
+        "THIRD_PARTY_LTA",
+        "USER_SUBMITTED"
+      ],
+      "description": "Provenance. USER_SUBMITTED and, in some cases, DRIVER_DEVICE / RIDER_DEVICE justify the UNVERIFIED_SOURCE issue code."
+    },
+    "admissibility_issue_code": {
+      "$comment": "LOAD-BEARING CLOSED VOCABULARY. Exactly 22 codes in six families. No code outside this list may appear anywhere in the corpus, in any policy clause, or in any agent output. Adding or removing a code is a MAJOR schema version bump.",
+      "type": "string",
+      "enum": [
+        "MISSING_ARTIFACT",
+        "TRUNCATED_LOG",
+        "PARTIAL_RECORD",
+        "CLOCK_SKEW",
+        "TIMESTAMP_INCONSISTENT",
+        "TIMESTAMP_OUT_OF_RANGE",
+        "OUT_OF_ORDER_SEQUENCE",
+        "GPS_GAP",
+        "LOW_SAMPLE_RATE",
+        "LOW_COVERAGE",
+        "GPS_DRIFT",
+        "IMPLAUSIBLE_SPEED",
+        "UNREAD_MESSAGE",
+        "CONTENT_REDACTED",
+        "LANGUAGE_AMBIGUITY",
+        "CROSS_SOURCE_CONFLICT",
+        "FARE_RECOMPUTE_MISMATCH",
+        "DISTANCE_MISMATCH",
+        "ADVISORY_UNCORROBORATED",
+        "STALE_SNAPSHOT",
+        "UNVERIFIED_SOURCE",
+        "SCHEMA_VERSION_MISMATCH"
+      ]
+    },
+    "admissibility_issue_detail": {
+      "type": "object",
+      "description": "Optional enrichment of one code listed in admissibility.issues. Every code appearing here MUST also appear in issues; issues is the authoritative list.",
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/admissibility_issue_code"
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "BLOCKING",
+            "MAJOR",
+            "MINOR"
+          ],
+          "description": "BLOCKING is reserved for MISSING_ARTIFACT."
+        },
+        "detail": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 600,
+          "description": "Human-readable specifics, with numbers. Not a restatement of the code name.",
+          "examples": [
+            "Two gaps totalling 412s, the larger spanning 06:12:40-06:18:10 near the CTE/PIE interchange."
+          ]
+        },
+        "clock_skew_sec": {
+          "type": "number",
+          "description": "Signed device-minus-server offset in seconds. Populated only for CLOCK_SKEW.",
+          "examples": [
+            -11.4
+          ]
+        },
+        "related_evidence_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence_id"
+          },
+          "uniqueItems": true,
+          "description": "MANDATORY and non-empty for every Family E code (CROSS_SOURCE_CONFLICT, FARE_RECOMPUTE_MISMATCH, DISTANCE_MISMATCH, ADVISORY_UNCORROBORATED): a conflict finding that does not name the other side is unfalsifiable. Enforced in tools/validate.py. Empty or omitted for all other codes.",
+          "examples": [
+            [
+              "EV-TRIP-00041"
+            ]
+          ]
+        }
+      },
+      "required": [
+        "code",
+        "severity",
+        "detail"
+      ],
+      "additionalProperties": false
+    },
+    "admissibility": {
+      "$comment": "LOAD-BEARING. Produced by the pre-pass that runs BEFORE the advocates debate. Present on every evidence artifact without exception, including artifacts with no problems.",
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "COMPLETE",
+            "IMPAIRED",
+            "MISSING"
+          ]
+        },
+        "issues": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/admissibility_issue_code"
+          },
+          "uniqueItems": true,
+          "description": "Authoritative issue list. Sorted by severity descending (BLOCKING, MAJOR, MINOR), ties broken alphabetically, for deterministic diffs and stable prompts."
+        },
+        "issue_details": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/admissibility_issue_detail"
+          },
+          "description": "Optional. Never contains a code absent from issues; may be shorter than issues, never longer."
+        },
+        "weight_multiplier": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Deterministic: 1.0 when COMPLETE, 0.0 when MISSING, otherwise max(0.25, round(product of per-code multipliers, 2)). Per-code multipliers are tabulated in SCHEMA.md section 3.2. Advisory input to the Judge, never an automatic verdict.",
+          "examples": [
+            1.0,
+            0.39,
+            0.0
+          ]
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 1000,
+          "description": "Human-readable summary of what the impairment means for adjudication — specifically, which claims it does and does not undermine. Empty string is acceptable for COMPLETE artifacts.",
+          "examples": [
+            "Trace is usable for the first and last thirds of the journey but the middle section — exactly the segment the rider disputes — is not covered. Treat route claims about 06:12-06:18 as unsupported."
+          ]
+        },
+        "assessed_at": {
+          "$ref": "#/$defs/sgt_timestamp"
+        },
+        "assessor_version": {
+          "type": "string",
+          "examples": [
+            "prepass-1.0.0"
+          ]
+        }
+      },
+      "required": [
+        "status",
+        "issues",
+        "weight_multiplier",
+        "notes"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "COMPLETE"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "issues": {
+                "maxItems": 0
+              },
+              "weight_multiplier": {
+                "const": 1.0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "MISSING"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "issues": {
+                "const": [
+                  "MISSING_ARTIFACT"
+                ]
+              },
+              "weight_multiplier": {
+                "const": 0.0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "IMPAIRED"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "issues": {
+                "minItems": 1,
+                "items": {
+                  "not": {
+                    "const": "MISSING_ARTIFACT"
+                  }
+                }
+              },
+              "weight_multiplier": {
+                "minimum": 0.25,
+                "exclusiveMaximum": 1.0
+              }
+            }
+          }
+        }
+      ]
+    },
+    "evidence_envelope": {
+      "$comment": "Uniform wrapper around every evidence artifact. The type-specific body lives in payload, which is null if and only if admissibility.status is MISSING.",
+      "type": "object",
+      "properties": {
+        "evidence_id": {
+          "$ref": "#/$defs/evidence_id"
+        },
+        "evidence_type": {
+          "$ref": "#/$defs/evidence_type"
+        },
+        "trip_id": {
+          "$ref": "#/$defs/trip_id"
+        },
+        "source": {
+          "$ref": "#/$defs/evidence_source"
+        },
+        "generated_at": {
+          "$ref": "#/$defs/sgt_timestamp"
+        },
+        "schema_version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "examples": [
+            "1.0.0"
+          ]
+        },
+        "admissibility": {
+          "$ref": "#/$defs/admissibility"
+        },
+        "payload": {
+          "description": "One of the entity bodies, or null when the artifact is MISSING.",
+          "type": [
+            "object",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "evidence_id",
+        "evidence_type",
+        "trip_id",
+        "source",
+        "generated_at",
+        "schema_version",
+        "admissibility",
+        "payload"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "evidence_type": {
+                "const": "TRIP_RECORD"
+              }
+            },
+            "required": [
+              "evidence_type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "evidence_id": {
+                "pattern": "^EV-TRIP-\\d{5}$"
+              },
+              "payload": {
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/trip"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "evidence_type": {
+                "const": "GPS_TRACE"
+              }
+            },
+            "required": [
+              "evidence_type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "evidence_id": {
+                "pattern": "^EV-GPS-\\d{5}$"
+              },
+              "payload": {
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/gps_trace"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "evidence_type": {
+                "const": "CHAT_LOG"
+              }
+            },
+            "required": [
+              "evidence_type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "evidence_id": {
+                "pattern": "^EV-CHAT-\\d{5}$"
+              },
+              "payload": {
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/chat_log"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "evidence_type": {
+                "const": "FARE_BREAKDOWN"
+              }
+            },
+            "required": [
+              "evidence_type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "evidence_id": {
+                "pattern": "^EV-FARE-\\d{5}$"
+              },
+              "payload": {
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/fare_breakdown"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "evidence_type": {
+                "const": "RIDER_PROFILE"
+              }
+            },
+            "required": [
+              "evidence_type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "evidence_id": {
+                "pattern": "^EV-RPROF-\\d{5}$"
+              },
+              "payload": {
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/rider_profile"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "evidence_type": {
+                "const": "DRIVER_PROFILE"
+              }
+            },
+            "required": [
+              "evidence_type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "evidence_id": {
+                "pattern": "^EV-DPROF-\\d{5}$"
+              },
+              "payload": {
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/driver_profile"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "evidence_type": {
+                "const": "TRAFFIC_ADVISORY"
+              }
+            },
+            "required": [
+              "evidence_type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "evidence_id": {
+                "pattern": "^EV-ADVIS-\\d{5}-\\d{2}$"
+              },
+              "payload": {
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/traffic_advisory"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "admissibility": {
+                "properties": {
+                  "status": {
+                    "const": "MISSING"
+                  }
+                },
+                "required": [
+                  "status"
+                ]
+              }
+            },
+            "required": [
+              "admissibility"
+            ]
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "type": "null"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "payload": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "trip": {
+      "$comment": "Payload of EV-TRIP-NNNNN. The spine of the case; every other artifact is interpreted against these timestamps.",
+      "type": "object",
+      "properties": {
+        "trip_id": {
+          "$ref": "#/$defs/trip_id"
+        },
+        "rider_id": {
+          "$ref": "#/$defs/rider_id"
+        },
+        "driver_id": {
+          "$ref": "#/$defs/driver_id"
+        },
+        "requested_at": {
+          "$ref": "#/$defs/sgt_timestamp",
+          "description": "Rider tapped Book."
+        },
+        "accepted_at": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/sgt_timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Driver accepted. Null if never matched."
+        },
+        "arrived_at": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/sgt_timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Driver marked arrival at pickup. Null if never arrived. Central to NO_SHOW_CHARGE."
+        },
+        "started_at": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/sgt_timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Rider boarded and the meter started. Null on cancelled trips."
+        },
+        "ended_at": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/sgt_timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Trip completed at dropoff. Mutually exclusive with cancelled_at."
+        },
+        "cancelled_at": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/sgt_timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Trip cancelled. Mutually exclusive with ended_at."
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "REQUESTED",
+            "ACCEPTED",
+            "DRIVER_ARRIVED",
+            "IN_PROGRESS",
+            "COMPLETED",
+            "CANCELLED_BY_RIDER",
+            "CANCELLED_BY_DRIVER",
+            "CANCELLED_BY_SYSTEM"
+          ],
+          "description": "ROUTE_DEVIATION cases are always COMPLETED. NO_SHOW_CHARGE cases are always one of the three CANCELLED_* values."
+        },
+        "cancelled_by": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "RIDER",
+            "DRIVER",
+            "SYSTEM",
+            null
+          ],
+          "description": "Non-null if and only if status is a CANCELLED_* value."
+        },
+        "cancellation_reason_code": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "RIDER_NO_SHOW",
+            "DRIVER_NO_SHOW",
+            "RIDER_CHANGED_MIND",
+            "DRIVER_UNABLE_TO_LOCATE",
+            "RIDER_UNREACHABLE",
+            "DRIVER_VEHICLE_ISSUE",
+            "WRONG_PICKUP_LOCATION",
+            "EXCESSIVE_WAIT",
+            "SYSTEM_TIMEOUT",
+            "OTHER",
+            null
+          ],
+          "description": "DRIVER_UNABLE_TO_LOCATE ('I was there, could not find them') and RIDER_NO_SHOW ('the rider did not turn up') are different claims. A NO_SHOW_CHARGE dispute usually turns on which one the evidence supports."
+        },
+        "pickup": {
+          "$ref": "#/$defs/geo_point"
+        },
+        "dropoff": {
+          "$ref": "#/$defs/geo_point"
+        },
+        "optimal_distance_km": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 120,
+          "description": "Route engine's best route at request time, km. The baseline any deviation is measured against.",
+          "examples": [
+            18.4
+          ]
+        },
+        "optimal_duration_min": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 240,
+          "description": "Route engine's traffic-aware ETA at request time, minutes.",
+          "examples": [
+            24.0
+          ]
+        },
+        "actual_distance_km": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 200,
+          "description": "Distance the platform recorded, km. Null if the trip never started.",
+          "examples": [
+            26.1
+          ]
+        },
+        "actual_duration_min": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 480,
+          "description": "started_at to ended_at, minutes. Null if the trip never started.",
+          "examples": [
+            38.6
+          ]
+        },
+        "vehicle_type": {
+          "type": "string",
+          "enum": [
+            "RYDE_X",
+            "RYDE_PLUS",
+            "RYDE_XL",
+            "RYDE_TAXI",
+            "RYDE_POOL"
+          ],
+          "description": "RYDE_X standard 4-seater, RYDE_PLUS premium, RYDE_XL 6-seater, RYDE_TAXI metered taxi, RYDE_POOL carpool."
+        },
+        "pickup_zone_class": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "STANDARD",
+            "LARGE_VENUE",
+            "AIRPORT",
+            "TRANSPORT_HUB",
+            null
+          ],
+          "description": "ADDENDUM A1 (1.1.0). Pickup-point class. Sets the POL-NS-02 arrival radius (50 / 120 / 150 / 150 m) and the POL-NS-01(c) minimum dwell (300 / 300 / 480 / 480 s). Null on ROUTE_DEVIATION cases, where it is meaningless."
+        },
+        "registered_pickup_points": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 50,
+          "description": "ADDENDUM A2 (1.1.0). How many distinct pickup points the venue has registered. POL-NS-03(ii) pin-ambiguity goodwill needs 2 or more.",
+          "examples": [
+            4
+          ]
+        },
+        "in_app_calls": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/in_app_call"
+          },
+          "description": "ADDENDUM A3 (1.1.0). In-app voice calls placed on this trip. Empty array when none. A call defeats POL-NS-04(b) even where the chat_log shows no reply."
+        },
+        "pickup_amended_at": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/sgt_timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "ADDENDUM A4 (1.1.0). When the pickup point was changed after booking. POL-RD-05: distance driven before this timestamp is never counted as excess."
+        },
+        "dropoff_amended_at": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/sgt_timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "ADDENDUM A4 (1.1.0). When the dropoff point was changed after booking."
+        },
+        "original_pickup": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/geo_point"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "ADDENDUM A5 (1.1.0). The pre-amendment pickup endpoint. Null when pickup_amended_at is null."
+        },
+        "original_dropoff": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/geo_point"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "ADDENDUM A5 (1.1.0). The pre-amendment dropoff endpoint. Null when dropoff_amended_at is null."
+        },
+        "optimal_route_erp_sgd": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/sgd_amount"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "ADDENDUM A6 (1.1.0). Total ERP the OPTIMAL route would have incurred. Without it the POL-RD-02 recomputed fare is not computable when the optimal route crosses a gantry, and POL-RD-09 cannot separate on-route from off-route tolls.",
+          "examples": [
+            0.0,
+            3.0
+          ]
+        },
+        "optimal_route_source": {
+          "type": "string",
+          "description": "Provenance of the baseline route, so the baseline itself is contestable rather than assumed.",
+          "examples": [
+            "routing-engine-v3.2 (LTA traffic snapshot 06:02)"
+          ]
+        },
+        "deviation_pct": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": -100,
+          "maximum": 1000,
+          "description": "DERIVED, 1dp: (actual_distance_km - optimal_distance_km) / optimal_distance_km * 100. Null when actual_distance_km is null. Negative is legal (shorter than optimal). The MATERIALITY threshold on this number is policy (POL-RD-*), deliberately not schema.",
+          "examples": [
+            41.8
+          ]
+        },
+        "wait_time_min": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 240,
+          "description": "DERIVED, 1dp: arrived_at to whichever of started_at or cancelled_at occurred. Null if arrived_at is null. Central to NO_SHOW_CHARGE.",
+          "examples": [
+            2.3
+          ]
+        },
+        "time_to_arrival_min": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 240,
+          "description": "DERIVED, 1dp: accepted_at to arrived_at. Null if either endpoint is null.",
+          "examples": [
+            8.7
+          ]
+        },
+        "amended_optimal_distance_km": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.1,
+          "maximum": 120,
+          "description": "ADDENDUM A19 (1.2.0). Route engine's re-quote between the AMENDED endpoints, km. Non-null if and only if pickup_amended_at or dropoff_amended_at is non-null. POL-RD-05 reads this field and may not derive a substitute; POL-RD-03 uses it in preference to its own scaling rule where present. Before this addendum the re-quote existed only inside the free text of optimal_route_source on one case and nowhere at all on another, which forced the Judge to regex a decimal out of prose.",
+          "examples": [
+            24.6
+          ]
+        },
+        "amended_optimal_duration_min": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 240,
+          "description": "ADDENDUM A20 (1.2.0). Duration of the amended_optimal_distance_km route, minutes. Same nullity rule. POL-RD-02 needs a duration as well as a distance to recompute the time charge.",
+          "examples": [
+            31.0
+          ]
+        },
+        "solo_optimal_distance_km": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.1,
+          "maximum": 120,
+          "description": "ADDENDUM A25 (1.2.0). On a RYDE_POOL trip, the optimal route for THIS rider travelling alone, km. Reference only: POL-RD-12 measures deviation against optimal_distance_km, which on a pooled trip is the MATCHED-ITINERARY optimal. Null on every non-pooled trip. Carried so that a rider's 'but my trip is only 9 km' is a citable field and the ruling can name both figures.",
+          "examples": [
+            9.2
+          ]
+        },
+        "chat_message_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 500,
+          "description": "ADDENDUM A26 (1.2.0). Number of messages the platform's message service recorded for this trip, independent of what survived into the chat_log export. POL-NS-08(c)'s third limb compares this against chat_log.message_count; before the addendum the limb tested a field that did not exist and was permanently undecidable. Null where the message service snapshot was not captured."
+        }
+      },
+      "required": [
+        "trip_id",
+        "rider_id",
+        "driver_id",
+        "requested_at",
+        "accepted_at",
+        "arrived_at",
+        "started_at",
+        "ended_at",
+        "cancelled_at",
+        "status",
+        "cancelled_by",
+        "cancellation_reason_code",
+        "pickup",
+        "dropoff",
+        "optimal_distance_km",
+        "optimal_duration_min",
+        "actual_distance_km",
+        "actual_duration_min",
+        "vehicle_type",
+        "optimal_route_source",
+        "deviation_pct",
+        "wait_time_min",
+        "time_to_arrival_min",
+        "pickup_zone_class",
+        "registered_pickup_points",
+        "in_app_calls",
+        "pickup_amended_at",
+        "dropoff_amended_at",
+        "original_pickup",
+        "original_dropoff",
+        "optimal_route_erp_sgd",
+        "amended_optimal_distance_km",
+        "amended_optimal_duration_min",
+        "solo_optimal_distance_km",
+        "chat_message_count"
+      ],
+      "additionalProperties": false
+    },
+    "in_app_call": {
+      "$comment": "ADDENDUM A3 (1.1.0). Call METADATA only - who placed it, when, how long, whether it connected. No audio is stored or analysed; that is out of scope by design.",
+      "type": "object",
+      "properties": {
+        "placed_by": {
+          "type": "string",
+          "enum": [
+            "RIDER",
+            "DRIVER"
+          ]
+        },
+        "placed_at": {
+          "$ref": "#/$defs/sgt_timestamp"
+        },
+        "duration_sec": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 7200
+        },
+        "answered": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "placed_by",
+        "placed_at",
+        "duration_sec",
+        "answered"
+      ],
+      "additionalProperties": false
+    },
+    "gps_point": {
+      "type": "object",
+      "properties": {
+        "lat": {
+          "$ref": "#/$defs/latitude"
+        },
+        "lng": {
+          "$ref": "#/$defs/longitude"
+        },
+        "ts": {
+          "$ref": "#/$defs/sgt_timestamp"
+        },
+        "speed_kph": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 200,
+          "description": "0.0 is legal and meaningful — stationary at a traffic light, or waiting at the pickup point.",
+          "examples": [
+            62.4,
+            0.0
+          ]
+        },
+        "heading_deg": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "exclusiveMaximum": 360,
+          "description": "0 = north. Optional.",
+          "examples": [
+            184.5
+          ]
+        },
+        "accuracy_m": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 5000,
+          "description": "Reported horizontal accuracy radius, metres. Optional, feeds GPS_DRIFT.",
+          "examples": [
+            8.0
+          ]
+        },
+        "venue_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 64,
+          "description": "ADDENDUM A21 (1.2.0). Venue or estate the platform resolved this fix to, where it could. Compared against trip.pickup.venue_id by POL-NS-03. Null on the overwhelming majority of fixes; populated on stationary dwells at named venues."
+        }
+      },
+      "required": [
+        "lat",
+        "lng",
+        "ts",
+        "speed_kph"
+      ],
+      "additionalProperties": false
+    },
+    "gps_gap": {
+      "type": "object",
+      "description": "One interval between consecutive fixes exceeding GAP_THRESHOLD_SEC (30).",
+      "properties": {
+        "from_ts": {
+          "$ref": "#/$defs/sgt_timestamp",
+          "description": "ts of the last fix before the gap."
+        },
+        "to_ts": {
+          "$ref": "#/$defs/sgt_timestamp",
+          "description": "ts of the first fix after the gap."
+        },
+        "duration_sec": {
+          "type": "number",
+          "exclusiveMinimum": 30,
+          "description": "to_ts minus from_ts, seconds, 1dp. Always greater than 30 by construction.",
+          "examples": [
+            330.0
+          ]
+        },
+        "straight_line_km": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "description": "Haversine distance between the bracketing fixes, km, 2dp. Quantifies how much road is unaccounted for.",
+          "examples": [
+            4.62
+          ]
+        }
+      },
+      "required": [
+        "from_ts",
+        "to_ts",
+        "duration_sec"
+      ],
+      "additionalProperties": false
+    },
+    "gps_trace": {
+      "$comment": "Payload of EV-GPS-NNNNN. Carries the raw fixes AND the derived integrity fields the admissibility pre-pass reads.",
+      "type": "object",
+      "properties": {
+        "trip_id": {
+          "$ref": "#/$defs/trip_id"
+        },
+        "points": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/gps_point"
+          },
+          "description": "Ordered ascending by ts, strictly monotonic. May be empty on a DRIVER_NO_SHOW where the driver's device never reported."
+        },
+        "point_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "len(points). Redundant, but saves every consumer a count.",
+          "examples": [
+            412
+          ]
+        },
+        "first_fix_at": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/sgt_timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "points[0].ts. Null if and only if points is empty."
+        },
+        "last_fix_at": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/sgt_timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "points[-1].ts. Null if and only if points is empty."
+        },
+        "expected_interval_sec": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 300,
+          "description": "Nominal sampling cadence for this client build. NOMINAL_SAMPLE_INTERVAL_SEC is 5.",
+          "examples": [
+            5
+          ]
+        },
+        "sample_interval_sec": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "description": "MEDIAN observed interval between consecutive fixes, seconds, 1dp. Null with fewer than 2 points. LOW_SAMPLE_RATE fires above 15.",
+          "examples": [
+            5.0
+          ]
+        },
+        "gaps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/gps_gap"
+          },
+          "description": "Every inter-fix interval exceeding 30s, in ascending from_ts order. Empty array when clean."
+        },
+        "max_gap_sec": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "description": "Largest gap duration, or 0 when gaps is empty. Null with fewer than 2 points.",
+          "examples": [
+            330.0
+          ]
+        },
+        "coverage_pct": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 100,
+          "description": "DERIVED, 1dp. 100 * (active_window_sec - sum(gap durations)) / active_window_sec, where active_window runs from started_at (or accepted_at if the trip never started) to ended_at (or cancelled_at). Clamped to [0,100]. Null with fewer than 2 points or a non-positive window. LOW_COVERAGE fires below 90.0.",
+          "examples": [
+            78.3
+          ]
+        },
+        "trace_distance_km": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 200,
+          "description": "DERIVED, 2dp: summed haversine distance over consecutive fixes. Compared against trip.actual_distance_km to fire DISTANCE_MISMATCH at a 10% tolerance.",
+          "examples": [
+            24.87
+          ]
+        },
+        "rider_track": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/gps_point"
+          },
+          "description": "ADDENDUM A8 (1.1.0). The RIDER device track. `points` is hereby defined as the DRIVER track. Needed by POL-NS-04(c) (rider within 100 m of the pin), POL-NS-05 and POL-NS-08(b). null means the rider-device track was never captured, which fires PARTIAL_RECORD; [] would mean the device reported zero fixes, which is a different claim. Normally null on ROUTE_DEVIATION, where rider position is not material."
+        }
+      },
+      "required": [
+        "trip_id",
+        "points",
+        "point_count",
+        "first_fix_at",
+        "last_fix_at",
+        "expected_interval_sec",
+        "sample_interval_sec",
+        "gaps",
+        "max_gap_sec",
+        "coverage_pct",
+        "trace_distance_km",
+        "rider_track"
+      ],
+      "additionalProperties": false
+    },
+    "chat_message": {
+      "type": "object",
+      "properties": {
+        "msg_id": {
+          "$ref": "#/$defs/msg_id"
+        },
+        "sender": {
+          "type": "string",
+          "enum": [
+            "RIDER",
+            "DRIVER",
+            "SYSTEM"
+          ],
+          "description": "SYSTEM covers platform notifications such as 'Your driver has arrived'."
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000,
+          "description": "Verbatim. Singlish, typos and code-switching are preserved — they are the evidence, not noise to clean up. A VOICE_CALL_LOG entry records call metadata as text only; no audio is stored or analysed.",
+          "examples": [
+            "boss im at exit B liao, cannot see you",
+            "Voice call placed by driver, 0:12, unanswered"
+          ]
+        },
+        "sent_at": {
+          "$ref": "#/$defs/sgt_timestamp"
+        },
+        "read_at": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/sgt_timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Null means never opened by the recipient. Drives UNREAD_MESSAGE."
+        },
+        "delivered_at": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/sgt_timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Reached the recipient's device. May be non-null while read_at is null — 'delivered but not read' is a real and often decisive distinction in no-show cases."
+        },
+        "channel": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "IN_APP",
+            "SMS",
+            "PUSH",
+            "VOICE_CALL_LOG",
+            null
+          ]
+        },
+        "language": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "en",
+            "zh",
+            "ms",
+            "ta",
+            "mixed",
+            null
+          ],
+          "description": "'mixed' is a hint toward LANGUAGE_AMBIGUITY."
+        },
+        "redacted": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "True if PII was stripped from text. Drives CONTENT_REDACTED."
+        },
+        "waypoint_hint": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/geo_point"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "ADDENDUM A22 (1.2.0). Coordinate the platform resolved from a place name in this message at ingest time. Non-null only where the message names a place specifically enough to resolve. POL-RD-04's 200 m corroboration test reads THIS FIELD; an agent that geocodes the place name from its own knowledge instead has produced an uncited fact and the claim is discarded."
+        }
+      },
+      "required": [
+        "msg_id",
+        "sender",
+        "text",
+        "sent_at",
+        "read_at"
+      ],
+      "additionalProperties": false
+    },
+    "chat_log": {
+      "$comment": "Payload of EV-CHAT-NNNNN.",
+      "type": "object",
+      "properties": {
+        "trip_id": {
+          "$ref": "#/$defs/trip_id"
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/chat_message"
+          },
+          "description": "Ordered ascending by sent_at. May be empty."
+        },
+        "message_count": {
+          "type": "integer",
+          "minimum": 0,
+          "examples": [
+            6
+          ]
+        },
+        "first_message_at": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/sgt_timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Null if and only if messages is empty."
+        },
+        "last_message_at": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/sgt_timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Null if and only if messages is empty."
+        },
+        "truncated": {
+          "type": "boolean",
+          "description": "True if the export was cut short. Drives TRUNCATED_LOG."
+        }
+      },
+      "required": [
+        "trip_id",
+        "messages",
+        "message_count",
+        "first_message_at",
+        "last_message_at",
+        "truncated"
+      ],
+      "additionalProperties": false
+    },
+    "erp_gantry": {
+      "type": "object",
+      "description": "One Electronic Road Pricing gantry charge. Itemising these is powerful for route deviation: a detour via the CTE at 08:30 hits gantries the optimal route avoids entirely.",
+      "properties": {
+        "gantry_name": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 160,
+          "examples": [
+            "CTE (Braddell Rd towards City)",
+            "ECP (Ophir Rd slip road)"
+          ]
+        },
+        "charged_at": {
+          "$ref": "#/$defs/sgt_timestamp"
+        },
+        "amount_sgd": {
+          "$ref": "#/$defs/sgd_amount",
+          "examples": [
+            1.5
+          ]
+        },
+        "on_optimal_route": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "Whether the optimal route would also have passed this gantry. False is a strong rider argument."
+        },
+        "lat": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/latitude"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "ADDENDUM A23 (1.2.0). Gantry position. Null where the payments ledger did not carry one, in which case POL-RD-09's trace-matching test is undecidable and the line is treated as matched."
+        },
+        "lng": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/longitude"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "ADDENDUM A23 (1.2.0). Gantry position. See lat."
+        }
+      },
+      "required": [
+        "gantry_name",
+        "charged_at",
+        "amount_sgd"
+      ],
+      "additionalProperties": false
+    },
+    "fare_breakdown": {
+      "$comment": "Payload of EV-FARE-NNNNN. All amounts SGD, 2dp. The recompute identity is: total_charged = base_fare + distance_fare + time_fare + surge_amount + tolls_erp + airport_surcharge + platform_fee + cancellation_fee + waiting_time_fee - promo_discount, within FARE_TOLERANCE_SGD (0.05). airport_surcharge was added by ADDENDUM A7 in 1.1.0.",
+      "type": "object",
+      "properties": {
+        "trip_id": {
+          "$ref": "#/$defs/trip_id"
+        },
+        "currency": {
+          "const": "SGD"
+        },
+        "fare_model": {
+          "type": "string",
+          "enum": [
+            "UPFRONT_QUOTE",
+            "METERED"
+          ],
+          "description": "Materially changes route-deviation reasoning. Under UPFRONT_QUOTE a longer route may cost the rider nothing extra and the loss falls on the driver instead."
+        },
+        "quoted_fare_sgd": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/sgd_amount"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Price shown at booking. Non-null when fare_model is UPFRONT_QUOTE.",
+          "examples": [
+            21.5
+          ]
+        },
+        "base_fare": {
+          "$ref": "#/$defs/sgd_amount",
+          "description": "Flagfall. Typical 3.00-4.50.",
+          "examples": [
+            3.2
+          ]
+        },
+        "distance_fare": {
+          "$ref": "#/$defs/sgd_amount",
+          "description": "distance_charged_km * per_km_rate_sgd.",
+          "examples": [
+            18.27
+          ]
+        },
+        "time_fare": {
+          "$ref": "#/$defs/sgd_amount",
+          "description": "time_charged_min * per_min_rate_sgd.",
+          "examples": [
+            9.65
+          ]
+        },
+        "distance_charged_km": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 200,
+          "description": "Distance the meter billed. MAY differ from trip.actual_distance_km — that divergence is a finding, not an error to smooth over.",
+          "examples": [
+            26.1
+          ]
+        },
+        "time_charged_min": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 480,
+          "examples": [
+            38.6
+          ]
+        },
+        "per_km_rate_sgd": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 10,
+          "description": "Typical 0.55-0.85.",
+          "examples": [
+            0.7
+          ]
+        },
+        "per_min_rate_sgd": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 10,
+          "description": "Typical 0.20-0.32.",
+          "examples": [
+            0.25
+          ]
+        },
+        "surge_multiplier": {
+          "type": "number",
+          "minimum": 1.0,
+          "maximum": 3.0,
+          "description": "1.0 means no surge.",
+          "examples": [
+            1.0
+          ]
+        },
+        "surge_amount": {
+          "$ref": "#/$defs/sgd_amount",
+          "description": "(base_fare + distance_fare + time_fare) * (surge_multiplier - 1). 0.00 when no surge.",
+          "examples": [
+            0.0
+          ]
+        },
+        "tolls_erp": {
+          "$ref": "#/$defs/sgd_amount",
+          "description": "Total ERP gantry charges. 0.00 outside charging hours. CANONICAL FIELD NAME is tolls_erp, not tolls.",
+          "examples": [
+            3.0
+          ]
+        },
+        "airport_surcharge": {
+          "$ref": "#/$defs/sgd_amount",
+          "description": "ADDENDUM A7 (1.1.0). Fixed surcharge on a Changi Airport pickup or dropoff, SGD 8.00 under the 2026Q3 rate card, 0.00 otherwise. Named explicitly by POL-RD-02 and part of the recompute identity. Never multiplied by surge.",
+          "examples": [
+            0.0,
+            8.0
+          ]
+        },
+        "erp_gantries": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/erp_gantry"
+          },
+          "description": "Itemised gantry charges."
+        },
+        "platform_fee": {
+          "$ref": "#/$defs/sgd_amount",
+          "description": "Typical 0.50-1.00.",
+          "examples": [
+            0.7
+          ]
+        },
+        "promo_discount": {
+          "$ref": "#/$defs/sgd_amount",
+          "description": "Non-negative magnitude, SUBTRACTED in the total. 0.00 when none.",
+          "examples": [
+            2.0
+          ]
+        },
+        "cancellation_fee": {
+          "$ref": "#/$defs/sgd_amount",
+          "description": "0.00 on completed trips. Typical 3.00-6.00. Central to NO_SHOW_CHARGE.",
+          "examples": [
+            4.0
+          ]
+        },
+        "waiting_time_fee": {
+          "$ref": "#/$defs/sgd_amount",
+          "description": "Charged after the free waiting minutes elapse. 0.00 when none.",
+          "examples": [
+            0.0
+          ]
+        },
+        "total_charged": {
+          "$ref": "#/$defs/sgd_amount",
+          "description": "What actually hit the rider's payment method.",
+          "examples": [
+            32.82
+          ]
+        },
+        "payment_status": {
+          "type": "string",
+          "enum": [
+            "CHARGED",
+            "PENDING",
+            "REFUNDED",
+            "PARTIALLY_REFUNDED",
+            "FAILED"
+          ]
+        },
+        "refund_issued_sgd": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/sgd_amount"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Already refunded before this dispute was filed.",
+          "examples": [
+            0.0
+          ]
+        },
+        "rate_card_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Pricing version in force.",
+          "examples": [
+            "RC-SG-2026Q2-RYDEX"
+          ]
+        },
+        "charged_at": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/sgt_timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "When payment was captured."
+        }
+      },
+      "required": [
+        "trip_id",
+        "currency",
+        "fare_model",
+        "base_fare",
+        "distance_fare",
+        "time_fare",
+        "surge_multiplier",
+        "surge_amount",
+        "tolls_erp",
+        "airport_surcharge",
+        "platform_fee",
+        "promo_discount",
+        "cancellation_fee",
+        "waiting_time_fee",
+        "total_charged",
+        "payment_status"
+      ],
+      "additionalProperties": false
+    },
+    "party_profile_base": {
+      "$comment": "Shared fields for both profile types. FAIRNESS CONSTRAINT: profile data informs CREDIBILITY WEIGHTING ONLY. A ruling must never rest on profile history alone — prior disputes are a reason to scrutinise the evidence, never evidence that this claim is false. The Judge must be able to point at trip, GPS, chat or fare evidence for any adverse finding. Encode this obligation explicitly in POL-GEN-*.",
+      "type": "object",
+      "properties": {
+        "party_id": {
+          "type": "string",
+          "pattern": "^(RDR|DRV)-\\d{5}$"
+        },
+        "party_role": {
+          "type": "string",
+          "enum": [
+            "RIDER",
+            "DRIVER"
+          ]
+        },
+        "snapshot_at": {
+          "$ref": "#/$defs/sgt_timestamp",
+          "description": "When these counters were read. Drives STALE_SNAPSHOT beyond 72h from dispute.filed_at."
+        },
+        "account_age_days": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000,
+          "examples": [
+            842
+          ]
+        },
+        "lifetime_trips": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000,
+          "examples": [
+            316
+          ]
+        },
+        "rating": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 1.0,
+          "maximum": 5.0,
+          "description": "2dp. Null if too few rated trips to publish.",
+          "examples": [
+            4.87
+          ]
+        },
+        "prior_disputes_filed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "description": "Disputes this party has raised, all time, EXCLUDING the present one.",
+          "examples": [
+            2
+          ]
+        },
+        "prior_disputes_upheld": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "description": "Of those, how many were decided in this party's favour. Must be <= prior_disputes_filed.",
+          "examples": [
+            1
+          ]
+        },
+        "cancellation_rate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "3dp FRACTION (not percent). Share of this party's accepted trips ending in their own cancellation.",
+          "examples": [
+            0.08
+          ]
+        },
+        "prior_no_show_flags": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "description": "Times this party was recorded as failing to appear at pickup.",
+          "examples": [
+            0
+          ]
+        }
+      },
+      "required": [
+        "party_id",
+        "party_role",
+        "snapshot_at",
+        "account_age_days",
+        "lifetime_trips",
+        "rating",
+        "prior_disputes_filed",
+        "prior_disputes_upheld",
+        "cancellation_rate",
+        "prior_no_show_flags"
+      ]
+    },
+    "rider_profile": {
+      "$comment": "Payload of EV-RPROF-NNNNN.",
+      "allOf": [
+        {
+          "$ref": "#/$defs/party_profile_base"
+        }
+      ],
+      "type": "object",
+      "properties": {
+        "party_id": {
+          "type": "string",
+          "pattern": "^RDR-\\d{5}$"
+        },
+        "party_role": {
+          "const": "RIDER"
+        },
+        "snapshot_at": true,
+        "account_age_days": true,
+        "lifetime_trips": true,
+        "rating": true,
+        "prior_disputes_filed": true,
+        "prior_disputes_upheld": true,
+        "cancellation_rate": true,
+        "prior_no_show_flags": true,
+        "deviation_claims_60d": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "description": "ADDENDUM A14 (1.1.0). ROUTE_DEVIATION claims this rider filed in the trailing 60 days. POL-RD-08 serial-claimant test, limb 1 (4 or more).",
+          "examples": [
+            5
+          ]
+        },
+        "deviation_claims_60d_substantiated": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "description": "ADDENDUM A15 (1.1.0). Of those, how many were substantiated. POL-RD-08 serial-claimant test, limb 2 (at most 1).",
+          "examples": [
+            1
+          ]
+        },
+        "no_show_disputes_30d": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "description": "ADDENDUM A16 (1.1.0). NO_SHOW_CHARGE disputes this rider filed in the trailing 30 days. POL-NS-09(d) fires at 3 or more.",
+          "examples": [
+            1
+          ]
+        },
+        "disputes_with_counterparty_90d": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "description": "ADDENDUM A17 (1.1.0). No-show disputes between this rider and this driver in the trailing 90 days. POL-NS-09(c) fires at 2 or more.",
+          "examples": [
+            0
+          ]
+        }
+      },
+      "required": [
+        "deviation_claims_60d",
+        "deviation_claims_60d_substantiated",
+        "no_show_disputes_30d",
+        "disputes_with_counterparty_90d"
+      ],
+      "additionalProperties": false
+    },
+    "driver_profile": {
+      "$comment": "Payload of EV-DPROF-NNNNN. Adds the driver-only counters.",
+      "allOf": [
+        {
+          "$ref": "#/$defs/party_profile_base"
+        }
+      ],
+      "type": "object",
+      "properties": {
+        "party_id": {
+          "type": "string",
+          "pattern": "^DRV-\\d{5}$"
+        },
+        "party_role": {
+          "const": "DRIVER"
+        },
+        "snapshot_at": true,
+        "account_age_days": true,
+        "lifetime_trips": true,
+        "rating": true,
+        "prior_disputes_filed": true,
+        "prior_disputes_upheld": true,
+        "cancellation_rate": true,
+        "prior_no_show_flags": true,
+        "prior_deviation_flags": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "description": "Prior SUBSTANTIATED route-deviation findings against this driver. Not complaints — findings.",
+          "examples": [
+            1
+          ]
+        },
+        "acceptance_rate": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1,
+          "description": "3dp fraction.",
+          "examples": [
+            0.91
+          ]
+        },
+        "vehicle_type": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "RYDE_X",
+            "RYDE_PLUS",
+            "RYDE_XL",
+            "RYDE_TAXI",
+            "RYDE_POOL",
+            null
+          ]
+        },
+        "active_region": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "examples": [
+            "West (Jurong / Clementi / Bukit Batok)"
+          ]
+        },
+        "deviation_flags_90d": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "description": "ADDENDUM A9 (1.1.0). Substantiated ROUTE_DEVIATION rulings against this driver in the trailing 90 days. POL-RD-06 pattern test, limb 1 (3 or more).",
+          "examples": [
+            4
+          ]
+        },
+        "completed_trips_90d": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000,
+          "description": "ADDENDUM A10 (1.1.0). Denominator for the POL-RD-06 rate limb (5% or more across at least 40 completed trips).",
+          "examples": [
+            344
+          ]
+        },
+        "no_show_terminations_30d": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "ADDENDUM A11 (1.1.0). Trips this driver terminated as rider_no_show in the trailing 30 days. POL-NS-07 anti-farming, limb 1 (4 or more).",
+          "examples": [
+            7
+          ]
+        },
+        "completed_trips_30d": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000,
+          "description": "ADDENDUM A12 (1.1.0). Denominator for the POL-NS-07 anti-farming rate limb (above 8%).",
+          "examples": [
+            61
+          ]
+        },
+        "disputes_with_counterparty_90d": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "description": "ADDENDUM A13 (1.1.0). No-show disputes between this driver and this rider in the trailing 90 days. POL-NS-09(c) fires at 2 or more.",
+          "examples": [
+            0
+          ]
+        }
+      },
+      "required": [
+        "prior_deviation_flags",
+        "deviation_flags_90d",
+        "completed_trips_90d",
+        "no_show_terminations_30d",
+        "completed_trips_30d",
+        "disputes_with_counterparty_90d"
+      ],
+      "additionalProperties": false
+    },
+    "advisory_geometry": {
+      "type": "object",
+      "description": "Axis-aligned bounding box. Constraint min_lat < max_lat and min_lng < max_lng is enforced in tools/validate.py.",
+      "properties": {
+        "min_lat": {
+          "$ref": "#/$defs/latitude",
+          "examples": [
+            1.336
+          ]
+        },
+        "min_lng": {
+          "$ref": "#/$defs/longitude",
+          "examples": [
+            103.845
+          ]
+        },
+        "max_lat": {
+          "$ref": "#/$defs/latitude",
+          "examples": [
+            1.352
+          ]
+        },
+        "max_lng": {
+          "$ref": "#/$defs/longitude",
+          "examples": [
+            103.862
+          ]
+        }
+      },
+      "required": [
+        "min_lat",
+        "min_lng",
+        "max_lat",
+        "max_lng"
+      ],
+      "additionalProperties": false
+    },
+    "traffic_advisory": {
+      "$comment": "Payload of EV-ADVIS-NNNNN-KK. The main exculpatory instrument for the Driver Advocate in route-deviation cases. The two derived booleans exist precisely so an advocate cannot wave at an unrelated road closure and have it counted.",
+      "type": "object",
+      "properties": {
+        "advisory_id": {
+          "$ref": "#/$defs/advisory_natural_id"
+        },
+        "road_name": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 200,
+          "examples": [
+            "Central Expressway (CTE) towards AYE, after Braddell Rd exit"
+          ]
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "CLOSURE",
+            "ACCIDENT",
+            "CONGESTION",
+            "EVENT",
+            "KERB_RESTRICTION",
+            "ENFORCEMENT"
+          ],
+          "description": "ADDENDUM A24 (1.2.0) added KERB_RESTRICTION (a no-stopping or bus-lane restriction in force, for example the Orchard Road bus-lane hours) and ENFORCEMENT (an enforcement operation on the road). POL-NS-06(i) names three of the four situations it covers by these types; before the addendum none of them had a representable value and the limb could only have been reached by keyword-matching free text."
+        },
+        "active_from": {
+          "$ref": "#/$defs/sgt_timestamp"
+        },
+        "active_to": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/sgt_timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Null means still active at snapshot time."
+        },
+        "geometry": {
+          "$ref": "#/$defs/advisory_geometry"
+        },
+        "severity": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "LOW",
+            "MODERATE",
+            "HIGH",
+            null
+          ]
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 600,
+          "examples": [
+            "Multi-vehicle accident, 2 of 3 lanes blocked. Expect delays of 20-30 min."
+          ]
+        },
+        "advisory_source": {
+          "type": "string",
+          "enum": [
+            "LTA_DATAMALL",
+            "PLATFORM_DETECTED",
+            "OPERATOR_ENTERED"
+          ]
+        },
+        "intersects_route": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "DERIVED: whether geometry contains at least one point of the actual GPS trace. Null when the GPS trace is MISSING."
+        },
+        "overlaps_trip_window": {
+          "type": "boolean",
+          "description": "DERIVED: whether [active_from, active_to] overlaps [requested_at, terminal_event]."
+        },
+        "overlap_minutes": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "description": "DERIVED, 1dp: length of that overlap. 0.0 when disjoint.",
+          "examples": [
+            47.6
+          ]
+        },
+        "shortest_lawful_alternative_km": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 200,
+          "description": "ADDENDUM A18 (1.1.0), restated 1.2.0. TOTAL length of the shortest lawful route between the BOOKED endpoints that avoids this advisory's affected segment - a whole route length, not an increment. Feeds the POL-RD-03 exoneration cap, which is min(measured_excess_km, 1.30 x (this - trip.optimal_distance_km) + 1.00): the clause takes 130% of the ADDITIONAL distance this route costs over the booked optimal, not 130% of this figure. Non-null only on advisories a driver may actually invoke.",
+          "examples": [
+            30.1
+          ]
+        }
+      },
+      "required": [
+        "advisory_id",
+        "road_name",
+        "type",
+        "active_from",
+        "active_to",
+        "geometry",
+        "advisory_source",
+        "intersects_route",
+        "overlaps_trip_window",
+        "overlap_minutes"
+      ],
+      "additionalProperties": false
+    },
+    "ground_truth": {
+      "$comment": "EVALUATION ONLY. MUST be stripped by the loader before any agent sees the case — not in the prompt, not in any tool result. Recommended enforcement: build case_bundle with a function that pops this key, plus an assertion that the serialised agent input contains neither 'ground_truth' nor 'expected_ruling'. A leak here silently invalidates every accuracy and calibration number in the final deck.",
+      "type": "object",
+      "properties": {
+        "expected_ruling": {
+          "type": "string",
+          "enum": [
+            "FULL_REFUND",
+            "PARTIAL_REFUND",
+            "NO_ACTION",
+            "DRIVER_COMPENSATION",
+            "ESCALATE"
+          ],
+          "description": "ESCALATE is a legitimate correct answer, not a failure mode."
+        },
+        "expected_amount_sgd": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "MUST equal amount_contested_sgd for FULL_REFUND; strictly between 0 and amount_contested_sgd for PARTIAL_REFUND; greater than 0 for DRIVER_COMPENSATION; null for NO_ACTION and ESCALATE."
+        },
+        "governing_clauses": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/policy_clause_id"
+          },
+          "minItems": 1,
+          "uniqueItems": true,
+          "examples": [
+            [
+              "POL-RD-03",
+              "POL-RD-05",
+              "POL-EV-02"
+            ]
+          ]
+        },
+        "difficulty": {
+          "type": "string",
+          "enum": [
+            "EASY",
+            "HARD",
+            "REVERSAL",
+            "INDETERMINATE"
+          ],
+          "description": "EASY: complete evidence pointing one way (~40% of corpus). HARD: complete evidence, two legitimate considerations pulling against each other (~30%). REVERSAL: claim_text reads sympathetically for one party but the evidence supports the other (~20%) — the sharpest test in the set, since an LLM that merely paraphrases the complainant fails every one. INDETERMINATE: evidence genuinely cannot settle it (~10%)."
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 120,
+          "maxLength": 2500,
+          "description": "One paragraph, 3-6 sentences, written for a human reviewer grading the Judge. Must name specific evidence IDs, specific clause IDs and specific numbers, and must state explicitly how any impaired evidence was handled."
+        },
+        "expected_driver_compensation_sgd": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "ADDENDUM A27 (1.2.0). The payment owed to the DRIVER on this case, where the outcome has a driver-side limb that expected_amount_sgd cannot carry - POL-NS-03(ii) pin-ambiguity goodwill alongside a rider refund is the standard instance. Independent of expected_amount_sgd and never netted against it. Null where no driver payment is owed. Where expected_ruling is DRIVER_COMPENSATION this field repeats expected_amount_sgd.",
+          "examples": [
+            2.0
+          ]
+        },
+        "expected_referrals": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 200
+          },
+          "description": "ADDENDUM A27 (1.2.0). Non-monetary outcomes that ACCOMPANY the ruling rather than replacing it: POL-RD-06(c) driver-conduct review, POL-RD-09(4) billing integrity, POL-NS-05(ii) false-arrival record, and the refund instruction POL-NS-07 writes into an escalation packet. Empty array where none. Distinct from ESCALATE, which replaces the ruling and stops the money.",
+          "examples": [
+            [
+              "POL-RD-06(c) driver-conduct review"
+            ]
+          ]
+        }
+      },
+      "required": [
+        "expected_ruling",
+        "expected_amount_sgd",
+        "governing_clauses",
+        "difficulty",
+        "rationale",
+        "expected_driver_compensation_sgd",
+        "expected_referrals"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "expected_ruling": {
+                "enum": [
+                  "NO_ACTION",
+                  "ESCALATE"
+                ]
+              }
+            },
+            "required": [
+              "expected_ruling"
+            ]
+          },
+          "then": {
+            "properties": {
+              "expected_amount_sgd": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "expected_ruling": {
+                "enum": [
+                  "FULL_REFUND",
+                  "PARTIAL_REFUND",
+                  "DRIVER_COMPENSATION"
+                ]
+              }
+            },
+            "required": [
+              "expected_ruling"
+            ]
+          },
+          "then": {
+            "properties": {
+              "expected_amount_sgd": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "difficulty": {
+                "const": "INDETERMINATE"
+              }
+            },
+            "required": [
+              "difficulty"
+            ]
+          },
+          "then": {
+            "properties": {
+              "expected_ruling": {
+                "const": "ESCALATE"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "counterparty_statement": {
+      "type": "object",
+      "description": "The other party's formal written response, if collected. Distinct from in-trip chat.",
+      "properties": {
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000,
+          "examples": [
+            "I was at the pickup point at Exit B for 5 minutes. Called twice, no answer. Waited past the free time then cancelled."
+          ]
+        },
+        "submitted_by": {
+          "type": "string",
+          "enum": [
+            "RIDER",
+            "DRIVER"
+          ]
+        },
+        "submitted_at": {
+          "$ref": "#/$defs/sgt_timestamp"
+        }
+      },
+      "required": [
+        "text",
+        "submitted_by",
+        "submitted_at"
+      ],
+      "additionalProperties": false
+    },
+    "dispute_core": {
+      "$comment": "Shared body of the case file. Not used directly — compose via 'dispute' (with ground truth, on disk) or 'dispute_public' (without, handed to agents). No additionalProperties restriction here, deliberately, so the two composites can extend it under allOf.",
+      "type": "object",
+      "properties": {
+        "dispute_id": {
+          "$ref": "#/$defs/dispute_id"
+        },
+        "trip_id": {
+          "$ref": "#/$defs/trip_id"
+        },
+        "case_no": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 99999,
+          "description": "The bare case number, for joins and sorting. Matches the digits in dispute_id, trip_id and every evidence_id in the bundle.",
+          "examples": [
+            41
+          ]
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "ROUTE_DEVIATION",
+            "NO_SHOW_CHARGE"
+          ],
+          "description": "Closed set — the two categories in scope. Property damage and safety incidents are deliberately out of scope because they require image analysis."
+        },
+        "filed_by": {
+          "type": "string",
+          "enum": [
+            "RIDER",
+            "DRIVER"
+          ],
+          "description": "Drivers file too, typically contesting a reversed cancellation fee."
+        },
+        "filed_at": {
+          "$ref": "#/$defs/sgt_timestamp"
+        },
+        "claim_text": {
+          "type": "string",
+          "minLength": 30,
+          "maxLength": 2000,
+          "description": "What the party actually wrote, in their own words. The primary natural-language input to both advocates. Keep it human — Singlish, typos, frustration, irrelevant detail. Do NOT sanitise it into a neat summary; sanitised claim text makes the task artificially easy and the demo unconvincing.",
+          "examples": [
+            "driver went CTE all the way up then came back down, my normal route from jurong east to marina bay never take 26km. i take this trip almost every week its always around 18km. charged me $32.82 when its usually around $22. please refund the difference, and he never say anything when i ask him."
+          ]
+        },
+        "amount_contested_sgd": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 10000,
+          "description": "Must be <= fare_breakdown.total_charged.",
+          "examples": [
+            10.54
+          ]
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence_id"
+          },
+          "minItems": 6,
+          "uniqueItems": true,
+          "description": "Every artifact in this case's bundle. Sorted TRIP, GPS, CHAT, FARE, RPROF, DPROF, then ADVIS by ordinal. Minimum 6 because all six singleton artifacts are always present, even when MISSING."
+        },
+        "counterparty_statement": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/counterparty_statement"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "channel": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "IN_APP_SUPPORT",
+            "EMAIL",
+            "CALL_CENTRE",
+            null
+          ]
+        }
+      },
+      "required": [
+        "dispute_id",
+        "trip_id",
+        "case_no",
+        "category",
+        "filed_by",
+        "filed_at",
+        "claim_text",
+        "amount_contested_sgd",
+        "evidence_ids"
+      ]
+    },
+    "dispute": {
+      "$comment": "The on-disk case file form, WITH ground truth. Never serialise this into an agent prompt.",
+      "allOf": [
+        {
+          "$ref": "#/$defs/dispute_core"
+        }
+      ],
+      "type": "object",
+      "properties": {
+        "ground_truth": {
+          "$ref": "#/$defs/ground_truth"
+        }
+      },
+      "required": [
+        "ground_truth"
+      ]
+    },
+    "dispute_public": {
+      "$comment": "The agent-facing form. The 'not required ground_truth' clause is the machine-checkable expression of the strip-before-prompt rule.",
+      "allOf": [
+        {
+          "$ref": "#/$defs/dispute_core"
+        }
+      ],
+      "type": "object",
+      "not": {
+        "required": [
+          "ground_truth"
+        ]
+      }
+    },
+    "admissibility_summary": {
+      "type": "object",
+      "description": "Bundle-level roll-up of the pre-pass, so the Judge gets one health read without re-scanning every artifact.",
+      "properties": {
+        "complete_count": {
+          "type": "integer",
+          "minimum": 0,
+          "examples": [
+            5
+          ]
+        },
+        "impaired_count": {
+          "type": "integer",
+          "minimum": 0,
+          "examples": [
+            1
+          ]
+        },
+        "missing_count": {
+          "type": "integer",
+          "minimum": 0,
+          "examples": [
+            1
+          ]
+        },
+        "issue_code_counts": {
+          "type": "object",
+          "propertyNames": {
+            "$ref": "#/$defs/admissibility_issue_code"
+          },
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "description": "Map of issue code to occurrence count across the whole bundle. Codes with zero occurrences are omitted.",
+          "examples": [
+            {
+              "GPS_GAP": 1,
+              "LOW_COVERAGE": 1,
+              "MISSING_ARTIFACT": 1
+            }
+          ]
+        },
+        "bundle_integrity_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Mean weight_multiplier across every artifact in the bundle, 2dp. Useful as one input to the escalation heuristic.",
+          "examples": [
+            0.77
+          ]
+        }
+      },
+      "required": [
+        "complete_count",
+        "impaired_count",
+        "missing_count",
+        "issue_code_counts",
+        "bundle_integrity_score"
+      ],
+      "additionalProperties": false
+    },
+    "case_bundle": {
+      "$comment": "What the agents actually receive. BOTH ADVOCATES RECEIVE THE BYTE-IDENTICAL BUNDLE — their difference is stance, not data. Contains dispute_public, never dispute.",
+      "type": "object",
+      "properties": {
+        "case_no": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 99999
+        },
+        "bundle_version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "examples": [
+            "1.0.0"
+          ]
+        },
+        "policy_version": {
+          "type": "string",
+          "description": "Which policy set was loaded. Rulings are only comparable within one policy version.",
+          "examples": [
+            "policy-1.0.0"
+          ]
+        },
+        "dispute": {
+          "$ref": "#/$defs/dispute_public"
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence_envelope"
+          },
+          "minItems": 6,
+          "description": "Sorted TRIP, GPS, CHAT, FARE, RPROF, DPROF, then ADVIS by ordinal."
+        },
+        "evidence_index": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence_id"
+          },
+          "minItems": 6,
+          "uniqueItems": true,
+          "description": "Flat list of every evidence_id present. This is the Judge's citation-resolution set: a claim citing an ID absent from this list is DISCARDED before weighing, not down-weighted."
+        },
+        "admissibility_summary": {
+          "$ref": "#/$defs/admissibility_summary"
+        }
+      },
+      "required": [
+        "case_no",
+        "bundle_version",
+        "policy_version",
+        "dispute",
+        "evidence",
+        "evidence_index",
+        "admissibility_summary"
+      ],
+      "additionalProperties": false
+    },
+    "case_file": {
+      "$comment": "The on-disk case shard. Carries dispute_public: ground truth lives only in data/answers/ground_truth.json.",
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "examples": [
+            "1.0.0"
+          ]
+        },
+        "case_no": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 99999
+        },
+        "dispute": {
+          "$ref": "#/$defs/dispute_public"
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence_envelope"
+          },
+          "minItems": 6,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "schema_version",
+        "case_no",
+        "dispute",
+        "evidence"
+      ],
+      "additionalProperties": false
+    },
+    "case_index_entry": {
+      "$comment": "One row of data/index.json - the PUBLIC corpus manifest an agent may safely read. It carries no ground truth: difficulty and expected_ruling moved to data/eval_index.json under $defs.eval_index_entry, because knowing a case is a REVERSAL tells an advocate to argue against the claimant and validation rule 21 forbids ground truth on the agent load path.",
+      "type": "object",
+      "properties": {
+        "case_no": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 99999
+        },
+        "dispute_id": {
+          "$ref": "#/$defs/dispute_id"
+        },
+        "trip_id": {
+          "$ref": "#/$defs/trip_id"
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "ROUTE_DEVIATION",
+            "NO_SHOW_CHARGE"
+          ]
+        },
+        "file": {
+          "type": "string",
+          "examples": [
+            "cases/case-00041.json"
+          ]
+        }
+      },
+      "required": [
+        "case_no",
+        "dispute_id",
+        "trip_id",
+        "category",
+        "file"
+      ],
+      "additionalProperties": false
+    },
+    "eval_index_entry": {
+      "$comment": "One row of data/eval_index.json - the ANSWER KEY. Never on the agent load path. Joined to index.json on case_no by the grader only.",
+      "type": "object",
+      "properties": {
+        "case_no": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 99999
+        },
+        "difficulty": {
+          "type": "string",
+          "enum": [
+            "EASY",
+            "HARD",
+            "REVERSAL",
+            "INDETERMINATE"
+          ]
+        },
+        "expected_ruling": {
+          "type": "string",
+          "enum": [
+            "FULL_REFUND",
+            "PARTIAL_REFUND",
+            "NO_ACTION",
+            "DRIVER_COMPENSATION",
+            "ESCALATE"
+          ]
+        },
+        "expected_amount_sgd": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "expected_driver_compensation_sgd": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "expected_referrals": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "governing_clauses": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/policy_clause_id"
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "case_no",
+        "difficulty",
+        "expected_ruling",
+        "expected_amount_sgd",
+        "expected_driver_compensation_sgd",
+        "expected_referrals",
+        "governing_clauses"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

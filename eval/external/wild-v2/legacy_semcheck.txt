@@ -1,0 +1,21 @@
+OK   701 ('NO_ACTION', None) derived ('NO_ACTION', None) | UPFRONT q=27.4 proper=0.00 phantom=0.00 refund=0.0
+OK   702 ('NO_ACTION', None) derived ('NO_ACTION', None) | UPFRONT q=22.4 proper=0.00 phantom=0.00 refund=0.0
+OK   703 ('FULL_REFUND', 6.0) derived ('FULL_REFUND', 6.0) | NS zone=STANDARD q=no dwell=None d_arr=None by=RIDER/RIDER_NO_SHOW farming=False
+OK   704 ('NO_ACTION', None) derived ('NO_ACTION', None) | NS zone=STANDARD q=no dwell=None d_arr=300 by=None/None farming=False
+OK   705 ('NO_ACTION', None) derived ('NO_ACTION', None) | NS zone=STANDARD q=yes dwell=None d_arr=3 by=None/None farming=False
+OK   706 ('FULL_REFUND', 4.0) derived ('FULL_REFUND', 4.0) | NS zone=STANDARD q=yes dwell=240.0 d_arr=2 by=RIDER/RIDER_NO_SHOW farming=False
+OK   707 ('NO_ACTION', None) derived ('NO_ACTION', None) | NS zone=STANDARD q=yes dwell=None d_arr=3 by=None/None farming=False
+DIFF 708 ('ESCALATE', None) derived ('NO_ACTION', None) | NS zone=STANDARD q=yes dwell=None d_arr=3 by=None/None farming=False
+OK   709 ('NO_ACTION', None) derived ('NO_ACTION', None) | UPFRONT q=23 proper=3.00 phantom=0.00 refund=0.0
+OK   710 ('NO_ACTION', None) derived ('NO_ACTION', None) | UPFRONT q=25 proper=6.00 phantom=0.00 refund=0.0
+DIFF 711 ('ESCALATE', None) derived ('NO_ACTION', None) | UPFRONT q=14.9 proper=0.00 phantom=0.00 refund=0.0
+OK   712 ('PARTIAL_REFUND', 8.0) derived ('PARTIAL_REFUND', 8.0) | UPFRONT q=28 proper=6.00 phantom=8.00 refund=8.0
+OK   713 ('NO_ACTION', None) derived ('NO_ACTION', None) | UPFRONT q=18.6 proper=0.00 phantom=0.00 refund=0.0
+DIFF 714 ('ESCALATE', None) derived ('NO_ACTION', None) | UPFRONT q=16.8 proper=0.00 phantom=0.00 refund=0.0
+OK   715 ('NO_ACTION', None) derived ('NO_ACTION', None) | UPFRONT q=7.2 proper=0.00 phantom=0.00 refund=0.0
+DIFF 716 ('ESCALATE', None) derived ('NO_ACTION', None) | UPFRONT q=21.4 proper=0.00 phantom=0.00 refund=0.0
+OK   717 ('NO_ACTION', None) derived ('NO_ACTION', None) | NS zone=STANDARD q=no dwell=None d_arr=298 by=None/None farming=False
+OK   718 ('PARTIAL_REFUND', 7.4) derived ('PARTIAL_REFUND', 7.4) | METERED dev=True pct=29.7 rec=28.805 refund=7.4 gap=0 dev90=0
+DIFF 719 ('ESCALATE', None) derived ('NO_ACTION', None) | UPFRONT q=22.4 proper=0.00 phantom=0.00 refund=0.0
+OK   720 ('FULL_REFUND', 4.0) derived ('FULL_REFUND', 4.0) | NS zone=STANDARD q=no dwell=None d_arr=288 by=DRIVER/RIDER_NO_SHOW farming=False
+mismatches: 5

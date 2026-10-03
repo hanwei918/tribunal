@@ -1,0 +1,267 @@
+{
+  "701": {
+    "expected_ruling": "NO_ACTION",
+    "expected_amount_sgd": null,
+    "expected_driver_compensation_sgd": null,
+    "expected_referrals": [],
+    "governing_clauses": [
+      "POL-GEN-03",
+      "POL-RD-01",
+      "POL-RD-11"
+    ],
+    "difficulty": "HARD",
+    "rationale": "EV-FARE-00701 is UPFRONT_QUOTE; charged 27.40 equals quote 27.40 plus properly crossed ERP 0.00. POL-RD-11 supplies no distance/time refund and POL-GEN-03 leaves the present payment state (CHARGED) unchanged. EV-GPS-00701 has 26.85 km; the booked/stored amended baseline is 20.70 km. All ERP coordinates match within 250 m, and no material residual deviation or qualifying repeat-driver pattern licenses POL-RD-06(c)."
+  },
+  "702": {
+    "expected_ruling": "NO_ACTION",
+    "expected_amount_sgd": null,
+    "expected_driver_compensation_sgd": null,
+    "expected_referrals": [],
+    "governing_clauses": [
+      "POL-GEN-03",
+      "POL-RD-01",
+      "POL-RD-11",
+      "POL-RD-05"
+    ],
+    "difficulty": "HARD",
+    "rationale": "EV-FARE-00702 is UPFRONT_QUOTE; charged 22.40 equals quote 22.40 plus properly crossed ERP 0.00. POL-RD-11 supplies no distance/time refund and POL-GEN-03 leaves the present payment state (CHARGED) unchanged. EV-GPS-00702 has 10.99 km; the booked/stored amended baseline is 11.00 km. All ERP coordinates match within 250 m, and no material residual deviation or qualifying repeat-driver pattern licenses POL-RD-06(c). The amendment has both stored estimates; the earlier quote is not the governing final quoted_fare_sgd, and no unsupported conduct or repricing-review referral is invented."
+  },
+  "703": {
+    "expected_ruling": "FULL_REFUND",
+    "expected_amount_sgd": 6.0,
+    "expected_driver_compensation_sgd": null,
+    "expected_referrals": [],
+    "governing_clauses": [
+      "POL-GEN-03",
+      "POL-NS-01",
+      "POL-NS-02"
+    ],
+    "difficulty": "EASY",
+    "rationale": "EV-TRIP-00703 has no arrival marker or boarding and the rider cancelled. EV-GPS-00703 provides no three consecutive qualifying fixes within the 50 m STANDARD radius, and every fix is well beyond 400 m. POL-NS-02 therefore refunds the full SGD 6 cancellation line in EV-FARE-00703; no driver compensation is due. Scheduling is context, not a new late-pickup rule. No false-arrival referral is due because no arrival was marked."
+  },
+  "704": {
+    "expected_ruling": "NO_ACTION",
+    "expected_amount_sgd": null,
+    "expected_driver_compensation_sgd": null,
+    "expected_referrals": [],
+    "governing_clauses": [
+      "POL-GEN-03",
+      "POL-NS-01"
+    ],
+    "difficulty": "HARD",
+    "rationale": "EV-TRIP-00704 records a completed trip with boarding; EV-FARE-00704 records cancellation_fee=0 and a verified platform fare. POL-NS-01 concerns unboarded driver-terminated pickup attempts, not a completed-trip refund. The claimant's cancellation-fee remedy is unsupported, so POL-GEN-03 leaves the payment state unchanged with no refund or driver payment. No frozen clause licenses a generic service-conduct referral, pro-rata partial-service refund, or refund of a waiting_time_fee through the no-show fee schedule."
+  },
+  "705": {
+    "expected_ruling": "NO_ACTION",
+    "expected_amount_sgd": null,
+    "expected_driver_compensation_sgd": null,
+    "expected_referrals": [],
+    "governing_clauses": [
+      "POL-GEN-03",
+      "POL-NS-01"
+    ],
+    "difficulty": "REVERSAL",
+    "rationale": "EV-TRIP-00705 records a completed trip with boarding; EV-FARE-00705 records cancellation_fee=0 and a verified platform fare. POL-NS-01 concerns unboarded driver-terminated pickup attempts, not a completed-trip refund. The claimant's cancellation-fee remedy is unsupported, so POL-GEN-03 leaves the payment state unchanged with no refund or driver payment. No frozen clause licenses a generic service-conduct referral, pro-rata partial-service refund, or refund of a waiting_time_fee through the no-show fee schedule."
+  },
+  "706": {
+    "expected_ruling": "FULL_REFUND",
+    "expected_amount_sgd": 4.0,
+    "expected_driver_compensation_sgd": null,
+    "expected_referrals": [],
+    "governing_clauses": [
+      "POL-GEN-03",
+      "POL-NS-01",
+      "POL-NS-02",
+      "POL-NS-06"
+    ],
+    "difficulty": "HARD",
+    "rationale": "EV-GPS-00706 begins qualifying dwell 10 seconds after acceptance and ends at 250 seconds, yielding 240 seconds, below STANDARD's 300 seconds. POL-NS-06 refunds the full SGD 4 cancellation fee from EV-FARE-00706, regardless of presence or the fact that the rider cancelled. POL-NS-07 is not a refusal-of-service clause and does not supply this remedy. No driver payment or generic conduct referral is licensed here."
+  },
+  "707": {
+    "expected_ruling": "NO_ACTION",
+    "expected_amount_sgd": null,
+    "expected_driver_compensation_sgd": null,
+    "expected_referrals": [],
+    "governing_clauses": [
+      "POL-GEN-03",
+      "POL-NS-01"
+    ],
+    "difficulty": "EASY",
+    "rationale": "EV-TRIP-00707 records a completed trip with boarding; EV-FARE-00707 records cancellation_fee=0 and a verified platform fare. POL-NS-01 concerns unboarded driver-terminated pickup attempts, not a completed-trip refund. The claimant's cancellation-fee remedy is unsupported, so POL-GEN-03 leaves the payment state unchanged with no refund or driver payment. No frozen clause licenses a generic service-conduct referral, pro-rata partial-service refund, or refund of a waiting_time_fee through the no-show fee schedule."
+  },
+  "708": {
+    "expected_ruling": "ESCALATE",
+    "expected_amount_sgd": null,
+    "expected_driver_compensation_sgd": null,
+    "expected_referrals": [],
+    "governing_clauses": [
+      "POL-GEN-03",
+      "POL-GEN-02",
+      "POL-NS-09"
+    ],
+    "difficulty": "INDETERMINATE",
+    "rationale": "EV-FARE-00708 is USER_SUBMITTED, impaired by UNVERIFIED_SOURCE at 0.60. It alone supplies the disputed SGD 26 charge and zero cancellation-fee line; the trip and chat are not independent payment records. Under POL-GEN-02 the deciding monetary fact caps confidence at 0.60, below 0.70, so POL-NS-09(a) requires terminal escalation. Obtain the canonical payment ledger before determining the fee or service-charge disposition; no refund/payment or additional referral is issued."
+  },
+  "709": {
+    "expected_ruling": "NO_ACTION",
+    "expected_amount_sgd": null,
+    "expected_driver_compensation_sgd": null,
+    "expected_referrals": [],
+    "governing_clauses": [
+      "POL-GEN-03",
+      "POL-RD-01",
+      "POL-RD-11",
+      "POL-RD-05"
+    ],
+    "difficulty": "HARD",
+    "rationale": "EV-FARE-00709 is UPFRONT_QUOTE; charged 26.00 equals quote 23.00 plus properly crossed ERP 3.00. POL-RD-11 supplies no distance/time refund and POL-GEN-03 leaves the present payment state (PENDING) unchanged. EV-GPS-00709 has 11.00 km; the booked/stored amended baseline is 11.20 km. All ERP coordinates match within 250 m, and no material residual deviation or qualifying repeat-driver pattern licenses POL-RD-06(c). POL-RD-04 has no distance shortfall over 1 km and POL-RD-09 is not a licence to release ERP as driver compensation; pending is not restored/paid by NO_ACTION."
+  },
+  "710": {
+    "expected_ruling": "NO_ACTION",
+    "expected_amount_sgd": null,
+    "expected_driver_compensation_sgd": null,
+    "expected_referrals": [],
+    "governing_clauses": [
+      "POL-GEN-03",
+      "POL-RD-01",
+      "POL-RD-11",
+      "POL-RD-09",
+      "POL-RD-12"
+    ],
+    "difficulty": "HARD",
+    "rationale": "EV-FARE-00710 is UPFRONT_QUOTE; charged 31.00 equals quote 25.00 plus properly crossed ERP 6.00. POL-RD-11 supplies no distance/time refund and POL-GEN-03 leaves the present payment state (CHARGED) unchanged. EV-GPS-00710 has 11.99 km; the booked/stored amended baseline is 12.20 km. All ERP coordinates match within 250 m, and no material residual deviation or qualifying repeat-driver pattern licenses POL-RD-06(c). The matched itinerary, not solo optimal 8.5 km, governs. POL-RD-12 contains no split-per-rider ERP formula; inventing a half-share or penalty is forbidden."
+  },
+  "711": {
+    "expected_ruling": "ESCALATE",
+    "expected_amount_sgd": null,
+    "expected_driver_compensation_sgd": null,
+    "expected_referrals": [],
+    "governing_clauses": [
+      "POL-GEN-03",
+      "POL-RD-05",
+      "POL-RD-10"
+    ],
+    "difficulty": "INDETERMINATE",
+    "rationale": "EV-TRIP-00711 retains a dropoff amendment but amended_optimal_distance_km and duration are null. POL-RD-05 cannot be run; POL-RD-10(5) makes escalation terminal. The reviewer must obtain the stored amended route/requote, not invent it from text or GPS. No automatic refund or driver payment issues and no conduct/billing referral is licensed merely by these allegations."
+  },
+  "712": {
+    "expected_ruling": "PARTIAL_REFUND",
+    "expected_amount_sgd": 8.0,
+    "expected_driver_compensation_sgd": null,
+    "expected_referrals": [
+      "POL-RD-09(4) billing-integrity review: North service-loop ERP (SGD 8.00) never passed"
+    ],
+    "governing_clauses": [
+      "POL-GEN-03",
+      "POL-RD-01",
+      "POL-RD-09",
+      "POL-RD-11"
+    ],
+    "difficulty": "EASY",
+    "rationale": "EV-GPS-00712 has trace distance 11.99 km below the 12.2 km optimal: no route deviation. The two SGD 3 gantries match actual fixes; the North service-loop ERP line in EV-FARE-00712 is 16784.6 m from the nearest fix, beyond 250 m despite on_optimal_route=true. POL-RD-09(4) independently returns SGD 8.00 of contested SGD 14.00 and requires the named billing-integrity referral. POL-RD-11 does not refund the quoted distance/time fare. No unpaid off-platform demand is added."
+  },
+  "713": {
+    "expected_ruling": "NO_ACTION",
+    "expected_amount_sgd": null,
+    "expected_driver_compensation_sgd": null,
+    "expected_referrals": [],
+    "governing_clauses": [
+      "POL-GEN-03",
+      "POL-RD-01",
+      "POL-RD-11"
+    ],
+    "difficulty": "REVERSAL",
+    "rationale": "EV-FARE-00713 is UPFRONT_QUOTE; charged 18.60 equals quote 18.60 plus properly crossed ERP 0.00. POL-RD-11 supplies no distance/time refund and POL-GEN-03 leaves the present payment state (CHARGED) unchanged. EV-GPS-00713 has 6.83 km; the booked/stored amended baseline is 10.80 km. All ERP coordinates match within 250 m, and no material residual deviation or qualifying repeat-driver pattern licenses POL-RD-06(c). This resolves only the format-supported route/fare claim, not whether partial service or abandonment deserves a separate remedy; no policy prices such damages."
+  },
+  "714": {
+    "expected_ruling": "ESCALATE",
+    "expected_amount_sgd": null,
+    "expected_driver_compensation_sgd": null,
+    "expected_referrals": [],
+    "governing_clauses": [
+      "POL-GEN-03",
+      "POL-RD-05",
+      "POL-RD-10"
+    ],
+    "difficulty": "INDETERMINATE",
+    "rationale": "EV-TRIP-00714 retains a dropoff amendment but amended_optimal_distance_km and duration are null. POL-RD-05 cannot be run; POL-RD-10(5) makes escalation terminal. The reviewer must obtain the stored amended route/requote, not invent it from text or GPS. No automatic refund or driver payment issues and no conduct/billing referral is licensed merely by these allegations."
+  },
+  "715": {
+    "expected_ruling": "NO_ACTION",
+    "expected_amount_sgd": null,
+    "expected_driver_compensation_sgd": null,
+    "expected_referrals": [],
+    "governing_clauses": [
+      "POL-GEN-03",
+      "POL-RD-01",
+      "POL-RD-11"
+    ],
+    "difficulty": "REVERSAL",
+    "rationale": "EV-FARE-00715 is UPFRONT_QUOTE; charged 7.20 equals quote 7.20 plus properly crossed ERP 0.00. POL-RD-11 supplies no distance/time refund and POL-GEN-03 leaves the present payment state (CHARGED) unchanged. EV-GPS-00715 has 3.40 km; the booked/stored amended baseline is 6.40 km. All ERP coordinates match within 250 m, and no material residual deviation or qualifying repeat-driver pattern licenses POL-RD-06(c). This resolves only the format-supported route/fare claim, not whether partial service or abandonment deserves a separate remedy; no policy prices such damages."
+  },
+  "716": {
+    "expected_ruling": "ESCALATE",
+    "expected_amount_sgd": null,
+    "expected_driver_compensation_sgd": null,
+    "expected_referrals": [],
+    "governing_clauses": [
+      "POL-GEN-03",
+      "POL-GEN-02",
+      "POL-RD-10"
+    ],
+    "difficulty": "INDETERMINATE",
+    "rationale": "EV-TRIP-00716 is impaired with STALE_SNAPSHOT and CROSS_SOURCE_CONFLICT at weight 0.30. EV-GPS-00716 is impaired with TIMESTAMP_OUT_OF_RANGE and CROSS_SOURCE_CONFLICT at weight 0.25. Cancellation is 16 minutes earlier than its final fix; POL-RD-10(4) independently mandates terminal escalation and POL-GEN-02 forbids treating either discounted revision as decisive proof for a monetary award. The discrepancy is not resolved by the positive charge in EV-FARE-00716. Obtain aligned trip, GPS and payment revisions; hold the disputed amount."
+  },
+  "717": {
+    "expected_ruling": "NO_ACTION",
+    "expected_amount_sgd": null,
+    "expected_driver_compensation_sgd": null,
+    "expected_referrals": [],
+    "governing_clauses": [
+      "POL-GEN-03",
+      "POL-NS-01"
+    ],
+    "difficulty": "HARD",
+    "rationale": "EV-TRIP-00717 records a completed trip with boarding; EV-FARE-00717 records cancellation_fee=0 and a verified platform fare. POL-NS-01 concerns unboarded driver-terminated pickup attempts, not a completed-trip refund. The claimant's cancellation-fee remedy is unsupported, so POL-GEN-03 leaves the payment state unchanged with no refund or driver payment. No frozen clause licenses a generic service-conduct referral, pro-rata partial-service refund, or refund of a waiting_time_fee through the no-show fee schedule."
+  },
+  "718": {
+    "expected_ruling": "PARTIAL_REFUND",
+    "expected_amount_sgd": 7.4,
+    "expected_driver_compensation_sgd": null,
+    "expected_referrals": [],
+    "governing_clauses": [
+      "POL-GEN-03",
+      "POL-RD-01",
+      "POL-RD-02",
+      "POL-RD-08"
+    ],
+    "difficulty": "EASY",
+    "rationale": "EV-GPS-00718 records 26.84 km against EV-TRIP-00718's 20.7 km optimal: excess 6.14 km exceeds both 20% and 0.8 km, but is not MATERIAL. EV-CHAT-00718 admits the unauthorized collection; no exonerating clause applies. POL-RD-02: charged_total=36.18; recomputed_fare=(3.80+0.75*20.7+0.28*31)*1+0.80=28.805; final refund=ceil05(7.375)=7.40. No intermediate recomputation rounding, cash repayment, compensation or referral applies."
+  },
+  "719": {
+    "expected_ruling": "ESCALATE",
+    "expected_amount_sgd": null,
+    "expected_driver_compensation_sgd": null,
+    "expected_referrals": [],
+    "governing_clauses": [
+      "POL-GEN-03",
+      "POL-RD-05",
+      "POL-RD-10"
+    ],
+    "difficulty": "INDETERMINATE",
+    "rationale": "EV-TRIP-00719 retains a dropoff amendment but amended_optimal_distance_km and duration are null. POL-RD-05 cannot be run; POL-RD-10(5) makes escalation terminal. The reviewer must obtain the stored amended route/requote, not invent it from text or GPS. No automatic refund or driver payment issues and no conduct/billing referral is licensed merely by these allegations."
+  },
+  "720": {
+    "expected_ruling": "FULL_REFUND",
+    "expected_amount_sgd": 4.0,
+    "expected_driver_compensation_sgd": null,
+    "expected_referrals": [],
+    "governing_clauses": [
+      "POL-GEN-03",
+      "POL-NS-02",
+      "POL-NS-03"
+    ],
+    "difficulty": "REVERSAL",
+    "rationale": "EV-GPS-00720 shows stationary waiting outside the 50 m radius but within 400 m for over 300 seconds. POL-NS-03 refunds the SGD 4 line in EV-FARE-00720. EV-CHAT-00720 has the driver's explicit service-entrance instruction, so neither-party-specified-sub-location is false even though registered_pickup_points is 2: the 50% goodwill limb does not apply. No driver payment or false-arrival referral is owed. The absent advisory is not deciding evidence for this stationary wrong-entrance ruling."
+  }
+}

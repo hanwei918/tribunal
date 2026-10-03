@@ -1,0 +1,56 @@
+{
+  "policy_id": "POLICY-GENERAL",
+  "category": "GENERAL",
+  "version": "1.0.1",
+  "jurisdiction": "Singapore",
+  "currency": "SGD",
+  "last_reviewed": "2026-09-04",
+  "confidence_floor": 0.7,
+  "applies_to": [
+    "ROUTE_DEVIATION",
+    "NO_SHOW_CHARGE"
+  ],
+  "clauses": [
+    {
+      "id": "POL-GEN-01",
+      "title": "Party profiles are credibility weighting only",
+      "category": "GENERAL",
+      "rule": "A rider_profile or driver_profile may inform how closely a party's assertions are scrutinised. It may never, on its own or in combination with another profile, establish a fact about THIS trip or carry an adverse finding against either party. Only the following profile fields may be cited as a ground of decision, and only for the tests that name them: driver_profile.deviation_flags_90d and driver_profile.completed_trips_90d (POL-RD-06); rider_profile.deviation_claims_60d and rider_profile.deviation_claims_60d_substantiated (POL-RD-08); driver_profile.no_show_terminations_30d and driver_profile.completed_trips_30d (POL-NS-07); rider_profile.no_show_disputes_30d (POL-NS-09(d)); rider_profile.disputes_with_counterparty_90d and driver_profile.disputes_with_counterparty_90d (POL-NS-09(c)). Every other field on either profile - rating, account_age_days, lifetime_trips, cancellation_rate, prior_disputes_filed, prior_disputes_upheld, prior_no_show_flags, prior_deviation_flags, acceptance_rate, active_region - is CONTEXT ONLY. A claim that cites one of those fields as a reason for the outcome is discarded by the Judge on the same footing as an uncited claim, and the Judge must say in the reasoning that it was discarded and why. Several of those fields are deliberate near-synonyms of the citable counters (prior_no_show_flags against no_show_disputes_30d; prior_deviation_flags against deviation_flags_90d): reading the lifetime counter where a clause names the trailing-window counter is the commonest way an adverse finding gets built on reputation without anyone noticing.",
+      "requires": [
+        "rider_profile",
+        "driver_profile"
+      ],
+      "licenses": [],
+      "favours": "NEUTRAL",
+      "notes": "This is the fairness constraint the schema has always asserted and no clause had ever stated. The list is exhaustive by design: an advocate can otherwise cite 'rating 4.19, cancellation rate 0.23' with a real evidence ID and a real clause ID and satisfy the citation contract while reasoning from reputation. The clause licenses no ruling of its own - it is a constraint on the other clauses, and it is cited alongside them, never instead of them."
+    },
+    {
+      "id": "POL-GEN-02",
+      "title": "Admissibility weight, disclosure, and how impairment enters confidence",
+      "category": "GENERAL",
+      "rule": "Every evidence artifact carries admissibility.weight_multiplier in [0.0, 1.0], produced by the pre-pass before the debate opens. It has three effects and no others. (1) DISCLOSURE. An advocate citing an artifact whose weight_multiplier is below 1.0 must state, in the same claim, that the artifact is impaired and which issue codes fired. A claim that cites an impaired artifact without disclosing the impairment is discarded by the Judge on the same footing as an uncited claim. (2) CONFIDENCE. The Judge's confidence in a ruling is capped by the evidence the ruling actually rests on: confidence must not exceed the minimum weight_multiplier among the artifacts that carry the deciding fact, and where two or more independent artifacts carry it, that cap is the maximum of their weight_multipliers rather than the minimum. bundle_integrity_score, the mean weight across the bundle, is context for the reader and is NOT the cap. Because the platform-wide escalation floor is 0.70, a deciding fact carried solely by an artifact at weight 0.65 or below escalates automatically under POL-RD-10(1) or POL-NS-09(a). (3) NARRATION. Any ruling that relies on an artifact below weight 1.0 must name the artifact, its weight and its issue codes in the written explanation, and say whether the finding survives the discount and why. A MISSING artifact has weight 0.0, can carry no fact, and its absence is itself citable. Schema-level impairment is not the same as policy-level impairment: POL-RD-07 and POL-NS-08 set their own, looser thresholds, and an artifact may be down-weighted here while remaining fully usable there. The Judge must say both things.",
+      "requires": [],
+      "licenses": [
+        "ESCALATE"
+      ],
+      "favours": "NEUTRAL",
+      "notes": "Without this clause weight_multiplier is a number with no arithmetic attached: the pre-pass emits 0.55 and nothing in the policy corpus says what 0.55 does. Rule (2) is the one that makes the escalation threshold and the admissibility layer a single mechanism rather than two unrelated ones, and it is what Yan Lin's calibration curve is measured against. Note the asymmetry in rule (2): impairment caps confidence only on the artifacts that DECIDE the case, so a broken advisory nobody relies on does not drag a clean ruling below the floor."
+    },
+    {
+      "id": "POL-GEN-03",
+      "title": "Ruling vocabulary, party-relative outcomes and compound rulings",
+      "category": "GENERAL",
+      "rule": "The five ruling values mean the following, and nothing else. FULL_REFUND: the filing party is entirely right and the whole contested amount is returned. PARTIAL_REFUND: part of the contested amount is returned. NO_ACTION: THE FILING PARTY'S CLAIM IS NOT SUPPORTED BY THE EVIDENCE AND THE PRESENT STATE STANDS - specifically, fare_breakdown.payment_status and fare_breakdown.refund_issued_sgd are left as they are. NO_ACTION is therefore PARTY-RELATIVE: on a rider-filed dispute it leaves a charge in place, and on a driver-filed dispute over a fee the platform has already reversed it leaves the rider refunded. It never means 'restore the charge'. DRIVER_COMPENSATION: the driver is owed money. ESCALATE: the case goes to a human reviewer, no monetary outcome issues, and the disputed amount is held rather than collected or refunded. ESCALATE is always TERMINAL and always REPLACES the ruling; a clause that adds something to a monetary ruling - POL-RD-06(c) driver-conduct review, POL-RD-09(4) billing integrity, POL-NS-05(ii) false-arrival record - produces a REFERRAL, not an escalation, and referrals never suppress the money. A ruling object carries: ruling (one of the five), amount_sgd (the refund to the filing party, null where none), driver_compensation_sgd (a platform-funded or fee-funded payment to the driver, null where none), referrals (an array of referral strings, empty where none), confidence, and the written explanation. Where a case produces both a rider refund and a driver payment - POL-NS-03(ii) pin-ambiguity goodwill is the standard instance - both fields are populated, the two are INDEPENDENT and are never netted against each other, and the ruling value names the outcome for the FILING party. ONE EXCEPTION, and it is the only one: where the ruling is DRIVER_COMPENSATION, amount_sgd carries the SAME figure as driver_compensation_sgd. It is the amount of money the ruling moves, not a second payment and not a refund to the filing party - on such a ruling the filing party's own charge stands, which POL-NS-07 states as 'the ruling on the fee is NO_ACTION'. The ruling VALUE is DRIVER_COMPENSATION because that is the outcome the case produces. Aggregate reporting must avoid double-counting driver payments: sum amount_sgd as a filing-party refund only across FULL_REFUND and PARTIAL_REFUND rulings.",
+      "requires": [],
+      "licenses": [
+        "FULL_REFUND",
+        "PARTIAL_REFUND",
+        "NO_ACTION",
+        "DRIVER_COMPENSATION",
+        "ESCALATE"
+      ],
+      "favours": "NEUTRAL",
+      "notes": "This clause resolves three general ambiguities: NO_ACTION is party-relative, ESCALATE replaces a monetary ruling while REFERRAL does not, and compound outcomes keep filing-party refunds separate from driver compensation."
+    }
+  ]
+}
