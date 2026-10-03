@@ -365,17 +365,19 @@ A second sealed set was imported on 2026-10-03: 20 cases under
 **not** a third development set and **not** the held-out set. It was prepared by
 OpenAI Codex for the owner and imported from the archive whose sha256
 `docs/notes/2026-10-03-the-second-freeze.md` records; it is run **exactly once**
-from the commit tagged `freeze-2026-10-03`, and that single run is the
+from a commit whose `tribunal/`, `prompts/` and `policy/` trees equal those at
+`freeze-2026-10-03` — which need not be the tagged commit itself, and the run's
+own events record the commit it was made from. That single run is the
 submission's generalisation figure. Its registration fixes policy version 2.
 
 - **`data/external/wild-v2/` — agent-visible, answer-free.** Twenty case files,
   `case-00701.json` to `case-00720.json`, plus the set's own `index.json`. The
-  files are byte-identical to the ones the archive shipped and are answer-free
-  under the same contract as `data/cases/`: no expected ruling, no answer field
-  and no argument for either side. The index's only change on import is its
-  `file` field, which names the flat layout `wild-v1` uses. The index is **not**
-  `data/index.json` and is never merged into it. The set is loaded by number
-  through `tribunal.loader.load_external_set_case`.
+  twenty case files are byte-identical to the ones the archive shipped and are
+  answer-free under the same contract as `data/cases/`: no expected ruling, no
+  answer field and no argument for either side. `index.json` is not: it changed
+  in its `file` field only, which names the flat layout `wild-v1` uses. The index
+  is **not** `data/index.json` and is never merged into it. The set is loaded by
+  number through `tribunal.loader.load_external_set_case`.
 - **`eval/answers/wild-v2/ground_truth.json` — answer-bearing.** The set's own
   key, under the same boundary as the other three, for the same reason and with
   the same force. It is a fourth answer key and therefore a fourth way for an

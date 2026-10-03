@@ -503,10 +503,12 @@ def run_directory(runs_dir: Path, model: str) -> Path:
 # added without its run directory being a headline directory here.
 SECOND_SET_RUNS_SUBDIR = "codex"
 SEALED_SET_RUNS_SUBDIR = "wild"
-# The second sealed set, imported on 2026-10-03. It is run once too, from the
-# commit tagged ``freeze-2026-10-03``, and its single run is the submission's
-# generalisation figure; it is a different set from ``wild`` and is never added
-# to it, to the combined figure or to ``--set all``.
+# The second sealed set, imported on 2026-10-03. It is run once too, from a
+# commit whose ``tribunal/``, ``prompts/`` and ``policy/`` trees equal those at
+# the tag ``freeze-2026-10-03`` -- every event the run writes records the commit
+# it was made from -- and its single run is the submission's generalisation
+# figure; it is a different set from ``wild`` and is never added to it, to the
+# combined figure or to ``--set all``.
 WILD_V2_SET_RUNS_SUBDIR = "wild-v2"
 SET_RUNS_SUBDIRS: Tuple[str, ...] = (
     SECOND_SET_RUNS_SUBDIR,
@@ -680,9 +682,10 @@ def assert_not_under_the_held_out_root(
             else:
                 detail = (
                     "which holds the sealed set wild-v2's single run: the set is run "
-                    "once, plainly, from the commit tagged freeze-2026-10-03, and its "
-                    "single run is the submission's generalisation figure, so nothing "
-                    "else is created under it"
+                    "once, plainly, from a commit whose tribunal/, prompts/ and "
+                    "policy/ trees equal those at freeze-2026-10-03, and its single "
+                    "run is the submission's generalisation figure, so nothing else "
+                    "is created under it"
                 )
             raise BenchmarkError(
                 "{0} lies under {1}, {2}".format(resolved, root, detail)

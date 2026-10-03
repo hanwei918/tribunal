@@ -355,7 +355,7 @@ class SealedSetSwitchGuardTests(unittest.TestCase):
             code, _, err = _run_cli(["--set", "wild", "--force", "--runs-dir", str(runs)])
 
             self.assertEqual(1, code, "a held-out run accepted --force")
-            self.assertIn("held-out set", err)
+            self.assertIn("the sealed set {0} is run once".format(SEALED.name), err)
             self.assertIn("--force", err)
             self.assertEqual(before, sentinel.read_bytes(), "the held-out result was rewritten")
             self.assertEqual(
@@ -377,7 +377,7 @@ class SealedSetSwitchGuardTests(unittest.TestCase):
                         ["--set", "wild", flag, value, "--runs-dir", str(runs)]
                     )
                     self.assertEqual(1, code, "{0} was accepted for the held-out set".format(flag))
-                    self.assertIn("held-out set", err)
+                    self.assertIn("the sealed set {0} is run once".format(SEALED.name), err)
                     self.assertIn(flag, err)
                     self.assertEqual(
                         before, sentinel.read_bytes(), "{0} rewrote the held-out result".format(flag)
@@ -395,7 +395,7 @@ class SealedSetSwitchGuardTests(unittest.TestCase):
             with self.subTest(switch=switch):
                 with self.assertRaises(run_benchmark.BenchmarkError) as caught:
                     sets.assert_not_sealed(SEALED, switch)
-                self.assertIn("held-out set", str(caught.exception))
+                self.assertIn("the sealed set {0} is run once".format(SEALED.name), str(caught.exception))
                 self.assertIn(switch, str(caught.exception))
 
 

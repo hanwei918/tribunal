@@ -3,8 +3,9 @@
 ``wild-v2`` is 20 cases under ``data/external/wild-v2/``, keyed by
 ``eval/answers/wild-v2/ground_truth.json``. Like the held-out set it is **not**
 a third development set: it was prepared by OpenAI Codex for the owner, it is
-run exactly once from the commit tagged ``freeze-2026-10-03``, and that single
-run is the submission's generalisation figure. Its registration fixes policy
+run exactly once from a commit whose ``tribunal/``, ``prompts/`` and ``policy/``
+trees equal those at ``freeze-2026-10-03``, and that single run is the
+submission's generalisation figure. Its registration fixes policy
 version 2 -- ``POL-RD-13`` and the ``POL-RD-11`` upfront remedy are what the
 submission now stands behind -- so it is run at version 2 with no flag, and
 ``--policy-version`` is refused for it.
@@ -413,7 +414,7 @@ class WildV2SwitchGuardTests(unittest.TestCase):
             )
 
             self.assertEqual(1, code, "a sealed run accepted --force")
-            self.assertIn("held-out set", err)
+            self.assertIn("the sealed set {0} is run once".format(WILD_V2.name), err)
             self.assertIn("--force", err)
             self.assertEqual(before, sentinel.read_bytes(), "the sealed result was rewritten")
             self.assertEqual(
@@ -430,7 +431,7 @@ class WildV2SwitchGuardTests(unittest.TestCase):
                         ["--set", "wild-v2", flag, str(run_dir), "--runs-dir", str(runs)]
                     )
                     self.assertEqual(1, code, "{0} was accepted for the sealed set".format(flag))
-                    self.assertIn("held-out set", err)
+                    self.assertIn("the sealed set {0} is run once".format(WILD_V2.name), err)
                     self.assertIn(flag, err)
                     self.assertEqual(
                         before, sentinel.read_bytes(), "{0} rewrote the sealed result".format(flag)
@@ -516,7 +517,10 @@ class WildV2SwitchGuardTests(unittest.TestCase):
                 with self.subTest(development_set=development_set.name, switch=switch):
                     with self.assertRaises(run_benchmark.BenchmarkError) as caught:
                         sets.assert_not_sealed(development_set, switch)
-                    self.assertIn("held-out set", str(caught.exception))
+                    self.assertIn(
+                        "the sealed set {0} is run once".format(development_set.name),
+                        str(caught.exception),
+                    )
                     self.assertIn(switch, str(caught.exception))
 
 

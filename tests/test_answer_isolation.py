@@ -75,9 +75,10 @@ The second sealed set
 There is a fourth answer key, ``eval/answers/wild-v2/ground_truth.json``, for
 the 20 cases under ``data/external/wild-v2/``. It is a sealed set on the
 held-out set's terms and not the held-out set: it was prepared by OpenAI Codex
-for the owner and imported on 2026-10-03, it is run exactly once from the commit
-tagged ``freeze-2026-10-03``, and its single run is the submission's
-generalisation figure at the policy version 2 its registration fixes. It is
+for the owner and imported on 2026-10-03, it is run exactly once from a commit
+whose ``tribunal/``, ``prompts/`` and ``policy/`` trees equal those at
+``freeze-2026-10-03``, and its single run is the submission's generalisation
+figure at the policy version 2 its registration fixes. It is
 covered by the same three layers for the held-out set's reason -- this is a key
 whose run a headline claim rests on -- and its answer-bearing material sits under
 ``eval/external/wild-v2/``, which is named in the tests rather than left to Layer
@@ -283,7 +284,8 @@ def _sealed_set_case(case_no):
 
 # The second sealed set, and its own key. It is a sealed set on the held-out
 # set's terms -- prepared without access to this repository, run exactly once
-# from the commit tagged ``freeze-2026-10-03``, and that single run is the
+# from a commit whose ``tribunal/``, ``prompts/`` and ``policy/`` trees equal
+# those at ``freeze-2026-10-03``, and that single run is the
 # submission's generalisation figure -- and it is a different set, with its own
 # case range, its own key and its own answer-bearing directory. Its key is a
 # fourth way for an answer to reach a brief, so it is guarded by the same layers

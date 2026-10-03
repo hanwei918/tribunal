@@ -243,12 +243,14 @@ WILD_DEV = DevelopmentSet(
 
 DEVELOPMENT_SETS: Tuple[DevelopmentSet, ...] = (CORPUS, SECOND_SET)
 
-# The second sealed set, imported on 2026-10-03 and run once from the commit
-# tagged ``freeze-2026-10-03``. It is the same kind of thing as the held-out
-# set -- drafted without access to this repository, keyed by its own file, run
-# once, and reported on its own -- and it is **not** the held-out set: 20 cases
-# over a range of its own, and its single run is never added to ``wild``'s, to
-# the combined figure or to ``--set all``.
+# The second sealed set, imported on 2026-10-03 and run once from a commit whose
+# ``tribunal/``, ``prompts/`` and ``policy/`` trees equal those at the tag
+# ``freeze-2026-10-03`` -- which need not be the tagged commit itself, and every
+# event the run writes records the commit it was made from. It is the same kind
+# of thing as the held-out set -- drafted without access to this repository,
+# keyed by its own file, run once, and reported on its own -- and it is **not**
+# the held-out set: 20 cases over a range of its own, and its single run is never
+# added to ``wild``'s, to the combined figure or to ``--set all``.
 #
 # Its registration fixes policy version 2, which the held-out set's did not:
 # ``POL-RD-13`` was approved through the policy-gap loop and the ``POL-RD-11``
@@ -271,9 +273,10 @@ WILD_V2 = DevelopmentSet(
     summary=(
         "the second sealed set (wild-v2): 20 cases prepared by OpenAI Codex for "
         "the owner and imported on 2026-10-03; nobody who changed the system has "
-        "seen them, they are run once from the commit tagged freeze-2026-10-03, "
-        "at the policy version 2 this registration fixes, and that single run is "
-        "the submission's generalisation figure"
+        "seen them, they are run once from a commit whose tribunal/, prompts/ "
+        "and policy/ trees equal those at freeze-2026-10-03, at the policy "
+        "version 2 this registration fixes, and that single run is the "
+        "submission's generalisation figure"
     ),
     sealed=True,
     policy_version=2,
@@ -342,8 +345,9 @@ DEVELOPMENT_DATA_CAVEAT = (
     "number. The generalisation figures the submission reports belong to the "
     "two sealed sets, each drafted without access to this repository and each "
     "run exactly once: the held-out set's, from the commit tagged "
-    "freeze-2026-09-30, and the second sealed set's, from the commit tagged "
-    "freeze-2026-10-03. Neither figure here is either of them, and the two are "
+    "freeze-2026-09-30, and the second sealed set's, from a commit whose "
+    "tribunal/, prompts/ and policy/ trees equal those at freeze-2026-10-03. "
+    "Neither figure here is either of them, and the two are "
     "never added to each other either."
 )
 
@@ -369,8 +373,10 @@ WILD_V2_CAVEAT = (
     "The second sealed set is not a development set and is never added to the "
     "combined figure above or to the held-out set's figure. It was prepared by "
     "OpenAI Codex for the owner and imported on 2026-10-03; it is run exactly "
-    "once from the commit tagged freeze-2026-10-03, at the policy version 2 its "
-    "registration fixes, and that single run is the submission's generalisation "
+    "once from a commit whose tribunal/, prompts/ and policy/ trees equal those "
+    "at freeze-2026-10-03 -- every event the run writes records the commit it "
+    "was made from -- at the policy version 2 its registration fixes, and that "
+    "single run is the submission's generalisation "
     "figure. It is absent from data/index.json and is graded against "
     "eval/answers/wild-v2/ground_truth.json, which is neither development key "
     "and not the held-out set's key either."
@@ -435,20 +441,22 @@ def assert_set_run_directory(
 
 
 def assert_not_sealed(development_set: DevelopmentSet, switch: str) -> None:
-    """Refuse a switch that would replace or re-take the held-out set's single run.
+    """Refuse a switch that would replace or re-take a sealed set's single run.
 
-    The held-out set is run once from the frozen commit and that run is the only
-    generalisation figure the submission reports. A switch that overwrote a
-    case's result, or that produced one from a run already recorded, would make
-    the figure a different measurement from the one the freeze names. It is
-    refused by name rather than left to convention, and it is refused for this
-    set and for no other.
+    A sealed set is run once from the frozen trees and that run must not be
+    replaced. A switch that overwrote a case's result, or that produced one from
+    a run already recorded, would make the figure a different measurement from
+    the one the freeze names. It is refused **by the set's own name** rather than
+    left to convention: the message used to say "the held-out set" whichever set
+    it refused, which is not true of the second sealed set, and it used to call
+    the run "the only generalisation figure the submission reports", which is
+    true of neither set now that there are two. It is refused for the named set
+    and for no other.
     """
     if development_set.sealed:
         raise run_benchmark.BenchmarkError(
-            "the held-out set is run once, so {0} is refused for it: its single "
-            "run is the only generalisation figure the submission reports and "
-            "must not be replaced".format(switch)
+            "the sealed set {0} is run once, so {1} is refused for it: its "
+            "single run must not be replaced".format(development_set.name, switch)
         )
 
 
@@ -1069,8 +1077,9 @@ def render_development_sets(model: str, runs_dir: Path = RUNS_DIR) -> str:
     were drafted differently and share one template; it is not a generalisation
     figure and it does not replace the corpus number. The generalisation figures
     belong to the two sealed sets -- the held-out set, run once from the commit
-    tagged ``freeze-2026-09-30``, and the second sealed set, run once from the
-    commit tagged ``freeze-2026-10-03`` -- and each is therefore printed in a
+    tagged ``freeze-2026-09-30``, and the second sealed set, run once from a
+    commit whose ``tribunal/``, ``prompts/`` and ``policy/`` trees equal those at
+    ``freeze-2026-10-03`` -- and each is therefore printed in a
     section of its own, never as a third row of the table above, never inside the
     combined line and never added to the other. The re-runnable set is printed in
     a section of its own too, because it holds the held-out set's own cases read
@@ -1196,8 +1205,9 @@ def _build_parser() -> argparse.ArgumentParser:
             "likewise never part of --set all and never part of the combined "
             "figure. The second sealed set, wild-v2 -- the 20 cases under "
             "data/external/wild-v2/ -- is registered here too and is run once "
-            "from the commit tagged freeze-2026-10-03, at the policy version 2 "
-            "its registration fixes and with no --policy-version flag; it is "
+            "from a commit whose tribunal/, prompts/ and policy/ trees equal "
+            "those at freeze-2026-10-03, at the policy version 2 its "
+            "registration fixes and with no --policy-version flag; it is "
             "never part of --set all and never part of the combined figure."
         ),
     )

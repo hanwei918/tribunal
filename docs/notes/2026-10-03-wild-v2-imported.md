@@ -168,7 +168,11 @@ rather than changed. Neither alters a case, a ruling or an answer.
     and for each one its four graded fields and its `difficulty` — 100
     comparisons — all equal, and the new file's records all carry all four graded
     fields and a difficulty. No value was printed at any point. The comparison
-    was made before the commit and is what the commit's message reports.
+    was made before the commit; **the commit's message does not report it**. That
+    message states what the commit did and not what was measured against it —
+    *"Rewrap wild-v2's key into the array shape the grader reads, keeping every
+    record's four graded fields and its difficulty unchanged"* — so this note is
+    where the measurement is recorded.
 
 The other 43 imported files are byte-for-byte the archive's, checked by hashing
 both sides.
@@ -343,29 +347,75 @@ says the two are never added to each other either. The change is text only and n
 test pinned the old wording; the tests that read this text assert on the
 `held-out set` phrase, which is still there.
 
-`tribunal/precedents.py` gained `SET_WILD_V2` in `EXTERNAL_SET_DIRS`, which is
-what lets `set_from_run_directory` read a `runs/wild-v2/<model>/` path as this
-set. It is a package module and names no path under `eval/`.
+`tribunal/precedents.py` was first changed to gain `SET_WILD_V2` in
+`EXTERNAL_SET_DIRS`, which is what would let `set_from_run_directory` read a
+`runs/wild-v2/<model>/` path as this set. **That change broke the freeze gate and
+has been taken back out**; see *The gate this import broke* below. The plain
+sealed run never reads that table, and its only readers on the run path are
+behind `--precedents`, which this set refuses.
 
-## The guards, each seen to fail first
+## The gate this import broke
 
-Every guard `wild` has, this set has, and each was asked to fire **before** it
-was shown to hold.
+The freeze note's own check is
+`git diff --quiet freeze-2026-10-03 -- tribunal prompts policy`. It exits `0` at
+the tag, and it is the condition the sealed run is made under — so it is also the
+sense in which this note's "run once from the commit tagged
+`freeze-2026-10-03`" should be read: the run is made from a commit whose
+`tribunal/`, `prompts/` and `policy/` trees equal those at the tag, which need
+not be the tagged commit itself. Every event a run writes carries the commit it
+was made from, so the run's own record answers which one that was.
+
+`f4de316`, the commit that imported this set, put `SET_WILD_V2` into
+`tribunal/precedents.py` — a package module, and so inside the frozen tree —
+because two loops in `tests/test_precedents.py` had been widened to
+`SEALED_SETS`. The gate therefore **exited 1 from `f4de316` onwards**, which the
+session that made it did not notice: the tree the sealed run is meant to be made
+from had been changed after the freeze, and nothing said so.
+
+`310b72a` restored it. `tribunal/precedents.py` is byte for byte the tag's file
+again, and the two loops skip the sets named in `NOT_YET_IN_PRECEDENTS`
+(`{"wild-v2"}`) instead. The check prints `0` again, measured after that commit:
+
+    $ git diff --quiet freeze-2026-10-03 -- tribunal prompts policy; echo $?
+    0
+
+    $ git log --oneline freeze-2026-10-03..HEAD -- tribunal prompts policy
+    310b72a Sealed-run readiness: A — restore the freeze gate and refuse the un-run sealed set in the policy-gap loop
+    f4de316 Register wild-v2 as a second sealed set at policy version 2, and give it every guard the held-out set has
+
+Those two commits are the whole history of the frozen trees since the tag, and
+the first is the repair of the second. Recorded rather than tidied away: a
+package module is inside the frozen tree whatever its reason for changing, and
+the gate has to be run after the commit and not only at the tag.
+
+## The guards, and how each was seen to fail
+
+Every guard `wild` has, this set has. **Not every one of them was asked to fire
+before it was shown to hold**, and the section below says which was.
 
 **The four switches that would replace or re-take the single run.**
 `assert_not_sealed` refuses `--force` for any set marked `sealed`, and `--force`
 is refused inside `run_set`; `--replay-advocates`, `--replay-check` and
 `--verify-recorded-drafts` are refused while the command line is read, in both
 CLIs, because every one of those produces a result from a run already recorded.
-The test that covers them first builds a runs root that already holds a
-`runs/wild-v2/<model>/` result, shows the refusal firing and the result still
-there afterwards, and only then shows the clean case passing.
+Each refusal is shown on a runs root that already holds a
+`runs/wild-v2/<model>/` result, and the fixture is compared **byte for byte**
+afterwards, so a refusal that quietly wrote something is caught rather than
+assumed away. These tests do **not** then show "the clean case passing". What is
+shown is that the guard is silent for every other set —
+`assert_not_sealed(development_set, "--force")` returns `None` for the two
+development sets and for `wild-dev` — and that the *plain* run of this set is
+still accepted, which is
+`test_the_plain_sealed_run_of_this_set_is_still_accepted` and is about the run
+rather than about a switch.
 
-**The three switches that change what the agents are given.** `--ablate`,
-`--precedents` and `--amount-rule` are each refused for this set, and
-`--policy-version` with them. A test asserts the refusal is for **this** set by
-running the same four switches against the development sets and finding them
-accepted, so the guard is a property of the set and not of the switch.
+**The switches that change what the agents are given.** `--ablate`,
+`--precedents`, `--amount-rule` and `--policy-version` are each refused for this
+set. There is **no** test that runs four switches against a development set and
+finds them accepted; the guard's being a property of the set rather than of the
+switch is asserted over `--force` alone, by
+`test_the_refusal_is_for_this_set_and_not_for_the_others`, which loops the two
+development sets and `wild-dev`.
 
 **The component-wise path guard.** `assert_not_under_the_held_out_root` now
 walks both sealed roots. The held-out set's root is closed outright. The new
@@ -374,9 +424,10 @@ directory, one component below the root — and refuses everything deeper. The
 permit is offered **only on the plain branch** of `run_benchmark`'s destination
 chain, so a switched destination can never claim it.
 
-**Each of those was asked to fire on the code as it stood, before the change.**
-The committed tree at `4d0fcb9` was unpacked into a scratch directory, the same
-questions were put to it, and the difference is the point:
+**The path guard and the headline directories were asked to fire on the code as
+it stood, before the change. The rest were not.** The committed tree at
+`4d0fcb9` was unpacked into a scratch directory, the same questions were put to
+it, and the difference is the point:
 
 | question | before the change | after |
 |---|---|---|
@@ -395,6 +446,13 @@ those destinations were accepted**, because there was no root to guard them. The
 guards are the difference, and the new test module cannot even be imported
 against the old tree — `eval.development_sets` has no `WILD_V2` — which is the
 same fact stated at the other end.
+
+**How the rest were shown red.** The switch refusals, the registration's fixing
+the policy version, the frozen run arguments and the sealed retry protocol were
+written with their tests and shown red in other ways — on a dirty fixture, or
+with the guard removed — and not against `4d0fcb9`. "Every guard was seen
+failing first" was true of the path guard and the headline directories and of
+nothing else; the sentence that said it was wrong.
 
 **One thing the bare call does and the run does not.** Asked with no permit, the
 guard refuses `runs/wild-v2/<model>/` too, as the table shows. That is correct:
