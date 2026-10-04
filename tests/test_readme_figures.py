@@ -31,7 +31,13 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from eval import baselines, development_sets, grade, run_benchmark  # noqa: E402
+from eval import (  # noqa: E402
+    baselines,
+    development_sets,
+    grade,
+    run_benchmark,
+    sealed_report,
+)
 
 README = PROJECT_ROOT / "README.md"
 MODEL = run_benchmark.resolve_model(None)
@@ -187,8 +193,31 @@ def graded(development_set: development_sets.DevelopmentSet, run_dir: Path) -> g
     )
 
 
-def sealed_figures() -> grade.GradeReport:
-    return graded(development_sets.named("wild"), development_sets.named("wild").run_dir(MODEL))
+def sealed_figures(name: str) -> grade.GradeReport:
+    """One sealed set's committed run, graded against its own frozen key."""
+    development_set = development_sets.named(name)
+    return graded(development_set, development_set.run_dir(MODEL))
+
+
+def sealed_categories(name: str) -> Dict[int, str]:
+    """Each case's category, from the set's own ``index.json``.
+
+    Read through the sealed report's own helper, so a category figure in the
+    README is the one ``python3 -m eval.sealed_report --set <name>`` prints
+    rather than a second reading of the same index that could come to differ
+    from it.
+    """
+    return sealed_report._categories(development_sets.named(name))
+
+
+def category_four_field(
+    report: grade.GradeReport, categories: Mapping[int, str], name: str
+) -> Tuple[int, int]:
+    """Four-field exact over every case of one category, a miss counted as one."""
+    in_set = sorted(
+        case_no for case_no, category in categories.items() if category == name
+    )
+    return sealed_report._exact_among(report, in_set)
 
 
 def ablation_figures(name: str) -> Tuple[int, int]:
@@ -297,7 +326,9 @@ class ReadmeFigureTests(unittest.TestCase):
         cls.table = read_table(text)
         cls.model_call = read_model_call_column(text)
 
-        cls.sealed = sealed_figures()
+        cls.sealed = sealed_figures("wild")
+        cls.sealed_v2 = sealed_figures("wild-v2")
+        cls.sealed_v2_categories = sealed_categories("wild-v2")
         cls.corpus = graded(development_sets.named("corpus"), development_sets.named("corpus").run_dir(MODEL))
         cls.codex = graded(development_sets.named("codex"), development_sets.named("codex").run_dir(MODEL))
         cls.admissibility = ablation_figures("admissibility")
@@ -312,6 +343,8 @@ class ReadmeFigureTests(unittest.TestCase):
     def expected(self) -> Dict[str, str]:
         sealed = self.sealed
         calibration = sealed.calibration
+        second = self.sealed_v2
+        second_calibration = second.calibration
         return {
             "Held-out set (wild-v1) — four-field exact, of the cases that produced a ruling": fraction(
                 sealed.exact_matches, sealed.total
@@ -344,6 +377,49 @@ class ReadmeFigureTests(unittest.TestCase):
             "Held-out set (wild-v1) — cases that differ from the key": case_list(
                 sorted(score.case_no for score in sealed.failures)
             ),
+            "Second sealed set (wild-v2) — four-field exact, of the cases that produced a ruling": fraction(
+                second.exact_matches, second.total
+            ),
+            "Second sealed set (wild-v2) — four-field exact, over all 20 cases": fraction(
+                second.exact_matches, 20
+            ),
+            "Second sealed set (wild-v2) — ruling alone, of the cases that produced a ruling": fraction(
+                second.field_tally("ruling")[0], second.total
+            ),
+            "Second sealed set (wild-v2) — escalation precision": ratio(
+                len(
+                    set(second_calibration.produced_escalations)
+                    & set(second_calibration.expected_escalations)
+                ),
+                len(second_calibration.produced_escalations),
+            ),
+            "Second sealed set (wild-v2) — escalation recall": ratio(
+                len(
+                    set(second_calibration.produced_escalations)
+                    & set(second_calibration.expected_escalations)
+                ),
+                len(second_calibration.expected_escalations),
+            ),
+            "Second sealed set (wild-v2) — over-escalation": case_list(
+                second_calibration.over_escalations
+            ),
+            "Second sealed set (wild-v2) — under-escalation": case_list(
+                second_calibration.under_escalations
+            ),
+            "Second sealed set (wild-v2) — ROUTE_DEVIATION four-field exact": fraction(
+                *category_four_field(
+                    second, self.sealed_v2_categories, "ROUTE_DEVIATION"
+                )
+            ),
+            "Second sealed set (wild-v2) — NO_SHOW_CHARGE four-field exact": fraction(
+                *category_four_field(
+                    second, self.sealed_v2_categories, "NO_SHOW_CHARGE"
+                )
+            ),
+            "Second sealed set (wild-v2) — cases with no ruling": case_list(
+                cases_with_no_ruling(development_sets.named("wild-v2"), second)
+            )
+            or "none",
             "Corpus — four-field exact (development)": fraction(
                 self.corpus.exact_matches, self.corpus.total
             ),

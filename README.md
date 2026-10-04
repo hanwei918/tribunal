@@ -27,14 +27,18 @@ fee held** rather than collected or refunded.
 Read this table from the top. The first block is the submission's claim; every
 block below it is context that says what that claim is worth.
 
-The held-out set (`wild-v1`) is the only **generalisation** figure. It is 64 cases
-derived from real complaints, prepared by their author as a development set;
-nobody who changed the system opened them before the freeze tagged
-`freeze-2026-09-30`, and they were run once from that tag. The corpus and the
-second set are **development** data the system was built against, so a figure over
-them measures fit, not generalisation. No two of the three are ever summed — one
-figure over 64 cases plus another over 44 is not a measurement of 108 cases — and
-the held-out set is never produced by `--set all`.
+Two figures are **generalisation** figures, and each is its own. The held-out set
+(`wild-v1`) is 64 cases derived from real complaints, prepared by their author as
+a development set; nobody who changed the system opened them before the freeze
+tagged `freeze-2026-09-30`, and they were run once from that tag. The second
+sealed set (`wild-v2`) is 20 cases, run once on 2026-10-04 from a commit whose
+`tribunal/`, `prompts/` and `policy/` trees equal those at the freeze tagged
+`freeze-2026-10-03`. The corpus and the second set are **development** data the
+system was built against, so a figure over them measures fit, not generalisation.
+**The two sealed figures are never summed or pooled** — one figure over 64 cases
+plus another over 20 is not a measurement of 84 cases — and neither sealed set is
+ever produced by `--set all`. The second sealed set's run, its figures and its two
+misses are read in `docs/notes/2026-10-04-the-second-sealed-run.md`.
 
 | figure | value | read from | recompute with | model call |
 |---|---|---|---|---|
@@ -47,6 +51,16 @@ the held-out set is never produced by `--set all`.
 | Held-out set (`wild-v1`) — under-escalation | 627 | `runs/wild/deepseek-deepseek-flash/case-*.json`, `eval/answers/wild/ground_truth.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
 | Held-out set (`wild-v1`) — cases with no ruling | 517, 533 | `runs/wild/deepseek-deepseek-flash/run.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
 | Held-out set (`wild-v1`) — cases that differ from the key | 501, 504, 508, 523, 530, 622, 627 | `runs/wild/deepseek-deepseek-flash/case-*.json`, `eval/answers/wild/ground_truth.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
+| Second sealed set (`wild-v2`) — four-field exact, of the cases that produced a ruling | 18/20 = 90.0% | `runs/wild-v2/deepseek-deepseek-flash/case-*.json`, `eval/answers/wild-v2/ground_truth.json` | `python3 -m eval.sealed_report --set wild-v2` | no |
+| Second sealed set (`wild-v2`) — four-field exact, over all 20 cases | 18/20 = 90.0% | `runs/wild-v2/deepseek-deepseek-flash/`, `eval/answers/wild-v2/ground_truth.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
+| Second sealed set (`wild-v2`) — ruling alone, of the cases that produced a ruling | 18/20 = 90.0% | `runs/wild-v2/deepseek-deepseek-flash/case-*.json`, `eval/answers/wild-v2/ground_truth.json` | `python3 -m eval.sealed_report --set wild-v2` | no |
+| Second sealed set (`wild-v2`) — escalation precision | 4/5 = 0.8 | `runs/wild-v2/deepseek-deepseek-flash/case-*.json`, `eval/answers/wild-v2/ground_truth.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
+| Second sealed set (`wild-v2`) — escalation recall | 4/5 = 0.8 | `runs/wild-v2/deepseek-deepseek-flash/case-*.json`, `eval/answers/wild-v2/ground_truth.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
+| Second sealed set (`wild-v2`) — over-escalation | 702 | `runs/wild-v2/deepseek-deepseek-flash/case-*.json`, `eval/answers/wild-v2/ground_truth.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
+| Second sealed set (`wild-v2`) — under-escalation | 716 | `runs/wild-v2/deepseek-deepseek-flash/case-*.json`, `eval/answers/wild-v2/ground_truth.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
+| Second sealed set (`wild-v2`) — ROUTE_DEVIATION four-field exact | 10/12 = 83.3% | `runs/wild-v2/deepseek-deepseek-flash/`, `eval/answers/wild-v2/ground_truth.json`, `data/external/wild-v2/index.json` | `python3 -m eval.sealed_report --set wild-v2` | no |
+| Second sealed set (`wild-v2`) — NO_SHOW_CHARGE four-field exact | 8/8 = 100.0% | `runs/wild-v2/deepseek-deepseek-flash/`, `eval/answers/wild-v2/ground_truth.json`, `data/external/wild-v2/index.json` | `python3 -m eval.sealed_report --set wild-v2` | no |
+| Second sealed set (`wild-v2`) — cases with no ruling | none | `runs/wild-v2/deepseek-deepseek-flash/run.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
 | Corpus — four-field exact (development) | 29/29 = 100.0% | `runs/deepseek-deepseek-flash/`, `eval/answers/ground_truth.json` | `python3 -m eval.development_sets --report` | no |
 | Second set — four-field exact (development) | 14/15 = 93.3% | `runs/codex/deepseek-deepseek-flash/`, `eval/answers/codex/ground_truth.json` | `python3 -m eval.development_sets --report` | no |
 | Ablation — admissibility precheck removed, both sets | 40/44 = 90.9% | `runs/ablation/admissibility/`, `runs/codex/ablation/admissibility/` | `python3 -m unittest tests.test_readme_figures -v` | no |
@@ -61,6 +75,13 @@ the held-out set is never produced by `--set all`.
 | Verifier — the switch in every scored run | off, in all 7 | every scored run's `run.json` and `case-*.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
 | Sample case 901 — under the current pipeline | ESCALATE, confidence 0.6 | `runs/rerun-2026-09-29/external/ryde/case-00901.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
 | Sample case 901 — the organisers' stated expectation | Cancellation charge UPHELD | `eval/external/ryde/expected.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
+
+**Each sealed block is read from its own single run and its own freeze.** The
+`wild-v1` rows are read from the run of 2026-09-30, made from the commit tagged
+`freeze-2026-09-30`; the `wild-v2` rows are read from the run of 2026-10-04, made
+from a commit whose `tribunal/`, `prompts/` and `policy/` trees equal those at
+`freeze-2026-10-03`. No `wild-v2` figure is added to a `wild-v1` figure or to any
+development figure.
 
 **Every command above is read-only and makes no model call.** The two module
 commands are `python3 -m eval.development_sets --report`, which prints each set's
@@ -83,14 +104,16 @@ produced. The commands that made them, and which of them were paid for, are:
 | run | command | when |
 |---|---|---|
 | held-out set (`wild-v1`) | `python3 -m eval.development_sets --set wild --concurrency 2 --timeout 900` | once, 2026-09-30, from the commit tagged `freeze-2026-09-30` |
+| second sealed set (`wild-v2`) | `TRIBUNAL_SEALED_RUN=wild-v2 python3 -m eval.development_sets --set wild-v2 --concurrency 2 --timeout 900` | once, 2026-10-04, from a commit whose `tribunal/`, `prompts/` and `policy/` trees equal those at `freeze-2026-10-03` |
 | development sets | `python3 -m eval.run_benchmark`, `python3 -m eval.development_sets --set codex` | 2026-09-22 to 2026-09-24 |
 | ablations | the same two with `--ablate admissibility` or `--ablate clause-notes` | 2026-09-29 |
 | sample case | `python3 -m eval.run_benchmark --external data/external/ryde/case-00901.json --runs-dir runs/rerun-2026-09-29 --timeout 900` | 2026-09-29 |
 
 ## What went wrong on the held-out set
 
-The held-out run is the submission's only generalisation figure and it is reported
-as it came out, misses included. Three things are worth a reader's attention.
+The held-out run is one of the submission's two generalisation figures and it is
+reported as it came out, misses included. Three things are worth a reader's
+attention.
 
 **One miss pays money the policy does not authorise.** Case 523 is the dangerous
 one: the key is `NO_ACTION`, and the run refunded 4.00 as a standalone
