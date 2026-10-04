@@ -314,21 +314,34 @@ def assert_not_an_external_run_directory(run_dir: Path, runs_dir: Path) -> Path:
     return resolved
 
 
-def assert_not_an_unrun_sealed_run_directory(run_dir: Path) -> Path:
-    """Refuse a run directory under a sealed set's root that has not been run.
+# The sealed roots whose run directory this loop does not read. ``wild`` is not
+# one of them: its 64 cases have been development data since 2026-10-01, so a
+# source under ``runs/wild/`` is re-run as ``wild-dev`` and the loop does read
+# it. The second sealed set has no such twin -- its cases are not development
+# data and are never re-run -- so a run directory under its root is refused.
+SEALED_ROOTS_THE_LOOP_DOES_NOT_READ: Tuple[str, ...] = (
+    run_benchmark.WILD_V2_SET_RUNS_SUBDIR,
+)
 
-    ``runs/wild-v2/`` holds the second sealed set's single run, and that run has
-    not been made. The set is deliberately absent from
-    ``tribunal.precedents.EXTERNAL_SET_DIRS`` until the run is committed, so a
-    run directory under that root reads as the corpus -- and the report would
-    then say "nothing could be analysed", which is a statement about this loop
-    rather than about the set. So the loop refuses the directory by name.
+
+def assert_not_a_sealed_record_the_loop_does_not_read(run_dir: Path) -> Path:
+    """Refuse a run directory of a sealed set this loop does not read.
+
+    ``runs/wild-v2/`` holds the second sealed set's single run. That run has
+    been made -- once, on 2026-10-04 -- and committed exactly as it was
+    produced, so what the loop has in front of it is a sealed **record**. The
+    set is deliberately absent from ``tribunal.precedents.EXTERNAL_SET_DIRS``,
+    because it is a held-out record and not development data, so a run directory
+    under that root reads as the corpus -- and the report would then say
+    "nothing could be analysed", which is a statement about this loop rather
+    than about the set. So the loop refuses the directory by name.
 
     The test is **component by component**: the component after the last
-    ``runs`` segment must be one of :data:`run_benchmark.UNRUN_SEALED_RUNS_SUBDIRS`.
-    That catches ``runs/wild-v2/<model>/`` and nothing else -- ``runs/wild-dev/``
-    is a different component and is not caught, and neither is a sibling whose
-    name merely starts the same way.
+    ``runs`` segment must be one of
+    :data:`SEALED_ROOTS_THE_LOOP_DOES_NOT_READ`. That catches
+    ``runs/wild-v2/<model>/`` and nothing else -- ``runs/wild-dev/`` is a
+    different component and is not caught, and neither is a sibling whose name
+    merely starts the same way.
     """
     resolved = Path(run_dir).resolve()
     parts = resolved.parts
@@ -338,12 +351,11 @@ def assert_not_an_unrun_sealed_run_directory(run_dir: Path) -> Path:
     if not indices:
         return resolved
     following = indices[-1] + 1
-    if following < len(parts) and parts[following] in run_benchmark.UNRUN_SEALED_RUNS_SUBDIRS:
+    if following < len(parts) and parts[following] in SEALED_ROOTS_THE_LOOP_DOES_NOT_READ:
         raise PolicyGapError(
-            "{0} is a run directory of the sealed set {1}, which is sealed and "
-            "has not been run yet; the policy-gap loop does not read it".format(
-                resolved, parts[following]
-            )
+            "{0} is a run directory of the sealed set {1}. That set has been "
+            "run: it is a sealed record, made once, and the policy-gap loop "
+            "does not read it".format(resolved, parts[following])
         )
     return resolved
 
@@ -956,11 +968,11 @@ def build_report(
     _refuse_both_wild_sets(
         (_set_of_run_directory(run_dir) for run_dir in run_dirs), command="report"
     )
-    # Before any case is loaded: the sealed set that has not been run yet is
-    # refused by name, so the report cannot read its un-run directory as the
-    # corpus and call that "nothing could be analysed".
+    # Before any case is loaded: a sealed set this loop does not read is refused
+    # by name, so the report cannot read its sealed record as the corpus and call
+    # that "nothing could be analysed".
     for run_dir in run_dirs:
-        assert_not_an_unrun_sealed_run_directory(run_dir)
+        assert_not_a_sealed_record_the_loop_does_not_read(run_dir)
     runs = tuple(read_run(Path(run_dir), prompts_dir=prompts_dir) for run_dir in run_dirs)
 
     combined: Dict[int, Tuple[str, ...]] = {}
@@ -1890,7 +1902,7 @@ def plan_rerun(
     keeps both names, so a reader can tell which set a source was read as from
     which set it will be run as.
 
-    A run directory of the sealed set that has not been run is refused **before
+    A run directory of a sealed set this loop does not read is refused **before
     the amendment is read**, the way :func:`build_report` refuses it: the
     refusal is about the directory the caller named, so it must not depend on
     the amendment file being loadable.
@@ -1898,10 +1910,10 @@ def plan_rerun(
     _refuse_both_wild_sets(
         (_set_of_run_directory(run_dir) for run_dir in run_dirs), command="rerun"
     )
-    # Before the amendment: its root holds a single run that does not exist yet,
-    # and reading it as the corpus would plan a rerun of nothing.
+    # Before the amendment: the set's root holds a sealed record this loop does
+    # not read, and reading it as the corpus would plan a rerun of nothing.
     for run_dir in run_dirs:
-        assert_not_an_unrun_sealed_run_directory(run_dir)
+        assert_not_a_sealed_record_the_loop_does_not_read(run_dir)
     amendment = load_amendment_file(number, amendments_root)
     clause = amendment.get("clause") or {}
     category = clause.get("category")
@@ -2244,18 +2256,18 @@ def build_diff(
         command="diff",
     )
     # Before any case is loaded: a source or a destination that is a run
-    # directory of the sealed set that has not been run is refused by name, so a
+    # directory of a sealed set this loop does not read is refused by name, so a
     # hand-made record cannot make this command read a directory the loop is not
     # allowed to read.
     for item in record.get("sources") or ():
         if isinstance(item, Mapping) and item.get("run_dir"):
-            assert_not_an_unrun_sealed_run_directory(Path(item["run_dir"]))
+            assert_not_a_sealed_record_the_loop_does_not_read(Path(item["run_dir"]))
     for item in record.get("cases") or ():
         if not isinstance(item, Mapping):
             continue
         for key in ("source_dir", "destination"):
             if item.get(key):
-                assert_not_an_unrun_sealed_run_directory(Path(item[key]))
+                assert_not_a_sealed_record_the_loop_does_not_read(Path(item[key]))
 
     keys: Dict[str, Mapping[int, grade.Ruling]] = {}
     cases: List[Dict[str, Any]] = []

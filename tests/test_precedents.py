@@ -1094,11 +1094,17 @@ class PipelinePrecedentsTests(unittest.TestCase):
 # Where a run with the switch on writes
 # --------------------------------------------------------------------------
 # The set that is registered in ``eval.development_sets`` but deliberately
-# **not** named in ``tribunal.precedents.EXTERNAL_SET_DIRS``: ``wild-v2`` stays
-# out of that table until its sealed run is committed, because ``tribunal/`` is
-# frozen at ``freeze-2026-10-03`` and the plain sealed run never reads the table.
-# Its only readers on the run path are behind ``--precedents``, which the set
-# refuses, so naming it here would breach the freeze for no run.
+# **not** named in ``tribunal.precedents.EXTERNAL_SET_DIRS``: ``wild-v2``.
+#
+# The name says "not yet" because the table it is missing from is inside the
+# frozen ``tribunal/`` tree, and a set is not added to it by an edit that would
+# breach ``freeze-2026-10-03``. The reason it stays out is **not** that its run
+# is pending: the run has been made, once, on 2026-10-04, and committed exactly
+# as produced. It stays out because it is a held-out **record** and not
+# development data -- its cases are never re-run and never briefed, so a
+# precedents block that read them would be reading a held-out case. Its only
+# readers on the run path are behind ``--precedents``, which the set refuses, so
+# naming it here would breach the freeze for no run at all.
 NOT_YET_IN_PRECEDENTS = frozenset({"wild-v2"})
 
 
@@ -1123,8 +1129,9 @@ class SetFromRunDirectoryTests(unittest.TestCase):
                 continue
             if development_set.name in NOT_YET_IN_PRECEDENTS:
                 # A set registered in ``eval/`` and deliberately absent from
-                # ``tribunal.precedents.EXTERNAL_SET_DIRS`` until its sealed run
-                # is committed. Asserted by the test below rather than here.
+                # ``tribunal.precedents.EXTERNAL_SET_DIRS`` because it is a
+                # held-out record and not development data. Asserted by the test
+                # below rather than here.
                 continue
             with self.subTest(development_set=development_set.name):
                 run_dir = Path("/tmp/runs") / development_set.runs_subdir / "a-model"
@@ -1148,18 +1155,25 @@ class SetFromRunDirectoryTests(unittest.TestCase):
                     loader.EXTERNAL_DIR / precedents.EXTERNAL_SET_DIRS[development_set.name],
                 )
 
-    def test_wild_v2_is_deliberately_absent_until_its_sealed_run_is_committed(self):
-        """``wild-v2`` is registered in ``eval/`` but not yet named in ``tribunal/``.
+    def test_wild_v2_is_deliberately_absent_as_a_held_out_record(self):
+        """``wild-v2`` is registered in ``eval/`` but not named in ``tribunal/``.
 
         Three things, so that neither a stray entry nor a stray removal can pass:
 
         1. the name is not in the frozen table at all;
         2. the registered set names, less the table's keys and less ``corpus``,
            are exactly the names deliberately held back -- so any other drift
-           still goes red, and this goes red when the entry comes back after the
-           run;
+           still goes red, and this stays red now that the run is committed,
+           because the reason for holding the set back is not the run;
         3. a run directory shaped like the set's own reads as the corpus, which
-           is what the frozen table gives it until the run is committed.
+           is what the frozen table gives it -- and it keeps reading as the
+           corpus now that the directory holds a committed run, because the table
+           is inside the frozen tree and this is what a run directory outside it
+           is given.
+
+        The set's run has been made and committed, and the entry is still not
+        added: it is a held-out record and not development data, so a precedents
+        block that read its cases would be reading a held-out case.
         """
         self.assertFalse("wild-v2" in precedents.EXTERNAL_SET_DIRS)
         registered = set(development_sets.BY_NAME)

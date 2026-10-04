@@ -1147,27 +1147,28 @@ class ReportDestinationTests(unittest.TestCase):
             self.assertIn("headline run directory", stderr.getvalue())
             self.assertFalse((destination / gaps.REPORT_FILE).exists())
 
-    def test_an_unrun_sealed_run_directory_is_refused_as_a_source(self):
-        """The sealed set that has not been run is refused by name, component-wise.
+    def test_a_sealed_record_the_loop_does_not_read_is_refused_as_a_source(self):
+        """The sealed set this loop does not read is refused by name, component-wise.
 
-        ``runs/wild-v2/<model>/`` is a run directory of the second sealed set,
-        which has not been run. The loop refuses it before reading anything,
-        because with the set absent from the frozen ``tribunal`` table a run
-        directory under that root reads as the corpus and the report would say
-        "nothing could be analysed". The two look-alikes are not caught:
-        ``runs/wild-v2x/`` is a different component, and ``runs/wild-dev/`` is
-        the re-runnable twin of the held-out set.
+        ``runs/wild-v2/<model>/`` is a run directory of the second sealed set.
+        That set has been run -- once, on 2026-10-04 -- and its run is a sealed
+        record. The loop refuses it before reading anything, because with the set
+        absent from the frozen ``tribunal`` table a run directory under that root
+        reads as the corpus and the report would say "nothing could be analysed".
+        The two look-alikes are not caught: ``runs/wild-v2x/`` is a different
+        component, and ``runs/wild-dev/`` is the re-runnable twin of the held-out
+        set.
         """
         with tempfile.TemporaryDirectory() as tmp:
             runs_dir = Path(tmp) / "runs"
             sealed = runs_dir / runner.WILD_V2_SET_RUNS_SUBDIR / runner.model_slug(MODEL)
             sealed.mkdir(parents=True)
             with self.assertRaises(gaps.PolicyGapError):
-                gaps.assert_not_an_unrun_sealed_run_directory(sealed)
+                gaps.assert_not_a_sealed_record_the_loop_does_not_read(sealed)
             # The component after the last ``runs`` is what is compared, so a
             # directory deeper under the same set is refused too.
             with self.assertRaises(gaps.PolicyGapError):
-                gaps.assert_not_an_unrun_sealed_run_directory(sealed / "nested")
+                gaps.assert_not_a_sealed_record_the_loop_does_not_read(sealed / "nested")
             for lookalike in (
                 runs_dir / (runner.WILD_V2_SET_RUNS_SUBDIR + "x") / runner.model_slug(MODEL),
                 runs_dir / runner.WILD_DEV_RUNS_SUBDIR / runner.model_slug(MODEL),
@@ -1175,10 +1176,21 @@ class ReportDestinationTests(unittest.TestCase):
                 with self.subTest(lookalike=str(lookalike)):
                     self.assertEqual(
                         lookalike.resolve(),
-                        gaps.assert_not_an_unrun_sealed_run_directory(lookalike),
+                        gaps.assert_not_a_sealed_record_the_loop_does_not_read(lookalike),
                     )
+            # The held-out set's own root is **not** refused: its 64 cases are
+            # development data and the loop reads them as ``wild-dev``. Without
+            # this the guard would pass whether it named one root or both.
+            held_out = (
+                runs_dir / runner.SEALED_SET_RUNS_SUBDIR / runner.model_slug(MODEL)
+            )
+            self.assertEqual(
+                held_out.resolve(),
+                gaps.assert_not_a_sealed_record_the_loop_does_not_read(held_out),
+                "the held-out set's own root is one the loop does read",
+            )
 
-    def test_the_report_command_refuses_the_unrun_sealed_run_before_loading_a_case(self):
+    def test_the_report_command_refuses_the_sealed_record_before_loading_a_case(self):
         with tempfile.TemporaryDirectory() as tmp:
             runs_dir = Path(tmp) / "runs"
             sealed = runs_dir / runner.WILD_V2_SET_RUNS_SUBDIR / runner.model_slug(MODEL)
@@ -1197,9 +1209,14 @@ class ReportDestinationTests(unittest.TestCase):
                 )
             self.assertEqual(1, status)
             self.assertIn("sealed", stderr.getvalue())
+            # The three things the refusal has to say: the set has been run, it
+            # is a sealed record, and this loop is not one of its readers.
+            self.assertIn("has been run", stderr.getvalue())
+            self.assertIn("sealed record", stderr.getvalue())
+            self.assertIn("does not read it", stderr.getvalue())
             self.assertFalse((out_dir / gaps.REPORT_FILE).exists())
 
-    def test_the_rerun_plan_refuses_the_unrun_sealed_run_before_the_amendment(self):
+    def test_the_rerun_plan_refuses_the_sealed_record_before_the_amendment(self):
         """``rerun`` refuses the directory before it reads the amendment file.
 
         The refusal is about the directory the caller named, so it must not be
@@ -1227,7 +1244,7 @@ class ReportDestinationTests(unittest.TestCase):
                 "the amendment was read before the directory was refused",
             )
 
-    def test_the_diff_refuses_a_record_that_names_the_unrun_sealed_run(self):
+    def test_the_diff_refuses_a_record_that_names_the_sealed_record(self):
         """A hand-made record cannot make ``diff`` read a directory it must not.
 
         ``diff`` takes its run directories from the rerun record rather than

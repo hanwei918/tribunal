@@ -576,21 +576,37 @@ HELD_OUT_REMEDY = (
     "under runs/wild-dev/, which is a different directory."
 )
 
+# The second sealed set's own, and it names no twin because there is none: its
+# cases are not development data, so no directory holds them again.
+WILD_V2_REMEDY = (
+    "The set is a sealed record: its cases are not development data and are "
+    "never re-run, so nothing is created under its root again."
+)
+
 
 def held_out_runs_root(runs_root: Path = RUNS_DIR) -> Path:
     """``<runs root>/wild/``: the held-out set's own runs root."""
     return Path(runs_root) / SEALED_SET_RUNS_SUBDIR
 
 
-# The two roots, one component below a runs root, that hold a single sealed run.
-# ``wild``'s run has been made -- once, from the commit tagged
-# ``freeze-2026-09-30`` -- so its root is closed outright. ``wild-v2``'s has
-# not, so its root still accepts exactly one destination: the plain sealed
-# run's own directory, one component below the root. Every switched destination
-# is deeper than that, which is what makes "nothing but the plain sealed run
-# writes under it" a check rather than an intention.
-MADE_SEALED_RUNS_SUBDIRS: Tuple[str, ...] = (SEALED_SET_RUNS_SUBDIR,)
-UNRUN_SEALED_RUNS_SUBDIRS: Tuple[str, ...] = (WILD_V2_SET_RUNS_SUBDIR,)
+# The roots, one component below a runs root, that hold a single sealed run.
+# **Both have now been made**: ``wild``'s once, from the commit tagged
+# ``freeze-2026-09-30``, and ``wild-v2``'s once, from a commit whose
+# ``tribunal/``, ``prompts/`` and ``policy/`` trees equal those at
+# ``freeze-2026-10-03``. So both are closed outright -- nothing is created under
+# either again, not a case, not an ablated run, not a run at a later policy
+# version, not a report -- because a second thing written there changes what the
+# directory means while leaving every file a reader would look at apparently
+# intact.
+MADE_SEALED_RUNS_SUBDIRS: Tuple[str, ...] = (
+    SEALED_SET_RUNS_SUBDIR,
+    WILD_V2_SET_RUNS_SUBDIR,
+)
+# The sealed roots whose single run has **not** been made. It is empty, and it is
+# kept rather than deleted: it is what the permit below is written against, so a
+# third sealed set -- drafted, imported and not yet run -- is accepted for
+# exactly one destination without any of that machinery being rewritten.
+UNRUN_SEALED_RUNS_SUBDIRS: Tuple[str, ...] = ()
 SEALED_RUNS_SUBDIRS: Tuple[str, ...] = (
     MADE_SEALED_RUNS_SUBDIRS + UNRUN_SEALED_RUNS_SUBDIRS
 )
@@ -620,21 +636,23 @@ def assert_not_under_the_held_out_root(
 ) -> Path:
     """Refuse a destination that lies under a sealed set's own root.
 
-    Two roots hold a single sealed run: ``<runs root>/wild/`` and
-    ``<runs root>/wild-v2/``. ``wild`` was run **once**, from the commit tagged
-    ``freeze-2026-09-30``, and that run is one of the submission's two
-    generalisation figures -- ``wild-v2``'s single run, which has not been made
-    yet, is the other -- so nothing may be created under its root again -- not
-    a case, not an ablated run, not a run at a later policy version, not a
-    report -- because a second thing written there changes what the directory
-    means while leaving every file a reader would look at apparently intact.
+    Two roots hold a single sealed run, and **both runs have now been made**:
+    ``<runs root>/wild/`` once, from the commit tagged ``freeze-2026-09-30``,
+    and ``<runs root>/wild-v2/`` once, on 2026-10-04, from a commit whose
+    ``tribunal/``, ``prompts/`` and ``policy/`` trees equal those at
+    ``freeze-2026-10-03``. Each is one of the submission's two generalisation
+    figures, so nothing may be created under either root again -- not a case,
+    not an ablated run, not a run at a later policy version, not a report --
+    because a second thing written there changes what the directory means while
+    leaving every file a reader would look at apparently intact.
 
-    ``wild-v2`` is sealed too and has **not** been run yet, so its root is closed
-    to everything but one destination: the plain sealed run's own directory,
-    which ``permit`` names and which is exactly one component below the root.
-    Everything else -- an ablated run, a precedents run, a run at a named policy
-    version, an amount-rule run -- is deeper than that and is refused, so the
-    set's single run is the only thing that can be written there.
+    ``permit`` is the one thing that could open a sealed root, and it is written
+    for a root whose single run has **not** been made yet: it names the plain
+    sealed run's own directory, exactly one component below the root, and the
+    permit is honoured only for that destination. Both roots' runs have been
+    made, so ``UNRUN_SEALED_RUNS_SUBDIRS`` is empty and no permit opens anything
+    today; the machinery is kept because a third sealed set would need exactly
+    it.
 
     ``permit`` is **not** a licence any caller may issue for itself. It is
     passed by :func:`eval.development_sets.run_set` alone, and only when the set
@@ -692,9 +710,13 @@ def assert_not_under_the_held_out_root(
                 and not sealed_base
             ):
                 # The one destination an un-run sealed root still accepts, and
-                # only for the caller that named the set it belongs to.
+                # only for the caller that named the set it belongs to. No root
+                # is in that tuple today, so this opens nothing; it is kept
+                # because a third sealed set would need exactly this.
                 continue
-            if subdir in MADE_SEALED_RUNS_SUBDIRS:
+            # One sentence per root, so a root added to the tuple cannot be
+            # refused with another root's reason.
+            if subdir == SEALED_SET_RUNS_SUBDIR:
                 detail = (
                     "which holds the held-out set's single run: it was made once from "
                     "the commit tagged freeze-2026-09-30 and is one of the two "
@@ -702,13 +724,20 @@ def assert_not_under_the_held_out_root(
                     "the second sealed set's single run -- so nothing is created "
                     "under it again. {0}".format(HELD_OUT_REMEDY if remedy is None else remedy)
                 )
+            elif subdir == WILD_V2_SET_RUNS_SUBDIR:
+                detail = (
+                    "which holds the sealed set wild-v2's single run: it was made "
+                    "once, plainly, from a commit whose tribunal/, prompts/ and "
+                    "policy/ trees equal those at freeze-2026-10-03, and it is the "
+                    "other generalisation figure the submission reports, so nothing "
+                    "is created under it again. {0}".format(
+                        WILD_V2_REMEDY if remedy is None else remedy
+                    )
+                )
             else:
                 detail = (
-                    "which holds the sealed set wild-v2's single run: the set is run "
-                    "once, plainly, from a commit whose tribunal/, prompts/ and "
-                    "policy/ trees equal those at freeze-2026-10-03, and its single "
-                    "run is the submission's generalisation figure, so nothing else "
-                    "is created under it"
+                    "which is a sealed set's own root: a single sealed run is all "
+                    "that is ever created under one"
                 )
             raise BenchmarkError(
                 "{0} lies under {1}, {2}".format(resolved, root, detail)
@@ -3129,13 +3158,16 @@ def run_benchmark(
         )
     else:
         run_dir = run_directory(runs_dir, model)
-        # The one destination a sealed root that has not been run yet still
-        # accepts, and only for the caller that named the set which owns it.
-        # ``sealed_permit_set`` is passed by ``eval.development_sets.run_set``
-        # alone and only for the set whose registration names that root, so a
-        # direct invocation of this runner -- ``python3 -m eval.run_benchmark
-        # --runs-dir runs/wild-v2`` -- issues no permit and is refused, as is
-        # any other set pointed at the same root.
+        # The one destination an un-run sealed root still accepts, and only for
+        # the caller that named the set which owns it.
+        # ``UNRUN_SEALED_RUNS_SUBDIRS`` is empty now that both sealed sets have
+        # been run, so this issues no permit at all and every destination under
+        # either sealed root is refused. The machinery is kept because a third
+        # sealed set would need it: ``sealed_permit_set`` is passed by
+        # ``eval.development_sets.run_set`` alone and only for the set whose
+        # registration names that root, so a direct invocation of this runner --
+        # ``python3 -m eval.run_benchmark --runs-dir runs/wild-v2`` -- issues no
+        # permit and is refused, as is any other set pointed at the same root.
         sealed_permit = (
             run_dir if sealed_permit_set in UNRUN_SEALED_RUNS_SUBDIRS else None
         )
@@ -3152,12 +3184,11 @@ def run_benchmark(
             "{1} holds the corpus results and a set written there would change "
             "what the reported figure covers".format(label, run_dir)
         )
-    # The held-out set's own root is closed, and so is the second sealed set's,
-    # to everything but its own plain run. A plain run, an ablated run, a run at
-    # a later policy version and a report all refuse a destination under either,
-    # and this is the one place a run's own destination is decided, so the check
-    # is made here and before the directory exists: a refused run leaves nothing
-    # behind.
+    # Both sealed roots are closed outright now that both runs have been made.
+    # A plain run, an ablated run, a run at a later policy version and a report
+    # all refuse a destination under either, and this is the one place a run's
+    # own destination is decided, so the check is made here and before the
+    # directory exists: a refused run leaves nothing behind.
     assert_not_under_the_held_out_root(
         run_dir, held_out_root or RUNS_DIR, permit=sealed_permit
     )

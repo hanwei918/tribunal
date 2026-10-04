@@ -326,11 +326,14 @@ SEALED_SETS: Tuple[DevelopmentSet, ...] = (SEALED_SET, WILD_V2)
 # cases are development data must not enter any of them by being named here.
 RERUN_SETS: Tuple[DevelopmentSet, ...] = (WILD_DEV,)
 
-# The sets whose **recorded runs** the measurements read: the three that have
-# been run. ``wild-v2`` is deliberately not one of them -- it has not been run,
-# so it has no drafts, no brief digests and no amount to re-reduce, and a
-# measurement that counted its cases as misses would be reporting a run nobody
-# made.
+# The sets whose **recorded runs** the measurements read. ``wild-v2`` is
+# deliberately not one of them, and the reason is not that it has no run: its
+# single run was committed on 2026-10-04 and it has drafts, brief digests and
+# amounts to re-reduce. It is excluded because the amount-rule measurement and
+# the recorded-drafts measurement have committed results over these three runs,
+# and adding a fourth would change figures the submission reports -- which is a
+# decision about measurement coverage, and not one a registration should settle
+# by being edited.
 ALL_SETS: Tuple[DevelopmentSet, ...] = DEVELOPMENT_SETS + (SEALED_SET,)
 
 BY_NAME = {

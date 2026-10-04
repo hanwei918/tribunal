@@ -22,9 +22,10 @@ same order:
   result, which is what the switch would replace -- and the fixture is compared
   byte for byte afterwards, so a refusal that quietly wrote something is caught
   rather than assumed away.
-* **Its root is closed to everything but its own run.** The component-wise path
-  guard refuses every switched destination under ``runs/wild-v2/`` and accepts
-  exactly one: the plain sealed run's own directory.
+* **Its root is closed outright.** The component-wise path guard refuses every
+  destination under ``runs/wild-v2/`` -- the plain sealed run's own directory
+  included, now that its single run has been made -- and a scratch runs root is
+  no exception, because the guard compares components and not one absolute path.
 * **Its structure holds.** All 20 cases load through the set's own loader and
   their briefs build at version 2; the key loads through
   ``eval.grade.load_answer_key`` and holds 20 records each carrying all four
@@ -41,6 +42,7 @@ Run from the project root with::
 from __future__ import annotations
 
 import contextlib
+import dataclasses
 import io
 import json
 import os
@@ -496,7 +498,7 @@ class WildV2SwitchGuardTests(unittest.TestCase):
                             1, code, "{0} was accepted for --set wild-v2".format(arguments)
                         )
                         self.assertIn("wild-v2", err)
-                        self.assertIn("nothing else is created under it", err)
+                        self.assertIn("nothing is created under it again", err)
                         self.assertEqual(
                             before,
                             sentinel.read_bytes(),
@@ -742,13 +744,15 @@ class WildV2RunsRootLockTests(unittest.TestCase):
             self.assertFalse(scratch.exists(), "the refused invocation created the root")
 
     def test_the_runs_root_is_accepted_whatever_its_case(self):
-        """``RUNS/`` is ``runs/`` here, so the flag is accepted for it.
+        """``RUNS/`` is ``runs/`` here, so the flag is not refused for its case.
 
         Both modules' ``RUNS_DIR`` are moved to a scratch root, which is what
         makes that root *the repository's own* for the duration of the call. The
         flag then names the same path in another case, and the invocation gets
-        past the lock and reaches the client -- which this module refuses to
-        build, so nothing is run and nothing is written.
+        past the lock: the refusal it meets is the root guard's, which is what
+        says the case-folded comparison accepted the flag. Were the lock still to
+        refuse it, the message would be the lock's -- and the two are asserted
+        apart here so one cannot stand in for the other.
         """
         with tempfile.TemporaryDirectory() as tmp:
             runs = Path(tmp) / "runs"
@@ -761,20 +765,27 @@ class WildV2RunsRootLockTests(unittest.TestCase):
             ), mock.patch.object(
                 run_benchmark.llm, "load_api_key", return_value="a-key"
             ):
-                with self.assertRaises(AssertionError) as caught:
-                    _run_cli(
-                        [
-                            "--set",
-                            "wild-v2",
-                            "--concurrency",
-                            "2",
-                            "--timeout",
-                            "900",
-                            "--runs-dir",
-                            str(other_case),
-                        ]
-                    )
-            self.assertIn("a client was built", str(caught.exception))
+                code, _out, err = _run_cli(
+                    [
+                        "--set",
+                        "wild-v2",
+                        "--concurrency",
+                        "2",
+                        "--timeout",
+                        "900",
+                        "--runs-dir",
+                        str(other_case),
+                    ]
+                )
+            self.assertEqual(
+                1, code, "the case-folded runs root was accepted for the sealed run"
+            )
+            self.assertNotIn(
+                "is not the repository's own",
+                err,
+                "the lock refused a runs root that differs only in case",
+            )
+            self.assertIn("nothing is created under it again", err)
 
     def test_a_set_that_registers_no_arguments_keeps_the_flag(self):
         """The lock is the registration's, so a development set is not caught.
@@ -1024,13 +1035,13 @@ class WildV2RunDirectoryIsHeadlineTests(unittest.TestCase):
 # Nothing but the plain sealed run writes under runs/wild-v2/
 # --------------------------------------------------------------------------
 class WildV2RootGuardTests(unittest.TestCase):
-    """The component-wise guard closes both sealed roots, and only one is opened.
+    """The component-wise guard closes both sealed roots outright.
 
-    ``runs/wild/`` is closed outright: its single run was made once and nothing
-    is created under it again. ``runs/wild-v2/`` has not been run, so it accepts
-    exactly one destination -- the plain sealed run's own directory, one
-    component below the root -- and refuses everything deeper, which is every
-    switched destination there is.
+    ``runs/wild/`` is closed: its single run was made once and nothing is
+    created under it again. ``runs/wild-v2/`` is closed the same way, now that
+    its own single run has been made: it accepts no destination at all -- the
+    plain sealed run's own directory included -- and every switched destination
+    below it is refused as well.
     """
 
     def setUp(self):
@@ -1044,6 +1055,7 @@ class WildV2RootGuardTests(unittest.TestCase):
     def test_every_switched_destination_under_the_wild_v2_root_is_refused(self):
         for relative in (
             (),
+            (self.slug,),
             (run_benchmark.ABLATION_DIRNAME, "clause-notes", self.slug),
             (run_benchmark.PRECEDENTS_DIRNAME, self.slug),
             (run_benchmark.policy_v_directory_name(2), self.slug),
@@ -1055,18 +1067,26 @@ class WildV2RootGuardTests(unittest.TestCase):
             with self.subTest(destination=str(destination)):
                 with self.assertRaises(run_benchmark.BenchmarkError) as caught:
                     run_benchmark.assert_not_under_the_held_out_root(destination, self.runs)
-                self.assertIn("nothing else is created under it", str(caught.exception))
+                self.assertIn("nothing is created under it again", str(caught.exception))
+                self.assertIn("never re-run", str(caught.exception))
                 self.assertIn(str(self.wild_v2.resolve()), str(caught.exception))
 
-    def test_the_plain_sealed_run_directory_is_the_one_destination_it_takes(self):
-        """The half that matters: a guard that refused everything would pass above."""
+    def test_the_plain_sealed_run_directory_is_refused_too(self):
+        """The root is closed outright, so not even the plain run directory is open.
+
+        This is the change that closes the root: the one destination an un-run
+        sealed root accepted is now refused like everything else, and the
+        refusal names the set as a sealed record. A permit does not open it --
+        the permit machinery is written for a root whose run has not been made.
+        """
         destination = self.wild_v2 / self.slug
-        self.assertEqual(
-            destination,
-            run_benchmark.assert_not_under_the_held_out_root(
-                destination, self.runs, permit=destination
-            ),
-        )
+        for permit in (None, destination):
+            with self.subTest(permit=permit is not None):
+                with self.assertRaises(run_benchmark.BenchmarkError) as caught:
+                    run_benchmark.assert_not_under_the_held_out_root(
+                        destination, self.runs, permit=permit
+                    )
+                self.assertIn("nothing is created under it again", str(caught.exception))
 
     def test_a_direct_invocation_of_the_runner_issues_no_permit(self):
         """``python3 -m eval.run_benchmark --runs-dir <root>/wild-v2`` is refused.
@@ -1107,7 +1127,7 @@ class WildV2RootGuardTests(unittest.TestCase):
                             "wild-v2 with {0}".format(extra or "no switch"),
                         )
                         self.assertIn(
-                            "nothing else is created under it", stderr.getvalue()
+                            "nothing is created under it again", stderr.getvalue()
                         )
                         self.assertIn(
                             str((runs / "wild-v2").resolve()), stderr.getvalue()
@@ -1224,39 +1244,37 @@ class WildV2RootGuardTests(unittest.TestCase):
                         str(caught.exception),
                     )
 
-    def test_the_plain_sealed_run_of_this_set_is_still_accepted(self):
-        """The other half of every refusal above: the set that owns the root runs.
+    def test_the_plain_sealed_run_of_this_set_is_now_refused(self):
+        """The set that owns the root can no longer run into it.
 
-        One case, a fake transport and a scratch runs root, so what is asserted
-        is that the permit ``run_set`` issues for ``wild-v2`` reaches the
-        destination and the run writes there -- and no value out of the key is
-        read, compared or printed.
+        The permit ``run_set`` issues for ``wild-v2`` used to open the plain run
+        directory; now that the set's single run has been made it opens nothing,
+        and the run is refused before a client is built. A factory that raises is
+        what turns a guard that stopped refusing into this test's failure rather
+        than into a paid call, and the scratch runs root is asserted untouched.
         """
         with tempfile.TemporaryDirectory() as tmp:
             runs = Path(tmp) / "runs"
-            transport = _protocol_transport({})
-            sets.run_set(
-                WILD_V2,
-                MODEL,
-                runs_dir=runs,
-                cases=(SENTINEL_CASE,),
-                client_factory=dev_rig.client_factory(transport),
-                git_runner=dev_rig.git_runner(),
-                progress=lambda text: None,
-                judge_votes=1,
-            )
-            run_dir = (
-                runs / run_benchmark.WILD_V2_SET_RUNS_SUBDIR / self.slug
-            )
-            self.assertTrue(
-                run_dir.is_dir(),
-                "the plain sealed run was refused its own run directory",
-            )
-            self.assertTrue(
-                any(run_dir.glob("case-*.json")),
-                "the plain sealed run wrote no case",
-            )
-            self.assertGreater(transport.calls(), 0, "the plain sealed run made no call")
+            calls = []
+
+            def refuse_to_build_a_client(_sink):
+                calls.append(_sink)
+                raise AssertionError("a client was built, so the sealed root was open")
+
+            with self.assertRaises(run_benchmark.BenchmarkError) as caught:
+                sets.run_set(
+                    WILD_V2,
+                    MODEL,
+                    runs_dir=runs,
+                    cases=(SENTINEL_CASE,),
+                    client_factory=refuse_to_build_a_client,
+                    git_runner=dev_rig.git_runner(),
+                    progress=lambda text: None,
+                    judge_votes=1,
+                )
+            self.assertIn("nothing is created under it again", str(caught.exception))
+            self.assertEqual([], calls, "the refused run built a client")
+            self.assertFalse(runs.exists(), "a refused run created the sealed root")
 
     def test_the_permit_does_not_open_the_held_out_root(self):
         """``wild`` has been run; nothing opens it, not even its own directory."""
@@ -1345,6 +1363,65 @@ class WildV2RootGuardTests(unittest.TestCase):
                         self.assertEqual({sentinel.name: before}, _state(run_dir))
             finally:
                 run_benchmark.llm.LLMClient = original
+
+
+# --------------------------------------------------------------------------
+# The root is closed, and the owner's own command is refused with it
+# --------------------------------------------------------------------------
+class WildV2RootIsClosedTests(unittest.TestCase):
+    """The owner's exact command is refused, because the run has been made.
+
+    The plain sealed run was the one destination an un-run sealed root accepted,
+    and it is closed with everything else. This is that closure shown on the
+    command the owner actually types: the opt-in set, the two switches the freeze
+    fixes, a scratch runs root in place of the repository's own, and
+    ``LLMClient`` patched to raise -- so a guard that let the run start fails here
+    rather than making a paid call.
+    """
+
+    ARGUMENTS = ["--set", "wild-v2", "--concurrency", "2", "--timeout", "900"]
+
+    def test_the_owners_exact_command_is_refused_and_writes_nothing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            with mock.patch.dict(
+                os.environ, {sets.SEALED_RUN_ENV_VAR: "wild-v2"}
+            ), mock.patch.object(sets, "RUNS_DIR", runs), mock.patch.object(
+                run_benchmark, "RUNS_DIR", runs
+            ), mock.patch.object(
+                run_benchmark.llm, "load_api_key", return_value="a-key"
+            ):
+                code, out, err = _run_cli(self.ARGUMENTS)
+
+            self.assertEqual(
+                1, code, "the owner's command was accepted for a closed root"
+            )
+            self.assertIn("FATAL: ", err)
+            self.assertIn("nothing is created under it again", err)
+            self.assertIn(
+                str((runs / run_benchmark.WILD_V2_SET_RUNS_SUBDIR).resolve()), err
+            )
+            self.assertEqual("", out, "the refused command printed something")
+            self.assertFalse(
+                runs.exists(), "the refused command created the runs root"
+            )
+
+    def test_a_scratch_runs_root_does_not_reopen_it(self):
+        """The closure is on the path, not on the repository's own root.
+
+        ``--runs-dir`` is refused for this set, so the scratch root is put in
+        place by moving both modules' ``RUNS_DIR``. The destination is then
+        ``<scratch>/wild-v2/<slug>/`` and it is refused exactly as the
+        repository's own would be, which is what makes the closure a property of
+        the directory's shape rather than of one absolute path.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            slug = run_benchmark.model_slug(MODEL)
+            destination = runs / run_benchmark.WILD_V2_SET_RUNS_SUBDIR / slug
+            with self.assertRaises(run_benchmark.BenchmarkError) as caught:
+                run_benchmark.assert_not_under_the_held_out_root(destination, runs)
+            self.assertIn("nothing is created under it again", str(caught.exception))
 
 
 # --------------------------------------------------------------------------
@@ -1975,6 +2052,24 @@ PROTOCOL_CASES = (
     CASE_SUCCEEDS,
 )
 
+# The set the protocol tests run: the second sealed set, with the two fields the
+# root guard reads changed and nothing else.
+#
+# The sealed protocol is a property of a *sealed set's* re-invocation, and it is
+# exercised by running one. The set's own root is closed now that its single run
+# has been made -- ``runs/wild-v2/<slug>/`` is refused wherever the runs root is,
+# because the guard compares path components and not one absolute path -- so the
+# set cannot be run to exercise the protocol. This is that set with a different
+# ``name`` and a different ``runs_subdir``, which are the only two things the
+# guard and the destination read: its cases, its case loader, its key and its
+# registration-fixed policy version are the sealed set's own, and every
+# invocation below goes through the real guard over a scratch runs root. The
+# protocol is therefore still tested on a set shaped exactly like the sealed one,
+# and the guard is not stood down to test it.
+PROTOCOL_SET = dataclasses.replace(
+    WILD_V2, name="wild-shaped", runs_subdir="wild-shaped"
+)
+
 
 def _protocol_transport(behaviour):
     produced = {
@@ -1988,12 +2083,14 @@ def _invoke(runs, cases, transport):
     """One invocation of the same call, with both streams captured.
 
     The runner's own progress is silenced, so what is captured is the sealed
-    protocol's own lines and nothing else.
+    protocol's own lines and nothing else. The set is :data:`PROTOCOL_SET`, the
+    sealed set's own cases and loader under a subdirectory that is not a sealed
+    root -- see there for why the sealed set itself cannot be run.
     """
     stdout = io.StringIO()
     with contextlib.redirect_stdout(stdout):
         summary = sets.run_set(
-            WILD_V2,
+            PROTOCOL_SET,
             MODEL,
             runs_dir=runs,
             cases=cases,
@@ -2012,7 +2109,7 @@ def _killed_attempt(runs, case_no):
     ``ruling`` nor a ``case_failed``. It is written here with a distinct
     invocation id, so it is an attempt of its own and not this invocation's.
     """
-    run_dir = runs / run_benchmark.WILD_V2_SET_RUNS_SUBDIR / run_benchmark.model_slug(MODEL)
+    run_dir = _protocol_run_dir(runs)
     run_dir.mkdir(parents=True, exist_ok=True)
     log = events.EventLog(
         run_dir / events.EVENTS_FILE, invocation_id=KILLED_INVOCATION
@@ -2255,8 +2352,13 @@ ADDENDUM_RULES = (
 
 
 def _protocol_run_dir(runs):
-    """The scratch run directory every protocol test writes into."""
-    return runs / run_benchmark.WILD_V2_SET_RUNS_SUBDIR / run_benchmark.model_slug(MODEL)
+    """The scratch run directory every protocol test writes into.
+
+    ``PROTOCOL_SET``'s own run directory, so it is
+    ``<runs root>/wild-shaped/<model-slug>/`` -- the shape the sealed set's would
+    be, under a subdirectory that is not a sealed root. See :data:`PROTOCOL_SET`.
+    """
+    return PROTOCOL_SET.run_dir(MODEL, runs)
 
 
 def _report_text(runs):
@@ -2392,9 +2494,11 @@ class SealedProtocolSecondPassTests(unittest.TestCase):
                 runs.exists(), "the refused invocation created the runs root"
             )
 
-            # It is the key that is missing and not the opt-in: with a key the
-            # invocation gets past this check and reaches the client, which this
-            # module refuses to build.
+            # It is the key that is missing and not the opt-in, and the keyless
+            # check is not the root guard either: with a key the invocation gets
+            # past this check and meets the guard, which refuses it because the
+            # set's single run has been made. The two messages are asserted apart
+            # so neither can stand in for the other.
             with mock.patch.dict(
                 os.environ, {sets.SEALED_RUN_ENV_VAR: "wild-v2"}
             ), mock.patch.object(
@@ -2402,9 +2506,14 @@ class SealedProtocolSecondPassTests(unittest.TestCase):
             ), mock.patch.object(sets, "RUNS_DIR", runs), mock.patch.object(
                 run_benchmark, "RUNS_DIR", runs
             ):
-                with self.assertRaises(AssertionError) as caught:
-                    _run_cli(arguments)
-            self.assertIn("a client was built", str(caught.exception))
+                code, _out, err = _run_cli(arguments)
+            self.assertEqual(1, code, "the sealed run was accepted with a key")
+            self.assertNotIn(
+                "no API key loads",
+                err,
+                "a key was loaded, so the keyless refusal is the wrong one",
+            )
+            self.assertIn("nothing is created under it again", err)
 
     def test_a_killed_attempt_does_not_stop_a_transport_retry(self):
         """TRANSPORT, then a killed attempt: the case is still called."""
@@ -2456,7 +2565,7 @@ class SealedProtocolSecondPassTests(unittest.TestCase):
 
             printed = []
             keep = sets.cases_the_sealed_protocol_will_not_retry(
-                WILD_V2, [CASE_SUCCEEDS], MODEL, runs, progress=printed.append
+                PROTOCOL_SET, [CASE_SUCCEEDS], MODEL, runs, progress=printed.append
             )
             self.assertEqual([], keep, "a kind that is not retried was retried")
             self.assertEqual(
@@ -2482,7 +2591,7 @@ class SealedProtocolSecondPassTests(unittest.TestCase):
 
             with self.assertRaises(run_benchmark.BenchmarkError) as caught:
                 sets.cases_the_sealed_protocol_will_not_retry(
-                    WILD_V2, [CASE_SUCCEEDS], MODEL, runs
+                    PROTOCOL_SET, [CASE_SUCCEEDS], MODEL, runs
                 )
             message = str(caught.exception)
             self.assertIn("does not verify", message)
@@ -2525,7 +2634,7 @@ class SealedProtocolSecondPassTests(unittest.TestCase):
 
             printed = []
             keep = sets.cases_the_sealed_protocol_will_not_retry(
-                WILD_V2, [CASE_KILLED], MODEL, runs, progress=printed.append
+                PROTOCOL_SET, [CASE_KILLED], MODEL, runs, progress=printed.append
             )
             self.assertEqual([CASE_KILLED], keep)
             self.assertEqual(

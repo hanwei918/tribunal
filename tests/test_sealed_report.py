@@ -4,12 +4,16 @@ Two sealed sets, two things to check. The held-out set has been run and its
 figures are written down in ``docs/notes/2026-09-30-the-sealed-run.md``: this
 reproduces every one of them from the committed files, so the note's numbers are
 a measurement rather than a hand computation nobody can repeat. The second
-sealed set has **not** been run, and against it the command prints one line and
-nothing else.
+sealed set has been run too -- once, on 2026-10-04 -- and its figures are written
+down in ``docs/notes/2026-10-04-the-second-sealed-run.md``: the whole of what
+the command prints for it is reproduced below, and the two sets are never summed
+or pooled.
 
-The second of those is also the sealed-content rule made checkable: the key is
-patched to raise, so a command that read it on the not-run path would fail here
-rather than quietly doing what the rule forbids.
+The second of those is also where the sealed-content rule became checkable before
+the run: the not-run test patched the key to raise, so a command that read it on
+the not-run path would have failed there rather than quietly doing what the rule
+forbids. That test went red the moment the run was committed, as it was written
+to, and is replaced here by the figures test beside the held-out set's.
 
 What "not run" means is a third thing, and it is not "no case files". A run in
 which every case failed leaves the event log and ``run.json`` and no result, and
@@ -40,11 +44,40 @@ from tribunal import events, loader, model  # noqa: E402
 
 MODEL = "deepseek/deepseek-flash"
 
-# The not-run line, whole. It is asserted as one string rather than searched
-# for, because the claim is that the command says this and says nothing else.
-NOT_RUN_WILD_V2 = (
-    "sealed set wild-v2 has not been run: "
-    "nothing under runs/wild-v2/deepseek-deepseek-flash\n"
+# The whole of ``sealed_report --set wild-v2``, as the committed run prints it.
+#
+# Written out rather than assembled from the figures, so a change to the
+# rendering is a failing test and not a test that agrees with itself. It is the
+# block ``docs/notes/2026-10-04-the-second-sealed-run.md`` states, and this is
+# the command that prints it: the note and this string are two records of one
+# run, and a disagreement between them is a finding to report rather than a
+# number to adjust.
+SECOND_SEALED_RUN_REPORT = (
+    "Sealed set wild-v2 \u2014 deepseek/deepseek-flash\n"
+    "Run: runs/wild-v2/deepseek-deepseek-flash\n"
+    "\n"
+    "Four-field exact\n"
+    "  over the 20 cases that produced a ruling: 18/20\n"
+    "  over the 20 cases in the set, a case with no ruling as a miss: 18/20\n"
+    "\n"
+    "Ruling alone\n"
+    "  over the 20 cases that produced a ruling: 18/20\n"
+    "  over the 20 cases in the set: 18/20\n"
+    "\n"
+    "Per category, from the set's own index.json\n"
+    "  NO_SHOW_CHARGE: 8 in the set, 8 produced; four-field 8/8 over produced "
+    "and 8/8 over all; ruling 8/8 over produced and 8/8 over all\n"
+    "  ROUTE_DEVIATION: 12 in the set, 12 produced; four-field 10/12 over "
+    "produced and 10/12 over all; ruling 10/12 over produced and 10/12 over "
+    "all\n"
+    "\n"
+    "Escalation\n"
+    "  over the 20 cases that produced a ruling: 5 produced, 5 expected, "
+    "4 true positives; precision 4/5, recall 4/5\n"
+    "  over the 20 cases in the set: 5 produced, 5 expected, 4 true positives; "
+    "precision 4/5, recall 4/5\n"
+    "\n"
+    "No ruling (0)\n"
 )
 
 
@@ -111,27 +144,37 @@ class HeldOutFiguresTests(unittest.TestCase):
         self.assertNotIn("target", text.lower())
 
 
-class UnRunSealedSetTests(unittest.TestCase):
-    """The second sealed set, before its run."""
+class SecondSealedSetFiguresTests(unittest.TestCase):
+    """The committed ``runs/wild-v2/`` record, reproduced whole.
 
-    def test_the_un_run_second_sealed_set_prints_one_line_and_nothing_else(self):
-        """The state of the second sealed set today, and a test with an expiry.
+    This is the figures test the not-run test was written to be replaced by. That
+    one asserted the whole output was the not-run line, so the committed run made
+    it go red rather than pass quietly; this asserts the whole output of the run
+    instead -- every line, the blank lines and the ordering included -- so a
+    rendering change, a changed figure and an added line all fail here.
 
-        This one is written to go red the moment the sealed run exists: it
-        asserts the whole of the output is the not-run line, so a committed run
-        directory makes it fail rather than pass quietly. When that happens it is
-        replaced by a figures test for ``wild-v2``, beside the one for
-        ``wild-v1`` -- not deleted and not relaxed.
-        """
-        # The key is patched to raise, so the whole-output assertion below is
-        # also the proof that the not-run path reads no key: a command that
-        # loaded it would fail here rather than print this line.
-        with mock.patch.object(
-            grade, "load_answer_key", side_effect=AssertionError("the key was read")
-        ):
-            code, text = run_report("--set", "wild-v2")
+    The two sealed sets are never summed or pooled: each is its own
+    generalisation figure from its own freeze, and neither of these tests reads
+    the other's run.
+    """
+
+    def test_it_reproduces_the_whole_report_the_committed_run_prints(self):
+        code, text = run_report("--set", "wild-v2")
         self.assertEqual(0, code)
-        self.assertEqual(NOT_RUN_WILD_V2, text)
+        self.assertEqual(SECOND_SEALED_RUN_REPORT, text)
+
+    def test_the_run_directory_the_report_names_is_the_committed_one(self):
+        """The second line of the report above names a run; this says it is there."""
+        self.assertTrue(
+            (PROJECT_ROOT / "runs" / "wild-v2" / "deepseek-deepseek-flash").is_dir(),
+            "the report names a run directory that is not in the repository",
+        )
+
+    def test_it_prints_no_corpus_target_beside_the_second_sealed_set(self):
+        """``TARGET_ESCALATION_RATE`` is the corpus's, and the set is not."""
+        _, text = run_report("--set", "wild-v2")
+        self.assertNotIn("TARGET_ESCALATION_RATE", text)
+        self.assertNotIn("target", text.lower())
 
     def test_a_development_set_is_refused_rather_than_reported(self):
         """The command prints no corpus target, so it is sealed sets only.
