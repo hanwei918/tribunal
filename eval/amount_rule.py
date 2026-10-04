@@ -116,9 +116,9 @@ def assert_not_a_run_directory(
 
     ``runs/<model-slug>/`` holds the corpus result the submission reports,
     ``runs/codex/<model-slug>/`` the second development set's and
-    ``runs/wild/<model-slug>/`` the held-out set's, whose single run is the only
-    generalisation figure; and ``runs/amount-rule/<rule>/<model-slug>/`` holds a
-    run of ``--amount-rule`` under a rule other than the published one. This
+    ``runs/wild/<model-slug>/`` the held-out set's, whose single run is one of
+    the two generalisation figures; and ``runs/amount-rule/<rule>/<model-slug>/``
+    holds a run of ``--amount-rule`` under a rule other than the published one. This
     measurement is not any of those, and a reader who found these figures there
     would read them as that run's, so the destination is refused before anything
     is written.
@@ -139,6 +139,13 @@ def assert_not_a_run_directory(
     separate arguments, so a caller who points ``--runs-dir`` at a scratch root
     has not thereby made the repository's own run directories safe to write
     into. Every headline directory under either root is refused.
+
+    **A sealed set's whole root is refused, not only its run directory.** Both
+    sealed runs have been made and nothing is created under either again, so a
+    destination anywhere under ``runs/wild/`` or ``runs/wild-v2/`` is refused,
+    ``--out-dir`` included. That rule is
+    :func:`eval.run_benchmark.assert_not_under_the_held_out_root`'s, so this
+    command and every run refuse the same paths.
     """
     resolved = Path(destination).resolve()
     roots = [Path(runs_dir).resolve()]
@@ -173,6 +180,23 @@ def assert_not_a_run_directory(
                     "holds a run's own results".format(candidate)
                 )
             candidate = candidate.parent
+
+    # And the whole of a sealed set's root, not only its run directory: both
+    # sealed runs have been made and nothing is created under either again, this
+    # measurement included. The rule itself lives in the runner, so this command
+    # and every run refuse the same paths; only the closing sentence is this
+    # command's own.
+    try:
+        run_benchmark.assert_not_under_the_held_out_root(
+            resolved,
+            runs_dir,
+            remedy=(
+                "The amount-rule measurement over those cases belongs in a "
+                "directory of its own, not under the run it read."
+            ),
+        )
+    except run_benchmark.BenchmarkError as exc:
+        raise AmountRuleError(str(exc)) from None
     return resolved
 
 

@@ -342,20 +342,28 @@ def assert_not_a_sealed_record_the_loop_does_not_read(run_dir: Path) -> Path:
     ``runs/wild-v2/<model>/`` and nothing else -- ``runs/wild-dev/`` is a
     different component and is not caught, and neither is a sibling whose name
     merely starts the same way.
+
+    **Both comparisons are case-folded**, through
+    :func:`eval.run_benchmark.path_components`, because this volume is
+    case-insensitive: ``runs/WILD-V2/<model>/`` names the same directory as
+    ``runs/wild-v2/<model>/``, and a guard that answered about the spelling
+    rather than the directory could be walked around by changing one letter's
+    case. The name in the refusal is the folded one, so the message says which
+    set was refused rather than which spelling was typed.
     """
+    folded = run_benchmark.path_components(run_dir)
     resolved = Path(run_dir).resolve()
-    parts = resolved.parts
-    indices = [
-        index for index, part in enumerate(parts) if part == precedents.RUNS_DIRNAME
-    ]
+    runs_name = precedents.RUNS_DIRNAME.casefold()
+    indices = [index for index, part in enumerate(folded) if part == runs_name]
     if not indices:
         return resolved
     following = indices[-1] + 1
-    if following < len(parts) and parts[following] in SEALED_ROOTS_THE_LOOP_DOES_NOT_READ:
+    sealed = tuple(name.casefold() for name in SEALED_ROOTS_THE_LOOP_DOES_NOT_READ)
+    if following < len(folded) and folded[following] in sealed:
         raise PolicyGapError(
             "{0} is a run directory of the sealed set {1}. That set has been "
             "run: it is a sealed record, made once, and the policy-gap loop "
-            "does not read it".format(resolved, parts[following])
+            "does not read it".format(resolved, folded[following])
         )
     return resolved
 

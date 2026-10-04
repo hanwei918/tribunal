@@ -228,8 +228,9 @@ SEALED_SET = DevelopmentSet(
         "the held-out set (wild-v1): 64 cases derived from real complaints, "
         "prepared by their author as a development set; nobody who changed the "
         "system opened them before the freeze tagged freeze-2026-09-30, and they "
-        "were run once from that tag; that single run is the only generalisation "
-        "figure the submission reports"
+        "were run once from that tag; that single run is one of the two "
+        "generalisation figures the submission reports, the other being the "
+        "second sealed set's"
     ),
     sealed=True,
 )
@@ -895,6 +896,44 @@ def render_sealed_plan(
     else:
         lines.append("    nothing")
     return "\n".join(lines)
+
+
+def sealed_root_is_closed(
+    development_set: DevelopmentSet, model: str, runs_dir: Path = RUNS_DIR
+) -> bool:
+    """Whether a sealed set's root already holds the one run it will ever hold.
+
+    A sealed root is closed outright once its single run is there: nothing is
+    created under it again, the plain run included. What the run leaves is its
+    own ``run.json``, written when the invocation ends, so that file's presence
+    is the fact -- not the directory, which a refused or interrupted invocation
+    can leave behind, and not the event log, which an attempt that does not
+    count also writes.
+    """
+    run_dir = development_set.run_dir(model, runs_dir)
+    return (run_dir / run_benchmark.METADATA_FILE).is_file()
+
+
+def render_closed_sealed_root(development_set: DevelopmentSet) -> str:
+    """What ``--check`` prints for a sealed set whose root is closed.
+
+    There is nothing to plan: the root holds its single run and no case will be
+    run again, so a list of cases that "would run" would describe an invocation
+    that cannot happen. What is left to say is the closure itself, and the three
+    empty counts are printed rather than left out, so the shape of the output
+    does not depend on whether the root is closed.
+    """
+    return "\n".join(
+        [
+            "sealed set {0} -- its root is closed: the single run is "
+            "committed".format(development_set.name),
+            "  would run (0): nothing",
+            "  would not run (0):",
+            "    nothing",
+            "  attempts that do not count (0):",
+            "    nothing",
+        ]
+    )
 
 
 def _nothing_left_to_run(
@@ -1814,16 +1853,30 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         if not present:
             continue
         for development_set in selected:
+            # The remedy is the set's own. Naming ``--set wild-dev`` is right
+            # only for the held-out set, whose 64 cases have a development twin;
+            # the second sealed set has none, so its refusal says so rather than
+            # offering a set that does not hold its cases.
+            if development_set.runs_subdir == run_benchmark.SEALED_SET_RUNS_SUBDIR:
+                remedy = (
+                    "{0} is the switch that moves a run one level down under "
+                    "its own set's root. Name --set wild-dev instead: those "
+                    "are the same 64 cases as development data, and their "
+                    "runs go under runs/wild-dev/".format(switch)
+                )
+            else:
+                remedy = (
+                    "{0} is the switch that moves a run one level down under "
+                    "its own set's root. This set is a sealed record with no "
+                    "development twin: its cases are not development data and "
+                    "are never re-run, so nothing is created under its root "
+                    "again.".format(switch)
+                )
             try:
                 run_benchmark.assert_not_under_the_held_out_root(
                     development_set.runs_dir(args.runs_dir),
                     args.runs_dir,
-                    remedy=(
-                        "{0} is the switch that moves a run one level down under "
-                        "its own set's root. Name --set wild-dev instead: those "
-                        "are the same 64 cases as development data, and their "
-                        "runs go under runs/wild-dev/".format(switch)
-                    ),
+                    remedy=remedy,
                 )
             except run_benchmark.BenchmarkError as exc:
                 print("FATAL: {0}".format(exc), file=sys.stderr)
@@ -1983,7 +2036,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     # there is one, prints the cases this invocation would run and the cases it
     # would not with their reasons, and returns. It builds no client, writes
     # nothing and creates no directory, so the owner can run it as often as they
-    # like before the one run.
+    # like before the one run. A set whose root is already closed has no plan to
+    # print -- no case will be run again -- so the closure is printed instead,
+    # and the event log is not read to print it.
     if args.check:
         for development_set in selected:
             if not development_set.sealed:
@@ -1992,6 +2047,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 case_no for case_no in development_set.cases if not cases or case_no in cases
             ]
             if not subset:
+                continue
+            if sealed_root_is_closed(development_set, model, args.runs_dir):
+                print(render_closed_sealed_root(development_set))
                 continue
             would_run, not_retried, do_not_count = sealed_protocol_plan(
                 development_set, subset, model, args.runs_dir

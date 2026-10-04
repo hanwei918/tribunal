@@ -499,6 +499,12 @@ class WildV2SwitchGuardTests(unittest.TestCase):
                         )
                         self.assertIn("wild-v2", err)
                         self.assertIn("nothing is created under it again", err)
+                        self.assertNotIn(
+                            "wild-dev",
+                            err,
+                            "the second sealed set's refusal carried the "
+                            "held-out set's remedy",
+                        )
                         self.assertEqual(
                             before,
                             sentinel.read_bytes(),
@@ -1414,13 +1420,22 @@ class WildV2RootIsClosedTests(unittest.TestCase):
         ``<scratch>/wild-v2/<slug>/`` and it is refused exactly as the
         repository's own would be, which is what makes the closure a property of
         the directory's shape rather than of one absolute path.
+
+        The guard is asked with ``permit=destination`` -- the one thing that
+        could open a sealed root. A root whose single run has **not** been made
+        accepts exactly that destination, so passing the permit is what makes
+        this test about the closure rather than about the call: with the set
+        moved back into ``UNRUN_SEALED_RUNS_SUBDIRS`` the permit would be
+        honoured, nothing would be raised, and this test would fail.
         """
         with tempfile.TemporaryDirectory() as tmp:
             runs = Path(tmp) / "runs"
             slug = run_benchmark.model_slug(MODEL)
             destination = runs / run_benchmark.WILD_V2_SET_RUNS_SUBDIR / slug
             with self.assertRaises(run_benchmark.BenchmarkError) as caught:
-                run_benchmark.assert_not_under_the_held_out_root(destination, runs)
+                run_benchmark.assert_not_under_the_held_out_root(
+                    destination, runs, permit=destination
+                )
             self.assertIn("nothing is created under it again", str(caught.exception))
 
 

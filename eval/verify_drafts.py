@@ -110,6 +110,23 @@ def assert_recorded_drafts_destination(runs_dir: Path, model: str) -> Path:
                     "the recorded-drafts results may not be written to the "
                     "headline run directory {0} or inside it".format(headline)
                 )
+
+    # The whole of a sealed set's root, not only its run directory: both sealed
+    # runs have been made and nothing is created under either again, this
+    # measurement included. The two headline walks above cannot see it, because
+    # the destination always goes through ``verify-recorded-drafts/`` while a
+    # sealed root is named after the set -- so ``--runs-dir runs/wild-v2`` put
+    # this measurement under the sealed root. The rule itself lives in the
+    # runner, so this command and every run refuse the same paths; only the
+    # closing sentence is this command's own.
+    run_benchmark.assert_not_under_the_held_out_root(
+        resolved,
+        runs_dir,
+        remedy=(
+            "A recorded-drafts measurement over those cases belongs in a "
+            "directory of its own, not under the run it read."
+        ),
+    )
     return run_dir
 
 

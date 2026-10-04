@@ -4,19 +4,24 @@ The run was made once, on 2026-10-04, and its 45 files are committed exactly as
 they were produced. The owner recorded a manifest of them the moment the run
 ended, and this repository now carries that manifest at
 ``docs/notes/2026-10-04-wild-v2-run-manifest.txt``. This module is what makes
-"exactly as produced" a measurement rather than a claim: it hashes every listed
-file and compares it with the digest the manifest states.
+"exactly as produced" a measurement rather than a claim, and it asks the
+question in both directions: it hashes every listed file and compares it with
+the digest the manifest states, and it fails if the run directory holds a file
+the manifest does not name -- a file added after the run ended leaves every
+listed digest intact, so a one-way check would not see it.
 
 **A failure names the file and nothing else.** A digest is a property of sealed
 bytes and a test's output is not where those belong; neither is a file's
-content. So the assertion messages carry repository-relative paths only, and the
-digests are compared, never printed.
+content. So the assertion messages carry repository-relative paths only, and
+every digest is compared rather than printed -- the manifest's own included,
+which is compared as a boolean for exactly that reason.
 
 **The check is shown able to fail.** A manifest whose digest for one file is
-wrong is built in a temporary directory and the checker is shown to report that
-file, so the green result over the real manifest is evidence of something. The
-fixture lives under the system's temporary directory, never under ``runs/``, and
-nothing here writes anything.
+wrong, and a run directory holding a file the manifest does not name, are each
+built in a temporary directory and the checker is shown to report the file, so
+the green result over the real manifest is evidence of something. The fixtures
+live under the system's temporary directory, never under ``runs/``, and nothing
+here writes anything.
 """
 
 from __future__ import annotations
@@ -91,6 +96,27 @@ def mismatches(entries: Sequence[Tuple[str, str]], root: Path) -> List[str]:
     return sorted(wrong)
 
 
+def unlisted(entries: Sequence[Tuple[str, str]], root: Path) -> List[str]:
+    """The files under the run directory that the manifest does not name.
+
+    The manifest is the record of what the run produced, so a file under the run
+    root that it does not name is a change to the record's subject: something
+    was added to the run after it ended, and every listed digest would still
+    verify. The walk is scoped to :data:`RUN_ROOT`, which is what makes this a
+    check about the run and not about the repository. The result is
+    repository-relative paths, sorted, and it is the whole of what a caller may
+    report.
+    """
+    root = Path(root)
+    listed = {relative for relative, _digest in entries}
+    present = {
+        str(path.relative_to(root))
+        for path in (root / RUN_ROOT).rglob("*")
+        if path.is_file()
+    }
+    return sorted(present - listed)
+
+
 class ManifestShapeTests(unittest.TestCase):
     """The manifest is the one the run's file count implies, over the one root."""
 
@@ -130,11 +156,16 @@ class ManifestIntegrityTests(unittest.TestCase):
     """The record, and every file the record names, as committed."""
 
     def test_the_manifest_is_the_one_the_owner_recorded(self):
-        """The record is pinned, so it cannot be edited to match edited files."""
+        """The record is pinned, so it cannot be edited to match edited files.
+
+        The comparison is made on a boolean rather than on the two digests, so
+        that a failure names the fact and not the digests: a test's output is
+        not where a digest belongs, and the pinned one is in this file for a
+        reader who wants it.
+        """
         digest = hashlib.sha256(MANIFEST.read_bytes()).hexdigest()
-        self.assertEqual(
-            MANIFEST_SHA256,
-            digest,
+        self.assertTrue(
+            MANIFEST_SHA256 == digest,
             "the committed manifest is not the one the owner recorded",
         )
 
@@ -146,6 +177,17 @@ class ManifestIntegrityTests(unittest.TestCase):
             wrong,
             "these files no longer hash as the manifest states: {0}".format(
                 ", ".join(wrong)
+            ),
+        )
+
+    def test_the_run_directory_holds_no_file_the_manifest_does_not_name(self):
+        """The other direction: a file added after the run ended is a change."""
+        extra = unlisted(manifest_entries(MANIFEST), PROJECT_ROOT)
+        self.assertEqual(
+            [],
+            extra,
+            "the run directory holds files the manifest does not name: {0}".format(
+                ", ".join(extra)
             ),
         )
 
@@ -184,6 +226,52 @@ class TheCheckCanFailTests(unittest.TestCase):
                 mismatches(entries, root),
                 "a missing file was not reported",
             )
+
+    def test_it_reports_a_file_added_under_the_run_directory(self):
+        """A file the manifest does not name leaves every listed digest intact.
+
+        The listed file still hashes as recorded, so a check that only hashed
+        the manifest's own lines would pass. The addition is reported by the
+        path alone.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            run_dir = root / "runs" / "wild-v2"
+            run_dir.mkdir(parents=True)
+            listed = run_dir / "case-00701.json"
+            added = run_dir / "case-00702.json"
+            listed.write_bytes(b"the bytes the manifest recorded\n")
+            added.write_bytes(b"a file the run did not produce\n")
+
+            entries = [
+                (
+                    "runs/wild-v2/case-00701.json",
+                    hashlib.sha256(listed.read_bytes()).hexdigest(),
+                )
+            ]
+
+            self.assertEqual([], mismatches(entries, root), "a listed file was reported")
+            self.assertEqual(
+                ["runs/wild-v2/case-00702.json"],
+                unlisted(entries, root),
+                "a file the manifest does not name was not reported",
+            )
+
+    def test_the_unlisted_check_has_a_clean_control(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            run_dir = root / "runs" / "wild-v2"
+            run_dir.mkdir(parents=True)
+            listed = run_dir / "case-00701.json"
+            listed.write_bytes(b"the bytes the manifest recorded\n")
+            entries = [
+                (
+                    "runs/wild-v2/case-00701.json",
+                    hashlib.sha256(listed.read_bytes()).hexdigest(),
+                )
+            ]
+
+            self.assertEqual([], unlisted(entries, root), "a clean fixture was reported")
 
     def test_the_clean_control_passes(self):
         with tempfile.TemporaryDirectory() as tmp:

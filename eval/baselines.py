@@ -123,6 +123,13 @@ def assert_not_a_run_directory(
     ``runs/<model-slug>/`` for exactly that reason. Every headline directory
     under either root is refused, so the guard no longer depends on the two
     arguments agreeing about where the runs are.
+
+    **A sealed set's whole root is refused, not only its run directory.** Both
+    sealed runs have been made and nothing is created under either again, so a
+    destination anywhere under ``runs/wild/`` or ``runs/wild-v2/`` is refused,
+    ``--out-dir`` included. That rule is
+    :func:`eval.run_benchmark.assert_not_under_the_held_out_root`'s, so this
+    command and every run refuse the same paths.
     """
     resolved = Path(destination).resolve()
     roots = [Path(runs_dir).resolve()]
@@ -158,6 +165,23 @@ def assert_not_a_run_directory(
                     "own results".format(candidate)
                 )
             candidate = candidate.parent
+
+    # And the whole of a sealed set's root, not only its run directory: both
+    # sealed runs have been made and nothing is created under either again, this
+    # measurement included. The rule itself lives in the runner, so this command
+    # and every run refuse the same paths; only the closing sentence is this
+    # command's own.
+    try:
+        run_benchmark.assert_not_under_the_held_out_root(
+            resolved,
+            runs_dir,
+            remedy=(
+                "The baselines over those cases belong in a directory of their "
+                "own, not under the run they read."
+            ),
+        )
+    except run_benchmark.BenchmarkError as exc:
+        raise BaselineError(str(exc)) from None
     return resolved
 
 
