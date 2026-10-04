@@ -4,8 +4,8 @@
 ``eval/answers/wild-v2/ground_truth.json``. Like the held-out set it is **not**
 a third development set: it was prepared by OpenAI Codex for the owner, it is
 run exactly once from a commit whose ``tribunal/``, ``prompts/`` and ``policy/``
-trees equal those at ``freeze-2026-10-03``, and that single run is the
-submission's generalisation figure. Its registration fixes policy
+trees equal those at ``freeze-2026-10-03``, and that single run is one of the two
+generalisation figures the submission reports. Its registration fixes policy
 version 2 -- ``POL-RD-13`` and the ``POL-RD-11`` upfront remedy are what the
 submission now stands behind -- so it is run at version 2 with no flag, and
 ``--policy-version`` is refused for it.

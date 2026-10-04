@@ -3,8 +3,8 @@
 The held-out set is 64 cases under ``data/external/wild/``, keyed by
 ``eval/answers/wild/ground_truth.json``. It is **not** a third development set:
 it was drafted without access to this repository, it is run exactly once from
-the commit tagged ``freeze-2026-09-30``, and that single run is the only
-generalisation figure the submission reports. Everything here follows from
+the commit tagged ``freeze-2026-09-30``, and that single run is one of the two
+generalisation figures the submission reports. Everything here follows from
 those four facts.
 
 What is asserted, in the order it matters:

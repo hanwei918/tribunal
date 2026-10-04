@@ -289,11 +289,11 @@ def _sealed_set_case(case_no):
 # The second sealed set, and its own key. It is a sealed set on the held-out
 # set's terms -- prepared without access to this repository, run exactly once
 # from a commit whose ``tribunal/``, ``prompts/`` and ``policy/`` trees equal
-# those at ``freeze-2026-10-03``, and that single run is the
-# submission's generalisation figure -- and it is a different set, with its own
-# case range, its own key and its own answer-bearing directory. Its key is a
-# fourth way for an answer to reach a brief, so it is guarded by the same layers
-# and its two paths are named explicitly below.
+# those at ``freeze-2026-10-03``, and that single run is one of the two
+# generalisation figures the submission reports -- and it is a different set,
+# with its own case range, its own key and its own answer-bearing directory. Its
+# key is a fourth way for an answer to reach a brief, so it is guarded by the
+# same layers and its two paths are named explicitly below.
 WILD_V2_KEY_PATH = EVAL_DIR / "answers" / "wild-v2" / "ground_truth.json"
 WILD_V2_SET_DIR = DATA_DIR / "external" / "wild-v2"
 WILD_V2_EXTERNAL_DIR = EVAL_DIR / "external" / "wild-v2"
@@ -656,9 +656,9 @@ class SecondDevelopmentSetTest(unittest.TestCase):
 class SealedSetIsolationTest(unittest.TestCase):
     """The guard covers the held-out set's key as well as the two above it.
 
-    The held-out set is the one set whose single run is the generalisation figure
-    the submission reports, so an answer reaching one of its briefs would
-    corrupt the figure that matters most. Its key is a third key and its cases
+    The held-out set's single run is one of the two generalisation figures the
+    submission reports, so an answer reaching one of its briefs would corrupt
+    that figure. Its key is a third key and its cases
     are briefed by the same ``brief.build_brief_for_case``, so the same layers
     are asserted over it: no case file carries an answer field, no brief
     carries an answer-key field name, and no module under ``tribunal/`` names

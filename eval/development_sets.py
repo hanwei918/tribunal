@@ -16,8 +16,8 @@ works on the prompt, and the set that meets that description is now in the
 repository: the held-out set, 64 cases under ``data/external/wild/``, keyed by
 ``eval/answers/wild/ground_truth.json``. It is **not** a third development
 set and it is never combined with the two above. It is run exactly once, from
-the commit tagged ``freeze-2026-09-30``, and that single run is the only
-figure the submission reports as generalisation. Nothing here produces that
+the commit tagged ``freeze-2026-09-30``, and that single run is one of the two
+generalisation figures the submission reports. Nothing here produces that
 figure.
 
 From 2026-10-01 those same 64 cases are registered a second time as
@@ -125,10 +125,10 @@ class DevelopmentSet:
     not land in a model's corpus run directory, and a distinct subdirectory is
     what makes that checkable rather than merely intended.
 
-    ``sealed`` marks the one set that is run **once** and whose single run is
-    the generalisation figure. It is the only field a set carries because of
-    what its results *mean* rather than where they live, and it is what lets a
-    switch that would replace that run be refused for this set and no other.
+    ``sealed`` marks a set that is run **once** and whose single run is one of
+    the two generalisation figures. It is the only field a set carries because
+    of what its results *mean* rather than where they live, and it is what lets
+    a switch that would replace that run be refused for this set and no other.
 
     ``policy_version`` is the version the set's **registration** fixes, and it
     is 1 for every set whose version is the command line's to choose. A set
@@ -295,11 +295,11 @@ WILD_V2 = DevelopmentSet(
     case_root=loader.EXTERNAL_DIR / run_benchmark.WILD_V2_SET_RUNS_SUBDIR,
     summary=(
         "the second sealed set (wild-v2): 20 cases prepared by OpenAI Codex for "
-        "the owner and imported on 2026-10-03; nobody who changed the system has "
-        "seen them, they are run once from a commit whose tribunal/, prompts/ "
-        "and policy/ trees equal those at freeze-2026-10-03, at the policy "
-        "version 2 this registration fixes, and that single run is the "
-        "submission's generalisation figure"
+        "the owner and imported on 2026-10-03; it was run once from a commit "
+        "whose tribunal/, prompts/ and policy/ trees equal those at "
+        "freeze-2026-10-03, at the policy version 2 this registration fixes, and "
+        "that single run is one of the two generalisation figures the submission "
+        "reports"
     ),
     sealed=True,
     policy_version=2,
@@ -380,10 +380,9 @@ DEVELOPMENT_DATA_CAVEAT = (
 )
 
 # The held-out set is printed on its own, and this is why. A sum of a
-# development figure and the generalisation figure is neither, so the two are
-# never added; and the sealed figure is a single run that has not happened when
-# the development figures are read, so it is reported as ``not run`` rather
-# than as zero.
+# development figure and a generalisation figure is neither, so the two are
+# never added; and a sealed figure is a single run, reported as ``not run``
+# rather than as zero where it is absent.
 SEALED_SET_CAVEAT = (
     "The held-out set is not a development set and is never added to the "
     "combined figure above. It was drafted without access to this repository "

@@ -18,8 +18,7 @@ The command, run by the owner outside this sandbox, one invocation:
 
     TRIBUNAL_SEALED_RUN=wild-v2 python3 -m eval.development_sets --set wild-v2 --concurrency 2 --timeout 900
 
-**When.** Started 2026-10-04 02:11:46 SGT and ended 03:25:32 SGT — a Sunday, and
-off-peak.
+**When.** Started 2026-10-04 02:11:46 SGT and ended 03:25:32 SGT — a Sunday.
 
 **From what.**
 
@@ -168,9 +167,9 @@ comparable strength.
 
 **The quorum, not the read-off check, kept the refund from being paid.** The
 threshold is 3, so `FULL_REFUND` at 2 of 4 would have escalated even if both 8.60
-drafts had passed the check. With the two 8.60 drafts abstaining, two usable
-drafts disagreed — `NO_ACTION` and `ESCALATE` — so agreement was 0.25, below the
-threshold, and the case escalated.
+drafts had passed the check. With the two 8.60 drafts abstaining there were **2
+valid drafts**, and a quorum of 3 agreeing drafts was needed; the two that
+remained disagreed — `NO_ACTION` and `ESCALATE` — so the case escalated.
 
 **The miss comes from a reading of `POL-RD-11(a)`, not from the read-off check.**
 The check did not stop a correct answer; it stopped two drafts that read the
@@ -201,10 +200,12 @@ about what happened.
 
 **The judge and the key differ about what the deciding fact is.** The judge took
 it to be the fare at its quote, carried by `EV-FARE-00716` at weight 1.0. The key
-and the dissent take it to be whether a **billable trip ran** at all, a fact that
-rests only on the 0.30 and 0.25 artifacts. On the key's reading the confidence cap
-is the lower of the two, 0.25, which is below the 0.70 floor, so `POL-RD-10(1)`
-engages and escalation is mandatory.
+takes it to be whether a **billable trip ran** at all, a fact that rests only on
+the 0.30 and 0.25 artifacts. The key's rationale rests on `POL-RD-10(4)` and
+`POL-GEN-02` and on nothing else: `POL-RD-10(4)` "independently mandates terminal
+escalation" and `POL-GEN-02` "forbids treating either discounted revision as
+decisive proof for a monetary award". It does not rest on `POL-RD-10(1)` or on a
+0.25 cap; that route is the dissent's, read below.
 
 The judge carried `NO_ACTION` with three of four drafts (agreement 0.75,
 `carried_not_unanimous`), and its explanation says exactly why:
@@ -224,13 +225,27 @@ ruling on the fare record:
 > EV-FARE-00716 at weight 1.0.
 
 So the ruling stands on one artifact at weight 1.0 while the two artifacts that
-carry the dispute are at 0.30 and 0.25. `POL-GEN-02(2)` as `policy/general.json`
-writes it says the confidence cap is "the minimum weight_multiplier among the
-artifacts that carry the deciding fact" — and the judge's answer is that the fare
-record is what carries the decision, so its cap is 1.0. The key's rationale for
-this case rejects that move in its own words: `POL-GEN-02` "forbids treating
-either discounted revision as decisive proof for a monetary award". That phrase
-is the rationale's, not the clause's.
+carry the dispute are at 0.30 and 0.25. **`POL-GEN-02(2)`, whole, as
+`policy/general.json` writes it:** "The Judge's confidence in a ruling is capped
+by the evidence the ruling actually rests on: confidence must not exceed the
+minimum weight_multiplier among the artifacts that carry the deciding fact, and
+where two or more independent artifacts carry it, that cap is the maximum of
+their weight_multipliers rather than the minimum. bundle_integrity_score, the
+mean weight across the bundle, is context for the reader and is NOT the cap.
+Because the platform-wide escalation floor is 0.70, a deciding fact carried
+solely by an artifact at weight 0.65 or below escalates automatically under
+POL-RD-10(1) or POL-NS-09(a)." The judge's answer is that the fare record is what
+carries the decision, so its cap is 1.0. The key's rationale for this case
+rejects that move in its own words: `POL-GEN-02` "forbids treating either
+discounted revision as decisive proof for a monetary award". That phrase is the
+rationale's, not the clause's.
+
+**Even the maximum is below the floor.** The two impaired artifacts are not
+independent carriers — one says the trip ran and the other says it was cancelled,
+and the trip record's distance is a copy of the same measurement — so the maximum
+clause does not lift the cap here. Even if it did, the maximum of 0.30 and 0.25 is
+**0.30**, and 0.30 is itself below the 0.70 floor, so escalation would be
+mandatory on either reading.
 
 **The dissent was sampled draft 2.** It proposed `ESCALATE` under `POL-GEN-02(2)`
 and `POL-RD-10(1)`, holding that
@@ -239,8 +254,11 @@ and `POL-RD-10(1)`, holding that
 > carried only by that impaired telemetry.
 
 so that its confidence "cannot exceed the minimum weight among its carriers,
-0.25", which is below the 0.70 floor. The position-swapped **draft 4 voted with
-the `NO_ACTION` majority**, so the split was three to one, not four to zero.
+0.25", which is below the 0.70 floor. **That minimum reading is draft 2's
+argument, not the key's:** the two impaired artifacts are not independent
+carriers, and the key's rationale rests on `POL-RD-10(4)` and `POL-GEN-02` rather
+than on the 0.25 cap or on `POL-RD-10(1)`. The position-swapped **draft 4 voted
+with the `NO_ACTION` majority**, so the split was three to one, not four to zero.
 
 **The literal reading is arguable.** `POL-RD-10(4)`'s words are what the judge
 says they are. But the clause exists so that a case like this one — a record that
@@ -288,9 +306,9 @@ the amount was not held.
   tribunal prompts policy` still exits 0 after this work, as it did before the
   run. Nothing in this note edits `tribunal/`, `prompts/` or `policy/`.
 - **The set is not development data.** Its cases are not run again, are not
-  briefed, and are not read by the policy-gap loop or the precedents block. The
-  run is a sealed record, and the root it lives under is closed: nothing is
-  created under `runs/wild-v2/` again, the plain sealed run included.
+  briefed to a model, and are not read by the policy-gap loop or the precedents
+  block. The run is a sealed record, and the root it lives under is closed:
+  nothing is created under `runs/wild-v2/` again, the plain sealed run included.
 
 **Any fix belongs to a later version, with a new sealed set.** 716 names a real
 question — whether `POL-RD-10(4)` reaches a cancellation-to-final-fix

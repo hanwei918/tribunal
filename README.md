@@ -72,7 +72,7 @@ misses are read in `docs/notes/2026-10-04-the-second-sealed-run.md`.
 | Verifier — rulings the material rule changed | 0 of 42 | `runs/verify-recorded-drafts/deepseek-deepseek-flash/verify-recorded.json`, `runs/codex/verify-recorded-drafts/deepseek-deepseek-flash/verify-recorded.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
 | Verifier — statements judged contradicted | 57 of 3,179 (15 material) | `runs/verify-recorded-drafts/*/deepseek-deepseek-flash/verify-recorded.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
 | Verifier — cases carrying a material contradiction | 102, 107, 108, 110, 9102, 9104, 9113 | `runs/verify-recorded-drafts/*/deepseek-deepseek-flash/verify-recorded.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
-| Verifier — the switch in every scored run | off, in all 8 | every scored run's `run.json` and `case-*.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
+| Verifier — the switch in every scored run | off, in all 8 | every scored run's `case-*.json`, each of which records its own `configuration`; the two development runs record none, in `run.json` or in their case files, so their half of this cell is unchecked | `python3 -m unittest tests.test_readme_figures -v` | no |
 | Sample case 901 — under the current pipeline | ESCALATE, confidence 0.6 | `runs/rerun-2026-09-29/external/ryde/case-00901.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
 | Sample case 901 — the organisers' stated expectation | Cancellation charge UPHELD | `eval/external/ryde/expected.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
 
@@ -82,6 +82,14 @@ misses are read in `docs/notes/2026-10-04-the-second-sealed-run.md`.
 from a commit whose `tribunal/`, `prompts/` and `policy/` trees equal those at
 `freeze-2026-10-03`. No `wild-v2` figure is added to a `wild-v1` figure or to any
 development figure.
+
+**Which policy version each block was measured at.** The corpus, the second
+development set and `wild-v1` were all measured at **policy version 1**, the
+three files in `policy/` exactly as they stood before amendment `0001`; the
+`wild-v2` block is the one measured at **version 2**. The version-2 re-run of the
+57 affected development cases is committed at `39a8a36` under `runs/policy-v2/`,
+`runs/codex/policy-v2/` and `runs/wild-dev/policy-v2/`, with `rerun.json`,
+`diff.json` and `diff.md`.
 
 **About the second sealed set's provenance.** The set shares three of its eight
 generator files with `wild-v1` — `core.py`, `places.py` and `wild.py` — and

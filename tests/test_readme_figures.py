@@ -25,7 +25,7 @@ import sys
 import unittest
 from decimal import Decimal
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, Sequence, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -474,17 +474,32 @@ class ReadmeFigureTests(unittest.TestCase):
         judged = sum(len(case["judged"]) for case in self.verifier)
         return "{0} of {1:,} ({2} material)".format(contradicted, judged, material)
 
-    def _verifier_switch(self) -> str:
-        for run_dir in SCORED_RUN_DIRS:
-            run = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
-            configuration = run.get("configuration")
-            if isinstance(configuration, Mapping) and configuration.get("verify_drafts"):
-                raise AssertionError(
-                    "{0} ran with the draft verifier on".format(
-                        run_dir.relative_to(PROJECT_ROOT)
+    def _verifier_switch(self, run_dirs: Optional[Sequence[Path]] = None) -> str:
+        """The switch, read from the case files the row's source names.
+
+        ``run.json`` records the ``configuration`` of the **last** invocation,
+        and two of the scored directories record none there at all, so a check
+        that read only ``run.json`` passed those two without reading anything.
+        The case files carry the same object per case, and they are what the
+        row's ``read from`` cell names. ``run_dirs`` exists so the check can be
+        shown to fail on a directory that has the switch on.
+        """
+        directories = tuple(SCORED_RUN_DIRS if run_dirs is None else run_dirs)
+        for run_dir in directories:
+            for case_file in sorted(run_dir.glob("case-*.json")):
+                case = json.loads(case_file.read_text(encoding="utf-8"))
+                configuration = case.get("configuration")
+                if isinstance(configuration, Mapping) and configuration.get(
+                    "verify_drafts"
+                ):
+                    try:
+                        where = case_file.relative_to(PROJECT_ROOT)
+                    except ValueError:
+                        where = case_file
+                    raise AssertionError(
+                        "{0} ran with the draft verifier on".format(where)
                     )
-                )
-        return "off, in all {0}".format(len(SCORED_RUN_DIRS))
+        return "off, in all {0}".format(len(directories))
 
     # -- the assertions ----------------------------------------------------
     def test_the_readme_states_every_figure_this_module_checks(self) -> None:

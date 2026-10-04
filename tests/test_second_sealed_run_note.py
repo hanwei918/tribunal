@@ -22,6 +22,16 @@ last-fix times, the published remedy and the dispute's contested amount. Each
 corrected sentence in the note is pinned to the record it was corrected against,
 so a note that drifted back to the earlier wording fails here.
 
+**The note's statements are pinned as whole rows and whole quoted passages, not
+as single facts.** A table row is built from the transcript or the case file and
+asserted in the note; the clause the note attributes to a draft is asserted both
+in that draft's own explanation and in the note; the threshold, the agreement and
+the confidence are asserted as the strings the note renders; the re-ask sentence
+is built from the draft numbers the vote records; and the note's ``sealed_report``
+block is compared with the command's own output. A one-fact edit to the note
+therefore fails here rather than passing as it did when each fact was checked
+separately.
+
 Prose is compared as whitespace-normalised text -- the note wraps its lines, and
 a sentence that reads the same at any column is the same sentence -- while the
 table rows are compared whole, because a table row is one line by construction.
@@ -48,7 +58,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from eval import development_sets, run_benchmark  # noqa: E402
+from eval import development_sets, run_benchmark, sealed_report  # noqa: E402
 from tribunal import brief, pipeline  # noqa: E402
 
 # The note under test. The override exists so an edited copy can be checked
@@ -69,6 +79,33 @@ Z_95 = 1.959963984540054
 # Every "N.NNN to N.NNN" interval string the note states must be one of the two
 # this module computes.
 INTERVAL_PATTERN = re.compile(r"\d+\.\d{3} to \d+\.\d{3}")
+
+# The note renders each artifact's type in its own parentheses. The types are the
+# case file's ``evidence_type``; only the casing here is the note's.
+EVIDENCE_TYPE_LABELS = {"TRIP_RECORD": "trip record", "GPS_TRACE": "GPS trace"}
+
+# Each clause the note attributes to a particular draft, with the phrase the
+# note renders that attribution as. The clause must appear in that draft's own
+# explanation -- otherwise the note attributes a clause the draft never cited --
+# and the phrase must appear in the note, so a clause that is only present
+# because the note quotes the policy whole does not satisfy the check.
+DRAFT_CLAUSES = (
+    (702, 1, "POL-RD-11(a)", "under `POL-RD-11(a)`"),
+    (702, 2, "POL-RD-11(a)", "under `POL-RD-11(a)`"),
+    (702, 4, "POL-RD-10(7)", "`ESCALATE` under `POL-RD-10(7)`"),
+    (
+        716,
+        2,
+        "POL-GEN-02(2)",
+        "`ESCALATE` under `POL-GEN-02(2)` and `POL-RD-10(1)`",
+    ),
+    (
+        716,
+        2,
+        "POL-RD-10(1)",
+        "`ESCALATE` under `POL-GEN-02(2)` and `POL-RD-10(1)`",
+    ),
+)
 
 
 def prose(text):
@@ -102,7 +139,11 @@ def wilson_interval(successes, total, z=Z_95):
 
 
 def three_places(value):
-    """A bound as the note states it: three decimal places, rounded half up."""
+    """A bound as the note states it: three decimal places.
+
+    Rendered with ``format``, which rounds the exact value of the double; no
+    bound the note states sits on a half, so the tie rule never comes into it.
+    """
     return "{0:.3f}".format(value)
 
 
@@ -176,6 +217,134 @@ def key_rationale_of(case_no):
 
 def judge_entries(case_no):
     return [e for e in transcript_of(case_no)["entries"] if e.get("role") == "JUDGE"]
+
+
+def vote_of(case_no):
+    """One case's vote block, as the transcript records it."""
+    return transcript_of(case_no)["vote"]
+
+
+def drafts_of(case_no):
+    """One case's drafts, by draft number."""
+    return {draft["draft"]: draft for draft in vote_of(case_no)["drafts"]}
+
+
+def judge_explanation(case_no, draft_number):
+    """The explanation of the judge call one draft points at.
+
+    Read through ``vote.drafts[].entries`` rather than by position, so the
+    explanation is the one the draft was actually reduced from.
+    """
+    draft = drafts_of(case_no)[draft_number]
+    entries = draft.get("entries") or []
+    if len(entries) != 1:
+        raise AssertionError(
+            "draft {0} of {1} points at {2} entries, not one".format(
+                draft_number, case_no, len(entries)
+            )
+        )
+    ruling = transcript_of(case_no)["entries"][entries[0]]["parsed"]["ruling"]
+    return prose(str(ruling.get("explanation", "")))
+
+
+def vote_row(draft):
+    """One row of the note's 702 draft table, built from the vote.
+
+    An abstaining draft has no proposal to read, so its figure is the one the
+    abstention message names; a draft that carried renders its ruling.
+    """
+    if draft["valid"]:
+        proposed = "`{0}`".format(draft["proposal"]["ruling"])
+        abstention = "\u2014"
+    else:
+        match = re.search(r"amount_sgd=(\S+)", draft["abstention"])
+        if match is None:
+            raise AssertionError(
+                "draft {0} abstained without naming an amount: {1!r}".format(
+                    draft["draft"], draft["abstention"]
+                )
+            )
+        proposed = "`amount_sgd` {0}".format(match.group(1))
+        abstention = "`{0}`".format(draft["abstention"].split(":")[0])
+    return "| {0} | {1} | {2} | {3} |".format(
+        draft["draft"], draft["kind"].replace("_", "-"), proposed, abstention
+    )
+
+
+def evidence_row(evidence_id):
+    """One row of the note's 716 artifact table, built from the case file.
+
+    The weight and the issue codes are the case file's; the type label is the
+    case file's ``evidence_type`` in the note's casing.
+    """
+    item = evidence_of(716)[evidence_id]
+    admissibility = item["admissibility"]
+    weight = "{0:.2f}".format(Decimal(admissibility["weight_multiplier"]))
+    codes = ", ".join(
+        "`{0}`".format(code)
+        for code in sorted(admissibility["issues"], reverse=True)
+    )
+    return "| `{0}` ({1}) | {2} | {3} |".format(
+        evidence_id, EVIDENCE_TYPE_LABELS[item["evidence_type"]], weight, codes
+    )
+
+
+def re_asked_drafts(case_no):
+    """The draft numbers re-asked inside their own case, from the vote.
+
+    A draft re-asked in call is one whose ``entries`` list holds more than the
+    one call the pipeline would otherwise make.
+    """
+    return [
+        draft["draft"]
+        for draft in vote_of(case_no)["drafts"]
+        if len(draft.get("entries") or []) > 1
+    ]
+
+
+def re_ask_phrase(re_asks):
+    """The note's own sentence for the re-asks, built from the draft numbers."""
+    parts = []
+    for case_no in sorted(re_asks):
+        drafts = re_asks[case_no]
+        times = "twice" if len(drafts) == 2 else "once"
+        if len(drafts) == 1:
+            numbered = "draft {0}".format(drafts[0])
+        else:
+            numbered = "drafts {0}".format(" and ".join(str(d) for d in drafts))
+        parts.append("{0} {1} ({2})".format(case_no, times, numbered))
+    return ", ".join(parts[:-1]) + " and " + parts[-1]
+
+
+def the_notes_report_block(text):
+    """The note's one fenced block, as its non-blank lines."""
+    blocks = re.findall(r"```\n(.*?)```", text, re.DOTALL)
+    if len(blocks) != 1:
+        raise AssertionError(
+            "the note carries {0} fenced blocks, not one".format(len(blocks))
+        )
+    return [line for line in blocks[0].splitlines() if line.strip()]
+
+
+def sealed_report_lines():
+    """The sealed report's own output, as its non-blank lines."""
+    return [
+        line
+        for line in sealed_report.render(SET, MODEL).splitlines()
+        if line.strip()
+    ]
+
+
+def pol_gen_02_confidence():
+    """The whole of ``POL-GEN-02(2)``, as ``policy/general.json`` writes it."""
+    general = json.loads(
+        (PROJECT_ROOT / "policy" / "general.json").read_text(encoding="utf-8")
+    )
+    clause = next(c for c in general["clauses"] if c["id"] == "POL-GEN-02")
+    rule = clause["rule"]
+    start = rule.index("(2) CONFIDENCE.")
+    end = rule.index("(3) NARRATION.")
+    return rule[start + len("(2) CONFIDENCE. ") : end].strip()
 
 
 def blockquotes(text):
@@ -364,6 +533,40 @@ class TheNotesIntervalsTests(unittest.TestCase):
         self.assertIn("freeze-2026-09-30", self.prose)
 
 
+class TheNotesReportBlockTests(unittest.TestCase):
+    """The note's ``sealed_report`` block, against the command's own output.
+
+    The note carries the figures as a block and says which command produced
+    them. A block transcribed by hand is a block that can drift from the command
+    it names, so the block is compared with what the command prints now.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = NOTE.read_text(encoding="utf-8")
+        cls.rendered = sealed_report_lines()
+
+    def test_the_command_prints_the_header_the_note_states_above_the_block(self):
+        self.assertEqual(
+            "Sealed set wild-v2 \u2014 {0}".format(MODEL), self.rendered[0]
+        )
+        self.assertEqual(
+            "Run: {0}".format(SET.run_dir(MODEL).relative_to(PROJECT_ROOT)),
+            self.rendered[1],
+        )
+
+    def test_the_notes_report_block_is_the_commands_output(self):
+        """Whole, line for line.
+
+        The command prints two header lines before the figures -- the set and
+        its model, and the run directory -- and a blank line between sections;
+        the note states the header in its own prose above the block and carries
+        no blank line inside it, so the two are compared with the blanks dropped
+        and the two header lines checked separately, above.
+        """
+        self.assertEqual(self.rendered[2:], the_notes_report_block(self.text))
+
+
 class TheNotesTwoMissesTests(unittest.TestCase):
     """The two misses the note reads, against the committed run and the key.
 
@@ -409,8 +612,8 @@ class TheNotes702Tests(unittest.TestCase):
     def setUpClass(cls):
         cls.text = NOTE.read_text(encoding="utf-8")
         cls.prose = prose(cls.text)
-        cls.vote = transcript_of(702)["vote"]
-        cls.drafts = {d["draft"]: d for d in cls.vote["drafts"]}
+        cls.vote = vote_of(702)
+        cls.drafts = drafts_of(702)
         cls.document = document_of(702)
         cls.money = money_block_of(702)
         cls.case = case_of(702)
@@ -476,8 +679,36 @@ class TheNotes702Tests(unittest.TestCase):
         self.assertEqual("ESCALATE", self.drafts[4]["proposal"]["ruling"])
         self.assertIs(self.drafts[4]["agrees"], False)
 
+    def test_the_notes_draft_table_rows_are_the_votes_rows(self):
+        """Each whole row, built from the vote rather than transcribed.
+
+        A one-fact edit to any cell -- a draft's kind, its proposed figure or its
+        abstention code -- fails here, because the row is rebuilt from the
+        transcript and then looked for in the note as one line.
+        """
+        rows = [vote_row(draft) for draft in self.vote["drafts"]]
+        self.assertEqual(4, len(rows))
+        self.assertEqual(len(set(rows)), 4, "two rows are the same row")
+        for row in rows:
+            with self.subTest(row=row):
+                self.assertIn(
+                    row,
+                    self.text,
+                    "the note does not state this row, built from the vote",
+                )
+
     def test_the_note_says_the_quorum_kept_the_refund(self):
         self.assertIn("The quorum, not the read-off check, kept the refund", self.prose)
+
+    def test_the_note_states_two_valid_drafts_and_a_quorum_of_three(self):
+        """The units, not a bare 0.25: 2 valid drafts and a quorum of 3."""
+        self.assertEqual(2, self.vote["valid"])
+        self.assertEqual(3, self.vote["threshold"])
+        self.assertIn(
+            "**2 valid drafts**, and a quorum of 3 agreeing drafts was needed",
+            self.prose,
+        )
+        self.assertNotIn("agreement was 0.25, below the threshold", self.prose)
 
     def test_the_note_no_longer_blames_the_read_off_check(self):
         """The three sentences the record contradicted, gone."""
@@ -493,16 +724,17 @@ class TheNotes716Tests(unittest.TestCase):
 
     The note used to attribute "decisive proof for a monetary award" to the
     clause. It is the key's rationale. The clause says the confidence cap is the
-    minimum weight among the artifacts that carry the deciding fact, and the note
-    now quotes it that way.
+    minimum weight among the artifacts that carry the deciding fact -- and, where
+    two or more independent artifacts carry it, the maximum of their weights --
+    and the note now quotes it whole.
     """
 
     @classmethod
     def setUpClass(cls):
         cls.text = NOTE.read_text(encoding="utf-8")
         cls.prose = prose(cls.text)
-        cls.vote = transcript_of(716)["vote"]
-        cls.drafts = {d["draft"]: d for d in cls.vote["drafts"]}
+        cls.vote = vote_of(716)
+        cls.drafts = drafts_of(716)
         cls.money = money_block_of(716)
         cls.case = case_of(716)
         cls.evidence = evidence_of(716)
@@ -546,6 +778,23 @@ class TheNotes716Tests(unittest.TestCase):
         self.assertIn("0.30", self.prose)
         self.assertIn("0.25", self.prose)
 
+    def test_the_notes_artifact_rows_are_the_case_files_rows(self):
+        """Each whole row: the id, its type, its weight and its issue codes.
+
+        The weight is the case file's ``weight_multiplier`` and the codes are its
+        ``issues``; an edit to either -- or to the type the note names -- fails
+        here rather than passing as an unchecked fact.
+        """
+        rows = (evidence_row("EV-TRIP-00716"), evidence_row("EV-GPS-00716"))
+        self.assertNotEqual(rows[0], rows[1])
+        for row in rows:
+            with self.subTest(row=row):
+                self.assertIn(
+                    row,
+                    self.text,
+                    "the note does not state this row, built from the case file",
+                )
+
     def test_the_cancellation_and_the_last_fix_are_16_minutes_apart(self):
         """The two timestamps the note reads, and the gap between them."""
         trip = self.evidence["EV-TRIP-00716"]["payload"]
@@ -570,11 +819,48 @@ class TheNotes716Tests(unittest.TestCase):
         self.assertNotIn("decisive proof for a monetary award", clause["rule"])
         self.assertIn("That phrase is the rationale's, not the clause's.", self.prose)
 
-    def test_the_note_quotes_pol_gen_02_2_as_written(self):
+    def test_the_note_quotes_pol_gen_02_2_whole_as_written(self):
+        """The whole of (2), including the maximum clause, from the policy file.
+
+        The note used to quote only the minimum half of the sentence, which read
+        as though the clause could never raise a cap. Both halves are asserted
+        here, and the clause text is read out of ``policy/general.json`` rather
+        than retyped.
+        """
+        confidence = pol_gen_02_confidence()
         self.assertIn(
-            "the minimum weight_multiplier among the artifacts that carry the deciding fact",
+            "that cap is the maximum of their weight_multipliers rather than the "
+            "minimum",
+            confidence,
+        )
+        self.assertIn(prose(confidence), self.prose)
+
+    def test_the_note_says_even_the_maximum_is_below_the_floor(self):
+        """0.30 is below the 0.70 floor too, so the reading does not matter."""
+        floor = json.loads(
+            (PROJECT_ROOT / "policy" / "general.json").read_text(encoding="utf-8")
+        )["confidence_floor"]
+        self.assertEqual(0.7, floor)
+        self.assertLess(0.30, floor)
+        self.assertIn("Even the maximum is below the floor", self.prose)
+        self.assertIn("the maximum of 0.30 and 0.25 is **0.30**", self.prose)
+        self.assertIn("below the 0.70 floor", self.prose)
+
+    def test_the_note_attributes_the_minimum_route_to_the_dissent_not_the_key(self):
+        """The 0.25 minimum and POL-RD-10(1) are draft 2's argument."""
+        self.assertIn(
+            "That minimum reading is draft 2's argument, not the key's", self.prose
+        )
+        self.assertIn(
+            "The key's rationale rests on `POL-RD-10(4)` and `POL-GEN-02` and on "
+            "nothing else",
             self.prose,
         )
+        # And the record agrees: the key's rationale names those two and neither
+        # POL-RD-10(1) nor a 0.25 cap.
+        self.assertIn("POL-RD-10(4)", self.rationale)
+        self.assertIn("POL-GEN-02", self.rationale)
+        self.assertNotIn("POL-RD-10(1)", self.rationale)
 
     def test_the_note_says_the_judge_and_the_key_differ_about_the_deciding_fact(self):
         self.assertIn(
@@ -583,8 +869,67 @@ class TheNotes716Tests(unittest.TestCase):
         self.assertIn("billable trip ran", self.prose)
 
 
+class TheNotesVoteFactsTests(unittest.TestCase):
+    """The clauses the note attributes to drafts, and the vote's own numbers."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = NOTE.read_text(encoding="utf-8")
+        cls.prose = prose(cls.text)
+
+    def test_each_clause_the_note_attributes_to_a_draft_is_that_drafts(self):
+        """Both directions: the draft cites it, and the note renders it as its own.
+
+        A clause the note attributes to a draft that did not cite it is a wrong
+        attribution; a clause the note drops is a statement the record does not
+        support being left out. The phrase is asserted rather than the bare
+        clause id, so a clause present only in the note's whole quotation of the
+        policy does not satisfy the check.
+        """
+        for case_no, draft_number, clause, phrase in DRAFT_CLAUSES:
+            with self.subTest(case=case_no, draft=draft_number, clause=clause):
+                self.assertIn(
+                    clause,
+                    judge_explanation(case_no, draft_number),
+                    "draft {0} of {1} does not cite {2}".format(
+                        draft_number, case_no, clause
+                    ),
+                )
+                self.assertIn(
+                    phrase,
+                    self.prose,
+                    "the note does not render draft {0} of {1}'s citation of "
+                    "{2} as {3!r}".format(draft_number, case_no, clause, phrase),
+                )
+
+    def test_the_threshold_the_agreement_and_the_confidence_are_the_notes_strings(self):
+        """Each rendered from the vote or the result, then looked for in the note."""
+        vote_702 = vote_of(702)
+        vote_716 = vote_of(716)
+        self.assertEqual(3, vote_702["threshold"])
+        self.assertEqual(3, vote_716["threshold"])
+        self.assertEqual(0.75, vote_716["agreement"])
+        confidence = document_of(716)["ruling"]["ruling"]["confidence"]
+        self.assertEqual(Decimal("0.85"), confidence)
+        self.assertIn(
+            "The threshold is {0}".format(vote_702["threshold"]),
+            self.prose,
+            "the note does not state 702's threshold as the vote records it",
+        )
+        self.assertIn(
+            "agreement {0}".format(vote_716["agreement"]),
+            self.prose,
+            "the note does not state 716's agreement as the vote records it",
+        )
+        self.assertIn(
+            "confidence {0}".format(confidence),
+            self.prose,
+            "the note does not state 716's produced confidence",
+        )
+
+
 class TheNotesSentencesTests(unittest.TestCase):
-    """The three sentences the sheet corrects, and the record behind each."""
+    """The sentences the sheet corrects, and the record behind each."""
 
     @classmethod
     def setUpClass(cls):
@@ -598,23 +943,35 @@ class TheNotesSentencesTests(unittest.TestCase):
         self.assertEqual([], run["failures"])
         self.assertIn("failures: []", self.prose)
 
-    def test_the_note_records_the_four_re_asks(self):
-        """Four judge answers were unusable and re-asked inside their case."""
-        re_asks = {}
-        for case_no in SET.cases:
-            drafts = transcript_of(case_no)["vote"]["drafts"]
-            extra = sum(1 for d in drafts if len(d.get("entries") or []) > 1)
-            if extra:
-                re_asks[case_no] = extra
-        self.assertEqual({701: 2, 708: 1, 718: 1}, re_asks)
+    def test_the_note_records_the_four_re_asks_by_draft_number(self):
+        """Four judge answers were unusable and re-asked inside their case.
+
+        The draft numbers come from ``vote.drafts[].entries``: a draft re-asked
+        in call is one whose ``entries`` list holds more than one call. The
+        note's own sentence is then built from those numbers and looked for, so a
+        sentence naming the wrong drafts fails here.
+        """
+        re_asks = {
+            case_no: re_asked_drafts(case_no)
+            for case_no in SET.cases
+            if re_asked_drafts(case_no)
+        }
+        self.assertEqual({701: [1, 3], 708: [1], 718: [1]}, re_asks)
+        self.assertEqual(4, sum(len(drafts) for drafts in re_asks.values()))
+        self.assertIn(re_ask_phrase(re_asks), self.prose)
         self.assertIn("one in-call retry", self.prose)
-        self.assertIn("701 twice", self.prose)
-        self.assertIn("708", self.prose)
-        self.assertIn("718", self.prose)
 
     def test_the_note_no_longer_claims_no_model_call_was_made_in_this_repository(self):
         self.assertNotIn("no model call was made in this repository", self.prose)
         self.assertIn("The owner's run made the model calls", self.prose)
+
+    def test_the_note_no_longer_calls_the_run_off_peak(self):
+        """Nothing in the record says the run was off-peak."""
+        self.assertNotIn("off-peak", self.prose)
+        self.assertIn("a Sunday.", self.prose)
+
+    def test_the_note_says_the_cases_are_not_briefed_to_a_model(self):
+        self.assertIn("are not briefed to a model", self.prose)
 
     def test_the_owners_record_is_marked_as_such(self):
         """The ping, the --check output and the gate exit are the owner's."""
