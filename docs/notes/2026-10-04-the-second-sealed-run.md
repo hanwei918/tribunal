@@ -4,9 +4,9 @@
 from a commit whose `tribunal/`, `prompts/` and `policy/` trees equal those at
 `freeze-2026-10-03`. The output is committed exactly as produced under
 `runs/wild-v2/deepseek-deepseek-flash/` — 45 files, recorded in
-`docs/notes/2026-10-04-wild-v2-run-manifest.txt` — and **no model call was made
-in this repository** to produce or to read it. This note reads every figure out
-of the committed files and the set's own key.
+`docs/notes/2026-10-04-wild-v2-run-manifest.txt`. The owner's run made the model
+calls; none was made in this repository in committing or reading it. This note
+reads every figure out of the committed files and the set's own key.
 
 Nothing in this note changes a ruling, a prompt, a policy, a case file or the
 key. It records what the run did, what it missed, and why. The key is frozen
@@ -27,7 +27,7 @@ off-peak.
 |---|---|
 | commit | `6cc268298ac079807ddc6682b7776824371648c2` |
 | working tree | clean — `run.json` records `working_tree_clean: true` |
-| the freeze gate | `git diff --quiet freeze-2026-10-03 -- tribunal prompts policy` exited 0 |
+| the freeze gate | `git diff --quiet freeze-2026-10-03 -- tribunal prompts policy` exited 0, as the owner recorded it |
 
 **Configuration,** as `run.json` records it:
 
@@ -46,20 +46,24 @@ off-peak.
 
 **Before the run.**
 
-- One ping through the runtime client answered 200.
+- One ping through the runtime client answered 200, as the owner recorded it.
 - `--check` printed `would run (20): 701 ... 720`, with nothing not run and no
-  attempt that did not count.
+  attempt that did not count, as the owner recorded it.
 
-**Outcome.** All 20 cases produced a ruling, with no failure of any kind. So no
-retry was made, and the protocol's retry rules did not come into play. The event
-chain verifies. 4,339,077 tokens were consumed, of which 1,044,223 were cached.
+**Outcome.** All 20 cases produced a ruling, and no case failed — `run.json`
+records `failures: []`. Four judge answers were unusable and were re-asked inside
+their own case by the pipeline's one in-call retry, which is not a protocol
+retry: 701 twice (drafts 1 and 3), 708 once (draft 1) and 718 once (draft 1) —
+four re-asks in all, each of which the model then answered. No protocol retry was
+made, so the protocol's retry rules did not come into play. The event chain
+verifies. 4,339,077 tokens were consumed, of which 1,044,223 were cached.
 
 **The invocation cap.** The owner recorded one reading before the run. The
 protocol addendum's section 4 says "at most two invocations", and the code
 applies a per-case cap that does not count a killed attempt. The two can
 disagree only after a killed invocation. The addendum itself says the code is
 what the run follows, so the per-case rule would have governed. The situation
-did not arise: there was one invocation and no failure.
+did not arise: there was one invocation and no case failed.
 
 ## The figures
 
@@ -140,25 +144,40 @@ The vote did not carry:
 | 3 | sampled | `NO_ACTION` | — |
 | 4 | position-swapped | `ESCALATE` | — |
 
-Two drafts proposed a refund of 8.60 and the draft check
-`DRAFT_AMOUNT_NOT_READ_OFF` rejected both, because 8.60 is neither a figure the
-brief's money block publishes nor the sum of two or three of them. That left two
-usable drafts that disagreed — `NO_ACTION` and `ESCALATE` — so agreement was
-0.25, below the quorum of 3, and the case escalated.
+**The money block published the right figure.** It published `pol_rd_11_remedy`
+0.00, with the charge equal to the governing `quoted_fare_sgd` of 22.40: no
+distance-or-time refund is available on an upfront fare, and the clause's own
+arithmetic gives 0.00. The brief that figure is read out of is the one the run
+was given — rebuilding the brief from the case file and the policy at version 2
+gives a sha256 equal to the `brief_sha256` the run recorded for 702.
 
-**What 8.60 most likely is.** The case shows an earlier quote and a superseding
-amendment: the in-app chat (`EV-CHAT-00702`) has the rider writing *"I changed it
-and the app now says 22.40, not 13.80"*, and the trip record's
-`dropoff_amended_at` is set with the original pin recorded. 22.40 − 13.80 = 8.60.
-So 8.60 is most likely the charge less the **earlier, superseded** quote — the
-amendment's difference, not the excess over the governing fare, which is 0.00.
-**This is an inference from the case's own figures and not a claim the record
-states.**
+**8.60 is in the record, not an inference.** It is the dispute's own
+`amount_contested_sgd`, and the rider's claim and drafts 1 and 2 derive it the
+same way: 22.40 less the **superseded** 13.80 quote in the chat log
+(`EV-CHAT-00702`), read as "the fare fixed at booking" under `POL-RD-11(a)`. The
+governing `quoted_fare_sgd` is 22.40, not 13.80, so that reading is the one the
+key rejects — but the figure itself is on the case, not read into it.
 
-The miss is safe in the way that matters: the check kept a wrong refund from
-being paid. A draft that had computed 0.00 would have passed and the case would
-have been decided, so what went wrong is that no draft found the right figure —
-not that the system published a wrong one.
+**The four drafts.** Drafts 1 and 2 (both sampled) proposed `FULL_REFUND` 8.60
+and were rejected by the draft check `DRAFT_AMOUNT_NOT_READ_OFF`, because 8.60 is
+neither a figure the brief's money block publishes nor the sum of two or three of
+them. Draft 3 (sampled) computed 0.00 and proposed `NO_ACTION`, which is correct.
+The position-swapped draft 4 proposed `ESCALATE` under `POL-RD-10(7)`, on its
+reading that the chat and the ledger are mutually contradictory evidence of
+comparable strength.
+
+**The quorum, not the read-off check, kept the refund from being paid.** The
+threshold is 3, so `FULL_REFUND` at 2 of 4 would have escalated even if both 8.60
+drafts had passed the check. With the two 8.60 drafts abstaining, two usable
+drafts disagreed — `NO_ACTION` and `ESCALATE` — so agreement was 0.25, below the
+threshold, and the case escalated.
+
+**The miss comes from a reading of `POL-RD-11(a)`, not from the read-off check.**
+The check did not stop a correct answer; it stopped two drafts that read the
+chat's 13.80 as the fare fixed at booking. A draft that had computed 0.00 the way
+draft 3 did would have carried, and the case would have been decided the way the
+key decides it. What went wrong is that the first two drafts read `POL-RD-11(a)`
+the other way.
 
 ### 716 — under-escalation, the dangerous kind
 
@@ -180,12 +199,19 @@ trace runs to a terminal fix at 13:43:40 — **16 minutes later**. So the record
 holds a cancellation and a trace that continues past it, and the two disagree
 about what happened.
 
+**The judge and the key differ about what the deciding fact is.** The judge took
+it to be the fare at its quote, carried by `EV-FARE-00716` at weight 1.0. The key
+and the dissent take it to be whether a **billable trip ran** at all, a fact that
+rests only on the 0.30 and 0.25 artifacts. On the key's reading the confidence cap
+is the lower of the two, 0.25, which is below the 0.70 floor, so `POL-RD-10(1)`
+engages and escalation is mandatory.
+
 The judge carried `NO_ACTION` with three of four drafts (agreement 0.75,
 `carried_not_unanimous`), and its explanation says exactly why:
 
 > (4) the 16-minute divergence flagged by the pre-pass is between a cancellation
-> event and the trace's terminal fix, not between pickup or dropoff timestamps —
-> pickup agrees at 13:18:40 on both artifacts and `ended_at` is null — so (4) is
+> event and the trace's terminal fix, not between pickup or dropoff timestamps -
+> pickup agrees at 13:18:40 on both artifacts and ended_at is null - so (4) is
 > not engaged.
 
 That is a **literal** reading of `POL-RD-10(4)`: the limb is about a disagreement
@@ -195,12 +221,26 @@ ruling on the fare record:
 
 > The fact the ruling actually rests on, that this is an upfront fare charged
 > exactly at its quote with no chargeable pass-throughs, is carried by
-> `EV-FARE-00716` at weight 1.0.
+> EV-FARE-00716 at weight 1.0.
 
 So the ruling stands on one artifact at weight 1.0 while the two artifacts that
-carry the dispute are at 0.30 and 0.25 — and `POL-GEN-02` is what forbids exactly
-that: a discounted revision may not be treated as decisive proof for a monetary
-award.
+carry the dispute are at 0.30 and 0.25. `POL-GEN-02(2)` as `policy/general.json`
+writes it says the confidence cap is "the minimum weight_multiplier among the
+artifacts that carry the deciding fact" — and the judge's answer is that the fare
+record is what carries the decision, so its cap is 1.0. The key's rationale for
+this case rejects that move in its own words: `POL-GEN-02` "forbids treating
+either discounted revision as decisive proof for a monetary award". That phrase
+is the rationale's, not the clause's.
+
+**The dissent was sampled draft 2.** It proposed `ESCALATE` under `POL-GEN-02(2)`
+and `POL-RD-10(1)`, holding that
+
+> The fact that decides this case - whether a billable trip was performed - is
+> carried only by that impaired telemetry.
+
+so that its confidence "cannot exceed the minimum weight among its carriers,
+0.25", which is below the 0.70 floor. The position-swapped **draft 4 voted with
+the `NO_ACTION` majority**, so the split was three to one, not four to zero.
 
 **The literal reading is arguable.** `POL-RD-10(4)`'s words are what the judge
 says they are. But the clause exists so that a case like this one — a record that
@@ -254,12 +294,13 @@ the amount was not held.
 
 **Any fix belongs to a later version, with a new sealed set.** 716 names a real
 question — whether `POL-RD-10(4)` reaches a cancellation-to-final-fix
-divergence — and 702 names a draft check that could not express the right figure.
-Both are the kind of change that would move rulings. Making either now would mean
-the run reported as the second generalisation figure was produced by a system
-that is no longer the system. The repair, when it is made, is measured on the
-development sets, and the generalisation figure is taken again from a set that
-has not been read. This run is closed as it stands.
+divergence — and 702 names a reading of `POL-RD-11(a)` that takes a superseded
+quote as the fare fixed at booking. Both are the kind of change that would move
+rulings. Making either now would mean the run reported as the second
+generalisation figure was produced by a system that is no longer the system. The
+repair, when it is made, is measured on the development sets, and the
+generalisation figure is taken again from a set that has not been read. This run
+is closed as it stands.
 
 ## Where to read it
 
