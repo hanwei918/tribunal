@@ -162,6 +162,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from eval import grade
+from eval import sealed_roots
 from tribunal import (
     brief,
     events,
@@ -580,7 +581,7 @@ HELD_OUT_REMEDY = (
 # cases are not development data, so no directory holds them again.
 WILD_V2_REMEDY = (
     "The set is a sealed record: its cases are not development data and are "
-    "never re-run, so nothing is created under its root again."
+    "never re-run."
 )
 
 
@@ -5043,6 +5044,14 @@ def assert_external_run_directory(run_dir: Path, runs_dir: Path) -> Path:
     every file a reader would look at apparently intact. The check is made
     rather than intended, so a caller cannot ask for the headline directory by
     accident and get it.
+
+    A well-formed external destination is still refused when the runs root it
+    belongs to is a sealed set's own root: ``--runs-dir runs/wild-v2`` puts
+    ``runs/wild-v2/external/<name>/`` under a sealed root, and this command's
+    own rule cannot see that because the destination is exactly where an
+    external case belongs. That rule is
+    :func:`eval.sealed_roots.refuse_a_sealed_destination`'s, so this command and
+    every other one that writes to a named path refuse the same paths.
     """
     resolved = Path(run_dir).resolve()
     external_root = (Path(runs_dir) / EXTERNAL_RUNS_SUBDIR).resolve()
@@ -5051,6 +5060,7 @@ def assert_external_run_directory(run_dir: Path, runs_dir: Path) -> Path:
             "an external case may only be written under runs/{0}/, and this one "
             "would go to {1}".format(EXTERNAL_RUNS_SUBDIR, resolved)
         )
+    sealed_roots.refuse_a_sealed_destination(resolved, runs_dir)
     return resolved
 
 

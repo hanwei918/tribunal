@@ -649,6 +649,24 @@ class WildV2SealedRunLockTests(unittest.TestCase):
             )
         return runs, code, out, err
 
+    def _open_root(self):
+        """Treat the sealed root as not yet made, so the plan branch is reached.
+
+        ``wild-v2``'s single run has been made, so its root is closed by the
+        registration and ``--check`` prints the closure instead of a plan. The
+        plan branch is what a sealed set that has been imported and not yet run
+        would take, so it is reached by emptying the two lists -- and the tuple
+        built from them, so nothing reads a list that disagrees with the others.
+        """
+        for name, value in (
+            ("MADE_SEALED_RUNS_SUBDIRS", ()),
+            ("UNRUN_SEALED_RUNS_SUBDIRS", ()),
+            ("SEALED_RUNS_SUBDIRS", ()),
+        ):
+            patcher = mock.patch.object(run_benchmark, name, value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
     def test_without_the_opt_in_the_invocation_is_refused_and_writes_nothing(self):
         with tempfile.TemporaryDirectory() as tmp:
             with mock.patch.dict(os.environ):
@@ -657,7 +675,26 @@ class WildV2SealedRunLockTests(unittest.TestCase):
 
             self.assertEqual(1, code, "the sealed run was not locked")
             self.assertIn(sets.SEALED_RUN_ENV_VAR, err)
+            self.assertIn("its single run has been made", err)
+            self.assertIn("root is closed", err)
+            self.assertFalse(runs.exists(), "the refused invocation created the runs root")
+
+    def test_without_the_opt_in_on_an_open_root_the_gate_explains_how_to_opt_in(self):
+        """The other half of the gate: a root whose run has not been made.
+
+        No sealed set is open today -- both have been run -- so the open branch
+        is reached by emptying the lists. Its message is the one that explains
+        the opt-in, and it still refuses and still writes nothing.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            self._open_root()
+            with mock.patch.dict(os.environ):
+                os.environ.pop(sets.SEALED_RUN_ENV_VAR, None)
+                runs, code, _out, err = self._invocation(tmp)
+
+            self.assertEqual(1, code, "the sealed run was not locked")
             self.assertIn("owner only", err)
+            self.assertIn(sets.SEALED_RUN_ENV_VAR, err)
             self.assertFalse(runs.exists(), "the refused invocation created the runs root")
 
     def test_the_opt_in_set_to_any_other_value_is_refused(self):
@@ -674,6 +711,7 @@ class WildV2SealedRunLockTests(unittest.TestCase):
 
     def test_check_creates_nothing_even_when_the_runs_root_does_not_exist(self):
         with tempfile.TemporaryDirectory() as tmp:
+            self._open_root()
             runs, code, out, err = self._invocation(tmp, "--check")
 
             self.assertEqual(0, code, err)
@@ -682,6 +720,7 @@ class WildV2SealedRunLockTests(unittest.TestCase):
 
     def test_check_prints_exactly_the_plan_for_a_scripted_events_log(self):
         with tempfile.TemporaryDirectory() as tmp:
+            self._open_root()
             runs = Path(tmp) / "runs"
             _scripted_events_log(runs)
             before = _state(runs)

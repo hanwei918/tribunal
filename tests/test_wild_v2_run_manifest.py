@@ -27,11 +27,13 @@ here writes anything.
 from __future__ import annotations
 
 import hashlib
+import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 from typing import List, Sequence, Tuple
+from unittest import mock
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -96,23 +98,50 @@ def mismatches(entries: Sequence[Tuple[str, str]], root: Path) -> List[str]:
     return sorted(wrong)
 
 
-def unlisted(entries: Sequence[Tuple[str, str]], root: Path) -> List[str]:
+def ignored(path: Path) -> bool:
+    """Whether the repository's ``.gitignore`` matches a path.
+
+    Asked of git itself rather than of a copy of the patterns, so the check and
+    the repository's own rules cannot come to differ; ``--no-index`` so a name
+    is ignored whether or not it happens to be tracked. A path outside the
+    repository cannot be matched by the repository's rules -- git says so with
+    its own exit status rather than by ignoring it -- which is what leaves the
+    scratch fixtures below unaffected.
+    """
+    result = subprocess.run(
+        ["git", "check-ignore", "-q", "--no-index", "--", str(path)],
+        cwd=PROJECT_ROOT,
+        capture_output=True,
+        text=True,
+    )
+    return result.returncode == 0
+
+
+def unlisted(
+    entries: Sequence[Tuple[str, str]], root: Path, run_root: str = RUN_ROOT
+) -> List[str]:
     """The files under the run directory that the manifest does not name.
 
     The manifest is the record of what the run produced, so a file under the run
     root that it does not name is a change to the record's subject: something
     was added to the run after it ended, and every listed digest would still
-    verify. The walk is scoped to :data:`RUN_ROOT`, which is what makes this a
-    check about the run and not about the repository. The result is
-    repository-relative paths, sorted, and it is the whole of what a caller may
-    report.
+    verify. The walk is scoped to ``run_root``, which is what makes this a check
+    about the run and not about the repository.
+
+    **A name the repository's ``.gitignore`` matches is not a change.** A Finder
+    file or a cache directory appearing beside a run says nothing about the run,
+    and the repository already ignores it, so it is skipped rather than
+    reported.
+
+    The result is repository-relative paths, sorted, and it is the whole of what
+    a caller may report.
     """
     root = Path(root)
     listed = {relative for relative, _digest in entries}
     present = {
         str(path.relative_to(root))
-        for path in (root / RUN_ROOT).rglob("*")
-        if path.is_file()
+        for path in (root / run_root).rglob("*")
+        if path.is_file() and not ignored(path)
     }
     return sorted(present - listed)
 
@@ -284,6 +313,54 @@ class TheCheckCanFailTests(unittest.TestCase):
             ]
 
             self.assertEqual([], mismatches(entries, root), "a clean fixture was reported")
+
+    def test_it_skips_a_name_the_ignore_rules_match(self):
+        """``.DS_Store`` sits under ``runs/`` on this machine and is not a change.
+
+        The rules are asked about paths in the repository, so nothing has to be
+        written to show what they say; the wiring is then shown with the
+        predicate replaced, because a file in a temporary directory is outside
+        the repository and no rule of ours can match it. The added case file is
+        still reported and the Finder file is not.
+        """
+        self.assertTrue(
+            ignored(PROJECT_ROOT / "runs" / "wild" / ".DS_Store"),
+            "the repository does not ignore .DS_Store",
+        )
+        self.assertFalse(
+            ignored(PROJECT_ROOT / "runs" / "wild" / "case-00501.json"),
+            "a case file is ignored",
+        )
+        self.assertFalse(
+            ignored(PROJECT_ROOT / "tests" / "not-a-real-file.json"),
+            "a path no rule names was ignored",
+        )
+
+        with mock.patch.object(
+            sys.modules[__name__], "ignored", lambda path: path.name == ".DS_Store"
+        ):
+            with tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                run_dir = root / "runs" / "wild-v2"
+                run_dir.mkdir(parents=True)
+                listed = run_dir / "case-00701.json"
+                listed.write_bytes(b"the bytes the manifest recorded\n")
+                (run_dir / ".DS_Store").write_bytes(b"a Finder file\n")
+                (run_dir / "case-00702.json").write_bytes(
+                    b"a file the run did not produce\n"
+                )
+                entries = [
+                    (
+                        "runs/wild-v2/case-00701.json",
+                        hashlib.sha256(listed.read_bytes()).hexdigest(),
+                    )
+                ]
+
+                self.assertEqual(
+                    ["runs/wild-v2/case-00702.json"],
+                    unlisted(entries, root),
+                    "the ignored name was reported or the added file was not",
+                )
 
 
 if __name__ == "__main__":

@@ -35,10 +35,13 @@ from eval import (  # noqa: E402
     amount_rule,
     baselines,
     development_sets as sets,
+    grade,
     policy_gaps,
     run_benchmark,
+    sealed_roots,
     verify_drafts,
 )
+from ui import build as ui_build  # noqa: E402
 
 MODEL = "deepseek/deepseek-flash"
 
@@ -69,8 +72,10 @@ class ScratchRunsRootTestCase(unittest.TestCase):
 
     ``--runs-dir`` is refused for a sealed set, so a scratch root is put in
     place by moving the constants: the command line reads ``sets.RUNS_DIR``, the
-    runner reads ``run_benchmark.RUNS_DIR``, and the two ``--out-dir`` guards
-    read their own. Nothing here touches a committed run.
+    runner reads ``run_benchmark.RUNS_DIR`` -- which is also what
+    :func:`eval.sealed_roots.refuse_a_sealed_destination` reads for the
+    repository's own root -- and the two ``--out-dir`` guards read their own.
+    Nothing here touches a committed run.
     """
 
     def setUp(self):
@@ -83,22 +88,9 @@ class ScratchRunsRootTestCase(unittest.TestCase):
             patcher.start()
             self.addCleanup(patcher.stop)
 
-    def sealed_run_directory(self, development_set):
-        """``<scratch>/<root>/<slug>/``, holding a run's own record.
 
-        ``run.json`` is what a run leaves behind when it ends, so its presence
-        is what makes the root closed. An empty directory, or one holding only
-        an event log, is not the same thing and is the fixture the open-root
-        control uses.
-        """
-        run_dir = development_set.run_dir(MODEL, self.scratch)
-        run_dir.mkdir(parents=True)
-        (run_dir / run_benchmark.METADATA_FILE).write_text("{}\n", encoding="utf-8")
-        return run_dir
-
-
-def _run_cli(arguments):
-    """``sets.main``, with both streams captured and no client buildable.
+def _run_main(entry, arguments):
+    """One command's ``main``, with both streams captured and no client buildable.
 
     Every invocation here is refused before a client is built, so no test may be
     able to build one: the class is patched to raise for the duration of the
@@ -114,10 +106,15 @@ def _run_cli(arguments):
     run_benchmark.llm.LLMClient = refuse_to_build_a_client
     try:
         with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
-            code = sets.main(arguments)
+            code = entry(arguments)
     finally:
         run_benchmark.llm.LLMClient = original
     return code, stdout.getvalue(), stderr.getvalue()
+
+
+def _run_cli(arguments):
+    """``sets.main``, with both streams captured and no client buildable."""
+    return _run_main(sets.main, arguments)
 
 
 # --------------------------------------------------------------------------
@@ -256,10 +253,18 @@ class CheckOnAClosedRootTests(ScratchRunsRootTestCase):
     """A closed root has no plan to print.
 
     ``--check`` prints what one plain invocation would run. For a set whose
-    single run is already there, no case will be run again, so a list of cases
-    that "would run" would describe an invocation that cannot happen. The
-    closure is printed instead, and the whole output is asserted -- the header,
-    the empty counts and the absent plan.
+    single run has been made, no case will be run again, so a list of cases that
+    "would run" would describe an invocation that cannot happen. The closure is
+    printed instead, and the whole output is asserted -- the header, the empty
+    counts and the absent plan.
+
+    **The fact is the registration, not a file under the root.** The closure is
+    read from ``run_benchmark.MADE_SEALED_RUNS_SUBDIRS``, the one list that says
+    which sealed runs have been made, so these tests patch the list rather than
+    writing a ``run.json``: a root whose run was made is closed for every model,
+    and a root whose run has not been made is open for every model.
+    ``UNRUN_SEALED_RUNS_SUBDIRS`` and the tuple built from the two are patched
+    with it, so nothing reads a list that disagrees with the others.
     """
 
     # ``wild`` fixes no arguments; ``wild-v2`` fixes the owner's command.
@@ -276,21 +281,34 @@ class CheckOnAClosedRootTests(ScratchRunsRootTestCase):
         ],
     }
 
+    def _patch_subdir_lists(self, made, unrun=()):
+        """Make the two subdirectory lists, and the tuple built from them, say this."""
+        for name, value in (
+            ("MADE_SEALED_RUNS_SUBDIRS", tuple(made)),
+            ("UNRUN_SEALED_RUNS_SUBDIRS", tuple(unrun)),
+            ("SEALED_RUNS_SUBDIRS", tuple(made) + tuple(unrun)),
+        ):
+            patcher = mock.patch.object(run_benchmark, name, value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
     def test_a_closed_root_prints_the_closure_and_lists_no_cases(self):
         for development_set in SEALED_SETS:
             with self.subTest(sealed_set=development_set.name):
-                self.sealed_run_directory(development_set)
                 code, out, err = _run_cli(self.ARGUMENTS[development_set.name])
                 self.assertEqual(0, code, err)
                 self.assertEqual(CLOSED_ROOT_OUTPUT.format(development_set.name), out)
                 self.assertNotIn("would run (1", out)
 
-    def test_a_root_with_no_run_still_prints_the_plan(self):
-        """The control: the branch is about the run, not about the command.
+    def test_a_root_whose_run_has_not_been_made_still_prints_the_plan(self):
+        """The control: the branch is about the list, not about the command.
 
-        The same command over the same scratch root, with the run's own
-        ``run.json`` not yet written, prints the plan for every case.
+        The same command over the same scratch root, with both subdirectory
+        lists emptied -- which is what a sealed set that has been drafted,
+        imported and not yet run would look like -- prints the plan for every
+        case.
         """
+        self._patch_subdir_lists(made=(), unrun=())
         for development_set in SEALED_SETS:
             with self.subTest(sealed_set=development_set.name):
                 code, out, err = _run_cli(self.ARGUMENTS[development_set.name])
@@ -302,6 +320,192 @@ class CheckOnAClosedRootTests(ScratchRunsRootTestCase):
                 self.assertIn(
                     "would run ({0}):".format(len(development_set.cases)), out
                 )
+
+    def test_the_closure_does_not_depend_on_which_model_is_named(self):
+        """A non-default ``--model`` is looking at the same closed root.
+
+        The root holds one run, made under one model. Asking about another model
+        used to look for that model's own ``run.json``, find none, and print a
+        plan for an invocation that cannot happen; the closure is the root's, so
+        the model named changes nothing.
+        """
+        for other in ("deepseek/deepseek-v4.1-flash", "some/other-model"):
+            with self.subTest(model=other):
+                code, out, err = _run_cli(
+                    ["--set", "wild", "--model", other, "--check"]
+                )
+                self.assertEqual(0, code, err)
+                self.assertEqual(CLOSED_ROOT_OUTPUT.format("wild"), out)
+                self.assertNotIn("would run (1", out)
+
+    def test_the_made_list_is_the_half_that_decides(self):
+        """``MADE_SEALED_RUNS_SUBDIRS`` closes a root; the other list does not."""
+        self._patch_subdir_lists(made=("wild-v2",), unrun=("wild",))
+        code, out, err = _run_cli(self.ARGUMENTS["wild-v2"])
+        self.assertEqual(0, code, err)
+        self.assertEqual(CLOSED_ROOT_OUTPUT.format("wild-v2"), out)
+        code, out, err = _run_cli(self.ARGUMENTS["wild"])
+        self.assertEqual(0, code, err)
+        self.assertTrue(out.startswith(OPEN_ROOT_HEADER.format("wild")), out)
+
+
+# --------------------------------------------------------------------------
+# Every command that writes to a path a caller names
+# --------------------------------------------------------------------------
+class NamedPathDestinationTests(ScratchRunsRootTestCase):
+    """Five commands write to a path the caller names, and each refuses a root.
+
+    ``run_benchmark --external``, ``eval.grade --out``, ``ui.build --out``,
+    ``policy_gaps draft --proposals-dir`` and ``policy_gaps approve
+    --amendments-dir``. Each of them can be pointed at a sealed root, and a file
+    written there would be the first new thing under a root whose single run is
+    committed. The refusal is one rule, in
+    :func:`eval.sealed_roots.refuse_a_sealed_destination`, and every test here is
+    one of those commands, run for **both** sealed roots.
+
+    ``tribunal.precedents --store`` is deliberately not one of them: ``tribunal/``
+    imports nothing from ``eval/`` and the evaluated system stays byte-identical
+    to the tag it was frozen at, so that guard is the caller's own.
+    """
+
+    def _in_root(self, development_set, *parts):
+        return self.scratch / development_set.runs_subdir / Path(*parts)
+
+    # -- run_benchmark --external ------------------------------------------
+    def test_the_external_runner_refuses_either_sealed_root(self):
+        """``--runs-dir runs/wild-v2 --external`` is the way in.
+
+        The destination is a well-formed external one -- under the runs root's
+        ``external/`` -- so the runner's own rule lets it through and only the
+        sealed-root rule refuses it.
+        """
+        for development_set in SEALED_SETS:
+            with self.subTest(sealed_set=development_set.name):
+                runs_dir = self.scratch / development_set.runs_subdir
+                destination = runs_dir / run_benchmark.EXTERNAL_RUNS_SUBDIR / "ryde"
+                with self.assertRaises(sealed_roots.SealedDestinationError) as caught:
+                    run_benchmark.assert_external_run_directory(destination, runs_dir)
+                self.assertIn(str(destination.resolve()), str(caught.exception))
+                self.assertFalse(destination.exists())
+
+    def test_an_external_run_of_its_own_is_still_taken(self):
+        """A guard that refused everything would pass the test above."""
+        destination = self.scratch / run_benchmark.EXTERNAL_RUNS_SUBDIR / "ryde"
+        self.assertEqual(
+            destination.resolve(),
+            run_benchmark.assert_external_run_directory(destination, self.scratch),
+        )
+
+    # -- eval.grade --out ---------------------------------------------------
+    def test_grade_out_refuses_either_sealed_root(self):
+        for development_set in SEALED_SETS:
+            with self.subTest(sealed_set=development_set.name):
+                destination = self._in_root(
+                    development_set, run_benchmark.model_slug(MODEL), "report.md"
+                )
+                code, out, err = _run_main(
+                    grade.main, ["--self-test", "--out", str(destination)]
+                )
+                self.assertEqual(1, code, err)
+                self.assertIn("FATAL", err)
+                self.assertIn(str(destination.resolve()), err)
+                self.assertFalse(destination.exists())
+
+    def test_grade_out_leaves_a_committed_report_byte_identical(self):
+        """The report already there is neither overwritten nor opened."""
+        destination = self._in_root(
+            sets.WILD_V2, run_benchmark.model_slug(MODEL), "report.md"
+        )
+        destination.parent.mkdir(parents=True)
+        committed = b"# the report that was committed\n"
+        destination.write_bytes(committed)
+
+        code, out, err = _run_main(
+            grade.main, ["--self-test", "--out", str(destination)]
+        )
+        self.assertEqual(1, code, err)
+        self.assertEqual(committed, destination.read_bytes())
+
+    def test_grade_out_of_its_own_is_still_taken(self):
+        destination = self.scratch / "report.md"
+        code, out, err = _run_main(
+            grade.main, ["--self-test", "--out", str(destination)]
+        )
+        self.assertEqual(0, code, err)
+        self.assertTrue(destination.is_file())
+
+    # -- ui.build --out -----------------------------------------------------
+    def test_ui_build_out_refuses_either_sealed_root(self):
+        for development_set in SEALED_SETS:
+            with self.subTest(sealed_set=development_set.name):
+                destination = self._in_root(
+                    development_set, run_benchmark.model_slug(MODEL), "index.html"
+                )
+                code, out, err = _run_main(ui_build.main, ["--out", str(destination)])
+                self.assertEqual(1, code, err)
+                self.assertIn("FATAL", err)
+                self.assertIn(str(destination.resolve()), err)
+                self.assertFalse(destination.exists())
+
+    def test_a_page_of_its_own_is_still_taken(self):
+        """The control: the same command with a destination of its own.
+
+        ``--check`` writes nothing, so the control is the guard letting the
+        command through to its own rule -- here, that there is no page yet.
+        """
+        destination = self.scratch / "index.html"
+        code, out, err = _run_main(
+            ui_build.main, ["--check", "--out", str(destination)]
+        )
+        self.assertEqual(1, code)
+        self.assertIn("does not exist", out)
+        self.assertNotIn("is sealed", out)
+
+    # -- policy_gaps draft --proposals-dir ----------------------------------
+    def test_the_draft_proposals_directory_refuses_either_sealed_root(self):
+        for development_set in SEALED_SETS:
+            with self.subTest(sealed_set=development_set.name):
+                root = self.scratch / development_set.runs_subdir
+                proposals = root / policy_gaps.PROPOSALS_DIRNAME
+                code, out, err = _run_main(
+                    policy_gaps.main,
+                    [
+                        "draft",
+                        "--report",
+                        str(self.scratch / "nowhere.json"),
+                        "--cluster",
+                        "C4",
+                        "--proposals-dir",
+                        str(root),
+                    ],
+                )
+                self.assertEqual(1, code, err)
+                self.assertIn("FATAL", err)
+                self.assertIn(str(proposals.resolve()), err)
+                self.assertFalse(proposals.exists())
+
+    # -- policy_gaps approve --amendments-dir -------------------------------
+    def test_the_approve_amendments_directory_refuses_either_sealed_root(self):
+        for development_set in SEALED_SETS:
+            with self.subTest(sealed_set=development_set.name):
+                root = self.scratch / development_set.runs_subdir
+                amendments = policy_gaps.amendments_directory(root)
+                code, out, err = _run_main(
+                    policy_gaps.main,
+                    [
+                        "approve",
+                        "--proposal",
+                        str(self.scratch / "nowhere.json"),
+                        "--approved-by",
+                        "the owner",
+                        "--amendments-dir",
+                        str(root),
+                    ],
+                )
+                self.assertEqual(1, code, err)
+                self.assertIn("FATAL", err)
+                self.assertIn(str(amendments.resolve()), err)
+                self.assertFalse(amendments.exists())
 
 
 if __name__ == "__main__":

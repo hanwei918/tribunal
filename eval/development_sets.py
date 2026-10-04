@@ -897,20 +897,20 @@ def render_sealed_plan(
     return "\n".join(lines)
 
 
-def sealed_root_is_closed(
-    development_set: DevelopmentSet, model: str, runs_dir: Path = RUNS_DIR
-) -> bool:
-    """Whether a sealed set's root already holds the one run it will ever hold.
+def sealed_root_is_closed(development_set: DevelopmentSet) -> bool:
+    """Whether a sealed set's root is closed outright.
 
-    A sealed root is closed outright once its single run is there: nothing is
-    created under it again, the plain run included. What the run leaves is its
-    own ``run.json``, written when the invocation ends, so that file's presence
-    is the fact -- not the directory, which a refused or interrupted invocation
-    can leave behind, and not the event log, which an attempt that does not
-    count also writes.
+    A sealed root is closed once its single run has been made: nothing is
+    created under it again, the plain run included. **The fact is the root's
+    registration, not a file under it.** The question is asked of
+    ``run_benchmark.MADE_SEALED_RUNS_SUBDIRS`` -- the one list that says which
+    sealed runs have been made -- and not of one model's ``run.json``, because a
+    run made under another model is the same root and closes it just as much:
+    ``--set wild --model <anything> --check`` is looking at a root whose single
+    run is committed, and asking a file named after the model would have printed
+    a plan for an invocation that cannot happen.
     """
-    run_dir = development_set.run_dir(model, runs_dir)
-    return (run_dir / run_benchmark.METADATA_FILE).is_file()
+    return development_set.runs_subdir in run_benchmark.MADE_SEALED_RUNS_SUBDIRS
 
 
 def render_closed_sealed_root(development_set: DevelopmentSet) -> str:
@@ -2047,7 +2047,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             ]
             if not subset:
                 continue
-            if sealed_root_is_closed(development_set, model, args.runs_dir):
+            if sealed_root_is_closed(development_set):
                 print(render_closed_sealed_root(development_set))
                 continue
             would_run, not_retried, do_not_count = sealed_protocol_plan(
@@ -2077,14 +2077,27 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         if not subset:
             continue
         if opt_in != development_set.name:
-            print(
-                "FATAL: {0} is a sealed set, and its single run is made by the "
-                "owner only. To make it, set {1}={0} for that one command; "
-                "nothing else may set it, and nothing in this repository does".format(
-                    development_set.name, SEALED_RUN_ENV_VAR
-                ),
-                file=sys.stderr,
-            )
+            if development_set.runs_subdir in run_benchmark.MADE_SEALED_RUNS_SUBDIRS:
+                # The run has been made, so there is nothing to opt in to: the
+                # root is closed, and this invocation cannot open it.
+                print(
+                    "FATAL: {0} is a sealed set and its single run has been "
+                    "made. Its root is closed: nothing is created under it "
+                    "again, {1}={0} included".format(
+                        development_set.name, SEALED_RUN_ENV_VAR
+                    ),
+                    file=sys.stderr,
+                )
+            else:
+                print(
+                    "FATAL: {0} is a sealed set, and its single run is made by "
+                    "the owner only. To make it, set {1}={0} for that one "
+                    "command; nothing else may set it, and nothing in this "
+                    "repository does".format(
+                        development_set.name, SEALED_RUN_ENV_VAR
+                    ),
+                    file=sys.stderr,
+                )
             return 1
         # And the run must be able to call a model at all. Checked after the
         # opt-in, so an invocation that is not the owner's is still told about the

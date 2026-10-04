@@ -62,6 +62,7 @@ from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
+from eval import sealed_roots
 from tribunal import loader
 
 __all__ = [
@@ -2323,6 +2324,22 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--title", default=None, help="report title")
     args = parser.parse_args(argv)
 
+    # The destination is the caller's to name, so it is refused before the key
+    # is loaded and before anything is graded. ``--out`` can be pointed at a
+    # committed ``report.md`` under a sealed root, and a report written there
+    # would be the first new thing under a root whose single run is committed.
+    # The rule is :mod:`eval.sealed_roots`'s, so this command and every other
+    # one that writes to a path a caller names refuse the same paths.
+    out = args.out
+    if out is None and args.self_test:
+        out = DEFAULT_REPORT_PATH
+    if out is not None:
+        try:
+            sealed_roots.refuse_a_sealed_destination(out)
+        except sealed_roots.SealedDestinationError as exc:
+            print("FATAL: {0}".format(exc), file=sys.stderr)
+            return 1
+
     key = load_answer_key()
     if args.self_test:
         produced = key_as_produced(key)
@@ -2334,9 +2351,6 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     report = grade(produced, key)
     text = render_report(report, title)
 
-    out = args.out
-    if out is None and args.self_test:
-        out = DEFAULT_REPORT_PATH
     if out is not None:
         Path(out).parent.mkdir(parents=True, exist_ok=True)
         Path(out).write_text(text, encoding="utf-8")

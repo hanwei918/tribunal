@@ -64,7 +64,7 @@ POLICY_DIR = PROJECT_ROOT / "policy"
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from eval import development_sets, grade, run_benchmark  # noqa: E402
+from eval import development_sets, grade, run_benchmark, sealed_roots  # noqa: E402
 from tribunal import (  # noqa: E402
     brief,
     llm,
@@ -267,21 +267,18 @@ def assert_not_a_run_directory(destination: Path, runs_dir: Path, model: str) ->
             "directory there is a headline directory".format(external)
         )
 
-    # The whole of the held-out set's root, not only its run directory: that run
-    # was made once and nothing is created under it again, report included. The
-    # rule itself lives in the runner, so the loop and every run refuse the same
-    # paths; only the closing sentence is this command's own.
+    # The whole of a sealed set's root, not only its run directory: both sealed
+    # runs have been made and nothing is created under either again, report
+    # included. That rule is one rule for every command that writes to a path a
+    # caller names, so it lives in :mod:`eval.sealed_roots`; only the closing
+    # sentence is this command's own.
     try:
-        run_benchmark.assert_not_under_the_held_out_root(
-            resolved,
-            runs_dir,
-            remedy=(
-                "A policy-gap report over those cases belongs in a directory of "
-                "its own, not under the run it read."
-            ),
-        )
-    except run_benchmark.BenchmarkError as exc:
-        raise PolicyGapError(str(exc)) from None
+        sealed_roots.refuse_a_sealed_destination(resolved, runs_dir)
+    except sealed_roots.SealedDestinationError as exc:
+        raise PolicyGapError(
+            "{0} A policy-gap report over those cases belongs in a directory of "
+            "its own, not under the run it read.".format(exc)
+        ) from None
 
     candidate = resolved
     while candidate != root and root in candidate.parents:
@@ -2577,6 +2574,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         PolicyGapError,
         policy_versions.AmendmentError,
         run_benchmark.BenchmarkError,
+        sealed_roots.SealedDestinationError,
         precedents.PrecedentError,
         loader.LoaderError,
     ) as exc:
@@ -2645,6 +2643,11 @@ def _main_report(args: argparse.Namespace) -> int:
 
 
 def _main_draft(args: argparse.Namespace) -> int:
+    # The proposals directory is the caller's to name, so it is refused before
+    # the report is read and before a proposal is written. The rule is
+    # :mod:`eval.sealed_roots`'s, so this command and every other one that
+    # writes to a path a caller names refuse the same paths.
+    sealed_roots.refuse_a_sealed_destination(proposals_directory(args.proposals_dir))
     model = run_benchmark.resolve_model(args.model)
     document = run_benchmark.read_json(args.report)
     if not isinstance(document, Mapping):
@@ -2673,6 +2676,11 @@ def _main_draft(args: argparse.Namespace) -> int:
 
 
 def _main_approve(args: argparse.Namespace) -> int:
+    # The amendments directory is the caller's to name, so it is refused before
+    # the proposal is read and before an amendment is written. The rule is
+    # :mod:`eval.sealed_roots`'s, so this command and every other one that
+    # writes to a path a caller names refuse the same paths.
+    sealed_roots.refuse_a_sealed_destination(amendments_directory(args.amendments_dir))
     version, path = approve_proposal(
         args.proposal, approved_by=args.approved_by, amendments_root=args.amendments_dir
     )

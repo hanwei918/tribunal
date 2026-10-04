@@ -52,7 +52,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from eval import run_benchmark  # noqa: E402
+from eval import run_benchmark, sealed_roots  # noqa: E402
 from tribunal import events, llm, money, pipeline, referee  # noqa: E402
 from tribunal import transcript as transcript_module  # noqa: E402
 
@@ -116,17 +116,16 @@ def assert_recorded_drafts_destination(runs_dir: Path, model: str) -> Path:
     # measurement included. The two headline walks above cannot see it, because
     # the destination always goes through ``verify-recorded-drafts/`` while a
     # sealed root is named after the set -- so ``--runs-dir runs/wild-v2`` put
-    # this measurement under the sealed root. The rule itself lives in the
-    # runner, so this command and every run refuse the same paths; only the
-    # closing sentence is this command's own.
-    run_benchmark.assert_not_under_the_held_out_root(
-        resolved,
-        runs_dir,
-        remedy=(
-            "A recorded-drafts measurement over those cases belongs in a "
-            "directory of its own, not under the run it read."
-        ),
-    )
+    # this measurement under the sealed root. That rule is one rule for every
+    # command that writes to a path a caller names, so it lives in
+    # :mod:`eval.sealed_roots`; only the closing sentence is this command's own.
+    try:
+        sealed_roots.refuse_a_sealed_destination(resolved, runs_dir)
+    except sealed_roots.SealedDestinationError as exc:
+        raise run_benchmark.BenchmarkError(
+            "{0} A recorded-drafts measurement over those cases belongs in a "
+            "directory of its own, not under the run it read.".format(exc)
+        ) from None
     return run_dir
 
 

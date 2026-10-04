@@ -540,6 +540,33 @@ reduce.
   but close the 501 shape first and then re-measure on a fresh held-out set. Nothing
   in this repository adopts it yet.
 
+## Every named destination refuses a sealed root (amended 2026-10-04)
+
+Both sealed roots — `runs/wild/` and `runs/wild-v2/` — and all four headline
+directories are now refused by **every command that writes to a path a user
+names**, through one helper, `eval.sealed_roots.refuse_a_sealed_destination(path,
+runs_dir)`. It refuses any path under a sealed root, comparing path components
+case-folded, against both the runs root it was given and the repository's own; it
+refuses any headline directory; and its message names the path only.
+
+- **The commands it guards.** `run_benchmark --external` (inside
+  `assert_external_run_directory`), `eval.grade --out`, `ui.build --out`,
+  `policy_gaps draft --proposals-dir` and `policy_gaps approve --amendments-dir`.
+  Each refuses before anything is created or written, and `eval.grade --out` in
+  particular can no longer overwrite a committed `report.md` in either sealed root.
+- **The four routed guards.** The recorded-drafts measurement, the baselines, the
+  amount-rule measurement and the policy-gap report now call the same helper and
+  re-raise their own error type around it, so each command's own refusal sentence
+  is unchanged while the rule lives in one place.
+- **The tests.** `tests/test_sealed_roots_closed.py` pins one test per call site,
+  for both sealed roots, over a scratch root, and shows each red with the call
+  removed; a `grade --out <scratch>/wild-v2/<slug>/report.md` is refused and the
+  committed report is left byte-identical.
+- **One write path is not guarded.** `tribunal.precedents --store` is named as the
+  one place a person can still write a sealed root's path: `tribunal/` imports
+  nothing from `eval/`, so the evaluated system stays byte-identical to the tag and
+  the store is left to whoever names it.
+
 ## Language rule (standing)
 
 Every document in this repository is written in English, and every prompt pasted into WorkBuddy is written in English. No Chinese characters in any tracked text file.

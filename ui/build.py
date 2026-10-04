@@ -112,6 +112,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from eval import grade  # noqa: E402
+from eval import sealed_roots  # noqa: E402
 from tribunal import brief as brief_module  # noqa: E402
 from tribunal import llm  # noqa: E402
 from tribunal import model as model_module  # noqa: E402
@@ -3393,6 +3394,16 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         help="compare the file on disk with a fresh build and write nothing",
     )
     args = parser.parse_args(argv)
+
+    # The page's destination is the caller's to name, so it is refused before
+    # the run is read and before anything is built. The rule is
+    # :mod:`eval.sealed_roots`'s, so this command and every other one that
+    # writes to a path a caller names refuse the same paths.
+    try:
+        sealed_roots.refuse_a_sealed_destination(args.out)
+    except sealed_roots.SealedDestinationError as exc:
+        print("FATAL: {0}".format(exc), file=sys.stderr)
+        return 1
 
     document = build_document(run_dir=Path(args.run_dir))
     _report_refusals(document)
