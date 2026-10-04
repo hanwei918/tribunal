@@ -72,7 +72,7 @@ misses are read in `docs/notes/2026-10-04-the-second-sealed-run.md`.
 | Verifier — rulings the material rule changed | 0 of 42 | `runs/verify-recorded-drafts/deepseek-deepseek-flash/verify-recorded.json`, `runs/codex/verify-recorded-drafts/deepseek-deepseek-flash/verify-recorded.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
 | Verifier — statements judged contradicted | 57 of 3,179 (15 material) | `runs/verify-recorded-drafts/*/deepseek-deepseek-flash/verify-recorded.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
 | Verifier — cases carrying a material contradiction | 102, 107, 108, 110, 9102, 9104, 9113 | `runs/verify-recorded-drafts/*/deepseek-deepseek-flash/verify-recorded.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
-| Verifier — the switch in every scored run | off, in all 7 | every scored run's `run.json` and `case-*.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
+| Verifier — the switch in every scored run | off, in all 8 | every scored run's `run.json` and `case-*.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
 | Sample case 901 — under the current pipeline | ESCALATE, confidence 0.6 | `runs/rerun-2026-09-29/external/ryde/case-00901.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
 | Sample case 901 — the organisers' stated expectation | Cancellation charge UPHELD | `eval/external/ryde/expected.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
 
@@ -83,10 +83,22 @@ from a commit whose `tribunal/`, `prompts/` and `policy/` trees equal those at
 `freeze-2026-10-03`. No `wild-v2` figure is added to a `wild-v1` figure or to any
 development figure.
 
-**Every command above is read-only and makes no model call.** The two module
+**About the second sealed set's provenance.** The set shares three of its eight
+generator files with `wild-v1` — `core.py`, `places.py` and `wild.py` — and
+`wild-v1` became development data on 2026-10-01, so 18/20 is read as an **upper
+estimate** rather than as an expectation. Whether the set's author, OpenAI Codex,
+could read this repository while preparing it is **not recorded**. One interrupted
+attempt on 2026-10-03 at 14:14 partly called cases 701 and 702; its record was
+deleted, and the owner ruled before the run that the attempt does not count under
+the protocol. The run's own note is
+`docs/notes/2026-10-04-the-second-sealed-run.md`.
+
+**Every command above is read-only and makes no model call.** The three module
 commands are `python3 -m eval.development_sets --report`, which prints each set's
-row (cases, four-field exact, and the four fields separately) and its currency,
-and `python3 -m eval.baselines --set all`, which prints the baseline table. The
+row (cases, four-field exact, and the four fields separately) and its currency;
+`python3 -m eval.baselines --set all`, which prints the baseline table; and
+`python3 -m eval.sealed_report --set <set>`, which prints one sealed set's own
+figures on both bases, per category, and its escalation counts. The
 rest are recomputed by `tests/test_readme_figures.py`, which parses this table and
 recomputes every row from the committed files and the frozen keys:
 
@@ -97,9 +109,13 @@ file states and the value the committed files hold. The module also fails if a
 figure is dropped from the table or added to it without being checked, and if any
 row's `model call` cell is not `no`.
 
-**The runs themselves did make model calls, and none of them was made here.** Each
-was run once by the owner outside this sandbox and committed byte for byte as
-produced. The commands that made them, and which of them were paid for, are:
+**The runs themselves did make model calls, and none of them was made here — with
+one exception that does not count.** Each run in the table below was made once by
+the owner outside this sandbox and committed byte for byte as produced. The one
+exception is the interrupted attempt on 2026-10-03 at 14:14, which partly called
+cases 701 and 702 before it was stopped; its record was deleted, it is not a run
+in the table, and the owner ruled before the run that it does not count under the
+protocol. The commands that made them, and which of them were paid for, are:
 
 | run | command | when |
 |---|---|---|
@@ -212,7 +228,7 @@ and `SHAPE`.
 | path | what it holds |
 |---|---|
 | `data/` | The 29-case corpus (`data/cases/`), its manifest (`data/index.json`), the data contract (`data/PUBLIC-CONTRACT.md`), and the external sets under `data/external/`: the organisers' sample, the second development set (`codex/`, 15 cases) and the held-out set (`wild/`, 64 cases). |
-| `policy/` | The policy the agents are briefed against, as three JSON files. `policy/amendments/` is empty: the repository is at policy version 1. |
+| `policy/` | The policy the agents are briefed against, as three JSON files. `policy/amendments/` holds `0001-pol-rd-13` (approved), so the repository is at **policy version 2**, and the second sealed set was run at version 2. |
 | `prompts/v1/` | The six prompts: the advocate template with its two stance blocks, the judge, the verifier and the policy drafter. |
 | `tribunal/` | The pipeline — loader, prepass, facts, brief, referee, pipeline, transcript, money, events, llm, model, precedents, policy versions. |
 | `eval/` | The benchmark and the measurement: the runner, the grader, the development-set runner, the baselines, the policy-gap loop, the verifier's measurement mode, and the event-log reader. `eval/answers/` holds the frozen keys. `eval/external/` holds answer-bearing source documents, which are **not** agent input. |

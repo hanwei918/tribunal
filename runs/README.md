@@ -18,12 +18,12 @@ This directory is the benchmark's own output. Every subdirectory named in the ta
 | **`deepseek-deepseek-flash/`** | **The headline run**, and on top of it **five judge-only re-runs** of that same run. Seven invocations: two full runs (`97dbb9c`, `493beea`) and five replays that reused `493beea`'s advocates and called only the judge — two measuring the prompt after its first amendment, three measuring the frozen prompt. Every cached result is current on both channels and all 29 carry a `replay` block; the graded figure over the 29 is **27/29**, failing 105 and 211, and that figure is the frozen prompt's. The runtime model decision rests on the `493beea` measurement. | A measurement, and a replay of one. Read each result's `replay` block before reading its tokens. |
 | `hy3/` | Produced under an invalidated configuration. | Evidence for a defect. No number in it is usable. |
 | `hy4-preview/` | Produced under the same invalidated configuration. | Evidence for a defect. No number in it is usable. |
-| `policy-v<N>/` | Where a run at a later policy version goes: `policy-v<N>/<model>/`, and `codex/policy-v<N>/<model>/` under the second set's root. No such run is committed here, because no amendment has been approved and the repository is at version 1. It has its own section below. | A different measurement from the headline: those briefs were built from an amended policy, so a figure here answers a question about a policy that is not the committed one. |
+| `policy-v<N>/` | Where a run at a later policy version goes: `policy-v<N>/<model>/`, and `codex/policy-v<N>/<model>/` under the second set's root. No such run is committed here: the repository is at **version 2** — the amendment `0001-pol-rd-13` is approved — and the one run that measures version 2 is the second sealed set's, which writes into `runs/wild-v2/<model>/` and never into a `policy-v<N>/` directory. It has its own section below. | A different measurement from the headline: those briefs were built from an amended policy, so a figure here answers a question about a policy that is not the committed one. |
 | `policy-gaps/` | The policy-gap loop's report — `python3 -m eval.policy_gaps report --run-dir … --run-dir …`. Two files, `report.json` and `report.md`, and it has its own section below. | **Not a run and not a score.** It names the cases the policy could not decide and groups them, read off the recorded runs. No model call is made to produce it, and nothing in it changes the policy. |
 | `precedents/` | Where a run with `--precedents` on goes: `precedents/<model>/`, and `codex/precedents/<model>/` under the second set's root. No such run is committed here. It has its own section below. | A different measurement from the headline, and not comparable to it: the precedent library is built from closures made by people who have seen these development sets. |
 | `rerun-2026-09-29/` | A runs root of its own, holding one re-run of the organisers' sample case: `rerun-2026-09-29/external/ryde/`, committed as `23589e1`. It went to its own root so that the committed `external/ryde/` result, which `docs/notes/2026-09-23-external-sample-case.md` is about, stayed as it was. It has its own section below. | Evidence of what that run did, not a score — there is no answer-key entry for 901. It is an external case like any other, so it is refused outside `runs/external/` and must never be merged into a model's run directory. |
-| `wild/` | **The single run of the held-out set (`wild-v1`)**, committed at `2e527d6`: `wild/deepseek-deepseek-flash/`, 131 files, run once by the owner from the commit tagged `freeze-2026-09-30` and committed byte for byte as produced. **62 of the 64 cases produced a ruling** — 517 and 533 failed with `SHAPE` and are recorded as misses — and the four-field figure is **55/62 = 88.7%** over the cases that produced a ruling, **55/64 = 85.9%** over the set. It has its own section below. | The submission's **only generalisation figure**, and never a development figure. It is never merged into a model's run directory, never summed with the corpus and second-set figures, and never produced by `--set all`. |
-| `wild-v2/` | **The second sealed set's single run, not yet made**: `wild-v2/<model-slug>/`, where `TRIBUNAL_SEALED_RUN=wild-v2 python3 -m eval.development_sets --set wild-v2 --concurrency 2 --timeout 900` will write, once, from a commit whose `tribunal/`, `prompts/` and `policy/` trees equal those at `freeze-2026-10-03`. The set is 20 cases, 701–720, keyed by `eval/answers/wild-v2/ground_truth.json`, and **no such directory is committed here** because the owner has not run it. It has its own section below. | A **second generalisation figure**, and never a development figure. It is never merged into a model's run directory, never summed with the corpus, second-set or `wild-v1` figures, and never produced by `--set all`. |
+| `wild/` | **The single run of the held-out set (`wild-v1`)**, committed at `2e527d6`: `wild/deepseek-deepseek-flash/`, 131 files, run once by the owner from the commit tagged `freeze-2026-09-30` and committed byte for byte as produced. **62 of the 64 cases produced a ruling** — 517 and 533 failed with `SHAPE` and are recorded as misses — and the four-field figure is **55/62 = 88.7%** over the cases that produced a ruling, **55/64 = 85.9%** over the set. It has its own section below. | One of the submission's **two generalisation figures**, and never a development figure. It is never merged into a model's run directory, never summed with the corpus, second-set or `wild-v2` figures, and never produced by `--set all`. |
+| `wild-v2/` | **The second sealed set's single run**, made once by the owner on 2026-10-04 from `6cc2682`: `wild-v2/deepseek-deepseek-flash/`, **45 files**, committed byte for byte at `9f4abee`. The set is 20 cases, 701–720, keyed by `eval/answers/wild-v2/ground_truth.json`, and the four-field figure is **18/20 = 90.0%** over the set; the manifest is `docs/notes/2026-10-04-wild-v2-run-manifest.txt`. It has its own section below. | One of the submission's **two generalisation figures**, and never a development figure. It is never merged into a model's run directory, never summed with the corpus, second-set or `wild-v1` figures, and never produced by `--set all`. The root is closed outright, like `wild/`. |
 
 **These are snapshots, and a later run moves them.** A run directory is named after the model id, so
 a future run of the same model writes into the same directory and rewrites these files case by case.
@@ -549,7 +549,7 @@ with over-escalations 501, 504, 508 and 530 and under-escalation 627.
 `events.jsonl`. Every figure, and the cause of each miss, is in
 `docs/notes/2026-09-30-the-sealed-run.md`.
 
-**It is the generalisation figure, and it is never added to anything.** The
+**It is one of the two generalisation figures, and it is never added to anything.** The
 corpus figure and the second set's figure are development figures: they were
 produced by people who had seen those cases. The held-out set was not, which is the
 whole of what makes its run a measurement of generalisation — so a sum of it and
@@ -587,6 +587,24 @@ ones any run directory carries, and its `report.md` is graded against
 `eval/answers/wild-v2/ground_truth.json` — the set's own key, which is neither
 development key.
 
+**The directory is committed, and it is the run this section named before it
+existed.** `runs/wild-v2/deepseek-deepseek-flash/` is the output of that command,
+run by the owner outside this sandbox **once, on 2026-10-04** — one invocation,
+from `6cc268298ac079807ddc6682b7776824371648c2`, with a clean tree and the freeze
+gate `git diff --quiet freeze-2026-10-03 -- tribunal prompts policy` exiting 0.
+All **45 files** are committed byte for byte as produced at `9f4abee`, and
+`docs/notes/2026-10-04-wild-v2-run-manifest.txt` records the digest of every one
+of them, checked by `tests/test_wild_v2_run_manifest.py`. **No model call was
+made in this repository** to produce or to read them.
+
+**The figures.** All 20 cases produced a ruling and no case failed. Four-field
+exact **18/20 = 90.0%** — the same over the cases that produced a ruling and over
+the set, because there is no no-ruling case to move the basis; ruling alone
+18/20; per category `NO_SHOW_CHARGE` 8/8 and `ROUTE_DEVIATION` 10/12; escalation
+precision 4/5 and recall 4/5, with the over-escalation at 702 and the
+under-escalation at 716. Every figure, the interval, and the cause of each miss
+is in `docs/notes/2026-10-04-the-second-sealed-run.md`.
+
 **The opt-in is what makes the run the owner's.** Without
 `TRIBUNAL_SEALED_RUN=wild-v2` in the environment the invocation is refused before
 any client is built and before any directory is created, and nothing in this
@@ -595,17 +613,12 @@ anything, needs no opt-in, and creates nothing:
 
     python3 -m eval.development_sets --set wild-v2 --concurrency 2 --timeout 900 --check
 
-**No such directory is committed here, and there is nothing to commit.** The set
-was imported and registered on 2026-10-03, and the owner runs it afterwards,
-once, from a commit whose `tribunal/`, `prompts/` and `policy/` trees equal those
-at `freeze-2026-10-03` — the commit the run's own events record — outside this
-sandbox. The command above is the one that produces it, and `--force` cannot be
-added to it: it is refused for this set in code.
-
-**One partial run was made and deleted.** On 2026-10-03 at 14:14 a probe started
-the command above with a real client, and it was stopped at 14:17:31; its
-`events.jsonl` (22,722 bytes) was removed with `git clean -fd runs/wild-v2` at
-14:19:36, and the owner decided that `wild-v2` stays the sealed set.
+**One partial run was made and deleted, and it does not count.** On 2026-10-03 at
+14:14 a probe started the command above with a real client, and it was stopped at
+14:17:31; its `events.jsonl` (22,722 bytes) was removed with
+`git clean -fd runs/wild-v2` at 14:19:36, and the owner decided that `wild-v2`
+stays the sealed set and that the attempt does not count under the sealed
+protocol.
 `docs/notes/2026-10-03-the-sealed-protocol-made-executable.md` records the facts
 and the decision under *The partial run of 14:14, and the owner's decision*.
 
@@ -630,11 +643,12 @@ the amount-rule measurement, the baselines, the policy-gap report and the
 recorded-drafts measurement. **Four headline directories now, not three.**
 
 **Nothing but the plain sealed run is created under its root.** The held-out
-set's root is closed outright; this one accepts exactly one destination, the
-plain run's own directory, and refuses every other path beneath it — the ablation
-directory, the precedents directory, a `policy-v<N>/` directory, anything else.
-The set has not been run, so the refusal is made before anything exists to
-protect, which is the point: the guard is in place when the run that matters is.
+set's root is closed outright, and so is this one: `runs/wild-v2/` is in
+`MADE_SEALED_RUNS_SUBDIRS`, so no permit opens it and nothing is created under it
+again, the plain sealed run included. Every other path beneath it is refused —
+the ablation directory, the precedents directory, a `policy-v<N>/` directory,
+anything else. The refusal is now made with the run committed, so the guard is
+what keeps the record the record.
 
 **A case that has a result is never re-run.** `--force` is refused for this set
 inside `run_set`, and `--replay-advocates`, `--replay-check` and

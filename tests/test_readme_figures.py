@@ -57,6 +57,7 @@ SCORED_RUN_DIRS = (
     PROJECT_ROOT / "runs" / MODEL_SLUG,
     PROJECT_ROOT / "runs" / "codex" / MODEL_SLUG,
     PROJECT_ROOT / "runs" / "wild" / MODEL_SLUG,
+    PROJECT_ROOT / "runs" / "wild-v2" / MODEL_SLUG,
     PROJECT_ROOT / "runs" / "ablation" / "admissibility" / MODEL_SLUG,
     PROJECT_ROOT / "runs" / "codex" / "ablation" / "admissibility" / MODEL_SLUG,
     PROJECT_ROOT / "runs" / "ablation" / "clause-notes" / MODEL_SLUG,

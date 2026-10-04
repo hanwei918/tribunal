@@ -263,14 +263,16 @@ WILD_DEV = DevelopmentSet(
 
 DEVELOPMENT_SETS: Tuple[DevelopmentSet, ...] = (CORPUS, SECOND_SET)
 
-# The second sealed set, imported on 2026-10-03 and run once from a commit whose
-# ``tribunal/``, ``prompts/`` and ``policy/`` trees equal those at the tag
-# ``freeze-2026-10-03`` -- which need not be the tagged commit itself, and every
-# event the run writes records the commit it was made from. It is the same kind
-# of thing as the held-out set -- drafted without access to this repository,
-# keyed by its own file, run once, and reported on its own -- and it is **not**
-# the held-out set: 20 cases over a range of its own, and its single run is never
-# added to ``wild``'s, to the combined figure or to ``--set all``.
+# The second sealed set, imported on 2026-10-03 and run once, on 2026-10-04, from
+# a commit whose ``tribunal/``, ``prompts/`` and ``policy/`` trees equal those at
+# the tag ``freeze-2026-10-03`` -- which need not be the tagged commit itself,
+# and every event the run writes records the commit it was made from. It is the
+# same kind of thing as the held-out set -- keyed by its own file, run once, and
+# reported on its own -- and it is **not** the held-out set: 20 cases over a
+# range of its own, and its single run is never added to ``wild``'s, to the
+# combined figure or to ``--set all``. Its provenance differs from the held-out
+# set's: it was prepared by OpenAI Codex for the owner, and whether Codex could
+# read this repository while preparing it is not recorded.
 #
 # Its registration fixes policy version 2, which the held-out set's did not:
 # ``POL-RD-13`` was approved through the policy-gap loop and the ``POL-RD-11``
@@ -366,10 +368,12 @@ DEVELOPMENT_DATA_CAVEAT = (
     "a sum over two sets that were drafted differently and share one template, "
     "so it is not a generalisation figure and does not replace the corpus "
     "number. The generalisation figures the submission reports belong to the "
-    "two sealed sets, each drafted without access to this repository and each "
-    "run exactly once: the held-out set's, from the commit tagged "
-    "freeze-2026-09-30, and the second sealed set's, from a commit whose "
-    "tribunal/, prompts/ and policy/ trees equal those at freeze-2026-10-03. "
+    "two sealed sets, each run exactly once: the held-out set's, drafted without "
+    "access to this repository, from the commit tagged freeze-2026-09-30; and "
+    "the second sealed set's, prepared by OpenAI Codex -- whether Codex could "
+    "read this repository while preparing it is not recorded -- from a commit "
+    "whose tribunal/, prompts/ and policy/ trees equal those at "
+    "freeze-2026-10-03. "
     "Neither figure here is either of them, and the two are "
     "never added to each other either."
 )
@@ -383,7 +387,8 @@ SEALED_SET_CAVEAT = (
     "The held-out set is not a development set and is never added to the "
     "combined figure above. It was drafted without access to this repository "
     "and is run exactly once from the commit tagged freeze-2026-09-30; that "
-    "single run is the only generalisation figure the submission reports. It "
+    "single run is one of the two generalisation figures the submission "
+    "reports. It "
     "is absent from data/index.json and is graded against "
     "eval/answers/wild/ground_truth.json, which is neither development key."
 )
@@ -395,14 +400,14 @@ SEALED_SET_CAVEAT = (
 WILD_V2_CAVEAT = (
     "The second sealed set is not a development set and is never added to the "
     "combined figure above or to the held-out set's figure. It was prepared by "
-    "OpenAI Codex for the owner and imported on 2026-10-03; it is run exactly "
-    "once from a commit whose tribunal/, prompts/ and policy/ trees equal those "
-    "at freeze-2026-10-03 -- every event the run writes records the commit it "
-    "was made from -- at the policy version 2 its registration fixes, and that "
-    "single run is the submission's generalisation "
-    "figure. It is absent from data/index.json and is graded against "
-    "eval/answers/wild-v2/ground_truth.json, which is neither development key "
-    "and not the held-out set's key either."
+    "OpenAI Codex for the owner and imported on 2026-10-03, and it was run "
+    "exactly once, on 2026-10-04, from a commit whose tribunal/, prompts/ and "
+    "policy/ trees equal those at freeze-2026-10-03 -- every event the run "
+    "wrote records the commit it was made from -- at the policy version 2 its "
+    "registration fixes; that single run is one of the two generalisation "
+    "figures the submission reports. It is absent from data/index.json and is "
+    "graded against eval/answers/wild-v2/ground_truth.json, which is neither "
+    "development key and not the held-out set's key either."
 )
 
 # The heading and the caveat each sealed set is printed under, so a set added to
