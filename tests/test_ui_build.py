@@ -1980,10 +1980,17 @@ class MoneyAndLabelTests(unittest.TestCase):
         self.assertIn("draftKindLabel(draft.kind)", self.script)
         self.assertIn('"badge " + (swapped ? "swapped" : "sampled")', self.script)
 
-    def test_an_abstention_keeps_its_code_as_the_title(self):
-        """The code is what the run wrote, so it is kept; the sentence is for a reader."""
+    def test_an_abstention_is_shown_as_its_reason_code(self):
+        """A draft that abstained made no proposal, so its four graded fields
+        would read ``null`` for the ruling and ``none`` for each amount -- the
+        tokens this system emits for a value, which is not the same thing as a
+        draft that proposed nothing. The line a reader gets is the reason code
+        the run recorded, and the whole recorded string is still kept in the
+        element's ``title``. What is printed is asserted by driving the page, in
+        ``RenderedWordingTests``; this is the wiring that assertion rests on."""
+        self.assertIn("abstentionLine(draft.abstention)", self.script)
         self.assertIn("title: text(draft.abstention)", self.script)
-        self.assertIn("abstentionSentence(draft.abstention)", self.script)
+        self.assertNotIn("abstentionSentence", self.script)
         self.assertNotIn('"abstained, and voted for nothing: "', self.script)
 
 
@@ -3720,6 +3727,57 @@ class PhoneWidthTests(unittest.TestCase):
                             ),
                         )
 
+    def test_the_model_s_prose_breaks_rather_than_widening_the_page(self):
+        """The model writes the prose on the advocate steps and in the stance
+        view, and it writes tokens no browser will break on its own: a clause id
+        glued to a word, a long path, a figure written out. Those text nodes --
+        not the boxes around them -- are what pushed corpus 104 and 114 and the
+        sealed sets' 507, 511, 519, 525, 704 and 714 sideways at 375px.
+
+        ``anywhere`` rather than ``break-word``, for the reason the id rule
+        gives: only ``anywhere`` counts towards the minimum width of the box,
+        which is the number a grid track is measured against. The rule is top
+        level rather than in the phone block because a paragraph is the same
+        paragraph at every width.
+        """
+        self.assertEqual(
+            "anywhere",
+            declarations_for(self.top, "p.text").get("overflow-wrap"),
+            "the model's prose has no rule to break a long token",
+        )
+        for width in (375, 600, 940):
+            with self.subTest(width=width):
+                self.assertEqual(
+                    "anywhere",
+                    effective_at(self.stylesheet, "p.text", width).get("overflow-wrap"),
+                )
+
+    def test_the_phone_block_breaks_the_prompt_lines(self):
+        """The stance view's rendered prompt lines are ``pre-wrap``: the padding
+        inside a line is spaces, and one long token -- a clause id glued to a
+        field name, as in ``driver_profile.deviation_flags_90d`` -- sets the
+        width of the column it sits in. Below 600px the line may break inside
+        such a word; above it the line is left as the prompt wrote it.
+        """
+        self.assertEqual(
+            "anywhere",
+            declarations_for(self.phone, ".plines li .t").get("overflow-wrap"),
+            "the prompt lines have no rule to break a long token in the phone block",
+        )
+        for width in (375, 600):
+            with self.subTest(width=width):
+                self.assertEqual(
+                    "anywhere",
+                    effective_at(self.stylesheet, ".plines li .t", width).get(
+                        "overflow-wrap"
+                    ),
+                )
+        self.assertNotIn(
+            "overflow-wrap",
+            effective_at(self.stylesheet, ".plines li .t", 940),
+            "the prompt lines break at widths the phone block does not cover",
+        )
+
     def test_the_phone_block_stops_the_wide_card_and_the_fixed_footer(self):
         """Two of the causes are not about content at all.
 
@@ -4643,6 +4701,8 @@ class RenderedWordingTests(unittest.TestCase):
     NO_RULING_BADGE = "no ruling produced"
     NO_CLAUSE = "no clause on these facts sends the case to a human"
     MATCHED_FLAG = "recorded matched flag"
+    ABSTENTION_NULL = "abstained: null"
+    ABSTENTION_CODE = "abstained (DRAFT_AMOUNT_NOT_READ_OFF)"
 
     @classmethod
     def setUpClass(cls):
@@ -4762,6 +4822,41 @@ class RenderedWordingTests(unittest.TestCase):
                 self.assertNotIn("null", text)
                 self.assertNotIn(self.MATCHED_FLAG, text)
                 self.assertNotIn(self.NO_CLAUSE, text)
+
+    def test_an_abstained_draft_is_shown_as_its_reason_code(self):
+        """The half of the check below that keeps it from passing vacuously.
+
+        A page that dropped an abstained draft from the vote table entirely
+        would satisfy "no rendered text says ``abstained: null``" for the wrong
+        reason, so the line that replaced it is asserted to be there: in the
+        overview of both sealed pages, which is the vote table, and in the judge
+        step of the two held-out cases whose four drafts all abstained, which is
+        where the four-field list used to be drawn instead.
+        """
+        for name in ("wild", "wild-v2"):
+            with self.subTest(page=name, view="overview"):
+                self.assertIn(self.ABSTENTION_CODE, self.text_of(name, "overview"))
+        for case_no in (517, 533):
+            with self.subTest(page="wild", case=case_no, step="judge"):
+                text = self.text_of("wild", "case", case_no, 5)
+                self.assertIn(self.ABSTENTION_CODE, text)
+                self.assertNotIn(
+                    "ruling null",
+                    text,
+                    "the judge step still draws a four-field list for a draft that proposed nothing",
+                )
+
+    def test_no_rendered_view_shows_an_abstained_draft_as_a_null_proposal(self):
+        """An abstained draft proposed nothing, so the line that named its four
+        graded fields read ``null`` for the ruling and ``none`` for each amount
+        and each referral list -- the tokens this system emits for a value,
+        which is a different thing from a draft that made no proposal. The walk
+        covers every page's overview, which is the vote table, and the judge
+        step of ``wild`` 517 and 533, whose four drafts each abstained.
+        """
+        for key, text in sorted(self.texts.items(), key=lambda item: str(item[0])):
+            with self.subTest(view=key):
+                self.assertNotIn(self.ABSTENTION_NULL, text)
 
 
 # The five payloads the sheet names for the panel's sentence: one with no valid

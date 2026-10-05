@@ -2287,6 +2287,14 @@ details[open] > summary { margin-bottom: 6px; }
 .claim .claim-head { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; color: var(--muted); font-size: 12px; }
 .claim .claim-no { font-family: var(--mono); color: var(--text); font-weight: 650; }
 .claim .text { margin: 8px 0 0 0; }
+/* The model writes this prose, on the advocate steps and in the stance view,
+   and it writes tokens no browser will break on its own: a clause id glued to
+   a word, a long path, a figure written out. The cause of the sideways scroll
+   at 375px is these text nodes and not the boxes around them, and ``anywhere``
+   rather than ``break-word`` because it counts towards the minimum width of the
+   box -- which is the number a grid track is measured against -- so the
+   paragraph gives way instead of the page. */
+p.text { overflow-wrap: anywhere; }
 .claim.discarded { border-color: rgba(255,107,107,0.4); background: rgba(255,107,107,0.06); }
 
 .role { border-top: 3px solid var(--line); padding-top: 12px; }
@@ -2528,6 +2536,12 @@ body.projector .marker { font-size: 14px; }
   body { padding-bottom: 0; }
   .kv, dl.tree, dl.keys, dl.digests { grid-template-columns: minmax(0, 1fr); }
   .badge { white-space: normal; }
+
+  /* The stance view's rendered prompt lines are ``pre-wrap``, so the padding
+     inside a line is spaces and a line holding one long token -- a clause id
+     glued to a field name -- sets the width of the column it is in. Below
+     600px the line may break inside such a word. */
+  .plines li .t { overflow-wrap: anywhere; }
 
   /* The runs index is a four-column table whose fourth column is the figure the
      page is read for, so at 375px the reader sees the set and what it is and has
@@ -3395,32 +3409,29 @@ _JS = r"""
     return sentence;
   }
 
-  // An abstention is recorded as a reason code, and one of the codes carries
-  // the statement the verifier rejected. The code is what the run wrote, so it
-  // stays on the element as its title; the sentence in front of a reader says
-  // what kind of thing the code means.
-  function abstentionSentence(reason) {
-    var raw = String(reason);
-    var code = raw.split(":")[0].trim();
-    if (code === "CONTRADICTED_BY_EVIDENCE") {
-      return "abstained: the verifier found the evidence contradicts a statement this draft relied on.";
-    }
-    if (code === "no reason recorded") {
-      return "abstained, and the run recorded no reason.";
-    }
-    if (code.indexOf("DRAFT_") === 0) {
-      return "abstained: the draft did not pass the code checks a voting draft must pass.";
-    }
-    if (raw.indexOf(":") < 0) {
-      return "abstained: the answer could not be read as a ruling.";
-    }
-    return "abstained: the run recorded a reason this page does not classify.";
+  // A draft that abstained proposed nothing: its ``proposal`` is null, so the
+  // four graded fields would read ``null`` for the ruling and ``none`` for each
+  // amount and each referral list -- the tokens this system emits for a value,
+  // which is a different thing from a draft that made no proposal at all. An
+  // abstained draft is therefore shown as the reason code it abstained with,
+  // and nothing else.
+  //
+  // The run records the reason as ``CODE: detail``, and the code is the part
+  // before the first colon. A draft that abstained with nothing recorded is
+  // named as such rather than shown as ``null``.
+  function abstentionCode(reason) {
+    if (reason === null || reason === undefined) { return "no reason recorded"; }
+    return String(reason).split(":")[0].trim();
+  }
+  function abstentionLine(reason) {
+    return "abstained (" + abstentionCode(reason) + ")";
   }
 
   // The whole four-field proposal, not just the ruling. On this run one case's
   // drafts all proposed ESCALATE and still disagreed, because they differed on
   // a referral -- a line that showed only the ruling would have called that
-  // vote unanimous.
+  // vote unanimous. It is drawn for a draft that made a proposal; an abstained
+  // draft reaches ``abstentionLine`` instead.
   function proposalLine(proposal) {
     var p = proposal || {};
     return text(p.ruling) + ", amount " + money(p.amount_sgd) +
@@ -3429,8 +3440,10 @@ _JS = r"""
   }
 
   function draftLine(draft) {
-    return "draft " + draft.draft + " (" + draftKindLabel(draft.kind) + ", seed " + text(draft.seed) + ") " +
-      text(draft.verdict) + ": " + proposalLine(draft.proposal);
+    var head = "draft " + draft.draft + " (" + draftKindLabel(draft.kind) +
+      ", seed " + text(draft.seed) + ") ";
+    if (draft.verdict === "abstained") { return head + abstentionLine(draft.abstention); }
+    return head + text(draft.verdict) + ": " + proposalLine(draft.proposal);
   }
 
   function draftBox(draft) {
@@ -3444,6 +3457,16 @@ _JS = r"""
       h("span", { class: "badge", text: "temperature " + text(draft.temperature) }),
       h("span", { class: "badge " + text(draft.verdict), text: text(draft.verdict) })
     ]));
+    // A draft that abstained made no proposal, so there is no four-field list
+    // to draw: drawing one printed ``null`` for the ruling and ``none`` for
+    // each amount, which are values this system emits and not absences. It is
+    // shown as the reason code it abstained with and nothing else, with the
+    // whole recorded string kept in the title as it was before.
+    if (draft.verdict === "abstained") {
+      box.appendChild(h("p", { class: "notes", title: text(draft.abstention),
+        text: abstentionLine(draft.abstention) }));
+      return box;
+    }
     var proposal = draft.proposal || {};
     box.appendChild(definitionList([
       ["ruling", h("span", { class: "badge judge", text: text(proposal.ruling) })],
@@ -3455,10 +3478,6 @@ _JS = r"""
           }))
         : h("span", { class: "null", text: "none" })]
     ]));
-    if (draft.abstention) {
-      box.appendChild(h("p", { class: "notes", title: text(draft.abstention),
-        text: abstentionSentence(draft.abstention) }));
-    }
     return box;
   }
 

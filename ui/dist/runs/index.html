@@ -202,6 +202,14 @@ details[open] > summary { margin-bottom: 6px; }
 .claim .claim-head { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; color: var(--muted); font-size: 12px; }
 .claim .claim-no { font-family: var(--mono); color: var(--text); font-weight: 650; }
 .claim .text { margin: 8px 0 0 0; }
+/* The model writes this prose, on the advocate steps and in the stance view,
+   and it writes tokens no browser will break on its own: a clause id glued to
+   a word, a long path, a figure written out. The cause of the sideways scroll
+   at 375px is these text nodes and not the boxes around them, and ``anywhere``
+   rather than ``break-word`` because it counts towards the minimum width of the
+   box -- which is the number a grid track is measured against -- so the
+   paragraph gives way instead of the page. */
+p.text { overflow-wrap: anywhere; }
 .claim.discarded { border-color: rgba(255,107,107,0.4); background: rgba(255,107,107,0.06); }
 
 .role { border-top: 3px solid var(--line); padding-top: 12px; }
@@ -443,6 +451,12 @@ body.projector .marker { font-size: 14px; }
   body { padding-bottom: 0; }
   .kv, dl.tree, dl.keys, dl.digests { grid-template-columns: minmax(0, 1fr); }
   .badge { white-space: normal; }
+
+  /* The stance view's rendered prompt lines are ``pre-wrap``, so the padding
+     inside a line is spaces and a line holding one long token -- a clause id
+     glued to a field name -- sets the width of the column it is in. Below
+     600px the line may break inside such a word. */
+  .plines li .t { overflow-wrap: anywhere; }
 
   /* The runs index is a four-column table whose fourth column is the figure the
      page is read for, so at 375px the reader sees the set and what it is and has
