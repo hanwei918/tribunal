@@ -78,6 +78,21 @@ tr.miss:hover td { background: rgba(255,107,107,0.16); }
 td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
 td.case-no { font-weight: 650; font-variant-numeric: tabular-nums; }
 
+/* A table is the one thing on the page that cannot reflow to a phone's width:
+   its columns are what they are, and the widest of them is a ``nowrap`` number
+   or a seven-column grid. So every table is built inside this box, which scrolls
+   sideways; the page itself never does. */
+.table-wrap { overflow-x: auto; max-width: 100%; }
+
+/* An evidence id, a clause id and a digest are one unbreakable string each, and
+   a sixty-character one would otherwise set the width of the column it sits in
+   -- and so of the page. ``anywhere`` rather than ``break-word`` because it
+   counts towards the minimum width of the box, which is the number a grid track
+   and an ``overflow-x`` box are measured against. */
+code, .mono, .scalar, .digest, .artifact .id, .record-row .id, dl.tree > dt {
+  overflow-wrap: anywhere;
+}
+
 .badge { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 11.5px;
   border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
 .badge.ok { color: var(--ok); border-color: rgba(74,194,107,0.5); }
@@ -108,11 +123,15 @@ blockquote { margin: 10px 0; padding: 10px 14px; border-left: 3px solid var(--li
   background: var(--panel-2); border-radius: 0 8px 8px 0; color: var(--text); }
 blockquote .who { display: block; color: var(--muted); font-size: 12px; margin-bottom: 5px; }
 
-.kv { display: grid; grid-template-columns: max-content 1fr; gap: 3px 16px; margin: 8px 0; font-size: 13.5px; }
+/* A definition list of a long key and a short value. The first track is
+   ``minmax(0, max-content)`` rather than ``max-content``: as a maximum it still
+   takes the width of the widest key, but as a minimum it can give way, which is
+   what keeps one long key from setting the width of the page. */
+.kv { display: grid; grid-template-columns: minmax(0, max-content) minmax(0, 1fr); gap: 3px 16px; margin: 8px 0; font-size: 13.5px; }
 .kv dt { color: var(--muted); }
 .kv dd { margin: 0; }
 
-dl.tree { display: grid; grid-template-columns: max-content 1fr; gap: 2px 14px; margin: 4px 0 4px 0; }
+dl.tree { display: grid; grid-template-columns: minmax(0, max-content) minmax(0, 1fr); gap: 2px 14px; margin: 4px 0 4px 0; }
 dl.tree > dt { color: var(--muted); font-family: var(--mono); font-size: 12px; padding-top: 1px; }
 dl.tree > dd { margin: 0; }
 ul.vals { margin: 0; padding-left: 16px; }
@@ -232,7 +251,7 @@ tr.contested { background: rgba(216,167,42,0.06); }
 tr.contested:hover { background: rgba(216,167,42,0.12); }
 
 /* ---- stance view: the two advocates against the same record ------------ */
-.stance-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px; }
+.stance-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; margin-top: 12px; }
 @media (max-width: 940px) { .stance-grid { grid-template-columns: 1fr; } }
 .stance-col { background: var(--panel); border: 1px solid var(--line); border-top-width: 3px;
   border-radius: 10px; padding: 14px 16px; }
@@ -256,7 +275,7 @@ tr.contested:hover { background: rgba(216,167,42,0.12); }
 .linkbar .what { color: var(--muted); font-size: 12.5px; }
 
 /* ---- keyboard help ---------------------------------------------------- */
-dl.keys { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin-top: 12px; }
+dl.keys { display: grid; grid-template-columns: minmax(0, max-content) minmax(0, 1fr); gap: 6px 14px; margin-top: 12px; }
 dl.keys > dt { margin: 0; }
 dl.keys > dd { margin: 0; color: var(--muted); }
 kbd { font-family: var(--mono); font-size: 11.5px; background: var(--panel-2);
@@ -270,7 +289,7 @@ kbd { font-family: var(--mono); font-size: 11.5px; background: var(--panel-2);
 .fact { border-left: 3px solid var(--ok); padding: 2px 0 2px 12px; margin: 12px 0; }
 .fact .what { font-weight: 600; }
 .fact .why { color: var(--muted); font-size: 12.5px; margin-top: 3px; max-width: 84ch; }
-dl.digests { display: grid; grid-template-columns: max-content 1fr; gap: 5px 12px;
+dl.digests { display: grid; grid-template-columns: minmax(0, max-content) minmax(0, 1fr); gap: 5px 12px;
   margin: 9px 0 0 0; }
 dl.digests > dt { color: var(--muted); font-size: 12px; white-space: nowrap; }
 dl.digests > dd { margin: 0; }
@@ -285,7 +304,7 @@ dl.digests > dd { margin: 0; }
   border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
 .tag.ok { color: var(--ok); border-color: rgba(74,194,107,0.5); }
 
-.prompt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+.prompt-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; margin-top: 12px; }
 @media (max-width: 940px) { .prompt-grid { grid-template-columns: 1fr; } }
 .prompt-col { border: 1px solid var(--line); border-radius: 8px; overflow: hidden;
   background: var(--panel-2); }
@@ -352,6 +371,23 @@ body.projector .plines li { padding: 2px 10px 2px 7px; }
 body.projector .plines li .n { min-width: 34px; }
 body.projector .prompt-col > h4 { font-size: 16px; padding: 9px 12px; }
 body.projector .marker { font-size: 14px; }
+
+/* ---- a phone ---------------------------------------------------------- */
+/* The page is read on a laptop at Demo Day and on a phone afterwards, and at
+   375px two things still pushed it sideways. A card that spans two columns of a
+   one-column grid widens the grid, because the second column is created to be
+   spanned. And the provenance footer is fixed, wraps to three lines at this
+   width, and covers the text it floats over, because the 74px of bottom padding
+   under ``body`` cannot follow a height that changes with the wrapping. Below
+   600px the card takes one column and the footer stops floating. The tables are
+   handled by the box around them, which works at every width. */
+@media (max-width: 600px) {
+  main { padding: 14px; }
+  h2 { font-size: 19px; }
+  .card.wide { grid-column: auto; }
+  footer.prov { position: static; }
+  body { padding-bottom: 0; }
+}
 </style>
 </head>
 <body>

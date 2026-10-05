@@ -3195,5 +3195,212 @@ class CheckCoversEveryPageTests(unittest.TestCase):
             )
 
 
+# ---------------------------------------------------------------------------
+# Reading the stylesheet as rules, for the tests that have no browser.
+# ---------------------------------------------------------------------------
+
+def _media_blocks(stylesheet: str):
+    """Every ``@media`` block as ``(condition, body)``.
+
+    A regular expression cannot do this. The bodies carry nested rules, so the
+    only way to find where a block ends is to count braces, and a pattern that
+    guessed would either stop at the first inner rule or run past the end of the
+    block it was looking for.
+    """
+    blocks = []
+    index = 0
+    while True:
+        start = stylesheet.find("@media", index)
+        if start < 0:
+            return blocks
+        opening = stylesheet.find("{", start)
+        if opening < 0:
+            return blocks
+        depth = 0
+        cursor = opening
+        while cursor < len(stylesheet):
+            if stylesheet[cursor] == "{":
+                depth += 1
+            elif stylesheet[cursor] == "}":
+                depth -= 1
+                if depth == 0:
+                    break
+            cursor += 1
+        condition = stylesheet[start + len("@media"):opening].strip()
+        blocks.append((condition, stylesheet[opening + 1:cursor]))
+        index = cursor + 1
+
+
+def _outside_media(stylesheet: str) -> str:
+    """The stylesheet with every ``@media`` block cut out of it.
+
+    The narrow-width rules are read from the block itself, so the rules that
+    apply at every width have to be read from what is left.
+    """
+    out = []
+    index = 0
+    while True:
+        start = stylesheet.find("@media", index)
+        if start < 0:
+            out.append(stylesheet[index:])
+            return "".join(out)
+        out.append(stylesheet[index:start])
+        opening = stylesheet.find("{", start)
+        depth = 0
+        cursor = opening
+        while cursor < len(stylesheet):
+            if stylesheet[cursor] == "{":
+                depth += 1
+            elif stylesheet[cursor] == "}":
+                depth -= 1
+                if depth == 0:
+                    break
+            cursor += 1
+        index = cursor + 1
+
+
+_RULE_RE = re.compile(r"([^{}]+)\{([^{}]*)\}", re.S)
+_COMMENT_RE = re.compile(r"/\*.*?\*/", re.S)
+
+
+def declarations(stylesheet: str):
+    """Every declaration in a stylesheet as ``(selector, property, value)``.
+
+    Comments come out first, and both reasons matter. A comment is not part of
+    the selector of the rule that follows it, so leaving it in glues the two
+    together and the rule stops being found at all -- which is how the first
+    version of this helper read every rule that had a comment above it. And a
+    rule that has been commented out must not read as a rule that is in force,
+    which is the whole difference between reading a stylesheet and searching it
+    for a phrase.
+    """
+    stylesheet = _COMMENT_RE.sub("", stylesheet)
+    out = []
+    for selector, body in _RULE_RE.findall(stylesheet):
+        for piece in body.split(";"):
+            if ":" not in piece:
+                continue
+            prop, _, value = piece.partition(":")
+            out.append((selector.strip(), prop.strip().lower(), value.strip()))
+    return out
+
+
+def declarations_for(stylesheet: str, selector: str):
+    """What one selector is declared to do, the last rule winning."""
+    found = {}
+    for rule, prop, value in declarations(stylesheet):
+        if selector in [part.strip() for part in rule.split(",")]:
+            found[prop] = value
+    return found
+
+
+class PhoneWidthTests(unittest.TestCase):
+    """The page at 375 px: nothing scrolls sideways but a table.
+
+    No browser runs in this suite, so nothing here can measure a width. What it
+    can do is read the stylesheet as rules -- not search it for a phrase -- and
+    require the rules that make the narrow layout. A substring search would be
+    satisfied by a commented-out rule, or by a selector that happened to contain
+    the words, and would then prove nothing about what the page is told to do.
+
+    Each rule here answers one measured cause of the sideways scroll at 375 px:
+    the overview's seven-column grid table and its card spanning two columns of
+    a one-column grid, the evidence tree's ``max-content`` key column under a
+    long key, the key step's five-column table with its ``nowrap`` number cells,
+    the stance view's ``1fr`` track holding a long ``code``, and a fixed footer
+    that wraps to three lines under a fixed 74px of bottom padding.
+    """
+
+    PHONE = "(max-width: 600px)"
+
+    @classmethod
+    def setUpClass(cls):
+        skip_unless_the_run_can_be_drawn()
+        page = build.render_html(build.build_document())
+        cls.stylesheet = "\n".join(_STYLE_RE.findall(page))
+        cls.top = _outside_media(cls.stylesheet)
+        cls.script = behaviour_script(page)
+        cls.phone = dict(_media_blocks(cls.stylesheet)).get(cls.PHONE, "")
+
+    def test_the_page_carries_a_block_for_a_phone(self):
+        self.assertTrue(self.phone, "no " + self.PHONE + " block in the stylesheet")
+
+    def test_every_table_is_built_inside_a_box_that_scrolls_sideways(self):
+        """A table cannot reflow to 375px; the box around it can scroll.
+
+        The check is structural rather than a search for a phrase: the script
+        builds a table in exactly one place, and that place is the wrapper. A
+        sixth table added straight to the page would be a table with no box
+        around it, and this test goes red.
+        """
+        self.assertEqual(
+            1, self.script.count('h("table"'),
+            "a table is built outside the wrapper that scrolls it sideways",
+        )
+        self.assertIn("function tableBox(", self.script)
+        self.assertEqual(
+            "auto",
+            declarations_for(self.top, ".table-wrap").get("overflow-x"),
+            "the box a table is built into does not scroll sideways",
+        )
+
+    def test_the_tracks_that_hold_a_long_key_can_shrink(self):
+        """``max-content`` in the first track is what made the evidence step
+        820px wide: one long key set the column's width and the page followed
+        it. ``minmax(0, max-content)`` lets the column give way instead, and
+        ``minmax(0, 1fr)`` does the same for the track beside it."""
+        for selector in (".kv", "dl.tree", "dl.keys", "dl.digests"):
+            with self.subTest(selector=selector):
+                self.assertEqual(
+                    "minmax(0, max-content) minmax(0, 1fr)",
+                    declarations_for(self.top, selector).get("grid-template-columns"),
+                )
+        for selector in (".stance-grid", ".prompt-grid"):
+            with self.subTest(selector=selector):
+                self.assertEqual(
+                    "minmax(0, 1fr) minmax(0, 1fr)",
+                    declarations_for(self.top, selector).get("grid-template-columns"),
+                )
+
+    def test_a_long_id_breaks_rather_than_widening_the_page(self):
+        """An evidence id, a clause id and a digest are single unbreakable
+        strings. Breaking one is what keeps a 60-character id from setting the
+        width of the column it sits in -- and of the page."""
+        for selector in (
+            "code",
+            ".artifact .id",
+            ".record-row .id",
+            "dl.tree > dt",
+            ".digest",
+        ):
+            with self.subTest(selector=selector):
+                self.assertEqual(
+                    "anywhere",
+                    declarations_for(self.top, selector).get("overflow-wrap"),
+                )
+
+    def test_the_phone_block_stops_the_wide_card_and_the_fixed_footer(self):
+        """Two of the causes are not about content at all.
+
+        A card that spans two columns of a one-column grid widens the grid, and
+        a fixed footer that wraps to three lines covers the text under it
+        because the 74px of bottom padding cannot follow its real height. Below
+        600px the card takes one column and the footer stops floating.
+        """
+        self.assertEqual(
+            "span 2", declarations_for(self.top, ".card.wide").get("grid-column"),
+            "the wide card no longer spans two columns at any width",
+        )
+        self.assertEqual(
+            "auto", declarations_for(self.phone, ".card.wide").get("grid-column"),
+        )
+        self.assertEqual(
+            "static", declarations_for(self.phone, "footer.prov").get("position"),
+        )
+        self.assertEqual(
+            "0", declarations_for(self.phone, "body").get("padding-bottom"),
+        )
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
