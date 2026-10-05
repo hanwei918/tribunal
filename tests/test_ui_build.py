@@ -23,14 +23,17 @@ here: the figures are recomputed from the run with ``eval.grade``, so the test
 compares two computations rather than one computation against a memory.
 
 One thing they do that they did not, and the reason is worth recording. The
-page's script is never executed by these tests -- there is no browser in the
-suite -- and that is how a defect that drew *nothing at all* reached a real
-browser: two panels answer "this run recorded no data" with ``null``, and
-``appendChild`` throws on anything that is not a node, so the step they are
-appended to is lost from that point on. So the script is now parsed as text for
-the one property that needs no browser, and no function whose own body can
-answer ``null`` may be handed straight to ``appendChild``. See
-``ChildAdderTests``.
+page's script used to be read and never executed, and that is how a defect that
+drew *nothing at all* reached a real browser: two panels answer "this run
+recorded no data" with ``null``, and ``appendChild`` throws on anything that is
+not a node, so the step they are appended to is lost from that point on. So no
+function whose own body can answer ``null`` may be handed straight to
+``appendChild``, and no string literal may be handed to it either -- both are
+guards in ``ChildAdderTests``. **And the script is now executed.** There is
+still no browser in the suite, but ``PageScriptRunsTests`` runs every page under
+``ui/dist/`` against a minimal DOM in ``tests/support/dom_shim.js``, whose
+``appendChild`` throws on a non-node exactly as a browser's does. Reading the
+page cannot see this class of defect; running it can.
 
 A third thing they do conditionally. The tests that read the committed run can
 only run while that run and this code agree about what the agents were handed.
@@ -2326,6 +2329,29 @@ class ChildAdderTests(unittest.TestCase):
             with self.subTest(function=name):
                 self.assertIn(name, nullable)
 
+    def test_no_string_literal_is_handed_to_append_child(self):
+        """``appendChild`` takes a node, and a string literal is not one.
+
+        ``add`` has converted a string to a text node since the page was written
+        and ``h`` has always gone through it, so every text append on the page
+        goes through ``add``. A call that passes a string literal straight to
+        ``appendChild`` is therefore a call that throws in a browser, and two of
+        them did: ``missLine`` handed the sentence after a note to
+        ``appendChild`` on both of its branches, so every page with a linked miss
+        threw out of ``renderOverview`` on load and the last step of every miss
+        drew nothing.
+
+        The scan reads the committed page because that is the artefact a browser
+        loads. It is not the whole guard -- ``PageScriptRunsTests`` runs the
+        script -- but it is the one that names the offending line.
+        """
+        offenders = [
+            (number, line.strip())
+            for number, line in enumerate(self.script.splitlines(), 1)
+            if re.search(r"appendChild\(\s*[\"']", line)
+        ]
+        self.assertEqual([], offenders)
+
     def test_the_scan_can_fire(self):
         """A positive control: a script written to be caught is caught.
 
@@ -3729,6 +3755,332 @@ class AccessibilityTests(unittest.TestCase):
             round(contrast_ratio(hex_colour("7b8794"), over((255, 107, 107, 0.09), panel)), 2),
             4.5,
         )
+
+
+# --------------------------------------------------------------------------
+# The page script, executed
+#
+# Every test above reads the page. This section runs it.
+#
+# The distinction matters because the defect it was written for is invisible to
+# reading: ``ui/build.py --check`` compares bytes, ``CommittedPageTests``
+# compares bytes, and the source-text guards look for a phrase. A page whose
+# ``renderOverview`` throws on load still builds, still compares byte for byte,
+# and still contains every phrase a substring test would look for. The only
+# thing that can see it is a script that runs.
+#
+# There is no browser in this suite, so the page is run under a minimal DOM in
+# ``tests/support/dom_shim.js``: no npm package, no network, and an
+# ``appendChild`` that throws on a non-node exactly as a browser's does.
+# --------------------------------------------------------------------------
+
+# The interpreter the harness runs under. The sheet names the first; the second
+# is whatever ``node`` is on the PATH, so the suite still runs where node was
+# installed some other way.
+NODE_CANDIDATES = ("/usr/local/bin/node",)
+
+# The DOM the page script is run against.
+DOM_SHIM = PROJECT_ROOT / "tests" / "support" / "dom_shim.js"
+
+# The page's data block and its stepper, both read out of the page rather than
+# typed here. A page that grew a seventh step would otherwise be walked as far as
+# the sixth and no further.
+DATA_PATTERN = re.compile(
+    r'<script id="tribunal-data" type="application/json">(.*?)</script>', re.S
+)
+STEPS_PATTERN = re.compile(r"var STEPS = \[(.*?)\];", re.S)
+
+# The cases each page is walked over.
+CASES_PER_PAGE = 3
+
+
+def node_executable() -> Optional[str]:
+    """The node that will run the shim, or ``None`` when there is not one.
+
+    Absent is not a pass: the caller skips with the reason, so a machine without
+    node reports the gap rather than a green run that proved nothing.
+    """
+    for candidate in NODE_CANDIDATES:
+        if os.access(candidate, os.X_OK):
+            return candidate
+    return shutil.which("node")
+
+
+def page_document(html: str) -> dict:
+    """The document one page carries, as the page itself reads it."""
+    match = DATA_PATTERN.search(html)
+    if match is None:
+        raise AssertionError("the page carries no data block")
+    return json.loads(match.group(1))
+
+
+def step_count(script: str) -> int:
+    """How many steps the page's own stepper has."""
+    match = STEPS_PATTERN.search(script)
+    if match is None:
+        raise AssertionError("the script has no STEPS list to walk")
+    count = len(re.findall(r"\{\s*id:", match.group(1)))
+    if count < 1:
+        raise AssertionError("the STEPS list names no step")
+    return count
+
+
+def cases_to_walk(name: str, document: dict, wanted: int = CASES_PER_PAGE) -> list:
+    """The cases to walk on one page: every miss it has, up to ``wanted``.
+
+    The miss line is the only place the page hands a plain string to
+    ``appendChild``, so the cases that reach it are the ones worth walking: they
+    are where this class of defect lives. A page with fewer misses than
+    ``wanted`` is topped up from its own case list, so every page is walked over
+    three cases rather than only the pages that missed.
+
+    ``wild`` is asked for 517 as well. It is the case the sheet names -- a miss
+    that produced no ruling at all -- and it is the state the page has least
+    practice drawing: no ruling, no clause, no amount.
+    """
+    cases = document.get("cases") or []
+    chosen = [
+        case["case_no"]
+        for case in cases
+        if (case.get("grading") or {}).get("exact") is False
+    ][:wanted]
+    if name == "wild" and 517 not in chosen:
+        chosen.append(517)
+    for case in cases:
+        if len(chosen) >= wanted:
+            break
+        if case["case_no"] not in chosen:
+            chosen.append(case["case_no"])
+    return chosen
+
+
+def targets_for(name: str, document: dict, script: str) -> list:
+    """Every view the harness renders on one page, in order."""
+    steps = step_count(script)
+    chosen = cases_to_walk(name, document)
+    targets = [
+        {"view": "case", "case": case_no, "step": step}
+        for case_no in chosen
+        for step in range(1, steps + 1)
+    ]
+    targets.append({"view": "stance", "case": chosen[0]})
+    return targets
+
+
+def run_the_shim(pages: list) -> dict:
+    """Run the shim over ``pages`` and return its report.
+
+    A job file and a temporary directory rather than a command line, because a
+    page's data block is megabytes and an argument list is not where megabytes
+    belong.
+    """
+    node = node_executable()
+    if node is None:
+        raise AssertionError("no node to run the shim with")
+    with tempfile.TemporaryDirectory() as scratch:
+        job = Path(scratch) / "job.json"
+        job.write_text(json.dumps({"pages": pages}), encoding="utf-8")
+        done = subprocess.run(
+            [node, str(DOM_SHIM), str(job)],
+            cwd=str(PROJECT_ROOT),
+            capture_output=True,
+            text=True,
+        )
+    if done.returncode != 0:
+        raise AssertionError(
+            "the shim exited {0}:\n{1}".format(done.returncode, done.stderr[-4000:])
+        )
+    return json.loads(done.stdout)
+
+
+class PageScriptRunsTests(unittest.TestCase):
+    """The page script is executed against a minimal DOM.
+
+    Every other test in this file reads the page as text, and a defect that only
+    shows when the script runs is invisible to all of them. This class runs it:
+    for every page under ``ui/dist/`` it loads the page's own data block and its
+    own behaviour script into ``tests/support/dom_shim.js`` and renders the views.
+
+    What is rendered is chosen from the page rather than typed here. The three
+    cases are the page's own misses -- the miss line is where a plain string was
+    handed to ``appendChild`` -- topped up from the page's case list so every
+    page is walked over three, and ``wild`` is walked over 517 as well because
+    the sheet names it. Every step of each case is rendered, and then the stance
+    view.
+
+    The overview is rendered by the load itself, so it is measured rather than
+    driven: the shim reports how many children ``renderOverview`` built, and a
+    load that threw part-way leaves that short and sets ``load_error``.
+
+    **The shim throws on a string, as a browser does**, which is what makes the
+    first test able to fail at all. ``test_the_harness_can_fail`` shows that it
+    does.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        if node_executable() is None:
+            raise unittest.SkipTest(
+                "node is not installed, so the page script cannot be run: tried "
+                + ", ".join(NODE_CANDIDATES)
+                + " and node on the PATH"
+            )
+        cls.relative = sorted(
+            str(path.relative_to(build.DIST_DIR))
+            for path in build.DIST_DIR.rglob("*.html")
+        )
+        cls.html = {}
+        cls.script = {}
+        cls.document = {}
+        cls.targets = {}
+        for relative in cls.relative:
+            text = (build.DIST_DIR / relative).read_text(encoding="utf-8")
+            cls.html[relative] = text
+            if "<script>" not in text:
+                continue
+            cls.script[relative] = behaviour_script(text)
+            cls.document[relative] = page_document(text)
+            cls.targets[relative] = targets_for(
+                cls.name_of(relative), cls.document[relative], cls.script[relative]
+            )
+
+    @staticmethod
+    def name_of(relative: str) -> str:
+        """The set a page belongs to, from the path it sits at."""
+        return "corpus" if relative == "index.html" else relative.split("/")[0]
+
+    def test_every_page_under_ui_dist_is_accounted_for(self):
+        """The five viewer pages, and the runs index beside them.
+
+        The index is static -- it links to the pages and carries no data of its
+        own -- so there is nothing in it to run. That is asserted rather than
+        assumed, because a page that quietly stopped carrying a script would
+        otherwise be a page this class silently stopped covering.
+        """
+        self.assertEqual(
+            [
+                "codex/index.html",
+                "index.html",
+                "runs/index.html",
+                "ryde-901/index.html",
+                "wild-v2/index.html",
+                "wild/index.html",
+            ],
+            self.relative,
+        )
+        self.assertEqual(
+            [
+                "codex/index.html",
+                "index.html",
+                "ryde-901/index.html",
+                "wild-v2/index.html",
+                "wild/index.html",
+            ],
+            sorted(self.script),
+        )
+
+    def test_the_pages_run_without_throwing(self):
+        """The point of the class: nothing throws, on any page, in any view."""
+        jobs = [
+            {
+                "name": self.name_of(relative),
+                "path": str(build.DIST_DIR / relative),
+                "targets": self.targets[relative],
+            }
+            for relative in sorted(self.script)
+        ]
+        report = run_the_shim(jobs)
+        self.assertEqual(
+            [job["name"] for job in jobs],
+            [page["name"] for page in report["pages"]],
+        )
+        for job, page in zip(jobs, report["pages"]):
+            with self.subTest(page=page["name"]):
+                self.assertIsNone(
+                    page["load_error"],
+                    "the page threw while it was loading: "
+                    + str(page["load_error"]),
+                )
+                self.assertGreater(
+                    page["overview_children"],
+                    0,
+                    "the overview rendered nothing",
+                )
+                self.assertEqual(
+                    [],
+                    page["exceptions"],
+                    "a view threw: " + json.dumps(page["exceptions"]),
+                )
+                self.assertEqual(len(job["targets"]), page["rendered"])
+
+    def test_the_walk_covers_the_cases_the_sheet_names(self):
+        """The walk is over the misses, and over ``wild`` 517 by name.
+
+        A page with fewer cases than the walk asks for is walked over the cases
+        it has: ``ryde-901`` is one case. ``wild`` is one longer than the others,
+        because 517 is asked for by name.
+        """
+        for relative in sorted(self.script):
+            name = self.name_of(relative)
+            cases = self.document[relative].get("cases") or []
+            chosen = cases_to_walk(name, self.document[relative])
+            misses = [
+                case["case_no"]
+                for case in cases
+                if (case.get("grading") or {}).get("exact") is False
+            ]
+            with self.subTest(page=name):
+                self.assertEqual(
+                    misses[:CASES_PER_PAGE], chosen[: len(misses[:CASES_PER_PAGE])]
+                )
+                self.assertEqual(
+                    min(CASES_PER_PAGE, len(cases)) + (1 if name == "wild" else 0),
+                    len(chosen),
+                )
+                if name == "wild":
+                    self.assertIn(517, chosen)
+                self.assertEqual(
+                    len(chosen) * step_count(self.script[relative]) + 1,
+                    len(self.targets[relative]),
+                )
+
+    def test_the_harness_can_fail(self):
+        """The control: a page that hands ``appendChild`` a string is caught.
+
+        Without this the class above could pass because the shim accepts
+        anything. The page is written here rather than mutated out of a real one,
+        so the control does not depend on which line of the real script happens
+        to run first: it is the defect in miniature -- the same call, the same
+        argument type, the same throw.
+        """
+        control = (
+            '<!DOCTYPE html>\n<html lang="en">\n<head><meta charset="utf-8">'
+            "<title>control</title></head>\n<body>\n"
+            '<section id="view-overview"></section>\n'
+            '<script id="tribunal-data" type="application/json">{"cases": []}'
+            "</script>\n<script>\n"
+            "(function () {\n"
+            '  document.getElementById("view-overview").appendChild("text");\n'
+            "})();\n"
+            "</script>\n</body>\n</html>\n"
+        )
+        with tempfile.TemporaryDirectory() as scratch:
+            path = Path(scratch) / "control.html"
+            path.write_text(control, encoding="utf-8")
+            report = run_the_shim(
+                [
+                    {
+                        "name": "control",
+                        "path": str(path),
+                        "targets": [{"view": "overview"}],
+                    }
+                ]
+            )
+        page = report["pages"][0]
+        self.assertIsNotNone(
+            page["load_error"], "a page that throws on load was called fine"
+        )
+        self.assertIn("appendChild", page["load_error"])
 
 
 if __name__ == "__main__":

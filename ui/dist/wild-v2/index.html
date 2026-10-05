@@ -1177,11 +1177,15 @@ body.projector .marker { font-size: 14px; }
       h("b", { text: "Case " + caseDoc.case_no + " is a miss, and it is shown as one. " }),
       "It failed on " + caseDoc.grading.failed_fields.join(", ") + ". "
     ]);
+    // ``add`` rather than ``appendChild``: the sentence after the note is a
+    // string, and ``appendChild`` throws on anything that is not a node. Handing
+    // a string to it here took out the whole overview on every page with a
+    // linked miss, because this function is called from ``renderOverview``.
     if (note) {
-      line.appendChild(h("a", { href: note.link, text: note.note }));
-      line.appendChild(" records why this is a contested reading rather than a defect, and why the answer key is not changed for it.");
+      add(line, h("a", { href: note.link, text: note.note }));
+      add(line, " records why this is a contested reading rather than a defect, and why the answer key is not changed for it.");
     } else {
-      line.appendChild("No note is written about this case, so it is shown as a miss and is not called a contested reading.");
+      add(line, "No note is written about this case, so it is shown as a miss and is not called a contested reading.");
     }
     return line;
   }
