@@ -3402,5 +3402,334 @@ class PhoneWidthTests(unittest.TestCase):
         )
 
 
+# ---------------------------------------------------------------------------
+# The page for a reader who is not looking at it.
+# ---------------------------------------------------------------------------
+
+class _PageScan(HTMLParser):
+    """Every start tag on a page, with its attributes.
+
+    The checks that follow are about what the page carries, so they read it the
+    way a browser does rather than searching it for a phrase. ``<style>`` and
+    ``<script>`` bodies are CDATA to this parser, so a tag written inside a
+    string in the script cannot be mistaken for a tag on the page.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.tags: list = []
+
+    def handle_starttag(self, tag, attrs):
+        self.tags.append((tag, dict(attrs)))
+
+    def handle_startendtag(self, tag, attrs):
+        self.tags.append((tag, dict(attrs)))
+
+
+def scan_page(text: str) -> _PageScan:
+    scan = _PageScan()
+    scan.feed(text)
+    return scan
+
+
+def _srgb_to_linear(channel: float) -> float:
+    channel = channel / 255.0
+    return channel / 12.92 if channel <= 0.04045 else ((channel + 0.055) / 1.055) ** 2.4
+
+
+def relative_luminance(colour) -> float:
+    red, green, blue = [_srgb_to_linear(channel) for channel in colour]
+    return 0.2126 * red + 0.7152 * green + 0.0722 * blue
+
+
+def contrast_ratio(one, other) -> float:
+    """WCAG 2.1 contrast, from 1.0 to 21.0."""
+    first, second = relative_luminance(one), relative_luminance(other)
+    return (max(first, second) + 0.05) / (min(first, second) + 0.05)
+
+
+def hex_colour(value: str):
+    value = value.lstrip("#")
+    return tuple(int(value[index:index + 2], 16) for index in (0, 2, 4))
+
+
+def over(foreground, background):
+    """A translucent colour composited onto an opaque one, as a browser does."""
+    red, green, blue, alpha = foreground
+    return tuple(
+        round(red * alpha + background[index] * (1 - alpha)) for index in range(3)
+    )
+
+
+class AccessibilityTests(unittest.TestCase):
+    """What the page tells a reader who is not looking at it.
+
+    No browser runs in this suite, so nothing here can say what a screen reader
+    announces. What it can say is what the page *carries*: one heading to
+    navigate by, a nav that is named, a current view and a current step that are
+    marked current rather than only coloured, two dialogs that say they are
+    dialogs, a row that opens a case which a keyboard can reach, a switch that
+    gives the single-character shortcuts back, and text that clears the contrast
+    floor the rest of the page is held to.
+
+    The static half of the page is parsed rather than searched. The dialogs, the
+    rows and the switch are built by the script at run time and no parser can see
+    them, so those are read out of the script -- which is the same bytes on all
+    five pages, asserted in ``EveryPageIsCommittedTests``.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        skip_unless_the_run_can_be_drawn()
+        cls.documents = built_documents()
+        cls.page = build.render_html(cls.documents["corpus"])
+        cls.static = cls.page.split('<script id="tribunal-data"', 1)[0]
+        cls.scan = scan_page(cls.static)
+        cls.stylesheet = "\n".join(_STYLE_RE.findall(cls.page))
+        cls.top = _outside_media(cls.stylesheet)
+        cls.root = declarations_for(cls.top, ":root")
+        cls.script = behaviour_script(cls.page)
+        cls.index = build.render_index(cls.documents)
+
+    def tags(self, name):
+        return [attrs for tag, attrs in self.scan.tags if tag == name]
+
+    def colour_of(self, selector):
+        """A selector's colour, with the page's own custom properties resolved."""
+        value = declarations_for(self.top, selector).get("color")
+        self.assertIsNotNone(value, selector + " declares no colour")
+        match = re.match(r"var\((--[a-z0-9-]+)\)$", value)
+        if match:
+            value = self.root.get(match.group(1))
+            self.assertIsNotNone(value, selector + " uses a property :root never sets")
+        return hex_colour(value)
+
+    def test_every_page_has_exactly_one_heading(self):
+        """A page with no h1 has no heading to navigate by; a page with two has
+        two answers to what the page is."""
+        pages = {
+            name: build.render_html(document) for name, document in self.documents.items()
+        }
+        pages["the runs index"] = self.index
+        for name, text in sorted(pages.items()):
+            with self.subTest(page=name):
+                headings = [tag for tag, _ in scan_page(text).tags if tag == "h1"]
+                self.assertEqual(
+                    1, len(headings),
+                    "a page carrying " + str(len(headings)) + " h1 headings",
+                )
+
+    def test_the_heading_is_the_page_s_own_brand(self):
+        """The one h1 is the brand, so the heading says which run is on screen."""
+        headings = self.tags("h1")
+        self.assertEqual(1, len(headings))
+        self.assertEqual("brand", headings[0].get("class"))
+        match = re.search(r'<h1 class="brand">([^<]+)</h1>', self.static)
+        self.assertIsNotNone(match, "the brand heading carries no text")
+        self.assertEqual(self.documents["corpus"]["set"]["brand"], match.group(1))
+
+    def test_the_views_nav_is_named(self):
+        navs = self.tags("nav")
+        self.assertEqual(1, len(navs), "the page carries no nav, or more than one")
+        self.assertTrue(navs[0].get("aria-label"), "the nav has no accessible name")
+
+    def test_the_current_view_is_marked_current(self):
+        """A class is not something a reader who cannot see it is told."""
+        buttons = {attrs.get("id"): attrs for attrs in self.tags("button")}
+        self.assertEqual(
+            "page", buttons["nav-overview"].get("aria-current"),
+            "the view that starts on is not marked as the current one",
+        )
+        for name in ("nav-case", "nav-stance"):
+            with self.subTest(button=name):
+                self.assertNotIn(
+                    "aria-current", buttons[name],
+                    "a view that is not on is marked as the current one",
+                )
+        self.assertIn('button.setAttribute("aria-current", "page")', self.script)
+        self.assertIn('button.removeAttribute("aria-current")', self.script)
+
+    def test_the_current_step_is_marked_current(self):
+        self.assertIn(
+            '"aria-current": index === state.step ? "step" : null', self.script
+        )
+
+    def test_the_question_mark_button_is_named(self):
+        """The button's visible text is one character, which is not a name."""
+        buttons = {attrs.get("id"): attrs for attrs in self.tags("button")}
+        self.assertEqual(
+            "keyboard shortcuts", buttons["show-keys"].get("aria-label")
+        )
+
+    def test_a_row_that_opens_a_case_can_be_opened_from_the_keyboard(self):
+        """A ``tr`` with a click handler cannot be reached by tab and is not
+        announced as anything a reader can act on, so the number it holds is a
+        button and the row handler stays for the pointer."""
+        self.assertEqual(
+            2, self.script.count('class: "case-open"'),
+            "a clickable row has no control in its first cell",
+        )
+        self.assertIn('"aria-label": "open case " + c.case_no', self.script)
+        self.assertIn("event.stopPropagation(); openCase(c.case_no)", self.script)
+        self.assertTrue(
+            declarations_for(self.top, ".case-open"),
+            "the button in the first cell has no rule of its own",
+        )
+
+    def test_the_stepper_keeps_the_focus_on_the_control_that_was_used(self):
+        """The stepper is rebuilt on every step, so the button that was pressed
+        is detached by the time the new step is on screen."""
+        for fragment in (
+            'id: "step-" + index',
+            'id: "step-back"',
+            'id: "step-next"',
+            'goToStep(index, "step-" + index)',
+            'goToStep(state.step + 1, "step-next")',
+            'goToStep(state.step - 1, "step-back")',
+            "state.focus = token || null",
+            "restoreFocus();",
+        ):
+            with self.subTest(fragment=fragment):
+                self.assertIn(fragment, self.script)
+        # The control can have become disabled -- "next" is, on the last step --
+        # and a disabled control cannot take the focus, so the step the reader
+        # landed on takes it instead.
+        self.assertIn(
+            'if (node && node.disabled) { node = document.getElementById("step-" + state.step); }',
+            self.script,
+        )
+
+    def test_both_dialogs_say_they_are_dialogs(self):
+        """The clause overlay and the keys overlay, each opened through the one
+        helper that gives the focus out and takes it back.
+
+        The call sites are counted with their semicolon: the helper's own
+        signature is the same characters and counting it would let a dialog that
+        never goes through the helper pass.
+        """
+        self.assertEqual(2, self.script.count('role: "dialog"'))
+        self.assertEqual(2, self.script.count('"aria-modal": "true"'))
+        self.assertEqual(2, self.script.count("openDialog(overlay, box, opener);"))
+        self.assertEqual(1, self.script.count("function openDialog(overlay, box, opener)"))
+        self.assertIn("box.focus()", self.script)
+        self.assertIn("state.modalOpener = opener || document.activeElement", self.script)
+        self.assertIn("giveBackTheFocus()", self.script)
+
+    def test_escape_closes_a_dialog(self):
+        self.assertIn(
+            'if (event.key === "Escape") { closeHelp(); closeModal(); event.preventDefault(); }',
+            self.script,
+        )
+
+    def test_the_setting_is_shown_in_the_dialog_that_lists_the_keys(self):
+        """The switch belongs beside the list it governs, not somewhere else on
+        the page."""
+        dialog = self.script.split("function renderHelp(", 1)[1].split(
+            "function closeHelp(", 1
+        )[0]
+        for fragment in ('id: "single-keys"', 'class: "keys"', '"aria-modal": "true"'):
+            with self.subTest(fragment=fragment):
+                self.assertIn(fragment, dialog)
+
+    def test_the_single_key_shortcuts_can_be_turned_off(self):
+        """WCAG 2.1.4. Every shortcut on this page is one character, so a reader
+        using speech input is otherwise competing with the page for letters."""
+        self.assertIn("singleKeys: true", self.script)
+        self.assertIn("key.length === 1 && !state.singleKeys", self.script)
+        self.assertIn('id: "single-keys-state"', self.script)
+        self.assertIn('state.singleKeys ? "on" : "off"', self.script)
+
+    def test_the_escalation_table_has_no_empty_header(self):
+        """A ``th`` with no text is a column a reader is not told the name of."""
+        self.assertNotIn('h("th", { text: "" })', self.script)
+        self.assertIn('h("th", { text: "Measure" })', self.script)
+
+    def test_nothing_on_the_page_is_smaller_than_twelve_pixels(self):
+        """11px of monospace on a phone is text that has to be zoomed to be
+        read."""
+        sizes = [
+            (selector, value)
+            for selector, prop, value in declarations(self.stylesheet)
+            if prop == "font-size"
+        ]
+        self.assertTrue(sizes, "the stylesheet declares no font size at all")
+        for selector, value in sizes:
+            with self.subTest(selector=selector, value=value):
+                self.assertRegex(
+                    value, r"^\d+(\.\d+)?px$",
+                    "a size that is not in px cannot be held to a floor",
+                )
+                self.assertGreaterEqual(float(value[:-2]), 12.0)
+        for selector, prop, value in declarations(self.stylesheet):
+            if prop != "font":
+                continue
+            match = re.match(r"(\d+(?:\.\d+)?)px", value)
+            if match:
+                with self.subTest(selector=selector, shorthand=value):
+                    self.assertGreaterEqual(float(match.group(1)), 12.0)
+
+    def test_the_floor_check_catches_a_size_that_is_too_small(self):
+        """The control for the test above: run over a stylesheet that still
+        carries one of the sizes it replaced."""
+        with self.assertRaises(AssertionError):
+            for selector, prop, value in declarations("x { font-size: 11.5px; }"):
+                if prop == "font-size":
+                    self.assertGreaterEqual(float(value[:-2]), 12.0)
+
+    def test_the_two_lowest_contrast_rules_clear_the_floor(self):
+        """The line number down a rendered prompt, and the word the page writes
+        where the run produced no value.
+
+        Both are text and both were below 4.5:1. The line number measured
+        2.87:1 on the plain column and 1.95:1 on the amber highlight of a
+        differing line; the null measured 4.28:1 on a panel and 3.63:1 in a miss
+        row. The backgrounds below are every one each rule can sit on, the
+        translucent washes composited the way a browser composites them.
+        """
+        page = hex_colour("0e1116")
+        panel = hex_colour("161c23")
+        panel_2 = hex_colour("1c242d")
+        cases = {
+            ".plines li .n": [
+                panel_2,
+                over((121, 192, 255, 0.05), panel_2),
+                over((216, 167, 42, 0.15), panel_2),
+            ],
+            ".null": [
+                page,
+                panel,
+                panel_2,
+                over((255, 107, 107, 0.09), panel),
+                over((255, 107, 107, 0.16), panel),
+                over((255, 107, 107, 0.06), panel),
+                over((216, 167, 42, 0.07), panel),
+                over((157, 171, 185, 0.05), panel_2),
+            ],
+        }
+        for selector, backgrounds in cases.items():
+            colour = self.colour_of(selector)
+            for background in backgrounds:
+                with self.subTest(selector=selector, background=background):
+                    self.assertGreaterEqual(
+                        round(contrast_ratio(colour, background), 2),
+                        4.5,
+                        selector + " is below the contrast floor on " + str(background),
+                    )
+
+    def test_the_contrast_floor_would_have_caught_the_colours_it_replaced(self):
+        """The control for the test above: the two colours it replaced, measured
+        the same way, are below the floor."""
+        panel = hex_colour("161c23")
+        panel_2 = hex_colour("1c242d")
+        self.assertLess(
+            round(contrast_ratio(hex_colour("5d6b78"), over((216, 167, 42, 0.15), panel_2)), 2),
+            4.5,
+        )
+        self.assertLess(
+            round(contrast_ratio(hex_colour("7b8794"), over((255, 107, 107, 0.09), panel)), 2),
+            4.5,
+        )
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

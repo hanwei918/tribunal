@@ -36,6 +36,11 @@ h2 { font-size: 22px; margin-top: 4px; }
 h3 { font-size: 16px; color: var(--text); margin-top: 22px; }
 h4 { font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
 p { margin: 8px 0; }
+/* Nothing on this page is set smaller than 12px. The sizes below that were 11px
+   and 11.5px -- the badges, the chips, the table headers, the label above a
+   card's figure, the line numbers down a rendered prompt, the digest in the
+   stance proof and the provenance footer -- and 11px of monospace on a phone is
+   text that has to be zoomed to be read. */
 code, .mono { font-family: var(--mono); font-size: 12.5px; }
 
 header.top {
@@ -45,7 +50,9 @@ header.top {
   padding: 10px 20px;
   display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
 }
-header.top .brand { font-weight: 600; font-size: 15px; }
+/* The brand is the page's one h1, and an h1 carries a bottom margin that would
+   push it off centre in this flex row. */
+header.top .brand { font-weight: 600; font-size: 15px; margin: 0; }
 header.top .spacer { flex: 1; }
 header.top .runs-link { font-size: 13px; color: var(--accent); text-decoration: none; }
 header.top .runs-link:hover { text-decoration: underline; }
@@ -63,14 +70,14 @@ button:disabled:hover { border-color: var(--line); }
 
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin: 16px 0 6px; }
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 13px 15px; }
-.card .label { color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.07em; }
+.card .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.07em; }
 .card .value { font-size: 25px; font-weight: 650; margin-top: 5px; font-variant-numeric: tabular-nums; }
 .card .sub { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
 .card.wide { grid-column: span 2; }
 
 table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
 th, td { text-align: left; padding: 6px 9px; border-bottom: 1px solid var(--line); vertical-align: top; }
-th { color: var(--muted); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.05em; }
+th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
 tbody tr:hover { background: #1a222b; }
 tr.clickable { cursor: pointer; }
 tr.miss td { background: rgba(255,107,107,0.09); }
@@ -93,7 +100,7 @@ code, .mono, .scalar, .digest, .artifact .id, .record-row .id, dl.tree > dt {
   overflow-wrap: anywhere;
 }
 
-.badge { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 11.5px;
+.badge { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 12px;
   border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
 .badge.ok { color: var(--ok); border-color: rgba(74,194,107,0.5); }
 .badge.miss { color: var(--bad); border-color: rgba(255,107,107,0.5); }
@@ -107,6 +114,18 @@ code, .mono, .scalar, .digest, .artifact .id, .record-row .id, dl.tree > dt {
 .case-picker { display: flex; flex-wrap: wrap; gap: 5px; margin: 12px 0 16px; }
 .case-picker button { padding: 3px 9px; font-size: 12.5px; font-variant-numeric: tabular-nums; }
 .case-picker button.miss { border-color: rgba(255,107,107,0.45); color: #ffc9c9; }
+
+/* The first cell of a clickable row is a button, so that a row which opens a
+   case can be opened from the keyboard. It is drawn like the number it holds
+   rather than like a control in a toolbar: no background, and a border that is
+   there at every moment so the cell does not move when the pointer arrives. */
+.case-open { font-weight: 650; font-variant-numeric: tabular-nums; padding: 1px 6px;
+  background: transparent; border-color: transparent; color: var(--accent); }
+.case-open:hover, .case-open:focus-visible { border-color: var(--accent); }
+
+/* The single-key switch in the keyboard dialog, and the state it is in. */
+.key-toggle { display: inline-flex; align-items: center; gap: 6px; color: var(--text); }
+.key-toggle input { margin: 0; }
 
 .case-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
 .case-head .title { font-size: 19px; font-weight: 650; }
@@ -135,10 +154,15 @@ dl.tree { display: grid; grid-template-columns: minmax(0, max-content) minmax(0,
 dl.tree > dt { color: var(--muted); font-family: var(--mono); font-size: 12px; padding-top: 1px; }
 dl.tree > dd { margin: 0; }
 ul.vals { margin: 0; padding-left: 16px; }
-.null { color: #7b8794; font-style: italic; }
+/* Not a value the run produced. It is dimmer than the text around it -- which
+   is the point -- but it is still text, so it clears 4.5:1 against every
+   background it can sit on, the lightest of which is a miss row under the
+   pointer: #a3b1bf measures 4.78:1 there and 6.09:1 on a plain panel. The
+   colour it replaces measured 3.63:1 on the miss row. */
+.null { color: #a3b1bf; font-style: italic; }
 .bool { color: var(--accent); font-family: var(--mono); font-size: 12.5px; }
 .scalar { font-family: var(--mono); font-size: 12.5px; }
-.src { color: var(--muted); font-family: var(--mono); font-size: 11px; margin-left: 7px;
+.src { color: var(--muted); font-family: var(--mono); font-size: 12px; margin-left: 7px;
   border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
 .empty { color: var(--muted); }
 
@@ -159,8 +183,8 @@ details > summary { cursor: pointer; color: var(--muted); font-size: 12.5px; }
 details[open] > summary { margin-bottom: 6px; }
 
 .chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; align-items: center; }
-.chips .chips-label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; margin-right: 3px; }
-.chip { font-family: var(--mono); font-size: 11.5px; padding: 1px 7px; border-radius: 999px;
+.chips .chips-label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; margin-right: 3px; }
+.chip { font-family: var(--mono); font-size: 12px; padding: 1px 7px; border-radius: 999px;
   background: #223040; border: 1px solid #33465a; color: #bcd8f5; }
 .chip:hover { border-color: var(--accent); }
 .chip.evidence { background: #1f2d24; border-color: #33543f; color: #b6e8c4; }
@@ -186,7 +210,7 @@ pre.raw { background: #10151b; border: 1px solid var(--line); border-radius: 8px
 
 footer.prov { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
   background: rgba(18,23,29,0.97); border-top: 1px solid var(--line);
-  padding: 7px 20px; font-size: 11.5px; color: var(--muted); font-family: var(--mono);
+  padding: 7px 20px; font-size: 12px; color: var(--muted); font-family: var(--mono);
   display: flex; flex-wrap: wrap; gap: 4px 18px; }
 footer.prov b { color: var(--text); font-weight: 600; }
 
@@ -278,7 +302,7 @@ tr.contested:hover { background: rgba(216,167,42,0.12); }
 dl.keys { display: grid; grid-template-columns: minmax(0, max-content) minmax(0, 1fr); gap: 6px 14px; margin-top: 12px; }
 dl.keys > dt { margin: 0; }
 dl.keys > dd { margin: 0; color: var(--muted); }
-kbd { font-family: var(--mono); font-size: 11.5px; background: var(--panel-2);
+kbd { font-family: var(--mono); font-size: 12px; background: var(--panel-2);
   border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px;
   padding: 1px 6px; color: var(--text); white-space: nowrap; }
 
@@ -295,12 +319,12 @@ dl.digests > dt { color: var(--muted); font-size: 12px; white-space: nowrap; }
 dl.digests > dd { margin: 0; }
 /* The digest is shown whole. A digest you can only see part of is not
    evidence of equality, it is an assertion that there is equality. */
-.digest { font-family: var(--mono); font-size: 11.5px; word-break: break-all;
+.digest { font-family: var(--mono); font-size: 12px; word-break: break-all;
   padding: 2px 7px; border-radius: 4px; border: 1px solid var(--line);
   background: var(--panel-2); color: var(--text); }
 .digest.same { border-color: rgba(74,194,107,0.55); background: rgba(74,194,107,0.10); }
 .digest.differ { border-color: rgba(240,163,94,0.55); background: rgba(240,163,94,0.09); }
-.tag { display: inline-block; margin-left: 8px; font-size: 11px; padding: 0 6px;
+.tag { display: inline-block; margin-left: 8px; font-size: 12px; padding: 0 6px;
   border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
 .tag.ok { color: var(--ok); border-color: rgba(74,194,107,0.5); }
 
@@ -311,10 +335,14 @@ dl.digests > dd { margin: 0; }
 .prompt-col > h4 { margin: 0; padding: 7px 10px; border-bottom: 1px solid var(--line);
   background: var(--panel); text-transform: none; letter-spacing: 0; font-size: 13px; }
 .plines { margin: 0; padding: 0; list-style: none; font-family: var(--mono);
-  font-size: 11px; max-height: 480px; overflow: auto; }
+  font-size: 12px; max-height: 480px; overflow: auto; }
 .plines li { display: flex; gap: 8px; padding: 1px 8px 1px 5px; white-space: pre-wrap;
   word-break: break-word; border-left: 3px solid transparent; }
-.plines li .n { color: #5d6b78; min-width: 28px; text-align: right; flex: none; }
+/* The line number down the side of a rendered prompt. It is the dimmest text on
+   the page and it still has to be readable: on the amber highlight of a
+   differing line the old colour measured 1.95:1, and #a3b0bd measures 4.82:1
+   there and 5.16:1 on the plain background of the column. */
+.plines li .n { color: #a3b0bd; min-width: 28px; text-align: right; flex: none; }
 .plines li.stance { background: rgba(121,192,255,0.05); border-left-color: rgba(121,192,255,0.35); }
 .plines li.stance .n { color: var(--muted); }
 .plines li.diff { background: rgba(216,167,42,0.15); border-left-color: var(--warn); }
@@ -392,16 +420,16 @@ body.projector .marker { font-size: 14px; }
 </head>
 <body>
 <header class="top">
-  <span class="brand">Tribunal - debate viewer - second development set</span>
-  <nav class="views">
-    <button id="nav-overview" class="on">Overview</button>
+  <h1 class="brand">Tribunal - debate viewer - second development set</h1>
+  <nav class="views" aria-label="views">
+    <button id="nav-overview" class="on" aria-current="page">Overview</button>
     <button id="nav-case">One case</button>
     <button id="nav-stance">Stance</button>
   </nav>
   <a class="runs-link" href="../runs/index.html">Runs</a>
   <span class="spacer"></span>
   <button id="toggle-projector" title="scale everything up for a projector">Projector</button>
-  <button id="show-keys" title="keyboard shortcuts">?</button>
+  <button id="show-keys" title="keyboard shortcuts" aria-label="keyboard shortcuts">?</button>
   <span class="badge">replay of a committed development run</span>
 </header>
 <main>
@@ -473,7 +501,20 @@ body.projector .marker { font-size: 14px; }
     // The vote filter is a reading aid, not part of the run, so it stays out
     // of the hash: a shared link opens the same run, and whoever follows it
     // decides for themselves whether to narrow the grid.
-    contestedOnly: false
+    contestedOnly: false,
+    // The control to put the focus back on after the next render. The stepper is
+    // rebuilt from scratch on every step, so the button that was pressed is gone
+    // by the time the new step is on screen and the focus has fallen back to the
+    // document. A token names the control rather than holding it, because the
+    // node it names is a different node after the render.
+    focus: null,
+    // The control that opened a dialog, so that closing the dialog can put the
+    // focus back on it.
+    modalOpener: null,
+    // WCAG 2.1.4: every shortcut on this page is a single character, and a
+    // single-character shortcut has to be able to be turned off. The switch is
+    // in the keyboard dialog, beside the list of keys it governs.
+    singleKeys: true
   };
 
   // ---- deep links ------------------------------------------------------
@@ -646,7 +687,10 @@ body.projector .marker { font-size: 14px; }
       class: known ? "chip clause" : "chip unknown",
       title: known ? "show this clause's rule text" : "not a clause in the loaded policy",
       text: clauseId,
-      onclick: function () { openClause(clauseId); }
+      // The chip is handed to the dialog as its opener, so closing the dialog
+      // puts the focus back on the chip that was pressed rather than at the top
+      // of the document.
+      onclick: function (event) { openClause(clauseId, event.currentTarget); }
     });
   }
   function chips(label, children) {
@@ -664,13 +708,21 @@ body.projector .marker { font-size: 14px; }
     document.getElementById("view-case").hidden = state.view !== "case";
     document.getElementById("view-stance").hidden = state.view !== "stance";
     ["overview", "case", "stance"].forEach(function (name) {
-      document.getElementById("nav-" + name).classList.toggle("on", state.view === name);
+      var button = document.getElementById("nav-" + name);
+      var current = state.view === name;
+      button.classList.toggle("on", current);
+      // The highlight is a class, and a class is not something a reader who
+      // cannot see it is told: the button that is on is also the one that is
+      // current, and the button that is not carries no such claim.
+      if (current) { button.setAttribute("aria-current", "page"); }
+      else { button.removeAttribute("aria-current"); }
     });
     document.getElementById("toggle-projector").classList.toggle("on", state.projector);
     if (state.view === "case") { renderCase(); }
     if (state.view === "stance") { renderStance(); }
     syncLinkBar();
     syncHash();
+    restoreFocus();
   }
   function syncHash() {
     var next = formatHash();
@@ -703,10 +755,25 @@ body.projector .marker { font-size: 14px; }
     refresh();
     window.scrollTo(0, 0);
   }
-  function goToStep(index) {
+  function goToStep(index, token) {
     state.step = Math.max(0, Math.min(STEPS.length - 1, index));
     state.highlight = null;
+    state.focus = token || null;
     refresh();
+  }
+  // Put the focus back on the control that was used, in the render that has just
+  // replaced it. The node is looked up by id because the one that was pressed is
+  // detached by now. A control that has become disabled cannot take the focus --
+  // "next" is disabled on the last step -- and then the step the reader has
+  // landed on takes it instead, so the focus stays in the stepper rather than
+  // falling back to the top of the document.
+  function restoreFocus() {
+    var wanted = state.focus;
+    state.focus = null;
+    if (!wanted) { return; }
+    var node = document.getElementById(wanted);
+    if (node && node.disabled) { node = document.getElementById("step-" + state.step); }
+    if (node && node.focus) { node.focus(); }
   }
   // Next and previous case, in the order the run lists them, so a presenter
   // can walk the corpus without going back to the grid.
@@ -734,10 +801,12 @@ body.projector .marker { font-size: 14px; }
     var node = byData("data-artifact", evidenceId);
     if (node && node.scrollIntoView) { node.scrollIntoView({ block: "center" }); }
   }
-  function openClause(rawId) {
+  function openClause(rawId, opener) {
     var base = String(rawId).replace(/\s*\([^)]*\)\s*$/, "");
     var entry = CLAUSES[base];
-    var box = h("div", { class: "box" });
+    // The dialog itself takes the focus when it opens, so a reader who cannot
+    // see it is put inside it rather than left on the page behind the overlay.
+    var box = h("div", { class: "box", tabindex: "-1" });
     box.appendChild(h("div", { class: "head" }, [
       h("span", { class: "id", text: rawId }),
       entry ? h("span", { class: "badge", text: entry.policy_id + " - " + entry.which }) : null,
@@ -751,14 +820,33 @@ body.projector .marker { font-size: 14px; }
       box.appendChild(h("p", { class: "hint", text: "rule text, as the agents received it" }));
       box.appendChild(h("div", { class: "rule", text: entry.clause.rule }));
     }
-    var overlay = h("div", { class: "modal", id: "clause-modal", onclick: function (event) {
-      if (event.target === overlay) { closeModal(); }
-    } }, box);
+    var overlay = h("div", { class: "modal", id: "clause-modal", role: "dialog", "aria-modal": "true",
+      "aria-label": "clause " + rawId, onclick: function (event) {
+        if (event.target === overlay) { closeModal(); }
+      } }, box);
+    openDialog(overlay, box, opener);
+  }
+  // Both dialogs are opened through this, so both behave the same way: the
+  // overlay is announced as a modal dialog, the focus moves into it, and the
+  // control that opened it is remembered so that closing can give it back.
+  function openDialog(overlay, box, opener) {
+    state.modalOpener = opener || document.activeElement;
     document.body.appendChild(overlay);
+    box.focus();
   }
   function closeModal() {
     var modal = document.getElementById("clause-modal");
     if (modal) { modal.parentNode.removeChild(modal); }
+    giveBackTheFocus();
+  }
+  // The control that opened the dialog takes the focus back when the dialog
+  // closes. It can be gone -- the view behind the dialog may have been
+  // re-rendered while it was open -- and then there is nothing to go back to and
+  // the focus stays where it is.
+  function giveBackTheFocus() {
+    var opener = state.modalOpener;
+    state.modalOpener = null;
+    if (opener && opener.focus && document.body.contains(opener)) { opener.focus(); }
   }
 
   // ---- View 1: overview --------------------------------------------------
@@ -863,7 +951,17 @@ body.projector .marker { font-size: 14px; }
         title: "open case " + c.case_no,
         onclick: function () { openCase(c.case_no); }
       });
-      row.appendChild(h("td", { class: "case-no", text: String(c.case_no) }));
+      // The row opens the case with a pointer, and this button opens it from the
+      // keyboard. A `tr` with a click handler cannot be reached by tab and is not
+      // announced as anything a reader can act on, so the number it holds is a
+      // button; the row handler stays for the pointer, and the button stops the
+      // event from reaching it and opening the same case twice.
+      row.appendChild(h("td", { class: "case-no" }, h("button", {
+        class: "case-open",
+        text: String(c.case_no),
+        "aria-label": "open case " + c.case_no,
+        onclick: function (event) { event.stopPropagation(); openCase(c.case_no); }
+      })));
       row.appendChild(h("td", { text: c.category }));
       row.appendChild(h("td", { text: text(c.difficulty) }));
       // A case the run could not rule on produced nothing. Its result cell says
@@ -1060,7 +1158,7 @@ body.projector .marker { font-size: 14px; }
     rows.push(h("tr", null, [h("td", { text: "INDETERMINATE cases ruled confidently" }), h("td", { class: "num",
       text: esc.indeterminate_ruled_confidently.length ? esc.indeterminate_ruled_confidently.join(", ") : "none" })]));
     return tableBox([
-      h("thead", null, h("tr", null, [h("th", { text: "" }), h("th", { text: "" })])),
+      h("thead", null, h("tr", null, [h("th", { text: "Measure" }), h("th", { text: "Value" })])),
       h("tbody", null, rows)
     ]);
   }
@@ -1400,7 +1498,12 @@ body.projector .marker { font-size: 14px; }
         title: "open case " + c.case_no,
         onclick: function () { openCase(c.case_no); }
       });
-      row.appendChild(h("td", { class: "case-no", text: String(c.case_no) }));
+      row.appendChild(h("td", { class: "case-no" }, h("button", {
+        class: "case-open",
+        text: String(c.case_no),
+        "aria-label": "open case " + c.case_no,
+        onclick: function (event) { event.stopPropagation(); openCase(c.case_no); }
+      })));
       row.appendChild(h("td", { text: c.category }));
       row.appendChild(h("td", { class: "vote-cell", text: agreementLabel(c.vote.agreeing, c.vote.votes) }));
       row.appendChild(h("td", null, h("span", { class: "badge contested " + text(c.vote.outcome),
@@ -1463,14 +1566,20 @@ body.projector .marker { font-size: 14px; }
     var stepper = h("div", { class: "stepper" });
     STEPS.forEach(function (step, index) {
       stepper.appendChild(h("button", {
+        id: "step-" + index,
         class: "step" + (index === state.step ? " on" : ""),
+        // The step that is on is also the step that is current, and the one
+        // that is not carries no such claim.
+        "aria-current": index === state.step ? "step" : null,
         text: step.label,
-        onclick: function () { goToStep(index); }
+        onclick: function () { goToStep(index, "step-" + index); }
       }));
     });
     stepper.appendChild(h("span", { class: "nav" }, [
-      h("button", { text: "back", disabled: state.step === 0, onclick: function () { goToStep(state.step - 1); } }),
-      h("button", { text: "next", disabled: state.step === STEPS.length - 1, onclick: function () { goToStep(state.step + 1); } })
+      h("button", { id: "step-back", text: "back", disabled: state.step === 0,
+        onclick: function () { goToStep(state.step - 1, "step-back"); } }),
+      h("button", { id: "step-next", text: "next", disabled: state.step === STEPS.length - 1,
+        onclick: function () { goToStep(state.step + 1, "step-next"); } })
     ]));
     root.appendChild(stepper);
 
@@ -2240,12 +2349,26 @@ body.projector .marker { font-size: 14px; }
     ["esc", "close a clause or this list"]
   ];
   function helpOpen() { return !!document.getElementById("keys-modal"); }
-  function renderHelp() {
+  function renderHelp(opener) {
     if (helpOpen()) { return; }
-    var box = h("div", { class: "box" });
+    var box = h("div", { class: "box", tabindex: "-1" });
     box.appendChild(h("div", { class: "head" }, [
       h("span", { class: "id", text: "Keyboard" }),
       h("button", { class: "close", text: "close", onclick: closeHelp })
+    ]));
+    // Every shortcut below is a single character, and a page that takes single
+    // characters has to be able to give them back (WCAG 2.1.4). The switch is
+    // here, beside the list it governs, and the state it is in is written out
+    // rather than left to the tick in the box.
+    var toggle = h("input", { type: "checkbox", id: "single-keys" });
+    var shown = h("span", { id: "single-keys-state", text: state.singleKeys ? "on" : "off" });
+    toggle.checked = state.singleKeys;
+    toggle.addEventListener("change", function (event) {
+      state.singleKeys = !!event.target.checked;
+      shown.textContent = state.singleKeys ? "on" : "off";
+    });
+    box.appendChild(h("p", { class: "hint" }, [
+      h("label", { class: "key-toggle", "for": "single-keys" }, [toggle, " single-key shortcuts: ", shown])
     ]));
     var dl = h("dl", { class: "keys" });
     KEYS.forEach(function (pair) {
@@ -2254,15 +2377,18 @@ body.projector .marker { font-size: 14px; }
     });
     box.appendChild(dl);
     box.appendChild(h("p", { class: "hint", text:
+      "The arrow keys and escape are not character keys, so the switch above does not turn them off. " +
       "The address bar always carries a link to exactly what is on screen, so one step can be sent to someone." }));
-    var overlay = h("div", { class: "modal", id: "keys-modal", onclick: function (event) {
-      if (event.target === overlay) { closeHelp(); }
-    } }, box);
-    document.body.appendChild(overlay);
+    var overlay = h("div", { class: "modal", id: "keys-modal", role: "dialog", "aria-modal": "true",
+      "aria-label": "keyboard shortcuts", onclick: function (event) {
+        if (event.target === overlay) { closeHelp(); }
+      } }, box);
+    openDialog(overlay, box, opener);
   }
   function closeHelp() {
     var modal = document.getElementById("keys-modal");
     if (modal) { modal.parentNode.removeChild(modal); }
+    giveBackTheFocus();
   }
   function modalOpen() { return helpOpen() || !!document.getElementById("clause-modal"); }
 
@@ -2278,6 +2404,11 @@ body.projector .marker { font-size: 14px; }
     if (event.metaKey || event.ctrlKey || event.altKey) { return; }
 
     var key = event.key;
+    // WCAG 2.1.4: a shortcut that is a single character can be turned off, so
+    // that a reader using speech input or an on-screen keyboard is not competing
+    // with the page for their own letters. The arrow keys and escape are not
+    // character keys and stay on; the switch is in the keyboard dialog.
+    if (key.length === 1 && !state.singleKeys) { return; }
     if (key === "ArrowRight" || key === "l") { goToStep(state.step + 1); }
     else if (key === "ArrowLeft" || key === "h") { goToStep(state.step - 1); }
     else if (key === "[") { stepCase(-1); }
@@ -2346,7 +2477,9 @@ body.projector .marker { font-size: 14px; }
   document.getElementById("nav-case").addEventListener("click", function () { showView("case"); });
   document.getElementById("nav-stance").addEventListener("click", function () { openStance(); });
   document.getElementById("toggle-projector").addEventListener("click", toggleProjector);
-  document.getElementById("show-keys").addEventListener("click", renderHelp);
+  document.getElementById("show-keys").addEventListener("click", function (event) {
+    renderHelp(event.currentTarget);
+  });
   document.addEventListener("keydown", onKeyDown);
 
   // The browser's own back button walks the steps: every navigation writes the
