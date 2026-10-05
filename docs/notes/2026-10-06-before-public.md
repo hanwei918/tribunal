@@ -148,3 +148,55 @@ and `git ls-files .env` is empty: the file exists in the working tree and is
 untracked. `.env.example` is not ignored — `git check-ignore -v .env.example`
 names line 7, the negation that keeps it committable. No tracked file is a PDF,
 a DOCX or a PPTX, and none has a resume-like name.
+
+## Finish
+
+The seven modules the task names, run together:
+
+    python3 -m unittest tests.test_ui_build tests.test_sealed_roots_closed \
+      tests.test_repository_hygiene tests.test_wild_run_manifest \
+      tests.test_wild_v2_run_manifest tests.test_language tests.test_readme_figures
+
+Ran 259 tests in 559.689s — OK (skipped=1). Those 259 are exactly the seven
+modules' own counts — 199, 24, 5, 9, 13, 6 and 3 — so each of the seven was
+collected and none went missing.
+
+The whole suite, which the part C section above says is recorded here:
+
+    python3 -m unittest discover -s tests -v
+
+Ran 2053 tests in 3722.752s — OK (skipped=4), exit 0. No test in it makes a
+model call.
+
+**The scan, run again over the tree as it now stands.** Part D's scan counted
+1010 tracked files; the tree holds 1011, `.env.example`, committed in part C,
+being the extra one. Over all 1011 the counts are the same where it matters. In
+code — that is, outside this record's own prose — there are exactly four hits:
+`TOKENHUB_API_KEY=` followed by a value twice in `tests/test_llm.py`,
+`TOKENHUB_API_KEY=from-the-file` and `TOKENHUB_API_KEY="quoted-value"`, each
+written into a temporary `.env` by the test that proves which of the environment
+and the file wins; and `SecretKey` twice in `tests/test_ui_build.py`, the
+credential scanner's own needle `re.compile(r"SecretKey")` and the fixture
+`"AWSSecretKey = x"` beside it. `sk-` followed by 8 or more characters is 0,
+`SecretId` 0, `AKID` 0 and `-----BEGIN` 0, and a `.env` file other than
+`.env.example` is 0 tracked as well. Everything else the scan finds is this record
+naming the needles in order to report them — the part D row in the buddy log and the
+part D section above — and the scan is run before the words that report it are
+written, so it does not count its own report. The scanner is shown to fire by
+running it over a control string holding one of each of the six, and it stays
+quiet on an ordinary English line.
+
+**The six pages, as committed:**
+
+| page | bytes |
+|---|---|
+| `ui/dist/index.html` | 2414270 |
+| `ui/dist/codex/index.html` | 1155598 |
+| `ui/dist/wild/index.html` | 4243482 |
+| `ui/dist/wild-v2/index.html` | 1430248 |
+| `ui/dist/ryde-901/index.html` | 279546 |
+| `ui/dist/runs/index.html` | 31639 |
+
+`git diff --stat freeze-2026-10-03 HEAD -- tribunal prompts policy` prints
+nothing and exits 0, so the three trees a run reads are byte-identical to the
+freeze tag and nothing in parts A to D reached them.
