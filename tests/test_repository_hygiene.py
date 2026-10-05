@@ -132,5 +132,14 @@ class TheStrayDocumentRulesTests(unittest.TestCase):
                 )
 
 
+class TheLicenceTests(unittest.TestCase):
+    """The repository is published, and the file it is published under says so."""
+
+    def test_the_licence_is_the_mit_licence(self):
+        self.assertTrue(
+            (PROJECT_ROOT / "LICENSE").read_text(encoding="utf-8").startswith("MIT License")
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

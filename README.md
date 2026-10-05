@@ -302,3 +302,23 @@ and the frozen keys, failing when any of them differs.
 `docs/buddy-log/README.md` holds one row per session: the task, the files it
 touched, what was verified and how, the screenshot, and the commit. The rows are
 written after the fact and are not pre-filled.
+
+## Third-party material
+
+The organisers of the Tencent Cloud AI Agent Hackathon Singapore 2026, Digital
+Native track (Ryde), gave every team a sample case. These files are that sample
+and everything derived from it, and they are named here so that a reader can
+tell the organisers' material from this project's own:
+
+- `eval/external/ryde/DISP-002.md` — the sample as it was supplied.
+- `eval/external/ryde/expected.json` — the organisers' own stated expectation
+  for it.
+- `data/external/ryde/` — the sample converted into this system's case format,
+  with every conversion decision recorded beside it.
+- `runs/external/ryde/` — the run that arbitrated the converted case.
+- `runs/rerun-2026-09-29/external/ryde/` — the same case re-run under the
+  current pipeline.
+
+They are included only to show how this system handles that sample. They are
+**not** covered by the MIT licence in `LICENSE`: that licence covers the rest of
+this repository, and the organisers' material remains the organisers'.
