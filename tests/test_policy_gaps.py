@@ -2063,6 +2063,45 @@ class RejectTests(unittest.TestCase):
                     Path(tmp) / "nowhere.json", rejected_by="reviewer", reason="no"
                 )
 
+    def test_the_command_line_refuses_a_proposal_outside_policy_proposals(self):
+        """``reject`` only rewrites a file under ``policy/proposals/``.
+
+        The rejection is written into the file the caller names, so a
+        ``--proposal`` pointing anywhere else -- a case file, a run record, any
+        JSON file at all -- would be rewritten. The file below holds valid JSON
+        and its bytes are asserted unchanged, so a guard that let the command
+        through would be seen to have rewritten it.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "elsewhere" / "0001-proposal.json"
+            path.parent.mkdir(parents=True)
+            committed = (
+                canonical(
+                    {
+                        "status": gaps.PROPOSAL_STATUS_PROPOSED,
+                        "clause": a_draft()["clause"],
+                    }
+                )
+                + "\n"
+            )
+            path.write_text(committed, encoding="utf-8")
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                status = gaps.main(
+                    [
+                        "reject",
+                        "--proposal",
+                        str(path),
+                        "--by",
+                        "reviewer",
+                        "--reason",
+                        "no",
+                    ]
+                )
+            self.assertEqual(1, status)
+            self.assertIn("policy/proposals", stderr.getvalue())
+            self.assertEqual(committed, path.read_text(encoding="utf-8"))
+
 
 # --------------------------------------------------------------------------
 # rerun: the plan

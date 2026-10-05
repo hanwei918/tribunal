@@ -5856,6 +5856,13 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         except loader.LoaderError as exc:
             print("FATAL: {0}".format(exc), file=sys.stderr)
             return 1
+        except sealed_roots.SealedDestinationError as exc:
+            # ``--runs-dir`` names the root an external case is written under,
+            # so it can be a sealed root. ``assert_external_run_directory``
+            # refuses that with ``SealedDestinationError``, and it is caught
+            # here so the command reports a refusal rather than a traceback.
+            print("FATAL: {0}".format(exc), file=sys.stderr)
+            return 1
         except BenchmarkError as exc:
             print("FATAL: {0}".format(exc), file=sys.stderr)
             return 1

@@ -2695,9 +2695,24 @@ def _main_approve(args: argparse.Namespace) -> int:
 
 
 def _main_reject(args: argparse.Namespace) -> int:
-    path = reject_proposal(
-        args.proposal, rejected_by=args.by, reason=args.reason
-    )
+    # A rejection rewrites the proposal file in place, so the path the caller
+    # names is both read and written. Two refusals, both before the file is
+    # opened: the sealed-root rule every command that writes to a named path
+    # obeys -- without it ``reject`` would rewrite any JSON file it was handed,
+    # a committed run file under either sealed root included -- and this
+    # command's own rule that a proposal is a file under ``policy/proposals/``.
+    proposal = Path(args.proposal).resolve()
+    sealed_roots.refuse_a_sealed_destination(proposal)
+    root = proposals_directory(None).resolve()
+    folded = run_benchmark.path_components(proposal)
+    root_parts = run_benchmark.path_components(root)
+    if len(folded) <= len(root_parts) or folded[: len(root_parts)] != root_parts:
+        raise PolicyGapError(
+            "a proposal is a file under {0}, and {1} is not under it".format(
+                _relative(root), proposal
+            )
+        )
+    path = reject_proposal(proposal, rejected_by=args.by, reason=args.reason)
     print("Recorded the rejection in {0}".format(_relative(path)))
     return 0
 

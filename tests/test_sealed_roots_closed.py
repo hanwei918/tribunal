@@ -153,13 +153,18 @@ class RecordedDraftsDestinationTests(ScratchRunsRootTestCase):
 # The two --out-dir guards
 # --------------------------------------------------------------------------
 class OutDirectoryGuardsTests(ScratchRunsRootTestCase):
-    """``--out-dir`` under a sealed root is refused, as the policy-gap loop's is.
+    """The derived ``--out-dir`` guards refuse a sealed root.
 
     ``runs/wild/`` and ``runs/wild-v2/`` are not run directories with a name a
     reader could mistake these figures for: they are sealed roots, and nothing
     is created under either again. The structural walk catches a destination
     inside a run directory; the sealed-root guard catches one inside a root
     whose run is not there yet.
+
+    Three commands derive a destination of their own and refuse a sealed root
+    through :func:`eval.sealed_roots.refuse_a_sealed_destination`: the baselines,
+    the amount-rule measurement and the policy-gap report. All three are tested
+    here, each for both sealed roots.
     """
 
     def test_the_baselines_destination_refuses_either_sealed_root(self):
@@ -203,6 +208,29 @@ class OutDirectoryGuardsTests(ScratchRunsRootTestCase):
             clean.resolve(),
             amount_rule.assert_not_a_run_directory(clean, self.scratch, MODEL),
         )
+
+    def test_the_policy_gap_report_destination_refuses_either_sealed_root(self):
+        """The report's own guard routes through the sealed-root helper.
+
+        ``policy_gaps.assert_not_a_run_directory`` refuses a headline directory
+        by name and a run directory structurally, and it also calls
+        :func:`eval.sealed_roots.refuse_a_sealed_destination`. Nothing else in
+        the guard sees a destination under a sealed root whose run directory the
+        name does not match, so without that call the report would be written
+        under a root whose single run is committed. The closing sentence is the
+        report's own, which is why the message is asserted and not only the
+        exception type.
+        """
+        for development_set in SEALED_SETS:
+            with self.subTest(sealed_set=development_set.name):
+                runs_dir = self.scratch / development_set.runs_subdir
+                destination = runs_dir / policy_gaps.POLICY_GAPS_DIRNAME
+                with self.assertRaises(policy_gaps.PolicyGapError) as caught:
+                    policy_gaps.assert_not_a_run_directory(destination, runs_dir, MODEL)
+                message = str(caught.exception)
+                self.assertIn(str(runs_dir.resolve()), message)
+                self.assertIn("directory of its own", message)
+                self.assertFalse(destination.exists())
 
 
 # --------------------------------------------------------------------------
@@ -353,19 +381,20 @@ class CheckOnAClosedRootTests(ScratchRunsRootTestCase):
 # Every command that writes to a path a caller names
 # --------------------------------------------------------------------------
 class NamedPathDestinationTests(ScratchRunsRootTestCase):
-    """Five commands write to a path the caller names, and each refuses a root.
+    """Six commands write to a path the caller names, and each refuses a root.
 
     ``run_benchmark --external``, ``eval.grade --out``, ``ui.build --out``,
-    ``policy_gaps draft --proposals-dir`` and ``policy_gaps approve
-    --amendments-dir``. Each of them can be pointed at a sealed root, and a file
-    written there would be the first new thing under a root whose single run is
-    committed. The refusal is one rule, in
+    ``policy_gaps draft --proposals-dir``, ``policy_gaps approve
+    --amendments-dir`` and ``policy_gaps reject --proposal``. Each of them can be
+    pointed at a sealed root, and a file written there would be the first new
+    thing under a root whose single run is committed. The refusal is one rule, in
     :func:`eval.sealed_roots.refuse_a_sealed_destination`, and every test here is
     one of those commands, run for **both** sealed roots.
 
-    ``tribunal.precedents --store`` is deliberately not one of them: ``tribunal/``
-    imports nothing from ``eval/`` and the evaluated system stays byte-identical
-    to the tag it was frozen at, so that guard is the caller's own.
+    ``tribunal.pipeline --out`` and ``tribunal.precedents --store`` are
+    deliberately not among them: ``tribunal/`` imports nothing from ``eval/`` and
+    the evaluated system stays byte-identical to the tag it was frozen at, so
+    those guards are their callers' own.
     """
 
     def _in_root(self, development_set, *parts):
@@ -395,6 +424,31 @@ class NamedPathDestinationTests(ScratchRunsRootTestCase):
             destination.resolve(),
             run_benchmark.assert_external_run_directory(destination, self.scratch),
         )
+
+    def test_the_external_command_line_reports_a_refusal_not_a_traceback(self):
+        """``--external --runs-dir <sealed root>`` is a FATAL line, not a crash.
+
+        The destination is well-formed for an external case -- under the runs
+        root's ``external/`` -- so the runner's own rule lets it through and the
+        sealed-root guard is what refuses it. That refusal used to leave ``main``
+        as a ``SealedDestinationError`` and print a traceback; the command now
+        reports it the way its other refusals are reported.
+        """
+        case_path = PROJECT_ROOT / "data" / "external" / "ryde" / "case-00901.json"
+        for development_set in SEALED_SETS:
+            with self.subTest(sealed_set=development_set.name):
+                runs_dir = self.scratch / development_set.runs_subdir
+                code, out, err = _run_main(
+                    run_benchmark.main,
+                    ["--external", str(case_path), "--runs-dir", str(runs_dir)],
+                )
+                self.assertEqual(1, code, err)
+                self.assertIn("FATAL", err)
+                self.assertIn("is sealed", err)
+                self.assertNotIn("Traceback", err)
+                self.assertFalse(
+                    (runs_dir / run_benchmark.EXTERNAL_RUNS_SUBDIR).exists()
+                )
 
     # -- eval.grade --out ---------------------------------------------------
     def test_grade_out_refuses_either_sealed_root(self):
@@ -506,6 +560,46 @@ class NamedPathDestinationTests(ScratchRunsRootTestCase):
                 self.assertIn("FATAL", err)
                 self.assertIn(str(amendments.resolve()), err)
                 self.assertFalse(amendments.exists())
+
+    # -- policy_gaps reject --proposal --------------------------------------
+    def test_the_reject_command_refuses_a_proposal_under_either_sealed_root(self):
+        """``reject`` rewrites the file it is given, so it is guarded too.
+
+        The rejection is recorded in the proposal file itself, so a
+        ``--proposal`` under a sealed root would rewrite a committed run file.
+        The file is written with valid JSON and its bytes are asserted unchanged,
+        so a guard that let the command through would be seen to have rewritten
+        it. The refusal is asserted to be the sealed-root one and not the
+        command's own ``policy/proposals/`` rule, because a proposal under a
+        sealed root fails both and only the sealed-root sentence says which.
+        """
+        for development_set in SEALED_SETS:
+            with self.subTest(sealed_set=development_set.name):
+                proposal = (
+                    self.scratch
+                    / development_set.runs_subdir
+                    / "0001-a-proposal.json"
+                )
+                proposal.parent.mkdir(parents=True, exist_ok=True)
+                committed = '{"status": "PROPOSED", "clause": {}}\n'
+                proposal.write_text(committed, encoding="utf-8")
+                code, out, err = _run_main(
+                    policy_gaps.main,
+                    [
+                        "reject",
+                        "--proposal",
+                        str(proposal),
+                        "--by",
+                        "the owner",
+                        "--reason",
+                        "no",
+                    ],
+                )
+                self.assertEqual(1, code, err)
+                self.assertIn("FATAL", err)
+                self.assertIn("is sealed", err)
+                self.assertIn(str(proposal.resolve()), err)
+                self.assertEqual(committed, proposal.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":
