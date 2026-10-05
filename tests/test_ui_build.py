@@ -3495,6 +3495,38 @@ def declarations_for(stylesheet: str, selector: str):
     return found
 
 
+_MAX_WIDTH_RE = re.compile(r"\(max-width:\s*(\d+)px\)")
+
+
+def effective_at(stylesheet: str, selector: str, width: int):
+    """What one selector is declared to do at a given viewport width.
+
+    A rule inside a ``@media`` block is in force only at the widths the block
+    names, so the rule a reader is actually given at 375px is usually *not* the
+    top-level rule -- on this page every cause of the sideways scroll is answered
+    by an override in the phone block, and reading only the top-level rule would
+    check the rule that has already been replaced. Blocks are applied in source
+    order and a later one wins, which is the cascade for two blocks that both
+    cover the width.
+
+    A block whose condition is not ``(max-width: Npx)`` is treated as never in
+    force. That is the only kind this stylesheet has, and the test that says so
+    is what keeps this helper from quietly skipping a block it cannot read.
+    """
+    found = {}
+    for rule, prop, value in declarations(_outside_media(stylesheet)):
+        if selector in [part.strip() for part in rule.split(",")]:
+            found[prop] = value
+    for condition, body in _media_blocks(stylesheet):
+        match = _MAX_WIDTH_RE.search(condition)
+        if match is None or width > int(match.group(1)):
+            continue
+        for rule, prop, value in declarations(body):
+            if selector in [part.strip() for part in rule.split(",")]:
+                found[prop] = value
+    return found
+
+
 class PhoneWidthTests(unittest.TestCase):
     """The page at 375 px: nothing scrolls sideways but a table.
 
@@ -3508,8 +3540,18 @@ class PhoneWidthTests(unittest.TestCase):
     the overview's seven-column grid table and its card spanning two columns of
     a one-column grid, the evidence tree's ``max-content`` key column under a
     long key, the key step's five-column table with its ``nowrap`` number cells,
-    the stance view's ``1fr`` track holding a long ``code``, and a fixed footer
-    that wraps to three lines under a fixed 74px of bottom padding.
+    the stance view's ``1fr`` track holding a long ``code``, a source chip that
+    cannot break, a badge that cannot wrap, a definition list whose value column
+    is squeezed to nothing, and a fixed footer that wraps to three lines under a
+    fixed 74px of bottom padding.
+
+    Every rule is read as the rule *in force at the width being asked about*,
+    through ``effective_at``, and not as the top-level rule. On this page those
+    are two different rules: the causes above are answered by overrides in the
+    phone block and in the 940px block, so a check that read the top-level rule
+    would be checking the rule that has already been replaced -- which is how the
+    overrides came to use a bare ``1fr``, whose ``min-content`` minimum is what
+    the override existed to remove.
     """
 
     PHONE = "(max-width: 600px)"
@@ -3525,6 +3567,44 @@ class PhoneWidthTests(unittest.TestCase):
 
     def test_the_page_carries_a_block_for_a_phone(self):
         self.assertTrue(self.phone, "no " + self.PHONE + " block in the stylesheet")
+
+    def test_every_media_block_is_a_max_width_block(self):
+        """``effective_at`` reads a condition as ``(max-width: Npx)`` and treats
+        anything else as never in force, so a block written another way would be
+        silently skipped rather than caught. This says which kind the stylesheet
+        has, so the helper cannot go quiet about a block it cannot read."""
+        conditions = [condition for condition, _ in _media_blocks(self.stylesheet)]
+        self.assertTrue(conditions, "the stylesheet has no @media block at all")
+        for condition in conditions:
+            with self.subTest(condition=condition):
+                self.assertIsNotNone(
+                    _MAX_WIDTH_RE.fullmatch(condition),
+                    "a media block whose width this suite cannot read: " + condition,
+                )
+
+    def test_the_overrides_that_apply_at_940px_can_shrink(self):
+        """The 940px override is the rule a reader on a narrow laptop is given,
+        and it was a bare ``1fr``. A bare ``1fr`` track has an automatic minimum
+        of ``min-content``, so the override that exists to make the layout one
+        column still let one long unbreakable child set the width of that column
+        -- and the page followed it. The check is on the rule in force at 940px,
+        not on the two-column rule it replaces."""
+        for selector in (".stance-grid", ".prompt-grid"):
+            with self.subTest(selector=selector):
+                self.assertEqual(
+                    "minmax(0, 1fr) minmax(0, 1fr)",
+                    declarations_for(self.top, selector).get("grid-template-columns"),
+                    "the two-column rule at every width is gone",
+                )
+                for width in (940, 600, 375):
+                    with self.subTest(selector=selector, width=width):
+                        self.assertEqual(
+                            "minmax(0, 1fr)",
+                            effective_at(self.stylesheet, selector, width).get(
+                                "grid-template-columns"
+                            ),
+                            "the one-column rule in force does not keep a zero minimum",
+                        )
 
     def test_every_table_is_built_inside_a_box_that_scrolls_sideways(self):
         """A table cannot reflow to 375px; the box around it can scroll.
@@ -3563,12 +3643,64 @@ class PhoneWidthTests(unittest.TestCase):
                     declarations_for(self.top, selector).get("grid-template-columns"),
                 )
 
+    def test_the_phone_block_stacks_the_key_above_the_value(self):
+        """A definition list puts its key in a ``max-content`` track beside the
+        value. That is right on a laptop and wrong at 375px, where the key, the
+        value and the gap between them leave the value a column too narrow to
+        read. Below 600px each list is a single column, so the key is above the
+        value; above it the key column is still there."""
+        for selector in (".kv", "dl.tree", "dl.keys", "dl.digests"):
+            with self.subTest(selector=selector):
+                self.assertEqual(
+                    "minmax(0, 1fr)",
+                    declarations_for(self.phone, selector).get("grid-template-columns"),
+                )
+                for width in (375, 600):
+                    with self.subTest(selector=selector, width=width):
+                        self.assertEqual(
+                            "minmax(0, 1fr)",
+                            effective_at(self.stylesheet, selector, width).get(
+                                "grid-template-columns"
+                            ),
+                        )
+                self.assertEqual(
+                    "minmax(0, max-content) minmax(0, 1fr)",
+                    effective_at(self.stylesheet, selector, 940).get(
+                        "grid-template-columns"
+                    ),
+                    "the key column is gone at 940px as well as at 375px",
+                )
+
+    def test_the_phone_block_lets_a_badge_wrap(self):
+        """A badge is ``nowrap`` at every width, which is right inside a table
+        cell and wrong at the end of a heading on a phone: the corpus page's
+        step 5 measured 389px on its ``DRIVER_COMPENSATION`` badge alone. Below
+        600px it may wrap, and above it may not."""
+        self.assertEqual("nowrap", declarations_for(self.top, ".badge").get("white-space"))
+        self.assertEqual("normal", declarations_for(self.phone, ".badge").get("white-space"))
+        for width in (375, 600):
+            with self.subTest(width=width):
+                self.assertEqual(
+                    "normal",
+                    effective_at(self.stylesheet, ".badge", width).get("white-space"),
+                )
+        self.assertEqual(
+            "nowrap",
+            effective_at(self.stylesheet, ".badge", 940).get("white-space"),
+            "the badge wraps at widths the phone block does not cover",
+        )
+
     def test_a_long_id_breaks_rather_than_widening_the_page(self):
-        """An evidence id, a clause id and a digest are single unbreakable
-        strings. Breaking one is what keeps a 60-character id from setting the
-        width of the column it sits in -- and of the page."""
+        """An evidence id, a clause id, a digest and the source chip beside a
+        claim are single unbreakable strings. Breaking one is what keeps a
+        60-character one from setting the width of the column it sits in -- and
+        of the page. The chip is the string the review measured on six of the six
+        pages, so the rule is checked at every width it can land at, not only at
+        the top level: a path is as long at 940px as it is at 375px, and only the
+        room around it changes."""
         for selector in (
             "code",
+            ".src",
             ".artifact .id",
             ".record-row .id",
             "dl.tree > dt",
@@ -3579,6 +3711,14 @@ class PhoneWidthTests(unittest.TestCase):
                     "anywhere",
                     declarations_for(self.top, selector).get("overflow-wrap"),
                 )
+                for width in (375, 600, 940):
+                    with self.subTest(selector=selector, width=width):
+                        self.assertEqual(
+                            "anywhere",
+                            effective_at(self.stylesheet, selector, width).get(
+                                "overflow-wrap"
+                            ),
+                        )
 
     def test_the_phone_block_stops_the_wide_card_and_the_fixed_footer(self):
         """Two of the causes are not about content at all.
@@ -3600,6 +3740,59 @@ class PhoneWidthTests(unittest.TestCase):
         )
         self.assertEqual(
             "0", declarations_for(self.phone, "body").get("padding-bottom"),
+        )
+
+    def test_the_runs_index_becomes_a_card_on_a_phone(self):
+        """The index's headline figure is the fourth of four columns, so at
+        375px the reader sees the set and what it is and has to swipe the table
+        sideways for the number the page exists to show. Below 600px each row is
+        a card instead.
+
+        The card reads set, headline, what it is, cases -- and that is the order
+        the markup puts the cells in, so the stylesheet rearranges nothing and a
+        reader of the HTML reads it in the same order as a reader of the card.
+        Both halves are checked: the markup order, and the rules in force at the
+        width. The index is static -- no script, no data -- so this is the only
+        place its layout can be read from.
+        """
+        index = build.render_index(built_documents())
+        self.assertEqual(1, index.count("<table"), "the index builds more than one table")
+        self.assertIn(
+            '<div class="table-wrap">\n<table class="index-table">',
+            index,
+            "the index's table is not inside the box that scrolls it sideways",
+        )
+        header = index.split("<thead>", 1)[1].split("</thead>", 1)[0]
+        self.assertEqual(
+            ["Set", "Headline figure", "What it is", "Cases"],
+            re.findall(r"<th>(.*?)</th>", header),
+            "the index's columns are not in the order the card reads in",
+        )
+        row = index.split("<tr>", 2)[2].split("</tr>", 1)[0]
+        self.assertEqual(
+            ["index-name", "index-figure", "index-what", "index-cases"],
+            re.findall(r'<td class="([a-z-]+)[ "]', row),
+            "the index's cells are not in the order the card reads in",
+        )
+        for selector, value in (
+            (".index-table tr", "block"),
+            (".index-table td", "block"),
+            (".index-table thead", "none"),
+        ):
+            with self.subTest(selector=selector):
+                self.assertEqual(
+                    value,
+                    declarations_for(self.phone, selector).get("display"),
+                    selector + " is not laid out as a card in the phone block",
+                )
+                self.assertEqual(
+                    value,
+                    effective_at(self.stylesheet, selector, 375).get("display"),
+                )
+        self.assertNotIn(
+            "display",
+            effective_at(self.stylesheet, ".index-table tr", 940),
+            "the index is a card at widths the phone block does not cover",
         )
 
 

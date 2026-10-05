@@ -2176,12 +2176,18 @@ td.case-no { font-weight: 650; font-variant-numeric: tabular-nums; }
    sideways; the page itself never does. */
 .table-wrap { overflow-x: auto; max-width: 100%; }
 
-/* An evidence id, a clause id and a digest are one unbreakable string each, and
-   a sixty-character one would otherwise set the width of the column it sits in
-   -- and so of the page. ``anywhere`` rather than ``break-word`` because it
-   counts towards the minimum width of the box, which is the number a grid track
-   and an ``overflow-x`` box are measured against. */
-code, .mono, .scalar, .digest, .artifact .id, .record-row .id, dl.tree > dt {
+/* An evidence id, a clause id, a digest and the source chip beside a claim are
+   one unbreakable string each, and a sixty-character one would otherwise set the
+   width of the column it sits in -- and so of the page. ``anywhere`` rather than
+   ``break-word`` because it counts towards the minimum width of the box, which
+   is the number a grid track and an ``overflow-x`` box are measured against.
+
+   The source chip is in this rule rather than in the phone block below, because
+   a run's path is as long as it is at every width: at 375px the chip was what
+   pushed six of the six measured pages sideways, and at 700px the same path in a
+   narrower panel does the same thing. A rule that only applies under 600px would
+   leave the cause in place wherever else it lands. */
+code, .mono, .scalar, .digest, .src, .artifact .id, .record-row .id, dl.tree > dt {
   overflow-wrap: anywhere;
 }
 
@@ -2361,7 +2367,13 @@ tr.contested:hover { background: rgba(216,167,42,0.12); }
 
 /* ---- stance view: the two advocates against the same record ------------ */
 .stance-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; margin-top: 12px; }
-@media (max-width: 940px) { .stance-grid { grid-template-columns: 1fr; } }
+/* One column below 940px, and the single track keeps its zero minimum. A bare
+   ``1fr`` has an automatic minimum of ``min-content``, so one long unbreakable
+   child -- an id, a digest, a source chip -- sets the column's width and the
+   page scrolls sideways anyway, which is what the review measured on the stance
+   view and on the evidence step's value column. ``.prompt-grid`` carries the
+   same override for the same reason. */
+@media (max-width: 940px) { .stance-grid { grid-template-columns: minmax(0, 1fr); } }
 .stance-col { background: var(--panel); border: 1px solid var(--line); border-top-width: 3px;
   border-radius: 10px; padding: 14px 16px; }
 .stance-col.RIDER_ADVOCATE { border-top-color: var(--rider); }
@@ -2414,7 +2426,12 @@ dl.digests > dd { margin: 0; }
 .tag.ok { color: var(--ok); border-color: rgba(74,194,107,0.5); }
 
 .prompt-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; margin-top: 12px; }
-@media (max-width: 940px) { .prompt-grid { grid-template-columns: 1fr; } }
+/* One column below 940px, and the single track keeps its zero minimum, for the
+   same reason ``.stance-grid`` does: a bare ``1fr`` has an automatic minimum of
+   ``min-content``, so a rendered prompt's longest unbreakable line would set the
+   width of the only track and the page would scroll sideways at the width this
+   override exists to serve. */
+@media (max-width: 940px) { .prompt-grid { grid-template-columns: minmax(0, 1fr); } }
 .prompt-col { border: 1px solid var(--line); border-radius: 8px; overflow: hidden;
   background: var(--panel-2); }
 .prompt-col > h4 { margin: 0; padding: 7px 10px; border-bottom: 1px solid var(--line);
@@ -2493,13 +2510,42 @@ body.projector .marker { font-size: 14px; }
    width, and covers the text it floats over, because the 74px of bottom padding
    under ``body`` cannot follow a height that changes with the wrapping. Below
    600px the card takes one column and the footer stops floating. The tables are
-   handled by the box around them, which works at every width. */
+   handled by the box around them, which works at every width.
+
+   Two more things are still wider than the screen at this width, and both are
+   about a value that cannot share a line with its key. A definition list puts its
+   key in a ``max-content`` track beside the value, and at 375px the two tracks
+   plus their gap leave the value a column too narrow to read -- so below 600px
+   the key goes above the value and each list is a single column. And a badge is
+   ``nowrap`` at every width, which is right inside a table cell and wrong at the
+   end of a heading on a phone: the corpus page's step 5 measured 389px on the
+   ``DRIVER_COMPENSATION`` badge alone. It may wrap here. */
 @media (max-width: 600px) {
   main { padding: 14px; }
   h2 { font-size: 19px; }
   .card.wide { grid-column: auto; }
   footer.prov { position: static; }
   body { padding-bottom: 0; }
+  .kv, dl.tree, dl.keys, dl.digests { grid-template-columns: minmax(0, 1fr); }
+  .badge { white-space: normal; }
+
+  /* The runs index is a four-column table whose fourth column is the figure the
+     page is read for, so at 375px the reader sees the set and what it is and has
+     to swipe the box sideways for the number. Below 600px each row is a card
+     instead, and the order the card reads in -- set, headline, what it is, cases
+     -- is the order the markup puts the cells in, so the stylesheet rearranges
+     nothing and a reader of the HTML reads it in the same order as a reader of
+     the card. */
+  .index-table, .index-table tbody, .index-table tr, .index-table td { display: block; }
+  .index-table thead { display: none; }
+  .index-table tr { border: 1px solid var(--line); border-radius: 8px;
+    background: var(--panel); padding: 10px 12px; margin-bottom: 10px; }
+  .index-table td { border: 0; padding: 0; }
+  .index-table .index-name { font-weight: 650; }
+  .index-table .index-figure { font-size: 22px; font-weight: 650; margin-top: 4px; }
+  .index-table .index-what { color: var(--muted); font-size: 13px; margin-top: 5px; }
+  .index-table .index-cases { color: var(--muted); font-size: 12.5px; margin-top: 3px; }
+  .index-table .sub { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
 }
 """
 
@@ -4768,6 +4814,11 @@ def render_index(documents: Mapping[str, Mapping[str, Any]]) -> str:
 
     The figures are read out of the documents this build has just produced, so
     the index cannot disagree with any page it links to.
+
+    The columns are set, headline figure, what it is, cases. The figure is second
+    because it is what the page is read for, and because below 600px each row
+    becomes a card in the order the markup puts the cells in -- so the stylesheet
+    rearranges nothing and the HTML reads in the same order as the card.
     """
     rows = _index_rows(documents)
     parts: List[str] = []
@@ -4789,12 +4840,12 @@ def render_index(documents: Mapping[str, Mapping[str, Any]]) -> str:
         )
         parts.append(
             "<tr>"
-            '<td><a href="' + _escape_html(row["link"]) + '">'
+            '<td class="index-name"><a href="' + _escape_html(row["link"]) + '">'
             + _escape_html(row["name"])
             + "</a> " + badge + "</td>"
-            "<td>" + _escape_html(row["summary"] or "") + "</td>"
-            '<td class="num">' + _escape_html(row["case_count"]) + "</td>"
-            '<td class="num">' + figure + note + "</td>"
+            '<td class="index-figure">' + figure + note + "</td>"
+            '<td class="index-what">' + _escape_html(row["summary"] or "") + "</td>"
+            '<td class="index-cases num">' + _escape_html(row["case_count"]) + "</td>"
             "</tr>"
         )
     return "".join(
@@ -4816,9 +4867,9 @@ def render_index(documents: Mapping[str, Mapping[str, Any]]) -> str:
             "sealed sets are never added to each other or to anything else: one "
             "figure over 64 cases plus another over 20 is not a measurement of "
             "84 cases.</p>\n",
-            '<div class="table-wrap">\n<table>\n',
-            "<thead><tr><th>Set</th><th>What it is</th><th>Cases</th>"
-            "<th>Headline figure</th></tr></thead>\n",
+            '<div class="table-wrap">\n<table class="index-table">\n',
+            "<thead><tr><th>Set</th><th>Headline figure</th><th>What it is</th>"
+            "<th>Cases</th></tr></thead>\n",
             "<tbody>\n",
             "\n".join(parts),
             "\n</tbody>\n</table>\n</div>\n",

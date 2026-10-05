@@ -91,12 +91,18 @@ td.case-no { font-weight: 650; font-variant-numeric: tabular-nums; }
    sideways; the page itself never does. */
 .table-wrap { overflow-x: auto; max-width: 100%; }
 
-/* An evidence id, a clause id and a digest are one unbreakable string each, and
-   a sixty-character one would otherwise set the width of the column it sits in
-   -- and so of the page. ``anywhere`` rather than ``break-word`` because it
-   counts towards the minimum width of the box, which is the number a grid track
-   and an ``overflow-x`` box are measured against. */
-code, .mono, .scalar, .digest, .artifact .id, .record-row .id, dl.tree > dt {
+/* An evidence id, a clause id, a digest and the source chip beside a claim are
+   one unbreakable string each, and a sixty-character one would otherwise set the
+   width of the column it sits in -- and so of the page. ``anywhere`` rather than
+   ``break-word`` because it counts towards the minimum width of the box, which
+   is the number a grid track and an ``overflow-x`` box are measured against.
+
+   The source chip is in this rule rather than in the phone block below, because
+   a run's path is as long as it is at every width: at 375px the chip was what
+   pushed six of the six measured pages sideways, and at 700px the same path in a
+   narrower panel does the same thing. A rule that only applies under 600px would
+   leave the cause in place wherever else it lands. */
+code, .mono, .scalar, .digest, .src, .artifact .id, .record-row .id, dl.tree > dt {
   overflow-wrap: anywhere;
 }
 
@@ -276,7 +282,13 @@ tr.contested:hover { background: rgba(216,167,42,0.12); }
 
 /* ---- stance view: the two advocates against the same record ------------ */
 .stance-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; margin-top: 12px; }
-@media (max-width: 940px) { .stance-grid { grid-template-columns: 1fr; } }
+/* One column below 940px, and the single track keeps its zero minimum. A bare
+   ``1fr`` has an automatic minimum of ``min-content``, so one long unbreakable
+   child -- an id, a digest, a source chip -- sets the column's width and the
+   page scrolls sideways anyway, which is what the review measured on the stance
+   view and on the evidence step's value column. ``.prompt-grid`` carries the
+   same override for the same reason. */
+@media (max-width: 940px) { .stance-grid { grid-template-columns: minmax(0, 1fr); } }
 .stance-col { background: var(--panel); border: 1px solid var(--line); border-top-width: 3px;
   border-radius: 10px; padding: 14px 16px; }
 .stance-col.RIDER_ADVOCATE { border-top-color: var(--rider); }
@@ -329,7 +341,12 @@ dl.digests > dd { margin: 0; }
 .tag.ok { color: var(--ok); border-color: rgba(74,194,107,0.5); }
 
 .prompt-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; margin-top: 12px; }
-@media (max-width: 940px) { .prompt-grid { grid-template-columns: 1fr; } }
+/* One column below 940px, and the single track keeps its zero minimum, for the
+   same reason ``.stance-grid`` does: a bare ``1fr`` has an automatic minimum of
+   ``min-content``, so a rendered prompt's longest unbreakable line would set the
+   width of the only track and the page would scroll sideways at the width this
+   override exists to serve. */
+@media (max-width: 940px) { .prompt-grid { grid-template-columns: minmax(0, 1fr); } }
 .prompt-col { border: 1px solid var(--line); border-radius: 8px; overflow: hidden;
   background: var(--panel-2); }
 .prompt-col > h4 { margin: 0; padding: 7px 10px; border-bottom: 1px solid var(--line);
@@ -408,13 +425,42 @@ body.projector .marker { font-size: 14px; }
    width, and covers the text it floats over, because the 74px of bottom padding
    under ``body`` cannot follow a height that changes with the wrapping. Below
    600px the card takes one column and the footer stops floating. The tables are
-   handled by the box around them, which works at every width. */
+   handled by the box around them, which works at every width.
+
+   Two more things are still wider than the screen at this width, and both are
+   about a value that cannot share a line with its key. A definition list puts its
+   key in a ``max-content`` track beside the value, and at 375px the two tracks
+   plus their gap leave the value a column too narrow to read -- so below 600px
+   the key goes above the value and each list is a single column. And a badge is
+   ``nowrap`` at every width, which is right inside a table cell and wrong at the
+   end of a heading on a phone: the corpus page's step 5 measured 389px on the
+   ``DRIVER_COMPENSATION`` badge alone. It may wrap here. */
 @media (max-width: 600px) {
   main { padding: 14px; }
   h2 { font-size: 19px; }
   .card.wide { grid-column: auto; }
   footer.prov { position: static; }
   body { padding-bottom: 0; }
+  .kv, dl.tree, dl.keys, dl.digests { grid-template-columns: minmax(0, 1fr); }
+  .badge { white-space: normal; }
+
+  /* The runs index is a four-column table whose fourth column is the figure the
+     page is read for, so at 375px the reader sees the set and what it is and has
+     to swipe the box sideways for the number. Below 600px each row is a card
+     instead, and the order the card reads in -- set, headline, what it is, cases
+     -- is the order the markup puts the cells in, so the stylesheet rearranges
+     nothing and a reader of the HTML reads it in the same order as a reader of
+     the card. */
+  .index-table, .index-table tbody, .index-table tr, .index-table td { display: block; }
+  .index-table thead { display: none; }
+  .index-table tr { border: 1px solid var(--line); border-radius: 8px;
+    background: var(--panel); padding: 10px 12px; margin-bottom: 10px; }
+  .index-table td { border: 0; padding: 0; }
+  .index-table .index-name { font-weight: 650; }
+  .index-table .index-figure { font-size: 22px; font-weight: 650; margin-top: 4px; }
+  .index-table .index-what { color: var(--muted); font-size: 13px; margin-top: 5px; }
+  .index-table .index-cases { color: var(--muted); font-size: 12.5px; margin-top: 3px; }
+  .index-table .sub { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
 }
 </style>
 </head>
@@ -426,14 +472,14 @@ body.projector .marker { font-size: 14px; }
 <h1>The runs</h1>
 <p class="lead">Every run the viewer draws, with the figure its own page reports. Each figure is computed from that run, and the two sealed sets are never added to each other or to anything else: one figure over 64 cases plus another over 20 is not a measurement of 84 cases.</p>
 <div class="table-wrap">
-<table>
-<thead><tr><th>Set</th><th>What it is</th><th>Cases</th><th>Headline figure</th></tr></thead>
+<table class="index-table">
+<thead><tr><th>Set</th><th>Headline figure</th><th>What it is</th><th>Cases</th></tr></thead>
 <tbody>
-<tr><td><a href="../index.html">corpus</a> </td><td>the 29-case corpus the submission&#x27;s headline figure is computed on</td><td class="num">29</td><td class="num">29/29<div class="sub">four-field exact over the 29 cases of the set</div></td></tr>
-<tr><td><a href="../codex/index.html">codex</a> </td><td>fifteen cases drafted by OpenAI Codex on 2026-09-24, copied in by the owner; development data, not a test set</td><td class="num">15</td><td class="num">14/15<div class="sub">four-field exact over the 15 cases of the set</div></td></tr>
-<tr><td><a href="../wild/index.html">wild</a> <span class="badge">freeze-2026-09-30</span></td><td>the held-out set (wild-v1): 64 cases whose author says its traps come from real complaints, prepared by their author as a development set; nobody who changed the system opened them before the freeze tagged freeze-2026-09-30, and they were run once from that tag; that single run is one of the two generalisation figures the submission reports, the other being the second sealed set&#x27;s</td><td class="num">64</td><td class="num">55/64<div class="sub">four-field exact over the 64 cases of the set</div></td></tr>
-<tr><td><a href="../wild-v2/index.html">wild-v2</a> <span class="badge">freeze-2026-10-03</span></td><td>the second sealed set (wild-v2): 20 cases prepared by OpenAI Codex for the owner and imported on 2026-10-03; it was run once from a commit whose tribunal/, prompts/ and policy/ trees equal those at freeze-2026-10-03, at the policy version 2 this registration fixes, and that single run is one of the two generalisation figures the submission reports</td><td class="num">20</td><td class="num">18/20<div class="sub">four-field exact over the 20 cases of the set</div></td></tr>
-<tr><td><a href="../ryde-901/index.html">ryde-901</a> </td><td>the organisers&#x27; sample case, re-run under the current pipeline; it is not in any answer key and is not graded</td><td class="num">1</td><td class="num"><span class="null">not graded</span></td></tr>
+<tr><td class="index-name"><a href="../index.html">corpus</a> </td><td class="index-figure">29/29<div class="sub">four-field exact over the 29 cases of the set</div></td><td class="index-what">the 29-case corpus the submission&#x27;s headline figure is computed on</td><td class="index-cases num">29</td></tr>
+<tr><td class="index-name"><a href="../codex/index.html">codex</a> </td><td class="index-figure">14/15<div class="sub">four-field exact over the 15 cases of the set</div></td><td class="index-what">fifteen cases drafted by OpenAI Codex on 2026-09-24, copied in by the owner; development data, not a test set</td><td class="index-cases num">15</td></tr>
+<tr><td class="index-name"><a href="../wild/index.html">wild</a> <span class="badge">freeze-2026-09-30</span></td><td class="index-figure">55/64<div class="sub">four-field exact over the 64 cases of the set</div></td><td class="index-what">the held-out set (wild-v1): 64 cases whose author says its traps come from real complaints, prepared by their author as a development set; nobody who changed the system opened them before the freeze tagged freeze-2026-09-30, and they were run once from that tag; that single run is one of the two generalisation figures the submission reports, the other being the second sealed set&#x27;s</td><td class="index-cases num">64</td></tr>
+<tr><td class="index-name"><a href="../wild-v2/index.html">wild-v2</a> <span class="badge">freeze-2026-10-03</span></td><td class="index-figure">18/20<div class="sub">four-field exact over the 20 cases of the set</div></td><td class="index-what">the second sealed set (wild-v2): 20 cases prepared by OpenAI Codex for the owner and imported on 2026-10-03; it was run once from a commit whose tribunal/, prompts/ and policy/ trees equal those at freeze-2026-10-03, at the policy version 2 this registration fixes, and that single run is one of the two generalisation figures the submission reports</td><td class="index-cases num">20</td></tr>
+<tr><td class="index-name"><a href="../ryde-901/index.html">ryde-901</a> </td><td class="index-figure"><span class="null">not graded</span></td><td class="index-what">the organisers&#x27; sample case, re-run under the current pipeline; it is not in any answer key and is not graded</td><td class="index-cases num">1</td></tr>
 </tbody>
 </table>
 </div>
