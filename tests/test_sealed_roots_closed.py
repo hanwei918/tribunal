@@ -490,12 +490,22 @@ class NamedPathDestinationTests(ScratchRunsRootTestCase):
 
     # -- ui.build --out -----------------------------------------------------
     def test_ui_build_out_refuses_either_sealed_root(self):
+        """``--set corpus --out runs/wild/...`` is the way in.
+
+        ``--out`` on its own is refused by the command's own argument rule --
+        a destination is one page's, so the page has to be named -- and that
+        refusal comes before the sealed-root guard is reached. ``--set`` names
+        the page whose run would be read; the guard runs before any run is read,
+        so this refuses without building a page of the corpus either.
+        """
         for development_set in SEALED_SETS:
             with self.subTest(sealed_set=development_set.name):
                 destination = self._in_root(
                     development_set, run_benchmark.model_slug(MODEL), "index.html"
                 )
-                code, out, err = _run_main(ui_build.main, ["--out", str(destination)])
+                code, out, err = _run_main(
+                    ui_build.main, ["--set", "corpus", "--out", str(destination)]
+                )
                 self.assertEqual(1, code, err)
                 self.assertIn("FATAL", err)
                 self.assertIn(str(destination.resolve()), err)
@@ -505,11 +515,13 @@ class NamedPathDestinationTests(ScratchRunsRootTestCase):
         """The control: the same command with a destination of its own.
 
         ``--check`` writes nothing, so the control is the guard letting the
-        command through to its own rule -- here, that there is no page yet.
+        command through to its own rule -- here, that there is no page yet. The
+        ``--set`` is the one the test above uses, so the only difference between
+        the two is where the destination is.
         """
         destination = self.scratch / "index.html"
         code, out, err = _run_main(
-            ui_build.main, ["--check", "--out", str(destination)]
+            ui_build.main, ["--check", "--set", "corpus", "--out", str(destination)]
         )
         self.assertEqual(1, code)
         self.assertIn("does not exist", out)
