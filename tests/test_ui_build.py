@@ -220,6 +220,14 @@ class _ResourceScan(HTMLParser):
     scanned: a ``url(...)`` in a stylesheet is a resource, but this page has no
     stylesheet other than its own inline one and no ``url(`` in it, and the
     assertion below covers that directly.
+
+    ``href`` on an anchor is **not** a resource. An anchor is a navigation
+    target: nothing is fetched when the page loads, and nothing is fetched when
+    it is not clicked either. That matters here because the pages link to files
+    outside ``ui/dist/`` -- the notes under ``docs/notes/`` -- by absolute URL,
+    so the link works when only ``ui/dist/`` is deployed. ``href`` stays in the
+    attribute list, because ``<link href>`` *is* a stylesheet fetch, and the
+    control test asserts both sides of that.
     """
 
     RESOURCE_ATTRIBUTES = (
@@ -235,15 +243,26 @@ class _ResourceScan(HTMLParser):
         "cite",
     )
 
+    # The tags whose ``href`` names where a click goes rather than something the
+    # page loads.
+    NAVIGATION_TAGS = frozenset({"a", "area"})
+
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
         self.references: list = []
+        self.anchors: list = []
         self.script_bodies: list = []
         self._in_script = False
 
     def handle_starttag(self, tag, attrs):
         for name, value in attrs:
             if name not in self.RESOURCE_ATTRIBUTES:
+                continue
+            if name == "href" and tag in self.NAVIGATION_TAGS:
+                # Recorded apart from the resources rather than dropped: where a
+                # link goes is a fact about the page, and the rule that it must
+                # not leave ``ui/dist/`` relatively is checked on this list.
+                self.anchors.append((tag, value or ""))
                 continue
             text = value or ""
             if name == "srcset":
@@ -428,13 +447,18 @@ class CommittedPageTests(unittest.TestCase):
 
         The same scan is pointed at a page that does reference external things,
         including the two cases a naive check would miss: a protocol-relative
-        host, and a ``data:`` URI that is legitimately not external.
+        host, and a ``data:`` URI that is legitimately not external. The anchor
+        is the third: its absolute URL is a navigation target, and the scan must
+        not call it a resource -- while the ``<link>`` above it, whose ``href``
+        *is* a stylesheet fetch, is still caught by the same pass.
         """
+        anchor = "https://github.com/hanwei918/tribunal/blob/main/docs/notes/x.md"
         scan = _ResourceScan()
         scan.feed(
             '<link rel="stylesheet" href="https://cdn.example/x.css">'
             '<script src="//cdn.example/x.js"></script>'
             '<img src="data:image/gif;base64,R0lGOD">'
+            '<a href="' + anchor + '">note</a>'
             '<script>fetch("/x"); new XMLHttpRequest();</script>'
         )
         external = sorted(
@@ -443,6 +467,7 @@ class CommittedPageTests(unittest.TestCase):
         self.assertEqual(
             ["//cdn.example/x.js", "https://cdn.example/x.css"], external
         )
+        self.assertNotIn(anchor, [url for _, _, url in scan.references])
         script = "\n".join(scan.script_bodies)
         self.assertIn("fetch(", script)
         self.assertIn("XMLHttpRequest", script)
@@ -570,10 +595,10 @@ class TheRunTests(unittest.TestCase):
                 )
 
         self.assertIn("decision_note", self.document)
-        self.assertTrue(
-            self.document["decision_note_link"].endswith(self.document["decision_note"]),
-            "the miss does not link to the note that records why it is contested",
-        )
+        # The link that used to sit beside it is gone. Nothing read it, and every
+        # link a page actually draws comes from ``miss_notes``; asserting it
+        # absent is what stops a second, unread copy from coming back.
+        self.assertNotIn("decision_note_link", self.document)
 
     def test_every_claim_carries_a_citation_the_viewer_can_open(self):
         """'No citation, no claim' is only visible if every chip resolves.
@@ -2678,16 +2703,26 @@ class PerSetPageTests(unittest.TestCase):
         self.assertEqual(len(PAGE_NAMES), len(set(titles)))
         self.assertEqual(len(PAGE_NAMES), len(set(brands)))
 
-    def test_the_sealed_pages_carry_the_caveat_the_registration_already_writes(self):
-        """No new caveat text: the words come out of ``eval/development_sets.py``."""
+    def test_the_sealed_pages_carry_the_registration_caveat_without_the_above(self):
+        """No new caveat text: the words come out of ``eval/development_sets.py``.
+
+        One phrase is dropped and nothing else. The report prints each set's
+        caveat under a heading with the combined figure a line above it, so the
+        caveat can say "the combined figure above"; the viewer prints the caveat
+        with no such figure on the page, and "above" would point at nothing a
+        reader can see. The equality below is the whole claim: ``replace``
+        touches that phrase and touches nothing else, so a caveat that had been
+        rewritten could not pass it.
+        """
         from eval import development_sets
 
         for name in ("wild", "wild-v2"):
+            registration = development_sets.SEALED_SET_SECTIONS[name][1]
+            variant = self.documents[name]["set"]["caveat"]
             with self.subTest(page=name):
-                self.assertEqual(
-                    development_sets.SEALED_SET_SECTIONS[name][1],
-                    self.documents[name]["set"]["caveat"],
-                )
+                self.assertNotEqual(registration, variant)
+                self.assertEqual(registration.replace(" above", ""), variant)
+                self.assertNotIn("above", variant)
         for name in ("corpus", "codex", "ryde-901"):
             with self.subTest(page=name):
                 self.assertIsNone(self.documents[name]["set"]["caveat"])
@@ -3064,15 +3099,83 @@ class MissNoteTests(unittest.TestCase):
                 for case_no in document["miss_notes"]:
                     self.assertFalse(cases[int(case_no)]["grading"]["exact"])
 
-    def test_the_link_is_written_for_the_depth_of_its_own_page(self):
-        """A note linked from ``ui/dist/wild/`` needs one more ``../`` than one
-        linked from ``ui/dist/``."""
-        for note in self.documents["wild"]["miss_notes"].values():
-            with self.subTest(link=note["link"]):
-                self.assertTrue(note["link"].startswith("../../../docs/notes/"))
-        for note in self.documents["wild-v2"]["miss_notes"].values():
-            with self.subTest(link=note["link"]):
-                self.assertTrue(note["link"].startswith("../../../docs/notes/"))
+    def test_every_note_link_is_absolute_to_the_repository(self):
+        """``ui/dist/`` is what gets deployed, so a note linked out of it by a
+        relative path -- ``../../../docs/notes/...`` from ``ui/dist/wild/`` --
+        points at a file the deployed copy does not have. The same path on the
+        repository's own blob page works from anywhere."""
+        for name in ("wild", "wild-v2"):
+            for case_no, note in sorted(self.documents[name]["miss_notes"].items()):
+                with self.subTest(page=name, case=case_no):
+                    self.assertEqual(
+                        build.REPOSITORY_BLOB_BASE + note["note"], note["link"]
+                    )
+
+    def test_the_base_is_one_constant_and_the_path_is_all_that_is_added(self):
+        """The depth of the page no longer enters into a link, which is the
+        point: one base, written once, and the path appended to it."""
+        self.assertEqual(
+            "https://github.com/hanwei918/tribunal/blob/main/",
+            build.REPOSITORY_BLOB_BASE,
+        )
+        for name in PAGE_NAMES:
+            with self.subTest(page=name):
+                self.assertEqual(
+                    build.REPOSITORY_BLOB_BASE + "docs/notes/x.md",
+                    build.pages()[name].link_to("docs/notes/x.md"),
+                )
+
+    def test_no_page_links_out_of_ui_dist_by_a_relative_path(self):
+        """Every anchor either goes to the repository by absolute URL or stays
+        inside ``ui/dist/``. One that climbed out relatively would work in this
+        checkout and 404 in a deployed copy of ``ui/dist/`` alone."""
+        for name in PAGE_NAMES:
+            page = build.pages()[name]
+            scan = _ResourceScan()
+            scan.feed(page.output_path.read_text(encoding="utf-8"))
+            self.assertTrue(scan.anchors, "{0} draws no link at all".format(name))
+            for tag, href in scan.anchors:
+                with self.subTest(page=name, href=href):
+                    if href.startswith(build.REPOSITORY_BLOB_BASE):
+                        continue
+                    up = 0
+                    while href[3 * up : 3 * up + 3] == "../":
+                        up += 1
+                    self.assertLessEqual(
+                        up,
+                        page.depth,
+                        "{0} leaves ui/dist by a relative path".format(href),
+                    )
+
+    def test_only_the_corpus_note_is_marked_contested(self):
+        """The contested sentence belongs to one note: the corpus's, about case
+        211, which argues the reading is contested rather than a defect. Each
+        sealed set's note records defects, so none of them may reach for it."""
+        for name in PAGE_NAMES:
+            page = build.pages()[name]
+            with self.subTest(page=name):
+                if name == "corpus":
+                    self.assertEqual(
+                        [page.miss_notes[211]], sorted(page.contested_notes)
+                    )
+                else:
+                    self.assertEqual([], sorted(page.contested_notes))
+
+    def test_every_miss_note_of_a_sealed_set_is_not_contested(self):
+        for name in ("wild", "wild-v2"):
+            for case_no, note in sorted(self.documents[name]["miss_notes"].items()):
+                with self.subTest(page=name, case=case_no):
+                    self.assertFalse(note["contested"])
+
+    def test_the_contested_note_is_about_a_case_that_is_not_a_miss(self):
+        """Case 211 matched all four fields, so the corpus page has no miss at
+        all and the contested sentence reaches no page today. That is why the
+        rendering test asserts its absence and not its presence -- and why the
+        marker is asserted here, where it can be seen."""
+        document = self.documents["corpus"]
+        self.assertEqual({}, document["miss_notes"])
+        cases = {case["case_no"]: case for case in document["cases"]}
+        self.assertTrue(cases[211]["grading"]["exact"])
 
 
 class EveryPageIsCommittedTests(unittest.TestCase):
@@ -4153,6 +4256,180 @@ class PageScriptRunsTests(unittest.TestCase):
             page["load_error"], "a page that throws on load was called fine"
         )
         self.assertIn("appendChild", page["load_error"])
+
+
+# --------------------------------------------------------------------------
+# The wording the page actually prints
+# --------------------------------------------------------------------------
+# The sentences here are chosen by the page's own data -- which note a miss
+# links to, whether a ruling exists to draw at all -- so no reading of the
+# source can tell whether the right words reached the right case. The script is
+# run and its own text is read back, the way ``PageScriptRunsTests`` runs it.
+
+# The case views whose text is read, per page, in addition to the overview. Each
+# is a case and the step whose wording the sheet names: the last step of a miss,
+# and both steps of a case that produced no ruling at all.
+WORDING_TARGETS = {
+    "corpus": [{"view": "case", "case": 211, "step": 6}],
+    "codex": [{"view": "case", "case": 9111, "step": 6}],
+    "wild": [
+        {"view": "case", "case": 501, "step": 6},
+        {"view": "case", "case": 517, "step": 5},
+        {"view": "case", "case": 517, "step": 6},
+        {"view": "case", "case": 533, "step": 5},
+        {"view": "case", "case": 533, "step": 6},
+    ],
+    "wild-v2": [{"view": "case", "case": 716, "step": 6}],
+    "ryde-901": [],
+}
+
+
+class RenderedWordingTests(unittest.TestCase):
+    """What each page prints, read back out of the DOM the page built.
+
+    Two claims the sheet makes about wording are claims about *rendering*, and
+    the data they turn on is not in the source:
+
+    * the contested sentence belongs to the corpus's note about case 211, which
+      argues the reading is contested rather than a defect, and to nothing else
+      -- while the sealed sets' notes record defects;
+    * a case whose judge drafts all abstained produced no ruling, so the judge
+      step and the last step must say that rather than print ``null`` and
+      ``none``, which are values this system emits and not absences.
+
+    Both are read off the text of the views the page rendered, for every page,
+    so a page that printed the wrong sentence for the right case is caught. The
+    control is ``test_the_harness_read_the_text_it_was_asked_for``: a shim that
+    answered with an empty string would make every assertion below pass for the
+    wrong reason.
+    """
+
+    CONTESTED = "contested reading rather than a defect"
+    NEUTRAL = "records this miss"
+    NO_NOTE = "No note is written about this case"
+    NO_RULING_NOTICE = "No ruling was produced for this case"
+    NO_RULING_BADGE = "no ruling produced"
+    NO_CLAUSE = "no clause on these facts sends the case to a human"
+    MATCHED_FLAG = "recorded matched flag"
+
+    @classmethod
+    def setUpClass(cls):
+        if node_executable() is None:
+            raise unittest.SkipTest(
+                "node is not installed, so the page's own text cannot be read: "
+                "tried " + ", ".join(NODE_CANDIDATES) + " and node on the PATH"
+            )
+        cls.report = run_the_shim(
+            [
+                {
+                    "name": name,
+                    "path": str(build.pages()[name].output_path),
+                    "targets": [
+                        dict(target, text=True) for target in WORDING_TARGETS[name]
+                    ],
+                    "overview_text": True,
+                }
+                for name in PAGE_NAMES
+            ]
+        )
+        cls.texts = {}
+        for page in cls.report["pages"]:
+            for entry in page["texts"]:
+                key = (page["name"], entry["view"], entry["case"], entry["step"])
+                cls.texts[key] = " ".join(entry["text"].split())
+
+    def text_of(self, name: str, view: str, case=None, step=None) -> str:
+        key = (name, view, case, step)
+        self.assertIn(
+            key, self.texts, "the harness rendered no text for {0}".format(key)
+        )
+        return self.texts[key]
+
+    def test_the_harness_read_the_text_it_was_asked_for(self):
+        """The control: every view asked for produced text.
+
+        Without it, a shim that answered with an empty string for every view
+        would make every assertion below pass.
+        """
+        for name in PAGE_NAMES:
+            with self.subTest(page=name):
+                overview = self.text_of(name, "overview")
+                self.assertTrue(overview, "the overview rendered no text")
+                for target in WORDING_TARGETS[name]:
+                    self.assertTrue(
+                        self.text_of(name, "case", target["case"], target["step"])
+                    )
+
+    def test_the_contested_sentence_reaches_no_page(self):
+        """It belongs to the corpus's note about case 211, and 211 matched all
+        four fields -- so the corpus has no miss to print it for, and no other
+        page has a note that argues it.
+
+        Asserted over every view the harness rendered, which includes every
+        page's overview: that is where a page lists its misses. So "the
+        contested sentence appears only on corpus 211" is a fact about the pages
+        and not a fact about which pages happened to be looked at.
+        """
+        for key, text in sorted(self.texts.items(), key=lambda item: str(item[0])):
+            with self.subTest(view=key):
+                self.assertNotIn(self.CONTESTED, text)
+
+    def test_a_note_that_is_not_contested_says_it_records_this_miss(self):
+        for name, case_no in (("wild", 501), ("wild-v2", 716)):
+            with self.subTest(page=name, case=case_no):
+                text = self.text_of(name, "case", case_no, 6)
+                self.assertIn(self.NEUTRAL, text)
+                self.assertNotIn(self.CONTESTED, text)
+
+    def test_the_sealed_overviews_record_their_misses(self):
+        for name in ("wild", "wild-v2"):
+            with self.subTest(page=name):
+                text = self.text_of(name, "overview")
+                self.assertIn(self.NEUTRAL, text)
+                self.assertNotIn(self.CONTESTED, text)
+
+    def test_a_miss_with_no_note_says_so(self):
+        """The second development set's one miss has no note about it, so it is
+        shown as a miss and not as a contested reading."""
+        text = self.text_of("codex", "case", 9111, 6)
+        self.assertIn(self.NO_NOTE, text)
+        self.assertNotIn(self.NEUTRAL, text)
+        self.assertNotIn(self.CONTESTED, text)
+
+    def test_the_judge_step_of_a_case_with_no_ruling_does_not_present_one(self):
+        """The ruling, the amount, the compensation and the confidence are not
+        drawn at all, because there is no ruling to draw. What is drawn is that
+        none was produced -- and the four abstained drafts are above it, which is
+        what lets a reader see why."""
+        for case_no in (517, 533):
+            with self.subTest(case=case_no):
+                text = self.text_of("wild", "case", case_no, 5)
+                self.assertIn(self.NO_RULING_NOTICE, text)
+                self.assertIn(
+                    "no referral: no ruling was produced, so there is nothing to refer.",
+                    text,
+                )
+                self.assertNotIn(self.NO_CLAUSE, text)
+                self.assertNotIn(self.MATCHED_FLAG, text)
+
+    def test_step_six_of_a_case_with_no_ruling_shows_no_null_value(self):
+        """The produced column used to read ``null`` for the ruling and ``none``
+        for the amounts -- the tokens this system emits for a value, which is a
+        different thing from a case that produced no ruling.
+
+        The grader's own detail already said "no ruling produced"; the column
+        says it now too. The run's own matched flag is gone with it: no result
+        file recorded one for these cases, so the line read "recorded matched
+        flag: null". The expected column still shows the key's own values, which
+        is why this asserts the absence of ``null`` rather than of ``none``.
+        """
+        for case_no in (517, 533):
+            with self.subTest(case=case_no):
+                text = self.text_of("wild", "case", case_no, 6)
+                self.assertIn(self.NO_RULING_BADGE, text)
+                self.assertNotIn("null", text)
+                self.assertNotIn(self.MATCHED_FLAG, text)
+                self.assertNotIn(self.NO_CLAUSE, text)
 
 
 if __name__ == "__main__":

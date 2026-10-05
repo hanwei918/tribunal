@@ -107,7 +107,17 @@ import sys
 from dataclasses import dataclass, field
 from decimal import Decimal
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    FrozenSet,
+    List,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -166,11 +176,12 @@ _CASE_FILE_RE = re.compile(r"^case-(\d{5})\.json$")
 # The transcript beside it, anchored the same way and for the same reason.
 _TRANSCRIPT_FILE_RE = re.compile(r"^case-(\d{5})\.transcript\.json$")
 
-# The link a miss points at, relative to ``ui/dist/index.html``. The note records
-# why case 211 is a contested reading rather than a defect. Kept as the corpus
-# page's own link, so anything that read it keeps reading the same value; every
-# other page recomputes it from its own depth.
-_DECISION_NOTE_LINK = "../../" + model_module.DECISION_NOTE
+# Where a link to a file outside ``ui/dist/`` points. The pages are published as
+# ``ui/dist/`` on its own, so a link out of the tree written relative to the page
+# -- ``../../../docs/notes/...`` from ``ui/dist/wild/`` -- resolves to nothing
+# once only that directory is deployed. Every such link is absolute, and this is
+# the one place the base of them is written.
+REPOSITORY_BLOB_BASE = "https://github.com/hanwei918/tribunal/blob/main/"
 
 # --------------------------------------------------------------------------
 # The pages: one per run, plus the index beside them
@@ -242,6 +253,14 @@ class ViewerPage:
     # point -- a link to a note about another case is a claim nobody made.
     miss_notes: Mapping[int, str] = field(default_factory=dict)
     miss_note_for_every_miss: Optional[str] = None
+    # The notes that argue the case is a *contested reading* rather than a
+    # defect. It is a property of the note and not of the miss: the corpus's
+    # note argues the reading is contested, while each sealed set's note records
+    # defects -- so a page that printed the contested sentence over every miss it
+    # had would be saying something the note it links to does not say. Empty is
+    # the honest default: a note nobody has read as arguing that is not claimed
+    # to.
+    contested_notes: FrozenSet[str] = frozenset()
     stated_expectation_path: Optional[Path] = None
 
     @property
@@ -250,8 +269,15 @@ class ViewerPage:
         return len(self.output_path.relative_to(DIST_DIR).parts) - 1
 
     def link_to(self, repository_path: str) -> str:
-        """A path from the project root, as a link written on this page."""
-        return "../" * (self.depth + 2) + repository_path
+        """A path from the project root, as a link written on this page.
+
+        Absolute, to the repository on the web, and not relative to where the
+        page sits. ``ui/dist/`` is what gets deployed, so a link out of it
+        written as ``../../../docs/notes/...`` points at a file the deployed
+        copy does not have; the same path on the repository's own blob page
+        works from anywhere.
+        """
+        return REPOSITORY_BLOB_BASE + repository_path
 
     @property
     def has_key(self) -> bool:
@@ -318,6 +344,10 @@ def _build_pages() -> Dict[str, ViewerPage]:
             # own note is that note. Every other miss is a miss and is shown as
             # one, with no link and no claim that the reading is contested.
             miss_notes={211: model_module.DECISION_NOTE},
+            # And it is the one note in the registry that argues the case is a
+            # contested reading rather than a defect. That is what the contested
+            # sentence is printed for, and nothing else is.
+            contested_notes=frozenset({model_module.DECISION_NOTE}),
         ),
         ViewerPage(
             name="codex",
@@ -1843,8 +1873,10 @@ def build_document(
         "generator": "ui/build.py",
         "set": _set_block(page, len(cases), key_path),
         "default_case": _default_case(page, cases),
+        # The path of the note about the corpus's contested reading. The link
+        # beside it is gone: nothing read it, and every link a page actually
+        # draws comes from ``miss_notes`` below.
         "decision_note": model_module.DECISION_NOTE,
-        "decision_note_link": page.link_to(model_module.DECISION_NOTE),
         # Only a case a note was written about gets a link, and only that case's
         # note. A miss with no note is a miss and is shown as one: it is not
         # called contested, and it does not link to a note about another case.
@@ -1879,6 +1911,28 @@ def build_document(
     return _normalise(document)
 
 
+# The words in a caveat that describe the report's own layout rather than a
+# fact. ``eval/development_sets.py`` prints each sealed set's caveat under a
+# heading with the combined figure a line above it, so the caveat can say "the
+# combined figure above". The viewer prints the caveat with no such figure on
+# the page, so "above" points at nothing a reader can see.
+_CAVEAT_LAYOUT_WORDS = " above"
+
+
+def _viewer_caveat(caveat: Optional[str]) -> Optional[str]:
+    """The registration's caveat, as this page can print it.
+
+    One phrase is dropped: the reference to a figure that is above the caveat in
+    the report and nowhere on the page. Nothing else is touched, and the test
+    asserts the variant is the registration's own text with that phrase removed
+    and no other change -- so this cannot quietly become a second caveat that
+    says something the registration does not.
+    """
+    if caveat is None:
+        return None
+    return caveat.replace(_CAVEAT_LAYOUT_WORDS, "")
+
+
 def _set_block(
     page: ViewerPage, case_count: int, key_path: Optional[Path]
 ) -> Dict[str, Any]:
@@ -1887,7 +1941,8 @@ def _set_block(
     The name, what the set is, and -- for a sealed set -- the tag its single run
     was made from and the caveat ``eval/development_sets.py`` already carries.
     No caveat text is written here: the registration owns those words, and a
-    second copy would be a second place for them to drift.
+    second copy would be a second place for them to drift. The only change is
+    the phrase that points above, which ``_viewer_caveat`` drops.
     """
     return {
         "name": page.name,
@@ -1896,7 +1951,7 @@ def _set_block(
         "brand": page.brand,
         "badge": page.badge,
         "report_tool": page.report_tool,
-        "caveat": page.caveat,
+        "caveat": _viewer_caveat(page.caveat),
         "freeze_tag": page.freeze_tag,
         "sealed": page.sealed,
         "policy_version": page.policy_version,
@@ -1944,8 +1999,13 @@ def _miss_notes(
     it says it is a miss; it does not call the reading contested and it does not
     link a note written about a different case, because that would be a claim
     this repository does not make.
+
+    ``contested`` is the registration's own statement about the *note*: whether
+    it argues the case is a contested reading rather than a defect. The page
+    prints the contested sentence for that and for nothing else, so a sealed
+    set, whose notes record defects, cannot be described by it.
     """
-    notes: Dict[str, Dict[str, str]] = {}
+    notes: Dict[str, Dict[str, Any]] = {}
     for case in cases:
         grading = case.get("grading")
         if grading is None or grading.get("exact"):
@@ -1953,7 +2013,11 @@ def _miss_notes(
         case_no = int(case["case_no"])
         note = page.miss_notes.get(case_no, page.miss_note_for_every_miss)
         if note is not None:
-            notes[str(case_no)] = {"note": note, "link": page.link_to(note)}
+            notes[str(case_no)] = {
+                "note": note,
+                "link": page.link_to(note),
+                "contested": note in page.contested_notes,
+            }
     return notes
 
 
@@ -3168,6 +3232,12 @@ _JS = r"""
   // case is a miss and nothing more: calling it a contested reading, or pointing
   // at a note written about another case, would be a claim this repository does
   // not make.
+  //
+  // Which sentence follows the link is the *note's* own fact and not the
+  // miss's. Only a note that argues the reading is contested gets the contested
+  // sentence; every other note says that it records this miss. The sealed sets'
+  // notes record defects, so the contested sentence over their misses would be
+  // the page saying something the note it links to does not say.
   function missLine(caseDoc) {
     var note = (DATA.miss_notes || {})[String(caseDoc.case_no)];
     var line = h("div", null, [
@@ -3180,7 +3250,9 @@ _JS = r"""
     // linked miss, because this function is called from ``renderOverview``.
     if (note) {
       add(line, h("a", { href: note.link, text: note.note }));
-      add(line, " records why this is a contested reading rather than a defect, and why the answer key is not changed for it.");
+      add(line, note.contested
+        ? " records why this is a contested reading rather than a defect, and why the answer key is not changed for it."
+        : " records this miss.");
     } else {
       add(line, "No note is written about this case, so it is shown as a miss and is not called a contested reading.");
     }
@@ -3842,12 +3914,24 @@ _JS = r"""
 
     var verdict = judge.verdict;
     section.appendChild(h("h3", { text: "The ruling" }));
-    section.appendChild(definitionList([
-      ["ruling", h("span", { class: "badge judge", text: text(verdict.ruling) })],
-      ["amount_sgd", money(verdict.amount_sgd)],
-      ["driver_compensation_sgd", money(verdict.driver_compensation_sgd)],
-      ["confidence", text(verdict.confidence)]
-    ]));
+    // A case whose drafts all abstained produced no ruling, and there is none to
+    // draw: the run wrote no result file, so ``verdict.ruling`` is null,
+    // ``money(null)`` is "none", and printing either would present the absence
+    // of a ruling as a value the judge chose. What the page says instead is that
+    // no ruling was produced -- and the drafts that abstained are drawn above it
+    // by the vote panel, so a reader can see why there is none.
+    if (caseDoc.has_ruling) {
+      section.appendChild(definitionList([
+        ["ruling", h("span", { class: "badge judge", text: text(verdict.ruling) })],
+        ["amount_sgd", money(verdict.amount_sgd)],
+        ["driver_compensation_sgd", money(verdict.driver_compensation_sgd)],
+        ["confidence", text(verdict.confidence)]
+      ]));
+    } else {
+      section.appendChild(h("p", { class: "null", text:
+        "No ruling was produced for this case: every judge draft abstained, so the run wrote no ruling, no amount " +
+        "and no compensation for it. The drafts and the vote that produced nothing are above." }));
+    }
 
     section.appendChild(h("h4", { text: "Referrals" }));
     if (judge.referrals && judge.referrals.length) {
@@ -3856,8 +3940,15 @@ _JS = r"""
         list.appendChild(h("li", null, [h("span", { text: String(item) }), " ", clauseChipsInText(String(item))]));
       });
       section.appendChild(list);
+    } else if (caseDoc.has_ruling) {
+      // The judge sent this case to nobody. The page used to add "no clause on
+      // these facts sends the case to a human", which is a reading of the policy
+      // and not a fact about this ruling: a judge that referred nobody may
+      // simply have been wrong. What is a fact is that it referred nobody.
+      section.appendChild(h("p", { class: "null", text: "no referral: the judge sent this case to no one" }));
     } else {
-      section.appendChild(h("p", { class: "null", text: "no referral: no clause on these facts sends the case to a human" }));
+      section.appendChild(h("p", { class: "null", text:
+        "no referral: no ruling was produced, so there is nothing to refer." }));
     }
 
     section.appendChild(h("h4", { text: "Explanation" }));
@@ -3921,6 +4012,24 @@ _JS = r"""
     return box;
   }
 
+  // What the run produced for one field, in the key's table. A case whose judge
+  // drafts all abstained produced nothing at all, and every produced cell would
+  // otherwise read "null" or "none" -- the tokens this system emits for a value,
+  // which is a different thing from a case that produced no ruling. The page
+  // says which of the two happened.
+  function producedCell(caseDoc, outcome) {
+    if (!caseDoc.has_ruling) {
+      return h("span", { class: "badge miss", text: "no ruling produced" });
+    }
+    if (outcome.field === "referrals") {
+      return referralList(caseDoc.judge.referrals);
+    }
+    if (outcome.field === "ruling") {
+      return h("code", { text: text(caseDoc.judge.verdict.ruling) });
+    }
+    return h("span", { class: "mono", text: money(caseDoc.judge.verdict[outcome.field]) });
+  }
+
   function renderKey(caseDoc, panel) {
     // A page with no key is not graded at all, so this step shows what it has
     // instead of a grade. There is no four-field comparison to draw and none is
@@ -3952,21 +4061,17 @@ _JS = r"""
     var body = h("tbody");
     caseDoc.grading.fields.forEach(function (outcome) {
       var expectedValue = null;
-      var producedValue = null;
       if (outcome.field === "referrals") {
         expectedValue = referralList(caseDoc.expected.referrals);
-        producedValue = referralList(caseDoc.judge.referrals);
       } else if (outcome.field === "ruling") {
         expectedValue = h("code", { text: text(caseDoc.expected.ruling) });
-        producedValue = h("code", { text: text(caseDoc.judge.verdict.ruling) });
       } else {
         expectedValue = h("span", { class: "mono", text: money(caseDoc.expected[outcome.field]) });
-        producedValue = h("span", { class: "mono", text: money(caseDoc.judge.verdict[outcome.field]) });
       }
       body.appendChild(h("tr", null, [
         h("td", null, h("code", { text: outcome.field })),
         h("td", null, expectedValue),
-        h("td", null, producedValue),
+        h("td", null, producedCell(caseDoc, outcome)),
         h("td", null, h("span", { class: outcome.correct ? "badge ok" : "badge miss",
           text: outcome.correct ? "match" : "MISS" })),
         h("td", { class: "hint", text: outcome.detail || "" })
@@ -3981,12 +4086,16 @@ _JS = r"""
     ]));
 
     panel.appendChild(h("h4", { text: "Answer-key metadata" }));
+    // The run's own ``matched`` flag is deliberately not printed. On a case that
+    // wrote no result file there is no flag at all, so the line read "recorded
+    // matched flag: null" -- and the two rows that do have something to say,
+    // whether the four fields matched and which of them did not, are already in
+    // the table above and in the miss line below.
     panel.appendChild(definitionList([
       ["difficulty", text(caseDoc.expected.difficulty)],
       ["governing clauses", (caseDoc.expected.governing_clauses || []).map(function (id) {
         return h("div", null, [clauseChip(id)]);
-      })],
-      ["recorded matched flag", text(caseDoc.recorded_matched)]
+      })]
     ]));
     // Only where the run recorded a flag at all. A case that wrote no result
     // file recorded nothing, and "the run recorded matched=null" would be a

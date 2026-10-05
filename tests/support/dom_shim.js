@@ -400,6 +400,18 @@ function hashFor(target) {
 // --------------------------------------------------------------------------
 // Running one page
 // --------------------------------------------------------------------------
+// The text of the view a target rendered, for the targets that ask for it.
+//
+// Some of what the page says is chosen by its own data -- which sentence a miss
+// gets, whether a ruling exists to draw at all -- so no reading of the source
+// can tell whether the right words reached the right case. Reading them back out
+// of the tree the script built can. It is opt-in per target because a page's
+// overview text runs to tens of kilobytes and most targets do not need it.
+function viewText(document, target) {
+  const node = document.getElementById("view-" + target.view);
+  return node ? node.textContent : "";
+}
+
 function runPage(job) {
   const html = fs.readFileSync(job.path, "utf8");
   const { body, data, script } = splitPage(html);
@@ -410,6 +422,7 @@ function runPage(job) {
     overview_children: 0,
     rendered: 0,
     exceptions: [],
+    texts: [],
   };
   if (!script) {
     return result;
@@ -438,6 +451,14 @@ function runPage(job) {
   // short, and ``load_error`` says why.
   const overview = document.getElementById("view-overview");
   result.overview_children = overview ? overview.childNodes.length : 0;
+  if (job.overview_text) {
+    result.texts.push({
+      view: "overview",
+      case: null,
+      step: null,
+      text: overview ? overview.textContent : "",
+    });
+  }
 
   for (const target of job.targets) {
     try {
@@ -448,6 +469,14 @@ function runPage(job) {
         stopPropagation() {},
       });
       result.rendered += 1;
+      if (target.text) {
+        result.texts.push({
+          view: target.view,
+          case: target.case === undefined ? null : target.case,
+          step: target.step === undefined ? null : target.step,
+          text: viewText(document, target),
+        });
+      }
     } catch (error) {
       result.exceptions.push({
         view: target.view,

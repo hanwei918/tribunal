@@ -225,7 +225,8 @@ SEALED_SET = DevelopmentSet(
     runs_subdir=run_benchmark.SEALED_SET_RUNS_SUBDIR,
     case_root=loader.EXTERNAL_DIR / run_benchmark.SEALED_SET_RUNS_SUBDIR,
     summary=(
-        "the held-out set (wild-v1): 64 cases derived from real complaints, "
+        "the held-out set (wild-v1): 64 cases whose author says its traps come "
+        "from real complaints, "
         "prepared by their author as a development set; nobody who changed the "
         "system opened them before the freeze tagged freeze-2026-09-30, and they "
         "were run once from that tag; that single run is one of the two "
