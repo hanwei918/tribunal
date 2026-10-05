@@ -4074,11 +4074,19 @@ class AccessibilityTests(unittest.TestCase):
         """The line number down a rendered prompt, and the word the page writes
         where the run produced no value.
 
-        Both are text and both were below 4.5:1. The line number measured
-        2.87:1 on the plain column and 1.95:1 on the amber highlight of a
-        differing line; the null measured 4.28:1 on a panel and 3.63:1 in a miss
-        row. The backgrounds below are every one each rule can sit on, the
+        Both are text and both were below 4.5:1 somewhere. The line number
+        measured 2.87:1 on the plain column and 1.95:1 on the amber highlight of
+        a differing line; the null measured 4.68:1 on a panel and 3.63:1 in a
+        miss row. The backgrounds below are every one each rule can sit on, the
         translucent washes composited the way a browser composites them.
+
+        Every figure named here and in the two stylesheet comments is recomputed
+        in ``test_every_stated_contrast_figure_is_the_one_this_formula_gives``.
+        Three of them used to be attached to the wrong pair -- 6.09 was the null
+        on a miss row and not on a panel, 5.16 was the replaced line number on
+        the page and not the new one on its column, and 4.28 was the replaced
+        null on the second panel and not on the first -- because a number in a
+        comment that nothing recomputes is a number that drifts.
         """
         page = hex_colour("0e1116")
         panel = hex_colour("161c23")
@@ -4123,6 +4131,92 @@ class AccessibilityTests(unittest.TestCase):
             round(contrast_ratio(hex_colour("7b8794"), over((255, 107, 107, 0.09), panel)), 2),
             4.5,
         )
+
+    # Every contrast figure this page states about its own colours, with the
+    # colour and the background it is stated against. The stylesheet's two
+    # comments and the docstring of the contrast test above carry these, and a
+    # figure in a comment is a claim: this table is what makes each one a claim
+    # the suite recomputes.
+    #
+    # The two colours the page still uses are named by their selector, so the
+    # figure is checked against the colour the page actually sets and not against
+    # a hex typed here twice. The other two are the colours those rules replaced,
+    # which the page no longer sets, so they are literals -- they are history,
+    # and the point of them is that they were below the floor.
+    STATED_CONTRAST = (
+        # the figure as stated, the colour, the background it is stated against
+        ("4.78", ".null", "a miss row under the pointer"),
+        ("7.84", ".null", "a plain panel"),
+        ("3.63", "#7b8794", "a miss row"),
+        ("1.95", "#5d6b78", "the amber highlight"),
+        ("4.82", ".plines li .n", "the amber highlight"),
+        ("7.09", ".plines li .n", "the plain column"),
+        ("2.87", "#5d6b78", "the plain column"),
+        ("4.68", "#7b8794", "a plain panel"),
+    )
+
+    def stated_backgrounds(self):
+        """The backgrounds the figures above are stated against.
+
+        Composited the same way the contrast tests composite them: a translucent
+        wash over the opaque colour under it, which is how a browser draws it.
+        """
+        page = hex_colour("0e1116")
+        panel = hex_colour("161c23")
+        panel_2 = hex_colour("1c242d")
+        return {
+            "a miss row": over((255, 107, 107, 0.09), panel),
+            "a miss row under the pointer": over((255, 107, 107, 0.16), panel),
+            "a plain panel": panel,
+            "the amber highlight": over((216, 167, 42, 0.15), panel_2),
+            "the plain column": panel_2,
+        }
+
+    def stated_colour(self, source: str):
+        """The colour a stated figure is about: a selector's, or a literal hex."""
+        if source.startswith("#"):
+            return hex_colour(source)
+        return self.colour_of(source)
+
+    def test_every_stated_contrast_figure_is_the_one_this_formula_gives(self):
+        """The figures the page states about its own colours, recomputed.
+
+        Three of these used to be real measurements attached to the wrong pair,
+        which is what a figure nothing recomputes becomes. Two of the colours are
+        read out of the stylesheet rather than typed here, so a rule whose colour
+        moved takes its stated figure red with it.
+        """
+        backgrounds = self.stated_backgrounds()
+        for figure, colour, background in self.STATED_CONTRAST:
+            with self.subTest(figure=figure, colour=colour, background=background):
+                self.assertEqual(
+                    figure,
+                    "%.2f"
+                    % contrast_ratio(
+                        self.stated_colour(colour), backgrounds[background]
+                    ),
+                    colour + " on " + background,
+                )
+
+    def test_every_stated_contrast_figure_is_stated_where_it_is_claimed(self):
+        """The other half of the claim: a figure the formula gives is only a
+        statement about the page if the page is where it is written.
+
+        The figures live in two places -- the stylesheet's two comments, and the
+        docstring of ``test_the_two_lowest_contrast_rules_clear_the_floor`` --
+        and this reads both, so a figure cannot be recomputed correctly and
+        still be missing from the page it claims to describe.
+        """
+        where = "\n".join(
+            [
+                self.stylesheet,
+                type(self).test_the_two_lowest_contrast_rules_clear_the_floor.__doc__
+                or "",
+            ]
+        )
+        for figure, _, _ in self.STATED_CONTRAST:
+            with self.subTest(figure=figure):
+                self.assertIn(figure + ":1", where)
 
 
 # --------------------------------------------------------------------------
@@ -4191,6 +4285,51 @@ def step_count(script: str) -> int:
     if count < 1:
         raise AssertionError("the STEPS list names no step")
     return count
+
+
+def judge_step(script: str) -> int:
+    """The 1-based step number of the judge step, from the page's own list.
+
+    Read rather than typed: a stepper that grew a step before the judge would
+    otherwise be driven to the wrong view and the test would still pass, because
+    the sentence it looks for is on the page somewhere.
+    """
+    match = STEPS_PATTERN.search(script)
+    if match is None:
+        raise AssertionError("the script has no STEPS list to walk")
+    ids = re.findall(r'id:\s*"([a-z]+)"', match.group(1))
+    if "judge" not in ids:
+        raise AssertionError("the stepper names no judge step")
+    return ids.index("judge") + 1
+
+
+def panel_sentence(vote: Mapping[str, Any]) -> str:
+    """``panelSentence`` from the page's own script, written out again here.
+
+    The page's rule: the count that agreed, then the drafts that abstained
+    (``votes - valid``) and the valid drafts that dissented
+    (``valid - agreeing``), because the run's ``valid`` count cannot tell those
+    two apart. A panel where no draft was valid has no count to give and says
+    so.
+
+    It is written out again rather than read out of the script because the point
+    of the test that uses it is that the *rendered* sentence equals what the rule
+    gives for the real payload -- so a change to the arithmetic, or to which
+    payload the page reads, shows up as a page that says something else.
+    """
+    votes = vote["votes"]
+    if not vote["valid"]:
+        return "no valid draft"
+    sentence = "judge panel: {0} of {1}{2}".format(
+        vote["agreeing"], votes, " agrees" if votes == 1 else " agree"
+    )
+    abstained = votes - vote["valid"]
+    dissented = vote["valid"] - vote["agreeing"]
+    if abstained > 0:
+        sentence += ", {0} abstained".format(abstained)
+    if dissented > 0:
+        sentence += ", {0} dissented".format(dissented)
+    return sentence
 
 
 def cases_to_walk(name: str, document: dict, wanted: int = CASES_PER_PAGE) -> list:
@@ -4623,6 +4762,209 @@ class RenderedWordingTests(unittest.TestCase):
                 self.assertNotIn("null", text)
                 self.assertNotIn(self.MATCHED_FLAG, text)
                 self.assertNotIn(self.NO_CLAUSE, text)
+
+
+# The five payloads the sheet names for the panel's sentence: one with no valid
+# draft at all, two with abstentions only, one with a dissent only, and one with
+# both.
+PANEL_PAYLOAD_CASES = {
+    "wild": (501, 512, 517),
+    "wild-v2": (702, 716),
+}
+
+
+class RenderedBehaviourTests(unittest.TestCase):
+    """The page driven: keys pressed, controls clicked, a switch turned off.
+
+    ``PageScriptRunsTests`` renders every view and reads the text back. This
+    class does something to the page first. The difference matters because a
+    substring test on the script survives a change that keeps the words and
+    stops the behaviour -- a handler that is never reached, a branch that can no
+    longer be taken -- and the only way to see that is to press the key and ask
+    what the page then is.
+
+    The harness reports, for each thing it was asked to do, whether it ran, and
+    a snapshot of the state afterwards: which view is showing, which element
+    holds the focus, whether a dialog is open, and what the address bar says.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        skip_unless_the_run_can_be_drawn()
+        cls.documents = built_documents()
+
+    def page_path(self, name: str) -> Path:
+        return build.pages()[name].output_path
+
+    def drive(self, label: str, targets: list, page_name: str = "wild") -> dict:
+        """Run one page through the harness over these targets."""
+        report = run_the_shim(
+            [{"name": label, "path": str(self.page_path(page_name)), "targets": targets}]
+        )
+        page = report["pages"][0]
+        self.assertEqual([], page["exceptions"], page["exceptions"])
+        return page
+
+    @staticmethod
+    def snapshots(page: dict) -> list:
+        return [
+            record["state"]
+            for block in page["actions"]
+            for record in block["records"]
+            if record["do"] == "snapshot"
+        ]
+
+    def test_the_judge_panel_s_sentence_is_the_one_the_payload_gives(self):
+        """``panelSentence`` over the real payloads of the five named cases.
+
+        The page's own rule is written out again in ``panel_sentence`` and
+        compared with what the judge step actually renders. Between them the
+        five payloads reach four of the rule's states: no valid draft,
+        abstentions only, a dissent only, and both.
+        """
+        pages = []
+        expected = {}
+        for name, case_numbers in PANEL_PAYLOAD_CASES.items():
+            script = behaviour_script(self.page_path(name).read_text(encoding="utf-8"))
+            step = judge_step(script)
+            pages.append(
+                {
+                    "name": name,
+                    "path": str(self.page_path(name)),
+                    "targets": [
+                        {"view": "case", "case": case_no, "step": step, "text": True}
+                        for case_no in case_numbers
+                    ],
+                }
+            )
+            for case in self.documents[name]["cases"]:
+                if case["case_no"] in case_numbers:
+                    expected[(name, case["case_no"])] = panel_sentence(case["vote"])
+        self.assertEqual(
+            len(PANEL_PAYLOAD_CASES["wild"]) + len(PANEL_PAYLOAD_CASES["wild-v2"]),
+            len(set(expected.values())),
+            "two of the five payloads give the same sentence, so one of the "
+            "rule's states is not reached and this checks one branch twice",
+        )
+        for page in run_the_shim(pages)["pages"]:
+            with self.subTest(page=page["name"]):
+                self.assertEqual([], page["exceptions"], page["exceptions"])
+            for entry in page["texts"]:
+                with self.subTest(page=page["name"], case=entry["case"]):
+                    self.assertIn(
+                        expected[(page["name"], entry["case"])],
+                        entry["text"],
+                        "the judge step does not say what the payload gives",
+                    )
+
+    def test_a_single_key_does_nothing_once_the_switch_is_off(self):
+        """WCAG 2.1.4, checked by pressing the key rather than by reading the
+        line that tests the switch.
+
+        The control is the same page with the switch still on, where the same
+        key opens the case: a page that ignored every key would pass the second
+        half on its own.
+        """
+        on = self.drive(
+            "the switch on",
+            [
+                {
+                    "view": "overview",
+                    "actions": [
+                        {"do": "snapshot"},
+                        {"do": "key", "key": "c"},
+                        {"do": "snapshot"},
+                    ],
+                }
+            ],
+        )
+        before, after = self.snapshots(on)
+        self.assertEqual("overview", before["view"])
+        self.assertEqual("case", after["view"], "the control never moved the view")
+
+        off = self.drive(
+            "the switch off",
+            [
+                {
+                    "view": "overview",
+                    "actions": [
+                        {"do": "click", "id": "show-keys"},
+                        {"do": "check", "id": "single-keys", "checked": False},
+                        {"do": "key", "key": "Escape"},
+                        {"do": "snapshot"},
+                        {"do": "key", "key": "c"},
+                        {"do": "snapshot"},
+                    ],
+                }
+            ],
+        )
+        records = off["actions"][0]["records"]
+        self.assertTrue(records[1]["ok"], records[1]["error"])
+        self.assertFalse(records[1]["checked"], "the switch was not turned off")
+        before, after = self.snapshots(off)
+        self.assertEqual("overview", before["view"])
+        self.assertEqual(
+            before,
+            after,
+            "the key changed the page after the single-key switch was turned off",
+        )
+
+    def test_the_focus_stays_on_the_step_that_was_clicked(self):
+        """The stepper is rebuilt from scratch on every step, so the button that
+        was pressed is detached by the time the new step is on screen. The
+        fragment tests above say the script looks the control up again by id;
+        this clicks one and asks where the focus ended up."""
+        clicked = 3
+        page = self.drive(
+            "a step is clicked",
+            [
+                {
+                    "view": "case",
+                    "case": 501,
+                    "step": 1,
+                    "actions": [
+                        {"do": "click", "id": "step-{0}".format(clicked)},
+                        {"do": "snapshot"},
+                    ],
+                }
+            ],
+        )
+        self.assertTrue(page["actions"][0]["records"][0]["ok"])
+        state = self.snapshots(page)[0]
+        self.assertEqual(
+            "step-{0}".format(clicked),
+            state["active_id"],
+            "the focus left the control that was clicked",
+        )
+        self.assertEqual("case", state["view"])
+        self.assertIn("step={0}".format(clicked + 1), state["hash"])
+
+    def test_escape_closes_a_dialog_and_gives_the_focus_back(self):
+        """A dialog takes the focus when it opens, so escape has to put it back
+        on the control that opened it rather than leave it on the page behind
+        the overlay."""
+        page = self.drive(
+            "a dialog is opened and escaped",
+            [
+                {
+                    "view": "overview",
+                    "actions": [
+                        {"do": "click", "id": "show-keys"},
+                        {"do": "snapshot"},
+                        {"do": "key", "key": "Escape"},
+                        {"do": "snapshot"},
+                    ],
+                }
+            ],
+        )
+        opened, closed = self.snapshots(page)
+        self.assertEqual("keys-modal", opened["modal"], "no dialog opened at all")
+        self.assertIsNone(closed["modal"], "escape left the dialog on the page")
+        self.assertEqual(
+            "show-keys",
+            closed["active_id"],
+            "the focus did not go back to the control that opened the dialog",
+        )
 
 
 if __name__ == "__main__":

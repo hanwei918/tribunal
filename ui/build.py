@@ -2248,7 +2248,7 @@ ul.vals { margin: 0; padding-left: 16px; }
 /* Not a value the run produced. It is dimmer than the text around it -- which
    is the point -- but it is still text, so it clears 4.5:1 against every
    background it can sit on, the lightest of which is a miss row under the
-   pointer: #a3b1bf measures 4.78:1 there and 6.09:1 on a plain panel. The
+   pointer: #a3b1bf measures 4.78:1 there and 7.84:1 on a plain panel. The
    colour it replaces measured 3.63:1 on the miss row. */
 .null { color: #a3b1bf; font-style: italic; }
 .bool { color: var(--accent); font-family: var(--mono); font-size: 12.5px; }
@@ -2443,7 +2443,7 @@ dl.digests > dd { margin: 0; }
 /* The line number down the side of a rendered prompt. It is the dimmest text on
    the page and it still has to be readable: on the amber highlight of a
    differing line the old colour measured 1.95:1, and #a3b0bd measures 4.82:1
-   there and 5.16:1 on the plain background of the column. */
+   there and 7.09:1 on the plain background of the column. */
 .plines li .n { color: #a3b0bd; min-width: 28px; text-align: right; flex: none; }
 .plines li.stance { background: rgba(121,192,255,0.05); border-left-color: rgba(121,192,255,0.35); }
 .plines li.stance .n { color: var(--muted); }

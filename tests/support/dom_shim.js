@@ -412,6 +412,111 @@ function viewText(document, target) {
   return node ? node.textContent : "";
 }
 
+// --------------------------------------------------------------------------
+// Doing something to the page, and saying what the page then is
+// --------------------------------------------------------------------------
+// A target may carry a list of things to do once its view is rendered. Some of
+// what this page does is only visible when something is done to it -- a key is
+// pressed, a control is clicked, a switch is turned off -- and a test that reads
+// the script for the words can survive a change that stops the behaviour. So the
+// harness does the thing and reports what happened: whether each action ran, and
+// a snapshot of the state the page is in afterwards. A snapshot is the three
+// things those behaviours are about: which view is showing, which element holds
+// the focus, and whether a dialog is open.
+function findById(document, id) {
+  const node = document.getElementById(id);
+  if (!node) {
+    throw new Error("no element with id " + id + " is on the page");
+  }
+  return node;
+}
+
+function modalId(document) {
+  for (const node of document.body.descendants()) {
+    if (node.classes.has("modal")) {
+      return node.id || "(no id)";
+    }
+  }
+  return null;
+}
+
+function showingView(document) {
+  for (const name of ["overview", "case", "stance"]) {
+    const node = document.getElementById("view-" + name);
+    if (node && !node.hidden) {
+      return name;
+    }
+  }
+  return null;
+}
+
+function snapshot(document, window) {
+  const active = document.activeElement;
+  return {
+    hash: window.location.hash,
+    view: showingView(document),
+    active_id: active && active.id ? active.id : "",
+    active_tag: active && active.tagName ? active.tagName.toLowerCase() : "",
+    modal: modalId(document),
+  };
+}
+
+// A key event carries the modifiers the page tests for, because a handler that
+// reads ``event.metaKey`` on an event without one reads ``undefined`` and a
+// shim that left them off would answer a different question from a browser's.
+function eventFor(type, extra) {
+  return Object.assign(
+    {
+      type: type,
+      preventDefault() {},
+      stopPropagation() {},
+      metaKey: false,
+      ctrlKey: false,
+      altKey: false,
+    },
+    extra || {}
+  );
+}
+
+function doAction(document, window, action) {
+  const record = { do: action.do, ok: false, error: null };
+  try {
+    if (action.do === "key") {
+      record.key = action.key;
+      document.dispatchEvent(eventFor("keydown", { key: action.key }));
+    } else if (action.do === "click") {
+      record.id = action.id;
+      const node = findById(document, action.id);
+      node.dispatchEvent(eventFor("click", { target: node }));
+    } else if (action.do === "check") {
+      record.id = action.id;
+      const node = findById(document, action.id);
+      node.checked = Boolean(action.checked);
+      record.checked = node.checked;
+      node.dispatchEvent(eventFor("change", { target: node }));
+    } else if (action.do === "snapshot") {
+      record.state = snapshot(document, window);
+    } else {
+      throw new Error("the shim does not know the action " + action.do);
+    }
+    record.ok = true;
+  } catch (error) {
+    record.error = describe(error);
+  }
+  return record;
+}
+
+function runActions(document, window, target) {
+  return {
+    view: target.view,
+    case: target.case === undefined ? null : target.case,
+    step: target.step === undefined ? null : target.step,
+    records: target.actions.map(function (action) {
+      return doAction(document, window, action);
+    }),
+  };
+}
+
 function runPage(job) {
   const html = fs.readFileSync(job.path, "utf8");
   const { body, data, script } = splitPage(html);
@@ -423,6 +528,7 @@ function runPage(job) {
     rendered: 0,
     exceptions: [],
     texts: [],
+    actions: [],
   };
   if (!script) {
     return result;
@@ -476,6 +582,9 @@ function runPage(job) {
           step: target.step === undefined ? null : target.step,
           text: viewText(document, target),
         });
+      }
+      if (target.actions) {
+        result.actions.push(runActions(document, window, target));
       }
     } catch (error) {
       result.exceptions.push({
