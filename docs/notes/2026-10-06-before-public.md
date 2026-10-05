@@ -115,3 +115,36 @@ rather than a real path, and `2026-09-23-what-the-viewer-build-reads.md`, which
 already writes it as `/Users/<name>/...`. The task named only the two, and the
 rest are dated records or inside `eval/external/`, which this task may not edit,
 so they are listed here rather than changed.
+
+## D. The last check
+
+The scan reads `git ls-files` — 1010 tracked files, the six under `ui/dist/`
+among them and all six tracked — and then the six `ui/dist/` files again from
+disk, so a page that had stopped being tracked would still be read. Every count
+is 0 except two, and both are the repository's own test vocabulary rather than a
+credential:
+
+| what was looked for | count | where |
+|---|---|---|
+| `sk-` followed by 8 or more characters | 0 | — |
+| `TOKENHUB_API_KEY=` followed by a value | 2 | `tests/test_llm.py`, the two fakes below |
+| `SecretKey` | 3 | `tests/test_ui_build.py` twice, `docs/buddy-log/README.md` once |
+| `SecretId` | 0 | — |
+| `AKID` | 0 | — |
+| `-----BEGIN` | 0 | — |
+| a `.env` file other than `.env.example` | 0 tracked | — |
+
+The two `TOKENHUB_API_KEY=` hits are `TOKENHUB_API_KEY=from-the-file` and
+`TOKENHUB_API_KEY="quoted-value"`, both written by `tests/test_llm.py` into a
+temporary `.env` to prove which of the environment and the file wins. The three
+`SecretKey` hits are the credential scanner's own needles — `("a secret key",
+re.compile(r"SecretKey"))` in `tests/test_ui_build.py`, the fixture string
+`"AWSSecretKey = x"` beside it, and the prose in the buddy log that names them.
+None of the six is a credential, and the scanner is shown to fire by running it
+over a control string holding one of each.
+
+`git check-ignore -v .env` names `.gitignore` line 5, the rule that ignores it,
+and `git ls-files .env` is empty: the file exists in the working tree and is
+untracked. `.env.example` is not ignored — `git check-ignore -v .env.example`
+names line 7, the negation that keeps it committable. No tracked file is a PDF,
+a DOCX or a PPTX, and none has a resume-like name.
