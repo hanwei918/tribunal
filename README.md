@@ -2,8 +2,19 @@
 
 2026 Tencent Cloud AI Singapore Hackathon / Digital Native / Ryde / Newbee.
 
-Official WorkBuddy project root: `/Users/hanweizhou/Desktop/Tribunal`.
+Official WorkBuddy project root: `.` — this repository.
 Execution start: 2026-09-18; feature-freeze target: 10-10; submission deadline: 10-16 (the exact time is per the submission platform).
+
+## The live demo
+
+The corpus page is live at <https://tribunal-dpruuzl3id9n.edgeone.dev/>, and the
+runs index — one line per set — is at
+<https://tribunal-dpruuzl3id9n.edgeone.dev/runs/>.
+
+It is a static replay of the runs committed in this repository: every page is
+built from a run's own recorded files, so it makes **no model call** and needs no
+key. It is hosted on Tencent EdgeOne Pages, and the same pages are committed at
+`ui/dist/`, where they open straight from `file://`.
 
 ## What Tribunal is
 
@@ -288,9 +299,38 @@ replay leaves a four-case report beside a twenty-nine-case directory.
 `runs/README.md` has the full account. `docs/notes/` holds the dated decisions
 behind every number in this file.
 
-## Running the tests
+## Running it
 
-    python -m unittest discover -s tests -v
+Everything here — the pipeline, the benchmark, the viewer and the suite — uses
+the Python standard library only, and the repository is kept runnable on **Python
+3.9.6** as well as on 3.13. Either interpreter runs every command below.
+
+    pip install -r requirements.txt
+
+`requirements.txt` declares no dependency, so this installs nothing today; it is
+written down so that a dependency added later is one command away.
+
+The model is reached through one adapter. Its key is read from the environment
+variable `TOKENHUB_API_KEY`, falling back to the repository-root `.env`, which is
+git-ignored and is never committed. Copy `.env.example` to `.env` and put the key
+in it. **Only the command that runs a case calls a model**, and nothing in the
+test suite makes a model call.
+
+Run one case — case 101 of the corpus, into a runs root of your own so that the
+committed results are left as they are:
+
+    python3 -m eval.run_benchmark --cases 101 --runs-dir /tmp/tribunal-runs
+
+Run the tests:
+
+    python3 -m unittest discover -s tests -v
+
+Build the viewer, which writes the six pages under `ui/dist/`:
+
+    python3 -m ui.build
+
+`python3 -m ui.build --check` rebuilds them in memory and reports whether each
+one is identical to the committed page.
 
 Nothing in the suite makes a model call and no credential is needed.
 `tests/test_readme_figures.py` is the one that keeps this file honest: it parses

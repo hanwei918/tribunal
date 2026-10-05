@@ -82,3 +82,36 @@ restored to its digest afterwards.
 
 Then `python3 -m ui.build` rewrote all six pages and `python3 -m ui.build
 --check` reports each identical to a fresh build.
+
+## C. The README, for a public reader
+
+**The live demo** is linked near the top: the corpus page at
+`https://tribunal-dpruuzl3id9n.edgeone.dev/`, and the runs index at `/runs/`. The
+section says it is a static replay of the committed runs, that it makes no model
+call, and that it is hosted on Tencent EdgeOne Pages.
+
+**Running it** is one section with the six things a stranger needs: the Python
+version — the standard library only, runnable on 3.9.6 as well as on 3.13 —
+`pip install -r requirements.txt`, the key in `.env` as `TOKENHUB_API_KEY` with
+`.env.example` added beside it, one command to run a case, one to run the tests,
+and one to build the viewer. Every command was run before it was written down,
+except the one that calls a model, which was checked against the runner's own
+argument list instead: `pip install -r requirements.txt` exits 0 and installs
+nothing, `python3 -m ui.build` rewrote the six pages, `python3 -m ui.build
+--check` reports each identical, and `python3 -m unittest discover -s tests -v`
+is the full suite whose result the Finish section below records.
+
+**Local paths.** `README.md` line 5 and `START-HERE.md` line 8 named
+`/Users/hanweizhou/Desktop/Tribunal`; both now name the repository root, as `.`.
+The paths recorded inside the run files stay exactly as the machine wrote them,
+and `runs/README.md` gains a sentence saying that a recorded run file carries the
+absolute path of the machine it ran on.
+
+Nine other tracked files outside `runs/` still hold an absolute path of that
+shape: `WORKBUDDY-HANDOFF.md`, `docs/buddy-log/README.md`, four dated notes under
+`docs/notes/`, the two generator scripts under `eval/external/wild-v2/gen/`, and
+`tests/test_ui_build.py` — whose occurrences are `/Users/someone/...`, a fixture
+rather than a real path, and `2026-09-23-what-the-viewer-build-reads.md`, which
+already writes it as `/Users/<name>/...`. The task named only the two, and the
+rest are dated records or inside `eval/external/`, which this task may not edit,
+so they are listed here rather than changed.

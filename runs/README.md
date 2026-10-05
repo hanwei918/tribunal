@@ -31,7 +31,9 @@ a future run of the same model writes into the same directory and rewrites these
 What is committed is the state at the commit, not a live measurement — which is why every
 `case-*.json` records the commit, the prompts digest and the interpreter it was produced under, and
 why `invocations.json` keeps one entry per invocation rather than only the last. Read a number here
-against those fields, not against the date the file was opened.
+against those fields, not against the date the file was opened. **A recorded run file also carries
+the absolute path of the machine the run was made on**, because that is where it read its case, its
+policy and its prompts; the path is part of the record and is left exactly as the run wrote it.
 
 **The runtime model decision is recorded in `tribunal/model.py` and argued in
 `docs/notes/2026-09-23-runtime-model-decision.md`.** That note carries the accuracy figures, the

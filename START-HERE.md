@@ -5,9 +5,9 @@ onboarding, and there is no prompt to copy.
 
 ## Working directory
 
-Every task runs in `/Users/hanweizhou/Desktop/Tribunal`, and **every task begins by reporting the
-actual working directory**. If the reported directory is not that path, stop and say so instead of
-continuing.
+Every task runs in the repository root — the directory holding this file, `.` — and **every task
+begins by reporting the actual working directory**. If the reported directory is not the repository
+root, stop and say so instead of continuing.
 
 ## Before acting
 
