@@ -240,12 +240,20 @@ rejects that move in its own words: `POL-GEN-02` "forbids treating either
 discounted revision as decisive proof for a monetary award". That phrase is the
 rationale's, not the clause's.
 
-**Even the maximum is below the floor.** The two impaired artifacts are not
-independent carriers — one says the trip ran and the other says it was cancelled,
-and the trip record's distance is a copy of the same measurement — so the maximum
-clause does not lift the cap here. Even if it did, the maximum of 0.30 and 0.25 is
-**0.30**, and 0.30 is itself below the 0.70 floor, so escalation would be
-mandatory on either reading.
+**Even the maximum is below the floor.** The reading that the two impaired
+artifacts are not independent carriers is **draft 2's**, not the note's. Draft 2's
+own words are that they "do not independently corroborate a single fact (one says
+the trip ran, the other says it was cancelled)", and that "the trip_record's
+distance is a copy of the same measurement". The second claim is draft 2's alone
+and is not repeated here as a fact: the case file carries two different figures —
+`actual_distance_km` 8.0 on `EV-TRIP-00716` and `trace_distance_km` 7.99 on
+`EV-GPS-00716` — and says nowhere that either was derived from the other. On draft
+2's reading the maximum clause does not lift the cap. **Draft 4 invoked the
+maximum rule too**, on the same non-independence footing: it read the rider's
+claim as resting on "the maximum-weight rule it invokes" and said that rule
+"applies only to independent carriers". Even if the maximum clause did lift the
+cap, the maximum of 0.30 and 0.25 is **0.30**, and 0.30 is itself below the 0.70
+floor, so escalation would be mandatory on either reading.
 
 **The dissent was sampled draft 2.** It proposed `ESCALATE` under `POL-GEN-02(2)`
 and `POL-RD-10(1)`, holding that
@@ -255,10 +263,11 @@ and `POL-RD-10(1)`, holding that
 
 so that its confidence "cannot exceed the minimum weight among its carriers,
 0.25", which is below the 0.70 floor. **That minimum reading is draft 2's
-argument, not the key's:** the two impaired artifacts are not independent
-carriers, and the key's rationale rests on `POL-RD-10(4)` and `POL-GEN-02` rather
-than on the 0.25 cap or on `POL-RD-10(1)`. The position-swapped **draft 4 voted
-with the `NO_ACTION` majority**, so the split was three to one, not four to zero.
+argument, not the key's:** draft 2's own words are that the two impaired
+artifacts "do not independently corroborate a single fact", and the key's
+rationale rests on `POL-RD-10(4)` and `POL-GEN-02` rather than on the 0.25 cap or
+on `POL-RD-10(1)`. The position-swapped **draft 4 voted with the `NO_ACTION`
+majority**, so the split was three to one, not four to zero.
 
 **The literal reading is arguable.** `POL-RD-10(4)`'s words are what the judge
 says they are. But the clause exists so that a case like this one — a record that

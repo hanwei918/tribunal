@@ -28,9 +28,10 @@ asserted in the note; the clause the note attributes to a draft is asserted both
 in that draft's own explanation and in the note; the threshold, the agreement and
 the confidence are asserted as the strings the note renders; the re-ask sentence
 is built from the draft numbers the vote records; and the note's ``sealed_report``
-block is compared with the command's own output. A one-fact edit to the note
-therefore fails here rather than passing as it did when each fact was checked
-separately.
+block is compared with the command's own output. **What is pinned is those rows,
+those passages and those sentences, not every fact the note states.** An edit to
+one of them fails here; a fact the note states outside them is not checked, so an
+edit there is not caught.
 
 Prose is compared as whitespace-normalised text -- the note wraps its lines, and
 a sentence that reads the same at any column is the same sentence -- while the

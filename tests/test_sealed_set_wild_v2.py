@@ -1077,7 +1077,7 @@ class WildV2RunDirectoryIsHeadlineTests(unittest.TestCase):
 
 
 # --------------------------------------------------------------------------
-# Nothing but the plain sealed run writes under runs/wild-v2/
+# Nothing is created under runs/wild-v2/ again
 # --------------------------------------------------------------------------
 class WildV2RootGuardTests(unittest.TestCase):
     """The component-wise guard closes both sealed roots outright.

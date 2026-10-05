@@ -507,8 +507,8 @@ SEALED_SET_RUNS_SUBDIR = "wild"
 # The second sealed set, imported on 2026-10-03. It is run once too, from a
 # commit whose ``tribunal/``, ``prompts/`` and ``policy/`` trees equal those at
 # the tag ``freeze-2026-10-03`` -- every event the run writes records the commit
-# it was made from -- and its single run is the submission's generalisation
-# figure; it is a different set from ``wild`` and is never added to it, to the
+# it was made from -- and its single run is one of the two generalisation
+# figures; it is a different set from ``wild`` and is never added to it, to the
 # combined figure or to ``--set all``.
 WILD_V2_SET_RUNS_SUBDIR = "wild-v2"
 SET_RUNS_SUBDIRS: Tuple[str, ...] = (

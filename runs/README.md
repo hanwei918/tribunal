@@ -23,7 +23,7 @@ This directory is the benchmark's own output. Every subdirectory named in the ta
 | `precedents/` | Where a run with `--precedents` on goes: `precedents/<model>/`, and `codex/precedents/<model>/` under the second set's root. No such run is committed here. It has its own section below. | A different measurement from the headline, and not comparable to it: the precedent library is built from closures made by people who have seen these development sets. |
 | `rerun-2026-09-29/` | A runs root of its own, holding one re-run of the organisers' sample case: `rerun-2026-09-29/external/ryde/`, committed as `23589e1`. It went to its own root so that the committed `external/ryde/` result, which `docs/notes/2026-09-23-external-sample-case.md` is about, stayed as it was. It has its own section below. | Evidence of what that run did, not a score — there is no answer-key entry for 901. It is an external case like any other, so it is refused outside `runs/external/` and must never be merged into a model's run directory. |
 | `wild/` | **The single run of the held-out set (`wild-v1`)**, committed at `2e527d6`: `wild/deepseek-deepseek-flash/`, 131 files, run once by the owner from the commit tagged `freeze-2026-09-30` and committed byte for byte as produced. **62 of the 64 cases produced a ruling** — 517 and 533 failed with `SHAPE` and are recorded as misses — and the four-field figure is **55/62 = 88.7%** over the cases that produced a ruling, **55/64 = 85.9%** over the set. It has its own section below. | One of the submission's **two generalisation figures**, and never a development figure. It is never merged into a model's run directory, never summed with the corpus, second-set or `wild-v2` figures, and never produced by `--set all`. |
-| `wild-dev/` | The held-out set's own 64 cases and key as **development data** — `wild-dev/<model-slug>/`, and the one directory committed under it is the version-2 re-run, `wild-dev/policy-v2/deepseek-deepseek-flash/`, 79 files, from `39a8a36`. From 2026-10-01 those answers may be read and the system changed to fix what they exposed, so it is the one directory in this table that may be **run again**; `sealed=False` is the whole of what allows that. It is in neither the set `--set all` runs nor the set the recorded-drafts measurement reads. | A **development** measurement, and never a generalisation figure. It holds the same 64 cases as `wild/`, but it is not that run: it is never merged with `wild/`, with `wild-v2/` or with the development sets, and no figure here is the submission's. |
+| `wild-dev/` | The held-out set's own 64 cases and key as **development data** — `wild-dev/<model-slug>/`, and the one directory committed under it is the version-2 re-run, `wild-dev/policy-v2/deepseek-deepseek-flash/`, 79 files, from `39a8a36`. From 2026-10-01 those answers may be read and the system changed to fix what they exposed, so, unlike `wild/`, which holds the same 64 cases, it may be **run again**; `sealed=False` is the whole of what allows that. It is in neither the set `--set all` runs nor the set the recorded-drafts measurement reads. | A **development** measurement, and never a generalisation figure. It holds the same 64 cases as `wild/`, but it is not that run: it is never merged with `wild/`, with `wild-v2/` or with the development sets, and no figure here is the submission's. |
 | `wild-v2/` | **The second sealed set's single run**, made once by the owner on 2026-10-04 from `6cc2682`: `wild-v2/deepseek-deepseek-flash/`, **45 files**, committed byte for byte at `9f4abee`. The set is 20 cases, 701–720, keyed by `eval/answers/wild-v2/ground_truth.json`, and the four-field figure is **18/20 = 90.0%** over the set; the manifest is `docs/notes/2026-10-04-wild-v2-run-manifest.txt`. It has its own section below. | One of the submission's **two generalisation figures**, and never a development figure. It is never merged into a model's run directory, never summed with the corpus, second-set or `wild-v1` figures, and never produced by `--set all`. The root is closed outright, like `wild/`. |
 
 **These are snapshots, and a later run moves them.** A run directory is named after the model id, so
@@ -506,15 +506,22 @@ anything is written, against *that version's* directory rather than against
 N>=2` is refused together with `--ablate`, `--precedents`, `--report`,
 `--replay-advocates`, `--replay-check` and `--verify-recorded-drafts`.
 
-**One such directory is committed, and it is the version-2 re-run.** The
+**Three such directories are committed, and they are the version-2 re-run.** The
 repository is at **version 2** — the amendment `0001-pol-rd-13` is approved — so
 there is no later version to run, and the commands above are the ones that would
-produce the output once one has been. The 57 development cases the amendment
-could touch were re-run at version 2 and committed at `39a8a36` under
-`runs/policy-v2/`, `runs/codex/policy-v2/` and `runs/wild-dev/policy-v2/`, with
-`rerun.json`, `diff.json` and `diff.md` beside the first. Of the 57, 9 changed,
-4 newly match the key and 1 newly misses it. `wild-v2` is the only **sealed** run
-at version 2, and it lives under `runs/wild-v2/<model>/`.
+produce the output of a later version once one is approved. The 57 development
+cases the amendment could touch were re-run at version 2 and committed at
+`39a8a36` under `runs/policy-v2/`, `runs/codex/policy-v2/` and
+`runs/wild-dev/policy-v2/`, with `rerun.json`, `diff.json` and `diff.md` beside
+the first. Of the 57, 9 changed, 4 newly match the key and 1 newly misses it.
+`wild-v2` is the only **sealed** run at version 2, and it lives under
+`runs/wild-v2/<model>/`.
+
+**Two files under `policy/` still read as they did at the tag.**
+`policy/amendments/README.md` says the directory "ships **empty**" and that "the
+policy as committed is version 1", and `policy/proposals/README.md` says it ships
+empty too. Both are frozen at the tag and are not edited here; the repository's
+current version is **2**, because the amendment `0001-pol-rd-13` is approved.
 
 ## `wild/` — the single run of the held-out set (`wild-v1`)
 
@@ -637,7 +644,8 @@ records the import, the digest of every imported file, and the registration.
 
 **The registration fixes the policy version at 2.** The amendment
 `0001-pol-rd-13` is approved, so the repository is at version 2, and this set is
-the one that measures it: `--set wild-v2` uses version 2 with no flag and still
+the only **sealed** set that measures it, and the only set registered at
+version 2: `--set wild-v2` uses version 2 with no flag and still
 writes into `runs/wild-v2/<model>/`, never into a `policy-v2` directory. An
 explicit `--policy-version` on this set is refused, because the version is part
 of what the set is rather than a switch on top of it.

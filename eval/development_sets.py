@@ -90,8 +90,8 @@ from tribunal.model import RUNTIME_MODEL  # noqa: E402
 class RunArguments:
     """The arguments one set's run is fixed at, as its registration records them.
 
-    Only ``wild-v2`` carries one, and only because its single run is the
-    submission's generalisation figure: the freeze note fixes the arguments the
+    Only ``wild-v2`` carries one, and only because its single run is one of the
+    two generalisation figures: the freeze note fixes the arguments the
     run is made with, so an invocation that differed in one of them would
     produce a *different* measurement under the same name. It is refused by
     name rather than silently honoured, which is the rule ``--force`` and the
@@ -1390,8 +1390,8 @@ def render_development_sets(model: str, runs_dir: Path = RUNS_DIR) -> str:
 
     # The held-out set is printed on its own and never inside the combined figure
     # above. It is not a third development set: that line is a sum over two sets
-    # that were drafted the same way, and adding the one set whose single run is
-    # the generalisation figure would make it a sum of two different claims.
+    # that were drafted the same way, and adding a set whose single run is one of
+    # the two generalisation figures would make it a sum of two different claims.
     #
     # Each sealed set gets a section of its own. They are two different sets --
     # two case ranges, two keys, two freeze tags, two policy versions -- and one
