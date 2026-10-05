@@ -310,7 +310,7 @@ the amount was not held.
 - **No ruling in the key changes.** Both misses are recorded against the key as
   it stands. `eval/answers/wild-v2/ground_truth.json` is frozen from the moment
   it was imported. Editing an expected result so a run scores better destroys
-  the only independent measurement this project has.
+  the measurement.
 - **No code, prompt or policy changes.** `git diff --quiet freeze-2026-10-03 --
   tribunal prompts policy` still exits 0 after this work, as it did before the
   run. Nothing in this note edits `tribunal/`, `prompts/` or `policy/`.

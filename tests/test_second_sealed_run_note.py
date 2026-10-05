@@ -1005,5 +1005,45 @@ class TheNotesBlockquotesTests(unittest.TestCase):
                 )
 
 
+class TheNotesTheKeysIndependenceTests(unittest.TestCase):
+    """The claim about what editing the key would destroy, against the note's own
+    limits.
+
+    The note used to say that editing an expected result so a run scores better
+    "destroys the only independent measurement this project has". Its own
+    *Honest limits* section says the word does not hold: ``wild-v2`` shares three
+    generator files with ``wild-v1`` and was authored against the same policy
+    files, and two clauses were changed because of what ``wild-v1`` showed, so
+    the set is **not** independent of the data the system was last tuned on. A
+    note cannot claim both, so the claim is now the narrower one.
+
+    The two sentences are read together rather than separately, because it is
+    their contradiction that was found: if the limits section were ever softened,
+    the narrower claim would no longer be the reason it is narrower.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = NOTE.read_text(encoding="utf-8")
+        cls.prose = prose(cls.text)
+
+    def test_the_note_no_longer_calls_the_key_the_only_independent_measurement(self):
+        self.assertNotIn("the only independent measurement", self.prose)
+        self.assertIn("destroys the measurement", self.prose)
+
+    def test_the_paragraph_still_says_why_editing_the_key_is_not_done(self):
+        """The narrower claim, with the rule it rests on still stated beside it."""
+        self.assertIn("is frozen from the moment", self.prose)
+
+    def test_the_notes_own_limits_say_the_set_is_not_independent_of_the_tuning_data(
+        self,
+    ):
+        """The sentence the claim contradicted, still stated."""
+        self.assertIn(
+            "is **not** independent of the data the system was last tuned on",
+            self.prose,
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

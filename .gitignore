@@ -9,3 +9,14 @@ tmp/
 output/
 docs/notes/*balance*
 .workbuddy-ai/
+
+# Documents that arrive by hand rather than by a build: an exported PDF, a Word
+# document, a slide deck, a file named after a CV. Matched case-insensitively --
+# the bracket expressions, not `*.pdf` -- because the name is whatever the tool
+# that wrote it chose, and gitignore is case-sensitive where the filesystem is.
+# `tests/test_repository_hygiene.py` asks git itself, in both casings, and
+# asserts that none of these rules reaches a file the repository carries.
+*.[Pp][Dd][Ff]
+*.[Dd][Oo][Cc][Xx]
+*.[Pp][Pp][Tt][Xx]
+*[Rr][Ee][Ss][Uu][Mm][Ee]*
