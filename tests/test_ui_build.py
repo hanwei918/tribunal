@@ -42,10 +42,12 @@ refusal mechanism itself under test.
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import os
 import re
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -2290,7 +2292,7 @@ class ChildAdderTests(unittest.TestCase):
     def test_the_scan_finds_the_functions_that_can_answer_null(self):
         """The scan's own control: it must see the functions the fix is about."""
         nullable = nullable_functions(self.script)
-        for name in ("missNote", "verifierPanel", "precedentsPanel"):
+        for name in ("missNote", "noRulingBlock", "verifierPanel", "precedentsPanel"):
             with self.subTest(function=name):
                 self.assertIn(name, nullable)
 
@@ -2325,11 +2327,44 @@ class ChildAdderTests(unittest.TestCase):
         )
 
     def test_every_nullable_function_is_appended_through_the_one_helper(self):
-        """Where the three null-answering functions are appended, and by what."""
+        """Where the null-answering functions are appended, and by what.
+
+        ``noRulingBlock`` joined the list with the held-out set's two cases that
+        produced no ruling: it answers "this run could not rule on anything" with
+        null, and the overview appends it through the same helper as the rest.
+        """
         self.assertEqual(
-            ["missNote", "precedentsPanel", "verifierPanel"],
+            ["missNote", "noRulingBlock", "precedentsPanel", "verifierPanel"],
             sorted({name for _, name in handed_to(self.script, "appendNode")}),
         )
+
+    def test_the_scan_runs_over_every_page_that_carries_a_script(self):
+        """Every page, not only the corpus's.
+
+        The five pages are built from one ``_JS`` constant, so their scripts are
+        byte-identical today and the corpus page's scan is evidence about all of
+        them -- ``EveryPageIsSelfContainedTests`` asserts that they are identical,
+        and it is the assertion that makes this loop more than ceremony. The loop
+        is here anyway, and names the pages that differ, because the day one page
+        grows a script of its own is the day the corpus page's scan stops being
+        evidence about it.
+        """
+        scripts = {
+            name: behaviour_script(
+                build.pages()[name].output_path.read_text(encoding="utf-8")
+            )
+            for name in PAGE_NAMES
+        }
+        self.assertIn("corpus", scripts)
+        for name, script in sorted(scripts.items()):
+            with self.subTest(page=name):
+                self.assertEqual(
+                    [],
+                    handed_to(script, "appendChild"),
+                    "a function that can answer null is handed straight to "
+                    "appendChild on {0}".format(name),
+                )
+                self.assertGreater(len(call_arguments(script, "appendChild")), 100)
 
     def test_the_helper_appends_only_a_real_node(self):
         """``appendNode`` must test for a node before it appends one.
@@ -2341,6 +2376,793 @@ class ChildAdderTests(unittest.TestCase):
         body = function_body(self.script, "appendNode")
         self.assertIn("instanceof Node", body)
         self.assertIn("appendChild", body)
+
+
+# --------------------------------------------------------------------------
+# One page per run, plus the runs index
+#
+# The viewer used to build one page -- the corpus's -- and fail on any other run.
+# ``grade.grade`` was called without the set's own key, so a second set raised
+# ``KeyError`` out of ``scores[case_no]``, and the default brief builder knew
+# only the corpus manifest. These tests hold the five pages that replaced it:
+# what each one takes from its own set, what it refuses, and what it commits.
+#
+# Two of them exist because of a failure that was *silent* rather than loud.
+# ``wild-v2`` must be briefed at policy version 2; at version 1 twelve of its
+# twenty cases are refused -- their recorded brief digests are version 2's -- and
+# the page still builds, with the twelve missing from a page nothing on it says
+# is short. So the version is cross-checked against what the run's own case files
+# recorded, and the mismatch stops the build. And a case that produced no ruling
+# was graded as a miss while appearing nowhere, so the two held-out cases in that
+# state are now in the case list, in the produced column, and in a block of their
+# own.
+# --------------------------------------------------------------------------
+
+# The five pages, in the order the index lists them.
+PAGE_NAMES = ("corpus", "codex", "wild", "wild-v2", "ryde-901")
+
+# The note each set attaches to its misses, where it attaches one. The first is
+# about the held-out set's run as a class, so it covers every miss of that set;
+# the second names its two cases, so it is attached to those cases only.
+THE_SEALED_RUN_NOTE = "docs/notes/2026-09-30-the-sealed-run.md"
+THE_SECOND_SEALED_RUN_NOTE = "docs/notes/2026-10-04-the-second-sealed-run.md"
+
+# What every file published under ``ui/dist/`` is scanned for before the
+# repository goes public. The label is the whole failure message: a hit names the
+# file and the pattern and never prints the text that matched, which would
+# republish the very thing the scan exists to keep out.
+_PUBLISH_PATTERNS = (
+    ("an absolute path under /Users/", re.compile(r"/Users/")),
+    ("an absolute path under /private/", re.compile(r"/private/")),
+    ("the author's account name", re.compile(r"hanweizhou")),
+    ("an email address", re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")),
+    ("an API key", re.compile(r"sk-[A-Za-z0-9_\-]{8,}")),
+    ("a bearer token", re.compile(r"Bearer ")),
+    ("a secret key", re.compile(r"SecretKey")),
+    ("an environment file", re.compile(r"\.env")),
+)
+
+_built_documents: Optional[Dict[str, dict]] = None
+
+
+def built_documents() -> Dict[str, dict]:
+    """Every page's document, built once for the whole test process.
+
+    Each document replays a run and rebuilds every brief in it, which is about
+    forty seconds for the five together, so building them per test would turn
+    these classes into minutes. Nothing below mutates a document.
+    """
+    global _built_documents
+    if _built_documents is None:
+        _built_documents = {
+            name: build.build_document(page=build.pages()[name]) for name in PAGE_NAMES
+        }
+    return _built_documents
+
+
+def committed_pages() -> Dict[str, str]:
+    """Every committed page under ``ui/dist/``, by path relative to it."""
+    return {
+        str(path.relative_to(build.DIST_DIR)): path.read_text(encoding="utf-8")
+        for path in sorted(build.DIST_DIR.rglob("*"))
+        if path.is_file()
+    }
+
+
+class ViewerPageRegistryTests(unittest.TestCase):
+    """One page per set, each reading its own run, key and policy version."""
+
+    def test_the_registry_holds_the_five_pages_the_sheet_names(self):
+        self.assertEqual(sorted(PAGE_NAMES), sorted(build.pages()))
+        # And the order the index lists them in, which is the corpus first
+        # because it is the page the submission links to.
+        self.assertEqual(tuple(PAGE_NAMES), build._INDEX_ORDER)
+
+    def test_every_page_is_where_the_sheet_says_it_is(self):
+        expected = {
+            "corpus": "ui/dist/index.html",
+            "codex": "ui/dist/codex/index.html",
+            "wild": "ui/dist/wild/index.html",
+            "wild-v2": "ui/dist/wild-v2/index.html",
+            "ryde-901": "ui/dist/ryde-901/index.html",
+        }
+        for name, path in sorted(expected.items()):
+            with self.subTest(page=name):
+                self.assertEqual(
+                    path,
+                    str(build.pages()[name].output_path.relative_to(build.PROJECT_ROOT)),
+                )
+
+    def test_the_corpus_page_keeps_the_path_the_submission_links_to(self):
+        """The one output path that must not move."""
+        self.assertEqual(build.OUTPUT_PATH, build.pages()["corpus"].output_path)
+        self.assertEqual(
+            "ui/dist/index.html",
+            str(build.OUTPUT_PATH.relative_to(build.PROJECT_ROOT)),
+        )
+
+    def test_every_page_reads_the_run_the_sheet_names(self):
+        expected = {
+            "corpus": "runs/deepseek-deepseek-flash",
+            "codex": "runs/codex/deepseek-deepseek-flash",
+            "wild": "runs/wild/deepseek-deepseek-flash",
+            "wild-v2": "runs/wild-v2/deepseek-deepseek-flash",
+            "ryde-901": "runs/rerun-2026-09-29/external/ryde",
+        }
+        for name, path in sorted(expected.items()):
+            with self.subTest(page=name):
+                self.assertEqual(
+                    path,
+                    str(build.pages()[name].run_dir.relative_to(build.PROJECT_ROOT)),
+                )
+
+    def test_the_organisers_case_is_read_from_the_re_run_not_the_stale_one(self):
+        """``runs/external/ryde`` predates the money facts and no longer rebuilds.
+
+        A page built from it would refuse the one case it holds, so the page
+        would be an empty shell that still exits zero.
+        """
+        page = build.pages()["ryde-901"]
+        self.assertIn("rerun-2026-09-29", str(page.run_dir))
+        self.assertNotEqual(
+            build.PROJECT_ROOT / "runs" / "external" / "ryde", page.run_dir
+        )
+
+    def test_every_page_but_the_organisers_case_is_graded_against_its_own_key(self):
+        expected = {
+            "corpus": "eval/answers/ground_truth.json",
+            "codex": "eval/answers/codex/ground_truth.json",
+            "wild": "eval/answers/wild/ground_truth.json",
+            "wild-v2": "eval/answers/wild-v2/ground_truth.json",
+        }
+        for name, path in sorted(expected.items()):
+            with self.subTest(page=name):
+                self.assertEqual(
+                    path,
+                    str(build.pages()[name].key_path.relative_to(build.PROJECT_ROOT)),
+                )
+        self.assertIsNone(build.pages()["ryde-901"].key_path)
+
+    def test_the_sealed_pages_carry_their_freeze_tags(self):
+        pages = build.pages()
+        self.assertEqual("freeze-2026-09-30", pages["wild"].freeze_tag)
+        self.assertEqual("freeze-2026-10-03", pages["wild-v2"].freeze_tag)
+        for name in ("corpus", "codex", "ryde-901"):
+            with self.subTest(page=name):
+                self.assertIsNone(pages[name].freeze_tag)
+
+    def test_the_corpus_page_sits_at_the_top_and_every_other_one_level_down(self):
+        """Depth is what every relative link on a page is computed from."""
+        pages = build.pages()
+        self.assertEqual(0, pages["corpus"].depth)
+        for name in ("codex", "wild", "wild-v2", "ryde-901"):
+            with self.subTest(page=name):
+                self.assertEqual(1, pages[name].depth)
+
+    def test_an_unknown_set_is_refused_by_name(self):
+        self.assertEqual(1, build.main(["--set", "no-such-set"]))
+
+    def test_naming_a_run_or_an_output_without_a_set_is_refused(self):
+        """``--run-dir`` and ``--out`` are one page's inputs, so they need a page."""
+        self.assertEqual(1, build.main(["--run-dir", "runs/deepseek-deepseek-flash"]))
+        self.assertEqual(1, build.main(["--out", "/tmp/whatever.html"]))
+
+
+class PolicyVersionTests(unittest.TestCase):
+    """A set briefed at the wrong policy version must stop the build, not shrink.
+
+    ``wild-v2`` is the case this exists for. At version 1, twelve of its twenty
+    cases are refused -- their recorded brief digests are version 2's -- and the
+    page still builds with the twelve missing. Twelve missing cases out of twenty
+    is not something a reader can tell by looking at the page, so the version is
+    checked against what the run's own case files recorded and a disagreement
+    stops the build instead.
+    """
+
+    def test_the_second_sealed_set_is_registered_at_version_two(self):
+        self.assertEqual(2, build.pages()["wild-v2"].policy_version)
+
+    def test_briefing_the_second_sealed_set_at_version_one_is_refused(self):
+        page = build.pages()["wild-v2"]
+        wrong = dataclasses.replace(page, policy_version=1)
+        with self.assertRaises(build.BuildError) as caught:
+            build.build_document(page=wrong)
+        message = str(caught.exception)
+        self.assertIn("policy version", message)
+        self.assertIn("wild-v2", message)
+        # The cases are named, so the reader sees which records disagree rather
+        # than being told only that something does.
+        self.assertIn("701", message)
+
+    def test_the_check_reads_the_version_the_run_itself_recorded(self):
+        """The control: the guard has something to read, and reads it.
+
+        A page whose version is right is admitted, which is what stops the guard
+        from being a rule that refuses everything.
+        """
+        mismatches = build._policy_version_mismatches(
+            {701: {"configuration": {"policy_version": 2}}},
+            build.pages()["wild-v2"],
+        )
+        self.assertEqual([], mismatches)
+        self.assertEqual(
+            1,
+            len(
+                build._policy_version_mismatches(
+                    {701: {"configuration": {"policy_version": 1}}},
+                    build.pages()["wild-v2"],
+                )
+            ),
+        )
+
+
+class PerSetPageTests(unittest.TestCase):
+    """What each page takes from its own set, asserted on the built documents."""
+
+    @classmethod
+    def setUpClass(cls):
+        skip_unless_the_run_can_be_drawn()
+        cls.documents = built_documents()
+
+    def test_every_page_names_its_own_set(self):
+        for name in PAGE_NAMES:
+            with self.subTest(page=name):
+                self.assertEqual(name, self.documents[name]["set"]["name"])
+
+    def test_every_page_carries_its_own_title_and_brand(self):
+        """The two strings that were the corpus's on every page."""
+        titles = [self.documents[name]["set"]["title"] for name in PAGE_NAMES]
+        brands = [self.documents[name]["set"]["brand"] for name in PAGE_NAMES]
+        for name in PAGE_NAMES:
+            with self.subTest(page=name):
+                self.assertTrue(self.documents[name]["set"]["title"])
+                self.assertIn("Tribunal", self.documents[name]["set"]["title"])
+        # A reader with two pages open has only the title bar to tell them apart,
+        # so no two pages may share one.
+        self.assertEqual(len(PAGE_NAMES), len(set(titles)))
+        self.assertEqual(len(PAGE_NAMES), len(set(brands)))
+
+    def test_the_sealed_pages_carry_the_caveat_the_registration_already_writes(self):
+        """No new caveat text: the words come out of ``eval/development_sets.py``."""
+        from eval import development_sets
+
+        for name in ("wild", "wild-v2"):
+            with self.subTest(page=name):
+                self.assertEqual(
+                    development_sets.SEALED_SET_SECTIONS[name][1],
+                    self.documents[name]["set"]["caveat"],
+                )
+        for name in ("corpus", "codex", "ryde-901"):
+            with self.subTest(page=name):
+                self.assertIsNone(self.documents[name]["set"]["caveat"])
+
+    def test_the_footer_digest_is_the_sets_own_key(self):
+        """The corpus key's digest on the held-out page would be a claim about a
+        key that run was never graded against."""
+        digests = {}
+        for name in ("corpus", "codex", "wild", "wild-v2"):
+            with self.subTest(page=name):
+                digest = self.documents[name]["provenance"]["answer_key_sha256"]
+                self.assertEqual(grade.answer_key_sha256(build.pages()[name].key_path), digest)
+                digests[name] = digest
+        self.assertEqual(
+            len(digests), len(set(digests.values())), "two sets share a key digest"
+        )
+        self.assertIsNone(
+            self.documents["ryde-901"]["provenance"]["answer_key_sha256"]
+        )
+
+    def test_the_default_case_is_the_one_the_set_names(self):
+        self.assertEqual(208, self.documents["corpus"]["default_case"])
+        self.assertEqual(901, self.documents["ryde-901"]["default_case"])
+
+    def test_every_other_page_opens_on_a_case_that_matched_four_fields(self):
+        """For the three sets that name none, the opening case is a fact about
+        the run rather than a number chosen by hand."""
+        for name in ("codex", "wild", "wild-v2"):
+            with self.subTest(page=name):
+                document = self.documents[name]
+                cases = {case["case_no"]: case for case in document["cases"]}
+                opened = cases[document["default_case"]]
+                self.assertTrue(opened["grading"]["exact"])
+
+    def test_the_corpus_target_is_shown_only_on_the_corpus_page(self):
+        """The target is a property of the 29-case corpus. A sealed set's rate
+        printed beside it would invite a comparison the set is not answerable
+        to."""
+        self.assertTrue(
+            self.documents["corpus"]["headline"]["escalation"]["corpus_target"]
+        )
+        for name in ("codex", "wild", "wild-v2"):
+            with self.subTest(page=name):
+                self.assertFalse(
+                    self.documents[name]["headline"]["escalation"]["corpus_target"]
+                )
+
+    def test_the_organisers_case_has_no_accuracy_figures_at_all(self):
+        headline = self.documents["ryde-901"]["headline"]
+        self.assertIsNone(headline["exact"])
+        self.assertEqual([], headline["exact_bases"])
+        self.assertIsNone(headline["escalation"])
+        self.assertEqual({}, headline["fields"])
+
+    def test_the_organisers_case_is_shown_beside_its_stated_expectation(self):
+        """Not a key: labelled as what it is, and never compared field by field."""
+        document = self.documents["ryde-901"]
+        stated = document["stated_expectation"]
+        self.assertIsNotNone(stated)
+        self.assertEqual("Cancellation charge UPHELD", stated["expected_outcome_as_stated"])
+        self.assertIn("NOT part of eval/answers/ground_truth.json", stated["not_the_answer_key"])
+        self.assertEqual(1, len(document["cases"]))
+        self.assertIsNone(document["cases"][0]["grading"])
+
+    def test_the_organisers_case_still_shows_the_ruling_the_run_reached(self):
+        """A page with no key is not a page with no result.
+
+        The produced side used to be read out of the grader's parsed ruling, and
+        there is no grader here, so all four fields came out ``null`` -- which
+        hides a ruling the run did produce.
+        """
+        verdict = self.documents["ryde-901"]["cases"][0]["judge"]["verdict"]
+        self.assertEqual("ESCALATE", verdict["ruling"])
+        self.assertEqual([], verdict["referrals"])
+
+    def test_an_invocations_file_whose_cases_is_a_list_is_read(self):
+        """The organisers' re-run writes ``cases`` as a list, not a mapping.
+
+        Reading ``.items()`` off it raised ``AttributeError``, so the one page
+        with no key could not be built at all.
+        """
+        run_dir = build.pages()["ryde-901"].run_dir
+        invocations = json.loads(
+            (run_dir / "invocations.json").read_text(encoding="utf-8")
+        )
+        self.assertIsInstance(invocations, list)
+        self.assertTrue(
+            any(isinstance(entry.get("cases"), list) for entry in invocations),
+            "the shape this test is about is no longer in the run",
+        )
+        provenance = build._provenance(
+            json.loads((run_dir / "run.json").read_text(encoding="utf-8")),
+            invocations,
+            run_dir,
+            {},
+            None,
+        )
+        self.assertEqual(len(invocations), len(provenance["invocations"]))
+        for entry in provenance["invocations"]:
+            # The count asked for is the one a bare list can carry; the split
+            # into completed and failed is not claimed, because the record does
+            # not carry it.
+            self.assertEqual(1, entry["requested"])
+            self.assertIsNone(entry["completed"])
+            self.assertIsNone(entry["failed"])
+
+
+class HeadlineBasisTests(unittest.TestCase):
+    """The two bases of the four-field figure, and the report they must equal."""
+
+    @classmethod
+    def setUpClass(cls):
+        skip_unless_the_run_can_be_drawn()
+        cls.documents = built_documents()
+
+    def test_the_sealed_sets_report_both_bases_and_label_them(self):
+        expected = {"wild": ["55/62", "55/64"], "wild-v2": ["18/20", "18/20"]}
+        for name, figures in sorted(expected.items()):
+            with self.subTest(page=name):
+                bases = self.documents[name]["headline"]["exact_bases"]
+                self.assertEqual(figures, [basis["display"] for basis in bases])
+                # A case with no ruling is the whole difference between the two,
+                # so the labels have to say which is which.
+                self.assertIn("produced a ruling", bases[0]["label"])
+                self.assertIn("counted as a miss", bases[1]["label"])
+                self.assertEqual(
+                    figures[1], self.documents[name]["headline"]["exact"]["display"]
+                )
+
+    def test_the_two_bases_equal_what_eval_sealed_report_prints(self):
+        """Asserted against the report command, not against numbers typed here."""
+        for name in ("wild", "wild-v2"):
+            with self.subTest(page=name):
+                completed = subprocess.run(
+                    [sys.executable, "-m", "eval.sealed_report", "--set", name],
+                    cwd=str(PROJECT_ROOT),
+                    capture_output=True,
+                    text=True,
+                )
+                self.assertEqual(0, completed.returncode, completed.stderr)
+                self.assertIn("Four-field exact", completed.stdout)
+                section = completed.stdout.split("Four-field exact", 1)[1]
+                printed = re.findall(r": (\d+/\d+)", section)[:2]
+                bases = self.documents[name]["headline"]["exact_bases"]
+                self.assertEqual(printed, [basis["display"] for basis in bases])
+
+
+class NoRulingTests(unittest.TestCase):
+    """The two cases the held-out set asked and could not rule on.
+
+    They are graded as misses -- a case that produced nothing is not a case that
+    agreed -- and they used to appear nowhere on the page, so the figure counted
+    them and nothing let a reader find them.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        skip_unless_the_run_can_be_drawn()
+        cls.document = built_documents()["wild"]
+        cls.cases = {case["case_no"]: case for case in cls.document["cases"]}
+
+    def test_the_run_recorded_two_cases_it_could_not_rule_on(self):
+        self.assertEqual(
+            [517, 533],
+            sorted(case["case_no"] for case in self.document["no_ruling_cases"]),
+        )
+
+    def test_each_is_listed_with_the_runs_own_failure_kind_and_detail(self):
+        for entry in self.document["no_ruling_cases"]:
+            with self.subTest(case=entry["case_no"]):
+                self.assertEqual("SHAPE", entry["failure_kind"])
+                self.assertEqual("JUDGE", entry["failed_agent"])
+                self.assertTrue(entry["detail"], "the failure detail did not reach the page")
+
+    def test_they_are_in_the_case_list_and_graded_as_misses(self):
+        """A case with no ruling is a miss, not a case that is absent."""
+        for case_no in (517, 533):
+            with self.subTest(case=case_no):
+                case = self.cases[case_no]
+                self.assertFalse(case["has_ruling"])
+                self.assertFalse(case["grading"]["exact"])
+                self.assertEqual(
+                    ["ruling", "amount_sgd", "driver_compensation_sgd", "referrals"],
+                    case["grading"]["failed_fields"],
+                )
+                self.assertIsNone(case["judge"]["verdict"]["ruling"])
+                self.assertEqual([], case["judge"]["verdict"]["referrals"])
+
+    def test_the_judge_step_carries_four_abstained_drafts(self):
+        for case_no in (517, 533):
+            with self.subTest(case=case_no):
+                vote = self.cases[case_no]["vote"]
+                self.assertEqual(4, len(vote["drafts"]))
+                self.assertEqual(0, vote["valid"])
+                for draft in vote["drafts"]:
+                    self.assertEqual("abstained", draft["verdict"])
+
+    def test_the_stance_proof_says_the_ranges_were_not_recorded(self):
+        """An empty list would read as a recorded finding that the two renders
+        do not differ, which is the opposite of what the run left behind."""
+        for case_no in (517, 533):
+            with self.subTest(case=case_no):
+                proof = self.cases[case_no]["stance_proof"]
+                self.assertIsNone(proof["recorded_differing_ranges"])
+                self.assertTrue(proof["differing_ranges"])
+
+    def test_the_brief_is_verified_through_the_advocates_own_digest(self):
+        """The route a case with no result file is admitted by.
+
+        There is no ``brief_sha256`` in a result that was never written, so the
+        digest comes from the advocates' own transcript entries -- which are the
+        same brief by the other place the run records it.
+        """
+        for case_no in (517, 533):
+            with self.subTest(case=case_no):
+                case = self.cases[case_no]
+                self.assertEqual(64, len(case["brief_sha256"]))
+                for role in ("RIDER_ADVOCATE", "DRIVER_ADVOCATE"):
+                    self.assertEqual(
+                        case["brief_sha256"], case["advocates"][role]["user_sha256"]
+                    )
+
+    def test_the_failed_cases_tokens_are_in_the_total(self):
+        """The headline is a figure over the run, so the tokens it spent failing
+        are part of it."""
+        tokens = self.document["headline"]["tokens"]
+        self.assertEqual(2, tokens["failed_cases"])
+        self.assertEqual(526237, tokens["failed_total"])
+        run = json.loads(
+            (build.pages()["wild"].run_dir / "run.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(run["tokens"]["total_for_the_case_set"], tokens["total"])
+        self.assertEqual(64, tokens["cases"])
+
+    def test_the_produced_column_says_no_ruling_rather_than_nothing(self):
+        """The data half of the claim, and then the script that draws it.
+
+        A blank cell would read as a ruling of ``null``, which is a token this
+        system emits and a different thing from a case that produced nothing.
+        """
+        for case_no in (517, 533):
+            with self.subTest(case=case_no):
+                self.assertFalse(self.cases[case_no]["has_ruling"])
+        script = behaviour_script(
+            build.pages()["corpus"].output_path.read_text(encoding="utf-8")
+        )
+        self.assertIn('"no ruling"', script)
+        self.assertIn("c.has_ruling", script)
+        self.assertIn("DATA.no_ruling_cases", script)
+
+
+class MissNoteTests(unittest.TestCase):
+    """Which miss links to which note, and which links to nothing.
+
+    Both ``missNote`` and the last step used to label every miss "a contested
+    reading rather than a defect" and link one note that is only about case 211.
+    On a page whose misses have no note written about them, that is a claim this
+    repository does not make.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        skip_unless_the_run_can_be_drawn()
+        cls.documents = built_documents()
+
+    @staticmethod
+    def _misses(document: dict) -> list:
+        return sorted(
+            str(case["case_no"])
+            for case in document["cases"]
+            if case["grading"] and not case["grading"]["exact"]
+        )
+
+    def test_the_two_named_cases_of_the_second_sealed_set_link_to_their_note(self):
+        notes = self.documents["wild-v2"]["miss_notes"]
+        self.assertEqual(["702", "716"], sorted(notes))
+        for case_no in ("702", "716"):
+            with self.subTest(case=case_no):
+                self.assertEqual(THE_SECOND_SEALED_RUN_NOTE, notes[case_no]["note"])
+                self.assertTrue(
+                    notes[case_no]["link"].endswith(THE_SECOND_SEALED_RUN_NOTE)
+                )
+
+    def test_every_miss_of_the_held_out_set_links_to_the_note_about_that_set(self):
+        document = self.documents["wild"]
+        self.assertEqual(self._misses(document), sorted(document["miss_notes"]))
+        for case_no, note in sorted(document["miss_notes"].items()):
+            with self.subTest(case=case_no):
+                self.assertEqual(THE_SEALED_RUN_NOTE, note["note"])
+
+    def test_a_miss_with_no_note_gets_no_link_and_no_contested_wording(self):
+        """The second development set's one miss has no note about it."""
+        document = self.documents["codex"]
+        self.assertEqual(["9111"], self._misses(document))
+        self.assertEqual({}, document["miss_notes"])
+
+    def test_no_note_is_attached_to_a_case_that_is_not_a_miss(self):
+        for name in PAGE_NAMES:
+            document = self.documents[name]
+            with self.subTest(page=name):
+                cases = {case["case_no"]: case for case in document["cases"]}
+                for case_no in document["miss_notes"]:
+                    self.assertFalse(cases[int(case_no)]["grading"]["exact"])
+
+    def test_the_link_is_written_for_the_depth_of_its_own_page(self):
+        """A note linked from ``ui/dist/wild/`` needs one more ``../`` than one
+        linked from ``ui/dist/``."""
+        for note in self.documents["wild"]["miss_notes"].values():
+            with self.subTest(link=note["link"]):
+                self.assertTrue(note["link"].startswith("../../../docs/notes/"))
+        for note in self.documents["wild-v2"]["miss_notes"].values():
+            with self.subTest(link=note["link"]):
+                self.assertTrue(note["link"].startswith("../../../docs/notes/"))
+
+
+class EveryPageIsCommittedTests(unittest.TestCase):
+    """Each page and the index: the committed bytes are the bytes this code makes."""
+
+    @classmethod
+    def setUpClass(cls):
+        skip_unless_the_run_can_be_drawn()
+        cls.documents = built_documents()
+
+    def test_every_page_is_committed_and_equals_a_fresh_build(self):
+        for name in PAGE_NAMES:
+            path = build.pages()[name].output_path
+            with self.subTest(page=name):
+                self.assertTrue(
+                    path.is_file(),
+                    "{0} is not committed; run `python3 -m ui.build`".format(path),
+                )
+                self.assertEqual(
+                    build.render_html(self.documents[name]),
+                    path.read_text(encoding="utf-8"),
+                    "{0} differs from a fresh build; run `python3 -m ui.build`".format(path),
+                )
+
+    def test_the_runs_index_is_committed_and_equals_a_fresh_build(self):
+        self.assertTrue(
+            build.INDEX_PATH.is_file(), "run `python3 -m ui.build`"
+        )
+        self.assertEqual(
+            build.render_index(self.documents),
+            build.INDEX_PATH.read_text(encoding="utf-8"),
+            "ui/dist/runs/index.html differs from a fresh build; "
+            "run `python3 -m ui.build`",
+        )
+
+    def test_the_index_lists_one_row_per_page_and_nothing_else(self):
+        text = build.INDEX_PATH.read_text(encoding="utf-8")
+        # Five rows plus the header row.
+        self.assertEqual(1 + len(PAGE_NAMES), text.count("<tr>"))
+        for name in PAGE_NAMES:
+            with self.subTest(page=name):
+                self.assertIn(">" + name + "</a>", text)
+
+    def test_the_index_figures_are_the_figures_its_pages_print(self):
+        """Computed from the built documents, never typed in."""
+        text = build.INDEX_PATH.read_text(encoding="utf-8")
+        for name in ("corpus", "codex", "wild", "wild-v2"):
+            with self.subTest(page=name):
+                display = self.documents[name]["headline"]["exact"]["display"]
+                self.assertIn(display, text)
+        self.assertIn("not graded", text)
+
+    def test_the_sealed_sets_stand_alone_and_are_never_summed(self):
+        """One figure over 64 cases plus another over 20 is not a measurement of
+        84 cases, so no row may say it is.
+
+        The index's own lead says the two are not added, and names the count it
+        would have been -- so the check is for a figure *over* that count rather
+        than for the number itself.
+        """
+        text = build.INDEX_PATH.read_text(encoding="utf-8")
+        for tag in ("freeze-2026-09-30", "freeze-2026-10-03"):
+            with self.subTest(tag=tag):
+                self.assertIn(tag, text)
+        self.assertNotIn("/84", text, "the index prints a figure over both sealed sets")
+        for name in ("wild", "wild-v2"):
+            with self.subTest(page=name):
+                display = self.documents[name]["headline"]["exact"]["display"]
+                self.assertIn(display, text)
+
+    def test_every_page_links_to_the_index_and_the_index_links_back(self):
+        index = build.INDEX_PATH.read_text(encoding="utf-8")
+        for name in PAGE_NAMES:
+            with self.subTest(page=name):
+                page = build.pages()[name]
+                text = page.output_path.read_text(encoding="utf-8")
+                self.assertIn(
+                    'href="{0}"'.format(self.documents[name]["set"]["runs_index_link"]),
+                    text,
+                )
+                from_index = "../" + page.output_path.relative_to(build.DIST_DIR).as_posix()
+                self.assertIn('href="{0}"'.format(from_index), index)
+
+
+class EveryPageIsSelfContainedTests(unittest.TestCase):
+    """Every published file is one file with nothing external in it."""
+
+    def test_no_published_file_references_an_external_resource(self):
+        for relative, text in sorted(committed_pages().items()):
+            with self.subTest(page=relative):
+                scan = _ResourceScan()
+                scan.feed(text)
+                external = [
+                    url for _, _, url in scan.references if is_external_reference(url)
+                ]
+                self.assertEqual(
+                    [], external, "{0} references an external resource".format(relative)
+                )
+                for tag in ("<link", "<iframe", "<object", "<embed"):
+                    self.assertNotIn(tag, text, "{0} embeds {1}".format(relative, tag))
+
+    def test_no_published_file_fetches_anything_at_runtime(self):
+        for relative, text in sorted(committed_pages().items()):
+            scan = _ResourceScan()
+            scan.feed(text)
+            script = "\n".join(scan.script_bodies)
+            for call in (
+                "fetch(",
+                "XMLHttpRequest",
+                "importScripts(",
+                "new Worker(",
+                "new EventSource(",
+                "new WebSocket(",
+            ):
+                with self.subTest(page=relative, call=call):
+                    self.assertNotIn(call, script)
+
+    def test_every_page_but_the_index_carries_the_same_script(self):
+        """Said out loud, because the ``appendNode`` scan depends on it.
+
+        The pages are built from one ``_JS`` constant, so their scripts are
+        byte-identical today and a scan of the corpus page is a scan of all five.
+        If that stops being true, this says so, and ``ChildAdderTests`` starts
+        scanning each page separately.
+        """
+        scripts = {
+            name: behaviour_script(
+                build.pages()[name].output_path.read_text(encoding="utf-8")
+            )
+            for name in PAGE_NAMES
+        }
+        differing = sorted(
+            name for name, script in scripts.items() if script != scripts["corpus"]
+        )
+        self.assertEqual([], differing, "these pages carry a script of their own")
+
+
+class PublishScanTests(unittest.TestCase):
+    """Everything under ``ui/dist/`` is scanned before the repository goes public."""
+
+    def test_no_published_file_carries_a_path_a_secret_or_an_address(self):
+        published = committed_pages()
+        self.assertTrue(published, "ui/dist/ is empty")
+        for relative, text in sorted(published.items()):
+            for label, pattern in _PUBLISH_PATTERNS:
+                with self.subTest(file=relative, pattern=label):
+                    self.assertIsNone(
+                        pattern.search(text),
+                        "{0} matches {1}".format(relative, label),
+                    )
+
+    def test_the_scan_can_fire(self):
+        """A positive control over every pattern.
+
+        Without it the scan would pass just as well if a pattern were written
+        wrong and matched nothing at all, which is the failure it exists to
+        prevent one level up.
+
+        The planted text is assembled from pieces rather than written out whole.
+        A key-shaped or path-shaped literal in this file would be a false alarm
+        for every scan of the repository -- including the one next door, which
+        reads this file's own shapes -- and a file that cries wolf about itself
+        is a file whose scan nobody trusts.
+        """
+        home = "/" + "Users" + "/someone"
+        account = "hanwei" + "zhou"
+        address = "someone" + "@" + "example.com"
+        key = "sk-" + "ABCDEFGH1234"
+        planted = "\n".join(
+            [
+                home + "/Desktop/Tribunal",
+                "/private/tmp/scratch",
+                "the author is " + account,
+                "write to " + address,
+                key,
+                "Authorization: Bearer abcdef",
+                "AWSSecretKey = x",
+                "read the .env file",
+            ]
+        )
+        caught = [label for label, pattern in _PUBLISH_PATTERNS if pattern.search(planted)]
+        self.assertEqual(len(_PUBLISH_PATTERNS), len(caught), caught)
+
+
+class CheckCoversEveryPageTests(unittest.TestCase):
+    """``--check`` is the gate, so it must look at every page and at the index."""
+
+    def test_check_examines_every_page_and_the_index(self):
+        completed = subprocess.run(
+            [sys.executable, "-m", "ui.build", "--check"],
+            cwd=str(PROJECT_ROOT),
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(0, completed.returncode, completed.stdout + completed.stderr)
+        paths = [build.pages()[name].output_path for name in PAGE_NAMES]
+        paths.append(build.INDEX_PATH)
+        for path in paths:
+            with self.subTest(path=path.name):
+                self.assertIn(str(path), completed.stdout)
+                self.assertIn("identical to a fresh build", completed.stdout)
+
+    def test_check_fails_when_a_page_on_disk_differs(self):
+        """The gate's own control: a changed byte must make it exit non-zero."""
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp) / "one-page.html"
+            self.assertEqual(
+                0,
+                build._write_or_check(destination, "first", False, "a page"),
+            )
+            self.assertEqual(
+                0,
+                build._write_or_check(destination, "first", True, "a page"),
+            )
+            self.assertEqual(
+                1,
+                build._write_or_check(destination, "second", True, "a page"),
+            )
 
 
 if __name__ == "__main__":

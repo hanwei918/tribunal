@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tribunal - the runs</title>
+<style>
+:root {
+  --bg: #0e1116;
+  --panel: #161c23;
+  --panel-2: #1c242d;
+  --line: #2b3641;
+  --text: #e8eef5;
+  --muted: #9dabb9;
+  --accent: #79c0ff;
+  --rider: #f0a35e;
+  --driver: #62d2a2;
+  --judge: #b9a2ff;
+  --ok: #4ac26b;
+  --warn: #d8a72a;
+  --bad: #ff6b6b;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  padding-bottom: 74px;
+}
+a { color: var(--accent); }
+h1, h2, h3, h4 { margin: 0 0 8px 0; line-height: 1.25; }
+h1 { font-size: 20px; letter-spacing: 0.01em; }
+h2 { font-size: 22px; margin-top: 4px; }
+h3 { font-size: 16px; color: var(--text); margin-top: 22px; }
+h4 { font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+p { margin: 8px 0; }
+code, .mono { font-family: var(--mono); font-size: 12.5px; }
+
+header.top {
+  position: sticky; top: 0; z-index: 20;
+  background: rgba(14,17,22,0.94);
+  border-bottom: 1px solid var(--line);
+  padding: 10px 20px;
+  display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+}
+header.top .brand { font-weight: 600; font-size: 15px; }
+header.top .spacer { flex: 1; }
+header.top .runs-link { font-size: 13px; color: var(--accent); text-decoration: none; }
+header.top .runs-link:hover { text-decoration: underline; }
+nav.views { display: flex; gap: 6px; }
+main { padding: 20px; max-width: 1180px; margin: 0 auto; }
+
+button {
+  font: inherit; color: var(--text); background: var(--panel-2);
+  border: 1px solid var(--line); border-radius: 6px; padding: 5px 11px; cursor: pointer;
+}
+button:hover { border-color: var(--accent); }
+button.on { background: var(--accent); color: #08121c; border-color: var(--accent); font-weight: 600; }
+button:disabled { opacity: 0.4; cursor: default; }
+button:disabled:hover { border-color: var(--line); }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin: 16px 0 6px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 13px 15px; }
+.card .label { color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.07em; }
+.card .value { font-size: 25px; font-weight: 650; margin-top: 5px; font-variant-numeric: tabular-nums; }
+.card .sub { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
+.card.wide { grid-column: span 2; }
+
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { text-align: left; padding: 6px 9px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.05em; }
+tbody tr:hover { background: #1a222b; }
+tr.clickable { cursor: pointer; }
+tr.miss td { background: rgba(255,107,107,0.09); }
+tr.miss:hover td { background: rgba(255,107,107,0.16); }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.case-no { font-weight: 650; font-variant-numeric: tabular-nums; }
+
+.badge { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 11.5px;
+  border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.badge.ok { color: var(--ok); border-color: rgba(74,194,107,0.5); }
+.badge.miss { color: var(--bad); border-color: rgba(255,107,107,0.5); }
+.badge.rider { color: var(--rider); border-color: rgba(240,163,94,0.5); }
+.badge.driver { color: var(--driver); border-color: rgba(98,210,162,0.5); }
+.badge.judge { color: var(--judge); border-color: rgba(185,162,255,0.5); }
+.badge.complete { color: var(--ok); border-color: rgba(74,194,107,0.5); }
+.badge.impaired { color: var(--warn); border-color: rgba(216,167,42,0.6); background: rgba(216,167,42,0.10); }
+.badge.missing { color: var(--bad); border-color: rgba(255,107,107,0.6); background: rgba(255,107,107,0.10); }
+
+.case-picker { display: flex; flex-wrap: wrap; gap: 5px; margin: 12px 0 16px; }
+.case-picker button { padding: 3px 9px; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.case-picker button.miss { border-color: rgba(255,107,107,0.45); color: #ffc9c9; }
+
+.case-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+.case-head .title { font-size: 19px; font-weight: 650; }
+
+.stepper { display: flex; gap: 6px; flex-wrap: wrap; margin: 14px 0; align-items: center; }
+.stepper .step { font-size: 12.5px; }
+.stepper .nav { margin-left: auto; display: flex; gap: 6px; }
+
+section.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  padding: 16px 18px; margin-top: 14px; }
+section.panel + section.panel { margin-top: 14px; }
+
+blockquote { margin: 10px 0; padding: 10px 14px; border-left: 3px solid var(--line);
+  background: var(--panel-2); border-radius: 0 8px 8px 0; color: var(--text); }
+blockquote .who { display: block; color: var(--muted); font-size: 12px; margin-bottom: 5px; }
+
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 3px 16px; margin: 8px 0; font-size: 13.5px; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; }
+
+dl.tree { display: grid; grid-template-columns: max-content 1fr; gap: 2px 14px; margin: 4px 0 4px 0; }
+dl.tree > dt { color: var(--muted); font-family: var(--mono); font-size: 12px; padding-top: 1px; }
+dl.tree > dd { margin: 0; }
+ul.vals { margin: 0; padding-left: 16px; }
+.null { color: #7b8794; font-style: italic; }
+.bool { color: var(--accent); font-family: var(--mono); font-size: 12.5px; }
+.scalar { font-family: var(--mono); font-size: 12.5px; }
+.src { color: var(--muted); font-family: var(--mono); font-size: 11px; margin-left: 7px;
+  border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+.empty { color: var(--muted); }
+
+.artifact { border: 1px solid var(--line); border-left-width: 4px; border-radius: 8px;
+  padding: 12px 14px; margin: 10px 0; background: var(--panel-2); }
+.artifact.COMPLETE { border-left-color: var(--ok); }
+.artifact.IMPAIRED { border-left-color: var(--warn); }
+.artifact.MISSING { border-left-color: var(--bad); background: rgba(255,107,107,0.05); }
+.artifact.flash { animation: flash 1.9s ease-out 1; }
+@keyframes flash { 0% { background: rgba(121,192,255,0.30); } 100% { background: var(--panel-2); } }
+.artifact .head { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; }
+.artifact .id { font-family: var(--mono); font-weight: 650; font-size: 13px; }
+.artifact .notes { color: var(--muted); font-size: 13px; margin: 7px 0 0 0; }
+.artifact .issues { margin-top: 6px; display: flex; gap: 5px; flex-wrap: wrap; }
+
+details { margin-top: 9px; }
+details > summary { cursor: pointer; color: var(--muted); font-size: 12.5px; }
+details[open] > summary { margin-bottom: 6px; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; align-items: center; }
+.chips .chips-label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; margin-right: 3px; }
+.chip { font-family: var(--mono); font-size: 11.5px; padding: 1px 7px; border-radius: 999px;
+  background: #223040; border: 1px solid #33465a; color: #bcd8f5; }
+.chip:hover { border-color: var(--accent); }
+.chip.evidence { background: #1f2d24; border-color: #33543f; color: #b6e8c4; }
+.chip.clause { background: #2b2537; border-color: #453a5c; color: #d6c8ff; }
+.chip.unknown { background: rgba(255,107,107,0.12); border-color: rgba(255,107,107,0.5); color: #ffc9c9; }
+.chip.issue { background: rgba(216,167,42,0.14); border-color: rgba(216,167,42,0.5); color: #f2d68a; }
+
+.claim { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin: 10px 0; background: var(--panel-2); }
+.claim .claim-head { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; color: var(--muted); font-size: 12px; }
+.claim .claim-no { font-family: var(--mono); color: var(--text); font-weight: 650; }
+.claim .text { margin: 8px 0 0 0; }
+.claim.discarded { border-color: rgba(255,107,107,0.4); background: rgba(255,107,107,0.06); }
+
+.role { border-top: 3px solid var(--line); padding-top: 12px; }
+.role.RIDER_ADVOCATE { border-top-color: var(--rider); }
+.role.DRIVER_ADVOCATE { border-top-color: var(--driver); }
+.role.JUDGE { border-top-color: var(--judge); }
+
+.callbar { color: var(--muted); font-size: 12px; font-family: var(--mono); margin-top: 6px; }
+.callbar .warn { color: var(--warn); }
+pre.raw { background: #10151b; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px;
+  overflow-x: auto; font-family: var(--mono); font-size: 12px; white-space: pre-wrap; word-break: break-word; max-height: 340px; }
+
+footer.prov { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+  background: rgba(18,23,29,0.97); border-top: 1px solid var(--line);
+  padding: 7px 20px; font-size: 11.5px; color: var(--muted); font-family: var(--mono);
+  display: flex; flex-wrap: wrap; gap: 4px 18px; }
+footer.prov b { color: var(--text); font-weight: 600; }
+
+.modal { position: fixed; inset: 0; z-index: 50; background: rgba(5,8,11,0.72);
+  display: flex; align-items: flex-start; justify-content: center; padding: 48px 20px; }
+.modal .box { background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+  max-width: 820px; width: 100%; max-height: 78vh; overflow: auto; padding: 18px 20px; }
+.modal .box .head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.modal .box .head .id { font-family: var(--mono); font-weight: 650; font-size: 15px; color: var(--judge); }
+.modal .box .close { margin-left: auto; }
+.modal .rule { margin-top: 12px; white-space: pre-wrap; }
+
+.miss-note { margin-top: 10px; padding: 11px 14px; border: 1px solid rgba(255,107,107,0.4);
+  border-radius: 8px; background: rgba(255,107,107,0.06); font-size: 13.5px; }
+.warnbox { margin-top: 12px; padding: 11px 14px; border: 1px solid rgba(216,167,42,0.5);
+  border-radius: 8px; background: rgba(216,167,42,0.07); font-size: 13.5px; }
+.lead { color: var(--muted); max-width: 78ch; }
+.hint { color: var(--muted); font-size: 12.5px; margin-top: 10px; }
+
+/* ---- the judge's vote ------------------------------------------------- */
+/* A ruling one draft reached and a ruling four drafts agreed on look the same
+   in the result object; this panel is what tells them apart. */
+.vote-result { border: 1px solid var(--line); border-left-width: 4px; border-radius: 8px;
+  padding: 11px 14px; margin: 10px 0; background: var(--panel-2); }
+/* The class is the outcome string the run recorded, spelled out here once so
+   the colour cannot drift away from the word. */
+.vote-result.carried { border-left-color: var(--ok); }
+.vote-result.carried_not_unanimous { border-left-color: var(--warn); }
+.vote-result.escalated { border-left-color: var(--bad); }
+.vote-result .headline { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; }
+.vote-result .headline .what { font-weight: 600; }
+.draft { border: 1px solid var(--line); border-left-width: 4px; border-radius: 8px;
+  padding: 10px 13px; margin: 9px 0; background: var(--panel-2); }
+.draft.agreed { border-left-color: var(--ok); }
+.draft.dissented { border-left-color: var(--warn); }
+.draft.abstained { border-left-color: #5d6b78; background: rgba(157,171,185,0.05); }
+.draft .draft-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  color: var(--muted); font-size: 12px; }
+.draft .draft-no { font-family: var(--mono); color: var(--text); font-weight: 650; }
+.draft .notes { color: var(--muted); font-size: 12.5px; margin: 6px 0 0 0; }
+.badge.sampled { color: var(--accent); border-color: rgba(121,192,255,0.5); }
+.badge.swapped { color: var(--judge); border-color: rgba(185,162,255,0.5); }
+.badge.agreed { color: var(--ok); border-color: rgba(74,194,107,0.5); }
+.badge.dissented { color: var(--warn); border-color: rgba(216,167,42,0.6); background: rgba(216,167,42,0.10); }
+.badge.abstained { color: var(--muted); }
+.badge.contested { color: var(--warn); border-color: rgba(216,167,42,0.6); }
+/* The verifier's findings and the precedents the judge was shown. Both panels
+   are drawn only when the run recorded them, so a case decided with either
+   switch off shows neither and carries no empty heading. */
+.verifier-panel, .precedents-panel { margin-top: 18px; }
+.draft.verification { background: var(--panel); }
+.draft .verdicts { margin: 8px 0 0 0; padding-left: 18px; }
+.draft .verdicts li { margin: 5px 0; }
+.draft .verdicts li .src { margin-left: 8px; }
+.badge.material { color: var(--bad); border-color: rgba(255,107,107,0.5); }
+.badge.not_material { color: var(--muted); }
+.vote-filter { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
+.vote-filter .count { color: var(--muted); font-size: 12.5px; }
+td.vote-cell { white-space: nowrap; }
+td.vote-cell .who { color: var(--muted); font-size: 12px; margin-left: 6px; }
+tr.contested { background: rgba(216,167,42,0.06); }
+tr.contested:hover { background: rgba(216,167,42,0.12); }
+
+/* ---- stance view: the two advocates against the same record ------------ */
+.stance-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px; }
+@media (max-width: 940px) { .stance-grid { grid-template-columns: 1fr; } }
+.stance-col { background: var(--panel); border: 1px solid var(--line); border-top-width: 3px;
+  border-radius: 10px; padding: 14px 16px; }
+.stance-col.RIDER_ADVOCATE { border-top-color: var(--rider); }
+.stance-col.DRIVER_ADVOCATE { border-top-color: var(--driver); }
+.stance-col > h3 { margin-top: 0; display: flex; align-items: baseline; gap: 8px; }
+.stance-col > h3 .count { color: var(--muted); font-size: 13px; font-weight: 400; }
+.record-row { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap;
+  border: 1px solid var(--line); border-left-width: 4px; border-radius: 8px;
+  padding: 9px 12px; margin: 8px 0; background: var(--panel-2); }
+.record-row.both { border-left-color: var(--accent); }
+.record-row.one { border-left-color: var(--warn); }
+.record-row .id { font-family: var(--mono); font-weight: 650; font-size: 13px; }
+.record-row .sides { color: var(--muted); font-size: 12.5px; margin-top: 5px; flex-basis: 100%; }
+
+/* ---- deep link -------------------------------------------------------- */
+.linkbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.linkbar input { flex: 1 1 320px; min-width: 220px; font-family: var(--mono); font-size: 12px;
+  color: var(--text); background: var(--panel-2); border: 1px solid var(--line);
+  border-radius: 6px; padding: 5px 9px; }
+.linkbar .what { color: var(--muted); font-size: 12.5px; }
+
+/* ---- keyboard help ---------------------------------------------------- */
+dl.keys { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin-top: 12px; }
+dl.keys > dt { margin: 0; }
+dl.keys > dd { margin: 0; color: var(--muted); }
+kbd { font-family: var(--mono); font-size: 11.5px; background: var(--panel-2);
+  border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px;
+  padding: 1px 6px; color: var(--text); white-space: nowrap; }
+
+/* ---- the stance proof ------------------------------------------------- */
+.proof { border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px;
+  background: var(--panel); margin-top: 12px; }
+.proof > h3 { margin-top: 0; }
+.fact { border-left: 3px solid var(--ok); padding: 2px 0 2px 12px; margin: 12px 0; }
+.fact .what { font-weight: 600; }
+.fact .why { color: var(--muted); font-size: 12.5px; margin-top: 3px; max-width: 84ch; }
+dl.digests { display: grid; grid-template-columns: max-content 1fr; gap: 5px 12px;
+  margin: 9px 0 0 0; }
+dl.digests > dt { color: var(--muted); font-size: 12px; white-space: nowrap; }
+dl.digests > dd { margin: 0; }
+/* The digest is shown whole. A digest you can only see part of is not
+   evidence of equality, it is an assertion that there is equality. */
+.digest { font-family: var(--mono); font-size: 11.5px; word-break: break-all;
+  padding: 2px 7px; border-radius: 4px; border: 1px solid var(--line);
+  background: var(--panel-2); color: var(--text); }
+.digest.same { border-color: rgba(74,194,107,0.55); background: rgba(74,194,107,0.10); }
+.digest.differ { border-color: rgba(240,163,94,0.55); background: rgba(240,163,94,0.09); }
+.tag { display: inline-block; margin-left: 8px; font-size: 11px; padding: 0 6px;
+  border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.tag.ok { color: var(--ok); border-color: rgba(74,194,107,0.5); }
+
+.prompt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+@media (max-width: 940px) { .prompt-grid { grid-template-columns: 1fr; } }
+.prompt-col { border: 1px solid var(--line); border-radius: 8px; overflow: hidden;
+  background: var(--panel-2); }
+.prompt-col > h4 { margin: 0; padding: 7px 10px; border-bottom: 1px solid var(--line);
+  background: var(--panel); text-transform: none; letter-spacing: 0; font-size: 13px; }
+.plines { margin: 0; padding: 0; list-style: none; font-family: var(--mono);
+  font-size: 11px; max-height: 480px; overflow: auto; }
+.plines li { display: flex; gap: 8px; padding: 1px 8px 1px 5px; white-space: pre-wrap;
+  word-break: break-word; border-left: 3px solid transparent; }
+.plines li .n { color: #5d6b78; min-width: 28px; text-align: right; flex: none; }
+.plines li.stance { background: rgba(121,192,255,0.05); border-left-color: rgba(121,192,255,0.35); }
+.plines li.stance .n { color: var(--muted); }
+.plines li.diff { background: rgba(216,167,42,0.15); border-left-color: var(--warn); }
+.plines li.diff .t { color: #ffe6b0; }
+.marker { display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted);
+  font-size: 12px; margin-top: 10px; }
+.marker span { display: inline-flex; align-items: center; gap: 6px; }
+.swatch { display: inline-block; width: 11px; height: 11px; border-radius: 2px;
+  border: 1px solid var(--line); }
+.swatch.stance { background: rgba(121,192,255,0.05); border-color: rgba(121,192,255,0.55); }
+.swatch.diff { background: rgba(216,167,42,0.15); border-color: var(--warn); }
+
+/* ---- projector -------------------------------------------------------- */
+/* A room is not a laptop: everything scales, and the contrast goes up so a
+   pale projector does not swallow the muted text. */
+body.projector {
+  --text: #f5f9fd;
+  --muted: #c2cfdc;
+  --line: #3d4a57;
+  font-size: 19px; line-height: 1.62;
+}
+body.projector main { max-width: 1560px; padding: 24px; }
+body.projector h1 { font-size: 27px; }
+body.projector h2 { font-size: 31px; }
+body.projector h3 { font-size: 22px; margin-top: 26px; }
+body.projector h4 { font-size: 17px; }
+body.projector p, body.projector .lead { max-width: 92ch; }
+body.projector .card .value { font-size: 35px; }
+body.projector .card .label { font-size: 13px; }
+body.projector .card .sub { font-size: 15px; }
+body.projector table { font-size: 17px; }
+body.projector th, body.projector td { padding: 10px 14px; }
+body.projector th { font-size: 13px; }
+body.projector code, body.projector .mono, body.projector .scalar, body.projector .bool,
+body.projector pre.raw { font-size: 15px; }
+body.projector .chip { font-size: 14px; padding: 2px 9px; }
+body.projector .badge { font-size: 13.5px; padding: 2px 9px; }
+body.projector button { padding: 8px 15px; }
+body.projector .stepper .step { font-size: 16px; }
+body.projector .case-picker button { font-size: 15px; padding: 5px 11px; }
+body.projector .artifact, body.projector .claim, body.projector .record-row { padding: 16px 18px; }
+body.projector .artifact .id { font-size: 16px; }
+body.projector footer.prov { font-size: 14px; padding: 11px 24px; gap: 6px 22px; }
+body.projector .stance-grid { gap: 18px; }
+body.projector .modal .box { max-width: 980px; }
+/* A digest in 11px mono is unreadable from the back of a room, and the
+   stance proof is precisely the thing a room is meant to be able to check. */
+body.projector .digest { font-size: 14px; padding: 3px 10px; }
+body.projector dl.digests > dt { font-size: 14px; }
+body.projector .tag { font-size: 13px; }
+body.projector .fact .why { font-size: 15px; max-width: 92ch; }
+body.projector .plines { font-size: 14px; max-height: none; }
+body.projector .plines li { padding: 2px 10px 2px 7px; }
+body.projector .plines li .n { min-width: 34px; }
+body.projector .prompt-col > h4 { font-size: 16px; padding: 9px 12px; }
+body.projector .marker { font-size: 14px; }
+</style>
+</head>
+<body>
+<header class="top">
+  <span class="brand">Tribunal - the runs</span>
+</header>
+<main>
+<h1>The runs</h1>
+<p class="lead">Every run the viewer draws, with the figure its own page reports. Each figure is computed from that run, and the two sealed sets are never added to each other or to anything else: one figure over 64 cases plus another over 20 is not a measurement of 84 cases.</p>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Set</th><th>What it is</th><th>Cases</th><th>Headline figure</th></tr></thead>
+<tbody>
+<tr><td><a href="../index.html">corpus</a> </td><td>the 29-case corpus the submission&#x27;s headline figure is computed on</td><td class="num">29</td><td class="num">29/29<div class="sub">four-field exact over the 29 cases of the set</div></td></tr>
+<tr><td><a href="../codex/index.html">codex</a> </td><td>fifteen cases drafted by OpenAI Codex on 2026-09-24, copied in by the owner; development data, not a test set</td><td class="num">15</td><td class="num">14/15<div class="sub">four-field exact over the 15 cases of the set</div></td></tr>
+<tr><td><a href="../wild/index.html">wild</a> <span class="badge">freeze-2026-09-30</span></td><td>the held-out set (wild-v1): 64 cases derived from real complaints, prepared by their author as a development set; nobody who changed the system opened them before the freeze tagged freeze-2026-09-30, and they were run once from that tag; that single run is one of the two generalisation figures the submission reports, the other being the second sealed set&#x27;s</td><td class="num">64</td><td class="num">55/64<div class="sub">four-field exact over the 64 cases of the set</div></td></tr>
+<tr><td><a href="../wild-v2/index.html">wild-v2</a> <span class="badge">freeze-2026-10-03</span></td><td>the second sealed set (wild-v2): 20 cases prepared by OpenAI Codex for the owner and imported on 2026-10-03; it was run once from a commit whose tribunal/, prompts/ and policy/ trees equal those at freeze-2026-10-03, at the policy version 2 this registration fixes, and that single run is one of the two generalisation figures the submission reports</td><td class="num">20</td><td class="num">18/20<div class="sub">four-field exact over the 20 cases of the set</div></td></tr>
+<tr><td><a href="../ryde-901/index.html">ryde-901</a> </td><td>the organisers&#x27; sample case, re-run under the current pipeline; it is not in any answer key and is not graded</td><td class="num">1</td><td class="num"><span class="null">not graded</span></td></tr>
+</tbody>
+</table>
+</div>
+</main>
+</body>
+</html>

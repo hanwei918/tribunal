@@ -99,10 +99,12 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import html
 import json
 import math
 import re
 import sys
+from dataclasses import dataclass, field
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
@@ -111,10 +113,13 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from eval import development_sets  # noqa: E402
 from eval import grade  # noqa: E402
+from eval import run_benchmark  # noqa: E402
 from eval import sealed_roots  # noqa: E402
 from tribunal import brief as brief_module  # noqa: E402
 from tribunal import llm  # noqa: E402
+from tribunal import loader as loader_module  # noqa: E402
 from tribunal import model as model_module  # noqa: E402
 from tribunal import money  # noqa: E402
 from tribunal import pipeline as pipeline_module  # noqa: E402
@@ -123,15 +128,21 @@ from tribunal import transcript as transcript_module  # noqa: E402
 
 __all__ = [
     "BuildError",
+    "ViewerPage",
     "RUN_DIR",
     "DIST_DIR",
     "OUTPUT_PATH",
+    "INDEX_PATH",
     "DEFAULT_CASE",
     "cached_cases",
+    "transcript_cases",
+    "cases_the_run_left_evidence_for",
     "cases_whose_briefs_match",
     "run_has_moved_on",
+    "pages",
     "build_document",
     "render_html",
+    "render_index",
     "main",
 ]
 
@@ -152,9 +163,260 @@ DEFAULT_CASE = 208
 # transcripts beside them match ``case-*.json`` too, so the suffix is anchored.
 _CASE_FILE_RE = re.compile(r"^case-(\d{5})\.json$")
 
+# The transcript beside it, anchored the same way and for the same reason.
+_TRANSCRIPT_FILE_RE = re.compile(r"^case-(\d{5})\.transcript\.json$")
+
 # The link a miss points at, relative to ``ui/dist/index.html``. The note records
-# why case 211 is a contested reading rather than a defect.
+# why case 211 is a contested reading rather than a defect. Kept as the corpus
+# page's own link, so anything that read it keeps reading the same value; every
+# other page recomputes it from its own depth.
 _DECISION_NOTE_LINK = "../../" + model_module.DECISION_NOTE
+
+# --------------------------------------------------------------------------
+# The pages: one per run, plus the index beside them
+# --------------------------------------------------------------------------
+# The index is one directory down beside the non-corpus pages, so its own links
+# resolve at the same depth as theirs.
+INDEX_PATH = DIST_DIR / "runs" / "index.html"
+
+# Where the organisers' sample case was re-run. **Not** ``runs/external/ryde``:
+# that directory's brief predates the money facts and no longer rebuilds, so a
+# page built from it would refuse the case. The 2026-09-29 re-run is the one
+# whose brief this code rebuilds.
+RYDE_RUN_DIR = PROJECT_ROOT / "runs" / "rerun-2026-09-29" / "external" / "ryde"
+RYDE_EXPECTED_PATH = PROJECT_ROOT / "eval" / "external" / "ryde" / "expected.json"
+
+# The tag each sealed set's single run was made from. The registration records
+# the policy version and the fixed arguments; the tag is named here as its own
+# value so a page can print it as one rather than as prose inside a caveat.
+FREEZE_TAGS = {
+    "wild": "freeze-2026-09-30",
+    "wild-v2": "freeze-2026-10-03",
+}
+
+# The two notes that discuss a sealed set's misses, each named once. The first
+# is about the held-out set's run as a whole, so it covers every miss of that
+# set; the second names its two cases, so it is attached to those cases only.
+THE_SEALED_RUN_NOTE = "docs/notes/2026-09-30-the-sealed-run.md"
+THE_SECOND_SEALED_RUN_NOTE = "docs/notes/2026-10-04-the-second-sealed-run.md"
+
+
+@dataclass(frozen=True)
+class ViewerPage:
+    """One page: a run to replay, the key to grade it with, and what it says.
+
+    ``load_case`` is the set's own loader -- the manifest for the corpus, the
+    set's index for a second set, an explicit path for the organisers' sample
+    case. The brief builder is derived from it, so a page cannot brief a case
+    with one loader and grade it against another's key.
+
+    ``default_case`` is ``None`` for a page whose opening case is the first one
+    that matched all four fields, which is a fact about the built document and
+    not about the registration.
+    """
+
+    name: str
+    run_dir: Path
+    output_path: Path
+    key_path: Optional[Path]
+    policy_version: int
+    load_case: Optional[Callable[[int], Mapping[str, Any]]]
+    summary: str
+    title: str
+    brand: str
+    badge: str
+    # The report a reader can reproduce this page's figures with. It is per set
+    # because the sets are not reported by one command: the corpus by
+    # ``eval/grade.py``, each sealed set by ``eval/sealed_report.py --set``. A
+    # page that named another set's command would send a reader to a figure that
+    # is not the one on the page.
+    report_tool: str
+    caveat: Optional[str]
+    freeze_tag: Optional[str]
+    sealed: bool
+    default_case: Optional[int]
+    # A note written about one named case, and a note written about a whole
+    # set's misses. The second is not a fallback for the first: the sealed set's
+    # note is about that set's misses as a class, and it is the note the sheet
+    # names for them. A miss with neither gets no link at all, which is the
+    # point -- a link to a note about another case is a claim nobody made.
+    miss_notes: Mapping[int, str] = field(default_factory=dict)
+    miss_note_for_every_miss: Optional[str] = None
+    stated_expectation_path: Optional[Path] = None
+
+    @property
+    def depth(self) -> int:
+        """How many directories below ``ui/dist`` this page's file sits."""
+        return len(self.output_path.relative_to(DIST_DIR).parts) - 1
+
+    def link_to(self, repository_path: str) -> str:
+        """A path from the project root, as a link written on this page."""
+        return "../" * (self.depth + 2) + repository_path
+
+    @property
+    def has_key(self) -> bool:
+        """Whether this page is graded against an answer key at all."""
+        return self.key_path is not None
+
+    @property
+    def brief_builder(self) -> Callable[[int], Mapping[str, Any]]:
+        """The brief this page's cases were handed, rebuilt from its own set.
+
+        The version is the registration's, not the command line's: a set that
+        fixes version 2 briefs every case at version 2, and there is no way to
+        ask this page for version 1.
+        """
+        load_case = self.load_case
+        version = self.policy_version
+        return lambda case_no: brief_module.build_brief_for_case(
+            load_case(case_no), policy_version=version
+        )
+
+
+def _ryde_case_loader(run_dir: Path) -> Callable[[int], Mapping[str, Any]]:
+    """The organisers' sample case, loaded by the path its own run recorded.
+
+    ``run.json`` names the converted case file, and the loader is
+    ``loader.load_external_case``: the manifest cannot name a case it does not
+    list, and this case is deliberately not in it. The path is read inside the
+    loader rather than at import, because this module's own ``_read_json`` is
+    defined below the registry.
+    """
+
+    def load_case(case_no: int) -> Mapping[str, Any]:
+        recorded = _read_json(Path(run_dir) / "run.json").get("external_case_path")
+        return loader_module.load_external_case(PROJECT_ROOT / str(recorded))
+
+    return load_case
+
+
+def _build_pages() -> Dict[str, ViewerPage]:
+    """Every page, keyed by the name ``--set`` takes."""
+    model = model_module.RUNTIME_MODEL
+    corpus = development_sets.CORPUS
+    codex = development_sets.SECOND_SET
+    wild = development_sets.SEALED_SET
+    wild_v2 = development_sets.WILD_V2
+    pages = (
+        ViewerPage(
+            name="corpus",
+            run_dir=RUN_DIR,
+            output_path=OUTPUT_PATH,
+            key_path=corpus.key_path,
+            policy_version=corpus.policy_version,
+            load_case=corpus.load_case,
+            summary=corpus.summary,
+            title="Tribunal - debate viewer",
+            brand="Tribunal - debate viewer",
+            badge="replay of a committed run",
+            report_tool="eval/grade.py's report",
+            caveat=None,
+            freeze_tag=None,
+            sealed=False,
+            default_case=DEFAULT_CASE,
+            # Only case 211 has a note written about it, and only the corpus's
+            # own note is that note. Every other miss is a miss and is shown as
+            # one, with no link and no claim that the reading is contested.
+            miss_notes={211: model_module.DECISION_NOTE},
+        ),
+        ViewerPage(
+            name="codex",
+            run_dir=codex.run_dir(model),
+            output_path=DIST_DIR / "codex" / "index.html",
+            key_path=codex.key_path,
+            policy_version=codex.policy_version,
+            load_case=codex.load_case,
+            summary=codex.summary,
+            title="Tribunal - debate viewer - the second development set",
+            brand="Tribunal - debate viewer - second development set",
+            badge="replay of a committed development run",
+            report_tool="the second development set's report, over its own key",
+            caveat=None,
+            freeze_tag=None,
+            sealed=False,
+            default_case=None,
+        ),
+        ViewerPage(
+            name="wild",
+            run_dir=wild.run_dir(model),
+            output_path=DIST_DIR / "wild" / "index.html",
+            key_path=wild.key_path,
+            policy_version=wild.policy_version,
+            load_case=wild.load_case,
+            summary=wild.summary,
+            title="Tribunal - debate viewer - the held-out set (wild-v1)",
+            brand="Tribunal - debate viewer - the held-out set (wild-v1)",
+            badge="replay of the held-out set's single run",
+            report_tool="python3 -m eval.sealed_report --set wild",
+            caveat=development_sets.SEALED_SET_SECTIONS[wild.name][1],
+            freeze_tag=FREEZE_TAGS[wild.name],
+            sealed=True,
+            default_case=None,
+            # The note about this set is about its misses as a class, so every
+            # miss of the set links to it and no case of the set is named in
+            # advance: which cases missed is a fact about the run.
+            miss_note_for_every_miss=THE_SEALED_RUN_NOTE,
+        ),
+        ViewerPage(
+            name="wild-v2",
+            run_dir=wild_v2.run_dir(model),
+            output_path=DIST_DIR / "wild-v2" / "index.html",
+            key_path=wild_v2.key_path,
+            policy_version=wild_v2.policy_version,
+            load_case=wild_v2.load_case,
+            summary=wild_v2.summary,
+            title="Tribunal - debate viewer - the second sealed set (wild-v2)",
+            brand="Tribunal - debate viewer - the second sealed set (wild-v2)",
+            badge="replay of the second sealed set's single run",
+            report_tool="python3 -m eval.sealed_report --set wild-v2",
+            caveat=development_sets.SEALED_SET_SECTIONS[wild_v2.name][1],
+            freeze_tag=FREEZE_TAGS[wild_v2.name],
+            sealed=True,
+            default_case=None,
+            # Only these two cases of this set have a note written about them,
+            # and it is one note about both. The other cases of the set are
+            # misses if they are misses and nothing more.
+            miss_notes={
+                702: THE_SECOND_SEALED_RUN_NOTE,
+                716: THE_SECOND_SEALED_RUN_NOTE,
+            },
+        ),
+        ViewerPage(
+            name="ryde-901",
+            run_dir=RYDE_RUN_DIR,
+            output_path=DIST_DIR / "ryde-901" / "index.html",
+            # No key. The organisers' sample case has no entry in any answer
+            # key, so it is shown beside their stated expectation and is not
+            # graded on four fields at all.
+            key_path=None,
+            policy_version=1,
+            load_case=_ryde_case_loader(RYDE_RUN_DIR),
+            summary=(
+                "the organisers' sample case, re-run under the current "
+                "pipeline; it is not in any answer key and is not graded"
+            ),
+            title="Tribunal - debate viewer - the organisers' sample case",
+            brand="Tribunal - debate viewer - the organisers' sample case",
+            badge="replay of the organisers' sample case",
+            # Unused on this page: it is not graded, so there is no report for a
+            # reader to reproduce. It is named as nothing rather than as some
+            # other set's command, so a mistake that printed it would print a
+            # sentence with no claim in it.
+            report_tool="no report: this case is not graded",
+            caveat=None,
+            freeze_tag=None,
+            sealed=False,
+            default_case=901,
+            stated_expectation_path=RYDE_EXPECTED_PATH,
+        ),
+    )
+    by_name = {page.name: page for page in pages}
+    return by_name
+
+
+def pages() -> Dict[str, ViewerPage]:
+    """Every page the viewer builds, by name. Built fresh; nothing is cached."""
+    return _build_pages()
 
 
 class BuildError(Exception):
@@ -349,6 +611,7 @@ def _stance_proof(
     driver: Mapping[str, Any],
     stored_ranges: Any,
     computed_ranges: List[List[int]],
+    recorded: bool = True,
 ) -> Dict[str, Any]:
     """The three facts of the stance proof for one case, checked not assumed.
 
@@ -357,6 +620,12 @@ def _stance_proof(
     whole reason the proof belongs to the build and not to the view: a proof
     view able to display a claim this repository does not back is worse than no
     proof view, because it looks like evidence and is not.
+
+    ``recorded`` is False for a case that wrote no result file at all -- the four
+    judge drafts abstained and nothing was cached -- so there is no recorded
+    ``stance_differing_ranges`` to compare against. Item 3 is then reported as
+    **not recorded** rather than as a comparison with an empty list, which would
+    read as a recorded finding that the two renders differ nowhere.
     """
     rider_user = rider.get("user_sha256")
     driver_user = driver.get("user_sha256")
@@ -410,23 +679,28 @@ def _stance_proof(
         )
 
     # 3. Stance only: the difference is where the run said it was.
-    stored = (
-        []
-        if stored_ranges is None
-        else [[int(lo), int(hi)] for lo, hi in stored_ranges]
-    )
-    if stored != computed_ranges:
-        raise BuildError(
-            "case {0}: the run recorded differing ranges {1} but the prompts "
-            "this build renders differ on {2}. The proof would be a claim this "
-            "repository no longer backs.".format(case_no, stored, computed_ranges)
+    if not recorded:
+        stored: Optional[List[List[int]]] = None
+    else:
+        stored = (
+            []
+            if stored_ranges is None
+            else [[int(lo), int(hi)] for lo, hi in stored_ranges]
         )
+        if stored != computed_ranges:
+            raise BuildError(
+                "case {0}: the run recorded differing ranges {1} but the prompts "
+                "this build renders differ on {2}. The proof would be a claim this "
+                "repository no longer backs.".format(case_no, stored, computed_ranges)
+            )
 
     return {
         "brief_sha256": brief_digest,
         "rider": {"system_sha256": rider_system, "user_sha256": rider_user},
         "driver": {"system_sha256": driver_system, "user_sha256": driver_user},
         "differing_ranges": computed_ranges,
+        # ``None`` when the run recorded none -- a case with no result file --
+        # which the page renders as "not recorded" rather than as an empty list.
         "recorded_differing_ranges": stored,
     }
 
@@ -498,13 +772,39 @@ def _expected_side(record: Mapping[str, Any]) -> Dict[str, Any]:
     }
 
 
-def _produced_side(score: grade.CaseScore) -> Dict[str, Any]:
-    """The run's own ruling for one case, as the grader read it.
+def _produced_side(
+    score: Optional[grade.CaseScore],
+    ruling: Optional[Mapping[str, Any]] = None,
+) -> Dict[str, Any]:
+    """The run's own ruling for one case.
 
-    Taken from the grader's parsed ruling rather than from the raw file, so the
-    produced side the page shows is the same object the score was computed from.
+    Taken from the grader's parsed ruling where there is one, so the produced
+    side the page shows is the same object the score was computed from.
+
+    A page that is not graded against a key has no score at all, and the produced
+    side is then read straight from the run's own ruling record. The run did
+    produce a ruling and the page has to show it: there is no key here for it to
+    agree or disagree with, and printing four nulls would hide a result the run
+    actually reached.
+
+    The fallback is used only where there is no score. A graded page whose ruling
+    the grader could not parse keeps the grader's reading of it, because that is
+    the reading the score was computed from.
     """
-    produced = score.produced
+    if score is None and ruling is not None:
+        return {
+            "ruling": ruling.get("ruling"),
+            "amount_sgd": grade.render_money(
+                grade.money_or_none(ruling.get("amount_sgd"))
+            ),
+            "driver_compensation_sgd": grade.render_money(
+                grade.money_or_none(ruling.get("driver_compensation_sgd"))
+            ),
+            "referrals": [str(item) for item in (ruling.get("referrals") or [])],
+            "confidence": _normalise(ruling.get("confidence")),
+            "explanation": ruling.get("explanation"),
+        }
+    produced = None if score is None else score.produced
     if produced is None:
         return {
             "ruling": None,
@@ -526,8 +826,15 @@ def _produced_side(score: grade.CaseScore) -> Dict[str, Any]:
     }
 
 
-def _grading_of(score: grade.CaseScore) -> Dict[str, Any]:
-    """Field by field, what agreed and what did not, in the grader's own words."""
+def _grading_of(score: Optional[grade.CaseScore]) -> Optional[Dict[str, Any]]:
+    """Field by field, what agreed and what did not, in the grader's own words.
+
+    ``None`` when the page is not graded against a key: there is no four-field
+    grading to report, and an empty one would read as a case that failed every
+    field rather than as a case that was never scored.
+    """
+    if score is None:
+        return None
     return {
         "exact": score.exact,
         "failed_fields": list(score.failed_fields),
@@ -542,15 +849,32 @@ def _grading_of(score: grade.CaseScore) -> Dict[str, Any]:
     }
 
 
+def _tally(correct: int, total: int) -> str:
+    """A count as ``n/of``, or ``n/a`` where there is nothing to divide by."""
+    return "{0}/{1}".format(correct, total) if total else "n/a"
+
+
 def _headline(
-    report: grade.GradeReport,
+    report_produced: Optional[grade.GradeReport],
+    report_all: Optional[grade.GradeReport],
     case_facts: Mapping[int, Mapping[str, Any]],
+    failed_tokens: int = 0,
+    failed_cases: int = 0,
+    known_dirs: Sequence[Path] = (),
 ) -> Dict[str, Any]:
     """Every headline figure, computed from the run.
 
     Nothing here is typed in. The accuracy figures come from the grader over the
     same produced rulings the page shows, so the viewer and ``eval/grade.py``
     cannot disagree about what the run scored.
+
+    **Two bases, and both are printed.** ``report_produced`` grades the cases
+    that produced a ruling; ``report_all`` grades every case of the key, with a
+    case that produced no ruling counted as a miss. The second is what the run
+    did on its set and is the honest one to quote, and it is the one the single
+    ``exact`` figure uses -- a figure that quietly drops the cases a run could
+    not answer is the figure that flatters it. ``exact_bases`` carries both,
+    labelled, which is what ``python3 -m eval.sealed_report`` prints.
 
     ``case_facts`` is every case in the run, refused ones included, so the
     figures describe the run rather than the subset this build could verify. A
@@ -560,25 +884,12 @@ def _headline(
     The discarded-claim total is the one figure the grader does not compute -- it
     is a property of the judge outputs, not of the verdict -- so it is summed
     from the run's own judge results, and the test recomputes it the same way.
+
+    ``failed_tokens`` and ``failed_cases`` are the tokens spent on the cases
+    that produced no ruling. They have no case file to be counted from, so they
+    are added here from ``run.json``'s own failure total: a token total that
+    left them out would report less than the run spent.
     """
-    calibration = report.calibration
-    total = report.total
-
-    fields = {}
-    for name in grade.GRADED_FIELDS:
-        correct, denominator = report.field_tally(name)
-        fields[name] = {
-            "matched": correct,
-            "total": denominator,
-            # ``grade._percent`` is private, and it is used deliberately: it is
-            # the grader's own rounding rule, and the viewer's whole claim about
-            # these numbers is that it cannot disagree with the grader about
-            # them. Re-deriving the rounding here would be a second rule.
-            "display": "{0}/{1} = {2}".format(
-                correct, denominator, grade.render_percent(grade._percent(correct, denominator))
-            ),
-        }
-
     discarded_per_case: Dict[str, int] = {}
     for case_no in sorted(case_facts):
         discarded = case_facts[case_no].get("discarded_claims") or []
@@ -594,46 +905,82 @@ def _headline(
         for case_no in sorted(case_facts)
         if case_facts[case_no].get("tokens")
     ]
+    token_total = sum(tokens) + int(failed_tokens)
+    token_cases = len(tokens) + int(failed_cases)
 
-    return {
-        "cases_graded": total,
-        # Present only when the advocates were replayed, and ``None`` otherwise.
-        # It sits beside the figure it qualifies rather than in the footer: a
-        # reader who reads only the cards must still learn that the number is the
-        # judge's and not the pipeline's, and a reader of a run that replayed
-        # nothing must not be shown a field that reads like a finding.
-        "replay": (
-            {
-                "cases": len(report.replay.cases),
-                "total": total,
-                "sources": [
-                    _source_directory(source) or "an unrecorded source"
-                    for source in report.replay.sources
-                ],
-                "tokens": report.replay.tokens,
-            }
-            if report.replay.any
-            else None
-        ),
-        "exact": {
+    def basis(report: grade.GradeReport, label: str) -> Dict[str, Any]:
+        return {
+            "label": label,
             "matched": report.exact_matches,
-            "total": total,
-            "display": "{0}/{1} = {2}".format(
-                report.exact_matches,
-                total,
-                grade.render_percent(grade._percent(report.exact_matches, total)),
-            ),
-        },
-        "two_field": {
-            "matched": report.two_field_matches,
-            "total": total,
+            "total": report.total,
+            "display": _tally(report.exact_matches, report.total),
+        }
+
+    if report_all is None:
+        exact: Optional[Dict[str, Any]] = None
+        exact_bases: List[Dict[str, Any]] = []
+        fields: Dict[str, Any] = {}
+        two_field: Optional[Dict[str, Any]] = None
+        escalation: Optional[Dict[str, Any]] = None
+        cases_graded: Optional[int] = None
+    else:
+        fields = {}
+        for name in grade.GRADED_FIELDS:
+            correct, denominator = report_all.field_tally(name)
+            fields[name] = {
+                "matched": correct,
+                "total": denominator,
+                # ``grade._percent`` is private, and it is used deliberately: it
+                # is the grader's own rounding rule, and the viewer's whole claim
+                # about these numbers is that it cannot disagree with the grader
+                # about them. Re-deriving the rounding here would be a second
+                # rule.
+                "display": "{0}/{1} = {2}".format(
+                    correct,
+                    denominator,
+                    grade.render_percent(grade._percent(correct, denominator)),
+                ),
+            }
+        # The same ``full`` rule ``eval/grade.py`` uses to decide whether the
+        # corpus target may be printed beside a rate. ``TARGET_ESCALATION_RATE``
+        # is a property of the 29-case corpus, so it is shown on the corpus's own
+        # page and nowhere else.
+        corpus_target = report_all.grades_full_corpus and (
+            tuple(sorted(report_all.corpus_cases)) == grade.corpus_case_numbers()
+        )
+        calibration = report_all.calibration
+        exact = basis(
+            report_all,
+            "over the {0} cases in the set, a case with no ruling counted as a "
+            "miss".format(report_all.total),
+        )
+        # Both bases, always, and neither offered as the one to quote. Over the
+        # cases that produced a ruling is what the system did where it answered;
+        # over every case in the set is what it did on the set. A set whose
+        # cases all produced a ruling prints the same figure twice, and that is
+        # the honest reading of it: the two bases coincide, and the page says so
+        # rather than choosing one for the reader.
+        exact_bases = [exact]
+        if report_produced is not None:
+            exact_bases.insert(
+                0,
+                basis(
+                    report_produced,
+                    "over the {0} cases that produced a ruling".format(
+                        report_produced.total
+                    ),
+                ),
+            )
+        cases_graded = report_all.total
+        two_field = {
+            "matched": report_all.two_field_matches,
+            "total": report_all.total,
             "note": (
                 "Reported as a contrast only, never as the result. A ruling "
                 "counts only when all four fields agree."
             ),
-        },
-        "fields": fields,
-        "escalation": {
+        }
+        escalation = {
             "expected": len(calibration.expected_escalations),
             "produced": len(calibration.produced_escalations),
             "true_positives": list(calibration.true_positives),
@@ -652,10 +999,41 @@ def _headline(
             "rate_percent": grade.render_percent(calibration.rate),
             "target_percent": grade.render_percent(calibration.target_rate),
             "off_target": calibration.rate_off_target,
+            # Whether the corpus target may be printed beside the rate at all.
+            # False for every set that is not the 29-case corpus, which is what
+            # stops a sealed set's rate being shown beside a target it is not
+            # answerable to.
+            "corpus_target": bool(corpus_target),
             "indeterminate_ruled_confidently": list(
                 calibration.indeterminate_ruled_confidently
             ),
-        },
+        }
+
+    return {
+        "cases_graded": cases_graded,
+        # Present only when the advocates were replayed, and ``None`` otherwise.
+        # It sits beside the figure it qualifies rather than in the footer: a
+        # reader who reads only the cards must still learn that the number is the
+        # judge's and not the pipeline's, and a reader of a run that replayed
+        # nothing must not be shown a field that reads like a finding.
+        "replay": (
+            {
+                "cases": len(report_all.replay.cases),
+                "total": report_all.total,
+                "sources": [
+                    _source_directory(source, known_dirs) or "an unrecorded source"
+                    for source in report_all.replay.sources
+                ],
+                "tokens": report_all.replay.tokens,
+            }
+            if report_all is not None and report_all.replay.any
+            else None
+        ),
+        "exact": exact,
+        "exact_bases": exact_bases,
+        "two_field": two_field,
+        "fields": fields,
+        "escalation": escalation,
         "discarded_claims": {
             "total": sum(discarded_per_case.values()),
             "per_case": discarded_per_case,
@@ -666,14 +1044,18 @@ def _headline(
             "cases": len(seconds),
         },
         "tokens": {
-            "total": sum(tokens),
-            "mean_per_case": round(sum(tokens) / len(tokens), 1) if tokens else None,
-            "cases": len(tokens),
+            "total": token_total,
+            "mean_per_case": round(token_total / token_cases, 1) if token_cases else None,
+            "cases": token_cases,
+            "failed_cases": int(failed_cases),
+            "failed_total": int(failed_tokens),
         },
     }
 
 
-def _repository_relative(value: Any) -> Optional[str]:
+def _repository_relative(
+    value: Any, known_dirs: Sequence[Path] = ()
+) -> Optional[str]:
     """A path from the run, as this repository expresses it, or ``None``.
 
     The run records absolute paths from the machine that produced it. Only the
@@ -687,6 +1069,11 @@ def _repository_relative(value: Any) -> Optional[str]:
     not, but whose trailing components name a directory this repository has, is
     reported as this repository names it; anything else is dropped rather than
     published.
+
+    ``known_dirs`` adds the directories this particular page is about -- a
+    second set's own run directory, which the run's recorded paths may name from
+    another checkout just as the corpus's are named. The corpus's run directory
+    and the prompts directory are always recognised.
 
     This is not a nicety. The committed run was made in one checkout, and in
     that checkout its recorded prompts path sat under the project root and was
@@ -702,8 +1089,12 @@ def _repository_relative(value: Any) -> Optional[str]:
         return path.resolve().relative_to(PROJECT_ROOT).as_posix()
     except ValueError:
         pass
-    for known in (RUN_DIR, pipeline_module.PROMPTS_DIR):
-        tail = known.resolve().relative_to(PROJECT_ROOT).parts
+    known_roots = (RUN_DIR, pipeline_module.PROMPTS_DIR) + tuple(known_dirs)
+    for known in known_roots:
+        try:
+            tail = Path(known).resolve().relative_to(PROJECT_ROOT).parts
+        except ValueError:
+            continue
         if len(path.parts) >= len(tail) and path.parts[-len(tail) :] == tail:
             return "/".join(tail)
     return None
@@ -741,7 +1132,9 @@ def _replay_facts(raw_by_case: Mapping[int, Mapping[str, Any]]) -> grade.ReplayF
     )
 
 
-def _case_replay(record: Any) -> Optional[Dict[str, Any]]:
+def _case_replay(
+    record: Any, known_dirs: Sequence[Path] = ()
+) -> Optional[Dict[str, Any]]:
     """One case's replay provenance, as the page shows it.
 
     ``None`` when this run called that case's advocates itself, so the case view
@@ -753,7 +1146,7 @@ def _case_replay(record: Any) -> Optional[Dict[str, Any]]:
     if not isinstance(record, Mapping):
         return None
     return {
-        "run_directory": _source_directory(record.get("run_dir")),
+        "run_directory": _source_directory(record.get("run_dir"), known_dirs),
         "git_commit": record.get("git_commit"),
         "advocate_calls": record.get("advocate_calls"),
         "tokens": record.get("tokens"),
@@ -761,7 +1154,9 @@ def _case_replay(record: Any) -> Optional[Dict[str, Any]]:
 
 
 def _run_replay(
-    record: Any, raw_by_case: Mapping[int, Mapping[str, Any]]
+    record: Any,
+    raw_by_case: Mapping[int, Mapping[str, Any]],
+    known_dirs: Sequence[Path] = (),
 ) -> Optional[Dict[str, Any]]:
     """The run's own replay provenance, as the page's footer shows it.
 
@@ -789,7 +1184,7 @@ def _run_replay(
         if isinstance(commit, str) and commit and commit not in made:
             made.append(commit)
     return {
-        "run_directory": _source_directory(record.get("run_dir")),
+        "run_directory": _source_directory(record.get("run_dir"), known_dirs),
         "git_commit": record.get("git_commit"),
         "advocate_commits": made,
         "model": record.get("model"),
@@ -799,7 +1194,9 @@ def _run_replay(
     }
 
 
-def _source_directory(value: Any) -> Optional[str]:
+def _source_directory(
+    value: Any, known_dirs: Sequence[Path] = ()
+) -> Optional[str]:
     """A replay source, as this repository can express it.
 
     Relativised when it is inside the checkout, named as such when it is not,
@@ -807,7 +1204,7 @@ def _source_directory(value: Any) -> Optional[str]:
     a foreign path would leave the page saying the advocates were replayed
     without saying from where, which is half the fact.
     """
-    relative = _repository_relative(value)
+    relative = _repository_relative(value, known_dirs)
     if relative is not None:
         return relative
     if isinstance(value, str) and value:
@@ -815,11 +1212,39 @@ def _source_directory(value: Any) -> Optional[str]:
     return None
 
 
+def _invocation_cases(entry: Mapping[str, Any]) -> Dict[str, Any]:
+    """One invocation's case counts, from whichever shape it recorded.
+
+    The corpus and the second sets write ``cases`` as an object with
+    ``completed``, ``failed`` and ``requested`` lists. The organisers' sample
+    case writes it as a bare list of case numbers, which is what it has to say:
+    one converted case, run on its own. Reading the object's keys off that list
+    is an ``AttributeError``, which is how a page for that run used to die
+    before it printed anything.
+
+    For the bare list, the count of cases is the count asked for and neither of
+    the other two is claimed -- the record does not carry the split, and
+    inventing one would be a figure the run never wrote.
+    """
+    cases = entry.get("cases")
+    if isinstance(cases, Mapping):
+        return {
+            "completed": len(cases.get("completed") or []),
+            "failed": len(cases.get("failed") or []),
+            "requested": len(cases.get("requested") or []),
+        }
+    if isinstance(cases, list):
+        return {"completed": None, "failed": None, "requested": len(cases)}
+    return {"completed": None, "failed": None, "requested": None}
+
+
 def _provenance(
     run: Mapping[str, Any],
     invocations: Sequence[Mapping[str, Any]],
     run_dir: Path,
     raw_by_case: Mapping[int, Mapping[str, Any]],
+    key_path: Optional[Path] = grade.ANSWER_KEY_PATH,
+    known_dirs: Sequence[Path] = (),
 ) -> Dict[str, Any]:
     """Which run this page is showing, on the page and not in a footnote.
 
@@ -828,19 +1253,23 @@ def _provenance(
     ``run.json``: a replay into the directory it reads from makes the two
     different, and the footer is the one place on the page that names a commit.
 
+    ``key_path`` is the key **this page** was graded against, so a second set's
+    footer shows its own key's digest rather than the corpus key's, and a page
+    with no key at all -- the organisers' sample case -- shows none.
+
     Every path is relative to the project root, because the run records absolute
     paths and this repository is published before submission: an absolute path
     carries a username into the artifact, which is a small leak with no upside.
     ``_repository_relative`` is what makes that hold in every checkout rather
     than only in the one the run happened to be made in.
     """
-    relative = _repository_relative
+    relative = lambda value: _repository_relative(value, known_dirs)  # noqa: E731
 
     history = []
     for entry in invocations:
         if not isinstance(entry, Mapping):
             continue
-        cases = entry.get("cases") or {}
+        counts = _invocation_cases(entry)
         history.append(
             {
                 "started_at": entry.get("started_at"),
@@ -848,9 +1277,9 @@ def _provenance(
                 "git_commit": entry.get("git_commit"),
                 "model": entry.get("model"),
                 "stop_reason": entry.get("stop_reason"),
-                "completed": len(cases.get("completed") or []),
-                "failed": len(cases.get("failed") or []),
-                "requested": len(cases.get("requested") or []),
+                "completed": counts["completed"],
+                "failed": counts["failed"],
+                "requested": counts["requested"],
                 "python_version": entry.get("python_version"),
                 "tokens_spent": (entry.get("tokens") or {}).get("spent_this_invocation"),
             }
@@ -871,7 +1300,9 @@ def _provenance(
         "working_tree_clean": run.get("working_tree_clean"),
         "prompts_directory": relative(run.get("prompts_dir")),
         "prompts_sha256": run.get("prompts_sha256"),
-        "answer_key_sha256": grade.answer_key_sha256(),
+        "answer_key_sha256": (
+            grade.answer_key_sha256(key_path) if key_path is not None else None
+        ),
         "python_version": run.get("python_version"),
         "started_at": run.get("started_at"),
         "ended_at": run.get("ended_at"),
@@ -885,8 +1316,67 @@ def _provenance(
         # otherwise, so "this run called every agent itself" is a fact the page
         # states rather than one a reader infers from an absent field. The footer
         # renders the negative case in words for that reason.
-        "replay": _run_replay(run.get("replay"), raw_by_case),
+        "replay": _run_replay(run.get("replay"), raw_by_case, known_dirs),
     }
+
+
+def transcript_cases(run_dir: Path = RUN_DIR) -> List[int]:
+    """Every case number the run directory holds a transcript for, ascending.
+
+    A case the judge could not rule on writes a transcript and no result: the
+    four drafts abstained, so there is nothing to cache. The transcript is then
+    the only evidence the case was run at all, and a page that listed the
+    directory by its result files would drop it silently.
+    """
+    numbers: List[int] = []
+    for path in sorted(Path(run_dir).glob("case-*.transcript.json")):
+        match = _TRANSCRIPT_FILE_RE.match(path.name)
+        if match is not None:
+            numbers.append(int(match.group(1)))
+    return sorted(numbers)
+
+
+def cases_the_run_left_evidence_for(
+    run_dir: Path = RUN_DIR, key_cases: Sequence[int] = ()
+) -> List[int]:
+    """The cases a page must account for, ascending.
+
+    Three sources, unioned. Two of them are on disk: the cases with a result
+    file, and the cases with only a transcript -- a case the judge could not
+    rule on writes a transcript and no result, so its transcript is the only
+    evidence it was run at all. The third is the answer key's own case list,
+    which is the set the figures are computed over; a case the key names that
+    left neither a result nor a transcript is a case the run never reached, and
+    it is counted as a miss in the headline's all-cases basis rather than drawn,
+    because there is nothing about it to show.
+    """
+    run_dir = Path(run_dir)
+    on_disk = set(cached_cases(run_dir)) | set(transcript_cases(run_dir))
+    return sorted(on_disk | (set(key_cases) & on_disk))
+
+
+def _recorded_brief_digest(run_dir: Path, case_no: int) -> Optional[str]:
+    """The brief digest a case's own record holds, or ``None``.
+
+    A case with a result file records it there. A case the run left only a
+    transcript for records it on the two advocates' transcript entries instead,
+    and that is the same bytes: both advocates are handed the brief, so the
+    digest on their entry is the brief they were handed. Reading it there is
+    what lets such a case be admitted rather than refused for having no result.
+    """
+    result_path = Path(run_dir) / ("case-%05d.json" % case_no)
+    if result_path.is_file():
+        return _read_json(result_path).get("brief_sha256")
+    transcript_path = Path(run_dir) / ("case-%05d.transcript.json" % case_no)
+    if not transcript_path.is_file():
+        return None
+    record = _read_json(transcript_path)
+    for entry in record.get("entries", []) or []:
+        if not isinstance(entry, Mapping):
+            continue
+        if entry.get("role") == transcript_module.ROLE_RIDER_ADVOCATE:
+            return entry.get("user_sha256")
+    return None
 
 
 def _rebuild_cached_cases(
@@ -906,15 +1396,18 @@ def _rebuild_cached_cases(
     A case is refused when its rebuilt digest is not the digest its result
     recorded, and also when the brief cannot be rebuilt at all: "cannot build it"
     is not "it matches", which is the rule the runner applies to the same
-    question.
+    question. A case with no result file at all -- one whose judge drafts all
+    abstained -- is checked against the digest its advocates' transcript entries
+    recorded instead, which is the same brief by a different route.
     """
     refused: List[Dict[str, Any]] = []
     built_by_case: Dict[int, Mapping[str, Any]] = {}
     raw_by_case: Dict[int, Mapping[str, Any]] = {}
     for case_no in numbers:
-        result = _read_json(run_dir / ("case-%05d.json" % case_no))
-        raw_by_case[case_no] = result
-        recorded = result.get("brief_sha256")
+        result_path = Path(run_dir) / ("case-%05d.json" % case_no)
+        if result_path.is_file():
+            raw_by_case[case_no] = _read_json(result_path)
+        recorded = _recorded_brief_digest(run_dir, case_no)
         try:
             rebuilt = builder(case_no)
             rebuilt_digest = _brief_digest(rebuilt)
@@ -948,21 +1441,27 @@ def _rebuild_cached_cases(
     return built_by_case, raw_by_case, refused
 
 
-def cases_whose_briefs_match(run_dir: Path = RUN_DIR) -> List[int]:
+def cases_whose_briefs_match(
+    run_dir: Optional[Path] = None, page: Optional[ViewerPage] = None
+) -> List[int]:
     """The cached cases whose rebuilt brief is the brief their result recorded.
 
     Asked without building a page, and answered by the same comparison
     :func:`build_document` makes, so a caller reading this list and the build
-    acting on it are reading one answer.
+    acting on it are reading one answer. The page decides which set's loader and
+    which policy version the brief is rebuilt at; the corpus's is the default.
     """
-    run_dir = Path(run_dir)
+    page = pages()["corpus"] if page is None else page
+    run_dir = Path(page.run_dir if run_dir is None else run_dir)
     built_by_case, _, _ = _rebuild_cached_cases(
-        run_dir, brief_module.build_brief, cached_cases(run_dir)
+        run_dir, page.brief_builder, cached_cases(run_dir)
     )
     return sorted(built_by_case)
 
 
-def run_has_moved_on(run_dir: Path = RUN_DIR) -> bool:
+def run_has_moved_on(
+    run_dir: Optional[Path] = None, page: Optional[ViewerPage] = None
+) -> bool:
     """Whether **every** cached case's brief has moved on from this code.
 
     True only when the run holds at least one cached case and this code agrees
@@ -976,31 +1475,95 @@ def run_has_moved_on(run_dir: Path = RUN_DIR) -> bool:
     itself from the run's own result files, so a run made by this code reads
     False with nothing reset by hand.
     """
-    run_dir = Path(run_dir)
+    page = pages()["corpus"] if page is None else page
+    run_dir = Path(page.run_dir if run_dir is None else run_dir)
     if not cached_cases(run_dir):
         return False
-    return not cases_whose_briefs_match(run_dir)
+    return not cases_whose_briefs_match(run_dir, page)
+
+
+def _policy_version_mismatches(
+    raw_by_case: Mapping[int, Mapping[str, Any]], page: ViewerPage
+) -> List[str]:
+    """Every case whose own record disagrees with the page's policy version.
+
+    Read from the case file's ``configuration``, which the runner writes for a
+    run made at a fixed version and omits for one made at the command line's
+    default. Where it is recorded it is checked, and a disagreement stops the
+    build: a page that briefed a case at version 1 while the run recorded
+    version 2 would show evidence the agents were never handed. This is the
+    check that makes briefing ``wild-v2`` at version 1 impossible rather than
+    merely unlikely -- at version 1 twelve of its twenty cases are silently
+    refused and the page still builds, which is the failure this exists to stop.
+    """
+    problems: List[str] = []
+    for case_no in sorted(raw_by_case):
+        configuration = raw_by_case[case_no].get("configuration")
+        if not isinstance(configuration, Mapping):
+            continue
+        recorded = configuration.get("policy_version")
+        if recorded is None:
+            continue
+        if int(recorded) != int(page.policy_version):
+            problems.append(
+                "case {0}: the run recorded policy version {1}, but this page "
+                "briefs every case of {2} at version {3}".format(
+                    case_no, recorded, page.name, page.policy_version
+                )
+            )
+    return problems
+
+
+def _stated_expectation(path: Optional[Path]) -> Optional[Dict[str, Any]]:
+    """The organisers' stated outcome for their own sample case, or ``None``.
+
+    Read as it stands and labelled on the page as what it is: not part of any
+    answer key, not merged into one, and not an input to any agent. It is shown
+    beside the produced ruling and is never a grade.
+    """
+    if path is None or not Path(path).is_file():
+        return None
+    record = _read_json(path)
+    return {
+        "source_document": record.get("source_document"),
+        "dispute_id": record.get("dispute_id"),
+        "expected_outcome_as_stated": record.get("expected_outcome_as_stated"),
+        "stated_reasons": [str(item) for item in record.get("stated_reasons", []) or []],
+        "not_the_answer_key": record.get("not_the_answer_key"),
+        "upheld_is_not_a_token_here": record.get("upheld_is_not_a_token_here"),
+    }
 
 
 def build_document(
-    run_dir: Path = RUN_DIR,
+    run_dir: Optional[Path] = None,
     brief_builder: Optional[Callable[[int], Mapping[str, Any]]] = None,
-    key_path: Path = grade.ANSWER_KEY_PATH,
+    key_path: Optional[Path] = None,
+    page: Optional[ViewerPage] = None,
 ) -> Dict[str, Any]:
-    """The whole data model of the viewer, as a plain dict.
+    """The whole data model of one page, as a plain dict.
+
+    ``page`` names the set this page is about: its run directory, its loader,
+    its policy version and its key. It defaults to the corpus, so a caller that
+    names nothing gets the page the submission reports.
 
     ``brief_builder`` is injectable so a test can hand in a brief that does not
     match the recorded digest and watch the case be refused rather than shown.
-    The default is the real one, and there is no other way to change what is
-    rebuilt.
+    The default is the page's own -- ``build_brief_for_case`` over that set's
+    loader at that set's policy version -- and there is no other way to change
+    what is rebuilt. ``key_path`` is the same kind of override for the key; a
+    page with no key at all (the organisers' sample case) passes ``None`` and is
+    not graded.
 
     A case whose rebuilt brief does not match the digest its result recorded is
     refused: named, with both digests, and left out of the cases the viewer can
     open. The refusal is reported rather than swallowed, because a viewer that
     silently drops a case is indistinguishable from a run that never had one.
     """
-    run_dir = Path(run_dir)
-    builder = brief_module.build_brief if brief_builder is None else brief_builder
+    page = pages()["corpus"] if page is None else page
+    run_dir = Path(page.run_dir if run_dir is None else run_dir)
+    builder = page.brief_builder if brief_builder is None else brief_builder
+    key_path = page.key_path if key_path is None else key_path
+    known_dirs = (page.run_dir,)
 
     run = _read_json(run_dir / "run.json")
     invocations = _read_json(run_dir / "invocations.json")
@@ -1008,16 +1571,28 @@ def build_document(
         raise BuildError("invocations.json is not a list")
 
     key_records: Dict[int, Mapping[str, Any]] = {}
-    for record in _read_json(key_path):
-        key_records[int(record["case_no"])] = record
+    key: Optional[Dict[int, grade.Ruling]] = None
+    if key_path is not None:
+        for record in _read_json(key_path):
+            key_records[int(record["case_no"])] = record
+        key = grade.load_answer_key(key_path)
 
-    numbers = cached_cases(run_dir)
+    numbers = cases_the_run_left_evidence_for(run_dir, key_records)
     if not numbers:
         raise BuildError("no cached case results under {0}".format(run_dir))
 
     built_by_case, raw_by_case, refused = _rebuild_cached_cases(
         run_dir, builder, numbers
     )
+
+    mismatches = _policy_version_mismatches(raw_by_case, page)
+    if mismatches:
+        raise BuildError(
+            "the run's own case records disagree with the policy version this "
+            "page briefs at (version {0}):\n  {1}".format(
+                page.policy_version, "\n  ".join(mismatches)
+            )
+        )
 
     if not built_by_case:
         raise BuildError(
@@ -1035,28 +1610,56 @@ def build_document(
     # the viewer can show: they are a measurement of the run, and a refusal is a
     # fact about the viewer. The refusal is reported beside them rather than
     # folded into them.
-    produced = {case_no: raw_by_case[case_no]["ruling"] for case_no in numbers
-                if "ruling" in raw_by_case[case_no]}
+    produced = {
+        case_no: raw_by_case[case_no]["ruling"]
+        for case_no in sorted(raw_by_case)
+        if "ruling" in raw_by_case[case_no]
+    }
     # The replay facts travel into the report so the headline figures and the
     # page's own statement about them come from one place. A page that said the
     # advocates were replayed while the report it is graded by did not would be
     # two answers to one question.
-    report = grade.grade(produced, replay=_replay_facts(raw_by_case))
-    scores = {score.case_no: score for score in report.cases}
+    replay_facts = _replay_facts(raw_by_case)
+    if key is None:
+        report_produced: Optional[grade.GradeReport] = None
+        report_all: Optional[grade.GradeReport] = None
+        scores: Dict[int, grade.CaseScore] = {}
+    else:
+        report_all = grade.grade(produced, key, corpus=key, replay=replay_facts)
+        report_produced = grade.grade(
+            produced,
+            {case_no: key[case_no] for case_no in produced if case_no in key},
+            corpus=key,
+            replay=replay_facts,
+        )
+        scores = {score.case_no: score for score in report_all.cases}
 
     # What the headline figures need per case, taken from the run's own result
     # files for every case the run holds -- refused ones included, so the
-    # figures describe the run and not the subset this build could verify.
+    # figures describe the run and not the subset this build could verify. A
+    # case with no result file (its judge drafts all abstained) contributes no
+    # facts here; its tokens are added from ``run.json``'s failure total below.
     case_facts = {
         case_no: {
             "discarded_claims": (
-                (raw_by_case[case_no].get("ruling") or {}).get("discarded_claims") or []
+                ((raw_by_case.get(case_no) or {}).get("ruling") or {}).get(
+                    "discarded_claims"
+                )
+                or []
             ),
-            "wall_seconds": raw_by_case[case_no].get("wall_seconds"),
-            "tokens": raw_by_case[case_no].get("tokens"),
+            "wall_seconds": (raw_by_case.get(case_no) or {}).get("wall_seconds"),
+            "tokens": (raw_by_case.get(case_no) or {}).get("tokens"),
         }
         for case_no in numbers
     }
+
+    failures = {
+        int(entry["case_no"]): entry
+        for entry in (run.get("failures") or [])
+        if isinstance(entry, Mapping) and "case_no" in entry
+    }
+    failed_tokens = int(((run.get("tokens") or {}).get("failed") or {}).get("total_tokens") or 0)
+    failed_cases = len(failures)
 
     # The stance proof's shared half is rendered once, before any case: the
     # advocate template is the same for every case, so the two renders and the
@@ -1068,9 +1671,10 @@ def build_document(
     computed_ranges = stance_prompts["differing_ranges"]
 
     cases: List[Dict[str, Any]] = []
+    no_ruling: List[Dict[str, Any]] = []
     for case_no in sorted(built_by_case):
         built = built_by_case[case_no]
-        result = raw_by_case[case_no]
+        result = raw_by_case.get(case_no)
         transcript = _read_json(run_dir / ("case-%05d.transcript.json" % case_no))
         rider_agent = _agent_block(transcript, transcript_module.ROLE_RIDER_ADVOCATE)
         driver_agent = _agent_block(transcript, transcript_module.ROLE_DRIVER_ADVOCATE)
@@ -1080,18 +1684,41 @@ def build_document(
             _claims_of(rider_agent),
             _claims_of(driver_agent),
         )
-        judge_output = result.get("ruling") or {}
-        score = scores[case_no]
-        expected = _expected_side(key_records[case_no])
-        brief_digest = result.get("brief_sha256")
+        judge_output = (result or {}).get("ruling") or {}
+        score = scores.get(case_no)
+        expected = _expected_side(key_records[case_no]) if key_records else None
+        # The digest the run recorded, or -- for a case that wrote no result --
+        # the one its advocates' transcript entries hold, which is the same
+        # brief by the other route the run records it on.
+        brief_digest = (result or {}).get("brief_sha256") or _recorded_brief_digest(
+            run_dir, case_no
+        )
+        recorded_ranges = (result or {}).get("stance_differing_ranges")
+        # A case with no result file never recorded where the two renders
+        # differ, so item 3 of the proof is reported as not recorded rather than
+        # compared against an empty list, which would read as a recorded "no
+        # difference" and is the opposite of what the run left.
+        ranges_recorded = result is not None and "stance_differing_ranges" in result
+
+        if result is None or "ruling" not in result:
+            failure = failures.get(case_no) or {}
+            no_ruling.append(
+                {
+                    "case_no": case_no,
+                    "failure_kind": failure.get("failure_kind"),
+                    "failed_agent": failure.get("failed_agent"),
+                    "detail": failure.get("reason"),
+                }
+            )
 
         cases.append(
             {
                 "case_no": case_no,
                 "category": category_by_case[case_no],
-                "difficulty": expected["difficulty"],
+                "difficulty": (expected or {}).get("difficulty"),
                 "brief_sha256": brief_digest,
                 "brief_rebuilt_sha256": _brief_digest(built),
+                "has_ruling": result is not None and "ruling" in result,
                 "dispute": _normalise(built["case"]["dispute"]),
                 "evidence": _normalise(built["case"]["evidence"]),
                 "advocates": {
@@ -1105,8 +1732,9 @@ def build_document(
                     brief_digest,
                     rider_agent,
                     driver_agent,
-                    result.get("stance_differing_ranges"),
+                    recorded_ranges,
                     computed_ranges,
+                    recorded=ranges_recorded,
                 ),
                 "referee": _normalise(referee_result.as_dict()),
                 "judge": {
@@ -1114,7 +1742,7 @@ def build_document(
                     "discarded_claims": _normalise(
                         judge_output.get("discarded_claims") or []
                     ),
-                    "verdict": _produced_side(score),
+                    "verdict": _produced_side(score, judge_output.get("ruling")),
                     "referrals": [
                         str(item)
                         for item in ((judge_output.get("ruling") or {}).get("referrals") or [])
@@ -1133,43 +1761,139 @@ def build_document(
                 # writes it on the case file, and an empty list means the switch
                 # was on and nothing matched. A case decided with the switch off
                 # carries no key at all, and the two are different findings.
-                "precedents_shown": result.get("precedents_shown"),
-                "recorded_matched": result.get("matched"),
+                "precedents_shown": (result or {}).get("precedents_shown"),
+                "recorded_matched": (result or {}).get("matched"),
                 # ``None`` when this run asked this case's advocates itself, so
                 # the case view can say which of the two happened rather than
                 # leaving a reader to infer it from a missing field.
-                "replay": _case_replay(result.get("replay")),
-                "tokens": _normalise(result.get("tokens")),
-                "wall_seconds": result.get("wall_seconds"),
-                "call_seconds": result.get("call_seconds"),
-                "recorded_at": result.get("recorded_at"),
-                "git_commit": result.get("git_commit"),
-                "python_version": result.get("python_version"),
-                "model": result.get("model"),
+                "replay": _case_replay((result or {}).get("replay"), known_dirs),
+                "tokens": _normalise((result or {}).get("tokens")),
+                "wall_seconds": (result or {}).get("wall_seconds"),
+                "call_seconds": (result or {}).get("call_seconds"),
+                "recorded_at": (result or {}).get("recorded_at"),
+                "git_commit": (result or {}).get("git_commit"),
+                "python_version": (result or {}).get("python_version"),
+                "model": (result or {}).get("model"),
             }
         )
 
     document = {
         "schema_version": 1,
         "generator": "ui/build.py",
-        "default_case": DEFAULT_CASE if any(c["case_no"] == DEFAULT_CASE for c in cases) else (
-            cases[0]["case_no"] if cases else None
-        ),
+        "set": _set_block(page, len(cases), key_path),
+        "default_case": _default_case(page, cases),
         "decision_note": model_module.DECISION_NOTE,
-        "decision_note_link": _DECISION_NOTE_LINK,
-        "provenance": _provenance(run, invocations, run_dir, raw_by_case),
-        "headline": _headline(report, case_facts),
+        "decision_note_link": page.link_to(model_module.DECISION_NOTE),
+        # Only a case a note was written about gets a link, and only that case's
+        # note. A miss with no note is a miss and is shown as one: it is not
+        # called contested, and it does not link to a note about another case.
+        "miss_notes": _miss_notes(page, cases),
+        "provenance": _provenance(
+            run, invocations, run_dir, raw_by_case, key_path, known_dirs
+        ),
+        "headline": _headline(
+            report_produced,
+            report_all,
+            case_facts,
+            failed_tokens,
+            failed_cases,
+            known_dirs,
+        ),
         "policies": policies,
         "policy_sha256": policy_digests,
         "stance_prompts": stance_prompts,
         "cases": cases,
+        # Cases the run asked and could not rule on. They are graded as misses
+        # in the headline above, and named here with the run's own failure kind
+        # and detail, because a figure that counts them and a page that never
+        # mentions them is a page a reader cannot audit.
+        "no_ruling_cases": no_ruling,
         "refused_cases": refused,
+        "stated_expectation": _stated_expectation(page.stated_expectation_path),
     }
     # One normalisation at the end rather than one at each use. A Decimal can
     # arrive from the brief, from a transcript's parsed value, or from a run file
     # read with ``parse_float=Decimal``, and a single pass makes it impossible to
     # miss one and ship a page whose data block will not parse.
     return _normalise(document)
+
+
+def _set_block(
+    page: ViewerPage, case_count: int, key_path: Optional[Path]
+) -> Dict[str, Any]:
+    """What the page says about the set it is showing.
+
+    The name, what the set is, and -- for a sealed set -- the tag its single run
+    was made from and the caveat ``eval/development_sets.py`` already carries.
+    No caveat text is written here: the registration owns those words, and a
+    second copy would be a second place for them to drift.
+    """
+    return {
+        "name": page.name,
+        "summary": page.summary,
+        "title": page.title,
+        "brand": page.brand,
+        "badge": page.badge,
+        "report_tool": page.report_tool,
+        "caveat": page.caveat,
+        "freeze_tag": page.freeze_tag,
+        "sealed": page.sealed,
+        "policy_version": page.policy_version,
+        "case_count": case_count,
+        "has_key": page.has_key,
+        "key_path": (
+            _repository_relative(str(key_path)) if key_path is not None else None
+        ),
+        # The corpus page is the one at ``ui/dist/index.html``; every other page
+        # and the index itself sit one directory down.
+        "runs_index_link": "../" * page.depth + "runs/index.html",
+    }
+
+
+def _default_case(page: ViewerPage, cases: Sequence[Mapping[str, Any]]) -> Optional[int]:
+    """The case the page opens on.
+
+    The registration's own choice where it names one -- the corpus's
+    demonstration case, the organisers' sample case -- and otherwise the first
+    case that matched all four fields, which is a fact about the built document
+    and not about the registration.
+    """
+    if not cases:
+        return None
+    if page.default_case is not None:
+        for case in cases:
+            if case["case_no"] == page.default_case:
+                return page.default_case
+    for case in cases:
+        if (case.get("grading") or {}).get("exact"):
+            return case["case_no"]
+    return cases[0]["case_no"]
+
+
+def _miss_notes(
+    page: ViewerPage, cases: Sequence[Mapping[str, Any]]
+) -> Dict[str, Dict[str, str]]:
+    """The note written about each miss, and only about that miss.
+
+    A note reaches a case by one of two routes: it is written about that case by
+    number, or the set names one note for every miss it has. Both are the
+    registration's own statement, and neither is inferred here.
+
+    A miss with no note gets nothing at all. The sentence the page writes about
+    it says it is a miss; it does not call the reading contested and it does not
+    link a note written about a different case, because that would be a claim
+    this repository does not make.
+    """
+    notes: Dict[str, Dict[str, str]] = {}
+    for case in cases:
+        grading = case.get("grading")
+        if grading is None or grading.get("exact"):
+            continue
+        case_no = int(case["case_no"])
+        note = page.miss_notes.get(case_no, page.miss_note_for_every_miss)
+        if note is not None:
+            notes[str(case_no)] = {"note": note, "link": page.link_to(note)}
+    return notes
 
 
 def _advocate_payload(agent: Mapping[str, Any]) -> Dict[str, Any]:
@@ -1283,6 +2007,8 @@ header.top {
 }
 header.top .brand { font-weight: 600; font-size: 15px; }
 header.top .spacer { flex: 1; }
+header.top .runs-link { font-size: 13px; color: var(--accent); text-decoration: none; }
+header.top .runs-link:hover { text-decoration: underline; }
 nav.views { display: flex; gap: 6px; }
 main { padding: 20px; max-width: 1180px; margin: 0 auto; }
 
@@ -1617,13 +2343,19 @@ _JS = r"""
     });
   });
 
+  // Whether this page is graded against an answer key at all. The organisers'
+  // sample case is not: it has no entry in any key, so its last step shows
+  // their stated expectation instead of a comparison with a key that does not
+  // cover it.
+  var HAS_KEY = !!(DATA.set && DATA.set.has_key);
+
   var STEPS = [
     { id: "dispute",  label: "1. The dispute" },
     { id: "evidence", label: "2. The evidence" },
     { id: "rider",    label: "3. Rider advocate" },
     { id: "driver",   label: "4. Driver advocate" },
     { id: "judge",    label: "5. Judge" },
-    { id: "key",      label: "6. Against the answer key" }
+    { id: "key",      label: HAS_KEY ? "6. Against the answer key" : "6. The stated expectation" }
   ];
 
   var state = {
@@ -1922,15 +2654,32 @@ _JS = r"""
     var esc = hl.escalation;
     var cards = h("div", { class: "cards" });
 
-    cards.appendChild(h("div", { class: "card wide" }, [
-      h("div", { class: "label", text: "Four-field exact match" }),
-      h("div", { class: "value", text: hl.exact.display }),
-      h("div", { class: "sub", text: "A ruling counts only when ruling, amount_sgd, driver_compensation_sgd and referrals all agree with the key." })
-    ]));
+    // The four-field figure, on both bases where there are two. Over the cases
+    // that produced a ruling is what the system did where it answered; over
+    // every case in the set is what it did on the set. Both are printed and
+    // neither is offered as the one to quote, because a figure that quietly
+    // drops the cases a run could not answer is the figure that flatters it.
+    var exactCard = h("div", { class: "card wide" }, [
+      h("div", { class: "label", text: "Four-field exact match" })
+    ]);
+    if (hl.exact) {
+      exactCard.appendChild(h("div", { class: "value", text: hl.exact.display }));
+      (hl.exact_bases || []).forEach(function (basis) {
+        exactCard.appendChild(h("div", { class: "sub", text: basis.display + " " + basis.label }));
+      });
+      exactCard.appendChild(h("div", { class: "sub", text:
+        "A ruling counts only when ruling, amount_sgd, driver_compensation_sgd and referrals all agree with the key." }));
+    } else {
+      exactCard.appendChild(h("div", { class: "value", text: "not graded" }));
+      exactCard.appendChild(h("div", { class: "sub", text:
+        "This run is not graded against an answer key, so no accuracy is claimed for it." }));
+    }
+    cards.appendChild(exactCard);
+
     cards.appendChild(h("div", { class: "card" }, [
       h("div", { class: "label", text: "Discarded claims, all judges" }),
       h("div", { class: "value", text: String(hl.discarded_claims.total) }),
-      h("div", { class: "sub", text: "Claims the judges threw out for a citation defect, across all " + hl.cases_graded + " cases." })
+      h("div", { class: "sub", text: "Claims the judges threw out for a citation defect, across all " + DATA.cases.length + " cases." })
     ]));
     cards.appendChild(h("div", { class: "card" }, [
       h("div", { class: "label", text: "Mean seconds per case" }),
@@ -1940,28 +2689,34 @@ _JS = r"""
     cards.appendChild(h("div", { class: "card" }, [
       h("div", { class: "label", text: "Mean tokens per case" }),
       h("div", { class: "value", text: text(hl.tokens.mean_per_case) }),
-      h("div", { class: "sub", text: hl.tokens.total.toLocaleString() + " tokens over " + hl.tokens.cases + " cases." })
+      h("div", { class: "sub", text: hl.tokens.total.toLocaleString() + " tokens over " + hl.tokens.cases + " cases" +
+        (hl.tokens.failed_cases
+          ? ", including " + hl.tokens.failed_total.toLocaleString() + " spent on the " + hl.tokens.failed_cases +
+            " case(s) that produced no ruling."
+          : ".") })
     ]));
-    cards.appendChild(h("div", { class: "card" }, [
-      h("div", { class: "label", text: "Escalation recall" }),
-      h("div", { class: "value", text: esc.recall.display }),
-      h("div", { class: "sub", text: esc.recall.matched + " of " + esc.recall.total + " cases the key escalates." })
-    ]));
-    cards.appendChild(h("div", { class: "card" }, [
-      h("div", { class: "label", text: "Escalation precision" }),
-      h("div", { class: "value", text: esc.precision.display }),
-      h("div", { class: "sub", text: esc.precision.matched + " of " + esc.precision.total + " cases the run escalated." })
-    ]));
-    cards.appendChild(h("div", { class: "card" }, [
-      h("div", { class: "label", text: "Over-escalations" }),
-      h("div", { class: "value", text: String(esc.over_escalations.length) }),
-      h("div", { class: "sub", text: esc.over_escalations.length ? "case " + esc.over_escalations.join(", ") : "none" })
-    ]));
-    cards.appendChild(h("div", { class: "card" }, [
-      h("div", { class: "label", text: "Under-escalations" }),
-      h("div", { class: "value", text: String(esc.under_escalations.length) }),
-      h("div", { class: "sub", text: esc.under_escalations.length ? "case " + esc.under_escalations.join(", ") : "none" })
-    ]));
+    if (esc) {
+      cards.appendChild(h("div", { class: "card" }, [
+        h("div", { class: "label", text: "Escalation recall" }),
+        h("div", { class: "value", text: esc.recall.display }),
+        h("div", { class: "sub", text: esc.recall.matched + " of " + esc.recall.total + " cases the key escalates." })
+      ]));
+      cards.appendChild(h("div", { class: "card" }, [
+        h("div", { class: "label", text: "Escalation precision" }),
+        h("div", { class: "value", text: esc.precision.display }),
+        h("div", { class: "sub", text: esc.precision.matched + " of " + esc.precision.total + " cases the run escalated." })
+      ]));
+      cards.appendChild(h("div", { class: "card" }, [
+        h("div", { class: "label", text: "Over-escalations" }),
+        h("div", { class: "value", text: String(esc.over_escalations.length) }),
+        h("div", { class: "sub", text: esc.over_escalations.length ? "case " + esc.over_escalations.join(", ") : "none" })
+      ]));
+      cards.appendChild(h("div", { class: "card" }, [
+        h("div", { class: "label", text: "Under-escalations" }),
+        h("div", { class: "value", text: String(esc.under_escalations.length) }),
+        h("div", { class: "sub", text: esc.under_escalations.length ? "case " + esc.under_escalations.join(", ") : "none" })
+      ]));
+    }
     return cards;
   }
 
@@ -1984,16 +2739,27 @@ _JS = r"""
   function caseGridTable(rows) {
     var body = h("tbody");
     rows.forEach(function (c) {
+      // Three states, not two. A case can be graded and agree, graded and miss,
+      // or not graded at all -- the organisers' sample case is in no key, so
+      // there is nothing for it to miss. It is drawn plainly rather than as a
+      // miss, because calling it one would be a claim about a key it is not in.
+      var graded = !!(c.grading && c.grading.exact);
       var row = h("tr", {
-        class: (c.grading.exact ? "clickable" : "clickable miss") + (isContested(c) ? " contested" : ""),
+        class: "clickable" + (c.grading && !graded ? " miss" : "") +
+          (isContested(c) ? " contested" : ""),
         title: "open case " + c.case_no,
         onclick: function () { openCase(c.case_no); }
       });
       row.appendChild(h("td", { class: "case-no", text: String(c.case_no) }));
       row.appendChild(h("td", { text: c.category }));
       row.appendChild(h("td", { text: text(c.difficulty) }));
-      row.appendChild(h("td", { text: text(c.judge.verdict.ruling) }));
-      row.appendChild(h("td", { text: text(c.expected.ruling) }));
+      // A case the run could not rule on produced nothing. Its result cell says
+      // so in words: a blank there reads as a ruling of null, and a null ruling
+      // is a real token this system emits and a different thing entirely.
+      row.appendChild(h("td", { class: c.has_ruling ? "" : "null",
+        text: c.has_ruling ? text(c.judge.verdict.ruling) : "no ruling" }));
+      row.appendChild(h("td", { class: c.expected ? "" : "null",
+        text: c.expected ? text(c.expected.ruling) : "not graded" }));
       // The vote column is the run's own vote_agreement, shown beside the
       // result rather than instead of it: a case can be a four-field match and
       // still be one the drafts only just agreed on.
@@ -2003,8 +2769,8 @@ _JS = r"""
           text: outcomeLabel(c.vote.outcome) })
       ] : h("span", { class: "null", text: "no vote" })));
       row.appendChild(h("td", null, h("span", {
-        class: c.grading.exact ? "badge ok" : "badge miss",
-        text: c.grading.exact ? "match" : "MISS"
+        class: graded ? "badge ok" : (c.grading ? "badge miss" : "badge"),
+        text: graded ? "match" : (c.grading ? "MISS" : "not graded")
       })));
       body.appendChild(row);
     });
@@ -2070,13 +2836,42 @@ _JS = r"""
     return box;
   }
 
+  // The set this page is about: its name, and -- for a sealed set -- the tag its
+  // single run was made from and the caveat the registration already carries.
+  // The caveat is not written here; it comes out of the data block, so this page
+  // and eval/development_sets.py cannot drift apart about what the set is.
+  function setBlock() {
+    var s = DATA.set || {};
+    var box = h("div", { class: "set-block" });
+    box.appendChild(h("h2", { class: "set-name" }, [
+      h("span", { text: s.name }),
+      s.sealed ? h("span", { class: "badge", text: "sealed set, run once" }) : null,
+      s.freeze_tag ? h("span", { class: "badge", text: s.freeze_tag }) : null
+    ]));
+    if (s.summary) { box.appendChild(h("p", { class: "lead", text: s.summary })); }
+    if (s.caveat) { box.appendChild(h("p", { class: "lead caveat", text: s.caveat })); }
+    return box;
+  }
+
+  // What the page is a figure of. A page with no key has no accuracy to report,
+  // and saying so is the whole of what it may claim.
+  function headlineLead() {
+    if (!HAS_KEY) {
+      return "This case is not graded: it is not in any answer key. Everything here is computed from the run " +
+        DATA.provenance.run_directory + ", and the run's own ruling is shown beside the organisers' stated " +
+        "expectation, which is not an answer.";
+    }
+    return "Every figure here is computed from the run " + DATA.provenance.run_directory +
+      " and the same grading code that produces " + text(DATA.set.report_tool) +
+      ". Nothing on this page is typed in.";
+  }
+
   function renderOverview() {
     var root = document.getElementById("view-overview");
     clear(root);
+    root.appendChild(setBlock());
     root.appendChild(h("h2", { text: "The run, at a glance" }));
-    root.appendChild(h("p", { class: "lead", text:
-      "Every figure here is computed from the committed run " + DATA.provenance.run_directory +
-      " and the same grading code that produces eval/grade.py's report. Nothing on this page is typed in." }));
+    root.appendChild(h("p", { class: "lead", text: headlineLead() }));
     if (DATA.headline.replay) {
       root.appendChild(h("p", { class: "lead", text:
         "The advocates' outputs for " + DATA.headline.replay.cases + " of " + DATA.headline.replay.total +
@@ -2086,48 +2881,104 @@ _JS = r"""
         DATA.headline.replay.tokens.toLocaleString() + " tokens, billed to the run that made them." }));
     }
     root.appendChild(headlineCards());
-    root.appendChild(h("h3", { text: "Per-field accuracy" }));
-    root.appendChild(h("p", { class: "lead", text:
-      "The per-field figures are there so a reader can see which field a model actually fails on; they are not alternative scores." }));
-    root.appendChild(fieldTable());
-    root.appendChild(h("h3", { text: "Escalation" }));
-    root.appendChild(escalationTable());
+    if (HAS_KEY) {
+      root.appendChild(h("h3", { text: "Per-field accuracy" }));
+      root.appendChild(h("p", { class: "lead", text:
+        "The per-field figures are there so a reader can see which field a model actually fails on; they are not alternative scores." }));
+      root.appendChild(fieldTable());
+      root.appendChild(h("h3", { text: "Escalation" }));
+      root.appendChild(escalationTable());
+    }
     root.appendChild(voteSummary());
     root.appendChild(h("h3", { text: "All " + DATA.cases.length + " cases" }));
     root.appendChild(h("p", { class: "lead", text: "Click any row to open the case stepped through in order." }));
     root.appendChild(caseGrid());
+    appendNode(root, noRulingBlock());
     appendNode(root, missNote());
     var refused = refusedBlock();
     if (refused) { root.appendChild(refused); }
   }
 
+  // The cases the run asked and could not rule on. They are counted as misses
+  // in the figures above, and listed here with the run's own failure kind, so a
+  // reader can audit the count rather than take it. It is a separate block from
+  // the refused one: a refusal is this build declining to draw a case whose
+  // brief it cannot verify, and a no-ruling case is the run's own result.
+  function noRulingBlock() {
+    var rows = DATA.no_ruling_cases || [];
+    if (!rows.length) { return null; }
+    var box = h("div", { class: "warnbox" });
+    box.appendChild(h("b", { text: "Cases the run could not rule on" }));
+    box.appendChild(h("p", { text:
+      "These cases were asked and produced no ruling: every judge draft abstained, so no result was written for " +
+      "them. They are counted as misses in the figures above -- a case that produced nothing is not a case that " +
+      "agreed -- and each is listed here with the run's own failure kind, so the count can be audited." }));
+    var list = h("ul");
+    rows.forEach(function (entry) {
+      list.appendChild(h("li", null, [
+        h("b", { text: "case " + entry.case_no + " - " }),
+        h("code", { text: text(entry.failure_kind) }),
+        entry.failed_agent ? " (" + text(entry.failed_agent) + ")" : "",
+        entry.detail ? h("div", { class: "hint", text: text(entry.detail) }) : null
+      ]));
+    });
+    box.appendChild(list);
+    return box;
+  }
+
   function escalationTable() {
     var esc = DATA.headline.escalation;
+    if (!esc) {
+      return h("p", { class: "null", text: "No escalation figures: this run is not graded against a key." });
+    }
+    var rows = [
+      h("tr", null, [h("td", { text: "Expected escalations" }), h("td", { class: "num", text: String(esc.expected) })]),
+      h("tr", null, [h("td", { text: "Produced escalations" }), h("td", { class: "num", text: String(esc.produced) })]),
+      h("tr", null, [h("td", { text: "Escalation rate" }), h("td", { class: "num", text: esc.rate_percent })])
+    ];
+    // The corpus target is a property of the 29-case corpus, and it is shown
+    // only on the corpus's own page. A sealed set's rate printed beside it
+    // would invite a comparison the set is not answerable to.
+    if (esc.corpus_target) {
+      rows.push(h("tr", null, [h("td", { text: "Corpus target" }), h("td", { class: "num",
+        text: esc.target_percent + (esc.off_target ? " (off target)" : " (on target)") })]));
+    }
+    rows.push(h("tr", null, [h("td", { text: "INDETERMINATE cases ruled confidently" }), h("td", { class: "num",
+      text: esc.indeterminate_ruled_confidently.length ? esc.indeterminate_ruled_confidently.join(", ") : "none" })]));
     return h("table", null, [
       h("thead", null, h("tr", null, [h("th", { text: "" }), h("th", { text: "" })])),
-      h("tbody", null, [
-        h("tr", null, [h("td", { text: "Expected escalations" }), h("td", { class: "num", text: String(esc.expected) })]),
-        h("tr", null, [h("td", { text: "Produced escalations" }), h("td", { class: "num", text: String(esc.produced) })]),
-        h("tr", null, [h("td", { text: "Escalation rate" }), h("td", { class: "num", text: esc.rate_percent })]),
-        h("tr", null, [h("td", { text: "Corpus target" }), h("td", { class: "num", text: esc.target_percent + (esc.off_target ? " (off target)" : " (on target)") })]),
-        h("tr", null, [h("td", { text: "INDETERMINATE cases ruled confidently" }), h("td", { class: "num",
-          text: esc.indeterminate_ruled_confidently.length ? esc.indeterminate_ruled_confidently.join(", ") : "none" })])
-      ])
+      h("tbody", null, rows)
     ]);
   }
 
+  // What the page says about one miss. It is written once, and used by both the
+  // overview's block and the last step of the case view, so the two cannot say
+  // different things about the same case.
+  //
+  // The link is drawn only where a note about *this* case exists. Otherwise the
+  // case is a miss and nothing more: calling it a contested reading, or pointing
+  // at a note written about another case, would be a claim this repository does
+  // not make.
+  function missLine(caseDoc) {
+    var note = (DATA.miss_notes || {})[String(caseDoc.case_no)];
+    var line = h("div", null, [
+      h("b", { text: "Case " + caseDoc.case_no + " is a miss, and it is shown as one. " }),
+      "It failed on " + caseDoc.grading.failed_fields.join(", ") + ". "
+    ]);
+    if (note) {
+      line.appendChild(h("a", { href: note.link, text: note.note }));
+      line.appendChild(" records why this is a contested reading rather than a defect, and why the answer key is not changed for it.");
+    } else {
+      line.appendChild("No note is written about this case, so it is shown as a miss and is not called a contested reading.");
+    }
+    return line;
+  }
+
   function missNote() {
-    var misses = DATA.cases.filter(function (c) { return !c.grading.exact; });
+    var misses = DATA.cases.filter(function (c) { return c.grading && !c.grading.exact; });
     if (!misses.length) { return null; }
     var box = h("div", { class: "miss-note" });
-    misses.forEach(function (c) {
-      box.appendChild(h("div", null, [
-        h("b", { text: "Case " + c.case_no + " is a miss, and it is shown as one. " }),
-        "It failed on " + c.grading.failed_fields.join(", ") + ". ",
-        h("a", { href: DATA.decision_note_link, text: DATA.decision_note }),
-        " records why this is a contested reading rather than a defect, and why the answer key is not changed for it."
-      ]));
-    });
+    misses.forEach(function (c) { box.appendChild(missLine(c)); });
     return box;
   }
 
@@ -2424,6 +3275,26 @@ _JS = r"""
   }
 
   // ---- View 2: one case, stepped through ---------------------------------
+  // The four-field badge, in one place so the case view and the stance view
+  // cannot disagree about the same case. Three states again: no key at all, a
+  // case the run produced no ruling for, and a graded case that matched or did
+  // not. The middle one is not a miss on four fields -- there are no four
+  // fields, because there is no ruling to compare.
+  function gradingBadge(caseDoc) {
+    if (!caseDoc.grading) {
+      return h("span", { class: "badge", text: "not graded" });
+    }
+    if (!caseDoc.has_ruling) {
+      return h("span", { class: "badge miss", text: "no ruling produced" });
+    }
+    return h("span", {
+      class: caseDoc.grading.exact ? "badge ok" : "badge miss",
+      text: caseDoc.grading.exact
+        ? "four-field match"
+        : "MISS on " + caseDoc.grading.failed_fields.join(", ")
+    });
+  }
+
   function renderCase() {
     var root = document.getElementById("view-case");
     var caseDoc = BY_CASE[state.caseNo];
@@ -2436,10 +3307,7 @@ _JS = r"""
       h("span", { class: "title", text: "Case " + caseDoc.case_no }),
       h("span", { class: "badge", text: caseDoc.category }),
       h("span", { class: "badge", text: text(caseDoc.difficulty) }),
-      h("span", {
-        class: caseDoc.grading.exact ? "badge ok" : "badge miss",
-        text: caseDoc.grading.exact ? "four-field match" : "MISS on " + caseDoc.grading.failed_fields.join(", ")
-      }),
+      gradingBadge(caseDoc),
       h("span", { class: "badge", text: "brief " + String(caseDoc.brief_sha256).slice(0, 12) }),
       // Said per case, not only once for the run: a reader stepping through one
       // case has to know whether these advocate outputs were asked for here, and
@@ -2770,11 +3638,62 @@ _JS = r"""
     return h("span", { class: "chips" }, unique.map(clauseChip));
   }
 
+  // The organisers' stated expectation for their own sample case, drawn as what
+  // it is. It is not a key and it is not used as one: nothing here is compared
+  // field by field, nothing is called a match or a miss against it, and the
+  // page says both of those things above it rather than leaving a reader to
+  // infer them from the absence of a Result column.
+  function statedExpectation(caseDoc) {
+    var stated = DATA.stated_expectation;
+    if (!stated) {
+      return h("p", { class: "null", text: "No stated expectation is recorded for this case." });
+    }
+    var box = h("div");
+    box.appendChild(definitionList([
+      ["source document", h("code", { text: text(stated.source_document) })],
+      ["dispute id", h("code", { text: text(stated.dispute_id) })],
+      ["stated outcome", h("b", { text: text(stated.expected_outcome_as_stated) })],
+      ["the run's own ruling", h("code", { text: text(caseDoc.judge.verdict.ruling) })]
+    ]));
+    var reasons = stated.stated_reasons || [];
+    if (reasons.length) {
+      box.appendChild(h("h4", { text: "The reasons as stated" }));
+      box.appendChild(h("ul", { class: "vals" }, reasons.map(function (reason) {
+        return h("li", { text: text(reason) });
+      })));
+    }
+    box.appendChild(h("p", { class: "hint", text: text(stated.not_the_answer_key) }));
+    box.appendChild(h("p", { class: "hint", text: text(stated.upheld_is_not_a_token_here) }));
+    return box;
+  }
+
   function renderKey(caseDoc, panel) {
+    // A page with no key is not graded at all, so this step shows what it has
+    // instead of a grade. There is no four-field comparison to draw and none is
+    // drawn: an empty table of four fields would read as four misses.
+    if (!HAS_KEY) {
+      panel.appendChild(h("h2", { text: "The organisers' stated expectation" }));
+      panel.appendChild(h("p", { class: "lead", text:
+        "This case is not in any answer key, so it is not graded and no accuracy is claimed for it. What the " +
+        "organisers state about their own sample case is below, labelled as what it is: the organisers' stated " +
+        "expectation, not an answer key." }));
+      panel.appendChild(statedExpectation(caseDoc));
+      return;
+    }
+    // A keyed page can still hold a case the key does not. Nothing is claimed
+    // about such a case rather than a table of four fields being drawn against
+    // no expected side, which would read as four misses.
+    if (!caseDoc.grading) {
+      panel.appendChild(h("h2", { text: "Against the answer key" }));
+      panel.appendChild(h("p", { class: "null", text:
+        "This case is not in the answer key this page grades against, so there is no expected side to compare it with." }));
+      return;
+    }
     panel.appendChild(h("h2", { text: "Against the answer key" }));
     panel.appendChild(h("p", { class: "lead", text:
-      "The expected side is the grading answer key at eval/answers/ground_truth.json. It is the answer key, not an input: " +
-      "no agent saw it, and nothing under tribunal/ can reach it. A case counts as a match only when all four fields agree." }));
+      "The expected side is the grading answer key at " + text(DATA.set.key_path) + ". It is the answer key, not an " +
+      "input: no agent saw it, and nothing under tribunal/ can reach it. A case counts as a match only when all four " +
+      "fields agree." }));
 
     var body = h("tbody");
     caseDoc.grading.fields.forEach(function (outcome) {
@@ -2815,7 +3734,10 @@ _JS = r"""
       })],
       ["recorded matched flag", text(caseDoc.recorded_matched)]
     ]));
-    if (caseDoc.recorded_matched !== caseDoc.grading.exact) {
+    // Only where the run recorded a flag at all. A case that wrote no result
+    // file recorded nothing, and "the run recorded matched=null" would be a
+    // claim about a file that does not exist.
+    if (caseDoc.has_ruling && caseDoc.recorded_matched !== caseDoc.grading.exact) {
       panel.appendChild(h("div", { class: "warnbox", text:
         "The run recorded matched=" + text(caseDoc.recorded_matched) + " for this case but the grader now reads " +
         text(caseDoc.grading.exact) + ". The two disagree, and the grader is the one that is recomputed here." }));
@@ -2825,11 +3747,7 @@ _JS = r"""
       panel.appendChild(h("div", null, paragraphs(caseDoc.expected.rationale)));
     }
     if (!caseDoc.grading.exact) {
-      panel.appendChild(h("div", { class: "miss-note" }, [
-        h("b", { text: "This case is a miss and is shown as one. " }),
-        h("a", { href: DATA.decision_note_link, text: DATA.decision_note }),
-        " records why the reading is contested and why the key is not changed for it."
-      ]));
+      panel.appendChild(h("div", { class: "miss-note" }, [missLine(caseDoc)]));
     }
   }
 
@@ -2847,8 +3765,12 @@ _JS = r"""
   function casePicker() {
     var picker = h("div", { class: "case-picker" });
     DATA.cases.forEach(function (c) {
+      // A picker button is marked as a miss only when the case was graded and
+      // did not match. A page with no key has no misses, and marking every
+      // button would say the run failed every case.
+      var cls = c.case_no === state.caseNo ? "on" : (c.grading && !c.grading.exact ? "miss" : "");
       picker.appendChild(h("button", {
-        class: (c.case_no === state.caseNo ? "on" : (c.grading.exact ? "" : "miss")),
+        class: cls,
         text: String(c.case_no),
         onclick: function () {
           if (state.view === "stance") { openStance(c.case_no); } else { openCase(c.case_no); }
@@ -2869,10 +3791,7 @@ _JS = r"""
       h("span", { class: "title", text: "Case " + caseDoc.case_no + ", both sides at once" }),
       h("span", { class: "badge", text: caseDoc.category }),
       h("span", { class: "badge", text: text(caseDoc.difficulty) }),
-      h("span", {
-        class: caseDoc.grading.exact ? "badge ok" : "badge miss",
-        text: caseDoc.grading.exact ? "four-field match" : "MISS on " + caseDoc.grading.failed_fields.join(", ")
-      })
+      gradingBadge(caseDoc)
     ]));
     root.appendChild(h("p", { class: "lead", text:
       "Both advocates were handed the same brief and the same " + caseDoc.evidence.length +
@@ -3085,17 +4004,28 @@ _JS = r"""
       ]
     ));
 
-    // 3. The difference is confined to the stance block.
+    // 3. The difference is confined to the stance block. A case that wrote no
+    //    result file has nothing recorded for this, and the row says so: an
+    //    empty list would read as a recorded finding that the two prompts do
+    //    not differ, which is the opposite of what the run left behind.
+    var recordedRanges = proof.recorded_differing_ranges;
     var why3 = "The two rendered system prompts differ on lines " + differingAsLines(proof.differing_ranges)
       + ", and the stance block occupies lines " + region[0] + " to " + (region[1] - 1)
-      + ". Every differing line falls inside it, which is what the run recorded in "
-      + "stance_differing_ranges and what this build recomputed before writing this page.";
+      + ". Every differing line falls inside it, which is what this build recomputed before writing this page.";
+    why3 += recordedRanges === null
+      ? " This case wrote no result file, so the run recorded no differing ranges for it: the recomputed ranges " +
+        "stand alone here, and the run's own record is shown as not recorded rather than as an empty list, which " +
+        "would read as a recorded finding that the two prompts do not differ."
+      : " It is also what the run recorded in stance_differing_ranges.";
     box.appendChild(fact(
       "3. The difference is confined to the stance block.",
       why3,
       [
         ["differing line ranges", JSON.stringify(proof.differing_ranges), "differ", "recomputed"],
-        ["recorded by the run", JSON.stringify(proof.recorded_differing_ranges), "differ", "matches"],
+        ["recorded by the run",
+          recordedRanges === null ? "not recorded" : JSON.stringify(recordedRanges),
+          recordedRanges === null ? "none" : "differ",
+          recordedRanges === null ? "not recorded" : "matches"],
         ["stance block", "[" + region[0] + ", " + region[1] + ")", "same", "half-open"]
       ]
     ));
@@ -3296,16 +4226,17 @@ _JS = r"""
 
 _BODY = """
 <header class="top">
-  <span class="brand">Tribunal - debate viewer</span>
+  <span class="brand">{brand}</span>
   <nav class="views">
     <button id="nav-overview" class="on">Overview</button>
     <button id="nav-case">One case</button>
     <button id="nav-stance">Stance</button>
   </nav>
+  <a class="runs-link" href="{runs_index_link}">Runs</a>
   <span class="spacer"></span>
   <button id="toggle-projector" title="scale everything up for a projector">Projector</button>
   <button id="show-keys" title="keyboard shortcuts">?</button>
-  <span class="badge">replay of a committed run</span>
+  <span class="badge">{badge}</span>
 </header>
 <main>
   <noscript>
@@ -3324,6 +4255,26 @@ _BODY = """
 """
 
 
+def _body(set_block: Mapping[str, Any]) -> str:
+    """The static half of one page, with the set's own words in it.
+
+    Only three things here are the set's: the brand, the badge, and where the
+    Runs link points. Everything else the page says about the set comes out of
+    the data block, so the behavioural script is the same bytes on every page
+    and the appendChild scan has one script to read rather than five.
+    """
+    return _BODY.format(
+        brand=_escape_html(set_block.get("brand") or "Tribunal - debate viewer"),
+        badge=_escape_html(set_block.get("badge") or "replay of a committed run"),
+        runs_index_link=_escape_html(set_block.get("runs_index_link") or "runs/index.html"),
+    )
+
+
+def _escape_html(value: Any) -> str:
+    """Text for an HTML context, escaped by the standard library."""
+    return html.escape(str(value), quote=True)
+
+
 def render_html(document: Mapping[str, Any]) -> str:
     """The whole page, as one string, from the document.
 
@@ -3337,6 +4288,7 @@ def render_html(document: Mapping[str, Any]) -> str:
     agents' own prose would otherwise end the data block early -- and the agents'
     prose is not ours to constrain.
     """
+    set_block = document.get("set") or {}
     data = json.dumps(
         document,
         ensure_ascii=False,
@@ -3350,16 +4302,141 @@ def render_html(document: Mapping[str, Any]) -> str:
             "<!DOCTYPE html>\n",
             '<html lang="en">\n<head>\n<meta charset="utf-8">\n',
             '<meta name="viewport" content="width=device-width, initial-scale=1">\n',
-            "<title>Tribunal - debate viewer</title>\n",
+            "<title>",
+            _escape_html(set_block.get("title") or "Tribunal - debate viewer"),
+            "</title>\n",
             "<style>\n",
             _CSS.strip(),
             "\n</style>\n</head>\n<body>\n",
-            _BODY.strip(),
+            _body(set_block).strip(),
             '\n<script id="tribunal-data" type="application/json">',
             data,
             "</script>\n<script>\n",
             _JS.strip(),
             "\n</script>\n</body>\n</html>\n",
+        ]
+    )
+
+
+# --------------------------------------------------------------------------
+# The runs index
+# --------------------------------------------------------------------------
+# The order the index lists the pages in. The corpus first because it is the
+# figure the submission reports; the two sealed sets together and after it,
+# because they are the same kind of thing; the sample case last, because it is
+# not graded.
+_INDEX_ORDER = ("corpus", "codex", "wild", "wild-v2", "ryde-901")
+
+
+def _page_link_from_index(name: str) -> str:
+    """A link to one page, written on the index. The index is one level down."""
+    relative = pages()[name].output_path.relative_to(DIST_DIR).as_posix()
+    return "../" + relative
+
+
+def _index_rows(documents: Mapping[str, Mapping[str, Any]]) -> List[Dict[str, Any]]:
+    """One row per built page, with the figures read out of its own document.
+
+    Nothing here is typed in. The case count and the headline figure come from
+    the document this build has just produced, so the index cannot print a
+    figure the page it links to does not also print.
+    """
+    rows: List[Dict[str, Any]] = []
+    for name in _INDEX_ORDER:
+        document = documents.get(name)
+        if document is None:
+            continue
+        set_block = document.get("set") or {}
+        headline = document.get("headline") or {}
+        exact = headline.get("exact")
+        rows.append(
+            {
+                "name": name,
+                "summary": set_block.get("summary"),
+                "case_count": set_block.get("case_count"),
+                "freeze_tag": set_block.get("freeze_tag"),
+                "sealed": bool(set_block.get("sealed")),
+                "graded": bool(set_block.get("has_key")),
+                "figure": None if exact is None else exact.get("display"),
+                "figure_label": (
+                    None
+                    if exact is None
+                    else "four-field exact over the {0} cases of the set".format(
+                        exact.get("total")
+                    )
+                ),
+                "link": _page_link_from_index(name),
+            }
+        )
+    return rows
+
+
+def render_index(documents: Mapping[str, Mapping[str, Any]]) -> str:
+    """The runs index: every page, its own figures, and a link to each.
+
+    The sealed sets stand on rows of their own, with the tag their single run
+    was made from. They are **never summed**, with each other or with anything
+    else: one figure over 64 cases plus another over 20 is not a measurement of
+    84 cases, and a total row here would say that it is.
+
+    The figures are read out of the documents this build has just produced, so
+    the index cannot disagree with any page it links to.
+    """
+    rows = _index_rows(documents)
+    parts: List[str] = []
+    for row in rows:
+        badge = (
+            '<span class="badge">' + _escape_html(row["freeze_tag"]) + "</span>"
+            if row["freeze_tag"]
+            else ""
+        )
+        figure = (
+            _escape_html(row["figure"])
+            if row["figure"] is not None
+            else '<span class="null">not graded</span>'
+        )
+        note = (
+            '<div class="sub">' + _escape_html(row["figure_label"]) + "</div>"
+            if row["figure_label"]
+            else ""
+        )
+        parts.append(
+            "<tr>"
+            '<td><a href="' + _escape_html(row["link"]) + '">'
+            + _escape_html(row["name"])
+            + "</a> " + badge + "</td>"
+            "<td>" + _escape_html(row["summary"] or "") + "</td>"
+            '<td class="num">' + _escape_html(row["case_count"]) + "</td>"
+            '<td class="num">' + figure + note + "</td>"
+            "</tr>"
+        )
+    return "".join(
+        [
+            "<!DOCTYPE html>\n",
+            '<html lang="en">\n<head>\n<meta charset="utf-8">\n',
+            '<meta name="viewport" content="width=device-width, initial-scale=1">\n',
+            "<title>Tribunal - the runs</title>\n",
+            "<style>\n",
+            _CSS.strip(),
+            "\n</style>\n</head>\n<body>\n",
+            '<header class="top">\n'
+            '  <span class="brand">Tribunal - the runs</span>\n'
+            "</header>\n",
+            "<main>\n",
+            "<h1>The runs</h1>\n",
+            '<p class="lead">Every run the viewer draws, with the figure its own '
+            "page reports. Each figure is computed from that run, and the two "
+            "sealed sets are never added to each other or to anything else: one "
+            "figure over 64 cases plus another over 20 is not a measurement of "
+            "84 cases.</p>\n",
+            '<div class="table-wrap">\n<table>\n',
+            "<thead><tr><th>Set</th><th>What it is</th><th>Cases</th>"
+            "<th>Headline figure</th></tr></thead>\n",
+            "<tbody>\n",
+            "\n".join(parts),
+            "\n</tbody>\n</table>\n</div>\n",
+            "</main>\n",
+            "</body>\n</html>\n",
         ]
     )
 
@@ -3384,10 +4461,125 @@ def _report_refusals(document: Mapping[str, Any]) -> None:
         )
 
 
+def _write_or_check(
+    destination: Path, text: str, check: bool, what: str
+) -> int:
+    """Write one built file, or compare it with what is on disk. 0 on success."""
+    if check:
+        if not destination.is_file():
+            print("{0} does not exist; run the build".format(destination))
+            return 1
+        committed = destination.read_text(encoding="utf-8")
+        if committed != text:
+            print(
+                "{0} differs from a fresh build ({1} bytes on disk, {2} bytes "
+                "rebuilt)".format(
+                    destination,
+                    len(committed.encode("utf-8")),
+                    len(text.encode("utf-8")),
+                )
+            )
+            return 1
+        print(
+            "{0} is identical to a fresh build ({1} bytes)".format(
+                destination, len(text.encode("utf-8"))
+            )
+        )
+        return 0
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(text, encoding="utf-8")
+    print(
+        "wrote {0}: {1}, {2} bytes".format(
+            destination, what, len(text.encode("utf-8"))
+        )
+    )
+    return 0
+
+
+def _refuse_a_sealed_destination(destination: Path) -> bool:
+    """Refuse a destination before anything is read or built. True when refused."""
+    try:
+        sealed_roots.refuse_a_sealed_destination(destination)
+    except sealed_roots.SealedDestinationError as exc:
+        print("FATAL: {0}".format(exc), file=sys.stderr)
+        return True
+    return False
+
+
+def _build_one_page(
+    page: ViewerPage,
+    run_dir: Optional[str] = None,
+    out: Optional[str] = None,
+    check: bool = False,
+) -> int:
+    """Build one page, or check it. The page's own path unless ``out`` names one."""
+    destination = Path(page.output_path if out is None else out)
+    # The page's destination is the caller's to name, so it is refused before
+    # the run is read and before anything is built. The rule is
+    # :mod:`eval.sealed_roots`'s, so this command and every other one that
+    # writes to a path a caller names refuse the same paths.
+    if _refuse_a_sealed_destination(destination):
+        return 1
+    try:
+        document = build_document(run_dir=run_dir, page=page)
+    except BuildError as exc:
+        print("FATAL: {0}".format(exc), file=sys.stderr)
+        return 1
+    _report_refusals(document)
+    return _write_or_check(
+        destination,
+        render_html(document),
+        check,
+        "{0} cases".format(len(document["cases"])),
+    )
+
+
+def _build_every_page(check: bool = False) -> int:
+    """Every page, plus the index beside them. Non-zero if anything failed."""
+    status = 0
+    documents: Dict[str, Dict[str, Any]] = {}
+    for name in _INDEX_ORDER:
+        page = pages()[name]
+        if _refuse_a_sealed_destination(Path(page.output_path)):
+            return 1
+        try:
+            document = build_document(page=page)
+        except BuildError as exc:
+            print("FATAL: {0}".format(exc), file=sys.stderr)
+            return 1
+        _report_refusals(document)
+        documents[name] = document
+        status |= _write_or_check(
+            Path(page.output_path),
+            render_html(document),
+            check,
+            "{0} cases".format(len(document["cases"])),
+        )
+    if _refuse_a_sealed_destination(INDEX_PATH):
+        return 1
+    status |= _write_or_check(
+        INDEX_PATH, render_index(documents), check, "{0} pages".format(len(documents))
+    )
+    return 0 if status == 0 else 1
+
+
 def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--run-dir", default=str(RUN_DIR), help="the run to replay")
-    parser.add_argument("--out", default=str(OUTPUT_PATH), help="where to write the page")
+    parser.add_argument(
+        "--set",
+        dest="set_name",
+        default=None,
+        help=(
+            "which page to build: {0}. With no --set, every page is built, plus "
+            "the index beside them.".format(", ".join(sorted(pages())))
+        ),
+    )
+    parser.add_argument(
+        "--run-dir", default=None, help="the run to replay, overriding the set's own"
+    )
+    parser.add_argument(
+        "--out", default=None, help="where to write the page, overriding the set's own"
+    )
     parser.add_argument(
         "--check",
         action="store_true",
@@ -3395,43 +4587,30 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    # The page's destination is the caller's to name, so it is refused before
-    # the run is read and before anything is built. The rule is
-    # :mod:`eval.sealed_roots`'s, so this command and every other one that
-    # writes to a path a caller names refuse the same paths.
-    try:
-        sealed_roots.refuse_a_sealed_destination(args.out)
-    except sealed_roots.SealedDestinationError as exc:
-        print("FATAL: {0}".format(exc), file=sys.stderr)
+    known = pages()
+    if args.set_name is not None and args.set_name not in known:
+        print(
+            "FATAL: {0!r} is not a page; the pages are {1}".format(
+                args.set_name, ", ".join(sorted(known))
+            ),
+            file=sys.stderr,
+        )
         return 1
-
-    document = build_document(run_dir=Path(args.run_dir))
-    _report_refusals(document)
-    page = render_html(document)
-
-    out = Path(args.out)
-    if args.check:
-        if not out.is_file():
-            print("{0} does not exist; run the build".format(out))
-            return 1
-        committed = out.read_text(encoding="utf-8")
-        if committed != page:
+    if args.set_name is None:
+        if args.run_dir is not None or args.out is not None:
             print(
-                "{0} differs from a fresh build ({1} bytes on disk, {2} bytes "
-                "rebuilt)".format(out, len(committed.encode("utf-8")), len(page.encode("utf-8")))
+                "FATAL: --run-dir and --out name one page's inputs; give --set "
+                "as well, or neither",
+                file=sys.stderr,
             )
             return 1
-        print("{0} is identical to a fresh build ({1} bytes)".format(out, len(page.encode("utf-8"))))
-        return 0
-
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(page, encoding="utf-8")
-    print(
-        "wrote {0}: {1} cases, {2} bytes".format(
-            out, len(document["cases"]), len(page.encode("utf-8"))
-        )
+        return _build_every_page(check=args.check)
+    return _build_one_page(
+        known[args.set_name],
+        run_dir=args.run_dir,
+        out=args.out,
+        check=args.check,
     )
-    return 0
 
 
 if __name__ == "__main__":
