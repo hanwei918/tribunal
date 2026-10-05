@@ -451,6 +451,41 @@ def cached_cases(run_dir: Path = RUN_DIR) -> List[int]:
     return sorted(numbers)
 
 
+def _agent_call_tokens(run_dir: Path) -> Dict[int, int]:
+    """Tokens each case spent, summed over every ``agent_call`` in the log.
+
+    This is deliberately not ``run.json``'s ``tokens.failed``. That figure
+    covers the invocation that *retried* a case which produced no ruling, and
+    not the invocation that first failed on it, so for a case asked twice it
+    reports about half of what the case cost. The page adds it to the case
+    records, and the case records carry only the cases that *did* produce a
+    ruling -- so a total built from it came out below the run's own.
+
+    The event log is written once per call and each entry names its case and its
+    invocation, so summing it is the only route to what a case spent across
+    every invocation it took. The log is read a line at a time rather than
+    loaded, because it holds one line per call for the whole run.
+    """
+    path = Path(run_dir) / "events.jsonl"
+    if not path.exists():
+        raise BuildError("no event log under {0}".format(run_dir))
+    per_case: Dict[int, int] = {}
+    with path.open("r", encoding="utf-8") as handle:
+        for line in handle:
+            line = line.strip()
+            if not line:
+                continue
+            event = json.loads(line)
+            if not isinstance(event, Mapping) or event.get("event") != "agent_call":
+                continue
+            case_no = event.get("case")
+            spent = event.get("total_tokens")
+            if case_no is None or spent is None:
+                continue
+            per_case[int(case_no)] = per_case.get(int(case_no), 0) + int(spent)
+    return per_case
+
+
 def _brief_digest(built: Mapping[str, Any]) -> str:
     """The SHA-256 of the brief exactly as the pipeline serialised it.
 
@@ -886,9 +921,10 @@ def _headline(
     from the run's own judge results, and the test recomputes it the same way.
 
     ``failed_tokens`` and ``failed_cases`` are the tokens spent on the cases
-    that produced no ruling. They have no case file to be counted from, so they
-    are added here from ``run.json``'s own failure total: a token total that
-    left them out would report less than the run spent.
+    that produced no ruling. They have no case file to be counted from, so the
+    caller sums them from the run's event log -- across every invocation, which
+    ``run.json``'s own failure total does not -- and they are added here: a
+    token total that left them out would report less than the run spent.
     """
     discarded_per_case: Dict[str, int] = {}
     for case_no in sorted(case_facts):
@@ -1049,6 +1085,11 @@ def _headline(
             "cases": token_cases,
             "failed_cases": int(failed_cases),
             "failed_total": int(failed_tokens),
+            # Where the failed figure came from, stated so the page can say it.
+            # It is not ``run.json``'s failure total, which counts one
+            # invocation of a case that took two, and a reader comparing the
+            # page with the run's own file has to be told which sum this is.
+            "failed_source": "events.jsonl",
         },
     }
 
@@ -1638,7 +1679,7 @@ def build_document(
     # files for every case the run holds -- refused ones included, so the
     # figures describe the run and not the subset this build could verify. A
     # case with no result file (its judge drafts all abstained) contributes no
-    # facts here; its tokens are added from ``run.json``'s failure total below.
+    # facts here; its tokens are added from the event log below.
     case_facts = {
         case_no: {
             "discarded_claims": (
@@ -1658,8 +1699,28 @@ def build_document(
         for entry in (run.get("failures") or [])
         if isinstance(entry, Mapping) and "case_no" in entry
     }
-    failed_tokens = int(((run.get("tokens") or {}).get("failed") or {}).get("total_tokens") or 0)
     failed_cases = len(failures)
+    # What the failed cases spent, summed from the event log across every
+    # invocation, and not taken from ``run.json``. The run's own failure total
+    # covers only the invocation that *retried* each of them, so it reports
+    # about half of the cost; and because these cases wrote no result file, the
+    # case records above cannot carry any of it. A run with no failures needs no
+    # log, which is why the read is conditional: a fixture run directory has
+    # none, and it has nothing to add.
+    failed_tokens = 0
+    if failures:
+        spent_by_case = _agent_call_tokens(run_dir)
+        missing = sorted(
+            case_no for case_no in failures if case_no not in spent_by_case
+        )
+        if missing:
+            raise BuildError(
+                "the event log under {0} records no call for the case(s) the run "
+                "failed on: {1}".format(
+                    run_dir, ", ".join(str(case_no) for case_no in missing)
+                )
+            )
+        failed_tokens = sum(spent_by_case[case_no] for case_no in failures)
 
     # The stance proof's shared half is rendered once, before any case: the
     # advocate template is the same for every case, so the two renders and the
@@ -2818,13 +2879,18 @@ _JS = r"""
       h("div", { class: "value", text: text(hl.seconds.mean_per_case) + " s" }),
       h("div", { class: "sub", text: hl.seconds.total + " s over " + hl.seconds.cases + " cases." })
     ]));
+    // The failed figure is not run.json's own failure total, which counts the
+    // one invocation that retried each failed case and not the one that first
+    // failed on it -- so it is about half of what the case cost. It is summed
+    // from the event log instead, and the page says which sum this is.
     cards.appendChild(h("div", { class: "card" }, [
       h("div", { class: "label", text: "Mean tokens per case" }),
       h("div", { class: "value", text: text(hl.tokens.mean_per_case) }),
       h("div", { class: "sub", text: hl.tokens.total.toLocaleString() + " tokens over " + hl.tokens.cases + " cases" +
         (hl.tokens.failed_cases
           ? ", including " + hl.tokens.failed_total.toLocaleString() + " spent on the " + hl.tokens.failed_cases +
-            " case(s) that produced no ruling."
+            " case(s) that produced no ruling, summed from the run's event log (" + hl.tokens.failed_source +
+            ") across every invocation."
           : ".") })
     ]));
     if (esc) {

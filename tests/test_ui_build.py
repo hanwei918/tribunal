@@ -56,7 +56,7 @@ import tempfile
 import unittest
 from html.parser import HTMLParser
 from pathlib import Path
-from typing import Any, Dict, Optional, Sequence
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -2835,6 +2835,48 @@ class HeadlineBasisTests(unittest.TestCase):
                 self.assertEqual(printed, [basis["display"] for basis in bases])
 
 
+def agent_call_tokens(run_dir: Path) -> Tuple[Dict[int, int], int]:
+    """What each case spent, and what the whole run spent, from the event log.
+
+    Not the same sum as ``run.json``'s ``tokens.failed``. That figure covers the
+    invocation that *retried* a failed case and not the invocation that first
+    failed on it, so for a case that was asked twice it is about half of what
+    the case cost. The event log carries one ``agent_call`` per call, each
+    naming its case and its invocation, so summing it is the only route to what
+    a case spent across every invocation it took.
+
+    Returned as a mapping from case number to tokens, and the total over the
+    whole log. Recomputed here rather than read from the builder, so that the
+    test compares two computations rather than one computation against a
+    memory.
+    """
+    per_case: Dict[int, int] = {}
+    total = 0
+    with (Path(run_dir) / "events.jsonl").open("r", encoding="utf-8") as handle:
+        for line in handle:
+            line = line.strip()
+            if not line:
+                continue
+            event = json.loads(line)
+            if event.get("event") != "agent_call":
+                continue
+            case_no = int(event["case"])
+            spent = int(event["total_tokens"])
+            per_case[case_no] = per_case.get(case_no, 0) + spent
+            total += spent
+    return per_case, total
+
+
+def failed_case_numbers(run_dir: Path) -> List[int]:
+    """The cases the run's own record names as producing no ruling."""
+    run = json.loads((Path(run_dir) / "run.json").read_text(encoding="utf-8"))
+    return sorted(
+        int(entry["case_no"])
+        for entry in (run.get("failures") or [])
+        if isinstance(entry, Mapping) and "case_no" in entry
+    )
+
+
 class NoRulingTests(unittest.TestCase):
     """The two cases the held-out set asked and could not rule on.
 
@@ -2912,15 +2954,45 @@ class NoRulingTests(unittest.TestCase):
 
     def test_the_failed_cases_tokens_are_in_the_total(self):
         """The headline is a figure over the run, so the tokens it spent failing
-        are part of it."""
+        are part of it -- and they are what the run spent, not what one
+        invocation of it spent.
+
+        ``run.json``'s failure total covers the invocation that *retried* each
+        failed case and not the invocation that first failed on it, so the page
+        stated about half of the cost and a total below the run's own. The
+        figure is summed from the event log now, across every invocation, which
+        is what makes the page's total the run's.
+        """
+        run_dir = Path(build.pages()["wild"].run_dir)
+        per_case, total = agent_call_tokens(run_dir)
+        failed = failed_case_numbers(run_dir)
         tokens = self.document["headline"]["tokens"]
+        self.assertEqual([517, 533], failed)
         self.assertEqual(2, tokens["failed_cases"])
-        self.assertEqual(526237, tokens["failed_total"])
-        run = json.loads(
-            (build.pages()["wild"].run_dir / "run.json").read_text(encoding="utf-8")
+        self.assertEqual(
+            sum(per_case[case_no] for case_no in failed), tokens["failed_total"]
         )
-        self.assertEqual(run["tokens"]["total_for_the_case_set"], tokens["total"])
         self.assertEqual(64, tokens["cases"])
+        # The total is the run's, so it is the sum over the whole event log --
+        # not the case records plus whatever one invocation of the failed cases
+        # happened to cost, which is what it used to be.
+        self.assertEqual(total, tokens["total"])
+        # And the figure the page used to state is smaller than the right one,
+        # which is the defect: it is one invocation's worth of a case asked
+        # twice.
+        run = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
+        self.assertLess(
+            run["tokens"]["failed"]["total_tokens"], tokens["failed_total"]
+        )
+
+    def test_the_page_states_where_the_failed_figure_comes_from(self):
+        """A figure whose source is not stated cannot be audited, and this one
+        is deliberately not the figure ``run.json`` carries, so the difference
+        has to be visible on the page rather than only in the code."""
+        tokens = self.document["headline"]["tokens"]
+        self.assertEqual("events.jsonl", tokens["failed_source"])
+        page = build.pages()["wild"].output_path.read_text(encoding="utf-8")
+        self.assertIn("summed from the run's event log", page)
 
     def test_the_produced_column_says_no_ruling_rather_than_nothing(self):
         """The data half of the claim, and then the script that draws it.
