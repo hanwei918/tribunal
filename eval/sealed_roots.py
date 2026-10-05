@@ -1,9 +1,12 @@
 """One refusal, in one place, for the paths a command is asked to write to.
 
-Several commands here write to a path the caller names: ``run_benchmark
---external``, ``eval.grade --out``, ``ui.build --out``, ``policy_gaps draft
---proposals-dir`` and ``policy_gaps approve --amendments-dir``. Each of those
-paths can land somewhere it must not. Two places are refused:
+Several commands write to a path the caller names: ``run_benchmark --external``,
+``eval.grade --out``, ``ui.build --out``, ``policy_gaps draft
+--proposals-dir``, ``policy_gaps approve --amendments-dir`` and ``policy_gaps
+reject --proposal``. Four more derive a destination of their own and reach this
+helper through their own guard: the recorded-drafts measurement, the baselines,
+the amount-rule measurement and the policy-gap report. Each of those paths can
+land somewhere it must not. Two places are refused:
 
 **A sealed set's root.** ``runs/wild/`` holds the held-out set's single run and
 ``runs/wild-v2/`` the second sealed set's, and both runs have been made. Each is
@@ -34,10 +37,16 @@ as the commands already here rather than restating them. The message names the
 **path** and nothing else: which root it fell under, which set owns that root
 and what to do instead are the caller's to say, because they differ per command.
 
-``tribunal.precedents --store`` is the one write path that does **not** come
-through here. ``tribunal/`` imports nothing from ``eval/``, and the evaluated
-system stays byte-identical to the tag it was frozen at, so that guard is the
-caller's own.
+**Two write paths do not come through here.** ``tribunal.pipeline --out`` and
+``tribunal.precedents --store`` both write to a path the caller names, and
+neither is stopped by anything in ``eval/``: ``tribunal/`` imports nothing from
+``eval/`` and the evaluated system stays byte-identical to the tag it was frozen
+at, so those guards are their callers' own. A write that reaches a sealed root
+through one of them is not prevented. It is **caught**: every committed file
+under a sealed root is checked file by file against its manifest by
+``tests.test_wild_run_manifest`` and ``tests.test_wild_v2_run_manifest``, and git
+shows any change to one, so the guard is what stops a command and the manifest
+and the diff are what notice anything the guard did not.
 """
 
 from __future__ import annotations

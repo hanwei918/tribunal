@@ -656,18 +656,24 @@ outright, and so is this one: `runs/wild-v2/` is in
 again, the plain sealed run included. The refusal is now made with the run
 committed, so the guard is what keeps the record the record.
 
-**Every command that writes to a path a user names refuses a sealed root.** Both
-sealed roots and all four headline directories are refused by one helper,
+**The commands below refuse a sealed root; two write paths do not.** Both sealed
+roots and all four headline directories are refused by one helper,
 `eval.sealed_roots.refuse_a_sealed_destination`, before anything is created or
 written. The commands it guards are `run_benchmark --external` (in
 `assert_external_run_directory`), `eval.grade --out`, `ui.build --out`,
-`policy_gaps draft --proposals-dir` and `policy_gaps approve --amendments-dir`, and
-the four guards the earlier cleanup added — the recorded-drafts measurement, the
-baselines, the amount-rule measurement and the policy-gap report — are routed
-through the same helper. Each of those is pinned by a test in
-`tests/test_sealed_roots_closed.py`, for both sealed roots. **`tribunal.precedents
---store` is the one write path that is not guarded**: `tribunal/` imports nothing
-from `eval/`, so the evaluated system stays byte-identical to the tag.
+`policy_gaps draft --proposals-dir`, `policy_gaps approve --amendments-dir` and
+`policy_gaps reject --proposal`, and the four guards the earlier cleanup added —
+the recorded-drafts measurement, the baselines, the amount-rule measurement and
+the policy-gap report — are routed through the same helper. Each of those is
+pinned by a test in
+`tests/test_sealed_roots_closed.py`, for both sealed roots. **Two write paths are
+not guarded: `tribunal.pipeline --out` and `tribunal.precedents --store`.**
+`tribunal/` imports nothing from `eval/`, so the evaluated system stays
+byte-identical to the tag and those guards are their callers' own. What catches a
+write that gets past a guard is the record rather than a guard: every committed
+file under `runs/wild/` and `runs/wild-v2/` is checked file by file against its
+manifest by `tests/test_wild_run_manifest.py` and
+`tests/test_wild_v2_run_manifest.py`, and git shows any change to one.
 
 **A case that has a result is never re-run.** `--force` is refused for this set
 inside `run_set`, and `--replay-advocates`, `--replay-check` and
