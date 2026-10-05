@@ -829,9 +829,10 @@ body.projector .marker { font-size: 14px; }
         text: c.has_ruling ? text(c.judge.verdict.ruling) : "no ruling" }));
       row.appendChild(h("td", { class: c.expected ? "" : "null",
         text: c.expected ? text(c.expected.ruling) : "not graded" }));
-      // The vote column is the run's own vote_agreement, shown beside the
-      // result rather than instead of it: a case can be a four-field match and
-      // still be one the drafts only just agreed on.
+      // The vote column counts the drafts that agreed, shown beside the result
+      // rather than instead of it: a case can be a four-field match and still
+      // be one the drafts only just agreed on. The run's own vote_agreement is
+      // a rounded fraction, and the panel says the count in words instead.
       row.appendChild(h("td", { class: "vote-cell" }, c.vote ? [
         h("span", { text: agreementLabel(c.vote.agreeing, c.vote.votes) }),
         c.vote.unanimous ? null : h("span", { class: "badge contested " + text(c.vote.outcome),
@@ -1064,7 +1065,11 @@ body.projector .marker { font-size: 14px; }
   var VOTE_OUTCOME_LABEL = {
     carried: "carried unanimously",
     carried_not_unanimous: "carried, not unanimous",
-    escalated: "no majority, escalated"
+    escalated: "no majority, escalated",
+    // Every draft abstained, so no proposal was ever put to the vote. The run
+    // writes the token and the page keeps it as the class; a reader is given
+    // the sentence, which is also what the panel's own label says below.
+    no_valid_drafts: "no valid draft"
   };
   var VOTE_OUTCOME_TEXT = {
     carried: "Every draft proposed the same four graded fields, so the ruling is the one they agreed on.",
@@ -1106,6 +1111,27 @@ body.projector .marker { font-size: 14px; }
   }
   function agreementLabel(agreeing, votes) {
     return agreeing + " of " + votes + (votes === 1 ? " draft agrees" : " drafts agree");
+  }
+
+  // The vote panel's label, in words. The run also records a rounded
+  // ``vote_agreement`` fraction, but a reader should not have to turn 0.75 back
+  // into "3 of 4", so the count the panel reached is said outright. The rest of
+  // the panel is then accounted for, draft by draft, and the two ways a draft
+  // can fail to agree are counted apart: a draft that abstained is not a draft
+  // that disagreed, and the run's own ``valid`` count cannot tell the two
+  // apart, so the abstentions come from ``votes - valid`` and the dissents from
+  // ``valid - agreeing``. A panel with no valid draft has no count to give, and
+  // says that instead of "0 of 4".
+  function panelSentence(vote) {
+    var votes = vote.votes;
+    if (!vote.valid) { return "no valid draft"; }
+    var sentence = "judge panel: " + vote.agreeing + " of " + votes +
+      (votes === 1 ? " agrees" : " agree");
+    var abstained = votes - vote.valid;
+    var dissented = vote.valid - vote.agreeing;
+    if (abstained > 0) { sentence += ", " + abstained + " abstained"; }
+    if (dissented > 0) { sentence += ", " + dissented + " dissented"; }
+    return sentence;
   }
 
   // An abstention is recorded as a reason code, and one of the codes carries
@@ -1190,10 +1216,15 @@ body.projector .marker { font-size: 14px; }
       "fields together; the drafts are drawn differently, and the run records how, per draft, below." }));
 
     var result = h("div", { class: "vote-result " + text(vote.outcome) });
+    // Two badges here used to say the same thing twice, one of them in the
+    // run's own vocabulary: the draft count, and the raw ``vote_agreement``
+    // fraction. The fraction stays in the data and is not drawn; a reader is
+    // given the panel's own sentence instead. When every draft abstained that
+    // sentence and the outcome label are the same words, so it is said once.
+    var sentence = panelSentence(vote);
     result.appendChild(h("div", { class: "headline" }, [
       h("span", { class: "what", text: outcomeLabel(vote.outcome) }),
-      h("span", { class: "badge", text: agreementLabel(vote.agreeing, vote.votes) }),
-      h("span", { class: "badge", text: "vote_agreement " + text(vote.agreement) }),
+      sentence === outcomeLabel(vote.outcome) ? null : h("span", { class: "badge", text: sentence }),
       vote.unanimous ? h("span", { class: "badge ok", text: "unanimous" })
                      : h("span", { class: "badge contested", text: "not unanimous" })
     ]));

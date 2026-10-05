@@ -830,7 +830,12 @@ class JudgeVoteTests(unittest.TestCase):
         """
         self.assertIn("votePanel(caseDoc)", self.script)
         self.assertIn("voteSummary()", self.script)
-        for field in ("vote.drafts", "vote.agreement", "vote.outcome", "vote.unanimous"):
+        # The panel reads the counts, not the fraction. ``vote.agreement`` is a
+        # rounded number the run records, and it stays in the data -- the test
+        # above compares it against the run's own record -- but no render path
+        # is handed the fraction to draw any more, so it is no longer a name
+        # the script reads. ``vote.valid`` is what the panel counts from.
+        for field in ("vote.drafts", "vote.valid", "vote.outcome", "vote.unanimous"):
             with self.subTest(field=field):
                 self.assertIn(field, self.script)
 
@@ -1913,10 +1918,35 @@ class MoneyAndLabelTests(unittest.TestCase):
         self.assertNotIn("text: text(c.vote.outcome)", self.script)
         self.assertIn('class: "badge contested " + text(c.vote.outcome)', self.script)
 
-    def test_the_agreement_badge_counts_drafts(self):
-        self.assertIn("agreementLabel(vote.agreeing, vote.votes)", self.script)
+    def test_the_compact_cells_still_count_the_drafts(self):
+        """The grid and the summary keep the one-line count; the vote panel is
+        the one place that gained the longer sentence, so the one-line count is
+        gone from the panel rather than from the page."""
         self.assertIn("agreementLabel(c.vote.agreeing, c.vote.votes)", self.script)
         self.assertIn('" drafts agree"', self.script)
+        self.assertNotIn("agreementLabel(vote.agreeing, vote.votes)", self.script)
+
+    def test_the_panel_says_how_the_drafts_voted_in_words(self):
+        """The panel's label is the count it reached, in words.
+
+        The raw ``vote_agreement`` badge is gone, and the panel says the count
+        instead -- accounting for the drafts that abstained and for the valid
+        drafts that disagreed, because the run's ``valid`` count on its own
+        cannot tell those two apart. A panel where no draft was valid has no
+        count to give and says so.
+        """
+        self.assertIn("panelSentence(vote)", self.script)
+        # The raw badge's own expression, so that a comment naming the fraction
+        # is not mistaken for the badge coming back.
+        self.assertNotIn('"vote_agreement " +', self.script)
+        for fragment in (
+            '"judge panel: "',
+            '"no valid draft"',
+            '" abstained"',
+            '" dissented"',
+        ):
+            with self.subTest(fragment=fragment):
+                self.assertIn(fragment, self.script)
 
     def test_the_draft_kind_is_a_label_and_the_token_is_a_class(self):
         self.assertIn("draftKindLabel(draft.kind)", self.script)
