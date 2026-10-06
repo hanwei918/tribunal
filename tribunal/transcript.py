@@ -145,8 +145,16 @@ class Transcript:
         status: int = 0,
         note: Optional[str] = None,
         shape: Optional[str] = None,
+        timestamp: Optional[str] = None,
     ) -> TranscriptEntry:
-        """Append one entry, digesting the prompts rather than storing them."""
+        """Append one entry, digesting the prompts rather than storing them.
+
+        ``timestamp`` is the entry's own time. It defaults to this transcript's
+        clock, which is what every caller before the parameter existed got; a
+        caller that passes one keeps the time the call **finished** rather than
+        the time the entry was written, which are not the same moment once two
+        calls are in flight together.
+        """
         entry = TranscriptEntry(
             role=role,
             model=model,
@@ -162,12 +170,21 @@ class Transcript:
             duration_seconds=duration_seconds,
             attempts=attempts,
             status=status,
-            timestamp=self._now(),
+            timestamp=self._now() if timestamp is None else timestamp,
             note=note,
             shape=shape,
         )
         self._entries.append(entry)
         return entry
+
+    def now(self) -> str:
+        """The timestamp the next entry would be given.
+
+        Public so that a caller making several calls at once can stamp each one
+        at the moment its call finished, and hand that value to :meth:`add`
+        later. It is the same clock either way: there is one per transcript.
+        """
+        return self._now()
 
     def record(
         self,
@@ -178,6 +195,7 @@ class Transcript:
         result: Any,
         note=None,
         shape=None,
+        timestamp: Optional[str] = None,
     ):
         """Append one entry straight from an :class:`tribunal.llm.LLMResult`."""
         return self.add(
@@ -197,6 +215,7 @@ class Transcript:
             status=result.status,
             note=note,
             shape=shape,
+            timestamp=timestamp,
         )
 
     @property

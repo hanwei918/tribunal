@@ -2182,6 +2182,7 @@ def run_one_case(
     amount_rule: str = pipeline.DEFAULT_AMOUNT_RULE,
     configuration: Optional[Mapping[str, Any]] = None,
     events_log: Optional[Any] = None,
+    parallel_calls: bool = False,
 ) -> Tuple[CaseOutcome, Optional[Dict[str, Any]], Optional[str]]:
     """Run one case. Returns ``(outcome, cache document, transcript json)``.
 
@@ -2273,6 +2274,10 @@ def run_one_case(
                 # applied on this path would be a run whose directory names a
                 # rule its drafts were not held to.
                 amount_rule=amount_rule,
+                # And the parallel switch, on the same rule: a replay calls the
+                # judge's drafts, so a switch accepted here and dropped on this
+                # path would be a switch that said it was on and was not.
+                parallel_calls=parallel_calls,
             )
         elif loaded_case is None:
             result = pipeline.run_case(
@@ -2288,6 +2293,7 @@ def run_one_case(
                 precedents=precedents,
                 policy_version=policy_version,
                 amount_rule=amount_rule,
+                parallel_calls=parallel_calls,
             )
         else:
             # A converted external case, already loaded through its own explicit
@@ -2305,6 +2311,7 @@ def run_one_case(
                 precedents=precedents,
                 policy_version=policy_version,
                 amount_rule=amount_rule,
+                parallel_calls=parallel_calls,
             )
     except (llm.MissingAPIKeyError, llm.ModelNotProvisionedError) as exc:
         # Not provisioned and no credential are the same failure for every
@@ -2908,6 +2915,14 @@ def run_benchmark(
     # and never to a ``policy-v2`` directory inside it.
     policy_version_moves_the_run: bool = True,
     amount_rule: str = pipeline.DEFAULT_AMOUNT_RULE,
+    # Whether the calls that depend on nothing are made at the same time. Off by
+    # default, so the sequential path is the one every run before the switch
+    # took; when it is on the two advocates and the judge's drafts are asked
+    # together instead of one after another. It changes no request, so it is
+    # deliberately absent from the ``configuration`` every artifact carries and
+    # from every staleness and cache key: a result produced with it on measured
+    # exactly what the same result measured with it off.
+    parallel_calls: bool = False,
     client_factory: Optional[Callable[[Callable[[Dict[str, Any]], None]], Any]] = None,
     key: Optional[Mapping[int, grade.Ruling]] = None,
     git_runner: Optional[Callable[[Sequence[str]], Optional[str]]] = None,
@@ -2966,6 +2981,15 @@ def run_benchmark(
     comparing an ablated result against the unablated brief would report every
     case of it stale. It is refused together with ``replay_dir``: a replay hands
     the judge the brief this code builds, which is not ablated.
+
+    ``parallel_calls`` is off by default and is not one of the switches that
+    changes what a run measures, so it does not move the run's directory and it
+    is not refused beside them. It reaches the pipeline as one keyword, changes
+    no request, and is recorded where the invocation records what it was -- the
+    ``invocation_start`` event and this run's ``run.json`` -- and nowhere else.
+    It is deliberately **not** in the ``configuration`` object, which is what a
+    case file is read against, because a result produced with it on is the same
+    result: same requests, same brief, same prompts.
     """
     if not model:
         raise BenchmarkError("model is required and has no default; name the model explicitly")
@@ -3281,18 +3305,30 @@ def run_benchmark(
             if amount_rule != pipeline.DEFAULT_AMOUNT_RULE
             else {}
         ),
+        # And the parallel switch, on the same rule: named on the invocation's
+        # own line when it is on, and absent from it when it is not, so the line
+        # a plain run appends is the line it always appended.
+        **({"parallel_calls": True} if parallel_calls else {}),
     )
 
     # A shared sink, because the client is shared across every case and, above
     # concurrency 1, across threads. The client calls this from whichever thread
     # is completing a request, so it is the one piece of the runner's state that
     # needs a lock.
-    records: List[Dict[str, Any]] = []
+    #
+    # Each record is kept with the position of the call that made it, read off
+    # the thread that call is on (``pipeline.call_sort_key``), and the file is
+    # written in that order rather than in the order the calls finished. With
+    # calls in flight together the completion order is the network's, and a
+    # record whose order moved with the network would not be reproducible. The
+    # position is the one thing a record cannot carry itself: this client is
+    # shared across every case and knows nothing about cases, roles or drafts.
+    records: List[Tuple[Tuple[int, str, int, int], Dict[str, Any]]] = []
     records_lock = threading.Lock()
 
     def sink(record: Dict[str, Any]) -> None:
         with records_lock:
-            records.append(record)
+            records.append((pipeline.call_sort_key(), record))
 
     positions = {case_no: index + 1 for index, case_no in enumerate(requested)}
     total = len(requested)
@@ -3401,6 +3437,7 @@ def run_benchmark(
             tokens_replayed=state["replayed"],
             replay=None if replay is None else replay_block(replay, outcomes),
             configuration=configuration,
+            parallel_calls=parallel_calls,
         )
         # Both, and the order matters. ``run.json`` is the latest invocation's
         # record at the conventional path; the history is what survives the next
@@ -3518,6 +3555,7 @@ def run_benchmark(
                 amount_rule=amount_rule,
                 configuration=configuration,
                 events_log=events_log,
+                parallel_calls=parallel_calls,
             )
 
         workers = max(1, concurrency)
@@ -3607,7 +3645,19 @@ def run_benchmark(
                 _persist(run_dir, outcome, document, transcript_json)
                 accept(outcome)
 
-    write_json(run_dir / CALLS_FILE, {"calls": records})
+    # Written in the order the calls were made, not the order they finished.
+    # ``sorted`` is stable, so two records sharing a position keep the order
+    # they were appended in; within one invocation a position is one call, so
+    # the file is a function of the run and not of the network.
+    write_json(
+        run_dir / CALLS_FILE,
+        {
+            "calls": [
+                record
+                for _position, record in sorted(records, key=lambda item: item[0])
+            ]
+        },
+    )
     write_metadata(state["stop_reason"])
 
     # Graded over the cases that produced a ruling — whether it was produced by
@@ -3801,6 +3851,7 @@ def _metadata_document(
     tokens_replayed: TokenSplit,
     replay: Optional[Mapping[str, Any]] = None,
     configuration: Mapping[str, Any],
+    parallel_calls: bool = False,
 ) -> Dict[str, Any]:
     """The run's own metadata file.
 
@@ -3826,6 +3877,11 @@ def _metadata_document(
     the replayed half of the case cost, and it is named so that no reader adds it
     to a total. ``replay`` is the source run itself, and ``None`` when this
     invocation called every agent itself.
+
+    ``parallel_calls`` is written only when it is on, so a plain run's metadata
+    is the metadata it always wrote. It is not in ``configuration`` above and
+    deliberately so: that object is what a case file is read against, and this
+    switch changes no request.
     """
     failed = [outcome for outcome in outcomes if outcome.status == STATUS_FAILED]
     consumed = tokens_charged + tokens_failed
@@ -3861,6 +3917,13 @@ def _metadata_document(
         # it, so the limit travels with the result.
         "case_deadline_seconds": case_deadline_seconds,
         "token_budget": token_budget,
+        # And whether the calls that depend on nothing were made together.
+        # Written only when the switch is on, on the rule every switch in this
+        # file follows, so a plain run's metadata is the metadata it always
+        # wrote. It is not in ``configuration`` above and deliberately so: that
+        # object is what a case file is read against, and this changes no
+        # request.
+        **({"parallel_calls": True} if parallel_calls else {}),
         "git_commit": run_provenance.get("git_commit"),
         "working_tree_clean": run_provenance.get("working_tree_clean"),
         "working_tree_status": run_provenance.get("working_tree_status"),
@@ -5568,6 +5631,21 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             "into runs/<model>/ where the submission's figure lives"
         ),
     )
+    parser.add_argument(
+        "--parallel-calls",
+        action="store_true",
+        help=(
+            "ask the calls that depend on nothing at the same time: the two "
+            "advocates, and the judge's drafts when there is a panel of them. "
+            "Off by default, so every run before this switch is the run it was. "
+            "It changes no request -- the same brief, the same prompts and the "
+            "same messages are sent, and the record is written in the same "
+            "order -- so it is not part of a case's configuration and it moves "
+            "no run directory. The client's rate limiter is unchanged, so up to "
+            "concurrency x 4 requests queue at one a second whatever this is set "
+            "to"
+        ),
+    )
     parser.add_argument("--runs-dir", type=Path, default=RUNS_DIR)
     parser.add_argument("--prompts-dir", type=Path, default=PROMPTS_DIR)
     args = parser.parse_args(argv)
@@ -5906,6 +5984,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             # parsed-but-dropped switch would run the published rule while its
             # own help text said otherwise.
             amount_rule=args.amount_rule,
+            # Not one of the four: it changes what a run measures in no respect,
+            # so it is not refused beside them and it moves no directory. It is
+            # named here for the same reason they are, though -- a switch this
+            # command line accepts has to reach the pipeline.
+            parallel_calls=args.parallel_calls,
         )
     except llm.ModelNotProvisionedError as exc:
         print("FATAL: {0}".format(exc), file=sys.stderr)

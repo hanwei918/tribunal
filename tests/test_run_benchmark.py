@@ -73,6 +73,7 @@ from __future__ import annotations
 
 import ast
 import contextlib
+import hashlib
 import io
 import json
 import re
@@ -92,7 +93,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from eval import grade  # noqa: E402
 from eval import run_benchmark as runner  # noqa: E402
 from tests import test_answer_isolation as isolation  # noqa: E402
-from tribunal import llm, money, pipeline, transcript  # noqa: E402
+from tribunal import events, llm, money, pipeline, transcript  # noqa: E402
 from tribunal.model import RUNTIME_MODEL  # noqa: E402
 
 PROMPTS_DIR = PROJECT_ROOT / "prompts" / "v1"
@@ -5329,6 +5330,139 @@ class PerCaseColumnTests(unittest.TestCase):
             self.assertEqual("yes", rows["110"][4])
             self.assertEqual("no", rows["101"][4])
             self.assertEqual("-", rows["101"][5])
+
+
+# --------------------------------------------------------------------------
+# Concurrent calls
+# --------------------------------------------------------------------------
+def invocation_start(run_dir):
+    """The invocation's own first line, and the only one it writes."""
+    path = Path(run_dir) / events.EVENTS_FILE
+    starts = [
+        event
+        for event in events.read_events(path)
+        if event["event"] == events.EVENT_INVOCATION_START
+    ]
+    assert len(starts) == 1, "expected exactly one invocation_start, found {0}".format(
+        len(starts)
+    )
+    return starts[0]
+
+
+class ParallelCallsTests(unittest.TestCase):
+    """The switch is recorded where it belongs, and nowhere else.
+
+    ``--parallel-calls`` decides *when* a call is made. It changes no request,
+    so it is not part of the case's ``configuration`` object and not part of any
+    staleness or cache key: it is named on the invocation's own line and on this
+    run's ``run.json``, and that is all. And because the calls of one case can
+    now finish in any order, the ``calls.json`` a run writes is sorted by the
+    call's own position rather than by the order the answers came back.
+    """
+
+    def both(self, tmp):
+        """One plain run and one parallel run, in two run directories."""
+        plain, _ = bench(tmp)
+        parallel, _ = bench(
+            tmp, runs_dir=Path(tmp) / "parallel", parallel_calls=True
+        )
+        return plain, parallel
+
+    def test_the_switch_is_not_part_of_the_configuration(self):
+        """It is not a switch that says anything about what a result measured."""
+        with tempfile.TemporaryDirectory() as tmp:
+            plain, parallel = self.both(tmp)
+
+            for summary in (plain, parallel):
+                document = runner.load_cached(summary.run_dir, 101)
+                self.assertEqual(
+                    runner.configuration_document(judge_votes=1, verify_drafts=False),
+                    document["configuration"],
+                )
+                self.assertEqual(
+                    sorted(runner.CONFIGURATION_FIELDS),
+                    sorted(document["configuration"]),
+                )
+                self.assertNotIn("parallel_calls", document["configuration"])
+
+    def test_run_json_names_the_switch_only_when_it_is_on(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            plain, parallel = self.both(tmp)
+
+            off = runner.read_json(plain.run_dir / runner.METADATA_FILE)
+            on = runner.read_json(parallel.run_dir / runner.METADATA_FILE)
+
+            self.assertNotIn("parallel_calls", off)
+            self.assertIs(True, on["parallel_calls"])
+
+    def test_the_invocation_start_event_names_it_only_when_it_is_on(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            plain, parallel = self.both(tmp)
+
+            self.assertNotIn("parallel_calls", invocation_start(plain.run_dir))
+            self.assertIs(True, invocation_start(parallel.run_dir)["parallel_calls"])
+
+    def test_the_calls_file_is_in_call_order_not_completion_order(self):
+        """With the calls overlapping, the file is the run's, not the network's.
+
+        Each record is placed by the position of the call that made it -- the
+        case, then the role, then the draft -- which is a function of the run
+        alone. The order the answers arrived in is not, so the two are compared
+        here: the file is sorted, and the arrival order is not.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, transport = bench(tmp, parallel_calls=True)
+            document = runner.read_json(summary.run_dir / runner.CALLS_FILE)
+
+            position = {}
+            for request in transport.requests:
+                body = json.dumps(request, ensure_ascii=False).encode("utf-8")
+                position[hashlib.sha256(body).hexdigest()] = role_of(request)
+
+            self.assertEqual(
+                len(transport.requests),
+                len(document["calls"]),
+                "every request must be on the record, and nothing else",
+            )
+            recorded = [position[record["request_sha256"]] for record in document["calls"]]
+            self.assertEqual(sorted(recorded), recorded, "the file is not in call order")
+            self.assertEqual(
+                sorted((case_no, role) for case_no, role in recorded),
+                sorted(
+                    (case_no, role)
+                    for case_no in CASE_SET
+                    for role in (
+                        transcript.ROLE_DRIVER_ADVOCATE,
+                        transcript.ROLE_JUDGE,
+                        transcript.ROLE_RIDER_ADVOCATE,
+                    )
+                ),
+            )
+            arrived = [role_of(request) for request in transport.requests]
+            self.assertNotEqual(
+                arrived,
+                recorded,
+                "the arrival order was the call order, so this proves nothing",
+            )
+
+    def test_two_parallel_runs_write_the_same_call_order(self):
+        """Two runs of one set differ in the clock and in nothing else.
+
+        Every record carries the instant its call finished, so two files are not
+        byte-identical and are not meant to be. What is a function of the run
+        alone is the order: the same calls, in the same positions, twice -- which
+        is the property a completion order could not have.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            first, _ = bench(tmp, runs_dir=Path(tmp) / "a", parallel_calls=True)
+            second, _ = bench(tmp, runs_dir=Path(tmp) / "b", parallel_calls=True)
+
+            def order(summary):
+                document = runner.read_json(summary.run_dir / runner.CALLS_FILE)
+                return [record["request_sha256"] for record in document["calls"]]
+
+            self.assertTrue(order(first))
+            self.assertEqual(order(first), order(second))
 
 
 if __name__ == "__main__":

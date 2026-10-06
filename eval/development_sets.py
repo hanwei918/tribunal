@@ -991,6 +991,12 @@ def run_set(
     ``docs/notes/2026-10-03-the-sealed-protocol-made-executable.md`` and applied
     by :func:`cases_the_sealed_protocol_will_not_retry`. When nothing is left,
     no call is made and an empty summary is returned.
+
+    ``parallel_calls`` arrives through ``kwargs`` like every other runner
+    argument, and it is the one of them that changes nothing the run measures:
+    it asks the calls that depend on nothing at the same time and leaves every
+    request byte-identical. It is therefore not refused for a sealed set and it
+    is not part of the arguments that set's registration fixes.
     """
     if force:
         assert_not_sealed(development_set, "--force")
@@ -1607,6 +1613,22 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--parallel-calls",
+        action="store_true",
+        help=(
+            "ask the calls that depend on nothing at the same time: the two "
+            "advocates, and the judge's drafts when there is a panel of them. "
+            "Off by default, so every run before this switch is the run it was. "
+            "It changes no request -- the same brief, the same prompts and the "
+            "same messages are sent, and the record is written in the same "
+            "order -- so it is not part of a case's configuration, it moves no "
+            "run directory, and it is not one of the arguments a sealed set's "
+            "run is fixed at. The client's rate limiter is unchanged, so up to "
+            "concurrency x 4 requests queue at one a second whatever this is set "
+            "to"
+        ),
+    )
+    parser.add_argument(
         "--report",
         action="store_true",
         help="print the sets separately and combined from cached runs; makes no model call",
@@ -2142,6 +2164,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 ),
                 policy_version=policy_version,
                 amount_rule=args.amount_rule,
+                parallel_calls=args.parallel_calls,
             )
         except run_benchmark.llm.ModelNotProvisionedError as exc:
             print("FATAL: {0}".format(exc), file=sys.stderr)

@@ -14,6 +14,8 @@ import json
 import re
 import sys
 import tempfile
+import threading
+import time
 import unittest
 from contextlib import redirect_stdout
 from decimal import Decimal
@@ -24,7 +26,14 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from tribunal import brief, llm, money, pipeline, transcript as transcript_module  # noqa: E402
+from tribunal import (  # noqa: E402
+    brief,
+    events,
+    llm,
+    money,
+    pipeline,
+    transcript as transcript_module,
+)
 from tribunal.model import RUNTIME_MODEL  # noqa: E402
 
 FAKE_KEY = "tok-live-FAKEKEY-0123456789abcdef-DO-NOT-LEAK"
@@ -3290,6 +3299,385 @@ class VerifierSwitchTests(unittest.TestCase):
                 judge_votes=1,
                 verify_drafts=True,
             )
+
+
+# --------------------------------------------------------------------------
+# Concurrent calls
+# --------------------------------------------------------------------------
+# A run whose calls are in flight together has no arrival order to script
+# against: the driver's request can land before the rider's, and a panel's
+# drafts finish in whatever order the provider returns them. So the transport
+# below answers each request by *what the request asks* rather than by the
+# order the requests arrive, and it can hold one answer until another request
+# has arrived -- which is how a test shows that two calls really overlapped
+# rather than merely being written down in a fixed order.
+#
+# The old positional transports above are left exactly as they were, and the
+# tests that use them still run the sequential path.
+# The client's own seed and temperature, which every request the pipeline makes
+# carries unless a draft names an override of its own.
+ADVOCATE_SEED = 42
+ADVOCATE_TEMPERATURE = 0.0
+
+RIDER_REQUEST = (RIDER, ADVOCATE_SEED, ADVOCATE_TEMPERATURE, ())
+DRIVER_REQUEST = (DRIVER, ADVOCATE_SEED, ADVOCATE_TEMPERATURE, ())
+SINGLE_JUDGE_REQUEST = (JUDGE, ADVOCATE_SEED, ADVOCATE_TEMPERATURE, ())
+
+
+def draft_request(seed, temperature, sides):
+    """The key of one judge draft's request: seed, temperature, side order."""
+    return (JUDGE, seed, temperature, tuple(sides))
+
+
+class RoutedTransport:
+    """Answers each request by what the request asks, not by arrival order.
+
+    The key is the agent's role, the settings the request carries -- its seed
+    and its temperature -- and, for the judge, the order the two sides are
+    presented in. One key may be asked more than once, which is what a shape
+    retry needs, so every key holds a FIFO and a repeat takes the next answer
+    for the same key.
+
+    ``hold`` names, for one key, another key whose arrival releases it. A test
+    uses it to prove that two calls overlapped: the held request can only be
+    answered once the other has arrived, and a sequential run would wait for a
+    request that can never come.
+
+    ``arrived`` is the order the requests came in; ``arrived_when`` records, for
+    each key, which keys had already been answered when it arrived. Those are
+    what let a test say a call was still in flight when another landed.
+    """
+
+    def __init__(self, answers, *, hold=None, hold_timeout=5.0):
+        self.answers = {key: list(values) for key, values in answers.items()}
+        self.hold = dict(hold or {})
+        self.hold_timeout = hold_timeout
+        self.calls = []
+        self.arrived = []
+        self.arrived_when = {}
+        self.finished = set()
+        self.condition = threading.Condition()
+
+    # -- what a request is ------------------------------------------------
+    @staticmethod
+    def _prompts():
+        rider, driver, _region = pipeline.render_advocate_prompts()
+        judge = (pipeline.PROMPTS_DIR / pipeline.JUDGE_PROMPT_FILE).read_text(
+            encoding="utf-8"
+        )
+        return rider, driver, judge
+
+    def _key(self, body):
+        request = json.loads(body.decode("utf-8"))
+        system = request["messages"][0]["content"]
+        user = request["messages"][1]["content"]
+        rider, driver, judge = self._prompts()
+        if system == rider:
+            role = RIDER
+        elif system == driver:
+            role = DRIVER
+        elif system == judge:
+            role = JUDGE
+        else:
+            raise AssertionError("a request carried a system prompt no agent sends")
+        sides = ()
+        if role == JUDGE:
+            claims = json.loads(user).get(pipeline.ADVOCATE_CLAIMS_KEY)
+            if isinstance(claims, list):
+                sides = tuple(item[pipeline.CLAIMS_SIDE_KEY] for item in claims)
+        return (role, request.get("seed"), request.get("temperature"), sides)
+
+    # -- answering --------------------------------------------------------
+    def __call__(self, url, headers, body, timeout):
+        key = self._key(body)
+        with self.condition:
+            self.calls.append({"url": url, "headers": dict(headers), "body": body})
+            self.arrived.append(key)
+            self.arrived_when[key] = set(self.finished)
+            self.condition.notify_all()
+        awaited = self.hold.get(key)
+        if awaited is not None:
+            self._await(awaited)
+        with self.condition:
+            queue = self.answers.get(key)
+            if not queue:
+                raise AssertionError(
+                    "RoutedTransport has no answer left for a request keyed "
+                    "{0!r}".format(key)
+                )
+            answer = queue.pop(0)
+            self.finished.add(key)
+        if isinstance(answer, Exception):
+            raise answer
+        return answer
+
+    def _await(self, awaited):
+        deadline = time.monotonic() + self.hold_timeout
+        with self.condition:
+            while awaited not in self.arrived:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise AssertionError(
+                        "a request held for {0!r} waited {1:g}s and it never "
+                        "arrived: the two calls did not overlap".format(
+                            awaited, self.hold_timeout
+                        )
+                    )
+                self.condition.wait(remaining)
+
+
+def routed_client(transport) -> llm.LLMClient:
+    return llm.LLMClient(
+        model="hy4-preview",
+        api_key=FAKE_KEY,
+        transport=transport,
+        sleep=lambda seconds: None,
+        clock=lambda: 0.0,
+    )
+
+
+def advocate_answers():
+    """One good answer for each advocate and for a single-draft judge."""
+    return {
+        RIDER_REQUEST: [envelope(RIDER_CLAIMS)],
+        DRIVER_REQUEST: [envelope(DRIVER_CLAIMS)],
+        SINGLE_JUDGE_REQUEST: [envelope(GOOD_RULING)],
+    }
+
+
+class ParallelCallTests(unittest.TestCase):
+    """Calls in flight together are still written down in one fixed order.
+
+    The switch changes *when* a call is made and nothing else: the same
+    requests, the same record, and -- the one deliberate difference -- a rider
+    that fails no longer stops the driver from being called. Every test here
+    scripts the transport by what each request asks, because with the calls
+    overlapping there is no arrival order to script against.
+    """
+
+    def run_the_case(self, transport, *, votes=1, parallel=True, events_log=None):
+        return pipeline.run_case(
+            CASE,
+            routed_client(transport),
+            now=lambda: PINNED_NOW,
+            judge_votes=votes,
+            parallel_calls=parallel,
+            events_log=events_log,
+        )
+
+    # -- the default ------------------------------------------------------
+    def test_the_default_is_the_sequential_path(self):
+        """Off unless asked: nothing else runs while the rider is unanswered.
+
+        The rider's answer is held for the driver's request. With the switch off
+        the driver's request cannot come while the rider waits, so the hold
+        times out and the run fails -- which is the sequential path's own shape,
+        stated as a test. Were the default the parallel one, the driver would
+        arrive, the hold would release, and this would not raise at all.
+        """
+        transport = RoutedTransport(
+            advocate_answers(),
+            hold={RIDER_REQUEST: DRIVER_REQUEST},
+            hold_timeout=0.5,
+        )
+
+        with self.assertRaises(AssertionError) as caught:
+            self.run_the_case(transport, parallel=False)
+
+        self.assertIn("did not overlap", str(caught.exception))
+        self.assertNotIn(DRIVER_REQUEST, transport.arrived)
+
+    # -- the advocates ----------------------------------------------------
+    def test_the_two_advocates_overlap_and_are_written_rider_then_driver(self):
+        transport = RoutedTransport(
+            advocate_answers(), hold={RIDER_REQUEST: DRIVER_REQUEST}
+        )
+
+        result = self.run_the_case(transport, parallel=True)
+
+        # The run completed at all only because the driver's request arrived
+        # while the rider's answer was being held: a sequential run would have
+        # waited for it and failed. So the two calls really did overlap.
+        self.assertTrue(result.ok)
+        self.assertIn(DRIVER_REQUEST, transport.arrived)
+        self.assertNotIn(RIDER_REQUEST, transport.arrived_when[DRIVER_REQUEST])
+        # The record, though, is in the case's own order -- rider, then driver,
+        # then the judge -- whatever order the answers came back in.
+        self.assertEqual([RIDER, DRIVER, JUDGE], roles_of(result))
+        self.assertEqual(
+            [transcript_module.ROLE_RIDER_ADVOCATE, transcript_module.ROLE_DRIVER_ADVOCATE],
+            [entry.role for entry in result.transcript.entries[:2]],
+        )
+
+    def test_the_advocate_events_are_rider_then_driver(self):
+        transport = RoutedTransport(
+            advocate_answers(), hold={RIDER_REQUEST: DRIVER_REQUEST}
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "events.jsonl"
+            log = events.EventLog(path, invocation_id="test", now=lambda: PINNED_NOW)
+            self.run_the_case(transport, parallel=True, events_log=log)
+            calls = [
+                event
+                for event in events.read_events(path)
+                if event["event"] == events.EVENT_AGENT_CALL
+            ]
+
+        self.assertEqual([RIDER, DRIVER, JUDGE], [event["role"] for event in calls])
+        self.assertEqual([1, 1, 1], [event["attempt"] for event in calls])
+
+    # -- the panel --------------------------------------------------------
+    def test_the_drafts_overlap_and_are_written_in_position_order(self):
+        sampled = [
+            draft_request(seed, pipeline.JUDGE_VOTE_TEMPERATURE, pipeline.DRIVER_FIRST)
+            for seed in pipeline.JUDGE_VOTE_SEEDS[:3]
+        ]
+        swapped = draft_request(42, 0.0, pipeline.RIDER_FIRST)
+        answers = advocate_answers()
+        del answers[SINGLE_JUDGE_REQUEST]
+        answers.update(
+            {
+                sampled[0]: [envelope(vote_ruling(explanation="draft-101"))],
+                sampled[1]: [envelope(vote_ruling(explanation="draft-202"))],
+                sampled[2]: [envelope(vote_ruling(explanation="draft-303"))],
+                swapped: [envelope(vote_ruling(explanation="draft-42"))],
+            }
+        )
+        transport = RoutedTransport(answers, hold={sampled[0]: swapped})
+
+        result = self.run_the_case(transport, votes=4, parallel=True)
+
+        self.assertTrue(result.ok)
+        # The first draft was held for the last one's arrival, so the panel ran
+        # together; the record is still in position order.
+        self.assertNotIn(sampled[0], transport.arrived_when[swapped])
+        self.assertEqual(
+            ["draft-101", "draft-202", "draft-303", "draft-42"],
+            [
+                json.loads(entry.response_text)["ruling"]["explanation"]
+                for entry in result.transcript.entries
+                if entry.role == JUDGE
+            ],
+        )
+        self.assertEqual(
+            [101, 202, 303, 42],
+            [draft["seed"] for draft in result.judge_vote["drafts"]],
+        )
+        # The entries each draft occupies are read off the transcript as it is
+        # actually written, so a draft that overlapped another still owns the
+        # run of indices its position gives it.
+        self.assertEqual(
+            [[2], [3], [4], [5]],
+            [draft["entries"] for draft in result.judge_vote["drafts"]],
+        )
+
+    # -- failures ---------------------------------------------------------
+    def test_a_worker_exception_propagates_after_the_join_with_earlier_attempts_written(
+        self,
+    ):
+        """The join comes first; then the record; then the first exception.
+
+        The driver's first answer is unusable, so it retries, and the retry is
+        what fails. Both advocates were in flight, so both are joined before
+        anything is written, and the rider's answer -- and the driver's own
+        completed attempt -- are on the record before the failure comes out.
+        """
+        transport = RoutedTransport(
+            {
+                RIDER_REQUEST: [envelope(RIDER_CLAIMS)],
+                DRIVER_REQUEST: [
+                    envelope("not the shape the advocate prompt asks for"),
+                    llm.TransportError("the wire went away"),
+                ],
+            }
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "events.jsonl"
+            log = events.EventLog(path, invocation_id="test", now=lambda: PINNED_NOW)
+            with self.assertRaises(llm.TransportError):
+                self.run_the_case(transport, parallel=True, events_log=log)
+            calls = [
+                event
+                for event in events.read_events(path)
+                if event["event"] == events.EVENT_AGENT_CALL
+            ]
+
+        self.assertEqual(
+            [(RIDER, 1), (DRIVER, 1)],
+            [(event["role"], event["attempt"]) for event in calls],
+        )
+
+    def test_a_failed_rider_no_longer_stops_the_driver_and_failed_agent_is_the_rider(self):
+        """The one behaviour the switch changes.
+
+        By the time the rider's answer is known to be unusable the driver is
+        already in flight, so it is not called off. Its answer is recorded, so
+        the cost of asking it is honest, and the run still fails at the rider --
+        which is the agent that actually failed.
+        """
+        transport = RoutedTransport(
+            {
+                RIDER_REQUEST: [
+                    envelope("not the shape"),
+                    envelope("still not the shape"),
+                ],
+                DRIVER_REQUEST: [envelope(DRIVER_CLAIMS)],
+                SINGLE_JUDGE_REQUEST: [envelope(GOOD_RULING)],
+            }
+        )
+
+        result = self.run_the_case(transport, parallel=True)
+
+        self.assertFalse(result.ok)
+        self.assertEqual(RIDER, result.failed_agent)
+        self.assertEqual([RIDER, RIDER, DRIVER], roles_of(result))
+        self.assertEqual(1, transport.arrived.count(DRIVER_REQUEST))
+
+    def test_the_sequential_path_still_stops_at_a_failed_rider(self):
+        """The same failure with the switch off, which is what it always did.
+
+        Held beside the test above, this is the difference in one place: off,
+        the driver is never asked; on, it is asked and its answer recorded.
+        """
+        transport = RoutedTransport(
+            {
+                RIDER_REQUEST: [
+                    envelope("not the shape"),
+                    envelope("still not the shape"),
+                ],
+                DRIVER_REQUEST: [envelope(DRIVER_CLAIMS)],
+                SINGLE_JUDGE_REQUEST: [envelope(GOOD_RULING)],
+            }
+        )
+
+        result = self.run_the_case(transport, parallel=False)
+
+        self.assertFalse(result.ok)
+        self.assertEqual(RIDER, result.failed_agent)
+        self.assertEqual([RIDER, RIDER], roles_of(result))
+        self.assertEqual(0, transport.arrived.count(DRIVER_REQUEST))
+
+    # -- no byte changes --------------------------------------------------
+    def test_the_switch_changes_no_request_and_no_record(self):
+        """The switch decides when a call is made, and nothing else.
+
+        The same requests go out -- as bytes -- and the same transcript comes
+        back, byte for byte. The clock is pinned and the calls spend no time, so
+        the two transcripts are comparable as they stand.
+        """
+        sequential = RoutedTransport(advocate_answers())
+        parallel = RoutedTransport(advocate_answers())
+
+        off = self.run_the_case(sequential, parallel=False)
+        on = self.run_the_case(parallel, parallel=True)
+
+        self.assertEqual(
+            sorted(call["body"] for call in sequential.calls),
+            sorted(call["body"] for call in parallel.calls),
+        )
+        self.assertEqual(off.transcript_json, on.transcript_json)
+        self.assertEqual(off.brief_sha256, on.brief_sha256)
+        self.assertEqual(off.ruling, on.ruling)
 
 
 if __name__ == "__main__":

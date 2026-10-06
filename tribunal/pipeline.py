@@ -80,6 +80,8 @@ is the check whose absence let this reach a paid run.
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
+import contextvars
 import difflib
 import hashlib
 import json
@@ -196,6 +198,35 @@ DRIVER_COMPENSATION = "DRIVER_COMPENSATION"
 MONEY_FIELDS = ("amount_sgd", "driver_compensation_sgd")
 
 UNUSABLE_RESPONSE_NOTE = "response was not the shape the prompt asked for; retried once"
+
+# --------------------------------------------------------------------------
+# Where a call sits in the run that made it
+# --------------------------------------------------------------------------
+# A parallel run finishes its calls in an order that depends on the model and
+# the network, and a record whose order moves with the network is not
+# reproducible. The client that writes the record is shared across every case
+# and knows nothing about cases, roles or drafts, so the position is published
+# on the thread the call is on and the sink reads it from there.
+#
+# It is a context variable rather than a thread-local because the pipeline runs
+# its own calls in private pools of its own, and each worker sets it for its own
+# call. **No byte sent to the model depends on it**: it is not part of a request,
+# and it is deliberately not part of the case's ``configuration`` either.
+CALL_CONTEXT: "contextvars.ContextVar[Optional[Tuple[int, str, int, int]]]" = (
+    contextvars.ContextVar("tribunal_call_context", default=None)
+)
+
+
+def call_sort_key() -> Tuple[int, str, int, int]:
+    """The call in flight on this thread: ``(case, role, draft, attempt)``.
+
+    ``(-1, "", -1, -1)`` when no call of this pipeline is in flight -- a client
+    driven directly by a test, for instance. It is a total order over the
+    records one invocation makes, and a function of the calls themselves rather
+    than of the order in which they happened to complete.
+    """
+    context = CALL_CONTEXT.get()
+    return context if context is not None else (-1, "", -1, -1)
 
 # --------------------------------------------------------------------------
 # The judge's vote
@@ -865,6 +896,198 @@ def normalise_judge_result(parsed: Any) -> Tuple[Optional[Any], str, str]:
     return parsed, shape, ""
 
 
+# --------------------------------------------------------------------------
+# One agent call, split into a worker part and a part that writes it down
+#
+# The split exists so that the calls which depend on nothing can be made
+# concurrently while the record they produce keeps the order the case reads in.
+# The worker part touches neither the transcript nor the event log; the part
+# that writes touches both, in attempt order. Run one after the other they are
+# exactly the call this pipeline has always made, so every existing caller is
+# unchanged -- and the default is the sequential path.
+# --------------------------------------------------------------------------
+@dataclass(frozen=True)
+class _AgentAttempt:
+    """One attempt's own result, and the time that attempt's call finished."""
+
+    attempt: int
+    result: Any
+    value: Optional[Any]
+    shape: str
+    reason: str
+    timestamp: str
+
+
+@dataclass(frozen=True)
+class _AgentCall:
+    """One agent call: its attempts, its outcome, and anything that was raised.
+
+    ``exception`` is caught and stored rather than raised, so a caller with
+    several calls in flight can join every one of them before deciding what to
+    do. Nothing is lost by waiting, and a failure in one call cannot leave
+    another one's worker thread running unattended.
+    """
+
+    role: str
+    system_prompt: str
+    user_message: str
+    attempts: Tuple[_AgentAttempt, ...]
+    value: Optional[Any]
+    reason: str
+    exception: Optional[BaseException] = None
+
+    @property
+    def failed(self) -> bool:
+        """True when the answer was unusable after the retry and nothing raised."""
+        return self.exception is None and self.value is None
+
+
+def _call_agent_worker(
+    client: Any,
+    *,
+    role: str,
+    system_prompt: str,
+    user_message: str,
+    normalise: Callable[[Any], Tuple[Optional[Any], str, str]],
+    deadline: Optional["CaseDeadline"] = None,
+    temperature: Any = llm._UNSET,
+    seed: Any = llm._UNSET,
+    now: Callable[[], str],
+    case_no: Optional[int] = None,
+    draft: int = 0,
+) -> _AgentCall:
+    """Make one agent call and write nothing.
+
+    Each attempt is its own :class:`_AgentAttempt`, so when both attempts are
+    unusable **both raw bodies stay on the record** once the caller writes them.
+    The shape each attempt arrived in is kept beside it, which is what makes a
+    model's choice between the two accepted advocate shapes a measurement rather
+    than something to be inferred from the raw text.
+
+    ``deadline`` is checked **before each attempt**, the shape retry included, so
+    a case that has run out of time stops instead of starting a call it cannot
+    finish. It is passed in rather than held as module state because the budget
+    belongs to one case.
+
+    ``temperature`` and ``seed`` are per-call overrides handed straight to the
+    client. Both default to ``llm._UNSET``, which means "use whatever this client
+    was built with", so a call that names neither is the same request it has
+    always been -- byte for byte.
+
+    ``now`` is the transcript's own clock, called **once per attempt at the
+    moment that attempt's call finished**. With calls in flight together, the
+    moment an entry is written is not the moment it answered, and an entry has to
+    say the second one.
+
+    ``case_no`` and ``draft`` are published on this thread as the call's
+    position, so a client's own record sink can order what it collects by the
+    call rather than by the order the calls happened to finish in. Neither is
+    part of any request.
+
+    A call that raises -- a spent deadline, an unprovisioned model, a transport
+    failure -- comes back with ``exception`` set and the attempts it did
+    complete. It is caught here rather than raised so that a caller with several
+    calls in flight can join them all first.
+    """
+    attempts: List[_AgentAttempt] = []
+    reason = ""
+    try:
+        for attempt in (1, 2):
+            if deadline is not None:
+                deadline.check()
+            CALL_CONTEXT.set(
+                (case_no if case_no is not None else -1, role, draft, attempt)
+            )
+            result = client.complete(
+                system_prompt,
+                user_message,
+                response_format=JSON_OBJECT_FORMAT,
+                temperature=temperature,
+                seed=seed,
+            )
+            value, shape, reason = normalise(result.json_body)
+            attempts.append(
+                _AgentAttempt(
+                    attempt=attempt,
+                    result=result,
+                    value=value,
+                    shape=shape,
+                    reason=reason,
+                    timestamp=now(),
+                )
+            )
+            if value is not None:
+                return _AgentCall(
+                    role, system_prompt, user_message, tuple(attempts), value, ""
+                )
+    except BaseException as exc:  # noqa: BLE001 - joined and re-raised by the caller
+        return _AgentCall(
+            role, system_prompt, user_message, tuple(attempts), None, reason, exc
+        )
+    return _AgentCall(role, system_prompt, user_message, tuple(attempts), None, reason)
+
+
+def _write_agent_call(
+    call: _AgentCall,
+    *,
+    transcript: Any,
+    events_log: Optional[Any] = None,
+    case_no: Optional[int] = None,
+) -> Tuple[Optional[Any], Optional[str]]:
+    """Write one call's attempts to the transcript and the event log, in order.
+
+    One entry per attempt, carrying the timestamp the attempt's call finished
+    at, and one ``agent_call`` event per attempt read off the entry just written
+    -- which is what makes a retried call two events instead of one, the
+    distinction the transcript has always drawn.
+
+    A stored exception is re-raised here, after every attempt this call did
+    complete has been written. That is what the sequential path has always done
+    -- an attempt that finished before the retry raised is on the record -- and
+    it is what a caller with several calls in flight needs: the calls are joined
+    first, then written in order, and only then does the first exception in that
+    order come out.
+    """
+    for attempt in call.attempts:
+        entry = transcript.record(
+            role=call.role,
+            system_prompt=call.system_prompt,
+            user_message=call.user_message,
+            result=attempt.result,
+            note=None if attempt.value is not None else UNUSABLE_RESPONSE_NOTE,
+            shape=attempt.shape,
+            timestamp=attempt.timestamp,
+        )
+        if events_log is not None:
+            events_log.record(
+                events.EVENT_AGENT_CALL,
+                case_no=case_no,
+                role=call.role,
+                attempt=attempt.attempt,
+                # The digest of the user message this attempt was actually
+                # handed, not of the message the caller meant to send: the two
+                # are the same bytes by construction, and recording the one the
+                # entry carries is what lets the event be checked against the
+                # transcript rather than against an intention.
+                request_sha256=entry.user_sha256,
+                system_sha256=entry.system_sha256,
+                shape=attempt.shape,
+                parse_outcome=entry.parse_outcome,
+                status=entry.status,
+                prompt_tokens=entry.prompt_tokens,
+                completion_tokens=entry.completion_tokens,
+                reasoning_tokens=entry.reasoning_tokens,
+                cached_tokens=entry.cached_tokens,
+                total_tokens=entry.prompt_tokens + entry.completion_tokens,
+                seconds=entry.duration_seconds,
+            )
+    if call.exception is not None:
+        raise call.exception
+    if call.value is not None:
+        return call.value, None
+    return None, call.reason
+
+
 def _call_agent(
     client: Any,
     *,
@@ -879,86 +1102,67 @@ def _call_agent(
     events_log: Optional[Any] = None,
     case_no: Optional[int] = None,
 ) -> Tuple[Optional[Any], Optional[str]]:
-    """One agent call, retried once when the answer is unusable.
+    """One agent call: the worker part, then the part that writes it down.
 
-    Each attempt is its own transcript entry, so when both attempts are unusable
-    **both raw bodies stay on the record**. The shape each attempt arrived in is
-    recorded alongside it, which is what makes a model's choice between the two
-    accepted advocate shapes a measurement rather than something to be inferred
-    from the raw text. It is not returned: the transcript entry is where a shape
-    belongs, and returning it as well would give two copies to keep in step.
-
-    ``deadline`` is checked **before each attempt**, the shape retry included, so
-    a case that has run out of time stops instead of starting a call it cannot
-    finish. It is passed in rather than held as module state because the budget
-    belongs to one case.
-
-    ``temperature`` and ``seed`` are per-call overrides handed straight to the
-    client. Both default to ``llm._UNSET``, which means "use whatever this client
-    was built with", so a call that names neither is the same request it has
-    always been -- byte for byte. They exist so that one client can be asked the
-    same question under several seeds without its own settings being rewritten
-    between calls.
-
-    ``events_log`` is the run's append-only event log, and it is optional so
-    that every existing caller -- and every test that drives this function
-    directly -- keeps working without one. When it is given, each attempt
-    appends one ``agent_call`` event carrying the role, the request digest, the
-    usage split, the seconds and the parse outcome, read off the transcript
-    entry the attempt just wrote. Recording it here rather than at the call
-    site is what makes a retried call two events instead of one, which is the
-    distinction the transcript has always drawn.
+    The two parts run in sequence here, which is the call this pipeline has
+    always made -- one attempt at a time, each written as it lands -- so every
+    existing caller is unchanged. A caller that wants several calls in flight
+    drives :func:`_call_agent_worker` and :func:`_write_agent_call` itself; see
+    :func:`run_loaded_case` and :func:`_run_judge_vote`.
 
     Returns ``(value, None)`` on success and ``(None, reason)`` when the second
     attempt is unusable too. A spent deadline is not an unusable answer, so it
     raises :class:`CaseDeadlineExceeded` instead of returning a reason.
     """
-    reason = ""
-    for _attempt in (1, 2):
-        if deadline is not None:
-            deadline.check()
-        result = client.complete(
-            system_prompt,
-            user_message,
-            response_format=JSON_OBJECT_FORMAT,
-            temperature=temperature,
-            seed=seed,
-        )
-        value, shape, reason = normalise(result.json_body)
-        entry = transcript.record(
-            role=role,
-            system_prompt=system_prompt,
-            user_message=user_message,
-            result=result,
-            note=None if value is not None else UNUSABLE_RESPONSE_NOTE,
-            shape=shape,
-        )
-        if events_log is not None:
-            events_log.record(
-                events.EVENT_AGENT_CALL,
-                case_no=case_no,
-                role=role,
-                attempt=_attempt,
-                # The digest of the user message this attempt was actually
-                # handed, not of the message the caller meant to send: the two
-                # are the same bytes by construction, and recording the one the
-                # entry carries is what lets the event be checked against the
-                # transcript rather than against an intention.
-                request_sha256=entry.user_sha256,
-                system_sha256=entry.system_sha256,
-                shape=shape,
-                parse_outcome=entry.parse_outcome,
-                status=entry.status,
-                prompt_tokens=entry.prompt_tokens,
-                completion_tokens=entry.completion_tokens,
-                reasoning_tokens=entry.reasoning_tokens,
-                cached_tokens=entry.cached_tokens,
-                total_tokens=entry.prompt_tokens + entry.completion_tokens,
-                seconds=entry.duration_seconds,
-            )
-        if value is not None:
-            return value, None
-    return None, reason
+    call = _call_agent_worker(
+        client,
+        role=role,
+        system_prompt=system_prompt,
+        user_message=user_message,
+        normalise=normalise,
+        deadline=deadline,
+        temperature=temperature,
+        seed=seed,
+        now=transcript.now,
+        case_no=case_no,
+    )
+    return _write_agent_call(
+        call, transcript=transcript, events_log=events_log, case_no=case_no
+    )
+
+
+def _join_calls(
+    work: Callable[[Any], _AgentCall],
+    items: Sequence[Any],
+    *,
+    parallel: bool,
+    workers: int,
+) -> List[_AgentCall]:
+    """Run one worker call per item and join every one of them.
+
+    When ``parallel`` is false this is a plain loop, which is the sequential
+    path every run took before the switch existed and is byte for byte the same
+    work in the same order.
+
+    When it is true the calls run in a pool **private to this call site**, sized
+    ``workers``. It is never the pool that holds the *cases*: submitting a call
+    to that one from inside a case would deadlock the moment every worker was
+    already inside a case, waiting for a slot that only the case it is running
+    could free.
+
+    Every worker is joined before anything is returned, so a failure in one call
+    cannot leave another one's thread running unattended. A worker never raises
+    -- it catches and stores what it caught -- so the join itself cannot fail
+    part-way and strand a call.
+    """
+    if not parallel:
+        return [work(item) for item in items]
+    pool = concurrent.futures.ThreadPoolExecutor(max_workers=max(1, workers))
+    try:
+        futures = [pool.submit(work, item) for item in items]
+    finally:
+        pool.shutdown(wait=True)
+    return [future.result() for future in futures]
 
 
 # --------------------------------------------------------------------------
@@ -1899,6 +2103,7 @@ def _run_judge_vote(
     transcript: Any,
     deadline: Optional["CaseDeadline"],
     votes: int,
+    parallel_calls: bool = False,
     amount_rule: str = DEFAULT_AMOUNT_RULE,
     events_log: Optional[Any] = None,
     case_no: Optional[int] = None,
@@ -1932,6 +2137,14 @@ def _run_judge_vote(
 
     Every draft is a real call, so every draft is billed and every draft is on
     the transcript in full.
+
+    ``parallel_calls`` is off by default. When it is on the drafts are asked
+    **at the same time**, in a pool private to this function, and then written
+    in position order -- which is the order they are written in either way. A
+    draft depends on nothing but the referee result and its own position, so
+    nothing about a draft's request changes; what changes is only how long the
+    panel takes to answer. The verifier, the reduction and the ``vote`` event
+    are sequential and unchanged in both cases.
     """
     sampled = votes - 1
     if sampled > len(JUDGE_VOTE_SEEDS):
@@ -1966,6 +2179,12 @@ def _run_judge_vote(
             result[code] = code in tripped
         return result
 
+    # Every draft's message is built here, on this thread and in position order,
+    # before any call is made. Building a message is deterministic and writes
+    # nothing, so this changes no request; it is what lets the calls run
+    # together, because a draft's message is a function of the referee result
+    # and the draft's position and of nothing else.
+    plans: List[Tuple[str, Tuple[str, ...], Any, Any, str]] = []
     for position in range(votes):
         if position < sampled:
             kind = DRAFT_SAMPLED
@@ -1978,28 +2197,50 @@ def _run_judge_vote(
             temperature = llm._UNSET
             seed = llm._UNSET
 
-        message = _checked_judge_message(
-            rider_claims,
-            driver_claims,
-            brief_json,
-            referee_result,
-            shape=JUDGE_CLAIMS_ARRAY,
-            sides=sides,
-            precedents=precedents,
+        plans.append(
+            (
+                kind,
+                sides,
+                temperature,
+                seed,
+                _checked_judge_message(
+                    rider_claims,
+                    driver_claims,
+                    brief_json,
+                    referee_result,
+                    shape=JUDGE_CLAIMS_ARRAY,
+                    sides=sides,
+                    precedents=precedents,
+                ),
+            )
         )
-        started = len(transcript)
-        parsed, failure = _call_agent(
+
+    def _draft_call(plan: Tuple[str, Tuple[str, ...], Any, Any, str]) -> _AgentCall:
+        kind, sides, temperature, seed, message = plan
+        return _call_agent_worker(
             client,
             role=transcript_module.ROLE_JUDGE,
             system_prompt=judge_prompt,
             user_message=message,
             normalise=normalise_judge_result,
-            transcript=transcript,
             deadline=deadline,
             temperature=temperature,
             seed=seed,
-            events_log=events_log,
+            now=transcript.now,
             case_no=case_no,
+        )
+
+    calls = _join_calls(_draft_call, plans, parallel=parallel_calls, workers=votes)
+
+    for position, (plan, call) in enumerate(zip(plans, calls)):
+        kind, sides, temperature, seed, _message = plan
+        # The entries this draft occupies, read off the transcript as it is
+        # actually written: with the calls in flight together the draft does not
+        # own a run of indices until it is written, and it is written here, in
+        # position order, one draft after another.
+        started = len(transcript)
+        parsed, failure = _write_agent_call(
+            call, transcript=transcript, events_log=events_log, case_no=case_no
         )
         entries = tuple(range(started, len(transcript)))
         common = dict(
@@ -2791,6 +3032,7 @@ def run_case(
     precedents: Optional[Any] = None,
     policy_version: int = policy_versions.BASE_VERSION,
     amount_rule: str = DEFAULT_AMOUNT_RULE,
+    parallel_calls: bool = False,
 ) -> PipelineResult:
     """Perform one full arbitration of a case named by its manifest number.
 
@@ -2825,6 +3067,12 @@ def run_case(
     is passed straight through for the same reason again. Version 1 is the
     three files as committed, so the default is the policy every run before the
     switch used and the brief is byte-identical to that one.
+
+    ``parallel_calls`` is passed straight through as well. It is off by default,
+    so the sequential path is the one every caller before the switch took; when
+    it is on the two advocates and the judge's drafts are asked at the same time
+    instead of one after another. It changes no request -- see
+    :func:`run_loaded_case`.
     """
     load = loader.load_case if case_loader is None else case_loader
     return run_loaded_case(
@@ -2841,6 +3089,7 @@ def run_case(
         precedents=precedents,
         policy_version=policy_version,
         amount_rule=amount_rule,
+        parallel_calls=parallel_calls,
     )
 
 
@@ -2859,6 +3108,7 @@ def run_loaded_case(
     precedents: Optional[Any] = None,
     policy_version: int = policy_versions.BASE_VERSION,
     amount_rule: str = DEFAULT_AMOUNT_RULE,
+    parallel_calls: bool = False,
 ) -> PipelineResult:
     """Perform one full arbitration of a case already in hand.
 
@@ -2904,6 +3154,28 @@ def run_loaded_case(
     the model, and the ids travel on the transcript at the top level, so what
     the judge was reading is a fact the record states rather than one a reader
     infers from the ruling.
+
+    ``parallel_calls`` is off by default, and off is the sequential path every
+    caller before the switch took. When it is on, two groups of calls are made
+    concurrently, each in a pool private to the site that needs it:
+
+    * the two advocates, because both read the same brief and neither depends
+      on the other -- see the block below; and
+    * the judge's drafts, when there is a panel of them -- see
+      :func:`_run_judge_vote`.
+
+    **No byte of any request changes.** The concurrency decides only when a call
+    is made, and the record it produces is written in the same order either way:
+    the rider's attempts, then the driver's, then the drafts in position order.
+    It is deliberately **not** part of the case's ``configuration`` and not part
+    of any staleness or cache key, because it changes no request and therefore
+    says nothing about what a result measured.
+
+    One behaviour does change, and it is the only one. A rider whose answer is
+    unusable no longer stops the driver from being called, because by the time
+    the rider's answer lands the driver is already in flight. The driver's
+    attempts are recorded, so the cost is honest, and ``failed_agent`` is still
+    the rider.
     """
     case_no = case["case_no"]
     prompts_dir = Path(prompts_dir)
@@ -2969,40 +3241,82 @@ def run_loaded_case(
         clock=clock,
     )
 
-    rider_claims, rider_failure = _call_agent(
-        client,
-        role=transcript_module.ROLE_RIDER_ADVOCATE,
-        system_prompt=rider_prompt,
-        user_message=advocate_user_message,
-        normalise=normalise_claims,
-        transcript=transcript,
-        deadline=deadline,
-        events_log=events_log,
-        case_no=case_no,
-    )
+    def _advocate_call(item: Tuple[str, str]) -> _AgentCall:
+        role, prompt = item
+        return _call_agent_worker(
+            client,
+            role=role,
+            system_prompt=prompt,
+            user_message=advocate_user_message,
+            normalise=normalise_claims,
+            deadline=deadline,
+            now=transcript.now,
+            case_no=case_no,
+        )
 
-    driver_claims = None
-    driver_failure = None
-    if rider_failure is None:
+    rider_call: _AgentCall
+    driver_call: Optional[_AgentCall]
+    if parallel_calls:
+        # Both advocates read the same brief and neither depends on the other,
+        # so they are asked at the same time. They are still *written* in the
+        # order the case reads in -- rider, then driver -- because the record is
+        # a deliverable and its order is part of it.
+        rider_call, driver_call = _join_calls(
+            _advocate_call,
+            (
+                (transcript_module.ROLE_RIDER_ADVOCATE, rider_prompt),
+                (transcript_module.ROLE_DRIVER_ADVOCATE, driver_prompt),
+            ),
+            parallel=True,
+            workers=2,
+        )
+    else:
+        rider_call = _advocate_call(
+            (transcript_module.ROLE_RIDER_ADVOCATE, rider_prompt)
+        )
         # The run stops at the first failed agent. The judge cannot be called
         # without both claim arrays, so continuing would spend a call on a run
         # that has already failed, and would put a driver response on the record
         # that the judge never saw.
-        driver_claims, driver_failure = _call_agent(
-            client,
-            role=transcript_module.ROLE_DRIVER_ADVOCATE,
-            system_prompt=driver_prompt,
-            user_message=advocate_user_message,
-            normalise=normalise_claims,
-            transcript=transcript,
-            deadline=deadline,
-            events_log=events_log,
-            case_no=case_no,
+        driver_call = (
+            _advocate_call((transcript_module.ROLE_DRIVER_ADVOCATE, driver_prompt))
+            if rider_call.exception is None and rider_call.value is not None
+            else None
         )
 
+    rider_claims = None
+    rider_failure = None
+    driver_claims = None
+    driver_failure = None
+    if rider_call.exception is not None:
+        # Nothing precedes the rider in role order, so nothing else is written:
+        # the rider's own completed attempts are, and then the exception comes
+        # out. The driver's answer, if it was asked for at all, is dropped --
+        # the calls after the first failing one are not written, and nothing
+        # read that answer.
+        _write_agent_call(
+            rider_call, transcript=transcript, events_log=events_log, case_no=case_no
+        )
+    rider_claims, rider_failure = _write_agent_call(
+        rider_call, transcript=transcript, events_log=events_log, case_no=case_no
+    )
+    if driver_call is not None:
+        if driver_call.exception is not None:
+            _write_agent_call(
+                driver_call, transcript=transcript, events_log=events_log, case_no=case_no
+            )
+        driver_claims, driver_failure = _write_agent_call(
+            driver_call, transcript=transcript, events_log=events_log, case_no=case_no
+        )
+
+    if rider_failure is None:
         # PROOF 1 — one brief, byte-identical. Both advocates were handed the
         # same bytes, and the digest of what each was actually given is on the
         # record, so the claim is checkable rather than asserted.
+        #
+        # Made only where both advocates were asked and the rider's answer was
+        # usable, which is exactly where it was made before: a case the rider
+        # failed has no second advocate the judge will read.
         if _user_digest(transcript, transcript_module.ROLE_RIDER_ADVOCATE) != _user_digest(
             transcript, transcript_module.ROLE_DRIVER_ADVOCATE
         ):
@@ -3130,6 +3444,7 @@ def run_loaded_case(
                 transcript=transcript,
                 deadline=deadline,
                 votes=judge_votes,
+                parallel_calls=parallel_calls,
                 amount_rule=amount_rule,
                 events_log=events_log,
                 case_no=case_no,
@@ -3566,6 +3881,7 @@ def replay_case(
     prompts_dir: Path = PROMPTS_DIR,
     verify_drafts: bool = False,
     amount_rule: str = DEFAULT_AMOUNT_RULE,
+    parallel_calls: bool = False,
 ) -> PipelineResult:
     """Arbitrate one case from a recorded run's advocates, calling only the judge.
 
@@ -3712,6 +4028,7 @@ def replay_case(
             transcript=transcript,
             deadline=deadline,
             votes=judge_votes,
+            parallel_calls=parallel_calls,
             amount_rule=amount_rule,
             events_log=events_log,
             case_no=replay.case_no,
