@@ -400,8 +400,10 @@ def case_file_for(run_dir: Any, case_no: int) -> Path:
 def transcript_file_for(run_dir: Any, case_no: int) -> Path:
     """The run's transcript for one case.
 
-    Named by the convention ``eval.run_benchmark.transcript_path`` uses, so a
-    closure reads the file the run wrote rather than one this module invented.
+    Named by the convention the runner's own transcript path uses, so a closure
+    reads the file the run wrote rather than one this module invented. The name
+    is spelled here rather than imported: this package may not name the runner,
+    which is a module under ``eval/``.
     """
     return Path(run_dir) / "case-{0:05d}.transcript.json".format(case_no)
 
