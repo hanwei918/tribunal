@@ -196,3 +196,62 @@ the pin behind covering whatever comes next. Removing the pin is the first thing
 reader should do after the example is rewritten to an invented id. The check is
 also shown red on a dirty fixture: a copy of the real tree with one identifier
 spliced into one file is reported with that file and that kind.
+
+## Finish
+
+The ten modules the task names, run together on an idle machine:
+
+    python3 -m unittest tests.test_pipeline tests.test_transcript tests.test_events \
+      tests.test_llm tests.test_run_benchmark tests.test_development_sets \
+      tests.test_offline_replay tests.test_no_leakage tests.test_readme_figures \
+      tests.test_language
+
+`Ran 685 tests in 2783.577s` — **`OK (skipped=3)`**. No test in it makes a model
+call.
+
+**The offline replay's per-set results**, both modes, 128 cases each replayed
+twice. The two columns that matter are the last three: nothing left over, nothing
+unanswered, and no digest in the run's own `calls.json` left unreproduced.
+
+| set | cases | ruled | recorded answers served | left over | unanswered | `calls.json` digests not reproduced |
+|---|---|---|---|---|---|---|
+| corpus | 29 | 29 | 177 | 0 | 0 | 0 |
+| codex | 15 | 15 | 91 | 0 | 0 | 0 |
+| wild | 64 | 62 | 392 | 0 | 0 | 0 |
+| wild-v2 | 20 | 20 | 124 | 0 | 0 | 0 |
+
+Each row is identical in both modes, and the two `wild` cases that ruled nothing
+are 517 and 533, still failing at the judge with the same vote.
+
+**The viewer is untouched and rebuilds to the committed bytes.**
+`python3 -m ui.build --check` reports each of the six pages identical to a fresh
+build — 2414270, 1155598, 4243482, 1430248, 279546 and 31639 bytes — which is
+what should happen when no recorded run changes.
+
+**The trees a run reads.** `git diff --stat freeze-2026-10-03 HEAD -- prompts
+policy` prints exactly one file, and it is the one this task was allowed to
+correct:
+
+    policy/amendments/README.md | 11 ++++++++++-
+    1 file changed, 10 insertions(+), 1 deletion(-)
+
+So no prompt moved and no policy JSON moved, and every recorded `brief_sha256`
+still rebuilds. `git diff --stat freeze-2026-10-03 HEAD -- tribunal` shows
+`tribunal/pipeline.py` and `tribunal/transcript.py`, which is where part A's work
+is.
+
+**The four commits**, each its own part, with its own buddy-log row beginning
+`Parallel calls: <part>`:
+
+| part | commit |
+|---|---|
+| A — concurrent calls, opt-in | `364877b` |
+| B — the offline replay | `fcd68ea` |
+| C — the documents | `283a89f` |
+| D — the no-leakage guard | `c416dc6` |
+
+**One deviation, recorded rather than smoothed over.** The task sheet says the
+no-leakage check is "shown red on a dirty fixture", which reads as a clean tree
+that the check passes. The tree is not clean: it holds one real violation, in a
+frozen prompt, and part D pins it rather than fixing it. The check is therefore
+green *with the pin* and red without it, and both states are shown above.
