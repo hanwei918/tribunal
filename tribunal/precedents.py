@@ -35,6 +35,24 @@ never reads ``matched`` and never reads ``events.jsonl``. The category, the
 dispute id and the contested amount come from the **rebuilt brief**, which is
 built from the case and the policy, so the answer-bearing half of a run is never
 opened.
+
+It also reads one case's **transcript**, and only for the recorded vote: the
+panel's own proposals are what a human's ruling is compared against when the
+``override`` flag is decided, and the case file carries the ruling the vote
+produced rather than the proposals it was produced from. Nothing else in the
+transcript is read, and no other case's transcript is opened.
+
+What a closure records
+----------------------
+A closure carries a decision, the clause ids it rests on, and -- since the
+reason became required -- three things it did not carry before: the reviewer's
+own **reason**, whether the decision **overrides** the panel's best-supported
+proposal, and the proposal it was compared against. The reason is written as a
+separate ``human_decision`` event on the same chain rather than as a field of the
+entry, because the block the judge is shown is built from the entry alone and the
+reason is prose about one case. Entries written before this carry no reason, no
+override and no schema version, they read as version 1, and they are never
+rewritten: the store is append-only.
 """
 
 from __future__ import annotations
@@ -62,6 +80,29 @@ README_FILE = "README.md"
 # (``seq``, ``ts``, ``event``, ``prev``, ``hash``, ...) are written by
 # ``EventLog``; everything else on the line is the entry.
 EVENT_CLOSURE = "closure"
+
+# The reviewer's own act, recorded beside the closure it produced. It is the one
+# event in this store that is not a ``closure``, and it is deliberately not part
+# of the entry: the reason is prose about one case, and the block the judge is
+# shown is built from the entry alone.
+EVENT_HUMAN_DECISION = "human_decision"
+
+# The store's schema version, written on every entry and every decision this code
+# appends. The two entries the owner closed before this existed carry no version
+# and read as version 1, which is what they are; the store is append-only, so an
+# older entry is never rewritten to say otherwise.
+SCHEMA_VERSION = 2
+
+# A reason has to say something. Twenty characters is a floor and not a target:
+# "not convinced" is fourteen, and a reason that short is a note that a decision
+# was made rather than a record of one.
+MIN_REASON_CHARS = 20
+
+# An evidence id as the case's own artifacts carry one.
+EVIDENCE_ID_RE = re.compile(r"\bEV-[A-Za-z0-9]+-\d+\b")
+# A clause reference as a reason would cite one. Deliberately loose, so a
+# malformed one is *not* counted as a citation rather than silently matching.
+CLAUSE_MENTION_RE = re.compile(r"POL-[A-Za-z]{1,6}-\d+")
 
 # The id an entry carries. Four digits because a library that needed a fifth
 # would already be a different kind of artefact.
@@ -220,9 +261,21 @@ def append_entry(
     invocation_id: str = "precedents-close",
     git_commit: Optional[str] = None,
     now: Optional[Any] = None,
+    human_decision: Optional[Mapping[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """Append one closure to the chain and return the entry as written."""
+    """Append one closure to the chain and return the entry as written.
+
+    ``human_decision``, when it is given, is appended as a second event on the
+    same chain, **after** the closure. The reason lives there and not on the
+    entry, because the block the judge is shown is built from the entry alone and
+    the reason is prose about one case: an entry travels to another case's judge,
+    and the reason must not travel with it. The two events go through one
+    :class:`~tribunal.events.EventLog`, so the chain is continued once and the
+    decision's line chains onto the closure's own line.
+    """
     _assert_no_forbidden_field_names(entry)
+    if human_decision is not None:
+        _assert_no_forbidden_field_names(human_decision, "human_decision")
     path = store_path(store)
     kwargs: Dict[str, Any] = {}
     if now is not None:
@@ -235,6 +288,8 @@ def append_entry(
     )
     case_no = entry.get("source", {}).get("case_no")
     log.record(EVENT_CLOSURE, case_no=case_no, **dict(entry))
+    if human_decision is not None:
+        log.record(EVENT_HUMAN_DECISION, case_no=case_no, **dict(human_decision))
     return dict(entry)
 
 
@@ -337,6 +392,143 @@ def read_case_document(case_file: Any) -> Dict[str, Any]:
 
 def case_file_for(run_dir: Any, case_no: int) -> Path:
     return Path(run_dir) / "case-{0:05d}.json".format(case_no)
+
+
+# --------------------------------------------------------------------------
+# The recorded vote, and the proposal a human's decision is compared against
+# --------------------------------------------------------------------------
+def transcript_file_for(run_dir: Any, case_no: int) -> Path:
+    """The run's transcript for one case.
+
+    Named by the convention ``eval.run_benchmark.transcript_path`` uses, so a
+    closure reads the file the run wrote rather than one this module invented.
+    """
+    return Path(run_dir) / "case-{0:05d}.transcript.json".format(case_no)
+
+
+def read_recorded_vote(run_dir: Any, case_no: int) -> Optional[Dict[str, Any]]:
+    """The vote one case's run recorded, or ``None`` when there is none.
+
+    Read from the case's **transcript**, which is where the panel's drafts and
+    the proposals they made live. The case file carries the ruling the vote
+    produced and not the proposals it was produced from, so a closure that
+    compared against the case file would be comparing the reviewer with the
+    system's own answer rather than with the panel's. Nothing else in the
+    transcript is read.
+    """
+    path = transcript_file_for(run_dir, case_no)
+    if not path.is_file():
+        return None
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"), parse_float=Decimal)
+    except (OSError, ValueError):
+        return None
+    vote = document.get("vote") if isinstance(document, Mapping) else None
+    return dict(vote) if isinstance(vote, Mapping) else None
+
+
+def best_supported_proposal(vote_block: Any) -> Optional[Dict[str, Any]]:
+    """The plurality proposal among a recorded vote's valid drafts, or ``None``.
+
+    "Best supported" is counted and not judged: the proposal the most valid
+    drafts made, with a tie going to the one whose first draft came earliest --
+    the same rule :func:`tribunal.pipeline._reduce_vote` uses to carry a ruling,
+    stated over proposals rather than over draft keys, so a closure compares the
+    reviewer against what the panel actually proposed.
+
+    A draft's proposal is grouped by its canonical serialisation, because two
+    drafts that proposed the same four graded fields have proposed the same
+    thing whatever order they were written in.
+
+    ``None`` when there is no vote, no valid draft, or no proposal on any valid
+    draft. That is a case a closure can still be made about, and it is why the
+    override is then ``None`` rather than ``False``: "the reviewer agreed with
+    the panel" and "there was no panel answer" are different facts.
+    """
+    if not isinstance(vote_block, Mapping):
+        return None
+    groups: Dict[str, List[Mapping[str, Any]]] = {}
+    for draft in vote_block.get("drafts") or []:
+        if not isinstance(draft, Mapping) or not draft.get("valid"):
+            continue
+        proposal = draft.get("proposal")
+        if not isinstance(proposal, Mapping):
+            continue
+        groups.setdefault(money.dumps_canonical(dict(proposal)), []).append(draft)
+    if not groups:
+        return None
+    key, drafts = max(
+        groups.items(),
+        key=lambda item: (len(item[1]), -int(item[1][0].get("draft") or 0)),
+    )
+    return json.loads(key, parse_float=Decimal)
+
+
+def override_for(decision: Mapping[str, Any], proposal: Any) -> Optional[bool]:
+    """Whether a reviewer's decision differs from the panel's best proposal.
+
+    Both sides are put through the pipeline's own key, so a referral is compared
+    as the clause references it leads with rather than as prose -- which is the
+    only comparison that can be made between two free-text referral lists, and
+    the one the vote itself makes between two drafts.
+
+    ``None`` when there is no proposal to compare against. A boolean cannot hold
+    that case and "the reviewer agreed", and the two mean different things.
+    """
+    if not isinstance(proposal, Mapping):
+        return None
+    from . import pipeline  # local: the pipeline imports this module
+
+    human = pipeline.proposal_from_key(pipeline.vote_key({"ruling": dict(decision)}))
+    return human != dict(proposal)
+
+
+def check_reason(reason: Any, brief_object: Mapping[str, Any]) -> str:
+    """A reviewer's reason, or a refusal naming what it is missing.
+
+    Three things are required and each is checked rather than trusted. The reason
+    says something -- at least :data:`MIN_REASON_CHARS` characters. It cites at
+    least one evidence id of **this case**, read off the rebuilt brief's own
+    evidence list. And it cites at least one clause id the loaded policy carries,
+    the limb allowed and the base id required to resolve.
+
+    A closure is the only record of what a person decided and why. A reason that
+    cites neither this case's evidence nor the policy's clauses is not a record
+    of a decision; it is a note that one was made, and the next reader cannot
+    tell it apart from a guess.
+    """
+    if not isinstance(reason, str) or len(reason.strip()) < MIN_REASON_CHARS:
+        raise PrecedentError(
+            "a closure carries a reason of at least {0} characters".format(
+                MIN_REASON_CHARS
+            )
+        )
+    case = brief_object.get("case") or {}
+    evidence_ids = {
+        item.get("evidence_id")
+        for item in (case.get("evidence") or [])
+        if isinstance(item, Mapping) and isinstance(item.get("evidence_id"), str)
+    }
+    cited_evidence = set(EVIDENCE_ID_RE.findall(reason))
+    if not cited_evidence & evidence_ids:
+        raise PrecedentError(
+            "the reason cites no evidence id of this case; it cites {0}, and the "
+            "case's own are {1}".format(
+                ", ".join(sorted(cited_evidence)) or "none",
+                ", ".join(sorted(evidence_ids)) or "none",
+            )
+        )
+    clauses = referee.policy_clauses(brief_object)
+    cited_clauses = [
+        token
+        for token in CLAUSE_MENTION_RE.findall(reason)
+        if base_clause_id(token) in clauses
+    ]
+    if not cited_clauses:
+        raise PrecedentError(
+            "the reason cites no clause id the loaded policy carries"
+        )
+    return reason
 
 
 def set_from_run_directory(run_dir: Any) -> str:
@@ -795,6 +987,11 @@ def close(args: argparse.Namespace) -> int:
             )
         )
 
+    # The reason is checked here, with every other refusal and before anything is
+    # written, so a closure with no usable reason leaves the store exactly as it
+    # found it.
+    reason = check_reason(args.reason, brief_object)
+
     entries = read_entries(store_path(args.store))
     previous = _latest_for_source(entries, set_name, args.case)
     if previous is not None:
@@ -805,6 +1002,12 @@ def close(args: argparse.Namespace) -> int:
                     args.case, set_name, previous.get("precedent_id")
                 )
             )
+
+    # What the panel proposed, and whether the reviewer departed from it. Read
+    # after every refusal above, so a closure that is going to be refused does not
+    # open the transcript either.
+    proposal = best_supported_proposal(read_recorded_vote(run_dir, args.case))
+    override = override_for(decision, proposal)
 
     dispute = (brief_object.get("case") or {}).get("dispute") or {}
     entry = {
@@ -825,11 +1028,34 @@ def close(args: argparse.Namespace) -> int:
         "closed_by": args.closed_by,
         "policy_version": policy_version,
         "supersedes": args.supersedes,
+        "schema_version": SCHEMA_VERSION,
+        "override": override,
+        "override_proposal": proposal,
     }
-    append_entry(entry, store=args.store, invocation_id=args.invocation_id)
-    print("stored {0} for case {1} of the {2} set".format(
-        entry["precedent_id"], args.case, set_name
-    ))
+    append_entry(
+        entry,
+        store=args.store,
+        invocation_id=args.invocation_id,
+        human_decision={
+            "schema_version": SCHEMA_VERSION,
+            "reviewer": args.closed_by,
+            "decision": dict(decision),
+            "reason": reason,
+            "override": override,
+        },
+    )
+    print(
+        "stored {0} for case {1} of the {2} set ({3})".format(
+            entry["precedent_id"],
+            args.case,
+            set_name,
+            {
+                None: "no panel proposal to compare against",
+                True: "overrides the panel's best-supported proposal",
+                False: "agrees with the panel's best-supported proposal",
+            }[override],
+        )
+    )
     return 0
 
 
@@ -899,6 +1125,19 @@ def _build_parser() -> argparse.ArgumentParser:
     close_parser.add_argument("--clause", action="append", default=[])
     close_parser.add_argument("--closed-by", required=True)
     close_parser.add_argument("--summary", required=True)
+    # Required, and required here rather than checked only in `close`, so a
+    # closure with no reason is refused by the argument parser before a run
+    # directory, a case file or a transcript is opened at all.
+    close_parser.add_argument(
+        "--reason",
+        required=True,
+        help=(
+            "why the reviewer decided this; at least {0} characters, citing at "
+            "least one evidence id of the case and one clause id of the policy".format(
+                MIN_REASON_CHARS
+            )
+        ),
+    )
     close_parser.add_argument("--supersedes", default=None)
     close_parser.add_argument("--invocation-id", default="precedents-close")
 

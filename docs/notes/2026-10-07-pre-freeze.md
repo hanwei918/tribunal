@@ -93,3 +93,54 @@ changes no recorded outcome, which is asserted rather than asserted-about.
 **Wording.** The reason text and the vote explanation name the floor and the
 clause that states it. **Nothing in `prompts/` changes**, which is what keeps
 every request byte for byte what it was.
+
+## B. A reason on every human closure
+
+`python3 -m tribunal.precedents close` records a human reviewer's decision on an
+escalated case, and it recorded the decision and not the thinking behind it. It
+now requires both.
+
+**The reason is required, and required three times over.** `--reason` is a
+required argument, so a closure with no reason is refused by the parser before a
+run directory, a case file or a transcript is opened. It must be at least twenty
+characters. And it must cite **at least one evidence id of this case** -- read
+off the rebuilt brief's own evidence list, so another case's evidence id is
+refused rather than accepted for looking the same -- and **at least one clause id
+the loaded policy carries**, the limb allowed and the base id required to
+resolve. A closure is the only record of what a person decided and why; a reason
+that cites neither this case's evidence nor the policy's clauses is not a record
+of a decision, it is a note that one was made. Every refusal happens before
+anything is written, so a refused closure leaves the store exactly as it found it.
+
+**The override flag is computed, not asked for.** The case's **transcript** is
+read -- and only its recorded vote -- because the case file carries the ruling
+the vote *produced* and not the proposals it was produced from, so a comparison
+against the case file would be a comparison against the system's own answer. The
+panel's **best-supported proposal** is the plurality proposal among the valid
+drafts, grouped by its canonical serialisation and tied to the proposal whose
+first draft came earliest: the same rule `_reduce_vote` uses to carry a ruling,
+stated over proposals instead of draft keys. `override` is `true` when the
+reviewer's own four graded fields differ from it, `false` when they agree, and
+**`null`** when there is no proposal to compare against -- a one-draft run
+records no vote at all -- because "the reviewer agreed with the panel" and "there
+was no panel answer" are different facts and a boolean cannot hold both. Both
+sides go through the pipeline's own `vote_key`, so a referral is compared as the
+clause references it leads with rather than as prose, which is the only
+comparison that can be made between two free-text referral lists. The proposal
+compared against is recorded beside the flag.
+
+**The reason is an event, not a field of the entry.** It is written as a
+`human_decision` event on the same chain, **after** the closure, carrying the
+reviewer, the decision, the reason and the override flag. It is deliberately not
+part of the entry: the block the judge is shown is built from the entry alone, so
+putting the reason there would send prose about one case to the judge of another.
+The two events go through one `EventLog`, so the chain is continued once and the
+decision's line chains onto the closure's own line.
+
+**The store's schema version is bumped for new entries**, which now carry
+`schema_version: 2`, `override` and `override_proposal`. The two entries the
+owner closed before this -- `P-0001` and `P-0002` -- carry none of them and are
+**not rewritten**: the store is append-only, so they read as version 1, which is
+what they are, and they still verify. `precedents/README.md` and the shipped
+store are untouched by this part.
+

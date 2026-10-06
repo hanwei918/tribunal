@@ -87,7 +87,11 @@ GEN_03 = "POL-GEN-03"
 # route-deviation policy holds, so this is one past it.
 UNRESOLVABLE = "POL-RD-99"
 
-# The eleven fields an entry carries, in the order ``close`` builds them.
+# The fields an entry carries, in the order ``close`` builds them. The last three
+# are the ones a closure gained when the reason became required: the store's
+# schema version, whether the decision overrides the panel's best-supported
+# proposal, and the proposal it was compared against. The two entries the owner
+# closed before that carry none of them, which is what the schema version says.
 ENTRY_FIELDS = (
     "precedent_id",
     "source",
@@ -100,6 +104,9 @@ ENTRY_FIELDS = (
     "closed_by",
     "policy_version",
     "supersedes",
+    "schema_version",
+    "override",
+    "override_proposal",
 )
 
 # The five fields a closure reads from a case file, and no sixth.
@@ -158,6 +165,9 @@ def entry(
     summary="A reviewer closed this case on the plain reading of the clause.",
     supersedes=None,
     dispute_id=None,
+    schema_version=precedents.SCHEMA_VERSION,
+    override=None,
+    override_proposal=None,
 ):
     """One closure entry, shaped as ``close`` builds it."""
     return {
@@ -188,6 +198,9 @@ def entry(
         "closed_by": "A Reviewer",
         "policy_version": 1,
         "supersedes": supersedes,
+        "schema_version": schema_version,
+        "override": override,
+        "override_proposal": override_proposal,
     }
 
 
@@ -446,8 +459,13 @@ class PrecedentEntryTests(unittest.TestCase):
 # --------------------------------------------------------------------------
 # Closing a case
 # --------------------------------------------------------------------------
-class CliCloseTests(unittest.TestCase):
-    """``close`` stores one decision, and refuses every case it cannot store."""
+class CloseRig:
+    """The two things every closure test needs: a run to close, and the command.
+
+    A mixin rather than a base, so the tests that are about the command line and
+    the tests that are about the reason and the override flag share it without
+    either running the other's tests.
+    """
 
     def closed_run(self, tmp, cases=(TARGET_CASE,)):
         """A real run directory over the scripted transport, so a case file exists."""
@@ -474,7 +492,22 @@ class CliCloseTests(unittest.TestCase):
         )
         return runner.run_directory(runs_dir, MODEL)
 
+    def reason(self, case_no, clause_id=RD_02):
+        """A reason that cites this case's own evidence and a clause.
+
+        Built from the case number, because the evidence ids are the case's own:
+        case 101's are ``EV-*-00101`` and the held-out set's case 501's are
+        ``EV-*-00501``. A reason that cited another case's evidence would be
+        refused, which is the point of the check.
+        """
+        return (
+            "The evidence EV-GPS-{0:05d} supports the reading of {1} this "
+            "reviewer took.".format(case_no, clause_id)
+        )
+
     def close(self, tmp, run_dir, arguments=(), **options):
+        case_no = options.get("case", TARGET_CASE)
+        clause_id = options.get("clause", RD_02)
         command = [
             "--store",
             str(store_dir(tmp)),
@@ -482,16 +515,24 @@ class CliCloseTests(unittest.TestCase):
             "--run-dir",
             str(run_dir),
             "--case",
-            str(options.get("case", TARGET_CASE)),
+            str(case_no),
             "--ruling",
             options.get("ruling", "PARTIAL_REFUND"),
             "--clause",
-            options.get("clause", RD_02),
+            clause_id,
             "--closed-by",
             options.get("closed_by", "A Reviewer"),
             "--summary",
             options.get("summary", "A reviewer closed this case."),
+            "--reason",
+            options.get("reason", self.reason(case_no, clause_id)),
         ]
+        if options.get("amount") is not None:
+            command.extend(["--amount", str(options["amount"])])
+        if options.get("driver_compensation") is not None:
+            command.extend(
+                ["--driver-compensation", str(options["driver_compensation"])]
+            )
         for extra in options.get("extra", ()):
             command.extend(extra)
         command.extend(arguments)
@@ -499,6 +540,10 @@ class CliCloseTests(unittest.TestCase):
             with contextlib.redirect_stderr(io.StringIO()) as err:
                 code = precedents.main(command)
         return code, out.getvalue(), err.getvalue()
+
+
+class CliCloseTests(CloseRig, unittest.TestCase):
+    """``close`` stores one decision, and refuses every case it cannot store."""
 
     def test_a_closure_is_stored_and_can_be_listed(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -729,6 +774,267 @@ class CliCloseTests(unittest.TestCase):
             stored = precedents.read_entries(precedents.store_path(store_dir(tmp)))[0]
             self.assertEqual("codex", stored["source"]["set"])
             self.assertEqual(9101, stored["source"]["case_no"])
+
+
+# --------------------------------------------------------------------------
+# The reason, and the override flag
+# --------------------------------------------------------------------------
+class ReasonAndOverrideTests(CloseRig, unittest.TestCase):
+    """A closure carries a reason, and says whether it departs from the panel.
+
+    Three things are required of a reason and each is checked rather than
+    trusted: it says something, it cites an evidence id of **this case**, and it
+    cites a clause id the loaded policy carries. The override flag is not
+    required of the reviewer at all -- it is computed, from the panel's own
+    recorded proposals, and the proposal it was computed against is recorded
+    beside it.
+    """
+
+    def panel_run(self, tmp):
+        """A run directory whose transcript holds a four-draft panel.
+
+        ``rig.bench`` defaults to one judge draft, which records no vote at all,
+        and a case with no vote has no proposal for a reviewer to depart from.
+        """
+        rig.bench(tmp, cases=(TARGET_CASE,), judge_votes=4)
+        return rig.run_dir_of(tmp)
+
+    def stored(self, tmp):
+        return precedents.read_entries(precedents.store_path(store_dir(tmp)))[0]
+
+    def events_of(self, tmp):
+        return events.read_events(precedents.store_path(store_dir(tmp)))
+
+    # -- the reason --------------------------------------------------------
+    def test_a_closure_without_a_reason_is_refused_by_the_parser(self):
+        """The argument is required, so nothing is opened before it is given."""
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self.closed_run(tmp)
+            command = [
+                "--store", str(store_dir(tmp)),
+                "close",
+                "--run-dir", str(run_dir),
+                "--case", str(TARGET_CASE),
+                "--ruling", "PARTIAL_REFUND",
+                "--clause", RD_02,
+                "--closed-by", "A Reviewer",
+                "--summary", "A reviewer closed this case.",
+            ]
+            with contextlib.redirect_stderr(io.StringIO()):
+                with self.assertRaises(SystemExit):
+                    precedents.main(command)
+            self.assertFalse(precedents.store_path(store_dir(tmp)).exists())
+
+    def test_a_reason_shorter_than_the_minimum_is_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self.closed_run(tmp)
+            code, _out, err = self.close(tmp, run_dir, reason="too short")
+
+            self.assertEqual(1, code)
+            self.assertIn("at least", err)
+            self.assertFalse(precedents.store_path(store_dir(tmp)).exists())
+
+    def test_a_reason_that_cites_another_cases_evidence_is_refused(self):
+        """The evidence id has to be *this* case's, not one of the same shape."""
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self.closed_run(tmp)
+            code, _out, err = self.close(
+                tmp,
+                run_dir,
+                reason="The evidence EV-GPS-00999 and POL-RD-02 settle it.",
+            )
+
+            self.assertEqual(1, code)
+            self.assertIn("no evidence id of this case", err)
+            self.assertFalse(precedents.store_path(store_dir(tmp)).exists())
+
+    def test_a_reason_that_cites_no_clause_the_policy_carries_is_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self.closed_run(tmp)
+            code, _out, err = self.close(
+                tmp,
+                run_dir,
+                reason="The evidence EV-GPS-00101 settles it for this reviewer.",
+            )
+
+            self.assertEqual(1, code)
+            self.assertIn("no clause id", err)
+            self.assertFalse(precedents.store_path(store_dir(tmp)).exists())
+
+    def test_a_valid_reason_is_stored_as_its_own_event_and_not_on_the_entry(self):
+        """The reason travels to a human, and the entry travels to a judge.
+
+        The block the judge is shown is built from the entry, so the reason is
+        written as a second event on the same chain rather than as a field of it.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self.closed_run(tmp)
+            reason = (
+                "The evidence EV-GPS-00101 carries the fact, and POL-RD-02 makes "
+                "it decisive."
+            )
+            code, out, err = self.close(tmp, run_dir, reason=reason)
+
+            self.assertEqual(0, code, err)
+            self.assertIn("P-0001", out)
+            stored = self.stored(tmp)
+            self.assertNotIn("reason", stored)
+
+            written = self.events_of(tmp)
+            self.assertEqual(
+                [precedents.EVENT_CLOSURE, precedents.EVENT_HUMAN_DECISION],
+                [event["event"] for event in written],
+            )
+            decision = written[1]
+            self.assertEqual(reason, decision["reason"])
+            self.assertEqual("A Reviewer", decision["reviewer"])
+            self.assertEqual("PARTIAL_REFUND", decision["decision"]["ruling"])
+            self.assertEqual(precedents.SCHEMA_VERSION, decision["schema_version"])
+            self.assertIsNone(events.verify_chain(precedents.store_path(store_dir(tmp))))
+
+    def test_the_reason_does_not_reach_the_block_the_judge_is_shown(self):
+        """``--precedents`` is unchanged by the reason, field for field."""
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self.closed_run(tmp)
+            self.close(
+                tmp,
+                run_dir,
+                reason=(
+                    "The evidence EV-GPS-00101 carries the fact, and POL-RD-02 "
+                    "makes it decisive."
+                ),
+            )
+            stored = self.stored(tmp)
+            block = precedents.block([stored])
+
+            self.assertEqual(
+                {"note", "items"}, set(block)
+            )
+            self.assertEqual(
+                {"precedent_id", "category", "clause_ids", "ruling"},
+                set(block["items"][0]),
+            )
+
+    # -- the override flag -------------------------------------------------
+    def test_the_flag_is_false_when_the_reviewer_agrees_with_the_panel(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self.panel_run(tmp)
+            proposal = precedents.best_supported_proposal(
+                precedents.read_recorded_vote(run_dir, TARGET_CASE)
+            )
+            self.assertIsNotNone(proposal)
+            code, _out, err = self.close(
+                tmp,
+                run_dir,
+                ruling=proposal["ruling"],
+                amount=str(proposal["amount_sgd"]),
+                driver_compensation=proposal["driver_compensation_sgd"],
+            )
+
+            self.assertEqual(0, code, err)
+            stored = self.stored(tmp)
+            self.assertIs(False, stored["override"])
+            self.assertEqual(
+                {
+                    "ruling": proposal["ruling"],
+                    "amount_sgd": Decimal(str(proposal["amount_sgd"])),
+                    "driver_compensation_sgd": None,
+                    "referrals": [],
+                },
+                {
+                    "ruling": stored["override_proposal"]["ruling"],
+                    "amount_sgd": stored["override_proposal"]["amount_sgd"],
+                    "driver_compensation_sgd": stored["override_proposal"][
+                        "driver_compensation_sgd"
+                    ],
+                    "referrals": list(stored["override_proposal"]["referrals"]),
+                },
+            )
+
+    def test_the_flag_is_true_when_the_reviewer_departs_from_the_panel(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self.panel_run(tmp)
+            code, out, err = self.close(tmp, run_dir, ruling="NO_ACTION")
+
+            self.assertEqual(0, code, err)
+            self.assertIn("overrides", out)
+            stored = self.stored(tmp)
+            self.assertIs(True, stored["override"])
+            self.assertEqual("PARTIAL_REFUND", stored["override_proposal"]["ruling"])
+
+    def test_the_flag_is_none_when_there_is_no_panel_proposal(self):
+        """A one-draft run records no vote, so there is nothing to override."""
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self.closed_run(tmp)
+            code, out, err = self.close(tmp, run_dir)
+
+            self.assertEqual(0, code, err)
+            self.assertIn("no panel proposal", out)
+            stored = self.stored(tmp)
+            self.assertIsNone(stored["override"])
+            self.assertIsNone(stored["override_proposal"])
+
+    def test_a_tie_goes_to_the_proposal_whose_first_draft_came_earliest(self):
+        """The plurality rule, stated over proposals rather than over keys."""
+        vote = {
+            "drafts": [
+                {"draft": 2, "valid": True, "proposal": {"ruling": "A"}},
+                {"draft": 1, "valid": True, "proposal": {"ruling": "B"}},
+                {"draft": 3, "valid": False, "proposal": {"ruling": "C"}},
+            ]
+        }
+        self.assertEqual({"ruling": "B"}, precedents.best_supported_proposal(vote))
+
+    def test_a_draft_that_abstained_is_not_counted_towards_the_plurality(self):
+        vote = {
+            "drafts": [
+                {"draft": 1, "valid": True, "proposal": {"ruling": "A"}},
+                {"draft": 2, "valid": True, "proposal": {"ruling": "A"}},
+                {"draft": 3, "valid": False, "proposal": {"ruling": "B"}},
+                {"draft": 4, "valid": False, "proposal": {"ruling": "B"}},
+            ]
+        }
+        self.assertEqual({"ruling": "A"}, precedents.best_supported_proposal(vote))
+
+    def test_the_override_is_read_from_the_vote_and_not_from_the_outcome(self):
+        """The comparison is against the drafts, not against the case file.
+
+        Case 101's scripted run carries ``PARTIAL_REFUND``, so a reviewer who
+        decided ``PARTIAL_REFUND`` on the panel's own amount has agreed with the
+        panel and not overridden it. Read off the case file alone there would be
+        nothing to compare against at all, which is why the vote is read from the
+        transcript.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self.panel_run(tmp)
+            code, _out, err = self.close(
+                tmp, run_dir, ruling="PARTIAL_REFUND", amount="8.05"
+            )
+
+            self.assertEqual(0, code, err)
+            stored = self.stored(tmp)
+            self.assertIs(False, stored["override"])
+            self.assertEqual(
+                Decimal("8.05"), stored["override_proposal"]["amount_sgd"]
+            )
+
+    def test_the_schema_version_is_written_and_the_older_entries_have_none(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self.closed_run(tmp)
+            self.close(tmp, run_dir)
+
+            self.assertEqual(
+                precedents.SCHEMA_VERSION, self.stored(tmp)["schema_version"]
+            )
+
+        shipped = precedents.read_entries(
+            precedents.store_path(PROJECT_ROOT / precedents.PRECEDENTS_DIRNAME)
+        )
+        self.assertEqual(["P-0001", "P-0002"], [e["precedent_id"] for e in shipped])
+        for entry in shipped:
+            with self.subTest(entry=entry["precedent_id"]):
+                self.assertNotIn("schema_version", entry)
+                self.assertNotIn("reason", entry)
 
 
 # --------------------------------------------------------------------------
@@ -1761,6 +2067,11 @@ class ShippedStoreTests(unittest.TestCase):
                             "--clause", RD_02,
                             "--closed-by", "A Reviewer",
                             "--summary", "A reviewer closed this case.",
+                            "--reason",
+                            (
+                                "The evidence EV-GPS-00101 supports the reading of "
+                                "POL-RD-02 this reviewer took."
+                            ),
                         ]
                     )
         self.assertEqual(0, code)
