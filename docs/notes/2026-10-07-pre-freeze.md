@@ -178,4 +178,74 @@ cost nothing. The last two lines are the **vote** and the **ruling**, which are
 what the calls were for; a case that produced neither says so instead of printing
 a row of dashes. It reads the log and writes nothing.
 
+## D. The readiness report
+
+`python3 -m eval.readiness` prints a report and writes nothing; `--out` writes
+it, and must name a file under `docs/notes/`. Every number in it is **computed**
+-- from the repository's committed runs, from the frozen answer keys, from the
+loaded policy, from the tests that already measure the thing, and from one
+measurement run named with `--speed-run`. Nothing is typed in.
+
+**The measurement run is named without a path.** An absolute path may not go into
+`docs/`, so the report identifies it by the invocation that produced it, the
+commit it ran at, whether `--parallel-calls` was on and at what concurrency, and
+the sha256 of its own `run.json`. It is read and never written; it is not copied
+into the repository and it is not re-run.
+
+**The prices, and the tier.** `--price-in-per-m`, `--price-out-per-m` and an
+optional `--price-cached-in-per-m`. When a cached-input price is given, the
+cached tokens are priced at it and **the rest of** `prompt_tokens` at the input
+price; `completion_tokens` already includes the reasoning tokens, so output is
+priced once. The arithmetic is `Decimal`, and one test states why as a case:
+sixty-four prompt and 2,234 completion tokens at 0.15 and 0.6 cost exactly
+0.00135 USD, which rounds to 0.0014 in `Decimal` and to 0.0013 in `float`,
+because 0.00135 is not a binary fraction. The report states which of the owner's
+two bands it priced at, computed from the instant the run recorded: peak is
+Monday to Friday, 09:00-12:00 and 14:00-18:00 Singapore time, and the speed run
+began at 20:42 SGT on a Tuesday, which is ordinary.
+
+**The comparison with a sequential run is like for like.** It is against
+`runs/policy-v2/<model>/` -- the same 15 corpus cases at the same policy version,
+one call at a time -- and over the case numbers the two share. It is deliberately
+**not** against `runs/<model>/`: 28 of that run's 29 cases replayed their
+advocates from an earlier run, so its `call_seconds` is judge time only, and the
+report refuses a baseline whose cases carry a non-null `replay` rather than
+printing a ratio between a partial measurement and a whole one. If it shows the
+recorded `wild-v2` mean it labels it as a different case set at a different
+policy version and **not** as a baseline.
+
+**What each dimension measures.**
+
+1. **Quality** -- the offline replay's result per set, run through the module
+   that owns the replay rather than a second implementation of it; the
+   confidence gate's effect on every recorded judge draft; and the speed run's
+   four-field score against the key.
+2. **Speed** -- the median and p90 of `wall_seconds` and of `call_seconds` (the
+   sum of a case's call durations, which is what one call at a time would have
+   taken), the ratio of the two medians, the median and p90 tokens per case, and
+   the cost per case.
+3. **Reproducibility** -- `ui.build --check` across every page, both sealed-set
+   manifest tests, the offline replay, and the freeze gate's exit status against
+   `freeze-2026-10-03`.
+4. **Human management** -- every `ESCALATE` in every committed run, with the
+   votes that produced them counted by outcome and the reason codes they rest on
+   counted; and that `precedents close` refuses a command with no `--reason` and
+   `policy_gaps approve` one with no `--approved-by`.
+5. **Logs** -- `verify_chain` over every committed **run's** log, the share of
+   the speed run's `agent_call` events carrying all four new fields, and the
+   timeline over a speed-run case.
+
+Each dimension gets a PASS or FAIL line, and the report ends with the five of
+them and whether every one passed.
+
+**One honest finding, and one criterion that cannot be met.** The logs dimension
+reports `runs/codex/<model>/events.jsonl` as not verifying, at line 343, where
+`prev` does not name the previous line -- a break in a committed log that
+predates this task and that nothing here repaired. And the criterion that the
+speed run's `agent_call` events carry all four new fields **cannot** be met by
+that run: it was made at `b129824`, before part C added them. The report says
+exactly that rather than reporting a zero as a defect in the code that writes
+them, and it is met by every run made since.
+
+
 
