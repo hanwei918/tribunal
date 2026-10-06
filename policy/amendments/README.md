@@ -5,7 +5,16 @@ numbered from `0001`. The files are applied in numeric order, and the policy
 version a run measures is **1 plus the number of files in this directory**:
 version N applies amendments `0001` through `N-1`.
 
-This directory ships **empty**. The policy as committed is version 1.
+This directory holds one approved amendment, `0001-pol-rd-13`, so the repository
+is at **policy version 2**. It shipped empty and the policy as committed was
+version 1 until the amendment was approved on 2026-10-01; the count above is what
+moved, and nothing in the base files changed.
+
+**This README is not a policy file, and the loader does not read it.**
+`policy_versions.amendment_files` skips `README.md` by name before it applies the
+`NNNN-<slug>.json` rule, so the version a run measures is decided by the
+amendment files alone. Editing this file changes no brief digest and no recorded
+`brief_sha256`.
 
 ## What an amendment may do
 

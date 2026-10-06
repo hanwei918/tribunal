@@ -4,9 +4,13 @@
 run is given `--precedents`, up to three of those entries are shown to the judge,
 chosen because they share clauses with the case in front of it.
 
-**This directory holds no entries today.** It ships with this README and an empty
-store, because a library is built from closures a person has actually made and
-there are none yet.
+**This directory holds two entries.** The store carries the closures `P-0001`
+and `P-0002`, both read from the held-out set's run at
+`runs/wild/deepseek-deepseek-flash/`: `P-0001` closes case 508 on a
+`PARTIAL_REFUND` of 6.00 and `P-0002` closes case 530 on a `PARTIAL_REFUND` of
+5.80, each under `POL-RD-01`, `POL-RD-02` and `POL-RD-08`. It shipped with this
+README and an empty store, because a library is built from closures a person has
+actually made.
 
 ## What the store is
 

@@ -243,6 +243,62 @@ and 2400 s bounds one case, and both are checked before the work they bound. A
 deadline is its own failure kind, `FAILURE_DEADLINE`, beside `TIMEOUT`, `TRANSPORT`
 and `SHAPE`.
 
+## Concurrency
+
+The three agents are the only part of a case that waits on something outside this
+process, and they are asked **one at a time** by default. `--parallel-calls` makes
+the waiting overlap: the two advocates are asked together, and the judge's drafts
+are asked together. Nothing else changes.
+
+**It is opt-in, and the sequential path is the default.** The switch is
+`--parallel-calls` on `eval.run_benchmark` and `eval.development_sets`, and a
+`parallel_calls` keyword through `run_set` and `run_benchmark` into `run_case`.
+The setting is recorded in the run's `invocation_start` event and in `run.json`,
+and it is deliberately **not** part of a case's `configuration` object: it is not
+a property of a case, it is not a staleness key and it is not a cache key, because
+it changes no request. Two runs that differ only in this switch read the same
+briefs and send the same bytes.
+
+**What overlaps.** The two advocate calls run in a pool private to that call site,
+two workers wide, and both are waited on before either answer is written down. The
+judge's draft messages are built in position order in the main thread and then
+asked in a pool private to the vote, `votes` workers wide, and all of them are
+waited on before any is recorded. Every answer is still written to the transcript,
+and its `agent_call` and `judge_draft` events still recorded, **in the case's own
+order** — rider before driver, drafts in position order — never in the order the
+answers happened to come back. The verifier, the vote reduction and the `vote`
+event stay sequential and unchanged, and so does the one-draft path. The
+per-client rate limiter is unchanged too: it is the same object, with the same
+names, admitting one request a second, so up to `concurrency × 4` requests queue
+behind it at one a second.
+
+**One behaviour change, and it is deliberate.** When the two advocates run
+concurrently and the rider's call fails, the driver is still called and its answer
+is still recorded, so the cost the run reports is the cost it actually incurred.
+The case still names the rider as `failed_agent`. Sequentially, a failed rider
+stops the driver from ever being asked; that is the one intended difference
+between the two modes.
+
+**How much it is expected to buy — an estimate.** A case takes about seven minutes
+today: on `wild-v2` the mean was 429.6 s. From the recorded durations, a case
+should drop from roughly the sum of its calls to roughly the longest advocate call
+plus the longest draft. **This is an estimate, not a measurement**; the owner will
+measure it.
+
+**What the offline replay proves.** `tests/test_offline_replay.py` makes no model
+call. It loads every recorded run committed under `runs/` — the corpus, the second
+development set and both sealed sets, including the two held-out cases that
+produced no ruling — and serves each recorded answer back through a transport that
+keys a request by the digests of its two prompts and its two per-call settings, so
+a request whose prompts differ by one byte finds no recording and the run stops.
+Each case is replayed twice, once sequentially and once with the switch on, and
+both runs are held against the recording: **the same requests, the same ruling,
+the same vote and the same referee ledger, given the same model outputs.** The two
+runs' `events.jsonl` files are byte-identical, and the request digests the replay
+computes include every digest in each run's `calls.json`. Three negative controls
+show the check biting: advocates written in completion order, two drafts' seeds
+exchanged, and the judge's temperature moved off 0.7 are each reported.
+
 ## Repository map
 
 | path | what it holds |
@@ -256,7 +312,7 @@ and `SHAPE`.
 | `tests/` | The suite. Nothing in it makes a model call. |
 | `ui/` | `ui/build.py` and the one committed page it builds. |
 | `docs/` | `docs/notes/` — the dated decisions behind every number here; `docs/buddy-log/` — the WorkBuddy sessions. |
-| `precedents/` | The precedent library: human closures of decided cases. Empty until a reviewer closes one. |
+| `precedents/` | The precedent library: human closures of decided cases. It holds the two closures `P-0001` and `P-0002`, and grows only when a reviewer closes one. |
 | `START-HERE.md` | The standing operating procedure for a session in this repository. Read it before changing anything. |
 
 ## The debate viewer
