@@ -1439,6 +1439,12 @@ DRAFT_AMOUNT_DOES_NOT_MIRROR = "DRAFT_AMOUNT_DOES_NOT_MIRROR"
 DRAFT_CLAUSE_MALFORMED = "DRAFT_CLAUSE_MALFORMED"
 DRAFT_CLAUSE_UNRESOLVED = "DRAFT_CLAUSE_UNRESOLVED"
 DRAFT_AMOUNT_NOT_READ_OFF = "DRAFT_AMOUNT_NOT_READ_OFF"
+# The draft's own confidence is below the floor the policy states. The draft
+# abstains rather than voting, because the floor is a policy instruction about
+# what may be decided at all: a ruling below it is one the policy says must go to
+# a human reviewer. The floor is read out of the policy -- see
+# :func:`confidence_floor` -- and not typed here as a number.
+DRAFT_BELOW_FLOOR = "DRAFT_BELOW_FLOOR"
 DRAFT_CHECK_CODES = (
     DRAFT_RULING_NOT_AN_OBJECT,
     DRAFT_UNKNOWN_RULING,
@@ -1449,6 +1455,35 @@ DRAFT_CHECK_CODES = (
     DRAFT_CLAUSE_MALFORMED,
     DRAFT_CLAUSE_UNRESOLVED,
     DRAFT_AMOUNT_NOT_READ_OFF,
+    DRAFT_BELOW_FLOOR,
+)
+
+# The two clauses that state the platform-wide confidence floor, each with the
+# limb its sentence sits in. A case's brief carries the policy for its own
+# category and the general one, so exactly one of these is present in any one
+# brief -- a no-show case carries POL-NS-09 and a route-deviation case POL-RD-10
+# -- and the reader takes whichever it finds, requiring the ones it finds to
+# agree. Each clause says in its own words that it is identical to the other,
+# which is why both are read wherever both are present.
+#
+# The floor is **read from the clause text** rather than written here as a
+# number. ``policy/no_show.json``'s notes on POL-NS-09 record why: the sentence
+# that once let the Judge's configuration govern where the two clauses diverge
+# "has been deleted, because it authorised a hardcoded constant to override
+# written policy silently", and typing the number here would put that constant
+# back.
+CONFIDENCE_FLOOR_CLAUSES: Tuple[Tuple[str, str], ...] = (
+    ("POL-RD-10", "POL-RD-10(1)"),
+    ("POL-NS-09", "POL-NS-09(a)"),
+)
+# The same number, as the loaded policy states it as a parameter: every policy
+# file carries a top-level ``confidence_floor``. It is read as well as the clause,
+# and the two must agree -- the field is the policy's own statement of the number
+# and the clause is where it is stated in prose, and a policy that disagreed with
+# itself is not one a ruling may be gated against.
+CONFIDENCE_FLOOR_FIELD = "confidence_floor"
+CONFIDENCE_FLOOR_RE = re.compile(
+    r"confidence(?:\s+in\s+the\s+ruling)?\s+is\s+below\s+(\d+(?:\.\d+)?)"
 )
 
 # The rule an amount is read off the brief's money block by.
@@ -1740,6 +1775,96 @@ def _clause_mentions(inner: Mapping[str, Any]) -> List[str]:
     return found
 
 
+def _as_number(value: Any) -> Optional[Decimal]:
+    """A JSON number as a ``Decimal``, or ``None`` when it is not one.
+
+    ``bool`` is excluded rather than accepted: ``isinstance(True, int)`` is true
+    in Python, and a confidence of ``true`` is not a confidence. A string that
+    is not a number is refused too, so an answer that quoted its confidence
+    reads as absent rather than as zero.
+    """
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, Decimal):
+        return value
+    if isinstance(value, (int, float, str)):
+        try:
+            return Decimal(str(value))
+        except (InvalidOperation, ValueError):
+            return None
+    return None
+
+
+def confidence_floor(brief_object: Any) -> Tuple[Decimal, Tuple[str, ...]]:
+    """The platform-wide confidence floor, and the clause references it came from.
+
+    The floor is read out of the loaded policy, from both places the policy
+    states it. The clause is where it is written down as a rule -- ``POL-RD-10``
+    for a route-deviation dispute, ``POL-NS-09`` for a no-show, each saying in its
+    own words that it is identical to the other -- and every policy file also
+    carries it as the top-level parameter ``confidence_floor``. A brief carries
+    the policy for its case's category and the general one, so one clause and two
+    parameters are in play; every one of them that is present is read and they
+    must all agree. A policy that disagreed with itself would be refused rather
+    than resolved.
+
+    A clause whose sentence no longer parses, or a brief carrying neither clause,
+    is a **refusal** rather than a default. A floor that fell back to a number
+    written in this file would be the silent override the policy's own notes
+    describe, and a floor that silently became ``0`` would let every draft vote.
+    """
+    clauses = referee.policy_clauses(brief_object)
+    found: Dict[Decimal, List[str]] = {}
+    references: List[str] = []
+    for clause_id, reference in CONFIDENCE_FLOOR_CLAUSES:
+        clause = clauses.get(clause_id)
+        if clause is None:
+            continue
+        text = clause.get("rule") if isinstance(clause, Mapping) else None
+        if not isinstance(text, str):
+            raise PipelineError(
+                "{0} carries no rule text, so the confidence floor cannot be read "
+                "from it".format(clause_id)
+            )
+        match = CONFIDENCE_FLOOR_RE.search(text)
+        if match is None:
+            raise PipelineError(
+                "{0} states no confidence floor this code can read, so its text "
+                "has moved and the floor can no longer be taken from it".format(
+                    clause_id
+                )
+            )
+        found.setdefault(Decimal(match.group(1)), []).append(clause_id)
+        references.append(reference)
+    if not references:
+        raise PipelineError(
+            "neither {0} is in the loaded policy, and they are the two clauses "
+            "that state the confidence floor".format(
+                " nor ".join(clause_id for clause_id, _ in CONFIDENCE_FLOOR_CLAUSES)
+            )
+        )
+    policies = brief_object.get("policies") if isinstance(brief_object, Mapping) else None
+    for name, policy in (policies or {}).items():
+        if not isinstance(policy, Mapping):
+            continue
+        stated = _as_number(policy.get(CONFIDENCE_FLOOR_FIELD))
+        if stated is not None:
+            found.setdefault(stated, []).append(
+                "{0}.{1}".format(name, CONFIDENCE_FLOOR_FIELD)
+            )
+    if len(found) != 1:
+        raise PipelineError(
+            "the confidence floor is not one number: {0}".format(
+                ", ".join(
+                    "{0} stated by {1}".format(floor, "/".join(where))
+                    for floor, where in sorted(found.items())
+                )
+            )
+        )
+    floor = next(iter(found))
+    return floor, tuple(references)
+
+
 def check_judge_draft(
     ruling: Any,
     brief_object: Any,
@@ -1751,9 +1876,10 @@ def check_judge_draft(
     fields recorded as unverifiable, which are not failures. An empty first
     tuple means the draft votes.
 
-    The four checks are the ruling value, the amount fields the ruling value
-    requires and the ones it forbids, the clause references it states, and the
-    amounts it states against the brief's own calculator. Nothing here judges
+    The five checks are the ruling value, the amount fields the ruling value
+    requires and the ones it forbids, the clause references it states, the
+    amounts it states against the brief's own calculator, and the draft's own
+    confidence against the floor the policy states. Nothing here judges
     the reasoning: a draft that passes has not been found right, only found
     well-formed.
 
@@ -1859,6 +1985,26 @@ def check_judge_draft(
                     "the sum of two or three of them"
                     if amount_rule == AMOUNT_RULE_PUBLISHED
                     else "a signed combination of two or three of them",
+                )
+            )
+
+    # The floor, last, so the codes above keep the order the record has always
+    # shown: a draft that is malformed *and* unsure is reported as malformed
+    # first. The gate is skipped for an ESCALATE -- an escalation is already the
+    # answer the floor asks for -- and for a draft whose confidence is not a
+    # number at all, which is a different defect from a low one and is not one
+    # this check is for.
+    if value in RULING_VALUES and value != ESCALATE:
+        confidence = _as_number(inner.get("confidence"))
+        floor, references = confidence_floor(brief_object)
+        if confidence is not None and confidence < floor:
+            failures.append(
+                "{0}: the draft's own confidence is {1}, below the floor of {2} "
+                "stated by {3}; a ruling below the floor must be ESCALATE".format(
+                    DRAFT_BELOW_FLOOR,
+                    confidence,
+                    floor,
+                    " and ".join(references),
                 )
             )
 
@@ -2129,7 +2275,62 @@ def _vote_escalation(
     }
 
 
-def _reduce_vote(drafts: Sequence[JudgeDraft], votes: int, referee_result: Any) -> JudgeVote:
+def _below_floor_escalation(published: Any, brief_object: Any) -> Optional[Any]:
+    """The ESCALATE a carried ruling becomes when its own confidence is below the floor.
+
+    **Unreachable through this pipeline.** :func:`check_judge_draft` abstains
+    such a draft, and an abstention is not part of a carried majority, so a
+    ruling that reaches here has already been found above the floor. It is kept
+    anyway, and for two reasons: "unreachable" is a claim about the checks
+    standing in front of it rather than a property of this function, and what it
+    protects is the thing that gets published. It is also what the floor means --
+    a ruling nobody is confident enough in is escalated rather than carried.
+
+    ``None`` when the ruling is already an ESCALATE, when its confidence is not a
+    number, or when that confidence is at or above the floor, so a caller can
+    call this unconditionally.
+
+    Both amounts are ``null`` and ``referrals`` is empty, because no ruling is
+    published for an amount or a referral to attach to, and ``confidence`` is
+    0.0 for the same reason ``_vote_escalation`` sets it: the panel's own
+    agreement is a separate figure, recorded as ``vote_agreement``.
+    """
+    inner = published.get("ruling") if isinstance(published, Mapping) else None
+    if not isinstance(inner, Mapping) or inner.get("ruling") == ESCALATE:
+        return None
+    confidence = _as_number(inner.get("confidence"))
+    if confidence is None:
+        return None
+    floor, references = confidence_floor(brief_object)
+    if confidence >= floor:
+        return None
+    return {
+        "ruling": {
+            "ruling": ESCALATE,
+            "amount_sgd": None,
+            "driver_compensation_sgd": None,
+            "referrals": [],
+            "confidence": 0.0,
+            "explanation": (
+                "The vote carried a ruling, but the ruling's own confidence is "
+                "{0}, below the floor of {1} stated by {2}. The floor is "
+                "mandatory, so the dispute is escalated to a human reviewer "
+                "rather than decided, and both amounts are null because no "
+                "ruling is published.".format(
+                    confidence, floor, " and ".join(references)
+                )
+            ),
+        },
+        "discarded_claims": list(published.get("discarded_claims") or []),
+    }
+
+
+def _reduce_vote(
+    drafts: Sequence[JudgeDraft],
+    votes: int,
+    referee_result: Any,
+    brief_object: Any = None,
+) -> JudgeVote:
     """Reduce K drafts to one ruling, or to the reason there is none.
 
     The quorum and the threshold are both a strict majority of the panel --
@@ -2142,6 +2343,15 @@ def _reduce_vote(drafts: Sequence[JudgeDraft], votes: int, referee_result: Any) 
     was answered, so there is nothing to disagree about, and the judge failed --
     the event this pipeline has always reported as a failure. Publishing an
     ESCALATE there would invent a ruling the judge never gave.
+
+    ``brief_object`` is the loaded policy the panel was briefed against, and it
+    is what the confidence floor is read from. When it is given, a carried
+    ruling whose own confidence is below the floor is published as an ESCALATE
+    instead, with the vote recorded as ``escalated``: the panel carried it, and
+    the policy says it may not be decided. When it is ``None`` that guard is
+    skipped, which is what every caller before the floor passed -- the drafts are
+    still gated individually by :func:`check_judge_draft`, so the two agree
+    wherever both run.
     """
     valid = [draft for draft in drafts if draft.valid]
     threshold = votes // 2 + 1
@@ -2175,6 +2385,11 @@ def _reduce_vote(drafts: Sequence[JudgeDraft], votes: int, referee_result: Any) 
     if carried:
         outcome = VOTE_CARRIED if agreeing == votes else VOTE_CARRIED_NOT_UNANIMOUS
         published = _with_vote_sentence(winner_drafts[0].ruling, votes, agreeing, agreement)
+        if brief_object is not None:
+            floored = _below_floor_escalation(published, brief_object)
+            if floored is not None:
+                published = floored
+                outcome = VOTE_ESCALATED
     else:
         outcome = VOTE_ESCALATED
         published = _vote_escalation(
@@ -2447,7 +2662,7 @@ def _run_judge_vote(
             case_no=case_no,
         )
 
-    vote = _reduce_vote(drafts, votes, referee_result)
+    vote = _reduce_vote(drafts, votes, referee_result, brief_object)
     if verification is not None:
         # The verdicts ride on the vote's own record, beside the drafts they
         # were charged to, so a reader of the transcript sees the two together.
@@ -3073,11 +3288,21 @@ def verify_draft_statements(
 
 
 def reduce_vote(
-    drafts: Sequence[JudgeDraft], votes: int, referee_result: Any
+    drafts: Sequence[JudgeDraft],
+    votes: int,
+    referee_result: Any,
+    brief_object: Any = None,
 ) -> JudgeVote:
     """The public name for the reduction, so a caller outside this module can
-    reduce a set of drafts it rebuilt rather than one it just called for."""
-    return _reduce_vote(drafts, votes, referee_result)
+    reduce a set of drafts it rebuilt rather than one it just called for.
+
+    ``brief_object`` is the loaded policy, and it is optional so that every
+    caller written before the confidence floor keeps working unchanged. A caller
+    that does not name one gets the reduction without the post-vote floor guard;
+    the per-draft gate inside :func:`check_judge_draft` is unaffected, because
+    that one reads the floor out of the brief it is already handed.
+    """
+    return _reduce_vote(drafts, votes, referee_result, brief_object)
 
 
 def recorded_judge_drafts(

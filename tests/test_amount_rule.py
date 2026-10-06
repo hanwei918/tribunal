@@ -144,7 +144,15 @@ def digests(root):
 
 
 def a_brief(*, money=None):
-    """A brief object with a money block, and nothing else a check needs."""
+    """A brief object with a money block and the clause that states the floor.
+
+    Both are read by the checks a draft must pass: the money block by the amount
+    check, and ``POL-NS-09`` by the confidence floor, which is read out of the
+    loaded policy rather than typed into the pipeline. The clause's number is the
+    policy's own, and the ``confidence_floor`` parameter beside it is the same
+    number, because the floor is read from both and they must agree. Nothing else
+    a check needs is here.
+    """
     payload = {}
     if money is not None:
         payload[brief.DERIVED_KEY] = {brief.MONEY_KEY: money}
@@ -153,7 +161,21 @@ def a_brief(*, money=None):
             "evidence": [
                 {"evidence_type": brief.FARE_EVIDENCE_TYPE, "payload": payload}
             ]
-        }
+        },
+        "policies": {
+            "no_show": {
+                "confidence_floor": 0.7,
+                "clauses": [
+                    {
+                        "id": "POL-NS-09",
+                        "rule": (
+                            "(a) Judge confidence is below 0.70, which is the "
+                            "platform-wide floor and is identical to POL-RD-10(1)."
+                        ),
+                    }
+                ],
+            }
+        },
     }
 
 

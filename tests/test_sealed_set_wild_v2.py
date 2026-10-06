@@ -2086,12 +2086,16 @@ class ProtocolTransport:
 # are null, and it names no clause -- which is all ``check_judge_draft`` asks of
 # a draft before it may vote. Feeding the real key here would make the suite read
 # the sealed key for tests that are not about the key at all.
+#
+# Its confidence is above the platform-wide floor for the same reason: a draft
+# below the floor abstains with ``DRAFT_BELOW_FLOOR`` instead of voting, and a
+# placeholder that abstains would stop the panel from carrying anything.
 PLACEHOLDER_RULING = {
     "ruling": "NO_ACTION",
     "amount_sgd": None,
     "driver_compensation_sgd": None,
     "referrals": [],
-    "confidence": 0.5,
+    "confidence": 0.9,
     "explanation": "A fixed placeholder ruling for the sealed-protocol tests.",
 }
 

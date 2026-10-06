@@ -16,6 +16,7 @@ import sys
 import tempfile
 import threading
 import time
+import types
 import unittest
 from contextlib import redirect_stdout
 from decimal import Decimal
@@ -1955,9 +1956,16 @@ class JudgeVoteTests(unittest.TestCase):
         self.assertTrue(result.judge_vote["unanimous"])
 
     def test_the_vote_does_not_change_what_confidence_means(self):
-        result, _ = run_vote(*self.drafts(*[envelope(vote_ruling(confidence=0.42))] * 4))
+        """The carried ruling keeps the draft's own confidence, unaveraged.
 
-        self.assertEqual(Decimal("0.42"), result.ruling["ruling"]["confidence"])
+        The fixture's confidence is above the floor, because a draft below it
+        abstains rather than voting, and what this test measures is that the vote
+        does not blend the confidences of the drafts that *did* vote. It is the
+        draft's own number, not a mean of the panel's.
+        """
+        result, _ = run_vote(*self.drafts(*[envelope(vote_ruling(confidence=0.92))] * 4))
+
+        self.assertEqual(Decimal("0.92"), result.ruling["ruling"]["confidence"])
         self.assertEqual(1.0, result.vote_agreement)
 
     # -- the drafts --------------------------------------------------------
@@ -2466,6 +2474,144 @@ class JudgeDraftCheckTests(unittest.TestCase):
         self.assertEqual(JUDGE, result.failed_agent)
         self.assertIsNone(result.ruling)
         self.assertEqual("no_valid_drafts", result.judge_vote["outcome"])
+
+    # -- the confidence floor ----------------------------------------------
+    def test_the_floor_is_read_from_the_policy_and_not_typed(self):
+        """The number is the policy's, and the clause it came from is named.
+
+        Case 208 is a no-show, so its brief carries `POL-NS-09`; case 101 is a
+        route deviation, so its brief carries `POL-RD-10`. Each clause says in
+        its own words that the floor is identical to the other's, and the reader
+        takes whichever it finds. A number typed into the pipeline would be the
+        silent override the policy's own notes describe.
+        """
+        self.assertEqual(
+            (Decimal("0.70"), ("POL-NS-09(a)",)),
+            pipeline.confidence_floor(self.brief),
+        )
+        self.assertEqual(
+            (Decimal("0.70"), ("POL-RD-10(1)",)),
+            pipeline.confidence_floor(brief.build_brief(101)),
+        )
+
+    def test_a_draft_below_the_floor_abstains_and_says_why(self):
+        """The reason names the code, the floor and the clause that states it."""
+        failures, _ = self.check(confidence=0.5)
+
+        self.assertEqual(1, len(failures))
+        self.assertTrue(failures[0].startswith(pipeline.DRAFT_BELOW_FLOOR))
+        self.assertIn("0.70", failures[0])
+        self.assertIn("POL-NS-09(a)", failures[0])
+
+    def test_a_draft_at_the_floor_still_votes(self):
+        """Both clauses say *below* the floor, so the floor itself is allowed."""
+        self.assertEqual(((), ()), self.check(confidence=0.70))
+
+    def test_an_escalate_below_the_floor_is_not_a_floor_failure(self):
+        """An escalation is already the answer the floor asks for."""
+        failures, _ = self.check(ruling_value="ESCALATE", amount=None, confidence=0.1)
+
+        self.assertEqual((), failures)
+
+    def test_a_confidence_that_is_not_a_number_is_not_a_floor_failure(self):
+        """A missing confidence is a different defect, and not this check's.
+
+        The floor is about a draft that *says* how sure it is; a draft that says
+        nothing about it is not below any number, and inventing one would be
+        reading a value the model did not give.
+        """
+        failures, _ = self.check(confidence=None)
+
+        self.assertEqual((), failures)
+
+    def test_the_floor_is_refused_rather_than_defaulted(self):
+        """A policy that no longer states it is a refusal, not a fallback.
+
+        A floor that fell back to a number written in this file would be the
+        override the policy's notes describe, and one that fell back to zero
+        would let every draft vote. The floor is stated twice -- in the clause and
+        as the policy's own ``confidence_floor`` parameter -- so a policy that
+        disagreed with itself is refused as well.
+        """
+        with self.assertRaises(pipeline.PipelineError):
+            pipeline.confidence_floor({"policies": {"general": {"clauses": []}}})
+
+        moved = {
+            "policies": {
+                "no_show": {
+                    "clauses": [{"id": "POL-NS-09", "rule": "confidence is up to you"}]
+                }
+            }
+        }
+        with self.assertRaises(pipeline.PipelineError):
+            pipeline.confidence_floor(moved)
+
+        disagreeing = {
+            "policies": {
+                "no_show": {
+                    "confidence_floor": 0.9,
+                    "clauses": [
+                        {
+                            "id": "POL-NS-09",
+                            "rule": "Judge confidence is below 0.70, the floor.",
+                        }
+                    ],
+                }
+            }
+        }
+        with self.assertRaises(pipeline.PipelineError):
+            pipeline.confidence_floor(disagreeing)
+
+    def test_a_carried_ruling_below_the_floor_becomes_an_escalation(self):
+        """Unreachable through the pipeline, and kept anyway.
+
+        The gate above abstains such a draft, so a carried majority cannot
+        contain one -- which is what makes this branch unreachable rather than
+        wrong. The draft is built directly, with the check bypassed, and the
+        reduction is asked what it does with it: the published ruling is an
+        ESCALATE, the vote is recorded as escalated, both amounts are null, and
+        the explanation names the floor and the clause.
+        """
+        ruling = json.loads(vote_ruling(ruling_value="FULL_REFUND", confidence=0.5))
+        draft = pipeline.JudgeDraft(
+            index=1,
+            kind=pipeline.SINGLE_DRAFT,
+            temperature=None,
+            seed=None,
+            sides=(),
+            entries=(0,),
+            ruling=ruling,
+            key=pipeline.vote_key(ruling),
+        )
+        vote = pipeline.reduce_vote(
+            [draft], 1, types.SimpleNamespace(discards=[]), self.brief
+        )
+
+        self.assertEqual("ESCALATE", vote.ruling["ruling"]["ruling"])
+        self.assertEqual(pipeline.VOTE_ESCALATED, vote.record["outcome"])
+        self.assertIsNone(vote.ruling["ruling"]["amount_sgd"])
+        self.assertEqual([], vote.ruling["ruling"]["referrals"])
+        self.assertIn("0.70", vote.ruling["ruling"]["explanation"])
+        self.assertIn("POL-NS-09(a)", vote.ruling["ruling"]["explanation"])
+
+    def test_the_same_ruling_carries_when_the_floor_is_not_given(self):
+        """The guard is opt-in, so a caller that does not name a brief keeps
+        the reduction it had: the drafts are gated individually either way."""
+        ruling = json.loads(vote_ruling(ruling_value="FULL_REFUND", confidence=0.5))
+        draft = pipeline.JudgeDraft(
+            index=1,
+            kind=pipeline.SINGLE_DRAFT,
+            temperature=None,
+            seed=None,
+            sides=(),
+            entries=(0,),
+            ruling=ruling,
+            key=pipeline.vote_key(ruling),
+        )
+        vote = pipeline.reduce_vote([draft], 1, types.SimpleNamespace(discards=[]))
+
+        self.assertEqual("FULL_REFUND", vote.ruling["ruling"]["ruling"])
+        self.assertEqual(pipeline.VOTE_CARRIED, vote.record["outcome"])
 
 
 class JudgePromptAmountsTests(unittest.TestCase):
