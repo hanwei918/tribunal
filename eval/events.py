@@ -2,10 +2,14 @@
 
 Two commands, and they are read-only:
 
-* ``python3 -m eval.events --case 211`` prints every event the log holds for
-  case 211, in the order it happened. The log is cumulative, so the history it
+* ``python3 -m eval.events --run-dir <dir> --case 211`` prints a **timeline** of
+  case 211: one row per event, in the order it happened, with the time, the role
+  or the draft it was, the status the provider returned, what it cost in tokens,
+  how long it took and how its answer parsed -- and the last two lines are the
+  vote and the ruling the case ended in. The log is cumulative, so the history it
   prints can span several invocations -- a case re-run under ``--force`` has
   more history than one that was run once, and the printer shows all of it.
+  ``--json`` prints the payloads instead, one per line.
 * ``python3 -m eval.events --verify`` checks the hash chain from the first line
   to the last and reports the first line that does not agree with it, exiting
   non-zero when there is one.
@@ -73,9 +77,7 @@ def _print_case(path: Path, case_no: int, as_json: bool) -> int:
             # written with, so what is printed is what was written.
             print(money.dumps_canonical(event))
         return 0
-    print("case {0} — {1} event(s) in {2}".format(case_no, len(found), path))
-    for event in found:
-        print(events.summarise(event))
+    print(events.timeline(path, case_no))
     return 0
 
 

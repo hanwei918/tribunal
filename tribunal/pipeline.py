@@ -1057,6 +1057,8 @@ def _write_agent_call(
     case_no: Optional[int] = None,
     raise_exception: bool = True,
     exception_note: Optional[str] = None,
+    policy_version: Optional[int] = None,
+    brief_sha256: Optional[str] = None,
 ) -> Tuple[Optional[Any], Optional[str]]:
     """Write one call's attempts to the transcript and the event log, in order.
 
@@ -1064,6 +1066,20 @@ def _write_agent_call(
     at, and one ``agent_call`` event per attempt read off the entry just written
     -- which is what makes a retried call two events instead of one, the
     distinction the transcript has always drawn.
+
+    **What the event carries.** The fields the transcript entry has, plus four
+    that are facts about the run rather than about the answer: the ``model`` that
+    answered, the ``policy_version`` the case was briefed at, the
+    ``brief_sha256`` of the brief the agent was handed, and ``body_sha256``, the
+    digest of the whole HTTP request body, which the client already computes and
+    the ``calls.json`` record already carries. A reader of one line should not
+    have to open another file to learn what the line was produced under.
+
+    ``request_sha256`` is kept exactly as it was and **it is misnamed**: it is
+    the digest of the *user message*, not of the request. It is not renamed,
+    because the name is in every committed event log and a rename would make two
+    generations of line mean different things under one key. ``body_sha256`` is
+    the field that actually is the request body's digest.
 
     A stored exception is re-raised here, after every attempt this call did
     complete has been written. That is what the sequential path has always done
@@ -1106,7 +1122,9 @@ def _write_agent_call(
                 # handed, not of the message the caller meant to send: the two
                 # are the same bytes by construction, and recording the one the
                 # entry carries is what lets the event be checked against the
-                # transcript rather than against an intention.
+                # transcript rather than against an intention. The name is
+                # wrong -- this is the user message, not the request -- and it is
+                # kept because every committed log already carries it.
                 request_sha256=entry.user_sha256,
                 system_sha256=entry.system_sha256,
                 shape=attempt.shape,
@@ -1118,6 +1136,12 @@ def _write_agent_call(
                 cached_tokens=entry.cached_tokens,
                 total_tokens=entry.prompt_tokens + entry.completion_tokens,
                 seconds=entry.duration_seconds,
+                # The four the call log gained. ``body_sha256`` is the request
+                # body's digest, which is what ``request_sha256`` sounds like.
+                model=attempt.result.model,
+                policy_version=policy_version,
+                brief_sha256=brief_sha256,
+                body_sha256=attempt.result.request_sha256,
             )
     if call.exception is not None:
         if raise_exception:
@@ -1142,6 +1166,8 @@ def _call_agent(
     events_log: Optional[Any] = None,
     case_no: Optional[int] = None,
     draft: int = 0,
+    policy_version: Optional[int] = None,
+    brief_sha256: Optional[str] = None,
 ) -> Tuple[Optional[Any], Optional[str]]:
     """One agent call: the worker part, then the part that writes it down.
 
@@ -1175,7 +1201,12 @@ def _call_agent(
         draft=draft,
     )
     return _write_agent_call(
-        call, transcript=transcript, events_log=events_log, case_no=case_no
+        call,
+        transcript=transcript,
+        events_log=events_log,
+        case_no=case_no,
+        policy_version=policy_version,
+        brief_sha256=brief_sha256,
     )
 
 
@@ -2419,6 +2450,8 @@ def _run_judge_vote(
     verify: bool = False,
     verifier_prompt: str = "",
     precedents: Optional[Mapping[str, Any]] = None,
+    policy_version: Optional[int] = None,
+    brief_sha256: Optional[str] = None,
 ) -> JudgeVote:
     """Ask the judge ``votes`` times on the same inputs and reduce the answers.
 
@@ -2578,12 +2611,16 @@ def _run_judge_vote(
                 events_log=events_log,
                 case_no=case_no,
                 draft=position + 1,
+                policy_version=policy_version,
+                brief_sha256=brief_sha256,
             )
         else:
             call = calls[position]
             parsed, failure = _write_agent_call(
                 call, transcript=transcript, events_log=events_log, case_no=case_no,
                 raise_exception=False,
+                policy_version=policy_version,
+                brief_sha256=brief_sha256,
             )
             if call.exception is not None:
                 # A raised draft has no answer, so it is not written as an
@@ -2660,6 +2697,8 @@ def _run_judge_vote(
             deadline=deadline,
             events_log=events_log,
             case_no=case_no,
+            policy_version=policy_version,
+            brief_sha256=brief_sha256,
         )
 
     vote = _reduce_vote(drafts, votes, referee_result, brief_object)
@@ -2963,6 +3002,8 @@ def _verifier_call(
     deadline: Optional["CaseDeadline"],
     events_log: Optional[Any],
     case_no: Optional[int],
+    policy_version: Optional[int] = None,
+    brief_sha256: Optional[str] = None,
 ) -> Tuple[Optional[List[Dict[str, Any]]], str, Any]:
     """Ask the verifier once. Returns ``(verdicts, reason, entry)``.
 
@@ -3011,6 +3052,12 @@ def _verifier_call(
             cached_tokens=entry.cached_tokens,
             total_tokens=entry.prompt_tokens + entry.completion_tokens,
             seconds=entry.duration_seconds,
+            # The verifier is a model call like any other, so its event carries
+            # the four fields every ``agent_call`` event carries.
+            model=result.model,
+            policy_version=policy_version,
+            brief_sha256=brief_sha256,
+            body_sha256=result.request_sha256,
         )
     return verdicts, reason, entry
 
@@ -3152,6 +3199,8 @@ def verify_draft_statements(
     deadline: Optional["CaseDeadline"],
     events_log: Optional[Any] = None,
     case_no: Optional[int] = None,
+    policy_version: Optional[int] = None,
+    brief_sha256: Optional[str] = None,
 ) -> Tuple[List[JudgeDraft], Dict[str, Any]]:
     """One verifier call over every valid draft, and the drafts it leaves.
 
@@ -3202,6 +3251,8 @@ def verify_draft_statements(
         deadline=deadline,
         events_log=events_log,
         case_no=case_no,
+        policy_version=policy_version,
+        brief_sha256=brief_sha256,
     )
     entry_index = len(transcript) - 1
     tokens = _tokens_of(entry)
@@ -3646,6 +3697,8 @@ def run_loaded_case(
         rider_claims, rider_failure = _write_agent_call(
             rider_call, transcript=transcript, events_log=events_log, case_no=case_no,
             raise_exception=False,
+            policy_version=policy_version,
+            brief_sha256=brief_sha256,
         )
         if rider_call.exception is not None:
             # The rider raised, and the driver was already in flight. The
@@ -3656,6 +3709,8 @@ def run_loaded_case(
                 driver_call, transcript=transcript, events_log=events_log, case_no=case_no,
                 raise_exception=False,
                 exception_note=_subsequent_exception_note(driver_call),
+                policy_version=policy_version,
+                brief_sha256=brief_sha256,
             )
             raise rider_call.exception
         driver_claims, driver_failure = _write_agent_call(
@@ -3668,6 +3723,8 @@ def run_loaded_case(
             exception_note=(
                 _subsequent_exception_note(driver_call) if rider_failure is not None else None
             ),
+            policy_version=policy_version,
+            brief_sha256=brief_sha256,
         )
     else:
         # The sequential path, unchanged: one agent at a time, each call written
@@ -3684,6 +3741,8 @@ def run_loaded_case(
             deadline=deadline,
             events_log=events_log,
             case_no=case_no,
+            policy_version=policy_version,
+            brief_sha256=brief_sha256,
         )
         if rider_claims is not None:
             driver_claims, driver_failure = _call_agent(
@@ -3696,6 +3755,8 @@ def run_loaded_case(
                 deadline=deadline,
                 events_log=events_log,
                 case_no=case_no,
+                policy_version=policy_version,
+                brief_sha256=brief_sha256,
             )
 
     if rider_failure is None:
@@ -3798,6 +3859,8 @@ def run_loaded_case(
                 deadline=deadline,
                 events_log=events_log,
                 case_no=case_no,
+                policy_version=policy_version,
+                brief_sha256=brief_sha256,
             )
             if judge_failure is not None:
                 failed_agent, failure_reason = transcript_module.ROLE_JUDGE, judge_failure
@@ -3839,6 +3902,8 @@ def run_loaded_case(
                 case_no=case_no,
                 verify=verify_drafts,
                 verifier_prompt=verifier_prompt,
+                policy_version=policy_version,
+                brief_sha256=brief_sha256,
                 precedents=precedents_block,
             )
             vote_record = vote.record
@@ -4385,6 +4450,11 @@ def replay_case(
             deadline=deadline,
             events_log=events_log,
             case_no=replay.case_no,
+            # A replay carries the brief digest it was handed. It carries no
+            # policy version: a ``Replayable`` does not have one, and inventing
+            # one from the default would put a number on the line that this code
+            # did not read from anywhere.
+            brief_sha256=replay.brief_sha256,
         )
         if judge_failure is not None:
             failed_agent, failure_reason = transcript_module.ROLE_JUDGE, judge_failure
@@ -4423,6 +4493,7 @@ def replay_case(
             case_no=replay.case_no,
             verify=verify_drafts,
             verifier_prompt=verifier_prompt,
+            brief_sha256=replay.brief_sha256,
         )
         vote_record = vote.record
         if vote.failure_reason is not None:

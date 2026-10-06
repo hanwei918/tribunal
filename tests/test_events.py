@@ -553,5 +553,173 @@ class CredentialTests(unittest.TestCase):
                 log.record(events.EVENT_AGENT_CALL, case_no=CASE, hash="forged")
 
 
+# --------------------------------------------------------------------------
+# The four fields the call log gained
+# --------------------------------------------------------------------------
+class CompleteCallLogTests(unittest.TestCase):
+    """Every ``agent_call`` event says what the call was made under.
+
+    A reader of one line should not have to open another file to learn which
+    model answered, which policy version the case was briefed at, which brief the
+    agent was handed or what the request body was. The four fields are on every
+    ``agent_call`` event, the verifier's included, and the old fields are still
+    there beside them.
+    """
+
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        rig.bench(self.temporary.name, cases=(CASE,))
+        self.run_dir = rig.run_dir_of(self.temporary.name)
+        self.log = log_path(self.run_dir)
+
+    def tearDown(self):
+        self.temporary.cleanup()
+
+    def calls(self):
+        return [
+            row
+            for row in events.events_for_case(self.log, CASE)
+            if row["event"] == events.EVENT_AGENT_CALL
+        ]
+
+    def test_every_agent_call_carries_the_four_new_fields(self):
+        rows = self.calls()
+        self.assertTrue(rows, "the run recorded no agent_call event at all")
+        for row in rows:
+            with self.subTest(role=row.get("role")):
+                self.assertEqual(rig.MODEL, row["model"])
+                self.assertEqual(1, row["policy_version"])
+                self.assertTrue(row["brief_sha256"])
+                self.assertTrue(row["body_sha256"])
+                # The fields that were there before are untouched.
+                self.assertTrue(row["request_sha256"])
+                self.assertTrue(row["system_sha256"])
+                self.assertIn("seconds", row)
+                self.assertIn("parse_outcome", row)
+
+    def test_the_old_digest_and_the_new_one_are_different_things(self):
+        """``request_sha256`` is the user message's digest; ``body_sha256`` is the request's.
+
+        The first is misnamed and is kept as it was, because every committed log
+        already carries it under that name. The second is the digest of the whole
+        request body, which is the one the run's ``calls.json`` records.
+        """
+        rows = self.calls()
+        for row in rows:
+            self.assertNotEqual(row["request_sha256"], row["body_sha256"])
+        recorded = runner.read_json(self.run_dir / runner.CALLS_FILE)["calls"]
+        self.assertEqual(
+            sorted(record["request_sha256"] for record in recorded),
+            sorted(row["body_sha256"] for row in rows),
+        )
+
+    def test_the_brief_digest_is_the_one_the_case_file_records(self):
+        document = runner.load_cached(self.run_dir, CASE)
+        for row in self.calls():
+            with self.subTest(role=row.get("role")):
+                self.assertEqual(document["brief_sha256"], row["brief_sha256"])
+
+    def test_the_policy_version_is_the_one_the_run_was_made_at(self):
+        """A run at a later policy version says so on every call."""
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, _transport = rig.bench(tmp, cases=(CASE,), policy_version=2)
+            log = log_path(summary.run_dir)
+            rows = [
+                row
+                for row in events.events_for_case(log, CASE)
+                if row["event"] == events.EVENT_AGENT_CALL
+            ]
+            self.assertTrue(rows)
+            for row in rows:
+                with self.subTest(role=row.get("role")):
+                    self.assertEqual(2, row["policy_version"])
+
+    def test_the_chain_still_verifies_with_the_new_fields(self):
+        self.assertIsNone(events.verify_chain(self.log))
+
+
+# --------------------------------------------------------------------------
+# The timeline
+# --------------------------------------------------------------------------
+class TimelineTests(unittest.TestCase):
+    """``--case`` prints a timeline, and the timeline ends with the vote and ruling."""
+
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        rig.bench(self.temporary.name, cases=(CASE,), judge_votes=4)
+        self.run_dir = rig.run_dir_of(self.temporary.name)
+        self.log = log_path(self.run_dir)
+
+    def tearDown(self):
+        self.temporary.cleanup()
+
+    def printed(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            status = events_cli.main(
+                ["--run-dir", str(self.run_dir), "--case", str(CASE)]
+            )
+        self.assertEqual(0, status)
+        return out.getvalue()
+
+    def test_the_command_prints_the_case_s_timeline(self):
+        text = self.printed()
+        self.assertIn("case {0}".format(CASE), text)
+        for name in names_of(self.log, CASE):
+            self.assertIn(name, text)
+
+    def test_the_header_names_the_columns(self):
+        header = self.printed().splitlines()[1]
+        for column in (
+            "time",
+            "event",
+            "role or draft",
+            "status",
+            "tokens",
+            "seconds",
+            "parse",
+        ):
+            self.assertIn(column, header)
+
+    def test_a_call_row_carries_its_role_status_tokens_seconds_and_parse(self):
+        row = [
+            line for line in self.printed().splitlines() if "agent_call" in line
+        ][0]
+        self.assertIn(transcript.ROLE_RIDER_ADVOCATE, row)
+        self.assertIn("200", row)
+        self.assertIn(str(rig.PROMPT_TOKENS + rig.COMPLETION_TOKENS), row)
+        self.assertIn("PARSED", row)
+
+    def test_a_row_prints_a_dash_for_a_column_that_does_not_apply(self):
+        """A referee decision spends no tokens and has no parse outcome."""
+        row = [
+            line
+            for line in self.printed().splitlines()
+            if "referee_decision" in line
+        ][0]
+        self.assertIn("-", row)
+
+    def test_the_timeline_ends_with_the_vote_and_the_ruling(self):
+        lines = [line for line in self.printed().splitlines() if line.strip()]
+        self.assertTrue(lines[-2].startswith("vote:"), lines[-2])
+        self.assertTrue(lines[-1].startswith("ruling:"), lines[-1])
+        # The value printed is the one the run recorded, read back rather than
+        # typed here: the scripted rig's ruling is whatever the key holds.
+        inner = runner.load_cached(self.run_dir, CASE)["ruling"]["ruling"]
+        self.assertIn(inner["ruling"], lines[-1])
+        self.assertIn("amount_sgd", lines[-1])
+
+    def test_a_case_the_log_does_not_hold_is_reported_and_nothing_is_written(self):
+        before = self.log.read_bytes()
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            status = events_cli.main(
+                ["--run-dir", str(self.run_dir), "--case", "999"]
+            )
+        self.assertEqual(1, status)
+        self.assertIn("999", err.getvalue())
+        self.assertEqual(before, self.log.read_bytes())
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

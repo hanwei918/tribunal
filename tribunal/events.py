@@ -427,6 +427,113 @@ def summarise_all(path: Path, case_no: int) -> str:
     return "\n".join(summarise(event) for event in events)
 
 
+# The timeline's columns, in the order it prints them. Every event carries as
+# many of them as apply, and a column an event has nothing to say about is a
+# dash rather than a zero: a referee decision that spends no tokens and a ruling
+# with no parse outcome are different from a call that cost nothing.
+_TIMELINE_COLUMNS = (
+    ("time", 32),
+    ("event", 18),
+    ("role or draft", 18),
+    ("status", 9),
+    ("tokens", 9),
+    ("seconds", 9),
+    ("parse", 0),
+)
+
+
+def _timeline_row(event: Mapping[str, Any]) -> str:
+    """One event's line: the six columns, a dash where one does not apply."""
+    who = event.get("role")
+    if who is None and event.get("draft") is not None:
+        who = "draft {0}".format(event["draft"])
+    seconds = event.get("seconds")
+    values = (
+        str(event.get("ts", "")),
+        str(event.get("event", "")),
+        "-" if who is None else str(who),
+        "-" if event.get("status") is None else str(event["status"]),
+        "-" if event.get("total_tokens") is None else str(event["total_tokens"]),
+        "-" if seconds is None else "{0:.3f}".format(float(seconds)),
+        str(event.get("parse_outcome") or "-"),
+    )
+    cells = []
+    for (name, width), value in zip(_TIMELINE_COLUMNS, values):
+        cells.append(value if width == 0 else "{0:<{1}}".format(value, width))
+    return "  ".join(cells).rstrip()
+
+
+def _timeline_tail(events: Sequence[Mapping[str, Any]]) -> List[str]:
+    """The two lines a case's timeline ends with: the vote, and the ruling.
+
+    They are what the calls were for, and neither is an event of the same shape
+    as a call, so they are rendered as sentences rather than as rows. A case that
+    produced neither says so instead of printing a row of dashes.
+    """
+    last_vote = None
+    last_ruling = None
+    for event in events:
+        if event.get("event") == EVENT_VOTE:
+            last_vote = event
+        elif event.get("event") == EVENT_RULING:
+            last_ruling = event
+    if last_vote is None:
+        vote_line = "vote:    none -- this case produced no vote"
+    else:
+        vote_line = (
+            "vote:    outcome {0}, {1} of {2} drafts valid, agreement {3}, "
+            "threshold {4}".format(
+                last_vote.get("outcome"),
+                last_vote.get("valid"),
+                last_vote.get("votes"),
+                last_vote.get("agreement"),
+                last_vote.get("threshold"),
+            )
+        )
+    if last_ruling is None:
+        ruling_line = "ruling:  none -- this case produced no ruling"
+    else:
+        inner = last_ruling.get("ruling")
+        inner = inner if isinstance(inner, Mapping) else {}
+        ruling_line = (
+            "ruling:  {0}, amount_sgd {1}, driver_compensation_sgd {2}, "
+            "referrals {3}".format(
+                inner.get("ruling"),
+                inner.get("amount_sgd"),
+                inner.get("driver_compensation_sgd"),
+                inner.get("referrals"),
+            )
+        )
+    return [vote_line, ruling_line]
+
+
+def timeline(path: Path, case_no: int) -> str:
+    """One case's history as a timeline, ending with the vote and the ruling.
+
+    The columns are the ones a reader following a case needs and cannot get from
+    one line of prose: when each call happened, which agent or which draft made
+    it, the status the provider returned, what it cost in tokens, how long it
+    took and how its answer parsed. The last two lines are the vote and the
+    ruling, which are what the calls were for.
+
+    Reads only; writes nothing.
+    """
+    events = events_for_case(path, case_no)
+    if not events:
+        return "no events recorded for case {0} in {1}".format(case_no, path)
+    lines = [
+        "case {0} — {1} event(s) in {2}".format(case_no, len(events), path),
+        "  ".join(
+            name if width == 0 else "{0:<{1}}".format(name, width)
+            for name, width in _TIMELINE_COLUMNS
+        ).rstrip(),
+    ]
+    lines.extend(_timeline_row(event) for event in events)
+    lines.append("")
+    lines.extend(_timeline_tail(events))
+    return "\n".join(lines)
+
+
 def sequence_of(path: Path) -> Sequence[int]:
     """The ``seq`` values in the log, in order. Used by the tests."""
     return [event.get("seq") for event in read_events(path)]

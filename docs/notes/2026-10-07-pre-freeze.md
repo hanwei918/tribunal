@@ -144,3 +144,38 @@ owner closed before this -- `P-0001` and `P-0002` -- carry none of them and are
 what they are, and they still verify. `precedents/README.md` and the shipped
 store are untouched by this part.
 
+## C. Complete call logs, and a timeline per case
+
+**Four fields on every `agent_call` event.** `model` -- the model that answered,
+read off the result rather than assumed. `policy_version` -- the version the case
+was briefed at, threaded down from `run_loaded_case`. `brief_sha256` -- the
+digest of the brief the agent was handed. And `body_sha256` -- the digest of the
+whole HTTP request body, which the client already computes and the run's
+`calls.json` already records. A reader of one line should not have to open
+another file to learn what the line was produced under. The verifier's call
+carries them too, because it is a model call like any other.
+
+**`request_sha256` is misnamed, and it stays.** It is the digest of the *user
+message*, not of the request, and it is kept exactly as it was: the name is in
+every committed event log, and a rename would make two generations of line mean
+different things under one key. `body_sha256` is the field that actually is the
+request body's digest, and a test asserts the two are never equal.
+
+**Effect on the record.** Events are not part of any request, so **nothing the
+offline replay checks moves**: the same requests are sent, the same answers are
+written and the same rulings come out. Old run directories keep their old events
+-- a line written before this has no `body_sha256` and is not rewritten, which is
+what an append-only log means -- and every committed log still verifies, because
+the new fields are payload and the chain is built over whatever the payload is.
+
+**A timeline per case.** `python3 -m eval.events --run-dir <dir> --case N` now
+prints a timeline rather than a line of key-value pairs: one row per event, in
+the order it happened, with seven columns -- the time, the event, the role or the
+draft it was, the status the provider returned, what it cost in tokens, how long
+it took and how its answer parsed -- and a dash in a column an event has nothing
+to say about, because a referee decision that spends no tokens is not a call that
+cost nothing. The last two lines are the **vote** and the **ruling**, which are
+what the calls were for; a case that produced neither says so instead of printing
+a row of dashes. It reads the log and writes nothing.
+
+
