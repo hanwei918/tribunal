@@ -260,9 +260,10 @@ policy gives for them. Nothing from it is quoted or summarised here.
 >
 > - **The name.** The task that produced this note called this archive "the sealed
 >   set". The repository now calls it **the held-out set (`wild-v1`)**: 64 cases
->   derived from real complaints, prepared by their author as a development set,
->   which nobody who changed the system opened before the freeze tagged
->   `freeze-2026-09-30` and which was run once from that tag. "The sealed set" in
+>   whose author says its traps come from real complaints, prepared by their
+>   author as a development set, which nobody who changed the system opened
+>   before the freeze tagged `freeze-2026-09-30` and which was run once from that
+>   tag. "The sealed set" in
 >   the section above therefore means `wild-v1` wherever the task's own naming is
 >   being reported, and the author's **24-case** set wherever her README is being
 >   reported. The distinction the section draws — her README names a different,

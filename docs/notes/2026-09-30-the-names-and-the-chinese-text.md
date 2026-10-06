@@ -48,9 +48,10 @@ for her own 24-case set and not a name for `wild-v1` at all.
 
 The accurate description is stated once, in `README.md`:
 
-> 64 cases derived from real complaints, prepared by their author as a development
-> set; nobody who changed the system opened them before the freeze tagged
-> `freeze-2026-09-30`, and they were run once from that tag.
+> 64 cases whose author says its traps come from real complaints, prepared by
+> their author as a development set; nobody who changed the system opened them
+> before the freeze tagged `freeze-2026-09-30`, and they were run once from that
+> tag.
 
 **Identifiers were not renamed.** `SEALED_SET`, `SEALED_SET_RUNS_SUBDIR`,
 `assert_not_sealed` and the `SealedSet*Tests` class names still read as they read.

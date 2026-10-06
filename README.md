@@ -7,9 +7,9 @@ Execution start: 2026-09-18; feature-freeze target: 10-10; submission deadline: 
 
 ## The live demo
 
-The corpus page is live at <https://tribunal-dpruuzl3id9n.edgeone.dev/>, and the
+The corpus page is live at <https://tribunal.edgeone.dev/>, and the
 runs index — one line per set — is at
-<https://tribunal-dpruuzl3id9n.edgeone.dev/runs/>.
+<https://tribunal.edgeone.dev/runs/>.
 
 It is a static replay of the runs committed in this repository: every page is
 built from a run's own recorded files, so it makes **no model call** and needs no
@@ -39,9 +39,10 @@ Read this table from the top. The first block is the submission's claim; every
 block below it is context that says what that claim is worth.
 
 Two figures are **generalisation** figures, and each is its own. The held-out set
-(`wild-v1`) is 64 cases derived from real complaints, prepared by their author as
-a development set; nobody who changed the system opened them before the freeze
-tagged `freeze-2026-09-30`, and they were run once from that tag. The second
+(`wild-v1`) is 64 cases whose author says its traps come from real complaints,
+prepared by their author as a development set; nobody who changed the system
+opened them before the freeze tagged `freeze-2026-09-30`, and they were run once
+from that tag. The second
 sealed set (`wild-v2`) is 20 cases, run once on 2026-10-04 from a commit whose
 `tribunal/`, `prompts/` and `policy/` trees equal those at the freeze tagged
 `freeze-2026-10-03`. The corpus and the second set are **development** data the

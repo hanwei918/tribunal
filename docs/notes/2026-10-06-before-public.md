@@ -86,7 +86,7 @@ Then `python3 -m ui.build` rewrote all six pages and `python3 -m ui.build
 ## C. The README, for a public reader
 
 **The live demo** is linked near the top: the corpus page at
-`https://tribunal-dpruuzl3id9n.edgeone.dev/`, and the runs index at `/runs/`. The
+`https://tribunal.edgeone.dev/`, and the runs index at `/runs/`. The
 section says it is a static replay of the committed runs, that it makes no model
 call, and that it is hosted on Tencent EdgeOne Pages.
 
