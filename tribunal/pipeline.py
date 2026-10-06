@@ -11,10 +11,8 @@
    carrying the same brief plus both claim arrays;
 5. return the ruling and the transcript.
 
-**The advocates run sequentially, not concurrently.** A deterministic transcript
-order matters more right now than the wall-clock saving, and running them in
-parallel is a later optimisation to be made deliberately — it would change the
-order the record is written in, and the record is a deliverable.
+**The advocates are sequential by default.** With the opt-in parallel switch,
+the calls overlap but their transcript entries are written in case order.
 
 Two structural properties are *enforced* here, not described:
 
@@ -30,9 +28,9 @@ Two structural properties are *enforced* here, not described:
 
 A model that answers with the wrong shape is retried once and then reported, and
 a ruling that breaks its own output contract is recorded and never repaired. See
-the module body for both. The run **stops at the first failed agent**: the judge
-cannot be called without both claim arrays, so there is nothing to gain by
-calling the second advocate once the first has failed.
+the module body for both. A sequential run **stops at the first failed agent**.
+With parallel calls, in-flight work is joined and accounted for; the judge still
+cannot be called without both claim arrays.
 
 The judge's vote
 ----------------
@@ -87,6 +85,7 @@ import hashlib
 import json
 import re
 import sys
+import threading
 import time
 from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
@@ -215,18 +214,30 @@ UNUSABLE_RESPONSE_NOTE = "response was not the shape the prompt asked for; retri
 CALL_CONTEXT: "contextvars.ContextVar[Optional[Tuple[int, str, int, int]]]" = (
     contextvars.ContextVar("tribunal_call_context", default=None)
 )
+STOP_PARALLEL_CALLS: "contextvars.ContextVar[Optional[threading.Event]]" = (
+    contextvars.ContextVar("tribunal_stop_parallel_calls", default=None)
+)
+CALL_ROLE_RANK = {
+    transcript_module.ROLE_RIDER_ADVOCATE: 0,
+    transcript_module.ROLE_DRIVER_ADVOCATE: 1,
+    transcript_module.ROLE_JUDGE: 2,
+    transcript_module.ROLE_VERIFIER: 3,
+}
 
 
-def call_sort_key() -> Tuple[int, str, int, int]:
-    """The call in flight on this thread: ``(case, role, draft, attempt)``.
+def call_sort_key() -> Tuple[int, int, int, int]:
+    """Sort the call in flight by ``(case, role rank, draft, attempt)``.
 
-    ``(-1, "", -1, -1)`` when no call of this pipeline is in flight -- a client
+    ``(-1, -1, -1, -1)`` when no call of this pipeline is in flight -- a client
     driven directly by a test, for instance. It is a total order over the
     records one invocation makes, and a function of the calls themselves rather
     than of the order in which they happened to complete.
     """
     context = CALL_CONTEXT.get()
-    return context if context is not None else (-1, "", -1, -1)
+    if context is None:
+        return (-1, -1, -1, -1)
+    case_no, role, draft, attempt = context
+    return (case_no, CALL_ROLE_RANK[role], draft, attempt)
 
 # --------------------------------------------------------------------------
 # The judge's vote
@@ -982,29 +993,40 @@ def _call_agent_worker(
     ``case_no`` and ``draft`` are published on this thread as the call's
     position, so a client's own record sink can order what it collects by the
     call rather than by the order the calls happened to finish in. Neither is
-    part of any request.
+    part of any request. The context is set and reset around the one
+    ``client.complete`` call, so a thread that goes on to make another call does
+    not carry this one's position into it.
 
-    A call that raises -- a spent deadline, an unprovisioned model, a transport
-    failure -- comes back with ``exception`` set and the attempts it did
-    complete. It is caught here rather than raised so that a caller with several
-    calls in flight can join them all first.
+    An ordinary exception -- a spent deadline, an unprovisioned model, a
+    transport failure -- is **caught and stored** with the attempts this call did
+    complete, so a caller with several calls in flight can join every one of
+    them and write them in case order before the first exception in that order
+    comes out. A :class:`KeyboardInterrupt` is deliberately **not** stored: it
+    escapes this function, so the join sees it and can cancel the work that has
+    not started yet. See :func:`_join_calls`.
     """
     attempts: List[_AgentAttempt] = []
     reason = ""
     try:
         for attempt in (1, 2):
+            stop = STOP_PARALLEL_CALLS.get()
+            if stop is not None and stop.is_set():
+                break
             if deadline is not None:
                 deadline.check()
-            CALL_CONTEXT.set(
+            token = CALL_CONTEXT.set(
                 (case_no if case_no is not None else -1, role, draft, attempt)
             )
-            result = client.complete(
-                system_prompt,
-                user_message,
-                response_format=JSON_OBJECT_FORMAT,
-                temperature=temperature,
-                seed=seed,
-            )
+            try:
+                result = client.complete(
+                    system_prompt,
+                    user_message,
+                    response_format=JSON_OBJECT_FORMAT,
+                    temperature=temperature,
+                    seed=seed,
+                )
+            finally:
+                CALL_CONTEXT.reset(token)
             value, shape, reason = normalise(result.json_body)
             attempts.append(
                 _AgentAttempt(
@@ -1020,7 +1042,7 @@ def _call_agent_worker(
                 return _AgentCall(
                     role, system_prompt, user_message, tuple(attempts), value, ""
                 )
-    except BaseException as exc:  # noqa: BLE001 - joined and re-raised by the caller
+    except Exception as exc:
         return _AgentCall(
             role, system_prompt, user_message, tuple(attempts), None, reason, exc
         )
@@ -1033,6 +1055,8 @@ def _write_agent_call(
     transcript: Any,
     events_log: Optional[Any] = None,
     case_no: Optional[int] = None,
+    raise_exception: bool = True,
+    exception_note: Optional[str] = None,
 ) -> Tuple[Optional[Any], Optional[str]]:
     """Write one call's attempts to the transcript and the event log, in order.
 
@@ -1047,6 +1071,14 @@ def _write_agent_call(
     it is what a caller with several calls in flight needs: the calls are joined
     first, then written in order, and only then does the first exception in that
     order come out.
+
+    ``raise_exception=False`` is for the one case where this call is not the
+    failure the case reports: a parallel driver whose rider has already failed is
+    written down and its exception is **noted on the entry** rather than raised,
+    because the case is a rider failure and the record should say what the driver
+    did without changing that. ``exception_note`` is that note. It is written on
+    the call's last entry, which is the only entry there is to carry it; a call
+    that raised before completing an attempt leaves no entry to note anything on.
     """
     for attempt in call.attempts:
         entry = transcript.record(
@@ -1054,7 +1086,13 @@ def _write_agent_call(
             system_prompt=call.system_prompt,
             user_message=call.user_message,
             result=attempt.result,
-            note=None if attempt.value is not None else UNUSABLE_RESPONSE_NOTE,
+            note=(
+                exception_note
+                if exception_note is not None and attempt is call.attempts[-1]
+                else None
+                if attempt.value is not None
+                else UNUSABLE_RESPONSE_NOTE
+            ),
             shape=attempt.shape,
             timestamp=attempt.timestamp,
         )
@@ -1082,7 +1120,9 @@ def _write_agent_call(
                 seconds=entry.duration_seconds,
             )
     if call.exception is not None:
-        raise call.exception
+        if raise_exception:
+            raise call.exception
+        return None, "{0}: {1}".format(type(call.exception).__name__, call.exception)
     if call.value is not None:
         return call.value, None
     return None, call.reason
@@ -1101,14 +1141,21 @@ def _call_agent(
     seed: Any = llm._UNSET,
     events_log: Optional[Any] = None,
     case_no: Optional[int] = None,
+    draft: int = 0,
 ) -> Tuple[Optional[Any], Optional[str]]:
     """One agent call: the worker part, then the part that writes it down.
 
     The two parts run in sequence here, which is the call this pipeline has
     always made -- one attempt at a time, each written as it lands -- so every
-    existing caller is unchanged. A caller that wants several calls in flight
+    existing caller is unchanged and the sequential path of a run is this
+    function called once per agent. A caller that wants several calls in flight
     drives :func:`_call_agent_worker` and :func:`_write_agent_call` itself; see
     :func:`run_loaded_case` and :func:`_run_judge_vote`.
+
+    ``draft`` is the call's position in a judge panel, published on the thread
+    through :data:`CALL_CONTEXT` so a client's own record sink can order what it
+    collected by the call. It is not part of any request, and it defaults to
+    ``0``, which is what every caller before the panel passed by not naming it.
 
     Returns ``(value, None)`` on success and ``(None, reason)`` when the second
     attempt is unusable too. A spent deadline is not an unusable answer, so it
@@ -1125,6 +1172,7 @@ def _call_agent(
         seed=seed,
         now=transcript.now,
         case_no=case_no,
+        draft=draft,
     )
     return _write_agent_call(
         call, transcript=transcript, events_log=events_log, case_no=case_no
@@ -1135,34 +1183,80 @@ def _join_calls(
     work: Callable[[Any], _AgentCall],
     items: Sequence[Any],
     *,
-    parallel: bool,
     workers: int,
 ) -> List[_AgentCall]:
-    """Run one worker call per item and join every one of them.
+    """Run one worker call per item, in a pool, and join every one of them.
 
-    When ``parallel`` is false this is a plain loop, which is the sequential
-    path every run took before the switch existed and is byte for byte the same
-    work in the same order.
+    This is the **parallel** path only. A sequential caller does not come here:
+    it calls :func:`_call_agent` once per agent, in order, so each call is
+    written before the next request begins and the first exception stops the run
+    -- which is the behaviour every run had before the switch existed.
 
-    When it is true the calls run in a pool **private to this call site**, sized
-    ``workers``. It is never the pool that holds the *cases*: submitting a call
-    to that one from inside a case would deadlock the moment every worker was
-    already inside a case, waiting for a slot that only the case it is running
-    could free.
+    The calls run in a pool **private to this call site**, sized ``workers``. It
+    is never the pool that holds the *cases*: submitting a call to that one from
+    inside a case would deadlock the moment every worker was already inside a
+    case, waiting for a slot that only the case it is running could free.
 
     Every worker is joined before anything is returned, so a failure in one call
-    cannot leave another one's thread running unattended. A worker never raises
-    -- it catches and stores what it caught -- so the join itself cannot fail
-    part-way and strand a call.
+    cannot leave another one's thread running unattended, and the calls are then
+    written in case order by the caller. A worker never raises an ordinary
+    exception -- it catches and stores what it caught -- so the join itself
+    cannot fail part-way and strand a call.
+
+    **What an interrupt can and cannot stop.** A :class:`KeyboardInterrupt`
+    raised inside a worker's transport call escapes
+    :func:`_call_agent_worker`, which stores ordinary exceptions and deliberately
+    does not store that one, and it lands here. Queued work is cancelled, and a
+    flag is set that an in-flight worker checks **before each attempt**, so a
+    worker that has already answered one unusable attempt does not start its
+    retry. What cannot be stopped is the transport request already on the wire: a
+    :class:`~concurrent.futures.Future` cannot cancel a call that is already
+    running, so the shutdown below waits for it to return before the interrupt
+    propagates. In short, the interrupt stops *starting* work; it does not abort
+    work already started.
     """
-    if not parallel:
-        return [work(item) for item in items]
     pool = concurrent.futures.ThreadPoolExecutor(max_workers=max(1, workers))
+    interrupted = threading.Event()
+
+    def guarded(item: Any) -> _AgentCall:
+        if interrupted.is_set():
+            raise concurrent.futures.CancelledError()
+        token = STOP_PARALLEL_CALLS.set(interrupted)
+        try:
+            return work(item)
+        finally:
+            STOP_PARALLEL_CALLS.reset(token)
+
+    futures = []
     try:
-        futures = [pool.submit(work, item) for item in items]
+        futures = [pool.submit(guarded, item) for item in items]
+        return [future.result() for future in futures]
+    except BaseException:
+        interrupted.set()
+        for future in futures:
+            future.cancel()
+        raise
     finally:
-        pool.shutdown(wait=True)
-    return [future.result() for future in futures]
+        # Running transport calls cannot be cancelled by a Future. Join them
+        # before the interrupt escapes; queued work never begins after it.
+        pool.shutdown(wait=True, cancel_futures=True)
+
+
+def _subsequent_exception_note(call: _AgentCall) -> Optional[str]:
+    """The note written on a call's last entry when its exception is not raised.
+
+    Only the parallel path needs it, and only for the driver: a rider that has
+    already failed is the failure the case reports, so the driver's exception is
+    a fact about a call that was in flight rather than the case's own failure. It
+    is recorded on the entry it belongs to instead of being dropped, and the
+    wording says which call it was. ``None`` when the call raised nothing --
+    there is then no exception to note, and the entry carries the usual note.
+    """
+    if call.exception is None:
+        return None
+    return "subsequent call raised {0}: {1}".format(
+        type(call.exception).__name__, call.exception
+    )
 
 
 # --------------------------------------------------------------------------
@@ -2138,13 +2232,16 @@ def _run_judge_vote(
     Every draft is a real call, so every draft is billed and every draft is on
     the transcript in full.
 
-    ``parallel_calls`` is off by default. When it is on the drafts are asked
-    **at the same time**, in a pool private to this function, and then written
-    in position order -- which is the order they are written in either way. A
-    draft depends on nothing but the referee result and its own position, so
-    nothing about a draft's request changes; what changes is only how long the
-    panel takes to answer. The verifier, the reduction and the ``vote`` event
-    are sequential and unchanged in both cases.
+    ``parallel_calls`` is off by default. Off, each draft is the ordinary
+    sequential call: it is written as it lands, before the next draft is
+    requested, and the first exception stops the panel. On, the drafts are asked
+    **at the same time**, in a pool private to this function, and then written in
+    position order; a draft that raised is held back while the drafts after it
+    are written, and its exception comes out once the panel is complete. A draft
+    depends on nothing but the referee result and its own position, so nothing
+    about a draft's request changes; what changes is only how long the panel
+    takes to answer. The verifier, the reduction and the ``vote`` event are
+    sequential and unchanged in both cases.
     """
     sampled = votes - 1
     if sampled > len(JUDGE_VOTE_SEEDS):
@@ -2215,7 +2312,8 @@ def _run_judge_vote(
             )
         )
 
-    def _draft_call(plan: Tuple[str, Tuple[str, ...], Any, Any, str]) -> _AgentCall:
+    def _draft_call(item: Tuple[int, Tuple[str, Tuple[str, ...], Any, Any, str]]) -> _AgentCall:
+        position, plan = item
         kind, sides, temperature, seed, message = plan
         return _call_agent_worker(
             client,
@@ -2228,20 +2326,58 @@ def _run_judge_vote(
             seed=seed,
             now=transcript.now,
             case_no=case_no,
+            # The draft's own index, one-based, so the call a client's record
+            # sink collected can be placed. Every draft used to publish draft 0,
+            # which made four drafts of one case indistinguishable to a sort.
+            draft=position + 1,
         )
 
-    calls = _join_calls(_draft_call, plans, parallel=parallel_calls, workers=votes)
+    calls = (
+        _join_calls(_draft_call, list(enumerate(plans)), workers=votes)
+        if parallel_calls
+        else None
+    )
+    first_exception: Optional[BaseException] = None
 
-    for position, (plan, call) in enumerate(zip(plans, calls)):
-        kind, sides, temperature, seed, _message = plan
+    for position, plan in enumerate(plans):
+        kind, sides, temperature, seed, message = plan
         # The entries this draft occupies, read off the transcript as it is
         # actually written: with the calls in flight together the draft does not
         # own a run of indices until it is written, and it is written here, in
-        # position order, one draft after another.
+        # position order, one draft after another. The index is taken before the
+        # call, because the sequential path writes inside it.
         started = len(transcript)
-        parsed, failure = _write_agent_call(
-            call, transcript=transcript, events_log=events_log, case_no=case_no
-        )
+        if calls is None:
+            # Sequential: the call is written as it lands, and the first
+            # exception stops the panel exactly as it did before the switch.
+            parsed, failure = _call_agent(
+                client,
+                role=transcript_module.ROLE_JUDGE,
+                system_prompt=judge_prompt,
+                user_message=message,
+                normalise=normalise_judge_result,
+                transcript=transcript,
+                deadline=deadline,
+                temperature=temperature,
+                seed=seed,
+                events_log=events_log,
+                case_no=case_no,
+                draft=position + 1,
+            )
+        else:
+            call = calls[position]
+            parsed, failure = _write_agent_call(
+                call, transcript=transcript, events_log=events_log, case_no=case_no,
+                raise_exception=False,
+            )
+            if call.exception is not None:
+                # A raised draft has no answer, so it is not written as an
+                # abstention. Its exception is held while the drafts after it
+                # are written in position order, and comes out once the panel
+                # is complete.
+                if first_exception is None:
+                    first_exception = call.exception
+                continue
         entries = tuple(range(started, len(transcript)))
         common = dict(
             index=position + 1,
@@ -2291,6 +2427,9 @@ def _run_judge_vote(
                 unverifiable=list(draft.unverifiable),
                 valid=draft.valid,
             )
+
+    if first_exception is not None:
+        raise first_exception
 
     # The verifier runs here, after every draft has been checked and before the
     # vote is reduced, so a contradiction can keep a draft out of the count. It
@@ -2620,12 +2759,17 @@ def _verifier_call(
     """
     if deadline is not None:
         deadline.check()
-    result = client.complete(
-        system_prompt,
-        user_message,
-        response_format=JSON_OBJECT_FORMAT,
-        temperature=VERIFIER_TEMPERATURE,
-    )
+    token = CALL_CONTEXT.set((case_no if case_no is not None else -1,
+                              transcript_module.ROLE_VERIFIER, 0, 1))
+    try:
+        result = client.complete(
+            system_prompt,
+            user_message,
+            response_format=JSON_OBJECT_FORMAT,
+            temperature=VERIFIER_TEMPERATURE,
+        )
+    finally:
+        CALL_CONTEXT.reset(token)
     verdicts, shape, reason = normalise_verifier_result(result.json_body)
     entry = transcript.record(
         role=transcript_module.ROLE_VERIFIER,
@@ -3171,11 +3315,13 @@ def run_loaded_case(
     of any staleness or cache key, because it changes no request and therefore
     says nothing about what a result measured.
 
-    One behaviour does change, and it is the only one. A rider whose answer is
-    unusable no longer stops the driver from being called, because by the time
-    the rider's answer lands the driver is already in flight. The driver's
-    attempts are recorded, so the cost is honest, and ``failed_agent`` is still
-    the rider.
+    With the switch on, a rider whose answer is unusable cannot stop the
+    already-in-flight driver. The driver's completed attempts are recorded, its
+    exception is **noted on the last of them** rather than raised, and the rider
+    remains ``failed_agent``. A rider that raises is propagated only after the
+    in-flight driver has been joined and written. With the switch off none of
+    that arises: the rider's call is written, then the driver is asked, and the
+    first exception stops the case.
     """
     case_no = case["case_no"]
     prompts_dir = Path(prompts_dir)
@@ -3254,8 +3400,11 @@ def run_loaded_case(
             case_no=case_no,
         )
 
-    rider_call: _AgentCall
-    driver_call: Optional[_AgentCall]
+    rider_claims = None
+    rider_failure = None
+    driver_claims = None
+    driver_failure = None
+
     if parallel_calls:
         # Both advocates read the same brief and neither depends on the other,
         # so they are asked at the same time. They are still *written* in the
@@ -3267,47 +3416,62 @@ def run_loaded_case(
                 (transcript_module.ROLE_RIDER_ADVOCATE, rider_prompt),
                 (transcript_module.ROLE_DRIVER_ADVOCATE, driver_prompt),
             ),
-            parallel=True,
             workers=2,
         )
-    else:
-        rider_call = _advocate_call(
-            (transcript_module.ROLE_RIDER_ADVOCATE, rider_prompt)
+        rider_claims, rider_failure = _write_agent_call(
+            rider_call, transcript=transcript, events_log=events_log, case_no=case_no,
+            raise_exception=False,
         )
-        # The run stops at the first failed agent. The judge cannot be called
-        # without both claim arrays, so continuing would spend a call on a run
-        # that has already failed, and would put a driver response on the record
-        # that the judge never saw.
-        driver_call = (
-            _advocate_call((transcript_module.ROLE_DRIVER_ADVOCATE, driver_prompt))
-            if rider_call.exception is None and rider_call.value is not None
-            else None
-        )
-
-    rider_claims = None
-    rider_failure = None
-    driver_claims = None
-    driver_failure = None
-    if rider_call.exception is not None:
-        # Nothing precedes the rider in role order, so nothing else is written:
-        # the rider's own completed attempts are, and then the exception comes
-        # out. The driver's answer, if it was asked for at all, is dropped --
-        # the calls after the first failing one are not written, and nothing
-        # read that answer.
-        _write_agent_call(
-            rider_call, transcript=transcript, events_log=events_log, case_no=case_no
-        )
-    rider_claims, rider_failure = _write_agent_call(
-        rider_call, transcript=transcript, events_log=events_log, case_no=case_no
-    )
-    if driver_call is not None:
-        if driver_call.exception is not None:
+        if rider_call.exception is not None:
+            # The rider raised, and the driver was already in flight. The
+            # driver's completed attempts are written and its own exception is
+            # noted rather than raised -- the case failed on the rider -- and
+            # then the rider's exception comes out.
             _write_agent_call(
-                driver_call, transcript=transcript, events_log=events_log, case_no=case_no
+                driver_call, transcript=transcript, events_log=events_log, case_no=case_no,
+                raise_exception=False,
+                exception_note=_subsequent_exception_note(driver_call),
             )
+            raise rider_call.exception
         driver_claims, driver_failure = _write_agent_call(
-            driver_call, transcript=transcript, events_log=events_log, case_no=case_no
+            driver_call, transcript=transcript, events_log=events_log, case_no=case_no,
+            # A rider that returned an unusable answer is the failure this case
+            # reports, so the driver's exception must not replace it. A rider
+            # that answered usably leaves the driver's exception as the case's
+            # own, which is what a run without the switch does with it.
+            raise_exception=rider_failure is None,
+            exception_note=(
+                _subsequent_exception_note(driver_call) if rider_failure is not None else None
+            ),
         )
+    else:
+        # The sequential path, unchanged: one agent at a time, each call written
+        # before the next request is made, and the first exception stops the run
+        # -- so a rider that fails, or that raises, means the driver is never
+        # asked. This is what every run did before the switch existed.
+        rider_claims, rider_failure = _call_agent(
+            client,
+            role=transcript_module.ROLE_RIDER_ADVOCATE,
+            system_prompt=rider_prompt,
+            user_message=advocate_user_message,
+            normalise=normalise_claims,
+            transcript=transcript,
+            deadline=deadline,
+            events_log=events_log,
+            case_no=case_no,
+        )
+        if rider_claims is not None:
+            driver_claims, driver_failure = _call_agent(
+                client,
+                role=transcript_module.ROLE_DRIVER_ADVOCATE,
+                system_prompt=driver_prompt,
+                user_message=advocate_user_message,
+                normalise=normalise_claims,
+                transcript=transcript,
+                deadline=deadline,
+                events_log=events_log,
+                case_no=case_no,
+            )
 
     if rider_failure is None:
         # PROOF 1 — one brief, byte-identical. Both advocates were handed the

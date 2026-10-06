@@ -81,6 +81,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 import unittest
 from decimal import Decimal
 from pathlib import Path
@@ -121,6 +122,11 @@ TOKENS_PER_CASE = TOKENS_PER_CALL * CALLS_PER_CASE
 
 # A bare claim array, which is all the pipeline's advocate validator asks for.
 CLAIM_ARRAY = '[{"claim_id": "C1", "evidence_id": "EV-GPS-00101", "clause_id": "POL-RD-01"}]'
+
+# What the rig's verifier says it rested every verdict on. The verifier is a
+# fourth call when the switch is on, and this rig answers it so a case can reach
+# the vote with the verifier on and its call appear in ``calls.json``.
+VERIFIER_EVIDENCE = "the brief states it"
 
 COMMIT = "0b20a66deadbeefcafe0123456789abcdef01234"
 DIRTY_STATUS = " M eval/run_benchmark.py\n?? tests/test_run_benchmark.py"
@@ -165,20 +171,25 @@ def role_of(request):
     The role is read off the request rather than counted, because the pipeline
     retries an unusable answer once and a call counter would misalign after the
     first retry. The judge's user message is the one whose keys are exactly
-    ``brief`` and ``claims``; the advocates are handed the brief itself.
+    ``brief`` and ``claims``; the verifier's is the one whose keys are ``brief``
+    and ``statements``; the advocates are handed the brief itself.
     """
     system = request["messages"][0]["content"]
     parsed = json.loads(request["messages"][1]["content"])
 
     if isinstance(parsed, dict) and "brief" in parsed and "claims" in parsed:
         return parsed["brief"]["case"]["case_no"], transcript.ROLE_JUDGE
+    if isinstance(parsed, dict) and "brief" in parsed and "statements" in parsed:
+        return parsed["brief"]["case"]["case_no"], transcript.ROLE_VERIFIER
 
     case_no = parsed["case"]["case_no"]
     if RIDER_STANCE in system:
         return case_no, transcript.ROLE_RIDER_ADVOCATE
     if DRIVER_STANCE in system:
         return case_no, transcript.ROLE_DRIVER_ADVOCATE
-    raise AssertionError("a request is neither an advocate's nor the judge's")
+    raise AssertionError(
+        "a request is neither an advocate's, the judge's nor the verifier's"
+    )
 
 
 class ScriptedTransport:
@@ -227,6 +238,22 @@ class ScriptedTransport:
             if self.mutate is not None:
                 ruling = self.mutate(case_no, ruling)
             content = money.dumps_canonical({"ruling": ruling, "discarded_claims": []})
+        elif role == transcript.ROLE_VERIFIER:
+            # Every statement supported, so the switch adds the verifier's call
+            # and changes no draft's vote.
+            statements = json.loads(request["messages"][1]["content"])["statements"]
+            content = json.dumps(
+                {
+                    "verdicts": [
+                        {
+                            "statement": item["n"],
+                            "verdict": pipeline.VERDICT_SUPPORTED,
+                            "evidence": VERIFIER_EVIDENCE,
+                        }
+                        for item in statements
+                    ]
+                }
+            )
         else:
             content = CLAIM_ARRAY
 
@@ -250,6 +277,68 @@ class ScriptedTransport:
 
     def calls(self) -> int:
         return len(self.requests)
+
+
+class DelayingTransport(ScriptedTransport):
+    """The scripted transport, with the answers coming back out of call order.
+
+    Every request sleeps for a fixed slice that depends on what it is -- the
+    rider longer than the driver, the first draft longer than the last -- so the
+    answers finish in roughly the reverse of the order they were asked in. A
+    ``calls.json`` written in completion order would then be in that reversed
+    order, which is what makes an ordering test bite; one written in call order
+    is not. The sleeps are real but short, and the client's own rate limiter
+    sleeps on the virtual clock, so nothing here waits on a network.
+
+    ``requests`` is still the order the transport *answered* in, which is what
+    ``ScriptedTransport`` means by it. That is the order the sink sees, so a test
+    can assert the answers did not come back in call order -- without which the
+    ordering assertion below would be a test that cannot fail.
+    """
+
+    def __call__(self, url, headers, body, timeout):
+        request = json.loads(body.decode("utf-8"))
+        _case_no, role = role_of(request)
+        if role == transcript.ROLE_RIDER_ADVOCATE:
+            time.sleep(0.08)
+        elif role == transcript.ROLE_JUDGE:
+            # The last draft answers first, and the position-swapped draft --
+            # the one whose seed is not a sampled one -- is the last position.
+            time.sleep(0.08 - 0.02 * call_position(request)[2])
+        return super().__call__(url, headers, body, timeout)
+
+
+# The order the calls of one case are *made* in. The role names sort
+# ``driver``, ``judge``, ``rider`` -- ASCII order puts the rider last when the
+# case reads it first -- so a position is a rank and not a name.
+CALL_RANK = {
+    transcript.ROLE_RIDER_ADVOCATE: 0,
+    transcript.ROLE_DRIVER_ADVOCATE: 1,
+    transcript.ROLE_JUDGE: 2,
+    transcript.ROLE_VERIFIER: 3,
+}
+
+
+def call_position(request, votes=4):
+    """``(case, role rank, draft)`` for one recorded request body.
+
+    The draft is read off the request rather than counted: a sampled draft
+    carries its own seed, the position-swapped draft carries the client's
+    defaults, and the verifier is one call per case rather than a draft. This is
+    the position the runner sorts ``calls.json`` by, so a test can check the
+    file against the calls instead of against the order they happened to arrive
+    in.
+    """
+    case_no, role = role_of(request)
+    if role != transcript.ROLE_JUDGE:
+        return (case_no, CALL_RANK[role], 0)
+    seed = request.get("seed")
+    position = (
+        pipeline.JUDGE_VOTE_SEEDS.index(seed) + 1
+        if seed in pipeline.JUDGE_VOTE_SEEDS[: votes - 1]
+        else votes
+    )
+    return (case_no, CALL_RANK[role], position)
 
 
 def client_factory(model, transport, clock=None):
@@ -5406,44 +5495,157 @@ class ParallelCallsTests(unittest.TestCase):
         """With the calls overlapping, the file is the run's, not the network's.
 
         Each record is placed by the position of the call that made it -- the
-        case, then the role, then the draft -- which is a function of the run
-        alone. The order the answers arrived in is not, so the two are compared
-        here: the file is sorted, and the arrival order is not.
+        case, then the role rank, then the draft -- which is a function of the
+        run alone. The order the answers arrived in is not, so the two are
+        compared here: the file is sorted, and the order the transport answered
+        in is not. The transport delays the rider past the driver, so this
+        comparison is not one that would hold whatever the file said.
         """
         with tempfile.TemporaryDirectory() as tmp:
-            summary, transport = bench(tmp, parallel_calls=True)
+            transport = DelayingTransport(produced_from_key(answer_key()))
+            summary, transport = bench(
+                tmp, transport=transport, parallel_calls=True
+            )
             document = runner.read_json(summary.run_dir / runner.CALLS_FILE)
 
-            position = {}
-            for request in transport.requests:
-                body = json.dumps(request, ensure_ascii=False).encode("utf-8")
-                position[hashlib.sha256(body).hexdigest()] = role_of(request)
-
+            bodies = {
+                hashlib.sha256(
+                    json.dumps(request, ensure_ascii=False).encode("utf-8")
+                ).hexdigest(): request
+                for request in transport.requests
+            }
             self.assertEqual(
                 len(transport.requests),
                 len(document["calls"]),
                 "every request must be on the record, and nothing else",
             )
-            recorded = [position[record["request_sha256"]] for record in document["calls"]]
+            recorded = [
+                call_position(bodies[record["request_sha256"]])
+                for record in document["calls"]
+            ]
+            recorded_roles = [
+                role_of(bodies[record["request_sha256"]])[1]
+                for record in document["calls"]
+            ]
+            answered = [call_position(request) for request in transport.requests]
+
             self.assertEqual(sorted(recorded), recorded, "the file is not in call order")
+            self.assertNotEqual(
+                answered,
+                recorded,
+                "the answers came back in call order, so this proves nothing",
+            )
+            # Written in call order, and the call order is the case's own:
+            # rider, then driver, then judge. The role rank is what puts the
+            # rider first, because the names sort driver, judge, rider.
             self.assertEqual(
-                sorted((case_no, role) for case_no, role in recorded),
-                sorted(
+                [
                     (case_no, role)
                     for case_no in CASE_SET
                     for role in (
+                        transcript.ROLE_RIDER_ADVOCATE,
                         transcript.ROLE_DRIVER_ADVOCATE,
                         transcript.ROLE_JUDGE,
-                        transcript.ROLE_RIDER_ADVOCATE,
                     )
-                ),
+                ],
+                [
+                    (case_no, role)
+                    for (case_no, _rank, _draft), role in zip(recorded, recorded_roles)
+                ],
             )
-            arrived = [role_of(request) for request in transport.requests]
-            self.assertNotEqual(
-                arrived,
-                recorded,
-                "the arrival order was the call order, so this proves nothing",
+
+    def test_four_drafts_and_a_verifier_are_written_in_call_order(self):
+        """The file is the run's order, and the verifier is the last call in it.
+
+        Four drafts, the verifier on and two cases at once, over a transport that
+        answers out of order: the rider's answer comes back after the driver's
+        and the last draft's before the first's. The file is sorted by the call's
+        own position -- case, then role rank, then draft -- so it is the order
+        the calls were *made* in, and two runs of the same set write the same
+        order even though neither run's answers came back in it. The verifier is
+        a fourth call and ranks last, which is what its rank is for.
+        """
+
+        def stating_a_fact(case_no, ruling):
+            ruling["explanation"] = (
+                "the fare of 8.05 SGD was charged and EV-GPS-00101 was on the record"
             )
+            return ruling
+
+        orders = []
+        with tempfile.TemporaryDirectory() as tmp:
+            for name in ("a", "b"):
+                transport = DelayingTransport(
+                    produced_from_key(answer_key()), mutate=stating_a_fact
+                )
+                summary, transport = bench(
+                    tmp,
+                    cases=(101, 102),
+                    runs_dir=Path(tmp) / name,
+                    transport=transport,
+                    judge_votes=4,
+                    verify_drafts=True,
+                    parallel_calls=True,
+                    concurrency=2,
+                )
+                bodies = {
+                    hashlib.sha256(
+                        json.dumps(request, ensure_ascii=False).encode("utf-8")
+                    ).hexdigest(): request
+                    for request in transport.requests
+                }
+                records = runner.read_json(summary.run_dir / runner.CALLS_FILE)["calls"]
+                order = [
+                    call_position(bodies[record["request_sha256"]])
+                    for record in records
+                ]
+                roles = [
+                    role_of(bodies[record["request_sha256"]])[1] for record in records
+                ]
+
+                self.assertEqual(
+                    2,
+                    roles.count(transcript.ROLE_VERIFIER),
+                    "the verifier is one call per case and both cases must be in the file",
+                )
+                self.assertNotEqual(
+                    [call_position(request) for request in transport.requests],
+                    order,
+                    "the answers came back in call order, so this proves nothing",
+                )
+                self.assertEqual(sorted(order), order, "the file is not in call order")
+                for case_no in (101, 102):
+                    with self.subTest(run=name, case=case_no):
+                        per_case = [item for item in order if item[0] == case_no]
+                        self.assertEqual(
+                            [0, 1, 2, 2, 2, 2, 3],
+                            [item[1] for item in per_case],
+                            "a case's calls are not in the order they were made",
+                        )
+                        self.assertEqual(
+                            [1, 2, 3, 4],
+                            [item[2] for item in per_case if item[1] == 2],
+                            "the drafts are not in position order",
+                        )
+                        self.assertEqual(
+                            [
+                                transcript.ROLE_RIDER_ADVOCATE,
+                                transcript.ROLE_DRIVER_ADVOCATE,
+                                transcript.ROLE_JUDGE,
+                                transcript.ROLE_JUDGE,
+                                transcript.ROLE_JUDGE,
+                                transcript.ROLE_JUDGE,
+                                transcript.ROLE_VERIFIER,
+                            ],
+                            [
+                                role
+                                for item, role in zip(order, roles)
+                                if item[0] == case_no
+                            ],
+                            "the file does not read rider, driver, drafts, verifier",
+                        )
+                orders.append(order)
+            self.assertEqual(orders[0], orders[1])
 
     def test_two_parallel_runs_write_the_same_call_order(self):
         """Two runs of one set differ in the clock and in nothing else.

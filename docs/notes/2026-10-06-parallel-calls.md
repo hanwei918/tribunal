@@ -46,28 +46,53 @@ every worker was already inside a case.
 the transcript and its `agent_call` or `judge_draft` event recorded in the case's
 own order -- rider before driver, drafts in position order. `Transcript.add` and
 `record` gained an optional `timestamp=` so an entry keeps the time its call
-finished rather than the time it was written. The verifier, the vote reduction
-and the `vote` event stay sequential and unchanged, and so does the K = 1 judge
-path. `calls.json` is now sorted into a deterministic order -- case, then role,
-then draft -- where before it was in completion order.
+finished rather than the time it was written. The verifier (a fourth model call),
+the vote reduction and the `vote` event stay sequential and unchanged, and so does
+the K = 1 judge path. `calls.json` is sorted into a deterministic order -- case,
+then the role's **rank** (rider 0, driver 1, judge 2, verifier 3), then the
+draft's position, then the attempt -- where before it was in completion order.
+The rank is what puts the rider first: the role *names* sort `driver`, `judge`,
+`rider`, so a sort by name would put the case's first call last. The draft's
+position is the one-based index the call was made at, and the verifier's is
+published too; before this every draft published position 0, which made four
+drafts of one case indistinguishable to a sort, and the verifier published
+nothing at all.
 
-**The one behaviour change, and it is deliberate.** When the two advocates run
-concurrently and the rider's call fails, the driver is still called and its
-answer is still recorded, so the cost the run reports is the cost it actually
-incurred; the case still names the rider as `failed_agent`. Sequentially, a failed
-rider stops the driver from ever being asked. This is the only intended
-difference between the two modes.
+**The default path was put back.** The first version of the switch routed the
+*sequential* path through the same join, which asked every call before writing
+any of them and stored a failure instead of stopping on it. A probe with four
+drafts and a first draft whose transport call raised made **six** requests at that
+version, where the commit before the switch, `3afd2f8`, made three. With the
+switch off the pipeline calls `_call_agent` once per agent again, in order,
+writing each call before the next request is made and stopping at the first
+exception -- so the sequential transcript, the events and the request count are
+`3afd2f8`'s. That is asserted by driving the probe and comparing against a report
+taken from a worktree of that commit.
+
+**Failure shapes.** With the switch off, a rider failure stops the driver and a
+raised draft stops the remaining drafts, each completed attempt written before
+the next request. With it on, **a rider that returns an unusable answer** stays
+the failed agent even when the driver raises (including a deadline); the driver's
+completed attempts are written and its exception is noted on the last of them,
+without re-raising the driver. When the rider raises, the already-in-flight driver
+is joined and its completed attempts are recorded before the rider exception is
+re-raised; drafts behave the same way, so a raised draft is held back while the
+drafts after it are written and comes out once the panel is complete. A parallel
+failure can therefore spend an extra driver request, and the two modes do not
+necessarily send the same *set* of request bodies. A `KeyboardInterrupt` cancels
+queued futures and stops running workers before a second attempt; transport calls
+already in flight can complete before shutdown.
 
 **Rate limiting is untouched.** The per-client limiter keeps capacity 1, its one
 request a second, and the same names and shape (`_respect_rate_limit`,
 `_last_request_at`, `_minimum_interval`); no process-wide registry keyed by model
 was added, because test clients use virtual clocks and reuse model names and such
-a registry would leak state between tests. With `--concurrency N` up to `N × 4`
+a registry would leak state between tests. With `--concurrency N` up to `N × max(2, votes)`
 requests queue behind the limiter at one a second.
 
 **Tests, shown red first.** A routed transport answers by request -- role, seed,
 temperature and the draft's sides -- with a per-key FIFO for shape retries; the
-older positional tests stay sequential. Four behaviours are asserted by driving
+older positional tests stay sequential. Five behaviours are asserted by driving
 the pipeline: the two advocates overlap and are still written rider then driver,
 under real overlap (the rider's answer is held until the driver's request has
 arrived); the advocate events are rider then driver; the drafts overlap and are
@@ -82,8 +107,9 @@ shown to bite by mutating `run_loaded_case` to write the driver first and
 
 ## B. The proof: the offline replay
 
-`tests/test_offline_replay.py` makes no model call. It loads every recorded run
-committed under `runs/` and serves each recorded `response_text` back through a
+`tests/test_offline_replay.py` makes no model call. It loads the four sets' main
+recorded runs (128 cases), not the ablation, policy-v2, hy3, hy4-preview or
+external arms, and serves each recorded `response_text` back through a
 transport, in a synthetic envelope carrying the recorded usage numbers, so a full
 arbitration runs again with no provider in the loop.
 
@@ -108,13 +134,35 @@ The assertions are: every transcript entry equals the recording, field for field
 with only `timestamp`, `duration_seconds` and the replay note normalised; the
 ruling, the vote, the referee ledger and the brief digest equal the recording; no
 request goes unanswered and no recorded answer is left unused; the request-body
-digests the replay computes include every digest in each run's `calls.json`; and
-the parallel run's `events.jsonl` is byte-identical to the sequential run's.
+digests the replay computes include every digest in each run's `calls.json`; the
+transport records each body **minus its messages** beside the key it was answered
+from, and every body must carry exactly the model, the temperature, the seed and
+the response format that key implies, with one temperature per role and draft
+kind; the parallel run's `events.jsonl` is byte-identical to the sequential
+run's; and one case's parallel run is asserted to have called the transport on
+more than one thread, so the two modes are not one path compared with itself.
+
+**The coverage of the digest check, stated honestly.** `calls.json` is rewritten
+by every invocation and holds only the last one, so **148 of the 784 recorded
+bodies** have a digest in their run's file -- 142 distinct digests. The prompts of
+the earlier invocations are still checked, through each transcript entry's own two
+digests, which is what the entry comparison does; their sampling settings are
+checked only against the recordings' own key. The argument that closes the rest of
+the gap is that `tribunal/llm.py` is unchanged and the worker hands
+`client.complete` the same arguments it always did, so the body is built by the
+same code from the same inputs.
 
 Three negative controls show the check biting: advocates written in completion
 order (driver first), the seeds of drafts 1 and 2 exchanged, and the judge's
 temperature moved off 0.7. Each is a test that fails if the replay stops
-reporting the change.
+reporting the change. The completion-order control drives the **parallel** path
+with the write order patched, and asserts that *both* the entry comparison and
+the byte comparison of the two runs' event logs fire -- a control that fed the
+comparison a hand-reordered list would prove the comparison works and nothing
+about the run. The seed swap is caught by the entry and the vote comparison and
+**not** by the transport's keying: the two seeds exchanged are both recorded
+seeds, so a swapped request still finds a recording, and what reports it is the
+entry the replay wrote and the vote it reduced.
 
 Two things had to be got right while writing it, and both are the kind of thing
 that makes a comparison silently wrong. The first is the `Decimal`/`float`
@@ -131,7 +179,7 @@ the same way rather than compared raw.
 **The README** gains a `## Concurrency` section between "How it works" and the
 repository map. It says what overlaps, that the switch is opt-in and where the
 setting is and is not recorded, that every answer is still written in the case's
-own order, that the rate limiter is unchanged and up to `concurrency × 4`
+own order, that the rate limiter is unchanged and up to `concurrency × max(2, votes)`
 requests queue at one a second, the one behaviour change from part A, and what
 the offline replay proves. It also carries the estimate, labelled as an estimate:
 from the recorded durations a case should drop from roughly the sum of its calls
@@ -163,10 +211,10 @@ change every request, and no byte sent to a model may move.
 
 ## D. The no-leakage guard
 
-`tests/test_no_leakage.py` walks `prompts/` and `policy/` -- the only two trees
-the agents are briefed from -- and looks for four kinds of case identifier: case
-file stems `case-NNNNN`, `dispute_id` values, trip ids, and evidence ids of the
-form `EV-<KIND>-<digits>`. The tokens are **built, not typed**: from the registry
+`tests/test_no_leakage.py` walks `prompts/` and `policy/` -- the two trees shared
+by every case -- and looks for four kinds of case identifier: case file stems
+`case-NNNNN`, `dispute_id` values, trip ids, and evidence ids of the form
+`EV-<KIND>-<digits>`. The tokens are **built, not typed**: from the registry
 (`eval.development_sets.BY_NAME`, every development, sealed and re-run set), and
 from each set's own index, its own answer key and its own cases. Each kind is
 asserted non-empty, so a harvest that silently stopped working fails instead of
@@ -174,9 +222,22 @@ passing by finding nothing to look for. Bare numbers do not count -- every patte
 carries its prefix, which is why the policy's own fees and the corpus's own case
 numbers do not match.
 
+The judge can be shown a **third** tree, `precedents/`, and it is deliberately
+not scanned here: nothing that tree can hand the judge carries a case identifier.
+The block the judge receives is built by `tribunal.precedents.block`, which is
+handed the entries already chosen and **no case id at all** -- it writes each
+entry's id, its category, its clause ids and its ruling. The choosing happens one
+level up, in `tribunal.precedents.matches`, and it is a function of the category,
+the clause ids a kept claim cites and the contested amount; it *excludes* the case
+being judged rather than naming it.
+
 A failure prints the file and the kind of token and nothing else, never the token
 and never the line it sat on, because this module's output is committed. The
-format is pinned by a test.
+format is pinned by a test -- and so is the rule that every comparison goes
+through it. No assertion compares `Violation` tuples, which is what the module
+did first: unittest prints the arguments of a failed comparison, and a tuple
+carries the token, so a failing check would have copied a real case identifier
+into the very output this module exists to keep it out of.
 
 **The guard found a real leak.** The check is red on the committed tree, and not
 because of a mistake in the check: the advocate template's worked example cites

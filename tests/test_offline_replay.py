@@ -5,7 +5,7 @@ any request this system sends to a model changed** when the calls were made
 concurrent. Concurrency decides *when* a call is made; it must not decide *what*
 is asked or *how* the answer is written down.
 
-The proof is a replay. Every recorded run committed under ``runs/`` holds, per
+The proof is a replay. The four sets' main recorded runs (128 cases) hold, per
 case, the transcript of every call it made: the digests of the two prompts, the
 raw answer, the usage figures and the timestamp. This module loads those files
 and serves each recorded ``response_text`` back through a transport, in a
@@ -44,6 +44,7 @@ import json
 import shutil
 import sys
 import tempfile
+import threading
 import unittest
 from decimal import Decimal
 from pathlib import Path
@@ -202,10 +203,22 @@ class RecordedTransport:
 
     ``digests`` is every full request body this transport was handed, hashed the
     way the client hashes one. ``leftover`` is what a caller checks to prove no
-    recorded answer went unused.
+    recorded answer went unused. ``bodies`` is each body minus its messages,
+    beside the key it was answered from and the role the recording gives that
+    call, which is what lets a test check the settings a request carried against
+    the settings the run recorded.
+
+    Every counter and every collection here is touched from whichever worker
+    thread is completing a request -- with the calls in flight together that is
+    not one thread -- so all of them are read and written under one lock. The
+    lock is held for the bookkeeping and for one queue pop and nothing else, so
+    it does not serialise the answer a caller gets.
     """
 
     def __init__(self, recordings) -> None:
+        self.lock = threading.Lock()
+        self.threads = set()
+        self.bodies = []
         self.queues = {}
         self.recorded = 0
         for key, entry in recordings:
@@ -216,27 +229,46 @@ class RecordedTransport:
         self.unmatched = []
 
     def __call__(self, url, headers, body, timeout):
-        self.digests.add(hashlib.sha256(body).hexdigest())
         request = json.loads(body.decode("utf-8"))
+        with self.lock:
+            self.threads.add(threading.get_ident())
+            self.digests.add(hashlib.sha256(body).hexdigest())
         key = (
             transcript.sha256_text(request["messages"][0]["content"]),
             transcript.sha256_text(request["messages"][1]["content"]),
             _number(request.get("temperature")),
             _number(request.get("seed")),
         )
-        queue = self.queues.get(key)
-        if not queue:
-            self.unmatched.append(key)
-            raise AssertionError(
-                "no recorded answer for a request keyed {0!r}: the replay is "
-                "asking something the recorded run never asked".format(key)
+        with self.lock:
+            queue = self.queues.get(key)
+            if not queue:
+                self.unmatched.append(key)
+                raise AssertionError(
+                    "no recorded answer for a request keyed {0!r}: the replay is "
+                    "asking something the recorded run never asked".format(key)
+                )
+            entry = queue.pop(0)
+            self.served += 1
+            # The body minus its messages, beside the recording it was answered
+            # from and the key it was matched by. What the request said about
+            # itself is a fact about the replay; the key is what the recording
+            # says that call was. Kept together so the two can be compared.
+            self.bodies.append(
+                (
+                    {
+                        name: value
+                        for name, value in request.items()
+                        if name != "messages"
+                    },
+                    key,
+                    entry.get("role"),
+                )
             )
-        entry = queue.pop(0)
-        self.served += 1
         return envelope(entry)
 
     def leftover(self) -> int:
-        return sum(len(queue) for queue in self.queues.values())
+        with self.lock:
+            return sum(len(queue) for queue in self.queues.values())
 
 
 # --------------------------------------------------------------------------
@@ -449,6 +481,102 @@ class OfflineReplayTests(unittest.TestCase):
                         ),
                     )
 
+    def test_the_parallel_replay_really_overlaps(self):
+        """A parallel run of one case has both advocates in flight at once.
+
+        The whole point of comparing the two modes is that the calls overlap, and
+        a "parallel" run that made every call on one thread would be a comparison
+        of the sequential path with itself. The transport records the thread each
+        request was made on, so the overlap is measured rather than assumed. One
+        case is enough: the advocate pool is two workers wide and both advocates
+        are submitted together, so the first case of the corpus shows it.
+        """
+        development_set = development_sets.BY_NAME["corpus"]
+        for case_no in development_set.cases:
+            replayed = replay_set(
+                development_set, MODEL, parallel=True, cases=(case_no,)
+            )
+            if len(replayed.transport.threads) > 1:
+                return
+        self.fail("the parallel replay never called the transport on two worker threads")
+
+    def test_request_body_settings_match_each_role_and_draft_kind(self):
+        """Every request's non-message body is the settings the recording implies.
+
+        A request body carries the model, the temperature, the seed and the
+        response format beside the two messages. The recordings hold the two
+        per-call settings each call was made with -- the client's own defaults
+        for an advocate, the draft's own for a judge -- so the body a replay
+        sends must carry exactly those, and the same model and the same response
+        format for every call of every role and every draft kind. Grouped by
+        role and draft kind, the temperature is one value: a sampled draft is
+        the only thing that samples, and a position-swapped draft is the only
+        judge call that runs at the client's own settings.
+
+        This is the half of "no byte changed" that the prompt digests cannot
+        see: two requests with identical messages and different sampling
+        settings are different requests.
+
+        **The coverage, stated honestly.** Only 148 of the 784 recorded bodies
+        have a digest in their run's ``calls.json`` (142 distinct digests),
+        because that file holds only the run's **last** invocation, and the
+        transcript holds every invocation that ever wrote into the directory.
+        The prompts of the earlier invocations are still checked, by the entry
+        comparison above; their settings are checked only through the
+        recordings' own key. The argument that closes the rest of the gap is
+        that ``tribunal/llm.py`` is unchanged and the worker hands
+        ``client.complete`` the same arguments it always did, so the body is
+        built by the same code from the same inputs -- and
+        :meth:`test_every_recorded_request_is_reproduced` pins the 148 that do
+        carry a digest.
+        """
+        expected_groups = {
+            (transcript.ROLE_RIDER_ADVOCATE, None),
+            (transcript.ROLE_DRIVER_ADVOCATE, None),
+            (transcript.ROLE_JUDGE, "sampled"),
+            (transcript.ROLE_JUDGE, "position_swapped"),
+        }
+        for name in SET_NAMES:
+            replayed = self.replayed[(name, True)]
+            self.assertTrue(
+                replayed.transport.bodies, "{0}: the replay made no request".format(name)
+            )
+            temperatures = {}
+            for body, key, role in replayed.transport.bodies:
+                _system, _user, temperature, seed = key
+                self.assertEqual(
+                    {"model", "temperature", "seed", "response_format"},
+                    set(body),
+                    "a request body carries more than the four settings",
+                )
+                self.assertEqual(MODEL, body["model"])
+                self.assertEqual({"type": "json_object"}, body["response_format"])
+                self.assertEqual(_number(temperature), _number(body["temperature"]))
+                self.assertEqual(_number(seed), _number(body["seed"]))
+                kind = None
+                if role == transcript.ROLE_JUDGE:
+                    kind = (
+                        "sampled"
+                        if _number(body["temperature"])
+                        == _number(pipeline.JUDGE_VOTE_TEMPERATURE)
+                        else "position_swapped"
+                    )
+                temperatures.setdefault((role, kind), set()).add(
+                    _number(body["temperature"])
+                )
+            with self.subTest(set=name):
+                self.assertEqual(
+                    expected_groups,
+                    set(temperatures),
+                    "the replay sent a role or a draft kind the recording does not hold",
+                )
+                for group, values in temperatures.items():
+                    self.assertEqual(
+                        1,
+                        len(values),
+                        "{0} sent more than one temperature: {1}".format(group, values),
+                    )
+
     def test_no_request_goes_unanswered_and_no_recording_is_left_unused(self):
         """The transport is a closed system, and it has to balance.
 
@@ -606,9 +734,8 @@ class NegativeControlTests(unittest.TestCase):
     * two drafts' seeds exchanged;
     * the judge's sampling temperature moved off ``0.7``.
 
-    The first is caught by the entry comparison, and the other two by the
-    transport's own keying, which is what makes the request digest load-bearing
-    rather than decorative.
+    Completion order is caught by entries and event bytes; seed swaps by
+    entries and vote; temperature changes by the transport's keying.
     """
 
     CASE = 101
@@ -620,35 +747,74 @@ class NegativeControlTests(unittest.TestCase):
         run_dir = cls.development_set.run_dir(cls.model, RUNS_DIR)
         cls.document = read_json(transcript_path(run_dir, cls.CASE))
 
-    def replay(self):
+    def replay(self, *, parallel=False, events_path=None):
         return replay_set(
             self.development_set,
             self.model,
-            parallel=False,
-            events_path=None,
+            parallel=parallel,
+            events_path=events_path,
             cases=(self.CASE,),
         )
 
     def test_the_replay_catches_advocates_written_in_completion_order(self):
-        """The driver's entry written first must be reported, not accepted."""
-        replayed = self.replay()
-        produced = [
-            entry.as_dict() for entry in replayed.results[self.CASE].transcript.entries
-        ]
-        recorded = self.document["entries"]
+        """The driver's entry written first must be reported, not accepted.
 
-        self.assertEqual([], transcript_differences(recorded, produced))
+        The mistake is driven through the **parallel** path, with the write order
+        patched so the driver's entry is written before the rider's -- which is
+        what a run that wrote each answer as it came back would do. Two of the
+        replay's checks have to fire: the entry comparison, which names the field
+        that moved, and the byte comparison of the two runs' event logs, which is
+        the log's own order. A control that only fed the comparison a
+        hand-reordered list would prove the comparison works and nothing about
+        the run.
+        """
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "events.jsonl"
+            replayed = self.replay(parallel=True, events_path=path)
+            produced = [
+                entry.as_dict() for entry in replayed.results[self.CASE].transcript.entries
+            ]
+            self.assertEqual([], transcript_differences(self.document["entries"], produced))
+            in_order_bytes = path.read_bytes()
 
-        # The mistake: the driver's answer came back first and was written
-        # first. The same calls, in the other order.
-        swapped = [produced[1], produced[0], *produced[2:]]
-        differences = transcript_differences(recorded, swapped)
+            original = pipeline._write_agent_call
+            held = []
 
-        self.assertTrue(differences, "a swapped write order was not reported")
-        self.assertIn("entry 0 (RIDER_ADVOCATE): role differs", differences)
+            def reverse_write(call, **kwargs):
+                if call.role == transcript.ROLE_RIDER_ADVOCATE:
+                    held.append((call, kwargs))
+                    return call.value, None
+                result = original(call, **kwargs)
+                if call.role == transcript.ROLE_DRIVER_ADVOCATE:
+                    for waiting_call, waiting_kwargs in held:
+                        original(waiting_call, **waiting_kwargs)
+                    held.clear()
+                return result
+
+            reordered_path = Path(directory) / "reordered.jsonl"
+            with mock.patch.object(
+                pipeline, "_write_agent_call", side_effect=reverse_write
+            ):
+                reordered = self.replay(parallel=True, events_path=reordered_path)
+
+            self.assertTrue(
+                transcript_differences(
+                    self.document["entries"],
+                    [
+                        entry.as_dict()
+                        for entry in reordered.results[self.CASE].transcript.entries
+                    ],
+                ),
+                "a swapped write order was not reported by the entry comparison",
+            )
+            self.assertNotEqual(
+                in_order_bytes,
+                reordered_path.read_bytes(),
+                "a swapped write order did not move the event log's bytes",
+            )
 
     def test_the_replay_catches_the_drafts_seeds_swapped(self):
-        """Two drafts exchanging seeds must move a recorded field."""
+        """Swapped seeds are caught by entry and vote comparison, not transport keying."""
         with mock.patch.object(
             pipeline, "JUDGE_VOTE_SEEDS", (202, 101, 303, 404, 505, 606)
         ):
@@ -657,7 +823,10 @@ class NegativeControlTests(unittest.TestCase):
         recorded = self.document["vote"]["drafts"]
         produced = replayed.results[self.CASE].judge_vote["drafts"]
 
-        self.assertNotEqual(recorded, produced, "a swapped seed was not reported")
+        self.assertTrue(transcript_differences(self.document["entries"], [
+            entry.as_dict() for entry in replayed.results[self.CASE].transcript.entries
+        ]), "a swapped seed did not change transcript entries")
+        self.assertNotEqual(as_recorded(recorded), as_recorded(produced), "a swapped seed was not reported")
         self.assertEqual(202, produced[0]["seed"])
         self.assertEqual(101, recorded[0]["seed"])
 

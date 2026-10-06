@@ -1,10 +1,20 @@
 """No case identifier reaches the prompts or the policy.
 
-The agents are briefed from two trees and nothing else: the prompt templates in
-``prompts/`` and the policy in ``policy/``. Both are shared by every case, so
-anything in either that names one particular case is a leak of that case's
-identity into every call the system ever makes -- and the leak is permanent,
-because a prompt or a policy file is not rebuilt per case.
+The judge can be shown three trees: the prompt templates in ``prompts/``, the
+policy in ``policy/``, and the closures selected out of ``precedents/``. The
+first two are shared by every case and are the two this module scans: anything
+in either that names one particular case is a leak of that case's identity into
+every call the system ever makes -- and the leak is permanent, because a prompt
+or a policy file is not rebuilt per case.
+
+``precedents/`` is the third tree and is deliberately **not** scanned, because
+nothing it can hand the judge carries a case identifier. The block is built by
+:func:`tribunal.precedents.block`, which receives no case id at all: it is
+handed the entries already chosen for this case and writes each one's id, its
+category, its clause ids and its ruling. The choosing happens one level up, in
+:func:`tribunal.precedents.matches`, and it is a function of the category, the
+clause ids a kept claim cites and the contested amount -- never of the case
+number, and it **excludes** the case being judged rather than naming it.
 
 This module asserts that leak does not exist. It walks ``prompts/`` and
 ``policy/`` and looks for four kinds of identifier:
@@ -31,8 +41,9 @@ is looked for, which is why the patterns above carry their prefixes.
 **What a failure says.** The file and the kind of token, and nothing else --
 never the token, and never the text around it. This module's own output is
 committed, and a failure that quoted the surrounding line would copy case
-material into a place that has none. :func:`report` is the whole of the message
-format, and a test pins it.
+material into a place that has none. So no assertion compares ``Violation``
+tuples, which unittest would print in full: every comparison goes through
+:func:`report`, which is the whole of the message format, and a test pins it.
 
 **The one violation that is known, and why it stays.** One real identifier does
 appear under ``prompts/``: the advocate template's worked example cites
@@ -282,7 +293,7 @@ class NoLeakageTests(unittest.TestCase):
                 shutil.copytree(PROJECT_ROOT / directory, fixture / directory)
 
             clean = scan(fixture, self.tokens)
-            self.assertEqual(sorted(KNOWN_VIOLATIONS), clean)
+            self.assertEqual(report(KNOWN_VIOLATIONS), report(clean))
 
             target = fixture / "prompts" / "v1" / "advocate.system.md"
             target.write_text(
@@ -292,14 +303,17 @@ class NoLeakageTests(unittest.TestCase):
 
             dirty = scan(fixture, self.tokens)
             spliced = Violation("prompts/v1/advocate.system.md", "trip id", "TRP-00501")
-            self.assertIn(spliced, dirty)
+            # Compared through ``report`` and never as ``Violation`` tuples: a
+            # failed comparison prints its arguments, and a tuple carries the
+            # token. The first assertion is what says the splice was found; the
+            # second is what says nothing else moved.
             self.assertEqual(
                 ["prompts/v1/advocate.system.md: trip id"],
                 report([item for item in dirty if item == spliced]),
             )
             self.assertEqual(
-                sorted(KNOWN_VIOLATIONS) + [spliced],
-                dirty,
+                report(sorted(KNOWN_VIOLATIONS) + [spliced]),
+                report(dirty),
             )
 
 

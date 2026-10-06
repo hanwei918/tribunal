@@ -3657,6 +3657,210 @@ class ParallelCallTests(unittest.TestCase):
         self.assertEqual([RIDER, RIDER], roles_of(result))
         self.assertEqual(0, transport.arrived.count(DRIVER_REQUEST))
 
+    def test_sequential_attempt_is_written_before_next_request(self):
+        """Each call is on the record before the next request is made.
+
+        The check happens inside the transport, at the moment the driver's
+        request arrives: at that instant the log must already hold the rider's
+        call and nothing else. A run that asked both advocates before writing
+        either -- which is what the switch's first version did with the switch
+        off -- fails here.
+        """
+        base = RoutedTransport(advocate_answers())
+        seen = []
+
+        def observing(url, headers, body, timeout):
+            if base._key(body) == DRIVER_REQUEST:
+                seen.append(
+                    [
+                        event["role"]
+                        for event in events.read_events(log.path)
+                        if event["event"] == events.EVENT_AGENT_CALL
+                    ]
+                )
+            return base(url, headers, body, timeout)
+
+        with tempfile.TemporaryDirectory() as directory:
+            log = events.EventLog(
+                Path(directory) / "events.jsonl",
+                invocation_id="test",
+                now=lambda: PINNED_NOW,
+            )
+            self.assertTrue(self.run_the_case(observing, parallel=False, events_log=log).ok)
+
+        self.assertEqual(
+            [[RIDER]], seen, "the rider was not written before the driver was asked"
+        )
+
+    def test_sequential_exception_stops_before_driver_or_later_drafts(self):
+        for failing in (RIDER_REQUEST, draft_request(101, 0.7, pipeline.DRIVER_FIRST)):
+            with self.subTest(failing=failing):
+                answers = advocate_answers()
+                if failing != RIDER_REQUEST:
+                    del answers[SINGLE_JUDGE_REQUEST]
+                    answers[failing] = [llm.TransportError("stop here")]
+                else:
+                    answers[RIDER_REQUEST] = [llm.TransportError("stop here")]
+                transport = RoutedTransport(answers)
+                with self.assertRaises(llm.TransportError):
+                    self.run_the_case(transport, votes=1 if failing == RIDER_REQUEST else 4, parallel=False)
+                if failing == RIDER_REQUEST:
+                    self.assertEqual([RIDER_REQUEST], transport.arrived)
+                else:
+                    self.assertEqual([RIDER_REQUEST, DRIVER_REQUEST, failing], transport.arrived)
+
+    def test_the_sequential_probe_matches_the_commit_before_the_switch(self):
+        """The default path is the path ``3afd2f8`` had, request for request.
+
+        The probe: four drafts, the switch off, and the first draft's transport
+        call raising. ``3afd2f8`` -- the commit the switch was built on -- made
+        three requests and stopped: rider, driver, draft one. The switch's first
+        version made six, because it asked every draft before writing any of
+        them and a stored exception stopped nothing.
+
+        The report pinned below was taken from a worktree of ``3afd2f8`` by
+        driving this exact scenario, and it is the whole of what that commit
+        produced: those three requests, the two advocate entries, and the two
+        ``agent_call`` events beside the referee's two decisions. Nothing about
+        the default path may move off it.
+        """
+        first_draft = draft_request(101, pipeline.JUDGE_VOTE_TEMPERATURE, pipeline.DRIVER_FIRST)
+        transport = RoutedTransport(
+            {
+                RIDER_REQUEST: [envelope(RIDER_CLAIMS)],
+                DRIVER_REQUEST: [envelope(DRIVER_CLAIMS)],
+                first_draft: [llm.TransportError("the first draft's wire went away")],
+            }
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "events.jsonl"
+            log = events.EventLog(path, invocation_id="probe", now=lambda: PINNED_NOW)
+            with self.assertRaises(llm.TransportError):
+                self.run_the_case(transport, votes=4, parallel=False, events_log=log)
+            written = events.read_events(path)
+
+        self.assertEqual(
+            [RIDER_REQUEST, DRIVER_REQUEST, first_draft],
+            transport.arrived,
+            "the sequential path did not make exactly the three requests 3afd2f8 made",
+        )
+        self.assertEqual(
+            [(RIDER, 1), (DRIVER, 1)],
+            [
+                (event["role"], event["attempt"])
+                for event in written
+                if event["event"] == events.EVENT_AGENT_CALL
+            ],
+            "the sequential path did not write exactly the two calls 3afd2f8 wrote",
+        )
+        self.assertEqual(
+            2,
+            len(
+                [
+                    event
+                    for event in written
+                    if event["event"] == events.EVENT_REFEREE_DECISION
+                ]
+            ),
+            "the referee's two decisions were written, as they were at 3afd2f8",
+        )
+
+    def test_parallel_unusable_rider_notes_the_drivers_exception_on_its_entry(self):
+        """The driver's own exception is recorded, not raised, and the entry says so.
+
+        The rider's answer is unusable, so the case fails at the rider -- and the
+        driver, already in flight, both retried and then raised. Its one
+        completed attempt stays on the record with the exception written into the
+        note, which is the only place it can go: the case's failure is the
+        rider's, so the driver's exception must not be raised in its place.
+        """
+        transport = RoutedTransport(
+            {
+                RIDER_REQUEST: [envelope("not the shape"), envelope("still not the shape")],
+                DRIVER_REQUEST: [
+                    envelope("not the shape either"),
+                    llm.TransportError("the wire went away"),
+                ],
+            }
+        )
+
+        result = self.run_the_case(transport, parallel=True)
+
+        self.assertFalse(result.ok)
+        self.assertEqual(RIDER, result.failed_agent)
+        self.assertEqual([RIDER, RIDER, DRIVER], roles_of(result))
+        driver_entries = [
+            entry for entry in result.transcript.entries if entry.role == DRIVER
+        ]
+        self.assertEqual(1, len(driver_entries))
+        self.assertEqual(
+            "subsequent call raised TransportError: the wire went away",
+            driver_entries[0].note,
+        )
+
+    def test_parallel_unusable_rider_keeps_priority_over_driver_deadline(self):
+        transport = RoutedTransport({
+            RIDER_REQUEST: [envelope("invalid"), envelope("still invalid")],
+            DRIVER_REQUEST: [pipeline.CaseDeadlineExceeded(
+                "driver expired", elapsed_seconds=10, case_no=CASE)],
+        })
+        with tempfile.TemporaryDirectory() as directory:
+            log = events.EventLog(Path(directory) / "events.jsonl", invocation_id="test", now=lambda: PINNED_NOW)
+            result = self.run_the_case(transport, parallel=True, events_log=log)
+            self.assertEqual(RIDER, result.failed_agent)
+            self.assertEqual([RIDER, RIDER], roles_of(result))
+            self.assertEqual(1, transport.arrived.count(DRIVER_REQUEST))
+            self.assertEqual(2, len([e for e in events.read_events(log.path) if e["event"] == events.EVENT_AGENT_CALL]))
+
+    def test_parallel_rider_exception_writes_driver_completed_call_before_raising(self):
+        transport = RoutedTransport({
+            RIDER_REQUEST: [llm.TransportError("rider failed")],
+            DRIVER_REQUEST: [envelope(DRIVER_CLAIMS)],
+        }, hold={RIDER_REQUEST: DRIVER_REQUEST})
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "events.jsonl"
+            log = events.EventLog(path, invocation_id="test", now=lambda: PINNED_NOW)
+            with self.assertRaises(llm.TransportError):
+                self.run_the_case(transport, parallel=True, events_log=log)
+            # A raised transport produced no rider result; only the completed
+            # in-flight driver request has an agent_call event.
+            self.assertEqual([DRIVER], [e["role"] for e in events.read_events(path) if e["event"] == events.EVENT_AGENT_CALL])
+
+    def test_parallel_interrupt_stops_second_attempt_after_in_flight_call(self):
+        waiting = threading.Event()
+        attempts = []
+
+        def work(item):
+            attempts.append((item, 1))
+            if item == 0:
+                self.assertTrue(waiting.wait(2))
+                raise KeyboardInterrupt()
+            waiting.set()
+            time.sleep(0.05)
+            if not pipeline.STOP_PARALLEL_CALLS.get().is_set():
+                attempts.append((item, 2))
+            return None
+
+        with self.assertRaises(KeyboardInterrupt):
+            pipeline._join_calls(work, (0, 1), workers=2)
+        self.assertEqual([(0, 1), (1, 1)], sorted(attempts))
+
+    def test_parallel_bad_first_draft_writes_other_completed_drafts(self):
+        answers = advocate_answers()
+        del answers[SINGLE_JUDGE_REQUEST]
+        for seed in pipeline.JUDGE_VOTE_SEEDS[:3]:
+            answers[draft_request(seed, 0.7, pipeline.DRIVER_FIRST)] = [envelope(vote_ruling())]
+        answers[draft_request(101, 0.7, pipeline.DRIVER_FIRST)] = [llm.TransportError("draft failed")]
+        answers[draft_request(42, 0.0, pipeline.RIDER_FIRST)] = [envelope(vote_ruling())]
+        transport = RoutedTransport(answers)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "events.jsonl"
+            log = events.EventLog(path, invocation_id="test", now=lambda: PINNED_NOW)
+            with self.assertRaises(llm.TransportError):
+                self.run_the_case(transport, votes=4, parallel=True, events_log=log)
+            calls = [e for e in events.read_events(path) if e["event"] == events.EVENT_AGENT_CALL]
+            self.assertEqual([RIDER, DRIVER, JUDGE, JUDGE, JUDGE], [e["role"] for e in calls])
+
     # -- no byte changes --------------------------------------------------
     def test_the_switch_changes_no_request_and_no_record(self):
         """The switch decides when a call is made, and nothing else.

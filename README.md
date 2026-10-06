@@ -248,7 +248,8 @@ and `SHAPE`.
 The three agents are the only part of a case that waits on something outside this
 process, and they are asked **one at a time** by default. `--parallel-calls` makes
 the waiting overlap: the two advocates are asked together, and the judge's drafts
-are asked together. Nothing else changes.
+are asked together. The verifier, when enabled, is a fourth model call after the
+advocates and the panel.
 
 **It is opt-in, and the sequential path is the default.** The switch is
 `--parallel-calls` on `eval.run_benchmark` and `eval.development_sets`, and a
@@ -256,8 +257,9 @@ are asked together. Nothing else changes.
 The setting is recorded in the run's `invocation_start` event and in `run.json`,
 and it is deliberately **not** part of a case's `configuration` object: it is not
 a property of a case, it is not a staleness key and it is not a cache key, because
-it changes no request. Two runs that differ only in this switch read the same
-briefs and send the same bytes.
+it changes no individual request body. The two modes use the same briefs and
+per-call settings; a parallel run can incur an extra driver request when the
+rider fails, so the sets of requests need not be identical in a failure case.
 
 **What overlaps.** The two advocate calls run in a pool private to that call site,
 two workers wide, and both are waited on before either answer is written down. The
@@ -269,15 +271,20 @@ order** — rider before driver, drafts in position order — never in the order
 answers happened to come back. The verifier, the vote reduction and the `vote`
 event stay sequential and unchanged, and so does the one-draft path. The
 per-client rate limiter is unchanged too: it is the same object, with the same
-names, admitting one request a second, so up to `concurrency × 4` requests queue
+names, admitting one request a second, so up to `concurrency × max(2, votes)` requests queue
 behind it at one a second.
 
-**One behaviour change, and it is deliberate.** When the two advocates run
-concurrently and the rider's call fails, the driver is still called and its answer
-is still recorded, so the cost the run reports is the cost it actually incurred.
-The case still names the rider as `failed_agent`. Sequentially, a failed rider
-stops the driver from ever being asked; that is the one intended difference
-between the two modes.
+**Failure priority.** With the switch off, a failed rider stops before the
+driver is requested, and a raised draft stops before the next draft is requested.
+With it on, a rider that returns an unusable answer remains the failed agent
+even if the driver raises (including a deadline); the driver's completed attempts
+are recorded and its exception is noted without replacing the rider failure.
+If the rider raises while the driver is in flight, the driver is joined and its
+completed attempts are recorded before the rider exception is re-raised. Drafts
+follow the same rule: join and record completed in-flight attempts, then re-raise
+the first draft exception. An already-running transport cannot be cancelled by
+an interrupt; queued futures are cancelled and running workers stop before a
+second attempt after the interrupt is observed.
 
 **How much it is expected to buy — an estimate.** A case takes about seven minutes
 today: on `wild-v2` the mean was 429.6 s. From the recorded durations, a case
@@ -286,18 +293,32 @@ plus the longest draft. **This is an estimate, not a measurement**; the owner wi
 measure it.
 
 **What the offline replay proves.** `tests/test_offline_replay.py` makes no model
-call. It loads every recorded run committed under `runs/` — the corpus, the second
+call. It loads the four sets' main recorded runs (128 cases) — the corpus, the second
 development set and both sealed sets, including the two held-out cases that
 produced no ruling — and serves each recorded answer back through a transport that
 keys a request by the digests of its two prompts and its two per-call settings, so
 a request whose prompts differ by one byte finds no recording and the run stops.
 Each case is replayed twice, once sequentially and once with the switch on, and
-both runs are held against the recording: **the same requests, the same ruling,
-the same vote and the same referee ledger, given the same model outputs.** The two
-runs' `events.jsonl` files are byte-identical, and the request digests the replay
-computes include every digest in each run's `calls.json`. Three negative controls
-show the check biting: advocates written in completion order, two drafts' seeds
-exchanged, and the judge's temperature moved off 0.7 are each reported.
+both runs are held against the recording: **the same requests, ruling, vote and
+referee ledger the recording holds, given the same model outputs.** The two runs'
+`events.jsonl` files are byte-identical, and the request digests the replay
+computes include every digest in each run's `calls.json`. The transport also
+records each request body minus its messages and checks it against the settings
+the recording implies, and one case's parallel run is asserted to have called the
+transport on more than one thread, so the two modes are not one path compared
+with itself.
+
+That digest check covers **148 of the 784 recorded bodies**, and 142 of those
+digests are distinct: `calls.json` holds only a run's last invocation while the
+transcript holds every invocation that ever wrote into the directory. The prompts
+of the earlier invocations are still checked, through each transcript entry's own
+two digests; their sampling settings are checked only against the recordings' own
+key, and the argument that closes the rest of the gap is that `tribunal/llm.py`
+is unchanged and the worker passes `client.complete` the same arguments it always
+did. Older arms not replayed are ablation, policy-v2, hy3, hy4-preview and
+external. Three negative controls show the check biting: advocates written in
+completion order, two drafts' seeds exchanged, and the judge's temperature moved
+off 0.7 are each reported.
 
 ## Repository map
 

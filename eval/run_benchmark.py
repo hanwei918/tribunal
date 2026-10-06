@@ -3323,7 +3323,14 @@ def run_benchmark(
     # record whose order moved with the network would not be reproducible. The
     # position is the one thing a record cannot carry itself: this client is
     # shared across every case and knows nothing about cases, roles or drafts.
-    records: List[Tuple[Tuple[int, str, int, int], Dict[str, Any]]] = []
+    #
+    # The position is ``(case, role rank, draft, attempt)`` -- the ranks being
+    # rider 0, driver 1, judge 2 and verifier 3 -- so the order is the order the
+    # calls are *made* in, which for a sequential run is the order they appear
+    # in the transcript. The role rank rather than the role name, because the
+    # names sort ``driver``, ``judge``, ``rider``: ASCII order puts the rider
+    # last when the case reads it first.
+    records: List[Tuple[Tuple[int, int, int, int], Dict[str, Any]]] = []
     records_lock = threading.Lock()
 
     def sink(record: Dict[str, Any]) -> None:
