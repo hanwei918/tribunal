@@ -1253,17 +1253,16 @@ def _join_calls(
 
     **This is the main thread's interrupt only.** The stop is a signal set by the
     thread that ran the join, so it only bites when the join is on the main
-    thread -- which is what a direct :func:`run_case` call is. The two runners
-    (:mod:`eval.run_benchmark` and :mod:`eval.development_sets`) call
-    :func:`run_case` in a pool thread of their own, so a Ctrl-C at the runner is
-    delivered to the main thread and **every in-flight case finishes in full**:
-    second attempts, the remaining drafts and the verifier all still run. What
-    the interrupt cannot stop even then is bounded below the join -- one
-    ``client.complete`` may make up to 4 HTTP attempts inside its 1200 s deadline,
-    and a request already waiting in the client's rate limiter is still sent.
-    Attempts completed inside an interrupted join are billed by the client that
-    made them but never written down, because nothing writes a call whose worker
-    did not return.
+    thread -- which is what a direct :func:`run_case` call is. Both
+    command-line runners call :func:`run_case` in a pool thread of their own, so
+    a Ctrl-C at a runner is delivered to the main thread and **every in-flight
+    case finishes in full**: second attempts, the remaining drafts and the
+    verifier all still run. What the interrupt cannot stop even then is bounded
+    below the join -- one ``client.complete`` may make up to 4 HTTP attempts
+    inside its 1200 s deadline, and a request already waiting in the client's
+    rate limiter is still sent. Attempts completed inside an interrupted join are
+    billed by the client that made them but never written down, because nothing
+    writes a call whose worker did not return.
     """
     pool = concurrent.futures.ThreadPoolExecutor(max_workers=max(1, workers))
     interrupted = threading.Event()
