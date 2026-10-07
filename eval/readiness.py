@@ -58,9 +58,11 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from eval import development_sets, grade, policy_gaps, verify_drafts  # noqa: E402
 from eval import run_benchmark as runner  # noqa: E402
-from tribunal import events, pipeline, precedents  # noqa: E402
+from tribunal import events, model, pipeline, precedents  # noqa: E402
 
-MODEL = "deepseek/deepseek-flash"
+# The model id is read from the one module that declares it, rather than typed
+# here: a second copy of it is a second place to change it.
+MODEL = model.RUNTIME_MODEL
 RUNS_DIR = PROJECT_ROOT / "runs"
 PROMPTS_DIR = PROJECT_ROOT / "prompts" / "v1"
 NOTES_DIR = PROJECT_ROOT / "docs" / "notes"

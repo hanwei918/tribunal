@@ -1083,6 +1083,8 @@ class ClosingAtARecordedVersionTests(unittest.TestCase):
                             "--case", "101",
                             "--ruling", "PARTIAL_REFUND",
                             "--clause", "POL-RD-02",
+                            "--reason",
+                            "EV-TRIP-00101 supports the refund under POL-RD-02.",
                             "--closed-by", "A Reviewer",
                             "--summary", "A reviewer closed this case.",
                         ]
