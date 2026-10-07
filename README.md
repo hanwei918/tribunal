@@ -52,6 +52,11 @@ plus another over 20 is not a measurement of 84 cases — and neither sealed set
 ever produced by `--set all`. The second sealed set's run, its figures and its two
 misses are read in `docs/notes/2026-10-04-the-second-sealed-run.md`.
 
+**Where the corpus came from.** The 29-case corpus was written by this team before
+the kick-off, following the dispute types in the organisers' brief. It is **not**
+organiser data. The only organiser-supplied case is `DISP-002`, converted as case
+901 and credited under [Third-party material](#third-party-material).
+
 | figure | value | read from | recompute with | model call |
 |---|---|---|---|---|
 | Held-out set (`wild-v1`) — four-field exact, of the cases that produced a ruling | 55/62 = 88.7% | `runs/wild/deepseek-deepseek-flash/case-*.json`, `eval/answers/wild/ground_truth.json` | `python3 -m eval.development_sets --report` | no |
@@ -243,6 +248,26 @@ and 2400 s bounds one case, and both are checked before the work they bound. A
 deadline is its own failure kind, `FAILURE_DEADLINE`, beside `TIMEOUT`, `TRANSPORT`
 and `SHAPE`.
 
+## Stretch goals
+
+The brief names seven stretch goals beside the core arbitration. What follows is
+the honest status of each, and what implements it. Five of them are the `ops/`
+layer: a support team's layer that **reads** the pipeline's inputs and its
+recorded outputs and **never feeds anything back** into a brief or a prompt, so
+every model request stays byte-identical with the layer in use or not. The
+design rule and each part's command are written out in
+`docs/notes/2026-10-07-the-ops-layer.md`.
+
+| stretch goal | status | what implements it | what it does not do |
+|---|---|---|---|
+| Escalation Protocol | done | The vote and the confidence floor are `tribunal/pipeline.py`; the packet a reviewer is handed is `ops/escalation.py` — `python3 -m ops.escalation --run-dir <dir> --case N [--format json or md] [--out <path>]` — and the closure that records the reviewer's decision is `ops/review.py` — `python3 -m ops.review --run-dir <dir> --case N --packet-sha256 <hex>` plus `tribunal.precedents close`'s own arguments. | It does not decide the case. An escalated case is terminal: no monetary ruling issues, the disputed amount is held, and the packet is read by a person. |
+| Learning Feedback Loop | done | The policy-gap loop is `eval/policy_gaps.py` (`report`, `draft`, `approve`, `reject`) with `tribunal/policy_versions.py`; the human closures are `tribunal/precedents.py` — `python3 -m tribunal.precedents close`. The loop ran from `wild-v1` to amendment `0001`, and policy version 2 was measured on `wild-v2`. | A draft changes no run until a person approves it, and the loop can only **add** a clause — it can never edit or remove one. A closure carries a reason and an override flag; it does not re-open a case. |
+| SLA & Routing Manager | done | `ops/queue.py` with `ops/config.json` — `python3 -m ops.queue --run-dir <dir> [--now <ISO instant>] [--config <path>]`. | It routes and reports; it never hands a dispute to the pipeline, and nothing in `tribunal/` reads its config. `auto_rulings_enabled` false is the kill switch, and it stops at the router. |
+| Fraud & Bad-Faith Detection | done | `ops/risk.py` — `python3 -m ops.risk --case N` or `--case-file <path>`. | Its signals go to the human reviewer and to the queue and **not to the judge**, because `POL-GEN-01` forbids a profile from establishing a fact about the trip. It rules on nothing, and it reads the five counters its clauses name and no other profile field. |
+| Evidence Collection | done, as a deterministic service rather than an LLM agent | `ops/sources.py` and `ops/evidence.py` — `python3 -m ops.evidence --case N` or `--case-file <path>`. | No model chooses what evidence exists. Every artifact the advocates see is reproducible: the collection equals the case file's own `evidence` array exactly, so the brief it produces has the recorded `brief_sha256`. |
+| Policy & Precedent | partial | Built: the store (`precedents/precedents.jsonl`), the matching and the block the judge can be shown (`tribunal/precedents.py`), and the `--precedents` switch. | **Not built: a scored run with precedents on.** It has not been measured yet — there is no figure for it here, and none is claimed. |
+| Image Analysis | not done, on purpose | — | The two categories chosen need no images. The brief itself says property damage needs image analysis, and that is why `PROPERTY_DAMAGE` is out of the pipeline's scope. |
+
 ## Concurrency
 
 The agents are the only part of a case that waits on something outside this
@@ -351,9 +376,12 @@ off 0.7 are each reported.
 | `runs/` | The benchmark's own output, committed as produced. `runs/README.md` says which directory holds what and how to read one run directory. |
 | `tests/` | The suite. Nothing in it makes a model call. |
 | `ui/` | `ui/build.py` and the one committed page it builds. |
-| `docs/` | `docs/notes/` — the dated decisions behind every number here; `docs/buddy-log/` — the WorkBuddy sessions. |
+| `docs/` | `docs/notes/` — the dated decisions behind every number here; `docs/buddy-log/` — the WorkBuddy sessions; `docs/roadmap/` — a drafted policy base version 2, kept as a roadmap and read by nothing. |
 | `precedents/` | The precedent library: human closures of decided cases. It holds the two closures `P-0001` and `P-0002`, and grows only when a reviewer closes one. |
 | `START-HERE.md` | The standing operating procedure for a session in this repository. Read it before changing anything. |
+
+A policy base version 2 aligned with published platform rules is drafted in
+`docs/roadmap/policy-v2/`; it is not applied and not measured.
 
 ## The debate viewer
 

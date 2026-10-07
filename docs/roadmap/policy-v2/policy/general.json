@@ -1,0 +1,118 @@
+{
+  "policy_id": "POLICY-GENERAL",
+  "category": "GENERAL",
+  "version": "2.0.0",
+  "jurisdiction": "Singapore",
+  "currency": "SGD",
+  "last_reviewed": "2026-10-07",
+  "confidence_floor": 0.7,
+  "applies_to": [
+    "ROUTE_DEVIATION",
+    "NO_SHOW_CHARGE"
+  ],
+  "clauses": [
+    {
+      "id": "POL-GEN-01",
+      "title": "Party profiles are credibility weighting only",
+      "category": "GENERAL",
+      "rule": "A rider_profile or driver_profile may inform how closely a party's assertions are scrutinised. It may never, on its own or in combination with another profile, establish a fact about THIS trip or carry an adverse finding against either party. Only the following profile fields may be cited as a ground of decision, and only for the tests that name them: driver_profile.deviation_flags_90d and driver_profile.completed_trips_90d (POL-RD-06); rider_profile.deviation_claims_60d and rider_profile.deviation_claims_60d_substantiated (POL-RD-08); driver_profile.no_show_terminations_30d and driver_profile.completed_trips_30d (POL-NS-07); rider_profile.no_show_disputes_30d (POL-NS-09(d)); rider_profile.disputes_with_counterparty_90d and driver_profile.disputes_with_counterparty_90d (POL-NS-09(c)). Every other field on either profile - rating, account_age_days, lifetime_trips, cancellation_rate, prior_disputes_filed, prior_disputes_upheld, prior_no_show_flags, prior_deviation_flags, acceptance_rate, active_region - is CONTEXT ONLY. A claim that cites one of those fields as a reason for the outcome is discarded by the Judge on the same footing as an uncited claim, and the Judge must say in the reasoning that it was discarded and why. Several of those fields are deliberate near-synonyms of the citable counters (prior_no_show_flags against no_show_disputes_30d; prior_deviation_flags against deviation_flags_90d): reading the lifetime counter where a clause names the trailing-window counter is the commonest way an adverse finding gets built on reputation without anyone noticing.",
+      "requires": [
+        "rider_profile",
+        "driver_profile"
+      ],
+      "licenses": [],
+      "favours": "NEUTRAL",
+      "notes": "This is the fairness constraint the schema has always asserted and no clause had ever stated. The list is exhaustive by design: an advocate can otherwise cite 'rating 4.19, cancellation rate 0.23' with a real evidence ID and a real clause ID and satisfy the citation contract while reasoning from reputation. The clause licenses no ruling of its own - it is a constraint on the other clauses, and it is cited alongside them, never instead of them.",
+      "sources": "[Source] The organisers' sample DISP-002 lists the rider's prior rejected disputes and a fraud flag among the evidence supporting its expected ruling. This clause deliberately refuses that use: history may lower the weight given to a party's assertions but may not decide the trip. The reasons are the ICODR 'equal' and 'fair and impartial' standards and the auditability of a ruling that rests only on the record of the trip itself."
+    },
+    {
+      "id": "POL-GEN-02",
+      "title": "Admissibility weight, disclosure, and how impairment enters confidence",
+      "category": "GENERAL",
+      "rule": "Every evidence artifact carries admissibility.weight_multiplier in [0.0, 1.0], produced by the pre-pass before the debate opens. It has three effects and no others. (1) DISCLOSURE. An advocate citing an artifact whose weight_multiplier is below 1.0 must state, in the same claim, that the artifact is impaired and which issue codes fired. A claim that cites an impaired artifact without disclosing the impairment is discarded by the Judge on the same footing as an uncited claim. (2) CONFIDENCE. The Judge's confidence in a ruling is capped by the evidence the ruling actually rests on: confidence must not exceed the minimum weight_multiplier among the artifacts that carry the deciding fact, and where two or more independent artifacts carry it, that cap is the maximum of their weight_multipliers rather than the minimum. bundle_integrity_score, the mean weight across the bundle, is context for the reader and is NOT the cap. Because the platform-wide escalation floor is 0.70, a deciding fact carried solely by an artifact at weight 0.65 or below escalates automatically under POL-RD-10(1) or POL-NS-09(a). (3) NARRATION. Any ruling that relies on an artifact below weight 1.0 must name the artifact, its weight and its issue codes in the written explanation, and say whether the finding survives the discount and why. A MISSING artifact has weight 0.0, can carry no fact, and its absence is itself citable. Schema-level impairment is not the same as policy-level impairment: POL-RD-07 and POL-NS-08 set their own, looser thresholds, and an artifact may be down-weighted here while remaining fully usable there. The Judge must say both things.",
+      "requires": [],
+      "licenses": [
+        "ESCALATE"
+      ],
+      "favours": "NEUTRAL",
+      "notes": "Without this clause weight_multiplier is a number with no arithmetic attached: the pre-pass emits 0.55 and nothing in the policy corpus says what 0.55 does. Rule (2) is the one that makes the escalation threshold and the admissibility layer a single mechanism rather than two unrelated ones, and it is what Yan Lin's calibration curve is measured against. Note the asymmetry in rule (2): impairment caps confidence only on the artifacts that DECIDE the case, so a broken advisory nobody relies on does not drag a clean ruling below the floor."
+    },
+    {
+      "id": "POL-GEN-03",
+      "title": "Ruling vocabulary, party-relative outcomes and compound rulings",
+      "category": "GENERAL",
+      "rule": "The five ruling values mean the following, and nothing else. FULL_REFUND: the filing party is entirely right and the whole contested amount is returned. PARTIAL_REFUND: part of the contested amount is returned. NO_ACTION: THE FILING PARTY'S CLAIM IS NOT SUPPORTED BY THE EVIDENCE AND THE PRESENT STATE STANDS - specifically, fare_breakdown.payment_status and fare_breakdown.refund_issued_sgd are left as they are. NO_ACTION is therefore PARTY-RELATIVE: on a rider-filed dispute it leaves a charge in place, and on a driver-filed dispute over a fee the platform has already reversed it leaves the rider refunded. It never means 'restore the charge'. DRIVER_COMPENSATION: the driver is owed money. ESCALATE: the case goes to a human reviewer, no monetary outcome issues, and the disputed amount is held rather than collected or refunded. ESCALATE is always TERMINAL and always REPLACES the ruling; a clause that adds something to a monetary ruling - POL-RD-06(c) driver-conduct review, POL-RD-09(4) billing integrity, POL-NS-05(ii) false-arrival record - produces a REFERRAL, not an escalation, and referrals never suppress the money. A ruling object carries: ruling (one of the five), amount_sgd (the refund to the filing party, null where none), driver_compensation_sgd (a platform-funded or fee-funded payment to the driver, null where none), referrals (an array of referral strings, empty where none), confidence, and the written explanation. Where a case produces both a rider refund and a driver payment - POL-NS-03(ii) pin-ambiguity goodwill is the standard instance - both fields are populated, the two are INDEPENDENT and are never netted against each other, and the ruling value names the outcome for the FILING party. ONE EXCEPTION, and it is the only one: where the ruling is DRIVER_COMPENSATION, amount_sgd carries the SAME figure as driver_compensation_sgd. It is the amount of money the ruling moves, not a second payment and not a refund to the filing party - on such a ruling the filing party's own charge stands, which POL-NS-07 states as 'the ruling on the fee is NO_ACTION'. The ruling VALUE is DRIVER_COMPENSATION because that is the outcome the case produces. Aggregate reporting must avoid double-counting driver payments: sum amount_sgd as a filing-party refund only across FULL_REFUND and PARTIAL_REFUND rulings.",
+      "requires": [],
+      "licenses": [
+        "FULL_REFUND",
+        "PARTIAL_REFUND",
+        "NO_ACTION",
+        "DRIVER_COMPENSATION",
+        "ESCALATE"
+      ],
+      "favours": "NEUTRAL",
+      "notes": "This clause resolves three general ambiguities: NO_ACTION is party-relative, ESCALATE replaces a monetary ruling while REFERRAL does not, and compound outcomes keep filing-party refunds separate from driver compensation."
+    },
+    {
+      "id": "POL-GEN-04",
+      "title": "Appeal of an automated ruling",
+      "category": "GENERAL",
+      "rule": "Every ruling issued without human review is a provisional ruling. Either party may appeal it once, within 30 days of the trip or of the ruling's issue, whichever is later, by lodging the appeal with the platform's help channel. An appeal (a) is heard by a human reviewer who did not take part in any earlier review of the same trip; (b) may add only record-type evidence - a GPS export, a fare or payment statement, an ERP gantry record with gantry name, entry time and cashcard statement, a call log, a photograph with its capture time - and may not add or amend a party statement; (c) suspends execution of any amount not yet executed and freezes it until decided, and where the amount was executed under POL-GEN-05 before the appeal, a successful appeal reverses it; (d) may not be withdrawn and re-lodged. A second appeal on the same trip, an appeal lodged after 30 days, or an appeal that adds only statements is refused. The appeal decision is recorded as a human closure under POL-GEN-06, enters the precedent store, and is final on the platform. This clause licenses no ruling value: an appeal is a route to human review, not a ruling, and it is lodged after a ruling has issued.",
+      "requires": [],
+      "licenses": [],
+      "favours": "NEUTRAL",
+      "notes": "Procedural: an advocate never cites this clause for a ruling value. It matters to the Judge only in that every automated ruling is provisional and its notice must carry the appeal route; the reviewer applies it when an appeal is lodged.",
+      "sources": "[Source] Ryde Help Centre, fetched 2026-10-07: fee waiver requests are made through RydeHELP and 'Requests submitted after 30 days of the trip will not be considered'; driver appeals require photographs, cleaning receipts with company details, or for ERP 'the gantry name, entry time and cashcard statement'. Meituan's review panel allows one appeal within 30 days decided within 48 hours; Xianyu's small court allows none. Ryde refunds an approved waiver as a voucher; this system rules in cash and leaves the execution channel to the platform. The once-only rule, the different-reviewer rule, the no-withdraw rule, the reversal of an executed amount and the 'or of the ruling's issue' extension are this system's additions."
+    },
+    {
+      "id": "POL-GEN-05",
+      "title": "Automatic execution threshold",
+      "category": "GENERAL",
+      "rule": "A provisional ruling whose monetary effect - the refund, the driver compensation, or their sum - does not exceed execution_threshold_sgd is executed automatically on issue, subject to POL-GEN-04. A provisional ruling whose monetary effect exceeds the threshold is issued but not executed: the amount is held and the case is placed in the human queue for release, where the reviewer either confirms execution or converts the case to a review under POL-GEN-06. A dispute carrying dispute.safety_flag or dispute.complaint_flag does not reach this clause: under POL-GEN-08(1) no automated ruling issues on it. The threshold is a field of this policy file and is set from the distribution of disputed amounts on the development sets, not chosen by hand; a change to it is a policy change recorded in the version history.",
+      "requires": [
+        "fare_breakdown"
+      ],
+      "licenses": [],
+      "favours": "NEUTRAL",
+      "notes": "Procedural: the Judge still rules; execution, not the ruling, is what the threshold gates. The Judge should name in the explanation whether the monetary effect is above or below execution_threshold_sgd so the queue can route it without re-reading the case.",
+      "sources": "[Source] No Singapore platform publishes an execution threshold; eBay's resolution centre resolves the large majority of low-value disputes by software and routes the rest to people. The threshold keeps the automated path on low-value, rule-clear cases, which is where the published platform policies place automated fees. The 8.00 figure is a candidate pending the distribution study."
+    },
+    {
+      "id": "POL-GEN-06",
+      "title": "Human review: entry, time limits, reading order, decisions and audit",
+      "category": "GENERAL",
+      "rule": "(1) Entry. A case reaches a human reviewer only by ESCALATE, by an amount above the POL-GEN-05 threshold, by dispute.safety_flag or dispute.complaint_flag on the dispute record, or by an appeal under POL-GEN-04; a reviewer may not take a case on their own motion. (2) Time. A review is decided within 24 hours of entry, within 2 hours for a safety flag, a first-instance case is closed within 48 hours of filing and an appeal within 48 hours of its lodgement; a review past its limit is escalated to the duty supervisor and the disputed amount stays frozen. (3) Reading order. The reviewer reads the escalation package - the reason codes, both advocates' kept and discarded claims, the referee ledger, the money block, every judge draft and the risk signals - before the parties' claims, then the referee ledger, then the remedy options, then any precedents; a decision may not be submitted until the package has been read in full. (4) Decisions. Exactly one of: ADOPT the system's proposed ruling; VARY, choosing a ruling and a remedy from the options the money block enumerates for this trip; REQUEST_EVIDENCE, naming the record-type items required; or REFER_COMPLIANCE for a safety, fraud or conduct matter. (5) Limits. The reviewer may not type an amount that the money block does not enumerate, may not edit the answer keys, the prompts or the policy, may not accept an oral or chat statement made after filing as evidence, and may not hear an appeal of a trip they reviewed. (6) Reasons. Every decision carries a written reason of at least 20 characters that cites at least one evidence id of this trip and at least one clause of the policy in force, or POL-GEN-07 where no clause applies; a decision without such a reason is refused before it is recorded. (7) Record. The reviewer's identity, the time of entry and of decision, the decision and the reason are written to the event chain; a decision that differs from the system's proposal is recorded as an override. (8) After decision. The frozen amount is released as decided and both parties receive the decision, with the appeal route under POL-GEN-04 where the decision was not itself an appeal decision; an appeal decision is final. (9) Audit. Each week 5 percent of ADOPT decisions and 100 percent of VARY decisions are re-read by a second reviewer; a VARY rate above 30 percent for two consecutive weeks triggers a policy review under the policy-gap procedure. (10) Recusal. A reviewer with any prior dealing with either party, recorded by party id, is excluded from the case.",
+      "requires": [],
+      "licenses": [],
+      "favours": "NEUTRAL",
+      "notes": "Procedural: binds the human reviewer, not the Judge. The Judge's contribution is the escalation package limb (3) requires - every draft, the referee ledger and the money block must be complete and the explanation must name the reason codes, because a reviewer may not submit until they have read them.",
+      "sources": "[Source] The 24 h / 2 h / 48 h limits follow the organisers' problem statement (current resolution 24-72 hours) and Meituan's 48-hour appeal window; the reading-order and no-amount rules implement the EU AI Act Article 14 duties to understand the system's limits and to resist automation bias; the record rule implements SVAMC Guideline 6 (the decision-maker does not delegate the decision) and the Supreme People's Court 2022 opinion that AI assists and does not replace the adjudicator; the audit rates are this system's. Ryde routes disputed fees through RydeHELP and publishes no reviewer rules. The 20-character minimum is the one tribunal.precedents enforces."
+    },
+    {
+      "id": "POL-GEN-07",
+      "title": "Residual principles where no clause licenses an outcome",
+      "category": "GENERAL",
+      "rule": "Where no clause of the policy in force licenses any outcome on the facts found, the Judge may not construct one: the ruling is ESCALATE and the case goes to human review. The reviewer decides under the following principles, citing this clause and the principle by number. (1) The party who asserts that money is owed - a fee, a charge, a refund, a compensation - carries the burden of proving the facts that make it owed. (2) A charge is the exception and no charge is the default: where the evidence does not establish the condition for a charge, the amount is returned to the party who paid it, not left with the party who collected it. (3) A loss that neither party caused is borne by the platform, in the manner of POL-NS-03(ii), and is never recovered from the other party. (4) The decision is written so that it can be reused: it cites the evidence ids and the principle numbers, and it enters the precedent store. (5) When two or more human decisions rest on this clause for the same kind of gap, the policy-gap procedure is run and an amendment is drafted; in drafting, the platform's own published policy is consulted first, then the record's platform_policy, then the published policies of Singapore ride-hailing platforms, then Uber's, and figures are never copied without the platform's own confirmation.",
+      "requires": [],
+      "licenses": [
+        "ESCALATE"
+      ],
+      "favours": "NEUTRAL",
+      "notes": "The Judge applies this clause in one way only: where no clause licenses an outcome on the facts found, rule ESCALATE and say so, citing this clause; do not reason from the principles to a monetary ruling, that is the reviewer's job.",
+      "sources": "[Source] ICODR standards (accountable, fair, transparent) and the ICODR AI-in-ODR standard that AI supports and does not replace human decision-making; SVAMC Guideline 6; the Supreme People's Court 2022 opinion on AI in adjudication; EU AI Act Article 14. The ordering of sources in principle (5) is the team's drafting rule, adopted 2026-10-07."
+    },
+    {
+      "id": "POL-GEN-08",
+      "title": "Scope of automated adjudication, disclosure and the right to a human",
+      "category": "GENERAL",
+      "rule": "(1) Scope. An automated ruling may issue only for a dispute category that has a policy file and an answer-key-tested pipeline - at this version ROUTE_DEVIATION and NO_SHOW_CHARGE. A dispute of any other category, a dispute carrying dispute.safety_flag or dispute.complaint_flag, and a dispute that alleges property damage, a cleaning fee, violence, harassment or discrimination is never adjudicated automatically: it is routed to human review under POL-GEN-06 with the record assembled but no draft ruling issued. (2) Disclosure. Every automated ruling is delivered to both parties with a statement that it was made without human review, the clauses and evidence ids it rests on, the evidence that was discarded and why, and the appeal route under POL-GEN-04. (3) Right to a human. Either party may, at any time before execution and once after, ask that the dispute be decided by a person; the request routes the case to human review under POL-GEN-06 and is never refused on the ground that the automated ruling was correct. (4) Data. The record shown to advocates, judge and reviewers carries party identifiers, not names, telephone numbers or vehicle registration marks; those are masked before display and restored only by the platform at execution. (5) Nothing in this clause licenses a ruling value.",
+      "requires": [],
+      "licenses": [],
+      "favours": "NEUTRAL",
+      "notes": "Procedural: limb (1) is enforced before the debate opens, so a case the Judge sees is in scope; limb (2) is satisfied by the explanation naming clauses, evidence ids and the discarded claims; limbs (3) and (4) bind the platform and the display layer.",
+      "sources": "[Source] Limb (1) implements the organisers' scope (text and structured evidence; image analysis and safety incidents out of the automated path) and ICODR's 'competent' standard. Limb (2) implements ICODR 'transparent', SVAMC Guideline 7 (disclosure of AI-generated output relied on) and EU AI Act Article 14. Limb (3) implements the Supreme People's Court 2022 opinion that users may choose whether to use AI assistance and may exit the interaction at any time, and ICODR's AI standard that AI supports rather than replaces human decision-making. Limb (4) implements ICODR 'confidential' and Singapore's PDPA data-minimisation principle; it is this system's addition."
+    }
+  ],
+  "execution_threshold_sgd": 8.0,
+  "sources": "[Source] {\"primary\": \"Ryde Help Centre (help.rydesharing.com), fetched 2026-10-07\", \"record\": \"trip_record.platform_policy, where the record carries it\", \"peers\": [\"Grab SG\", \"Gojek SG\", \"ComfortDelGro Zig\"], \"international\": [\"Uber\"], \"regulatory\": [\"Point-to-Point Passenger Transport Industry Act (Singapore)\"], \"residual\": \"POL-GEN-07\", \"rule\": \"Rulings cite POL- clauses only; every other source is consulted when a clause is drafted and is named in that clause's notes.\"} Provenance for every clause is in its own sources key; notes is guidance the model reads, sources is for people and is dropped at injection."
+}

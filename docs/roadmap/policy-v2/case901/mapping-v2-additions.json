@@ -1,0 +1,149 @@
+{
+  "fields_added_at_version_2": [
+    {
+      "target": "evidence.EV-TRIP-00901.payload.platform_policy.free_wait_sec",
+      "kind": "copied",
+      "source": "cancellation_policy.free_wait_time_min",
+      "value": 300,
+      "reason": "the source states 5 minutes; carried as seconds in the platform_policy block introduced at policy version 2 so that POL-NS-01(c) reads the sample's own waiting period"
+    },
+    {
+      "target": "evidence.EV-TRIP-00901.payload.platform_policy.no_show_threshold_sec",
+      "kind": "copied",
+      "source": "cancellation_policy.no_show_threshold_min",
+      "value": 480,
+      "reason": "the source states 8 minutes; POL-NS-01(c) requires the cancellation to fall at or after it where it is longer than free_wait_sec"
+    },
+    {
+      "target": "evidence.EV-TRIP-00901.payload.platform_policy.cancellation_fee_sgd",
+      "kind": "copied",
+      "source": "cancellation_policy.cancellation_fee_after_wait",
+      "value": 5.0,
+      "reason": "the source states 5.00; fee_schedule.resolution_rule now reads this field first, which resolves the version-1 divergence between the sample's 5.00 and the 4.00 schedule"
+    },
+    {
+      "target": "evidence.EV-TRIP-00901.payload.platform_policy.fee_goes_to",
+      "kind": "copied",
+      "source": "cancellation_policy.fee_goes_to",
+      "value": "DRIVER",
+      "reason": "the source states driver_compensation"
+    },
+    {
+      "target": "evidence.EV-TRIP-00901.payload.platform_policy.arrival_marker",
+      "kind": "judged",
+      "source": "app_events[driver_arrived].details",
+      "value": "GPS_AUTO",
+      "reason": "the source's arrival event says 'Auto-arrival confirmed' from GPS within 10 m, not a driver button press"
+    },
+    {
+      "target": "evidence.EV-TRIP-00901.payload.platform_policy.grace_after_match_sec",
+      "kind": "judged",
+      "source": "(none)",
+      "value": 180,
+      "reason": "the source states no grace after matching; fee_schedule.defaults (Ryde's published 3 minutes) is written in so that the block is complete"
+    },
+    {
+      "target": "evidence.EV-TRIP-00901.payload.platform_policy.advance_grace_before_scheduled_sec",
+      "kind": "judged",
+      "source": "(none)",
+      "value": 900,
+      "reason": "as above, Ryde's published 15 minutes"
+    },
+    {
+      "target": "evidence.EV-TRIP-00901.payload.platform_policy.rider_gross_cancellation_fee_sgd",
+      "kind": "judged",
+      "source": "(none)",
+      "value": null,
+      "reason": "the source gives one figure only"
+    },
+    {
+      "target": "evidence.EV-TRIP-00901.payload.platform_policy.waiting_fee_sgd",
+      "kind": "judged",
+      "source": "(none)",
+      "value": null,
+      "reason": "the source states no waiting-time fee"
+    },
+    {
+      "target": "evidence.EV-TRIP-00901.payload.platform_policy.source",
+      "kind": "judged",
+      "source": "(none)",
+      "value": "RECORD-PLATFORM",
+      "reason": "an opaque code: the block came from the record itself; the human-readable provenance is in data/external/ryde/mapping.json, never in the case file, so nothing tells the model which record this is"
+    },
+    {
+      "target": "evidence.EV-TRIP-00901.payload.scheduled_at",
+      "kind": "copied",
+      "source": "trip_data.scheduled_time",
+      "value": "2026-09-13T08:45:00+08:00",
+      "reason": "the source states it; it was dropped by the version-1 conversion"
+    },
+    {
+      "target": "evidence.EV-TRIP-00901.payload.events[*]",
+      "kind": "copied",
+      "source": "app_events[*]",
+      "value": "10 events, event_type/at/detail as stated, source PLATFORM_TELEMETRY",
+      "reason": "the source's platform event log; the version-1 conversion dropped it, which left the dwell carried by the GPS trace alone and capped confidence at the trace's 0.6 weight under POL-GEN-02(2). With the platform's own wait-timer events present the dwell has two independent carriers."
+    },
+    {
+      "target": "evidence.EV-TRIP-00901.payload.events[driver_assigned].detail",
+      "kind": "judged",
+      "source": "app_events[1].details",
+      "value": "Driver D-2398 (Honda HR-V SGP 4521 M) assigned. ETA 13 min.",
+      "reason": "the driver's name is dropped, as driver_profile.name already is (DROPPED_SOURCE_VALUES in tests/test_external_case.py); the plate stays, as it does in the chat_log"
+    },
+    {
+      "target": "evidence.EV-TRIP-00901.payload.events[cancellation_fee_applied].detail",
+      "kind": "judged",
+      "source": "app_events[8].details",
+      "value": "No-show threshold (8 min) reached. $5.00 cancellation fee charged to rider payment method.",
+      "reason": "the payment method is dropped, as rider_profile.payment_method already is"
+    }
+  ],
+  "policy_divergences_resolved_at_version_2": [
+    {
+      "finding": "The source's cancellation fee of SGD 5.00 matches no entry in fee_schedule.",
+      "resolution": "fee_schedule.resolution_rule reads trip_record.platform_policy.cancellation_fee_sgd (5.0) first; POL-NS-08(d) is no longer engaged."
+    },
+    {
+      "finding": "The source's 8-minute no-show threshold has no counterpart in POL-NS.",
+      "resolution": "POL-NS-01(c) reads platform_policy.free_wait_sec (300) and no_show_threshold_sec (480); the cancellation at 08:51 falls at the 8-minute threshold measured from the 08:43 arrival."
+    },
+    {
+      "finding": "Waiting clock from arrival or from scheduled time (version-1 divergence 3).",
+      "resolution": "scheduled_at is now carried; POL-NS-01(c) runs the clock from the first qualifying in-geofence fix, and the platform's wait_timer_started event (08:43:10) is a second, independent carrier of the same start."
+    }
+  ],
+  "entries_to_retire": [
+    {
+      "target": "trip_data.scheduled_time",
+      "was": "dropped",
+      "now": "copied to evidence.EV-TRIP-00901.payload.scheduled_at"
+    },
+    {
+      "target": "cancellation_policy.free_wait_time_min",
+      "was": "dropped",
+      "now": "copied to evidence.EV-TRIP-00901.payload.platform_policy.free_wait_sec"
+    },
+    {
+      "target": "cancellation_policy.no_show_threshold_min",
+      "was": "dropped",
+      "now": "copied to evidence.EV-TRIP-00901.payload.platform_policy.no_show_threshold_sec"
+    },
+    {
+      "target": "cancellation_policy.cancellation_fee_after_wait",
+      "was": "dropped",
+      "now": "copied to evidence.EV-TRIP-00901.payload.platform_policy.cancellation_fee_sgd"
+    },
+    {
+      "target": "cancellation_policy.fee_goes_to",
+      "was": "dropped",
+      "now": "copied to evidence.EV-TRIP-00901.payload.platform_policy.fee_goes_to"
+    },
+    {
+      "target": "app_events[*] (wait_timer_started, wait_timer_expired, rider_notified, driver_released and the rest)",
+      "was": "dropped",
+      "now": "copied to evidence.EV-TRIP-00901.payload.events[*] with two details redacted below"
+    }
+  ],
+  "note": "Entries to merge into data/external/ryde/mapping.json (not eval/external/ryde/) when convert.py is updated; targets follow the file's existing evidence.<id>.payload.<field> spelling. The converted file is written with json.dumps(indent=2) in insertion order, as convert.py writes it, so the bundle's case-00901.json is byte-reproducible."
+}

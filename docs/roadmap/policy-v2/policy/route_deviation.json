@@ -1,0 +1,268 @@
+{
+  "policy_id": "POLICY-ROUTE-DEVIATION",
+  "category": "ROUTE_DEVIATION",
+  "version": "2.0.0",
+  "jurisdiction": "Singapore",
+  "currency": "SGD",
+  "last_reviewed": "2026-10-07",
+  "confidence_floor": 0.70,
+  "fare_model": {
+    "base_fare": 3.80,
+    "per_km": 0.75,
+    "per_min": 0.28,
+    "platform_fee": 0.80,
+    "airport_surcharge": {
+      "applies_to": "Trips ORIGINATING at Changi Airport or Seletar Airport. A trip that ENDS at an airport carries no surcharge; a surcharge line on such a trip is a billing-integrity defect under POL-RD-09(4).",
+      "peak_sgd": 8.00,
+      "peak_window": "Friday, Saturday and Sunday, 17:00 to 23:59 SGT",
+      "off_peak_sgd": 6.00
+    },
+    "surge_multiplier_applies_to": [
+      "base_fare",
+      "distance_charge",
+      "time_charge"
+    ],
+    "surge_multiplier_field": "fare_breakdown.surge_multiplier",
+    "erp_and_tolls": "Passed through at metered cost and itemised gantry-by-gantry in the fare_breakdown; never multiplied by surge.",
+    "rounding": "Intermediate values (recomputed_fare, per-line differences) are NOT rounded. Only the final amount payable under a ruling is rounded, and it is rounded UP to the nearest SGD 0.05. This applies to refunds under POL-RD-02, pass-through corrections under POL-RD-09, driver compensation under POL-RD-04 and any amount under POL-RD-11 alike.",
+    "de_minimis_refund": 0.50,
+    "note": "These are the constants the POL-RD-02, POL-RD-04, POL-RD-09 and POL-RD-11 arithmetic runs on. If a trip_record carries its own rate card for a promotional or fixed-fare product, that rate card overrides these constants and the ruling must say which was used.",
+    "sources": "[Source] Ryde does not publish its surge mechanism; the rule that surge multiplies base, distance and time but never ERP is this system's, consistent with ERP being a pass-through."
+  },
+  "clauses": [
+    {
+      "id": "POL-RD-01",
+      "title": "Route Deviation Threshold",
+      "category": "ROUTE_DEVIATION",
+      "rule": "Measure actual_distance_km as the length of the gps_trace polyline between the recorded pickup event and the recorded dropoff event; the governing field is gps_trace.trace_distance_km. Where gps_trace.trace_distance_km and trip_record.actual_distance_km disagree, gps_trace.trace_distance_km governs: trip_record.actual_distance_km is a rounded convenience copy of the same measurement and may NOT be cited for the threshold test. Measure optimal_distance_km as the platform route estimate stored on the trip_record at booking, or the adjusted optimal produced by POL-RD-03, POL-RD-04, POL-RD-05 or POL-RD-12 where one of those clauses applies. Excess = actual_distance_km - optimal_distance_km. A route deviation is ESTABLISHED only when the excess is greater than 20% of optimal_distance_km AND greater than 0.8 km in absolute terms; both tests must pass. An excess greater than 50% of optimal_distance_km, or greater than 8.0 km absolute, is additionally a MATERIAL deviation and requires the driver_profile check in POL-RD-06. Materiality is assessed on the excess REMAINING after any adjustment under POL-RD-03, POL-RD-04, POL-RD-05 or POL-RD-12, not on the excess as first measured. If either establishment test fails, no deviation exists and the outcome is NO_ACTION however the rider characterises the trip, save for a billing-integrity refund under POL-RD-09(4), which is available whether or not a deviation exists.",
+      "requires": [
+        "gps_trace",
+        "trip_record"
+      ],
+      "licenses": [
+        "NO_ACTION",
+        "PARTIAL_REFUND"
+      ],
+      "favours": "NEUTRAL",
+      "notes": "A single numeric gate so that ordinary lane changes, U-turns forced by Singapore's divided roads, and 300 m of ERP gantry avoidance never become refundable disputes. The trace-governs sentence exists because the two distance fields straddle the materiality threshold on at least one case in this corpus: cite the trace figure or the finding is unsafe.",
+      "sources": "[Source] Ryde publishes no route-deviation rule; its fare is 'based on the trip's distance and duration' (fetched 2026-10-07). This clause follows Uber's published rule that a driver's detour may change the fare for the extra distance driven while a rider's change of destination or added stop is charged as the actual trip, and the Singapore point-to-point principle - as summarised by a third-party PDVL study guide, to be confirmed against LTA's text - that an upfront algorithmic fare binds the driver and that congestion and diversion risk is absorbed by the platform's pricing."
+    },
+    {
+      "id": "POL-RD-02",
+      "title": "Optimal-Route Fare Recomputation",
+      "category": "ROUTE_DEVIATION",
+      "rule": "Where a deviation is established under POL-RD-01 and no exculpatory clause fully excuses it, the refund is arithmetic, not discretionary. This clause applies only where fare_breakdown.fare_model is METERED; for UPFRONT_QUOTE trips POL-RD-11 governs instead. Compute recomputed_fare = ((3.80 + 0.75 x optimal_distance_km + 0.28 x optimal_duration_min) x the surge_multiplier recorded on the FARE_BREAKDOWN) + 0.80 platform fee + ERP and toll charges for gantries lying on the optimal route + any fixed surcharge already itemised in the fare_breakdown and properly chargeable (for example the Changi Airport surcharge on a trip ORIGINATING at the airport) + fare_breakdown.waiting_time_fee - fare_breakdown.promo_discount. Refund = charged_total - recomputed_fare, floored at zero, and the payable figure is rounded UP to the nearest SGD 0.05; intermediate values are not rounded. If the refund is below SGD 0.50 the outcome is NO_ACTION as de minimis. If the refund is 90% or more of charged_total, issue FULL_REFUND instead of a partial. Where POL-RD-03, POL-RD-04, POL-RD-05 or POL-RD-12 excuses part of the excess, run this computation against the adjusted optimal route rather than the booked one. The ruling must state charged_total, recomputed_fare and the refund on separate lines.",
+      "requires": [
+        "gps_trace",
+        "trip_record",
+        "fare_breakdown"
+      ],
+      "licenses": [
+        "PARTIAL_REFUND",
+        "FULL_REFUND",
+        "NO_ACTION"
+      ],
+      "favours": "RIDER",
+      "notes": "Prevents the Judge inventing round-number goodwill payments; every dollar refunded is traceable to a line of the fare_breakdown and can be re-checked by hand. The surge multiplier lives on fare_breakdown.surge_multiplier and nowhere else - the trip_record does not carry the field at all. Reading surge as absent where it is 1.35 doubles the refund, so the ruling must state which artifact the multiplier was read from.",
+      "sources": "[Source] Ryde publishes no route-deviation rule; its fare is 'based on the trip's distance and duration' (fetched 2026-10-07). This clause follows Uber's published rule that a driver's detour may change the fare for the extra distance driven while a rider's change of destination or added stop is charged as the actual trip, and the Singapore point-to-point principle - as summarised by a third-party PDVL study guide, to be confirmed against LTA's text - that an upfront algorithmic fare binds the driver and that congestion and diversion risk is absorbed by the platform's pricing."
+    },
+    {
+      "id": "POL-RD-03",
+      "title": "Road Closure or Traffic Advisory Exoneration",
+      "category": "ROUTE_DEVIATION",
+      "rule": "A deviation is EXONERATED where a traffic_advisory (a) names a road, expressway segment or junction that the optimal route traverses, for example a PIE closure at the Jalan Anak Bukit exit or an AYE contraflow at Tuas; (b) has a validity window overlapping the time the gps_trace shows the vehicle would have reached that segment, allowing a 15-minute buffer at each end; and (c) is matched by an actual route that leaves the optimal corridor before the affected segment and rejoins it after. Exoneration is capped. The justified excess is the lesser of the measured excess, or 130% of the ADDITIONAL distance of the shortest lawful alternative over the booked optimal route, plus 1.0 km of tolerance - that is, min(measured_excess_km, 1.30 x (traffic_advisory.shortest_lawful_alternative_km - trip_record.optimal_distance_km) + 1.00), where shortest_lawful_alternative_km is the TOTAL length of that alternative route between the booked endpoints. Excess beyond that cap is not exonerated and is refunded under POL-RD-02 computed against the closure-adjusted optimal route. The closure-adjusted optimal distance is trip_record.optimal_distance_km + justified_excess_km. Its duration is trip_record.optimal_duration_min scaled by the ratio of the adjusted optimal distance to the booked optimal distance, rounded to 1 decimal place; where trip_record.amended_optimal_duration_min is non-null that stored figure governs instead. An advisory issued after the trip ended, or covering a corridor the optimal route never uses, does not exonerate anything.",
+      "requires": [
+        "traffic_advisory",
+        "gps_trace",
+        "trip_record"
+      ],
+      "licenses": [
+        "NO_ACTION",
+        "PARTIAL_REFUND"
+      ],
+      "favours": "DRIVER",
+      "notes": "Exists so that a driver who correctly avoided a closed expressway is not penalised for it, while still capping how far 'there was a closure' can stretch. The cap is on ADDITIONAL distance, not on route length: 130% of a whole alternative route would exceed any conceivable excess and the cap would never bite. Both the cap formula and the duration derivation are written out in full here because the Judge cannot reproduce the adjusted optimal without them and must not invent one."
+    },
+    {
+      "id": "POL-RD-04",
+      "title": "Rider-Requested Detour or Additional Stop",
+      "category": "ROUTE_DEVIATION",
+      "rule": "A deviation is EXONERATED to the extent it is attributable to a rider instruction recorded in the chat_log. The instruction must (a) come from the rider, (b) be timestamped before the vehicle leaves the optimal corridor or no more than 3 minutes after, and (c) identify a place or road specifically enough to act on, such as 'stop at Jurong Point first' or 'take the AYE, not the PIE'. The gps_trace must corroborate it: the vehicle passes within 200 m of the requested waypoint, or travels the requested road. The waypoint coordinate is taken from chat_message.waypoint_hint, which the platform resolves from the message text at ingest; the Judge and both advocates must use that field and must not geocode a place name from general knowledge. Where waypoint_hint is null and no road is named, the corroboration test is undecidable on the record: the clause is unavailable, the case is decided on the remaining clauses, and the ruling must say the test could not be run. The excess distance between leaving and rejoining the optimal corridor is then excluded before POL-RD-01 and POL-RD-02 are applied. Vague messages such as 'go the fast way' or 'you know better' do not exonerate. Separately, where the fare_breakdown shows the rider was billed for less distance than the gps_trace records and the shortfall exceeds 1.0 km, the driver may be granted DRIVER_COMPENSATION at SGD 0.75 per unbilled kilometre, rounded UP to the nearest SGD 0.05 and capped at SGD 15.00 per trip.",
+      "requires": [
+        "chat_log",
+        "gps_trace",
+        "trip_record",
+        "fare_breakdown"
+      ],
+      "licenses": [
+        "NO_ACTION",
+        "PARTIAL_REFUND",
+        "DRIVER_COMPENSATION"
+      ],
+      "favours": "DRIVER",
+      "notes": "The commonest true reversal: the rider genuinely asked for the detour in chat and has forgotten, and the driver is owed the extra distance rather than being fined for it. The waypoint_hint field exists so the 200 m test is a field comparison rather than an act of geocoding, which the no-citation-no-credit rule forbids. The compensation limb rounds like every other payable amount in this policy; 4.16 unbilled kilometres pays 3.15, not 3.12.",
+      "sources": "[Source] Ryde publishes no route-deviation rule; its fare is 'based on the trip's distance and duration' (fetched 2026-10-07). This clause follows Uber's published rule that a driver's detour may change the fare for the extra distance driven while a rider's change of destination or added stop is charged as the actual trip, and the Singapore point-to-point principle - as summarised by a third-party PDVL study guide, to be confirmed against LTA's text - that an upfront algorithmic fare binds the driver and that congestion and diversion risk is absorbed by the platform's pricing."
+    },
+    {
+      "id": "POL-RD-05",
+      "title": "Pickup or Dropoff Point Relocation",
+      "category": "ROUTE_DEVIATION",
+      "rule": "Where the trip_record shows the pickup or dropoff point was amended after booking, whether by the rider moving the pin, by the rider giving a different address in the chat_log, or by a platform-directed bay assignment such as a Changi Airport terminal queue, a Marina Bay Sands arrival bay or an MRT private-hire pickup bay including a terminal change from T1 to T3, re-apply POL-RD-01 against the optimal route between the AMENDED endpoints. That figure is trip_record.amended_optimal_distance_km, with trip_record.amended_optimal_duration_min as its duration; both are non-null whenever either pickup_amended_at or dropoff_amended_at is non-null. Where an amendment timestamp is present but amended_optimal_distance_km is null, the re-quote is missing from the record, this clause cannot be run and POL-RD-10(5) applies; the Judge must not derive a substitute figure. If no deviation survives the recomputation, the outcome is NO_ACTION. Distance driven before the amendment timestamp is never counted as excess against the driver. Where the rider was not at the amended point and the gps_trace shows the vehicle circling within 400 m of it for more than 4 minutes, that circling distance is also excluded from excess.",
+      "requires": [
+        "trip_record",
+        "gps_trace",
+        "chat_log"
+      ],
+      "licenses": [
+        "NO_ACTION",
+        "PARTIAL_REFUND"
+      ],
+      "favours": "DRIVER",
+      "notes": "Stops a driver being charged with deviation for a route that only looks wrong because the destination on the receipt is not the destination that was actually driven to. The amended optimal is a stored field, not something the Judge re-derives: a re-quote invented by the agent, or one read out of the free text of optimal_route_source, is exactly the hallucination the citation rule exists to prevent."
+    },
+    {
+      "id": "POL-RD-06",
+      "title": "Repeat Deviation Pattern",
+      "category": "ROUTE_DEVIATION",
+      "rule": "Consult the driver_profile whenever POL-RD-01 records a MATERIAL deviation, or the evidence is otherwise finely balanced. A pattern is ESTABLISHED when driver_profile.deviation_flags_90d is 3 or more, or driver_profile.deviation_flags_90d divided by driver_profile.completed_trips_90d is 0.05 or more with completed_trips_90d of at least 40. No other profile field may be used for this test; in particular driver_profile.prior_deviation_flags is a lifetime counter and is NOT the trailing-90-day figure this clause asks for. Where a pattern is established, and only these three effects follow: (a) if the evidence is genuinely balanced and the rider's claim is supported by at least one artifact other than the gps_trace, the balance is resolved in the rider's favour; (b) a deviation that is both MATERIAL and substantiated on this trip's own evidence licenses FULL_REFUND of charged_total rather than the POL-RD-02 partial, save that government-set and third-party pass-through lines (ERP, tolls, a properly chargeable airport surcharge) are settled under POL-RD-09 and are not uplifted by this limb, and the ruling must state the POL-RD-02 figure and the uplifted figure side by side so the size of the uplift is visible and auditable; (c) the case is additionally REFERRED to driver-conduct review, which is recorded in the ruling's referrals list and does not displace or delay the monetary ruling. A pattern may never be used to establish that this particular trip deviated; that finding must rest on POL-RD-01 evidence for this trip alone, and POL-GEN-01 applies to every use of this artifact.",
+      "requires": [
+        "driver_profile",
+        "gps_trace",
+        "trip_record"
+      ],
+      "licenses": [
+        "FULL_REFUND",
+        "PARTIAL_REFUND"
+      ],
+      "favours": "RIDER",
+      "notes": "Lets the tribunal see the serial long-hauler that any single case would miss, while explicitly forbidding a finding of guilt built on reputation instead of this trip's GPS. Limb (b) is a deterrent uplift on the REMEDY, not on the FINDING - the finding is still POL-RD-01 on this trip's trace - and the requirement to print both figures is what keeps the uplift auditable by a human. Limb (c) is a referral, not an escalation: the Judge still rules and money still moves."
+    },
+    {
+      "id": "POL-RD-07",
+      "title": "GPS Trace Integrity and Gap Handling",
+      "category": "ROUTE_DEVIATION",
+      "rule": "The gps_trace is IMPAIRED FOR POLICY PURPOSES under this clause if, within the disputed segment, it contains (a) a gap of more than 90 seconds between consecutive fixes, (b) a straight-line jump of more than 500 m between consecutive fixes, or (c) a sustained sampling interval above 30 seconds. An artifact tagged IMPAIRED by the admissibility pre-pass but NOT meeting limbs (a) to (c) of this clause is down-weighted in the Judge's confidence under POL-GEN-02 only, and does not trigger the consequences below or POL-RD-10(3). Where the trace is impaired under (a) to (c): (i) excess distance across the impaired stretch is measured as the straight line between the bounding fixes, which is the reading most favourable to the driver; (ii) a deviation may NOT be established on the gps_trace alone and must be corroborated by an INDEPENDENT source, which means one of - a driver admission in the chat_log; the set of erp_gantries actually charged in the fare_breakdown placing the vehicle on a corridor the optimal route does not use; a counterparty_statement admitting the route; or a trip_record.actual_distance_km the platform derived independently of this trace. The billed distance on the fare_breakdown is NOT independent corroboration where it is a copy of the trace figure, and the Judge must check whether it is before relying on it; (iii) if no corroboration exists, the claim is not sustained on the present record and the outcome is ESCALATE rather than NO_ACTION, because absence of proof here is a data failure and not a finding for the driver. Any ruling that touches an impaired trace must say so in its explanation and state which corroborating artifact carried it.",
+      "requires": [
+        "gps_trace",
+        "fare_breakdown",
+        "trip_record",
+        "chat_log"
+      ],
+      "licenses": [
+        "ESCALATE",
+        "PARTIAL_REFUND",
+        "NO_ACTION"
+      ],
+      "favours": "NEUTRAL",
+      "notes": "Tunnel and multi-storey carpark dropouts are routine in Singapore, so the tribunal must be able to say 'the evidence cannot answer this' instead of hallucinating a route across the gap. The schema pre-pass and this clause use DIFFERENT thresholds on purpose: an artifact can be schema-IMPAIRED and policy-clean, and the Judge must say both things out loud. Limb (ii) previously named the billed distance as corroboration; on this platform the meter is derived from the same trace, so that reading was circular and has been replaced by a list of genuinely independent sources."
+    },
+    {
+      "id": "POL-RD-08",
+      "title": "Burden of Proof and Shifting",
+      "category": "ROUTE_DEVIATION",
+      "rule": "The rider carries the initial burden and must show, citing evidence IDs: (a) that the artifacts describe the same trip, with matching trip identifier and pickup timestamp across trip_record, gps_trace and fare_breakdown; and (b) an excess meeting the POL-RD-01 threshold, measured from an unimpaired gps_trace or, where the trace is impaired under POL-RD-07(a) to (c), from an independent source named in POL-RD-07(ii). Once both are shown, the burden shifts to the driver, who must point to a specific artifact and a specific clause to invoke POL-RD-03, POL-RD-04, POL-RD-05, POL-RD-11 or POL-RD-12; a general assertion that traffic was bad, unsupported by a traffic_advisory ID, does not discharge it. Assertions from either side that cite no evidence ID carry no weight and are discarded. Where rider_profile.deviation_claims_60d is 4 or more and rider_profile.deviation_claims_60d_substantiated is 1 or fewer, a claim with excess below 30% additionally requires corroboration beyond the gps_trace, drawn from the same list as POL-RD-07(ii); this factor may never be used to deny a claim that is otherwise proven, and POL-GEN-01 governs every other field on either profile.",
+      "requires": [
+        "trip_record",
+        "gps_trace",
+        "fare_breakdown",
+        "rider_profile"
+      ],
+      "licenses": [
+        "NO_ACTION",
+        "PARTIAL_REFUND",
+        "ESCALATE"
+      ],
+      "favours": "NEUTRAL",
+      "notes": "Makes the debate winnable on evidence rather than eloquence, and fixes who loses when a fact is simply unknown. Both profile tests name their exact field paths so that a near-synonym counter on the same artifact cannot be quietly substituted for the one the clause means."
+    },
+    {
+      "id": "POL-RD-09",
+      "title": "ERP, Toll and Surcharge Pass-Through",
+      "category": "ROUTE_DEVIATION",
+      "rule": "Charges that merely pass through a third-party or government-set cost are settled separately from distance and time charges, and are never counted twice. (1) Where a deviation is refunded under POL-RD-02, off-route ERP is ALREADY COMPREHENDED in that refund, because the refund is charged_total less a recomputed fare that includes only on-optimal-route gantries. Such charges are itemised separately in the ruling for transparency but must NEVER be added on top of the POL-RD-02 figure. (2) Where the deviation is exonerated as an external event under POL-RD-03, the distance and time charges stand because the driver is not at fault, but off-route ERP charges are still refunded to the rider as a standalone pass-through correction, capped at SGD 12.00 per trip, since the rider did not cause the closure either. (3) Where the detour was rider-caused under POL-RD-04, POL-RD-05 or POL-RD-12, no ERP refund is due. (4) A charge line for a gantry the gps_trace never passes, or an airport surcharge on a trip that does not ORIGINATE at an airport, is a billing-integrity failure: it is refunded in full as a standalone correction, available whether or not a deviation exists, and recorded as a billing-integrity finding in the ruling's referrals list. POL-RD-10(8) is NOT thereby triggered where the only unmatched line is one refunded under this limb. A gantry is matched to the trace by comparing erp_gantry.lat and erp_gantry.lng against the trace, treating any fix within 250 m of the gantry as a crossing; where an erp_gantry carries no coordinates the match is undecidable on the record, the line is treated as matched, and the ruling must say so.",
+      "requires": [
+        "fare_breakdown",
+        "gps_trace",
+        "trip_record"
+      ],
+      "licenses": [
+        "PARTIAL_REFUND",
+        "NO_ACTION"
+      ],
+      "favours": "RIDER",
+      "notes": "ERP is the part of a Singapore fare a rider notices most, and a fault-based refund of distance alone would still leave them paying for gantries they never asked to cross. Limb (1) is the anti-double-count rule and guards the single most common arithmetic error in this category: on a 26.04 fare carrying 5.50 of off-route ERP the correct refund is 10.75, not 16.25. Limb (4) no longer refers the matter to POL-RD-10, whose licences array is ESCALATE only and which forbids a monetary ruling; a phantom line is both refundable and knowable, so the tribunal rules on it.",
+      "sources": "[Source] Ryde Help Centre (fetched 2026-10-07): fares for RydeX, XL, LUXE, TAXI, FLASH and PET exclude ERP; the driver keys in 'the ERP gantry you passed during the journey' at drop-off; an additional or excessive amount 'will be considered fraudulent and drivers will be liable for permanent suspension'; carpool ERP is shared 50/50 between driver and passenger. A third-party PDVL study guide summarises the Singapore point-to-point rules as allowing only ERP incurred while the passenger is on board to be passed through; that summary is to be confirmed against LTA's own text. An ERP dispute is evidenced by the gantry name, the entry time and a cashcard statement, which is the evidence standard Ryde itself sets for driver appeals."
+    },
+    {
+      "id": "POL-RD-10",
+      "title": "Mandatory Escalation, No Ruling",
+      "category": "ROUTE_DEVIATION",
+      "rule": "The Judge must NOT issue a final ruling, and must instead ESCALATE to a human reviewer with the full case summary, both advocate briefs and the admissibility report, whenever any of the following holds: (1) the Judge's own confidence in the ruling is below 0.70, which is the platform-wide floor and is identical to POL-NS-09(a); (2) the trip identifiers on trip_record, gps_trace and fare_breakdown do not all match, or the trip_record is absent from the pool; (3) the gps_trace is impaired under limbs (a) to (c) of POL-RD-07 and no corroborating artifact of the kind POL-RD-07(ii) names exists; (4) pickup or dropoff timestamps on two admitted artifacts disagree by more than 10 minutes, or any artifact's timestamps run backwards; (5) an exculpatory clause is invoked against a cited artifact that is missing from the pool, or does not cover the trip window, or lacks the field the clause requires - for example a rider-requested detour asserted with no chat_log for the trip, a closure asserted with no traffic_advisory, or a POL-RD-05 amendment with amended_optimal_distance_km null; (6) the refund computed under POL-RD-02 exceeds SGD 150.00, or exceeds charged_total; (7) both sides are supported by admissible and mutually contradictory evidence of comparable strength, such as a chat_log detour request whose waypoint the gps_trace never approaches; (8) any charge line in the fare_breakdown has no counterpart anywhere in the gps_trace or trip_record, OTHER than a line refunded under POL-RD-09(4). Escalation under this clause is TERMINAL: it replaces the ruling, no monetary outcome issues, and the disputed amount is held rather than collected or refunded. The Judge must name the trigger that fired and state what evidence would resolve it. A referral under POL-RD-06(c) or POL-RD-09(4) is not an escalation and does not engage this clause.",
+      "requires": [
+        "trip_record",
+        "gps_trace",
+        "fare_breakdown"
+      ],
+      "licenses": [
+        "ESCALATE"
+      ],
+      "favours": "NEUTRAL",
+      "notes": "Guarantees the system has a way to say 'a human must look at this' rather than producing a confident ruling on broken, contradictory or incomplete evidence. Note the sharp line between ESCALATE-as-ruling here and REFER-as-addition under POL-RD-06(c): the same word once did both jobs, and the two mean opposite things about whether money moves."
+    },
+    {
+      "id": "POL-RD-11",
+      "title": "Upfront-Quoted Fares",
+      "category": "ROUTE_DEVIATION",
+      "rule": "Where fare_breakdown.fare_model is UPFRONT_QUOTE and fare_breakdown.quoted_fare_sgd is non-null, the distance and time charges were fixed at booking and a detour costs the rider nothing on those lines; the loss falls on the driver. POL-RD-02 does not run and no distance-or-time refund is available to the rider however large the excess. The rider's remedies are limited to: (a) any amount by which charged_total exceeds quoted_fare_sgd plus the pass-through and statutory lines properly chargeable under POL-RD-09 - ERP and tolls actually crossed, a properly chargeable airport surcharge, and fare_breakdown.waiting_time_fee - which is refunded in full; and (b) a pass-through correction under POL-RD-09 for off-route or phantom gantries and for a surcharge wrongly applied. The driver's unrecovered cost on an unjustified detour is not recoverable from the rider under this clause; where the detour was rider-requested it is compensated under POL-RD-04 instead. A MATERIAL deviation on an upfront-quoted trip still requires the POL-RD-06 driver_profile check and still supports a POL-RD-06(c) conduct referral, because the conduct is the same even though the money is not.",
+      "requires": [
+        "fare_breakdown",
+        "trip_record",
+        "gps_trace"
+      ],
+      "licenses": [
+        "NO_ACTION",
+        "PARTIAL_REFUND",
+        "FULL_REFUND",
+        "ESCALATE"
+      ],
+      "favours": "NEUTRAL",
+      "notes": "Upfront pricing is the norm for Singapore private hire, and under it the economics of a detour invert: the rider is already whole on distance and time, so a Judge that runs POL-RD-02 on an upfront trip refunds money the rider never lost. The live questions that remain are the pass-through lines and the driver's conduct, and this clause preserves both while closing the distance-refund route.",
+      "sources": "[Source] Ryde publishes no route-deviation rule; its fare is 'based on the trip's distance and duration' (fetched 2026-10-07). This clause follows Uber's published rule that a driver's detour may change the fare for the extra distance driven while a rider's change of destination or added stop is charged as the actual trip, and the Singapore point-to-point principle - as summarised by a third-party PDVL study guide, to be confirmed against LTA's text - that an upfront algorithmic fare binds the driver and that congestion and diversion risk is absorbed by the platform's pricing."
+    },
+    {
+      "id": "POL-RD-12",
+      "title": "Pooled and Shared Trips",
+      "category": "ROUTE_DEVIATION",
+      "rule": "Where trip_record.vehicle_type is RYDE_POOL, the baseline for POL-RD-01 is the MATCHED-ITINERARY optimal recorded in trip_record.optimal_distance_km - the route the platform computed for the pooled itinerary at match time - and not the solo-rider optimal, which is carried separately as trip_record.solo_optimal_distance_km for reference only. Distance attributable to collecting or setting down a co-rider on a platform-matched pooled itinerary is never a deviation and is excluded from excess before POL-RD-01 is applied. A claim that measures excess against solo_optimal_distance_km has cited the wrong field and fails on that ground alone; the ruling must name both figures so the rider can see why. This clause does not excuse excess beyond the matched itinerary: where the trace exceeds the matched-itinerary optimal by more than the POL-RD-01 threshold, the deviation is established as usual and POL-RD-02 runs against the matched-itinerary figure. Where solo_optimal_distance_km is non-null but the trip_record does not identify the pooled itinerary, the record is incomplete and POL-RD-10(5) applies.",
+      "requires": [
+        "trip_record",
+        "gps_trace"
+      ],
+      "licenses": [
+        "NO_ACTION",
+        "PARTIAL_REFUND"
+      ],
+      "favours": "DRIVER",
+      "notes": "Carpooling is the platform's signature product and 'the driver detoured to collect the other passenger and I was billed for it' is the route-deviation dispute most specific to it. Without this clause a pooled trip fails POL-RD-01 by construction, because a matched pooled itinerary is longer than any single rider's own optimal route and always will be."
+    },
+    {
+      "id": "POL-RD-13",
+      "title": "Missing Traffic Advisory and Uncited Traffic Excuses",
+      "category": "ROUTE_DEVIATION",
+      "rule": "Where a party asserts an external traffic cause - a queue, a breakdown, a closure or an incident - as the explanation for a measured route deviation, the assertion is tested against the traffic_advisory for this trip and nothing else. POL-RD-03 requires an advisory record that names a road or segment the optimal route traverses, carries a validity window overlapping the time the gps_trace shows the vehicle would have reached that segment, and is matched by a route that leaves the optimal corridor before the affected segment and rejoins it after. Where the bundle holds no traffic_advisory covering the trip window - the artifact's admissibility status is MISSING and its weight_multiplier is 0.0 - that comparison cannot be run on the record, POL-RD-03 is unavailable, and the assertion carries no weight under POL-RD-08. Two consequences follow, and no others. (1) Where the asserting party names no evidence ID for an advisory, the missing advisory is NOT an exculpatory clause invoked against a cited artifact within POL-RD-10(5): an assertion that cites no artifact cannot be invoked against one, and the absence of an artifact no party has cited is a gap in the bundle rather than a contradiction in it. This clause does not narrow POL-RD-10(5) where the party does cite the missing identifier; that case still escalates. (2) Where the rider has shown an excess meeting the POL-RD-01 threshold on a gps_trace that is not impaired under POL-RD-07(a) to (c), the deviation stands at the measured figure and POL-RD-02 runs against the booked optimal route; the driver's traffic assertion neither reduces the excess nor supplies an amended optimal, and the ruling must record that the assertion was discarded and that no advisory was on file. This clause does not displace POL-RD-07: where the gps_trace IS impaired under POL-RD-07(a) to (c) and no independent corroboration of the kind POL-RD-07(ii) names exists, POL-RD-10(3) still governs and the case still escalates.",
+      "requires": [
+        "traffic_advisory",
+        "gps_trace",
+        "trip_record"
+      ],
+      "licenses": [
+        "FULL_REFUND",
+        "PARTIAL_REFUND",
+        "NO_ACTION"
+      ],
+      "favours": "RIDER",
+      "notes": "Added because a cluster of escalations shipped a MISSING traffic_advisory whose identifier was minted so the absence itself could be cited, and each carried a driver assertion of an external traffic cause. POL-RD-08 already provides that an uncited traffic assertion does not discharge the driver's burden, but POL-RD-10(5) lists 'a closure asserted with no traffic_advisory' among its escalation triggers, so the same facts read one way pay a POL-RD-02 refund and read the other way escalate with no money moving. Human closures settled the point: an established deviation with the absent advisory making the driver's excuse weightless under POL-RD-08, not a POL-RD-10(5) escalation. This clause states that priority and leaves POL-RD-07 and POL-RD-10(3) untouched where the trace itself is impaired and the missing advisory is not the deciding defect.",
+      "sources": "[Source] Original amendment notes (name the development cases the cluster was drawn from; kept out of the model's view): Added because every case in this cluster ships a MISSING traffic_advisory whose identifier was minted so the absence itself could be cited, and every one carries a driver assertion of an external traffic cause - the CTE queue at Braddell in case 508, the Balestier bus breakdown in 530, the KPE signal loss in 110, the 'app acting up' in 112, the hung phone in 512 and the unaccounted telemetry gap in 9115. POL-RD-08 already provides that an uncited traffic assertion does not discharge the driver's burden, but POL-RD-10(5) lists 'a closure asserted with no traffic_advisory' among its escalation triggers, so the same facts read one way pay a POL-RD-02 refund and read the other way escalate with no money moving. The human closures in this cluster settled the point: 508 and 530 were decided as established deviations with the ordinary POL-RD-02 refund, the absent advisory making the driver's excuse weightless under POL-RD-08 and not a POL-RD-10(5) escalation. This clause states that priority for the whole cluster and leaves POL-RD-07 and POL-RD-10(3) untouched for cases 110, 112, 512 and 9115, where the trace itself is impaired and the missing advisory is not the deciding defect."
+    }
+  ]
+}
