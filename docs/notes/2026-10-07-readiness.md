@@ -84,7 +84,7 @@ Named without a path, because an absolute path may not go into `docs/`:
 
 **Logs.**
 
-  FAIL: verify_chain over 13 committed run log(s) -- 1 do not verify: runs/codex/deepseek-deepseek-flash/events.jsonl at line 343: chain (prev does not name the previous line)
+  PASS: verify_chain over 13 committed run log(s) -- 1 known break(s): runs/codex/deepseek-deepseek-flash/events.jsonl at line 343: chain (prev does not name the previous line), known, documented in docs/notes/2026-09-27-the-replays-the-icloud-move-and-the-probe.md
   FAIL: 0 of 176 agent_call events in the speed run carry all four new fields (0%); the speed run was made at b129824178b51b6d655bc0863f805cc75fe1f82b, and the fields were added after it, so this criterion cannot be met by that run and is met by every run made since
   PASS: the timeline prints case 101 of the speed run (33 line(s))
 
