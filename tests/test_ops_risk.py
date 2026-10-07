@@ -71,13 +71,14 @@ EXPECTED_FIELDS: Dict[str, Tuple[str, ...]] = {
     "POL-NS-09(d)": ("rider_profile.no_show_disputes_30d",),
 }
 
-# The side each test examines. ``POL-NS-09(c)`` names a counter on each profile
-# and reads the larger of the two, so its side is taken from the counters and is
-# asserted in the corpus tests instead of being declared here.
+# The side each test is reported against. ``POL-NS-09(c)`` reads a counter on
+# each profile -- the same disputes counted from both sides -- so it is reported
+# as ``PAIR`` rather than as one of the two parties.
 EXPECTED_SIDES: Dict[str, str] = {
     "POL-RD-06": "DRIVER",
     "POL-RD-08": "RIDER",
     "POL-NS-07": "DRIVER",
+    "POL-NS-09(c)": "PAIR",
     "POL-NS-09(d)": "RIDER",
 }
 
@@ -205,15 +206,23 @@ class TheFiveTestsTests(unittest.TestCase):
             "a test reads a different field list from the one the clause names",
         )
 
-    def test_every_test_carries_the_category_and_the_side_it_examines(self):
+    def test_every_test_carries_the_category_and_the_side_it_is_reported_against(self):
         self.assertEqual(
             EXPECTED_CATEGORIES,
             {test.clause: test.category for test in risk.POLICY_TESTS},
         )
+        self.assertEqual(
+            EXPECTED_SIDES,
+            {test.clause: test.side for test in risk.POLICY_TESTS},
+        )
         for test in risk.POLICY_TESTS:
-            if test.clause in EXPECTED_SIDES:
-                with self.subTest(clause=test.clause):
-                    self.assertEqual(EXPECTED_SIDES[test.clause], test.side)
+            with self.subTest(clause=test.clause):
+                self.assertIn(test.side, risk.SIDES)
+
+    def test_the_three_sides_are_named_once_and_the_pair_is_one_of_them(self):
+        self.assertEqual(("RIDER", "DRIVER", "PAIR"), risk.SIDES)
+        self.assertEqual("PAIR", risk.SIDE_PAIR)
+        self.assertNotIn(risk.SIDE_PAIR, ("RIDER", "DRIVER"))
 
     def test_no_test_reads_a_lifetime_counter(self):
         """The policy names them as near-synonyms that must not be substituted."""
@@ -394,7 +403,7 @@ class TheCorpusTests(unittest.TestCase):
         self.assertEqual("2", str(values["rider_profile.disputes_with_counterparty_90d"]))
         self.assertEqual("2", str(values["driver_profile.disputes_with_counterparty_90d"]))
         self.assertEqual([], [note for note in signal.notes if "counters_disagree" in note])
-        self.assertIn(signal.side, ("RIDER", "DRIVER"))
+        self.assertEqual("PAIR", signal.side)
 
     def test_a_case_whose_counters_differ_carries_the_disagreement_note(self):
         """The note the module's own reading of the clause requires."""
@@ -405,7 +414,9 @@ class TheCorpusTests(unittest.TestCase):
         signal = risk.assess(case, policies_for(case), corpus_root())
         found = [s for s in signal.signals if s.clause == "POL-NS-09(c)"][0]
         self.assertTrue(found.tripped)
-        self.assertEqual("RIDER", found.side)
+        # The side is the pair's whatever the counters say: the clause is about
+        # the two parties together, so no reading of the counters renames it.
+        self.assertEqual("PAIR", found.side)
         self.assertTrue(
             [note for note in found.notes if note.startswith("counters_disagree")],
             found.notes,

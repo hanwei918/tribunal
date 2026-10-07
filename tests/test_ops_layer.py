@@ -29,11 +29,13 @@ from __future__ import annotations
 
 import builtins
 import contextlib
+import importlib.util
 import io
 import json
 import os
 import re
 import sys
+import sysconfig
 import tempfile
 import unittest
 from pathlib import Path
@@ -45,7 +47,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 import ops  # noqa: E402
-from ops import escalation, queue, review, risk  # noqa: E402
+from ops import escalation, evidence, queue, review, risk  # noqa: E402
 
 # The run directory every command here is run against, and its set.
 CORPUS_RUN = PROJECT_ROOT / "runs" / "deepseek-deepseek-flash"
@@ -106,6 +108,37 @@ def repository_files() -> Set[str]:
     return found
 
 
+def is_standard_library(name: str) -> bool:
+    """Whether a top-level module name is part of the standard library.
+
+    ``sys.stdlib_module_names`` is the answer on Python 3.10 and later, and it
+    is used whenever it is there. **It is not there on 3.9**, which is the
+    second interpreter this repository is tested on, so on that interpreter the
+    module is asked for its spec instead: a built-in or frozen module is
+    standard library, and so is one whose origin lies under
+    ``sysconfig.get_paths()["stdlib"]`` and not under a ``site-packages``
+    directory. A package installed beside the interpreter is therefore
+    classified as third-party rather than as standard library, which is the
+    distinction the rule is about.
+    """
+    names = getattr(sys, "stdlib_module_names", None)
+    if names is not None:
+        return name in names
+    try:
+        spec = importlib.util.find_spec(name)
+    except (ImportError, ValueError):
+        return False
+    if spec is None:
+        return False
+    if spec.origin in ("built-in", "frozen"):
+        return True
+    origin = spec.origin
+    if not origin:
+        return False
+    stdlib = sysconfig.get_paths()["stdlib"]
+    return origin.startswith(stdlib) and "site-packages" not in origin
+
+
 def keys_of(node: Any) -> Set[str]:
     """Every key anywhere in a JSON document, recursively."""
     found: Set[str] = set()
@@ -122,12 +155,12 @@ def keys_of(node: Any) -> Set[str]:
 def every_command() -> List[Tuple[str, Callable[..., int], List[str]]]:
     """Every ``ops`` command, over the corpus, as ``(name, entry, arguments)``.
 
-    Each entry is a command that can run: the risk signals for every case, a
-    packet for every case (``--any``, so a case that did not escalate is still
-    built), a packet for each of the five escalated cases without ``--any``, the
-    queue for the run, at no instant and at a fixed one, and one closure through
-    the review step. A command that refuses is still a command that was run, so
-    the refusals are exercised too.
+    Each entry is a command that can run: the risk signals for every case, the
+    collected evidence for every case, a packet for every case (``--any``, so a
+    case that did not escalate is still built), a packet for each of the five
+    escalated cases without ``--any``, the queue for the run, at no instant and
+    at a fixed one, and one closure through the review step. A command that
+    refuses is still a command that was run, so the refusals are exercised too.
     """
     commands: List[Tuple[str, Callable[..., int], List[str]]] = []
     for case_no in CORPUS_CASE_NUMBERS:
@@ -145,6 +178,14 @@ def every_command() -> List[Tuple[str, Callable[..., int], List[str]]]:
                 "escalation {0}".format(case_no),
                 escalation.main,
                 ["--run-dir", str(CORPUS_RUN), "--case", str(case_no)],
+            )
+        )
+    for case_no in CORPUS_CASE_NUMBERS:
+        commands.append(
+            (
+                "evidence {0}".format(case_no),
+                evidence.main,
+                ["--case", str(case_no)],
             )
         )
     commands.append(("queue", queue.main, ["--run-dir", str(CORPUS_RUN)]))
@@ -227,7 +268,7 @@ class TheImportGraphTests(unittest.TestCase):
                 top = name.split(".")[0]
                 if top in ("ops", "tribunal", "eval"):
                     continue
-                if top in sys.stdlib_module_names:
+                if is_standard_library(top):
                     continue
                 with self.subTest(module=path.name, imported=name):
                     self.fail(
@@ -261,6 +302,13 @@ class TheImportGraphTests(unittest.TestCase):
                             name == "ops" or name.startswith("ops."),
                             "{0}/{1} imports ops".format(package, path.name),
                         )
+
+    def test_the_standard_library_classification_answers_both_ways(self):
+        """The control for the 3.9 fallback: it is not answering ``True`` always."""
+        self.assertTrue(is_standard_library("json"))
+        self.assertTrue(is_standard_library("sys"))
+        self.assertFalse(is_standard_library("ops"))
+        self.assertFalse(is_standard_library("a-module-that-does-not-exist-anywhere"))
 
     def test_the_import_walk_reaches_the_modules_it_claims_to(self):
         """A control: the walk is reading real import statements."""

@@ -342,6 +342,16 @@ class ThePacketPartsTests(PacketTestCase):
         for clause_id in packet["trigger"]["explanation_clause_ids"]:
             self.assertIn(precedents.base_clause_id(clause_id), found, clause_id)
 
+    def test_the_packet_reports_the_pair_test_against_the_pair(self):
+        """``POL-NS-09(c)`` reads a counter on each profile, so its side is PAIR."""
+        packet = escalation.build_packet(CORPUS_RUN, 213)
+        pair = [s for s in packet["risk"]["signals"] if s["clause"] == "POL-NS-09(c)"][0]
+        self.assertTrue(pair["tripped"])
+        self.assertEqual("PAIR", pair["side"])
+        for signal in packet["risk"]["signals"]:
+            with self.subTest(clause=signal["clause"]):
+                self.assertIn(signal["side"], ("RIDER", "DRIVER", "PAIR"))
+
     def test_the_risk_signals_are_part_1_s_reading_of_the_same_case(self):
         packet = self.packets[207]
         self.assertEqual(["POL-NS-07"], packet["risk"]["tripped"])

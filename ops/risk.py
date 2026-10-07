@@ -26,6 +26,12 @@ counters differ, a ``counters_disagree`` note is recorded, because two counts of
 one set of events that disagree are themselves worth a reviewer's attention; the
 larger is still the figure the test runs on.
 
+The **side** this test is reported against is ``PAIR``. It reads a counter on
+each profile, and the clause is about the two parties together rather than about
+either one of them, so naming the side that supplied the larger figure would say
+the signal is about one party when it is not. The other four tests name a counter
+on one profile and are reported against that profile's side.
+
 **The lifetime counters are never read.** ``prior_no_show_flags`` and
 ``prior_deviation_flags`` are lifetime counters, and the policy names them as
 near-synonyms that must not be substituted for the trailing-window counters the
@@ -120,6 +126,17 @@ THRESHOLD_PATTERNS: Dict[str, "re.Pattern[str]"] = {
 }
 
 
+# The side a signal is reported against. Four of the five clauses name a counter
+# on one profile, and the side is that profile's. ``POL-NS-09(c)`` names a
+# counter on **each** profile -- the same disputes counted from both sides -- so
+# it is reported as ``PAIR``: reporting one of the two would say the signal is
+# about a party when the clause is about the two of them.
+SIDE_RIDER = "RIDER"
+SIDE_DRIVER = "DRIVER"
+SIDE_PAIR = "PAIR"
+SIDES: Tuple[str, ...] = (SIDE_RIDER, SIDE_DRIVER, SIDE_PAIR)
+
+
 class PolicyTest(NamedTuple):
     """One of the five policy tests, as the clause states it."""
 
@@ -129,13 +146,13 @@ class PolicyTest(NamedTuple):
     fields: Tuple[str, ...]
 
 
-# The five tests, in clause order. ``POL-NS-09(c)`` is the one whose side is
-# read off the counters rather than declared: see :data:`PAIR_CLAUSE`.
+# The five tests, in clause order, each with the side it is reported against --
+# ``PAIR`` for the one clause that names a counter on each profile.
 POLICY_TESTS: Tuple[PolicyTest, ...] = (
     PolicyTest(
         clause="POL-RD-06",
         category="ROUTE_DEVIATION",
-        side="DRIVER",
+        side=SIDE_DRIVER,
         fields=(
             "driver_profile.deviation_flags_90d",
             "driver_profile.completed_trips_90d",
@@ -144,7 +161,7 @@ POLICY_TESTS: Tuple[PolicyTest, ...] = (
     PolicyTest(
         clause="POL-RD-08",
         category="ROUTE_DEVIATION",
-        side="RIDER",
+        side=SIDE_RIDER,
         fields=(
             "rider_profile.deviation_claims_60d",
             "rider_profile.deviation_claims_60d_substantiated",
@@ -153,7 +170,7 @@ POLICY_TESTS: Tuple[PolicyTest, ...] = (
     PolicyTest(
         clause="POL-NS-07",
         category="NO_SHOW_CHARGE",
-        side="DRIVER",
+        side=SIDE_DRIVER,
         fields=(
             "driver_profile.no_show_terminations_30d",
             "driver_profile.completed_trips_30d",
@@ -162,7 +179,7 @@ POLICY_TESTS: Tuple[PolicyTest, ...] = (
     PolicyTest(
         clause="POL-NS-09(c)",
         category="NO_SHOW_CHARGE",
-        side="RIDER",
+        side=SIDE_PAIR,
         fields=(
             "rider_profile.disputes_with_counterparty_90d",
             "driver_profile.disputes_with_counterparty_90d",
@@ -171,7 +188,7 @@ POLICY_TESTS: Tuple[PolicyTest, ...] = (
     PolicyTest(
         clause="POL-NS-09(d)",
         category="NO_SHOW_CHARGE",
-        side="RIDER",
+        side=SIDE_RIDER,
         fields=("rider_profile.no_show_disputes_30d",),
     ),
 )
@@ -376,26 +393,6 @@ def _trips(clause: str, values: Mapping[str, Optional[Any]], numbers: Mapping[st
     raise RiskError("{0} is not one of the five tests this module reads".format(clause))
 
 
-def _side_for(
-    test: PolicyTest, values: Mapping[str, Optional[Any]]
-) -> str:
-    """Which side the signal is about.
-
-    Four of the five clauses name a counter on one profile and the side is that
-    profile's. ``POL-NS-09(c)`` names a counter on each -- the same disputes
-    counted from both sides -- and the reading taken is the larger of the two, so
-    the side is the side that counter belongs to. When the two are equal the
-    rider's counter is the one taken, and the side is ``RIDER``.
-    """
-    if test.clause != PAIR_CLAUSE:
-        return test.side
-    rider = _as_number(values["rider_profile.disputes_with_counterparty_90d"])
-    driver = _as_number(values["driver_profile.disputes_with_counterparty_90d"])
-    if driver is not None and (rider is None or driver > rider):
-        return "DRIVER"
-    return "RIDER"
-
-
 def _notes_for(
     test: PolicyTest, values: Mapping[str, Optional[Any]]
 ) -> Tuple[str, ...]:
@@ -428,7 +425,7 @@ def signals_for(case: Mapping[str, Any], policies: Mapping[str, Any]) -> Tuple[S
             Signal(
                 clause=test.clause,
                 category=test.category,
-                side=_side_for(test, values),
+                side=test.side,
                 fields=tuple(sorted(values.items())),
                 threshold=sentence,
                 tripped=_trips(test.clause, values, numbers),

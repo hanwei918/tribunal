@@ -532,6 +532,26 @@ class TheCorpusQueueTests(unittest.TestCase):
         self.assertEqual(CORPUS_AUTO, len(auto))
         self.assertEqual([], [entry for entry in self.entries if entry.lane == queue.LANE_SAFETY])
 
+    def test_a_tripped_pair_test_still_routes_the_case_to_the_second_tier(self):
+        """The queue reads ``tripped``, and the pair test's side does not move it.
+
+        ``POL-NS-09(c)`` is reported against ``PAIR`` rather than against one
+        party; the queue is unaffected by that, which is the point -- it routes
+        on whether a signal tripped and never on which side a signal names.
+        """
+        entries = queue.build_queue(
+            [
+                dispute(11, ruling="ESCALATE", risk_tripped=True),
+                dispute(12, ruling="ESCALATE", risk_tripped=False),
+            ],
+            self.config,
+        )
+        self.assertEqual(queue.TIER_HUMAN_RISK, entries[0].tier)
+        self.assertEqual(11, entries[0].case_no)
+        self.assertIn(queue.REASON_RISK_TRIPPED, entries[0].reasons)
+        self.assertEqual(queue.TIER_HUMAN, entries[1].tier)
+        self.assertNotIn(queue.REASON_RISK_TRIPPED, entries[1].reasons)
+
     def test_the_two_tier_two_cases_are_the_two_that_trip_a_signal(self):
         self.assertEqual(
             list(CORPUS_TIER_TWO),
