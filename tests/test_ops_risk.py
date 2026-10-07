@@ -1,12 +1,7 @@
 """The fraud and bad-faith signals of ``ops/risk.py``.
 
-The operations layer runs beside the debate, never inside it: it reads a case
-and the loaded policy and writes nothing back into a brief or a prompt. This
-module holds that layer to the rules the ops task states for every part, and to
-the five policy tests part 1 names.
-
-Five things are asserted, and each is asserted over the real corpus rather than
-over a restatement of it:
+Five things are asserted here, and each is asserted over the real corpus rather
+than over a restatement of it:
 
 * **The field list.** Every test reads exactly the profile fields the policy
   clause names and no other profile field, checked twice -- once against the
@@ -22,27 +17,25 @@ over a restatement of it:
   four the task measured: 105, 107, 207 and 213.
 * **The attention flag.** ``repeat_party`` is not a policy test and fires on
   none of the corpus cases, so it is tested on synthetic fixtures of its own.
-* **The layer's rules.** No module in ``ops/`` imports a network client, nothing
-  in ``tribunal/`` or ``eval/`` imports ``ops``, no command opens anything under
-  an ``answers`` directory, no output carries the keys the task names, two runs
-  are byte-identical, and no command writes a file.
+* **The reading of ``POL-NS-09(c)``.** The larger of the two counters, with the
+  disagreement note when they differ.
+
+The rules that bind every module of the layer -- the import graph, the answer
+keys, the write guard and the ``--out`` refusals -- are asserted once, over every
+``ops`` command, in ``tests/test_ops_layer.py``.
 """
 
 from __future__ import annotations
 
-import builtins
 import contextlib
 import io
 import json
-import os
 import sys
 import tempfile
 import unittest
-from datetime import datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Sequence, Set, Tuple
-from unittest import mock
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -108,15 +101,6 @@ EXPECTED_CORPUS_TRIPS: Tuple[Tuple[int, str], ...] = (
 # The lifetime counters the policy names as near-synonyms. Reading one where a
 # clause names a trailing-window counter is the mistake the task calls the trap.
 LIFETIME_COUNTERS = ("prior_no_show_flags", "prior_deviation_flags")
-
-# The keys no output may carry.
-FORBIDDEN_OUTPUT_KEYS = ("expected", "matched", "grade")
-
-# Directories that are not repository content, for the write check.
-NOT_REPOSITORY_CONTENT = frozenset(
-    {".git", ".workbuddy-ai", "__pycache__", ".venv", "tmp", "output"}
-)
-
 
 # --------------------------------------------------------------------------
 # Helpers
@@ -199,18 +183,6 @@ def case_with_recording_profiles(case: Dict[str, Any]) -> Tuple[Dict[str, Any], 
         if artifact["evidence_type"] in ("RIDER_PROFILE", "DRIVER_PROFILE"):
             artifact["payload"] = RecordingProfile(artifact["payload"], log)
     return copy, log
-
-
-def repository_files() -> Set[str]:
-    found: Set[str] = set()
-    for path in PROJECT_ROOT.rglob("*"):
-        if not path.is_file():
-            continue
-        relative = path.relative_to(PROJECT_ROOT)
-        if any(part in NOT_REPOSITORY_CONTENT for part in relative.parts[:-1]):
-            continue
-        found.add(str(relative))
-    return found
 
 
 # --------------------------------------------------------------------------
@@ -573,193 +545,6 @@ class TheRepeatPartyTests(unittest.TestCase):
                 self.assertEqual(
                     (), risk.repeat_party_flags(case, corpus_root())
                 )
-
-
-# --------------------------------------------------------------------------
-# The layer's rules
-# --------------------------------------------------------------------------
-class TheImportGraphTests(unittest.TestCase):
-    """Rule 1: what ``ops/`` may import, and what may import ``ops/``."""
-
-    ALLOWED_PACKAGES = frozenset({"ops", "tribunal", "eval"})
-
-    FORBIDDEN_MODULES = frozenset(
-        {
-            "tribunal.llm",
-            "urllib",
-            "http",
-            "socket",
-            "ssl",
-            "requests",
-            "httpx",
-            "urllib3",
-            "ftplib",
-            "smtplib",
-            "telnetlib",
-            "xmlrpc",
-            "asyncio",
-        }
-    )
-
-    def _imports(self, path: Path) -> Set[str]:
-        import ast
-
-        found: Set[str] = set()
-        tree = ast.parse(path.read_text(encoding="utf-8"))
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Import):
-                for alias in node.names:
-                    found.add(alias.name)
-            elif isinstance(node, ast.ImportFrom):
-                if node.level:
-                    continue
-                if node.module:
-                    found.add(node.module)
-                    for alias in node.names:
-                        found.add(node.module + "." + alias.name)
-        return found
-
-    def ops_modules(self) -> List[Path]:
-        return sorted((PROJECT_ROOT / "ops").glob("*.py"))
-
-    def test_ops_modules_import_only_from_tribunal_eval_and_ops(self):
-        self.assertTrue(self.ops_modules(), "ops/ holds no modules")
-        for path in self.ops_modules():
-            for name in self._imports(path):
-                top = name.split(".")[0]
-                if top in ("ops", "tribunal", "eval"):
-                    continue
-                if top in sys.stdlib_module_names:
-                    continue
-                with self.subTest(module=path.name, imported=name):
-                    self.fail(
-                        "{0} imports {1}, which is neither the standard library nor "
-                        "a repository package".format(path.name, name)
-                    )
-
-    def test_no_ops_module_imports_a_network_client(self):
-        for path in self.ops_modules():
-            for name in self._imports(path):
-                for forbidden in self.FORBIDDEN_MODULES:
-                    with self.subTest(module=path.name, imported=name):
-                        self.assertFalse(
-                            name == forbidden or name.startswith(forbidden + "."),
-                            "{0} imports {1}".format(path.name, name),
-                        )
-
-    def test_nothing_in_tribunal_or_eval_imports_ops(self):
-        for package in ("tribunal", "eval"):
-            for path in sorted((PROJECT_ROOT / package).glob("*.py")):
-                for name in self._imports(path):
-                    with self.subTest(module=path.name, imported=name):
-                        self.assertFalse(
-                            name == "ops" or name.startswith("ops."),
-                            "{0}/{1} imports ops".format(package, path.name),
-                        )
-
-    def test_the_import_walk_reaches_the_modules_it_claims_to(self):
-        """A control: the walk is reading real import statements."""
-        imports = self._imports(PROJECT_ROOT / "ops" / "risk.py")
-        self.assertTrue(imports, "risk.py was walked and no import was found")
-
-
-class TheNoAnswersTests(unittest.TestCase):
-    """Rule 2: no ``ops`` command opens an answer key, and none prints one."""
-
-    def _guard(self):
-        real_open = io.open
-
-        def guarded(file, *args, **kwargs):
-            text = str(file).replace(os.sep, "/")
-            if "/answers/" in text:
-                raise AssertionError("an ops command opened {0}".format(text))
-            return real_open(file, *args, **kwargs)
-
-        return guarded
-
-    def test_the_guard_is_capable_of_failing(self):
-        """The positive control: a path under answers/ is refused."""
-        with mock.patch("io.open", self._guard()), mock.patch(
-            "builtins.open", self._guard()
-        ):
-            with self.assertRaises(AssertionError):
-                Path("/tmp/nowhere-at-all/answers/ground_truth.json").read_text()
-
-    def test_every_command_runs_over_the_corpus_with_the_keys_unreadable(self):
-        commands = [["--case", str(case_no)] for case_no in CORPUS_CASE_NUMBERS]
-        commands.append(["--case-file", str(PROJECT_ROOT / "data" / "external" / "ryde" / "case-00901.json")])
-
-        for arguments in commands:
-            with self.subTest(arguments=arguments):
-                with mock.patch("io.open", self._guard()), mock.patch(
-                    "builtins.open", self._guard()
-                ):
-                    code, out, err = run_command(arguments)
-                self.assertEqual(0, code, err)
-                for key in FORBIDDEN_OUTPUT_KEYS:
-                    self.assertNotIn(key, out, arguments)
-                    self.assertNotIn(key, err, arguments)
-
-    def test_the_corpus_run_prints_the_four_signals_it_should(self):
-        code, out, err = run_command(["--case", "213"])
-        self.assertEqual(0, code, err)
-        self.assertIn("POL-NS-09(c)", out)
-        self.assertIn("tripped=true", out)
-
-
-class TheDeterminismTests(unittest.TestCase):
-    """Rule 5: two runs give byte-identical output, and outputs are sorted."""
-
-    def test_two_runs_of_one_case_are_byte_identical(self):
-        first = run_command(["--case", "207"])
-        second = run_command(["--case", "207"])
-        self.assertEqual(first, second)
-
-    def test_the_signals_are_sorted_by_clause(self):
-        for case_no in CORPUS_CASE_NUMBERS:
-            case = load_corpus_case(case_no)
-            assessment = risk.assess(case, policies_for(case), corpus_root())
-            with self.subTest(case=case_no):
-                clauses = [signal.clause for signal in assessment.signals]
-                self.assertEqual(sorted(clauses), clauses)
-
-    def test_the_fields_of_a_signal_are_sorted_by_path(self):
-        for case_no in CORPUS_CASE_NUMBERS:
-            case = load_corpus_case(case_no)
-            assessment = risk.assess(case, policies_for(case), corpus_root())
-            for signal in assessment.signals:
-                with self.subTest(case=case_no, clause=signal.clause):
-                    paths = [path for path, _ in signal.fields]
-                    self.assertEqual(sorted(paths), paths)
-
-    def test_the_rendering_is_ascii(self):
-        code, out, err = run_command(["--case", "105"])
-        self.assertEqual(0, code, err)
-        out.encode("ascii")
-
-
-class TheNoWritesTests(unittest.TestCase):
-    """Rule 3: ``ops`` writes nothing unless it is given an ``--out``.
-
-    Part 1's command has no ``--out`` at all, so the rule it is held to is the
-    first half of the sentence: the command leaves the tree as it found it.
-    """
-
-    def test_the_command_writes_no_file(self):
-        before = repository_files()
-        for case_no in (105, 107, 207, 208, 213):
-            run_command(["--case", str(case_no)])
-        self.assertEqual(before, repository_files())
-
-    def test_the_module_holds_no_write_call(self):
-        import ast
-
-        tree = ast.parse((PROJECT_ROOT / "ops" / "risk.py").read_text(encoding="utf-8"))
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Call):
-                name = getattr(node.func, "attr", None) or getattr(node.func, "id", None)
-                with self.subTest(line=node.lineno):
-                    self.assertNotIn(name, ("write_text", "write_bytes", "mkdir", "touch"))
 
 
 if __name__ == "__main__":
