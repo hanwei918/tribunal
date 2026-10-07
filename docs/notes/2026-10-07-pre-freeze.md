@@ -165,8 +165,14 @@ request body's digest, and a test asserts the two are never equal.
 offline replay checks moves**: the same requests are sent, the same answers are
 written and the same rulings come out. Old run directories keep their old events
 -- a line written before this has no `body_sha256` and is not rewritten, which is
-what an append-only log means -- and every committed log still verifies, because
-the new fields are payload and the chain is built over whatever the payload is.
+what an append-only log means -- and **no committed log that verified before
+stops verifying**: the new fields are payload and the chain is built over
+whatever the payload is. One committed log does not verify, and did not before
+this either: `runs/codex/deepseek-deepseek-flash/events.jsonl` breaks at line
+343, the iCloud move of 2026-09-27 recorded in
+`docs/notes/2026-09-27-the-replays-the-icloud-move-and-the-probe.md`, and
+`runs/` is not edited to repair it. `python3 -m eval.readiness` names that break
+as known and documented rather than as a fault, and fails on any other break.
 
 **A timeline per case.** `python3 -m eval.events --run-dir <dir> --case N` now
 prints a timeline rather than a line of key-value pairs: one row per event, in

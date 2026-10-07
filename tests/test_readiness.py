@@ -23,13 +23,14 @@ import unittest
 from contextlib import redirect_stderr
 from decimal import Decimal
 from pathlib import Path
+from unittest import mock
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from eval import readiness  # noqa: E402
-from tribunal import events, money  # noqa: E402
+from tribunal import events, money, precedents  # noqa: E402
 
 # A start instant inside the peak band, and one outside it. The owner's speed run
 # began at 20:41 SGT on a Tuesday, which is outside both windows.
@@ -448,6 +449,108 @@ class ReportTests(unittest.TestCase):
             self.assertIn("0.6 USD/M", text)
             self.assertIn("cached input 0.003 USD/M", text)
             self.assertIn("ordinary", text)
+
+
+def run_with_a_broken_log(root: Path, name: str) -> Path:
+    """A run directory whose event log breaks at its second line.
+
+    One valid line, written through the real writer, then a line that is not
+    JSON at all: ``verify_chain`` reports a ``malformed`` break at line 2, which
+    is all this needs -- the line number and the path are what the pin names.
+    """
+    run_dir = Path(root) / name
+    run_dir.mkdir(parents=True, exist_ok=True)
+    (run_dir / "run.json").write_text("{}", encoding="utf-8")
+    log = events.EventLog(run_dir / events.EVENTS_FILE, invocation_id="fixture")
+    log.record(events.EVENT_CASE_START, case_no=101, position=1, total=1)
+    with open(run_dir / events.EVENTS_FILE, "a", encoding="utf-8") as handle:
+        handle.write("this line is not JSON\n")
+    return run_dir
+
+
+class KnownLogBreakTests(unittest.TestCase):
+    """One committed log is broken, and the report says so rather than hiding it.
+
+    The break is the iCloud move of 2026-09-27, and ``runs/`` must not be edited
+    to repair it. The pin names the path, the line and the note that documents
+    it; the check still fails on any other break, and on a pin that has gone
+    stale.
+    """
+
+    def test_the_pinned_break_is_named_as_known_and_not_as_a_fault(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            ok, lines = readiness.logs_dimension(build_run(Path(tmp) / "run"), 101)
+
+        text = "\n".join(lines)
+        self.assertIn("known, documented in", text)
+        self.assertIn(
+            "runs/codex/deepseek-deepseek-flash/events.jsonl at line 343", text
+        )
+        self.assertNotIn("do not verify", text)
+        self.assertTrue(ok, text)
+
+    def test_with_the_pin_removed_the_same_break_is_a_fault(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with mock.patch.object(readiness, "KNOWN_LOG_BREAKS", ()):
+                ok, lines = readiness.logs_dimension(build_run(Path(tmp) / "run"), 101)
+
+        text = "\n".join(lines)
+        self.assertFalse(ok, text)
+        self.assertIn("do not verify", text)
+        self.assertIn("runs/codex/deepseek-deepseek-flash/events.jsonl", text)
+        self.assertIn(readiness.FAIL, text)
+
+    def test_a_second_break_in_a_fixture_log_fails_the_check(self):
+        """A pinned break is named; an unpinned one beside it is a fault."""
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            runs.mkdir()
+            pinned = run_with_a_broken_log(runs, "pinned")
+            other = run_with_a_broken_log(runs, "other")
+            pin = (
+                precedents.repository_relative(pinned / events.EVENTS_FILE),
+                2,
+                "docs/notes/x.md",
+            )
+            with mock.patch.object(readiness, "RUNS_DIR", runs):
+                with mock.patch.object(readiness, "KNOWN_LOG_BREAKS", (pin,)):
+                    ok, lines = readiness.logs_dimension(
+                        build_run(Path(tmp) / "speed"), 101
+                    )
+
+        text = "\n".join(lines)
+        self.assertFalse(ok, text)
+        self.assertIn("known, documented in docs/notes/x.md", text)
+        self.assertIn(precedents.repository_relative(other / events.EVENTS_FILE), text)
+        # Exactly one log is a fault: the pinned one is named as known instead.
+        self.assertIn("1 do not verify", text)
+        self.assertIn("1 known break(s)", text)
+
+    def test_a_pin_that_no_longer_names_a_break_is_a_fault(self):
+        """A stale pin is a claim about the record that is no longer true."""
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / "runs"
+            intact = runs / "intact"
+            intact.mkdir(parents=True)
+            (intact / "run.json").write_text("{}", encoding="utf-8")
+            log = events.EventLog(
+                intact / events.EVENTS_FILE, invocation_id="fixture"
+            )
+            log.record(events.EVENT_CASE_START, case_no=101, position=1, total=1)
+            pin = (
+                precedents.repository_relative(intact / events.EVENTS_FILE),
+                99,
+                "docs/notes/x.md",
+            )
+            with mock.patch.object(readiness, "RUNS_DIR", runs):
+                with mock.patch.object(readiness, "KNOWN_LOG_BREAKS", (pin,)):
+                    ok, lines = readiness.logs_dimension(
+                        build_run(Path(tmp) / "speed"), 101
+                    )
+
+        text = "\n".join(lines)
+        self.assertFalse(ok, text)
+        self.assertIn("pinned break(s) no longer present", text)
 
 
 if __name__ == "__main__":

@@ -31,7 +31,10 @@ The five dimensions
    reason still refuse without one.
 5. **Logs** -- ``verify_chain`` over every committed run's event log, the share
    of the speed run's ``agent_call`` events carrying all four new fields, and the
-   timeline command over a speed-run case.
+   timeline command over a speed-run case. One break in a committed log is known
+   and documented -- the iCloud move of 2026-09-27 cut it -- and is named as such
+   rather than as a fault; any break anywhere else, or a pinned break that has
+   moved or gone, fails the check.
 
 No model call is made and no browser is launched. The subprocesses it runs are
 the test modules and the builders that make no model call either; they are run
@@ -103,6 +106,24 @@ COST_QUANTUM = Decimal("0.000001")
 # The four fields every ``agent_call`` event carries since the call log was
 # completed, and the fields that were already there.
 NEW_CALL_FIELDS = ("model", "policy_version", "brief_sha256", "body_sha256")
+
+# A break in a committed log that is **known and documented**, and that this
+# report names as such rather than as a fault. The iCloud move of 2026-09-27 cut
+# one log, and ``runs/`` must not be edited to repair it: the break is part of
+# the record. Each entry is ``(repository-relative path, the line the chain
+# breaks at, the note that documents it)``.
+#
+# The pin is not a pass. The check still fails if any log breaks anywhere else,
+# if a pinned break moves off its line, or if a pinned break disappears -- a pin
+# that no longer names a real break is a stale claim about the record, and this
+# report fails on a stale claim as it fails on a new fault.
+KNOWN_LOG_BREAKS = (
+    (
+        "runs/codex/deepseek-deepseek-flash/events.jsonl",
+        343,
+        "docs/notes/2026-09-27-the-replays-the-icloud-move-and-the-probe.md",
+    ),
+)
 
 # What a dimension's line says. Two words, so a reader scanning the report can
 # see the shape of it without reading the numbers.
@@ -755,6 +776,8 @@ def logs_dimension(run_dir: Path, case_no: int) -> Tuple[bool, List[str]]:
     # is not in the file; they are copies, not runs, and they are not what this
     # dimension is about.
     broken: List[Tuple[str, str]] = []
+    known: List[str] = []
+    seen: List[Tuple[str, int, str]] = []
     logs = 0
     for log in sorted(RUNS_DIR.rglob(events.EVENTS_FILE)):
         if not (log.parent / runner.METADATA_FILE).is_file():
@@ -768,20 +791,50 @@ def logs_dimension(run_dir: Path, case_no: int) -> Tuple[bool, List[str]]:
             continue
         logs += 1
         break_ = events.verify_chain(log)
-        if break_ is not None:
-            broken.append(
-                (precedents.repository_relative(log), break_.describe())
+        if break_ is None:
+            continue
+        relative = precedents.repository_relative(log)
+        pinned = next(
+            (
+                entry
+                for entry in KNOWN_LOG_BREAKS
+                if entry[0] == relative and entry[1] == break_.line_number
+            ),
+            None,
+        )
+        if pinned is None:
+            broken.append((relative, break_.describe()))
+        else:
+            seen.append(pinned)
+            known.append(
+                "{0} at {1}, known, documented in {2}".format(
+                    relative, break_.describe(), pinned[2]
+                )
             )
-    ok = ok and not broken
+    # A pin that named a break that is not there any more is a stale claim, and
+    # a stale claim fails the check as a new fault does.
+    stale = [entry for entry in KNOWN_LOG_BREAKS if entry not in seen]
+    ok = ok and not broken and not stale
     lines.append(
-        "  {0}: verify_chain over {1} committed run log(s){2}".format(
-            PASS if not broken else FAIL,
+        "  {0}: verify_chain over {1} committed run log(s){2}{3}{4}".format(
+            PASS if not broken and not stale else FAIL,
             logs,
             ""
             if not broken
             else " -- {0} do not verify: {1}".format(
                 len(broken),
                 "; ".join("{0} at {1}".format(path, detail) for path, detail in broken),
+            ),
+            ""
+            if not known
+            else " -- {0} known break(s): {1}".format(len(known), "; ".join(known)),
+            ""
+            if not stale
+            else " -- {0} pinned break(s) no longer present: {1}".format(
+                len(stale),
+                "; ".join(
+                    "{0} at line {1}".format(entry[0], entry[1]) for entry in stale
+                ),
             ),
         )
     )
