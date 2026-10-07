@@ -27,14 +27,24 @@ layer does not write into, and the sealed roots and headline run directories,
 which are :func:`eval.sealed_roots.refuse_a_sealed_destination`'s rule. The
 second half is a call to that helper rather than a copy of it, so the two cannot
 drift apart.
+
+**Which set a run directory belongs to** is the other thing more than one
+command needs, and it is here for the same reason: ``ops.escalation`` builds a
+packet from a run directory and ``ops.queue`` routes the disputes of one, and
+both have to find the cases the run was made from. The rule is the registry's
+own -- see :func:`development_set_for` -- so a set added to
+``eval.development_sets`` is one this layer can read without being edited.
 """
 
 from __future__ import annotations
 
+import json
+from decimal import Decimal
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional, Type
 
-from eval import sealed_roots
+from eval import development_sets, sealed_roots
+from tribunal import loader
 
 # ``ops/`` sits directly under the project root.
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -92,3 +102,67 @@ def refuse_a_forbidden_destination(
     except sealed_roots.SealedDestinationError as exc:
         raise OpsWriteError(str(exc)) from exc
     return resolved
+
+
+def development_set_for(run_dir: Path):
+    """Which set a run directory belongs to, read off its path.
+
+    The rule is the registry's own: the path component that follows the last
+    ``runs`` segment names a set when it is one of the registered runs
+    subdirectories, and everything else is the corpus -- whose run directory is
+    ``runs/<model>/`` and carries no component of its own. The registry is read
+    rather than restated, so a set added there is one this layer can read
+    without being edited.
+
+    The mapping is deliberately not ``tribunal.precedents``' own: its table
+    names the sets that existed when the precedent library was built and does
+    not know ``wild-v2``, so a run directory under it would be answered as the
+    corpus and its cases loaded through the wrong manifest.
+    """
+    parts = Path(run_dir).resolve().parts
+    indices = [index for index, part in enumerate(parts) if part == "runs"]
+    if indices:
+        following = indices[-1] + 1
+        if following < len(parts):
+            for development_set in development_sets.BY_NAME.values():
+                if development_set.runs_subdir == parts[following]:
+                    return development_set
+    return development_sets.CORPUS
+
+
+def case_root_of(development_set) -> Path:
+    """Where a set's public case files live.
+
+    The corpus is loaded through the manifest under ``data/cases/``; a second
+    set carries its own directory. It is the root a case is read from, and the
+    root a repeated party id would be looked for in.
+    """
+    if development_set.case_root is None:
+        return Path(loader.CASES_DIR)
+    return Path(development_set.case_root)
+
+
+def read_json_document(path: Path, error: Type[OpsError] = OpsError) -> Any:
+    """Read one UTF-8 JSON document, with amounts as ``Decimal``.
+
+    ``parse_float=Decimal`` fixes the money representation at the parse
+    boundary, which is where the literal is still available -- the same hook
+    ``tribunal.loader`` uses, so a figure read here is the figure the file
+    wrote rather than the nearest binary float.
+
+    A missing file, an unreadable one and one that is not JSON are all reported
+    the same way, because to a caller they are one thing: the document that was
+    named is not there to be read.
+
+    ``error`` is the exception class to raise, so each module can report a
+    document it could not read as its own error type while the reading itself
+    stays in one place.
+    """
+    try:
+        return json.loads(Path(path).read_text(encoding="utf-8"), parse_float=Decimal)
+    except FileNotFoundError as exc:
+        raise error("no file at {0}".format(path)) from exc
+    except OSError as exc:
+        raise error("{0} cannot be read: {1}".format(path, exc)) from exc
+    except ValueError as exc:
+        raise error("invalid JSON in {0}: {1}".format(path, exc)) from exc

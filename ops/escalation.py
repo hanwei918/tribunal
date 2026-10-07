@@ -46,8 +46,15 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
-from eval import development_sets
-from ops import OpsError, OpsWriteError, refuse_a_forbidden_destination, risk
+from ops import (
+    OpsError,
+    OpsWriteError,
+    case_root_of,
+    development_set_for,
+    read_json_document,
+    refuse_a_forbidden_destination,
+    risk,
+)
 from tribunal import events, loader, money, precedents
 
 # The ruling value a packet is built for.
@@ -84,42 +91,8 @@ class EscalationError(OpsError):
 # Reading the run
 # --------------------------------------------------------------------------
 def _read_json(path: Path) -> Any:
-    try:
-        return json.loads(Path(path).read_text(encoding="utf-8"), parse_float=Decimal)
-    except FileNotFoundError as exc:
-        raise EscalationError("no file at {0}".format(path)) from exc
-    except OSError as exc:
-        raise EscalationError("{0} cannot be read: {1}".format(path, exc)) from exc
-    except ValueError as exc:
-        raise EscalationError("invalid JSON in {0}: {1}".format(path, exc)) from exc
-
-
-def development_set_for(run_dir: Path):
-    """Which set a run directory belongs to, read off its path.
-
-    The rule is the registry's own: the path component that follows the last
-    ``runs`` segment names a set when it is one of the registered runs
-    subdirectories, and everything else is the corpus -- whose run directory is
-    ``runs/<model>/`` and carries no component of its own. The registry is read
-    rather than restated, so a set added there is one this command can build a
-    packet for without being edited.
-    """
-    parts = Path(run_dir).resolve().parts
-    indices = [index for index, part in enumerate(parts) if part == "runs"]
-    if indices:
-        following = indices[-1] + 1
-        if following < len(parts):
-            for development_set in development_sets.BY_NAME.values():
-                if development_set.runs_subdir == parts[following]:
-                    return development_set
-    return development_sets.CORPUS
-
-
-def _case_root(development_set) -> Path:
-    """Where a set's cases live, which is where a repeat party would be found."""
-    if development_set.case_root is None:
-        return Path(loader.CASES_DIR)
-    return Path(development_set.case_root)
+    """The layer's reader, with this module's own error type."""
+    return read_json_document(path, EscalationError)
 
 
 def _transcript_path(run_dir: Path, document: Mapping[str, Any], case_no: int) -> Path:
@@ -351,7 +324,7 @@ def build_packet(
                 case_no, development_set.name, exc
             )
         ) from exc
-    case_root = _case_root(development_set)
+    case_root = case_root_of(development_set)
 
     configuration = document.get("configuration")
     if not isinstance(configuration, Mapping):

@@ -45,7 +45,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 import ops  # noqa: E402
-from ops import escalation, review, risk  # noqa: E402
+from ops import escalation, queue, review, risk  # noqa: E402
 
 # The run directory every command here is run against, and its set.
 CORPUS_RUN = PROJECT_ROOT / "runs" / "deepseek-deepseek-flash"
@@ -124,9 +124,10 @@ def every_command() -> List[Tuple[str, Callable[..., int], List[str]]]:
 
     Each entry is a command that can run: the risk signals for every case, a
     packet for every case (``--any``, so a case that did not escalate is still
-    built), a packet for each of the five escalated cases without ``--any``, and
-    one closure through the review step. A command that refuses is still a
-    command that was run, so the refusals are exercised too.
+    built), a packet for each of the five escalated cases without ``--any``, the
+    queue for the run, at no instant and at a fixed one, and one closure through
+    the review step. A command that refuses is still a command that was run, so
+    the refusals are exercised too.
     """
     commands: List[Tuple[str, Callable[..., int], List[str]]] = []
     for case_no in CORPUS_CASE_NUMBERS:
@@ -146,6 +147,14 @@ def every_command() -> List[Tuple[str, Callable[..., int], List[str]]]:
                 ["--run-dir", str(CORPUS_RUN), "--case", str(case_no)],
             )
         )
+    commands.append(("queue", queue.main, ["--run-dir", str(CORPUS_RUN)]))
+    commands.append(
+        (
+            "queue --now",
+            queue.main,
+            ["--run-dir", str(CORPUS_RUN), "--now", "2026-07-30T00:00:00+08:00"],
+        )
+    )
     return commands
 
 
