@@ -1757,9 +1757,20 @@ def approve_proposal(
         )
 
     directory = amendments_directory(amendments_root)
-    directory.mkdir(parents=True, exist_ok=True)
     base_version = policy_versions.current_version(amendments_root)
     number = base_version
+    # An amendment numbered N computes policy version N + 1. Since 2026-10-08
+    # version 3 is a separate policy base of its own, kept at ``policy/v3/``, so
+    # amendment 0002 on base 1 would be a second policy under one number -- and
+    # ``loader.load_policies`` would read the separate base's own files for it.
+    # Refused before the directory is created, so a refused approval writes
+    # nothing at all. It is this module's own error type, like every other
+    # refusal an approve can make.
+    try:
+        policy_versions.refuse_a_taken_version(number + 1)
+    except policy_versions.AmendmentError as exc:
+        raise PolicyGapError(str(exc))
+    directory.mkdir(parents=True, exist_ok=True)
     stamp = (now or (lambda: datetime.now(timezone.utc).isoformat()))()
 
     amendment = {

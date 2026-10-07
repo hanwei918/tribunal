@@ -336,12 +336,15 @@ def load_policies(
     arithmetic constants (for example ``fare_model`` and ``fee_schedule``)
     reach the agents. An unsupported category raises rather than defaulting.
 
-    ``policy_version`` is the version to build: version 1 is the three files
-    exactly as committed, and a higher version applies the approved amendments
-    numbered below it. Version 1 returns the files as they were read, without a
-    copy, and does not read ``policy/amendments/`` at all -- so a plain run
-    builds the bytes it always built, and a broken amendment cannot stop the
-    version-1 measurement.
+    ``policy_version`` is the version to build. Version 1 is the three files
+    exactly as committed, and it is read from ``policy/``; a higher version of
+    the amendment sequence applies the approved amendments numbered below it. A
+    **separate base** -- version 3, Ji Guofang's platform-aligned policy -- is
+    read from its own directory (``policy/v3/``) and has no amendment applied to
+    it, because its own text already carries what amendment ``0001`` adds to
+    version 1. Version 1 returns the files as they were read, without a copy, and
+    does not read ``policy/amendments/`` at all -- so a plain run builds the bytes
+    it always built, and a broken amendment cannot stop the version-1 measurement.
     """
     filename = CATEGORY_POLICY_FILES.get(category)
     if filename is None:
@@ -350,11 +353,16 @@ def load_policies(
                 category, ", ".join(sorted(CATEGORY_POLICY_FILES))
             )
         )
+    directory = policy_versions.base_directory(policy_version)
     policies = {
-        "general": _read_json(POLICY_DIR / GENERAL_POLICY_FILE),
-        "category": _read_json(POLICY_DIR / filename),
+        "general": _read_json(directory / GENERAL_POLICY_FILE),
+        "category": _read_json(directory / filename),
     }
     if policy_version == policy_versions.BASE_VERSION:
+        return policies
+    if policy_versions.is_a_separate_base(policy_version):
+        # A separate base is its own policy: its files are read whole, exactly as
+        # version 1's are, and the amendments directory is not consulted.
         return policies
     return policy_versions.apply_amendments(
         policies,

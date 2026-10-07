@@ -61,6 +61,7 @@ DERIVED_KEY = "derived"
 # POL-RD-01's excess and status. Emitted for ROUTE_DEVIATION cases only.
 DEVIATION_BLOCK = "deviation"
 ROUTE_DEVIATION_CATEGORY = "ROUTE_DEVIATION"
+NO_SHOW_CHARGE_CATEGORY = "NO_SHOW_CHARGE"
 POL_RD_01 = "POL-RD-01"
 
 NO_DEVIATION_INPUTS_REASON = (
@@ -1826,6 +1827,161 @@ def _policies_without_notes(policies: Dict[str, Any]) -> Dict[str, Any]:
     return trimmed
 
 
+# --------------------------------------------------------------------------
+# Provenance, and the platform parameters in force
+# --------------------------------------------------------------------------
+# Version 3's policy files carry provenance in a ``sources`` key: on a clause, on
+# a block such as ``fee_schedule`` or ``fare_model``, and once at the top level of
+# ``general.json`` (which the draft's own notes call ``policy_sources``). The
+# draft's rule is that ``notes`` is what the model reads and ``sources`` is for
+# people, so a brief at version 3 has every one of those keys removed before the
+# policies are injected -- otherwise Ryde's help-centre wording, the organisers'
+# sample and a sealed-set author would reach the advocates and the judge in every
+# request. Both spellings are removed, so the filter does not depend on which name
+# a later draft gives the top-level block.
+PROVENANCE_KEYS = ("sources", "policy_sources")
+
+# The version from which provenance is stripped. Versions 1 and 2 carry no
+# ``sources`` key at all, so this changes nothing for them and their briefs stay
+# byte-identical; the gate is written as a version rather than as "always" so
+# that what a version-1 brief is has a statement rather than an accident.
+PROVENANCE_STRIPPED_VERSION = 3
+
+
+def _without_provenance(policies: Dict[str, Any]) -> Dict[str, Any]:
+    """Return the policies with every provenance key, at any depth, removed.
+
+    ``sources`` is dropped wherever it appears -- top level, clause, or a block
+    such as ``fee_schedule`` -- and so is ``policy_sources``, the name the
+    draft's notes give the top-level one. Nothing else is touched.
+    """
+    return {key: _strip_provenance(policy) for key, policy in policies.items()}
+
+
+def _strip_provenance(node: Any) -> Any:
+    """One node with its provenance keys removed, recursively."""
+    if isinstance(node, dict):
+        return {
+            key: _strip_provenance(value)
+            for key, value in node.items()
+            if key not in PROVENANCE_KEYS
+        }
+    if isinstance(node, list):
+        return [_strip_provenance(value) for value in node]
+    return node
+
+
+# The block a version-3 no-show brief publishes beside the trip record: the
+# platform parameters in force for that trip. A case that carries its own
+# ``platform_policy`` uses it; a case that carries none, and whose pickup zone
+# class and vehicle type are in the version-1 fee table, gets the block the
+# version-1 parameters imply, marked ``AUTHORED-V1``; a case with neither uses
+# the loaded policy's ``fee_schedule.defaults``.
+PLATFORM_POLICY_KEY = "platform_policy"
+PLATFORM_POLICY_IN_FORCE_KEY = "platform_policy_in_force"
+AUTHORED_V1_SOURCE = "AUTHORED-V1"
+PLATFORM_POLICY_IN_FORCE_VERSION = 3
+
+# The version-1 fee table's own field names. Named here so the derivation reads
+# the table by name rather than by position.
+V1_ZONE_FEE_KEY = "zone_class_fee_sgd"
+V1_TIER_FEE_KEY = "vehicle_tier_fee_sgd"
+V1_DWELL_KEY = "minimum_dwell_sec"
+
+
+def _version_one_fee_schedule(category: str) -> Dict[str, Any]:
+    """The version-1 fee table for ``category``, read at run time.
+
+    Read through the loader from ``policy/no_show.json`` -- the live version-1
+    file -- rather than typed here or read from the version-3 policy, because the
+    figures a version-1 case was authored under are exactly what the derivation
+    has to reproduce.
+    """
+    policies = loader.load_policies(category, policy_versions.BASE_VERSION)
+    return policies["category"].get("fee_schedule") or {}
+
+
+def _authored_v1_block(
+    trip: Dict[str, Any], fee_schedule: Dict[str, Any], defaults: Dict[str, Any]
+) -> Optional[Dict[str, Any]]:
+    """The block the version-1 parameters imply for one trip, or ``None``.
+
+    ``free_wait_sec`` comes from the zone's ``minimum_dwell_sec`` and
+    ``cancellation_fee_sgd`` from the GREATER of the zone-class and vehicle-tier
+    fees, both read out of the version-1 table. The five parameters that are not
+    in that table -- the two grace windows, the waiting fee, who receives the fee
+    and how arrival is marked -- are read from the loaded policy's
+    ``fee_schedule.defaults``, so no figure is typed here either. ``None`` means
+    the trip's zone class or vehicle type is not in the table at all, and the
+    caller falls back to ``defaults``.
+    """
+    zone = trip.get("pickup_zone_class")
+    tier = trip.get("vehicle_type")
+    zone_fee = (fee_schedule.get(V1_ZONE_FEE_KEY) or {}).get(zone)
+    tier_fee = (fee_schedule.get(V1_TIER_FEE_KEY) or {}).get(tier)
+    dwell = (fee_schedule.get(V1_DWELL_KEY) or {}).get(zone)
+    if zone_fee is None or tier_fee is None or dwell is None:
+        return None
+    fee, _dimension = money.schedule_fee(zone_fee, tier_fee)
+    return {
+        "grace_after_match_sec": defaults.get("grace_after_match_sec"),
+        "advance_grace_before_scheduled_sec": defaults.get(
+            "advance_grace_before_scheduled_sec"
+        ),
+        "free_wait_sec": int(dwell),
+        "no_show_threshold_sec": None,
+        "cancellation_fee_sgd": fee,
+        "rider_gross_cancellation_fee_sgd": None,
+        "waiting_fee_sgd": defaults.get("waiting_fee_sgd"),
+        "fee_goes_to": defaults.get("fee_goes_to"),
+        "arrival_marker": defaults.get("arrival_marker"),
+        "source": AUTHORED_V1_SOURCE,
+    }
+
+
+def _platform_policy_in_force(
+    trip_payload: Any, category: str, category_policy: Dict[str, Any]
+) -> Optional[Dict[str, Any]]:
+    """The platform parameters in force for one trip, at policy version 3.
+
+    Three cases, in the order the draft's ``resolution_rule`` reads them:
+
+    * the record carries its own ``platform_policy`` -- use it, unchanged;
+    * a no-show record carries none, and its zone class and vehicle type are in
+      the version-1 fee table -- derive the block those parameters imply, which
+      is the block the draft's backfill would have written into the case file,
+      and mark it ``AUTHORED-V1``. The case file is **not** touched;
+    * neither -- fall back to the loaded policy's ``fee_schedule.defaults``,
+      which carries its own ``source``.
+    """
+    trip = trip_payload if isinstance(trip_payload, dict) else {}
+    own = trip.get(PLATFORM_POLICY_KEY)
+    if isinstance(own, dict) and own:
+        return dict(own)
+
+    fee_schedule = category_policy.get("fee_schedule") or {}
+    defaults = fee_schedule.get("defaults")
+    defaults = defaults if isinstance(defaults, dict) else {}
+
+    if category == NO_SHOW_CHARGE_CATEGORY:
+        derived = _authored_v1_block(
+            trip, _version_one_fee_schedule(category), defaults
+        )
+        if derived is not None:
+            return derived
+
+    return dict(defaults) if defaults else None
+
+
+def _attach_payload_key(artifact: Dict[str, Any], key: str, block: Any) -> Dict[str, Any]:
+    """Return a copy of ``artifact`` with ``block`` added to its payload."""
+    payload = dict(artifact.get("payload") or {})
+    payload[key] = block
+    new_artifact = dict(artifact)
+    new_artifact["payload"] = payload
+    return new_artifact
+
+
 def build_brief(case_no: int, include_clause_notes: bool = True) -> Dict[str, Any]:
     """Return the evidence package for one case.
 
@@ -1870,12 +2026,24 @@ def build_brief_for_case(
 
     ``policy_version`` is the version of the policy to brief against, and it is
     passed straight to :func:`tribunal.loader.load_policies`: version 1 is the
-    three files as committed, version N is those files with amendments ``0001``
-    through ``N-1`` applied. It is keyword-only and defaults to version 1, so
-    the brief is byte-identical to the one every caller produced before the
-    parameter existed. It is deliberately **not** on :func:`build_brief`, whose
-    signature is pinned by a test: that entry point briefs the corpus, and the
-    corpus is measured at version 1.
+    three files as committed, version N of the amendment sequence is those files
+    with amendments ``0001`` through ``N-1`` applied, and version 3 is a separate
+    base read from ``policy/v3/`` with no amendment applied. It is keyword-only
+    and defaults to version 1, so the brief is byte-identical to the one every
+    caller produced before the parameter existed. It is deliberately **not** on
+    :func:`build_brief`, whose signature is pinned by a test: that entry point
+    briefs the corpus, and the corpus is measured at version 1.
+
+    Two things happen only from version 3 on, and both are gated on the version
+    so that versions 1 and 2 keep their bytes exactly:
+
+    * every provenance key is removed from the injected policies
+      (:func:`_without_provenance`), because version 3's policies carry their
+      sources and the model must not read them;
+    * the trip record gains a ``platform_policy_in_force`` block
+      (:func:`_platform_policy_in_force`) -- the parameters in force for the
+      trip, which for a version-1 no-show case that carries none are derived
+      from the version-1 fee table rather than written into the case file.
     """
     if ablate is not None and not ablation_known(ablate):
         raise AblationError(
@@ -1888,6 +2056,12 @@ def build_brief_for_case(
 
     category = case["dispute"].get("category")
     policies = loader.load_policies(category, policy_version)
+    if policy_version >= PROVENANCE_STRIPPED_VERSION:
+        # The policies at this version carry their provenance in ``sources``
+        # keys, which are for people and must not reach the model. Dropping them
+        # here, before anything reads the policies, means no block can carry one
+        # into the brief by accident.
+        policies = _without_provenance(policies)
 
     category_policy = policies["category"]
     policy_id = category_policy.get("policy_id", "")
@@ -2007,6 +2181,21 @@ def build_brief_for_case(
             else artifact
             for artifact in evidence
         ]
+
+    # The platform parameters in force travel on the trip record, because that is
+    # the artifact the draft's ``resolution_rule`` and POL-NS-01(c) read them
+    # from. A case that carries its own ``platform_policy`` keeps it; a version-1
+    # no-show case that carries none gets the block its version-1 parameters
+    # imply, derived here rather than written into the case file.
+    if policy_version >= PLATFORM_POLICY_IN_FORCE_VERSION and trip_evidence_id is not None:
+        in_force = _platform_policy_in_force(trip_payload, category, category_policy)
+        if in_force is not None:
+            evidence = [
+                _attach_payload_key(artifact, PLATFORM_POLICY_IN_FORCE_KEY, in_force)
+                if artifact["evidence_id"] == trip_evidence_id
+                else artifact
+                for artifact in evidence
+            ]
 
     # The admissibility ablation is applied last, over the assembled evidence
     # rather than inside any one block, so every artifact is treated the same way

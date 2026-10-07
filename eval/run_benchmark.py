@@ -3088,7 +3088,7 @@ def run_benchmark(
         # message belongs to the command line that asked, and because the
         # staleness check would otherwise swallow it into ``None`` per case.
         try:
-            available = policy_versions.current_version()
+            available = policy_versions.highest_available_version()
         except policy_versions.AmendmentError as exc:
             raise BenchmarkError(str(exc))
         if policy_version > available:

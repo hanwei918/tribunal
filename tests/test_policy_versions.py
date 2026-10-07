@@ -315,6 +315,143 @@ class VersionOneIsUnchangedTests(unittest.TestCase):
 
 
 # --------------------------------------------------------------------------
+# Version 3, the separate base
+# --------------------------------------------------------------------------
+V3_DIR = POLICY_DIR / "v3"
+
+# The version-1 bytes and amendment 0001, by digest, as they stand. Version 3 is
+# added *beside* them and must not touch them: an edited version-1 file would
+# move every recorded ``brief_sha256``, so the digests are pinned rather than
+# assumed.
+V1_FILE_DIGESTS = {
+    "general.json": "12d64aa3de9878e3a99e5d9e39e4bdf251d4a82cd8f577993812278a57ea14bf",
+    "no_show.json": "7e80df8f3084eb1ae8c4b8b3724096e36bb3491bb5ab154af5d626ff009daadf",
+    "route_deviation.json": "628b503c0da63937f95a7e18e51bf1579972cdf590122d34150f4953d6e32b9d",
+}
+AMENDMENT_0001_DIGEST = "72ceb95957e72c4c10960ffd79ddf6a9c13ed1d97059b1bfb21f47fa4f3ae855"
+
+# The three version-3 files, by digest. The bytes are the archive's with **one
+# edit**: the top-level ``version`` string, ``2.0.0`` to ``3.0.0``.
+V3_FILE_DIGESTS = {
+    "general.json": "52248998cce5133abf8aa22428cf4eab089ad9cccbfa3c1cc9da76e670be9d2a",
+    "no_show.json": "bef9c2bb217ea1f78266d600291a2b7b21e54825bfbbe67142f8d4054bc668bb",
+    "route_deviation.json": "e49e72ce68cadb7af32ea20426d2693eb7e846767e82694bc2074f688fb5f7f8",
+}
+
+# The canonical digest of the loaded policy pair at each version, per category.
+# Pinned so that "versions 1 and 2 build exactly what they built today" is a
+# check over the *loaded documents* and not only over the files on disk.
+LOADED_POLICY_DIGESTS = {
+    (1, "NO_SHOW_CHARGE"): "7b22d2d551be510a9fb7a95e817bfdc5c35913c85223c77a79582722573d151a",
+    (1, "ROUTE_DEVIATION"): "c6e942b36b2de34c255fcc9259fa88f6b789d1e8267acb47882c75ca690fd82b",
+    (2, "NO_SHOW_CHARGE"): "7b22d2d551be510a9fb7a95e817bfdc5c35913c85223c77a79582722573d151a",
+    (2, "ROUTE_DEVIATION"): "07bfc0f1971febbf45741df6a5dfbfbba310183b76892bb7f44a27cf30df3535",
+    (3, "NO_SHOW_CHARGE"): "d6d068a6a2cb781399bcb9f63dcb5e1ca12c52c1cd28483ecc45db1ec1cd8207",
+    (3, "ROUTE_DEVIATION"): "fd6031f3382d126aee2e66353e9b8040f116acc296a08381742ceb67f4dc8eff",
+}
+
+# The draft's own clause counts, which the three version-3 files carry.
+V3_CLAUSE_COUNTS = {"general.json": 8, "no_show.json": 10, "route_deviation.json": 13}
+
+
+class VersionThreeTests(unittest.TestCase):
+    """Version 3 is a separate base: its own directory, and no amendment."""
+
+    def test_the_version_three_files_carry_version_three(self):
+        for name, expected in sorted(V3_FILE_DIGESTS.items()):
+            with self.subTest(file=name):
+                path = V3_DIR / name
+                self.assertTrue(path.is_file(), "policy/v3/{0} is missing".format(name))
+                self.assertEqual(expected, hashlib.sha256(path.read_bytes()).hexdigest())
+                self.assertEqual(
+                    "3.0.0", json.loads(path.read_text(encoding="utf-8"))["version"]
+                )
+
+    def test_the_version_one_bytes_and_amendment_are_untouched(self):
+        for name, expected in sorted(V1_FILE_DIGESTS.items()):
+            with self.subTest(file=name):
+                self.assertEqual(
+                    expected,
+                    hashlib.sha256((POLICY_DIR / name).read_bytes()).hexdigest(),
+                )
+        amendment = (
+            POLICY_DIR / policy_versions.AMENDMENTS_DIRNAME / "0001-pol-rd-13.json"
+        )
+        self.assertEqual(
+            AMENDMENT_0001_DIGEST, hashlib.sha256(amendment.read_bytes()).hexdigest()
+        )
+
+    def test_version_three_loads_its_own_files(self):
+        for category in sorted(loader.CATEGORY_POLICY_FILES):
+            with self.subTest(category=category):
+                loaded = loader.load_policies(category, 3)
+                self.assertEqual("3.0.0", loaded["general"]["version"])
+                self.assertEqual("3.0.0", loaded["category"]["version"])
+
+    def test_version_three_does_not_read_the_amendments_directory(self):
+        # A separate base has no amendment sequence, so a broken amendment must
+        # not be able to stop a version-3 brief either.
+        with mock.patch.object(
+            policy_versions,
+            "amendment_files",
+            side_effect=AssertionError("the amendments directory was read"),
+        ):
+            policies = loader.load_policies(CATEGORY, 3)
+        self.assertIn("clauses", policies["category"])
+
+    def test_version_three_carries_the_drafts_clause_counts(self):
+        for name, expected in sorted(V3_CLAUSE_COUNTS.items()):
+            with self.subTest(file=name):
+                document = json.loads((V3_DIR / name).read_text(encoding="utf-8"))
+                self.assertEqual(expected, len(document["clauses"]))
+
+    def test_the_loaded_documents_at_each_version_are_the_ones_pinned(self):
+        """Versions 1 and 2 build exactly what they built; version 3 is new."""
+        for (version, category), expected in sorted(LOADED_POLICY_DIGESTS.items()):
+            with self.subTest(version=version, category=category):
+                self.assertEqual(
+                    expected,
+                    money.canonical_sha256(loader.load_policies(category, version)),
+                )
+
+    def test_version_three_is_a_separate_base(self):
+        self.assertTrue(policy_versions.is_a_separate_base(3))
+        for version in (1, 2, 4):
+            with self.subTest(version=version):
+                self.assertFalse(policy_versions.is_a_separate_base(version))
+        self.assertEqual(V3_DIR, policy_versions.base_directory(3))
+        self.assertEqual(POLICY_DIR, policy_versions.base_directory(1))
+        self.assertEqual(POLICY_DIR, policy_versions.base_directory(2))
+
+    def test_amendments_are_never_applied_to_version_three(self):
+        with self.assertRaises(policy_versions.AmendmentError) as caught:
+            policy_versions.apply_amendments(
+                policies_for(), 3, files=files_for(), root=tempfile.mkdtemp()
+            )
+        self.assertIn("separate policy base", str(caught.exception))
+
+    def test_the_highest_available_version_names_both_sequences(self):
+        self.assertEqual(2, policy_versions.current_version())
+        self.assertEqual(3, policy_versions.highest_available_version())
+        # A scratch root with no amendments is at version 1, and the separate
+        # base is still 3, so the highest there is 3 too: the two sequences are
+        # independent.
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(1, policy_versions.current_version(tmp))
+            self.assertEqual(3, policy_versions.highest_available_version(tmp))
+
+    def test_an_amendment_that_would_compute_a_separate_base_is_refused(self):
+        for version in sorted(policy_versions.SEPARATE_BASE_VERSIONS):
+            with self.subTest(version=version):
+                with self.assertRaises(policy_versions.AmendmentError) as caught:
+                    policy_versions.refuse_a_taken_version(version)
+                self.assertIn("policy/v3/", str(caught.exception))
+        # A version that is not a separate base is not refused.
+        policy_versions.refuse_a_taken_version(2)
+        policy_versions.refuse_a_taken_version(4)
+
+
+# --------------------------------------------------------------------------
 # What an amendment may not be
 # --------------------------------------------------------------------------
 class AmendmentRefusalTests(unittest.TestCase):
@@ -481,16 +618,31 @@ class ApplyingAmendmentsTests(unittest.TestCase):
                     policies_for(), 3, files=files_for(), root=tmp
                 )
 
-    def test_two_amendments_apply_in_order_and_name_the_highest(self):
+    def test_a_second_amendment_would_compute_a_separate_base_and_is_refused(self):
+        """Two amendments on base 1 compute version 3, which a base already holds.
+
+        Until 2026-10-08 this test applied two amendments in order and checked
+        that the higher one was named. Version 3 is now a separate policy base of
+        its own, so a second amendment would compute the same number as that
+        base: the amendment sequence can hold at most one amendment, and the
+        function that applies amendments refuses the second rather than
+        producing a policy the loader would never read. The first amendment
+        still applies, and still names ``0001``.
+        """
         with tempfile.TemporaryDirectory() as tmp:
             write_amendment(tmp, "0001-one.json", amendment_document("POL-RD-13"))
-            write_amendment(tmp, "0002-two.json", amendment_document("POL-RD-14"))
             applied = policy_versions.apply_amendments(
-                policies_for(), 3, files=files_for(), root=tmp
+                policies_for(), 2, files=files_for(), root=tmp
             )
-        ids = [clause["id"] for clause in applied["category"]["clauses"]]
-        self.assertEqual(["POL-RD-13", "POL-RD-14"], ids[-2:])
-        self.assertTrue(applied["category"]["version"].endswith("0002"))
+            self.assertEqual("POL-RD-13", applied["category"]["clauses"][-1]["id"])
+            self.assertTrue(applied["category"]["version"].endswith("0001"))
+
+            write_amendment(tmp, "0002-two.json", amendment_document("POL-RD-14"))
+            with self.assertRaises(policy_versions.AmendmentError) as caught:
+                policy_versions.apply_amendments(
+                    policies_for(), 3, files=files_for(), root=tmp
+                )
+            self.assertIn("separate policy base", str(caught.exception))
 
     def test_an_amendment_to_a_policy_the_brief_does_not_carry_is_skipped(self):
         # A no-show clause has no business in a route-deviation brief, and one
@@ -689,8 +841,9 @@ class RunBenchmarkCommandLineTests(unittest.TestCase):
     def test_a_version_the_repository_does_not_have_is_refused_before_a_client(self):
         # The same shape as the development-set test below: the runs root is a
         # scratch one, so nothing here resolves a destination under the
-        # repository's own runs/. The repository is at version 2 since
-        # 2026-10-01, so the version it does not have is 3.
+        # repository's own runs/. The amendment sequence is at version 2 since
+        # 2026-10-01 and version 3 is a separate base since 2026-10-08, so the
+        # version the repository does not have is 4.
         with tempfile.TemporaryDirectory() as tmp:
             with mock.patch.object(
                 runner,
@@ -703,12 +856,12 @@ class RunBenchmarkCommandLineTests(unittest.TestCase):
                             [
                                 "--model", MODEL,
                                 "--cases", "101",
-                                "--policy-version", "3",
+                                "--policy-version", "4",
                                 "--runs-dir", str(Path(tmp) / "runs"),
                             ]
                         )
         self.assertEqual(1, code)
-        self.assertIn("there is no policy version 3", errors.getvalue())
+        self.assertIn("there is no policy version 4", errors.getvalue())
 
     def test_version_1_is_accepted_and_writes_to_the_ordinary_directory(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -774,17 +927,18 @@ class DevelopmentSetsCommandLineTests(unittest.TestCase):
     def test_an_unknown_version_is_reachable_and_says_so(self):
         # The flag is a plain integer, so a version that does not exist is not a
         # parser error: it is refused by the runner with a message naming the
-        # version the repository is actually at. The repository is at version 2
-        # since 2026-10-01, so the version that names nothing is 3. The runs root
-        # is a scratch one, so the refusal is about the version and this test
-        # never resolves a destination under the repository's own runs/.
+        # version the repository is actually at. The amendment sequence is at
+        # version 2 since 2026-10-01 and version 3 is a separate base since
+        # 2026-10-08, so the version that names nothing is 4. The runs root is a
+        # scratch one, so the refusal is about the version and this test never
+        # resolves a destination under the repository's own runs/.
         with tempfile.TemporaryDirectory() as tmp:
             code, message = self.refuse(
                 [
                     "--set",
                     "codex",
                     "--policy-version",
-                    "3",
+                    "4",
                     "--cases",
                     "9101",
                     "--runs-dir",
@@ -792,7 +946,7 @@ class DevelopmentSetsCommandLineTests(unittest.TestCase):
                 ]
             )
         self.assertEqual(1, code)
-        self.assertIn("there is no policy version 3", message)
+        self.assertIn("there is no policy version 4", message)
 
 
 # --------------------------------------------------------------------------

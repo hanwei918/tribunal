@@ -24,6 +24,18 @@ categories.
 
 The directory is a parameter with the repository's own path as its default, so
 every test can point it at a temporary directory.
+
+**A separate base.** Not every version is version 1 plus amendments. Version 3
+is Ji Guofang's platform-aligned policy, added on 2026-10-08 as a second base of
+its own: its three files live under ``policy/v3/`` and no amendment applies to
+it, because the one clause amendment ``0001`` adds to version 1 is already part
+of version 3's text. ``SEPARATE_BASE_VERSIONS`` names those versions, and the
+three functions around it say which directory a version reads
+(:func:`base_directory`), whether a version is one of them
+(:func:`is_a_separate_base`) and the highest version the repository can brief at
+(:func:`highest_available_version`). ``current_version`` stays what it always
+was -- the version of the **amendment sequence**, which is what the next
+amendment would compute -- so version 3 does not move it.
 """
 
 from __future__ import annotations
@@ -46,6 +58,18 @@ _AMENDMENT_FILE_RE = re.compile(r"^(\d{4})-[a-z0-9]+(?:-[a-z0-9]+)*\.json$")
 
 # Version 1 is the policy as committed, with nothing applied to it.
 BASE_VERSION = 1
+
+# Versions that are **their own base** rather than version 1 plus amendments.
+# Each entry maps the version number to the directory under ``policy/`` whose
+# three files it is. Version 3 is Ji Guofang's platform-aligned policy, added on
+# 2026-10-08: a second base, kept beside the version-1 files, with **no
+# amendment applied to it** -- the clause amendment ``0001`` adds to version 1 is
+# already part of version 3's own text.
+#
+# The version numbers here are reserved. An amendment that computed one of them
+# would be a second policy under one number, so :func:`refuse_a_taken_version`
+# refuses one, and it is why ``policy/amendments/`` can never reach 0002.
+SEPARATE_BASE_VERSIONS = {3: "v3"}
 
 # What a file's ``version`` string gains once an amendment has reached it. The
 # number it carries is the highest one that file received.
@@ -161,8 +185,70 @@ def amendment_files(root: Optional[Any] = None) -> List[Path]:
 
 
 def current_version(root: Optional[Any] = None) -> int:
-    """The version this repository is at: 1 plus the amendments on disk."""
+    """The version the amendment sequence is at: 1 plus the amendments on disk.
+
+    This is the version of the **amendment sequence**, and it is what the next
+    amendment would compute. It is not the highest version the repository can
+    brief at: a separate base is not an amendment, so it is not counted here.
+    Use :func:`highest_available_version` for that.
+    """
     return BASE_VERSION + len(amendment_files(root))
+
+
+# --------------------------------------------------------------------------
+# Separate bases
+# --------------------------------------------------------------------------
+def is_a_separate_base(version: Any) -> bool:
+    """Whether ``version`` is its own base rather than version 1 plus amendments."""
+    return version in SEPARATE_BASE_VERSIONS
+
+
+def base_directory(version: int, root: Optional[Any] = None) -> Path:
+    """The directory a version's three files are read from.
+
+    Version 1, and every version built from it by amendment, reads ``policy/``
+    itself. A separate base reads its own subdirectory of it. ``root`` overrides
+    ``policy/`` for a caller that points the whole thing elsewhere, exactly as it
+    does for the amendments directory.
+    """
+    base = Path(root) if root is not None else POLICY_DIR
+    subdirectory = SEPARATE_BASE_VERSIONS.get(version)
+    return base if subdirectory is None else base / subdirectory
+
+
+def highest_available_version(root: Optional[Any] = None) -> int:
+    """The highest policy version this repository can brief at.
+
+    The amendment sequence gives :func:`current_version`; a separate base gives
+    its own number, and the two sequences are independent. The highest of them is
+    what a command line may ask for.
+    """
+    amendment_top = current_version(root)
+    separate_top = max(SEPARATE_BASE_VERSIONS, default=BASE_VERSION)
+    return max(amendment_top, separate_top)
+
+
+def refuse_a_taken_version(version: int) -> None:
+    """Refuse a version number a separate base already occupies.
+
+    An amendment that computed one of those numbers would be a second policy
+    under one number: ``load_policies`` would read the separate base's own files
+    for that version, and the amendment's clause would reach no brief at all. The
+    check lives here rather than at a call site so every caller is refused the
+    same way, and the message names the directory the base is kept at.
+    """
+    if is_a_separate_base(version):
+        raise AmendmentError(
+            "policy version {0} is a separate policy base, kept at policy/{1}/, "
+            "and an amendment cannot compute it: amendment {2:04d} on base {3} "
+            "would compute version {0}, a second policy under the same "
+            "number".format(
+                version,
+                SEPARATE_BASE_VERSIONS[version],
+                version - BASE_VERSION,
+                BASE_VERSION,
+            )
+        )
 
 
 # --------------------------------------------------------------------------
@@ -278,6 +364,17 @@ def apply_amendments(
     if not isinstance(version, int) or isinstance(version, bool):
         raise AmendmentError(
             "a policy version is an integer, and {0!r} is not".format(version)
+        )
+    if is_a_separate_base(version):
+        # A separate base is its own policy and has no amendment sequence: its
+        # text already carries what amendment 0001 adds to version 1, so there is
+        # nothing for this function to apply and reading the amendments directory
+        # for it would be reading the wrong policy's provenance.
+        raise AmendmentError(
+            "policy version {0} is a separate policy base, kept at policy/{1}/, "
+            "and amendments are never applied to it".format(
+                version, SEPARATE_BASE_VERSIONS[version]
+            )
         )
     available = amendment_files(root)
     if version < BASE_VERSION:

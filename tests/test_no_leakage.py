@@ -87,6 +87,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from eval import development_sets  # noqa: E402
+from tribunal import brief, loader, money  # noqa: E402
 
 # The two trees the agents are briefed from. Nothing else is scanned: the point
 # is what a model is handed, and a model is handed these two and no more.
@@ -215,6 +216,153 @@ def report(violations):
     anywhere.
     """
     return sorted("{0}: {1}".format(item.path, item.kind) for item in violations)
+
+
+def _all_keys(node):
+    """Every key in a parsed JSON value, at any depth."""
+    if isinstance(node, dict):
+        for key, value in node.items():
+            yield key
+            yield from _all_keys(value)
+    elif isinstance(node, (list, tuple)):
+        for value in node:
+            yield from _all_keys(value)
+
+
+# --------------------------------------------------------------------------
+# A version-3 brief carries no provenance and names no other case
+# --------------------------------------------------------------------------
+# The two cases a version-3 brief is built for below: one of each category. 101
+# is a route-deviation case and 201 a no-show case, and both are corpus cases,
+# so neither belongs to a sealed set.
+VERSION_THREE_BRIEF_CASES = (101, 201)
+
+# What version 3's policies carry inside their ``sources`` keys, and what must
+# therefore not reach a brief: Ryde's own help centre, the organisers' sample,
+# and a sealed set's author. Matched case-insensitively, because a brief that
+# said "Sealed" would leak exactly as much as one that said "sealed".
+PROVENANCE_STRINGS = ("help.rydesharing", "DISP-002", "organiser", "sealed")
+
+# The provenance keys ``brief.py`` drops. The draft's own notes call the
+# top-level one ``policy_sources``; the file spells it ``sources``. Both are
+# removed, so this list names both.
+PROVENANCE_KEYS = ("sources", "policy_sources")
+
+
+class VersionThreeBriefTests(unittest.TestCase):
+    """What a version-3 brief must not carry.
+
+    The policies at version 3 record their provenance in ``sources`` keys: on a
+    clause, on ``fee_schedule`` and ``fare_model``, and once at the top level of
+    ``general.json``. Those keys name Ryde's help centre, the organisers' sample
+    and a sealed set, and every case-number mention in the draft's files sits
+    inside one. ``notes`` is what the model reads and ``sources`` is for people,
+    so ``brief.py`` drops every one of them before the policies are injected.
+
+    This class builds real version-3 briefs and looks at what they hold, rather
+    than trusting the filter's name. Every assertion is over a fixed string, a
+    set of keys, or a count -- never over a case identifier, because this
+    module's own output is committed and a failure must not copy one anywhere.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tokens = identifiers()
+        cls.briefs = {
+            case_no: brief.build_brief_for_case(
+                loader.load_case(case_no), policy_version=3
+            )
+            for case_no in VERSION_THREE_BRIEF_CASES
+        }
+        cls.texts = {
+            case_no: money.dumps_canonical(document)
+            for case_no, document in cls.briefs.items()
+        }
+
+    def own_tokens(self, case_no):
+        """Every identifier of the case itself, which its own brief may carry."""
+        text = "\n".join(_strings(loader.load_case(case_no)))
+        found = set()
+        for pattern in PATTERNS.values():
+            found.update(pattern.findall(text))
+        return found
+
+    # -- the control ------------------------------------------------------
+    def test_the_policies_really_are_the_version_three_ones(self):
+        """A brief that was not briefed at version 3 would pass vacuously."""
+        for case_no, document in sorted(self.briefs.items()):
+            with self.subTest(case_no=case_no):
+                self.assertEqual("3.0.0", document["policies"]["general"]["version"])
+                self.assertEqual("3.0.0", document["policies"]["category"]["version"])
+
+    def test_the_raw_policies_do_carry_provenance(self):
+        """The filter is doing work: the files it is handed carry the strings."""
+        raw = loader.load_policies("NO_SHOW_CHARGE", 3)
+        self.assertIn("sources", set(_all_keys(raw["category"])))
+        self.assertTrue(
+            any(
+                needle.lower() in money.dumps_canonical(raw).lower()
+                for needle in PROVENANCE_STRINGS
+            ),
+            "the version-3 files carry none of the provenance strings",
+        )
+
+    # -- the property -----------------------------------------------------
+    def test_the_brief_carries_no_provenance_key_at_any_depth(self):
+        for case_no, document in sorted(self.briefs.items()):
+            with self.subTest(case_no=case_no):
+                present = sorted(
+                    set(_all_keys(document["policies"])) & set(PROVENANCE_KEYS)
+                )
+                self.assertEqual([], present, "a provenance key reached the brief")
+
+    def test_the_brief_carries_no_provenance_string(self):
+        for case_no, text in sorted(self.texts.items()):
+            lowered = text.lower()
+            for needle in PROVENANCE_STRINGS:
+                with self.subTest(case_no=case_no, needle=needle):
+                    self.assertNotIn(needle.lower(), lowered)
+
+    def test_the_brief_names_no_other_case(self):
+        """No case, dispute, trip or evidence id other than the case's own."""
+        for case_no, text in sorted(self.texts.items()):
+            own = self.own_tokens(case_no)
+            foreign = sorted(
+                {
+                    kind
+                    for kind, values in self.tokens.items()
+                    for token in values
+                    if token not in own and token in text
+                }
+            )
+            with self.subTest(case_no=case_no):
+                self.assertEqual(
+                    [], foreign, "an identifier of another case reached the brief"
+                )
+
+    # -- the raw tree -----------------------------------------------------
+    def test_the_scan_reaches_the_version_three_policy_directory(self):
+        """``policy/`` is walked whole, so ``policy/v3/`` is covered too.
+
+        The three version-3 files carry provenance, and a case identifier could
+        reach them as easily as it could reach a version-1 clause. The walk is
+        what covers them, so the coverage is pinned rather than assumed: a later
+        change that narrowed the walk would fail here.
+        """
+        scanned = {
+            str(path.relative_to(PROJECT_ROOT))
+            for directory in SCANNED_DIRECTORIES
+            for path in (PROJECT_ROOT / directory).rglob("*")
+            if path.is_file()
+        }
+        for name in (
+            "general.json",
+            "no_show.json",
+            "route_deviation.json",
+            "CHANGES.md",
+        ):
+            with self.subTest(file=name):
+                self.assertIn("policy/v3/{0}".format(name), scanned)
 
 
 class NoLeakageTests(unittest.TestCase):

@@ -8,6 +8,8 @@ from the project root with::
 
 from __future__ import annotations
 
+import copy
+import hashlib
 import inspect
 import json
 import re
@@ -886,6 +888,183 @@ class MoneyBlockTests(unittest.TestCase):
                 clause["rule"] = "the cap is stated nowhere in this sentence"
         with self.assertRaises(loader.LoaderError):
             brief._money_prose_constants(policy)
+
+
+# --------------------------------------------------------------------------
+# The platform parameters in force, at policy version 3
+# --------------------------------------------------------------------------
+# The corpus, split by category. Every case was authored under version-1
+# parameters and none carries `trip_record.platform_policy`, so version 3 has to
+# derive the block rather than read it.
+NO_SHOW_CASES = tuple(
+    entry["case_no"] for entry in manifest() if entry["category"] == "NO_SHOW_CHARGE"
+)
+ROUTE_DEVIATION_CASES = tuple(
+    entry["case_no"] for entry in manifest() if entry["category"] == "ROUTE_DEVIATION"
+)
+
+# The version-1 fee table the derivation reads, read here independently so the
+# test compares the brief against the file rather than against the derivation.
+V1_FEE_SCHEDULE = json.loads(
+    (PROJECT_ROOT / "policy" / "no_show.json").read_text(encoding="utf-8"),
+    parse_float=Decimal,
+)["fee_schedule"]
+
+# The ten fields `trip_record.platform_policy` carries by contract.
+PLATFORM_POLICY_FIELDS = {
+    "grace_after_match_sec",
+    "advance_grace_before_scheduled_sec",
+    "free_wait_sec",
+    "no_show_threshold_sec",
+    "cancellation_fee_sgd",
+    "rider_gross_cancellation_fee_sgd",
+    "waiting_fee_sgd",
+    "fee_goes_to",
+    "arrival_marker",
+    "source",
+}
+
+
+def trip_record(brief_obj):
+    """The TRIP_RECORD artifact inside a brief."""
+    for artifact in brief_obj["case"]["evidence"]:
+        if artifact["evidence_type"] == "TRIP_RECORD":
+            return artifact
+    raise AssertionError("brief has no TRIP_RECORD artifact")
+
+
+def in_force_block(case_no, policy_version=3):
+    """``platform_policy_in_force`` as a brief of ``case_no`` carries it."""
+    return trip_record(
+        brief.build_brief_for_case(
+            loader.load_case(case_no), policy_version=policy_version
+        )
+    )["payload"].get(brief.PLATFORM_POLICY_IN_FORCE_KEY)
+
+
+class VersionThreePlatformPolicyTests(unittest.TestCase):
+    """What a version-3 brief says the platform parameters in force are.
+
+    Every case in this repository was written under version-1 parameters, and
+    none carries ``trip_record.platform_policy``. So at version 3 the brief
+    derives the block from the version-1 fee table -- exactly the block the
+    draft's own backfill script would have written into the case file -- and the
+    case file is not touched. That script is not in this repository and nothing
+    like it is run.
+    """
+
+    def test_every_corpus_no_show_case_gets_the_authored_v1_block(self):
+        self.assertTrue(NO_SHOW_CASES)
+        for case_no in NO_SHOW_CASES:
+            with self.subTest(case_no=case_no):
+                block = in_force_block(case_no)
+                self.assertIsNotNone(block, "a no-show brief carried no block")
+                self.assertEqual(brief.AUTHORED_V1_SOURCE, block["source"])
+                self.assertEqual(PLATFORM_POLICY_FIELDS, set(block))
+
+    def test_the_derived_fee_and_free_wait_are_the_version_one_ones(self):
+        """The same fee and free wait the case was authored under.
+
+        Read again out of the version-1 file, independently of the derivation,
+        and compared: a derivation that had drifted would fail here.
+        """
+        for case_no in NO_SHOW_CASES:
+            with self.subTest(case_no=case_no):
+                payload = next(
+                    artifact["payload"]
+                    for artifact in loader.load_case(case_no)["evidence"]
+                    if artifact["evidence_type"] == "TRIP_RECORD"
+                )
+                zone = payload["pickup_zone_class"]
+                tier = payload["vehicle_type"]
+                expected_fee, _dimension = money.schedule_fee(
+                    V1_FEE_SCHEDULE["zone_class_fee_sgd"][zone],
+                    V1_FEE_SCHEDULE["vehicle_tier_fee_sgd"][tier],
+                )
+                block = in_force_block(case_no)
+                self.assertEqual(
+                    int(V1_FEE_SCHEDULE["minimum_dwell_sec"][zone]),
+                    block["free_wait_sec"],
+                )
+                self.assertEqual(expected_fee, block["cancellation_fee_sgd"])
+
+    def test_two_named_cases_carry_the_figures_their_zone_and_tier_give(self):
+        # 201 is a STANDARD zone and an RYDE_X vehicle: the greater of 4.0 and
+        # 4.0. 208 is RYDE_XL, whose tier fee is 8.0 and governs. Both dwell for
+        # the STANDARD zone's 300 s.
+        self.assertEqual(
+            {"free_wait_sec": 300, "cancellation_fee_sgd": Decimal("4.0")},
+            {
+                key: in_force_block(201)[key]
+                for key in ("free_wait_sec", "cancellation_fee_sgd")
+            },
+        )
+        self.assertEqual(
+            {"free_wait_sec": 300, "cancellation_fee_sgd": Decimal("8.0")},
+            {
+                key: in_force_block(208)[key]
+                for key in ("free_wait_sec", "cancellation_fee_sgd")
+            },
+        )
+
+    def test_a_case_that_carries_a_block_uses_its_own(self):
+        """A record's own parameters win over anything derived from version 1."""
+        case = copy.deepcopy(loader.load_case(201))
+        payload = next(
+            artifact["payload"]
+            for artifact in case["evidence"]
+            if artifact["evidence_type"] == "TRIP_RECORD"
+        )
+        own = {
+            "grace_after_match_sec": 120,
+            "advance_grace_before_scheduled_sec": 600,
+            "free_wait_sec": 240,
+            "no_show_threshold_sec": 480,
+            "cancellation_fee_sgd": Decimal("6.5"),
+            "rider_gross_cancellation_fee_sgd": Decimal("7.02"),
+            "waiting_fee_sgd": Decimal("4.0"),
+            "fee_goes_to": "PLATFORM",
+            "arrival_marker": "GPS_AUTO",
+            "source": "RECORD-PLATFORM",
+        }
+        payload["platform_policy"] = own
+
+        briefed = brief.build_brief_for_case(case, policy_version=3)
+        payload_out = trip_record(briefed)["payload"]
+        self.assertEqual(own, payload_out[brief.PLATFORM_POLICY_IN_FORCE_KEY])
+        self.assertEqual("RECORD-PLATFORM", payload_out[brief.PLATFORM_POLICY_IN_FORCE_KEY]["source"])
+        # The record's own key stays where it was; the brief adds the in-force
+        # block beside it rather than moving or rewriting it.
+        self.assertEqual(own, payload_out["platform_policy"])
+
+    def test_a_route_deviation_case_gets_no_in_force_block(self):
+        """The block is a no-show parameter set; a deviation brief carries none."""
+        self.assertTrue(ROUTE_DEVIATION_CASES)
+        for case_no in ROUTE_DEVIATION_CASES:
+            with self.subTest(case_no=case_no):
+                self.assertIsNone(in_force_block(case_no))
+
+    def test_versions_one_and_two_carry_no_in_force_block(self):
+        for case_no in (201, 208):
+            for version in (1, 2):
+                with self.subTest(case_no=case_no, version=version):
+                    self.assertIsNone(in_force_block(case_no, version))
+
+    def test_a_full_brief_build_leaves_every_case_file_byte_identical(self):
+        """The derivation is at build time: nothing is written into a case file."""
+        files = sorted((PROJECT_ROOT / "data" / "cases").glob("case-*.json"))
+        self.assertEqual(29, len(files))
+        before = {
+            path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in files
+        }
+        for case_no in case_numbers():
+            brief.build_brief_for_case(
+                loader.load_case(case_no), policy_version=3
+            )
+        after = {
+            path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in files
+        }
+        self.assertEqual(before, after)
 
 
 if __name__ == "__main__":

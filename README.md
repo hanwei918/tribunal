@@ -376,12 +376,13 @@ off 0.7 are each reported.
 | `runs/` | The benchmark's own output, committed as produced. `runs/README.md` says which directory holds what and how to read one run directory. |
 | `tests/` | The suite. Nothing in it makes a model call. |
 | `ui/` | `ui/build.py` and the one committed page it builds. |
-| `docs/` | `docs/notes/` — the dated decisions behind every number here; `docs/buddy-log/` — the WorkBuddy sessions; `docs/roadmap/` — a drafted policy base version 2, kept as a roadmap and read by nothing. |
+| `docs/` | `docs/notes/` — the dated decisions behind every number here; `docs/buddy-log/` — the WorkBuddy sessions; `docs/roadmap/` — the policy base Ji Guofang drafted, kept as a roadmap and read by nothing. |
 | `precedents/` | The precedent library: human closures of decided cases. It holds the two closures `P-0001` and `P-0002`, and grows only when a reviewer closes one. |
 | `START-HERE.md` | The standing operating procedure for a session in this repository. Read it before changing anything. |
 
-A policy base version 2 aligned with published platform rules is drafted in
-`docs/roadmap/policy-v2/`; it is not applied and not measured.
+A policy base version 3 aligned with published platform rules is added as
+`policy/v3/`; it is not the default and no run has been made at it. The draft it
+came from is kept in `docs/roadmap/policy-v2/`, read by nothing.
 
 ## The debate viewer
 

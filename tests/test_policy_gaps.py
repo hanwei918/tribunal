@@ -1928,6 +1928,35 @@ class ApproveTests(unittest.TestCase):
             [clause.get("id") for clause in applied["general"]["clauses"]],
         )
 
+    def test_an_amendment_that_would_compute_a_separate_base_is_refused(self):
+        """Amendment 0002 on base 1 would compute version 3, and version 3 is taken.
+
+        Version 3 is a separate policy base of its own since 2026-10-08, kept at
+        ``policy/v3/``. An amendment numbered 0002 would compute the same number
+        from base 1 -- a second policy under one number, and the one
+        ``loader.load_policies`` would read for a version-3 brief would be the
+        separate base's files, not this amendment's clause. So the amendment
+        sequence stops at 0001, and the refusal names the directory. Nothing is
+        written.
+        """
+        # One amendment in the root, so the next one would be numbered 0002.
+        _version, first = self.approve()
+        self.assertTrue(first.is_file())
+        before = sorted(path.name for path in first.parent.iterdir())
+
+        # The same proposal again: it is still PROPOSED, and its clause is still
+        # the next free one, so only the version check can refuse it.
+        self.proposal = self._write_proposal(a_draft())
+        with self.assertRaises(gaps.PolicyGapError) as caught:
+            self.approve()
+        message = str(caught.exception)
+        self.assertIn("policy/v3/", message)
+        self.assertIn("0002", message)
+        # Nothing was written: the directory holds exactly what it held.
+        self.assertEqual(
+            before, sorted(path.name for path in first.parent.iterdir())
+        )
+
     def test_a_rejected_proposal_cannot_be_approved(self):
         self.proposal = self._write_proposal(
             a_draft(), status=gaps.PROPOSAL_STATUS_REJECTED

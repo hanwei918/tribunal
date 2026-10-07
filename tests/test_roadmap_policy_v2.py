@@ -1,11 +1,14 @@
-"""The drafted policy base version 2 is a roadmap document, and nothing reads it.
+"""The policy Ji Guofang drafted is kept here as a roadmap, and nothing reads it.
 
-``docs/roadmap/policy-v2/`` holds a policy base version 2 drafted by Ji Guofang
-on 2026-10-07 against published platform rules. It is **drafted, not applied and
-not measured**: `policy/` still holds the version-1 bytes and amendment `0001`,
-`BASE_VERSION` is still 1, and no figure in this repository was produced under
-it. This module holds the folder to that, and holds the repository to leaving it
-alone.
+``docs/roadmap/policy-v2/`` holds the policy base Ji Guofang drafted on
+2026-10-07 against published platform rules. It arrived as an archive and is kept
+here byte for byte. On 2026-10-08 the same policy was **added to the runtime as
+policy version 3**, under ``policy/v3/``: a separate base, not the default, and
+**not measured** -- no run exists at version 3. ``policy/`` still holds the
+version-1 bytes and amendment ``0001``, ``BASE_VERSION`` is still 1, and no
+figure in this repository was produced under the draft. This module holds the
+folder to the archive it came from, and holds the repository to reading
+``policy/v3/`` rather than this folder.
 
 Five things are asserted:
 
@@ -18,14 +21,17 @@ Five things are asserted:
   second sealed set's, so it must not be in this repository even as a document;
   `policy/history/v1/` is byte-identical to the live `policy/` files and
   amendment `0001`, so a second copy of it would be a copy that can drift.
-* **It is not applied.** The live `policy/` files are not the draft's,
-  `BASE_VERSION` is still 1, and the draft's own clause counts (8 / 10 / 13) are
-  not the live ones (3 / 9 / 12).
+* **The draft is not the version in force.** The live `policy/` files are not
+  the draft's, `BASE_VERSION` is still 1, and the draft's own clause counts
+  (8 / 10 / 13) are not the live ones (3 / 9 / 12). The draft's files here still
+  carry `2.0.0`, because this folder is the archive as received; the runtime copy
+  at `policy/v3/` carries `3.0.0`.
 * **Nothing reads it.** No module under `tribunal/`, `eval/` or `ops/` names
   `docs/roadmap/`, and the backfill script's name appears nowhere in the tree.
 * **The README says what it is.** The folder's README says who drafted it and
-  when, that it is not applied and not measured, and what applying it would
-  take; and the repository's own README carries the one roadmap line.
+  when, that it is now added as policy version 3 and is not the default and not
+  yet measured, and what making it the default would take; and the repository's
+  own README carries the one roadmap line.
 """
 
 from __future__ import annotations
@@ -225,7 +231,27 @@ class TheRoadmapFolderTests(unittest.TestCase):
                 self.assertNotIn("backfill_platform_policy", contents(path))
 
     def test_the_documents_that_name_it_are_the_ones_that_should(self):
-        """The control for the scan above: the name is present where it belongs."""
+        """The control for the scan above: the name is present where it belongs.
+
+        Four documents, and each one has a reason to name the script:
+
+        * the folder's README says the script was left out and why;
+        * the draft's own ``POLICY-V2-CHANGES.md`` describes what it did;
+        * ``docs/buddy-log/README.md`` records the session that unpacked the
+          bundle and left the script out, so it names it in the same breath;
+        * ``policy/v3/CHANGES.md`` is that same draft text as the runtime keeps
+          it, with a note saying the script was not added and why.
+
+        The buddy log and ``policy/v3/CHANGES.md`` were added on 2026-10-08. The
+        buddy log is a record of what a session did, and the session
+        legitimately wrote down that the script was left out of the repository;
+        the row was written after the module was last run, so the set this test
+        computes had one more member than the set it expected. ``CHANGES.md`` is
+        the draft's own account, which names the script in its own text, and the
+        note above it names it again. The scan itself is unchanged -- the control
+        is widened, not loosened, and a fifth document that names the script
+        still fails.
+        """
         naming = {
             str(path.relative_to(PROJECT_ROOT))
             for path in text_files()
@@ -233,13 +259,22 @@ class TheRoadmapFolderTests(unittest.TestCase):
         }
         self.assertEqual(
             {"docs/roadmap/policy-v2/README.md",
-             "docs/roadmap/policy-v2/policy/POLICY-V2-CHANGES.md"},
+             "docs/roadmap/policy-v2/policy/POLICY-V2-CHANGES.md",
+             "docs/buddy-log/README.md",
+             "policy/v3/CHANGES.md"},
             naming,
         )
 
 
-class TheDraftIsNotAppliedTests(unittest.TestCase):
-    """The policy in force is version 1 plus amendment 0001, and not this draft."""
+class TheDraftIsNotTheVersionInForceTests(unittest.TestCase):
+    """The version in force is version 1 plus amendment 0001, and not this draft.
+
+    The draft is now available to the runtime as version 3, so "not applied"
+    would be the wrong words. What is still true, and what these tests hold, is
+    that the draft is not the **default** and not what ``policy/`` holds: the
+    live three files are version 1's, ``BASE_VERSION`` is 1, and the draft's
+    files in this folder are untouched.
+    """
 
     def test_the_live_policy_files_are_not_the_draft_s(self):
         for name in ("general.json", "no_show.json", "route_deviation.json"):
@@ -316,22 +351,29 @@ class TheReadmeSaysWhatItIsTests(unittest.TestCase):
         self.assertIn("Ji Guofang", self.text)
         self.assertIn("2026-10-07", self.text)
 
-    def test_the_readme_says_it_is_not_applied_and_not_measured(self):
+    def test_the_readme_says_it_is_added_but_not_the_default_and_not_measured(self):
+        # Compared with the README's own line wrapping removed, so that a
+        # sentence reflowed by an editor is not a failing test. The repository
+        # README's roadmap line is read the same way, below.
+        normalised = " ".join(self.text.split())
         for needle in (
-            "Drafted, not applied, and not measured",
+            "Drafted, added as policy version 3, not the default, and not yet measured",
             "no figure anywhere in this repository was produced under this draft",
+            "no run exists at version 3",
         ):
             with self.subTest(needle=needle):
-                self.assertIn(needle, self.text)
+                self.assertIn(needle, normalised)
 
-    def test_the_readme_says_what_applying_it_would_take(self):
+    def test_the_readme_says_what_making_it_the_default_would_take(self):
+        normalised = " ".join(self.text.split())
         for needle in (
-            "a re-registration of the sealed sets as development data",
-            "a full rerun",
-            "a new sealed set",
+            "a development run at version 3",
+            "the default moves to version 3 only if it does no worse",
+            "a freeze tag",
+            "one sealed run",
         ):
             with self.subTest(needle=needle):
-                self.assertIn(needle, self.text)
+                self.assertIn(needle, normalised)
 
     def test_the_readme_says_the_sources_note_describes_the_draft_as_in_force(self):
         self.assertIn("as if it were in force", self.text)
@@ -342,10 +384,17 @@ class TheReadmeSaysWhatItIsTests(unittest.TestCase):
         self.assertIn(ARCHIVE_SHA256, self.text)
 
     def test_the_repository_readme_carries_the_one_roadmap_line(self):
-        """The line is one sentence, wherever the README wraps it."""
+        """The line is one sentence, wherever the README wraps it.
+
+        It named the draft as a roadmap and said it was not applied and not
+        measured. On 2026-10-08 the draft was added as policy version 3, so the
+        line now says what is true of it: it is added, it is not the default, and
+        no run has been made at it.
+        """
         sentence = (
-            "A policy base version 2 aligned with published platform rules is "
-            "drafted in `docs/roadmap/policy-v2/`; it is not applied and not measured."
+            "A policy base version 3 aligned with published platform rules is "
+            "added as `policy/v3/`; it is not the default and no run has been "
+            "made at it."
         )
         self.assertIn(sentence, " ".join(self.repository.split()))
 
