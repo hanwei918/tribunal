@@ -21,18 +21,23 @@ sequential path, so every existing test keeps its meaning. The setting is
 recorded in the run's `invocation_start` event and in `run.json`, and it is
 deliberately **not** part of a case's `configuration` object: it is not a
 property of a case, it is not a staleness key and it is not a cache key, because
-it changes no request. Three tests hold that: the configuration object does not
-carry it, `run.json` and the `invocation_start` event name it only when it is on,
-and two parallel runs write the same call order.
+**no individual request body changes**. What it can change is the *set* of
+requests -- up to two driver requests after the rider fails, the remaining draft
+requests after a draft raises, and a different set again under a case deadline.
+Three tests hold the recording: the configuration object does not carry it,
+`run.json` and the `invocation_start` event name it only when it is on, and two
+parallel runs write the same call order.
 
-**The pipeline was split, not rewritten.** `_call_agent` became two parts. The
-worker part runs the two-attempt loop, the deadline check and `client.complete`,
-touches neither the transcript nor the event log, and returns each attempt's
-result with its own timestamp, the final value and reason, and any exception --
-caught and stored. The main-thread part writes each attempt to the transcript and
-the `agent_call` event in attempt order, exactly as before, and then returns or
-re-raises the stored exception. `_call_agent` is the two parts run in sequence,
-so every existing caller is unchanged.
+**The pipeline was split, not rewritten.** A call is now two functions.
+`_call_agent_worker` runs the two-attempt loop, the deadline check and
+`client.complete`, touches neither the transcript nor the event log, and returns
+each attempt's result with its own timestamp, the final value and reason, and any
+exception -- caught and stored. `_write_agent_call` writes each attempt to the
+transcript and the `agent_call` event in attempt order, exactly as before, and
+then returns or re-raises the stored exception. `_call_agent` is the two run in
+sequence for one call, which is the sequential path and what every caller before
+the switch took; the parallel path drives the two itself, so the calls of one
+group can be in flight together while still being written in the case's order.
 
 The advocates run in a pool **private to that call site**, two workers wide, and
 both are waited on before either answer is written down. The judge's draft
@@ -48,15 +53,18 @@ own order -- rider before driver, drafts in position order. `Transcript.add` and
 `record` gained an optional `timestamp=` so an entry keeps the time its call
 finished rather than the time it was written. The verifier (a fourth model call),
 the vote reduction and the `vote` event stay sequential and unchanged, and so does
-the K = 1 judge path. `calls.json` is sorted into a deterministic order -- case,
-then the role's **rank** (rider 0, driver 1, judge 2, verifier 3), then the
-draft's position, then the attempt -- where before it was in completion order.
-The rank is what puts the rider first: the role *names* sort `driver`, `judge`,
-`rider`, so a sort by name would put the case's first call last. The draft's
-position is the one-based index the call was made at, and the verifier's is
-published too; before this every draft published position 0, which made four
-drafts of one case indistinguishable to a sort, and the verifier published
-nothing at all.
+the K = 1 judge path. `calls.json` is sorted into a deterministic order -- the
+case's **position in the requested list**, then the role's **rank** (rider 0,
+driver 1, judge 2, verifier 3), then the draft's position, then the attempt --
+where before it was in completion order. The position and not the case number,
+because `--cases` may name them in any order: a run asked for `--cases 103,101`
+is then in true call order, which a sort by case number would not give. The rank
+is what puts the rider first: the role *names* sort `driver`, `judge`, `rider`,
+so a sort by name would put the case's first call last. The draft's position is
+the one-based index the call was made at, and the verifier's is published too;
+before this every draft published position 0, which made four drafts of one case
+indistinguishable to a sort, and the verifier published nothing at all. The
+attempt is in the key because a retried call is two records at one position.
 
 **The default path was put back.** The first version of the switch routed the
 *sequential* path through the same join, which asked every call before writing
@@ -73,15 +81,33 @@ taken from a worktree of that commit.
 raised draft stops the remaining drafts, each completed attempt written before
 the next request. With it on, **a rider that returns an unusable answer** stays
 the failed agent even when the driver raises (including a deadline); the driver's
-completed attempts are written and its exception is noted on the last of them,
-without re-raising the driver. When the rider raises, the already-in-flight driver
-is joined and its completed attempts are recorded before the rider exception is
-re-raised; drafts behave the same way, so a raised draft is held back while the
-drafts after it are written and comes out once the panel is complete. A parallel
-failure can therefore spend an extra driver request, and the two modes do not
-necessarily send the same *set* of request bodies. A `KeyboardInterrupt` cancels
-queued futures and stops running workers before a second attempt; transport calls
-already in flight can complete before shutdown.
+completed attempts are written, and its exception is noted on the last of them
+**only when it completed at least one attempt** -- a driver that raised before
+completing an attempt leaves no entry to note it on -- without re-raising the
+driver. When the rider raises, the already-in-flight driver is joined and its
+completed attempts are recorded before the rider exception is re-raised; drafts
+behave the same way, so a raised draft is held back while the drafts after it are
+written and comes out once the panel is complete. A parallel failure can
+therefore spend an extra driver request, and the two modes do not necessarily
+send the same *set* of request bodies; under a case deadline they can differ
+again.
+
+**The interrupt, and how far it reaches.** A `KeyboardInterrupt` raised inside a
+worker's transport call escapes the worker -- ordinary exceptions are caught and
+stored, that one deliberately is not -- and lands in the join. Queued futures are
+cancelled and a flag is set that an in-flight worker checks before each attempt,
+so a worker that has already answered one unusable attempt does not start its
+retry; transport calls already in flight can complete before shutdown, because a
+`Future` cannot cancel a call that is already running. The join-level stop is the
+**main thread's** interrupt only. `eval.run_benchmark` and
+`eval.development_sets` run every case in a pool thread of their own, so Ctrl-C at
+the runner is delivered to the main thread and **every in-flight case finishes in
+full** -- second attempts, the remaining drafts and the verifier all still run.
+Below the join nothing can be stopped either: one `client.complete` may make up to
+4 HTTP attempts inside its 1200 s deadline, and a request already waiting in the
+rate limiter is still sent. Attempts completed inside an interrupted join are
+billed by the client that made them but **not written**, because nothing writes a
+call whose worker did not return.
 
 **Rate limiting is untouched.** The per-client limiter keeps capacity 1, its one
 request a second, and the same names and shape (`_respect_rate_limit`,
@@ -142,15 +168,22 @@ kind; the parallel run's `events.jsonl` is byte-identical to the sequential
 run's; and one case's parallel run is asserted to have called the transport on
 more than one thread, so the two modes are not one path compared with itself.
 
-**The coverage of the digest check, stated honestly.** `calls.json` is rewritten
-by every invocation and holds only the last one, so **148 of the 784 recorded
-bodies** have a digest in their run's file -- 142 distinct digests. The prompts of
-the earlier invocations are still checked, through each transcript entry's own two
-digests, which is what the entry comparison does; their sampling settings are
-checked only against the recordings' own key. The argument that closes the rest of
-the gap is that `tribunal/llm.py` is unchanged and the worker hands
-`client.complete` the same arguments it always did, so the body is built by the
-same code from the same inputs.
+**The coverage of the digest check, stated exactly.** The transport keys every
+one of the **784** requests the four sets' recordings hold by
+`(sha256(system), sha256(user), temperature, seed)`, so all 784 are checked on
+those four fields. A full-body digest exists for **148** of them -- 142 distinct
+-- because `calls.json` is rewritten by every invocation and holds only the last
+one; those 148 are pinned by the digest test. The **verifier is never replayed**:
+every committed run was made with the verifier off, so no recording holds a
+verifier call. The prompts of the earlier invocations are still checked, through
+each transcript entry's own two digests, which is what the entry comparison does;
+their sampling settings are checked only against the recordings' own key. The
+argument that closes the rest of the gap is that `tribunal/llm.py` is unchanged
+and the worker hands `client.complete` the same arguments it always did, so the
+body is built by the same code from the same inputs. The arms that are **not**
+replayed at all are the ablation, the `policy-v2` run, `hy3`, `hy4-preview`,
+`deepseek-v4.1-flash` (case 105), `rerun-2026-09-29/external/ryde` (case 901),
+`external`, and the `_icloud-incident-2026-09-27` archive.
 
 Three negative controls show the check biting: advocates written in completion
 order (driver first), the seeds of drafts 1 and 2 exchanged, and the judge's
@@ -180,7 +213,8 @@ the same way rather than compared raw.
 repository map. It says what overlaps, that the switch is opt-in and where the
 setting is and is not recorded, that every answer is still written in the case's
 own order, that the rate limiter is unchanged and up to `concurrency × max(2, votes)`
-requests queue at one a second, the one behaviour change from part A, and what
+requests queue at one a second, the requests a parallel run can send that a
+sequential one would not, how far an interrupt reaches, and what
 the offline replay proves. It also carries the estimate, labelled as an estimate:
 from the recorded durations a case should drop from roughly the sum of its calls
 to roughly the longest advocate call plus the longest draft. The estimate is not
@@ -212,7 +246,8 @@ change every request, and no byte sent to a model may move.
 ## D. The no-leakage guard
 
 `tests/test_no_leakage.py` walks `prompts/` and `policy/` -- the two trees shared
-by every case -- and looks for four kinds of case identifier: case file stems
+by every case, and the only two this module scans -- and looks for four kinds of
+case identifier: case file stems
 `case-NNNNN`, `dispute_id` values, trip ids, and evidence ids of the form
 `EV-<KIND>-<digits>`. The tokens are **built, not typed**: from the registry
 (`eval.development_sets.BY_NAME`, every development, sealed and re-run set), and
@@ -224,12 +259,18 @@ numbers do not match.
 
 The judge can be shown a **third** tree, `precedents/`, and it is deliberately
 not scanned here: nothing that tree can hand the judge carries a case identifier.
-The block the judge receives is built by `tribunal.precedents.block`, which is
-handed the entries already chosen and **no case id at all** -- it writes each
-entry's id, its category, its clause ids and its ruling. The choosing happens one
-level up, in `tribunal.precedents.matches`, and it is a function of the category,
-the clause ids a kept claim cites and the contested amount; it *excludes* the case
-being judged rather than naming it.
+The block the judge receives is built by `tribunal.precedents.block`, and the
+guarantee is in what it **emits**: each item carries only `precedent_id`,
+`category`, `clause_ids` and `ruling`, and the block carries only a fixed `note`
+and those items. It *is* handed entries that carry `case_no` and `dispute_id` --
+those are the stored entries -- so the guarantee is about the output, not about
+the input. The choosing happens one level up, in `tribunal.precedents.matches`,
+which uses `case_no` and `dispute_id` to **exclude** the case being judged rather
+than to name it, and is otherwise a function of the category, the clause ids a
+kept claim cites and the contested amount. Two tests already hold this:
+`tests/test_precedents.py` pins the block's exact key set, and
+`tests/test_answer_isolation.py` pins that the case being judged never appears in
+its own block.
 
 A failure prints the file and the kind of token and nothing else, never the token
 and never the line it sat on, because this module's output is committed. The
@@ -257,6 +298,23 @@ the pin behind covering whatever comes next. Removing the pin is the first thing
 reader should do after the example is rewritten to an invented id. The check is
 also shown red on a dirty fixture: a copy of the real tree with one identifier
 spliced into one file is reported with that file and that kind.
+
+## Known gaps, recorded rather than closed
+
+The 2026-10-07 follow-up did the review's documents, its failing tests and its
+clean-ups, and deliberately left three items open. Each is one sentence:
+
+- **The review's §1 item 7** -- the item-2 tests are not extended with the
+  driver's exception note, the driver's completed attempts in shape (a), the
+  first raising draft by position, the raising rider's own completed attempts, or
+  the rider's exception winning when the driver also raises; only the four
+  scenarios the follow-up sheet names are covered.
+- **The review's §2 item 1** -- `_write_agent_call` still replaces
+  `UNUSABLE_RESPONSE_NOTE` with the exception note on a driver whose rider
+  failed, so that entry loses the "retried once" marker instead of carrying both.
+- **The review's §2 item 2** -- in parallel mode the drafts after the first
+  raising draft still get `judge_draft` events, where the sequential path would
+  not have reached them.
 
 ## Finish
 

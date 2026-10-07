@@ -2777,6 +2777,40 @@ class VerifierCallTests(unittest.TestCase):
         self.assertEqual(2, result.judge_vote["valid"])
         self.assertEqual(1, len(transport.verifier_requests))
 
+    def test_the_verifier_request_carries_the_clients_own_settings(self):
+        """One verifier call, and the settings it was made with.
+
+        The verifier is a model call like any other, so its body carries exactly
+        the five keys every request carries. It runs at
+        :data:`pipeline.VERIFIER_TEMPERATURE`, which is ``0.0``, and at the
+        client's own seed, because the verifier names no seed of its own. The
+        constant is asserted beside the body: a body compared only with itself
+        would go on matching whatever the constant said, so patching the
+        constant to another temperature has to fail this test.
+        """
+        result, transport = run_verified(
+            *self.ADVOCATES, *judge_drafts(*[FACTUAL_EXPLANATION] * 4)
+        )
+        self.assertTrue(result.ok)
+
+        bodies = []
+        for call in transport.calls:
+            body = json.loads(call["body"].decode("utf-8"))
+            parsed = json.loads(body["messages"][1]["content"])
+            if isinstance(parsed, dict) and "statements" in parsed:
+                bodies.append(body)
+
+        self.assertEqual(1, len(bodies), "one verifier call per case")
+        body = bodies[0]
+        self.assertEqual(
+            {"model", "messages", "temperature", "seed", "response_format"},
+            set(body),
+        )
+        self.assertEqual(0.0, pipeline.VERIFIER_TEMPERATURE)
+        self.assertEqual(pipeline.VERIFIER_TEMPERATURE, body["temperature"])
+        self.assertEqual(llm.DEFAULT_SEED, body["seed"])
+        self.assertEqual({"type": "json_object"}, body["response_format"])
+
     def test_one_call_covers_every_statement_the_drafts_state(self):
         rich = (
             "The fare was S$4.35 per EV-GPS-00208. "
@@ -3511,19 +3545,24 @@ class RoutedTransport:
         judge = (pipeline.PROMPTS_DIR / pipeline.JUDGE_PROMPT_FILE).read_text(
             encoding="utf-8"
         )
-        return rider, driver, judge
+        verifier = (pipeline.PROMPTS_DIR / pipeline.VERIFIER_PROMPT_FILE).read_text(
+            encoding="utf-8"
+        )
+        return rider, driver, judge, verifier
 
     def _key(self, body):
         request = json.loads(body.decode("utf-8"))
         system = request["messages"][0]["content"]
         user = request["messages"][1]["content"]
-        rider, driver, judge = self._prompts()
+        rider, driver, judge, verifier = self._prompts()
         if system == rider:
             role = RIDER
         elif system == driver:
             role = DRIVER
         elif system == judge:
             role = JUDGE
+        elif system == verifier:
+            role = VERIFIER
         else:
             raise AssertionError("a request carried a system prompt no agent sends")
         sides = ()
@@ -3553,7 +3592,7 @@ class RoutedTransport:
                 )
             answer = queue.pop(0)
             self.finished.add(key)
-        if isinstance(answer, Exception):
+        if isinstance(answer, BaseException):
             raise answer
         return answer
 
@@ -3570,6 +3609,32 @@ class RoutedTransport:
                         )
                     )
                 self.condition.wait(remaining)
+
+
+class InterruptingTransport(RoutedTransport):
+    """A routed transport whose driver waits for the interrupt before answering.
+
+    The driver's **first** attempt blocks, with a timeout, on the stop flag the
+    join sets -- the very flag the worker checks before its second attempt -- so
+    the second-attempt check is reached *after* the interrupt has landed rather
+    than in a race with it. ``arrived`` still counts every request that reached
+    the transport, which is what the interrupt test asserts on.
+    """
+
+    def __init__(self, answers):
+        super().__init__(answers)
+        self.driver_attempts = 0
+
+    def __call__(self, url, headers, body, timeout):
+        if self._key(body) == DRIVER_REQUEST:
+            self.driver_attempts += 1
+            if self.driver_attempts == 1:
+                stop = pipeline.STOP_PARALLEL_CALLS.get()
+                assert stop is not None, "the driver is not running inside a join"
+                assert stop.wait(5.0), (
+                    "the rider's interrupt never reached the driver's worker"
+                )
+        return super().__call__(url, headers, body, timeout)
 
 
 def routed_client(transport) -> llm.LLMClient:
@@ -3594,11 +3659,13 @@ def advocate_answers():
 class ParallelCallTests(unittest.TestCase):
     """Calls in flight together are still written down in one fixed order.
 
-    The switch changes *when* a call is made and nothing else: the same
-    requests, the same record, and -- the one deliberate difference -- a rider
-    that fails no longer stops the driver from being called. Every test here
-    scripts the transport by what each request asks, because with the calls
-    overlapping there is no arrival order to script against.
+    The switch changes *when* a call is made and nothing about a request body:
+    the same brief, the same prompts, the same messages, and the same record.
+    What it can change is the *set* of requests -- a rider that fails no longer
+    stops the driver from being called, and a raised draft no longer stops the
+    drafts after it. Every test here scripts the transport by what each request
+    asks, because with the calls overlapping there is no arrival order to script
+    against.
     """
 
     def run_the_case(self, transport, *, votes=1, parallel=True, events_log=None):
@@ -3972,24 +4039,37 @@ class ParallelCallTests(unittest.TestCase):
             # in-flight driver request has an agent_call event.
             self.assertEqual([DRIVER], [e["role"] for e in events.read_events(path) if e["event"] == events.EVENT_AGENT_CALL])
 
-    def test_parallel_interrupt_stops_second_attempt_after_in_flight_call(self):
-        waiting = threading.Event()
-        attempts = []
+    def test_parallel_interrupt_stops_the_drivers_second_attempt(self):
+        """An interrupt stops the *next* request; it cannot abort one in flight.
 
-        def work(item):
-            attempts.append((item, 1))
-            if item == 0:
-                self.assertTrue(waiting.wait(2))
-                raise KeyboardInterrupt()
-            waiting.set()
-            time.sleep(0.05)
-            if not pipeline.STOP_PARALLEL_CALLS.get().is_set():
-                attempts.append((item, 2))
-            return None
+        Driven through ``run_case`` with the switch on and a routed transport,
+        not through ``_join_calls`` with a hand-written worker: what is under
+        test is the real check inside the worker's two-attempt loop. The rider's
+        transport call raises ``KeyboardInterrupt``; the driver's first answer is
+        unusable, and the driver is held until the interrupt has landed, so the
+        worker reaches its second-attempt check after the stop is set rather
+        than in a race with it. The driver's second attempt must never be
+        requested -- and a worker whose stop check is deleted asks for it, which
+        is how this test is shown to bite.
+        """
+        transport = InterruptingTransport(
+            {
+                RIDER_REQUEST: [KeyboardInterrupt()],
+                DRIVER_REQUEST: [
+                    envelope("not the shape the advocate prompt asks for")
+                ],
+            }
+        )
 
         with self.assertRaises(KeyboardInterrupt):
-            pipeline._join_calls(work, (0, 1), workers=2)
-        self.assertEqual([(0, 1), (1, 1)], sorted(attempts))
+            self.run_the_case(transport, parallel=True)
+
+        self.assertEqual(1, transport.arrived.count(RIDER_REQUEST))
+        self.assertEqual(
+            1,
+            transport.arrived.count(DRIVER_REQUEST),
+            "the driver's second attempt was requested after the interrupt",
+        )
 
     def test_parallel_bad_first_draft_writes_other_completed_drafts(self):
         answers = advocate_answers()
@@ -4011,9 +4091,13 @@ class ParallelCallTests(unittest.TestCase):
     def test_the_switch_changes_no_request_and_no_record(self):
         """The switch decides when a call is made, and nothing else.
 
-        The same requests go out -- as bytes -- and the same transcript comes
-        back, byte for byte. The clock is pinned and the calls spend no time, so
-        the two transcripts are comparable as they stand.
+        **No individual request body changes**: the same brief, the same prompts
+        and the same messages go out, and the same transcript comes back, byte
+        for byte. (The *set* of requests can differ when something fails or a
+        case deadline is reached; this scenario fails at nothing and reaches no
+        deadline, so both modes ask exactly the same calls.) The clock is pinned
+        and the calls spend no time, so the two transcripts are comparable as
+        they stand.
         """
         sequential = RoutedTransport(advocate_answers())
         parallel = RoutedTransport(advocate_answers())
@@ -4028,6 +4112,299 @@ class ParallelCallTests(unittest.TestCase):
         self.assertEqual(off.transcript_json, on.transcript_json)
         self.assertEqual(off.brief_sha256, on.brief_sha256)
         self.assertEqual(off.ruling, on.ruling)
+
+
+VERIFIER = transcript_module.ROLE_VERIFIER
+VERIFIER_REQUEST = (VERIFIER, ADVOCATE_SEED, ADVOCATE_TEMPERATURE, ())
+
+# The corpus case the four sequential failure shapes are pinned on, and the
+# answers the probe used: the two advocates' claims, and a ruling whose
+# explanation carries a figure and an evidence id so the verifier really runs.
+SEQUENTIAL_CASE = 101
+RIDER_FACTUAL_CLAIMS = json.dumps(
+    [{"text": "rider point", "evidence_ids": ["EV-GPS-00101"], "clause_ids": ["POL-RD-02"]}]
+)
+DRIVER_FACTUAL_CLAIMS = json.dumps(
+    [{"text": "driver point", "evidence_ids": ["EV-GPS-00101"], "clause_ids": ["POL-RD-01"]}]
+)
+FACTUAL_RULING = json.dumps(
+    {
+        "ruling": {
+            "ruling": "NO_ACTION",
+            "amount_sgd": None,
+            "driver_compensation_sgd": None,
+            "referrals": [],
+            "confidence": 0.85,
+            "explanation": (
+                "the fare of 4.35 SGD was charged and EV-GPS-00101 is on the record"
+            ),
+        },
+        "discarded_claims": [],
+    }
+)
+
+
+class SequentialFailureShapeTests(unittest.TestCase):
+    """The sequential path's four failure shapes, pinned as literals.
+
+    The default path is the one every run before the switch took, so its shapes
+    are written down rather than described: the requests that arrived, the
+    transcript's roles and notes, the ``agent_call`` and ``judge_draft`` events
+    in order, and the exception that came out. The expectations were produced by
+    driving these four scenarios against a temporary worktree of ``3afd2f8`` --
+    the commit the switch was built on -- and the sequential path is that
+    commit's, which
+    :meth:`ParallelCallTests.test_the_sequential_probe_matches_the_commit_before_the_switch`
+    asserts separately. They are literals here; no other tree is read at run
+    time.
+    """
+
+    ADVOCATES = {
+        RIDER_REQUEST: [envelope(RIDER_FACTUAL_CLAIMS)],
+        DRIVER_REQUEST: [envelope(DRIVER_FACTUAL_CLAIMS)],
+    }
+    SAMPLED = {
+        draft_request(seed, pipeline.JUDGE_VOTE_TEMPERATURE, pipeline.DRIVER_FIRST): [
+            envelope(FACTUAL_RULING)
+        ]
+        for seed in pipeline.JUDGE_VOTE_SEEDS[:3]
+    }
+    SWAPPED = draft_request(42, 0.0, pipeline.RIDER_FIRST)
+
+    def run_the_case(self, answers, *, verify=False, watched=()):
+        """Run corpus case 101 sequentially and report everything it did.
+
+        ``watched`` names request keys whose arrival is to be observed from
+        inside the transport: for each, the ``agent_call`` and ``judge_draft``
+        events already on the log at that instant are recorded, which is what
+        says a call is written before the next one is asked for.
+        """
+        log_path = None
+        transport = RoutedTransport(answers)
+        watched = set(watched)
+        observed = {}
+        captured = {}
+        real_transcript = transcript_module.Transcript
+
+        class Capturing(real_transcript):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                captured["transcript"] = self
+
+        def observing(url, headers, body, timeout):
+            key = transport._key(body)
+            if key in watched:
+                observed[key] = [
+                    (event["event"], event.get("role"), event.get("draft"))
+                    for event in events.read_events(log_path)
+                    if event["event"]
+                    in (events.EVENT_AGENT_CALL, events.EVENT_JUDGE_DRAFT)
+                ]
+            return transport(url, headers, body, timeout)
+
+        with tempfile.TemporaryDirectory() as directory:
+            log_path = Path(directory) / "events.jsonl"
+            log = events.EventLog(log_path, invocation_id="test", now=lambda: PINNED_NOW)
+            client = llm.LLMClient(
+                model="hy4-preview",
+                api_key=FAKE_KEY,
+                transport=observing,
+                sleep=lambda seconds: None,
+                clock=lambda: 0.0,
+            )
+            raised = None
+            transcript_module.Transcript = Capturing
+            try:
+                pipeline.run_case(
+                    SEQUENTIAL_CASE,
+                    client,
+                    now=lambda: PINNED_NOW,
+                    judge_votes=4,
+                    verify_drafts=verify,
+                    events_log=log,
+                )
+            except BaseException as exc:  # noqa: BLE001
+                raised = type(exc)
+            finally:
+                transcript_module.Transcript = real_transcript
+            written = events.read_events(log_path)
+
+        return {
+            "arrived": list(transport.arrived),
+            "transcript": [
+                (entry.role, entry.note)
+                for entry in captured["transcript"].entries
+            ],
+            "events": [
+                (
+                    event["event"],
+                    event.get("role"),
+                    event.get("draft"),
+                    event.get("attempt"),
+                )
+                for event in written
+                if event["event"]
+                in (events.EVENT_AGENT_CALL, events.EVENT_JUDGE_DRAFT)
+            ],
+            "raised": raised,
+            "observed": observed,
+        }
+
+    def all_drafts(self):
+        answers = dict(self.ADVOCATES)
+        answers.update(self.SAMPLED)
+        answers[self.SWAPPED] = [envelope(FACTUAL_RULING)]
+        return answers
+
+    def test_a_draft_one_raise_stops_the_panel_before_draft_two(self):
+        """The first draft raises, so drafts two, three and four are never asked."""
+        answers = self.all_drafts()
+        answers[
+            draft_request(101, pipeline.JUDGE_VOTE_TEMPERATURE, pipeline.DRIVER_FIRST)
+        ] = [llm.TransportError("the first draft's wire went away")]
+
+        report = self.run_the_case(answers)
+
+        self.assertEqual(
+            [
+                RIDER_REQUEST,
+                DRIVER_REQUEST,
+                draft_request(101, pipeline.JUDGE_VOTE_TEMPERATURE, pipeline.DRIVER_FIRST),
+            ],
+            report["arrived"],
+        )
+        self.assertEqual([(RIDER, None), (DRIVER, None)], report["transcript"])
+        self.assertEqual(
+            [
+                (events.EVENT_AGENT_CALL, RIDER, None, 1),
+                (events.EVENT_AGENT_CALL, DRIVER, None, 1),
+            ],
+            report["events"],
+        )
+        self.assertIs(llm.TransportError, report["raised"])
+
+    def test_a_driver_raise_stops_before_the_judge_is_asked(self):
+        """The driver's completed attempt is written, then its raise ends the case.
+
+        The driver's first answer is unusable and its retry raises, so one
+        attempt completed before the exception: that entry -- and its
+        ``agent_call`` -- is on the record, and the judge is never asked.
+        """
+        answers = dict(self.ADVOCATES)
+        answers[DRIVER_REQUEST] = [
+            envelope("not the shape the advocate prompt asks for"),
+            llm.TransportError("the driver's wire went away"),
+        ]
+
+        report = self.run_the_case(answers)
+
+        self.assertEqual(
+            [RIDER_REQUEST, DRIVER_REQUEST, DRIVER_REQUEST], report["arrived"]
+        )
+        self.assertEqual(
+            [
+                (RIDER, None),
+                (DRIVER, "response was not the shape the prompt asked for; retried once"),
+            ],
+            report["transcript"],
+        )
+        self.assertEqual(
+            [
+                (events.EVENT_AGENT_CALL, RIDER, None, 1),
+                (events.EVENT_AGENT_CALL, DRIVER, None, 1),
+            ],
+            report["events"],
+        )
+        self.assertIs(llm.TransportError, report["raised"])
+
+    def test_an_interrupt_in_a_draft_escapes_and_stops_the_panel(self):
+        """A ``KeyboardInterrupt`` is not an unusable answer: it comes straight out."""
+        answers = self.all_drafts()
+        answers[
+            draft_request(101, pipeline.JUDGE_VOTE_TEMPERATURE, pipeline.DRIVER_FIRST)
+        ] = [KeyboardInterrupt()]
+
+        report = self.run_the_case(answers)
+
+        self.assertEqual(
+            [
+                RIDER_REQUEST,
+                DRIVER_REQUEST,
+                draft_request(101, pipeline.JUDGE_VOTE_TEMPERATURE, pipeline.DRIVER_FIRST),
+            ],
+            report["arrived"],
+        )
+        self.assertEqual([(RIDER, None), (DRIVER, None)], report["transcript"])
+        self.assertEqual(
+            [
+                (events.EVENT_AGENT_CALL, RIDER, None, 1),
+                (events.EVENT_AGENT_CALL, DRIVER, None, 1),
+            ],
+            report["events"],
+        )
+        self.assertIs(KeyboardInterrupt, report["raised"])
+
+    def test_a_verifier_raise_comes_out_after_every_draft_is_written(self):
+        """The panel is complete and on the record before the verifier is asked."""
+        answers = self.all_drafts()
+        answers[VERIFIER_REQUEST] = [llm.TransportError("the verifier's wire went away")]
+
+        report = self.run_the_case(answers, verify=True)
+
+        self.assertEqual(
+            [
+                RIDER_REQUEST,
+                DRIVER_REQUEST,
+                draft_request(101, pipeline.JUDGE_VOTE_TEMPERATURE, pipeline.DRIVER_FIRST),
+                draft_request(202, pipeline.JUDGE_VOTE_TEMPERATURE, pipeline.DRIVER_FIRST),
+                draft_request(303, pipeline.JUDGE_VOTE_TEMPERATURE, pipeline.DRIVER_FIRST),
+                self.SWAPPED,
+                VERIFIER_REQUEST,
+            ],
+            report["arrived"],
+        )
+        self.assertEqual(
+            [(RIDER, None), (DRIVER, None), (JUDGE, None), (JUDGE, None), (JUDGE, None), (JUDGE, None)],
+            report["transcript"],
+        )
+        self.assertEqual(
+            [
+                (events.EVENT_AGENT_CALL, RIDER, None, 1),
+                (events.EVENT_AGENT_CALL, DRIVER, None, 1),
+                (events.EVENT_AGENT_CALL, JUDGE, None, 1),
+                (events.EVENT_JUDGE_DRAFT, None, 1, None),
+                (events.EVENT_AGENT_CALL, JUDGE, None, 1),
+                (events.EVENT_JUDGE_DRAFT, None, 2, None),
+                (events.EVENT_AGENT_CALL, JUDGE, None, 1),
+                (events.EVENT_JUDGE_DRAFT, None, 3, None),
+                (events.EVENT_AGENT_CALL, JUDGE, None, 1),
+                (events.EVENT_JUDGE_DRAFT, None, 4, None),
+            ],
+            report["events"],
+        )
+        self.assertIs(llm.TransportError, report["raised"])
+
+    def test_each_call_is_written_before_the_next_request_is_made(self):
+        """The record is on the log before the next request goes out.
+
+        Observed from inside the transport: at the instant draft 2's request
+        arrives, draft 1's ``agent_call`` and ``judge_draft`` are already there.
+        A run that asked every draft before writing any of them -- which is what
+        the switch's first version did with the switch off -- fails here.
+        """
+        second = draft_request(202, pipeline.JUDGE_VOTE_TEMPERATURE, pipeline.DRIVER_FIRST)
+
+        report = self.run_the_case(self.all_drafts(), watched={second})
+
+        self.assertEqual(
+            [
+                (events.EVENT_AGENT_CALL, RIDER, None),
+                (events.EVENT_AGENT_CALL, DRIVER, None),
+                (events.EVENT_AGENT_CALL, JUDGE, None),
+                (events.EVENT_JUDGE_DRAFT, None, 1),
+            ],
+            report["observed"][second],
+        )
 
 
 if __name__ == "__main__":

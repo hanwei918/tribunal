@@ -2918,10 +2918,13 @@ def run_benchmark(
     # Whether the calls that depend on nothing are made at the same time. Off by
     # default, so the sequential path is the one every run before the switch
     # took; when it is on the two advocates and the judge's drafts are asked
-    # together instead of one after another. It changes no request, so it is
-    # deliberately absent from the ``configuration`` every artifact carries and
-    # from every staleness and cache key: a result produced with it on measured
-    # exactly what the same result measured with it off.
+    # together instead of one after another. **No individual request body
+    # changes** -- the same brief, the same prompts and the same messages are
+    # sent -- so it is deliberately absent from the ``configuration`` every
+    # artifact carries and from every staleness and cache key. It can still send
+    # requests a sequential run would not: up to two driver requests after the
+    # rider fails, and the remaining draft requests after a draft raises; and
+    # under a case deadline it can send a different set of requests.
     parallel_calls: bool = False,
     client_factory: Optional[Callable[[Callable[[Dict[str, Any]], None]], Any]] = None,
     key: Optional[Mapping[int, grade.Ruling]] = None,
@@ -3324,21 +3327,28 @@ def run_benchmark(
     # position is the one thing a record cannot carry itself: this client is
     # shared across every case and knows nothing about cases, roles or drafts.
     #
-    # The position is ``(case, role rank, draft, attempt)`` -- the ranks being
-    # rider 0, driver 1, judge 2 and verifier 3 -- so the order is the order the
-    # calls are *made* in, which for a sequential run is the order they appear
-    # in the transcript. The role rank rather than the role name, because the
-    # names sort ``driver``, ``judge``, ``rider``: ASCII order puts the rider
-    # last when the case reads it first.
+    # The position is ``(the case's place in this invocation's requested list,
+    # role rank, draft, attempt)`` -- the ranks being rider 0, driver 1, judge 2
+    # and verifier 3 -- so the order is the order the calls are *made* in, which
+    # for a sequential run is the order they appear in the transcript. The
+    # **requested position** and not the case number, because ``--cases`` may
+    # name them in any order: with the case number first, a run asked for
+    # ``--cases 103,101`` would write its file in 101-then-103 order, which is
+    # not the order its calls were made in. The role rank rather than the role
+    # name, because the names sort ``driver``, ``judge``, ``rider``: ASCII order
+    # puts the rider last when the case reads it first.
+    positions = {case_no: index + 1 for index, case_no in enumerate(requested)}
+    total = len(requested)
+
     records: List[Tuple[Tuple[int, int, int, int], Dict[str, Any]]] = []
     records_lock = threading.Lock()
 
     def sink(record: Dict[str, Any]) -> None:
+        case_no, rank, draft, attempt = pipeline.call_sort_key()
         with records_lock:
-            records.append((pipeline.call_sort_key(), record))
-
-    positions = {case_no: index + 1 for index, case_no in enumerate(requested)}
-    total = len(requested)
+            records.append(
+                ((positions.get(case_no, case_no), rank, draft, attempt), record)
+            )
 
     # Every other mutation below happens on the thread that called this
     # function: worker threads run `pipeline.run_case` and return, and the
@@ -3887,8 +3897,12 @@ def _metadata_document(
 
     ``parallel_calls`` is written only when it is on, so a plain run's metadata
     is the metadata it always wrote. It is not in ``configuration`` above and
-    deliberately so: that object is what a case file is read against, and this
-    switch changes no request.
+    deliberately so: that object is what a case file is read against, and **no
+    individual request body depends on this switch**. The *set* of requests can
+    still differ -- a parallel run can spend up to two driver requests after the
+    rider fails, and the remaining draft requests after a draft raises, and under
+    a case deadline it can send a different set again -- but every body it does
+    send is a body the sequential path sends too.
     """
     failed = [outcome for outcome in outcomes if outcome.status == STATUS_FAILED]
     consumed = tokens_charged + tokens_failed
@@ -5645,11 +5659,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             "ask the calls that depend on nothing at the same time: the two "
             "advocates, and the judge's drafts when there is a panel of them. "
             "Off by default, so every run before this switch is the run it was. "
-            "It changes no request -- the same brief, the same prompts and the "
-            "same messages are sent, and the record is written in the same "
-            "order -- so it is not part of a case's configuration and it moves "
-            "no run directory. The client's rate limiter is unchanged, so up to "
-            "concurrency x 4 requests queue at one a second whatever this is set "
+            "No individual request body changes -- the same brief, the same "
+            "prompts and the same messages are sent -- so it is not part of a "
+            "case's configuration and it moves no run directory. It can still "
+            "send requests a sequential run would not: up to two driver requests "
+            "after the rider fails, the remaining draft requests after a draft "
+            "raises, and a different set of requests under a case deadline. The "
+            "client's rate limiter is unchanged, so up to concurrency × "
+            "max(2, votes) requests queue at one a second whatever this is set "
             "to"
         ),
     )

@@ -245,21 +245,29 @@ and `SHAPE`.
 
 ## Concurrency
 
-The three agents are the only part of a case that waits on something outside this
-process, and they are asked **one at a time** by default. `--parallel-calls` makes
-the waiting overlap: the two advocates are asked together, and the judge's drafts
-are asked together. The verifier, when enabled, is a fourth model call after the
-advocates and the panel.
+The agents are the only part of a case that waits on something outside this
+process -- the two advocates, the judge's four drafts, and the verifier, which
+is a fourth model call when it is enabled -- and they are asked **one at a
+time** by default. `--parallel-calls` makes the waiting overlap: the two
+advocates are asked together, and the judge's drafts are asked together. The
+verifier, when enabled, is a fourth model call after the advocates and the
+panel.
 
 **It is opt-in, and the sequential path is the default.** The switch is
 `--parallel-calls` on `eval.run_benchmark` and `eval.development_sets`, and a
 `parallel_calls` keyword through `run_set` and `run_benchmark` into `run_case`.
 The setting is recorded in the run's `invocation_start` event and in `run.json`,
 and it is deliberately **not** part of a case's `configuration` object: it is not
-a property of a case, it is not a staleness key and it is not a cache key, because
-it changes no individual request body. The two modes use the same briefs and
-per-call settings; a parallel run can incur an extra driver request when the
-rider fails, so the sets of requests need not be identical in a failure case.
+a property of a case, it is not a staleness key and it is not a cache key,
+because **no individual request body changes**. The two modes use the same
+briefs and per-call settings.
+
+**What it can still change is the set of requests, not the bodies.** When
+something fails, parallel mode can send requests sequential mode would not: up
+to two driver requests after the rider fails, and the remaining draft requests
+after a draft raises. Under a case deadline it can send a different set of
+requests again, because the calls are in flight together when the deadline is
+reached. Every body it does send is a body sequential mode sends too.
 
 **What overlaps.** The two advocate calls run in a pool private to that call site,
 two workers wide, and both are waited on before either answer is written down. The
@@ -278,13 +286,24 @@ behind it at one a second.
 driver is requested, and a raised draft stops before the next draft is requested.
 With it on, a rider that returns an unusable answer remains the failed agent
 even if the driver raises (including a deadline); the driver's completed attempts
-are recorded and its exception is noted without replacing the rider failure.
+are recorded, and its exception is noted on the last of them **only when it
+completed at least one attempt** — a driver that raised before completing an
+attempt leaves no entry to note it on — without replacing the rider failure.
 If the rider raises while the driver is in flight, the driver is joined and its
 completed attempts are recorded before the rider exception is re-raised. Drafts
 follow the same rule: join and record completed in-flight attempts, then re-raise
-the first draft exception. An already-running transport cannot be cancelled by
-an interrupt; queued futures are cancelled and running workers stop before a
-second attempt after the interrupt is observed.
+the first draft exception.
+
+**What an interrupt can and cannot stop.** The join-level stop applies only when
+`run_case` runs on the main thread. `eval.run_benchmark` and
+`eval.development_sets` run every case in a pool thread, so Ctrl-C at the runner
+lets every in-flight case finish in full — including second attempts, the
+remaining drafts and the verifier. An already-running transport cannot be
+cancelled by an interrupt: queued futures are cancelled and running workers stop
+before a *second* attempt once the interrupt is observed, but one
+`client.complete` can still make up to 4 HTTP attempts within its 1200 s deadline,
+and requests already waiting in the rate limiter are still sent. Attempts
+completed inside an interrupted join are billed but not written.
 
 **How much it is expected to buy — an estimate.** A case takes about seven minutes
 today: on `wild-v2` the mean was 429.6 s. From the recorded durations, a case

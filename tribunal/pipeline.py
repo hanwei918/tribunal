@@ -12,7 +12,9 @@
 5. return the ruling and the transcript.
 
 **The advocates are sequential by default.** With the opt-in parallel switch,
-the calls overlap but their transcript entries are written in case order.
+the calls overlap but their transcript entries are written in case order. **No
+individual request body changes**; what can change is the *set* of requests, when
+something fails or a case deadline is reached -- see :func:`run_loaded_case`.
 
 Two structural properties are *enforced* here, not described:
 
@@ -30,7 +32,10 @@ A model that answers with the wrong shape is retried once and then reported, and
 a ruling that breaks its own output contract is recorded and never repaired. See
 the module body for both. A sequential run **stops at the first failed agent**.
 With parallel calls, in-flight work is joined and accounted for; the judge still
-cannot be called without both claim arrays.
+cannot be called without both claim arrays. The join-level interrupt described at
+:func:`_join_calls` applies only when :func:`run_case` runs on the **main
+thread**: the two runners run every case in a pool thread, so Ctrl-C there lets
+each in-flight case finish in full.
 
 The judge's vote
 ----------------
@@ -1245,6 +1250,20 @@ def _join_calls(
     running, so the shutdown below waits for it to return before the interrupt
     propagates. In short, the interrupt stops *starting* work; it does not abort
     work already started.
+
+    **This is the main thread's interrupt only.** The stop is a signal set by the
+    thread that ran the join, so it only bites when the join is on the main
+    thread -- which is what a direct :func:`run_case` call is. The two runners
+    (:mod:`eval.run_benchmark` and :mod:`eval.development_sets`) call
+    :func:`run_case` in a pool thread of their own, so a Ctrl-C at the runner is
+    delivered to the main thread and **every in-flight case finishes in full**:
+    second attempts, the remaining drafts and the verifier all still run. What
+    the interrupt cannot stop even then is bounded below the join -- one
+    ``client.complete`` may make up to 4 HTTP attempts inside its 1200 s deadline,
+    and a request already waiting in the client's rate limiter is still sent.
+    Attempts completed inside an interrupted join are billed by the client that
+    made them but never written down, because nothing writes a call whose worker
+    did not return.
     """
     pool = concurrent.futures.ThreadPoolExecutor(max_workers=max(1, workers))
     interrupted = threading.Event()
@@ -2525,10 +2544,10 @@ def _run_judge_vote(
         return result
 
     # Every draft's message is built here, on this thread and in position order,
-    # before any call is made. Building a message is deterministic and writes
-    # nothing, so this changes no request; it is what lets the calls run
-    # together, because a draft's message is a function of the referee result
-    # and the draft's position and of nothing else.
+    # before any call is made. Building a message is deterministic and sends
+    # nothing, so it alters no request; it is what lets the calls run together,
+    # because a draft's message is a function of the referee result and the
+    # draft's position and of nothing else.
     plans: List[Tuple[str, Tuple[str, ...], Any, Any, str]] = []
     for position in range(votes):
         if position < sampled:
@@ -3491,7 +3510,7 @@ def run_case(
     ``parallel_calls`` is passed straight through as well. It is off by default,
     so the sequential path is the one every caller before the switch took; when
     it is on the two advocates and the judge's drafts are asked at the same time
-    instead of one after another. It changes no request -- see
+    instead of one after another. **No individual request body changes** -- see
     :func:`run_loaded_case`.
     """
     load = loader.load_case if case_loader is None else case_loader
@@ -3584,16 +3603,25 @@ def run_loaded_case(
     * the judge's drafts, when there is a panel of them -- see
       :func:`_run_judge_vote`.
 
-    **No byte of any request changes.** The concurrency decides only when a call
-    is made, and the record it produces is written in the same order either way:
-    the rider's attempts, then the driver's, then the drafts in position order.
-    It is deliberately **not** part of the case's ``configuration`` and not part
-    of any staleness or cache key, because it changes no request and therefore
-    says nothing about what a result measured.
+    **No individual request body changes.** The concurrency decides only when a
+    call is made, and the record it produces is written in the same order either
+    way: the rider's attempts, then the driver's, then the drafts in position
+    order. It is deliberately **not** part of the case's ``configuration`` and
+    not part of any staleness or cache key, because no body depends on it and it
+    therefore says nothing about what a result measured.
+
+    **What it can change is the *set* of requests.** Parallel mode can send
+    requests the sequential path would not: up to two driver requests after the
+    rider fails, and the remaining draft requests after a draft raises. Under a
+    case deadline it can send a different set again, because the calls are in
+    flight together when the deadline is reached. Every body it does send is a
+    body the sequential path sends too.
 
     With the switch on, a rider whose answer is unusable cannot stop the
     already-in-flight driver. The driver's completed attempts are recorded, its
-    exception is **noted on the last of them** rather than raised, and the rider
+    exception is **noted on the last of them** rather than raised -- and **only
+    when it completed at least one attempt**: a driver that raised before
+    completing an attempt leaves no entry to note anything on -- and the rider
     remains ``failed_agent``. A rider that raises is propagated only after the
     in-flight driver has been joined and written. With the switch off none of
     that arises: the rider's call is written, then the driver is asked, and the

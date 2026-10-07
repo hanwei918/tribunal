@@ -221,6 +221,10 @@ class ScriptedTransport:
         self.mutate = mutate
         self.requests = []
         self.roles = []
+        # The position each request was made at, read off the pipeline's own
+        # context as the request goes out. A body does not carry the role, the
+        # draft or the attempt, so this is the only place a test can learn them.
+        self.contexts = []
         self._lock = threading.Lock()
 
     def __call__(self, url, headers, body, timeout):
@@ -229,6 +233,7 @@ class ScriptedTransport:
         with self._lock:
             self.requests.append(request)
             self.roles.append((case_no, role))
+            self.contexts.append(pipeline.CALL_CONTEXT.get())
 
         if (case_no, role) in self.fail:
             return llm.HttpResult(status=self.fail_status, body=b'{"error": "scripted failure"}')
@@ -339,6 +344,31 @@ def call_position(request, votes=4):
         else votes
     )
     return (case_no, CALL_RANK[role], position)
+
+
+def call_order(records, transport, positions):
+    """The position of every record in ``calls.json``, in the file's own order.
+
+    A record carries the digest of the body it was made from and nothing that
+    names the call -- no role, no draft, no attempt -- so the records are paired
+    with the arrivals **by digest and in order**: the n-th record carrying a
+    digest is the n-th arrival that carried it. Each arrival's position was read
+    off ``pipeline.CALL_CONTEXT`` by the transport, which is the only place the
+    role, the draft and the attempt are visible, and the case is then mapped to
+    its place in the **requested** list, which is the first element of the key
+    the runner sorts by.
+    """
+    arrivals = {}
+    for request, context in zip(transport.requests, transport.contexts):
+        digest = hashlib.sha256(
+            json.dumps(request, ensure_ascii=False).encode("utf-8")
+        ).hexdigest()
+        arrivals.setdefault(digest, []).append(context)
+    order = []
+    for record in records:
+        case_no, role, draft, attempt = arrivals[record["request_sha256"]].pop(0)
+        order.append((positions[case_no], CALL_RANK[role], draft, attempt))
+    return order
 
 
 def client_factory(model, transport, clock=None):
@@ -5441,12 +5471,17 @@ def invocation_start(run_dir):
 class ParallelCallsTests(unittest.TestCase):
     """The switch is recorded where it belongs, and nowhere else.
 
-    ``--parallel-calls`` decides *when* a call is made. It changes no request,
-    so it is not part of the case's ``configuration`` object and not part of any
-    staleness or cache key: it is named on the invocation's own line and on this
-    run's ``run.json``, and that is all. And because the calls of one case can
-    now finish in any order, the ``calls.json`` a run writes is sorted by the
-    call's own position rather than by the order the answers came back.
+    ``--parallel-calls`` decides *when* a call is made. **No individual request
+    body changes**, so it is not part of the case's ``configuration`` object and
+    not part of any staleness or cache key: it is named on the invocation's own
+    line and on this run's ``run.json``, and that is all. What it can change is
+    the *set* of requests -- a parallel run can spend up to two driver requests
+    after the rider fails, and the remaining draft requests after a draft raises
+    -- and under a case deadline it can send a different set again. And because
+    the calls of one case can finish in any order, the ``calls.json`` a run
+    writes is sorted by the call's own position -- the case's place in the
+    requested list, the role rank, the draft and the attempt -- rather than by
+    the order the answers came back.
     """
 
     def both(self, tmp):
@@ -5495,11 +5530,16 @@ class ParallelCallsTests(unittest.TestCase):
         """With the calls overlapping, the file is the run's, not the network's.
 
         Each record is placed by the position of the call that made it -- the
-        case, then the role rank, then the draft -- which is a function of the
-        run alone. The order the answers arrived in is not, so the two are
-        compared here: the file is sorted, and the order the transport answered
-        in is not. The transport delays the rider past the driver, so this
-        comparison is not one that would hold whatever the file said.
+        case's place in the **requested** list, then the role rank, then the
+        draft, then the attempt -- which is a function of the run alone. The
+        order the answers arrived in is not, so the two are compared here: the
+        file is sorted, and the order the transport answered in is not. The
+        transport delays the rider past the driver, so this comparison is not
+        one that would hold whatever the file said.
+
+        The count is not asserted here:
+        ``test_the_calls_file_records_one_entry_per_request`` already holds that
+        one record is written per request.
         """
         with tempfile.TemporaryDirectory() as tmp:
             transport = DelayingTransport(produced_from_key(answer_key()))
@@ -5514,11 +5554,6 @@ class ParallelCallsTests(unittest.TestCase):
                 ).hexdigest(): request
                 for request in transport.requests
             }
-            self.assertEqual(
-                len(transport.requests),
-                len(document["calls"]),
-                "every request must be on the record, and nothing else",
-            )
             recorded = [
                 call_position(bodies[record["request_sha256"]])
                 for record in document["calls"]
@@ -5560,10 +5595,16 @@ class ParallelCallsTests(unittest.TestCase):
         Four drafts, the verifier on and two cases at once, over a transport that
         answers out of order: the rider's answer comes back after the driver's
         and the last draft's before the first's. The file is sorted by the call's
-        own position -- case, then role rank, then draft -- so it is the order
-        the calls were *made* in, and two runs of the same set write the same
-        order even though neither run's answers came back in it. The verifier is
-        a fourth call and ranks last, which is what its rank is for.
+        own position -- the case's place in the **requested** list, then the role
+        rank, then the draft, then the attempt -- so it reads in the order the
+        calls were *made* in, which is a function of the run and not of the
+        network.
+
+        The two cases are asked for in **reverse** number order (102 then 101),
+        so a file sorted by case number rather than by requested position would
+        be in the wrong order and this test would say so. And both modes are run:
+        the switch decides when a call is made, not what the record says, so the
+        two files must read the same.
         """
 
         def stating_a_fact(case_no, ruling):
@@ -5572,80 +5613,70 @@ class ParallelCallsTests(unittest.TestCase):
             )
             return ruling
 
+        asked = (102, 101)
+        positions = {case_no: index + 1 for index, case_no in enumerate(asked)}
         orders = []
         with tempfile.TemporaryDirectory() as tmp:
-            for name in ("a", "b"):
+            for parallel in (False, True):
+                mode = "parallel" if parallel else "sequential"
                 transport = DelayingTransport(
                     produced_from_key(answer_key()), mutate=stating_a_fact
                 )
                 summary, transport = bench(
                     tmp,
-                    cases=(101, 102),
-                    runs_dir=Path(tmp) / name,
+                    cases=asked,
+                    runs_dir=Path(tmp) / mode,
                     transport=transport,
                     judge_votes=4,
                     verify_drafts=True,
-                    parallel_calls=True,
+                    parallel_calls=parallel,
                     concurrency=2,
                 )
-                bodies = {
-                    hashlib.sha256(
-                        json.dumps(request, ensure_ascii=False).encode("utf-8")
-                    ).hexdigest(): request
-                    for request in transport.requests
-                }
                 records = runner.read_json(summary.run_dir / runner.CALLS_FILE)["calls"]
-                order = [
-                    call_position(bodies[record["request_sha256"]])
-                    for record in records
-                ]
-                roles = [
-                    role_of(bodies[record["request_sha256"]])[1] for record in records
-                ]
+                order = call_order(records, transport, positions)
+                arrived = [(case_no, role) for case_no, role in transport.roles]
 
-                self.assertEqual(
-                    2,
-                    roles.count(transcript.ROLE_VERIFIER),
-                    "the verifier is one call per case and both cases must be in the file",
-                )
-                self.assertNotEqual(
-                    [call_position(request) for request in transport.requests],
-                    order,
-                    "the answers came back in call order, so this proves nothing",
-                )
-                self.assertEqual(sorted(order), order, "the file is not in call order")
-                for case_no in (101, 102):
-                    with self.subTest(run=name, case=case_no):
-                        per_case = [item for item in order if item[0] == case_no]
+                with self.subTest(mode=mode):
+                    self.assertEqual(
+                        2,
+                        [role for _case, role in arrived].count(
+                            transcript.ROLE_VERIFIER
+                        ),
+                        "the verifier is one call per case, and both cases are here",
+                    )
+                    self.assertEqual(
+                        sorted(order), order, "the file is not in call order"
+                    )
+                    if parallel:
+                        self.assertNotEqual(
+                            [
+                                (positions[case_no], CALL_RANK[role])
+                                for case_no, role in arrived
+                            ],
+                            [(key[0], key[1]) for key in order],
+                            "the answers came back in call order, so this proves nothing",
+                        )
+                    for case_no in asked:
+                        per_case = [key for key in order if key[0] == positions[case_no]]
                         self.assertEqual(
                             [0, 1, 2, 2, 2, 2, 3],
-                            [item[1] for item in per_case],
+                            [key[1] for key in per_case],
                             "a case's calls are not in the order they were made",
                         )
                         self.assertEqual(
                             [1, 2, 3, 4],
-                            [item[2] for item in per_case if item[1] == 2],
+                            [key[2] for key in per_case if key[1] == 2],
                             "the drafts are not in position order",
                         )
                         self.assertEqual(
-                            [
-                                transcript.ROLE_RIDER_ADVOCATE,
-                                transcript.ROLE_DRIVER_ADVOCATE,
-                                transcript.ROLE_JUDGE,
-                                transcript.ROLE_JUDGE,
-                                transcript.ROLE_JUDGE,
-                                transcript.ROLE_JUDGE,
-                                transcript.ROLE_VERIFIER,
-                            ],
-                            [
-                                role
-                                for item, role in zip(order, roles)
-                                if item[0] == case_no
-                            ],
-                            "the file does not read rider, driver, drafts, verifier",
+                            [1, 1, 1, 1, 1, 1, 1],
+                            [key[3] for key in per_case],
+                            "nothing here retried, so every attempt is the first",
                         )
                 orders.append(order)
-            self.assertEqual(orders[0], orders[1])
+            self.assertEqual(
+                orders[0], orders[1], "the two modes wrote different orders"
+            )
 
     def test_two_parallel_runs_write_the_same_call_order(self):
         """Two runs of one set differ in the clock and in nothing else.
@@ -5665,6 +5696,27 @@ class ParallelCallsTests(unittest.TestCase):
 
             self.assertTrue(order(first))
             self.assertEqual(order(first), order(second))
+
+    def test_the_sort_key_is_the_position_and_carries_the_attempt(self):
+        """``call_sort_key`` is ``(case, role rank, draft, attempt)``.
+
+        The last element is the attempt, and it is load-bearing: a retried call
+        sends one body twice, so its two records carry the same digest and
+        nothing else in ``calls.json`` tells them apart. It is asserted here
+        because a file cannot show it -- the sort's own stability puts the two in
+        arrival order either way -- so the key is the only place the attempt is
+        observable.
+        """
+        token = pipeline.CALL_CONTEXT.set((101, transcript.ROLE_VERIFIER, 0, 2))
+        try:
+            self.assertEqual(
+                (101, CALL_RANK[transcript.ROLE_VERIFIER], 0, 2),
+                pipeline.call_sort_key(),
+            )
+        finally:
+            pipeline.CALL_CONTEXT.reset(token)
+        # No call of this pipeline in flight: a client driven by a test directly.
+        self.assertEqual((-1, -1, -1, -1), pipeline.call_sort_key())
 
 
 if __name__ == "__main__":

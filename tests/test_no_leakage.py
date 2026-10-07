@@ -9,12 +9,15 @@ or a policy file is not rebuilt per case.
 
 ``precedents/`` is the third tree and is deliberately **not** scanned, because
 nothing it can hand the judge carries a case identifier. The block is built by
-:func:`tribunal.precedents.block`, which receives no case id at all: it is
-handed the entries already chosen for this case and writes each one's id, its
-category, its clause ids and its ruling. The choosing happens one level up, in
-:func:`tribunal.precedents.matches`, and it is a function of the category, the
-clause ids a kept claim cites and the contested amount -- never of the case
-number, and it **excludes** the case being judged rather than naming it.
+:func:`tribunal.precedents.block`, and the guarantee is in what it **emits**:
+each item carries only ``precedent_id``, ``category``, ``clause_ids`` and
+``ruling``, and the block only a fixed ``note`` and those items. It *is* handed
+entries that carry ``case_no`` and ``dispute_id`` -- those are the stored entries
+-- so the guarantee is about the output, not about the input. The choosing
+happens one level up, in :func:`tribunal.precedents.matches`, which uses
+``case_no`` and ``dispute_id`` to **exclude** the case being judged rather than
+to name it, and is otherwise a function of the category, the clause ids a kept
+claim cites and the contested amount.
 
 This module asserts that leak does not exist. It walks ``prompts/`` and
 ``policy/`` and looks for four kinds of identifier:

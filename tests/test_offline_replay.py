@@ -1,9 +1,12 @@
 """The offline replay: the same requests, the same record, given the same answers.
 
-The claim this module exists to check is narrow and load-bearing: **no byte of
-any request this system sends to a model changed** when the calls were made
+The claim this module exists to check is narrow and load-bearing: **no individual
+request body this system sends to a model changed** when the calls were made
 concurrent. Concurrency decides *when* a call is made; it must not decide *what*
-is asked or *how* the answer is written down.
+is asked or *how* the answer is written down. It does not follow that the two
+modes send the same *set* of requests -- parallel mode can spend up to two driver
+requests after the rider fails, and the remaining draft requests after a draft
+raises -- and this module is a statement about the bodies, not about the set.
 
 The proof is a replay. The four sets' main recorded runs (128 cases) hold, per
 case, the transcript of every call it made: the digests of the two prompts, the
@@ -14,11 +17,24 @@ can be run again with **no model call at all**. Each case is then run twice --
 once sequentially, once with ``parallel_calls`` on -- and both runs are held
 against the recording.
 
+**The coverage, stated exactly.** The transport keys every one of the **784**
+requests the four sets' recordings hold by ``(sha256(system), sha256(user),
+temperature, seed)``, so all 784 are checked on those four fields. A full-body
+digest exists for **148** of them, because each run's ``calls.json`` is rewritten
+by every invocation and holds only the last one; those 148 are pinned by
+:meth:`OfflineReplayTests.test_every_recorded_request_is_reproduced`. The
+verifier is **never** replayed: every committed run was made with the verifier
+off, so no recording holds a verifier call. And the arms that are not replayed at
+all are the ablation, the ``policy-v2`` run, ``hy3``, ``hy4-preview``,
+``deepseek-v4.1-flash`` (case 105), ``rerun-2026-09-29/external/ryde`` (case 901),
+``external``, and the ``_icloud-incident-2026-09-27`` archive.
+
 What each assertion buys:
 
 * the transport keys every request by ``(sha256(system), sha256(user),
   temperature, seed)``, so a request whose prompts differ by one byte finds no
-  recording and the run stops. That is the "no byte changed" check;
+  recording and the run stops. That is the "no individual request body changed"
+  check;
 * the request-body digests the transport computes must include every digest in
   the run's committed ``calls.json``, so the replay is tied to the record the
   committed run actually wrote;
@@ -204,9 +220,11 @@ class RecordedTransport:
     ``digests`` is every full request body this transport was handed, hashed the
     way the client hashes one. ``leftover`` is what a caller checks to prove no
     recorded answer went unused. ``bodies`` is each body minus its messages,
-    beside the key it was answered from and the role the recording gives that
-    call, which is what lets a test check the settings a request carried against
-    the settings the run recorded.
+    beside the key it was answered from, the role the recording gives that call,
+    and the position the pipeline published on this thread for it -- read off
+    ``pipeline.CALL_CONTEXT``, so a test knows which case, role, draft and
+    attempt made the request rather than inferring them from the body it is
+    checking.
 
     Every counter and every collection here is touched from whichever worker
     thread is completing a request -- with the calls in flight together that is
@@ -250,19 +268,22 @@ class RecordedTransport:
             entry = queue.pop(0)
             self.served += 1
             # The body minus its messages, beside the recording it was answered
-            # from and the key it was matched by. What the request said about
-            # itself is a fact about the replay; the key is what the recording
-            # says that call was. Kept together so the two can be compared.
+            # from, the key it was matched by, and the position the pipeline
+            # published on this thread. What the request said about itself is a
+            # fact about the replay; the key is what the recording says that
+            # call was, and the position is what the run says it was. Kept
+            # together so all three can be compared.
             self.bodies.append(
-                (
-                    {
+                {
+                    "call": pipeline.CALL_CONTEXT.get(),
+                    "body": {
                         name: value
                         for name, value in request.items()
                         if name != "messages"
                     },
-                    key,
-                    entry.get("role"),
-                )
+                    "key": key,
+                    "role": entry.get("role"),
+                }
             )
         return envelope(entry)
 
@@ -501,81 +522,93 @@ class OfflineReplayTests(unittest.TestCase):
         self.fail("the parallel replay never called the transport on two worker threads")
 
     def test_request_body_settings_match_each_role_and_draft_kind(self):
-        """Every request's non-message body is the settings the recording implies.
+        """Every request's non-message body is the settings the run made it with.
 
         A request body carries the model, the temperature, the seed and the
-        response format beside the two messages. The recordings hold the two
-        per-call settings each call was made with -- the client's own defaults
-        for an advocate, the draft's own for a judge -- so the body a replay
-        sends must carry exactly those, and the same model and the same response
-        format for every call of every role and every draft kind. Grouped by
-        role and draft kind, the temperature is one value: a sampled draft is
-        the only thing that samples, and a position-swapped draft is the only
-        judge call that runs at the client's own settings.
+        response format beside the two messages, and nothing else. The position
+        each request was made at is read off ``pipeline.CALL_CONTEXT`` -- the
+        case, the role, the draft and the attempt the pipeline published on that
+        thread -- so what a request *is* comes from the run rather than from the
+        body being checked. The settings are then asserted by name: the client's
+        own ``0.0`` and ``42`` for both advocates and for the position-swapped
+        draft, and ``0.7`` with the draft's own recorded seed for a sampled one.
 
-        This is the half of "no byte changed" that the prompt digests cannot
-        see: two requests with identical messages and different sampling
-        settings are different requests.
+        Run over **both modes**. A setting that moved in one mode only is still a
+        request that changed, and this is the half of "no individual request body
+        changed" that the prompt digests cannot see.
 
-        **The coverage, stated honestly.** Only 148 of the 784 recorded bodies
-        have a digest in their run's ``calls.json`` (142 distinct digests),
-        because that file holds only the run's **last** invocation, and the
-        transcript holds every invocation that ever wrote into the directory.
-        The prompts of the earlier invocations are still checked, by the entry
-        comparison above; their settings are checked only through the
-        recordings' own key. The argument that closes the rest of the gap is
-        that ``tribunal/llm.py`` is unchanged and the worker hands
-        ``client.complete`` the same arguments it always did, so the body is
-        built by the same code from the same inputs -- and
-        :meth:`test_every_recorded_request_is_reproduced` pins the 148 that do
-        carry a digest.
+        **The coverage, stated exactly.** Only 148 of the 784 recorded bodies
+        have a digest in their run's ``calls.json`` (142 distinct), because that
+        file holds only the run's **last** invocation while the transcript holds
+        every invocation that ever wrote into the directory. The prompts of the
+        earlier invocations are still checked, by the entry comparison; their
+        settings are checked here, which reads the bodies themselves and does not
+        depend on a digest. The argument that closes the rest of the gap is that
+        ``tribunal/llm.py`` is unchanged and the worker hands ``client.complete``
+        the same arguments it always did, so the body is built by the same code
+        from the same inputs.
         """
-        expected_groups = {
-            (transcript.ROLE_RIDER_ADVOCATE, None),
-            (transcript.ROLE_DRIVER_ADVOCATE, None),
-            (transcript.ROLE_JUDGE, "sampled"),
-            (transcript.ROLE_JUDGE, "position_swapped"),
-        }
+        zero, default_seed = Decimal("0.0"), Decimal("42")
         for name in SET_NAMES:
-            replayed = self.replayed[(name, True)]
-            self.assertTrue(
-                replayed.transport.bodies, "{0}: the replay made no request".format(name)
-            )
-            temperatures = {}
-            for body, key, role in replayed.transport.bodies:
-                _system, _user, temperature, seed = key
-                self.assertEqual(
-                    {"model", "temperature", "seed", "response_format"},
-                    set(body),
-                    "a request body carries more than the four settings",
-                )
-                self.assertEqual(MODEL, body["model"])
-                self.assertEqual({"type": "json_object"}, body["response_format"])
-                self.assertEqual(_number(temperature), _number(body["temperature"]))
-                self.assertEqual(_number(seed), _number(body["seed"]))
-                kind = None
-                if role == transcript.ROLE_JUDGE:
-                    kind = (
-                        "sampled"
-                        if _number(body["temperature"])
-                        == _number(pipeline.JUDGE_VOTE_TEMPERATURE)
-                        else "position_swapped"
+            for parallel in (False, True):
+                replayed = self.replayed[(name, parallel)]
+                with self.subTest(set=name, mode=replayed.mode):
+                    self.assertTrue(
+                        replayed.transport.bodies,
+                        "{0}: the replay made no request".format(name),
                     )
-                temperatures.setdefault((role, kind), set()).add(
-                    _number(body["temperature"])
-                )
-            with self.subTest(set=name):
-                self.assertEqual(
-                    expected_groups,
-                    set(temperatures),
-                    "the replay sent a role or a draft kind the recording does not hold",
-                )
-                for group, values in temperatures.items():
-                    self.assertEqual(
-                        1,
-                        len(values),
-                        "{0} sent more than one temperature: {1}".format(group, values),
-                    )
+                    temperatures = {}
+                    for record in replayed.transport.bodies:
+                        call = record["call"]
+                        body = record["body"]
+                        self.assertIsNotNone(
+                            call, "a request carried no position on its thread"
+                        )
+                        case_no, role, draft, attempt = call
+                        self.assertIn(case_no, replayed.results)
+                        self.assertEqual(
+                            {"model", "temperature", "seed", "response_format"},
+                            set(body),
+                            "a request body carries more than the four settings",
+                        )
+                        self.assertEqual(MODEL, body["model"])
+                        self.assertEqual(
+                            {"type": "json_object"}, body["response_format"]
+                        )
+                        if role in (
+                            transcript.ROLE_RIDER_ADVOCATE,
+                            transcript.ROLE_DRIVER_ADVOCATE,
+                        ):
+                            self.assertEqual(0, draft)
+                            kind = None
+                            expected = (zero, default_seed)
+                        else:
+                            self.assertEqual(transcript.ROLE_JUDGE, role)
+                            if draft == JUDGE_VOTES:
+                                kind = "position_swapped"
+                                expected = (zero, default_seed)
+                            else:
+                                kind = "sampled"
+                                expected = (
+                                    _number(pipeline.JUDGE_VOTE_TEMPERATURE),
+                                    _number(pipeline.JUDGE_VOTE_SEEDS[draft - 1]),
+                                )
+                        self.assertEqual(
+                            expected,
+                            (_number(body["temperature"]), _number(body["seed"])),
+                            "{0} sent settings the run does not make".format(call),
+                        )
+                        temperatures.setdefault((role, kind), set()).add(
+                            _number(body["temperature"])
+                        )
+                    for group, values in temperatures.items():
+                        self.assertEqual(
+                            1,
+                            len(values),
+                            "{0} sent more than one temperature: {1}".format(
+                                group, values
+                            ),
+                        )
 
     def test_no_request_goes_unanswered_and_no_recording_is_left_unused(self):
         """The transport is a closed system, and it has to balance.
