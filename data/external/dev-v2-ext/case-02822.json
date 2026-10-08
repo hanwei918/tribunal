@@ -7,7 +7,7 @@
     "case_no": 2822,
     "category": "ROUTE_DEVIATION",
     "filed_by": "RIDER",
-    "filed_at": "2026-08-16T00:24:18+08:00",
+    "filed_at": "2026-09-13T18:40:20+08:00",
     "claim_text": "Longer route than needed, $9.28.",
     "amount_contested_sgd": 1.0,
     "evidence_ids": [
@@ -22,7 +22,7 @@
     "counterparty_statement": {
       "text": "Followed the app.",
       "submitted_by": "DRIVER",
-      "submitted_at": "2026-08-16T08:51:18+08:00"
+      "submitted_at": "2026-09-14T08:17:06+08:00"
     },
     "channel": "IN_APP_SUPPORT",
     "safety_flag": false,
@@ -34,39 +34,39 @@
       "evidence_type": "TRIP_RECORD",
       "trip_id": "TRP-02822",
       "source": "PLATFORM_TELEMETRY",
-      "generated_at": "2026-08-16T08:00:00+08:00",
+      "generated_at": "2026-09-13T22:00:00+08:00",
       "schema_version": "1.2.0",
       "admissibility": {
         "status": "COMPLETE",
         "issues": [],
         "weight_multiplier": 1.0,
         "notes": "Trip record complete and causally ordered.",
-        "assessed_at": "2026-08-16T08:00:11+08:00",
+        "assessed_at": "2026-09-13T22:00:11+08:00",
         "assessor_version": "prepass-1.0.0"
       },
       "payload": {
         "trip_id": "TRP-02822",
         "rider_id": "RDR-09822",
         "driver_id": "DRV-09822",
-        "requested_at": "2026-08-15T22:14:43+08:00",
-        "accepted_at": "2026-08-15T22:15:30+08:00",
-        "arrived_at": "2026-08-15T22:20:32+08:00",
-        "started_at": "2026-08-15T22:22:05+08:00",
-        "ended_at": "2026-08-15T22:28:05+08:00",
+        "requested_at": "2026-09-13T12:28:58+08:00",
+        "accepted_at": "2026-09-13T12:29:46+08:00",
+        "arrived_at": "2026-09-13T12:33:13+08:00",
+        "started_at": "2026-09-13T12:34:20+08:00",
+        "ended_at": "2026-09-13T12:40:20+08:00",
         "cancelled_at": null,
         "status": "COMPLETED",
         "cancelled_by": null,
         "cancellation_reason_code": null,
         "pickup": {
-          "label": "Blk 12 Telok Blangah Cres, Telok Blangah",
-          "lat": 1.2769,
-          "lng": 103.8143,
+          "label": "Blk 640 Jurong West St 61, Jurong West",
+          "lat": 1.3406,
+          "lng": 103.6996,
           "venue_id": null
         },
         "dropoff": {
-          "label": "Blk 1 Holland Close",
-          "lat": 1.2992,
-          "lng": 103.8202,
+          "label": "Blk 456 Hougang Ave 10",
+          "lat": 1.3537,
+          "lng": 103.7186,
           "venue_id": null
         },
         "optimal_distance_km": 3.2,
@@ -74,10 +74,10 @@
         "actual_distance_km": 4.0,
         "actual_duration_min": 6.0,
         "vehicle_type": "RYDE_X",
-        "optimal_route_source": "routing-engine-v3.2 (LTA traffic snapshot 22:14)",
+        "optimal_route_source": "routing-engine-v3.2 (LTA traffic snapshot 12:28)",
         "deviation_pct": 26.6,
-        "wait_time_min": 1.6,
-        "time_to_arrival_min": 5.0,
+        "wait_time_min": 1.1,
+        "time_to_arrival_min": 3.5,
         "pickup_zone_class": null,
         "registered_pickup_points": null,
         "in_app_calls": [],
@@ -95,25 +95,25 @@
         "events": [
           {
             "event_type": "driver_assigned",
-            "at": "2026-08-15T22:15:30+08:00",
+            "at": "2026-09-13T12:29:46+08:00",
             "detail": "Driver DRV-09822 assigned.",
             "source": "PLATFORM_TELEMETRY"
           },
           {
             "event_type": "driver_arrived",
-            "at": "2026-08-15T22:20:32+08:00",
+            "at": "2026-09-13T12:33:13+08:00",
             "detail": "Driver tapped 'I'm Here'.",
             "source": "PLATFORM_TELEMETRY"
           },
           {
             "event_type": "trip_started",
-            "at": "2026-08-15T22:22:05+08:00",
+            "at": "2026-09-13T12:34:20+08:00",
             "detail": "Rider boarded; meter started.",
             "source": "PLATFORM_TELEMETRY"
           },
           {
             "event_type": "trip_completed",
-            "at": "2026-08-15T22:28:05+08:00",
+            "at": "2026-09-13T12:40:20+08:00",
             "detail": "Trip completed at the drop-off point.",
             "source": "PLATFORM_TELEMETRY"
           }
@@ -125,319 +125,319 @@
       "evidence_type": "GPS_TRACE",
       "trip_id": "TRP-02822",
       "source": "PLATFORM_TELEMETRY",
-      "generated_at": "2026-08-16T08:00:00+08:00",
+      "generated_at": "2026-09-13T22:00:00+08:00",
       "schema_version": "1.2.0",
       "admissibility": {
         "status": "COMPLETE",
         "issues": [],
         "weight_multiplier": 1.0,
         "notes": "10 s telemetry, 100.0% coverage, driver track only.",
-        "assessed_at": "2026-08-16T08:00:11+08:00",
+        "assessed_at": "2026-09-13T22:00:11+08:00",
         "assessor_version": "prepass-1.0.0"
       },
       "payload": {
         "trip_id": "TRP-02822",
         "points": [
           {
-            "lat": 1.2769,
-            "lng": 103.8143,
-            "ts": "2026-08-15T22:22:05+08:00",
+            "lat": 1.3406,
+            "lng": 103.6996,
+            "ts": "2026-09-13T12:34:20+08:00",
             "speed_kph": 0.0,
             "heading_deg": null,
-            "accuracy_m": 4.1
+            "accuracy_m": 8.9
           },
           {
-            "lat": 1.27792,
-            "lng": 103.814249,
-            "ts": "2026-08-15T22:22:15+08:00",
-            "speed_kph": 38.1,
-            "heading_deg": 274.8,
-            "accuracy_m": 10.0
+            "lat": 1.341369,
+            "lng": 103.700266,
+            "ts": "2026-09-13T12:34:30+08:00",
+            "speed_kph": 39.1,
+            "heading_deg": 351.5,
+            "accuracy_m": 6.3
           },
           {
-            "lat": 1.278938,
-            "lng": 103.814219,
-            "ts": "2026-08-15T22:22:25+08:00",
-            "speed_kph": 38.5,
-            "heading_deg": 232.6,
-            "accuracy_m": 9.9
+            "lat": 1.342127,
+            "lng": 103.700944,
+            "ts": "2026-09-13T12:34:40+08:00",
+            "speed_kph": 35.7,
+            "heading_deg": 249.9,
+            "accuracy_m": 11.5
           },
           {
-            "lat": 1.279953,
-            "lng": 103.81423,
-            "ts": "2026-08-15T22:22:35+08:00",
-            "speed_kph": 41.4,
-            "heading_deg": 147.8,
-            "accuracy_m": 11.7
-          },
-          {
-            "lat": 1.280968,
-            "lng": 103.814301,
-            "ts": "2026-08-15T22:22:45+08:00",
-            "speed_kph": 37.9,
-            "heading_deg": 38.0,
-            "accuracy_m": 6.0
-          },
-          {
-            "lat": 1.281975,
-            "lng": 103.814448,
-            "ts": "2026-08-15T22:22:55+08:00",
-            "speed_kph": 44.4,
-            "heading_deg": 247.9,
-            "accuracy_m": 11.8
-          },
-          {
-            "lat": 1.282967,
-            "lng": 103.814682,
-            "ts": "2026-08-15T22:23:05+08:00",
-            "speed_kph": 38.3,
-            "heading_deg": 31.8,
-            "accuracy_m": 9.5
-          },
-          {
-            "lat": 1.283932,
-            "lng": 103.815002,
-            "ts": "2026-08-15T22:23:15+08:00",
-            "speed_kph": 38.3,
-            "heading_deg": 211.3,
-            "accuracy_m": 8.7
-          },
-          {
-            "lat": 1.284869,
-            "lng": 103.8154,
-            "ts": "2026-08-15T22:23:25+08:00",
-            "speed_kph": 34.2,
-            "heading_deg": 203.2,
-            "accuracy_m": 11.0
-          },
-          {
-            "lat": 1.285399,
-            "lng": 103.814627,
-            "ts": "2026-08-15T22:23:35+08:00",
-            "speed_kph": 42.2,
-            "heading_deg": 101.2,
-            "accuracy_m": 9.8
-          },
-          {
-            "lat": 1.285898,
-            "lng": 103.813735,
-            "ts": "2026-08-15T22:23:45+08:00",
-            "speed_kph": 41.0,
-            "heading_deg": 260.6,
-            "accuracy_m": 9.1
-          },
-          {
-            "lat": 1.286403,
-            "lng": 103.812847,
-            "ts": "2026-08-15T22:23:55+08:00",
-            "speed_kph": 41.6,
-            "heading_deg": 96.6,
-            "accuracy_m": 6.2
-          },
-          {
-            "lat": 1.286918,
-            "lng": 103.811968,
-            "ts": "2026-08-15T22:24:05+08:00",
-            "speed_kph": 40.5,
-            "heading_deg": 333.1,
-            "accuracy_m": 5.6
-          },
-          {
-            "lat": 1.28745,
-            "lng": 103.811099,
-            "ts": "2026-08-15T22:24:15+08:00",
-            "speed_kph": 37.3,
-            "heading_deg": 116.2,
-            "accuracy_m": 5.4
-          },
-          {
-            "lat": 1.288003,
-            "lng": 103.810255,
-            "ts": "2026-08-15T22:24:25+08:00",
-            "speed_kph": 45.5,
-            "heading_deg": 7.8,
-            "accuracy_m": 4.2
-          },
-          {
-            "lat": 1.288606,
-            "lng": 103.809433,
-            "ts": "2026-08-15T22:24:35+08:00",
-            "speed_kph": 40.4,
-            "heading_deg": 173.6,
-            "accuracy_m": 9.4
-          },
-          {
-            "lat": 1.289292,
-            "lng": 103.808689,
-            "ts": "2026-08-15T22:24:45+08:00",
-            "speed_kph": 44.7,
-            "heading_deg": 45.1,
-            "accuracy_m": 10.3
-          },
-          {
-            "lat": 1.290193,
-            "lng": 103.808287,
-            "ts": "2026-08-15T22:24:55+08:00",
-            "speed_kph": 40.3,
-            "heading_deg": 29.0,
-            "accuracy_m": 10.1
-          },
-          {
-            "lat": 1.290836,
-            "lng": 103.809016,
-            "ts": "2026-08-15T22:25:05+08:00",
-            "speed_kph": 36.1,
-            "heading_deg": 359.1,
-            "accuracy_m": 10.5
-          },
-          {
-            "lat": 1.291076,
-            "lng": 103.810004,
-            "ts": "2026-08-15T22:25:15+08:00",
-            "speed_kph": 36.2,
-            "heading_deg": 195.7,
-            "accuracy_m": 11.8
-          },
-          {
-            "lat": 1.291192,
-            "lng": 103.811022,
-            "ts": "2026-08-15T22:25:25+08:00",
-            "speed_kph": 40.7,
-            "heading_deg": 73.8,
-            "accuracy_m": 8.5
-          },
-          {
-            "lat": 1.29125,
-            "lng": 103.812036,
-            "ts": "2026-08-15T22:25:35+08:00",
-            "speed_kph": 35.3,
-            "heading_deg": 194.9,
-            "accuracy_m": 7.0
-          },
-          {
-            "lat": 1.291274,
-            "lng": 103.813058,
-            "ts": "2026-08-15T22:25:45+08:00",
-            "speed_kph": 45.2,
-            "heading_deg": 310.5,
-            "accuracy_m": 9.3
-          },
-          {
-            "lat": 1.291276,
-            "lng": 103.814072,
-            "ts": "2026-08-15T22:25:55+08:00",
-            "speed_kph": 37.4,
-            "heading_deg": 104.1,
-            "accuracy_m": 9.4
-          },
-          {
-            "lat": 1.291264,
-            "lng": 103.815096,
-            "ts": "2026-08-15T22:26:05+08:00",
-            "speed_kph": 45.3,
-            "heading_deg": 265.2,
-            "accuracy_m": 8.2
-          },
-          {
-            "lat": 1.291242,
-            "lng": 103.816113,
-            "ts": "2026-08-15T22:26:15+08:00",
-            "speed_kph": 39.7,
-            "heading_deg": 339.9,
-            "accuracy_m": 9.4
-          },
-          {
-            "lat": 1.291213,
-            "lng": 103.817124,
-            "ts": "2026-08-15T22:26:25+08:00",
-            "speed_kph": 43.1,
-            "heading_deg": 231.4,
-            "accuracy_m": 11.0
-          },
-          {
-            "lat": 1.29118,
-            "lng": 103.81815,
-            "ts": "2026-08-15T22:26:35+08:00",
-            "speed_kph": 34.2,
-            "heading_deg": 83.2,
-            "accuracy_m": 8.0
-          },
-          {
-            "lat": 1.291235,
-            "lng": 103.819101,
-            "ts": "2026-08-15T22:26:45+08:00",
-            "speed_kph": 41.6,
-            "heading_deg": 93.4,
+            "lat": 1.34286,
+            "lng": 103.701648,
+            "ts": "2026-09-13T12:34:50+08:00",
+            "speed_kph": 34.1,
+            "heading_deg": 316.8,
             "accuracy_m": 7.4
           },
           {
-            "lat": 1.292171,
-            "lng": 103.8195,
-            "ts": "2026-08-15T22:26:55+08:00",
+            "lat": 1.343559,
+            "lng": 103.70239,
+            "ts": "2026-09-13T12:35:00+08:00",
             "speed_kph": 34.4,
-            "heading_deg": 246.9,
-            "accuracy_m": 11.3
+            "heading_deg": 336.3,
+            "accuracy_m": 5.1
           },
           {
-            "lat": 1.293137,
-            "lng": 103.819819,
-            "ts": "2026-08-15T22:27:05+08:00",
-            "speed_kph": 39.6,
-            "heading_deg": 296.2,
-            "accuracy_m": 4.9
+            "lat": 1.344208,
+            "lng": 103.703172,
+            "ts": "2026-09-13T12:35:10+08:00",
+            "speed_kph": 43.4,
+            "heading_deg": 102.1,
+            "accuracy_m": 4.2
           },
           {
-            "lat": 1.294129,
-            "lng": 103.820052,
-            "ts": "2026-08-15T22:27:15+08:00",
+            "lat": 1.344801,
+            "lng": 103.703996,
+            "ts": "2026-09-13T12:35:20+08:00",
+            "speed_kph": 43.3,
+            "heading_deg": 318.3,
+            "accuracy_m": 9.8
+          },
+          {
+            "lat": 1.345333,
+            "lng": 103.704863,
+            "ts": "2026-09-13T12:35:30+08:00",
+            "speed_kph": 43.0,
+            "heading_deg": 346.0,
+            "accuracy_m": 8.6
+          },
+          {
+            "lat": 1.345806,
+            "lng": 103.705761,
+            "ts": "2026-09-13T12:35:40+08:00",
+            "speed_kph": 35.2,
+            "heading_deg": 344.9,
+            "accuracy_m": 5.1
+          },
+          {
+            "lat": 1.346737,
+            "lng": 103.705464,
+            "ts": "2026-09-13T12:35:50+08:00",
+            "speed_kph": 34.1,
+            "heading_deg": 112.7,
+            "accuracy_m": 4.2
+          },
+          {
+            "lat": 1.347693,
+            "lng": 103.705109,
+            "ts": "2026-09-13T12:36:00+08:00",
+            "speed_kph": 42.5,
+            "heading_deg": 14.9,
+            "accuracy_m": 6.2
+          },
+          {
+            "lat": 1.348653,
+            "lng": 103.704759,
+            "ts": "2026-09-13T12:36:10+08:00",
+            "speed_kph": 45.9,
+            "heading_deg": 65.9,
+            "accuracy_m": 10.2
+          },
+          {
+            "lat": 1.349603,
+            "lng": 103.704427,
+            "ts": "2026-09-13T12:36:20+08:00",
+            "speed_kph": 45.1,
+            "heading_deg": 321.9,
+            "accuracy_m": 9.4
+          },
+          {
+            "lat": 1.350565,
+            "lng": 103.704109,
+            "ts": "2026-09-13T12:36:30+08:00",
             "speed_kph": 42.0,
-            "heading_deg": 332.5,
-            "accuracy_m": 6.5
+            "heading_deg": 250.9,
+            "accuracy_m": 7.4
           },
           {
-            "lat": 1.295136,
-            "lng": 103.820199,
-            "ts": "2026-08-15T22:27:25+08:00",
-            "speed_kph": 40.3,
-            "heading_deg": 51.9,
-            "accuracy_m": 9.7
+            "lat": 1.351545,
+            "lng": 103.703816,
+            "ts": "2026-09-13T12:36:40+08:00",
+            "speed_kph": 45.7,
+            "heading_deg": 159.5,
+            "accuracy_m": 8.9
           },
           {
-            "lat": 1.296151,
-            "lng": 103.82027,
-            "ts": "2026-08-15T22:27:35+08:00",
+            "lat": 1.352527,
+            "lng": 103.703573,
+            "ts": "2026-09-13T12:36:50+08:00",
+            "speed_kph": 36.8,
+            "heading_deg": 163.6,
+            "accuracy_m": 8.4
+          },
+          {
+            "lat": 1.353536,
+            "lng": 103.703424,
+            "ts": "2026-09-13T12:37:00+08:00",
+            "speed_kph": 35.7,
+            "heading_deg": 76.8,
+            "accuracy_m": 10.1
+          },
+          {
+            "lat": 1.354521,
+            "lng": 103.703581,
+            "ts": "2026-09-13T12:37:10+08:00",
+            "speed_kph": 43.1,
+            "heading_deg": 288.8,
+            "accuracy_m": 10.4
+          },
+          {
+            "lat": 1.354721,
+            "lng": 103.704503,
+            "ts": "2026-09-13T12:37:20+08:00",
+            "speed_kph": 39.8,
+            "heading_deg": 7.1,
+            "accuracy_m": 8.9
+          },
+          {
+            "lat": 1.354296,
+            "lng": 103.705423,
+            "ts": "2026-09-13T12:37:30+08:00",
+            "speed_kph": 41.8,
+            "heading_deg": 24.1,
+            "accuracy_m": 9.3
+          },
+          {
+            "lat": 1.353738,
+            "lng": 103.706275,
+            "ts": "2026-09-13T12:37:40+08:00",
+            "speed_kph": 43.3,
+            "heading_deg": 62.0,
+            "accuracy_m": 10.5
+          },
+          {
+            "lat": 1.353128,
+            "lng": 103.707089,
+            "ts": "2026-09-13T12:37:50+08:00",
+            "speed_kph": 45.7,
+            "heading_deg": 343.4,
+            "accuracy_m": 8.6
+          },
+          {
+            "lat": 1.352488,
+            "lng": 103.70788,
+            "ts": "2026-09-13T12:38:00+08:00",
+            "speed_kph": 37.6,
+            "heading_deg": 295.3,
+            "accuracy_m": 11.0
+          },
+          {
+            "lat": 1.351831,
+            "lng": 103.708656,
+            "ts": "2026-09-13T12:38:10+08:00",
+            "speed_kph": 45.8,
+            "heading_deg": 15.0,
+            "accuracy_m": 8.8
+          },
+          {
+            "lat": 1.351164,
+            "lng": 103.70942,
+            "ts": "2026-09-13T12:38:20+08:00",
+            "speed_kph": 45.8,
+            "heading_deg": 0.2,
+            "accuracy_m": 5.1
+          },
+          {
+            "lat": 1.350482,
+            "lng": 103.710185,
+            "ts": "2026-09-13T12:38:30+08:00",
+            "speed_kph": 36.5,
+            "heading_deg": 241.1,
+            "accuracy_m": 5.2
+          },
+          {
+            "lat": 1.349808,
+            "lng": 103.71093,
+            "ts": "2026-09-13T12:38:40+08:00",
+            "speed_kph": 44.0,
+            "heading_deg": 309.6,
+            "accuracy_m": 5.1
+          },
+          {
+            "lat": 1.34912,
+            "lng": 103.711685,
+            "ts": "2026-09-13T12:38:50+08:00",
+            "speed_kph": 44.1,
+            "heading_deg": 326.2,
+            "accuracy_m": 7.7
+          },
+          {
+            "lat": 1.348496,
+            "lng": 103.712442,
+            "ts": "2026-09-13T12:39:00+08:00",
+            "speed_kph": 41.5,
+            "heading_deg": 255.0,
+            "accuracy_m": 6.1
+          },
+          {
+            "lat": 1.348969,
+            "lng": 103.713341,
+            "ts": "2026-09-13T12:39:10+08:00",
+            "speed_kph": 44.8,
+            "heading_deg": 7.7,
+            "accuracy_m": 6.4
+          },
+          {
+            "lat": 1.349501,
+            "lng": 103.714207,
+            "ts": "2026-09-13T12:39:20+08:00",
+            "speed_kph": 38.1,
+            "heading_deg": 102.9,
+            "accuracy_m": 6.0
+          },
+          {
+            "lat": 1.350094,
+            "lng": 103.715032,
+            "ts": "2026-09-13T12:39:30+08:00",
+            "speed_kph": 37.1,
+            "heading_deg": 175.7,
+            "accuracy_m": 11.5
+          },
+          {
+            "lat": 1.350743,
+            "lng": 103.715813,
+            "ts": "2026-09-13T12:39:40+08:00",
             "speed_kph": 36.1,
-            "heading_deg": 265.8,
-            "accuracy_m": 5.0
+            "heading_deg": 152.7,
+            "accuracy_m": 11.9
           },
           {
-            "lat": 1.297166,
-            "lng": 103.820281,
-            "ts": "2026-08-15T22:27:45+08:00",
-            "speed_kph": 39.9,
-            "heading_deg": 34.2,
-            "accuracy_m": 4.1
+            "lat": 1.351443,
+            "lng": 103.716554,
+            "ts": "2026-09-13T12:39:50+08:00",
+            "speed_kph": 35.7,
+            "heading_deg": 265.1,
+            "accuracy_m": 7.2
           },
           {
-            "lat": 1.298184,
-            "lng": 103.820251,
-            "ts": "2026-08-15T22:27:55+08:00",
-            "speed_kph": 40.0,
-            "heading_deg": 172.8,
-            "accuracy_m": 9.2
+            "lat": 1.352176,
+            "lng": 103.717259,
+            "ts": "2026-09-13T12:40:00+08:00",
+            "speed_kph": 35.6,
+            "heading_deg": 61.2,
+            "accuracy_m": 8.2
           },
           {
-            "lat": 1.2992,
-            "lng": 103.8202,
-            "ts": "2026-08-15T22:28:05+08:00",
+            "lat": 1.352934,
+            "lng": 103.717937,
+            "ts": "2026-09-13T12:40:10+08:00",
+            "speed_kph": 44.9,
+            "heading_deg": 74.3,
+            "accuracy_m": 7.4
+          },
+          {
+            "lat": 1.3537,
+            "lng": 103.7186,
+            "ts": "2026-09-13T12:40:20+08:00",
             "speed_kph": 0.0,
             "heading_deg": null,
-            "accuracy_m": 5.4
+            "accuracy_m": 9.7
           }
         ],
         "point_count": 37,
-        "first_fix_at": "2026-08-15T22:22:05+08:00",
-        "last_fix_at": "2026-08-15T22:28:05+08:00",
+        "first_fix_at": "2026-09-13T12:34:20+08:00",
+        "last_fix_at": "2026-09-13T12:40:20+08:00",
         "expected_interval_sec": 10.0,
         "sample_interval_sec": 10.0,
         "gaps": [],
@@ -452,14 +452,14 @@
       "evidence_type": "CHAT_LOG",
       "trip_id": "TRP-02822",
       "source": "PLATFORM_TELEMETRY",
-      "generated_at": "2026-08-16T08:00:00+08:00",
+      "generated_at": "2026-09-13T22:00:00+08:00",
       "schema_version": "1.2.0",
       "admissibility": {
         "status": "COMPLETE",
         "issues": [],
         "weight_multiplier": 1.0,
         "notes": "0 message(s), sequence numbering intact.",
-        "assessed_at": "2026-08-16T08:00:11+08:00",
+        "assessed_at": "2026-09-13T22:00:11+08:00",
         "assessor_version": "prepass-1.0.0"
       },
       "payload": {
@@ -476,14 +476,14 @@
       "evidence_type": "FARE_BREAKDOWN",
       "trip_id": "TRP-02822",
       "source": "PAYMENTS_LEDGER",
-      "generated_at": "2026-08-16T08:00:00+08:00",
+      "generated_at": "2026-09-13T22:00:00+08:00",
       "schema_version": "1.2.0",
       "admissibility": {
         "status": "COMPLETE",
         "issues": [],
         "weight_multiplier": 1.0,
         "notes": "Ledger lines reconcile to total_charged; 0 ERP line(s).",
-        "assessed_at": "2026-08-16T08:00:11+08:00",
+        "assessed_at": "2026-09-13T22:00:11+08:00",
         "assessor_version": "prepass-1.0.0"
       },
       "payload": {
@@ -511,7 +511,7 @@
         "payment_status": "CHARGED",
         "refund_issued_sgd": 0.0,
         "rate_card_id": "RC-SG-2026Q3-RYDEX",
-        "charged_at": "2026-08-15T22:28:30+08:00"
+        "charged_at": "2026-09-13T12:40:45+08:00"
       }
     },
     {
@@ -519,30 +519,30 @@
       "evidence_type": "RIDER_PROFILE",
       "trip_id": "TRP-02822",
       "source": "PLATFORM_TELEMETRY",
-      "generated_at": "2026-08-16T08:00:00+08:00",
+      "generated_at": "2026-09-13T22:00:00+08:00",
       "schema_version": "1.2.0",
       "admissibility": {
         "status": "COMPLETE",
         "issues": [],
         "weight_multiplier": 1.0,
         "notes": "",
-        "assessed_at": "2026-08-16T08:00:11+08:00",
+        "assessed_at": "2026-09-13T22:00:11+08:00",
         "assessor_version": "prepass-1.0.0"
       },
       "payload": {
         "party_id": "RDR-09822",
         "party_role": "RIDER",
-        "snapshot_at": "2026-08-16T08:00:00+08:00",
-        "account_age_days": 1606,
-        "lifetime_trips": 45,
-        "rating": 4.71,
-        "prior_disputes_filed": 1,
-        "prior_disputes_upheld": 1,
-        "cancellation_rate": 0.045,
+        "snapshot_at": "2026-09-13T22:00:00+08:00",
+        "account_age_days": 2042,
+        "lifetime_trips": 777,
+        "rating": 4.73,
+        "prior_disputes_filed": 0,
+        "prior_disputes_upheld": 0,
+        "cancellation_rate": 0.083,
         "prior_no_show_flags": 0,
         "deviation_claims_60d": 0,
         "deviation_claims_60d_substantiated": 0,
-        "no_show_disputes_30d": 0,
+        "no_show_disputes_30d": 1,
         "disputes_with_counterparty_90d": 0
       }
     },
@@ -551,35 +551,35 @@
       "evidence_type": "DRIVER_PROFILE",
       "trip_id": "TRP-02822",
       "source": "PLATFORM_TELEMETRY",
-      "generated_at": "2026-08-16T08:00:00+08:00",
+      "generated_at": "2026-09-13T22:00:00+08:00",
       "schema_version": "1.2.0",
       "admissibility": {
         "status": "COMPLETE",
         "issues": [],
         "weight_multiplier": 1.0,
         "notes": "",
-        "assessed_at": "2026-08-16T08:00:11+08:00",
+        "assessed_at": "2026-09-13T22:00:11+08:00",
         "assessor_version": "prepass-1.0.0"
       },
       "payload": {
         "party_id": "DRV-09822",
         "party_role": "DRIVER",
-        "snapshot_at": "2026-08-16T08:00:00+08:00",
-        "account_age_days": 1977,
-        "lifetime_trips": 5382,
-        "rating": 4.89,
-        "prior_disputes_filed": 1,
+        "snapshot_at": "2026-09-13T22:00:00+08:00",
+        "account_age_days": 256,
+        "lifetime_trips": 5495,
+        "rating": 4.46,
+        "prior_disputes_filed": 2,
         "prior_disputes_upheld": 0,
-        "cancellation_rate": 0.079,
-        "prior_no_show_flags": 1,
+        "cancellation_rate": 0.042,
+        "prior_no_show_flags": 2,
         "prior_deviation_flags": 0,
-        "acceptance_rate": 0.856,
+        "acceptance_rate": 0.872,
         "vehicle_type": "RYDE_X",
-        "active_region": "North (Woodlands / Yishun / Sembawang)",
-        "deviation_flags_90d": 0,
-        "completed_trips_90d": 307,
+        "active_region": "East (Changi / Tampines / Bedok)",
+        "deviation_flags_90d": 1,
+        "completed_trips_90d": 402,
         "no_show_terminations_30d": 2,
-        "completed_trips_30d": 102,
+        "completed_trips_30d": 134,
         "disputes_with_counterparty_90d": 0
       }
     },
@@ -588,7 +588,7 @@
       "evidence_type": "TRAFFIC_ADVISORY",
       "trip_id": "TRP-02822",
       "source": "THIRD_PARTY_LTA",
-      "generated_at": "2026-08-16T08:00:00+08:00",
+      "generated_at": "2026-09-13T22:00:00+08:00",
       "schema_version": "1.2.0",
       "admissibility": {
         "status": "MISSING",
@@ -599,12 +599,12 @@
           {
             "code": "MISSING_ARTIFACT",
             "severity": "BLOCKING",
-            "detail": "No advisory covers the Blk 12 Telok Blangah Cres corridor in this window."
+            "detail": "No advisory covers the Blk 640 Jurong West St 61 corridor in this window."
           }
         ],
         "weight_multiplier": 0.0,
         "notes": "Artifact absent. The identifier is minted anyway so that the absence itself can be cited by either advocate.",
-        "assessed_at": "2026-08-16T08:00:09+08:00",
+        "assessed_at": "2026-09-13T22:00:09+08:00",
         "assessor_version": "prepass-1.0.0"
       },
       "payload": null

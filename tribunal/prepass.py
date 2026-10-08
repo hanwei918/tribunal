@@ -103,6 +103,7 @@ GPS_GAP_VARIANTS = (
 GAP_FROM_KEY = "from_ts"
 GAP_TO_KEY = "to_ts"
 GAP_DURATION_KEY = "duration_sec"
+GAP_STRAIGHT_LINE_KM_KEY = "straight_line_km"
 POINT_TIMESTAMP_KEY = "ts"
 
 ISSUE_SEVERITIES: Dict[str, str] = {

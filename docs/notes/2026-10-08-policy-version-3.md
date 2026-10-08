@@ -167,50 +167,194 @@ existing case file, answer key, prompt or `policy/` file changed.
 1709, 1734 and 1775 — and 1767 is a one-off judge slip. None of the four is
 addressed by this part, and no key was edited.
 
-## The `GPS_GAP` table
+## What part 5 changed
 
-Every artifact in the four sets that carries the corpus's `GPS_GAP` tag, with how
-policy version 3 reads it, the gap that reading turned on, where that gap sits,
-and the artifact's weight before and after.
+Two items, from the owner's second sheet. As in part 4, every change is gated so
+that **versions 1 and 2 build exactly the briefs and the rulings they built**; no
+case file or key of any other set, no prompt and no `policy/*.json` file changed.
 
-**The grading is done for a no-show case only.** POL-NS-08(b) is a no-show limb
-about the waiting window, and the `integrity` block lives in `no_show.json`; no
-route-deviation clause asks for a gap to be graded by that window. So a
-route-deviation case keeps the **ungraded** `GPS_GAP` tag and version 1's weight
-for it, 0.6. The policy's table has no ungraded `GPS_GAP` key, so that weight is
-read from its `GPS_GAP_LONG_INSIDE_WINDOW` entry, which carries the same 0.6 —
-read out of the loaded policy, never typed into code.
+### 1. A route-deviation `GPS_GAP` is graded by POL-RD-07's own limbs
+
+Part 2 graded every route-deviation gap by the no-show waiting window, which
+turned it into a *short* gap and **raised** its weight; part 3 left every
+route-deviation gap ungraded at version 1's 0.6. The key owner ruled both wrong
+for case 1775: the clause that owns a route-deviation trace is **POL-RD-07**, and
+its own limbs grade the gap.
+
+At version 3, for `ROUTE_DEVIATION` only, the tag is now graded:
+
+* **short** — `GPS_GAP_SHORT_OR_OUTSIDE_WINDOW`, weight 0.85 — when **every** gap
+  between consecutive fixes in the trace is within limb (a)'s limit **and** no
+  straight-line jump between consecutive fixes exceeds limb (b)'s;
+* **long** — `GPS_GAP_LONG_INSIDE_WINDOW`, weight 0.6 — otherwise. That is
+  version 1's weight for the tag.
+
+Both limits are **read out of POL-RD-07's own sentence** ("a gap of more than 90
+seconds between consecutive fixes", "a straight-line jump of more than 500 m
+between consecutive fixes") the way `brief._waypoint_threshold` reads POL-RD-04's
+200 m, and both weights are read from `integrity.weights`. Nothing is typed, and
+a clause whose sentence has moved is a **refusal** (`LoaderError`), not a default:
+a limit written into `tribunal/` would be a policy number hard-coded there, and a
+silent default would grade every gap short. The reading is taken over the **whole
+trace** — the record does not mark the "disputed segment" — so every interval
+between consecutive fixes is read; the gaps and the jumps are computed from the
+trace's own points, with the recorded `gaps` summary as the fallback.
+
+A **no-show** case is untouched: it keeps part 2's grading by the waiting window
+and POL-NS-08(b)'s own 120 s threshold. The two readings cannot cross, because the
+route-deviation limits are read only for a `ROUTE_DEVIATION` case.
+
+**The tests.** `tests/test_brief.VersionThreeGapGradingTests` (12 tests) holds the
+rule. Shown red against `dac357f`'s `tribunal/` — `FAILED (failures=4, errors=9)`,
+the four failures on the four route-deviation artifacts still carrying the
+ungraded tag and the nine errors on the tests that name `POL_RD_07`, the limits
+reader and the graded variant — and green with the change in place.
+
+Where it shows:
+
+| set | case | category | evidence id | reading | gap | jump | weight |
+|---|---|---|---|---|---|---|---|
+| dev-v2 | 1732 | NO_SHOW | `EV-GPS-01732` | `GPS_GAP_LONG_INSIDE_WINDOW` | 199.0 s | — | 0.39 |
+| dev-v2 | 1736 | NO_SHOW | `EV-GPS-01736` | `GPS_GAP_SHORT_OR_OUTSIDE_WINDOW` | 60.0 s | — | 0.85 |
+| dev-v2 | 1775 | ROUTE_D | `EV-GPS-01775` | `GPS_GAP_SHORT_OR_OUTSIDE_WINDOW` | 40.0 s | 0.40 km | 0.85 |
+| dev-v2 | 1776 | ROUTE_D | `EV-GPS-01776` | `GPS_GAP_LONG_INSIDE_WINDOW` | 100.0 s | 1.00 km | 0.60 |
+| dev-v2-ext | 2732 | NO_SHOW | `EV-GPS-02732` | `GPS_GAP_LONG_INSIDE_WINDOW` | 195.0 s | — | 0.39 |
+| dev-v2-ext | 2736 | NO_SHOW | `EV-GPS-02736` | `GPS_GAP_SHORT_OR_OUTSIDE_WINDOW` | 60.0 s | — | 0.85 |
+| dev-v2-ext | 2756 | NO_SHOW | `EV-GPS-02756` | `GPS_GAP_LONG_INSIDE_WINDOW` | 197.0 s | — | 0.39 |
+| dev-v2-ext | 2760 | NO_SHOW | `EV-GPS-02760` | `GPS_GAP_SHORT_OR_OUTSIDE_WINDOW` | 60.0 s | — | 0.85 |
+| dev-v2-ext | 2825 | ROUTE_D | `EV-GPS-02825` | `GPS_GAP_SHORT_OR_OUTSIDE_WINDOW` | 40.0 s | 0.40 km | 0.85 |
+| dev-v2-ext | 2826 | ROUTE_D | `EV-GPS-02826` | `GPS_GAP_LONG_INSIDE_WINDOW` | 100.0 s | 1.01 km | 0.60 |
+| dev-v2-ext | 2849 | ROUTE_D | `EV-GPS-02849` | `GPS_GAP_SHORT_OR_OUTSIDE_WINDOW` | 40.0 s | 0.40 km | 0.85 |
+| dev-v2-ext | 2850 | ROUTE_D | `EV-GPS-02850` | `GPS_GAP_LONG_INSIDE_WINDOW` | 100.0 s | 1.00 km | 0.60 |
+
+The six route-deviation rows that turn on the new limb are 1775, 2825 and 2849
+(short) and 1776, 2826 and 2850 (long); each weight equals the one the case file
+itself declares, so nothing the sets already recorded moves. Corpus 110, codex
+9115, wild 512 and wild 517 keep the weights part 3 gave them, because every one
+of their gaps exceeds 90 s. A fixture that keeps 1775's 40 s gap but moves one fix
+600 m north of the fix before it grades **long** — limb (b) alone decides it.
+
+### 2. The revised development sets
+
+The bundle `~/Desktop/Tencent /guofang-ui-v2/tribunal-dev-v2-rev2.zip`, sha256
+`f446acb20844e3102eb21f2feb472914f31ff112d39bb061a5f80b57afb2c2b4`, was checked
+against that digest, unpacked outside the repository, and copied in. Its
+top-level Chinese note is left out, as the language rule requires. **218 files
+were installed byte for byte and every one was checked by sha256**; six files
+carry the bundle's bytes **plus** the edit part 3 made and this sheet keeps:
+
+| file | what was re-applied |
+|---|---|
+| `data/external/dev-v2/README.md` | "policy version 3 (drafted as base version 2)" for "policy base version 2" |
+| `data/external/dev-v2-ext/README.md` | the same phrase |
+| `eval/answers/dev-v2/DATASHEET.md` | the same phrase |
+| `eval/answers/dev-v2-ext/DATASHEET.md` | the same phrase |
+| `eval/answers/dev-v2/README.md` | the same phrase, twice |
+| `tests/test_dev_v2.py` | part 3's guard classes (the bundle ships the base file without them) |
+
+`tests/test_dev_v2.py` is therefore byte-identical to `dac357f`'s: the bundle's
+first 208 lines are the same 208 lines, and the guards part 3 appended are kept.
+
+**What the revision changes.**
+
+* **Key corrections ruled by the key owner.** 1709 and 1710 (and their variants
+  2709 and 2710) now expect the `POL-NS-05(ii)` false-arrival referral, which the
+  system produced: the arrival marker is stamped more than 300 m from the pin and
+  no in-geofence fix exists anywhere, so limb (ii) applies. 1775 is regenerated
+  with a short gap and now expects `PARTIAL_REFUND` **6.35**, not 4.50.
+* **Regeneration.** The generator was re-run (seed unchanged), so **137 case files
+  changed in random detail**: `dev-v2` **1714** and **1775–1790**, and all **120**
+  of `dev-v2-ext`. Some keys followed: 1779 now expects **5.70**, and 53
+  `dev-v2-ext` keys changed. The set's `index.json` was updated with every
+  regenerated file's digest, because a registered set is loaded through its own
+  index and the loader holds each file to the digest its entry records.
+* **`eval/synth/verify_dev_set.py`.** The bundle's checker is installed byte for
+  byte, so part 3's `POLICY_VERSION = 3` constant is **not** carried over. That
+  costs the check nothing here: the revised checker's derivation reads the
+  record's own `platform_policy` block rather than the brief's in-force block, and
+  it was measured at **both** the default version and version 3 before the choice
+  was made — 80 of 80 and 120 of 120 either way. The bundle also brings the
+  derivation the key owner added (the POL-NS-05(ii) referral and the
+  `straight_line_km > 0.5` limb of the gap test), which part 3's copy did not have.
+
+**A run made on the first revision is not comparable for those 137 cases.** Any
+result produced against `tribunal-dev-v2-rev1.zip` reads a different case file for
+each of them, so its per-case agreement is evidence about the old bytes and must
+not be compared with a run made against these.
+
+**The checks.**
+
+```
+cases agreeing with the key on all four fields: 80 of 80
+cases agreeing with the key on all four fields: 120 of 120
+```
+
+`python3 -m unittest tests.test_dev_v2` reads **36 tests, OK**, and the same
+figures come out under `/usr/bin/python3`.
+
+### 3. Not in this sheet
+
+* **Case 1734** still waits for the key owner's wording of a change to
+  `POL-NS-04`; the key expects `DRIVER_COMPENSATION` 3.60 and the clause's second
+  half leads the judge to escalate. `policy/v3/` is not edited here.
+* **Case 1767** was a one-off judge slip and nothing changes for it.
+
+
+Every artifact in this repository that carries the corpus's `GPS_GAP` tag, with
+how policy version 3 reads it, the gap that reading turned on, where that gap
+sits, and the artifact's weight before and after.
+
+**Which clause grades a gap turns on the category, and there are two.** POL-NS-08(b)
+is a no-show limb about the waiting window, and the `integrity` block (which
+carries every weight) lives in `no_show.json`. POL-RD-07 is the route-deviation
+clause about the trace's own integrity, and **its own limbs (a) and (b)** grade a
+route-deviation gap — the reading the key owner ruled for case 1775, and the one
+part 5 put in place. Part 2 graded every gap by the no-show window, which turned
+a route-deviation gap into a *short* one and **raised** its weight; part 3 left
+every route-deviation gap ungraded at version 1's 0.6. Both readings were wrong,
+and each is replaced below by the clause that owns the case.
 
 The **waiting window** is the one POL-NS-01(c) measures dwell over — from the
 trip's arrival marker to its cancellation — so a trip that was never cancelled
 has no window and no gap can be inside it. A gap counts as inside when it
 overlaps that interval; it *straddles the cancellation* when it contains the
-cancellation itself. A gap is "long" when its duration is strictly greater than
-`integrity.gps_gap_policy_threshold_sec` (120 s). All of this is used for a
-no-show case only, so no route-deviation gap is graded at all.
+cancellation itself. For a no-show case a gap is "long" when its duration is
+strictly greater than `integrity.gps_gap_policy_threshold_sec` (120 s). For a
+route-deviation case a gap is "long" when any gap between consecutive fixes
+exceeds 90 s **or** any straight-line jump between consecutive fixes exceeds
+500 m — both limits read out of POL-RD-07's own sentence, and neither typed. The
+route-deviation reading is taken over the **whole trace**, because the record
+does not mark the "disputed segment".
 
 | set | case | evidence id | how version 3 reads it | gap | position | old weight | new weight |
 |---|---|---|---|---|---|---|---|
-| corpus | 110 | `EV-GPS-00110` | ungraded `GPS_GAP` | 428.0 s | 18:35:00 → 18:42:08 | 0.39 | 0.39 |
-| corpus | 210 | `EV-GPS-00210` | `GPS_GAP_LONG_INSIDE_WINDOW` | 186.0 s | 23:39:15 → 23:42:21 | 0.25 | 0.25 |
-| corpus | 211 | `EV-GPS-00211` | `GPS_GAP_LONG_INSIDE_WINDOW` | 168.0 s | 12:33:40 → 12:36:28 | 0.39 | 0.39 |
-| codex | 9115 | `EV-GPS-09115` | ungraded `GPS_GAP` | 160.0 s | 20:03:10 → 20:05:50 | 0.60 | 0.60 |
-| wild | 512 | `EV-GPS-00512` | ungraded `GPS_GAP` | 860.0 s | 19:23:30 → 19:37:50 | 0.39 | 0.39 |
-| wild | 517 | `EV-GPS-00517` | ungraded `GPS_GAP` | 620.0 s | 22:26:30 → 22:36:50 | 0.39 | 0.39 |
+| corpus | 110 | `EV-GPS-00110` | `GPS_GAP_LONG_INSIDE_WINDOW` (POL-RD-07) | 428.0 s | 18:35:00 → 18:42:08 | 0.39 | 0.39 |
+| corpus | 210 | `EV-GPS-00210` | `GPS_GAP_LONG_INSIDE_WINDOW` (POL-NS-08(b)) | 186.0 s | 23:39:15 → 23:42:21 | 0.25 | 0.25 |
+| corpus | 211 | `EV-GPS-00211` | `GPS_GAP_LONG_INSIDE_WINDOW` (POL-NS-08(b)) | 168.0 s | 12:33:40 → 12:36:28 | 0.39 | 0.39 |
+| codex | 9115 | `EV-GPS-09115` | `GPS_GAP_LONG_INSIDE_WINDOW` (POL-RD-07) | 160.0 s | 20:03:10 → 20:05:50 | 0.60 | 0.60 |
+| wild | 512 | `EV-GPS-00512` | `GPS_GAP_LONG_INSIDE_WINDOW` (POL-RD-07) | 860.0 s | 19:23:30 → 19:37:50 | 0.39 | 0.39 |
+| wild | 517 | `EV-GPS-00517` | `GPS_GAP_LONG_INSIDE_WINDOW` (POL-RD-07) | 620.0 s | 22:26:30 → 22:36:50 | 0.39 | 0.39 |
 
-The two graded rows are the two no-show artifacts, and their weights do not move:
-both gaps are longer than 120 s and both windows exist, so both grade
+The two no-show rows are graded by the waiting window, and their weights do not
+move: both gaps are longer than 120 s and both windows exist, so both grade
 `GPS_GAP_LONG_INSIDE_WINDOW` at 0.6 — the same figure the version-1 table gives
-the ungraded tag. The four route-deviation artifacts are ungraded and keep 0.6.
-**No weight in this table changes between version 1 and version 3.**
+the ungraded tag. The four route-deviation rows are now graded by POL-RD-07, and
+every one of their gaps exceeds 90 s, so all four grade long and keep the weight
+part 3 gave them. **No weight in this table changes between version 1 and version
+3**, and no weight moved when part 5 replaced the ungraded reading.
 
-That is the correction part 3 made to part 2. Part 2 graded every `GPS_GAP`,
-which meant a route-deviation gap — a gap in a trip with no waiting window —
-fell into `GPS_GAP_SHORT_OR_OUTSIDE_WINDOW` and its weight rose (110 and 512 and
-517 to 0.55, 9115 to 0.85). That reading applied a no-show limb to a
-route-deviation case. A route-deviation trace is still impaired for policy
-purposes — under POL-RD-07, whose limb is "within the disputed segment" — and the
-judge reads that clause directly, as it always did.
+The two development sets carry twelve more tagged artifacts, and four of them
+turn on the new limb — the short/long route pair and its variants. Their reading
+and weight are in the part-5 section below.
+
+That is the correction part 3 made to part 2, and part 5's correction to part 3.
+Part 2 graded every `GPS_GAP`, which meant a route-deviation gap — a gap in a
+trip with no waiting window — fell into `GPS_GAP_SHORT_OR_OUTSIDE_WINDOW` and its
+weight rose (110 and 512 and 517 to 0.55, 9115 to 0.85). That reading applied a
+no-show limb to a route-deviation case. Part 3 then left those gaps ungraded
+altogether. Neither is the policy's reading: a route-deviation trace is impaired
+for policy purposes under **POL-RD-07**, whose limbs state their own two limits,
+and that is what grades it now.
 
 ## What has not been measured
 

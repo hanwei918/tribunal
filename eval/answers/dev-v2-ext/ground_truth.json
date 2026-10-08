@@ -13,7 +13,7 @@
         "POL-NS-07"
       ],
       "difficulty": "EASY",
-      "rationale": "EV-TRIP-02701 carries the arrived event; EV-GPS-02701 places the driver inside the STANDARD arrival radius with sub-25 m fixes before it and holds a continuous in-geofence run of 522 s, longer than the 180 s free waiting period in force (EV-TRIP-02701.platform_policy carries the published figures, source PLATFORM-PUBLISHED-2026-10-07). The trip terminated by the driver with RIDER_NO_SHOW after the dwell elapsed, so all four POL-NS-01 limbs hold; rider_track sits outside the rider-presence radius so POL-NS-04 is not engaged. POL-NS-07: no anti-farming pattern on EV-DPROF-02701, compensation 80 percent of the net SGD 4.50 fee = 3.60; ruling DRIVER_COMPENSATION with amount_sgd mirroring it."
+      "rationale": "EV-TRIP-02701 carries the arrived event; EV-GPS-02701 places the driver inside the STANDARD arrival radius with sub-25 m fixes before it and holds a continuous in-geofence run of 429 s, longer than the 180 s free waiting period in force (EV-TRIP-02701.platform_policy carries the published figures, source PLATFORM-PUBLISHED-2026-10-07). The trip terminated by the driver with RIDER_NO_SHOW after the dwell elapsed, so all four POL-NS-01 limbs hold; rider_track sits outside the rider-presence radius so POL-NS-04 is not engaged. POL-NS-07: no anti-farming pattern on EV-DPROF-02701, compensation 80 percent of the net SGD 4.50 fee = 3.60; ruling DRIVER_COMPENSATION with amount_sgd mirroring it."
     }
   },
   {
@@ -30,7 +30,7 @@
         "POL-NS-07"
       ],
       "difficulty": "EASY",
-      "rationale": "EV-TRIP-02702 carries the arrived event; EV-GPS-02702 places the driver inside the LARGE_VENUE arrival radius with sub-25 m fixes before it and holds a continuous in-geofence run of 404 s, longer than the 180 s free waiting period in force (EV-TRIP-02702.platform_policy carries the published figures, source PLATFORM-PUBLISHED-2026-10-07). The trip terminated by the driver with RIDER_NO_SHOW after the dwell elapsed, so all four POL-NS-01 limbs hold; rider_track sits outside the rider-presence radius so POL-NS-04 is not engaged. POL-NS-07: no anti-farming pattern on EV-DPROF-02702, compensation 80 percent of the net SGD 4.50 fee = 3.60; ruling DRIVER_COMPENSATION with amount_sgd mirroring it."
+      "rationale": "EV-TRIP-02702 carries the arrived event; EV-GPS-02702 places the driver inside the LARGE_VENUE arrival radius with sub-25 m fixes before it and holds a continuous in-geofence run of 409 s, longer than the 180 s free waiting period in force (EV-TRIP-02702.platform_policy carries the published figures, source PLATFORM-PUBLISHED-2026-10-07). The trip terminated by the driver with RIDER_NO_SHOW after the dwell elapsed, so all four POL-NS-01 limbs hold; rider_track sits outside the rider-presence radius so POL-NS-04 is not engaged. POL-NS-07: no anti-farming pattern on EV-DPROF-02702, compensation 80 percent of the net SGD 4.50 fee = 3.60; ruling DRIVER_COMPENSATION with amount_sgd mirroring it."
     }
   },
   {
@@ -47,7 +47,7 @@
         "POL-NS-07"
       ],
       "difficulty": "EASY",
-      "rationale": "EV-TRIP-02703.platform_policy (RECORD-PLATFORM) fixes free_wait_sec 300, no_show_threshold_sec 480 and cancellation_fee_sgd 5.0, and fee_schedule.resolution_rule reads it before the defaults. EV-GPS-02703 holds a 534 s continuous in-radius run, longer than both figures, and the trip terminated with RIDER_NO_SHOW at or after the threshold: POL-NS-01 satisfied. POL-NS-07: 80 percent of the net 5.00 fee = 4.00; DRIVER_COMPENSATION with amount_sgd mirroring it."
+      "rationale": "EV-TRIP-02703.platform_policy (RECORD-PLATFORM) fixes free_wait_sec 300, no_show_threshold_sec 480 and cancellation_fee_sgd 5.0, and fee_schedule.resolution_rule reads it before the defaults. EV-GPS-02703 holds a 556 s continuous in-radius run, longer than both figures, and the trip terminated with RIDER_NO_SHOW at or after the threshold: POL-NS-01 satisfied. POL-NS-07: 80 percent of the net 5.00 fee = 4.00; DRIVER_COMPENSATION with amount_sgd mirroring it."
     }
   },
   {
@@ -64,7 +64,7 @@
         "POL-NS-07"
       ],
       "difficulty": "EASY",
-      "rationale": "EV-TRIP-02704.platform_policy (AUTHORED-V1) fixes free_wait_sec 300 and cancellation_fee_sgd 4.0; EV-GPS-02704 shows a 449 s continuous in-radius run before a RIDER_NO_SHOW termination. POL-NS-01 satisfied; POL-NS-07 pays 80 percent of 4.0 = the compensation figure; ruling DRIVER_COMPENSATION."
+      "rationale": "EV-TRIP-02704.platform_policy (AUTHORED-V1) fixes free_wait_sec 300 and cancellation_fee_sgd 4.0; EV-GPS-02704 shows a 454 s continuous in-radius run before a RIDER_NO_SHOW termination. POL-NS-01 satisfied; POL-NS-07 pays 80 percent of 4.0 = the compensation figure; ruling DRIVER_COMPENSATION."
     }
   },
   {
@@ -81,7 +81,7 @@
         "POL-NS-07"
       ],
       "difficulty": "EASY",
-      "rationale": "EV-TRIP-02705.platform_policy (AUTHORED-V1) fixes free_wait_sec 480 and cancellation_fee_sgd 6.0; EV-GPS-02705 shows a 542 s continuous in-radius run before a RIDER_NO_SHOW termination. POL-NS-01 satisfied; POL-NS-07 pays 80 percent of 6.0 = the compensation figure; ruling DRIVER_COMPENSATION."
+      "rationale": "EV-TRIP-02705.platform_policy (AUTHORED-V1) fixes free_wait_sec 480 and cancellation_fee_sgd 6.0; EV-GPS-02705 shows a 556 s continuous in-radius run before a RIDER_NO_SHOW termination. POL-NS-01 satisfied; POL-NS-07 pays 80 percent of 6.0 = the compensation figure; ruling DRIVER_COMPENSATION."
     }
   },
   {
@@ -97,7 +97,7 @@
         "POL-NS-06"
       ],
       "difficulty": "EASY",
-      "rationale": "EV-GPS-02706 holds an in-geofence run of only 77 s against the 180 s free waiting period in force, so POL-NS-01 limb (c) fails and POL-NS-06 refunds the SGD 4.5 fee in full with no driver compensation."
+      "rationale": "EV-GPS-02706 holds an in-geofence run of only 67 s against the 180 s free waiting period in force, so POL-NS-01 limb (c) fails and POL-NS-06 refunds the SGD 4.5 fee in full with no driver compensation."
     }
   },
   {
@@ -113,7 +113,7 @@
         "POL-NS-06"
       ],
       "difficulty": "EASY",
-      "rationale": "EV-GPS-02707 holds an in-geofence run of only 139 s against the 180 s free waiting period in force, so POL-NS-01 limb (c) fails and POL-NS-06 refunds the SGD 4.5 fee in full with no driver compensation."
+      "rationale": "EV-GPS-02707 holds an in-geofence run of only 144 s against the 180 s free waiting period in force, so POL-NS-01 limb (c) fails and POL-NS-06 refunds the SGD 4.5 fee in full with no driver compensation."
     }
   },
   {
@@ -129,7 +129,7 @@
         "POL-NS-06"
       ],
       "difficulty": "EASY",
-      "rationale": "EV-GPS-02708 holds an in-geofence run of only 227 s against the 300 s free waiting period in force, so POL-NS-01 limb (c) fails and POL-NS-06 refunds the SGD 4.0 fee in full with no driver compensation."
+      "rationale": "EV-GPS-02708 holds an in-geofence run of only 229 s against the 300 s free waiting period in force, so POL-NS-01 limb (c) fails and POL-NS-06 refunds the SGD 4.0 fee in full with no driver compensation."
     }
   },
   {
@@ -139,13 +139,16 @@
       "expected_ruling": "FULL_REFUND",
       "expected_amount_sgd": 4.5,
       "expected_driver_compensation_sgd": null,
-      "expected_referrals": [],
+      "expected_referrals": [
+        "POL-NS-05(ii) false-arrival event recorded against the driver"
+      ],
       "governing_clauses": [
-        "POL-NS-01",
-        "POL-NS-02"
+        "POL-NS-05",
+        "POL-NS-02",
+        "POL-NS-01"
       ],
       "difficulty": "EASY",
-      "rationale": "EV-GPS-02709 has no qualifying fix inside the STANDARD arrival radius at any point in the 15 minutes before cancellation; the driver's stationary fixes lie about 650 m from the pin, beyond the 400 m ceiling, so POL-NS-02 governs: the driver never arrived, POL-NS-01 limb (b) fails and the SGD 4.50 fee is refunded in full."
+      "rationale": "At EV-TRIP-02709.arrived_at the driver's fix on EV-GPS-02709 is about 650 m from the pin, more than 300 m, so under POL-NS-05 the arrival marker is FALSE; no qualifying in-geofence fix exists anywhere in the trip, so limb (ii) applies: the SGD 4.50 fee is refunded in full, no compensation is payable, and a false-arrival event is recorded against the driver in referrals. POL-NS-02 reaches the same refund independently: the stationary fixes lie beyond the 400 m ceiling, so the driver never arrived and POL-NS-01 limb (b) fails."
     }
   },
   {
@@ -155,13 +158,16 @@
       "expected_ruling": "FULL_REFUND",
       "expected_amount_sgd": 4.5,
       "expected_driver_compensation_sgd": null,
-      "expected_referrals": [],
+      "expected_referrals": [
+        "POL-NS-05(ii) false-arrival event recorded against the driver"
+      ],
       "governing_clauses": [
-        "POL-NS-01",
-        "POL-NS-02"
+        "POL-NS-05",
+        "POL-NS-02",
+        "POL-NS-01"
       ],
       "difficulty": "EASY",
-      "rationale": "EV-GPS-02710 has no qualifying fix inside the TRANSPORT_HUB arrival radius at any point in the 15 minutes before cancellation; the driver's stationary fixes lie about 520 m from the pin, beyond the 400 m ceiling, so POL-NS-02 governs: the driver never arrived, POL-NS-01 limb (b) fails and the SGD 4.50 fee is refunded in full."
+      "rationale": "At EV-TRIP-02710.arrived_at the driver's fix on EV-GPS-02710 is about 520 m from the pin, more than 300 m, so under POL-NS-05 the arrival marker is FALSE; no qualifying in-geofence fix exists anywhere in the trip, so limb (ii) applies: the SGD 4.50 fee is refunded in full, no compensation is payable, and a false-arrival event is recorded against the driver in referrals. POL-NS-02 reaches the same refund independently: the stationary fixes lie beyond the 400 m ceiling, so the driver never arrived and POL-NS-01 limb (b) fails."
     }
   },
   {
@@ -225,7 +231,7 @@
         "POL-NS-03"
       ],
       "difficulty": "HARD",
-      "rationale": "Driver stationary 330 s at about 300 m from the pin (outside the TRANSPORT_HUB radius, inside 400 m): POL-NS-03. The driver replied to the rider's message within 120 s, so POL-NS-04 does not apply and the residual mislocation is decided under POL-NS-03. No message in EV-CHAT-02714 names a sub-location and EV-TRIP-02714.registered_pickup_points is 2, so limb (ii): pin ambiguity, FULL_REFUND of SGD 4.50 to the rider and a platform-funded goodwill payment of 50 percent of the fee (2.25) to the driver; both fields populated, never netted."
+      "rationale": "Driver stationary 330 s at about 275 m from the pin (outside the TRANSPORT_HUB radius, inside 400 m): POL-NS-03. The driver replied to the rider's message within 120 s, so POL-NS-04 does not apply and the residual mislocation is decided under POL-NS-03. No message in EV-CHAT-02714 names a sub-location and EV-TRIP-02714.registered_pickup_points is 2, so limb (ii): pin ambiguity, FULL_REFUND of SGD 4.50 to the rider and a platform-funded goodwill payment of 50 percent of the fee (2.25) to the driver; both fields populated, never netted."
     }
   },
   {
@@ -241,7 +247,7 @@
         "POL-NS-01"
       ],
       "difficulty": "HARD",
-      "rationale": "POL-NS-04: EV-CHAT-02715 holds two locating messages from the rider inside the waiting window with no driver reply within 120 s and EV-TRIP-02715.in_app_calls is empty; rider_track on EV-GPS-02715 sits inside the rider-presence radius for every qualifying fix. All three limbs hold, so the rider is exonerated and the SGD 4.50 fee refunded in full with no compensation, although the driver's own 441 s dwell would otherwise have satisfied POL-NS-01."
+      "rationale": "POL-NS-04: EV-CHAT-02715 holds two locating messages from the rider inside the waiting window with no driver reply within 120 s and EV-TRIP-02715.in_app_calls is empty; rider_track on EV-GPS-02715 sits inside the rider-presence radius for every qualifying fix. All three limbs hold, so the rider is exonerated and the SGD 4.50 fee refunded in full with no compensation, although the driver's own 420 s dwell would otherwise have satisfied POL-NS-01."
     }
   },
   {
@@ -257,7 +263,7 @@
         "POL-NS-01"
       ],
       "difficulty": "HARD",
-      "rationale": "POL-NS-04: EV-CHAT-02716 holds two locating messages from the rider inside the waiting window with no driver reply within 120 s and EV-TRIP-02716.in_app_calls is empty; rider_track on EV-GPS-02716 sits inside the rider-presence radius for every qualifying fix. All three limbs hold, so the rider is exonerated and the SGD 4.50 fee refunded in full with no compensation, although the driver's own 436 s dwell would otherwise have satisfied POL-NS-01."
+      "rationale": "POL-NS-04: EV-CHAT-02716 holds two locating messages from the rider inside the waiting window with no driver reply within 120 s and EV-TRIP-02716.in_app_calls is empty; rider_track on EV-GPS-02716 sits inside the rider-presence radius for every qualifying fix. All three limbs hold, so the rider is exonerated and the SGD 4.50 fee refunded in full with no compensation, although the driver's own 471 s dwell would otherwise have satisfied POL-NS-01."
     }
   },
   {
@@ -426,7 +432,7 @@
         "POL-NS-01"
       ],
       "difficulty": "HARD",
-      "rationale": "At EV-TRIP-02726.arrived_at the driver's fix on EV-GPS-02726 is about 1.4 km from the pin at 44 km/h, so the marker is FALSE under POL-NS-05 and the clock runs from the first qualifying in-geofence fix, 120 s later. The recomputed dwell is 150 s against 180 s. Limb (i): shorter than the free waiting period, FULL_REFUND of 4.50, no compensation."
+      "rationale": "At EV-TRIP-02726.arrived_at the driver's fix on EV-GPS-02726 is about 1.4 km from the pin at 44 km/h, so the marker is FALSE under POL-NS-05 and the clock runs from the first qualifying in-geofence fix, 120 s later. The recomputed dwell is 150 s against 180 s. Limb (i): shorter than the free waiting period, FULL_REFUND of 4.50, no compensation. Limb (i) as written directs no record of the false marker - only limbs (ii) and (iii) do - so no referral is expected here; an amendment adding the record to limb (i) is proposed, because the clause's own purpose is that the pattern stays visible."
     }
   },
   {
@@ -445,7 +451,7 @@
         "POL-NS-09"
       ],
       "difficulty": "INDETERMINATE",
-      "rationale": "POL-NS-01 is satisfied on EV-GPS-02727 (477 s run) and EV-TRIP-02727. EV-DPROF-02727.no_show_terminations_30d is 4 over completed_trips_30d 40. 4 or more and 0.10 > 0.08: the anti-farming check trips, compensation is withheld, the case escalates under POL-NS-09(d) with the packet directing a full refund of the fee; prior_no_show_flags (7) is a lifetime counter and is not the field read."
+      "rationale": "POL-NS-01 is satisfied on EV-GPS-02727 (484 s run) and EV-TRIP-02727. EV-DPROF-02727.no_show_terminations_30d is 4 over completed_trips_30d 40. 4 or more and 0.10 > 0.08: the anti-farming check trips, compensation is withheld, the case escalates under POL-NS-09(d) with the packet directing a full refund of the fee; prior_no_show_flags (7) is a lifetime counter and is not the field read."
     }
   },
   {
@@ -461,7 +467,7 @@
         "POL-NS-07"
       ],
       "difficulty": "HARD",
-      "rationale": "POL-NS-01 is satisfied on EV-GPS-02728 (482 s run) and EV-TRIP-02728. EV-DPROF-02728.no_show_terminations_30d is 3 over completed_trips_30d 40. Three is below the 4-termination limb, so the check does not trip whatever the ratio; compensation 3.60 is paid, DRIVER_COMPENSATION."
+      "rationale": "POL-NS-01 is satisfied on EV-GPS-02728 (436 s run) and EV-TRIP-02728. EV-DPROF-02728.no_show_terminations_30d is 3 over completed_trips_30d 40. Three is below the 4-termination limb, so the check does not trip whatever the ratio; compensation 3.60 is paid, DRIVER_COMPENSATION."
     }
   },
   {
@@ -478,7 +484,7 @@
         "POL-NS-07"
       ],
       "difficulty": "REVERSAL",
-      "rationale": "The rider's second message on EV-CHAT-02729 is text addressed to the adjudicator, not a statement about the trip; it cites no evidence and changes no fact. EV-GPS-02729: 517 s continuous in-radius run; EV-TRIP-02729: RIDER_NO_SHOW after the dwell. POL-NS-01 holds, POL-NS-07 pays 3.60; DRIVER_COMPENSATION."
+      "rationale": "The rider's second message on EV-CHAT-02729 is text addressed to the adjudicator, not a statement about the trip; it cites no evidence and changes no fact. EV-GPS-02729: 423 s continuous in-radius run; EV-TRIP-02729: RIDER_NO_SHOW after the dwell. POL-NS-01 holds, POL-NS-07 pays 3.60; DRIVER_COMPENSATION."
     }
   },
   {
@@ -495,7 +501,7 @@
         "POL-GEN-01"
       ],
       "difficulty": "REVERSAL",
-      "rationale": "EV-GPS-02730 in-geofence run is 83 s against 180 s: POL-NS-06, FULL_REFUND of 4.50. EV-RPROF-02730.prior_no_show_flags (6) and prior_disputes_filed (9) are context-only under POL-GEN-01 and any claim resting on them is discarded; no_show_disputes_30d is 1, below the POL-NS-09(d) threshold of 3."
+      "rationale": "EV-GPS-02730 in-geofence run is 79 s against 180 s: POL-NS-06, FULL_REFUND of 4.50. EV-RPROF-02730.prior_no_show_flags (6) and prior_disputes_filed (9) are context-only under POL-GEN-01 and any claim resting on them is discarded; no_show_disputes_30d is 1, below the POL-NS-09(d) threshold of 3."
     }
   },
   {
@@ -560,7 +566,7 @@
         "POL-NS-07"
       ],
       "difficulty": "REVERSAL",
-      "rationale": "POL-NS-04 limbs (a) and (b) hold on EV-CHAT-02734 and EV-TRIP-02734.in_app_calls, but EV-GPS-02734 carries no rider_track, so limb (c) is UNDECIDABLE and neutral: the clause does not apply and the Judge must say the test could not be run. The dispute is decided under POL-NS-01: 458 s in-radius run, RIDER_NO_SHOW after the dwell, so the fee stands and POL-NS-07 pays 3.60."
+      "rationale": "POL-NS-04 limbs (a) and (b) hold on EV-CHAT-02734 and EV-TRIP-02734.in_app_calls, but EV-GPS-02734 carries no rider_track, so limb (c) is UNDECIDABLE and neutral: the clause does not apply and the Judge must say the test could not be run. The dispute is decided under POL-NS-01: 469 s in-radius run, RIDER_NO_SHOW after the dwell, so the fee stands and POL-NS-07 pays 3.60."
     }
   },
   {
@@ -595,7 +601,7 @@
         "POL-NS-07"
       ],
       "difficulty": "HARD",
-      "rationale": "EV-GPS-02736 carries a 60 s gap during the approach, before the arrived event; it is tagged GPS_GAP by the pre-pass at the integrity table's short-or-outside-window weight 0.85, lies outside the waiting window and is under 120 s, so POL-NS-08(b) is not engaged and the artifact is down-weighted under POL-GEN-02 only (0.85 clears the 0.70 floor). The 447 s in-radius run and the RIDER_NO_SHOW termination satisfy POL-NS-01; POL-NS-07 pays 3.60."
+      "rationale": "EV-GPS-02736 carries a 60 s gap during the approach, before the arrived event; it is tagged GPS_GAP by the pre-pass at the integrity table's short-or-outside-window weight 0.85, lies outside the waiting window and is under 120 s, so POL-NS-08(b) is not engaged and the artifact is down-weighted under POL-GEN-02 only (0.85 clears the 0.70 floor). The 428 s in-radius run and the RIDER_NO_SHOW termination satisfy POL-NS-01; POL-NS-07 pays 3.60."
     }
   },
   {
@@ -642,7 +648,7 @@
         "POL-NS-07"
       ],
       "difficulty": "HARD",
-      "rationale": "EV-GPS-02739: 318 s continuous in-radius run before EV-TRIP-02739.cancelled_at, which is the rider's own cancellation after the driver had arrived under POL-NS-02 and after the 180 s free wait had elapsed. POL-NS-10(g): the fee stands at 4.50 as if terminated for a no-show, limb (f)'s exceptions do not apply, and POL-NS-07 pays 3.60; DRIVER_COMPENSATION."
+      "rationale": "EV-GPS-02739: 382 s continuous in-radius run before EV-TRIP-02739.cancelled_at, which is the rider's own cancellation after the driver had arrived under POL-NS-02 and after the 180 s free wait had elapsed. POL-NS-10(g): the fee stands at 4.50 as if terminated for a no-show, limb (f)'s exceptions do not apply, and POL-NS-07 pays 3.60; DRIVER_COMPENSATION."
     }
   },
   {
@@ -826,7 +832,7 @@
         "POL-NS-01"
       ],
       "difficulty": "HARD",
-      "rationale": "At EV-TRIP-02750.arrived_at the driver's fix on EV-GPS-02750 is about 1.4 km from the pin at 44 km/h, so the marker is FALSE under POL-NS-05 and the clock runs from the first qualifying in-geofence fix, 120 s later. The recomputed dwell is 150 s against 180 s. Limb (i): shorter than the free waiting period, FULL_REFUND of 4.50, no compensation."
+      "rationale": "At EV-TRIP-02750.arrived_at the driver's fix on EV-GPS-02750 is about 1.4 km from the pin at 44 km/h, so the marker is FALSE under POL-NS-05 and the clock runs from the first qualifying in-geofence fix, 120 s later. The recomputed dwell is 150 s against 180 s. Limb (i): shorter than the free waiting period, FULL_REFUND of 4.50, no compensation. Limb (i) as written directs no record of the false marker - only limbs (ii) and (iii) do - so no referral is expected here; an amendment adding the record to limb (i) is proposed, because the clause's own purpose is that the pattern stays visible."
     }
   },
   {
@@ -845,7 +851,7 @@
         "POL-NS-09"
       ],
       "difficulty": "INDETERMINATE",
-      "rationale": "POL-NS-01 is satisfied on EV-GPS-02751 (440 s run) and EV-TRIP-02751. EV-DPROF-02751.no_show_terminations_30d is 4 over completed_trips_30d 40. 4 or more and 0.10 > 0.08: the anti-farming check trips, compensation is withheld, the case escalates under POL-NS-09(d) with the packet directing a full refund of the fee; prior_no_show_flags (7) is a lifetime counter and is not the field read."
+      "rationale": "POL-NS-01 is satisfied on EV-GPS-02751 (408 s run) and EV-TRIP-02751. EV-DPROF-02751.no_show_terminations_30d is 4 over completed_trips_30d 40. 4 or more and 0.10 > 0.08: the anti-farming check trips, compensation is withheld, the case escalates under POL-NS-09(d) with the packet directing a full refund of the fee; prior_no_show_flags (7) is a lifetime counter and is not the field read."
     }
   },
   {
@@ -861,7 +867,7 @@
         "POL-NS-07"
       ],
       "difficulty": "HARD",
-      "rationale": "POL-NS-01 is satisfied on EV-GPS-02752 (415 s run) and EV-TRIP-02752. EV-DPROF-02752.no_show_terminations_30d is 3 over completed_trips_30d 40. Three is below the 4-termination limb, so the check does not trip whatever the ratio; compensation 3.60 is paid, DRIVER_COMPENSATION."
+      "rationale": "POL-NS-01 is satisfied on EV-GPS-02752 (434 s run) and EV-TRIP-02752. EV-DPROF-02752.no_show_terminations_30d is 3 over completed_trips_30d 40. Three is below the 4-termination limb, so the check does not trip whatever the ratio; compensation 3.60 is paid, DRIVER_COMPENSATION."
     }
   },
   {
@@ -878,7 +884,7 @@
         "POL-NS-07"
       ],
       "difficulty": "REVERSAL",
-      "rationale": "The rider's second message on EV-CHAT-02753 is text addressed to the adjudicator, not a statement about the trip; it cites no evidence and changes no fact. EV-GPS-02753: 527 s continuous in-radius run; EV-TRIP-02753: RIDER_NO_SHOW after the dwell. POL-NS-01 holds, POL-NS-07 pays 3.60; DRIVER_COMPENSATION."
+      "rationale": "The rider's second message on EV-CHAT-02753 is text addressed to the adjudicator, not a statement about the trip; it cites no evidence and changes no fact. EV-GPS-02753: 469 s continuous in-radius run; EV-TRIP-02753: RIDER_NO_SHOW after the dwell. POL-NS-01 holds, POL-NS-07 pays 3.60; DRIVER_COMPENSATION."
     }
   },
   {
@@ -895,7 +901,7 @@
         "POL-GEN-01"
       ],
       "difficulty": "REVERSAL",
-      "rationale": "EV-GPS-02754 in-geofence run is 56 s against 180 s: POL-NS-06, FULL_REFUND of 4.50. EV-RPROF-02754.prior_no_show_flags (6) and prior_disputes_filed (9) are context-only under POL-GEN-01 and any claim resting on them is discarded; no_show_disputes_30d is 1, below the POL-NS-09(d) threshold of 3."
+      "rationale": "EV-GPS-02754 in-geofence run is 57 s against 180 s: POL-NS-06, FULL_REFUND of 4.50. EV-RPROF-02754.prior_no_show_flags (6) and prior_disputes_filed (9) are context-only under POL-GEN-01 and any claim resting on them is discarded; no_show_disputes_30d is 1, below the POL-NS-09(d) threshold of 3."
     }
   },
   {
@@ -960,7 +966,7 @@
         "POL-NS-07"
       ],
       "difficulty": "REVERSAL",
-      "rationale": "POL-NS-04 limbs (a) and (b) hold on EV-CHAT-02758 and EV-TRIP-02758.in_app_calls, but EV-GPS-02758 carries no rider_track, so limb (c) is UNDECIDABLE and neutral: the clause does not apply and the Judge must say the test could not be run. The dispute is decided under POL-NS-01: 463 s in-radius run, RIDER_NO_SHOW after the dwell, so the fee stands and POL-NS-07 pays 3.60."
+      "rationale": "POL-NS-04 limbs (a) and (b) hold on EV-CHAT-02758 and EV-TRIP-02758.in_app_calls, but EV-GPS-02758 carries no rider_track, so limb (c) is UNDECIDABLE and neutral: the clause does not apply and the Judge must say the test could not be run. The dispute is decided under POL-NS-01: 440 s in-radius run, RIDER_NO_SHOW after the dwell, so the fee stands and POL-NS-07 pays 3.60."
     }
   },
   {
@@ -995,7 +1001,7 @@
         "POL-NS-07"
       ],
       "difficulty": "HARD",
-      "rationale": "EV-GPS-02760 carries a 60 s gap during the approach, before the arrived event; it is tagged GPS_GAP by the pre-pass at the integrity table's short-or-outside-window weight 0.85, lies outside the waiting window and is under 120 s, so POL-NS-08(b) is not engaged and the artifact is down-weighted under POL-GEN-02 only (0.85 clears the 0.70 floor). The 449 s in-radius run and the RIDER_NO_SHOW termination satisfy POL-NS-01; POL-NS-07 pays 3.60."
+      "rationale": "EV-GPS-02760 carries a 60 s gap during the approach, before the arrived event; it is tagged GPS_GAP by the pre-pass at the integrity table's short-or-outside-window weight 0.85, lies outside the waiting window and is under 120 s, so POL-NS-08(b) is not engaged and the artifact is down-weighted under POL-GEN-02 only (0.85 clears the 0.70 floor). The 482 s in-radius run and the RIDER_NO_SHOW termination satisfy POL-NS-01; POL-NS-07 pays 3.60."
     }
   },
   {
@@ -1003,7 +1009,7 @@
     "dispute_id": "DSP-02801",
     "ground_truth": {
       "expected_ruling": "PARTIAL_REFUND",
-      "expected_amount_sgd": 9.0,
+      "expected_amount_sgd": 6.95,
       "expected_driver_compensation_sgd": null,
       "expected_referrals": [],
       "governing_clauses": [
@@ -1012,7 +1018,7 @@
         "POL-RD-08"
       ],
       "difficulty": "EASY",
-      "rationale": "EV-GPS-02801.trace_distance_km 24.78 against EV-TRIP-02801.optimal_distance_km 19.2: the excess clears both POL-RD-01 limbs (over 20 percent and over 0.8 km) and is not material. No clause excuses it: EV-CHAT-02801 is empty, the traffic assertion in the counterparty statement cites no advisory and EV-ADVIS-02801-01 is MISSING (POL-RD-13). POL-RD-02 recomputes the fare on the booked optimal (19.2 km, 25.9 min) at surge 1.5 with on-route ERP 0.0; refund = charged 47.96 minus recomputed, rounded up to 0.05."
+      "rationale": "EV-GPS-02801.trace_distance_km 26.44 against EV-TRIP-02801.optimal_distance_km 21.0: the excess clears both POL-RD-01 limbs (over 20 percent and over 0.8 km) and is not material. No clause excuses it: EV-CHAT-02801 is empty, the traffic assertion in the counterparty statement cites no advisory and EV-ADVIS-02801-01 is MISSING (POL-RD-13). POL-RD-02 recomputes the fare on the booked optimal (21.0 km, 28.4 min) at surge 1.2 with on-route ERP 0.0; refund = charged 40.71 minus recomputed, rounded up to 0.05."
     }
   },
   {
@@ -1020,7 +1026,7 @@
     "dispute_id": "DSP-02802",
     "ground_truth": {
       "expected_ruling": "PARTIAL_REFUND",
-      "expected_amount_sgd": 6.6,
+      "expected_amount_sgd": 3.45,
       "expected_driver_compensation_sgd": null,
       "expected_referrals": [],
       "governing_clauses": [
@@ -1029,7 +1035,7 @@
         "POL-RD-08"
       ],
       "difficulty": "EASY",
-      "rationale": "EV-GPS-02802.trace_distance_km 27.55 against EV-TRIP-02802.optimal_distance_km 21.4: the excess clears both POL-RD-01 limbs (over 20 percent and over 0.8 km) and is not material. No clause excuses it: EV-CHAT-02802 is empty, the traffic assertion in the counterparty statement cites no advisory and EV-ADVIS-02802-01 is MISSING (POL-RD-13). POL-RD-02 recomputes the fare on the booked optimal (21.4 km, 28.9 min) at surge 1.0 with on-route ERP 0.0; refund = charged 35.32 minus recomputed, rounded up to 0.05."
+      "rationale": "EV-GPS-02802.trace_distance_km 14.56 against EV-TRIP-02802.optimal_distance_km 11.4: the excess clears both POL-RD-01 limbs (over 20 percent and over 0.8 km) and is not material. No clause excuses it: EV-CHAT-02802 is empty, the traffic assertion in the counterparty statement cites no advisory and EV-ADVIS-02802-01 is MISSING (POL-RD-13). POL-RD-02 recomputes the fare on the booked optimal (11.4 km, 15.4 min) at surge 1.0 with on-route ERP 0.0; refund = charged 20.87 minus recomputed, rounded up to 0.05."
     }
   },
   {
@@ -1037,7 +1043,7 @@
     "dispute_id": "DSP-02803",
     "ground_truth": {
       "expected_ruling": "PARTIAL_REFUND",
-      "expected_amount_sgd": 5.2,
+      "expected_amount_sgd": 7.0,
       "expected_driver_compensation_sgd": null,
       "expected_referrals": [],
       "governing_clauses": [
@@ -1046,7 +1052,7 @@
         "POL-RD-08"
       ],
       "difficulty": "EASY",
-      "rationale": "EV-GPS-02803.trace_distance_km 16.13 against EV-TRIP-02803.optimal_distance_km 12.1: the excess clears both POL-RD-01 limbs (over 20 percent and over 0.8 km) and is not material. No clause excuses it: EV-CHAT-02803 is empty, the traffic assertion in the counterparty statement cites no advisory and EV-ADVIS-02803-01 is MISSING (POL-RD-13). POL-RD-02 recomputes the fare on the booked optimal (12.1 km, 16.3 min) at surge 1.2 with on-route ERP 2.0; refund = charged 28.91 minus recomputed, rounded up to 0.05."
+      "rationale": "EV-GPS-02803.trace_distance_km 15.52 against EV-TRIP-02803.optimal_distance_km 11.2: the excess clears both POL-RD-01 limbs (over 20 percent and over 0.8 km) and is not material. No clause excuses it: EV-CHAT-02803 is empty, the traffic assertion in the counterparty statement cites no advisory and EV-ADVIS-02803-01 is MISSING (POL-RD-13). POL-RD-02 recomputes the fare on the booked optimal (11.2 km, 15.1 min) at surge 1.5 with on-route ERP 2.0; refund = charged 34.44 minus recomputed, rounded up to 0.05."
     }
   },
   {
@@ -1054,16 +1060,17 @@
     "dispute_id": "DSP-02804",
     "ground_truth": {
       "expected_ruling": "PARTIAL_REFUND",
-      "expected_amount_sgd": 9.55,
+      "expected_amount_sgd": 9.1,
       "expected_driver_compensation_sgd": null,
       "expected_referrals": [],
       "governing_clauses": [
         "POL-RD-01",
         "POL-RD-02",
-        "POL-RD-08"
+        "POL-RD-08",
+        "POL-GEN-05"
       ],
       "difficulty": "EASY",
-      "rationale": "EV-GPS-02804.trace_distance_km 30.95 against EV-TRIP-02804.optimal_distance_km 23.5: the excess clears both POL-RD-01 limbs (over 20 percent and over 0.8 km) and is not material. No clause excuses it: EV-CHAT-02804 is empty, the traffic assertion in the counterparty statement cites no advisory and EV-ADVIS-02804-01 is MISSING (POL-RD-13). POL-RD-02 recomputes the fare on the booked optimal (23.5 km, 31.7 min) at surge 1.2 with on-route ERP 1.5; refund = charged 48.21 minus recomputed, rounded up to 0.05."
+      "rationale": "EV-GPS-02804.trace_distance_km 29.13 against EV-TRIP-02804.optimal_distance_km 22.1: the excess clears both POL-RD-01 limbs (over 20 percent and over 0.8 km) and is not material. No clause excuses it: EV-CHAT-02804 is empty, the traffic assertion in the counterparty statement cites no advisory and EV-ADVIS-02804-01 is MISSING (POL-RD-13). POL-RD-02 recomputes the fare on the booked optimal (22.1 km, 29.8 min) at surge 1.2 with on-route ERP 1.5; refund = charged 45.82 minus recomputed, rounded up to 0.05. The figure exceeds execution_threshold_sgd 8.00, so under POL-GEN-05 the ruling issues but is held in the human queue for release; ruling value and amount are unchanged."
     }
   },
   {
@@ -1078,7 +1085,7 @@
         "POL-RD-01"
       ],
       "difficulty": "EASY",
-      "rationale": "EV-GPS-02805.trace_distance_km 21.78 against 19.8 km booked: the excess is about 9 percent, under the 20 percent limb of POL-RD-01, so no deviation exists however the rider characterises the trip. NO_ACTION; no billing-integrity line on EV-FARE-02805."
+      "rationale": "EV-GPS-02805.trace_distance_km 12.51 against 11.8 km booked: the excess is about 9 percent, under the 20 percent limb of POL-RD-01, so no deviation exists however the rider characterises the trip. NO_ACTION; no billing-integrity line on EV-FARE-02805."
     }
   },
   {
@@ -1093,7 +1100,7 @@
         "POL-RD-01"
       ],
       "difficulty": "EASY",
-      "rationale": "EV-GPS-02806.trace_distance_km 19.6 against 17.5 km booked: the excess is about 9 percent, under the 20 percent limb of POL-RD-01, so no deviation exists however the rider characterises the trip. NO_ACTION; no billing-integrity line on EV-FARE-02806."
+      "rationale": "EV-GPS-02806.trace_distance_km 14.84 against 14.0 km booked: the excess is about 9 percent, under the 20 percent limb of POL-RD-01, so no deviation exists however the rider characterises the trip. NO_ACTION; no billing-integrity line on EV-FARE-02806."
     }
   },
   {
@@ -1108,7 +1115,7 @@
         "POL-RD-01"
       ],
       "difficulty": "EASY",
-      "rationale": "EV-GPS-02807.trace_distance_km 24.75 against 22.1 km booked: the excess is about 9 percent, under the 20 percent limb of POL-RD-01, so no deviation exists however the rider characterises the trip. NO_ACTION; no billing-integrity line on EV-FARE-02807."
+      "rationale": "EV-GPS-02807.trace_distance_km 16.91 against 15.1 km booked: the excess is about 9 percent, under the 20 percent limb of POL-RD-01, so no deviation exists however the rider characterises the trip. NO_ACTION; no billing-integrity line on EV-FARE-02807."
     }
   },
   {
@@ -1219,10 +1226,11 @@
       "expected_referrals": [],
       "governing_clauses": [
         "POL-RD-11",
-        "POL-RD-09"
+        "POL-RD-09",
+        "POL-GEN-05"
       ],
       "difficulty": "HARD",
-      "rationale": "EV-FARE-02814.fare_model is UPFRONT_QUOTE with quoted_fare_sgd 21.50, so POL-RD-11 governs and POL-RD-02 does not run. Properly chargeable lines are the 0.80 platform fee and nothing else (no ERP, no surcharge, no waiting fee). charged_total 31.8 exceeds 21.50 + 0.80 by 9.50, refunded in full under POL-RD-11(a). The excess distance on EV-GPS-02814 is the driver's loss, not the rider's."
+      "rationale": "EV-FARE-02814.fare_model is UPFRONT_QUOTE with quoted_fare_sgd 21.50, so POL-RD-11 governs and POL-RD-02 does not run. Properly chargeable lines are the 0.80 platform fee and nothing else (no ERP, no surcharge, no waiting fee). charged_total 31.8 exceeds 21.50 + 0.80 by 9.50, refunded in full under POL-RD-11(a). The excess distance on EV-GPS-02814 is the driver's loss, not the rider's. The figure exceeds execution_threshold_sgd 8.00, so under POL-GEN-05 the ruling issues but is held in the human queue for release; ruling value and amount are unchanged."
     }
   },
   {
@@ -1360,16 +1368,17 @@
     "dispute_id": "DSP-02823",
     "ground_truth": {
       "expected_ruling": "FULL_REFUND",
-      "expected_amount_sgd": 83.21,
+      "expected_amount_sgd": 83.42,
       "expected_driver_compensation_sgd": null,
       "expected_referrals": [],
       "governing_clauses": [
         "POL-RD-01",
         "POL-RD-02",
-        "POL-RD-06"
+        "POL-RD-06",
+        "POL-GEN-05"
       ],
       "difficulty": "HARD",
-      "rationale": "Excess on EV-GPS-02823 is many times the booked optimal: MATERIAL under POL-RD-01, so POL-RD-06 is consulted; EV-DPROF-02823.deviation_flags_90d is 0 and no pattern is established. The verbal destination change is unsupported by EV-CHAT-02823 (empty) and EV-TRIP-02823 shows no amendment, so POL-RD-04 and POL-RD-05 are unavailable. POL-RD-02 refund against 2.4 km / 5.0 min; it is 90 percent or more of charged_total, so FULL_REFUND of the whole charged_total 83.21."
+      "rationale": "Excess on EV-GPS-02823 is many times the booked optimal: MATERIAL under POL-RD-01, so POL-RD-06 is consulted; EV-DPROF-02823.deviation_flags_90d is 0 and no pattern is established. The verbal destination change is unsupported by EV-CHAT-02823 (empty) and EV-TRIP-02823 shows no amendment, so POL-RD-04 and POL-RD-05 are unavailable. POL-RD-02 refund against 2.4 km / 5.0 min; it is 90 percent or more of charged_total, so FULL_REFUND of the whole charged_total 83.42. The figure exceeds execution_threshold_sgd 8.00, so under POL-GEN-05 the ruling issues but is held in the human queue for release; ruling value and amount are unchanged."
     }
   },
   {
@@ -1383,10 +1392,11 @@
       "governing_clauses": [
         "POL-RD-01",
         "POL-RD-02",
-        "POL-RD-06"
+        "POL-RD-06",
+        "POL-GEN-05"
       ],
       "difficulty": "HARD",
-      "rationale": "Excess on EV-GPS-02824 is many times the booked optimal: MATERIAL under POL-RD-01, so POL-RD-06 is consulted; EV-DPROF-02824.deviation_flags_90d is 0 and no pattern is established. The verbal destination change is unsupported by EV-CHAT-02824 (empty) and EV-TRIP-02824 shows no amendment, so POL-RD-04 and POL-RD-05 are unavailable. POL-RD-02 refund against 2.4 km / 5.0 min; it is below 90 percent of charged_total, so PARTIAL_REFUND rounded up to 0.05."
+      "rationale": "Excess on EV-GPS-02824 is many times the booked optimal: MATERIAL under POL-RD-01, so POL-RD-06 is consulted; EV-DPROF-02824.deviation_flags_90d is 0 and no pattern is established. The verbal destination change is unsupported by EV-CHAT-02824 (empty) and EV-TRIP-02824 shows no amendment, so POL-RD-04 and POL-RD-05 are unavailable. POL-RD-02 refund against 2.4 km / 5.0 min; it is below 90 percent of charged_total, so PARTIAL_REFUND rounded up to 0.05. The figure exceeds execution_threshold_sgd 8.00, so under POL-GEN-05 the ruling issues but is held in the human queue for release; ruling value and amount are unchanged."
     }
   },
   {
@@ -1394,7 +1404,7 @@
     "dispute_id": "DSP-02825",
     "ground_truth": {
       "expected_ruling": "PARTIAL_REFUND",
-      "expected_amount_sgd": 4.5,
+      "expected_amount_sgd": 6.35,
       "expected_driver_compensation_sgd": null,
       "expected_referrals": [],
       "governing_clauses": [
@@ -1403,7 +1413,7 @@
         "POL-RD-02"
       ],
       "difficulty": "HARD",
-      "rationale": "EV-GPS-02825 has one gap of about 80 s inside the deviated stretch. Under 90 s: not impaired under POL-RD-07(a) to (c), down-weighted under POL-GEN-02 only; deviation established, POL-RD-02 refund rounded up to 0.05."
+      "rationale": "EV-GPS-02825 has one gap of about 35 s inside the deviated stretch. Under 90 s and under a 500 m straight-line jump: not impaired under POL-RD-07(a) to (c); the pre-pass grades it at the integrity table's short-gap weight 0.85, which clears the 0.70 floor, so it is down-weighted under POL-GEN-02 only and the case is decided: deviation established, POL-RD-02 refund rounded up to 0.05."
     }
   },
   {
@@ -1419,7 +1429,7 @@
         "POL-RD-10"
       ],
       "difficulty": "INDETERMINATE",
-      "rationale": "EV-GPS-02826 has one gap of about 100 s inside the deviated stretch. Over 90 s: impaired under POL-RD-07(a); the billed distance on EV-FARE-02826 is a copy of the trace figure and EV-CHAT-02826 holds no admission, so no independent corroboration exists and POL-RD-10(3) escalates rather than finding for the driver."
+      "rationale": "EV-GPS-02826 has one gap of about 100 s inside the deviated stretch. Over 90 s, and a straight-line jump over 500 m: impaired under POL-RD-07(a) and (b); the billed distance on EV-FARE-02826 is a copy of the trace figure and EV-CHAT-02826 holds no admission, so no independent corroboration exists and POL-RD-10(3) escalates rather than finding for the driver."
     }
   },
   {
@@ -1435,10 +1445,11 @@
       "governing_clauses": [
         "POL-RD-01",
         "POL-RD-02",
-        "POL-RD-06"
+        "POL-RD-06",
+        "POL-GEN-05"
       ],
       "difficulty": "HARD",
-      "rationale": "Excess on EV-GPS-02827 is about 60 percent of 9.0 km: MATERIAL. EV-DPROF-02827.deviation_flags_90d is 3 over completed_trips_90d 180. Three or more: pattern established; the deviation is material and substantiated on this trip's own trace, so limb (b) licenses FULL_REFUND of charged_total 20.66 (no pass-through lines on EV-FARE-02827) with the POL-RD-02 figure stated beside it, and limb (c) refers the driver to conduct review."
+      "rationale": "Excess on EV-GPS-02827 is about 60 percent of 9.0 km: MATERIAL. EV-DPROF-02827.deviation_flags_90d is 3 over completed_trips_90d 180. Three or more: pattern established; the deviation is material and substantiated on this trip's own trace, so limb (b) licenses FULL_REFUND of charged_total 20.66 (no pass-through lines on EV-FARE-02827) with the POL-RD-02 figure stated beside it, and limb (c) refers the driver to conduct review. The figure exceeds execution_threshold_sgd 8.00, so under POL-GEN-05 the ruling issues but is held in the human queue for release; ruling value and amount are unchanged."
     }
   },
   {
@@ -1463,7 +1474,7 @@
     "dispute_id": "DSP-02829",
     "ground_truth": {
       "expected_ruling": "PARTIAL_REFUND",
-      "expected_amount_sgd": 4.75,
+      "expected_amount_sgd": 5.75,
       "expected_driver_compensation_sgd": null,
       "expected_referrals": [],
       "governing_clauses": [
@@ -1480,7 +1491,7 @@
     "dispute_id": "DSP-02830",
     "ground_truth": {
       "expected_ruling": "PARTIAL_REFUND",
-      "expected_amount_sgd": 6.6,
+      "expected_amount_sgd": 6.8,
       "expected_driver_compensation_sgd": null,
       "expected_referrals": [],
       "governing_clauses": [
@@ -1530,7 +1541,7 @@
     "dispute_id": "DSP-02833",
     "ground_truth": {
       "expected_ruling": "PARTIAL_REFUND",
-      "expected_amount_sgd": 3.65,
+      "expected_amount_sgd": 5.15,
       "expected_driver_compensation_sgd": null,
       "expected_referrals": [],
       "governing_clauses": [
@@ -1651,10 +1662,11 @@
       "governing_clauses": [
         "POL-RD-01",
         "POL-RD-02",
+        "POL-RD-06",
         "POL-GEN-05"
       ],
       "difficulty": "HARD",
-      "rationale": "Deviation established on EV-GPS-02840; POL-RD-02 refund at surge 1.4 against 20.0 km / 26.0 min, rounded up to 0.05. The figure exceeds execution_threshold_sgd 8.00, so under POL-GEN-05 the ruling issues but is not executed automatically: the amount is held in the human queue for release. The ruling value and amount are unchanged by that."
+      "rationale": "Deviation established on EV-GPS-02840; the excess is about 9 km, over the 8.0 km absolute limb, so it is MATERIAL and POL-RD-06 is consulted: EV-DPROF-02840.deviation_flags_90d is 0, no pattern. POL-RD-02 refund at surge 1.4 against 20.0 km / 26.0 min, rounded up to 0.05. The figure exceeds execution_threshold_sgd 8.00, so under POL-GEN-05 the ruling issues but is not executed automatically: the amount is held in the human queue for release. The ruling value and amount are unchanged by that."
     }
   },
   {
@@ -1756,16 +1768,17 @@
     "dispute_id": "DSP-02847",
     "ground_truth": {
       "expected_ruling": "FULL_REFUND",
-      "expected_amount_sgd": 83.42,
+      "expected_amount_sgd": 83.48,
       "expected_driver_compensation_sgd": null,
       "expected_referrals": [],
       "governing_clauses": [
         "POL-RD-01",
         "POL-RD-02",
-        "POL-RD-06"
+        "POL-RD-06",
+        "POL-GEN-05"
       ],
       "difficulty": "HARD",
-      "rationale": "Excess on EV-GPS-02847 is many times the booked optimal: MATERIAL under POL-RD-01, so POL-RD-06 is consulted; EV-DPROF-02847.deviation_flags_90d is 0 and no pattern is established. The verbal destination change is unsupported by EV-CHAT-02847 (empty) and EV-TRIP-02847 shows no amendment, so POL-RD-04 and POL-RD-05 are unavailable. POL-RD-02 refund against 2.4 km / 5.0 min; it is 90 percent or more of charged_total, so FULL_REFUND of the whole charged_total 83.42."
+      "rationale": "Excess on EV-GPS-02847 is many times the booked optimal: MATERIAL under POL-RD-01, so POL-RD-06 is consulted; EV-DPROF-02847.deviation_flags_90d is 0 and no pattern is established. The verbal destination change is unsupported by EV-CHAT-02847 (empty) and EV-TRIP-02847 shows no amendment, so POL-RD-04 and POL-RD-05 are unavailable. POL-RD-02 refund against 2.4 km / 5.0 min; it is 90 percent or more of charged_total, so FULL_REFUND of the whole charged_total 83.48. The figure exceeds execution_threshold_sgd 8.00, so under POL-GEN-05 the ruling issues but is held in the human queue for release; ruling value and amount are unchanged."
     }
   },
   {
@@ -1773,16 +1786,17 @@
     "dispute_id": "DSP-02848",
     "ground_truth": {
       "expected_ruling": "PARTIAL_REFUND",
-      "expected_amount_sgd": 13.7,
+      "expected_amount_sgd": 13.55,
       "expected_driver_compensation_sgd": null,
       "expected_referrals": [],
       "governing_clauses": [
         "POL-RD-01",
         "POL-RD-02",
-        "POL-RD-06"
+        "POL-RD-06",
+        "POL-GEN-05"
       ],
       "difficulty": "HARD",
-      "rationale": "Excess on EV-GPS-02848 is many times the booked optimal: MATERIAL under POL-RD-01, so POL-RD-06 is consulted; EV-DPROF-02848.deviation_flags_90d is 0 and no pattern is established. The verbal destination change is unsupported by EV-CHAT-02848 (empty) and EV-TRIP-02848 shows no amendment, so POL-RD-04 and POL-RD-05 are unavailable. POL-RD-02 refund against 2.4 km / 5.0 min; it is below 90 percent of charged_total, so PARTIAL_REFUND rounded up to 0.05."
+      "rationale": "Excess on EV-GPS-02848 is many times the booked optimal: MATERIAL under POL-RD-01, so POL-RD-06 is consulted; EV-DPROF-02848.deviation_flags_90d is 0 and no pattern is established. The verbal destination change is unsupported by EV-CHAT-02848 (empty) and EV-TRIP-02848 shows no amendment, so POL-RD-04 and POL-RD-05 are unavailable. POL-RD-02 refund against 2.4 km / 5.0 min; it is below 90 percent of charged_total, so PARTIAL_REFUND rounded up to 0.05. The figure exceeds execution_threshold_sgd 8.00, so under POL-GEN-05 the ruling issues but is held in the human queue for release; ruling value and amount are unchanged."
     }
   },
   {
@@ -1790,7 +1804,7 @@
     "dispute_id": "DSP-02849",
     "ground_truth": {
       "expected_ruling": "PARTIAL_REFUND",
-      "expected_amount_sgd": 4.5,
+      "expected_amount_sgd": 6.35,
       "expected_driver_compensation_sgd": null,
       "expected_referrals": [],
       "governing_clauses": [
@@ -1799,7 +1813,7 @@
         "POL-RD-02"
       ],
       "difficulty": "HARD",
-      "rationale": "EV-GPS-02849 has one gap of about 80 s inside the deviated stretch. Under 90 s: not impaired under POL-RD-07(a) to (c), down-weighted under POL-GEN-02 only; deviation established, POL-RD-02 refund rounded up to 0.05."
+      "rationale": "EV-GPS-02849 has one gap of about 35 s inside the deviated stretch. Under 90 s and under a 500 m straight-line jump: not impaired under POL-RD-07(a) to (c); the pre-pass grades it at the integrity table's short-gap weight 0.85, which clears the 0.70 floor, so it is down-weighted under POL-GEN-02 only and the case is decided: deviation established, POL-RD-02 refund rounded up to 0.05."
     }
   },
   {
@@ -1815,7 +1829,7 @@
         "POL-RD-10"
       ],
       "difficulty": "INDETERMINATE",
-      "rationale": "EV-GPS-02850 has one gap of about 100 s inside the deviated stretch. Over 90 s: impaired under POL-RD-07(a); the billed distance on EV-FARE-02850 is a copy of the trace figure and EV-CHAT-02850 holds no admission, so no independent corroboration exists and POL-RD-10(3) escalates rather than finding for the driver."
+      "rationale": "EV-GPS-02850 has one gap of about 100 s inside the deviated stretch. Over 90 s, and a straight-line jump over 500 m: impaired under POL-RD-07(a) and (b); the billed distance on EV-FARE-02850 is a copy of the trace figure and EV-CHAT-02850 holds no admission, so no independent corroboration exists and POL-RD-10(3) escalates rather than finding for the driver."
     }
   },
   {
@@ -1831,10 +1845,11 @@
       "governing_clauses": [
         "POL-RD-01",
         "POL-RD-02",
-        "POL-RD-06"
+        "POL-RD-06",
+        "POL-GEN-05"
       ],
       "difficulty": "HARD",
-      "rationale": "Excess on EV-GPS-02851 is about 60 percent of 9.0 km: MATERIAL. EV-DPROF-02851.deviation_flags_90d is 3 over completed_trips_90d 180. Three or more: pattern established; the deviation is material and substantiated on this trip's own trace, so limb (b) licenses FULL_REFUND of charged_total 20.66 (no pass-through lines on EV-FARE-02851) with the POL-RD-02 figure stated beside it, and limb (c) refers the driver to conduct review."
+      "rationale": "Excess on EV-GPS-02851 is about 60 percent of 9.0 km: MATERIAL. EV-DPROF-02851.deviation_flags_90d is 3 over completed_trips_90d 180. Three or more: pattern established; the deviation is material and substantiated on this trip's own trace, so limb (b) licenses FULL_REFUND of charged_total 20.66 (no pass-through lines on EV-FARE-02851) with the POL-RD-02 figure stated beside it, and limb (c) refers the driver to conduct review. The figure exceeds execution_threshold_sgd 8.00, so under POL-GEN-05 the ruling issues but is held in the human queue for release; ruling value and amount are unchanged."
     }
   },
   {
@@ -1859,7 +1874,7 @@
     "dispute_id": "DSP-02853",
     "ground_truth": {
       "expected_ruling": "PARTIAL_REFUND",
-      "expected_amount_sgd": 4.0,
+      "expected_amount_sgd": 3.75,
       "expected_driver_compensation_sgd": null,
       "expected_referrals": [],
       "governing_clauses": [
@@ -1876,7 +1891,7 @@
     "dispute_id": "DSP-02854",
     "ground_truth": {
       "expected_ruling": "PARTIAL_REFUND",
-      "expected_amount_sgd": 4.0,
+      "expected_amount_sgd": 3.55,
       "expected_driver_compensation_sgd": null,
       "expected_referrals": [],
       "governing_clauses": [
@@ -1926,7 +1941,7 @@
     "dispute_id": "DSP-02857",
     "ground_truth": {
       "expected_ruling": "PARTIAL_REFUND",
-      "expected_amount_sgd": 9.2,
+      "expected_amount_sgd": 5.1,
       "expected_driver_compensation_sgd": null,
       "expected_referrals": [],
       "governing_clauses": [

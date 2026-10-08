@@ -17,6 +17,7 @@ import sys
 import unittest
 from decimal import Decimal
 from pathlib import Path
+from unittest import mock
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -25,6 +26,15 @@ if str(PROJECT_ROOT) not in sys.path:
 from tribunal import brief, facts, loader, money, prepass  # noqa: E402
 
 INDEX_PATH = PROJECT_ROOT / "data" / "index.json"
+
+# The two development sets' case directories, for the version-3 readings below.
+DEV_V2_DIR = loader.EXTERNAL_DIR / "dev-v2"
+
+
+def dev_v2_case(case_no):
+    """One case of the revised ``dev-v2`` development set."""
+    return loader.load_external_set_case(DEV_V2_DIR, case_no)
+
 
 # Facts that can only be computed once a zone class selects the thresholds.
 ZONE_DEPENDENT_KEYS = (
@@ -1260,22 +1270,39 @@ class VersionThreePlatformPolicyTests(unittest.TestCase):
         )
 
 
-class VersionThreeGapGradingScopeTests(unittest.TestCase):
-    """The three-way ``GPS_GAP`` grading is a no-show reading, and applies there only.
+class VersionThreeGapGradingTests(unittest.TestCase):
+    """How version 3 grades a ``GPS_GAP`` tag, by the clause that owns the category.
 
-    POL-NS-08(b) is a no-show limb about the waiting window, and the
-    ``integrity`` block lives in ``no_show.json``: no route-deviation clause asks
-    for a gap to be graded by that window. So a route-deviation case keeps the
-    **ungraded** tag and version 1's weight for it, and a no-show case is graded
-    as part 2 describes.
+    Two clauses grade a gap and they belong to two different policies:
+
+    * **POL-NS-08(b)** grades a **no-show** trace's gap by the waiting window --
+      the reading part 2 describes, and the one the ``integrity`` block (which
+      carries the weights) lives beside in ``no_show.json``;
+    * **POL-RD-07**'s own limbs (a) and (b) grade a **route-deviation** trace's
+      gap -- the reading the key owner ruled for case 1775. A gap is *short* when
+      every gap between consecutive fixes is within limb (a)'s limit and no
+      straight-line jump between consecutive fixes exceeds limb (b)'s, and
+      *long* otherwise. Both limits are read out of the clause's own sentence,
+      never typed, and a clause whose sentence has moved is a refusal.
+
+    Neither reading is the flat 0.6: part 2 graded every gap by the no-show
+    window, which turned a route-deviation gap into a short one and raised its
+    weight, and part 3 left every route-deviation gap ungraded at version 1's
+    0.6. Both were wrong, and the readings below are what replaces them.
     """
 
     def gps_admissibility(self, case, policy_version=3):
         briefed = brief.build_brief_for_case(case, policy_version=policy_version)
         return artifact_of(briefed, "GPS_TRACE")["admissibility"]
 
+    def gap_variant(self, admissibility):
+        """The one ``GPS_GAP_*`` variant the artifact was graded into."""
+        return next(
+            code for code in admissibility["issues"] if code.startswith("GPS_GAP_")
+        )
+
     def route_deviation_cases(self):
-        """The four route-deviation artifacts that carry a ``GPS_GAP`` tag."""
+        """The four corpus-and-external route-deviation artifacts carrying the tag."""
         yield "corpus 110", loader.load_case(110)
         for set_name, case_no in (("codex", 9115), ("wild", 512), ("wild", 517)):
             yield "{0} {1}".format(set_name, case_no), loader.load_external_set_case(
@@ -1288,18 +1315,31 @@ class VersionThreeGapGradingScopeTests(unittest.TestCase):
             with self.subTest(case=name):
                 self.assertEqual("ROUTE_DEVIATION", case["dispute"]["category"])
 
-    def test_a_route_deviation_gap_keeps_the_ungraded_tag(self):
+    def test_a_route_deviation_gap_is_graded_by_pol_rd_07(self):
+        """The ungraded tag is gone: a variant replaces it and the detail names it."""
         for name, case in self.route_deviation_cases():
             with self.subTest(case=name):
                 admissibility = self.gps_admissibility(case)
-                self.assertIn(prepass.GPS_GAP_CODE, admissibility["issues"])
-                self.assertNotIn(
-                    "variant",
-                    json.dumps(admissibility.get("issue_details") or []),
-                    "a route-deviation gap was graded into a POL-NS-08(b) variant",
+                self.assertNotIn(prepass.GPS_GAP_CODE, admissibility["issues"])
+                variant = self.gap_variant(admissibility)
+                self.assertIn(variant, prepass.GPS_GAP_VARIANTS)
+                detail = next(
+                    detail
+                    for detail in admissibility["issue_details"]
+                    if detail.get("code") == prepass.GPS_GAP_CODE
+                )
+                self.assertEqual(variant, detail["variant"])
+
+    def test_all_four_route_deviation_gaps_are_long(self):
+        """Every one of their gaps exceeds limb (a)'s 90 s, so all grade long."""
+        for name, case in self.route_deviation_cases():
+            with self.subTest(case=name):
+                self.assertEqual(
+                    prepass.GPS_GAP_LONG_INSIDE_WINDOW,
+                    self.gap_variant(self.gps_admissibility(case)),
                 )
 
-    def test_the_four_route_deviation_weights_are_the_ones_the_sheet_names(self):
+    def test_the_four_route_deviation_weights_are_the_ones_part_three_gave_them(self):
         expected = {
             "corpus 110": Decimal("0.39"),
             "codex 9115": Decimal("0.60"),
@@ -1312,8 +1352,8 @@ class VersionThreeGapGradingScopeTests(unittest.TestCase):
         }
         self.assertEqual(expected, seen)
 
-    def test_a_route_deviation_weight_is_the_version_one_one(self):
-        """It equals the weight the case file itself declares, for every one."""
+    def test_a_long_route_deviation_weight_equals_the_declared_one(self):
+        """The long reading is version 1's weight, so it equals the case file's own."""
         for name, case in self.route_deviation_cases():
             declared = next(
                 artifact["admissibility"]["weight_multiplier"]
@@ -1328,12 +1368,92 @@ class VersionThreeGapGradingScopeTests(unittest.TestCase):
                     ),
                 )
 
-    def test_the_weight_it_keeps_is_read_from_the_policy_not_typed(self):
-        """0.6 is not a literal: it is the policy's long-inside-window entry."""
+    def test_a_short_route_deviation_gap_grades_short(self):
+        """1775's one 40 s gap and its 0.4 km jump: the short reading, 0.85."""
+        admissibility = self.gps_admissibility(dev_v2_case(1775))
+        self.assertEqual(
+            prepass.GPS_GAP_SHORT_OR_OUTSIDE_WINDOW, self.gap_variant(admissibility)
+        )
+        self.assertEqual(
+            Decimal("0.85"), Decimal(str(admissibility["weight_multiplier"]))
+        )
+
+    def test_a_long_route_deviation_gap_grades_long(self):
+        """1776's 100 s gap and 1.0 km jump: the long reading, 0.6."""
+        admissibility = self.gps_admissibility(dev_v2_case(1776))
+        self.assertEqual(
+            prepass.GPS_GAP_LONG_INSIDE_WINDOW, self.gap_variant(admissibility)
+        )
+        self.assertEqual(
+            Decimal("0.6"), Decimal(str(admissibility["weight_multiplier"]))
+        )
+
+    def test_a_short_gap_with_a_long_jump_grades_long(self):
+        """Limb (b) alone decides it: a 40 s gap with a 600 m jump is long.
+
+        The fixture is 1775 with one fix moved 600 m north of the fix before it,
+        so every interval between consecutive fixes is still within limb (a)'s
+        90 s and only the jump exceeds limb (b)'s 500 m.
+        """
+        case = copy.deepcopy(dev_v2_case(1775))
+        trace = next(
+            artifact
+            for artifact in case["evidence"]
+            if artifact["evidence_type"] == "GPS_TRACE"
+        )
+        points = trace["payload"]["points"]
+        gap_from = trace["payload"]["gaps"][0]["from_ts"]
+        index = next(i for i, point in enumerate(points) if point["ts"] == gap_from)
+        # The case files are read with ``parse_float=Decimal``, so the moved
+        # coordinate is written back as one: a bare float would make the
+        # arithmetic below mix the two types.
+        moved_lat = float(points[index]["lat"]) + 600 / 111320.0
+        points[index + 1]["lat"] = Decimal(str(moved_lat))
+        points[index + 1]["lng"] = points[index]["lng"]
+
+        admissibility = self.gps_admissibility(case)
+        self.assertEqual(
+            prepass.GPS_GAP_LONG_INSIDE_WINDOW, self.gap_variant(admissibility)
+        )
+        self.assertEqual(
+            Decimal("0.6"), Decimal(str(admissibility["weight_multiplier"]))
+        )
+
+    def test_the_limits_are_the_ones_pol_rd_07_states(self):
+        """90 s and 500 m are the clause's own figures, read from its sentence."""
+        clause = brief._clause_of(
+            loader.load_policies("ROUTE_DEVIATION", 3)["category"], brief.POL_RD_07
+        )
+        self.assertEqual((90.0, 500.0), brief._route_deviation_gap_limits(clause))
+
+    def test_the_limits_are_read_from_the_clause_and_a_moved_sentence_refuses(self):
+        """Neither limit is typed: a clause that no longer states them is a refusal."""
+        real = loader.load_policies
+
+        def moved(category, policy_version=1):
+            policies = real(category, policy_version)
+            for clause in policies["category"]["clauses"]:
+                if clause["id"] == brief.POL_RD_07:
+                    clause["rule"] = clause["rule"].replace(
+                        "90 seconds", "ninety seconds"
+                    )
+            return policies
+
+        with mock.patch.object(brief.loader, "load_policies", side_effect=moved):
+            with self.assertRaises(loader.LoaderError) as caught:
+                brief.build_brief_for_case(dev_v2_case(1775), policy_version=3)
+        self.assertIn(brief.POL_RD_07, str(caught.exception))
+
+    def test_the_weights_are_read_from_the_policy_not_typed(self):
+        """0.85 and 0.6 are not literals: they are the policy's own entries."""
         weights = prepass.weights_from_policy(
             loader.load_policies("NO_SHOW_CHARGE", 3)["category"]
         )
         self.assertNotIn(prepass.GPS_GAP_CODE, weights)
+        self.assertEqual(
+            Decimal("0.85"),
+            Decimal(str(weights[prepass.GPS_GAP_SHORT_OR_OUTSIDE_WINDOW])),
+        )
         self.assertEqual(
             Decimal("0.6"),
             Decimal(str(weights[prepass.GPS_GAP_LONG_INSIDE_WINDOW])),
@@ -1348,11 +1468,8 @@ class VersionThreeGapGradingScopeTests(unittest.TestCase):
         seen = {}
         for case_no in sorted(expected):
             admissibility = self.gps_admissibility(loader.load_case(case_no))
-            variant = next(
-                code for code in admissibility["issues"] if code.startswith("GPS_GAP_")
-            )
             seen[case_no] = (
-                variant,
+                self.gap_variant(admissibility),
                 Decimal(str(admissibility["weight_multiplier"])),
             )
         self.assertEqual(expected, seen)

@@ -31,12 +31,6 @@ SET_NAME = sys.argv[1] if len(sys.argv) > 1 else "dev-v2"
 SET_DIR = ROOT / "data" / "external" / SET_NAME
 KEY = ROOT / "eval" / "answers" / SET_NAME / "ground_truth.json"
 META = ROOT / "eval" / "answers" / SET_NAME / "manifest-meta.json"
-
-# The policy version these cases are written for. They carry the version-3 record
-# fields, so the brief is built at version 3: the free waiting period, the fee
-# and the weights the derivation reads are then the ones the policy states,
-# rather than version 1's tables.
-POLICY_VERSION = 3
 FREE_WAIT_DEFAULT = 180
 FEE_DEFAULT = Decimal("4.5")
 WAITING_FEE_DEFAULT = Decimal("5.0")
@@ -120,6 +114,14 @@ def derive_no_show(case, b, meta):
     if trip["cancellation_reason_code"] == "DRIVER_UNABLE_TO_LOCATE" and qf >= 3:
         return dict(out, ruling="FULL_REFUND", amount=float(fee), referrals=["POL-NS-01(d)"])
     dist = meta["derived"]["dist_m"]
+    # POL-NS-05: a marker stamped more than 300 m from the pin is false; with no in-geofence fix anywhere, limb (ii) adds a referral
+    if trip.get("arrived_at") and qf < 3:
+        from tribunal import facts
+        raw_pts = raw_ev(case, "GPS_TRACE")["payload"]["points"]
+        at = [p for p in raw_pts if p["ts"] == trip["arrived_at"]]
+        if at and facts.haversine_m(float(at[0]["lat"]), float(at[0]["lng"]), float(trip["pickup"]["lat"]), float(trip["pickup"]["lng"])) > 300:
+            fee_ = fee
+            return dict(out, ruling="FULL_REFUND", amount=float(fee_), referrals=["POL-NS-05(ii)"])
     if qf < 3:  # no arrival on the record
         if 0 < dist <= 400 and run == 0:
             # POL-NS-03: fault from chat
@@ -171,7 +173,7 @@ def derive_route(case, b, meta):
     cp = case["dispute"].get("counterparty_statement") or {}
     if "EV-ADVIS" in (cp.get("text") or "") and adv["admissibility"]["status"] == "MISSING":
         return dict(out, ruling="ESCALATE")
-    gap_over_90 = any(float(g["duration_sec"]) > 90 for g in gps.get("gaps", []))
+    gap_over_90 = any(float(g["duration_sec"]) > 90 or float(g["straight_line_km"]) > 0.5 for g in gps.get("gaps", []))
     # phantom ERP
     phantom = D("0")
     lines = m.get("erp_lines", {}).get("lines", [])
@@ -282,7 +284,7 @@ def main():
         for t in ("TRIP_RECORD", "GPS_TRACE", "CHAT_LOG", "FARE_BREAKDOWN", "RIDER_PROFILE", "DRIVER_PROFILE", "TRAFFIC_ADVISORY"):
             if types.count(t) < 1:
                 problems.append((n, "missing artifact type " + t))
-        b = brief.build_brief_for_case(case, policy_version=POLICY_VERSION)
+        b = brief.build_brief_for_case(case)
         trip = ev(b, "TRIP_RECORD")["payload"]; chat = ev(b, "CHAT_LOG")["payload"]; gps = ev(b, "GPS_TRACE")["payload"]
         if chat["message_count"] != trip["chat_message_count"]:
             problems.append((n, "chat count {0} != trip_record {1}".format(chat["message_count"], trip["chat_message_count"])))

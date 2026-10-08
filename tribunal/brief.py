@@ -126,6 +126,22 @@ WAYPOINT_APPROACH_KEY = "waypoint_approach"
 WAYPOINT_CORROBORATION_RE = re.compile(
     r"passes within\s+(\d+(?:\.\d+)?)\s*m\b"
 )
+
+# POL-RD-07: how a **route-deviation** trace's own gaps are graded at version 3.
+# The clause states its two limits as prose -- "a gap of more than 90 seconds
+# between consecutive fixes" (limb (a)) and "a straight-line jump of more than
+# 500 m between consecutive fixes" (limb (b)) -- and nowhere as a field, so both
+# are read out of the clause's own sentence the way POL-RD-04's distance is, and
+# never typed here. A clause whose sentence no longer parses is a refusal: a
+# limit written in this file would be a policy number hard-coded in
+# ``tribunal/``, and a silent default would grade every gap short.
+GPS_GAP_DURATION_LIMIT_RE = re.compile(
+    r"a gap of more than\s+(\d+(?:\.\d+)?)\s*seconds?\s+between consecutive fixes"
+)
+GPS_GAP_JUMP_LIMIT_RE = re.compile(
+    r"a straight-line jump of more than\s+(\d+(?:\.\d+)?)\s*m\b"
+)
+
 NO_WAYPOINT_COORDINATES_REASON = (
     "this waypoint_hint carries no coordinates, so how close the trace came to "
     "the requested waypoint is not computable from the record"
@@ -355,6 +371,145 @@ def _waypoint_threshold(clause: Any) -> float:
             "it: found {1} such lines".format(POL_RD_04, len(found))
         )
     return float(found[0])
+
+
+def _clause_of(policy: Dict[str, Any], clause_id: str) -> Any:
+    """One clause of a loaded policy, by id, or ``None`` where it is absent."""
+    for clause in policy.get("clauses", []) or []:
+        if isinstance(clause, dict) and clause.get("id") == clause_id:
+            return clause
+    return None
+
+
+def _route_deviation_gap_limits(clause: Any) -> Tuple[float, float]:
+    """POL-RD-07's two limits, read from the clause's own sentence.
+
+    The clause states them as prose and nowhere as a field: "a gap of more than
+    90 seconds between consecutive fixes" is limb (a) and "a straight-line jump
+    of more than 500 m between consecutive fixes" is limb (b). Both are read out
+    of the loaded clause text, the route :func:`_waypoint_threshold` already
+    takes for POL-RD-04 and :func:`_deviation_thresholds` for POL-RD-01, and for
+    the same reason: a value that came from a clause belongs in the loaded
+    policy.
+
+    A clause that is absent, carries no rule text, or no longer states both
+    limits is a **refusal** rather than a default. A limit written in this file
+    would be a policy number hard-coded in ``tribunal/``, and a silent default
+    would grade every route-deviation gap short -- which is exactly the reading
+    the key owner ruled wrong.
+
+    Returns ``(duration_limit_sec, jump_limit_m)``.
+    """
+    rule = clause.get("rule") if isinstance(clause, dict) else None
+    if not isinstance(rule, str):
+        raise loader.LoaderError(
+            "{0} carries no rule text, so the two limits its limbs (a) and (b) "
+            "state cannot be read from it".format(POL_RD_07)
+        )
+    seconds = GPS_GAP_DURATION_LIMIT_RE.findall(rule)
+    metres = GPS_GAP_JUMP_LIMIT_RE.findall(rule)
+    if len(seconds) != 1 or len(metres) != 1:
+        raise loader.LoaderError(
+            "{0} states no pair of limits this code can read, so its text has "
+            "moved and the limits can no longer be taken from it: found {1} "
+            "duration and {2} jump lines".format(POL_RD_07, len(seconds), len(metres))
+        )
+    return float(seconds[0]), float(metres[0])
+
+
+def _consecutive_jumps(points: Any) -> List[float]:
+    """The straight-line distance in metres between each pair of consecutive fixes.
+
+    POL-RD-07(b) is about "a straight-line jump ... between consecutive fixes",
+    so the jumps are computed from the trace's own points and not read off the
+    ``gaps`` summary, which records only the intervals the sampler already
+    flagged. A pair whose coordinates cannot be read is skipped rather than
+    guessed at, exactly as :func:`prepass.gaps_from_points` skips an unreadable
+    interval.
+    """
+    if not isinstance(points, list):
+        return []
+    jumps: List[float] = []
+    for earlier, later in zip(points, points[1:]):
+        if not (isinstance(earlier, dict) and isinstance(later, dict)):
+            continue
+        try:
+            jumps.append(
+                facts.haversine_m(
+                    float(earlier["lat"]),
+                    float(earlier["lng"]),
+                    float(later["lat"]),
+                    float(later["lng"]),
+                )
+            )
+        except (KeyError, TypeError, ValueError):
+            continue
+    return jumps
+
+
+def _recorded_jumps(gaps: Any) -> List[float]:
+    """The jumps the trace's own ``gaps`` summary records, in metres.
+
+    The fallback for a trace whose raw points cannot be read but whose summary
+    is present: each recorded gap carries its ``straight_line_km``. A summary
+    that does not carry one contributes nothing rather than a guessed figure.
+    """
+    if not isinstance(gaps, list):
+        return []
+    jumps: List[float] = []
+    for gap in gaps:
+        if not isinstance(gap, dict):
+            continue
+        kilometres = gap.get(prepass.GAP_STRAIGHT_LINE_KM_KEY)
+        try:
+            jumps.append(float(kilometres) * 1000.0)
+        except (TypeError, ValueError):
+            continue
+    return jumps
+
+
+def _route_deviation_gap_variant(
+    artifact: Dict[str, Any], limits: Tuple[float, float]
+) -> str:
+    """POL-RD-07's reading of one route-deviation trace's gaps.
+
+    The clause's own limbs, over the **whole trace** -- the record does not mark
+    the "disputed segment", so the closest reading it allows is every interval
+    between consecutive fixes:
+
+    * **short** when every gap between consecutive fixes is within limb (a)'s
+      limit and no straight-line jump between consecutive fixes exceeds limb
+      (b)'s limit -- the trace is not impaired under (a) or (b), so the tag is
+      graded ``GPS_GAP_SHORT_OR_OUTSIDE_WINDOW``;
+    * **long** otherwise -- ``GPS_GAP_LONG_INSIDE_WINDOW``, which is version 1's
+      weight for the tag.
+
+    Both limits come from the clause (``limits``), never from a literal here. A
+    trace with no readable interval is short: nothing engages the limb, which is
+    the reading POL-NS-08(b) already takes for a trace with no readable gap.
+    """
+    payload = artifact.get("payload")
+    payload = payload if isinstance(payload, dict) else {}
+    gaps = prepass.gaps_from_points(payload.get(TRACE_POINTS_KEY))
+    jumps = _consecutive_jumps(payload.get(TRACE_POINTS_KEY))
+    if not gaps and not jumps and isinstance(payload.get(TRACE_GAPS_KEY), list):
+        gaps = payload[TRACE_GAPS_KEY]
+        jumps = _recorded_jumps(gaps)
+
+    limit_sec, limit_m = limits
+    for gap in gaps:
+        if not isinstance(gap, dict):
+            continue
+        try:
+            duration = float(gap.get(prepass.GAP_DURATION_KEY))
+        except (TypeError, ValueError):
+            continue
+        if duration > limit_sec:
+            return prepass.GPS_GAP_LONG_INSIDE_WINDOW
+    for jump in jumps:
+        if jump > limit_m:
+            return prepass.GPS_GAP_LONG_INSIDE_WINDOW
+    return prepass.GPS_GAP_SHORT_OR_OUTSIDE_WINDOW
 
 
 def _trace_clause_blocks(policy: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -1060,6 +1215,7 @@ MONEY_KEY = "money"
 POL_RD_02 = "POL-RD-02"
 POL_RD_03 = "POL-RD-03"
 POL_RD_04 = "POL-RD-04"
+POL_RD_07 = "POL-RD-07"
 POL_RD_10 = "POL-RD-10"
 POL_RD_11 = "POL-RD-11"
 POL_NS_01 = "POL-NS-01"
@@ -2366,13 +2522,15 @@ def _attach_payload_key(artifact: Dict[str, Any], key: str, block: Any) -> Dict[
 
 
 # --------------------------------------------------------------------------
-# The integrity weights, and the three GPS_GAP variants (policy version 3)
+# The integrity weights, and the GPS_GAP variants (policy version 3)
 # --------------------------------------------------------------------------
 # From version 3 on the pre-pass's weights are read from the loaded policy's
-# ``integrity`` block, and the corpus's single ``GPS_GAP`` tag is graded into
-# POL-NS-08(b)'s three variants. The brief shows the reading it was judged on --
-# the variant code, the recomputed weight, and a marker saying it was recomputed
-# -- so a reader can tell a version-3 reading from the corpus's own. The case
+# ``integrity`` block, and the corpus's single ``GPS_GAP`` tag is graded into a
+# variant by the clause that owns the category: POL-NS-08(b)'s waiting window
+# for a no-show case, and POL-RD-07's own limbs (a) and (b) for a
+# route-deviation one. The brief shows the reading it was judged on -- the
+# variant code, the recomputed weight, and a marker saying it was recomputed --
+# so a reader can tell a version-3 reading from the corpus's own. The case
 # file's ``admissibility`` is never edited: the brief carries a copy of it.
 ADMISSIBILITY_KEY = "admissibility"
 ISSUES_KEY = "issues"
@@ -2395,10 +2553,11 @@ def _integrity_reading(
     """The policy's weight table and GPS-gap threshold, for either category.
 
     The block lives on ``no_show.json``, because POL-NS-08 is the clause that
-    states it, and a route-deviation brief grades its trace's gaps under
-    POL-NS-08(b) as well -- so a deviation brief reads the same table. The
-    loaded category policy is asked first, so a later version that carries the
-    block on both files is read from the file in hand.
+    states it, and both categories read their weights from it: a route-deviation
+    trace's gap is graded by POL-RD-07's own limbs, but the **weight** each
+    variant carries is the one table. The loaded category policy is asked first,
+    so a later version that carries the block on both files is read from the
+    file in hand.
     """
     source = category_policy
     if prepass.INTEGRITY_KEY not in source:
@@ -2451,29 +2610,38 @@ def _recomputed_admissibility(
     weights: Dict[str, Any],
     threshold: Optional[int],
     category: Optional[str],
+    route_limits: Optional[Tuple[float, float]] = None,
 ) -> Optional[Dict[str, Any]]:
     """One artifact's ``admissibility`` as policy version 3 reads it, or ``None``.
 
-    The declared issues are kept, except that for a **no-show** case the single
-    ``GPS_GAP`` tag is replaced by the variant POL-NS-08(b) grades it into; the
-    weight is recomputed from the loaded policy's table; and the block records
-    the version it was recomputed at. An artifact with no admissibility object
-    gets none.
+    The declared issues are kept, except that the single ``GPS_GAP`` tag is
+    replaced by the variant the policy grades it into; the weight is recomputed
+    from the loaded policy's table; and the block records the version it was
+    recomputed at. An artifact with no admissibility object gets none.
 
-    The grading is scoped to ``NO_SHOW_CHARGE`` because POL-NS-08(b) is a no-show
-    limb about the waiting window and the ``integrity`` block lives in
-    ``no_show.json``: no route-deviation clause asks for a gap to be graded by
-    that window. A route-deviation case therefore keeps the ungraded tag, and
-    :func:`_weight_of` reads its weight from the policy's long-inside-window
-    entry.
+    Which reading grades the gap turns on the **category**, because the two
+    clauses that grade a gap belong to two different policies:
+
+    * a **no-show** case is graded by POL-NS-08(b)'s waiting window, the reading
+      part 2 describes -- the ``integrity`` block lives in ``no_show.json``;
+    * a **route-deviation** case is graded by POL-RD-07's own limbs (a) and (b),
+      the reading the key owner ruled for case 1775 -- ``route_limits`` carries
+      those two limits, read from the clause by
+      :func:`_route_deviation_gap_limits`, and is ``None`` for every other
+      category, so a no-show brief cannot pick up the route-deviation reading by
+      accident.
     """
     declared = artifact.get(ADMISSIBILITY_KEY)
     if not isinstance(declared, dict):
         return None
     issues = [code for code in (declared.get(ISSUES_KEY) or []) if isinstance(code, str)]
     variant = None
-    if prepass.GPS_GAP_CODE in issues and category == NO_SHOW_CHARGE_CATEGORY:
-        variant = _gps_gap_variant_of(artifact, trip_payload, threshold)
+    if prepass.GPS_GAP_CODE in issues:
+        if category == NO_SHOW_CHARGE_CATEGORY:
+            variant = _gps_gap_variant_of(artifact, trip_payload, threshold)
+        elif route_limits is not None:
+            variant = _route_deviation_gap_variant(artifact, route_limits)
+    if variant is not None:
         issues = [
             variant if code == prepass.GPS_GAP_CODE else code for code in issues
         ]
@@ -2489,32 +2657,25 @@ def _recomputed_admissibility(
             else detail
             for detail in (declared.get(ISSUE_DETAILS_KEY) or [])
         ]
-    recomputed[WEIGHT_MULTIPLIER_KEY] = _weight_of(issues, weights, category)
+    recomputed[WEIGHT_MULTIPLIER_KEY] = _weight_of(issues, weights)
     recomputed[RECOMPUTED_AT_KEY] = PLATFORM_POLICY_IN_FORCE_VERSION
     return recomputed
 
 
-def _weight_of(
-    issues: List[str], weights: Dict[str, Any], category: Optional[str]
-) -> float:
+def _weight_of(issues: List[str], weights: Dict[str, Any]) -> float:
     """The policy's weight for these tags, at policy version 3.
 
     The loaded policy's table has no ungraded ``GPS_GAP`` key: it holds the three
-    variants POL-NS-08(b) grades a gap into, and the grading is done for a no-show
-    case only. A route-deviation case keeps the ungraded tag -- POL-NS-08(b) is a
-    no-show limb and no route-deviation clause asks for it -- and its weight is
-    read from the table's ``GPS_GAP_LONG_INSIDE_WINDOW`` entry, which carries
-    version 1's 0.6 for the ungraded tag. The figure is read, never typed.
+    variants a gap is graded into, and :func:`_recomputed_admissibility` has
+    already replaced the tag by the time this is called -- by POL-NS-08(b)'s
+    window for a no-show case and by POL-RD-07's own limbs for a route-deviation
+    one. An ungraded ``GPS_GAP`` reaching here therefore raises
+    ``prepass.UnknownIssueCodeError`` rather than picking a weight: there is no
+    reading left to choose, and choosing one silently is how version 1's 0.6 came
+    to stand in for a policy decision. The figures are read from the policy,
+    never typed.
     """
-    codes = issues
-    if category != NO_SHOW_CHARGE_CATEGORY and prepass.GPS_GAP_CODE in issues:
-        codes = [
-            prepass.GPS_GAP_LONG_INSIDE_WINDOW
-            if code == prepass.GPS_GAP_CODE
-            else code
-            for code in issues
-        ]
-    return prepass.weight_for(codes, weights=weights)
+    return prepass.weight_for(issues, weights=weights)
 
 
 def _with_recomputed_admissibility(
@@ -2594,10 +2755,10 @@ def build_brief_for_case(
       block (POL-NS-01(c), which POL-NS-05(i) and POL-NS-06 read), and so do the
       no-show fee and the waiting-time fee;
     * each artifact's ``admissibility`` is recomputed from the loaded policy's
-      ``integrity`` weight table, with the single ``GPS_GAP`` tag graded into
-      POL-NS-08(b)'s three variants -- **for a no-show case only**, because
-      POL-NS-08(b) is a no-show limb about the waiting window and the table lives
-      in ``no_show.json``;
+      ``integrity`` weight table, with the single ``GPS_GAP`` tag graded into a
+      variant by the clause that owns the category -- POL-NS-08(b)'s waiting
+      window for a no-show case, and POL-RD-07's own limbs (a) and (b) for a
+      route-deviation one;
     * a route-deviation trace gains two readings of its own geometry -- how close
       it came to each rider-requested waypoint (POL-RD-04) and how it stands
       against each advisory's bounding box (POL-RD-03(c)). Both clauses live in
@@ -2667,15 +2828,31 @@ def build_brief_for_case(
     # weights, from the loaded policy rather than from the version-1 tables. Both
     # are computed here, before the evidence is assembled, because grading a
     # trace's gaps needs its raw points and the GPS transform takes them out.
+    #
+    # A route-deviation trace's gap is graded by POL-RD-07's own limbs, and that
+    # clause lives in ``route_deviation.json`` -- so its two limits are read for
+    # a route-deviation case only, and ``route_limits`` stays ``None`` for every
+    # other category. The limits come from the loaded clause, never from a
+    # literal here, and a clause whose sentence has moved is a refusal.
     in_force: Optional[Dict[str, Any]] = None
     recomputed_admissibility: Dict[str, Optional[Dict[str, Any]]] = {}
     if policy_version >= PLATFORM_POLICY_IN_FORCE_VERSION:
         in_force = _platform_policy_in_force(trip_payload, category, category_policy)
         weights, gap_threshold = _integrity_reading(category_policy, policy_version)
+        route_limits = (
+            _route_deviation_gap_limits(_clause_of(category_policy, POL_RD_07))
+            if category == ROUTE_DEVIATION_CATEGORY
+            else None
+        )
         for artifact in case["evidence"]:
             recomputed_admissibility[artifact["evidence_id"]] = (
                 _recomputed_admissibility(
-                    artifact, trip_payload, weights, gap_threshold, category
+                    artifact,
+                    trip_payload,
+                    weights,
+                    gap_threshold,
+                    category,
+                    route_limits,
                 )
             )
 

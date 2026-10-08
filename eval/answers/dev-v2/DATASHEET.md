@@ -96,3 +96,18 @@ a product of WorkBuddy, not supplied by the organisers.
    limb (ii) resolves by a full refund). No case in this set rests on that pattern any more; the next policy revision
    should say which clause yields. Likewise POL-NS-04 should state that an undecidable limb (c) sends the case to
    POL-NS-01 without engaging POL-NS-08's escalation sentence (item 8).
+10. First-run findings (2026-10-08, dev-v2 run by the developer) and what changed: (a) the "never arrived" cases
+    (1709, 1710 and variants) stamp the arrival marker more than 300 m from the pin, which engages POL-NS-05 and its
+    limb (ii) referral; the key had the right ruling and amount but omitted the referral - added. (b) The 80 s-gap
+    route case (1775 and variants) carried the version-1 GPS_GAP weight 0.6, which on its own forces escalation under
+    POL-GEN-02 (0.6 is at or below 0.65); the version-2 integrity grading for a gap that POL-RD-07 does not treat as
+    impaired is 0.85, now written on the artifact. Route-deviation gaps are to be graded by the 90 s limb of POL-RD-07
+    exactly as no-show gaps are graded by the 120 s limb of POL-NS-08. (c) 1734 (and 2734) remain a policy probe and are
+    excluded from the score until POL-NS-04 is amended (item 8).
+11. Second-round review (26 more keys re-adjudicated independently): POL-NS-05 limb (i) as written directs no record of
+    the false marker, so the short-dwell false-marker cases (1726 and variants) expect no referral; an amendment adding
+    the record to limb (i) is proposed, because the clause's purpose is that the pattern stays visible. Every refund
+    above execution_threshold_sgd 8.00 now cites POL-GEN-05; every MATERIAL deviation (including the 8.0 km absolute
+    limb) cites POL-RD-06; a FULL_REFUND route case contests charged_total, so GEN-03's "whole contested amount" and
+    RD-02's charged_total coincide; the short-gap route pair runs at 36 km/h so that its 40 s gap stays under the 500 m
+    jump of POL-RD-07(b).
