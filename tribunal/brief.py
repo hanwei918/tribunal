@@ -28,7 +28,7 @@ import hashlib
 import re
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
-from . import facts, loader, money, policy_versions
+from . import facts, loader, money, policy_versions, prepass
 
 # The five evaluation-only keys the contract forbids anywhere in a bundle.
 FORBIDDEN_KEYS = loader.FORBIDDEN_KEYS
@@ -545,6 +545,7 @@ def _arrival_block(
     policy_id: str,
     no_show_thresholds: Optional[Dict[str, Any]] = None,
     advisories: Optional[List[Dict[str, Any]]] = None,
+    platform_policy: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """The zone-dependent no-show facts, or an explicit statement of why not.
 
@@ -555,6 +556,14 @@ def _arrival_block(
     Where the loaded policy carries a POL-NS-06 clause, the block also carries
     the accumulated-dwell facts, which are what decide a shortfall case where
     the driver left the radius and came back.
+
+    ``platform_policy`` is the block in force for the trip, from policy version
+    3 on. POL-NS-01(c) fixes the free waiting period from it, and POL-NS-05(i)
+    and POL-NS-06 read the waiting period from POL-NS-01(c), so the minimum the
+    dwell is measured against comes from the block rather than from the
+    version-1 ``minimum_dwell_sec`` table. Where the block names no free wait
+    the table is still used, which is what keeps a record authored under
+    version 1 briefed to the same dwell.
     """
     if not isinstance(trip_payload, dict):
         return {
@@ -583,6 +592,14 @@ def _arrival_block(
     rider_radius = (fee_schedule.get("rider_presence_radius_m") or {}).get(zone)
     dwell_seconds = (fee_schedule.get("minimum_dwell_sec") or {}).get(zone)
     accuracy_max = fee_schedule.get("gps_accuracy_filter_m")
+
+    if platform_policy is not None:
+        # POL-NS-01(c): the free waiting period in force for this trip. Where the
+        # block names one it governs, whatever the zone table says; the table is
+        # kept for a record that carries no block.
+        in_force_wait = money.free_wait_in_force(platform_policy)
+        if in_force_wait is not None:
+            dwell_seconds = in_force_wait
 
     if None in (arrival_radius, rider_radius, dwell_seconds, accuracy_max):
         block["available"] = False
@@ -753,6 +770,7 @@ POL_RD_11 = "POL-RD-11"
 POL_NS_01 = "POL-NS-01"
 POL_NS_03 = "POL-NS-03"
 POL_NS_07 = "POL-NS-07"
+POL_NS_10 = "POL-NS-10"
 
 METERED_MODEL = "METERED"
 UPFRONT_QUOTE_MODEL = "UPFRONT_QUOTE"
@@ -1560,13 +1578,28 @@ def _no_show_money(
     trip_evidence_id: Optional[str],
     fee_schedule: Dict[str, Any],
     policy_id: str,
+    platform_policy: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """POL-NS-01 and POL-NS-07: the no-show fee and the two payments on it."""
+    """POL-NS-01 and POL-NS-07: the no-show fee and the two payments on it.
+
+    ``platform_policy`` is the block in force for the trip, from policy version 3
+    on. POL-NS-01 fixes the chargeable fee there -- "in the net amount fixed by
+    ``fee_schedule.resolution_rule``: ``platform_policy.cancellation_fee_sgd``
+    where the record carries it, otherwise
+    ``fee_schedule.defaults.cancellation_fee_sgd``" -- so the version-1
+    zone-class/vehicle-tier tables are not consulted for the fee at all, and the
+    dimension that says which of them governed is not published. POL-NS-08(d)'s
+    other accepted figure, the rider's gross, travels into the arithmetic so a
+    ``fare_breakdown`` line that equals it reconciles rather than differs, and
+    POL-NS-10(d)'s waiting-time fee is published in the constants.
+    """
     trip = trip_payload if isinstance(trip_payload, dict) else {}
     zone = trip.get("pickup_zone_class")
     vehicle = trip.get("vehicle_type")
     zone_fee = (fee_schedule.get("zone_class_fee_sgd") or {}).get(zone)
     tier_fee = (fee_schedule.get("vehicle_tier_fee_sgd") or {}).get(vehicle)
+    defaults = fee_schedule.get("defaults")
+    defaults = defaults if isinstance(defaults, dict) else {}
 
     block: Dict[str, Any] = {
         "policy_id": policy_id,
@@ -1578,22 +1611,41 @@ def _no_show_money(
         "not_structured": list(NOT_STRUCTURED_MONEY),
     }
 
-    if zone_fee is None or tier_fee is None:
-        block["available"] = False
-        block["reason"] = NO_FEE_SCHEDULE_REASON
-        return block
+    if platform_policy is not None:
+        amount = money.fee_in_force(platform_policy)
+        if amount is None:
+            fallback = defaults.get(money.CANCELLATION_FEE_KEY)
+            amount = None if fallback is None else money._dec(fallback)
+        gross = money.gross_fee_in_force(platform_policy)
+        waiting = money.waiting_fee_in_force(platform_policy)
+        dimension = None
+        if amount is None:
+            block["available"] = False
+            block["reason"] = NO_FEE_SCHEDULE_REASON
+            return block
+    else:
+        if zone_fee is None or tier_fee is None:
+            block["available"] = False
+            block["reason"] = NO_FEE_SCHEDULE_REASON
+            return block
+        amount, dimension = money.schedule_fee(zone_fee, tier_fee)
+        gross = None
+        waiting = None
 
-    amount, dimension = money.schedule_fee(zone_fee, tier_fee)
     arithmetic = money.fee_arithmetic(
         amount,
         fare_payload.get("cancellation_fee"),
         fee_schedule.get("driver_compensation_rate"),
         fee_schedule.get("pin_ambiguity_goodwill_rate"),
+        gross_fee=gross,
     )
 
     block["available"] = True
     block["schedule_fee"] = _money(money.payable_string(amount), None, policy_id, clause_id=POL_NS_01)
-    block["schedule_fee_dimension"] = _money(dimension, None, policy_id, clause_id=POL_NS_01)
+    if dimension is not None:
+        block["schedule_fee_dimension"] = _money(
+            dimension, None, policy_id, clause_id=POL_NS_01
+        )
     block["fee_charged"] = _money(
         money.payable_string(arithmetic["fee_charged"]), fare_evidence_id, policy_id
     )
@@ -1608,7 +1660,7 @@ def _no_show_money(
         money.payable_string(arithmetic["goodwill"]), fare_evidence_id, policy_id,
         clause_id=POL_NS_03,
     )
-    block["constants"] = {
+    constants: Dict[str, Any] = {
         "zone_class_fee": _money(zone_fee, None, policy_id, structured=True),
         "vehicle_tier_fee": _money(tier_fee, None, policy_id, structured=True),
         "driver_compensation_rate": _money(
@@ -1618,6 +1670,12 @@ def _no_show_money(
             fee_schedule.get("pin_ambiguity_goodwill_rate"), None, policy_id, structured=True
         ),
     }
+    if waiting is not None:
+        constants["waiting_fee_sgd"] = _money(
+            money.payable_string(waiting), None, policy_id, structured=True,
+            clause_id=POL_NS_10,
+        )
+    block["constants"] = constants
     return block
 
 
@@ -1634,6 +1692,7 @@ def _money_block(
     advisories: List[Dict[str, Any]],
     *,
     policy_version: int = policy_versions.BASE_VERSION,
+    platform_policy: Optional[Dict[str, Any]] = None,
 ) -> Optional[Dict[str, Any]]:
     """The money block for one case, or ``None`` where there is no fare to compute on.
 
@@ -1663,6 +1722,7 @@ def _money_block(
         trip_evidence_id,
         category_policy.get("fee_schedule") or {},
         policy_id,
+        platform_policy,
     )
 
 
@@ -1688,6 +1748,7 @@ def _transform_gps_payload(
     advisories: Optional[List[Dict[str, Any]]] = None,
     gantry_lines: Any = None,
     fare_evidence_id: Optional[str] = None,
+    platform_policy: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Replace one GPS payload's raw point arrays with derived facts."""
     payload = artifact.get("payload")
@@ -1716,6 +1777,7 @@ def _transform_gps_payload(
             policy_id,
             no_show_thresholds,
             advisories,
+            platform_policy,
         ),
     }
     if deviation_thresholds:
@@ -1982,6 +2044,137 @@ def _attach_payload_key(artifact: Dict[str, Any], key: str, block: Any) -> Dict[
     return new_artifact
 
 
+# --------------------------------------------------------------------------
+# The integrity weights, and the three GPS_GAP variants (policy version 3)
+# --------------------------------------------------------------------------
+# From version 3 on the pre-pass's weights are read from the loaded policy's
+# ``integrity`` block, and the corpus's single ``GPS_GAP`` tag is graded into
+# POL-NS-08(b)'s three variants. The brief shows the reading it was judged on --
+# the variant code, the recomputed weight, and a marker saying it was recomputed
+# -- so a reader can tell a version-3 reading from the corpus's own. The case
+# file's ``admissibility`` is never edited: the brief carries a copy of it.
+ADMISSIBILITY_KEY = "admissibility"
+ISSUES_KEY = "issues"
+ISSUE_DETAILS_KEY = "issue_details"
+WEIGHT_MULTIPLIER_KEY = "weight_multiplier"
+RECOMPUTED_AT_KEY = "recomputed_at_policy_version"
+
+# The two trip-record fields the waiting window is read from.
+ARRIVED_AT_KEY = "arrived_at"
+CANCELLED_AT_KEY = "cancelled_at"
+
+# The trace payload's own raw points, and its recorded gaps.
+TRACE_POINTS_KEY = "points"
+TRACE_GAPS_KEY = "gaps"
+
+
+def _integrity_reading(
+    category_policy: Dict[str, Any], policy_version: int
+) -> Tuple[Dict[str, Any], Optional[int]]:
+    """The policy's weight table and GPS-gap threshold, for either category.
+
+    The block lives on ``no_show.json``, because POL-NS-08 is the clause that
+    states it, and a route-deviation brief grades its trace's gaps under
+    POL-NS-08(b) as well -- so a deviation brief reads the same table. The
+    loaded category policy is asked first, so a later version that carries the
+    block on both files is read from the file in hand.
+    """
+    source = category_policy
+    if prepass.INTEGRITY_KEY not in source:
+        source = loader.load_policies(NO_SHOW_CHARGE_CATEGORY, policy_version)["category"]
+    return (
+        prepass.weights_from_policy(source),
+        prepass.gps_gap_threshold_from_policy(source),
+    )
+
+
+def _waiting_window(trip_payload: Any) -> Optional[Tuple[Any, Any]]:
+    """The waiting window ``(arrived_at, cancelled_at)``, or ``None``.
+
+    POL-NS-08(b) reaches "a sampling gap longer than 120 seconds inside the
+    waiting window", and the window is the one POL-NS-01(c) measures dwell over:
+    from the driver's arrival marker to the cancellation. A trip that was never
+    cancelled -- a completed route-deviation trip, for instance -- has no waiting
+    window, so no gap is inside it.
+    """
+    if not isinstance(trip_payload, dict):
+        return None
+    arrived = trip_payload.get(ARRIVED_AT_KEY)
+    cancelled = trip_payload.get(CANCELLED_AT_KEY)
+    if not arrived or not cancelled:
+        return None
+    return (arrived, cancelled)
+
+
+def _gps_gap_variant_of(
+    artifact: Dict[str, Any], trip_payload: Any, threshold: Optional[int]
+) -> str:
+    """The POL-NS-08(b) variant one artifact's trace gaps fall into.
+
+    The gaps are computed from the trace's own points, which is what POL-NS-08(b)
+    is about; a payload with no readable points falls back to the ``gaps`` the
+    trace records itself, so a trace that carries only the summary is still
+    graded.
+    """
+    payload = artifact.get("payload")
+    payload = payload if isinstance(payload, dict) else {}
+    gaps = prepass.gaps_from_points(payload.get(TRACE_POINTS_KEY))
+    if not gaps and isinstance(payload.get(TRACE_GAPS_KEY), list):
+        gaps = payload[TRACE_GAPS_KEY]
+    return prepass.gps_gap_variant(gaps, _waiting_window(trip_payload), threshold)
+
+
+def _recomputed_admissibility(
+    artifact: Dict[str, Any],
+    trip_payload: Any,
+    weights: Dict[str, Any],
+    threshold: Optional[int],
+) -> Optional[Dict[str, Any]]:
+    """One artifact's ``admissibility`` as policy version 3 reads it, or ``None``.
+
+    The declared issues are kept, except that the single ``GPS_GAP`` tag is
+    replaced by the variant POL-NS-08(b) grades it into; the weight is recomputed
+    from the loaded policy's table; and the block records the version it was
+    recomputed at. An artifact with no admissibility object gets none.
+    """
+    declared = artifact.get(ADMISSIBILITY_KEY)
+    if not isinstance(declared, dict):
+        return None
+    issues = [code for code in (declared.get(ISSUES_KEY) or []) if isinstance(code, str)]
+    variant = None
+    if prepass.GPS_GAP_CODE in issues:
+        variant = _gps_gap_variant_of(artifact, trip_payload, threshold)
+        issues = [
+            variant if code == prepass.GPS_GAP_CODE else code for code in issues
+        ]
+    recomputed = dict(declared)
+    recomputed[ISSUES_KEY] = issues
+    if variant is not None:
+        # The prose detail the corpus wrote for the gap keeps its own code -- it
+        # is the corpus's own assessment, not this one -- and gains the variant
+        # the policy graded it into, so the two read together.
+        recomputed[ISSUE_DETAILS_KEY] = [
+            dict(detail, variant=variant)
+            if isinstance(detail, dict) and detail.get("code") == prepass.GPS_GAP_CODE
+            else detail
+            for detail in (declared.get(ISSUE_DETAILS_KEY) or [])
+        ]
+    recomputed[WEIGHT_MULTIPLIER_KEY] = prepass.weight_for(issues, weights=weights)
+    recomputed[RECOMPUTED_AT_KEY] = PLATFORM_POLICY_IN_FORCE_VERSION
+    return recomputed
+
+
+def _with_recomputed_admissibility(
+    artifact: Dict[str, Any], recomputed: Optional[Dict[str, Any]]
+) -> Dict[str, Any]:
+    """Return a copy of ``artifact`` carrying the recomputed admissibility."""
+    if recomputed is None:
+        return artifact
+    new_artifact = dict(artifact)
+    new_artifact[ADMISSIBILITY_KEY] = recomputed
+    return new_artifact
+
+
 def build_brief(case_no: int, include_clause_notes: bool = True) -> Dict[str, Any]:
     """Return the evidence package for one case.
 
@@ -2034,7 +2227,7 @@ def build_brief_for_case(
     :func:`build_brief`, whose signature is pinned by a test: that entry point
     briefs the corpus, and the corpus is measured at version 1.
 
-    Two things happen only from version 3 on, and both are gated on the version
+    Four things happen only from version 3 on, and each is gated on the version
     so that versions 1 and 2 keep their bytes exactly:
 
     * every provenance key is removed from the injected policies
@@ -2043,7 +2236,13 @@ def build_brief_for_case(
     * the trip record gains a ``platform_policy_in_force`` block
       (:func:`_platform_policy_in_force`) -- the parameters in force for the
       trip, which for a version-1 no-show case that carries none are derived
-      from the version-1 fee table rather than written into the case file.
+      from the version-1 fee table rather than written into the case file;
+    * the free waiting period the dwell is measured against comes from that
+      block (POL-NS-01(c), which POL-NS-05(i) and POL-NS-06 read), and so do the
+      no-show fee and the waiting-time fee;
+    * each artifact's ``admissibility`` is recomputed from the loaded policy's
+      ``integrity`` weight table, with the single ``GPS_GAP`` tag graded into
+      POL-NS-08(b)'s three variants.
     """
     if ablate is not None and not ablation_known(ablate):
         raise AblationError(
@@ -2084,6 +2283,22 @@ def build_brief_for_case(
             trip_payload = artifact.get("payload")
             trip_evidence_id = artifact["evidence_id"]
             break
+
+    # Policy version 3 reads the trip's parameters in force, and the pre-pass's
+    # weights, from the loaded policy rather than from the version-1 tables. Both
+    # are computed here, before the evidence is assembled, because grading a
+    # trace's gaps needs its raw points and the GPS transform takes them out.
+    in_force: Optional[Dict[str, Any]] = None
+    recomputed_admissibility: Dict[str, Optional[Dict[str, Any]]] = {}
+    if policy_version >= PLATFORM_POLICY_IN_FORCE_VERSION:
+        in_force = _platform_policy_in_force(trip_payload, category, category_policy)
+        weights, gap_threshold = _integrity_reading(category_policy, policy_version)
+        for artifact in case["evidence"]:
+            recomputed_admissibility[artifact["evidence_id"]] = (
+                _recomputed_admissibility(
+                    artifact, trip_payload, weights, gap_threshold
+                )
+            )
 
     # POL-RD-09(4) measures each ERP gantry line against the trace, so the fare
     # breakdown's lines travel into the GPS trace's derived facts. A case whose
@@ -2137,6 +2352,7 @@ def build_brief_for_case(
             advisories,
             gantry_lines,
             fare_evidence_id,
+            in_force,
         )
         if artifact["evidence_type"] == GPS_EVIDENCE_TYPE
         else artifact
@@ -2173,6 +2389,7 @@ def build_brief_for_case(
         gps_evidence_id,
         advisories,
         policy_version=policy_version,
+        platform_policy=in_force,
     )
     if money_block is not None:
         evidence = [
@@ -2186,16 +2403,26 @@ def build_brief_for_case(
     # the artifact the draft's ``resolution_rule`` and POL-NS-01(c) read them
     # from. A case that carries its own ``platform_policy`` keeps it; a version-1
     # no-show case that carries none gets the block its version-1 parameters
-    # imply, derived here rather than written into the case file.
-    if policy_version >= PLATFORM_POLICY_IN_FORCE_VERSION and trip_evidence_id is not None:
-        in_force = _platform_policy_in_force(trip_payload, category, category_policy)
-        if in_force is not None:
-            evidence = [
-                _attach_payload_key(artifact, PLATFORM_POLICY_IN_FORCE_KEY, in_force)
-                if artifact["evidence_id"] == trip_evidence_id
-                else artifact
-                for artifact in evidence
-            ]
+    # imply, derived above rather than written into the case file.
+    if in_force is not None and trip_evidence_id is not None:
+        evidence = [
+            _attach_payload_key(artifact, PLATFORM_POLICY_IN_FORCE_KEY, in_force)
+            if artifact["evidence_id"] == trip_evidence_id
+            else artifact
+            for artifact in evidence
+        ]
+
+    # The pre-pass reading travels with each artifact from version 3 on: the
+    # variant a ``GPS_GAP`` was graded into, the weight recomputed from the
+    # policy's own table, and the version it was recomputed at. The case file's
+    # own ``admissibility`` is never edited -- the brief carries a copy of it.
+    if recomputed_admissibility:
+        evidence = [
+            _with_recomputed_admissibility(
+                artifact, recomputed_admissibility.get(artifact["evidence_id"])
+            )
+            for artifact in evidence
+        ]
 
     # The admissibility ablation is applied last, over the assembled evidence
     # rather than inside any one block, so every artifact is treated the same way

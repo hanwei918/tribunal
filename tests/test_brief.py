@@ -942,6 +942,84 @@ def in_force_block(case_no, policy_version=3):
     )["payload"].get(brief.PLATFORM_POLICY_IN_FORCE_KEY)
 
 
+def artifact_of(brief_obj, evidence_type):
+    """One artifact of a brief, or ``None`` where the case carries none."""
+    for artifact in brief_obj["case"]["evidence"]:
+        if artifact["evidence_type"] == evidence_type:
+            return artifact
+    return None
+
+
+def derived_of(brief_obj, evidence_type, key):
+    """One derived block of one artifact, or ``{}``."""
+    artifact = artifact_of(brief_obj, evidence_type)
+    payload = artifact.get("payload") if artifact else None
+    payload = payload if isinstance(payload, dict) else {}
+    derived = payload.get("derived")
+    derived = derived if isinstance(derived, dict) else {}
+    block = derived.get(key)
+    return block if isinstance(block, dict) else {}
+
+
+def money_block_at(case_no, policy_version):
+    """The money block a brief of ``case_no`` publishes at one version.
+
+    Named apart from :func:`money_block`, which takes a brief already in hand.
+    """
+    return derived_of(
+        brief.build_brief_for_case(
+            loader.load_case(case_no), policy_version=policy_version
+        ),
+        "FARE_BREAKDOWN",
+        "money",
+    )
+
+
+def dwell_figure(case_no, policy_version):
+    arrival = derived_of(
+        brief.build_brief_for_case(
+            loader.load_case(case_no), policy_version=policy_version
+        ),
+        "GPS_TRACE",
+        "arrival",
+    )
+    return (arrival.get("thresholds") or {}).get("minimum_dwell_sec", {}).get("value")
+
+
+# The money figures both versions publish, and that must not move between them.
+MONEY_FIGURE_KEYS = (
+    "schedule_fee",
+    "fee_charged",
+    "difference",
+    "driver_compensation",
+    "goodwill",
+)
+
+# The two policy rates the money block carries, which are read from the loaded
+# policy's fee_schedule at both versions.
+MONEY_RATE_KEYS = ("driver_compensation_rate", "pin_ambiguity_goodwill_rate")
+
+
+def money_figures(case_no, policy_version):
+    """Every money figure a brief publishes, by name."""
+    block = money_block_at(case_no, policy_version)
+    figures = {
+        key: block[key]["value"] for key in MONEY_FIGURE_KEYS if key in block
+    }
+    for key in MONEY_RATE_KEYS:
+        value = (block.get("constants") or {}).get(key)
+        if isinstance(value, dict):
+            figures["constants." + key] = value["value"]
+    return figures
+
+
+# The trip-record fields POL-GEN-08 and POL-NS-10 may read and that no case in
+# this repository carries. Absent means false or null, so a case without them
+# must brief at version 3 without error.
+OPTIONAL_SCOPE_FIELDS = ("safety_flag", "complaint_flag")
+OPTIONAL_TRIP_FIELDS = ("scheduled_at", "events")
+
+
 class VersionThreePlatformPolicyTests(unittest.TestCase):
     """What a version-3 brief says the platform parameters in force are.
 
@@ -1065,6 +1143,170 @@ class VersionThreePlatformPolicyTests(unittest.TestCase):
             path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in files
         }
         self.assertEqual(before, after)
+
+    # -- the money and the dwell, at version 3 ----------------------------
+    def test_every_corpus_no_show_case_keeps_its_version_two_figures(self):
+        """The block is derived from the version-1 table, so no figure moves.
+
+        Every money figure and the dwell minimum are compared with the same
+        figure at version 2. This is the check the sheet asks for, and it is the
+        reason the derivation reads the version-1 table rather than the loaded
+        version-3 ``fee_schedule.defaults``: the fee and the free wait a
+        version-1 case was authored under are what its answer key was written
+        against.
+        """
+        self.assertTrue(NO_SHOW_CASES)
+        for case_no in NO_SHOW_CASES:
+            with self.subTest(case_no=case_no):
+                self.assertEqual(
+                    money_figures(case_no, 2), money_figures(case_no, 3)
+                )
+                self.assertEqual(
+                    dwell_figure(case_no, 2), dwell_figure(case_no, 3)
+                )
+
+    def test_version_three_publishes_the_waiting_fee_and_drops_the_dimension(self):
+        """The two deliberate differences, asserted rather than left implicit."""
+        for case_no in (201, 208):
+            with self.subTest(case_no=case_no):
+                version_two = money_block_at(case_no, 2)
+                version_three = money_block_at(case_no, 3)
+                self.assertNotIn("waiting_fee_sgd", version_two["constants"])
+                self.assertEqual(
+                    Decimal("5.00"),
+                    money._dec(version_three["constants"]["waiting_fee_sgd"]["value"]),
+                )
+                self.assertIn("schedule_fee_dimension", version_two)
+                self.assertNotIn("schedule_fee_dimension", version_three)
+
+    def test_version_three_reads_the_fee_and_the_free_wait_from_the_block(self):
+        """A record whose block states other figures gets those figures."""
+        case = copy.deepcopy(loader.load_case(201))
+        next(
+            artifact["payload"]
+            for artifact in case["evidence"]
+            if artifact["evidence_type"] == "TRIP_RECORD"
+        )["platform_policy"] = {
+            "grace_after_match_sec": 180,
+            "advance_grace_before_scheduled_sec": 900,
+            "free_wait_sec": 240,
+            "no_show_threshold_sec": None,
+            "cancellation_fee_sgd": Decimal("7.25"),
+            "rider_gross_cancellation_fee_sgd": Decimal("7.83"),
+            "waiting_fee_sgd": Decimal("3.50"),
+            "fee_goes_to": "DRIVER",
+            "arrival_marker": "BUTTON",
+            "source": "RECORD-PLATFORM",
+        }
+        briefed = brief.build_brief_for_case(case, policy_version=3)
+        block = derived_of(briefed, "FARE_BREAKDOWN", "money")
+        self.assertEqual(Decimal("7.25"), money._dec(block["schedule_fee"]["value"]))
+        self.assertEqual(
+            Decimal("3.50"),
+            money._dec(block["constants"]["waiting_fee_sgd"]["value"]),
+        )
+        arrival = derived_of(briefed, "GPS_TRACE", "arrival")
+        self.assertEqual(
+            240, arrival["thresholds"]["minimum_dwell_sec"]["value"]
+        )
+
+    def test_a_gross_charged_line_reconciles_at_version_three(self):
+        """POL-NS-08(d): the line may equal the net or, where named, the gross."""
+        case = copy.deepcopy(loader.load_case(201))
+        next(
+            artifact["payload"]
+            for artifact in case["evidence"]
+            if artifact["evidence_type"] == "TRIP_RECORD"
+        )["platform_policy"] = {
+            "grace_after_match_sec": 180,
+            "advance_grace_before_scheduled_sec": 900,
+            "free_wait_sec": 300,
+            "no_show_threshold_sec": None,
+            "cancellation_fee_sgd": Decimal("4.0"),
+            "rider_gross_cancellation_fee_sgd": Decimal("5.28"),
+            "waiting_fee_sgd": Decimal("5.0"),
+            "fee_goes_to": "DRIVER",
+            "arrival_marker": "BUTTON",
+            "source": "RECORD-PLATFORM",
+        }
+        fare = next(
+            artifact["payload"]
+            for artifact in case["evidence"]
+            if artifact["evidence_type"] == "FARE_BREAKDOWN"
+        )
+        fare["cancellation_fee"] = Decimal("5.28")
+
+        version_three = derived_of(
+            brief.build_brief_for_case(case, policy_version=3),
+            "FARE_BREAKDOWN",
+            "money",
+        )
+        self.assertEqual(
+            Decimal("5.28"), money._dec(version_three["fee_charged"]["value"])
+        )
+        self.assertEqual(
+            Decimal("0.00"), money._dec(version_three["difference"]["value"])
+        )
+
+        # The same line at version 2 is a difference, because version 2 has no
+        # gross figure to reconcile it against.
+        version_two = derived_of(
+            brief.build_brief_for_case(case, policy_version=2),
+            "FARE_BREAKDOWN",
+            "money",
+        )
+        self.assertEqual(
+            Decimal("1.28"), money._dec(version_two["difference"]["value"])
+        )
+
+
+class VersionThreeScopeGateTests(unittest.TestCase):
+    """The optional fields POL-GEN-08 and POL-NS-10 read, and their absence.
+
+    ``dispute.safety_flag``, ``dispute.complaint_flag``,
+    ``trip_record.scheduled_at`` and ``trip_record.events[]`` are all optional,
+    and no case in this repository carries any of them. The rule is that absent
+    means false or null, so nothing has to be added for a case that has none:
+    what this class holds is that a version-3 brief of such a case is built
+    without error, and that the brief invents none of the four.
+    """
+
+    def test_no_corpus_case_carries_any_of_the_four(self):
+        """The premise, so the test below is not vacuous."""
+        for case_no in case_numbers():
+            case = loader.load_case(case_no)
+            with self.subTest(case_no=case_no):
+                for field in OPTIONAL_SCOPE_FIELDS:
+                    self.assertNotIn(field, case["dispute"])
+                payload = next(
+                    artifact["payload"]
+                    for artifact in case["evidence"]
+                    if artifact["evidence_type"] == "TRIP_RECORD"
+                )
+                for field in OPTIONAL_TRIP_FIELDS:
+                    self.assertNotIn(field, payload)
+
+    def test_every_corpus_case_briefs_at_version_three_without_them(self):
+        for case_no in case_numbers():
+            with self.subTest(case_no=case_no):
+                briefed = brief.build_brief_for_case(
+                    loader.load_case(case_no), policy_version=3
+                )
+                self.assertEqual(case_no, briefed["case"]["case_no"])
+                self.assertIn("evidence", briefed["case"])
+
+    def test_the_brief_invents_none_of_the_four(self):
+        """Absent means absent: nothing is defaulted into the brief either."""
+        for case_no in case_numbers():
+            with self.subTest(case_no=case_no):
+                briefed = brief.build_brief_for_case(
+                    loader.load_case(case_no), policy_version=3
+                )
+                for field in OPTIONAL_SCOPE_FIELDS:
+                    self.assertNotIn(field, briefed["case"]["dispute"])
+                payload = trip_record(briefed)["payload"]
+                for field in OPTIONAL_TRIP_FIELDS:
+                    self.assertNotIn(field, payload)
 
 
 if __name__ == "__main__":

@@ -60,6 +60,35 @@ EXTERNAL_DIR = PROJECT_ROOT / "data" / "external"
 CASE_PATH = EXTERNAL_DIR / "ryde" / "case-00901.json"
 MAPPING_PATH = EXTERNAL_DIR / "ryde" / "mapping.json"
 
+# The version-3 conversion, under a path of its own. The version-1 directory is
+# what the recorded run read, so nothing here writes to it.
+V3_DIR = EXTERNAL_DIR / "ryde-v3"
+V3_CASE_PATH = V3_DIR / "case-00901.json"
+V3_MAPPING_PATH = V3_DIR / "mapping.json"
+
+# The event types the source's app-event log records, in its own order.
+SOURCE_EVENT_TYPES = (
+    "booking_confirmed",
+    "driver_assigned",
+    "driver_en_route",
+    "driver_arrived",
+    "rider_notified",
+    "wait_timer_started",
+    "driver_called_rider",
+    "wait_timer_expired",
+    "cancellation_fee_applied",
+    "driver_released",
+)
+
+
+def trip_payload_of(case):
+    """The TRIP_RECORD payload of one converted case."""
+    return next(
+        artifact["payload"]
+        for artifact in case["evidence"]
+        if artifact["evidence_type"] == "TRIP_RECORD"
+    )
+
 # The one committed run of the converted case. It is read by the summary test
 # below, which checks the printed fields against the artifact's own values: the
 # defect it guards against was a property of this stored shape, not of a
@@ -1188,6 +1217,131 @@ class ExternalRunTests(unittest.TestCase):
             self._run(tmp)
         after = sorted(p.as_posix() for p in runner.RUNS_DIR.rglob("*") if p.is_file())
         self.assertEqual(before, after, "an external run wrote into the real runs/ tree")
+
+
+class VersionThreeConversionTests(unittest.TestCase):
+    """Case 901 at policy version 3, under a path of its own.
+
+    Her notes' item 45. The version-1 case is what the recorded run read, and it
+    stays byte-identical. The version-3 case adds the sample's own platform
+    parameters, its scheduled time and its app-event log -- which is what
+    POL-NS-01(c) and POL-GEN-02(2) read -- and nothing else.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.block = convert.conversion_input(SOURCE_PATH.read_text(encoding="utf-8"))
+        cls.case, cls.mapping = convert.convert(cls.block, 3)
+        cls.committed = V3_CASE_PATH.read_text(encoding="utf-8")
+        cls.payload = trip_payload_of(cls.case)
+
+    def test_the_version_three_case_and_its_mapping_are_committed(self):
+        self.assertTrue(V3_CASE_PATH.is_file())
+        self.assertTrue(V3_MAPPING_PATH.is_file())
+
+    def test_the_converter_reproduces_the_committed_version_three_case(self):
+        """The case file is the converter's own output, not a hand edit."""
+        self.assertEqual(
+            self.committed,
+            json.dumps(self.case, indent=2, ensure_ascii=False) + "\n",
+        )
+
+    def test_the_version_three_case_loads_through_the_external_loader(self):
+        loaded = loader.load_external_case(V3_CASE_PATH)
+        self.assertEqual(901, loaded["case_no"])
+        self.assertEqual("NO_SHOW_CHARGE", loaded["dispute"]["category"])
+
+    def test_the_version_three_case_carries_the_platforms_own_parameters(self):
+        block = self.payload["platform_policy"]
+        self.assertEqual(convert.PLATFORM_POLICY_SOURCE, block["source"])
+        self.assertEqual(300, block["free_wait_sec"])
+        self.assertEqual(480, block["no_show_threshold_sec"])
+        self.assertEqual(5.0, block["cancellation_fee_sgd"])
+        self.assertEqual("DRIVER", block["fee_goes_to"])
+        self.assertEqual("GPS_AUTO", block["arrival_marker"])
+        self.assertIsNone(block["rider_gross_cancellation_fee_sgd"])
+        self.assertIsNone(block["waiting_fee_sgd"])
+        self.assertEqual("2026-09-13T08:45:00+08:00", self.payload["scheduled_at"])
+
+    def test_the_version_three_case_carries_the_platforms_event_log(self):
+        events = self.payload["events"]
+        self.assertEqual(list(SOURCE_EVENT_TYPES), [event["event_type"] for event in events])
+        for event in events:
+            with self.subTest(event=event["event_type"]):
+                self.assertEqual({"event_type", "at", "detail", "source"}, set(event))
+                self.assertEqual("PLATFORM_TELEMETRY", event["source"])
+
+    def test_no_dropped_source_value_reaches_the_version_three_case(self):
+        """The event log is carried without the two values the corpus drops."""
+        for value in DROPPED_SOURCE_VALUES:
+            with self.subTest(value=value):
+                self.assertNotIn(value, self.committed)
+
+    def test_the_version_one_conversion_is_byte_identical(self):
+        """Version 1 is what the recorded run read, and it does not move."""
+        case, mapping = convert.convert(self.block, 1)
+        self.assertEqual(
+            CASE_PATH.read_text(encoding="utf-8"),
+            json.dumps(case, indent=2, ensure_ascii=False) + "\n",
+        )
+        self.assertEqual(
+            MAPPING_PATH.read_text(encoding="utf-8"),
+            json.dumps(mapping, indent=2, ensure_ascii=False) + "\n",
+        )
+
+    def test_the_two_conversions_differ_only_in_what_version_three_adds(self):
+        version_one = trip_payload_of(convert.convert(self.block, 1)[0])
+        self.assertEqual(
+            ["scheduled_at", "platform_policy", "events"],
+            [key for key in self.payload if key not in version_one],
+        )
+        for key, value in version_one.items():
+            with self.subTest(key=key):
+                self.assertEqual(value, self.payload[key])
+
+    def test_the_version_three_case_briefs_and_uses_its_own_block(self):
+        briefed = brief.build_brief_for_case(
+            loader.load_external_case(V3_CASE_PATH), policy_version=3
+        )
+        trip = next(
+            artifact
+            for artifact in briefed["case"]["evidence"]
+            if artifact["evidence_type"] == "TRIP_RECORD"
+        )
+        block = trip["payload"][brief.PLATFORM_POLICY_IN_FORCE_KEY]
+        self.assertEqual(convert.PLATFORM_POLICY_SOURCE, block["source"])
+        self.assertEqual(300, block["free_wait_sec"])
+        self.assertEqual(10, len(trip["payload"]["events"]))
+
+    def test_the_mapping_records_the_version_and_the_resolutions(self):
+        self.assertEqual(3, self.mapping["policy_version"])
+        resolved = [
+            entry
+            for entry in self.mapping["policy_divergences"]
+            if "resolution" in entry
+        ]
+        self.assertEqual(3, len(resolved))
+        self.assertEqual(
+            [],
+            convert.unrecorded_items(convert.parse_source(self.block), self.mapping),
+        )
+
+    def test_a_version_three_write_touches_neither_version_one_file(self):
+        """The version-3 writer names only the version-3 paths, and no others.
+
+        ``write_text`` is replaced rather than wrapped, so this test writes
+        nothing: what it asserts is which paths the writer would name.
+        """
+        written = []
+        with mock.patch.object(
+            Path, "write_text", lambda self, *args, **kwargs: written.append(self)
+        ):
+            convert.write_outputs(3)
+        self.assertIn(V3_CASE_PATH, written)
+        self.assertIn(V3_MAPPING_PATH, written)
+        for path in (CASE_PATH, MAPPING_PATH, EXPECTED_PATH):
+            with self.subTest(path=path.name):
+                self.assertNotIn(path, written)
 
 
 if __name__ == "__main__":

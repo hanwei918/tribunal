@@ -191,5 +191,206 @@ class SchemaVersionDetectorTests(unittest.TestCase):
         self.assertEqual(offenders, {})
 
 
+def policy_weights():
+    """The weight table the version-3 policy states."""
+    document = json.loads(
+        (PROJECT_ROOT / "policy" / "v3" / "no_show.json").read_text(encoding="utf-8"),
+        parse_float=Decimal,
+    )
+    return prepass.weights_from_policy(document)
+
+
+def policy_threshold():
+    """POL-NS-08(b)'s gap threshold, as the version-3 policy states it."""
+    document = json.loads(
+        (PROJECT_ROOT / "policy" / "v3" / "no_show.json").read_text(encoding="utf-8")
+    )
+    return prepass.gps_gap_threshold_from_policy(document)
+
+
+# A waiting window for the fixtures below: ten minutes of a trip that was
+# cancelled at its end.
+WINDOW = ("2026-08-06T12:00:00+08:00", "2026-08-06T12:10:00+08:00")
+
+
+def gap(from_ts, to_ts, duration):
+    """One recorded gap, in the shape the trace carries."""
+    return {"from_ts": from_ts, "to_ts": to_ts, "duration_sec": duration}
+
+
+class PolicyWeightTableTests(unittest.TestCase):
+    """The weights the policy states, and the codes they know."""
+
+    def test_the_table_holds_the_three_variants_and_not_the_bare_tag(self):
+        weights = policy_weights()
+        for variant in prepass.GPS_GAP_VARIANTS:
+            with self.subTest(variant=variant):
+                self.assertIn(variant, weights)
+        self.assertNotIn(
+            prepass.GPS_GAP_CODE,
+            weights,
+            "the policy's table still carries the ungraded GPS_GAP tag",
+        )
+
+    def test_the_table_holds_every_code_the_corpus_uses_apart_from_the_tag(self):
+        used = set()
+        for _case_no, artifact in all_artifacts():
+            used.update(prepass.issue_codes_of(artifact))
+        used.discard(prepass.GPS_GAP_CODE)
+        weights = policy_weights()
+        missing = sorted(code for code in used if code not in weights)
+        self.assertEqual([], missing, "the policy's table is missing a corpus code")
+
+    def test_the_table_reproduces_every_declared_weight_that_is_not_a_gap(self):
+        """With the policy's own table, every non-gap artifact weighs as declared."""
+        weights = policy_weights()
+        checked = 0
+        for case_no, artifact in all_artifacts():
+            codes = prepass.issue_codes_of(artifact)
+            if not codes or prepass.GPS_GAP_CODE in codes:
+                continue
+            declared = Decimal(str(artifact["admissibility"]["weight_multiplier"]))
+            with self.subTest(case_no=case_no, evidence_id=artifact["evidence_id"]):
+                self.assertEqual(
+                    declared, Decimal(str(prepass.weight_for(codes, weights=weights)))
+                )
+            checked += 1
+        self.assertGreater(checked, 40)
+
+    def test_the_corpus_gaps_grade_as_the_note_says(self):
+        """The corpus's three ``GPS_GAP`` artifacts, pinned: variant and weight.
+
+        The other three live in the development sets; the full table is in
+        ``docs/notes/2026-10-08-policy-version-3.md``. These three are pinned
+        here because they are the corpus's own, and because two of them are the
+        two whose weight does not move.
+        """
+        weights = policy_weights()
+        threshold = policy_threshold()
+        expected = {
+            110: (prepass.GPS_GAP_SHORT_OR_OUTSIDE_WINDOW, Decimal("0.55")),
+            210: (prepass.GPS_GAP_LONG_INSIDE_WINDOW, Decimal("0.25")),
+            211: (prepass.GPS_GAP_LONG_INSIDE_WINDOW, Decimal("0.39")),
+        }
+        seen = {}
+        for case_no, artifact in all_artifacts():
+            codes = prepass.issue_codes_of(artifact)
+            if prepass.GPS_GAP_CODE not in codes:
+                continue
+            trip = next(
+                entry["payload"]
+                for entry in loader.load_case(case_no)["evidence"]
+                if entry["evidence_type"] == "TRIP_RECORD"
+            )
+            window = None
+            if trip.get("arrived_at") and trip.get("cancelled_at"):
+                window = (trip["arrived_at"], trip["cancelled_at"])
+            gaps = prepass.gaps_from_points(
+                (artifact.get("payload") or {}).get("points")
+            )
+            variant = prepass.gps_gap_variant(gaps, window, threshold)
+            graded = [
+                variant if code == prepass.GPS_GAP_CODE else code for code in codes
+            ]
+            seen[case_no] = (
+                variant,
+                Decimal(str(prepass.weight_for(graded, weights=weights))),
+            )
+        self.assertEqual(expected, seen)
+
+    def test_the_threshold_is_the_policys_own(self):
+        self.assertEqual(120, policy_threshold())
+
+    def test_a_policy_with_no_integrity_block_is_refused(self):
+        with self.assertRaises(prepass.UnknownIssueCodeError):
+            prepass.weights_from_policy({"policy_id": "POLICY-NO-SHOW"})
+
+
+class GpsGapVariantTests(unittest.TestCase):
+    """POL-NS-08(b)'s three variants, one fixture each."""
+
+    def classify(self, gaps, window=WINDOW):
+        return prepass.gps_gap_variant(gaps, window, policy_threshold())
+
+    def test_a_gap_of_at_most_the_threshold_is_short(self):
+        self.assertEqual(
+            prepass.GPS_GAP_SHORT_OR_OUTSIDE_WINDOW,
+            self.classify([gap("2026-08-06T12:01:00+08:00", "2026-08-06T12:03:00+08:00", 120.0)]),
+        )
+
+    def test_a_long_gap_outside_the_window_is_short_or_outside(self):
+        self.assertEqual(
+            prepass.GPS_GAP_SHORT_OR_OUTSIDE_WINDOW,
+            self.classify(
+                [gap("2026-08-06T11:00:00+08:00", "2026-08-06T11:30:00+08:00", 1800.0)]
+            ),
+        )
+
+    def test_a_long_gap_inside_the_window_is_long_inside(self):
+        self.assertEqual(
+            prepass.GPS_GAP_LONG_INSIDE_WINDOW,
+            self.classify(
+                [gap("2026-08-06T12:03:00+08:00", "2026-08-06T12:06:00+08:00", 180.0)]
+            ),
+        )
+
+    def test_a_long_gap_that_contains_the_cancellation_straddles_it(self):
+        self.assertEqual(
+            prepass.GPS_GAP_STRADDLING_CANCELLATION,
+            self.classify(
+                [gap("2026-08-06T12:08:00+08:00", "2026-08-06T12:12:00+08:00", 240.0)]
+            ),
+        )
+
+    def test_a_short_gap_that_contains_the_cancellation_is_still_short(self):
+        """POL-NS-08(b) grades by length first: a short gap engages nothing."""
+        self.assertEqual(
+            prepass.GPS_GAP_SHORT_OR_OUTSIDE_WINDOW,
+            self.classify(
+                [gap("2026-08-06T12:09:30+08:00", "2026-08-06T12:10:30+08:00", 60.0)]
+            ),
+        )
+
+    def test_a_record_with_no_waiting_window_has_no_gap_inside_it(self):
+        self.assertEqual(
+            prepass.GPS_GAP_SHORT_OR_OUTSIDE_WINDOW,
+            self.classify(
+                [gap("2026-08-06T12:03:00+08:00", "2026-08-06T12:06:00+08:00", 180.0)],
+                window=None,
+            ),
+        )
+
+    def test_a_trace_with_no_readable_gap_is_short_or_outside(self):
+        self.assertEqual(
+            prepass.GPS_GAP_SHORT_OR_OUTSIDE_WINDOW, self.classify([])
+        )
+
+    def test_the_gaps_are_computed_from_the_traces_own_points(self):
+        points = [
+            {"ts": "2026-08-06T12:00:00+08:00"},
+            {"ts": "2026-08-06T12:01:00+08:00"},
+            {"ts": "2026-08-06T12:04:00+08:00"},
+        ]
+        self.assertEqual(
+            [
+                {
+                    "from_ts": "2026-08-06T12:00:00+08:00",
+                    "to_ts": "2026-08-06T12:01:00+08:00",
+                    "duration_sec": 60.0,
+                },
+                {
+                    "from_ts": "2026-08-06T12:01:00+08:00",
+                    "to_ts": "2026-08-06T12:04:00+08:00",
+                    "duration_sec": 180.0,
+                },
+            ],
+            prepass.gaps_from_points(points),
+        )
+
+    def test_an_unreadable_point_is_skipped_rather_than_guessed_at(self):
+        points = [{"ts": "2026-08-06T12:00:00+08:00"}, {"ts": None}, {"ts": "not a stamp"}]
+        self.assertEqual([], prepass.gaps_from_points(points))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

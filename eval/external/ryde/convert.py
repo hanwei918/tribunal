@@ -71,12 +71,13 @@ source produces the same bytes.
 
 from __future__ import annotations
 
+import argparse
 import json
 import statistics
 import sys
 from decimal import Decimal
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 # --------------------------------------------------------------------------
 # Locations
@@ -90,9 +91,27 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 SOURCE_PATH = PROJECT_ROOT / "eval" / "external" / "ryde" / "DISP-002.md"
 EXPECTED_PATH = PROJECT_ROOT / "eval" / "external" / "ryde" / "expected.json"
+
+# The policy version the conversion is written for. Version 1 is the case the
+# recorded run read, and it stays byte-identical: nothing below changes for it.
+# Version 3 adds the sample's own platform parameters and its app-event log,
+# which is what POL-NS-01(c) and POL-GEN-02(2) read.
+DEFAULT_POLICY_VERSION = 1
+PLATFORM_POLICY_VERSION = 3
+POLICY_VERSIONS = (DEFAULT_POLICY_VERSION, PLATFORM_POLICY_VERSION)
+
+# One output directory per version. The version-1 directory holds the case the
+# recorded run read and is never rewritten; the version-3 case is written beside
+# it, under a directory of its own, with its own mapping.
 OUTPUT_DIR = PROJECT_ROOT / "data" / "external" / "ryde"
-CASE_PATH = OUTPUT_DIR / "case-00901.json"
-MAPPING_PATH = OUTPUT_DIR / "mapping.json"
+OUTPUT_DIR_FOR_VERSION = {
+    DEFAULT_POLICY_VERSION: OUTPUT_DIR,
+    PLATFORM_POLICY_VERSION: PROJECT_ROOT / "data" / "external" / "ryde-v3",
+}
+CASE_NAME = "case-00901.json"
+MAPPING_NAME = "mapping.json"
+CASE_PATH = OUTPUT_DIR / CASE_NAME
+MAPPING_PATH = OUTPUT_DIR / MAPPING_NAME
 
 # The case number. The corpus occupies 101-115 and 201-214; a converted case is
 # drawn from outside both ranges so it can never be mistaken for a corpus case.
@@ -370,42 +389,69 @@ _APP_EVENT_DISPOSITION = {
 }
 
 
-def _audit(decisions: Decisions, source: Dict[str, Any]) -> None:
+# What became of each app event the source records, at policy version 3. Every
+# one is now carried in ``EV-TRIP-00901.payload.events[]`` as well as wherever
+# the version-1 conversion already put it, so no event is dropped any more. The
+# table is kept separate from the version-1 one rather than rewritten, so that
+# the version-1 mapping record still says what the version-1 conversion did.
+_APP_EVENT_DISPOSITION_V3 = {
+    kind: (
+        "Carried in EV-TRIP-00901.payload.events[] with its own event_type, "
+        "timestamp and details. " + version_one
+    )
+    for kind, version_one in _APP_EVENT_DISPOSITION.items()
+}
+
+
+def _audit(
+    decisions: Decisions, source: Dict[str, Any],
+    policy_version: int = DEFAULT_POLICY_VERSION,
+) -> None:
     """Record every source item the conversion reads and does not carry.
 
     A drop is a decision, so it goes on the record with its reason rather than
     disappearing. The events are recorded one at a time because the conversion
     reads them one at a time; a wildcard entry would hide an event nobody read.
-    """
-    decisions.judged(
-        "trip_data.scheduled_time", None,
-        "Dropped: no field in this corpus's trip-record payload holds a scheduled "
-        "pickup time, and no limb of POL-NS-01 to POL-NS-09 reads one. The source's "
-        "08:45 schedule is quoted in policy_divergences, where the question it raises "
-        "- whether a waiting clock runs from arrival or from the scheduled time - is "
-        "recorded and left open rather than resolved here.",
-        source="trip_data.scheduled_time",
-    )
 
-    for field, reason in (
-        ("free_wait_time_min",
-         "the source platform's own free-wait period, not this system's"),
-        ("cancellation_fee_after_wait",
-         "the source's own fee figure; the amount itself is carried on EV-FARE-00901, "
-         "and policy_divergences records that it does not reconcile with fee_schedule"),
-        ("no_show_threshold_min",
-         "the source's own threshold; this system's dwell minimum is read from "
-         "fee_schedule at arbitration time, as policy_divergences records"),
-        ("fee_goes_to",
-         "the source's own instruction about where the fee goes; this system "
-         "compensates the driver under POL-NS-07 at its own rate"),
-    ):
+    From policy version 3 three of the version-1 drops become copies: the
+    scheduled time is carried as ``payload.scheduled_at``, the source's own
+    cancellation-policy fields are carried in the ``platform_policy`` block, and
+    the events are carried as ``payload.events[]``. Those entries are therefore
+    not written for version 3 -- an entry saying a field was dropped, beside a
+    field that carries it, would be a record that contradicts the case.
+    """
+    version_three = policy_version >= PLATFORM_POLICY_VERSION
+
+    if not version_three:
         decisions.judged(
-            "cancellation_policy." + field, None,
-            "Dropped: {0}. No field of the converted case holds a source policy "
-            "figure.".format(reason),
-            source="cancellation_policy." + field,
+            "trip_data.scheduled_time", None,
+            "Dropped: no field in this corpus's trip-record payload holds a scheduled "
+            "pickup time, and no limb of POL-NS-01 to POL-NS-09 reads one. The source's "
+            "08:45 schedule is quoted in policy_divergences, where the question it raises "
+            "- whether a waiting clock runs from arrival or from the scheduled time - is "
+            "recorded and left open rather than resolved here.",
+            source="trip_data.scheduled_time",
         )
+
+        for field, reason in (
+            ("free_wait_time_min",
+             "the source platform's own free-wait period, not this system's"),
+            ("cancellation_fee_after_wait",
+             "the source's own fee figure; the amount itself is carried on EV-FARE-00901, "
+             "and policy_divergences records that it does not reconcile with fee_schedule"),
+            ("no_show_threshold_min",
+             "the source's own threshold; this system's dwell minimum is read from "
+             "fee_schedule at arbitration time, as policy_divergences records"),
+            ("fee_goes_to",
+             "the source's own instruction about where the fee goes; this system "
+             "compensates the driver under POL-NS-07 at its own rate"),
+        ):
+            decisions.judged(
+                "cancellation_policy." + field, None,
+                "Dropped: {0}. No field of the converted case holds a source policy "
+                "figure.".format(reason),
+                source="cancellation_policy." + field,
+            )
 
     decisions.judged(
         "chat_logs[*].type", None,
@@ -436,9 +482,12 @@ def _audit(decisions: Decisions, source: Dict[str, Any]) -> None:
         source="driver_profile.dispute_history.rejected",
     )
 
+    dispositions = (
+        _APP_EVENT_DISPOSITION_V3 if version_three else _APP_EVENT_DISPOSITION
+    )
     for event in source["app_events"]:
         kind = event["event_type"]
-        disposition = _APP_EVENT_DISPOSITION.get(kind)
+        disposition = dispositions.get(kind)
         if disposition is None:
             raise ConversionError(
                 "the source records an app event this converter has no disposition "
@@ -491,8 +540,22 @@ def admissibility(
 # --------------------------------------------------------------------------
 # The conversion
 # --------------------------------------------------------------------------
-def convert(block_text: str) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-    """Build the converted case and its mapping record from the fenced block."""
+def convert(
+    block_text: str, policy_version: int = DEFAULT_POLICY_VERSION
+) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    """Build the converted case and its mapping record from the fenced block.
+
+    ``policy_version`` selects what the conversion carries: version 1 is the case
+    the recorded run read, and version 3 adds the sample's own platform
+    parameters and its app-event log. An unknown version is refused rather than
+    defaulted, so a typo cannot write the version-1 case under another name.
+    """
+    if policy_version not in POLICY_VERSIONS:
+        raise ConversionError(
+            "no conversion for policy version {0}; the versions are {1}".format(
+                policy_version, ", ".join(str(item) for item in POLICY_VERSIONS)
+            )
+        )
     source = parse_source(block_text)
     decisions = Decisions()
 
@@ -523,7 +586,10 @@ def convert(block_text: str) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     )
 
     artifacts = [
-        _trip_record(decisions, trip, events, chats, ticket, export_at, assessed_at),
+        _trip_record(
+            decisions, trip, events, chats, ticket, export_at, assessed_at,
+            policy, policy_version,
+        ),
         _gps_trace(decisions, fixes, trip, trip_id, export_at, assessed_at),
         _chat_log(decisions, chats, trip_id, export_at, assessed_at),
         _fare(decisions, trip, export_at, assessed_at),
@@ -535,7 +601,7 @@ def convert(block_text: str) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     # Everything the conversion read and did not carry, recorded rather than
     # dropped in silence. It runs after the artifacts so the mapping reads as
     # the case first and the audit of what it left out second.
-    _audit(decisions, source)
+    _audit(decisions, source, policy_version)
 
     evidence_ids = [artifact["evidence_id"] for artifact in artifacts]
 
@@ -615,14 +681,16 @@ def convert(block_text: str) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         "source_document": "eval/external/ryde/DISP-002.md",
         "source_dispute_id": ticket["dispute_id"],
         "converted_case_no": CASE_NO,
-        "converted_case_file": "external/ryde/case-00901.json",
+        "converted_case_file": "external/{0}/case-00901.json".format(
+            OUTPUT_DIR_FOR_VERSION[policy_version].name
+        ),
         "note": (
             "Every field of the converted case, with whether the conversion copied it "
             "or judged it, and why. The source's title and Evidence Summary are not "
             "listed anywhere here because nothing in them reached the conversion."
         ),
         "fields": decisions.entries,
-        "policy_divergences": _divergences(trip, policy),
+        "policy_divergences": _divergences(trip, policy, policy_version),
         "assumptions": [
             {
                 "assumption": "pickup zone class is STANDARD",
@@ -653,6 +721,10 @@ def convert(block_text: str) -> Tuple[Dict[str, Any], Dict[str, Any]]:
             },
         ],
     }
+    if policy_version >= PLATFORM_POLICY_VERSION:
+        # Recorded on the version-3 mapping only. The version-1 mapping is the
+        # record the recorded run was read against, and it stays byte-identical.
+        mapping["policy_version"] = policy_version
     return case, mapping
 
 
@@ -664,13 +736,197 @@ def _plus_seconds(stamp: str, seconds: int) -> str:
     return (parsed + timedelta(seconds=seconds)).isoformat()
 
 
+# --------------------------------------------------------------------------
+# What policy version 3 adds to the trip record
+# --------------------------------------------------------------------------
+# The source's own platform parameters, in the contract's field names, plus the
+# platform's app-event log. Version 1 carries neither, and nothing below runs for
+# it: the version-1 case is the case the recorded run read and stays
+# byte-identical.
+PLATFORM_POLICY_SOURCE = "RECORD-PLATFORM"
+SECONDS_PER_MINUTE = 60
+PLATFORM_TELEMETRY_SOURCE = "PLATFORM_TELEMETRY"
+
+# The two source strings that carry material this repository drops elsewhere: the
+# driver's name (as ``driver_profile.name`` is dropped) and the rider's payment
+# method (as ``rider_profile.payment_method`` is). Both are removed from the
+# event text, so the platform's own log can be carried without carrying them.
+DROPPED_EVENT_FRAGMENTS = ("Lim Wei Ming, ", " (e-wallet)")
+
+
+def _redacted(detail: str) -> str:
+    """One event detail with the dropped fragments removed."""
+    for fragment in DROPPED_EVENT_FRAGMENTS:
+        detail = detail.replace(fragment, "")
+    return detail
+
+
+def _platform_policy_block(
+    decisions: Decisions, policy: Dict[str, Any], arrival_details: str
+) -> Dict[str, Any]:
+    """``trip_record.platform_policy``, the block policy version 3 adds.
+
+    Three of the ten fields are the sample's own and are copied: the free wait
+    and the no-show threshold, which the source states in minutes and the
+    contract in seconds, and the fee. ``fee_goes_to`` is the source's instruction
+    translated into the contract's token. The rest are judged, and each is
+    recorded as judged: the two grace windows are the loaded policy's published
+    defaults, written in so that the block is complete, and the arrival marker is
+    read off the source's own arrival event, which says the arrival was
+    auto-confirmed from a GPS measurement rather than a button press. The source
+    is an opaque code, because the block reaches the model.
+    """
+    return {
+        "grace_after_match_sec": decisions.judged(
+            "evidence.EV-TRIP-00901.payload.platform_policy.grace_after_match_sec",
+            180,
+            "The source states no grace after matching. fee_schedule.defaults "
+            "(Ryde's published 3 minutes) is written in so that the block is "
+            "complete; POL-NS-10(a) reads it.",
+        ),
+        "advance_grace_before_scheduled_sec": decisions.judged(
+            "evidence.EV-TRIP-00901.payload.platform_policy."
+            "advance_grace_before_scheduled_sec",
+            900,
+            "The source states no advance grace for a scheduled trip. "
+            "fee_schedule.defaults (Ryde's published 15 minutes) is written in, as "
+            "above; POL-NS-10(b) reads it.",
+        ),
+        "free_wait_sec": decisions.copied(
+            "evidence.EV-TRIP-00901.payload.platform_policy.free_wait_sec",
+            "cancellation_policy.free_wait_time_min",
+            int(policy["free_wait_time_min"]) * SECONDS_PER_MINUTE,
+            "The source states {0} minutes; carried as seconds, because "
+            "POL-NS-01(c) reads a free waiting period in seconds and this is the "
+            "period the sample's own wait timer runs.".format(
+                policy["free_wait_time_min"]
+            ),
+        ),
+        "no_show_threshold_sec": decisions.copied(
+            "evidence.EV-TRIP-00901.payload.platform_policy.no_show_threshold_sec",
+            "cancellation_policy.no_show_threshold_min",
+            int(policy["no_show_threshold_min"]) * SECONDS_PER_MINUTE,
+            "The source states {0} minutes; POL-NS-01(c) requires the cancellation "
+            "to fall at or after it where it is longer than free_wait_sec, and the "
+            "sample's cancellation at 08:51:00 falls exactly on it.".format(
+                policy["no_show_threshold_min"]
+            ),
+        ),
+        "cancellation_fee_sgd": decisions.copied(
+            "evidence.EV-TRIP-00901.payload.platform_policy.cancellation_fee_sgd",
+            "cancellation_policy.cancellation_fee_after_wait",
+            policy["cancellation_fee_after_wait"],
+            "The source states the fee; fee_schedule.resolution_rule now reads this "
+            "field first, which resolves the version-1 divergence between the "
+            "sample's figure and the schedule's.",
+        ),
+        "rider_gross_cancellation_fee_sgd": decisions.judged(
+            "evidence.EV-TRIP-00901.payload.platform_policy."
+            "rider_gross_cancellation_fee_sgd",
+            None,
+            "The source gives one figure only: no rider-side gross amount is "
+            "stated, and none is derived. Null rather than the fee repeated.",
+        ),
+        "waiting_fee_sgd": decisions.judged(
+            "evidence.EV-TRIP-00901.payload.platform_policy.waiting_fee_sgd",
+            None,
+            "The source states no waiting-time fee. POL-NS-10(d) reads this field, "
+            "so a figure here would decide a limb on a value nobody recorded.",
+        ),
+        "fee_goes_to": decisions.judged(
+            "evidence.EV-TRIP-00901.payload.platform_policy.fee_goes_to",
+            "DRIVER",
+            "The source writes 'driver_compensation'; DRIVER is this contract's "
+            "token for the same instruction, and POL-NS-07 compensates the driver "
+            "under it.",
+            source="cancellation_policy.fee_goes_to",
+        ),
+        "arrival_marker": decisions.judged(
+            "evidence.EV-TRIP-00901.payload.platform_policy.arrival_marker",
+            "GPS_AUTO",
+            "Read off the source's own arrival event, whose text is {0!r}: the "
+            "marker was auto-confirmed from a GPS measurement rather than a driver "
+            "button press, so GPS_AUTO is the marker this record carries.".format(
+                arrival_details
+            ),
+            source="app_events[driver_arrived].details",
+        ),
+        "source": decisions.judged(
+            "evidence.EV-TRIP-00901.payload.platform_policy.source",
+            PLATFORM_POLICY_SOURCE,
+            "An opaque code: the block came from the record itself. The "
+            "human-readable provenance is in the mapping record and never in the "
+            "case file, because the block reaches the model.",
+        ),
+    }
+
+
+def _event_log(
+    decisions: Decisions, events: List[Dict[str, Any]], by_type: Dict[str, Any]
+) -> List[Dict[str, Any]]:
+    """The source's app-event log, in the contract's ``events[]`` shape.
+
+    Every event the source records is carried, in the source's own order, with
+    its ``event_type``, its timestamp as ``at``, its detail and the evidence
+    source ``PLATFORM_TELEMETRY``. Two details are redacted; both redactions are
+    recorded separately below, because they are decisions about the text rather
+    than about the event.
+    """
+    log = [
+        {
+            "event_type": event["event_type"],
+            "at": event["timestamp"],
+            "detail": _redacted(event["details"]),
+            "source": PLATFORM_TELEMETRY_SOURCE,
+        }
+        for event in events
+    ]
+    decisions.judged(
+        "evidence.EV-TRIP-00901.payload.events[*]",
+        log,
+        "Copied: the source's platform event log, {0} events, each with its own "
+        "event_type, timestamp and details and the evidence source "
+        "PLATFORM_TELEMETRY. The version-1 conversion dropped it, which left the "
+        "dwell carried by the GPS trace alone and capped confidence at the "
+        "trace's 0.6 weight under POL-GEN-02(2); with the platform's own "
+        "wait-timer events present the dwell has two independent carriers.".format(
+            len(log)
+        ),
+        source=", ".join(
+            "app_events[{0}]".format(event["event_type"]) for event in events
+        ),
+    )
+    decisions.judged(
+        "evidence.EV-TRIP-00901.payload.events[driver_assigned].detail",
+        _redacted(by_type["driver_assigned"]["details"]),
+        "The driver's name is dropped from the event text, as driver_profile.name "
+        "already is. The plate stays, as it does in the chat_log.",
+        source="app_events[driver_assigned].details",
+    )
+    decisions.judged(
+        "evidence.EV-TRIP-00901.payload.events[cancellation_fee_applied].detail",
+        _redacted(by_type["cancellation_fee_applied"]["details"]),
+        "The rider's payment method is dropped from the event text, as "
+        "rider_profile.payment_method already is.",
+        source="app_events[cancellation_fee_applied].details",
+    )
+    return log
+
+
 def _trip_record(
     decisions: Decisions, trip: Dict[str, Any], events: List[Dict[str, Any]],
     chats: List[Dict[str, Any]], ticket: Dict[str, Any], export_at: str,
-    assessed_at: str,
+    assessed_at: str, policy: Optional[Dict[str, Any]] = None,
+    policy_version: int = DEFAULT_POLICY_VERSION,
 ) -> Dict[str, Any]:
-    """TRIP_RECORD, assembled from trip_data and the app events."""
+    """TRIP_RECORD, assembled from trip_data and the app events.
+
+    From policy version 3 the record also carries ``scheduled_at``, the
+    ``platform_policy`` block and the platform's own ``events[]``. Version 1
+    carries none of them, so the case the recorded run read is byte-identical.
+    """
     by_type = {event["event_type"]: event for event in events}
+    arrival_details = by_type["driver_arrived"]["details"]
 
     def at(event_type: str) -> Optional[str]:
         event = by_type.get(event_type)
@@ -857,6 +1113,21 @@ def _trip_record(
             "Null: the source records no amendment to either end of the trip.",
         )
 
+    if policy_version >= PLATFORM_POLICY_VERSION:
+        # The three fields policy version 3 adds, in the order the contract's
+        # trip record lists them. Nothing above changes for version 1.
+        payload["scheduled_at"] = decisions.copied(
+            "evidence.EV-TRIP-00901.payload.scheduled_at",
+            "trip_data.scheduled_time", trip["scheduled_time"],
+            "The source states it; the version-1 conversion dropped it. POL-NS-10(b) "
+            "reads it, and POL-NS-01(c) uses it to say where a scheduled trip's "
+            "waiting clock starts.",
+        )
+        payload["platform_policy"] = _platform_policy_block(
+            decisions, policy or {}, arrival_details
+        )
+        payload["events"] = _event_log(decisions, events, by_type)
+
     # The one deviation from the corpus's own shape that is worth stating in
     # full, because a reader comparing the two would otherwise have to find it.
     decisions.judged(
@@ -876,7 +1147,6 @@ def _trip_record(
     # The one app event whose text is case material rather than a duplicate of a
     # timestamp: the platform's own account of how the arrival marker was made.
     # Carried, and carried as what it is -- a distance claim, not an accuracy.
-    arrival_details = by_type["driver_arrived"]["details"]
     decisions.judged(
         "evidence.EV-TRIP-00901.admissibility.notes", None,
         "The source's driver_arrived details are carried into this artifact's "
@@ -1558,14 +1828,46 @@ def _artifact(
     }
 
 
-def _divergences(trip: Dict[str, Any], policy: Dict[str, Any]) -> List[Dict[str, Any]]:
+# What policy version 3 does about three of the divergences below, keyed by the
+# opening words of the finding. The resolution is added to the entry rather than
+# replacing it, so the mapping still says what the source and this system each
+# said and, beside it, what changed.
+DIVERGENCE_RESOLUTIONS = (
+    (
+        "The source's cancellation fee of SGD 5.00",
+        "fee_schedule.resolution_rule reads trip_record.platform_policy."
+        "cancellation_fee_sgd (5.00) first; POL-NS-08(d) is no longer engaged on "
+        "the converted case.",
+    ),
+    (
+        "The source's 8-minute no-show threshold",
+        "POL-NS-01(c) reads platform_policy.free_wait_sec (300) and "
+        "no_show_threshold_sec (480); the cancellation at 08:51:00 falls at the "
+        "8-minute threshold measured from the 08:43 arrival.",
+    ),
+    (
+        "Whether the waiting clock runs from arrival",
+        "scheduled_at is now carried as trip_record.scheduled_at, and POL-NS-10(b) "
+        "reads it. POL-NS-01(c) still runs the clock from the first qualifying "
+        "in-geofence fix, and the platform's own wait_timer_started event "
+        "(08:43:10) is a second, independent carrier of the same start.",
+    ),
+)
+
+
+def _divergences(
+    trip: Dict[str, Any], policy: Dict[str, Any],
+    policy_version: int = DEFAULT_POLICY_VERSION,
+) -> List[Dict[str, Any]]:
     """Where the source's policy and this system's policy disagree.
 
-    Recorded, not resolved. The case runs under this system's loaded policy
-    unchanged, so each divergence is a fact about the conversion rather than
-    something the converted case can express.
+    Recorded, not resolved, at version 1: the case runs under this system's
+    loaded policy unchanged, so each divergence is a fact about the conversion
+    rather than something the converted case can express. From policy version 3
+    the three the platform-policy block settles gain a ``resolution`` beside
+    them; the rest stand as they were.
     """
-    return [
+    divergences = [
         {
             "finding": "The source's cancellation fee of SGD 5.00 matches no entry in fee_schedule.",
             "source_policy": "cancellation_fee_after_wait: 5.00",
@@ -1657,6 +1959,13 @@ def _divergences(trip: Dict[str, Any], policy: Dict[str, Any]) -> List[Dict[str,
         },
     ]
 
+    if policy_version >= PLATFORM_POLICY_VERSION:
+        for entry in divergences:
+            for opening, resolution in DIVERGENCE_RESOLUTIONS:
+                if entry["finding"].startswith(opening):
+                    entry["resolution"] = resolution
+    return divergences
+
 
 def _seconds_between(start: str, end: str) -> float:
     """Whole seconds between two ISO-8601 stamps, as a float."""
@@ -1707,16 +2016,31 @@ def expected_outcome(source_text: str) -> Dict[str, Any]:
 # --------------------------------------------------------------------------
 # Entry point
 # --------------------------------------------------------------------------
-def write_outputs() -> Tuple[Path, Path, Path]:
-    """Read the source, convert it, and write the three output files.
+def write_outputs(
+    policy_version: int = DEFAULT_POLICY_VERSION,
+) -> Tuple[Path, Path, Path]:
+    """Read the source, convert it, and write the output files.
+
+    ``policy_version`` selects the directory and what the case carries. Version 1
+    writes the three files it has always written, under ``data/external/ryde/``,
+    and nothing about it changes. Version 3 writes the case and its mapping under
+    ``data/external/ryde-v3/`` and leaves ``expected.json`` alone: the
+    organisers' stated expectation belongs to the sample, not to a second reading
+    of it.
 
     Refuses to write a mapping that drops a source item in silence. The check is
     made here as well as in the test suite because a mapping with a hole in it
     is wrong the moment it is written, not only when something reads it back.
     """
+    if policy_version not in POLICY_VERSIONS:
+        raise ConversionError(
+            "no conversion for policy version {0}; the versions are {1}".format(
+                policy_version, ", ".join(str(item) for item in POLICY_VERSIONS)
+            )
+        )
     markdown = SOURCE_PATH.read_text(encoding="utf-8")
     block = conversion_input(markdown)
-    case, mapping = convert(block)
+    case, mapping = convert(block, policy_version)
 
     missing = unrecorded_items(parse_source(block), mapping)
     if missing:
@@ -1725,22 +2049,44 @@ def write_outputs() -> Tuple[Path, Path, Path]:
             "recorded: {1}".format(len(missing), ", ".join(missing))
         )
 
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    CASE_PATH.write_text(
+    directory = OUTPUT_DIR_FOR_VERSION[policy_version]
+    directory.mkdir(parents=True, exist_ok=True)
+    case_path = directory / CASE_NAME
+    mapping_path = directory / MAPPING_NAME
+    case_path.write_text(
         json.dumps(case, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
     )
-    MAPPING_PATH.write_text(
+    mapping_path.write_text(
         json.dumps(mapping, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
     )
-    EXPECTED_PATH.write_text(
-        json.dumps(expected_outcome(markdown), indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
+    if policy_version == DEFAULT_POLICY_VERSION:
+        EXPECTED_PATH.write_text(
+            json.dumps(expected_outcome(markdown), indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+    return case_path, mapping_path, EXPECTED_PATH
+
+
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    parser = argparse.ArgumentParser(
+        prog="python3 -m eval.external.ryde.convert",
+        description=(
+            "Convert the organisers' sample case into this repository's case shape. "
+            "Version 1 writes data/external/ryde/ and is what the recorded run read; "
+            "version 3 writes data/external/ryde-v3/ with the sample's own platform "
+            "parameters and its app-event log."
+        ),
     )
-    return CASE_PATH, MAPPING_PATH, EXPECTED_PATH
-
-
-def main() -> int:
-    case_path, mapping_path, expected_path = write_outputs()
+    parser.add_argument(
+        "--policy-version",
+        type=int,
+        choices=list(POLICY_VERSIONS),
+        default=DEFAULT_POLICY_VERSION,
+        metavar="N",
+        help="which conversion to write: 1 (the default) or 3",
+    )
+    args = parser.parse_args(argv)
+    case_path, mapping_path, expected_path = write_outputs(args.policy_version)
     for path in (case_path, mapping_path, expected_path):
         print("wrote {0}".format(path.relative_to(PROJECT_ROOT)))
     return 0

@@ -17,7 +17,7 @@ from __future__ import annotations
 import hashlib
 import json
 from decimal import Decimal, ROUND_CEILING, ROUND_HALF_UP
-from typing import Any, Dict, List, Mapping, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 # POL-RD-02's rounding rule: "the payable figure is rounded UP to the nearest
 # SGD 0.05". Exposed as a default so the one-argument call works, and as a
@@ -521,11 +521,85 @@ def schedule_fee(zone_class_fee: Any, vehicle_tier_fee: Any) -> Tuple[Decimal, s
     return zone, DIMENSION_TIE
 
 
+# --------------------------------------------------------------------------
+# The platform parameters in force (policy version 3)
+#
+# From version 3 on, the no-show fee, the free waiting period and the
+# waiting-time fee are read from ``trip_record.platform_policy`` -- the block
+# the brief publishes as ``platform_policy_in_force`` -- rather than from the
+# version-1 ``fee_schedule`` tables. POL-NS-01: "the cancellation fee stands, in
+# the net amount fixed by ``fee_schedule.resolution_rule``:
+# ``platform_policy.cancellation_fee_sgd`` where the record carries it". The
+# accessors below are the only place that shape is known, so no other module has
+# to spell the field names out.
+#
+# Each returns ``None`` when the block does not carry the field, so a caller
+# falls back to the loaded policy's own default rather than to a literal here.
+# --------------------------------------------------------------------------
+PLATFORM_POLICY_KEY = "platform_policy"
+CANCELLATION_FEE_KEY = "cancellation_fee_sgd"
+RIDER_GROSS_FEE_KEY = "rider_gross_cancellation_fee_sgd"
+FREE_WAIT_KEY = "free_wait_sec"
+WAITING_FEE_KEY = "waiting_fee_sgd"
+
+
+def _block_field(platform_policy: Any, key: str) -> Any:
+    """One field of a platform-policy block, or ``None`` for anything else."""
+    if not isinstance(platform_policy, Mapping):
+        return None
+    return platform_policy.get(key)
+
+
+def fee_in_force(platform_policy: Any) -> Optional[Decimal]:
+    """The net cancellation fee the block states, or ``None``.
+
+    POL-NS-01's fee limb. ``None`` means the block names no fee, which is the
+    caller's cue to fall back to ``fee_schedule.defaults``; no figure is
+    substituted here.
+    """
+    value = _block_field(platform_policy, CANCELLATION_FEE_KEY)
+    return None if value is None else _dec(value)
+
+
+def gross_fee_in_force(platform_policy: Any) -> Optional[Decimal]:
+    """The rider-side gross figure the block names, for POL-NS-08(d), or ``None``.
+
+    POL-NS-08(d): the ``fare_breakdown`` cancellation-fee line may equal the net
+    or, where the block names one, the gross. The gross figure is used for that
+    reconciliation only -- POL-NS-07 compensates on the net, never on this.
+    """
+    value = _block_field(platform_policy, RIDER_GROSS_FEE_KEY)
+    return None if value is None else _dec(value)
+
+
+def free_wait_in_force(platform_policy: Any) -> Optional[int]:
+    """POL-NS-01(c)'s free waiting period: the block's ``free_wait_sec``.
+
+    ``None`` when the block names none, so the caller uses
+    ``fee_schedule.defaults.free_wait_sec``. POL-NS-05(i) and POL-NS-06 read the
+    waiting period from POL-NS-01(c), so both take their figure from here.
+    """
+    value = _block_field(platform_policy, FREE_WAIT_KEY)
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def waiting_fee_in_force(platform_policy: Any) -> Optional[Decimal]:
+    """POL-NS-10(d)'s waiting-time fee: the block's ``waiting_fee_sgd``, or None."""
+    value = _block_field(platform_policy, WAITING_FEE_KEY)
+    return None if value is None else _dec(value)
+
+
 def fee_arithmetic(
     schedule_fee_amount: Any,
     fee_charged: Any,
     driver_compensation_rate: Any,
     goodwill_rate: Any,
+    gross_fee: Any = None,
 ) -> Dict[str, Decimal]:
     """The no-show fee, the fee charged, and the two payments computed on it.
 
@@ -537,16 +611,26 @@ def fee_arithmetic(
     that disagreement is a finding in its own right (POL-NS-08(d)), and a
     reader cannot see it if only one of them is published.
 
+    ``gross_fee`` is POL-NS-08(d)'s other accepted figure. Where it is given and
+    the charged line equals it, the difference is zero: the clause says the line
+    "may equal either the net or ... the gross amount", so a gross line is a
+    reconciled line and not a discrepancy. A gross line does not change either
+    payment -- POL-NS-07 computes on the net in force and never on the rider's
+    gross figure.
+
     Neither payment is put through the round-UP rule. ``fare_model.rounding``
     names POL-RD-02, POL-RD-09, POL-RD-04 and POL-RD-11, and neither of these
     two is any of those; both are written to two places instead.
     """
     schedule = _dec(schedule_fee_amount)
     charged = _dec(fee_charged)
+    difference = charged - schedule
+    if gross_fee is not None and charged == _dec(gross_fee):
+        difference = ZERO
     return {
         "schedule_fee": schedule,
         "fee_charged": charged,
-        "difference": charged - schedule,
+        "difference": difference,
         "driver_compensation": (_dec(driver_compensation_rate) * charged).quantize(
             PLACES, rounding=ROUND_HALF_UP
         ),
