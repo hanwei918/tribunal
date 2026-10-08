@@ -308,6 +308,15 @@ VOTE_CARRIED_NOT_UNANIMOUS = "carried_not_unanimous"
 VOTE_ESCALATED = "escalated"
 VOTE_NO_VALID_DRAFTS = "no_valid_drafts"
 
+# The version from which a panel with no valid draft **publishes an ESCALATE**
+# rather than failing the case. It is the reason code the vote already records
+# (``VOTE_NO_VALID_DRAFTS``) that says why, and the ruling is an escalation so
+# that ``ops.escalation`` builds a packet for it: a guard that held and left the
+# case with no ruling at all is a case a human has to decide, not a case that
+# produced nothing. At versions 1 and 2 it stays the failure it always was, so
+# the held-out cases 517 and 533 still fail at the judge in the offline replay.
+NO_VALID_DRAFTS_ESCALATION_VERSION = 3
+
 
 class PipelineError(Exception):
     """Base class for every failure the pipeline raises."""
@@ -1574,6 +1583,11 @@ REQUIRED_AMOUNTS: Dict[str, Tuple[str, ...]] = {
 # malformed reference be reported instead of silently not being seen.
 CLAUSE_MENTION_RE = re.compile(r"POL-[A-Za-z]{1,6}-\d+")
 
+# One abstention reason as the checks write it: the code, then its detail. The
+# same shape ``ops.escalation`` reads a draft's abstention with, so a reader of
+# the packet and a reader of the explanation are reading one format.
+ABSTENTION_CODE_RE = re.compile(r"^([A-Z][A-Z0-9_]*): (.*)$", re.S)
+
 
 def money_block(brief_object: Any) -> Optional[Mapping[str, Any]]:
     """The money block the brief publishes, or ``None`` when it publishes none.
@@ -2207,6 +2221,87 @@ def _checked_judge_message(
     return message
 
 
+def _abstention_codes(abstention: Any) -> List[Dict[str, Any]]:
+    """One draft's abstention, as its codes and any clause id one of them cites.
+
+    A draft's abstention is ``"; ".join(failures)`` and each failure is
+    ``"CODE: detail"``. The code is what the record names; for
+    :data:`DRAFT_CLAUSE_UNRESOLVED` the detail quotes the clause id that did not
+    resolve in the loaded policy, and that id is the whole of the finding -- a
+    reader told only the code cannot tell a typo from a clause that was never
+    written.
+    """
+    if not isinstance(abstention, str) or not abstention:
+        return [{"code": None, "cited": None}]
+    found: List[Dict[str, Any]] = []
+    for item in abstention.split("; "):
+        match = ABSTENTION_CODE_RE.match(item)
+        code = match.group(1) if match else item
+        cited = None
+        if code == DRAFT_CLAUSE_UNRESOLVED:
+            mention = CLAUSE_MENTION_RE.search(item)
+            cited = mention.group(0) if mention else None
+        found.append({"code": code, "cited": cited})
+    return found
+
+
+def _no_valid_drafts_escalation(
+    drafts: Sequence[JudgeDraft], referee_result: Any
+) -> Any:
+    """The ESCALATE a version-3 panel with no valid draft publishes.
+
+    Zero valid drafts is not a disagreement -- nothing was answered -- and at
+    versions 1 and 2 it is the judge failure this pipeline has always reported.
+    From version 3 it is published as an ESCALATE instead, because a panel whose
+    every draft was rejected by the code checks is a case a human has to decide:
+    case 1779's guard held (all four drafts cited ``POL-RD-99``, a clause the
+    policy does not carry, so no ruling rests on it) and the case still ended
+    with no ruling at all.
+
+    The explanation names every draft's abstention codes, and for a
+    :data:`DRAFT_CLAUSE_UNRESOLVED` abstention the cited id that did not resolve.
+    Both money fields are ``null``, ``referrals`` is empty and ``confidence`` is
+    0.0, for the same reason :func:`_vote_escalation` sets them: no ruling is
+    published for an amount, a referral or a confidence to attach to.
+    """
+    lines = [
+        "The judge was asked {0} times on the same inputs and not one draft "
+        "produced a ruling the code checks accept, so no ruling was carried and "
+        "the dispute is escalated to a human reviewer. Each draft abstained:".format(
+            len(drafts)
+        )
+    ]
+    for draft in drafts:
+        parts = []
+        for item in _abstention_codes(draft.abstention):
+            if item["code"] is None:
+                continue
+            if item["cited"] is not None:
+                parts.append("{0} (cited {1})".format(item["code"], item["cited"]))
+            else:
+                parts.append(str(item["code"]))
+        lines.append(
+            "- draft {0} ({1}): {2}".format(
+                draft.index, draft.kind, "; ".join(parts) or "no reason recorded"
+            )
+        )
+    lines.append(
+        "No draft voted, so there is no agreement figure and no majority to "
+        "carry. The reason code is {0}.".format(VOTE_NO_VALID_DRAFTS)
+    )
+    return {
+        "ruling": {
+            "ruling": ESCALATE,
+            "amount_sgd": None,
+            "driver_compensation_sgd": None,
+            "referrals": [],
+            "confidence": 0.0,
+            "explanation": "\n".join(lines),
+        },
+        "discarded_claims": list(referee_result.discards),
+    }
+
+
 def _vote_record(
     drafts: Sequence[JudgeDraft],
     votes: int,
@@ -2379,6 +2474,7 @@ def _reduce_vote(
     votes: int,
     referee_result: Any,
     brief_object: Any = None,
+    policy_version: int = policy_versions.BASE_VERSION,
 ) -> JudgeVote:
     """Reduce K drafts to one ruling, or to the reason there is none.
 
@@ -2389,9 +2485,14 @@ def _reduce_vote(
     panel that could not sit is not a decision.
 
     Zero valid drafts is not a disagreement and is not reported as one. Nothing
-    was answered, so there is nothing to disagree about, and the judge failed --
-    the event this pipeline has always reported as a failure. Publishing an
-    ESCALATE there would invent a ruling the judge never gave.
+    was answered, so there is nothing to disagree about. At versions 1 and 2 it
+    is the judge failure this pipeline has always reported. From version 3 it is
+    published as an ``ESCALATE`` instead, with the reason code
+    ``no_valid_drafts``: a panel every one of whose drafts was rejected is a case
+    a human has to decide, and the guard that kept the bad drafts out is not a
+    reason to hand the case back with no ruling at all. The gate is the version,
+    so a version-1 or version-2 run -- the offline replay's held-out cases 517
+    and 533 among them -- still fails exactly where it failed.
 
     ``brief_object`` is the loaded policy the panel was briefed against, and it
     is what the confidence floor is read from. When it is given, a carried
@@ -2406,15 +2507,23 @@ def _reduce_vote(
     threshold = votes // 2 + 1
 
     if not valid:
+        record = _vote_record(
+            drafts, votes, threshold, None, (), VOTE_NO_VALID_DRAFTS
+        )
+        if policy_version >= NO_VALID_DRAFTS_ESCALATION_VERSION:
+            published = _no_valid_drafts_escalation(drafts, referee_result)
+            return JudgeVote(
+                ruling=published,
+                findings=tuple(validate_ruling_shape(published)),
+                record=record,
+            )
         first = drafts[0].abstention or "no reason recorded"
         return JudgeVote(
             failure_reason=(
                 "all {0} judge drafts were unusable, so no ruling was produced; "
                 "the first said: {1}".format(votes, first)
             ),
-            record=_vote_record(
-                drafts, votes, threshold, None, (), VOTE_NO_VALID_DRAFTS
-            ),
+            record=record,
         )
 
     groups: Dict[Tuple[Any, ...], List[JudgeDraft]] = {}
@@ -2719,7 +2828,7 @@ def _run_judge_vote(
             brief_sha256=brief_sha256,
         )
 
-    vote = _reduce_vote(drafts, votes, referee_result, brief_object)
+    vote = _reduce_vote(drafts, votes, referee_result, brief_object, policy_version)
     if verification is not None:
         # The verdicts ride on the vote's own record, beside the drafts they
         # were charged to, so a reader of the transcript sees the two together.
@@ -3361,6 +3470,7 @@ def reduce_vote(
     votes: int,
     referee_result: Any,
     brief_object: Any = None,
+    policy_version: int = policy_versions.BASE_VERSION,
 ) -> JudgeVote:
     """The public name for the reduction, so a caller outside this module can
     reduce a set of drafts it rebuilt rather than one it just called for.
@@ -3370,8 +3480,14 @@ def reduce_vote(
     that does not name one gets the reduction without the post-vote floor guard;
     the per-draft gate inside :func:`check_judge_draft` is unaffected, because
     that one reads the floor out of the brief it is already handed.
+
+    ``policy_version`` is the version the drafts were briefed at, and it decides
+    one thing: whether a panel with no valid draft publishes an ``ESCALATE`` or
+    fails the case. It defaults to version 1, so a caller that re-reduces a
+    version-1 or version-2 run's drafts -- every committed run -- gets exactly
+    the reduction it got before the parameter existed.
     """
-    return _reduce_vote(drafts, votes, referee_result, brief_object)
+    return _reduce_vote(drafts, votes, referee_result, brief_object, policy_version)
 
 
 def recorded_judge_drafts(

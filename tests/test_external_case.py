@@ -37,6 +37,7 @@ import shutil
 import sys
 import tempfile
 import unittest
+from decimal import Decimal
 from pathlib import Path
 from unittest import mock
 
@@ -65,6 +66,18 @@ MAPPING_PATH = EXTERNAL_DIR / "ryde" / "mapping.json"
 V3_DIR = EXTERNAL_DIR / "ryde-v3"
 V3_CASE_PATH = V3_DIR / "case-00901.json"
 V3_MAPPING_PATH = V3_DIR / "mapping.json"
+
+# The archive's own copy of this case, kept byte for byte under
+# ``docs/roadmap/policy-v2/``. It is what the version-3 conversion produced
+# before the fare artifact's admissibility note was corrected, so comparing the
+# two names the one difference and its reason rather than leaving it to a reader
+# to find.
+HER_CASE901_PATH = (
+    PROJECT_ROOT / "docs" / "roadmap" / "policy-v2" / "case901" / "case-00901.json"
+)
+
+# The fare artifact whose admissibility note is the one difference.
+FARE_EVIDENCE_ID = "EV-FARE-00901"
 
 # The event types the source's app-event log records, in its own order.
 SOURCE_EVENT_TYPES = (
@@ -132,6 +145,39 @@ DROPPED_SOURCE_VALUES = (
     "payment_method",
     "e-wallet",
 )
+
+
+def differing_paths(left, right, path="root"):
+    """Every path at which two parsed documents differ, named, sorted.
+
+    ``root`` is a label for the pair rather than a key in either document. A
+    path is named in full -- ``root.evidence[3].admissibility.notes`` -- so a
+    failure says which field moved instead of only that something did.
+    """
+    if type(left) is not type(right):
+        return [path]
+    if isinstance(left, dict):
+        found = []
+        for key in sorted(set(left) | set(right)):
+            if key not in left or key not in right:
+                found.append("{0}.{1}".format(path, key))
+            else:
+                found.extend(
+                    differing_paths(
+                        left[key], right[key], "{0}.{1}".format(path, key)
+                    )
+                )
+        return found
+    if isinstance(left, list):
+        if len(left) != len(right):
+            return [path]
+        found = []
+        for index, (one, other) in enumerate(zip(left, right)):
+            found.extend(
+                differing_paths(one, other, "{0}[{1}]".format(path, index))
+            )
+        return found
+    return [] if left == right else [path]
 
 
 def _fingerprint(paths):
@@ -1298,6 +1344,59 @@ class VersionThreeConversionTests(unittest.TestCase):
         for key, value in version_one.items():
             with self.subTest(key=key):
                 self.assertEqual(value, self.payload[key])
+
+    # -- the one place the conversion differs from the archive's own copy ----
+    def fare_artifact(self, case):
+        return next(
+            artifact
+            for artifact in case["evidence"]
+            if artifact["evidence_id"] == FARE_EVIDENCE_ID
+        )
+
+    def test_the_version_three_case_equals_her_case901_copy_apart_from_the_fare_note(self):
+        """Her copy is this conversion before the fare note was corrected.
+
+        ``docs/roadmap/policy-v2/case901/case-00901.json`` is the archive's own
+        copy, kept byte for byte. The version-3 conversion was its equal until
+        the fare artifact's admissibility note was corrected, so **one** path
+        differs now and it is named here: the fare note. It moved because the
+        note the version-1 conversion wrote says the single 5.00 line "does not
+        reconcile with this system's fee_schedule" and engages POL-NS-08(d)
+        against 4.00, and at version 3 the fee in force is the record's own
+        ``platform_policy.cancellation_fee_sgd``, 5.00, so the ledger
+        reconciles. Nothing else in the case moved.
+        """
+        hers = json.loads(HER_CASE901_PATH.read_text(encoding="utf-8"))
+        index = next(
+            position
+            for position, artifact in enumerate(self.case["evidence"])
+            if artifact["evidence_id"] == FARE_EVIDENCE_ID
+        )
+        self.assertEqual(
+            ["root.evidence[{0}].admissibility.notes".format(index)],
+            differing_paths(hers, self.case),
+        )
+
+    def test_the_fare_note_says_the_fee_in_force_reconciles(self):
+        """The note states the version-3 reading, and the code set is unchanged."""
+        note = self.fare_artifact(self.case)["admissibility"]["notes"]
+        hers = self.fare_artifact(
+            json.loads(HER_CASE901_PATH.read_text(encoding="utf-8"))
+        )["admissibility"]["notes"]
+        self.assertIn("does not reconcile", hers)
+        self.assertIn("IS engaged", hers)
+        self.assertIn("NOT engaged", note)
+        self.assertIn("platform_policy", note)
+        self.assertNotIn("does not reconcile", note)
+
+    def test_the_ledger_is_still_a_partial_record_with_its_own_weight(self):
+        """Nothing else was itemised, so PARTIAL_RECORD stays and weighs 0.75."""
+        admissibility = self.fare_artifact(self.case)["admissibility"]
+        self.assertEqual(["PARTIAL_RECORD"], admissibility["issues"])
+        self.assertEqual(
+            Decimal("0.75"), Decimal(str(admissibility["weight_multiplier"]))
+        )
+        self.assertEqual("IMPAIRED", admissibility["status"])
 
     def test_the_version_three_case_briefs_and_uses_its_own_block(self):
         briefed = brief.build_brief_for_case(

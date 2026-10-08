@@ -230,6 +230,59 @@ def gantry_proximity(
     return records
 
 
+def bounding_box_approach(
+    points: Optional[Sequence[Dict[str, Any]]],
+    min_lat: float,
+    min_lng: float,
+    max_lat: float,
+    max_lng: float,
+) -> Dict[str, Any]:
+    """How a trace stands against an axis-aligned latitude/longitude box.
+
+    A traffic advisory's ``geometry`` is a bounding box -- ``min_lat``,
+    ``min_lng``, ``max_lat`` and ``max_lng`` -- and the optimal route's own
+    polyline is not in the record at all. So how the trace stands against that
+    box is the closest test of whether the trace entered the advisory's area
+    that the record allows, and it is the figure POL-RD-03(c)'s limb (c) is
+    weighed against.
+
+    Returns ``{"fix_count": n, "fixes_inside": k, "minimum_distance_m": d}``,
+    where ``d`` is the distance in metres from the nearest fix to the box --
+    ``0.0`` when a fix lies inside it, because the nearest point of the box is
+    the fix itself -- and ``None`` when the trace carries no fix with both
+    coordinates. Nothing here decides that the trace entered anything: the
+    figures are published and the clause is the judge's to apply.
+    """
+    trace = [fix for fix in points or [] if isinstance(fix, Mapping)]
+    inside = 0
+    nearest = None
+    for fix in trace:
+        lat, lng = fix.get("lat"), fix.get("lng")
+        if lat is None or lng is None:
+            continue
+        # The case files are read with ``parse_float=Decimal``, so a coordinate
+        # arrives as a ``Decimal``; the arithmetic here is float, the way
+        # :func:`haversine_m` and the rest of this module's geometry is.
+        lat, lng = float(lat), float(lng)
+        # The nearest point of an axis-aligned box is the point clamped into it,
+        # which is the fix itself when the fix is inside. One expression for
+        # both cases, so a fix on the boundary counts as inside and reads 0 m.
+        closest_lat = min(max(lat, min_lat), max_lat)
+        closest_lng = min(max(lng, min_lng), max_lng)
+        if closest_lat == lat and closest_lng == lng:
+            inside += 1
+            distance = 0.0
+        else:
+            distance = haversine_m(lat, lng, closest_lat, closest_lng)
+        if nearest is None or distance < nearest:
+            nearest = distance
+    return {
+        "fix_count": len(trace),
+        "fixes_inside": inside,
+        "minimum_distance_m": nearest,
+    }
+
+
 def _is_qualifying(fix: Dict[str, Any], lat: float, lng: float, radius_m: float, accuracy_max_m: float) -> bool:
     """True when a fix is inside the radius and carries usable accuracy.
 

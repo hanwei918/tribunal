@@ -592,7 +592,7 @@ def convert(
         ),
         _gps_trace(decisions, fixes, trip, trip_id, export_at, assessed_at),
         _chat_log(decisions, chats, trip_id, export_at, assessed_at),
-        _fare(decisions, trip, export_at, assessed_at),
+        _fare(decisions, trip, export_at, assessed_at, policy_version),
         _rider(decisions, rider_profile, trip_id, export_at, assessed_at),
         _driver(decisions, driver_profile, trip_id, export_at, assessed_at),
         _advisory(decisions, trip_id, export_at, assessed_at),
@@ -1464,9 +1464,20 @@ def _chat_log(
 
 
 def _fare(
-    decisions: Decisions, trip: Dict[str, Any], export_at: str, assessed_at: str
+    decisions: Decisions, trip: Dict[str, Any], export_at: str, assessed_at: str,
+    policy_version: int = DEFAULT_POLICY_VERSION,
 ) -> Dict[str, Any]:
-    """FARE_BREAKDOWN, carrying only the one line the source itemises."""
+    """FARE_BREAKDOWN, carrying only the one line the source itemises.
+
+    ``policy_version`` decides the admissibility note, and nothing else. The
+    ledger carries one 5.00 line either way and itemises nothing else either
+    way, so the code set is ``PARTIAL_RECORD`` at both versions and its weight
+    does not move. What moves is what the note says about the fee: at version 1
+    the 5.00 does not reconcile with ``fee_schedule`` and engages POL-NS-08(d)
+    against 4.00, and at version 3 the fee in force is the record's own
+    ``platform_policy.cancellation_fee_sgd``, 5.00, so the ledger reconciles and
+    POL-NS-08(d) is not engaged. The version-1 note is left exactly as it was.
+    """
     fee = float(trip["cancellation_fee"])
     payload = {
         "trip_id": decisions.copied(
@@ -1559,6 +1570,27 @@ def _fare(
         "in the corpus's vocabulary covers it and this conversion may not invent one; "
         "the engagement is stated here in prose instead."
     )
+    if policy_version >= PLATFORM_POLICY_VERSION:
+        # The version-3 reading, and the one place the two conversions of this
+        # artifact differ. The fee in force is the record's own platform_policy
+        # figure rather than the version-1 fee_schedule's, so the single line
+        # reconciles and POL-NS-08(d) is not engaged. The weight is read from the
+        # same pre-pass rule ``admissibility`` derives it from rather than typed
+        # here, so the note cannot state a figure the block beside it does not.
+        from tribunal import prepass  # noqa: PLC0415 - see admissibility()
+
+        weight = prepass.weight_for(["PARTIAL_RECORD"])
+        notes = (
+            "The ledger carries one line: the 5.00 cancellation fee. It itemises "
+            "nothing else, so this is still a PARTIAL_RECORD, at the weight this "
+            "conversion's own pre-pass rule gives that code ({0}). The 5.00 equals the "
+            "fee in force for this trip: fee_schedule.resolution_rule reads "
+            "trip_record.platform_policy.cancellation_fee_sgd first, and the record "
+            "states it as 5.00, so the single line reconciles with the fee and "
+            "POL-NS-08(d) is NOT engaged. No issue code is minted for the "
+            "reconciliation, because there is nothing to report: the one line and the "
+            "fee in force are the same figure.".format(weight)
+        )
     return _artifact(
         decisions, "EV-FARE-00901", "FARE_BREAKDOWN", "PAYMENTS_LEDGER",
         trip["trip_id"], export_at, payload, ["PARTIAL_RECORD"], notes, assessed_at,

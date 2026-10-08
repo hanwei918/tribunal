@@ -385,7 +385,7 @@
           "PARTIAL_RECORD"
         ],
         "weight_multiplier": 0.75,
-        "notes": "The ledger carries one line: the 5.00 cancellation fee. It itemises nothing else, which is a PARTIAL_RECORD, and the 5.00 does not reconcile with this system's fee_schedule, so POL-NS-08(d) IS engaged: the greater of the STANDARD zone fee (4.00) and the RYDE_X tier fee (4.00) is 4.00. Both figures depend on the stated zone-class and vehicle-tier assumptions recorded in the mapping record. No issue code is minted for the POL-NS-08(d) mismatch, because no code in the corpus's vocabulary covers it and this conversion may not invent one; the engagement is stated here in prose instead.",
+        "notes": "The ledger carries one line: the 5.00 cancellation fee. It itemises nothing else, so this is still a PARTIAL_RECORD, at the weight this conversion's own pre-pass rule gives that code (0.75). The 5.00 equals the fee in force for this trip: fee_schedule.resolution_rule reads trip_record.platform_policy.cancellation_fee_sgd first, and the record states it as 5.00, so the single line reconciles with the fee and POL-NS-08(d) is NOT engaged. No issue code is minted for the reconciliation, because there is nothing to report: the one line and the fee in force are the same figure.",
         "assessed_at": "2026-09-13T09:20:05+08:00",
         "assessor_version": "prepass-1.0.0"
       },

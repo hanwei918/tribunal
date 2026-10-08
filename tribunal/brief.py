@@ -26,6 +26,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import re
+from decimal import Decimal
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from . import facts, loader, money, policy_versions, prepass
@@ -107,6 +108,57 @@ LIMB_KEY = "limb"
 POL_NS_05 = "POL-NS-05"
 POL_NS_06 = "POL-NS-06"
 TRAFFIC_ADVISORY_EVIDENCE_TYPE = "TRAFFIC_ADVISORY"
+CHAT_LOG_EVIDENCE_TYPE = "CHAT_LOG"
+
+# POL-RD-04: whether the trace corroborates a rider-requested stop. The clause
+# says the trace "must corroborate" the instruction, and it says what that means
+# -- "the vehicle passes within 200 m of the requested waypoint". The judge was
+# left to work it out from raw fixes, and three calibration cases missed on it.
+# This block publishes the distance from the trace to each requested waypoint.
+#
+# The 200 is **read out of the clause's own sentence**, the way
+# :func:`pipeline.confidence_floor` reads the floor, and never typed here. A
+# clause whose sentence no longer parses is a refusal rather than a default, for
+# the same reason: a distance written in this file would be a policy number
+# hard-coded in ``tribunal/``, and a silent default would let every hint read as
+# corroborated.
+WAYPOINT_APPROACH_KEY = "waypoint_approach"
+WAYPOINT_CORROBORATION_RE = re.compile(
+    r"passes within\s+(\d+(?:\.\d+)?)\s*m\b"
+)
+NO_WAYPOINT_COORDINATES_REASON = (
+    "this waypoint_hint carries no coordinates, so how close the trace came to "
+    "the requested waypoint is not computable from the record"
+)
+NO_TRACE_FIXES_FOR_WAYPOINT_REASON = (
+    "the gps_trace carries no fixes, so how close it came to the requested "
+    "waypoint is not computable from the record"
+)
+
+# POL-RD-03(c): whether the deviation "is matched by an actual route that leaves
+# the optimal corridor before the affected segment and rejoins it after". The
+# record carries no optimal-route polyline -- only the advisory's bounding box --
+# so this block publishes how the trace stands against that box and says, in its
+# own words, that the judge weighs it and that it decides nothing.
+ADVISORY_AREA_KEY = "advisory_area"
+BOUNDING_BOX_FIELDS = ("min_lat", "min_lng", "max_lat", "max_lng")
+NO_BOX_GEOMETRY_REASON = (
+    "this advisory's geometry is not a bounding box, so the number of fixes "
+    "inside its area and the distance from the trace to it are not computable "
+    "from the record"
+)
+ADVISORY_AREA_BASIS = (
+    "The optimal route's own polyline is not in the record, so whether the "
+    "trace enters the advisory's area is the closest test of POL-RD-03(c)'s "
+    "limb (c) that the record allows. It is a fact for the judge to weigh "
+    "against the limb, and it decides nothing by itself."
+)
+
+# The version at which these two readings are published. Both clauses live in
+# ``route_deviation.json``, so the blocks are emitted for a route-deviation
+# brief only, the same way the deviation block is -- a no-show brief carries
+# neither, and versions 1 and 2 carry neither.
+TRACE_CLAUSE_BLOCKS_VERSION = 3
 
 # The two dwell figures a shortfall can be measured against, named by the field
 # each one is. Which of them is lawful is decided by limb (i) and is not the
@@ -271,6 +323,64 @@ def _no_show_thresholds(policy: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         "leash_m": float(leash[0]),
         "admissible_types": types,
         "motion_speed_kph": float(motion[0]),
+    }
+
+
+def _waypoint_threshold(clause: Any) -> float:
+    """POL-RD-04's corroboration distance, read from the clause's own sentence.
+
+    The clause states what "the gps_trace must corroborate it" means: "the
+    vehicle passes within 200 m of the requested waypoint". The figure is read
+    out of the loaded clause text rather than typed here, the route
+    :func:`_deviation_thresholds` already takes for POL-RD-01 and for the same
+    reason: a value that came from a clause belongs in the loaded policy.
+
+    A clause that is absent, carries no rule text, or no longer states the
+    distance is a **refusal** rather than a default. A threshold that fell back
+    to a number written in this file would be the silent override the policy's
+    own notes describe, and one that silently became ``0`` would let every
+    requested waypoint read as reached.
+    """
+    rule = clause.get("rule") if isinstance(clause, dict) else None
+    if not isinstance(rule, str):
+        raise loader.LoaderError(
+            "{0} carries no rule text, so the waypoint corroboration distance "
+            "cannot be read from it".format(POL_RD_04)
+        )
+    found = WAYPOINT_CORROBORATION_RE.findall(rule)
+    if len(found) != 1:
+        raise loader.LoaderError(
+            "{0} states no waypoint corroboration distance this code can read, "
+            "so its text has moved and the distance can no longer be taken from "
+            "it: found {1} such lines".format(POL_RD_04, len(found))
+        )
+    return float(found[0])
+
+
+def _trace_clause_blocks(policy: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """What the version-3 trace blocks need from the loaded policy.
+
+    Two readings, both of them route-deviation clauses:
+
+    * ``waypoint_threshold_m`` -- POL-RD-04's corroboration distance, read by
+      :func:`_waypoint_threshold`;
+    * ``advisory_area`` -- whether the policy carries POL-RD-03, the closure
+      clause the second block serves.
+
+    Returns ``None`` for a policy that carries neither clause, which is how a
+    NO_SHOW_CHARGE case is recognised -- exactly as :func:`_deviation_thresholds`
+    returns ``None`` for it -- so a no-show brief carries neither block.
+    """
+    clauses = {
+        clause.get("id"): clause
+        for clause in policy.get("clauses", []) or []
+        if isinstance(clause, dict)
+    }
+    if POL_RD_03 not in clauses and POL_RD_04 not in clauses:
+        return None
+    return {
+        "waypoint_threshold_m": _waypoint_threshold(clauses.get(POL_RD_04)),
+        "advisory_area": POL_RD_03 in clauses,
     }
 
 
@@ -735,6 +845,191 @@ def _gantry_proximity_block(
             _gantry_proximity_line(record, gps_evidence_id, fare_evidence_id)
             for record in records
         ],
+    }
+
+
+def _waypoint_hints(chat_logs: Any) -> List[Dict[str, Any]]:
+    """Every chat message that carries a ``waypoint_hint``, with its source.
+
+    One record per message, in the order the logs and their messages are given,
+    so the block reads in the case's own order. The hint travels as the case
+    wrote it -- the platform resolves the coordinate from the message text at
+    ingest, and POL-RD-04 forbids geocoding the place name from general
+    knowledge -- so nothing here reads the message text at all.
+    """
+    found: List[Dict[str, Any]] = []
+    for log in chat_logs or []:
+        if not isinstance(log, dict):
+            continue
+        payload = log.get("payload")
+        if not isinstance(payload, dict):
+            continue
+        for message in payload.get("messages") or []:
+            if not isinstance(message, dict):
+                continue
+            hint = message.get("waypoint_hint")
+            if not isinstance(hint, dict):
+                continue
+            found.append(
+                {
+                    "evidence_id": log.get("evidence_id") or "",
+                    "message_id": message.get("msg_id"),
+                    "sent_at": message.get("sent_at"),
+                    "sender": message.get("sender"),
+                    "hint": hint,
+                }
+            )
+    return found
+
+
+def _waypoint_approach_block(
+    gps_payload: Dict[str, Any],
+    gps_evidence_id: str,
+    chat_logs: Any,
+    threshold_m: float,
+    policy_id: str,
+) -> Dict[str, Any]:
+    """POL-RD-04: how close the trace came to each rider-requested waypoint.
+
+    The clause requires the trace to corroborate a rider instruction -- "the
+    vehicle passes within 200 m of the requested waypoint" -- and the distance
+    is arithmetic on coordinates the model cannot do. The block states the
+    figure and whether it is within the clause's own threshold; whether that
+    corroborates the instruction is the clause's question and the judge's.
+
+    Every value carries the artifact it was read from: the message's own fields
+    from the chat log and the distance from the trace, so an advocate quoting
+    either can cite it.
+    """
+    trace = facts.driver_points(gps_payload)
+    entries: List[Dict[str, Any]] = []
+    for record in _waypoint_hints(chat_logs):
+        hint = record["hint"]
+        chat_id = record["evidence_id"]
+        entry: Dict[str, Any] = {
+            "evidence_id": chat_id,
+            "message_id": record["message_id"],
+            "sent_at": _sourced(record["sent_at"], chat_id),
+            "sender": _sourced(record["sender"], chat_id),
+            "label": _sourced(hint.get("label"), chat_id),
+            "coordinates": _sourced(
+                {"lat": hint.get("lat"), "lng": hint.get("lng")}, chat_id
+            ),
+        }
+        if hint.get("lat") is None or hint.get("lng") is None:
+            entry["available"] = False
+            entry["reason"] = NO_WAYPOINT_COORDINATES_REASON
+            entries.append(entry)
+            continue
+
+        distances = facts.distances_to_point(trace, hint["lat"], hint["lng"])
+        if not distances:
+            entry["available"] = False
+            entry["reason"] = NO_TRACE_FIXES_FOR_WAYPOINT_REASON
+            entries.append(entry)
+            continue
+
+        nearest = min(range(len(distances)), key=distances.__getitem__)
+        entry["available"] = True
+        entry["nearest_fix"] = {
+            "index": _sourced(nearest, gps_evidence_id),
+            "ts": _sourced(trace[nearest].get("ts"), gps_evidence_id),
+            "distance_m": _sourced(distances[nearest], gps_evidence_id),
+        }
+        entry["within_threshold"] = _sourced(
+            distances[nearest] <= threshold_m, gps_evidence_id
+        )
+        entries.append(entry)
+
+    return {
+        "policy_id": policy_id,
+        "clause_id": POL_RD_04,
+        "threshold_m": _clause_threshold(threshold_m, policy_id, POL_RD_04),
+        "messages": entries,
+    }
+
+
+def _is_bounding_box(geometry: Any) -> bool:
+    """Whether a geometry carries the four numbers a bounding box is.
+
+    The case files are read with ``parse_float=Decimal``, so a coordinate in a
+    loaded case is a ``Decimal`` and not a ``float``; both are accepted, and a
+    ``bool`` -- which is an ``int`` in Python -- is not a coordinate.
+    """
+    if not isinstance(geometry, dict):
+        return False
+    for field in BOUNDING_BOX_FIELDS:
+        value = geometry.get(field)
+        if isinstance(value, bool) or not isinstance(value, (int, float, Decimal)):
+            return False
+    return True
+
+
+def _advisory_area_block(
+    gps_payload: Dict[str, Any],
+    gps_evidence_id: str,
+    advisories: Any,
+    policy_id: str,
+) -> Dict[str, Any]:
+    """POL-RD-03(c): how the trace stands against each advisory's own box.
+
+    The clause asks whether the deviation "is matched by an actual route that
+    leaves the optimal corridor before the affected segment and rejoins it
+    after". The record has no optimal-route polyline, only distances, and the
+    advisory's ``geometry`` is a bounding box, so whether the trace enters that
+    box is the closest test of the limb the record allows. The block publishes
+    the count of fixes inside, the distance to the box and that fact, beside a
+    ``basis`` sentence saying what it is for and that it decides nothing.
+
+    One entry per advisory that ``intersects_route``. An advisory whose geometry
+    is not a box gets ``computed: false`` and the reason rather than being
+    dropped, so "the geometry could not be measured" is distinguishable from
+    "there was no advisory".
+    """
+    trace = facts.driver_points(gps_payload)
+    entries: List[Dict[str, Any]] = []
+    for advisory in advisories or []:
+        if not isinstance(advisory, dict):
+            continue
+        payload = advisory.get("payload")
+        if not isinstance(payload, dict) or payload.get("intersects_route") is not True:
+            continue
+        geometry = payload.get("geometry")
+        if not isinstance(geometry, dict):
+            continue
+
+        evidence_id = advisory.get("evidence_id") or ""
+        entry: Dict[str, Any] = {
+            "evidence_id": evidence_id,
+            "basis": ADVISORY_AREA_BASIS,
+        }
+        if not _is_bounding_box(geometry):
+            entry["computed"] = False
+            entry["reason"] = NO_BOX_GEOMETRY_REASON
+            entries.append(entry)
+            continue
+
+        approach = facts.bounding_box_approach(
+            trace,
+            float(geometry["min_lat"]),
+            float(geometry["min_lng"]),
+            float(geometry["max_lat"]),
+            float(geometry["max_lng"]),
+        )
+        entry["computed"] = True
+        entry["fixes_inside"] = _sourced(approach["fixes_inside"], gps_evidence_id)
+        entry["minimum_distance_m"] = _sourced(
+            approach["minimum_distance_m"], gps_evidence_id
+        )
+        entry["trace_enters_area"] = _sourced(
+            approach["fixes_inside"] > 0, gps_evidence_id
+        )
+        entries.append(entry)
+
+    return {
+        "policy_id": policy_id,
+        "clause_id": POL_RD_03,
+        "advisories": entries,
     }
 
 
@@ -1749,8 +2044,18 @@ def _transform_gps_payload(
     gantry_lines: Any = None,
     fare_evidence_id: Optional[str] = None,
     platform_policy: Optional[Dict[str, Any]] = None,
+    *,
+    chat_logs: Any = None,
+    clause_blocks: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """Replace one GPS payload's raw point arrays with derived facts."""
+    """Replace one GPS payload's raw point arrays with derived facts.
+
+    ``clause_blocks`` carries what the two version-3 trace blocks need from the
+    loaded policy -- POL-RD-04's corroboration distance and whether POL-RD-03 is
+    present. It is keyword-only and defaults to ``None``, so every caller that
+    does not pass it gets the derived facts it always got, byte for byte, and a
+    no-show brief (whose policy carries neither clause) gets no block at all.
+    """
     payload = artifact.get("payload")
     if not isinstance(payload, dict):
         # A MISSING artifact keeps its evidence_id and admissibility; there is
@@ -1788,6 +2093,22 @@ def _transform_gps_payload(
         derived[ERP_GANTRY_PROXIMITY_KEY] = _gantry_proximity_block(
             payload, evidence_id, gantry_lines, fare_evidence_id or "", policy_id
         )
+    if clause_blocks is not None:
+        # The two route-deviation readings, published only from version 3 on.
+        # ``clause_blocks`` is ``None`` for a no-show policy, so neither block
+        # can appear on a brief whose policy does not carry the clause it serves.
+        if clause_blocks.get("waypoint_threshold_m") is not None:
+            derived[WAYPOINT_APPROACH_KEY] = _waypoint_approach_block(
+                payload,
+                evidence_id,
+                chat_logs,
+                clause_blocks["waypoint_threshold_m"],
+                policy_id,
+            )
+        if clause_blocks.get("advisory_area"):
+            derived[ADVISORY_AREA_KEY] = _advisory_area_block(
+                payload, evidence_id, advisories, policy_id
+            )
     transformed[DERIVED_KEY] = derived
 
     new_artifact = dict(artifact)
@@ -2259,7 +2580,7 @@ def build_brief_for_case(
     :func:`build_brief`, whose signature is pinned by a test: that entry point
     briefs the corpus, and the corpus is measured at version 1.
 
-    Four things happen only from version 3 on, and each is gated on the version
+    Five things happen only from version 3 on, and each is gated on the version
     so that versions 1 and 2 keep their bytes exactly:
 
     * every provenance key is removed from the injected policies
@@ -2276,7 +2597,11 @@ def build_brief_for_case(
       ``integrity`` weight table, with the single ``GPS_GAP`` tag graded into
       POL-NS-08(b)'s three variants -- **for a no-show case only**, because
       POL-NS-08(b) is a no-show limb about the waiting window and the table lives
-      in ``no_show.json``.
+      in ``no_show.json``;
+    * a route-deviation trace gains two readings of its own geometry -- how close
+      it came to each rider-requested waypoint (POL-RD-04) and how it stands
+      against each advisory's bounding box (POL-RD-03(c)). Both clauses live in
+      ``route_deviation.json``, so a no-show brief carries neither.
     """
     if ablate is not None and not ablation_known(ablate):
         raise AblationError(
@@ -2304,6 +2629,26 @@ def build_brief_for_case(
     # gets no deviation block at all.
     deviation_thresholds = (
         _deviation_thresholds(category_policy) if category == ROUTE_DEVIATION_CATEGORY else None
+    )
+
+    # The two version-3 trace readings, and what the policy states for them.
+    # ``clause_blocks`` is ``None`` for a no-show policy -- it carries neither
+    # POL-RD-03 nor POL-RD-04 -- so no block can appear on a brief whose policy
+    # does not carry the clause it serves, and the chat log is only read where
+    # the waypoint block will use it.
+    clause_blocks = (
+        _trace_clause_blocks(category_policy)
+        if policy_version >= TRACE_CLAUSE_BLOCKS_VERSION
+        else None
+    )
+    chat_logs = (
+        [
+            {"evidence_id": artifact["evidence_id"], "payload": artifact.get("payload")}
+            for artifact in case["evidence"]
+            if artifact["evidence_type"] == CHAT_LOG_EVIDENCE_TYPE
+        ]
+        if clause_blocks is not None
+        else None
     )
 
     # POL-NS-06(i) is the mirror image: a NO_SHOW_CHARGE fact, and the
@@ -2338,7 +2683,6 @@ def build_brief_for_case(
     # breakdown's lines travel into the GPS trace's derived facts. A case whose
     # fare breakdown carries no gantry line gets no block at all, which is what
     # keeps every other brief byte-identical.
-    #
     # The whole fare payload is kept as well, because the money block is
     # computed on it and published beside it.
     gantry_lines = None
@@ -2387,6 +2731,8 @@ def build_brief_for_case(
             gantry_lines,
             fare_evidence_id,
             in_force,
+            chat_logs=chat_logs,
+            clause_blocks=clause_blocks,
         )
         if artifact["evidence_type"] == GPS_EVIDENCE_TYPE
         else artifact

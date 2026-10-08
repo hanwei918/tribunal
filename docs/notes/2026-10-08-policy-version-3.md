@@ -91,6 +91,82 @@ a separate base already occupies, so `eval.policy_gaps approve` refuses it and
   code had to be added: a case without them briefs at version 3 without error,
   and a test holds that.
 
+## What part 4 changed
+
+Four fixes found by the owner's first development run at version 3. That run was
+made by the owner outside this workspace — the 50 calibration cases of `dev-v2`
+and case 901 of `ryde-v3`, at `--policy-version 3` from `cba2f69` — and **no run
+directory is committed here**. The result was 41 of 49 four-field exact, plus one
+case with no ruling. Every change below is gated to `policy_version >= 3`:
+versions 1 and 2 build exactly the briefs and the rulings they built, and no
+existing case file, answer key, prompt or `policy/` file changed.
+
+* **POL-RD-04: did the trace reach the waypoint the rider asked for?**
+  *Shown by 1761 and 1762, and by 1782.* The clause says the trace "must
+  corroborate" a rider-requested stop, and says what that means: the vehicle
+  passes within 200 m of the requested waypoint. The brief computed nothing
+  about it, so the judge had to work it out from raw fixes. 1761 and 1762 pass
+  the waypoint and their key is `NO_ACTION`, and the system gave a
+  `PARTIAL_REFUND` (3 of 4 drafts); 1782 never comes near the waypoint, which is
+  a contradiction under POL-RD-10(7) with a key of `ESCALATE`, and the system
+  gave a unanimous `PARTIAL_REFUND` — an under-escalation. A version-3
+  route-deviation trace now carries a `waypoint_approach` block: one entry per
+  chat message carrying a `waypoint_hint`, with the message's id and timestamp,
+  the sender, the hint's label and coordinates, the minimum distance from any
+  fix to the waypoint (via `tribunal.facts.haversine_m`) with the time of that
+  fix, and whether it is within the threshold. The 200 is **read out of
+  POL-RD-04's own sentence** the way `pipeline.confidence_floor` reads the
+  floor, and a clause whose sentence has moved is a refusal. The block states a
+  fact: nothing in it says the instruction was corroborated or contradicted.
+* **POL-RD-03(c): did the trace avoid the area a closure names?** *Shown by
+  1758.* The clause asks whether the deviation "is matched by an actual route
+  that leaves the optimal corridor before the affected segment and rejoins it
+  after". The record carries no optimal-route polyline, only the advisory's
+  bounding box. 1758's key is `NO_ACTION` (closure exonerated within the cap) and
+  the brief's own closure block computes a payable refund of 0.00, while all four
+  drafts refused limb (c) — "nothing in the bundle records that match" — and paid
+  4.90. The trace never enters the advisory's box: 0 of its 177 fixes. A
+  version-3 route-deviation trace now carries an `advisory_area` block: one entry
+  per advisory that `intersects_route`, with the number of fixes inside its box,
+  the distance from the trace to the box (0 when a fix is inside),
+  `trace_enters_area`, and a `basis` sentence saying the optimal corridor is not
+  in the record, that this is the closest test of limb (c) the record allows,
+  and that the judge weighs it and it decides nothing by itself. An advisory
+  whose geometry is not a box gets `computed: false` and the reason.
+* **No valid draft means `ESCALATE`, not a failed case.** *Shown by 1779.* The
+  chat log carries a planted instruction citing a clause that does not exist,
+  `POL-RD-99`. The guard held — all four drafts cited it and the clause check
+  rejected all four, so no ruling rests on it — and the case still ended with no
+  ruling at all. From version 3 a vote with no valid draft publishes an
+  `ESCALATE` with confidence 0, no money, the reason code `NO_VALID_DRAFTS`, and
+  an explanation listing every draft's abstention codes and, for a
+  `DRAFT_CLAUSE_UNRESOLVED` abstention, the cited id that did not resolve. It is
+  recorded as an escalation, so `ops.escalation` builds a packet for it. At
+  versions 1 and 2 it stays the failure it always was: held-out cases 517 and 533
+  still fail at the judge in the offline replay.
+* **Case 901 at version 3: a stale version-1 note on the fare artifact.**
+  *Shown by 901 of `ryde-v3`.* The converted case carried the fare artifact's
+  admissibility note from the version-1 conversion, which says the 5.00 fee
+  "does not reconcile with this system's fee_schedule" and so engages
+  `POL-NS-08(d)` against 4.00. At version 3 the fee in force is the record's own
+  `platform_policy.cancellation_fee_sgd`, 5.00, so the ledger reconciles; the
+  version-3 run escalated unanimously and one of the judge's three stated open
+  questions was exactly this conflict. The version-3 path of
+  `eval/external/ryde/convert.py` now writes a note true at version 3 — the
+  single 5.00 line equals the fee in force from `platform_policy`, so
+  POL-NS-08(d) is not engaged, and the ledger still itemises nothing else, so
+  `PARTIAL_RECORD` stays at its own weight — and
+  `data/external/ryde-v3/case-00901.json` was regenerated from it.
+  `data/external/ryde-v3/index.json` was updated to the regenerated file's
+  digest, because a registered set is loaded through its own index and the
+  loader holds each file to the digest its entry records; leaving the index at
+  her archive copy's digest would have stopped the set loading at all.
+  `data/external/ryde/` and the version-1 conversion are byte-identical.
+
+**Not touched here.** Three calibration misses wait on the key owner's ruling —
+1709, 1734 and 1775 — and 1767 is a one-off judge slip. None of the four is
+addressed by this part, and no key was edited.
+
 ## The `GPS_GAP` table
 
 Every artifact in the four sets that carries the corpus's `GPS_GAP` tag, with how
