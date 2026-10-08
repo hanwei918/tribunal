@@ -2129,20 +2129,29 @@ def _recomputed_admissibility(
     trip_payload: Any,
     weights: Dict[str, Any],
     threshold: Optional[int],
+    category: Optional[str],
 ) -> Optional[Dict[str, Any]]:
     """One artifact's ``admissibility`` as policy version 3 reads it, or ``None``.
 
-    The declared issues are kept, except that the single ``GPS_GAP`` tag is
-    replaced by the variant POL-NS-08(b) grades it into; the weight is recomputed
-    from the loaded policy's table; and the block records the version it was
-    recomputed at. An artifact with no admissibility object gets none.
+    The declared issues are kept, except that for a **no-show** case the single
+    ``GPS_GAP`` tag is replaced by the variant POL-NS-08(b) grades it into; the
+    weight is recomputed from the loaded policy's table; and the block records
+    the version it was recomputed at. An artifact with no admissibility object
+    gets none.
+
+    The grading is scoped to ``NO_SHOW_CHARGE`` because POL-NS-08(b) is a no-show
+    limb about the waiting window and the ``integrity`` block lives in
+    ``no_show.json``: no route-deviation clause asks for a gap to be graded by
+    that window. A route-deviation case therefore keeps the ungraded tag, and
+    :func:`_weight_of` reads its weight from the policy's long-inside-window
+    entry.
     """
     declared = artifact.get(ADMISSIBILITY_KEY)
     if not isinstance(declared, dict):
         return None
     issues = [code for code in (declared.get(ISSUES_KEY) or []) if isinstance(code, str)]
     variant = None
-    if prepass.GPS_GAP_CODE in issues:
+    if prepass.GPS_GAP_CODE in issues and category == NO_SHOW_CHARGE_CATEGORY:
         variant = _gps_gap_variant_of(artifact, trip_payload, threshold)
         issues = [
             variant if code == prepass.GPS_GAP_CODE else code for code in issues
@@ -2159,9 +2168,32 @@ def _recomputed_admissibility(
             else detail
             for detail in (declared.get(ISSUE_DETAILS_KEY) or [])
         ]
-    recomputed[WEIGHT_MULTIPLIER_KEY] = prepass.weight_for(issues, weights=weights)
+    recomputed[WEIGHT_MULTIPLIER_KEY] = _weight_of(issues, weights, category)
     recomputed[RECOMPUTED_AT_KEY] = PLATFORM_POLICY_IN_FORCE_VERSION
     return recomputed
+
+
+def _weight_of(
+    issues: List[str], weights: Dict[str, Any], category: Optional[str]
+) -> float:
+    """The policy's weight for these tags, at policy version 3.
+
+    The loaded policy's table has no ungraded ``GPS_GAP`` key: it holds the three
+    variants POL-NS-08(b) grades a gap into, and the grading is done for a no-show
+    case only. A route-deviation case keeps the ungraded tag -- POL-NS-08(b) is a
+    no-show limb and no route-deviation clause asks for it -- and its weight is
+    read from the table's ``GPS_GAP_LONG_INSIDE_WINDOW`` entry, which carries
+    version 1's 0.6 for the ungraded tag. The figure is read, never typed.
+    """
+    codes = issues
+    if category != NO_SHOW_CHARGE_CATEGORY and prepass.GPS_GAP_CODE in issues:
+        codes = [
+            prepass.GPS_GAP_LONG_INSIDE_WINDOW
+            if code == prepass.GPS_GAP_CODE
+            else code
+            for code in issues
+        ]
+    return prepass.weight_for(codes, weights=weights)
 
 
 def _with_recomputed_admissibility(
@@ -2242,7 +2274,9 @@ def build_brief_for_case(
       no-show fee and the waiting-time fee;
     * each artifact's ``admissibility`` is recomputed from the loaded policy's
       ``integrity`` weight table, with the single ``GPS_GAP`` tag graded into
-      POL-NS-08(b)'s three variants.
+      POL-NS-08(b)'s three variants -- **for a no-show case only**, because
+      POL-NS-08(b) is a no-show limb about the waiting window and the table lives
+      in ``no_show.json``.
     """
     if ablate is not None and not ablation_known(ablate):
         raise AblationError(
@@ -2296,7 +2330,7 @@ def build_brief_for_case(
         for artifact in case["evidence"]:
             recomputed_admissibility[artifact["evidence_id"]] = (
                 _recomputed_admissibility(
-                    artifact, trip_payload, weights, gap_threshold
+                    artifact, trip_payload, weights, gap_threshold, category
                 )
             )
 

@@ -223,7 +223,15 @@ class WildV2RegistryTests(unittest.TestCase):
             "a development set is marked sealed",
         )
         self.assertEqual(
-            {item.name for item in sets.DEVELOPMENT_SETS + sets.SEALED_SETS + sets.RERUN_SETS},
+            {
+                item.name
+                for item in (
+                    sets.DEVELOPMENT_SETS
+                    + sets.SEALED_SETS
+                    + sets.RERUN_SETS
+                    + sets.NAMED_SETS
+                )
+            },
             set(sets.BY_NAME),
             "the name table is not exactly the registered sets",
         )

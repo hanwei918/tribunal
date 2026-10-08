@@ -93,39 +93,48 @@ a separate base already occupies, so `eval.policy_gaps approve` refuses it and
 
 ## The `GPS_GAP` table
 
-Every artifact in the four sets that carries the corpus's `GPS_GAP` tag, with the
-variant POL-NS-08(b) grades it into, the gap the grading turned on, where that
-gap sits, and the artifact's weight before and after. The **waiting window** is
-the one POL-NS-01(c) measures dwell over — from the trip's arrival marker to its
-cancellation — so a trip that was never cancelled has no window and no gap can be
-inside it. A gap counts as inside when it overlaps that interval; it *straddles
-the cancellation* when it contains the cancellation itself. A gap is "long" when
-its duration is strictly greater than `integrity.gps_gap_policy_threshold_sec`
-(120 s).
+Every artifact in the four sets that carries the corpus's `GPS_GAP` tag, with how
+policy version 3 reads it, the gap that reading turned on, where that gap sits,
+and the artifact's weight before and after.
 
-| set | case | evidence id | variant | gap | position | old weight | new weight |
+**The grading is done for a no-show case only.** POL-NS-08(b) is a no-show limb
+about the waiting window, and the `integrity` block lives in `no_show.json`; no
+route-deviation clause asks for a gap to be graded by that window. So a
+route-deviation case keeps the **ungraded** `GPS_GAP` tag and version 1's weight
+for it, 0.6. The policy's table has no ungraded `GPS_GAP` key, so that weight is
+read from its `GPS_GAP_LONG_INSIDE_WINDOW` entry, which carries the same 0.6 —
+read out of the loaded policy, never typed into code.
+
+The **waiting window** is the one POL-NS-01(c) measures dwell over — from the
+trip's arrival marker to its cancellation — so a trip that was never cancelled
+has no window and no gap can be inside it. A gap counts as inside when it
+overlaps that interval; it *straddles the cancellation* when it contains the
+cancellation itself. A gap is "long" when its duration is strictly greater than
+`integrity.gps_gap_policy_threshold_sec` (120 s). All of this is used for a
+no-show case only, so no route-deviation gap is graded at all.
+
+| set | case | evidence id | how version 3 reads it | gap | position | old weight | new weight |
 |---|---|---|---|---|---|---|---|
-| corpus | 110 | `EV-GPS-00110` | `GPS_GAP_SHORT_OR_OUTSIDE_WINDOW` | 428.0 s | 18:35:00 → 18:42:08 | 0.39 | 0.55 |
+| corpus | 110 | `EV-GPS-00110` | ungraded `GPS_GAP` | 428.0 s | 18:35:00 → 18:42:08 | 0.39 | 0.39 |
 | corpus | 210 | `EV-GPS-00210` | `GPS_GAP_LONG_INSIDE_WINDOW` | 186.0 s | 23:39:15 → 23:42:21 | 0.25 | 0.25 |
 | corpus | 211 | `EV-GPS-00211` | `GPS_GAP_LONG_INSIDE_WINDOW` | 168.0 s | 12:33:40 → 12:36:28 | 0.39 | 0.39 |
-| codex | 9115 | `EV-GPS-09115` | `GPS_GAP_SHORT_OR_OUTSIDE_WINDOW` | 160.0 s | 20:03:10 → 20:05:50 | 0.60 | 0.85 |
-| wild | 512 | `EV-GPS-00512` | `GPS_GAP_SHORT_OR_OUTSIDE_WINDOW` | 860.0 s | 19:23:30 → 19:37:50 | 0.39 | 0.55 |
-| wild | 517 | `EV-GPS-00517` | `GPS_GAP_SHORT_OR_OUTSIDE_WINDOW` | 620.0 s | 22:26:30 → 22:36:50 | 0.39 | 0.55 |
+| codex | 9115 | `EV-GPS-09115` | ungraded `GPS_GAP` | 160.0 s | 20:03:10 → 20:05:50 | 0.60 | 0.60 |
+| wild | 512 | `EV-GPS-00512` | ungraded `GPS_GAP` | 860.0 s | 19:23:30 → 19:37:50 | 0.39 | 0.39 |
+| wild | 517 | `EV-GPS-00517` | ungraded `GPS_GAP` | 620.0 s | 22:26:30 → 22:36:50 | 0.39 | 0.39 |
 
-Two windows, and only two: case 210's is 23:42:10 → 23:49:05 (its 186 s gap
-overlaps it, and starts before it), and case 211's is 12:29:55 → 12:38:20 (its
-168 s gap falls inside it). Cases 110, 9115, 512 and 517 are completed
-route-deviation trips with no cancellation, so they have no waiting window at
-all: POL-NS-08(b) is a no-show limb and does not reach them, which is why their
-gap tag grades at 0.85. Their traces are still impaired for policy purposes —
-under POL-RD-07, whose limb is "within the disputed segment" — and the judge
-reads that clause directly.
+The two graded rows are the two no-show artifacts, and their weights do not move:
+both gaps are longer than 120 s and both windows exist, so both grade
+`GPS_GAP_LONG_INSIDE_WINDOW` at 0.6 — the same figure the version-1 table gives
+the ungraded tag. The four route-deviation artifacts are ungraded and keep 0.6.
+**No weight in this table changes between version 1 and version 3.**
 
-The four weights that move all move **up**, and none of them moves above the
-0.70 confidence floor on the gap tag alone except 9115, whose single-code weight
-becomes 0.85. That is the effect her notes describe: a schema-level `GPS_GAP`
-tag must not, on its own, cap confidence below the floor, or the half of
-POL-NS-08(b) that permits a ruling on a short gap can never operate.
+That is the correction part 3 made to part 2. Part 2 graded every `GPS_GAP`,
+which meant a route-deviation gap — a gap in a trip with no waiting window —
+fell into `GPS_GAP_SHORT_OR_OUTSIDE_WINDOW` and its weight rose (110 and 512 and
+517 to 0.55, 9115 to 0.85). That reading applied a no-show limb to a
+route-deviation case. A route-deviation trace is still impaired for policy
+purposes — under POL-RD-07, whose limb is "within the disputed segment" — and the
+judge reads that clause directly, as it always did.
 
 ## What has not been measured
 

@@ -16,6 +16,8 @@ one-case set registered at version 2, over the same scripted transport.
 
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import shutil
 import sys
@@ -1016,6 +1018,153 @@ class PolicyVersionTests(unittest.TestCase):
             self.assertIn("**Escalation rate (on these 1 cases)**", written)
             self.assertIn("not comparable to the corpus base rate", written)
             self.assertIn("| True positives (key and run both ESCALATE) |", written)
+
+
+# --------------------------------------------------------------------------
+# The version-3 sets, installed 2026-10-08
+# --------------------------------------------------------------------------
+# One case of each: a no-show from dev-v2, a route-deviation variant from
+# dev-v2-ext, and the organisers' sample.
+VERSION_THREE_CASES = (("dev-v2", 1701), ("dev-v2-ext", 2701), ("ryde-v3", 901))
+
+# What the scripted judge answers with for the one set that has no key. It is a
+# well-formed POL-GEN-03 ruling of the shape the pipeline emits; the run records
+# it and does not grade it, because the organisers' sample carries a stated
+# expectation rather than an answer key.
+UNSCORED_RULING = {
+    "ruling": "DRIVER_COMPENSATION",
+    "amount_sgd": 4.0,
+    "driver_compensation_sgd": 4.0,
+    "referrals": [],
+}
+
+
+def produced_for(development_set, case_no):
+    """What the scripted judge answers with for one case of one set."""
+    produced = grade.key_as_produced(development_set.key())
+    if case_no in produced:
+        return produced
+    return {case_no: {"case_no": case_no, "ruling": dict(UNSCORED_RULING)}}
+
+
+class VersionThreeSetRegistrationTests(unittest.TestCase):
+    """The three version-3 sets are registered, and each runs at version 3.
+
+    No model is called: the transport answers from the set's own key, or -- for
+    ``ryde-v3``, which has a stated expectation rather than a key -- from a
+    well-formed ruling the run records and does not grade. Every runs root here
+    is a temporary directory, so nothing lands under the repository's own
+    ``runs/``.
+    """
+
+    def test_the_three_sets_are_registered_and_are_not_development_sets(self):
+        for name, _case_no in VERSION_THREE_CASES:
+            with self.subTest(set=name):
+                development_set = sets.named(name)
+                self.assertEqual(3, development_set.policy_version)
+                self.assertFalse(development_set.sealed)
+                self.assertTrue(development_set.cases)
+                self.assertNotIn(
+                    development_set,
+                    sets.DEVELOPMENT_SETS,
+                    "{0} is in the tuple --set all runs".format(name),
+                )
+                self.assertNotIn(development_set, sets.SEALED_SETS)
+                self.assertNotIn(development_set, sets.ALL_SETS)
+
+    def test_ryde_v3_has_a_stated_expectation_and_no_key(self):
+        """Its expectation is the organisers' word, which is not a ruling."""
+        self.assertEqual({}, sets.named("ryde-v3").key())
+        self.assertEqual(
+            run_benchmark.EXTERNAL_EXPECTED_PATH,
+            sets.named("ryde-v3").stated_expectation,
+        )
+        self.assertEqual(
+            "Cancellation charge UPHELD",
+            run_benchmark.read_expected_outcome(
+                sets.named("ryde-v3").stated_expectation
+            )["expected_outcome_as_stated"],
+        )
+
+    def test_each_set_runs_one_case_at_version_three(self):
+        for name, case_no in VERSION_THREE_CASES:
+            with self.subTest(set=name):
+                development_set = sets.named(name)
+                transport = ScriptedTransport(
+                    produced_for(development_set, case_no)
+                )
+                with tempfile.TemporaryDirectory() as tmp:
+                    runs = Path(tmp) / "runs"
+                    summary = sets.run_set(
+                        development_set,
+                        MODEL,
+                        cases=[case_no],
+                        runs_dir=runs,
+                        client_factory=client_factory(transport),
+                        git_runner=git_runner(),
+                        progress=lambda text: None,
+                        judge_votes=1,
+                    )
+                    self.assertGreater(transport.calls(), 0, "no call was made")
+                    run_dir = development_set.run_dir(MODEL, runs)
+                    self.assertEqual(run_dir, summary.run_dir)
+                    recorded = json.loads(
+                        (run_dir / "case-{0:05d}.json".format(case_no)).read_text(
+                            encoding="utf-8"
+                        )
+                    )
+                    self.assertEqual(
+                        3,
+                        recorded["configuration"]["policy_version"],
+                        "the run did not brief at the version the set fixes",
+                    )
+
+    def test_the_run_lands_under_the_sets_own_root(self):
+        for name, case_no in VERSION_THREE_CASES:
+            with self.subTest(set=name):
+                development_set = sets.named(name)
+                with tempfile.TemporaryDirectory() as tmp:
+                    runs = Path(tmp) / "runs"
+                    sets.run_set(
+                        development_set,
+                        MODEL,
+                        cases=[case_no],
+                        runs_dir=runs,
+                        client_factory=client_factory(
+                            ScriptedTransport(produced_for(development_set, case_no))
+                        ),
+                        git_runner=git_runner(),
+                        progress=lambda text: None,
+                        judge_votes=1,
+                    )
+                    expected = runs / development_set.runs_subdir / run_benchmark.model_slug(MODEL)
+                    self.assertTrue(
+                        (expected / "case-{0:05d}.json".format(case_no)).is_file(),
+                        "{0} did not write under its own root".format(name),
+                    )
+                    # Never one level down in a policy-v<N> directory: the
+                    # version is part of what the set is, not a switch.
+                    self.assertFalse((expected / "policy-v3").exists())
+
+    def test_an_earlier_policy_version_is_refused_by_name(self):
+        """These cases carry the version-3 fields; 1 and 2 would measure nothing."""
+        for name, case_no in VERSION_THREE_CASES:
+            for version in ("1", "2"):
+                with self.subTest(set=name, version=version):
+                    with tempfile.TemporaryDirectory() as tmp:
+                        with contextlib.redirect_stderr(io.StringIO()) as errors:
+                            code = sets.main(
+                                [
+                                    "--set", name,
+                                    "--policy-version", version,
+                                    "--cases", str(case_no),
+                                    "--runs-dir", str(Path(tmp) / "runs"),
+                                ]
+                            )
+                    self.assertEqual(1, code)
+                    self.assertIn(name, errors.getvalue())
+                    self.assertIn("fixes policy version 3", errors.getvalue())
+                    self.assertFalse((Path(tmp) / "runs").exists())
 
 
 if __name__ == "__main__":

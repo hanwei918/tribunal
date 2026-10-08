@@ -20,7 +20,7 @@ Six things are asserted:
 * **What the collector may read.** It reads the dispute's ``trip_id`` and never
   its ``evidence_ids`` -- asserted by running it over a dispute that records
   every key it is asked for.
-* **The proof.** For all 29 corpus cases and all 101 cases under
+* **The proof.** For all 29 corpus cases and all 301 cases under
   ``data/external/``, each against its own root, the collection equals the case
   file's ``evidence`` array exactly: same artifacts, same order, same canonical
   JSON. And a brief built from the collected case has the ``brief_sha256`` the
@@ -468,21 +468,23 @@ class TheCorpusEqualityTests(unittest.TestCase):
 
 
 class TheExternalEqualityTests(unittest.TestCase):
-    """The same, over the 101 converted cases, each against its own root.
+    """The same, over the 301 converted cases, each against its own root.
 
     ``ryde-v3/`` joined the tree on 2026-10-08: the organisers' sample converted
     for policy version 3, under a path of its own so that the version-1 case the
-    recorded run read stays where it is. It is an ordinary agent-visible,
-    answer-free external case, so the same two checks apply to it.
+    recorded run read stays where it is. ``dev-v2/`` and ``dev-v2-ext/`` joined
+    it the same day: Ji Guofang's 80 synthetic development cases and their 120
+    variants, written for policy version 3. All four are ordinary agent-visible,
+    answer-free external cases, so the same two checks apply to them.
     """
 
     @classmethod
     def setUpClass(cls):
         cls.roots = external_roots()
 
-    def test_the_external_tree_holds_the_five_sets(self):
+    def test_the_external_tree_holds_the_seven_sets(self):
         self.assertEqual(
-            ["codex", "ryde", "ryde-v3", "wild", "wild-v2"],
+            ["codex", "dev-v2", "dev-v2-ext", "ryde", "ryde-v3", "wild", "wild-v2"],
             [root.name for root in self.roots],
         )
 
@@ -501,7 +503,7 @@ class TheExternalEqualityTests(unittest.TestCase):
                         money.dumps_canonical(list(collection.artifacts)),
                     )
                     self.assertTrue(result.agrees, result)
-        self.assertEqual(101, total)
+        self.assertEqual(301, total)
 
     def test_wild_v2_case_708_collects_its_user_submitted_fare_breakdown(self):
         root = EXTERNAL_ROOT / "wild-v2"

@@ -22,7 +22,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from tribunal import brief, facts, loader, money  # noqa: E402
+from tribunal import brief, facts, loader, money, prepass  # noqa: E402
 
 INDEX_PATH = PROJECT_ROOT / "data" / "index.json"
 
@@ -1258,6 +1258,104 @@ class VersionThreePlatformPolicyTests(unittest.TestCase):
         self.assertEqual(
             Decimal("1.28"), money._dec(version_two["difference"]["value"])
         )
+
+
+class VersionThreeGapGradingScopeTests(unittest.TestCase):
+    """The three-way ``GPS_GAP`` grading is a no-show reading, and applies there only.
+
+    POL-NS-08(b) is a no-show limb about the waiting window, and the
+    ``integrity`` block lives in ``no_show.json``: no route-deviation clause asks
+    for a gap to be graded by that window. So a route-deviation case keeps the
+    **ungraded** tag and version 1's weight for it, and a no-show case is graded
+    as part 2 describes.
+    """
+
+    def gps_admissibility(self, case, policy_version=3):
+        briefed = brief.build_brief_for_case(case, policy_version=policy_version)
+        return artifact_of(briefed, "GPS_TRACE")["admissibility"]
+
+    def route_deviation_cases(self):
+        """The four route-deviation artifacts that carry a ``GPS_GAP`` tag."""
+        yield "corpus 110", loader.load_case(110)
+        for set_name, case_no in (("codex", 9115), ("wild", 512), ("wild", 517)):
+            yield "{0} {1}".format(set_name, case_no), loader.load_external_set_case(
+                loader.EXTERNAL_DIR / set_name, case_no
+            )
+
+    def test_every_case_here_is_a_route_deviation_case(self):
+        """The premise, so the tests below are about the right category."""
+        for name, case in self.route_deviation_cases():
+            with self.subTest(case=name):
+                self.assertEqual("ROUTE_DEVIATION", case["dispute"]["category"])
+
+    def test_a_route_deviation_gap_keeps_the_ungraded_tag(self):
+        for name, case in self.route_deviation_cases():
+            with self.subTest(case=name):
+                admissibility = self.gps_admissibility(case)
+                self.assertIn(prepass.GPS_GAP_CODE, admissibility["issues"])
+                self.assertNotIn(
+                    "variant",
+                    json.dumps(admissibility.get("issue_details") or []),
+                    "a route-deviation gap was graded into a POL-NS-08(b) variant",
+                )
+
+    def test_the_four_route_deviation_weights_are_the_ones_the_sheet_names(self):
+        expected = {
+            "corpus 110": Decimal("0.39"),
+            "codex 9115": Decimal("0.60"),
+            "wild 512": Decimal("0.39"),
+            "wild 517": Decimal("0.39"),
+        }
+        seen = {
+            name: Decimal(str(self.gps_admissibility(case)["weight_multiplier"]))
+            for name, case in self.route_deviation_cases()
+        }
+        self.assertEqual(expected, seen)
+
+    def test_a_route_deviation_weight_is_the_version_one_one(self):
+        """It equals the weight the case file itself declares, for every one."""
+        for name, case in self.route_deviation_cases():
+            declared = next(
+                artifact["admissibility"]["weight_multiplier"]
+                for artifact in case["evidence"]
+                if artifact["evidence_type"] == "GPS_TRACE"
+            )
+            with self.subTest(case=name):
+                self.assertEqual(
+                    Decimal(str(declared)),
+                    Decimal(
+                        str(self.gps_admissibility(case)["weight_multiplier"])
+                    ),
+                )
+
+    def test_the_weight_it_keeps_is_read_from_the_policy_not_typed(self):
+        """0.6 is not a literal: it is the policy's long-inside-window entry."""
+        weights = prepass.weights_from_policy(
+            loader.load_policies("NO_SHOW_CHARGE", 3)["category"]
+        )
+        self.assertNotIn(prepass.GPS_GAP_CODE, weights)
+        self.assertEqual(
+            Decimal("0.6"),
+            Decimal(str(weights[prepass.GPS_GAP_LONG_INSIDE_WINDOW])),
+        )
+
+    def test_the_no_show_gaps_are_still_graded(self):
+        """Part 2's behaviour for the two no-show artifacts, unchanged."""
+        expected = {
+            210: ("GPS_GAP_LONG_INSIDE_WINDOW", Decimal("0.25")),
+            211: ("GPS_GAP_LONG_INSIDE_WINDOW", Decimal("0.39")),
+        }
+        seen = {}
+        for case_no in sorted(expected):
+            admissibility = self.gps_admissibility(loader.load_case(case_no))
+            variant = next(
+                code for code in admissibility["issues"] if code.startswith("GPS_GAP_")
+            )
+            seen[case_no] = (
+                variant,
+                Decimal(str(admissibility["weight_multiplier"])),
+            )
+        self.assertEqual(expected, seen)
 
 
 class VersionThreeScopeGateTests(unittest.TestCase):

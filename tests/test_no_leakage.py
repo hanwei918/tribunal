@@ -57,6 +57,15 @@ example was rewritten to invented placeholder ids (``EV-DEMO-00042`` and
 ``EV-DEMO-00051``) for exactly this reason, and the note that records it says
 none of those ids appears anywhere in the repository.
 
+**A second one, added 2026-10-08.** ``policy/v3/CHANGES.md`` names the
+organisers' sample by its file name, ``case-00901``, because it is Ji Guofang's
+own change notes and her text describes what her bundle contained. Registering
+the sample as the development set ``ryde-v3`` made that name an identifier this
+module harvests. It is a different kind of finding -- the file is a document,
+nothing injects it into a brief, and the injected ``policy/v3/*.json`` carry no
+case identifier -- and it is pinned for the same reason: the check should go on
+being exact about everything else rather than be loosened for one document.
+
 The advocate example is **not** fixed here, and the reason is the same one that
 freezes the judge prompt's ``referee_ledger`` naming: the prompt is sent with
 every request, so editing it changes every request, and the whole point of the
@@ -111,8 +120,23 @@ Violation = collections.namedtuple("Violation", "path kind token")
 # The identifiers that are known to be there, and are not being fixed. See the
 # module docstring: the advocate template's worked example cites a real evidence
 # id, and the template cannot be edited without changing every request.
+#
+# The second was added on 2026-10-08, when ``data/external/ryde-v3/`` was
+# registered as the one-case development set ``ryde-v3``. ``policy/v3/CHANGES.md``
+# is Ji Guofang's own change notes for policy version 3, kept verbatim under a
+# prepended note, and her text names the organisers' sample by its file name --
+# ``case-00901`` -- while describing what the bundle contains. Registering the
+# sample made that name an identifier this module harvests, so the scan reports
+# it. It is not the same kind of finding as the first: the file is a **document**,
+# nothing injects it into a brief, and the files that *are* injected
+# (``policy/v3/*.json``) carry no case identifier at all -- their ``sources``
+# keys, which did, are stripped before the policies reach the model. The pin is
+# here so the scan can go on being exact about everything else; removing the
+# sample's file name from her notes would be editing her text, and removing the
+# pin is the thing to do if that name ever leaves it.
 KNOWN_VIOLATIONS = (
     Violation("prompts/v1/advocate.system.md", "evidence id", "EV-GPS-00208"),
+    Violation("policy/v3/CHANGES.md", "case file stem", "case-00901"),
 )
 
 

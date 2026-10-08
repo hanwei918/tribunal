@@ -1,0 +1,288 @@
+[
+  {
+    "pair_id": "NS-B1-v1",
+    "kind": "DIRECTIONAL",
+    "cases": [
+      2717,
+      2718
+    ],
+    "expected_relation": "DIRECTIONAL: 179 s -> FULL_REFUND, 181 s -> DRIVER_COMPENSATION",
+    "expected_rulings": {
+      "2717": "FULL_REFUND",
+      "2718": "DRIVER_COMPENSATION"
+    }
+  },
+  {
+    "pair_id": "NS-B1-v2",
+    "kind": "DIRECTIONAL",
+    "cases": [
+      2741,
+      2742
+    ],
+    "expected_relation": "DIRECTIONAL: 179 s -> FULL_REFUND, 181 s -> DRIVER_COMPENSATION",
+    "expected_rulings": {
+      "2741": "FULL_REFUND",
+      "2742": "DRIVER_COMPENSATION"
+    }
+  },
+  {
+    "pair_id": "NS-B2-v1",
+    "kind": "DIRECTIONAL",
+    "cases": [
+      2719,
+      2720
+    ],
+    "expected_relation": "DIRECTIONAL: inside radius -> DRIVER_COMPENSATION, outside -> FULL_REFUND (POL-NS-03(i) not engaged, no sub-location; registered_pickup_points 1 so no goodwill)",
+    "expected_rulings": {
+      "2719": "DRIVER_COMPENSATION",
+      "2720": "FULL_REFUND"
+    }
+  },
+  {
+    "pair_id": "NS-B2-v2",
+    "kind": "DIRECTIONAL",
+    "cases": [
+      2743,
+      2744
+    ],
+    "expected_relation": "DIRECTIONAL: inside radius -> DRIVER_COMPENSATION, outside -> FULL_REFUND (POL-NS-03(i) not engaged, no sub-location; registered_pickup_points 1 so no goodwill)",
+    "expected_rulings": {
+      "2743": "DRIVER_COMPENSATION",
+      "2744": "FULL_REFUND"
+    }
+  },
+  {
+    "pair_id": "NS-B3-v1",
+    "kind": "DIRECTIONAL",
+    "cases": [
+      2721,
+      2722
+    ],
+    "expected_relation": "DIRECTIONAL: fixes at 25 m or better qualify; fixes worse than 25 m count for neither presence nor absence, so no qualifying fix exists and POL-NS-02 finds no arrival",
+    "expected_rulings": {
+      "2721": "DRIVER_COMPENSATION",
+      "2722": "FULL_REFUND"
+    }
+  },
+  {
+    "pair_id": "NS-B3-v2",
+    "kind": "DIRECTIONAL",
+    "cases": [
+      2745,
+      2746
+    ],
+    "expected_relation": "DIRECTIONAL: fixes at 25 m or better qualify; fixes worse than 25 m count for neither presence nor absence, so no qualifying fix exists and POL-NS-02 finds no arrival",
+    "expected_rulings": {
+      "2745": "DRIVER_COMPENSATION",
+      "2746": "FULL_REFUND"
+    }
+  },
+  {
+    "pair_id": "NS-B5-v1",
+    "kind": "DIRECTIONAL",
+    "cases": [
+      2725,
+      2726
+    ],
+    "expected_relation": "DIRECTIONAL on the recomputed dwell: >= 180 s the fee stands via POL-NS-05(iii) with a referral, < 180 s POL-NS-05(i) refunds",
+    "expected_rulings": {
+      "2725": "DRIVER_COMPENSATION",
+      "2726": "FULL_REFUND"
+    }
+  },
+  {
+    "pair_id": "NS-B5-v2",
+    "kind": "DIRECTIONAL",
+    "cases": [
+      2749,
+      2750
+    ],
+    "expected_relation": "DIRECTIONAL on the recomputed dwell: >= 180 s the fee stands via POL-NS-05(iii) with a referral, < 180 s POL-NS-05(i) refunds",
+    "expected_rulings": {
+      "2749": "DRIVER_COMPENSATION",
+      "2750": "FULL_REFUND"
+    }
+  },
+  {
+    "pair_id": "NS-B6-v1",
+    "kind": "DIRECTIONAL",
+    "cases": [
+      2727,
+      2728
+    ],
+    "expected_relation": "DIRECTIONAL: 4 terminations at ratio > 0.08 withholds compensation and escalates; 3 does not",
+    "expected_rulings": {
+      "2727": "ESCALATE",
+      "2728": "DRIVER_COMPENSATION"
+    }
+  },
+  {
+    "pair_id": "NS-B6-v2",
+    "kind": "DIRECTIONAL",
+    "cases": [
+      2751,
+      2752
+    ],
+    "expected_relation": "DIRECTIONAL: 4 terminations at ratio > 0.08 withholds compensation and escalates; 3 does not",
+    "expected_rulings": {
+      "2751": "ESCALATE",
+      "2752": "DRIVER_COMPENSATION"
+    }
+  },
+  {
+    "pair_id": "RD-B1-v1",
+    "kind": "DIRECTIONAL",
+    "cases": [
+      2817,
+      2818
+    ],
+    "expected_relation": "DIRECTIONAL: 19.9 percent -> NO_ACTION, 20.3 percent -> PARTIAL_REFUND (both over 0.8 km)",
+    "expected_rulings": {
+      "2817": "NO_ACTION",
+      "2818": "PARTIAL_REFUND"
+    }
+  },
+  {
+    "pair_id": "RD-B1-v2",
+    "kind": "DIRECTIONAL",
+    "cases": [
+      2841,
+      2842
+    ],
+    "expected_relation": "DIRECTIONAL: 19.9 percent -> NO_ACTION, 20.3 percent -> PARTIAL_REFUND (both over 0.8 km)",
+    "expected_rulings": {
+      "2841": "NO_ACTION",
+      "2842": "PARTIAL_REFUND"
+    }
+  },
+  {
+    "pair_id": "RD-B2-v1",
+    "kind": "DIRECTIONAL",
+    "cases": [
+      2819,
+      2820
+    ],
+    "expected_relation": "DIRECTIONAL: 0.76 km -> NO_ACTION, 0.84 km -> PARTIAL_REFUND (both over 20 percent)",
+    "expected_rulings": {
+      "2819": "NO_ACTION",
+      "2820": "PARTIAL_REFUND"
+    }
+  },
+  {
+    "pair_id": "RD-B2-v2",
+    "kind": "DIRECTIONAL",
+    "cases": [
+      2843,
+      2844
+    ],
+    "expected_relation": "DIRECTIONAL: 0.76 km -> NO_ACTION, 0.84 km -> PARTIAL_REFUND (both over 20 percent)",
+    "expected_rulings": {
+      "2843": "NO_ACTION",
+      "2844": "PARTIAL_REFUND"
+    }
+  },
+  {
+    "pair_id": "RD-B3-v1",
+    "kind": "DIRECTIONAL",
+    "cases": [
+      2821,
+      2822
+    ],
+    "expected_relation": "DIRECTIONAL: the booked optimal duration decides whether the arithmetic refund clears SGD 0.50",
+    "expected_rulings": {
+      "2821": "NO_ACTION",
+      "2822": "PARTIAL_REFUND"
+    }
+  },
+  {
+    "pair_id": "RD-B3-v2",
+    "kind": "DIRECTIONAL",
+    "cases": [
+      2845,
+      2846
+    ],
+    "expected_relation": "DIRECTIONAL: the booked optimal duration decides whether the arithmetic refund clears SGD 0.50",
+    "expected_rulings": {
+      "2845": "NO_ACTION",
+      "2846": "PARTIAL_REFUND"
+    }
+  },
+  {
+    "pair_id": "RD-B4-v1",
+    "kind": "DIRECTIONAL",
+    "cases": [
+      2823,
+      2824
+    ],
+    "expected_relation": "DIRECTIONAL: refund >= 90 percent of charged -> FULL_REFUND; below -> PARTIAL_REFUND; both MATERIAL so POL-RD-06 is checked and finds no pattern",
+    "expected_rulings": {
+      "2823": "FULL_REFUND",
+      "2824": "PARTIAL_REFUND"
+    }
+  },
+  {
+    "pair_id": "RD-B4-v2",
+    "kind": "DIRECTIONAL",
+    "cases": [
+      2847,
+      2848
+    ],
+    "expected_relation": "DIRECTIONAL: refund >= 90 percent of charged -> FULL_REFUND; below -> PARTIAL_REFUND; both MATERIAL so POL-RD-06 is checked and finds no pattern",
+    "expected_rulings": {
+      "2847": "FULL_REFUND",
+      "2848": "PARTIAL_REFUND"
+    }
+  },
+  {
+    "pair_id": "RD-B5-v1",
+    "kind": "DIRECTIONAL",
+    "cases": [
+      2825,
+      2826
+    ],
+    "expected_relation": "DIRECTIONAL: 80 s gap -> schema tag only, PARTIAL_REFUND; 100 s gap -> POL-RD-07 impaired, no corroboration, ESCALATE under POL-RD-10(3)",
+    "expected_rulings": {
+      "2825": "PARTIAL_REFUND",
+      "2826": "ESCALATE"
+    }
+  },
+  {
+    "pair_id": "RD-B5-v2",
+    "kind": "DIRECTIONAL",
+    "cases": [
+      2849,
+      2850
+    ],
+    "expected_relation": "DIRECTIONAL: 80 s gap -> schema tag only, PARTIAL_REFUND; 100 s gap -> POL-RD-07 impaired, no corroboration, ESCALATE under POL-RD-10(3)",
+    "expected_rulings": {
+      "2849": "PARTIAL_REFUND",
+      "2850": "ESCALATE"
+    }
+  },
+  {
+    "pair_id": "RD-B6-v1",
+    "kind": "DIRECTIONAL",
+    "cases": [
+      2827,
+      2828
+    ],
+    "expected_relation": "DIRECTIONAL: deviation_flags_90d 3 with a MATERIAL substantiated deviation -> FULL_REFUND of charged_total with a conduct referral; 2 -> ordinary POL-RD-02 partial",
+    "expected_rulings": {
+      "2827": "FULL_REFUND",
+      "2828": "PARTIAL_REFUND"
+    }
+  },
+  {
+    "pair_id": "RD-B6-v2",
+    "kind": "DIRECTIONAL",
+    "cases": [
+      2851,
+      2852
+    ],
+    "expected_relation": "DIRECTIONAL: deviation_flags_90d 3 with a MATERIAL substantiated deviation -> FULL_REFUND of charged_total with a conduct referral; 2 -> ordinary POL-RD-02 partial",
+    "expected_rulings": {
+      "2851": "FULL_REFUND",
+      "2852": "PARTIAL_REFUND"
+    }
+  }
+]

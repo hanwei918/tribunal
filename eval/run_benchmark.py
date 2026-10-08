@@ -2926,6 +2926,14 @@ def run_benchmark(
     # rider fails, and the remaining draft requests after a draft raises; and
     # under a case deadline it can send a different set of requests.
     parallel_calls: bool = False,
+    # Whether the cases are graded against a key at all. An external sample that
+    # carries a **stated expectation** rather than a key has nothing to be
+    # scored against: the organisers' own word is not one of POL-GEN-03's
+    # rulings, and grading a case against a token it never had would invent one.
+    # With this on, a case the key does not carry is run and reported as
+    # unscored rather than refused before the run. Off by default, so every
+    # other caller's cases are still refused when they are not in the key.
+    unscored: bool = False,
     client_factory: Optional[Callable[[Callable[[Dict[str, Any]], None]], Any]] = None,
     key: Optional[Mapping[int, grade.Ruling]] = None,
     git_runner: Optional[Callable[[Sequence[str]], Optional[str]]] = None,
@@ -3116,12 +3124,17 @@ def run_benchmark(
     resolved_key: Mapping[int, grade.Ruling] = (
         grade.load_answer_key() if key is None else dict(key)
     )
-    missing = [case_no for case_no in requested if case_no not in resolved_key]
-    if missing:
-        raise BenchmarkError(
-            "case(s) {0} are not in the answer key, so a run over them could not "
-            "be graded".format(", ".join(str(case_no) for case_no in missing))
-        )
+    if not unscored:
+        # Refused before a client exists and before any case is issued: a case
+        # the key does not carry cannot be graded, and a run over it would be a
+        # run whose figures could not be computed. An unscored run is the one
+        # exception, and it says so rather than relying on an empty key.
+        missing = [case_no for case_no in requested if case_no not in resolved_key]
+        if missing:
+            raise BenchmarkError(
+                "case(s) {0} are not in the answer key, so a run over them could not "
+                "be graded".format(", ".join(str(case_no) for case_no in missing))
+            )
 
     # The timeout is threaded through to the client the runner builds, which is
     # the whole point of the parameter: before it existed every call inherited

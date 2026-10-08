@@ -1,0 +1,778 @@
+{
+  "schema_version": "1.2.0",
+  "case_no": 2732,
+  "dispute": {
+    "dispute_id": "DSP-02732",
+    "trip_id": "TRP-02732",
+    "case_no": 2732,
+    "category": "NO_SHOW_CHARGE",
+    "filed_by": "RIDER",
+    "filed_at": "2026-09-08T19:06:53+08:00",
+    "claim_text": "I was there, he cancelled, charged $4.50.",
+    "amount_contested_sgd": 4.5,
+    "evidence_ids": [
+      "EV-TRIP-02732",
+      "EV-GPS-02732",
+      "EV-CHAT-02732",
+      "EV-FARE-02732",
+      "EV-RPROF-02732",
+      "EV-DPROF-02732",
+      "EV-ADVIS-02732-01"
+    ],
+    "counterparty_statement": {
+      "text": "I waited the full time.",
+      "submitted_by": "DRIVER",
+      "submitted_at": "2026-09-09T11:38:13+08:00"
+    },
+    "channel": "IN_APP_SUPPORT",
+    "safety_flag": false,
+    "complaint_flag": false
+  },
+  "evidence": [
+    {
+      "evidence_id": "EV-TRIP-02732",
+      "evidence_type": "TRIP_RECORD",
+      "trip_id": "TRP-02732",
+      "source": "PLATFORM_TELEMETRY",
+      "generated_at": "2026-09-09T04:00:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Cancelled trip record, causally ordered; zone class STANDARD; 1 registered pickup point(s).",
+        "assessed_at": "2026-09-09T04:00:07+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-02732",
+        "rider_id": "RDR-09732",
+        "driver_id": "DRV-09732",
+        "requested_at": "2026-09-08T12:59:13+08:00",
+        "accepted_at": "2026-09-08T13:00:14+08:00",
+        "arrived_at": "2026-09-08T13:04:49+08:00",
+        "started_at": null,
+        "ended_at": null,
+        "cancelled_at": "2026-09-08T13:11:32+08:00",
+        "status": "CANCELLED_BY_DRIVER",
+        "cancelled_by": "DRIVER",
+        "cancellation_reason_code": "RIDER_NO_SHOW",
+        "pickup": {
+          "label": "Blk 412 Pasir Ris Dr 6, Pasir Ris",
+          "lat": 1.3741,
+          "lng": 103.9536,
+          "venue_id": "VEN-PASIR-RIS-DR6"
+        },
+        "dropoff": {
+          "label": "Tan Tock Seng Hospital, 11 Jln Tan Tock Seng",
+          "lat": 1.3214,
+          "lng": 103.8458,
+          "venue_id": null
+        },
+        "optimal_distance_km": 17.3,
+        "optimal_duration_min": 26.8,
+        "actual_distance_km": null,
+        "actual_duration_min": null,
+        "vehicle_type": "RYDE_X",
+        "optimal_route_source": "routing-engine-v3.2 (LTA traffic snapshot 12:59)",
+        "deviation_pct": null,
+        "wait_time_min": 6.7,
+        "time_to_arrival_min": 4.6,
+        "pickup_zone_class": "STANDARD",
+        "registered_pickup_points": 1,
+        "in_app_calls": [],
+        "pickup_amended_at": null,
+        "dropoff_amended_at": null,
+        "original_pickup": null,
+        "original_dropoff": null,
+        "optimal_route_erp_sgd": 0.0,
+        "amended_optimal_distance_km": null,
+        "amended_optimal_duration_min": null,
+        "solo_optimal_distance_km": null,
+        "chat_message_count": 0,
+        "scheduled_at": null,
+        "platform_policy": {
+          "grace_after_match_sec": 180,
+          "advance_grace_before_scheduled_sec": 900,
+          "free_wait_sec": 180,
+          "no_show_threshold_sec": null,
+          "cancellation_fee_sgd": 4.5,
+          "rider_gross_cancellation_fee_sgd": 6.61,
+          "waiting_fee_sgd": 5.0,
+          "fee_goes_to": "DRIVER",
+          "arrival_marker": "BUTTON",
+          "source": "PLATFORM-PUBLISHED-2026-10-07"
+        },
+        "events": null
+      }
+    },
+    {
+      "evidence_id": "EV-GPS-02732",
+      "evidence_type": "GPS_TRACE",
+      "trip_id": "TRP-02732",
+      "source": "PLATFORM_TELEMETRY",
+      "generated_at": "2026-09-09T04:00:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "IMPAIRED",
+        "issues": [
+          "GPS_GAP",
+          "LOW_COVERAGE"
+        ],
+        "issue_details": [
+          {
+            "code": "GPS_GAP",
+            "severity": "MAJOR",
+            "detail": "A 208.0 s sampling gap from 13:05:40 to 13:09:08, 0.0 km apart in a straight line."
+          },
+          {
+            "code": "LOW_COVERAGE",
+            "severity": "MAJOR",
+            "detail": "coverage_pct 71.9: below the 90.0 threshold."
+          }
+        ],
+        "weight_multiplier": 0.39,
+        "notes": "10 s telemetry, 71.9% coverage, driver track only.",
+        "assessed_at": "2026-09-09T04:00:07+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-02732",
+        "points": [
+          {
+            "lat": 1.36023,
+            "lng": 103.991629,
+            "ts": "2026-09-08T13:00:19+08:00",
+            "speed_kph": 60.4,
+            "heading_deg": 291.9,
+            "accuracy_m": 6.8
+          },
+          {
+            "lat": 1.360744,
+            "lng": 103.990221,
+            "ts": "2026-09-08T13:00:29+08:00",
+            "speed_kph": 61.1,
+            "heading_deg": 289.1,
+            "accuracy_m": 9.3
+          },
+          {
+            "lat": 1.361257,
+            "lng": 103.988812,
+            "ts": "2026-09-08T13:00:39+08:00",
+            "speed_kph": 59.2,
+            "heading_deg": 292.3,
+            "accuracy_m": 5.1
+          },
+          {
+            "lat": 1.361771,
+            "lng": 103.987404,
+            "ts": "2026-09-08T13:00:49+08:00",
+            "speed_kph": 57.5,
+            "heading_deg": 290.8,
+            "accuracy_m": 5.3
+          },
+          {
+            "lat": 1.362285,
+            "lng": 103.985995,
+            "ts": "2026-09-08T13:00:59+08:00",
+            "speed_kph": 62.8,
+            "heading_deg": 292.8,
+            "accuracy_m": 13.5
+          },
+          {
+            "lat": 1.362798,
+            "lng": 103.984587,
+            "ts": "2026-09-08T13:01:09+08:00",
+            "speed_kph": 59.7,
+            "heading_deg": 293.2,
+            "accuracy_m": 12.1
+          },
+          {
+            "lat": 1.363312,
+            "lng": 103.983178,
+            "ts": "2026-09-08T13:01:19+08:00",
+            "speed_kph": 62.9,
+            "heading_deg": 288.0,
+            "accuracy_m": 11.9
+          },
+          {
+            "lat": 1.363826,
+            "lng": 103.98177,
+            "ts": "2026-09-08T13:01:29+08:00",
+            "speed_kph": 62.5,
+            "heading_deg": 290.7,
+            "accuracy_m": 11.3
+          },
+          {
+            "lat": 1.36434,
+            "lng": 103.980361,
+            "ts": "2026-09-08T13:01:39+08:00",
+            "speed_kph": 57.9,
+            "heading_deg": 293.9,
+            "accuracy_m": 9.3
+          },
+          {
+            "lat": 1.364853,
+            "lng": 103.978953,
+            "ts": "2026-09-08T13:01:49+08:00",
+            "speed_kph": 61.3,
+            "heading_deg": 290.4,
+            "accuracy_m": 10.9
+          },
+          {
+            "lat": 1.365367,
+            "lng": 103.977544,
+            "ts": "2026-09-08T13:01:59+08:00",
+            "speed_kph": 59.7,
+            "heading_deg": 291.7,
+            "accuracy_m": 8.0
+          },
+          {
+            "lat": 1.365881,
+            "lng": 103.976136,
+            "ts": "2026-09-08T13:02:09+08:00",
+            "speed_kph": 61.9,
+            "heading_deg": 286.7,
+            "accuracy_m": 6.8
+          },
+          {
+            "lat": 1.366394,
+            "lng": 103.974727,
+            "ts": "2026-09-08T13:02:19+08:00",
+            "speed_kph": 57.6,
+            "heading_deg": 289.6,
+            "accuracy_m": 12.4
+          },
+          {
+            "lat": 1.366908,
+            "lng": 103.973319,
+            "ts": "2026-09-08T13:02:29+08:00",
+            "speed_kph": 59.6,
+            "heading_deg": 287.8,
+            "accuracy_m": 13.9
+          },
+          {
+            "lat": 1.367422,
+            "lng": 103.97191,
+            "ts": "2026-09-08T13:02:39+08:00",
+            "speed_kph": 60.6,
+            "heading_deg": 291.2,
+            "accuracy_m": 11.5
+          },
+          {
+            "lat": 1.367936,
+            "lng": 103.970502,
+            "ts": "2026-09-08T13:02:49+08:00",
+            "speed_kph": 59.6,
+            "heading_deg": 293.9,
+            "accuracy_m": 9.8
+          },
+          {
+            "lat": 1.368449,
+            "lng": 103.969093,
+            "ts": "2026-09-08T13:02:59+08:00",
+            "speed_kph": 58.3,
+            "heading_deg": 286.6,
+            "accuracy_m": 10.0
+          },
+          {
+            "lat": 1.368963,
+            "lng": 103.967685,
+            "ts": "2026-09-08T13:03:09+08:00",
+            "speed_kph": 61.4,
+            "heading_deg": 289.1,
+            "accuracy_m": 10.1
+          },
+          {
+            "lat": 1.369477,
+            "lng": 103.966276,
+            "ts": "2026-09-08T13:03:19+08:00",
+            "speed_kph": 62.9,
+            "heading_deg": 286.6,
+            "accuracy_m": 5.5
+          },
+          {
+            "lat": 1.36999,
+            "lng": 103.964868,
+            "ts": "2026-09-08T13:03:29+08:00",
+            "speed_kph": 58.1,
+            "heading_deg": 288.7,
+            "accuracy_m": 13.6
+          },
+          {
+            "lat": 1.370504,
+            "lng": 103.963459,
+            "ts": "2026-09-08T13:03:39+08:00",
+            "speed_kph": 58.4,
+            "heading_deg": 288.1,
+            "accuracy_m": 8.3
+          },
+          {
+            "lat": 1.371018,
+            "lng": 103.962051,
+            "ts": "2026-09-08T13:03:49+08:00",
+            "speed_kph": 57.6,
+            "heading_deg": 290.0,
+            "accuracy_m": 9.4
+          },
+          {
+            "lat": 1.371531,
+            "lng": 103.960642,
+            "ts": "2026-09-08T13:03:59+08:00",
+            "speed_kph": 60.9,
+            "heading_deg": 291.0,
+            "accuracy_m": 13.4
+          },
+          {
+            "lat": 1.372045,
+            "lng": 103.959234,
+            "ts": "2026-09-08T13:04:09+08:00",
+            "speed_kph": 59.1,
+            "heading_deg": 288.5,
+            "accuracy_m": 9.3
+          },
+          {
+            "lat": 1.372559,
+            "lng": 103.957825,
+            "ts": "2026-09-08T13:04:19+08:00",
+            "speed_kph": 60.5,
+            "heading_deg": 288.8,
+            "accuracy_m": 12.6
+          },
+          {
+            "lat": 1.373073,
+            "lng": 103.956417,
+            "ts": "2026-09-08T13:04:29+08:00",
+            "speed_kph": 57.0,
+            "heading_deg": 292.7,
+            "accuracy_m": 13.0
+          },
+          {
+            "lat": 1.373586,
+            "lng": 103.955008,
+            "ts": "2026-09-08T13:04:39+08:00",
+            "speed_kph": 61.6,
+            "heading_deg": 290.6,
+            "accuracy_m": 6.0
+          },
+          {
+            "lat": 1.374099,
+            "lng": 103.953605,
+            "ts": "2026-09-08T13:04:49+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 6.5,
+            "venue_id": "VEN-PASIR-RIS-DR6"
+          },
+          {
+            "lat": 1.374108,
+            "lng": 103.953579,
+            "ts": "2026-09-08T13:04:59+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.4,
+            "venue_id": "VEN-PASIR-RIS-DR6"
+          },
+          {
+            "lat": 1.374094,
+            "lng": 103.953585,
+            "ts": "2026-09-08T13:05:10+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 13.3,
+            "venue_id": "VEN-PASIR-RIS-DR6"
+          },
+          {
+            "lat": 1.374097,
+            "lng": 103.953599,
+            "ts": "2026-09-08T13:05:20+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 8.6,
+            "venue_id": "VEN-PASIR-RIS-DR6"
+          },
+          {
+            "lat": 1.374099,
+            "lng": 103.953584,
+            "ts": "2026-09-08T13:05:30+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 7.4,
+            "venue_id": "VEN-PASIR-RIS-DR6"
+          },
+          {
+            "lat": 1.374078,
+            "lng": 103.953599,
+            "ts": "2026-09-08T13:05:40+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 6.0,
+            "venue_id": "VEN-PASIR-RIS-DR6"
+          },
+          {
+            "lat": 1.374084,
+            "lng": 103.953593,
+            "ts": "2026-09-08T13:09:08+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 14.9,
+            "venue_id": "VEN-PASIR-RIS-DR6"
+          },
+          {
+            "lat": 1.374125,
+            "lng": 103.953603,
+            "ts": "2026-09-08T13:09:19+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 6.9,
+            "venue_id": "VEN-PASIR-RIS-DR6"
+          },
+          {
+            "lat": 1.374101,
+            "lng": 103.953605,
+            "ts": "2026-09-08T13:09:29+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 5.4,
+            "venue_id": "VEN-PASIR-RIS-DR6"
+          },
+          {
+            "lat": 1.374087,
+            "lng": 103.953602,
+            "ts": "2026-09-08T13:09:38+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.2,
+            "venue_id": "VEN-PASIR-RIS-DR6"
+          },
+          {
+            "lat": 1.374107,
+            "lng": 103.953612,
+            "ts": "2026-09-08T13:09:49+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 8.2,
+            "venue_id": "VEN-PASIR-RIS-DR6"
+          },
+          {
+            "lat": 1.374106,
+            "lng": 103.953613,
+            "ts": "2026-09-08T13:10:00+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 7.3,
+            "venue_id": "VEN-PASIR-RIS-DR6"
+          },
+          {
+            "lat": 1.374098,
+            "lng": 103.953603,
+            "ts": "2026-09-08T13:10:11+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.5,
+            "venue_id": "VEN-PASIR-RIS-DR6"
+          },
+          {
+            "lat": 1.374098,
+            "lng": 103.953596,
+            "ts": "2026-09-08T13:10:20+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.5,
+            "venue_id": "VEN-PASIR-RIS-DR6"
+          },
+          {
+            "lat": 1.374094,
+            "lng": 103.953604,
+            "ts": "2026-09-08T13:10:31+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 11.2,
+            "venue_id": "VEN-PASIR-RIS-DR6"
+          },
+          {
+            "lat": 1.37409,
+            "lng": 103.953601,
+            "ts": "2026-09-08T13:10:41+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 11.9,
+            "venue_id": "VEN-PASIR-RIS-DR6"
+          },
+          {
+            "lat": 1.374119,
+            "lng": 103.953581,
+            "ts": "2026-09-08T13:10:51+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.0,
+            "venue_id": "VEN-PASIR-RIS-DR6"
+          },
+          {
+            "lat": 1.374093,
+            "lng": 103.953575,
+            "ts": "2026-09-08T13:11:00+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 12.5,
+            "venue_id": "VEN-PASIR-RIS-DR6"
+          },
+          {
+            "lat": 1.374121,
+            "lng": 103.953583,
+            "ts": "2026-09-08T13:11:10+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 11.9,
+            "venue_id": "VEN-PASIR-RIS-DR6"
+          },
+          {
+            "lat": 1.374089,
+            "lng": 103.953576,
+            "ts": "2026-09-08T13:11:20+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 8.6,
+            "venue_id": "VEN-PASIR-RIS-DR6"
+          },
+          {
+            "lat": 1.374121,
+            "lng": 103.953591,
+            "ts": "2026-09-08T13:11:29+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 5.3,
+            "venue_id": "VEN-PASIR-RIS-DR6"
+          },
+          {
+            "lat": 1.373586,
+            "lng": 103.955008,
+            "ts": "2026-09-08T13:11:49+08:00",
+            "speed_kph": 27.5,
+            "heading_deg": 110.0,
+            "accuracy_m": 9.3
+          },
+          {
+            "lat": 1.373244,
+            "lng": 103.955947,
+            "ts": "2026-09-08T13:11:59+08:00",
+            "speed_kph": 43.5,
+            "heading_deg": 110.0,
+            "accuracy_m": 11.6
+          },
+          {
+            "lat": 1.372901,
+            "lng": 103.956886,
+            "ts": "2026-09-08T13:12:09+08:00",
+            "speed_kph": 36.4,
+            "heading_deg": 110.0,
+            "accuracy_m": 5.8
+          },
+          {
+            "lat": 1.372559,
+            "lng": 103.957825,
+            "ts": "2026-09-08T13:12:19+08:00",
+            "speed_kph": 38.5,
+            "heading_deg": 110.0,
+            "accuracy_m": 7.5
+          },
+          {
+            "lat": 1.372216,
+            "lng": 103.958764,
+            "ts": "2026-09-08T13:12:29+08:00",
+            "speed_kph": 38.2,
+            "heading_deg": 110.0,
+            "accuracy_m": 8.1
+          },
+          {
+            "lat": 1.371874,
+            "lng": 103.959703,
+            "ts": "2026-09-08T13:12:39+08:00",
+            "speed_kph": 41.3,
+            "heading_deg": 110.0,
+            "accuracy_m": 7.6
+          }
+        ],
+        "point_count": 54,
+        "first_fix_at": "2026-09-08T13:00:19+08:00",
+        "last_fix_at": "2026-09-08T13:12:39+08:00",
+        "expected_interval_sec": 10.0,
+        "sample_interval_sec": 10.0,
+        "gaps": [
+          {
+            "from_ts": "2026-09-08T13:05:40+08:00",
+            "to_ts": "2026-09-08T13:09:08+08:00",
+            "duration_sec": 208.0,
+            "straight_line_km": 0.0
+          }
+        ],
+        "max_gap_sec": 208.0,
+        "coverage_pct": 71.9,
+        "trace_distance_km": 5.27,
+        "rider_track": null
+      }
+    },
+    {
+      "evidence_id": "EV-CHAT-02732",
+      "evidence_type": "CHAT_LOG",
+      "trip_id": "TRP-02732",
+      "source": "PLATFORM_TELEMETRY",
+      "generated_at": "2026-09-09T04:00:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "0 message(s), sequence numbering intact, read receipts present.",
+        "assessed_at": "2026-09-09T04:00:07+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-02732",
+        "messages": [],
+        "message_count": 0,
+        "first_message_at": null,
+        "last_message_at": null,
+        "truncated": false
+      }
+    },
+    {
+      "evidence_id": "EV-FARE-02732",
+      "evidence_type": "FARE_BREAKDOWN",
+      "trip_id": "TRP-02732",
+      "source": "PAYMENTS_LEDGER",
+      "generated_at": "2026-09-09T04:00:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Ledger lines reconcile to total_charged.",
+        "assessed_at": "2026-09-09T04:00:07+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-02732",
+        "currency": "SGD",
+        "fare_model": "METERED",
+        "quoted_fare_sgd": null,
+        "base_fare": 0.0,
+        "distance_fare": 0.0,
+        "time_fare": 0.0,
+        "distance_charged_km": null,
+        "time_charged_min": null,
+        "per_km_rate_sgd": null,
+        "per_min_rate_sgd": null,
+        "surge_multiplier": 1.0,
+        "surge_amount": 0.0,
+        "tolls_erp": 0.0,
+        "erp_gantries": [],
+        "airport_surcharge": 0.0,
+        "platform_fee": 0.0,
+        "promo_discount": 0.0,
+        "cancellation_fee": 4.5,
+        "waiting_time_fee": 0.0,
+        "total_charged": 4.5,
+        "payment_status": "CHARGED",
+        "refund_issued_sgd": 0.0,
+        "rate_card_id": "RC-SG-2026Q3-RYDEX",
+        "charged_at": "2026-09-08T13:11:49+08:00"
+      }
+    },
+    {
+      "evidence_id": "EV-RPROF-02732",
+      "evidence_type": "RIDER_PROFILE",
+      "trip_id": "TRP-02732",
+      "source": "PLATFORM_TELEMETRY",
+      "generated_at": "2026-09-09T04:00:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "",
+        "assessed_at": "2026-09-09T04:00:07+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "RDR-09732",
+        "party_role": "RIDER",
+        "snapshot_at": "2026-09-09T04:00:00+08:00",
+        "account_age_days": 288,
+        "lifetime_trips": 332,
+        "rating": 4.43,
+        "prior_disputes_filed": 0,
+        "prior_disputes_upheld": 0,
+        "cancellation_rate": 0.036,
+        "prior_no_show_flags": 0,
+        "deviation_claims_60d": 1,
+        "deviation_claims_60d_substantiated": 0,
+        "no_show_disputes_30d": 0,
+        "disputes_with_counterparty_90d": 0
+      }
+    },
+    {
+      "evidence_id": "EV-DPROF-02732",
+      "evidence_type": "DRIVER_PROFILE",
+      "trip_id": "TRP-02732",
+      "source": "PLATFORM_TELEMETRY",
+      "generated_at": "2026-09-09T04:00:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "",
+        "assessed_at": "2026-09-09T04:00:07+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "DRV-09732",
+        "party_role": "DRIVER",
+        "snapshot_at": "2026-09-09T04:00:00+08:00",
+        "account_age_days": 2212,
+        "lifetime_trips": 4096,
+        "rating": 4.67,
+        "prior_disputes_filed": 1,
+        "prior_disputes_upheld": 1,
+        "cancellation_rate": 0.044,
+        "prior_no_show_flags": 1,
+        "prior_deviation_flags": 1,
+        "acceptance_rate": 0.912,
+        "vehicle_type": "RYDE_X",
+        "active_region": "North-East (Sengkang / Punggol / Hougang)",
+        "deviation_flags_90d": 0,
+        "completed_trips_90d": 311,
+        "no_show_terminations_30d": 1,
+        "completed_trips_30d": 103,
+        "disputes_with_counterparty_90d": 0
+      }
+    },
+    {
+      "evidence_id": "EV-ADVIS-02732-01",
+      "evidence_type": "TRAFFIC_ADVISORY",
+      "trip_id": "TRP-02732",
+      "source": "THIRD_PARTY_LTA",
+      "generated_at": "2026-09-09T04:00:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "MISSING",
+        "issues": [
+          "MISSING_ARTIFACT"
+        ],
+        "issue_details": [
+          {
+            "code": "MISSING_ARTIFACT",
+            "severity": "BLOCKING",
+            "detail": "No advisory covers Blk 412 Pasir Ris Dr 6 in this window."
+          }
+        ],
+        "weight_multiplier": 0.0,
+        "notes": "Artifact absent. The identifier is minted anyway so that the absence itself can be cited by either advocate.",
+        "assessed_at": "2026-09-09T04:00:09+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": null
+    }
+  ]
+}

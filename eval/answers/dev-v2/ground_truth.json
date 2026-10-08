@@ -1,0 +1,1322 @@
+[
+  {
+    "case_no": 1701,
+    "dispute_id": "DSP-01701",
+    "ground_truth": {
+      "expected_ruling": "DRIVER_COMPENSATION",
+      "expected_amount_sgd": 3.6,
+      "expected_driver_compensation_sgd": 3.6,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-01",
+        "POL-NS-02",
+        "POL-NS-07"
+      ],
+      "difficulty": "EASY",
+      "rationale": "EV-TRIP-01701 carries the arrived event; EV-GPS-01701 places the driver inside the STANDARD arrival radius with sub-25 m fixes before it and holds a continuous in-geofence run of 410 s, longer than the 180 s free waiting period in force (EV-TRIP-01701.platform_policy carries the published figures, source PLATFORM-PUBLISHED-2026-10-07). The trip terminated by the driver with RIDER_NO_SHOW after the dwell elapsed, so all four POL-NS-01 limbs hold; rider_track sits outside the rider-presence radius so POL-NS-04 is not engaged. POL-NS-07: no anti-farming pattern on EV-DPROF-01701, compensation 80 percent of the net SGD 4.50 fee = 3.60; ruling DRIVER_COMPENSATION with amount_sgd mirroring it."
+    }
+  },
+  {
+    "case_no": 1702,
+    "dispute_id": "DSP-01702",
+    "ground_truth": {
+      "expected_ruling": "DRIVER_COMPENSATION",
+      "expected_amount_sgd": 3.6,
+      "expected_driver_compensation_sgd": 3.6,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-01",
+        "POL-NS-02",
+        "POL-NS-07"
+      ],
+      "difficulty": "EASY",
+      "rationale": "EV-TRIP-01702 carries the arrived event; EV-GPS-01702 places the driver inside the LARGE_VENUE arrival radius with sub-25 m fixes before it and holds a continuous in-geofence run of 380 s, longer than the 180 s free waiting period in force (EV-TRIP-01702.platform_policy carries the published figures, source PLATFORM-PUBLISHED-2026-10-07). The trip terminated by the driver with RIDER_NO_SHOW after the dwell elapsed, so all four POL-NS-01 limbs hold; rider_track sits outside the rider-presence radius so POL-NS-04 is not engaged. POL-NS-07: no anti-farming pattern on EV-DPROF-01702, compensation 80 percent of the net SGD 4.50 fee = 3.60; ruling DRIVER_COMPENSATION with amount_sgd mirroring it."
+    }
+  },
+  {
+    "case_no": 1703,
+    "dispute_id": "DSP-01703",
+    "ground_truth": {
+      "expected_ruling": "DRIVER_COMPENSATION",
+      "expected_amount_sgd": 4.0,
+      "expected_driver_compensation_sgd": 4.0,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-01",
+        "POL-NS-02",
+        "POL-NS-07"
+      ],
+      "difficulty": "EASY",
+      "rationale": "EV-TRIP-01703.platform_policy (RECORD-PLATFORM) fixes free_wait_sec 300, no_show_threshold_sec 480 and cancellation_fee_sgd 5.0, and fee_schedule.resolution_rule reads it before the defaults. EV-GPS-01703 holds a 500 s continuous in-radius run, longer than both figures, and the trip terminated with RIDER_NO_SHOW at or after the threshold: POL-NS-01 satisfied. POL-NS-07: 80 percent of the net 5.00 fee = 4.00; DRIVER_COMPENSATION with amount_sgd mirroring it."
+    }
+  },
+  {
+    "case_no": 1704,
+    "dispute_id": "DSP-01704",
+    "ground_truth": {
+      "expected_ruling": "DRIVER_COMPENSATION",
+      "expected_amount_sgd": 3.2,
+      "expected_driver_compensation_sgd": 3.2,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-01",
+        "POL-NS-02",
+        "POL-NS-07"
+      ],
+      "difficulty": "EASY",
+      "rationale": "EV-TRIP-01704.platform_policy (AUTHORED-V1) fixes free_wait_sec 300 and cancellation_fee_sgd 4.0; EV-GPS-01704 shows a 360 s continuous in-radius run before a RIDER_NO_SHOW termination. POL-NS-01 satisfied; POL-NS-07 pays 80 percent of 4.0 = the compensation figure; ruling DRIVER_COMPENSATION."
+    }
+  },
+  {
+    "case_no": 1705,
+    "dispute_id": "DSP-01705",
+    "ground_truth": {
+      "expected_ruling": "DRIVER_COMPENSATION",
+      "expected_amount_sgd": 4.8,
+      "expected_driver_compensation_sgd": 4.8,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-01",
+        "POL-NS-02",
+        "POL-NS-07"
+      ],
+      "difficulty": "EASY",
+      "rationale": "EV-TRIP-01705.platform_policy (AUTHORED-V1) fixes free_wait_sec 480 and cancellation_fee_sgd 6.0; EV-GPS-01705 shows a 520 s continuous in-radius run before a RIDER_NO_SHOW termination. POL-NS-01 satisfied; POL-NS-07 pays 80 percent of 6.0 = the compensation figure; ruling DRIVER_COMPENSATION."
+    }
+  },
+  {
+    "case_no": 1706,
+    "dispute_id": "DSP-01706",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 4.5,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-01",
+        "POL-NS-06"
+      ],
+      "difficulty": "EASY",
+      "rationale": "EV-GPS-01706 holds an in-geofence run of only 95 s against the 180 s free waiting period in force, so POL-NS-01 limb (c) fails and POL-NS-06 refunds the SGD 4.5 fee in full with no driver compensation."
+    }
+  },
+  {
+    "case_no": 1707,
+    "dispute_id": "DSP-01707",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 4.5,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-01",
+        "POL-NS-06"
+      ],
+      "difficulty": "EASY",
+      "rationale": "EV-GPS-01707 holds an in-geofence run of only 150 s against the 180 s free waiting period in force, so POL-NS-01 limb (c) fails and POL-NS-06 refunds the SGD 4.5 fee in full with no driver compensation."
+    }
+  },
+  {
+    "case_no": 1708,
+    "dispute_id": "DSP-01708",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 4.0,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-01",
+        "POL-NS-06"
+      ],
+      "difficulty": "EASY",
+      "rationale": "EV-GPS-01708 holds an in-geofence run of only 240 s against the 300 s free waiting period in force, so POL-NS-01 limb (c) fails and POL-NS-06 refunds the SGD 4.0 fee in full with no driver compensation."
+    }
+  },
+  {
+    "case_no": 1709,
+    "dispute_id": "DSP-01709",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 4.5,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-01",
+        "POL-NS-02"
+      ],
+      "difficulty": "EASY",
+      "rationale": "EV-GPS-01709 has no qualifying fix inside the STANDARD arrival radius at any point in the 15 minutes before cancellation; the driver's stationary fixes lie about 650 m from the pin, beyond the 400 m ceiling, so POL-NS-02 governs: the driver never arrived, POL-NS-01 limb (b) fails and the SGD 4.50 fee is refunded in full."
+    }
+  },
+  {
+    "case_no": 1710,
+    "dispute_id": "DSP-01710",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 4.5,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-01",
+        "POL-NS-02"
+      ],
+      "difficulty": "EASY",
+      "rationale": "EV-GPS-01710 has no qualifying fix inside the TRANSPORT_HUB arrival radius at any point in the 15 minutes before cancellation; the driver's stationary fixes lie about 520 m from the pin, beyond the 400 m ceiling, so POL-NS-02 governs: the driver never arrived, POL-NS-01 limb (b) fails and the SGD 4.50 fee is refunded in full."
+    }
+  },
+  {
+    "case_no": 1711,
+    "dispute_id": "DSP-01711",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 4.5,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-01",
+        "POL-NS-03"
+      ],
+      "difficulty": "HARD",
+      "rationale": "EV-GPS-01711 shows the driver stationary for 260 s at about 160 m from the pin: outside the arrival radius but within 400 m, so POL-NS-03 governs and POL-NS-01 limb (b) fails. EV-CHAT-01711 MSG-01711-001 names the entrance and the driver did not move to it before cancelling: limb (i), the driver bears the loss, FULL_REFUND of SGD 4.50 with no compensation."
+    }
+  },
+  {
+    "case_no": 1712,
+    "dispute_id": "DSP-01712",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 4.5,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-01",
+        "POL-NS-03"
+      ],
+      "difficulty": "HARD",
+      "rationale": "EV-GPS-01712 shows the driver stationary for 260 s at about 260 m from the pin: outside the arrival radius but within 400 m, so POL-NS-03 governs and POL-NS-01 limb (b) fails. EV-CHAT-01712 MSG-01712-001 names the entrance and the driver did not move to it before cancelling: limb (i), the driver bears the loss, FULL_REFUND of SGD 4.50 with no compensation."
+    }
+  },
+  {
+    "case_no": 1713,
+    "dispute_id": "DSP-01713",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 4.5,
+      "expected_driver_compensation_sgd": 2.25,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-01",
+        "POL-NS-03"
+      ],
+      "difficulty": "HARD",
+      "rationale": "Driver stationary 330 s at about 230 m from the pin (outside the LARGE_VENUE radius, inside 400 m): POL-NS-03. The driver replied to the rider's message within 120 s, so POL-NS-04 does not apply and the residual mislocation is decided under POL-NS-03. No message in EV-CHAT-01713 names a sub-location and EV-TRIP-01713.registered_pickup_points is 3, so limb (ii): pin ambiguity, FULL_REFUND of SGD 4.50 to the rider and a platform-funded goodwill payment of 50 percent of the fee (2.25) to the driver; both fields populated, never netted."
+    }
+  },
+  {
+    "case_no": 1714,
+    "dispute_id": "DSP-01714",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 4.5,
+      "expected_driver_compensation_sgd": 2.25,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-01",
+        "POL-NS-03"
+      ],
+      "difficulty": "HARD",
+      "rationale": "Driver stationary 330 s at about 300 m from the pin (outside the TRANSPORT_HUB radius, inside 400 m): POL-NS-03. The driver replied to the rider's message within 120 s, so POL-NS-04 does not apply and the residual mislocation is decided under POL-NS-03. No message in EV-CHAT-01714 names a sub-location and EV-TRIP-01714.registered_pickup_points is 2, so limb (ii): pin ambiguity, FULL_REFUND of SGD 4.50 to the rider and a platform-funded goodwill payment of 50 percent of the fee (2.25) to the driver; both fields populated, never netted."
+    }
+  },
+  {
+    "case_no": 1715,
+    "dispute_id": "DSP-01715",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 4.5,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-04",
+        "POL-NS-01"
+      ],
+      "difficulty": "HARD",
+      "rationale": "POL-NS-04: EV-CHAT-01715 holds two locating messages from the rider inside the waiting window with no driver reply within 120 s and EV-TRIP-01715.in_app_calls is empty; rider_track on EV-GPS-01715 sits inside the rider-presence radius for every qualifying fix. All three limbs hold, so the rider is exonerated and the SGD 4.50 fee refunded in full with no compensation, although the driver's own 400 s dwell would otherwise have satisfied POL-NS-01."
+    }
+  },
+  {
+    "case_no": 1716,
+    "dispute_id": "DSP-01716",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 4.5,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-04",
+        "POL-NS-01"
+      ],
+      "difficulty": "HARD",
+      "rationale": "POL-NS-04: EV-CHAT-01716 holds two locating messages from the rider inside the waiting window with no driver reply within 120 s and EV-TRIP-01716.in_app_calls is empty; rider_track on EV-GPS-01716 sits inside the rider-presence radius for every qualifying fix. All three limbs hold, so the rider is exonerated and the SGD 4.50 fee refunded in full with no compensation, although the driver's own 400 s dwell would otherwise have satisfied POL-NS-01."
+    }
+  },
+  {
+    "case_no": 1717,
+    "dispute_id": "DSP-01717",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 4.5,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-01",
+        "POL-NS-06"
+      ],
+      "difficulty": "HARD",
+      "rationale": "Continuous in-geofence run on EV-GPS-01717 is 179 s against the 180 s free waiting period stated on EV-TRIP-01717.platform_policy (the published figures). One second short: POL-NS-01(c) fails, POL-NS-06 refunds SGD 4.50 in full."
+    }
+  },
+  {
+    "case_no": 1718,
+    "dispute_id": "DSP-01718",
+    "ground_truth": {
+      "expected_ruling": "DRIVER_COMPENSATION",
+      "expected_amount_sgd": 3.6,
+      "expected_driver_compensation_sgd": 3.6,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-01",
+        "POL-NS-07"
+      ],
+      "difficulty": "HARD",
+      "rationale": "Continuous in-geofence run on EV-GPS-01718 is 181 s against the 180 s free waiting period stated on EV-TRIP-01718.platform_policy (the published figures). One second over: POL-NS-01 satisfied, POL-NS-07 pays 80 percent of 4.50 = 3.60; DRIVER_COMPENSATION."
+    }
+  },
+  {
+    "case_no": 1719,
+    "dispute_id": "DSP-01719",
+    "ground_truth": {
+      "expected_ruling": "DRIVER_COMPENSATION",
+      "expected_amount_sgd": 3.6,
+      "expected_driver_compensation_sgd": 3.6,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-01",
+        "POL-NS-02",
+        "POL-NS-07"
+      ],
+      "difficulty": "HARD",
+      "rationale": "The driver's stationary fixes on EV-GPS-01719 are about 44 m from the pin, with the STANDARD arrival radius at 50 m. Inside: POL-NS-02 satisfied with a 360 s run, POL-NS-01 holds, POL-NS-07 pays 3.60."
+    }
+  },
+  {
+    "case_no": 1720,
+    "dispute_id": "DSP-01720",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 4.5,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-01",
+        "POL-NS-03"
+      ],
+      "difficulty": "HARD",
+      "rationale": "The driver's stationary fixes on EV-GPS-01720 are about 56 m from the pin, with the STANDARD arrival radius at 50 m. Outside the radius but inside 400 m: POL-NS-03 governs, limb (b) fails, FULL_REFUND of 4.50; neither party named a sub-location and registered_pickup_points is 1, so no goodwill under limb (ii)."
+    }
+  },
+  {
+    "case_no": 1721,
+    "dispute_id": "DSP-01721",
+    "ground_truth": {
+      "expected_ruling": "DRIVER_COMPENSATION",
+      "expected_amount_sgd": 3.6,
+      "expected_driver_compensation_sgd": 3.6,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-01",
+        "POL-NS-02",
+        "POL-NS-07"
+      ],
+      "difficulty": "REVERSAL",
+      "rationale": "Every stationary fix on EV-GPS-01721 reports accuracy between 20.0 and 24.0 m. All pass the 25 m filter: 400 s qualifying run, POL-NS-01 holds, POL-NS-07 pays 3.60."
+    }
+  },
+  {
+    "case_no": 1722,
+    "dispute_id": "DSP-01722",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 4.5,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-02",
+        "POL-NS-01"
+      ],
+      "difficulty": "REVERSAL",
+      "rationale": "Every stationary fix on EV-GPS-01722 reports accuracy between 27.0 and 34.0 m. None passes the 25 m filter, so under POL-NS-02 there is no qualifying in-radius fix in the 15 minutes before cancellation: the arrival is not established on the record, POL-NS-01 limb (b) fails and the fee is refunded in full. The trace is not impaired - it is simply inadmissible for the arrival test - so no escalation."
+    }
+  },
+  {
+    "case_no": 1723,
+    "dispute_id": "DSP-01723",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 4.5,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [
+        "POL-NS-01(d) mis-selected cancellation reason recorded as a driver-education item"
+      ],
+      "governing_clauses": [
+        "POL-NS-01",
+        "POL-NS-04"
+      ],
+      "difficulty": "HARD",
+      "rationale": "EV-TRIP-01723.cancellation_reason_code is DRIVER_UNABLE_TO_LOCATE with the driver's fixes inside the arrival radius (380 s run). POL-NS-01 limb (d) is not satisfied by that code - it is the driver's own admission - and where the fixes lie inside the radius the clause itself fixes the outcome: FULL_REFUND of SGD 4.50, no compensation, and the mis-selected code recorded in referrals as a driver-education item. POL-NS-04 independently reaches the same refund: the rider's locating message went unanswered and rider_track sits inside the presence radius."
+    }
+  },
+  {
+    "case_no": 1724,
+    "dispute_id": "DSP-01724",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 4.5,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [
+        "POL-NS-01(d) mis-selected cancellation reason recorded as a driver-education item"
+      ],
+      "governing_clauses": [
+        "POL-NS-01",
+        "POL-NS-04"
+      ],
+      "difficulty": "HARD",
+      "rationale": "EV-TRIP-01724.cancellation_reason_code is DRIVER_UNABLE_TO_LOCATE with the driver's fixes inside the arrival radius (200 s run). POL-NS-01 limb (d) is not satisfied by that code - it is the driver's own admission - and where the fixes lie inside the radius the clause itself fixes the outcome: FULL_REFUND of SGD 4.50, no compensation, and the mis-selected code recorded in referrals as a driver-education item. POL-NS-04 independently reaches the same refund: the rider's locating message went unanswered and rider_track sits inside the presence radius."
+    }
+  },
+  {
+    "case_no": 1725,
+    "dispute_id": "DSP-01725",
+    "ground_truth": {
+      "expected_ruling": "DRIVER_COMPENSATION",
+      "expected_amount_sgd": 3.6,
+      "expected_driver_compensation_sgd": 3.6,
+      "expected_referrals": [
+        "POL-NS-05(iii) false-arrival event recorded against the driver"
+      ],
+      "governing_clauses": [
+        "POL-NS-05",
+        "POL-NS-01",
+        "POL-NS-07"
+      ],
+      "difficulty": "HARD",
+      "rationale": "At EV-TRIP-01725.arrived_at the driver's fix on EV-GPS-01725 is about 1.4 km from the pin at 44 km/h, so the marker is FALSE under POL-NS-05 and the clock runs from the first qualifying in-geofence fix, 120 s later. The recomputed dwell is 210 s against 180 s. Limb (iii): the minimum is met, POL-NS-01 is read from the recomputed clock and holds, the fee stands and POL-NS-07 pays 3.60; the false marker is recorded in referrals."
+    }
+  },
+  {
+    "case_no": 1726,
+    "dispute_id": "DSP-01726",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 4.5,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-05",
+        "POL-NS-01"
+      ],
+      "difficulty": "HARD",
+      "rationale": "At EV-TRIP-01726.arrived_at the driver's fix on EV-GPS-01726 is about 1.4 km from the pin at 44 km/h, so the marker is FALSE under POL-NS-05 and the clock runs from the first qualifying in-geofence fix, 120 s later. The recomputed dwell is 150 s against 180 s. Limb (i): shorter than the free waiting period, FULL_REFUND of 4.50, no compensation."
+    }
+  },
+  {
+    "case_no": 1727,
+    "dispute_id": "DSP-01727",
+    "ground_truth": {
+      "expected_ruling": "ESCALATE",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [
+        "POL-NS-07 escalation packet: instruct the reviewer to refund the rider's SGD 4.50 cancellation fee in full"
+      ],
+      "governing_clauses": [
+        "POL-NS-01",
+        "POL-NS-07",
+        "POL-NS-09"
+      ],
+      "difficulty": "INDETERMINATE",
+      "rationale": "POL-NS-01 is satisfied on EV-GPS-01727 (390 s run) and EV-TRIP-01727. EV-DPROF-01727.no_show_terminations_30d is 4 over completed_trips_30d 40. 4 or more and 0.10 > 0.08: the anti-farming check trips, compensation is withheld, the case escalates under POL-NS-09(d) with the packet directing a full refund of the fee; prior_no_show_flags (7) is a lifetime counter and is not the field read."
+    }
+  },
+  {
+    "case_no": 1728,
+    "dispute_id": "DSP-01728",
+    "ground_truth": {
+      "expected_ruling": "DRIVER_COMPENSATION",
+      "expected_amount_sgd": 3.6,
+      "expected_driver_compensation_sgd": 3.6,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-01",
+        "POL-NS-07"
+      ],
+      "difficulty": "HARD",
+      "rationale": "POL-NS-01 is satisfied on EV-GPS-01728 (390 s run) and EV-TRIP-01728. EV-DPROF-01728.no_show_terminations_30d is 3 over completed_trips_30d 40. Three is below the 4-termination limb, so the check does not trip whatever the ratio; compensation 3.60 is paid, DRIVER_COMPENSATION."
+    }
+  },
+  {
+    "case_no": 1729,
+    "dispute_id": "DSP-01729",
+    "ground_truth": {
+      "expected_ruling": "DRIVER_COMPENSATION",
+      "expected_amount_sgd": 3.6,
+      "expected_driver_compensation_sgd": 3.6,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-01",
+        "POL-NS-02",
+        "POL-NS-07"
+      ],
+      "difficulty": "REVERSAL",
+      "rationale": "The rider's second message on EV-CHAT-01729 is text addressed to the adjudicator, not a statement about the trip; it cites no evidence and changes no fact. EV-GPS-01729: 410 s continuous in-radius run; EV-TRIP-01729: RIDER_NO_SHOW after the dwell. POL-NS-01 holds, POL-NS-07 pays 3.60; DRIVER_COMPENSATION."
+    }
+  },
+  {
+    "case_no": 1730,
+    "dispute_id": "DSP-01730",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 4.5,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-06",
+        "POL-NS-01",
+        "POL-GEN-01"
+      ],
+      "difficulty": "REVERSAL",
+      "rationale": "EV-GPS-01730 in-geofence run is 95 s against 180 s: POL-NS-06, FULL_REFUND of 4.50. EV-RPROF-01730.prior_no_show_flags (6) and prior_disputes_filed (9) are context-only under POL-GEN-01 and any claim resting on them is discarded; no_show_disputes_30d is 1, below the POL-NS-09(d) threshold of 3."
+    }
+  },
+  {
+    "case_no": 1731,
+    "dispute_id": "DSP-01731",
+    "ground_truth": {
+      "expected_ruling": "ESCALATE",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-09",
+        "POL-NS-01"
+      ],
+      "difficulty": "INDETERMINATE",
+      "rationale": "On the trip's own evidence POL-NS-01 is satisfied (EV-GPS-01731: 390 s in-radius run; RIDER_NO_SHOW after the dwell), but EV-RPROF-01731.disputes_with_counterparty_90d and EV-DPROF-01731.disputes_with_counterparty_90d both read 2: two or more no-show disputes between the same rider and driver in the trailing 90 days. POL-NS-09(c) escalates regardless of the merits; the fee is held and the reviewer settles whether the pairing is abuse on either side. These two counters are the only profile fields POL-GEN-01 lets this limb read."
+    }
+  },
+  {
+    "case_no": 1732,
+    "dispute_id": "DSP-01732",
+    "ground_truth": {
+      "expected_ruling": "ESCALATE",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-08",
+        "POL-NS-09",
+        "POL-NS-01"
+      ],
+      "difficulty": "INDETERMINATE",
+      "rationale": "EV-GPS-01732 has a 190 s sampling gap inside the waiting window, a policy-level impairment under POL-NS-08(b); the trace is the only carrier of the dwell (EV-TRIP-01732 carries no events block and EV-CHAT-01732 is empty), so the ruling may not exceed PARTIAL_REFUND and the case escalates under POL-NS-09(e). The reviewer must settle whether the driver held position across the gap."
+    }
+  },
+  {
+    "case_no": 1733,
+    "dispute_id": "DSP-01733",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 4.5,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-10"
+      ],
+      "difficulty": "HARD",
+      "rationale": "The rider cancelled 420 s after accepted_at, outside the 180 s grace of POL-NS-10(a), so the fee would be chargeable under limb (f) - except that EV-CHAT-01733 MSG-01733-001 shows the driver asking the rider to cancel, one of limb (f)'s four exceptions. FULL_REFUND of 4.50, no compensation."
+    }
+  },
+  {
+    "case_no": 1734,
+    "dispute_id": "DSP-01734",
+    "ground_truth": {
+      "expected_ruling": "DRIVER_COMPENSATION",
+      "expected_amount_sgd": 3.6,
+      "expected_driver_compensation_sgd": 3.6,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-04",
+        "POL-NS-01",
+        "POL-NS-07"
+      ],
+      "difficulty": "REVERSAL",
+      "rationale": "POL-NS-04 limbs (a) and (b) hold on EV-CHAT-01734 and EV-TRIP-01734.in_app_calls, but EV-GPS-01734 carries no rider_track, so limb (c) is UNDECIDABLE and neutral: the clause does not apply and the Judge must say the test could not be run. The dispute is decided under POL-NS-01: 400 s in-radius run, RIDER_NO_SHOW after the dwell, so the fee stands and POL-NS-07 pays 3.60."
+    }
+  },
+  {
+    "case_no": 1735,
+    "dispute_id": "DSP-01735",
+    "ground_truth": {
+      "expected_ruling": "ESCALATE",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [
+        "POL-GEN-08(1) safety flag: routed to human review without a draft ruling"
+      ],
+      "governing_clauses": [
+        "POL-GEN-08",
+        "POL-GEN-06"
+      ],
+      "difficulty": "INDETERMINATE",
+      "rationale": "dispute.safety_flag is set and EV-CHAT-01735 MSG-01735-002 is a threat. Under POL-GEN-08(1) a dispute carrying a safety flag is never adjudicated automatically: the record is assembled and the case routed to human review under POL-GEN-06 (2 h limit) with no draft ruling. ESCALATE; the fee is held."
+    }
+  },
+  {
+    "case_no": 1736,
+    "dispute_id": "DSP-01736",
+    "ground_truth": {
+      "expected_ruling": "DRIVER_COMPENSATION",
+      "expected_amount_sgd": 3.6,
+      "expected_driver_compensation_sgd": 3.6,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-01",
+        "POL-NS-08",
+        "POL-NS-07"
+      ],
+      "difficulty": "HARD",
+      "rationale": "EV-GPS-01736 carries a 60 s gap during the approach, before the arrived event; it is tagged GPS_GAP by the pre-pass at the integrity table's short-or-outside-window weight 0.85, lies outside the waiting window and is under 120 s, so POL-NS-08(b) is not engaged and the artifact is down-weighted under POL-GEN-02 only (0.85 clears the 0.70 floor). The 410 s in-radius run and the RIDER_NO_SHOW termination satisfy POL-NS-01; POL-NS-07 pays 3.60."
+    }
+  },
+  {
+    "case_no": 1737,
+    "dispute_id": "DSP-01737",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 4.5,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-10"
+      ],
+      "difficulty": "EASY",
+      "rationale": "EV-TRIP-01737: cancelled_at is 120 s after accepted_at, inside the 180 s grace_after_match_sec stated on EV-TRIP-01737.platform_policy. POL-NS-10(a): not chargeable whatever the driver's position; limb (c): the SGD 4.50 charged on EV-FARE-01737 is refunded in full with no compensation."
+    }
+  },
+  {
+    "case_no": 1738,
+    "dispute_id": "DSP-01738",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 4.5,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-10"
+      ],
+      "difficulty": "EASY",
+      "rationale": "EV-TRIP-01738.scheduled_at is 45 min after accepted_at and cancelled_at is 25 min after accepted_at, so the cancellation fell 20 min = 1200 s before the scheduled time, more than the 900 s advance_grace_before_scheduled_sec. POL-NS-10(b) makes it non-chargeable and limb (c) refunds the 4.50 in full."
+    }
+  },
+  {
+    "case_no": 1739,
+    "dispute_id": "DSP-01739",
+    "ground_truth": {
+      "expected_ruling": "DRIVER_COMPENSATION",
+      "expected_amount_sgd": 3.6,
+      "expected_driver_compensation_sgd": 3.6,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-10",
+        "POL-NS-02",
+        "POL-NS-07"
+      ],
+      "difficulty": "HARD",
+      "rationale": "EV-GPS-01739: 300 s continuous in-radius run before EV-TRIP-01739.cancelled_at, which is the rider's own cancellation after the driver had arrived under POL-NS-02 and after the 180 s free wait had elapsed. POL-NS-10(g): the fee stands at 4.50 as if terminated for a no-show, limb (f)'s exceptions do not apply, and POL-NS-07 pays 3.60; DRIVER_COMPENSATION."
+    }
+  },
+  {
+    "case_no": 1740,
+    "dispute_id": "DSP-01740",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 5.0,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-10"
+      ],
+      "difficulty": "EASY",
+      "rationale": "EV-TRIP-01740 is COMPLETED and EV-FARE-01740 carries a SGD 5.00 waiting_time_fee. EV-GPS-01740 shows an in-geofence dwell of 100 s before boarding, under the 180 s free wait, so POL-NS-10(d) does not support the line and limb (e) refunds it in full. amount_contested is the waiting fee only."
+    }
+  },
+  {
+    "case_no": 1751,
+    "dispute_id": "DSP-01751",
+    "ground_truth": {
+      "expected_ruling": "PARTIAL_REFUND",
+      "expected_amount_sgd": 6.8,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-01",
+        "POL-RD-02",
+        "POL-RD-08"
+      ],
+      "difficulty": "EASY",
+      "rationale": "EV-GPS-01751.trace_distance_km 28.34 against EV-TRIP-01751.optimal_distance_km 22.0: the excess clears both POL-RD-01 limbs (over 20 percent and over 0.8 km) and is not material. No clause excuses it: EV-CHAT-01751 is empty, the traffic assertion in the counterparty statement cites no advisory and EV-ADVIS-01751-01 is MISSING (POL-RD-13). POL-RD-02 recomputes the fare on the booked optimal (22.0 km, 29.7 min) at surge 1.0 with on-route ERP 0.0; refund = charged 36.19 minus recomputed, rounded up to 0.05."
+    }
+  },
+  {
+    "case_no": 1752,
+    "dispute_id": "DSP-01752",
+    "ground_truth": {
+      "expected_ruling": "PARTIAL_REFUND",
+      "expected_amount_sgd": 9.3,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-01",
+        "POL-RD-02",
+        "POL-RD-08"
+      ],
+      "difficulty": "EASY",
+      "rationale": "EV-GPS-01752.trace_distance_km 30.24 against EV-TRIP-01752.optimal_distance_km 23.5: the excess clears both POL-RD-01 limbs (over 20 percent and over 0.8 km) and is not material. No clause excuses it: EV-CHAT-01752 is empty, the traffic assertion in the counterparty statement cites no advisory and EV-ADVIS-01752-01 is MISSING (POL-RD-13). POL-RD-02 recomputes the fare on the booked optimal (23.5 km, 31.7 min) at surge 1.3 with on-route ERP 0.0; refund = charged 49.49 minus recomputed, rounded up to 0.05."
+    }
+  },
+  {
+    "case_no": 1753,
+    "dispute_id": "DSP-01753",
+    "ground_truth": {
+      "expected_ruling": "PARTIAL_REFUND",
+      "expected_amount_sgd": 6.75,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-01",
+        "POL-RD-02",
+        "POL-RD-08"
+      ],
+      "difficulty": "EASY",
+      "rationale": "EV-GPS-01753.trace_distance_km 27.96 against EV-TRIP-01753.optimal_distance_km 21.7: the excess clears both POL-RD-01 limbs (over 20 percent and over 0.8 km) and is not material. No clause excuses it: EV-CHAT-01753 is empty, the traffic assertion in the counterparty statement cites no advisory and EV-ADVIS-01753-01 is MISSING (POL-RD-13). POL-RD-02 recomputes the fare on the booked optimal (21.7 km, 29.3 min) at surge 1.0 with on-route ERP 2.0; refund = charged 37.82 minus recomputed, rounded up to 0.05."
+    }
+  },
+  {
+    "case_no": 1754,
+    "dispute_id": "DSP-01754",
+    "ground_truth": {
+      "expected_ruling": "PARTIAL_REFUND",
+      "expected_amount_sgd": 5.65,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-01",
+        "POL-RD-02",
+        "POL-RD-08"
+      ],
+      "difficulty": "EASY",
+      "rationale": "EV-GPS-01754.trace_distance_km 19.07 against EV-TRIP-01754.optimal_distance_km 14.7: the excess clears both POL-RD-01 limbs (over 20 percent and over 0.8 km) and is not material. No clause excuses it: EV-CHAT-01754 is empty, the traffic assertion in the counterparty statement cites no advisory and EV-ADVIS-01754-01 is MISSING (POL-RD-13). POL-RD-02 recomputes the fare on the booked optimal (14.7 km, 19.8 min) at surge 1.2 with on-route ERP 1.5; refund = charged 32.38 minus recomputed, rounded up to 0.05."
+    }
+  },
+  {
+    "case_no": 1755,
+    "dispute_id": "DSP-01755",
+    "ground_truth": {
+      "expected_ruling": "NO_ACTION",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-01"
+      ],
+      "difficulty": "EASY",
+      "rationale": "EV-GPS-01755.trace_distance_km 20.38 against 18.7 km booked: the excess is about 9 percent, under the 20 percent limb of POL-RD-01, so no deviation exists however the rider characterises the trip. NO_ACTION; no billing-integrity line on EV-FARE-01755."
+    }
+  },
+  {
+    "case_no": 1756,
+    "dispute_id": "DSP-01756",
+    "ground_truth": {
+      "expected_ruling": "NO_ACTION",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-01"
+      ],
+      "difficulty": "EASY",
+      "rationale": "EV-GPS-01756.trace_distance_km 19.08 against 17.5 km booked: the excess is about 9 percent, under the 20 percent limb of POL-RD-01, so no deviation exists however the rider characterises the trip. NO_ACTION; no billing-integrity line on EV-FARE-01756."
+    }
+  },
+  {
+    "case_no": 1757,
+    "dispute_id": "DSP-01757",
+    "ground_truth": {
+      "expected_ruling": "NO_ACTION",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-01"
+      ],
+      "difficulty": "EASY",
+      "rationale": "EV-GPS-01757.trace_distance_km 24.53 against 22.5 km booked: the excess is about 9 percent, under the 20 percent limb of POL-RD-01, so no deviation exists however the rider characterises the trip. NO_ACTION; no billing-integrity line on EV-FARE-01757."
+    }
+  },
+  {
+    "case_no": 1758,
+    "dispute_id": "DSP-01758",
+    "ground_truth": {
+      "expected_ruling": "NO_ACTION",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-01",
+        "POL-RD-03",
+        "POL-RD-08"
+      ],
+      "difficulty": "HARD",
+      "rationale": "Excess 22.5 - 18.0 = about 4.5 km (25 percent) clears both POL-RD-01 limbs. EV-ADVIS-01758-01 is an LTA accident on the PIE corridor the optimal route uses, active across the trip, with the trace leaving the corridor before the advisory box and rejoining after it, so POL-RD-03 applies. Cap = 1.30 x (21.0 - 18.0) + 1.0 = 4.9 km, more than the measured excess, so the whole excess is justified and nothing remains for POL-RD-02. NO_ACTION; no ERP on EV-FARE-01758."
+    }
+  },
+  {
+    "case_no": 1759,
+    "dispute_id": "DSP-01759",
+    "ground_truth": {
+      "expected_ruling": "NO_ACTION",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-01",
+        "POL-RD-03"
+      ],
+      "difficulty": "HARD",
+      "rationale": "Excess 27.28 - 22.0 km clears POL-RD-01. EV-ADVIS-01759-01 is an LTA closure on the CTE segment the optimal route traverses, window overlapping the trip, trace leaves and rejoins the corridor around it: POL-RD-03 applies. Cap = 1.30 x (25.6 - 22.0) + 1.0 = 5.68 km, which exceeds the measured excess, so the deviation is exonerated in full. NO_ACTION; no off-route ERP on EV-FARE-01759, so POL-RD-09(2) adds nothing."
+    }
+  },
+  {
+    "case_no": 1760,
+    "dispute_id": "DSP-01760",
+    "ground_truth": {
+      "expected_ruling": "PARTIAL_REFUND",
+      "expected_amount_sgd": 3.8,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-01",
+        "POL-RD-03",
+        "POL-RD-02"
+      ],
+      "difficulty": "HARD",
+      "rationale": "Excess 31.2 - 24.0 = about 7.2 km clears POL-RD-01. EV-ADVIS-01760-01 (AYE closure, corridor, window) engages POL-RD-03, but the cap is 1.30 x (26.0 - 24.0) + 1.0 = 3.6 km: 3.6 km justified, the rest not. POL-RD-02 runs against the closure-adjusted optimal 27.6 km with duration 32.0 x 27.6 / 24.0 = 36.8 min; refund = charged 39.4 minus that recomputed fare, rounded up to 0.05."
+    }
+  },
+  {
+    "case_no": 1761,
+    "dispute_id": "DSP-01761",
+    "ground_truth": {
+      "expected_ruling": "NO_ACTION",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-04",
+        "POL-RD-01"
+      ],
+      "difficulty": "HARD",
+      "rationale": "EV-CHAT-01761 MSG-01761-001 is a rider instruction before the vehicle left the corridor naming a place, with waypoint_hint set; EV-GPS-01761 passes within 200 m of that waypoint. POL-RD-04 excludes the excess between leaving and rejoining the corridor, which is the whole bulge, so nothing remains for POL-RD-01. NO_ACTION."
+    }
+  },
+  {
+    "case_no": 1762,
+    "dispute_id": "DSP-01762",
+    "ground_truth": {
+      "expected_ruling": "NO_ACTION",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-04",
+        "POL-RD-01"
+      ],
+      "difficulty": "HARD",
+      "rationale": "EV-CHAT-01762 MSG-01762-001 is a rider instruction before the vehicle left the corridor naming a place, with waypoint_hint set; EV-GPS-01762 passes within 200 m of that waypoint. POL-RD-04 excludes the excess between leaving and rejoining the corridor, which is the whole bulge, so nothing remains for POL-RD-01. NO_ACTION."
+    }
+  },
+  {
+    "case_no": 1763,
+    "dispute_id": "DSP-01763",
+    "ground_truth": {
+      "expected_ruling": "PARTIAL_REFUND",
+      "expected_amount_sgd": 6.0,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-11",
+        "POL-RD-09"
+      ],
+      "difficulty": "HARD",
+      "rationale": "EV-FARE-01763.fare_model is UPFRONT_QUOTE with quoted_fare_sgd 21.50, so POL-RD-11 governs and POL-RD-02 does not run. Properly chargeable lines are the 0.80 platform fee and nothing else (no ERP, no surcharge, no waiting fee). charged_total 28.3 exceeds 21.50 + 0.80 by 6.00, refunded in full under POL-RD-11(a). The excess distance on EV-GPS-01763 is the driver's loss, not the rider's."
+    }
+  },
+  {
+    "case_no": 1764,
+    "dispute_id": "DSP-01764",
+    "ground_truth": {
+      "expected_ruling": "PARTIAL_REFUND",
+      "expected_amount_sgd": 9.5,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-11",
+        "POL-RD-09"
+      ],
+      "difficulty": "HARD",
+      "rationale": "EV-FARE-01764.fare_model is UPFRONT_QUOTE with quoted_fare_sgd 21.50, so POL-RD-11 governs and POL-RD-02 does not run. Properly chargeable lines are the 0.80 platform fee and nothing else (no ERP, no surcharge, no waiting fee). charged_total 31.8 exceeds 21.50 + 0.80 by 9.50, refunded in full under POL-RD-11(a). The excess distance on EV-GPS-01764 is the driver's loss, not the rider's."
+    }
+  },
+  {
+    "case_no": 1765,
+    "dispute_id": "DSP-01765",
+    "ground_truth": {
+      "expected_ruling": "PARTIAL_REFUND",
+      "expected_amount_sgd": 2.0,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [
+        "POL-RD-09(4) billing-integrity finding: ERP gantry line of SGD 2.00 on EV-FARE-01765 that the trace never passes"
+      ],
+      "governing_clauses": [
+        "POL-RD-09",
+        "POL-RD-01"
+      ],
+      "difficulty": "EASY",
+      "rationale": "EV-GPS-01765 excess is about 5 percent, so no deviation under POL-RD-01. EV-FARE-01765 carries one ERP gantry whose coordinates are kilometres from every fix (nothing within 250 m): POL-RD-09(4) billing-integrity failure, refunded in full as a standalone correction and recorded in referrals; POL-RD-10(8) is not triggered by it."
+    }
+  },
+  {
+    "case_no": 1766,
+    "dispute_id": "DSP-01766",
+    "ground_truth": {
+      "expected_ruling": "PARTIAL_REFUND",
+      "expected_amount_sgd": 3.0,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [
+        "POL-RD-09(4) billing-integrity finding: ERP gantry line of SGD 3.00 on EV-FARE-01766 that the trace never passes"
+      ],
+      "governing_clauses": [
+        "POL-RD-09",
+        "POL-RD-01"
+      ],
+      "difficulty": "EASY",
+      "rationale": "EV-GPS-01766 excess is about 5 percent, so no deviation under POL-RD-01. EV-FARE-01766 carries one ERP gantry whose coordinates are kilometres from every fix (nothing within 250 m): POL-RD-09(4) billing-integrity failure, refunded in full as a standalone correction and recorded in referrals; POL-RD-10(8) is not triggered by it."
+    }
+  },
+  {
+    "case_no": 1767,
+    "dispute_id": "DSP-01767",
+    "ground_truth": {
+      "expected_ruling": "NO_ACTION",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-01"
+      ],
+      "difficulty": "HARD",
+      "rationale": "Excess 14.39 - 12.0 km on EV-GPS-01767 is just under 20 percent of the booked optimal; the absolute limb (0.8 km) passes in both. Establishment fails on the percentage limb: NO_ACTION."
+    }
+  },
+  {
+    "case_no": 1768,
+    "dispute_id": "DSP-01768",
+    "ground_truth": {
+      "expected_ruling": "PARTIAL_REFUND",
+      "expected_amount_sgd": 2.6,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-01",
+        "POL-RD-02"
+      ],
+      "difficulty": "HARD",
+      "rationale": "Excess 14.44 - 12.0 km on EV-GPS-01768 is just over 20 percent of the booked optimal; the absolute limb (0.8 km) passes in both. Both limbs pass: POL-RD-02 arithmetic refund against 12.0 km / 16.0 min, rounded up to 0.05."
+    }
+  },
+  {
+    "case_no": 1769,
+    "dispute_id": "DSP-01769",
+    "ground_truth": {
+      "expected_ruling": "NO_ACTION",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-01"
+      ],
+      "difficulty": "HARD",
+      "rationale": "Excess on EV-GPS-01769 is about 0.76 km against 3.2 km booked (over 20 percent). Under 0.8 km absolute: no deviation, NO_ACTION."
+    }
+  },
+  {
+    "case_no": 1770,
+    "dispute_id": "DSP-01770",
+    "ground_truth": {
+      "expected_ruling": "PARTIAL_REFUND",
+      "expected_amount_sgd": 1.05,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-01",
+        "POL-RD-02"
+      ],
+      "difficulty": "HARD",
+      "rationale": "Excess on EV-GPS-01770 is about 0.84 km against 3.2 km booked (over 20 percent). Over 0.8 km: established; POL-RD-02 refund against 3.2 km / 6.0 min, rounded up to 0.05."
+    }
+  },
+  {
+    "case_no": 1771,
+    "dispute_id": "DSP-01771",
+    "ground_truth": {
+      "expected_ruling": "NO_ACTION",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-01",
+        "POL-RD-02"
+      ],
+      "difficulty": "HARD",
+      "rationale": "Deviation established on EV-GPS-01771 (0.85 km, 26 percent). POL-RD-02: refund = charged 9.28 minus the fare recomputed on 3.2 km / 6.0 min. The booked optimal duration is 7.0 min while the trip took about 6.1 min, so the time component of the recomputed fare exceeds the time billed; the arithmetic refund is below SGD 0.50 and the outcome is NO_ACTION as de minimis."
+    }
+  },
+  {
+    "case_no": 1772,
+    "dispute_id": "DSP-01772",
+    "ground_truth": {
+      "expected_ruling": "PARTIAL_REFUND",
+      "expected_amount_sgd": 0.6,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-01",
+        "POL-RD-02"
+      ],
+      "difficulty": "HARD",
+      "rationale": "Deviation established on EV-GPS-01772 (0.85 km, 26 percent). POL-RD-02: refund = charged 9.28 minus the fare recomputed on 3.2 km / 6.0 min. The booked optimal duration is 6.0 min; the refund exceeds SGD 0.50, so PARTIAL_REFUND rounded up to 0.05."
+    }
+  },
+  {
+    "case_no": 1773,
+    "dispute_id": "DSP-01773",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 83.42,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-01",
+        "POL-RD-02",
+        "POL-RD-06"
+      ],
+      "difficulty": "HARD",
+      "rationale": "Excess on EV-GPS-01773 is many times the booked optimal: MATERIAL under POL-RD-01, so POL-RD-06 is consulted; EV-DPROF-01773.deviation_flags_90d is 0 and no pattern is established. The verbal destination change is unsupported by EV-CHAT-01773 (empty) and EV-TRIP-01773 shows no amendment, so POL-RD-04 and POL-RD-05 are unavailable. POL-RD-02 refund against 2.4 km / 5.0 min; it is 90 percent or more of charged_total, so FULL_REFUND of the whole charged_total 83.42."
+    }
+  },
+  {
+    "case_no": 1774,
+    "dispute_id": "DSP-01774",
+    "ground_truth": {
+      "expected_ruling": "PARTIAL_REFUND",
+      "expected_amount_sgd": 13.7,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-01",
+        "POL-RD-02",
+        "POL-RD-06"
+      ],
+      "difficulty": "HARD",
+      "rationale": "Excess on EV-GPS-01774 is many times the booked optimal: MATERIAL under POL-RD-01, so POL-RD-06 is consulted; EV-DPROF-01774.deviation_flags_90d is 0 and no pattern is established. The verbal destination change is unsupported by EV-CHAT-01774 (empty) and EV-TRIP-01774 shows no amendment, so POL-RD-04 and POL-RD-05 are unavailable. POL-RD-02 refund against 2.4 km / 5.0 min; it is below 90 percent of charged_total, so PARTIAL_REFUND rounded up to 0.05."
+    }
+  },
+  {
+    "case_no": 1775,
+    "dispute_id": "DSP-01775",
+    "ground_truth": {
+      "expected_ruling": "PARTIAL_REFUND",
+      "expected_amount_sgd": 4.5,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-01",
+        "POL-RD-07",
+        "POL-RD-02"
+      ],
+      "difficulty": "HARD",
+      "rationale": "EV-GPS-01775 has one gap of about 80 s inside the deviated stretch. Under 90 s: not impaired under POL-RD-07(a) to (c), down-weighted under POL-GEN-02 only; deviation established, POL-RD-02 refund rounded up to 0.05."
+    }
+  },
+  {
+    "case_no": 1776,
+    "dispute_id": "DSP-01776",
+    "ground_truth": {
+      "expected_ruling": "ESCALATE",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-07",
+        "POL-RD-10"
+      ],
+      "difficulty": "INDETERMINATE",
+      "rationale": "EV-GPS-01776 has one gap of about 100 s inside the deviated stretch. Over 90 s: impaired under POL-RD-07(a); the billed distance on EV-FARE-01776 is a copy of the trace figure and EV-CHAT-01776 holds no admission, so no independent corroboration exists and POL-RD-10(3) escalates rather than finding for the driver."
+    }
+  },
+  {
+    "case_no": 1777,
+    "dispute_id": "DSP-01777",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 20.66,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [
+        "POL-RD-06(c) driver-conduct review"
+      ],
+      "governing_clauses": [
+        "POL-RD-01",
+        "POL-RD-02",
+        "POL-RD-06"
+      ],
+      "difficulty": "HARD",
+      "rationale": "Excess on EV-GPS-01777 is about 60 percent of 9.0 km: MATERIAL. EV-DPROF-01777.deviation_flags_90d is 3 over completed_trips_90d 180. Three or more: pattern established; the deviation is material and substantiated on this trip's own trace, so limb (b) licenses FULL_REFUND of charged_total 20.66 (no pass-through lines on EV-FARE-01777) with the POL-RD-02 figure stated beside it, and limb (c) refers the driver to conduct review."
+    }
+  },
+  {
+    "case_no": 1778,
+    "dispute_id": "DSP-01778",
+    "ground_truth": {
+      "expected_ruling": "PARTIAL_REFUND",
+      "expected_amount_sgd": 5.7,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-01",
+        "POL-RD-02",
+        "POL-RD-06"
+      ],
+      "difficulty": "HARD",
+      "rationale": "Excess on EV-GPS-01778 is about 60 percent of 9.0 km: MATERIAL. EV-DPROF-01778.deviation_flags_90d is 2 over completed_trips_90d 180. Two, and 2/180 is under 0.05: no pattern; POL-RD-02 partial refund rounded up to 0.05; prior_deviation_flags is a lifetime counter and is not read."
+    }
+  },
+  {
+    "case_no": 1779,
+    "dispute_id": "DSP-01779",
+    "ground_truth": {
+      "expected_ruling": "PARTIAL_REFUND",
+      "expected_amount_sgd": 7.3,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-01",
+        "POL-RD-02",
+        "POL-RD-08"
+      ],
+      "difficulty": "REVERSAL",
+      "rationale": "The rider's message on EV-CHAT-01779 is addressed to the adjudicator and cites a clause that does not exist; it is not a fact about the trip. Excess on EV-GPS-01779 clears POL-RD-01, no clause excuses it, POL-RD-02 refund against the booked optimal rounded up to 0.05."
+    }
+  },
+  {
+    "case_no": 1780,
+    "dispute_id": "DSP-01780",
+    "ground_truth": {
+      "expected_ruling": "PARTIAL_REFUND",
+      "expected_amount_sgd": 5.4,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-13",
+        "POL-RD-01",
+        "POL-RD-02"
+      ],
+      "difficulty": "HARD",
+      "rationale": "The driver asserts a traffic cause but names no advisory and EV-ADVIS-01780-01 is MISSING. POL-RD-13: the assertion carries no weight under POL-RD-08, the missing advisory is a gap in the bundle rather than an invoked artifact (so POL-RD-10(5) is not engaged), and the deviation stands at the measured figure; POL-RD-02 runs against the booked optimal."
+    }
+  },
+  {
+    "case_no": 1781,
+    "dispute_id": "DSP-01781",
+    "ground_truth": {
+      "expected_ruling": "ESCALATE",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-10",
+        "POL-RD-13",
+        "POL-RD-03"
+      ],
+      "difficulty": "INDETERMINATE",
+      "rationale": "The driver invokes POL-RD-03 against a cited artifact, EV-ADVIS-01781-01, which is MISSING from the pool. POL-RD-13(1) preserves POL-RD-10(5) for exactly this case: an exculpatory clause invoked against a cited artifact that is missing escalates. The reviewer needs the advisory record itself."
+    }
+  },
+  {
+    "case_no": 1782,
+    "dispute_id": "DSP-01782",
+    "ground_truth": {
+      "expected_ruling": "ESCALATE",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-10",
+        "POL-RD-04"
+      ],
+      "difficulty": "INDETERMINATE",
+      "rationale": "EV-CHAT-01782 MSG-01782-001 is a timely, specific rider detour request with a waypoint_hint, but EV-GPS-01782 never comes within 200 m of that waypoint: admissible evidence on both sides of comparable strength, mutually contradictory. POL-RD-10(7) escalates; the amount is held."
+    }
+  },
+  {
+    "case_no": 1783,
+    "dispute_id": "DSP-01783",
+    "ground_truth": {
+      "expected_ruling": "PARTIAL_REFUND",
+      "expected_amount_sgd": 3.35,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-01",
+        "POL-RD-02",
+        "POL-GEN-01"
+      ],
+      "difficulty": "REVERSAL",
+      "rationale": "EV-DPROF-01783.prior_deviation_flags (6) is a lifetime counter and context only under POL-GEN-01; deviation_flags_90d is 0, so POL-RD-06 establishes no pattern and the deviation is not material anyway. POL-RD-02 arithmetic partial refund against the booked optimal."
+    }
+  },
+  {
+    "case_no": 1784,
+    "dispute_id": "DSP-01784",
+    "ground_truth": {
+      "expected_ruling": "ESCALATE",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-10",
+        "POL-RD-08"
+      ],
+      "difficulty": "INDETERMINATE",
+      "rationale": "EV-FARE-01784.trip_id does not match EV-TRIP-01784 and EV-GPS-01784. POL-RD-08(a) is not shown and POL-RD-10(2) escalates: the identifiers on the three artifacts do not all match. The reviewer must obtain the ledger entry for this trip."
+    }
+  },
+  {
+    "case_no": 1785,
+    "dispute_id": "DSP-01785",
+    "ground_truth": {
+      "expected_ruling": "ESCALATE",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-10",
+        "POL-RD-01",
+        "POL-RD-02"
+      ],
+      "difficulty": "INDETERMINATE",
+      "rationale": "Excess on EV-GPS-01785 is about 70 km, MATERIAL many times over, and POL-RD-02 at surge 2.0 against 22.0 km / 30.0 min would exceed SGD 150.00, so POL-RD-10(6) requires escalation and no monetary ruling issues; the amount is held for the reviewer."
+    }
+  },
+  {
+    "case_no": 1786,
+    "dispute_id": "DSP-01786",
+    "ground_truth": {
+      "expected_ruling": "NO_ACTION",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-12",
+        "POL-RD-01"
+      ],
+      "difficulty": "REVERSAL",
+      "rationale": "EV-TRIP-01786.vehicle_type is RYDE_POOL; the POL-RD-01 baseline is the matched-itinerary optimal 16.0 km, not solo_optimal_distance_km 11.5. Against 16.0 km the excess on EV-GPS-01786 is about 6 percent: no deviation. NO_ACTION; the ruling names both figures."
+    }
+  },
+  {
+    "case_no": 1787,
+    "dispute_id": "DSP-01787",
+    "ground_truth": {
+      "expected_ruling": "NO_ACTION",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-05",
+        "POL-RD-01"
+      ],
+      "difficulty": "HARD",
+      "rationale": "EV-TRIP-01787.dropoff_amended_at is set with amended_optimal_distance_km 13.4: POL-RD-05 re-applies POL-RD-01 against the amended optimal. Trace 13.2 km against 13.4 km is under the 20 percent limb, so no deviation survives. NO_ACTION."
+    }
+  },
+  {
+    "case_no": 1788,
+    "dispute_id": "DSP-01788",
+    "ground_truth": {
+      "expected_ruling": "ESCALATE",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-05",
+        "POL-RD-10"
+      ],
+      "difficulty": "INDETERMINATE",
+      "rationale": "EV-TRIP-01788.dropoff_amended_at is set but amended_optimal_distance_km is null: the re-quote is missing from the record, POL-RD-05 cannot be run and the Judge must not derive a substitute figure. POL-RD-10(5) escalates."
+    }
+  },
+  {
+    "case_no": 1789,
+    "dispute_id": "DSP-01789",
+    "ground_truth": {
+      "expected_ruling": "PARTIAL_REFUND",
+      "expected_amount_sgd": 3.0,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-03",
+        "POL-RD-09",
+        "POL-RD-01"
+      ],
+      "difficulty": "HARD",
+      "rationale": "Excess 24.6 - 20.0 = about 4.6 km (23 percent) clears POL-RD-01 and is within the POL-RD-03 cap of 1.30 x (23.0 - 20.0) + 1.0 = 4.9 km, so the deviation is exonerated and distance and time charges stand. POL-RD-09(2): the SGD 3.00 off-route ERP line on EV-FARE-01789 (gantry at the detour apex, not on the optimal corridor) is refunded as a standalone pass-through correction, under the 12.00 cap. PARTIAL_REFUND 3.00."
+    }
+  },
+  {
+    "case_no": 1790,
+    "dispute_id": "DSP-01790",
+    "ground_truth": {
+      "expected_ruling": "PARTIAL_REFUND",
+      "expected_amount_sgd": 14.1,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-01",
+        "POL-RD-02",
+        "POL-GEN-05"
+      ],
+      "difficulty": "HARD",
+      "rationale": "Deviation established on EV-GPS-01790; POL-RD-02 refund at surge 1.4 against 20.0 km / 26.0 min, rounded up to 0.05. The figure exceeds execution_threshold_sgd 8.00, so under POL-GEN-05 the ruling issues but is not executed automatically: the amount is held in the human queue for release. The ruling value and amount are unchanged by that."
+    }
+  }
+]

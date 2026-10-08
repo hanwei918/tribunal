@@ -1194,5 +1194,111 @@ class PrecedentIsolationTest(unittest.TestCase):
         self.assertEqual(["matched"], _needles_in(message))
 
 
+# The two dev-v2 development sets, added 2026-10-08, and the answer-bearing file
+# names that belong under ``eval/answers/dev-v2*/`` and never under ``data/``.
+# Each name is one of the files the sets' own keys are made of, so a copy of one
+# under a set root is exactly the shape this guard exists to catch: an expected
+# outcome sitting where the agent can read it.
+DEV_V2_SET_DIRS = (
+    DATA_DIR / "external" / "dev-v2",
+    DATA_DIR / "external" / "dev-v2-ext",
+)
+DEV_V2_KEY_FILES = (
+    "ground_truth.json",
+    "EXPECTED.md",
+    "pairs.json",
+    "manifest-meta.json",
+    "DATASHEET.md",
+)
+
+# The names that must not appear inside a file under either root. ``ground_truth``
+# is added to the module's own list because it is the key's file name rather than
+# one of its fields, and a set root holding a file that says it would be a set
+# root describing an outcome.
+DEV_V2_FORBIDDEN_NAMES = DISTINCTIVE_ANSWER_FIELDS + ("ground_truth",)
+
+
+class DevV2IsolationTest(unittest.TestCase):
+    """The guard covers the two dev-v2 sets' roots as well as the keys above it.
+
+    Both are development data: their cases are agent-visible and answer-free, and
+    everything that describes an outcome lives under ``eval/answers/dev-v2*/``.
+    This class holds the roots to that, by file name and by content, and shows
+    the check capable of failing.
+    """
+
+    def test_the_two_roots_are_present(self):
+        for root in DEV_V2_SET_DIRS:
+            with self.subTest(root=root.name):
+                self.assertTrue(root.is_dir(), "{0} is missing".format(root))
+                self.assertTrue((root / "CANARY.txt").is_file())
+
+    def test_no_answer_bearing_file_name_sits_under_either_root(self):
+        for root in DEV_V2_SET_DIRS:
+            present = sorted(path.name for path in root.iterdir() if path.is_file())
+            for name in DEV_V2_KEY_FILES:
+                with self.subTest(root=root.name, name=name):
+                    self.assertNotIn(name, present)
+            # A subdirectory would be a way to put one back one level down.
+            with self.subTest(root=root.name, kind="directory"):
+                self.assertEqual(
+                    [],
+                    sorted(path.name for path in root.iterdir() if path.is_dir()),
+                )
+
+    def test_no_file_under_either_root_carries_an_answer_field_name(self):
+        for root in DEV_V2_SET_DIRS:
+            for path in sorted(root.rglob("*")):
+                if not path.is_file():
+                    continue
+                text = path.read_text(encoding="utf-8", errors="replace")
+                with self.subTest(path=str(path.relative_to(PROJECT_ROOT))):
+                    for name in DEV_V2_FORBIDDEN_NAMES:
+                        self.assertNotIn(name, text)
+
+    def test_the_names_the_check_looks_for_are_the_ones_that_exist(self):
+        """A control: a typo in the list above cannot make the check vacuous."""
+        answers = EVAL_DIR / "answers"
+        for name in DEV_V2_KEY_FILES:
+            with self.subTest(name=name):
+                found = sorted(answers.glob("dev-v2*/" + name))
+                self.assertTrue(
+                    found, "no {0} under eval/answers/dev-v2*/".format(name)
+                )
+
+    def test_the_check_is_capable_of_failing(self):
+        """Shown red: an ``EXPECTED.md`` copied under a set root is caught.
+
+        The copy is made in a temporary directory shaped like the set root, so no
+        file is written into the repository and there is nothing to restore. The
+        real root is then checked again and must be clean.
+        """
+        with tempfile.TemporaryDirectory(prefix="tribunal-dev-v2-") as temporary:
+            root = Path(temporary)
+            (root / "case-01701.json").write_text("{}\n", encoding="utf-8")
+            self.assertEqual([], self.offenders(root))
+
+            shutil.copy2(
+                EVAL_DIR / "answers" / "dev-v2" / "EXPECTED.md",
+                root / "EXPECTED.md",
+            )
+            self.assertEqual(["EXPECTED.md"], self.offenders(root))
+
+            shutil.copy2(
+                EVAL_DIR / "answers" / "dev-v2" / "pairs.json",
+                root / "pairs.json",
+            )
+            self.assertEqual(["EXPECTED.md", "pairs.json"], self.offenders(root))
+
+        for real in DEV_V2_SET_DIRS:
+            with self.subTest(root=real.name):
+                self.assertEqual([], self.offenders(real))
+
+    def offenders(self, root):
+        """The answer-bearing file names sitting under ``root``."""
+        present = {path.name for path in Path(root).iterdir() if path.is_file()}
+        return sorted(present & set(DEV_V2_KEY_FILES))
+
+
 if __name__ == "__main__":
     unittest.main()

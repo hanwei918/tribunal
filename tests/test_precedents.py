@@ -1399,19 +1399,30 @@ class PipelinePrecedentsTests(unittest.TestCase):
 # --------------------------------------------------------------------------
 # Where a run with the switch on writes
 # --------------------------------------------------------------------------
-# The set that is registered in ``eval.development_sets`` but deliberately
-# **not** named in ``tribunal.precedents.EXTERNAL_SET_DIRS``: ``wild-v2``.
+# The sets that are registered in ``eval.development_sets`` and deliberately
+# **not** named in ``tribunal.precedents.EXTERNAL_SET_DIRS``.
 #
 # The name says "not yet" because the table it is missing from is inside the
 # frozen ``tribunal/`` tree, and a set is not added to it by an edit that would
-# breach ``freeze-2026-10-03``. The reason it stays out is **not** that its run
-# is pending: the run has been made, once, on 2026-10-04, and committed exactly
-# as produced. It stays out because it is a held-out **record** and not
-# development data -- its cases are never re-run and never briefed, so a
-# precedents block that read them would be reading a held-out case. Its only
-# readers on the run path are behind ``--precedents``, which the set refuses, so
-# naming it here would breach the freeze for no run at all.
-NOT_YET_IN_PRECEDENTS = frozenset({"wild-v2"})
+# breach ``freeze-2026-10-03``.
+#
+# ``wild-v2``'s reason is its own, and it is **not** that its run is pending: the
+# run has been made, once, on 2026-10-04, and committed exactly as produced. It
+# stays out because it is a held-out **record** and not development data -- its
+# cases are never re-run and never briefed, so a precedents block that read them
+# would be reading a held-out case. Its only readers on the run path are behind
+# ``--precedents``, which the set refuses, so naming it here would breach the
+# freeze for no run at all.
+#
+# ``dev-v2``, ``dev-v2-ext`` and ``ryde-v3`` were registered on 2026-10-08 and
+# are absent for the first reason only: the table is frozen. None of them has a
+# run yet, so nothing reads a closure of theirs. One consequence is recorded
+# rather than fixed: a run of one of them with ``--precedents`` would have
+# ``set_from_run_directory`` answer ``corpus`` for its run directory, because the
+# name is not in the frozen table. That is written down in
+# ``docs/notes/2026-10-08-the-dev-sets.md``; correcting it means editing the
+# frozen tree, which the entry above this comment says not to do.
+NOT_YET_IN_PRECEDENTS = frozenset({"wild-v2", "dev-v2", "dev-v2-ext", "ryde-v3"})
 
 
 class SetFromRunDirectoryTests(unittest.TestCase):
