@@ -440,18 +440,22 @@ versioned runs land under `runs/<set>/policy-v6/<model>/`.
 
 > Where trip_record.platform_policy.arrival_marker is GPS_AUTO and
 > trip_record.events carries the platform's own arrival event stating its
-> geofence test (for example "Driver GPS within 10m of pickup point. Speed 0
-> km/h. Auto-arrival confirmed"), together with wait_timer_started and
-> wait_timer_expired events, those events are PLATFORM_TELEMETRY records of the
-> platform's full-resolution measurement. They are a carrier independent of the
-> exported gps_trace for POL-NS-01 limbs (b) and (c) and for POL-GEN-02(2):
-> arrival is established at the arrival event's time, and the free waiting period
-> is established as served when wait_timer_expired precedes the termination,
-> unless an admissible fix in the exported trace affirmatively places the driver
-> outside the arrival radius, or moving at 15 km/h or more, during the window
-> (POL-NS-05). A sparse or accuracy-less export trace does not impair these
-> events; it is weighed only for contradiction. A driver-pressed arrival marker
-> (BUTTON) is not covered by this clause. This clause licenses no ruling value.
+> geofence test (the distance to the pickup point and the speed at the arrival
+> time), together with wait_timer_started and wait_timer_expired events, those
+> events are PLATFORM_TELEMETRY records of the platform's full-resolution
+> measurement. They are a carrier independent of the exported gps_trace for
+> POL-NS-01 limbs (b) and (c) and for POL-GEN-02(2): arrival is established at
+> the arrival event's time, and the free waiting period is established as served
+> when wait_timer_expired precedes the termination, unless an admissible fix in
+> the exported trace affirmatively places the driver outside the arrival radius,
+> or moving at 15 km/h or more, during the window (POL-NS-05). A sparse or
+> accuracy-less export trace does not impair these events; it is weighed only for
+> contradiction. A driver-pressed arrival marker (BUTTON) is not covered by this
+> clause. This clause licenses no ruling value.
+
+The wording was revised on 2026-10-09 at the request of Ji Guofang, the policy
+owner, so that the rule states the geofence test in general terms rather than
+quoting the sample's event text; her confirmation follows this wording.
 
 It requires `trip_record` and `gps_trace`, licenses **no** ruling value, and
 favours **NEUTRAL**. A driver-pressed marker stays under `POL-NS-02` and

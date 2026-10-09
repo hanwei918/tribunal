@@ -253,6 +253,47 @@ class VersionSixBriefTests(unittest.TestCase):
 
 
 # --------------------------------------------------------------------------
+# The revised wording: the clause states its test in general terms
+# --------------------------------------------------------------------------
+class VersionSixClauseWordingTests(unittest.TestCase):
+    """``POL-NS-12`` states the geofence test in general terms, not the sample's words.
+
+    The first draft quoted the organisers' sample's own arrival-event text as its
+    example, which read as fitted to that one case. At the policy owner's request
+    the rule now names what the platform's event states -- the distance to the
+    pickup point and the speed at the arrival time -- and neither the rule nor the
+    notes may carry any of the sample's own words.
+    """
+
+    # The sample's own wording and figures: ``Auto-arrival`` and ``Driver GPS
+    # within`` are its arrival-event text, ``10m`` and ``0 km/h`` the figures
+    # inside it, ``901`` its case number, ``DISP-002`` its dispute id, and
+    # ``organiser`` names its authors. Written here rather than imported, so a
+    # test that fails to see one is looking for the word itself.
+    QUOTED_SAMPLE_STRINGS = (
+        "Auto-arrival",
+        "Driver GPS within",
+        "10m",
+        "0 km/h",
+        "901",
+        "DISP-002",
+        "organiser",
+    )
+
+    def test_the_clause_rule_and_notes_do_not_quote_the_sample(self):
+        loaded = loader.load_policies("NO_SHOW_CHARGE", VERSION_SIX)
+        clause = next(
+            clause
+            for clause in loaded["category"]["clauses"]
+            if clause["id"] == "POL-NS-12"
+        )
+        text = "{0}\n{1}".format(clause["rule"], clause["notes"])
+        for needle in self.QUOTED_SAMPLE_STRINGS:
+            with self.subTest(needle=needle):
+                self.assertNotIn(needle, text)
+
+
+# --------------------------------------------------------------------------
 # POL-GEN-08(4): the registration mask, from version 6 only
 # --------------------------------------------------------------------------
 class VehicleRegistrationMaskTests(unittest.TestCase):

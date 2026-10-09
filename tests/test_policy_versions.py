@@ -364,7 +364,7 @@ LOADED_POLICY_DIGESTS = {
     (4, "ROUTE_DEVIATION"): "fd6031f3382d126aee2e66353e9b8040f116acc296a08381742ceb67f4dc8eff",
     (5, "NO_SHOW_CHARGE"): "7ed85af25bfae34c03b46099989bcac197c1bebd8e02c7a8dc07ce0e8571c20e",
     (5, "ROUTE_DEVIATION"): "377742d8ef9c0d0fc53da47ce687c8460dc4756f2c8282160265ee34fe6dec1c",
-    (6, "NO_SHOW_CHARGE"): "99ae7136af0829dd949a01df8585b67d5a5940b8a940dbf5ddc1caea36b91170",
+    (6, "NO_SHOW_CHARGE"): "1b5c4780690404e114b615a7a2d5d3a496b3ea5013e41f2fc976be3cbd1412b2",
     (6, "ROUTE_DEVIATION"): "377742d8ef9c0d0fc53da47ce687c8460dc4756f2c8282160265ee34fe6dec1c",
 }
 
@@ -385,12 +385,12 @@ V3_AMENDMENT_0002_DIGEST = (
 V3_AMENDMENT_0002_PROPOSAL = POLICY_DIR / "v3" / "proposals" / "0002-pol-rd-14.json"
 V3_AMENDMENT_0003 = POLICY_DIR / "v3" / "amendments" / "0003-pol-ns-12.json"
 V3_AMENDMENT_0003_DIGEST = (
-    "07bfbb4dcfb5194c1ba88cfaa960c63507f6c6ed29a72ba8192b5a50018301f8"
+    "9fa988960d049a67e9bdbdbbaa822cb246bb2bc0e806e1b865f730e25852d582"
 )
 V3_AMENDMENT_0003_PROPOSAL = POLICY_DIR / "v3" / "proposals" / "0003-pol-ns-12.json"
 # The digest the amendment records, and the digest the file has.
 V3_AMENDMENT_0003_PROPOSAL_DIGEST = (
-    "105fa95280d54f660d075cd9ee49b75c5db3fd2c987812d58ab6abc446d407b6"
+    "79e597c05b69e6f213bed011df740b3819e4706899feacb76ac995cbcf61d97f"
 )
 
 # A version-4 route-deviation brief for a corpus case, pinned **from before**
