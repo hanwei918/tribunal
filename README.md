@@ -97,12 +97,24 @@ reads them is `docs/notes/2026-10-10-the-version-6-development-runs.md`.
 **What these sets are.** `dev-v2-ext` is development data, drafted by the key
 owner for policy version 3; it is not a sealed set and it is not a generalisation
 figure. Its holdout cases 2734, 2758 and 2832 are the cases the key owner's
-amendments were drafted from, so the holdout split is not clean.
+amendments were drafted from, so the holdout split is not clean. Its five cases
+that differ from the key — 2749, 2809, 2829, 2853 and 2858 — are explained one by
+one in
+[`docs/notes/2026-10-10-what-went-wrong-at-version-6.md`](docs/notes/2026-10-10-what-went-wrong-at-version-6.md).
 
 **The corpus key.** The corpus key at `eval/answers/ground_truth.json` was written
 under policy version 1, and the corpus was measured at version 6. The three cases
-that differ from it — 107, 112 and 211 — are listed above and are not explained
-here yet.
+that differ from it — 107, 112 and 211 — are listed above and are explained one by
+one in
+[`docs/notes/2026-10-10-what-went-wrong-at-version-6.md`](docs/notes/2026-10-10-what-went-wrong-at-version-6.md):
+107 is a split, its panel two drafts for a `PARTIAL_REFUND 7.45` and two for an
+`ESCALATE`, so no majority of three carried and the case escalated; 112 is a
+missed `POL-RD-10(4)` trigger, the trace's first fix 13 minutes 30 seconds before
+the trip record's `started_at` against the clause's 10-minute limb, which the
+judge read past and ruled `NO_ACTION`; and 211 is a contested reading of
+`POL-GEN-02(2)`, the majority bridging the trace's 168-second recording gap with
+the chat log and paying the driver 3.20 where the key splits the fee and refunds
+2.00.
 
 **The precedent arm.** With the switch on the 15 route-deviation cases score
 15/15, and without it they score 13/15; the two cases whose ruling changed are 107
