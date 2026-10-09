@@ -1,0 +1,254 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" width="1600" height="1000" font-family="Inter, Helvetica, Arial, sans-serif">
+  <!-- Tribunal architecture, drawn by hand from the code at freeze-2026-10-09 (policy version 6). -->
+  <defs>
+    <marker id="arrowBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#1f6feb"/>
+    </marker>
+    <marker id="arrowOrange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#d9822b"/>
+    </marker>
+    <marker id="arrowGreen" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#2da44e"/>
+    </marker>
+    <marker id="arrowGrey" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#57606a"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1600" height="1000" fill="#ffffff"/>
+
+  <!-- Title -->
+  <text x="24" y="42" font-size="28" font-weight="bold" fill="#1f2328">Tribunal - the arbitration system</text>
+  <text x="24" y="68" font-size="18" fill="#57606a">At freeze-2026-10-09, policy version 6. Every box names the file that implements it; every arrow is directed and labelled with what it carries.</text>
+
+  <!-- Legend -->
+  <rect x="1210" y="16" width="14" height="14" fill="#1f6feb"/>
+  <text x="1230" y="28" font-size="18" fill="#1f2328">pipeline</text>
+  <rect x="1320" y="16" width="14" height="14" fill="#d9822b"/>
+  <text x="1340" y="28" font-size="18" fill="#1f2328">human / operations</text>
+  <rect x="1210" y="42" width="14" height="14" fill="#2da44e"/>
+  <text x="1230" y="54" font-size="18" fill="#1f2328">learning</text>
+  <rect x="1320" y="42" width="14" height="14" fill="#57606a"/>
+  <text x="1340" y="54" font-size="18" fill="#1f2328">data / records</text>
+
+  <!-- ===================== Band A: the case path ===================== -->
+  <rect x="20" y="78" width="1560" height="396" rx="12" fill="#eaf1fc" stroke="#1f6feb" stroke-width="2"/>
+  <text x="40" y="106" font-size="24" font-weight="bold" fill="#1f6feb">Band A - the case path</text>
+  <text x="360" y="106" font-size="18" fill="#57606a">one dispute, from the record to a ruling</text>
+
+  <!-- Stage 1 -->
+  <rect x="60" y="118" width="251" height="134" rx="8" fill="#ffffff" stroke="#1f6feb" stroke-width="2"/>
+  <circle cx="84" cy="142" r="15" fill="#1f6feb"/>
+  <text x="84" y="148" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="middle">1</text>
+  <text x="110" y="149" font-size="19" font-weight="bold" fill="#1f2328">Dispute + evidence</text>
+  <text x="72" y="175" font-size="18" fill="#1f6feb">data/PUBLIC-CONTRACT.md</text>
+  <text x="72" y="195" font-size="18" fill="#1f6feb">tribunal/loader.py</text>
+  <text x="72" y="219" font-size="18" fill="#57606a">Trip record, GPS trace,</text>
+  <text x="72" y="239" font-size="18" fill="#57606a">chat log, fare, profiles.</text>
+
+  <!-- Stage 2 -->
+  <rect x="367" y="118" width="251" height="134" rx="8" fill="#ffffff" stroke="#1f6feb" stroke-width="2"/>
+  <circle cx="391" cy="142" r="15" fill="#1f6feb"/>
+  <text x="391" y="148" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="middle">2</text>
+  <text x="417" y="149" font-size="19" font-weight="bold" fill="#1f2328">Scope gate</text>
+  <text x="379" y="175" font-size="18" fill="#1f6feb">tribunal/pipeline.py</text>
+  <text x="379" y="199" font-size="18" fill="#57606a">Safety or complaint flag:</text>
+  <text x="379" y="223" font-size="18" fill="#57606a">goes to a human, no call.</text>
+
+  <!-- Stage 3 -->
+  <rect x="674" y="118" width="251" height="134" rx="8" fill="#ffffff" stroke="#1f6feb" stroke-width="2"/>
+  <circle cx="698" cy="142" r="15" fill="#1f6feb"/>
+  <text x="698" y="148" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="middle">3</text>
+  <text x="724" y="149" font-size="19" font-weight="bold" fill="#1f2328">Admissibility</text>
+  <text x="686" y="175" font-size="18" fill="#1f6feb">tribunal/prepass.py</text>
+  <text x="686" y="199" font-size="18" fill="#57606a">Weights each artifact</text>
+  <text x="686" y="223" font-size="18" fill="#57606a">from its issue codes.</text>
+
+  <!-- Stage 4 -->
+  <rect x="981" y="118" width="251" height="134" rx="8" fill="#ffffff" stroke="#1f6feb" stroke-width="2"/>
+  <circle cx="1005" cy="142" r="15" fill="#1f6feb"/>
+  <text x="1005" y="148" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="middle">4</text>
+  <text x="1031" y="149" font-size="19" font-weight="bold" fill="#1f2328">Derived facts</text>
+  <text x="993" y="175" font-size="18" fill="#1f6feb">tribunal/facts.py</text>
+  <text x="993" y="199" font-size="18" fill="#57606a">Excess distance, dwell,</text>
+  <text x="993" y="223" font-size="18" fill="#57606a">waypoint approach, events.</text>
+
+  <!-- Stage 5 -->
+  <rect x="1288" y="118" width="251" height="134" rx="8" fill="#ffffff" stroke="#1f6feb" stroke-width="2"/>
+  <circle cx="1312" cy="142" r="15" fill="#1f6feb"/>
+  <text x="1312" y="148" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="middle">5</text>
+  <text x="1338" y="149" font-size="19" font-weight="bold" fill="#1f2328">One brief</text>
+  <text x="1300" y="175" font-size="18" fill="#1f6feb">tribunal/brief.py</text>
+  <text x="1300" y="199" font-size="18" fill="#57606a">Built once, sha256 taken;</text>
+  <text x="1300" y="223" font-size="18" fill="#57606a">registrations masked.</text>
+
+  <!-- Stage 6 -->
+  <rect x="60" y="322" width="306" height="134" rx="8" fill="#ffffff" stroke="#1f6feb" stroke-width="2"/>
+  <circle cx="84" cy="346" r="15" fill="#1f6feb"/>
+  <text x="84" y="352" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="middle">6</text>
+  <text x="110" y="353" font-size="19" font-weight="bold" fill="#1f2328">Two advocates</text>
+  <text x="72" y="379" font-size="18" fill="#1f6feb">prompts/v1/advocate.system.md</text>
+  <text x="72" y="403" font-size="18" fill="#57606a">Opposite stances, one brief:</text>
+  <text x="72" y="427" font-size="18" fill="#57606a">rider and driver, in parallel.</text>
+
+  <!-- Stage 7 -->
+  <rect x="492" y="322" width="306" height="134" rx="8" fill="#ffffff" stroke="#1f6feb" stroke-width="2"/>
+  <circle cx="516" cy="346" r="15" fill="#1f6feb"/>
+  <text x="516" y="352" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="middle">7</text>
+  <text x="542" y="353" font-size="19" font-weight="bold" fill="#1f2328">Citation referee</text>
+  <text x="504" y="379" font-size="18" fill="#1f6feb">tribunal/referee.py</text>
+  <text x="504" y="403" font-size="18" fill="#57606a">Deterministic; a claim without</text>
+  <text x="504" y="427" font-size="18" fill="#57606a">a resolving citation is cut.</text>
+
+  <!-- Stage 8 -->
+  <rect x="854" y="322" width="306" height="134" rx="8" fill="#ffffff" stroke="#1f6feb" stroke-width="2"/>
+  <circle cx="878" cy="346" r="15" fill="#1f6feb"/>
+  <text x="878" y="352" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="middle">8</text>
+  <text x="904" y="353" font-size="19" font-weight="bold" fill="#1f2328">Judge</text>
+  <text x="866" y="379" font-size="18" fill="#1f6feb">prompts/v1/judge.system.md</text>
+  <text x="866" y="403" font-size="18" fill="#57606a">Four drafts: three sampled,</text>
+  <text x="866" y="427" font-size="18" fill="#57606a">one position-swapped; majority.</text>
+
+  <!-- Stage 9 -->
+  <rect x="1216" y="322" width="306" height="134" rx="8" fill="#ffffff" stroke="#1f6feb" stroke-width="2"/>
+  <circle cx="1240" cy="346" r="15" fill="#1f6feb"/>
+  <text x="1240" y="352" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="middle">9</text>
+  <text x="1266" y="353" font-size="19" font-weight="bold" fill="#1f2328">Confidence and triggers</text>
+  <text x="1228" y="379" font-size="18" fill="#1f6feb">tribunal/pipeline.py</text>
+  <text x="1228" y="403" font-size="18" fill="#57606a">Floor 0.70 and policy triggers;</text>
+  <text x="1228" y="427" font-size="18" fill="#57606a">below it, a tie or no draft.</text>
+
+  <!-- Band A arrows, row 1 -->
+  <path d="M313,185 L363,185" fill="none" stroke="#1f6feb" stroke-width="2.5" marker-end="url(#arrowBlue)"/>
+  <text x="338" y="176" font-size="18" fill="#57606a" text-anchor="middle">case</text>
+  <path d="M620,185 L670,185" fill="none" stroke="#1f6feb" stroke-width="2.5" marker-end="url(#arrowBlue)"/>
+  <text x="645" y="176" font-size="18" fill="#57606a" text-anchor="middle">record</text>
+  <path d="M927,185 L977,185" fill="none" stroke="#1f6feb" stroke-width="2.5" marker-end="url(#arrowBlue)"/>
+  <text x="952" y="176" font-size="18" fill="#57606a" text-anchor="middle">codes</text>
+  <path d="M1234,185 L1284,185" fill="none" stroke="#1f6feb" stroke-width="2.5" marker-end="url(#arrowBlue)"/>
+  <text x="1259" y="176" font-size="18" fill="#57606a" text-anchor="middle">facts</text>
+
+  <!-- Band A arrows, row 2 -->
+  <path d="M368,389 L488,389" fill="none" stroke="#1f6feb" stroke-width="2.5" marker-end="url(#arrowBlue)"/>
+  <text x="428" y="380" font-size="18" fill="#57606a" text-anchor="middle">claims</text>
+  <path d="M800,389 L850,389" fill="none" stroke="#1f6feb" stroke-width="2.5" marker-end="url(#arrowBlue)"/>
+  <text x="825" y="380" font-size="18" fill="#57606a" text-anchor="middle">kept</text>
+  <path d="M1162,389 L1212,389" fill="none" stroke="#1f6feb" stroke-width="2.5" marker-end="url(#arrowBlue)"/>
+  <text x="1187" y="380" font-size="18" fill="#57606a" text-anchor="middle">drafts</text>
+
+  <!-- Wrap: stage 5 to stage 6, one brief -->
+  <path d="M1413,252 L1413,290 L213,290 L213,318" fill="none" stroke="#1f6feb" stroke-width="2.5" marker-end="url(#arrowBlue)"/>
+  <text x="740" y="284" font-size="18" fill="#57606a" text-anchor="middle">same bytes</text>
+
+  <!-- Scope gate branch down to the human band -->
+  <path d="M470,252 L470,270 L50,270 L50,568" fill="none" stroke="#1f6feb" stroke-width="2.5" marker-end="url(#arrowBlue)"/>
+  <text x="200" y="266" font-size="18" fill="#57606a">safety or complaint flag</text>
+
+  <!-- Escalation branch from stage 9 down to the human band -->
+  <path d="M1369,456 L1369,466 L1530,466 L1530,568" fill="none" stroke="#1f6feb" stroke-width="2.5" marker-end="url(#arrowBlue)"/>
+  <text x="1400" y="484" font-size="18" fill="#57606a">ESCALATE</text>
+
+  <!-- Grey strip: every call recorded -->
+  <rect x="60" y="494" width="1460" height="66" rx="8" fill="#eef1f4" stroke="#57606a" stroke-width="1.5"/>
+  <text x="76" y="516" font-size="18" font-weight="bold" fill="#57606a">Every call recorded - tribunal/transcript.py and tribunal/events.py write events.jsonl (hash-chained)</text>
+  <text x="76" y="538" font-size="18" fill="#57606a">Model: deepseek/deepseek-flash on Tencent Cloud TokenHub (Singapore), exactly as RUNTIME_MODEL,</text>
+  <text x="76" y="558" font-size="18" fill="#57606a">MODEL_PROVIDER and MODEL_REGION in tribunal/model.py say.</text>
+
+  <!-- ===================== Band B: human and operations ===================== -->
+  <rect x="20" y="572" width="1560" height="190" rx="12" fill="#fbf0e4" stroke="#d9822b" stroke-width="2"/>
+  <text x="40" y="598" font-size="24" font-weight="bold" fill="#d9822b">Band B - the human and operations layer</text>
+  <text x="560" y="598" font-size="18" fill="#57606a">reads the pipeline's records; never feeds a brief or a prompt</text>
+
+  <rect x="60" y="610" width="283" height="146" rx="8" fill="#ffffff" stroke="#d9822b" stroke-width="2"/>
+  <circle cx="84" cy="634" r="15" fill="#d9822b"/>
+  <text x="110" y="641" font-size="19" font-weight="bold" fill="#1f2328">Risk signals</text>
+  <text x="72" y="667" font-size="18" fill="#d9822b">ops/risk.py</text>
+  <text x="72" y="709" font-size="18" fill="#57606a">five policy tests, shown</text>
+  <text x="72" y="729" font-size="18" fill="#57606a">to the reviewer, never</text>
+  <text x="72" y="749" font-size="18" fill="#57606a">to the judge.</text>
+
+  <rect x="359" y="610" width="283" height="146" rx="8" fill="#ffffff" stroke="#d9822b" stroke-width="2"/>
+  <circle cx="383" cy="634" r="15" fill="#d9822b"/>
+  <text x="409" y="641" font-size="19" font-weight="bold" fill="#1f2328">Evidence collection</text>
+  <text x="371" y="667" font-size="18" fill="#d9822b">ops/sources.py,</text>
+  <text x="371" y="687" font-size="18" fill="#d9822b">ops/evidence.py</text>
+  <text x="371" y="709" font-size="18" fill="#57606a">deterministic; reproduces</text>
+  <text x="371" y="729" font-size="18" fill="#57606a">the brief's evidence</text>
+  <text x="371" y="749" font-size="18" fill="#57606a">exactly.</text>
+
+  <rect x="658" y="610" width="283" height="146" rx="8" fill="#ffffff" stroke="#d9822b" stroke-width="2"/>
+  <circle cx="682" cy="634" r="15" fill="#d9822b"/>
+  <text x="708" y="641" font-size="19" font-weight="bold" fill="#1f2328">Queue, SLA, routing</text>
+  <text x="670" y="667" font-size="18" fill="#d9822b">ops/queue.py,</text>
+  <text x="670" y="687" font-size="18" fill="#d9822b">ops/config.json</text>
+  <text x="670" y="709" font-size="18" fill="#57606a">safety fast track; complaint</text>
+  <text x="670" y="729" font-size="18" fill="#57606a">review; escalations; kill</text>
+  <text x="670" y="749" font-size="18" fill="#57606a">switch auto_rulings_enabled</text>
+
+  <rect x="957" y="610" width="283" height="146" rx="8" fill="#ffffff" stroke="#d9822b" stroke-width="2"/>
+  <circle cx="981" cy="634" r="15" fill="#d9822b"/>
+  <text x="1007" y="641" font-size="19" font-weight="bold" fill="#1f2328">Escalation packet</text>
+  <text x="969" y="667" font-size="18" fill="#d9822b">ops/escalation.py</text>
+  <text x="969" y="709" font-size="18" fill="#57606a">the record, both claim sets</text>
+  <text x="969" y="729" font-size="18" fill="#57606a">the referee's ledger and</text>
+  <text x="969" y="749" font-size="18" fill="#57606a">all four drafts.</text>
+
+  <rect x="1256" y="610" width="283" height="146" rx="8" fill="#ffffff" stroke="#d9822b" stroke-width="2"/>
+  <circle cx="1280" cy="634" r="15" fill="#d9822b"/>
+  <text x="1306" y="641" font-size="19" font-weight="bold" fill="#1f2328">Review and closure</text>
+  <text x="1268" y="667" font-size="18" fill="#d9822b">ops/review.py,</text>
+  <text x="1268" y="687" font-size="18" fill="#d9822b">tribunal/precedents.py</text>
+  <text x="1268" y="709" font-size="18" fill="#57606a">the reviewer's decision,</text>
+  <text x="1268" y="729" font-size="18" fill="#57606a">with a reason citing</text>
+  <text x="1268" y="749" font-size="18" fill="#57606a">evidence and clause ids.</text>
+
+  <!-- ===================== Band C: learning ===================== -->
+  <rect x="20" y="778" width="1560" height="182" rx="12" fill="#e8f6ed" stroke="#2da44e" stroke-width="2"/>
+  <text x="40" y="804" font-size="24" font-weight="bold" fill="#2da44e">Band C - learning</text>
+  <text x="290" y="804" font-size="18" fill="#57606a">human closures, and the policy they change</text>
+
+  <rect x="60" y="816" width="280" height="134" rx="8" fill="#ffffff" stroke="#2da44e" stroke-width="2"/>
+  <circle cx="84" cy="840" r="15" fill="#2da44e"/>
+  <text x="110" y="847" font-size="19" font-weight="bold" fill="#1f2328">Precedent store</text>
+  <text x="72" y="873" font-size="18" fill="#2da44e">precedents/precedents.jsonl</text>
+  <text x="72" y="897" font-size="18" fill="#57606a">human closures; shown to a</text>
+  <text x="72" y="917" font-size="18" fill="#57606a">judge with --precedents on.</text>
+
+  <rect x="400" y="816" width="280" height="134" rx="8" fill="#ffffff" stroke="#2da44e" stroke-width="2"/>
+  <circle cx="424" cy="840" r="15" fill="#2da44e"/>
+  <text x="450" y="847" font-size="19" font-weight="bold" fill="#1f2328">Policy-gap loop</text>
+  <text x="412" y="873" font-size="18" fill="#2da44e">eval/policy_gaps.py</text>
+  <text x="412" y="897" font-size="18" fill="#57606a">report, draft, human</text>
+  <text x="412" y="917" font-size="18" fill="#57606a">approval.</text>
+
+  <rect x="740" y="816" width="280" height="134" rx="8" fill="#ffffff" stroke="#2da44e" stroke-width="2"/>
+  <circle cx="764" cy="840" r="15" fill="#2da44e"/>
+  <text x="790" y="847" font-size="19" font-weight="bold" fill="#1f2328">Policy versions</text>
+  <text x="752" y="873" font-size="18" fill="#2da44e">tribunal/policy_versions.py</text>
+  <text x="752" y="897" font-size="18" fill="#57606a">base 1 + 0001 = v2; base 3</text>
+  <text x="752" y="917" font-size="18" fill="#57606a">+ POL-NS-11, POL-RD-14,</text>
+  <text x="752" y="937" font-size="18" fill="#57606a">POL-NS-12 = v6, frozen.</text>
+
+  <!-- Band C arrows -->
+  <path d="M682,883 L736,883" fill="none" stroke="#2da44e" stroke-width="2.5" marker-end="url(#arrowGreen)"/>
+  <text x="709" y="874" font-size="18" fill="#57606a" text-anchor="middle">clause</text>
+
+  <!-- Human closure into learning -->
+  <path d="M1400,756 L1400,770 L226,770 L226,812" fill="none" stroke="#d9822b" stroke-width="2.5" marker-end="url(#arrowOrange)"/>
+  <text x="236" y="800" font-size="18" fill="#57606a">closure</text>
+
+  <!-- Policy back up to one brief -->
+  <path d="M880,816 L880,790 L1560,790 L1560,200 L1543,200" fill="none" stroke="#2da44e" stroke-width="2.5" marker-end="url(#arrowGreen)"/>
+  <text x="900" y="806" font-size="18" fill="#57606a">policy version 6</text>
+
+  <!-- Precedent store to the judge, optional -->
+  <path d="M200,812 L30,812 L30,486 L1007,486 L1007,460" fill="none" stroke="#2da44e" stroke-width="2.5" stroke-dasharray="8 6" marker-end="url(#arrowGreen)"/>
+  <text x="600" y="492" font-size="18" fill="#57606a" text-anchor="middle">optional; measured in part 10</text>
+
+  <!-- Measured, not claimed -->
+  <rect x="1056" y="816" width="484" height="134" rx="8" fill="#eef1f4" stroke="#57606a" stroke-width="2"/>
+  <text x="1072" y="848" font-size="19" font-weight="bold" fill="#1f2328">Measured, not claimed</text>
+  <text x="1072" y="876" font-size="18" fill="#57606a">Development sets; sealed sets run once</text>
+  <text x="1072" y="898" font-size="18" fill="#57606a">from a freeze tag; offline replay of</text>
+  <text x="1072" y="920" font-size="18" fill="#57606a">every recorded run (eval/).</text>
+</svg>
