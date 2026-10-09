@@ -483,7 +483,7 @@ def resolved_policy_version(
 
     * a set written for a **base** (``dev-v2`` and its two siblings) accepts any
       version on that base; with no version named it runs at the base's
-      **latest**, which today is 5;
+      **latest**, which today is 6;
     * a set that **fixes** one version (``wild-v2`` is version 2) briefs at it
       whatever the invocation says, because the version is part of what the set
       is;
@@ -508,7 +508,7 @@ def version_moves_the_run(
 
     A set written for a base moves its run at any version above 1, so
     ``--set dev-v2`` with no flag is a versioned run at
-    ``runs/dev-v2/policy-v5/<model>/``. A set that **fixes** its version keeps
+    ``runs/dev-v2/policy-v6/<model>/``. A set that **fixes** its version keeps
     the set's own directory -- ``wild-v2`` runs into ``runs/wild-v2/<model>/``
     and never into a ``policy-v2`` directory inside it. Every other set moves its
     run only when a version above 1 was named.

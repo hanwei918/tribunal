@@ -398,3 +398,138 @@ version-pairing refusals on a set's **resolved** version instead of the command
 line's turned nine of `tests.test_sealed_set_wild_v2` red, because `wild-v2` is a
 set registered before version 3 and had to behave exactly as it did at `7c3cf93`.
 
+## Part 8: `POL-NS-12` and the registration mask `POL-GEN-08(4)` (2026-10-09)
+
+Part 8 adds the owner's clause `POL-NS-12` ("Platform-confirmed arrival and
+waiting") as the third amendment on base 3 -- so the highest version is now **6**
+-- and makes the two things it turns on visible in a version-6 brief: the
+platform's own arrival and wait-timer events, and, under `POL-GEN-08(4)`, a
+registration mask over the free text the model reads.
+
+### What version 6 is
+
+Version 6 is **base 3 plus the three amendments on base 3**. Base 3 is Ji
+Guofang's platform-aligned policy at `policy/v3/`; the amendments are
+`0001-pol-ns-11.json` (`POL-NS-11`), `0002-pol-rd-14.json` (`POL-RD-14`) and
+`0003-pol-ns-12.json` (`POL-NS-12`). The no-show policy therefore carries **12
+clauses**, and its `version` string reads `3.0.0+amendment.0003`; the
+route-deviation file is untouched by the new clause and still reads
+`3.0.0+amendment.0002`. Version 4 is base 3 with `0001` only and version 5 is it
+with `0001` and `0002`; both are unchanged, and a version-4 and a version-5 brief
+for case 101 are pinned at the digests they had before this part.
+
+The input was `~/Desktop/tribunal-amendment-0003-pol-ns-12/0003-pol-ns-12.proposal.json`,
+sha256 `105fa95280d54f660d075cd9ee49b75c5db3fd2c987812d58ab6abc446d407b6`, checked
+against that digest before anything was copied. It is installed byte for byte at
+`policy/v3/proposals/0003-pol-ns-12.json`, and the amendment at
+`policy/v3/amendments/0003-pol-ns-12.json` carries the proposal's `clause` object
+**byte for byte** (the two clause blocks were compared as bytes), `base_version`
+3, `proposal_file` and `proposal_sha256` as above, `report_file` and
+`report_sha256` null, `cluster_id` null, `cases` `[901]`, `approved_by` `Zhou
+Hanwei`, `approved_at` the instant the file was written, and a `note`.
+
+`--policy-version 6` is accepted and a run at it would go to
+`runs/policy-v6/<model>/`; the sets written for base 3 (`dev-v2`, `dev-v2-ext`,
+`ryde-v3`) now default to the latest base-3 version, which is **6**, and their
+versioned runs land under `runs/<set>/policy-v6/<model>/`.
+
+### The clause, quoted
+
+`POL-NS-12`, "Platform-confirmed arrival and waiting", `NO_SHOW_CHARGE`. Its
+`rule`, in full:
+
+> Where trip_record.platform_policy.arrival_marker is GPS_AUTO and
+> trip_record.events carries the platform's own arrival event stating its
+> geofence test (for example "Driver GPS within 10m of pickup point. Speed 0
+> km/h. Auto-arrival confirmed"), together with wait_timer_started and
+> wait_timer_expired events, those events are PLATFORM_TELEMETRY records of the
+> platform's full-resolution measurement. They are a carrier independent of the
+> exported gps_trace for POL-NS-01 limbs (b) and (c) and for POL-GEN-02(2):
+> arrival is established at the arrival event's time, and the free waiting period
+> is established as served when wait_timer_expired precedes the termination,
+> unless an admissible fix in the exported trace affirmatively places the driver
+> outside the arrival radius, or moving at 15 km/h or more, during the window
+> (POL-NS-05). A sparse or accuracy-less export trace does not impair these
+> events; it is weighed only for contradiction. A driver-pressed arrival marker
+> (BUTTON) is not covered by this clause. This clause licenses no ruling value.
+
+It requires `trip_record` and `gps_trace`, licenses **no** ruling value, and
+favours **NEUTRAL**. A driver-pressed marker stays under `POL-NS-02` and
+`POL-NS-05`.
+
+### Why the owner approved it
+
+The organisers' own sample -- case 901, converted from `DISP-002` -- escalates at
+version 3, and their stated expectation is that the charge is upheld. All four
+drafts escalated. The judge's reasons were that the exported trace holds four
+fixes in the waiting window, minutes apart and with no accuracy field, so the
+`POL-NS-02` arrival test cannot run, and that the platform's "auto-arrival
+confirmed" event is the same carrier as the trace, so it cannot corroborate it.
+The owner approved a clause that treats a platform-confirmed (`GPS_AUTO`) arrival
+and the platform's wait-timer events as their own carrier, because those events
+are the platform's own full-resolution measurement rather than a copy of the
+export. **Ji Guofang's confirmation as policy owner is pending**: the clause was
+approved by the owner on 2026-10-09 and carries a `note` saying so, and the
+amendment has null report fields because there is no `policy_gaps` report.
+
+### The facts the clause turns on, and the mask
+
+* **The platform events.** A version-6 no-show brief already passes the trip
+  record's `events[]` array through, so **no new block was added**: the three
+  events (`driver_arrived`, `wait_timer_started`, `wait_timer_expired`) travel
+  with their times and the trip record's `evidence_id`. A test confirms the
+  pass-through for case 901. Of the 200 `dev-v2` and `dev-v2-ext` cases, none
+  carries the full trigger -- a `GPS_AUTO` marker, an arrival event and a
+  `wait_timer_expired` event -- and only case 901 does; a test asserts both.
+* **The registration mask.** `POL-GEN-08(4)` says the record shown to advocates,
+  judge and reviewers "carries party identifiers, not names, telephone numbers or
+  vehicle registration marks; those are masked before display". From **version 6
+  only** the brief replaces every match of the Singapore registration pattern
+  `S[A-Z]{1,2}\s?\d{1,4}\s?[A-Z]` (word-bounded) with
+  `[vehicle registration masked]`, in a chat message's `text`, a trip record's
+  `events[].detail`, and the dispute's `claim_text` and `counterparty_statement`.
+  Ids, numbers and every other string are untouched, and no case file is changed:
+  the mask is applied to the brief only. The marks it reaches are corpus 202
+  (`SLA1234X`), 208 (`SJK8842P`) and 212 (`SLZ9931H`) in chat text, and case
+  901's chat text and one of its `events[].detail` strings (`SGP 4521 M`) -- the
+  sheet's scan described that mark as sitting in two `events[].detail` strings,
+  and the committed case carries it in one event detail and one chat message, so
+  the mask is written over every match wherever it appears rather than over a
+  counted list. The scan found no telephone number in any set. Versions 1 to 5
+  keep the bytes they had, so a version-5 brief for 208 still carries its mark.
+
+### The tests
+
+`tests/test_policy_v3_ns12.py` (7 tests) holds the facts: the trigger scan over
+the 200 development cases and the second set, case 901 as the only case with the
+trigger, the version-6 brief carrying `POL-NS-12` and the three platform events,
+the policy text carrying none of `DISP-002`, `organiser` or `901` and no
+`sources` key, the mask over the four version-6 briefs and a version-5 brief that
+still carries its mark, the fixture message and dispute free text, and the ids
+the mask leaves alone.
+
+`tests/test_policy_versions.py` gained version 6 to the pinned loaded-policy
+digests, the third amendment's digest and the proposal digest it records, the
+12-clause version-6 no-show load, the pinned version-5 brief digest, and a third
+amendment that rewrites an existing clause refused. The two tests that called
+version 6 "the one the repository does not have" now name version 7, and
+`tests/test_development_sets.py` reads the default base-3 version as 6.
+
+**Run no tests at all.** Every new test was written against the pre-change tree
+and is left for the owner to run outside the sandbox -- the owner runs each new
+test against the code before this part (it must fail there) and the full suite on
+both interpreters. The change was checked from the record instead: the 44
+recorded `brief_sha256` values still rebuild, the loaded-policy digests at
+versions 1 to 6 match their pins, the version-4 and version-5 brief digests for
+101 are the ones they had before this part, the no-leakage scan reports the same
+two known findings and no new one, and a version-6 brief for 901 carries the
+clause and masks the marks.
+
+### What has not been measured
+
+**No run exists at policy version 6.** Nothing in this repository has briefed a
+case at version 6 for a recorded run, no model call was made while adding it, and
+no browser was launched. The default policy version is still 1. What *is*
+measured, and holds today: versions 1 to 5 build exactly the briefs they built at
+`541ac31`, and the offline replay is unchanged.
+

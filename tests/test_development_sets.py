@@ -1056,7 +1056,7 @@ class BaseThreeSetRegistrationTests(unittest.TestCase):
 
     ``dev-v2``, ``dev-v2-ext`` and ``ryde-v3`` are written for policy base 3, so
     they accept any version on that base (3, 4, 5, ...) and run at the **latest**
-    one -- today 5 -- when no version is named. Every set registered before
+    one -- today 6 -- when no version is named. Every set registered before
     version 3 keeps the version it fixes.
 
     No model is called: the transport answers from the set's own key, or -- for
@@ -1098,7 +1098,7 @@ class BaseThreeSetRegistrationTests(unittest.TestCase):
 
     def test_the_default_version_is_the_latest_on_base_three(self):
         latest = policy_versions.version_on_base(3)
-        self.assertEqual(5, latest, "base 3 is at version 5 after amendment 0002")
+        self.assertEqual(6, latest, "base 3 is at version 6 after amendment 0003")
         for name, _case_no in VERSION_THREE_CASES:
             with self.subTest(set=name):
                 self.assertEqual(

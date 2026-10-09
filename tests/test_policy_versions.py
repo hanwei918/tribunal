@@ -349,6 +349,10 @@ V3_FILE_DIGESTS = {
 # Version 5 adds the second amendment, ``POL-RD-14``, which joins
 # ``route_deviation.json`` -- so the route-deviation digest moves and the no-show
 # one does not, and version 4's own pair is unchanged by it.
+#
+# Version 6 adds the third amendment, ``POL-NS-12``, which joins
+# ``no_show.json`` -- so the no-show digest moves and the route-deviation one does
+# not, and version 5's own pair is unchanged by it.
 LOADED_POLICY_DIGESTS = {
     (1, "NO_SHOW_CHARGE"): "7b22d2d551be510a9fb7a95e817bfdc5c35913c85223c77a79582722573d151a",
     (1, "ROUTE_DEVIATION"): "c6e942b36b2de34c255fcc9259fa88f6b789d1e8267acb47882c75ca690fd82b",
@@ -360,13 +364,15 @@ LOADED_POLICY_DIGESTS = {
     (4, "ROUTE_DEVIATION"): "fd6031f3382d126aee2e66353e9b8040f116acc296a08381742ceb67f4dc8eff",
     (5, "NO_SHOW_CHARGE"): "7ed85af25bfae34c03b46099989bcac197c1bebd8e02c7a8dc07ce0e8571c20e",
     (5, "ROUTE_DEVIATION"): "377742d8ef9c0d0fc53da47ce687c8460dc4756f2c8282160265ee34fe6dec1c",
+    (6, "NO_SHOW_CHARGE"): "99ae7136af0829dd949a01df8585b67d5a5940b8a940dbf5ddc1caea36b91170",
+    (6, "ROUTE_DEVIATION"): "377742d8ef9c0d0fc53da47ce687c8460dc4756f2c8282160265ee34fe6dec1c",
 }
 
 # The first amendment **on base 3**, by digest, and the proposal it was approved
 # from. The proposal's digest is the one the amendment records, so the two pin
 # each other: an edited proposal would leave the amendment naming a digest its
 # proposal no longer has. The second amendment, ``POL-RD-14``, is pinned the same
-# way and makes **version 5**.
+# way and makes **version 5**; the third, ``POL-NS-12``, makes **version 6**.
 V3_AMENDMENT_0001 = POLICY_DIR / "v3" / "amendments" / "0001-pol-ns-11.json"
 V3_AMENDMENT_0001_DIGEST = (
     "0d24461e9a0fe3cc27a16dc78ffb7daa9cc36c05f8e233c0e272e2a168e8f6de"
@@ -377,12 +383,29 @@ V3_AMENDMENT_0002_DIGEST = (
     "e254b5f837423e0ee7ee6beec7bb2661fc98e0442c694dc8cc9b4f81c9121703"
 )
 V3_AMENDMENT_0002_PROPOSAL = POLICY_DIR / "v3" / "proposals" / "0002-pol-rd-14.json"
+V3_AMENDMENT_0003 = POLICY_DIR / "v3" / "amendments" / "0003-pol-ns-12.json"
+V3_AMENDMENT_0003_DIGEST = (
+    "07bfbb4dcfb5194c1ba88cfaa960c63507f6c6ed29a72ba8192b5a50018301f8"
+)
+V3_AMENDMENT_0003_PROPOSAL = POLICY_DIR / "v3" / "proposals" / "0003-pol-ns-12.json"
+# The digest the amendment records, and the digest the file has.
+V3_AMENDMENT_0003_PROPOSAL_DIGEST = (
+    "105fa95280d54f660d075cd9ee49b75c5db3fd2c987812d58ab6abc446d407b6"
+)
 
 # A version-4 route-deviation brief for a corpus case, pinned **from before**
 # amendment 0002 existed. Version 4 is base 3 with 0001 only, and 0001 is a
 # no-show clause, so this digest must not move when 0002 lands.
 VERSION_FOUR_BRIEF_101 = (
     "1faec3653b2f07d0051a33f5be1e80d683144de59aafbcc93e867cd5961c6beb"
+)
+
+# The same brief at **version 5**, pinned from before amendment 0003 existed.
+# Version 5 is base 3 with 0001 and 0002, and 0003 is a no-show clause, so this
+# digest must not move when 0003 lands -- and the version-6 brief must differ
+# from it, because 0003 adds a clause to the no-show policy the case is not in.
+VERSION_FIVE_BRIEF_101 = (
+    "81a63ee33f97a351cdcaa4eac863a1694b81ffca866e0c7d31711834272605ee"
 )
 
 
@@ -493,11 +516,11 @@ class VersionThreeTests(unittest.TestCase):
     def test_the_highest_available_version_names_both_sequences(self):
         self.assertEqual(2, policy_versions.current_version())
         # Base 1's own sequence is still at 2 -- one amendment -- and base 3's is
-        # at 5, because ``POL-NS-11`` and ``POL-RD-14`` are its two amendments.
-        # The two sequences are independent, so the highest is 5 and
-        # ``current_version`` does not move.
-        self.assertEqual(5, policy_versions.highest_available_version())
-        self.assertEqual(5, policy_versions.version_on_base(3))
+        # at 6, because ``POL-NS-11``, ``POL-RD-14`` and ``POL-NS-12`` are its
+        # three amendments. The two sequences are independent, so the highest is
+        # 6 and ``current_version`` does not move.
+        self.assertEqual(6, policy_versions.highest_available_version())
+        self.assertEqual(6, policy_versions.version_on_base(3))
         self.assertEqual(2, policy_versions.version_on_base(1))
         # A scratch root with no amendments is at version 1, and base 3 there is
         # the base alone, so the highest there is 3: the two sequences are
@@ -546,10 +569,14 @@ class BaseThreeAmendmentTests(unittest.TestCase):
     never applied to another.
     """
 
-    def test_the_two_amendments_on_base_three_are_installed(self):
+    def test_the_three_amendments_on_base_three_are_installed(self):
         files = policy_versions.amendment_files(POLICY_DIR, base_version=3)
         self.assertEqual(
-            ["0001-pol-ns-11.json", "0002-pol-rd-14.json"],
+            [
+                "0001-pol-ns-11.json",
+                "0002-pol-rd-14.json",
+                "0003-pol-ns-12.json",
+            ],
             [path.name for path in files],
         )
         self.assertEqual(
@@ -559,6 +586,10 @@ class BaseThreeAmendmentTests(unittest.TestCase):
         self.assertEqual(
             V3_AMENDMENT_0002_DIGEST,
             hashlib.sha256(V3_AMENDMENT_0002.read_bytes()).hexdigest(),
+        )
+        self.assertEqual(
+            V3_AMENDMENT_0003_DIGEST,
+            hashlib.sha256(V3_AMENDMENT_0003.read_bytes()).hexdigest(),
         )
 
     def test_the_amendment_records_the_digest_of_the_proposal_it_names(self):
@@ -616,7 +647,7 @@ class BaseThreeAmendmentTests(unittest.TestCase):
     def test_the_amendment_moves_only_the_file_its_clause_joins(self):
         """A no-show clause leaves the route-deviation document exactly as it was."""
         self.assertEqual(
-            5,
+            6,
             policy_versions.version_on_base(3),
         )
         self.assertEqual(
@@ -688,6 +719,129 @@ class BaseThreeAmendmentTests(unittest.TestCase):
         ids = [clause["id"] for clause in briefed["policies"]["category"]["clauses"]]
         self.assertIn("POL-NS-11", ids)
         self.assertEqual([], sources_keys(briefed["policies"]))
+
+    def test_the_third_amendment_records_the_digest_of_the_proposal_it_names(self):
+        """``POL-NS-12``, the third amendment on base 3, which makes version 6."""
+        amendment = policy_versions.load_amendment(V3_AMENDMENT_0003, base_version=3)
+        self.assertEqual(3, amendment["base_version"])
+        self.assertEqual("POL-NS-12", amendment["clause"]["id"])
+        self.assertEqual("NO_SHOW_CHARGE", amendment["clause"]["category"])
+        self.assertEqual([901], amendment["cases"])
+        self.assertIsNone(amendment["cluster_id"])
+        self.assertIsNone(amendment["report_file"])
+        self.assertIsNone(amendment["report_sha256"])
+        self.assertEqual("Zhou Hanwei", amendment["approved_by"])
+        self.assertEqual(
+            "policy/v3/proposals/0003-pol-ns-12.json", amendment["proposal_file"]
+        )
+        self.assertEqual(
+            V3_AMENDMENT_0003_PROPOSAL_DIGEST,
+            hashlib.sha256(V3_AMENDMENT_0003_PROPOSAL.read_bytes()).hexdigest(),
+        )
+        self.assertEqual(
+            V3_AMENDMENT_0003_PROPOSAL_DIGEST, amendment["proposal_sha256"]
+        )
+
+    def test_version_six_loads_with_twelve_no_show_clauses(self):
+        loaded = loader.load_policies("NO_SHOW_CHARGE", 6)
+        ids = [clause["id"] for clause in loaded["category"]["clauses"]]
+        self.assertEqual(12, len(ids))
+        self.assertIn("POL-NS-12", ids)
+        self.assertEqual(
+            "3.0.0{0}0003".format(policy_versions.AMENDMENT_MARKER),
+            loaded["category"]["version"],
+        )
+        # The route-deviation file is untouched by a no-show clause, so its
+        # version-6 digest equals version 5's and its suffix still names 0002.
+        route = loader.load_policies("ROUTE_DEVIATION", 6)
+        self.assertEqual(
+            14, len(route["category"]["clauses"])
+        )
+        self.assertEqual(
+            "3.0.0{0}0002".format(policy_versions.AMENDMENT_MARKER),
+            route["category"]["version"],
+        )
+        # Version 5 does not carry it: it is added at 6 and nowhere below.
+        for version in (3, 4, 5):
+            with self.subTest(version=version):
+                self.assertNotIn(
+                    "POL-NS-12",
+                    [
+                        clause["id"]
+                        for clause in loader.load_policies(
+                            "NO_SHOW_CHARGE", version
+                        )["category"]["clauses"]
+                    ],
+                )
+
+    def test_the_version_five_brief_is_unchanged_by_the_third_amendment(self):
+        """Version 5 is base 3 with 0001 and 0002, and its brief digest is pinned."""
+        case = loader.load_case(101)
+        _canonical, digest = brief.brief_digest(
+            brief.build_brief_for_case(case, policy_version=5)
+        )
+        self.assertEqual(VERSION_FIVE_BRIEF_101, digest)
+        # 0003 is a no-show clause, so a route-deviation brief does not carry it
+        # at any version: 101's version-6 brief is byte-identical to its
+        # version-5 one, because the clause is skipped for the file it does not
+        # join and 101 carries no registration mark for POL-GEN-08(4) to mask.
+        self.assertEqual(
+            digest,
+            brief.brief_digest(
+                brief.build_brief_for_case(case, policy_version=6)
+            )[1],
+        )
+        # A no-show brief does carry it, so the two differ there.
+        no_show = loader.load_case(201)
+        self.assertNotEqual(
+            brief.brief_digest(
+                brief.build_brief_for_case(no_show, policy_version=5)
+            )[1],
+            brief.brief_digest(
+                brief.build_brief_for_case(no_show, policy_version=6)
+            )[1],
+        )
+
+    def test_a_third_amendment_that_rewrites_an_existing_clause_is_refused(self):
+        """With two amendments already present, 0003 may still not edit a clause.
+
+        The positive half of the refusal: the id must be the next free number, so
+        a third amendment that re-declares an existing no-show clause is refused
+        even though its number is the right one.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            write_amendment(
+                tmp,
+                "0001-first.json",
+                amendment_document(
+                    "POL-NS-11", category="NO_SHOW_CHARGE", base_version=3
+                ),
+                base_version=3,
+            )
+            write_amendment(
+                tmp,
+                "0002-second.json",
+                amendment_document(
+                    "POL-NS-12", category="NO_SHOW_CHARGE", base_version=3
+                ),
+                base_version=3,
+            )
+            write_amendment(
+                tmp,
+                "0003-rewrite.json",
+                amendment_document(
+                    "POL-NS-04", category="NO_SHOW_CHARGE", base_version=3
+                ),
+                base_version=3,
+            )
+            with self.assertRaises(policy_versions.AmendmentError) as caught:
+                policy_versions.apply_amendments(
+                    loader.load_policies("NO_SHOW_CHARGE", 3),
+                    6,
+                    files={"general": "general.json", "category": "no_show.json"},
+                    root=tmp,
+                )
+        self.assertIn("never edits or replaces", str(caught.exception))
 
     def test_a_second_amendment_numbered_0001_on_base_three_is_refused(self):
         """Two files numbered 0001 are the duplicate the numbering forbids."""
@@ -1157,8 +1311,9 @@ class RunBenchmarkCommandLineTests(unittest.TestCase):
         # scratch one, so nothing here resolves a destination under the
         # repository's own runs/. The amendment sequence is at version 2 since
         # 2026-10-01, version 3 is a separate base since 2026-10-08, version 4 is
-        # that base with its first amendment and version 5 is it with the second,
-        # so the version the repository does not have is 6.
+        # that base with its first amendment, version 5 is it with the second and
+        # version 6 is it with the third, so the version the repository does not
+        # have is 7.
         with tempfile.TemporaryDirectory() as tmp:
             with mock.patch.object(
                 runner,
@@ -1171,12 +1326,12 @@ class RunBenchmarkCommandLineTests(unittest.TestCase):
                             [
                                 "--model", MODEL,
                                 "--cases", "101",
-                                "--policy-version", "6",
+                                "--policy-version", "7",
                                 "--runs-dir", str(Path(tmp) / "runs"),
                             ]
                         )
         self.assertEqual(1, code)
-        self.assertIn("there is no policy version 6", errors.getvalue())
+        self.assertIn("there is no policy version 7", errors.getvalue())
 
     def test_version_1_is_accepted_and_writes_to_the_ordinary_directory(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -1246,17 +1401,17 @@ class DevelopmentSetsCommandLineTests(unittest.TestCase):
         # parser error: it is refused by the runner with a message naming the
         # version the repository is actually at. The amendment sequence is at
         # version 2 since 2026-10-01, version 3 is a separate base since
-        # 2026-10-08, and versions 4 and 5 are that base with its two amendments,
-        # so the version that names nothing is 6. The runs root is a scratch one,
-        # so the refusal is about the version and this test never resolves a
-        # destination under the repository's own runs/.
+        # 2026-10-08, and versions 4, 5 and 6 are that base with its three
+        # amendments, so the version that names nothing is 7. The runs root is a
+        # scratch one, so the refusal is about the version and this test never
+        # resolves a destination under the repository's own runs/.
         with tempfile.TemporaryDirectory() as tmp:
             code, message = self.refuse(
                 [
                     "--set",
                     "codex",
                     "--policy-version",
-                    "6",
+                    "7",
                     "--cases",
                     "9101",
                     "--runs-dir",
@@ -1264,7 +1419,7 @@ class DevelopmentSetsCommandLineTests(unittest.TestCase):
                 ]
             )
         self.assertEqual(1, code)
-        self.assertIn("there is no policy version 6", message)
+        self.assertIn("there is no policy version 7", message)
 
 
 # --------------------------------------------------------------------------

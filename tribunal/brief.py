@@ -2450,6 +2450,29 @@ def _strip_provenance(node: Any) -> Any:
     return node
 
 
+# --------------------------------------------------------------------------
+# POL-GEN-08(4): the vehicle registration marks in what the model reads
+# --------------------------------------------------------------------------
+# ``POL-GEN-08(4)`` (version 3 and later) says "The record shown to advocates,
+# judge and reviewers carries party identifiers, not names, telephone numbers or
+# vehicle registration marks; those are masked before display". The brief passed
+# them through. From **version 6 only** every match of the Singapore
+# registration pattern is replaced with a fixed placeholder in the three places
+# a registration mark can reach the model: a chat message's ``text``, a trip
+# record's ``events[].detail``, and the dispute's ``claim_text`` and
+# ``counterparty_statement``. Ids, numbers and every other string are untouched,
+# and the case files are not changed: the mask is applied to the brief only.
+#
+# The gate is a version rather than "always" so that versions 1 to 5 keep the
+# bytes they had. ``re`` is the standard-library module already imported above.
+VEHICLE_MASK_VERSION = 6
+VEHICLE_MASK = "[vehicle registration masked]"
+VEHICLE_REGISTRATION_RE = re.compile(r"\bS[A-Z]{1,2}\s?\d{1,4}\s?[A-Z]\b")
+
+# The two dispute fields a registration mark can reach the model through.
+CLAIM_TEXT_KEY = "claim_text"
+COUNTERPARTY_STATEMENT_KEY = "counterparty_statement"
+
 # The block a version-3 no-show brief publishes beside the trip record: the
 # platform parameters in force for that trip. A case that carries its own
 # ``platform_policy`` uses it; a case that carries none, and whose pickup zone
@@ -2729,6 +2752,104 @@ def _with_recomputed_admissibility(
     return new_artifact
 
 
+def _mask_registrations(text: Any) -> Any:
+    """``text`` with every Singapore registration mark replaced, or ``text``.
+
+    A non-string is returned unchanged, so this can be applied to a field that
+    may be ``null`` without a type check at every call site.
+    """
+    if not isinstance(text, str):
+        return text
+    return VEHICLE_REGISTRATION_RE.sub(VEHICLE_MASK, text)
+
+
+def _masked_dispute(dispute: Any) -> Any:
+    """The dispute with its two free-text fields masked (POL-GEN-08(4)).
+
+    Only ``claim_text`` and ``counterparty_statement`` are touched: every other
+    field is an identifier, an amount, a timestamp or a channel, and none of
+    those may be altered. The input is not modified.
+    """
+    if not isinstance(dispute, dict):
+        return dispute
+    masked = dict(dispute)
+    for key in (CLAIM_TEXT_KEY, COUNTERPARTY_STATEMENT_KEY):
+        if isinstance(masked.get(key), str):
+            masked[key] = _mask_registrations(masked[key])
+    return masked
+
+
+def _masked_messages(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """A chat log's payload with every message's ``text`` masked."""
+    messages = payload.get("messages")
+    if not isinstance(messages, list):
+        return payload
+    masked = []
+    changed = False
+    for message in messages:
+        if isinstance(message, dict) and isinstance(message.get("text"), str):
+            text = _mask_registrations(message["text"])
+            if text != message["text"]:
+                message = dict(message)
+                message["text"] = text
+                changed = True
+        masked.append(message)
+    if not changed:
+        return payload
+    new_payload = dict(payload)
+    new_payload["messages"] = masked
+    return new_payload
+
+
+def _masked_events(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """A trip record's payload with every event's ``detail`` masked."""
+    events = payload.get("events")
+    if not isinstance(events, list):
+        return payload
+    masked = []
+    changed = False
+    for event in events:
+        if isinstance(event, dict) and isinstance(event.get("detail"), str):
+            detail = _mask_registrations(event["detail"])
+            if detail != event["detail"]:
+                event = dict(event)
+                event["detail"] = detail
+                changed = True
+        masked.append(event)
+    if not changed:
+        return payload
+    new_payload = dict(payload)
+    new_payload["events"] = masked
+    return new_payload
+
+
+def _masked_artifact_registrations(artifact: Any) -> Any:
+    """One evidence artifact with its registration marks masked, at version 6.
+
+    A chat log's messages and a trip record's events are the two artifact kinds
+    that carry free text a registration mark reaches the model through; every
+    other artifact is returned unchanged, and so is one whose text carried no
+    mark.
+    """
+    if not isinstance(artifact, dict):
+        return artifact
+    payload = artifact.get("payload")
+    if not isinstance(payload, dict):
+        return artifact
+    evidence_type = artifact.get("evidence_type")
+    if evidence_type == CHAT_LOG_EVIDENCE_TYPE:
+        new_payload = _masked_messages(payload)
+    elif evidence_type == TRIP_EVIDENCE_TYPE:
+        new_payload = _masked_events(payload)
+    else:
+        return artifact
+    if new_payload is payload:
+        return artifact
+    new_artifact = dict(artifact)
+    new_artifact["payload"] = new_payload
+    return new_artifact
+
+
 def build_brief(case_no: int, include_clause_notes: bool = True) -> Dict[str, Any]:
     """Return the evidence package for one case.
 
@@ -2803,6 +2924,12 @@ def build_brief_for_case(
       it came to each rider-requested waypoint (POL-RD-04) and how it stands
       against each advisory's bounding box (POL-RD-03(c)). Both clauses live in
       ``route_deviation.json``, so a no-show brief carries neither.
+
+    And one thing happens only from version 6 on, gated the same way so that
+    versions 1 to 5 keep their bytes exactly: ``POL-GEN-08(4)``'s registration
+    mask replaces every vehicle registration mark in the free text the model
+    reads (:func:`_masked_dispute` and :func:`_masked_artifact_registrations`,
+    see ``VEHICLE_MASK_VERSION``).
     """
     if ablate is not None and not ablation_known(ablate):
         raise AblationError(
@@ -3028,11 +3155,20 @@ def build_brief_for_case(
     if ablate == ABLATION_ADMISSIBILITY:
         evidence = [_without_admissibility(artifact) for artifact in evidence]
 
+    # POL-GEN-08(4): from version 6 only, a registration mark in a chat message,
+    # a trip event or the dispute's own free text is replaced before the model
+    # reads it. Versions 1 to 5 keep the bytes they had, so this changes no
+    # brief below 6; the case files are never edited -- only this brief's copy.
+    dispute = case["dispute"]
+    if policy_version >= VEHICLE_MASK_VERSION:
+        evidence = [_masked_artifact_registrations(artifact) for artifact in evidence]
+        dispute = _masked_dispute(dispute)
+
     brief = {
         "case": {
             "case_no": case["case_no"],
             "schema_version": case["schema_version"],
-            "dispute": case["dispute"],
+            "dispute": dispute,
             "evidence": evidence,
         },
         "policies": policies if include_clause_notes else _policies_without_notes(policies),
