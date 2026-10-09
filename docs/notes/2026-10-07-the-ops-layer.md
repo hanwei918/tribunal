@@ -1,7 +1,7 @@
 # The ops layer: the stretch goals that leave every model request unchanged (2026-10-07)
 
 `ops/` is the layer a support team would run around the pipeline. It was added
-in five parts, and every part is held to the same three rules. This note states
+in six parts, and every part is held to the same three rules. This note states
 the design rule, gives each part's command, and says what each part does **not**
 do.
 
@@ -137,6 +137,40 @@ holds: for all 29 corpus cases and all 100 cases under `data/external/`, each
 against its own root, the collection equals the case file's `evidence` array
 exactly, and a brief built from the collected case has the recorded
 `brief_sha256`.
+
+### Part 6 — appeals and recusal (`ops/appeal.py`)
+
+(Part 5 was the documents — the `## Stretch goals` section of the README and
+this note — and it added no command, so the parts' commands are numbered 1 to 4
+and 6.)
+
+```
+python3 -m ops.appeal --run-dir <dir> --case N --filed-by rider|driver
+  --lodged-at <ISO instant> --now <ISO instant> --evidence <kind>[,<kind>...]
+  --reviewer <id> [--earlier-reviews <path>] [--earlier-appeals <path>] [--out <path>]
+```
+
+`POL-GEN-04` is the appeal clause, and this is the command that executes it. It
+checks one appeal against the clause and assigns the reviewer who may hear it,
+and it decides nothing about the merits: an appeal is a route to human review,
+not a ruling, and the clause licenses no ruling value. Six checks are reported
+by name, each with the clause text it read — `once`, `in_time`, `ruling_exists`,
+`evidence`, `reviewer`, `execution` — and the appeal is accepted when the five
+decision checks pass. It exits 0 when the appeal is accepted, 3 when it is
+refused, and 2 when the command could not be run at all.
+
+The window is the clause's own number of days, read out of the clause's sentence
+and refused when that sentence has moved; the boundary is inclusive, and the
+deadline is the later of the trip and the ruling's issue. The execution
+threshold is the figure `POL-GEN-05` names as `execution_threshold_sgd`, and its
+sentence is matched the same way: a ruling at or under the threshold was
+executed on issue, so a successful appeal reverses it, and one above it is held,
+so the appeal freezes it.
+
+**What it does not do.** It records nothing: a granted appeal is recorded as a
+human closure under `POL-GEN-06` by `ops.review`, not here. It reads no
+transcript and no answer key, makes no model call, and changes nothing in
+`tribunal/`, `prompts/`, `policy/`, `runs/` or `data/`.
 
 ## What none of the parts do
 

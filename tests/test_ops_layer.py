@@ -47,10 +47,35 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 import ops  # noqa: E402
-from ops import escalation, evidence, queue, review, risk  # noqa: E402
+from ops import appeal, escalation, evidence, queue, review, risk  # noqa: E402
 
 # The run directory every command here is run against, and its set.
 CORPUS_RUN = PROJECT_ROOT / "runs" / "deepseek-deepseek-flash"
+
+# The committed version-6 corpus run. The appeal command is checked against a
+# policy version that carries ``POL-GEN-04`` and ``POL-GEN-05``, which the plain
+# corpus run above does not record: it was made before the clauses existed.
+V6_CORPUS_RUN = PROJECT_ROOT / "runs" / "policy-v6" / "deepseek-deepseek-flash"
+
+# One accepted appeal, for the answer-key and determinism checks: corpus case
+# 101, lodged well inside ``POL-GEN-04``'s 30-day window, adding a GPS export and
+# heard by a reviewer who is a party to no corpus trip.
+APPEAL_ARGUMENTS: List[str] = [
+    "--run-dir",
+    str(V6_CORPUS_RUN),
+    "--case",
+    "101",
+    "--filed-by",
+    "rider",
+    "--lodged-at",
+    "2026-10-20T12:00:00+08:00",
+    "--now",
+    "2026-10-21T09:00:00+08:00",
+    "--evidence",
+    "GPS_EXPORT",
+    "--reviewer",
+    "REV-9001",
+]
 
 # The 29-case corpus, in manifest order, read off the manifest rather than
 # restated so a corpus that changed would change what these tests cover.
@@ -159,8 +184,9 @@ def every_command() -> List[Tuple[str, Callable[..., int], List[str]]]:
     collected evidence for every case, a packet for every case (``--any``, so a
     case that did not escalate is still built), a packet for each of the five
     escalated cases without ``--any``, the queue for the run, at no instant and
-    at a fixed one, and one closure through the review step. A command that
-    refuses is still a command that was run, so the refusals are exercised too.
+    at a fixed one, one closure through the review step, and one accepted appeal
+    against ``POL-GEN-04`` over the version-6 run. A command that refuses is
+    still a command that was run, so the refusals are exercised too.
     """
     commands: List[Tuple[str, Callable[..., int], List[str]]] = []
     for case_no in CORPUS_CASE_NUMBERS:
@@ -196,6 +222,10 @@ def every_command() -> List[Tuple[str, Callable[..., int], List[str]]]:
             ["--run-dir", str(CORPUS_RUN), "--now", "2026-07-30T00:00:00+08:00"],
         )
     )
+    # The appeal command, over the version-6 run whose policy carries
+    # ``POL-GEN-04``: one accepted appeal, so the answer-key check below runs a
+    # command that exits 0. It is last so the determinism check picks it up.
+    commands.append(("appeal", appeal.main, list(APPEAL_ARGUMENTS)))
     return commands
 
 
