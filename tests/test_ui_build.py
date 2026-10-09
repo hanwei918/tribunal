@@ -63,6 +63,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from eval import grade  # noqa: E402
+from tests import portability  # noqa: E402
 from tribunal import brief  # noqa: E402
 from tribunal import pipeline  # noqa: E402
 from tribunal import transcript  # noqa: E402
@@ -343,8 +344,11 @@ class CommittedPageTests(unittest.TestCase):
         """A stored artefact that can drift from its code is a lie waiting to happen.
 
         The failure message names the command that fixes it, because the fix is
-        never to edit the committed file.
+        never to edit the committed file. A platform that cannot rebuild case
+        111's brief builds one case fewer and cannot be compared with the
+        committed page at all, so this test skips there and says so.
         """
+        portability.require_the_same_libm()
         self.assertTrue(
             build.OUTPUT_PATH.is_file(),
             "ui/dist/index.html is not committed; run `python -m ui.build`",
@@ -3194,6 +3198,7 @@ class EveryPageIsCommittedTests(unittest.TestCase):
         cls.documents = built_documents()
 
     def test_every_page_is_committed_and_equals_a_fresh_build(self):
+        portability.require_the_same_libm()
         for name in PAGE_NAMES:
             path = build.pages()[name].output_path
             with self.subTest(page=name):
@@ -3208,6 +3213,7 @@ class EveryPageIsCommittedTests(unittest.TestCase):
                 )
 
     def test_the_runs_index_is_committed_and_equals_a_fresh_build(self):
+        portability.require_the_same_libm()
         self.assertTrue(
             build.INDEX_PATH.is_file(), "run `python3 -m ui.build`"
         )
@@ -3228,6 +3234,7 @@ class EveryPageIsCommittedTests(unittest.TestCase):
 
     def test_the_index_figures_are_the_figures_its_pages_print(self):
         """Computed from the built documents, never typed in."""
+        portability.require_the_same_libm()
         text = build.INDEX_PATH.read_text(encoding="utf-8")
         for name in ("corpus", "codex", "wild", "wild-v2"):
             with self.subTest(page=name):
@@ -3371,6 +3378,7 @@ class CheckCoversEveryPageTests(unittest.TestCase):
     """``--check`` is the gate, so it must look at every page and at the index."""
 
     def test_check_examines_every_page_and_the_index(self):
+        portability.require_the_same_libm()
         completed = subprocess.run(
             [sys.executable, "-m", "ui.build", "--check"],
             cwd=str(PROJECT_ROOT),

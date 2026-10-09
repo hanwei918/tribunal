@@ -291,7 +291,9 @@ instead.
   not built. Chat sentiment, agreement and threat signals: not built.
 - **Platforms.** Case 111's brief digest differs on Linux by one unit in the last
   place of `driver_track.mean_distance_m`; the recorded digests were made on
-  macOS.
+  macOS. The suite handles it: the tests that rebuild that brief skip on Linux,
+  naming the case and the last place, and the counts that follow from it are
+  taken over the set the platform can rebuild with the case it left out named.
 - **Synthetic data.** Every case except 901 is synthetic or semi-synthetic.
 
 ## What went wrong on the held-out set
@@ -625,9 +627,20 @@ collected in:
     python3 -m eval.development_sets --set dev-v2-ext --policy-version 6 \
         --parallel-calls --concurrency 3 --timeout 900 --runs-dir $D/dev
 
-Run the tests:
+Run the tests, from the repository root:
 
-    python3 -m unittest discover -s tests -v
+    python3 -m unittest
+
+`tests/` is a package, so that one command finds the whole suite; `python3 -m
+unittest discover -s tests -v` names the same tests with each one printed.
+Twenty-seven of the tests read the repository's git history, and without `.git`
+— a zip download — or without `git` they skip, saying so, rather than failing
+against a history that is not there. On Linux the tests that rebuild case 111's
+brief skip for a second reason: glibc and macOS libm disagree in the last place
+of its `driver_track.mean_distance_m`, so the brief digest its run recorded on
+macOS cannot be rebuilt there, and those tests say which case and which place.
+On macOS with `.git` nothing skips except the four tests that skip everywhere,
+and the run ends `OK (skipped=4)`.
 
 Build the viewer, which writes the six pages under `ui/dist/`:
 

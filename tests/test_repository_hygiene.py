@@ -24,10 +24,15 @@ quietly hide a tracked file from a later ``git add``.
 from __future__ import annotations
 
 import subprocess
+import sys
 import unittest
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from tests import portability  # noqa: E402
 
 # Documents a tool drops into the working tree: an exported PDF, a Word
 # document, a slide deck, and a file named after a CV. Each is listed in the
@@ -85,11 +90,19 @@ def ignored(path: str) -> bool:
 
 
 class TheStrayDocumentRulesTests(unittest.TestCase):
-    """The four documents the rules cover, in the casings they arrive in."""
+    """The four documents the rules cover, in the casings they arrive in.
+
+    **A machine without the repository's history cannot be asked.** ``git
+    check-ignore`` answers from ``.git``, so with no ``.git`` -- a zip download
+    -- or no ``git``, a name comes back unanswered rather than unignored. The
+    two tests below that fail without the history skip, naming the reason, and
+    run exactly as they did when it is there.
+    """
 
     def test_every_stray_document_is_ignored(self):
         for name in STRAY_DOCUMENTS:
             with self.subTest(name=name):
+                portability.require_git_history()
                 self.assertTrue(
                     ignored(name),
                     "{0!r} is not ignored, so a drag-and-drop can commit it".format(
@@ -103,6 +116,7 @@ class TheStrayDocumentRulesTests(unittest.TestCase):
         A helper that answered ``False`` for everything would pass the test
         below and fail this one.
         """
+        portability.require_git_history()
         self.assertTrue(ignored("__pycache__/anything.pyc"))
         self.assertFalse(ignored("README.md"))
 

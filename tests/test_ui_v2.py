@@ -26,6 +26,14 @@ them, because a row order that depended on a set or a dict would change its byte
 when the interpreter's string hash seed changed. Each class memoises what it
 read, so no test builds the site for itself.
 
+**A platform that cannot rebuild case 111's brief skips the tests that build.**
+The builder rebuilds every case's brief and holds it against the digest the run
+recorded, refusing the case rather than drawing a regenerated brief; on a
+platform whose libm rounds that case's mean distance one unit in the last place
+differently, the site cannot be built at all. Every test here that builds says
+so and skips, naming the case and the last place; the tests that only read the
+committed pages keep running.
+
 Two things these tests deliberately do not do. They do not search a page for the
 text ``http`` to prove it loads nothing external -- the agents' own explanations
 discuss URLs as ordinary prose, and a substring search would either fail on
@@ -56,6 +64,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from eval import v6_runs  # noqa: E402
 from ops import escalation  # noqa: E402
+from tests import portability  # noqa: E402
 from ui.v2 import build as v2  # noqa: E402
 
 # The four runs the site is drawn from, and the case root each set loads through.
@@ -231,6 +240,7 @@ def built_pages() -> Dict[str, str]:
     """
     global _PAGES, _GUARD
     if _PAGES is None:
+        portability.require_the_same_libm()
         guard = _ReadGuard()
         with guard:
             loaded = [
@@ -254,6 +264,7 @@ def second_build() -> Dict[str, str]:
     """A second, independent build, for the byte-identity check."""
     global _SECOND_BUILD
     if _SECOND_BUILD is None:
+        portability.require_the_same_libm()
         _SECOND_BUILD = {relative(path): text for path, text in v2.pages()}
     return _SECOND_BUILD
 
@@ -316,6 +327,7 @@ class DeterminismTests(unittest.TestCase):
 
     def test_check_passes_on_the_command_line(self):
         """The command the owner runs: a fresh build against the committed files."""
+        portability.require_the_same_libm()
         result = subprocess.run(
             [sys.executable, "-m", "ui.v2.build", "--check"],
             cwd=str(PROJECT_ROOT),
@@ -342,6 +354,7 @@ class DeterminismTests(unittest.TestCase):
         in their own processes under two seeds, and every page's digest is
         compared. This is the check that caught the queue's row order.
         """
+        portability.require_the_same_libm()
         first = build_under_hash_seed("0")
         second = build_under_hash_seed("1")
         self.assertEqual(sorted(first), sorted(second))

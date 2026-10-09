@@ -33,6 +33,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from eval import baselines, development_sets as sets  # noqa: E402
 from eval import grade, run_benchmark  # noqa: E402
+from tests import portability  # noqa: E402
 from tests import test_upfront_remedy as upfront_rig  # noqa: E402
 from tribunal import llm, loader, money, policy_versions, transcript  # noqa: E402
 
@@ -569,25 +570,44 @@ class DevelopmentSetReportTests(unittest.TestCase):
     """The two sets separately, then combined."""
 
     def test_each_set_is_checked_for_currency_with_its_own_loader(self):
-        """Both sets read all current, and the report prints the four counts."""
+        """Both sets read all current -- but for the one case the platform moves.
+
+        On a platform whose libm rounds case 111's mean distance one unit in the
+        last place away from the recorded one, that single case reads
+        ``stale_brief``: the count below is over the set the platform can
+        rebuild, and it names the case it left out. On a platform that can read
+        the whole record nothing is left out and the counts are as they were.
+        """
         report = sets.render_development_sets(MODEL)
         self.assertIn(
             "Currency, each set checked with its own loader and its own briefs:", report
         )
         for development_set in sets.DEVELOPMENT_SETS:
             with self.subTest(development_set=development_set.name):
+                shifted = (
+                    (portability.CASE_111,)
+                    if portability.the_case_111_platform_difference()
+                    and development_set is sets.CORPUS
+                    else ()
+                )
                 produced = len(sets.cached_cases(development_set, MODEL))
                 staleness = sets.currency_for(development_set, MODEL)
                 self.assertTrue(staleness.checked)
-                self.assertEqual((), staleness.stale)
+                self.assertEqual(shifted, staleness.stale)
                 self.assertEqual((), staleness.unknown)
-                self.assertEqual((), staleness.stale_brief)
+                self.assertEqual(shifted, staleness.stale_brief)
                 self.assertEqual((), staleness.stale_prompts)
                 self.assertGreater(produced, 0)
                 expected = (
                     "  {0:<8} current {1:>3}, stale_brief {2:>3}, "
                     "stale_prompts {3:>3}, unknown {4:>3}"
-                ).format(development_set.name, produced, 0, 0, 0)
+                ).format(
+                    development_set.name,
+                    produced - len(shifted),
+                    len(shifted),
+                    0,
+                    0,
+                )
                 self.assertIn(expected, report)
 
     def test_a_set_that_has_not_been_run_reports_nothing_rather_than_zero(self):

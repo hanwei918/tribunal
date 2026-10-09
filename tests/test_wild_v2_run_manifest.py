@@ -40,6 +40,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from eval import run_benchmark  # noqa: E402
+from tests import portability  # noqa: E402
 
 # The manifest, as the owner recorded it when the run ended. It is a note this
 # repository carries, not the set: reading it reads a document we wrote.
@@ -323,6 +324,7 @@ class TheCheckCanFailTests(unittest.TestCase):
         the repository and no rule of ours can match it. The added case file is
         still reported and the Finder file is not.
         """
+        portability.require_git_history()
         self.assertTrue(
             ignored(PROJECT_ROOT / "runs" / "wild" / ".DS_Store"),
             "the repository does not ignore .DS_Store",

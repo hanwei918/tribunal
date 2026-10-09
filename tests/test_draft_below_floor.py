@@ -38,6 +38,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from eval import development_sets, run_benchmark, verify_drafts  # noqa: E402
+from tests import portability  # noqa: E402
 from tribunal import pipeline  # noqa: E402
 
 # The model every recorded run was made on, and the two trees the replay reads
@@ -59,6 +60,26 @@ SET_NAMES = ("corpus", "codex", "wild", "wild-v2")
 RECORDED_DRAFTS = 512
 REBUILT_DRAFTS = 504
 DRAFTS_BELOW_THE_FLOOR = 44
+
+
+def drafts_the_platform_leaves_out() -> int:
+    """The drafts of case 111, or ``0`` when this platform can rebuild them.
+
+    Case 111's brief cannot be rebuilt where the libm rounds its mean distance
+    one unit in the last place differently, so ``check_replay`` refuses it and
+    its drafts are not among the ones this module can rebuild. The count is read
+    from the run's own transcript rather than typed in here, so the three counts
+    below are over the set the platform can rebuild and they say which case they
+    left out.
+    """
+    if not portability.the_case_111_platform_difference():
+        return 0
+    run_dir = development_sets.BY_NAME["corpus"].run_dir(MODEL, RUNS_DIR)
+    transcript = run_benchmark.read_json(
+        run_benchmark.transcript_path(run_dir, portability.CASE_111)
+    )
+    vote_block = (transcript or {}).get("vote") or {}
+    return len(vote_block.get("drafts") or [])
 
 
 def _last_answer(record: Mapping[str, Any], entries: Sequence[Mapping[str, Any]]):
@@ -168,7 +189,11 @@ class RecordedDraftFloorTests(unittest.TestCase):
         held-out cases that produced no ruling, 517 and 533. ``check_replay``
         refuses them because there is no result for their advocates to be
         replayed against, which is the same refusal the offline replay records.
+        A platform whose libm moves case 111's mean distance adds that case's
+        four drafts to the difference; the count below is then over the set the
+        platform can rebuild, and the case it left out is named.
         """
+        left_out = drafts_the_platform_leaves_out()
         rebuilt = sum(
             len(drafts)
             for _set, _dir, cases in self.sets.values()
@@ -188,9 +213,12 @@ class RecordedDraftFloorTests(unittest.TestCase):
                 drafts += held
                 if case_no not in accepted:
                     refused.append((name, case_no, held))
-        self.assertEqual(REBUILT_DRAFTS, rebuilt)
+        expected_refused = [("wild", 517, 4), ("wild", 533, 4)]
+        if left_out:
+            expected_refused.append(("corpus", portability.CASE_111, left_out))
+        self.assertEqual(REBUILT_DRAFTS - left_out, rebuilt)
         self.assertEqual(RECORDED_DRAFTS, drafts)
-        self.assertEqual([("wild", 517, 4), ("wild", 533, 4)], sorted(refused))
+        self.assertEqual(sorted(expected_refused), sorted(refused))
 
     def test_every_recorded_draft_carries_a_confidence(self):
         """The gate is about a number, so the record has to hold one."""
@@ -204,7 +232,7 @@ class RecordedDraftFloorTests(unittest.TestCase):
                         "a recorded draft carries no confidence",
                     )
                 seen += 1
-        self.assertEqual(REBUILT_DRAFTS, seen)
+        self.assertEqual(REBUILT_DRAFTS - drafts_the_platform_leaves_out(), seen)
 
     def test_the_drafts_below_the_floor_are_escalates_or_already_invalid(self):
         """What makes the gate's zero effect a fact rather than a coincidence.
@@ -256,7 +284,9 @@ class RecordedDraftFloorTests(unittest.TestCase):
                 with self.subTest(set=name, case=case_no, what="ruling"):
                     self.assertEqual(result["ruling"], vote.ruling)
             checked += 1
-        self.assertEqual(REBUILT_DRAFTS // 4, checked)
+        self.assertEqual(
+            (REBUILT_DRAFTS - drafts_the_platform_leaves_out()) // 4, checked
+        )
 
     def test_the_same_drafts_reduce_to_a_ruling_above_the_floor_or_none(self):
         """No published ruling of the four sets is below the floor.

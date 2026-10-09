@@ -43,6 +43,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from tests import test_wild_v2_run_manifest as rig  # noqa: E402
+from tests import portability  # noqa: E402
 
 # The commit the run is committed at, as ``runs/README.md`` and the note state
 # it. The listing is taken from the commit rather than from the working tree, so
@@ -65,7 +66,13 @@ def manifest() -> Tuple[Tuple[str, str], ...]:
     hands back every blob in one call rather than one call per file. The parse
     is positional: each response is a header line, the bytes it declares, and a
     newline.
+
+    **A machine without the repository's history is told so, not measured.**
+    Every test that asks this question skips when ``git rev-parse
+    --show-toplevel`` fails -- a zip download has no ``.git``, and a machine may
+    have no ``git`` -- rather than failing on a listing that cannot be read.
     """
+    portability.require_git_history()
     listing = subprocess.run(
         ["git", "ls-tree", "-r", "-z", RUN_COMMIT, "--", RUN_ROOT],
         cwd=PROJECT_ROOT,

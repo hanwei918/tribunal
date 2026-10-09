@@ -51,6 +51,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from ops import evidence, sources  # noqa: E402
+from tests import portability  # noqa: E402
 from tribunal import brief, loader, money  # noqa: E402
 
 CORPUS_ROOT = PROJECT_ROOT / "data" / "cases"
@@ -455,6 +456,7 @@ class TheCorpusEqualityTests(unittest.TestCase):
         self.assertEqual(2, len([i for i in case["dispute"]["evidence_ids"] if "ADVIS" in i]))
 
     def test_a_brief_built_from_the_collected_case_has_the_recorded_digest(self):
+        portability.require_the_same_libm()
         for path in sorted(CORPUS_RUN.glob("case-*.json")):
             if path.name.endswith(".transcript.json"):
                 continue

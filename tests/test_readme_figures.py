@@ -45,6 +45,7 @@ from eval import (  # noqa: E402
     sealed_report,
     v6_runs,
 )
+from tests import portability  # noqa: E402
 
 README = PROJECT_ROOT / "README.md"
 MODEL = run_benchmark.resolve_model(None)
@@ -742,6 +743,15 @@ class ReadmeFigureTests(unittest.TestCase):
         )
 
     def test_every_figure_in_the_readme_is_what_the_files_say(self) -> None:
+        """The figures, recomputed from the committed runs and the frozen keys.
+
+        A platform that cannot rebuild case 111's brief refuses that case in
+        ``eval.baselines``, so the baseline rows' denominators move by one and
+        the figures the README states -- which were measured on macOS -- cannot
+        be recomputed here. The test skips there and says why, rather than
+        comparing a macOS figure with a Linux one.
+        """
+        portability.require_the_same_libm()
         for label, value in self.expected().items():
             with self.subTest(figure=label):
                 self.assertIn(label, self.table)

@@ -71,6 +71,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from eval import development_sets  # noqa: E402
+from tests import portability  # noqa: E402
 from tribunal import events, llm, money, pipeline, transcript  # noqa: E402
 
 # A key that is unmistakable if it ever turns up where it should not. No request
@@ -687,6 +688,7 @@ class OfflineReplayTests(unittest.TestCase):
                         )
 
     def test_the_brief_digest_matches_the_recording(self):
+        portability.require_the_same_libm()
         for name in SET_NAMES:
             run_dir = development_sets.BY_NAME[name].run_dir(self.models[name], RUNS_DIR)
             for replayed in self.each(name):

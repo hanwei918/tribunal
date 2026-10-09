@@ -40,6 +40,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from eval import development_sets  # noqa: E402
+from tests import portability  # noqa: E402
 from tribunal import brief, policy_versions  # noqa: E402
 
 # The three runs whose recorded briefs must keep rebuilding, and the key each
@@ -222,6 +223,7 @@ class VersionOneIsUnchangedTests(unittest.TestCase):
     """
 
     def test_every_recorded_brief_digest_rebuilds_at_version_one(self):
+        portability.require_the_same_libm()
         checked = 0
         for set_name, run_dir in RUN_DIRECTORIES:
             for path in sorted(run_dir.glob("case-*.json")):

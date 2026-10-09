@@ -37,6 +37,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from eval import development_sets, run_benchmark as runner  # noqa: E402
+from tests import portability  # noqa: E402
 from tests import test_run_benchmark as rig  # noqa: E402
 from tribunal import (  # noqa: E402
     brief,
@@ -270,6 +271,7 @@ class VersionOneIsUnchangedTests(unittest.TestCase):
         self.assertIn("clauses", policies["category"])
 
     def test_version_1_rebuilds_every_recorded_brief_digest_exactly(self):
+        portability.require_the_same_libm()
         corpus = recorded_digests(CORPUS_RUN_DIR)
         self.assertEqual(CORPUS_CASES, len(corpus))
 

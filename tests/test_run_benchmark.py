@@ -93,6 +93,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from eval import grade  # noqa: E402
 from eval import run_benchmark as runner  # noqa: E402
+from tests import portability  # noqa: E402
 from tests import test_answer_isolation as isolation  # noqa: E402
 from tribunal import events, llm, money, pipeline, transcript  # noqa: E402
 from tribunal.model import RUNTIME_MODEL  # noqa: E402
@@ -3825,7 +3826,13 @@ class NoteCouplingTests(unittest.TestCase):
         the comparison is made only against the cache the note describes, and
         skipped with the reason named otherwise: a note's count is a claim about
         one cache, and holding it against another measures the calendar.
+
+        Nor is it unconditional across platforms. The note records the cache's
+        staleness, which the checker answers by rebuilding each brief; a
+        platform that cannot rebuild case 111's brief reads one case stale where
+        the note read none, so the comparison skips there and says why.
         """
+        portability.require_the_same_libm()
         directories = self._the_notes_own_cache()
         for directory in directories:
             block = self.claim[directory]
