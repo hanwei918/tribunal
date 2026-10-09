@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Case 103 - Route deviation</title>
+<style>
+:root{
+  --ink:#1b1f24;--paper:#ffffff;--soft:#f6f8fa;--line:#d8dee4;--muted:#57606a;
+  --blue:#1f6feb;--orange:#d9822b;--green:#2da44e;--red:#cf222e;
+}
+@media (prefers-color-scheme:dark){
+  :root{--ink:#e6edf3;--paper:#0d1117;--soft:#161b22;--line:#30363d;--muted:#8b949e;}
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--blue)}
+.layout{display:flex;min-height:100vh}
+.side{flex:0 0 168px;border-right:1px solid var(--line);background:var(--soft);padding:24px 14px}
+.brand{font-weight:700;margin:0 0 18px;padding:0 8px;letter-spacing:.01em}
+.navlink{display:block;padding:7px 10px;border-radius:7px;color:var(--ink);text-decoration:none}
+.navlink:hover{background:var(--line)}
+.navlink.current{background:var(--blue);color:#fff}
+main{flex:1 1 auto;min-width:0;max-width:1080px;padding:30px 34px 70px}
+h1{font-size:1.5rem;line-height:1.3;margin:.2em 0 .4em}
+h2{font-size:1.05rem;margin:0 0 12px}
+h3{font-size:.95rem;margin:18px 0 6px}
+p{margin:.55em 0}
+.eyebrow{color:var(--muted);font-size:.85rem;letter-spacing:.06em;text-transform:uppercase;margin:0}
+.lede{font-size:1.05rem;margin:.3em 0 1em}
+.card{border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin:0 0 18px;background:var(--paper)}
+.card.soft{background:var(--soft)}
+.card.wide{padding-bottom:8px}
+.disclosure{font-weight:600;border-left:4px solid var(--blue);padding-left:12px;margin:0 0 14px}
+.figures{display:flex;flex-wrap:wrap;gap:14px;margin:0 0 22px}
+.figure{border:1px solid var(--line);border-radius:12px;padding:14px 18px;min-width:168px;flex:1 1 168px}
+.figure .k{color:var(--muted);font-size:.82rem;text-transform:uppercase;letter-spacing:.05em;margin:0 0 6px}
+.figure .v{font-size:1.35rem;font-weight:650;margin:0}
+.figure .s{color:var(--muted);font-size:.85rem;margin:4px 0 0}
+.facts{display:flex;flex-wrap:wrap;gap:10px 28px;margin:0;padding:0}
+.facts div{margin:0}
+.facts dt{color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.05em}
+.facts dd{margin:2px 0 0;font-weight:600}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px}
+.tab{border:1px solid var(--line);background:var(--soft);color:var(--ink);border-radius:999px;padding:7px 16px;font:inherit;cursor:pointer}
+.tab-on{background:var(--blue);border-color:var(--blue);color:#fff}
+table{border-collapse:collapse;width:100%}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+th.sortable{cursor:pointer;user-select:none}
+th.sortable::after{content:" \2195";color:var(--muted)}
+tr.reviewer td{background:rgba(217,130,43,.09)}
+.pill{display:inline-block;border-radius:999px;padding:2px 10px;font-size:.8rem;font-weight:600}
+.pill.blue{background:rgba(31,111,235,.14);color:var(--blue)}
+.pill.orange{background:rgba(217,130,43,.16);color:var(--orange)}
+.pill.green{background:rgba(45,164,78,.16);color:var(--green)}
+.pill.red{background:rgba(207,34,46,.14);color:var(--red)}
+.pill.grey{background:var(--soft);color:var(--muted);border:1px solid var(--line)}
+.filters{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 14px}
+.filters button{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:999px;padding:6px 14px;font:inherit;cursor:pointer}
+.filters button.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.filters select{font:inherit;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--paper);color:var(--ink)}
+.bar{position:relative;height:12px;border-radius:6px;background:var(--soft);border:1px solid var(--line);margin:10px 0 6px;overflow:hidden}
+.bar span{position:absolute;left:0;top:0;bottom:0;background:var(--blue)}
+.bar i{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--red)}
+.axis{display:flex;justify-content:space-between;color:var(--muted);font-size:.82rem}
+blockquote{margin:8px 0;padding:10px 14px;border-left:3px solid var(--line);background:var(--soft);white-space:pre-wrap;overflow-wrap:anywhere}
+details{border:1px solid var(--line);border-radius:10px;padding:0 16px;margin:0 0 10px}
+details[open]{padding-bottom:12px}
+summary{cursor:pointer;padding:13px 0;font-weight:600}
+.label{color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;margin:12px 0 0}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.85rem;word-break:break-all}
+pre{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:12px;overflow-wrap:anywhere;white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.85rem}
+.foot{border-top:1px solid var(--line);margin-top:34px;padding-top:14px;color:var(--muted);font-size:.85rem}
+.foot span{margin-right:18px}
+.claim{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:0 0 10px}
+.claim p{margin:.35em 0}
+.err{color:var(--red);font-weight:600}
+.ok{color:var(--green);font-weight:600}
+.empty{color:var(--muted)}
+@media (max-width:640px){
+  .layout{display:block}
+  .side{border-right:0;border-bottom:1px solid var(--line);padding:14px 12px}
+  .brand{margin-bottom:8px}
+  main{padding:20px 16px 48px}
+  .card{padding:16px}
+  table thead{display:none}
+  table,tbody,tr,td{display:block;width:100%}
+  tr{border-bottom:1px solid var(--line);padding:8px 0}
+  td{border:0;padding:4px 0}
+  td::before{content:attr(data-label);display:block;color:var(--muted);font-size:.78rem;text-transform:uppercase;letter-spacing:.05em}
+}
+</style>
+</head>
+<body>
+<div class="layout">
+<nav class="side" aria-label="Sections">
+<p class="brand">Tribunal</p>
+<a class="navlink" href="index.html">Queue</a>
+</nav>
+<main>
+<header class="pagehead">
+<p class="eyebrow">corpus &middot; case 103</p>
+<h1>Route deviation</h1>
+<p class="lede">Braddell Road was closed so I understand the driver had to go another way, fine.</p>
+<dl class="facts"><div><dt>Filed by</dt><dd>RIDER</dd></div><div><dt>Amount contested</dt><dd>SGD 9.00</dd></div><div><dt>Status</dt><dd>PARTIAL_REFUND</dd></div></dl>
+</header>
+<div class="tabs" role="tablist"><button type="button" class="tab tab-on" role="tab" id="tab-ruling" aria-controls="panel-ruling" data-tab="ruling" aria-selected="true">Ruling</button><button type="button" class="tab" role="tab" id="tab-decision" aria-controls="panel-decision" data-tab="decision" aria-selected="false">How it was decided</button></div>
+<section role="tabpanel" id="panel-ruling" aria-labelledby="tab-ruling" data-panel="ruling"><div class="card"><p class="disclosure">This is a provisional ruling made by an automated system.</p><h2>Ruling</h2><p><strong>PARTIAL_REFUND</strong> -- part of the contested amount is returned.</p><p>Refund to the filing party: SGD 4.00. Driver compensation: none.</p><div class="bar" role="img" aria-label="confidence 0.9 against a floor of 0.7"><span style="width:90.0%"></span><i style="left:70.0%"></i></div><p class="axis"><span>confidence 0.9</span><span>floor 0.7 (POL-GEN-02)</span></p><p class="label">The appeal path, quoted from POL-GEN-04</p><blockquote>Every ruling issued without human review is a provisional ruling. Either party may appeal it once, within 30 days of the trip or of the ruling's issue, whichever is later, by lodging the appeal with the platform's help channel. An appeal (a) is heard by a human reviewer who did not take part in any earlier review of the same trip; (b) may add only record-type evidence - a GPS export, a fare or payment statement, an ERP gantry record with gantry name, entry time and cashcard statement, a call log, a photograph with its capture time - and may not add or amend a party statement; (c) suspends execution of any amount not yet executed and freezes it until decided, and where the amount was executed under POL-GEN-05 before the appeal, a successful appeal reverses it; (d) may not be withdrawn and re-lodged. A second appeal on the same trip, an appeal lodged after 30 days, or an appeal that adds only statements is refused. The appeal decision is recorded as a human closure under POL-GEN-06, enters the precedent store, and is final on the platform. This clause licenses no ruling value: an appeal is a route to human review, not a ruling, and it is lodged after a ruling has issued.</blockquote><p>POL-GEN-05: the monetary effect is SGD 4.00 against an execution threshold of SGD 8.00. It does not exceed the threshold, so the amount is executed automatically on issue, subject to POL-GEN-04.</p></div><div class="card"><h2>The two notices</h2><h3>Notice to the rider</h3><p>What was decided: the ruling is PARTIAL_REFUND -- part of the contested amount is returned.</p><p>What money moves: SGD 4.00 refunded to the rider.</p><p>How to appeal: Every ruling issued without human review is a provisional ruling. Either party may appeal it once, within 30 days of the trip or of the ruling's issue, whichever is later, by lodging the appeal with the platform's help channel. An appeal (a) is heard by a human reviewer who did not take part in any earlier review of the same trip; (b) may add only record-type evidence - a GPS export, a fare or payment statement, an ERP gantry record with gantry name, entry time and cashcard statement, a call log, a photograph with its capture time - and may not add or amend a party statement; (c) suspends execution of any amount not yet executed and freezes it until decided, and where the amount was executed under POL-GEN-05 before the appeal, a successful appeal reverses it; (d) may not be withdrawn and re-lodged. A second appeal on the same trip, an appeal lodged after 30 days, or an appeal that adds only statements is refused. The appeal decision is recorded as a human closure under POL-GEN-06, enters the precedent store, and is final on the platform. This clause licenses no ruling value: an appeal is a route to human review, not a ruling, and it is lodged after a ruling has issued.</p><p class="label">The judge's explanation, as written</p><blockquote>Rider and driver: this is my decision on trip TRP-00103 (14 July, Bishan to Kallang Wave Mall).
+
+WHAT THE EVIDENCE SHOWS. The GPS trace (EV-GPS-00103) ran 11.18 km against the booked optimal of 8.2 km (EV-TRIP-00103) &#8212; an excess of 2.98 km, or 36.3%. Under POL-RD-01 the trace figure governs, not the trip record's rounded 11.2 km copy. That clears both establishment gates (over 20% and over 0.8 km), so a deviation is established. It does not reach the 50% / 8.0 km materiality lines, so no MATERIAL deviation is recorded on this trip.
+
+DISTANCE &#8212; NO REFUND. The LTA advisory ADV-20260714-031 (EV-ADVIS-00103-01) closes Braddell Road (towards Serangoon) between Lorong 1 Toa Payoh and Bishan Rd from 05:30 to 12:00, which covers the trip window, and the trace runs inside the closure geometry. Under POL-RD-03 the justified excess is min(2.98 km, 1.30 x (10.6 - 8.2) + 1.00 = 4.12 km) = 2.98 km, so the entire measured excess is exonerated. There is no excess beyond that cap, so POL-RD-02 does not run and the distance and time charges stand. The $4.15 figure both sides put forward is the POL-RD-02 arithmetic against the closure-adjusted optimal; it does not govern here, because POL-RD-02 applies only where no exculpatory clause fully excuses the deviation, and POL-RD-03 excuses it in full. Likewise the unadjusted $8.49 comparison is not in play.
+
+ERP &#8212; $4.00 REFUNDED. The fare (EV-FARE-00103) carries $4.00 of ERP: CTE (Braddell Rd towards City) $3.00 and CTE (Moulmein Rd towards City) $1.00, against an optimal-route ERP of $0.00. Both gantries are genuinely crossed &#8212; the trace passes 0.0 m and 40.25 m from them, inside the 250 m match radius of POL-RD-09(4) &#8212; so this is not a phantom-line billing defect and no billing-integrity referral arises. But neither gantry is on the route the rider booked. Under POL-RD-09(2), where the deviation is exonerated as an external event under POL-RD-03, the distance and time charges stand while off-route ERP is refunded to the rider as a standalone pass-through correction, capped at $12.00 per trip. The rider did not cause the closure and did not choose the expressway. I therefore refund the off-route ERP of $4.00.
+
+DRIVER'S RIDER-AUTHORISATION ARGUMENT (POL-RD-04 / POL-RD-09(3)) &#8212; REJECTED. The driver's message announced the diversion ('braddell close today, i take CTE ah', 08:12:30) and the rider answered 'ok' (08:12:58), but POL-RD-04 requires a RIDER instruction that identifies a place or road specifically enough to act on. The rider's reply names no place or road, and neither message carries a waypoint_hint. POL-RD-04's test therefore cannot be run on this record, the clause is unavailable, and the exchange is not a rider-caused detour. POL-RD-09(3) does not bar the ERP refund.
+
+DRIVER'S NO_ACTION ARGUMENT &#8212; REJECTED. Leaving the fare entirely as charged would keep the $4.00 of off-route ERP that POL-RD-09(2) directs be returned.
+
+NO ESCALATION, NO COMPENSATION, NO REFERRALS. Trip identifiers match across the trip record, trace and fare breakdown; the trace is clean (175 fixes, 10 s interval, no gaps, max_gap 0 s, 100% coverage, so POL-RD-07(a)-(c) is not met); the advisory is present and current; and the refund is far below the $150 ceiling. No repeat-deviation pattern exists (driver_profile.deviation_flags_90d 0 against 553 completed trips_90d), so no POL-RD-06 uplift or conduct referral applies. No driver compensation is due: the fare billed no less distance than the trace records. The rider's own profile shows deviation_claims_60d 0, so no extra corroboration is demanded.
+
+RESULT. PARTIAL_REFUND of SGD 4.00 to the rider (the off-route ERP pass-through under POL-RD-09(2)); the contested amount was SGD 9.00. The distance and time charges stand. This refund is within the SGD 8.00 automatic-execution threshold, so it executes on issue subject to the appeal route under POL-GEN-04.
+
+The judge was asked 4 times on the same inputs and 3 of the 4 drafts agreed on this ruling, so it is carried, not unanimous (vote agreement 0.75).</blockquote><h3>Notice to the driver</h3><p>What was decided: the ruling is PARTIAL_REFUND -- part of the contested amount is returned.</p><p>What money moves: SGD 4.00 refunded to the rider.</p><p>How to appeal: Every ruling issued without human review is a provisional ruling. Either party may appeal it once, within 30 days of the trip or of the ruling's issue, whichever is later, by lodging the appeal with the platform's help channel. An appeal (a) is heard by a human reviewer who did not take part in any earlier review of the same trip; (b) may add only record-type evidence - a GPS export, a fare or payment statement, an ERP gantry record with gantry name, entry time and cashcard statement, a call log, a photograph with its capture time - and may not add or amend a party statement; (c) suspends execution of any amount not yet executed and freezes it until decided, and where the amount was executed under POL-GEN-05 before the appeal, a successful appeal reverses it; (d) may not be withdrawn and re-lodged. A second appeal on the same trip, an appeal lodged after 30 days, or an appeal that adds only statements is refused. The appeal decision is recorded as a human closure under POL-GEN-06, enters the precedent store, and is final on the platform. This clause licenses no ruling value: an appeal is a route to human review, not a ruling, and it is lodged after a ruling has issued.</p><p class="label">The judge's explanation, as written</p><blockquote>Rider and driver: this is my decision on trip TRP-00103 (14 July, Bishan to Kallang Wave Mall).
+
+WHAT THE EVIDENCE SHOWS. The GPS trace (EV-GPS-00103) ran 11.18 km against the booked optimal of 8.2 km (EV-TRIP-00103) &#8212; an excess of 2.98 km, or 36.3%. Under POL-RD-01 the trace figure governs, not the trip record's rounded 11.2 km copy. That clears both establishment gates (over 20% and over 0.8 km), so a deviation is established. It does not reach the 50% / 8.0 km materiality lines, so no MATERIAL deviation is recorded on this trip.
+
+DISTANCE &#8212; NO REFUND. The LTA advisory ADV-20260714-031 (EV-ADVIS-00103-01) closes Braddell Road (towards Serangoon) between Lorong 1 Toa Payoh and Bishan Rd from 05:30 to 12:00, which covers the trip window, and the trace runs inside the closure geometry. Under POL-RD-03 the justified excess is min(2.98 km, 1.30 x (10.6 - 8.2) + 1.00 = 4.12 km) = 2.98 km, so the entire measured excess is exonerated. There is no excess beyond that cap, so POL-RD-02 does not run and the distance and time charges stand. The $4.15 figure both sides put forward is the POL-RD-02 arithmetic against the closure-adjusted optimal; it does not govern here, because POL-RD-02 applies only where no exculpatory clause fully excuses the deviation, and POL-RD-03 excuses it in full. Likewise the unadjusted $8.49 comparison is not in play.
+
+ERP &#8212; $4.00 REFUNDED. The fare (EV-FARE-00103) carries $4.00 of ERP: CTE (Braddell Rd towards City) $3.00 and CTE (Moulmein Rd towards City) $1.00, against an optimal-route ERP of $0.00. Both gantries are genuinely crossed &#8212; the trace passes 0.0 m and 40.25 m from them, inside the 250 m match radius of POL-RD-09(4) &#8212; so this is not a phantom-line billing defect and no billing-integrity referral arises. But neither gantry is on the route the rider booked. Under POL-RD-09(2), where the deviation is exonerated as an external event under POL-RD-03, the distance and time charges stand while off-route ERP is refunded to the rider as a standalone pass-through correction, capped at $12.00 per trip. The rider did not cause the closure and did not choose the expressway. I therefore refund the off-route ERP of $4.00.
+
+DRIVER'S RIDER-AUTHORISATION ARGUMENT (POL-RD-04 / POL-RD-09(3)) &#8212; REJECTED. The driver's message announced the diversion ('braddell close today, i take CTE ah', 08:12:30) and the rider answered 'ok' (08:12:58), but POL-RD-04 requires a RIDER instruction that identifies a place or road specifically enough to act on. The rider's reply names no place or road, and neither message carries a waypoint_hint. POL-RD-04's test therefore cannot be run on this record, the clause is unavailable, and the exchange is not a rider-caused detour. POL-RD-09(3) does not bar the ERP refund.
+
+DRIVER'S NO_ACTION ARGUMENT &#8212; REJECTED. Leaving the fare entirely as charged would keep the $4.00 of off-route ERP that POL-RD-09(2) directs be returned.
+
+NO ESCALATION, NO COMPENSATION, NO REFERRALS. Trip identifiers match across the trip record, trace and fare breakdown; the trace is clean (175 fixes, 10 s interval, no gaps, max_gap 0 s, 100% coverage, so POL-RD-07(a)-(c) is not met); the advisory is present and current; and the refund is far below the $150 ceiling. No repeat-deviation pattern exists (driver_profile.deviation_flags_90d 0 against 553 completed trips_90d), so no POL-RD-06 uplift or conduct referral applies. No driver compensation is due: the fare billed no less distance than the trace records. The rider's own profile shows deviation_claims_60d 0, so no extra corroboration is demanded.
+
+RESULT. PARTIAL_REFUND of SGD 4.00 to the rider (the off-route ERP pass-through under POL-RD-09(2)); the contested amount was SGD 9.00. The distance and time charges stand. This refund is within the SGD 8.00 automatic-execution threshold, so it executes on issue subject to the appeal route under POL-GEN-04.
+
+The judge was asked 4 times on the same inputs and 3 of the 4 drafts agreed on this ruling, so it is carried, not unanimous (vote agreement 0.75).</blockquote></div><div class="card"><h2>What each side argued</h2><h3>The rider advocate</h3><div class="claim"><p><span class="pill green">kept</span> The trace governs the threshold test and it establishes a deviation on this trip: gps_trace.trace_distance_km is 11.18 km against a booked optimal of 8.2 km, an excess of 2.98 km, which is 36.3% of optimal. Both limbs of the POL-RD-01 gate pass &#8212; 36.3% clears the 20% test and 2.98 km clears the 0.8 km test &#8212; so the excess is established on the trace figure the clause makes governing, not on the rounded trip_record copy.</p><p class="label">evidence EV-GPS-00103, EV-TRIP-00103 &middot; clauses POL-RD-01, POL-RD-08</p></div><div class="claim"><p><span class="pill green">kept</span> The three artifacts describe the same trip &#8212; trip_record, gps_trace and fare_breakdown all carry trip TRP-00103 with the same 08:07:20 pickup/start window &#8212; and the trace is unimpaired for policy purposes: 175 fixes at a 10 second sample interval, no gaps, max_gap_sec 0.0 and 100% coverage. POL-RD-07(a) to (c) do not fire, so the excess stands at the measured figure and no independent corroboration of it is required.</p><p class="label">evidence EV-TRIP-00103, EV-GPS-00103, EV-FARE-00103 &middot; clauses POL-RD-07, POL-RD-08</p></div><div class="claim"><p><span class="pill green">kept</span> The rider accepts that the LTA closure of Braddell Road (valid 05:30 to 12:00, overlapping the trip window, with 33 trace fixes inside the advisory geometry) exonerates the driver's distance to the POL-RD-03 cap: the justified excess is min(2.98 km, 1.30 x (10.6 - 8.2) + 1.00 = 4.12 km), which is 2.98 km, so the whole of the excess is excused and no distance or time refund is sought. What POL-RD-03 does not do is move the ERP gantries onto the rider, who did not cause the closure and did not choose the CTE.</p><p class="label">evidence EV-ADVIS-00103-01, EV-GPS-00103, EV-TRIP-00103 &middot; clauses POL-RD-03</p></div><div class="claim"><p><span class="pill green">kept</span> The rider is being made to pay $4.00 of expressway ERP that her route would never have generated: trip_record.optimal_route_erp_sgd is 0.00, and both charged gantries &#8212; CTE (Braddell Rd towards City) at $3.00 and CTE (Moulmein Rd towards City) at $1.00 &#8212; carry on_optimal_route false. Under POL-RD-09(2), where the deviation is exonerated as an external event under POL-RD-03 the distance and time charges stand, but off-route ERP is still refunded to the rider as a standalone pass-through correction, capped at $12.00 per trip; the $4.00 claimed is well inside that cap.</p><p class="label">evidence EV-FARE-00103, EV-TRIP-00103, EV-ADVIS-00103-01 &middot; clauses POL-RD-09, POL-RD-03</p></div><div class="claim"><p><span class="pill green">kept</span> The CTE detour was not rider-caused, so POL-RD-09(3) does not bar that ERP refund: the only chat message announcing the diversion is the driver's &#8212; 'braddell close today, i take CTE ah' &#8212; and the rider's 'ok' is an acknowledgement, not an instruction identifying a place or road, and neither message carries a waypoint_hint. POL-RD-04's exoneration cannot be run on this record, and no distance may be excluded on the strength of that exchange.</p><p class="label">evidence EV-CHAT-00103 &middot; clauses POL-RD-04, POL-RD-09</p></div><div class="claim"><p><span class="pill green">kept</span> On the closure branch the fare artifact itself publishes the arithmetic: with the closure-adjusted optimal of 11.18 km and 28.6 minutes, the recomputed fare is $20.993 against a charged total of $25.12, a refund of $4.127, rounded up to the nearest $0.05 as $4.15. POL-RD-09(1) forbids adding the $4.00 of ERP on top of that &#8212; the ERP is already comprehended in the recomputation because the recomputed fare carries only on-optimal-route gantries, and here that figure is zero &#8212; so $4.15 is the single amount the rider should receive, and it comfortably meets her request for at least the ERP.</p><p class="label">evidence EV-FARE-00103, EV-TRIP-00103, EV-ADVIS-00103-01 &middot; clauses POL-RD-02, POL-RD-09, POL-RD-03</p></div><div class="claim"><p><span class="pill green">kept</span> Nothing on this record requires escalation, so the tribunal can rule on the money: the trip identifiers match across trip_record, gps_trace and fare_breakdown, no timestamps run backwards, the trace is not impaired under POL-RD-07, the traffic advisory is present and COMPLETE rather than missing &#8212; so neither POL-RD-13 nor POL-RD-10(5) is engaged &#8212; and the refund is far below the SGD 150.00 ceiling.</p><p class="label">evidence EV-TRIP-00103, EV-GPS-00103, EV-ADVIS-00103-01, EV-FARE-00103 &middot; clauses POL-RD-10, POL-RD-13</p></div><div class="claim"><p><span class="pill green">kept</span> No impairment discount applies to the rider's case: every artifact she relies on &#8212; trip record, GPS trace, fare breakdown and traffic advisory &#8212; is COMPLETE with weight_multiplier 1.0 and no issue codes, so the confidence cap in POL-GEN-02(2) does not drag the ruling below the 0.70 floor and no disclosure of impairment is owed.</p><p class="label">evidence EV-TRIP-00103, EV-GPS-00103, EV-FARE-00103, EV-ADVIS-00103-01 &middot; clauses POL-GEN-02, POL-RD-10</p></div><div class="claim"><p><span class="pill green">kept</span> The rider is not a serial deviation claimant: rider_profile.deviation_claims_60d is 0 and deviation_claims_60d_substantiated is 0, so the POL-RD-08 corroboration gate for claimants with four or more claims in 60 days is not triggered and no corroboration beyond the trace is demanded of her. The profile is cited only for that test, as POL-GEN-01 requires, and nothing else on it bears on this trip.</p><p class="label">evidence EV-RPROF-00103 &middot; clauses POL-RD-08, POL-GEN-01</p></div><h3>The driver advocate</h3><div class="claim"><p><span class="pill green">kept</span> The whole of the measured excess is exonerated by the closure under POL-RD-03. The LTA advisory EV-ADVIS-00103-01 names Braddell Road (towards Serangoon) between Lorong 1 Toa Payoh and Bishan Rd, a road the optimal route itself traverses; it is valid 05:30 to 12:00 on the trip date, so it overlaps the 08:07-08:36 trip window; and the trace enters the advisory geometry with 33 fixes inside it (EV-GPS-00103). The exoneration cap is min(2.98 km, 1.30 x (10.6 - 8.2) + 1.00) = min(2.98, 4.12) = 2.98 km, which is exactly the measured excess. The driver's diversion falls entirely inside the cap and attracts no distance penalty.</p><p class="label">evidence EV-ADVIS-00103-01, EV-GPS-00103, EV-TRIP-00103 &middot; clauses POL-RD-03</p></div><div class="claim"><p><span class="pill green">kept</span> The rider chose the CTE, so no ERP refund is due. EV-CHAT-00103 records the driver naming the Braddell closure and the CTE routing at 08:12:30 and the rider answering "ok" at 08:12:58, sixty-eight seconds before the first CTE gantry was charged at 08:14:06. That assent is a rider instruction within POL-RD-04, and the trace corroborates it: the vehicle runs past both CTE gantries at 0.0 m and 40.25 m (EV-GPS-00103). On a detour the rider authorised, POL-RD-09(3) provides that no ERP refund is due. The rider's assertion that he "did not choose to go on the CTE" is contradicted by his own message.</p><p class="label">evidence EV-CHAT-00103, EV-GPS-00103, EV-FARE-00103 &middot; clauses POL-RD-04, POL-RD-09</p></div><div class="claim"><p><span class="pill green">kept</span> If the closure alone is treated as the cause, the refund must still be run against the closure-adjusted optimal and not the booked one. POL-RD-02, applied to the adjusted optimal of 8.2 + 2.98 = 11.18 km (duration 28.6 min), gives a recomputed fare of SGD 20.993 against a charged total of SGD 25.12 - a refund of SGD 4.13, rounded up to SGD 4.15. That is the ceiling; it is not the SGD 8.49 an unadjusted comparison would produce, and it is far short of the SGD 9.00 the rider contests. The rider himself accepts the diversion was necessary ("I understand the driver had to go another way, fine"), so the cost of the diverted route cannot be returned to him.</p><p class="label">evidence EV-FARE-00103, EV-TRIP-00103, EV-ADVIS-00103-01, EV-GPS-00103 &middot; clauses POL-RD-02, POL-RD-03</p></div><div class="claim"><p><span class="pill green">kept</span> There is no billing-integrity defect in the ERP lines. Both charged gantries are matched to the trace within the 250 m POL-RD-09(4) radius: the CTE (Braddell Rd towards City) gantry has a fix at 0.0 m and the CTE (Moulmein Rd towards City) gantry a fix at 40.25 m (EV-GPS-00103). No gantry was charged that the vehicle did not cross, so the rider gets no full refund of the ERP on a phantom-line theory, and the two lines are genuine pass-through costs of SGD 3.00 and SGD 1.00.</p><p class="label">evidence EV-FARE-00103, EV-GPS-00103 &middot; clauses POL-RD-09</p></div><div class="claim"><p><span class="pill green">kept</span> Even on the rider's best case the deviation is modest and not material. Measured on the trace as POL-RD-01 requires, the trip ran 11.18 km (EV-GPS-00103) against a booked optimal of 8.2 km (EV-TRIP-00103) - an excess of 2.98 km, or 36.3%. That clears the 20% / 0.8 km establishment gates but sits well below the 50% and 8.0 km materiality lines, so no MATERIAL deviation is recorded on this trip and the trip_record's rounded 11.2 km convenience copy is not the figure relied on.</p><p class="label">evidence EV-GPS-00103, EV-TRIP-00103 &middot; clauses POL-RD-01</p></div><div class="claim"><p><span class="pill green">kept</span> There is no repeat-deviation pattern to uplift any refund or to refer the driver. The driver's deviation_flags_90d is 0 against completed_trips_90d of 553 (EV-DPROF-00103), far below the 3-flag and 0.05-ratio thresholds POL-RD-06 sets. No FULL_REFUND uplift is available on this trip and no driver-conduct referral is warranted.</p><p class="label">evidence EV-DPROF-00103 &middot; clauses POL-RD-06</p></div><div class="claim"><p><span class="pill green">kept</span> The trace is clean, so the measured excess stands and no escalation is engaged. EV-GPS-00103 carries 175 fixes at a 10 s sampling interval over 100% coverage, with no gaps and a maximum gap of 0 s, so none of POL-RD-07(a) to (c) is met; there is no impaired stretch, no corroboration requirement, and no POL-RD-10(3) escalation. The deviation is measured directly from the trace.</p><p class="label">evidence EV-GPS-00103 &middot; clauses POL-RD-07</p></div><div class="claim"><p><span class="pill green">kept</span> The outcome should preserve the charge. On this rider-filed dispute NO_ACTION under POL-GEN-03 leaves the fare as charged, which is correct because the excess is exonerated by the closure under POL-RD-03 and the ERP was incurred on a route the rider authorised, barring an ERP refund under POL-RD-09(3). At the very most, and only if the rider's "ok" is not treated as an instruction, the recovery is the off-route ERP pass-through of SGD 4.00 under POL-RD-09(2) - never the SGD 9.00 claimed.</p><p class="label">evidence EV-FARE-00103, EV-TRIP-00103, EV-CHAT-00103 &middot; clauses POL-GEN-03, POL-RD-09, POL-RD-04</p></div></div><div class="card wide"><h2>Evidence</h2><p>The weight is the one the admissibility precheck gave each artifact, as the brief carried it.</p><table><thead><tr><th>Artifact</th><th>Type</th><th>Source</th><th>Admissibility</th><th>Issue codes</th></tr></thead><tbody><tr><td>EV-TRIP-00103</td><td>TRIP_RECORD</td><td>PLATFORM_TELEMETRY</td><td>COMPLETE (weight 1.0)</td><td>none</td></tr><tr><td>EV-GPS-00103</td><td>GPS_TRACE</td><td>PLATFORM_TELEMETRY</td><td>COMPLETE (weight 1.0)</td><td>none</td></tr><tr><td>EV-CHAT-00103</td><td>CHAT_LOG</td><td>PLATFORM_TELEMETRY</td><td>COMPLETE (weight 1.0)</td><td>none</td></tr><tr><td>EV-FARE-00103</td><td>FARE_BREAKDOWN</td><td>PAYMENTS_LEDGER</td><td>COMPLETE (weight 1.0)</td><td>none</td></tr><tr><td>EV-RPROF-00103</td><td>RIDER_PROFILE</td><td>PLATFORM_TELEMETRY</td><td>COMPLETE (weight 1.0)</td><td>none</td></tr><tr><td>EV-DPROF-00103</td><td>DRIVER_PROFILE</td><td>PLATFORM_TELEMETRY</td><td>COMPLETE (weight 1.0)</td><td>none</td></tr><tr><td>EV-ADVIS-00103-01</td><td>TRAFFIC_ADVISORY</td><td>THIRD_PARTY_LTA</td><td>COMPLETE (weight 1.0)</td><td>none</td></tr></tbody></table></div></section>
+<section role="tabpanel" id="panel-decision" aria-labelledby="tab-decision" data-panel="decision" hidden><div class="card wide"><h2>How it was decided</h2><details><summary>Evidence pack</summary><p class="label">Who</p><p>code</p><p class="label">What it produced</p><p><p>The brief was built from the case and the loaded policy. Its sha256 is <span class="mono">e77cf133112edc97f37d113c4f948e1b451091b1c16218534a70823d86d1f935</span>.</p><p>Both advocates received these same bytes: yes, the recorded user_sha256 of each advocate is this digest.</p></p><p class="label">The derived facts each artifact carries</p><ul><li>EV-TRIP-00103 (TRIP_RECORD): no derived facts</li><li>EV-GPS-00103 (GPS_TRACE): advisory_area, arrival, deviation, driver_track, erp_gantry_proximity, rider_presence, waypoint_approach</li><li>EV-CHAT-00103 (CHAT_LOG): no derived facts</li><li>EV-FARE-00103 (FARE_BREAKDOWN): money</li><li>EV-RPROF-00103 (RIDER_PROFILE): no derived facts</li><li>EV-DPROF-00103 (DRIVER_PROFILE): no derived facts</li><li>EV-ADVIS-00103-01 (TRAFFIC_ADVISORY): no derived facts</li></ul></details><details><summary>Both sides argue</summary><p class="label">Who</p><p>model</p><p class="label">What it produced</p><p><p>The two advocates ran on the same brief and at the same time: the rider advocate made 9 claim(s) and the driver advocate made 8.</p><p>Their instructions differ -- system_sha256 <span class="mono">b90cb450bbd10645bb645632dfa64bafaeb4f690787527ce2ec0743e9e2ac355</span> against <span class="mono">c317acbca01e30fca7b769c8d85d31333a756e601b25ca9ad2ede328c4607543</span> -- and their brief is one digest for both.</p></p><p class="label">The rider advocate's own claims</p><blockquote>{"claims":[{"text":"The trace governs the threshold test and it establishes a deviation on this trip: gps_trace.trace_distance_km is 11.18 km against a booked optimal of 8.2 km, an excess of 2.98 km, which is 36.3% of optimal. Both limbs of the POL-RD-01 gate pass &#8212; 36.3% clears the 20% test and 2.98 km clears the 0.8 km test &#8212; so the excess is established on the trace figure the clause makes governing, not on the rounded trip_record copy.","evidence_ids":["EV-GPS-00103","EV-TRIP-00103"],"clause_ids":["POL-RD-01","POL-RD-08"],"relies_on":"derived.deviation.excess_km","asserted_weight":1.0},{"text":"The three artifacts describe the same trip &#8212; trip_record, gps_trace and fare_breakdown all carry trip TRP-00103 with the same 08:07:20 pickup/start window &#8212; and the trace is unimpaired for policy purposes: 175 fixes at a 10 second sample interval, no gaps, max_gap_sec 0.0 and 100% coverage. POL-RD-07(a) to (c) do not fire, so the excess stands at the measured figure and no independent corroboration of it is required.","evidence_ids":["EV-TRIP-00103","EV-GPS-00103","EV-FARE-00103"],"clause_ids":["POL-RD-07","POL-RD-08"],"relies_on":"payload.max_gap_sec","asserted_weight":1.0},{"text":"The rider accepts that the LTA closure of Braddell Road (valid 05:30 to 12:00, overlapping the trip window, with 33 trace fixes inside the advisory geometry) exonerates the driver's distance to the POL-RD-03 cap: the justified excess is min(2.98 km, 1.30 x (10.6 - 8.2) + 1.00 = 4.12 km), which is 2.98 km, so the whole of the excess is excused and no distance or time refund is sought. What POL-RD-03 does not do is move the ERP gantries onto the rider, who did not cause the closure and did not choose the CTE.","evidence_ids":["EV-ADVIS-00103-01","EV-GPS-00103","EV-TRIP-00103"],"clause_ids":["POL-RD-03"],"relies_on":"derived.advisory_area.advisories","asserted_weight":1.0},{"text":"The rider is being made to pay $4.00 of expressway ERP that her route would never have generated: trip_record.optimal_route_erp_sgd is 0.00, and both charged gantries &#8212; CTE (Braddell Rd towards City) at $3.00 and CTE (Moulmein Rd towards City) at $1.00 &#8212; carry on_optimal_route false. Under POL-RD-09(2), where the deviation is exonerated as an external event under POL-RD-03 the distance and time charges stand, but off-route ERP is still refunded to the rider as a standalone pass-through correction, capped at $12.00 per trip; the $4.00 claimed is well inside that cap.","evidence_ids":["EV-FARE-00103","EV-TRIP-00103","EV-ADVIS-00103-01"],"clause_ids":["POL-RD-09","POL-RD-03"],"relies_on":"derived.erp_gantry_proximity.lines","asserted_weight":1.0},{"text":"The CTE detour was not rider-caused, so POL-RD-09(3) does not bar that ERP refund: the only chat message announcing the diversion is the driver's &#8212; 'braddell close today, i take CTE ah' &#8212; and the rider's 'ok' is an acknowledgement, not an instruction identifying a place or road, and neither message carries a waypoint_hint. POL-RD-04's exoneration cannot be run on this record, and no distance may be excluded on the strength of that exchange.","evidence_ids":["EV-CHAT-00103"],"clause_ids":["POL-RD-04","POL-RD-09"],"asserted_weight":1.0},{"text":"On the closure branch the fare artifact itself publishes the arithmetic: with the closure-adjusted optimal of 11.18 km and 28.6 minutes, the recomputed fare is $20.993 against a charged total of $25.12, a refund of $4.127, rounded up to the nearest $0.05 as $4.15. POL-RD-09(1) forbids adding the $4.00 of ERP on top of that &#8212; the ERP is already comprehended in the recomputation because the recomputed fare carries only on-optimal-route gantries, and here that figure is zero &#8212; so $4.15 is the single amount the rider should receive, and it comfortably meets her request for at least the ERP.","evidence_ids":["EV-FARE-00103","EV-TRIP-00103","EV-ADVIS-00103-01"],"clause_ids":["POL-RD-02","POL-RD-09","POL-RD-03"],"relies_on":"derived.money.closure.refund.refund_before_rounding","asserted_weight":1.0},{"text":"Nothing on this record requires escalation, so the tribunal can rule on the money: the trip identifiers match across trip_record, gps_trace and fare_breakdown, no timestamps run backwards, the trace is not impaired under POL-RD-07, the traffic advisory is present and COMPLETE rather than missing &#8212; so neither POL-RD-13 nor POL-RD-10(5) is engaged &#8212; and the refund is far below the SGD 150.00 ceiling.","evidence_ids":["EV-TRIP-00103","EV-GPS-00103","EV-ADVIS-00103-01","EV-FARE-00103"],"clause_ids":["POL-RD-10","POL-RD-13"],"asserted_weight":1.0},{"text":"No impairment discount applies to the rider's case: every artifact she relies on &#8212; trip record, GPS trace, fare breakdown and traffic advisory &#8212; is COMPLETE with weight_multiplier 1.0 and no issue codes, so the confidence cap in POL-GEN-02(2) does not drag the ruling below the 0.70 floor and no disclosure of impairment is owed.","evidence_ids":["EV-TRIP-00103","EV-GPS-00103","EV-FARE-00103","EV-ADVIS-00103-01"],"clause_ids":["POL-GEN-02","POL-RD-10"],"asserted_weight":1.0},{"text":"The rider is not a serial deviation claimant: rider_profile.deviation_claims_60d is 0 and deviation_claims_60d_substantiated is 0, so the POL-RD-08 corroboration gate for claimants with four or more claims in 60 days is not triggered and no corroboration beyond the trace is demanded of her. The profile is cited only for that test, as POL-GEN-01 requires, and nothing else on it bears on this trip.","evidence_ids":["EV-RPROF-00103"],"clause_ids":["POL-RD-08","POL-GEN-01"],"asserted_weight":1.0}]}</blockquote><p class="label">The driver advocate's own claims</p><blockquote>{"claims":[{"text":"The whole of the measured excess is exonerated by the closure under POL-RD-03. The LTA advisory EV-ADVIS-00103-01 names Braddell Road (towards Serangoon) between Lorong 1 Toa Payoh and Bishan Rd, a road the optimal route itself traverses; it is valid 05:30 to 12:00 on the trip date, so it overlaps the 08:07-08:36 trip window; and the trace enters the advisory geometry with 33 fixes inside it (EV-GPS-00103). The exoneration cap is min(2.98 km, 1.30 x (10.6 - 8.2) + 1.00) = min(2.98, 4.12) = 2.98 km, which is exactly the measured excess. The driver's diversion falls entirely inside the cap and attracts no distance penalty.","evidence_ids":["EV-ADVIS-00103-01","EV-GPS-00103","EV-TRIP-00103"],"clause_ids":["POL-RD-03"],"relies_on":"derived.money.closure.justified_excess_km","asserted_weight":1.0},{"text":"The rider chose the CTE, so no ERP refund is due. EV-CHAT-00103 records the driver naming the Braddell closure and the CTE routing at 08:12:30 and the rider answering \"ok\" at 08:12:58, sixty-eight seconds before the first CTE gantry was charged at 08:14:06. That assent is a rider instruction within POL-RD-04, and the trace corroborates it: the vehicle runs past both CTE gantries at 0.0 m and 40.25 m (EV-GPS-00103). On a detour the rider authorised, POL-RD-09(3) provides that no ERP refund is due. The rider's assertion that he \"did not choose to go on the CTE\" is contradicted by his own message.","evidence_ids":["EV-CHAT-00103","EV-GPS-00103","EV-FARE-00103"],"clause_ids":["POL-RD-04","POL-RD-09"],"relies_on":"derived.erp_gantry_proximity.lines","asserted_weight":1.0},{"text":"If the closure alone is treated as the cause, the refund must still be run against the closure-adjusted optimal and not the booked one. POL-RD-02, applied to the adjusted optimal of 8.2 + 2.98 = 11.18 km (duration 28.6 min), gives a recomputed fare of SGD 20.993 against a charged total of SGD 25.12 - a refund of SGD 4.13, rounded up to SGD 4.15. That is the ceiling; it is not the SGD 8.49 an unadjusted comparison would produce, and it is far short of the SGD 9.00 the rider contests. The rider himself accepts the diversion was necessary (\"I understand the driver had to go another way, fine\"), so the cost of the diverted route cannot be returned to him.","evidence_ids":["EV-FARE-00103","EV-TRIP-00103","EV-ADVIS-00103-01","EV-GPS-00103"],"clause_ids":["POL-RD-02","POL-RD-03"],"relies_on":"derived.money.closure.recomputed_fare","asserted_weight":1.0},{"text":"There is no billing-integrity defect in the ERP lines. Both charged gantries are matched to the trace within the 250 m POL-RD-09(4) radius: the CTE (Braddell Rd towards City) gantry has a fix at 0.0 m and the CTE (Moulmein Rd towards City) gantry a fix at 40.25 m (EV-GPS-00103). No gantry was charged that the vehicle did not cross, so the rider gets no full refund of the ERP on a phantom-line theory, and the two lines are genuine pass-through costs of SGD 3.00 and SGD 1.00.","evidence_ids":["EV-FARE-00103","EV-GPS-00103"],"clause_ids":["POL-RD-09"],"relies_on":"derived.erp_gantry_proximity.lines[].nearest_fix.distance_m","asserted_weight":1.0},{"text":"Even on the rider's best case the deviation is modest and not material. Measured on the trace as POL-RD-01 requires, the trip ran 11.18 km (EV-GPS-00103) against a booked optimal of 8.2 km (EV-TRIP-00103) - an excess of 2.98 km, or 36.3%. That clears the 20% / 0.8 km establishment gates but sits well below the 50% and 8.0 km materiality lines, so no MATERIAL deviation is recorded on this trip and the trip_record's rounded 11.2 km convenience copy is not the figure relied on.","evidence_ids":["EV-GPS-00103","EV-TRIP-00103"],"clause_ids":["POL-RD-01"],"relies_on":"derived.deviation.excess_pct","asserted_weight":1.0},{"text":"There is no repeat-deviation pattern to uplift any refund or to refer the driver. The driver's deviation_flags_90d is 0 against completed_trips_90d of 553 (EV-DPROF-00103), far below the 3-flag and 0.05-ratio thresholds POL-RD-06 sets. No FULL_REFUND uplift is available on this trip and no driver-conduct referral is warranted.","evidence_ids":["EV-DPROF-00103"],"clause_ids":["POL-RD-06"],"relies_on":"driver_profile.deviation_flags_90d","asserted_weight":1.0},{"text":"The trace is clean, so the measured excess stands and no escalation is engaged. EV-GPS-00103 carries 175 fixes at a 10 s sampling interval over 100% coverage, with no gaps and a maximum gap of 0 s, so none of POL-RD-07(a) to (c) is met; there is no impaired stretch, no corroboration requirement, and no POL-RD-10(3) escalation. The deviation is measured directly from the trace.","evidence_ids":["EV-GPS-00103"],"clause_ids":["POL-RD-07"],"relies_on":"max_gap_sec","asserted_weight":1.0},{"text":"The outcome should preserve the charge. On this rider-filed dispute NO_ACTION under POL-GEN-03 leaves the fare as charged, which is correct because the excess is exonerated by the closure under POL-RD-03 and the ERP was incurred on a route the rider authorised, barring an ERP refund under POL-RD-09(3). At the very most, and only if the rider's \"ok\" is not treated as an instruction, the recovery is the off-route ERP pass-through of SGD 4.00 under POL-RD-09(2) - never the SGD 9.00 claimed.","evidence_ids":["EV-FARE-00103","EV-TRIP-00103","EV-CHAT-00103"],"clause_ids":["POL-GEN-03","POL-RD-09","POL-RD-04"],"relies_on":"derived.money.off_optimal_route_total","asserted_weight":1.0}]}</blockquote></details><details><summary>Citation check</summary><p class="label">Who</p><p>code</p><p class="label">What it produced</p><p><p>The referee checked every claim against the artifacts it cites. 17 claim(s) kept, 0 discarded.</p></p><p class="label">Discarded claims and the referee's reason</p><ul><li>none</li></ul></details><details><summary>Judge</summary><p class="label">Who</p><p>model</p><p class="label">What it produced</p><p><p>The judge was asked 4 times on the same inputs: 3 sampled drafts and one with the parties' positions swapped. The vote agreement is 0.75, and the outcome recorded is carried_not_unanimous.</p></p><p class="label">Each draft</p><ul><li>draft 1 (sampled, sides DRIVER_ADVOCATE, RIDER_ADVOCATE): PARTIAL_REFUND, amount SGD 4.00, driver none, confidence 0.9</li><li>draft 2 (sampled, sides DRIVER_ADVOCATE, RIDER_ADVOCATE): PARTIAL_REFUND, amount SGD 4.00, driver none, confidence 0.85</li><li>draft 3 (sampled, sides DRIVER_ADVOCATE, RIDER_ADVOCATE): PARTIAL_REFUND, amount SGD 4.00, driver none, confidence 0.95</li><li>draft 4 (position_swapped, sides RIDER_ADVOCATE, DRIVER_ADVOCATE): PARTIAL_REFUND, amount SGD 4.15, driver none, confidence 0.9</li></ul><p class="label">Each draft's own explanation</p><blockquote>Rider and driver: this is my decision on trip TRP-00103 (14 July, Bishan to Kallang Wave Mall).
+
+WHAT THE EVIDENCE SHOWS. The GPS trace (EV-GPS-00103) ran 11.18 km against the booked optimal of 8.2 km (EV-TRIP-00103) &#8212; an excess of 2.98 km, or 36.3%. Under POL-RD-01 the trace figure governs, not the trip record's rounded 11.2 km copy. That clears both establishment gates (over 20% and over 0.8 km), so a deviation is established. It does not reach the 50% / 8.0 km materiality lines, so no MATERIAL deviation is recorded on this trip.
+
+DISTANCE &#8212; NO REFUND. The LTA advisory ADV-20260714-031 (EV-ADVIS-00103-01) closes Braddell Road (towards Serangoon) between Lorong 1 Toa Payoh and Bishan Rd from 05:30 to 12:00, which covers the trip window, and the trace runs inside the closure geometry. Under POL-RD-03 the justified excess is min(2.98 km, 1.30 x (10.6 - 8.2) + 1.00 = 4.12 km) = 2.98 km, so the entire measured excess is exonerated. There is no excess beyond that cap, so POL-RD-02 does not run and the distance and time charges stand. The $4.15 figure both sides put forward is the POL-RD-02 arithmetic against the closure-adjusted optimal; it does not govern here, because POL-RD-02 applies only where no exculpatory clause fully excuses the deviation, and POL-RD-03 excuses it in full. Likewise the unadjusted $8.49 comparison is not in play.
+
+ERP &#8212; $4.00 REFUNDED. The fare (EV-FARE-00103) carries $4.00 of ERP: CTE (Braddell Rd towards City) $3.00 and CTE (Moulmein Rd towards City) $1.00, against an optimal-route ERP of $0.00. Both gantries are genuinely crossed &#8212; the trace passes 0.0 m and 40.25 m from them, inside the 250 m match radius of POL-RD-09(4) &#8212; so this is not a phantom-line billing defect and no billing-integrity referral arises. But neither gantry is on the route the rider booked. Under POL-RD-09(2), where the deviation is exonerated as an external event under POL-RD-03, the distance and time charges stand while off-route ERP is refunded to the rider as a standalone pass-through correction, capped at $12.00 per trip. The rider did not cause the closure and did not choose the expressway. I therefore refund the off-route ERP of $4.00.
+
+DRIVER'S RIDER-AUTHORISATION ARGUMENT (POL-RD-04 / POL-RD-09(3)) &#8212; REJECTED. The driver's message announced the diversion ('braddell close today, i take CTE ah', 08:12:30) and the rider answered 'ok' (08:12:58), but POL-RD-04 requires a RIDER instruction that identifies a place or road specifically enough to act on. The rider's reply names no place or road, and neither message carries a waypoint_hint. POL-RD-04's test therefore cannot be run on this record, the clause is unavailable, and the exchange is not a rider-caused detour. POL-RD-09(3) does not bar the ERP refund.
+
+DRIVER'S NO_ACTION ARGUMENT &#8212; REJECTED. Leaving the fare entirely as charged would keep the $4.00 of off-route ERP that POL-RD-09(2) directs be returned.
+
+NO ESCALATION, NO COMPENSATION, NO REFERRALS. Trip identifiers match across the trip record, trace and fare breakdown; the trace is clean (175 fixes, 10 s interval, no gaps, max_gap 0 s, 100% coverage, so POL-RD-07(a)-(c) is not met); the advisory is present and current; and the refund is far below the $150 ceiling. No repeat-deviation pattern exists (driver_profile.deviation_flags_90d 0 against 553 completed trips_90d), so no POL-RD-06 uplift or conduct referral applies. No driver compensation is due: the fare billed no less distance than the trace records. The rider's own profile shows deviation_claims_60d 0, so no extra corroboration is demanded.
+
+RESULT. PARTIAL_REFUND of SGD 4.00 to the rider (the off-route ERP pass-through under POL-RD-09(2)); the contested amount was SGD 9.00. The distance and time charges stand. This refund is within the SGD 8.00 automatic-execution threshold, so it executes on issue subject to the appeal route under POL-GEN-04.</blockquote><blockquote>To both parties, in plain terms.
+
+THE DISTANCE. On the governing GPS trace (EV-GPS-00103) the trip ran 11.18 km against the booked optimal of 8.2 km on the trip record (EV-TRIP-00103) &#8212; an excess of 2.98 km, 36.3%, which clears both POL-RD-01 establishment gates (20% and 0.8 km). It stays well below the materiality lines (50% and 8.0 km), so no MATERIAL deviation is recorded. The LTA advisory (EV-ADVIS-00103-01, COMPLETE, weight 1.0) names Braddell Road (towards Serangoon), a road the optimal route itself uses, is valid 05:30&#8211;12:00 on the day and overlaps the trip window, and the trace enters its geometry. The POL-RD-03 exoneration cap is min(2.98 km, 1.30 &#215; (10.6 &#8722; 8.2) + 1.00 = 4.12 km) = 2.98 km, so the whole of the measured excess is excused. No distance or time refund is due on that account; both sides agree, and I accept it.
+
+THE ERP &#8212; THE ONLY MONEY THAT MOVES. The fare (EV-FARE-00103) charged $25.12, of which $4.00 is expressway ERP at two CTE gantries: $3.00 at CTE (Braddell Rd towards City) and $1.00 at CTE (Moulmein Rd towards City). Your normal route carries no ERP at all &#8212; optimal_route_erp_sgd is $0.00 on the trip record and both gantries are marked on_optimal_route false. Because the deviation is exonerated as an external event under POL-RD-03, POL-RD-09(2) governs: the distance and time charges stand (the driver was not at fault), but the off-route ERP is refunded to the rider as a standalone pass-through correction, capped at $12.00. That is $4.00, and it is the refund.
+
+DRIVER, YOUR 'RIDER CHOSE THE CTE' DEFENCE FAILS. POL-RD-04 requires a rider instruction that 'identify a place or road specifically enough to act on' (limb (c)). The rider's only message is 'ok' (EV-CHAT-00103); neither message carries a waypoint_hint, and the road names come from your message, not hers. An acknowledgement of your announced diversion is not an instruction within POL-RD-04, so POL-RD-09(3) does not bar the ERP refund and the detour is not treated as rider-caused. Your fallback that the recovery is 'at the very most $4.00 under POL-RD-09(2)' is correct, and it is what I award.
+
+WHY $4.00 AND NOT $4.15. Both advocates offered $4.15 by running POL-RD-02 against a closure-adjusted optimal (charged $25.12 less recomputed $20.993 = $4.127, rounded to $4.15). That route is not open on these facts: POL-RD-02 runs only where a deviation is established 'and no exculpatory clause fully excuses it,' and here POL-RD-03 excuses the excess entirely, leaving no residual to recompute. The operative provision is therefore POL-RD-09(2), and it refunds the off-route ERP alone. POL-RD-09(1) (ERP already comprehended in a POL-RD-02 refund) does not apply because there is no POL-RD-02 refund to comprehend it in. Rider, your request was 'at least the ERP,' and $4.00 is the ERP; the balance of your $9.00 is not supported, since the longer route was made necessary by the closure and the distance and time charges stand.
+
+NO ESCALATION, NO REFERRAL. The trace is clean &#8212; 175 fixes, 10 s interval, 100% coverage, max gap 0 s &#8212; so POL-RD-07(a)&#8211;(c) and POL-RD-10(3) are not engaged; trip identifiers match across all three instruments; no timestamps run backwards; the advisory is present, not missing, so POL-RD-13 and POL-RD-10(5) do not fire; and the refund is far below the $150 ceiling. There is no billing-integrity defect: both charged gantries are matched to the trace within the 250 m POL-RD-09(4) radius (0.0 m and 40.25 m), so no full-ERP refund and no POL-RD-09(4) referral arise. The driver has no repeat-deviation pattern (deviation_flags_90d 0 against 553 completed trips_90d), so POL-RD-06's uplift and conduct referral do not fire. Every artifact relied on carries weight_multiplier 1.0 with no issue codes, so no impairment discount applies and confidence is not capped below the floor.
+
+OUTCOME. PARTIAL_REFUND of $4.00 to the rider. The monetary effect ($4.00) is below the $8.00 automatic-execution threshold, so the refund will be executed on issue. The charge otherwise stands as billed.</blockquote><blockquote>To both parties. This trip (TRP-00103, Blk 510 Bishan St 13 to Kallang Wave Mall, 14 July 2026) is partly refunded.
+
+What the evidence shows. The GPS trace records 11.18 km against a booked optimal of 8.2 km &#8212; an excess of 2.98 km, or 36.3%. That clears both POL-RD-01 establishment gates (20% and 0.8 km), so a deviation is established; it does not reach the 50% or 8.0 km materiality lines, so no MATERIAL deviation is recorded and the driver's profile is not engaged.
+
+Distance and time &#8212; no refund. The LTA advisory EV-ADVIS-00103-01 (Braddell Road towards Serangoon closed, 05:30&#8211;12:00, overlapping the trip) fully exonerates the diversion under POL-RD-03. The justified excess is min(2.98 km, 1.30 x (10.6 - 8.2) + 1.00 = 4.12 km) = 2.98 km, i.e. the whole excess. Because the exoneration covers everything, POL-RD-02 does not run, and under POL-RD-09(2) the distance and time charges stand &#8212; the driver is not at fault for the closure. No distance or time refund is due.
+
+ERP &#8212; refunded. The two CTE gantry lines ($3.00 at Braddell Rd towards City, $1.00 at Moulmein Rd towards City) total $4.00, and both carry on_optimal_route false; the optimal route's own ERP is $0.00. The GPS trace confirms the vehicle actually crossed both gantries (nearest fixes 0.0 m and 40.25 m, inside POL-RD-09(4)'s 250 m radius), so these are genuine charges and not phantom or billing-integrity lines. But the rider did not cause the closure and would not have incurred any ERP on her normal route, so POL-RD-09(2) refunds the off-route ERP in full as a standalone pass-through correction: $4.00, well inside the $12.00 cap. That satisfies the rider's request to refund at least the ERP.
+
+The driver's argument that the rider authorised the CTE is rejected. POL-RD-04 requires a rider instruction that identifies a place or road specifically enough to act on; the rider's 'ok' at 08:12:58 is an acknowledgement of the driver's message, not an instruction, and waypoint_hint is null. POL-RD-04 cannot be run on this record and POL-RD-09(3) therefore does not bar the ERP refund.
+
+The figure of $4.15 offered as the alternative (charging the fare against the closure-adjusted optimal under POL-RD-02) is not applied. POL-RD-03 fully exonerates the excess, so POL-RD-02 does not run at all; the only sum that moves is the $4.00 of off-route ERP, and the extra $0.15 is part of the distance and time charges, which stand.
+
+No escalation trigger under POL-RD-10 fires: the trip identifiers match across trip_record, gps_trace and fare_breakdown; the trace is unimpaired (175 fixes, 10 s interval, no gaps, max gap 0 s, 100% coverage, so POL-RD-07(a)&#8211;(c) do not fire); the traffic advisory is present and COMPLETE; and the refund is far below the $150.00 ceiling. There is no repeat-deviation pattern (deviation_flags_90d is 0 against 553 completed trips in 90 days), so no POL-RD-06(c) driver-conduct referral issues, and no POL-RD-09(4) billing-integrity referral, because no unmatched line exists. Every artifact this ruling rests on is COMPLETE at weight_multiplier 1.0, so the POL-GEN-02(2) confidence cap is 1.0 and no impairment discount applies. The monetary effect of $4.00 is below the SGD 8.00 POL-GEN-05 execution threshold and so executes automatically.</blockquote><blockquote>To both parties. The fare is reduced by $4.15; the balance of $20.97 of the $25.12 charge stands.
+
+What the record shows. The trip (TRP-00103, 14 July 2026, Bishan to Kallang Wave Mall) ran 11.18 km on the GPS trace (EV-GPS-00103). POL-RD-01 makes the trace figure governing, so the trip record's rounded 11.2 km (EV-TRIP-00103) is not used for the threshold test. Against the booked optimal of 8.2 km that is an excess of 2.98 km, 36.3% &#8212; above the 20% and 0.8 km establishment gates, so the deviation is established, but below the 50% and 8.0 km materiality lines, so no MATERIAL deviation is recorded.
+
+The diversion is justified. The LTA advisory EV-ADVIS-00103-01 closes Braddell Road (towards Serangoon) between Lorong 1 Toa Payoh and Bishan Rd &#8212; a road the optimal route traverses &#8212; from 05:30 to 12:00 on the trip date, and the trace runs through the advisory geometry inside the 08:07&#8211;08:36 trip window. The rider himself accepts the driver had to go another way. Under POL-RD-03 the diversion is therefore exonerated, and the exoneration cap is min(2.98 km, 1.30 x (10.6 - 8.2) + 1.00) = min(2.98, 4.12) = 2.98 km, so the whole excess is excused and no distance or time penalty attaches to the driver.
+
+What is refunded. The fare is recomputed against the closure-adjusted optimal (POL-RD-03): 8.2 + 2.98 = 11.18 km and 28.6 minutes, giving a recomputed fare of $20.99 ((3.80 + 0.75 x 11.18 + 0.28 x 28.6) x 1.0 surge, read from the surcharge field on the fare breakdown, + 0.80 platform fee + zero on-optimal-route ERP) against the charged total of $25.12. The difference is $4.127, rounded up to the nearest $0.05 as $4.15. The $4.00 of off-route ERP (CTE Braddell Rd towards City, $3.00, and CTE Moulmein Rd towards City, $1.00, EV-FARE-00103) is already comprehended in that figure, because the recomputed fare counts only gantries on the optimal route, and EV-TRIP-00103 records optimal_route_erp_sgd of 0.00. It is itemised for transparency but must not be added on top of the $4.15 &#8212; doing so would be the double-count POL-RD-09(1) forbids.
+
+The driver's authorisation point, and the rider's ERP point, are answered together. I have read the chat (EV-CHAT-00103): at 08:12:30 the driver wrote 'braddell close today, i take CTE ah' and at 08:12:58 the rider replied 'ok'. POL-RD-04 requires an instruction that comes from the rider and identifies a place or road specifically enough to act on; waypoint_hint is null on both messages. An acknowledgement of the driver's own plan does not meet that test, so POL-RD-04 is unavailable on this record, no distance is excluded under it, and POL-RD-09(3) does not bar the ERP refund. The driver's contrary claim is rejected on that ground. The driver's alternative request for NO_ACTION is also rejected: the rider did not cause the closure and the off-route ERP is not hers to bear.
+
+No escalation and no referrals. Trip record, trace and fare breakdown all carry TRP-00103; the trace is unimpaired (175 fixes, 10 s interval, no gaps, max_gap_sec 0.0, 100% coverage), so POL-RD-07 and POL-RD-10(3) are not engaged; the traffic advisory is present and COMPLETE, so POL-RD-13 and POL-RD-10(5) are not engaged; and the refund is far below the $150 ceiling. No repeat-deviation pattern exists (driver_profile.deviation_flags_90d is 0 against 553 completed trips, POL-RD-06), so there is no conduct referral and no FULL_REFUND uplift. Both ERP gantries are matched within 250 m of the trace (CTE Braddell Rd at 0.0 m, CTE Moulmein Rd at 40.25 m), so there is no phantom line and no billing-integrity referral under POL-RD-09(4). The rider profile counters are cited only for the POL-RD-08 test the clause names (0 claims in 60 days), as POL-GEN-01 requires.
+
+Figures used: charged_total $25.12; recomputed fare $20.99; refund $4.127, rounded up to $4.15. That is within the $8.00 execution threshold, so the refund is executed automatically. Confidence 0.9: every artifact this ruling rests on carries weight_multiplier 1.0, so no impairment discount applies.</blockquote></details><details><summary>Floor and triggers</summary><p class="label">Who</p><p>code</p><p class="label">What it produced</p><p><p>The confidence recorded for this case is 0.9 against the floor of 0.7 stated by POL-GEN-02.</p><p>No escalation reason code is recorded: the case did not escalate.</p></p></details><details><summary>Outcome</summary><p class="label">Who</p><p>code</p><p class="label">What it produced</p><p><p>PARTIAL_REFUND -- part of the contested amount is returned.</p><p>Refund SGD 4.00. Driver compensation none.</p></p></details></div></section>
+<footer class="foot"><span>commit 9ca7313</span><span>tag freeze-2026-10-09</span><span>policy version 6</span><span>model deepseek/deepseek-flash</span></footer>
+</main>
+
+</div>
+<script>
+(function(){
+  "use strict";
+  function each(selector, root){
+    return Array.prototype.slice.call((root || document).querySelectorAll(selector));
+  }
+
+  var tabs = each("[data-tab]");
+  tabs.forEach(function(tab){
+    tab.addEventListener("click", function(){
+      var name = tab.getAttribute("data-tab");
+      tabs.forEach(function(other){
+        var on = other === tab;
+        other.setAttribute("aria-selected", on ? "true" : "false");
+        other.className = on ? "tab tab-on" : "tab";
+      });
+      each("[data-panel]").forEach(function(panel){
+        panel.hidden = panel.getAttribute("data-panel") !== name;
+      });
+    });
+  });
+
+  var table = document.getElementById("queue");
+  if (table){
+    var body = table.tBodies[0];
+    var rows = Array.prototype.slice.call(body.rows);
+    var state = {column: null, up: true};
+
+    function value(row, column){
+      var cell = row.querySelector('td[data-column="' + column + '"]');
+      if (!cell){ return ""; }
+      var sort = cell.getAttribute("data-sort");
+      return sort === null ? cell.textContent.trim() : sort;
+    }
+
+    function numeric(text){
+      return /^-?[0-9]+(\.[0-9]+)?$/.test(text);
+    }
+
+    function sortBy(column){
+      if (state.column === column){ state.up = !state.up; }
+      else { state.column = column; state.up = true; }
+      rows.sort(function(a, b){
+        var x = value(a, column), y = value(b, column);
+        if (numeric(x) && numeric(y)){
+          return state.up ? Number(x) - Number(y) : Number(y) - Number(x);
+        }
+        if (x === y){ return 0; }
+        return state.up ? (x < y ? -1 : 1) : (x < y ? 1 : -1);
+      });
+      rows.forEach(function(row){ body.appendChild(row); });
+    }
+
+    each("th[data-column]", table).forEach(function(head){
+      head.classList.add("sortable");
+      head.addEventListener("click", function(){
+        sortBy(head.getAttribute("data-column"));
+      });
+    });
+
+    var chosen = {outcome: "all", set: "all"};
+    function apply(){
+      var shown = 0;
+      rows.forEach(function(row){
+        var okOutcome = chosen.outcome === "all" || row.getAttribute("data-outcome") === chosen.outcome;
+        var okSet = chosen.set === "all" || row.getAttribute("data-set") === chosen.set;
+        var ok = okOutcome && okSet;
+        row.hidden = !ok;
+        if (ok){ shown += 1; }
+      });
+      var count = document.getElementById("shown");
+      if (count){ count.textContent = String(shown); }
+    }
+
+    each("[data-filter]").forEach(function(button){
+      button.addEventListener("click", function(){
+        chosen.outcome = button.getAttribute("data-filter");
+        each("[data-filter]").forEach(function(other){
+          other.className = other === button ? "on" : "";
+        });
+        apply();
+      });
+    });
+
+    var picker = document.getElementById("set-picker");
+    if (picker){
+      picker.addEventListener("change", function(){
+        chosen.set = picker.value;
+        apply();
+      });
+    }
+    apply();
+  }
+
+  var form = document.getElementById("review-form");
+  if (form){
+    var reason = document.getElementById("reason");
+    var verdict = document.getElementById("verdict");
+    var output = document.getElementById("command");
+    var evidence = (form.getAttribute("data-evidence") || "").split(" ").filter(Boolean);
+    var clauses = (form.getAttribute("data-clauses") || "").split(" ").filter(Boolean);
+    var floor = Number(form.getAttribute("data-reason-min") || "0");
+
+    function cited(text, ids){
+      for (var i = 0; i < ids.length; i += 1){
+        if (text.indexOf(ids[i]) >= 0){ return true; }
+      }
+      return false;
+    }
+
+    function check(){
+      var text = reason.value.trim();
+      var problems = [];
+      if (text.length < floor){
+        problems.push("the reason is " + text.length + " characters; POL-GEN-06(6) requires at least " + floor);
+      }
+      if (!cited(text, evidence)){
+        problems.push("the reason cites no evidence id of this case");
+      }
+      if (!cited(text, clauses)){
+        problems.push("the reason cites no clause id of this case");
+      }
+      return {text: text, problems: problems};
+    }
+
+    function decision(){
+      var picked = form.querySelector('input[name="decision"]:checked');
+      return picked ? picked.value : "";
+    }
+
+    function command(){
+      var text = reason.value.trim();
+      return "python3 -m ops.review --run-dir " + form.getAttribute("data-run-dir") +
+        " --case " + form.getAttribute("data-case") +
+        " --packet-sha256 " + form.getAttribute("data-packet") +
+        " close --ruling " + form.getAttribute("data-ruling") +
+        ' --closed-by "' + (document.getElementById("reviewer").value || "reviewer") + '"' +
+        ' --summary "' + decision() + '"' +
+        ' --reason "' + text.replace(/"/g, "'") + '"';
+    }
+
+    function refresh(){
+      var state = check();
+      if (state.problems.length){
+        verdict.className = "err";
+        verdict.textContent = state.problems.join("; ");
+      } else {
+        verdict.className = "ok";
+        verdict.textContent = "The reason is long enough and cites this case's own evidence and clause ids.";
+      }
+      output.textContent = command();
+    }
+
+    form.addEventListener("input", refresh);
+    form.addEventListener("change", refresh);
+
+    var copy = document.getElementById("copy");
+    if (copy){
+      copy.addEventListener("click", function(){
+        var text = command();
+        var done = function(){
+          var status = document.getElementById("copy-status");
+          if (status){ status.textContent = "Copied."; }
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText){
+          navigator.clipboard.writeText(text).then(done, function(){
+            var status = document.getElementById("copy-status");
+            if (status){ status.textContent = "Select the command above and copy it by hand."; }
+          });
+        } else {
+          var status = document.getElementById("copy-status");
+          if (status){ status.textContent = "Select the command above and copy it by hand."; }
+        }
+      });
+    }
+    refresh();
+  }
+})();
+</script>
+</body>
+</html>

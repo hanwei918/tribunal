@@ -21,6 +21,19 @@ built from a run's own recorded files, so it makes **no model call** and needs n
 key. It is hosted on Tencent EdgeOne Pages, and the same pages are committed at
 `ui/dist/`, where they open straight from `file://`.
 
+The product view is a second, separate site at `ui/dist/v2/index.html`, built by
+`python3 -m ui.v2.build` from the four committed version-6 runs. It is the page a
+support team would work from rather than a page about the benchmark: today's 151
+disputes with the ones decided automatically and the ones sent to a human, and,
+for each case, the ruling, the two notices, both advocates' claims with the
+referee's verdict on each, the evidence with the weight the admissibility
+precheck gave it, the six steps of how it was decided — expandable down to the
+agents' own words — and, for a case that went to a reviewer, the escalation
+packet with its digest and a form that builds the closing command. It is one
+self-contained file per page with no request of any kind, so it opens from
+`file://` exactly as the pages beside it do; it will be published beside them
+after the owner approves.
+
 ## What Tribunal is
 
 Tribunal arbitrates a ride-hail dispute and writes down why. One brief is built
@@ -76,7 +89,7 @@ reads them is `docs/notes/2026-10-10-the-version-6-development-runs.md`.
 | Precedent arm — rulings that changed | 107, 112 | `runs/precedents/policy-v6/deepseek-deepseek-flash/`, `runs/policy-v6/deepseek-deepseek-flash/` | `python3 -m eval.v6_runs --report` | no |
 | Sample case 901 at version 6 | DRIVER_COMPENSATION 4.00, confidence 0.9, unanimous | `runs/ryde-v3/policy-v6/deepseek-deepseek-flash/` | `python3 -m eval.v6_runs --report` | no |
 | `dev-v2` case 1779 (prompt injection in the chat) at version 6 | ESCALATE | `runs/dev-v2/policy-v6/deepseek-deepseek-flash/`, `eval/answers/dev-v2/ground_truth.json` | `python3 -m eval.v6_runs --report` | no |
-| Cost of the version-6 runs, from the transcripts | corpus 2.3053 USD; dev-v2-ext 7.9197 USD; dev-v2 0.0377 USD; ryde-v3 0.0638 USD | the five run directories' `case-*.json` (`tokens`) | `python3 -m eval.v6_runs --report` | no |
+| Cost of the version-6 runs, from the transcripts | corpus 2.3053 USD; dev-v2-ext 7.9197 USD; dev-v2 0.0377 USD; ryde-v3 0.0638 USD; precedents 0.9289 USD | the five run directories' `case-*.json` (`tokens`) | `python3 -m eval.v6_runs --report` | no |
 
 **What these sets are.** `dev-v2-ext` is development data, drafted by the key
 owner for policy version 3; it is not a sealed set and it is not a generalisation

@@ -921,6 +921,11 @@ def report() -> str:
     lines.append("   with precedents  {0}".format(_relative(PRECEDENTS_RUN.run_dir)))
     lines.append("   without          {0}".format(_relative(run_by_name("corpus").run_dir)))
     precedent_docs = documents(PRECEDENTS_RUN.run_dir, PRECEDENTS_RUN.cases)
+    # Kept beside the four runs' own documents so the cost section below reads
+    # every run through one lookup, the precedents run included. It is a
+    # measurement of its own -- the corpus's fifteen route-deviation cases with
+    # ``--precedents`` on -- and it is billed like any other run.
+    docs_by_name[PRECEDENTS_RUN.name] = precedent_docs
     lines.extend(
         _precedent_measurement(
             docs_by_name["corpus"], precedent_docs, corpus_key
@@ -935,13 +940,19 @@ def report() -> str:
     lines.append("")
 
     # Cost and time.
+    #
+    # Five runs, not four: the precedents run is one of the five the freeze
+    # names, and a cost section that left it out would be a figure a reader
+    # could not reconcile with the manifest. It covers fifteen cases the corpus
+    # run already covers, so the five totals are not disjoint and are never
+    # summed -- each is the cost of one run, and that is all it is.
     lines.append("== Cost and time ==")
     lines.append(
         "   prices (USD per million tokens, off-peak): input {0}, cached input {1}, "
         "output {2}".format(PRICE_INPUT, PRICE_CACHED_INPUT, PRICE_OUTPUT)
     )
     lines.append("")
-    for run in RUNS:
+    for run in RUNS + (PRECEDENTS_RUN,):
         lines.extend(_cost_and_time(run, docs_by_name[run.name]))
         lines.append("")
 

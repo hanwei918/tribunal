@@ -450,7 +450,16 @@ def v6_cost(run: "v6_runs.V6Run") -> str:
 
 
 def v6_costs() -> str:
-    return "; ".join(v6_cost(run) for run in v6_runs.RUNS)
+    """Every run the freeze names, the precedents run among them.
+
+    Five, not four: the cost row is read off ``python3 -m eval.v6_runs --report``
+    and that report bills the precedents run beside the other four, so a test
+    that summed only ``v6_runs.RUNS`` would check a figure the report no longer
+    prints.
+    """
+    return "; ".join(
+        v6_cost(run) for run in v6_runs.RUNS + (v6_runs.PRECEDENTS_RUN,)
+    )
 
 
 def v6_expected() -> Dict[str, str]:

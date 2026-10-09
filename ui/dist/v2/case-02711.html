@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Case 2711 - No-show fee</title>
+<style>
+:root{
+  --ink:#1b1f24;--paper:#ffffff;--soft:#f6f8fa;--line:#d8dee4;--muted:#57606a;
+  --blue:#1f6feb;--orange:#d9822b;--green:#2da44e;--red:#cf222e;
+}
+@media (prefers-color-scheme:dark){
+  :root{--ink:#e6edf3;--paper:#0d1117;--soft:#161b22;--line:#30363d;--muted:#8b949e;}
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--blue)}
+.layout{display:flex;min-height:100vh}
+.side{flex:0 0 168px;border-right:1px solid var(--line);background:var(--soft);padding:24px 14px}
+.brand{font-weight:700;margin:0 0 18px;padding:0 8px;letter-spacing:.01em}
+.navlink{display:block;padding:7px 10px;border-radius:7px;color:var(--ink);text-decoration:none}
+.navlink:hover{background:var(--line)}
+.navlink.current{background:var(--blue);color:#fff}
+main{flex:1 1 auto;min-width:0;max-width:1080px;padding:30px 34px 70px}
+h1{font-size:1.5rem;line-height:1.3;margin:.2em 0 .4em}
+h2{font-size:1.05rem;margin:0 0 12px}
+h3{font-size:.95rem;margin:18px 0 6px}
+p{margin:.55em 0}
+.eyebrow{color:var(--muted);font-size:.85rem;letter-spacing:.06em;text-transform:uppercase;margin:0}
+.lede{font-size:1.05rem;margin:.3em 0 1em}
+.card{border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin:0 0 18px;background:var(--paper)}
+.card.soft{background:var(--soft)}
+.card.wide{padding-bottom:8px}
+.disclosure{font-weight:600;border-left:4px solid var(--blue);padding-left:12px;margin:0 0 14px}
+.figures{display:flex;flex-wrap:wrap;gap:14px;margin:0 0 22px}
+.figure{border:1px solid var(--line);border-radius:12px;padding:14px 18px;min-width:168px;flex:1 1 168px}
+.figure .k{color:var(--muted);font-size:.82rem;text-transform:uppercase;letter-spacing:.05em;margin:0 0 6px}
+.figure .v{font-size:1.35rem;font-weight:650;margin:0}
+.figure .s{color:var(--muted);font-size:.85rem;margin:4px 0 0}
+.facts{display:flex;flex-wrap:wrap;gap:10px 28px;margin:0;padding:0}
+.facts div{margin:0}
+.facts dt{color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.05em}
+.facts dd{margin:2px 0 0;font-weight:600}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px}
+.tab{border:1px solid var(--line);background:var(--soft);color:var(--ink);border-radius:999px;padding:7px 16px;font:inherit;cursor:pointer}
+.tab-on{background:var(--blue);border-color:var(--blue);color:#fff}
+table{border-collapse:collapse;width:100%}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+th.sortable{cursor:pointer;user-select:none}
+th.sortable::after{content:" \2195";color:var(--muted)}
+tr.reviewer td{background:rgba(217,130,43,.09)}
+.pill{display:inline-block;border-radius:999px;padding:2px 10px;font-size:.8rem;font-weight:600}
+.pill.blue{background:rgba(31,111,235,.14);color:var(--blue)}
+.pill.orange{background:rgba(217,130,43,.16);color:var(--orange)}
+.pill.green{background:rgba(45,164,78,.16);color:var(--green)}
+.pill.red{background:rgba(207,34,46,.14);color:var(--red)}
+.pill.grey{background:var(--soft);color:var(--muted);border:1px solid var(--line)}
+.filters{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 14px}
+.filters button{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:999px;padding:6px 14px;font:inherit;cursor:pointer}
+.filters button.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.filters select{font:inherit;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--paper);color:var(--ink)}
+.bar{position:relative;height:12px;border-radius:6px;background:var(--soft);border:1px solid var(--line);margin:10px 0 6px;overflow:hidden}
+.bar span{position:absolute;left:0;top:0;bottom:0;background:var(--blue)}
+.bar i{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--red)}
+.axis{display:flex;justify-content:space-between;color:var(--muted);font-size:.82rem}
+blockquote{margin:8px 0;padding:10px 14px;border-left:3px solid var(--line);background:var(--soft);white-space:pre-wrap;overflow-wrap:anywhere}
+details{border:1px solid var(--line);border-radius:10px;padding:0 16px;margin:0 0 10px}
+details[open]{padding-bottom:12px}
+summary{cursor:pointer;padding:13px 0;font-weight:600}
+.label{color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;margin:12px 0 0}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.85rem;word-break:break-all}
+pre{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:12px;overflow-wrap:anywhere;white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.85rem}
+.foot{border-top:1px solid var(--line);margin-top:34px;padding-top:14px;color:var(--muted);font-size:.85rem}
+.foot span{margin-right:18px}
+.claim{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:0 0 10px}
+.claim p{margin:.35em 0}
+.err{color:var(--red);font-weight:600}
+.ok{color:var(--green);font-weight:600}
+.empty{color:var(--muted)}
+@media (max-width:640px){
+  .layout{display:block}
+  .side{border-right:0;border-bottom:1px solid var(--line);padding:14px 12px}
+  .brand{margin-bottom:8px}
+  main{padding:20px 16px 48px}
+  .card{padding:16px}
+  table thead{display:none}
+  table,tbody,tr,td{display:block;width:100%}
+  tr{border-bottom:1px solid var(--line);padding:8px 0}
+  td{border:0;padding:4px 0}
+  td::before{content:attr(data-label);display:block;color:var(--muted);font-size:.78rem;text-transform:uppercase;letter-spacing:.05em}
+}
+</style>
+</head>
+<body>
+<div class="layout">
+<nav class="side" aria-label="Sections">
+<p class="brand">Tribunal</p>
+<a class="navlink" href="index.html">Queue</a>
+</nav>
+<main>
+<header class="pagehead">
+<p class="eyebrow">dev-v2-ext &middot; case 2711</p>
+<h1>No-show fee</h1>
+<p class="lede">I told him exactly where I was.</p>
+<dl class="facts"><div><dt>Filed by</dt><dd>RIDER</dd></div><div><dt>Amount contested</dt><dd>SGD 4.50</dd></div><div><dt>Status</dt><dd>FULL_REFUND</dd></div></dl>
+</header>
+<div class="tabs" role="tablist"><button type="button" class="tab tab-on" role="tab" id="tab-ruling" aria-controls="panel-ruling" data-tab="ruling" aria-selected="true">Ruling</button><button type="button" class="tab" role="tab" id="tab-decision" aria-controls="panel-decision" data-tab="decision" aria-selected="false">How it was decided</button></div>
+<section role="tabpanel" id="panel-ruling" aria-labelledby="tab-ruling" data-panel="ruling"><div class="card"><p class="disclosure">This is a provisional ruling made by an automated system.</p><h2>Ruling</h2><p><strong>FULL_REFUND</strong> -- the filing party is entirely right and the whole contested amount is returned.</p><p>Refund to the filing party: SGD 4.50. Driver compensation: none.</p><div class="bar" role="img" aria-label="confidence 0.9 against a floor of 0.7"><span style="width:90.0%"></span><i style="left:70.0%"></i></div><p class="axis"><span>confidence 0.9</span><span>floor 0.7 (POL-GEN-02)</span></p><p class="label">The appeal path, quoted from POL-GEN-04</p><blockquote>Every ruling issued without human review is a provisional ruling. Either party may appeal it once, within 30 days of the trip or of the ruling's issue, whichever is later, by lodging the appeal with the platform's help channel. An appeal (a) is heard by a human reviewer who did not take part in any earlier review of the same trip; (b) may add only record-type evidence - a GPS export, a fare or payment statement, an ERP gantry record with gantry name, entry time and cashcard statement, a call log, a photograph with its capture time - and may not add or amend a party statement; (c) suspends execution of any amount not yet executed and freezes it until decided, and where the amount was executed under POL-GEN-05 before the appeal, a successful appeal reverses it; (d) may not be withdrawn and re-lodged. A second appeal on the same trip, an appeal lodged after 30 days, or an appeal that adds only statements is refused. The appeal decision is recorded as a human closure under POL-GEN-06, enters the precedent store, and is final on the platform. This clause licenses no ruling value: an appeal is a route to human review, not a ruling, and it is lodged after a ruling has issued.</blockquote><p>POL-GEN-05: the monetary effect is SGD 4.50 against an execution threshold of SGD 8.00. It does not exceed the threshold, so the amount is executed automatically on issue, subject to POL-GEN-04.</p></div><div class="card"><h2>The two notices</h2><h3>Notice to the rider</h3><p>What was decided: the ruling is FULL_REFUND -- the filing party is entirely right and the whole contested amount is returned.</p><p>What money moves: SGD 4.50 refunded to the rider.</p><p>How to appeal: Every ruling issued without human review is a provisional ruling. Either party may appeal it once, within 30 days of the trip or of the ruling's issue, whichever is later, by lodging the appeal with the platform's help channel. An appeal (a) is heard by a human reviewer who did not take part in any earlier review of the same trip; (b) may add only record-type evidence - a GPS export, a fare or payment statement, an ERP gantry record with gantry name, entry time and cashcard statement, a call log, a photograph with its capture time - and may not add or amend a party statement; (c) suspends execution of any amount not yet executed and freezes it until decided, and where the amount was executed under POL-GEN-05 before the appeal, a successful appeal reverses it; (d) may not be withdrawn and re-lodged. A second appeal on the same trip, an appeal lodged after 30 days, or an appeal that adds only statements is refused. The appeal decision is recorded as a human closure under POL-GEN-06, enters the precedent store, and is final on the platform. This clause licenses no ruling value: an appeal is a route to human review, not a ruling, and it is lodged after a ruling has issued.</p><p class="label">The judge's explanation, as written</p><blockquote>To both parties: the rider's claim is upheld, and the SGD 4.50 no-show fee is refunded in full.
+
+What the record shows. The driver accepted the trip at 20:22:12 on 17 Aug, pressed 'arrived' at 20:28:14 and cancelled at 20:32:36 under reason code RIDER_NO_SHOW (EV-TRIP-02711). The platform charged the rider SGD 4.50 (EV-FARE-02711: total_charged 4.50, cancellation_fee 4.50, payment_status CHARGED, refund_issued_sgd 0.00).
+
+Arrival fails. The GPS trace (EV-GPS-02711, weight 1.0, COMPLETE, 69 fixes at a 10 s cadence, 100% coverage, max_gap_sec 0.0) places the driver's closest approach to the pickup pin at 156.99 m anywhere in the trip, with 0 fixes inside the 50 m STANDARD arrival radius and 0 continuous in-geofence runs. POL-NS-02's proximity test therefore fails, and with it POL-NS-01 limb (b): the driver did not arrive at the pickup point. POL-NS-12 does not help the driver - arrival_marker is BUTTON, not GPS_AUTO, so a pressed marker stays subject to POL-NS-02 and POL-NS-05, and the bare statement that he 'was at the pickup as shown on the map' is corroborated by no telemetry.
+
+Dwell fails independently. The free waiting period in force is 180 s (trip_record.platform_policy.free_wait_sec). The effective in-geofence dwell is 0 s, measured - per POL-NS-01(c) - from the first qualifying in-geofence GPS fix and not from the 'arrived' tap. POL-NS-06 therefore makes the fee not chargeable on a 180 s shortfall, with no driver compensation, and POL-NS-01 limb (d) cannot be met either because the dwell never elapsed. The driver's contrary point, that 262 s elapsed between the tap and the cancellation against a 180 s period, is rejected: that interval is the platform's wait timer, not the dwell the clause measures from the GPS clock, which never began. The rider's point that nothing can be accumulated is accepted: EV-ADVIS-02711-01 is MISSING (issue MISSING_ARTIFACT, weight 0.0; cited for its absence, which is citable), so POL-NS-06(i) is unavailable, accumulation is defeated, and the 180 s stands unreduced.
+
+Wrong-entrance reading changes nothing. The driver's nearest position, 157 m, is outside the 50 m radius but inside the 400 m ceiling of POL-NS-03, so even on the reading that he attended the wrong face of the venue the rider is still refunded in full; POL-NS-03 decides the refund exactly as POL-NS-02 does. Its compensation allocation goes against the driver: the rider named her sub-location in the chat log at 20:28:34 ('im at the main entrance next to the taxi stand, block A'), the driver read it and answered only 'ok' at 20:29:04, and the trace never shows him closing the last 157 m before he cancelled - limb (i) puts the loss on the driver. Limb (ii)'s pin-ambiguity goodwill does not apply because registered_pickup_points is 1, not 2 or more.
+
+Other points answered. POL-NS-04 cannot exonerate the rider (the driver replied within 120 s, 30 s after her message, read 10 s later), but it does not need to - the refund follows from POL-NS-02 and POL-NS-06. POL-NS-05 records no false-arrival finding and produces no referral: its test reads the fix matched to the 20:28:14 marker, the driver's nearest approach anywhere in the trace is 156.99 m (inside its 300 m leash) and the trace carries stationary samples, so neither trigger - over 300 m, or 15 km/h or more - is established.
+
+Integrity, confidence and escalation. Nothing is impaired under POL-NS-08: the trace is COMPLETE with no (a) clock skew and no (b) trace defect; the chat log holds 2 messages, matching trip_record.chat_message_count, with no sequence gap (c); and the 4.50 cancellation line equals platform_policy.cancellation_fee_sgd of 4.50 (d). The deciding facts rest on artifacts at weight 1.0, so the POL-GEN-02(2) cap is 1.0 and confidence is 0.9. POL-NS-09 is not engaged: confidence is above the 0.70 floor; the arrival event and the trace are reconciled by POL-NS-01(b)/POL-NS-02/POL-NS-12 rather than left in unresolved contradiction; both parties' disputes_with_counterparty_90d are 0; the POL-NS-07 anti-farming check does not trip (2 no-show terminations against 87 completed trips, rate 0.023); and no deciding fact rests on impaired evidence. The lifetime counter prior_no_show_flags is context-only under POL-GEN-01 and was used for nothing.
+
+The money. The refund is the cancellation-fee line only - 4.50, which is the whole of total_charged (base_fare, distance_fare, time_fare, platform_fee and waiting_time_fee are all 0.00). driver_compensation_sgd is null, and referrals is empty. The monetary effect of 4.50 is below the POL-GEN-05 execution threshold of 8.00, so it executes automatically on issue; this is a provisional ruling and either party may appeal once, within 30 days, under POL-GEN-04.
+
+The judge was asked 4 times on the same inputs and every draft agreed on this ruling, so it is carried unanimously (vote agreement 1.00).</blockquote><h3>Notice to the driver</h3><p>What was decided: the ruling is FULL_REFUND -- the filing party is entirely right and the whole contested amount is returned.</p><p>What money moves: SGD 4.50 refunded to the rider.</p><p>How to appeal: Every ruling issued without human review is a provisional ruling. Either party may appeal it once, within 30 days of the trip or of the ruling's issue, whichever is later, by lodging the appeal with the platform's help channel. An appeal (a) is heard by a human reviewer who did not take part in any earlier review of the same trip; (b) may add only record-type evidence - a GPS export, a fare or payment statement, an ERP gantry record with gantry name, entry time and cashcard statement, a call log, a photograph with its capture time - and may not add or amend a party statement; (c) suspends execution of any amount not yet executed and freezes it until decided, and where the amount was executed under POL-GEN-05 before the appeal, a successful appeal reverses it; (d) may not be withdrawn and re-lodged. A second appeal on the same trip, an appeal lodged after 30 days, or an appeal that adds only statements is refused. The appeal decision is recorded as a human closure under POL-GEN-06, enters the precedent store, and is final on the platform. This clause licenses no ruling value: an appeal is a route to human review, not a ruling, and it is lodged after a ruling has issued.</p><p class="label">The judge's explanation, as written</p><blockquote>To both parties: the rider's claim is upheld, and the SGD 4.50 no-show fee is refunded in full.
+
+What the record shows. The driver accepted the trip at 20:22:12 on 17 Aug, pressed 'arrived' at 20:28:14 and cancelled at 20:32:36 under reason code RIDER_NO_SHOW (EV-TRIP-02711). The platform charged the rider SGD 4.50 (EV-FARE-02711: total_charged 4.50, cancellation_fee 4.50, payment_status CHARGED, refund_issued_sgd 0.00).
+
+Arrival fails. The GPS trace (EV-GPS-02711, weight 1.0, COMPLETE, 69 fixes at a 10 s cadence, 100% coverage, max_gap_sec 0.0) places the driver's closest approach to the pickup pin at 156.99 m anywhere in the trip, with 0 fixes inside the 50 m STANDARD arrival radius and 0 continuous in-geofence runs. POL-NS-02's proximity test therefore fails, and with it POL-NS-01 limb (b): the driver did not arrive at the pickup point. POL-NS-12 does not help the driver - arrival_marker is BUTTON, not GPS_AUTO, so a pressed marker stays subject to POL-NS-02 and POL-NS-05, and the bare statement that he 'was at the pickup as shown on the map' is corroborated by no telemetry.
+
+Dwell fails independently. The free waiting period in force is 180 s (trip_record.platform_policy.free_wait_sec). The effective in-geofence dwell is 0 s, measured - per POL-NS-01(c) - from the first qualifying in-geofence GPS fix and not from the 'arrived' tap. POL-NS-06 therefore makes the fee not chargeable on a 180 s shortfall, with no driver compensation, and POL-NS-01 limb (d) cannot be met either because the dwell never elapsed. The driver's contrary point, that 262 s elapsed between the tap and the cancellation against a 180 s period, is rejected: that interval is the platform's wait timer, not the dwell the clause measures from the GPS clock, which never began. The rider's point that nothing can be accumulated is accepted: EV-ADVIS-02711-01 is MISSING (issue MISSING_ARTIFACT, weight 0.0; cited for its absence, which is citable), so POL-NS-06(i) is unavailable, accumulation is defeated, and the 180 s stands unreduced.
+
+Wrong-entrance reading changes nothing. The driver's nearest position, 157 m, is outside the 50 m radius but inside the 400 m ceiling of POL-NS-03, so even on the reading that he attended the wrong face of the venue the rider is still refunded in full; POL-NS-03 decides the refund exactly as POL-NS-02 does. Its compensation allocation goes against the driver: the rider named her sub-location in the chat log at 20:28:34 ('im at the main entrance next to the taxi stand, block A'), the driver read it and answered only 'ok' at 20:29:04, and the trace never shows him closing the last 157 m before he cancelled - limb (i) puts the loss on the driver. Limb (ii)'s pin-ambiguity goodwill does not apply because registered_pickup_points is 1, not 2 or more.
+
+Other points answered. POL-NS-04 cannot exonerate the rider (the driver replied within 120 s, 30 s after her message, read 10 s later), but it does not need to - the refund follows from POL-NS-02 and POL-NS-06. POL-NS-05 records no false-arrival finding and produces no referral: its test reads the fix matched to the 20:28:14 marker, the driver's nearest approach anywhere in the trace is 156.99 m (inside its 300 m leash) and the trace carries stationary samples, so neither trigger - over 300 m, or 15 km/h or more - is established.
+
+Integrity, confidence and escalation. Nothing is impaired under POL-NS-08: the trace is COMPLETE with no (a) clock skew and no (b) trace defect; the chat log holds 2 messages, matching trip_record.chat_message_count, with no sequence gap (c); and the 4.50 cancellation line equals platform_policy.cancellation_fee_sgd of 4.50 (d). The deciding facts rest on artifacts at weight 1.0, so the POL-GEN-02(2) cap is 1.0 and confidence is 0.9. POL-NS-09 is not engaged: confidence is above the 0.70 floor; the arrival event and the trace are reconciled by POL-NS-01(b)/POL-NS-02/POL-NS-12 rather than left in unresolved contradiction; both parties' disputes_with_counterparty_90d are 0; the POL-NS-07 anti-farming check does not trip (2 no-show terminations against 87 completed trips, rate 0.023); and no deciding fact rests on impaired evidence. The lifetime counter prior_no_show_flags is context-only under POL-GEN-01 and was used for nothing.
+
+The money. The refund is the cancellation-fee line only - 4.50, which is the whole of total_charged (base_fare, distance_fare, time_fare, platform_fee and waiting_time_fee are all 0.00). driver_compensation_sgd is null, and referrals is empty. The monetary effect of 4.50 is below the POL-GEN-05 execution threshold of 8.00, so it executes automatically on issue; this is a provisional ruling and either party may appeal once, within 30 days, under POL-GEN-04.
+
+The judge was asked 4 times on the same inputs and every draft agreed on this ruling, so it is carried unanimously (vote agreement 1.00).</blockquote></div><div class="card"><h2>What each side argued</h2><h3>The rider advocate</h3><div class="claim"><p><span class="pill green">kept</span> The driver never reached the pickup point, and his own trace proves it. The trace carries 69 fixes at a 10-second cadence with 100% coverage across the whole approach, and over that entire track the closest he ever came to the pickup pin was 156.99 m &#8212; 107 m outside the 50 m STANDARD arrival radius that POL-NS-02 sets. The derived arrival block reports 0 qualifying in-radius fixes and 0 continuous in-geofence runs. POL-NS-02's proximity test therefore fails, POL-NS-01 limb (b) fails with it, and the rider is entitled to a full refund of the cancellation fee.</p><p class="label">evidence EV-GPS-02711, EV-TRIP-02711 &middot; clauses POL-NS-02, POL-NS-01</p></div><div class="claim"><p><span class="pill green">kept</span> Even if arrival were taken as given, the dwell is zero. The free waiting period in force for this trip is 180 seconds (trip_record.platform_policy.free_wait_sec), and the effective in-geofence dwell measured under POL-NS-02 and POL-NS-01(c) is 0 seconds: longest_qualifying_run.duration_sec is 0.0 and the derived shortfall is 180.0 s against the STANDARD minimum. POL-NS-06 makes the fee not chargeable on that shortfall &#8212; whether or not the rider was present and whether or not she answered messages &#8212; and no driver compensation is payable. The 4.50 cancellation-fee line that EV-FARE-02711 shows as charged is therefore refundable in full.</p><p class="label">evidence EV-GPS-02711, EV-TRIP-02711, EV-FARE-02711 &middot; clauses POL-NS-06, POL-NS-01</p></div><div class="claim"><p><span class="pill green">kept</span> POL-NS-01 limb (d) requires the cancellation to fall at or after the moment the required dwell elapsed. The dwell never elapsed &#8212; it never began, because there was no qualifying in-geofence fix &#8212; so the driver's termination at 20:32:36 under reason code RIDER_NO_SHOW cannot satisfy limb (d), any more than the arrival event can satisfy limb (b). The RIDER_NO_SHOW code is not the rider's admission in this record; it is the driver's own selection.</p><p class="label">evidence EV-TRIP-02711, EV-GPS-02711 &middot; clauses POL-NS-01</p></div><div class="claim"><p><span class="pill green">kept</span> The arrival marker on this trip is a driver button press (trip_record.platform_policy.arrival_marker = BUTTON), so the platform-confirmed-arrival shortcut in POL-NS-12 is unavailable by its own terms &#8212; it covers only GPS_AUTO arrivals and leaves a pressed marker to POL-NS-02 and POL-NS-05. The driver's statement that he 'was at the pickup as shown on the map' is thus uncorroborated by any telemetry: the record shows a marker at 20:28:14 and a nearest approach of 157 m, and under POL-NS-02 the button press does not establish arrival.</p><p class="label">evidence EV-TRIP-02711, EV-GPS-02711 &middot; clauses POL-NS-12, POL-NS-02</p></div><div class="claim"><p><span class="pill green">kept</span> Nothing in this record lets the dwell be accumulated to reach the minimum. EV-ADVIS-02711-01 is MISSING &#8212; issue MISSING_ARTIFACT, weight 0.0, no payload &#8212; so no traffic advisory covers this pickup road, and POL-NS-06(i)'s precondition (a present and populated advisory of an admissible type covering the pickup road and the waiting window) cannot be met. The derived block records the limb as unavailable for exactly that reason. The required 180 seconds accordingly stands unreduced and unsummed, and the full refund under POL-NS-06 follows. (I disclose the impairment: the artifact is MISSING and carries weight 0.0; it is cited for the absence itself, which is citable.)</p><p class="label">evidence EV-ADVIS-02711-01, EV-GPS-02711 &middot; clauses POL-NS-06</p></div><div class="claim"><p><span class="pill green">kept</span> The rider was not the party who failed to appear. Her own track carries 47 fixes, every one qualifying, and every one within 14.79 m of the pickup pin (mean 12.03 m) across 20:26:34 to 20:33:28 &#8212; far inside the 100 m STANDARD rider-presence radius &#8212; and she named her sub-location in the chat log at 20:28:34 ('im at the main entrance next to the taxi stand, block A'). To the extent POL-NS-03 is engaged at all on a closest approach of 157 m, which is inside its 400 m ceiling, limb (i) allocates this mislocation to the driver: the rider stated her entrance, the driver read it and answered only 'ok' at 20:29:04, and the trace never shows him closing the last 157 m before he cancelled at 20:32:36 &#8212; so he receives no compensation. I do not rely on POL-NS-04 to exonerate the rider: the driver did reply within 120 seconds of her message, so limb (b) of that clause is not met and I concede the point.</p><p class="label">evidence EV-GPS-02711, EV-CHAT-02711, EV-TRIP-02711 &middot; clauses POL-NS-03, POL-NS-04</p></div><div class="claim"><p><span class="pill green">kept</span> This case is decidable now and should be refunded, not held. The apparent conflict between the 20:28:14 arrival event and a trace that never enters the geofence is resolved by POL-NS-01(b) and POL-NS-02, which require the trace to corroborate the arrival event and which the button marker does not satisfy &#8212; so the POL-NS-09(b) trigger is not engaged. Nor is any integrity limb engaged: the trace is COMPLETE with 100% coverage, 0 gaps, max_gap_sec 0.0 and 69 fixes across the window, and the arrival event timestamp 20:28:14 sits exactly on a fix timestamp, so there is no clock skew under POL-NS-08(a) and no trace defect under POL-NS-08(b). The deciding fact rests on an artifact at weight 1.0, above the confidence floor, and escalation under POL-NS-09 would wrongly leave the rider's 4.50 held.</p><p class="label">evidence EV-GPS-02711, EV-TRIP-02711 &middot; clauses POL-NS-09, POL-NS-08, POL-NS-01</p></div><div class="claim"><p><span class="pill green">kept</span> The remedy the rider seeks is the refund of the cancellation-fee line only. EV-FARE-02711 shows the 4.50 cancellation fee as the entirety of total_charged, with payment_status CHARGED and refund_issued_sgd 0.0, and the fare reconciles with platform_policy.cancellation_fee_sgd, so there is no fare defect and no booking or platform fee to net off (platform_fee is 0.0; base_fare, distance_fare and time_fare are all 0.0). A full refund of 4.50, with driver_compensation_sgd null, is the ruling the record supports.</p><p class="label">evidence EV-FARE-02711, EV-TRIP-02711 &middot; clauses POL-GEN-03, POL-NS-06</p></div><h3>The driver advocate</h3><div class="claim"><p><span class="pill green">kept</span> The driver's own trace places him 156.99 m from the pickup pin at his closest recorded approach anywhere in the 69-fix run - outside the 50 m STANDARD arrival radius that POL-NS-02 fixes for this zone class, but far inside the 400 m ceiling POL-NS-03 sets for a wrong-face-of-venue arrival. The rider's own account ('he stayed on the other side and cancelled') describes exactly that situation, not an abandoned job, so the driver attended the venue and the case is decided under POL-NS-03 rather than as a driver who never came.</p><p class="label">evidence EV-GPS-02711 &middot; clauses POL-NS-03, POL-NS-02</p></div><div class="claim"><p><span class="pill green">kept</span> Limb (a) of POL-NS-01 is satisfied and the driver's cancellation was not premature in time on the platform's own clock: the trip record carries the driver's 'arrived' event at 20:28:14 and the cancellation at 20:32:36, an elapsed wait of 4.4 minutes (262 seconds) against the 180 second free_wait_sec in force for this trip under platform_policy. The driver gave the rider substantially longer than the free waiting period the fee pays for, whatever the geofence arithmetic finally shows.</p><p class="label">evidence EV-TRIP-02711 &middot; clauses POL-NS-01, POL-NS-06</p></div><div class="claim"><p><span class="pill green">kept</span> POL-NS-05 catches a false arrival marker only where the fix matched to the arrival timestamp puts the driver more than 300 m from the pin or travelling at 15 km/h or more. Neither trigger is made out on this record: the driver's closest fix anywhere in the trace is 156.99 m from the pin, inside the 300 m leash, and the trace contains stationary 0.0 km/h samples. No false-arrival finding or POL-NS-05(ii) referral should be recorded against this driver.</p><p class="label">evidence EV-GPS-02711 &middot; clauses POL-NS-05</p></div><div class="claim"><p><span class="pill green">kept</span> The rider's POL-NS-04 route fails at limb (b). The rider's locating message was sent at 20:28:34 and the driver replied 'ok' at 20:29:04 - thirty seconds later, and read at 20:29:14 - well inside the 120 second window limb (b) allows. The driver neither ignored the message nor left it unanswered, so the rider cannot be exonerated on a driver coordination failure and the case must be decided on the arrival and dwell arithmetic.</p><p class="label">evidence EV-CHAT-02711 &middot; clauses POL-NS-04</p></div><div class="claim"><p><span class="pill green">kept</span> There is no farming pattern and no escalation ground on the profiles. The POL-NS-07 anti-farming check requires driver_profile.no_show_terminations_30d of 4 or more AND a rate above 0.08; this driver shows 2 terminations against 87 completed trips in the same window, a rate of 0.023, so the check does not trip. The lifetime counter prior_no_show_flags is not the trailing-30-day field the clause names and may not be substituted for it, and both parties' disputes_with_counterparty_90d are 0, so POL-NS-09(c) is not engaged either.</p><p class="label">evidence EV-DPROF-02711, EV-RPROF-02711 &middot; clauses POL-NS-07, POL-NS-09</p></div><div class="claim"><p><span class="pill green">kept</span> Nothing in the bundle is impaired and the disputed amount is clean. Every artifact is COMPLETE at weight 1.0; the GPS trace carries 100.0 percent coverage, a 10 second cadence and a maximum gap of 0.0 seconds, so the POL-NS-08(a) clock-skew, (b) trace-defect and (c) chat-defect limbs are not engaged and no POL-NS-09(e) escalation arises; and the fare breakdown's cancellation-fee line of 4.50 SGD reconciles exactly with platform_policy.cancellation_fee_sgd of 4.50, so POL-NS-08(d) is satisfied and the amount itself is not in issue. On a clean record the single live question is whether the fee is chargeable at all.</p><p class="label">evidence EV-GPS-02711, EV-FARE-02711, EV-TRIP-02711 &middot; clauses POL-NS-08</p></div></div><div class="card wide"><h2>Evidence</h2><p>The weight is the one the admissibility precheck gave each artifact, as the brief carried it.</p><table><thead><tr><th>Artifact</th><th>Type</th><th>Source</th><th>Admissibility</th><th>Issue codes</th></tr></thead><tbody><tr><td>EV-TRIP-02711</td><td>TRIP_RECORD</td><td>PLATFORM_TELEMETRY</td><td>COMPLETE (weight 1.0)</td><td>none</td></tr><tr><td>EV-GPS-02711</td><td>GPS_TRACE</td><td>PLATFORM_TELEMETRY</td><td>COMPLETE (weight 1.0)</td><td>none</td></tr><tr><td>EV-CHAT-02711</td><td>CHAT_LOG</td><td>PLATFORM_TELEMETRY</td><td>COMPLETE (weight 1.0)</td><td>none</td></tr><tr><td>EV-FARE-02711</td><td>FARE_BREAKDOWN</td><td>PAYMENTS_LEDGER</td><td>COMPLETE (weight 1.0)</td><td>none</td></tr><tr><td>EV-RPROF-02711</td><td>RIDER_PROFILE</td><td>PLATFORM_TELEMETRY</td><td>COMPLETE (weight 1.0)</td><td>none</td></tr><tr><td>EV-DPROF-02711</td><td>DRIVER_PROFILE</td><td>PLATFORM_TELEMETRY</td><td>COMPLETE (weight 1.0)</td><td>none</td></tr><tr><td>EV-ADVIS-02711-01</td><td>TRAFFIC_ADVISORY</td><td>THIRD_PARTY_LTA</td><td>MISSING (weight 0.0)</td><td>MISSING_ARTIFACT</td></tr></tbody></table></div></section>
+<section role="tabpanel" id="panel-decision" aria-labelledby="tab-decision" data-panel="decision" hidden><div class="card wide"><h2>How it was decided</h2><details><summary>Evidence pack</summary><p class="label">Who</p><p>code</p><p class="label">What it produced</p><p><p>The brief was built from the case and the loaded policy. Its sha256 is <span class="mono">62fc1b61cb2866bb3374499da9c673c8bf1840e084d03cbbfa39a531bd344c4d</span>.</p><p>Both advocates received these same bytes: yes, the recorded user_sha256 of each advocate is this digest.</p></p><p class="label">The derived facts each artifact carries</p><ul><li>EV-TRIP-02711 (TRIP_RECORD): no derived facts</li><li>EV-GPS-02711 (GPS_TRACE): arrival, driver_track, rider_presence</li><li>EV-CHAT-02711 (CHAT_LOG): no derived facts</li><li>EV-FARE-02711 (FARE_BREAKDOWN): money</li><li>EV-RPROF-02711 (RIDER_PROFILE): no derived facts</li><li>EV-DPROF-02711 (DRIVER_PROFILE): no derived facts</li><li>EV-ADVIS-02711-01 (TRAFFIC_ADVISORY): no derived facts</li></ul></details><details><summary>Both sides argue</summary><p class="label">Who</p><p>model</p><p class="label">What it produced</p><p><p>The two advocates ran on the same brief and at the same time: the rider advocate made 8 claim(s) and the driver advocate made 6.</p><p>Their instructions differ -- system_sha256 <span class="mono">b90cb450bbd10645bb645632dfa64bafaeb4f690787527ce2ec0743e9e2ac355</span> against <span class="mono">c317acbca01e30fca7b769c8d85d31333a756e601b25ca9ad2ede328c4607543</span> -- and their brief is one digest for both.</p></p><p class="label">The rider advocate's own claims</p><blockquote>{"claims":[{"text":"The driver never reached the pickup point, and his own trace proves it. The trace carries 69 fixes at a 10-second cadence with 100% coverage across the whole approach, and over that entire track the closest he ever came to the pickup pin was 156.99 m &#8212; 107 m outside the 50 m STANDARD arrival radius that POL-NS-02 sets. The derived arrival block reports 0 qualifying in-radius fixes and 0 continuous in-geofence runs. POL-NS-02's proximity test therefore fails, POL-NS-01 limb (b) fails with it, and the rider is entitled to a full refund of the cancellation fee.","evidence_ids":["EV-GPS-02711","EV-TRIP-02711"],"clause_ids":["POL-NS-02","POL-NS-01"],"relies_on":"derived.driver_track.min_distance_m","asserted_weight":1.0},{"text":"Even if arrival were taken as given, the dwell is zero. The free waiting period in force for this trip is 180 seconds (trip_record.platform_policy.free_wait_sec), and the effective in-geofence dwell measured under POL-NS-02 and POL-NS-01(c) is 0 seconds: longest_qualifying_run.duration_sec is 0.0 and the derived shortfall is 180.0 s against the STANDARD minimum. POL-NS-06 makes the fee not chargeable on that shortfall &#8212; whether or not the rider was present and whether or not she answered messages &#8212; and no driver compensation is payable. The 4.50 cancellation-fee line that EV-FARE-02711 shows as charged is therefore refundable in full.","evidence_ids":["EV-GPS-02711","EV-TRIP-02711","EV-FARE-02711"],"clause_ids":["POL-NS-06","POL-NS-01"],"relies_on":"derived.arrival.longest_qualifying_run.duration_sec","asserted_weight":1.0},{"text":"POL-NS-01 limb (d) requires the cancellation to fall at or after the moment the required dwell elapsed. The dwell never elapsed &#8212; it never began, because there was no qualifying in-geofence fix &#8212; so the driver's termination at 20:32:36 under reason code RIDER_NO_SHOW cannot satisfy limb (d), any more than the arrival event can satisfy limb (b). The RIDER_NO_SHOW code is not the rider's admission in this record; it is the driver's own selection.","evidence_ids":["EV-TRIP-02711","EV-GPS-02711"],"clause_ids":["POL-NS-01"],"asserted_weight":1.0},{"text":"The arrival marker on this trip is a driver button press (trip_record.platform_policy.arrival_marker = BUTTON), so the platform-confirmed-arrival shortcut in POL-NS-12 is unavailable by its own terms &#8212; it covers only GPS_AUTO arrivals and leaves a pressed marker to POL-NS-02 and POL-NS-05. The driver's statement that he 'was at the pickup as shown on the map' is thus uncorroborated by any telemetry: the record shows a marker at 20:28:14 and a nearest approach of 157 m, and under POL-NS-02 the button press does not establish arrival.","evidence_ids":["EV-TRIP-02711","EV-GPS-02711"],"clause_ids":["POL-NS-12","POL-NS-02"],"relies_on":"derived.driver_track.min_distance_m","asserted_weight":1.0},{"text":"Nothing in this record lets the dwell be accumulated to reach the minimum. EV-ADVIS-02711-01 is MISSING &#8212; issue MISSING_ARTIFACT, weight 0.0, no payload &#8212; so no traffic advisory covers this pickup road, and POL-NS-06(i)'s precondition (a present and populated advisory of an admissible type covering the pickup road and the waiting window) cannot be met. The derived block records the limb as unavailable for exactly that reason. The required 180 seconds accordingly stands unreduced and unsummed, and the full refund under POL-NS-06 follows. (I disclose the impairment: the artifact is MISSING and carries weight 0.0; it is cited for the absence itself, which is citable.)","evidence_ids":["EV-ADVIS-02711-01","EV-GPS-02711"],"clause_ids":["POL-NS-06"],"relies_on":"derived.arrival.accumulated_dwell.limb.available","asserted_weight":0.0},{"text":"The rider was not the party who failed to appear. Her own track carries 47 fixes, every one qualifying, and every one within 14.79 m of the pickup pin (mean 12.03 m) across 20:26:34 to 20:33:28 &#8212; far inside the 100 m STANDARD rider-presence radius &#8212; and she named her sub-location in the chat log at 20:28:34 ('im at the main entrance next to the taxi stand, block A'). To the extent POL-NS-03 is engaged at all on a closest approach of 157 m, which is inside its 400 m ceiling, limb (i) allocates this mislocation to the driver: the rider stated her entrance, the driver read it and answered only 'ok' at 20:29:04, and the trace never shows him closing the last 157 m before he cancelled at 20:32:36 &#8212; so he receives no compensation. I do not rely on POL-NS-04 to exonerate the rider: the driver did reply within 120 seconds of her message, so limb (b) of that clause is not met and I concede the point.","evidence_ids":["EV-GPS-02711","EV-CHAT-02711","EV-TRIP-02711"],"clause_ids":["POL-NS-03","POL-NS-04"],"relies_on":"derived.rider_presence.mean_distance_m","asserted_weight":1.0},{"text":"This case is decidable now and should be refunded, not held. The apparent conflict between the 20:28:14 arrival event and a trace that never enters the geofence is resolved by POL-NS-01(b) and POL-NS-02, which require the trace to corroborate the arrival event and which the button marker does not satisfy &#8212; so the POL-NS-09(b) trigger is not engaged. Nor is any integrity limb engaged: the trace is COMPLETE with 100% coverage, 0 gaps, max_gap_sec 0.0 and 69 fixes across the window, and the arrival event timestamp 20:28:14 sits exactly on a fix timestamp, so there is no clock skew under POL-NS-08(a) and no trace defect under POL-NS-08(b). The deciding fact rests on an artifact at weight 1.0, above the confidence floor, and escalation under POL-NS-09 would wrongly leave the rider's 4.50 held.","evidence_ids":["EV-GPS-02711","EV-TRIP-02711"],"clause_ids":["POL-NS-09","POL-NS-08","POL-NS-01"],"asserted_weight":1.0},{"text":"The remedy the rider seeks is the refund of the cancellation-fee line only. EV-FARE-02711 shows the 4.50 cancellation fee as the entirety of total_charged, with payment_status CHARGED and refund_issued_sgd 0.0, and the fare reconciles with platform_policy.cancellation_fee_sgd, so there is no fare defect and no booking or platform fee to net off (platform_fee is 0.0; base_fare, distance_fare and time_fare are all 0.0). A full refund of 4.50, with driver_compensation_sgd null, is the ruling the record supports.","evidence_ids":["EV-FARE-02711","EV-TRIP-02711"],"clause_ids":["POL-GEN-03","POL-NS-06"],"asserted_weight":1.0}]}</blockquote><p class="label">The driver advocate's own claims</p><blockquote>{
+  "claims": [
+    {
+      "text": "The driver's own trace places him 156.99 m from the pickup pin at his closest recorded approach anywhere in the 69-fix run - outside the 50 m STANDARD arrival radius that POL-NS-02 fixes for this zone class, but far inside the 400 m ceiling POL-NS-03 sets for a wrong-face-of-venue arrival. The rider's own account ('he stayed on the other side and cancelled') describes exactly that situation, not an abandoned job, so the driver attended the venue and the case is decided under POL-NS-03 rather than as a driver who never came.",
+      "evidence_ids": ["EV-GPS-02711"],
+      "clause_ids": ["POL-NS-03", "POL-NS-02"],
+      "relies_on": "derived.driver_track.min_distance_m",
+      "asserted_weight": 1.0
+    },
+    {
+      "text": "Limb (a) of POL-NS-01 is satisfied and the driver's cancellation was not premature in time on the platform's own clock: the trip record carries the driver's 'arrived' event at 20:28:14 and the cancellation at 20:32:36, an elapsed wait of 4.4 minutes (262 seconds) against the 180 second free_wait_sec in force for this trip under platform_policy. The driver gave the rider substantially longer than the free waiting period the fee pays for, whatever the geofence arithmetic finally shows.",
+      "evidence_ids": ["EV-TRIP-02711"],
+      "clause_ids": ["POL-NS-01", "POL-NS-06"],
+      "relies_on": "trip_record.platform_policy.free_wait_sec",
+      "asserted_weight": 1.0
+    },
+    {
+      "text": "POL-NS-05 catches a false arrival marker only where the fix matched to the arrival timestamp puts the driver more than 300 m from the pin or travelling at 15 km/h or more. Neither trigger is made out on this record: the driver's closest fix anywhere in the trace is 156.99 m from the pin, inside the 300 m leash, and the trace contains stationary 0.0 km/h samples. No false-arrival finding or POL-NS-05(ii) referral should be recorded against this driver.",
+      "evidence_ids": ["EV-GPS-02711"],
+      "clause_ids": ["POL-NS-05"],
+      "relies_on": "derived.driver_track.min_distance_m",
+      "asserted_weight": 1.0
+    },
+    {
+      "text": "The rider's POL-NS-04 route fails at limb (b). The rider's locating message was sent at 20:28:34 and the driver replied 'ok' at 20:29:04 - thirty seconds later, and read at 20:29:14 - well inside the 120 second window limb (b) allows. The driver neither ignored the message nor left it unanswered, so the rider cannot be exonerated on a driver coordination failure and the case must be decided on the arrival and dwell arithmetic.",
+      "evidence_ids": ["EV-CHAT-02711"],
+      "clause_ids": ["POL-NS-04"],
+      "relies_on": "chat_log.messages",
+      "asserted_weight": 1.0
+    },
+    {
+      "text": "There is no farming pattern and no escalation ground on the profiles. The POL-NS-07 anti-farming check requires driver_profile.no_show_terminations_30d of 4 or more AND a rate above 0.08; this driver shows 2 terminations against 87 completed trips in the same window, a rate of 0.023, so the check does not trip. The lifetime counter prior_no_show_flags is not the trailing-30-day field the clause names and may not be substituted for it, and both parties' disputes_with_counterparty_90d are 0, so POL-NS-09(c) is not engaged either.",
+      "evidence_ids": ["EV-DPROF-02711", "EV-RPROF-02711"],
+      "clause_ids": ["POL-NS-07", "POL-NS-09"],
+      "relies_on": "driver_profile.no_show_terminations_30d",
+      "asserted_weight": 1.0
+    },
+    {
+      "text": "Nothing in the bundle is impaired and the disputed amount is clean. Every artifact is COMPLETE at weight 1.0; the GPS trace carries 100.0 percent coverage, a 10 second cadence and a maximum gap of 0.0 seconds, so the POL-NS-08(a) clock-skew, (b) trace-defect and (c) chat-defect limbs are not engaged and no POL-NS-09(e) escalation arises; and the fare breakdown's cancellation-fee line of 4.50 SGD reconciles exactly with platform_policy.cancellation_fee_sgd of 4.50, so POL-NS-08(d) is satisfied and the amount itself is not in issue. On a clean record the single live question is whether the fee is chargeable at all.",
+      "evidence_ids": ["EV-GPS-02711", "EV-FARE-02711", "EV-TRIP-02711"],
+      "clause_ids": ["POL-NS-08"],
+      "relies_on": "derived.money.fee_charged",
+      "asserted_weight": 1.0
+    }
+  ]
+}</blockquote></details><details><summary>Citation check</summary><p class="label">Who</p><p>code</p><p class="label">What it produced</p><p><p>The referee checked every claim against the artifacts it cites. 14 claim(s) kept, 0 discarded.</p></p><p class="label">Discarded claims and the referee's reason</p><ul><li>none</li></ul></details><details><summary>Judge</summary><p class="label">Who</p><p>model</p><p class="label">What it produced</p><p><p>The judge was asked 4 times on the same inputs: 3 sampled drafts and one with the parties' positions swapped. The vote agreement is 1.0, and the outcome recorded is carried.</p></p><p class="label">Each draft</p><ul><li>draft 1 (sampled, sides DRIVER_ADVOCATE, RIDER_ADVOCATE): FULL_REFUND, amount SGD 4.50, driver none, confidence 0.9</li><li>draft 2 (sampled, sides DRIVER_ADVOCATE, RIDER_ADVOCATE): FULL_REFUND, amount SGD 4.50, driver none, confidence 0.95</li><li>draft 3 (sampled, sides DRIVER_ADVOCATE, RIDER_ADVOCATE): FULL_REFUND, amount SGD 4.50, driver none, confidence 0.95</li><li>draft 4 (position_swapped, sides RIDER_ADVOCATE, DRIVER_ADVOCATE): FULL_REFUND, amount SGD 4.50, driver none, confidence 0.95</li></ul><p class="label">Each draft's own explanation</p><blockquote>To both parties: the rider's claim is upheld, and the SGD 4.50 no-show fee is refunded in full.
+
+What the record shows. The driver accepted the trip at 20:22:12 on 17 Aug, pressed 'arrived' at 20:28:14 and cancelled at 20:32:36 under reason code RIDER_NO_SHOW (EV-TRIP-02711). The platform charged the rider SGD 4.50 (EV-FARE-02711: total_charged 4.50, cancellation_fee 4.50, payment_status CHARGED, refund_issued_sgd 0.00).
+
+Arrival fails. The GPS trace (EV-GPS-02711, weight 1.0, COMPLETE, 69 fixes at a 10 s cadence, 100% coverage, max_gap_sec 0.0) places the driver's closest approach to the pickup pin at 156.99 m anywhere in the trip, with 0 fixes inside the 50 m STANDARD arrival radius and 0 continuous in-geofence runs. POL-NS-02's proximity test therefore fails, and with it POL-NS-01 limb (b): the driver did not arrive at the pickup point. POL-NS-12 does not help the driver - arrival_marker is BUTTON, not GPS_AUTO, so a pressed marker stays subject to POL-NS-02 and POL-NS-05, and the bare statement that he 'was at the pickup as shown on the map' is corroborated by no telemetry.
+
+Dwell fails independently. The free waiting period in force is 180 s (trip_record.platform_policy.free_wait_sec). The effective in-geofence dwell is 0 s, measured - per POL-NS-01(c) - from the first qualifying in-geofence GPS fix and not from the 'arrived' tap. POL-NS-06 therefore makes the fee not chargeable on a 180 s shortfall, with no driver compensation, and POL-NS-01 limb (d) cannot be met either because the dwell never elapsed. The driver's contrary point, that 262 s elapsed between the tap and the cancellation against a 180 s period, is rejected: that interval is the platform's wait timer, not the dwell the clause measures from the GPS clock, which never began. The rider's point that nothing can be accumulated is accepted: EV-ADVIS-02711-01 is MISSING (issue MISSING_ARTIFACT, weight 0.0; cited for its absence, which is citable), so POL-NS-06(i) is unavailable, accumulation is defeated, and the 180 s stands unreduced.
+
+Wrong-entrance reading changes nothing. The driver's nearest position, 157 m, is outside the 50 m radius but inside the 400 m ceiling of POL-NS-03, so even on the reading that he attended the wrong face of the venue the rider is still refunded in full; POL-NS-03 decides the refund exactly as POL-NS-02 does. Its compensation allocation goes against the driver: the rider named her sub-location in the chat log at 20:28:34 ('im at the main entrance next to the taxi stand, block A'), the driver read it and answered only 'ok' at 20:29:04, and the trace never shows him closing the last 157 m before he cancelled - limb (i) puts the loss on the driver. Limb (ii)'s pin-ambiguity goodwill does not apply because registered_pickup_points is 1, not 2 or more.
+
+Other points answered. POL-NS-04 cannot exonerate the rider (the driver replied within 120 s, 30 s after her message, read 10 s later), but it does not need to - the refund follows from POL-NS-02 and POL-NS-06. POL-NS-05 records no false-arrival finding and produces no referral: its test reads the fix matched to the 20:28:14 marker, the driver's nearest approach anywhere in the trace is 156.99 m (inside its 300 m leash) and the trace carries stationary samples, so neither trigger - over 300 m, or 15 km/h or more - is established.
+
+Integrity, confidence and escalation. Nothing is impaired under POL-NS-08: the trace is COMPLETE with no (a) clock skew and no (b) trace defect; the chat log holds 2 messages, matching trip_record.chat_message_count, with no sequence gap (c); and the 4.50 cancellation line equals platform_policy.cancellation_fee_sgd of 4.50 (d). The deciding facts rest on artifacts at weight 1.0, so the POL-GEN-02(2) cap is 1.0 and confidence is 0.9. POL-NS-09 is not engaged: confidence is above the 0.70 floor; the arrival event and the trace are reconciled by POL-NS-01(b)/POL-NS-02/POL-NS-12 rather than left in unresolved contradiction; both parties' disputes_with_counterparty_90d are 0; the POL-NS-07 anti-farming check does not trip (2 no-show terminations against 87 completed trips, rate 0.023); and no deciding fact rests on impaired evidence. The lifetime counter prior_no_show_flags is context-only under POL-GEN-01 and was used for nothing.
+
+The money. The refund is the cancellation-fee line only - 4.50, which is the whole of total_charged (base_fare, distance_fare, time_fare, platform_fee and waiting_time_fee are all 0.00). driver_compensation_sgd is null, and referrals is empty. The monetary effect of 4.50 is below the POL-GEN-05 execution threshold of 8.00, so it executes automatically on issue; this is a provisional ruling and either party may appeal once, within 30 days, under POL-GEN-04.</blockquote><blockquote>To the rider and the driver. The SGD 4.50 cancellation fee charged at 20:32:53 on 2026-08-17 (EV-FARE-02711: cancellation_fee 4.50, total_charged 4.50, payment_status CHARGED, refund_issued_sgd 0.00) is refunded to the rider in full. No driver compensation is payable.
+
+The fee fails the arrival test, and it fails on the driver's own trace. POL-NS-01 limb (b) requires the GPS trace to place the driver inside the arrival radius for this pickup - Blk 231 Serangoon Ave 3, Serangoon, pickup_zone_class STANDARD, so fee_schedule.arrival_radius_m 50 m. EV-GPS-02711 holds 69 fixes at a 10 s cadence with 100.0% coverage and no gaps, and the closest it ever places the driver to the pickup pin is 156.99 m; its derived arrival block reports 0 qualifying in-radius fixes and 0 continuous in-geofence runs. The 'arrived' event at 20:28:14 does not fill that gap: trip_record.platform_policy.arrival_marker is BUTTON, and POL-NS-12 covers platform-confirmed GPS_AUTO arrivals only, so a pressed marker is left to POL-NS-02 and POL-NS-05 and does not establish arrival by itself. Limb (b) therefore fails and the fee is not chargeable.
+
+Two independent clauses give the same answer. POL-NS-02: with no qualifying in-radius fix anywhere in the 15 minutes before the cancellation, the driver never arrived and the rider is entitled to a full refund of the cancellation fee. POL-NS-06: the effective in-geofence dwell measured under POL-NS-01(c) is 0 seconds against the 180-second free waiting period in force for this trip (trip_record.platform_policy.free_wait_sec = 180), a shortfall of 180.0 s, and POL-NS-06 refunds the fee whether or not the rider was present and whether or not she answered messages. Nothing permits that 0 to be accumulated, because POL-NS-06(i) needs a present and populated traffic advisory of an admissible type and EV-ADVIS-02711-01 is MISSING (issue MISSING_ARTIFACT, weight_multiplier 0.0, no payload). That absence is citable and is cited only for itself: a missing artifact carries no fact and does not cap confidence here.
+
+Driver's claims. (1) The wrong-face-of-venue framing is accepted in part. The closest recorded approach of 156.99 m is outside the 50 m radius but inside POL-NS-03's 400 m ceiling, and where the driver was holding position there the trip is decided under POL-NS-03 - which also refunds the rider in full. It changes nothing for the driver, because POL-NS-03(i) allocates this loss to him: the rider stated her sub-location in the chat log at 20:28:34 ('im at the main entrance next to the taxi stand, block A'), the driver answered only 'ok' at 20:29:04, and the trace never shows him closing the last 157 m before he cancelled at 20:32:36. POL-NS-03(ii) cannot apply because registered_pickup_points is 1 and the rider did specify a sub-location, so no platform-funded goodwill arises either. (2) The claim that the 4.4 minutes between the arrival tap and the cancellation satisfies the wait is rejected: POL-NS-01(c) measures the dwell from the first qualifying in-geofence fix, not from the marker, and no dwell was measured at all. (3) The POL-NS-05 point is accepted: the 156.99 m closest approach is inside that clause's 300 m leash, nothing on the record puts the arrival-timestamp fix beyond 300 m or the driver at 15 km/h or more at that moment, and a driver stationary within 300 m but outside the radius is decided under POL-NS-03 rather than caught here. No false-arrival referral is recorded. (4) The POL-NS-04 point is accepted: the driver replied 30 seconds after the rider's message, inside that clause's 120-second window, so limb (b) is not met and POL-NS-04 does not exonerate the rider; the refund does not depend on it. (5) The escalation point is accepted: driver_profile.no_show_terminations_30d is 2 against 87 completed trips in the same window (rate 0.023), so POL-NS-07's anti-farming test does not trip and POL-NS-09(d) is not engaged, and both parties' disputes_with_counterparty_90d are 0, so POL-NS-09(c) is not engaged. The mention of prior_no_show_flags was flagged by the referee; it is a context-only field under POL-GEN-01 and was not used as a ground, so nothing turns on it. (6) The clean-record point is accepted: EV-GPS-02711 (100.0% coverage, 0.0 s maximum gap, 69 fixes, arrival timestamp on a fix), EV-CHAT-02711 (2 messages matching trip_record.chat_message_count) and EV-FARE-02711 (4.50 reconciling with platform_policy.cancellation_fee_sgd 4.50) show no POL-NS-08(a) to (d) impairment.
+
+The rider's claims are accepted: the 0 qualifying in-radius fixes and the 156.99 m closest approach; the 0-second dwell against the 180-second minimum; the failure of limb (d), since the cancellation cannot fall after a dwell that never began and RIDER_NO_SHOW is the driver's own selection rather than the rider's admission; the unavailability of POL-NS-12 on a BUTTON marker; the MISSING advisory and the unavailable POL-NS-06(i) accumulation; her own track placing her within 14.79 m of the pin across 20:26:34 to 20:33:28; and the POL-NS-03(i) allocation against the driver. The remedy she asks for is the right one: the 4.50 cancellation-fee line only, with base_fare, distance_fare, time_fare, platform_fee and waiting_time_fee all 0.00 and no booking fee to net off.
+
+No escalation follows. POL-NS-09(b) is not engaged, because the tension between the 20:28:14 arrival event and a trace that never enters the geofence is exactly what POL-NS-01(b) and POL-NS-02 resolve, and the trace is authoritative for limb (b). POL-NS-09(a) is not engaged at confidence 0.95; (c) and (d) are not engaged on the profiles; and (e) is not engaged because nothing is impaired under POL-NS-08(a) to (d). No clause produces a referral on these facts, so the referrals list is empty.
+
+Confidence and execution. The deciding fact - no qualifying in-radius fix and a zero-second dwell - is carried by EV-GPS-02711, whose weight_multiplier is 1.0; that is the POL-GEN-02(2) cap, and 0.95 sits below it. No artifact the ruling rests on is discounted, and the MISSING advisory carries no fact. The monetary effect, SGD 4.50, is below the POL-GEN-05 execution threshold of SGD 8.00, so this provisional ruling executes automatically on issue; either party may appeal once within 30 days under POL-GEN-04.</blockquote><blockquote>To the rider and the driver. The 4.50 SGD cancellation fee charged on trip TRP-02711 is refunded to the rider in full, and no compensation is paid to the driver.
+
+The driver never reached the pickup point. His own GPS trace (EV-GPS-02711, weight 1.0, no impairments) carries 69 fixes at a 10-second cadence with 100% coverage, and across that entire track the closest he ever came to the pickup pin at Blk 231 Serangoon Ave 3 was 156.99 m &#8212; a little over three times the 50 m STANDARD arrival radius. The derived arrival block records 0 qualifying in-geofence fixes and a longest qualifying run of 0.0 seconds. POL-NS-01 therefore fails at limb (b) and limb (c), and limb (d) cannot be met either, because the required dwell never elapsed before the 20:32:36 cancellation. POL-NS-02 refunds the fee in full where no qualifying in-radius fix exists, and POL-NS-06 reaches the same result on the dwell arithmetic: 0.0 seconds measured against the 180-second free waiting period in force (trip_record.platform_policy.free_wait_sec), a shortfall of 180.0 seconds. The 4.50 cancellation-fee line on EV-FARE-02711 (payment_status CHARGED, refund_issued_sgd 0.0) is the whole of the contested amount, so the refund is 4.50.
+
+The driver's answer does not change this. The 4.4 minutes between the 20:28:14 'arrived' event and the 20:32:36 cancellation (EV-TRIP-02711) is not the dwell the clause measures: POL-NS-01(c) runs that clock from the first qualifying in-geofence GPS fix, and there is none. The arrival marker on this trip is a driver button press (arrival_marker = BUTTON), so the platform-confirmed-arrival shortcut in POL-NS-12 is unavailable by its own terms, and the driver's statement that he was 'at the pickup as shown on the map' is corroborated by no telemetry in the record.
+
+If the case is read under POL-NS-03 rather than POL-NS-02, the outcome is the same. A closest approach of 156.99 m sits inside POL-NS-03's 400 m ceiling, but that clause also refunds the fee in full, and it leaves the driver with nothing: the rider named her sub-location in the chat log at 20:28:34 ('im at the main entrance next to the taxi stand, block A'), the driver read it and replied only 'ok' at 20:29:04, and the trace shows he never moved to it before cancelling. The 50-percent pin-ambiguity goodwill in POL-NS-03(ii) is not available: the rider did specify a sub-location and trip_record.registered_pickup_points is 1, not 2 or more. So driver_compensation_sgd is null on either reading.
+
+The rider's POL-NS-04 argument is rejected on the driver's point. The driver replied at 20:29:04, thirty seconds after her 20:28:34 message, so limb (b)'s 120-second silence requirement fails and POL-NS-04 does not exonerate her. That does not affect the refund, which rests on the driver's position, not on the rider's conduct.
+
+No escalation. The apparent conflict between the 20:28:14 arrival event and a trace that never enters the geofence is resolved by POL-NS-01(b) and POL-NS-02, which require the trace to corroborate the button marker, so POL-NS-09(b) is not engaged. No limb of POL-NS-08 is engaged either: the trace is COMPLETE with 100% coverage, a 10-second cadence, max_gap_sec 0.0 and 69 fixes across the window; the 20:28:14 arrival timestamp falls on a fix, so there is no clock skew under (a); the chat log's 2 messages match trip_record.chat_message_count, so (c) is clear; and the fare breakdown's 4.50 cancellation-fee line reconciles exactly with platform_policy.cancellation_fee_sgd, so (d) is satisfied. The anti-farming check does not trip: 2 no-show terminations against 87 completed trips in 30 days is a rate of 0.023, below both the 4-termination count and the 0.08 rate, and driver_profile.no_show_terminations_30d and completed_trips_30d are the only fields that check may read. Both profiles show disputes_with_counterparty_90d of 0 and rider_profile.no_show_disputes_30d is 0, so POL-NS-09(c) and (d) are not engaged. The lifetime counter prior_no_show_flags was not used as a substitute, correctly.
+
+The missing traffic advisory (EV-ADVIS-02711-01, status MISSING, weight 0.0, issue MISSING_ARTIFACT) does not reduce the 180-second minimum: POL-NS-06(i) can only permit separate in-geofence intervals to be summed where a present and populated advisory of an admissible type covers the pickup road, and there is no second in-geofence interval to sum in any event. The missing artifact carries no fact about the dwell.
+
+No referral is recorded. POL-NS-05's false-arrival test turns on the driver's distance and speed at the arrival timestamp, and this record supplies no such pair of numbers, so that clause does not fire and no false-arrival record is entered. POL-NS-01's driver-education item for a mis-selected reason code applies where the stationary fixes lie inside the arrival radius, which is not this case, and the recorded code RIDER_NO_SHOW is in any event one the clause recognises.
+
+The refund rests on artifacts at weight 1.0 (EV-GPS-02711, EV-TRIP-02711, EV-FARE-02711), so confidence is capped at 1.0 and is set at 0.95. The monetary effect of 4.50 SGD does not exceed the 8.00 SGD execution threshold in POL-GEN-05, so it executes automatically on issue. Either party may appeal within 30 days under POL-GEN-04.</blockquote><blockquote>Both parties: the SGD 4.50 cancellation fee charged on TRP-02711 is refunded in full to the rider. No driver compensation is payable, and the case is not escalated.
+
+Why the fee does not stand. The driver's GPS trace (EV-GPS-02711: 69 fixes at a 10-second cadence, 100% coverage, no gaps) never places the vehicle inside the 50 m STANDARD arrival radius of the pickup pin at Blk 231 Serangoon Ave 3; his closest approach anywhere in the trip was 156.99 m (derived.driver_track.min_distance_m), and the derived arrival block reports 0 qualifying in-geofence fixes and no continuous in-geofence run. The rider's device, by contrast, lies within 14.78 m of the pin across all 47 of its fixes (20:26:34-20:33:28). POL-NS-01 limb (b) therefore fails: the 20:28:14 'arrived' event is a driver button press (platform_policy.arrival_marker = BUTTON), and a pressed marker establishes arrival only if the trace corroborates it (POL-NS-02; POL-NS-12 covers GPS_AUTO arrivals only and is unavailable here by its own terms). POL-NS-01 limb (c) runs the waiting clock from the first qualifying in-geofence fix, not from the tap, so the required 180 s dwell (platform_policy.free_wait_sec) never began: measured dwell 0.0 s against a 180.0 s minimum. POL-NS-06 makes the fee refundable on that shortfall whether or not the rider was present, and limb (d) cannot be satisfied because the dwell it measures never elapsed. The driver's 262-second wait on the trip-record clock (20:28:14 to 20:32:36) is not in-geofence waiting time and does not change this outcome.
+
+POL-NS-03. The driver's case that this is a wrong-face-of-venue arrival is geometrically available (156.99 m is inside the 400 m ceiling), but it yields the same fee outcome: POL-NS-03 also refunds the cancellation fee in full. It matters only to compensation, and limb (i) decides that against the driver: the rider stated her sub-location in the chat log at 20:28:34 ('im at the main entrance next to the taxi stand, block A', EV-CHAT-02711), the driver read it and replied 'ok' at 20:29:04, and the trace never shows him closing the last 157 m before cancelling at 20:32:36. POL-NS-03(ii)'s platform-funded goodwill is not available: it requires registered_pickup_points of 2 or more (this trip has 1) and no sub-location stated by either party.
+
+Other claims. POL-NS-05 is not engaged - the driver never came within 300 m of the pin - so no false-arrival finding and no POL-NS-05(ii) referral is recorded. POL-NS-04 does not exonerate the rider (the driver replied 30 seconds after her message, inside limb (b)'s 120-second window), but the refund does not rest on it. POL-NS-06(i) accumulation is unavailable: EV-ADVIS-02711-01 is MISSING and carries weight 0.0, so it carries no fact and neither raises nor lowers the 180-second minimum. POL-NS-07 compensation is not payable because POL-NS-01 is not satisfied in full; in any event the anti-farming check does not trip (2 no-show terminations against 87 completed trips in 30 days, rate 0.023, against thresholds of 4 and 0.08 - lifetime counters such as prior_no_show_flags are context only and were not used). The driver's statement that he 'was at the pickup as shown on the map' is a party statement carrying no weight; it is contradicted by his own trace and establishes no fact.
+
+Integrity and escalation. Nothing is impaired under POL-NS-08: no clock skew (the 20:28:14 arrival stamp falls exactly on a fix), no gap over 120 s, 69 fixes in the window, the chat log's 2 messages match trip_record.chat_message_count, and the fare's 4.50 cancellation-fee line reconciles with platform_policy.cancellation_fee_sgd. No POL-NS-09 trigger fires: the apparent conflict between the button press and the trace is resolved by POL-NS-01(b) and POL-NS-02; neither profile shows disputes with the other party in 90 days; and the deciding fact rests on weight-1.0 artifacts.
+
+Confidence. The deciding fact - the driver's position and in-geofence dwell - is carried by EV-GPS-02711 at weight 1.0, so POL-GEN-02(2) caps confidence at 1.0; I set it at 0.95. The refund of SGD 4.50 is below POL-GEN-05's execution threshold of SGD 8.00 and executes automatically. This is a provisional ruling; either party may appeal once within 30 days under POL-GEN-04.</blockquote></details><details><summary>Floor and triggers</summary><p class="label">Who</p><p>code</p><p class="label">What it produced</p><p><p>The confidence recorded for this case is 0.9 against the floor of 0.7 stated by POL-GEN-02.</p><p>No escalation reason code is recorded: the case did not escalate.</p></p></details><details><summary>Outcome</summary><p class="label">Who</p><p>code</p><p class="label">What it produced</p><p><p>FULL_REFUND -- the filing party is entirely right and the whole contested amount is returned.</p><p>Refund SGD 4.50. Driver compensation none.</p></p></details></div></section>
+<footer class="foot"><span>commit 9ca7313</span><span>tag freeze-2026-10-09</span><span>policy version 6</span><span>model deepseek/deepseek-flash</span></footer>
+</main>
+
+</div>
+<script>
+(function(){
+  "use strict";
+  function each(selector, root){
+    return Array.prototype.slice.call((root || document).querySelectorAll(selector));
+  }
+
+  var tabs = each("[data-tab]");
+  tabs.forEach(function(tab){
+    tab.addEventListener("click", function(){
+      var name = tab.getAttribute("data-tab");
+      tabs.forEach(function(other){
+        var on = other === tab;
+        other.setAttribute("aria-selected", on ? "true" : "false");
+        other.className = on ? "tab tab-on" : "tab";
+      });
+      each("[data-panel]").forEach(function(panel){
+        panel.hidden = panel.getAttribute("data-panel") !== name;
+      });
+    });
+  });
+
+  var table = document.getElementById("queue");
+  if (table){
+    var body = table.tBodies[0];
+    var rows = Array.prototype.slice.call(body.rows);
+    var state = {column: null, up: true};
+
+    function value(row, column){
+      var cell = row.querySelector('td[data-column="' + column + '"]');
+      if (!cell){ return ""; }
+      var sort = cell.getAttribute("data-sort");
+      return sort === null ? cell.textContent.trim() : sort;
+    }
+
+    function numeric(text){
+      return /^-?[0-9]+(\.[0-9]+)?$/.test(text);
+    }
+
+    function sortBy(column){
+      if (state.column === column){ state.up = !state.up; }
+      else { state.column = column; state.up = true; }
+      rows.sort(function(a, b){
+        var x = value(a, column), y = value(b, column);
+        if (numeric(x) && numeric(y)){
+          return state.up ? Number(x) - Number(y) : Number(y) - Number(x);
+        }
+        if (x === y){ return 0; }
+        return state.up ? (x < y ? -1 : 1) : (x < y ? 1 : -1);
+      });
+      rows.forEach(function(row){ body.appendChild(row); });
+    }
+
+    each("th[data-column]", table).forEach(function(head){
+      head.classList.add("sortable");
+      head.addEventListener("click", function(){
+        sortBy(head.getAttribute("data-column"));
+      });
+    });
+
+    var chosen = {outcome: "all", set: "all"};
+    function apply(){
+      var shown = 0;
+      rows.forEach(function(row){
+        var okOutcome = chosen.outcome === "all" || row.getAttribute("data-outcome") === chosen.outcome;
+        var okSet = chosen.set === "all" || row.getAttribute("data-set") === chosen.set;
+        var ok = okOutcome && okSet;
+        row.hidden = !ok;
+        if (ok){ shown += 1; }
+      });
+      var count = document.getElementById("shown");
+      if (count){ count.textContent = String(shown); }
+    }
+
+    each("[data-filter]").forEach(function(button){
+      button.addEventListener("click", function(){
+        chosen.outcome = button.getAttribute("data-filter");
+        each("[data-filter]").forEach(function(other){
+          other.className = other === button ? "on" : "";
+        });
+        apply();
+      });
+    });
+
+    var picker = document.getElementById("set-picker");
+    if (picker){
+      picker.addEventListener("change", function(){
+        chosen.set = picker.value;
+        apply();
+      });
+    }
+    apply();
+  }
+
+  var form = document.getElementById("review-form");
+  if (form){
+    var reason = document.getElementById("reason");
+    var verdict = document.getElementById("verdict");
+    var output = document.getElementById("command");
+    var evidence = (form.getAttribute("data-evidence") || "").split(" ").filter(Boolean);
+    var clauses = (form.getAttribute("data-clauses") || "").split(" ").filter(Boolean);
+    var floor = Number(form.getAttribute("data-reason-min") || "0");
+
+    function cited(text, ids){
+      for (var i = 0; i < ids.length; i += 1){
+        if (text.indexOf(ids[i]) >= 0){ return true; }
+      }
+      return false;
+    }
+
+    function check(){
+      var text = reason.value.trim();
+      var problems = [];
+      if (text.length < floor){
+        problems.push("the reason is " + text.length + " characters; POL-GEN-06(6) requires at least " + floor);
+      }
+      if (!cited(text, evidence)){
+        problems.push("the reason cites no evidence id of this case");
+      }
+      if (!cited(text, clauses)){
+        problems.push("the reason cites no clause id of this case");
+      }
+      return {text: text, problems: problems};
+    }
+
+    function decision(){
+      var picked = form.querySelector('input[name="decision"]:checked');
+      return picked ? picked.value : "";
+    }
+
+    function command(){
+      var text = reason.value.trim();
+      return "python3 -m ops.review --run-dir " + form.getAttribute("data-run-dir") +
+        " --case " + form.getAttribute("data-case") +
+        " --packet-sha256 " + form.getAttribute("data-packet") +
+        " close --ruling " + form.getAttribute("data-ruling") +
+        ' --closed-by "' + (document.getElementById("reviewer").value || "reviewer") + '"' +
+        ' --summary "' + decision() + '"' +
+        ' --reason "' + text.replace(/"/g, "'") + '"';
+    }
+
+    function refresh(){
+      var state = check();
+      if (state.problems.length){
+        verdict.className = "err";
+        verdict.textContent = state.problems.join("; ");
+      } else {
+        verdict.className = "ok";
+        verdict.textContent = "The reason is long enough and cites this case's own evidence and clause ids.";
+      }
+      output.textContent = command();
+    }
+
+    form.addEventListener("input", refresh);
+    form.addEventListener("change", refresh);
+
+    var copy = document.getElementById("copy");
+    if (copy){
+      copy.addEventListener("click", function(){
+        var text = command();
+        var done = function(){
+          var status = document.getElementById("copy-status");
+          if (status){ status.textContent = "Copied."; }
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText){
+          navigator.clipboard.writeText(text).then(done, function(){
+            var status = document.getElementById("copy-status");
+            if (status){ status.textContent = "Select the command above and copy it by hand."; }
+          });
+        } else {
+          var status = document.getElementById("copy-status");
+          if (status){ status.textContent = "Select the command above and copy it by hand."; }
+        }
+      });
+    }
+    refresh();
+  }
+})();
+</script>
+</body>
+</html>
