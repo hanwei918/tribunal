@@ -535,7 +535,12 @@ class SealedV1RunArgumentsTests(unittest.TestCase):
         for line in text.splitlines():
             cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
             if len(cells) == 2 and cells[0] == "model":
-                stated = cells[1].strip().strip("`").split(",")[0].strip()
+                # The value is a code span followed by a gloss: read what is
+                # between the backticks, so the closing backtick is not read as
+                # part of the model.
+                span = cells[1].split("`")
+                if len(span) >= 3:
+                    stated = span[1].strip()
                 break
         self.assertIsNotNone(stated, "the freeze note's configuration table states no model")
         self.assertEqual(stated, SEALED_V1.run_arguments.model)

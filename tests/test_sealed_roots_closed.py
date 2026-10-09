@@ -295,12 +295,22 @@ class CheckOnAClosedRootTests(ScratchRunsRootTestCase):
     with it, so nothing reads a list that disagrees with the others.
     """
 
-    # ``wild`` fixes no arguments; ``wild-v2`` fixes the owner's command.
+    # ``wild`` fixes no arguments; ``wild-v2`` and ``sealed-v1`` fix the owner's
+    # command, each at the arguments its own registration names.
     ARGUMENTS = {
         "wild": ["--set", "wild", "--check"],
         "wild-v2": [
             "--set",
             "wild-v2",
+            "--concurrency",
+            "2",
+            "--timeout",
+            "900",
+            "--check",
+        ],
+        "sealed-v1": [
+            "--set",
+            "sealed-v1",
             "--concurrency",
             "2",
             "--timeout",
@@ -321,7 +331,17 @@ class CheckOnAClosedRootTests(ScratchRunsRootTestCase):
             self.addCleanup(patcher.stop)
 
     def test_a_closed_root_prints_the_closure_and_lists_no_cases(self):
-        for development_set in SEALED_SETS:
+        # ``sealed-v1`` is imported and **not yet run**, so its root is not
+        # closed and the plan branch below is where it is covered. The closure is
+        # asserted for every root the registration says has been made, and the
+        # list of those is pinned here, so a set cannot pass by being skipped.
+        closed = [
+            development_set
+            for development_set in SEALED_SETS
+            if sets.sealed_root_is_closed(development_set)
+        ]
+        self.assertEqual(("wild", "wild-v2"), tuple(item.name for item in closed))
+        for development_set in closed:
             with self.subTest(sealed_set=development_set.name):
                 code, out, err = _run_cli(self.ARGUMENTS[development_set.name])
                 self.assertEqual(0, code, err)

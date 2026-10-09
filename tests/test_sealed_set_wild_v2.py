@@ -1675,27 +1675,55 @@ class WildV2RunArgumentsTests(unittest.TestCase):
         )
 
     def test_the_registration_records_the_freezes_eight_settings(self):
-        frozen = WILD_V2.run_arguments
-        self.assertIsNotNone(frozen, "wild-v2 fixes no run arguments")
-        self.assertEqual("deepseek/deepseek-flash", frozen.model)
-        self.assertEqual(4, frozen.judge_votes)
-        self.assertFalse(frozen.verify_drafts)
-        self.assertEqual(900.0, frozen.timeout_seconds)
-        self.assertEqual(2, frozen.concurrency)
-        # "The default" is recorded as the default rather than as today's
-        # number, so the registration cannot start refusing the default.
-        self.assertIsNone(frozen.prompts_dir)
-        self.assertIsNone(frozen.case_deadline_seconds)
-        self.assertIsNone(frozen.token_budget)
+        # Each sealed set whose single run is fixed at a freeze's arguments, and
+        # the arguments that freeze fixes. Both fix the same eight settings, and
+        # each row carries its own expected value, so a registration that drifted
+        # on either set fails here.
+        fixed = (
+            (
+                WILD_V2,
+                sets.RunArguments(
+                    model="deepseek/deepseek-flash",
+                    judge_votes=4,
+                    verify_drafts=False,
+                    timeout_seconds=900.0,
+                    concurrency=2,
+                ),
+            ),
+            (
+                sets.SEALED_V1,
+                sets.RunArguments(
+                    model="deepseek/deepseek-flash",
+                    judge_votes=4,
+                    verify_drafts=False,
+                    timeout_seconds=900.0,
+                    concurrency=2,
+                ),
+            ),
+        )
+        for development_set, expected in fixed:
+            with self.subTest(sealed_set=development_set.name):
+                frozen = development_set.run_arguments
+                self.assertIsNotNone(
+                    frozen, "{0} fixes no run arguments".format(development_set.name)
+                )
+                self.assertEqual(expected, frozen)
+                # "The default" is recorded as the default rather than as today's
+                # number, so the registration cannot start refusing the default.
+                self.assertIsNone(frozen.prompts_dir)
+                self.assertIsNone(frozen.case_deadline_seconds)
+                self.assertIsNone(frozen.token_budget)
+        with_frozen_arguments = {item.name for item, _expected in fixed}
         for development_set in (
             sets.DEVELOPMENT_SETS + sets.SEALED_SETS + sets.RERUN_SETS
         ):
-            if development_set is WILD_V2:
+            if development_set.name in with_frozen_arguments:
                 continue
             with self.subTest(development_set=development_set.name):
                 self.assertIsNone(
                     development_set.run_arguments,
-                    "a set that is not wild-v2 fixes run arguments",
+                    "a set that is not a sealed set with frozen arguments fixes "
+                    "run arguments",
                 )
 
     def test_the_judge_vote_default_agrees_with_the_freezes_four(self):

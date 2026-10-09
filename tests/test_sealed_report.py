@@ -153,9 +153,9 @@ class SecondSealedSetFiguresTests(unittest.TestCase):
     instead -- every line, the blank lines and the ordering included -- so a
     rendering change, a changed figure and an added line all fail here.
 
-    The two sealed sets are never summed or pooled: each is its own
-    generalisation figure from its own freeze, and neither of these tests reads
-    the other's run.
+    The sealed sets are never summed or pooled: each is its own generalisation
+    figure from its own freeze, and neither of these tests reads another set's
+    run.
     """
 
     def test_it_reproduces_the_whole_report_the_committed_run_prints(self):
@@ -190,7 +190,8 @@ class SecondSealedSetFiguresTests(unittest.TestCase):
         self.assertEqual(1, code)
         self.assertEqual("", text)
         self.assertIn(
-            "FATAL: 'codex' is not a sealed set; the sealed sets are wild, wild-v2",
+            "FATAL: 'codex' is not a sealed set; the sealed sets are "
+            "sealed-v1, wild, wild-v2",
             errors.getvalue(),
         )
 
