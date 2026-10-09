@@ -2,11 +2,16 @@
 
 The README is the first thing a reader sees, and a figure in it that has drifted
 away from the file it came from is worse than no figure at all. This module
-parses the results table in ``README.md`` and recomputes each figure from the
+parses the results tables in ``README.md`` and recomputes each figure from the
 committed runs and the frozen answer keys, so a figure that disagrees fails here
 rather than misleading a reader.
 
-The table is parsed rather than restated, so the check is against the README a
+The README carries **two** tables under this header -- the frozen system's, at
+policy version 6, and the earlier blocks' -- and both are parsed, so a figure
+stated in either is checked and neither can be dropped from the check by the
+other appearing above it.
+
+The tables are parsed rather than restated, so the check is against the README a
 reader actually reads. The labels are matched exactly and in both directions: a
 figure the README states and this module does not know about fails, and so does a
 figure this module knows about that the README has dropped. Both are failures for
@@ -37,6 +42,7 @@ from eval import (  # noqa: E402
     grade,
     run_benchmark,
     sealed_report,
+    v6_runs,
 )
 
 README = PROJECT_ROOT / "README.md"
@@ -90,36 +96,41 @@ def _plain(cell: str) -> str:
 
 
 def _table_rows(text: str) -> List[List[str]]:
-    """The results table's data rows, as lists of cells.
+    """The results tables' data rows, as lists of cells.
 
-    Located by its header rather than by position, and read until the first line
-    that is not a table row, so a second table added elsewhere cannot be mistaken
-    for this one.
+    Located by their header rather than by position, and each table is read
+    until the first line that is not a table row. The README states the figures
+    in two tables under this header -- the frozen system's, at policy version 6,
+    and the earlier blocks' -- and both are read, so neither is left unchecked
+    by the other sitting above it.
     """
     lines = text.splitlines()
-    start = None
-    for index, line in enumerate(lines):
-        cells = _cells(line)
+    rows: List[List[str]] = []
+    found = False
+    index = 0
+    while index < len(lines):
+        cells = _cells(lines[index])
         if cells and tuple(_plain(cell).lower() for cell in cells) == TABLE_HEADER:
-            start = index
-            break
-    if start is None:
+            found = True
+            index += 2  # skip the header and its alignment row
+            while index < len(lines):
+                row = _cells(lines[index])
+                if not row:
+                    break
+                if len(row) != len(TABLE_HEADER):
+                    raise AssertionError(
+                        "README.md has a results row with {0} cells, not {1}: {2!r}".format(
+                            len(row), len(TABLE_HEADER), lines[index]
+                        )
+                    )
+                rows.append(row)
+                index += 1
+            continue
+        index += 1
+    if not found:
         raise AssertionError(
             "README.md has no results table headed {0}".format(" | ".join(TABLE_HEADER))
         )
-
-    rows: List[List[str]] = []
-    for line in lines[start + 2 :]:  # skip the header and its alignment row
-        cells = _cells(line)
-        if not cells:
-            break
-        if len(cells) != len(TABLE_HEADER):
-            raise AssertionError(
-                "README.md has a results row with {0} cells, not {1}: {2!r}".format(
-                    len(cells), len(TABLE_HEADER), line
-                )
-            )
-        rows.append(cells)
     if not rows:
         raise AssertionError("README.md's results table has no rows")
     return rows
@@ -316,6 +327,172 @@ def sample_case_expectation() -> str:
 
 
 # --------------------------------------------------------------------------
+# The frozen system, at policy version 6
+# --------------------------------------------------------------------------
+def v6_documents(run: "v6_runs.V6Run") -> Dict[int, Any]:
+    """The cases a version-6 run covers, read through the module that reads them."""
+    return v6_runs.documents(run.run_dir, run.cases)
+
+
+def v6_key(run: "v6_runs.V6Run") -> Dict[int, Any]:
+    """A version-6 run's own key, or nothing where the run is not scored."""
+    return grade.load_answer_key(run.key_path) if run.key_path is not None else {}
+
+
+def v6_report(run: "v6_runs.V6Run") -> grade.GradeReport:
+    """One version-6 run graded, through the grader ``eval.v6_runs`` itself uses."""
+    return v6_runs._grade_run(run, v6_documents(run), v6_key(run))
+
+
+def v6_rate(matched: int, total: int) -> str:
+    return v6_runs._rate_text(matched, total)
+
+
+def v6_wilson(matched: int, total: int) -> str:
+    return v6_runs.wilson_text(matched, total)
+
+
+def v6_split(run: "v6_runs.V6Run") -> str:
+    """``dev-v2-ext``'s two splits, graded separately, as ``--report`` prints them."""
+    documents = v6_documents(run)
+    key = v6_key(run)
+    split = v6_runs.read_json(
+        PROJECT_ROOT / "data" / "external" / "dev-v2-ext" / "split.json"
+    )
+    parts = []
+    for label in ("calibration", "holdout"):
+        members = [case_no for case_no in split[label] if case_no in documents]
+        part = {case_no: documents[case_no] for case_no in members}
+        report = v6_runs._grade_run(run, part, key)
+        parts.append("{0} {1}".format(label, v6_rate(report.exact_matches, report.total)))
+    return "; ".join(parts)
+
+
+def v6_word(document: Mapping[str, Any]) -> Any:
+    """A case document's ruling value, the way ``eval.v6_runs`` reads it."""
+    inner = (document.get("ruling") or {}).get("ruling")
+    return inner.get("ruling") if isinstance(inner, Mapping) else None
+
+
+def v6_precedent_figures() -> Tuple[str, str]:
+    """The 15 route-deviation cases with the precedents block on, and without it."""
+    corpus = v6_runs.run_by_name("corpus")
+    key = grade.load_answer_key(corpus.key_path)
+    subset = {case_no: key[case_no] for case_no in v6_runs.ROUTE_DEVIATION_CASES}
+    with_precedents = v6_runs._grade_run(
+        v6_runs.PRECEDENTS_RUN, v6_documents(v6_runs.PRECEDENTS_RUN), key
+    )
+    corpus_documents = v6_documents(corpus)
+    without_precedents = grade.grade(
+        {
+            case_no: corpus_documents[case_no].get("ruling")
+            for case_no in v6_runs.ROUTE_DEVIATION_CASES
+        },
+        subset,
+        corpus=subset,
+    )
+    return (
+        v6_rate(with_precedents.exact_matches, with_precedents.total),
+        v6_rate(without_precedents.exact_matches, without_precedents.total),
+    )
+
+
+def v6_precedent_changed() -> str:
+    """The route-deviation cases whose ruling value moved when the block was shown."""
+    corpus_documents = v6_documents(v6_runs.run_by_name("corpus"))
+    precedent_documents = v6_documents(v6_runs.PRECEDENTS_RUN)
+    return case_list(
+        [
+            case_no
+            for case_no in v6_runs.ROUTE_DEVIATION_CASES
+            if v6_word(precedent_documents[case_no]) != v6_word(corpus_documents[case_no])
+        ]
+    )
+
+
+def v6_sample_901() -> str:
+    """901 at version 6: its ruling, its amount, its confidence and its agreement."""
+    document = v6_documents(v6_runs.run_by_name("ryde-v3"))[901]
+    ruling = (document.get("ruling") or {}).get("ruling") or {}
+    return "{0} {1:.2f}, confidence {2}, {3}".format(
+        ruling.get("ruling"),
+        ruling.get("amount_sgd"),
+        ruling.get("confidence"),
+        "unanimous" if document.get("vote_agreement") == 1.0 else "split",
+    )
+
+
+def v6_case_1779() -> str:
+    """The prompt-injection case at version 6: its ruling value."""
+    document = v6_documents(v6_runs.run_by_name("dev-v2"))[1779]
+    return v6_word(document)
+
+
+def v6_cost(run: "v6_runs.V6Run") -> str:
+    """One run's cost in USD, at the prices ``eval.v6_runs`` bills at."""
+    documents = v6_documents(run)
+    prompt = sum(
+        document.get("tokens", {}).get("prompt_tokens", 0) for document in documents.values()
+    )
+    cached = sum(
+        document.get("tokens", {}).get("cached_tokens", 0) for document in documents.values()
+    )
+    completion = sum(
+        document.get("tokens", {}).get("completion_tokens", 0)
+        for document in documents.values()
+    )
+    cost = (
+        Decimal(prompt - cached) * v6_runs.PRICE_INPUT
+        + Decimal(cached) * v6_runs.PRICE_CACHED_INPUT
+        + Decimal(completion) * v6_runs.PRICE_OUTPUT
+    ) / v6_runs.MILLION
+    return "{0} {1:.4f} USD".format(run.name, cost)
+
+
+def v6_costs() -> str:
+    return "; ".join(v6_cost(run) for run in v6_runs.RUNS)
+
+
+def v6_expected() -> Dict[str, str]:
+    """Every figure the README's first block states, recomputed from the runs."""
+    dev = v6_runs.run_by_name("dev-v2-ext")
+    dev_report = v6_report(dev)
+    dev_calibration = dev_report.calibration
+    true_positives = len(dev_calibration.true_positives)
+    corpus_report = v6_report(v6_runs.run_by_name("corpus"))
+    with_precedents, without_precedents = v6_precedent_figures()
+    return {
+        "dev-v2-ext — four-field exact": v6_rate(
+            dev_report.exact_matches, dev_report.total
+        ),
+        "dev-v2-ext — Wilson 95% interval": v6_wilson(
+            dev_report.exact_matches, dev_report.total
+        ),
+        "dev-v2-ext — escalation precision": ratio(
+            true_positives, true_positives + len(dev_calibration.false_positives)
+        ),
+        "dev-v2-ext — escalation recall": ratio(
+            true_positives, true_positives + len(dev_calibration.false_negatives)
+        ),
+        "dev-v2-ext — over-escalations": case_list(dev_calibration.over_escalations),
+        "dev-v2-ext — under-escalation": case_list(dev_calibration.under_escalations),
+        "dev-v2-ext — calibration and holdout splits, four-field exact": v6_split(dev),
+        "Corpus at version 6 — four-field exact": v6_rate(
+            corpus_report.exact_matches, corpus_report.total
+        ),
+        "Corpus at version 6 — cases that differ from the key": case_list(
+            sorted(score.case_no for score in corpus_report.cases if not score.exact)
+        ),
+        "Precedent arm — the 15 route-deviation cases, with precedents": with_precedents,
+        "Precedent arm — the same 15, without precedents": without_precedents,
+        "Precedent arm — rulings that changed": v6_precedent_changed(),
+        "Sample case 901 at version 6": v6_sample_901(),
+        "dev-v2 case 1779 (prompt injection in the chat) at version 6": v6_case_1779(),
+        "Cost of the version-6 runs, from the transcripts": v6_costs(),
+    }
+
+
+# --------------------------------------------------------------------------
 # The figures, keyed by the label the README gives them
 # --------------------------------------------------------------------------
 class ReadmeFigureTests(unittest.TestCase):
@@ -346,7 +523,7 @@ class ReadmeFigureTests(unittest.TestCase):
         calibration = sealed.calibration
         second = self.sealed_v2
         second_calibration = second.calibration
-        return {
+        figures = {
             "Held-out set (wild-v1) — four-field exact, of the cases that produced a ruling": fraction(
                 sealed.exact_matches, sealed.total
             ),
@@ -444,6 +621,10 @@ class ReadmeFigureTests(unittest.TestCase):
             "Sample case 901 — under the current pipeline": self.sample_ruling,
             "Sample case 901 — the organisers' stated expectation": self.sample_expectation,
         }
+        # The README's first block, the frozen system at policy version 6, is a
+        # second table under the same header and is checked the same way.
+        figures.update(v6_expected())
+        return figures
 
     def _baseline(self, key: str) -> str:
         """One combined baseline row's four-field cell, as ``n/m = p%``.

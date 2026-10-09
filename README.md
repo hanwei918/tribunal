@@ -2,8 +2,13 @@
 
 2026 Tencent Cloud AI Singapore Hackathon / Digital Native / Ryde / Newbee.
 
-Official WorkBuddy project root: `.` — this repository.
-Execution start: 2026-09-18; feature-freeze target: 10-10; submission deadline: 10-16 (the exact time is per the submission platform).
+**An automatic ruling is a first decision, not the last word: a party may appeal it once within 30 days under `POL-GEN-04`; an amount above the execution threshold of `POL-GEN-05`, and every dispute carrying a safety or complaint flag under `POL-GEN-08(1)`, go to a human reviewer under `POL-GEN-06`; and the kill switch `auto_rulings_enabled` in `ops/config.json` lets a human switch automatic rulings off.**
+
+Execution start: 2026-09-18. Feature freeze tagged 2026-10-09 (`freeze-2026-10-09`). Submission: 2026-10-16 (the exact time is per the submission platform).
+
+![Tribunal architecture](docs/architecture.svg)
+
+The same system is written out box by box, one paragraph per box and the file that implements it, in [`docs/architecture.md`](docs/architecture.md).
 
 ## The live demo
 
@@ -33,10 +38,72 @@ majority decides. Below the **confidence floor of 0.70**, or on a policy
 escalation, the case gets no ruling at all: it goes to a **human reviewer with the
 fee held** rather than collected or refunded.
 
+At policy version 6 the system adds three things. A **scope gate** under
+`POL-GEN-08(1)` routes a safety- or complaint-flagged dispute to a human with no
+model call at all, before any prompt is rendered. The platform's own **arrival
+and wait-timer events** are admitted under `POL-NS-12` as a carrier independent
+of the exported GPS trace, so a sparse or accuracy-less export does not defeat a
+platform-confirmed arrival and a served waiting period. And `POL-GEN-08(4)`'s
+**masking of vehicle registration marks** is applied to the brief, so no
+registration mark reaches an advocate, a judge or a reviewer.
+
 ## Results
 
-Read this table from the top. The first block is the submission's claim; every
-block below it is context that says what that claim is worth.
+**The frozen system, at policy version 6**
+
+These are the submission's figures, measured at policy version 6. The owner made
+the five runs once, outside this workspace, from a clean checkout of the commit
+tagged `freeze-2026-10-09`, and they are committed under `runs/policy-v6/`,
+`runs/precedents/policy-v6/`, `runs/dev-v2-ext/policy-v6/`,
+`runs/dev-v2/policy-v6/` and `runs/ryde-v3/policy-v6/`. Every row is printed by
+`python3 -m eval.v6_runs --report` and recomputed by
+`tests/test_readme_figures.py` from the committed runs and keys; the note that
+reads them is `docs/notes/2026-10-10-the-version-6-development-runs.md`.
+
+| figure | value | read from | recompute with | model call |
+|---|---|---|---|---|
+| `dev-v2-ext` — four-field exact | 115/120 = 95.8% | `runs/dev-v2-ext/policy-v6/deepseek-deepseek-flash/`, `eval/answers/dev-v2-ext/ground_truth.json` | `python3 -m eval.v6_runs --report` | no |
+| `dev-v2-ext` — Wilson 95% interval | [90.6%, 98.2%] | `runs/dev-v2-ext/policy-v6/deepseek-deepseek-flash/`, `eval/answers/dev-v2-ext/ground_truth.json` | `python3 -m eval.v6_runs --report` | no |
+| `dev-v2-ext` — escalation precision | 16/20 = 0.8 | `runs/dev-v2-ext/policy-v6/deepseek-deepseek-flash/`, `eval/answers/dev-v2-ext/ground_truth.json` | `python3 -m eval.v6_runs --report` | no |
+| `dev-v2-ext` — escalation recall | 16/17 = 0.941 | `runs/dev-v2-ext/policy-v6/deepseek-deepseek-flash/`, `eval/answers/dev-v2-ext/ground_truth.json` | `python3 -m eval.v6_runs --report` | no |
+| `dev-v2-ext` — over-escalations | 2749, 2809, 2829, 2853 | `runs/dev-v2-ext/policy-v6/deepseek-deepseek-flash/`, `eval/answers/dev-v2-ext/ground_truth.json` | `python3 -m eval.v6_runs --report` | no |
+| `dev-v2-ext` — under-escalation | 2858 | `runs/dev-v2-ext/policy-v6/deepseek-deepseek-flash/`, `eval/answers/dev-v2-ext/ground_truth.json` | `python3 -m eval.v6_runs --report` | no |
+| `dev-v2-ext` — calibration and holdout splits, four-field exact | calibration 75/79 = 94.9%; holdout 40/41 = 97.6% | `runs/dev-v2-ext/policy-v6/deepseek-deepseek-flash/`, `eval/answers/dev-v2-ext/ground_truth.json`, `data/external/dev-v2-ext/split.json` | `python3 -m eval.v6_runs --report` | no |
+| Corpus at version 6 — four-field exact | 26/29 = 89.7% | `runs/policy-v6/deepseek-deepseek-flash/`, `eval/answers/ground_truth.json` | `python3 -m eval.v6_runs --report` | no |
+| Corpus at version 6 — cases that differ from the key | 107, 112, 211 | `runs/policy-v6/deepseek-deepseek-flash/`, `eval/answers/ground_truth.json` | `python3 -m eval.v6_runs --report` | no |
+| Precedent arm — the 15 route-deviation cases, with precedents | 15/15 = 100.0% | `runs/precedents/policy-v6/deepseek-deepseek-flash/`, `eval/answers/ground_truth.json` | `python3 -m eval.v6_runs --report` | no |
+| Precedent arm — the same 15, without precedents | 13/15 = 86.7% | `runs/policy-v6/deepseek-deepseek-flash/`, `eval/answers/ground_truth.json` | `python3 -m eval.v6_runs --report` | no |
+| Precedent arm — rulings that changed | 107, 112 | `runs/precedents/policy-v6/deepseek-deepseek-flash/`, `runs/policy-v6/deepseek-deepseek-flash/` | `python3 -m eval.v6_runs --report` | no |
+| Sample case 901 at version 6 | DRIVER_COMPENSATION 4.00, confidence 0.9, unanimous | `runs/ryde-v3/policy-v6/deepseek-deepseek-flash/` | `python3 -m eval.v6_runs --report` | no |
+| `dev-v2` case 1779 (prompt injection in the chat) at version 6 | ESCALATE | `runs/dev-v2/policy-v6/deepseek-deepseek-flash/`, `eval/answers/dev-v2/ground_truth.json` | `python3 -m eval.v6_runs --report` | no |
+| Cost of the version-6 runs, from the transcripts | corpus 2.3053 USD; dev-v2-ext 7.9197 USD; dev-v2 0.0377 USD; ryde-v3 0.0638 USD | the five run directories' `case-*.json` (`tokens`) | `python3 -m eval.v6_runs --report` | no |
+
+**What these sets are.** `dev-v2-ext` is development data, drafted by the key
+owner for policy version 3; it is not a sealed set and it is not a generalisation
+figure. Its holdout cases 2734, 2758 and 2832 are the cases the key owner's
+amendments were drafted from, so the holdout split is not clean.
+
+**The corpus key.** The corpus key at `eval/answers/ground_truth.json` was written
+under policy version 1, and the corpus was measured at version 6. The three cases
+that differ from it — 107, 112 and 211 — are listed above and are not explained
+here yet.
+
+**The precedent arm.** With the switch on the 15 route-deviation cases score
+15/15, and without it they score 13/15; the two cases whose ruling changed are 107
+and 112. Neither 107's nor 112's ruling with precedents mentions a precedent, and
+`precedents/precedents.jsonl` holds two precedents, so the difference is not
+attributed to the precedents. It is reported, not claimed.
+
+**The third sealed set.** `sealed-v1` is 24 cases, imported and registered at
+policy version 6, and it has **not** been run. Its key is being re-derived under
+version 6 by the key owner, who will not see any system output on the set; the
+single run follows, and its figures will be added as their own block.
+
+**The earlier blocks.** Every block below was measured at policy version 1 or 2,
+from the earlier freezes; they are kept as they were.
+
+Read the table below from the top. The first block is the submission's claim;
+every block below it is context that says what that claim is worth.
 
 Two figures are **generalisation** figures, and each is its own. The held-out set
 (`wild-v1`) is 64 cases whose author says its traps come from real complaints,
@@ -124,8 +191,8 @@ row (cases, four-field exact, and the four fields separately) and its currency;
 `python3 -m eval.baselines --set all`, which prints the baseline table; and
 `python3 -m eval.sealed_report --set <set>`, which prints one sealed set's own
 figures on both bases, per category, and its escalation counts. The
-rest are recomputed by `tests/test_readme_figures.py`, which parses this table and
-recomputes every row from the committed files and the frozen keys:
+rest are recomputed by `tests/test_readme_figures.py`, which parses these tables
+and recomputes every row from the committed files and the frozen keys:
 
     python3 -m unittest tests.test_readme_figures -v
 
@@ -149,6 +216,35 @@ protocol. The commands that made them, and which of them were paid for, are:
 | development sets | `python3 -m eval.run_benchmark`, `python3 -m eval.development_sets --set codex` | 2026-09-22 to 2026-09-24 |
 | ablations | the same two with `--ablate admissibility` or `--ablate clause-notes` | 2026-09-29 |
 | sample case | `python3 -m eval.run_benchmark --external data/external/ryde/case-00901.json --runs-dir runs/rerun-2026-09-29 --timeout 900` | 2026-09-29 |
+
+## Limitations and disclosures
+
+- **Personal data.** No case file in this repository contains a telephone number
+  or a name. The organisers' original `DISP-002.md` contains names and never
+  enters a brief. The implementation of `POL-GEN-08(4)` masks vehicle
+  registration marks only.
+- **sealed-v1 before the freeze.** Before the 2026-10-09 freeze, the policy
+  owner's AI assistant opened sealed-v1's cases and key. By the policy owner's
+  account, no policy changed because of it. One sealed case's key and one derived
+  fact (case 311) reached the development side at 23:11, after the frozen trees
+  were committed at 22:42 (`9ca7313`). The set's README says "run once, k=3" and
+  does not define k; the run is made once with judge votes 4, and the agreement
+  among the four votes is reported as k-consistency.
+- **Amendments without a gap report.** The three base-3 amendments (`POL-NS-11`,
+  `POL-RD-14`, `POL-NS-12`) were approved directly, without the `POL-GEN-07(5)`
+  policy-gap report. No report is backfilled.
+- **When waiting starts.** `POL-NS-01(c)` in `policy/v3/no_show.json` measures
+  dwell "from the first qualifying in-geofence GPS fix and not from the 'arrived'
+  event". The scheduled pickup time is not used.
+- **Not built.** Model fallback: not built. Structured-output repair: not built.
+  Weighting user-submitted evidence down: not built. Risk signals sent to the
+  judge: not built. Evidence requested by the advocates in a second round: not
+  built. BM25 precedent retrieval: not built. Calibrated escalation thresholds:
+  not built. Chat sentiment, agreement and threat signals: not built.
+- **Platforms.** Case 111's brief digest differs on Linux by one unit in the last
+  place of `driver_track.mean_distance_m`; the recorded digests were made on
+  macOS.
+- **Synthetic data.** Every case except 901 is synthetic or semi-synthetic.
 
 ## What went wrong on the held-out set
 
@@ -213,31 +309,43 @@ deterministic except the three agents.
 
 1. **Load.** `tribunal/loader.py` reads a case against the manifest at
    `data/index.json`, under the data contract in `data/PUBLIC-CONTRACT.md`.
-2. **Prepass and facts.** `tribunal/prepass.py` reproduces the corpus's own
+2. **Scope gate.** `tribunal/pipeline.py` holds `POL-GEN-08(1)`: a dispute whose
+   `dispute.safety_flag` or `dispute.complaint_flag` is true is never adjudicated
+   automatically, and it is routed to human review with the record assembled and
+   no draft ruling issued. The gate fires before any prompt is rendered, so no
+   advocate, judge or verifier is called at all.
+3. **Prepass and facts.** `tribunal/prepass.py` reproduces the corpus's own
    `weight_multiplier` arithmetic from an artifact's issue codes, so the
    admissibility weights are derived rather than trusted. `tribunal/facts.py`
    turns the raw GPS trace — three quarters of a case's bytes — into the small
    numbers the policy thresholds on: excess distance, dwell, coverage.
-3. **One brief.** `tribunal/brief.py` builds the evidence package once and
+4. **One brief.** `tribunal/brief.py` builds the evidence package once and
    canonicalises it once. The same bytes go to both advocates and to the judge,
    and the brief's sha256 is recorded on the result so a reader can confirm it.
-4. **Two advocates, one brief, opposite stances.** `prompts/v1/advocate.system.md`
+   The brief carries the trip record's own `events[]`, which is where the
+   platform's arrival and wait-timer events of `POL-NS-12` travel, and under
+   `POL-GEN-08(4)` it masks Singapore vehicle registration marks in a chat
+   message's text, a trip record's event details and the dispute's two free-text
+   fields before anything is serialised.
+5. **Two advocates, one brief, opposite stances.** `prompts/v1/advocate.system.md`
    is rendered twice, substituting `prompts/v1/stance.rider.md` and
    `prompts/v1/stance.driver.md` at the `{{STANCE}}` placeholder. `run_case`
    asserts that the two rendered prompts differ only inside that block, which is
    the project's central claim.
-5. **The referee.** `tribunal/referee.py` is a deterministic citation referee,
+6. **The referee.** `tribunal/referee.py` is a deterministic citation referee,
    deliberately narrower than the judge. It discards a claim for citing no
    evidence id, citing no clause id, citing something that does not resolve,
    resting on impaired evidence without disclosing the impairment, or treating a
    context-only profile field as a ground. It never decides the merits.
-6. **The judge, four times.** `prompts/v1/judge.system.md` is asked four times on
+7. **The judge, four times.** `prompts/v1/judge.system.md` is asked four times on
    the same inputs — three sampled, one with the parties' positions swapped — and
    the majority decides. A draft that fails a code check abstains, and a tie is an
    escalation. The drafts are reduced over all four graded fields together,
    because a panel that agreed on the label while disagreeing on the money has not
-   agreed on anything.
-7. **The floor, and the human.** `POL-RD-10` requires an escalation whenever the
+   agreed on anything. A vote with no valid draft at all publishes an `ESCALATE`
+   with confidence 0 and the reason code `no_valid_drafts`, naming each draft's
+   abstention, rather than ending the case as a failure.
+8. **The floor, and the human.** `POL-RD-10` requires an escalation whenever the
    judge's confidence is below 0.70 or one of its listed conditions holds, and the
    case then goes to a human reviewer with the fee held rather than collected or
    refunded. `tribunal/transcript.py` records every call: what each agent was told
@@ -263,9 +371,9 @@ design rule and each part's command are written out in
 | Escalation Protocol | done | The vote and the confidence floor are `tribunal/pipeline.py`; the packet a reviewer is handed is `ops/escalation.py` — `python3 -m ops.escalation --run-dir <dir> --case N [--format json or md] [--out <path>]` — and the closure that records the reviewer's decision is `ops/review.py` — `python3 -m ops.review --run-dir <dir> --case N --packet-sha256 <hex>` plus `tribunal.precedents close`'s own arguments. | It does not decide the case. An escalated case is terminal: no monetary ruling issues, the disputed amount is held, and the packet is read by a person. |
 | Learning Feedback Loop | done | The policy-gap loop is `eval/policy_gaps.py` (`report`, `draft`, `approve`, `reject`) with `tribunal/policy_versions.py`; the human closures are `tribunal/precedents.py` — `python3 -m tribunal.precedents close`. The loop ran from `wild-v1` to amendment `0001`, and policy version 2 was measured on `wild-v2`. | A draft changes no run until a person approves it, and the loop can only **add** a clause — it can never edit or remove one. A closure carries a reason and an override flag; it does not re-open a case. |
 | SLA & Routing Manager | done | `ops/queue.py` with `ops/config.json` — `python3 -m ops.queue --run-dir <dir> [--now <ISO instant>] [--config <path>]`. | It routes and reports; it never hands a dispute to the pipeline, and nothing in `tribunal/` reads its config. `auto_rulings_enabled` false is the kill switch, and it stops at the router. |
-| Fraud & Bad-Faith Detection | done | `ops/risk.py` — `python3 -m ops.risk --case N` or `--case-file <path>`. | Its signals go to the human reviewer and to the queue and **not to the judge**, because `POL-GEN-01` forbids a profile from establishing a fact about the trip. It rules on nothing, and it reads the five counters its clauses name and no other profile field. |
-| Evidence Collection | done, as a deterministic service rather than an LLM agent | `ops/sources.py` and `ops/evidence.py` — `python3 -m ops.evidence --case N` or `--case-file <path>`. | No model chooses what evidence exists. Every artifact the advocates see is reproducible: the collection equals the case file's own `evidence` array exactly, so the brief it produces has the recorded `brief_sha256`. |
-| Policy & Precedent | partial | Built: the store (`precedents/precedents.jsonl`), the matching and the block the judge can be shown (`tribunal/precedents.py`), and the `--precedents` switch. | **Not built: a scored run with precedents on.** It has not been measured yet — there is no figure for it here, and none is claimed. |
+| Fraud & Bad-Faith Detection | done | `ops/risk.py` — `python3 -m ops.risk --case N` or `--case-file <path>`. | The brief asks for risk signals to be fed to the judge. This system sends them to the human reviewer and to the queue instead and **not to the judge**, because `POL-GEN-01` forbids a profile from establishing a fact about the trip; that is a deliberate difference from the brief. It rules on nothing, and it reads the five counters its clauses name and no other profile field. |
+| Evidence Collection | done, as a deterministic service rather than an LLM agent | `ops/sources.py` and `ops/evidence.py` — `python3 -m ops.evidence --case N` or `--case-file <path>`. | The advocates do not request evidence themselves: collection is deterministic and runs before any model call. No model chooses what evidence exists. Every artifact the advocates see is reproducible: the collection equals the case file's own `evidence` array exactly, so the brief it produces has the recorded `brief_sha256`. |
+| Policy & Precedent | built, and measured once | Built: the store (`precedents/precedents.jsonl`), the matching and the block the judge can be shown (`tribunal/precedents.py`), and the `--precedents` switch. Measured once, at policy version 6, over the corpus's 15 route-deviation cases: 15/15 with the block and 13/15 without it. | The measured difference (15/15 against 13/15) is not attributed to the precedents; the store holds two. The measurement is development data and is not a generalisation figure. |
 | Image Analysis | not done, on purpose | — | The two categories chosen need no images. The brief itself says property damage needs image analysis, and that is why `PROPERTY_DAMAGE` is out of the pipeline's scope. |
 
 ## Concurrency
@@ -442,10 +550,32 @@ git-ignored and is never committed. Copy `.env.example` to `.env` and put the ke
 in it. **Only the command that runs a case calls a model**, and nothing in the
 test suite makes a model call.
 
-Run one case — case 101 of the corpus, into a runs root of your own so that the
-committed results are left as they are:
+Run one case — case 101 of the corpus, at the frozen policy version 6, into a
+runs root of your own so that the committed results are left as they are:
 
-    python3 -m eval.run_benchmark --cases 101 --runs-dir /tmp/tribunal-runs
+    python3 -m eval.run_benchmark --cases 101 --policy-version 6 --runs-dir /tmp/tribunal-runs
+
+The five commands the version-6 development runs were made with, from a clean
+checkout of the commit tagged `freeze-2026-10-09`, are recorded in
+`docs/notes/2026-10-10-the-version-6-development-runs.md`; `D` is
+`~/Desktop/tribunal-final-runs-v6`, the runs root the owner's archive was
+collected in:
+
+    python3 -m eval.development_sets --set dev-v2 --policy-version 6 --cases 1779 \
+        --parallel-calls --timeout 900 --runs-dir $D/dev1779
+
+    python3 -m eval.run_benchmark --policy-version 6 --parallel-calls --concurrency 3 \
+        --timeout 900 --runs-dir $D/corpus
+
+    python3 -m eval.run_benchmark --cases 101,102,103,104,105,106,107,108,109,110,111,112,113,114,115 \
+        --precedents --policy-version 6 --parallel-calls --concurrency 3 --timeout 900 \
+        --runs-dir $D/precedents
+
+    python3 -m eval.development_sets --set ryde-v3 --policy-version 6 \
+        --parallel-calls --timeout 900 --runs-dir $D/ryde
+
+    python3 -m eval.development_sets --set dev-v2-ext --policy-version 6 \
+        --parallel-calls --concurrency 3 --timeout 900 --runs-dir $D/dev
 
 Run the tests:
 
@@ -460,8 +590,8 @@ one is identical to the committed page.
 
 Nothing in the suite makes a model call and no credential is needed.
 `tests/test_readme_figures.py` is the one that keeps this file honest: it parses
-the results table above and recomputes every figure in it from the committed runs
-and the frozen keys, failing when any of them differs.
+the results tables above and recomputes every figure in them from the committed
+runs and the frozen keys, failing when any of them differs.
 
 ## Where the WorkBuddy sessions are recorded
 
