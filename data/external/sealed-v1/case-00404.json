@@ -1,0 +1,1248 @@
+{
+  "schema_version": "1.2.0",
+  "case_no": 404,
+  "dispute": {
+    "dispute_id": "DSP-00404",
+    "trip_id": "TRP-00404",
+    "case_no": 404,
+    "category": "NO_SHOW_CHARGE",
+    "filed_by": "RIDER",
+    "filed_at": "2026-08-19T21:56:55+08:00",
+    "claim_text": "I was at guardhouse A which is where the pin is. He was at the other guardhouse. Nobody said which one. Refund the $4.",
+    "amount_contested_sgd": 4.0,
+    "evidence_ids": [
+      "EV-TRIP-00404",
+      "EV-GPS-00404",
+      "EV-CHAT-00404",
+      "EV-FARE-00404",
+      "EV-RPROF-00404",
+      "EV-DPROF-00404",
+      "EV-ADVIS-00404-01"
+    ],
+    "counterparty_statement": {
+      "text": "Bayshore has two guardhouses. Pin showed the condo, not which gate. I waited five and a half minutes.",
+      "submitted_by": "DRIVER",
+      "submitted_at": "2026-08-20T08:00:00+08:00"
+    },
+    "channel": "IN_APP_SUPPORT"
+  },
+  "evidence": [
+    {
+      "evidence_id": "EV-TRIP-00404",
+      "evidence_type": "TRIP_RECORD",
+      "trip_id": "TRP-00404",
+      "source": "PLATFORM_TELEMETRY",
+      "generated_at": "2026-08-20T10:00:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Cancelled trip record, causally ordered.",
+        "assessed_at": "2026-08-20T10:00:09+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-00404",
+        "rider_id": "RDR-11508",
+        "driver_id": "DRV-11463",
+        "requested_at": "2026-08-19T18:45:00+08:00",
+        "accepted_at": "2026-08-19T18:45:45+08:00",
+        "arrived_at": "2026-08-19T18:51:25+08:00",
+        "started_at": null,
+        "ended_at": null,
+        "cancelled_at": "2026-08-19T18:56:55+08:00",
+        "status": "CANCELLED_BY_DRIVER",
+        "cancelled_by": "DRIVER",
+        "cancellation_reason_code": "DRIVER_UNABLE_TO_LOCATE",
+        "pickup": {
+          "label": "Bayshore Park, Guardhouse A, 60 Bayshore Rd",
+          "lat": 1.3111,
+          "lng": 103.9368,
+          "venue_id": "VEN-BAYSHORE-PARK"
+        },
+        "dropoff": {
+          "label": "Suntec City Tower 2, 9 Temasek Blvd",
+          "lat": 1.2949,
+          "lng": 103.858,
+          "venue_id": null
+        },
+        "optimal_distance_km": 12.0,
+        "optimal_duration_min": 18.0,
+        "actual_distance_km": null,
+        "actual_duration_min": null,
+        "vehicle_type": "RYDE_X",
+        "optimal_route_source": "routing-engine-v3.2 (LTA traffic snapshot 18:45)",
+        "deviation_pct": null,
+        "wait_time_min": 5.5,
+        "time_to_arrival_min": 5.7,
+        "pickup_zone_class": "LARGE_VENUE",
+        "registered_pickup_points": 2,
+        "in_app_calls": [],
+        "pickup_amended_at": null,
+        "dropoff_amended_at": null,
+        "original_pickup": null,
+        "original_dropoff": null,
+        "optimal_route_erp_sgd": 0.0,
+        "amended_optimal_distance_km": null,
+        "amended_optimal_duration_min": null,
+        "solo_optimal_distance_km": null,
+        "chat_message_count": 4
+      }
+    },
+    {
+      "evidence_id": "EV-GPS-00404",
+      "evidence_type": "GPS_TRACE",
+      "trip_id": "TRP-00404",
+      "source": "PLATFORM_TELEMETRY",
+      "generated_at": "2026-08-20T10:00:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver device telemetry at 10 s cadence from acceptance to cancellation.",
+        "assessed_at": "2026-08-20T10:00:09+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-00404",
+        "points": [
+          {
+            "lat": 1.301781,
+            "lng": 103.905196,
+            "ts": "2026-08-19T18:45:45+08:00",
+            "speed_kph": 43.9,
+            "heading_deg": 70.9,
+            "accuracy_m": 28.1
+          },
+          {
+            "lat": 1.302141,
+            "lng": 103.906233,
+            "ts": "2026-08-19T18:45:55+08:00",
+            "speed_kph": 43.9,
+            "heading_deg": 70.9,
+            "accuracy_m": 34.7
+          },
+          {
+            "lat": 1.302515,
+            "lng": 103.90724,
+            "ts": "2026-08-19T18:46:05+08:00",
+            "speed_kph": 43.0,
+            "heading_deg": 69.6,
+            "accuracy_m": 45.6
+          },
+          {
+            "lat": 1.302886,
+            "lng": 103.908286,
+            "ts": "2026-08-19T18:46:15+08:00",
+            "speed_kph": 44.4,
+            "heading_deg": 70.5,
+            "accuracy_m": 38.6
+          },
+          {
+            "lat": 1.303224,
+            "lng": 103.90932,
+            "ts": "2026-08-19T18:46:25+08:00",
+            "speed_kph": 43.5,
+            "heading_deg": 71.9,
+            "accuracy_m": 43.0
+          },
+          {
+            "lat": 1.303584,
+            "lng": 103.910329,
+            "ts": "2026-08-19T18:46:35+08:00",
+            "speed_kph": 42.9,
+            "heading_deg": 70.4,
+            "accuracy_m": 38.1
+          },
+          {
+            "lat": 1.303941,
+            "lng": 103.911371,
+            "ts": "2026-08-19T18:46:45+08:00",
+            "speed_kph": 44.1,
+            "heading_deg": 71.1,
+            "accuracy_m": 33.3
+          },
+          {
+            "lat": 1.304297,
+            "lng": 103.912397,
+            "ts": "2026-08-19T18:46:55+08:00",
+            "speed_kph": 43.5,
+            "heading_deg": 70.9,
+            "accuracy_m": 44.3
+          },
+          {
+            "lat": 1.304679,
+            "lng": 103.91342,
+            "ts": "2026-08-19T18:47:05+08:00",
+            "speed_kph": 43.7,
+            "heading_deg": 69.5,
+            "accuracy_m": 29.0
+          },
+          {
+            "lat": 1.305018,
+            "lng": 103.914484,
+            "ts": "2026-08-19T18:47:15+08:00",
+            "speed_kph": 44.7,
+            "heading_deg": 72.3,
+            "accuracy_m": 43.2
+          },
+          {
+            "lat": 1.305401,
+            "lng": 103.915493,
+            "ts": "2026-08-19T18:47:25+08:00",
+            "speed_kph": 43.2,
+            "heading_deg": 69.2,
+            "accuracy_m": 45.0
+          },
+          {
+            "lat": 1.305738,
+            "lng": 103.916533,
+            "ts": "2026-08-19T18:47:35+08:00",
+            "speed_kph": 43.8,
+            "heading_deg": 72.0,
+            "accuracy_m": 44.6
+          },
+          {
+            "lat": 1.306106,
+            "lng": 103.91756,
+            "ts": "2026-08-19T18:47:45+08:00",
+            "speed_kph": 43.7,
+            "heading_deg": 70.3,
+            "accuracy_m": 34.4
+          },
+          {
+            "lat": 1.306482,
+            "lng": 103.918567,
+            "ts": "2026-08-19T18:47:55+08:00",
+            "speed_kph": 43.0,
+            "heading_deg": 69.5,
+            "accuracy_m": 31.9
+          },
+          {
+            "lat": 1.306856,
+            "lng": 103.919595,
+            "ts": "2026-08-19T18:48:05+08:00",
+            "speed_kph": 43.8,
+            "heading_deg": 70.0,
+            "accuracy_m": 32.8
+          },
+          {
+            "lat": 1.307183,
+            "lng": 103.920637,
+            "ts": "2026-08-19T18:48:15+08:00",
+            "speed_kph": 43.7,
+            "heading_deg": 72.6,
+            "accuracy_m": 31.9
+          },
+          {
+            "lat": 1.307533,
+            "lng": 103.921659,
+            "ts": "2026-08-19T18:48:25+08:00",
+            "speed_kph": 43.2,
+            "heading_deg": 71.1,
+            "accuracy_m": 37.1
+          },
+          {
+            "lat": 1.307891,
+            "lng": 103.922717,
+            "ts": "2026-08-19T18:48:35+08:00",
+            "speed_kph": 44.7,
+            "heading_deg": 71.3,
+            "accuracy_m": 30.3
+          },
+          {
+            "lat": 1.308274,
+            "lng": 103.923745,
+            "ts": "2026-08-19T18:48:45+08:00",
+            "speed_kph": 43.9,
+            "heading_deg": 69.6,
+            "accuracy_m": 43.8
+          },
+          {
+            "lat": 1.30865,
+            "lng": 103.924773,
+            "ts": "2026-08-19T18:48:55+08:00",
+            "speed_kph": 43.8,
+            "heading_deg": 69.9,
+            "accuracy_m": 41.5
+          },
+          {
+            "lat": 1.308995,
+            "lng": 103.925785,
+            "ts": "2026-08-19T18:49:05+08:00",
+            "speed_kph": 42.8,
+            "heading_deg": 71.2,
+            "accuracy_m": 33.7
+          },
+          {
+            "lat": 1.309372,
+            "lng": 103.92681,
+            "ts": "2026-08-19T18:49:15+08:00",
+            "speed_kph": 43.7,
+            "heading_deg": 69.8,
+            "accuracy_m": 42.2
+          },
+          {
+            "lat": 1.309697,
+            "lng": 103.927822,
+            "ts": "2026-08-19T18:49:25+08:00",
+            "speed_kph": 42.5,
+            "heading_deg": 72.2,
+            "accuracy_m": 39.0
+          },
+          {
+            "lat": 1.310093,
+            "lng": 103.928867,
+            "ts": "2026-08-19T18:49:35+08:00",
+            "speed_kph": 44.7,
+            "heading_deg": 69.2,
+            "accuracy_m": 33.1
+          },
+          {
+            "lat": 1.310427,
+            "lng": 103.929921,
+            "ts": "2026-08-19T18:49:45+08:00",
+            "speed_kph": 44.2,
+            "heading_deg": 72.4,
+            "accuracy_m": 32.5
+          },
+          {
+            "lat": 1.310786,
+            "lng": 103.930937,
+            "ts": "2026-08-19T18:49:55+08:00",
+            "speed_kph": 43.1,
+            "heading_deg": 70.5,
+            "accuracy_m": 33.0
+          },
+          {
+            "lat": 1.311149,
+            "lng": 103.931944,
+            "ts": "2026-08-19T18:50:05+08:00",
+            "speed_kph": 42.8,
+            "heading_deg": 70.2,
+            "accuracy_m": 44.3
+          },
+          {
+            "lat": 1.311491,
+            "lng": 103.93297,
+            "ts": "2026-08-19T18:50:15+08:00",
+            "speed_kph": 43.3,
+            "heading_deg": 71.6,
+            "accuracy_m": 36.2
+          },
+          {
+            "lat": 1.311881,
+            "lng": 103.934029,
+            "ts": "2026-08-19T18:50:25+08:00",
+            "speed_kph": 45.2,
+            "heading_deg": 69.8,
+            "accuracy_m": 46.6
+          },
+          {
+            "lat": 1.312062,
+            "lng": 103.934977,
+            "ts": "2026-08-19T18:50:35+08:00",
+            "speed_kph": 38.6,
+            "heading_deg": 79.2,
+            "accuracy_m": 38.3
+          },
+          {
+            "lat": 1.311204,
+            "lng": 103.935647,
+            "ts": "2026-08-19T18:50:45+08:00",
+            "speed_kph": 43.6,
+            "heading_deg": 142.0,
+            "accuracy_m": 41.6
+          },
+          {
+            "lat": 1.31032,
+            "lng": 103.936304,
+            "ts": "2026-08-19T18:50:55+08:00",
+            "speed_kph": 44.1,
+            "heading_deg": 143.4,
+            "accuracy_m": 46.3
+          },
+          {
+            "lat": 1.309444,
+            "lng": 103.936958,
+            "ts": "2026-08-19T18:51:05+08:00",
+            "speed_kph": 43.8,
+            "heading_deg": 143.3,
+            "accuracy_m": 37.7
+          },
+          {
+            "lat": 1.308599,
+            "lng": 103.93763,
+            "ts": "2026-08-19T18:51:15+08:00",
+            "speed_kph": 43.2,
+            "heading_deg": 141.5,
+            "accuracy_m": 35.3
+          },
+          {
+            "lat": 1.308575,
+            "lng": 103.937604,
+            "ts": "2026-08-19T18:51:25+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 6.0,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.308573,
+            "lng": 103.937616,
+            "ts": "2026-08-19T18:51:35+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 8.3,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.308578,
+            "lng": 103.937592,
+            "ts": "2026-08-19T18:51:45+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 13.1,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.308588,
+            "lng": 103.937585,
+            "ts": "2026-08-19T18:51:55+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 7.7,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.308589,
+            "lng": 103.937632,
+            "ts": "2026-08-19T18:52:05+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 10.3,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.308555,
+            "lng": 103.937613,
+            "ts": "2026-08-19T18:52:15+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 5.3,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.308558,
+            "lng": 103.937597,
+            "ts": "2026-08-19T18:52:25+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 10.7,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.308569,
+            "lng": 103.937591,
+            "ts": "2026-08-19T18:52:35+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.4,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.30859,
+            "lng": 103.937597,
+            "ts": "2026-08-19T18:52:45+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 12.1,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.308551,
+            "lng": 103.937611,
+            "ts": "2026-08-19T18:52:55+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 5.1,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.308589,
+            "lng": 103.937596,
+            "ts": "2026-08-19T18:53:05+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 13.2,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.308594,
+            "lng": 103.937605,
+            "ts": "2026-08-19T18:53:15+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 5.2,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.308558,
+            "lng": 103.937636,
+            "ts": "2026-08-19T18:53:25+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.4,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.308597,
+            "lng": 103.937633,
+            "ts": "2026-08-19T18:53:35+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 7.4,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.308587,
+            "lng": 103.937613,
+            "ts": "2026-08-19T18:53:45+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 10.2,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.308569,
+            "lng": 103.937607,
+            "ts": "2026-08-19T18:53:55+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 13.8,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.308589,
+            "lng": 103.937611,
+            "ts": "2026-08-19T18:54:05+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 8.7,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.308573,
+            "lng": 103.937608,
+            "ts": "2026-08-19T18:54:15+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 11.1,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.308584,
+            "lng": 103.937625,
+            "ts": "2026-08-19T18:54:25+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 12.3,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.308559,
+            "lng": 103.937625,
+            "ts": "2026-08-19T18:54:35+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 10.3,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.308576,
+            "lng": 103.937626,
+            "ts": "2026-08-19T18:54:45+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 13.9,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.308582,
+            "lng": 103.937599,
+            "ts": "2026-08-19T18:54:55+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 5.8,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.308583,
+            "lng": 103.937596,
+            "ts": "2026-08-19T18:55:05+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 10.0,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.308603,
+            "lng": 103.937631,
+            "ts": "2026-08-19T18:55:15+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 6.4,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.308561,
+            "lng": 103.937617,
+            "ts": "2026-08-19T18:55:25+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 6.4,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.308559,
+            "lng": 103.937597,
+            "ts": "2026-08-19T18:55:35+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.4,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.308578,
+            "lng": 103.937597,
+            "ts": "2026-08-19T18:55:45+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 5.9,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.308581,
+            "lng": 103.937593,
+            "ts": "2026-08-19T18:55:55+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 7.4,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.308601,
+            "lng": 103.937638,
+            "ts": "2026-08-19T18:56:05+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 5.1,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.308596,
+            "lng": 103.937621,
+            "ts": "2026-08-19T18:56:15+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 13.8,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.308588,
+            "lng": 103.937601,
+            "ts": "2026-08-19T18:56:25+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.8,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.30858,
+            "lng": 103.937623,
+            "ts": "2026-08-19T18:56:35+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.4,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.308581,
+            "lng": 103.937629,
+            "ts": "2026-08-19T18:56:45+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 10.8,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.308582,
+            "lng": 103.937631,
+            "ts": "2026-08-19T18:56:55+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 8.8,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          }
+        ],
+        "point_count": 68,
+        "first_fix_at": "2026-08-19T18:45:45+08:00",
+        "last_fix_at": "2026-08-19T18:56:55+08:00",
+        "expected_interval_sec": 10.0,
+        "sample_interval_sec": 10.0,
+        "gaps": [],
+        "max_gap_sec": 0.0,
+        "coverage_pct": 100.0,
+        "trace_distance_km": 4.08,
+        "rider_track": [
+          {
+            "lat": 1.311128,
+            "lng": 103.936819,
+            "ts": "2026-08-19T18:51:25+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 10.6,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.311131,
+            "lng": 103.936866,
+            "ts": "2026-08-19T18:51:34+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.7,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.311118,
+            "lng": 103.936837,
+            "ts": "2026-08-19T18:51:43+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 11.8,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.311168,
+            "lng": 103.936858,
+            "ts": "2026-08-19T18:51:52+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 5.1,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.311163,
+            "lng": 103.936854,
+            "ts": "2026-08-19T18:52:01+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 13.2,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.311146,
+            "lng": 103.936878,
+            "ts": "2026-08-19T18:52:10+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 10.6,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.311146,
+            "lng": 103.936878,
+            "ts": "2026-08-19T18:52:19+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 10.8,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.311161,
+            "lng": 103.936861,
+            "ts": "2026-08-19T18:52:28+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 14.6,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.311162,
+            "lng": 103.936828,
+            "ts": "2026-08-19T18:52:37+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 7.4,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.311125,
+            "lng": 103.936855,
+            "ts": "2026-08-19T18:52:46+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 13.3,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.311175,
+            "lng": 103.936836,
+            "ts": "2026-08-19T18:52:55+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 13.9,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.311155,
+            "lng": 103.936817,
+            "ts": "2026-08-19T18:53:04+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 12.3,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.31118,
+            "lng": 103.936812,
+            "ts": "2026-08-19T18:53:13+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 13.4,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.311137,
+            "lng": 103.936854,
+            "ts": "2026-08-19T18:53:22+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 4.9,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.311166,
+            "lng": 103.936857,
+            "ts": "2026-08-19T18:53:31+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 6.2,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.311141,
+            "lng": 103.936872,
+            "ts": "2026-08-19T18:53:40+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 11.1,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.311135,
+            "lng": 103.936824,
+            "ts": "2026-08-19T18:53:49+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 15.6,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.31111,
+            "lng": 103.93688,
+            "ts": "2026-08-19T18:53:58+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 11.8,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.311132,
+            "lng": 103.936827,
+            "ts": "2026-08-19T18:54:07+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.9,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.311164,
+            "lng": 103.936827,
+            "ts": "2026-08-19T18:54:16+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 6.0,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.311177,
+            "lng": 103.936812,
+            "ts": "2026-08-19T18:54:25+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 10.7,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.31117,
+            "lng": 103.936834,
+            "ts": "2026-08-19T18:54:34+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 11.4,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.311116,
+            "lng": 103.936816,
+            "ts": "2026-08-19T18:54:43+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 14.2,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.311153,
+            "lng": 103.936843,
+            "ts": "2026-08-19T18:54:52+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 7.7,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.311168,
+            "lng": 103.936845,
+            "ts": "2026-08-19T18:55:01+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.3,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.311164,
+            "lng": 103.936827,
+            "ts": "2026-08-19T18:55:10+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 11.5,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.311127,
+            "lng": 103.936874,
+            "ts": "2026-08-19T18:55:19+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 14.9,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.311117,
+            "lng": 103.936843,
+            "ts": "2026-08-19T18:55:28+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 11.2,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.311111,
+            "lng": 103.936824,
+            "ts": "2026-08-19T18:55:37+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 5.2,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.31112,
+            "lng": 103.936863,
+            "ts": "2026-08-19T18:55:46+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.9,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.31115,
+            "lng": 103.93688,
+            "ts": "2026-08-19T18:55:55+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 7.9,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.311165,
+            "lng": 103.936834,
+            "ts": "2026-08-19T18:56:04+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.9,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.311123,
+            "lng": 103.936821,
+            "ts": "2026-08-19T18:56:13+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 9.0,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.311142,
+            "lng": 103.936841,
+            "ts": "2026-08-19T18:56:22+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 14.0,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.311138,
+            "lng": 103.936814,
+            "ts": "2026-08-19T18:56:31+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 6.8,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.311144,
+            "lng": 103.936839,
+            "ts": "2026-08-19T18:56:40+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 16.0,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          },
+          {
+            "lat": 1.311131,
+            "lng": 103.936811,
+            "ts": "2026-08-19T18:56:49+08:00",
+            "speed_kph": 0.0,
+            "heading_deg": null,
+            "accuracy_m": 11.1,
+            "venue_id": "VEN-BAYSHORE-PARK"
+          }
+        ]
+      }
+    },
+    {
+      "evidence_id": "EV-CHAT-00404",
+      "evidence_type": "CHAT_LOG",
+      "trip_id": "TRP-00404",
+      "source": "PLATFORM_TELEMETRY",
+      "generated_at": "2026-08-20T10:00:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "In-app chat export for the trip.",
+        "assessed_at": "2026-08-20T10:00:09+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-00404",
+        "messages": [
+          {
+            "msg_id": "MSG-00404-001",
+            "sender": "SYSTEM",
+            "text": "Your driver has arrived",
+            "sent_at": "2026-08-19T18:51:26+08:00",
+            "read_at": "2026-08-19T18:51:50+08:00",
+            "delivered_at": "2026-08-19T18:51:27+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-00404-002",
+            "sender": "DRIVER",
+            "text": "arrived",
+            "sent_at": "2026-08-19T18:51:40+08:00",
+            "read_at": "2026-08-19T18:51:55+08:00",
+            "delivered_at": "2026-08-19T18:51:41+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-00404-003",
+            "sender": "RIDER",
+            "text": "coming",
+            "sent_at": "2026-08-19T18:52:15+08:00",
+            "read_at": "2026-08-19T18:52:25+08:00",
+            "delivered_at": "2026-08-19T18:52:16+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-00404-004",
+            "sender": "DRIVER",
+            "text": "?",
+            "sent_at": "2026-08-19T18:55:25+08:00",
+            "read_at": "2026-08-19T18:55:40+08:00",
+            "delivered_at": "2026-08-19T18:55:26+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          }
+        ],
+        "message_count": 4,
+        "first_message_at": "2026-08-19T18:51:26+08:00",
+        "last_message_at": "2026-08-19T18:55:25+08:00",
+        "truncated": false
+      }
+    },
+    {
+      "evidence_id": "EV-FARE-00404",
+      "evidence_type": "FARE_BREAKDOWN",
+      "trip_id": "TRP-00404",
+      "source": "PAYMENTS_LEDGER",
+      "generated_at": "2026-08-20T10:00:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Ledger line for the cancellation.",
+        "assessed_at": "2026-08-20T10:00:09+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-00404",
+        "currency": "SGD",
+        "fare_model": "METERED",
+        "quoted_fare_sgd": null,
+        "base_fare": 0.0,
+        "distance_fare": 0.0,
+        "time_fare": 0.0,
+        "distance_charged_km": null,
+        "time_charged_min": null,
+        "per_km_rate_sgd": null,
+        "per_min_rate_sgd": null,
+        "surge_multiplier": 1.0,
+        "surge_amount": 0.0,
+        "tolls_erp": 0.0,
+        "erp_gantries": [],
+        "airport_surcharge": 0.0,
+        "platform_fee": 0.0,
+        "promo_discount": 0.0,
+        "cancellation_fee": 4.0,
+        "waiting_time_fee": 0.0,
+        "total_charged": 4.0,
+        "payment_status": "CHARGED",
+        "refund_issued_sgd": 0.0,
+        "rate_card_id": "RC-SG-2026Q3-RYDEX",
+        "charged_at": "2026-08-19T18:57:10+08:00"
+      }
+    },
+    {
+      "evidence_id": "EV-RPROF-00404",
+      "evidence_type": "RIDER_PROFILE",
+      "trip_id": "TRP-00404",
+      "source": "PLATFORM_TELEMETRY",
+      "generated_at": "2026-08-20T10:00:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "",
+        "assessed_at": "2026-08-20T10:00:09+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "RDR-11508",
+        "party_role": "RIDER",
+        "snapshot_at": "2026-08-20T10:00:00+08:00",
+        "account_age_days": 700,
+        "lifetime_trips": 240,
+        "rating": 4.78,
+        "prior_disputes_filed": 1,
+        "prior_disputes_upheld": 0,
+        "cancellation_rate": 0.045,
+        "prior_no_show_flags": 0,
+        "deviation_claims_60d": 0,
+        "deviation_claims_60d_substantiated": 0,
+        "no_show_disputes_30d": 0,
+        "disputes_with_counterparty_90d": 0
+      }
+    },
+    {
+      "evidence_id": "EV-DPROF-00404",
+      "evidence_type": "DRIVER_PROFILE",
+      "trip_id": "TRP-00404",
+      "source": "PLATFORM_TELEMETRY",
+      "generated_at": "2026-08-20T10:00:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "",
+        "assessed_at": "2026-08-20T10:00:09+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "DRV-11463",
+        "party_role": "DRIVER",
+        "snapshot_at": "2026-08-20T10:00:00+08:00",
+        "account_age_days": 1100,
+        "lifetime_trips": 1900,
+        "rating": 4.88,
+        "prior_disputes_filed": 1,
+        "prior_disputes_upheld": 0,
+        "cancellation_rate": 0.03,
+        "prior_no_show_flags": 0,
+        "prior_deviation_flags": 0,
+        "acceptance_rate": 0.91,
+        "vehicle_type": "RYDE_X",
+        "active_region": "East (Bedok / Marine Parade)",
+        "deviation_flags_90d": 0,
+        "completed_trips_90d": 200,
+        "no_show_terminations_30d": 1,
+        "completed_trips_30d": 120,
+        "disputes_with_counterparty_90d": 0
+      }
+    },
+    {
+      "evidence_id": "EV-ADVIS-00404-01",
+      "evidence_type": "TRAFFIC_ADVISORY",
+      "trip_id": "TRP-00404",
+      "source": "THIRD_PARTY_LTA",
+      "generated_at": "2026-08-20T10:00:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "MISSING",
+        "issues": [
+          "MISSING_ARTIFACT"
+        ],
+        "issue_details": [
+          {
+            "code": "MISSING_ARTIFACT",
+            "severity": "BLOCKING",
+            "detail": "No advisory covers Bayshore Rd in this window."
+          }
+        ],
+        "weight_multiplier": 0.0,
+        "notes": "Artifact absent. The identifier is minted so that the absence itself is citable.",
+        "assessed_at": "2026-08-20T10:00:09+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": null
+    }
+  ]
+}

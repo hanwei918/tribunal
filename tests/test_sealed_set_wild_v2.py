@@ -214,7 +214,10 @@ class WildV2RegistryTests(unittest.TestCase):
         """``--set all`` and the combined figure both read ``DEVELOPMENT_SETS``."""
         self.assertEqual(["corpus", "codex"], [item.name for item in sets.DEVELOPMENT_SETS])
         self.assertNotIn(WILD_V2, sets.DEVELOPMENT_SETS)
-        self.assertEqual(("wild", "wild-v2"), tuple(item.name for item in sets.SEALED_SETS))
+        self.assertEqual(
+            ("wild", "wild-v2", "sealed-v1"),
+            tuple(item.name for item in sets.SEALED_SETS),
+        )
         self.assertIn(WILD_V2, sets.SEALED_SETS)
         self.assertNotIn("wild-v2", [item.name for item in sets.ALL_SETS])
         self.assertNotIn("wild-v2", [item.name for item in sets.RERUN_SETS])
@@ -983,13 +986,18 @@ class WildV2RunDirectoryIsHeadlineTests(unittest.TestCase):
             path.resolve() for path in run_benchmark.headline_run_directories(self.runs, MODEL)
         ]
         self.assertIn(self.sealed_run_dir.resolve(), headline)
-        self.assertEqual(4, len(headline), "the headline directories are not four")
+        self.assertEqual(5, len(headline), "the headline directories are not five")
         self.assertEqual(
             {
                 (self.runs / run_benchmark.model_slug(MODEL)).resolve(),
                 (self.runs / "codex" / run_benchmark.model_slug(MODEL)).resolve(),
                 (self.runs / "wild" / run_benchmark.model_slug(MODEL)).resolve(),
                 self.sealed_run_dir.resolve(),
+                (
+                    self.runs
+                    / run_benchmark.SEALED_V1_SET_RUNS_SUBDIR
+                    / run_benchmark.model_slug(MODEL)
+                ).resolve(),
             },
             set(headline),
         )

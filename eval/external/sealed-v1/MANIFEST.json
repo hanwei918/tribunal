@@ -1,0 +1,92 @@
+{
+  "sealed_set": "tribunal-sealed-v1",
+  "created": "2026-09-26",
+  "author": "Claude (independent of prompt tuning; never saw dev-set misses or prompts)",
+  "schema_version": "1.2.0",
+  "policy_versions": {
+    "general": "1.0.1",
+    "no_show": "1.1.1",
+    "route_deviation": "1.1.0"
+  },
+  "case_count": 24,
+  "case_numbers": [
+    301,
+    302,
+    303,
+    304,
+    305,
+    306,
+    307,
+    308,
+    309,
+    310,
+    311,
+    312,
+    401,
+    402,
+    403,
+    404,
+    405,
+    406,
+    407,
+    408,
+    409,
+    410,
+    411,
+    412
+  ],
+  "categories": {
+    "ROUTE_DEVIATION": 12,
+    "NO_SHOW_CHARGE": 12
+  },
+  "rulings": {
+    "NO_ACTION": 4,
+    "PARTIAL_REFUND": 5,
+    "DRIVER_COMPENSATION": 3,
+    "FULL_REFUND": 7,
+    "ESCALATE": 5
+  },
+  "difficulty": {
+    "EASY": 4,
+    "HARD": 14,
+    "REVERSAL": 3,
+    "INDETERMINATE": 3
+  },
+  "case_file_sha256": {
+    "case-00301.json": "de57a0981fa9e9f81469d8bb3de185f9afe50deb5d56568dff0956ee1753b951",
+    "case-00302.json": "dccd462dd75773c95bab65aa19409b3b29f66916c3b1cd84c4efc8c561f7cd56",
+    "case-00303.json": "cd1b48fd3e421ed24e684fc1ef2563dc8f00dbbb9f39a8d83847fcfd7cbedde1",
+    "case-00304.json": "bad5591a87c127c553e481f7d35ec2b4508b6d762f03364a841d80af57cb03ee",
+    "case-00305.json": "165d53bf117e349b34d619137875437e0c37a4520492e52affc4895101d76c29",
+    "case-00306.json": "08adf9263f2124db4a02fb6b47e781fbd7a5a86bd8c6982a6d6b7a4e6ee3ceac",
+    "case-00307.json": "696ab2f360089afd167e2946a7b88d50a58be39d8ddd34a2b9a01b651dfc05f1",
+    "case-00308.json": "1c79116c9f86dd54e214787768a604d15deaa040920d490a7d9dfddbfb44e359",
+    "case-00309.json": "eeb710c09c2b2f3687f8ef0ac240f11c85d710b471ba31217873f6f6a136a231",
+    "case-00310.json": "78731f6c0c35fc3017b2a567c8b1c1f1d5686a49f20b686feabb95ac0f2def47",
+    "case-00311.json": "d3c07949861631f38ae390fbe51227a035e3a89b2b14742a537e18f067a5acd3",
+    "case-00312.json": "9ddbf9945e9430a9bba9f312b55f96b68d372b55853421ed132e789ba5336e82",
+    "case-00401.json": "36a16e50f91a867fda1a6a4022c3692bab6596fa4a76b2dac93dcd523e54a5ee",
+    "case-00402.json": "2cd70620fd0ae6a025e5ee31e935acdf0957f167a1249837f84d3bb804726e77",
+    "case-00403.json": "d761ebc64a3dc6f0e83f8b412b6644daae157aa544106ee3593905b8f3baec45",
+    "case-00404.json": "e28ba333bfe7afddd66fd764e5070b55c1543793b80276673d84f2588103b3cf",
+    "case-00405.json": "8a862fc7deec769fc533dfe00bc82dff3ab24a0d279d217d773aa5f47aab2e15",
+    "case-00406.json": "e1ea97954f51a533c7fc1c1c736425ca1e66f37d8c071b4a6c62c58c24c888f2",
+    "case-00407.json": "ab6a81440edd629c3585fa0af699cee2e5bbacc0f6a7fde860f72fd26bc4f482",
+    "case-00408.json": "50907cce41674cdf8ba4ffb098682d4ad5fda99a369731ecf049649e5c737dc4",
+    "case-00409.json": "d164f606046bcac553e50ff2f9ba5eaee6b3f531e95abd3237f00d285ee555df",
+    "case-00410.json": "237a8a9dd6f3e8dfc6767dc172bbc79fe4667f6d104890532dad631440d710b4",
+    "case-00411.json": "82b0c90a3868ed444b331ec5df6fcc70e6a933165d7d453bcbbb4adc731b4eaf",
+    "case-00412.json": "9172a6fffea5fe8e302775a8751beae9259e1058b71b4447774325e309d04781"
+  },
+  "case_set_sha256": "5ae223770b880bb4add85b474da1274b46a853ecaed6ee7c968776c4838ce5f2",
+  "answer_key_sha256": "412d60bdf207b2be7f66986f40dc4d517b084df7e45dc4c12b566686cddd7f6d",
+  "eval_index_sha256": "989bbf5f8d61efe32d6545c4aea4ce48379a44edd192db1c5cdaf233ad49b3ee",
+  "protocol": {
+    "sealed_until": "model, prompts and policy are frozen (planned 2026-10-08)",
+    "runs_allowed": 1,
+    "k": 3,
+    "report": "agreement with this answer key per field (ruling, amount, driver_compensation, referrals), with 95% CI; k-consistency; miss taxonomy; official Ryde samples reported on a separate row",
+    "notes_policy": "admissibility.notes are descriptive only (no interpretive hints), unlike the dev set; strip-notes ablation on dev is therefore comparable to this set",
+    "no_tuning_after_run": "any change after the sealed run turns this set into a dev set; do not re-run"
+  }
+}

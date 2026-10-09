@@ -86,6 +86,20 @@ whose run a headline claim rests on -- and its answer-bearing material sits unde
 1's general rule. It gets its own falsifiability checks too, for the same reason
 the other three have them.
 
+The third sealed set
+--------------------
+There is a fifth answer key, ``eval/answers/sealed-v1/ground_truth.json``, for
+the 24 cases under ``data/external/sealed-v1/``. It is a sealed set on the other
+two's terms and a different set again: it was prepared by an independent author
+and imported on 2026-10-09, it is run exactly once from a commit whose
+``tribunal/``, ``prompts/`` and ``policy/`` trees equal those at
+``freeze-2026-10-09``, and its single run is the submission's third
+generalisation figure at the policy version 6 its registration fixes. It is
+covered by the same three layers for the same reason, and its answer-bearing
+material sits under ``eval/external/sealed-v1/``, which is named in the tests
+rather than left to Layer 1's general rule. It gets its own falsifiability checks
+too, for the same reason the other four have them.
+
 The precedent library
 ---------------------
 ``tribunal/precedents.py`` is a fourth place an answer could reach an agent: it
@@ -327,6 +341,48 @@ def _wild_v2_set_case(case_no):
     on purpose, so the manifest path would not find them.
     """
     return loader.load_external_set_case(WILD_V2_SET_DIR, case_no)
+
+
+# The third sealed set, and its own key. It is a sealed set on the held-out set's
+# terms -- prepared by an independent author, imported on 2026-10-09, run exactly
+# once from a commit whose ``tribunal/``, ``prompts/`` and ``policy/`` trees
+# equal those at ``freeze-2026-10-09``, at the policy version 6 its registration
+# fixes -- and it is a different set, with its own case range, its own key and
+# its own answer-bearing directory. Its key is a fifth way for an answer to reach
+# a brief, so it is guarded by the same layers and its two paths are named
+# explicitly below.
+SEALED_V1_KEY_PATH = EVAL_DIR / "answers" / "sealed-v1" / "ground_truth.json"
+SEALED_V1_SET_DIR = DATA_DIR / "external" / "sealed-v1"
+SEALED_V1_EXTERNAL_DIR = EVAL_DIR / "external" / "sealed-v1"
+
+# The two paths the third sealed set's answers live at, named so a reader can see
+# which ones the set added rather than only that Layer 1 covers all of ``eval/``.
+SEALED_V1_ANSWER_PATHS = (
+    "eval/answers/sealed-v1/ground_truth.json",
+    "eval/external/sealed-v1",
+)
+
+
+def _sealed_v1_key_records():
+    """The third sealed set's answer key, as a list of records."""
+    with SEALED_V1_KEY_PATH.open("r", encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def _sealed_v1_set_case_numbers():
+    """Every case number the set's own index lists, in index order."""
+    with (SEALED_V1_SET_DIR / "index.json").open("r", encoding="utf-8") as handle:
+        return [entry["case_no"] for entry in json.load(handle)]
+
+
+def _sealed_v1_set_case(case_no):
+    """One case of the third sealed set, loaded through its own index.
+
+    Through ``load_external_set_case``, the loader the set is run with, and never
+    through the corpus manifest -- these cases are absent from ``data/index.json``
+    on purpose, so the manifest path would not find them.
+    """
+    return loader.load_external_set_case(SEALED_V1_SET_DIR, case_no)
 
 
 def _brief_violations(case_no):
@@ -947,6 +1003,158 @@ class WildV2IsolationTest(unittest.TestCase):
         # GREEN again, on the real case.
         self.assertEqual({}, _brief_violations_for_case(real, policy_version=version))
         self.assertEqual(20, len(_wild_v2_set_case_numbers()), "the real index changed")
+
+
+class SealedV1IsolationTest(unittest.TestCase):
+    """The guard covers the third sealed set's key as well as the four above it.
+
+    ``sealed-v1`` is the set whose single run is taken *after* everything the
+    first five keys measure, at the policy version its registration fixes, so an
+    answer reaching one of its briefs would corrupt the figure the submission
+    leads with. Its key is a fifth key and its cases are briefed by the same
+    ``brief.build_brief_for_case`` -- at the version its run will brief them at,
+    which is why every brief below is built at the registration's version and not
+    at the default. The same layers are asserted over it: no file of the set
+    carries an answer field, no brief carries an answer-key field name, and no
+    module under ``tribunal/`` names either of the two paths that hold the set's
+    answers. Each check is shown capable of failing on a dirty fixture before it
+    is shown to hold.
+    """
+
+    def test_the_third_sealed_key_is_present_and_is_no_other_key(self):
+        self.assertTrue(SEALED_V1_KEY_PATH.is_file(), "the third sealed key is missing")
+        for other in (ANSWER_KEY_PATH, SECOND_KEY_PATH, SEALED_KEY_PATH, WILD_V2_KEY_PATH):
+            with self.subTest(other=other.name):
+                self.assertNotEqual(other, SEALED_V1_KEY_PATH)
+        self.assertEqual(24, len(_sealed_v1_key_records()))
+
+    def test_every_needle_occurs_in_the_third_sealed_key(self):
+        """A mistyped needle would make the scan below unable to fire."""
+        key_text = SEALED_V1_KEY_PATH.read_text(encoding="utf-8")
+        for name in DISTINCTIVE_ANSWER_FIELDS:
+            with self.subTest(field=name):
+                self.assertTrue(
+                    name in key_text,
+                    "{0!r} is not a field of the third sealed key".format(name),
+                )
+
+    def test_no_file_of_the_third_sealed_set_carries_an_answer_field(self):
+        """The set arrived answer-free, and is still answer-free here.
+
+        ``index.json`` is scanned with the case files: it is the one file under
+        the set's own directory this repository re-serialised on import, so it is
+        a file this repository wrote and not one the archive shipped -- and it is
+        under the set's directory either way.
+        """
+        paths = sorted(SEALED_V1_SET_DIR.glob("case-*.json")) + [
+            SEALED_V1_SET_DIR / "index.json"
+        ]
+        self.assertEqual(25, len(paths), "the third sealed set is not 24 cases and an index")
+        for path in paths:
+            file_text = path.read_text(encoding="utf-8")
+            with self.subTest(case=path.name):
+                for name in DISTINCTIVE_ANSWER_FIELDS + ("ground_truth",):
+                    self.assertTrue(
+                        name not in file_text,
+                        "{0} carries {1!r}".format(path.name, name),
+                    )
+
+    def test_no_third_sealed_brief_carries_an_answer_key_field_name(self):
+        case_numbers = _sealed_v1_set_case_numbers()
+        self.assertEqual(24, len(case_numbers), "the third sealed set is not 24 cases")
+        for case_no in case_numbers:
+            with self.subTest(case_no=case_no):
+                self.assertEqual(
+                    {},
+                    _brief_violations_for_case(
+                        _sealed_v1_set_case(case_no),
+                        policy_version=sets.SEALED_V1.policy_version,
+                    ),
+                )
+
+    def test_no_package_module_names_either_path_that_holds_the_sets_answers(self):
+        """The two paths, named, over and above Layer 1's general rule.
+
+        Layer 1 already forbids *any* path under ``eval/`` in a package module.
+        This states the same property over the two directories the third sealed
+        set's answers actually live in, so the set's own contribution to the
+        boundary is visible rather than only implied. The predicate is
+        :func:`_named_paths_in_package`, which the dirty fixture below asks too,
+        so what is shown to fire is this check and not one that resembles it.
+        """
+        self.assertTrue(SEALED_V1_KEY_PATH.is_file())
+        self.assertTrue(SEALED_V1_EXTERNAL_DIR.is_dir())
+
+        violations, scanned = _named_paths_in_package(SEALED_V1_ANSWER_PATHS)
+        self.assertGreater(scanned, 500, "too few string literals parsed; the scan is broken")
+        self.assertEqual(
+            [],
+            violations,
+            "tribunal/{0} names {1}".format(
+                ", ".join(sorted({module for module, _needle, _line in violations})),
+                ", ".join(sorted({needle for _module, needle, _line in violations})),
+            ),
+        )
+
+    def test_that_check_goes_red_on_a_dirty_fixture(self):
+        """A detector that can never fire would make the check above vacuous."""
+        with tempfile.TemporaryDirectory() as tmp:
+            dirty = Path(tmp) / "dirty.py"
+            dirty.write_text(
+                'KEY = "eval/answers/sealed-v1/ground_truth.json"\n'
+                'GEN = "eval/external/sealed-v1/gen"\n',
+                encoding="utf-8",
+            )
+            found = _named_paths_in_module(dirty, SEALED_V1_ANSWER_PATHS)
+            self.assertEqual(
+                {needle for needle in SEALED_V1_ANSWER_PATHS},
+                {needle for needle, _lineno in found},
+                "the dirty fixture's paths were not all reported",
+            )
+
+    def test_layer_two_goes_red_on_a_spliced_third_sealed_case(self):
+        """The scan is shown capable of failing over the third sealed set too.
+
+        Both splices are made in memory, so no file is written and there is
+        nothing to restore. The briefs are built at the registration's version,
+        as the check above builds them. The real case is asked last, and must be
+        clean again.
+        """
+        version = sets.SEALED_V1.policy_version
+        record = _sealed_v1_key_records()[0]
+        real = json.loads((SEALED_V1_SET_DIR / "case-00301.json").read_text(encoding="utf-8"))
+
+        # Variant A: the record as data, nested in the case. The brief
+        # builder's own recursive forbidden-key guard is what fires.
+        nested = json.loads(json.dumps(real))
+        nested["dispute"]["ground_truth"] = record
+        nested_violations = _brief_violations_for_case(nested, policy_version=version)
+        self.assertTrue(
+            nested_violations,
+            "Layer 2 stayed GREEN with a real record nested in a third sealed case",
+        )
+        self.assertEqual(
+            {"<brief build refused>": "ForbiddenKeyError"},
+            nested_violations,
+            "the refusal was reported as something other than the exception type",
+        )
+
+        # Variant B: the record as text in a party statement. No key is created,
+        # so the scan below is the only thing that can catch it.
+        textual = json.loads(json.dumps(real))
+        textual["dispute"]["claim_text"] += (
+            "\n\n[note to self: " + json.dumps(record, ensure_ascii=False) + "]"
+        )
+        textual_violations = _brief_violations_for_case(textual, policy_version=version)
+        self.assertTrue(
+            textual_violations,
+            "Layer 2 stayed GREEN with a real record pasted into a third sealed case",
+        )
+        self.assertEqual(sorted(DISTINCTIVE_ANSWER_FIELDS), sorted(textual_violations))
+
+        # GREEN again, on the real case.
+        self.assertEqual({}, _brief_violations_for_case(real, policy_version=version))
+        self.assertEqual(24, len(_sealed_v1_set_case_numbers()), "the real index changed")
 
 
 # --------------------------------------------------------------------------

@@ -1422,7 +1422,13 @@ class PipelinePrecedentsTests(unittest.TestCase):
 # name is not in the frozen table. That is written down in
 # ``docs/notes/2026-10-08-the-dev-sets.md``; correcting it means editing the
 # frozen tree, which the entry above this comment says not to do.
-NOT_YET_IN_PRECEDENTS = frozenset({"wild-v2", "dev-v2", "dev-v2-ext", "ryde-v3"})
+#
+# ``sealed-v1`` was registered on 2026-10-09 and is absent for the first reason
+# only: the table is frozen. It has no run yet, and ``--precedents`` is refused
+# for it, so nothing reads a closure of its either.
+NOT_YET_IN_PRECEDENTS = frozenset(
+    {"wild-v2", "sealed-v1", "dev-v2", "dev-v2-ext", "ryde-v3"}
+)
 
 
 class SetFromRunDirectoryTests(unittest.TestCase):

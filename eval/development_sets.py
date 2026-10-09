@@ -429,10 +429,53 @@ WILD_V2 = DevelopmentSet(
     ),
 )
 
+# The third sealed set, imported on 2026-10-09 and **not yet run**. Its 24 cases
+# are 301-312 and 401-412; its own manifest records that it was prepared by
+# "Claude (independent of prompt tuning; never saw dev-set misses or prompts)".
+# Its registration fixes policy version 6, the version frozen at the tag
+# ``freeze-2026-10-09``, and its single run is made from a commit whose
+# ``tribunal/``, ``prompts/`` and ``policy/`` trees equal those at that tag, at
+# the arguments recorded below -- the configuration of the two earlier sealed
+# runs. It is a different set from ``wild`` and ``wild-v2`` and is never added
+# to either, to the combined figure or to ``--set all``.
+#
+# The key in this archive was written under policy version 1 and will be
+# re-derived under version 6 by the key owner before the run; the registration
+# reads the key's digest from the key file rather than pinning it here, so that
+# replacement touches only ``eval/answers/sealed-v1/``.
+SEALED_V1 = DevelopmentSet(
+    name="sealed-v1",
+    cases=tuple(
+        entry["case_no"]
+        for entry in loader.load_external_index(
+            loader.EXTERNAL_DIR / run_benchmark.SEALED_V1_SET_RUNS_SUBDIR
+        )
+    ),
+    key_path=ANSWER_DIR / run_benchmark.SEALED_V1_SET_RUNS_SUBDIR / "ground_truth.json",
+    runs_subdir=run_benchmark.SEALED_V1_SET_RUNS_SUBDIR,
+    case_root=loader.EXTERNAL_DIR / run_benchmark.SEALED_V1_SET_RUNS_SUBDIR,
+    summary=(
+        "the third sealed set (sealed-v1): 24 cases prepared by an independent "
+        "author and imported on 2026-10-09; it is run once, plainly, from a "
+        "commit whose tribunal/, prompts/ and policy/ trees equal those at "
+        "freeze-2026-10-09, at the policy version 6 this registration fixes, and "
+        "that single run is the submission's third generalisation figure"
+    ),
+    sealed=True,
+    policy_version=6,
+    run_arguments=RunArguments(
+        model=RUNTIME_MODEL,
+        judge_votes=4,
+        verify_drafts=False,
+        timeout_seconds=900.0,
+        concurrency=2,
+    ),
+)
+
 # The sets that are run **once**, in the order the report prints them. Each is
 # printed in a section of its own and is never part of ``--set all`` or of the
 # combined figure.
-SEALED_SETS: Tuple[DevelopmentSet, ...] = (SEALED_SET, WILD_V2)
+SEALED_SETS: Tuple[DevelopmentSet, ...] = (SEALED_SET, WILD_V2, SEALED_V1)
 
 # The sets that exist to be run again. They are registered by name and are
 # deliberately outside the tuples above: ``--set all``, the combined figure
@@ -534,14 +577,16 @@ DEVELOPMENT_DATA_CAVEAT = (
     "a sum over two sets that were drafted differently and share one template, "
     "so it is not a generalisation figure and does not replace the corpus "
     "number. The generalisation figures the submission reports belong to the "
-    "two sealed sets, each run exactly once: the held-out set's, drafted without "
-    "access to this repository, from the commit tagged freeze-2026-09-30; and "
+    "three sealed sets, each run exactly once: the held-out set's, drafted without "
+    "access to this repository, from the commit tagged freeze-2026-09-30; "
     "the second sealed set's, prepared by OpenAI Codex -- whether Codex could "
     "read this repository while preparing it is not recorded -- from a commit "
     "whose tribunal/, prompts/ and policy/ trees equal those at "
-    "freeze-2026-10-03. "
-    "Neither figure here is either of them, and the two are "
-    "never added to each other either."
+    "freeze-2026-10-03; and the third sealed set's, prepared by an independent "
+    "author and imported on 2026-10-09, from a commit whose tribunal/, prompts/ "
+    "and policy/ trees equal those at freeze-2026-10-09. "
+    "Neither figure here is any of them, and no two of the three are "
+    "ever added to each other."
 )
 
 # The held-out set is printed on its own, and this is why. A sum of a
@@ -575,6 +620,23 @@ WILD_V2_CAVEAT = (
     "development key and not the held-out set's key either."
 )
 
+# The third sealed set is printed on its own for the same reasons and with one
+# of its own: its registration fixes policy version 6, so its figure is a
+# measurement of version 6 and of nothing else.
+SEALED_V1_CAVEAT = (
+    "The third sealed set is not a development set and is never added to the "
+    "combined figure above, to the held-out set's figure or to the second "
+    "sealed set's. It was prepared by an independent author and imported on "
+    "2026-10-09, and its single run is made from a commit whose tribunal/, "
+    "prompts/ and policy/ trees equal those at freeze-2026-10-09 -- every event "
+    "the run writes records the commit it was made from -- at the policy "
+    "version 6 its registration fixes; that single run is the third "
+    "generalisation figure the submission reports. It is absent from "
+    "data/index.json and is graded against "
+    "eval/answers/sealed-v1/ground_truth.json, which is neither development key "
+    "and not either other sealed set's key."
+)
+
 # The heading and the caveat each sealed set is printed under, so a set added to
 # ``SEALED_SETS`` cannot be printed without both.
 SEALED_SET_SECTIONS = {
@@ -586,6 +648,11 @@ SEALED_SET_SECTIONS = {
         "The second sealed set (wild-v2), on its own and never in the combined "
         "figure:",
         WILD_V2_CAVEAT,
+    ),
+    SEALED_V1.name: (
+        "The third sealed set (sealed-v1), on its own and never in the combined "
+        "figure:",
+        SEALED_V1_CAVEAT,
     ),
 }
 
