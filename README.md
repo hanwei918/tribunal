@@ -90,6 +90,9 @@ reads them is `docs/notes/2026-10-10-the-version-6-development-runs.md`.
 | Sample case 901 at version 6 | DRIVER_COMPENSATION 4.00, confidence 0.9, unanimous | `runs/ryde-v3/policy-v6/deepseek-deepseek-flash/` | `python3 -m eval.v6_runs --report` | no |
 | `dev-v2` case 1779 (prompt injection in the chat) at version 6 | ESCALATE | `runs/dev-v2/policy-v6/deepseek-deepseek-flash/`, `eval/answers/dev-v2/ground_truth.json` | `python3 -m eval.v6_runs --report` | no |
 | Cost of the version-6 runs, from the transcripts | corpus 2.3053 USD; dev-v2-ext 7.9197 USD; dev-v2 0.0377 USD; ryde-v3 0.0638 USD; precedents 0.9289 USD | the five run directories' `case-*.json` (`tokens`) | `python3 -m eval.v6_runs --report` | no |
+| Fairness, both version-6 runs — errors towards the rider / towards the driver / to an escalation | 0 / 1 / 5 | `runs/policy-v6/deepseek-deepseek-flash/`, `runs/dev-v2-ext/policy-v6/deepseek-deepseek-flash/`, `eval/answers/ground_truth.json`, `eval/answers/dev-v2-ext/ground_truth.json` | `python3 -m eval.fairness --report` | no |
+| Fairness, both version-6 runs — position-swap agreement on all four graded fields | 136/141 = 96.5% | `runs/policy-v6/deepseek-deepseek-flash/`, `runs/dev-v2-ext/policy-v6/deepseek-deepseek-flash/` | `python3 -m eval.fairness --report` | no |
+| Fairness, both version-6 runs — expected calibration error | 0.088 | `runs/policy-v6/deepseek-deepseek-flash/`, `runs/dev-v2-ext/policy-v6/deepseek-deepseek-flash/` | `python3 -m eval.fairness --report` | no |
 
 **What these sets are.** `dev-v2-ext` is development data, drafted by the key
 owner for policy version 3; it is not a sealed set and it is not a generalisation
@@ -229,6 +232,38 @@ protocol. The commands that made them, and which of them were paid for, are:
 | development sets | `python3 -m eval.run_benchmark`, `python3 -m eval.development_sets --set codex` | 2026-09-22 to 2026-09-24 |
 | ablations | the same two with `--ablate admissibility` or `--ablate clause-notes` | 2026-09-29 |
 | sample case | `python3 -m eval.run_benchmark --external data/external/ryde/case-00901.json --runs-dir runs/rerun-2026-09-29 --timeout 900` | 2026-09-29 |
+
+## Fairness and calibration
+
+![Calibration of the version-6 judge drafts](docs/calibration-v6.svg)
+
+The judging asks about responsible AI, fairness and transparency, and the
+version-6 runs already hold what three such measurements need. `eval/fairness.py`
+reads the corpus run and the `dev-v2-ext` run — separately and together — and
+prints them; the three rows in the table above are its combined figures, and the
+chart is the reliability diagram it draws with
+`python3 -m eval.fairness --chart docs/calibration-v6.svg`. The note that reads
+them is `docs/notes/2026-10-10-fairness-and-calibration.md`.
+
+- **Which way the errors lean.** Of the 149 cases the two runs cover, 8 differ
+  from their key: 1 moved towards the driver (211), 5 to an escalation (107,
+  2749, 2809, 2829 and 2853), and 2 away from one (112 and 2858). None moved
+  towards the rider, and no case has both sides a refund of a different size.
+- **The position swap.** Of the 141 cases whose swapped draft and at least one
+  sampled draft are valid, the swapped draft agrees with the sampled majority on
+  all four graded fields in 136 and on the ruling alone in 139. It disagrees on
+  all four in 103, 107, 2723, 2749 and 2809, and on the ruling in 107 and 2809.
+- **Calibration.** Over the 567 valid judge drafts the expected calibration
+  error is 0.088. Drafts below the 0.70 floor are right 27 times in 29; drafts at
+  or above it are right 523 times in 538. The four drafts of one case answer the
+  same brief, so they are not independent draws, and every rate here is a count
+  over drafts rather than over independent trials.
+
+A split by `dispute.filed_by` is **not** reported: every `dev-v2-ext` dispute
+and 28 of the 29 corpus disputes were filed by the rider, so it has one case on
+one side. The counts come from the sets' own public case files, which is the one
+place the runs do not record; the three measurements above are what is measured
+instead.
 
 ## Limitations and disclosures
 
@@ -493,7 +528,7 @@ off 0.7 are each reported.
 | `policy/` | The policy the agents are briefed against, as three JSON files. `policy/amendments/` holds `0001-pol-rd-13` (approved), so the repository is at **policy version 2**, and the second sealed set was run at version 2. |
 | `prompts/v1/` | The six prompts: the advocate template with its two stance blocks, the judge, the verifier and the policy drafter. |
 | `tribunal/` | The pipeline — loader, prepass, facts, brief, referee, pipeline, transcript, money, events, llm, model, precedents, policy versions. |
-| `eval/` | The benchmark and the measurement: the runner, the grader, the development-set runner, the baselines, the policy-gap loop, the verifier's measurement mode, and the event-log reader. `eval/answers/` holds the frozen keys. `eval/external/` holds answer-bearing source documents, which are **not** agent input. |
+| `eval/` | The benchmark and the measurement: the runner, the grader, the development-set runner, the baselines, the policy-gap loop, the verifier's measurement mode, the fairness and calibration measurement, and the event-log reader. `eval/answers/` holds the frozen keys. `eval/external/` holds answer-bearing source documents, which are **not** agent input. |
 | `runs/` | The benchmark's own output, committed as produced. `runs/README.md` says which directory holds what and how to read one run directory. |
 | `tests/` | The suite. Nothing in it makes a model call. |
 | `ui/` | `ui/build.py` and the one committed page it builds. |

@@ -39,6 +39,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from eval import (  # noqa: E402
     baselines,
     development_sets,
+    fairness,
     grade,
     run_benchmark,
     sealed_report,
@@ -462,6 +463,37 @@ def v6_costs() -> str:
     )
 
 
+# The three fairness figures are the only ones that read the runs' transcripts,
+# which is the most expensive thing this module does, so they are computed once
+# and read twice: ``expected()`` is called by two tests.
+_FAIRNESS_FIGURES: Dict[str, str] = {}
+
+
+def fairness_figures() -> Dict[str, str]:
+    """The three fairness rows, over both version-6 development runs together.
+
+    Read through ``eval.fairness`` rather than re-derived here, so the README
+    and ``python3 -m eval.fairness --report`` cannot come to print the same
+    figure two ways.
+    """
+    if not _FAIRNESS_FIGURES:
+        lean, swap, calibration = fairness.combined_measurements()
+        _FAIRNESS_FIGURES.update(
+            {
+                "Fairness, both version-6 runs — errors towards the rider / towards the driver / to an escalation": fairness.error_lean_cell(
+                    lean
+                ),
+                "Fairness, both version-6 runs — position-swap agreement on all four graded fields": fairness.swap_agreement_cell(
+                    swap
+                ),
+                "Fairness, both version-6 runs — expected calibration error": fairness.calibration_error_cell(
+                    calibration
+                ),
+            }
+        )
+    return dict(_FAIRNESS_FIGURES)
+
+
 def v6_expected() -> Dict[str, str]:
     """Every figure the README's first block states, recomputed from the runs."""
     dev = v6_runs.run_by_name("dev-v2-ext")
@@ -470,7 +502,7 @@ def v6_expected() -> Dict[str, str]:
     true_positives = len(dev_calibration.true_positives)
     corpus_report = v6_report(v6_runs.run_by_name("corpus"))
     with_precedents, without_precedents = v6_precedent_figures()
-    return {
+    figures = {
         "dev-v2-ext — four-field exact": v6_rate(
             dev_report.exact_matches, dev_report.total
         ),
@@ -499,6 +531,8 @@ def v6_expected() -> Dict[str, str]:
         "dev-v2 case 1779 (prompt injection in the chat) at version 6": v6_case_1779(),
         "Cost of the version-6 runs, from the transcripts": v6_costs(),
     }
+    figures.update(fairness_figures())
+    return figures
 
 
 # --------------------------------------------------------------------------
