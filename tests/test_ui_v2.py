@@ -16,12 +16,15 @@ pages were built from rather than against a number typed in here:
   equals ``ops.escalation``'s, and a decided case has no such tab;
 * the appeal text matches ``POL-GEN-04``'s rule text.
 
-**The suite builds the site three times and says why.** A build reads 151 cases,
+**The suite builds the site five times and says why.** A build reads 151 cases,
 rebuilds each case's brief and builds 26 escalation packets, which is about
 forty seconds; the first class compares the committed pages with a fresh build
 (that is what ``--check`` does), the second compares two builds with each other,
-and the third runs the command line the owner will run. Each class memoises what
-it read, so no test builds the site for itself.
+the third runs the command line the owner will run, and the fourth runs two
+builds in subprocesses under two different ``PYTHONHASHSEED`` values and compares
+them, because a row order that depended on a set or a dict would change its bytes
+when the interpreter's string hash seed changed. Each class memoises what it
+read, so no test builds the site for itself.
 
 Two things these tests deliberately do not do. They do not search a page for the
 text ``http`` to prove it loads nothing external -- the agents' own explanations
@@ -56,11 +59,17 @@ from ops import escalation  # noqa: E402
 from ui.v2 import build as v2  # noqa: E402
 
 # The four runs the site is drawn from, and the case root each set loads through.
+# The order is the builder's own set order -- the order the set selector lists the
+# sets in, and the order the queue's rows are written in -- so a test that reads
+# the runs here reads them in the order the page does.
+# ``DeterminismTests.test_the_run_order_is_the_builders_own`` holds the two
+# together, because an order that drifted apart from the builder's is exactly
+# what made the two determinism tests disagree about the row order.
 SET_RUNS: Tuple[Tuple[str, str], ...] = (
     ("corpus", "runs/policy-v6/deepseek-deepseek-flash"),
     ("dev-v2-ext", "runs/dev-v2-ext/policy-v6/deepseek-deepseek-flash"),
-    ("dev-v2", "runs/dev-v2/policy-v6/deepseek-deepseek-flash"),
     ("ryde-v3", "runs/ryde-v3/policy-v6/deepseek-deepseek-flash"),
+    ("dev-v2", "runs/dev-v2/policy-v6/deepseek-deepseek-flash"),
 )
 
 CASE_ROOTS: Mapping[str, str] = {
@@ -249,6 +258,44 @@ def second_build() -> Dict[str, str]:
     return _SECOND_BUILD
 
 
+# The script the hash-seed check runs in each subprocess. It builds the site and
+# prints one sha256 per page, so the two subprocesses' bytes are compared without
+# a multi-megabyte pipe: two pages with the same digest are the same bytes.
+_HASH_SEED_SCRIPT = (
+    "import hashlib, json, sys\n"
+    "from ui.v2 import build\n"
+    "pages = {}\n"
+    "for path, text in build.pages():\n"
+    "    pages[path.name] = hashlib.sha256(text.encode('utf-8')).hexdigest()\n"
+    "sys.stdout.write(json.dumps(pages, sort_keys=True))\n"
+)
+
+
+def build_under_hash_seed(seed: str) -> Dict[str, str]:
+    """One page digest per page, from a build in a process of its own.
+
+    ``PYTHONHASHSEED`` salts every string hash in that process, so a build whose
+    output depended on a set or a dict -- or on the order a directory listing
+    came back in -- would come back with different digests under two seeds.
+    """
+    environment = dict(os.environ)
+    environment["PYTHONHASHSEED"] = seed
+    done = subprocess.run(
+        [sys.executable, "-c", _HASH_SEED_SCRIPT],
+        cwd=str(PROJECT_ROOT),
+        capture_output=True,
+        text=True,
+        env=environment,
+    )
+    if done.returncode != 0:
+        raise AssertionError(
+            "a build under PYTHONHASHSEED={0} failed:\n{1}".format(
+                seed, done.stderr[-4000:]
+            )
+        )
+    return json.loads(done.stdout)
+
+
 def committed_pages() -> Dict[str, str]:
     return {
         path.relative_to(v2.DIST_DIR).as_posix(): path.read_text(encoding="utf-8")
@@ -285,6 +332,30 @@ class DeterminismTests(unittest.TestCase):
         self.assertEqual(sorted(first), sorted(again), "the two builds made different files")
         differing = sorted(name for name in first if first[name] != again[name])
         self.assertEqual([], differing, "two builds of one site produced different bytes")
+
+    def test_two_builds_under_different_hash_seeds_are_byte_identical(self):
+        """The row order is the files', not the interpreter's.
+
+        A row order that came out of a set or a dict -- or out of an unsorted
+        directory listing -- would move when the interpreter's string hash seed
+        moved, because a Python string hash is salted per process. Two builds run
+        in their own processes under two seeds, and every page's digest is
+        compared. This is the check that caught the queue's row order.
+        """
+        first = build_under_hash_seed("0")
+        second = build_under_hash_seed("1")
+        self.assertEqual(sorted(first), sorted(second))
+        differing = sorted(name for name in first if first[name] != second[name])
+        self.assertEqual([], differing, "two hash seeds produced different bytes")
+
+    def test_the_run_order_is_the_builders_own(self):
+        """The test reads the runs in the order the queue writes them.
+
+        The order here is typed in this file, so it can drift from the builder's
+        own; that drift is what made the two determinism tests disagree about
+        whether 901 came before 1779.
+        """
+        self.assertEqual(tuple(v2.SET_ORDER), tuple(name for name, _ in SET_RUNS))
 
     def test_every_committed_page_equals_a_fresh_build(self):
         committed = committed_pages()
@@ -393,7 +464,13 @@ class SelfContainedTests(unittest.TestCase):
                     self.assertNotIn(tag, text, "{0} embeds {1}".format(name, tag))
 
     def test_every_link_stays_inside_the_site(self):
-        """The only links are the queue and the case pages beside it."""
+        """The only links are the pages beside it and a fragment on the page.
+
+        A notice links to the judge's explanation with ``#judge-explanation``, a
+        fragment on its own page; every other link is one of the pages this site
+        commits. A fragment is checked against the page that carries it, so a
+        link to an anchor that is not there is still a failure.
+        """
         names = set(built_pages())
         for name, text in sorted(built_pages().items()):
             scan = _ResourceScan()
@@ -401,6 +478,13 @@ class SelfContainedTests(unittest.TestCase):
             for _tag, url in scan.anchors:
                 with self.subTest(page=name, url=url):
                     self.assertFalse(is_external_reference(url))
+                    if url.startswith("#"):
+                        self.assertIn(
+                            'id="{0}"'.format(url[1:]),
+                            text,
+                            "{0} links to {1}, an anchor it does not carry".format(name, url),
+                        )
+                        continue
                     self.assertIn(url, names, "{0} links to {1}, which is not a page".format(name, url))
 
     def test_no_page_fetches_anything_at_runtime(self):
@@ -557,35 +641,121 @@ class SealedSetTests(unittest.TestCase):
 # What each case page shows
 # --------------------------------------------------------------------------
 class CasePageFiguresTests(unittest.TestCase):
-    """The ruling, the two amounts and the confidence, against the case file."""
+    """The ruling, the money and the confidence, against the case file."""
+
+    def expected_money(self, case: Mapping[str, Any]) -> str:
+        """What the page must say about money, chosen by the ruling value.
+
+        POL-GEN-03's single exception is the one that matters: on a
+        ``DRIVER_COMPENSATION`` ruling ``amount_sgd`` carries the same figure as
+        ``driver_compensation_sgd`` and is the amount the ruling moves, not a
+        refund, so a page that called it one would be stating a policy the
+        policy does not state.
+        """
+        ruling = inner_ruling(case["document"])
+        value = str(ruling.get("ruling"))
+        currency = currency_of(case["document"])
+        filed_by = (
+            public_case(case["set"], case["case_no"]).get("dispute") or {}
+        ).get("filed_by")
+        if value in ("FULL_REFUND", "PARTIAL_REFUND"):
+            return "Refund to the {0}: {1}".format(
+                str(filed_by).lower(), money(ruling.get("amount_sgd"), currency)
+            )
+        if value == "DRIVER_COMPENSATION":
+            return "The fee stands. The driver is paid {0}. No refund.".format(
+                money(ruling.get("driver_compensation_sgd"), currency)
+            )
+        if value == "NO_ACTION":
+            return "No money moves. The charge stands."
+        if value == "ESCALATE":
+            return "No money moves. The disputed amount is held."
+        raise AssertionError("no money rule is stated for " + value)
 
     def test_every_case_page_shows_its_own_ruling_and_money(self):
-        currency = currency_of(cases()[0]["document"])
+        """The ruling in words and code, and the money by ruling value.
+
+        A case sent to a reviewer is the one shape that differs: no ruling was
+        issued, so the page headlines the reason the case reached a reviewer
+        rather than a ruling, and the ruling value ``ESCALATE`` appears where the
+        packet carries it.
+        """
         for case in cases():
-            document = case["document"]
-            ruling = inner_ruling(document)
+            value = str(inner_ruling(case["document"]).get("ruling"))
             page = built_pages()["case-{0:05d}.html".format(case["case_no"])]
             with self.subTest(case=case["case_no"]):
+                if case["trigger"] is None:
+                    self.assertIn(
+                        "<strong>{0}</strong>".format(v2.ruling_words(value)),
+                        page,
+                        "the ruling is not shown in words",
+                    )
+                else:
+                    votes = int(
+                        (case["document"].get("configuration") or {}).get("judge_votes")
+                    )
+                    self.assertIn(
+                        TRIGGER_WORDS[case["trigger"]].format(votes=votes),
+                        page,
+                        "the reason is not shown in words",
+                    )
+                    self.assertIn(
+                        '<span class="mono">{0}</span>'.format(case["trigger"]),
+                        page,
+                        "the reason code is not shown after the words",
+                    )
                 self.assertIn(
-                    "<strong>{0}</strong>".format(ruling.get("ruling")),
+                    '<span class="mono">{0}</span>'.format(value),
                     page,
-                    "the ruling value is not shown",
+                    "the ruling code is not shown",
                 )
                 self.assertIn(
-                    "Refund to the filing party: {0}. Driver compensation: {1}.".format(
-                        money(ruling.get("amount_sgd"), currency),
-                        money(ruling.get("driver_compensation_sgd"), currency),
-                    ),
+                    self.expected_money(case),
                     page,
-                    "the two amounts are not shown as the case file carries them",
+                    "the money is not stated by the ruling value",
                 )
+
+    def test_case_901_says_the_fee_stands_and_the_driver_is_paid(self):
+        """The case the sheet names: its amount is not a refund.
+
+        901 is a ``DRIVER_COMPENSATION`` ruling whose ``amount_sgd`` is the same
+        figure as its ``driver_compensation_sgd``. POL-GEN-03 says that figure is
+        the amount the ruling moves and not a refund, so the page must not offer
+        it as one.
+        """
+        rows = [
+            row for row in cases() if row["set"] == "ryde-v3" and row["case_no"] == 901
+        ]
+        self.assertEqual(1, len(rows))
+        case = rows[0]
+        ruling = inner_ruling(case["document"])
+        self.assertEqual("DRIVER_COMPENSATION", ruling.get("ruling"))
+        currency = currency_of(case["document"])
+        page = built_pages()["case-00901.html"]
+        self.assertIn(
+            "The fee stands. The driver is paid {0}. No refund.".format(
+                money(ruling.get("driver_compensation_sgd"), currency)
+            ),
+            page,
+        )
+        self.assertNotIn(
+            "Refund to the rider: {0}".format(money(ruling.get("amount_sgd"), currency)),
+            page,
+        )
+        self.assertNotIn("Refund to the filing party", page)
 
     def test_every_case_page_shows_its_own_confidence_and_the_floor(self):
         floor = read_json(PROJECT_ROOT / "policy" / "v3" / "general.json")["confidence_floor"]
         for case in cases():
-            confidence = inner_ruling(case["document"]).get("confidence")
             page = built_pages()["case-{0:05d}.html".format(case["case_no"])]
             with self.subTest(case=case["case_no"]):
+                if case["trigger"] is not None:
+                    # A case sent to a reviewer has no ruling to be confident in,
+                    # so the bar is replaced by the reason in words.
+                    self.assertIn("No automated ruling was issued.", page)
+                    self.assertNotIn('role="img"', page)
+                    continue
+                confidence = inner_ruling(case["document"]).get("confidence")
                 if confidence is None:
                     self.assertIn("No confidence is recorded", page)
                     continue
@@ -611,10 +781,22 @@ class CasePageFiguresTests(unittest.TestCase):
 # --------------------------------------------------------------------------
 # The queue's five figures
 # --------------------------------------------------------------------------
+# The words the sheet gives for each reason code. They are typed here, in the
+# test, rather than read from the builder, so a page that showed a code where the
+# words belong is caught. The no-majority phrase names the panel size, which is
+# the run's own judge_votes rather than a number typed anywhere.
+TRIGGER_WORDS: Mapping[str, str] = {
+    "GEN08_SCOPE": "safety or complaint flag",
+    "NO_VALID_DRAFTS": "no judge draft passed the code checks",
+    "NO_MAJORITY": "the {votes} drafts did not agree",
+    "JUDGE_ESCALATE": "the judge escalated under the policy",
+}
+
+
 class QueueFiguresTests(unittest.TestCase):
     """The five figures, recomputed from the run files and compared."""
 
-    def figures(self) -> Dict[str, str]:
+    def figures(self) -> Dict[str, Any]:
         rows = cases()
         total = len(rows)
         reviewer = [row for row in rows if row["trigger"] is not None]
@@ -622,9 +804,6 @@ class QueueFiguresTests(unittest.TestCase):
         counts = {name: 0 for name in TRIGGERS}
         for row in reviewer:
             counts[row["trigger"]] += 1
-        tally = ", ".join(
-            "{0} {1}".format(name, counts[name]) for name in TRIGGERS if counts[name]
-        )
         walls = [
             Decimal(str(row["document"]["wall_seconds"])) for row in rows
         ]
@@ -634,15 +813,25 @@ class QueueFiguresTests(unittest.TestCase):
             int((row["document"].get("configuration") or {}).get("policy_version"))
             for row in rows
         }
+        votes = {
+            int((row["document"].get("configuration") or {}).get("judge_votes"))
+            for row in rows
+        }
         self.assertEqual(1, len(models))
         self.assertEqual(1, len(versions))
+        self.assertEqual(1, len(votes))
+        vote_count = votes.pop()
         return {
             "total": str(total),
             "automatic": "{0} of {1}".format(automatic, total),
             "automatic_share": "{0:.1f}%".format(Decimal(automatic) * 100 / Decimal(total)),
             "reviewer": "{0} of {1}".format(len(reviewer), total),
             "reviewer_share": "{0:.1f}%".format(Decimal(len(reviewer)) * 100 / Decimal(total)),
-            "tally": tally,
+            "triggers": [
+                (TRIGGER_WORDS[name].format(votes=vote_count), counts[name])
+                for name in TRIGGERS
+                if counts[name]
+            ],
             "median_time": "{0:.1f} s".format(median(walls)),
             "median_cost": "{0:.4f} USD".format(median(costs)),
             "version": "v{0}".format(versions.pop()),
@@ -653,10 +842,23 @@ class QueueFiguresTests(unittest.TestCase):
         figures = self.figures()
         text = index_text()
         for key, value in sorted(figures.items()):
-            if key == "total":
+            if key in ("total", "triggers"):
                 continue
             with self.subTest(figure=key):
                 self.assertIn(value, text, "{0} is not on the queue page".format(key))
+
+    def test_the_reviewer_triggers_card_lists_one_trigger_per_line(self):
+        """Each trigger on a line of its own: the words first, then the count."""
+        text = index_text()
+        for words, count in self.figures()["triggers"]:
+            with self.subTest(trigger=words):
+                self.assertIn(
+                    '<li><span class="t">{0}</span> <span class="n">{1}</span></li>'.format(
+                        words, count
+                    ),
+                    text,
+                    "the reviewer-triggers card does not list {0}".format(words),
+                )
 
     def test_the_figures_are_not_the_whole_of_it(self):
         """The two shares are complements of one queue, not of two."""
@@ -748,13 +950,39 @@ class AppealTextTests(unittest.TestCase):
             out.append(character if ord(character) < 128 else "&#{0};".format(ord(character)))
         return "".join(out).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
+    # POL-GEN-04's own sentence about the route: "may appeal it once, within 30
+    # days". The line the page carries is built from those two numbers, so the
+    # test reads them from the clause rather than typing them.
+    APPEAL_LINE_RE = re.compile(
+        r"may appeal it (once|twice|[0-9]+ times), within ([0-9]+) days"
+    )
+
+    def appeal_line(self) -> str:
+        """POL-GEN-04's route in one line, from the clause's own numbers."""
+        match = self.APPEAL_LINE_RE.search(self.rule_text("POL-GEN-04"))
+        self.assertIsNotNone(match, "POL-GEN-04 no longer states the route")
+        return (
+            "Either party may appeal {0} within {1} days. A different human "
+            "reviewer hears it, and only record evidence may be added.".format(
+                match.group(1), match.group(2)
+            )
+        )
+
     def test_the_appeal_text_is_pol_gen_04(self):
-        appeal = self.escaped(self.rule_text("POL-GEN-04"))
-        self.assertIn("30 days", appeal)
+        clause = self.escaped(self.rule_text("POL-GEN-04"))
+        self.assertIn("30 days", clause)
+        line = self.appeal_line()
         for case in cases():
             page = built_pages()["case-{0:05d}.html".format(case["case_no"])]
             with self.subTest(case=case["case_no"]):
-                self.assertIn(appeal, page, "the appeal text is not POL-GEN-04's rule")
+                if case["trigger"] is not None:
+                    # No ruling was issued, so there is no appeal path to show.
+                    self.assertNotIn(line, page)
+                    self.assertNotIn("Read POL-GEN-04 in full", page)
+                    continue
+                self.assertIn(line, page, "the appeal is not POL-GEN-04's route")
+                self.assertIn("Read POL-GEN-04 in full", page)
+                self.assertIn(clause, page, "the full clause is not on the page")
 
     def test_the_execution_text_is_pol_gen_05(self):
         """And the execution sentence carries the policy's own threshold."""

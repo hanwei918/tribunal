@@ -164,14 +164,64 @@ TRIGGER_ORDER: Tuple[str, ...] = (
 # The ruling value that means "a human decides this".
 ESCALATE = pipeline_module.ESCALATE
 
+# The two ruling values that return money to the filing party, and the one that
+# leaves the present state standing. ``ESCALATE`` and ``DRIVER_COMPENSATION``
+# come from the pipeline; these are named here because nothing else names them.
+FULL_REFUND = "FULL_REFUND"
+PARTIAL_REFUND = "PARTIAL_REFUND"
+NO_ACTION = "NO_ACTION"
+REFUND_RULINGS: Tuple[str, ...] = (FULL_REFUND, PARTIAL_REFUND)
+
 # The two outcomes a queue row can have, as the filter row names them.
 OUTCOME_AUTO = "auto"
 OUTCOME_REVIEWER = "reviewer"
 
+# The words a ruling value is shown under, before its code. These are the words
+# the track brief uses for the five values; the code follows in small monospace,
+# so a reader meets the meaning first and the vocabulary the policy names after
+# it. A value with no words of its own is shown as the code itself.
+RULING_WORDS: Mapping[str, str] = {
+    "FULL_REFUND": "Full refund",
+    "PARTIAL_REFUND": "Partial refund",
+    "NO_ACTION": "No change",
+    "DRIVER_COMPENSATION": "Fee stands, driver compensated",
+    "ESCALATE": "Sent to a human reviewer",
+}
+
+# The words a reviewer trigger is shown under, before its code. Three of the
+# four are fixed phrases. The fourth -- ``NO_MAJORITY`` -- names the panel size,
+# so it is built from the run's own count of drafts rather than typed here, and
+# :func:`trigger_words` is what builds it. A code with no phrase of its own is
+# shown as the code.
+TRIGGER_WORDS: Mapping[str, str] = {
+    TRIGGER_SCOPE: "safety or complaint flag",
+    TRIGGER_NO_VALID_DRAFTS: "no judge draft passed the code checks",
+    TRIGGER_JUDGE: "the judge escalated under the policy",
+}
+
+# The words the filing party is shown under, by the loader's own role.
+FILED_BY_WORDS: Mapping[str, str] = {
+    "RIDER": "Rider",
+    "DRIVER": "Driver",
+}
+
+# What a case sent to a reviewer says where a decided case carries its
+# provisional-ruling disclosure.
+NO_AUTOMATED_RULING = (
+    "No automated ruling was issued. A human reviewer decides this case."
+)
+
+# The set order, as an index. The queue's row order is this order and then the
+# case number; nothing about a directory listing or an interpreter's string hash
+# seed may decide it.
+SET_ORDER_INDEX: Mapping[str, int] = {
+    name: index for index, name in enumerate(SET_ORDER)
+}
+
 CASE_FILE_RE = re.compile(r"^case-(\d{5})\.json$")
 
-# The five figures the queue prints, and the six steps a case page walks. Both
-# are tuples so their order is a fact about this file rather than about a dict.
+# The six steps a case page walks. It is a tuple so its order is a fact about
+# this file rather than about a dict.
 STEP_TITLES: Tuple[str, ...] = (
     "Evidence pack",
     "Both sides argue",
@@ -279,6 +329,18 @@ def _attribute(value: Any) -> str:
     if value is None:
         return ""
     return _entity(html.escape(str(value), quote=True))
+
+
+def _coded(words: Any, code: Any, strong: bool = False) -> str:
+    """The plain words first, the code after them in small monospace.
+
+    Every place a reader meets a ruling value or a reason code is drawn with
+    this: the words carry the meaning, and the code follows in ``.mono`` so the
+    vocabulary the policy names is still on the page. The words are escaped
+    here, so a caller passes the rendered HTML straight through.
+    """
+    word_html = "<strong>{0}</strong>".format(_text(words)) if strong else _text(words)
+    return '{0} <span class="mono">{1}</span>'.format(word_html, _text(code))
 
 
 def _money(value: Any, currency: str) -> str:
@@ -416,28 +478,99 @@ def _policy_facts(category: str, version: int) -> PolicyFacts:
     )
 
 
-def plain_words(policy: PolicyFacts, ruling_value: str) -> str:
-    """POL-GEN-03's own sentence for one ruling value.
+def ruling_words(ruling_value: Any) -> str:
+    """The words a ruling value is shown under, before its code."""
+    return RULING_WORDS.get(str(ruling_value), str(ruling_value))
 
-    The clause states each of the five values as ``VALUE: <sentence>``, so the
-    definition is the text between the value's marker and the end of its first
-    sentence. A value the clause does not define is refused rather than
-    described by hand: a page that paraphrased the vocabulary would be stating a
-    policy the policy does not state.
+
+def trigger_words(trigger: str, votes: int) -> str:
+    """The words a reviewer trigger is shown under, before its code.
+
+    The no-majority phrase names the panel size -- "the four drafts did not
+    agree" -- and the count is the run's own number of judge drafts, so the
+    number on the page is read from the run rather than typed here.
     """
-    rule = policy.rule("POL-GEN-03")
-    marker = ruling_value + ": "
-    start = rule.find(marker)
-    if start < 0:
-        raise BuildError(
-            "POL-GEN-03 states no definition for the ruling value {0!r}".format(
-                ruling_value
-            )
+    if trigger == TRIGGER_NO_MAJORITY:
+        return "the {0} drafts did not agree".format(votes)
+    return TRIGGER_WORDS.get(trigger, trigger)
+
+
+def filed_by_words(value: Any) -> str:
+    """The words the filing party is shown under, before its role code."""
+    return FILED_BY_WORDS.get(str(value), str(value))
+
+
+def money_statement(
+    ruling: Mapping[str, Any], currency: str, filed_by: Any
+) -> str:
+    """What money moves, stated by the ruling value (POL-GEN-03).
+
+    POL-GEN-03 says ``amount_sgd`` is the refund to the filing party on every
+    ruling but one. Its single exception is ``DRIVER_COMPENSATION``: there the
+    field carries the same figure as ``driver_compensation_sgd`` -- the amount
+    the ruling moves, not a second payment and not a refund -- so the sentence
+    is chosen by the ruling value and never calls that figure a refund. A value
+    the clause does not cover is refused rather than described by hand.
+    """
+    value = str(ruling.get("ruling"))
+    if value in REFUND_RULINGS:
+        who = str(filed_by or "").strip().lower() or "filing party"
+        return "Refund to the {0}: {1}".format(
+            who, _money(ruling.get("amount_sgd"), currency)
         )
-    rest = rule[start + len(marker) :]
-    end = rest.find(". ")
-    sentence = rest if end < 0 else rest[: end + 1]
-    return sentence.strip()
+    if value == pipeline_module.DRIVER_COMPENSATION:
+        return "The fee stands. The driver is paid {0}. No refund.".format(
+            _money(ruling.get("driver_compensation_sgd"), currency)
+        )
+    if value == NO_ACTION:
+        return "No money moves. The charge stands."
+    if value == ESCALATE:
+        return "No money moves. The disputed amount is held."
+    raise BuildError(
+        "POL-GEN-03 states no money rule for the ruling value {0!r}".format(value)
+    )
+
+
+# POL-GEN-04's own sentence about the route: "may appeal it once, within 30
+# days". Both numbers are read from it, so a clause whose sentence has moved is
+# a refusal rather than a re-typed figure.
+_APPEAL_RE = re.compile(
+    r"may appeal it (once|twice|[0-9]+ times), within ([0-9]+) days"
+)
+
+
+def appeal_line(policy: PolicyFacts) -> str:
+    """POL-GEN-04's appeal route in one line, built from the clause's numbers."""
+    match = _APPEAL_RE.search(policy.rule("POL-GEN-04"))
+    if match is None:
+        raise BuildError(
+            "POL-GEN-04 no longer states how many times a party may appeal and "
+            "within how many days"
+        )
+    return (
+        "Either party may appeal {0} within {1} days. A different human reviewer "
+        "hears it, and only record evidence may be added.".format(
+            match.group(1), match.group(2)
+        )
+    )
+
+
+# POL-GEN-06(2)'s own sentence about the two review limits: "decided within 24
+# hours of entry, within 2 hours for a safety flag".
+_REVIEW_TIME_RE = re.compile(
+    r"decided within ([0-9]+) hours of entry, within ([0-9]+) hours for a safety flag"
+)
+
+
+def review_time_limit(policy: PolicyFacts) -> str:
+    """POL-GEN-06(2)'s two review time limits, read from the clause's sentence."""
+    match = _REVIEW_TIME_RE.search(policy.rule("POL-GEN-06"))
+    if match is None:
+        raise BuildError("POL-GEN-06 no longer states the two review time limits")
+    return (
+        "A reviewer decides within {0} hours of entry, or within {1} hours when "
+        "the case carries a safety flag.".format(match.group(1), match.group(2))
+    )
 
 
 # --------------------------------------------------------------------------
@@ -504,53 +637,39 @@ def _notice(
     side: str,
     policy: PolicyFacts,
     ruling: Mapping[str, Any],
-    explanation: str,
+    filed_by: Any,
 ) -> str:
-    """One party's notice, built from the ruling's fields and the explanation.
+    """One party's notice: what was decided, what money moves, how to appeal.
 
-    It states what was decided, what money moves and how to appeal, and it adds
-    no fact and no figure the ruling does not already carry. The appeal route is
-    POL-GEN-04's own text; the decision is POL-GEN-03's own sentence for the
-    ruling value; the money is the ruling's two amount fields.
+    It adds no fact and no figure the ruling does not already carry, and it does
+    not repeat the judge's explanation: the explanation is shown once under the
+    ruling, and the notice links to it. The appeal is POL-GEN-04's route in one
+    line, and the full clause sits once under the ruling.
     """
-    currency = policy.currency
     value = str(ruling.get("ruling"))
-    decided = "What was decided: the ruling is {0} -- {1}".format(
-        value, plain_words(policy, value)
+    decided = "What was decided: the ruling is {0}.".format(
+        _coded(ruling_words(value), value)
     )
-    amount = _decimal(ruling.get("amount_sgd"))
-    driver = _decimal(ruling.get("driver_compensation_sgd"))
-    if value == ESCALATE:
-        money = (
-            "What money moves: nothing. Escalation is terminal, so no refund and "
-            "no driver compensation issue and the disputed amount is held."
-        )
-    elif value == pipeline_module.DRIVER_COMPENSATION:
-        money = "What money moves: {0} to the driver.".format(_money(driver, currency))
-    else:
-        parts = []
-        if amount is not None:
-            parts.append("{0} refunded to the rider".format(_money(amount, currency)))
-        if driver is not None:
-            parts.append(
-                "{0} paid to the driver".format(_money(driver, currency))
-            )
-        money = "What money moves: {0}.".format(
-            " and ".join(parts) if parts else "nothing"
-        )
+    money = "What money moves: {0}".format(
+        money_statement(ruling, policy.currency, filed_by)
+    )
+    appeal = "How to appeal: {0}".format(appeal_line(policy))
+    link = (
+        '<p><a href="#judge-explanation">Read the judge\'s explanation, as '
+        "written</a>.</p>"
+    )
     return (
         "<h3>{0}</h3>"
         "<p>{1}</p>"
         "<p>{2}</p>"
-        "<p>How to appeal: {3}</p>"
-        "<p class=\"label\">The judge's explanation, as written</p>"
-        "<blockquote>{4}</blockquote>"
+        "<p>{3}</p>"
+        "{4}"
     ).format(
         _text("Notice to the " + side.lower()),
-        _text(decided),
+        decided,
         _text(money),
-        _text(policy.rule("POL-GEN-04")),
-        _text(explanation),
+        _text(appeal),
+        link,
     )
 
 
@@ -672,21 +791,34 @@ def _evidence(brief: Mapping[str, Any]) -> List[Dict[str, Any]]:
     return rows
 
 
-def _outcome_text(ruling: Mapping[str, Any], currency: str, trigger: Optional[str]) -> str:
-    """The outcome column: a ruling and its amounts, or the reviewer route."""
+def _outcome_text(
+    ruling: Mapping[str, Any],
+    currency: str,
+    trigger: Optional[str],
+    votes: int,
+) -> str:
+    """The outcome column: the ruling in words and code, and what money moves.
+
+    The cell is rendered HTML rather than text, because the words are wrapped
+    and the code sits in ``.mono``; the caller writes it as it is and never
+    escapes it again. On a ``DRIVER_COMPENSATION`` ruling the figure is never
+    called a refund -- POL-GEN-03 says the fee stands and the driver is paid.
+    """
     value = str(ruling.get("ruling"))
     if value == ESCALATE and trigger is not None:
-        return "Sent to a reviewer: {0}".format(trigger)
+        return "Sent to a reviewer: {0}".format(
+            _coded(trigger_words(trigger, votes), trigger)
+        )
     amount = _decimal(ruling.get("amount_sgd"))
     driver = _decimal(ruling.get("driver_compensation_sgd"))
-    parts = [value]
+    parts = [_coded(ruling_words(value), value)]
     if value == pipeline_module.DRIVER_COMPENSATION and driver is not None:
-        parts.append("driver {0}".format(_money(driver, currency)))
+        parts.append("driver paid {0}".format(_money(driver, currency)))
     else:
         if amount is not None:
             parts.append("refund {0}".format(_money(amount, currency)))
         if driver is not None:
-            parts.append("driver {0}".format(_money(driver, currency)))
+            parts.append("driver paid {0}".format(_money(driver, currency)))
     return " ".join(parts)
 
 
@@ -725,6 +857,27 @@ class CaseData:
     @property
     def category(self) -> str:
         return str((self.case.get("dispute") or {}).get("category"))
+
+    @property
+    def votes(self) -> int:
+        """The number of drafts the judge was asked for, read from the run.
+
+        The run's own configuration records it, and a scope-gated case -- which
+        asked no judge -- has no vote in its transcript, so the configuration is
+        the first place to look and the transcript's own count is the fallback.
+        A case that records neither is refused rather than drawn with a zero.
+        """
+        configuration = self.document.get("configuration")
+        if isinstance(configuration, Mapping) and configuration.get("judge_votes") is not None:
+            return int(configuration["judge_votes"])
+        vote = self.transcript.get("vote")
+        if isinstance(vote, Mapping) and vote.get("votes") is not None:
+            return int(vote["votes"])
+        raise BuildError(
+            "case {0} of {1} records no judge vote count".format(
+                self.case_no, self.set_name
+            )
+        )
 
 
 def _load_case(set_name: str, case_no: int) -> CaseData:
@@ -800,12 +953,20 @@ def _load_case(set_name: str, case_no: int) -> CaseData:
 
 
 def read_every_case() -> List[CaseData]:
-    """Every case of the four runs, in the selector's order and by case number."""
+    """Every case of the four runs: the set selector's order, then case number.
+
+    The order is a fact about this file rather than about a directory listing or
+    an interpreter's string hash seed. The rows are collected in ``SET_ORDER``
+    and then sorted on the same order and the case number, so a build run twice
+    under two hash seeds writes the same bytes and the queue's row order is the
+    order the set selector lists the sets in.
+    """
     out: List[CaseData] = []
     for set_name in SET_ORDER:
         run = _run_for(set_name)
         for case_no in _case_numbers(run.run_dir):
             out.append(_load_case(set_name, case_no))
+    out.sort(key=lambda row: (SET_ORDER_INDEX[row.set_name], row.case_no))
     return out
 
 
@@ -823,6 +984,7 @@ class QueueFigures:
     median_seconds: Decimal
     median_cost: Decimal
     policy_version: int
+    votes: int
     model: str
 
     @property
@@ -868,11 +1030,11 @@ def queue_figures(cases: Sequence[CaseData]) -> QueueFigures:
         for case in cases
     }
     models = {str(case.document.get("model")) for case in cases}
-    if len(versions) != 1 or len(models) != 1:
+    votes = {case.votes for case in cases}
+    if len(versions) != 1 or len(models) != 1 or len(votes) != 1:
         raise BuildError(
-            "the queue mixes policy versions {0} or models {1}".format(
-                sorted(versions), sorted(models)
-            )
+            "the queue mixes policy versions {0}, models {1} or judge vote "
+            "counts {2}".format(sorted(versions), sorted(models), sorted(votes))
         )
     return QueueFigures(
         total=len(cases),
@@ -882,6 +1044,7 @@ def queue_figures(cases: Sequence[CaseData]) -> QueueFigures:
         median_seconds=_median(walls),
         median_cost=_median(costs),
         policy_version=versions.pop(),
+        votes=votes.pop(),
         model=models.pop(),
     )
 
@@ -890,12 +1053,17 @@ def queue_figures(cases: Sequence[CaseData]) -> QueueFigures:
 # The stylesheet and the script
 # --------------------------------------------------------------------------
 _CSS = """
+/* The light theme is the default: the palette in :root is what a reader gets
+   when the system asks for no preference, and the dark palette below replaces
+   it only when the system asks for dark. The accent colours move with it, so a
+   pill, a bar or a link keeps the same contrast on either background. */
 :root{
   --ink:#1b1f24;--paper:#ffffff;--soft:#f6f8fa;--line:#d8dee4;--muted:#57606a;
   --blue:#1f6feb;--orange:#d9822b;--green:#2da44e;--red:#cf222e;
 }
 @media (prefers-color-scheme:dark){
-  :root{--ink:#e6edf3;--paper:#0d1117;--soft:#161b22;--line:#30363d;--muted:#8b949e;}
+  :root{--ink:#e6edf3;--paper:#0d1117;--soft:#161b22;--line:#30363d;--muted:#8b949e;
+    --blue:#58a6ff;--orange:#e3a008;--green:#3fb950;--red:#f85149;}
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
@@ -923,6 +1091,12 @@ p{margin:.55em 0}
 .figure .k{color:var(--muted);font-size:.82rem;text-transform:uppercase;letter-spacing:.05em;margin:0 0 6px}
 .figure .v{font-size:1.35rem;font-weight:650;margin:0}
 .figure .s{color:var(--muted);font-size:.85rem;margin:4px 0 0}
+.figure.wide{flex:1 1 100%}
+.triggers{list-style:none;margin:0;padding:0}
+.triggers li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 14px;padding:5px 0;border-bottom:1px solid var(--line);font-size:1rem;line-height:1.5}
+.triggers li:last-child{border-bottom:0}
+.triggers .n{font-weight:650;font-variant-numeric:tabular-nums}
+td[data-column="time"]{white-space:nowrap}
 .facts{display:flex;flex-wrap:wrap;gap:10px 28px;margin:0;padding:0}
 .facts div{margin:0}
 .facts dt{color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.05em}
@@ -1214,25 +1388,48 @@ def _figure(key: str, value: str, note: str = "") -> str:
     ).format(_text(key), _text(value), sub)
 
 
-def _trigger_tally(figures: QueueFigures) -> str:
-    counted = [
-        "{0} {1}".format(name, figures.triggers[name])
-        for name in TRIGGER_ORDER
-        if figures.triggers.get(name)
-    ]
-    return ", ".join(counted) if counted else "none"
+def _trigger_card(figures: QueueFigures) -> str:
+    """The reviewer triggers, one per line: the words first, then the count.
+
+    A row per trigger rather than one run-on string, so a reader sees which
+    reason fired and how often without counting commas. The card spans the row
+    (``.figure.wide``) and its lines wrap, so a long phrase cannot overflow it.
+    """
+    lines = []
+    for name in TRIGGER_ORDER:
+        count = figures.triggers.get(name, 0)
+        if not count:
+            continue
+        lines.append(
+            '<li><span class="t">{0}</span> <span class="n">{1}</span></li>'.format(
+                _text(trigger_words(name, figures.votes)), _text(count)
+            )
+        )
+    body = "".join(lines) if lines else '<li><span class="t">none</span></li>'
+    return (
+        '<div class="figure wide"><p class="k">Reviewer triggers</p>'
+        '<ul class="triggers">{0}</ul>'
+        '<p class="s">counted by reason code</p></div>'
+    ).format(body)
 
 
 def _queue_row(case: CaseData) -> str:
     dispute = case.case.get("dispute") or {}
     currency = case.policy.currency
-    outcome = _outcome_text(case.ruling, currency, case.trigger)
+    outcome = _outcome_text(case.ruling, currency, case.trigger, case.votes)
     confidence = case.ruling.get("confidence")
-    confidence_text = "none" if confidence is None else str(confidence)
+    # A case sent to a reviewer has no ruling to be confident in, so the column
+    # shows a dash rather than a figure read off a ruling that was never made.
+    if case.trigger is not None:
+        confidence_text = "-"
+    else:
+        confidence_text = "none" if confidence is None else str(confidence)
     amount_sort = _decimal(dispute.get("amount_contested_sgd"))
     time_sort = _decimal(case.document.get("wall_seconds"))
-    # The cell text is escaped once, when it is written; the sort key is the raw
-    # value, so a sort never reads an HTML entity as though it were the value.
+    filed_by = dispute.get("filed_by")
+    # The cell text is escaped once, when it is written -- the outcome is the one
+    # cell already rendered as HTML -- and the sort key is a plain value, so a
+    # sort never reads a markup fragment as though it were the value.
     cells = (
         (
             "case",
@@ -1246,14 +1443,19 @@ def _queue_row(case: CaseData) -> str:
             case.category,
             "Category",
         ),
-        ("filed_by", _text(dispute.get("filed_by")), str(dispute.get("filed_by")), "Filed by"),
+        (
+            "filed_by",
+            _text(filed_by_words(filed_by)),
+            str(filed_by),
+            "Filed by",
+        ),
         (
             "amount",
             _text(_money(dispute.get("amount_contested_sgd"), currency)),
             str(amount_sort if amount_sort is not None else 0),
             "Amount contested",
         ),
-        ("outcome", _text(outcome), outcome, "Outcome"),
+        ("outcome", outcome, str(case.ruling.get("ruling")), "Outcome"),
         ("confidence", _text(confidence_text), confidence_text, "Confidence"),
         (
             "time",
@@ -1328,7 +1530,7 @@ def build_index(cases: Sequence[CaseData]) -> str:
                 "{0} of {1}".format(figures.reviewer, figures.total),
                 "{0} of the queue".format(figures.reviewer_share),
             ),
-            _figure("Reviewer triggers", _trigger_tally(figures), "counted by reason code"),
+            _trigger_card(figures),
             _figure("Median time per case", _seconds(figures.median_seconds), "wall clock"),
             _figure(
                 "Median cost per case",
@@ -1466,41 +1668,93 @@ def _evidence_table(case: CaseData) -> str:
     )
 
 
-def _ruling_tab(case: CaseData) -> str:
+def _decided_ruling(case: CaseData) -> str:
+    """The ruling card of a decided case: the ruling, its money and its appeal."""
     policy = case.policy
-    currency = policy.currency
     ruling = case.ruling
     value = str(ruling.get("ruling"))
     explanation = str(ruling.get("explanation") or "")
-    amount = _money(ruling.get("amount_sgd"), currency)
-    driver = _money(ruling.get("driver_compensation_sgd"), currency)
-    card = (
+    dispute = case.case.get("dispute") or {}
+    return (
         '<div class="card">'
         '<p class="disclosure">{0}</p>'
         "<h2>Ruling</h2>"
-        "<p><strong>{1}</strong> -- {2}</p>"
-        "<p>Refund to the filing party: {3}. Driver compensation: {4}.</p>"
-        "{5}"
-        '<p class="label">The appeal path, quoted from POL-GEN-04</p>'
-        "<blockquote>{6}</blockquote>"
+        "<p>{1}</p>"
+        "<p>{2}</p>"
+        '<p class="label" id="judge-explanation">The judge\'s explanation, as '
+        "written</p>"
+        "<blockquote>{3}</blockquote>"
+        "<p>How to appeal: {4}</p>"
+        "<details><summary>Read POL-GEN-04 in full</summary>"
+        "<blockquote>{5}</blockquote></details>"
+        "{6}"
         "<p>{7}</p>"
         "</div>"
     ).format(
         _text(DISCLOSURE),
-        _text(value),
-        _text(plain_words(policy, value)),
-        _text(amount),
-        _text(driver),
-        _confidence_card(case),
+        _coded(ruling_words(value), value, strong=True),
+        _text(money_statement(ruling, policy.currency, dispute.get("filed_by"))),
+        _text(explanation),
+        _text(appeal_line(policy)),
         _text(policy.rule("POL-GEN-04")),
-        _text(execution_sentence(policy, ruling, currency)),
+        _confidence_card(case),
+        _text(execution_sentence(policy, ruling, policy.currency)),
     )
-    notices = (
-        '<div class="card"><h2>The two notices</h2>'
-        + _notice("RIDER", policy, ruling, explanation)
-        + _notice("DRIVER", policy, ruling, explanation)
-        + "</div>"
+
+
+def _reviewer_ruling(case: CaseData) -> str:
+    """The ruling card of a case a human reviewer decides.
+
+    No ruling was issued, so the page says so where a decided case carries its
+    provisional disclosure, shows the reason the case reached a reviewer in
+    words rather than a confidence bar, states what money moves on an
+    escalation, and gives the review time limit read from POL-GEN-06(2). There
+    is no appeal path to show, because there is no ruling to appeal.
+    """
+    policy = case.policy
+    trigger = str(case.trigger)
+    reason = "Why a reviewer: {0}".format(
+        _coded(trigger_words(trigger, case.votes), trigger)
     )
+    no_draft = ""
+    if trigger == TRIGGER_NO_VALID_DRAFTS:
+        no_draft = "<p>No draft was valid, so the panel could not reduce a ruling.</p>"
+    dispute = case.case.get("dispute") or {}
+    return (
+        '<div class="card">'
+        '<p class="disclosure">{0}</p>'
+        "<h2>Ruling</h2>"
+        "<p>{1}</p>"
+        "<p>{2}</p>"
+        "<p>{3}</p>"
+        "{4}"
+        "<p>{5}</p>"
+        "</div>"
+    ).format(
+        _text(NO_AUTOMATED_RULING),
+        reason,
+        _text(
+            money_statement(case.ruling, policy.currency, dispute.get("filed_by"))
+        ),
+        _text(review_time_limit(policy)),
+        no_draft,
+        _text(execution_sentence(policy, case.ruling, policy.currency)),
+    )
+
+
+def _ruling_tab(case: CaseData) -> str:
+    policy = case.policy
+    ruling = case.ruling
+    dispute = case.case.get("dispute") or {}
+    if case.trigger is not None:
+        card = _reviewer_ruling(case)
+    else:
+        card = _decided_ruling(case) + (
+            '<div class="card"><h2>The two notices</h2>'
+            + _notice("RIDER", policy, ruling, dispute.get("filed_by"))
+            + _notice("DRIVER", policy, ruling, dispute.get("filed_by"))
+            + "</div>"
+        )
     argued = (
         '<div class="card"><h2>What each side argued</h2>'
         "<h3>The rider advocate</h3>"
@@ -1516,7 +1770,7 @@ def _ruling_tab(case: CaseData) -> str:
         + _evidence_table(case)
         + "</div>"
     )
-    return card + notices + argued + evidence
+    return card + argued + evidence
 
 
 def _step(title: str, who: str, produced: str, detail: str = "") -> str:
@@ -1649,7 +1903,10 @@ def _decision_tab(case: CaseData) -> str:
             _text(draft["draft"]),
             _text(draft["kind"]),
             _text(", ".join(str(side) for side in draft["sides"])),
-            _text(draft["proposal"].get("ruling")),
+            _coded(
+                ruling_words(draft["proposal"].get("ruling")),
+                draft["proposal"].get("ruling"),
+            ),
             _text(_money(draft["proposal"].get("amount_sgd"), case.policy.currency)),
             _text(
                 _money(
@@ -1698,34 +1955,38 @@ def _decision_tab(case: CaseData) -> str:
         "stated by POL-GEN-02.</p>{2}".format(
             _text(case.ruling.get("confidence")),
             _text(floor),
-            "<p>The escalation reason code is <strong>{0}</strong>.</p>".format(
-                _text(case.trigger)
+            "<p>The escalation reason is {0}.</p>".format(
+                _coded(trigger_words(str(case.trigger), case.votes), case.trigger)
             )
             if case.trigger
-            else "<p>No escalation reason code is recorded: the case did not "
+            else "<p>No escalation reason is recorded: the case did not "
             "escalate.</p>",
         ),
     )
 
     # 6. The outcome.
+    dispute = case.case.get("dispute") or {}
     if case.trigger:
         step6 = _step(
             STEP_TITLES[5],
             "code",
-            "<p>Sent to a reviewer, fee held: {0}.</p>".format(_text(case.trigger)),
+            "<p>Sent to a reviewer, fee held: {0}.</p>".format(
+                _coded(trigger_words(str(case.trigger), case.votes), case.trigger)
+            ),
         )
     else:
         step6 = _step(
             STEP_TITLES[5],
             "code",
-            "<p>{0} -- {1}</p><p>Refund {2}. Driver compensation {3}.</p>".format(
-                _text(case.ruling.get("ruling")),
-                _text(plain_words(case.policy, str(case.ruling.get("ruling")))),
-                _text(_money(case.ruling.get("amount_sgd"), case.policy.currency)),
+            "<p>{0}</p><p>{1}</p>".format(
+                _coded(
+                    ruling_words(case.ruling.get("ruling")),
+                    case.ruling.get("ruling"),
+                    strong=True,
+                ),
                 _text(
-                    _money(
-                        case.ruling.get("driver_compensation_sgd"),
-                        case.policy.currency,
+                    money_statement(
+                        case.ruling, case.policy.currency, dispute.get("filed_by")
                     )
                 ),
             ),
@@ -1764,7 +2025,10 @@ def _review_tab(case: CaseData) -> str:
         "<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td>"
         "<td>{5}</td></tr>".format(
             _text(draft.get("draft")),
-            _text((draft.get("proposal") or {}).get("ruling")),
+            _coded(
+                ruling_words((draft.get("proposal") or {}).get("ruling")),
+                (draft.get("proposal") or {}).get("ruling"),
+            ),
             _text((draft.get("proposal") or {}).get("amount_sgd")),
             _text(draft.get("confidence")),
             _text("valid" if draft.get("valid") else "abstained"),
@@ -1847,7 +2111,7 @@ def _review_tab(case: CaseData) -> str:
         brief_rows or "<li>none</li>",
         admissibility_rows or "<tr><td colspan=\"5\">none</td></tr>",
         _text(", ".join(packet.get("clause_ids") or []) or "none"),
-        _text(ruling.get("ruling")),
+        _coded(ruling_words(ruling.get("ruling")), ruling.get("ruling")),
         _text(ruling.get("amount_sgd")),
         _text(ruling.get("driver_compensation_sgd")),
         _text(ruling.get("confidence")),
@@ -1917,14 +2181,18 @@ def build_case_page(case: CaseData) -> str:
     """One case page: a header, two or three tabs, and the footer."""
     dispute = case.case.get("dispute") or {}
     currency = case.policy.currency
-    status = (
-        "Sent to a reviewer: {0}".format(case.trigger)
-        if case.trigger
-        else str(case.ruling.get("ruling"))
-    )
+    # The header names the case once -- "Case 901" -- and the set it belongs to.
+    if case.trigger:
+        status = "Sent to a reviewer: {0}".format(
+            _coded(trigger_words(str(case.trigger), case.votes), case.trigger)
+        )
+    else:
+        status = _coded(
+            ruling_words(case.ruling.get("ruling")), case.ruling.get("ruling")
+        )
     header = (
         '<header class="pagehead">\n'
-        '<p class="eyebrow">{0} &middot; case {1}</p>\n'
+        '<p class="eyebrow">{0} &middot; Case {1}</p>\n'
         "<h1>{2}</h1>\n"
         '<p class="lede">{3}</p>\n'
         '<dl class="facts">'
@@ -1933,13 +2201,13 @@ def build_case_page(case: CaseData) -> str:
         "<div><dt>Status</dt><dd>{6}</dd></div>"
         "</dl>\n</header>\n"
     ).format(
-        _text(case.label),
+        _text(case.set_name),
         _text(case.case_no),
         _text(CATEGORY_WORDS.get(case.category, case.category)),
         _text(_summary_line(case.case)),
-        _text(dispute.get("filed_by")),
+        _text(filed_by_words(dispute.get("filed_by"))),
         _text(_money(dispute.get("amount_contested_sgd"), currency)),
-        _text(status),
+        status,
     )
     tabs = [
         ("ruling", "Ruling"),

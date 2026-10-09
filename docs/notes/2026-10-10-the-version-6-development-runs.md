@@ -241,6 +241,12 @@ ryde-v3  (1 case)
   tokens median    prompt 154838   cached prompt 114560   completion 95697   billed 250535
   cost             0.0638 USD
   wall clock       median 171.3s   p90 171.3s
+
+precedents  (15 cases)
+  tokens total     prompt 2,092,155   cached prompt 1,595,002   completion 1,415,824   billed 3,507,979
+  tokens median    prompt 137502   cached prompt 109568   completion 88177   billed 221373
+  cost             0.9289 USD
+  wall clock       median 178.3s   p90 262.6s
 ```
 
 Two things the report states and does not explain. The corpus key was written

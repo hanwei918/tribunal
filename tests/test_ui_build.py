@@ -4458,6 +4458,20 @@ def run_the_shim(pages: list) -> dict:
     return json.loads(done.stdout)
 
 
+def viewer_page_paths() -> List[Path]:
+    """The pages the old viewer builds, and the runs index it writes beside them.
+
+    ``ui/dist/`` also holds the second site under ``ui/dist/v2/``, which
+    ``ui.v2.build`` writes and this viewer does not. A discovery that walked the
+    whole directory would sweep those pages in and read a data block they do not
+    carry, so this class reads only the pages ``ui.build.pages()`` names, plus
+    the runs index the viewer writes with them.
+    """
+    paths = [page.output_path for page in build.pages().values()]
+    paths.append(build.INDEX_PATH)
+    return paths
+
+
 class PageScriptRunsTests(unittest.TestCase):
     """The page script is executed against a minimal DOM.
 
@@ -4491,8 +4505,7 @@ class PageScriptRunsTests(unittest.TestCase):
                 + " and node on the PATH"
             )
         cls.relative = sorted(
-            str(path.relative_to(build.DIST_DIR))
-            for path in build.DIST_DIR.rglob("*.html")
+            str(path.relative_to(build.DIST_DIR)) for path in viewer_page_paths()
         )
         cls.html = {}
         cls.script = {}
