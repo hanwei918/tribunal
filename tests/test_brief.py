@@ -23,7 +23,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from tribunal import brief, facts, loader, money, prepass  # noqa: E402
+from tribunal import brief, facts, loader, money, pipeline, prepass  # noqa: E402
 
 INDEX_PATH = PROJECT_ROOT / "data" / "index.json"
 
@@ -1268,6 +1268,78 @@ class VersionThreePlatformPolicyTests(unittest.TestCase):
         self.assertEqual(
             Decimal("1.28"), money._dec(version_two["difference"]["value"])
         )
+
+    def test_the_waiting_time_line_and_the_fee_in_force_are_published(self):
+        """POL-NS-10(d) and (e): case 1740, whose fee line was unreadable.
+
+        The block published the waiting-time fee in force as a *constant*, and
+        ``constants`` is deliberately not somewhere a draft may read an amount
+        from -- so all four drafts of 1740 proposed 5.00 and every one was
+        rejected as not read off. Both figures are published from version 3 on,
+        each with the artifact it came from.
+        """
+        case = dev_v2_case(1740)
+        block = derived_of(
+            brief.build_brief_for_case(case, policy_version=3),
+            "FARE_BREAKDOWN",
+            "money",
+        )
+        self.assertEqual(
+            Decimal("5.00"), money._dec(block[brief.WAITING_TIME_FEE_KEY]["value"])
+        )
+        self.assertEqual(
+            "EV-FARE-01740", block[brief.WAITING_TIME_FEE_KEY]["evidence_id"]
+        )
+        self.assertEqual(
+            Decimal("5.00"),
+            money._dec(block[brief.WAITING_FEE_IN_FORCE_KEY]["value"]),
+        )
+        self.assertEqual(
+            "EV-TRIP-01740", block[brief.WAITING_FEE_IN_FORCE_KEY]["evidence_id"]
+        )
+        for key in (brief.WAITING_TIME_FEE_KEY, brief.WAITING_FEE_IN_FORCE_KEY):
+            with self.subTest(key=key):
+                self.assertEqual("POL-NS-10", block[key]["clause_id"])
+
+    def test_a_draft_proposing_the_waiting_fee_reads_it_off(self):
+        """The read-off check accepts 5.00 for 1740, and names the figure it read."""
+        briefed = brief.build_brief_for_case(dev_v2_case(1740), policy_version=3)
+        figures = pipeline.published_money_figures(pipeline.money_block(briefed))
+        self.assertEqual(
+            "waiting_time_fee.value",
+            pipeline.amount_reads_off(Decimal("5.00"), figures),
+        )
+        draft = {
+            "ruling": {
+                "ruling": "FULL_REFUND",
+                "amount_sgd": "5.00",
+                "driver_compensation_sgd": None,
+                "referrals": [],
+                "confidence": 0.9,
+                "explanation": "the waiting-time line POL-NS-10(e) refunds in full",
+            }
+        }
+        failures, unverifiable = pipeline.check_judge_draft(draft, briefed)
+        self.assertEqual((), failures)
+        self.assertEqual((), unverifiable)
+
+    def test_the_waiting_fee_is_not_published_at_versions_one_and_two(self):
+        """The publication is a version-3 reading; the earlier briefs do not move."""
+        case = dev_v2_case(1740)
+        for version in (1, 2):
+            with self.subTest(version=version):
+                block = derived_of(
+                    brief.build_brief_for_case(case, policy_version=version),
+                    "FARE_BREAKDOWN",
+                    "money",
+                )
+                self.assertNotIn(brief.WAITING_TIME_FEE_KEY, block)
+                self.assertNotIn(brief.WAITING_FEE_IN_FORCE_KEY, block)
+                self.assertIsNone(
+                    pipeline.amount_reads_off(
+                        Decimal("5.00"), pipeline.published_money_figures(block)
+                    )
+                )
 
 
 class VersionThreeGapGradingTests(unittest.TestCase):

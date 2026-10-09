@@ -1226,6 +1226,13 @@ POL_NS_10 = "POL-NS-10"
 METERED_MODEL = "METERED"
 UPFRONT_QUOTE_MODEL = "UPFRONT_QUOTE"
 
+# POL-NS-10(d) and (e): the waiting-time line ``fare_breakdown`` charged, and the
+# name the version-3 no-show money block publishes the fee in force under. The
+# first is the payload's own field name, so the block reads the line by the name
+# the record writes it with.
+WAITING_TIME_FEE_KEY = "waiting_time_fee"
+WAITING_FEE_IN_FORCE_KEY = "waiting_fee_in_force"
+
 # The clause-prose constants the money arithmetic needs, named as the keys
 # ``_money_prose_constants`` returns them.
 FULL_REFUND_SHARE = "full_refund_share"
@@ -2030,6 +2037,8 @@ def _no_show_money(
     fee_schedule: Dict[str, Any],
     policy_id: str,
     platform_policy: Optional[Dict[str, Any]] = None,
+    *,
+    policy_version: int = policy_versions.BASE_VERSION,
 ) -> Dict[str, Any]:
     """POL-NS-01 and POL-NS-07: the no-show fee and the two payments on it.
 
@@ -2043,6 +2052,14 @@ def _no_show_money(
     other accepted figure, the rider's gross, travels into the arithmetic so a
     ``fare_breakdown`` line that equals it reconciles rather than differs, and
     POL-NS-10(d)'s waiting-time fee is published in the constants.
+
+    From version 3 on, POL-NS-10(d) and (e) turn on two further figures, and they
+    are published as **figures** rather than as constants: the waiting-time line
+    ``fare_breakdown`` charged, carrying that artifact's id, and the waiting-time
+    fee the policy in force states. A draft may read an amount off a published
+    figure, and ``constants`` is deliberately not somewhere it may read one -- so
+    the fee in force sits in both places, once as the constant that says what the
+    policy states and once as a figure a draft can cite.
     """
     trip = trip_payload if isinstance(trip_payload, dict) else {}
     zone = trip.get("pickup_zone_class")
@@ -2126,6 +2143,28 @@ def _no_show_money(
             money.payable_string(waiting), None, policy_id, structured=True,
             clause_id=POL_NS_10,
         )
+    if policy_version >= PLATFORM_POLICY_IN_FORCE_VERSION:
+        # POL-NS-10(e) refunds the waiting-time line ``fare_breakdown`` carries
+        # where limb (d) does not support it, so both the line charged and the fee
+        # the policy states have to be readable figures: a draft that proposes one
+        # of them must be able to read it off the block. An absent line publishes
+        # nothing rather than a zero -- ``money._dec(None)`` is zero, and a
+        # published 0.00 would be a figure no line in the record states.
+        charged_waiting = fare_payload.get(WAITING_TIME_FEE_KEY)
+        if charged_waiting is not None:
+            block[WAITING_TIME_FEE_KEY] = _money(
+                money.payable_string(charged_waiting),
+                fare_evidence_id,
+                policy_id,
+                clause_id=POL_NS_10,
+            )
+        if waiting is not None:
+            block[WAITING_FEE_IN_FORCE_KEY] = _money(
+                money.payable_string(waiting),
+                trip_evidence_id,
+                policy_id,
+                clause_id=POL_NS_10,
+            )
     block["constants"] = constants
     return block
 
@@ -2174,6 +2213,7 @@ def _money_block(
         category_policy.get("fee_schedule") or {},
         policy_id,
         platform_policy,
+        policy_version=policy_version,
     )
 
 

@@ -340,11 +340,14 @@ def load_policies(
     exactly as committed, and it is read from ``policy/``; a higher version of
     the amendment sequence applies the approved amendments numbered below it. A
     **separate base** -- version 3, Ji Guofang's platform-aligned policy -- is
-    read from its own directory (``policy/v3/``) and has no amendment applied to
-    it, because its own text already carries what amendment ``0001`` adds to
-    version 1. Version 1 returns the files as they were read, without a copy, and
-    does not read ``policy/amendments/`` at all -- so a plain run builds the bytes
-    it always built, and a broken amendment cannot stop the version-1 measurement.
+    read from its own directory (``policy/v3/``); version 3 is that base alone,
+    and a version above it applies **that base's own** amendments, so version 4
+    is base 3 with ``policy/v3/amendments/0001`` applied. A separate base is not
+    amended by ``policy/amendments/``, and the base-1 sequence is not amended by
+    ``policy/v3/amendments/``: each version reads the sequence of its own base.
+    Version 1 returns the files as they were read, without a copy, and does not
+    read an amendments directory at all -- so a plain run builds the bytes it
+    always built, and a broken amendment cannot stop the version-1 measurement.
     """
     filename = CATEGORY_POLICY_FILES.get(category)
     if filename is None:

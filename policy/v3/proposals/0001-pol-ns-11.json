@@ -1,0 +1,24 @@
+{
+  "base_version": 2,
+  "cluster_id": "C1",
+  "cases": [
+    1734,
+    2734
+  ],
+  "clause": {
+    "id": "POL-NS-11",
+    "title": "Undecidable rider presence",
+    "category": "NO_SHOW_CHARGE",
+    "rule": "Where POL-NS-04 limb (c) cannot be run - rider_track is absent from the gps_trace, or every fix in it is filtered out for accuracy - limb (c) is UNDECIDABLE: it is neither satisfied nor failed, POL-NS-04 cannot exonerate the rider, and the dispute is decided under the remaining clauses on the driver's own evidence. Notwithstanding POL-NS-08(b), the missing rider_track is not the evidence for any deciding fact of those clauses: it does not impair the gps_trace for the driver's arrival or dwell, does not by itself engage POL-NS-08(b) or POL-NS-09(e), and does not lower the POL-GEN-02 cap on a finding that rests on the driver's track. The Judge must say the test could not be run rather than inferring the rider was elsewhere. This clause licenses no ruling value.",
+    "requires": [
+      "gps_trace",
+      "chat_log",
+      "trip_record"
+    ],
+    "licenses": [],
+    "favours": "NEUTRAL",
+    "notes": "Added because POL-NS-04 reads an absent rider_track as 'impaired under POL-NS-08(b)' while POL-NS-08's closing sentence escalates a case whose only evidence for the deciding fact is impaired, so a rider who sent an unanswered message but whose own device recorded nothing could reach human review although the driver's arrival and dwell were fully recorded. The deciding fact for the fee is the driver's position; the rider's track decides only whether POL-NS-04 exonerates the rider. Where that question cannot be answered the clause simply does not help the rider, and the fee is decided on the driver's evidence under POL-NS-01 and POL-NS-07. At the next base revision this clause folds into POL-NS-04's undecidable sentence and the rider_track words come out of POL-NS-08(b)."
+  },
+  "drafted_by": "Ji Guofang (policy owner), wording proposed by Zhou Hanwei 2026-10-08, revised for the POL-NS-08(b) cross-reference",
+  "source": "dev-v2 first run 2026-10-08: judge escalated 1734 under POL-NS-08(b)/POL-NS-09(e) where the key, read purposively, is DRIVER_COMPENSATION 3.60"
+}

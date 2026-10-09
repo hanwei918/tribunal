@@ -1957,6 +1957,54 @@ class ApproveTests(unittest.TestCase):
             before, sorted(path.name for path in first.parent.iterdir())
         )
 
+    def test_approve_on_base_three_writes_under_the_bases_own_directory(self):
+        """The same command, aimed at base 3, writes ``policy/v3/amendments/``.
+
+        ``POL-NS-11`` is the next free no-show clause in the base-3 file, and the
+        scratch amendments root holds none on that base, so this is its ``0001``
+        -- and it makes version **4**, which is base 3 plus one amendment. Base
+        1's own sequence is not touched by it.
+        """
+        self.proposal = self._write_proposal(a_draft(clause={"id": "POL-NS-11"}))
+        version, path = self.approve(base_version=3)
+
+        self.assertEqual(4, version)
+        self.assertEqual(
+            policy_versions.amendments_dir_for(3, self.amendments_root), path.parent
+        )
+        self.assertEqual(self.amendments_root / "v3" / "amendments", path.parent)
+        self.assertEqual("0001-pol-ns-11.json", path.name)
+
+        document = runner.read_json(path)
+        self.assertEqual(3, document["base_version"])
+        self.assertEqual("POL-NS-11", document["clause"]["id"])
+        self.assertEqual(
+            "POL-NS-11",
+            policy_versions.load_amendment(path, base_version=3)["clause"]["id"],
+        )
+        # Nothing was written into base 1's own directory.
+        self.assertEqual(
+            [], list(policy_versions.amendment_files(self.amendments_root))
+        )
+
+    def test_approve_on_base_one_still_refuses_a_second_amendment(self):
+        """Base 1's sequence stops at ``0001``: its ``0002`` would compute base 3.
+
+        This is the refusal the sheet leaves in place, and it is made before the
+        directory is created, so a refused approval writes nothing.
+        """
+        _version, first = self.approve()
+        before = sorted(entry.name for entry in first.parent.iterdir())
+        self.proposal = self._write_proposal(a_draft())
+        with self.assertRaises(gaps.PolicyGapError) as caught:
+            self.approve()
+        message = str(caught.exception)
+        self.assertIn("policy/v3/", message)
+        self.assertIn("0002", message)
+        self.assertEqual(
+            before, sorted(entry.name for entry in first.parent.iterdir())
+        )
+
     def test_a_rejected_proposal_cannot_be_approved(self):
         self.proposal = self._write_proposal(
             a_draft(), status=gaps.PROPOSAL_STATUS_REJECTED

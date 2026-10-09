@@ -27,15 +27,31 @@ every test can point it at a temporary directory.
 
 **A separate base.** Not every version is version 1 plus amendments. Version 3
 is Ji Guofang's platform-aligned policy, added on 2026-10-08 as a second base of
-its own: its three files live under ``policy/v3/`` and no amendment applies to
-it, because the one clause amendment ``0001`` adds to version 1 is already part
-of version 3's text. ``SEPARATE_BASE_VERSIONS`` names those versions, and the
-three functions around it say which directory a version reads
-(:func:`base_directory`), whether a version is one of them
-(:func:`is_a_separate_base`) and the highest version the repository can brief at
+its own: its three files live under ``policy/v3/``. ``SEPARATE_BASE_VERSIONS``
+names those versions, and the functions around it say which directory a version
+reads (:func:`base_directory`), whether a version **is** one of them
+(:func:`is_a_separate_base`), which base a version belongs to
+(:func:`separate_base_of`) and the highest version the repository can brief at
 (:func:`highest_available_version`). ``current_version`` stays what it always
-was -- the version of the **amendment sequence**, which is what the next
-amendment would compute -- so version 3 does not move it.
+was -- the version of the **amendment sequence** on base 1, which is what the
+next amendment there would compute -- so a separate base does not move it.
+
+**Amendments on a separate base.** A separate base carries its own amendment
+sequence, under exactly the rules the base-1 sequence obeys: one clause per file,
+``NNNN-<slug>.json`` numbered from ``0001``, the clause's id the next free number
+for its prefix, and add-only. They live at ``policy/v3/amendments/``, and the
+numbering is the one the sheet that added it fixes: **version 3 is the base
+alone, and version 3 + k applies the base-3 amendments ``0001`` to k**. So
+``POL-NS-11``, the first clause added on base 3, makes **version 4**. The base-1
+sequence is untouched by this: its amendments still apply to base 1 only, so
+versions 1 and 2 are exactly what they were.
+
+That gives every version one owner. Base 1 owns versions 1 and 2, and its
+sequence can never grow past ``0001`` -- amendment ``0002`` there would compute
+version 3, which base 3 owns -- so :func:`refuse_a_taken_version` refuses it.
+Base 3 owns 3 and up. An amendment is refused when the version it would compute
+belongs to a **different** base, and allowed when it belongs to its own, which is
+what lets base 3's own first amendment compute version 4.
 """
 
 from __future__ import annotations
@@ -120,6 +136,20 @@ AMENDMENT_FIELDS = (
     "approved_at",
 )
 
+# One more field an amendment **on a separate base** may carry: a ``note`` saying
+# how the clause was approved where it did not come through a ``policy_gaps``
+# report. ``POL-NS-11`` is the case it was widened for: the key owner approved it
+# directly after the 2026-10-08 development run, on cases 1734 and 2734, so its
+# ``report_file`` and ``report_sha256`` are null and the note says why.
+#
+# It is **not** allowed on base 1. There the exact key set is the mechanism by
+# which "an amendment adds one clause and can never edit one" is true rather than
+# intended, and the amendment ``0001`` on that base has no note. The check is
+# per base rather than global so that widening one base's schema cannot widen the
+# other's.
+AMENDMENT_NOTE_FIELD = "note"
+AMENDMENT_NOTE_BASES = frozenset({3})
+
 
 class AmendmentError(Exception):
     """An amendment, or a set of them, that this code will not apply."""
@@ -129,21 +159,42 @@ class AmendmentError(Exception):
 # The set of amendments on disk
 # --------------------------------------------------------------------------
 def amendments_dir(root: Optional[Any] = None) -> Path:
-    """The directory the amendments live in, under ``root`` or the repository."""
+    """The directory the **base-1** amendments live in, under ``root`` or the repository.
+
+    This stays the one place the base-1 path is computed, so the tests that
+    redirect this single function still redirect every base-1 read of it.
+    """
     base = Path(root) if root is not None else POLICY_DIR
     return base / AMENDMENTS_DIRNAME
 
 
-def amendment_files(root: Optional[Any] = None) -> List[Path]:
-    """Every amendment file, in numeric order.
+def amendments_dir_for(base_version: int, root: Optional[Any] = None) -> Path:
+    """The amendments directory of **one base**.
+
+    Base 1's is the one :func:`amendments_dir` computes, so a caller that
+    redirects that function redirects base 1 everywhere. A separate base keeps
+    its own amendments beside its own three files, which is
+    ``policy/v3/amendments/`` for base 3 -- the same layout ``policy/amendments/``
+    has for base 1, one directory down.
+    """
+    if base_version == BASE_VERSION:
+        return amendments_dir(root)
+    return base_directory(base_version, root) / AMENDMENTS_DIRNAME
+
+
+def amendment_files(
+    root: Optional[Any] = None, base_version: int = BASE_VERSION
+) -> List[Path]:
+    """Every amendment file **on one base**, in numeric order.
 
     A file that is not named ``NNNN-<slug>.json`` is refused rather than
     skipped, and so are a number used twice and a sequence with a hole in it.
     "Version N applies ``0001`` through ``N-1``" only means something if the
     numbers below N are exactly the ones on disk: a hole would make the current
-    version name amendments that do not exist.
+    version name amendments that do not exist. A separate base's sequence is
+    checked by the same rules, because it is the same kind of sequence.
     """
-    directory = amendments_dir(root)
+    directory = amendments_dir_for(base_version, root)
     if not directory.is_dir():
         return []
     found: List[Tuple[int, Path]] = []
@@ -187,80 +238,156 @@ def amendment_files(root: Optional[Any] = None) -> List[Path]:
 def current_version(root: Optional[Any] = None) -> int:
     """The version the amendment sequence is at: 1 plus the amendments on disk.
 
-    This is the version of the **amendment sequence**, and it is what the next
-    amendment would compute. It is not the highest version the repository can
-    brief at: a separate base is not an amendment, so it is not counted here.
-    Use :func:`highest_available_version` for that.
+    This is the version of the **amendment sequence** on base 1, and it is what
+    the next amendment there would compute. It is not the highest version the
+    repository can brief at: a separate base carries its own sequence, so it is
+    not counted here. Use :func:`highest_available_version` for that, or
+    :func:`version_on_base` for one base.
     """
     return BASE_VERSION + len(amendment_files(root))
+
+
+def amendments_on(base_version: int, root: Optional[Any] = None) -> int:
+    """How many amendments one base carries.
+
+    The number an amendment approved next would take is this plus one, which is
+    what :func:`apply_amendments` and ``policy_gaps approve`` both need.
+    """
+    return len(amendment_files(root, base_version=base_version))
+
+
+def version_on_base(base_version: int, root: Optional[Any] = None) -> int:
+    """The highest version one base reaches: the base plus its own amendments.
+
+    Base 1 gives :func:`current_version`. Base 3 gives 3 plus the amendments under
+    ``policy/v3/amendments/``, so the base alone is version 3 and the first
+    amendment on it makes version 4.
+    """
+    return base_version + amendments_on(base_version, root)
 
 
 # --------------------------------------------------------------------------
 # Separate bases
 # --------------------------------------------------------------------------
 def is_a_separate_base(version: Any) -> bool:
-    """Whether ``version`` is its own base rather than version 1 plus amendments."""
+    """Whether ``version`` **is** a separate base rather than version 1 plus amendments.
+
+    A version built from a separate base by one of that base's own amendments is
+    not itself a base: version 4 is base 3 with its first amendment applied. Use
+    :func:`separate_base_of` for "which base does this version belong to".
+    """
     return version in SEPARATE_BASE_VERSIONS
+
+
+def separate_base_of(version: Any) -> Optional[int]:
+    """The separate base ``version`` belongs to, or ``None`` for the base-1 sequence.
+
+    Every version at or above a separate base's own number belongs to that base:
+    version 3 is the base alone and version 4 is the base with its amendment
+    ``0001`` applied, so both read ``policy/v3/``. With more than one base the
+    highest one at or below the version wins, which keeps a later base's versions
+    its own.
+    """
+    candidates = [base for base in SEPARATE_BASE_VERSIONS if version >= base]
+    return max(candidates) if candidates else None
+
+
+def owner_of_version(version: int) -> int:
+    """The base that owns a policy version: a separate base, or base 1.
+
+    Every version has exactly one owner, which is what makes
+    :func:`refuse_a_taken_version` a question with an answer: versions 1 and 2 are
+    base 1's, and 3 and up are base 3's.
+    """
+    base = separate_base_of(version)
+    return BASE_VERSION if base is None else base
 
 
 def base_directory(version: int, root: Optional[Any] = None) -> Path:
     """The directory a version's three files are read from.
 
     Version 1, and every version built from it by amendment, reads ``policy/``
-    itself. A separate base reads its own subdirectory of it. ``root`` overrides
-    ``policy/`` for a caller that points the whole thing elsewhere, exactly as it
-    does for the amendments directory.
+    itself. A separate base reads its own subdirectory of it -- and so does a
+    version built from that base by one of its own amendments, because the files
+    are the base's own. ``root`` overrides ``policy/`` for a caller that points
+    the whole thing elsewhere, exactly as it does for the amendments directory.
     """
     base = Path(root) if root is not None else POLICY_DIR
-    subdirectory = SEPARATE_BASE_VERSIONS.get(version)
+    owner = separate_base_of(version)
+    subdirectory = SEPARATE_BASE_VERSIONS.get(owner) if owner is not None else None
     return base if subdirectory is None else base / subdirectory
 
 
 def highest_available_version(root: Optional[Any] = None) -> int:
     """The highest policy version this repository can brief at.
 
-    The amendment sequence gives :func:`current_version`; a separate base gives
-    its own number, and the two sequences are independent. The highest of them is
-    what a command line may ask for.
+    The amendment sequence on base 1 gives :func:`current_version`; every separate
+    base gives its own sequence, and they are independent. The highest of them is
+    what a command line may ask for, so with one amendment on base 3 the answer is
+    4 -- version 3 plus that amendment -- even though base 1's own sequence is
+    still at 2.
     """
-    amendment_top = current_version(root)
-    separate_top = max(SEPARATE_BASE_VERSIONS, default=BASE_VERSION)
-    return max(amendment_top, separate_top)
+    tops = [current_version(root)]
+    tops.extend(
+        version_on_base(base, root) for base in sorted(SEPARATE_BASE_VERSIONS)
+    )
+    return max(tops)
 
 
-def refuse_a_taken_version(version: int) -> None:
-    """Refuse a version number a separate base already occupies.
+def refuse_a_taken_version(version: int, base_version: int = BASE_VERSION) -> None:
+    """Refuse a version number that belongs to a **different** base.
 
-    An amendment that computed one of those numbers would be a second policy
-    under one number: ``load_policies`` would read the separate base's own files
-    for that version, and the amendment's clause would reach no brief at all. The
-    check lives here rather than at a call site so every caller is refused the
-    same way, and the message names the directory the base is kept at.
+    An amendment that computed such a number would be a second policy under one
+    number: ``load_policies`` would read the other base's own files for that
+    version, and the amendment's clause would reach no brief at all. So amendment
+    ``0002`` on base 1 is refused -- it would compute version 3, which base 3 owns
+    -- while amendment ``0001`` on base 3 is allowed, because version 4 is that
+    base's own next version. It refuses in both directions, so base 3 cannot
+    compute base 1's versions either. The check lives here rather than at a call
+    site so every caller is refused the same way, and the message names the
+    directory the owning base is kept at.
     """
-    if is_a_separate_base(version):
-        raise AmendmentError(
-            "policy version {0} is a separate policy base, kept at policy/{1}/, "
-            "and an amendment cannot compute it: amendment {2:04d} on base {3} "
-            "would compute version {0}, a second policy under the same "
-            "number".format(
-                version,
-                SEPARATE_BASE_VERSIONS[version],
-                version - BASE_VERSION,
-                BASE_VERSION,
-            )
+    owner = owner_of_version(version)
+    if owner == base_version:
+        return
+    where = (
+        "policy/{0}/".format(SEPARATE_BASE_VERSIONS[owner])
+        if owner in SEPARATE_BASE_VERSIONS
+        else "policy/"
+    )
+    if version > base_version:
+        detail = (
+            "amendment {0:04d} on base {1} would compute it, a second policy "
+            "under the same number".format(version - base_version, base_version)
         )
+    else:
+        detail = (
+            "an amendment on base {0} computes versions above {0}, and {1} is "
+            "below it".format(base_version, version)
+        )
+    raise AmendmentError(
+        "policy version {0} belongs to policy base {1}, kept at {2}, not to base "
+        "{3}: {4}".format(version, owner, where, base_version, detail)
+    )
 
 
 # --------------------------------------------------------------------------
 # One amendment
 # --------------------------------------------------------------------------
-def load_amendment(path: Any) -> Dict[str, Any]:
-    """One amendment file, read and checked. Raises ``AmendmentError``.
+def load_amendment(path: Any, base_version: int = BASE_VERSION) -> Dict[str, Any]:
+    """One amendment file on ``base_version``, read and checked. Raises ``AmendmentError``.
 
     The checks here are the ones that make "adds one clause" true rather than
     merely intended: the exact key set at the top level and again inside the
     clause, an id of the right shape and of a known prefix, and a clause
     category that agrees with the file it is going to join.
+
+    ``base_version`` decides one thing and one thing only: whether a ``note``
+    field is allowed beside the provenance set. A separate base's amendments may
+    carry one, because a clause there can be approved by hand rather than through
+    a ``policy_gaps`` report -- ``POL-NS-11`` is such a clause. Base 1's may not,
+    because there the exact key set is the mechanism that leaves nowhere to write
+    an edit. The clause's own eight fields are the same on both.
 
     Whether the number is the next free one is **not** decided here, because
     that depends on the amendments before it; :func:`apply_amendments` decides
@@ -285,9 +412,15 @@ def load_amendment(path: Any) -> Dict[str, Any]:
                 source, type(document).__name__
             )
         )
-    expected = set(AMENDMENT_FIELDS) | {"clause"}
-    missing = sorted(expected - set(document))
-    extra = sorted(set(document) - expected)
+    # ``note`` is **allowed** on a base that takes one and never required: the
+    # provenance set is what every amendment must carry, and a note is an extra
+    # sentence a hand-approved clause may add.
+    required = set(AMENDMENT_FIELDS) | {"clause"}
+    allowed = set(AMENDMENT_FIELDS) | {"clause"}
+    if base_version in AMENDMENT_NOTE_BASES:
+        allowed.add(AMENDMENT_NOTE_FIELD)
+    missing = sorted(required - set(document))
+    extra = sorted(set(document) - allowed)
     if missing or extra:
         raise AmendmentError(
             "{0} carries the wrong fields: missing {1}, unexpected {2}. An "
@@ -350,12 +483,22 @@ def apply_amendments(
     files: Mapping[str, str],
     root: Optional[Any] = None,
 ) -> Dict[str, Any]:
-    """``policies`` with amendments ``0001`` through ``version - 1`` applied.
+    """``policies`` with the amendments of ``version``'s own base applied.
+
+    On base 1 that is amendments ``0001`` through ``version - 1``; on a separate
+    base it is that base's ``0001`` through ``version - base``, so base 3's
+    version 4 applies base 3's ``0001``.
 
     ``files`` maps each policy's key in ``policies`` to the filename it was read
     from, so the prefix of a clause id can find the policy it belongs to without
     this module knowing the loader's own layout. A clause whose policy is not in
     ``policies`` is skipped: it belongs to a file this brief does not carry.
+
+    ``version`` is decomposed by its **own base**: base 1's versions apply the
+    amendments under ``policy/amendments/``, and a separate base's versions apply
+    the amendments under that base's own directory. Version 3 is base 3 alone and
+    has no amendment to apply, so it is refused here -- the loader returns its
+    files before reaching this function. Version 4 applies base 3's ``0001``.
 
     The input is not modified. Each target file's ``version`` string gains
     ``+amendment.<highest number it received>``, so a brief says which
@@ -365,30 +508,32 @@ def apply_amendments(
         raise AmendmentError(
             "a policy version is an integer, and {0!r} is not".format(version)
         )
-    if is_a_separate_base(version):
-        # A separate base is its own policy and has no amendment sequence: its
+    owner = separate_base_of(version)
+    base = BASE_VERSION if owner is None else owner
+    if owner is not None and version == owner:
+        # A separate base is its own policy and has no amendment of its own: its
         # text already carries what amendment 0001 adds to version 1, so there is
-        # nothing for this function to apply and reading the amendments directory
+        # nothing for this function to apply and reading an amendments directory
         # for it would be reading the wrong policy's provenance.
         raise AmendmentError(
             "policy version {0} is a separate policy base, kept at policy/{1}/, "
             "and amendments are never applied to it".format(
-                version, SEPARATE_BASE_VERSIONS[version]
+                version, SEPARATE_BASE_VERSIONS[owner]
             )
         )
-    available = amendment_files(root)
-    if version < BASE_VERSION:
+    available = amendment_files(root, base_version=base)
+    if version < base:
         raise AmendmentError(
             "the lowest policy version is {0}, and {1} was asked for".format(
-                BASE_VERSION, version
+                base, version
             )
         )
-    if version > BASE_VERSION + len(available):
+    if version > base + len(available):
         raise AmendmentError(
             "there is no policy version {0}; this repository is at version {1}, "
             "so {2} amendment{3} can be applied".format(
                 version,
-                BASE_VERSION + len(available),
+                base + len(available),
                 len(available),
                 "s" if len(available) != 1 else "",
             )
@@ -398,8 +543,8 @@ def apply_amendments(
     by_file = {name: key for key, name in files.items()}
     highest: Dict[str, int] = {}
 
-    for number, path in enumerate(available[: version - 1], start=1):
-        amendment = load_amendment(path)
+    for number, path in enumerate(available[: version - base], start=1):
+        amendment = load_amendment(path, base_version=base)
         clause = amendment["clause"]
         match = CLAUSE_ID_RE.match(clause["id"])
         prefix = match.group(1)

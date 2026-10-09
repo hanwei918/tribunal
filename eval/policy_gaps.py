@@ -5,7 +5,7 @@ adds a clause. This loop finds the cases the policy could not decide, groups
 them, and -- for a group a person has closed at least twice -- asks a model to
 draft **one clause** that would decide them. Nothing it drafts takes effect on
 its own: a draft is a proposal under ``policy/proposals/`` until a person runs
-``approve``, and ``approve`` is the only writer of ``policy/amendments/``.
+``approve``, and ``approve`` is the only writer of an amendments directory.
 
 The commands
 ------------
@@ -15,7 +15,9 @@ The commands
   write ``runs/policy-gaps/report.json`` and ``report.md``. **No model call.**
 * ``draft --report FILE --cluster ID`` -- one model call, for a flagged cluster
   that has at least two human closures, writing a proposal.
-* ``approve --proposal FILE --approved-by NAME`` -- write the amendment.
+* ``approve --proposal FILE --approved-by NAME [--base-version N]`` -- write the
+  amendment, on base 1 by default and on a separate base where the caller names
+  one (base 3 writes ``policy/v3/amendments/`` and makes policy version 4).
 * ``reject --proposal FILE --by NAME --reason TEXT`` -- record a rejection.
 * ``rerun --amendment NNNN --run-dir DIR [...] [--yes]`` -- re-run the affected
   cases at the new policy version.
@@ -225,9 +227,15 @@ def proposals_directory(root: Optional[Any] = None) -> Path:
     return base / PROPOSALS_DIRNAME
 
 
-def amendments_directory(root: Optional[Any] = None) -> Path:
-    """The amendments directory, through the module that owns its layout."""
-    return policy_versions.amendments_dir(root)
+def amendments_directory(
+    root: Optional[Any] = None, base_version: int = policy_versions.BASE_VERSION
+) -> Path:
+    """The amendments directory **of one base**, through the module that owns its layout.
+
+    Base 1's is ``policy/amendments/``; base 3's is ``policy/v3/amendments/``, one
+    directory down beside the three files it amends.
+    """
+    return policy_versions.amendments_dir_for(base_version, root)
 
 
 def assert_not_a_run_directory(destination: Path, runs_dir: Path, model: str) -> Path:
@@ -1713,9 +1721,22 @@ def approve_proposal(
     *,
     approved_by: str,
     amendments_root: Optional[Any] = None,
+    base_version: int = policy_versions.BASE_VERSION,
     now: Optional[Callable[[], str]] = None,
 ) -> Tuple[int, Path]:
-    """Write the amendment for one proposal. Returns ``(new_version, path)``."""
+    """Write the amendment for one proposal, on ``base_version``. Returns ``(new_version, path)``.
+
+    ``base_version`` is the policy base the clause joins: 1 for the amendment
+    sequence the repository shipped with, or a separate base -- 3, Ji Guofang's
+    platform-aligned policy. The amendment is written under **that base's** own
+    amendments directory, numbered from ``0001`` within it, and the version it
+    computes is ``base_version`` plus its number. So the first amendment on base 3
+    is ``policy/v3/amendments/0001-<slug>.json`` and makes version 4.
+
+    The refusal that matters is unchanged: an amendment may not compute a version
+    another base owns, so a **second** amendment on base 1 is still refused, and
+    an amendment on base 3 whose version is base 3's own is allowed.
+    """
     proposal_file = Path(proposal_file)
     proposal = run_benchmark.read_json(proposal_file)
     if not isinstance(proposal, Mapping):
@@ -1748,7 +1769,12 @@ def approve_proposal(
                 clause.get("category"), target, policy_versions.PREFIX_CATEGORY[prefix]
             )
         )
-    free = next_free_number(POLICY_DIR / target, prefix)
+    # The next free number is read off the **repository's own** file for this
+    # base: ``policy/`` for base 1, ``policy/v3/`` for base 3. The amendment is
+    # written wherever the caller names, but the clause numbers a proposal has to
+    # match are the ones the policy the repository briefs at carries.
+    base_policy_dir = policy_versions.base_directory(base_version)
+    free = next_free_number(base_policy_dir / target, prefix)
     if int(match.group(2)) != free:
         raise PolicyGapError(
             "the proposal adds {0}, and the next free {1} clause is POL-{1}-{2:02d}".format(
@@ -1756,18 +1782,18 @@ def approve_proposal(
             )
         )
 
-    directory = amendments_directory(amendments_root)
-    base_version = policy_versions.current_version(amendments_root)
-    number = base_version
-    # An amendment numbered N computes policy version N + 1. Since 2026-10-08
-    # version 3 is a separate policy base of its own, kept at ``policy/v3/``, so
-    # amendment 0002 on base 1 would be a second policy under one number -- and
-    # ``loader.load_policies`` would read the separate base's own files for it.
-    # Refused before the directory is created, so a refused approval writes
-    # nothing at all. It is this module's own error type, like every other
+    directory = amendments_directory(amendments_root, base_version)
+    number = policy_versions.amendments_on(base_version, amendments_root) + 1
+    new_version = base_version + number
+    # An amendment numbered N on base B computes policy version B + N. Since
+    # 2026-10-08 version 3 is a separate policy base of its own, kept at
+    # ``policy/v3/``, so amendment 0002 on base 1 would be a second policy under
+    # one number -- and ``loader.load_policies`` would read the separate base's own
+    # files for it. Refused before the directory is created, so a refused approval
+    # writes nothing at all. It is this module's own error type, like every other
     # refusal an approve can make.
     try:
-        policy_versions.refuse_a_taken_version(number + 1)
+        policy_versions.refuse_a_taken_version(new_version, base_version)
     except policy_versions.AmendmentError as exc:
         raise PolicyGapError(str(exc))
     directory.mkdir(parents=True, exist_ok=True)
@@ -1789,11 +1815,11 @@ def approve_proposal(
     path = directory / "{0:04d}-{1}.json".format(number, slug_for(clause_id))
     path.write_text(money.dumps_canonical(amendment) + "\n", encoding="utf-8")
     try:
-        policy_versions.load_amendment(path)
+        policy_versions.load_amendment(path, base_version=base_version)
     except policy_versions.AmendmentError:
         path.unlink()
         raise
-    return policy_versions.current_version(amendments_root), path
+    return new_version, path
 
 
 def reject_proposal(
@@ -2536,6 +2562,12 @@ def _build_parser() -> argparse.ArgumentParser:
     approve.add_argument("--proposal", type=Path, required=True)
     approve.add_argument("--approved-by", required=True)
     approve.add_argument("--amendments-dir", type=Path, default=None)
+    # The base the clause joins. Version 1's amendment sequence is the default,
+    # so an invocation that does not name a base is the one it always was; base 3
+    # writes under ``policy/v3/amendments/`` and makes version 4.
+    approve.add_argument(
+        "--base-version", type=int, default=policy_versions.BASE_VERSION
+    )
 
     reject = sub.add_parser("reject", help="record a rejection in the proposal")
     reject.add_argument("--proposal", type=Path, required=True)
@@ -2691,11 +2723,16 @@ def _main_approve(args: argparse.Namespace) -> int:
     # the proposal is read and before an amendment is written. The rule is
     # :mod:`eval.sealed_roots`'s, so this command and every other one that
     # writes to a path a caller names refuse the same paths.
-    sealed_roots.refuse_a_sealed_destination(amendments_directory(args.amendments_dir))
-    version, path = approve_proposal(
-        args.proposal, approved_by=args.approved_by, amendments_root=args.amendments_dir
+    sealed_roots.refuse_a_sealed_destination(
+        amendments_directory(args.amendments_dir, args.base_version)
     )
-    number = version - 1
+    version, path = approve_proposal(
+        args.proposal,
+        approved_by=args.approved_by,
+        amendments_root=args.amendments_dir,
+        base_version=args.base_version,
+    )
+    number = version - args.base_version
     print("policy version is now {0}".format(version))
     print("Wrote {0}".format(_relative(path)))
     print(
