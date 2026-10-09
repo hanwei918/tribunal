@@ -1,0 +1,79 @@
+[  1/29] case 101  started
+[  2/29] case 102  started
+[  3/29] case 103  started
+[  1/29] case 101  match      89.8s     169,117 tokens
+[  4/29] case 104  started
+[  2/29] case 102  match     113.6s     203,368 tokens
+[  5/29] case 105  started
+[  3/29] case 103  match     273.8s     283,491 tokens
+[  6/29] case 106  started
+[  5/29] case 105  match     177.6s     222,948 tokens
+[  7/29] case 107  started
+[  6/29] case 106  match      75.0s     177,807 tokens
+[  8/29] case 108  started
+[  4/29] case 104  match     273.4s     291,284 tokens
+[  9/29] case 109  started
+[  9/29] case 109  match     157.5s     231,187 tokens
+[ 10/29] case 110  started
+[  8/29] case 108  match     184.6s     210,127 tokens
+[ 11/29] case 111  started
+[  7/29] case 107  MISS      278.0s     310,036 tokens
+[ 12/29] case 112  started
+[ 10/29] case 110  match     186.1s     242,383 tokens
+[ 13/29] case 113  started
+[ 11/29] case 111  match     188.3s     226,125 tokens
+[ 14/29] case 114  started
+[ 14/29] case 114  match      95.9s     196,305 tokens
+[ 15/29] case 115  started
+[ 13/29] case 113  match     115.5s     183,987 tokens
+[ 16/29] case 201  started
+[ 15/29] case 115  match     121.7s     198,747 tokens
+[ 17/29] case 202  started
+[ 16/29] case 201  match     122.5s     197,611 tokens
+[ 18/29] case 203  started
+[ 17/29] case 202  match     172.9s     222,667 tokens
+[ 19/29] case 204  started
+[ 18/29] case 203  match     171.0s     225,790 tokens
+[ 20/29] case 205  started
+[ 12/29] case 112  MISS      624.8s     611,066 tokens
+[ 21/29] case 206  started
+[ 19/29] case 204  match     152.9s     218,054 tokens
+[ 22/29] case 207  started
+[ 20/29] case 205  match     177.9s     281,402 tokens
+[ 23/29] case 208  started
+[ 21/29] case 206  match     154.3s     235,069 tokens
+[ 24/29] case 209  started
+[ 22/29] case 207  match     149.5s     213,976 tokens
+[ 25/29] case 210  started
+[ 23/29] case 208  match     277.9s     264,375 tokens
+[ 26/29] case 211  started
+[ 24/29] case 209  match     231.2s     259,010 tokens
+[ 27/29] case 212  started
+[ 25/29] case 210  match     183.5s     273,159 tokens
+[ 28/29] case 213  started
+[ 28/29] case 213  match     177.9s     221,735 tokens
+[ 29/29] case 214  started
+[ 27/29] case 212  match     221.7s     248,542 tokens
+[ 29/29] case 214  match     330.8s     318,315 tokens
+[ 26/29] case 211  MISS      548.2s     459,436 tokens
+
+run         deepseek/deepseek-flash  ->  /Users/hanweizhou/Desktop/tribunal-final-runs-v6/corpus/policy-v6/deepseek-deepseek-flash
+provenance  commit 9ca7313b945f, tree clean, prompts 5b8510cd900a, key bfd3fa50ecc7
+cases       29 completed, 0 cached, 0 failed
+limits      timeout 900s per attempt, case deadline 2400s, concurrency 3
+tokens      7,397,119 charged to the budget, 0 reused from cache
+            4,135,620 in, 3,261,499 out (2,987,474 of the output was reasoning)
+stop        completed
+
+four-field exact match  26/29 = 89.7%
+  ruling                   26/29
+  amount_sgd               27/29
+  driver_compensation_sgd  28/29
+  referrals                29/29
+cached        all 29 results match the brief and the prompts this code builds
+
+cases graded  29 of 29 in the corpus — the whole corpus
+escalation  5/29 = 17.2%  (target 17.2%)  precision 0.8  recall 0.8  over 1  under 1
+INDETERMINATE cases ruled confidently: 112
+
+report written to /Users/hanweizhou/Desktop/tribunal-final-runs-v6/corpus/policy-v6/deepseek-deepseek-flash/report.md

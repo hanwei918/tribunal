@@ -1,0 +1,83 @@
+[  1/1] case 901  started
+[  1/1] case 901  MISS      171.3s     250,535 tokens
+stated expectation (/private/tmp/claude-501/-Users-hanweizhou-Desktop-Tencent-/b54331d1-962b-4b3d-9cba-8aca5ed615c8/scratchpad/frozen/eval/external/ryde/expected.json): Cancellation charge UPHELD
+  this run is not scored against it: the organisers' word is not one of POL-GEN-03's rulings
+
+run         deepseek/deepseek-flash  ->  /Users/hanweizhou/Desktop/tribunal-final-runs-v6/ryde/ryde-v3/policy-v6/deepseek-deepseek-flash
+provenance  commit 9ca7313b945f, tree clean, prompts 5b8510cd900a, key f4b93ccff494
+cases       1 completed, 0 cached, 0 failed
+limits      timeout 900s per attempt, case deadline 2400s, concurrency 1
+tokens      250,535 charged to the budget, 0 reused from cache
+            154,838 in, 95,697 out (80,344 of the output was reasoning)
+stop        completed
+
+four-field exact match  0/0 = n/a
+  ruling                   0/0
+  amount_sgd               0/0
+  driver_compensation_sgd  0/0
+  referrals                0/0
+cached        all 0 results match the brief and the prompts this code builds
+
+cases graded  0 of 0 in the corpus — a selected subset: 
+escalation  0/0 = n/a  (on these 0 cases)  precision n/a  recall n/a  over 0  under 0
+  rates on a selected subset are not comparable to the corpus base rate, so the corpus target is not printed beside them
+  raw counts
+    true positives        0  none
+    false positives       0  none
+    false negatives       0  none
+    over-escalations      0  none
+    under-escalations     0  none
+
+report written to /Users/hanweizhou/Desktop/tribunal-final-runs-v6/ryde/ryde-v3/policy-v6/deepseek-deepseek-flash/report.md
+
+Development sets — deepseek/deepseek-flash
+
+Separately, each set graded against its own key:
+
+  set      run directory                            cases      exact  ruling amount driver   refs
+  corpus   deepseek-deepseek-flash                   0/29    not run
+  codex    deepseek-deepseek-flash                   0/15    not run
+
+Currency, each set checked with its own loader and its own briefs:
+
+  corpus   current   0, stale_brief   0, stale_prompts   0, unknown   0
+  codex    current   0, stale_brief   0, stale_prompts   0, unknown   0
+
+Combined, every case graded against the key it belongs to:
+
+  no case of any development set has been run for this model
+
+The held-out set (wild-v1), on its own and never in the combined figure:
+
+  set      run directory                            cases      exact  ruling amount driver   refs
+  wild     deepseek-deepseek-flash                   0/64    not run
+
+Currency, checked with the set's own loader and its own briefs:
+
+  wild     current   0, stale_brief   0, stale_prompts   0, unknown   0
+
+The held-out set is not a development set and is never added to the combined figure above. It was drafted without access to this repository and is run exactly once from the commit tagged freeze-2026-09-30; that single run is one of the two generalisation figures the submission reports. It is absent from data/index.json and is graded against eval/answers/wild/ground_truth.json, which is neither development key.
+
+The second sealed set (wild-v2), on its own and never in the combined figure:
+
+  set      run directory                            cases      exact  ruling amount driver   refs
+  wild-v2  deepseek-deepseek-flash                   0/20    not run
+
+Currency, checked with the set's own loader and its own briefs:
+
+  wild-v2  current   0, stale_brief   0, stale_prompts   0, unknown   0
+
+The second sealed set is not a development set and is never added to the combined figure above or to the held-out set's figure. It was prepared by OpenAI Codex for the owner and imported on 2026-10-03, and it was run exactly once, on 2026-10-04, from a commit whose tribunal/, prompts/ and policy/ trees equal those at freeze-2026-10-03 -- every event the run wrote records the commit it was made from -- at the policy version 2 its registration fixes; that single run is one of the two generalisation figures the submission reports. It is absent from data/index.json and is graded against eval/answers/wild-v2/ground_truth.json, which is neither development key and not the held-out set's key either.
+
+The re-runnable set, on its own, never in the combined figure and never in the held-out set's section:
+
+  set      run directory                            cases      exact  ruling amount driver   refs
+  wild-dev deepseek-deepseek-flash                   0/64    not run
+
+Currency, checked with the set's own loader and its own briefs:
+
+  wild-dev current   0, stale_brief   0, stale_prompts   0, unknown   0
+
+The re-runnable set is development data. It holds the held-out set's own 64 cases and grades them against the held-out set's own key, whose answers were read on 2026-10-01 so that the system could be changed to fix what they exposed; a figure here is a reading of a set the system has now seen, and it is not a generalisation figure. Its runs go to runs/wild-dev/<model>/, which is not the directory holding the held-out set's single run. Re-running it, --force and the advocate replay are all allowed for it. It is never part of the combined figure and never part of --set all.
+
+Both development sets are development data, and neither is a test set. The corpus figure is the figure the submission reports; the combined figure is a sum over two sets that were drafted differently and share one template, so it is not a generalisation figure and does not replace the corpus number. The generalisation figures the submission reports belong to the two sealed sets, each run exactly once: the held-out set's, drafted without access to this repository, from the commit tagged freeze-2026-09-30; and the second sealed set's, prepared by OpenAI Codex -- whether Codex could read this repository while preparing it is not recorded -- from a commit whose tribunal/, prompts/ and policy/ trees equal those at freeze-2026-10-03. Neither figure here is either of them, and the two are never added to each other either.

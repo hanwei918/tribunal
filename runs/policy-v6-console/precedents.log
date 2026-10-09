@@ -1,0 +1,59 @@
+[  1/15] case 101  started
+[  2/15] case 102  started
+[  3/15] case 103  started
+[  1/15] case 101  match      67.5s     170,326 tokens
+[  4/15] case 104  started
+[  2/15] case 102  match     125.2s     187,230 tokens
+[  5/15] case 105  started
+[  3/15] case 103  match     262.6s     319,913 tokens
+[  6/15] case 106  started
+[  5/15] case 105  match     161.8s     216,530 tokens
+[  7/15] case 107  started
+[  4/15] case 104  match     234.6s     283,109 tokens
+[  8/15] case 108  started
+[  6/15] case 106  match     112.3s     196,747 tokens
+[  9/15] case 109  started
+[  7/15] case 107  match     215.8s     272,345 tokens
+[ 10/15] case 110  started
+[  8/15] case 108  match     209.5s     221,373 tokens
+[ 11/15] case 111  started
+[  9/15] case 109  match     178.3s     231,963 tokens
+[ 12/15] case 112  started
+[ 11/15] case 111  match     185.3s     242,450 tokens
+[ 13/15] case 113  started
+[ 10/15] case 110  match     216.2s     247,679 tokens
+[ 14/15] case 114  started
+[ 14/15] case 114  match      90.8s     181,684 tokens
+[ 15/15] case 115  started
+[ 13/15] case 113  match     128.5s     183,540 tokens
+[ 15/15] case 115  match      82.8s     191,881 tokens
+[ 12/15] case 112  match     380.6s     361,209 tokens
+
+run         deepseek/deepseek-flash  ->  /Users/hanweizhou/Desktop/tribunal-final-runs-v6/precedents/precedents/policy-v6/deepseek-deepseek-flash
+provenance  commit 9ca7313b945f, tree clean, prompts 5b8510cd900a, key bfd3fa50ecc7
+cases       15 completed, 0 cached, 0 failed
+precedents  the judge was shown earlier human closures; no covered case is the source of one
+            Figures with precedents on are not comparable to the headline figure. The precedent library is built from closures made by people who have seen these development sets, so a case the library holds a closure for is material the system has been shown before.
+limits      timeout 900s per attempt, case deadline 2400s, concurrency 3
+tokens      3,507,979 charged to the budget, 0 reused from cache
+            2,092,155 in, 1,415,824 out (1,282,126 of the output was reasoning)
+stop        completed
+
+four-field exact match  15/15 = 100.0%
+  ruling                   15/15
+  amount_sgd               15/15
+  driver_compensation_sgd  15/15
+  referrals                15/15
+cached        all 15 results match the brief and the prompts this code builds
+
+cases graded  15 of 29 in the corpus — a selected subset: 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115
+escalation  2/15 = 13.3%  (on these 15 cases)  precision 1.0  recall 1.0  over 0  under 0
+  rates on a selected subset are not comparable to the corpus base rate, so the corpus target is not printed beside them
+  raw counts
+    true positives        2  110, 112
+    false positives       0  none
+    false negatives       0  none
+    over-escalations      0  none
+    under-escalations     0  none
+
+report written to /Users/hanweizhou/Desktop/tribunal-final-runs-v6/precedents/precedents/policy-v6/deepseek-deepseek-flash/report.md
