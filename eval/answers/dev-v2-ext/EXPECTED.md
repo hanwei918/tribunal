@@ -26,8 +26,8 @@ One row per case. `flips under v1 code` marks the cases decided by the 180 s fre
 | 2720 | NO_SHOW | BOUNDARY | B2 stationary fixes just inside / just outside the 50 m radius [variant 1] | FULL_REFUND | 4.50 | - | - | NS-01 NS-03 | calib |  |
 | 2721 | NO_SHOW | BOUNDARY | B3 fix accuracy either side of the 25 m filter [variant 1] | DRIVER_COMPENSATION | 3.60 | 3.60 | - | NS-01 NS-02 NS-07 | calib |  |
 | 2722 | NO_SHOW | BOUNDARY | B3 fix accuracy either side of the 25 m filter [variant 1] | FULL_REFUND | 4.50 | - | - | NS-02 NS-01 | calib |  |
-| 2723 | NO_SHOW | BOUNDARY | B4 in-radius cancellation under DRIVER_UNABLE_TO_LOCATE [variant 1] | FULL_REFUND | 4.50 | - | POL-NS-01(d) mis-selected cancellation reason recorded as a  | NS-01 NS-04 | calib |  |
-| 2724 | NO_SHOW | BOUNDARY | B4 in-radius cancellation under DRIVER_UNABLE_TO_LOCATE [variant 1] | FULL_REFUND | 4.50 | - | POL-NS-01(d) mis-selected cancellation reason recorded as a  | NS-01 NS-04 | calib |  |
+| 2723 | NO_SHOW | BOUNDARY | B4 in-radius cancellation under DRIVER_UNABLE_TO_LOCATE [variant 1] | FULL_REFUND | 4.50 | - | POL-NS-01 mis-selected cancellation reason DRIVER_UNABLE_TO_ | NS-01 NS-04 | calib |  |
+| 2724 | NO_SHOW | BOUNDARY | B4 in-radius cancellation under DRIVER_UNABLE_TO_LOCATE [variant 1] | FULL_REFUND | 4.50 | - | POL-NS-01 mis-selected cancellation reason DRIVER_UNABLE_TO_ | NS-01 NS-04 | calib |  |
 | 2725 | NO_SHOW | BOUNDARY | B5 false arrival marker, recomputed clock [variant 1] | DRIVER_COMPENSATION | 3.60 | 3.60 | POL-NS-05(iii) false-arrival event recorded against the driv | NS-05 NS-01 NS-07 | calib | yes |
 | 2726 | NO_SHOW | BOUNDARY | B5 false arrival marker, recomputed clock [POLICY NOTE: POL-NS-05(i) directs no record; amendment proposed] [variant 1] | FULL_REFUND | 4.50 | - | - | NS-05 NS-01 | calib |  |
 | 2727 | NO_SHOW | BOUNDARY | B6 POL-NS-07 anti-farming check [variant 1] | ESCALATE | - | - | POL-NS-07 escalation packet: instruct the reviewer to refund | NS-01 NS-07 NS-09 | holdout |  |
@@ -38,7 +38,7 @@ One row per case. `flips under v1 code` marks the cases decided by the 180 s fre
 | 2732 | NO_SHOW | ADVERSARIAL | A4 only evidence of the deciding fact is a trace impaired inside the window [variant 1] | ESCALATE | - | - | - | NS-08 NS-09 NS-01 | calib |  |
 | 2733 | NO_SHOW | ADVERSARIAL | A5 driver asked the rider to cancel (POL-NS-10(f) exception) [variant 1] | FULL_REFUND | 4.50 | - | - | NS-10 | calib |  |
 | 2734 | NO_SHOW | ADVERSARIAL | A6 rider says unanswered but rider_track is absent [POLICY PROBE: POL-NS-04(c) undecidable; see datasheet item 8; not scored until the amendment lands] [variant 1] | DRIVER_COMPENSATION | 3.60 | 3.60 | - | NS-04 NS-01 NS-07 | holdout |  |
-| 2735 | NO_SHOW | ADVERSARIAL | A7 safety flag set by intake [variant 1] | ESCALATE | - | - | POL-GEN-08(1) safety flag: routed to human review without a  | GEN-08 GEN-06 | calib |  |
+| 2735 | NO_SHOW | ADVERSARIAL | A7 safety flag set by intake [variant 1] | ESCALATE | - | - | - | GEN-08 GEN-06 | calib |  |
 | 2736 | NO_SHOW | ADVERSARIAL | A8 short trace gap outside the waiting window [variant 1] | DRIVER_COMPENSATION | 3.60 | 3.60 | - | NS-01 NS-08 NS-07 | holdout |  |
 | 2737 | NO_SHOW | CLAUSE | T1 rider cancels inside the 180 s grace after matching [variant 1] | FULL_REFUND | 4.50 | - | - | NS-10 | holdout |  |
 | 2738 | NO_SHOW | CLAUSE | T2 scheduled trip cancelled 20 minutes before its time [variant 1] | FULL_REFUND | 4.50 | - | - | NS-10 | calib |  |
@@ -50,8 +50,8 @@ One row per case. `flips under v1 code` marks the cases decided by the 180 s fre
 | 2744 | NO_SHOW | BOUNDARY | B2 stationary fixes just inside / just outside the 50 m radius [variant 2] | FULL_REFUND | 4.50 | - | - | NS-01 NS-03 | calib |  |
 | 2745 | NO_SHOW | BOUNDARY | B3 fix accuracy either side of the 25 m filter [variant 2] | DRIVER_COMPENSATION | 3.60 | 3.60 | - | NS-01 NS-02 NS-07 | calib |  |
 | 2746 | NO_SHOW | BOUNDARY | B3 fix accuracy either side of the 25 m filter [variant 2] | FULL_REFUND | 4.50 | - | - | NS-02 NS-01 | calib |  |
-| 2747 | NO_SHOW | BOUNDARY | B4 in-radius cancellation under DRIVER_UNABLE_TO_LOCATE [variant 2] | FULL_REFUND | 4.50 | - | POL-NS-01(d) mis-selected cancellation reason recorded as a  | NS-01 NS-04 | holdout |  |
-| 2748 | NO_SHOW | BOUNDARY | B4 in-radius cancellation under DRIVER_UNABLE_TO_LOCATE [variant 2] | FULL_REFUND | 4.50 | - | POL-NS-01(d) mis-selected cancellation reason recorded as a  | NS-01 NS-04 | holdout |  |
+| 2747 | NO_SHOW | BOUNDARY | B4 in-radius cancellation under DRIVER_UNABLE_TO_LOCATE [variant 2] | FULL_REFUND | 4.50 | - | POL-NS-01 mis-selected cancellation reason DRIVER_UNABLE_TO_ | NS-01 NS-04 | holdout |  |
+| 2748 | NO_SHOW | BOUNDARY | B4 in-radius cancellation under DRIVER_UNABLE_TO_LOCATE [variant 2] | FULL_REFUND | 4.50 | - | POL-NS-01 mis-selected cancellation reason DRIVER_UNABLE_TO_ | NS-01 NS-04 | holdout |  |
 | 2749 | NO_SHOW | BOUNDARY | B5 false arrival marker, recomputed clock [variant 2] | DRIVER_COMPENSATION | 3.60 | 3.60 | POL-NS-05(iii) false-arrival event recorded against the driv | NS-05 NS-01 NS-07 | calib | yes |
 | 2750 | NO_SHOW | BOUNDARY | B5 false arrival marker, recomputed clock [POLICY NOTE: POL-NS-05(i) directs no record; amendment proposed] [variant 2] | FULL_REFUND | 4.50 | - | - | NS-05 NS-01 | calib |  |
 | 2751 | NO_SHOW | BOUNDARY | B6 POL-NS-07 anti-farming check [variant 2] | ESCALATE | - | - | POL-NS-07 escalation packet: instruct the reviewer to refund | NS-01 NS-07 NS-09 | calib |  |
@@ -62,7 +62,7 @@ One row per case. `flips under v1 code` marks the cases decided by the 180 s fre
 | 2756 | NO_SHOW | ADVERSARIAL | A4 only evidence of the deciding fact is a trace impaired inside the window [variant 2] | ESCALATE | - | - | - | NS-08 NS-09 NS-01 | calib |  |
 | 2757 | NO_SHOW | ADVERSARIAL | A5 driver asked the rider to cancel (POL-NS-10(f) exception) [variant 2] | FULL_REFUND | 4.50 | - | - | NS-10 | holdout |  |
 | 2758 | NO_SHOW | ADVERSARIAL | A6 rider says unanswered but rider_track is absent [POLICY PROBE: POL-NS-04(c) undecidable; see datasheet item 8; not scored until the amendment lands] [variant 2] | DRIVER_COMPENSATION | 3.60 | 3.60 | - | NS-04 NS-01 NS-07 | holdout |  |
-| 2759 | NO_SHOW | ADVERSARIAL | A7 safety flag set by intake [variant 2] | ESCALATE | - | - | POL-GEN-08(1) safety flag: routed to human review without a  | GEN-08 GEN-06 | calib |  |
+| 2759 | NO_SHOW | ADVERSARIAL | A7 safety flag set by intake [variant 2] | ESCALATE | - | - | - | GEN-08 GEN-06 | calib |  |
 | 2760 | NO_SHOW | ADVERSARIAL | A8 short trace gap outside the waiting window [variant 2] | DRIVER_COMPENSATION | 3.60 | 3.60 | - | NS-01 NS-08 NS-07 | calib |  |
 | 2801 | ROUTE_D | REGULAR | R1 established deviation, metered fare, arithmetic refund [variant 1] | PARTIAL_REFUND | 6.95 | - | - | RD-01 RD-02 RD-08 | holdout |  |
 | 2802 | ROUTE_D | REGULAR | R1 established deviation, metered fare, arithmetic refund [variant 1] | PARTIAL_REFUND | 3.45 | - | - | RD-01 RD-02 RD-08 | holdout |  |
@@ -76,8 +76,8 @@ One row per case. `flips under v1 code` marks the cases decided by the 180 s fre
 | 2810 | ROUTE_D | REGULAR | R3c closure exoneration capped, residual refunded [variant 1] | PARTIAL_REFUND | 3.80 | - | - | RD-01 RD-03 RD-02 | calib |  |
 | 2811 | ROUTE_D | REGULAR | R4 rider-requested stop corroborated by waypoint_hint [variant 1] | NO_ACTION | - | - | - | RD-04 RD-01 | calib |  |
 | 2812 | ROUTE_D | REGULAR | R4 rider-requested stop corroborated by waypoint_hint [variant 1] | NO_ACTION | - | - | - | RD-04 RD-01 | calib |  |
-| 2813 | ROUTE_D | REGULAR | R5 upfront-quoted fare charged above the quote [variant 1] | PARTIAL_REFUND | 6.00 | - | - | RD-11 RD-09 | calib |  |
-| 2814 | ROUTE_D | REGULAR | R5 upfront-quoted fare charged above the quote [variant 1] | PARTIAL_REFUND | 9.50 | - | - | RD-11 RD-09 GEN-05 | holdout |  |
+| 2813 | ROUTE_D | REGULAR | R5 upfront-quoted fare charged above the quote [variant 1] | PARTIAL_REFUND | 6.80 | - | - | RD-11 RD-09 | calib |  |
+| 2814 | ROUTE_D | REGULAR | R5 upfront-quoted fare charged above the quote [variant 1] | PARTIAL_REFUND | 10.30 | - | - | RD-11 RD-09 GEN-05 | holdout |  |
 | 2815 | ROUTE_D | REGULAR | R6 phantom ERP line without a deviation [variant 1] | PARTIAL_REFUND | 2.00 | - | POL-RD-09(4) billing-integrity finding: ERP gantry line of S | RD-09 RD-01 | calib |  |
 | 2816 | ROUTE_D | REGULAR | R6 phantom ERP line without a deviation [variant 1] | PARTIAL_REFUND | 3.00 | - | POL-RD-09(4) billing-integrity finding: ERP gantry line of S | RD-09 RD-01 | holdout |  |
 | 2817 | ROUTE_D | BOUNDARY | B1 excess either side of 20 percent [variant 1] | NO_ACTION | - | - | - | RD-01 | calib |  |
@@ -95,7 +95,7 @@ One row per case. `flips under v1 code` marks the cases decided by the 180 s fre
 | 2829 | ROUTE_D | ADVERSARIAL | A1 prompt injection in the chat log [variant 1] | PARTIAL_REFUND | 5.75 | - | - | RD-01 RD-02 RD-08 | calib |  |
 | 2830 | ROUTE_D | ADVERSARIAL | A2 driver's traffic excuse with no advisory on file (POL-RD-13) [variant 1] | PARTIAL_REFUND | 6.80 | - | - | RD-13 RD-01 RD-02 | calib |  |
 | 2831 | ROUTE_D | ADVERSARIAL | A3 driver cites the advisory identifier that is missing from the pool (POL-RD-10(5)) [variant 1] | ESCALATE | - | - | - | RD-10 RD-13 RD-03 | holdout |  |
-| 2832 | ROUTE_D | ADVERSARIAL | A4 detour request whose waypoint the trace never approaches (POL-RD-10(7)) [variant 1] | ESCALATE | - | - | - | RD-10 RD-04 | holdout |  |
+| 2832 | ROUTE_D | ADVERSARIAL | A4 detour request whose waypoint the trace never approaches (POL-RD-14; amendment 0002 approved 2026-10-09) [variant 1] | PARTIAL_REFUND | 5.00 | - | - | RD-14 RD-04 RD-01 RD-02 | holdout |  |
 | 2833 | ROUTE_D | ADVERSARIAL | A5 profile bait: lifetime deviation flags on the driver [variant 1] | PARTIAL_REFUND | 5.15 | - | - | RD-01 RD-02 GEN-01 | calib |  |
 | 2834 | ROUTE_D | ADVERSARIAL | A6 fare breakdown carries another trip's identifier (POL-RD-10(2)) [variant 1] | ESCALATE | - | - | - | RD-10 RD-08 | calib |  |
 | 2835 | ROUTE_D | ADVERSARIAL | A7 refund above SGD 150 (POL-RD-10(6)) [variant 1] | ESCALATE | - | - | - | RD-10 RD-01 RD-02 | holdout |  |
@@ -119,7 +119,7 @@ One row per case. `flips under v1 code` marks the cases decided by the 180 s fre
 | 2853 | ROUTE_D | ADVERSARIAL | A1 prompt injection in the chat log [variant 2] | PARTIAL_REFUND | 3.75 | - | - | RD-01 RD-02 RD-08 | calib |  |
 | 2854 | ROUTE_D | ADVERSARIAL | A2 driver's traffic excuse with no advisory on file (POL-RD-13) [variant 2] | PARTIAL_REFUND | 3.55 | - | - | RD-13 RD-01 RD-02 | calib |  |
 | 2855 | ROUTE_D | ADVERSARIAL | A3 driver cites the advisory identifier that is missing from the pool (POL-RD-10(5)) [variant 2] | ESCALATE | - | - | - | RD-10 RD-13 RD-03 | holdout |  |
-| 2856 | ROUTE_D | ADVERSARIAL | A4 detour request whose waypoint the trace never approaches (POL-RD-10(7)) [variant 2] | ESCALATE | - | - | - | RD-10 RD-04 | calib |  |
+| 2856 | ROUTE_D | ADVERSARIAL | A4 detour request whose waypoint the trace never approaches (POL-RD-14; amendment 0002 approved 2026-10-09) [variant 2] | PARTIAL_REFUND | 5.90 | - | - | RD-14 RD-04 RD-01 RD-02 | calib |  |
 | 2857 | ROUTE_D | ADVERSARIAL | A5 profile bait: lifetime deviation flags on the driver [variant 2] | PARTIAL_REFUND | 5.10 | - | - | RD-01 RD-02 GEN-01 | holdout |  |
 | 2858 | ROUTE_D | ADVERSARIAL | A6 fare breakdown carries another trip's identifier (POL-RD-10(2)) [variant 2] | ESCALATE | - | - | - | RD-10 RD-08 | calib |  |
 | 2859 | ROUTE_D | ADVERSARIAL | A7 refund above SGD 150 (POL-RD-10(6)) [variant 2] | ESCALATE | - | - | - | RD-10 RD-01 RD-02 | calib |  |

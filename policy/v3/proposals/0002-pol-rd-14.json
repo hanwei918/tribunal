@@ -1,0 +1,28 @@
+{
+  "base_version": 2,
+  "cluster_id": "C2",
+  "cases": [
+    1782,
+    2832,
+    2856
+  ],
+  "clause": {
+    "id": "POL-RD-14",
+    "title": "Uncorroborated rider instruction",
+    "category": "ROUTE_DEVIATION",
+    "rule": "Where a rider instruction in the chat_log meets POL-RD-04(a) to (c) but the gps_trace does not corroborate it - the vehicle never passes within 200 m of the waypoint named by chat_message.waypoint_hint and never travels the requested road - the instruction did not cause the measured excess: POL-RD-04 does not apply, no distance is excluded, and the deviation is decided under POL-RD-01 and POL-RD-02 on the trace as measured. This is not the contradiction POL-RD-10(7) describes: a request that was made and a route that did not follow it are consistent with each other, and the driver's reliance on the request is an assertion that fails on the trace, not evidence of comparable strength against it. POL-RD-10(7) is engaged only where the trace corroborates the instruction in part, so that the excess attributable to it cannot be separated from the rest. The ruling must state that the instruction was found and that the trace did not corroborate it.",
+    "requires": [
+      "chat_log",
+      "gps_trace",
+      "trip_record"
+    ],
+    "licenses": [
+      "PARTIAL_REFUND",
+      "FULL_REFUND",
+      "NO_ACTION"
+    ],
+    "favours": "RIDER",
+    "notes": "Added because POL-RD-10(7) gives 'a chat_log detour request whose waypoint the gps_trace never approaches' as its example of mutually contradictory evidence, while POL-RD-04 treats the same facts as a failed corroboration test. Read as an escalation, every detour excuse a driver could not substantiate would reach a human reviewer; read as a failed corroboration, the rider's refund is arithmetic and the driver's excuse simply falls away. The second reading is the one POL-RD-04 and POL-RD-08 already imply (an assertion that does not survive the artifact it rests on discharges nothing), so this clause states it and confines POL-RD-10(7) to the partly corroborated case. At the next base revision the example in POL-RD-10(7) is replaced accordingly."
+  },
+  "drafted_by": "Ji Guofang (policy owner); decision taken 2026-10-09 after checking platform practice: route disputes are reviewed on the recorded route against the expected one, and a stop the rider asks for counts only where the record shows it - a verbal request the vehicle never followed excuses nothing"
+}

@@ -220,6 +220,8 @@ __all__ = [
     "PRECEDENTS_DIRNAME",
     "precedents_run_directory",
     "assert_precedents_destination",
+    "precedents_policy_v_run_directory",
+    "assert_precedents_policy_v_destination",
     "POLICY_V_DIRNAME",
     "policy_v_directory_name",
     "policy_v_run_directory",
@@ -829,6 +831,56 @@ def assert_precedents_destination(run_dir: Path, runs_dir: Path, model: str) -> 
         raise BenchmarkError(
             "a run with precedents on may only be written under {0}, and this one "
             "would go to {1}".format(root, resolved)
+        )
+    return Path(run_dir)
+
+
+def precedents_policy_v_run_directory(
+    runs_dir: Path, policy_version: int, model: str
+) -> Path:
+    """Where a run with precedents **and** a later version lives.
+
+    ``runs/precedents/policy-v<N>/<model-slug>/``: the precedents block is the
+    same whatever the policy version, so the two switches may be given together,
+    and their run is a third measurement -- neither the plain precedents run at
+    ``runs/precedents/<model-slug>/`` nor the plain version-N run at
+    ``runs/policy-v<N>/<model-slug>/`` -- so it gets a directory of its own that
+    collides with neither.
+    """
+    return (
+        Path(runs_dir)
+        / PRECEDENTS_DIRNAME
+        / policy_v_directory_name(policy_version)
+        / model_slug(model)
+    )
+
+
+def assert_precedents_policy_v_destination(
+    run_dir: Path, runs_dir: Path, policy_version: int, model: str
+) -> Path:
+    """Refuse a precedents-and-version run's directory that is not under its root.
+
+    Checked against ``<runs root>/precedents/policy-v<N>/`` specifically rather
+    than against ``precedents/*`` or ``policy-v*``, so a run at one version
+    cannot land in another's and a plain precedents run cannot land in a
+    versioned one. ``runs/<model-slug>/``, ``runs/codex/<model-slug>/`` and the
+    two sealed roots are refused by :func:`assert_not_a_headline_directory` and
+    by :func:`eval.sealed_roots.refuse_a_sealed_destination`, which the callers
+    of this helper apply as well.
+
+    Returns the directory unchanged when it is where it should be.
+    """
+    resolved = Path(run_dir).resolve()
+    assert_not_a_headline_directory(resolved, runs_dir, model)
+    root = (
+        Path(runs_dir) / PRECEDENTS_DIRNAME / policy_v_directory_name(policy_version)
+    ).resolve()
+    if not resolved.is_relative_to(root):
+        raise BenchmarkError(
+            "a run with precedents on at policy version {0} may only be written "
+            "under {1}, and this one would go to {2}".format(
+                policy_version, root, resolved
+            )
         )
     return Path(run_dir)
 
@@ -2483,6 +2535,13 @@ def run_one_case(
         # ids travel with the result because a reader of one case file has to be
         # able to see which earlier closures its judge was reading.
         document["precedents_shown"] = list(result.precedents_shown)
+    if result.scope_gate is not None:
+        # Present only when POL-GEN-08(1)'s gate fired, on the same rule the
+        # verifier's and the library's blocks follow: a case file produced by a
+        # case the gate did not fire on is the file it always was. The block
+        # names the flags, the clause and the reason code and records ``calls``
+        # as 0, so the file says in its own words that no model call was made.
+        document["scope_gate"] = result.scope_gate
     if amount_rule != pipeline.DEFAULT_AMOUNT_RULE:
         # Present only when the rule is not the published one, on the same rule
         # the verifier's and the library's blocks follow: a case file produced
@@ -3057,14 +3116,22 @@ def run_benchmark(
         )
         if on
     ]
-    if len(switches_on) > 1:
+    if len(switches_on) > 1 and set(switches_on) != {
+        "--precedents",
+        "--policy-version N>=2",
+    }:
         # At most one of the switches that change what a run measures may be on
-        # per invocation. A run with two of them on measures neither, and the
-        # directory it wrote to would name only one of them.
+        # per invocation -- a run with two of them on measures neither -- with
+        # **one exception**: ``--precedents`` and ``--policy-version`` may be
+        # given together, because the precedents block is the same whatever the
+        # policy version, so the two do not confound each other. Their run gets a
+        # directory of its own, ``runs/precedents/policy-v<N>/<model>/``, and
+        # every other pairing keeps its refusal.
         raise BenchmarkError(
             "at most one of --ablate, --precedents, --policy-version N>=2 and "
-            "--amount-rule may be given per invocation: each changes what the run "
-            "measures, and a run with two of them on measures neither"
+            "--amount-rule may be given per invocation, except --precedents with "
+            "--policy-version: each changes what the run measures, and a run with "
+            "two of them on measures neither"
         )
     if precedents is not None and replay_dir is not None:
         # A replay reuses a recorded run's advocates, and the judge of the run
@@ -3167,17 +3234,31 @@ def run_benchmark(
     # the second set, so the same rule puts an ablated corpus run at
     # ``runs/ablation/<name>/<model-slug>/``, a precedents corpus run at
     # ``runs/precedents/<model-slug>/``, a version-N corpus run at
-    # ``runs/policy-v<N>/<model-slug>/`` and a signed-rule corpus run at
-    # ``runs/amount-rule/<rule>/<model-slug>/`` -- and the same four under
+    # ``runs/policy-v<N>/<model-slug>/``, a precedents-and-version run at
+    # ``runs/precedents/policy-v<N>/<model-slug>/`` and a signed-rule corpus run
+    # at ``runs/amount-rule/<rule>/<model-slug>/`` -- and the same under
     # ``runs/codex/`` for the second set. None of them can land where an
     # unswitched result lives, which is what makes the measurements
     # distinguishable by their paths and not only by their contents. At most one
-    # switch can be on -- checked above -- so the order here decides only which
-    # directory a run that cannot happen would have gone to.
+    # switch can be on -- checked above, with ``--precedents`` and
+    # ``--policy-version`` the one pair that may be given together -- so the
+    # order here decides only which directory a run that cannot happen would have
+    # gone to.
     sealed_permit: Optional[Path] = None
     if ablation is not None:
         run_dir = assert_ablation_destination(
             ablation_run_directory(runs_dir, ablation, model), runs_dir, model
+        )
+    elif (
+        precedents is not None
+        and policy_version != policy_versions.BASE_VERSION
+        and policy_version_moves_the_run
+    ):
+        run_dir = assert_precedents_policy_v_destination(
+            precedents_policy_v_run_directory(runs_dir, policy_version, model),
+            runs_dir,
+            policy_version,
+            model,
         )
     elif precedents is not None:
         run_dir = assert_precedents_destination(
@@ -5761,13 +5842,16 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         # a run briefed at version 1, and naming the version beside one would
         # look as though the briefs had been built from amended policy. This
         # block comes after the other two, so it is the one that catches a
-        # version named beside --ablate or --precedents as well as one alone.
-        if args.ablate is not None or args.precedents:
+        # version named beside --ablate as well as one alone.
+        #
+        # ``--precedents`` is deliberately **not** in that list: the precedents
+        # block is the same whatever the policy version, so the two may be given
+        # together and the run goes to ``runs/precedents/policy-v<N>/<model>/``.
+        if args.ablate is not None:
             parser.error(
-                "at most one of --ablate, --precedents, --policy-version N>=2 "
-                "and --amount-rule may be given per invocation: each changes "
-                "what the run measures, and a run with two of them on measures "
-                "neither"
+                "at most one of --ablate, --policy-version N>=2 and --amount-rule "
+                "may be given per invocation: each changes what the run measures, "
+                "and a run with two of them on measures neither"
             )
         for present, name, why in (
             (args.compare, "--compare", "reads cached runs produced at version 1"),

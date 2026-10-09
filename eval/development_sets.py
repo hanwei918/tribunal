@@ -74,7 +74,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from eval import grade, run_benchmark  # noqa: E402
-from tribunal import events, loader  # noqa: E402
+from tribunal import events, loader, policy_versions  # noqa: E402
 
 # The model id is a live value in exactly one module, and this is not it: the
 # registration below names the model its run is fixed at by reading the decision
@@ -152,6 +152,14 @@ class DevelopmentSet:
     summary: str
     sealed: bool = False
     policy_version: int = 1
+    # The policy **base** a set's versions belong to, for a set written for a
+    # separate base rather than for one fixed version. Where it is set, the set
+    # accepts any version on that base (3, 4, 5, ...), runs at the **latest** one
+    # when no version is named, and the version moves the run one level down
+    # under the set's own root -- ``runs/<set>/policy-v<N>/<model>/``. Where it is
+    # ``None`` the set either fixes one version (``wild-v2`` is version 2) or
+    # takes whatever the command line gives, exactly as before.
+    policy_base: Optional[int] = None
     run_arguments: Optional[RunArguments] = None
     # Where a set's **stated expectation** lives, for a set that has one and no
     # answer key. ``ryde-v3`` is that set: the organisers' sample carries a word
@@ -311,6 +319,7 @@ DEV_V2 = DevelopmentSet(
         "against, so it is never a generalisation figure"
     ),
     policy_version=VERSION_THREE,
+    policy_base=VERSION_THREE,
 )
 
 DEV_V2_EXT = DevelopmentSet(
@@ -328,6 +337,7 @@ DEV_V2_EXT = DevelopmentSet(
         "eighty cases turn on. Development data, never a generalisation figure"
     ),
     policy_version=VERSION_THREE,
+    policy_base=VERSION_THREE,
 )
 
 # The organisers' sample converted for policy version 3, as a one-case
@@ -350,6 +360,7 @@ RYDE_V3 = DevelopmentSet(
         "key; the run is not scored"
     ),
     policy_version=VERSION_THREE,
+    policy_base=VERSION_THREE,
     stated_expectation=run_benchmark.EXTERNAL_EXPECTED_PATH,
 )
 
@@ -455,6 +466,60 @@ def named(name: str) -> DevelopmentSet:
                 name, ", ".join(sorted(BY_NAME))
             )
         ) from None
+
+
+def resolved_policy_version(
+    development_set: DevelopmentSet, named: Optional[int]
+) -> int:
+    """The policy version one set's invocation briefs at.
+
+    ``named`` is the version the **command line** carries: version 1, the
+    default, when it named none -- or ``None`` for a caller that gave none at
+    all. Both mean "not named", so both are treated the same, and that is why
+    this takes the command line's version rather than an "explicit or None" flag:
+    the layer that replaces it is the one that knows the registration.
+
+    Three cases, and they are the three a registration can be in:
+
+    * a set written for a **base** (``dev-v2`` and its two siblings) accepts any
+      version on that base; with no version named it runs at the base's
+      **latest**, which today is 5;
+    * a set that **fixes** one version (``wild-v2`` is version 2) briefs at it
+      whatever the invocation says, because the version is part of what the set
+      is;
+    * every other set takes the version the command line gives, and version 1
+      when it gives none -- the behaviour the corpus has always had.
+    """
+    if named is None:
+        named = run_benchmark.DEFAULT_POLICY_VERSION
+    if development_set.policy_base is not None:
+        if named == run_benchmark.DEFAULT_POLICY_VERSION:
+            return policy_versions.version_on_base(development_set.policy_base)
+        return named
+    if development_set.policy_version != run_benchmark.DEFAULT_POLICY_VERSION:
+        return development_set.policy_version
+    return named
+
+
+def version_moves_the_run(
+    development_set: DevelopmentSet, named: Optional[int]
+) -> bool:
+    """Whether this set's version moves its run one level down under its root.
+
+    A set written for a base moves its run at any version above 1, so
+    ``--set dev-v2`` with no flag is a versioned run at
+    ``runs/dev-v2/policy-v5/<model>/``. A set that **fixes** its version keeps
+    the set's own directory -- ``wild-v2`` runs into ``runs/wild-v2/<model>/``
+    and never into a ``policy-v2`` directory inside it. Every other set moves its
+    run only when a version above 1 was named.
+    """
+    if resolved_policy_version(development_set, named) == (
+        run_benchmark.DEFAULT_POLICY_VERSION
+    ):
+        return False
+    if development_set.policy_base is not None:
+        return True
+    return development_set.policy_version == run_benchmark.DEFAULT_POLICY_VERSION
 
 
 # The development-data caveat, in one place because two reports print it: this
@@ -1126,14 +1191,21 @@ def run_set(
     assert_set_run_directory(
         development_set.run_dir(model, runs_dir), development_set, runs_dir
     )
-    # A set whose registration fixes the policy version briefs at that version
-    # whatever the invocation says, and its run keeps the set's own directory
-    # rather than moving one level down into a ``policy-v<N>`` one: the version
-    # is part of what the set is, not a switch on the run. ``wild-v2`` is the one
-    # set that uses this.
-    if development_set.policy_version != run_benchmark.DEFAULT_POLICY_VERSION:
-        kwargs["policy_version"] = development_set.policy_version
-        kwargs["policy_version_moves_the_run"] = False
+    # The version this invocation briefs at, resolved from the set's own
+    # registration and the version the command line named (version 1, the
+    # default, when it named none). A set written for a base runs at the latest
+    # version on it when no flag names one; a set that fixes its version briefs
+    # at it whatever the invocation says; and every other set takes the version
+    # given, or version 1.
+    named = kwargs.pop("policy_version", None)
+    kwargs["policy_version"] = resolved_policy_version(development_set, named)
+    # Whether the version moves the run one level down under the set's own root:
+    # ``runs/<set>/policy-v<N>/<model>/``. Two versions of one set are then two
+    # directories and neither can be mistaken for the other's results. A set that
+    # fixes its version keeps the set's own directory instead.
+    kwargs["policy_version_moves_the_run"] = version_moves_the_run(
+        development_set, named
+    )
     summary = run_benchmark.run_benchmark(
         model,
         selected,
@@ -1809,10 +1881,31 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     # 1 would make an explicit ``--policy-version 1`` indistinguishable from no
     # flag at all.
     explicit_policy_version = args.policy_version
+    # The version the command line carries: version 1, the default, when it named
+    # none. ``run_set`` is what replaces it with a set's own registration, because
+    # that is the layer that knows the registration.
     policy_version = (
         run_benchmark.DEFAULT_POLICY_VERSION
         if explicit_policy_version is None
         else explicit_policy_version
+    )
+
+    # A later policy version **named on the command line**, which is the switch
+    # the refusals below are keyed on. It is deliberately the command line's
+    # version and not a set's **resolved** one: a set written for a base resolves
+    # to the latest version on that base when no flag names one, but that is what
+    # the set *is* rather than a second switch the invocation gave. Keying on the
+    # resolved version instead would refuse ``--set wild-v2 --report`` and
+    # ``--set wild-v2 --replay-check``, and hand ``wild-v2``'s own sealed-root
+    # refusals to the wrong block -- which is exactly what it did before this
+    # predicate was narrowed back.
+    version_named = policy_version != run_benchmark.DEFAULT_POLICY_VERSION
+
+    # "all" is the two development sets. The held-out set is deliberately not in
+    # that list: it is run once, and an invocation that ran it as a side effect
+    # of running everything would be a run nobody chose to make.
+    selected = (
+        [named(args.set_name)] if args.set_name != "all" else list(DEVELOPMENT_SETS)
     )
 
     if args.ablate is not None:
@@ -1862,19 +1955,23 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 )
                 return 1
 
-    if policy_version != run_benchmark.DEFAULT_POLICY_VERSION:
+    if version_named:
         # A later policy version changes what every agent is given, so it follows
-        # the rule the ablation and the precedent block follow: it cannot be
-        # combined with another switch that changes the agents' input, nor with a
-        # mode that reads or reports a run produced without it. This block runs
-        # after the other two, so it is the one that catches a version named
-        # beside either of them as well as one named alone.
-        if args.ablate is not None or args.precedents:
+        # the rule the ablation follows: it cannot be combined with another switch
+        # that changes the agents' input, nor with a mode that reads or reports a
+        # run produced without it. This block runs after the other two, so it is
+        # the one that catches a version named beside either of them as well as
+        # one named alone.
+        #
+        # ``--precedents`` is **not** in that list any more: the precedents block
+        # is the same whatever the policy version, so the two may be given
+        # together, and the run goes to ``runs/precedents/policy-vN/<model>/``.
+        if args.ablate is not None:
             print(
-                "FATAL: at most one of --ablate, --precedents, "
-                "--policy-version N>=2 and --amount-rule may be given per "
-                "invocation: each changes what the run measures, and a run with "
-                "two of them on measures neither",
+                "FATAL: at most one of --ablate, --policy-version N>=2 "
+                "and --amount-rule may be given per invocation: each changes "
+                "what the run measures, and a run with two of them on measures "
+                "neither",
                 file=sys.stderr,
             )
             return 1
@@ -1903,7 +2000,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         if (
             args.ablate is not None
             or args.precedents
-            or policy_version != run_benchmark.DEFAULT_POLICY_VERSION
+            or version_named
         ):
             print(
                 "FATAL: at most one of --ablate, --precedents, "
@@ -1956,11 +2053,6 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         )
         return 0
 
-    # "all" is the two development sets. The held-out set is deliberately not in
-    # that list: it is run once, and an invocation that ran it as a side effect
-    # of running everything would be a run nobody chose to make.
-    selected = [named(args.set_name)] if args.set_name != "all" else list(DEVELOPMENT_SETS)
-
     # The run root, for a set whose registration fixes its command line. Its
     # single run has to land in the directory the six destinations read, and
     # ``--runs-dir`` is what would put it somewhere nothing reads while the
@@ -2012,22 +2104,30 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     # set that does not exist -- so naming the flag beside it is refused rather
     # than silently ignored.
     #
-    # One exception, added 2026-10-08: the version-3 sets accept a flag that
-    # **names the version their registration already fixes**. It changes
-    # nothing -- the set briefs at that version either way -- and it is how the
-    # owner's sheet writes the command, so ``--set dev-v2 --policy-version 3``
-    # runs the set rather than being refused for saying the same thing twice.
-    # Every other version is still refused, so ``--set dev-v2 --policy-version
-    # 2`` is told which version the set is written for, and ``wild-v2``'s own
-    # refusals are unchanged.
+    # A set written for a **base** (``dev-v2`` and its two siblings) is the other
+    # kind: it accepts any version on that base -- 3, 4, 5, ... -- and refuses
+    # one that belongs to another base, so ``--set dev-v2 --policy-version 4``
+    # runs the set at version 4 and ``--policy-version 2`` is told which base the
+    # set is written for.
     if explicit_policy_version is not None:
         for development_set in selected:
-            if development_set.policy_version != run_benchmark.DEFAULT_POLICY_VERSION:
+            if development_set.policy_base is not None:
                 if (
-                    development_set.name in VERSION_THREE_SET_NAMES
-                    and explicit_policy_version == development_set.policy_version
+                    policy_versions.separate_base_of(explicit_policy_version)
+                    == development_set.policy_base
                 ):
                     continue
+                print(
+                    "FATAL: {0} is written for policy base {1}, so "
+                    "--policy-version {2} is refused for it".format(
+                        development_set.name,
+                        development_set.policy_base,
+                        explicit_policy_version,
+                    ),
+                    file=sys.stderr,
+                )
+                return 1
+            if development_set.policy_version != run_benchmark.DEFAULT_POLICY_VERSION:
                 print(
                     "FATAL: {0} fixes policy version {1} in its registration, so "
                     "--policy-version is refused for it".format(
@@ -2045,7 +2145,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     for present, switch in (
         (args.ablate is not None, "--ablate"),
         (args.precedents, "--precedents"),
-        (policy_version != run_benchmark.DEFAULT_POLICY_VERSION, "--policy-version"),
+        (version_named, "--policy-version"),
         (args.amount_rule != run_benchmark.pipeline.DEFAULT_AMOUNT_RULE, "--amount-rule"),
     ):
         if not present:
@@ -2187,7 +2287,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                     subset,
                     model=model,
                     prompts_dir=args.prompts_dir,
-                    policy_version=policy_version,
+                    policy_version=resolved_policy_version(
+                        development_set, policy_version
+                    ),
                     case_loader=development_set.load_case,
                 )
             except run_benchmark.BenchmarkError as exc:

@@ -109,6 +109,12 @@ EVENT_VERIFICATION = "verification"
 # calls rather than inside the ruling: the ruling says what the judge decided,
 # and this says one of the things it was reading.
 EVENT_PRECEDENTS_SHOWN = "precedents_shown"
+# The ``POL-GEN-08(1)`` scope gate. A flagged dispute is never adjudicated
+# automatically, so the pipeline assembles the record and publishes an
+# ``ESCALATE`` without asking any agent. It is a fact about the case in its own
+# right -- the record of a call that was deliberately **not** made -- and it
+# belongs beside the calls rather than inside the ruling.
+EVENT_SCOPE_GATE = "scope_gate"
 EVENT_RULING = "ruling"
 EVENT_CASE_FAILED = "case_failed"
 EVENT_GRADE = "grade"
@@ -123,6 +129,7 @@ EVENT_TYPES = (
     EVENT_VOTE,
     EVENT_VERIFICATION,
     EVENT_PRECEDENTS_SHOWN,
+    EVENT_SCOPE_GATE,
     EVENT_RULING,
     EVENT_CASE_FAILED,
     EVENT_GRADE,

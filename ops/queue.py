@@ -93,6 +93,13 @@ REASON_OUT_OF_SCOPE = "OUT_OF_SCOPE"
 REASON_AUTO_PAUSED = "AUTO_PAUSED"
 REASON_RULED = "RULED"
 REASON_RISK_TRIPPED = "RISK_TRIPPED"
+# The two ``POL-GEN-08(1)`` flags. A flagged dispute is never adjudicated
+# automatically, so the flag -- not the category -- decides the lane: a safety
+# flag is fast-tracked, and a complaint flag is a human review with the reason
+# ``GEN08_COMPLAINT``. The safety reason is named here too so a reader can tell a
+# flagged fast-track from a safety-category one.
+REASON_SAFETY_FLAG = "GEN08_SAFETY"
+REASON_GEN08_COMPLAINT = "GEN08_COMPLAINT"
 
 # The ruling value the pipeline uses to hand a case to a human. Named here
 # rather than read from the policy, because it is a *value* of the ruling
@@ -230,6 +237,11 @@ class Dispute(NamedTuple):
     ruling: Optional[str]
     wall_seconds: Optional[Decimal]
     risk_tripped: bool
+    # The two ``POL-GEN-08(1)`` flags, read off the case's own dispute. A dispute
+    # that carries either is never adjudicated automatically, so the flag decides
+    # the lane whatever the category is.
+    safety_flag: bool = False
+    complaint_flag: bool = False
 
 
 class Entry(NamedTuple):
@@ -253,7 +265,16 @@ def lane_for(dispute: Dispute, config: Config) -> Tuple[str, Tuple[str, ...]]:
     The in-scope categories are the loader's own category-to-policy map, so a
     category the pipeline learns to adjudicate becomes routable without this
     module being edited.
+
+    ``POL-GEN-08(1)`` is checked **before** the category, because a flagged
+    dispute is never adjudicated automatically: whatever its category, a safety
+    flag is fast-tracked and a complaint flag is a human review with the reason
+    ``GEN08_COMPLAINT``.
     """
+    if dispute.safety_flag:
+        return LANE_SAFETY, (REASON_SAFETY_FLAG,)
+    if dispute.complaint_flag:
+        return LANE_HUMAN, (REASON_GEN08_COMPLAINT,)
     if dispute.category not in loader.CATEGORY_POLICY_FILES:
         if dispute.category in SAFETY_CATEGORIES:
             return LANE_SAFETY, (REASON_SAFETY,)
@@ -455,6 +476,8 @@ def disputes_from_run(run_dir: Path) -> List[Dispute]:
                 ruling=inner.get("ruling"),
                 wall_seconds=document.get("wall_seconds"),
                 risk_tripped=_risk_tripped(case, document, development_set),
+                safety_flag=dispute.get("safety_flag") is True,
+                complaint_flag=dispute.get("complaint_flag") is True,
             )
         )
     return found

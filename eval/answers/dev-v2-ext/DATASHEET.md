@@ -114,3 +114,12 @@ a product of WorkBuddy, not supplied by the organisers.
     limb) cites POL-RD-06; a FULL_REFUND route case contests charged_total, so GEN-03's "whole contested amount" and
     RD-02's charged_total coincide; the short-gap route pair runs at 36 km/h so that its 40 s gap stays under the 500 m
     jump of POL-RD-07(b).
+12. Second-run findings (2026-10-08 evening) and what changed: (a) the DRIVER_UNABLE_TO_LOCATE referral now cites
+    POL-NS-01 without a limb - the sentence that directs the record follows limb (d) in the clause body rather than
+    sitting inside it; (b) the safety-flag case expects no referral: an escalation replaces the ruling (POL-GEN-03) and
+    the trigger is stated in the explanation; (c) the upfront-quote cases (1763, 1764 and variants) now refund the
+    0.80 platform fee as well - POL-RD-11(a) lists the lines properly chargeable above the quote exhaustively and the
+    platform fee is not among them, so the key was wrong and the judge was right; (d) amendment 0002 (POL-RD-14) was approved on 2026-10-09, so 1782 and its variants are keyed PARTIAL_REFUND at the
+    POL-RD-02 figure: an instruction the trace never followed excludes nothing. Two pipeline defects the run exposed are code items, not key items: the vote
+    reduces referrals by raw text rather than by clause reference (1725), and the no-show money block does not
+    enumerate the waiting-time fee as a refund option (1740).

@@ -372,14 +372,14 @@
       "expected_amount_sgd": 4.5,
       "expected_driver_compensation_sgd": null,
       "expected_referrals": [
-        "POL-NS-01(d) mis-selected cancellation reason recorded as a driver-education item"
+        "POL-NS-01 mis-selected cancellation reason DRIVER_UNABLE_TO_LOCATE recorded as a driver-education item"
       ],
       "governing_clauses": [
         "POL-NS-01",
         "POL-NS-04"
       ],
       "difficulty": "HARD",
-      "rationale": "EV-TRIP-02723.cancellation_reason_code is DRIVER_UNABLE_TO_LOCATE with the driver's fixes inside the arrival radius (380 s run). POL-NS-01 limb (d) is not satisfied by that code - it is the driver's own admission - and where the fixes lie inside the radius the clause itself fixes the outcome: FULL_REFUND of SGD 4.50, no compensation, and the mis-selected code recorded in referrals as a driver-education item. POL-NS-04 independently reaches the same refund: the rider's locating message went unanswered and rider_track sits inside the presence radius."
+      "rationale": "EV-TRIP-02723.cancellation_reason_code is DRIVER_UNABLE_TO_LOCATE with the driver's fixes inside the arrival radius (380 s run). POL-NS-01 limb (d) is not satisfied by that code - it is the driver's own admission - and where the fixes lie inside the radius the clause itself fixes the outcome: FULL_REFUND of SGD 4.50, no compensation, and the mis-selected code recorded in referrals as a driver-education item (the sentence follows limb (d) in the clause body, so the referral cites POL-NS-01 without a limb). POL-NS-04 independently reaches the same refund: the rider's locating message went unanswered and rider_track sits inside the presence radius."
     }
   },
   {
@@ -390,14 +390,14 @@
       "expected_amount_sgd": 4.5,
       "expected_driver_compensation_sgd": null,
       "expected_referrals": [
-        "POL-NS-01(d) mis-selected cancellation reason recorded as a driver-education item"
+        "POL-NS-01 mis-selected cancellation reason DRIVER_UNABLE_TO_LOCATE recorded as a driver-education item"
       ],
       "governing_clauses": [
         "POL-NS-01",
         "POL-NS-04"
       ],
       "difficulty": "HARD",
-      "rationale": "EV-TRIP-02724.cancellation_reason_code is DRIVER_UNABLE_TO_LOCATE with the driver's fixes inside the arrival radius (200 s run). POL-NS-01 limb (d) is not satisfied by that code - it is the driver's own admission - and where the fixes lie inside the radius the clause itself fixes the outcome: FULL_REFUND of SGD 4.50, no compensation, and the mis-selected code recorded in referrals as a driver-education item. POL-NS-04 independently reaches the same refund: the rider's locating message went unanswered and rider_track sits inside the presence radius."
+      "rationale": "EV-TRIP-02724.cancellation_reason_code is DRIVER_UNABLE_TO_LOCATE with the driver's fixes inside the arrival radius (200 s run). POL-NS-01 limb (d) is not satisfied by that code - it is the driver's own admission - and where the fixes lie inside the radius the clause itself fixes the outcome: FULL_REFUND of SGD 4.50, no compensation, and the mis-selected code recorded in referrals as a driver-education item (the sentence follows limb (d) in the clause body, so the referral cites POL-NS-01 without a limb). POL-NS-04 independently reaches the same refund: the rider's locating message went unanswered and rider_track sits inside the presence radius."
     }
   },
   {
@@ -576,15 +576,13 @@
       "expected_ruling": "ESCALATE",
       "expected_amount_sgd": null,
       "expected_driver_compensation_sgd": null,
-      "expected_referrals": [
-        "POL-GEN-08(1) safety flag: routed to human review without a draft ruling"
-      ],
+      "expected_referrals": [],
       "governing_clauses": [
         "POL-GEN-08",
         "POL-GEN-06"
       ],
       "difficulty": "INDETERMINATE",
-      "rationale": "dispute.safety_flag is set and EV-CHAT-02735 MSG-02735-002 is a threat. Under POL-GEN-08(1) a dispute carrying a safety flag is never adjudicated automatically: the record is assembled and the case routed to human review under POL-GEN-06 (2 h limit) with no draft ruling. ESCALATE; the fee is held."
+      "rationale": "dispute.safety_flag is set and EV-CHAT-02735 MSG-02735-002 is a threat. Under POL-GEN-08(1) a dispute carrying a safety flag is never adjudicated automatically: the record is assembled and the case routed to human review under POL-GEN-06 (2 h limit) with no draft ruling. ESCALATE; the fee is held; the escalation trigger (the safety flag) is stated in the explanation, and no referral is expected because an escalation replaces the ruling (POL-GEN-03)."
     }
   },
   {
@@ -772,14 +770,14 @@
       "expected_amount_sgd": 4.5,
       "expected_driver_compensation_sgd": null,
       "expected_referrals": [
-        "POL-NS-01(d) mis-selected cancellation reason recorded as a driver-education item"
+        "POL-NS-01 mis-selected cancellation reason DRIVER_UNABLE_TO_LOCATE recorded as a driver-education item"
       ],
       "governing_clauses": [
         "POL-NS-01",
         "POL-NS-04"
       ],
       "difficulty": "HARD",
-      "rationale": "EV-TRIP-02747.cancellation_reason_code is DRIVER_UNABLE_TO_LOCATE with the driver's fixes inside the arrival radius (380 s run). POL-NS-01 limb (d) is not satisfied by that code - it is the driver's own admission - and where the fixes lie inside the radius the clause itself fixes the outcome: FULL_REFUND of SGD 4.50, no compensation, and the mis-selected code recorded in referrals as a driver-education item. POL-NS-04 independently reaches the same refund: the rider's locating message went unanswered and rider_track sits inside the presence radius."
+      "rationale": "EV-TRIP-02747.cancellation_reason_code is DRIVER_UNABLE_TO_LOCATE with the driver's fixes inside the arrival radius (380 s run). POL-NS-01 limb (d) is not satisfied by that code - it is the driver's own admission - and where the fixes lie inside the radius the clause itself fixes the outcome: FULL_REFUND of SGD 4.50, no compensation, and the mis-selected code recorded in referrals as a driver-education item (the sentence follows limb (d) in the clause body, so the referral cites POL-NS-01 without a limb). POL-NS-04 independently reaches the same refund: the rider's locating message went unanswered and rider_track sits inside the presence radius."
     }
   },
   {
@@ -790,14 +788,14 @@
       "expected_amount_sgd": 4.5,
       "expected_driver_compensation_sgd": null,
       "expected_referrals": [
-        "POL-NS-01(d) mis-selected cancellation reason recorded as a driver-education item"
+        "POL-NS-01 mis-selected cancellation reason DRIVER_UNABLE_TO_LOCATE recorded as a driver-education item"
       ],
       "governing_clauses": [
         "POL-NS-01",
         "POL-NS-04"
       ],
       "difficulty": "HARD",
-      "rationale": "EV-TRIP-02748.cancellation_reason_code is DRIVER_UNABLE_TO_LOCATE with the driver's fixes inside the arrival radius (200 s run). POL-NS-01 limb (d) is not satisfied by that code - it is the driver's own admission - and where the fixes lie inside the radius the clause itself fixes the outcome: FULL_REFUND of SGD 4.50, no compensation, and the mis-selected code recorded in referrals as a driver-education item. POL-NS-04 independently reaches the same refund: the rider's locating message went unanswered and rider_track sits inside the presence radius."
+      "rationale": "EV-TRIP-02748.cancellation_reason_code is DRIVER_UNABLE_TO_LOCATE with the driver's fixes inside the arrival radius (200 s run). POL-NS-01 limb (d) is not satisfied by that code - it is the driver's own admission - and where the fixes lie inside the radius the clause itself fixes the outcome: FULL_REFUND of SGD 4.50, no compensation, and the mis-selected code recorded in referrals as a driver-education item (the sentence follows limb (d) in the clause body, so the referral cites POL-NS-01 without a limb). POL-NS-04 independently reaches the same refund: the rider's locating message went unanswered and rider_track sits inside the presence radius."
     }
   },
   {
@@ -976,15 +974,13 @@
       "expected_ruling": "ESCALATE",
       "expected_amount_sgd": null,
       "expected_driver_compensation_sgd": null,
-      "expected_referrals": [
-        "POL-GEN-08(1) safety flag: routed to human review without a draft ruling"
-      ],
+      "expected_referrals": [],
       "governing_clauses": [
         "POL-GEN-08",
         "POL-GEN-06"
       ],
       "difficulty": "INDETERMINATE",
-      "rationale": "dispute.safety_flag is set and EV-CHAT-02759 MSG-02759-002 is a threat. Under POL-GEN-08(1) a dispute carrying a safety flag is never adjudicated automatically: the record is assembled and the case routed to human review under POL-GEN-06 (2 h limit) with no draft ruling. ESCALATE; the fee is held."
+      "rationale": "dispute.safety_flag is set and EV-CHAT-02759 MSG-02759-002 is a threat. Under POL-GEN-08(1) a dispute carrying a safety flag is never adjudicated automatically: the record is assembled and the case routed to human review under POL-GEN-06 (2 h limit) with no draft ruling. ESCALATE; the fee is held; the escalation trigger (the safety flag) is stated in the explanation, and no referral is expected because an escalation replaces the ruling (POL-GEN-03)."
     }
   },
   {
@@ -1205,7 +1201,7 @@
     "dispute_id": "DSP-02813",
     "ground_truth": {
       "expected_ruling": "PARTIAL_REFUND",
-      "expected_amount_sgd": 6.0,
+      "expected_amount_sgd": 6.8,
       "expected_driver_compensation_sgd": null,
       "expected_referrals": [],
       "governing_clauses": [
@@ -1213,7 +1209,7 @@
         "POL-RD-09"
       ],
       "difficulty": "HARD",
-      "rationale": "EV-FARE-02813.fare_model is UPFRONT_QUOTE with quoted_fare_sgd 21.50, so POL-RD-11 governs and POL-RD-02 does not run. Properly chargeable lines are the 0.80 platform fee and nothing else (no ERP, no surcharge, no waiting fee). charged_total 28.3 exceeds 21.50 + 0.80 by 6.00, refunded in full under POL-RD-11(a). The excess distance on EV-GPS-02813 is the driver's loss, not the rider's."
+      "rationale": "EV-FARE-02813.fare_model is UPFRONT_QUOTE with quoted_fare_sgd 21.50, so POL-RD-11 governs and POL-RD-02 does not run. POL-RD-11(a) names the lines properly chargeable on top of the quote - ERP and tolls actually crossed, a proper airport surcharge, fare_breakdown.waiting_time_fee - and EV-FARE-02813 carries none of them; the 0.80 platform fee is not in that list, so everything above 21.50 is refunded: charged_total 28.3 minus 21.50 = 6.80 under POL-RD-11(a). The excess distance on EV-GPS-02813 is the driver's loss, not the rider's."
     }
   },
   {
@@ -1221,7 +1217,7 @@
     "dispute_id": "DSP-02814",
     "ground_truth": {
       "expected_ruling": "PARTIAL_REFUND",
-      "expected_amount_sgd": 9.5,
+      "expected_amount_sgd": 10.3,
       "expected_driver_compensation_sgd": null,
       "expected_referrals": [],
       "governing_clauses": [
@@ -1230,7 +1226,7 @@
         "POL-GEN-05"
       ],
       "difficulty": "HARD",
-      "rationale": "EV-FARE-02814.fare_model is UPFRONT_QUOTE with quoted_fare_sgd 21.50, so POL-RD-11 governs and POL-RD-02 does not run. Properly chargeable lines are the 0.80 platform fee and nothing else (no ERP, no surcharge, no waiting fee). charged_total 31.8 exceeds 21.50 + 0.80 by 9.50, refunded in full under POL-RD-11(a). The excess distance on EV-GPS-02814 is the driver's loss, not the rider's. The figure exceeds execution_threshold_sgd 8.00, so under POL-GEN-05 the ruling issues but is held in the human queue for release; ruling value and amount are unchanged."
+      "rationale": "EV-FARE-02814.fare_model is UPFRONT_QUOTE with quoted_fare_sgd 21.50, so POL-RD-11 governs and POL-RD-02 does not run. POL-RD-11(a) names the lines properly chargeable on top of the quote - ERP and tolls actually crossed, a proper airport surcharge, fare_breakdown.waiting_time_fee - and EV-FARE-02814 carries none of them; the 0.80 platform fee is not in that list, so everything above 21.50 is refunded: charged_total 31.8 minus 21.50 = 10.30 under POL-RD-11(a). The excess distance on EV-GPS-02814 is the driver's loss, not the rider's. The figure exceeds execution_threshold_sgd 8.00, so under POL-GEN-05 the ruling issues but is held in the human queue for release; ruling value and amount are unchanged."
     }
   },
   {
@@ -1524,16 +1520,18 @@
     "case_no": 2832,
     "dispute_id": "DSP-02832",
     "ground_truth": {
-      "expected_ruling": "ESCALATE",
-      "expected_amount_sgd": null,
+      "expected_ruling": "PARTIAL_REFUND",
+      "expected_amount_sgd": 5.0,
       "expected_driver_compensation_sgd": null,
       "expected_referrals": [],
       "governing_clauses": [
-        "POL-RD-10",
-        "POL-RD-04"
+        "POL-RD-14",
+        "POL-RD-04",
+        "POL-RD-01",
+        "POL-RD-02"
       ],
-      "difficulty": "INDETERMINATE",
-      "rationale": "EV-CHAT-02832 MSG-02832-001 is a timely, specific rider detour request with a waypoint_hint, but EV-GPS-02832 never comes within 200 m of that waypoint: admissible evidence on both sides of comparable strength, mutually contradictory. POL-RD-10(7) escalates; the amount is held."
+      "difficulty": "HARD",
+      "rationale": "EV-CHAT-02832 MSG-02832-001 is a timely, specific rider instruction with a waypoint_hint, but EV-GPS-02832 never comes within 200 m of that waypoint and never travels the requested road: the instruction did not cause the measured excess. Under POL-RD-14 (amendment 0002) POL-RD-04 does not apply and no distance is excluded; a request that was made and a route that did not follow it are consistent, so this is not the POL-RD-10(7) contradiction, and the driver's reliance on the request is an assertion that fails on the trace. The deviation is established on EV-GPS-02832 under POL-RD-01 and POL-RD-02 refunds charged 27.19 minus the fare recomputed on the booked optimal, rounded up to 0.05; the ruling states that the instruction was found and not corroborated."
     }
   },
   {
@@ -1924,16 +1922,18 @@
     "case_no": 2856,
     "dispute_id": "DSP-02856",
     "ground_truth": {
-      "expected_ruling": "ESCALATE",
-      "expected_amount_sgd": null,
+      "expected_ruling": "PARTIAL_REFUND",
+      "expected_amount_sgd": 5.9,
       "expected_driver_compensation_sgd": null,
       "expected_referrals": [],
       "governing_clauses": [
-        "POL-RD-10",
-        "POL-RD-04"
+        "POL-RD-14",
+        "POL-RD-04",
+        "POL-RD-01",
+        "POL-RD-02"
       ],
-      "difficulty": "INDETERMINATE",
-      "rationale": "EV-CHAT-02856 MSG-02856-001 is a timely, specific rider detour request with a waypoint_hint, but EV-GPS-02856 never comes within 200 m of that waypoint: admissible evidence on both sides of comparable strength, mutually contradictory. POL-RD-10(7) escalates; the amount is held."
+      "difficulty": "HARD",
+      "rationale": "EV-CHAT-02856 MSG-02856-001 is a timely, specific rider instruction with a waypoint_hint, but EV-GPS-02856 never comes within 200 m of that waypoint and never travels the requested road: the instruction did not cause the measured excess. Under POL-RD-14 (amendment 0002) POL-RD-04 does not apply and no distance is excluded; a request that was made and a route that did not follow it are consistent, so this is not the POL-RD-10(7) contradiction, and the driver's reliance on the request is an assertion that fails on the trace. The deviation is established on EV-GPS-02856 under POL-RD-01 and POL-RD-02 refunds charged 31.13 minus the fare recomputed on the booked optimal, rounded up to 0.05; the ruling states that the instruction was found and not corroborated."
     }
   },
   {

@@ -317,6 +317,29 @@ VOTE_NO_VALID_DRAFTS = "no_valid_drafts"
 # the held-out cases 517 and 533 still fail at the judge in the offline replay.
 NO_VALID_DRAFTS_ESCALATION_VERSION = 3
 
+# --------------------------------------------------------------------------
+# POL-GEN-08(1): a flagged dispute is never adjudicated automatically
+# --------------------------------------------------------------------------
+# ``POL-GEN-08(1)`` (version 3 and later) says a dispute carrying
+# ``dispute.safety_flag`` or ``dispute.complaint_flag`` "is never adjudicated
+# automatically: it is routed to human review under POL-GEN-06 with the record
+# assembled but no draft ruling issued". From version 3 the pipeline obeys it
+# literally: the brief is built -- "the record assembled" -- and **no** agent is
+# asked, not the two advocates, not the judge, not the verifier. The ruling
+# published is an ``ESCALATE`` with no referral, because the key owner's revised
+# keys expect one, and the referral the clause might otherwise carry is the
+# human reviewer's to make.
+SCOPE_GATE_VERSION = 3
+
+# The two flags the clause names, and the order they are reported in.
+SAFETY_FLAG = "safety_flag"
+COMPLAINT_FLAG = "complaint_flag"
+SCOPE_GATE_FLAGS: Tuple[str, ...] = (SAFETY_FLAG, COMPLAINT_FLAG)
+
+# The clause that does the gating, and the reason code the gate records.
+SCOPE_GATE_CLAUSE = "POL-GEN-08(1)"
+GEN08_SCOPE = "GEN08_SCOPE"
+
 
 class PipelineError(Exception):
     """Base class for every failure the pipeline raises."""
@@ -812,6 +835,11 @@ class PipelineResult:
     # nothing matched -- and it is not the same as ``None``, which says the
     # judge was never shown a precedent block at all.
     precedents_shown: Optional[Tuple[str, ...]] = None
+    # The ``POL-GEN-08(1)`` scope gate, when it fired: the flags that set it, the
+    # clause, the reason code and the count of calls made. ``None`` for every
+    # case the gate did not fire on, so "this case was never adjudicated
+    # automatically" is a sentence only a gated case's file can say.
+    scope_gate: Optional[Dict[str, Any]] = None
 
     @property
     def replayed(self) -> bool:
@@ -2243,6 +2271,52 @@ def _abstention_codes(abstention: Any) -> List[Dict[str, Any]]:
             cited = mention.group(0) if mention else None
         found.append({"code": code, "cited": cited})
     return found
+
+
+def scope_gate_flags(case: Any) -> Tuple[str, ...]:
+    """The ``POL-GEN-08(1)`` flags a case's dispute carries, in a fixed order.
+
+    Only ``True`` sets a flag: a dispute that omits one, or carries a false one,
+    is not flagged. Reading the value rather than its presence keeps the gate a
+    property of the record rather than of how the record happens to be written.
+    """
+    dispute = case.get("dispute") if isinstance(case, Mapping) else None
+    if not isinstance(dispute, Mapping):
+        return ()
+    return tuple(flag for flag in SCOPE_GATE_FLAGS if dispute.get(flag) is True)
+
+
+def scope_gate_ruling(flags: Sequence[str]) -> Dict[str, Any]:
+    """The ``ESCALATE`` a flagged dispute publishes, with no referral.
+
+    ``confidence`` is 0 and both money fields are ``null`` because no ruling is
+    published for an amount or a confidence to attach to, and ``referrals`` is
+    **empty**: the clause routes the dispute to human review under POL-GEN-06,
+    and a referral is a clause-mandated instruction a draft ruling carries,
+    which a gate that issues no draft ruling does not. The explanation names the
+    flag and the clause, and states the reason code, so a reader of one case
+    file can see why no agent was asked.
+    """
+    named = " and ".join("dispute.{0}".format(flag) for flag in flags)
+    explanation = (
+        "The dispute carries {0}, so under {1} it is never adjudicated "
+        "automatically: the record is assembled and no advocate, judge or "
+        "verifier is asked. The dispute is routed to human review under "
+        "POL-GEN-06 with no draft ruling issued. The reason code is {2}.".format(
+            named, SCOPE_GATE_CLAUSE, GEN08_SCOPE
+        )
+    )
+    return {
+        "ruling": {
+            "ruling": ESCALATE,
+            "amount_sgd": None,
+            "driver_compensation_sgd": None,
+            "referrals": [],
+            "confidence": 0.0,
+            "explanation": explanation,
+        },
+        "discarded_claims": [],
+    }
 
 
 def _no_valid_drafts_escalation(
@@ -3791,6 +3865,47 @@ def run_loaded_case(
 
     if advocate_user_message is not brief_json:
         raise BriefIdentityError("the brief was serialised more than once for the advocates")
+
+    # POL-GEN-08(1): a flagged dispute is never adjudicated automatically. The
+    # brief above is "the record assembled", and the gate fires here -- after the
+    # record is built, before a prompt is rendered and before any call is made --
+    # so a flagged case reaches no model at all. It is checked against the loaded
+    # version, so versions 1 and 2 ask the model exactly as they always did.
+    if policy_version >= SCOPE_GATE_VERSION:
+        gate_flags = scope_gate_flags(case)
+        if gate_flags:
+            if events_log is not None:
+                events_log.record(
+                    events.EVENT_SCOPE_GATE,
+                    case_no=case_no,
+                    reason_code=GEN08_SCOPE,
+                    clause=SCOPE_GATE_CLAUSE,
+                    flags=list(gate_flags),
+                    calls=0,
+                )
+            published = scope_gate_ruling(gate_flags)
+            return PipelineResult(
+                case_no=case_no,
+                model=getattr(client, "_model", ""),
+                ok=True,
+                brief_sha256=brief_sha256,
+                # An empty transcript is the record of a case no agent was asked,
+                # and it is written rather than omitted so the file says the case
+                # has no calls instead of leaving a reader to infer it.
+                transcript=transcript_module.Transcript(now=now),
+                ruling=published,
+                ruling_findings=validate_ruling_shape(published),
+                # ``None`` when the precedents switch was off, and an empty tuple
+                # when it was on: the switch was on and no block reached a judge,
+                # which is not the same sentence as the switch being off.
+                precedents_shown=None if precedents is None else (),
+                scope_gate={
+                    "reason_code": GEN08_SCOPE,
+                    "clause": SCOPE_GATE_CLAUSE,
+                    "flags": list(gate_flags),
+                    "calls": 0,
+                },
+            )
 
     rider_prompt, driver_prompt, _region = render_advocate_prompts(prompts_dir)
     judge_prompt = _read(prompts_dir / JUDGE_PROMPT_FILE)

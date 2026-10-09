@@ -34,7 +34,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from eval import baselines, development_sets as sets  # noqa: E402
 from eval import grade, run_benchmark  # noqa: E402
 from tests import test_upfront_remedy as upfront_rig  # noqa: E402
-from tribunal import llm, loader, money, transcript  # noqa: E402
+from tribunal import llm, loader, money, policy_versions, transcript  # noqa: E402
 
 MODEL = "deepseek/deepseek-flash"
 # The house fake credential, deliberately not ``sk-`` prefixed so that it never
@@ -1047,8 +1047,17 @@ def produced_for(development_set, case_no):
     return {case_no: {"case_no": case_no, "ruling": dict(UNSCORED_RULING)}}
 
 
-class VersionThreeSetRegistrationTests(unittest.TestCase):
-    """The three version-3 sets are registered, and each runs at version 3.
+class _ReachedTheRunner(Exception):
+    """Raised by the patched runner, to prove an invocation got past its refusals."""
+
+
+class BaseThreeSetRegistrationTests(unittest.TestCase):
+    """The three sets written for base 3, and the versions they accept.
+
+    ``dev-v2``, ``dev-v2-ext`` and ``ryde-v3`` are written for policy base 3, so
+    they accept any version on that base (3, 4, 5, ...) and run at the **latest**
+    one -- today 5 -- when no version is named. Every set registered before
+    version 3 keeps the version it fixes.
 
     No model is called: the transport answers from the set's own key, or -- for
     ``ryde-v3``, which has a stated expectation rather than a key -- from a
@@ -1062,6 +1071,7 @@ class VersionThreeSetRegistrationTests(unittest.TestCase):
             with self.subTest(set=name):
                 development_set = sets.named(name)
                 self.assertEqual(3, development_set.policy_version)
+                self.assertEqual(3, development_set.policy_base)
                 self.assertFalse(development_set.sealed)
                 self.assertTrue(development_set.cases)
                 self.assertNotIn(
@@ -1086,40 +1096,79 @@ class VersionThreeSetRegistrationTests(unittest.TestCase):
             )["expected_outcome_as_stated"],
         )
 
-    def test_each_set_runs_one_case_at_version_three(self):
-        for name, case_no in VERSION_THREE_CASES:
+    def test_the_default_version_is_the_latest_on_base_three(self):
+        latest = policy_versions.version_on_base(3)
+        self.assertEqual(5, latest, "base 3 is at version 5 after amendment 0002")
+        for name, _case_no in VERSION_THREE_CASES:
             with self.subTest(set=name):
-                development_set = sets.named(name)
-                transport = ScriptedTransport(
-                    produced_for(development_set, case_no)
+                self.assertEqual(
+                    latest, sets.resolved_policy_version(sets.named(name), None)
                 )
-                with tempfile.TemporaryDirectory() as tmp:
-                    runs = Path(tmp) / "runs"
-                    summary = sets.run_set(
-                        development_set,
-                        MODEL,
-                        cases=[case_no],
-                        runs_dir=runs,
-                        client_factory=client_factory(transport),
-                        git_runner=git_runner(),
-                        progress=lambda text: None,
-                        judge_votes=1,
-                    )
-                    self.assertGreater(transport.calls(), 0, "no call was made")
-                    run_dir = development_set.run_dir(MODEL, runs)
-                    self.assertEqual(run_dir, summary.run_dir)
-                    recorded = json.loads(
-                        (run_dir / "case-{0:05d}.json".format(case_no)).read_text(
-                            encoding="utf-8"
-                        )
-                    )
-                    self.assertEqual(
-                        3,
-                        recorded["configuration"]["policy_version"],
-                        "the run did not brief at the version the set fixes",
-                    )
 
-    def test_the_run_lands_under_the_sets_own_root(self):
+    def test_a_version_on_base_three_is_accepted_and_recorded(self):
+        for name, case_no in VERSION_THREE_CASES:
+            for version in (3, 4, 5):
+                with self.subTest(set=name, version=version):
+                    development_set = sets.named(name)
+                    transport = ScriptedTransport(
+                        produced_for(development_set, case_no)
+                    )
+                    with tempfile.TemporaryDirectory() as tmp:
+                        runs = Path(tmp) / "runs"
+                        summary = sets.run_set(
+                            development_set,
+                            MODEL,
+                            cases=[case_no],
+                            runs_dir=runs,
+                            client_factory=client_factory(transport),
+                            git_runner=git_runner(),
+                            progress=lambda text: None,
+                            judge_votes=1,
+                            policy_version=version,
+                        )
+                        self.assertGreater(transport.calls(), 0, "no call was made")
+                        run_dir = run_benchmark.policy_v_run_directory(
+                            development_set.runs_dir(runs), version, MODEL
+                        )
+                        self.assertEqual(run_dir, summary.run_dir)
+                        recorded = json.loads(
+                            (run_dir / "case-{0:05d}.json".format(case_no)).read_text(
+                                encoding="utf-8"
+                            )
+                        )
+                        self.assertEqual(
+                            version,
+                            recorded["configuration"]["policy_version"],
+                            "the run did not record the version it used",
+                        )
+
+    def test_the_command_line_accepts_a_version_on_base_three(self):
+        """Each set reaches the runner with the version the flag named."""
+        for name, case_no in VERSION_THREE_CASES:
+            for version in (4, 5):
+                with self.subTest(set=name, version=version):
+                    seen = {}
+
+                    def stop(*args, **kwargs):
+                        seen.update(kwargs)
+                        raise _ReachedTheRunner()
+
+                    with tempfile.TemporaryDirectory() as tmp:
+                        with mock.patch.object(
+                            sets.run_benchmark, "run_benchmark", side_effect=stop
+                        ):
+                            with self.assertRaises(_ReachedTheRunner):
+                                sets.main(
+                                    [
+                                        "--set", name,
+                                        "--policy-version", str(version),
+                                        "--cases", str(case_no),
+                                        "--runs-dir", str(Path(tmp) / "runs"),
+                                    ]
+                                )
+                    self.assertEqual(version, seen.get("policy_version"))
+
+    def test_the_default_run_lands_under_a_policy_v_directory(self):
         for name, case_no in VERSION_THREE_CASES:
             with self.subTest(set=name):
                 development_set = sets.named(name)
@@ -1137,17 +1186,22 @@ class VersionThreeSetRegistrationTests(unittest.TestCase):
                         progress=lambda text: None,
                         judge_votes=1,
                     )
-                    expected = runs / development_set.runs_subdir / run_benchmark.model_slug(MODEL)
+                    latest = policy_versions.version_on_base(3)
+                    expected = (
+                        runs
+                        / development_set.runs_subdir
+                        / "policy-v{0}".format(latest)
+                        / run_benchmark.model_slug(MODEL)
+                    )
                     self.assertTrue(
                         (expected / "case-{0:05d}.json".format(case_no)).is_file(),
-                        "{0} did not write under its own root".format(name),
+                        "{0} did not write under its own policy-v{1} root".format(
+                            name, latest
+                        ),
                     )
-                    # Never one level down in a policy-v<N> directory: the
-                    # version is part of what the set is, not a switch.
-                    self.assertFalse((expected / "policy-v3").exists())
 
     def test_an_earlier_policy_version_is_refused_by_name(self):
-        """These cases carry the version-3 fields; 1 and 2 would measure nothing."""
+        """These cases carry the base-3 fields; 1 and 2 would measure nothing."""
         for name, case_no in VERSION_THREE_CASES:
             for version in ("1", "2"):
                 with self.subTest(set=name, version=version):
@@ -1163,8 +1217,29 @@ class VersionThreeSetRegistrationTests(unittest.TestCase):
                             )
                     self.assertEqual(1, code)
                     self.assertIn(name, errors.getvalue())
-                    self.assertIn("fixes policy version 3", errors.getvalue())
+                    self.assertIn("policy base 3", errors.getvalue())
                     self.assertFalse((Path(tmp) / "runs").exists())
+
+    def test_the_corpus_and_the_sealed_sets_are_unchanged(self):
+        for development_set in (
+            sets.CORPUS,
+            sets.SECOND_SET,
+            sets.SEALED_SET,
+            sets.WILD_DEV,
+        ):
+            with self.subTest(set=development_set.name):
+                self.assertIsNone(development_set.policy_base)
+                self.assertEqual(
+                    run_benchmark.DEFAULT_POLICY_VERSION,
+                    sets.resolved_policy_version(development_set, None),
+                )
+        # ``wild-v2`` fixes version 2 and is untouched by this: it has no base,
+        # so it never picks up a later version, and its registration is not a
+        # switch on the invocation.
+        self.assertIsNone(sets.named("wild-v2").policy_base)
+        self.assertEqual(
+            2, sets.resolved_policy_version(sets.named("wild-v2"), None)
+        )
 
 
 if __name__ == "__main__":

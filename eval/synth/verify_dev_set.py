@@ -81,7 +81,7 @@ def derive_no_show(case, b, meta):
     sc = meta["scenario"]
     gap_inside = any(float(g["duration_sec"]) > 120 for g in gps.get("gaps", []) if trip.get("arrived_at") and g["from_ts"] >= trip["arrived_at"])
     if disp.get("safety_flag"):
-        return dict(out, ruling="ESCALATE", referrals=["POL-GEN-08(1)"])
+        return dict(out, ruling="ESCALATE")
     if trip["status"] == "COMPLETED":  # waiting-fee case
         if run < free_wait and D(fare["waiting_time_fee"]) > 0:
             return dict(out, ruling="FULL_REFUND", amount=float(D(fare["waiting_time_fee"])))
@@ -112,7 +112,7 @@ def derive_no_show(case, b, meta):
     if gap_inside and trip.get("events") is None:
         return dict(out, ruling="ESCALATE")
     if trip["cancellation_reason_code"] == "DRIVER_UNABLE_TO_LOCATE" and qf >= 3:
-        return dict(out, ruling="FULL_REFUND", amount=float(fee), referrals=["POL-NS-01(d)"])
+        return dict(out, ruling="FULL_REFUND", amount=float(fee), referrals=["POL-NS-01"])
     dist = meta["derived"]["dist_m"]
     # POL-NS-05: a marker stamped more than 300 m from the pin is false; with no in-geofence fix anywhere, limb (ii) adds a referral
     if trip.get("arrived_at") and qf < 3:
@@ -193,10 +193,9 @@ def derive_route(case, b, meta):
         wp = msg.get("waypoint_hint")
         if msg["sender"] == "RIDER" and isinstance(wp, dict):
             dmin = min(facts.haversine_m(float(p["lat"]), float(p["lng"]), float(wp["lat"]), float(wp["lng"])) for p in pts)
-            if dmin > 200:
-                return dict(out, ruling="ESCALATE")
-            else:
+            if dmin <= 200:
                 return dict(out, ruling="NO_ACTION")  # POL-RD-04 excludes the whole bulge in this set
+            # POL-RD-14 (amendment 0002): uncorroborated instruction excludes nothing; fall through to POL-RD-01/02
     # pooled
     if trip["vehicle_type"] == "RYDE_POOL":
         return dict(out, ruling="NO_ACTION") if status == "no deviation" else dict(out, ruling="PARTIAL_REFUND")
@@ -205,7 +204,7 @@ def derive_route(case, b, meta):
         if exc <= D("0.2") * D(trip["amended_optimal_distance_km"]) or exc <= D("0.8"):
             return dict(out, ruling="NO_ACTION")
     if fare["fare_model"] == "UPFRONT_QUOTE":
-        proper = D("0.8") + D(fare["tolls_erp"]) - phantom + D(fare["airport_surcharge"]) + D(fare["waiting_time_fee"])
+        proper = D(fare["tolls_erp"]) - phantom + D(fare["airport_surcharge"]) + D(fare["waiting_time_fee"])  # POL-RD-11(a): platform fee is not a listed pass-through
         refund = charged - D(fare["quoted_fare_sgd"]) - proper + phantom
         over = D(val(m["charged_over_quote"]))
         assert over == charged - D(fare["quoted_fare_sgd"]), ("upfront over-quote figure disagrees with the brief", over)
