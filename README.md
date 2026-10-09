@@ -258,12 +258,31 @@ them is `docs/notes/2026-10-10-fairness-and-calibration.md`.
   or above it are right 523 times in 538. The four drafts of one case answer the
   same brief, so they are not independent draws, and every rate here is a count
   over drafts rather than over independent trials.
+- **What the low bins hold.** All 29 drafts below the 0.70 floor propose
+  `ESCALATE`, so the floor's below-floor share correct counts escalations and
+  decides nothing; of the 538 drafts at or above the floor, 45 propose `ESCALATE`
+  and the 493 that do not are right 478 times (97.0%).
 
 A split by `dispute.filed_by` is **not** reported: every `dev-v2-ext` dispute
 and 28 of the 29 corpus disputes were filed by the rider, so it has one case on
 one side. The counts come from the sets' own public case files, which is the one
 place the runs do not record; the three measurements above are what is measured
 instead.
+
+## Governance
+
+`docs/governance/incidents.md` records what went wrong while the system was
+built — the iCloud split of the event log, the interrupted sealed attempt,
+`sealed-v1` opened before the freeze, and the three amendments approved without a
+gap report — each with how it was found and what was done.
+`docs/governance/threat-model.md` is a table of the threats the system faces —
+prompt injection, forged evidence ids, collusion and repeat claims, answer-key
+leakage, the sealed sets, API keys and a wrong automatic ruling — each with the
+control in this repository and what it does not cover.
+`docs/governance/privacy.md` sets out what personal data the system handles, what
+is masked and what is not, who can read a transcript, the retention rule a
+deployment would still have to decide, and that a Singapore deployment would be
+subject to the PDPA without this repository making any compliance claim.
 
 ## Limitations and disclosures
 

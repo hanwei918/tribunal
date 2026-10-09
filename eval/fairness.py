@@ -27,6 +27,13 @@ Three things are measured, over the corpus run (``runs/policy-v6/``) and the
    over all drafts. The share correct below the 0.70 floor and at or above it is
    reported too.
 
+4. **What the low bins hold.** A draft that proposes ``ESCALATE`` decides
+   nothing -- it sends the case to a person -- and the key often says
+   ``ESCALATE`` too, so a below-floor bin can look well-calibrated while holding
+   only escalations. Each side of the floor is therefore split again: how many
+   of its drafts propose ``ESCALATE``, and how often the drafts that propose
+   something else are right.
+
 **What is read, and what is not.** The runs under ``runs/``, the two committed
 keys (``eval/answers/ground_truth.json`` and
 ``eval/answers/dev-v2-ext/ground_truth.json``), the two runs' transcripts, and
@@ -105,6 +112,12 @@ CATEGORY_FOR_POLICY_LOOKUP = "ROUTE_DEVIATION"
 RIDER_FAVOURING: Tuple[str, ...] = ("FULL_REFUND", "PARTIAL_REFUND")
 DRIVER_FAVOURING: Tuple[str, ...] = ("NO_ACTION", "DRIVER_COMPENSATION")
 NEITHER_SIDE: Tuple[str, ...] = ("ESCALATE",)
+
+# The one ruling value that decides nothing: a draft that proposes it sends the
+# case to a person rather than ruling on it. The calibration split below reads
+# this value apart from the four that decide, because a draft that escalates
+# agrees with an escalating key without having decided anything.
+ESCALATE = NEITHER_SIDE[0]
 
 RIDER = "RIDER"
 DRIVER = "DRIVER"
@@ -447,12 +460,19 @@ def position_swap(transcripts: Mapping[int, Mapping[str, Any]]) -> PositionSwap:
 # --------------------------------------------------------------------------
 @dataclass(frozen=True)
 class DraftOutcome:
-    """One valid judge draft: its confidence and whether its fields equal the key."""
+    """One valid judge draft: its confidence, its value, and its verdict.
+
+    ``ruling`` is the value the draft proposed -- one of the five POL-GEN-03
+    values -- and ``correct`` is whether the draft's four graded fields equal
+    the case's key. The value is carried beside the verdict so the calibration
+    can tell a draft that decided a case from one that sent it to a person.
+    """
 
     case_no: int
     kind: str
     confidence: Decimal
     correct: bool
+    ruling: str
 
 
 @dataclass(frozen=True)
@@ -580,7 +600,13 @@ def draft_outcomes(
                 )
             score = grade.score_case(case_no, key[case_no], _produced_from_draft(case_no, inner))
             outcomes.append(
-                DraftOutcome(case_no, str(draft.get("kind")), confidence, score.exact)
+                DraftOutcome(
+                    case_no,
+                    str(draft.get("kind")),
+                    confidence,
+                    score.exact,
+                    str(inner.get("ruling")),
+                )
             )
     return tuple(outcomes)
 
@@ -622,6 +648,53 @@ def calibrate(outcomes: Sequence[DraftOutcome]) -> Calibration:
         ece=ece,
         below_floor=(sum(1 for o in below if o.correct), len(below)),
         at_or_above_floor=(sum(1 for o in at_or_above if o.correct), len(at_or_above)),
+    )
+
+
+@dataclass(frozen=True)
+class EscalateSplit:
+    """The drafts that propose ``ESCALATE``, below the floor and at or above it.
+
+    Each side of the floor is split again, because the floor split above counts
+    every draft: a below-floor bin that holds only escalations reads as
+    well-calibrated while deciding nothing. ``below_other`` and ``above_other``
+    are ``(correct, total)`` among the drafts in that group whose value is not
+    ``ESCALATE``; the total is 0 when every draft in the group escalates, and
+    the share is then undefined rather than zero.
+    """
+
+    below_escalate: int
+    below_total: int
+    below_other: Tuple[int, int]
+    above_escalate: int
+    above_total: int
+    above_other: Tuple[int, int]
+
+
+def escalate_split(outcomes: Sequence[DraftOutcome]) -> EscalateSplit:
+    """How many drafts propose ``ESCALATE``, and how often the rest are right.
+
+    The two groups are the same two the floor split uses -- drafts below the
+    0.70 floor and drafts at or above it -- so the two splits are read off one
+    pass and cannot disagree about which draft is in which group.
+    """
+    below = [o for o in outcomes if o.confidence < FLOOR]
+    above = [o for o in outcomes if o.confidence >= FLOOR]
+
+    def split(group: Sequence[DraftOutcome]) -> Tuple[int, Tuple[int, int]]:
+        escalating = [o for o in group if o.ruling == ESCALATE]
+        rest = [o for o in group if o.ruling != ESCALATE]
+        return len(escalating), (sum(1 for o in rest if o.correct), len(rest))
+
+    below_escalate, below_other = split(below)
+    above_escalate, above_other = split(above)
+    return EscalateSplit(
+        below_escalate=below_escalate,
+        below_total=len(below),
+        below_other=below_other,
+        above_escalate=above_escalate,
+        above_total=len(above),
+        above_other=above_other,
     )
 
 
@@ -692,6 +765,19 @@ def _rate(k: int, n: int) -> str:
     return "{0}/{1} = {2}".format(k, n, grade.render_percent(grade._percent(k, n)))
 
 
+def _other_rate(pair: Tuple[int, int]) -> str:
+    """The share correct among the drafts that do not propose ``ESCALATE``.
+
+    ``none`` rather than a zero rate when the group holds no such draft: a group
+    that is all escalations has no share correct to state, and printing ``0/0``
+    would read as a rate of nothing rather than an absence.
+    """
+    correct, total = pair
+    if total == 0:
+        return "none (0 drafts)"
+    return _rate(correct, total)
+
+
 def _edge(value: Decimal) -> str:
     return "{0:.1f}".format(value)
 
@@ -743,7 +829,9 @@ def _swap_block(label: str, swap: PositionSwap) -> List[str]:
     ]
 
 
-def _calibration_block(label: str, calibration: Calibration) -> List[str]:
+def _calibration_block(
+    label: str, calibration: Calibration, split: EscalateSplit
+) -> List[str]:
     lines = [
         "-- {0}: {1} valid judge drafts".format(label, calibration.total),
         "   {0:<14}{1:>6}{2:>12}{3:>16}{4:>20}".format(
@@ -777,6 +865,25 @@ def _calibration_block(label: str, calibration: Calibration) -> List[str]:
     lines.append(
         "   at or above it        {0}".format(_rate(at_correct, at_total))
     )
+    lines.append(
+        "   drafts proposing ESCALATE, below the {0} floor   {1}".format(
+            _floor_text(), _rate(split.below_escalate, split.below_total)
+        )
+    )
+    lines.append(
+        "   drafts proposing ESCALATE, at or above it        {0}".format(
+            _rate(split.above_escalate, split.above_total)
+        )
+    )
+    lines.append(
+        "   share correct among the drafts that do not propose ESCALATE"
+    )
+    lines.append(
+        "     below the floor   {0}".format(_other_rate(split.below_other))
+    )
+    lines.append(
+        "     at or above it    {0}".format(_other_rate(split.above_other))
+    )
     return lines
 
 
@@ -793,6 +900,7 @@ def report() -> str:
         for name in MEASURED_SETS
     }
     calibrations = {name: calibrate(outcomes[name]) for name in MEASURED_SETS}
+    splits = {name: escalate_split(outcomes[name]) for name in MEASURED_SETS}
 
     lines: List[str] = [
         "Version 6 fairness and calibration -- report",
@@ -847,10 +955,13 @@ def report() -> str:
     # -- 3. Calibration ---------------------------------------------------
     lines.append("== 3. Calibration ==")
     for name in MEASURED_SETS:
-        lines.extend(_calibration_block(name, calibrations[name]))
+        lines.extend(_calibration_block(name, calibrations[name], splits[name]))
+    pooled_outcomes = outcomes[CORPUS] + outcomes[DEV_V2_EXT]
     lines.extend(
         _calibration_block(
-            "both runs", calibrate(outcomes[CORPUS] + outcomes[DEV_V2_EXT])
+            "both runs",
+            calibrate(pooled_outcomes),
+            escalate_split(pooled_outcomes),
         )
     )
     lines.append(

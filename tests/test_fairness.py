@@ -11,6 +11,9 @@ rests on:
   disagrees, on the ruling alone and on all four fields;
 * the calibration's expected error is the known value of a synthetic set of
   drafts whose bins and gaps are arithmetic a reader can do by hand;
+* the escalate split counts the drafts that propose ``ESCALATE`` below the floor
+  and at or above it, and the share correct among the rest, on a synthetic set
+  whose counts are known by hand;
 * the committed chart ``docs/calibration-v6.svg`` equals a fresh build, byte for
   byte.
 
@@ -105,8 +108,12 @@ def _key_ruling(
     )
 
 
-def _outcome(confidence: str, correct: bool, case_no: int = 1) -> fairness.DraftOutcome:
-    return fairness.DraftOutcome(case_no, "sampled", Decimal(confidence), correct)
+def _outcome(
+    confidence: str, correct: bool, case_no: int = 1, ruling: str = "PARTIAL_REFUND"
+) -> fairness.DraftOutcome:
+    return fairness.DraftOutcome(
+        case_no, "sampled", Decimal(confidence), correct, ruling
+    )
 
 
 # --------------------------------------------------------------------------
@@ -320,6 +327,76 @@ class TheCalibrationTests(unittest.TestCase):
 
 
 # --------------------------------------------------------------------------
+# 4b. What the low bins hold, on a set built for the purpose
+# --------------------------------------------------------------------------
+class TheEscalateSplitTests(unittest.TestCase):
+    """How many drafts escalate, and how often the rest are right.
+
+    The split is the one ``--report`` prints beside the floor split, and it
+    exists because a draft that proposes ``ESCALATE`` decides nothing: a
+    below-floor group that is all escalations has a share correct that says
+    nothing about whether the judge can decide a case.
+    """
+
+    def setUp(self) -> None:
+        # Below the floor: two escalate, one decides and is right, one decides
+        # and is wrong. At or above it: one escalates, two decide and are right,
+        # one decides and is wrong.
+        self.outcomes: Tuple[fairness.DraftOutcome, ...] = tuple(
+            [
+                _outcome("0.3", True, case_no=1, ruling="ESCALATE"),
+                _outcome("0.4", True, case_no=2, ruling="ESCALATE"),
+                _outcome("0.6", True, case_no=3, ruling="PARTIAL_REFUND"),
+                _outcome("0.6", False, case_no=4, ruling="NO_ACTION"),
+                _outcome("0.9", True, case_no=5, ruling="ESCALATE"),
+                _outcome("0.9", True, case_no=6, ruling="PARTIAL_REFUND"),
+                _outcome("0.8", True, case_no=7, ruling="FULL_REFUND"),
+                _outcome("0.85", False, case_no=8, ruling="NO_ACTION"),
+            ]
+        )
+        self.split = fairness.escalate_split(self.outcomes)
+
+    def test_below_the_floor_escalations_and_the_rest(self) -> None:
+        self.assertEqual(self.split.below_escalate, 2)
+        self.assertEqual(self.split.below_total, 4)
+        self.assertEqual(self.split.below_other, (1, 2))
+
+    def test_at_or_above_the_floor_escalations_and_the_rest(self) -> None:
+        self.assertEqual(self.split.above_escalate, 1)
+        self.assertEqual(self.split.above_total, 4)
+        self.assertEqual(self.split.above_other, (2, 3))
+
+    def test_a_group_that_only_escalates_has_no_share_correct(self) -> None:
+        split = fairness.escalate_split(
+            (_outcome("0.3", True, case_no=1, ruling="ESCALATE"),)
+        )
+        self.assertEqual(split.below_escalate, 1)
+        self.assertEqual(split.below_total, 1)
+        self.assertEqual(split.below_other, (0, 0))
+        self.assertEqual(split.above_total, 0)
+
+    def test_the_share_correct_among_the_rest_is_rendered(self) -> None:
+        self.assertEqual(
+            fairness._other_rate(self.split.below_other), "1/2 = 50.0%"
+        )
+        self.assertEqual(
+            fairness._other_rate(self.split.above_other), "2/3 = 66.7%"
+        )
+
+    def test_a_group_with_no_non_escalating_draft_reads_none(self) -> None:
+        self.assertEqual(fairness._other_rate((0, 0)), "none (0 drafts)")
+
+    def test_the_floor_split_and_the_escalate_split_agree_on_the_groups(self) -> None:
+        calibration = fairness.calibrate(self.outcomes)
+        self.assertEqual(
+            self.split.below_total, calibration.below_floor[1]
+        )
+        self.assertEqual(
+            self.split.above_total, calibration.at_or_above_floor[1]
+        )
+
+
+# --------------------------------------------------------------------------
 # 5. The committed chart, and what the report reads
 # --------------------------------------------------------------------------
 def _report_recording_opens() -> Tuple[str, List[str]]:
@@ -409,6 +486,11 @@ class TheCommittedChartAndTheReportTests(unittest.TestCase):
             with self.subTest(heading=heading):
                 self.assertIn(heading, self.report_text)
         self.assertIn("drafts of one case are not independent", self.report_text)
+        self.assertIn("drafts proposing ESCALATE", self.report_text)
+        self.assertIn(
+            "share correct among the drafts that do not propose ESCALATE",
+            self.report_text,
+        )
 
     def test_the_chart_command_refuses_a_sealed_destination(self) -> None:
         target = PROJECT_ROOT / "runs" / "wild-v2" / "calibration.svg"

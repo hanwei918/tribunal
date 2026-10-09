@@ -103,6 +103,11 @@ dev-v2-ext  runs/dev-v2-ext/policy-v6/deepseek-deepseek-flash
    expected calibration error   0.084
    below the 0.70 floor   9/11 = 81.8%
    at or above it        96/103 = 93.2%
+   drafts proposing ESCALATE, below the 0.70 floor   11/11 = 100.0%
+   drafts proposing ESCALATE, at or above it        8/103 = 7.8%
+   share correct among the drafts that do not propose ESCALATE
+     below the floor   none (0 drafts)
+     at or above it    88/95 = 92.6%
 -- dev-v2-ext: 453 valid judge drafts
    bin            count   mean conf   share correct          Wilson 95%
    [0.0, 0.5)        10       0.312          100.0%     [72.2%, 100.0%]
@@ -113,6 +118,11 @@ dev-v2-ext  runs/dev-v2-ext/policy-v6/deepseek-deepseek-flash
    expected calibration error   0.093
    below the 0.70 floor   18/18 = 100.0%
    at or above it        427/435 = 98.2%
+   drafts proposing ESCALATE, below the 0.70 floor   18/18 = 100.0%
+   drafts proposing ESCALATE, at or above it        37/435 = 8.5%
+   share correct among the drafts that do not propose ESCALATE
+     below the floor   none (0 drafts)
+     at or above it    390/398 = 98.0%
 -- both runs: 567 valid judge drafts
    bin            count   mean conf   share correct          Wilson 95%
    [0.0, 0.5)        21       0.318           90.5%      [71.1%, 97.3%]
@@ -123,6 +133,11 @@ dev-v2-ext  runs/dev-v2-ext/policy-v6/deepseek-deepseek-flash
    expected calibration error   0.088
    below the 0.70 floor   27/29 = 93.1%
    at or above it        523/538 = 97.2%
+   drafts proposing ESCALATE, below the 0.70 floor   29/29 = 100.0%
+   drafts proposing ESCALATE, at or above it        45/538 = 8.4%
+   share correct among the drafts that do not propose ESCALATE
+     below the floor   none (0 drafts)
+     at or above it    478/493 = 97.0%
    drafts of one case are not independent: a case's four drafts answer the same brief, so the 567 valid drafts are 141 panels rather than 567 independent draws.
    the chart is written by: python3 -m eval.fairness --chart docs/calibration-v6.svg
 ```
@@ -207,6 +222,22 @@ estimated, so a well-calibrated confidence is a statement about the model's
 self-report and not about a decision rule the system could be tuned on. And the
 key is the corpus's version-1 key for one of the two runs, so "correct" is
 agreement with that key.
+
+**What the low bins hold.** The below-floor share correct is high — 27 of 29
+pooled — and the reason is not that the judge decides hard cases at low
+confidence. A draft that proposes `ESCALATE` decides nothing: it sends the case
+to a person, and the key often says `ESCALATE` too, so such a draft counts as
+"correct" without having ruled. The measurement splits each side of the floor on
+that value, and the split is total: **all 29 drafts below the 0.70 floor propose
+`ESCALATE`** (29/29 pooled; 11/11 in the corpus and 18/18 in `dev-v2-ext`), so
+the below-floor bin holds no draft that decided a case at all and its share
+correct is a count of escalations agreeing with escalating keys. At or above the
+floor, 45 of 538 drafts propose `ESCALATE` (8.4%) and the 493 that propose
+something else are right **478 times (97.0%)**. The floor therefore discards no
+draft that decided a case — every draft it removes escalated — and the drafts it
+keeps decide the great majority of cases and are right 478 times in 493. This is
+a description of the two development runs and not a rate with a useful interval;
+the drafts of one case are not independent, as above.
 
 ## The chart
 
