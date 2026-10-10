@@ -516,6 +516,21 @@ design rule and each part's command are written out in
 | Policy & Precedent | built, and measured once | Built: the store (`precedents/precedents.jsonl`), the matching and the block the judge can be shown (`tribunal/precedents.py`), and the `--precedents` switch. Measured once, at policy version 6, over the corpus's 15 route-deviation cases: 15/15 with the block and 13/15 without it. | The measured difference (15/15 against 13/15) is not attributed to the precedents; the store holds two. The measurement is development data and is not a generalisation figure. |
 | Image Analysis | not done, on purpose | — | The two categories chosen need no images. The brief itself says property damage needs image analysis, and that is why `PROPERTY_DAMAGE` is out of the pipeline's scope. |
 
+One more command completes the escalation protocol. `POL-GEN-06(4)` lets a
+reviewer choose `REQUEST_EVIDENCE` and nothing in the pipeline executed it:
+`ops/evidence_window.py` — `python3 -m ops.evidence_window open|submit|status|close
+--store <dir> --run-dir <dir> --case N --now <ISO instant>` — opens one window to
+**both parties at once**, lets each file a record and see the other's until it
+closes, and at the close gives the default outcome `POL-GEN-07(1)(2)` requires
+where the named evidence did not arrive, with the exact command that records it.
+**Unlike platforms that publish no decision deadline, Tribunal commits to 48
+hours, and a missing piece of evidence never stops the clock** — that sentence is
+operations rule `OPS-EW-01`, **not a clause of the frozen policy**, and
+`ops/config.json` states the window's own figure beside it. The command is a
+reader's command: it opens the window, takes the filings and prints the decision
+it leaves, and it changes nothing in `tribunal/`, `prompts/`, `policy/`, `runs/`
+or `data/`.
+
 ## Concurrency
 
 The agents are the only part of a case that waits on something outside this

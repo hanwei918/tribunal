@@ -6,5 +6,9 @@
     "human_review_hours": 24,
     "safety_hours": 2,
     "end_to_end_hours": 48
+  },
+  "evidence_window": {
+    "close_hours_after_filing": 36,
+    "note": "OPS-EW-01, an operations rule and not frozen policy. The reviewer opens the window within POL-GEN-06(2)'s 24 hours of entry; the window closes close_hours_after_filing hours after filing, and the decision is due at POL-GEN-06(2)'s first-review limit. A missing piece of evidence never stops the clock. `python3 -m ops.evidence_window` reads this figure and refuses when it is absent."
   }
 }

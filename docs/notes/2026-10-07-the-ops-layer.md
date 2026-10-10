@@ -1,7 +1,7 @@
 # The ops layer: the stretch goals that leave every model request unchanged (2026-10-07)
 
 `ops/` is the layer a support team would run around the pipeline. It was added
-in six parts, and every part is held to the same three rules. This note states
+in seven parts, and every part is held to the same three rules. This note states
 the design rule, gives each part's command, and says what each part does **not**
 do.
 
@@ -117,8 +117,9 @@ the lane and not the measurement. Every human-lane case also carries
 `POL-GEN-06(2)`'s first-review deadline, `filed_at` plus the config's
 `end_to_end_hours`; past it the status is the clause's own consequence, escalated
 to the duty supervisor with the amount frozen. `--windows <store>` lists each
-human-lane case beside the evidence-window store, which belongs to part 26
-(`ops/evidence_window.py`) and is not in the repository yet.
+human-lane case beside its evidence window — the items the reviewer named, when
+it closes and when the decision is due, and what is still missing — read out of
+the store part 7 (`ops/evidence_window.py`) writes, and reads nothing else.
 
 The targets are the team's own and live in `ops/config.json`, whose `note` says so
 and names Ryde's baseline from the brief. The in-scope categories are read off
@@ -156,8 +157,8 @@ exactly, and a brief built from the collected case has the recorded
 ### Part 6 — appeals and recusal (`ops/appeal.py`)
 
 (Part 5 was the documents — the `## Stretch goals` section of the README and
-this note — and it added no command, so the parts' commands are numbered 1 to 4
-and 6.)
+this note — and it added no command, so the parts' commands are numbered 1 to 4,
+6 and 7.)
 
 ```
 python3 -m ops.appeal --run-dir <dir> --case N --filed-by rider|driver
@@ -186,6 +187,57 @@ so the appeal freezes it.
 human closure under `POL-GEN-06` by `ops.review`, not here. It reads no
 transcript and no answer key, makes no model call, and changes nothing in
 `tribunal/`, `prompts/`, `policy/`, `runs/` or `data/`.
+
+### Part 7 — the evidence window (`ops/evidence_window.py`)
+
+```
+python3 -m ops.evidence_window open --store <dir> --run-dir <dir> --case N
+  --now <ISO instant> --items <kind>[,<kind>...] --opened-by <name>
+python3 -m ops.evidence_window submit --store <dir> --run-dir <dir> --case N
+  --now <ISO instant> --party rider|driver --kind <kind> --file <path> [--note <text>]
+python3 -m ops.evidence_window status --store <dir> --run-dir <dir> --case N --now <ISO instant>
+python3 -m ops.evidence_window close --store <dir> --run-dir <dir> --case N --now <ISO instant>
+```
+
+`POL-GEN-06(4)` lets a reviewer choose `REQUEST_EVIDENCE`, and nothing executed
+it. This is the command that does: one window opened to **both parties at once**.
+`open` names the missing record kinds -- only from the six of `POL-GEN-04(b)`,
+read from `ops.appeal.RECORD_EVIDENCE_KINDS` -- and is allowed only for an
+escalated case or one whose amount is held under `POL-GEN-05`, once per case,
+and within `POL-GEN-06(2)`'s 24 hours of entry. `submit` takes one party's record,
+refuses a `STATEMENT` (`POL-GEN-06(5)`), refuses after the close, and stores the
+file by its SHA-256 under `<store>/files/`; a note travels marked "argument, not
+evidence". `status` prints the window, what each party filed, the time left and
+what is still missing. `close` refuses before the close instant; if the named
+evidence arrived it says to decide on it, and if it did not it gives the default
+outcome `POL-GEN-07(1)(2)` requires -- a no-show fee disputed by the rider is
+refunded in full from the fare record's `total_charged`, a no-show fee disputed
+by the driver and a route-deviation claim take `NO_ACTION` -- with the exact
+`python3 -m ops.review` command for it. It does not write the precedent store
+itself.
+
+**The clock does not stop for missing evidence**, and that is operations rule
+`OPS-EW-01`, not a clause of the frozen policy: the window closes
+`close_hours_after_filing` (36) hours after filing, which leaves the reviewer the
+hours up to `POL-GEN-06(2)`'s 48-hour first-review limit, and the disputed amount
+stays frozen throughout. Both policy figures are matched **word for word** and
+refused when the sentence has moved, and the 36 is required from
+`ops/config.json` rather than defaulted. The three sentences the default outcome
+rests on -- `POL-GEN-06`'s `REQUEST_EVIDENCE` limb and `POL-GEN-07(1)` and `(2)`
+-- are matched the same way.
+
+**The store.** One append-only `jsonl` per case, each line carrying the previous
+line's hash; reading refuses a broken chain. The store path passes
+`refuse_a_forbidden_destination`, so a store inside `runs/`, `data/`, `policy/`,
+`prompts/`, `tribunal/`, `eval/answers/` or either sealed root is refused before
+anything is created. `.gitignore` gains `evidence-windows/`, the store a command
+copied off the product view's support page writes to.
+
+**What it does not do.** It decides nothing: the close gives the outcome the
+residual principles require and the command to record it, and a person runs that
+command. It reads no transcript and no answer key, makes no model call, reads no
+wall clock without `--now`, and changes nothing in `tribunal/`, `prompts/`,
+`policy/`, `runs/` or `data/`.
 
 ## What none of the parts do
 

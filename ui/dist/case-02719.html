@@ -384,6 +384,7 @@ The monetary effect is SGD 3.60, below the SGD 8.00 execution threshold of POL-G
     var runDir = form.getAttribute("data-run-dir") || "";
     var caseNo = form.getAttribute("data-case") || "";
     var packet = form.getAttribute("data-packet") || "";
+    var store = form.getAttribute("data-store") || "";
 
     function cited(text, ids){
       for (var i = 0; i < ids.length; i += 1){
@@ -464,7 +465,8 @@ The monetary effect is SGD 3.60, below the SGD 8.00 execution threshold of POL-G
     function windowCommand(){
       var items = each('input[name="evidence"]:checked', form)
         .map(function(box){ return box.value; });
-      return ["python3 -m ops.evidence_window", "open", "--run-dir " + runDir,
+      return ["python3 -m ops.evidence_window", "open", "--store " + store,
+        "--run-dir " + runDir,
         "--case " + caseNo, "--now " + quoted(valueOf("window-now")),
         "--items " + items.join(","), "--opened-by " + quoted(who())].join(" ");
     }
@@ -484,7 +486,7 @@ The monetary effect is SGD 3.60, below the SGD 8.00 execution threshold of POL-G
       showFields();
       if (decision() === "REQUEST_EVIDENCE"){
         verdict.className = "empty";
-        verdict.textContent = "The evidence-window command is part 26 (ops/evidence_window.py), which is not in this repository yet.";
+        verdict.textContent = "The evidence-window command is part 26 (ops/evidence_window.py): it opens one window to both parties at once.";
       } else {
         var state = check();
         if (state.problems.length){

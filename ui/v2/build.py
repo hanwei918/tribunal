@@ -80,8 +80,9 @@ decisions, and each one builds its own command:
   carries a note as well.
 * **REQUEST_EVIDENCE** offers the six record kinds of POL-GEN-04(b) -- read from
   ``ops.appeal.RECORD_EVIDENCE_KINDS`` -- and the instant the window opens. It
-  builds ``python3 -m ops.evidence_window open``, which is **part 26**: the
-  evidence window is not in this repository yet, and the page says so.
+  builds ``python3 -m ops.evidence_window open``, which is **part 26**: one
+  window is opened to both parties at once, and the page names the store the
+  command writes to rather than pretending the command runs here.
 
 The closing command is ``tribunal.precedents close``'s own command line behind
 ``ops.review``, and it carries **no** ``close`` of its own: ``ops.review``
@@ -259,11 +260,14 @@ DECISION_RULING_VALUES: Tuple[str, ...] = (
 # the kinds POL-GEN-04(b) lists.
 EVIDENCE_KINDS: Tuple[str, ...] = tuple(appeal_module.RECORD_EVIDENCE_KINDS)
 
-# The part the evidence-window command belongs to. ``POL-GEN-06(4)`` lets a
-# reviewer choose REQUEST_EVIDENCE and nothing in this repository executes it:
-# ``ops/evidence_window.py`` is part 26, and the page says so rather than
-# pretending the command runs here.
+# The part the evidence-window command belongs to, and the store the page's
+# command writes to. ``POL-GEN-06(4)`` lets a reviewer choose REQUEST_EVIDENCE,
+# and ``ops/evidence_window.py`` is the command that executes it: it is part 26,
+# and the page names the store rather than pretending the command runs in the
+# browser. The store is gitignored, so a command copied off the page writes
+# under the repository root and leaves nothing tracked.
 EVIDENCE_WINDOW_PART = "part 26"
+EVIDENCE_STORE = "evidence-windows"
 
 # The words a ruling value is shown under, before its code. These are the words
 # the track brief uses for the five values; the code follows in small monospace,
@@ -1480,6 +1484,7 @@ _JS = """
     var runDir = form.getAttribute("data-run-dir") || "";
     var caseNo = form.getAttribute("data-case") || "";
     var packet = form.getAttribute("data-packet") || "";
+    var store = form.getAttribute("data-store") || "";
 
     function cited(text, ids){
       for (var i = 0; i < ids.length; i += 1){
@@ -1560,7 +1565,8 @@ _JS = """
     function windowCommand(){
       var items = each('input[name="evidence"]:checked', form)
         .map(function(box){ return box.value; });
-      return ["python3 -m ops.evidence_window", "open", "--run-dir " + runDir,
+      return ["python3 -m ops.evidence_window", "open", "--store " + store,
+        "--run-dir " + runDir,
         "--case " + caseNo, "--now " + quoted(valueOf("window-now")),
         "--items " + items.join(","), "--opened-by " + quoted(who())].join(" ");
     }
@@ -1580,7 +1586,7 @@ _JS = """
       showFields();
       if (decision() === "REQUEST_EVIDENCE"){
         verdict.className = "empty";
-        verdict.textContent = "The evidence-window command is part 26 (ops/evidence_window.py), which is not in this repository yet.";
+        verdict.textContent = "The evidence-window command is part 26 (ops/evidence_window.py): it opens one window to both parties at once.";
       } else {
         var state = check();
         if (state.problems.length){
@@ -3104,6 +3110,22 @@ def closing_command(
     """
     if case.packet is None:
         raise BuildError("case {0} has no escalation packet".format(case.case_no))
+    # What an ADOPT records is the panel's own proposal, so when the caller
+    # passes no ruling the command takes the proposal's ruling and amount. The
+    # amount is the proposal's ``amount_sgd``, or its ``driver_compensation_sgd``
+    # on a ``DRIVER_COMPENSATION`` ruling -- the two fields the proposal carries,
+    # read the way ``ops.appeal.monetary_effect`` reads them.
+    if decision == DECISION_ADOPT and ruling is None:
+        proposal = adopt_proposal(case)
+        if isinstance(proposal, Mapping):
+            ruling = str(proposal.get("ruling") or "") or None
+            if amount is None:
+                if ruling == pipeline_module.DRIVER_COMPENSATION:
+                    amount = proposal.get("driver_compensation_sgd")
+                    if amount is None:
+                        amount = proposal.get("amount_sgd")
+                else:
+                    amount = proposal.get("amount_sgd")
     parts: List[str] = ["python3", "-m", "ops.review"]
     if store is not None:
         parts += ["--store", str(store)]
@@ -3137,15 +3159,16 @@ def evidence_window_command(
     items: Sequence[str] = (),
     opened_at: str = "",
     opened_by: str = "reviewer",
-    store: Optional[str] = None,
+    store: str = EVIDENCE_STORE,
 ) -> str:
     """The ``python3 -m ops.evidence_window open`` command, which is part 26.
 
-    ``POL-GEN-06(4)`` lets a reviewer choose REQUEST_EVIDENCE and nothing in this
-    repository executes it: the evidence window is ``ops/evidence_window.py``,
-    part 26, which has not landed. The form builds the command in the shape part
-    26 states -- ``--store``, ``--run-dir``, ``--case``, ``--now``, ``--items``
-    and ``--opened-by`` -- and the page says which part it belongs to.
+    ``POL-GEN-06(4)`` lets a reviewer choose REQUEST_EVIDENCE, and
+    ``ops/evidence_window.py`` is the command that executes it. The form builds
+    the command in that command's own shape -- ``--store``, ``--run-dir``,
+    ``--case``, ``--now``, ``--items`` and ``--opened-by`` -- and the page names
+    the store it writes to, which is gitignored, rather than pretending the
+    command runs in the browser.
     """
     parts: List[str] = ["python3", "-m", "ops.evidence_window", "open"]
     if store is not None:
@@ -3357,15 +3380,16 @@ def _review_tab(case: CaseData) -> str:
         '<input id="window-now" type="text" size="30" '
         'placeholder="2026-08-11T20:00:00+08:00"></p>'
         '<p class="empty">{3}: the evidence window is '
-        '<span class="mono">ops/evidence_window.py</span>, which is not in this '
-        "repository yet, so this is the command it will take rather than one that "
-        "runs here.</p></div>"
+        '<span class="mono">ops/evidence_window.py</span>, which opens one window '
+        "to both parties at once; the command below names the store it writes to, "
+        "and that store is not tracked.</p></div>"
     ).format(ruling_options, clause_options, evidence_boxes, EVIDENCE_WINDOW_PART)
     form_card = (
         '<div class="card wide" id="review-form" '
         'data-run-dir="{0}" data-case="{1}" data-packet="{2}" '
         'data-adopt-ruling="{3}" data-adopt-amount="{4}" data-adopt-clauses="{5}" '
-        'data-evidence="{6}" data-clauses="{7}" data-reason-min="{8}">'
+        'data-evidence="{6}" data-clauses="{7}" data-reason-min="{8}" '
+        'data-store="{13}">'
         "<h2>The decision</h2>"
         "<p>POL-GEN-06(4) names exactly four decisions:</p>{9}"
         "{10}"
@@ -3397,6 +3421,7 @@ def _review_tab(case: CaseData) -> str:
         adopt_note,
         decision_fields,
         precedents_module.MIN_REASON_CHARS,
+        _attribute(EVIDENCE_STORE),
     )
     return packet_card + form_card
 

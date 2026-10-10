@@ -385,6 +385,7 @@ Figures used: charged_total $25.12; recomputed fare $20.99; refund $4.127, round
     var runDir = form.getAttribute("data-run-dir") || "";
     var caseNo = form.getAttribute("data-case") || "";
     var packet = form.getAttribute("data-packet") || "";
+    var store = form.getAttribute("data-store") || "";
 
     function cited(text, ids){
       for (var i = 0; i < ids.length; i += 1){
@@ -465,7 +466,8 @@ Figures used: charged_total $25.12; recomputed fare $20.99; refund $4.127, round
     function windowCommand(){
       var items = each('input[name="evidence"]:checked', form)
         .map(function(box){ return box.value; });
-      return ["python3 -m ops.evidence_window", "open", "--run-dir " + runDir,
+      return ["python3 -m ops.evidence_window", "open", "--store " + store,
+        "--run-dir " + runDir,
         "--case " + caseNo, "--now " + quoted(valueOf("window-now")),
         "--items " + items.join(","), "--opened-by " + quoted(who())].join(" ");
     }
@@ -485,7 +487,7 @@ Figures used: charged_total $25.12; recomputed fare $20.99; refund $4.127, round
       showFields();
       if (decision() === "REQUEST_EVIDENCE"){
         verdict.className = "empty";
-        verdict.textContent = "The evidence-window command is part 26 (ops/evidence_window.py), which is not in this repository yet.";
+        verdict.textContent = "The evidence-window command is part 26 (ops/evidence_window.py): it opens one window to both parties at once.";
       } else {
         var state = check();
         if (state.problems.length){

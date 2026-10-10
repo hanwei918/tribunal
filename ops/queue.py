@@ -73,7 +73,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Sequence, Tuple
 
-from ops import OpsError, appeal, development_set_for, read_json_document, risk
+from ops import OpsError, appeal, development_set_for, evidence_window, read_json_document, risk
 from tribunal import loader
 
 # The config this module reads when it is not given one. It sits beside the
@@ -692,25 +692,46 @@ def render(
 def render_windows(entries: Sequence[Entry], store: Path) -> str:
     """The evidence-window block ``--windows`` prints, one line per human case.
 
-    The evidence-window store belongs to part 26 (``ops/evidence_window.py``),
-    which is not in this repository yet, so this block names the store and the
-    cases it would be read for rather than reporting a window status this module
-    invented. It is a **read**: no path is written, and no clock is read.
+    The store belongs to part 26 (``ops/evidence_window.py``) and this is a
+    **read**: each human-lane case is shown beside its window -- the items the
+    reviewer named, when it closes and when the decision is due, and what is
+    still missing. No path is written and no clock is read, so the block is a
+    function of the store and not of the moment it was printed.
     """
-    lines: List[str] = [
-        "evidence windows: {0}".format(store),
-        "the evidence-window store is part 26 (ops/evidence_window.py), which is "
-        "not in this repository yet, so no window status is read here",
-    ]
+    lines: List[str] = ["evidence windows: {0}".format(store)]
     human = [entry for entry in entries if entry.lane == LANE_HUMAN]
     if not human:
         lines.append("  no case is in the human lane")
         return "\n".join(lines) + "\n"
     for entry in human:
-        lines.append(
-            "  {0:<6} {1}".format(entry.case_no, "+".join(entry.reasons))
-        )
+        lines.extend(_window_lines(store, entry))
     return "\n".join(lines) + "\n"
+
+
+def _window_lines(store: Path, entry: Entry) -> List[str]:
+    """One human-lane case's window, as the store records it."""
+    try:
+        window = evidence_window.window_state(Path(store), entry.case_no)
+        events = evidence_window.read_events(Path(store), entry.case_no)
+    except evidence_window.EvidenceWindowError as exc:
+        return [
+            "  {0:<6} {1}".format(entry.case_no, "+".join(entry.reasons)),
+            "         window store unreadable: {0}".format(exc),
+        ]
+    if window is None:
+        return [
+            "  {0:<6} {1}".format(entry.case_no, "+".join(entry.reasons)),
+            "         no evidence window",
+        ]
+    missing = evidence_window.missing_items(window, events)
+    return [
+        "  {0:<6} {1}".format(entry.case_no, "+".join(entry.reasons)),
+        "         items {0}".format(", ".join(window.items)),
+        "         closes {0}, decide by {1}".format(
+            window.close_at.isoformat(), window.decide_at.isoformat()
+        ),
+        "         still missing: {0}".format(", ".join(missing) or "nothing"),
+    ]
 
 
 # --------------------------------------------------------------------------
@@ -747,9 +768,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         type=Path,
         default=None,
         help=(
-            "a store of evidence windows; each human-lane case is listed with "
-            "the store it would be read from. The window store belongs to part "
-            "26 (ops/evidence_window.py), which is not in this repository yet"
+            "a store of evidence windows; each human-lane case is listed beside "
+            "its window: the items named, when it closes and when the decision is "
+            "due, and what is still missing. Read-only; the store is written by "
+            "part 26 (ops/evidence_window.py)"
         ),
     )
     args = parser.parse_args(argv)

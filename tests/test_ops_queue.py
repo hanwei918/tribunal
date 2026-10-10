@@ -727,15 +727,14 @@ class TheFirstReviewClockTests(unittest.TestCase):
         self.assertEqual(0, code, err)
         self.assertIn(queue.BREACHED_REVIEW, out)
 
-    def test_the_windows_option_names_the_part_26_store(self):
-        """``--windows`` belongs to part 26, and says so rather than inventing one."""
+    def test_the_windows_option_reads_the_part_26_store(self):
+        """``--windows`` reads part 26's store and reports each human case's window."""
         code, out, err = run_command(
             ["--run-dir", str(CORPUS_V6_RUN), "--windows", "/tmp/evidence-windows"]
         )
         self.assertEqual(0, code, err)
         self.assertIn("evidence windows: /tmp/evidence-windows", out)
-        self.assertIn("part 26", out)
-        self.assertIn("no window status is read", out)
+        self.assertIn("no evidence window", out)
 
 
 # --------------------------------------------------------------------------
