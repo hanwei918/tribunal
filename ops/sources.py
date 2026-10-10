@@ -13,6 +13,16 @@ An adapter is a name, the artifact types it holds, the ``source`` values it
 answers for, and the key it is looked up by -- and its one public method is
 :meth:`Adapter.fetch`, which returns the artifacts filed under one key.
 
+**A party key is scoped to a trip.** A trip id is unique to one case; a party id
+is not. The collusion set holds three disputes between the same rider and the
+same driver, so a lookup keyed by party id **alone** would answer with all three
+cases' profiles and a case would be handed another case's evidence. Every lookup
+the collector makes therefore carries the trip it is being made for, and the
+party answer is filtered to artifacts whose own ``trip_id`` is that trip. A
+caller that names no trip still gets the party's artifacts over the whole root,
+which is what the adapter's own description says it holds; it is the collector
+that must never ask that way.
+
 **No adapter ever returns a whole case file.** The index keeps artifacts, not
 documents, and there is no method on it that hands a case back. What an adapter
 returns is a tuple of artifacts, each the object the case file carries.
@@ -71,6 +81,12 @@ class SourceIndex:
     system keyed by ``trip_id`` would answer with, and it is why the collector
     compares what it found with what the case lists rather than assuming one
     artifact per call.
+
+    **A party key spans cases, so it is read with a trip.** A trip id belongs to
+    one case; a party id does not, and three disputes of the collusion set are
+    between the same rider and the same driver. :meth:`artifacts` therefore takes
+    an optional ``trip_id`` that keeps a party answer to one trip's artifacts,
+    which is the form the collector uses.
     """
 
     def __init__(self, case_root: Path) -> None:
@@ -114,8 +130,22 @@ class SourceIndex:
         key_kind: str,
         evidence_types: Sequence[str],
         sources: Optional[Sequence[str]] = None,
+        trip_id: Optional[str] = None,
     ) -> Tuple[Mapping[str, Any], ...]:
         """The artifacts filed under one key, of these types and sources.
+
+        ``trip_id`` scopes a **party** lookup to one trip. A party id is not
+        unique across a case root -- the collusion set holds three disputes
+        between the same rider and the same driver -- so without it a party
+        lookup answers with every case that party appears in, and the collector
+        would hand one case another case's profiles. The collector always passes
+        the trip the profiles are being fetched for; the parameter is optional
+        because a caller that wants a party's artifacts over the whole root can
+        still ask for them, which is what :class:`ProfileService` describes.
+
+        A trip-keyed lookup ignores ``trip_id`` in the sense that it can never
+        drop anything: every artifact in the trip table is filed under the trip
+        it carries.
 
         Sorted by ``evidence_id`` within the answer, so two collections of the
         same case are the same collection.
@@ -125,6 +155,8 @@ class SourceIndex:
         found: List[Mapping[str, Any]] = []
         for evidence_type in evidence_types:
             for artifact in table.get((key, evidence_type), ()):
+                if trip_id is not None and artifact.get("trip_id") != trip_id:
+                    continue
                 if allowed is not None and artifact.get("source") not in allowed:
                     continue
                 found.append(artifact)
@@ -146,9 +178,19 @@ class Adapter:
     def __init__(self, index: SourceIndex) -> None:
         self.index = index
 
-    def fetch(self, key: str) -> Tuple[Mapping[str, Any], ...]:
-        """The artifacts this service holds under one key."""
-        return self.index.artifacts(key, self.key_kind, self.evidence_types, self.sources)
+    def fetch(
+        self, key: str, trip_id: Optional[str] = None
+    ) -> Tuple[Mapping[str, Any], ...]:
+        """The artifacts this service holds under one key.
+
+        ``trip_id`` scopes a party-keyed lookup to one trip, which is what keeps
+        two cases that share a party from answering for each other -- see
+        :meth:`SourceIndex.artifacts`. A trip-keyed adapter can never lose an
+        artifact to it, because its key already names the trip.
+        """
+        return self.index.artifacts(
+            key, self.key_kind, self.evidence_types, self.sources, trip_id
+        )
 
     def describe(self) -> Dict[str, Any]:
         """The adapter as data, for a caller that wants to enumerate them."""
@@ -199,6 +241,12 @@ class ProfileService(Adapter):
 
     The party ids come from the trip record rather than from the dispute, which
     is why this is the one adapter the collector cannot call first.
+
+    A party id is not unique across a case root, so the collector passes the trip
+    it is fetching the profiles for and the answer is kept to that trip's
+    artifacts. Without it, the collusion set's repeated pair would answer three
+    times over and each of the three cases would be handed the other two's
+    profiles.
     """
 
     name = "ProfileService"

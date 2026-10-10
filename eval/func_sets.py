@@ -15,8 +15,8 @@ system rather than its accuracy:
   built and every span the key names is looked for in it.
 * **collusion-v1** -- eight cases read together as one case root, with a control
   or decoy beside every positive. The check needs no model: ``ops/risk.py`` is
-  asked for its flags and its five policy tests, and the answer is held against
-  the set's own key and its cross-case expectation.
+  **run as a command** and its JSON is read, and the answer is held against the
+  set's own key and its cross-case expectation.
 * **chat-signals-v1** -- 32 labelled chat messages under ``eval/fixtures/``, not
   cases. The check is the label counts. No classifier exists yet: the fixture is
   the labelled set a classifier would be measured against, and nothing here
@@ -25,6 +25,13 @@ system rather than its accuracy:
 This module is under ``eval/``, so it may read ``eval/answers/``; nothing under
 ``tribunal/`` may, and nothing here is imported by it. It writes nothing: every
 command is a reading, and ``--report`` prints to standard output.
+
+**It imports no ``ops`` module.** The ops layer is a layer of its own and
+``tests.test_ops_layer`` forbids the edge in either direction: nothing under
+``tribunal/`` or ``eval/`` may import ``ops``, and ``ops`` may never open an
+answer key. The collusion reading is therefore taken the way a person would take
+it -- ``python3 -m ops.risk --case-root <root> --json`` is run as a subprocess
+and its output is parsed -- rather than by importing the layer that produced it.
 
 What "still present" means
 --------------------------
@@ -41,6 +48,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Set, Tuple
@@ -51,8 +59,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from eval import development_sets  # noqa: E402
-from ops import risk  # noqa: E402
-from tribunal import brief, loader  # noqa: E402
+from tribunal import brief  # noqa: E402
 
 # The three **case** sets this module reads, in the order the report prints them.
 # The fourth functional set, ``inject-v1``, is registered beside them and is
@@ -75,10 +82,10 @@ POLICY_VERSION = 6
 # visible the first time it appears.
 SPAN_KINDS: Tuple[str, ...] = ("NAME", "PHONE", "EMAIL", "PLATE", "PLACE")
 
-# The five policy tests ``ops/risk.py`` reports, by the clause id it names each
-# of them with -- ``POL-NS-09(c)`` and ``POL-NS-09(d)`` are limbs of one clause
-# and are two tests.
-RISK_TESTS: Tuple[str, ...] = tuple(test.clause for test in risk.POLICY_TESTS)
+# The ops module the collusion reading is taken from, and the mode it is asked
+# for. It is named as a command-line module rather than imported: see the module
+# docstring.
+RISK_MODULE = "ops.risk"
 
 # The two comparison verdicts the collusion report counts.
 MATCH = "match"
@@ -301,11 +308,47 @@ def collusion_expected_flags() -> Dict[int, List[int]]:
     }
 
 
+def risk_reading(case_root: Path) -> Dict[int, Mapping[str, Any]]:
+    """``ops/risk.py``'s reading of one case root, by case number.
+
+    The module is **run**, not imported: ``eval/`` may not import ``ops`` (see
+    the module docstring), so the reading is taken the way a person would take
+    it. It is asked for its JSON mode, which is sorted and deterministic, and the
+    interpreter is the one running this module, so the two halves cannot come
+    from different Pythons.
+
+    A non-zero exit is a refusal -- the root is not there, or a case cannot be
+    read -- and is reported rather than parsed as an empty reading.
+    """
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            RISK_MODULE,
+            "--case-root",
+            str(case_root),
+            "--json",
+        ],
+        cwd=str(PROJECT_ROOT),
+        capture_output=True,
+        text=True,
+    )
+    if completed.returncode != 0:
+        raise FuncSetsError(
+            "{0} exited {1}: {2}".format(
+                RISK_MODULE, completed.returncode, completed.stderr.strip()
+            )
+        )
+    document = json.loads(completed.stdout)
+    return {row["case_no"]: row for row in document["cases"]}
+
+
 def collusion_report() -> List[str]:
     """The risk layer's flags over the root, against the key and cross_case.json."""
     root = case_root("collusion-v1")
     keys = key_of("collusion-v1")
     expected_flags = collusion_expected_flags()
+    reading = risk_reading(root)
 
     lines: List[str] = [
         "ops/risk.py is run over the whole case root. Its repeat_party attention",
@@ -319,11 +362,11 @@ def collusion_report() -> List[str]:
     flag_matches = flag_misses = flag_extras = 0
     risk_matches = risk_misses = risk_extras = 0
     for case_no in case_numbers("collusion-v1"):
-        case = load_case("collusion-v1", case_no)
-        policies = loader.load_policies(case["dispute"]["category"])
-        signals = risk.signals_for(case, policies)
-        tripped = sorted(signal.clause for signal in signals if signal.tripped)
-        produced = sorted({flag.other_case_no for flag in risk.repeat_party_flags(case, root)})
+        row = reading[case_no]
+        tripped = sorted(
+            signal["clause"] for signal in row["signals"] if signal["tripped"]
+        )
+        produced = sorted({flag["other_case_no"] for flag in row["attention"]})
         expected_repeat = expected_flags[case_no]
         expected_risk = sorted(expected_risk_tests(keys[case_no]))
 
@@ -336,7 +379,7 @@ def collusion_report() -> List[str]:
 
         lines.append(
             "  case {0}  {1}  key ruling {2}".format(
-                case_no, case["dispute"]["category"], keys[case_no]["expected_ruling"]
+                case_no, row["category"], keys[case_no]["expected_ruling"]
             )
         )
         lines.append(

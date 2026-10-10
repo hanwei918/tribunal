@@ -56,6 +56,14 @@ policy finding. It reads the trip records' party ids, not a profile: the same
 ``rider_id`` or ``driver_id`` appearing in another dispute of the same case root
 within 30 days of this dispute's ``filed_at``. That window is the flag's own and
 is not read from the policy, because the flag is not a policy test.
+
+**One case, or a whole root, and text or JSON.** ``--case`` and ``--case-file``
+read one case; ``--case-root`` reads every case file in one directory, in
+case-number order. ``--json`` prints the same readings as a JSON document
+instead of as text -- sorted keys, a fixed key order, and a ``Decimal`` written
+as its own literal -- so a caller that is not allowed to import this package can
+run it and read its answer rather than restating it. Nothing here opens an
+answer key, whichever mode is used.
 """
 
 from __future__ import annotations
@@ -617,29 +625,124 @@ def _load(case: Optional[int], case_file: Optional[Path]) -> Tuple[Mapping[str, 
     return loader.load_external_case(path), path.parent
 
 
+def _cases_over_root(case_root: Path) -> List[Mapping[str, Any]]:
+    """Every case file in one root, by case number.
+
+    A root that is not there is refused rather than read as an empty one: "this
+    root holds no case" and "there is no root at this path" are different
+    answers, and the second one silently printing nothing would be a reading
+    nobody made.
+    """
+    root = Path(case_root)
+    if not root.is_dir():
+        raise RiskError("no case root at {0}".format(root))
+    return sorted(_cases_in_root(root), key=lambda case: case["case_no"])
+
+
+def assessments_over_root(case_root: Path) -> Tuple[Assessment, ...]:
+    """Every case in one root, assessed, in case-number order."""
+    found: List[Assessment] = []
+    for case in _cases_over_root(case_root):
+        policies = loader.load_policies(case["dispute"]["category"])
+        found.append(assess(case, policies, Path(case_root)))
+    return tuple(found)
+
+
+def assessment_json(assessment: Assessment) -> Dict[str, Any]:
+    """One assessment as plain data: dicts and lists, no named tuples."""
+    return {
+        "case_no": assessment.case_no,
+        "category": assessment.category,
+        "filed_by": assessment.filed_by,
+        "filed_at": assessment.filed_at,
+        "signals": [
+            {
+                "clause": signal.clause,
+                "category": signal.category,
+                "side": signal.side,
+                "tripped": signal.tripped,
+                "fields": [[path, value] for path, value in signal.fields],
+                "threshold": signal.threshold,
+                "notes": list(signal.notes),
+            }
+            for signal in assessment.signals
+        ],
+        "attention": [
+            {
+                "party_role": flag.party_role,
+                "party_id": flag.party_id,
+                "other_case_no": flag.other_case_no,
+                "other_filed_at": flag.other_filed_at,
+                "days_apart": flag.days_apart,
+            }
+            for flag in assessment.attention
+        ],
+    }
+
+
+def _json_value(value: Any) -> str:
+    """A value ``json`` cannot write, as the text the case files write it as.
+
+    The only one is ``Decimal``: a case read through the external loader carries
+    its money as a ``Decimal``, and writing it as a binary float would make the
+    document depend on the platform's arithmetic. Its own literal text is what
+    the case file holds and what a reader of the JSON can compare.
+    """
+    if isinstance(value, Decimal):
+        return str(value)
+    raise TypeError("{0!r} is not JSON-serialisable".format(value))
+
+
+def json_document(assessments: Sequence[Assessment]) -> str:
+    """``assessments`` as a deterministic JSON document.
+
+    Sorted keys, one element per case in the order they were given, and a fixed
+    key order within each -- so two runs produce the same bytes and a caller can
+    diff them.
+    """
+    document = {"cases": [assessment_json(item) for item in assessments]}
+    return json.dumps(document, sort_keys=True, indent=2, default=_json_value) + "\n"
+
+
 def main(argv: Optional[Sequence[str]] = None) -> int:
-    """Print the fraud and bad-faith signals for one case."""
+    """Print the fraud and bad-faith signals for one case, or for a whole root."""
     parser = argparse.ArgumentParser(
         prog="python -m ops.risk",
         description=(
-            "Report the five policy tests for one case, and the repeat_party "
-            "attention flag. Writes nothing."
+            "Report the five policy tests for one case or a whole case root, and "
+            "the repeat_party attention flag. Writes nothing, and opens no answer "
+            "key."
         ),
     )
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--case", type=int, help="a corpus case number")
     source.add_argument("--case-file", type=Path, help="one converted case file")
+    source.add_argument(
+        "--case-root", type=Path, help="every case file in one directory"
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="print the readings as a JSON document rather than as text",
+    )
     args = parser.parse_args(argv)
 
     try:
-        case, case_root = _load(args.case, args.case_file)
-        policies = loader.load_policies(case["dispute"]["category"])
-        assessment = assess(case, policies, case_root)
+        if args.case_root is not None:
+            assessments: Tuple[Assessment, ...] = assessments_over_root(args.case_root)
+        else:
+            case, case_root = _load(args.case, args.case_file)
+            policies = loader.load_policies(case["dispute"]["category"])
+            assessments = (assess(case, policies, case_root),)
     except (RiskError, loader.LoaderError) as exc:
         print("FATAL: {0}".format(exc), file=sys.stderr)
         return 1
 
-    sys.stdout.write(render(assessment))
+    if args.json:
+        sys.stdout.write(json_document(assessments))
+        return 0
+    for assessment in assessments:
+        sys.stdout.write(render(assessment))
     return 0
 
 

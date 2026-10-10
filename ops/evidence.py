@@ -23,6 +23,13 @@ driver profile, traffic advisories -- with the artifacts of one type sorted by
 129 committed case files are written in, and it is what makes the collection
 equal to the ``evidence`` array it came from.
 
+**Every call carries the trip.** The two profile lookups are keyed by party id,
+and a party id is not unique across a case root: three disputes of the collusion
+set are between the same rider and the same driver. Every call therefore passes
+the dispute's ``trip_id`` to the adapter, which keeps a party answer to that
+trip's artifacts. Without it a case would collect the other cases' profiles as
+well as its own, which is a collection that is not the case's.
+
 **The retrieval log.** One entry per call, in the order the calls were made: the
 service, the key, and the artifact ids it returned. A call that found nothing is
 in the log with an empty answer, because "the advisory feed holds nothing for
@@ -120,6 +127,10 @@ def collect(dispute: Mapping[str, Any], systems: SourceSystems) -> Collection:
     ``evidence_ids`` is never read here, and a test asserts it by making the
     dispute refuse that key.
 
+    Every call is scoped to ``trip_id``, which is what keeps the two
+    party-keyed profile lookups from answering with another case's profiles
+    when two cases share a party.
+
     Raises:
         EvidenceError: the dispute names no trip, the trip record is not in the
             index, or the trip record names no party to look a profile up by.
@@ -131,7 +142,7 @@ def collect(dispute: Mapping[str, Any], systems: SourceSystems) -> Collection:
     log: List[Retrieval] = []
     found: List[Mapping[str, Any]] = []
 
-    trip = systems.trip.fetch(trip_id)
+    trip = systems.trip.fetch(trip_id, trip_id)  # the key and the scope are one trip
     log.append(Retrieval(systems.trip.name, trip_id, tuple(_evidence_id(a) for a in trip)))
     if not trip:
         raise EvidenceError(
@@ -157,7 +168,7 @@ def collect(dispute: Mapping[str, Any], systems: SourceSystems) -> Collection:
                     adapter.name, adapter.key_kind
                 )
             )
-        answer = adapter.fetch(key)
+        answer = adapter.fetch(key, trip_id)
         log.append(Retrieval(adapter.name, key, tuple(_evidence_id(a) for a in answer)))
         found.extend(answer)
 

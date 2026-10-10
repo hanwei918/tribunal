@@ -20,7 +20,7 @@ Six things are asserted:
 * **What the collector may read.** It reads the dispute's ``trip_id`` and never
   its ``evidence_ids`` -- asserted by running it over a dispute that records
   every key it is asked for.
-* **The proof.** For all 29 corpus cases and all 325 cases under
+* **The proof.** For all 29 corpus cases and all 353 cases under
   ``data/external/``, each against its own root, the collection equals the case
   file's ``evidence`` array exactly: same artifacts, same order, same canonical
   JSON. And a brief built from the collected case has the ``brief_sha256`` the
@@ -470,14 +470,17 @@ class TheCorpusEqualityTests(unittest.TestCase):
 
 
 class TheExternalEqualityTests(unittest.TestCase):
-    """The same, over the 325 converted cases, each against its own root.
+    """The same, over the 353 converted cases, each against its own root.
 
     ``ryde-v3/`` joined the tree on 2026-10-08: the organisers' sample converted
     for policy version 3, under a path of its own so that the version-1 case the
     recorded run read stays where it is. ``dev-v2/`` and ``dev-v2-ext/`` joined
     it the same day: Ji Guofang's 80 synthetic development cases and their 120
     variants, written for policy version 3. ``sealed-v1/`` joined it on
-    2026-10-09: the third sealed set's 24 cases. All of them are ordinary
+    2026-10-09: the third sealed set's 24 cases. ``inject-v1/``, ``pii-v1/`` and
+    ``collusion-v1/`` joined it on 2026-10-10: the three functional case sets,
+    28 cases in all, and ``collusion-v1``'s first three are the only cases in the
+    repository that share both a rider and a driver. All of them are ordinary
     agent-visible, answer-free external cases, so the same two checks apply to
     every one.
     """
@@ -486,12 +489,15 @@ class TheExternalEqualityTests(unittest.TestCase):
     def setUpClass(cls):
         cls.roots = external_roots()
 
-    def test_the_external_tree_holds_the_eight_sets(self):
+    def test_the_external_tree_holds_the_eleven_sets(self):
         self.assertEqual(
             [
                 "codex",
+                "collusion-v1",
                 "dev-v2",
                 "dev-v2-ext",
+                "inject-v1",
+                "pii-v1",
                 "ryde",
                 "ryde-v3",
                 "sealed-v1",
@@ -530,7 +536,105 @@ class TheExternalEqualityTests(unittest.TestCase):
                             root.name, path.name
                         ),
                     )
-        self.assertEqual(325, total)
+        self.assertEqual(353, total)
+
+    def test_two_cases_that_share_both_parties_collect_to_their_own_arrays(self):
+        """The collision the collusion set exposed, on a fixture of its own.
+
+        A party id is not unique across a case root, and the collusion set's
+        first three cases are three disputes between the same rider and the same
+        driver. A party-keyed lookup that was not scoped to the trip would answer
+        with all of them and each case would collect the others' profiles. Two
+        synthetic cases are written here -- sharing both party ids and sharing
+        nothing else -- and both checks are made: the collection is each case's
+        own evidence array, and the profile lookup is what the trip scope is for.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            rider, driver = "RDR-09001", "DRV-09001"
+            for case_no in (901, 902):
+                trip_id = "TRP-{0:05d}".format(case_no)
+                dispute = {
+                    "case_no": case_no,
+                    "trip_id": trip_id,
+                    "category": "NO_SHOW_CHARGE",
+                    "filed_by": "RIDER",
+                    "filed_at": "2026-07-01T10:00:00+08:00",
+                    "claim_text": "fixture",
+                    "amount_contested_sgd": 4.0,
+                    "counterparty_statement": None,
+                    "channel": "IN_APP_SUPPORT",
+                }
+                evidence_array = [
+                    {
+                        "evidence_id": "EV-TRIP-{0:05d}".format(case_no),
+                        "evidence_type": "TRIP_RECORD",
+                        "trip_id": trip_id,
+                        "source": "PLATFORM_TELEMETRY",
+                        "payload": {
+                            "trip_id": trip_id,
+                            "rider_id": rider,
+                            "driver_id": driver,
+                        },
+                    },
+                    {
+                        "evidence_id": "EV-RPROF-{0:05d}".format(case_no),
+                        "evidence_type": "RIDER_PROFILE",
+                        "trip_id": trip_id,
+                        "source": "PLATFORM_TELEMETRY",
+                        "payload": {"party_id": rider},
+                    },
+                    {
+                        "evidence_id": "EV-DPROF-{0:05d}".format(case_no),
+                        "evidence_type": "DRIVER_PROFILE",
+                        "trip_id": trip_id,
+                        "source": "PLATFORM_TELEMETRY",
+                        "payload": {"party_id": driver},
+                    },
+                ]
+                dispute["evidence_ids"] = [item["evidence_id"] for item in evidence_array]
+                (root / "case-{0:05d}.json".format(case_no)).write_text(
+                    json.dumps(
+                        {
+                            "schema_version": "1.2.0",
+                            "case_no": case_no,
+                            "dispute": dispute,
+                            "evidence": evidence_array,
+                        }
+                    )
+                    + "\n",
+                    encoding="utf-8",
+                )
+
+            systems = sources.SourceSystems.over(root)
+            for case_no in (901, 902):
+                case = json.loads(
+                    (root / "case-{0:05d}.json".format(case_no)).read_text()
+                )
+                collection = evidence.collect(case["dispute"], systems)
+                with self.subTest(case_no=case_no):
+                    self.assertTrue(
+                        money.dumps_canonical(case["evidence"])
+                        == money.dumps_canonical(list(collection.artifacts)),
+                        "case {0} does not collect to its own evidence array".format(
+                            case_no
+                        ),
+                    )
+                    self.assertTrue(evidence.check(collection, case["dispute"]).agrees)
+
+            # Why the scope is there: the party id alone names both cases, and the
+            # trip narrows it to one.
+            self.assertEqual(
+                ["EV-RPROF-00901", "EV-RPROF-00902"],
+                [a["evidence_id"] for a in systems.profiles.fetch(rider)],
+            )
+            self.assertEqual(
+                ["EV-RPROF-00902"],
+                [
+                    a["evidence_id"]
+                    for a in systems.profiles.fetch(rider, "TRP-00902")
+                ],
+            )
 
     def test_wild_v2_case_708_collects_its_user_submitted_fare_breakdown(self):
         root = EXTERNAL_ROOT / "wild-v2"
