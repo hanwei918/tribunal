@@ -3154,23 +3154,34 @@ class MissNoteTests(unittest.TestCase):
     def test_no_page_links_out_of_ui_dist_by_a_relative_path(self):
         """Every anchor either goes to the repository by absolute URL or stays
         inside ``ui/dist/``. One that climbed out relatively would work in this
-        checkout and 404 in a deployed copy of ``ui/dist/`` alone."""
+        checkout and 404 in a deployed copy of ``ui/dist/`` alone.
+
+        The replay sits one level under the site's root, so its link back to the
+        queue starts with ``../`` and the runs index's with ``../../``. The link
+        is resolved against the page's own path rather than counted: the page's
+        depth below ``ui/dist/`` is no longer the number of ``../`` a link may
+        carry, and counting refused the queue link that is now correct.
+        """
+        published = build.DIST_DIR.parent.resolve()
         for name in PAGE_NAMES:
             page = build.pages()[name]
             scan = _ResourceScan()
             scan.feed(page.output_path.read_text(encoding="utf-8"))
             self.assertTrue(scan.anchors, "{0} draws no link at all".format(name))
-            for tag, href in scan.anchors:
+            for _tag, href in scan.anchors:
                 with self.subTest(page=name, href=href):
                     if href.startswith(build.REPOSITORY_BLOB_BASE):
                         continue
-                    up = 0
-                    while href[3 * up : 3 * up + 3] == "../":
-                        up += 1
-                    self.assertLessEqual(
-                        up,
-                        page.depth,
+                    if not href or href.startswith("#"):
+                        continue
+                    target = (page.output_path.parent / href).resolve()
+                    self.assertTrue(
+                        target == published or published in target.parents,
                         "{0} leaves ui/dist by a relative path".format(href),
+                    )
+                    self.assertTrue(
+                        target.is_file(),
+                        "{0} points at {1}, which is not there".format(href, target),
                     )
 
     def test_only_the_corpus_note_is_marked_contested(self):

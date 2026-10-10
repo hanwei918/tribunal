@@ -1107,12 +1107,54 @@ class FrontDoorTests(unittest.TestCase):
                 self.assertIn(str(dispute.get("dispute_id")), page)
                 self.assertIn(str(dispute.get("trip_id")), page)
                 self.assertIn(str(dispute.get("filed_at")), page)
-                self.assertIn(v2.status_chip(case, with_time=True), page)
+                self.assertIn(
+                    v2.status_chip(case, with_time=True, title=True), page
+                )
                 self.assertIn(
                     v2._text(v2._summary_line(case.case)),
                     page,
                     "the masked first sentence of the claim is not the title",
                 )
+
+    def test_every_case_page_carries_the_opening_of_the_explanation(self):
+        """The summary is the explanation's opening, and it is never one line.
+
+        Some explanations open with a one-line salutation -- 104's is "To the
+        rider and the driver: this is a provisional automated ruling." -- so the
+        summary takes paragraphs until it is at least the sheet's 120 characters.
+        Every paragraph it shows is the explanation's own, verbatim.
+        """
+        for case in loaded_cases():
+            explanation = str(case.ruling.get("explanation") or "").strip()
+            if not explanation:
+                continue
+            page = built_pages()[case.link]
+            chosen = v2._summary_paragraphs(explanation)
+            whole = len(" ".join(explanation.split()))
+            with self.subTest(case=case.case_no):
+                self.assertTrue(chosen, "no summary is shown")
+                self.assertGreaterEqual(
+                    len(" ".join(chosen.split())),
+                    min(v2.SUMMARY_MINIMUM_CHARS, whole),
+                    "the summary is shorter than the sheet's minimum",
+                )
+                self.assertIn("From the judge's explanation", page)
+                for paragraph in chosen.split("\n\n"):
+                    self.assertIn(
+                        v2._text(paragraph),
+                        page,
+                        "the summary is not the explanation's own words",
+                    )
+
+    def test_the_summary_is_never_a_one_line_salutation(self):
+        """104's own opening is one line; the page shows the sentence after it."""
+        case = loaded_case(104)
+        explanation = str(case.ruling.get("explanation") or "")
+        first = re.split(r"\n\s*\n", explanation.strip())[0].strip()
+        chosen = v2._summary_paragraphs(explanation)
+        self.assertLess(len(" ".join(first.split())), v2.SUMMARY_MINIMUM_CHARS)
+        self.assertGreater(len(" ".join(chosen.split())), len(" ".join(first.split())))
+        self.assertTrue(chosen.startswith(first), "the opening is not verbatim")
 
 
 # --------------------------------------------------------------------------
@@ -1167,7 +1209,10 @@ class FeaturedCardTests(unittest.TestCase):
         drafts = list(vote.get("drafts") or [])
         self.assertTrue(drafts, "1779 has no drafts to count")
         card = card_html(index_text(), 1779)
-        self.assertIn("NO_VALID_DRAFTS", card)
+        # The words of part 13b first, the code small after them -- never the raw
+        # code on its own.
+        self.assertIn("no judge draft passed the code checks", card)
+        self.assertIn('<span class="mono">NO_VALID_DRAFTS</span>', card)
         self.assertIn("rejected by the code checks", card)
         self.assertIn(
             "every one of the {0} drafts".format(len(drafts)),
@@ -1181,6 +1226,60 @@ class FeaturedCardTests(unittest.TestCase):
         card = card_html(index_text(), 2735)
         self.assertIn(TRIGGER_WORDS["GEN08_SCOPE"].format(votes=votes), card)
         self.assertIn("0 - the scope gate asked no model", card)
+
+
+# --------------------------------------------------------------------------
+# The status chips
+# --------------------------------------------------------------------------
+class StatusChipTests(unittest.TestCase):
+    """Short words on the chip, and the detail where a reader looks for it."""
+
+    def test_a_held_amount_gets_a_short_chip_and_the_reason_in_the_title(self):
+        """The chip cannot wrap, so the figure travels in the title instead.
+
+        The long form the owner saw -- "Decided automatically - SGD 8.05 held
+        for a reviewer" -- overflowed the pill and changed the row's height.
+        """
+        held = [case for case in loaded_cases() if v2._money_is_held(case)]
+        self.assertTrue(held, "no case has a held amount to check")
+        queue = built_pages()["index.html"]
+        for case in held:
+            chip = v2.status_chip(case)
+            reason = v2.held_reason(case)
+            with self.subTest(case=case.case_no):
+                self.assertIn(">Held for release</span>", chip)
+                self.assertNotIn("SGD", chip, "the chip carries the figure it hides")
+                self.assertIn("POL-GEN-05", reason)
+                self.assertIn("execution threshold", reason)
+                self.assertIn(
+                    ' title="{0}"'.format(v2._attribute(reason)),
+                    queue,
+                    "the queue's status cell does not carry the reason",
+                )
+                self.assertIn(
+                    v2.status_chip(case, with_time=True, title=True),
+                    built_pages()[case.link],
+                    "the case header does not carry the reason",
+                )
+
+    def test_every_chip_is_one_of_the_four_meanings(self):
+        for case in loaded_cases():
+            chip = v2.status_chip(case)
+            with self.subTest(case=case.case_no):
+                if case.trigger is not None:
+                    self.assertIn('class="chip bad"', chip)
+                    self.assertIn("Sent to a reviewer - ", chip)
+                elif v2._money_is_held(case):
+                    self.assertIn('class="chip warn"', chip)
+                elif case.ruling.get("ruling") in (
+                    "FULL_REFUND",
+                    "PARTIAL_REFUND",
+                    "NO_ACTION",
+                    "DRIVER_COMPENSATION",
+                ):
+                    self.assertIn('class="chip ok"', chip)
+                else:
+                    self.assertIn('class="chip grey"', chip)
 
 
 # --------------------------------------------------------------------------
@@ -1243,6 +1342,19 @@ class KeyFigureTileTests(unittest.TestCase):
 TRACE_SVG_RE = re.compile(r'<div class="map">(<svg.*?</svg>)</div>', re.S)
 
 
+def optimal_distance_of(case: Any) -> Any:
+    """A case's optimal route distance, from its brief or its case file.
+
+    Computed here rather than read off the page's caption, so the caption is
+    checked against an independent figure.
+    """
+    deviation = v2._derived_block(case.brief, "GPS_TRACE", "deviation")
+    value = v2._fact_value(deviation, "optimal_distance_km") if deviation else None
+    if value is None:
+        value = v2._case_payload(case.case, "TRIP_RECORD").get("optimal_distance_km")
+    return value
+
+
 class TraceDrawingTests(unittest.TestCase):
     """The trace is drawn from the fixes, and the optimal route is never drawn."""
 
@@ -1261,26 +1373,26 @@ class TraceDrawingTests(unittest.TestCase):
                 self.assertIn("<polyline", match.group(1))
 
     def test_no_line_is_labelled_optimal(self):
+        """No line is labelled optimal anywhere, and the caption says why.
+
+        The caption belongs to the trace: it is written where a trace is drawn
+        and the record carries an optimal distance. A case with no GPS fixes has
+        no trace block at all -- case 213 is one, though its trip record does
+        carry an optimal distance -- so the caption is required only where a
+        trace was drawn.
+        """
         for case in loaded_cases():
             page = built_pages()[case.link]
             match = TRACE_SVG_RE.search(page)
-            if match is not None:
-                with self.subTest(case=case.case_no):
+            optimal = optimal_distance_of(case)
+            with self.subTest(case=case.case_no):
+                if match is not None:
                     self.assertNotIn("<text", match.group(1))
                     self.assertNotIn("optimal", match.group(1))
-            deviation = v2._derived_block(case.brief, "GPS_TRACE", "deviation")
-            optimal = (
-                v2._fact_value(deviation, "optimal_distance_km")
-                if deviation
-                else None
-            )
-            if optimal is None:
-                optimal = v2._case_payload(case.case, "TRIP_RECORD").get(
-                    "optimal_distance_km"
-                )
-            if optimal is not None:
-                with self.subTest(case=case.case_no):
+                if match is not None and optimal is not None:
                     self.assertIn("(distance only)", page)
+                else:
+                    self.assertNotIn("(distance only)", page)
 
     def test_the_rail_carries_the_evidence_and_the_record(self):
         for case in loaded_cases():

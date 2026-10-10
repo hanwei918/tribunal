@@ -793,9 +793,12 @@ def _outcome_text(
     return words
 
 
-def _chip(kind: str, words: str) -> str:
+def _chip(kind: str, words: str, title: Any = None) -> str:
     """One status chip. The kind is the colour class, and it is fixed here."""
-    return '<span class="chip {0}">{1}</span>'.format(_attribute(kind), _text(words))
+    attribute = ' title="{0}"'.format(_attribute(title)) if title else ""
+    return '<span class="chip {0}"{1}>{2}</span>'.format(
+        _attribute(kind), attribute, _text(words)
+    )
 
 
 def _money_is_held(case: "CaseData") -> bool:
@@ -810,11 +813,24 @@ def _money_is_held(case: "CaseData") -> bool:
     return monetary_effect(case.ruling) > case.policy.execution_threshold
 
 
-def status_chip(case: "CaseData", with_time: bool = False) -> str:
+def held_reason(case: "CaseData") -> str:
+    """Why a decided case's money is held for release, in one sentence."""
+    return "{0} is above the POL-GEN-05 execution threshold of {1}".format(
+        _money(monetary_effect(case.ruling), case.policy.currency),
+        _money(case.policy.execution_threshold, case.policy.currency),
+    )
+
+
+def status_chip(
+    case: "CaseData", with_time: bool = False, title: bool = False
+) -> str:
     """The status chip: green decided, red reviewer, amber held, grey otherwise.
 
-    The four meanings the sheet names. The wall time is appended on a case page
-    and left off a queue row, where the time has a column of its own.
+    The four meanings the sheet names. A held amount gets the short words "Held
+    for release": a chip long enough to wrap would change the row's height, so
+    the figure and the threshold it crossed travel in the ``title`` attribute,
+    which is where a reader looks for the detail. The wall time is appended on a
+    case page and left off a queue row, where the time has a column of its own.
     """
     suffix = (
         " - {0}".format(_seconds(case.document.get("wall_seconds"))) if with_time else ""
@@ -829,9 +845,8 @@ def status_chip(case: "CaseData", with_time: bool = False) -> str:
     if _money_is_held(case):
         return _chip(
             "warn",
-            "Decided automatically - {0} held for a reviewer{1}".format(
-                _money(monetary_effect(case.ruling), case.policy.currency), suffix
-            ),
+            "Held for release{0}".format(suffix),
+            title=held_reason(case) if title else None,
         )
     if case.ruling.get("ruling") in (
         FULL_REFUND,
@@ -1102,9 +1117,9 @@ p{margin:.5em 0}
 .top-in{max-width:1280px;margin:0 auto;padding:0 24px;height:56px;display:flex;align-items:center;gap:20px}
 .brand{display:inline-flex;align-items:center;gap:9px;font-weight:700;font-size:17px;text-decoration:none;color:var(--ink)}
 .mark{width:26px;height:26px;border-radius:7px;background:var(--accent);display:inline-flex;align-items:center;justify-content:center;flex:none}
-.nav{display:flex;gap:2px;flex-wrap:wrap}
-.nav a{padding:7px 12px;border-radius:8px;text-decoration:none;color:var(--muted);font-weight:500}
-.nav a.on{color:var(--ink);background:var(--soft);border:1px solid var(--line)}
+.nav{display:flex;align-items:center;gap:2px;flex-wrap:wrap}
+.nav a{padding:7px 12px;border:1px solid transparent;border-radius:8px;text-decoration:none;color:var(--muted);font-weight:500;line-height:1.2}
+.nav a.on{color:var(--ink);background:var(--soft);border-color:var(--line)}
 .mode{margin-left:auto;font-size:13px;color:var(--muted);white-space:nowrap}
 @media (max-width:700px){.mode{display:none}.top-in{gap:12px;padding:0 16px}}
 .wrap{max-width:1280px;margin:0 auto;padding:26px 24px 56px}
@@ -1116,7 +1131,7 @@ p{margin:.5em 0}
 
 /* chips */
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0}
-.chip{display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:999px;font-size:13px;font-weight:500;background:var(--grey-wash);color:var(--grey);border:1px solid var(--line)}
+.chip{display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:999px;font-size:13px;font-weight:500;background:var(--grey-wash);color:var(--grey);border:1px solid var(--line);white-space:nowrap}
 .chip.ok{background:var(--ok-wash);color:var(--ok);border-color:transparent}
 .chip.bad{background:var(--bad-wash);color:var(--bad);border-color:transparent}
 .chip.warn{background:var(--warn-wash);color:var(--warn);border-color:transparent}
@@ -1179,13 +1194,15 @@ td a{font-weight:600;text-decoration:none}
 .sec{margin:0 0 22px}
 .sides{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 @media (max-width:700px){.sides{grid-template-columns:minmax(0,1fr)}}
-.side{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 18px}
+.sides>*{min-width:0}
+.two>*{min-width:0}
+.side{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 18px;min-width:0;overflow-wrap:anywhere}
 .side header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
 .side header small{color:var(--muted)}
 .side ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px}
-.side li{line-height:1.5}
+.side li{line-height:1.5;overflow-wrap:anywhere}
 .side li s{color:var(--muted)}
-.side .ref{color:var(--muted);font-size:.78rem;margin-left:4px;white-space:nowrap}
+.side .ref{color:var(--muted);font-size:.78rem;margin-left:4px;overflow-wrap:anywhere}
 .side .why{display:block;font-size:.82rem;color:var(--bad);margin-top:2px}
 
 /* rail */
@@ -1482,13 +1499,18 @@ def _mode_text(version: Any, model: Any) -> str:
 
 def _topbar(mode: str, current: str) -> str:
     """The top bar: the product, the two sites, and the run being replayed."""
+    # Both items are links on every page -- the current one is marked with
+    # ``aria-current`` rather than turned into a span, so the two sit on one
+    # baseline and the page's own item is still a link a reader can follow.
     queue = (
-        '<span class="on">Queue</span>'
+        '<a href="index.html" class="on" aria-current="page">Queue</a>'
         if current == "queue"
         else '<a href="index.html">Queue</a>'
     )
     replay = (
-        '<span class="on">Evaluation replay</span>'
+        '<a href="{0}" class="on" aria-current="page">Evaluation replay</a>'.format(
+            REPLAY_INDEX
+        )
         if current == "replay"
         else '<a href="{0}">Evaluation replay</a>'.format(REPLAY_INDEX)
     )
@@ -1572,47 +1594,60 @@ def _queue_row(case: CaseData) -> str:
     # The cell text is escaped once, when it is written -- the status is the one
     # cell already rendered as HTML -- and the sort key is a plain value, so a
     # sort never reads a markup fragment as though it were the value.
+    # The status cell's title carries the reason a held amount is held: the chip
+    # itself stays short so the row's height cannot change, and the figure is one
+    # hover away rather than cut off.
+    held = held_reason(case) if _money_is_held(case) else ""
     cells = (
         (
             "case",
             '<a href="{0}">{1}</a>'.format(_attribute(case.link), _text(case.case_no)),
             str(case.case_no),
             "Case",
+            "",
         ),
         (
             "category",
             _text(CATEGORY_WORDS.get(case.category, case.category)),
             case.category,
             "Category",
+            "",
         ),
         (
             "filed_by",
             _text(filed_by_words(filed_by)),
             str(filed_by),
             "Filed by",
+            "",
         ),
         (
             "amount",
             _text(_money(dispute.get("amount_contested_sgd"), currency)),
             str(amount_sort if amount_sort is not None else 0),
             "Amount contested",
+            "",
         ),
-        ("status", status_chip(case), case.outcome_kind, "Status"),
-        ("outcome", _text(outcome), str(case.ruling.get("ruling")), "Outcome"),
-        ("confidence", _text(confidence_text), confidence_text, "Confidence"),
+        ("status", status_chip(case), case.outcome_kind, "Status", held),
+        ("outcome", _text(outcome), str(case.ruling.get("ruling")), "Outcome", ""),
+        ("confidence", _text(confidence_text), confidence_text, "Confidence", ""),
         (
             "time",
             _text(_seconds(case.document.get("wall_seconds"))),
             str(time_sort if time_sort is not None else 0),
             "Time",
+            "",
         ),
     )
     row_class = "reviewer" if case.trigger is not None else "auto"
     cells_html = "".join(
-        '<td data-column="{0}" data-sort="{1}" data-label="{2}">{3}</td>'.format(
-            _attribute(name), _attribute(sort), _attribute(label), value
+        '<td data-column="{0}" data-sort="{1}" data-label="{2}"{3}>{4}</td>'.format(
+            _attribute(name),
+            _attribute(sort),
+            _attribute(label),
+            ' title="{0}"'.format(_attribute(tip)) if tip else "",
+            value,
         )
-        for name, value, sort, label in cells
+        for name, value, sort, label, tip in cells
     )
     return '<tr class="{0}" data-outcome="{1}" data-set="{2}">{3}</tr>'.format(
         row_class, case.outcome_kind, _attribute(case.label), cells_html
@@ -1663,20 +1698,36 @@ FEATURED_CASES: Tuple[Tuple[int, str], ...] = (
 
 
 def _featured_facts(case: CaseData) -> List[Tuple[str, str]]:
-    """The facts one featured card carries, each read from the run's own files."""
+    """The facts one featured card carries, each read from the run's own files.
+
+    Each fact is returned as the HTML it is drawn with, so a reason code can sit
+    small after its words exactly as it does on the case page.
+    """
     currency = case.policy.currency
     dispute = case.case.get("dispute") or {}
     if case.case_no == 901:
         return [
-            ("Outcome", _outcome_text(case.ruling, currency, case.trigger, case.votes)),
-            ("Confidence", str(case.ruling.get("confidence"))),
+            (
+                "Outcome",
+                _text(
+                    _outcome_text(case.ruling, currency, case.trigger, case.votes)
+                ),
+            ),
+            ("Confidence", _text(str(case.ruling.get("confidence")))),
         ]
     if case.case_no == 208:
         return [
-            ("Outcome", _outcome_text(case.ruling, currency, case.trigger, case.votes)),
+            (
+                "Outcome",
+                _text(
+                    _outcome_text(case.ruling, currency, case.trigger, case.votes)
+                ),
+            ),
             (
                 "Amounts",
-                money_statement(case.ruling, currency, dispute.get("filed_by")),
+                _text(
+                    money_statement(case.ruling, currency, dispute.get("filed_by"))
+                ),
             ),
         ]
     if case.case_no == 1779:
@@ -1690,7 +1741,11 @@ def _featured_facts(case: CaseData) -> List[Tuple[str, str]]:
             panel = "{0} of {1} drafts were rejected by the code checks".format(
                 len(rejected), len(drafts)
             )
-        return [("Reason code", str(case.trigger)), ("The panel", panel)]
+        return [
+            # The words of part 13b, with the code small after them.
+            ("Reason", _coded(trigger_words(str(case.trigger), case.votes), case.trigger)),
+            ("The panel", _text(panel)),
+        ]
     if case.case_no == 2735:
         calls = [
             entry
@@ -1698,12 +1753,14 @@ def _featured_facts(case: CaseData) -> List[Tuple[str, str]]:
             if isinstance(entry, Mapping)
         ]
         return [
-            ("Reason", trigger_words(str(case.trigger), case.votes)),
+            ("Reason", _text(trigger_words(str(case.trigger), case.votes))),
             (
                 "Model calls",
-                "0 - the scope gate asked no model"
-                if not calls
-                else "{0} agent calls are recorded".format(len(calls)),
+                _text(
+                    "0 - the scope gate asked no model"
+                    if not calls
+                    else "{0} agent calls are recorded".format(len(calls))
+                ),
             ),
         ]
     raise BuildError(
@@ -1714,7 +1771,7 @@ def _featured_facts(case: CaseData) -> List[Tuple[str, str]]:
 def _featured_card(case: CaseData, title: str) -> str:
     """One featured case: a fixed title, and the run's own facts beneath it."""
     facts = "".join(
-        "<p><b>{0}</b> {1}</p>".format(_text(label), _text(value))
+        "<p><b>{0}</b> {1}</p>".format(_text(label), value)
         for label, value in _featured_facts(case)
     )
     return (
@@ -2335,22 +2392,44 @@ def _ruling_clause_ids(case: CaseData) -> List[str]:
     ]
 
 
-def _first_paragraph(text: Any) -> str:
-    """The first paragraph of a block of prose, verbatim."""
+# The opening of a judge's explanation is shown from its first paragraph up to
+# at least this many characters: some cases open with a one-line salutation, and
+# a summary that is one line long is not a summary.
+SUMMARY_MINIMUM_CHARS = 120
+
+
+def _summary_paragraphs(text: Any, minimum: int = SUMMARY_MINIMUM_CHARS) -> str:
+    """The explanation's opening, verbatim, from its first paragraph to ``minimum``.
+
+    Paragraphs are added until the opening is at least ``minimum`` characters
+    long, so a case that opens with a one-line salutation shows the sentence
+    after it too. Nothing is rewritten: the chosen paragraphs are the
+    explanation's own, joined by the blank line that separated them.
+    """
     collapsed = str(text or "").strip()
     if not collapsed:
         return ""
-    return re.split(r"\n\s*\n", collapsed, maxsplit=1)[0].strip()
+    chosen: List[str] = []
+    length = 0
+    for paragraph in re.split(r"\n\s*\n", collapsed):
+        paragraph = paragraph.strip()
+        if not paragraph:
+            continue
+        chosen.append(paragraph)
+        # Counted the way a reader measures it: runs of whitespace are one space.
+        length += len(" ".join(paragraph.split()))
+        if length >= minimum:
+            break
+    return "\n\n".join(chosen)
 
 
 def _verdict_card(case: CaseData) -> str:
     """The verdict card: the outcome on the left, the key figures on the right.
 
     The left column carries the outcome in large type, the code and the clauses
-    the ruling cites, the first paragraph of the judge's explanation verbatim,
-    and -- on a decided case -- POL-GEN-04's appeal route; on a case sent to a
-    reviewer it carries the reviewer line instead, because there is no ruling to
-    appeal.
+    the ruling cites, the opening of the judge's explanation verbatim, and -- on
+    a decided case -- POL-GEN-04's appeal route; on a case sent to a reviewer it
+    carries the reviewer line instead, because there is no ruling to appeal.
     """
     policy = case.policy
     ruling = case.ruling
@@ -2360,13 +2439,13 @@ def _verdict_card(case: CaseData) -> str:
         headline = _coded(
             trigger_words(str(case.trigger), case.votes), case.trigger, strong=True
         )
-        summary = _first_paragraph((case.packet or {}).get("explanation"))
+        summary = _summary_paragraphs((case.packet or {}).get("explanation"))
         after = "No automated ruling was issued. {0}".format(review_time_limit(policy))
         details = ""
         note = ""
     else:
         headline = _coded(ruling_words(value), value, strong=True)
-        summary = _first_paragraph(ruling.get("explanation"))
+        summary = _summary_paragraphs(ruling.get("explanation"))
         after = "How to appeal: {0}".format(appeal_line(policy))
         details = (
             "<details><summary>Read POL-GEN-04 in full</summary>"
@@ -2385,12 +2464,12 @@ def _verdict_card(case: CaseData) -> str:
         if clauses
         else ""
     )
-    summary_block = (
-        '<p class="lbl">From the judge\'s explanation</p>'
-        '<p class="why">{0}</p>'.format(_text(summary))
-        if summary
-        else ""
-    )
+    summary_block = ""
+    if summary:
+        summary_block = '<p class="lbl">From the judge\'s explanation</p>' + "".join(
+            '<p class="why">{0}</p>'.format(_text(paragraph))
+            for paragraph in summary.split("\n\n")
+        )
     return (
         '<div class="verdict">'
         '<div class="v-left">'
@@ -2980,7 +3059,7 @@ def build_case_page(case: CaseData) -> str:
                 _money(dispute.get("amount_contested_sgd"), currency)
             )
         ),
-        status_chip(case, with_time=True),
+        status_chip(case, with_time=True, title=True),
     )
     tabs = [
         ("ruling", "Ruling"),
