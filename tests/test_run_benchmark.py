@@ -5726,5 +5726,63 @@ class ParallelCallsTests(unittest.TestCase):
         self.assertEqual((-1, -1, -1, -1), pipeline.call_sort_key())
 
 
+class EarlyMajorityRecordTests(unittest.TestCase):
+    """The early-majority switch is recorded where the parallel one is.
+
+    It changes no request body and moves no run directory -- the same drafts are
+    asked, with the same messages -- so it is not part of a case's
+    ``configuration`` object and not part of any staleness or cache key. It is
+    named on the invocation's own line and on this run's ``run.json``, and that
+    is all. What it *does* change is how long a panel waits, and that is recorded
+    per case by the vote block rather than here.
+    """
+
+    def test_the_switch_is_not_part_of_the_configuration(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, _ = bench(
+                tmp, parallel_calls=True, early_majority=True
+            )
+
+            document = runner.load_cached(summary.run_dir, 101)
+            self.assertNotIn("early_majority", document["configuration"])
+            self.assertEqual(
+                sorted(runner.CONFIGURATION_FIELDS),
+                sorted(document["configuration"]),
+            )
+
+    def test_run_json_names_the_switch_only_when_it_is_on(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            plain, _ = bench(tmp)
+            early, _ = bench(
+                tmp,
+                runs_dir=Path(tmp) / "early",
+                parallel_calls=True,
+                early_majority=True,
+            )
+
+            off = runner.read_json(plain.run_dir / runner.METADATA_FILE)
+            on = runner.read_json(early.run_dir / runner.METADATA_FILE)
+
+            self.assertNotIn("early_majority", off)
+            self.assertIs(True, on["early_majority"])
+            # And the parallel switch it needs is named beside it.
+            self.assertIs(True, on["parallel_calls"])
+
+    def test_the_invocation_start_event_names_it_only_when_it_is_on(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            plain, _ = bench(tmp)
+            early, _ = bench(
+                tmp,
+                runs_dir=Path(tmp) / "early",
+                parallel_calls=True,
+                early_majority=True,
+            )
+
+            self.assertNotIn("early_majority", invocation_start(plain.run_dir))
+            self.assertIs(
+                True, invocation_start(early.run_dir)["early_majority"]
+            )
+
+
 if __name__ == "__main__":
     unittest.main()

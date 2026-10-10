@@ -1314,9 +1314,31 @@ def run_set(
     it asks the calls that depend on nothing at the same time and leaves every
     request byte-identical. It is therefore not refused for a sealed set and it
     is not part of the arguments that set's registration fixes.
+
+    ``early_majority`` arrives the same way and is the other switch that changes
+    nothing the run measures, so it too is not part of a set's registered
+    arguments. It is refused here for a **sealed** set, and not merely left to
+    the runner's destination guard: a sealed set's single run is one measurement
+    and the owner's note fixes how it was made, so a switch that would have made
+    the panel publish at three drafts is refused by name. It is also refused
+    without ``parallel_calls``, because what it stops waiting for is a call
+    already in flight.
     """
     if force:
         assert_not_sealed(development_set, "--force")
+
+    early_majority = bool(kwargs.get("early_majority"))
+    if early_majority:
+        if not kwargs.get("parallel_calls"):
+            raise run_benchmark.BenchmarkError(
+                "--early-majority needs --parallel-calls: the rule stops waiting "
+                "for a draft that is already in flight, and a sequential panel "
+                "has none"
+            )
+        # By the set's own name, as ``--force`` is refused, so the message says
+        # which set cannot be run with it rather than only that something is
+        # wrong.
+        assert_not_sealed(development_set, "--early-majority")
 
     selected = list(development_set.cases if cases is None else cases)
     unknown = [case_no for case_no in selected if case_no not in set(development_set.cases)]
@@ -2006,6 +2028,25 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--early-majority",
+        action="store_true",
+        help=(
+            "publish the judge's panel as soon as a majority of its drafts have "
+            "agreed, instead of waiting for every draft. Off by default, so "
+            "every run before this switch waited for the whole panel. It needs "
+            "--parallel-calls -- what it stops waiting for is a call already in "
+            "flight -- and it is refused for every sealed set, whose single run "
+            "is one measurement and is not re-taken. The position-swapped draft "
+            "is always waited for, because the fairness measurement reads it; a "
+            "draft the panel did not wait for is recorded as not_awaited and "
+            "does not count. No individual request body changes, so it is not "
+            "part of a case's configuration, it moves no run directory and it is "
+            "not one of the arguments a sealed set's run is fixed at. It is "
+            "refused with --verify-drafts, because the verifier can take a vote "
+            "away after the panel has stopped waiting"
+        ),
+    )
+    parser.add_argument(
         "--report",
         action="store_true",
         help="print the sets separately and combined from cached runs; makes no model call",
@@ -2183,6 +2224,31 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         # anything: the rule would not be applied and would look as though it
         # had been.
 
+    if args.early_majority:
+        # The early-majority switch's own two conditions, refused before any
+        # mode runs and before any call. It is **not** one of the four switches
+        # that change what a run measures -- it changes no request body and
+        # moves no directory -- so it is not refused beside them; it is refused
+        # beside ``--parallel-calls``, which it needs, and beside
+        # ``--verify-drafts``, which would make it unsound.
+        if not args.parallel_calls:
+            print(
+                "FATAL: --early-majority needs --parallel-calls: the rule stops "
+                "waiting for a draft that is already in flight, and a sequential "
+                "panel has none",
+                file=sys.stderr,
+            )
+            return 1
+        if args.verify_drafts:
+            print(
+                "FATAL: --early-majority cannot be used with --verify-drafts: "
+                "the verifier runs over every valid draft and a contradiction "
+                "can take a vote away, so a panel that published at three could "
+                "publish a ruling the full panel would not have carried",
+                file=sys.stderr,
+            )
+            return 1
+
     if args.report:
         if args.replay_advocates is not None or args.replay_check is not None:
             print("FATAL: --report reads cached runs and takes no replay arguments", file=sys.stderr)
@@ -2343,6 +2409,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 # different timeout" is not what a reader who typed ``--force``
                 # against a sealed set needs to be told.
                 (args.force, "--force"),
+                (args.early_majority, "--early-majority"),
                 (args.replay_advocates is not None, "--replay-advocates"),
                 (args.replay_check is not None, "--replay-check"),
                 (args.verify_recorded_drafts is not None, "--verify-recorded-drafts"),
@@ -2596,6 +2663,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 policy_version=policy_version,
                 amount_rule=args.amount_rule,
                 parallel_calls=args.parallel_calls,
+                early_majority=args.early_majority,
             )
         except run_benchmark.llm.ModelNotProvisionedError as exc:
             print("FATAL: {0}".format(exc), file=sys.stderr)

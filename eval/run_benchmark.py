@@ -2264,6 +2264,7 @@ def run_one_case(
     configuration: Optional[Mapping[str, Any]] = None,
     events_log: Optional[Any] = None,
     parallel_calls: bool = False,
+    early_majority: bool = False,
 ) -> Tuple[CaseOutcome, Optional[Dict[str, Any]], Optional[str]]:
     """Run one case. Returns ``(outcome, cache document, transcript json)``.
 
@@ -2313,6 +2314,13 @@ def run_one_case(
     run's brief, prompts, model and recorded answers all agree with this code.
     When it is given, the advocates are not called and only the judge is, through
     :func:`tribunal.pipeline.replay_case`.
+
+    ``parallel_calls`` and ``early_majority`` are passed straight through on
+    every path, the replayed and the external one included, for the same reason
+    ``amount_rule`` is: a switch accepted on the command line and dropped on one
+    of these paths would be a switch that said it was on and was not. Which of
+    the two a case may use, and when the rule fires, is decided in
+    :func:`tribunal.pipeline._run_judge_vote`.
     """
     if replay is not None and loaded_case is not None:
         # Refused, not merely unused. Replay reuses another run's advocates for
@@ -2359,6 +2367,10 @@ def run_one_case(
                 # judge's drafts, so a switch accepted here and dropped on this
                 # path would be a switch that said it was on and was not.
                 parallel_calls=parallel_calls,
+                # And the early-majority switch, for the same reason again: a
+                # replay builds a panel of drafts, so the rule has something to
+                # say here exactly as it does on a full run.
+                early_majority=early_majority,
             )
         elif loaded_case is None:
             result = pipeline.run_case(
@@ -2375,6 +2387,7 @@ def run_one_case(
                 policy_version=policy_version,
                 amount_rule=amount_rule,
                 parallel_calls=parallel_calls,
+                early_majority=early_majority,
             )
         else:
             # A converted external case, already loaded through its own explicit
@@ -2393,6 +2406,7 @@ def run_one_case(
                 policy_version=policy_version,
                 amount_rule=amount_rule,
                 parallel_calls=parallel_calls,
+                early_majority=early_majority,
             )
     except (llm.MissingAPIKeyError, llm.ModelNotProvisionedError) as exc:
         # Not provisioned and no credential are the same failure for every
@@ -3014,6 +3028,19 @@ def run_benchmark(
     # rider fails, and the remaining draft requests after a draft raises; and
     # under a case deadline it can send a different set of requests.
     parallel_calls: bool = False,
+    # Whether the judge's panel publishes as soon as a majority of its drafts
+    # have agreed, rather than waiting for every draft. Off by default, so the
+    # panel every run before the switch waited for is the panel it still waits
+    # for; and it needs ``parallel_calls``, because what it stops waiting for is
+    # a call already in flight. It changes no request body and moves no run
+    # directory -- the same drafts are asked, and the ones the panel did not
+    # wait for are recorded as ``not_awaited`` -- so, like ``parallel_calls``,
+    # it is deliberately absent from the ``configuration`` every artifact
+    # carries and from every staleness and cache key. It is recorded where the
+    # invocation records what it was: the ``invocation_start`` event and this
+    # run's ``run.json``. It is refused for every sealed set, whose single run is
+    # one measurement and is not re-taken.
+    early_majority: bool = False,
     # Whether the cases are graded against a key at all. An external sample that
     # carries a **stated expectation** rather than a key has nothing to be
     # scored against: the organisers' own word is not one of POL-GEN-03's
@@ -3089,6 +3116,14 @@ def run_benchmark(
     It is deliberately **not** in the ``configuration`` object, which is what a
     case file is read against, because a result produced with it on is the same
     result: same requests, same brief, same prompts.
+
+    ``early_majority`` follows ``parallel_calls`` in every respect and for the
+    same reasons: it changes no request, moves no directory and is absent from
+    the ``configuration`` object. It is refused without ``parallel_calls`` --
+    there is nothing in flight to stop waiting for -- and refused for every
+    sealed set, whose single run is one measurement and is not re-taken. It is
+    also refused with ``--verify-drafts``, because the verifier can take a vote
+    away after the panel has stopped waiting.
     """
     if not model:
         raise BenchmarkError("model is required and has no default; name the model explicitly")
@@ -3108,6 +3143,27 @@ def run_benchmark(
         )
     if token_budget is not None and token_budget < 0:
         raise BenchmarkError("token_budget cannot be negative")
+    if early_majority and not parallel_calls:
+        # Refused here as well as at the command line, so a caller driving this
+        # function directly is told before a directory is created and before any
+        # call. What the rule stops waiting for is a call already in flight, and
+        # a sequential panel has none.
+        raise BenchmarkError(
+            "--early-majority needs --parallel-calls: the rule stops waiting for "
+            "a draft that is already in flight, and a sequential panel has none"
+        )
+    if early_majority and verify_drafts:
+        # Refused for the same reason the pipeline refuses it, and here as well
+        # so the caller is told before anything is read or written: the verifier
+        # can take a vote away after the panel has stopped waiting, so the
+        # majority the rule published on would not be the majority the vote was
+        # taken over.
+        raise BenchmarkError(
+            "--early-majority cannot be used with --verify-drafts: the verifier "
+            "runs over every valid draft and a contradiction can take a vote "
+            "away, so a panel that published at three could publish a ruling the "
+            "full panel would not have carried"
+        )
     if ablation is not None and not brief.ablation_known(ablation):
         # Refused here as well as at the command line, so a caller driving this
         # function directly is told which names exist rather than getting a
@@ -3435,6 +3491,11 @@ def run_benchmark(
         # own line when it is on, and absent from it when it is not, so the line
         # a plain run appends is the line it always appended.
         **({"parallel_calls": True} if parallel_calls else {}),
+        # And the early-majority switch, on the same rule once more. It is a
+        # switch that says what this invocation did rather than what it measured,
+        # so it is named on the invocation's own line beside the parallel one and
+        # is absent from a run that did not ask for it.
+        **({"early_majority": True} if early_majority else {}),
     )
 
     # A shared sink, because the client is shared across every case and, above
@@ -3578,6 +3639,7 @@ def run_benchmark(
             replay=None if replay is None else replay_block(replay, outcomes),
             configuration=configuration,
             parallel_calls=parallel_calls,
+            early_majority=early_majority,
         )
         # Both, and the order matters. ``run.json`` is the latest invocation's
         # record at the conventional path; the history is what survives the next
@@ -3696,6 +3758,7 @@ def run_benchmark(
                 configuration=configuration,
                 events_log=events_log,
                 parallel_calls=parallel_calls,
+                early_majority=early_majority,
             )
 
         workers = max(1, concurrency)
@@ -3992,6 +4055,7 @@ def _metadata_document(
     replay: Optional[Mapping[str, Any]] = None,
     configuration: Mapping[str, Any],
     parallel_calls: bool = False,
+    early_majority: bool = False,
 ) -> Dict[str, Any]:
     """The run's own metadata file.
 
@@ -4026,6 +4090,12 @@ def _metadata_document(
     rider fails, and the remaining draft requests after a draft raises, and under
     a case deadline it can send a different set again -- but every body it does
     send is a body the sequential path sends too.
+
+    ``early_majority`` is written on the same rule and for the same reasons: it
+    changes no request body and it is not in ``configuration``. What it changes
+    is how long a panel waits, which the case files themselves record -- the
+    draft the panel did not wait for carries ``not_awaited`` and the vote block
+    says ``early_majority``.
     """
     failed = [outcome for outcome in outcomes if outcome.status == STATUS_FAILED]
     consumed = tokens_charged + tokens_failed
@@ -4068,6 +4138,10 @@ def _metadata_document(
         # object is what a case file is read against, and this changes no
         # request.
         **({"parallel_calls": True} if parallel_calls else {}),
+        # And whether the judge's panel published at a majority rather than at
+        # every draft, on the same rule and for the same reason: a switch that
+        # says what the invocation did and not what it measured.
+        **({"early_majority": True} if early_majority else {}),
         "git_commit": run_provenance.get("git_commit"),
         "working_tree_clean": run_provenance.get("working_tree_clean"),
         "working_tree_status": run_provenance.get("working_tree_status"),
@@ -5793,6 +5867,26 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             "to"
         ),
     )
+    parser.add_argument(
+        "--early-majority",
+        action="store_true",
+        help=(
+            "publish the judge's panel as soon as a majority of its drafts have "
+            "agreed, instead of waiting for every draft. Off by default, so "
+            "every run before this switch waited for the whole panel. It needs "
+            "--parallel-calls -- what it stops waiting for is a call already in "
+            "flight -- and it is refused for a sealed set, whose single run is "
+            "one measurement. The position-swapped draft is always waited for, "
+            "because the fairness measurement reads it; a draft the panel did "
+            "not wait for is recorded as not_awaited and does not count. No "
+            "individual request body changes, so it is not part of a case's "
+            "configuration and it moves no run directory. It is refused with "
+            "--verify-drafts, because the verifier can take a vote away after "
+            "the panel has stopped waiting, and it has no effect on a panel of "
+            "fewer than four drafts, where three drafts cannot be returned "
+            "without the fourth"
+        ),
+    )
     parser.add_argument("--runs-dir", type=Path, default=RUNS_DIR)
     parser.add_argument("--prompts-dir", type=Path, default=PROMPTS_DIR)
     args = parser.parse_args(argv)
@@ -5956,6 +6050,27 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                     "the brief's money block by and takes no {0}, which "
                     "{1}".format(name, why)
                 )
+
+    if args.early_majority:
+        # The switch's two conditions, refused here rather than left to the
+        # runner, so a caller is told before a directory is created and before
+        # any call. It is deliberately **not** one of the four switches that
+        # change what a run measures -- it changes no request body and moves no
+        # directory -- so it is not refused beside them, and it is refused beside
+        # these two for reasons of its own.
+        if not args.parallel_calls:
+            parser.error(
+                "--early-majority needs --parallel-calls: the rule stops waiting "
+                "for a draft that is already in flight, and a sequential panel "
+                "has none"
+            )
+        if args.verify_drafts:
+            parser.error(
+                "--early-majority cannot be used with --verify-drafts: the "
+                "verifier runs over every valid draft and a contradiction can "
+                "take a vote away, so a panel that published at three could "
+                "publish a ruling the full panel would not have carried"
+            )
 
     if args.compare:
         if args.model is not None:
@@ -6139,6 +6254,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             # named here for the same reason they are, though -- a switch this
             # command line accepts has to reach the pipeline.
             parallel_calls=args.parallel_calls,
+            # And the early-majority switch, which reaches the pipeline on
+            # exactly the same rule: accepted here, honoured there, and refused
+            # above where it cannot be.
+            early_majority=args.early_majority,
         )
     except llm.ModelNotProvisionedError as exc:
         print("FATAL: {0}".format(exc), file=sys.stderr)

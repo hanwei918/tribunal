@@ -83,6 +83,7 @@ is the check whose absence let this reach a paid run.
 from __future__ import annotations
 
 import argparse
+import collections
 import concurrent.futures
 import contextvars
 import difflib
@@ -259,6 +260,14 @@ DEFAULT_JUDGE_VOTES = 4
 # differs about it is the order in which it reads the two sides.
 JUDGE_VOTE_TEMPERATURE = 0.7
 JUDGE_VOTE_SEEDS = (101, 202, 303, 404, 505, 606)
+
+# The early-majority rule's own floor on the sampled drafts. A majority of a
+# panel of four is three, and the position-swapped draft is always one of the
+# three, so two sampled drafts are the fewest that can complete it: three
+# returned drafts are the fewest that can agree, and one of them is the swapped
+# one. It is a named constant rather than a literal because the rule reads it
+# and ``_run_judge_vote`` must not be able to drift from it.
+EARLY_MAJORITY_MIN_SAMPLED = 2
 
 # The two shapes the judge's ``claims`` value can take.
 #
@@ -1345,6 +1354,109 @@ def _subsequent_exception_note(call: _AgentCall) -> Optional[str]:
     )
 
 
+def _not_awaited_exception_note(call: _AgentCall) -> Optional[str]:
+    """The note written on a not-awaited call's last entry when it raised.
+
+    A draft the panel did not wait for is not the case's failure -- the panel
+    published without it -- so its exception is noted on the entry it belongs to
+    rather than raised, exactly as a parallel driver's is when the rider has
+    already failed. ``None`` when the call raised nothing, or when it never
+    completed an attempt to note anything on.
+    """
+    if call.exception is None:
+        return None
+    return "a draft the panel did not wait for raised {0}: {1}".format(
+        type(call.exception).__name__, call.exception
+    )
+
+
+def _join_calls_until(
+    work: Callable[[Any], _AgentCall],
+    items: Sequence[Tuple[int, Any]],
+    *,
+    workers: int,
+    enough: Callable[[Mapping[int, _AgentCall]], bool],
+) -> Tuple[Dict[int, _AgentCall], frozenset]:
+    """Run one worker call per item and join only as many as ``enough`` needs.
+
+    The **early-majority** path only, and the reason it exists.
+    :func:`_join_calls` joins every call it started, which is what a run with
+    the switch off does and must keep doing. This one is handed a predicate over
+    the calls that have answered and stops waiting the first time that predicate
+    holds, so the calls still in flight are left running rather than waited for:
+    their answers cannot change what the panel publishes, and waiting for them
+    is the cost the switch exists to avoid.
+
+    ``items`` is ``(position, item)`` pairs, and each pair is handed to ``work``
+    whole -- the same contract :func:`_join_calls` has -- with the position read
+    off its first element, so the caller can put every answer back where it
+    belongs whatever order the calls finished in. For the judge's panel the
+    position is the draft's own index and the item is the ``(position, plan)``
+    pair ``_draft_call`` already expects.
+
+    Returns ``(calls, awaited)``. ``calls`` maps a position to the call that
+    answered; ``awaited`` is the set of positions the predicate's own answer
+    rests on. A call that answered **after** the predicate held is in ``calls``
+    -- it did happen, and the record says what it said -- but not in ``awaited``,
+    so it does not count. A position in neither is a call the panel published
+    without waiting for.
+
+    **A request already on the wire cannot be cancelled.** A
+    :class:`~concurrent.futures.Future` cannot stop a call that is running, so
+    the pool is shut down *without* waiting for the calls still in flight. They
+    are not lost from the log -- the client that made them recorded them -- and
+    an answer that arrives after the panel published is written down only if it
+    had arrived by then. See ``docs/notes/2026-10-10-early-majority.md``.
+    """
+    pool = concurrent.futures.ThreadPoolExecutor(max_workers=max(1, workers))
+    interrupted = threading.Event()
+
+    def guarded(item: Any) -> _AgentCall:
+        if interrupted.is_set():
+            raise concurrent.futures.CancelledError()
+        token = STOP_PARALLEL_CALLS.set(interrupted)
+        try:
+            return work(item)
+        finally:
+            STOP_PARALLEL_CALLS.reset(token)
+
+    # Each pair is submitted whole -- the worker is handed what the caller
+    # scripted for it -- and its first element is the position the answer goes
+    # back to.
+    submitted = [(item[0], pool.submit(guarded, item)) for item in items]
+    calls: Dict[int, _AgentCall] = {}
+    awaited: set = set()
+    try:
+        pending = {future: position for position, future in submitted}
+        while pending:
+            done, _ = concurrent.futures.wait(
+                pending, return_when=concurrent.futures.FIRST_COMPLETED
+            )
+            for future in done:
+                position = pending.pop(future)
+                calls[position] = future.result()
+                awaited.add(position)
+            if enough(calls):
+                break
+        # Whatever else had answered by the time the panel published. A call
+        # still running is not waited for; it stays out of ``calls`` and the
+        # draft it belongs to is recorded as not awaited.
+        for future, position in list(pending.items()):
+            if future.done() and not future.cancelled():
+                calls[position] = future.result()
+        return calls, frozenset(awaited)
+    except BaseException:
+        interrupted.set()
+        for _position, future in submitted:
+            future.cancel()
+        raise
+    finally:
+        # Not ``wait=True``: the calls still in flight are exactly the ones the
+        # panel decided not to wait for, and joining them here would give back
+        # the time the rule saves.
+        pool.shutdown(wait=False, cancel_futures=True)
+
+
 # --------------------------------------------------------------------------
 # The judge's vote: K drafts, and the majority decides
 # --------------------------------------------------------------------------
@@ -2122,10 +2234,24 @@ class JudgeDraft:
     # charged to the draft that stated it, and the record has to be able to show
     # which draft that was.
     verification: Optional[Dict[str, Any]] = None
+    # Whether the panel published without waiting for this draft -- see
+    # :func:`_join_calls_until`. ``False`` for every draft of every run whose
+    # early-majority switch is off, so a run without the switch is byte for byte
+    # what it was. A draft the panel did not await **does not count**, whatever
+    # its answer was: it is a draft the vote was not taken over, and the raw
+    # answer is on the transcript beside it.
+    not_awaited: bool = False
 
     @property
     def valid(self) -> bool:
-        return self.key is not None
+        """Whether this draft's answer may vote.
+
+        A draft the panel did not await may not, even when its answer is a
+        well-formed ruling that passed every code check. ``key`` is still set
+        for such a draft when it did answer -- the record says what it proposed
+        -- and it is ``not_awaited`` that keeps it out of the count.
+        """
+        return self.key is not None and not self.not_awaited
 
     def as_dict(self, agreeing: bool) -> Dict[str, Any]:
         proposal = None
@@ -2162,7 +2288,13 @@ class JudgeDraft:
             # never asked" are different findings, and a run with the switch
             # off has to stay byte for byte what it was.
             written["verification"] = self.verification
+        if self.not_awaited:
+            # Written only when it happened, on the rule every switch in this
+            # file follows: a draft the panel did wait for carries no such key,
+            # so a run whose switch is off writes the block it always wrote.
+            written["not_awaited"] = True
         return written
+
 
 
 
@@ -2384,9 +2516,21 @@ def _vote_record(
     agreeing: Sequence[int],
     outcome: str,
 ) -> Dict[str, Any]:
-    """The vote as it is written into the transcript, beside the ledger."""
+    """The vote as it is written into the transcript, beside the ledger.
+
+    ``valid`` counts the drafts that may vote, which is every draft of a run
+    whose early-majority switch is off and is the drafts the panel awaited when
+    it is on: a draft it did not wait for does not count, whatever it answered.
+    ``votes`` is the panel -- how many times the judge was asked -- so a reader
+    can see both how many drafts the vote was taken over and how many were
+    asked for.
+
+    ``early_majority`` is written only when the panel actually stopped early,
+    on the rule every switch in this file follows: a run that waited for every
+    draft writes the block it always wrote.
+    """
     agreed = set(agreeing)
-    return {
+    written = {
         "votes": votes,
         "threshold": threshold,
         "valid": sum(1 for draft in drafts if draft.valid),
@@ -2395,6 +2539,10 @@ def _vote_record(
         "unanimous": outcome == VOTE_CARRIED,
         "drafts": [draft.as_dict(draft.index in agreed) for draft in drafts],
     }
+    if any(draft.not_awaited for draft in drafts):
+        written["early_majority"] = True
+    return written
+
 
 
 def _with_vote_sentence(ruling: Any, votes: int, agreeing: int, agreement: float) -> Any:
@@ -2463,7 +2611,16 @@ def _vote_escalation(
         "draft proposed:".format(votes)
     ]
     for draft in drafts:
-        if draft.valid:
+        if draft.not_awaited:
+            # A draft the panel did not wait for is neither a proposal nor an
+            # abstention: it did not take part. Unreachable through the early
+            # majority -- the rule fires only once three drafts have agreed,
+            # which carries -- and stated anyway, because a reader of a block
+            # should not have to reason about reachability to read it.
+            lines.append(
+                "- draft {0} ({1}): not awaited".format(draft.index, draft.kind)
+            )
+        elif draft.valid:
             lines.append(
                 "- draft {0} ({1}): {2}".format(
                     draft.index, draft.kind, render_vote_key(draft.key)
@@ -2576,6 +2733,12 @@ def _reduce_vote(
     skipped, which is what every caller before the floor passed -- the drafts are
     still gated individually by :func:`check_judge_draft`, so the two agree
     wherever both run.
+
+    ``votes`` is the panel and not the drafts in hand: a draft the panel did not
+    await is not valid (see :class:`JudgeDraft`) and so is not in ``valid``, but
+    the judge was still asked ``votes`` times and the agreement is stated
+    against that -- "three of the four drafts agreed" is what a panel of four
+    with one dissenting or un-awaited draft produced.
     """
     valid = [draft for draft in drafts if draft.valid]
     threshold = votes // 2 + 1
@@ -2645,6 +2808,7 @@ def _run_judge_vote(
     deadline: Optional["CaseDeadline"],
     votes: int,
     parallel_calls: bool = False,
+    early_majority: bool = False,
     amount_rule: str = DEFAULT_AMOUNT_RULE,
     events_log: Optional[Any] = None,
     case_no: Optional[int] = None,
@@ -2691,7 +2855,49 @@ def _run_judge_vote(
     about a draft's request changes; what changes is only how long the panel
     takes to answer. The verifier, the reduction and the ``vote`` event are
     sequential and unchanged in both cases.
+
+    ``early_majority`` is off by default and needs ``parallel_calls``: it is a
+    statement about how long a panel that is already asking its drafts together
+    waits, and there is nothing to stop waiting for when the drafts are asked one
+    after another. On, the panel publishes as soon as **all** of these hold:
+
+    * the position-swapped draft has answered -- it is always awaited, because
+      the fairness measurement reads it;
+    * at least :data:`EARLY_MAJORITY_MIN_SAMPLED` sampled drafts have answered;
+    * a majority of the returned drafts are valid and agree on all four graded
+      fields together.
+
+    The third condition is what makes it safe: a majority that has agreed cannot
+    be changed by a draft that has not answered, because the threshold is already
+    met. Anything less and the panel waits for every draft, exactly as it does
+    with the switch off. A draft the panel did not wait for is recorded as
+    ``not_awaited`` and does not count. With the switch off every byte of every
+    message, request and result is what it was.
+
+    ``early_majority`` is refused together with ``verify``, and not merely
+    ignored: the verifier runs over the valid drafts after every one of them has
+    been checked, and a contradiction can take a vote away, so a panel that
+    stopped at three could publish a ruling the full panel would not have
+    carried.
     """
+    if early_majority and not parallel_calls:
+        # Refused rather than honoured in part: with the calls made one after
+        # another there is nothing in flight to stop waiting for, and a switch
+        # that says it is on and does nothing is worse than one that says why.
+        raise PipelineError(
+            "early_majority needs parallel_calls: the rule stops waiting for a "
+            "draft that is already in flight, and a sequential panel has none"
+        )
+    if early_majority and verify:
+        # The verifier can take a vote away after the panel has stopped
+        # waiting, so the majority the rule published on is not the majority the
+        # vote would have been taken over. See the docstring.
+        raise PipelineError(
+            "early_majority cannot be used with the draft verifier: the verifier "
+            "runs over every valid draft and a contradiction can take a vote "
+            "away, so a panel that published at three could publish a ruling the "
+            "full panel would not have carried"
+        )
     sampled = votes - 1
     if sampled > len(JUDGE_VOTE_SEEDS):
         raise PipelineError(
@@ -2781,11 +2987,78 @@ def _run_judge_vote(
             draft=position + 1,
         )
 
-    calls = (
-        _join_calls(_draft_call, list(enumerate(plans)), workers=votes)
-        if parallel_calls
-        else None
-    )
+    # The early-majority rule's own reading of a returned call, and the
+    # predicate the join stops on. Both are built here, on this thread, because
+    # both need the referee result and the loaded policy the drafts are checked
+    # against, and neither sends anything.
+    threshold = votes // 2 + 1
+
+    def _draft_key_of(call: _AgentCall) -> Optional[Tuple[Any, ...]]:
+        """A returned call's four graded fields, or ``None`` if it cannot vote.
+
+        The same assembly and the same ten checks the write loop below runs,
+        asked of a call that has answered but has not been written yet. The rule
+        has to know whether three returned drafts agree before it decides to stop
+        waiting, and "agree" has to mean what it means in the vote.
+        """
+        if call.exception is not None or call.value is None:
+            return None
+        ruling = _assemble_ruling(call.value, referee_result)
+        failures, _unverifiable = check_judge_draft(ruling, brief_object, amount_rule)
+        if failures:
+            return None
+        return vote_key(ruling)
+
+    # A position's answer never changes once it has arrived, so its four graded
+    # fields are read once and kept: the predicate is asked after every arrival,
+    # and re-running the ten checks over the drafts already read would be work
+    # that grows with the square of the panel for an answer already in hand.
+    keys_by_position: Dict[int, Optional[Tuple[Any, ...]]] = {}
+
+    def _enough(returned: Mapping[int, _AgentCall]) -> bool:
+        """Whether the panel may publish without the drafts still in flight.
+
+        The three conditions the note states, in the order they can be answered:
+        the position-swapped draft -- the last position, ``votes - 1`` -- is
+        back, at least :data:`EARLY_MAJORITY_MIN_SAMPLED` sampled drafts are
+        back, and a majority of the returned drafts agree on all four graded
+        fields together. A draft that raised or that failed a code check is
+        returned and does not agree, exactly as it would not vote.
+        """
+        if sampled not in returned:
+            return False
+        if (
+            sum(1 for position in returned if position < sampled)
+            < EARLY_MAJORITY_MIN_SAMPLED
+        ):
+            return False
+        keys: List[Tuple[Any, ...]] = []
+        for position, call in returned.items():
+            if position not in keys_by_position:
+                keys_by_position[position] = _draft_key_of(call)
+            key = keys_by_position[position]
+            if key is not None:
+                keys.append(key)
+        if len(keys) < threshold:
+            return False
+        return collections.Counter(keys).most_common(1)[0][1] >= threshold
+
+    if early_majority:
+        # The calls still in flight when the rule fires are not joined, which is
+        # the whole of what the switch is for.
+        calls, awaited_positions = _join_calls_until(
+            _draft_call, list(enumerate(plans)), workers=votes, enough=_enough
+        )
+    elif parallel_calls:
+        # Every call is joined, so nothing is left in flight and nothing is
+        # unawaited: the dict is keyed by position for the loop below, and
+        # ``awaited_positions`` stays ``None``, which is what makes every draft
+        # count.
+        calls = dict(enumerate(_join_calls(_draft_call, list(enumerate(plans)), workers=votes)))
+        awaited_positions = None
+    else:
+        calls = None
+        awaited_positions = None
     first_exception: Optional[BaseException] = None
 
     for position, plan in enumerate(plans):
@@ -2796,6 +3069,11 @@ def _run_judge_vote(
         # position order, one draft after another. The index is taken before the
         # call, because the sequential path writes inside it.
         started = len(transcript)
+        # Whether this draft counts. With the switch off -- or on and the rule
+        # not fired -- every draft is awaited and this is True for all of them,
+        # which is what keeps a run without the rule byte for byte what it was.
+        counted = awaited_positions is None or position in awaited_positions
+        call = None if calls is None else calls.get(position)
         if calls is None:
             # Sequential: the call is written as it lands, and the first
             # exception stops the panel exactly as it did before the switch.
@@ -2815,15 +3093,24 @@ def _run_judge_vote(
                 policy_version=policy_version,
                 brief_sha256=brief_sha256,
             )
+        elif call is None:
+            # Not awaited, and it had not answered when the panel published. Its
+            # request may still be in flight; nothing about it is written here,
+            # and the draft is recorded as not awaited below.
+            parsed, failure = None, None
         else:
-            call = calls[position]
             parsed, failure = _write_agent_call(
                 call, transcript=transcript, events_log=events_log, case_no=case_no,
                 raise_exception=False,
+                # A not-awaited call that raised is not the case's failure -- the
+                # panel published without it -- so its exception is noted on the
+                # entry it belongs to rather than raised, as a parallel driver's
+                # is when the rider has already failed.
+                exception_note=None if counted else _not_awaited_exception_note(call),
                 policy_version=policy_version,
                 brief_sha256=brief_sha256,
             )
-            if call.exception is not None:
+            if call.exception is not None and counted:
                 # A raised draft has no answer, so it is not written as an
                 # abstention. Its exception is held while the drafts after it
                 # are written in position order, and comes out once the panel
@@ -2839,10 +3126,13 @@ def _run_judge_vote(
             seed=_recorded_setting(client, "_seed", seed),
             sides=sides,
             entries=entries,
+            not_awaited=not counted,
         )
         failures: Tuple[str, ...] = ()
         if parsed is None:
-            draft = JudgeDraft(abstention=failure, **common)
+            # A not-awaited draft is recorded as not awaited and not as an
+            # abstention: it did not fail a check, it was simply not waited for.
+            draft = JudgeDraft(abstention=None if not counted else failure, **common)
         else:
             ruling = _assemble_ruling(parsed, referee_result)
             failures, unverifiable = check_judge_draft(
@@ -2879,6 +3169,9 @@ def _run_judge_vote(
                 abstention=draft.abstention,
                 unverifiable=list(draft.unverifiable),
                 valid=draft.valid,
+                # Named only when the panel published without this draft, so a
+                # run whose switch is off writes the event it always wrote.
+                **({"not_awaited": True} if draft.not_awaited else {}),
             )
 
     if first_exception is not None:
@@ -2923,6 +3216,9 @@ def _run_judge_vote(
             outcome=vote.record.get("outcome"),
             unanimous=vote.record.get("unanimous"),
             proposals=[_proposal(draft) for draft in drafts if draft.valid],
+            # Named only when the panel stopped early, so a run whose switch is
+            # off writes the event it always wrote.
+            **({"early_majority": True} if vote.record.get("early_majority") else {}),
         )
     return vote
 
@@ -3661,6 +3957,7 @@ def run_case(
     policy_version: int = policy_versions.BASE_VERSION,
     amount_rule: str = DEFAULT_AMOUNT_RULE,
     parallel_calls: bool = False,
+    early_majority: bool = False,
 ) -> PipelineResult:
     """Perform one full arbitration of a case named by its manifest number.
 
@@ -3701,6 +3998,10 @@ def run_case(
     it is on the two advocates and the judge's drafts are asked at the same time
     instead of one after another. **No individual request body changes** -- see
     :func:`run_loaded_case`.
+
+    ``early_majority`` is passed straight through on the same rule, and it is
+    refused without ``parallel_calls`` where the panel is built. It is off by
+    default, so every caller before it asked for the whole panel.
     """
     load = loader.load_case if case_loader is None else case_loader
     return run_loaded_case(
@@ -3718,6 +4019,7 @@ def run_case(
         policy_version=policy_version,
         amount_rule=amount_rule,
         parallel_calls=parallel_calls,
+        early_majority=early_majority,
     )
 
 
@@ -3737,6 +4039,7 @@ def run_loaded_case(
     policy_version: int = policy_versions.BASE_VERSION,
     amount_rule: str = DEFAULT_AMOUNT_RULE,
     parallel_calls: bool = False,
+    early_majority: bool = False,
 ) -> PipelineResult:
     """Perform one full arbitration of a case already in hand.
 
@@ -3815,11 +4118,23 @@ def run_loaded_case(
     in-flight driver has been joined and written. With the switch off none of
     that arises: the rider's call is written, then the driver is asked, and the
     first exception stops the case.
+
+    ``early_majority`` is passed straight to :func:`_run_judge_vote`, which is
+    the one place the panel is built and the one place the rule is applied. It
+    needs ``parallel_calls``, because the rule stops waiting for a call that is
+    already in flight, and it is refused rather than ignored when there is none.
     """
     case_no = case["case_no"]
     prompts_dir = Path(prompts_dir)
     if judge_votes < 1:
         raise PipelineError("judge_votes must be at least 1, got {0}".format(judge_votes))
+    if early_majority and not parallel_calls:
+        # Refused here as well as in the panel, so a direct caller of this
+        # function is told before the brief is built and before any call.
+        raise PipelineError(
+            "early_majority needs parallel_calls: the rule stops waiting for a "
+            "draft that is already in flight, and a sequential panel has none"
+        )
     if verify_drafts and judge_votes < 2:
         # Refused rather than ignored. The verifier is asked over the drafts of
         # a panel; a single-draft run has no panel to verify and its one call is
@@ -4155,6 +4470,7 @@ def run_loaded_case(
                 deadline=deadline,
                 votes=judge_votes,
                 parallel_calls=parallel_calls,
+                early_majority=early_majority,
                 amount_rule=amount_rule,
                 events_log=events_log,
                 case_no=case_no,
@@ -4594,6 +4910,7 @@ def replay_case(
     verify_drafts: bool = False,
     amount_rule: str = DEFAULT_AMOUNT_RULE,
     parallel_calls: bool = False,
+    early_majority: bool = False,
 ) -> PipelineResult:
     """Arbitrate one case from a recorded run's advocates, calling only the judge.
 
@@ -4626,9 +4943,21 @@ def replay_case(
     exactly where a different rule has something to say, and a switch named on
     the command line that did not reach this path would be a switch that was
     accepted and not applied.
+
+    ``parallel_calls`` and ``early_majority`` reach the panel here for the same
+    reason: a replay builds a panel of judge drafts, so a switch accepted on the
+    command line and dropped on this path would be a switch that said it was on
+    and was not.
     """
     if judge_votes < 1:
         raise PipelineError("judge_votes must be at least 1, got {0}".format(judge_votes))
+    if early_majority and not parallel_calls:
+        # Refused here as well as in the panel, so a replay asked for the rule
+        # without the switch it needs is told before any call.
+        raise PipelineError(
+            "early_majority needs parallel_calls: the rule stops waiting for a "
+            "draft that is already in flight, and a sequential panel has none"
+        )
     if amount_rule not in AMOUNT_RULES:
         raise PipelineError(
             "no amount rule called {0!r}; the rules are {1}".format(
@@ -4746,6 +5075,7 @@ def replay_case(
             deadline=deadline,
             votes=judge_votes,
             parallel_calls=parallel_calls,
+            early_majority=early_majority,
             amount_rule=amount_rule,
             events_log=events_log,
             case_no=replay.case_no,
