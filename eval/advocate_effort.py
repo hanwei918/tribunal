@@ -267,6 +267,22 @@ def wall_seconds_of(document: Mapping[str, Any]) -> Decimal:
 # --------------------------------------------------------------------------
 # The comparison
 # --------------------------------------------------------------------------
+def _referrals_agree(left: grade.Ruling, right: grade.Ruling) -> bool:
+    """Whether two runs' referrals name the same clause references.
+
+    A referral is free prose, so it is not compared as a string. The grader
+    compares referrals by clause reference and by recall: a produced list
+    reaches the clauses the expected one names, and a clause it adds beyond them
+    is an addition rather than a failure. Read between two produced sides, which
+    have no expected one, the two therefore name the same clauses when either
+    side reaches every clause the other names.
+    """
+    return (
+        grade.match_referrals(left.referrals, right.referrals).matched
+        or grade.match_referrals(right.referrals, left.referrals).matched
+    )
+
+
 @dataclass(frozen=True)
 class CaseSide:
     """One run's reading of one case: what it ruled, cost and how long it took."""
@@ -295,14 +311,22 @@ class ComparedCase:
 
     @property
     def four_fields_changed(self) -> bool:
-        """Whether the four graded fields differ between the two runs."""
-        return (
-            self.baseline.ruling_word,
-            self.baseline.ruling,
-        ) != (
-            self.candidate.ruling_word,
-            self.candidate.ruling,
-        )
+        """Whether the four graded fields differ between the two runs.
+
+        Only the four fields the grading reads are compared, and each the way
+        the grading reads it: the ruling word exactly, the two amounts as
+        ``Decimal``, so ``5.9`` and ``5.90`` are one amount, and the referrals
+        by clause reference. A field the grading never reads -- the explanation,
+        the confidence -- is not part of this and cannot make two runs differ.
+        """
+        left = self.baseline.ruling
+        right = self.candidate.ruling
+        if left.ruling != right.ruling:
+            return True
+        for name in ("amount_sgd", "driver_compensation_sgd"):
+            if not grade.compare_money(left.field(name), right.field(name)):
+                return True
+        return not _referrals_agree(left, right)
 
     @property
     def direction(self) -> str:
@@ -649,8 +673,8 @@ def report(
         )
     )
     lines.append(
-        "   direction          improved {0}   regressed {1}   moved between two "
-        "misses {2}   unchanged {3}".format(
+        "   direction          improved {0}   regressed {1}   miss on both, "
+        "changed {2}   unchanged {3}".format(
             counts[IMPROVED], counts[REGRESSED], counts[MOVED], counts[UNCHANGED]
         )
     )

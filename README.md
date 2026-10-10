@@ -267,6 +267,9 @@ in every artifact's `configuration`, a run under it goes to a root of its own at
 `python3 -m eval.advocate_effort --report --baseline <run dir> --candidate <run
 dir>` compares a switched run against the baseline it is measured against
 ([`docs/notes/2026-10-10-the-advocate-effort-switch.md`](docs/notes/2026-10-10-the-advocate-effort-switch.md)).
+The owner's development run with the switch on is read in
+[`docs/notes/2026-10-11-advocate-reasoning-off.md`](docs/notes/2026-10-11-advocate-reasoning-off.md);
+it is not the submitted setting.
 
 **The support page's closing command, the `POL-GEN-05` hold and the 48-hour
 clock.** The product view's human-review form builds `tribunal.precedents

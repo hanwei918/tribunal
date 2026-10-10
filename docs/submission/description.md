@@ -26,7 +26,9 @@ execution threshold (SGD 8.00, `docs/architecture.md`), a ruling whose amount is
 held. After it a party may appeal once within 30 days under `POL-GEN-04`, and a
 reviewer may open an evidence window to both parties under `POL-GEN-06(4)`. The
 48-hour first-review commitment is operations rule `OPS-EW-01`, not a clause of
-the frozen policy (README, Business value).
+the frozen policy (README, Business value). Support staff can also ask WorkBuddy
+about a case through a read-only connector, `integrations/workbuddy/`, which
+answers from the committed records.
 
 **The architecture.** `docs/architecture.svg`, written out in
 `docs/architecture.md`: one brief, handed byte-identical to two advocates

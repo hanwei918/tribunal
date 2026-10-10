@@ -462,6 +462,70 @@ def two_runs(tmp):
     return Path(baseline.run_dir), candidate
 
 
+def write_case_101(run_dir, *, amount, explanation, confidence):
+    """Rewrite one run's case 101 with its four graded fields fixed.
+
+    Every graded field is set to the same reading in both runs, and only the
+    amount's written form differs -- ``5.9`` against ``5.90``, one amount. The
+    explanation and the confidence are the fields the grading never reads, and
+    they are what a caller varies.
+    """
+    path = Path(run_dir) / "case-00101.json"
+    document = runner.read_json(path)
+    body = document["ruling"]["ruling"]
+    body["ruling"] = "DRIVER_COMPENSATION"
+    body["amount_sgd"] = amount
+    body["driver_compensation_sgd"] = amount
+    body["referrals"] = []
+    body["explanation"] = explanation
+    body["confidence"] = confidence
+    path.write_text(money.dumps_canonical(document), encoding="utf-8")
+
+
+class TheGradedFieldComparisonTests(unittest.TestCase):
+    """Only the four fields the grading reads can make a case a change."""
+
+    def test_the_fields_the_grading_never_reads_are_not_a_change(self):
+        """Two runs whose four fields are equal report nothing changed.
+
+        The two sides are made to differ in the explanation, in the confidence
+        and in how the amount was written -- ``5.9`` against ``5.90`` -- and in
+        nothing the grading reads. A comparison that reads the whole ruling
+        object, or the amounts as written, would call this a change; the four
+        graded fields are equal and it is not one.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            baseline, candidate = two_runs(tmp)
+            write_case_101(
+                baseline,
+                amount=Decimal("5.9"),
+                explanation="the baseline's explanation, which is one text",
+                confidence=Decimal("0.7"),
+            )
+            write_case_101(
+                candidate,
+                amount=Decimal("5.90"),
+                explanation="the candidate's explanation, which is another",
+                confidence=Decimal("0.9"),
+            )
+
+            comparison = advocate_effort.compare(
+                baseline, candidate, key=rig.answer_key()
+            )
+            counts = {direction: 0 for direction in advocate_effort.DIRECTIONS}
+            for case in comparison.cases:
+                counts[case.direction] += 1
+
+            self.assertEqual(3, len(comparison.cases))
+            self.assertEqual(0, counts[advocate_effort.MOVED])
+            self.assertEqual(0, counts[advocate_effort.IMPROVED])
+            self.assertEqual(0, counts[advocate_effort.REGRESSED])
+            self.assertEqual(3, counts[advocate_effort.UNCHANGED])
+
+            text = advocate_effort.report(baseline, candidate, key=rig.answer_key())
+            self.assertIn("changed            0 of 3", text)
+
+
 class TheReportTests(unittest.TestCase):
     """The report's figures, over two run directories built for it."""
 

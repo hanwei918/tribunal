@@ -72,7 +72,11 @@ decision of 160.4 s and a 90th percentile of 286.9 s (README, Business value;
 `python3 -m eval.business_value --report`). Throughput beyond that is not
 claimed: the parallel-calls improvement in README, Concurrency, is labelled an
 estimate and not a measurement, so no throughput figure is offered that the
-recorded runs do not carry.
+recorded runs do not carry. A measured development run with the advocates'
+reasoning off cut the median case time from 152.9 s to 61.7 s and the cost by
+about 39%, at 113 against 115 of 120 four-field exact; it is not the submitted
+setting
+([`docs/notes/2026-10-11-advocate-reasoning-off.md`](../notes/2026-10-11-advocate-reasoning-off.md)).
 
 **How was it built?** In WorkBuddy, one module per round, with a row per session
 in `docs/buddy-log/README.md` — the task, the files it touched, what was verified
