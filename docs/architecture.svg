@@ -1,6 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" width="1600" height="1000" font-family="Inter, Helvetica, Arial, sans-serif">
   <!-- Tribunal architecture, a container view (C4 style), drawn by hand from the
-       code at freeze-2026-10-09 (policy version 6). -->
+       code at freeze-2026-10-09 (policy version 6) plus the post-sealed changes
+       of 2026-10-10. -->
   <defs>
     <marker id="arrowBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
       <path d="M0,0 L10,5 L0,10 Z" fill="#1f6feb"/>
@@ -20,7 +21,7 @@
   </defs>
   <rect x="0" y="0" width="1600" height="1000" fill="#ffffff"/>
   <text x="24" y="40" font-size="26" font-weight="bold" fill="#1f2328">Tribunal - how one dispute is decided, and what happens after</text>
-  <text x="24" y="64" font-size="14" fill="#57606a">Container view (C4 style) at freeze-2026-10-09, policy version 6. Each element names the file that implements it.</text>
+  <text x="24" y="64" font-size="14" fill="#57606a">Container view (C4 style) at freeze-2026-10-09, policy version 6, plus the post-sealed changes of 2026-10-10. Each element names the file that implements it.</text>
   <rect x="1040" y="12" width="540" height="104" rx="8" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1"/>
   <rect x="1054" y="26" width="12" height="12" fill="#ffffff" stroke="#1f6feb" stroke-width="2"/>
   <text x="1072" y="37" font-size="14" fill="#1f2328">Code, deterministic</text>
@@ -47,95 +48,99 @@
   <ellipse cx="655" cy="148" rx="255" ry="9" fill="#eef1f4" stroke="#1f6feb" stroke-width="1.6"/>
   <text x="420" y="172" font-size="16" font-weight="bold" fill="#1f2328">Case record</text>
   <text x="420" y="191" font-size="14" fill="#1f6feb">data/PUBLIC-CONTRACT.md</text>
-  <path d="M655,214 L655,196" fill="none" stroke="#1f6feb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
+  <path d="M655,212 L655,196" fill="none" stroke="#1f6feb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
   <text x="667" y="208" font-size="14" fill="#57606a">same artifacts</text>
-  <rect x="400" y="214" width="510" height="68" rx="8" fill="#f6f8fa" stroke="#1f6feb" stroke-width="1.6"/>
-  <text x="420" y="240" font-size="16" font-weight="bold" fill="#1f2328">Evidence collection</text>
-  <text x="420" y="262" font-size="14" fill="#1f6feb">ops/evidence.py, ops/sources.py</text>
-  <text x="420" y="278" font-size="14" fill="#57606a">fetches the same artifacts from mocked source systems</text>
-  <path d="M655,282 L655,296" fill="none" stroke="#1f6feb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
-  <rect x="400" y="296" width="510" height="40" rx="6" fill="#ffffff" stroke="#1f6feb" stroke-width="1.6"/>
-  <circle cx="424" cy="316" r="13" fill="#1f6feb"/>
-  <text x="424" y="321" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">1</text>
-  <text x="448" y="315" font-size="16" font-weight="bold" fill="#1f2328">1. Load the case</text>
-  <text x="448" y="331" font-size="14" fill="#57606a">tribunal/loader.py - refuses a malformed record.</text>
-  <path d="M655,336 L655,350" fill="none" stroke="#1f6feb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
-  <rect x="400" y="350" width="510" height="40" rx="6" fill="#ffffff" stroke="#1f6feb" stroke-width="1.6"/>
-  <circle cx="424" cy="370" r="13" fill="#1f6feb"/>
-  <text x="424" y="375" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">2</text>
-  <text x="448" y="369" font-size="16" font-weight="bold" fill="#1f2328">2. Weigh the evidence</text>
-  <text x="448" y="385" font-size="14" fill="#57606a">tribunal/prepass.py - issue codes become weights.</text>
-  <path d="M655,390 L655,404" fill="none" stroke="#1f6feb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
-  <rect x="400" y="404" width="510" height="40" rx="6" fill="#ffffff" stroke="#1f6feb" stroke-width="1.6"/>
-  <circle cx="424" cy="424" r="13" fill="#1f6feb"/>
-  <text x="424" y="429" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">3</text>
-  <text x="448" y="423" font-size="16" font-weight="bold" fill="#1f2328">3. Derive facts and money</text>
-  <text x="448" y="439" font-size="14" fill="#57606a">tribunal/facts.py, tribunal/money.py - geometry and arithmetic, no model.</text>
-  <path d="M655,444 L655,458" fill="none" stroke="#1f6feb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
-  <rect x="400" y="458" width="510" height="40" rx="6" fill="#ffffff" stroke="#1f6feb" stroke-width="1.6"/>
-  <circle cx="424" cy="478" r="13" fill="#1f6feb"/>
-  <text x="424" y="483" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">4</text>
-  <text x="448" y="477" font-size="16" font-weight="bold" fill="#1f2328">4. Build one brief</text>
-  <text x="448" y="493" font-size="14" fill="#57606a">tribunal/brief.py - one sha256; registration plates masked.</text>
-  <path d="M655,498 L655,512" fill="none" stroke="#1f6feb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
-  <rect x="400" y="512" width="510" height="40" rx="6" fill="#ffffff" stroke="#1f6feb" stroke-width="1.6"/>
-  <polygon points="424,520 437,532 424,544 411,532" fill="#1f6feb"/>
-  <text x="424" y="537" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">5</text>
-  <text x="448" y="531" font-size="16" font-weight="bold" fill="#1f2328">5. Scope gate</text>
-  <text x="448" y="547" font-size="14" fill="#57606a">tribunal/pipeline.py - safety or complaint flag?</text>
-  <path d="M655,552 L655,572" fill="none" stroke="#1f6feb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
-  <text x="667" y="564" font-size="14" fill="#57606a">no flag</text>
-  <rect x="400" y="572" width="510" height="40" rx="6" fill="#ffffff" stroke="#1f6feb" stroke-width="1.6"/>
-  <circle cx="424" cy="592" r="13" fill="#1f6feb"/>
-  <text x="424" y="597" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">6</text>
-  <text x="448" y="591" font-size="16" font-weight="bold" fill="#1f2328">6. Two advocates</text>
-  <text x="448" y="607" font-size="14" fill="#57606a">prompts/v1/advocate.system.md - one template, two stances.</text>
-  <rect x="844" y="582" width="58" height="20" rx="10" fill="#8250df"/>
-  <text x="873" y="597" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">LLM x2</text>
-  <path d="M655,612 L655,626" fill="none" stroke="#1f6feb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
-  <rect x="400" y="626" width="510" height="40" rx="6" fill="#ffffff" stroke="#1f6feb" stroke-width="1.6"/>
-  <circle cx="424" cy="646" r="13" fill="#1f6feb"/>
-  <text x="424" y="651" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">7</text>
-  <text x="448" y="645" font-size="16" font-weight="bold" fill="#1f2328">7. Citation referee</text>
-  <text x="448" y="661" font-size="14" fill="#57606a">tribunal/referee.py - deterministic; cuts unsupported claims.</text>
-  <path d="M655,666 L655,680" fill="none" stroke="#1f6feb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
-  <rect x="400" y="680" width="510" height="40" rx="6" fill="#ffffff" stroke="#1f6feb" stroke-width="1.6"/>
-  <circle cx="424" cy="700" r="13" fill="#1f6feb"/>
-  <text x="424" y="705" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">8</text>
-  <text x="448" y="699" font-size="16" font-weight="bold" fill="#1f2328">8. Judge panel</text>
-  <text x="448" y="715" font-size="14" fill="#57606a">prompts/v1/judge.system.md - four drafts, then the majority.</text>
-  <rect x="844" y="690" width="58" height="20" rx="10" fill="#8250df"/>
-  <text x="873" y="705" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">LLM x4</text>
-  <path d="M655,720 L655,734" fill="none" stroke="#1f6feb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
-  <rect x="400" y="734" width="510" height="40" rx="6" fill="#ffffff" stroke="#1f6feb" stroke-width="1.6"/>
-  <circle cx="424" cy="754" r="13" fill="#1f6feb"/>
-  <text x="424" y="759" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">9</text>
-  <text x="448" y="753" font-size="16" font-weight="bold" fill="#1f2328">9. Draft checks</text>
-  <text x="448" y="769" font-size="14" fill="#57606a">tribunal/pipeline.py - 10 checks before a vote.</text>
-  <path d="M655,774 L655,788" fill="none" stroke="#1f6feb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
-  <rect x="400" y="788" width="510" height="40" rx="6" fill="#ffffff" stroke="#1f6feb" stroke-width="1.6"/>
-  <polygon points="424,796 437,808 424,820 411,808" fill="#1f6feb"/>
-  <text x="424" y="813" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">10</text>
-  <text x="448" y="807" font-size="16" font-weight="bold" fill="#1f2328">10. Vote and floor</text>
-  <text x="448" y="823" font-size="14" fill="#57606a">tribunal/pipeline.py - 3 of 4 agree and confidence &gt;= 0.70?</text>
-  <path d="M655,828 L655,848" fill="none" stroke="#1f6feb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
-  <text x="667" y="840" font-size="14" fill="#57606a">yes</text>
-  <rect x="400" y="848" width="510" height="40" rx="6" fill="#ffffff" stroke="#1f6feb" stroke-width="1.6"/>
-  <circle cx="424" cy="868" r="13" fill="#1f6feb"/>
-  <text x="424" y="873" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">11</text>
-  <text x="448" y="867" font-size="16" font-weight="bold" fill="#1f2328">11. Publish the result</text>
-  <text x="448" y="883" font-size="14" fill="#57606a">tribunal/pipeline.py - a ruling, or ESCALATE with its reason code.</text>
-  <text x="940" y="524" font-size="14" fill="#57606a">flagged</text>
-  <text x="940" y="800" font-size="14" fill="#57606a">no</text>
-  <path d="M910,532 L934,532 L934,868 L912,868" fill="none" stroke="#1f6feb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
-  <path d="M910,808 L934,808" fill="none" stroke="#1f6feb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
+  <rect x="400" y="212" width="510" height="68" rx="8" fill="#f6f8fa" stroke="#1f6feb" stroke-width="1.6"/>
+  <text x="420" y="236" font-size="16" font-weight="bold" fill="#1f2328">Evidence collection</text>
+  <text x="420" y="258" font-size="14" fill="#1f6feb">ops/evidence.py, ops/sources.py</text>
+  <text x="420" y="274" font-size="14" fill="#57606a">fetches the same artifacts from mocked source systems</text>
+  <path d="M655,280 L655,292" fill="none" stroke="#1f6feb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
+  <rect x="400" y="292" width="510" height="40" rx="6" fill="#ffffff" stroke="#1f6feb" stroke-width="1.6"/>
+  <circle cx="424" cy="312" r="13" fill="#1f6feb"/>
+  <text x="424" y="317" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">1</text>
+  <text x="448" y="311" font-size="16" font-weight="bold" fill="#1f2328">1. Load the case</text>
+  <text x="448" y="327" font-size="14" fill="#57606a">tribunal/loader.py - refuses a malformed record.</text>
+  <path d="M655,332 L655,342" fill="none" stroke="#1f6feb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
+  <rect x="400" y="342" width="510" height="40" rx="6" fill="#ffffff" stroke="#1f6feb" stroke-width="1.6"/>
+  <circle cx="424" cy="362" r="13" fill="#1f6feb"/>
+  <text x="424" y="367" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">2</text>
+  <text x="448" y="361" font-size="16" font-weight="bold" fill="#1f2328">2. Weigh the evidence</text>
+  <text x="448" y="377" font-size="14" fill="#57606a">tribunal/prepass.py - issue codes become weights.</text>
+  <path d="M655,382 L655,392" fill="none" stroke="#1f6feb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
+  <rect x="400" y="392" width="510" height="40" rx="6" fill="#ffffff" stroke="#1f6feb" stroke-width="1.6"/>
+  <circle cx="424" cy="412" r="13" fill="#1f6feb"/>
+  <text x="424" y="417" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">3</text>
+  <text x="448" y="411" font-size="16" font-weight="bold" fill="#1f2328">3. Derive facts and money</text>
+  <text x="448" y="427" font-size="14" fill="#57606a">tribunal/facts.py, tribunal/money.py - geometry and arithmetic, no model.</text>
+  <path d="M655,432 L655,442" fill="none" stroke="#1f6feb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
+  <rect x="400" y="442" width="510" height="50" rx="6" fill="#ffffff" stroke="#1f6feb" stroke-width="1.6"/>
+  <circle cx="424" cy="467" r="13" fill="#1f6feb"/>
+  <text x="424" y="472" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">4</text>
+  <text x="448" y="459" font-size="16" font-weight="bold" fill="#1f2328">4. Build one brief</text>
+  <text x="448" y="474" font-size="14" fill="#57606a">tribunal/brief.py - one sha256;</text>
+  <text x="448" y="487" font-size="14" fill="#57606a">plates, telephone numbers and e-mail addresses masked.</text>
+  <path d="M655,492 L655,502" fill="none" stroke="#1f6feb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
+  <rect x="400" y="502" width="510" height="40" rx="6" fill="#ffffff" stroke="#1f6feb" stroke-width="1.6"/>
+  <polygon points="424,510 437,522 424,534 411,522" fill="#1f6feb"/>
+  <text x="424" y="527" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">5</text>
+  <text x="448" y="521" font-size="16" font-weight="bold" fill="#1f2328">5. Scope gate</text>
+  <text x="448" y="537" font-size="14" fill="#57606a">tribunal/pipeline.py - safety or complaint flag?</text>
+  <path d="M655,542 L655,558" fill="none" stroke="#1f6feb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
+  <text x="667" y="554" font-size="14" fill="#57606a">no flag</text>
+  <rect x="400" y="558" width="510" height="40" rx="6" fill="#ffffff" stroke="#1f6feb" stroke-width="1.6"/>
+  <circle cx="424" cy="578" r="13" fill="#1f6feb"/>
+  <text x="424" y="583" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">6</text>
+  <text x="448" y="577" font-size="16" font-weight="bold" fill="#1f2328">6. Two advocates</text>
+  <text x="448" y="593" font-size="14" fill="#57606a">prompts/v1/advocate.system.md - one template, two stances.</text>
+  <rect x="844" y="568" width="58" height="20" rx="10" fill="#8250df"/>
+  <text x="873" y="583" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">LLM x2</text>
+  <path d="M655,598 L655,608" fill="none" stroke="#1f6feb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
+  <rect x="400" y="608" width="510" height="40" rx="6" fill="#ffffff" stroke="#1f6feb" stroke-width="1.6"/>
+  <circle cx="424" cy="628" r="13" fill="#1f6feb"/>
+  <text x="424" y="633" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">7</text>
+  <text x="448" y="627" font-size="16" font-weight="bold" fill="#1f2328">7. Citation referee</text>
+  <text x="448" y="643" font-size="14" fill="#57606a">tribunal/referee.py - deterministic; cuts unsupported claims.</text>
+  <path d="M655,648 L655,658" fill="none" stroke="#1f6feb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
+  <rect x="400" y="658" width="510" height="40" rx="6" fill="#ffffff" stroke="#1f6feb" stroke-width="1.6"/>
+  <circle cx="424" cy="678" r="13" fill="#1f6feb"/>
+  <text x="424" y="683" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">8</text>
+  <text x="448" y="677" font-size="16" font-weight="bold" fill="#1f2328">8. Judge panel</text>
+  <text x="448" y="693" font-size="14" fill="#57606a">prompts/v1/judge.system.md - four drafts, then the majority.</text>
+  <rect x="844" y="668" width="58" height="20" rx="10" fill="#8250df"/>
+  <text x="873" y="683" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">LLM x4</text>
+  <rect x="674" y="706" width="236" height="36" rx="8" fill="#ffffff" stroke="#1f6feb" stroke-width="1.6" stroke-dasharray="8 6"/>
+  <text x="686" y="720" font-size="14" fill="#1f6feb">optional: stop once 3 of 4 agree</text>
+  <text x="686" y="735" font-size="14" fill="#1f6feb">(--early-majority)</text>
+  <path d="M655,698 L655,752" fill="none" stroke="#1f6feb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
+  <rect x="400" y="752" width="510" height="40" rx="6" fill="#ffffff" stroke="#1f6feb" stroke-width="1.6"/>
+  <circle cx="424" cy="772" r="13" fill="#1f6feb"/>
+  <text x="424" y="777" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">9</text>
+  <text x="448" y="771" font-size="16" font-weight="bold" fill="#1f2328">9. Draft checks</text>
+  <text x="448" y="787" font-size="14" fill="#57606a">tribunal/pipeline.py - 10 checks before a vote.</text>
+  <path d="M655,792 L655,802" fill="none" stroke="#1f6feb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
+  <rect x="400" y="802" width="510" height="40" rx="6" fill="#ffffff" stroke="#1f6feb" stroke-width="1.6"/>
+  <polygon points="424,810 437,822 424,834 411,822" fill="#1f6feb"/>
+  <text x="424" y="827" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">10</text>
+  <text x="448" y="821" font-size="16" font-weight="bold" fill="#1f2328">10. Vote and floor</text>
+  <text x="448" y="837" font-size="14" fill="#57606a">tribunal/pipeline.py - 3 of 4 agree and confidence &gt;= 0.70?</text>
+  <path d="M655,842 L655,858" fill="none" stroke="#1f6feb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
+  <text x="667" y="854" font-size="14" fill="#57606a">yes</text>
+  <rect x="400" y="858" width="510" height="40" rx="6" fill="#ffffff" stroke="#1f6feb" stroke-width="1.6"/>
+  <circle cx="424" cy="878" r="13" fill="#1f6feb"/>
+  <text x="424" y="883" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">11</text>
+  <text x="448" y="877" font-size="16" font-weight="bold" fill="#1f2328">11. Publish the result</text>
+  <text x="448" y="893" font-size="14" fill="#57606a">tribunal/pipeline.py - a ruling, or ESCALATE with its reason code.</text>
+  <text x="940" y="514" font-size="14" fill="#57606a">flagged</text>
+  <text x="940" y="814" font-size="14" fill="#57606a">no</text>
+  <path d="M910,522 L934,522 L934,878 L912,878" fill="none" stroke="#1f6feb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
+  <path d="M910,822 L934,822" fill="none" stroke="#1f6feb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
   <text x="951" y="700" font-size="14" fill="#1f6feb" text-anchor="middle" transform="rotate(-90 951 700)">ESCALATE</text>
-  <path d="M655,888 L655,910" fill="none" stroke="#1f6feb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
-  <text x="667" y="899" font-size="14" fill="#57606a">case file</text>
-  <rect x="400" y="919" width="510" height="48" rx="12" fill="#f6f8fa" stroke="#1f6feb" stroke-width="1.6"/>
-  <ellipse cx="655" cy="919" rx="255" ry="9" fill="#eef1f4" stroke="#1f6feb" stroke-width="1.6"/>
-  <text x="420" y="943" font-size="16" font-weight="bold" fill="#1f2328">Run records</text>
-  <text x="420" y="962" font-size="14" fill="#57606a">runs/ - case files, transcripts; tribunal/events.py hash chain</text>
+  <path d="M655,898 L655,914" fill="none" stroke="#1f6feb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
+  <text x="667" y="910" font-size="14" fill="#57606a">case file</text>
+  <rect x="400" y="923" width="510" height="48" rx="12" fill="#f6f8fa" stroke="#1f6feb" stroke-width="1.6"/>
+  <ellipse cx="655" cy="923" rx="255" ry="9" fill="#eef1f4" stroke="#1f6feb" stroke-width="1.6"/>
+  <text x="420" y="947" font-size="16" font-weight="bold" fill="#1f2328">Run records</text>
+  <text x="420" y="966" font-size="14" fill="#57606a">runs/ - case files, transcripts; tribunal/events.py hash chain</text>
 
   <!-- Left column: the model provider and the measurement tooling -->
   <rect x="20" y="118" width="300" height="196" rx="8" fill="#f6f8fa" stroke="#57606a" stroke-width="1.6" stroke-dasharray="8 6"/>
@@ -154,27 +159,28 @@
   <text x="36" y="424" font-size="14" fill="#57606a">one call per case</text>
   <rect x="20" y="458" width="300" height="208" rx="8" fill="#f6f8fa" stroke="#57606a" stroke-width="1.6"/>
   <text x="36" y="484" font-size="16" font-weight="bold" fill="#1f2328">Measured, not claimed</text>
-  <text x="36" y="506" font-size="14" fill="#57606a">eval/run_benchmark.py - the runner</text>
-  <text x="36" y="526" font-size="14" fill="#57606a">eval/development_sets.py - the sets</text>
-  <text x="36" y="546" font-size="14" fill="#57606a">eval/grade.py, eval/sealed_report.py</text>
-  <text x="36" y="566" font-size="14" fill="#57606a">eval/fairness.py, eval/baselines.py</text>
-  <text x="36" y="586" font-size="14" fill="#57606a">eval/readiness.py</text>
-  <text x="36" y="606" font-size="14" fill="#57606a">Audits: eval/verify_drafts.py,</text>
-  <text x="36" y="626" font-size="14" fill="#57606a">eval/verify_rationales.py,</text>
-  <text x="36" y="646" font-size="14" fill="#57606a">eval/amount_rule.py, eval/v6_runs.py</text>
+  <text x="36" y="504" font-size="14" fill="#57606a">eval/run_benchmark.py - the runner</text>
+  <text x="36" y="522" font-size="14" fill="#57606a">eval/development_sets.py - the sets</text>
+  <text x="36" y="540" font-size="14" fill="#57606a">eval/grade.py, eval/sealed_report.py</text>
+  <text x="36" y="558" font-size="14" fill="#57606a">eval/fairness.py, eval/baselines.py</text>
+  <text x="36" y="576" font-size="14" fill="#57606a">eval/readiness.py</text>
+  <text x="36" y="594" font-size="14" fill="#57606a">Audits: eval/verify_drafts.py,</text>
+  <text x="36" y="612" font-size="14" fill="#57606a">eval/verify_rationales.py,</text>
+  <text x="36" y="630" font-size="14" fill="#57606a">eval/amount_rule.py, eval/v6_runs.py</text>
+  <text x="36" y="648" font-size="14" fill="#57606a">eval/func_sets.py, eval/early_majority.py</text>
   <rect x="20" y="686" width="300" height="104" rx="8" fill="#eaf1fc" stroke="#1f6feb" stroke-width="1.6"/>
   <text x="36" y="712" font-size="16" font-weight="bold" fill="#1f6feb">Debate viewer</text>
-  <text x="36" y="734" font-size="14" fill="#1f2328">ui/build.py</text>
+  <text x="36" y="734" font-size="14" fill="#1f2328">ui/build.py - the replay, at /replay/</text>
   <text x="36" y="756" font-size="14" fill="#57606a">each agent's words, replayed</text>
   <text x="36" y="776" font-size="14" fill="#57606a">from the record; no model.</text>
-  <path d="M400,592 L380,592 M400,700 L380,700 M380,700 L380,250 L326,250" fill="none" stroke="#1f6feb" stroke-width="2.2" marker-end="url(#arrowPurple)"/>
+  <path d="M400,578 L380,578 M400,678 L380,678 M380,678 L380,250 L326,250" fill="none" stroke="#1f6feb" stroke-width="2.2" marker-end="url(#arrowPurple)"/>
   <text x="330" y="244" font-size="14" fill="#8250df">call</text>
-  <path d="M400,754 L364,754 L364,386 L326,386" fill="none" stroke="#1f6feb" stroke-width="2.2" marker-end="url(#arrowPurple)"/>
+  <path d="M400,772 L364,772 L364,386 L326,386" fill="none" stroke="#1f6feb" stroke-width="2.2" marker-end="url(#arrowPurple)"/>
   <text x="328" y="380" font-size="14" fill="#8250df">verify</text>
-  <path d="M400,935 L348,935 L348,562 L326,562" fill="none" stroke="#1f6feb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
+  <path d="M400,939 L348,939 L348,562 L326,562" fill="none" stroke="#1f6feb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
   <text x="324" y="556" font-size="14" fill="#57606a">grade</text>
-  <path d="M400,960 L300,960 L300,738 L326,738" fill="none" stroke="#1f6feb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
-  <text x="330" y="954" font-size="14" fill="#1f6feb">replay</text>
+  <path d="M400,964 L300,964 L300,738 L326,738" fill="none" stroke="#1f6feb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
+  <text x="330" y="958" font-size="14" fill="#1f6feb">replay</text>
 
   <!-- Right column: the learning loop -->
   <rect x="1020" y="118" width="560" height="272" rx="8" fill="#e8f6ed" stroke="#2da44e" stroke-width="1.6" stroke-dasharray="8 6"/>
@@ -195,55 +201,65 @@
   <ellipse cx="1300" cy="322" rx="264" ry="9" fill="#e8f6ed" stroke="#2da44e" stroke-width="1.6"/>
   <text x="1056" y="348" font-size="16" font-weight="bold" fill="#1f2328">Policy versions</text>
   <text x="1056" y="366" font-size="14" fill="#2da44e">tribunal/policy_versions.py - v6 = base 3 + 3 clauses</text>
-  <path d="M1036,348 L968,348 L968,478 L914,478" fill="none" stroke="#2da44e" stroke-width="2.2" marker-end="url(#arrowGreen)"/>
+  <path d="M1036,348 L968,348 L968,467 L914,467" fill="none" stroke="#2da44e" stroke-width="2.2" marker-end="url(#arrowGreen)"/>
   <text x="974" y="342" font-size="14" fill="#2da44e">v6</text>
-  <path d="M1036,186 L1002,186 L1002,592 L914,592" fill="none" stroke="#2da44e" stroke-width="2.2" stroke-dasharray="8 6" marker-end="url(#arrowGreen)"/>
+  <path d="M1036,186 L1002,186 L1002,578 L914,578" fill="none" stroke="#2da44e" stroke-width="2.2" stroke-dasharray="8 6" marker-end="url(#arrowGreen)"/>
   <text x="926" y="250" font-size="14" fill="#2da44e">precedents</text>
 
   <!-- Right column: human operations -->
   <rect x="1020" y="400" width="560" height="590" rx="8" fill="#fbf0e4" stroke="#d9822b" stroke-width="1.6" stroke-dasharray="8 6"/>
-  <text x="1036" y="428" font-size="18" font-weight="bold" fill="#d9822b">After the pipeline - human operations</text>
-  <text x="1036" y="450" font-size="14" fill="#57606a">reads the records; never feeds a brief or a prompt</text>
-  <circle cx="1160" cy="466" r="8" fill="#d9822b"/>
-  <rect x="1148" y="476" width="24" height="14" rx="7" fill="#d9822b"/>
-  <text x="1182" y="472" font-size="14" fill="#1f2328">Support reviewer</text>
-  <path d="M1160,490 L1160,514" fill="none" stroke="#d9822b" stroke-width="2.2" marker-end="url(#arrowOrange)"/>
-  <text x="1172" y="506" font-size="14" fill="#57606a">decides with</text>
-  <rect x="1120" y="514" width="320" height="68" rx="8" fill="#ffffff" stroke="#d9822b" stroke-width="1.6"/>
-  <text x="1136" y="536" font-size="16" font-weight="bold" fill="#1f2328">Reviewer decides</text>
-  <text x="1136" y="556" font-size="14" fill="#d9822b">ops/review.py, tribunal/precedents.py</text>
-  <text x="1136" y="574" font-size="14" fill="#57606a">the reason cites evidence and clause ids</text>
-  <rect x="1120" y="600" width="320" height="84" rx="8" fill="#ffffff" stroke="#d9822b" stroke-width="1.6"/>
-  <text x="1136" y="622" font-size="16" font-weight="bold" fill="#1f2328">Escalation packet</text>
-  <text x="1136" y="642" font-size="14" fill="#d9822b">ops/escalation.py</text>
-  <text x="1136" y="660" font-size="14" fill="#57606a">the record, the claims, the 4 drafts,</text>
-  <text x="1136" y="678" font-size="14" fill="#57606a">risk signals (ops/risk.py)</text>
-  <path d="M1240,600 L1240,582" fill="none" stroke="#d9822b" stroke-width="2.2" marker-end="url(#arrowOrange)"/>
-  <text x="1252" y="594" font-size="14" fill="#57606a">packet</text>
-  <rect x="1120" y="702" width="320" height="68" rx="8" fill="#ffffff" stroke="#d9822b" stroke-width="1.6"/>
-  <text x="1136" y="724" font-size="16" font-weight="bold" fill="#1f2328">Appeal (POL-GEN-04)</text>
-  <text x="1136" y="744" font-size="14" fill="#d9822b">ops/appeal.py - six checks</text>
-  <text x="1136" y="762" font-size="14" fill="#57606a">names a reviewer, no merits</text>
-  <path d="M1440,736 L1520,736 L1520,548 L1444,548" fill="none" stroke="#d9822b" stroke-width="2.2" marker-end="url(#arrowOrange)"/>
-  <text x="1448" y="542" font-size="14" fill="#57606a">assigns</text>
-  <rect x="1120" y="788" width="320" height="84" rx="8" fill="#ffffff" stroke="#d9822b" stroke-width="1.6"/>
-  <text x="1136" y="810" font-size="16" font-weight="bold" fill="#1f2328">Queue, SLA, lanes</text>
-  <text x="1136" y="830" font-size="14" fill="#d9822b">ops/queue.py, ops/config.json</text>
-  <text x="1136" y="848" font-size="14" fill="#57606a">safety, human or auto lane; kill switch;</text>
-  <text x="1136" y="866" font-size="14" fill="#57606a">out-of-scope categories land here too</text>
-  <path d="M1120,830 L984,830 L984,642 L1116,642" fill="none" stroke="#d9822b" stroke-width="2.2" marker-end="url(#arrowOrange)"/>
-  <text x="1024" y="636" font-size="14" fill="#57606a">human, safety</text>
-  <path d="M910,943 L1040,943 L1040,848 L1116,848" fill="none" stroke="#57606a" stroke-width="2.2" marker-end="url(#arrowGrey)"/>
-  <text x="912" y="937" font-size="14" fill="#57606a">every case</text>
-  <rect x="1120" y="890" width="320" height="84" rx="8" fill="#ffffff" stroke="#d9822b" stroke-width="1.6"/>
-  <text x="1136" y="912" font-size="16" font-weight="bold" fill="#1f2328">Notices</text>
-  <text x="1136" y="932" font-size="14" fill="#d9822b">ui/v2/build.py</text>
-  <text x="1136" y="950" font-size="14" fill="#57606a">rider and driver: the ruling, the money,</text>
-  <text x="1136" y="968" font-size="14" fill="#57606a">how to appeal; the support view</text>
-  <path d="M1240,890 L1240,872" fill="none" stroke="#d9822b" stroke-width="2.2" marker-end="url(#arrowOrange)"/>
-  <text x="1252" y="884" font-size="14" fill="#57606a">auto</text>
-  <path d="M1440,932 L1520,932 L1520,754 L1444,754" fill="none" stroke="#d9822b" stroke-width="2.2" marker-end="url(#arrowOrange)"/>
-  <text x="1448" y="926" font-size="14" fill="#57606a">appealed</text>
+  <text x="1036" y="418" font-size="18" font-weight="bold" fill="#d9822b">After the pipeline - human operations</text>
+  <text x="1036" y="438" font-size="14" fill="#57606a">reads the records; never feeds a brief or a prompt</text>
+  <circle cx="1160" cy="456" r="8" fill="#d9822b"/>
+  <rect x="1148" y="466" width="24" height="14" rx="7" fill="#d9822b"/>
+  <text x="1182" y="462" font-size="14" fill="#1f2328">Support reviewer</text>
+  <path d="M1160,480 L1160,496" fill="none" stroke="#d9822b" stroke-width="2.2" marker-end="url(#arrowOrange)"/>
+  <text x="1172" y="492" font-size="14" fill="#57606a">decides with</text>
+  <rect x="1120" y="496" width="320" height="60" rx="8" fill="#ffffff" stroke="#d9822b" stroke-width="1.6"/>
+  <text x="1136" y="514" font-size="16" font-weight="bold" fill="#1f2328">Reviewer decides</text>
+  <text x="1136" y="531" font-size="14" fill="#d9822b">ops/review.py, tribunal/precedents.py</text>
+  <text x="1136" y="547" font-size="14" fill="#57606a">the reason cites evidence and clause ids</text>
+  <path d="M1240,556 L1240,572" fill="none" stroke="#d9822b" stroke-width="2.2" marker-end="url(#arrowOrange)"/>
+  <text x="1252" y="568" font-size="14" fill="#57606a">request evidence</text>
+  <path d="M1360,572 L1360,556" fill="none" stroke="#d9822b" stroke-width="2.2" marker-end="url(#arrowOrange)"/>
+  <text x="1372" y="568" font-size="14" fill="#57606a">closes</text>
+  <rect x="1120" y="572" width="320" height="60" rx="8" fill="#ffffff" stroke="#d9822b" stroke-width="1.6"/>
+  <text x="1136" y="590" font-size="16" font-weight="bold" fill="#1f2328">Evidence window (OPS-EW-01)</text>
+  <text x="1136" y="607" font-size="14" fill="#d9822b">ops/evidence_window.py</text>
+  <text x="1136" y="623" font-size="14" fill="#57606a">both parties file records; the clock never stops</text>
+  <rect x="1120" y="642" width="320" height="72" rx="8" fill="#ffffff" stroke="#d9822b" stroke-width="1.6"/>
+  <text x="1136" y="660" font-size="16" font-weight="bold" fill="#1f2328">Escalation packet</text>
+  <text x="1136" y="677" font-size="14" fill="#d9822b">ops/escalation.py</text>
+  <text x="1136" y="693" font-size="14" fill="#57606a">the record, the claims, the 4 drafts,</text>
+  <text x="1136" y="709" font-size="14" fill="#57606a">risk signals (ops/risk.py)</text>
+  <path d="M1440,642 L1460,642 L1460,556 L1444,556" fill="none" stroke="#d9822b" stroke-width="2.2" marker-end="url(#arrowOrange)"/>
+  <text x="1472" y="600" font-size="14" fill="#57606a">packet</text>
+  <rect x="1120" y="722" width="320" height="60" rx="8" fill="#ffffff" stroke="#d9822b" stroke-width="1.6"/>
+  <text x="1136" y="740" font-size="16" font-weight="bold" fill="#1f2328">Appeal (POL-GEN-04)</text>
+  <text x="1136" y="757" font-size="14" fill="#d9822b">ops/appeal.py - six checks</text>
+  <text x="1136" y="773" font-size="14" fill="#57606a">names a reviewer, no merits</text>
+  <path d="M1440,752 L1520,752 L1520,526 L1444,526" fill="none" stroke="#d9822b" stroke-width="2.2" marker-end="url(#arrowOrange)"/>
+  <text x="1448" y="522" font-size="14" fill="#57606a">assigns</text>
+  <rect x="1120" y="790" width="320" height="108" rx="8" fill="#ffffff" stroke="#d9822b" stroke-width="1.6"/>
+  <text x="1136" y="808" font-size="16" font-weight="bold" fill="#1f2328">Queue, SLA, lanes</text>
+  <text x="1136" y="825" font-size="14" fill="#d9822b">ops/queue.py, ops/config.json</text>
+  <text x="1136" y="840" font-size="14" fill="#57606a">safety / human / auto lane; kill switch;</text>
+  <text x="1136" y="855" font-size="14" fill="#57606a">amount above SGD 8.00 held for release;</text>
+  <text x="1136" y="870" font-size="14" fill="#57606a">(POL-GEN-05); 48-hour first-review clock;</text>
+  <text x="1136" y="885" font-size="14" fill="#57606a">chat threat -&gt; safety lane (ops/chat_signals.py)</text>
+  <path d="M1120,834 L984,834 L984,678 L1116,678" fill="none" stroke="#d9822b" stroke-width="2.2" marker-end="url(#arrowOrange)"/>
+  <text x="1024" y="672" font-size="14" fill="#57606a">human, safety</text>
+  <path d="M910,947 L1040,947 L1040,854 L1116,854" fill="none" stroke="#57606a" stroke-width="2.2" marker-end="url(#arrowGrey)"/>
+  <text x="912" y="941" font-size="14" fill="#57606a">every case</text>
+  <rect x="1120" y="914" width="320" height="72" rx="8" fill="#ffffff" stroke="#d9822b" stroke-width="1.6"/>
+  <text x="1136" y="932" font-size="16" font-weight="bold" fill="#1f2328">Notices and the support page</text>
+  <text x="1136" y="949" font-size="14" fill="#d9822b">ui/v2/build.py - the site's front door: the</text>
+  <text x="1136" y="964" font-size="14" fill="#57606a">ruling, the money, how to appeal, the support</text>
+  <text x="1136" y="979" font-size="14" fill="#57606a">view; the replay is ui/build.py under /replay/</text>
+  <path d="M1240,914 L1240,898" fill="none" stroke="#d9822b" stroke-width="2.2" marker-end="url(#arrowOrange)"/>
+  <text x="1252" y="910" font-size="14" fill="#57606a">auto</text>
+  <path d="M1440,950 L1520,950 L1520,764 L1444,764" fill="none" stroke="#d9822b" stroke-width="2.2" marker-end="url(#arrowOrange)"/>
+  <text x="1448" y="944" font-size="14" fill="#57606a">appealed</text>
 
   <text x="24" y="986" font-size="14" fill="#57606a">Drawn by hand from the code at freeze-2026-10-09; every box names the file that implements it. Arrows: solid = every case, dashed = optional.</text>
 </svg>

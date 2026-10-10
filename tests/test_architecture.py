@@ -183,8 +183,9 @@ class TheDiagramSaysWhatItIsTests(unittest.TestCase):
 
     TITLE = "Tribunal - how one dispute is decided, and what happens after"
     SUBTITLE = (
-        "Container view (C4 style) at freeze-2026-10-09, policy version 6. "
-        "Each element names the file that implements it."
+        "Container view (C4 style) at freeze-2026-10-09, policy version 6, "
+        "plus the post-sealed changes of 2026-10-10. Each element names the "
+        "file that implements it."
     )
     LEGEND = (
         "Code, deterministic",
@@ -255,7 +256,12 @@ class TheExtractorTests(unittest.TestCase):
             "precedents/precedents.jsonl",
             "ops/evidence.py",
             "ops/queue.py",
+            "ops/evidence_window.py",
+            "ops/chat_signals.py",
             "eval/policy_gaps.py",
+            "eval/func_sets.py",
+            "eval/early_majority.py",
+            "ui/build.py",
             "ui/v2/build.py",
         ):
             self.assertIn(required, found, "{0} was not extracted".format(required))

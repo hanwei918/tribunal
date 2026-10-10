@@ -1,11 +1,11 @@
 # Tribunal architecture
 
 The diagram is the whole arbitration system as it stands at the freeze tag
-`freeze-2026-10-09`, which is policy version 6, drawn as a **container view** in
-the C4 style: one dispute's path down the middle, the model provider and the
-measurement tooling on the left, the learning loop and the human operations on
-the right. Every element names the file that implements it, and every arrow is
-directed and labelled with what it carries.
+`freeze-2026-10-09`, which is policy version 6, plus the post-sealed changes of
+2026-10-10, drawn as a **container view** in the C4 style: one dispute's path
+down the middle, the model provider and the measurement tooling on the left, the
+learning loop and the human operations on the right. Every element names the file
+that implements it, and every arrow is directed and labelled with what it carries.
 
 ![Tribunal architecture](architecture.svg)
 
@@ -56,10 +56,12 @@ can check that no clause number appears as a literal in either module.
 
 **4. Build one brief.** `tribunal/brief.py` builds exactly one object per case,
 canonicalises it and records its sha256, and both advocates read those same
-bytes. From version 6 it also masks Singapore vehicle registration plates in a
-chat message's `text`, a trip record's event details and the dispute's two
-free-text fields. A reader can check that the module has no side or stance
-parameter.
+bytes. From version 6 it also masks, in the free text the model reads, a
+Singapore vehicle registration plate, a telephone number and an e-mail address
+-- a chat message's `text`, a trip record's event details, and the dispute's two
+free-text fields. Names are deliberately not masked, and versions 1 to 5 keep
+their bytes exactly. A reader can check `_mask_personal_data`, `_masked_dispute`
+and `VEHICLE_MASK_VERSION`, and that the module has no side or stance parameter.
 
 **5. Scope gate.** `tribunal/pipeline.py` holds the gate, `POL-GEN-08(1)`, and
 the reason code `GEN08_SCOPE`. A dispute whose `safety_flag` or `complaint_flag`
@@ -86,7 +88,13 @@ check `_check_claim` and the closed set of reason codes.
 `tribunal/pipeline.py` runs the panel, so the row carries a purple **LLM x4**
 badge. Four drafts are taken: three sampled at temperature 0.7 with distinct
 seeds and one position-swapped draft. A reader can check `DEFAULT_JUDGE_VOTES`
-and `JUDGE_VOTE_TEMPERATURE`.
+and `JUDGE_VOTE_TEMPERATURE`. The row also carries a dashed note,
+**optional: stop once 3 of 4 agree (--early-majority)**: with the switch on, and
+only with `--parallel-calls`, the panel publishes as soon as the position-swapped
+draft and two sampled drafts are back and a majority of the returned drafts agree
+on all four graded fields. It is off by default, and a run without it is byte for
+byte what it was. A reader can check `EARLY_MAJORITY_MIN_SAMPLED` and
+`_join_calls_until`.
 
 **9. Draft checks.** `tribunal/pipeline.py` holds the **ten** checks a draft
 must pass before it can be voted on -- `DRAFT_CHECK_CODES` names them, from
@@ -139,13 +147,16 @@ agreement and calibration; `eval/baselines.py` scores the baselines; and
 beside them: `eval/verify_drafts.py` re-checks a run's recorded drafts,
 `eval/verify_rationales.py` audits the answer key's hand-written rationales
 against the package's arithmetic, `eval/amount_rule.py` re-reduces the recorded
-drafts under a second reading rule, and `eval/v6_runs.py` reads the version-6
-batch. The **grade** arrow comes from the run records.
+drafts under a second reading rule, `eval/v6_runs.py` reads the version-6 batch,
+`eval/func_sets.py` reads the four functional sets, and `eval/early_majority.py`
+replays the early-majority rule over every version-6 case and asserts the
+published ruling is unchanged. The **grade** arrow comes from the run records.
 
 **Debate viewer.** `ui/build.py` turns each run's own transcript into the two
 views a person can look at -- each agent's words, in order, replayed from the
-record. It makes no model call: the **replay** arrow is a reading of the run
-records and nothing else.
+record. It is the site's **replay**, and it is published under `/replay/`. It
+makes no model call: the **replay** arrow is a reading of the run records and
+nothing else.
 
 ## The right side: the learning loop
 
@@ -188,6 +199,15 @@ rebuilt now, and the closure carries the reviewer's reason citing this case's
 own evidence and the policy's own clause ids. The **closure** arrow is that
 closure reaching the precedent store.
 
+**Evidence window (OPS-EW-01).** `ops/evidence_window.py` makes `POL-GEN-06(4)`'s
+`REQUEST_EVIDENCE` executable: the reviewer opens one window to both parties,
+each files a record before it closes, and the reviewer decides on what arrived.
+The **request evidence** arrow is the reviewer opening it from the decision above
+and **closes** is the window closing back into that decision. Its clock never
+stops for missing evidence, and that is the operations rule `OPS-EW-01`, written
+in `ops/config.json`, and not a clause of the frozen policy. A reader can check
+`open_window`, `submit`, `status` and `close`.
+
 **Escalation packet.** `ops/escalation.py` builds what a reviewer is handed: the
 case, both advocate briefs, the admissibility report, the judge's explanation
 verbatim, all four drafts and their abstentions, and the risk signals
@@ -202,21 +222,26 @@ route to human review, not a ruling. The **assigns** arrow is that reviewer.
 
 **Queue, SLA and lanes.** `ops/queue.py` sorts the disputes of a run into the
 safety, human-review and auto lanes, and `ops/config.json` holds the team's SLA
-targets and the kill switch `auto_rulings_enabled`. The **every case** arrow is
-the run records being read; **human, safety** is a dispute going up to the
-packet; and out-of-scope categories land here too. A reader can check that no
-threshold comes from the policy and that the kill switch moves an auto case into
-human review.
+targets and the kill switch `auto_rulings_enabled`. A ruling whose amount is
+above `POL-GEN-05`'s SGD 8.00 execution threshold is held for release and placed
+in the human queue; every human-lane case carries `POL-GEN-06(2)`'s 48-hour
+first-review clock beside its lane target; and a chat message that carries a
+threat is fast-tracked into the safety lane ahead of every other lane, read by
+`ops/chat_signals.py`. The **every case** arrow is the run records being read;
+**human, safety** is a dispute going up to the packet; and out-of-scope
+categories land here too. A reader can check that no threshold comes from the
+policy and that the kill switch moves an auto case into human review.
 
-**Notices.** `ui/v2/build.py` is the product view: for each case the ruling, the
-money and POL-GEN-04's own appeal route, built from the record with no model
-call. The **auto** arrow is the queue handing a case to it and **appealed** is
-an appeal coming back up to the appeal command.
+**Notices and the support page.** `ui/v2/build.py` is the product view and the
+site's front door: for each case the ruling, the money and POL-GEN-04's own
+appeal route, built from the record with no model call. The **auto** arrow is the
+queue handing a case to it and **appealed** is an appeal coming back up to the
+appeal command.
 
 ## What the arrows carry
 
 Every arrow in the diagram is labelled with what it carries, so the labels are
 the contract between the boxes: `files`, `same artifacts`, `case`, `no flag`,
 `flagged`, `yes`, `no`, `case file`, `call`, `verify`, `grade`, `replay`,
-`approved`, `v6`, `decides with`, `packet`, `assigns`, `human, safety`,
-`every case`, `auto`, `appealed` and `precedents`.
+`approved`, `v6`, `decides with`, `request evidence`, `closes`, `packet`,
+`assigns`, `human, safety`, `every case`, `auto`, `appealed` and `precedents`.
