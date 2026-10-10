@@ -19,11 +19,13 @@ So the viewer is built from the committed run and makes no network call at all.
 
 The output
 ----------
-``ui/dist/index.html`` -- one file, with every byte of data, CSS and JavaScript
-inline. No framework, no CDN, no external request of any kind, so it opens from
-``file://`` on a laptop with no internet on a projector at Demo Day, and serves
-unchanged from GitHub Pages once the repository is public. The build is
-deterministic: the same inputs produce the same bytes, and
+``ui/dist/replay/index.html`` -- one file, with every byte of data, CSS and
+JavaScript inline. No framework, no CDN, no external request of any kind, so it
+opens from ``file://`` on a laptop with no internet on a projector at Demo Day,
+and serves unchanged from GitHub Pages once the repository is public. The replay
+sits under ``replay/`` because the site's root is the product view
+``ui/v2/build.py`` writes; every page here carries a link back to that queue. The
+build is deterministic: the same inputs produce the same bytes, and
 ``tests/test_ui_build.py`` requires the committed file to equal a fresh build,
 because the lesson of this repository is that a stored artefact must not be
 able to drift from the code that produces it without something going red.
@@ -160,9 +162,11 @@ __all__ = [
 # id, and this is the one the runtime model decision rests on.
 RUN_DIR = PROJECT_ROOT / "runs" / "deepseek-deepseek-flash"
 
-# Where the built file lives. It is committed, so a judge can open it without
-# running Python.
-DIST_DIR = PROJECT_ROOT / "ui" / "dist"
+# Where the built files live. They are committed, so a judge can open them
+# without running Python. The replay sits one level down under ``replay/``: the
+# site's root is the product view ``ui/v2/build.py`` writes, and every page here
+# links back to it.
+DIST_DIR = PROJECT_ROOT / "ui" / "dist" / "replay"
 OUTPUT_PATH = DIST_DIR / "index.html"
 
 # The case the viewer opens on. 208 is the demonstration case: every artifact is
@@ -178,7 +182,7 @@ _TRANSCRIPT_FILE_RE = re.compile(r"^case-(\d{5})\.transcript\.json$")
 
 # Where a link to a file outside ``ui/dist/`` points. The pages are published as
 # ``ui/dist/`` on its own, so a link out of the tree written relative to the page
-# -- ``../../../docs/notes/...`` from ``ui/dist/wild/`` -- resolves to nothing
+# -- ``../../../../docs/notes/...`` from ``ui/dist/replay/wild/`` -- resolves to nothing
 # once only that directory is deployed. Every such link is absolute, and this is
 # the one place the base of them is written.
 REPOSITORY_BLOB_BASE = "https://github.com/hanwei918/tribunal/blob/main/"
@@ -265,7 +269,7 @@ class ViewerPage:
 
     @property
     def depth(self) -> int:
-        """How many directories below ``ui/dist`` this page's file sits."""
+        """How many directories below the replay root this page's file sits."""
         return len(self.output_path.relative_to(DIST_DIR).parts) - 1
 
     def link_to(self, repository_path: str) -> str:
@@ -273,9 +277,9 @@ class ViewerPage:
 
         Absolute, to the repository on the web, and not relative to where the
         page sits. ``ui/dist/`` is what gets deployed, so a link out of it
-        written as ``../../../docs/notes/...`` points at a file the deployed
-        copy does not have; the same path on the repository's own blob page
-        works from anywhere.
+        written as ``../../../../docs/notes/...`` from a replay page points at a
+        file the deployed copy does not have; the same path on the repository's
+        own blob page works from anywhere.
         """
         return REPOSITORY_BLOB_BASE + repository_path
 
@@ -1960,9 +1964,12 @@ def _set_block(
         "key_path": (
             _repository_relative(str(key_path)) if key_path is not None else None
         ),
-        # The corpus page is the one at ``ui/dist/index.html``; every other page
-        # and the index itself sit one directory down.
+        # The corpus page is the one at ``ui/dist/replay/index.html``; every other
+        # page and the index itself sit one directory down.
         "runs_index_link": "../" * page.depth + "runs/index.html",
+        # And the queue -- the product view -- is one directory above the replay
+        # root, so every page here links back to the site's front door.
+        "queue_link": "../" * (page.depth + 1) + "index.html",
     }
 
 
@@ -4684,6 +4691,7 @@ _BODY = """
     <button id="nav-case">One case</button>
     <button id="nav-stance">Stance</button>
   </nav>
+  <a class="runs-link" href="{queue_link}">Queue</a>
   <a class="runs-link" href="{runs_index_link}">Runs</a>
   <span class="spacer"></span>
   <button id="toggle-projector" title="scale everything up for a projector">Projector</button>
@@ -4719,6 +4727,7 @@ def _body(set_block: Mapping[str, Any]) -> str:
         brand=_escape_html(set_block.get("brand") or "Tribunal - debate viewer"),
         badge=_escape_html(set_block.get("badge") or "replay of a committed run"),
         runs_index_link=_escape_html(set_block.get("runs_index_link") or "runs/index.html"),
+        queue_link=_escape_html(set_block.get("queue_link") or "../index.html"),
     )
 
 
@@ -4878,6 +4887,8 @@ def render_index(documents: Mapping[str, Mapping[str, Any]]) -> str:
             "\n</style>\n</head>\n<body>\n",
             '<header class="top">\n'
             '  <span class="brand">Tribunal - the runs</span>\n'
+            '  <span class="spacer"></span>\n'
+            '  <a class="runs-link" href="../../index.html">Queue</a>\n'
             "</header>\n",
             "<main>\n",
             "<h1>The runs</h1>\n",

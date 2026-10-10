@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Case 2838 - Route deviation</title>
+<style>
+/* The light theme is the default: the palette in :root is what a reader gets
+   when the system asks for no preference, and the dark palette below replaces
+   it only when the system asks for dark. The status colours move with it, so a
+   chip keeps the same contrast on either background. */
+:root{
+  --bg:#f3f4f6;--card:#ffffff;--line:#e5e7eb;--ink:#111827;--muted:#6b7280;
+  --soft:#f9fafb;--accent:#1d4ed8;--accent-wash:#e8effd;
+  --ok:#15803d;--ok-wash:#dcfce7;--bad:#b91c1c;--bad-wash:#fee2e2;
+  --warn:#92400e;--warn-wash:#fef3c7;--grey:#374151;--grey-wash:#f3f4f6;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#0f172a;--card:#1e293b;--line:#334155;--ink:#f1f5f9;--muted:#94a3b8;
+    --soft:#16213a;--accent:#93c5fd;--accent-wash:#1e293b;
+    --ok:#86efac;--ok-wash:#14532d;--bad:#fca5a5;--bad-wash:#7f1d1d;
+    --warn:#fcd34d;--warn-wash:#78350f;--grey:#cbd5e1;--grey-wash:#1e293b;}
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+h1{font-size:1.6rem;line-height:1.25;margin:0 0 6px}
+h2{font-size:1rem;margin:0 0 12px}
+h3{font-size:.92rem;margin:16px 0 6px}
+p{margin:.5em 0}
+.top{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line)}
+.top-in{max-width:1280px;margin:0 auto;padding:0 24px;height:56px;display:flex;align-items:center;gap:20px}
+.brand{display:inline-flex;align-items:center;gap:9px;font-weight:700;font-size:17px;text-decoration:none;color:var(--ink)}
+.mark{width:26px;height:26px;border-radius:7px;background:var(--accent);display:inline-flex;align-items:center;justify-content:center;flex:none}
+.nav{display:flex;gap:2px;flex-wrap:wrap}
+.nav a{padding:7px 12px;border-radius:8px;text-decoration:none;color:var(--muted);font-weight:500}
+.nav a.on{color:var(--ink);background:var(--soft);border:1px solid var(--line)}
+.mode{margin-left:auto;font-size:13px;color:var(--muted);white-space:nowrap}
+@media (max-width:700px){.mode{display:none}.top-in{gap:12px;padding:0 16px}}
+.wrap{max-width:1280px;margin:0 auto;padding:26px 24px 56px}
+@media (max-width:700px){.wrap{padding:18px 16px 40px}}
+.lede{color:var(--muted);margin:.3em 0 1.1em;max-width:78ch}
+.ids{color:var(--muted);font-size:.86rem;font-variant-numeric:tabular-nums;margin:0}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.85rem;word-break:break-word}
+.num{font-variant-numeric:tabular-nums}
+
+/* chips */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0}
+.chip{display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:999px;font-size:13px;font-weight:500;background:var(--grey-wash);color:var(--grey);border:1px solid var(--line)}
+.chip.ok{background:var(--ok-wash);color:var(--ok);border-color:transparent}
+.chip.bad{background:var(--bad-wash);color:var(--bad);border-color:transparent}
+.chip.warn{background:var(--warn-wash);color:var(--warn);border-color:transparent}
+
+/* featured cards */
+.featured{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:18px 0 22px}
+@media (max-width:960px){.featured{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.featured{grid-template-columns:minmax(0,1fr)}}
+.fcard{display:block;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;text-decoration:none;color:var(--ink)}
+.fcard:hover{border-color:var(--accent)}
+.fcard .fcase{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.fcard h2{font-size:.95rem;margin:2px 0 8px}
+.fcard p{margin:.25em 0;font-size:13px;color:var(--muted)}
+.fcard b{color:var(--ink);font-weight:600}
+
+/* figures */
+.figures{display:flex;flex-wrap:wrap;gap:14px;margin:0 0 22px}
+.figure{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 18px;min-width:168px;flex:1 1 168px}
+.figure .k{color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;margin:0 0 6px}
+.figure .v{font-size:1.3rem;font-weight:650;margin:0}
+.figure .s{color:var(--muted);font-size:.85rem;margin:4px 0 0}
+.figure.wide{flex:1 1 100%}
+.triggers{list-style:none;margin:0;padding:0}
+.triggers li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 14px;padding:4px 0;border-bottom:1px solid var(--line)}
+.triggers li:last-child{border-bottom:0}
+.triggers .n{font-weight:650;font-variant-numeric:tabular-nums}
+
+/* table */
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin:0 0 18px}
+.card.wide{padding:0;overflow:hidden}
+.card.wide>h2,.card.wide>p{padding:0 22px}
+.card.wide>h2{margin-top:18px}
+table{border-collapse:collapse;width:100%}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{color:var(--muted);font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover td{background:var(--soft)}
+th.sortable{cursor:pointer;user-select:none}
+td[data-column="time"],td[data-column="confidence"]{white-space:nowrap}
+td a{font-weight:600;text-decoration:none}
+
+/* case page */
+.pagehead{margin:0 0 18px}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;border-bottom:1px solid var(--line);margin:0 0 22px}
+.tabs button{appearance:none;border:0;background:transparent;color:var(--muted);font:inherit;font-weight:500;padding:9px 13px;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer}
+.tabs button.tab-on{color:var(--ink);border-bottom-color:var(--accent)}
+.verdict{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px 26px;display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:30px;margin:0 0 22px}
+.verdict .word{font-size:2.1rem;font-weight:700;letter-spacing:-.01em;line-height:1.1;margin:0}
+.verdict .code{color:var(--muted);margin:6px 0 0}
+.verdict .lbl{color:var(--muted);font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;margin:18px 0 4px}
+.verdict .why{margin:0;font-size:1rem}
+.verdict .after{margin:14px 0 0;font-size:.9rem;color:var(--muted)}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 20px;align-content:start;border-left:1px solid var(--line);padding-left:26px}
+.tiles div{display:flex;flex-direction:column;gap:2px}
+.tiles b{font-size:1.15rem;font-weight:650}
+.tiles span{font-size:.8rem;color:var(--muted)}
+@media (max-width:960px){.verdict{grid-template-columns:minmax(0,1fr)}.tiles{border-left:0;padding-left:0;border-top:1px solid var(--line);padding-top:16px}}
+.two{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:26px;align-items:start}
+@media (max-width:960px){.two{grid-template-columns:minmax(0,1fr)}}
+.sec{margin:0 0 22px}
+.sides{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:700px){.sides{grid-template-columns:minmax(0,1fr)}}
+.side{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 18px}
+.side header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.side header small{color:var(--muted)}
+.side ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px}
+.side li{line-height:1.5}
+.side li s{color:var(--muted)}
+.side .ref{color:var(--muted);font-size:.78rem;margin-left:4px;white-space:nowrap}
+.side .why{display:block;font-size:.82rem;color:var(--bad);margin-top:2px}
+
+/* rail */
+.rail{display:flex;flex-direction:column;gap:14px}
+.rail details{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:0 16px}
+.rail summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 0;font-weight:600;cursor:pointer}
+.rail summary::-webkit-details-marker{display:none}
+.rail summary span{font-weight:400;color:var(--muted);font-size:.82rem}
+.rail .in{padding:0 0 14px;font-size:.9rem}
+.map{background:var(--soft);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.map svg{display:block;width:100%;height:auto}
+.cap{color:var(--muted);font-size:.78rem;margin:6px 0 0}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:.78rem;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:16px;height:3px;vertical-align:middle;margin-right:5px;border-radius:2px}
+.legend i.dot{width:9px;height:9px;border-radius:50%}
+.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 14px;font-size:.88rem}
+
+/* stepper */
+.stepper{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin:0 0 10px}
+.stepper button{appearance:none;text-align:left;border:0;border-left:1px solid var(--line);background:transparent;font:inherit;color:inherit;cursor:pointer;padding:14px 16px;display:flex;flex-direction:column;gap:5px;position:relative}
+.stepper button:first-child{border-left:0}
+.stepper button .n{display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--muted)}
+.stepper button .n i{width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;background:var(--grey);font-style:normal}
+.stepper button .n i.llm{background:var(--accent)}
+.stepper button .n i.ok{background:var(--ok)}
+.stepper button .n i.bad{background:var(--bad)}
+.stepper button .t{font-weight:600}
+.stepper button .s{font-size:.78rem;color:var(--muted)}
+.stepper button.on{background:var(--soft)}
+.stepper button.on::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--accent)}
+@media (max-width:900px){.stepper{grid-template-columns:repeat(3,minmax(0,1fr))}.stepper button{border-top:1px solid var(--line)}}
+.who{display:flex;flex-wrap:wrap;gap:16px;font-size:.8rem;color:var(--muted);margin:0 0 16px 4px}
+.who i{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:0;margin-right:5px}
+.detail{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 22px}
+.detail h3{margin:0 0 4px;font-size:1.05rem}
+.detail .lead{margin:0 0 12px;color:var(--muted)}
+.pane{display:none}.pane.on{display:block}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:12px 0}
+.grid3 div{background:var(--soft);border-radius:8px;padding:10px 12px}
+.grid3 b{display:block;font-size:1.15rem;font-weight:650}
+.grid3 span{font-size:.8rem;color:var(--muted)}
+@media (max-width:700px){.grid3{grid-template-columns:minmax(0,1fr)}}
+
+/* misc */
+.claim{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:0 0 10px}
+.claim p{margin:.3em 0}
+.pill{display:inline-block;border-radius:999px;padding:1px 9px;font-size:.78rem;font-weight:600}
+.pill.green{background:var(--ok-wash);color:var(--ok)}
+.pill.red{background:var(--bad-wash);color:var(--bad)}
+.pill.grey{background:var(--grey-wash);color:var(--muted)}
+.err{color:var(--bad);font-weight:600}
+.ok{color:var(--ok);font-weight:600}
+.empty{color:var(--muted)}
+blockquote{margin:8px 0;padding:10px 14px;border-left:3px solid var(--line);background:var(--soft);white-space:pre-wrap;overflow-wrap:anywhere}
+details.form{border:1px solid var(--line);border-radius:10px;padding:0 16px;margin:0 0 10px}
+details.form summary{cursor:pointer;padding:12px 0;font-weight:600}
+.filters{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 14px}
+.filters button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:6px 14px;font:inherit;cursor:pointer}
+.filters button.on{background:var(--ink);color:var(--card);border-color:var(--ink)}
+.filters select{font:inherit;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+.foot{border-top:1px solid var(--line);margin-top:32px;padding-top:14px;color:var(--muted);font-size:.82rem;display:flex;flex-wrap:wrap;gap:16px}
+pre{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:12px;overflow-wrap:anywhere;white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.85rem}
+textarea,input[type="text"]{font:inherit;color:inherit}
+</style>
+</head>
+<body>
+<header class="top">
+<div class="top-in">
+<a class="brand" href="index.html"><span class="mark"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v16M8 20h8M5 7h14M5 7L2 13h6zM19 7l-3 6h6z"/></svg></span>Tribunal</a>
+<nav class="nav" aria-label="Sites"><a href="index.html">Queue</a><a href="replay/index.html">Evaluation replay</a></nav>
+<span class="mode">Replay - policy v6 - deepseek/deepseek-flash</span>
+</div>
+</header>
+<main class="wrap">
+<header class="pagehead">
+<p class="ids">DSP-02838 &middot; TRP-02838 &middot; filed 2026-08-13T04:21:59+08:00</p>
+<h1>Route deviation - 13.2 km against 10.0 km, $19.32.</h1>
+<div class="chips"><span class="chip">Route deviation</span><span class="chip">Filed by rider</span><span class="chip">Contested SGD 4.50</span><span class="chip bad">Sent to a reviewer - the judge escalated under the policy - 133.7 s</span></div>
+</header>
+<div class="tabs" role="tablist"><button type="button" class="tab tab-on" role="tab" id="tab-ruling" aria-controls="panel-ruling" data-tab="ruling" aria-selected="true">Ruling</button><button type="button" class="tab" role="tab" id="tab-decision" aria-controls="panel-decision" data-tab="decision" aria-selected="false">How it was decided</button><button type="button" class="tab" role="tab" id="tab-review" aria-controls="panel-review" data-tab="review" aria-selected="false">Human review</button></div>
+<section role="tabpanel" id="panel-ruling" aria-labelledby="tab-ruling" data-panel="ruling"><div class="verdict"><div class="v-left"><p class="cap">This is a provisional ruling made by an automated system.</p><p class="word"><strong>the judge escalated under the policy</strong> <span class="mono">JUDGE_ESCALATE</span></p><p>No money moves. The disputed amount is held.</p><p class="lbl">From the judge's explanation</p><p class="why">To both parties &#8212; rider and driver &#8212; in the dispute over trip TRP-02838 (Northpoint City to Blk 7 Everton Park, 12 August 2026).</p><p class="after">No automated ruling was issued. A reviewer decides within 24 hours of entry, or within 2 hours when the case carries a safety flag.</p><p>Escalation is terminal: no monetary outcome issues, so there is nothing for POL-GEN-05 to execute and the disputed amount is held rather than collected or refunded.</p></div><div class="tiles"><div><b>3.2 km</b><span>extra distance, against POL-RD-01's 0.8 km limit</span></div><div><b>32%</b><span>of the optimal distance, against POL-RD-01's 20% limit</span></div><div><b>100%</b><span>trace coverage</span></div><div aria-label="confidence 0.9 against a floor of 0.7"><b>0.9</b><span>confidence against the floor of 0.7 (POL-GEN-02)</span></div></div></div><div class="two"><div class="maincol"><section class="sec"><h2>What each side argued</h2><div class="sides"><article class="side"><header><b>Rider advocate</b><small>11 claim(s), 11 kept</small></header><ol><li>The GPS trace measures 13.2 km between the recorded pickup and the recorded dropoff against a booked optimal of 10.0 km, an excess of 3.2 km or 32% of optimal. Both POL-RD-01 gates are passed: the excess is greater than 20% of optimal and greater than 0.8 km in absolute terms, so the route deviation is ESTABLISHED. The trace figure is the governing measurement under POL-RD-01 and it happens to agree with the trip record's convenience copy, so no conflict arises.<span class="ref">EV-GPS-02838, EV-TRIP-02838 &middot; POL-RD-01</span></li><li>The trace is unimpaired for policy purposes under POL-RD-07: 104 fixes over 100% coverage at a 10-second sample interval, zero gaps, and a maximum gap of 0.0 seconds. None of limbs (a) to (c) fires, so the rider's proof needs no independent corroboration, excess is measured on the trace as recorded, and POL-RD-07(i) to (iii) and POL-RD-10(3) are not engaged.<span class="ref">EV-GPS-02838 &middot; POL-RD-07</span></li><li>No traffic advisory covers this trip. EV-ADVIS-02838-01 is MISSING, carries no payload and has weight_multiplier 0.0 with issue code MISSING_ARTIFACT, and its absence is itself citable. POL-RD-03's comparison therefore cannot be run: there is no advisory naming a road the optimal route traverses, so no external traffic cause can reduce or excuse the 3.2 km excess, and any such excuse carries no weight under POL-RD-08 and POL-RD-13.<span class="ref">EV-ADVIS-02838-01 &middot; POL-RD-13, POL-RD-03</span></li><li>The one message on the trip is the rider's own 'changed the pin to the other building', sent at 14:06:43 after the meter started at 14:03:23, and it exonerates no distance. Its waypoint_hint is null and it names no road, so POL-RD-04's corroboration test cannot be run and that clause is unavailable on the record; and even treated as an instruction, the trace never shows the vehicle travelling to the place it names, so under POL-RD-14 the instruction caused none of the measured excess and no distance is excluded.<span class="ref">EV-CHAT-02838, EV-GPS-02838 &middot; POL-RD-04, POL-RD-14</span></li><li>The dropoff pin was amended at 14:07:23, but the trip record stores no amended optimal: amended_optimal_distance_km and amended_optimal_duration_min are both null. POL-RD-05 accordingly cannot be run, no substitute figure may be derived from the booked 10.0 km optimal, and neither the re-measurement nor the partial exclusion of pre-amendment distance can be applied. The excess stands at the measured 3.2 km for the POL-RD-01 and POL-RD-02 arithmetic.<span class="ref">EV-TRIP-02838 &middot; POL-RD-05</span></li><li>The rider's burden under POL-RD-08 is discharged. Trip identifier TRP-02838 appears on the trip record, the trace and the fare breakdown alike, and the excess is measured from a trace that is not impaired, so the burden shifts to the driver; the driver's counterparty statement ('Rider moved the pin') cites no evidence id and no clause and is discarded under POL-RD-08 as discharging nothing. The rider's own profile adds no corroboration requirement either: deviation_claims_60d is 1, well below the POL-RD-08 threshold of 4, and POL-GEN-01 permits that field to be used for this test only.<span class="ref">EV-TRIP-02838, EV-GPS-02838, EV-FARE-02838, EV-RPROF-02838 &middot; POL-RD-08, POL-GEN-01</span></li><li>The fare model on this trip is METERED and quoted_fare_sgd is null, so POL-RD-11 does not close the distance-and-time route: the rider was billed per kilometre and per minute actually driven, and POL-RD-02 governs the remedy. The refund is arithmetic, not discretionary.<span class="ref">EV-FARE-02838 &middot; POL-RD-11, POL-RD-02</span></li><li>Running POL-RD-02 on the booked optimal route: (3.80 + 0.75 x 10.0 + 0.28 x 14.0) = 15.22, multiplied by the surge multiplier of 1.0 read from fare_breakdown.surge_multiplier, plus the 0.80 platform fee, with no ERP, no surcharge, no waiting-time fee and no promo discount, gives a recomputed fare of 16.02. Refund = 19.32 charged_total less 16.02 = 3.30, which is above the 0.50 de minimis and far below 90% of charged_total, so the outcome is PARTIAL_REFUND of SGD 3.30. Payment status is CHARGED with refund_issued_sgd 0.00, so this refund moves money the rider is presently carrying.<span class="ref">EV-FARE-02838, EV-TRIP-02838 &middot; POL-RD-02</span></li><li>There is no pass-through line to correct, and none to count twice. The fare breakdown carries no ERP gantry lines at all, tolls_erp is 0.00, both the on-optimal-route and off-optimal-route ERP totals are 0.00, and the airport surcharge is 0.00 on a trip that neither originates nor ends at an airport. The POL-RD-02 refund of 3.30 is therefore neither enlarged nor duplicated by POL-RD-09.<span class="ref">EV-FARE-02838 &middot; POL-RD-09, POL-RD-02</span></li><li>The billed distance is 13.2 km and the trace distance is 13.2 km, so the rider was billed for exactly the distance driven: there is no unbilled-distance shortfall and no DRIVER_COMPENSATION is available under POL-RD-04. The vehicle type is RYDE_X, not RYDE_POOL, so POL-RD-12's matched-itinerary baseline does not apply and the booked 10.0 km optimal is the correct comparator.<span class="ref">EV-FARE-02838, EV-GPS-02838, EV-TRIP-02838 &middot; POL-RD-04, POL-RD-12</span></li><li>No POL-RD-10 escalation trigger is engaged on this record. The trip identifiers match across trip record, trace and fare ledger; the trace is unimpaired with no gaps; the timestamps run forward; the refund of 3.30 is far below the SGD 150.00 ceiling and below charged_total. Limb (5) is not engaged either, because the driver's pin-move assertion cites no artifact and no clause, and an assertion that cites nothing cannot be invoked against a record field that no party has put in issue.<span class="ref">EV-TRIP-02838, EV-GPS-02838, EV-FARE-02838 &middot; POL-RD-10, POL-RD-08</span></li></ol></article><article class="side"><header><b>Driver advocate</b><small>8 claim(s), 8 kept</small></header><ol><li>The drop-off point was relocated mid-trip, and the rider says so in her own words. trip_record.dropoff_amended_at reads 2026-08-12T14:07:23, and the only chat message on the trip, sent by the rider at 14:06:43, reads 'changed the pin to the other building'. Under POL-RD-05 the baseline for any deviation test is the optimal route between the AMENDED endpoints, not the booked 10.0 km figure against which this rider's claim is measured.<span class="ref">EV-TRIP-02838, EV-CHAT-02838 &middot; POL-RD-05</span></li><li>The amended re-quote that POL-RD-05 requires is absent from the record: trip_record.amended_optimal_distance_km and amended_optimal_duration_min are both null even though dropoff_amended_at is set. POL-RD-05 provides that in exactly that state the clause cannot be run and the tribunal must not derive a substitute figure, and POL-RD-10(5) names 'a POL-RD-05 amendment with amended_optimal_distance_km null' as a mandatory escalation trigger. The case must go to a human reviewer, not produce a refund computed against the un-amended optimal route.<span class="ref">EV-TRIP-02838 &middot; POL-RD-05, POL-RD-10</span></li><li>Escalation under POL-RD-10 is terminal: it replaces the ruling, no monetary outcome issues, and the disputed amount is held rather than collected or refunded. On a rider-filed dispute whose fare_breakdown.payment_status is CHARGED and whose refund_issued_sgd is 0.0, that is the outcome which leaves the driver's fare undisturbed pending human review instead of returning it.<span class="ref">EV-FARE-02838 &middot; POL-GEN-03, POL-RD-10</span></li><li>The rider's prima facie case shifts the burden to the driver under POL-RD-08, and the driver discharges it by naming a specific artifact and a specific clause from the list POL-RD-08 gives: EV-TRIP-02838, whose amendment timestamps are the artifact, and POL-RD-05, the exculpatory clause. The driver asserts no uncited traffic excuse, so nothing turns on POL-RD-08's bar against bare assertion.<span class="ref">EV-TRIP-02838 &middot; POL-RD-08, POL-RD-05</span></li><li>Even taking the rider's own trace figure at face value, the excess is 3.2 km over a 10.0 km booked optimal, 32%, which clears POL-RD-01's establishment gate (greater than 20% and greater than 0.8 km) but is not MATERIAL: POL-RD-01 sets materiality at more than 50% or more than 8.0 km absolute, and neither is met. The rider therefore cannot reach the FULL_REFUND uplift in POL-RD-06(b) on this trip's evidence, whatever else is decided.<span class="ref">EV-GPS-02838, EV-TRIP-02838 &middot; POL-RD-01</span></li><li>Nor is any repeat-deviation pattern established under POL-RD-06: driver_profile.deviation_flags_90d is 1, below the three-flag threshold, and 1 divided by 207 completed_trips_90d is about 0.005, far below the 0.05 ratio threshold. Those two fields are the only profile fields POL-GEN-01 permits for this test, so the rider's remedy cannot be uplifted to FULL_REFUND and no driver-conduct referral follows from the profile.<span class="ref">EV-DPROF-02838 &middot; POL-RD-06, POL-GEN-01</span></li><li>The escalation does not rest on trace impairment, and the tribunal should name the right trigger. The gps_trace is clean for policy purposes: 104 fixes at a 10 second interval, 100.0% coverage, no gaps and a maximum gap of 0 seconds, so POL-RD-07(a) to (c) never fires and POL-RD-10(3) is not engaged. The trigger that fires is POL-RD-10(5), the missing amended re-quote.<span class="ref">EV-GPS-02838 &middot; POL-RD-07, POL-RD-10</span></li><li>No traffic advisory covers this corridor: EV-ADVIS-02838-01 is MISSING, carries weight 0.0 and its issue code is MISSING_ARTIFACT, and the driver asserts no external traffic cause. Under POL-RD-13 an absent advisory that no party cites is a gap in the bundle, not the POL-RD-10(5) contradiction of 'a closure asserted with no traffic_advisory', so it neither exonerates nor incriminates the driver and supplies no second escalation trigger.<span class="ref">EV-ADVIS-02838-01 &middot; POL-RD-13, POL-RD-10</span></li></ol></article></div></section></div><aside class="rail"><details open><summary>Trace <span>104 fixes</span></summary><div class="in"><div class="map"><svg viewBox="0 0 360 250"><title>the trip trace</title><polyline points="116.69,12.0 117.86,15.58 119.01,19.13 120.16,22.67 121.31,26.22 122.43,29.77 123.55,33.33 124.64,36.89 125.72,40.45 126.79,44.06 127.82,47.63 128.83,51.21 129.81,54.84 130.76,58.43 131.68,62.03 132.58,65.68 133.44,69.29 134.27,72.92 135.08,76.58 135.85,80.22 136.6,83.9 137.31,87.55 138.6,90.51 142.4,90.44 146.02,90.38 149.81,90.32 153.58,90.26 157.32,90.21 161.04,90.16 164.74,90.12 168.56,90.09 172.18,90.07 175.91,90.06 179.6,90.06 183.38,90.08 187.09,90.11 190.88,90.17 194.59,90.25 198.34,90.35 201.98,90.48 205.78,90.66 209.43,90.86 213.18,91.13 216.87,91.45 220.68,91.86 224.33,92.35 227.97,92.95 231.67,93.75 235.23,94.77 238.65,96.19 241.69,98.34 243.31,101.61 242.51,105.22 240.43,108.3 237.87,110.98 235.04,113.44 232.06,115.73 229.02,117.89 225.94,119.93 222.7,121.97 219.56,123.87 216.35,125.75 213.1,127.59 209.82,129.4 206.56,131.17 203.17,132.97 199.97,134.64 196.54,136.41 193.31,138.05 189.87,139.78 186.67,141.38 183.26,143.06 179.96,144.68 176.61,146.31 173.23,147.94 169.82,149.59 166.54,151.16 163.07,152.82 159.76,154.4 156.43,155.98 152.92,157.65 149.58,159.24 149.65,162.48 150.36,166.14 151.11,169.82 151.88,173.45 152.69,177.12 153.52,180.74 154.38,184.36 155.28,188.01 156.2,191.61 157.15,195.2 158.14,198.82 159.14,202.4 160.18,205.98 161.24,209.59 162.32,213.15 163.42,216.71 164.53,220.26 165.66,223.81 166.8,227.37 167.95,230.91 169.11,234.46 170.27,238.0" fill="none" stroke="#1d4ed8" stroke-width="2"/><circle cx="116.69" cy="12.0" r="4" fill="#15803d"><title>pickup</title></circle><circle cx="170.27" cy="238.0" r="4" fill="#b91c1c"><title>drop-off</title></circle></svg></div><p class="cap">optimal: 10 km (distance only)</p><p class="legend"><i style="background:#1d4ed8"></i>driven trace<i class="dot" style="background:#15803d"></i>pickup<i class="dot" style="background:#b91c1c"></i>drop-off</p></div></details><details><summary>Evidence <span>7 item(s)</span></summary><div class="in"><p>EV-TRIP-02838<br><span class="ref">PLATFORM_TELEMETRY &middot; COMPLETE (weight 1.0)</span></p><p>EV-GPS-02838<br><span class="ref">PLATFORM_TELEMETRY &middot; COMPLETE (weight 1.0)</span></p><p>EV-CHAT-02838<br><span class="ref">PLATFORM_TELEMETRY &middot; COMPLETE (weight 1.0)</span></p><p>EV-FARE-02838<br><span class="ref">PAYMENTS_LEDGER &middot; COMPLETE (weight 1.0)</span></p><p>EV-RPROF-02838<br><span class="ref">PLATFORM_TELEMETRY &middot; COMPLETE (weight 1.0)</span></p><p>EV-DPROF-02838<br><span class="ref">PLATFORM_TELEMETRY &middot; COMPLETE (weight 1.0)</span></p><p>EV-ADVIS-02838-01<br><span class="ref">THIRD_PARTY_LTA &middot; MISSING (weight 0.0)</span></p></div></details><details><summary>Record <span>133.7 s</span></summary><div class="in"><div class="kv"><span>events</span><span>6 (one per agent call)</span><span>tokens</span><span>267999 (prompt 132634, cached 52608, completion 82757)</span><span>wall time</span><span>133.7 s</span></div></div></details></aside></div></section>
+<section role="tabpanel" id="panel-decision" aria-labelledby="tab-decision" data-panel="decision" hidden><div class="stepper"><button type="button" data-step="1" class="on"><span class="n"><i>1</i>no time recorded</span><span class="t">Evidence pack</span><span class="s">7 artifacts, brief cbec486b09ef</span></button><button type="button" data-step="2"><span class="n"><i class="llm">2</i>106.4 s</span><span class="t">Both sides argue</span><span class="s">rider 11 claims - driver 8</span></button><button type="button" data-step="3"><span class="n"><i>3</i>no time recorded</span><span class="t">Citation check</span><span class="s">19 kept, 0 discarded</span></button><button type="button" data-step="4"><span class="n"><i class="llm">4</i>225.6 s</span><span class="t">Judge</span><span class="s">4 drafts, 1.0</span></button><button type="button" data-step="5"><span class="n"><i>5</i>no time recorded</span><span class="t">Floor and triggers</span><span class="s">confidence 0.9 against the floor 0.7</span></button><button type="button" data-step="6"><span class="n"><i class="bad">6</i>no time recorded</span><span class="t">Outcome</span><span class="s">the judge escalated under the policy</span></button></div><p class="who"><span><i style="background:#374151"></i>code</span><span><i style="background:#1d4ed8"></i>model</span><span><i style="background:#15803d"></i>outcome</span></p><div class="detail"><div class="pane on" data-pane="1"><h3>Evidence pack</h3><p class="lead">computed by code - 7 artifacts, brief cbec486b09ef</p><p>The brief was built from the case and the loaded policy. Its sha256 is <span class="mono">cbec486b09efa865f696977541b07649c7f8359eac2dd6fcd1907e8aefbcb755</span>.</p><p>Both advocates received these same bytes: yes, the recorded user_sha256 of each advocate is this digest.</p><p class="label">The derived facts each artifact carries</p><ul><li>EV-TRIP-02838 (TRIP_RECORD): no derived facts</li><li>EV-GPS-02838 (GPS_TRACE): advisory_area, arrival, deviation, driver_track, rider_presence, waypoint_approach</li><li>EV-CHAT-02838 (CHAT_LOG): no derived facts</li><li>EV-FARE-02838 (FARE_BREAKDOWN): money</li><li>EV-RPROF-02838 (RIDER_PROFILE): no derived facts</li><li>EV-DPROF-02838 (DRIVER_PROFILE): no derived facts</li><li>EV-ADVIS-02838-01 (TRAFFIC_ADVISORY): no derived facts</li></ul></div><div class="pane" data-pane="2"><h3>Both sides argue</h3><p class="lead">asked of the model - rider 11 claims - driver 8</p><p>The two advocates ran on the same brief and at the same time: the rider advocate made 11 claim(s) and the driver advocate made 8.</p><p>Their instructions differ -- system_sha256 <span class="mono">b90cb450bbd10645bb645632dfa64bafaeb4f690787527ce2ec0743e9e2ac355</span> against <span class="mono">c317acbca01e30fca7b769c8d85d31333a756e601b25ca9ad2ede328c4607543</span> -- and their brief is one digest for both.</p><p class="label">The rider advocate's own claims</p><blockquote>{
+  "claims": [
+    {
+      "text": "The GPS trace measures 13.2 km between the recorded pickup and the recorded dropoff against a booked optimal of 10.0 km, an excess of 3.2 km or 32% of optimal. Both POL-RD-01 gates are passed: the excess is greater than 20% of optimal and greater than 0.8 km in absolute terms, so the route deviation is ESTABLISHED. The trace figure is the governing measurement under POL-RD-01 and it happens to agree with the trip record's convenience copy, so no conflict arises.",
+      "evidence_ids": ["EV-GPS-02838", "EV-TRIP-02838"],
+      "clause_ids": ["POL-RD-01"],
+      "relies_on": "derived.deviation.excess_km",
+      "asserted_weight": 1.0
+    },
+    {
+      "text": "The trace is unimpaired for policy purposes under POL-RD-07: 104 fixes over 100% coverage at a 10-second sample interval, zero gaps, and a maximum gap of 0.0 seconds. None of limbs (a) to (c) fires, so the rider's proof needs no independent corroboration, excess is measured on the trace as recorded, and POL-RD-07(i) to (iii) and POL-RD-10(3) are not engaged.",
+      "evidence_ids": ["EV-GPS-02838"],
+      "clause_ids": ["POL-RD-07"],
+      "relies_on": "max_gap_sec",
+      "asserted_weight": 1.0
+    },
+    {
+      "text": "No traffic advisory covers this trip. EV-ADVIS-02838-01 is MISSING, carries no payload and has weight_multiplier 0.0 with issue code MISSING_ARTIFACT, and its absence is itself citable. POL-RD-03's comparison therefore cannot be run: there is no advisory naming a road the optimal route traverses, so no external traffic cause can reduce or excuse the 3.2 km excess, and any such excuse carries no weight under POL-RD-08 and POL-RD-13.",
+      "evidence_ids": ["EV-ADVIS-02838-01"],
+      "clause_ids": ["POL-RD-13", "POL-RD-03"],
+      "relies_on": "admissibility.weight_multiplier",
+      "asserted_weight": 0.0
+    },
+    {
+      "text": "The one message on the trip is the rider's own 'changed the pin to the other building', sent at 14:06:43 after the meter started at 14:03:23, and it exonerates no distance. Its waypoint_hint is null and it names no road, so POL-RD-04's corroboration test cannot be run and that clause is unavailable on the record; and even treated as an instruction, the trace never shows the vehicle travelling to the place it names, so under POL-RD-14 the instruction caused none of the measured excess and no distance is excluded.",
+      "evidence_ids": ["EV-CHAT-02838", "EV-GPS-02838"],
+      "clause_ids": ["POL-RD-04", "POL-RD-14"],
+      "relies_on": "messages[0].waypoint_hint",
+      "asserted_weight": 1.0
+    },
+    {
+      "text": "The dropoff pin was amended at 14:07:23, but the trip record stores no amended optimal: amended_optimal_distance_km and amended_optimal_duration_min are both null. POL-RD-05 accordingly cannot be run, no substitute figure may be derived from the booked 10.0 km optimal, and neither the re-measurement nor the partial exclusion of pre-amendment distance can be applied. The excess stands at the measured 3.2 km for the POL-RD-01 and POL-RD-02 arithmetic.",
+      "evidence_ids": ["EV-TRIP-02838"],
+      "clause_ids": ["POL-RD-05"],
+      "relies_on": "amended_optimal_distance_km",
+      "asserted_weight": 1.0
+    },
+    {
+      "text": "The rider's burden under POL-RD-08 is discharged. Trip identifier TRP-02838 appears on the trip record, the trace and the fare breakdown alike, and the excess is measured from a trace that is not impaired, so the burden shifts to the driver; the driver's counterparty statement ('Rider moved the pin') cites no evidence id and no clause and is discarded under POL-RD-08 as discharging nothing. The rider's own profile adds no corroboration requirement either: deviation_claims_60d is 1, well below the POL-RD-08 threshold of 4, and POL-GEN-01 permits that field to be used for this test only.",
+      "evidence_ids": ["EV-TRIP-02838", "EV-GPS-02838", "EV-FARE-02838", "EV-RPROF-02838"],
+      "clause_ids": ["POL-RD-08", "POL-GEN-01"],
+      "relies_on": "deviation_claims_60d",
+      "asserted_weight": 1.0
+    },
+    {
+      "text": "The fare model on this trip is METERED and quoted_fare_sgd is null, so POL-RD-11 does not close the distance-and-time route: the rider was billed per kilometre and per minute actually driven, and POL-RD-02 governs the remedy. The refund is arithmetic, not discretionary.",
+      "evidence_ids": ["EV-FARE-02838"],
+      "clause_ids": ["POL-RD-11", "POL-RD-02"],
+      "relies_on": "derived.money.fare_model",
+      "asserted_weight": 1.0
+    },
+    {
+      "text": "Running POL-RD-02 on the booked optimal route: (3.80 + 0.75 x 10.0 + 0.28 x 14.0) = 15.22, multiplied by the surge multiplier of 1.0 read from fare_breakdown.surge_multiplier, plus the 0.80 platform fee, with no ERP, no surcharge, no waiting-time fee and no promo discount, gives a recomputed fare of 16.02. Refund = 19.32 charged_total less 16.02 = 3.30, which is above the 0.50 de minimis and far below 90% of charged_total, so the outcome is PARTIAL_REFUND of SGD 3.30. Payment status is CHARGED with refund_issued_sgd 0.00, so this refund moves money the rider is presently carrying.",
+      "evidence_ids": ["EV-FARE-02838", "EV-TRIP-02838"],
+      "clause_ids": ["POL-RD-02"],
+      "relies_on": "derived.money.recomputed_fare",
+      "asserted_weight": 1.0
+    },
+    {
+      "text": "There is no pass-through line to correct, and none to count twice. The fare breakdown carries no ERP gantry lines at all, tolls_erp is 0.00, both the on-optimal-route and off-optimal-route ERP totals are 0.00, and the airport surcharge is 0.00 on a trip that neither originates nor ends at an airport. The POL-RD-02 refund of 3.30 is therefore neither enlarged nor duplicated by POL-RD-09.",
+      "evidence_ids": ["EV-FARE-02838"],
+      "clause_ids": ["POL-RD-09", "POL-RD-02"],
+      "relies_on": "derived.money.erp_lines.total",
+      "asserted_weight": 1.0
+    },
+    {
+      "text": "The billed distance is 13.2 km and the trace distance is 13.2 km, so the rider was billed for exactly the distance driven: there is no unbilled-distance shortfall and no DRIVER_COMPENSATION is available under POL-RD-04. The vehicle type is RYDE_X, not RYDE_POOL, so POL-RD-12's matched-itinerary baseline does not apply and the booked 10.0 km optimal is the correct comparator.",
+      "evidence_ids": ["EV-FARE-02838", "EV-GPS-02838", "EV-TRIP-02838"],
+      "clause_ids": ["POL-RD-04", "POL-RD-12"],
+      "relies_on": "distance_charged_km",
+      "asserted_weight": 1.0
+    },
+    {
+      "text": "No POL-RD-10 escalation trigger is engaged on this record. The trip identifiers match across trip record, trace and fare ledger; the trace is unimpaired with no gaps; the timestamps run forward; the refund of 3.30 is far below the SGD 150.00 ceiling and below charged_total. Limb (5) is not engaged either, because the driver's pin-move assertion cites no artifact and no clause, and an assertion that cites nothing cannot be invoked against a record field that no party has put in issue.",
+      "evidence_ids": ["EV-TRIP-02838", "EV-GPS-02838", "EV-FARE-02838"],
+      "clause_ids": ["POL-RD-10", "POL-RD-08"],
+      "relies_on": "derived.money.refund.payable",
+      "asserted_weight": 1.0
+    }
+  ]
+}</blockquote><p class="label">The driver advocate's own claims</p><blockquote>{
+  "claims": [
+    {
+      "text": "The drop-off point was relocated mid-trip, and the rider says so in her own words. trip_record.dropoff_amended_at reads 2026-08-12T14:07:23, and the only chat message on the trip, sent by the rider at 14:06:43, reads 'changed the pin to the other building'. Under POL-RD-05 the baseline for any deviation test is the optimal route between the AMENDED endpoints, not the booked 10.0 km figure against which this rider's claim is measured.",
+      "evidence_ids": ["EV-TRIP-02838", "EV-CHAT-02838"],
+      "clause_ids": ["POL-RD-05"],
+      "relies_on": "trip_record.dropoff_amended_at",
+      "asserted_weight": 1.0
+    },
+    {
+      "text": "The amended re-quote that POL-RD-05 requires is absent from the record: trip_record.amended_optimal_distance_km and amended_optimal_duration_min are both null even though dropoff_amended_at is set. POL-RD-05 provides that in exactly that state the clause cannot be run and the tribunal must not derive a substitute figure, and POL-RD-10(5) names 'a POL-RD-05 amendment with amended_optimal_distance_km null' as a mandatory escalation trigger. The case must go to a human reviewer, not produce a refund computed against the un-amended optimal route.",
+      "evidence_ids": ["EV-TRIP-02838"],
+      "clause_ids": ["POL-RD-05", "POL-RD-10"],
+      "relies_on": "trip_record.amended_optimal_distance_km",
+      "asserted_weight": 1.0
+    },
+    {
+      "text": "Escalation under POL-RD-10 is terminal: it replaces the ruling, no monetary outcome issues, and the disputed amount is held rather than collected or refunded. On a rider-filed dispute whose fare_breakdown.payment_status is CHARGED and whose refund_issued_sgd is 0.0, that is the outcome which leaves the driver's fare undisturbed pending human review instead of returning it.",
+      "evidence_ids": ["EV-FARE-02838"],
+      "clause_ids": ["POL-GEN-03", "POL-RD-10"],
+      "relies_on": "fare_breakdown.refund_issued_sgd",
+      "asserted_weight": 1.0
+    },
+    {
+      "text": "The rider's prima facie case shifts the burden to the driver under POL-RD-08, and the driver discharges it by naming a specific artifact and a specific clause from the list POL-RD-08 gives: EV-TRIP-02838, whose amendment timestamps are the artifact, and POL-RD-05, the exculpatory clause. The driver asserts no uncited traffic excuse, so nothing turns on POL-RD-08's bar against bare assertion.",
+      "evidence_ids": ["EV-TRIP-02838"],
+      "clause_ids": ["POL-RD-08", "POL-RD-05"],
+      "asserted_weight": 1.0
+    },
+    {
+      "text": "Even taking the rider's own trace figure at face value, the excess is 3.2 km over a 10.0 km booked optimal, 32%, which clears POL-RD-01's establishment gate (greater than 20% and greater than 0.8 km) but is not MATERIAL: POL-RD-01 sets materiality at more than 50% or more than 8.0 km absolute, and neither is met. The rider therefore cannot reach the FULL_REFUND uplift in POL-RD-06(b) on this trip's evidence, whatever else is decided.",
+      "evidence_ids": ["EV-GPS-02838", "EV-TRIP-02838"],
+      "clause_ids": ["POL-RD-01"],
+      "relies_on": "derived.deviation.excess_pct",
+      "asserted_weight": 1.0
+    },
+    {
+      "text": "Nor is any repeat-deviation pattern established under POL-RD-06: driver_profile.deviation_flags_90d is 1, below the three-flag threshold, and 1 divided by 207 completed_trips_90d is about 0.005, far below the 0.05 ratio threshold. Those two fields are the only profile fields POL-GEN-01 permits for this test, so the rider's remedy cannot be uplifted to FULL_REFUND and no driver-conduct referral follows from the profile.",
+      "evidence_ids": ["EV-DPROF-02838"],
+      "clause_ids": ["POL-RD-06", "POL-GEN-01"],
+      "relies_on": "driver_profile.deviation_flags_90d",
+      "asserted_weight": 1.0
+    },
+    {
+      "text": "The escalation does not rest on trace impairment, and the tribunal should name the right trigger. The gps_trace is clean for policy purposes: 104 fixes at a 10 second interval, 100.0% coverage, no gaps and a maximum gap of 0 seconds, so POL-RD-07(a) to (c) never fires and POL-RD-10(3) is not engaged. The trigger that fires is POL-RD-10(5), the missing amended re-quote.",
+      "evidence_ids": ["EV-GPS-02838"],
+      "clause_ids": ["POL-RD-07", "POL-RD-10"],
+      "relies_on": "max_gap_sec",
+      "asserted_weight": 1.0
+    },
+    {
+      "text": "No traffic advisory covers this corridor: EV-ADVIS-02838-01 is MISSING, carries weight 0.0 and its issue code is MISSING_ARTIFACT, and the driver asserts no external traffic cause. Under POL-RD-13 an absent advisory that no party cites is a gap in the bundle, not the POL-RD-10(5) contradiction of 'a closure asserted with no traffic_advisory', so it neither exonerates nor incriminates the driver and supplies no second escalation trigger.",
+      "evidence_ids": ["EV-ADVIS-02838-01"],
+      "clause_ids": ["POL-RD-13", "POL-RD-10"],
+      "asserted_weight": 0.0
+    }
+  ]
+}</blockquote></div><div class="pane" data-pane="3"><h3>Citation check</h3><p class="lead">computed by code - 19 kept, 0 discarded</p><p>The referee checked every claim against the artifacts it cites. 19 claim(s) kept, 0 discarded.</p><p class="label">Discarded claims and the referee's reason</p><ul><li>none</li></ul></div><div class="pane" data-pane="4"><h3>Judge</h3><p class="lead">asked of the model - 4 drafts, 1.0</p><p>The judge was asked 4 times on the same inputs: 3 sampled drafts and one with the parties' positions swapped. The vote agreement is 1.0, and the outcome recorded is carried.</p><p class="label">Each draft</p><ul><li>draft 1 (sampled, sides DRIVER_ADVOCATE, RIDER_ADVOCATE): Sent to a human reviewer <span class="mono">ESCALATE</span>, amount none, driver none, confidence 0.9</li><li>draft 2 (sampled, sides DRIVER_ADVOCATE, RIDER_ADVOCATE): Sent to a human reviewer <span class="mono">ESCALATE</span>, amount none, driver none, confidence 0.9</li><li>draft 3 (sampled, sides DRIVER_ADVOCATE, RIDER_ADVOCATE): Sent to a human reviewer <span class="mono">ESCALATE</span>, amount none, driver none, confidence 0.9</li><li>draft 4 (position_swapped, sides RIDER_ADVOCATE, DRIVER_ADVOCATE): Sent to a human reviewer <span class="mono">ESCALATE</span>, amount none, driver none, confidence 0.9</li></ul><p class="label">Each draft's own explanation</p><blockquote>To both parties &#8212; rider and driver &#8212; in the dispute over trip TRP-02838 (Northpoint City to Blk 7 Everton Park, 12 August 2026).
+
+This case goes to a human reviewer and no money moves today. The charge of SGD 19.32 stands as it is (EV-FARE-02838: payment_status CHARGED, refund_issued_sgd 0.00), and the disputed amount is held rather than collected or refunded.
+
+What the record shows. The GPS trace EV-GPS-02838 measures 13.2 km between the recorded pickup and drop-off against a booked optimal of 10.0 km on the trip record EV-TRIP-02838 &#8212; an excess of 3.2 km, or 32%, which clears both POL-RD-01 establishment gates (more than 20% of optimal and more than 0.8 km) but is not a MATERIAL deviation, which needs more than 50% or more than 8.0 km. The trace is unimpaired for policy purposes under POL-RD-07(a)&#8211;(c): 104 fixes at a 10-second interval, 100% coverage, no gaps, maximum gap 0 seconds. On the trace alone the rider's case would be the ordinary POL-RD-02 partial refund: charged_total 19.32 less a recomputed fare of 16.02 (= (3.80 + 0.75 &#215; 10.0 + 0.28 &#215; 14.0) &#215; the surge multiplier of 1.0 read on EV-FARE-02838, + 0.80 platform fee, no ERP, no surcharge, no waiting fee, no promo discount) = 3.30, above the 0.50 de minimis and well under 90% of charged_total.
+
+What stops that computation. The trip record shows the drop-off pin was amended mid-trip &#8212; dropoff_amended_at = 2026-08-12T14:07:23, with the drop-off moved from the original pin (1.3563, 103.8545) to (1.3591, 103.8522) &#8212; and the rider confirms it in the only chat message of the trip (EV-CHAT-02838, 14:06:43, 'changed the pin to the other building'). POL-RD-05 requires the deviation to be re-measured against the optimal route between the AMENDED endpoints, and it states that distance driven before the amendment is never counted as excess against the driver. That re-quote is not on the record: trip_record.amended_optimal_distance_km and amended_optimal_duration_min are both null even though the amendment timestamp is set. POL-RD-05 says in terms that in this state the clause cannot be run, that POL-RD-10(5) applies, and that no substitute figure may be derived. POL-RD-10(5) names 'a POL-RD-05 amendment with amended_optimal_distance_km null' as a mandatory escalation trigger, and POL-RD-10 is terminal: it replaces the ruling and no monetary outcome issues. It has fired, so I may not issue the 3.30 refund, and equally may not let the 19.32 stand as a final finding.
+
+Claims answered. The rider's submission that the excess simply 'stands at the measured 3.2 km' because the amended re-quote is missing is rejected on its consequence: the missing re-quote is the escalation trigger, not a defect to be worked around, and the booked 10.0 km optimal cannot be used as though nothing had been amended. The rider's submission that no POL-RD-10 trigger is engaged because the driver cited nothing is also rejected: the driver's brief cites EV-TRIP-02838 and POL-RD-05, and the amendment is a fact of the record itself, not merely an assertion. The driver's counterparty statement ('Rider moved the pin') is consistent with the record but cites no evidence ID and carries no weight of its own under POL-RD-08. The rider's POL-RD-02 arithmetic (3.30) is correct as arithmetic and is not applied, because the baseline is put in issue by the un-run POL-RD-05. Both sides agree the trace is unimpaired and the trigger is POL-RD-10(5) rather than POL-RD-10(3); that is accepted.
+
+Rest of the record, recorded for the reviewer. Trip identifiers match across EV-TRIP-02838, EV-GPS-02838 and EV-FARE-02838, and the timestamps run forward. No traffic advisory covers this trip: EV-ADVIS-02838-01 is MISSING, weight 0.0, issue MISSING_ARTIFACT, and the driver asserts no traffic cause, so POL-RD-03 excuses nothing and POL-RD-13 has no work to do. The chat message names no road and carries waypoint_hint null, so POL-RD-04's 200 m corroboration test cannot be run and no distance is excluded under POL-RD-04 or POL-RD-14. The fare is METERED with a null quoted fare, so POL-RD-11 does not close the route, and the vehicle is RYDE_X, not RYDE_POOL, so POL-RD-12's matched-itinerary baseline is not in play. There is no ERP or surcharge line to correct under POL-RD-09. The billed distance (13.2 km) equals the trace distance, so no DRIVER_COMPENSATION arises under POL-RD-04. driver_profile.deviation_flags_90d = 1 against 207 completed trips in 90 days is far below POL-RD-06's three-flag or 0.05-ratio pattern test, so there is no FULL_REFUND uplift on a future ruling and no driver-conduct referral. No clause produces a referral here, so the referrals list is empty.
+
+Confidence is 0.9, capped by the deciding artifact EV-TRIP-02838 at weight 1.0, which carries the amendment timestamp and the missing re-quote.
+
+What would resolve it. The reviewer needs the amended drop-off re-quote &#8212; the platform's optimal distance and duration between the pickup and the amended drop-off pin (amended_optimal_distance_km and amended_optimal_duration_min) &#8212; or confirmation that the mid-trip pin move did not affect the driven route. With that figure POL-RD-05 can run, the excess can be re-baselined with pre-amendment distance excluded, and the ordinary POL-RD-02 arithmetic can be applied; without it the excess cannot be measured against the correct baseline.</blockquote><blockquote>To both parties: this dispute cannot be finally decided on the record as it stands, so it goes to a human reviewer and the SGD 4.50 in dispute is held &#8212; not refunded to the rider and not released to the driver.
+
+Why it escalates. The trip record shows the drop-off pin was moved after booking (trip_record.dropoff_amended_at = 2026-08-12T14:07:23, matching the rider's own 14:06:43 chat message 'changed the pin to the other building'), but the amended route figures are null (amended_optimal_distance_km and amended_optimal_duration_min). POL-RD-05 requires the deviation to be re-measured between the amended endpoints using that stored re-quote, and it says in terms that where an amendment timestamp is present and the re-quote is null the clause cannot be run and POL-RD-10(5) applies; I may not derive a substitute. That is the trigger that fires: an exculpatory clause (POL-RD-05) invoked against a cited artifact (EV-TRIP-02838) that lacks the field the clause requires, which is POL-RD-10(5) exactly. POL-RD-10 escalation is terminal: no money moves and the amount is held.
+
+What I did not do, and why. I did not run the rider's POL-RD-02 arithmetic &#8212; charged_total 19.32 less a recomputed fare of 16.02 on the booked 10.0 km optimal gives a 3.30 refund &#8212; because that figure is right only on the booked baseline, and the amendment puts the baseline in issue; the rider's argument that POL-RD-10(5) is not engaged is rejected, since the record itself carries the amendment and the driver's claims cite EV-TRIP-02838 and POL-RD-05 rather than citing nothing. The trace is clean for policy purposes (104 fixes at a 10-second interval, 100% coverage, no gaps, max gap 0.0 s; trace_distance_km 13.2 against optimal 10.0 km = 3.2 km / 32% excess), so POL-RD-07(a)-(c) and POL-RD-10(3) are not engaged; the escalation rests on POL-RD-10(5) alone. No traffic advisory exists for this trip (EV-ADVIS-02838-01 is MISSING, weight 0.0, issue MISSING_ARTIFACT) and no party asserted an external traffic cause against it, so POL-RD-13 supplies no second trigger. There is no repeat-deviation pattern (driver_profile.deviation_flags_90d = 1 against a threshold of 3; 1/207 completed_trips_90d = 0.005 against 0.05), so POL-RD-06 changes nothing and produces no conduct referral, and POL-GEN-01 confines that test to those two fields. No billing-integrity referral: the fare carries no ERP gantry lines and no airport surcharge. No DRIVER_COMPENSATION: billed distance 13.2 km equals the trace distance, and the vehicle is RYDE_X, not RYDE_POOL. POL-RD-11 does not apply because fare_model is METERED and quoted_fare_sgd is null.
+
+What would resolve it: the amended optimal route and duration for the relocated drop-off, or a platform record showing the pin move did not change the route economics, so that POL-RD-01 and POL-RD-02 can be re-run on the correct baseline.</blockquote><blockquote>To both parties: the measurement itself is not in dispute, but the record will not let me turn it into a money ruling, so this goes to a human reviewer with the SGD 4.50 held rather than collected or refunded.
+
+WHAT IS AGREED. The GPS trace records 13.2 km driven between the recorded pickup and dropoff against a booked optimal of 10.0 km &#8212; an excess of 3.2 km, or 32%, which passes POL-RD-01's two establishment gates (more than 20% and more than 0.8 km) and does not reach MATERIAL (more than 50% or more than 8.0 km). The trace is unimpaired for policy purposes under POL-RD-07: 104 fixes at a 10-second interval, 100% coverage, no gaps, maximum gap 0 seconds, so limbs (a) to (c) never fire. EV-ADVIS-02838-01 is MISSING with weight 0.0, so no traffic advisory covered this corridor and no external cause excuses or reduces the excess (POL-RD-13); the empty advisory file is a gap in the bundle, not a second ground of escalation.
+
+WHY IT CANNOT BE RULED ON. trip_record.dropoff_amended_at is set (14:07:23) and the rider's own chat message at 14:06:43 &#8212; 'changed the pin to the other building' &#8212; confirms the pin was moved mid-trip. POL-RD-05 therefore requires the deviation to be re-measured between the AMENDED endpoints, and that figure is trip_record.amended_optimal_distance_km, which is null; amended_optimal_duration_min is null too. POL-RD-05 states that in exactly this state the clause cannot be run, that no substitute figure may be derived, and that POL-RD-10(5) applies. POL-RD-10(5) names this case expressly &#8212; 'a POL-RD-05 amendment with amended_optimal_distance_km null' &#8212; as a mandatory escalation trigger, and escalation under POL-RD-10 is TERMINAL.
+
+TO THE RIDER. Your claims that the deviation is established (POL-RD-01), that the trace is unimpaired (POL-RD-07), that the missing advisory exonerates no one (POL-RD-13), that the sole chat message (waypoint_hint null) excludes no distance (POL-RD-04/POL-RD-14), that the fare is METERED so POL-RD-11 does not close the distance route, that POL-RD-09 adds nothing (no ERP gantry lines, tolls 0.00, airport surcharge 0.00), and that no DRIVER_COMPENSATION arises (billed 13.2 km equals the traced 13.2 km; vehicle is RYDE_X, not RYDE_POOL) are all ACCEPTED. I do not rule on your POL-RD-02 arithmetic because the escalation displaces it; for transparency it would have been 19.32 charged less 16.02 recomputed = 3.30, but that computation is forbidden here because it would have to run against the un-amended 10.0 km optimal, which POL-RD-05 does not permit. Your final claim &#8212; that POL-RD-10(5) is not engaged because the driver's pin-move assertion cites no artifact &#8212; is REJECTED: the driver's advocate does cite EV-TRIP-02838 and POL-RD-05 and puts the missing amended re-quote squarely in issue, so the trigger fires on the clause's own terms.
+
+TO THE DRIVER. Your claims that the drop-off was relocated (POL-RD-05), that the amended re-quote is absent so the clause cannot run and POL-RD-10(5) fires, that the escalation is terminal (POL-GEN-03), that the deviation is not MATERIAL, that no repeat pattern is established under POL-RD-06 (deviation_flags_90d 1 is below 3, and 1/207 = 0.005 is below 0.05), and that the rider discharged her POL-RD-08 burden are ACCEPTED.
+
+WHAT WOULD RESOLVE IT: the stored amended re-quote &#8212; trip_record.amended_optimal_distance_km and trip_record.amended_optimal_duration_min for the relocated drop-off. With those two fields the reviewer can run POL-RD-05 and then the POL-RD-02 arithmetic, and the refund becomes a calculation rather than a guess.
+
+CONFIDENCE 0.90: the deciding fact is the trip record's own amendment-field state, carried by EV-TRIP-02838 at weight 1.0 and corroborated independently by the rider's contemporaneous chat message EV-CHAT-02838 at weight 1.0, so the cap is 1.0. No referral is added: there is no pattern for POL-RD-06(c), no unmatched charge line for POL-RD-09(4), and no no-show clause is in play. The monetary effect is nil because the escalation holds the amount.</blockquote><blockquote>To both parties: trip TRP-02838 (Northpoint City to Blk 7 Everton Park) is being sent to a human reviewer, and no money changes hands in the meantime. Both money fields are null and the disputed amount is held rather than collected or refunded.
+
+What the instruments alone would show. The GPS trace EV-GPS-02838 is the governing measurement under POL-RD-01, and it runs 13.2 km between the recorded pickup and the recorded dropoff against the booked optimal of 10.0 km on EV-TRIP-02838 &#8212; an excess of 3.2 km, or 32%. That clears both POL-RD-01 gates (more than 20% of optimal and more than 0.8 km), so a deviation is established, though it is not MATERIAL (neither more than 50% nor more than 8.0 km). The rider's burden under POL-RD-08 is therefore met and shifts to the driver, and the driver's one-line statement 'Rider moved the pin' cites no evidence and no clause, so it discharges nothing.
+
+Why the case must escalate anyway. EV-TRIP-02838 shows dropoff_amended_at = 2026-08-12 14:07:23, and the rider's own chat message of 14:06:43 on EV-CHAT-02838 ('changed the pin to the other building') confirms the drop-off pin was moved mid-trip. Under POL-RD-05 the deviation must be re-measured against the optimal route between the AMENDED endpoints, that figure being trip_record.amended_optimal_distance_km. That field, and amended_optimal_duration_min with it, is null. POL-RD-05 states in terms that where the amendment timestamp is present and the re-quote is missing, the clause cannot be run and POL-RD-10(5) applies, and that the Judge must not derive a substitute figure. POL-RD-10(5) names this very state &#8212; 'a POL-RD-05 amendment with amended_optimal_distance_km null' &#8212; as a mandatory escalation trigger. It has fired. Escalation under POL-RD-10 is terminal: it replaces the ruling, so the $19.32 charged on EV-FARE-02838 stands and no refund issues. What would resolve it is the platform's stored amended optimal distance and duration for the amended drop-off point; with that figure POL-RD-01 can be re-run against the correct baseline and the POL-RD-02 arithmetic completed. On this record we cannot know whether the 3.2 km excess survives the pin move.
+
+For transparency, had POL-RD-05 been runnable: the fare_model is METERED with quoted_fare_sgd null, so POL-RD-11 does not close the distance-and-time route and POL-RD-02 would run. charged_total is 19.32; recomputed_fare = (3.80 + 0.75 x 10.0 + 0.28 x 14.0) x 1.0 (surge read from fare_breakdown.surge_multiplier) + 0.80 platform fee = 16.02; refund = 3.30. That is the figure the rider's advocate asks for, and it is not awarded because the escalation replaces it.
+
+Remaining claims, answered. The trace is clean for policy purposes under POL-RD-07 (104 fixes, 100.0% coverage, 10-second interval, no gaps, 0.0 s maximum gap), so escalation does not rest on trace integrity and no independent-corroboration question arises. The missing traffic advisory EV-ADVIS-02838-01 (weight 0.0, issue MISSING_ARTIFACT) is a gap in the bundle, not a contradiction: no party asserts an external traffic cause, so under POL-RD-13 it neither exonerates the driver nor supplies a second escalation trigger. The chat message names no road and carries waypoint_hint = null, so POL-RD-04's corroboration test cannot be run and no distance is excluded; and because the trace corroborates no instruction, POL-RD-14 and POL-RD-10(7) are not engaged. No repeat-deviation pattern is established under POL-RD-06 (deviation_flags_90d = 1, below 3; 1/207 = 0.005, below the 0.05 ratio), so there is no FULL_REFUND uplift and no driver-conduct referral. There is no ERP line and no airport surcharge to correct, so POL-RD-09 produces no billing-integrity referral; and billed distance (13.2 km) equals trace distance (13.2 km), so no unbilled-distance compensation arises under POL-RD-04. The rider's contention that no POL-RD-10 trigger fires is rejected: trigger (5) is engaged by the missing amended re-quote, independently of the trace. No clause on this record produces a referral.</blockquote></div><div class="pane" data-pane="5"><h3>Floor and triggers</h3><p class="lead">computed by code - confidence 0.9 against the floor 0.7</p><p>The confidence recorded for this case is 0.9 against the floor of 0.7 stated by POL-GEN-02.</p><p>The escalation reason is the judge escalated under the policy <span class="mono">JUDGE_ESCALATE</span>.</p></div><div class="pane" data-pane="6"><h3>Outcome</h3><p class="lead">the outcome - the judge escalated under the policy</p><p>Sent to a reviewer, fee held: the judge escalated under the policy <span class="mono">JUDGE_ESCALATE</span>.</p></div></div></section>
+<section role="tabpanel" id="panel-review" aria-labelledby="tab-review" data-panel="review" hidden><div class="card wide"><h2>The escalation packet</h2><p>Built by <span class="mono">ops.escalation</span> from this run. Its sha256 is <span class="mono">0401e9f752f952acb00e5329ecc6c761bbbe1ec3a35e10a56a6f3220138ec766</span>.</p><h3>The case</h3><p>ROUTE_DEVIATION &middot; filed by RIDER &middot; contested 4.5</p><h3>The trigger</h3><p>outcome carried &middot; threshold 3 &middot; valid 4 &middot; votes 4 &middot; agreement 1.0 &middot; unanimous True</p><h3>The judge's explanation, verbatim</h3><blockquote>To both parties &#8212; rider and driver &#8212; in the dispute over trip TRP-02838 (Northpoint City to Blk 7 Everton Park, 12 August 2026).
+
+This case goes to a human reviewer and no money moves today. The charge of SGD 19.32 stands as it is (EV-FARE-02838: payment_status CHARGED, refund_issued_sgd 0.00), and the disputed amount is held rather than collected or refunded.
+
+What the record shows. The GPS trace EV-GPS-02838 measures 13.2 km between the recorded pickup and drop-off against a booked optimal of 10.0 km on the trip record EV-TRIP-02838 &#8212; an excess of 3.2 km, or 32%, which clears both POL-RD-01 establishment gates (more than 20% of optimal and more than 0.8 km) but is not a MATERIAL deviation, which needs more than 50% or more than 8.0 km. The trace is unimpaired for policy purposes under POL-RD-07(a)&#8211;(c): 104 fixes at a 10-second interval, 100% coverage, no gaps, maximum gap 0 seconds. On the trace alone the rider's case would be the ordinary POL-RD-02 partial refund: charged_total 19.32 less a recomputed fare of 16.02 (= (3.80 + 0.75 &#215; 10.0 + 0.28 &#215; 14.0) &#215; the surge multiplier of 1.0 read on EV-FARE-02838, + 0.80 platform fee, no ERP, no surcharge, no waiting fee, no promo discount) = 3.30, above the 0.50 de minimis and well under 90% of charged_total.
+
+What stops that computation. The trip record shows the drop-off pin was amended mid-trip &#8212; dropoff_amended_at = 2026-08-12T14:07:23, with the drop-off moved from the original pin (1.3563, 103.8545) to (1.3591, 103.8522) &#8212; and the rider confirms it in the only chat message of the trip (EV-CHAT-02838, 14:06:43, 'changed the pin to the other building'). POL-RD-05 requires the deviation to be re-measured against the optimal route between the AMENDED endpoints, and it states that distance driven before the amendment is never counted as excess against the driver. That re-quote is not on the record: trip_record.amended_optimal_distance_km and amended_optimal_duration_min are both null even though the amendment timestamp is set. POL-RD-05 says in terms that in this state the clause cannot be run, that POL-RD-10(5) applies, and that no substitute figure may be derived. POL-RD-10(5) names 'a POL-RD-05 amendment with amended_optimal_distance_km null' as a mandatory escalation trigger, and POL-RD-10 is terminal: it replaces the ruling and no monetary outcome issues. It has fired, so I may not issue the 3.30 refund, and equally may not let the 19.32 stand as a final finding.
+
+Claims answered. The rider's submission that the excess simply 'stands at the measured 3.2 km' because the amended re-quote is missing is rejected on its consequence: the missing re-quote is the escalation trigger, not a defect to be worked around, and the booked 10.0 km optimal cannot be used as though nothing had been amended. The rider's submission that no POL-RD-10 trigger is engaged because the driver cited nothing is also rejected: the driver's brief cites EV-TRIP-02838 and POL-RD-05, and the amendment is a fact of the record itself, not merely an assertion. The driver's counterparty statement ('Rider moved the pin') is consistent with the record but cites no evidence ID and carries no weight of its own under POL-RD-08. The rider's POL-RD-02 arithmetic (3.30) is correct as arithmetic and is not applied, because the baseline is put in issue by the un-run POL-RD-05. Both sides agree the trace is unimpaired and the trigger is POL-RD-10(5) rather than POL-RD-10(3); that is accepted.
+
+Rest of the record, recorded for the reviewer. Trip identifiers match across EV-TRIP-02838, EV-GPS-02838 and EV-FARE-02838, and the timestamps run forward. No traffic advisory covers this trip: EV-ADVIS-02838-01 is MISSING, weight 0.0, issue MISSING_ARTIFACT, and the driver asserts no traffic cause, so POL-RD-03 excuses nothing and POL-RD-13 has no work to do. The chat message names no road and carries waypoint_hint null, so POL-RD-04's 200 m corroboration test cannot be run and no distance is excluded under POL-RD-04 or POL-RD-14. The fare is METERED with a null quoted fare, so POL-RD-11 does not close the route, and the vehicle is RYDE_X, not RYDE_POOL, so POL-RD-12's matched-itinerary baseline is not in play. There is no ERP or surcharge line to correct under POL-RD-09. The billed distance (13.2 km) equals the trace distance, so no DRIVER_COMPENSATION arises under POL-RD-04. driver_profile.deviation_flags_90d = 1 against 207 completed trips in 90 days is far below POL-RD-06's three-flag or 0.05-ratio pattern test, so there is no FULL_REFUND uplift on a future ruling and no driver-conduct referral. No clause produces a referral here, so the referrals list is empty.
+
+Confidence is 0.9, capped by the deciding artifact EV-TRIP-02838 at weight 1.0, which carries the amendment timestamp and the missing re-quote.
+
+What would resolve it. The reviewer needs the amended drop-off re-quote &#8212; the platform's optimal distance and duration between the pickup and the amended drop-off pin (amended_optimal_distance_km and amended_optimal_duration_min) &#8212; or confirmation that the mid-trip pin move did not affect the driven route. With that figure POL-RD-05 can run, the excess can be re-baselined with pre-amendment distance excluded, and the ordinary POL-RD-02 arithmetic can be applied; without it the excess cannot be measured against the correct baseline.
+
+The judge was asked 4 times on the same inputs and every draft agreed on this ruling, so it is carried unanimously (vote agreement 1.00).</blockquote><h3>The drafts</h3><table><thead><tr><th>Draft</th><th>Ruling</th><th>Amount</th><th>Confidence</th><th>State</th><th>Abstention</th></tr></thead><tbody><tr><td>1</td><td>Sent to a human reviewer <span class="mono">ESCALATE</span></td><td></td><td>0.9</td><td>valid</td><td>none</td></tr><tr><td>2</td><td>Sent to a human reviewer <span class="mono">ESCALATE</span></td><td></td><td>0.9</td><td>valid</td><td>none</td></tr><tr><td>3</td><td>Sent to a human reviewer <span class="mono">ESCALATE</span></td><td></td><td>0.9</td><td>valid</td><td>none</td></tr><tr><td>4</td><td>Sent to a human reviewer <span class="mono">ESCALATE</span></td><td></td><td>0.9</td><td>valid</td><td>none</td></tr></tbody></table><h3>The advocate briefs, as the packet carries them</h3><ul><li>RIDER: The GPS trace measures 13.2 km between the recorded pickup and the recorded dropoff against a booked optimal of 10.0 km, an excess of 3.2 km or 32% of optimal. Both POL-RD-01 gates are passed: the excess is greater than 20% of optimal and greater than 0.8 km in absolute terms, so the route deviation is ESTABLISHED. The trace figure is the governing measurement under POL-RD-01 and it happens to agree with the trip record's convenience copy, so no conflict arises. KEPT; The trace is unimpaired for policy purposes under POL-RD-07: 104 fixes over 100% coverage at a 10-second sample interval, zero gaps, and a maximum gap of 0.0 seconds. None of limbs (a) to (c) fires, so the rider's proof needs no independent corroboration, excess is measured on the trace as recorded, and POL-RD-07(i) to (iii) and POL-RD-10(3) are not engaged. KEPT; No traffic advisory covers this trip. EV-ADVIS-02838-01 is MISSING, carries no payload and has weight_multiplier 0.0 with issue code MISSING_ARTIFACT, and its absence is itself citable. POL-RD-03's comparison therefore cannot be run: there is no advisory naming a road the optimal route traverses, so no external traffic cause can reduce or excuse the 3.2 km excess, and any such excuse carries no weight under POL-RD-08 and POL-RD-13. KEPT; The one message on the trip is the rider's own 'changed the pin to the other building', sent at 14:06:43 after the meter started at 14:03:23, and it exonerates no distance. Its waypoint_hint is null and it names no road, so POL-RD-04's corroboration test cannot be run and that clause is unavailable on the record; and even treated as an instruction, the trace never shows the vehicle travelling to the place it names, so under POL-RD-14 the instruction caused none of the measured excess and no distance is excluded. KEPT; The dropoff pin was amended at 14:07:23, but the trip record stores no amended optimal: amended_optimal_distance_km and amended_optimal_duration_min are both null. POL-RD-05 accordingly cannot be run, no substitute figure may be derived from the booked 10.0 km optimal, and neither the re-measurement nor the partial exclusion of pre-amendment distance can be applied. The excess stands at the measured 3.2 km for the POL-RD-01 and POL-RD-02 arithmetic. KEPT; The rider's burden under POL-RD-08 is discharged. Trip identifier TRP-02838 appears on the trip record, the trace and the fare breakdown alike, and the excess is measured from a trace that is not impaired, so the burden shifts to the driver; the driver's counterparty statement ('Rider moved the pin') cites no evidence id and no clause and is discarded under POL-RD-08 as discharging nothing. The rider's own profile adds no corroboration requirement either: deviation_claims_60d is 1, well below the POL-RD-08 threshold of 4, and POL-GEN-01 permits that field to be used for this test only. KEPT; The fare model on this trip is METERED and quoted_fare_sgd is null, so POL-RD-11 does not close the distance-and-time route: the rider was billed per kilometre and per minute actually driven, and POL-RD-02 governs the remedy. The refund is arithmetic, not discretionary. KEPT; Running POL-RD-02 on the booked optimal route: (3.80 + 0.75 x 10.0 + 0.28 x 14.0) = 15.22, multiplied by the surge multiplier of 1.0 read from fare_breakdown.surge_multiplier, plus the 0.80 platform fee, with no ERP, no surcharge, no waiting-time fee and no promo discount, gives a recomputed fare of 16.02. Refund = 19.32 charged_total less 16.02 = 3.30, which is above the 0.50 de minimis and far below 90% of charged_total, so the outcome is PARTIAL_REFUND of SGD 3.30. Payment status is CHARGED with refund_issued_sgd 0.00, so this refund moves money the rider is presently carrying. KEPT; There is no pass-through line to correct, and none to count twice. The fare breakdown carries no ERP gantry lines at all, tolls_erp is 0.00, both the on-optimal-route and off-optimal-route ERP totals are 0.00, and the airport surcharge is 0.00 on a trip that neither originates nor ends at an airport. The POL-RD-02 refund of 3.30 is therefore neither enlarged nor duplicated by POL-RD-09. KEPT; The billed distance is 13.2 km and the trace distance is 13.2 km, so the rider was billed for exactly the distance driven: there is no unbilled-distance shortfall and no DRIVER_COMPENSATION is available under POL-RD-04. The vehicle type is RYDE_X, not RYDE_POOL, so POL-RD-12's matched-itinerary baseline does not apply and the booked 10.0 km optimal is the correct comparator. KEPT; No POL-RD-10 escalation trigger is engaged on this record. The trip identifiers match across trip record, trace and fare ledger; the trace is unimpaired with no gaps; the timestamps run forward; the refund of 3.30 is far below the SGD 150.00 ceiling and below charged_total. Limb (5) is not engaged either, because the driver's pin-move assertion cites no artifact and no clause, and an assertion that cites nothing cannot be invoked against a record field that no party has put in issue. KEPT</li><li>DRIVER: The drop-off point was relocated mid-trip, and the rider says so in her own words. trip_record.dropoff_amended_at reads 2026-08-12T14:07:23, and the only chat message on the trip, sent by the rider at 14:06:43, reads 'changed the pin to the other building'. Under POL-RD-05 the baseline for any deviation test is the optimal route between the AMENDED endpoints, not the booked 10.0 km figure against which this rider's claim is measured. KEPT; The amended re-quote that POL-RD-05 requires is absent from the record: trip_record.amended_optimal_distance_km and amended_optimal_duration_min are both null even though dropoff_amended_at is set. POL-RD-05 provides that in exactly that state the clause cannot be run and the tribunal must not derive a substitute figure, and POL-RD-10(5) names 'a POL-RD-05 amendment with amended_optimal_distance_km null' as a mandatory escalation trigger. The case must go to a human reviewer, not produce a refund computed against the un-amended optimal route. KEPT; Escalation under POL-RD-10 is terminal: it replaces the ruling, no monetary outcome issues, and the disputed amount is held rather than collected or refunded. On a rider-filed dispute whose fare_breakdown.payment_status is CHARGED and whose refund_issued_sgd is 0.0, that is the outcome which leaves the driver's fare undisturbed pending human review instead of returning it. KEPT; The rider's prima facie case shifts the burden to the driver under POL-RD-08, and the driver discharges it by naming a specific artifact and a specific clause from the list POL-RD-08 gives: EV-TRIP-02838, whose amendment timestamps are the artifact, and POL-RD-05, the exculpatory clause. The driver asserts no uncited traffic excuse, so nothing turns on POL-RD-08's bar against bare assertion. KEPT; Even taking the rider's own trace figure at face value, the excess is 3.2 km over a 10.0 km booked optimal, 32%, which clears POL-RD-01's establishment gate (greater than 20% and greater than 0.8 km) but is not MATERIAL: POL-RD-01 sets materiality at more than 50% or more than 8.0 km absolute, and neither is met. The rider therefore cannot reach the FULL_REFUND uplift in POL-RD-06(b) on this trip's evidence, whatever else is decided. KEPT; Nor is any repeat-deviation pattern established under POL-RD-06: driver_profile.deviation_flags_90d is 1, below the three-flag threshold, and 1 divided by 207 completed_trips_90d is about 0.005, far below the 0.05 ratio threshold. Those two fields are the only profile fields POL-GEN-01 permits for this test, so the rider's remedy cannot be uplifted to FULL_REFUND and no driver-conduct referral follows from the profile. KEPT; The escalation does not rest on trace impairment, and the tribunal should name the right trigger. The gps_trace is clean for policy purposes: 104 fixes at a 10 second interval, 100.0% coverage, no gaps and a maximum gap of 0 seconds, so POL-RD-07(a) to (c) never fires and POL-RD-10(3) is not engaged. The trigger that fires is POL-RD-10(5), the missing amended re-quote. KEPT; No traffic advisory covers this corridor: EV-ADVIS-02838-01 is MISSING, carries weight 0.0 and its issue code is MISSING_ARTIFACT, and the driver asserts no external traffic cause. Under POL-RD-13 an absent advisory that no party cites is a gap in the bundle, not the POL-RD-10(5) contradiction of 'a closure asserted with no traffic_advisory', so it neither exonerates nor incriminates the driver and supplies no second escalation trigger. KEPT</li></ul><h3>The admissibility report</h3><table><thead><tr><th>Artifact</th><th>Type</th><th>Source</th><th>Status</th><th>Weight</th></tr></thead><tbody><tr><td>EV-TRIP-02838</td><td>TRIP_RECORD</td><td>PLATFORM_TELEMETRY</td><td>COMPLETE</td><td>1.0</td></tr><tr><td>EV-GPS-02838</td><td>GPS_TRACE</td><td>PLATFORM_TELEMETRY</td><td>COMPLETE</td><td>1.0</td></tr><tr><td>EV-CHAT-02838</td><td>CHAT_LOG</td><td>PLATFORM_TELEMETRY</td><td>COMPLETE</td><td>1.0</td></tr><tr><td>EV-FARE-02838</td><td>FARE_BREAKDOWN</td><td>PAYMENTS_LEDGER</td><td>COMPLETE</td><td>1.0</td></tr><tr><td>EV-RPROF-02838</td><td>RIDER_PROFILE</td><td>PLATFORM_TELEMETRY</td><td>COMPLETE</td><td>1.0</td></tr><tr><td>EV-DPROF-02838</td><td>DRIVER_PROFILE</td><td>PLATFORM_TELEMETRY</td><td>COMPLETE</td><td>1.0</td></tr><tr><td>EV-ADVIS-02838-01</td><td>TRAFFIC_ADVISORY</td><td>THIRD_PARTY_LTA</td><td>MISSING</td><td>0.0</td></tr></tbody></table><h3>Every clause id relied on</h3><p class="mono">POL-GEN-01, POL-GEN-03, POL-RD-01, POL-RD-02, POL-RD-03, POL-RD-04, POL-RD-05, POL-RD-06, POL-RD-07, POL-RD-08, POL-RD-09, POL-RD-10, POL-RD-11, POL-RD-12, POL-RD-13, POL-RD-14</p><h3>The ruling</h3><p>Sent to a human reviewer <span class="mono">ESCALATE</span> &middot; amount  &middot; driver  &middot; confidence 0.9</p><h3>The timeline</h3><table><thead><tr><th>Time</th><th>Event</th><th>Role or draft</th><th>Seconds</th></tr></thead><tbody><tr><td>2026-10-09T17:20:09.618830+00:00</td><td>case_start</td><td></td><td></td></tr><tr><td>2026-10-09T17:21:09.440613+00:00</td><td>agent_call</td><td>RIDER_ADVOCATE</td><td>59.80892279185355</td></tr><tr><td>2026-10-09T17:21:09.448485+00:00</td><td>agent_call</td><td>DRIVER_ADVOCATE</td><td>46.625421250006184</td></tr><tr><td>2026-10-09T17:21:09.454401+00:00</td><td>referee_decision</td><td></td><td></td></tr><tr><td>2026-10-09T17:21:09.454632+00:00</td><td>referee_decision</td><td></td><td></td></tr><tr><td>2026-10-09T17:21:09.454905+00:00</td><td>referee_decision</td><td></td><td></td></tr><tr><td>2026-10-09T17:21:09.455090+00:00</td><td>referee_decision</td><td></td><td></td></tr><tr><td>2026-10-09T17:21:09.455269+00:00</td><td>referee_decision</td><td></td><td></td></tr><tr><td>2026-10-09T17:21:09.455453+00:00</td><td>referee_decision</td><td></td><td></td></tr><tr><td>2026-10-09T17:21:09.455612+00:00</td><td>referee_decision</td><td></td><td></td></tr><tr><td>2026-10-09T17:21:09.455759+00:00</td><td>referee_decision</td><td></td><td></td></tr><tr><td>2026-10-09T17:21:09.455925+00:00</td><td>referee_decision</td><td></td><td></td></tr><tr><td>2026-10-09T17:21:09.456090+00:00</td><td>referee_decision</td><td></td><td></td></tr><tr><td>2026-10-09T17:21:09.456240+00:00</td><td>referee_decision</td><td></td><td></td></tr><tr><td>2026-10-09T17:21:09.456396+00:00</td><td>referee_decision</td><td></td><td></td></tr><tr><td>2026-10-09T17:21:09.456555+00:00</td><td>referee_decision</td><td></td><td></td></tr><tr><td>2026-10-09T17:21:09.456698+00:00</td><td>referee_decision</td><td></td><td></td></tr><tr><td>2026-10-09T17:21:09.456855+00:00</td><td>referee_decision</td><td></td><td></td></tr><tr><td>2026-10-09T17:21:09.457008+00:00</td><td>referee_decision</td><td></td><td></td></tr><tr><td>2026-10-09T17:21:09.457153+00:00</td><td>referee_decision</td><td></td><td></td></tr><tr><td>2026-10-09T17:21:09.457303+00:00</td><td>referee_decision</td><td></td><td></td></tr><tr><td>2026-10-09T17:21:09.457454+00:00</td><td>referee_decision</td><td></td><td></td></tr><tr><td>2026-10-09T17:22:23.349062+00:00</td><td>agent_call</td><td>JUDGE</td><td>47.10083879204467</td></tr><tr><td>2026-10-09T17:22:23.356427+00:00</td><td>judge_draft</td><td>draft 1</td><td></td></tr><tr><td>2026-10-09T17:22:23.357083+00:00</td><td>agent_call</td><td>JUDGE</td><td>52.91838129120879</td></tr><tr><td>2026-10-09T17:22:23.357768+00:00</td><td>judge_draft</td><td>draft 2</td><td></td></tr><tr><td>2026-10-09T17:22:23.358179+00:00</td><td>agent_call</td><td>JUDGE</td><td>51.72552091698162</td></tr><tr><td>2026-10-09T17:22:23.358722+00:00</td><td>judge_draft</td><td>draft 3</td><td></td></tr><tr><td>2026-10-09T17:22:23.359028+00:00</td><td>agent_call</td><td>JUDGE</td><td>73.84145579091273</td></tr><tr><td>2026-10-09T17:22:23.359564+00:00</td><td>judge_draft</td><td>draft 4</td><td></td></tr><tr><td>2026-10-09T17:22:23.359879+00:00</td><td>vote</td><td></td><td></td></tr><tr><td>2026-10-09T17:22:23.360161+00:00</td><td>ruling</td><td></td><td></td></tr></tbody></table></div><div class="card wide" id="review-form" data-run-dir="runs/dev-v2-ext/policy-v6/deepseek-deepseek-flash" data-case="2838" data-packet="0401e9f752f952acb00e5329ecc6c761bbbe1ec3a35e10a56a6f3220138ec766" data-ruling="ESCALATE" data-evidence="EV-TRIP-02838 EV-GPS-02838 EV-CHAT-02838 EV-FARE-02838 EV-RPROF-02838 EV-DPROF-02838 EV-ADVIS-02838-01" data-clauses="POL-GEN-01 POL-GEN-03 POL-RD-01 POL-RD-02 POL-RD-03 POL-RD-04 POL-RD-05 POL-RD-06 POL-RD-07 POL-RD-08 POL-RD-09 POL-RD-10 POL-RD-11 POL-RD-12 POL-RD-13 POL-RD-14" data-reason-min="20"><h2>The decision</h2><p>POL-GEN-06(4) names exactly four decisions:</p><p><label><input type="radio" name="decision" value="ADOPT" checked> Adopt the system's proposed ruling.</label></p><p><label><input type="radio" name="decision" value="VARY"> Vary: choose a ruling and a remedy from the money block's options.</label></p><p><label><input type="radio" name="decision" value="REQUEST_EVIDENCE"> Request evidence: name the record-type items required.</label></p><p><label><input type="radio" name="decision" value="REFER_COMPLIANCE"> Refer compliance: a safety, fraud or conduct matter.</label></p><p><label>Reviewer <input id="reviewer" type="text" placeholder="a name"></label></p><p><label for="reason">Reason</label></p><textarea id="reason" rows="4" style="width:100%"></textarea><p id="verdict"></p><p><button type="button" id="copy">Copy the closing command</button> <span id="copy-status" class="empty"></span></p><pre id="command"></pre><p><strong>This form closes nothing by itself: there is no server.</strong> It checks the reason and builds the command; recording the decision is a command a person runs.</p></div></section>
+<footer class="foot"><span>commit 9ca7313</span><span>tag freeze-2026-10-09</span><span>policy version 6</span><span>model deepseek/deepseek-flash</span></footer>
+</main>
+
+<script>
+(function(){
+  "use strict";
+  function each(selector, root){
+    return Array.prototype.slice.call((root || document).querySelectorAll(selector));
+  }
+
+  // Tabs: a button with data-tab shows the panel with the same data-panel.
+  var tabs = each("[data-tab]");
+  tabs.forEach(function(tab){
+    tab.addEventListener("click", function(){
+      var name = tab.getAttribute("data-tab");
+      tabs.forEach(function(other){
+        var on = other === tab;
+        other.setAttribute("aria-selected", on ? "true" : "false");
+        other.className = on ? "tab tab-on" : "tab";
+      });
+      each("[data-panel]").forEach(function(panel){
+        panel.hidden = panel.getAttribute("data-panel") !== name;
+      });
+    });
+  });
+
+  // The stepper: a button with data-step shows the pane with the same data-pane.
+  each(".stepper").forEach(function(stepper){
+    var buttons = each("button[data-step]", stepper);
+    buttons.forEach(function(button){
+      button.addEventListener("click", function(){
+        buttons.forEach(function(other){
+          other.className = other === button ? "on" : "";
+        });
+        var detail = stepper.parentElement.querySelector(".detail");
+        if (!detail){ return; }
+        each(".pane", detail).forEach(function(pane){
+          pane.className = pane.getAttribute("data-pane") === button.getAttribute("data-step") ? "pane on" : "pane";
+        });
+      });
+    });
+  });
+
+  var table = document.getElementById("queue");
+  if (table){
+    var body = table.tBodies[0];
+    var rows = Array.prototype.slice.call(body.rows);
+    var state = {column: null, up: true};
+
+    function value(row, column){
+      var cell = row.querySelector('td[data-column="' + column + '"]');
+      if (!cell){ return ""; }
+      var sort = cell.getAttribute("data-sort");
+      return sort === null ? cell.textContent.trim() : sort;
+    }
+
+    function numeric(text){
+      return /^-?[0-9]+(\.[0-9]+)?$/.test(text);
+    }
+
+    function sortBy(column){
+      if (state.column === column){ state.up = !state.up; }
+      else { state.column = column; state.up = true; }
+      rows.sort(function(a, b){
+        var x = value(a, column), y = value(b, column);
+        if (numeric(x) && numeric(y)){
+          return state.up ? Number(x) - Number(y) : Number(y) - Number(x);
+        }
+        if (x === y){ return 0; }
+        return state.up ? (x < y ? -1 : 1) : (x < y ? 1 : -1);
+      });
+      rows.forEach(function(row){ body.appendChild(row); });
+    }
+
+    each("th[data-column]", table).forEach(function(head){
+      head.classList.add("sortable");
+      head.addEventListener("click", function(){
+        sortBy(head.getAttribute("data-column"));
+      });
+    });
+
+    var chosen = {outcome: "all", set: "all"};
+    function apply(){
+      var shown = 0;
+      rows.forEach(function(row){
+        var okOutcome = chosen.outcome === "all" || row.getAttribute("data-outcome") === chosen.outcome;
+        var okSet = chosen.set === "all" || row.getAttribute("data-set") === chosen.set;
+        var ok = okOutcome && okSet;
+        row.hidden = !ok;
+        if (ok){ shown += 1; }
+      });
+      var count = document.getElementById("shown");
+      if (count){ count.textContent = String(shown); }
+    }
+
+    each("[data-filter]").forEach(function(button){
+      button.addEventListener("click", function(){
+        chosen.outcome = button.getAttribute("data-filter");
+        each("[data-filter]").forEach(function(other){
+          other.className = other === button ? "on" : "";
+        });
+        apply();
+      });
+    });
+
+    var picker = document.getElementById("set-picker");
+    if (picker){
+      picker.addEventListener("change", function(){
+        chosen.set = picker.value;
+        apply();
+      });
+    }
+    apply();
+  }
+
+  var form = document.getElementById("review-form");
+  if (form){
+    var reason = document.getElementById("reason");
+    var verdict = document.getElementById("verdict");
+    var output = document.getElementById("command");
+    var evidence = (form.getAttribute("data-evidence") || "").split(" ").filter(Boolean);
+    var clauses = (form.getAttribute("data-clauses") || "").split(" ").filter(Boolean);
+    var floor = Number(form.getAttribute("data-reason-min") || "0");
+
+    function cited(text, ids){
+      for (var i = 0; i < ids.length; i += 1){
+        if (text.indexOf(ids[i]) >= 0){ return true; }
+      }
+      return false;
+    }
+
+    function check(){
+      var text = reason.value.trim();
+      var problems = [];
+      if (text.length < floor){
+        problems.push("the reason is " + text.length + " characters; POL-GEN-06(6) requires at least " + floor);
+      }
+      if (!cited(text, evidence)){
+        problems.push("the reason cites no evidence id of this case");
+      }
+      if (!cited(text, clauses)){
+        problems.push("the reason cites no clause id of this case");
+      }
+      return {text: text, problems: problems};
+    }
+
+    function decision(){
+      var picked = form.querySelector('input[name="decision"]:checked');
+      return picked ? picked.value : "";
+    }
+
+    function command(){
+      var text = reason.value.trim();
+      return "python3 -m ops.review --run-dir " + form.getAttribute("data-run-dir") +
+        " --case " + form.getAttribute("data-case") +
+        " --packet-sha256 " + form.getAttribute("data-packet") +
+        " close --ruling " + form.getAttribute("data-ruling") +
+        ' --closed-by "' + (document.getElementById("reviewer").value || "reviewer") + '"' +
+        ' --summary "' + decision() + '"' +
+        ' --reason "' + text.replace(/"/g, "'") + '"';
+    }
+
+    function refresh(){
+      var state = check();
+      if (state.problems.length){
+        verdict.className = "err";
+        verdict.textContent = state.problems.join("; ");
+      } else {
+        verdict.className = "ok";
+        verdict.textContent = "The reason is long enough and cites this case's own evidence and clause ids.";
+      }
+      output.textContent = command();
+    }
+
+    form.addEventListener("input", refresh);
+    form.addEventListener("change", refresh);
+
+    var copy = document.getElementById("copy");
+    if (copy){
+      copy.addEventListener("click", function(){
+        var text = command();
+        var done = function(){
+          var status = document.getElementById("copy-status");
+          if (status){ status.textContent = "Copied."; }
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText){
+          navigator.clipboard.writeText(text).then(done, function(){
+            var status = document.getElementById("copy-status");
+            if (status){ status.textContent = "Select the command above and copy it by hand."; }
+          });
+        } else {
+          var status = document.getElementById("copy-status");
+          if (status){ status.textContent = "Select the command above and copy it by hand."; }
+        }
+      });
+    }
+    refresh();
+  }
+})();
+</script>
+</body>
+</html>

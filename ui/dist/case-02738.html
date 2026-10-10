@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Case 2738 - No-show fee</title>
+<style>
+/* The light theme is the default: the palette in :root is what a reader gets
+   when the system asks for no preference, and the dark palette below replaces
+   it only when the system asks for dark. The status colours move with it, so a
+   chip keeps the same contrast on either background. */
+:root{
+  --bg:#f3f4f6;--card:#ffffff;--line:#e5e7eb;--ink:#111827;--muted:#6b7280;
+  --soft:#f9fafb;--accent:#1d4ed8;--accent-wash:#e8effd;
+  --ok:#15803d;--ok-wash:#dcfce7;--bad:#b91c1c;--bad-wash:#fee2e2;
+  --warn:#92400e;--warn-wash:#fef3c7;--grey:#374151;--grey-wash:#f3f4f6;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#0f172a;--card:#1e293b;--line:#334155;--ink:#f1f5f9;--muted:#94a3b8;
+    --soft:#16213a;--accent:#93c5fd;--accent-wash:#1e293b;
+    --ok:#86efac;--ok-wash:#14532d;--bad:#fca5a5;--bad-wash:#7f1d1d;
+    --warn:#fcd34d;--warn-wash:#78350f;--grey:#cbd5e1;--grey-wash:#1e293b;}
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+h1{font-size:1.6rem;line-height:1.25;margin:0 0 6px}
+h2{font-size:1rem;margin:0 0 12px}
+h3{font-size:.92rem;margin:16px 0 6px}
+p{margin:.5em 0}
+.top{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line)}
+.top-in{max-width:1280px;margin:0 auto;padding:0 24px;height:56px;display:flex;align-items:center;gap:20px}
+.brand{display:inline-flex;align-items:center;gap:9px;font-weight:700;font-size:17px;text-decoration:none;color:var(--ink)}
+.mark{width:26px;height:26px;border-radius:7px;background:var(--accent);display:inline-flex;align-items:center;justify-content:center;flex:none}
+.nav{display:flex;gap:2px;flex-wrap:wrap}
+.nav a{padding:7px 12px;border-radius:8px;text-decoration:none;color:var(--muted);font-weight:500}
+.nav a.on{color:var(--ink);background:var(--soft);border:1px solid var(--line)}
+.mode{margin-left:auto;font-size:13px;color:var(--muted);white-space:nowrap}
+@media (max-width:700px){.mode{display:none}.top-in{gap:12px;padding:0 16px}}
+.wrap{max-width:1280px;margin:0 auto;padding:26px 24px 56px}
+@media (max-width:700px){.wrap{padding:18px 16px 40px}}
+.lede{color:var(--muted);margin:.3em 0 1.1em;max-width:78ch}
+.ids{color:var(--muted);font-size:.86rem;font-variant-numeric:tabular-nums;margin:0}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.85rem;word-break:break-word}
+.num{font-variant-numeric:tabular-nums}
+
+/* chips */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0}
+.chip{display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:999px;font-size:13px;font-weight:500;background:var(--grey-wash);color:var(--grey);border:1px solid var(--line)}
+.chip.ok{background:var(--ok-wash);color:var(--ok);border-color:transparent}
+.chip.bad{background:var(--bad-wash);color:var(--bad);border-color:transparent}
+.chip.warn{background:var(--warn-wash);color:var(--warn);border-color:transparent}
+
+/* featured cards */
+.featured{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:18px 0 22px}
+@media (max-width:960px){.featured{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.featured{grid-template-columns:minmax(0,1fr)}}
+.fcard{display:block;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;text-decoration:none;color:var(--ink)}
+.fcard:hover{border-color:var(--accent)}
+.fcard .fcase{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.fcard h2{font-size:.95rem;margin:2px 0 8px}
+.fcard p{margin:.25em 0;font-size:13px;color:var(--muted)}
+.fcard b{color:var(--ink);font-weight:600}
+
+/* figures */
+.figures{display:flex;flex-wrap:wrap;gap:14px;margin:0 0 22px}
+.figure{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 18px;min-width:168px;flex:1 1 168px}
+.figure .k{color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;margin:0 0 6px}
+.figure .v{font-size:1.3rem;font-weight:650;margin:0}
+.figure .s{color:var(--muted);font-size:.85rem;margin:4px 0 0}
+.figure.wide{flex:1 1 100%}
+.triggers{list-style:none;margin:0;padding:0}
+.triggers li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 14px;padding:4px 0;border-bottom:1px solid var(--line)}
+.triggers li:last-child{border-bottom:0}
+.triggers .n{font-weight:650;font-variant-numeric:tabular-nums}
+
+/* table */
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin:0 0 18px}
+.card.wide{padding:0;overflow:hidden}
+.card.wide>h2,.card.wide>p{padding:0 22px}
+.card.wide>h2{margin-top:18px}
+table{border-collapse:collapse;width:100%}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{color:var(--muted);font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover td{background:var(--soft)}
+th.sortable{cursor:pointer;user-select:none}
+td[data-column="time"],td[data-column="confidence"]{white-space:nowrap}
+td a{font-weight:600;text-decoration:none}
+
+/* case page */
+.pagehead{margin:0 0 18px}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;border-bottom:1px solid var(--line);margin:0 0 22px}
+.tabs button{appearance:none;border:0;background:transparent;color:var(--muted);font:inherit;font-weight:500;padding:9px 13px;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer}
+.tabs button.tab-on{color:var(--ink);border-bottom-color:var(--accent)}
+.verdict{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px 26px;display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:30px;margin:0 0 22px}
+.verdict .word{font-size:2.1rem;font-weight:700;letter-spacing:-.01em;line-height:1.1;margin:0}
+.verdict .code{color:var(--muted);margin:6px 0 0}
+.verdict .lbl{color:var(--muted);font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;margin:18px 0 4px}
+.verdict .why{margin:0;font-size:1rem}
+.verdict .after{margin:14px 0 0;font-size:.9rem;color:var(--muted)}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 20px;align-content:start;border-left:1px solid var(--line);padding-left:26px}
+.tiles div{display:flex;flex-direction:column;gap:2px}
+.tiles b{font-size:1.15rem;font-weight:650}
+.tiles span{font-size:.8rem;color:var(--muted)}
+@media (max-width:960px){.verdict{grid-template-columns:minmax(0,1fr)}.tiles{border-left:0;padding-left:0;border-top:1px solid var(--line);padding-top:16px}}
+.two{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:26px;align-items:start}
+@media (max-width:960px){.two{grid-template-columns:minmax(0,1fr)}}
+.sec{margin:0 0 22px}
+.sides{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:700px){.sides{grid-template-columns:minmax(0,1fr)}}
+.side{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 18px}
+.side header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.side header small{color:var(--muted)}
+.side ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px}
+.side li{line-height:1.5}
+.side li s{color:var(--muted)}
+.side .ref{color:var(--muted);font-size:.78rem;margin-left:4px;white-space:nowrap}
+.side .why{display:block;font-size:.82rem;color:var(--bad);margin-top:2px}
+
+/* rail */
+.rail{display:flex;flex-direction:column;gap:14px}
+.rail details{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:0 16px}
+.rail summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 0;font-weight:600;cursor:pointer}
+.rail summary::-webkit-details-marker{display:none}
+.rail summary span{font-weight:400;color:var(--muted);font-size:.82rem}
+.rail .in{padding:0 0 14px;font-size:.9rem}
+.map{background:var(--soft);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.map svg{display:block;width:100%;height:auto}
+.cap{color:var(--muted);font-size:.78rem;margin:6px 0 0}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:.78rem;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:16px;height:3px;vertical-align:middle;margin-right:5px;border-radius:2px}
+.legend i.dot{width:9px;height:9px;border-radius:50%}
+.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 14px;font-size:.88rem}
+
+/* stepper */
+.stepper{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin:0 0 10px}
+.stepper button{appearance:none;text-align:left;border:0;border-left:1px solid var(--line);background:transparent;font:inherit;color:inherit;cursor:pointer;padding:14px 16px;display:flex;flex-direction:column;gap:5px;position:relative}
+.stepper button:first-child{border-left:0}
+.stepper button .n{display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--muted)}
+.stepper button .n i{width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;background:var(--grey);font-style:normal}
+.stepper button .n i.llm{background:var(--accent)}
+.stepper button .n i.ok{background:var(--ok)}
+.stepper button .n i.bad{background:var(--bad)}
+.stepper button .t{font-weight:600}
+.stepper button .s{font-size:.78rem;color:var(--muted)}
+.stepper button.on{background:var(--soft)}
+.stepper button.on::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--accent)}
+@media (max-width:900px){.stepper{grid-template-columns:repeat(3,minmax(0,1fr))}.stepper button{border-top:1px solid var(--line)}}
+.who{display:flex;flex-wrap:wrap;gap:16px;font-size:.8rem;color:var(--muted);margin:0 0 16px 4px}
+.who i{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:0;margin-right:5px}
+.detail{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 22px}
+.detail h3{margin:0 0 4px;font-size:1.05rem}
+.detail .lead{margin:0 0 12px;color:var(--muted)}
+.pane{display:none}.pane.on{display:block}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:12px 0}
+.grid3 div{background:var(--soft);border-radius:8px;padding:10px 12px}
+.grid3 b{display:block;font-size:1.15rem;font-weight:650}
+.grid3 span{font-size:.8rem;color:var(--muted)}
+@media (max-width:700px){.grid3{grid-template-columns:minmax(0,1fr)}}
+
+/* misc */
+.claim{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:0 0 10px}
+.claim p{margin:.3em 0}
+.pill{display:inline-block;border-radius:999px;padding:1px 9px;font-size:.78rem;font-weight:600}
+.pill.green{background:var(--ok-wash);color:var(--ok)}
+.pill.red{background:var(--bad-wash);color:var(--bad)}
+.pill.grey{background:var(--grey-wash);color:var(--muted)}
+.err{color:var(--bad);font-weight:600}
+.ok{color:var(--ok);font-weight:600}
+.empty{color:var(--muted)}
+blockquote{margin:8px 0;padding:10px 14px;border-left:3px solid var(--line);background:var(--soft);white-space:pre-wrap;overflow-wrap:anywhere}
+details.form{border:1px solid var(--line);border-radius:10px;padding:0 16px;margin:0 0 10px}
+details.form summary{cursor:pointer;padding:12px 0;font-weight:600}
+.filters{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 14px}
+.filters button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:6px 14px;font:inherit;cursor:pointer}
+.filters button.on{background:var(--ink);color:var(--card);border-color:var(--ink)}
+.filters select{font:inherit;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+.foot{border-top:1px solid var(--line);margin-top:32px;padding-top:14px;color:var(--muted);font-size:.82rem;display:flex;flex-wrap:wrap;gap:16px}
+pre{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:12px;overflow-wrap:anywhere;white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.85rem}
+textarea,input[type="text"]{font:inherit;color:inherit}
+</style>
+</head>
+<body>
+<header class="top">
+<div class="top-in">
+<a class="brand" href="index.html"><span class="mark"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v16M8 20h8M5 7h14M5 7L2 13h6zM19 7l-3 6h6z"/></svg></span>Tribunal</a>
+<nav class="nav" aria-label="Sites"><a href="index.html">Queue</a><a href="replay/index.html">Evaluation replay</a></nav>
+<span class="mode">Replay - policy v6 - deepseek/deepseek-flash</span>
+</div>
+</header>
+<main class="wrap">
+<header class="pagehead">
+<p class="ids">DSP-02738 &middot; TRP-02738 &middot; filed 2026-08-11T12:01:11+08:00</p>
+<h1>No-show fee - This was an advance booking.</h1>
+<div class="chips"><span class="chip">No-show fee</span><span class="chip">Filed by rider</span><span class="chip">Contested SGD 4.50</span><span class="chip ok">Decided automatically - 164.0 s</span></div>
+</header>
+<div class="tabs" role="tablist"><button type="button" class="tab tab-on" role="tab" id="tab-ruling" aria-controls="panel-ruling" data-tab="ruling" aria-selected="true">Ruling</button><button type="button" class="tab" role="tab" id="tab-decision" aria-controls="panel-decision" data-tab="decision" aria-selected="false">How it was decided</button></div>
+<section role="tabpanel" id="panel-ruling" aria-labelledby="tab-ruling" data-panel="ruling"><div class="verdict"><div class="v-left"><p class="cap">This is a provisional ruling made by an automated system.</p><p class="word"><strong>Full refund</strong> <span class="mono">FULL_REFUND</span></p><p>Refund to the rider: SGD 4.50</p><p class="lbl">From the judge's explanation</p><p class="why">This was an advance (scheduled) booking, and the cancellation fell outside the chargeable window. The trip record (EV-TRIP-02738) shows the booking accepted at 17:10:08 on 10 Aug 2026 for a scheduled pickup at 17:55:08, and the rider cancelled at 17:35:08 &#8212; 1,200 seconds before the scheduled time. The policy in force for this trip sets the advance cancellation grace at 900 seconds before the scheduled pickup (platform_policy.advance_grace_before_scheduled_sec), so the free-cancellation period ran up to 17:40:08. The rider cancelled more than 900 seconds before the scheduled time, and POL-NS-10(b) states that such a cancellation 'is not chargeable'. The trip was accepted at 17:10:08, well before that 900-second window opened, so POL-NS-10(b)'s proviso pulling limb (a) in from accepted_at does not apply, and the 180-second post-match grace of limb (a) is irrelevant. POL-NS-10(c) then directs that the fee charged on a cancellation made non-chargeable by limb (a) or (b) is refunded in full with no driver compensation: the payments ledger (EV-FARE-02738) shows cancellation_fee 4.50 SGD, total_charged 4.50 SGD, payment_status CHARGED and refund_issued_sgd 0.00, so the whole contested 4.50 SGD returns to the rider. To the driver: your reading of POL-NS-10(f) as the governing charging rule is rejected. Limb (f) charges 'a rider's own cancellation after the grace in limb (a) or (b)' &#8212; that is, one falling after the free-cancellation period has run. This cancellation was made inside the limb (b) advance grace (17:35:08, before the window opened at 17:40:08), so limb (f) is not engaged and limb (b) governs. Your remaining points are accepted as correct on the record but do not change the outcome: the driver did begin navigating 8 seconds after acceptance (17:10:16), the trace runs 157 fixes with no gaps and 100% coverage, no limb (f) refund exception is made out, and the 4.50 SGD fare line reconciles to the platform's published figure, so no POL-NS-08(d) defect arises. To the rider: your core case is right, and it is independently supported. The baseline no-show charge also fails: POL-NS-01 limb (a) requires a driver 'arrived' event in the trip record and there is none (arrived_at is null and the event list runs driver_assigned to driver_en_route to trip_cancelled only), and limb (d) requires termination under RIDER_NO_SHOW, RIDER_UNREACHABLE or EXCESSIVE_WAIT, whereas the record closes with RIDER_CANCELLED. The driver's own trace places him about 14,000 m from the pickup pin and moving at 57&#8211;63 km/h at the moment of cancellation, so the 180-second free waiting period was never served (0 seconds of in-geofence dwell) and POL-NS-06 supports a full refund. No driver compensation is payable: POL-NS-01 is not satisfied on any limb, so POL-NS-07's payout condition is never reached, and the POL-NS-07 anti-farming check does not trip (no_show_terminations_30d is 2, below the required 4, and 2/90 = 0.022, below the required 0.08), so POL-NS-09(d) is not engaged. Evidence quality: the ruling rests on the trip record and the fare breakdown, both carrying weight_multiplier 1.0, and no POL-NS-08 limb is engaged (no clock skew, no trace gap over 120 seconds, the chat log is internally consistent, and the fare line reconciles), so confidence is not capped below 1.0 and is stated at 0.92. The traffic advisory EV-ADVIS-02738-01 is MISSING with weight 0.0 and issue code MISSING_ARTIFACT; it carries no fact this ruling needs (POL-NS-06(i) accumulation is not required) and it does not affect the outcome or the confidence. No clause produces a referral and the case does not escalate: confidence 0.92 is above the 0.70 floor. The monetary effect of 4.50 SGD is at or below the 8.00 SGD execution threshold, so this provisional ruling is executed automatically on issue.</p><p class="after">How to appeal: Either party may appeal once within 30 days. A different human reviewer hears it, and only record evidence may be added.</p><p>POL-GEN-05: the monetary effect is SGD 4.50 against an execution threshold of SGD 8.00. It does not exceed the threshold, so the amount is executed automatically on issue, subject to POL-GEN-04.</p><details><summary>Read POL-GEN-04 in full</summary><blockquote>Every ruling issued without human review is a provisional ruling. Either party may appeal it once, within 30 days of the trip or of the ruling's issue, whichever is later, by lodging the appeal with the platform's help channel. An appeal (a) is heard by a human reviewer who did not take part in any earlier review of the same trip; (b) may add only record-type evidence - a GPS export, a fare or payment statement, an ERP gantry record with gantry name, entry time and cashcard statement, a call log, a photograph with its capture time - and may not add or amend a party statement; (c) suspends execution of any amount not yet executed and freezes it until decided, and where the amount was executed under POL-GEN-05 before the appeal, a successful appeal reverses it; (d) may not be withdrawn and re-lodged. A second appeal on the same trip, an appeal lodged after 30 days, or an appeal that adds only statements is refused. The appeal decision is recorded as a human closure under POL-GEN-06, enters the precedent store, and is final on the platform. This clause licenses no ruling value: an appeal is a route to human review, not a ruling, and it is lodged after a ruling has issued.</blockquote></details></div><div class="tiles"><div><b>100%</b><span>trace coverage</span></div><div><b>0.0 s</b><span>continuous in-geofence dwell, against the free wait in force (180.0 s)</span></div><div><b>13999.99 m</b><span>closest approach to the pickup point, against the arrival radius (50 m)</span></div><div><b>SGD 4.50</b><span>refund to the filing party (POL-GEN-03)</span></div><div aria-label="confidence 0.92 against a floor of 0.7"><b>0.92</b><span>confidence against the floor of 0.7 (POL-GEN-02)</span></div></div></div><div class="two"><div class="maincol"><section class="sec"><h2>What each side argued</h2><div class="sides"><article class="side"><header><b>Rider advocate</b><small>11 claim(s), 11 kept</small></header><ol><li>This was a scheduled (advance) booking, and the rider cancelled outside the advance grace: trip_record carries scheduled_at 2026-08-10T17:55:08+08:00 and cancelled_at 2026-08-10T17:35:08+08:00 - exactly 1,200 seconds before the scheduled pickup, and therefore more than the 900-second advance grace the policy in force for this trip sets (platform_policy.advance_grace_before_scheduled_sec = 900). Under POL-NS-10(b) a cancellation made more than that window before the scheduled time is not chargeable, whatever the driver's position, and the driver's early arrival cannot shorten it. The trip was accepted at 17:10:08, well before the 900-second window opened at 17:40:08, so nothing in limb (a) displaces limb (b). Limb (f)'s chargeability for a rider's own cancellation bites only once the limb (a) or limb (b) grace has run; this cancellation precedes the advance window altogether, so POL-NS-10(b), not limb (f), governs.<span class="ref">EV-TRIP-02738 &middot; POL-NS-10</span></li><li>Because POL-NS-10(b) makes this cancellation non-chargeable, POL-NS-10(c) directs that the fee charged on it is refunded in full with no driver compensation. The payments ledger shows cancellation_fee 4.50 SGD, total_charged 4.50 SGD, payment_status CHARGED and refund_issued_sgd 0.00: the whole of the contested 4.50 SGD is still with the platform, so a full refund of the cancellation-fee line returns the entire contested amount rather than part of it.<span class="ref">EV-FARE-02738, EV-TRIP-02738 &middot; POL-NS-10</span></li><li>Independently of the advance-booking grace, the baseline no-show charge of POL-NS-01 cannot stand, because limb (a) requires a driver 'arrived' event in the trip record and this record contains none: arrived_at is null and the event list runs driver_assigned (17:10:08) -&gt; driver_en_route (17:10:16) -&gt; trip_cancelled (17:35:08), with no arrival marker of any kind and no wait-timer event. Limb (a) therefore fails, and under POL-NS-01's own closing words the fee is not chargeable under that clause.<span class="ref">EV-TRIP-02738 &middot; POL-NS-01</span></li><li>Limb (d) of POL-NS-01 fails on the face of the record as well. The trip was terminated by the rider with cancellation_reason_code RIDER_CANCELLED and cancelled_by RIDER, which is none of the three codes limb (d) recognises (RIDER_NO_SHOW, RIDER_UNREACHABLE, EXCESSIVE_WAIT), and no boarding event is recorded. A no-show fee cannot be built on a cancellation the rider himself made under a code the clause does not name.<span class="ref">EV-TRIP-02738 &middot; POL-NS-01</span></li><li>The waiting period the fee is meant to buy was never served. The driver's own trace yields 0 in-geofence fixes, an accumulated in-geofence dwell of 0.0 seconds and a longest qualifying run of 0.0 seconds, against the free waiting period of 180 seconds in force for this STANDARD pickup - a shortfall of the full 180 seconds. Under POL-NS-06 a cancellation fee on an effective in-geofence dwell shorter than that minimum is not chargeable and is refunded in full, whether or not the rider was present and whether or not the rider responded to messages.<span class="ref">EV-GPS-02738, EV-TRIP-02738 &middot; POL-NS-06</span></li><li>The driver never arrived at the pickup point at all. Across 157 fixes spanning 17:10:08 to 17:36:08 (100% coverage, no gaps), his closest approach to the pickup pin was 13,999.99 m, his mean distance was 27,000.03 m, and his reported speeds run from 57.0 to 63.0 km/h - expressway speeds - right through the moment of cancellation at 17:35:08. Against the 50 m STANDARD arrival radius there is no qualifying in-radius fix (qualifying_fix_count 0), so POL-NS-02's arrival test is not merely unsatisfied, it is missed by roughly 14 kilometres.<span class="ref">EV-GPS-02738 &middot; POL-NS-02</span></li><li>The one route that could have accumulated dwell across separate in-geofence intervals - POL-NS-06(i) - is unavailable on this record. It requires a traffic_advisory that is present and populated, of type KERB_RESTRICTION, ENFORCEMENT, CLOSURE or ACCIDENT, covering the pickup road and the waiting period. EV-ADVIS-02738-01 is MISSING with weight_multiplier 0.0 and issue code MISSING_ARTIFACT (no advisory covers Blk 55 Lengkok Bahru in this window). With limb (i) unavailable there is nothing to sum, the dwell stands at zero, and the POL-NS-06 shortfall remains the full 180 seconds.<span class="ref">EV-ADVIS-02738-01, EV-GPS-02738 &middot; POL-NS-06</span></li><li>No driver compensation is payable and no anti-farming escalation arises on this record. POL-NS-01 is not satisfied on any limb, so POL-NS-07's payout condition is never reached; and the POL-NS-07 anti-farming check does not trip on this driver, because driver_profile.no_show_terminations_30d is 2, below the 4 the clause requires, and 2 divided by driver_profile.completed_trips_30d (90) is 0.022, below the 0.08 rate the clause requires. The check requires BOTH limbs, so neither the withholding in POL-NS-07 nor the escalation limb POL-NS-09(d) is engaged, and the disputed fee should be refunded rather than held.<span class="ref">EV-DPROF-02738, EV-TRIP-02738 &middot; POL-NS-07, POL-NS-09</span></li><li>There is no platform-telemetry shortcut to arrival here. The arrival marker in force for this trip is BUTTON, not GPS_AUTO, and the record carries no platform arrival event, no wait_timer_started and no wait_timer_expired. POL-NS-12 therefore does not apply, and the driver's arrival can only be established on the exported trace - which places him some 14 km away and moving at over 57 km/h when the trip was cancelled.<span class="ref">EV-TRIP-02738, EV-GPS-02738 &middot; POL-NS-12</span></li><li>The money on this record is clean and the refund figure is not uncertain. The fare_breakdown cancellation-fee line of 4.50 SGD equals the net fee the fee_schedule.resolution_rule produces for this trip (platform_policy.cancellation_fee_sgd 4.50), so no POL-NS-08(d) fare defect arises, refund_issued_sgd is 0.00, and the evidence bundle is otherwise complete at weight 1.0. Nothing in the record supports a part-refund or a held fee: the rider is entitled to the full 4.50 SGD.<span class="ref">EV-FARE-02738, EV-TRIP-02738 &middot; POL-NS-08, POL-NS-10</span></li><li>Any suggestion that the rider was not where he was supposed to be is contradicted by his own trace: the rider's device registers a stationary fix (0.0 km/h) 3.93 m from the pickup pin at 17:35:48, inside the 100 m STANDARD rider-presence radius (rider_qualifying_fix_count 1). POL-NS-04's unanswered-message route is not itself available on this record because the chat log holds 0 messages, so limbs (a) and (b) of that clause cannot be made out; the point is only that the rider's non-appearance cannot be inferred, and the refund rests on POL-NS-10(b) and POL-NS-06 rather than on POL-NS-04.<span class="ref">EV-GPS-02738, EV-CHAT-02738 &middot; POL-NS-04</span></li></ol></article><article class="side"><header><b>Driver advocate</b><small>6 claim(s), 6 kept</small></header><ol><li>This trip ended as a rider-initiated cancellation, not a no-show. The record closes it as CANCELLED_BY_RIDER with cancellation_reason_code RIDER_CANCELLED at 17:35:08, and the ledger carries the $4.50 as a cancellation-fee line rather than a no-show charge earned by an arrival. The dispute therefore falls to be decided under POL-NS-10, the clause that governs a rider's own cancellation, and not under the arrival test of POL-NS-01.<span class="ref">EV-TRIP-02738, EV-FARE-02738 &middot; POL-NS-10, POL-NS-01</span></li><li>The only grace limb (a) of POL-NS-10 creates for this rider is a cancellation within 180 seconds of the match. The match is recorded at 17:10:08 and the rider cancelled at 17:35:08, 1500 seconds later, so limb (a) affords her nothing at all on these timestamps.<span class="ref">EV-TRIP-02738 &middot; POL-NS-10</span></li><li>On the driver's reading of POL-NS-10, limb (f) &#8212; the limb that expressly governs 'a rider's own cancellation' &#8212; is the charging rule once the grace has run, and it makes the fee chargeable at the published figure 'whether or not the driver had arrived'. Its four refund exceptions are exhaustive, and the rider's cancellation at 17:35:08 falls within none of them, so the fee stands. Limb (b)'s pre-scheduled window is part of the same charging scheme and cannot be read to empty limb (f) of its exhaustive exception list on facts where the rider was matched and the driver dispatched twenty-five minutes before she terminated.<span class="ref">EV-TRIP-02738, EV-FARE-02738 &middot; POL-NS-10</span></li><li>The driver performed his side of the booking. He accepted at 17:10:08 and the trip record shows he began navigating to the pickup point 8 seconds later, at 17:10:16, and the trace then runs continuously with 157 fixes, no gaps and 100% coverage over 26.0 km. Limb (f)'s first refund exception &#8212; that the driver had not begun moving toward the pickup within the grace &#8212; is therefore not made out.<span class="ref">EV-TRIP-02738, EV-GPS-02738 &middot; POL-NS-10</span></li><li>The driver was never late and no mismatch is shown. The first ETA displayed to the rider was 40 minutes (arrival about 17:50:08) and the rider cancelled at 17:35:08, before that estimate; the chat log carries no message in which the driver asked the rider to cancel, and nothing in the trip record or the chat log shows a vehicle or driver mismatch. None of limb (f)'s remaining refund exceptions is made out.<span class="ref">EV-TRIP-02738, EV-CHAT-02738 &middot; POL-NS-10</span></li><li>The $4.50 charged is the platform's own published figure in force for this trip &#8212; platform_policy.cancellation_fee_sgd of $4.50 for a RYDE_X booking at a STANDARD pickup &#8212; and the fare line reconciles to it, so the charge discloses no integrity defect within POL-NS-08(d) and there is no arithmetic footing on which to reduce it.<span class="ref">EV-FARE-02738, EV-TRIP-02738 &middot; POL-NS-08</span></li></ol></article></div></section></div><aside class="rail"><details open><summary>Trace <span>157 fixes</span></summary><div class="in"><div class="map"><svg viewBox="0 0 360 250"><title>the trip trace</title><circle cx="48.4" cy="187.71" r="0.37" fill="none" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4 3"/><polyline points="48.41,187.74" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="4 3"/><polyline points="348.0,193.99 346.75,193.97 345.5,193.94 344.26,193.91 343.01,193.89 341.76,193.86 340.51,193.83 339.26,193.81 338.01,193.78 336.77,193.76 335.52,193.73 334.27,193.7 333.02,193.68 331.77,193.65 330.52,193.63 329.28,193.6 328.03,193.57 326.78,193.55 325.53,193.52 324.28,193.49 323.03,193.47 321.78,193.44 320.54,193.42 319.29,193.39 318.04,193.36 316.79,193.34 315.54,193.31 314.3,193.28 313.05,193.26 311.8,193.23 310.55,193.21 309.3,193.18 308.05,193.15 306.8,193.13 305.56,193.1 304.31,193.08 303.06,193.05 301.81,193.02 300.56,193.0 299.31,192.97 298.07,192.94 296.82,192.92 295.57,192.89 294.32,192.87 293.07,192.84 291.82,192.81 290.58,192.79 289.33,192.76 288.08,192.74 286.83,192.71 285.58,192.68 284.33,192.66 283.09,192.63 281.84,192.61 280.59,192.58 279.34,192.55 278.09,192.53 276.84,192.5 275.6,192.47 274.35,192.45 273.1,192.42 271.85,192.4 270.6,192.37 269.35,192.34 268.11,192.32 266.86,192.29 265.61,192.27 264.36,192.24 263.11,192.21 261.86,192.19 260.62,192.16 259.37,192.13 258.12,192.11 256.87,192.08 255.62,192.06 254.37,192.03 253.13,192.0 251.88,191.98 250.63,191.95 249.38,191.93 248.13,191.9 246.88,191.87 245.64,191.85 244.39,191.82 243.14,191.79 241.89,191.77 240.64,191.74 239.39,191.72 238.15,191.69 236.9,191.66 235.65,191.64 234.4,191.61 233.15,191.58 231.9,191.56 230.65,191.53 229.41,191.51 228.16,191.48 226.91,191.45 225.66,191.43 224.41,191.4 223.17,191.38 221.92,191.35 220.67,191.32 219.42,191.3 218.17,191.27 216.92,191.24 215.67,191.22 214.43,191.19 213.18,191.17 211.93,191.14 210.68,191.11 209.43,191.09 208.18,191.06 206.94,191.04 205.69,191.01 204.44,190.98 203.19,190.96 201.94,190.93 200.69,190.9 199.45,190.88 198.2,190.85 196.95,190.83 195.7,190.8 194.45,190.77 193.2,190.75 191.96,190.72 190.71,190.7 189.46,190.67 188.21,190.64 186.96,190.62 185.71,190.59 184.47,190.56 183.22,190.54 181.97,190.51 180.72,190.49 179.47,190.46 178.22,190.43 176.98,190.41 175.73,190.38 174.48,190.36 173.23,190.33 171.98,190.3 170.73,190.28 169.49,190.25 168.24,190.23 166.99,190.2 165.74,190.17 164.49,190.15 163.24,190.12 162.0,190.09 160.75,190.07 159.5,190.04 158.25,190.02 157.0,189.99 155.75,189.96 154.51,189.94 153.26,189.91" fill="none" stroke="#1d4ed8" stroke-width="2"/><circle cx="48.4" cy="187.71" r="4" fill="#15803d"><title>pickup</title></circle><circle cx="12.0" cy="56.01" r="4" fill="#b91c1c"><title>drop-off</title></circle></svg></div><p class="cap">optimal: 23.7 km (distance only)</p><p class="legend"><i style="background:#1d4ed8"></i>driven trace<i class="dot" style="background:#15803d"></i>pickup<i class="dot" style="background:#b91c1c"></i>drop-off</p></div></details><details><summary>Evidence <span>7 item(s)</span></summary><div class="in"><p>EV-TRIP-02738<br><span class="ref">PLATFORM_TELEMETRY &middot; COMPLETE (weight 1.0)</span></p><p>EV-GPS-02738<br><span class="ref">PLATFORM_TELEMETRY &middot; COMPLETE (weight 1.0)</span></p><p>EV-CHAT-02738<br><span class="ref">PLATFORM_TELEMETRY &middot; COMPLETE (weight 1.0)</span></p><p>EV-FARE-02738<br><span class="ref">PAYMENTS_LEDGER &middot; COMPLETE (weight 1.0)</span></p><p>EV-RPROF-02738<br><span class="ref">PLATFORM_TELEMETRY &middot; COMPLETE (weight 1.0)</span></p><p>EV-DPROF-02738<br><span class="ref">PLATFORM_TELEMETRY &middot; COMPLETE (weight 1.0)</span></p><p>EV-ADVIS-02738-01<br><span class="ref">THIRD_PARTY_LTA &middot; MISSING (weight 0.0)</span></p></div></details><details><summary>Record <span>164.0 s</span></summary><div class="in"><div class="kv"><span>events</span><span>6 (one per agent call)</span><span>tokens</span><span>283259 (prompt 138162, cached 70784, completion 74313)</span><span>wall time</span><span>164.0 s</span></div></div></details></aside></div></section>
+<section role="tabpanel" id="panel-decision" aria-labelledby="tab-decision" data-panel="decision" hidden><div class="stepper"><button type="button" data-step="1" class="on"><span class="n"><i>1</i>no time recorded</span><span class="t">Evidence pack</span><span class="s">7 artifacts, brief 997a192a1bd2</span></button><button type="button" data-step="2"><span class="n"><i class="llm">2</i>170.4 s</span><span class="t">Both sides argue</span><span class="s">rider 11 claims - driver 6</span></button><button type="button" data-step="3"><span class="n"><i>3</i>no time recorded</span><span class="t">Citation check</span><span class="s">17 kept, 0 discarded</span></button><button type="button" data-step="4"><span class="n"><i class="llm">4</i>143.7 s</span><span class="t">Judge</span><span class="s">4 drafts, 1.0</span></button><button type="button" data-step="5"><span class="n"><i>5</i>no time recorded</span><span class="t">Floor and triggers</span><span class="s">confidence 0.92 against the floor 0.7</span></button><button type="button" data-step="6"><span class="n"><i class="ok">6</i>no time recorded</span><span class="t">Outcome</span><span class="s">Full refund</span></button></div><p class="who"><span><i style="background:#374151"></i>code</span><span><i style="background:#1d4ed8"></i>model</span><span><i style="background:#15803d"></i>outcome</span></p><div class="detail"><div class="pane on" data-pane="1"><h3>Evidence pack</h3><p class="lead">computed by code - 7 artifacts, brief 997a192a1bd2</p><p>The brief was built from the case and the loaded policy. Its sha256 is <span class="mono">997a192a1bd272122292e044b7ee272e88afdb4f543fafc08d95f178b28acb37</span>.</p><p>Both advocates received these same bytes: yes, the recorded user_sha256 of each advocate is this digest.</p><p class="label">The derived facts each artifact carries</p><ul><li>EV-TRIP-02738 (TRIP_RECORD): no derived facts</li><li>EV-GPS-02738 (GPS_TRACE): arrival, driver_track, rider_presence</li><li>EV-CHAT-02738 (CHAT_LOG): no derived facts</li><li>EV-FARE-02738 (FARE_BREAKDOWN): money</li><li>EV-RPROF-02738 (RIDER_PROFILE): no derived facts</li><li>EV-DPROF-02738 (DRIVER_PROFILE): no derived facts</li><li>EV-ADVIS-02738-01 (TRAFFIC_ADVISORY): no derived facts</li></ul></div><div class="pane" data-pane="2"><h3>Both sides argue</h3><p class="lead">asked of the model - rider 11 claims - driver 6</p><p>The two advocates ran on the same brief and at the same time: the rider advocate made 11 claim(s) and the driver advocate made 6.</p><p>Their instructions differ -- system_sha256 <span class="mono">b90cb450bbd10645bb645632dfa64bafaeb4f690787527ce2ec0743e9e2ac355</span> against <span class="mono">c317acbca01e30fca7b769c8d85d31333a756e601b25ca9ad2ede328c4607543</span> -- and their brief is one digest for both.</p><p class="label">The rider advocate's own claims</p><blockquote>{
+  "claims": [
+    {
+      "text": "This was a scheduled (advance) booking, and the rider cancelled outside the advance grace: trip_record carries scheduled_at 2026-08-10T17:55:08+08:00 and cancelled_at 2026-08-10T17:35:08+08:00 - exactly 1,200 seconds before the scheduled pickup, and therefore more than the 900-second advance grace the policy in force for this trip sets (platform_policy.advance_grace_before_scheduled_sec = 900). Under POL-NS-10(b) a cancellation made more than that window before the scheduled time is not chargeable, whatever the driver's position, and the driver's early arrival cannot shorten it. The trip was accepted at 17:10:08, well before the 900-second window opened at 17:40:08, so nothing in limb (a) displaces limb (b). Limb (f)'s chargeability for a rider's own cancellation bites only once the limb (a) or limb (b) grace has run; this cancellation precedes the advance window altogether, so POL-NS-10(b), not limb (f), governs.",
+      "evidence_ids": ["EV-TRIP-02738"],
+      "clause_ids": ["POL-NS-10"],
+      "relies_on": "trip_record.cancelled_at",
+      "asserted_weight": 1.0
+    },
+    {
+      "text": "Because POL-NS-10(b) makes this cancellation non-chargeable, POL-NS-10(c) directs that the fee charged on it is refunded in full with no driver compensation. The payments ledger shows cancellation_fee 4.50 SGD, total_charged 4.50 SGD, payment_status CHARGED and refund_issued_sgd 0.00: the whole of the contested 4.50 SGD is still with the platform, so a full refund of the cancellation-fee line returns the entire contested amount rather than part of it.",
+      "evidence_ids": ["EV-FARE-02738", "EV-TRIP-02738"],
+      "clause_ids": ["POL-NS-10"],
+      "relies_on": "derived.money.fee_charged",
+      "asserted_weight": 1.0
+    },
+    {
+      "text": "Independently of the advance-booking grace, the baseline no-show charge of POL-NS-01 cannot stand, because limb (a) requires a driver 'arrived' event in the trip record and this record contains none: arrived_at is null and the event list runs driver_assigned (17:10:08) -&gt; driver_en_route (17:10:16) -&gt; trip_cancelled (17:35:08), with no arrival marker of any kind and no wait-timer event. Limb (a) therefore fails, and under POL-NS-01's own closing words the fee is not chargeable under that clause.",
+      "evidence_ids": ["EV-TRIP-02738"],
+      "clause_ids": ["POL-NS-01"],
+      "relies_on": "trip_record.events",
+      "asserted_weight": 1.0
+    },
+    {
+      "text": "Limb (d) of POL-NS-01 fails on the face of the record as well. The trip was terminated by the rider with cancellation_reason_code RIDER_CANCELLED and cancelled_by RIDER, which is none of the three codes limb (d) recognises (RIDER_NO_SHOW, RIDER_UNREACHABLE, EXCESSIVE_WAIT), and no boarding event is recorded. A no-show fee cannot be built on a cancellation the rider himself made under a code the clause does not name.",
+      "evidence_ids": ["EV-TRIP-02738"],
+      "clause_ids": ["POL-NS-01"],
+      "relies_on": "trip_record.cancellation_reason_code",
+      "asserted_weight": 1.0
+    },
+    {
+      "text": "The waiting period the fee is meant to buy was never served. The driver's own trace yields 0 in-geofence fixes, an accumulated in-geofence dwell of 0.0 seconds and a longest qualifying run of 0.0 seconds, against the free waiting period of 180 seconds in force for this STANDARD pickup - a shortfall of the full 180 seconds. Under POL-NS-06 a cancellation fee on an effective in-geofence dwell shorter than that minimum is not chargeable and is refunded in full, whether or not the rider was present and whether or not the rider responded to messages.",
+      "evidence_ids": ["EV-GPS-02738", "EV-TRIP-02738"],
+      "clause_ids": ["POL-NS-06"],
+      "relies_on": "derived.arrival.longest_qualifying_run.duration_sec",
+      "asserted_weight": 1.0
+    },
+    {
+      "text": "The driver never arrived at the pickup point at all. Across 157 fixes spanning 17:10:08 to 17:36:08 (100% coverage, no gaps), his closest approach to the pickup pin was 13,999.99 m, his mean distance was 27,000.03 m, and his reported speeds run from 57.0 to 63.0 km/h - expressway speeds - right through the moment of cancellation at 17:35:08. Against the 50 m STANDARD arrival radius there is no qualifying in-radius fix (qualifying_fix_count 0), so POL-NS-02's arrival test is not merely unsatisfied, it is missed by roughly 14 kilometres.",
+      "evidence_ids": ["EV-GPS-02738"],
+      "clause_ids": ["POL-NS-02"],
+      "relies_on": "derived.driver_track.min_distance_m",
+      "asserted_weight": 1.0
+    },
+    {
+      "text": "The one route that could have accumulated dwell across separate in-geofence intervals - POL-NS-06(i) - is unavailable on this record. It requires a traffic_advisory that is present and populated, of type KERB_RESTRICTION, ENFORCEMENT, CLOSURE or ACCIDENT, covering the pickup road and the waiting period. EV-ADVIS-02738-01 is MISSING with weight_multiplier 0.0 and issue code MISSING_ARTIFACT (no advisory covers Blk 55 Lengkok Bahru in this window). With limb (i) unavailable there is nothing to sum, the dwell stands at zero, and the POL-NS-06 shortfall remains the full 180 seconds.",
+      "evidence_ids": ["EV-ADVIS-02738-01", "EV-GPS-02738"],
+      "clause_ids": ["POL-NS-06"],
+      "relies_on": "derived.arrival.accumulated_dwell.limb.available",
+      "asserted_weight": 0.0
+    },
+    {
+      "text": "No driver compensation is payable and no anti-farming escalation arises on this record. POL-NS-01 is not satisfied on any limb, so POL-NS-07's payout condition is never reached; and the POL-NS-07 anti-farming check does not trip on this driver, because driver_profile.no_show_terminations_30d is 2, below the 4 the clause requires, and 2 divided by driver_profile.completed_trips_30d (90) is 0.022, below the 0.08 rate the clause requires. The check requires BOTH limbs, so neither the withholding in POL-NS-07 nor the escalation limb POL-NS-09(d) is engaged, and the disputed fee should be refunded rather than held.",
+      "evidence_ids": ["EV-DPROF-02738", "EV-TRIP-02738"],
+      "clause_ids": ["POL-NS-07", "POL-NS-09"],
+      "relies_on": "driver_profile.no_show_terminations_30d",
+      "asserted_weight": 1.0
+    },
+    {
+      "text": "There is no platform-telemetry shortcut to arrival here. The arrival marker in force for this trip is BUTTON, not GPS_AUTO, and the record carries no platform arrival event, no wait_timer_started and no wait_timer_expired. POL-NS-12 therefore does not apply, and the driver's arrival can only be established on the exported trace - which places him some 14 km away and moving at over 57 km/h when the trip was cancelled.",
+      "evidence_ids": ["EV-TRIP-02738", "EV-GPS-02738"],
+      "clause_ids": ["POL-NS-12"],
+      "relies_on": "trip_record.platform_policy.arrival_marker",
+      "asserted_weight": 1.0
+    },
+    {
+      "text": "The money on this record is clean and the refund figure is not uncertain. The fare_breakdown cancellation-fee line of 4.50 SGD equals the net fee the fee_schedule.resolution_rule produces for this trip (platform_policy.cancellation_fee_sgd 4.50), so no POL-NS-08(d) fare defect arises, refund_issued_sgd is 0.00, and the evidence bundle is otherwise complete at weight 1.0. Nothing in the record supports a part-refund or a held fee: the rider is entitled to the full 4.50 SGD.",
+      "evidence_ids": ["EV-FARE-02738", "EV-TRIP-02738"],
+      "clause_ids": ["POL-NS-08", "POL-NS-10"],
+      "relies_on": "derived.money.fee_charged",
+      "asserted_weight": 1.0
+    },
+    {
+      "text": "Any suggestion that the rider was not where he was supposed to be is contradicted by his own trace: the rider's device registers a stationary fix (0.0 km/h) 3.93 m from the pickup pin at 17:35:48, inside the 100 m STANDARD rider-presence radius (rider_qualifying_fix_count 1). POL-NS-04's unanswered-message route is not itself available on this record because the chat log holds 0 messages, so limbs (a) and (b) of that clause cannot be made out; the point is only that the rider's non-appearance cannot be inferred, and the refund rests on POL-NS-10(b) and POL-NS-06 rather than on POL-NS-04.",
+      "evidence_ids": ["EV-GPS-02738", "EV-CHAT-02738"],
+      "clause_ids": ["POL-NS-04"],
+      "relies_on": "derived.arrival.rider_qualifying_fix_count",
+      "asserted_weight": 1.0
+    }
+  ]
+}</blockquote><p class="label">The driver advocate's own claims</p><blockquote>{
+  "claims": [
+    {
+      "text": "This trip ended as a rider-initiated cancellation, not a no-show. The record closes it as CANCELLED_BY_RIDER with cancellation_reason_code RIDER_CANCELLED at 17:35:08, and the ledger carries the $4.50 as a cancellation-fee line rather than a no-show charge earned by an arrival. The dispute therefore falls to be decided under POL-NS-10, the clause that governs a rider's own cancellation, and not under the arrival test of POL-NS-01.",
+      "evidence_ids": ["EV-TRIP-02738", "EV-FARE-02738"],
+      "clause_ids": ["POL-NS-10", "POL-NS-01"],
+      "asserted_weight": 1.0
+    },
+    {
+      "text": "The only grace limb (a) of POL-NS-10 creates for this rider is a cancellation within 180 seconds of the match. The match is recorded at 17:10:08 and the rider cancelled at 17:35:08, 1500 seconds later, so limb (a) affords her nothing at all on these timestamps.",
+      "evidence_ids": ["EV-TRIP-02738"],
+      "clause_ids": ["POL-NS-10"],
+      "relies_on": "trip_record.platform_policy.grace_after_match_sec",
+      "asserted_weight": 1.0
+    },
+    {
+      "text": "On the driver's reading of POL-NS-10, limb (f) &#8212; the limb that expressly governs 'a rider's own cancellation' &#8212; is the charging rule once the grace has run, and it makes the fee chargeable at the published figure 'whether or not the driver had arrived'. Its four refund exceptions are exhaustive, and the rider's cancellation at 17:35:08 falls within none of them, so the fee stands. Limb (b)'s pre-scheduled window is part of the same charging scheme and cannot be read to empty limb (f) of its exhaustive exception list on facts where the rider was matched and the driver dispatched twenty-five minutes before she terminated.",
+      "evidence_ids": ["EV-TRIP-02738", "EV-FARE-02738"],
+      "clause_ids": ["POL-NS-10"],
+      "asserted_weight": 1.0
+    },
+    {
+      "text": "The driver performed his side of the booking. He accepted at 17:10:08 and the trip record shows he began navigating to the pickup point 8 seconds later, at 17:10:16, and the trace then runs continuously with 157 fixes, no gaps and 100% coverage over 26.0 km. Limb (f)'s first refund exception &#8212; that the driver had not begun moving toward the pickup within the grace &#8212; is therefore not made out.",
+      "evidence_ids": ["EV-TRIP-02738", "EV-GPS-02738"],
+      "clause_ids": ["POL-NS-10"],
+      "relies_on": "derived.driver_track.fix_count",
+      "asserted_weight": 1.0
+    },
+    {
+      "text": "The driver was never late and no mismatch is shown. The first ETA displayed to the rider was 40 minutes (arrival about 17:50:08) and the rider cancelled at 17:35:08, before that estimate; the chat log carries no message in which the driver asked the rider to cancel, and nothing in the trip record or the chat log shows a vehicle or driver mismatch. None of limb (f)'s remaining refund exceptions is made out.",
+      "evidence_ids": ["EV-TRIP-02738", "EV-CHAT-02738"],
+      "clause_ids": ["POL-NS-10"],
+      "asserted_weight": 1.0
+    },
+    {
+      "text": "The $4.50 charged is the platform's own published figure in force for this trip &#8212; platform_policy.cancellation_fee_sgd of $4.50 for a RYDE_X booking at a STANDARD pickup &#8212; and the fare line reconciles to it, so the charge discloses no integrity defect within POL-NS-08(d) and there is no arithmetic footing on which to reduce it.",
+      "evidence_ids": ["EV-FARE-02738", "EV-TRIP-02738"],
+      "clause_ids": ["POL-NS-08"],
+      "asserted_weight": 1.0
+    }
+  ]
+}</blockquote></div><div class="pane" data-pane="3"><h3>Citation check</h3><p class="lead">computed by code - 17 kept, 0 discarded</p><p>The referee checked every claim against the artifacts it cites. 17 claim(s) kept, 0 discarded.</p><p class="label">Discarded claims and the referee's reason</p><ul><li>none</li></ul></div><div class="pane" data-pane="4"><h3>Judge</h3><p class="lead">asked of the model - 4 drafts, 1.0</p><p>The judge was asked 4 times on the same inputs: 3 sampled drafts and one with the parties' positions swapped. The vote agreement is 1.0, and the outcome recorded is carried.</p><p class="label">Each draft</p><ul><li>draft 1 (sampled, sides DRIVER_ADVOCATE, RIDER_ADVOCATE): Full refund <span class="mono">FULL_REFUND</span>, amount SGD 4.50, driver none, confidence 0.92</li><li>draft 2 (sampled, sides DRIVER_ADVOCATE, RIDER_ADVOCATE): Full refund <span class="mono">FULL_REFUND</span>, amount SGD 4.50, driver none, confidence 0.95</li><li>draft 3 (sampled, sides DRIVER_ADVOCATE, RIDER_ADVOCATE): Full refund <span class="mono">FULL_REFUND</span>, amount SGD 4.50, driver none, confidence 0.95</li><li>draft 4 (position_swapped, sides RIDER_ADVOCATE, DRIVER_ADVOCATE): Full refund <span class="mono">FULL_REFUND</span>, amount SGD 4.50, driver none, confidence 0.95</li></ul><p class="label">Each draft's own explanation</p><blockquote>This was an advance (scheduled) booking, and the cancellation fell outside the chargeable window. The trip record (EV-TRIP-02738) shows the booking accepted at 17:10:08 on 10 Aug 2026 for a scheduled pickup at 17:55:08, and the rider cancelled at 17:35:08 &#8212; 1,200 seconds before the scheduled time. The policy in force for this trip sets the advance cancellation grace at 900 seconds before the scheduled pickup (platform_policy.advance_grace_before_scheduled_sec), so the free-cancellation period ran up to 17:40:08. The rider cancelled more than 900 seconds before the scheduled time, and POL-NS-10(b) states that such a cancellation 'is not chargeable'. The trip was accepted at 17:10:08, well before that 900-second window opened, so POL-NS-10(b)'s proviso pulling limb (a) in from accepted_at does not apply, and the 180-second post-match grace of limb (a) is irrelevant. POL-NS-10(c) then directs that the fee charged on a cancellation made non-chargeable by limb (a) or (b) is refunded in full with no driver compensation: the payments ledger (EV-FARE-02738) shows cancellation_fee 4.50 SGD, total_charged 4.50 SGD, payment_status CHARGED and refund_issued_sgd 0.00, so the whole contested 4.50 SGD returns to the rider. To the driver: your reading of POL-NS-10(f) as the governing charging rule is rejected. Limb (f) charges 'a rider's own cancellation after the grace in limb (a) or (b)' &#8212; that is, one falling after the free-cancellation period has run. This cancellation was made inside the limb (b) advance grace (17:35:08, before the window opened at 17:40:08), so limb (f) is not engaged and limb (b) governs. Your remaining points are accepted as correct on the record but do not change the outcome: the driver did begin navigating 8 seconds after acceptance (17:10:16), the trace runs 157 fixes with no gaps and 100% coverage, no limb (f) refund exception is made out, and the 4.50 SGD fare line reconciles to the platform's published figure, so no POL-NS-08(d) defect arises. To the rider: your core case is right, and it is independently supported. The baseline no-show charge also fails: POL-NS-01 limb (a) requires a driver 'arrived' event in the trip record and there is none (arrived_at is null and the event list runs driver_assigned to driver_en_route to trip_cancelled only), and limb (d) requires termination under RIDER_NO_SHOW, RIDER_UNREACHABLE or EXCESSIVE_WAIT, whereas the record closes with RIDER_CANCELLED. The driver's own trace places him about 14,000 m from the pickup pin and moving at 57&#8211;63 km/h at the moment of cancellation, so the 180-second free waiting period was never served (0 seconds of in-geofence dwell) and POL-NS-06 supports a full refund. No driver compensation is payable: POL-NS-01 is not satisfied on any limb, so POL-NS-07's payout condition is never reached, and the POL-NS-07 anti-farming check does not trip (no_show_terminations_30d is 2, below the required 4, and 2/90 = 0.022, below the required 0.08), so POL-NS-09(d) is not engaged. Evidence quality: the ruling rests on the trip record and the fare breakdown, both carrying weight_multiplier 1.0, and no POL-NS-08 limb is engaged (no clock skew, no trace gap over 120 seconds, the chat log is internally consistent, and the fare line reconciles), so confidence is not capped below 1.0 and is stated at 0.92. The traffic advisory EV-ADVIS-02738-01 is MISSING with weight 0.0 and issue code MISSING_ARTIFACT; it carries no fact this ruling needs (POL-NS-06(i) accumulation is not required) and it does not affect the outcome or the confidence. No clause produces a referral and the case does not escalate: confidence 0.92 is above the 0.70 floor. The monetary effect of 4.50 SGD is at or below the 8.00 SGD execution threshold, so this provisional ruling is executed automatically on issue.</blockquote><blockquote>To the rider and the driver: the $4.50 cancellation fee is refunded in full to the rider, with no driver compensation. This was an advance booking. The record shows the trip was scheduled for 17:55:08 and the rider cancelled at 17:35:08, exactly 1,200 seconds before the scheduled pickup. The platform policy in force sets an advance grace of 900 seconds (platform_policy.advance_grace_before_scheduled_sec = 900). Because the cancellation came more than 900 seconds before the scheduled time, POL-NS-10(b) makes it non-chargeable; POL-NS-10(c) then requires the fee charged on it to be refunded in full with no driver compensation. The driver's argument that POL-NS-10(f) makes the fee chargeable is rejected: limb (f) applies only to a rider cancellation after the grace in limb (a) or limb (b), and this cancellation came before the advance-booking window rather than after it, so limb (b) governs. The driver's performance &#8212; accepting at 17:10:08, starting en route at 17:10:16, and a continuous 157-fix trace with no gaps &#8212; is accepted, but it cannot make chargeable a fee that the advance-grace rule removes. Independently, the no-show charge fails under POL-NS-01: there is no driver 'arrived' event (arrived_at is null), and the cancellation reason code RIDER_CANCELLED is not one of the three codes POL-NS-01(d) recognises. POL-NS-02 and POL-NS-06 also support the refund: the trace places the driver about 13,999.99 m from the pickup pin at closest, moving at 57&#8211;63 km/h, with 0 qualifying in-geofence fixes and 0.0 seconds of in-geofence dwell against the 180-second free waiting period &#8212; a 180-second shortfall. The missing traffic advisory (EV-ADVIS-02738-01, weight 0.0, MISSING_ARTIFACT) is not used to carry any deciding fact; it is cited only to confirm that POL-NS-06(i) accumulation is unavailable, so it does not lower confidence in this ruling. No driver compensation is payable: POL-NS-01 is not satisfied, and the POL-NS-07 anti-farming check does not trip (driver_profile.no_show_terminations_30d is 2, below 4, and 2/90 = 0.022, below 0.08), so no POL-NS-09(d) escalation arises. The fare figure of $4.50 reconciles with the platform's net cancellation fee, so no POL-NS-08(d) defect arises. The single rider-position fix at 17:35:48 is consistent with the rider being near the pin, but the refund does not depend on it. Confidence is 0.95 because the deciding facts &#8212; the scheduled and cancellation timestamps and the fee &#8212; are carried by artifacts at weight 1.0. The monetary effect, $4.50, is below the $8.00 execution threshold, so it executes automatically on issue subject to the appeal route in POL-GEN-04. No referral is issued because no clause that produces one fires.</blockquote><blockquote>To the rider: the $4.50 cancellation fee charged on this advance booking is refunded in full. The trip record shows you were matched at 17:10:08 and the pickup was scheduled for 17:55:08; you cancelled at 17:35:08, exactly 1,200 seconds before the scheduled time. POL-NS-10(b) makes a scheduled-trip cancellation made more than the advance grace before scheduled_at (900 seconds in force for this trip, i.e. any cancellation before 17:40:08) non-chargeable whatever the driver's position, and it cannot be shortened by the driver's early dispatch. POL-NS-10(c) then refunds the fee in full with no driver compensation. The 180-second post-match grace in limb (a) gives you nothing (your cancellation was 1,500 seconds after the match), but on a scheduled booking limb (b), not limb (a), is the governing grace, and you cancelled inside it.
+
+To the driver: I have read your arguments. The $4.50 is not chargeable. Your limb (f) argument is rejected: limb (f) makes a rider's own cancellation chargeable only 'after the grace in limb (a) or (b)', and this cancellation fell inside limb (b)'s protected window rather than after it. Limb (b) is a charging rule in its own right for scheduled trips and is not emptied by limb (f). I accept your factual points - you began moving toward the pickup at 17:10:16, your trace ran 157 fixes with no gaps and 100% coverage, no vehicle/driver mismatch or ask&#45;to-cancel is shown - but on a scheduled booking none of those makes the fee chargeable once limb (b) applies. I also accept that the $4.50 line is the platform's own published figure and reconciles to platform_policy.cancellation_fee_sgd, so no POL-NS-08(d) fare defect arises; the defect is chargeability, not arithmetic.
+
+The charge independently fails the no-show tests. POL-NS-01 limb (a) requires a driver 'arrived' event and this record has none (arrived_at is null; the event list is driver_assigned 17:10:08 -&gt; driver_en_route 17:10:16 -&gt; trip_cancelled 17:35:08, with no arrival marker and no wait-timer events), and limb (d) requires termination under RIDER_NO_SHOW, RIDER_UNREACHABLE or EXCESSIVE_WAIT, whereas the trip closed as RIDER_CANCELLED by the rider. POL-NS-02 places the driver's closest approach 13,999.99 m from the pin with 0 qualifying in-radius fixes and speeds of 57.0-63.0 km/h through the cancellation; POL-NS-06 measures an in-geofence dwell of 0.0 s against the 180 s free waiting period, a 180 s shortfall. POL-NS-06(i) offers no accumulation route: EV-ADVIS-02738-01 is MISSING with weight_multiplier 0.0 and issue code MISSING_ARTIFACT, and no claim in this ruling relies on it.
+
+No driver compensation is payable: POL-NS-07's payout condition (POL-NS-01 satisfied in full) is not reached, and the anti-farming check does not trip - no_show_terminations_30d is 2 (below 4) and 2/90 = 0.022 (below 0.08) - so POL-NS-09(d) is not engaged and the fee is refunded rather than held. POL-NS-04 cannot be run (the chat log holds 0 messages, so limbs (a) and (b) cannot be made out) and is not relied on; POL-NS-12 does not apply (arrival marker BUTTON, no platform arrival or wait-timer events).
+
+Confidence: the deciding facts (accepted_at, cancelled_at, scheduled_at) are carried by EV-TRIP-02738 at weight 1.0 and the amount charged by EV-FARE-02738 at weight 1.0, so the POL-GEN-02(2) cap is 1.0. Confidence is set at 0.95. The monetary effect, $4.50, is below the $8.00 execution threshold of POL-GEN-05 and executes automatically on issue.</blockquote><blockquote>To both parties: the $4.50 cancellation fee charged on trip TRP-02738 is refunded in full. This was a scheduled (advance) booking - the trip record (EV-TRIP-02738, weight 1.0) shows scheduled_at 2026-08-10T17:55:08 and cancelled_at 2026-08-10T17:35:08, so the rider cancelled 1,200 seconds before the scheduled pickup, which is more than the 900-second advance grace in force for this trip (platform_policy.advance_grace_before_scheduled_sec = 900). POL-NS-10(b) says a cancellation made more than that grace before the scheduled time is not chargeable whatever the driver's position, and POL-NS-10(c) directs that the fee charged on it is refunded in full with no driver compensation. The trip was matched at 17:10:08, outside the 900-second window that opened at 17:40:08, so the limb (a) match-grace does not displace limb (b). The amount refunded is the fare ledger's cancellation-fee line of $4.50 (EV-FARE-02738, weight 1.0), which reconciles to the platform's published figure for this trip, equals total_charged, and leaves refund_issued_sgd at $0.00 - so the whole contested sum is returned.
+
+Driver side: your limb (f) argument is rejected. Limb (f) governs a rider's own cancellation made after the grace in limb (a) or limb (b); this cancellation falls inside limb (b)'s protected early window, so the charging rule of limb (f) and its exhaustive exception list are never reached. Limb (b) is a specific rule for advance bookings and cannot be read away by limb (f). Your supporting points are otherwise accepted but do not create a charge limb (b) removes: the driver was dispatched promptly (en route 8 seconds after match, 157 fixes, no gaps, 100% coverage over 26.0 km, EV-GPS-02738), none of limb (f)'s exceptions is made out, and the fare line shows no POL-NS-08(d) defect.
+
+Rider side: your further grounds are consistent with this outcome but are not needed to reach it. On POL-NS-01, limb (a) fails (arrived_at is null and the event list carries no arrival marker) and limb (d) fails (the record closes as CANCELLED_BY_RIDER with RIDER_CANCELLED, none of the three codes limb (d) names). On POL-NS-02, the driver's closest approach to the pin was 13,999.99 m against the 50 m STANDARD radius, at reported speeds of 57.0-63.0 km/h through the moment of cancellation, so no qualifying in-radius fix exists. POL-NS-06's arithmetic also yields the full 180-second shortfall (0.0 s in-geofence dwell against a 180 s minimum). POL-NS-12 does not apply because the arrival marker in force is BUTTON. Your rider-presence fix (3.93 m from the pin) and the empty chat log are noted, but POL-NS-04 cannot exonerate the rider on a chat log holding 0 messages, and nothing turns on it. The traffic advisory EV-ADVIS-02738-01 is MISSING (weight 0.0, MISSING_ARTIFACT); it carries no fact and the ruling does not rest on it.
+
+On compensation and escalation: POL-NS-01 is not satisfied on any limb, so POL-NS-07's payout condition is never reached and no driver compensation is payable. The anti-farming check does not trip - driver_profile.no_show_terminations_30d is 2 (below the required 4) and 2/90 = 0.022 (below the required 0.08) - so there is no withholding and no POL-NS-09(d) escalation. No other POL-NS-09 trigger fires.
+
+Confidence: the deciding facts (the scheduled and cancellation times, and the $4.50 ledger line) are carried by EV-TRIP-02738 and EV-FARE-02738, both at weight_multiplier 1.0, so the cap under POL-GEN-02(2) is 1.0; no impaired artifact carries a deciding fact. Confidence is set at 0.95, above the 0.70 floor, so the case is not escalated. The monetary effect of $4.50 is below the POL-GEN-05 execution threshold of $8.00.</blockquote></div><div class="pane" data-pane="5"><h3>Floor and triggers</h3><p class="lead">computed by code - confidence 0.92 against the floor 0.7</p><p>The confidence recorded for this case is 0.92 against the floor of 0.7 stated by POL-GEN-02.</p><p>No escalation reason is recorded: the case did not escalate.</p></div><div class="pane" data-pane="6"><h3>Outcome</h3><p class="lead">the outcome - Full refund</p><p><strong>Full refund</strong> <span class="mono">FULL_REFUND</span></p><p>Refund to the rider: SGD 4.50</p></div></div></section>
+<footer class="foot"><span>commit 9ca7313</span><span>tag freeze-2026-10-09</span><span>policy version 6</span><span>model deepseek/deepseek-flash</span></footer>
+</main>
+
+<script>
+(function(){
+  "use strict";
+  function each(selector, root){
+    return Array.prototype.slice.call((root || document).querySelectorAll(selector));
+  }
+
+  // Tabs: a button with data-tab shows the panel with the same data-panel.
+  var tabs = each("[data-tab]");
+  tabs.forEach(function(tab){
+    tab.addEventListener("click", function(){
+      var name = tab.getAttribute("data-tab");
+      tabs.forEach(function(other){
+        var on = other === tab;
+        other.setAttribute("aria-selected", on ? "true" : "false");
+        other.className = on ? "tab tab-on" : "tab";
+      });
+      each("[data-panel]").forEach(function(panel){
+        panel.hidden = panel.getAttribute("data-panel") !== name;
+      });
+    });
+  });
+
+  // The stepper: a button with data-step shows the pane with the same data-pane.
+  each(".stepper").forEach(function(stepper){
+    var buttons = each("button[data-step]", stepper);
+    buttons.forEach(function(button){
+      button.addEventListener("click", function(){
+        buttons.forEach(function(other){
+          other.className = other === button ? "on" : "";
+        });
+        var detail = stepper.parentElement.querySelector(".detail");
+        if (!detail){ return; }
+        each(".pane", detail).forEach(function(pane){
+          pane.className = pane.getAttribute("data-pane") === button.getAttribute("data-step") ? "pane on" : "pane";
+        });
+      });
+    });
+  });
+
+  var table = document.getElementById("queue");
+  if (table){
+    var body = table.tBodies[0];
+    var rows = Array.prototype.slice.call(body.rows);
+    var state = {column: null, up: true};
+
+    function value(row, column){
+      var cell = row.querySelector('td[data-column="' + column + '"]');
+      if (!cell){ return ""; }
+      var sort = cell.getAttribute("data-sort");
+      return sort === null ? cell.textContent.trim() : sort;
+    }
+
+    function numeric(text){
+      return /^-?[0-9]+(\.[0-9]+)?$/.test(text);
+    }
+
+    function sortBy(column){
+      if (state.column === column){ state.up = !state.up; }
+      else { state.column = column; state.up = true; }
+      rows.sort(function(a, b){
+        var x = value(a, column), y = value(b, column);
+        if (numeric(x) && numeric(y)){
+          return state.up ? Number(x) - Number(y) : Number(y) - Number(x);
+        }
+        if (x === y){ return 0; }
+        return state.up ? (x < y ? -1 : 1) : (x < y ? 1 : -1);
+      });
+      rows.forEach(function(row){ body.appendChild(row); });
+    }
+
+    each("th[data-column]", table).forEach(function(head){
+      head.classList.add("sortable");
+      head.addEventListener("click", function(){
+        sortBy(head.getAttribute("data-column"));
+      });
+    });
+
+    var chosen = {outcome: "all", set: "all"};
+    function apply(){
+      var shown = 0;
+      rows.forEach(function(row){
+        var okOutcome = chosen.outcome === "all" || row.getAttribute("data-outcome") === chosen.outcome;
+        var okSet = chosen.set === "all" || row.getAttribute("data-set") === chosen.set;
+        var ok = okOutcome && okSet;
+        row.hidden = !ok;
+        if (ok){ shown += 1; }
+      });
+      var count = document.getElementById("shown");
+      if (count){ count.textContent = String(shown); }
+    }
+
+    each("[data-filter]").forEach(function(button){
+      button.addEventListener("click", function(){
+        chosen.outcome = button.getAttribute("data-filter");
+        each("[data-filter]").forEach(function(other){
+          other.className = other === button ? "on" : "";
+        });
+        apply();
+      });
+    });
+
+    var picker = document.getElementById("set-picker");
+    if (picker){
+      picker.addEventListener("change", function(){
+        chosen.set = picker.value;
+        apply();
+      });
+    }
+    apply();
+  }
+
+  var form = document.getElementById("review-form");
+  if (form){
+    var reason = document.getElementById("reason");
+    var verdict = document.getElementById("verdict");
+    var output = document.getElementById("command");
+    var evidence = (form.getAttribute("data-evidence") || "").split(" ").filter(Boolean);
+    var clauses = (form.getAttribute("data-clauses") || "").split(" ").filter(Boolean);
+    var floor = Number(form.getAttribute("data-reason-min") || "0");
+
+    function cited(text, ids){
+      for (var i = 0; i < ids.length; i += 1){
+        if (text.indexOf(ids[i]) >= 0){ return true; }
+      }
+      return false;
+    }
+
+    function check(){
+      var text = reason.value.trim();
+      var problems = [];
+      if (text.length < floor){
+        problems.push("the reason is " + text.length + " characters; POL-GEN-06(6) requires at least " + floor);
+      }
+      if (!cited(text, evidence)){
+        problems.push("the reason cites no evidence id of this case");
+      }
+      if (!cited(text, clauses)){
+        problems.push("the reason cites no clause id of this case");
+      }
+      return {text: text, problems: problems};
+    }
+
+    function decision(){
+      var picked = form.querySelector('input[name="decision"]:checked');
+      return picked ? picked.value : "";
+    }
+
+    function command(){
+      var text = reason.value.trim();
+      return "python3 -m ops.review --run-dir " + form.getAttribute("data-run-dir") +
+        " --case " + form.getAttribute("data-case") +
+        " --packet-sha256 " + form.getAttribute("data-packet") +
+        " close --ruling " + form.getAttribute("data-ruling") +
+        ' --closed-by "' + (document.getElementById("reviewer").value || "reviewer") + '"' +
+        ' --summary "' + decision() + '"' +
+        ' --reason "' + text.replace(/"/g, "'") + '"';
+    }
+
+    function refresh(){
+      var state = check();
+      if (state.problems.length){
+        verdict.className = "err";
+        verdict.textContent = state.problems.join("; ");
+      } else {
+        verdict.className = "ok";
+        verdict.textContent = "The reason is long enough and cites this case's own evidence and clause ids.";
+      }
+      output.textContent = command();
+    }
+
+    form.addEventListener("input", refresh);
+    form.addEventListener("change", refresh);
+
+    var copy = document.getElementById("copy");
+    if (copy){
+      copy.addEventListener("click", function(){
+        var text = command();
+        var done = function(){
+          var status = document.getElementById("copy-status");
+          if (status){ status.textContent = "Copied."; }
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText){
+          navigator.clipboard.writeText(text).then(done, function(){
+            var status = document.getElementById("copy-status");
+            if (status){ status.textContent = "Select the command above and copy it by hand."; }
+          });
+        } else {
+          var status = document.getElementById("copy-status");
+          if (status){ status.textContent = "Select the command above and copy it by hand."; }
+        }
+      });
+    }
+    refresh();
+  }
+})();
+</script>
+</body>
+</html>

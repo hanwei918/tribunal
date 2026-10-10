@@ -351,13 +351,14 @@ class CommittedPageTests(unittest.TestCase):
         portability.require_the_same_libm()
         self.assertTrue(
             build.OUTPUT_PATH.is_file(),
-            "ui/dist/index.html is not committed; run `python -m ui.build`",
+            "ui/dist/replay/index.html is not committed; run `python -m ui.build`",
         )
         committed = build.OUTPUT_PATH.read_text(encoding="utf-8")
         self.assertEqual(
             self.page,
             committed,
-            "ui/dist/index.html differs from a fresh build; run `python -m ui.build`",
+            "ui/dist/replay/index.html differs from a fresh build; run "
+            "`python -m ui.build`",
         )
 
     def test_two_builds_are_byte_identical(self):
@@ -2349,7 +2350,9 @@ class ChildAdderTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if not build.OUTPUT_PATH.is_file():
-            raise AssertionError("ui/dist/index.html is not committed; run `python -m ui.build`")
+            raise AssertionError(
+                "ui/dist/replay/index.html is not committed; run `python -m ui.build`"
+            )
         cls.page = build.OUTPUT_PATH.read_text(encoding="utf-8")
         cls.script = behaviour_script(cls.page)
 
@@ -2552,11 +2555,11 @@ class ViewerPageRegistryTests(unittest.TestCase):
 
     def test_every_page_is_where_the_sheet_says_it_is(self):
         expected = {
-            "corpus": "ui/dist/index.html",
-            "codex": "ui/dist/codex/index.html",
-            "wild": "ui/dist/wild/index.html",
-            "wild-v2": "ui/dist/wild-v2/index.html",
-            "ryde-901": "ui/dist/ryde-901/index.html",
+            "corpus": "ui/dist/replay/index.html",
+            "codex": "ui/dist/replay/codex/index.html",
+            "wild": "ui/dist/replay/wild/index.html",
+            "wild-v2": "ui/dist/replay/wild-v2/index.html",
+            "ryde-901": "ui/dist/replay/ryde-901/index.html",
         }
         for name, path in sorted(expected.items()):
             with self.subTest(page=name):
@@ -2565,12 +2568,23 @@ class ViewerPageRegistryTests(unittest.TestCase):
                     str(build.pages()[name].output_path.relative_to(build.PROJECT_ROOT)),
                 )
 
-    def test_the_corpus_page_keeps_the_path_the_submission_links_to(self):
-        """The one output path that must not move."""
+    def test_the_replay_sits_one_level_under_the_site_root(self):
+        """The replay's own root, and the queue one directory above it.
+
+        The site's root is the product view ``ui.v2.build`` writes; every page
+        here sits under ``replay/`` and links back up to that queue.
+        """
         self.assertEqual(build.OUTPUT_PATH, build.pages()["corpus"].output_path)
         self.assertEqual(
-            "ui/dist/index.html",
+            "ui/dist/replay/index.html",
             str(build.OUTPUT_PATH.relative_to(build.PROJECT_ROOT)),
+        )
+        self.assertEqual(
+            "ui/dist/replay/runs/index.html",
+            str(build.INDEX_PATH.relative_to(build.PROJECT_ROOT)),
+        )
+        self.assertEqual(
+            build.PROJECT_ROOT / "ui" / "dist" / "replay", build.DIST_DIR
         )
 
     def test_every_page_reads_the_run_the_sheet_names(self):
@@ -3112,7 +3126,8 @@ class MissNoteTests(unittest.TestCase):
 
     def test_every_note_link_is_absolute_to_the_repository(self):
         """``ui/dist/`` is what gets deployed, so a note linked out of it by a
-        relative path -- ``../../../docs/notes/...`` from ``ui/dist/wild/`` --
+        relative path -- ``../../../../docs/notes/...`` from
+        ``ui/dist/replay/wild/`` --
         points at a file the deployed copy does not have. The same path on the
         repository's own blob page works from anywhere."""
         for name in ("wild", "wild-v2"):
@@ -3220,7 +3235,7 @@ class EveryPageIsCommittedTests(unittest.TestCase):
         self.assertEqual(
             build.render_index(self.documents),
             build.INDEX_PATH.read_text(encoding="utf-8"),
-            "ui/dist/runs/index.html differs from a fresh build; "
+            "ui/dist/replay/runs/index.html differs from a fresh build; "
             "run `python3 -m ui.build`",
         )
 
@@ -4469,11 +4484,11 @@ def run_the_shim(pages: list) -> dict:
 def viewer_page_paths() -> List[Path]:
     """The pages the old viewer builds, and the runs index it writes beside them.
 
-    ``ui/dist/`` also holds the second site under ``ui/dist/v2/``, which
-    ``ui.v2.build`` writes and this viewer does not. A discovery that walked the
-    whole directory would sweep those pages in and read a data block they do not
-    carry, so this class reads only the pages ``ui.build.pages()`` names, plus
-    the runs index the viewer writes with them.
+    ``ui/dist/`` also holds the product view ``ui.v2.build`` writes -- the queue
+    at the site's root and one page per case beside it. A discovery that walked
+    the whole directory would sweep those pages in and read a data block they do
+    not carry, so this class reads only the pages ``ui.build.pages()`` names,
+    plus the runs index the viewer writes with them.
     """
     paths = [page.output_path for page in build.pages().values()]
     paths.append(build.INDEX_PATH)

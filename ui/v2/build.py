@@ -11,8 +11,11 @@ policy version 6: today's disputes, what was decided automatically, what went to
 a human, and -- for one case -- the whole decision, step by step, with the
 agents' own words.
 
-It is a **separate site**. ``ui/build.py`` and every page it commits are
-untouched; the code lives in ``ui/v2/`` and the output in ``ui/dist/v2/``.
+It is the **front door**. The site root is this page -- ``ui/dist/index.html``,
+the queue, and ``ui/dist/case-<NNNNN>.html`` beside it -- and the evaluation
+replay ``ui/build.py`` builds now lives one level down under ``ui/dist/replay/``.
+The code still lives in ``ui/v2/``, and every page here carries a link to the
+replay.
 
 What it reads
 -------------
@@ -84,6 +87,7 @@ import argparse
 import hashlib
 import html
 import json
+import math
 import os
 import re
 import sys
@@ -108,8 +112,12 @@ from tribunal import precedents as precedents_module  # noqa: E402
 # --------------------------------------------------------------------------
 # Where the site lives
 # --------------------------------------------------------------------------
-DIST_DIR = PROJECT_ROOT / "ui" / "dist" / "v2"
+DIST_DIR = PROJECT_ROOT / "ui" / "dist"
 INDEX_PATH = DIST_DIR / "index.html"
+
+# The evaluation replay, one level down from this site's own pages. Every page
+# here links to it, and every page it builds links back to this queue.
+REPLAY_INDEX = "replay/index.html"
 
 # The four runs the queue is drawn from, in the order the set selector lists
 # them. The name is the run's name in ``eval.v6_runs``; the label is what a
@@ -633,46 +641,6 @@ def execution_sentence(
     )
 
 
-def _notice(
-    side: str,
-    policy: PolicyFacts,
-    ruling: Mapping[str, Any],
-    filed_by: Any,
-) -> str:
-    """One party's notice: what was decided, what money moves, how to appeal.
-
-    It adds no fact and no figure the ruling does not already carry, and it does
-    not repeat the judge's explanation: the explanation is shown once under the
-    ruling, and the notice links to it. The appeal is POL-GEN-04's route in one
-    line, and the full clause sits once under the ruling.
-    """
-    value = str(ruling.get("ruling"))
-    decided = "What was decided: the ruling is {0}.".format(
-        _coded(ruling_words(value), value)
-    )
-    money = "What money moves: {0}".format(
-        money_statement(ruling, policy.currency, filed_by)
-    )
-    appeal = "How to appeal: {0}".format(appeal_line(policy))
-    link = (
-        '<p><a href="#judge-explanation">Read the judge\'s explanation, as '
-        "written</a>.</p>"
-    )
-    return (
-        "<h3>{0}</h3>"
-        "<p>{1}</p>"
-        "<p>{2}</p>"
-        "<p>{3}</p>"
-        "{4}"
-    ).format(
-        _text("Notice to the " + side.lower()),
-        decided,
-        _text(money),
-        _text(appeal),
-        link,
-    )
-
-
 def _claims(transcript: Mapping[str, Any], side: str) -> List[Dict[str, Any]]:
     """One side's claims, each with the referee's verdict where there is one.
 
@@ -738,6 +706,14 @@ def _drafts(transcript: Mapping[str, Any]) -> List[Dict[str, Any]]:
                 "draft": draft.get("draft"),
                 "kind": draft.get("kind"),
                 "sides": list(draft.get("sides") or []),
+                # The transcript entries this draft occupies, so a page can read
+                # the seconds the judge's own calls took without guessing a role
+                # name.
+                "entry_indices": [
+                    index
+                    for index in draft.get("entries") or []
+                    if isinstance(index, int)
+                ],
                 "seed": draft.get("seed"),
                 "temperature": draft.get("temperature"),
                 "valid": bool(draft.get("valid")),
@@ -797,29 +773,74 @@ def _outcome_text(
     trigger: Optional[str],
     votes: int,
 ) -> str:
-    """The outcome column: the ruling in words and code, and what money moves.
+    """The outcome column: the words and the amount, and no code.
 
-    The cell is rendered HTML rather than text, because the words are wrapped
-    and the code sits in ``.mono``; the caller writes it as it is and never
-    escapes it again. On a ``DRIVER_COMPENSATION`` ruling the figure is never
-    called a refund -- POL-GEN-03 says the fee stands and the driver is paid.
+    The ruling code belongs on the case page, so this cell carries the words a
+    reader meets first and the figure the ruling moves -- "Partial refund -
+    SGD 8.05". On a ``DRIVER_COMPENSATION`` ruling the figure is never called a
+    refund: POL-GEN-03 says the fee stands and the driver is paid.
     """
     value = str(ruling.get("ruling"))
     if value == ESCALATE and trigger is not None:
-        return "Sent to a reviewer: {0}".format(
-            _coded(trigger_words(trigger, votes), trigger)
-        )
+        return "Sent to a reviewer - {0}".format(_text(trigger_words(trigger, votes)))
     amount = _decimal(ruling.get("amount_sgd"))
     driver = _decimal(ruling.get("driver_compensation_sgd"))
-    parts = [_coded(ruling_words(value), value)]
+    words = _text(ruling_words(value))
     if value == pipeline_module.DRIVER_COMPENSATION and driver is not None:
-        parts.append("driver paid {0}".format(_money(driver, currency)))
-    else:
-        if amount is not None:
-            parts.append("refund {0}".format(_money(amount, currency)))
-        if driver is not None:
-            parts.append("driver paid {0}".format(_money(driver, currency)))
-    return " ".join(parts)
+        return "{0} - driver paid {1}".format(words, _money(driver, currency))
+    if value in REFUND_RULINGS and amount is not None:
+        return "{0} - {1}".format(words, _money(amount, currency))
+    return words
+
+
+def _chip(kind: str, words: str) -> str:
+    """One status chip. The kind is the colour class, and it is fixed here."""
+    return '<span class="chip {0}">{1}</span>'.format(_attribute(kind), _text(words))
+
+
+def _money_is_held(case: "CaseData") -> bool:
+    """Whether POL-GEN-05 holds this case's money for release.
+
+    A decided case whose monetary effect is above the execution threshold is
+    issued but not executed, so its status is not simply "decided": the amount
+    is held and the case joins the human queue.
+    """
+    if case.trigger is not None:
+        return False
+    return monetary_effect(case.ruling) > case.policy.execution_threshold
+
+
+def status_chip(case: "CaseData", with_time: bool = False) -> str:
+    """The status chip: green decided, red reviewer, amber held, grey otherwise.
+
+    The four meanings the sheet names. The wall time is appended on a case page
+    and left off a queue row, where the time has a column of its own.
+    """
+    suffix = (
+        " - {0}".format(_seconds(case.document.get("wall_seconds"))) if with_time else ""
+    )
+    if case.trigger is not None:
+        return _chip(
+            "bad",
+            "Sent to a reviewer - {0}{1}".format(
+                trigger_words(str(case.trigger), case.votes), suffix
+            ),
+        )
+    if _money_is_held(case):
+        return _chip(
+            "warn",
+            "Decided automatically - {0} held for a reviewer{1}".format(
+                _money(monetary_effect(case.ruling), case.policy.currency), suffix
+            ),
+        )
+    if case.ruling.get("ruling") in (
+        FULL_REFUND,
+        PARTIAL_REFUND,
+        NO_ACTION,
+        pipeline_module.DRIVER_COMPENSATION,
+    ):
+        return _chip("ok", "Decided automatically{0}".format(suffix))
+    return _chip("grey", "No status is recorded{0}".format(suffix))
 
 
 # --------------------------------------------------------------------------
@@ -1055,101 +1076,179 @@ def queue_figures(cases: Sequence[CaseData]) -> QueueFigures:
 _CSS = """
 /* The light theme is the default: the palette in :root is what a reader gets
    when the system asks for no preference, and the dark palette below replaces
-   it only when the system asks for dark. The accent colours move with it, so a
-   pill, a bar or a link keeps the same contrast on either background. */
+   it only when the system asks for dark. The status colours move with it, so a
+   chip keeps the same contrast on either background. */
 :root{
-  --ink:#1b1f24;--paper:#ffffff;--soft:#f6f8fa;--line:#d8dee4;--muted:#57606a;
-  --blue:#1f6feb;--orange:#d9822b;--green:#2da44e;--red:#cf222e;
+  --bg:#f3f4f6;--card:#ffffff;--line:#e5e7eb;--ink:#111827;--muted:#6b7280;
+  --soft:#f9fafb;--accent:#1d4ed8;--accent-wash:#e8effd;
+  --ok:#15803d;--ok-wash:#dcfce7;--bad:#b91c1c;--bad-wash:#fee2e2;
+  --warn:#92400e;--warn-wash:#fef3c7;--grey:#374151;--grey-wash:#f3f4f6;
 }
 @media (prefers-color-scheme:dark){
-  :root{--ink:#e6edf3;--paper:#0d1117;--soft:#161b22;--line:#30363d;--muted:#8b949e;
-    --blue:#58a6ff;--orange:#e3a008;--green:#3fb950;--red:#f85149;}
+  :root{--bg:#0f172a;--card:#1e293b;--line:#334155;--ink:#f1f5f9;--muted:#94a3b8;
+    --soft:#16213a;--accent:#93c5fd;--accent-wash:#1e293b;
+    --ok:#86efac;--ok-wash:#14532d;--bad:#fca5a5;--bad-wash:#7f1d1d;
+    --warn:#fcd34d;--warn-wash:#78350f;--grey:#cbd5e1;--grey-wash:#1e293b;}
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
-body{background:var(--paper);color:var(--ink);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
-a{color:var(--blue)}
-.layout{display:flex;min-height:100vh}
-.side{flex:0 0 168px;border-right:1px solid var(--line);background:var(--soft);padding:24px 14px}
-.brand{font-weight:700;margin:0 0 18px;padding:0 8px;letter-spacing:.01em}
-.navlink{display:block;padding:7px 10px;border-radius:7px;color:var(--ink);text-decoration:none}
-.navlink:hover{background:var(--line)}
-.navlink.current{background:var(--blue);color:#fff}
-main{flex:1 1 auto;min-width:0;max-width:1080px;padding:30px 34px 70px}
-h1{font-size:1.5rem;line-height:1.3;margin:.2em 0 .4em}
-h2{font-size:1.05rem;margin:0 0 12px}
-h3{font-size:.95rem;margin:18px 0 6px}
-p{margin:.55em 0}
-.eyebrow{color:var(--muted);font-size:.85rem;letter-spacing:.06em;text-transform:uppercase;margin:0}
-.lede{font-size:1.05rem;margin:.3em 0 1em}
-.card{border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin:0 0 18px;background:var(--paper)}
-.card.soft{background:var(--soft)}
-.card.wide{padding-bottom:8px}
-.disclosure{font-weight:600;border-left:4px solid var(--blue);padding-left:12px;margin:0 0 14px}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+h1{font-size:1.6rem;line-height:1.25;margin:0 0 6px}
+h2{font-size:1rem;margin:0 0 12px}
+h3{font-size:.92rem;margin:16px 0 6px}
+p{margin:.5em 0}
+.top{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line)}
+.top-in{max-width:1280px;margin:0 auto;padding:0 24px;height:56px;display:flex;align-items:center;gap:20px}
+.brand{display:inline-flex;align-items:center;gap:9px;font-weight:700;font-size:17px;text-decoration:none;color:var(--ink)}
+.mark{width:26px;height:26px;border-radius:7px;background:var(--accent);display:inline-flex;align-items:center;justify-content:center;flex:none}
+.nav{display:flex;gap:2px;flex-wrap:wrap}
+.nav a{padding:7px 12px;border-radius:8px;text-decoration:none;color:var(--muted);font-weight:500}
+.nav a.on{color:var(--ink);background:var(--soft);border:1px solid var(--line)}
+.mode{margin-left:auto;font-size:13px;color:var(--muted);white-space:nowrap}
+@media (max-width:700px){.mode{display:none}.top-in{gap:12px;padding:0 16px}}
+.wrap{max-width:1280px;margin:0 auto;padding:26px 24px 56px}
+@media (max-width:700px){.wrap{padding:18px 16px 40px}}
+.lede{color:var(--muted);margin:.3em 0 1.1em;max-width:78ch}
+.ids{color:var(--muted);font-size:.86rem;font-variant-numeric:tabular-nums;margin:0}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.85rem;word-break:break-word}
+.num{font-variant-numeric:tabular-nums}
+
+/* chips */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0}
+.chip{display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:999px;font-size:13px;font-weight:500;background:var(--grey-wash);color:var(--grey);border:1px solid var(--line)}
+.chip.ok{background:var(--ok-wash);color:var(--ok);border-color:transparent}
+.chip.bad{background:var(--bad-wash);color:var(--bad);border-color:transparent}
+.chip.warn{background:var(--warn-wash);color:var(--warn);border-color:transparent}
+
+/* featured cards */
+.featured{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:18px 0 22px}
+@media (max-width:960px){.featured{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.featured{grid-template-columns:minmax(0,1fr)}}
+.fcard{display:block;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;text-decoration:none;color:var(--ink)}
+.fcard:hover{border-color:var(--accent)}
+.fcard .fcase{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.fcard h2{font-size:.95rem;margin:2px 0 8px}
+.fcard p{margin:.25em 0;font-size:13px;color:var(--muted)}
+.fcard b{color:var(--ink);font-weight:600}
+
+/* figures */
 .figures{display:flex;flex-wrap:wrap;gap:14px;margin:0 0 22px}
-.figure{border:1px solid var(--line);border-radius:12px;padding:14px 18px;min-width:168px;flex:1 1 168px}
-.figure .k{color:var(--muted);font-size:.82rem;text-transform:uppercase;letter-spacing:.05em;margin:0 0 6px}
-.figure .v{font-size:1.35rem;font-weight:650;margin:0}
+.figure{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 18px;min-width:168px;flex:1 1 168px}
+.figure .k{color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;margin:0 0 6px}
+.figure .v{font-size:1.3rem;font-weight:650;margin:0}
 .figure .s{color:var(--muted);font-size:.85rem;margin:4px 0 0}
 .figure.wide{flex:1 1 100%}
 .triggers{list-style:none;margin:0;padding:0}
-.triggers li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 14px;padding:5px 0;border-bottom:1px solid var(--line);font-size:1rem;line-height:1.5}
+.triggers li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 14px;padding:4px 0;border-bottom:1px solid var(--line)}
 .triggers li:last-child{border-bottom:0}
 .triggers .n{font-weight:650;font-variant-numeric:tabular-nums}
-td[data-column="time"]{white-space:nowrap}
-.facts{display:flex;flex-wrap:wrap;gap:10px 28px;margin:0;padding:0}
-.facts div{margin:0}
-.facts dt{color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.05em}
-.facts dd{margin:2px 0 0;font-weight:600}
-.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px}
-.tab{border:1px solid var(--line);background:var(--soft);color:var(--ink);border-radius:999px;padding:7px 16px;font:inherit;cursor:pointer}
-.tab-on{background:var(--blue);border-color:var(--blue);color:#fff}
+
+/* table */
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin:0 0 18px}
+.card.wide{padding:0;overflow:hidden}
+.card.wide>h2,.card.wide>p{padding:0 22px}
+.card.wide>h2{margin-top:18px}
 table{border-collapse:collapse;width:100%}
-th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
-th{color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{color:var(--muted);font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover td{background:var(--soft)}
 th.sortable{cursor:pointer;user-select:none}
-th.sortable::after{content:" \\2195";color:var(--muted)}
-tr.reviewer td{background:rgba(217,130,43,.09)}
-.pill{display:inline-block;border-radius:999px;padding:2px 10px;font-size:.8rem;font-weight:600}
-.pill.blue{background:rgba(31,111,235,.14);color:var(--blue)}
-.pill.orange{background:rgba(217,130,43,.16);color:var(--orange)}
-.pill.green{background:rgba(45,164,78,.16);color:var(--green)}
-.pill.red{background:rgba(207,34,46,.14);color:var(--red)}
-.pill.grey{background:var(--soft);color:var(--muted);border:1px solid var(--line)}
-.filters{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 14px}
-.filters button{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:999px;padding:6px 14px;font:inherit;cursor:pointer}
-.filters button.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
-.filters select{font:inherit;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--paper);color:var(--ink)}
-.bar{position:relative;height:12px;border-radius:6px;background:var(--soft);border:1px solid var(--line);margin:10px 0 6px;overflow:hidden}
-.bar span{position:absolute;left:0;top:0;bottom:0;background:var(--blue)}
-.bar i{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--red)}
-.axis{display:flex;justify-content:space-between;color:var(--muted);font-size:.82rem}
-blockquote{margin:8px 0;padding:10px 14px;border-left:3px solid var(--line);background:var(--soft);white-space:pre-wrap;overflow-wrap:anywhere}
-details{border:1px solid var(--line);border-radius:10px;padding:0 16px;margin:0 0 10px}
-details[open]{padding-bottom:12px}
-summary{cursor:pointer;padding:13px 0;font-weight:600}
-.label{color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;margin:12px 0 0}
-.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.85rem;word-break:break-all}
-pre{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:12px;overflow-wrap:anywhere;white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.85rem}
-.foot{border-top:1px solid var(--line);margin-top:34px;padding-top:14px;color:var(--muted);font-size:.85rem}
-.foot span{margin-right:18px}
-.claim{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:0 0 10px}
-.claim p{margin:.35em 0}
-.err{color:var(--red);font-weight:600}
-.ok{color:var(--green);font-weight:600}
+td[data-column="time"],td[data-column="confidence"]{white-space:nowrap}
+td a{font-weight:600;text-decoration:none}
+
+/* case page */
+.pagehead{margin:0 0 18px}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;border-bottom:1px solid var(--line);margin:0 0 22px}
+.tabs button{appearance:none;border:0;background:transparent;color:var(--muted);font:inherit;font-weight:500;padding:9px 13px;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer}
+.tabs button.tab-on{color:var(--ink);border-bottom-color:var(--accent)}
+.verdict{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px 26px;display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:30px;margin:0 0 22px}
+.verdict .word{font-size:2.1rem;font-weight:700;letter-spacing:-.01em;line-height:1.1;margin:0}
+.verdict .code{color:var(--muted);margin:6px 0 0}
+.verdict .lbl{color:var(--muted);font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;margin:18px 0 4px}
+.verdict .why{margin:0;font-size:1rem}
+.verdict .after{margin:14px 0 0;font-size:.9rem;color:var(--muted)}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 20px;align-content:start;border-left:1px solid var(--line);padding-left:26px}
+.tiles div{display:flex;flex-direction:column;gap:2px}
+.tiles b{font-size:1.15rem;font-weight:650}
+.tiles span{font-size:.8rem;color:var(--muted)}
+@media (max-width:960px){.verdict{grid-template-columns:minmax(0,1fr)}.tiles{border-left:0;padding-left:0;border-top:1px solid var(--line);padding-top:16px}}
+.two{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:26px;align-items:start}
+@media (max-width:960px){.two{grid-template-columns:minmax(0,1fr)}}
+.sec{margin:0 0 22px}
+.sides{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:700px){.sides{grid-template-columns:minmax(0,1fr)}}
+.side{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 18px}
+.side header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.side header small{color:var(--muted)}
+.side ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px}
+.side li{line-height:1.5}
+.side li s{color:var(--muted)}
+.side .ref{color:var(--muted);font-size:.78rem;margin-left:4px;white-space:nowrap}
+.side .why{display:block;font-size:.82rem;color:var(--bad);margin-top:2px}
+
+/* rail */
+.rail{display:flex;flex-direction:column;gap:14px}
+.rail details{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:0 16px}
+.rail summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 0;font-weight:600;cursor:pointer}
+.rail summary::-webkit-details-marker{display:none}
+.rail summary span{font-weight:400;color:var(--muted);font-size:.82rem}
+.rail .in{padding:0 0 14px;font-size:.9rem}
+.map{background:var(--soft);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.map svg{display:block;width:100%;height:auto}
+.cap{color:var(--muted);font-size:.78rem;margin:6px 0 0}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:.78rem;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:16px;height:3px;vertical-align:middle;margin-right:5px;border-radius:2px}
+.legend i.dot{width:9px;height:9px;border-radius:50%}
+.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 14px;font-size:.88rem}
+
+/* stepper */
+.stepper{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin:0 0 10px}
+.stepper button{appearance:none;text-align:left;border:0;border-left:1px solid var(--line);background:transparent;font:inherit;color:inherit;cursor:pointer;padding:14px 16px;display:flex;flex-direction:column;gap:5px;position:relative}
+.stepper button:first-child{border-left:0}
+.stepper button .n{display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--muted)}
+.stepper button .n i{width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;background:var(--grey);font-style:normal}
+.stepper button .n i.llm{background:var(--accent)}
+.stepper button .n i.ok{background:var(--ok)}
+.stepper button .n i.bad{background:var(--bad)}
+.stepper button .t{font-weight:600}
+.stepper button .s{font-size:.78rem;color:var(--muted)}
+.stepper button.on{background:var(--soft)}
+.stepper button.on::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--accent)}
+@media (max-width:900px){.stepper{grid-template-columns:repeat(3,minmax(0,1fr))}.stepper button{border-top:1px solid var(--line)}}
+.who{display:flex;flex-wrap:wrap;gap:16px;font-size:.8rem;color:var(--muted);margin:0 0 16px 4px}
+.who i{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:0;margin-right:5px}
+.detail{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 22px}
+.detail h3{margin:0 0 4px;font-size:1.05rem}
+.detail .lead{margin:0 0 12px;color:var(--muted)}
+.pane{display:none}.pane.on{display:block}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:12px 0}
+.grid3 div{background:var(--soft);border-radius:8px;padding:10px 12px}
+.grid3 b{display:block;font-size:1.15rem;font-weight:650}
+.grid3 span{font-size:.8rem;color:var(--muted)}
+@media (max-width:700px){.grid3{grid-template-columns:minmax(0,1fr)}}
+
+/* misc */
+.claim{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:0 0 10px}
+.claim p{margin:.3em 0}
+.pill{display:inline-block;border-radius:999px;padding:1px 9px;font-size:.78rem;font-weight:600}
+.pill.green{background:var(--ok-wash);color:var(--ok)}
+.pill.red{background:var(--bad-wash);color:var(--bad)}
+.pill.grey{background:var(--grey-wash);color:var(--muted)}
+.err{color:var(--bad);font-weight:600}
+.ok{color:var(--ok);font-weight:600}
 .empty{color:var(--muted)}
-@media (max-width:640px){
-  .layout{display:block}
-  .side{border-right:0;border-bottom:1px solid var(--line);padding:14px 12px}
-  .brand{margin-bottom:8px}
-  main{padding:20px 16px 48px}
-  .card{padding:16px}
-  table thead{display:none}
-  table,tbody,tr,td{display:block;width:100%}
-  tr{border-bottom:1px solid var(--line);padding:8px 0}
-  td{border:0;padding:4px 0}
-  td::before{content:attr(data-label);display:block;color:var(--muted);font-size:.78rem;text-transform:uppercase;letter-spacing:.05em}
-}
+blockquote{margin:8px 0;padding:10px 14px;border-left:3px solid var(--line);background:var(--soft);white-space:pre-wrap;overflow-wrap:anywhere}
+details.form{border:1px solid var(--line);border-radius:10px;padding:0 16px;margin:0 0 10px}
+details.form summary{cursor:pointer;padding:12px 0;font-weight:600}
+.filters{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 14px}
+.filters button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:6px 14px;font:inherit;cursor:pointer}
+.filters button.on{background:var(--ink);color:var(--card);border-color:var(--ink)}
+.filters select{font:inherit;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+.foot{border-top:1px solid var(--line);margin-top:32px;padding-top:14px;color:var(--muted);font-size:.82rem;display:flex;flex-wrap:wrap;gap:16px}
+pre{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:12px;overflow-wrap:anywhere;white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.85rem}
+textarea,input[type="text"]{font:inherit;color:inherit}
 """
 
 _JS = """
@@ -1159,6 +1258,7 @@ _JS = """
     return Array.prototype.slice.call((root || document).querySelectorAll(selector));
   }
 
+  // Tabs: a button with data-tab shows the panel with the same data-panel.
   var tabs = each("[data-tab]");
   tabs.forEach(function(tab){
     tab.addEventListener("click", function(){
@@ -1170,6 +1270,23 @@ _JS = """
       });
       each("[data-panel]").forEach(function(panel){
         panel.hidden = panel.getAttribute("data-panel") !== name;
+      });
+    });
+  });
+
+  // The stepper: a button with data-step shows the pane with the same data-pane.
+  each(".stepper").forEach(function(stepper){
+    var buttons = each("button[data-step]", stepper);
+    buttons.forEach(function(button){
+      button.addEventListener("click", function(){
+        buttons.forEach(function(other){
+          other.className = other === button ? "on" : "";
+        });
+        var detail = stepper.parentElement.querySelector(".detail");
+        if (!detail){ return; }
+        each(".pane", detail).forEach(function(pane){
+          pane.className = pane.getAttribute("data-pane") === button.getAttribute("data-step") ? "pane on" : "pane";
+        });
       });
     });
   });
@@ -1343,21 +1460,46 @@ def _shell(title: str, body: str) -> str:
         '<html lang="en">\n<head>\n<meta charset="utf-8">\n'
         '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
         "<title>{0}</title>\n<style>{1}</style>\n</head>\n<body>\n"
-        '<div class="layout">\n{2}\n</div>\n<script>{3}</script>\n</body>\n</html>\n'
+        "{2}\n<script>{3}</script>\n</body>\n</html>\n"
     ).format(_text(title), _CSS, body, _JS)
     return defuse_key_shaped(page)
 
 
-def _nav(current: str) -> str:
-    """The narrow left navigation: the queue, and nothing else."""
-    if current == "queue":
-        item = '<span class="navlink current">Queue</span>'
-    else:
-        item = '<a class="navlink" href="index.html">Queue</a>'
-    return (
-        '<nav class="side" aria-label="Sections">\n'
-        '<p class="brand">Tribunal</p>\n{0}\n</nav>\n'.format(item)
+# The product's mark, inline: a beam, a base, a crossbar and two pans. It is
+# drawn here rather than loaded, so the page needs no font and no image.
+SCALES_MARK = (
+    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" '
+    'stroke="#ffffff" stroke-width="2" stroke-linecap="round" '
+    'stroke-linejoin="round" aria-hidden="true">'
+    '<path d="M12 4v16M8 20h8M5 7h14M5 7L2 13h6zM19 7l-3 6h6z"/></svg>'
+)
+
+
+def _mode_text(version: Any, model: Any) -> str:
+    """The top bar's right-hand readout, from the run the page replays."""
+    return "Replay - policy v{0} - {1}".format(_text(version), _text(model))
+
+
+def _topbar(mode: str, current: str) -> str:
+    """The top bar: the product, the two sites, and the run being replayed."""
+    queue = (
+        '<span class="on">Queue</span>'
+        if current == "queue"
+        else '<a href="index.html">Queue</a>'
     )
+    replay = (
+        '<span class="on">Evaluation replay</span>'
+        if current == "replay"
+        else '<a href="{0}">Evaluation replay</a>'.format(REPLAY_INDEX)
+    )
+    return (
+        '<header class="top">\n<div class="top-in">\n'
+        '<a class="brand" href="index.html"><span class="mark">{0}</span>Tribunal'
+        "</a>\n"
+        '<nav class="nav" aria-label="Sites">{1}{2}</nav>\n'
+        '<span class="mode">{3}</span>\n'
+        "</div>\n</header>\n"
+    ).format(SCALES_MARK, queue, replay, _text(mode))
 
 
 def _footer(case: CaseData) -> str:
@@ -1427,7 +1569,7 @@ def _queue_row(case: CaseData) -> str:
     amount_sort = _decimal(dispute.get("amount_contested_sgd"))
     time_sort = _decimal(case.document.get("wall_seconds"))
     filed_by = dispute.get("filed_by")
-    # The cell text is escaped once, when it is written -- the outcome is the one
+    # The cell text is escaped once, when it is written -- the status is the one
     # cell already rendered as HTML -- and the sort key is a plain value, so a
     # sort never reads a markup fragment as though it were the value.
     cells = (
@@ -1455,7 +1597,8 @@ def _queue_row(case: CaseData) -> str:
             str(amount_sort if amount_sort is not None else 0),
             "Amount contested",
         ),
-        ("outcome", outcome, str(case.ruling.get("ruling")), "Outcome"),
+        ("status", status_chip(case), case.outcome_kind, "Status"),
+        ("outcome", _text(outcome), str(case.ruling.get("ruling")), "Outcome"),
         ("confidence", _text(confidence_text), confidence_text, "Confidence"),
         (
             "time",
@@ -1482,6 +1625,7 @@ def _queue_head() -> str:
         ("category", "Category"),
         ("filed_by", "Filed by"),
         ("amount", "Amount contested"),
+        ("status", "Status"),
         ("outcome", "Outcome"),
         ("confidence", "Confidence"),
         ("time", "Time"),
@@ -1508,14 +1652,101 @@ def _set_picker(cases: Sequence[CaseData]) -> str:
     )
 
 
+# The four featured cases, and the fixed title each card carries. The title is
+# this file's words; every fact under it is read from the run.
+FEATURED_CASES: Tuple[Tuple[int, str], ...] = (
+    (901, "The organisers' sample"),
+    (208, "A no-show the evidence settles"),
+    (1779, "A prompt injection, caught"),
+    (2735, "A safety flag: straight to a human"),
+)
+
+
+def _featured_facts(case: CaseData) -> List[Tuple[str, str]]:
+    """The facts one featured card carries, each read from the run's own files."""
+    currency = case.policy.currency
+    dispute = case.case.get("dispute") or {}
+    if case.case_no == 901:
+        return [
+            ("Outcome", _outcome_text(case.ruling, currency, case.trigger, case.votes)),
+            ("Confidence", str(case.ruling.get("confidence"))),
+        ]
+    if case.case_no == 208:
+        return [
+            ("Outcome", _outcome_text(case.ruling, currency, case.trigger, case.votes)),
+            (
+                "Amounts",
+                money_statement(case.ruling, currency, dispute.get("filed_by")),
+            ),
+        ]
+    if case.case_no == 1779:
+        drafts = _drafts(case.transcript)
+        rejected = [draft for draft in drafts if not draft["valid"]]
+        if drafts and len(rejected) == len(drafts):
+            panel = "every one of the {0} drafts was rejected by the code checks".format(
+                len(drafts)
+            )
+        else:
+            panel = "{0} of {1} drafts were rejected by the code checks".format(
+                len(rejected), len(drafts)
+            )
+        return [("Reason code", str(case.trigger)), ("The panel", panel)]
+    if case.case_no == 2735:
+        calls = [
+            entry
+            for entry in case.transcript.get("entries") or []
+            if isinstance(entry, Mapping)
+        ]
+        return [
+            ("Reason", trigger_words(str(case.trigger), case.votes)),
+            (
+                "Model calls",
+                "0 - the scope gate asked no model"
+                if not calls
+                else "{0} agent calls are recorded".format(len(calls)),
+            ),
+        ]
+    raise BuildError(
+        "case {0} is featured but has no card of its own".format(case.case_no)
+    )
+
+
+def _featured_card(case: CaseData, title: str) -> str:
+    """One featured case: a fixed title, and the run's own facts beneath it."""
+    facts = "".join(
+        "<p><b>{0}</b> {1}</p>".format(_text(label), _text(value))
+        for label, value in _featured_facts(case)
+    )
+    return (
+        '<a class="fcard" href="{0}">'
+        '<span class="fcase">Case {1}</span>'
+        "<h2>{2}</h2>{3}</a>"
+    ).format(_attribute(case.link), _text(case.case_no), _text(title), facts)
+
+
+def _featured_cards(cases: Sequence[CaseData]) -> str:
+    """The four featured cases, in the order this file names them."""
+    by_number = {case.case_no: case for case in cases}
+    cards: List[str] = []
+    for case_no, title in FEATURED_CASES:
+        case = by_number.get(case_no)
+        if case is None:
+            raise BuildError(
+                "featured case {0} is not among the runs this site draws".format(case_no)
+            )
+        cards.append(_featured_card(case, title))
+    return '<section class="featured">' + "".join(cards) + "</section>\n"
+
+
 def build_index(cases: Sequence[CaseData]) -> str:
-    """The queue: five figures, a filter row and one sortable row per case."""
+    """The queue: four featured cases, the figures, a filter row and the table."""
     figures = queue_figures(cases)
     header = (
         '<header class="pagehead">\n'
         "<h1>Today's disputes</h1>\n"
         '<p class="lede">A replay of the version-6 runs committed in this '
-        "repository; no page calls a model.</p>\n"
+        "repository; no page calls a model. Every number is read from the run's "
+        "own files.</p>\n"
         "</header>\n"
     )
     figure_html = '<div class="figures">' + "".join(
@@ -1559,9 +1790,10 @@ def build_index(cases: Sequence[CaseData]) -> str:
         "<tbody>{1}</tbody>\n</table>\n</div>\n".format(_queue_head(), rows)
     )
     body = (
-        _nav("queue")
-        + "<main>\n"
+        _topbar(_mode_text(figures.policy_version, figures.model), "queue")
+        + '<main class="wrap">\n'
         + header
+        + _featured_cards(cases)
         + figure_html
         + filters
         + table
@@ -1592,55 +1824,40 @@ def _summary_line(case: Mapping[str, Any]) -> str:
     return collapsed if end < 0 else collapsed[: end + 1]
 
 
-def _confidence_card(case: CaseData) -> str:
-    """The confidence, on its scale, with the policy's floor marked."""
-    confidence = _decimal(case.ruling.get("confidence"))
-    floor = case.policy.confidence_floor
-    if confidence is None:
-        return '<p class="empty">No confidence is recorded for this case.</p>'
-    width = "{0:.1f}%".format(confidence * 100)
-    mark = "{0:.1f}%".format(floor * 100)
-    return (
-        '<div class="bar" role="img" aria-label="confidence {0} against a floor of {1}">'
-        "<span style=\"width:{2}\"></span><i style=\"left:{3}\"></i></div>"
-        '<p class="axis"><span>confidence {0}</span>'
-        "<span>floor {1} (POL-GEN-02)</span></p>"
-    ).format(_attribute(confidence), _attribute(floor), _attribute(width), _attribute(mark))
-
-
 def _claims_block(case: CaseData, side: str) -> str:
-    """One side's claims, each marked kept or discarded by the referee."""
+    """One side's column: its numbered claims, and the referee's verdict on each.
+
+    A discarded claim is struck through and the referee's reason sits under it in
+    red. The head says how many claims the side made and how many were kept.
+    """
+    heading = side.title() + " advocate"
     claims = _claims(case.transcript, side)
     if not claims:
         return (
-            '<p class="empty">No claim from the {0} advocate is recorded: no '
-            "advocate was asked to argue this case.</p>".format(_text(side.lower()))
+            '<article class="side"><header><b>{0}</b></header>'
+            '<p class="empty">No advocate was asked to argue this case, so this '
+            "side made no claim.</p></article>".format(_text(heading))
         )
-    out = []
+    kept = sum(1 for claim in claims if claim["status"] == "KEPT")
+    items = []
     for claim in claims:
-        status = claim["status"]
-        if status == "KEPT":
-            pill = '<span class="pill green">kept</span>'
-        elif status == "DISCARDED":
-            pill = '<span class="pill red">discarded</span>'
-        else:
-            pill = '<span class="pill grey">no verdict recorded</span>'
-        lines = ['<div class="claim"><p>{0} {1}</p>'.format(pill, _text(claim["text"]))]
-        lines.append(
-            '<p class="label">evidence {0} &middot; clauses {1}</p>'.format(
-                _text(", ".join(claim["evidence_ids"]) or "none"),
-                _text(", ".join(claim["clause_ids"]) or "none"),
-            )
+        text = _text(claim["text"])
+        if claim["status"] == "DISCARDED":
+            text = "<s>{0}</s>".format(text)
+        refs = '<span class="ref">{0} &middot; {1}</span>'.format(
+            _text(", ".join(claim["evidence_ids"]) or "no evidence id"),
+            _text(", ".join(claim["clause_ids"]) or "no clause id"),
         )
-        if status == "DISCARDED":
-            lines.append(
-                '<p><strong>Discarded by the referee ({0}):</strong> {1}</p>'.format(
-                    _text(claim["reason_code"]), _text(claim["detail"])
-                )
+        reason = ""
+        if claim["status"] == "DISCARDED":
+            reason = '<span class="why">Discarded by the referee ({0}): {1}</span>'.format(
+                _text(claim["reason_code"]), _text(claim["detail"])
             )
-        lines.append("</div>")
-        out.append("".join(lines))
-    return "".join(out)
+        items.append("<li>{0}{1}{2}</li>".format(text, refs, reason))
+    return (
+        '<article class="side"><header><b>{0}</b><small>{1} claim(s), {2} kept</small>'
+        "</header><ol>{3}</ol></article>"
+    ).format(_text(heading), len(claims), kept, "".join(items))
 
 
 def _evidence_table(case: CaseData) -> str:
@@ -1668,128 +1885,607 @@ def _evidence_table(case: CaseData) -> str:
     )
 
 
-def _decided_ruling(case: CaseData) -> str:
-    """The ruling card of a decided case: the ruling, its money and its appeal."""
+def _compact(value: Any) -> str:
+    """A derived figure, written short: two decimals, no trailing zeros."""
+    number = _decimal(value)
+    if number is None:
+        return _text(value)
+    try:
+        text = format(number.quantize(Decimal("0.01")), "f")
+    except Exception:
+        return _text(value)
+    if "." in text:
+        text = text.rstrip("0").rstrip(".")
+    return text or "0"
+
+
+def _payload(brief: Mapping[str, Any], evidence_type: str) -> Mapping[str, Any]:
+    """One artifact's payload, by evidence type, or an empty mapping."""
+    for artifact in brief.get("case", {}).get("evidence") or []:
+        if isinstance(artifact, Mapping) and artifact.get("evidence_type") == evidence_type:
+            payload = artifact.get("payload")
+            return payload if isinstance(payload, Mapping) else {}
+    return {}
+
+
+def _case_payload(case: Mapping[str, Any], evidence_type: str) -> Mapping[str, Any]:
+    """One artifact's payload from a **public case**, by evidence type.
+
+    The brief reduces a GPS trace to cited derived facts and carries no point
+    list, so the geometry a trace is drawn from is read from the case file the
+    run was made from rather than from the brief.
+    """
+    for artifact in case.get("evidence") or []:
+        if isinstance(artifact, Mapping) and artifact.get("evidence_type") == evidence_type:
+            payload = artifact.get("payload")
+            return payload if isinstance(payload, Mapping) else {}
+    return {}
+
+
+def _derived_block(
+    brief: Mapping[str, Any], evidence_type: str, key: str
+) -> Optional[Mapping[str, Any]]:
+    """One artifact's derived block by key, or ``None`` when it carries none."""
+    derived = _payload(brief, evidence_type).get("derived")
+    if isinstance(derived, Mapping) and isinstance(derived.get(key), Mapping):
+        return derived[key]
+    return None
+
+
+def _fact_value(block: Any, *path: str) -> Any:
+    """The ``value`` at a dotted path inside a derived block, or ``None``."""
+    node: Any = block
+    for name in path:
+        if not isinstance(node, Mapping):
+            return None
+        node = node.get(name)
+    if isinstance(node, Mapping) and "value" in node:
+        return node.get("value")
+    return node
+
+
+def _platform_arrival(case: CaseData) -> Mapping[str, Any]:
+    """The platform's own arrival and wait-timer times, where POL-NS-12 applies.
+
+    The clause reads a platform-confirmed arrival (``arrival_marker`` is
+    ``GPS_AUTO``) and the platform's own wait-timer events. A case without the
+    marker gets an empty mapping rather than a substituted time.
+    """
+    payload = _payload(case.brief, "TRIP_RECORD")
+    policy = payload.get("platform_policy_in_force") or payload.get("platform_policy")
+    marker = policy.get("arrival_marker") if isinstance(policy, Mapping) else None
+    events = payload.get("events")
+    if marker != "GPS_AUTO" or not isinstance(events, list):
+        return {}
+    times: Dict[str, Any] = {}
+    for event in events:
+        if isinstance(event, Mapping) and event.get("event_type"):
+            times.setdefault(str(event["event_type"]), event.get("at"))
+    return times
+
+
+def key_figure_tiles(case: CaseData) -> List[Tuple[str, str]]:
+    """A computed fact beside the policy limit it is tested against.
+
+    Every tile is read from the brief's derived facts or from the run's own
+    record; a fact the block does not carry is left out rather than invented.
+    """
+    brief = case.brief
+    currency = case.policy.currency
+    tiles: List[Tuple[str, str]] = []
+
+    deviation = _derived_block(brief, "GPS_TRACE", "deviation")
+    if deviation is not None and _fact_value(deviation, "available"):
+        excess_km = _fact_value(deviation, "excess_km")
+        excess_pct = _fact_value(deviation, "excess_pct")
+        thresholds = deviation.get("thresholds") or {}
+        if excess_km is not None:
+            tiles.append(
+                (
+                    "{0} km".format(_compact(excess_km)),
+                    "extra distance, against POL-RD-01's {0} km limit".format(
+                        _compact(_fact_value(thresholds, "threshold_km"))
+                    ),
+                )
+            )
+        if excess_pct is not None:
+            tiles.append(
+                (
+                    "{0}%".format(_compact(excess_pct)),
+                    "of the optimal distance, against POL-RD-01's {0}% limit".format(
+                        _compact(_fact_value(thresholds, "threshold_pct"))
+                    ),
+                )
+            )
+
+    coverage = _payload(brief, "GPS_TRACE").get("coverage_pct")
+    if coverage is not None:
+        tiles.append(("{0}%".format(_compact(coverage)), "trace coverage"))
+
+    arrival = _derived_block(brief, "GPS_TRACE", "arrival")
+    driver_track = _derived_block(brief, "GPS_TRACE", "driver_track")
+    if arrival is not None and _fact_value(arrival, "available"):
+        dwell = _fact_value(arrival, "accumulated_dwell", "longest_run_sec")
+        wait = _fact_value(arrival, "thresholds", "minimum_dwell_sec")
+        if dwell is not None and wait is not None:
+            tiles.append(
+                (
+                    _seconds(dwell),
+                    "continuous in-geofence dwell, against the free wait in force "
+                    "({0})".format(_seconds(wait)),
+                )
+            )
+        approach = _fact_value(driver_track or {}, "min_distance_m")
+        radius = _fact_value(arrival, "thresholds", "arrival_radius_m")
+        if approach is not None and radius is not None:
+            tiles.append(
+                (
+                    "{0} m".format(_compact(approach)),
+                    "closest approach to the pickup point, against the arrival "
+                    "radius ({0} m)".format(_compact(radius)),
+                )
+            )
+
+    times = _platform_arrival(case)
+    if times:
+        if times.get("driver_arrived"):
+            tiles.append(
+                (
+                    str(times["driver_arrived"]),
+                    "platform-confirmed arrival (POL-NS-12)",
+                )
+            )
+        start = times.get("wait_timer_started")
+        expiry = times.get("wait_timer_expired")
+        if start or expiry:
+            tiles.append(
+                (
+                    "{0} to {1}".format(start or "not recorded", expiry or "not recorded"),
+                    "the platform's own wait timer (POL-NS-12)",
+                )
+            )
+
+    value = str(case.ruling.get("ruling"))
+    amount = _decimal(case.ruling.get("amount_sgd"))
+    driver = _decimal(case.ruling.get("driver_compensation_sgd"))
+    confidence = _decimal(case.ruling.get("confidence"))
+    if value in REFUND_RULINGS and amount is not None:
+        tiles.append(
+            (_money(amount, currency), "refund to the filing party (POL-GEN-03)")
+        )
+    if driver is not None:
+        tiles.append((_money(driver, currency), "driver compensation (POL-GEN-03)"))
+    if confidence is not None:
+        tiles.append(
+            (
+                str(confidence),
+                "confidence against the floor of {0} (POL-GEN-02)".format(
+                    case.policy.confidence_floor
+                ),
+            )
+        )
+    return tiles
+
+
+def _tiles_html(case: CaseData) -> str:
+    """The right-hand column of the verdict card: the key-figure tiles.
+
+    The confidence tile carries the confidence and the floor as its accessible
+    name, so the two figures a reader checks it against are on the page rather
+    than only in the words beside them.
+    """
+    tiles = key_figure_tiles(case)
+    if not tiles:
+        return (
+            '<div class="tiles"><div><span>No derived fact is recorded for this '
+            "case.</span></div></div>"
+        )
+    confidence = case.ruling.get("confidence")
+    parts = []
+    for value, label in tiles:
+        aria = ""
+        if confidence is not None and label.startswith(
+            "confidence against the floor of"
+        ):
+            aria = ' aria-label="confidence {0} against a floor of {1}"'.format(
+                _attribute(confidence), _attribute(case.policy.confidence_floor)
+            )
+        parts.append(
+            "<div{0}><b>{1}</b><span>{2}</span></div>".format(
+                aria, _text(value), _text(label)
+            )
+        )
+    return '<div class="tiles">' + "".join(parts) + "</div>"
+
+
+# The trace's drawing frame, and the metres in one degree of latitude used to
+# turn the fixes into metres. The projection is local and equirectangular, so a
+# metre is the same number of pixels on both axes.
+MAP_WIDTH = 360.0
+MAP_HEIGHT = 250.0
+MAP_PAD = 12.0
+METRES_PER_DEGREE = 111320.0
+
+
+def _latlngs(points: Any) -> List[Tuple[float, float]]:
+    """``[(lat, lng), ...]`` from a trace's point list, skipping anything else."""
+    out: List[Tuple[float, float]] = []
+    for point in points or []:
+        if not isinstance(point, Mapping):
+            continue
+        try:
+            out.append((float(point["lat"]), float(point["lng"])))
+        except (KeyError, TypeError, ValueError):
+            continue
+    return out
+
+
+def _one_latlng(node: Any) -> Optional[Tuple[float, float]]:
+    """``(lat, lng)`` from a labelled place, or ``None``."""
+    if not isinstance(node, Mapping):
+        return None
+    try:
+        return (float(node["lat"]), float(node["lng"]))
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def _trace_svg(case: CaseData) -> str:
+    """The trace, drawn by the builder from the GPS fixes.
+
+    The driven trace, the pickup and drop-off points, and -- for a no-show --
+    the arrival radius around the pickup point with the fixes inside it and the
+    rider's own track where the record carries one. The optimal route is a
+    distance and not a line, so no optimal line is drawn here.
+    """
+    # The raw fixes and the labelled places are the case file's; the arrival
+    # radius below is the brief's own derived figure.
+    gps = _case_payload(case.case, "GPS_TRACE")
+    trip = _case_payload(case.case, "TRIP_RECORD")
+    driver = _latlngs(gps.get("points"))
+    if not driver:
+        return ""
+    rider = _latlngs(gps.get("rider_track"))
+    pickup = _one_latlng(trip.get("pickup"))
+    dropoff = _one_latlng(trip.get("dropoff"))
+    arrival = _derived_block(case.brief, "GPS_TRACE", "arrival") or {}
+    radius_m = _fact_value(arrival, "thresholds", "arrival_radius_m")
+
+    lat0 = sum(point[0] for point in driver) / len(driver)
+    metres_per_degree_lng = METRES_PER_DEGREE * math.cos(math.radians(lat0))
+
+    def to_metres(point: Tuple[float, float]) -> Tuple[float, float]:
+        return (point[1] * metres_per_degree_lng, -point[0] * METRES_PER_DEGREE)
+
+    xs: List[float] = []
+    ys: List[float] = []
+    for point in driver + rider:
+        x, y = to_metres(point)
+        xs.append(x)
+        ys.append(y)
+    for point in (pickup, dropoff):
+        if point is not None:
+            x, y = to_metres(point)
+            xs.append(x)
+            ys.append(y)
+    if pickup is not None and radius_m is not None:
+        x, y = to_metres(pickup)
+        xs += [x - float(radius_m), x + float(radius_m)]
+        ys += [y - float(radius_m), y + float(radius_m)]
+
+    min_x, max_x = min(xs), max(xs)
+    min_y, max_y = min(ys), max(ys)
+    span_x = max(max_x - min_x, 100.0)
+    span_y = max(max_y - min_y, 100.0)
+    scale = min(
+        (MAP_WIDTH - 2 * MAP_PAD) / span_x, (MAP_HEIGHT - 2 * MAP_PAD) / span_y
+    )
+    offset_x = (MAP_WIDTH - span_x * scale) / 2 - min_x * scale
+    offset_y = (MAP_HEIGHT - span_y * scale) / 2 - min_y * scale
+
+    def to_pixels(point: Tuple[float, float]) -> Tuple[float, float]:
+        x, y = to_metres(point)
+        return (round(x * scale + offset_x, 2), round(y * scale + offset_y, 2))
+
+    def polyline(points: List[Tuple[float, float]]) -> str:
+        return " ".join(
+            "{0},{1}".format(*to_pixels(point)) for point in points
+        )
+
+    parts = [
+        '<svg viewBox="0 0 {0} {1}"><title>the trip trace</title>'.format(
+            int(MAP_WIDTH), int(MAP_HEIGHT)
+        )
+    ]
+    if pickup is not None and radius_m is not None:
+        centre_x, centre_y = to_pixels(pickup)
+        parts.append(
+            '<circle cx="{0}" cy="{1}" r="{2}" fill="none" stroke="#9ca3af" '
+            'stroke-width="1" stroke-dasharray="4 3"/>'.format(
+                centre_x, centre_y, round(float(radius_m) * scale, 2)
+            )
+        )
+    if rider:
+        parts.append(
+            '<polyline points="{0}" fill="none" stroke="#6b7280" stroke-width="1.5" '
+            'stroke-dasharray="4 3"/>'.format(polyline(rider))
+        )
+    parts.append(
+        '<polyline points="{0}" fill="none" stroke="#1d4ed8" stroke-width="2"/>'.format(
+            polyline(driver)
+        )
+    )
+    for point, colour, label in (
+        (pickup, "#15803d", "pickup"),
+        (dropoff, "#b91c1c", "drop-off"),
+    ):
+        if point is None:
+            continue
+        x, y = to_pixels(point)
+        parts.append(
+            '<circle cx="{0}" cy="{1}" r="4" fill="{2}"><title>{3}</title></circle>'.format(
+                x, y, colour, _text(label)
+            )
+        )
+    parts.append("</svg>")
+    return "".join(parts)
+
+
+def _trace_caption(case: CaseData) -> str:
+    """The trace's caption: the optimal distance, and the promise not to draw it."""
+    deviation = _derived_block(case.brief, "GPS_TRACE", "deviation")
+    optimal = _fact_value(deviation, "optimal_distance_km") if deviation else None
+    if optimal is None:
+        optimal = _case_payload(case.case, "TRIP_RECORD").get("optimal_distance_km")
+    if optimal is None:
+        return "The optimal route's distance is not recorded for this case."
+    return "optimal: {0} km (distance only)".format(_compact(optimal))
+
+
+def _rail(case: CaseData) -> str:
+    """The right rail: the trace, the evidence and the record."""
+    svg = _trace_svg(case)
+    if svg:
+        trace = (
+            '<div class="map">{0}</div><p class="cap">{1}</p>'
+            '<p class="legend"><i style="background:#1d4ed8"></i>driven trace'
+            '<i class="dot" style="background:#15803d"></i>pickup'
+            '<i class="dot" style="background:#b91c1c"></i>drop-off'
+            "</p>"
+        ).format(svg, _text(_trace_caption(case)))
+        trace_block = (
+            '<details open><summary>Trace <span>{0}</span></summary>'
+            '<div class="in">{1}</div></details>'.format(
+                _text(
+                    "{0} fixes".format(
+                        len(
+                            _latlngs(
+                                _case_payload(case.case, "GPS_TRACE").get("points")
+                            )
+                        )
+                    )
+                ),
+                trace,
+            )
+        )
+    else:
+        trace_block = (
+            "<details open><summary>Trace <span>not recorded</span></summary>"
+            '<div class="in"><p class="empty">This case carries no GPS fixes to '
+            "draw.</p></div></details>"
+        )
+
+    evidence = _evidence(case.brief)
+    evidence_lines = "".join(
+        '<p>{0}<br><span class="ref">{1} &middot; {2} (weight {3})</span></p>'.format(
+            _text(item["evidence_id"]),
+            _text(item["source"]),
+            _text(item["status"]),
+            _text(item["weight"]),
+        )
+        for item in evidence
+    )
+    evidence_block = (
+        "<details><summary>Evidence <span>{0}</span></summary>"
+        '<div class="in">{1}</div></details>'.format(
+            _text("{0} item(s)".format(len(evidence))), evidence_lines or "<p>none</p>"
+        )
+    )
+
+    entries = [
+        entry
+        for entry in case.transcript.get("entries") or []
+        if isinstance(entry, Mapping)
+    ]
+    prompt = cached = completion = 0
+    for entry in entries:
+        prompt += int(entry.get("prompt_tokens") or 0)
+        cached += int(entry.get("cached_tokens") or 0)
+        completion += int(entry.get("completion_tokens") or 0)
+    record_block = (
+        "<details><summary>Record <span>{0}</span></summary>"
+        '<div class="in"><div class="kv">'
+        "<span>events</span><span>{1} (one per agent call)</span>"
+        "<span>tokens</span><span>{2} (prompt {3}, cached {4}, completion {5})</span>"
+        "<span>wall time</span><span>{6}</span>"
+        "</div></div></details>"
+    ).format(
+        _text(_seconds(case.document.get("wall_seconds"))),
+        len(entries),
+        prompt + cached + completion,
+        prompt,
+        cached,
+        completion,
+        _text(_seconds(case.document.get("wall_seconds"))),
+    )
+    return '<aside class="rail">{0}{1}{2}</aside>'.format(
+        trace_block, evidence_block, record_block
+    )
+
+
+def _ruling_clause_ids(case: CaseData) -> List[str]:
+    """The clause ids the ruling cites, read from the ruling's own referrals."""
+    references = pipeline_module.referral_clause_references(
+        case.ruling.get("referrals")
+    )
+    return [
+        str(reference)
+        for reference in references
+        if str(reference).startswith("POL-")
+    ]
+
+
+def _first_paragraph(text: Any) -> str:
+    """The first paragraph of a block of prose, verbatim."""
+    collapsed = str(text or "").strip()
+    if not collapsed:
+        return ""
+    return re.split(r"\n\s*\n", collapsed, maxsplit=1)[0].strip()
+
+
+def _verdict_card(case: CaseData) -> str:
+    """The verdict card: the outcome on the left, the key figures on the right.
+
+    The left column carries the outcome in large type, the code and the clauses
+    the ruling cites, the first paragraph of the judge's explanation verbatim,
+    and -- on a decided case -- POL-GEN-04's appeal route; on a case sent to a
+    reviewer it carries the reviewer line instead, because there is no ruling to
+    appeal.
+    """
     policy = case.policy
     ruling = case.ruling
-    value = str(ruling.get("ruling"))
-    explanation = str(ruling.get("explanation") or "")
     dispute = case.case.get("dispute") or {}
+    value = str(ruling.get("ruling"))
+    if case.trigger is not None:
+        headline = _coded(
+            trigger_words(str(case.trigger), case.votes), case.trigger, strong=True
+        )
+        summary = _first_paragraph((case.packet or {}).get("explanation"))
+        after = "No automated ruling was issued. {0}".format(review_time_limit(policy))
+        details = ""
+        note = ""
+    else:
+        headline = _coded(ruling_words(value), value, strong=True)
+        summary = _first_paragraph(ruling.get("explanation"))
+        after = "How to appeal: {0}".format(appeal_line(policy))
+        details = (
+            "<details><summary>Read POL-GEN-04 in full</summary>"
+            "<blockquote>{0}</blockquote></details>".format(
+                _text(policy.rule("POL-GEN-04"))
+            )
+        )
+        note = (
+            ""
+            if _decimal(ruling.get("confidence")) is not None
+            else '<p class="empty">No confidence is recorded for this case.</p>'
+        )
+    clauses = _ruling_clause_ids(case)
+    clause_line = (
+        '<p class="code mono">{0}</p>'.format(_text(", ".join(clauses)))
+        if clauses
+        else ""
+    )
+    summary_block = (
+        '<p class="lbl">From the judge\'s explanation</p>'
+        '<p class="why">{0}</p>'.format(_text(summary))
+        if summary
+        else ""
+    )
     return (
-        '<div class="card">'
-        '<p class="disclosure">{0}</p>'
-        "<h2>Ruling</h2>"
-        "<p>{1}</p>"
-        "<p>{2}</p>"
-        '<p class="label" id="judge-explanation">The judge\'s explanation, as '
-        "written</p>"
-        "<blockquote>{3}</blockquote>"
-        "<p>How to appeal: {4}</p>"
-        "<details><summary>Read POL-GEN-04 in full</summary>"
-        "<blockquote>{5}</blockquote></details>"
-        "{6}"
-        "<p>{7}</p>"
+        '<div class="verdict">'
+        '<div class="v-left">'
+        '<p class="cap">{0}</p>'
+        '<p class="word">{1}</p>'
+        "{2}"
+        "<p>{3}</p>"
+        "{4}"
+        '<p class="after">{5}</p>'
+        "<p>{6}</p>"
+        "{7}"
+        "{8}"
+        "</div>"
+        "{9}"
         "</div>"
     ).format(
         _text(DISCLOSURE),
-        _coded(ruling_words(value), value, strong=True),
+        headline,
+        clause_line,
         _text(money_statement(ruling, policy.currency, dispute.get("filed_by"))),
-        _text(explanation),
-        _text(appeal_line(policy)),
-        _text(policy.rule("POL-GEN-04")),
-        _confidence_card(case),
+        summary_block,
+        _text(after),
         _text(execution_sentence(policy, ruling, policy.currency)),
-    )
-
-
-def _reviewer_ruling(case: CaseData) -> str:
-    """The ruling card of a case a human reviewer decides.
-
-    No ruling was issued, so the page says so where a decided case carries its
-    provisional disclosure, shows the reason the case reached a reviewer in
-    words rather than a confidence bar, states what money moves on an
-    escalation, and gives the review time limit read from POL-GEN-06(2). There
-    is no appeal path to show, because there is no ruling to appeal.
-    """
-    policy = case.policy
-    trigger = str(case.trigger)
-    reason = "Why a reviewer: {0}".format(
-        _coded(trigger_words(trigger, case.votes), trigger)
-    )
-    no_draft = ""
-    if trigger == TRIGGER_NO_VALID_DRAFTS:
-        no_draft = "<p>No draft was valid, so the panel could not reduce a ruling.</p>"
-    dispute = case.case.get("dispute") or {}
-    return (
-        '<div class="card">'
-        '<p class="disclosure">{0}</p>'
-        "<h2>Ruling</h2>"
-        "<p>{1}</p>"
-        "<p>{2}</p>"
-        "<p>{3}</p>"
-        "{4}"
-        "<p>{5}</p>"
-        "</div>"
-    ).format(
-        _text(NO_AUTOMATED_RULING),
-        reason,
-        _text(
-            money_statement(case.ruling, policy.currency, dispute.get("filed_by"))
-        ),
-        _text(review_time_limit(policy)),
-        no_draft,
-        _text(execution_sentence(policy, case.ruling, policy.currency)),
+        details,
+        note,
+        _tiles_html(case),
     )
 
 
 def _ruling_tab(case: CaseData) -> str:
-    policy = case.policy
-    ruling = case.ruling
-    dispute = case.case.get("dispute") or {}
-    if case.trigger is not None:
-        card = _reviewer_ruling(case)
-    else:
-        card = _decided_ruling(case) + (
-            '<div class="card"><h2>The two notices</h2>'
-            + _notice("RIDER", policy, ruling, dispute.get("filed_by"))
-            + _notice("DRIVER", policy, ruling, dispute.get("filed_by"))
-            + "</div>"
-        )
-    argued = (
-        '<div class="card"><h2>What each side argued</h2>'
-        "<h3>The rider advocate</h3>"
+    """The Ruling tab: the verdict, what each side argued, and the right rail."""
+    sides = (
+        '<section class="sec"><h2>What each side argued</h2>'
+        '<div class="sides">'
         + _claims_block(case, "RIDER")
-        + "<h3>The driver advocate</h3>"
         + _claims_block(case, "DRIVER")
+        + "</div></section>"
+    )
+    return (
+        _verdict_card(case)
+        + '<div class="two"><div class="maincol">'
+        + sides
+        + "</div>"
+        + _rail(case)
         + "</div>"
     )
-    evidence = (
-        '<div class="card wide"><h2>Evidence</h2>'
-        "<p>The weight is the one the admissibility precheck gave each artifact, "
-        "as the brief carried it.</p>"
-        + _evidence_table(case)
-        + "</div>"
-    )
-    return card + argued + evidence
 
 
-def _step(title: str, who: str, produced: str, detail: str = "") -> str:
-    body = '<p class="label">Who</p><p>{0}</p><p class="label">What it produced</p><p>{1}</p>'.format(
-        _text(who), produced
-    )
-    if detail:
-        body += detail
-    return "<details><summary>{0}</summary>{1}</details>".format(_text(title), body)
+# Who did each of the six steps. Steps 1, 3 and 5 are code; 2 and 4 are the
+# model; 6 is the outcome.
+STEP_WHO: Tuple[str, ...] = ("code", "model", "code", "model", "code", "outcome")
+STEP_WHO_WORDS: Mapping[str, str] = {
+    "code": "computed by code",
+    "model": "asked of the model",
+    "outcome": "the outcome",
+}
+
+
+def _seconds_for_entries(case: CaseData, indices: Sequence[int]) -> Optional[str]:
+    """The seconds the transcript records for the entries at these indices."""
+    entries = case.transcript.get("entries") or []
+    total = Decimal(0)
+    found = False
+    for index in sorted(set(indices)):
+        if not isinstance(index, int) or not 0 <= index < len(entries):
+            continue
+        entry = entries[index]
+        value = _decimal(entry.get("duration_seconds")) if isinstance(entry, Mapping) else None
+        if value is not None:
+            total += value
+            found = True
+    return _seconds(total) if found else None
+
+
+def _seconds_for_roles(case: CaseData, roles: Sequence[str]) -> Optional[str]:
+    """The seconds the transcript records for the entries of these roles."""
+    entries = case.transcript.get("entries") or []
+    indices = [
+        index
+        for index, entry in enumerate(entries)
+        if isinstance(entry, Mapping) and entry.get("role") in roles
+    ]
+    return _seconds_for_entries(case, indices)
 
 
 def _decision_tab(case: CaseData) -> str:
+    """How it was decided: a stepper of the six steps, and the chosen step's detail."""
     transcript = case.transcript
     entries = transcript.get("entries") or []
     vote = transcript.get("vote") if isinstance(transcript.get("vote"), Mapping) else {}
     advocates = {
         entry.get("role"): entry
         for entry in entries
-        if isinstance(entry, Mapping) and entry.get("role") in ("RIDER_ADVOCATE", "DRIVER_ADVOCATE")
+        if isinstance(entry, Mapping)
+        and entry.get("role") in ("RIDER_ADVOCATE", "DRIVER_ADVOCATE")
     }
     rider = advocates.get("RIDER_ADVOCATE")
     driver = advocates.get("DRIVER_ADVOCATE")
@@ -1810,57 +2506,71 @@ def _decision_tab(case: CaseData) -> str:
         )
         for row in facts
     )
-    step1 = _step(
-        STEP_TITLES[0],
-        "code",
-        '<p>The brief was built from the case and the loaded policy. Its sha256 is '
-        '<span class="mono">{0}</span>.</p>'
-        "<p>Both advocates received these same bytes: {1}.</p>".format(
+    step1 = {
+        "title": STEP_TITLES[0],
+        "time": None,
+        "summary": "{0} artifacts, brief {1}".format(
+            len(facts), case.brief_sha256[:12]
+        ),
+        "detail": (
+            "<p>The brief was built from the case and the loaded policy. Its sha256 "
+            'is <span class="mono">{0}</span>.</p>'
+            "<p>Both advocates received these same bytes: {1}.</p>"
+            '<p class="label">The derived facts each artifact carries</p><ul>{2}</ul>'
+        ).format(
             _text(case.brief_sha256),
             _text(
                 "yes, the recorded user_sha256 of each advocate is this digest"
                 if same_bytes
                 else "no, the recorded digests do not agree with the brief"
             ),
+            fact_rows,
         ),
-        '<p class="label">The derived facts each artifact carries</p><ul>{0}</ul>'.format(
-            fact_rows
-        ),
-    )
+    }
 
     # 2. Both sides argue.
+
     def claim_count(entry: Any) -> int:
         parsed = entry.get("parsed") if isinstance(entry, Mapping) else None
         claims = parsed.get("claims") if isinstance(parsed, Mapping) else None
         return len(claims) if isinstance(claims, list) else 0
 
     if rider is None and driver is None:
-        step2 = _step(
-            STEP_TITLES[1],
-            "code",
-            "<p>No advocate was asked: the scope gate assembled the record and "
-            "stopped, so neither side argued this case.</p>",
-        )
+        step2 = {
+            "title": STEP_TITLES[1],
+            "time": None,
+            "summary": "no advocate was asked",
+            "detail": (
+                "<p>No advocate was asked: the scope gate assembled the record and "
+                "stopped, so neither side argued this case.</p>"
+            ),
+        }
     else:
-        step2 = _step(
-            STEP_TITLES[1],
-            "model",
-            "<p>The two advocates ran on the same brief and at the same time: the "
-            "rider advocate made {0} claim(s) and the driver advocate made {1}.</p>"
-            "<p>Their instructions differ -- system_sha256 <span class=\"mono\">{2}"
-            "</span> against <span class=\"mono\">{3}</span> -- and their brief is "
-            "one digest for both.</p>".format(
+        step2 = {
+            "title": STEP_TITLES[1],
+            "time": _seconds_for_roles(case, ("RIDER_ADVOCATE", "DRIVER_ADVOCATE")),
+            "summary": "rider {0} claims - driver {1}".format(
+                claim_count(rider), claim_count(driver)
+            ),
+            "detail": (
+                "<p>The two advocates ran on the same brief and at the same time: the "
+                "rider advocate made {0} claim(s) and the driver advocate made {1}.</p>"
+                '<p>Their instructions differ -- system_sha256 <span class="mono">{2}'
+                '</span> against <span class="mono">{3}</span> -- and their brief is '
+                "one digest for both.</p>"
+                "<p class=\"label\">The rider advocate's own claims</p>"
+                "<blockquote>{4}</blockquote>"
+                "<p class=\"label\">The driver advocate's own claims</p>"
+                "<blockquote>{5}</blockquote>"
+            ).format(
                 claim_count(rider),
                 claim_count(driver),
                 _text((rider or {}).get("system_sha256")),
                 _text((driver or {}).get("system_sha256")),
-            ),
-            "<p class=\"label\">The rider advocate's own claims</p><blockquote>{0}</blockquote>"
-            "<p class=\"label\">The driver advocate's own claims</p><blockquote>{1}</blockquote>".format(
                 _text(_claims_text(case, "RIDER")),
                 _text(_claims_text(case, "DRIVER")),
             ),
-        )
+        }
 
     # 3. The citation check.
     rider_claims = _claims(transcript, "RIDER")
@@ -1869,12 +2579,18 @@ def _decision_tab(case: CaseData) -> str:
     kept = [claim for claim in all_claims if claim["status"] == "KEPT"]
     discarded = [claim for claim in all_claims if claim["status"] == "DISCARDED"]
     if all_claims:
-        step3_produced = (
-            "<p>The referee checked every claim against the artifacts it cites. "
-            "{0} claim(s) kept, {1} discarded.</p>".format(len(kept), len(discarded))
-        )
-        step3_detail = (
-            "<p class=\"label\">Discarded claims and the referee's reason</p><ul>{0}</ul>".format(
+        step3 = {
+            "title": STEP_TITLES[2],
+            "time": None,
+            "summary": "{0} kept, {1} discarded".format(len(kept), len(discarded)),
+            "detail": (
+                "<p>The referee checked every claim against the artifacts it cites. "
+                "{0} claim(s) kept, {1} discarded.</p>"
+                "<p class=\"label\">Discarded claims and the referee's reason</p>"
+                "<ul>{2}</ul>"
+            ).format(
+                len(kept),
+                len(discarded),
                 "".join(
                     "<li>{0} ({1}) -- {2}: {3}</li>".format(
                         _text(claim["reason_code"]),
@@ -1884,16 +2600,19 @@ def _decision_tab(case: CaseData) -> str:
                     )
                     for claim in discarded
                 )
-                or "<li>none</li>"
-            )
-        )
+                or "<li>none</li>",
+            ),
+        }
     else:
-        step3_produced = (
-            "<p>No claim reached the referee: no advocate was asked to argue "
-            "this case.</p>"
-        )
-        step3_detail = ""
-    step3 = _step(STEP_TITLES[2], "code", step3_produced, step3_detail)
+        step3 = {
+            "title": STEP_TITLES[2],
+            "time": None,
+            "summary": "no claim reached the referee",
+            "detail": (
+                "<p>No claim reached the referee: no advocate was asked to argue "
+                "this case.</p>"
+            ),
+        }
 
     # 4. The judge.
     drafts = _drafts(transcript)
@@ -1919,66 +2638,86 @@ def _decision_tab(case: CaseData) -> str:
         )
         for draft in drafts
     )
-    step4 = _step(
-        STEP_TITLES[3],
-        "model" if drafts else "code",
-        (
-            "<p>The judge was asked {0} times on the same inputs: {1} sampled drafts "
-            "and one with the parties' positions swapped. The vote agreement is {2}, "
-            "and the outcome recorded is {3}.</p>".format(
+    judge_indices = [
+        index for draft in drafts for index in draft["entry_indices"]
+    ]
+    if drafts:
+        agreement = vote.get("agreement")
+        step4 = {
+            "title": STEP_TITLES[3],
+            "time": _seconds_for_entries(case, judge_indices),
+            "summary": "{0} drafts{1}".format(
+                len(drafts), ", {0}".format(_text(agreement)) if agreement else ""
+            ),
+            "detail": (
+                "<p>The judge was asked {0} times on the same inputs: {1} sampled "
+                "drafts and one with the parties' positions swapped. The vote "
+                "agreement is {2}, and the outcome recorded is {3}.</p>"
+                "<p class=\"label\">Each draft</p><ul>{4}</ul>"
+                "<p class=\"label\">Each draft's own explanation</p>{5}"
+            ).format(
                 _text(vote.get("votes")),
                 _text(sum(1 for draft in drafts if draft["kind"] == "sampled")),
-                _text(vote.get("agreement")),
+                _text(agreement),
                 _text(vote.get("outcome")),
-            )
-            if drafts
-            else "<p>No draft was asked for: the scope gate stopped before the "
-            "judge, so this case has no panel and no vote.</p>"
-        ),
-        "<p class=\"label\">Each draft</p><ul>{0}</ul>"
-        "<p class=\"label\">Each draft's own explanation</p>{1}".format(
-            draft_rows or "<li>none</li>",
-            "".join(
-                "<blockquote>{0}</blockquote>".format(_text(draft["explanation"]))
-                for draft in drafts
-            )
-            or "<p class=\"empty\">No draft was asked for.</p>",
-        ),
-    )
+                draft_rows or "<li>none</li>",
+                "".join(
+                    "<blockquote>{0}</blockquote>".format(_text(draft["explanation"]))
+                    for draft in drafts
+                )
+                or "<p class=\"empty\">No draft was asked for.</p>",
+            ),
+        }
+    else:
+        step4 = {
+            "title": STEP_TITLES[3],
+            "time": None,
+            "summary": "no draft was asked for",
+            "detail": (
+                "<p>No draft was asked for: the scope gate stopped before the "
+                "judge, so this case has no panel and no vote.</p>"
+            ),
+        }
 
     # 5. The floor and the triggers.
     floor = case.policy.confidence_floor
-    step5 = _step(
-        STEP_TITLES[4],
-        "code",
-        "<p>The confidence recorded for this case is {0} against the floor of {1} "
-        "stated by POL-GEN-02.</p>{2}".format(
+    step5 = {
+        "title": STEP_TITLES[4],
+        "time": None,
+        "summary": "confidence {0} against the floor {1}".format(
+            _text(case.ruling.get("confidence")), _text(floor)
+        ),
+        "detail": (
+            "<p>The confidence recorded for this case is {0} against the floor of "
+            "{1} stated by POL-GEN-02.</p>{2}"
+        ).format(
             _text(case.ruling.get("confidence")),
             _text(floor),
             "<p>The escalation reason is {0}.</p>".format(
                 _coded(trigger_words(str(case.trigger), case.votes), case.trigger)
             )
             if case.trigger
-            else "<p>No escalation reason is recorded: the case did not "
-            "escalate.</p>",
+            else "<p>No escalation reason is recorded: the case did not escalate.</p>",
         ),
-    )
+    }
 
     # 6. The outcome.
     dispute = case.case.get("dispute") or {}
     if case.trigger:
-        step6 = _step(
-            STEP_TITLES[5],
-            "code",
-            "<p>Sent to a reviewer, fee held: {0}.</p>".format(
+        step6 = {
+            "title": STEP_TITLES[5],
+            "time": None,
+            "summary": trigger_words(str(case.trigger), case.votes),
+            "detail": "<p>Sent to a reviewer, fee held: {0}.</p>".format(
                 _coded(trigger_words(str(case.trigger), case.votes), case.trigger)
             ),
-        )
+        }
     else:
-        step6 = _step(
-            STEP_TITLES[5],
-            "code",
-            "<p>{0}</p><p>{1}</p>".format(
+        step6 = {
+            "title": STEP_TITLES[5],
+            "time": None,
+            "summary": ruling_words(case.ruling.get("ruling")),
+            "detail": "<p>{0}</p><p>{1}</p>".format(
                 _coded(
                     ruling_words(case.ruling.get("ruling")),
                     case.ruling.get("ruling"),
@@ -1990,16 +2729,52 @@ def _decision_tab(case: CaseData) -> str:
                     )
                 ),
             ),
+        }
+
+    steps = [step1, step2, step3, step4, step5, step6]
+    circle_class = {
+        "code": "",
+        "model": "llm",
+        "outcome": "ok" if case.trigger is None else "bad",
+    }
+    buttons: List[str] = []
+    panes: List[str] = []
+    for index, step in enumerate(steps):
+        who = STEP_WHO[index]
+        circle = (
+            ' class="{0}"'.format(circle_class[who]) if circle_class[who] else ""
+        )
+        buttons.append(
+            '<button type="button" data-step="{0}"{1}>'
+            '<span class="n"><i{2}>{3}</i>{4}</span>'
+            '<span class="t">{5}</span><span class="s">{6}</span></button>'.format(
+                index + 1,
+                ' class="on"' if index == 0 else "",
+                circle,
+                index + 1,
+                _text(step["time"] or "no time recorded"),
+                _text(step["title"]),
+                _text(step["summary"]),
+            )
+        )
+        panes.append(
+            '<div class="pane{0}" data-pane="{1}"><h3>{2}</h3>'
+            '<p class="lead">{3}</p>{4}</div>'.format(
+                " on" if index == 0 else "",
+                index + 1,
+                _text(step["title"]),
+                _text("{0} - {1}".format(STEP_WHO_WORDS[who], step["summary"])),
+                step["detail"],
+            )
         )
     return (
-        '<div class="card wide"><h2>How it was decided</h2>'
-        + step1
-        + step2
-        + step3
-        + step4
-        + step5
-        + step6
-        + "</div>"
+        '<div class="stepper">' + "".join(buttons) + "</div>"
+        '<p class="who">'
+        '<span><i style="background:#374151"></i>code</span>'
+        '<span><i style="background:#1d4ed8"></i>model</span>'
+        '<span><i style="background:#15803d"></i>outcome</span>'
+        "</p>"
+        '<div class="detail">' + "".join(panes) + "</div>"
     )
 
 
@@ -2181,33 +2956,31 @@ def build_case_page(case: CaseData) -> str:
     """One case page: a header, two or three tabs, and the footer."""
     dispute = case.case.get("dispute") or {}
     currency = case.policy.currency
-    # The header names the case once -- "Case 901" -- and the set it belongs to.
-    if case.trigger:
-        status = "Sent to a reviewer: {0}".format(
-            _coded(trigger_words(str(case.trigger), case.votes), case.trigger)
-        )
-    else:
-        status = _coded(
-            ruling_words(case.ruling.get("ruling")), case.ruling.get("ruling")
-        )
+    category_words = CATEGORY_WORDS.get(case.category, case.category)
+    title = "{0} - {1}".format(_text(category_words), _text(_summary_line(case.case)))
     header = (
         '<header class="pagehead">\n'
-        '<p class="eyebrow">{0} &middot; Case {1}</p>\n'
-        "<h1>{2}</h1>\n"
-        '<p class="lede">{3}</p>\n'
-        '<dl class="facts">'
-        "<div><dt>Filed by</dt><dd>{4}</dd></div>"
-        "<div><dt>Amount contested</dt><dd>{5}</dd></div>"
-        "<div><dt>Status</dt><dd>{6}</dd></div>"
-        "</dl>\n</header>\n"
+        '<p class="ids">{0} &middot; {1} &middot; filed {2}</p>\n'
+        "<h1>{3}</h1>\n"
+        '<div class="chips">'
+        '<span class="chip">{4}</span>'
+        '<span class="chip">{5}</span>'
+        '<span class="chip">{6}</span>'
+        "{7}"
+        "</div>\n</header>\n"
     ).format(
-        _text(case.set_name),
-        _text(case.case_no),
-        _text(CATEGORY_WORDS.get(case.category, case.category)),
-        _text(_summary_line(case.case)),
-        _text(filed_by_words(dispute.get("filed_by"))),
-        _text(_money(dispute.get("amount_contested_sgd"), currency)),
-        status,
+        _text(dispute.get("dispute_id")),
+        _text(dispute.get("trip_id")),
+        _text(dispute.get("filed_at")),
+        title,
+        _text(category_words),
+        _text("Filed by {0}".format(str(filed_by_words(dispute.get("filed_by"))).lower())),
+        _text(
+            "Contested {0}".format(
+                _money(dispute.get("amount_contested_sgd"), currency)
+            )
+        ),
+        status_chip(case, with_time=True),
     )
     tabs = [
         ("ruling", "Ruling"),
@@ -2237,9 +3010,13 @@ def build_case_page(case: CaseData) -> str:
     panels.append(panel("decision", True, _decision_tab(case)))
     if case.trigger is not None:
         panels.append(panel("review", True, _review_tab(case)))
+    configuration = case.document.get("configuration") or {}
     body = (
-        _nav("case")
-        + "<main>\n"
+        _topbar(
+            _mode_text(configuration.get("policy_version"), case.document.get("model")),
+            "case",
+        )
+        + '<main class="wrap">\n'
         + header
         + '<div class="tabs" role="tablist">'
         + tab_html
@@ -2250,7 +3027,7 @@ def build_case_page(case: CaseData) -> str:
         + "\n</main>\n"
     )
     return _shell(
-        "Case {0} - {1}".format(case.case_no, CATEGORY_WORDS.get(case.category, case.category)),
+        "Case {0} - {1}".format(case.case_no, category_words),
         body,
     )
 
@@ -2312,7 +3089,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = argparse.ArgumentParser(
         prog="python3 -m ui.v2.build",
         description=(
-            "Build the product view: the queue at ui/dist/v2/index.html and one "
+            "Build the product view: the queue at ui/dist/index.html and one "
             "page per case of the four version-6 runs. Read-only on runs/, data/, "
             "policy/ and ops/config.json; no model call."
         ),

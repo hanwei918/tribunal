@@ -12,27 +12,36 @@ The same system is written out box by box, one paragraph per box and the file th
 
 ## The live demo
 
-The corpus page is live at <https://tribunal.edgeone.dev/>, and the
-runs index — one line per set — is at
-<https://tribunal.edgeone.dev/runs/>.
+The product view is live at <https://tribunal.edgeone.dev/>: today's 151
+disputes, one line each, with the ones decided automatically and the ones sent to
+a human. The evaluation replay is one level down at
+<https://tribunal.edgeone.dev/replay/>, and its runs index — one line per set —
+is at <https://tribunal.edgeone.dev/replay/runs/>.
 
-It is a static replay of the runs committed in this repository: every page is
-built from a run's own recorded files, so it makes **no model call** and needs no
-key. It is hosted on Tencent EdgeOne Pages, and the same pages are committed at
-`ui/dist/`, where they open straight from `file://`.
+Both sites are static replays of the runs committed in this repository: every
+page is built from a run's own recorded files, so neither makes a **model call**
+and neither needs a key. They are hosted on Tencent EdgeOne Pages, and the same
+pages are committed at `ui/dist/`, where they open straight from `file://`.
 
-The product view is a second, separate site at `ui/dist/v2/index.html`, built by
-`python3 -m ui.v2.build` from the four committed version-6 runs. It is the page a
-support team would work from rather than a page about the benchmark: today's 151
-disputes with the ones decided automatically and the ones sent to a human, and,
-for each case, the ruling, the two notices, both advocates' claims with the
-referee's verdict on each, the evidence with the weight the admissibility
+**The root is the product view**, built by `python3 -m ui.v2.build` from the four
+committed version-6 runs. It is the page a support team would work from rather
+than a page about the benchmark: four featured cases, the queue's figures, and,
+for each case, the ruling, the key figures set against the policy limits they are
+tested against, both advocates' claims with the referee's verdict on each, a
+trace drawn from the GPS fixes, the evidence with the weight the admissibility
 precheck gave it, the six steps of how it was decided — expandable down to the
 agents' own words — and, for a case that went to a reviewer, the escalation
-packet with its digest and a form that builds the closing command. It is one
-self-contained file per page with no request of any kind, so it opens from
-`file://` exactly as the pages beside it do; it will be published beside them
-after the owner approves.
+packet with its digest and a form that builds the closing command.
+
+**The evaluation replay is under `replay/`**, built by `python3 -m ui.build`. It
+is the benchmark page: the 29 corpus cases at policy version 1 with an answer key
+beside them and a miss marked where the ruling and the key disagree, and, beside
+it, the held-out set, the second sealed set and the organisers' sample case.
+Every page there carries a link back to the queue.
+
+Both are one self-contained file per page with no request of any kind, so they
+open from `file://` exactly as they do when served. The product view is published
+at the root and the replay under `replay/` after the owner approves.
 
 ## What Tribunal is
 

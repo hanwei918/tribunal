@@ -1,17 +1,24 @@
-"""Tests for ``ui.v2``: the product view, and the pages it commits.
+"""Tests for ``ui.v2``: the product view -- the site's front door -- and its pages.
 
-No network, no browser, no credential, no model call. What is under test is the
-seven properties the sheet names, and each is checked against the files the
-pages were built from rather than against a number typed in here:
+No network, no browser, no credential, no model call. The product view is the
+site's root now (``ui/dist/index.html`` and ``ui/dist/case-<NNNNN>.html``), and
+the evaluation replay ``ui.build`` writes lives beside it under
+``ui/dist/replay/``. What is under test is the properties the sheet names, and
+each is checked against the files the pages were built from rather than against
+a number typed in here:
 
 * ``--check`` passes, and two builds are byte-identical;
-* no page contains ``fetch(``, an external ``src=`` or ``href=``, ``<link``, or a
-  non-ASCII byte;
+* no page contains ``fetch(``, an external ``src=`` or ``href=``, ``<link``, a
+  web font, or a non-ASCII byte;
 * no page names a sealed-v1 case number (301 to 312, 401 to 412) or reads a
   sealed path;
 * for every case page, the ruling, the two amounts and the confidence shown
   equal the case file's;
 * the queue's five figures equal what the run files give;
+* the four featured cards show the run's own facts, and no key-figure tile shows
+  a fact the case's derived block does not carry;
+* the trace SVG draws the fixes and never draws the optimal route;
+* the replay's own links resolve, and every replay page links back to the queue;
 * a case sent to a reviewer has the "Human review" tab and its packet sha256
   equals ``ops.escalation``'s, and a decided case has no such tab;
 * the appeal text matches ``POL-GEN-04``'s rule text.
@@ -218,6 +225,7 @@ _CASES: Optional[List[Dict[str, Any]]] = None
 _PAGES: Optional[Dict[str, str]] = None
 _SECOND_BUILD: Optional[Dict[str, str]] = None
 _GUARD: Optional["_ReadGuard"] = None
+_LOADED: Optional[List[Any]] = None
 
 
 def cases() -> List[Dict[str, Any]]:
@@ -238,7 +246,7 @@ def built_pages() -> Dict[str, str]:
     sealed-path test asks about the build that actually happened rather than
     about a second one run beside it.
     """
-    global _PAGES, _GUARD
+    global _PAGES, _GUARD, _LOADED
     if _PAGES is None:
         portability.require_the_same_libm()
         guard = _ReadGuard()
@@ -249,9 +257,28 @@ def built_pages() -> Dict[str, str]:
             pages: Dict[str, str] = {relative(v2.INDEX_PATH): v2.build_index(loaded)}
             for data in loaded:
                 pages[relative(v2.DIST_DIR / data.link)] = v2.build_case_page(data)
+        _LOADED = loaded
         _GUARD = guard
         _PAGES = pages
     return _PAGES
+
+
+def loaded_cases() -> List[Any]:
+    """The cases the one build read, as ``ui.v2``'s own data objects.
+
+    Kept from the build the other tests use rather than loaded a second time, so
+    a test about a derived fact reads the same object the page was built from.
+    """
+    built_pages()
+    assert _LOADED is not None
+    return _LOADED
+
+
+def loaded_case(case_no: int) -> Any:
+    for data in loaded_cases():
+        if data.case_no == case_no:
+            return data
+    raise AssertionError("case {0} is not one of the runs".format(case_no))
 
 
 def read_guard() -> "_ReadGuard":
@@ -307,11 +334,23 @@ def build_under_hash_seed(seed: str) -> Dict[str, str]:
     return json.loads(done.stdout)
 
 
+# The replay's directory name, taken from the builder's own link to it, so this
+# walk cannot drift from where the builder says the replay lives.
+REPLAY_DIR = Path(v2.REPLAY_INDEX).parts[0]
+
+
 def committed_pages() -> Dict[str, str]:
+    """This site's committed pages: the root, and not the replay beside it.
+
+    The evaluation replay is a second site under ``replay/``, built by
+    ``ui.build`` and committed under the same root, so the walk skips it: a
+    comparison that read it would hold this builder to another one's bytes.
+    """
     return {
         path.relative_to(v2.DIST_DIR).as_posix(): path.read_text(encoding="utf-8")
         for path in sorted(v2.DIST_DIR.rglob("*"))
         if path.is_file()
+        and REPLAY_DIR not in path.relative_to(v2.DIST_DIR).parts
     }
 
 
@@ -477,12 +516,13 @@ class SelfContainedTests(unittest.TestCase):
                     self.assertNotIn(tag, text, "{0} embeds {1}".format(name, tag))
 
     def test_every_link_stays_inside_the_site(self):
-        """The only links are the pages beside it and a fragment on the page.
+        """A link is a page here, the replay, or a fragment on the page.
 
-        A notice links to the judge's explanation with ``#judge-explanation``, a
-        fragment on its own page; every other link is one of the pages this site
-        commits. A fragment is checked against the page that carries it, so a
-        link to an anchor that is not there is still a failure.
+        Every page carries a link to the evaluation replay beside it. That link
+        is checked against the file on disk, because the replay is a second site
+        this builder does not write. Every other link is one of the pages this
+        site commits, or a fragment, which is checked against the page that
+        carries it, so a link to an anchor that is not there is still a failure.
         """
         names = set(built_pages())
         for name, text in sorted(built_pages().items()):
@@ -496,6 +536,12 @@ class SelfContainedTests(unittest.TestCase):
                             'id="{0}"'.format(url[1:]),
                             text,
                             "{0} links to {1}, an anchor it does not carry".format(name, url),
+                        )
+                        continue
+                    if url == v2.REPLAY_INDEX:
+                        self.assertTrue(
+                            (v2.DIST_DIR / url).is_file(),
+                            "the replay page {0} is not committed".format(url),
                         )
                         continue
                     self.assertIn(url, names, "{0} links to {1}, which is not a page".format(name, url))
@@ -1012,6 +1058,294 @@ class AppealTextTests(unittest.TestCase):
                 else:
                     self.assertIn(
                         money(threshold, currency), page, "the execution threshold is missing"
+                    )
+
+
+# --------------------------------------------------------------------------
+# The front door: the product view at the root, the replay beside it
+# --------------------------------------------------------------------------
+class FrontDoorTests(unittest.TestCase):
+    """The site's root is the product view, and the replay is one level down."""
+
+    def test_the_builders_paths_are_the_site_root(self):
+        self.assertEqual(PROJECT_ROOT / "ui" / "dist", v2.DIST_DIR)
+        self.assertEqual(v2.DIST_DIR / "index.html", v2.INDEX_PATH)
+        self.assertEqual("replay/index.html", v2.REPLAY_INDEX)
+        self.assertTrue(
+            (v2.DIST_DIR / "replay" / "index.html").is_file(),
+            "the evaluation replay is not committed under replay/",
+        )
+        self.assertFalse(
+            (v2.DIST_DIR / "v2").exists(),
+            "the old ui/dist/v2/ directory is still committed",
+        )
+
+    def test_every_page_carries_the_top_bar_and_a_link_to_the_replay(self):
+        for name, text in sorted(built_pages().items()):
+            with self.subTest(page=name):
+                self.assertIn('<header class="top">', text)
+                self.assertIn('href="replay/index.html"', text)
+                self.assertIn("Evaluation replay", text)
+                self.assertIn(">Queue</a>", text)
+                self.assertIn('class="mark"', text)
+
+    def test_the_top_bar_names_the_run_every_page_replays(self):
+        first = cases()[0]["document"]
+        expected = "Replay - policy v{0} - {1}".format(
+            (first.get("configuration") or {}).get("policy_version"),
+            first.get("model"),
+        )
+        for name, text in sorted(built_pages().items()):
+            with self.subTest(page=name):
+                self.assertIn(expected, text)
+
+    def test_every_case_header_carries_its_own_ids_and_chips(self):
+        for case in loaded_cases():
+            page = built_pages()[case.link]
+            dispute = case.case.get("dispute") or {}
+            with self.subTest(case=case.case_no):
+                self.assertIn(str(dispute.get("dispute_id")), page)
+                self.assertIn(str(dispute.get("trip_id")), page)
+                self.assertIn(str(dispute.get("filed_at")), page)
+                self.assertIn(v2.status_chip(case, with_time=True), page)
+                self.assertIn(
+                    v2._text(v2._summary_line(case.case)),
+                    page,
+                    "the masked first sentence of the claim is not the title",
+                )
+
+
+# --------------------------------------------------------------------------
+# The four featured cases
+# --------------------------------------------------------------------------
+# The fixed titles, typed here so a page that changed one is caught.
+FEATURED_CASES: Tuple[Tuple[int, str], ...] = (
+    (901, "The organisers' sample"),
+    (208, "A no-show the evidence settles"),
+    (1779, "A prompt injection, caught"),
+    (2735, "A safety flag: straight to a human"),
+)
+
+
+def card_html(text: str, case_no: int) -> str:
+    """The featured card for one case, cut out of the queue page."""
+    link = 'href="case-{0:05d}.html"'.format(case_no)
+    end_of_link = text.index(link)
+    start = text.rindex('<a class="fcard"', 0, end_of_link)
+    return text[start : text.index("</a>", start)]
+
+
+class FeaturedCardTests(unittest.TestCase):
+    """The four featured cases: fixed titles, and facts read from the run."""
+
+    def test_the_queue_carries_the_four_cards(self):
+        text = index_text()
+        self.assertEqual(4, text.count('class="fcard"'))
+        for case_no, title in FEATURED_CASES:
+            with self.subTest(case=case_no):
+                self.assertIn(title, card_html(text, case_no))
+
+    def test_901_shows_its_outcome_and_its_confidence(self):
+        case = [row for row in cases() if row["case_no"] == 901][0]
+        ruling = inner_ruling(case["document"])
+        card = card_html(index_text(), 901)
+        self.assertIn(v2.ruling_words(ruling.get("ruling")), card)
+        self.assertIn(str(ruling.get("confidence")), card)
+
+    def test_208_shows_its_outcome_and_its_amounts(self):
+        case = [row for row in cases() if row["case_no"] == 208][0]
+        ruling = inner_ruling(case["document"])
+        currency = currency_of(case["document"])
+        filed_by = (public_case("corpus", 208).get("dispute") or {}).get("filed_by")
+        card = card_html(index_text(), 208)
+        self.assertIn(v2.ruling_words(ruling.get("ruling")), card)
+        self.assertIn(v2.money_statement(ruling, currency, filed_by), card)
+
+    def test_1779_shows_the_reason_code_and_the_rejected_panel(self):
+        case = [row for row in cases() if row["case_no"] == 1779][0]
+        vote = transcript_of(case["run_dir"], 1779).get("vote") or {}
+        drafts = list(vote.get("drafts") or [])
+        self.assertTrue(drafts, "1779 has no drafts to count")
+        card = card_html(index_text(), 1779)
+        self.assertIn("NO_VALID_DRAFTS", card)
+        self.assertIn("rejected by the code checks", card)
+        self.assertIn(
+            "every one of the {0} drafts".format(len(drafts)),
+            card,
+            "the card does not say the whole panel was rejected",
+        )
+
+    def test_2735_shows_the_reason_and_that_no_model_was_called(self):
+        case = [row for row in cases() if row["case_no"] == 2735][0]
+        votes = int((case["document"].get("configuration") or {}).get("judge_votes"))
+        card = card_html(index_text(), 2735)
+        self.assertIn(TRIGGER_WORDS["GEN08_SCOPE"].format(votes=votes), card)
+        self.assertIn("0 - the scope gate asked no model", card)
+
+
+# --------------------------------------------------------------------------
+# The key-figure tiles, and the trace
+# --------------------------------------------------------------------------
+class KeyFigureTileTests(unittest.TestCase):
+    """A tile is a fact the brief carries, beside the limit it is tested against."""
+
+    def test_no_tile_is_drawn_for_a_fact_the_block_lacks(self):
+        for case in loaded_cases():
+            tiles = v2.key_figure_tiles(case)
+            text = " ".join("{0} {1}".format(value, label) for value, label in tiles)
+            deviation = v2._derived_block(case.brief, "GPS_TRACE", "deviation")
+            arrival = v2._derived_block(case.brief, "GPS_TRACE", "arrival")
+            coverage = v2._payload(case.brief, "GPS_TRACE").get("coverage_pct")
+            with self.subTest(case=case.case_no):
+                if deviation and v2._fact_value(deviation, "available"):
+                    self.assertIn("POL-RD-01", text)
+                else:
+                    self.assertNotIn("POL-RD-01", text)
+                if arrival and v2._fact_value(arrival, "available"):
+                    self.assertIn("arrival radius", text)
+                else:
+                    self.assertNotIn("arrival radius", text)
+                if coverage is None:
+                    self.assertNotIn("trace coverage", text)
+                else:
+                    self.assertIn("trace coverage", text)
+
+    def test_every_tile_is_on_its_own_case_page(self):
+        for case in loaded_cases():
+            page = built_pages()[case.link]
+            for value, label in v2.key_figure_tiles(case):
+                with self.subTest(case=case.case_no, tile=value):
+                    self.assertIn(value, page)
+                    self.assertIn(label, page)
+
+    def test_the_confidence_tile_names_the_floor_it_is_tested_against(self):
+        floor = read_json(PROJECT_ROOT / "policy" / "v3" / "general.json")[
+            "confidence_floor"
+        ]
+        for case in loaded_cases():
+            if case.trigger is not None:
+                continue
+            confidence = case.ruling.get("confidence")
+            if confidence is None:
+                continue
+            with self.subTest(case=case.case_no):
+                self.assertIn(
+                    'aria-label="confidence {0} against a floor of {1}"'.format(
+                        confidence, floor
+                    ),
+                    built_pages()[case.link],
+                )
+
+
+# The trace's own SVG, cut out of the rail. The page also carries the product's
+# scales mark, which is an SVG too, so the trace is found by its container
+# rather than as "the first SVG on the page".
+TRACE_SVG_RE = re.compile(r'<div class="map">(<svg.*?</svg>)</div>', re.S)
+
+
+class TraceDrawingTests(unittest.TestCase):
+    """The trace is drawn from the fixes, and the optimal route is never drawn."""
+
+    def test_the_trace_is_drawn_from_the_fixes(self):
+        for case in loaded_cases():
+            page = built_pages()[case.link]
+            match = TRACE_SVG_RE.search(page)
+            fixes = v2._latlngs(
+                v2._case_payload(case.case, "GPS_TRACE").get("points")
+            )
+            with self.subTest(case=case.case_no):
+                if not fixes:
+                    self.assertIsNone(match, "a trace was drawn with no fixes")
+                    continue
+                self.assertIsNotNone(match, "no trace was drawn")
+                self.assertIn("<polyline", match.group(1))
+
+    def test_no_line_is_labelled_optimal(self):
+        for case in loaded_cases():
+            page = built_pages()[case.link]
+            match = TRACE_SVG_RE.search(page)
+            if match is not None:
+                with self.subTest(case=case.case_no):
+                    self.assertNotIn("<text", match.group(1))
+                    self.assertNotIn("optimal", match.group(1))
+            deviation = v2._derived_block(case.brief, "GPS_TRACE", "deviation")
+            optimal = (
+                v2._fact_value(deviation, "optimal_distance_km")
+                if deviation
+                else None
+            )
+            if optimal is None:
+                optimal = v2._case_payload(case.case, "TRIP_RECORD").get(
+                    "optimal_distance_km"
+                )
+            if optimal is not None:
+                with self.subTest(case=case.case_no):
+                    self.assertIn("(distance only)", page)
+
+    def test_the_rail_carries_the_evidence_and_the_record(self):
+        for case in loaded_cases():
+            page = built_pages()[case.link]
+            with self.subTest(case=case.case_no):
+                self.assertIn("<summary>Evidence ", page)
+                self.assertIn("<summary>Record ", page)
+
+
+# --------------------------------------------------------------------------
+# Nothing external, and no web font
+# --------------------------------------------------------------------------
+STYLE_RE = re.compile(r"<style>(.*?)</style>", re.S)
+
+
+class WebFontTests(unittest.TestCase):
+    """No page loads a font, and none names one."""
+
+    def test_no_stylesheet_imports_or_embeds_a_font(self):
+        for name, text in sorted(built_pages().items()):
+            styles = "".join(STYLE_RE.findall(text)).lower()
+            with self.subTest(page=name):
+                for needle in ("@import", "@font-face", "url(", "fonts.googleapis", "fonts.gstatic"):
+                    self.assertNotIn(needle, styles)
+                self.assertNotIn("<link", text)
+
+
+# --------------------------------------------------------------------------
+# The replay beside the queue
+# --------------------------------------------------------------------------
+class ReplayLinkTests(unittest.TestCase):
+    """The evaluation replay under replay/: its links resolve, and it links back."""
+
+    def replay_pages(self) -> List[Path]:
+        return sorted((v2.DIST_DIR / REPLAY_DIR).rglob("*.html"))
+
+    def test_the_replay_is_committed(self):
+        self.assertTrue(self.replay_pages(), "the evaluation replay is not committed")
+
+    def test_every_replay_page_links_back_to_the_queue(self):
+        queue = (v2.DIST_DIR / "index.html").resolve()
+        for path in self.replay_pages():
+            scan = _ResourceScan()
+            scan.feed(path.read_text(encoding="utf-8"))
+            targets = {
+                (path.parent / url).resolve()
+                for _tag, url in scan.anchors
+                if url and not url.startswith("#") and not is_external_reference(url)
+            }
+            with self.subTest(page=path.relative_to(v2.DIST_DIR).as_posix()):
+                self.assertIn(
+                    queue, targets, "a replay page does not link back to the queue"
+                )
+
+    def test_every_relative_link_in_the_replay_resolves(self):
+        for path in self.replay_pages():
+            scan = _ResourceScan()
+            scan.feed(path.read_text(encoding="utf-8"))
+            for _tag, url in scan.anchors:
+                if not url or url.startswith("#") or is_external_reference(url):
+                    continue
+                with self.subTest(page=path.name, url=url):
+                    self.assertTrue(
+                        (path.parent / url).resolve().is_file(),
+                        "{0} links to {1}, which is not there".format(path.name, url),
                     )
 
 
