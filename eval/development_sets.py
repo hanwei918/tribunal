@@ -429,20 +429,20 @@ WILD_V2 = DevelopmentSet(
     ),
 )
 
-# The third sealed set, imported on 2026-10-09 and **not yet run**. Its 24 cases
-# are 301-312 and 401-412; its own manifest records that it was prepared by
-# "Claude (independent of prompt tuning; never saw dev-set misses or prompts)".
-# Its registration fixes policy version 6, the version frozen at the tag
-# ``freeze-2026-10-09``, and its single run is made from a commit whose
-# ``tribunal/``, ``prompts/`` and ``policy/`` trees equal those at that tag, at
-# the arguments recorded below -- the configuration of the two earlier sealed
-# runs. It is a different set from ``wild`` and ``wild-v2`` and is never added
-# to either, to the combined figure or to ``--set all``.
+# The third sealed set, imported on 2026-10-09 and run once, on 2026-10-10. Its
+# 24 cases are 301-312 and 401-412; its own manifest records that it was prepared
+# by "Claude (independent of prompt tuning; never saw dev-set misses or
+# prompts)". Its registration fixes policy version 6, the version frozen at the
+# tag ``freeze-2026-10-09``, and its single run was made from the commit
+# ``feb7174``, whose ``tribunal/``, ``prompts/`` and ``policy/`` trees equal those
+# at that tag, at the arguments recorded below -- the configuration of the two
+# earlier sealed runs. It is a different set from ``wild`` and ``wild-v2`` and is
+# never added to either, to the combined figure or to ``--set all``.
 #
-# The key in this archive was written under policy version 1 and will be
-# re-derived under version 6 by the key owner before the run; the registration
-# reads the key's digest from the key file rather than pinning it here, so that
-# replacement touches only ``eval/answers/sealed-v1/``.
+# The key in this archive was written under policy version 1 and was re-derived
+# under version 6 by the key owner before the run; the registration reads the
+# key's digest from the key file rather than pinning it here, so that replacement
+# touched only ``eval/answers/sealed-v1/``.
 SEALED_V1 = DevelopmentSet(
     name="sealed-v1",
     cases=tuple(
@@ -483,14 +483,14 @@ SEALED_SETS: Tuple[DevelopmentSet, ...] = (SEALED_SET, WILD_V2, SEALED_V1)
 # cases are development data must not enter any of them by being named here.
 RERUN_SETS: Tuple[DevelopmentSet, ...] = (WILD_DEV,)
 
-# The sets whose **recorded runs** the measurements read. ``wild-v2`` is
-# deliberately not one of them, and the reason is not that it has no run: its
-# single run was committed on 2026-10-04 and it has drafts, brief digests and
-# amounts to re-reduce. It is excluded because the amount-rule measurement and
-# the recorded-drafts measurement have committed results over these three runs,
-# and adding a fourth would change figures the submission reports -- which is a
-# decision about measurement coverage, and not one a registration should settle
-# by being edited.
+# The sets whose **recorded runs** the measurements read. ``wild-v2`` and
+# ``sealed-v1`` are deliberately not among them, and the reason is not that they
+# have no run: their single runs were committed, on 2026-10-04 and 2026-10-10,
+# and they have drafts, brief digests and amounts to re-reduce. They are excluded
+# because the amount-rule measurement and the recorded-drafts measurement have
+# committed results over these three runs, and adding a fourth would change
+# figures the submission reports -- which is a decision about measurement
+# coverage, and not one a registration should settle by being edited.
 ALL_SETS: Tuple[DevelopmentSet, ...] = DEVELOPMENT_SETS + (SEALED_SET,)
 
 BY_NAME = {
@@ -627,12 +627,12 @@ SEALED_V1_CAVEAT = (
     "The third sealed set is not a development set and is never added to the "
     "combined figure above, to the held-out set's figure or to the second "
     "sealed set's. It was prepared by an independent author and imported on "
-    "2026-10-09, and its single run is made from a commit whose tribunal/, "
-    "prompts/ and policy/ trees equal those at freeze-2026-10-09 -- every event "
-    "the run writes records the commit it was made from -- at the policy "
-    "version 6 its registration fixes; that single run is the third "
-    "generalisation figure the submission reports. It is absent from "
-    "data/index.json and is graded against "
+    "2026-10-09, and it was run exactly once, on 2026-10-10, from the commit "
+    "feb7174, whose tribunal/, prompts/ and policy/ trees equal those at "
+    "freeze-2026-10-09 -- every event the run wrote records the commit it was "
+    "made from -- at the policy version 6 its registration fixes; that single "
+    "run is the third generalisation figure the submission reports. It is absent "
+    "from data/index.json and is graded against "
     "eval/answers/sealed-v1/ground_truth.json, which is neither development key "
     "and not either other sealed set's key."
 )

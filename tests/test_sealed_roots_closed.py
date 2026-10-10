@@ -1,14 +1,14 @@
-"""The last ways into a sealed root are closed, for both sealed roots.
+"""The last ways into a sealed root are closed, for all three sealed roots.
 
-``runs/wild/`` holds the held-out set's single run and ``runs/wild-v2/`` the
-second sealed set's. Both runs have been made and both roots are closed
-outright, so every command that would write under one of them has to refuse the
-whole of the root -- not only the run directory, and not only the spelling the
-path happens to be given in.
+``runs/wild/`` holds the held-out set's single run, ``runs/wild-v2/`` the second
+sealed set's and ``runs/sealed-v1/`` the third's. All three runs have been made
+and all three roots are closed outright, so every command that would write under
+one of them has to refuse the whole of the root -- not only the run directory,
+and not only the spelling the path happens to be given in.
 
-Each test here is one of those commands, and each is run for **both** roots: the
-two are named by their registrations rather than restated, so a third sealed set
-would be covered by the same loops.
+Each test here is one of those commands, and each is run for **every** root: the
+three are named by their registrations rather than restated, so a fourth sealed
+set would be covered by the same loops.
 
 **Every test runs against a scratch root.** Nothing reads or writes a committed
 run: the runs root is a temporary directory, the modules are made to believe it
@@ -155,16 +155,16 @@ class RecordedDraftsDestinationTests(ScratchRunsRootTestCase):
 class OutDirectoryGuardsTests(ScratchRunsRootTestCase):
     """The derived ``--out-dir`` guards refuse a sealed root.
 
-    ``runs/wild/`` and ``runs/wild-v2/`` are not run directories with a name a
-    reader could mistake these figures for: they are sealed roots, and nothing
-    is created under either again. The structural walk catches a destination
-    inside a run directory; the sealed-root guard catches one inside a root
-    whose run is not there yet.
+    ``runs/wild/``, ``runs/wild-v2/`` and ``runs/sealed-v1/`` are not run
+    directories with a name a reader could mistake these figures for: they are
+    sealed roots, and nothing is created under any of them again. The structural
+    walk catches a destination inside a run directory; the sealed-root guard
+    catches one inside a root whose single run is committed.
 
     Three commands derive a destination of their own and refuse a sealed root
     through :func:`eval.sealed_roots.refuse_a_sealed_destination`: the baselines,
     the amount-rule measurement and the policy-gap report. All three are tested
-    here, each for both sealed roots.
+    here, each for every sealed root.
     """
 
     def test_the_baselines_destination_refuses_either_sealed_root(self):
@@ -331,16 +331,18 @@ class CheckOnAClosedRootTests(ScratchRunsRootTestCase):
             self.addCleanup(patcher.stop)
 
     def test_a_closed_root_prints_the_closure_and_lists_no_cases(self):
-        # ``sealed-v1`` is imported and **not yet run**, so its root is not
-        # closed and the plan branch below is where it is covered. The closure is
-        # asserted for every root the registration says has been made, and the
+        # All three sealed sets have been run, so all three roots are closed and
+        # the plan branch below is reached only by emptying the lists. The closure
+        # is asserted for every root the registration says has been made, and the
         # list of those is pinned here, so a set cannot pass by being skipped.
         closed = [
             development_set
             for development_set in SEALED_SETS
             if sets.sealed_root_is_closed(development_set)
         ]
-        self.assertEqual(("wild", "wild-v2"), tuple(item.name for item in closed))
+        self.assertEqual(
+            ("wild", "wild-v2", "sealed-v1"), tuple(item.name for item in closed)
+        )
         for development_set in closed:
             with self.subTest(sealed_set=development_set.name):
                 code, out, err = _run_cli(self.ARGUMENTS[development_set.name])
@@ -409,7 +411,7 @@ class NamedPathDestinationTests(ScratchRunsRootTestCase):
     pointed at a sealed root, and a file written there would be the first new
     thing under a root whose single run is committed. The refusal is one rule, in
     :func:`eval.sealed_roots.refuse_a_sealed_destination`, and every test here is
-    one of those commands, run for **both** sealed roots.
+    one of those commands, run for **every** sealed root.
 
     ``tribunal.pipeline --out`` and ``tribunal.precedents --store`` are
     deliberately not among them: ``tribunal/`` imports nothing from ``eval/`` and

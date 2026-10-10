@@ -136,11 +136,33 @@ and 112. Neither 107's nor 112's ruling with precedents mentions a precedent, an
 `precedents/precedents.jsonl` holds two precedents, so the difference is not
 attributed to the precedents. It is reported, not claimed.
 
-**The third sealed set.** `sealed-v1` is 24 cases, imported and registered at
-policy version 6, and it has **not** been run. The key owner re-derived the key
-under version 6 on 2026-10-10 without seeing any output on the set; the old and
-new `answer_key_sha256` are `7529d925…` (imported) and `f430f6c0…` (now). The
-single run follows, and its figures will be added as their own block.
+**The third sealed set (`sealed-v1`), at policy version 6**
+
+`sealed-v1` is 24 cases, imported and registered at policy version 6. Its single
+run was made once by the owner, on 2026-10-10, from the commit `feb7174`, whose
+`tribunal/`, `prompts/` and `policy/` trees equal those at the freeze tagged
+`freeze-2026-10-09`, and it is committed at `runs/sealed-v1/deepseek-deepseek-flash/`.
+The set's own protocol asks for the **agreement** against its key rather than an
+"accuracy", so that is the word used here, and its figure is the submission's
+third generalisation figure: it is **never** pooled with `wild-v1`'s or
+`wild-v2`'s. The key owner re-derived the key under version 6 on 2026-10-10
+without seeing any output on the set; the old and new `answer_key_sha256` are
+`7529d925…` (imported) and `f430f6c0…` (at the run). The note that reads the run
+is `docs/notes/2026-10-10-the-third-sealed-run.md`.
+
+| figure | value | read from | recompute with | model call |
+|---|---|---|---|---|
+| Third sealed set (`sealed-v1`) — four-field agreement, of the cases that produced a ruling | 21/24 = 87.5% | `runs/sealed-v1/deepseek-deepseek-flash/case-*.json`, `eval/answers/sealed-v1/ground_truth.json` | `python3 -m eval.sealed_report --set sealed-v1` | no |
+| Third sealed set (`sealed-v1`) — four-field agreement, over all 24 cases | 21/24 = 87.5% | `runs/sealed-v1/deepseek-deepseek-flash/`, `eval/answers/sealed-v1/ground_truth.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
+| Third sealed set (`sealed-v1`) — ruling alone, of the cases that produced a ruling | 21/24 = 87.5% | `runs/sealed-v1/deepseek-deepseek-flash/case-*.json`, `eval/answers/sealed-v1/ground_truth.json` | `python3 -m eval.sealed_report --set sealed-v1` | no |
+| Third sealed set (`sealed-v1`) — Wilson 95% interval | [69.0%, 95.7%] | `runs/sealed-v1/deepseek-deepseek-flash/`, `eval/answers/sealed-v1/ground_truth.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
+| Third sealed set (`sealed-v1`) — escalation precision | 3/5 = 0.6 | `runs/sealed-v1/deepseek-deepseek-flash/case-*.json`, `eval/answers/sealed-v1/ground_truth.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
+| Third sealed set (`sealed-v1`) — escalation recall | 3/4 = 0.75 | `runs/sealed-v1/deepseek-deepseek-flash/case-*.json`, `eval/answers/sealed-v1/ground_truth.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
+| Third sealed set (`sealed-v1`) — over-escalations | 304, 312 | `runs/sealed-v1/deepseek-deepseek-flash/case-*.json`, `eval/answers/sealed-v1/ground_truth.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
+| Third sealed set (`sealed-v1`) — under-escalation | 410 | `runs/sealed-v1/deepseek-deepseek-flash/case-*.json`, `eval/answers/sealed-v1/ground_truth.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
+| Third sealed set (`sealed-v1`) — ROUTE_DEVIATION four-field agreement | 10/12 = 83.3% | `runs/sealed-v1/deepseek-deepseek-flash/`, `eval/answers/sealed-v1/ground_truth.json`, `data/external/sealed-v1/index.json` | `python3 -m eval.sealed_report --set sealed-v1` | no |
+| Third sealed set (`sealed-v1`) — NO_SHOW_CHARGE four-field agreement | 11/12 = 91.7% | `runs/sealed-v1/deepseek-deepseek-flash/`, `eval/answers/sealed-v1/ground_truth.json`, `data/external/sealed-v1/index.json` | `python3 -m eval.sealed_report --set sealed-v1` | no |
+| Third sealed set (`sealed-v1`) — cases with no ruling | none | `runs/sealed-v1/deepseek-deepseek-flash/run.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
 
 **The earlier blocks.** Every block below was measured at policy version 1 or 2,
 from the earlier freezes; they are kept as they were.
@@ -148,19 +170,23 @@ from the earlier freezes; they are kept as they were.
 Read the table below from the top. The first block is the submission's claim;
 every block below it is context that says what that claim is worth.
 
-Two figures are **generalisation** figures, and each is its own. The held-out set
-(`wild-v1`) is 64 cases whose author says its traps come from real complaints,
-prepared by their author as a development set; nobody who changed the system
-opened them before the freeze tagged `freeze-2026-09-30`, and they were run once
-from that tag. The second
+Three figures are **generalisation** figures, and each is its own. The held-out
+set (`wild-v1`) is 64 cases whose author says its traps come from real
+complaints, prepared by their author as a development set; nobody who changed the
+system opened them before the freeze tagged `freeze-2026-09-30`, and they were
+run once from that tag. The second
 sealed set (`wild-v2`) is 20 cases, run once on 2026-10-04 from a commit whose
 `tribunal/`, `prompts/` and `policy/` trees equal those at the freeze tagged
-`freeze-2026-10-03`. The corpus and the second set are **development** data the
-system was built against, so a figure over them measures fit, not generalisation.
-**The two sealed figures are never summed or pooled** — one figure over 64 cases
-plus another over 20 is not a measurement of 84 cases — and neither sealed set is
-ever produced by `--set all`. The second sealed set's run, its figures and its two
-misses are read in `docs/notes/2026-10-04-the-second-sealed-run.md`.
+`freeze-2026-10-03`. The third sealed set (`sealed-v1`) is 24 cases, run once on
+2026-10-10 from the commit `feb7174`, whose `tribunal/`, `prompts/` and `policy/`
+trees equal those at the freeze tagged `freeze-2026-10-09`. The corpus and the
+second set are **development** data the system was built against, so a figure
+over them measures fit, not generalisation. **The three sealed figures are never
+summed or pooled** — one figure over 64 cases, one over 20 and one over 24 are
+not a measurement of 108 cases — and no sealed set is ever produced by
+`--set all`. The second sealed set's run, its figures and its two misses are read
+in `docs/notes/2026-10-04-the-second-sealed-run.md`, and the third's in
+`docs/notes/2026-10-10-the-third-sealed-run.md`.
 
 **Where the corpus came from.** The 29-case corpus was written by this team before
 the kick-off, following the dispute types in the organisers' brief. It is **not**
@@ -207,8 +233,10 @@ organiser data. The only organiser-supplied case is `DISP-002`, converted as cas
 `wild-v1` rows are read from the run of 2026-09-30, made from the commit tagged
 `freeze-2026-09-30`; the `wild-v2` rows are read from the run of 2026-10-04, made
 from a commit whose `tribunal/`, `prompts/` and `policy/` trees equal those at
-`freeze-2026-10-03`. No `wild-v2` figure is added to a `wild-v1` figure or to any
-development figure.
+`freeze-2026-10-03`; the `sealed-v1` rows are read from the run of 2026-10-10,
+made from the commit `feb7174`, whose `tribunal/`, `prompts/` and `policy/`
+trees equal those at `freeze-2026-10-09`. No sealed figure is added to another
+sealed figure or to any development figure.
 
 **Which policy version each block was measured at.** The corpus, the second
 development set and `wild-v1` were all measured at **policy version 1**, the
@@ -256,6 +284,7 @@ protocol. The commands that made them, and which of them were paid for, are:
 |---|---|---|
 | held-out set (`wild-v1`) | `python3 -m eval.development_sets --set wild --concurrency 2 --timeout 900` | once, 2026-09-30, from the commit tagged `freeze-2026-09-30` |
 | second sealed set (`wild-v2`) | `TRIBUNAL_SEALED_RUN=wild-v2 python3 -m eval.development_sets --set wild-v2 --concurrency 2 --timeout 900` | once, 2026-10-04, from a commit whose `tribunal/`, `prompts/` and `policy/` trees equal those at `freeze-2026-10-03` |
+| third sealed set (`sealed-v1`) | `TRIBUNAL_SEALED_RUN=sealed-v1 python3 -m eval.development_sets --set sealed-v1 --parallel-calls --concurrency 2 --timeout 900` | once, 2026-10-10, from the commit `feb7174`, whose `tribunal/`, `prompts/` and `policy/` trees equal those at `freeze-2026-10-09` |
 | development sets | `python3 -m eval.run_benchmark`, `python3 -m eval.development_sets --set codex` | 2026-09-22 to 2026-09-24 |
 | ablations | the same two with `--ablate admissibility` or `--ablate clause-notes` | 2026-09-29 |
 | sample case | `python3 -m eval.run_benchmark --external data/external/ryde/case-00901.json --runs-dir runs/rerun-2026-09-29 --timeout 900` | 2026-09-29 |

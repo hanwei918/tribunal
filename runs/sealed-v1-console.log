@@ -1,0 +1,326 @@
+start 2026-10-10 11:36:27 at feb7174
+[  1/24] case 301  started
+[  2/24] case 302  started
+[  1/24] case 301  match     152.3s     202,248 tokens
+[  3/24] case 303  started
+[  2/24] case 302  match     152.4s     210,382 tokens
+[  4/24] case 304  started
+[  3/24] case 303  match     112.2s     185,237 tokens
+[  5/24] case 305  started
+[  5/24] case 305  match     241.3s     255,798 tokens
+[  6/24] case 306  started
+[  6/24] case 306  match     178.9s     207,521 tokens
+[  7/24] case 307  started
+[  4/24] case 304  MISS      601.5s     481,774 tokens
+[  8/24] case 308  started
+[  7/24] case 307  match     123.4s     212,050 tokens
+[  9/24] case 309  started
+[  8/24] case 308  match     148.4s     226,760 tokens
+[ 10/24] case 310  started
+[  9/24] case 309  match     118.5s     178,772 tokens
+[ 11/24] case 311  started
+[ 10/24] case 310  match      79.4s     182,140 tokens
+[ 12/24] case 312  started
+[ 12/24] case 312  MISS      122.6s     213,036 tokens
+[ 13/24] case 401  started
+[ 11/24] case 311  match     328.0s     318,644 tokens
+[ 14/24] case 402  started
+[ 13/24] case 401  match     213.8s     224,808 tokens
+[ 15/24] case 403  started
+[ 14/24] case 402  match     220.3s     237,052 tokens
+[ 16/24] case 404  started
+[ 15/24] case 403  match     699.2s     543,311 tokens
+[ 17/24] case 405  started
+[ 16/24] case 404  match     576.2s     461,515 tokens
+[ 18/24] case 406  started
+[ 17/24] case 405  match     200.5s     232,227 tokens
+[ 19/24] case 407  started
+[ 18/24] case 406  match     211.0s     231,462 tokens
+[ 20/24] case 408  started
+[ 19/24] case 407  match     113.0s     201,170 tokens
+[ 21/24] case 409  started
+[ 20/24] case 408  match     147.0s     220,274 tokens
+[ 22/24] case 410  started
+[ 21/24] case 409  match     105.8s     200,968 tokens
+[ 23/24] case 411  started
+[ 22/24] case 410  MISS      159.7s     243,174 tokens
+[ 24/24] case 412  started
+[ 23/24] case 411  match     230.0s     287,016 tokens
+[ 24/24] case 412  match     140.5s     211,610 tokens
+
+run         deepseek/deepseek-flash  ->  /Users/hanweizhou/Desktop/Tribunal/runs/sealed-v1/deepseek-deepseek-flash
+provenance  commit feb71748c9f1, tree clean, prompts 5b8510cd900a, key f430f6c017e1
+cases       24 completed, 0 cached, 0 failed
+limits      timeout 900s per attempt, case deadline 2400s, concurrency 2
+tokens      6,168,949 charged to the budget, 0 reused from cache
+            3,397,716 in, 2,771,233 out (2,550,932 of the output was reasoning)
+stop        completed
+
+four-field exact match  21/24 = 87.5%
+  ruling                   21/24
+  amount_sgd               21/24
+  driver_compensation_sgd  24/24
+  referrals                23/24
+cached        all 24 results match the brief and the prompts this code builds
+
+cases graded  24 of 24 in the corpus — the whole corpus
+escalation  5/24 = 20.8%  (target 17.2%)  precision 0.6  recall 0.75  over 2  under 1
+INDETERMINATE cases ruled confidently: 410
+
+report written to /Users/hanweizhou/Desktop/Tribunal/runs/sealed-v1/deepseek-deepseek-flash/report.md
+
+Development sets — deepseek/deepseek-flash
+
+Separately, each set graded against its own key:
+
+  set      run directory                            cases      exact  ruling amount driver   refs
+  corpus   runs/deepseek-deepseek-flash             29/29      29/29   29/29  29/29  29/29  29/29
+  codex    runs/codex/deepseek-deepseek-flash       15/15      14/15   15/15  14/15  15/15  15/15
+
+Currency, each set checked with its own loader and its own briefs:
+
+  corpus   current  29, stale_brief   0, stale_prompts   0, unknown   0
+  codex    current  15, stale_brief   0, stale_prompts   0, unknown   0
+
+Combined, every case graded against the key it belongs to:
+
+  produced  44 of 44 cases  (corpus 29 of 29; codex 15 of 15)
+  exact     43/44 over the cases produced
+
+Per case — cost, provenance and explanation tags
+
+Computed by code from each case's own artifacts: the token split summed off its transcript by role, the wall clock and the vote agreement read off its cache entry, the amount provenance computed from the brief this code builds, and the four tags matched over the ruling's explanation by regular expression and keyword. No model is involved. A dash means the artifact does not record the figure. `vote agreement` is the share of the judge's drafts that agreed on the published ruling, and it is not the judge's own `confidence`. The patterns, and what each is known to miss and to mistake, are documented in `docs/notes/2026-09-27-the-event-log-and-the-report-columns.md`.
+
+corpus — runs/deepseek-deepseek-flash
+
+| case | advocate tokens | judge tokens | wall s | escalated | vote agreement | amount_sgd from | driver_compensation_sgd from | cites evidence | cites clause | shows arithmetic | names a gap |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 101 | 52586 | 98076 | 91.0 | no | 1.00 | refund.payable.value | n/a | yes | yes | yes | yes |
+| 102 | 63190 | 139264 | 253.0 | no | 1.00 | n/a | n/a | yes | yes | no | yes |
+| 103 | 71175 | 122015 | 131.1 | no | 1.00 | erp_lines.off_optimal_route_total.value | n/a | yes | yes | no | yes |
+| 104 | 76100 | 185210 | 391.8 | no | 1.00 | closure[0].refund.payable.value | n/a | yes | yes | yes | yes |
+| 105 | 62180 | 237802 | 622.5 | no | 1.00 | charged_total.value | n/a | yes | yes | no | yes |
+| 106 | 53363 | 109204 | 107.3 | no | 1.00 | refund.payable.value | n/a | yes | yes | yes | yes |
+| 107 | 62146 | 253028 | 694.2 | no | 0.75 | refund.payable.value | n/a | yes | yes | no | yes |
+| 108 | 67582 | 113362 | 138.7 | no | 1.00 | n/a | n/a | yes | yes | no | yes |
+| 109 | 62818 | 183461 | 340.5 | no | 1.00 | unverifiable: not structured | unverifiable: not structured | yes | yes | no | yes |
+| 110 | 61918 | 134976 | 208.7 | yes | 1.00 | n/a | n/a | yes | yes | no | yes |
+| 111 | 73290 | 197817 | 505.6 | no | 1.00 | n/a | n/a | yes | yes | no | yes |
+| 112 | 75727 | 243603 | 652.8 | yes | 1.00 | n/a | n/a | yes | yes | no | yes |
+| 113 | 55655 | 103982 | 101.3 | no | 1.00 | n/a | n/a | yes | yes | no | yes |
+| 114 | 63426 | 181631 | 373.0 | no | 1.00 | refund.payable.value | n/a | yes | yes | no | yes |
+| 115 | 55099 | 114124 | 148.7 | no | 1.00 | erp_lines.lines[1].amount_sgd.value | n/a | yes | yes | no | yes |
+| 201 | 55400 | 95921 | 88.2 | no | 1.00 | schedule_fee.value | n/a | yes | yes | no | yes |
+| 202 | 77920 | 125806 | 193.7 | no | 1.00 | driver_compensation.value | driver_compensation.value | yes | yes | no | yes |
+| 203 | 62811 | 94424 | 86.4 | no | 1.00 | schedule_fee.value | n/a | yes | yes | no | yes |
+| 204 | 62362 | 104811 | 116.3 | no | 1.00 | schedule_fee.value | n/a | no | yes | yes | no |
+| 205 | 75787 | 154007 | 309.1 | no | 1.00 | schedule_fee.value | n/a | yes | yes | no | yes |
+| 206 | 56567 | 155699 | 306.6 | no | 1.00 | schedule_fee.value | goodwill.value | yes | yes | no | yes |
+| 207 | 59825 | 134172 | 263.1 | yes | 1.00 | n/a | n/a | yes | yes | no | yes |
+| 208 | 80664 | 107670 | 115.0 | no | 1.00 | driver_compensation.value | driver_compensation.value | yes | yes | no | yes |
+| 209 | 100260 | 123259 | 176.7 | no | 1.00 | n/a | n/a | yes | yes | no | yes |
+| 210 | 65213 | 146518 | 252.2 | yes | 1.00 | n/a | n/a | yes | yes | yes | yes |
+| 211 | 75479 | 353394 | 1009.3 | no | 0.75 | goodwill.value | n/a | yes | yes | no | yes |
+| 212 | 70471 | 130800 | 207.6 | no | 1.00 | schedule_fee.value | n/a | yes | yes | no | yes |
+| 213 | 58262 | 145117 | 277.4 | yes | 1.00 | n/a | n/a | yes | yes | no | yes |
+| 214 | 72943 | 162430 | 332.6 | no | 1.00 | driver_compensation.value | driver_compensation.value | yes | yes | no | yes |
+
+codex — runs/codex/deepseek-deepseek-flash
+
+| case | advocate tokens | judge tokens | wall s | escalated | vote agreement | amount_sgd from | driver_compensation_sgd from | cites evidence | cites clause | shows arithmetic | names a gap |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 9101 | 88766 | 101553 | 99.5 | no | 1.00 | driver_compensation.value | driver_compensation.value | yes | yes | no | yes |
+| 9102 | 62147 | 102258 | 102.5 | no | 1.00 | driver_compensation.value | driver_compensation.value | yes | yes | no | yes |
+| 9103 | 61770 | 97523 | 92.5 | no | 1.00 | schedule_fee.value | n/a | yes | yes | no | yes |
+| 9104 | 60939 | 101250 | 115.4 | no | 1.00 | schedule_fee.value | n/a | yes | yes | no | yes |
+| 9105 | 65334 | 108655 | 117.0 | no | 1.00 | schedule_fee.value | n/a | yes | yes | no | yes |
+| 9106 | 87307 | 102727 | 110.6 | no | 1.00 | schedule_fee.value | n/a | yes | yes | yes | yes |
+| 9107 | 61450 | 109710 | 136.7 | no | 1.00 | driver_compensation.value | driver_compensation.value | yes | yes | no | yes |
+| 9108 | 56452 | 99717 | 102.6 | yes | 1.00 | n/a | n/a | yes | yes | no | yes |
+| 9109 | 57241 | 137573 | 272.2 | yes | 1.00 | n/a | n/a | yes | yes | yes | yes |
+| 9110 | 57524 | 104819 | 133.9 | yes | 1.00 | n/a | n/a | yes | yes | no | yes |
+| 9111 | 62514 | 236214 | 538.3 | no | 1.00 | refund.payable.value | n/a | yes | yes | no | yes |
+| 9112 | 62778 | 100056 | 90.6 | no | 1.00 | n/a | n/a | yes | yes | no | yes |
+| 9113 | 56944 | 197755 | 428.0 | no | 0.75 | erp_lines.lines[0].amount_sgd.value + closure[0].refund.payable.value | n/a | yes | yes | yes | yes |
+| 9114 | 55692 | 101789 | 121.4 | no | 1.00 | erp_lines.lines[0].amount_sgd.value | n/a | yes | yes | no | yes |
+| 9115 | 55306 | 145568 | 262.3 | yes | 1.00 | n/a | n/a | yes | yes | yes | yes |
+
+The held-out set (wild-v1), on its own and never in the combined figure:
+
+  set      run directory                            cases      exact  ruling amount driver   refs
+  wild     runs/wild/deepseek-deepseek-flash        62/64      55/62   56/62  56/62  62/62  60/62
+
+Currency, checked with the set's own loader and its own briefs:
+
+  wild     current  62, stale_brief   0, stale_prompts   0, unknown   0
+
+The held-out set is not a development set and is never added to the combined figure above. It was drafted without access to this repository and is run exactly once from the commit tagged freeze-2026-09-30; that single run is one of the two generalisation figures the submission reports. It is absent from data/index.json and is graded against eval/answers/wild/ground_truth.json, which is neither development key.
+
+Per case — cost, provenance and explanation tags
+
+Computed by code from each case's own artifacts: the token split summed off its transcript by role, the wall clock and the vote agreement read off its cache entry, the amount provenance computed from the brief this code builds, and the four tags matched over the ruling's explanation by regular expression and keyword. No model is involved. A dash means the artifact does not record the figure. `vote agreement` is the share of the judge's drafts that agreed on the published ruling, and it is not the judge's own `confidence`. The patterns, and what each is known to miss and to mistake, are documented in `docs/notes/2026-09-27-the-event-log-and-the-report-columns.md`.
+
+wild — runs/wild/deepseek-deepseek-flash
+
+| case | advocate tokens | judge tokens | wall s | escalated | vote agreement | amount_sgd from | driver_compensation_sgd from | cites evidence | cites clause | shows arithmetic | names a gap |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 501 | 70925 | 315186 | 1028.6 | yes | 0.25 | n/a | n/a | no | no | no | no |
+| 502 | 60143 | 241640 | 798.5 | no | 0.75 | charged_total.value | n/a | yes | yes | yes | yes |
+| 503 | 57058 | 101825 | 203.9 | no | 1.00 | refund.payable.value | n/a | yes | yes | yes | yes |
+| 504 | 45540 | 260627 | 859.6 | yes | 1.00 | n/a | n/a | yes | yes | no | yes |
+| 505 | 54084 | 306291 | 1003.7 | no | 1.00 | refund.payable.value | n/a | yes | yes | no | yes |
+| 506 | 59153 | 99461 | 271.6 | no | 1.00 | charged_over_quote.value | n/a | yes | yes | no | yes |
+| 507 | 62166 | 107393 | 257.0 | no | 1.00 | refund.payable.value | n/a | yes | yes | no | yes |
+| 508 | 58161 | 336994 | 1141.2 | yes | 0.75 | n/a | n/a | yes | yes | no | yes |
+| 509 | 49438 | 99344 | 168.0 | no | 1.00 | refund.payable.value | n/a | yes | yes | no | yes |
+| 510 | 57964 | 106625 | 258.7 | no | 1.00 | charged_over_quote.value | n/a | yes | yes | no | yes |
+| 511 | 55575 | 116274 | 274.7 | no | 1.00 | n/a | n/a | yes | yes | no | yes |
+| 512 | 57692 | 188904 | 566.8 | yes | 0.75 | n/a | n/a | yes | yes | no | yes |
+| 513 | 60163 | 111929 | 264.1 | no | 1.00 | refund.payable.value | n/a | yes | yes | yes | yes |
+| 514 | 53862 | 119684 | 290.0 | no | 1.00 | refund.payable.value | n/a | yes | yes | yes | yes |
+| 515 | 68888 | 141111 | 375.1 | no | 1.00 | charged_total.value | n/a | yes | yes | no | yes |
+| 516 | 65346 | 122007 | 325.9 | no | 1.00 | erp_lines.lines[0].amount_sgd.value | n/a | yes | yes | no | yes |
+| 518 | 61763 | 177188 | 463.5 | no | 1.00 | refund.payable.value | n/a | yes | yes | yes | yes |
+| 519 | 64532 | 113454 | 319.2 | no | 1.00 | n/a | n/a | yes | yes | yes | yes |
+| 520 | 58742 | 216805 | 632.4 | no | 1.00 | unverifiable: not structured | unverifiable: not structured | yes | yes | no | yes |
+| 521 | 53951 | 110467 | 269.6 | no | 1.00 | erp_lines.lines[0].amount_sgd.value | n/a | yes | yes | no | yes |
+| 522 | 56160 | 208760 | 713.5 | no | 0.75 | n/a | n/a | yes | yes | no | no |
+| 523 | 61791 | 233093 | 797.6 | no | 0.75 | erp_lines.lines[0].amount_sgd.value | n/a | yes | yes | no | yes |
+| 524 | 51799 | 105171 | 251.8 | no | 1.00 | charged_over_quote.value | n/a | yes | yes | no | yes |
+| 525 | 65603 | 120122 | 299.6 | no | 1.00 | charged_over_quote.value | n/a | yes | yes | no | yes |
+| 526 | 61511 | 141707 | 428.3 | no | 1.00 | n/a | n/a | yes | yes | no | yes |
+| 527 | 66685 | 101246 | 254.3 | no | 1.00 | n/a | n/a | yes | yes | no | yes |
+| 528 | 77695 | 117780 | 398.8 | no | 1.00 | n/a | n/a | yes | yes | no | yes |
+| 529 | 64017 | 125596 | 374.7 | no | 1.00 | n/a | n/a | yes | yes | no | yes |
+| 530 | 58267 | 207391 | 929.2 | yes | 1.00 | n/a | n/a | yes | yes | yes | yes |
+| 531 | 52055 | 153401 | 475.8 | no | 1.00 | n/a | n/a | yes | yes | no | yes |
+| 532 | 58643 | 116641 | 306.4 | no | 1.00 | erp_lines.lines[0].amount_sgd.value | n/a | yes | yes | no | yes |
+| 534 | 52691 | 106469 | 214.9 | no | 1.00 | refund.refund_before_rounding.value | n/a | yes | yes | yes | yes |
+| 535 | 72275 | 103415 | 285.3 | no | 1.00 | n/a | n/a | yes | yes | no | yes |
+| 536 | 59040 | 291751 | 958.5 | no | 0.75 | n/a | n/a | yes | yes | no | yes |
+| 537 | 60770 | 104068 | 261.7 | no | 1.00 | n/a | n/a | yes | yes | no | yes |
+| 601 | 60647 | 94728 | 221.1 | no | 0.75 | schedule_fee.value | n/a | yes | yes | no | yes |
+| 602 | 59503 | 104177 | 254.0 | no | 1.00 | schedule_fee.value | n/a | yes | yes | no | yes |
+| 603 | 54760 | 96158 | 202.8 | no | 1.00 | schedule_fee.value | n/a | yes | yes | no | yes |
+| 604 | 67423 | 117689 | 323.5 | no | 1.00 | schedule_fee.value | n/a | yes | yes | no | yes |
+| 605 | 66968 | 111108 | 279.9 | no | 1.00 | schedule_fee.value | n/a | yes | yes | no | yes |
+| 606 | 60914 | 105230 | 244.5 | no | 1.00 | schedule_fee.value | n/a | yes | yes | yes | yes |
+| 607 | 59047 | 111366 | 287.4 | no | 1.00 | schedule_fee.value | n/a | yes | yes | no | yes |
+| 608 | 55750 | 96822 | 214.3 | no | 1.00 | n/a | n/a | yes | yes | yes | yes |
+| 609 | 53945 | 99303 | 215.4 | no | 1.00 | schedule_fee.value | n/a | yes | yes | no | yes |
+| 610 | 45951 | 92728 | 161.7 | no | 1.00 | schedule_fee.value | n/a | yes | yes | yes | yes |
+| 611 | 59468 | 100978 | 234.7 | no | 1.00 | schedule_fee.value | n/a | yes | yes | no | yes |
+| 612 | 71954 | 117028 | 353.3 | no | 1.00 | schedule_fee.value | n/a | yes | yes | yes | yes |
+| 613 | 74536 | 102565 | 303.0 | no | 1.00 | schedule_fee.value | n/a | yes | yes | no | yes |
+| 614 | 67757 | 99875 | 279.9 | no | 1.00 | schedule_fee.value | n/a | yes | yes | no | yes |
+| 615 | 65549 | 98622 | 256.1 | no | 1.00 | schedule_fee.value | n/a | yes | yes | no | yes |
+| 616 | 65785 | 186823 | 597.6 | no | 1.00 | schedule_fee.value | n/a | yes | yes | no | yes |
+| 617 | 59379 | 92866 | 220.3 | no | 1.00 | schedule_fee.value | n/a | yes | yes | no | yes |
+| 618 | 63685 | 103202 | 273.8 | no | 1.00 | n/a | n/a | yes | yes | no | yes |
+| 619 | 70094 | 194807 | 658.9 | no | 1.00 | schedule_fee.value | n/a | yes | yes | no | yes |
+| 620 | 58406 | 108799 | 263.6 | no | 1.00 | schedule_fee.value | n/a | yes | yes | no | yes |
+| 621 | 71400 | 123182 | 363.7 | no | 1.00 | driver_compensation.value | driver_compensation.value | yes | yes | no | yes |
+| 622 | 60746 | 156361 | 486.1 | yes | 1.00 | n/a | n/a | no | yes | no | no |
+| 623 | 59076 | 126163 | 316.2 | no | 1.00 | schedule_fee.value | n/a | yes | yes | no | yes |
+| 624 | 57086 | 115464 | 280.9 | no | 1.00 | driver_compensation.value | driver_compensation.value | yes | yes | no | yes |
+| 625 | 68228 | 108086 | 297.5 | no | 1.00 | schedule_fee.value | n/a | yes | yes | no | yes |
+| 626 | 52551 | 136670 | 380.5 | yes | 1.00 | n/a | n/a | yes | yes | yes | yes |
+| 627 | 60452 | 147929 | 386.1 | no | 1.00 | schedule_fee.value | n/a | yes | yes | no | yes |
+
+The second sealed set (wild-v2), on its own and never in the combined figure:
+
+  set      run directory                            cases      exact  ruling amount driver   refs
+  wild-v2  runs/wild-v2/deepseek-deepseek-flash     20/20      18/20   18/20  20/20  20/20  20/20
+
+Currency, checked with the set's own loader and its own briefs:
+
+  wild-v2  current  20, stale_brief   0, stale_prompts   0, unknown   0
+
+The second sealed set is not a development set and is never added to the combined figure above or to the held-out set's figure. It was prepared by OpenAI Codex for the owner and imported on 2026-10-03, and it was run exactly once, on 2026-10-04, from a commit whose tribunal/, prompts/ and policy/ trees equal those at freeze-2026-10-03 -- every event the run wrote records the commit it was made from -- at the policy version 2 its registration fixes; that single run is one of the two generalisation figures the submission reports. It is absent from data/index.json and is graded against eval/answers/wild-v2/ground_truth.json, which is neither development key and not the held-out set's key either.
+
+Per case — cost, provenance and explanation tags
+
+Computed by code from each case's own artifacts: the token split summed off its transcript by role, the wall clock and the vote agreement read off its cache entry, the amount provenance computed from the brief this code builds, and the four tags matched over the ruling's explanation by regular expression and keyword. No model is involved. A dash means the artifact does not record the figure. `vote agreement` is the share of the judge's drafts that agreed on the published ruling, and it is not the judge's own `confidence`. The patterns, and what each is known to miss and to mistake, are documented in `docs/notes/2026-09-27-the-event-log-and-the-report-columns.md`.
+
+wild-v2 — runs/wild-v2/deepseek-deepseek-flash
+
+| case | advocate tokens | judge tokens | wall s | escalated | vote agreement | amount_sgd from | driver_compensation_sgd from | cites evidence | cites clause | shows arithmetic | names a gap |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 701 | 61024 | 168440 | 329.9 | no | 1.00 | n/a | n/a | yes | yes | no | yes |
+| 702 | 60232 | 228581 | 734.3 | yes | 0.25 | n/a | n/a | no | no | no | no |
+| 703 | 55640 | 97225 | 207.7 | no | 1.00 | schedule_fee.value | n/a | yes | yes | no | yes |
+| 704 | 71119 | 174643 | 576.0 | no | 1.00 | n/a | n/a | no | yes | no | yes |
+| 705 | 63567 | 105964 | 274.9 | no | 1.00 | n/a | n/a | yes | yes | no | yes |
+| 706 | 58578 | 99505 | 219.5 | no | 1.00 | schedule_fee.value | n/a | yes | yes | no | yes |
+| 707 | 50572 | 103568 | 215.0 | no | 1.00 | n/a | n/a | yes | yes | no | yes |
+| 708 | 66037 | 276755 | 901.0 | yes | 0.75 | n/a | n/a | yes | yes | no | yes |
+| 709 | 81280 | 109406 | 327.0 | no | 1.00 | n/a | n/a | yes | yes | no | yes |
+| 710 | 54976 | 115355 | 237.9 | no | 1.00 | n/a | n/a | yes | yes | no | yes |
+| 711 | 65003 | 139618 | 378.5 | yes | 1.00 | n/a | n/a | yes | yes | no | yes |
+| 712 | 58702 | 105459 | 171.0 | no | 1.00 | erp_lines.lines[2].amount_sgd.value | n/a | yes | yes | no | yes |
+| 713 | 61125 | 204258 | 645.5 | no | 1.00 | n/a | n/a | yes | yes | no | yes |
+| 714 | 67033 | 174186 | 546.2 | yes | 1.00 | n/a | n/a | yes | yes | no | yes |
+| 715 | 68125 | 158999 | 509.0 | no | 1.00 | n/a | n/a | yes | yes | no | yes |
+| 716 | 62684 | 199274 | 620.6 | no | 0.75 | n/a | n/a | yes | yes | no | yes |
+| 717 | 63804 | 181341 | 567.3 | no | 1.00 | n/a | n/a | yes | yes | no | yes |
+| 718 | 57259 | 125109 | 196.8 | no | 1.00 | refund.payable.value | n/a | yes | yes | yes | yes |
+| 719 | 68172 | 148786 | 432.0 | yes | 1.00 | n/a | n/a | yes | yes | no | yes |
+| 720 | 55214 | 172459 | 502.5 | no | 1.00 | schedule_fee.value | n/a | yes | yes | no | yes |
+
+The third sealed set (sealed-v1), on its own and never in the combined figure:
+
+  set      run directory                            cases      exact  ruling amount driver   refs
+  sealed-v1 runs/sealed-v1/deepseek-deepseek-flash   24/24      21/24   21/24  21/24  24/24  23/24
+
+Currency, checked with the set's own loader and its own briefs:
+
+  sealed-v1 current  24, stale_brief   0, stale_prompts   0, unknown   0
+
+The third sealed set is not a development set and is never added to the combined figure above, to the held-out set's figure or to the second sealed set's. It was prepared by an independent author and imported on 2026-10-09, and its single run is made from a commit whose tribunal/, prompts/ and policy/ trees equal those at freeze-2026-10-09 -- every event the run writes records the commit it was made from -- at the policy version 6 its registration fixes; that single run is the third generalisation figure the submission reports. It is absent from data/index.json and is graded against eval/answers/sealed-v1/ground_truth.json, which is neither development key and not either other sealed set's key.
+
+Per case — cost, provenance and explanation tags
+
+Computed by code from each case's own artifacts: the token split summed off its transcript by role, the wall clock and the vote agreement read off its cache entry, the amount provenance computed from the brief this code builds, and the four tags matched over the ruling's explanation by regular expression and keyword. No model is involved. A dash means the artifact does not record the figure. `vote agreement` is the share of the judge's drafts that agreed on the published ruling, and it is not the judge's own `confidence`. The patterns, and what each is known to miss and to mistake, are documented in `docs/notes/2026-09-27-the-event-log-and-the-report-columns.md`.
+
+sealed-v1 — runs/sealed-v1/deepseek-deepseek-flash
+
+| case | advocate tokens | judge tokens | wall s | escalated | vote agreement | amount_sgd from | driver_compensation_sgd from | cites evidence | cites clause | shows arithmetic | names a gap |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 301 | 69775 | 132473 | 152.3 | no | 1.00 | n/a | n/a | yes | yes | no | yes |
+| 302 | 70509 | 139873 | 152.4 | no | 1.00 | refund.payable.value | n/a | yes | yes | yes | yes |
+| 303 | 65715 | 119522 | 112.2 | no | 1.00 | refund.payable.value | n/a | yes | yes | no | yes |
+| 304 | 87020 | 394754 | 601.5 | yes | 0.50 | n/a | n/a | no | no | no | no |
+| 305 | 83036 | 172762 | 241.3 | no | 1.00 | components.platform_fee.value + refund.de_minimis.value | components.platform_fee.value + refund.de_minimis.value | yes | yes | no | yes |
+| 306 | 72019 | 135502 | 178.9 | no | 1.00 | charged_total.value | n/a | yes | yes | no | yes |
+| 307 | 68734 | 143316 | 123.4 | yes | 1.00 | n/a | n/a | yes | yes | no | yes |
+| 308 | 62291 | 164469 | 148.4 | no | 1.00 | n/a | n/a | yes | yes | no | yes |
+| 309 | 69010 | 109762 | 118.5 | no | 1.00 | n/a | n/a | yes | yes | no | yes |
+| 310 | 61316 | 120824 | 79.4 | no | 1.00 | erp_lines.lines[1].amount_sgd.value | n/a | yes | yes | no | yes |
+| 311 | 71250 | 247394 | 328.0 | no | 0.75 | refund.payable.value | n/a | yes | yes | yes | yes |
+| 312 | 73897 | 139139 | 122.6 | yes | - | n/a | n/a | no | no | no | no |
+| 401 | 84909 | 139899 | 213.8 | no | 1.00 | driver_compensation.value | driver_compensation.value | no | yes | no | yes |
+| 402 | 86483 | 150569 | 220.3 | no | 1.00 | schedule_fee.value | n/a | yes | yes | no | yes |
+| 403 | 97132 | 446179 | 699.2 | no | 1.00 | schedule_fee.value | n/a | yes | yes | no | yes |
+| 404 | 81875 | 379640 | 576.2 | no | 1.00 | schedule_fee.value | goodwill.value | yes | yes | no | yes |
+| 405 | 85665 | 146562 | 200.5 | no | 1.00 | schedule_fee.value | n/a | yes | yes | no | yes |
+| 406 | 84217 | 147245 | 211.0 | no | 1.00 | driver_compensation.value | driver_compensation.value | yes | yes | no | yes |
+| 407 | 65410 | 135760 | 113.0 | no | 1.00 | schedule_fee.value | n/a | yes | yes | no | yes |
+| 408 | 77137 | 143137 | 147.0 | no | 1.00 | n/a | n/a | yes | yes | no | yes |
+| 409 | 68518 | 132450 | 105.8 | yes | 1.00 | n/a | n/a | yes | yes | yes | yes |
+| 410 | 76071 | 167103 | 159.7 | no | 1.00 | schedule_fee.value | n/a | yes | yes | yes | yes |
+| 411 | 67705 | 219311 | 230.0 | yes | 1.00 | n/a | n/a | yes | yes | yes | yes |
+| 412 | 70310 | 141300 | 140.5 | no | 1.00 | schedule_fee.value | n/a | yes | yes | no | yes |
+
+The re-runnable set, on its own, never in the combined figure and never in the held-out set's section:
+
+  set      run directory                            cases      exact  ruling amount driver   refs
+  wild-dev runs/wild-dev/deepseek-deepseek-flash     0/64    not run
+
+Currency, checked with the set's own loader and its own briefs:
+
+  wild-dev current   0, stale_brief   0, stale_prompts   0, unknown   0
+
+The re-runnable set is development data. It holds the held-out set's own 64 cases and grades them against the held-out set's own key, whose answers were read on 2026-10-01 so that the system could be changed to fix what they exposed; a figure here is a reading of a set the system has now seen, and it is not a generalisation figure. Its runs go to runs/wild-dev/<model>/, which is not the directory holding the held-out set's single run. Re-running it, --force and the advocate replay are all allowed for it. It is never part of the combined figure and never part of --set all.
+
+Both development sets are development data, and neither is a test set. The corpus figure is the figure the submission reports; the combined figure is a sum over two sets that were drafted differently and share one template, so it is not a generalisation figure and does not replace the corpus number. The generalisation figures the submission reports belong to the three sealed sets, each run exactly once: the held-out set's, drafted without access to this repository, from the commit tagged freeze-2026-09-30; the second sealed set's, prepared by OpenAI Codex -- whether Codex could read this repository while preparing it is not recorded -- from a commit whose tribunal/, prompts/ and policy/ trees equal those at freeze-2026-10-03; and the third sealed set's, prepared by an independent author and imported on 2026-10-09, from a commit whose tribunal/, prompts/ and policy/ trees equal those at freeze-2026-10-09. Neither figure here is any of them, and no two of the three are ever added to each other.
+exit 0 12:21:38

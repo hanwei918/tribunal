@@ -70,8 +70,14 @@ read, and neither is copied in.
 
 | archive path | sha256 | disposition |
 |---|---|---|
-| `README.md` | `ad4826f9bd81c6a0997d8fd2c7d5e44739b9d69ce37db021a540b4484c50a7dd` | kept outside the repository: written in Chinese; an English translation is added after the sealed run is committed |
-| `DESIGN.md` | `3341b4423fa45e9198c347e9db4723d1548789c012638ae6190e2adf9f8e24a4` | kept outside the repository: written in Chinese; an English translation is added after the sealed run is committed |
+| `README.md` | `ad4826f9bd81c6a0997d8fd2c7d5e44739b9d69ce37db021a540b4484c50a7dd` | kept outside the repository: written in Chinese; an English translation is committed at `eval/external/sealed-v1/README.en.md` |
+| `DESIGN.md` | `3341b4423fa45e9198c347e9db4723d1548789c012638ae6190e2adf9f8e24a4` | kept outside the repository: written in Chinese; an English translation is committed at `eval/external/sealed-v1/DESIGN.en.md` |
+
+The two translations are committed with the sealed run —
+`eval/external/sealed-v1/README.en.md` and
+`eval/external/sealed-v1/DESIGN.en.md` — each opening with the archive file's
+name and its sha256 and saying that the original, in Chinese, stays outside the
+repository. The originals are still not imported.
 
 The other 34 files were imported, and every one is byte-identical to its archive
 entry except the two in the next section.
@@ -108,7 +114,7 @@ except the two in the next section.
 | `data/external/sealed-v1/case-00411.json` | `82b0c90a3868ed444b331ec5df6fcc70e6a933165d7d453bcbbb4adc731b4eaf` |
 | `data/external/sealed-v1/case-00412.json` | `9172a6fffea5fe8e302775a8751beae9259e1058b71b4447774325e309d04781` |
 | `data/external/sealed-v1/index.json` | `d55b706f1898786a4c48013c3de7de84e0be94f4a8b93aa12f334ee69e1de71e` |
-| `eval/answers/sealed-v1/ground_truth.json` | `f430f6c017e109bd0feee86e3eac611dab7b087dee51ec5f644eb2eb9880b353` (the version-6 key, 2026-10-10; the key owner's note on the re-derivation is committed with the sealed run; imported as `7529d925e9defa6a93576661cda22f553e5337bad8662d87e813bc5b3fc74640`) |
+| `eval/answers/sealed-v1/ground_truth.json` | `f430f6c017e109bd0feee86e3eac611dab7b087dee51ec5f644eb2eb9880b353` (the version-6 key, 2026-10-10; the key owner's note on the re-derivation is [`2026-10-10-sealed-v1-key-at-version-6.md`](2026-10-10-sealed-v1-key-at-version-6.md), committed with the sealed run; imported as `7529d925e9defa6a93576661cda22f553e5337bad8662d87e813bc5b3fc74640`) |
 | `eval/external/sealed-v1/eval_index.json` | `989bbf5f8d61efe32d6545c4aea4ce48379a44edd192db1c5cdaf233ad49b3ee` |
 | `eval/external/sealed-v1/MANIFEST.json` | `f4eb7a4ffc1841b927e98dd7782faa1f160bd7f0cb9db21ec3c91ad31b43b12d` |
 | `eval/external/sealed-v1/gen/build.py` | `d508efba157b7b2123f49c97d0bb779f7c27936365f6a4b529d725aca2758293` |

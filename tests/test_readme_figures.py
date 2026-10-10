@@ -6,10 +6,10 @@ parses the results tables in ``README.md`` and recomputes each figure from the
 committed runs and the frozen answer keys, so a figure that disagrees fails here
 rather than misleading a reader.
 
-The README carries **two** tables under this header -- the frozen system's, at
-policy version 6, and the earlier blocks' -- and both are parsed, so a figure
-stated in either is checked and neither can be dropped from the check by the
-other appearing above it.
+The README carries **three** tables under this header -- the frozen system's, at
+policy version 6, the third sealed set's, at the same version, and the earlier
+blocks' -- and all three are parsed, so a figure stated in any of them is checked
+and none can be dropped from the check by another appearing above it.
 
 The tables are parsed rather than restated, so the check is against the README a
 reader actually reads. The labels are matched exactly and in both directions: a
@@ -102,9 +102,9 @@ def _table_rows(text: str) -> List[List[str]]:
 
     Located by their header rather than by position, and each table is read
     until the first line that is not a table row. The README states the figures
-    in two tables under this header -- the frozen system's, at policy version 6,
-    and the earlier blocks' -- and both are read, so neither is left unchecked
-    by the other sitting above it.
+    in three tables under this header -- the frozen system's, at policy version
+    6, the third sealed set's, and the earlier blocks' -- and all three are read,
+    so none is left unchecked by another sitting above it.
     """
     lines = text.splitlines()
     rows: List[List[str]] = []
@@ -551,6 +551,8 @@ class ReadmeFigureTests(unittest.TestCase):
         cls.sealed = sealed_figures("wild")
         cls.sealed_v2 = sealed_figures("wild-v2")
         cls.sealed_v2_categories = sealed_categories("wild-v2")
+        cls.sealed_v1 = sealed_figures("sealed-v1")
+        cls.sealed_v1_categories = sealed_categories("sealed-v1")
         cls.corpus = graded(development_sets.named("corpus"), development_sets.named("corpus").run_dir(MODEL))
         cls.codex = graded(development_sets.named("codex"), development_sets.named("codex").run_dir(MODEL))
         cls.admissibility = ablation_figures("admissibility")
@@ -567,6 +569,8 @@ class ReadmeFigureTests(unittest.TestCase):
         calibration = sealed.calibration
         second = self.sealed_v2
         second_calibration = second.calibration
+        third = self.sealed_v1
+        third_calibration = third.calibration
         figures = {
             "Held-out set (wild-v1) — four-field exact, of the cases that produced a ruling": fraction(
                 sealed.exact_matches, sealed.total
@@ -640,6 +644,52 @@ class ReadmeFigureTests(unittest.TestCase):
             ),
             "Second sealed set (wild-v2) — cases with no ruling": case_list(
                 cases_with_no_ruling(development_sets.named("wild-v2"), second)
+            )
+            or "none",
+            "Third sealed set (sealed-v1) — four-field agreement, of the cases that produced a ruling": fraction(
+                third.exact_matches, third.total
+            ),
+            "Third sealed set (sealed-v1) — four-field agreement, over all 24 cases": fraction(
+                third.exact_matches, 24
+            ),
+            "Third sealed set (sealed-v1) — ruling alone, of the cases that produced a ruling": fraction(
+                third.field_tally("ruling")[0], third.total
+            ),
+            "Third sealed set (sealed-v1) — Wilson 95% interval": v6_wilson(
+                third.exact_matches, 24
+            ),
+            "Third sealed set (sealed-v1) — escalation precision": ratio(
+                len(
+                    set(third_calibration.produced_escalations)
+                    & set(third_calibration.expected_escalations)
+                ),
+                len(third_calibration.produced_escalations),
+            ),
+            "Third sealed set (sealed-v1) — escalation recall": ratio(
+                len(
+                    set(third_calibration.produced_escalations)
+                    & set(third_calibration.expected_escalations)
+                ),
+                len(third_calibration.expected_escalations),
+            ),
+            "Third sealed set (sealed-v1) — over-escalations": case_list(
+                third_calibration.over_escalations
+            ),
+            "Third sealed set (sealed-v1) — under-escalation": case_list(
+                third_calibration.under_escalations
+            ),
+            "Third sealed set (sealed-v1) — ROUTE_DEVIATION four-field agreement": fraction(
+                *category_four_field(
+                    third, self.sealed_v1_categories, "ROUTE_DEVIATION"
+                )
+            ),
+            "Third sealed set (sealed-v1) — NO_SHOW_CHARGE four-field agreement": fraction(
+                *category_four_field(
+                    third, self.sealed_v1_categories, "NO_SHOW_CHARGE"
+                )
+            ),
+            "Third sealed set (sealed-v1) — cases with no ruling": case_list(
+                cases_with_no_ruling(development_sets.named("sealed-v1"), third)
             )
             or "none",
             "Corpus — four-field exact (development)": fraction(
