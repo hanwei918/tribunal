@@ -1328,6 +1328,11 @@ def run_set(
     the panel publish at three drafts is refused by name. It is also refused
     without ``parallel_calls``, because what it stops waiting for is a call
     already in flight.
+
+    ``integrity_gate`` arrives through ``kwargs`` on the same rule and is refused
+    for a **sealed** set by the set's own name for the same reason: a sealed
+    set's single run is one measurement, and a switch that would have escalated a
+    record without asking the model is a different measurement.
     """
     if force:
         assert_not_sealed(development_set, "--force")
@@ -1344,6 +1349,12 @@ def run_set(
         # which set cannot be run with it rather than only that something is
         # wrong.
         assert_not_sealed(development_set, "--early-majority")
+
+    if kwargs.get("integrity_gate"):
+        # By the set's own name, on the same rule: a sealed set's single run is
+        # one measurement and a switch that would have escalated a record
+        # without asking the model is a different one.
+        assert_not_sealed(development_set, "--integrity-gate")
 
     selected = list(development_set.cases if cases is None else cases)
     unknown = [case_no for case_no in selected if case_no not in set(development_set.cases)]
@@ -2052,6 +2063,25 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--integrity-gate",
+        action="store_true",
+        help=(
+            "hold the record itself to POL-RD-10's own limbs (2) and (4) before "
+            "the model is asked. Off by default, so every run before this switch "
+            "asked the model exactly as it did. On, a route-deviation dispute "
+            "whose trip identifiers do not all match across the trip record, the "
+            "GPS trace and the fare breakdown -- or whose trip record is absent "
+            "-- or whose pickup and dropoff timestamps two admitted artifacts "
+            "disagree on by more than the clause's own minutes, or whose "
+            "timestamps run backwards, is escalated by code with the reason code "
+            "RD10_RECORD_INTEGRITY and no call made. No individual request body "
+            "changes -- a gated case sends none -- so it is not part of a case's "
+            "configuration, it moves no run directory and it is not one of the "
+            "arguments a sealed set's run is fixed at. It is refused for every "
+            "sealed set, whose single run is one measurement and is not re-taken"
+        ),
+    )
+    parser.add_argument(
         "--report",
         action="store_true",
         help="print the sets separately and combined from cached runs; makes no model call",
@@ -2415,6 +2445,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 # against a sealed set needs to be told.
                 (args.force, "--force"),
                 (args.early_majority, "--early-majority"),
+                (args.integrity_gate, "--integrity-gate"),
                 (args.replay_advocates is not None, "--replay-advocates"),
                 (args.replay_check is not None, "--replay-check"),
                 (args.verify_recorded_drafts is not None, "--verify-recorded-drafts"),
@@ -2669,6 +2700,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 amount_rule=args.amount_rule,
                 parallel_calls=args.parallel_calls,
                 early_majority=args.early_majority,
+                integrity_gate=args.integrity_gate,
             )
         except run_benchmark.llm.ModelNotProvisionedError as exc:
             print("FATAL: {0}".format(exc), file=sys.stderr)

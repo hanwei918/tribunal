@@ -241,6 +241,19 @@ and together with `--verify-drafts`. `python3 -m eval.early_majority --report`
 shows the published ruling is identical on every case it would stop early on
 ([`docs/notes/2026-10-10-early-majority.md`](docs/notes/2026-10-10-early-majority.md)).
 
+**The record-integrity gate, off by default.** `--integrity-gate` holds the
+assembled record to `POL-RD-10`'s own limbs (2) and (4) -- the trip identifiers
+on the trip record, the GPS trace and the fare breakdown must all match and the
+trip record must be in the pool, and pickup and dropoff timestamps on two
+admitted artifacts must not disagree by more than the clause's own minutes nor
+run backwards -- and escalates a record that fails, with the reason code
+`RD10_RECORD_INTEGRITY` and no model call. It is off unless asked for and refused
+for every sealed set.
+`python3 -m eval.integrity_gate --report` shows it would escalate three of the
+203 cases with a version-6 run -- 112, 2834 and 2858, each of whose key is
+`ESCALATE` -- and break none
+([`docs/notes/2026-10-10-the-integrity-gate.md`](docs/notes/2026-10-10-the-integrity-gate.md)).
+
 **The support page's closing command, the `POL-GEN-05` hold and the 48-hour
 clock.** The product view's human-review form builds `tribunal.precedents
 close`'s own command line behind `ops.review`, with no `close` of its own. A

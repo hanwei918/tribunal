@@ -86,6 +86,7 @@ import argparse
 import collections
 import concurrent.futures
 import contextvars
+import datetime
 import difflib
 import hashlib
 import json
@@ -849,6 +850,12 @@ class PipelineResult:
     # case the gate did not fire on, so "this case was never adjudicated
     # automatically" is a sentence only a gated case's file can say.
     scope_gate: Optional[Dict[str, Any]] = None
+    # The ``POL-RD-10(2)``/``(4)`` record-integrity gate, when it fired: the
+    # limbs that fired, the clause, the reason code and the count of calls made.
+    # ``None`` for every case the gate did not fire on, and ``None`` for every
+    # case whatever when the switch is off, so "this case was escalated on its
+    # own record" is a sentence only a gated case's file can say.
+    record_integrity: Optional[Dict[str, Any]] = None
 
     @property
     def replayed(self) -> bool:
@@ -2451,6 +2458,272 @@ def scope_gate_ruling(flags: Sequence[str]) -> Dict[str, Any]:
     }
 
 
+# --------------------------------------------------------------------------
+# POL-RD-10(2) and (4): the record-integrity gate
+# --------------------------------------------------------------------------
+# Two of ``POL-RD-10``'s escalation triggers are conditions **code can test
+# with no model**, and the judge read past both at version 6 (see
+# ``docs/notes/2026-10-10-what-went-wrong-at-version-6.md``):
+#
+# * limb **(2)**: "the trip identifiers on trip_record, gps_trace and
+#   fare_breakdown do not all match, or the trip_record is absent from the
+#   pool". Case 2858's fare ledger is filed under ``TRP-02758`` while the trip
+#   record and the trace are both ``TRP-02858``, and the judge ruled
+#   ``PARTIAL_REFUND 6.90`` on it.
+# * limb **(4)**: "pickup or dropoff timestamps on two admitted artifacts
+#   disagree by more than 10 minutes, or any artifact's timestamps run
+#   backwards". Case 112's trace begins 13 minutes 30 seconds before the trip
+#   record says the trip started, and the judge ruled ``NO_ACTION`` on it.
+#
+# The gate below runs in the same place ``POL-GEN-08(1)``'s scope gate does --
+# after the record is assembled and before a prompt is rendered or a call is
+# made -- and it is off unless the caller asks for it, so a run without the
+# switch is byte for byte the run it was. It applies to ``ROUTE_DEVIATION``
+# disputes only: see :func:`record_integrity_limbs` for why ``POL-NS-09``
+# carries no limb of the same kind for a no-show dispute.
+INTEGRITY_GATE_CLAUSE = "POL-RD-10"
+RD10_RECORD_INTEGRITY = "RD10_RECORD_INTEGRITY"
+
+# The two limbs, named as the clause numbers them.
+RD10_IDENTIFIERS = "POL-RD-10(2)"
+RD10_TIMESTAMPS = "POL-RD-10(4)"
+
+# Limb (4)'s own sentence, and the number of minutes it states. The number is
+# read from the loaded clause rather than copied here, so a policy whose
+# sentence has moved is **refused** rather than measured against a figure this
+# module carries.
+RD10_DISAGREEMENT_RE = re.compile(
+    r"pickup or dropoff timestamps on two admitted artifacts disagree by more "
+    r"than (\d+) minutes"
+)
+RD10_DISAGREEMENT_MOVED = (
+    "POL-RD-10's limb (4) sentence is not in the loaded clause, so the number "
+    "of minutes two admitted artifacts may disagree by cannot be read from the "
+    "policy; the record-integrity gate refuses rather than measure against a "
+    "figure this module carries"
+)
+
+# What each limb says, for the explanation the gate publishes.
+RD10_LIMB_SENTENCES: Dict[str, str] = {
+    RD10_IDENTIFIERS: (
+        "the trip identifiers on trip_record, gps_trace and fare_breakdown do "
+        "not all match, or the trip_record is absent from the pool"
+    ),
+    RD10_TIMESTAMPS: (
+        "pickup or dropoff timestamps on two admitted artifacts disagree by "
+        "more than the clause's own minutes, or an artifact's timestamps run "
+        "backwards"
+    ),
+}
+
+
+def _admitted_artifact(brief_object: Any, evidence_type: str) -> Optional[Mapping[str, Any]]:
+    """The first **admitted** artifact of one type in an assembled brief.
+
+    An artifact is admitted when it is present in the record **with a payload**.
+    That is the same test as ``admissibility.status != "MISSING"`` on every case
+    this repository carries -- a ``MISSING`` artifact's payload is ``null``,
+    checked over all of them -- and it is the test that survives the
+    ``admissibility`` ablation, which removes the status object but never the
+    payload. ``None`` means the artifact is absent from the pool.
+    """
+    case = brief_object.get("case") if isinstance(brief_object, Mapping) else None
+    evidence = case.get("evidence") if isinstance(case, Mapping) else None
+    if not isinstance(evidence, list):
+        return None
+    for artifact in evidence:
+        if not isinstance(artifact, Mapping):
+            continue
+        if artifact.get("evidence_type") != evidence_type:
+            continue
+        if isinstance(artifact.get("payload"), Mapping):
+            return artifact
+    return None
+
+
+def _trip_identifier(artifact: Mapping[str, Any]) -> Any:
+    """The trip identifier one admitted artifact carries.
+
+    The payload's own ``trip_id`` where it has one -- the field the clause means
+    by "the trip identifiers on trip_record, gps_trace and fare_breakdown", and
+    the one case 2858's fare ledger contradicts -- and the identifier the
+    artifact was *filed* under otherwise, so an artifact whose payload carries no
+    identifier is compared on the identifier it has rather than treated as
+    having none.
+    """
+    payload = artifact.get("payload")
+    if isinstance(payload, Mapping):
+        value = payload.get("trip_id")
+        if value is not None:
+            return value
+    return artifact.get("trip_id")
+
+
+def _moment(value: Any) -> Optional["datetime.datetime"]:
+    """An ISO-8601 timestamp as a ``datetime``, or ``None`` when it is absent."""
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        return datetime.datetime.fromisoformat(value)
+    except ValueError:
+        return None
+
+
+def _runs_backwards(started: Any, ended: Any) -> bool:
+    """Whether one artifact's own start is later than its own end."""
+    first, second = _moment(started), _moment(ended)
+    return first is not None and second is not None and first > second
+
+
+def record_integrity_minutes(policy_version: int) -> "datetime.timedelta":
+    """Limb (4)'s own minutes, read from the loaded ``POL-RD-10`` text.
+
+    The sentence is matched word for word and the number is taken from it, so a
+    policy whose sentence has moved is refused rather than measured against a
+    figure this module carries. :data:`RD10_DISAGREEMENT_MOVED` is the refusal.
+    """
+    policies = loader.load_policies(brief.ROUTE_DEVIATION_CATEGORY, policy_version)
+    category = policies.get("category") if isinstance(policies, Mapping) else None
+    clauses = category.get("clauses") if isinstance(category, Mapping) else None
+    for clause in clauses or ():
+        if not isinstance(clause, Mapping) or clause.get("id") != INTEGRITY_GATE_CLAUSE:
+            continue
+        match = RD10_DISAGREEMENT_RE.search(clause.get("rule") or "")
+        if match is None:
+            break
+        return datetime.timedelta(minutes=int(match.group(1)))
+    raise PipelineError(RD10_DISAGREEMENT_MOVED)
+
+
+def record_integrity_limbs(brief_object: Any, policy_version: int) -> Tuple[str, ...]:
+    """The ``POL-RD-10`` record-integrity limbs an assembled record trips.
+
+    Read from the **brief**, which is "the record assembled": the same artifacts
+    the agents would be handed, with the trace already reduced to its summary
+    fields. Nothing is read from the case file that is not in the brief.
+
+    **Limb (2)** fires when the trip record is absent from the pool, or when the
+    trip identifiers on the trip record, the GPS trace and the fare breakdown do
+    not all match. The identifier compared is each artifact's payload
+    ``trip_id``, falling back to the identifier it was filed under; an artifact
+    that is absent is not compared, so a record with only one of the three has
+    nothing to disagree with.
+
+    **Limb (4)** fires when the two artifacts that carry the trip's own pickup
+    and dropoff timestamps disagree by more than the clause's own minutes, or
+    when either of them runs backwards. The fields compared are:
+
+    * ``trip_record.started_at`` against ``gps_trace.first_fix_at`` -- the
+      **pickup** pair. ``started_at`` is when the trip, and its meter, began at
+      the pickup point; ``first_fix_at`` is the first position the trace records
+      for the trip. Both are the trip's beginning, which is the pickup event,
+      and case 112 is the 13 minutes 30 seconds between them.
+    * ``trip_record.ended_at`` against ``gps_trace.last_fix_at`` -- the
+      **dropoff** pair, by the same reading at the other end: ``ended_at`` is
+      when the trip finished at the dropoff point and ``last_fix_at`` is the
+      trace's final fix.
+
+    "Run backwards" is each artifact's own pair: ``started_at`` after
+    ``ended_at`` on the trip record, or ``first_fix_at`` after ``last_fix_at``
+    on the trace. The wider ordering (``requested_at`` to ``ended_at``) holds in
+    every case this repository carries, and is deliberately **not** part of the
+    gate: the limb names the pickup and dropoff timestamps, and those are the
+    pairs above.
+
+    **Why a no-show dispute is left alone.** The sheet asks whether
+    ``POL-NS-09`` carries a limb of the same kind. It does not. Its five
+    triggers are a confidence floor (a), a substantive contradiction on arrival,
+    dwell or rider presence that **no clause resolves** (b), a counterparty
+    dispute history (c), the anti-farming check and an abuse count (d), and
+    sole impaired evidence (e). None is a deterministic record-integrity test:
+    there is no identifier-matching limb and no backwards-timestamp limb
+    anywhere in it, and (b) -- the nearest -- is expressly the case where a
+    clause does *not* resolve the conflict, which is the opposite of a test code
+    can make on the record alone. ``POL-NS-08(a)`` does compare trip-record and
+    trace times, but it is an impairment rule that down-weights a claim and
+    reads 90 seconds, not an escalation trigger, and it is not in ``POL-NS-09``.
+    So the gate is ``ROUTE_DEVIATION`` only, and a no-show dispute reaches the
+    judge exactly as it did.
+    """
+    case = brief_object.get("case") if isinstance(brief_object, Mapping) else None
+    dispute = case.get("dispute") if isinstance(case, Mapping) else None
+    if not isinstance(dispute, Mapping):
+        return ()
+    if dispute.get("category") != brief.ROUTE_DEVIATION_CATEGORY:
+        return ()
+
+    trip = _admitted_artifact(brief_object, brief.TRIP_EVIDENCE_TYPE)
+    trace = _admitted_artifact(brief_object, brief.GPS_EVIDENCE_TYPE)
+    fare = _admitted_artifact(brief_object, brief.FARE_EVIDENCE_TYPE)
+
+    limbs: List[str] = []
+    if trip is None:
+        limbs.append(RD10_IDENTIFIERS)
+    else:
+        identifiers = [
+            _trip_identifier(artifact)
+            for artifact in (trip, trace, fare)
+            if artifact is not None
+        ]
+        if len(set(identifiers)) > 1:
+            limbs.append(RD10_IDENTIFIERS)
+
+    if trip is not None and trace is not None:
+        trip_payload = trip["payload"]
+        trace_payload = trace["payload"]
+        window = record_integrity_minutes(policy_version)
+        pairs = (
+            (trip_payload.get("started_at"), trace_payload.get("first_fix_at")),
+            (trip_payload.get("ended_at"), trace_payload.get("last_fix_at")),
+        )
+        disagree = False
+        for left, right in pairs:
+            first, second = _moment(left), _moment(right)
+            if first is not None and second is not None and abs(first - second) > window:
+                disagree = True
+        if (
+            disagree
+            or _runs_backwards(trip_payload.get("started_at"), trip_payload.get("ended_at"))
+            or _runs_backwards(trace_payload.get("first_fix_at"), trace_payload.get("last_fix_at"))
+        ):
+            limbs.append(RD10_TIMESTAMPS)
+
+    return tuple(limbs)
+
+
+def record_integrity_ruling(limbs: Sequence[str]) -> Dict[str, Any]:
+    """The ``ESCALATE`` a record-integrity failure publishes, with no referral.
+
+    Shaped exactly like :func:`scope_gate_ruling`: ``confidence`` is 0, both
+    money fields are ``None`` and ``referrals`` is empty, because no draft
+    ruling is published for an amount, a referral or a confidence to attach to.
+    The explanation names every limb that fired, what the limb says, the clause
+    and the reason code, so a reader of one case file can see why no agent was
+    asked.
+    """
+    named = " and ".join(limbs)
+    said = " ".join(RD10_LIMB_SENTENCES.get(limb, limb) for limb in limbs)
+    explanation = (
+        "The record trips {0} of {1}: {2}. Under {1} the judge must not issue a "
+        "final ruling, so the dispute is escalated to a human reviewer with no "
+        "draft ruling issued and no advocate, judge or verifier is asked. The "
+        "reason code is {3}.".format(
+            named, INTEGRITY_GATE_CLAUSE, said, RD10_RECORD_INTEGRITY
+        )
+    )
+    return {
+        "ruling": {
+            "ruling": ESCALATE,
+            "amount_sgd": None,
+            "driver_compensation_sgd": None,
+            "referrals": [],
+            "confidence": 0.0,
+            "explanation": explanation,
+        },
+        "discarded_claims": [],
+    }
+
+
 def _no_valid_drafts_escalation(
     drafts: Sequence[JudgeDraft], referee_result: Any
 ) -> Any:
@@ -3958,6 +4231,7 @@ def run_case(
     amount_rule: str = DEFAULT_AMOUNT_RULE,
     parallel_calls: bool = False,
     early_majority: bool = False,
+    integrity_gate: bool = False,
 ) -> PipelineResult:
     """Perform one full arbitration of a case named by its manifest number.
 
@@ -4002,6 +4276,12 @@ def run_case(
     ``early_majority`` is passed straight through on the same rule, and it is
     refused without ``parallel_calls`` where the panel is built. It is off by
     default, so every caller before it asked for the whole panel.
+
+    ``integrity_gate`` is passed straight through on the same rule. It is off by
+    default, so every caller before it asks the model exactly as it did; when it
+    is on, a route-deviation record whose own trip identifiers or pickup and
+    dropoff timestamps do not hang together is escalated by code with no call
+    made -- see :func:`run_loaded_case`.
     """
     load = loader.load_case if case_loader is None else case_loader
     return run_loaded_case(
@@ -4020,6 +4300,7 @@ def run_case(
         amount_rule=amount_rule,
         parallel_calls=parallel_calls,
         early_majority=early_majority,
+        integrity_gate=integrity_gate,
     )
 
 
@@ -4040,6 +4321,7 @@ def run_loaded_case(
     amount_rule: str = DEFAULT_AMOUNT_RULE,
     parallel_calls: bool = False,
     early_majority: bool = False,
+    integrity_gate: bool = False,
 ) -> PipelineResult:
     """Perform one full arbitration of a case already in hand.
 
@@ -4123,6 +4405,18 @@ def run_loaded_case(
     the one place the panel is built and the one place the rule is applied. It
     needs ``parallel_calls``, because the rule stops waiting for a call that is
     already in flight, and it is refused rather than ignored when there is none.
+
+    ``integrity_gate`` is off by default. When it is on, and the dispute is a
+    ``ROUTE_DEVIATION``, the assembled record is held to ``POL-RD-10``'s limbs
+    (2) and (4) by :func:`record_integrity_limbs` -- a trip identifier that does
+    not match across the three artifacts, or a trip record missing from the
+    pool, or pickup and dropoff timestamps two admitted artifacts disagree on by
+    more than the clause's own minutes, or an artifact whose own timestamps run
+    backwards -- and a record that trips either limb is escalated by
+    :func:`record_integrity_ruling` with **no model call at all**. It is checked
+    in the same place and after the ``POL-GEN-08(1)`` scope gate, so a flagged
+    dispute keeps the scope gate's own record; and the policy is read only when
+    the switch is on, so a run without it builds the bytes it always built.
     """
     case_no = case["case_no"]
     prompts_dir = Path(prompts_dir)
@@ -4218,6 +4512,45 @@ def run_loaded_case(
                     "reason_code": GEN08_SCOPE,
                     "clause": SCOPE_GATE_CLAUSE,
                     "flags": list(gate_flags),
+                    "calls": 0,
+                },
+            )
+
+    # POL-RD-10(2) and (4): a record whose own identifiers or timestamps do not
+    # hang together is escalated by code, before a prompt is rendered and before
+    # any call is made. It sits beside the POL-GEN-08(1) gate above and *after*
+    # it, so a flagged dispute keeps the scope gate's own record. The switch is
+    # off by default and the policy is read only when it is on, so a run without
+    # it is byte for byte the run it was.
+    if integrity_gate:
+        gate_limbs = record_integrity_limbs(case_brief, policy_version)
+        if gate_limbs:
+            if events_log is not None:
+                events_log.record(
+                    events.EVENT_RECORD_INTEGRITY,
+                    case_no=case_no,
+                    reason_code=RD10_RECORD_INTEGRITY,
+                    clause=INTEGRITY_GATE_CLAUSE,
+                    limbs=list(gate_limbs),
+                    calls=0,
+                )
+            published = record_integrity_ruling(gate_limbs)
+            return PipelineResult(
+                case_no=case_no,
+                model=getattr(client, "_model", ""),
+                ok=True,
+                brief_sha256=brief_sha256,
+                transcript=transcript_module.Transcript(now=now),
+                ruling=published,
+                ruling_findings=validate_ruling_shape(published),
+                # Set on the same rule the scope gate above sets it: ``None``
+                # when the precedents switch was off, and an empty tuple when it
+                # was on, because the switch was on and no block reached a judge.
+                precedents_shown=None if precedents is None else (),
+                record_integrity={
+                    "reason_code": RD10_RECORD_INTEGRITY,
+                    "clause": INTEGRITY_GATE_CLAUSE,
+                    "limbs": list(gate_limbs),
                     "calls": 0,
                 },
             )
@@ -4911,6 +5244,7 @@ def replay_case(
     amount_rule: str = DEFAULT_AMOUNT_RULE,
     parallel_calls: bool = False,
     early_majority: bool = False,
+    integrity_gate: bool = False,
 ) -> PipelineResult:
     """Arbitrate one case from a recorded run's advocates, calling only the judge.
 
@@ -4948,6 +5282,14 @@ def replay_case(
     reason: a replay builds a panel of judge drafts, so a switch accepted on the
     command line and dropped on this path would be a switch that said it was on
     and was not.
+
+    ``integrity_gate`` reaches the gate here on the same rule again. It is
+    applied to the brief this replay rebuilds, at the version the source run
+    recorded, **before** the referee runs and before the judge is called, so a
+    replayed case whose record trips ``POL-RD-10(2)`` or ``(4)`` is escalated by
+    code exactly as a full run would escalate it -- and no borrowed advocate
+    entry is carried into the result, because a case no agent was asked has no
+    call to report.
     """
     if judge_votes < 1:
         raise PipelineError("judge_votes must be at least 1, got {0}".format(judge_votes))
@@ -4990,6 +5332,40 @@ def replay_case(
     )
 
     replay_brief = _parse(replay.brief_json)
+    # POL-RD-10(2) and (4): the same gate a full run applies, applied to the
+    # brief this replay rebuilt and before the referee or the judge is reached.
+    # It is off by default, so a replay without the switch is the replay it was.
+    if integrity_gate:
+        gate_limbs = record_integrity_limbs(replay_brief, replay.source.policy_version)
+        if gate_limbs:
+            if events_log is not None:
+                events_log.record(
+                    events.EVENT_RECORD_INTEGRITY,
+                    case_no=replay.case_no,
+                    reason_code=RD10_RECORD_INTEGRITY,
+                    clause=INTEGRITY_GATE_CLAUSE,
+                    limbs=list(gate_limbs),
+                    calls=0,
+                )
+            published = record_integrity_ruling(gate_limbs)
+            return PipelineResult(
+                case_no=replay.case_no,
+                model=getattr(client, "_model", ""),
+                ok=True,
+                brief_sha256=replay.brief_sha256,
+                # A fresh, empty transcript rather than the one holding the
+                # copied advocate entries: no agent was asked for this ruling,
+                # so the case's own record must not claim that any was.
+                transcript=transcript_module.Transcript(now=now),
+                ruling=published,
+                ruling_findings=validate_ruling_shape(published),
+                record_integrity={
+                    "reason_code": RD10_RECORD_INTEGRITY,
+                    "clause": INTEGRITY_GATE_CLAUSE,
+                    "limbs": list(gate_limbs),
+                    "calls": 0,
+                },
+            )
     referee_result = referee.referee(
         replay_brief,
         replay.rider_claims,

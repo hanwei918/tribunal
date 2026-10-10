@@ -2265,6 +2265,7 @@ def run_one_case(
     events_log: Optional[Any] = None,
     parallel_calls: bool = False,
     early_majority: bool = False,
+    integrity_gate: bool = False,
 ) -> Tuple[CaseOutcome, Optional[Dict[str, Any]], Optional[str]]:
     """Run one case. Returns ``(outcome, cache document, transcript json)``.
 
@@ -2321,6 +2322,11 @@ def run_one_case(
     of these paths would be a switch that said it was on and was not. Which of
     the two a case may use, and when the rule fires, is decided in
     :func:`tribunal.pipeline._run_judge_vote`.
+
+    ``integrity_gate`` is passed straight through on every path too, and for the
+    same reason: a case whose route-deviation record trips ``POL-RD-10(2)`` or
+    ``(4)`` is escalated by code with no call made, and a path that dropped the
+    switch would rule on the record the gate exists to refuse.
     """
     if replay is not None and loaded_case is not None:
         # Refused, not merely unused. Replay reuses another run's advocates for
@@ -2371,6 +2377,11 @@ def run_one_case(
                 # replay builds a panel of drafts, so the rule has something to
                 # say here exactly as it does on a full run.
                 early_majority=early_majority,
+                # And the record-integrity gate, on the same rule once more: a
+                # replay rebuilds the case's brief, so the gate has the record
+                # it reads and a switch dropped here would rule on a record a
+                # full run would escalate.
+                integrity_gate=integrity_gate,
             )
         elif loaded_case is None:
             result = pipeline.run_case(
@@ -2388,6 +2399,7 @@ def run_one_case(
                 amount_rule=amount_rule,
                 parallel_calls=parallel_calls,
                 early_majority=early_majority,
+                integrity_gate=integrity_gate,
             )
         else:
             # A converted external case, already loaded through its own explicit
@@ -2407,6 +2419,7 @@ def run_one_case(
                 amount_rule=amount_rule,
                 parallel_calls=parallel_calls,
                 early_majority=early_majority,
+                integrity_gate=integrity_gate,
             )
     except (llm.MissingAPIKeyError, llm.ModelNotProvisionedError) as exc:
         # Not provisioned and no credential are the same failure for every
@@ -2585,6 +2598,14 @@ def run_one_case(
         # names the flags, the clause and the reason code and records ``calls``
         # as 0, so the file says in its own words that no model call was made.
         document["scope_gate"] = result.scope_gate
+    if result.record_integrity is not None:
+        # Present only when POL-RD-10(2)/(4)'s gate fired, on the same rule the
+        # scope gate's block follows: a case file produced by a case the gate
+        # did not fire on -- and every case file produced with the switch off --
+        # is the file it always was. The block names the limbs, the clause and
+        # the reason code and records ``calls`` as 0, so the file says in its own
+        # words that no model call was made.
+        document["record_integrity"] = result.record_integrity
     if amount_rule != pipeline.DEFAULT_AMOUNT_RULE:
         # Present only when the rule is not the published one, on the same rule
         # the verifier's and the library's blocks follow: a case file produced
@@ -3041,6 +3062,20 @@ def run_benchmark(
     # run's ``run.json``. It is refused for every sealed set, whose single run is
     # one measurement and is not re-taken.
     early_majority: bool = False,
+    # Whether the record itself is held to POL-RD-10's own limbs (2) and (4)
+    # before the model is asked. Off by default, so every run before the switch
+    # asked the model exactly as it did; when it is on, a route-deviation record
+    # whose trip identifiers do not all match, or whose trip record is absent,
+    # or whose pickup and dropoff timestamps two admitted artifacts disagree on
+    # by more than the clause's own minutes, or whose timestamps run backwards,
+    # is escalated with no call at all. Like ``parallel_calls`` and
+    # ``early_majority`` it changes no request body -- a gated case sends none --
+    # so it is deliberately absent from the ``configuration`` every artifact
+    # carries and from every staleness and cache key, and it moves no run
+    # directory. It is recorded where the invocation records what it was: the
+    # ``invocation_start`` event and this run's ``run.json``. It is refused for
+    # every sealed set, whose single run is one measurement and is not re-taken.
+    integrity_gate: bool = False,
     # Whether the cases are graded against a key at all. An external sample that
     # carries a **stated expectation** rather than a key has nothing to be
     # scored against: the organisers' own word is not one of POL-GEN-03's
@@ -3124,6 +3159,12 @@ def run_benchmark(
     sealed set, whose single run is one measurement and is not re-taken. It is
     also refused with ``--verify-drafts``, because the verifier can take a vote
     away after the panel has stopped waiting.
+
+    ``integrity_gate`` follows ``parallel_calls`` too, and for the same reasons
+    again: it changes no request body (a gated case sends none at all), moves no
+    directory, and is absent from the ``configuration`` object. It is recorded
+    in the ``invocation_start`` event and in this run's ``run.json``, and it is
+    refused for every sealed set by the set's own name.
     """
     if not model:
         raise BenchmarkError("model is required and has no default; name the model explicitly")
@@ -3496,6 +3537,11 @@ def run_benchmark(
         # so it is named on the invocation's own line beside the parallel one and
         # is absent from a run that did not ask for it.
         **({"early_majority": True} if early_majority else {}),
+        # And the record-integrity gate, on the same rule again: a switch that
+        # says what this invocation did and not what it measured, so it is named
+        # on the invocation's own line when it is on and absent from a run that
+        # did not ask for it.
+        **({"integrity_gate": True} if integrity_gate else {}),
     )
 
     # A shared sink, because the client is shared across every case and, above
@@ -3640,6 +3686,7 @@ def run_benchmark(
             configuration=configuration,
             parallel_calls=parallel_calls,
             early_majority=early_majority,
+            integrity_gate=integrity_gate,
         )
         # Both, and the order matters. ``run.json`` is the latest invocation's
         # record at the conventional path; the history is what survives the next
@@ -3759,6 +3806,7 @@ def run_benchmark(
                 events_log=events_log,
                 parallel_calls=parallel_calls,
                 early_majority=early_majority,
+                integrity_gate=integrity_gate,
             )
 
         workers = max(1, concurrency)
@@ -4056,6 +4104,7 @@ def _metadata_document(
     configuration: Mapping[str, Any],
     parallel_calls: bool = False,
     early_majority: bool = False,
+    integrity_gate: bool = False,
 ) -> Dict[str, Any]:
     """The run's own metadata file.
 
@@ -4142,6 +4191,10 @@ def _metadata_document(
         # every draft, on the same rule and for the same reason: a switch that
         # says what the invocation did and not what it measured.
         **({"early_majority": True} if early_majority else {}),
+        # And whether the record was held to POL-RD-10's own limbs before the
+        # model was asked, on the same rule once more: a switch that says what
+        # the invocation did and not what it measured.
+        **({"integrity_gate": True} if integrity_gate else {}),
         "git_commit": run_provenance.get("git_commit"),
         "working_tree_clean": run_provenance.get("working_tree_clean"),
         "working_tree_status": run_provenance.get("working_tree_status"),
@@ -5887,6 +5940,25 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             "without the fourth"
         ),
     )
+    parser.add_argument(
+        "--integrity-gate",
+        action="store_true",
+        help=(
+            "hold the record itself to POL-RD-10's own limbs (2) and (4) before "
+            "the model is asked. Off by default, so every run before this switch "
+            "asked the model exactly as it did. On, a route-deviation dispute "
+            "whose trip identifiers do not all match across the trip record, the "
+            "GPS trace and the fare breakdown -- or whose trip record is absent "
+            "-- or whose pickup and dropoff timestamps two admitted artifacts "
+            "disagree on by more than the clause's own minutes, or whose "
+            "timestamps run backwards, is escalated by code with the reason code "
+            "RD10_RECORD_INTEGRITY and no call made. No individual request body "
+            "changes -- a gated case sends none -- so it is not part of a case's "
+            "configuration and it moves no run directory. It is refused for "
+            "every sealed set, whose single run is one measurement and is not "
+            "re-taken"
+        ),
+    )
     parser.add_argument("--runs-dir", type=Path, default=RUNS_DIR)
     parser.add_argument("--prompts-dir", type=Path, default=PROMPTS_DIR)
     args = parser.parse_args(argv)
@@ -6258,6 +6330,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             # exactly the same rule: accepted here, honoured there, and refused
             # above where it cannot be.
             early_majority=args.early_majority,
+            # And the record-integrity gate, on the same rule once more: a switch
+            # this command line accepts is a switch it honours.
+            integrity_gate=args.integrity_gate,
         )
     except llm.ModelNotProvisionedError as exc:
         print("FATAL: {0}".format(exc), file=sys.stderr)

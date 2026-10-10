@@ -115,6 +115,11 @@ EVENT_PRECEDENTS_SHOWN = "precedents_shown"
 # right -- the record of a call that was deliberately **not** made -- and it
 # belongs beside the calls rather than inside the ruling.
 EVENT_SCOPE_GATE = "scope_gate"
+# The ``POL-RD-10(2)``/``(4)`` record-integrity gate, when the switch is on and
+# the record trips a limb. The record is assembled, the limbs are named and an
+# ``ESCALATE`` is published, with no agent asked -- so it is the record of a
+# call that was deliberately **not** made, exactly as the scope gate's is.
+EVENT_RECORD_INTEGRITY = "record_integrity"
 EVENT_RULING = "ruling"
 EVENT_CASE_FAILED = "case_failed"
 EVENT_GRADE = "grade"
@@ -130,6 +135,7 @@ EVENT_TYPES = (
     EVENT_VERIFICATION,
     EVENT_PRECEDENTS_SHOWN,
     EVENT_SCOPE_GATE,
+    EVENT_RECORD_INTEGRITY,
     EVENT_RULING,
     EVENT_CASE_FAILED,
     EVENT_GRADE,
