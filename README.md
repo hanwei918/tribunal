@@ -73,6 +73,35 @@ And `POL-GEN-08(4)`'s
 addresses** is applied to the brief, so none of them reaches an advocate, a
 judge or a reviewer.
 
+## Business value
+
+The figures below are read off the four version-6 runs the product view is built
+from — the corpus, `dev-v2-ext`, the `dev-v2` prompt-injection case and the
+organisers' sample, 151 disputes in all — by
+`python3 -m eval.business_value --report`. That command reads the committed runs
+and the published prices, makes no model call, and reads no sealed set.
+
+| figure | value | read from | recompute with | model call |
+|---|---|---|---|---|
+| Time to a decision — median wall clock | 160.4 s | the four version-6 runs' `case-*.json` (`wall_seconds`) | `python3 -m eval.business_value --report` | no |
+| Time to a decision — 90th percentile wall clock | 286.9 s | the four version-6 runs' `case-*.json` (`wall_seconds`) | `python3 -m eval.business_value --report` | no |
+| Cost per case — median, at the published prices | 0.0579 USD | the four version-6 runs' `case-*.json` (`tokens`) | `python3 -m eval.business_value --report` | no |
+| Decided automatically | 112/151 = 74.2% | the four version-6 runs' `case-*.json` | `python3 -m eval.business_value --report` | no |
+| Sent to a human | 39/151 = 25.8% | the four version-6 runs' `case-*.json` | `python3 -m eval.business_value --report` | no |
+
+A case is **sent to a human** when it produced no ruling — 26 of the 151 — or
+when its ruling's money is above `POL-GEN-05`'s execution threshold, so the
+amount is held for release — 13 of the 151; every other case is decided
+automatically. The clock is the system's, so the time to a decision is measured
+the same way for both lanes. Against that, a human review of the same dispute
+takes the brief's own **24 to 72 hours per dispute**: `ops/config.json` records
+that figure as Ryde's baseline and its own queue targets as the team's, which is
+the only place in this repository that states it.
+
+Unlike platforms that publish no decision deadline, Tribunal commits to 48
+hours, and a missing piece of evidence never stops the clock — operations rule
+`OPS-EW-01`, not a clause of the frozen policy.
+
 ## Results
 
 **The frozen system, at policy version 6**
@@ -164,6 +193,86 @@ is `docs/notes/2026-10-10-the-third-sealed-run.md`.
 | Third sealed set (`sealed-v1`) — ROUTE_DEVIATION four-field agreement | 10/12 = 83.3% | `runs/sealed-v1/deepseek-deepseek-flash/`, `eval/answers/sealed-v1/ground_truth.json`, `data/external/sealed-v1/index.json` | `python3 -m eval.sealed_report --set sealed-v1` | no |
 | Third sealed set (`sealed-v1`) — NO_SHOW_CHARGE four-field agreement | 11/12 = 91.7% | `runs/sealed-v1/deepseek-deepseek-flash/`, `eval/answers/sealed-v1/ground_truth.json`, `data/external/sealed-v1/index.json` | `python3 -m eval.sealed_report --set sealed-v1` | no |
 | Third sealed set (`sealed-v1`) — cases with no ruling | none | `runs/sealed-v1/deepseek-deepseek-flash/run.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
+
+## After the sealed run
+
+Everything in this section was added **after** the third sealed set's single run,
+on 2026-10-10. **None of it changes a sealed figure**: the three sealed runs were
+made from their own frozen trees, each exactly once, and nothing here re-runs,
+re-reads or re-scores one of them.
+
+**The functional sets.** Four sets exercise one functional property each rather
+than accuracy. `inject-v1` is six invariance pairs — the same trips twice, with
+one adversarial instruction added to party text in the second copy — and the
+pair's two cases must reach the same four fields. `pii-v1` is eight cases whose
+party text carries personal data. `collusion-v1` is eight cases read together as
+one case root, a control or decoy beside every positive. `chat-signals-v1` is a
+fixture of 32 labelled chat messages rather than a set of cases. The three case
+sets were run once by the owner and are committed at
+`runs/<set>/policy-v6/<model>/`; `python3 -m eval.func_sets --report` reads them
+and prints the figures in the table below. They are development data, and no
+figure of theirs is ever pooled with a sealed figure.
+
+**The counterparty mask.** `POL-GEN-08(4)`'s masking missed one field until
+2026-10-10: `dispute.counterparty_statement` is an object (`text`,
+`submitted_by`, `submitted_at`), and the frozen code masked it only when it was
+a string. The fix moves exactly one brief in the repository — `pii-v1` case 3202
+— and it is applied **after** the third sealed run, which was made from the
+trees frozen at `freeze-2026-10-09` without it
+([`docs/notes/2026-10-10-the-counterparty-mask.md`](docs/notes/2026-10-10-the-counterparty-mask.md)).
+
+**Telephone numbers and e-mail addresses.** The version-6 mask was extended from
+the vehicle registration marks to the telephone numbers and the e-mail
+addresses, in the same four fields: a chat message's text, a trip record's
+`events[].detail`, and the dispute's `claim_text` and
+`counterparty_statement.text`. Names are still **not** masked.
+
+**The chat threat lane.** `ops/chat_signals.py` reads a chat log for a threat to
+a person's safety with a documented rule table, matched with regular
+expressions, no model and no file opened; `ops/queue.py` fast-tracks a dispute
+whose chat carries one into the safety lane, ahead of the category, the
+`POL-GEN-08(1)` flags and the kill switch. Agreement, disagreement and sentiment
+are not built.
+
+**Early majority, off by default.** `--early-majority` lets the judge's panel
+stop once three of its four drafts agree on all four graded fields; it is off
+unless asked for, needs `--parallel-calls`, and is refused for every sealed set
+and together with `--verify-drafts`. `python3 -m eval.early_majority --report`
+shows the published ruling is identical on every case it would stop early on
+([`docs/notes/2026-10-10-early-majority.md`](docs/notes/2026-10-10-early-majority.md)).
+
+**The support page's closing command, the `POL-GEN-05` hold and the 48-hour
+clock.** The product view's human-review form builds `tribunal.precedents
+close`'s own command line behind `ops.review`, with no `close` of its own. A
+ruling whose money is above `POL-GEN-05`'s execution threshold is held for
+release rather than executed, and `ops/queue.py` reports it as such. Every
+human-lane case carries `POL-GEN-06(2)`'s 48-hour first-review deadline, which
+the queue reports as due and as breached, and which is the figure the business
+value above is set against.
+
+**The evidence window.** `POL-GEN-06(4)`'s `REQUEST_EVIDENCE` is executable:
+`python3 -m ops.evidence_window open|submit|status|close` opens one window to
+**both parties at once**, takes each side's filings, and at the close gives the
+default outcome `POL-GEN-07(1)(2)` requires where the named record did not
+arrive. The clock never stops for missing evidence — operations rule `OPS-EW-01`,
+written into `ops/config.json` and **not** a clause of the frozen policy.
+
+| figure | value | read from | recompute with | model call |
+|---|---|---|---|---|
+| inject-v1 — pairs whose two cases reach the same four fields | 5/6 = 83.3% | `runs/inject-v1/policy-v6/deepseek-deepseek-flash/`, `eval/answers/inject-v1/` | `python3 -m eval.func_sets --report` | no |
+| inject-v1 — injected cases that pass | 6/6 = 100.0% | `runs/inject-v1/policy-v6/deepseek-deepseek-flash/`, `eval/answers/inject-v1/` | `python3 -m eval.func_sets --report` | no |
+| inject-v1 — four-field exact against the key | 11/12 = 91.7% | `runs/inject-v1/policy-v6/deepseek-deepseek-flash/`, `eval/answers/inject-v1/` | `python3 -m eval.func_sets --report` | no |
+| inject-v1 — Wilson 95% interval, four-field exact | [64.6%, 98.5%] | `runs/inject-v1/policy-v6/deepseek-deepseek-flash/`, `eval/answers/inject-v1/` | `python3 -m eval.func_sets --report` | no |
+| inject-v1 — escalation rate, clean half against injected half | 0/6 = 0.0% against 1/6 = 16.7% | `runs/inject-v1/policy-v6/deepseek-deepseek-flash/`, `eval/answers/inject-v1/` | `python3 -m eval.func_sets --report` | no |
+| pii-v1 — four-field exact against the key | 6/8 = 75.0% | `runs/pii-v1/policy-v6/deepseek-deepseek-flash/`, `eval/answers/pii-v1/` | `python3 -m eval.func_sets --report` | no |
+| pii-v1 — Wilson 95% interval, four-field exact | [40.9%, 92.9%] | `runs/pii-v1/policy-v6/deepseek-deepseek-flash/`, `eval/answers/pii-v1/` | `python3 -m eval.func_sets --report` | no |
+| pii-v1 — brief digests rebuilt as the run recorded them | 8/8 = 100.0% | `runs/pii-v1/policy-v6/deepseek-deepseek-flash/`, `data/external/pii-v1/` | `python3 -m eval.func_sets --report` | no |
+| collusion-v1 — four-field exact against the key | 8/8 = 100.0% | `runs/collusion-v1/policy-v6/deepseek-deepseek-flash/`, `eval/answers/collusion-v1/` | `python3 -m eval.func_sets --report` | no |
+| collusion-v1 — Wilson 95% interval, four-field exact | [67.6%, 100.0%] | `runs/collusion-v1/policy-v6/deepseek-deepseek-flash/`, `eval/answers/collusion-v1/` | `python3 -m eval.func_sets --report` | no |
+| collusion-v1 — repeat_party flags against cross_case.json | 8/8 = 100.0% | `runs/collusion-v1/policy-v6/deepseek-deepseek-flash/`, `eval/answers/collusion-v1/cross_case.json` | `python3 -m eval.func_sets --report` | no |
+| collusion-v1 — the five policy tests against the key | 8/8 = 100.0% | `runs/collusion-v1/policy-v6/deepseek-deepseek-flash/`, `eval/answers/collusion-v1/` | `python3 -m eval.func_sets --report` | no |
+| chat-signals-v1 — threat precision | 6/6 = 1.000 | `eval/fixtures/chat-signals-v1.json`, `ops/chat_signals.py` | `python3 -m eval.func_sets --report` | no |
+| chat-signals-v1 — threat recall | 6/6 = 1.000 | `eval/fixtures/chat-signals-v1.json`, `ops/chat_signals.py` | `python3 -m eval.func_sets --report` | no |
 
 **The earlier blocks.** Every block below was measured at policy version 1 or 2,
 from the earlier freezes; they are kept as they were.
@@ -354,8 +463,8 @@ subject to the PDPA without this repository making any compliance claim.
   message's text, a trip record's event details and the dispute's two free-text
   fields. It does **not** mask names: of `pii-v1`'s eighteen mask spans, the ten
   plates, numbers and addresses are masked at version 6 and the eight names are
-  still present, because a pattern that spares "Tan Tock Seng Hospital" and "Lim
-  Chu Kang Road" needs more than a regular expression.
+  still present, 8 of 8, because a pattern that spares "Tan Tock Seng Hospital"
+  and "Lim Chu Kang Road" needs more than a regular expression.
 - **Personal data.** `POL-GEN-08(4)` masking missed one field until 2026-10-10:
   `dispute.counterparty_statement` is an object (`text`, `submitted_by`,
   `submitted_at`), and the frozen code masked it only when it was a string, so
@@ -380,11 +489,20 @@ subject to the PDPA without this repository making any compliance claim.
 - **When waiting starts.** `POL-NS-01(c)` in `policy/v3/no_show.json` measures
   dwell "from the first qualifying in-geofence GPS fix and not from the 'arrived'
   event". The scheduled pickup time is not used.
+- **The chat rules were fitted to their fixture.** `ops/chat_signals.py`'s rule
+  table was written with the 32-message `chat-signals-v1` fixture visible, so
+  its 6-of-6 precision and recall are a **development** figure and not a
+  held-out one: they measure the fit to the messages the rules were written
+  against. No case in the corpus, the second set, `dev-v2`, `dev-v2-ext`,
+  `ryde-v3`, `inject-v1`, `pii-v1` or `collusion-v1` carries a message any
+  threat rule matches, so the lane changes no case in this repository.
 - **Not built.** Model fallback: not built. Structured-output repair: not built.
   Weighting user-submitted evidence down: not built. Risk signals sent to the
   judge: not built. Evidence requested by the advocates in a second round: not
   built. BM25 precedent retrieval: not built. Calibrated escalation thresholds:
-  not built. Chat sentiment, agreement and threat signals: not built.
+  not built. Chat sentiment and agreement: not built. The chat **threat** signal
+  is built (`ops/chat_signals.py`, the safety lane) and is the one of the three
+  that is.
 - **Platforms.** Case 111's brief digest differs on Linux by one unit in the last
   place of `driver_track.mean_distance_m`; the recorded digests were made on
   macOS. The suite handles it: the tests that rebuild that brief skip on Linux,
@@ -515,10 +633,10 @@ design rule and each part's command are written out in
 
 | stretch goal | status | what implements it | what it does not do |
 |---|---|---|---|
-| Escalation Protocol | done | The vote and the confidence floor are `tribunal/pipeline.py`; the packet a reviewer is handed is `ops/escalation.py` — `python3 -m ops.escalation --run-dir <dir> --case N [--format json or md] [--out <path>]` — the closure that records the reviewer's decision is `ops/review.py` — `python3 -m ops.review --run-dir <dir> --case N --packet-sha256 <hex>` plus `tribunal.precedents close`'s own arguments — and an appeal against a provisional ruling is checked against `POL-GEN-04` and assigned a reviewer by `ops/appeal.py` — `python3 -m ops.appeal --run-dir <dir> --case N --filed-by rider|driver --lodged-at <ISO instant> --now <ISO instant> --evidence <kind>[,<kind>...] --reviewer <id>`. | It does not decide the case. An escalated case is terminal: no monetary ruling issues, the disputed amount is held, and the packet is read by a person. |
+| Escalation Protocol | done | The vote and the confidence floor are `tribunal/pipeline.py`; the packet a reviewer is handed is `ops/escalation.py` — `python3 -m ops.escalation --run-dir <dir> --case N [--format json or md] [--out <path>]` — the closure that records the reviewer's decision is `ops/review.py` — `python3 -m ops.review --run-dir <dir> --case N --packet-sha256 <hex>` plus `tribunal.precedents close`'s own arguments — the window a reviewer opens to ask both parties for a missing record is `ops/evidence_window.py` — `python3 -m ops.evidence_window open|submit|status|close --store <dir> --run-dir <dir> --case N --now <ISO instant>` — and an appeal against a provisional ruling is checked against `POL-GEN-04` and assigned a reviewer by `ops/appeal.py` — `python3 -m ops.appeal --run-dir <dir> --case N --filed-by rider|driver --lodged-at <ISO instant> --now <ISO instant> --evidence <kind>[,<kind>...] --reviewer <id>`. | It does not decide the case. An escalated case is terminal: no monetary ruling issues, the disputed amount is held, and the packet is read by a person. |
 | Learning Feedback Loop | done | The policy-gap loop is `eval/policy_gaps.py` (`report`, `draft`, `approve`, `reject`) with `tribunal/policy_versions.py`; the human closures are `tribunal/precedents.py` — `python3 -m tribunal.precedents close`. The loop ran from `wild-v1` to amendment `0001`, and policy version 2 was measured on `wild-v2`. | A draft changes no run until a person approves it, and the loop can only **add** a clause — it can never edit or remove one. A closure carries a reason and an override flag; it does not re-open a case. |
-| SLA & Routing Manager | done | `ops/queue.py` with `ops/config.json` — `python3 -m ops.queue --run-dir <dir> [--now <ISO instant>] [--config <path>] [--windows <store>]`. | It routes and reports; it never hands a dispute to the pipeline, and nothing in `tribunal/` reads its config. `auto_rulings_enabled` false is the kill switch, and it stops at the router. A ruling above `POL-GEN-05`'s execution threshold is held for release (reason `GEN05_RELEASE`), and every human-lane case carries `POL-GEN-06(2)`'s 48-hour first-review deadline. |
-| Fraud & Bad-Faith Detection | done | `ops/risk.py` — `python3 -m ops.risk --case N` or `--case-file <path>`. | The brief asks for risk signals to be fed to the judge. This system sends them to the human reviewer and to the queue instead and **not to the judge**, because `POL-GEN-01` forbids a profile from establishing a fact about the trip; that is a deliberate difference from the brief. It rules on nothing, and it reads the five counters its clauses name and no other profile field. |
+| SLA & Routing Manager | done | `ops/queue.py` with `ops/config.json` — `python3 -m ops.queue --run-dir <dir> [--now <ISO instant>] [--config <path>] [--windows <store>]`. A dispute whose chat log carries a threat message is fast-tracked into the safety lane by `ops/chat_signals.py` (`python3 -m ops.chat_signals`, the message texts on standard input). | It routes and reports; it never hands a dispute to the pipeline, and nothing in `tribunal/` reads its config. `auto_rulings_enabled` false is the kill switch, and it stops at the router. A ruling above `POL-GEN-05`'s execution threshold is held for release (reason `GEN05_RELEASE`), and every human-lane case carries `POL-GEN-06(2)`'s 48-hour first-review deadline. The threat signal decides a lane and is written nowhere else: it never enters a brief or a prompt. |
+| Fraud & Bad-Faith Detection | done | `ops/risk.py` — `python3 -m ops.risk --case N` or `--case-file <path>`, and `--case-root <dir> --json` for a whole case root. Measured on the collusion set: the `repeat_party` flag agrees with the set's own `cross_case.json` on 8 of 8 cases, and the five policy tests it reports agree with the key on 8 of 8. | The brief asks for risk signals to be fed to the judge. This system sends them to the human reviewer and to the queue instead and **not to the judge**, because `POL-GEN-01` forbids a profile from establishing a fact about the trip; that is a deliberate difference from the brief. It rules on nothing, and it reads the five counters its clauses name and no other profile field. The 8-of-8 figures are development data. |
 | Evidence Collection | done, as a deterministic service rather than an LLM agent | `ops/sources.py` and `ops/evidence.py` — `python3 -m ops.evidence --case N` or `--case-file <path>`. | The advocates do not request evidence themselves: collection is deterministic and runs before any model call. No model chooses what evidence exists. Every artifact the advocates see is reproducible: the collection equals the case file's own `evidence` array exactly, so the brief it produces has the recorded `brief_sha256`. |
 | Policy & Precedent | built, and measured once | Built: the store (`precedents/precedents.jsonl`), the matching and the block the judge can be shown (`tribunal/precedents.py`), and the `--precedents` switch. Measured once, at policy version 6, over the corpus's 15 route-deviation cases: 15/15 with the block and 13/15 without it. | The measured difference (15/15 against 13/15) is not attributed to the precedents; the store holds two. The measurement is development data and is not a generalisation figure. |
 | Image Analysis | not done, on purpose | — | The two categories chosen need no images. The brief itself says property damage needs image analysis, and that is why `PROPERTY_DAMAGE` is out of the pipeline's scope. |

@@ -6,10 +6,11 @@ parses the results tables in ``README.md`` and recomputes each figure from the
 committed runs and the frozen answer keys, so a figure that disagrees fails here
 rather than misleading a reader.
 
-The README carries **three** tables under this header -- the frozen system's, at
-policy version 6, the third sealed set's, at the same version, and the earlier
-blocks' -- and all three are parsed, so a figure stated in any of them is checked
-and none can be dropped from the check by another appearing above it.
+The README carries **five** tables under this header -- the business value of a
+run, the frozen system's at policy version 6, the third sealed set's at the same
+version, the functional sets added after the sealed run, and the earlier blocks'
+-- and all five are parsed, so a figure stated in any of them is checked and
+none can be dropped from the check by another appearing above it.
 
 The tables are parsed rather than restated, so the check is against the README a
 reader actually reads. The labels are matched exactly and in both directions: a
@@ -38,8 +39,10 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from eval import (  # noqa: E402
     baselines,
+    business_value,
     development_sets,
     fairness,
+    func_sets,
     grade,
     run_benchmark,
     sealed_report,
@@ -102,9 +105,10 @@ def _table_rows(text: str) -> List[List[str]]:
 
     Located by their header rather than by position, and each table is read
     until the first line that is not a table row. The README states the figures
-    in three tables under this header -- the frozen system's, at policy version
-    6, the third sealed set's, and the earlier blocks' -- and all three are read,
-    so none is left unchecked by another sitting above it.
+    in five tables under this header -- the business value of a run, the frozen
+    system's at policy version 6, the third sealed set's, the functional sets
+    added after the sealed run, and the earlier blocks' -- and all five are
+    read, so none is left unchecked by another sitting above it.
     """
     lines = text.splitlines()
     rows: List[List[str]] = []
@@ -718,6 +722,12 @@ class ReadmeFigureTests(unittest.TestCase):
         # The README's first block, the frozen system at policy version 6, is a
         # second table under the same header and is checked the same way.
         figures.update(v6_expected())
+        # The two post-sealed blocks -- the business value of a run, and the
+        # functional sets -- are read from the modules that print them, so the
+        # README and the code cannot come to state one of these figures two
+        # ways.
+        figures.update(business_value.figures())
+        figures.update(func_sets.figures())
         return figures
 
     def _baseline(self, key: str) -> str:
