@@ -10,6 +10,8 @@ Execution start: 2026-09-18. Feature freeze tagged 2026-10-09 (`freeze-2026-10-0
 
 The same system is written out box by box, one paragraph per box and the file that implements it, in [`docs/architecture.md`](docs/architecture.md).
 
+The submission's own texts — a one-line blurb, a description and the judges' questions — are in [`docs/submission/`](docs/submission/).
+
 ## The live demo
 
 The product view is live at <https://tribunal.edgeone.dev/>: today's 151
