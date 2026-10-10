@@ -254,6 +254,18 @@ for every sealed set.
 `ESCALATE` -- and break none
 ([`docs/notes/2026-10-10-the-integrity-gate.md`](docs/notes/2026-10-10-the-integrity-gate.md)).
 
+**The advocate-effort switch, off by default.** `--advocate-effort none` makes
+the **two advocate requests** carry `"reasoning_effort": "none"` and leaves the
+judge's drafts and the verifier untouched; `default`, the default, leaves every
+request exactly as it is today. It changes what a run measures, so it is recorded
+in every artifact's `configuration`, a run under it goes to a root of its own at
+`runs/advocate-effort-<effort>/<set>/[policy-v<N>/]<model>/`, it may be given with
+`--policy-version`, and it is refused beside `--ablate`, `--precedents`,
+`--amount-rule` and a replay and for every sealed set.
+`python3 -m eval.advocate_effort --report --baseline <run dir> --candidate <run
+dir>` compares a switched run against the baseline it is measured against
+([`docs/notes/2026-10-10-the-advocate-effort-switch.md`](docs/notes/2026-10-10-the-advocate-effort-switch.md)).
+
 **The support page's closing command, the `POL-GEN-05` hold and the 48-hour
 clock.** The product view's human-review form builds `tribunal.precedents
 close`'s own command line behind `ops.review`, with no `close` of its own. A

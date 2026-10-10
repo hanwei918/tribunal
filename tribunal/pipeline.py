@@ -270,6 +270,38 @@ JUDGE_VOTE_SEEDS = (101, 202, 303, 404, 505, 606)
 # and ``_run_judge_vote`` must not be able to drift from it.
 EARLY_MAJORITY_MIN_SAMPLED = 2
 
+# --------------------------------------------------------------------------
+# The advocate-effort switch
+# --------------------------------------------------------------------------
+# The two advocates are the slowest part of a case. Over the 171 version-6
+# cases with four drafts, the slower advocate call has median 91 s and 90th
+# percentile 140 s, against the whole case's 160 s and 290 s -- so turning
+# reasoning off for the advocates is where a saving would be, if the rulings
+# survive it. ``tribunal.llm`` already supports ``reasoning_effort``: the key is
+# omitted and reasoning stays on, and the explicit string ``"none"`` suppresses
+# it, measured on TokenHub in
+# ``docs/notes/2026-09-21-tokenhub-api-facts.md``.
+#
+# ``default`` is what every run before this switch sent: the client's own
+# setting, which is ``None``, so no ``reasoning_effort`` key appears in the body
+# at all. ``none`` makes the **two advocate requests** carry the key. The
+# judge's drafts and the verifier are untouched, because a switch named for the
+# advocates that quietly moved the judge as well would not be measuring what its
+# name says.
+ADVOCATE_EFFORT_DEFAULT = "default"
+ADVOCATE_EFFORT_NONE = "none"
+ADVOCATE_EFFORTS: Tuple[str, ...] = (ADVOCATE_EFFORT_DEFAULT, ADVOCATE_EFFORT_NONE)
+
+# What each setting puts on the wire, as the value handed to
+# :meth:`tribunal.llm.LLMClient.complete`. ``default`` maps to ``llm._UNSET`` --
+# the same sentinel ``temperature`` and ``seed`` use -- which means "leave this
+# client's own setting alone", so a default run's body is byte for byte the body
+# it always was. ``none`` maps to the explicit string.
+ADVOCATE_EFFORT_REASONING: Dict[str, Any] = {
+    ADVOCATE_EFFORT_DEFAULT: llm._UNSET,
+    ADVOCATE_EFFORT_NONE: ADVOCATE_EFFORT_NONE,
+}
+
 # The two shapes the judge's ``claims`` value can take.
 #
 # ``object`` is what every run before the vote produced, and it is still what
@@ -1021,6 +1053,7 @@ def _call_agent_worker(
     deadline: Optional["CaseDeadline"] = None,
     temperature: Any = llm._UNSET,
     seed: Any = llm._UNSET,
+    reasoning_effort: Any = llm._UNSET,
     now: Callable[[], str],
     case_no: Optional[int] = None,
     draft: int = 0,
@@ -1038,10 +1071,12 @@ def _call_agent_worker(
     finish. It is passed in rather than held as module state because the budget
     belongs to one case.
 
-    ``temperature`` and ``seed`` are per-call overrides handed straight to the
-    client. Both default to ``llm._UNSET``, which means "use whatever this client
-    was built with", so a call that names neither is the same request it has
-    always been -- byte for byte.
+    ``temperature``, ``seed`` and ``reasoning_effort`` are per-call overrides
+    handed straight to the client. All three default to ``llm._UNSET``, which
+    means "use whatever this client was built with", so a call that names none
+    of them is the same request it has always been -- byte for byte. The third
+    is what ``--advocate-effort none`` uses: it is passed on the two advocate
+    calls alone, and no other call in this module names it.
 
     ``now`` is the transcript's own clock, called **once per attempt at the
     moment that attempt's call finished**. With calls in flight together, the
@@ -1082,6 +1117,7 @@ def _call_agent_worker(
                     response_format=JSON_OBJECT_FORMAT,
                     temperature=temperature,
                     seed=seed,
+                    reasoning_effort=reasoning_effort,
                 )
             finally:
                 CALL_CONTEXT.reset(token)
@@ -1221,6 +1257,7 @@ def _call_agent(
     deadline: Optional["CaseDeadline"] = None,
     temperature: Any = llm._UNSET,
     seed: Any = llm._UNSET,
+    reasoning_effort: Any = llm._UNSET,
     events_log: Optional[Any] = None,
     case_no: Optional[int] = None,
     draft: int = 0,
@@ -1254,6 +1291,7 @@ def _call_agent(
         deadline=deadline,
         temperature=temperature,
         seed=seed,
+        reasoning_effort=reasoning_effort,
         now=transcript.now,
         case_no=case_no,
         draft=draft,
@@ -4232,6 +4270,7 @@ def run_case(
     parallel_calls: bool = False,
     early_majority: bool = False,
     integrity_gate: bool = False,
+    advocate_effort: str = ADVOCATE_EFFORT_DEFAULT,
 ) -> PipelineResult:
     """Perform one full arbitration of a case named by its manifest number.
 
@@ -4282,6 +4321,13 @@ def run_case(
     is on, a route-deviation record whose own trip identifiers or pickup and
     dropoff timestamps do not hang together is escalated by code with no call
     made -- see :func:`run_loaded_case`.
+
+    ``advocate_effort`` is passed straight through on the same rule once more.
+    It is ``"default"`` unless a caller names it, so every caller before the
+    switch sends the requests it always sent; when it is ``"none"`` the two
+    advocate requests carry ``"reasoning_effort": "none"`` and the judge's
+    drafts and the verifier are untouched -- see :func:`run_loaded_case` and
+    :data:`ADVOCATE_EFFORTS`.
     """
     load = loader.load_case if case_loader is None else case_loader
     return run_loaded_case(
@@ -4301,6 +4347,7 @@ def run_case(
         parallel_calls=parallel_calls,
         early_majority=early_majority,
         integrity_gate=integrity_gate,
+        advocate_effort=advocate_effort,
     )
 
 
@@ -4322,6 +4369,7 @@ def run_loaded_case(
     parallel_calls: bool = False,
     early_majority: bool = False,
     integrity_gate: bool = False,
+    advocate_effort: str = ADVOCATE_EFFORT_DEFAULT,
 ) -> PipelineResult:
     """Perform one full arbitration of a case already in hand.
 
@@ -4417,9 +4465,29 @@ def run_loaded_case(
     in the same place and after the ``POL-GEN-08(1)`` scope gate, so a flagged
     dispute keeps the scope gate's own record; and the policy is read only when
     the switch is on, so a run without it builds the bytes it always built.
+
+    ``advocate_effort`` is ``"default"`` unless a caller names one of
+    :data:`ADVOCATE_EFFORTS`, and a name outside them is refused here as well as
+    at the command line. It is the one switch that changes **some** of a case's
+    requests rather than all of them or none: ``"none"`` hands
+    :data:`ADVOCATE_EFFORT_REASONING`'s value to the two advocate calls and to
+    nothing else, so the judge's drafts and the verifier are asked exactly as
+    they were. ``"default"`` maps to ``llm._UNSET`` -- the sentinel
+    ``temperature`` and ``seed`` already use -- so the advocates' bodies are the
+    bodies every run before the switch sent, byte for byte, and a run without
+    the switch is the run it was.
     """
     case_no = case["case_no"]
     prompts_dir = Path(prompts_dir)
+    if advocate_effort not in ADVOCATE_EFFORTS:
+        # Refused here as well as at the command line, so a caller driving this
+        # function directly is told which settings exist rather than silently
+        # getting the default and a record that does not say what it sent.
+        raise PipelineError(
+            "no advocate effort called {0!r}; the settings are {1}".format(
+                advocate_effort, ", ".join(ADVOCATE_EFFORTS)
+            )
+        )
     if judge_votes < 1:
         raise PipelineError("judge_votes must be at least 1, got {0}".format(judge_votes))
     if early_majority and not parallel_calls:
@@ -4569,6 +4637,14 @@ def run_loaded_case(
         clock=clock,
     )
 
+    # What the two advocate calls carry on the wire. ``default`` resolves to the
+    # sentinel that leaves the client's own setting alone, so the two bodies are
+    # the ones they always were; ``none`` is the explicit string. Read once here
+    # and passed to the advocate calls alone -- the judge's drafts below and the
+    # verifier after them name no ``reasoning_effort`` at all, which is what
+    # keeps the switch a statement about the advocates.
+    advocate_reasoning = ADVOCATE_EFFORT_REASONING[advocate_effort]
+
     def _advocate_call(item: Tuple[str, str]) -> _AgentCall:
         role, prompt = item
         return _call_agent_worker(
@@ -4578,6 +4654,7 @@ def run_loaded_case(
             user_message=advocate_user_message,
             normalise=normalise_claims,
             deadline=deadline,
+            reasoning_effort=advocate_reasoning,
             now=transcript.now,
             case_no=case_no,
         )
@@ -4645,6 +4722,7 @@ def run_loaded_case(
             normalise=normalise_claims,
             transcript=transcript,
             deadline=deadline,
+            reasoning_effort=advocate_reasoning,
             events_log=events_log,
             case_no=case_no,
             policy_version=policy_version,
@@ -4659,6 +4737,7 @@ def run_loaded_case(
                 normalise=normalise_claims,
                 transcript=transcript,
                 deadline=deadline,
+                reasoning_effort=advocate_reasoning,
                 events_log=events_log,
                 case_no=case_no,
                 policy_version=policy_version,

@@ -1023,6 +1023,106 @@ def assert_amount_rule_destination(
     return Path(run_dir)
 
 
+# Where a run made with the advocates' reasoning turned off lives. The two
+# advocates are the slowest part of a case, and ``--advocate-effort none``
+# changes the two advocate requests and nothing else, so a run made with it is a
+# different measurement from the headline and must not be able to land where the
+# headline figure lives. The same rule the ablation, the precedent block, a later
+# policy version and the amount rule follow, for the same reason.
+#
+# The root sits at the **top** of the runs tree rather than under a set's own
+# root, so one root holds every set's switched runs and a reader can see at a
+# glance which runs were made with reasoning off: ``runs/advocate-effort-none/``
+# with the set's own subdirectory under it, then the version's and the model's.
+ADVOCATE_EFFORT_DIRNAME = "advocate-effort"
+
+
+def advocate_effort_directory_name(advocate_effort: str) -> str:
+    """The one directory name one advocate-effort setting's runs live under."""
+    return "{0}-{1}".format(ADVOCATE_EFFORT_DIRNAME, advocate_effort)
+
+
+def advocate_effort_root(
+    runs_dir: Path,
+    held_out_root: Optional[Path],
+    advocate_effort: str,
+) -> Path:
+    """``<top-level runs root>/advocate-effort-<effort>/<set>/``.
+
+    ``runs_dir`` is the *set's* root -- ``runs/`` for the corpus, ``runs/codex/``
+    for the second set -- and ``held_out_root`` is the top-level root the
+    invocation was given, which is what ``eval.development_sets.run_set`` passes
+    as the root a sealed set's own root has to be compared against. ``None``
+    means the set's root *is* the top-level one, which is what a direct
+    invocation of this runner gives: ``python3 -m eval.run_benchmark`` names the
+    corpus root and no other.
+
+    The set's part is taken from where ``runs_dir`` sits under the top-level
+    root, so the corpus contributes nothing and a development set contributes its
+    own name -- ``runs/advocate-effort-none/codex/``, which is the set's switched
+    run root. A runs root that is not under the top-level one (a scratch root a
+    caller named, with no top-level root of its own) contributes nothing either,
+    so the switched run stays inside the root the caller named rather than
+    reaching into this repository's ``runs/``.
+    """
+    top = Path(runs_dir if held_out_root is None else held_out_root)
+    base = Path(runs_dir)
+    try:
+        set_part = base.resolve().relative_to(top.resolve())
+    except ValueError:
+        set_part = Path("")
+    return top / advocate_effort_directory_name(advocate_effort) / set_part
+
+
+def advocate_effort_run_directory(
+    root: Path, advocate_effort: str, policy_version: int, model: str
+) -> Path:
+    """Where one run under the switch lives, under its own root.
+
+    ``<root>/<model-slug>/`` at version 1 and ``<root>/policy-v<N>/<model-slug>/``
+    above it, which is the layout every other run in this tree uses: the version
+    is a path component and not a flag, so two versions of one set are two
+    directories and neither can be mistaken for the other's results.
+    """
+    base = Path(root)
+    if policy_version != DEFAULT_POLICY_VERSION:
+        base = base / policy_v_directory_name(policy_version)
+    return base / model_slug(model)
+
+
+def assert_advocate_effort_destination(
+    run_dir: Path, root: Path, model: str
+) -> Path:
+    """Refuse a switched run's directory that is not under the switch's own root.
+
+    ``runs/<model-slug>/``, ``runs/codex/<model-slug>/`` and the three sealed
+    roots hold the figures the submission reports, and a run whose advocates
+    reasoned differently is a different measurement: one written there would
+    change what that directory means while leaving every file a reader looks at
+    apparently intact. The destination is therefore checked rather than merely
+    chosen, so a name that resolved outside ``root`` cannot put such a result
+    where a reported figure lives.
+
+    The reported directories are asked about against the tree the switch's root
+    **sits under** and not against the root itself, and that is not a detail: the
+    corpus's switched run belongs at ``<switch root>/<model-slug>/``, which is
+    the shape a headline directory has under any root, so asking the question of
+    the switch's root would refuse the one destination the switch exists to
+    create.
+
+    Returns the directory unchanged when it is where it should be.
+    """
+    resolved = Path(run_dir).resolve()
+    root = Path(root).resolve()
+    if not resolved.is_relative_to(root):
+        raise BenchmarkError(
+            "a run under the {0!r} advocate effort may only be written under {1}, "
+            "and this one would go to {2}".format(root.name, root, resolved)
+        )
+    assert_not_a_headline_directory(resolved, root.parent, model)
+    return Path(run_dir)
+
+
 def case_cache_path(run_dir: Path, case_no: int) -> Path:
     return Path(run_dir) / _CASE_FILE_FORMAT.format(case_no)
 
@@ -2266,6 +2366,7 @@ def run_one_case(
     parallel_calls: bool = False,
     early_majority: bool = False,
     integrity_gate: bool = False,
+    advocate_effort: str = pipeline.ADVOCATE_EFFORT_DEFAULT,
 ) -> Tuple[CaseOutcome, Optional[Dict[str, Any]], Optional[str]]:
     """Run one case. Returns ``(outcome, cache document, transcript json)``.
 
@@ -2327,7 +2428,26 @@ def run_one_case(
     same reason: a case whose route-deviation record trips ``POL-RD-10(2)`` or
     ``(4)`` is escalated by code with no call made, and a path that dropped the
     switch would rule on the record the gate exists to refuse.
+
+    ``advocate_effort`` reaches the two full-arbitration paths and not the
+    replay. A replay calls no advocate -- it copies a recorded run's advocate
+    entries and calls only the judge -- so there is no advocate request for the
+    switch to change, and it is refused beside a replay rather than silently
+    dropped. On the two paths that do call the advocates it is passed on for the
+    reason the others are: a switch this runner accepts is a switch it honours.
     """
+    if replay is not None and advocate_effort != pipeline.ADVOCATE_EFFORT_DEFAULT:
+        # Refused for the reason :func:`run_benchmark` refuses it, and checked
+        # here as well because this is the layer that would otherwise drop it
+        # quietly: :func:`tribunal.pipeline.replay_case` makes no advocate call,
+        # so a switched replay would be a run whose directory named a setting its
+        # advocates were never asked under.
+        raise BenchmarkError(
+            "a run under --advocate-effort {0} cannot replay: replay reuses a "
+            "recorded run's advocates and calls only the judge".format(
+                advocate_effort
+            )
+        )
     if replay is not None and loaded_case is not None:
         # Refused, not merely unused. Replay reuses another run's advocates for
         # a corpus case whose brief is byte-identical to theirs; an external
@@ -2400,6 +2520,10 @@ def run_one_case(
                 parallel_calls=parallel_calls,
                 early_majority=early_majority,
                 integrity_gate=integrity_gate,
+                # And which reasoning effort the two advocates' requests carry.
+                # Only the judge is called on the replay path above, which is why
+                # the switch is refused beside a replay rather than passed here.
+                advocate_effort=advocate_effort,
             )
         else:
             # A converted external case, already loaded through its own explicit
@@ -2420,6 +2544,7 @@ def run_one_case(
                 parallel_calls=parallel_calls,
                 early_majority=early_majority,
                 integrity_gate=integrity_gate,
+                advocate_effort=advocate_effort,
             )
     except (llm.MissingAPIKeyError, llm.ModelNotProvisionedError) as exc:
         # Not provisioned and no credential are the same failure for every
@@ -2531,6 +2656,13 @@ def run_one_case(
             ablation=ablate,
             policy_version=policy_version,
         )
+        if amount_rule != pipeline.DEFAULT_AMOUNT_RULE:
+            configuration = dict(configuration, amount_rule=amount_rule)
+        if advocate_effort != pipeline.ADVOCATE_EFFORT_DEFAULT:
+            # Added on the same rule :func:`run_benchmark` adds it: a caller that
+            # built its own configuration object has said so already, and one
+            # that did not gets the switch named rather than silently omitted.
+            configuration = dict(configuration, advocate_effort=advocate_effort)
     document = {
         "schema_version": CACHE_SCHEMA_VERSION,
         "case_no": case_no,
@@ -3076,6 +3208,21 @@ def run_benchmark(
     # ``invocation_start`` event and this run's ``run.json``. It is refused for
     # every sealed set, whose single run is one measurement and is not re-taken.
     integrity_gate: bool = False,
+    # Which reasoning effort the two advocates' requests carry. ``"default"`` --
+    # the default -- leaves every request exactly as it is today, so a run
+    # without the switch is byte for byte the run it was; ``"none"`` makes the
+    # **two advocate requests** carry ``"reasoning_effort": "none"`` and leaves
+    # the judge's drafts and the verifier untouched. Unlike ``parallel_calls``,
+    # ``early_majority`` and ``integrity_gate`` this one changes request bodies,
+    # so it is a switch that changes what a run measures: it is recorded in the
+    # ``configuration`` every artifact carries, it is refused beside the other
+    # such switches (``--precedents`` and ``--policy-version`` are the one pair
+    # that may be given together, and ``--advocate-effort`` with
+    # ``--policy-version`` is the second), and a run under it goes to a root of
+    # its own, ``runs/advocate-effort-<effort>/<set>/[policy-v<N>/]<model>/``, so
+    # it can never mix with or overwrite a default run. It is refused for every
+    # sealed set, whose single run is one measurement and is not re-taken.
+    advocate_effort: str = pipeline.ADVOCATE_EFFORT_DEFAULT,
     # Whether the cases are graded against a key at all. An external sample that
     # carries a **stated expectation** rather than a key has nothing to be
     # scored against: the organisers' own word is not one of POL-GEN-03's
@@ -3165,6 +3312,18 @@ def run_benchmark(
     directory, and is absent from the ``configuration`` object. It is recorded
     in the ``invocation_start`` event and in this run's ``run.json``, and it is
     refused for every sealed set by the set's own name.
+
+    ``advocate_effort`` is the opposite kind of switch and follows the rule the
+    ablation follows instead. It **does** change request bodies -- the two
+    advocate requests gain ``"reasoning_effort": "none"`` -- so it changes what a
+    run measures: it is written into the ``configuration`` every artifact carries
+    (only when it is not the default, so a plain run's artifacts are byte for
+    byte what they always were), it is recorded in the ``invocation_start`` event
+    and in this run's ``run.json``, and it moves the run directory to
+    ``runs/advocate-effort-<effort>/<set>/[policy-v<N>/]<model>/``. It may be
+    given with ``--policy-version`` -- the version's directory sits under the
+    switch's root -- and it is refused beside the other switches that change what
+    a run measures, and beside a replay, which calls no advocate to reason.
     """
     if not model:
         raise BenchmarkError("model is required and has no default; name the model explicitly")
@@ -3232,6 +3391,16 @@ def run_benchmark(
                 amount_rule, ", ".join(pipeline.AMOUNT_RULES)
             )
         )
+    if advocate_effort not in pipeline.ADVOCATE_EFFORTS:
+        # Refused on the same rule and in the same place: a caller driving this
+        # function directly is told which settings exist rather than getting a
+        # directory named after a typo -- and, because this switch changes
+        # request bodies, rather than silently sending the default's.
+        raise BenchmarkError(
+            "no advocate effort called {0!r}; the settings are {1}".format(
+                advocate_effort, ", ".join(pipeline.ADVOCATE_EFFORTS)
+            )
+        )
     switches_on = [
         name
         for name, on in (
@@ -3239,25 +3408,32 @@ def run_benchmark(
             ("--precedents", precedents is not None),
             ("--policy-version N>=2", policy_version != policy_versions.BASE_VERSION),
             ("--amount-rule", amount_rule != pipeline.DEFAULT_AMOUNT_RULE),
+            (
+                "--advocate-effort",
+                advocate_effort != pipeline.ADVOCATE_EFFORT_DEFAULT,
+            ),
         )
         if on
     ]
-    if len(switches_on) > 1 and set(switches_on) != {
-        "--precedents",
-        "--policy-version N>=2",
-    }:
-        # At most one of the switches that change what a run measures may be on
-        # per invocation -- a run with two of them on measures neither -- with
-        # **one exception**: ``--precedents`` and ``--policy-version`` may be
-        # given together, because the precedents block is the same whatever the
-        # policy version, so the two do not confound each other. Their run gets a
-        # directory of its own, ``runs/precedents/policy-v<N>/<model>/``, and
-        # every other pairing keeps its refusal.
+    # The pairs that may be given together, and there are two of them. A run with
+    # two switches that change what it measures measures neither, with **one
+    # exception each**: ``--precedents`` and ``--policy-version`` may be given
+    # together, because the precedents block is the same whatever the policy
+    # version; and ``--advocate-effort`` and ``--policy-version`` may be given
+    # together, because the version's directory sits under the switch's own root
+    # and the two are not confounded -- one changes what the advocates reason
+    # over, the other what they are given.
+    allowed_pairs = (
+        frozenset({"--precedents", "--policy-version N>=2"}),
+        frozenset({"--advocate-effort", "--policy-version N>=2"}),
+    )
+    if len(switches_on) > 1 and frozenset(switches_on) not in allowed_pairs:
         raise BenchmarkError(
-            "at most one of --ablate, --precedents, --policy-version N>=2 and "
-            "--amount-rule may be given per invocation, except --precedents with "
-            "--policy-version: each changes what the run measures, and a run with "
-            "two of them on measures neither"
+            "at most one of --ablate, --precedents, --policy-version N>=2, "
+            "--amount-rule and --advocate-effort may be given per invocation, "
+            "except --precedents or --advocate-effort with --policy-version: each "
+            "changes what the run measures, and a run with two of them on "
+            "measures neither"
         )
     if precedents is not None and replay_dir is not None:
         # A replay reuses a recorded run's advocates, and the judge of the run
@@ -3280,6 +3456,17 @@ def run_benchmark(
             "a run at a later policy version cannot replay: a replay rebuilds the "
             "brief at the version the source run recorded, and the advocates it "
             "reuses were given that brief, not this version's"
+        )
+    if advocate_effort != pipeline.ADVOCATE_EFFORT_DEFAULT and replay_dir is not None:
+        # A replay reuses a recorded run's advocates and calls only the judge, so
+        # there is no advocate request for this switch to change. Naming it
+        # beside a replay is a request this pipeline cannot honour, and honouring
+        # it quietly would be a run whose directory names a setting its advocates
+        # were never asked under.
+        raise BenchmarkError(
+            "a run under --advocate-effort {0} cannot replay: a replay reuses a "
+            "recorded run's advocates and calls only the judge, so no advocate "
+            "request is made for the switch to change".format(advocate_effort)
         )
     if policy_version != policy_versions.BASE_VERSION:
         # Refused here, before a client exists and before any case is issued, so
@@ -3371,9 +3558,22 @@ def run_benchmark(
     # order here decides only which directory a run that cannot happen would have
     # gone to.
     sealed_permit: Optional[Path] = None
+    # The root the destination below is built under. It is the runs root this
+    # invocation was given, except under the advocate-effort switch: a run whose
+    # advocates reasoned differently goes to a root of its own, at the top of the
+    # runs tree, with the set's own subdirectory under it, so it can never mix
+    # with or overwrite a default run. Every guard below is asked about that root
+    # rather than about the one the caller named, so the two cannot disagree.
+    destination_root = runs_dir
+    if advocate_effort != pipeline.ADVOCATE_EFFORT_DEFAULT:
+        destination_root = advocate_effort_root(
+            runs_dir, held_out_root, advocate_effort
+        )
     if ablation is not None:
         run_dir = assert_ablation_destination(
-            ablation_run_directory(runs_dir, ablation, model), runs_dir, model
+            ablation_run_directory(destination_root, ablation, model),
+            destination_root,
+            model,
         )
     elif (
         precedents is not None
@@ -3381,31 +3581,59 @@ def run_benchmark(
         and policy_version_moves_the_run
     ):
         run_dir = assert_precedents_policy_v_destination(
-            precedents_policy_v_run_directory(runs_dir, policy_version, model),
-            runs_dir,
+            precedents_policy_v_run_directory(
+                destination_root, policy_version, model
+            ),
+            destination_root,
             policy_version,
             model,
         )
     elif precedents is not None:
         run_dir = assert_precedents_destination(
-            precedents_run_directory(runs_dir, model), runs_dir, model
+            precedents_run_directory(destination_root, model),
+            destination_root,
+            model,
+        )
+    elif (
+        advocate_effort != pipeline.ADVOCATE_EFFORT_DEFAULT
+        and policy_version != policy_versions.BASE_VERSION
+        and policy_version_moves_the_run
+    ):
+        # The switch's own root, with the version's directory under it. The pair
+        # is one of the two allowed combinations, so it is reached rather than
+        # refused: the version decides the briefs and the switch decides what the
+        # advocates' requests carry, and neither confounds the other.
+        run_dir = assert_advocate_effort_destination(
+            advocate_effort_run_directory(
+                destination_root, advocate_effort, policy_version, model
+            ),
+            destination_root,
+            model,
         )
     elif policy_version != policy_versions.BASE_VERSION and policy_version_moves_the_run:
         run_dir = assert_policy_v_destination(
-            policy_v_run_directory(runs_dir, policy_version, model),
-            runs_dir,
+            policy_v_run_directory(destination_root, policy_version, model),
+            destination_root,
             policy_version,
             model,
         )
     elif amount_rule != pipeline.DEFAULT_AMOUNT_RULE:
         run_dir = assert_amount_rule_destination(
-            amount_rule_run_directory(runs_dir, amount_rule, model),
-            runs_dir,
+            amount_rule_run_directory(destination_root, amount_rule, model),
+            destination_root,
             amount_rule,
             model,
         )
+    elif advocate_effort != pipeline.ADVOCATE_EFFORT_DEFAULT:
+        run_dir = assert_advocate_effort_destination(
+            advocate_effort_run_directory(
+                destination_root, advocate_effort, policy_version, model
+            ),
+            destination_root,
+            model,
+        )
     else:
-        run_dir = run_directory(runs_dir, model)
+        run_dir = run_directory(destination_root, model)
         # The one destination an un-run sealed root still accepts, and only for
         # the caller that named the set which owns it.
         # ``UNRUN_SEALED_RUNS_SUBDIRS`` is empty now that all three sealed sets
@@ -3432,6 +3660,11 @@ def run_benchmark(
             "{1} holds the corpus results and a set written there would change "
             "what the reported figure covers".format(label, run_dir)
         )
+    if advocate_effort != pipeline.ADVOCATE_EFFORT_DEFAULT:
+        # The switch's destination, checked rather than merely chosen: the two
+        # branches above build it, and this is what says a name that resolved
+        # anywhere else cannot put such a result where a reported figure lives.
+        assert_advocate_effort_destination(run_dir, destination_root, model)
     # All three sealed roots are closed outright now that their runs have been
     # made. A plain run, an ablated run, a run at a later policy version and a
     # report all refuse a destination under any of them, and this is the one
@@ -3475,6 +3708,13 @@ def run_benchmark(
         # a switch is on; this one is a sixth only where it is not the default,
         # which is what keeps the plain run's artifacts byte-identical.
         configuration = dict(configuration, amount_rule=amount_rule)
+    if advocate_effort != pipeline.ADVOCATE_EFFORT_DEFAULT:
+        # And the advocate-effort switch, on the same rule and for the same
+        # reason: a run whose advocates reasoned differently is a different
+        # measurement, so the case file has to say so on its own -- but a run
+        # with the switch off writes the configuration object it always wrote,
+        # which is what keeps the default byte-identical.
+        configuration = dict(configuration, advocate_effort=advocate_effort)
 
     # The invocation's own id, and the append-only log every case appends to.
     # The id is written on every event line and on the invocation's metadata, so
@@ -3542,6 +3782,15 @@ def run_benchmark(
         # on the invocation's own line when it is on and absent from a run that
         # did not ask for it.
         **({"integrity_gate": True} if integrity_gate else {}),
+        # And the advocate-effort switch, named only when it is not the default,
+        # so the line a plain run appends is the line it always appended. It is
+        # named with its value rather than as a boolean, because "which effort"
+        # is the measurement and ``none`` is the only one that exists today.
+        **(
+            {"advocate_effort": advocate_effort}
+            if advocate_effort != pipeline.ADVOCATE_EFFORT_DEFAULT
+            else {}
+        ),
     )
 
     # A shared sink, because the client is shared across every case and, above
@@ -3687,6 +3936,7 @@ def run_benchmark(
             parallel_calls=parallel_calls,
             early_majority=early_majority,
             integrity_gate=integrity_gate,
+            advocate_effort=advocate_effort,
         )
         # Both, and the order matters. ``run.json`` is the latest invocation's
         # record at the conventional path; the history is what survives the next
@@ -3807,6 +4057,7 @@ def run_benchmark(
                 parallel_calls=parallel_calls,
                 early_majority=early_majority,
                 integrity_gate=integrity_gate,
+                advocate_effort=advocate_effort,
             )
 
         workers = max(1, concurrency)
@@ -4105,6 +4356,7 @@ def _metadata_document(
     parallel_calls: bool = False,
     early_majority: bool = False,
     integrity_gate: bool = False,
+    advocate_effort: str = pipeline.ADVOCATE_EFFORT_DEFAULT,
 ) -> Dict[str, Any]:
     """The run's own metadata file.
 
@@ -4145,6 +4397,14 @@ def _metadata_document(
     is how long a panel waits, which the case files themselves record -- the
     draft the panel did not wait for carries ``not_awaited`` and the vote block
     says ``early_majority``.
+
+    ``advocate_effort`` is the one of these switches that is written **both**
+    here and in ``configuration``, and it is written here only when it is not
+    the default, so a plain run's metadata is the metadata it always wrote. It
+    belongs in both because it does change request bodies -- the two advocate
+    requests carry ``"reasoning_effort": "none"`` -- and the metadata file is
+    what a reader consults to learn what an invocation did, while the
+    ``configuration`` object is what a case file is read against.
     """
     failed = [outcome for outcome in outcomes if outcome.status == STATUS_FAILED]
     consumed = tokens_charged + tokens_failed
@@ -4195,6 +4455,16 @@ def _metadata_document(
         # model was asked, on the same rule once more: a switch that says what
         # the invocation did and not what it measured.
         **({"integrity_gate": True} if integrity_gate else {}),
+        # And which reasoning effort the two advocates' requests carried, named
+        # only when it is not the default, so a plain run's metadata is the
+        # metadata it always wrote. It is the one of these switches that is also
+        # in ``configuration`` above, because it is the one of them that changes
+        # request bodies.
+        **(
+            {"advocate_effort": advocate_effort}
+            if advocate_effort != pipeline.ADVOCATE_EFFORT_DEFAULT
+            else {}
+        ),
         "git_commit": run_provenance.get("git_commit"),
         "working_tree_clean": run_provenance.get("working_tree_clean"),
         "working_tree_status": run_provenance.get("working_tree_status"),
@@ -5959,6 +6229,25 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             "re-taken"
         ),
     )
+    parser.add_argument(
+        "--advocate-effort",
+        choices=list(pipeline.ADVOCATE_EFFORTS),
+        default=pipeline.ADVOCATE_EFFORT_DEFAULT,
+        metavar="EFFORT",
+        help=(
+            "which reasoning effort the two advocates' requests carry: default "
+            "(the default) leaves every request exactly as it is today, and none "
+            "makes the two advocate requests carry reasoning_effort \"none\" "
+            "while the judge's drafts and the verifier are untouched. It is a "
+            "switch that changes what a run measures, so results go to "
+            "runs/advocate-effort-<effort>/<set>/[policy-v<N>/]<model>/, never "
+            "into a run directory holding a default result, and it is refused "
+            "for every sealed set, whose single run is one measurement and is "
+            "not re-taken. It may be given with --policy-version, whose "
+            "directory sits under the switch's root, and it is refused beside "
+            "--ablate, --precedents, --amount-rule and a replay"
+        ),
+    )
     parser.add_argument("--runs-dir", type=Path, default=RUNS_DIR)
     parser.add_argument("--prompts-dir", type=Path, default=PROMPTS_DIR)
     args = parser.parse_args(argv)
@@ -6120,6 +6409,58 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 parser.error(
                     "--amount-rule names the rule a draft's amount is read off "
                     "the brief's money block by and takes no {0}, which "
+                    "{1}".format(name, why)
+                )
+
+    if args.advocate_effort != pipeline.ADVOCATE_EFFORT_DEFAULT:
+        # The fifth switch that changes what a run measures, and it follows the
+        # rule the other four follow: every mode below reads or produces a run
+        # whose advocates reasoned as they always did, so naming the switch
+        # beside one would look as though it had been applied. ``--policy-version``
+        # is deliberately **not** in that list: the version's directory sits
+        # under the switch's own root, so the two may be given together and the
+        # run goes to ``runs/advocate-effort-<effort>/policy-v<N>/<model>/``.
+        # This block comes after the other four, so it is the one that catches
+        # the switch named beside any of them as well as one named alone.
+        if (
+            args.ablate is not None
+            or args.precedents
+            or args.amount_rule != pipeline.DEFAULT_AMOUNT_RULE
+        ):
+            parser.error(
+                "at most one of --ablate, --precedents, --policy-version N>=2, "
+                "--amount-rule and --advocate-effort may be given per "
+                "invocation: each changes what the run measures, and a run with "
+                "two of them on measures neither"
+            )
+        for present, name, why in (
+            (
+                args.compare,
+                "--compare",
+                "reads cached runs produced with the advocates reasoning",
+            ),
+            (
+                args.replay_advocates is not None,
+                "--replay-advocates",
+                "reuses a recorded run's advocates and calls only the judge, so "
+                "no advocate request is made for the switch to change",
+            ),
+            (args.replay_check is not None, "--replay-check", "reads a recorded run"),
+            (
+                args.verify_recorded_drafts is not None,
+                "--verify-recorded-drafts",
+                "reuses a recorded run's drafts",
+            ),
+            (
+                args.external is not None,
+                "--external",
+                "arbitrates a converted case in full, outside the corpus",
+            ),
+        ):
+            if present:
+                parser.error(
+                    "--advocate-effort names the reasoning effort the two "
+                    "advocates' requests carry and takes no {0}, which "
                     "{1}".format(name, why)
                 )
 
@@ -6333,6 +6674,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             # And the record-integrity gate, on the same rule once more: a switch
             # this command line accepts is a switch it honours.
             integrity_gate=args.integrity_gate,
+            # And the advocate-effort switch, on the same rule again: accepted
+            # here, honoured in the pipeline, and refused above where it cannot
+            # be.
+            advocate_effort=args.advocate_effort,
         )
     except llm.ModelNotProvisionedError as exc:
         print("FATAL: {0}".format(exc), file=sys.stderr)

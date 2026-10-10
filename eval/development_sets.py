@@ -1333,6 +1333,15 @@ def run_set(
     for a **sealed** set by the set's own name for the same reason: a sealed
     set's single run is one measurement, and a switch that would have escalated a
     record without asking the model is a different measurement.
+
+    ``advocate_effort`` arrives the same way and is the one of these switches
+    that changes what a run measures: ``none`` makes the two advocate requests
+    carry ``reasoning_effort``, so it is passed to the runner like the ablation
+    and a later policy version, and it is refused for a **sealed** set by the
+    set's own name. The refusal is made here rather than left to the runner's
+    destination guard, because the switched run goes to a root of its own --
+    ``runs/advocate-effort-<effort>/`` at the top of the runs tree -- and never
+    near the sealed root, so no destination guard would notice it.
     """
     if force:
         assert_not_sealed(development_set, "--force")
@@ -1355,6 +1364,19 @@ def run_set(
         # one measurement and a switch that would have escalated a record
         # without asking the model is a different one.
         assert_not_sealed(development_set, "--integrity-gate")
+
+    if (
+        kwargs.get("advocate_effort", run_benchmark.pipeline.ADVOCATE_EFFORT_DEFAULT)
+        != run_benchmark.pipeline.ADVOCATE_EFFORT_DEFAULT
+    ):
+        # By the set's own name, on the same rule once more. Unlike the other
+        # switches refused here, this one **does** change request bodies -- the
+        # two advocate requests gain ``reasoning_effort`` -- so a sealed set's
+        # single run would be a different measurement from the one the freeze
+        # names, and the switch is refused rather than left to the destination
+        # guard: the switched run goes to a root of its own, outside the sealed
+        # root, so no destination guard would notice it.
+        assert_not_sealed(development_set, "--advocate-effort")
 
     selected = list(development_set.cases if cases is None else cases)
     unknown = [case_no for case_no in selected if case_no not in set(development_set.cases)]
@@ -2082,6 +2104,27 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--advocate-effort",
+        choices=list(run_benchmark.pipeline.ADVOCATE_EFFORTS),
+        default=run_benchmark.pipeline.ADVOCATE_EFFORT_DEFAULT,
+        metavar="EFFORT",
+        help=(
+            "which reasoning effort the two advocates' requests carry: default "
+            "(the default) leaves every request exactly as it is today, and none "
+            "makes the two advocate requests carry reasoning_effort \"none\" "
+            "while the judge's drafts and the verifier are untouched. It is a "
+            "switch that changes what a run measures, so results go to "
+            "runs/advocate-effort-<effort>/<set>/[policy-v<N>/]<model>/ -- the "
+            "switch's own root at the top of the runs tree, with the set's own "
+            "subdirectory under it -- and never into a run directory holding a "
+            "default result. It may be given with --policy-version, whose "
+            "directory sits under the switch's root, and it is refused beside "
+            "--ablate, --precedents, --amount-rule and a replay. It is refused "
+            "for every sealed set, whose single run is one measurement and is "
+            "not re-taken"
+        ),
+    )
+    parser.add_argument(
         "--report",
         action="store_true",
         help="print the sets separately and combined from cached runs; makes no model call",
@@ -2258,6 +2301,46 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         # other three read a run, or reuse recorded drafts, without judging
         # anything: the rule would not be applied and would look as though it
         # had been.
+
+    if args.advocate_effort != run_benchmark.pipeline.ADVOCATE_EFFORT_DEFAULT:
+        # The fifth switch that changes what a run measures, and it follows the
+        # rule the other four follow. It **does** change request bodies -- the
+        # two advocate requests gain ``reasoning_effort`` -- so a mode that reads
+        # or reports a run whose advocates reasoned as they always did cannot be
+        # combined with it: naming the switch beside one would look as though it
+        # had been applied. This block runs last, so it is the one that catches
+        # the switch named beside any of the other four as well as one alone.
+        #
+        # ``--policy-version`` is deliberately **not** in that list: the
+        # version's directory sits under the switch's own root, so the two may be
+        # given together and the run goes to
+        # ``runs/advocate-effort-<effort>/policy-v<N>/<model>/``.
+        if (
+            args.ablate is not None
+            or args.precedents
+            or args.amount_rule != run_benchmark.pipeline.DEFAULT_AMOUNT_RULE
+        ):
+            print(
+                "FATAL: at most one of --ablate, --precedents, --policy-version "
+                "N>=2, --amount-rule and --advocate-effort may be given per "
+                "invocation: each changes what the run measures, and a run with "
+                "two of them on measures neither",
+                file=sys.stderr,
+            )
+            return 1
+        for present, name in (
+            (args.report, "--report"),
+            (args.replay_advocates is not None, "--replay-advocates"),
+            (args.replay_check is not None, "--replay-check"),
+            (args.verify_recorded_drafts is not None, "--verify-recorded-drafts"),
+        ):
+            if present:
+                print(
+                    "FATAL: --advocate-effort names the reasoning effort the two "
+                    "advocates' requests carry and takes no {0}".format(name),
+                    file=sys.stderr,
+                )
+                return 1
 
     if args.early_majority:
         # The early-majority switch's own two conditions, refused before any
@@ -2446,6 +2529,16 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 (args.force, "--force"),
                 (args.early_majority, "--early-majority"),
                 (args.integrity_gate, "--integrity-gate"),
+                # The advocate-effort switch by name too. It is refused in
+                # ``run_set`` as well, and here as well for the reason
+                # ``--force`` is: the message should name the switch a reader
+                # typed rather than the frozen-arguments check that would
+                # otherwise answer first.
+                (
+                    args.advocate_effort
+                    != run_benchmark.pipeline.ADVOCATE_EFFORT_DEFAULT,
+                    "--advocate-effort",
+                ),
                 (args.replay_advocates is not None, "--replay-advocates"),
                 (args.replay_check is not None, "--replay-check"),
                 (args.verify_recorded_drafts is not None, "--verify-recorded-drafts"),
@@ -2701,6 +2794,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 parallel_calls=args.parallel_calls,
                 early_majority=args.early_majority,
                 integrity_gate=args.integrity_gate,
+                advocate_effort=args.advocate_effort,
             )
         except run_benchmark.llm.ModelNotProvisionedError as exc:
             print("FATAL: {0}".format(exc), file=sys.stderr)

@@ -441,6 +441,7 @@ class LLMClient:
         response_format: Optional[Dict[str, Any]],
         temperature: Any = _UNSET,
         seed: Any = _UNSET,
+        reasoning_effort: Any = _UNSET,
     ) -> Dict[str, Any]:
         """The request body, with every optional key omitted when it is None.
 
@@ -450,15 +451,26 @@ class LLMClient:
         a value. Omitting ``reasoning_effort`` leaves reasoning ON; passing the
         explicit string ``"none"`` suppresses it.
 
-        ``temperature`` and ``seed`` here are **per-call overrides**. Left at
-        ``_UNSET`` -- the default -- each falls back to the value this client
-        was built with, so a caller that says nothing gets exactly the body it
-        got before these parameters existed. A caller that passes one overrides
-        it for that call alone; the client's own settings are not modified,
-        because two calls of one client under two seeds is the whole point.
+        ``temperature``, ``seed`` and ``reasoning_effort`` here are **per-call
+        overrides**. Left at ``_UNSET`` -- the default -- each falls back to the
+        value this client was built with, so a caller that says nothing gets
+        exactly the body it got before these parameters existed. A caller that
+        passes one overrides it for that call alone; the client's own settings
+        are not modified, because two calls of one client under two seeds is the
+        whole point -- and one client whose advocates reason and whose judge is
+        asked the same way it always was is the whole point of the third.
+
+        ``reasoning_effort`` is the one that reaches a *subset* of a case's
+        calls: ``tribunal.pipeline`` passes it on the two advocate calls alone
+        when ``--advocate-effort none`` is on, and passes nothing at all on
+        every other call, so the judge's drafts and the verifier are the
+        requests they always were.
         """
         effective_temperature = self._temperature if temperature is _UNSET else temperature
         effective_seed = self._seed if seed is _UNSET else seed
+        effective_reasoning_effort = (
+            self._reasoning_effort if reasoning_effort is _UNSET else reasoning_effort
+        )
         body: Dict[str, Any] = {
             "model": self._model,
             "messages": [
@@ -470,8 +482,8 @@ class LLMClient:
             body["temperature"] = effective_temperature
         if effective_seed is not None:
             body["seed"] = effective_seed
-        if self._reasoning_effort is not None:
-            body["reasoning_effort"] = self._reasoning_effort
+        if effective_reasoning_effort is not None:
+            body["reasoning_effort"] = effective_reasoning_effort
         if response_format is not None:
             body["response_format"] = response_format
         return body
@@ -632,13 +644,17 @@ class LLMClient:
         response_format: Optional[Dict[str, Any]] = None,
         temperature: Any = _UNSET,
         seed: Any = _UNSET,
+        reasoning_effort: Any = _UNSET,
     ) -> LLMResult:
         """Send one request and return everything it produced.
 
-        ``temperature`` and ``seed`` override this client's own settings for
-        this call alone; left unset, the client's values are used and the body
-        is the one it has always sent. A caller that needs several samples of
-        one prompt with different seeds therefore needs one client, not several.
+        ``temperature``, ``seed`` and ``reasoning_effort`` override this
+        client's own settings for this call alone; left unset, the client's
+        values are used and the body is the one it has always sent. A caller
+        that needs several samples of one prompt with different seeds therefore
+        needs one client, not several -- and a caller that wants reasoning off
+        for two calls of a case and left alone for the rest needs one client
+        too, because ``reasoning_effort`` travels per call.
 
         Raises :class:`MissingAPIKeyError` when there is no credential and
         :class:`ModelNotProvisionedError` when the model is not provisioned.
@@ -646,7 +662,9 @@ class LLMClient:
         ``parse_outcome == PARSE_MALFORMED``, ``parse_error`` and the raw text,
         so the caller can decide whether to retry.
         """
-        request_body = self._request_body(system, user, response_format, temperature, seed)
+        request_body = self._request_body(
+            system, user, response_format, temperature, seed, reasoning_effort
+        )
         encoded = json.dumps(request_body, ensure_ascii=False).encode("utf-8")
         digest = hashlib.sha256(encoded).hexdigest()
 
