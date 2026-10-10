@@ -309,7 +309,10 @@ class ThePolicyTests(unittest.TestCase):
         self.assertEqual(ew.BURDEN_SENTENCE, burden)
         self.assertEqual(ew.CHARGE_DEFAULT_SENTENCE, charge)
         text = self.policies()["general"]
-        self.assertIn("REQUEST_EVIDENCE, naming the record-type items required", json.dumps(text))
+        self.assertIn(
+            "REQUEST_EVIDENCE, naming the record-type items required",
+            json.dumps(text, default=str),
+        )
 
     def test_a_moved_sentence_is_refused(self):
         """A POL-GEN-06 that no longer names the decision is a refusal."""

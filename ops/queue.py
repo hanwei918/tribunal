@@ -21,6 +21,13 @@ has already finished with.
   case is placed in the human queue by the policy itself.
 * ``AUTO`` -- the pipeline ruled, or has ruled, and did not escalate.
 
+**A threat in the chat log comes first.** A dispute whose chat log carries a
+threat message -- read by ``ops.chat_signals``, the layer's own deterministic
+detector -- is fast-tracked with the reason ``CHAT_THREAT``, ahead of the
+category, the ``POL-GEN-08(1)`` flags and the kill switch alike. The signal is a
+routing input: it decides a lane and is written nowhere else, so it never enters
+a brief or a prompt.
+
 **The kill switch.** ``auto_rulings_enabled`` false in ``ops/config.json`` moves
 every dispute the pipeline would have ruled on into ``HUMAN_REVIEW`` with the
 reason ``AUTO_PAUSED``. It is the router declining to hand the dispute on, and it
@@ -73,7 +80,15 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Sequence, Tuple
 
-from ops import OpsError, appeal, development_set_for, evidence_window, read_json_document, risk
+from ops import (
+    OpsError,
+    appeal,
+    chat_signals,
+    development_set_for,
+    evidence_window,
+    read_json_document,
+    risk,
+)
 from tribunal import loader
 
 # The config this module reads when it is not given one. It sits beside the
@@ -114,6 +129,11 @@ REASON_GEN08_COMPLAINT = "GEN08_COMPLAINT"
 # threshold is issued but not executed: the amount is held and the case is placed
 # in the human queue for release, so the reason is named here.
 REASON_GEN05_RELEASE = "GEN05_RELEASE"
+# The chat threat lane. A dispute whose chat log carries a threat message is
+# fast-tracked ahead of every other lane, with the reason ``CHAT_THREAT``. The
+# message is read by ``ops.chat_signals``, the layer's own deterministic
+# detector, and the signal never enters a brief or a prompt.
+REASON_CHAT_THREAT = "CHAT_THREAT"
 
 # The status a human-lane case carries once its first-review deadline has passed.
 # It is ``POL-GEN-06(2)``'s own consequence: "a review past its limit is escalated
@@ -134,6 +154,10 @@ ESCALATE = "ESCALATE"
 # the pipeline. The list is a list and not a name prefix, because a name is not
 # a guarantee of anything.
 SAFETY_CATEGORIES: Tuple[str, ...] = ("SAFETY_INCIDENT",)
+
+# The evidence kind a threat message travels in, and the field it is read from.
+# A chat log's messages are the only text the threat detector reads.
+CHAT_LOG_EVIDENCE_TYPE = "CHAT_LOG"
 
 # The four targets the config states, and the lane each one is the target of.
 SLA_KEYS = (
@@ -270,6 +294,10 @@ class Dispute(NamedTuple):
     amount_sgd: Optional[Decimal] = None
     driver_compensation_sgd: Optional[Decimal] = None
     execution_threshold_sgd: Optional[Decimal] = None
+    # Whether the case's chat log carries a threat message, read by
+    # ``ops.chat_signals``. A threat message fast-tracks the dispute ahead of
+    # every other lane; the signal is a routing input and reaches no brief.
+    chat_threat: bool = False
 
 
 class Entry(NamedTuple):
@@ -316,6 +344,12 @@ def lane_for(dispute: Dispute, config: Config) -> Tuple[str, Tuple[str, ...]]:
     category the pipeline learns to adjudicate becomes routable without this
     module being edited.
 
+    A **threat message in the chat log** is checked first, before every other
+    lane: a threat to a person's safety outranks the category, the flags and the
+    kill switch alike, and the dispute is fast-tracked with the reason
+    ``CHAT_THREAT``. The message is read by ``ops.chat_signals`` and the signal
+    stays in this layer.
+
     ``POL-GEN-08(1)`` is checked **before** the category, because a flagged
     dispute is never adjudicated automatically: whatever its category, a safety
     flag is fast-tracked and a complaint flag is a human review with the reason
@@ -328,6 +362,8 @@ def lane_for(dispute: Dispute, config: Config) -> Tuple[str, Tuple[str, ...]]:
     every dispute the pipeline would have ruled on and that is the more general
     fact.
     """
+    if dispute.chat_threat:
+        return LANE_SAFETY, (REASON_CHAT_THREAT,)
     if dispute.safety_flag:
         return LANE_SAFETY, (REASON_SAFETY_FLAG,)
     if dispute.complaint_flag:
@@ -523,6 +559,29 @@ def _at_most(value: Any, limit: Decimal) -> bool:
 # --------------------------------------------------------------------------
 # Reading a run
 # --------------------------------------------------------------------------
+def chat_log_has_threat(case: Mapping[str, Any]) -> bool:
+    """Whether any message of the case's chat log carries a threat.
+
+    The message is read with :func:`ops.chat_signals.detect`, the layer's own
+    deterministic detector, and only the ``CHAT_LOG`` artifact's messages are
+    read. The reading is a routing input: it decides a lane and is written
+    nowhere else, so it never enters a brief or a prompt.
+    """
+    for artifact in case.get("evidence") or []:
+        if not isinstance(artifact, Mapping):
+            continue
+        if artifact.get("evidence_type") != CHAT_LOG_EVIDENCE_TYPE:
+            continue
+        payload = artifact.get("payload")
+        if not isinstance(payload, Mapping):
+            continue
+        for message in payload.get("messages") or []:
+            text = message.get("text") if isinstance(message, Mapping) else None
+            if isinstance(text, str) and chat_signals.detect(text)["threat"]:
+                return True
+    return False
+
+
 def _risk_tripped(case: Mapping[str, Any], document: Mapping[str, Any], development_set) -> bool:
     """Whether any of part 1's five tests trips for this case.
 
@@ -611,6 +670,7 @@ def disputes_from_run(run_dir: Path) -> List[Dispute]:
                 execution_threshold_sgd=_execution_threshold(
                     dispute["category"], version or development_set.policy_version
                 ),
+                chat_threat=chat_log_has_threat(case),
             )
         )
     return found

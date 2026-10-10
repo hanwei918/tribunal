@@ -18,9 +18,12 @@ system rather than its accuracy:
   **run as a command** and its JSON is read, and the answer is held against the
   set's own key and its cross-case expectation.
 * **chat-signals-v1** -- 32 labelled chat messages under ``eval/fixtures/``, not
-  cases. The check is the label counts. No classifier exists yet: the fixture is
-  the labelled set a classifier would be measured against, and nothing here
-  classifies anything.
+  cases. The check runs ``python3 -m ops.chat_signals`` as a subprocess over the
+  fixture's message texts (passed on standard input) and scores the threat
+  label: true and false positives and negatives, precision and recall, and every
+  miss by id. Agreement, disagreement and sentiment are **not** built, and this
+  module reads none of them. The rules were written with this fixture visible, so
+  the score is a development figure and not a held-out one.
 
 This module is under ``eval/``, so it may read ``eval/answers/``; nothing under
 ``tribunal/`` may, and nothing here is imported by it. It writes nothing: every
@@ -32,16 +35,20 @@ command is a reading, and ``--report`` prints to standard output.
 answer key. The collusion reading is therefore taken the way a person would take
 it -- ``python3 -m ops.risk --case-root <root> --json`` is run as a subprocess
 and its output is parsed -- rather than by importing the layer that produced it.
+The chat reading is taken the same way: ``python3 -m ops.chat_signals`` is run as
+a subprocess with the fixture's message texts on standard input, so the module
+that reads ``eval/fixtures/`` is this one and the command never opens a file.
 
 What "still present" means
 --------------------------
 ``pii-v1``'s key lists, per case, the strings that must be masked before display
 and the strings that must not be. A string the key says must be masked and that
 the version-6 brief **still contains** is a leak: the mask did not reach it. The
-version-6 mask implements ``POL-GEN-08(4)``'s vehicle registration marks only, so
-today the plates are masked and the names, telephone numbers and e-mail addresses
-are reported as found. Reporting is the whole of what this module does about
-them: the gap is the policy's, not this reading's, and it is not fixed here.
+version-6 mask implements ``POL-GEN-08(4)``'s vehicle registration marks,
+telephone numbers and e-mail addresses, so the plates, the numbers and the
+addresses are masked and the names are reported as found. Names are **not**
+masked: a pattern that spares "Tan Tock Seng Hospital" and "Lim Chu Kang Road"
+needs more than a regular expression, and the README and the privacy page say so.
 """
 
 from __future__ import annotations
@@ -180,8 +187,8 @@ def pii_report() -> List[str]:
         "For each case, every span the key says must be masked and whether the",
         "version-6 brief still contains it, then every span it says must not be",
         "masked and whether it survives. \"STILL PRESENT\" on a mask span is a",
-        "leak: the mask did not reach it. Only PLATE is masked today; the other",
-        "kinds are reported as found and are not fixed here.",
+        "leak: the mask did not reach it. PLATE, PHONE and EMAIL are masked;",
+        "NAME is not, and the disclosure says so.",
         "",
     ]
     masked = {kind: 0 for kind in SPAN_KINDS}
@@ -248,12 +255,11 @@ def pii_report() -> List[str]:
         )
     )
     lines.append(
-        "  The mask implements POL-GEN-08(4)'s vehicle registration marks only,"
+        "  The mask implements POL-GEN-08(4)'s vehicle registration marks,"
     )
     lines.append(
-        "  so the {0} plate spans are masked and the {1} other spans are not.".format(
-            masked.get("PLATE", 0), total_masked - masked.get("PLATE", 0)
-        )
+        "  telephone numbers and e-mail addresses; the {0} name spans are not "
+        "masked.".format(masked.get("NAME", 0))
     )
     for note in pii_notes():
         lines.append("")
@@ -425,22 +431,71 @@ def _numbers(values: Sequence[int]) -> str:
 
 
 # --------------------------------------------------------------------------
-# chat-signals-v1: the fixture's counts per label
+# chat-signals-v1: the fixture's counts per label, and the detector's score
 # --------------------------------------------------------------------------
 CHAT_LABELS: Tuple[str, ...] = ("threat", "agreement", "disagreement")
 SENTIMENTS: Tuple[str, ...] = ("NEG", "NEU", "POS")
 
+# The ops module the threat label is scored with. It is named as a command-line
+# module rather than imported, for the reason the risk module is: see the module
+# docstring. The fixture's texts are handed to it on standard input, because the
+# command opens no file and ``ops`` never opens anything under ``eval/``.
+CHAT_SIGNALS_MODULE = "ops.chat_signals"
+
+
+def chat_threat_reading() -> List[Mapping[str, Any]]:
+    """``python3 -m ops.chat_signals`` over the fixture's texts, one verdict each.
+
+    The module is **run**, not imported: ``eval/`` may not import ``ops`` (see
+    the module docstring). The fixture's message texts travel on standard input
+    as a JSON array, and the interpreter is the one running this module, so the
+    two halves cannot come from different Pythons. A non-zero exit is a refusal
+    and is reported rather than read as an empty reading.
+    """
+    document = read_json(CHAT_FIXTURE)
+    texts = [item["text"] for item in document["items"]]
+    completed = subprocess.run(
+        [sys.executable, "-m", CHAT_SIGNALS_MODULE],
+        cwd=str(PROJECT_ROOT),
+        input=json.dumps(texts),
+        capture_output=True,
+        text=True,
+    )
+    if completed.returncode != 0:
+        raise FuncSetsError(
+            "{0} exited {1}: {2}".format(
+                CHAT_SIGNALS_MODULE, completed.returncode, completed.stderr.strip()
+            )
+        )
+    payload = json.loads(completed.stdout)
+    results = payload["results"]
+    if len(results) != len(texts):
+        raise FuncSetsError(
+            "{0} answered {1} message(s) for {2} sent".format(
+                CHAT_SIGNALS_MODULE, len(results), len(texts)
+            )
+        )
+    return results
+
+
+def _ratio(numerator: int, denominator: int) -> str:
+    """``6/6 = 1.000``; a zero denominator reads ``0.000`` rather than failing."""
+    value = 0.0 if denominator == 0 else numerator / denominator
+    return "{0}/{1} = {2:.3f}".format(numerator, denominator, value)
+
 
 def chat_report() -> List[str]:
-    """The fixture's counts per label, recomputed and held against its own."""
+    """The fixture's counts per label, and the detector's score on the threat label."""
     document = read_json(CHAT_FIXTURE)
     items = document["items"]
     declared = document["counts"]
 
     lines: List[str] = [
-        "The fixture's counts per label. They are recomputed from the items and",
-        "held against the counts the file itself states, so a drifted file is",
-        "reported rather than copied.",
+        "The fixture's counts per label, recomputed and held against the counts",
+        "the file itself states; then the threat label scored against the fixture,",
+        "with python3 -m ops.chat_signals run as a subprocess over the message",
+        "texts. The rules were written with this 32-message fixture visible, so",
+        "the score is a development figure and not a held-out one.",
         "",
         "  set {0}, {1} messages".format(document["set"], len(items)),
         "",
@@ -466,11 +521,56 @@ def chat_report() -> List[str]:
             "yes" if agrees else "NO"
         )
     )
+
+    reading = chat_threat_reading()
+    true_positives = false_positives = false_negatives = true_negatives = 0
+    misses: List[str] = []
+    for item, verdict in zip(items, reading):
+        expected = bool(item["labels"]["threat"])
+        produced = bool(verdict["threat"])
+        if produced and expected:
+            true_positives += 1
+        elif produced and not expected:
+            false_positives += 1
+            misses.append(
+                "      false positive  {0}  {1!r}  matched {2}".format(
+                    item["id"], item["text"], ", ".join(verdict["matched"]) or "(none)"
+                )
+            )
+        elif expected and not produced:
+            false_negatives += 1
+            misses.append(
+                "      false negative  {0}  {1!r}".format(item["id"], item["text"])
+            )
+        else:
+            true_negatives += 1
+
     lines.append("")
-    lines.append("  No classifier exists yet: the fixture is the labelled set one")
-    lines.append("  would be measured against, and nothing here classifies a")
-    lines.append("  message. The label a threat carries is what routes a dispute to")
-    lines.append("  the safety lane; no label enters a brief.")
+    lines.append("  the threat label, scored by python3 -m ops.chat_signals:")
+    lines.append("    true positives   {0}".format(true_positives))
+    lines.append("    false positives  {0}".format(false_positives))
+    lines.append("    false negatives  {0}".format(false_negatives))
+    lines.append("    true negatives   {0}".format(true_negatives))
+    lines.append(
+        "    precision        {0}".format(
+            _ratio(true_positives, true_positives + false_positives)
+        )
+    )
+    lines.append(
+        "    recall           {0}".format(
+            _ratio(true_positives, true_positives + false_negatives)
+        )
+    )
+    lines.append("    every miss by id:")
+    if misses:
+        lines.extend(misses)
+    else:
+        lines.append("      (none)")
+    lines.append("")
+    lines.append("  Agreement, disagreement and sentiment are not built: the fixture")
+    lines.append("  carries those labels and this module reads none of them. The threat")
+    lines.append("  label is what routes a dispute to the safety lane; no label enters")
+    lines.append("  a brief.")
     return lines
 
 
@@ -512,8 +612,8 @@ def report() -> str:
         [
             "",
             "",
-            "chat-signals-v1: the fixture's label counts",
-            "-------------------------------------------",
+            "chat-signals-v1: the fixture's label counts, and the detector's score",
+            "------------------------------------------------------------------------",
             "",
         ]
     )

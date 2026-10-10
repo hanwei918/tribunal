@@ -11,6 +11,13 @@ figure. The fourth is a fixture of labelled chat messages,
 that pii-v1 case 3202 exposed is fixed in the same change; that fix is
 `docs/notes/2026-10-10-the-counterparty-mask.md`.
 
+**Part 24 (2026-10-10) adds two things.** The version-6 mask is extended from
+the vehicle registration marks to **telephone numbers and e-mail addresses**, in
+the same four fields, and the chat fixture gains a reader: `ops/chat_signals.py`
+is a deterministic threat detector, `ops/queue.py` routes a dispute whose chat
+carries a threat to the safety lane, and this report now scores the detector's
+threat label. Both are described below. Names remain **unmasked**.
+
 Nothing here changes a case file, a policy, a prompt or a key. Every figure
 below is printed by `python3 -m eval.func_sets --report`, which reads the sets
 and writes nothing; no model was called to produce it.
@@ -32,9 +39,11 @@ telephone numbers with and without `+65` and with and without spaces, two
 e-mail addresses at RFC 2606 reserved domains, and vehicle plates, with place
 names that contain surnames as hard negatives. The check needs no model: the
 version-6 brief is built and every span the key names is looked for in it. The
-mask implements `POL-GEN-08(4)`'s vehicle registration marks only, so the
-report finds the plate spans masked and every name, telephone number and e-mail
-address still present. The gap is reported as found and is not fixed here.
+mask implements `POL-GEN-08(4)`'s vehicle registration marks, **telephone
+numbers and e-mail addresses**, so the report finds the plates, the numbers and
+the addresses masked and every name still present. Names are not masked: a
+pattern that spares "Tan Tock Seng Hospital" and "Lim Chu Kang Road" needs more
+than a regular expression, and the README and the privacy page say so.
 
 **collusion-v1** measures the operations layer's risk reading over a whole case
 root rather than one case at a time. Eight cases are read together: 3301-3303
@@ -51,11 +60,12 @@ are held against the risk clauses the key's own ruling rests on.
 carrying three boolean labels (threat, agreement, disagreement) and a sentiment
 label, with hard negatives beside every positive -- a complaint threat that is
 not a safety threat, sarcasm that is not agreement, a location correction that
-is not a dispute. The check is the label counts, recomputed from the items and
-held against the counts the file itself states. No classifier exists yet: the
-fixture is the labelled set one would be measured against, and nothing here
-classifies a message. The routing rule it is built for is that a message
-labelled `threat` sends the dispute to the safety lane; no label enters a brief.
+is not a dispute. The check recomputes the label counts and holds them against
+the counts the file itself states, and then scores the **threat** label with
+`ops/chat_signals.py`, run as a subprocess. Agreement, disagreement and
+sentiment are not detected: the fixture carries those labels and no module reads
+them. The routing rule it is built for is that a message labelled `threat` sends
+the dispute to the safety lane; no label enters a brief.
 
 ## The report
 
@@ -79,51 +89,51 @@ pii-v1: personal data in party text, and the version-6 brief
 For each case, every span the key says must be masked and whether the
 version-6 brief still contains it, then every span it says must not be
 masked and whether it survives. "STILL PRESENT" on a mask span is a
-leak: the mask did not reach it. Only PLATE is masked today; the other
-kinds are reported as found and are not fixed here.
+leak: the mask did not reach it. PLATE, PHONE and EMAIL are masked;
+NAME is not, and the disclosure says so.
 
   case 3201  (NO_SHOW_CHARGE)
     mask   NAME  'Tan Mei Ling'                     STILL PRESENT
-    mask   PHONE '9912 3456'                        STILL PRESENT
+    mask   PHONE '9912 3456'                        masked
     mask   NAME  'Mei Ling'                         STILL PRESENT
-    mask   PHONE '+65 9934 1207'                    STILL PRESENT
+    mask   PHONE '+65 9934 1207'                    masked
     keep   PLACE 'Tan Tock Seng Hospital'           survives
   case 3202  (NO_SHOW_CHARGE)
     mask   NAME  'Jonathan Lim'                     STILL PRESENT
     mask   PLATE 'SZZ 4821 K'                       masked
     mask   PLATE 'SZZ 4821 K'                       masked
   case 3203  (NO_SHOW_CHARGE)
-    mask   EMAIL 'priya.raghavan@example.com'       STILL PRESENT
-    mask   PHONE '99785521'                         STILL PRESENT
+    mask   EMAIL 'priya.raghavan@example.com'       masked
+    mask   PHONE '99785521'                         masked
     mask   NAME  'Muhammad Hafiz bin Rahman'        STILL PRESENT
   case 3204  (NO_SHOW_CHARGE)
     mask   NAME  'Siti'                             STILL PRESENT
     keep   PLACE 'Lim Chu Kang Road'                survives
   case 3205  (ROUTE_DEVIATION)
     mask   NAME  'Daniel Koh'                       STILL PRESENT
-    mask   PHONE '9921 8804'                        STILL PRESENT
+    mask   PHONE '9921 8804'                        masked
     mask   PLATE 'SZY 7302 D'                       masked
   case 3206  (ROUTE_DEVIATION)
     mask   NAME  'Kumar s/o Ramasamy'               STILL PRESENT
   case 3207  (ROUTE_DEVIATION)
     mask   NAME  'Aisyah Binte Osman'               STILL PRESENT
-    mask   PHONE '9967 0042'                        STILL PRESENT
+    mask   PHONE '9967 0042'                        masked
     keep   PLACE 'Jurong Point'                     survives
   case 3208  (ROUTE_DEVIATION)
-    mask   EMAIL 'w.chen@example.org'               STILL PRESENT
+    mask   EMAIL 'w.chen@example.org'               masked
     keep   PLACE 'AYE Alexandra Rd'                 survives
 
   mask spans by kind:
     NAME   8 of 8 still present, 0 masked
-    PHONE  5 of 5 still present, 0 masked
-    EMAIL  2 of 2 still present, 0 masked
+    PHONE  0 of 5 still present, 5 masked
+    EMAIL  0 of 2 still present, 2 masked
     PLATE  0 of 3 still present, 3 masked
   do-not-mask spans by kind:
     PLACE  4 of 4 survive, 0 removed
 
-  18 mask spans over 8 cases; 15 still present, 3 masked.
-  The mask implements POL-GEN-08(4)'s vehicle registration marks only,
-  so the 3 plate spans are masked and the 15 other spans are not.
+  18 mask spans over 8 cases; 8 still present, 10 masked.
+  The mask implements POL-GEN-08(4)'s vehicle registration marks,
+  telephone numbers and e-mail addresses; the 8 name spans are not masked.
 
   note (eval/external/ryde/DISP-002.md): The organisers' sample as supplied carries two personal names and a plate; the converted case 901 carries only the plate. A new-dispute intake that reads the original must mask both names before any brief is built.
 
@@ -170,12 +180,14 @@ expected_ruling (see expected_risk_tests).
   establishing a fact about the trip, so nothing here rules.
 
 
-chat-signals-v1: the fixture's label counts
--------------------------------------------
+chat-signals-v1: the fixture's label counts, and the detector's score
+------------------------------------------------------------------------
 
-The fixture's counts per label. They are recomputed from the items and
-held against the counts the file itself states, so a drifted file is
-reported rather than copied.
+The fixture's counts per label, recomputed and held against the counts
+the file itself states; then the threat label scored against the fixture,
+with python3 -m ops.chat_signals run as a subprocess over the message
+texts. The rules were written with this 32-message fixture visible, so
+the score is a development figure and not a held-out one.
 
   set chat-signals-v1, 32 messages
 
@@ -189,24 +201,33 @@ reported rather than copied.
 
   the file's own counts agree with the recomputation: yes
 
-  No classifier exists yet: the fixture is the labelled set one
-  would be measured against, and nothing here classifies a
-  message. The label a threat carries is what routes a dispute to
-  the safety lane; no label enters a brief.
+  the threat label, scored by python3 -m ops.chat_signals:
+    true positives   6
+    false positives  0
+    false negatives  0
+    true negatives   26
+    precision        6/6 = 1.000
+    recall           6/6 = 1.000
+    every miss by id:
+      (none)
+
+  Agreement, disagreement and sentiment are not built: the fixture
+  carries those labels and this module reads none of them. The threat
+  label is what routes a dispute to the safety lane; no label enters
+  a brief.
 ```
 
 ## What the report found
 
 **pii-v1.** Eighteen spans are marked for masking and four for keeping. The
-three plate spans are masked at version 6 -- two in case 3202's counterparty
-statement and chat message, one in case 3205's claim -- and all fifteen other
-spans are still present: eight names, five telephone numbers and two e-mail
-addresses. All four hard negatives survive, so the mask is not over-reaching
-either. The set's datasheet states thirteen strings to mask and five hard
-negatives; the key file holds eighteen mask spans (two of them the same plate)
-and four do-not-mask spans, and the report reads the key file. Masking the
-names, numbers and addresses is `POL-GEN-08(4)`'s own wording and is not done
-here.
+three plate spans, the five telephone numbers and the two e-mail addresses are
+masked at version 6 -- ten of the eighteen -- and the eight name spans are still
+present, which is what this part leaves unmasked. All four hard negatives
+survive, so the mask is not over-reaching either. The set's datasheet states
+thirteen strings to mask and five hard negatives; the key file holds eighteen
+mask spans (two of them the same plate) and four do-not-mask spans, and the
+report reads the key file. Masking the names is `POL-GEN-08(4)`'s own wording
+and is not done here.
 
 **collusion-v1.** Both readings agree with the key on all eight cases: the
 `repeat_party` flag matches `cross_case.json` on every case (0 misses, 0
@@ -218,8 +239,73 @@ to check.
 
 **chat-signals-v1.** The recomputed counts equal the file's own: 6 of 32
 messages carry a threat, 6 an agreement, 12 a disagreement, and the sentiment
-split is 14 negative, 13 neutral and 5 positive. There is nothing to classify
-against yet.
+split is 14 negative, 13 neutral and 5 positive. The detector scores the threat
+label 6 true positives, 0 false positives, 0 false negatives and 26 true
+negatives -- precision and recall each 6 of 6 -- with no miss to name. That is a
+**development figure**: the rules were written with this fixture in view, so it
+measures how well the rules fit the messages they were fitted to, not how they
+would generalise to messages nobody has seen.
 
 **inject-v1.** Not measured here. Its check asks a model, and no model was
 called.
+
+## The chat threat lane
+
+The handbook asks that a chat log be read for threats to a person's safety and
+that a dispute whose chat carries one be fast-tracked. `ops/chat_signals.py` is
+that read: a small, documented rule table, matched with regular expressions, no
+model and no file opened.
+
+- **`detect(message_text)`** returns `{"threat": bool, "matched": [rule ids]}`.
+  The rules are of two kinds. **Threat rules**: explicit harm ("I will
+  hurt/kill/find you"), intimidation by location or by third parties ("I know
+  where you live", "my brothers know your car", "watch your back"), conditional
+  menace ("see what happens when ...") and doxxing ("post your photo/address").
+  **Exclusion rules**: a complaint or a review ("report", "review", "dispute"),
+  an idiom ("killing me" about traffic, "kill for a kopi") and a safety warning
+  ("careful, ... don't hurt"). A message is a threat when at least one threat
+  rule matches **and** no exclusion rule does; `matched` names every rule that
+  matched, so a reader can see why a message was cleared as well as why one was
+  flagged.
+- **The command** reads message texts from standard input -- a JSON array, or
+  one message per line -- and prints one verdict per message, in input order.
+  This report runs it over the fixture's 32 texts. It opens no file: the texts
+  are handed to it, because the fixture is under `eval/` and `ops` never opens
+  anything under `eval/`.
+- **`ops/queue.py`** routes a dispute whose chat log carries a threat message to
+  `SAFETY_FAST_TRACK` with the reason `CHAT_THREAT`, **before** the category,
+  the `POL-GEN-08(1)` flags and the kill switch. The signal is a routing input
+  and is written nowhere else: it never enters a brief or a prompt.
+- **Agreement, disagreement and sentiment are not built.** The fixture carries
+  those labels and no module reads them.
+- **The score is a development figure.** The rules were written with the
+  32-message fixture visible, so the 6-of-6 precision and recall above measure
+  the fit, not generalisation. No case in the corpus, the second set, `dev-v2`,
+  `dev-v2-ext`, `ryde-v3`, `inject-v1`, `pii-v1` or `collusion-v1` carries a
+  message any threat rule matches, so the lane changes no case in the
+  repository.
+
+## The mask extended to telephone numbers and e-mail addresses
+
+`POL-GEN-08(4)` says the record shown to the advocates, the judge and the
+reviewers "carries party identifiers, not names, telephone numbers or vehicle
+registration marks; those are masked before display". The version-6 mask
+implemented the registration marks only; this part adds the telephone numbers
+and the e-mail addresses, in the same four fields -- a chat message's `text`, a
+trip record's `events[].detail`, and the dispute's `claim_text` and
+`counterparty_statement.text`.
+
+- **Telephone.** A Singapore number: an optional `+65` with a space or a hyphen,
+  then eight digits beginning 3, 6, 8 or 9, optionally split 4-4 by a space or a
+  hyphen. It is word-bounded, so a longer digit run, a decimal or an identifier
+  that merely contains one is left alone. Replaced with `[telephone masked]`.
+- **E-mail.** A conservative address pattern. Replaced with `[e-mail masked]`.
+- **Names are not masked.** A pattern that spares "Tan Tock Seng Hospital" and
+  "Lim Chu Kang Road" needs more than a regular expression. The README and the
+  privacy page say so, with the pii-v1 count.
+- **Nothing else moves.** The gate is the same version 6, so versions 1 to 5
+  build the bytes they built. Every recorded run's `brief_sha256` still
+  rebuilds: 210 briefs across the two version-1 runs and the five version-6
+  runs, 0 changed. The mask moves exactly the pii-v1 briefs the key marks, and
+  no recorded run carries a telephone number or an e-mail address in a masked
+  field.

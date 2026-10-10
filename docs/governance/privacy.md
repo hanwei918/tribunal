@@ -26,25 +26,28 @@ names and never enters a brief (`README.md`, *Limitations and disclosures*).
 
 ## What is masked before a model reads it, and what is not
 
-**Masked.** At policy version 6, `POL-GEN-08(4)`'s masking of vehicle
-registration marks is applied to the brief: `tribunal/brief.py` replaces every
-word-bounded match of the Singapore registration pattern with a fixed
-placeholder (`VEHICLE_MASK`, `VEHICLE_REGISTRATION_RE`, `_mask_registrations`) in
-a chat message's text, a trip record's event details, and the dispute's two
-free-text fields, before anything is serialised. The clause is
-`POL-GEN-08(4)` in `policy/v3/general.json`; the case files are not changed — the
-mask is applied to the brief only.
+**Masked.** At policy version 6, `POL-GEN-08(4)`'s masking is applied to the
+brief: `tribunal/brief.py` replaces a word-bounded Singapore vehicle
+registration mark (`VEHICLE_MASK`, `VEHICLE_REGISTRATION_RE`), a Singapore
+telephone number (`TELEPHONE_MASK`, `TELEPHONE_RE`) and a conservative e-mail
+address (`EMAIL_MASK`, `EMAIL_RE`) with a fixed placeholder, through
+`_mask_personal_data`, in a chat message's text, a trip record's event details,
+and the dispute's two free-text fields, before anything is serialised. The
+clause is `POL-GEN-08(4)` in `policy/v3/general.json`; the case files are not
+changed — the mask is applied to the brief only.
 
 **Not masked, and not done.** `POL-GEN-08(4)` says the record carries "party
 identifiers, not names, telephone numbers or vehicle registration marks; those
-are masked before display". Only the registration marks are implemented.
-Names and telephone numbers are **not** masked. None appeared until 2026-10-10,
-when the functional set `pii-v1` was imported: it carries names, telephone
-numbers and e-mail addresses on purpose, none of them identifying a real person,
-and they reach its briefs unmasked. Every other case set carries neither
-(`README.md`, *Limitations and disclosures*). The clause is therefore implemented
-for the one identifier that does occur and is unimplemented for the two that do,
-and this page says so rather than implying a general redaction.
+are masked before display". The registration marks, the telephone numbers and
+the e-mail addresses are implemented; **names are not**, because a pattern that
+spares "Tan Tock Seng Hospital" and "Lim Chu Kang Road" needs more than a
+regular expression. The functional set `pii-v1`, imported on 2026-10-10, is the
+one case set that carries names, telephone numbers and e-mail addresses on
+purpose, none of them identifying a real person (`README.md`, *Limitations and
+disclosures*). Its key marks eighteen spans to mask and four to keep; at version
+6 the three plates, the five telephone numbers and the two e-mail addresses are
+masked and the eight names are still present. Every other case set carries
+neither.
 
 `POL-GEN-08(4)` masking missed one field until 2026-10-10:
 `dispute.counterparty_statement` is an object (`text`, `submitted_by`,

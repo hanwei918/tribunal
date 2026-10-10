@@ -2469,6 +2469,22 @@ VEHICLE_MASK_VERSION = 6
 VEHICLE_MASK = "[vehicle registration masked]"
 VEHICLE_REGISTRATION_RE = re.compile(r"\bS[A-Z]{1,2}\s?\d{1,4}\s?[A-Z]\b")
 
+# ``POL-GEN-08(4)`` names "telephone numbers" beside the registration marks, so
+# the same version-6 gate also replaces a party's contact details in the same
+# fields. **Telephone**: a Singapore number -- an optional ``+65`` with a space
+# or a hyphen, then eight digits beginning 3, 6, 8 or 9, optionally split 4-4 by
+# a space or a hyphen -- word-bounded, so a longer digit run, a decimal or an
+# identifier that merely contains one is left alone.
+TELEPHONE_MASK = "[telephone masked]"
+TELEPHONE_RE = re.compile(r"(?<!\d)(?:\+65[\s-]?)?[3689]\d{3}[\s-]?\d{4}(?!\d)")
+
+# **E-mail**: a conservative address pattern -- a local part of letters, digits
+# and the usual punctuation, an ``@``, a dotted domain and a two-letter-or-longer
+# suffix. It is deliberately narrow rather than RFC-complete, so it masks the
+# addresses a party writes and nothing that only looks like one.
+EMAIL_MASK = "[e-mail masked]"
+EMAIL_RE = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
+
 # The two dispute fields a registration mark can reach the model through.
 CLAIM_TEXT_KEY = "claim_text"
 COUNTERPARTY_STATEMENT_KEY = "counterparty_statement"
@@ -2755,12 +2771,31 @@ def _with_recomputed_admissibility(
 def _mask_registrations(text: Any) -> Any:
     """``text`` with every Singapore registration mark replaced, or ``text``.
 
-    A non-string is returned unchanged, so this can be applied to a field that
-    may be ``null`` without a type check at every call site.
+    The registration rule on its own. The product view's summary line applies it
+    (``ui/v2/build.py``), so it stays a function of its own; the brief applies
+    :func:`_mask_personal_data`, which also masks a telephone number and an
+    e-mail address.
     """
     if not isinstance(text, str):
         return text
     return VEHICLE_REGISTRATION_RE.sub(VEHICLE_MASK, text)
+
+
+def _mask_personal_data(text: Any) -> Any:
+    """``text`` with every registration mark, telephone number and e-mail masked.
+
+    ``POL-GEN-08(4)``'s masking, as the version-6 brief applies it: the three
+    patterns are applied in turn to the one string, and a non-string is returned
+    unchanged, so a field that may be ``null`` needs no type check at the call
+    site. **Names are deliberately not masked here**: a pattern that spares "Tan
+    Tock Seng Hospital" and "Lim Chu Kang Road" needs more than a regular
+    expression, and the README and the privacy page say so.
+    """
+    if not isinstance(text, str):
+        return text
+    text = VEHICLE_REGISTRATION_RE.sub(VEHICLE_MASK, text)
+    text = TELEPHONE_RE.sub(TELEPHONE_MASK, text)
+    return EMAIL_RE.sub(EMAIL_MASK, text)
 
 
 def _masked_dispute(dispute: Any) -> Any:
@@ -2775,11 +2810,11 @@ def _masked_dispute(dispute: Any) -> Any:
     masked = dict(dispute)
     for key in (CLAIM_TEXT_KEY, COUNTERPARTY_STATEMENT_KEY):
         if isinstance(masked.get(key), str):
-            masked[key] = _mask_registrations(masked[key])
+            masked[key] = _mask_personal_data(masked[key])
     statement = masked.get(COUNTERPARTY_STATEMENT_KEY)
     if isinstance(statement, dict) and isinstance(statement.get("text"), str):
         statement = dict(statement)
-        statement["text"] = _mask_registrations(statement["text"])
+        statement["text"] = _mask_personal_data(statement["text"])
         masked[COUNTERPARTY_STATEMENT_KEY] = statement
     return masked
 
@@ -2793,7 +2828,7 @@ def _masked_messages(payload: Dict[str, Any]) -> Dict[str, Any]:
     changed = False
     for message in messages:
         if isinstance(message, dict) and isinstance(message.get("text"), str):
-            text = _mask_registrations(message["text"])
+            text = _mask_personal_data(message["text"])
             if text != message["text"]:
                 message = dict(message)
                 message["text"] = text
@@ -2815,7 +2850,7 @@ def _masked_events(payload: Dict[str, Any]) -> Dict[str, Any]:
     changed = False
     for event in events:
         if isinstance(event, dict) and isinstance(event.get("detail"), str):
-            detail = _mask_registrations(event["detail"])
+            detail = _mask_personal_data(event["detail"])
             if detail != event["detail"]:
                 event = dict(event)
                 event["detail"] = detail
@@ -2829,12 +2864,12 @@ def _masked_events(payload: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _masked_artifact_registrations(artifact: Any) -> Any:
-    """One evidence artifact with its registration marks masked, at version 6.
+    """One evidence artifact with its personal data masked, at version 6.
 
     A chat log's messages and a trip record's events are the two artifact kinds
-    that carry free text a registration mark reaches the model through; every
-    other artifact is returned unchanged, and so is one whose text carried no
-    mark.
+    that carry free text a registration mark, a telephone number or an e-mail
+    address reaches the model through; every other artifact is returned
+    unchanged, and so is one whose text carried none.
     """
     if not isinstance(artifact, dict):
         return artifact
@@ -2931,10 +2966,12 @@ def build_brief_for_case(
       ``route_deviation.json``, so a no-show brief carries neither.
 
     And one thing happens only from version 6 on, gated the same way so that
-    versions 1 to 5 keep their bytes exactly: ``POL-GEN-08(4)``'s registration
-    mask replaces every vehicle registration mark in the free text the model
-    reads (:func:`_masked_dispute` and :func:`_masked_artifact_registrations`,
-    see ``VEHICLE_MASK_VERSION``).
+    versions 1 to 5 keep their bytes exactly: ``POL-GEN-08(4)``'s mask replaces
+    every vehicle registration mark, every Singapore telephone number and every
+    e-mail address in the free text the model reads (:func:`_masked_dispute` and
+    :func:`_masked_artifact_registrations`, through
+    :func:`_mask_personal_data`, see ``VEHICLE_MASK_VERSION``). Names are not
+    masked; the disclosure says so.
     """
     if ablate is not None and not ablation_known(ablate):
         raise AblationError(
@@ -3160,10 +3197,11 @@ def build_brief_for_case(
     if ablate == ABLATION_ADMISSIBILITY:
         evidence = [_without_admissibility(artifact) for artifact in evidence]
 
-    # POL-GEN-08(4): from version 6 only, a registration mark in a chat message,
-    # a trip event or the dispute's own free text is replaced before the model
-    # reads it. Versions 1 to 5 keep the bytes they had, so this changes no
-    # brief below 6; the case files are never edited -- only this brief's copy.
+    # POL-GEN-08(4): from version 6 only, a registration mark, a telephone number
+    # or an e-mail address in a chat message, a trip event or the dispute's own
+    # free text is replaced before the model reads it. Versions 1 to 5 keep the
+    # bytes they had, so this changes no brief below 6; the case files are never
+    # edited -- only this brief's copy.
     dispute = case["dispute"]
     if policy_version >= VEHICLE_MASK_VERSION:
         evidence = [_masked_artifact_registrations(artifact) for artifact in evidence]

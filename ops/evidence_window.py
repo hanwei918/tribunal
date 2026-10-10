@@ -617,8 +617,8 @@ def submit(
         )
     if kind == STATEMENT_KIND:
         raise EvidenceWindowError(
-            "a party statement may not be filed: POL-GEN-06(5) refuses a statement "
-            "made after filing as evidence"
+            "kind {0}: a party statement may not be filed: POL-GEN-06(5) refuses a "
+            "statement made after filing as evidence".format(STATEMENT_KIND)
         )
     if kind not in EVIDENCE_ITEMS:
         raise EvidenceWindowError(

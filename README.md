@@ -69,8 +69,9 @@ platform-confirmed arrival and a served waiting period. The policy owner
 confirmed the clause's revised wording on 2026-10-10
 ([`docs/notes/2026-10-10-ns-12-confirmed-by-policy-owner.md`](docs/notes/2026-10-10-ns-12-confirmed-by-policy-owner.md)).
 And `POL-GEN-08(4)`'s
-**masking of vehicle registration marks** is applied to the brief, so no
-registration mark reaches an advocate, a judge or a reviewer.
+**masking of vehicle registration marks, telephone numbers and e-mail
+addresses** is applied to the brief, so none of them reaches an advocate, a
+judge or a reviewer.
 
 ## Results
 
@@ -349,7 +350,12 @@ subject to the PDPA without this repository making any compliance claim.
   block outside Singapore's allocated mobile ranges, and every e-mail domain is
   an RFC 2606 reserved name. The organisers' original `DISP-002.md` contains
   names and never enters a brief. The implementation of `POL-GEN-08(4)` masks
-  vehicle registration marks only.
+  vehicle registration marks, telephone numbers and e-mail addresses, in a chat
+  message's text, a trip record's event details and the dispute's two free-text
+  fields. It does **not** mask names: of `pii-v1`'s eighteen mask spans, the ten
+  plates, numbers and addresses are masked at version 6 and the eight names are
+  still present, because a pattern that spares "Tan Tock Seng Hospital" and "Lim
+  Chu Kang Road" needs more than a regular expression.
 - **Personal data.** `POL-GEN-08(4)` masking missed one field until 2026-10-10:
   `dispute.counterparty_statement` is an object (`text`, `submitted_by`,
   `submitted_at`), and the frozen code masked it only when it was a string, so
@@ -464,9 +470,10 @@ deterministic except the three agents.
    and the brief's sha256 is recorded on the result so a reader can confirm it.
    The brief carries the trip record's own `events[]`, which is where the
    platform's arrival and wait-timer events of `POL-NS-12` travel, and under
-   `POL-GEN-08(4)` it masks Singapore vehicle registration marks in a chat
-   message's text, a trip record's event details and the dispute's two free-text
-   fields before anything is serialised.
+   `POL-GEN-08(4)` it masks Singapore vehicle registration marks, telephone
+   numbers and e-mail addresses in a chat message's text, a trip record's event
+   details and the dispute's two free-text fields before anything is serialised.
+   Names are not masked, and the disclosure says so.
 5. **Two advocates, one brief, opposite stances.** `prompts/v1/advocate.system.md`
    is rendered twice, substituting `prompts/v1/stance.rider.md` and
    `prompts/v1/stance.driver.md` at the `{{STANCE}}` placeholder. `run_case`
