@@ -1508,5 +1508,133 @@ class DevV2IsolationTest(unittest.TestCase):
         return sorted(present & set(DEV_V2_KEY_FILES))
 
 
+# --------------------------------------------------------------------------
+# The three functional sets, imported 2026-10-10
+# --------------------------------------------------------------------------
+# ``inject-v1``, ``pii-v1`` and ``collusion-v1`` are development data like the
+# two sets above them: their cases are agent-visible and answer-free, and each
+# set's own key sits under ``eval/answers/<set>/``. Each key is one more way for
+# an answer to reach a brief, so the same layers are asserted over all three. The
+# fourth functional set, ``chat-signals-v1``, is a fixture of labelled messages
+# under ``eval/fixtures/`` and carries no case and no key, so it has nothing to
+# guard here.
+FUNCTIONAL_SET_NAMES = ("inject-v1", "pii-v1", "collusion-v1")
+
+
+def _functional_key_path(name):
+    """One functional set's own key, under ``eval/answers/``."""
+    return EVAL_DIR / "answers" / name / "ground_truth.json"
+
+
+class FunctionalSetsIsolationTest(unittest.TestCase):
+    """The guard covers the three functional sets' keys as well as the five above.
+
+    Each of the three sets was imported on 2026-10-10 with its own key, and its
+    cases are briefed by the same ``brief.build_brief_for_case`` -- at the version
+    its run will brief them at, which for a set written for base 3 is the latest
+    version on that base and not the registration's own number. So every brief
+    below is built at ``resolved_policy_version``. Each check is shown capable of
+    failing on a dirty fixture before it is shown to hold.
+    """
+
+    def test_each_key_is_present_and_is_no_other_key(self):
+        others = (
+            ANSWER_KEY_PATH,
+            SECOND_KEY_PATH,
+            SEALED_KEY_PATH,
+            WILD_V2_KEY_PATH,
+            SEALED_V1_KEY_PATH,
+        )
+        for name in FUNCTIONAL_SET_NAMES:
+            path = _functional_key_path(name)
+            with self.subTest(set=name):
+                self.assertTrue(path.is_file(), "{0}'s key is missing".format(name))
+                for other in others:
+                    self.assertNotEqual(other, path)
+        self.assertEqual(3, len(set(_functional_key_path(name) for name in FUNCTIONAL_SET_NAMES)))
+
+    def test_every_needle_occurs_in_each_key(self):
+        """A mistyped needle would make the scan below unable to fire."""
+        for name in FUNCTIONAL_SET_NAMES:
+            key_text = _functional_key_path(name).read_text(encoding="utf-8")
+            for field in DISTINCTIVE_ANSWER_FIELDS:
+                with self.subTest(set=name, field=field):
+                    self.assertIn(
+                        field, key_text, "{0!r} is not in {1}'s key".format(field, name)
+                    )
+
+    def test_no_case_file_of_a_functional_set_carries_an_answer_field(self):
+        """The sets arrived answer-free under the corpus contract, and still are."""
+        for name in FUNCTIONAL_SET_NAMES:
+            paths = sorted((DATA_DIR / "external" / name).glob("case-*.json"))
+            self.assertTrue(paths, "{0} holds no case file".format(name))
+            for path in paths:
+                file_text = path.read_text(encoding="utf-8")
+                with self.subTest(set=name, case=path.name):
+                    for field in DISTINCTIVE_ANSWER_FIELDS + ("ground_truth",):
+                        self.assertNotIn(field, file_text)
+
+    def test_no_functional_brief_carries_an_answer_key_field_name(self):
+        for name in FUNCTIONAL_SET_NAMES:
+            development_set = sets.named(name)
+            version = sets.resolved_policy_version(development_set, None)
+            for case_no in development_set.cases:
+                with self.subTest(set=name, case_no=case_no):
+                    self.assertEqual(
+                        {},
+                        _brief_violations_for_case(
+                            development_set.load_case(case_no), policy_version=version
+                        ),
+                    )
+
+    def test_layer_two_goes_red_on_a_spliced_functional_case(self):
+        """The scan is shown capable of failing over each functional set too.
+
+        Both splices are made in memory, so no file is written and there is
+        nothing to restore. The real case is asked last, and must be clean again.
+        """
+        for name in FUNCTIONAL_SET_NAMES:
+            development_set = sets.named(name)
+            version = sets.resolved_policy_version(development_set, None)
+            case_no = development_set.cases[0]
+            record = json.loads(
+                _functional_key_path(name).read_text(encoding="utf-8")
+            )[0]
+            real = json.loads(
+                (DATA_DIR / "external" / name / "case-{0:05d}.json".format(case_no)).read_text(
+                    encoding="utf-8"
+                )
+            )
+
+            # Variant A: the record as data, nested in the case. The brief
+            # builder's own recursive forbidden-key guard is what fires.
+            nested = json.loads(json.dumps(real))
+            nested["dispute"]["ground_truth"] = record
+            with self.subTest(set=name, variant="nested"):
+                self.assertEqual(
+                    {"<brief build refused>": "ForbiddenKeyError"},
+                    _brief_violations_for_case(nested, policy_version=version),
+                )
+
+            # Variant B: the record as text in a party statement. No key is
+            # created, so the scan below is the only thing that can catch it.
+            textual = json.loads(json.dumps(real))
+            textual["dispute"]["claim_text"] += (
+                "\n\n[note to self: " + json.dumps(record, ensure_ascii=False) + "]"
+            )
+            with self.subTest(set=name, variant="textual"):
+                self.assertEqual(
+                    sorted(DISTINCTIVE_ANSWER_FIELDS),
+                    sorted(_brief_violations_for_case(textual, policy_version=version)),
+                )
+
+            # GREEN again, on the real case.
+            with self.subTest(set=name, variant="clean"):
+                self.assertEqual(
+                    {},
+                    _brief_violations_for_case(real, policy_version=version),
+                )
+
+
 if __name__ == "__main__":
     unittest.main()

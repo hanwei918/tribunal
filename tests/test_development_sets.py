@@ -1262,5 +1262,125 @@ class BaseThreeSetRegistrationTests(unittest.TestCase):
         )
 
 
+# --------------------------------------------------------------------------
+# The three functional sets, registered 2026-10-10
+# --------------------------------------------------------------------------
+# One case of each: a clean injection twin, a no-show whose party text carries
+# personal data, and the first case of the repeated pair. Each is a no-show, the
+# shape the scripted judge already answers from a key elsewhere in this module.
+FUNCTIONAL_SET_CASES = (("inject-v1", 3101), ("pii-v1", 3201), ("collusion-v1", 3301))
+
+
+class FunctionalSetRegistrationTests(unittest.TestCase):
+    """The three functional case sets: registered, loaded, and run by name.
+
+    ``inject-v1``, ``pii-v1`` and ``collusion-v1`` are development data that is
+    tuned against, registered exactly as ``dev-v2-ext`` is: written for policy
+    base 3, so they accept any version on that base and run at the latest one --
+    today 6 -- when no version is named, which puts their runs under
+    ``runs/<set>/policy-v6/<model>/``. They are deliberately outside
+    ``DEVELOPMENT_SETS``, so ``--set all`` does not run them and the combined
+    figure does not sum them.
+
+    No model is called: the transport answers from each set's own key, and every
+    runs root is a temporary directory.
+    """
+
+    def test_the_three_sets_are_registered_and_are_not_development_sets(self):
+        self.assertEqual(
+            ("inject-v1", "pii-v1", "collusion-v1"), sets.FUNCTIONAL_SET_NAMES
+        )
+        for name, _case_no in FUNCTIONAL_SET_CASES:
+            with self.subTest(set=name):
+                development_set = sets.named(name)
+                self.assertEqual(3, development_set.policy_version)
+                self.assertEqual(3, development_set.policy_base)
+                self.assertFalse(development_set.sealed)
+                self.assertTrue(development_set.cases)
+                self.assertNotIn(
+                    development_set,
+                    sets.DEVELOPMENT_SETS,
+                    "{0} is in the tuple --set all runs".format(name),
+                )
+                self.assertNotIn(development_set, sets.SEALED_SETS)
+                self.assertNotIn(development_set, sets.ALL_SETS)
+                self.assertIn(development_set, sets.NAMED_SETS)
+                self.assertIs(development_set, sets.BY_NAME[name])
+
+    def test_each_set_has_its_own_root_key_and_runs_subdirectory(self):
+        roots = {sets.named(name).case_root for name, _ in FUNCTIONAL_SET_CASES}
+        keys = {sets.named(name).key_path for name, _ in FUNCTIONAL_SET_CASES}
+        subdirs = {sets.named(name).runs_subdir for name, _ in FUNCTIONAL_SET_CASES}
+        self.assertEqual(3, len(roots))
+        self.assertEqual(3, len(keys))
+        self.assertEqual({"inject-v1", "pii-v1", "collusion-v1"}, subdirs)
+        for name, _ in FUNCTIONAL_SET_CASES:
+            development_set = sets.named(name)
+            self.assertEqual(loader.EXTERNAL_DIR / name, development_set.case_root)
+            self.assertEqual(
+                sets.ANSWER_DIR / name / "ground_truth.json",
+                development_set.key_path,
+            )
+            self.assertTrue(development_set.case_root.is_dir())
+
+    def test_every_case_loads_through_its_own_index(self):
+        for name, _case_no in FUNCTIONAL_SET_CASES:
+            development_set = sets.named(name)
+            for case_no in development_set.cases:
+                with self.subTest(set=name, case_no=case_no):
+                    case = loader.load_external_set_case(development_set.case_root, case_no)
+                    self.assertEqual(case_no, case["case_no"])
+                    self.assertEqual(case_no, case["dispute"]["case_no"])
+            for entry in loader.load_external_index(development_set.case_root):
+                with self.subTest(set=name, case_no=entry["case_no"]):
+                    case = loader.load_external_set_case(
+                        development_set.case_root, entry["case_no"]
+                    )
+                    for field in loader.MANIFEST_DISPUTE_FIELDS:
+                        self.assertEqual(entry[field], case["dispute"][field])
+
+    def test_the_default_version_is_the_latest_on_base_three(self):
+        latest = policy_versions.version_on_base(3)
+        self.assertEqual(6, latest, "base 3 is at version 6 after amendment 0003")
+        for name, _case_no in FUNCTIONAL_SET_CASES:
+            with self.subTest(set=name):
+                self.assertEqual(
+                    latest, sets.resolved_policy_version(sets.named(name), None)
+                )
+
+    def test_the_default_run_lands_under_a_policy_v_directory(self):
+        for name, case_no in FUNCTIONAL_SET_CASES:
+            development_set = sets.named(name)
+            with self.subTest(set=name):
+                with tempfile.TemporaryDirectory() as tmp:
+                    runs = Path(tmp) / "runs"
+                    summary = sets.run_set(
+                        development_set,
+                        MODEL,
+                        cases=[case_no],
+                        runs_dir=runs,
+                        client_factory=client_factory(
+                            ScriptedTransport(produced_for(development_set, case_no))
+                        ),
+                        git_runner=git_runner(),
+                        progress=lambda text: None,
+                        judge_votes=1,
+                    )
+                    latest = policy_versions.version_on_base(3)
+                    expected = (
+                        runs
+                        / development_set.runs_subdir
+                        / "policy-v{0}".format(latest)
+                        / run_benchmark.model_slug(MODEL)
+                    )
+                    self.assertEqual(expected, summary.run_dir)
+                    self.assertTrue(
+                        (expected / "case-{0:05d}.json".format(case_no)).is_file(),
+                        "{0} did not write under its own policy-v{1} root".format(
+                            name, latest
+                        ),
+                    )
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -38,20 +38,24 @@ mask is applied to the brief only.
 **Not masked, and not done.** `POL-GEN-08(4)` says the record carries "party
 identifiers, not names, telephone numbers or vehicle registration marks; those
 are masked before display". Only the registration marks are implemented.
-Names and telephone numbers are **not** masked, because none appears: no case
-file in this repository contains a telephone number or a name (`README.md`,
-*Limitations and disclosures*). The clause is therefore implemented for the one
-identifier that does occur and is unimplemented for the two that do not, and
-this page says so rather than implying a general redaction.
+Names and telephone numbers are **not** masked. None appeared until 2026-10-10,
+when the functional set `pii-v1` was imported: it carries names, telephone
+numbers and e-mail addresses on purpose, none of them identifying a real person,
+and they reach its briefs unmasked. Every other case set carries neither
+(`README.md`, *Limitations and disclosures*). The clause is therefore implemented
+for the one identifier that does occur and is unimplemented for the two that do,
+and this page says so rather than implying a general redaction.
 
-`POL-GEN-08(4)` masking misses one field:
+`POL-GEN-08(4)` masking missed one field until 2026-10-10:
 `dispute.counterparty_statement` is an object (`text`, `submitted_by`,
-`submitted_at`), and the frozen code masks it only when it is a string, so its
-`text` is never masked. The policy owner reported it on 2026-10-10, after the
-freeze. No brief built at version 6 is affected: none of the 254 cases in the
-corpus, `dev-v2`, `dev-v2-ext`, 901 and sealed-v1 carries a registration mark
-there, and no version-6 brief of any of them contains one. The fix waits until
-the sealed run is committed.
+`submitted_at`), and the frozen code masked it only when it was a string, so its
+`text` was never masked. The policy owner reported it on 2026-10-10, after the
+freeze, and it is fixed **after** the third sealed set's single run and not
+before it: that run was made from the trees frozen at `freeze-2026-10-09`,
+without this fix, and no case of that run carries a registration mark in a
+counterparty statement, so no brief it built contained one. The fix moves
+exactly one brief in the repository — `pii-v1` case 3202 at version 6 — and every
+recorded run's `brief_sha256` still rebuilds.
 
 ## Who can read what
 

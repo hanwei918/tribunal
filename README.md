@@ -342,18 +342,25 @@ subject to the PDPA without this repository making any compliance claim.
 
 ## Limitations and disclosures
 
-- **Personal data.** No case file in this repository contains a telephone number
-  or a name. The organisers' original `DISP-002.md` contains names and never
-  enters a brief. The implementation of `POL-GEN-08(4)` masks vehicle
-  registration marks only.
-- **Personal data.** `POL-GEN-08(4)` masking misses one field:
+- **Personal data.** No case set in this repository other than the functional set
+  `pii-v1` contains a telephone number or a name. `pii-v1` carries them on
+  purpose — eight synthetic cases built to measure `POL-GEN-08(4)`'s masking —
+  and none of it identifies a real person: every telephone number starts `99`, a
+  block outside Singapore's allocated mobile ranges, and every e-mail domain is
+  an RFC 2606 reserved name. The organisers' original `DISP-002.md` contains
+  names and never enters a brief. The implementation of `POL-GEN-08(4)` masks
+  vehicle registration marks only.
+- **Personal data.** `POL-GEN-08(4)` masking missed one field until 2026-10-10:
   `dispute.counterparty_statement` is an object (`text`, `submitted_by`,
-  `submitted_at`), and the frozen code masks it only when it is a string, so its
-  `text` is never masked. The policy owner reported it on 2026-10-10, after the
-  freeze. No brief built at version 6 is affected: none of the 254 cases in the
-  corpus, `dev-v2`, `dev-v2-ext`, 901 and sealed-v1 carries a registration mark
-  there, and no version-6 brief of any of them contains one. The fix waits until
-  the sealed run is committed.
+  `submitted_at`), and the frozen code masked it only when it was a string, so
+  its `text` was never masked. The policy owner reported it on 2026-10-10, after
+  the freeze, and it is fixed **after** the third sealed set's single run and not
+  before it: that run was made from the trees frozen at `freeze-2026-10-09`,
+  without this fix, and no case of that run carries a registration mark in a
+  counterparty statement, so no brief it built contained one. The fix moves
+  exactly one brief in the repository — `pii-v1` case 3202 at version 6, the case
+  that exposed it — and every recorded run's `brief_sha256` still rebuilds. See
+  [`docs/notes/2026-10-10-the-counterparty-mask.md`](docs/notes/2026-10-10-the-counterparty-mask.md).
 - **sealed-v1 before the freeze.** Before the 2026-10-09 freeze, the policy
   owner's AI assistant opened sealed-v1's cases and key. By the policy owner's
   account, no policy changed because of it. One sealed case's key and one derived

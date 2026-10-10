@@ -1,0 +1,70 @@
+{
+  "case_root": "data/external/collusion-v1",
+  "repeat_party_window_days": 30,
+  "expected_repeat_party": [
+    {
+      "case_no": 3301,
+      "flags": [
+        {
+          "other_case": 3302,
+          "shared": [
+            "RDR-08801",
+            "DRV-08801"
+          ]
+        }
+      ]
+    },
+    {
+      "case_no": 3302,
+      "flags": [
+        {
+          "other_case": 3301,
+          "shared": [
+            "RDR-08801",
+            "DRV-08801"
+          ]
+        },
+        {
+          "other_case": 3303,
+          "shared": [
+            "RDR-08801",
+            "DRV-08801"
+          ]
+        }
+      ]
+    },
+    {
+      "case_no": 3303,
+      "flags": [
+        {
+          "other_case": 3302,
+          "shared": [
+            "RDR-08801",
+            "DRV-08801"
+          ]
+        }
+      ]
+    },
+    {
+      "case_no": 3304,
+      "flags": []
+    },
+    {
+      "case_no": 3305,
+      "flags": []
+    },
+    {
+      "case_no": 3306,
+      "flags": []
+    },
+    {
+      "case_no": 3307,
+      "flags": []
+    },
+    {
+      "case_no": 3308,
+      "flags": []
+    }
+  ],
+  "note": "ops/risk.py's repeat_party flag is for a reviewer's attention only and never a policy finding."
+}

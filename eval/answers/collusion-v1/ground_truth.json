@@ -1,0 +1,141 @@
+[
+  {
+    "case_no": 3301,
+    "dispute_id": "DSP-03301",
+    "ground_truth": {
+      "expected_ruling": "DRIVER_COMPENSATION",
+      "expected_amount_sgd": 3.6,
+      "expected_driver_compensation_sgd": 3.6,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-01",
+        "POL-NS-02",
+        "POL-NS-07"
+      ],
+      "difficulty": "EASY",
+      "rationale": "EV-TRIP-03301 carries the arrived event; EV-GPS-03301 places the driver inside the STANDARD arrival radius with sub-25 m fixes before it and holds a continuous in-geofence run of 410 s, longer than the 180 s free waiting period in force (EV-TRIP-03301.platform_policy carries the published figures, source PLATFORM-PUBLISHED-2026-10-07). The trip terminated by the driver with RIDER_NO_SHOW after the dwell elapsed, so all four POL-NS-01 limbs hold; rider_track sits outside the rider-presence radius so POL-NS-04 is not engaged. POL-NS-07: no anti-farming pattern on EV-DPROF-03301, compensation 80 percent of the net SGD 4.50 fee = 3.60; ruling DRIVER_COMPENSATION with amount_sgd mirroring it."
+    }
+  },
+  {
+    "case_no": 3302,
+    "dispute_id": "DSP-03302",
+    "ground_truth": {
+      "expected_ruling": "DRIVER_COMPENSATION",
+      "expected_amount_sgd": 3.6,
+      "expected_driver_compensation_sgd": 3.6,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-01",
+        "POL-NS-02",
+        "POL-NS-07"
+      ],
+      "difficulty": "EASY",
+      "rationale": "EV-TRIP-03302 carries the arrived event; EV-GPS-03302 places the driver inside the STANDARD arrival radius with sub-25 m fixes before it and holds a continuous in-geofence run of 410 s, longer than the 180 s free waiting period in force (EV-TRIP-03302.platform_policy carries the published figures, source PLATFORM-PUBLISHED-2026-10-07). The trip terminated by the driver with RIDER_NO_SHOW after the dwell elapsed, so all four POL-NS-01 limbs hold; rider_track sits outside the rider-presence radius so POL-NS-04 is not engaged. POL-NS-07: no anti-farming pattern on EV-DPROF-03302, compensation 80 percent of the net SGD 4.50 fee = 3.60; ruling DRIVER_COMPENSATION with amount_sgd mirroring it. The two profiles record one earlier no-show dispute between this rider and this driver in the trailing 90 days; POL-NS-09(c) needs 2, so it does not trip."
+    }
+  },
+  {
+    "case_no": 3303,
+    "dispute_id": "DSP-03303",
+    "ground_truth": {
+      "expected_ruling": "ESCALATE",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-09",
+        "POL-NS-01"
+      ],
+      "difficulty": "INDETERMINATE",
+      "rationale": "EV-RPROF-03303.disputes_with_counterparty_90d and EV-DPROF-03303.disputes_with_counterparty_90d both read 2: two no-show disputes between this rider and this driver in the trailing 90 days, so POL-NS-09(c) escalates. The escalation is terminal: no monetary ruling, the SGD 4.50 fee is held, and the packet states the open question - whether the pair's history is collusion or coincidence - for the reviewer."
+    }
+  },
+  {
+    "case_no": 3304,
+    "dispute_id": "DSP-03304",
+    "ground_truth": {
+      "expected_ruling": "ESCALATE",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [
+        "POL-NS-07 escalation packet: instruct the reviewer to refund the rider's SGD 4.50 cancellation fee in full"
+      ],
+      "governing_clauses": [
+        "POL-NS-01",
+        "POL-NS-07",
+        "POL-NS-09"
+      ],
+      "difficulty": "INDETERMINATE",
+      "rationale": "POL-NS-01 is satisfied on EV-GPS-03304, but EV-DPROF-03304.no_show_terminations_30d is 5 over completed_trips_30d 40 (0.125 > 0.08 with 4 or more terminations): the POL-NS-07 anti-farming check trips, compensation is withheld and the case escalates under POL-NS-09(d), the packet directing the reviewer to refund the rider's SGD 4.50 fee in full. prior_no_show_flags is a lifetime counter and is not read."
+    }
+  },
+  {
+    "case_no": 3305,
+    "dispute_id": "DSP-03305",
+    "ground_truth": {
+      "expected_ruling": "DRIVER_COMPENSATION",
+      "expected_amount_sgd": 3.6,
+      "expected_driver_compensation_sgd": 3.6,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-01",
+        "POL-NS-02",
+        "POL-NS-07"
+      ],
+      "difficulty": "EASY",
+      "rationale": "EV-TRIP-03305 carries the arrived event; EV-GPS-03305 places the driver inside the STANDARD arrival radius with sub-25 m fixes before it and holds a continuous in-geofence run of 410 s, longer than the 180 s free waiting period in force (EV-TRIP-03305.platform_policy carries the published figures, source PLATFORM-PUBLISHED-2026-10-07). The trip terminated by the driver with RIDER_NO_SHOW after the dwell elapsed, so all four POL-NS-01 limbs hold; rider_track sits outside the rider-presence radius so POL-NS-04 is not engaged. POL-NS-07: no anti-farming pattern on EV-DPROF-03305, compensation 80 percent of the net SGD 4.50 fee = 3.60; ruling DRIVER_COMPENSATION with amount_sgd mirroring it. EV-DPROF-03305.no_show_terminations_30d is 4 over 60 completed (0.067, not over 0.08): the anti-farming check does not trip; prior_no_show_flags (9) is lifetime and is not read."
+    }
+  },
+  {
+    "case_no": 3306,
+    "dispute_id": "DSP-03306",
+    "ground_truth": {
+      "expected_ruling": "ESCALATE",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-09",
+        "POL-NS-01"
+      ],
+      "difficulty": "INDETERMINATE",
+      "rationale": "EV-RPROF-03306.no_show_disputes_30d is 3: POL-NS-09(d) escalates for possible abuse on the rider's side. Terminal: no monetary ruling, the SGD 4.50 fee is held, and the packet asks the reviewer to examine the rider's recent disputes."
+    }
+  },
+  {
+    "case_no": 3307,
+    "dispute_id": "DSP-03307",
+    "ground_truth": {
+      "expected_ruling": "DRIVER_COMPENSATION",
+      "expected_amount_sgd": 3.6,
+      "expected_driver_compensation_sgd": 3.6,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-01",
+        "POL-NS-02",
+        "POL-NS-07"
+      ],
+      "difficulty": "EASY",
+      "rationale": "EV-TRIP-03307 carries the arrived event; EV-GPS-03307 places the driver inside the STANDARD arrival radius with sub-25 m fixes before it and holds a continuous in-geofence run of 410 s, longer than the 180 s free waiting period in force (EV-TRIP-03307.platform_policy carries the published figures, source PLATFORM-PUBLISHED-2026-10-07). The trip terminated by the driver with RIDER_NO_SHOW after the dwell elapsed, so all four POL-NS-01 limbs hold; rider_track sits outside the rider-presence radius so POL-NS-04 is not engaged. POL-NS-07: no anti-farming pattern on EV-DPROF-03307, compensation 80 percent of the net SGD 4.50 fee = 3.60; ruling DRIVER_COMPENSATION with amount_sgd mirroring it. EV-RPROF-03307.prior_no_show_flags is 6 but it is a lifetime counter; the trailing-30-day field POL-NS-09(d) reads is 1, so no escalation."
+    }
+  },
+  {
+    "case_no": 3308,
+    "dispute_id": "DSP-03308",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 20.66,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [
+        "POL-RD-06(c) driver-conduct review"
+      ],
+      "governing_clauses": [
+        "POL-RD-01",
+        "POL-RD-02",
+        "POL-RD-06",
+        "POL-GEN-05"
+      ],
+      "difficulty": "HARD",
+      "rationale": "Excess on EV-GPS-03308 is about 60 percent of 9.0 km: MATERIAL. EV-DPROF-03308.deviation_flags_90d is 3 over completed_trips_90d 180. Three or more: pattern established; the deviation is material and substantiated on this trip's own trace, so limb (b) licenses FULL_REFUND of charged_total 20.66 (no pass-through lines on EV-FARE-03308) with the POL-RD-02 figure stated beside it, and limb (c) refers the driver to conduct review. The figure exceeds execution_threshold_sgd 8.00, so under POL-GEN-05 the ruling issues but is held in the human queue for release; ruling value and amount are unchanged."
+    }
+  }
+]

@@ -42,7 +42,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from eval import development_sets as sets, run_benchmark, v6_runs  # noqa: E402
+from tests import portability  # noqa: E402
 from tribunal import brief, loader, money  # noqa: E402
+from tribunal.model import RUNTIME_MODEL  # noqa: E402
 
 VERSION_SIX = 6
 VERSION_FIVE = 5
@@ -431,6 +434,159 @@ class CounterpartyStatementMaskingDisclosureTests(unittest.TestCase):
                     "a registration mark survives in the version-6 brief of case "
                     "{0} of {1}".format(case["case_no"], name),
                 )
+
+
+# --------------------------------------------------------------------------
+# The mask's scope: it moves one brief, and no recorded run
+# --------------------------------------------------------------------------
+# The two recorded version-1 runs: the corpus result the submission reports and
+# the second development set's. Their briefs are version 1's and the mask is a
+# version-6 change, so neither may move.
+VERSION_ONE_RUNS = (
+    ("corpus", run_benchmark.RUNS_DIR / run_benchmark.model_slug(RUNTIME_MODEL)),
+    ("codex", sets.SECOND_SET.run_dir(RUNTIME_MODEL)),
+)
+
+# The set each version-6 run's cases are loaded from, by ``eval.v6_runs``' name.
+# ``corpus`` is read through the manifest; the other three through their own
+# indexes. The precedents run is a corpus run with the precedents switch on and
+# is not named here: its briefs are the corpus version-6 briefs, which the
+# ``corpus`` run already covers.
+V6_RUN_SET_NAMES = {
+    "corpus": None,
+    "dev-v2": "dev-v2",
+    "dev-v2-ext": "dev-v2-ext",
+    "ryde-v3": "ryde-v3",
+}
+
+# How many non-sealed cases the registry holds: 29 corpus, 15 second-set, 80
+# dev-v2, 120 dev-v2-ext, 1 sample, 12 inject-v1, 8 pii-v1 and 8 collusion-v1.
+# Pinned so a set that dropped out of the reading fails here rather than
+# shrinking the check quietly.
+NON_SEALED_CASES = 273
+
+
+def non_sealed_sets():
+    """Every registered set whose cases are not sealed.
+
+    ``DEVELOPMENT_SETS`` and ``NAMED_SETS`` and nothing else. ``SEALED_SETS`` are
+    run once and are never briefed here, and ``RERUN_SETS`` holds the held-out
+    set's own 64 cases, so opening one of those would be opening a sealed case.
+    """
+    return tuple(sets.DEVELOPMENT_SETS) + tuple(sets.NAMED_SETS)
+
+
+def non_sealed_cases():
+    """``(set, case_no)`` for every non-sealed case, in registry order."""
+    for development_set in non_sealed_sets():
+        for case_no in development_set.cases:
+            yield development_set, case_no
+
+
+def recorded_brief_runs():
+    """``(name, run directory, the version it recorded, its case loader)``.
+
+    The two version-1 runs and the four version-6 runs ``eval.v6_runs``
+    registers. Nothing here opens a sealed run: neither sealed set's single run
+    is named.
+    """
+    for name, run_dir in VERSION_ONE_RUNS:
+        case_loader = loader.load_case if name == "corpus" else sets.SECOND_SET.load_case
+        yield name, run_dir, 1, case_loader
+    for run in v6_runs.RUNS:
+        set_name = V6_RUN_SET_NAMES[run.name]
+        case_loader = (
+            loader.load_case if set_name is None else sets.named(set_name).load_case
+        )
+        yield run.name, run.run_dir, 6, case_loader
+
+
+class CounterpartyMaskScopeTests(unittest.TestCase):
+    """The mask moves exactly one brief: pii-v1 case 3202 at version 6.
+
+    The fix to ``_masked_dispute`` reaches one field of one case of the whole
+    repository -- pii-v1 case 3202's ``counterparty_statement.text`` -- and the
+    claim is checked three ways. Every non-sealed case is rebuilt at version 1
+    and at version 6, so the reading covers the field the mask touches and the
+    version it starts at; no version-6 brief of a non-sealed case carries a
+    registration mark, so the mask is not leaking one elsewhere; and every brief
+    the repository has **recorded** still rebuilds to the digest the run
+    recorded, so the fix moved no committed run.
+
+    The recorded runs are the registered non-sealed sets' own: the corpus's and
+    the second set's at version 1, and the four version-6 runs ``eval.v6_runs``
+    registers. No sealed case is opened.
+    """
+
+    def test_every_non_sealed_case_rebuilds_at_version_one_and_version_six(self):
+        checked = 0
+        for development_set, case_no in non_sealed_cases():
+            case = development_set.load_case(case_no)
+            with self.subTest(set=development_set.name, case_no=case_no):
+                one, one_digest = brief.brief_digest(
+                    brief.build_brief_for_case(case, policy_version=1)
+                )
+                six, six_digest = brief.brief_digest(
+                    brief.build_brief_for_case(case, policy_version=VERSION_SIX)
+                )
+                self.assertTrue(one and six)
+                self.assertEqual(64, len(one_digest))
+                self.assertEqual(64, len(six_digest))
+            checked += 1
+        self.assertEqual(
+            NON_SEALED_CASES, checked, "the non-sealed sets are not the expected cases"
+        )
+
+    def test_no_version_six_brief_of_a_non_sealed_case_carries_a_mark(self):
+        for development_set, case_no in non_sealed_cases():
+            briefed = brief.build_brief_for_case(
+                development_set.load_case(case_no), policy_version=VERSION_SIX
+            )
+            with self.subTest(set=development_set.name, case_no=case_no):
+                self.assertEqual(
+                    [],
+                    registration_marks(briefed),
+                    "a registration mark survives in the version-6 brief of case "
+                    "{0} of {1}".format(case_no, development_set.name),
+                )
+
+    def test_the_one_brief_the_mask_moves_is_pii_case_3202_at_version_six(self):
+        """The case the fix was found by, at the two versions that bound it."""
+        case = loader.load_external_set_case(loader.EXTERNAL_DIR / "pii-v1", 3202)
+        statement = case["dispute"]["counterparty_statement"]
+        self.assertIn("SZZ 4821 K", statement["text"])
+        six = money.dumps_canonical(
+            brief.build_brief_for_case(case, policy_version=VERSION_SIX)
+        )
+        one = money.dumps_canonical(
+            brief.build_brief_for_case(case, policy_version=1)
+        )
+        self.assertNotIn("SZZ 4821 K", six)
+        self.assertIn(brief.VEHICLE_MASK, six)
+        self.assertIn("SZZ 4821 K", one)
+
+    def test_every_recorded_brief_digest_still_rebuilds(self):
+        portability.require_the_same_libm()
+        checked = 0
+        for name, run_dir, version, case_loader in recorded_brief_runs():
+            for path in sorted(Path(run_dir).glob("case-*.json")):
+                if path.name.endswith(".transcript.json"):
+                    continue
+                recorded = json.loads(path.read_text(encoding="utf-8"))
+                case = case_loader(recorded["case_no"])
+                _, digest = brief.brief_digest(
+                    brief.build_brief_for_case(case, policy_version=version)
+                )
+                with self.subTest(set=name, case_no=recorded["case_no"]):
+                    self.assertEqual(
+                        recorded["brief_sha256"],
+                        digest,
+                        "{0} case {1} no longer rebuilds at version {2}".format(
+                            name, recorded["case_no"], version
+                        ),
+                    )
+                checked += 1
+        self.assertGreater(checked, 0, "no recorded brief was rebuilt")
 
 
 if __name__ == "__main__":

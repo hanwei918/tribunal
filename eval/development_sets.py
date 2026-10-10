@@ -370,10 +370,96 @@ VERSION_THREE_SET_NAMES = tuple(
     development_set.name for development_set in VERSION_THREE_SETS
 )
 
+# The four functional sets, imported on 2026-10-10: three case sets and the
+# chat-signals fixture. They are **not** a fifth development set and not a
+# sealed one: they exist to exercise one functional property each -- injection
+# resistance, personal-data masking, cross-case collusion -- beside the
+# chat-message labels the ops layer routes on. They are registered exactly as
+# ``dev-v2-ext`` is: written for policy base 3, so they accept any version on
+# that base and run at the **latest** one -- today 6 -- when no version is
+# named, which is why their runs go to ``runs/<set>/policy-v6/<model>/`` rather
+# than to a plain ``runs/<set>/<model>/``. They are deliberately **outside**
+# ``DEVELOPMENT_SETS``: that tuple is what ``--set all`` runs and what the
+# combined figure sums, and these sets are development data that is tuned
+# against, so neither is ever a generalisation figure. Naming one is how it is
+# run: ``--set inject-v1``.
+#
+# ``chat-signals-v1`` is not registered here at all. It is not a case set: it is
+# a fixture of 32 labelled chat messages under ``eval/fixtures/``, and the
+# checks over it need no case, no key and no run.
+INJECT_V1 = DevelopmentSet(
+    name="inject-v1",
+    cases=tuple(
+        entry["case_no"]
+        for entry in loader.load_external_index(loader.EXTERNAL_DIR / "inject-v1")
+    ),
+    key_path=ANSWER_DIR / "inject-v1" / "ground_truth.json",
+    runs_subdir="inject-v1",
+    case_root=loader.EXTERNAL_DIR / "inject-v1",
+    summary=(
+        "twelve cases in six invariance pairs for policy version 6: 3101-3106 "
+        "clean and 3107-3112 the same trips with one adversarial instruction "
+        "added to party text, made by eval/synth/make_func_sets.py (seed "
+        "20261009). Development data that is tuned against, so it is never a "
+        "generalisation figure"
+    ),
+    policy_version=VERSION_THREE,
+    policy_base=VERSION_THREE,
+)
+
+PII_V1 = DevelopmentSet(
+    name="pii-v1",
+    cases=tuple(
+        entry["case_no"]
+        for entry in loader.load_external_index(loader.EXTERNAL_DIR / "pii-v1")
+    ),
+    key_path=ANSWER_DIR / "pii-v1" / "ground_truth.json",
+    runs_subdir="pii-v1",
+    case_root=loader.EXTERNAL_DIR / "pii-v1",
+    summary=(
+        "eight cases for policy version 6 whose party text carries personal "
+        "names, telephone numbers, e-mail addresses and vehicle plates, with "
+        "place names containing surnames as hard negatives (3201-3208), made by "
+        "eval/synth/make_func_sets.py (seed 20261009). Development data, never a "
+        "generalisation figure"
+    ),
+    policy_version=VERSION_THREE,
+    policy_base=VERSION_THREE,
+)
+
+COLLUSION_V1 = DevelopmentSet(
+    name="collusion-v1",
+    cases=tuple(
+        entry["case_no"]
+        for entry in loader.load_external_index(loader.EXTERNAL_DIR / "collusion-v1")
+    ),
+    key_path=ANSWER_DIR / "collusion-v1" / "ground_truth.json",
+    runs_subdir="collusion-v1",
+    case_root=loader.EXTERNAL_DIR / "collusion-v1",
+    summary=(
+        "eight cases for policy version 6 read together as one case root "
+        "(3301-3308): a repeated pair, a farming driver and its control, a rider "
+        "abuse flag and its lifetime-counter decoy, and a pattern driver, made "
+        "by eval/synth/make_func_sets.py (seed 20261009). Development data, "
+        "never a generalisation figure"
+    ),
+    policy_version=VERSION_THREE,
+    policy_base=VERSION_THREE,
+)
+
+# The three case sets of the functional family, and their names. They are
+# registered beside the version-3 sets and share their version behaviour; the
+# fourth functional set, ``chat-signals-v1``, is a fixture rather than a set of
+# cases and is deliberately absent.
+FUNCTIONAL_SETS: Tuple[DevelopmentSet, ...] = (INJECT_V1, PII_V1, COLLUSION_V1)
+FUNCTIONAL_SET_NAMES = tuple(
+    development_set.name for development_set in FUNCTIONAL_SETS
+)
+
 # The sets that are run by name and are in none of the tuples above: ``--set
 # all`` does not run them, the combined figure does not sum them, and the
 # recorded-drafts measurement does not read them.
-NAMED_SETS: Tuple[DevelopmentSet, ...] = VERSION_THREE_SETS
+NAMED_SETS: Tuple[DevelopmentSet, ...] = VERSION_THREE_SETS + FUNCTIONAL_SETS
 
 # The second sealed set, imported on 2026-10-03 and run once, on 2026-10-04, from
 # a commit whose ``tribunal/``, ``prompts/`` and ``policy/`` trees equal those at

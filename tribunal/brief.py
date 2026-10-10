@@ -2776,6 +2776,11 @@ def _masked_dispute(dispute: Any) -> Any:
     for key in (CLAIM_TEXT_KEY, COUNTERPARTY_STATEMENT_KEY):
         if isinstance(masked.get(key), str):
             masked[key] = _mask_registrations(masked[key])
+    statement = masked.get(COUNTERPARTY_STATEMENT_KEY)
+    if isinstance(statement, dict) and isinstance(statement.get("text"), str):
+        statement = dict(statement)
+        statement["text"] = _mask_registrations(statement["text"])
+        masked[COUNTERPARTY_STATEMENT_KEY] = statement
     return masked
 
 
