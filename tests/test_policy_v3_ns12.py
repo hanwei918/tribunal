@@ -31,6 +31,7 @@ No model call is made.
 
 from __future__ import annotations
 
+import json
 import re
 import sys
 import unittest
@@ -83,6 +84,16 @@ PROVENANCE_STRINGS = ("DISP-002", "organiser", "901")
 
 # The ids the mask must leave alone.
 UNTOUCHED_IDS = ("EV-CHAT-00208", "TRP-00001", "DSP-00001")
+
+# The sets the 2026-10-10 masking disclosure covers, minus the sealed one: the
+# corpus (read through the manifest, below) and these three external sets, loaded
+# through their own indexes. ``sealed-v1`` is named in the same disclosure and is
+# deliberately absent here -- no test in this module opens a sealed case.
+DISCLOSURE_SET_ROOTS = (
+    loader.EXTERNAL_DIR / "dev-v2",
+    loader.EXTERNAL_DIR / "dev-v2-ext",
+    loader.EXTERNAL_DIR / "ryde-v3",
+)
 
 
 def trigger_of(case: Any) -> Any:
@@ -178,6 +189,22 @@ def chat_texts(briefed: Any) -> List[str]:
         for message in artifact["payload"]["messages"]:
             texts.append(message["text"])
     return texts
+
+
+def disclosure_cases():
+    """Every **non-sealed** case the 2026-10-10 disclosure is about, by set name.
+
+    The corpus is read through the manifest -- numbers only -- and the three
+    external sets through their own indexes. ``sealed-v1`` is named in the same
+    disclosure and is not opened: no sealed case is read here.
+    """
+    with (PROJECT_ROOT / "data" / "index.json").open("r", encoding="utf-8") as handle:
+        corpus = json.load(handle)
+    for entry in corpus:
+        yield "corpus", loader.load_case(entry["case_no"])
+    for root in DISCLOSURE_SET_ROOTS:
+        for entry in loader.load_external_index(root):
+            yield root.name, loader.load_external_set_case(root, entry["case_no"])
 
 
 # --------------------------------------------------------------------------
@@ -360,6 +387,50 @@ class VehicleRegistrationMaskTests(unittest.TestCase):
             [artifact["evidence_id"] for artifact in loader.load_case(208)["evidence"]],
             ids,
         )
+
+
+# --------------------------------------------------------------------------
+# The 2026-10-10 disclosure: the counterparty_statement masking gap
+# --------------------------------------------------------------------------
+class CounterpartyStatementMaskingDisclosureTests(unittest.TestCase):
+    """The masking gap the policy owner reported on 2026-10-10.
+
+    ``POL-GEN-08(4)``'s mask reaches ``dispute.counterparty_statement`` only when
+    the field is a **string**, and in every case of this repository that carries
+    one it is an **object** (``text``, ``submitted_by``, ``submitted_at``), so its
+    ``text`` is never masked. The disclosure says no brief built at version 6 is
+    affected, because no case in the corpus, ``dev-v2``, ``dev-v2-ext``, 901 or
+    ``sealed-v1`` carries a registration mark there. This class checks that claim
+    over every **non-sealed** case; ``sealed-v1`` is named in the same disclosure
+    and no sealed case is opened here.
+    """
+
+    def test_counterparty_statement_is_an_object_in_every_case_that_has_one(self):
+        seen = 0
+        for name, case in disclosure_cases():
+            statement = case["dispute"].get("counterparty_statement")
+            if statement is None:
+                continue
+            seen += 1
+            with self.subTest(set=name, case_no=case["case_no"]):
+                self.assertIsInstance(
+                    statement,
+                    dict,
+                    "case {0} of {1} carries a counterparty_statement that is not "
+                    "an object".format(case["case_no"], name),
+                )
+        self.assertGreater(seen, 0, "no case carried a counterparty_statement to check")
+
+    def test_no_version_six_brief_of_the_non_sealed_sets_carries_a_mark(self):
+        for name, case in disclosure_cases():
+            with self.subTest(set=name, case_no=case["case_no"]):
+                briefed = brief.build_brief_for_case(case, policy_version=VERSION_SIX)
+                self.assertEqual(
+                    [],
+                    registration_marks(briefed),
+                    "a registration mark survives in the version-6 brief of case "
+                    "{0} of {1}".format(case["case_no"], name),
+                )
 
 
 if __name__ == "__main__":

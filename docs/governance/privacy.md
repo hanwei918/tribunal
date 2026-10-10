@@ -44,6 +44,15 @@ file in this repository contains a telephone number or a name (`README.md`,
 identifier that does occur and is unimplemented for the two that do not, and
 this page says so rather than implying a general redaction.
 
+`POL-GEN-08(4)` masking misses one field:
+`dispute.counterparty_statement` is an object (`text`, `submitted_by`,
+`submitted_at`), and the frozen code masks it only when it is a string, so its
+`text` is never masked. The policy owner reported it on 2026-10-10, after the
+freeze. No brief built at version 6 is affected: none of the 254 cases in the
+corpus, `dev-v2`, `dev-v2-ext`, 901 and sealed-v1 carries a registration mark
+there, and no version-6 brief of any of them contains one. The fix waits until
+the sealed run is committed.
+
 ## Who can read what
 
 **The transcripts are committed.** `tribunal/transcript.py` records every call —

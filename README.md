@@ -56,7 +56,10 @@ At policy version 6 the system adds three things. A **scope gate** under
 model call at all, before any prompt is rendered. The platform's own **arrival
 and wait-timer events** are admitted under `POL-NS-12` as a carrier independent
 of the exported GPS trace, so a sparse or accuracy-less export does not defeat a
-platform-confirmed arrival and a served waiting period. And `POL-GEN-08(4)`'s
+platform-confirmed arrival and a served waiting period. The policy owner
+confirmed the clause's revised wording on 2026-10-10
+([`docs/notes/2026-10-10-ns-12-confirmed-by-policy-owner.md`](docs/notes/2026-10-10-ns-12-confirmed-by-policy-owner.md)).
+And `POL-GEN-08(4)`'s
 **masking of vehicle registration marks** is applied to the brief, so no
 registration mark reaches an advocate, a judge or a reviewer.
 
@@ -114,7 +117,9 @@ the trip record's `started_at` against the clause's 10-minute limb, which the
 judge read past and ruled `NO_ACTION`; and 211 is a contested reading of
 `POL-GEN-02(2)`, the majority bridging the trace's 168-second recording gap with
 the chat log and paying the driver 3.20 where the key splits the fee and refunds
-2.00.
+2.00. The key owner ruled on 2026-10-10 that the key's reading stands, so 211
+remains a miss
+([`docs/notes/2026-10-10-case-211-owner-ruling.md`](docs/notes/2026-10-10-case-211-owner-ruling.md)).
 
 **The precedent arm.** With the switch on the 15 route-deviation cases score
 15/15, and without it they score 13/15; the two cases whose ruling changed are 107
@@ -123,8 +128,9 @@ and 112. Neither 107's nor 112's ruling with precedents mentions a precedent, an
 attributed to the precedents. It is reported, not claimed.
 
 **The third sealed set.** `sealed-v1` is 24 cases, imported and registered at
-policy version 6, and it has **not** been run. Its key is being re-derived under
-version 6 by the key owner, who will not see any system output on the set; the
+policy version 6, and it has **not** been run. The key owner re-derived the key
+under version 6 on 2026-10-10 without seeing any output on the set; the old and
+new `answer_key_sha256` are `7529d925…` (imported) and `f430f6c0…` (now). The
 single run follows, and its figures will be added as their own block.
 
 **The earlier blocks.** Every block below was measured at policy version 1 or 2,
@@ -302,6 +308,14 @@ subject to the PDPA without this repository making any compliance claim.
   or a name. The organisers' original `DISP-002.md` contains names and never
   enters a brief. The implementation of `POL-GEN-08(4)` masks vehicle
   registration marks only.
+- **Personal data.** `POL-GEN-08(4)` masking misses one field:
+  `dispute.counterparty_statement` is an object (`text`, `submitted_by`,
+  `submitted_at`), and the frozen code masks it only when it is a string, so its
+  `text` is never masked. The policy owner reported it on 2026-10-10, after the
+  freeze. No brief built at version 6 is affected: none of the 254 cases in the
+  corpus, `dev-v2`, `dev-v2-ext`, 901 and sealed-v1 carries a registration mark
+  there, and no version-6 brief of any of them contains one. The fix waits until
+  the sealed run is committed.
 - **sealed-v1 before the freeze.** Before the 2026-10-09 freeze, the policy
   owner's AI assistant opened sealed-v1's cases and key. By the policy owner's
   account, no policy changed because of it. One sealed case's key and one derived

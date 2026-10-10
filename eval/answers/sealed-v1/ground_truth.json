@@ -175,17 +175,20 @@
     "case_no": 311,
     "dispute_id": "DSP-00311",
     "ground_truth": {
-        "expected_ruling": "ESCALATE",
-        "expected_amount_sgd": null,
+        "expected_ruling": "PARTIAL_REFUND",
+        "expected_amount_sgd": 7.05,
         "expected_driver_compensation_sgd": null,
         "expected_referrals": [],
         "governing_clauses": [
-          "POL-RD-10",
+          "POL-RD-14",
           "POL-RD-04",
-          "POL-RD-01"
+          "POL-RD-01",
+          "POL-RD-02",
+          "POL-RD-06",
+          "POL-RD-08"
         ],
         "difficulty": "HARD",
-        "rationale": "EV-GPS-00311 trace 12.40 km vs optimal 7.5 km: excess 65.3%, established and MATERIAL under POL-RD-01; EV-DPROF-00311 deviation_flags_90d is 0 so POL-RD-06 finds no pattern. EV-CHAT-00311 MSG-00311-001 is a genuine rider detour request naming Clementi Mall with a populated waypoint_hint, timestamped 50 s into the trip, satisfying POL-RD-04(a)(b)(c) on its face. But the corroboration test fails: the nearest trace fix to the Clementi Mall waypoint is 2595 m away, far outside 200 m, and the trace instead runs north to King Albert Park. The record therefore holds admissible evidence that the rider asked for a detour and admissible evidence that the driver drove a different one; the driver's statement that the rider then cancelled the stop has no chat support. This is the situation POL-RD-10(7) names in terms: a chat_log detour request whose waypoint the gps_trace never approaches. ESCALATE. The reviewer must settle whether the Bukit Timah routing was the rider's second instruction or the driver's choice; a voice-call record or the rider's own account of the aborted stop would resolve it."
+        "rationale": "Re-derived under policy version 6 (POL-RD-14, amendment 0002). EV-CHAT-00311 MSG-00311-001 is a rider instruction naming Clementi Mall with a populated waypoint_hint, 50 s after started_at, so it meets POL-RD-04(a) to (c) on its face; but the nearest fix on EV-GPS-00311 is 2595 m from that waypoint, far outside 200 m, so the trace never corroborates it. POL-RD-14 decides exactly this: the instruction did not cause the measured excess, POL-RD-04 does not apply, no distance is excluded, and this is not the POL-RD-10(7) contradiction, which is engaged only where the trace corroborates the instruction in part. The driver's statement that the rider then cancelled the stop cites no evidence ID and has no chat support, so under POL-RD-08 it carries no weight. POL-RD-01 on the trace as measured: 12.40 km against the booked 7.5 km, excess 4.90 km or 65.3 percent, established and MATERIAL; POL-RD-06 is consulted and EV-DPROF-00311.deviation_flags_90d is 0 over 260 completed trips, so no pattern. POL-RD-02 on the booked optimal (7.5 km, 12.0 min, surge 1.0, no ERP): recomputed fare = (3.80 + 0.75 x 7.5 + 0.28 x 12.0) x 1.0 + 0.80 = 13.585; refund = charged_total 20.62 - 13.585 = 7.035, rounded up to 7.05, 34 percent of charged_total, so PARTIAL_REFUND. The figure exceeds the rider's amount_contested 5.00: POL-RD-02 states the refund is arithmetic, not discretionary, and the development keys follow the same reading. It is below execution_threshold_sgd 8.00, so POL-GEN-05 does not hold it. PARTIAL_REFUND 7.05."
       }
   },
   {
