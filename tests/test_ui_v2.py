@@ -21,6 +21,10 @@ a number typed in here:
 * the replay's own links resolve, and every replay page links back to the queue;
 * a case sent to a reviewer has the "Human review" tab and its packet sha256
   equals ``ops.escalation``'s, and a decided case has no such tab;
+* the closing command the review form builds is one ``ops.review`` accepts and
+  stores -- for 213 a VARY of ``FULL_REFUND 6.0`` citing ``POL-GEN-07``, for 107
+  an ADOPT carrying the panel's own ``PARTIAL_REFUND 7.45``, and an escalated
+  case with nothing to adopt has ADOPT disabled;
 * the appeal text matches ``POL-GEN-04``'s rule text.
 
 **The suite builds the site five times and says why.** A build reads 151 cases,
@@ -53,12 +57,16 @@ computation against a memory.
 
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import os
 import pathlib
 import re
+import shlex
 import subprocess
 import sys
+import tempfile
 import unittest
 from decimal import Decimal
 from html.parser import HTMLParser
@@ -70,7 +78,9 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from eval import v6_runs  # noqa: E402
+from ops import appeal as appeal_module  # noqa: E402
 from ops import escalation  # noqa: E402
+from ops import review as review_module  # noqa: E402
 from tests import portability  # noqa: E402
 from ui.v2 import build as v2  # noqa: E402
 
@@ -1459,6 +1469,137 @@ class ReplayLinkTests(unittest.TestCase):
                         (path.parent / url).resolve().is_file(),
                         "{0} links to {1}, which is not there".format(path.name, url),
                     )
+
+
+# --------------------------------------------------------------------------
+# The closing command the human-review form builds
+# --------------------------------------------------------------------------
+class ClosingCommandTests(unittest.TestCase):
+    """POL-GEN-06(4)'s four decisions, and the command each one builds.
+
+    The page builds the command in JavaScript and this module builds it in
+    Python; the two are one shape, and the Python one is what is exercised here,
+    because the command that matters is the one ``ops.review`` accepts and the
+    closure it stores.
+    """
+
+    def test_the_vary_command_stores_a_closure_through_ops_review(self):
+        """The sheet's acceptance for 213: VARY, FULL_REFUND 6.0, POL-GEN-07."""
+        case = v2._load_case("corpus", 213)
+        evidence_id = str(
+            ((case.brief.get("case") or {}).get("evidence") or [])[0]["evidence_id"]
+        )
+        reason = (
+            "The reviewer varies the ruling to a full refund: {0} carries the fare "
+            "the rider paid, and POL-GEN-07(2) returns it."
+        ).format(evidence_id)
+        command = v2.closing_command(
+            case,
+            "VARY",
+            ruling="FULL_REFUND",
+            amount="6.0",
+            clauses=["POL-GEN-07"],
+            closed_by="a reviewer",
+            reason=reason,
+        )
+        self.assertIn("--ruling FULL_REFUND", command)
+        self.assertIn("--amount 6.0", command)
+        self.assertIn("--clause POL-GEN-07", command)
+        self.assertNotIn("close ", command)
+        with tempfile.TemporaryDirectory() as tmp:
+            argv = shlex.split(command)[3:] + ["--store", tmp]
+            with contextlib.redirect_stdout(io.StringIO()):
+                with contextlib.redirect_stderr(io.StringIO()):
+                    code = review_module.main(argv)
+            self.assertEqual(0, code)
+            self.assertTrue(
+                (Path(tmp) / "precedents.jsonl").is_file(),
+                "the command did not store a closure",
+            )
+
+    def test_adopt_on_107_carries_the_panel_s_own_proposal(self):
+        """ADOPT records what the panel proposed, and 107's is PARTIAL_REFUND 7.45."""
+        case = v2._load_case("corpus", 107)
+        proposal = v2.adopt_proposal(case)
+        self.assertEqual("PARTIAL_REFUND", str(proposal.get("ruling")))
+        self.assertEqual("7.45", str(proposal.get("amount_sgd")))
+        self.assertFalse(v2.adopt_is_disabled(case))
+        command = v2.closing_command(
+            case, "ADOPT", reason="a reason of at least twenty characters long"
+        )
+        self.assertIn("--ruling PARTIAL_REFUND", command)
+        self.assertIn("--amount 7.45", command)
+        self.assertNotIn("close ", command)
+
+    def test_an_escalated_case_with_nothing_to_adopt_has_adopt_disabled(self):
+        """The panel's plurality is ESCALATE, or there is no proposal at all."""
+        disabled = None
+        for set_name, run_dir in run_directories():
+            for case_no in case_numbers(run_dir):
+                document = read_json(run_dir / ("case-%05d.json" % case_no))
+                if inner_ruling(document).get("ruling") != "ESCALATE":
+                    continue
+                case = v2._load_case(set_name, case_no)
+                if v2.adopt_is_disabled(case):
+                    disabled = case
+                    break
+            if disabled is not None:
+                break
+        self.assertIsNotNone(disabled, "no escalated case has nothing to adopt")
+        page = v2.build_case_page(disabled)
+        self.assertIn("nothing to adopt", page)
+        self.assertIn(
+            '<input type="radio" name="decision" value="ADOPT" disabled', page
+        )
+
+    def test_the_form_offers_every_clause_of_the_case_s_policy(self):
+        """POL-GEN-06(6) needs POL-GEN-07 reachable, so every clause is offered."""
+        case = v2._load_case("corpus", 213)
+        page = v2.build_case_page(case)
+        offered = v2.case_policy_clauses(case)
+        self.assertIn("POL-GEN-07", offered)
+        for clause in offered:
+            with self.subTest(clause=clause):
+                self.assertIn('<option value="{0}">{0}</option>'.format(clause), page)
+
+    def test_the_form_offers_the_six_record_kinds(self):
+        """They are ``ops.appeal``'s own list, read rather than retyped."""
+        case = v2._load_case("corpus", 213)
+        page = v2.build_case_page(case)
+        self.assertEqual(tuple(appeal_module.RECORD_EVIDENCE_KINDS), v2.EVIDENCE_KINDS)
+        self.assertEqual(6, len(v2.EVIDENCE_KINDS))
+        for kind in v2.EVIDENCE_KINDS:
+            with self.subTest(kind=kind):
+                self.assertIn('name="evidence" value="{0}"'.format(kind), page)
+
+    def test_the_request_evidence_command_is_the_part_26_window_command(self):
+        case = v2._load_case("corpus", 213)
+        command = v2.evidence_window_command(
+            case,
+            items=["CALL_LOG"],
+            opened_at="2026-08-11T20:00:00+08:00",
+            opened_by="a reviewer",
+        )
+        self.assertTrue(command.startswith("python3 -m ops.evidence_window open"))
+        self.assertIn("--items CALL_LOG", command)
+        self.assertIn("--opened-by", command)
+        page = v2.build_case_page(case)
+        self.assertIn("part 26", page)
+        self.assertIn("ops/evidence_window.py", page)
+
+    def test_the_closing_command_carries_no_close_of_its_own(self):
+        """``ops.review`` supplies the subcommand; a second one is refused."""
+        case = v2._load_case("corpus", 213)
+        command = v2.closing_command(
+            case,
+            "VARY",
+            ruling="NO_ACTION",
+            clauses=["POL-GEN-03"],
+            reason="a reason of at least twenty characters long",
+        )
+        self.assertNotIn("close ", command)
+        self.assertIn("--closed-by", command)
+        self.assertIn("--packet-sha256", command)
 
 
 if __name__ == "__main__":

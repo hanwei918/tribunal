@@ -567,12 +567,22 @@ class TheRunTests(unittest.TestCase):
         is what makes a miss legible on the page rather than merely counted.
         That legibility is asserted for **every** case rather than for the
         misses, so it cannot pass by having nothing to check.
+
+        A platform that cannot rebuild case 111's brief leaves that case out of
+        the page's own case set, so it is left out of the comparison and of the
+        loop here too: it is named, and it is the only case the platform moves.
         """
+        skipped = (
+            {portability.CASE_111}
+            if portability.the_case_111_platform_difference()
+            else set()
+        )
         produced = {
             case_no: json.loads(
                 (build.RUN_DIR / ("case-%05d.json" % case_no)).read_text(encoding="utf-8")
             )["ruling"]
             for case_no in build.cached_cases(build.RUN_DIR)
+            if case_no not in skipped
         }
         report = grade.grade(produced)
 

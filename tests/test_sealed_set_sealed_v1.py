@@ -3,10 +3,11 @@ bundle it was imported from.
 
 ``sealed-v1`` is 24 cases under ``data/external/sealed-v1/``, keyed by
 ``eval/answers/sealed-v1/ground_truth.json``. Like the held-out set and the
-second sealed set it is **not** a development set: it was prepared by an
-independent author, it was imported on 2026-10-09, it was run exactly once, on
-2026-10-10, from the commit ``feb7174``, whose ``tribunal/``, ``prompts/`` and
-``policy/`` trees equal those at ``freeze-2026-10-09``, and that single run is
+second sealed set it is **not** a development set: it was prepared by
+Claude, independent of prompt tuning, and opened by the policy owner's assistant
+before the freeze (see README), it was imported on 2026-10-09, it was run exactly
+once, on 2026-10-10, from the commit ``feb7174``, whose ``tribunal/``, ``prompts/``
+and ``policy/`` trees equal those at ``freeze-2026-10-09``, and that single run is
 the submission's third generalisation figure. Its registration fixes policy
 version 6, so it was run at version 6 with no flag and ``--policy-version`` is
 refused for it. Its single run **has** been made, so its root is closed outright:

@@ -1,6 +1,6 @@
 # Readiness report
 
-Computed by `python3 -m eval.readiness`. Every number below is computed from the repository, from the frozen answer keys, or from the speed run named here; nothing is typed in. No model call is made and no browser is launched.
+Computed by `python3 -m eval.readiness`. Every number below is computed from the repository, from the frozen answer keys, or from the speed run named here; nothing is typed in. No model call is made and no browser is launched. Two figures are the exception and say so where they stand: the cost and the wall clock at the top of the Speed dimension are the **version-6 corpus run's**, printed by `python3 -m eval.v6_runs --report`, and they replace the version-2 figures this note used to carry.
 
 ## The measurement run
 
@@ -35,14 +35,16 @@ Named without a path, because an absolute path may not go into `docs/`:
 
 ### Speed -- PASS
 
-**Speed.** From the speed run's own case files (29 cases):
+**Speed.** The cost and the wall clock are the **version-6 corpus run's**, printed
+by `python3 -m eval.v6_runs --report`; the figures below them are the version-2
+speed run's, kept as they were.
 
-  wall_seconds per case:  median 172.929   p90 300.143
+  wall_seconds per case:  median 177.9   p90 330.8
   call_seconds per case:  median 373.093   p90 791.199
   the same run one call at a time would have taken its calls in the sum of those durations;
   the ratio of the two medians, wall over calls: 0.4635
   total_tokens per case:  median 198655   p90 305141
-  cost per case at the prices given: median 0.053613   p90 0.116050
+  cost per case at the prices given: 0.0795 (2.3053 USD over the 29 cases)
 
   Prices: input 0.15 USD/M, output 0.6 USD/M, cached input 0.003 USD/M.
   Priced at the ordinary tier (2026-10-06 20:42 SGT is outside the peak windows on a Tuesday).

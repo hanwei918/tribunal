@@ -575,7 +575,9 @@ class DevelopmentSetReportTests(unittest.TestCase):
         On a platform whose libm rounds case 111's mean distance one unit in the
         last place away from the recorded one, that single case reads
         ``stale_brief``: the count below is over the set the platform can
-        rebuild, and it names the case it left out. On a platform that can read
+        rebuild, and it names the case it left out. The judge message embeds the
+        brief, so the same case reads ``stale_prompts`` too -- the two counts are
+        the same one, and the report's numbers follow. On a platform that can read
         the whole record nothing is left out and the counts are as they were.
         """
         report = sets.render_development_sets(MODEL)
@@ -596,7 +598,9 @@ class DevelopmentSetReportTests(unittest.TestCase):
                 self.assertEqual(shifted, staleness.stale)
                 self.assertEqual((), staleness.unknown)
                 self.assertEqual(shifted, staleness.stale_brief)
-                self.assertEqual((), staleness.stale_prompts)
+                # The judge message embeds the brief, so a case whose brief is
+                # stale has a stale prompt too: the two are the same case set.
+                self.assertEqual(staleness.stale_brief, staleness.stale_prompts)
                 self.assertGreater(produced, 0)
                 expected = (
                     "  {0:<8} current {1:>3}, stale_brief {2:>3}, "
@@ -605,7 +609,7 @@ class DevelopmentSetReportTests(unittest.TestCase):
                     development_set.name,
                     produced - len(shifted),
                     len(shifted),
-                    0,
+                    len(staleness.stale_prompts),
                     0,
                 )
                 self.assertIn(expected, report)

@@ -64,6 +64,31 @@ It renders as the same character and cannot be read as part of a key, and
 :func:`build` prints the page and the count of what it rewrote, so nothing is
 done quietly.
 
+The reviewer's form, and what each decision carries
+---------------------------------------------------
+A case that went to a reviewer carries a form with POL-GEN-06(4)'s four
+decisions, and each one builds its own command:
+
+* **ADOPT** records the panel's best-supported proposal, read with
+  ``tribunal.precedents.best_supported_proposal``. Where that proposal is
+  ``ESCALATE``, or where there is no proposal at all, the page says "nothing to
+  adopt" and disables the choice rather than offering an empty command.
+* **VARY** and **REFER_COMPLIANCE** offer a ruling from POL-GEN-03's values
+  (without ``ESCALATE``, which a closure refuses), an amount, and a multi-select
+  of **every** clause the case's own policy carries -- ``referee.policy_clauses``
+  called rather than re-implemented, so POL-GEN-07 is reachable. REFER_COMPLIANCE
+  carries a note as well.
+* **REQUEST_EVIDENCE** offers the six record kinds of POL-GEN-04(b) -- read from
+  ``ops.appeal.RECORD_EVIDENCE_KINDS`` -- and the instant the window opens. It
+  builds ``python3 -m ops.evidence_window open``, which is **part 26**: the
+  evidence window is not in this repository yet, and the page says so.
+
+The closing command is ``tribunal.precedents close``'s own command line behind
+``ops.review``, and it carries **no** ``close`` of its own: ``ops.review``
+supplies the subcommand. The page builds the same string in JavaScript that
+:func:`closing_command` and :func:`evidence_window_command` build in Python, so a
+test can hold the command itself to ``ops.review`` without a browser.
+
 Where the sealed set enters, and where it does not
 --------------------------------------------------
 This module names no path under ``eval/answers/sealed-v1/``,
@@ -103,11 +128,13 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from eval import development_sets  # noqa: E402
 from eval import v6_runs  # noqa: E402
+from ops import appeal as appeal_module  # noqa: E402
 from ops import escalation  # noqa: E402
 from tribunal import brief as brief_module  # noqa: E402
 from tribunal import loader  # noqa: E402
 from tribunal import pipeline as pipeline_module  # noqa: E402
 from tribunal import precedents as precedents_module  # noqa: E402
+from tribunal import referee as referee_module  # noqa: E402
 
 # --------------------------------------------------------------------------
 # Where the site lives
@@ -183,6 +210,60 @@ REFUND_RULINGS: Tuple[str, ...] = (FULL_REFUND, PARTIAL_REFUND)
 # The two outcomes a queue row can have, as the filter row names them.
 OUTCOME_AUTO = "auto"
 OUTCOME_REVIEWER = "reviewer"
+
+# --------------------------------------------------------------------------
+# The reviewer's four decisions, and the vocabulary each one offers
+# --------------------------------------------------------------------------
+# POL-GEN-06(4) names exactly four decisions, and the form offers them in the
+# order the clause does.
+DECISION_ADOPT = "ADOPT"
+DECISION_VARY = "VARY"
+DECISION_REQUEST_EVIDENCE = "REQUEST_EVIDENCE"
+DECISION_REFER_COMPLIANCE = "REFER_COMPLIANCE"
+DECISIONS: Tuple[str, ...] = (
+    DECISION_ADOPT,
+    DECISION_VARY,
+    DECISION_REQUEST_EVIDENCE,
+    DECISION_REFER_COMPLIANCE,
+)
+
+# The words each decision is offered under, so the form's order and its labels
+# are facts about this file rather than about a tuple written out twice.
+DECISION_LABELS: Mapping[str, str] = {
+    DECISION_ADOPT: "Adopt the system's proposed ruling.",
+    DECISION_VARY: (
+        "Vary: choose a ruling and a remedy from the options the money block "
+        "enumerates for this trip."
+    ),
+    DECISION_REQUEST_EVIDENCE: (
+        "Request evidence: name the record-type items required."
+    ),
+    DECISION_REFER_COMPLIANCE: (
+        "Refer compliance: a safety, fraud or conduct matter."
+    ),
+}
+
+# The ruling values a VARY or REFER_COMPLIANCE decision may choose from, in the
+# order POL-GEN-03 states them and **without** ``ESCALATE``: a closure records a
+# decision, and ``ESCALATE`` is the absence of one, which
+# ``tribunal.precedents close`` refuses in as many words.
+DECISION_RULING_VALUES: Tuple[str, ...] = (
+    FULL_REFUND,
+    PARTIAL_REFUND,
+    NO_ACTION,
+    pipeline_module.DRIVER_COMPENSATION,
+)
+
+# The record kinds a REQUEST_EVIDENCE decision may name. They are
+# ``ops.appeal``'s own list, read rather than retyped, so the page offers exactly
+# the kinds POL-GEN-04(b) lists.
+EVIDENCE_KINDS: Tuple[str, ...] = tuple(appeal_module.RECORD_EVIDENCE_KINDS)
+
+# The part the evidence-window command belongs to. ``POL-GEN-06(4)`` lets a
+# reviewer choose REQUEST_EVIDENCE and nothing in this repository executes it:
+# ``ops/evidence_window.py`` is part 26, and the page says so rather than
+# pretending the command runs here.
+EVIDENCE_WINDOW_PART = "part 26"
 
 # The words a ruling value is shown under, before its code. These are the words
 # the track brief uses for the five values; the code follows in small monospace,
@@ -1266,6 +1347,14 @@ details.form summary{cursor:pointer;padding:12px 0;font-weight:600}
 .foot{border-top:1px solid var(--line);margin-top:32px;padding-top:14px;color:var(--muted);font-size:.82rem;display:flex;flex-wrap:wrap;gap:16px}
 pre{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:12px;overflow-wrap:anywhere;white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.85rem}
 textarea,input[type="text"]{font:inherit;color:inherit}
+
+/* the reviewer's decision form */
+.decision-fields{border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin:10px 0}
+.decision-fields[hidden]{display:none}
+.decision-fields label{margin-right:12px}
+.decision-fields select,.decision-fields input[type="text"]{font:inherit;color:inherit;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card)}
+.decision-fields select[multiple]{min-width:240px;vertical-align:top}
+.decision-fields .ev{display:inline-flex;align-items:center;gap:6px;margin:0 14px 6px 0;font-size:.9rem}
 """
 
 _JS = """
@@ -1388,6 +1477,9 @@ _JS = """
     var evidence = (form.getAttribute("data-evidence") || "").split(" ").filter(Boolean);
     var clauses = (form.getAttribute("data-clauses") || "").split(" ").filter(Boolean);
     var floor = Number(form.getAttribute("data-reason-min") || "0");
+    var runDir = form.getAttribute("data-run-dir") || "";
+    var caseNo = form.getAttribute("data-case") || "";
+    var packet = form.getAttribute("data-packet") || "";
 
     function cited(text, ids){
       for (var i = 0; i < ids.length; i += 1){
@@ -1416,25 +1508,88 @@ _JS = """
       return picked ? picked.value : "";
     }
 
+    function valueOf(id){
+      var node = document.getElementById(id);
+      return node ? node.value : "";
+    }
+
+    function quoted(text){
+      return '"' + String(text).replace(/"/g, "'") + '"';
+    }
+
+    function who(){
+      return valueOf("reviewer") || "reviewer";
+    }
+
+    function chosenClauses(id){
+      var node = document.getElementById(id);
+      if (!node){ return []; }
+      return Array.prototype.slice.call(node.options)
+        .filter(function(option){ return option.selected; })
+        .map(function(option){ return option.value; });
+    }
+
+    function reviewCommand(){
+      var d = decision();
+      var ruling = "", amount = "", list = [], summary = d;
+      if (d === "ADOPT"){
+        ruling = form.getAttribute("data-adopt-ruling") || "";
+        amount = form.getAttribute("data-adopt-amount") || "";
+        list = (form.getAttribute("data-adopt-clauses") || "").split(" ").filter(Boolean);
+      } else {
+        var prefix = d === "REFER_COMPLIANCE" ? "refer-" : "vary-";
+        ruling = valueOf(prefix + "ruling");
+        amount = valueOf(prefix + "amount");
+        list = chosenClauses(prefix + "clauses");
+        if (d === "REFER_COMPLIANCE"){
+          var note = valueOf("refer-note").trim();
+          if (note){ summary = d + ": " + note; }
+        }
+      }
+      var parts = ["python3 -m ops.review", "--run-dir " + runDir,
+        "--case " + caseNo, "--packet-sha256 " + packet];
+      if (ruling){ parts.push("--ruling " + ruling); }
+      if (amount){ parts.push("--amount " + amount); }
+      list.forEach(function(clause){ parts.push("--clause " + clause); });
+      parts.push("--closed-by " + quoted(who()));
+      parts.push("--summary " + quoted(summary));
+      parts.push("--reason " + quoted(reason.value.trim()));
+      return parts.join(" ");
+    }
+
+    function windowCommand(){
+      var items = each('input[name="evidence"]:checked', form)
+        .map(function(box){ return box.value; });
+      return ["python3 -m ops.evidence_window", "open", "--run-dir " + runDir,
+        "--case " + caseNo, "--now " + quoted(valueOf("window-now")),
+        "--items " + items.join(","), "--opened-by " + quoted(who())].join(" ");
+    }
+
     function command(){
-      var text = reason.value.trim();
-      return "python3 -m ops.review --run-dir " + form.getAttribute("data-run-dir") +
-        " --case " + form.getAttribute("data-case") +
-        " --packet-sha256 " + form.getAttribute("data-packet") +
-        " close --ruling " + form.getAttribute("data-ruling") +
-        ' --closed-by "' + (document.getElementById("reviewer").value || "reviewer") + '"' +
-        ' --summary "' + decision() + '"' +
-        ' --reason "' + text.replace(/"/g, "'") + '"';
+      return decision() === "REQUEST_EVIDENCE" ? windowCommand() : reviewCommand();
+    }
+
+    function showFields(){
+      var d = decision();
+      each("[data-for]", form).forEach(function(block){
+        block.hidden = block.getAttribute("data-for") !== d;
+      });
     }
 
     function refresh(){
-      var state = check();
-      if (state.problems.length){
-        verdict.className = "err";
-        verdict.textContent = state.problems.join("; ");
+      showFields();
+      if (decision() === "REQUEST_EVIDENCE"){
+        verdict.className = "empty";
+        verdict.textContent = "The evidence-window command is part 26 (ops/evidence_window.py), which is not in this repository yet.";
       } else {
-        verdict.className = "ok";
-        verdict.textContent = "The reason is long enough and cites this case's own evidence and clause ids.";
+        var state = check();
+        if (state.problems.length){
+          verdict.className = "err";
+          verdict.textContent = state.problems.join("; ");
+        } else {
+          verdict.className = "ok";
+          verdict.textContent = "The reason is long enough and cites this case's own evidence and clause ids.";
+        }
       }
       output.textContent = command();
     }
@@ -2470,6 +2625,15 @@ def _verdict_card(case: CaseData) -> str:
             '<p class="why">{0}</p>'.format(_text(paragraph))
             for paragraph in summary.split("\n\n")
         )
+    # A ruling whose money is above the execution threshold was issued but not
+    # executed, so the figure is named for what it is: an amount awaiting release.
+    awaiting = (
+        '<p class="awaiting">Amount awaiting release: {0}</p>'.format(
+            _text(_money(monetary_effect(ruling), policy.currency))
+        )
+        if _money_is_held(case)
+        else ""
+    )
     return (
         '<div class="verdict">'
         '<div class="v-left">'
@@ -2480,6 +2644,7 @@ def _verdict_card(case: CaseData) -> str:
         "{4}"
         '<p class="after">{5}</p>'
         "<p>{6}</p>"
+        "{10}"
         "{7}"
         "{8}"
         "</div>"
@@ -2496,6 +2661,7 @@ def _verdict_card(case: CaseData) -> str:
         details,
         note,
         _tiles_html(case),
+        awaiting,
     )
 
 
@@ -2865,6 +3031,135 @@ def _claims_text(case: CaseData, side: str) -> str:
     return ""
 
 
+# --------------------------------------------------------------------------
+# The closing command the form builds
+# --------------------------------------------------------------------------
+def case_policy_clauses(case: "CaseData") -> List[str]:
+    """Every clause id of the policy this case was decided under, sorted.
+
+    POL-GEN-06(6) requires a decision's reason to cite "at least one clause of
+    the policy in force, or POL-GEN-07 where no clause applies", so the form
+    offers **every** clause the case's own policy carries rather than only the
+    ones the ruling happened to cite -- which is what lets POL-GEN-07 be chosen.
+    ``referee.policy_clauses`` is the policy's own reader, called rather than
+    re-implemented.
+    """
+    return sorted(referee_module.policy_clauses(case.brief))
+
+
+def adopt_proposal(case: "CaseData") -> Optional[Mapping[str, Any]]:
+    """The panel's best-supported proposal, as ``tribunal.precedents`` reads it."""
+    return precedents_module.best_supported_proposal(case.transcript.get("vote"))
+
+
+def adopt_is_disabled(case: "CaseData") -> bool:
+    """Whether there is nothing for a reviewer to adopt.
+
+    ``tribunal.precedents.best_supported_proposal`` counts the valid drafts'
+    proposals and takes the plurality, so an ADOPT is "adopt what the panel
+    proposed". When the plurality is ``ESCALATE`` -- or when there is no valid
+    draft and so no proposal at all -- there is nothing to adopt, and the page
+    says so and disables the choice rather than offering an empty command.
+    """
+    proposal = adopt_proposal(case)
+    if not isinstance(proposal, Mapping):
+        return True
+    return str(proposal.get("ruling")) == ESCALATE
+
+
+def _summary_for(decision: str, note: str) -> str:
+    """The summary a decision's closure carries: the decision, and its note."""
+    note = str(note or "").strip()
+    if decision == DECISION_REFER_COMPLIANCE and note:
+        return "{0}: {1}".format(decision, note)
+    return decision
+
+
+def closing_command(
+    case: "CaseData",
+    decision: str,
+    *,
+    ruling: Optional[str] = None,
+    amount: Any = None,
+    clauses: Sequence[str] = (),
+    note: str = "",
+    closed_by: str = "reviewer",
+    summary: Optional[str] = None,
+    reason: str = "",
+    store: Optional[str] = None,
+) -> str:
+    """The ``python3 -m ops.review`` command the form builds for one decision.
+
+    It is ``tribunal.precedents close``'s own command line -- ``ops.review``
+    forwards every argument it does not use -- and it carries **no** ``close``:
+    ``ops.review`` supplies the subcommand itself, and a second one is what the
+    old page's command was refused for. The ruling is the decision's own: the
+    panel's best-supported proposal for ADOPT, and the reviewer's choice from
+    POL-GEN-03's values for VARY and REFER_COMPLIANCE. ``--clause`` is repeated
+    once per clause, and every clause offered is one of the case's own policy's.
+
+    ``store`` is for a caller that wants the closure somewhere other than the
+    repository's own ``precedents/``; the page's command leaves it out, so the
+    command a reviewer copies writes to the repository's store.
+    """
+    if case.packet is None:
+        raise BuildError("case {0} has no escalation packet".format(case.case_no))
+    parts: List[str] = ["python3", "-m", "ops.review"]
+    if store is not None:
+        parts += ["--store", str(store)]
+    parts += [
+        "--run-dir", _relative_run_dir(case),
+        "--case", str(case.case_no),
+        "--packet-sha256", escalation.packet_sha256(case.packet),
+    ]
+    if ruling:
+        parts += ["--ruling", str(ruling)]
+    if amount is not None and str(amount) != "":
+        parts += ["--amount", str(amount)]
+    for clause in clauses:
+        parts += ["--clause", str(clause)]
+    parts += [
+        "--closed-by",
+        '"{0}"'.format(closed_by),
+        "--summary",
+        '"{0}"'.format(
+            summary if summary is not None else _summary_for(decision, note)
+        ),
+        "--reason",
+        '"{0}"'.format(str(reason).replace('"', "'")),
+    ]
+    return " ".join(parts)
+
+
+def evidence_window_command(
+    case: "CaseData",
+    *,
+    items: Sequence[str] = (),
+    opened_at: str = "",
+    opened_by: str = "reviewer",
+    store: Optional[str] = None,
+) -> str:
+    """The ``python3 -m ops.evidence_window open`` command, which is part 26.
+
+    ``POL-GEN-06(4)`` lets a reviewer choose REQUEST_EVIDENCE and nothing in this
+    repository executes it: the evidence window is ``ops/evidence_window.py``,
+    part 26, which has not landed. The form builds the command in the shape part
+    26 states -- ``--store``, ``--run-dir``, ``--case``, ``--now``, ``--items``
+    and ``--opened-by`` -- and the page says which part it belongs to.
+    """
+    parts: List[str] = ["python3", "-m", "ops.evidence_window", "open"]
+    if store is not None:
+        parts += ["--store", str(store)]
+    parts += [
+        "--run-dir", _relative_run_dir(case),
+        "--case", str(case.case_no),
+        "--now", '"{0}"'.format(opened_at),
+        "--items", ",".join(str(item) for item in items),
+        "--opened-by", '"{0}"'.format(opened_by),
+    ]
+    return " ".join(parts)
+
+
 def _review_tab(case: CaseData) -> str:
     """The human-review tab: the packet, its digest, and a form that closes nothing."""
     packet = case.packet
@@ -2977,33 +3272,113 @@ def _review_tab(case: CaseData) -> str:
         for artifact in packet.get("admissibility") or []
         if artifact.get("evidence_id")
     ]
-    clause_ids = [str(item) for item in packet.get("clause_ids") or []]
-    choices = (
-        ("ADOPT", "Adopt the system's proposed ruling."),
-        ("VARY", "Vary: choose a ruling and a remedy from the money block's options."),
-        ("REQUEST_EVIDENCE", "Request evidence: name the record-type items required."),
-        ("REFER_COMPLIANCE", "Refer compliance: a safety, fraud or conduct matter."),
+    clause_ids = case_policy_clauses(case)
+    proposal = adopt_proposal(case)
+    adopt_ruling = (
+        "" if not isinstance(proposal, Mapping) else str(proposal.get("ruling") or "")
     )
+    adopt_amount = (
+        ""
+        if not isinstance(proposal, Mapping) or proposal.get("amount_sgd") is None
+        else str(proposal.get("amount_sgd"))
+    )
+    # What an ADOPT records is the panel's proposal, so the command's clauses are
+    # the ones the packet relied on; a packet that names none falls back to every
+    # clause the case's policy carries, because a closure rests on at least one.
+    adopt_clauses = [str(item) for item in packet.get("clause_ids") or []] or clause_ids
+    disabled = adopt_is_disabled(case)
+    first_enabled = DECISION_VARY if disabled else DECISION_ADOPT
+
+    choices = tuple((value, DECISION_LABELS[value]) for value in DECISIONS)
     radios = "".join(
-        '<p><label><input type="radio" name="decision" value="{0}"{1}> {2}</label></p>'.format(
-            _attribute(value), " checked" if index == 0 else "", _text(label)
+        '<p><label><input type="radio" name="decision" value="{0}"{1}{2}> {3}</label></p>'.format(
+            _attribute(value),
+            " disabled" if value == DECISION_ADOPT and disabled else "",
+            " checked" if value == first_enabled else "",
+            _text(label),
         )
-        for index, (value, label) in enumerate(choices)
+        for value, label in choices
     )
+    if disabled:
+        adopt_note = (
+            '<p class="empty" id="adopt-note">nothing to adopt: the panel\'s '
+            "best-supported proposal is {0}.</p>".format(_text(adopt_ruling or "absent"))
+        )
+    else:
+        adopt_note = (
+            '<p class="empty" id="adopt-note">The panel\'s best-supported proposal is '
+            "{0} {1}; ADOPT records exactly that.</p>".format(
+                _text(adopt_ruling),
+                "" if not adopt_amount else _money(adopt_amount, case.policy.currency),
+            )
+        )
+    ruling_options = "".join(
+        '<option value="{0}">{1}</option>'.format(
+            _attribute(value), _text(ruling_words(value))
+        )
+        for value in DECISION_RULING_VALUES
+    )
+    clause_options = "".join(
+        '<option value="{0}">{0}</option>'.format(_attribute(clause))
+        for clause in clause_ids
+    )
+    evidence_boxes = "".join(
+        '<label class="ev"><input type="checkbox" name="evidence" value="{0}"> '
+        "{0}</label>".format(_attribute(kind))
+        for kind in EVIDENCE_KINDS
+    )
+    decision_fields = (
+        '<div class="decision-fields" data-for="ADOPT">'
+        "<p>Adopt the panel's proposal. The command carries the proposal's own "
+        "ruling and amount, and the clauses the packet relied on.</p></div>"
+        '<div class="decision-fields" data-for="VARY">'
+        '<p><label for="vary-ruling">Ruling</label> '
+        '<select id="vary-ruling">{0}</select> '
+        '<label for="vary-amount">Amount</label> '
+        '<input id="vary-amount" type="text" inputmode="decimal" size="8" '
+        'placeholder="a figure the money block enumerates"></p>'
+        '<p><label for="vary-clauses">Clauses (choose at least one)</label><br>'
+        '<select id="vary-clauses" multiple size="6">{1}</select></p></div>'
+        '<div class="decision-fields" data-for="REFER_COMPLIANCE">'
+        '<p><label for="refer-ruling">Ruling</label> '
+        '<select id="refer-ruling">{0}</select> '
+        '<label for="refer-amount">Amount</label> '
+        '<input id="refer-amount" type="text" inputmode="decimal" size="8"></p>'
+        '<p><label for="refer-clauses">Clauses (choose at least one)</label><br>'
+        '<select id="refer-clauses" multiple size="6">{1}</select></p>'
+        "<p><label for=\"refer-note\">Note: the safety, fraud or conduct matter "
+        "referred</label><br>"
+        '<input id="refer-note" type="text" size="40"></p></div>'
+        '<div class="decision-fields" data-for="REQUEST_EVIDENCE">'
+        "<p>Name the record-type items required, and when the window opens. The "
+        "reviewer opens one window for both parties at once.</p>"
+        "<p>{2}</p>"
+        '<p><label for="window-now">Opens at (an ISO 8601 instant with a zone)</label> '
+        '<input id="window-now" type="text" size="30" '
+        'placeholder="2026-08-11T20:00:00+08:00"></p>'
+        '<p class="empty">{3}: the evidence window is '
+        '<span class="mono">ops/evidence_window.py</span>, which is not in this '
+        "repository yet, so this is the command it will take rather than one that "
+        "runs here.</p></div>"
+    ).format(ruling_options, clause_options, evidence_boxes, EVIDENCE_WINDOW_PART)
     form_card = (
         '<div class="card wide" id="review-form" '
-        'data-run-dir="{0}" data-case="{1}" data-packet="{2}" data-ruling="{3}" '
-        'data-evidence="{4}" data-clauses="{5}" data-reason-min="{6}">'
+        'data-run-dir="{0}" data-case="{1}" data-packet="{2}" '
+        'data-adopt-ruling="{3}" data-adopt-amount="{4}" data-adopt-clauses="{5}" '
+        'data-evidence="{6}" data-clauses="{7}" data-reason-min="{8}">'
         "<h2>The decision</h2>"
-        "<p>POL-GEN-06(4) names exactly four decisions:</p>{7}"
-        "<p><label>Reviewer <input id=\"reviewer\" type=\"text\" "
-        "placeholder=\"a name\"></label></p>"
-        "<p><label for=\"reason\">Reason</label></p>"
-        "<textarea id=\"reason\" rows=\"4\" style=\"width:100%\"></textarea>"
-        "<p id=\"verdict\"></p>"
-        "<p><button type=\"button\" id=\"copy\">Copy the closing command</button> "
+        "<p>POL-GEN-06(4) names exactly four decisions:</p>{9}"
+        "{10}"
+        "{11}"
+        '<p><label>Reviewer <input id="reviewer" type="text" '
+        'placeholder="a name"></label></p>'
+        '<p><label for="reason">Reason</label> (at least {12} characters, citing one '
+        "evidence id of this case and one clause id of the policy)</p>"
+        '<textarea id="reason" rows="4" style="width:100%"></textarea>'
+        '<p id="verdict"></p>'
+        '<p><button type="button" id="copy">Copy the command</button> '
         '<span id="copy-status" class="empty"></span></p>'
-        "<pre id=\"command\"></pre>"
+        '<pre id="command"></pre>'
         "<p><strong>This form closes nothing by itself: there is no server.</strong> "
         "It checks the reason and builds the command; recording the decision is a "
         "command a person runs.</p>"
@@ -3012,11 +3387,16 @@ def _review_tab(case: CaseData) -> str:
         _attribute(_relative_run_dir(case)),
         _attribute(case.case_no),
         _attribute(digest),
-        _attribute(ruling.get("ruling")),
+        _attribute(adopt_ruling),
+        _attribute(adopt_amount),
+        _attribute(" ".join(adopt_clauses)),
         _attribute(" ".join(evidence_ids)),
         _attribute(" ".join(clause_ids)),
         _attribute(precedents_module.MIN_REASON_CHARS),
         radios,
+        adopt_note,
+        decision_fields,
+        precedents_module.MIN_REASON_CHARS,
     )
     return packet_card + form_card
 

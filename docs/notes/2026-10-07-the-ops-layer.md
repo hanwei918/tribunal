@@ -95,6 +95,7 @@ expectation; no answer key is opened anywhere in the layer.
 
 ```
 python3 -m ops.queue --run-dir <dir> [--now <ISO instant>] [--config <path>]
+  [--windows <store>]
 ```
 
 Routes each dispute of a run into `SAFETY_FAST_TRACK`, `HUMAN_REVIEW` or `AUTO`,
@@ -104,6 +105,20 @@ earliest due time, the larger contested amount and the case number. With `--now`
 it reports the time left or `BREACHED`. It also reports the measured auto-ruling
 SLA as a count of cases: 14 of 24 on the corpus run, against the 5-minute target
 on `wall_seconds`.
+
+**Two more policy figures, both read rather than typed.** A ruling whose monetary
+effect — `ops.appeal.monetary_effect`'s reading, a `DRIVER_COMPENSATION` ruling's
+two fields counted once — is above `POL-GEN-05`'s `execution_threshold_sgd` is
+held for release: the lane is `HUMAN_REVIEW` with the reason `GEN05_RELEASE`, the
+threshold is read with `ops.appeal.read_execution_threshold` so a moved sentence
+is refused, and versions 1 and 2 carry no `POL-GEN-05` and so no hold. A held case
+still counts as one the pipeline decided in the timing figures, so a hold moves
+the lane and not the measurement. Every human-lane case also carries
+`POL-GEN-06(2)`'s first-review deadline, `filed_at` plus the config's
+`end_to_end_hours`; past it the status is the clause's own consequence, escalated
+to the duty supervisor with the amount frozen. `--windows <store>` lists each
+human-lane case beside the evidence-window store, which belongs to part 26
+(`ops/evidence_window.py`) and is not in the repository yet.
 
 The targets are the team's own and live in `ops/config.json`, whose `note` says so
 and names Ryde's baseline from the brief. The in-scope categories are read off

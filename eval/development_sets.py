@@ -541,8 +541,10 @@ SEALED_V1 = DevelopmentSet(
     runs_subdir=run_benchmark.SEALED_V1_SET_RUNS_SUBDIR,
     case_root=loader.EXTERNAL_DIR / run_benchmark.SEALED_V1_SET_RUNS_SUBDIR,
     summary=(
-        "the third sealed set (sealed-v1): 24 cases prepared by an independent "
-        "author and imported on 2026-10-09; it is run once, plainly, from a "
+        "the third sealed set (sealed-v1): 24 cases prepared by Claude, "
+        "independent of prompt tuning, and opened by the policy owner's assistant "
+        "before the freeze (see README), and imported on 2026-10-09; it is run "
+        "once, plainly, from a "
         "commit whose tribunal/, prompts/ and policy/ trees equal those at "
         "freeze-2026-10-09, at the policy version 6 this registration fixes, and "
         "that single run is the submission's third generalisation figure"
@@ -668,9 +670,10 @@ DEVELOPMENT_DATA_CAVEAT = (
     "the second sealed set's, prepared by OpenAI Codex -- whether Codex could "
     "read this repository while preparing it is not recorded -- from a commit "
     "whose tribunal/, prompts/ and policy/ trees equal those at "
-    "freeze-2026-10-03; and the third sealed set's, prepared by an independent "
-    "author and imported on 2026-10-09, from a commit whose tribunal/, prompts/ "
-    "and policy/ trees equal those at freeze-2026-10-09. "
+    "freeze-2026-10-03; and the third sealed set's, prepared by Claude, "
+    "independent of prompt tuning, and opened by the policy owner's assistant "
+    "before the freeze (see README), and imported on 2026-10-09, from a commit "
+    "whose tribunal/, prompts/ and policy/ trees equal those at freeze-2026-10-09. "
     "Neither figure here is any of them, and no two of the three are "
     "ever added to each other."
 )
@@ -712,7 +715,9 @@ WILD_V2_CAVEAT = (
 SEALED_V1_CAVEAT = (
     "The third sealed set is not a development set and is never added to the "
     "combined figure above, to the held-out set's figure or to the second "
-    "sealed set's. It was prepared by an independent author and imported on "
+    "sealed set's. It was prepared by Claude, independent of prompt tuning, and "
+    "opened by the policy owner's assistant before the freeze (see README); it "
+    "was imported on "
     "2026-10-09, and it was run exactly once, on 2026-10-10, from the commit "
     "feb7174, whose tribunal/, prompts/ and policy/ trees equal those at "
     "freeze-2026-10-09 -- every event the run wrote records the commit it was "

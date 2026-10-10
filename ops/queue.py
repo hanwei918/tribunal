@@ -14,9 +14,11 @@ has already finished with.
   that is safety-related, such as ``SAFETY_INCIDENT``. It never enters the
   pipeline, so there is no ruling to route on and the lane is decided by the
   category alone.
-* ``HUMAN_REVIEW`` -- any of three things: the ruling is ``ESCALATE``; the
+* ``HUMAN_REVIEW`` -- any of four things: the ruling is ``ESCALATE``; the
   category is out of scope (``PROPERTY_DAMAGE`` needs image analysis the pipeline
-  does not do); or the kill switch is off.
+  does not do); the kill switch is off; or the ruling's monetary effect is above
+  ``POL-GEN-05``'s execution threshold, so the amount is held for release and the
+  case is placed in the human queue by the policy itself.
 * ``AUTO`` -- the pipeline ruled, or has ruled, and did not escalate.
 
 **The kill switch.** ``auto_rulings_enabled`` false in ``ops/config.json`` moves
@@ -36,18 +38,26 @@ rather than a reason to reroute a case the pipeline decided.
 **The SLA.** A due time is ``filed_at`` plus the lane's target -- the safety
 lane's ``safety_hours``, human review's ``human_review_hours``, the auto lane's
 ``auto_ruling_minutes`` -- and with ``--now`` the queue says what is left or says
-``BREACHED``. The config's ``end_to_end_hours`` is the queue's commitment from
-filing to resolution and is printed as such; no due time is computed from it,
-because the policy does not state one and this module will not invent a second
-deadline. The numbers themselves are the team's own, not Ryde's, and
-``ops/config.json`` says so in its own ``note``.
+``BREACHED``. Every case in the human lane carries a **second** deadline beside
+it: the first-review deadline, ``filed_at`` plus ``end_to_end_hours``, which is
+``POL-GEN-06(2)``'s "a first-instance case is closed within 48 hours of filing"
+and the figure ``ops/config.json`` states for it. Past it the queue says
+``BREACHED: escalated to the duty supervisor; the disputed amount stays frozen``,
+which is the clause's own consequence, and the case keeps its place in the lane.
+The numbers themselves are the team's own, not Ryde's, and ``ops/config.json``
+says so in its own ``note``.
 
-**No threshold here comes from the policy, and that is not a gap.** The queue
-applies no policy number of its own: the only policy figures that reach a lane
-are part 1's five tests, and ``ops.risk`` reads those out of the loaded policy
-and refuses a sentence that has moved. What this module reads instead is
-``ops/config.json``, and it refuses a config that does not state a target rather
-than defaulting to one -- the same rule, applied to the file the team owns.
+**Two policy figures reach a lane, and both are read from the policy text.**
+``POL-GEN-05``'s ``execution_threshold_sgd`` decides whether a ruling's money is
+held, and it is read with :func:`ops.appeal.read_execution_threshold`, so a
+sentence that has moved is refused rather than resolved against a number written
+here; versions 1 and 2 carry no ``POL-GEN-05``, so there is no threshold and no
+hold. ``POL-GEN-06(2)``'s first-review deadline is the one figure the queue takes
+from ``ops/config.json`` instead of the clause -- the team's own
+``end_to_end_hours``, refused when the config states none rather than defaulted.
+Part 1's five tests still reach a lane through ``ops.risk``, which reads them out
+of the loaded policy and refuses a moved sentence. The config's own targets are
+required rather than defaulted, the same rule applied to the file the team owns.
 
 **Determinism.** No wall clock is read unless ``--now`` is given; without it the
 status column says so rather than guessing. The output is sorted by the queue's
@@ -63,7 +73,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Sequence, Tuple
 
-from ops import OpsError, development_set_for, read_json_document, risk
+from ops import OpsError, appeal, development_set_for, read_json_document, risk
 from tribunal import loader
 
 # The config this module reads when it is not given one. It sits beside the
@@ -100,6 +110,17 @@ REASON_RISK_TRIPPED = "RISK_TRIPPED"
 # flagged fast-track from a safety-category one.
 REASON_SAFETY_FLAG = "GEN08_SAFETY"
 REASON_GEN08_COMPLAINT = "GEN08_COMPLAINT"
+# The ``POL-GEN-05`` hold. A ruling whose monetary effect is above the execution
+# threshold is issued but not executed: the amount is held and the case is placed
+# in the human queue for release, so the reason is named here.
+REASON_GEN05_RELEASE = "GEN05_RELEASE"
+
+# The status a human-lane case carries once its first-review deadline has passed.
+# It is ``POL-GEN-06(2)``'s own consequence: "a review past its limit is escalated
+# to the duty supervisor and the disputed amount stays frozen".
+BREACHED_REVIEW = (
+    "BREACHED: escalated to the duty supervisor; the disputed amount stays frozen"
+)
 
 # The ruling value the pipeline uses to hand a case to a human. Named here
 # rather than read from the policy, because it is a *value* of the ruling
@@ -242,6 +263,13 @@ class Dispute(NamedTuple):
     # the lane whatever the category is.
     safety_flag: bool = False
     complaint_flag: bool = False
+    # The ruling's money, and the run's policy version's ``POL-GEN-05`` threshold.
+    # The threshold is ``None`` at versions 1 and 2, which carry no ``POL-GEN-05``,
+    # and ``None`` for a category the pipeline does not adjudicate -- neither has a
+    # hold to apply.
+    amount_sgd: Optional[Decimal] = None
+    driver_compensation_sgd: Optional[Decimal] = None
+    execution_threshold_sgd: Optional[Decimal] = None
 
 
 class Entry(NamedTuple):
@@ -257,6 +285,28 @@ class Entry(NamedTuple):
     due_at: datetime
     status: str
     wall_seconds: Optional[Decimal]
+    # ``POL-GEN-06(2)``'s first-review deadline, for a human-lane case only, and
+    # the status of that deadline at ``--now``. Both are ``None``/a dash for a
+    # case the policy does not put in front of a first-instance reviewer.
+    review_due_at: Optional[datetime] = None
+    review_status: str = "-"
+
+
+def money_is_held(dispute: Dispute) -> bool:
+    """Whether ``POL-GEN-05`` holds this dispute's money above the threshold.
+
+    The monetary effect is :func:`ops.appeal.monetary_effect`'s own reading -- the
+    refund, the driver compensation, or their sum, with a ``DRIVER_COMPENSATION``
+    ruling's two fields counted once -- so the queue and the appeal command cannot
+    disagree about how much money a ruling moves. No threshold (a version-1 or
+    version-2 run, or a category the pipeline does not adjudicate) means no hold.
+    """
+    if dispute.execution_threshold_sgd is None:
+        return False
+    effect = appeal.monetary_effect(
+        dispute.ruling, dispute.amount_sgd, dispute.driver_compensation_sgd
+    )
+    return effect > dispute.execution_threshold_sgd
 
 
 def lane_for(dispute: Dispute, config: Config) -> Tuple[str, Tuple[str, ...]]:
@@ -270,6 +320,13 @@ def lane_for(dispute: Dispute, config: Config) -> Tuple[str, Tuple[str, ...]]:
     dispute is never adjudicated automatically: whatever its category, a safety
     flag is fast-tracked and a complaint flag is a human review with the reason
     ``GEN08_COMPLAINT``.
+
+    The ``POL-GEN-05`` hold is checked after the kill switch and before the auto
+    lane: a ruling whose money is above the execution threshold is issued but not
+    executed, and ``POL-GEN-05`` places the case in the human queue for release
+    itself. The kill switch keeps its own reason when it is off, because it moves
+    every dispute the pipeline would have ruled on and that is the more general
+    fact.
     """
     if dispute.safety_flag:
         return LANE_SAFETY, (REASON_SAFETY_FLAG,)
@@ -285,6 +342,8 @@ def lane_for(dispute: Dispute, config: Config) -> Tuple[str, Tuple[str, ...]]:
         # The kill switch is the reason this case is not AUTO, so it is the
         # reason recorded. A case already going to a human is not re-reasoned.
         return LANE_HUMAN, (REASON_AUTO_PAUSED,)
+    if money_is_held(dispute):
+        return LANE_HUMAN, (REASON_GEN05_RELEASE,)
     return LANE_AUTO, (REASON_RULED,)
 
 
@@ -341,6 +400,21 @@ def status_for(due_at: datetime, now: Optional[datetime]) -> str:
     return "{0} remaining".format(_duration(remaining))
 
 
+def review_status_for(due_at: datetime, now: Optional[datetime]) -> str:
+    """``POL-GEN-06(2)``'s first-review status: the time left, or the breach.
+
+    Past the deadline the clause's consequence is shown rather than a bare
+    ``BREACHED``: the review is escalated to the duty supervisor and the disputed
+    amount stays frozen. Without ``--now`` no clock is read and the status is a
+    dash, exactly as the lane's own status is.
+    """
+    if now is None:
+        return "-"
+    if (due_at - now).total_seconds() < 0:
+        return BREACHED_REVIEW
+    return "{0} remaining".format(_duration(due_at - now))
+
+
 def build_queue(
     disputes: Sequence[Dispute], config: Config, now: Optional[datetime] = None
 ) -> List[Entry]:
@@ -356,7 +430,12 @@ def build_queue(
         lane, reasons = lane_for(dispute, config)
         if dispute.risk_tripped:
             reasons = reasons + (REASON_RISK_TRIPPED,)
-        due_at = _parse_instant(dispute.filed_at, "filed_at") + config.sla.target_for(lane)
+        filed = _parse_instant(dispute.filed_at, "filed_at")
+        due_at = filed + config.sla.target_for(lane)
+        # ``POL-GEN-06(2)``'s first-review deadline belongs to the human lane and
+        # to no other: it is the limit a first-instance review is closed within,
+        # and a case the pipeline decided automatically has no first review.
+        review_due_at = filed + config.sla.end_to_end() if lane == LANE_HUMAN else None
         entries.append(
             Entry(
                 tier=tier_for(lane, dispute.risk_tripped),
@@ -369,6 +448,12 @@ def build_queue(
                 due_at=due_at,
                 status=status_for(due_at, now),
                 wall_seconds=dispute.wall_seconds,
+                review_due_at=review_due_at,
+                review_status=(
+                    "-"
+                    if review_due_at is None
+                    else review_status_for(review_due_at, now)
+                ),
             )
         )
     return sorted(
@@ -391,6 +476,16 @@ def _as_decimal(value: Any) -> Decimal:
         return Decimal(0)
 
 
+def counts_as_decided_automatically(entry: Entry) -> bool:
+    """Whether the timing figures count this case as one the pipeline decided.
+
+    A case held under ``POL-GEN-05`` sits in the human lane for release, but the
+    pipeline did rule on it and no person decided it, so it is counted with the
+    automatic cases rather than against the human lane's time.
+    """
+    return entry.lane == LANE_AUTO or REASON_GEN05_RELEASE in entry.reasons
+
+
 def measured_auto_sla(
     entries: Sequence[Entry], config: Config
 ) -> Tuple[int, int]:
@@ -399,10 +494,12 @@ def measured_auto_sla(
     Measured and reported as a count of cases rather than as a rate, because a
     rate is a claim and a count is a reading. A case whose run recorded no
     ``wall_seconds`` did not meet the target, and it is still counted in the
-    denominator: it is one of the auto cases and its time is not known.
+    denominator: it is one of the auto cases and its time is not known. A case
+    held for release under ``POL-GEN-05`` is one of them, which is what keeps a
+    hold from moving the auto-lane figures.
     """
     limit = config.sla.auto_ruling_minutes * 60
-    auto = [entry for entry in entries if entry.lane == LANE_AUTO]
+    auto = [entry for entry in entries if counts_as_decided_automatically(entry)]
     met = [entry for entry in auto if _at_most(entry.wall_seconds, limit)]
     return len(met), len(auto)
 
@@ -443,6 +540,31 @@ def _risk_tripped(case: Mapping[str, Any], document: Mapping[str, Any], developm
     return any(signal.tripped for signal in risk.signals_for(case, policies))
 
 
+def _execution_threshold(category: Any, policy_version: Any) -> Optional[Decimal]:
+    """The run's policy version's ``POL-GEN-05`` threshold, or ``None``.
+
+    ``None`` when there is no ``POL-GEN-05`` to read: a version-1 or version-2
+    run carries none, and a category the pipeline does not adjudicate has no
+    policy of its own. Where the clause **is** there its sentence is read with
+    :func:`ops.appeal.read_execution_threshold`, so a sentence that has moved is
+    a refusal rather than a figure nobody reviewed -- the rule every threshold in
+    this layer obeys.
+    """
+    if category not in loader.CATEGORY_POLICY_FILES:
+        return None
+    try:
+        policies = loader.load_policies(category, policy_version)
+    except loader.LoaderError:
+        return None
+    if appeal.CLAUSE_EXECUTION not in appeal.policy_clauses(policies):
+        return None
+    try:
+        _sentence, threshold = appeal.read_execution_threshold(policies)
+    except appeal.AppealPolicyError as exc:
+        raise QueueError(str(exc)) from exc
+    return threshold
+
+
 def disputes_from_run(run_dir: Path) -> List[Dispute]:
     """Every case a run directory holds, as a dispute the queue can route."""
     run_dir = Path(run_dir)
@@ -467,6 +589,12 @@ def disputes_from_run(run_dir: Path) -> List[Dispute]:
             )
         case = development_set.load_case(case_no)
         dispute = case["dispute"]
+        configuration = document.get("configuration")
+        version = (
+            configuration.get("policy_version")
+            if isinstance(configuration, Mapping)
+            else None
+        )
         found.append(
             Dispute(
                 case_no=case_no,
@@ -478,6 +606,11 @@ def disputes_from_run(run_dir: Path) -> List[Dispute]:
                 risk_tripped=_risk_tripped(case, document, development_set),
                 safety_flag=dispute.get("safety_flag") is True,
                 complaint_flag=dispute.get("complaint_flag") is True,
+                amount_sgd=inner.get("amount_sgd"),
+                driver_compensation_sgd=inner.get("driver_compensation_sgd"),
+                execution_threshold_sgd=_execution_threshold(
+                    dispute["category"], version or development_set.policy_version
+                ),
             )
         )
     return found
@@ -486,7 +619,10 @@ def disputes_from_run(run_dir: Path) -> List[Dispute]:
 # --------------------------------------------------------------------------
 # Rendering
 # --------------------------------------------------------------------------
-# The columns, in the order the task names them.
+# The columns, in the order the task names them. ``review_due_at`` and
+# ``review_status`` are ``POL-GEN-06(2)``'s first-review clock, and they are a
+# dash on every case the clause does not put in front of a first-instance
+# reviewer.
 COLUMNS: Tuple[Tuple[str, int], ...] = (
     ("tier", 4),
     ("case", 5),
@@ -496,7 +632,9 @@ COLUMNS: Tuple[Tuple[str, int], ...] = (
     ("amount", 7),
     ("filed_at", 25),
     ("due_at", 25),
-    ("status", 0),
+    ("status", 22),
+    ("review_due_at", 25),
+    ("review_status", 0),
 )
 
 
@@ -515,7 +653,9 @@ def render(
     lines: List[str] = [
         "queue: {0} case(s) from {1}".format(len(entries), run_dir),
         "auto rulings: {0}".format("enabled" if config.auto_rulings_enabled else "paused"),
-        "end-to-end target: {0} from filing to resolution".format(
+        "end-to-end target: {0} from filing to resolution; POL-GEN-06(2)'s "
+        "first-review deadline is the same {0} from filing, and a human-lane case "
+        "past it is escalated to the duty supervisor with its amount frozen".format(
             _duration(config.sla.end_to_end())
         ),
         "",
@@ -534,6 +674,8 @@ def render(
                     entry.filed_at,
                     entry.due_at.isoformat(),
                     entry.status,
+                    "-" if entry.review_due_at is None else entry.review_due_at.isoformat(),
+                    entry.review_status,
                 ]
             )
         )
@@ -544,6 +686,30 @@ def render(
             met, of, config.sla.auto_ruling_minutes
         ),
     ]
+    return "\n".join(lines) + "\n"
+
+
+def render_windows(entries: Sequence[Entry], store: Path) -> str:
+    """The evidence-window block ``--windows`` prints, one line per human case.
+
+    The evidence-window store belongs to part 26 (``ops/evidence_window.py``),
+    which is not in this repository yet, so this block names the store and the
+    cases it would be read for rather than reporting a window status this module
+    invented. It is a **read**: no path is written, and no clock is read.
+    """
+    lines: List[str] = [
+        "evidence windows: {0}".format(store),
+        "the evidence-window store is part 26 (ops/evidence_window.py), which is "
+        "not in this repository yet, so no window status is read here",
+    ]
+    human = [entry for entry in entries if entry.lane == LANE_HUMAN]
+    if not human:
+        lines.append("  no case is in the human lane")
+        return "\n".join(lines) + "\n"
+    for entry in human:
+        lines.append(
+            "  {0:<6} {1}".format(entry.case_no, "+".join(entry.reasons))
+        )
     return "\n".join(lines) + "\n"
 
 
@@ -576,6 +742,16 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         default=None,
         help="the config to read; defaults to ops/config.json",
     )
+    parser.add_argument(
+        "--windows",
+        type=Path,
+        default=None,
+        help=(
+            "a store of evidence windows; each human-lane case is listed with "
+            "the store it would be read from. The window store belongs to part "
+            "26 (ops/evidence_window.py), which is not in this repository yet"
+        ),
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -595,6 +771,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         return 1
 
     sys.stdout.write(render(entries, config, args.run_dir, disputes))
+    if args.windows is not None:
+        sys.stdout.write(render_windows(entries, args.windows))
     return 0
 
 

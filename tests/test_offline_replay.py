@@ -380,11 +380,24 @@ def replay_set(development_set, model, *, parallel, events_path=None, cases=None
     once, before any case runs, and the transport refuses any request they do
     not cover.
 
-    ``cases`` defaults to the whole set. A control that needs one case passes
-    one, so a guard can be shown to fire without replaying a hundred cases.
+    ``cases`` defaults to the whole set, less case 111 on a platform whose libm
+    cannot rebuild its brief (``tests/portability.py`` says which and why). A
+    control that needs one case passes one, so a guard can be shown to fire
+    without replaying a hundred cases.
     """
     run_dir = development_set.run_dir(model, RUNS_DIR)
-    cases = list(development_set.cases if cases is None else cases)
+    if cases is None:
+        cases = list(development_set.cases)
+        if (
+            portability.the_case_111_platform_difference()
+            and portability.CASE_111 in cases
+        ):
+            # Case 111's brief cannot be rebuilt here, so its recorded prompts
+            # cannot be reproduced: it is left out rather than replayed against a
+            # digest this machine cannot make, and the count below says so.
+            cases = [case_no for case_no in cases if case_no != portability.CASE_111]
+    else:
+        cases = list(cases)
     documents = {}
     recordings = []
     for case_no in cases:

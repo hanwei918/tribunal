@@ -21,6 +21,15 @@ Six things are asserted:
   the time left or ``BREACHED`` at a fixed ``--now``, and without ``--now`` the
   status is a dash and **no clock is read at all** -- asserted by making the
   module's ``datetime`` refuse to answer.
+* **The ``POL-GEN-05`` hold.** A ruling whose monetary effect is above the
+  execution threshold is held for release: the lane is ``HUMAN_REVIEW`` with the
+  reason ``GEN05_RELEASE``, and the case still counts as one the pipeline decided
+  in the timing figures. Versions 1 and 2 carry no ``POL-GEN-05``, so there is no
+  threshold and no hold.
+* **The 48-hour clock.** Every human-lane case carries ``POL-GEN-06(2)``'s
+  first-review deadline, ``filed_at`` plus ``end_to_end_hours``; past it the
+  status is the clause's own consequence. The corpus acceptance is case 213 at a
+  fixed ``--now``.
 * **The measured SLA.** Counted off ``wall_seconds`` and reported as a count of
   cases, on the corpus run and on a small fixture run.
 * **The config.** Every target is required, and the shipped file says in its own
@@ -51,6 +60,11 @@ from ops import queue  # noqa: E402
 from tribunal import loader  # noqa: E402
 
 CORPUS_RUN = PROJECT_ROOT / "runs" / "deepseek-deepseek-flash"
+
+# The version-6 corpus run, where ``POL-GEN-05``'s 8.00 execution threshold is in
+# force, and the cases the sheet's acceptance names as held above it.
+CORPUS_V6_RUN = PROJECT_ROOT / "runs" / "policy-v6" / "deepseek-deepseek-flash"
+CORPUS_V6_HELD = (101, 105, 106, 114)
 
 # The corpus queue, measured on the committed run: five escalations, and the two
 # of them whose part-1 signals trip. Nothing here is computed from the module
@@ -508,6 +522,220 @@ class TheSlaTests(unittest.TestCase):
                     entry.due_at,
                     datetime.fromisoformat(entry.filed_at) + self.config.sla.end_to_end(),
                 )
+
+
+# --------------------------------------------------------------------------
+# POL-GEN-05: the amount held for release
+# --------------------------------------------------------------------------
+def held_dispute(
+    case_no: int = 101,
+    ruling: str = "PARTIAL_REFUND",
+    amount_sgd: Optional[str] = "8.05",
+    driver_compensation_sgd: Optional[str] = None,
+    threshold: Optional[str] = "8.0",
+) -> queue.Dispute:
+    """One dispute carrying the money ``POL-GEN-05`` is read against."""
+    return queue.Dispute(
+        case_no=case_no,
+        category="ROUTE_DEVIATION",
+        filed_at="2026-07-01T10:00:00+08:00",
+        amount_contested_sgd=Decimal("10.0"),
+        ruling=ruling,
+        wall_seconds=Decimal("10"),
+        risk_tripped=False,
+        amount_sgd=None if amount_sgd is None else Decimal(amount_sgd),
+        driver_compensation_sgd=(
+            None if driver_compensation_sgd is None else Decimal(driver_compensation_sgd)
+        ),
+        execution_threshold_sgd=None if threshold is None else Decimal(threshold),
+    )
+
+
+class TheGen05HoldTests(unittest.TestCase):
+    """A ruling above the execution threshold is issued but not executed."""
+
+    def setUp(self):
+        self.config = config()
+
+    def test_a_ruling_above_the_threshold_is_held_for_release(self):
+        dispute_ = held_dispute(amount_sgd="8.05", threshold="8.0")
+        self.assertTrue(queue.money_is_held(dispute_))
+        lane, reasons = queue.lane_for(dispute_, self.config)
+        self.assertEqual(queue.LANE_HUMAN, lane)
+        self.assertEqual((queue.REASON_GEN05_RELEASE,), reasons)
+
+    def test_a_ruling_at_the_threshold_is_not_held(self):
+        """The clause holds a ruling that *exceeds* the threshold, and no other."""
+        dispute_ = held_dispute(amount_sgd="8.00", threshold="8.0")
+        self.assertFalse(queue.money_is_held(dispute_))
+        lane, reasons = queue.lane_for(dispute_, self.config)
+        self.assertEqual(queue.LANE_AUTO, lane)
+        self.assertEqual((queue.REASON_RULED,), reasons)
+
+    def test_no_threshold_means_no_hold(self):
+        """Versions 1 and 2 carry no POL-GEN-05, so nothing is held."""
+        dispute_ = held_dispute(amount_sgd="80.0", threshold=None)
+        self.assertFalse(queue.money_is_held(dispute_))
+        self.assertEqual(queue.LANE_AUTO, queue.lane_for(dispute_, self.config)[0])
+
+    def test_a_driver_compensation_ruling_counts_its_two_fields_once(self):
+        """POL-GEN-03's one exception: amount_sgd repeats the driver figure."""
+        dispute_ = held_dispute(
+            ruling="DRIVER_COMPENSATION",
+            amount_sgd="8.05",
+            driver_compensation_sgd="8.05",
+            threshold="8.0",
+        )
+        self.assertTrue(queue.money_is_held(dispute_))
+        self.assertEqual(queue.LANE_HUMAN, queue.lane_for(dispute_, self.config)[0])
+
+    def test_an_escalated_case_keeps_the_escalation_reason(self):
+        dispute_ = held_dispute(ruling="ESCALATE", amount_sgd=None, threshold="8.0")
+        lane, reasons = queue.lane_for(dispute_, self.config)
+        self.assertEqual(queue.LANE_HUMAN, lane)
+        self.assertEqual((queue.REASON_ESCALATED,), reasons)
+
+    def test_the_kill_switch_reason_wins_while_the_switch_is_off(self):
+        dispute_ = held_dispute(amount_sgd="8.05", threshold="8.0")
+        lane, reasons = queue.lane_for(dispute_, config(enabled=False))
+        self.assertEqual(queue.LANE_HUMAN, lane)
+        self.assertEqual((queue.REASON_AUTO_PAUSED,), reasons)
+
+    def test_a_held_case_still_counts_as_decided_automatically(self):
+        """A hold moves the lane, and it does not move the timing figures."""
+        disputes = [held_dispute(case_no=101), held_dispute(case_no=102, amount_sgd="4.0")]
+        entries = queue.build_queue(disputes, self.config)
+        self.assertEqual((2, 2), queue.measured_auto_sla(entries, self.config))
+        for entry in entries:
+            with self.subTest(case=entry.case_no):
+                self.assertTrue(queue.counts_as_decided_automatically(entry))
+
+    def test_the_hold_is_read_off_the_run_s_policy_version(self):
+        """The threshold is the run's own version's, read from the policy text."""
+        self.assertEqual(Decimal("8.0"), queue._execution_threshold("ROUTE_DEVIATION", 6))
+        self.assertIsNone(queue._execution_threshold("ROUTE_DEVIATION", 1))
+        self.assertIsNone(queue._execution_threshold("ROUTE_DEVIATION", 2))
+        self.assertIsNone(queue._execution_threshold("PROPERTY_DAMAGE", 6))
+
+
+class TheVersion6CorpusHoldTests(unittest.TestCase):
+    """The version-6 corpus run's own held cases, as the sheet's acceptance."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.entries = queue.build_queue(
+            queue.disputes_from_run(CORPUS_V6_RUN), queue.load_config()
+        )
+
+    def test_the_held_cases_are_the_four_the_sheet_names(self):
+        held = sorted(
+            entry.case_no
+            for entry in self.entries
+            if queue.REASON_GEN05_RELEASE in entry.reasons
+        )
+        self.assertEqual(list(CORPUS_V6_HELD), held)
+
+    def test_every_held_case_is_in_the_human_lane(self):
+        for entry in self.entries:
+            if queue.REASON_GEN05_RELEASE in entry.reasons:
+                with self.subTest(case=entry.case_no):
+                    self.assertEqual(queue.LANE_HUMAN, entry.lane)
+
+    def test_the_held_cases_are_counted_as_automatic_in_the_timing_figures(self):
+        met, of = queue.measured_auto_sla(self.entries, queue.load_config())
+        auto = [entry for entry in self.entries if entry.lane == queue.LANE_AUTO]
+        held = [
+            entry
+            for entry in self.entries
+            if queue.REASON_GEN05_RELEASE in entry.reasons
+        ]
+        self.assertEqual(len(auto) + len(held), of)
+        self.assertLessEqual(met, of)
+
+
+# --------------------------------------------------------------------------
+# POL-GEN-06(2): the first-review clock
+# --------------------------------------------------------------------------
+# The instant the sheet's acceptance names, and the case it names.
+ACCEPTANCE_NOW = "2026-08-12T10:00:00+08:00"
+ACCEPTANCE_CASE = 213
+
+
+class TheFirstReviewClockTests(unittest.TestCase):
+    """Every human-lane case carries POL-GEN-06(2)'s 48-hour deadline."""
+
+    def setUp(self):
+        self.config = config()
+
+    def entry(self, one, now=None):
+        return queue.build_queue([one], self.config, now)[0]
+
+    def test_the_deadline_is_filing_time_plus_end_to_end_hours(self):
+        entry = self.entry(
+            dispute(11, ruling="ESCALATE", filed_at="2026-08-11T18:40:00+08:00")
+        )
+        self.assertEqual(
+            datetime.fromisoformat("2026-08-13T18:40:00+08:00"), entry.review_due_at
+        )
+
+    def test_an_auto_case_carries_no_first_review_deadline(self):
+        entry = self.entry(dispute(11, "ROUTE_DEVIATION"))
+        self.assertIsNone(entry.review_due_at)
+        self.assertEqual("-", entry.review_status)
+
+    def test_without_now_the_review_status_is_a_dash_and_no_clock_is_read(self):
+        with mock.patch.object(queue, "datetime", NoClock):
+            entry = self.entry(dispute(11, ruling="ESCALATE"))
+        self.assertEqual("-", entry.review_status)
+
+    def test_the_status_is_the_time_remaining_at_a_fixed_now(self):
+        entry = self.entry(
+            dispute(11, ruling="ESCALATE", filed_at="2026-08-11T18:40:00+08:00"),
+            datetime.fromisoformat(ACCEPTANCE_NOW),
+        )
+        self.assertEqual("1d 8h 40m remaining", entry.review_status)
+
+    def test_past_the_deadline_the_clause_s_consequence_is_shown(self):
+        entry = self.entry(
+            dispute(11, ruling="ESCALATE", filed_at="2026-08-11T18:40:00+08:00"),
+            datetime.fromisoformat("2026-08-14T10:00:00+08:00"),
+        )
+        self.assertEqual(queue.BREACHED_REVIEW, entry.review_status)
+
+    def test_the_breach_sentence_is_pol_gen_06_s_consequence(self):
+        self.assertIn("escalated to the duty supervisor", queue.BREACHED_REVIEW)
+        self.assertIn("the disputed amount stays frozen", queue.BREACHED_REVIEW)
+
+    def test_case_213_shows_the_remaining_time_the_sheet_names(self):
+        """The acceptance: 213 at ``--now 2026-08-12T10:00:00+08:00``."""
+        code, out, err = run_command(
+            ["--run-dir", str(CORPUS_V6_RUN), "--now", ACCEPTANCE_NOW]
+        )
+        self.assertEqual(0, code, err)
+        rows_for_213 = [
+            line
+            for line in out.splitlines()
+            if len(line.split()) >= 2 and line.split()[1] == str(ACCEPTANCE_CASE)
+        ]
+        self.assertEqual(1, len(rows_for_213), out)
+        self.assertIn("1d 8h 40m remaining", rows_for_213[0])
+
+    def test_the_command_reports_the_breach_past_the_deadline(self):
+        code, out, err = run_command(
+            ["--run-dir", str(CORPUS_V6_RUN), "--now", "2027-01-01T00:00:00+08:00"]
+        )
+        self.assertEqual(0, code, err)
+        self.assertIn(queue.BREACHED_REVIEW, out)
+
+    def test_the_windows_option_names_the_part_26_store(self):
+        """``--windows`` belongs to part 26, and says so rather than inventing one."""
+        code, out, err = run_command(
+            ["--run-dir", str(CORPUS_V6_RUN), "--windows", "/tmp/evidence-windows"]
+        )
+        self.assertEqual(0, code, err)
+        self.assertIn("evidence windows: /tmp/evidence-windows", out)
+        self.assertIn("part 26", out)
+        self.assertIn("no window status is read", out)
 
 
 # --------------------------------------------------------------------------

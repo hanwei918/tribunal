@@ -90,8 +90,9 @@ The third sealed set
 --------------------
 There is a fifth answer key, ``eval/answers/sealed-v1/ground_truth.json``, for
 the 24 cases under ``data/external/sealed-v1/``. It is a sealed set on the other
-two's terms and a different set again: it was prepared by an independent author
-and imported on 2026-10-09, it is run exactly once from a commit whose
+two's terms and a different set again: it was prepared by Claude, independent of
+prompt tuning, and opened by the policy owner's assistant before the freeze (see
+README), and it was imported on 2026-10-09, it is run exactly once from a commit whose
 ``tribunal/``, ``prompts/`` and ``policy/`` trees equal those at
 ``freeze-2026-10-09``, and its single run is the submission's third
 generalisation figure at the policy version 6 its registration fixes. It is
@@ -344,12 +345,13 @@ def _wild_v2_set_case(case_no):
 
 
 # The third sealed set, and its own key. It is a sealed set on the held-out set's
-# terms -- prepared by an independent author, imported on 2026-10-09, run exactly
-# once from a commit whose ``tribunal/``, ``prompts/`` and ``policy/`` trees
-# equal those at ``freeze-2026-10-09``, at the policy version 6 its registration
-# fixes -- and it is a different set, with its own case range, its own key and
-# its own answer-bearing directory. Its key is a fifth way for an answer to reach
-# a brief, so it is guarded by the same layers and its two paths are named
+# terms -- prepared by Claude, independent of prompt tuning, and opened by the
+# policy owner's assistant before the freeze (see README), imported on 2026-10-09,
+# run exactly once from a commit whose ``tribunal/``, ``prompts/`` and ``policy/``
+# trees equal those at ``freeze-2026-10-09``, at the policy version 6 its
+# registration fixes -- and it is a different set, with its own case range, its own
+# key and its own answer-bearing directory. Its key is a fifth way for an answer to
+# reach a brief, so it is guarded by the same layers and its two paths are named
 # explicitly below.
 SEALED_V1_KEY_PATH = EVAL_DIR / "answers" / "sealed-v1" / "ground_truth.json"
 SEALED_V1_SET_DIR = DATA_DIR / "external" / "sealed-v1"

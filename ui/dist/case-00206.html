@@ -182,6 +182,14 @@ details.form summary{cursor:pointer;padding:12px 0;font-weight:600}
 .foot{border-top:1px solid var(--line);margin-top:32px;padding-top:14px;color:var(--muted);font-size:.82rem;display:flex;flex-wrap:wrap;gap:16px}
 pre{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:12px;overflow-wrap:anywhere;white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.85rem}
 textarea,input[type="text"]{font:inherit;color:inherit}
+
+/* the reviewer's decision form */
+.decision-fields{border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin:10px 0}
+.decision-fields[hidden]{display:none}
+.decision-fields label{margin-right:12px}
+.decision-fields select,.decision-fields input[type="text"]{font:inherit;color:inherit;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card)}
+.decision-fields select[multiple]{min-width:240px;vertical-align:top}
+.decision-fields .ev{display:inline-flex;align-items:center;gap:6px;margin:0 14px 6px 0;font-size:.9rem}
 </style>
 </head>
 <body>
@@ -436,6 +444,9 @@ Execution. The monetary effect is $4.00 + $2.00 = $6.00, below the $8.00 automat
     var evidence = (form.getAttribute("data-evidence") || "").split(" ").filter(Boolean);
     var clauses = (form.getAttribute("data-clauses") || "").split(" ").filter(Boolean);
     var floor = Number(form.getAttribute("data-reason-min") || "0");
+    var runDir = form.getAttribute("data-run-dir") || "";
+    var caseNo = form.getAttribute("data-case") || "";
+    var packet = form.getAttribute("data-packet") || "";
 
     function cited(text, ids){
       for (var i = 0; i < ids.length; i += 1){
@@ -464,25 +475,88 @@ Execution. The monetary effect is $4.00 + $2.00 = $6.00, below the $8.00 automat
       return picked ? picked.value : "";
     }
 
+    function valueOf(id){
+      var node = document.getElementById(id);
+      return node ? node.value : "";
+    }
+
+    function quoted(text){
+      return '"' + String(text).replace(/"/g, "'") + '"';
+    }
+
+    function who(){
+      return valueOf("reviewer") || "reviewer";
+    }
+
+    function chosenClauses(id){
+      var node = document.getElementById(id);
+      if (!node){ return []; }
+      return Array.prototype.slice.call(node.options)
+        .filter(function(option){ return option.selected; })
+        .map(function(option){ return option.value; });
+    }
+
+    function reviewCommand(){
+      var d = decision();
+      var ruling = "", amount = "", list = [], summary = d;
+      if (d === "ADOPT"){
+        ruling = form.getAttribute("data-adopt-ruling") || "";
+        amount = form.getAttribute("data-adopt-amount") || "";
+        list = (form.getAttribute("data-adopt-clauses") || "").split(" ").filter(Boolean);
+      } else {
+        var prefix = d === "REFER_COMPLIANCE" ? "refer-" : "vary-";
+        ruling = valueOf(prefix + "ruling");
+        amount = valueOf(prefix + "amount");
+        list = chosenClauses(prefix + "clauses");
+        if (d === "REFER_COMPLIANCE"){
+          var note = valueOf("refer-note").trim();
+          if (note){ summary = d + ": " + note; }
+        }
+      }
+      var parts = ["python3 -m ops.review", "--run-dir " + runDir,
+        "--case " + caseNo, "--packet-sha256 " + packet];
+      if (ruling){ parts.push("--ruling " + ruling); }
+      if (amount){ parts.push("--amount " + amount); }
+      list.forEach(function(clause){ parts.push("--clause " + clause); });
+      parts.push("--closed-by " + quoted(who()));
+      parts.push("--summary " + quoted(summary));
+      parts.push("--reason " + quoted(reason.value.trim()));
+      return parts.join(" ");
+    }
+
+    function windowCommand(){
+      var items = each('input[name="evidence"]:checked', form)
+        .map(function(box){ return box.value; });
+      return ["python3 -m ops.evidence_window", "open", "--run-dir " + runDir,
+        "--case " + caseNo, "--now " + quoted(valueOf("window-now")),
+        "--items " + items.join(","), "--opened-by " + quoted(who())].join(" ");
+    }
+
     function command(){
-      var text = reason.value.trim();
-      return "python3 -m ops.review --run-dir " + form.getAttribute("data-run-dir") +
-        " --case " + form.getAttribute("data-case") +
-        " --packet-sha256 " + form.getAttribute("data-packet") +
-        " close --ruling " + form.getAttribute("data-ruling") +
-        ' --closed-by "' + (document.getElementById("reviewer").value || "reviewer") + '"' +
-        ' --summary "' + decision() + '"' +
-        ' --reason "' + text.replace(/"/g, "'") + '"';
+      return decision() === "REQUEST_EVIDENCE" ? windowCommand() : reviewCommand();
+    }
+
+    function showFields(){
+      var d = decision();
+      each("[data-for]", form).forEach(function(block){
+        block.hidden = block.getAttribute("data-for") !== d;
+      });
     }
 
     function refresh(){
-      var state = check();
-      if (state.problems.length){
-        verdict.className = "err";
-        verdict.textContent = state.problems.join("; ");
+      showFields();
+      if (decision() === "REQUEST_EVIDENCE"){
+        verdict.className = "empty";
+        verdict.textContent = "The evidence-window command is part 26 (ops/evidence_window.py), which is not in this repository yet.";
       } else {
-        verdict.className = "ok";
-        verdict.textContent = "The reason is long enough and cites this case's own evidence and clause ids.";
+        var state = check();
+        if (state.problems.length){
+          verdict.className = "err";
+          verdict.textContent = state.problems.join("; ");
+        } else {
+          verdict.className = "ok";
+          verdict.textContent = "The reason is long enough and cites this case's own evidence and clause ids.";
+        }
       }
       output.textContent = command();
     }
