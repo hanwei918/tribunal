@@ -1,14 +1,20 @@
 """The architecture diagram is a self-contained, honest document.
 
-``docs/architecture.svg`` is drawn by hand from the code at the freeze tag, and
-``docs/architecture.md`` explains it box by box. Three properties make the pair
-worth committing, and each is asserted here rather than assumed:
+``docs/architecture.svg`` is drawn by hand from the code at the freeze tag, as a
+container view (C4 style): one dispute's path down the middle, the model
+provider and the measurement tooling on the left, the learning loop and the
+human operations on the right. ``docs/architecture.md`` explains it element by
+element, in the same order. Four properties make the pair worth committing, and
+each is asserted here rather than assumed:
 
 * **The diagram is a well-formed drawing.** It parses as XML and declares the
   viewBox the sheet fixes, so a renderer has something to lay out.
 * **The diagram is self-contained and portable.** It carries no script, no
   embedded image, no hyperlink and no character outside ASCII, so it renders the
   same way everywhere and needs no network.
+* **The diagram says what it is.** It carries the title and the subtitle the
+  sheet fixes, the legend names the six kinds of element, and the middle column
+  is eleven numbered steps. Each is read off the parsed drawing.
 * **Every path it names is a path that is here.** A box that names the file
   implementing it is only worth the reader's trust if the file exists, so every
   path written in the SVG and in the page is resolved against the repository and
@@ -166,6 +172,76 @@ class TheDiagramIsSelfContainedTests(unittest.TestCase):
         self.fail("docs/architecture.md holds non-ASCII characters: {0}".format(", ".join(offenders)))
 
 
+class TheDiagramSaysWhatItIsTests(unittest.TestCase):
+    """The title, the subtitle, the legend and the eleven numbered steps.
+
+    The sheet fixes the title, the subtitle and the six kinds the legend names,
+    and the middle column is eleven numbered steps. Each is read off the parsed
+    drawing rather than described, so a redraw that drops one fails here instead
+    of passing as a drawing nobody checked.
+    """
+
+    TITLE = "Tribunal - how one dispute is decided, and what happens after"
+    SUBTITLE = (
+        "Container view (C4 style) at freeze-2026-10-09, policy version 6. "
+        "Each element names the file that implements it."
+    )
+    LEGEND = (
+        "Code, deterministic",
+        "LLM call",
+        "Human / operations",
+        "Data / records",
+        "Learning loop",
+        "External system",
+    )
+
+    def _texts(self) -> List[str]:
+        return [
+            (element.text or "").strip()
+            for element in ET.fromstring(svg_text()).iter()
+            if local_name(element.tag) == "text"
+        ]
+
+    def test_it_carries_the_title_and_the_subtitle_the_sheet_fixes(self):
+        found = self._texts()
+        self.assertIn(self.TITLE, found, "the diagram does not carry the sheet's title")
+        self.assertIn(
+            self.SUBTITLE, found, "the diagram does not carry the sheet's subtitle"
+        )
+
+    def test_the_legend_names_the_six_kinds_of_element(self):
+        found = set(self._texts())
+        for label in self.LEGEND:
+            with self.subTest(label=label):
+                self.assertIn(
+                    label, found, "the legend does not name {0!r}".format(label)
+                )
+
+    def test_the_middle_column_is_eleven_numbered_steps(self):
+        """Read as structure, not by searching the text.
+
+        A step's number is the only middle-anchored white text that is a bare
+        digit -- the legend's swatch labels are not centred, and the LLM badges
+        carry letters -- so the set of them is the diagram's own numbering.
+        """
+        numbers: List[int] = []
+        for element in ET.fromstring(svg_text()).iter():
+            if local_name(element.tag) != "text":
+                continue
+            if element.get("text-anchor") != "middle":
+                continue
+            if (element.get("fill") or "").lower() != "#ffffff":
+                continue
+            content = (element.text or "").strip()
+            if content.isdigit():
+                numbers.append(int(content))
+        self.assertEqual(
+            list(range(1, 12)),
+            sorted(numbers),
+            "the diagram's step badges are not numbered 1 to 11",
+        )
+
+
 class TheExtractorTests(unittest.TestCase):
     """The path extractor is shown to work, and to be able to fail."""
 
@@ -177,6 +253,10 @@ class TheExtractorTests(unittest.TestCase):
             "tribunal/brief.py",
             "prompts/v1/advocate.system.md",
             "precedents/precedents.jsonl",
+            "ops/evidence.py",
+            "ops/queue.py",
+            "eval/policy_gaps.py",
+            "ui/v2/build.py",
         ):
             self.assertIn(required, found, "{0} was not extracted".format(required))
 

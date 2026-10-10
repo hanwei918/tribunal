@@ -74,7 +74,20 @@ def prose(text: str) -> str:
 
 
 def wilson_interval(successes: int, total: int, z: float = Z_95) -> Tuple[float, float]:
-    """The Wilson score interval for a binomial proportion, as ``(low, high)``."""
+    """The Wilson score interval for a binomial proportion, as ``(low, high)``.
+
+    The score interval rather than the normal approximation, because at n = 20
+    the normal approximation runs outside the unit interval at the edges and is
+    not what a figure this small should be quoted with.
+
+    **Both bounds are clamped, to the unit interval and to the estimate.** The
+    interval always contains the estimate and always lies in ``[0, 1]``, but the
+    arithmetic leaves a rounding residue at the two edges: ``0 of 24`` computes a
+    lower bound of about 1.4e-17 rather than 0, and ``24 of 24`` an upper bound
+    just under 1. A bound outside the range a proportion can take, or on the
+    wrong side of the estimate, is a rounding artefact rather than a finding, so
+    the clamp is what makes the edge cases exact.
+    """
     if total <= 0:
         raise ValueError("a proportion needs a positive denominator")
     if not 0 <= successes <= total:
@@ -85,7 +98,10 @@ def wilson_interval(successes: int, total: int, z: float = Z_95) -> Tuple[float,
     half = (z / denominator) * math.sqrt(
         proportion * (1 - proportion) / total + z * z / (4 * total * total)
     )
-    return centre - half, centre + half
+    return (
+        max(0.0, min(centre - half, proportion)),
+        min(1.0, max(centre + half, proportion)),
+    )
 
 
 def three_places(value: float) -> str:
