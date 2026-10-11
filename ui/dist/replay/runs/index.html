@@ -91,6 +91,11 @@ td.case-no { font-weight: 650; font-variant-numeric: tabular-nums; }
    sideways; the page itself never does. */
 .table-wrap { overflow-x: auto; max-width: 100%; }
 
+/* 47.6: the box scrolls, so it takes the focus -- an ``overflow-x`` region with
+   nothing focusable in it cannot be scrolled without a pointer -- and its focus
+   has to be visible. */
+.table-wrap:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
 /* An evidence id, a clause id, a digest and the source chip beside a claim are
    one unbreakable string each, and a sixty-character one would otherwise set the
    width of the column it sits in -- and so of the page. ``anywhere`` rather than
@@ -493,7 +498,7 @@ body.projector .marker { font-size: 14px; }
 <p class="replay-banner">Historical benchmark replay at policy version 1. The product view shows policy version 6: corpus 26/29; sealed-v1 21/24 agreement; sealed-v2 12/12 agreement.</p>
 <h1>The runs</h1>
 <p class="lead">Every run the viewer draws, with the figure its own page reports. Each figure is computed from that run, and the two sealed sets are never added to each other or to anything else: one figure over 64 cases plus another over 20 is not a measurement of 84 cases.</p>
-<div class="table-wrap">
+<div class="table-wrap" tabindex="0" role="region" aria-label="The runs, their headline figures and their sizes">
 <table class="index-table">
 <thead><tr><th>Set</th><th>Headline figure</th><th>What it is</th><th>Cases</th></tr></thead>
 <tbody>

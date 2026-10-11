@@ -310,6 +310,26 @@ th[aria-sort="descending"] .sort::after{content:"\2193"}
 .nav a{flex:none;white-space:nowrap}
 .brand{flex:none}
 .mode{flex:none}
+
+/* 47.1: the outcome first. A case page opened with the two parties' long
+   accounts and the chat, and the ruling came after them; the summary bar states
+   the outcome, the money and who decides in one line under the title, and its
+   "Why" link goes to the ruling panel. */
+.summarybar{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;
+  background:var(--soft);border:1px solid var(--line);border-radius:10px;
+  padding:9px 13px;margin:12px 0 0;font-size:.9rem;color:var(--muted)}
+.summarybar b{color:var(--ink);font-weight:650}
+
+/* 47.4: where the refund POL-RD-02 computes is larger than the amount the rider
+   contested, the figure is named for what it is and the clause it comes from. */
+.refundnote{margin:.5em 0 0;font-size:.86rem;color:var(--muted)}
+
+/* 47.3: the line under the queue's tiles, for "executed" and "confidence". */
+.figurewords{color:var(--muted);font-size:.86rem;margin:-10px 0 20px;max-width:78ch}
+
+/* 47.5/47.6: a table's scrolling box is reachable by keyboard, so it carries a
+   focus ring of its own rather than depending on the one a control gets. */
+.tscroll:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 </style>
 </head>
 <body>

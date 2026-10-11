@@ -2201,6 +2201,11 @@ td.case-no { font-weight: 650; font-variant-numeric: tabular-nums; }
    sideways; the page itself never does. */
 .table-wrap { overflow-x: auto; max-width: 100%; }
 
+/* 47.6: the box scrolls, so it takes the focus -- an ``overflow-x`` region with
+   nothing focusable in it cannot be scrolled without a pointer -- and its focus
+   has to be visible. */
+.table-wrap:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
 /* An evidence id, a clause id, a digest and the source chip beside a claim are
    one unbreakable string each, and a sixty-character one would otherwise set the
    width of the column it sits in -- and so of the page. ``anywhere`` rather than
@@ -2744,8 +2749,16 @@ _JS = r"""
   // has five -- so it goes into a box that scrolls sideways, and the page itself
   // does not. The tests require the script to build a table in exactly one
   // place, which is here, so a table added straight to a panel is caught.
-  function tableBox(children) {
-    return h("div", { class: "table-wrap" }, h("table", null, children));
+  //
+  // 47.6: a box that scrolls is a box a reader has to reach, and an
+  // ``overflow-x`` region with nothing focusable inside it cannot be scrolled
+  // without a pointer -- which is the ``scrollable-region-focusable`` violation
+  // an axe-core scan of the live site found on these wrappers. So the box takes
+  // the focus itself, says it is a region, and carries a label naming the table
+  // it holds.
+  function tableBox(children, label) {
+    return h("div", { class: "table-wrap", tabindex: "0", role: "region",
+      "aria-label": label }, h("table", null, children));
   }
   // ``appendChild`` throws when it is handed anything that is not a node, and a
   // section that has nothing to draw answers with null rather than an empty box.
@@ -3085,7 +3098,7 @@ _JS = r"""
     return tableBox([
       h("thead", null, h("tr", null, [h("th", { text: "Graded field" }), h("th", { text: "Agreed with the key" })])),
       body
-    ]);
+    ], "The headline fields, against the answer key");
   }
 
   function caseGridTable(rows) {
@@ -3144,7 +3157,7 @@ _JS = r"""
         h("th", { text: "Result" })
       ])),
       body
-    ]);
+    ], "Every case of the run, its result and the key's");
   }
 
   // The whole grid, with a filter for the cases the drafts did not agree on.
@@ -3311,7 +3324,7 @@ _JS = r"""
     return tableBox([
       h("thead", null, h("tr", null, [h("th", { text: "Measure" }), h("th", { text: "Value" })])),
       h("tbody", null, rows)
-    ]);
+    ], "The escalation measures");
   }
 
   // What the page says about one miss. It is written once, and used by both the
@@ -3685,7 +3698,7 @@ _JS = r"""
         h("th", { text: "Vote outcome" }), h("th", { text: "The drafts that did not agree" })
       ])),
       body
-    ]));
+    ], "The cases the drafts did not agree on"));
     return box;
   }
 
@@ -4178,7 +4191,7 @@ _JS = r"""
         h("th", { text: "Produced (the run)" }), h("th", { text: "Result" }), h("th", { text: "Grader's detail" })
       ])),
       body
-    ]));
+    ], "The four graded fields, the key's answer and the run's"));
 
     panel.appendChild(h("h4", { text: "Answer-key metadata" }));
     // The run's own ``matched`` flag is deliberately not printed. On a case that
@@ -4923,7 +4936,9 @@ def render_index(documents: Mapping[str, Mapping[str, Any]]) -> str:
             "sealed sets are never added to each other or to anything else: one "
             "figure over 64 cases plus another over 20 is not a measurement of "
             "84 cases.</p>\n",
-            '<div class="table-wrap">\n<table class="index-table">\n',
+            '<div class="table-wrap" tabindex="0" role="region" '
+            'aria-label="The runs, their headline figures and their sizes">\n'
+            '<table class="index-table">\n',
             "<thead><tr><th>Set</th><th>Headline figure</th><th>What it is</th>"
             "<th>Cases</th></tr></thead>\n",
             "<tbody>\n",

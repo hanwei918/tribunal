@@ -3881,7 +3881,9 @@ class PhoneWidthTests(unittest.TestCase):
         index = build.render_index(built_documents())
         self.assertEqual(1, index.count("<table"), "the index builds more than one table")
         self.assertIn(
-            '<div class="table-wrap">\n<table class="index-table">',
+            '<div class="table-wrap" tabindex="0" role="region" '
+            'aria-label="The runs, their headline figures and their sizes">\n'
+            '<table class="index-table">',
             index,
             "the index's table is not inside the box that scrolls it sideways",
         )
@@ -3986,8 +3988,9 @@ class AccessibilityTests(unittest.TestCase):
     navigate by, a nav that is named, a current view and a current step that are
     marked current rather than only coloured, two dialogs that say they are
     dialogs, a row that opens a case which a keyboard can reach, a switch that
-    gives the single-character shortcuts back, and text that clears the contrast
-    floor the rest of the page is held to.
+    gives the single-character shortcuts back, a box that scrolls sideways and
+    takes the focus so it can be scrolled without a pointer, and text that clears
+    the contrast floor the rest of the page is held to.
 
     The static half of the page is parsed rather than searched. The dialogs, the
     rows and the switch are built by the script at run time and no parser can see
@@ -4160,6 +4163,34 @@ class AccessibilityTests(unittest.TestCase):
         """A ``th`` with no text is a column a reader is not told the name of."""
         self.assertNotIn('h("th", { text: "" })', self.script)
         self.assertIn('h("th", { text: "Measure" })', self.script)
+
+    def test_a_table_box_that_scrolls_can_be_reached_from_the_keyboard(self):
+        """``scrollable-region-focusable``: the box that scrolls takes the focus.
+
+        An axe-core scan of the live site found one violation type on the
+        scrolling wrappers: an ``overflow-x`` region with nothing focusable
+        inside it cannot be scrolled without a pointer. The script builds every
+        table in exactly one place, so that one place carries the three
+        attributes and a label naming the table; the runs index is static and
+        carries them too; and the focused box has a ring of its own.
+        """
+        self.assertIn(
+            'class: "table-wrap", tabindex: "0", role: "region",', self.script
+        )
+        self.assertIn('"aria-label": label', self.script)
+        self.assertEqual(
+            "2px solid var(--accent)",
+            declarations_for(self.top, ".table-wrap:focus-visible").get("outline"),
+        )
+        boxes = [
+            attrs
+            for _tag, attrs in scan_page(self.index).tags
+            if attrs.get("class") == "table-wrap"
+        ]
+        self.assertEqual(1, len(boxes), "the index carries no table box, or more")
+        self.assertEqual("0", boxes[0].get("tabindex"))
+        self.assertEqual("region", boxes[0].get("role"))
+        self.assertTrue((boxes[0].get("aria-label") or "").strip())
 
     def test_nothing_on_the_page_is_smaller_than_twelve_pixels(self):
         """11px of monospace on a phone is text that has to be zoomed to be

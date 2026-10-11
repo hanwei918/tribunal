@@ -612,6 +612,55 @@ STEP_TITLES: Tuple[str, ...] = (
 
 DISCLOSURE = "This is a provisional ruling made by an automated system."
 
+# --------------------------------------------------------------------------
+# 47. The summary bar, and what two loaded words mean
+# --------------------------------------------------------------------------
+# 47.1: a case page opened with the two parties' long accounts and the chat, and
+# the ruling came after them. The summary bar states the outcome, the money and
+# who decides next in one line under the title, and links to the ruling panel.
+# Every word of it is read from the ruling and from the lane the queue's own
+# status chip assigns the case, as the chips already are: nothing here reads a
+# file the page did not already read.
+SUMMARY_BAR_WHY = "Why"
+SUMMARY_BAR_TARGET = "panel-ruling"
+SUMMARY_MONEY_REFUND = "refund to the {0}"
+SUMMARY_MONEY_DRIVER = "driver compensation"
+SUMMARY_MONEY_NOTHING = "nothing moves"
+SUMMARY_MONEY_HELD = "held"
+SUMMARY_WHO_PANEL = "decided by the panel"
+SUMMARY_WHO_HELD = "held for a person to release"
+SUMMARY_WHO_PERSON = "sent to a person"
+
+# 47.3: what the queue's two loaded words mean, in one sentence each. The tile's
+# small print and the line under the tiles both read these, so the page cannot
+# come to mean two things by "executed" or by "confidence": "executed" is not a
+# payment and "confidence" is not a measured accuracy.
+EXECUTED_MEANS = (
+    "the system would have executed the ruling on issue, and no money moved"
+)
+CONFIDENCE_MEANS = (
+    "the judge's own figure, capped by the evidence weights, not a measured "
+    "accuracy"
+)
+
+# The one line under the queue's tiles, built from the two sentences above so
+# the tile's small print and the line cannot say different things about the same
+# word.
+QUEUE_WORDS_NOTE = (
+    'These are recorded runs on synthetic cases, so "executed" means '
+    + EXECUTED_MEANS
+    + '; and "confidence" is '
+    + CONFIDENCE_MEANS
+    + " - the measured agreement figures are in the README's results."
+)
+
+# 47.4: the clause whose arithmetic a refund above the contested amount comes
+# from, and the clause whose wording says a partial refund returns part of the
+# contested amount. They are named on the page and in the README, and the
+# tension between them is disclosed rather than repaired.
+REFUND_ARITHMETIC_CLAUSE = "POL-RD-02"
+REFUND_WORDING_CLAUSE = "POL-GEN-03"
+
 
 class BuildError(Exception):
     """A page could not be built from the files it reads."""
@@ -1399,6 +1448,111 @@ def status_chip(
 
 
 # --------------------------------------------------------------------------
+# 47.1: the outcome first, in one line
+# --------------------------------------------------------------------------
+def _summary_outcome(case: "CaseData") -> str:
+    """The outcome in words: the ruling's own, or who decides where there is none."""
+    if case.trigger is not None:
+        return _text(SENT_TO_A_PERSON)
+    return _text(ruling_words(str(case.ruling.get("ruling"))))
+
+
+def _summary_money(case: "CaseData") -> str:
+    """What the money does, in one of the four phrases the sheet names.
+
+    Read from the ruling and from the lane the queue's own chip assigns the
+    case: a refund to the filing party, the driver's compensation, no money
+    moving, or an amount held -- by ``POL-GEN-05`` above the execution threshold
+    where the case was decided, and by the escalation where it was not.
+    """
+    ruling = case.ruling
+    currency = case.policy.currency
+    value = str(ruling.get("ruling"))
+    if case.trigger is not None or _money_is_held(case):
+        return _text(SUMMARY_MONEY_HELD)
+    if value in REFUND_RULINGS:
+        filed_by = str(
+            (case.case.get("dispute") or {}).get("filed_by") or ""
+        ).strip().lower() or "filing party"
+        return "{0} {1}".format(
+            _text(SUMMARY_MONEY_REFUND.format(filed_by)),
+            _text(_money(ruling.get("amount_sgd"), currency)),
+        )
+    if value == pipeline_module.DRIVER_COMPENSATION:
+        return "{0} {1}".format(
+            _text(SUMMARY_MONEY_DRIVER),
+            _text(_money(ruling.get("driver_compensation_sgd"), currency)),
+        )
+    if value == NO_ACTION:
+        return _text(SUMMARY_MONEY_NOTHING)
+    raise BuildError(
+        "POL-GEN-03 states no money rule for the ruling value {0!r}".format(value)
+    )
+
+
+def _summary_who(case: "CaseData") -> str:
+    """Who decided, or who decides next: the panel, a release, or a person."""
+    if case.trigger is not None:
+        return _text(SUMMARY_WHO_PERSON)
+    if _money_is_held(case):
+        return _text(SUMMARY_WHO_HELD)
+    return _text(SUMMARY_WHO_PANEL)
+
+
+def summary_bar(case: "CaseData") -> str:
+    """The one-line summary a case page opens with, directly under its chips.
+
+    The outcome in words, the money, who decides, and a link to the ruling
+    panel. It is the same three facts the chips and the ruling panel carry, put
+    where a reader meets them first rather than after the two parties' accounts
+    and the chat.
+    """
+    return (
+        '<p class="summarybar">'
+        "<b>{0}</b> &middot; {1} &middot; {2} &middot; "
+        '<a href="#{3}">{4}</a></p>'
+    ).format(
+        _summary_outcome(case),
+        _summary_money(case),
+        _summary_who(case),
+        _attribute(SUMMARY_BAR_TARGET),
+        _text(SUMMARY_BAR_WHY),
+    )
+
+
+def refund_over_contested(case: "CaseData") -> str:
+    """One line where the refund is larger than the amount the rider contested.
+
+    ``POL-RD-02`` computes the refund from the fare -- the charged total minus
+    the fare recomputed on the optimal route -- and does not cap it at the
+    amount the rider named, while ``POL-GEN-03``'s wording says a partial refund
+    returns "part of the contested amount". Where the two disagree the page says
+    which figure it is showing and where it comes from. The comparison is made
+    here, from the record, and the line is drawn only where the refund is the
+    larger of the two.
+    """
+    ruling = case.ruling
+    if str(ruling.get("ruling")) not in REFUND_RULINGS:
+        return ""
+    amount = _decimal(ruling.get("amount_sgd"))
+    dispute = case.case.get("dispute") or {}
+    contested = _decimal(dispute.get("amount_contested_sgd"))
+    if amount is None or contested is None or amount <= contested:
+        return ""
+    filed_by = str(dispute.get("filed_by") or "").strip().lower() or "filing party"
+    return (
+        '<p class="refundnote">The refund is the fare difference {0} computes, '
+        "which here is more than the {1} the {2} asked for; the policy does not "
+        "cap it at the amount contested ({3}).</p>"
+    ).format(
+        _text(REFUND_ARITHMETIC_CLAUSE),
+        _text(_money(contested, case.policy.currency)),
+        _text(filed_by),
+        _text(REFUND_WORDING_CLAUSE),
+    )
+
+
+# --------------------------------------------------------------------------
 # One case, read once
 # --------------------------------------------------------------------------
 @dataclass(frozen=True)
@@ -1946,6 +2100,26 @@ th[aria-sort="descending"] .sort::after{content:"\\2193"}
 .nav a{flex:none;white-space:nowrap}
 .brand{flex:none}
 .mode{flex:none}
+
+/* 47.1: the outcome first. A case page opened with the two parties' long
+   accounts and the chat, and the ruling came after them; the summary bar states
+   the outcome, the money and who decides in one line under the title, and its
+   "Why" link goes to the ruling panel. */
+.summarybar{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;
+  background:var(--soft);border:1px solid var(--line);border-radius:10px;
+  padding:9px 13px;margin:12px 0 0;font-size:.9rem;color:var(--muted)}
+.summarybar b{color:var(--ink);font-weight:650}
+
+/* 47.4: where the refund POL-RD-02 computes is larger than the amount the rider
+   contested, the figure is named for what it is and the clause it comes from. */
+.refundnote{margin:.5em 0 0;font-size:.86rem;color:var(--muted)}
+
+/* 47.3: the line under the queue's tiles, for "executed" and "confidence". */
+.figurewords{color:var(--muted);font-size:.86rem;margin:-10px 0 20px;max-width:78ch}
+
+/* 47.5/47.6: a table's scrolling box is reachable by keyboard, so it carries a
+   focus ring of its own rather than depending on the one a control gets. */
+.tscroll:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 """
 
 _JS = """
@@ -2765,8 +2939,8 @@ def build_index(cases: Sequence[CaseData]) -> str:
             _figure(
                 "Decided and executed",
                 "{0} of {1}".format(figures.executed, figures.total),
-                "{0} of the queue, executed on issue (POL-GEN-05)".format(
-                    figures.executed_share
+                "{0} of the queue: {1} (POL-GEN-05)".format(
+                    figures.executed_share, EXECUTED_MEANS
                 ),
             ),
             _figure(
@@ -2796,6 +2970,12 @@ def build_index(cases: Sequence[CaseData]) -> str:
             ),
         )
     ) + "</div>\n"
+    # 47.3: one line under the tiles, for the two loaded words a reader can take
+    # wrongly: "executed" is not a payment, and "confidence" is not a measured
+    # accuracy. The executed tile's small print carries the same words.
+    words_note = '<p class="figurewords">{0}</p>\n'.format(
+        _text(QUEUE_WORDS_NOTE)
+    )
     filters = (
         '<div class="filters">'
         '<button type="button" data-filter="all" class="on">All</button>'
@@ -2810,7 +2990,9 @@ def build_index(cases: Sequence[CaseData]) -> str:
     # without the box the table was cut off below about 1230 px with no way to
     # reach the columns past the edge.
     table = (
-        '<div class="card wide">\n<div class="tscroll"><table id="queue">\n'
+        '<div class="card wide">\n'
+        '<div class="tscroll" tabindex="0" role="region" '
+        'aria-label="The queue of disputes"><table id="queue">\n'
         "<thead>{0}</thead>\n"
         "<tbody>{1}</tbody>\n</table></div>\n</div>\n".format(_queue_head(), rows)
     )
@@ -2822,6 +3004,7 @@ def build_index(cases: Sequence[CaseData]) -> str:
         + _links_row()
         + _featured_cards(cases)
         + figure_html
+        + words_note
         + filters
         + table
         + _footer(cases[0])
@@ -3926,7 +4109,9 @@ def _dispute_block(case: CaseData) -> str:
         # clock alone: a full ISO instant wraps inside a cell on a phone.
         chat_block = (
             '<p class="cap">{0}</p>'
-            '<div class="tscroll"><table><thead><tr><th>Time</th><th>From</th>'
+            '<div class="tscroll" tabindex="0" role="region" '
+            'aria-label="The chat, as the record carries it">'
+            "<table><thead><tr><th>Time</th><th>From</th>"
             "<th>Message</th></tr></thead><tbody>{1}</tbody></table></div>"
         ).format(
             _text(_date_of(chat[0].get("sent_at"))),
@@ -4090,7 +4275,9 @@ def _record_block(case: CaseData) -> str:
         '<section class="sec" id="what-the-record-shows">'
         "<h2>What the record shows</h2>"
         '<p class="cap">{0}</p>'
-        '<div class="tscroll"><table><thead><tr><th>Fact</th><th>The record</th>'
+        '<div class="tscroll" tabindex="0" role="region" '
+        'aria-label="What the record shows">'
+        "<table><thead><tr><th>Fact</th><th>The record</th>"
         "</tr></thead><tbody>{1}</tbody></table></div>"
         "</section>"
     ).format(
@@ -4189,7 +4376,9 @@ def _draft_table(case: CaseData, drafts: Sequence[Mapping[str, Any]]) -> str:
             )
         )
     return (
-        '<div class="tscroll"><table><thead><tr><th>Draft</th><th>Kind</th>'
+        '<div class="tscroll" tabindex="0" role="region" '
+        'aria-label="The panel\'s drafts, one row each">'
+        "<table><thead><tr><th>Draft</th><th>Kind</th>"
         "<th>Proposed</th><th>Confidence</th><th>Why it was voided</th></tr>"
         "</thead><tbody>{0}</tbody></table></div>"
     ).format("".join(rows))
@@ -4310,6 +4499,7 @@ def _verdict_card(case: CaseData) -> str:
         '<p class="word">{1}</p>'
         "{2}"
         "<p>{3}</p>"
+        "{12}"
         "{11}"
         "{4}"
         '<p class="after">{5}</p>'
@@ -4333,6 +4523,7 @@ def _verdict_card(case: CaseData) -> str:
         _tiles_html(case),
         awaiting,
         _notice(case),
+        refund_over_contested(case),
     )
 
 
@@ -4660,7 +4851,20 @@ def _judge_detail(case: CaseData, drafts: Sequence[Mapping[str, Any]], vote: Map
             for draft in drafts
         ),
         "".join(
-            "<blockquote>{0}</blockquote>".format(_text(draft["explanation"]))
+            # 47.2: each explanation is long -- a draft's own reasoning runs to
+            # several paragraphs -- so it sits in a closed ``<details>`` named
+            # for its draft, and the four draft cards above stay visible.
+            "<details><summary>{0}</summary><blockquote>{1}</blockquote></details>".format(
+                _text(
+                    "Draft {0} - {1}".format(
+                        draft["draft"],
+                        DRAFT_KIND_WORDS.get(
+                            str(draft["kind"]), str(draft["kind"])
+                        ),
+                    )
+                ),
+                _text(draft["explanation"]),
+            )
             for draft in drafts
         )
         or '<p class="empty">No draft was asked for.</p>',
@@ -5168,7 +5372,9 @@ def _review_tab(case: CaseData) -> str:
     )
     timeline_block = (
         "<details><summary>Show the event log</summary>"
-        '<div class="tscroll"><table><thead><tr><th>Time</th><th>Event</th>'
+        '<div class="tscroll" tabindex="0" role="region" '
+        'aria-label="The escalation packet\'s event log">'
+        "<table><thead><tr><th>Time</th><th>Event</th>"
         "<th>Role or draft</th><th>Seconds</th></tr></thead><tbody>{0}</tbody>"
         "</table></div></details>"
     ).format(timeline_rows or '<tr><td colspan="4">none</td></tr>')
@@ -5197,12 +5403,16 @@ def _review_tab(case: CaseData) -> str:
         "&middot; votes {7} &middot; agreement: {8} &middot; unanimous: {9}</p>"
         "<h3>The judge's explanation, verbatim</h3><blockquote>{10}</blockquote>"
         "<h3>The drafts</h3>"
-        '<div class="tscroll"><table><thead><tr><th>Draft</th><th>Ruling</th>'
+        '<div class="tscroll" tabindex="0" role="region" '
+        'aria-label="The escalation packet\'s drafts">'
+        "<table><thead><tr><th>Draft</th><th>Ruling</th>"
         "<th>Amount</th><th>Confidence</th><th>State</th><th>Abstention</th></tr>"
         "</thead><tbody>{11}</tbody></table></div>"
         "<h3>The advocate briefs, as the packet carries them</h3><ul>{12}</ul>"
         "<h3>The admissibility report</h3>"
-        '<div class="tscroll"><table><thead><tr><th>Artifact</th>'
+        '<div class="tscroll" tabindex="0" role="region" '
+        'aria-label="The escalation packet\'s admissibility report">'
+        "<table><thead><tr><th>Artifact</th>"
         "<th>Type</th><th>Source</th><th>Status</th><th>Weight</th></tr></thead>"
         "<tbody>{13}</tbody></table></div>"
         "<h3>Every clause id relied on</h3><p class=\"mono\">{14}</p>"
@@ -5405,7 +5615,9 @@ def build_case_page(case: CaseData) -> str:
         '<span class="chip">{5}</span>'
         '<span class="chip">{6}</span>'
         "{7}"
-        "</div>\n</header>\n"
+        "</div>\n"
+        "{8}"
+        "</header>\n"
     ).format(
         _text(dispute.get("dispute_id")),
         _text(dispute.get("trip_id")),
@@ -5419,6 +5631,7 @@ def build_case_page(case: CaseData) -> str:
             )
         ),
         status_chip(case, with_time=True, title=True),
+        summary_bar(case),
     )
     tabs = [
         ("ruling", "Ruling"),

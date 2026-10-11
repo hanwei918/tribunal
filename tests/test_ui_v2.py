@@ -1200,6 +1200,33 @@ class QueueFiguresTests(unittest.TestCase):
                 self.assertIn('<p class="k">{0}</p>'.format(label), text)
         self.assertIn("POL-GEN-05", text)
 
+    def test_the_queue_says_what_executed_and_confidence_mean(self):
+        """The two loaded words a reader can take wrongly, said once in one line.
+
+        "Decided and executed" reads as a payment and the table's "confidence"
+        reads as a measured accuracy; neither is what the figures are. The line
+        under the tiles says what each word means, and the executed tile's small
+        print carries the same words as the line.
+        """
+        text = index_text()
+        self.assertIn(v2.EXECUTED_MEANS, v2.QUEUE_WORDS_NOTE)
+        self.assertIn(v2.CONFIDENCE_MEANS, v2.QUEUE_WORDS_NOTE)
+        self.assertIn(
+            '<p class="figurewords">{0}</p>'.format(v2._text(v2.QUEUE_WORDS_NOTE)),
+            text,
+            "the queue does not say what the two words mean",
+        )
+        self.assertIn(
+            v2._text(
+                "{0} of the queue: {1} (POL-GEN-05)".format(
+                    self.figures()["executed_share"], v2.EXECUTED_MEANS
+                )
+            ),
+            text,
+            "the executed tile's small print does not use the line's own words",
+        )
+        self.assertIn("README", text)
+
     def test_the_queue_prints_the_held_reason_in_the_row(self):
         """The reason is text in the row, not only a tooltip.
 
@@ -2576,12 +2603,51 @@ class StylesheetTests(unittest.TestCase):
     def test_a_wide_table_scrolls_inside_its_own_container(self):
         """The queue's table scrolls in a box of its own rather than being cut."""
         self.assertIn(".tscroll{overflow-x:auto", v2._CSS)
-        self.assertIn('<div class="tscroll"><table id="queue">', index_text())
+        self.assertIn(
+            '<div class="tscroll" tabindex="0" role="region" '
+            'aria-label="The queue of disputes"><table id="queue">',
+            index_text(),
+        )
         # The box is what scrolls, so every table a case page draws sits in one.
         for case in loaded_cases():
             with self.subTest(case=case.case_no):
                 page = built_pages()[case.link]
                 self.assertEqual(page.count("<table"), page.count('class="tscroll"'))
+
+    def test_every_scrolling_table_can_be_reached_from_the_keyboard(self):
+        """``scrollable-region-focusable``: a box that scrolls must take the focus.
+
+        An axe-core scan of the live site found one violation type on the case
+        pages: an ``overflow-x`` region with nothing focusable inside it cannot
+        be scrolled without a pointer. Every wrapper carries the three
+        attributes, each with a label naming the table it holds, and the
+        stylesheet gives the focused box a ring of its own.
+        """
+        self.assertIn(
+            ".tscroll:focus-visible{outline:2px solid var(--accent)", v2._CSS
+        )
+        pages = {"index.html": index_text()}
+        for case in loaded_cases():
+            pages[case.link] = built_pages()[case.link]
+        wrappers = 0
+        for name, page in sorted(pages.items()):
+            self.assertEqual(
+                page.count("<table"),
+                page.count('class="tscroll"'),
+                name + " draws a table outside the box that scrolls it",
+            )
+            for attributes in re.findall(r'<div class="tscroll"([^>]*)>', page):
+                wrappers += 1
+                with self.subTest(page=name, attributes=attributes):
+                    self.assertIn('tabindex="0"', attributes)
+                    self.assertIn('role="region"', attributes)
+                    label = re.search(r'aria-label="([^"]*)"', attributes)
+                    self.assertIsNotNone(
+                        label, "a scrolling box carries no label naming its table"
+                    )
+                    assert label is not None
+                    self.assertTrue(label.group(1).strip())
+        self.assertGreater(wrappers, 0, "no page draws a scrolling table")
 
 
 # --------------------------------------------------------------------------
@@ -2636,6 +2702,96 @@ class StatusChipTests(unittest.TestCase):
                     self.assertIn('class="chip ok"', chip)
                 else:
                     self.assertIn('class="chip grey"', chip)
+
+
+# --------------------------------------------------------------------------
+# 47.1: the outcome first
+# --------------------------------------------------------------------------
+class SummaryBarTests(unittest.TestCase):
+    """The one line a case page opens with, read from the ruling and the lane."""
+
+    def bar_of(self, page: str) -> str:
+        match = re.search(r'<p class="summarybar">(.*?)</p>', page, re.S)
+        self.assertIsNotNone(match, "the page carries no summary bar")
+        assert match is not None
+        return match.group(1)
+
+    def test_every_case_page_states_the_outcome_the_money_and_who_decides(self):
+        for case in loaded_cases():
+            bar = self.bar_of(built_pages()[case.link])
+            with self.subTest(case=case.case_no):
+                self.assertIn(v2._text(v2._summary_outcome(case)), bar)
+                self.assertIn(v2._summary_money(case), bar)
+                self.assertIn(v2._summary_who(case), bar)
+
+    def test_the_bar_sits_under_the_title_and_chips_and_links_to_the_ruling(self):
+        case = loaded_case(208)
+        page = built_pages()[case.link]
+        chips = page.index("</div>\n", page.index('<div class="chips">'))
+        self.assertLess(page.index("<h1>"), page.index('<p class="summarybar">'))
+        self.assertLess(chips, page.index('<p class="summarybar">'))
+        self.assertIn('<a href="#panel-ruling">Why</a>', self.bar_of(page))
+        self.assertIn('id="panel-ruling"', page)
+
+    def test_the_bar_uses_the_sheet_s_own_vocabulary(self):
+        """Four phrases for the money and three for who decides, and nothing else."""
+        who = set()
+        for case in loaded_cases():
+            who.add(re.sub(r"<[^>]+>", "", v2._summary_who(case)))
+            money = re.sub(r"<[^>]+>", "", v2._summary_money(case))
+            with self.subTest(case=case.case_no):
+                self.assertTrue(
+                    money in (v2.SUMMARY_MONEY_NOTHING, v2.SUMMARY_MONEY_HELD)
+                    or money.startswith(v2.SUMMARY_MONEY_DRIVER + " ")
+                    or re.match(
+                        r"^refund to the [a-z]+(?: [a-z]+)? SGD [0-9.]+$", money
+                    ),
+                    money,
+                )
+        self.assertTrue(
+            who
+            <= {
+                v2.SUMMARY_WHO_PANEL,
+                v2.SUMMARY_WHO_HELD,
+                v2.SUMMARY_WHO_PERSON,
+            },
+            sorted(who),
+        )
+
+    def test_a_refund_over_the_contested_amount_is_named_and_explained(self):
+        """47.4: the figure the page shows is POL-RD-02's arithmetic, not a cap.
+
+        The eight recorded rulings the sheet names -- seven of them in the
+        dev-v2-ext run this site draws -- show a refund larger than the amount
+        contested. On those pages the money line is followed by a sentence
+        saying where the figure comes from; on every other page it is not.
+        """
+        over = []
+        for case in loaded_cases():
+            page = built_pages()[case.link]
+            note = v2.refund_over_contested(case)
+            amount = v2._decimal(case.ruling.get("amount_sgd"))
+            contested = v2._decimal(
+                (case.case.get("dispute") or {}).get("amount_contested_sgd")
+            )
+            with self.subTest(case=case.case_no):
+                if (
+                    str(case.ruling.get("ruling")) in ("FULL_REFUND", "PARTIAL_REFUND")
+                    and amount is not None
+                    and contested is not None
+                    and amount > contested
+                ):
+                    over.append(case.case_no)
+                    self.assertIn(note, page)
+                    self.assertIn(v2.REFUND_ARITHMETIC_CLAUSE, note)
+                    self.assertIn(v2.REFUND_WORDING_CLAUSE, note)
+                    self.assertIn(
+                        v2._money(contested, case.policy.currency), note
+                    )
+                else:
+                    self.assertEqual("", note)
+                    self.assertNotIn('<p class="refundnote">', page)
+        self.assertEqual([2801, 2802, 2804, 2818, 2828, 2842, 2849], over)
 
 
 # --------------------------------------------------------------------------

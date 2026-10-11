@@ -741,6 +741,17 @@ subject to the PDPA without this repository making any compliance claim.
   ablations and the sample case's first run — are the historical version-1 runs,
   and the tables label them as such; nothing needed fixing. **Disclosed and not
   fixed**, because the default is part of the frozen code.
+- **A refund can be larger than the amount contested.** `POL-RD-02` computes the
+  refund from the fare — the charged total minus the fare recomputed on the
+  optimal route — and does not cap it at the amount the rider named, while
+  `POL-GEN-03`'s wording says a partial refund returns "part of the contested
+  amount". Eight recorded rulings show the two disagree: `dev-v2-ext` 2801,
+  2802, 2804, 2818, 2828, 2842 and 2849 — each a `PARTIAL_REFUND` above the
+  amount contested, 2801 refunding SGD 6.95 against SGD 6.00 — and `sealed-v1`
+  311. Each of those case pages says so in one line beside the money, naming
+  `POL-RD-02` as the arithmetic and `POL-GEN-03` as the wording. The tension is
+  **disclosed and not repaired**: `policy/` is frozen for the submission, so
+  neither clause is reworded and no refund is capped at the amount contested.
 
 ## What went wrong on the held-out set
 
