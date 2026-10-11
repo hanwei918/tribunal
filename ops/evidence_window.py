@@ -54,6 +54,7 @@ import argparse
 import hashlib
 import json
 import re
+import shlex
 import sys
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -841,31 +842,40 @@ def review_command(
     It is ``tribunal.precedents close``'s own command line behind
     ``ops.review``, and it carries **no** ``close``: ``ops.review`` supplies the
     subcommand itself.
+
+    **Every argument is quoted for a shell.** The command is printed to be
+    copy-pasted, so a value that is merely wrapped in double quotes is rewritten
+    before it arrives: a shell expands ``$``, runs backticks and applies history
+    expansion to ``!``, and the reviewer's reason -- free text, and the field
+    most likely to hold one of those characters -- would reach ``close`` as
+    something other than what was written. :func:`shlex.quote` leaves a value
+    that needs no quoting alone and single-quotes the rest, which is the quoting
+    the shell itself undoes.
     """
     parts: List[str] = [
         "python3",
         "-m",
         "ops.review",
         "--run-dir",
-        str(run_dir),
+        shlex.quote(str(run_dir)),
         "--case",
         str(case_no),
         "--packet-sha256",
         escalation.packet_sha256(packet),
         "--ruling",
-        ruling,
+        shlex.quote(ruling),
     ]
     if amount is not None:
         parts += ["--amount", str(amount)]
     parts += [
         "--clause",
-        CLAUSE_RESIDUAL,
+        shlex.quote(CLAUSE_RESIDUAL),
         "--closed-by",
-        '"{0}"'.format(closed_by),
+        shlex.quote(closed_by),
         "--summary",
-        '"{0}"'.format(ruling),
+        shlex.quote(ruling),
         "--reason",
-        '"{0}"'.format(str(reason).replace('"', "'")),
+        shlex.quote(str(reason)),
     ]
     return " ".join(parts)
 

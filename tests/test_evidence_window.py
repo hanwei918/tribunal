@@ -41,6 +41,7 @@ import hashlib
 import io
 import json
 import shlex
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -275,6 +276,37 @@ class TheAcceptanceTests(unittest.TestCase):
                 (precedent_store / "precedents.jsonl").is_file(),
                 "the printed command stored no closure",
             )
+
+    def test_a_reason_a_shell_would_rewrite_is_quoted_safely(self):
+        """The printed command is copy-pasted, so a shell must not rewrite it.
+
+        A reason is free text and may hold `$`, a backtick or `!`. Wrapped in
+        double quotes a shell expands the first, runs the second as a command
+        and history-expands the third, so the value that reached ``close`` would
+        not be the value the reviewer wrote. ``shlex.quote`` single-quotes it
+        instead, and this test hands the printed argument to a real POSIX shell
+        to show the round trip.
+        """
+        reason = "refund $4.50 `per POL-RD-09` and NO! action"
+        command = ew.review_command(
+            Path("/tmp/tribunal-run"),
+            CASE,
+            {"case_no": CASE},
+            "FULL_REFUND",
+            Decimal("4.50"),
+            reason,
+            "a reviewer",
+        )
+        quoted = command.split("--reason ", 1)[1]
+        completed = subprocess.run(
+            ["/bin/sh", "-c", "printf '%s' " + quoted],
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(0, completed.returncode, completed.stderr)
+        self.assertEqual(reason, completed.stdout)
+        argv = shlex.split(command)
+        self.assertEqual(reason, argv[argv.index("--reason") + 1])
 
     def test_a_tampered_store_line_is_refused(self):
         with tempfile.TemporaryDirectory() as tmp:
