@@ -14,7 +14,7 @@
 
 **An automatic ruling is a first decision, not the last word: a party may appeal it once within 30 days under `POL-GEN-04`; an amount above the execution threshold of `POL-GEN-05`, and every dispute carrying a safety or complaint flag under `POL-GEN-08(1)`, go to a human reviewer under `POL-GEN-06`; and the kill switch `auto_rulings_enabled` in `ops/config.json` lets a human switch automatic rulings off.**
 
-Execution start: 2026-09-18. Feature freeze tagged 2026-10-09 (`freeze-2026-10-09`). Submission: 2026-10-16 (the exact time is per the submission platform).
+Execution start: 2026-09-18. The feature freeze is tagged 2026-10-09 (`freeze-2026-10-09`), and the final code freeze — the code the fourth sealed set ran on — is tagged `freeze-2026-10-11`; after that second tag, `tribunal/`, `prompts/` and `policy/` did not change. Submission: 2026-10-16 (the exact time is per the submission platform).
 
 ![Tribunal architecture](docs/architecture.svg)
 

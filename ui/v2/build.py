@@ -405,6 +405,18 @@ DRAFT_KIND_WORDS: Mapping[str, str] = {
     pipeline_module.DRAFT_POSITION_SWAPPED: "parties' positions swapped",
 }
 
+# The five steps the landing page's strip names, each as (who, what, note). The
+# three ``who`` values are the case page's own -- code, model, outcome -- and
+# the colours below are the ones the case page draws them in, so a reader who
+# has seen the stepper meets the same three colours here.
+HOW_IT_WORKS: Tuple[Tuple[str, str, str], ...] = (
+    ("code", "The evidence brief", "the same bytes to both sides"),
+    ("model", "Rider and driver advocates", "one advocate for each side, AI"),
+    ("code", "The citation referee", "checks every claim against the record"),
+    ("model", "The judge, four drafts", "AI; a majority carries the ruling"),
+    ("outcome", "A ruling, or a person", "the money held until a person decides"),
+)
+
 # The words the filing party is shown under, by the loader's own role.
 FILED_BY_WORDS: Mapping[str, str] = {
     "RIDER": "Rider",
@@ -478,11 +490,23 @@ CALL_LOG_CHANNEL = "VOICE_CALL_LOG"
 # are development data, and the README is where the submission's figures -- the
 # sealed sets among them -- are stated, with the command that measured each one.
 README_RESULTS_LINK = "../../README.md#results"
+README_RESULTS_WORDS = "How the figures were measured"
+
+# The README's architecture section, linked from the queue's links row. The
+# repository is not public yet, so this is the repository-relative path rather
+# than a GitHub URL; it resolves from the site root exactly as the results link
+# does, which is what ``tests/test_ui_v2.py`` holds it to.
+README_ARCHITECTURE_LINK = "../../docs/architecture.md"
+
+# The case the links row sends a reader to for the debate itself: the no-show
+# case the description names, whose "How it was decided" tab shows the two
+# advocates' claims and the judge's four drafts.
+HOW_IT_WAS_DECIDED_CASE = 208
 
 # What the queue page says the product is, and what the disputes on it are. Two
 # sentences about the system, and then the two disclosures: every dispute shown
 # is synthetic except the organisers' own sample, and the figures are
-# development data rather than a generalisation figure.
+# development data measured over the recorded runs.
 WHAT_TRIBUNAL_DOES = (
     "Tribunal decides one disputed trip from one evidence brief: two AI "
     "advocates argue the same brief, a citation referee checks every claim, a "
@@ -493,9 +517,7 @@ WHAT_THE_DISPUTES_ARE = (
     "Every dispute shown here is a synthetic test case, except case 901, which "
     "is the organisers' sample."
 )
-WHAT_THE_FIGURES_ARE = (
-    "These figures are development data, not a generalisation figure."
-)
+WHAT_THE_FIGURES_ARE = "These figures are development data."
 
 # The set order, as an index. The queue's row order is this order and then the
 # case number; nothing about a directory listing or an interpreter's string hash
@@ -1771,6 +1793,17 @@ th[aria-sort="descending"] .sort::after{content:"\\2193"}
 .d-void{margin:.4em 0 0;padding-left:18px;font-size:.82rem;color:var(--bad)}
 .pill.blue{background:var(--accent-wash);color:var(--accent)}
 
+/* 44.2: the landing page's how-it-works strip and its links row. */
+.how{background:var(--card);border:1px solid var(--line);border-radius:12px;
+  padding:12px 16px;margin:0 0 18px}
+.how h2{margin:0 0 8px;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.how ol{display:flex;flex-wrap:wrap;gap:6px 14px;list-style:none;margin:0;padding:0}
+.how li{display:flex;align-items:center;gap:7px;font-size:.86rem;color:var(--muted)}
+.how li b{color:var(--ink);font-weight:600}
+.how i{width:9px;height:9px;border-radius:50%;flex:none}
+.how .arw{color:var(--muted);margin-left:8px}
+.links{display:flex;flex-wrap:wrap;gap:6px 18px;margin:0 0 20px;font-size:.9rem}
+
 /* 44.3: on a 375 px phone the nav wrapped, which pushed its Queue pill against
    the bar's top edge. The nav stays on one line now and scrolls sideways when
    it has to, and the bar's three children are allowed to shrink around it. */
@@ -2088,9 +2121,14 @@ SCALES_MARK = (
 )
 
 
-def _mode_text(version: Any, model: Any) -> str:
-    """The top bar's right-hand readout, from the run the page replays."""
-    return "Replay - policy v{0} - {1}".format(_text(version), _text(model))
+def _mode_text(version: Any) -> str:
+    """The top bar's right-hand readout: the runs the pages replay.
+
+    It says what the pages are -- recorded runs at one policy version -- and
+    leaves the model to the footer, which names the run each page replays. The
+    version is the run's own, read from the record rather than typed here.
+    """
+    return "Recorded runs, policy version {0}".format(_text(version))
 
 
 def _topbar(mode: str, current: str) -> str:
@@ -2313,6 +2351,39 @@ FEATURED_CASES: Tuple[Tuple[int, str], ...] = (
 )
 
 
+def _featured_answer(case: CaseData) -> str:
+    """Case 208's record in one line, from the same derived facts the table uses.
+
+    The three facts the no-show record turns on: how long the driver held
+    position inside the arrival radius, where the rider's device was, and the one
+    call the log records. Each is read from the brief's own derived blocks, or
+    from the chat the record carries, so the card says nothing the record does
+    not. A fact the blocks do not carry is left out rather than filled in.
+    """
+    arrival = _derived_block(case.brief, "GPS_TRACE", "arrival") or {}
+    presence = _derived_block(case.brief, "GPS_TRACE", "rider_presence") or {}
+    parts: List[str] = []
+    dwell = _fact_value(arrival, "accumulated_dwell", "longest_run_sec")
+    if dwell is not None:
+        parts.append(
+            "driver inside the arrival radius {0} s".format(_whole(dwell))
+        )
+    near = _fact_value(presence, "min_distance_m")
+    far = _fact_value(presence, "max_distance_m")
+    if near is not None and far is not None:
+        parts.append(
+            "her phone {0}-{1} m away".format(_whole(near), _whole(far))
+        )
+    calls = [
+        message
+        for message in _chat_messages(case)
+        if str(message.get("channel")) == CALL_LOG_CHANNEL
+    ]
+    if calls:
+        parts.append(_call_line(calls[0].get("text")))
+    return "; ".join(part for part in parts if part)
+
+
 def _featured_facts(case: CaseData) -> List[Tuple[str, str]]:
     """The facts one featured card carries, each read from the run's own files.
 
@@ -2320,7 +2391,6 @@ def _featured_facts(case: CaseData) -> List[Tuple[str, str]]:
     small after its words exactly as it does on the case page.
     """
     currency = case.policy.currency
-    dispute = case.case.get("dispute") or {}
     if case.case_no == 901:
         return [
             (
@@ -2332,6 +2402,9 @@ def _featured_facts(case: CaseData) -> List[Tuple[str, str]]:
             ("Confidence", _text(str(case.ruling.get("confidence")))),
         ]
     if case.case_no == 208:
+        # The outcome line already carries the ruling and the money, so the
+        # second line is the record's own one-line answer rather than the
+        # amounts a second time.
         return [
             (
                 "Outcome",
@@ -2339,12 +2412,7 @@ def _featured_facts(case: CaseData) -> List[Tuple[str, str]]:
                     _outcome_text(case.ruling, currency, case.trigger, case.votes)
                 ),
             ),
-            (
-                "Amounts",
-                _text(
-                    money_statement(case.ruling, currency, dispute.get("filed_by"))
-                ),
-            ),
+            ("What the record shows", _text(_featured_answer(case))),
         ]
     if case.case_no == 1779:
         drafts = _drafts(case.transcript)
@@ -2379,8 +2447,9 @@ def _featured_facts(case: CaseData) -> List[Tuple[str, str]]:
                 len(refused), len(drafts)
             )
         return [
-            # The words of part 13b, with the code small after them.
-            ("Reason", _coded(trigger_words(str(case.trigger), case.votes), case.trigger)),
+            # The words alone: the card is a summary a reader meets first, and
+            # the reason code belongs on the case page's own steps.
+            ("Reason", _text(trigger_words(str(case.trigger), case.votes))),
             ("The panel", _text(panel)),
         ]
     if case.case_no == 2735:
@@ -2432,6 +2501,50 @@ def _featured_cards(cases: Sequence[CaseData]) -> str:
     return '<section class="featured">' + "".join(cards) + "</section>\n"
 
 
+def _how_it_works() -> str:
+    """The five steps of one dispute, one line each, in the case page's colours.
+
+    The three colours are the case page's own -- code, model and outcome -- so a
+    reader who has seen the stepper on a case page meets the same three here.
+    """
+    items = []
+    for index, (who, what, note) in enumerate(HOW_IT_WORKS):
+        arrow = (
+            ""
+            if index + 1 == len(HOW_IT_WORKS)
+            else '<span class="arw">&#8594;</span>'
+        )
+        items.append(
+            '<li><i style="background:{0}"></i><b>{1}</b> <span>{2}</span>{3}</li>'.format(
+                _attribute(STEP_COLOURS[who]), _text(what), _text(note), arrow
+            )
+        )
+    return (
+        '<section class="how" aria-label="How a dispute is decided">'
+        "<h2>How it works</h2><ol>{0}</ol></section>\n"
+    ).format("".join(items))
+
+
+def _links_row() -> str:
+    """The two links out of the queue's own words: the architecture and a case.
+
+    The architecture link is the repository-relative path, because the
+    repository is not public yet and the site resolves it from its own root
+    exactly as it resolves the results link. The second link sends a reader to
+    the case whose "How it was decided" tab is the debate itself.
+    """
+    return (
+        '<p class="links">'
+        '<a href="{0}">Architecture</a>'
+        '<a href="{1}">How it was decided: see case {2}</a>'
+        "</p>\n"
+    ).format(
+        _attribute(README_ARCHITECTURE_LINK),
+        _attribute("case-{0:05d}.html".format(HOW_IT_WAS_DECIDED_CASE)),
+        _text(HOW_IT_WAS_DECIDED_CASE),
+    )
+
+
 def build_index(cases: Sequence[CaseData]) -> str:
     """The queue: four featured cases, the figures, a filter row and the table."""
     figures = queue_figures(cases)
@@ -2439,15 +2552,16 @@ def build_index(cases: Sequence[CaseData]) -> str:
         '<header class="pagehead">\n'
         "<h1>Today's disputes</h1>\n"
         '<p class="lede">{0}</p>\n'
-        '<p class="lede">{1} {2} A replay of the version-6 runs committed in '
-        "this repository; no page calls a model, and every number is read from "
-        "the run's own files. <a href=\"{3}\">The README's results</a>.</p>\n"
+        '<p class="lede">{1} {2} These pages replay the recorded runs committed '
+        "in this repository and call no model; every number is read from the "
+        'run\'s own files. <a href="{3}">{4}</a>.</p>\n'
         "</header>\n"
     ).format(
         _text(WHAT_TRIBUNAL_DOES),
         _text(WHAT_THE_DISPUTES_ARE),
         _text(WHAT_THE_FIGURES_ARE),
         _attribute(README_RESULTS_LINK),
+        _text(README_RESULTS_WORDS),
     )
     figure_html = '<div class="figures">' + "".join(
         (
@@ -2502,9 +2616,11 @@ def build_index(cases: Sequence[CaseData]) -> str:
         "<tbody>{1}</tbody>\n</table></div>\n</div>\n".format(_queue_head(), rows)
     )
     body = (
-        _topbar(_mode_text(figures.policy_version, figures.model), "queue")
+        _topbar(_mode_text(figures.policy_version), "queue")
         + '<main class="wrap">\n'
         + header
+        + _how_it_works()
+        + _links_row()
         + _featured_cards(cases)
         + figure_html
         + filters
@@ -4696,7 +4812,7 @@ def build_case_page(case: CaseData) -> str:
     configuration = case.document.get("configuration") or {}
     body = (
         _topbar(
-            _mode_text(configuration.get("policy_version"), case.document.get("model")),
+            _mode_text(configuration.get("policy_version")),
             "case",
         )
         + '<main class="wrap">\n'

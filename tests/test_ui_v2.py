@@ -134,6 +134,14 @@ TRANSCRIPT_RE = re.compile(r"^case-(\d{5})\.transcript\.json$")
 # vote's outcome and the ruling value.
 TRIGGERS = ("GEN08_SCOPE", "NO_VALID_DRAFTS", "NO_MAJORITY", "JUDGE_ESCALATE")
 
+# The links off the site, each as the page writes it and the file it must
+# resolve to. They are repository-relative paths, which the site root reaches
+# the same way it reaches a case page.
+REPOSITORY_LINKS: Mapping[str, Path] = {
+    v2.README_RESULTS_LINK: PROJECT_ROOT / "README.md",
+    v2.README_ARCHITECTURE_LINK: PROJECT_ROOT / "docs" / "architecture.md",
+}
+
 
 # --------------------------------------------------------------------------
 # Reading the run files
@@ -560,13 +568,16 @@ class SelfContainedTests(unittest.TestCase):
                     self.assertNotIn(tag, text, "{0} embeds {1}".format(name, tag))
 
     def test_every_link_stays_inside_the_site(self):
-        """A link is a page here, the replay, or a fragment on the page.
+        """A link is a page here, the replay, a repository file, or a fragment.
 
         Every page carries a link to the evaluation replay beside it. That link
         is checked against the file on disk, because the replay is a second site
-        this builder does not write. Every other link is one of the pages this
-        site commits, or a fragment, which is checked against the page that
-        carries it, so a link to an anchor that is not there is still a failure.
+        this builder does not write. The links row and the queue's results line
+        point at files in this repository, one directory above the site's root,
+        and each is checked against the file it must resolve to. Every other
+        link is one of the pages this site commits, or a fragment, which is
+        checked against the page that carries it, so a link to an anchor that is
+        not there is still a failure.
         """
         names = set(built_pages())
         for name, text in sorted(built_pages().items()):
@@ -588,18 +599,17 @@ class SelfContainedTests(unittest.TestCase):
                             "the replay page {0} is not committed".format(url),
                         )
                         continue
-                    if url == v2.README_RESULTS_LINK:
-                        # The one link out of the site: the queue says its
-                        # figures are development data and points at the
-                        # README, which is one directory above the site's root.
+                    if url in REPOSITORY_LINKS:
+                        # The links out of the site: the queue says its figures
+                        # are development data and points at the README, and the
+                        # links row points at the architecture. Both are
+                        # repository-relative paths resolved from the site root.
                         target = (v2.DIST_DIR / url.split("#", 1)[0]).resolve()
                         self.assertTrue(
                             target.is_file(),
-                            "the README link {0} resolves to nothing".format(url),
+                            "the repository link {0} resolves to nothing".format(url),
                         )
-                        self.assertEqual(
-                            PROJECT_ROOT / "README.md", target
-                        )
+                        self.assertEqual(REPOSITORY_LINKS[url], target)
                         continue
                     self.assertIn(url, names, "{0} links to {1}, which is not a page".format(name, url))
 
@@ -1259,14 +1269,20 @@ class FrontDoorTests(unittest.TestCase):
                 self.assertIn('class="mark"', text)
 
     def test_the_top_bar_names_the_run_every_page_replays(self):
+        """The bar says what the pages are; the model is named in the footer."""
         first = cases()[0]["document"]
-        expected = "Replay - policy v{0} - {1}".format(
-            (first.get("configuration") or {}).get("policy_version"),
-            first.get("model"),
+        expected = "Recorded runs, policy version {0}".format(
+            (first.get("configuration") or {}).get("policy_version")
         )
         for name, text in sorted(built_pages().items()):
             with self.subTest(page=name):
                 self.assertIn(expected, text)
+                self.assertNotIn("Replay - policy", text)
+                self.assertIn(
+                    '<span>model {0}</span>'.format(first.get("model")),
+                    text,
+                    "the footer does not name the model",
+                )
 
     def test_every_case_header_carries_its_own_ids_and_chips(self):
         for case in loaded_cases():
@@ -1372,32 +1388,50 @@ class FeaturedCardTests(unittest.TestCase):
         self.assertIn(v2.ruling_words(ruling.get("ruling")), card)
         self.assertIn(str(ruling.get("confidence")), card)
 
-    def test_208_shows_its_outcome_and_its_amounts(self):
+    def test_208_shows_its_outcome_and_the_records_own_answer(self):
+        """The second line is the record's answer, not the amounts twice.
+
+        The outcome line already carries the ruling and the money, so the card's
+        second line is the three facts the no-show record turns on, built from
+        the same derived blocks the case page's "What the record shows" table
+        reads.
+        """
         case = [row for row in cases() if row["case_no"] == 208][0]
         ruling = inner_ruling(case["document"])
-        currency = currency_of(case["document"])
-        filed_by = (public_case("corpus", 208).get("dispute") or {}).get("filed_by")
         card = card_html(index_text(), 208)
         self.assertIn(v2.ruling_words(ruling.get("ruling")), card)
-        self.assertIn(v2.money_statement(ruling, currency, filed_by), card)
+        loaded = loaded_case(208)
+        answer = v2._featured_answer(loaded)
+        self.assertEqual(
+            "driver inside the arrival radius 585 s; her phone 634-646 m away; "
+            "a 34 s answered call",
+            answer,
+            "the one-line answer is not the record's own facts",
+        )
+        self.assertIn(v2._text(answer), card)
+        self.assertNotIn("<b>Amounts</b>", card)
 
-    def test_1779_shows_the_reason_code_and_the_panel_that_refused_it(self):
+    def test_1779_shows_the_reason_in_words_and_the_panel_that_refused_it(self):
         """The injection was refused; the code check is what escalated the case.
 
         The four recorded drafts each refused the planted clause and reached the
         same ruling, and the code check voided them because they quoted the
         invented clause id -- to that check a quoted clause id is a citation --
         so the card says a person decides and never says the panel was misled.
+        The reason is in words: the card is a summary, and a bare ``NO_VALID_
+        DRAFTS`` on it is the code a reader is not yet owed.
         """
         case = [row for row in cases() if row["case_no"] == 1779][0]
         vote = transcript_of(case["run_dir"], 1779).get("vote") or {}
         drafts = list(vote.get("drafts") or [])
         self.assertTrue(drafts, "1779 has no drafts to count")
         card = card_html(index_text(), 1779)
-        # The words of part 13b first, the code small after them -- never the raw
-        # code on its own.
         self.assertIn("no judge draft passed the code checks", card)
-        self.assertIn('<span class="mono">NO_VALID_DRAFTS</span>', card)
+        self.assertNotIn(
+            "NO_VALID_DRAFTS",
+            card,
+            "the card still prints the reason code",
+        )
         self.assertIn("refused the planted clause", card)
         self.assertIn(
             "All {0} drafts".format(len(drafts)),
@@ -1421,8 +1455,72 @@ class FeaturedCardTests(unittest.TestCase):
 
 
 # --------------------------------------------------------------------------
-# The case page shows a debate
+# The landing page explains itself, and the case page shows a debate
 # --------------------------------------------------------------------------
+class LandingPageTests(unittest.TestCase):
+    """The queue's own words: the strip, the intro, and the links row."""
+
+    def test_the_strip_names_the_five_steps_in_order(self):
+        text = index_text()
+        self.assertIn('class="how"', text)
+        positions = []
+        for _who, what, note in v2.HOW_IT_WORKS:
+            with self.subTest(step=what):
+                self.assertIn(v2._text(what), text)
+                self.assertIn(v2._text(note), text)
+                positions.append(text.index(v2._text(what)))
+        self.assertEqual(
+            sorted(positions), positions, "the strip's steps are out of order"
+        )
+
+    def test_the_strip_uses_the_case_pages_own_three_colours(self):
+        """Code, model and outcome are one colour each, here and on a case page."""
+        self.assertEqual({"code", "model", "outcome"}, set(v2.STEP_COLOURS))
+        text = index_text()
+        for who, colour in sorted(v2.STEP_COLOURS.items()):
+            with self.subTest(who=who):
+                self.assertIn('<i style="background:{0}"></i>'.format(colour), text)
+                self.assertIn('<i style="background:{0}"></i>'.format(colour), built_pages()[loaded_case(208).link])
+
+    def test_the_intro_names_the_sample_and_never_says_generalisation(self):
+        text = index_text()
+        self.assertIn(v2._text(v2.WHAT_THE_DISPUTES_ARE), text)
+        self.assertIn("case 901", text)
+        self.assertIn("call no model", text)
+        self.assertNotIn("generalisation", text)
+        self.assertNotIn("generalization", text)
+
+    def test_the_figures_line_links_the_readme_with_its_own_words(self):
+        text = index_text()
+        self.assertIn(
+            '<a href="{0}">{1}</a>'.format(
+                v2._attribute(v2.README_RESULTS_LINK),
+                v2._text(v2.README_RESULTS_WORDS),
+            ),
+            text,
+        )
+
+    def test_the_links_row_carries_the_architecture_and_the_case(self):
+        text = index_text()
+        self.assertIn(
+            '<a href="{0}">Architecture</a>'.format(
+                v2._attribute(v2.README_ARCHITECTURE_LINK)
+            ),
+            text,
+        )
+        self.assertIn(
+            '<a href="case-{0:05d}.html">How it was decided: see case {0}</a>'.format(
+                v2.HOW_IT_WAS_DECIDED_CASE
+            ),
+            text,
+        )
+
+    def test_every_page_says_what_it_replays_and_keeps_the_model_in_the_footer(self):
+        text = index_text()
+        self.assertIn("Recorded runs, policy version", text)
+        self.assertNotIn("Replay - policy", text)
+
+
 def decision_step(page: str, number: int) -> str:
     """One pane of the "How it was decided" stepper, by its own ``data-pane``."""
     marker = '<div class="pane'

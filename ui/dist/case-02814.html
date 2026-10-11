@@ -255,6 +255,17 @@ th[aria-sort="descending"] .sort::after{content:"\2193"}
 .d-void{margin:.4em 0 0;padding-left:18px;font-size:.82rem;color:var(--bad)}
 .pill.blue{background:var(--accent-wash);color:var(--accent)}
 
+/* 44.2: the landing page's how-it-works strip and its links row. */
+.how{background:var(--card);border:1px solid var(--line);border-radius:12px;
+  padding:12px 16px;margin:0 0 18px}
+.how h2{margin:0 0 8px;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.how ol{display:flex;flex-wrap:wrap;gap:6px 14px;list-style:none;margin:0;padding:0}
+.how li{display:flex;align-items:center;gap:7px;font-size:.86rem;color:var(--muted)}
+.how li b{color:var(--ink);font-weight:600}
+.how i{width:9px;height:9px;border-radius:50%;flex:none}
+.how .arw{color:var(--muted);margin-left:8px}
+.links{display:flex;flex-wrap:wrap;gap:6px 18px;margin:0 0 20px;font-size:.9rem}
+
 /* 44.3: on a 375 px phone the nav wrapped, which pushed its Queue pill against
    the bar's top edge. The nav stays on one line now and scrolls sideways when
    it has to, and the bar's three children are allowed to shrink around it. */
@@ -269,7 +280,7 @@ th[aria-sort="descending"] .sort::after{content:"\2193"}
 <div class="top-in">
 <a class="brand" href="index.html"><span class="mark"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v16M8 20h8M5 7h14M5 7L2 13h6zM19 7l-3 6h6z"/></svg></span>Tribunal</a>
 <nav class="nav" aria-label="Sites"><a href="index.html">Queue</a><a href="replay/index.html">Benchmark replay (policy v1)</a></nav>
-<span class="mode">Replay - policy v6 - deepseek/deepseek-flash</span>
+<span class="mode">Recorded runs, policy version 6</span>
 </div>
 </header>
 <main class="wrap">
