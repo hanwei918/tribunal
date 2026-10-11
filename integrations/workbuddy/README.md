@@ -83,6 +83,26 @@ The four committed version-6 runs -- `corpus`, `dev-v2-ext`, `dev-v2`,
 `eval.func_sets.FUNCTIONAL_SET_NAMES` rather than typed into the server, so a
 set added to either registry is offered without this file being edited.
 
+## Seen in WorkBuddy
+
+Four screenshots of a real WorkBuddy session on 2026-10-11 are committed under
+`docs/buddy-log/`, one for each step:
+
+- [`13-2026-10-11-connector-1-connector-enabled.png`](../../docs/buddy-log/13-2026-10-11-connector-1-connector-enabled.png)
+  — the connector management window with `tribunal` enabled and its three tools
+  listed: `tribunal_case`, `tribunal_queue` and `tribunal_packet`.
+- [`13-2026-10-11-connector-2-tool-calls.png`](../../docs/buddy-log/13-2026-10-11-connector-2-tool-calls.png)
+  — the owner's question and WorkBuddy calling `tribunal_case` and
+  `tribunal_queue`.
+- [`13-2026-10-11-connector-3-case-901.png`](../../docs/buddy-log/13-2026-10-11-connector-3-case-901.png)
+  — the answer for case 901 of `ryde-v3`: `DRIVER_COMPENSATION`, SGD 4.00,
+  confidence 0.9.
+- [`13-2026-10-11-connector-4-corpus-queue.png`](../../docs/buddy-log/13-2026-10-11-connector-4-corpus-queue.png)
+  — the answer for the `corpus` queue: 29 cases, 9 in `HUMAN_REVIEW`, 20 `AUTO`,
+  0 `SAFETY_FAST_TRACK`, with the nine cases and their reason codes.
+
+Every answer shown there matches the server's own output for the same calls.
+
 ## What it will not do
 
 - **It never reads a sealed set.** `wild`, `wild-v2` and `sealed-v1` are refused

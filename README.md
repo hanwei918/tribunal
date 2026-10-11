@@ -12,6 +12,8 @@ The same system is written out box by box, one paragraph per box and the file th
 
 The submission's own texts — a one-line blurb, a description and the judges' questions — are in [`docs/submission/`](docs/submission/).
 
+The read-only WorkBuddy connector — an MCP server that answers from the committed records, with no key and no network — is in [`integrations/workbuddy/`](integrations/workbuddy/).
+
 ## The live demo
 
 The product view is live at <https://tribunal.edgeone.dev/>: today's 151
@@ -222,19 +224,21 @@ a string. The fix moves exactly one brief in the repository — `pii-v1` case 32
 — and it is applied **after** the third sealed run, which was made from the
 trees frozen at `freeze-2026-10-09` without it
 ([`docs/notes/2026-10-10-the-counterparty-mask.md`](docs/notes/2026-10-10-the-counterparty-mask.md)).
+It is on by default: it is part of every version-6 brief.
 
 **Telephone numbers and e-mail addresses.** The version-6 mask was extended from
 the vehicle registration marks to the telephone numbers and the e-mail
 addresses, in the same four fields: a chat message's text, a trip record's
 `events[].detail`, and the dispute's `claim_text` and
-`counterparty_statement.text`. Names are still **not** masked.
+`counterparty_statement.text`. Names are still **not** masked. This extension is
+on by default too.
 
 **The chat threat lane.** `ops/chat_signals.py` reads a chat log for a threat to
 a person's safety with a documented rule table, matched with regular
 expressions, no model and no file opened; `ops/queue.py` fast-tracks a dispute
 whose chat carries one into the safety lane, ahead of the category, the
 `POL-GEN-08(1)` flags and the kill switch. Agreement, disagreement and sentiment
-are not built.
+are not built. It is on by default: the queue checks every dispute's chat log.
 
 **Early majority, off by default.** `--early-majority` lets the judge's panel
 stop once three of its four drafts agree on all four graded fields; it is off
@@ -278,14 +282,15 @@ ruling whose money is above `POL-GEN-05`'s execution threshold is held for
 release rather than executed, and `ops/queue.py` reports it as such. Every
 human-lane case carries `POL-GEN-06(2)`'s 48-hour first-review deadline, which
 the queue reports as due and as breached, and which is the figure the business
-value above is set against.
+value above is set against. All three are on by default.
 
 **The evidence window.** `POL-GEN-06(4)`'s `REQUEST_EVIDENCE` is executable:
 `python3 -m ops.evidence_window open|submit|status|close` opens one window to
 **both parties at once**, takes each side's filings, and at the close gives the
 default outcome `POL-GEN-07(1)(2)` requires where the named record did not
 arrive. The clock never stops for missing evidence — operations rule `OPS-EW-01`,
-written into `ops/config.json` and **not** a clause of the frozen policy.
+written into `ops/config.json` and **not** a clause of the frozen policy. It is
+not on by default: nothing opens a window until a reviewer runs the command.
 
 | figure | value | read from | recompute with | model call |
 |---|---|---|---|---|
@@ -303,6 +308,15 @@ written into `ops/config.json` and **not** a clause of the frozen policy.
 | collusion-v1 — the five policy tests against the key | 8/8 = 100.0% | `runs/collusion-v1/policy-v6/deepseek-deepseek-flash/`, `eval/answers/collusion-v1/` | `python3 -m eval.func_sets --report` | no |
 | chat-signals-v1 — threat precision | 6/6 = 1.000 | `eval/fixtures/chat-signals-v1.json`, `ops/chat_signals.py` | `python3 -m eval.func_sets --report` | no |
 | chat-signals-v1 — threat recall | 6/6 = 1.000 | `eval/fixtures/chat-signals-v1.json`, `ops/chat_signals.py` | `python3 -m eval.func_sets --report` | no |
+
+**The WorkBuddy connector.** `integrations/workbuddy/tribunal_mcp_server.py` is a
+read-only MCP server that answers three questions from the committed records —
+`tribunal_case`, `tribunal_queue` and `tribunal_packet` — with no key and no
+network; it refuses `wild`, `wild-v2` and `sealed-v1` by name before any path is
+resolved, and it writes nothing. It is **not** enabled by default: a user adds one
+entry to their WorkBuddy `mcp.json` and trusts the server, and nothing here is
+installed into any configuration
+([`integrations/workbuddy/README.md`](integrations/workbuddy/README.md)).
 
 **The earlier blocks.** Every block below was measured at policy version 1 or 2,
 from the earlier freezes; they are kept as they were.
@@ -793,25 +807,31 @@ off 0.7 are each reported.
 | `eval/` | The benchmark and the measurement: the runner, the grader, the development-set runner, the baselines, the policy-gap loop, the verifier's measurement mode, the fairness and calibration measurement, and the event-log reader. `eval/answers/` holds the frozen keys. `eval/external/` holds answer-bearing source documents, which are **not** agent input. |
 | `runs/` | The benchmark's own output, committed as produced. `runs/README.md` says which directory holds what and how to read one run directory. |
 | `tests/` | The suite. Nothing in it makes a model call. |
-| `ui/` | `ui/build.py` and the one committed page it builds. |
-| `docs/` | `docs/notes/` — the dated decisions behind every number here; `docs/buddy-log/` — the WorkBuddy sessions; `docs/roadmap/` — the policy base Ji Guofang drafted, kept as a roadmap and read by nothing. |
+| `ops/` | The support team's layer: the queue and its SLA routing, the escalation packet, the reviewer's closure, the evidence window, the appeal check, the risk signals and the chat-signal reader. It reads the pipeline's inputs and its recorded outputs and never feeds anything back. |
+| `integrations/` | The read-only WorkBuddy connector (`integrations/workbuddy/`): an MCP server that answers from the committed records, with no key and no network. |
+| `ui/` | `ui/v2/build.py`, which builds the site's front door — the queue at `ui/dist/index.html` and one page per case — from the four version-6 runs, and `ui/build.py`, which builds the evaluation replay under `ui/dist/replay/`. |
+| `docs/` | `docs/notes/` — the dated decisions behind every number here; `docs/buddy-log/` — the WorkBuddy sessions; `docs/submission/` — the submission's own texts; `docs/governance/` — the incidents, threat model and privacy pages; `docs/roadmap/` — the policy base Ji Guofang drafted, kept as a roadmap and read by nothing. |
 | `precedents/` | The precedent library: human closures of decided cases. It holds the two closures `P-0001` and `P-0002`, and grows only when a reviewer closes one. |
 | `START-HERE.md` | The standing operating procedure for a session in this repository. Read it before changing anything. |
 
 A policy base version 3 aligned with published platform rules is added as
-`policy/v3/`; it is not the default and no run has been made at it. The draft it
-came from is kept in `docs/roadmap/policy-v2/`, read by nothing.
+`policy/v3/`; it is not the default — `current_version` stays 2 — but the
+version-6 runs are made at it, since version 6 is base 3 plus the three
+amendments under `policy/v3/amendments/`. The draft it came from is kept in
+`docs/roadmap/policy-v2/`, read by nothing.
 
 ## The debate viewer
 
-`ui/dist/index.html` is one self-contained page, built by `ui/build.py` from the
-committed run in `runs/deepseek-deepseek-flash/`. Open it directly: it needs no
-server and makes no network request of any kind, so it works from `file://` on a
-machine with no internet. It carries the run's headline figures over all 29 cases,
-one case stepped through in the order it was decided, and the stance proof — that
-both advocates were handed byte-identical evidence and differed only in their
-instructions. Rebuild it with `python -m ui.build`; the committed file is required
-by test to equal a fresh build.
+`ui/dist/replay/index.html` is one self-contained page, built by `ui/build.py`
+from the committed run in `runs/deepseek-deepseek-flash/`. Open it directly: it
+needs no server and makes no network request of any kind, so it works from
+`file://` on a machine with no internet. It carries the run's headline figures
+over all 29 cases, one case stepped through in the order it was decided, and the
+stance proof — that both advocates were handed byte-identical evidence and
+differed only in their instructions. It sits one level down under `replay/`
+because the site's root is the product view `ui/v2/build.py` writes. Rebuild it
+with `python3 -m ui.build`; the committed file is required by test to equal a
+fresh build.
 
 ## The organisers' sample case
 
@@ -887,6 +907,18 @@ collected in:
     python3 -m eval.development_sets --set dev-v2-ext --policy-version 6 \
         --parallel-calls --concurrency 3 --timeout 900 --runs-dir $D/dev
 
+Two switches change what a run measures, and both are **off by default**, so a
+run without them writes what it always wrote:
+
+- `--integrity-gate` holds the assembled record to `POL-RD-10`'s own limbs (2)
+  and (4) and escalates a record that fails, with the reason code
+  `RD10_RECORD_INTEGRITY` and no model call.
+- `--advocate-effort none` makes the two advocate requests carry
+  `"reasoning_effort": "none"` and leaves the judge's drafts and the verifier
+  untouched.
+
+Each is refused for every sealed set.
+
 Run the tests, from the repository root:
 
     python3 -m unittest
@@ -902,12 +934,17 @@ macOS cannot be rebuilt there, and those tests say which case and which place.
 On macOS with `.git` nothing skips except the four tests that skip everywhere,
 and the run ends `OK (skipped=4)`.
 
-Build the viewer, which writes the six pages under `ui/dist/`:
+Build the product view, which writes the queue and one page per case under
+`ui/dist/`:
+
+    python3 -m ui.v2.build
+
+Build the evaluation replay, which writes the six pages under `ui/dist/replay/`:
 
     python3 -m ui.build
 
-`python3 -m ui.build --check` rebuilds them in memory and reports whether each
-one is identical to the committed page.
+`--check` on either rebuilds its pages in memory and reports whether each one is
+identical to the committed page.
 
 Nothing in the suite makes a model call and no credential is needed.
 `tests/test_readme_figures.py` is the one that keeps this file honest: it parses
@@ -918,7 +955,11 @@ runs and the frozen keys, failing when any of them differs.
 
 `docs/buddy-log/README.md` holds one row per session: the task, the files it
 touched, what was verified and how, the screenshot, and the commit. The rows are
-written after the fact and are not pre-filled.
+written after the fact and are not pre-filled. Its *WorkBuddy sessions, in
+screenshots* table lists the screenshots themselves, including the four from the
+connector session of 2026-10-11 — the MCP server management window, the tool
+calls, and the answers for case 901 and the `corpus` queue — each with its
+sha256.
 
 ## Third-party material
 
