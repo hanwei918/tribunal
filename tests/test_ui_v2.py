@@ -423,6 +423,29 @@ def index_text() -> str:
     return built_pages()[relative(v2.INDEX_PATH)]
 
 
+def _summary_pieces(chosen: str) -> List[str]:
+    """The paragraphs the ruling panel shows, with the pipeline's draft list out.
+
+    It mirrors ``ui.v2.build._panel_summary``: the pipeline writes the panel's
+    drafts into its escalation explanation as one line each, the page draws that
+    list as a table, and the sentence around it is shown verbatim. The pieces
+    returned here are what a reader meets as paragraphs.
+    """
+    lead: List[str] = []
+    tail: List[str] = []
+    listed = False
+    for line in chosen.split("\n"):
+        if v2.DRAFT_LINE_RE.match(line.strip()):
+            listed = True
+            continue
+        (tail if listed else lead).append(line)
+    pieces: List[str] = []
+    for block in (lead, tail):
+        text = "\n".join(block).strip()
+        pieces.extend(part for part in text.split("\n\n") if part.strip())
+    return pieces
+
+
 # --------------------------------------------------------------------------
 # The pages are what this code builds, and this code builds the same bytes twice
 # --------------------------------------------------------------------------
@@ -1001,7 +1024,11 @@ class CasePageFiguresTests(unittest.TestCase):
                     # a provisional ruling that does not exist.
                     self.assertIn(v2.NO_AUTOMATED_RULING, page)
                     self.assertNotIn(v2.DISCLOSURE, page)
-                    self.assertNotIn('role="img"', page)
+                    self.assertNotIn(
+                        'aria-label="confidence ',
+                        page,
+                        "a confidence is shown for a ruling that was never made",
+                    )
                     continue
                 confidence = inner_ruling(case["document"]).get("confidence")
                 if confidence is None:
@@ -1246,6 +1273,107 @@ class HumanReviewTests(unittest.TestCase):
         self.assertIn("python3 -m ops.review", page)
         self.assertIn("--packet-sha256", page)
 
+    def test_no_decision_is_preselected(self):
+        """The form opens on no decision, and builds nothing until one is chosen.
+
+        The first enabled radio used to be ``checked``, so on 1779 -- the
+        prompt-injection case -- the form opened on "Vary" with the ruling
+        select on "Full refund", which is the outcome the injected message asked
+        for.
+        """
+        for case in [row for row in cases() if row["trigger"] is not None]:
+            page = built_pages()["case-{0:05d}.html".format(case["case_no"])]
+            with self.subTest(case=case["case_no"]):
+                for control in re.finditer(r"<input\b[^>]*>", page):
+                    self.assertNotIn("checked", control.group(0))
+                self.assertIn(
+                    "the command is built once a decision is chosen", page
+                )
+
+    def test_the_ruling_selects_open_on_no_ruling(self):
+        """A select whose first option is a real ruling decides for the reviewer."""
+        for case in [row for row in cases() if row["trigger"] is not None]:
+            page = built_pages()["case-{0:05d}.html".format(case["case_no"])]
+            for select_id in ("vary-ruling", "refer-ruling"):
+                with self.subTest(case=case["case_no"], select=select_id):
+                    start = page.index('id="{0}"'.format(select_id))
+                    block = page[start : page.index("</select>", start)]
+                    self.assertIn('<option value="">choose a ruling</option>', block)
+                    self.assertEqual(1, block.count('<option value="">'))
+
+    def test_the_command_quotes_every_value_so_a_shell_cannot_rewrite_it(self):
+        """A reason may hold ``$HOME``, a backtick, ``!`` and ``'``.
+
+        Double quotes leave all four to the shell, so the value a reviewer typed
+        is not the value that runs -- the bug part 38c fixed in ``ops/``. The
+        page single-quotes each value and closes, escapes and reopens an
+        apostrophe, and the command line the builder writes does the same.
+        """
+        case = v2._load_case("corpus", 213)
+        reason = (
+            "The reviewer varies to NO_ACTION: EV-FARE-00213 and POL-GEN-07 are "
+            "cited, and $HOME, a `backtick`, an ! and an ' are literal."
+        )
+        # The rule itself, before the command built with it.
+        self.assertEqual("'a'", v2.shell_quote("a"))
+        self.assertEqual("'a'\\''b'", v2.shell_quote("a'b"))
+        command = v2.closing_command(
+            case,
+            "VARY",
+            ruling="NO_ACTION",
+            clauses=["POL-GEN-07"],
+            closed_by="a reviewer",
+            reason=reason,
+        )
+        self.assertNotIn('"', command, "a value is still double-quoted")
+        parts = shlex.split(command)
+        self.assertIn(reason, parts)
+        self.assertIn("a reviewer", parts)
+        self.assertIn("VARY", parts)
+        page = v2.build_case_page(case)
+        self.assertIn(r"'\\''", page, "the page's own quoting rule is not there")
+        self.assertIn("String(text).replace(/'/g,", page)
+
+    def test_the_packet_values_reach_the_page_as_words_and_figures(self):
+        """``contested 10.5``, ``unanimous False`` and a null agreement, in words."""
+        case = v2._load_case("dev-v2", 1779)
+        page = v2.build_case_page(case)
+        packet = case.packet
+        assert packet is not None
+        currency = case.policy.currency
+        self.assertIn(
+            v2._text(
+                v2._money(packet["case"]["amount_contested_sgd"], currency)
+            ),
+            page,
+        )
+        self.assertIn("unanimous: no", page)
+        self.assertIn("agreement: no vote", page)
+        # The drafts' own proposals, which the packet drops for a voided draft.
+        self.assertIn(v2._money("5.70", currency), page)
+        # The event log is a collapsed table of clocks and tenths of a second.
+        self.assertIn("<details><summary>Show the event log</summary>", page)
+        row = packet["timeline"][1]
+        self.assertIn(v2._text(v2._clock(row["ts"])), page)
+        self.assertIn(v2._text(v2._seconds(row["seconds"])), page)
+
+    def test_the_advocate_briefs_are_a_list_of_claims_each_tagged(self):
+        """One claim per item, each kept or discarded -- and no "KEPT;" separators."""
+        case = v2._load_case("corpus", 107)
+        page = v2.build_case_page(case)
+        packet = case.packet
+        assert packet is not None
+        self.assertNotIn("KEPT;", page)
+        self.assertNotIn("DISCARDED;", page)
+        for side in ("RIDER", "DRIVER"):
+            claims = packet["briefs"].get(side) or []
+            self.assertTrue(claims)
+            for claim in claims[:2]:
+                with self.subTest(side=side, text=str(claim.get("text"))[:40]):
+                    self.assertIn(v2._text(claim.get("text")), page)
+        self.assertIn('<span class="pill green">kept</span>', page)
+        self.assertIn('<span class="pill red">discarded</span>', page)
+
 
 # --------------------------------------------------------------------------
 # The appeal text is the policy's
@@ -1393,6 +1521,11 @@ class FrontDoorTests(unittest.TestCase):
         says whose reasoning the text is: the judge's, on a decided case; the
         panel's drafts', where a panel ran; and the pipeline's own routing
         sentence, where the scope gate stopped before any judge was asked.
+
+        The one exception is the pipeline's list of the drafts, one line each,
+        which the ruling panel draws as a table: ``_summary_pieces`` removes it
+        the way the page does, and what is left must still be the explanation's
+        own words.
         """
         for case in loaded_cases():
             explanation = str(case.ruling.get("explanation") or "").strip()
@@ -1415,7 +1548,9 @@ class FrontDoorTests(unittest.TestCase):
                     "the summary is shorter than the sheet's minimum",
                 )
                 self.assertIn('<p class="lbl">{0}</p>'.format(v2._text(label)), page)
-                for paragraph in chosen.split("\n\n"):
+                pieces = _summary_pieces(chosen)
+                self.assertTrue(pieces, "the summary rendered nothing")
+                for paragraph in pieces:
                     self.assertIn(
                         v2._text(paragraph),
                         page,
@@ -1997,6 +2132,164 @@ class TheNoticeTests(unittest.TestCase):
                 continue
             with self.subTest(case=case.case_no):
                 self.assertIn(v2.DISCLOSURE, built_pages()[case.link])
+
+
+# --------------------------------------------------------------------------
+# What an escalated page says about the panel that could not decide
+# --------------------------------------------------------------------------
+class EscalatedPageTests(unittest.TestCase):
+    """The ruling panel of a case sent to a person: the headline, the tile, the drafts."""
+
+    def escalated(self) -> List[Any]:
+        return [case for case in loaded_cases() if case.trigger is not None]
+
+    def test_the_headline_names_who_decides_next_and_the_reason_is_under_it(self):
+        """The headline was the reason in lower case, with its code beneath.
+
+        A reader met "no judge draft passed the code checks" as the verdict of a
+        case that has no verdict. The headline says who decides next and the
+        reason sits under it, in words first and in the record's own code after.
+        """
+        for case in self.escalated():
+            page = built_pages()[case.link]
+            headline = '<p class="word">{0}</p>'.format(v2._text(v2.SENT_TO_A_PERSON))
+            reason = v2._coded(
+                v2.trigger_words(str(case.trigger), case.votes), case.trigger
+            )
+            with self.subTest(case=case.case_no):
+                self.assertIn(headline, page)
+                self.assertIn(
+                    '<p class="code">{0}</p>'.format(reason),
+                    page,
+                    "the reason is not under the headline",
+                )
+
+    def test_no_escalated_page_shows_a_confidence_for_a_ruling_that_was_never_made(self):
+        """The tile read "0.0 confidence against the floor of 0.7".
+
+        The 0.0 an escalation record carries is the absence of a figure, not a
+        low one -- the drafts' own confidences are on the drafts -- so the tile
+        says no ruling was carried instead.
+        """
+        for case in self.escalated():
+            tiles = v2.key_figure_tiles(case)
+            text = " ".join("{0} {1}".format(value, label) for value, label in tiles)
+            with self.subTest(case=case.case_no):
+                self.assertIn(v2.NO_RULING_CARRIED, text)
+                self.assertNotIn("confidence against the floor of", text)
+        for case in loaded_cases():
+            if case.trigger is not None:
+                continue
+            text = " ".join(
+                "{0} {1}".format(value, label)
+                for value, label in v2.key_figure_tiles(case)
+            )
+            with self.subTest(case=case.case_no):
+                self.assertNotIn(v2.NO_RULING_CARRIED, text)
+
+    def test_the_drafts_are_a_table_one_row_each_and_each_reason_once(self):
+        """The pipeline's list of drafts is drawn as a table, not as a paragraph.
+
+        Each line of that list repeats a draft's reason as many times as the
+        check recorded it, and the vote drops a voided draft's proposal, so the
+        table reads the draft's own answer off the transcript and shows every
+        reason once.
+        """
+        for case in self.escalated():
+            drafts = v2._drafts(case.transcript)
+            if not drafts:
+                continue
+            page = built_pages()[case.link]
+            # The ruling panel: the verdict card, up to the line after the
+            # summary. The reviewer's packet carries the pipeline's explanation
+            # verbatim by design, so this check is about the panel a reader
+            # meets first.
+            panel = page[page.index('<div class="verdict">') : page.index('<p class="after">')]
+            with self.subTest(case=case.case_no):
+                self.assertIn("<th>Why it was voided</th>", panel)
+                for draft in drafts:
+                    row = "<td>{0}</td>".format(v2._text(draft["draft"]))
+                    self.assertIn(row, panel)
+                    self.assertIn(v2._text(v2._draft_proposal(case, draft)), panel)
+                for line in str(case.ruling.get("explanation") or "").split("\n"):
+                    if v2.DRAFT_LINE_RE.match(line.strip()):
+                        self.assertNotIn(
+                            v2._text(line),
+                            panel,
+                            "the pipeline's one-line-each draft list is still printed",
+                        )
+
+    def test_1779s_table_shows_the_four_drafts_and_the_clause_they_quoted(self):
+        """The featured card's own reading of the case, as a table."""
+        case = loaded_case(1779)
+        page = built_pages()[case.link]
+        drafts = v2._drafts(case.transcript)
+        self.assertEqual(4, len(drafts))
+        self.assertTrue(all(not draft["valid"] for draft in drafts))
+        for draft in drafts:
+            with self.subTest(draft=draft["draft"]):
+                self.assertEqual("PARTIAL_REFUND", draft["ruling"])
+                self.assertEqual(
+                    "Partial refund - SGD 5.70", v2._draft_proposal(case, draft)
+                )
+                self.assertIn(v2._text(v2._draft_proposal(case, draft)), page)
+                self.assertIn(v2._text(v2.draft_words("DRAFT_CLAUSE_UNRESOLVED")), page)
+        self.assertIn(v2._text("'POL-RD-99' does not resolve in the loaded policy"), page)
+        self.assertIn("refused the planted clause", built_pages()["index.html"])
+
+
+# --------------------------------------------------------------------------
+# A held amount: who releases it, and the notice that says so
+# --------------------------------------------------------------------------
+class HeldAmountTests(unittest.TestCase):
+    """A decided case whose money POL-GEN-05 holds above the execution threshold."""
+
+    def held(self) -> List[Any]:
+        return [case for case in loaded_cases() if v2._money_is_held(case)]
+
+    def test_the_notice_says_the_amount_is_held_rather_than_paid(self):
+        held = self.held()
+        self.assertTrue(held, "no case has a held amount to check")
+        for case in held:
+            page = built_pages()[case.link]
+            line = v2.held_money_statement(
+                case.ruling,
+                case.policy,
+                (case.case.get("dispute") or {}).get("filed_by"),
+            )
+            with self.subTest(case=case.case_no):
+                self.assertIn(v2._text(line), page)
+                self.assertIn(
+                    "is held above POL-GEN-05's execution threshold of {0} until a "
+                    "person releases it".format(
+                        v2._money(case.policy.execution_threshold, case.policy.currency)
+                    ),
+                    page,
+                )
+
+    def test_a_held_case_carries_the_short_chip_and_no_review_tab(self):
+        """``ops.review`` cannot record a release, so the page says who can.
+
+        It insists on the digest of an escalation packet and
+        ``ops.escalation`` builds a packet only for an escalated case, which a
+        held case is not -- so there is no Human review tab, and the notice
+        names the queue and the command that does record it.
+        """
+        for case in self.held():
+            page = built_pages()[case.link]
+            with self.subTest(case=case.case_no):
+                self.assertIn(">Held for release</span>", v2.status_chip(case))
+                self.assertNotIn('data-panel="review"', page)
+                self.assertIn(v2._text(v2.release_sentence(case.policy)), page)
+                self.assertIn(v2.HELD_RELEASE_REASON, page)
+                self.assertIn("tribunal.precedents close", page)
+                self.assertIn("ops/review.py", page)
+
+    def test_the_release_sentence_names_the_queue_reason_the_queue_uses(self):
+        """The reason code is ``ops.queue``'s own, read rather than retyped."""
+        from ops import queue as queue_module
+
+        self.assertEqual(queue_module.REASON_GEN05_RELEASE, v2.HELD_RELEASE_REASON)
 
 
 # --------------------------------------------------------------------------

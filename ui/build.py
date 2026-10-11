@@ -222,13 +222,15 @@ THE_SECOND_SEALED_RUN_NOTE = "docs/notes/2026-10-04-the-second-sealed-run.md"
 # a **historical** record: the corpus page replays a policy-version-1 run made
 # on 2026-09-27, and the runs beside it are their own committed runs at the
 # versions their registrations fix. The product view -- the site's root, which
-# every page here links back to -- is the policy-version-6 pipeline, and the two
+# every page here links back to -- is the policy-version-6 pipeline, and the
 # figures named in the second sentence are the ones it shows: the corpus at
-# version 6 and the third sealed set's agreement. A reader who took this page's
-# figures for the product's would be reading a figure about an older pipeline.
+# version 6 and each sealed set's own agreement, stated one set at a time and
+# never summed. A reader who took this page's figures for the product's would be
+# reading a figure about an older pipeline.
 REPLAY_BANNER = (
     "Historical benchmark replay at policy version 1. The product view shows "
-    "policy version 6: corpus 26/29; sealed-v1 21/24 agreement."
+    "policy version 6: corpus 26/29; sealed-v1 21/24 agreement; sealed-v2 12/12 "
+    "agreement."
 )
 
 

@@ -170,8 +170,10 @@ from eval import development_sets  # noqa: E402
 from eval import v6_runs  # noqa: E402
 from ops import appeal as appeal_module  # noqa: E402
 from ops import escalation  # noqa: E402
+from ops import queue as queue_module  # noqa: E402
 from tribunal import brief as brief_module  # noqa: E402
 from tribunal import loader  # noqa: E402
+from tribunal import model as model_module  # noqa: E402
 from tribunal import pipeline as pipeline_module  # noqa: E402
 from tribunal import precedents as precedents_module  # noqa: E402
 from tribunal import referee as referee_module  # noqa: E402
@@ -247,6 +249,18 @@ TRIGGER_ORDER: Tuple[str, ...] = (
 
 # The ruling value that means "a human decides this".
 ESCALATE = pipeline_module.ESCALATE
+
+# What the ruling panel of an escalated case says where a decided case shows the
+# ruling. A case sent to a person carried no ruling at all, so the panel's
+# headline names who decides next and the reason it went there sits under it.
+SENT_TO_A_PERSON = "Sent to a person"
+
+# What the key-figure tile says where a decided case shows its confidence. The
+# escalation record's ``confidence`` is 0.0 because no draft's confidence
+# attaches to a ruling the panel did not reach -- the vote records the drafts'
+# own figures -- so a tile that read 0.0 against the floor would report a
+# measurement that was never made.
+NO_RULING_CARRIED = "no ruling was carried"
 
 # The two ruling values that return money to the filing party, and the one that
 # leaves the present state standing. ``ESCALATE`` and ``DRIVER_COMPENSATION``
@@ -1265,6 +1279,55 @@ def held_reason(case: "CaseData") -> str:
     )
 
 
+# The reason code ``ops.queue`` gives a case whose money POL-GEN-05 holds: the
+# case sits in the human lane for release. It is read from the module that
+# routes it rather than retyped here, so a rename cannot leave the page naming a
+# code the queue no longer uses.
+HELD_RELEASE_REASON = queue_module.REASON_GEN05_RELEASE
+
+
+def held_money_statement(
+    ruling: Mapping[str, Any], policy: PolicyFacts, filed_by: Any
+) -> str:
+    """The notice's money line when POL-GEN-05 holds the amount for release.
+
+    :func:`money_statement` states what money the ruling moves, which on a held
+    case reads as though it had moved. It has not: the ruling issued the amount
+    and POL-GEN-05 stopped it at the execution threshold, so the line says what
+    was decided, what holds it, and until when.
+    """
+    return (
+        "{0} The amount was decided and is held above POL-GEN-05's execution "
+        "threshold of {1} until a person releases it.".format(
+            money_statement(ruling, policy.currency, filed_by),
+            _money(policy.execution_threshold, policy.currency),
+        )
+    )
+
+
+def release_sentence(policy: PolicyFacts) -> str:
+    """Who releases a held amount, and how, in one sentence.
+
+    ``ops.review`` is the command this page's review form builds, and it cannot
+    record a release: it insists on the digest of an escalation packet, and
+    ``ops.escalation`` builds a packet only for an escalated case -- which a
+    held case, whose ruling is a refund rather than an escalation, is not. What
+    the repository does have is the human queue the case sits in and the closure
+    command that needs no packet. The threshold is the loaded policy's own, so
+    the sentence cannot quote a figure the policy does not state.
+    """
+    return (
+        "A person releases it, not this form: the queue holds the case in the "
+        "human lane under {0} (POL-GEN-05, execution threshold {1}), and the "
+        "release is recorded as a closure by python3 -m tribunal.precedents "
+        "close, not by ops/review.py, which requires the digest of an escalation "
+        "packet and a packet is built only for an escalated case.".format(
+            HELD_RELEASE_REASON,
+            _money(policy.execution_threshold, policy.currency),
+        )
+    )
+
+
 def status_chip(
     case: "CaseData", with_time: bool = False, title: bool = False
 ) -> str:
@@ -2000,8 +2063,14 @@ _JS = """
       return node ? node.value : "";
     }
 
+    // One value as one shell word. Double quotes leave $, a backtick and ! to
+    // the shell, so a reason carrying one would be rewritten before the command
+    // ran; a single-quoted word is literal, and the one character that cannot
+    // appear inside it is closed, escaped and reopened. This is the rule
+    // ``ui.v2.build.shell_quote`` applies in Python, so the command the page
+    // shows and the command the builder builds are the same word for word.
     function quoted(text){
-      return '"' + String(text).replace(/"/g, "'") + '"';
+      return "'" + String(text).replace(/'/g, "'\\\\''") + "'";
     }
 
     function who(){
@@ -2066,6 +2135,14 @@ _JS = """
 
     function refresh(){
       showFields();
+      if (!decision()){
+        // Nothing is chosen, so there is nothing to build: the command appears
+        // once the reviewer has chosen one of the four decisions.
+        verdict.className = "empty";
+        verdict.textContent = "Choose one of the four decisions: the command is built once a decision is chosen.";
+        output.textContent = "";
+        return;
+      }
       if (decision() === "REQUEST_EVIDENCE"){
         verdict.className = "empty";
         verdict.textContent = "The evidence-window command is part 26 (ops/evidence_window.py): it opens one window to both parties at once.";
@@ -2602,7 +2679,9 @@ def build_index(cases: Sequence[CaseData]) -> str:
             _figure(
                 "Median cost per case",
                 _usd(figures.median_cost),
-                "at the owner's prices",
+                "at the published {0} prices the runs are billed at".format(
+                    model_module.MODEL_PROVIDER
+                ),
             ),
             _figure(
                 "Policy version and model",
@@ -2897,7 +2976,19 @@ def key_figure_tiles(case: CaseData) -> List[Tuple[str, str]]:
         )
     if driver is not None:
         tiles.append((_money(driver, currency), "driver compensation (POL-GEN-03)"))
-    if confidence is not None:
+    if case.trigger is not None:
+        # No ruling was carried, so there is no confidence of this case's own to
+        # weigh against the floor: the 0.0 the escalation record carries is the
+        # absence of a figure, not a low one. The drafts' own confidences are on
+        # the drafts.
+        tiles.append(
+            (
+                NO_RULING_CARRIED,
+                "so there is no confidence to weigh against the floor of {0} "
+                "(POL-GEN-02)".format(case.policy.confidence_floor),
+            )
+        )
+    elif confidence is not None:
         tiles.append(
             (
                 str(confidence),
@@ -3413,6 +3504,7 @@ def _notice(case: CaseData) -> str:
     policy = case.policy
     ruling = case.ruling
     dispute = case.case.get("dispute") or {}
+    held = _money_is_held(case)
     if case.trigger is None:
         outcome = "The panel decided this case: {0}.".format(
             _coded(
@@ -3425,6 +3517,11 @@ def _notice(case: CaseData) -> str:
             "An automated system made this decision. The judge answered four "
             "times and the majority carried."
         )
+        if held:
+            # The amount is decided but not executed, so the parties are told
+            # who releases it and how: this page's form cannot, and the sentence
+            # says why in the same breath.
+            who = "{0} {1}".format(who, release_sentence(policy))
         appeal = appeal_line(policy)
     else:
         outcome = _text(NO_AUTOMATED_RULING)
@@ -3433,6 +3530,11 @@ def _notice(case: CaseData) -> str:
             "ruling for it, so it was sent to a reviewer."
         )
         appeal = appeal_line_after_a_decision(policy)
+    money = (
+        held_money_statement(ruling, policy, dispute.get("filed_by"))
+        if held
+        else money_statement(ruling, policy.currency, dispute.get("filed_by"))
+    )
     clauses = _cited_clause_ids(case)
     clause_line = (
         "; ".join(
@@ -3461,7 +3563,7 @@ def _notice(case: CaseData) -> str:
     ).format(
         _text(NOTICE_TITLE),
         outcome,
-        _text(money_statement(ruling, policy.currency, dispute.get("filed_by"))),
+        _text(money),
         _text(clause_line),
         _text(kinds_line),
         _text(who),
@@ -3698,6 +3800,128 @@ def _record_block(case: CaseData) -> str:
     )
 
 
+# The pipeline writes the panel's drafts into its escalation explanation as one
+# line each, ``- draft 1 (sampled): ...``. The line repeats a draft's reason as
+# many times as the check recorded it, so the ruling panel draws the list as a
+# table instead and shows every reason once.
+DRAFT_LINE_RE = re.compile(r"^- draft \d+ \(")
+
+
+def _paragraphs_html(text: Any) -> str:
+    """The explanation's paragraphs, verbatim, as ``<p class="why">`` blocks."""
+    return "".join(
+        '<p class="why">{0}</p>'.format(_text(paragraph))
+        for paragraph in str(text or "").split("\n\n")
+        if paragraph.strip()
+    )
+
+
+def _void_reasons(abstention: Any) -> List[Tuple[str, str]]:
+    """A voided draft's reasons, each once, as ``(code, detail)`` pairs.
+
+    The record writes a reason as ``CODE: detail`` and joins several with a
+    semicolon; the same pair may be recorded twice, which is why the pair is
+    what is deduplicated rather than the line.
+    """
+    found: List[Tuple[str, str]] = []
+    for piece in str(abstention or "").split(";"):
+        piece = piece.strip()
+        if not piece:
+            continue
+        code, _, detail = piece.partition(":")
+        pair = (code.strip(), detail.strip())
+        if pair not in found:
+            found.append(pair)
+    return found
+
+
+def _draft_proposal(case: CaseData, draft: Mapping[str, Any]) -> str:
+    """The ruling and amount a draft itself proposed, voided or not.
+
+    The vote drops a voided draft's proposal -- there is nothing to carry -- so
+    the draft's own answer is read from the transcript entry the draft parsed to
+    and worded exactly as a carried ruling's money is.
+    """
+    if not draft["ruling"]:
+        return "no ruling was parsed"
+    return _outcome_text(
+        {
+            "ruling": draft["ruling"],
+            "amount_sgd": draft["amount_sgd"],
+            "driver_compensation_sgd": draft["driver_compensation_sgd"],
+        },
+        case.policy.currency,
+        None,
+        case.votes,
+    )
+
+
+def _draft_table(case: CaseData, drafts: Sequence[Mapping[str, Any]]) -> str:
+    """The panel's drafts, one row each: kind, proposal, confidence, voiding.
+
+    A row per draft rather than a sentence per draft, so the four can be read
+    down the page: what kind of draft it was, what it proposed, how confident it
+    was, and -- where the code checks rejected it -- why, each reason once.
+    """
+    rows = []
+    for draft in drafts:
+        if draft["valid"]:
+            why = "not voided: the code checks accepted it"
+        else:
+            reasons = _void_reasons(draft["abstention"])
+            why = "; ".join(
+                "{0} ({1}){2}".format(
+                    draft_words(code), code, ": {0}".format(detail) if detail else ""
+                )
+                for code, detail in reasons
+            ) or "no reason is recorded"
+        rows.append(
+            "<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td></tr>".format(
+                _text(draft["draft"]),
+                _text(DRAFT_KIND_WORDS.get(str(draft["kind"]), str(draft["kind"]))),
+                _text(_draft_proposal(case, draft)),
+                _text(
+                    "none" if draft["confidence"] is None else str(draft["confidence"])
+                ),
+                _text(why),
+            )
+        )
+    return (
+        '<div class="tscroll"><table><thead><tr><th>Draft</th><th>Kind</th>'
+        "<th>Proposed</th><th>Confidence</th><th>Why it was voided</th></tr>"
+        "</thead><tbody>{0}</tbody></table></div>"
+    ).format("".join(rows))
+
+
+def _panel_summary(case: CaseData) -> str:
+    """The ruling panel's summary: the panel's own words, and its drafts as a table.
+
+    On a case the panel could not decide, the pipeline's own routing sentence
+    ends with a list of the drafts, one line each. The list is drawn as a table
+    -- one row per draft, each reason once, and the ruling the draft itself
+    proposed, which the vote drops for a voided draft -- and the sentence around
+    it is shown verbatim. A panel that reached a ruling has no such list, and
+    its explanation is shown as it was.
+    """
+    summary = _summary_paragraphs((case.packet or {}).get("explanation"))
+    drafts = _drafts(case.transcript)
+    if not drafts:
+        return _paragraphs_html(summary)
+    lead: List[str] = []
+    tail: List[str] = []
+    listed = False
+    for line in summary.split("\n"):
+        if DRAFT_LINE_RE.match(line.strip()):
+            listed = True
+            continue
+        (tail if listed else lead).append(line)
+    return (
+        _paragraphs_html("\n".join(lead).strip())
+        + _draft_table(case, drafts)
+        + _paragraphs_html("\n".join(tail).strip())
+    )
+
+
 def _verdict_card(case: CaseData) -> str:
     """The verdict card: the outcome on the left, the key figures on the right.
 
@@ -3713,22 +3937,39 @@ def _verdict_card(case: CaseData) -> str:
     dispute = case.case.get("dispute") or {}
     value = str(ruling.get("ruling"))
     if case.trigger is not None:
-        headline = _coded(
-            trigger_words(str(case.trigger), case.votes), case.trigger, strong=True
+        # The panel carried no ruling, so the headline names who decides next
+        # and the reason the case went there sits under it, in words first and
+        # in the record's own code after them.
+        headline = _text(SENT_TO_A_PERSON)
+        clause_line = '<p class="code">{0}</p>'.format(
+            _coded(trigger_words(str(case.trigger), case.votes), case.trigger)
         )
-        summary = _summary_paragraphs((case.packet or {}).get("explanation"))
         after = "No automated ruling was made. {0}".format(review_time_limit(policy))
         disclosure = NO_AUTOMATED_RULING
+        details = ""
+        note = ""
         # The text a case that went to a reviewer carries is the panel's drafts'
         # reasoning where there was a panel, and the pipeline's own routing
-        # sentence where the scope gate stopped before any judge was asked.
+        # sentence where the scope gate stopped before any judge was asked. The
+        # drafts themselves are drawn as a table rather than as the pipeline's
+        # one-line-each list.
         summary_label = (
             DRAFTS_TEXT_LABEL if _drafts(case.transcript) else ROUTING_TEXT_LABEL
         )
-        details = ""
-        note = ""
+        panel_block = _panel_summary(case)
+        summary_block = (
+            '<p class="lbl">{0}</p>{1}'.format(_text(summary_label), panel_block)
+            if panel_block
+            else ""
+        )
     else:
         headline = _coded(ruling_words(value), value, strong=True)
+        clauses = _ruling_clause_ids(case)
+        clause_line = (
+            '<p class="code mono">{0}</p>'.format(_text(", ".join(clauses)))
+            if clauses
+            else ""
+        )
         summary = _summary_paragraphs(ruling.get("explanation"))
         after = "How to appeal: {0}".format(appeal_line(policy))
         disclosure = DISCLOSURE
@@ -3744,19 +3985,12 @@ def _verdict_card(case: CaseData) -> str:
             if _decimal(ruling.get("confidence")) is not None
             else '<p class="empty">No confidence is recorded for this case.</p>'
         )
-    clauses = _ruling_clause_ids(case)
-    clause_line = (
-        '<p class="code mono">{0}</p>'.format(_text(", ".join(clauses)))
-        if clauses
-        else ""
-    )
-    summary_block = ""
-    if summary:
-        summary_block = '<p class="lbl">{0}</p>'.format(
-            _text(summary_label)
-        ) + "".join(
-            '<p class="why">{0}</p>'.format(_text(paragraph))
-            for paragraph in summary.split("\n\n")
+        summary_block = (
+            '<p class="lbl">{0}</p>{1}'.format(
+                _text(summary_label), _paragraphs_html(summary)
+            )
+            if summary
+            else ""
         )
     # A ruling whose money is above the execution threshold was issued but not
     # executed, so the figure is named for what it is: an amount awaiting release.
@@ -4407,6 +4641,19 @@ def _summary_for(decision: str, note: str) -> str:
     return decision
 
 
+def shell_quote(value: Any) -> str:
+    """A value as one shell word: single-quoted, with ``'`` written ``'\\''``.
+
+    Double quotes leave ``$``, a backtick and ``!`` to the shell, so a reason
+    carrying one is rewritten before the command ever runs -- the same bug part
+    38c fixed in ``ops/``. A single-quoted word is literal; the one character
+    that cannot appear inside it is closed, escaped and reopened, which is what
+    ``'\\''`` does. This is ``shlex.quote``'s rule written out, because the page
+    builds the same word in JavaScript and the two have to agree.
+    """
+    return "'" + str(value).replace("'", "'\\''") + "'"
+
+
 def closing_command(
     case: "CaseData",
     decision: str,
@@ -4468,13 +4715,11 @@ def closing_command(
         parts += ["--clause", str(clause)]
     parts += [
         "--closed-by",
-        '"{0}"'.format(closed_by),
+        shell_quote(closed_by),
         "--summary",
-        '"{0}"'.format(
-            summary if summary is not None else _summary_for(decision, note)
-        ),
+        shell_quote(summary if summary is not None else _summary_for(decision, note)),
         "--reason",
-        '"{0}"'.format(str(reason).replace('"', "'")),
+        shell_quote(reason),
     ]
     return " ".join(parts)
 
@@ -4502,11 +4747,19 @@ def evidence_window_command(
     parts += [
         "--run-dir", _relative_run_dir(case),
         "--case", str(case.case_no),
-        "--now", '"{0}"'.format(opened_at),
+        "--now", shell_quote(opened_at),
         "--items", ",".join(str(item) for item in items),
-        "--opened-by", '"{0}"'.format(opened_by),
+        "--opened-by", shell_quote(opened_by),
     ]
     return " ".join(parts)
+
+
+def _brief_kept(claim: Any) -> bool:
+    """Whether the packet records the referee keeping one advocate's claim."""
+    if not isinstance(claim, Mapping):
+        return False
+    verdict = claim.get("verdict")
+    return isinstance(verdict, Mapping) and verdict.get("status") == "KEPT"
 
 
 def _review_tab(case: CaseData) -> str:
@@ -4518,21 +4771,34 @@ def _review_tab(case: CaseData) -> str:
     trigger = packet.get("trigger") or {}
     case_block = packet.get("case") or {}
     ruling = packet.get("ruling") or {}
-    drafts = packet.get("drafts") or []
+    currency = case.policy.currency
+    # The packet drops a voided draft's proposal -- there is nothing to carry --
+    # so the drafts are read from the transcript, where each draft's own answer
+    # is recorded whether or not the code checks accepted it, and the packet's
+    # own abstention detail is joined on by draft number.
+    packet_drafts = {
+        draft.get("draft"): draft
+        for draft in packet.get("drafts") or []
+        if isinstance(draft, Mapping)
+    }
     draft_rows = "".join(
         "<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td>"
         "<td>{5}</td></tr>".format(
-            _text(draft.get("draft")),
-            _coded(
-                ruling_words((draft.get("proposal") or {}).get("ruling")),
-                (draft.get("proposal") or {}).get("ruling"),
+            _text(draft["draft"]),
+            _coded(ruling_words(draft["ruling"]), draft["ruling"])
+            if draft["ruling"]
+            else '<span class="cap">no ruling was parsed</span>',
+            _text(_money(draft["amount_sgd"], currency)),
+            _text(
+                "none" if draft["confidence"] is None else str(draft["confidence"])
             ),
-            _text((draft.get("proposal") or {}).get("amount_sgd")),
-            _text(draft.get("confidence")),
-            _text("valid" if draft.get("valid") else "abstained"),
-            _text(draft.get("abstention_code") or "none"),
+            _text("valid" if draft["valid"] else "abstained"),
+            _text(
+                (packet_drafts.get(draft["draft"]) or {}).get("abstention_code")
+                or "none"
+            ),
         )
-        for draft in drafts
+        for draft in _drafts(case.transcript)
     )
     admissibility_rows = "".join(
         "<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td></tr>".format(
@@ -4544,31 +4810,38 @@ def _review_tab(case: CaseData) -> str:
         )
         for artifact in packet.get("admissibility") or []
     )
+    # The event log's instants are full ISO strings with microseconds, and its
+    # durations carry sixteen decimals. Each row carries the clock alone and the
+    # duration to a tenth of a second, and the table is collapsed, because the
+    # log is a long mechanical record rather than the decision itself.
     timeline_rows = "".join(
         "<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td></tr>".format(
-            _text(row.get("ts")),
+            _text(_clock(row.get("ts"))),
             _text(row.get("event")),
             _text(row.get("role_or_draft")),
-            _text(row.get("seconds")),
+            _text("none" if row.get("seconds") is None else _seconds(row.get("seconds"))),
         )
         for row in packet.get("timeline") or []
     )
+    timeline_block = (
+        "<details><summary>Show the event log</summary>"
+        '<div class="tscroll"><table><thead><tr><th>Time</th><th>Event</th>'
+        "<th>Role or draft</th><th>Seconds</th></tr></thead><tbody>{0}</tbody>"
+        "</table></div></details>"
+    ).format(timeline_rows or '<tr><td colspan="4">none</td></tr>')
     briefs = packet.get("briefs") or {}
     brief_rows = "".join(
-        "<li>{0}: {1}</li>".format(
+        "<li>{0}<ul>{1}</ul></li>".format(
             _text(side),
-            _text(
-                "; ".join(
-                    "{0} {1}".format(
-                        claim.get("text"),
-                        "KEPT"
-                        if (claim.get("verdict") or {}).get("status") == "KEPT"
-                        else "DISCARDED",
-                    )
-                    for claim in briefs.get(side) or []
+            "".join(
+                '<li>{0} <span class="pill {1}">{2}</span></li>'.format(
+                    _text(claim.get("text")),
+                    "green" if _brief_kept(claim) else "red",
+                    _text("kept" if _brief_kept(claim) else "discarded"),
                 )
-                or "no claim"
-            ),
+                for claim in briefs.get(side) or []
+            )
+            or "<li>no claim</li>",
         )
         for side in ("RIDER", "DRIVER")
     )
@@ -4578,7 +4851,7 @@ def _review_tab(case: CaseData) -> str:
         'sha256 is <span class="mono">{0}</span>.</p>'
         "<h3>The case</h3><p>{1} &middot; filed by {2} &middot; contested {3}</p>"
         "<h3>The trigger</h3><p>outcome {4} &middot; threshold {5} &middot; valid {6} "
-        "&middot; votes {7} &middot; agreement {8} &middot; unanimous {9}</p>"
+        "&middot; votes {7} &middot; agreement: {8} &middot; unanimous: {9}</p>"
         "<h3>The judge's explanation, verbatim</h3><blockquote>{10}</blockquote>"
         "<h3>The drafts</h3>"
         '<div class="tscroll"><table><thead><tr><th>Draft</th><th>Ruling</th>'
@@ -4592,31 +4865,33 @@ def _review_tab(case: CaseData) -> str:
         "<h3>Every clause id relied on</h3><p class=\"mono\">{14}</p>"
         "<h3>The ruling</h3><p>{15} &middot; amount {16} &middot; driver {17} &middot; "
         "confidence {18}</p>"
-        "<h3>The timeline</h3>"
-        '<div class="tscroll"><table><thead><tr><th>Time</th><th>Event</th>'
-        "<th>Role or draft</th><th>Seconds</th></tr></thead><tbody>{19}</tbody></table></div>"
+        "<h3>The timeline</h3>{19}"
         "</div>"
     ).format(
         _text(digest),
         _text(case_block.get("category")),
         _text(case_block.get("filed_by")),
-        _text(case_block.get("amount_contested_sgd")),
+        _text(_money(case_block.get("amount_contested_sgd"), currency)),
         _text(trigger.get("outcome")),
         _text(trigger.get("threshold")),
         _text(trigger.get("valid")),
         _text(trigger.get("votes")),
-        _text(trigger.get("agreement")),
-        _text(trigger.get("unanimous")),
+        _text(
+            "no vote"
+            if trigger.get("agreement") is None
+            else trigger.get("agreement")
+        ),
+        _text("yes" if trigger.get("unanimous") else "no"),
         _text(packet.get("explanation")),
         draft_rows or "<tr><td colspan=\"6\">none</td></tr>",
         brief_rows or "<li>none</li>",
         admissibility_rows or "<tr><td colspan=\"5\">none</td></tr>",
         _text(", ".join(packet.get("clause_ids") or []) or "none"),
         _coded(ruling_words(ruling.get("ruling")), ruling.get("ruling")),
-        _text(ruling.get("amount_sgd")),
-        _text(ruling.get("driver_compensation_sgd")),
+        _text(_money(ruling.get("amount_sgd"), currency)),
+        _text(_money(ruling.get("driver_compensation_sgd"), currency)),
         _text(ruling.get("confidence")),
-        timeline_rows or "<tr><td colspan=\"4\">none</td></tr>",
+        timeline_block,
     )
 
     evidence_ids = [
@@ -4639,14 +4914,14 @@ def _review_tab(case: CaseData) -> str:
     # clause the case's policy carries, because a closure rests on at least one.
     adopt_clauses = [str(item) for item in packet.get("clause_ids") or []] or clause_ids
     disabled = adopt_is_disabled(case)
-    first_enabled = DECISION_VARY if disabled else DECISION_ADOPT
 
     choices = tuple((value, DECISION_LABELS[value]) for value in DECISIONS)
+    # No radio is ``checked``. The form opens on no decision, so the outcome on
+    # the page is the reviewer's from the first click and never the page's.
     radios = "".join(
-        '<p><label><input type="radio" name="decision" value="{0}"{1}{2}> {3}</label></p>'.format(
+        '<p><label><input type="radio" name="decision" value="{0}"{1}> {2}</label></p>'.format(
             _attribute(value),
             " disabled" if value == DECISION_ADOPT and disabled else "",
-            " checked" if value == first_enabled else "",
             _text(label),
         )
         for value, label in choices
@@ -4664,11 +4939,18 @@ def _review_tab(case: CaseData) -> str:
                 "" if not adopt_amount else _money(adopt_amount, case.policy.currency),
             )
         )
-    ruling_options = "".join(
-        '<option value="{0}">{1}</option>'.format(
-            _attribute(value), _text(ruling_words(value))
+    # The form opens on no decision at all. A pre-selected one would be an
+    # outcome chosen by the page rather than by the reviewer -- and on 1779 the
+    # first enabled choice was VARY with the ruling select on a full refund,
+    # which is the outcome the injected message asked for.
+    ruling_options = (
+        '<option value="">choose a ruling</option>'
+        + "".join(
+            '<option value="{0}">{1}</option>'.format(
+                _attribute(value), _text(ruling_words(value))
+            )
+            for value in DECISION_RULING_VALUES
         )
-        for value in DECISION_RULING_VALUES
     )
     clause_options = "".join(
         '<option value="{0}">{0}</option>'.format(_attribute(clause))

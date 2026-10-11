@@ -518,8 +518,14 @@ Execution and referrals. The refund of SGD 4.50 is below the SGD 8.00 execution 
       return node ? node.value : "";
     }
 
+    // One value as one shell word. Double quotes leave $, a backtick and ! to
+    // the shell, so a reason carrying one would be rewritten before the command
+    // ran; a single-quoted word is literal, and the one character that cannot
+    // appear inside it is closed, escaped and reopened. This is the rule
+    // ``ui.v2.build.shell_quote`` applies in Python, so the command the page
+    // shows and the command the builder builds are the same word for word.
     function quoted(text){
-      return '"' + String(text).replace(/"/g, "'") + '"';
+      return "'" + String(text).replace(/'/g, "'\\''") + "'";
     }
 
     function who(){
@@ -584,6 +590,14 @@ Execution and referrals. The refund of SGD 4.50 is below the SGD 8.00 execution 
 
     function refresh(){
       showFields();
+      if (!decision()){
+        // Nothing is chosen, so there is nothing to build: the command appears
+        // once the reviewer has chosen one of the four decisions.
+        verdict.className = "empty";
+        verdict.textContent = "Choose one of the four decisions: the command is built once a decision is chosen.";
+        output.textContent = "";
+        return;
+      }
       if (decision() === "REQUEST_EVIDENCE"){
         verdict.className = "empty";
         verdict.textContent = "The evidence-window command is part 26 (ops/evidence_window.py): it opens one window to both parties at once.";
