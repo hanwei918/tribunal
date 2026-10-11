@@ -33,25 +33,23 @@ held. A party may appeal once within 30 days under `POL-GEN-04`; a reviewer may
 open an evidence window under `POL-GEN-06(4)`.
 
 **The architecture.** `docs/architecture.svg`, written out in
-`docs/architecture.md`: a referee that discards a claim citing no evidence id, no
-clause id, an unresolvable citation, undisclosed impaired evidence, or a
-context-only profile field; a judge that rules four times, the majority
-deciding; and a confidence floor of 0.70, below which it goes to a human (README,
-What Tribunal is). At version 6 a scope gate routes a safety- or complaint-flagged
-dispute to a human before any prompt is rendered, and an optional
-record-integrity gate holds the record to `POL-RD-10`'s limbs (README, After the
-sealed run).
+`docs/architecture.md`: one brief, handed byte-identical to two advocates, one
+for the rider and one for the driver, differing only in stance; a referee that
+discards a claim citing no evidence id, no clause id, an unresolvable citation,
+undisclosed impaired evidence, or a context-only profile field; a judge that
+rules four times, the majority deciding; and a confidence floor of 0.70, below
+which it goes to a human (README, What Tribunal is). At version 6 a scope gate
+routes a safety- or complaint-flagged dispute to a human before any prompt is
+rendered, and an optional record-integrity gate holds the record to
+`POL-RD-10`'s limbs (README, After the sealed run).
 
 **How the prompts drive it.** `prompts/v1/advocate.system.md` is one template
-rendered twice, from `prompts/v1/stance.rider.md` and
-`prompts/v1/stance.driver.md`, differing only in the stance block, which the code
-asserts (`tribunal/pipeline.py`). `prompts/v1/judge.system.md` tells the judge to
-test the claims against the record and cap its confidence by the weights of the
-deciding fact's artifacts. The policy the agents cite is three JSON files
-whose clauses carry `id`, `title`, `category`, `rule`, `requires`, `licenses`,
-`favours` and `notes`; an unresolvable clause id is not citable. The `DRAFT_*`
-codes in `tribunal/pipeline.py` reject a draft with an unresolved clause, a money
-field that does not mirror, or an amount not read off the brief.
+rendered twice from the two stance files, which the code asserts
+(`tribunal/pipeline.py`). `prompts/v1/judge.system.md` tells the judge to test
+the claims against the record and cap its confidence by the weights of the
+deciding fact's artifacts. The policy is three JSON files; an unresolvable
+clause id is not citable. The `DRAFT_*` codes reject a draft with an unresolved
+clause, a money field that does not mirror, or an amount not read off the brief.
 
 **Built on Tencent Cloud.** Built in WorkBuddy (a row per session in
 `docs/buddy-log/README.md`); every model call goes to Tencent Cloud MaaS
