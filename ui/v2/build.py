@@ -188,9 +188,11 @@ INDEX_PATH = DIST_DIR / "index.html"
 # The evaluation replay, one level down from this site's own pages. Every page
 # here links to it, and every page it builds links back to this queue. It is the
 # **benchmark** replay at policy version 1 -- a historical record, not the
-# pipeline these pages show -- and the footer link names it as that.
+# pipeline these pages show -- and the footer link names it as that: it is the
+# earlier benchmark, and its runs are the version-1 ones, which is what a reader
+# who follows it should expect to find.
 REPLAY_INDEX = "replay/index.html"
-REPLAY_LABEL = "Historical replay (policy v1)"
+REPLAY_LABEL = "Earlier benchmark replay (policy v1 runs)"
 
 # The architecture diagram, copied into the site so the queue's link to it stays
 # inside the published root. The source is the repository's own diagram; the
@@ -501,6 +503,14 @@ ROUTING_TEXT_LABEL = "Why no automatic ruling was made"
 # about what happened.
 NOTICE_TITLE = "Notice to the rider and the driver"
 
+# What every notice says above its first line. The notice is the decision put
+# into the parties' own words, and this page does not send it to either of them:
+# there is no mail, no account, no form and no request of any kind on it, which
+# the site's own self-containment is what makes true. A reader who took the
+# notice for something the two parties had been sent would be reading a page as
+# a delivery, so the page says what it is.
+NOTICE_PREVIEW = "Preview: this page sends nothing."
+
 # The record kinds the notice names, in the order it names them. A kind that is
 # not here is not named: the two profile artifacts are deliberately absent,
 # because a notice to the parties must not tell them their own profiles carried
@@ -540,7 +550,13 @@ CALL_LOG_CHANNEL = "VOICE_CALL_LOG"
 # The README's results section, linked from the queue. The queue's own figures
 # are development data, and the README is where the submission's figures -- the
 # sealed sets among them -- are stated, with the command that measured each one.
-README_RESULTS_LINK = "../../README.md#results"
+# The link is the repository's own page and not a path out of the site: it was
+# ``../../README.md#results``, which resolved in a checkout -- the repository's
+# file is two directories above the site -- and 404s wherever ``ui/dist/`` is
+# served on its own, which is where this site is served. The repository is
+# private until the owner opens it on 2026-10-16; the address is the one the
+# repository will have, so the link is correct now and works then.
+README_RESULTS_LINK = "https://github.com/hanwei918/tribunal#results"
 README_RESULTS_WORDS = "How the figures were measured"
 
 # The architecture diagram, linked from the queue's links row. It is a file
@@ -1040,6 +1056,36 @@ def money_statement(
     )
 
 
+def ruling_sentence(ruling: Mapping[str, Any], currency: str) -> str:
+    """The ruling as one sentence in plain words, with the figure it moves.
+
+    The notice leads with words and puts the ruling's own code in brackets
+    after them, so a party meets what was decided before the vocabulary the
+    policy names, and the code is still on the line for a reader who needs it.
+    The sentence is chosen by the ruling value, exactly as
+    :func:`money_statement` is and for the same reason: POL-GEN-03's single
+    exception is ``DRIVER_COMPENSATION``, where the figure is what the driver is
+    paid and is never called a refund. A value the clause does not cover is
+    refused rather than described by hand.
+    """
+    value = str(ruling.get("ruling"))
+    if value in REFUND_RULINGS:
+        return "The rider is refunded {0}".format(
+            _money(ruling.get("amount_sgd"), currency)
+        )
+    if value == pipeline_module.DRIVER_COMPENSATION:
+        return "The fee stands and the driver is paid {0}".format(
+            _money(ruling.get("driver_compensation_sgd"), currency)
+        )
+    if value == NO_ACTION:
+        return "The charge stands and no money moves"
+    if value == ESCALATE:
+        return "No ruling is made and the case goes to a person"
+    raise BuildError(
+        "POL-GEN-03 states no ruling for the ruling value {0!r}".format(value)
+    )
+
+
 # POL-GEN-04's own sentence about the route: "may appeal it once, within 30
 # days". Both numbers are read from it, so a clause whose sentence has moved is
 # a refusal rather than a re-typed figure.
@@ -1051,11 +1097,13 @@ _APPEAL_RE = re.compile(
 def appeal_line(policy: PolicyFacts) -> str:
     """POL-GEN-04's appeal route in one line, built from the clause's numbers.
 
-    The clause is named by its id in the line itself, and not only in the clause
-    line above it: the clause line names what the ruling rests on, and the
-    appeal route is a right POL-GEN-04 gives the parties whether or not the
-    ruling rested on it, so a notice that named the clause only there would lose
-    it the moment the ruling rested on other clauses.
+    The route is stated in words and the clause id follows it in brackets: the
+    clause line above names what the ruling rests on, and the appeal route is a
+    right POL-GEN-04 gives the parties whether or not the ruling rested on it,
+    so a notice that named the clause only there would lose it the moment the
+    ruling rested on other clauses. The id is on the line all the same, after
+    the words rather than in front of them, because a party reads what they may
+    do first.
     """
     match = _APPEAL_RE.search(policy.rule("POL-GEN-04"))
     if match is None:
@@ -1064,8 +1112,8 @@ def appeal_line(policy: PolicyFacts) -> str:
             "within how many days"
         )
     return (
-        "POL-GEN-04. Either party may appeal {0} within {1} days. A different "
-        "human reviewer hears it, and only record evidence may be added.".format(
+        "You may appeal {0} within {1} days (POL-GEN-04). A different human "
+        "reviewer hears it, and only record evidence may be added.".format(
             match.group(1), match.group(2)
         )
     )
@@ -1095,8 +1143,8 @@ def appeal_line_after_a_decision(policy: PolicyFacts) -> str:
             "within how many days"
         )
     return (
-        "No ruling has been made yet, so there is nothing to appeal. POL-GEN-04: "
-        "after a person decides, either party may appeal it {0} within {1} days, "
+        "No ruling has been made yet, so there is nothing to appeal. After a "
+        "person decides, you may appeal it {0} within {1} days (POL-GEN-04), "
         "and a different human reviewer hears it.".format(
             match.group(1), match.group(2)
         )
@@ -2533,20 +2581,34 @@ def _topbar(mode: str, current: str) -> str:
     ).format(SCALES_MARK, queue, _text(mode))
 
 
+# The two freezes these pages stand between, and what each one is. The runs this
+# site replays were recorded from the trees frozen at ``freeze-2026-10-09`` --
+# ``v6_runs.FREEZE_TAG``, read from the module that names it rather than typed
+# here -- and the repository's final code freeze is the tag below, which is the
+# one the fourth sealed set ran on. The footer states both, because a reader who
+# meets one tag should not have to guess which tree a page came from. The
+# README does not claim that the two trees build byte-identical briefs for these
+# cases, so this does not claim it either.
+FINAL_FREEZE_TAG = "freeze-2026-10-11"
+FREEZE_NOTE = "Runs recorded at {0}. The final code freeze is {1}.".format(
+    v6_runs.FREEZE_TAG, FINAL_FREEZE_TAG
+)
+
+
 def _footer(case: CaseData) -> str:
-    """The footer every page carries: commit, tag, policy version, model, replay."""
+    """The footer every page carries: commit, freezes, policy version, model, replay."""
     configuration = case.document.get("configuration") or {}
     return (
         '<footer class="foot">'
         "<span>commit {0}</span>"
-        "<span>tag {1}</span>"
+        "<span>{1}</span>"
         "<span>policy version {2}</span>"
         "<span>model {3}</span>"
         '<span><a href="{4}">{5}</a></span>'
         "</footer>"
     ).format(
         _text(str(case.document.get("git_commit"))[:7]),
-        _text(v6_runs.FREEZE_TAG),
+        _text(FREEZE_NOTE),
         _text(configuration.get("policy_version")),
         _text(case.document.get("model")),
         _attribute(REPLAY_INDEX),
@@ -3995,12 +4057,12 @@ def _notice(case: CaseData) -> str:
     dispute = case.case.get("dispute") or {}
     held = _money_is_held(case)
     if case.trigger is None:
-        outcome = "The panel decided this case: {0}.".format(
-            _coded(
-                ruling_words(ruling.get("ruling")),
-                ruling.get("ruling"),
-                strong=True,
-            )
+        # The words first and the ruling's own code after them in brackets: a
+        # party reads what was decided before meeting the vocabulary the policy
+        # names, and the code is on the line for a reader who wants it.
+        outcome = "{0} ({1}).".format(
+            _text(ruling_sentence(ruling, policy.currency)),
+            _text(ruling.get("ruling")),
         )
         who = (
             "An automated system made this decision. The judge answered four "
@@ -4042,15 +4104,17 @@ def _notice(case: CaseData) -> str:
     return (
         '<div class="notice" id="notice">'
         "<h2>{0}</h2>"
-        "<p><b>Outcome.</b> {1}</p>"
-        "<p><b>The money.</b> {2}</p>"
-        "<p><b>Clauses named in the ruling.</b> {3}</p>"
-        "<p><b>Evidence cited.</b> {4}</p>"
-        "<p><b>Who decided.</b> {5}</p>"
-        "<p><b>Appeal.</b> {6}</p>"
+        '<p class="preview">{1}</p>'
+        "<p><b>Outcome.</b> {2}</p>"
+        "<p><b>The money.</b> {3}</p>"
+        "<p><b>Clauses named in the ruling.</b> {4}</p>"
+        "<p><b>Evidence cited.</b> {5}</p>"
+        "<p><b>Who decided.</b> {6}</p>"
+        "<p><b>Appeal.</b> {7}</p>"
         "</div>"
     ).format(
         _text(NOTICE_TITLE),
+        _text(NOTICE_PREVIEW),
         outcome,
         _text(money),
         _text(clause_line),

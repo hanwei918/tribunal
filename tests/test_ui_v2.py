@@ -76,7 +76,7 @@ import unittest
 from decimal import Decimal
 from html.parser import HTMLParser
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
+from typing import Any, Dict, FrozenSet, List, Mapping, Optional, Sequence, Tuple
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -134,15 +134,16 @@ TRANSCRIPT_RE = re.compile(r"^case-(\d{5})\.transcript\.json$")
 # vote's outcome and the ruling value.
 TRIGGERS = ("GEN08_SCOPE", "NO_VALID_DRAFTS", "NO_MAJORITY", "JUDGE_ESCALATE")
 
-# The links off the site, each as the page writes it and the file it must
-# resolve to. One is left: the queue's results line points at the README beside
-# the code, a repository-relative path the site root reaches the same way it
-# reaches a case page. The architecture link was the second until part 44c, when
-# the diagram started travelling with the site; it is a file inside ``ui/dist/``
-# now, and it is checked below as one.
-REPOSITORY_LINKS: Mapping[str, Path] = {
-    v2.README_RESULTS_LINK: PROJECT_ROOT / "README.md",
-}
+# The one link off the site, as the page writes it. It is the queue's results
+# line, and until part 48 it was the repository-relative path
+# ``../../README.md#results``: a path out of ``ui/dist/`` that resolved in a
+# checkout and 404s wherever the site is served on its own, so the
+# inside-the-site link check had to name it as an exception. It is the
+# repository's own page on GitHub now -- an absolute URL, which resolves nowhere
+# in a checkout and therefore needs no exception -- and this is the set the
+# external-reference check expects a page to carry. Every other link a built
+# page carries is a file inside ``ui/dist/``, and is checked as one.
+EXTERNAL_LINKS: FrozenSet[str] = frozenset({v2.README_RESULTS_LINK})
 
 # The files this site carries that are not pages: the architecture diagram and
 # the link-preview image, each copied into ``ui/dist/`` byte for byte, and the
@@ -634,18 +635,17 @@ class SelfContainedTests(unittest.TestCase):
                     self.assertNotIn(tag, text, "{0} embeds {1}".format(name, tag))
 
     def test_every_link_stays_inside_the_site(self):
-        """A link is a page here, the replay, a copied asset, a repository file,
-        or a fragment.
+        """A link is a page here, the replay, a copied asset, one named URL, or a
+        fragment.
 
         Every page carries a link to the evaluation replay beside it. That link
         is checked against the file on disk, because the replay is a second site
         this builder does not write. The queue's results line points at the
-        README, one directory above the site's root, and is checked against the
-        file it must resolve to. The architecture link is the diagram the builder
-        copies into the site, and it is checked against the file it must equal.
-        Every other link is one of the pages this site commits, or a fragment,
-        which is checked against the page that carries it, so a link to an anchor
-        that is not there is still a failure.
+        repository's own page, and is the one link a page carries that leaves the
+        site; it is named in ``EXTERNAL_LINKS`` rather than passed over silently,
+        and every other link is a file the builder copies in, one of the pages
+        this site commits, or a fragment, which is checked against the page that
+        carries it, so a link to an anchor that is not there is still a failure.
         """
         names = set(built_pages())
         for name, text in sorted(built_pages().items()):
@@ -653,6 +653,12 @@ class SelfContainedTests(unittest.TestCase):
             scan.feed(text)
             for _tag, url in scan.anchors:
                 with self.subTest(page=name, url=url):
+                    if url in EXTERNAL_LINKS:
+                        # The one link out of the site, named rather than
+                        # skipped: it is an absolute URL, so there is no file
+                        # here to resolve it against.
+                        self.assertTrue(is_external_reference(url))
+                        continue
                     self.assertFalse(is_external_reference(url))
                     if url.startswith("#"):
                         self.assertIn(
@@ -676,17 +682,6 @@ class SelfContainedTests(unittest.TestCase):
                             "the site asset {0} is not committed".format(url),
                         )
                         self.assertEqual(SITE_ASSETS[url].read_bytes(), target.read_bytes())
-                        continue
-                    if url in REPOSITORY_LINKS:
-                        # The one link out of the site: the queue says its figures
-                        # are development data and points at the README. It is a
-                        # repository-relative path resolved from the site root.
-                        target = (v2.DIST_DIR / url.split("#", 1)[0]).resolve()
-                        self.assertTrue(
-                            target.is_file(),
-                            "the repository link {0} resolves to nothing".format(url),
-                        )
-                        self.assertEqual(REPOSITORY_LINKS[url], target)
                         continue
                     self.assertIn(url, names, "{0} links to {1}, which is not a page".format(name, url))
 
@@ -785,8 +780,9 @@ class SiteAssetTests(unittest.TestCase):
     it was a 404. The builder now copies ``docs/architecture.svg`` in byte for
     byte and the link is a file beside the pages. These two tests hold that: the
     committed copy is the repository's own bytes, and every relative href a
-    built page carries resolves to a file inside ``ui/dist/``. The one
-    repository link beside it is named rather than skipped silently.
+    built page carries resolves to a file inside ``ui/dist/``. The one link that
+    leaves the site is an absolute URL, and it is named in ``EXTERNAL_LINKS``
+    rather than passed over silently.
     """
 
     def test_the_architecture_diagram_is_committed_byte_for_byte(self):
@@ -804,12 +800,12 @@ class SiteAssetTests(unittest.TestCase):
     def test_every_relative_link_resolves_inside_the_site(self):
         """A relative href is a file in ``ui/dist/``, not a path out of the site.
 
-        Every anchor a built page carries that is not a fragment, not an external
-        URL and not one of the repository links this module names must resolve to
-        a file inside the published root. The architecture link is the case this
-        test was written for; the README link beside it is the one deliberate
-        exception, and it is named in ``REPOSITORY_LINKS`` rather than skipped
-        silently.
+        Every anchor a built page carries that is not a fragment and not an
+        external URL must resolve to a file inside the published root. The
+        architecture link is the case this test was written for. There is no
+        exception left: the queue's results link was the one repository-relative
+        path a page carried, and since part 48 it is an absolute URL to the
+        repository's own page, so this check covers every relative link again.
         """
         published = v2.DIST_DIR.resolve()
         for name, text in sorted(built_pages().items()):
@@ -818,8 +814,6 @@ class SiteAssetTests(unittest.TestCase):
             for _tag, url in scan.anchors:
                 with self.subTest(page=name, url=url):
                     if not url or url.startswith("#") or is_external_reference(url):
-                        continue
-                    if url in REPOSITORY_LINKS:
                         continue
                     target = (v2.DIST_DIR / url.split("#", 1)[0]).resolve()
                     self.assertTrue(
@@ -1457,11 +1451,15 @@ class AppealTextTests(unittest.TestCase):
     )
 
     def appeal_line(self) -> str:
-        """POL-GEN-04's route in one line, from the clause's own numbers."""
+        """POL-GEN-04's route in one line, from the clause's own numbers.
+
+        The words lead and the clause id follows them in brackets, which is the
+        shape the notice's code-carrying lines take since part 48.
+        """
         match = self.APPEAL_LINE_RE.search(self.rule_text("POL-GEN-04"))
         self.assertIsNotNone(match, "POL-GEN-04 no longer states the route")
         return (
-            "Either party may appeal {0} within {1} days. A different human "
+            "You may appeal {0} within {1} days (POL-GEN-04). A different human "
             "reviewer hears it, and only record evidence may be added.".format(
                 match.group(1), match.group(2)
             )
@@ -1528,7 +1526,7 @@ class FrontDoorTests(unittest.TestCase):
         It sits in the footer now, under the words that say which pipeline it
         is, and the header keeps the queue.
         """
-        self.assertEqual("Historical replay (policy v1)", v2.REPLAY_LABEL)
+        self.assertEqual("Earlier benchmark replay (policy v1 runs)", v2.REPLAY_LABEL)
         for name, text in sorted(built_pages().items()):
             with self.subTest(page=name):
                 self.assertIn('<header class="top">', text)
