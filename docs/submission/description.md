@@ -65,8 +65,9 @@ evidence the other cannot - a deliberate departure from the brief. <!-- README -
 **The guards.**
 
 - **Admissibility pre-check** - impaired evidence is carried at its weight, not
-  trusted (107's GPS trace, weight 0.30); removing the pre-check scores 40/44.
-  <!-- README -->
+  trusted (107's GPS trace, weight 0.30); removing the pre-check scores 40/44
+  (policy version 1, 2026-09-29; corpus and codex sets, whose corpus notes the
+  ablation also removed). <!-- README -->
 - **Citation referee** - discards an uncited, unresolvable or
   undisclosed-impairment claim, or one resting on a context-only profile field
   (104). <!-- README -->
@@ -85,7 +86,9 @@ decided" and the replay), a confidence score, a recommended action and amount,
 an explanation to both parties. The stretch goals: Escalation Protocol (the core
 pipeline); Fraud & Bad-Faith Detection, SLA & Routing, Evidence Collection
 (deterministic services beside the pipeline); Policy & Precedent (built, off by
-default, measured once, 15/15 against 13/15); Learning Feedback Loop (the
+default, measured once, 15/15 against 13/15; the difference is not attributed
+to the precedents - the store holds two, and neither changed ruling mentions
+one - so it is reported, not claimed); Learning Feedback Loop (the
 policy-gap loop, a person approves every clause); Image Analysis (not done, on
 purpose). Two departures are deliberate: risk signals go to the human reviewer,
 not the judge (`POL-GEN-01`), and the advocates do not gather their own
@@ -149,8 +152,13 @@ sample carries 2 to 4 minute fixes and none) or the platform's own arrival and
 wait-timer events, which is how 901 was decided. A rollout would start in shadow
 mode with `auto_rulings_enabled` false, then switch on `POL-GEN-05`'s SGD 8.00
 threshold. Throughput is bounded by the provider's measured limits of 1,000,000
-tokens and 60 requests a minute per model; a case makes six model calls, so the
-arithmetic ceiling is ten cases a minute per model - computed, not measured.
+tokens and 60 requests a minute per model; a case is billed a median of 226,125
+tokens, 58,364 of them cached prompt (`python3 -m eval.v6_runs --report`), so
+the token limit binds first: the arithmetic ceiling is about 4.4 cases a minute
+per model if cached tokens count against the limit and about 6 if they do not,
+while the request limit - ten cases a minute, at six model calls a case - does
+not bind. The endpoint note does not record which way cached tokens count, so
+that is not known. Computed, not measured.
 <!-- tokenhub-api-facts -->
 
 What is not measured: real Ryde data. Every case except 901 is synthetic or
