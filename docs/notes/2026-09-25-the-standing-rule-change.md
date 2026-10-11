@@ -35,6 +35,16 @@ fitting and it made the 27/29 a figure about a prompt that no longer moved.
   the **10 October freeze**. That single run is the only figure the submission
   reports as **generalisation**.
 
+> **Correction, 2026-10-11.** "Drafted without access to this repository" is too
+> strong, and the sets' own files say so: `eval/external/wild/gen/validate.py`
+> and `eval/external/sealed-v1/gen/validate.py` both read this repository's
+> `data/schema.json` and `policy/*.json` from a copy, and `sealed-v1`'s own
+> README says the set "was authored from `data/SCHEMA.md`, `data/schema.json` and
+> `policy/*.json` alone". What a sealed set's author did not have is the
+> development prompts, the misses and the tuning process. The bullet above is
+> kept as written; the provenance table in `README.md` (*Where the test sets came
+> from*) sets out what each set's author had.
+
 ## Why the premise stopped holding
 
 The freeze rested on there being one development set and no other. On

@@ -161,6 +161,12 @@ the rider/driver boundary. One case moved towards the driver — 211, key
 escalation (107, 2749, 2809, 2829 and 2853), and two moved away from one (112 and
 2858). **None moved towards the rider**, and no case has both sides a refund of a
 different size, so the amount-move row the measurement carries is empty here.
+The two that moved away from an escalation are **under-escalations** — cases that
+should have gone to a person and were decided instead: **112**, ruled `NO_ACTION`
+where the key escalates, with no money moved, and **2858**, which refunded
+**6.90** where the key escalates. The third sealed set's single run holds a third,
+**410**, which refunded **4.00** where its key escalates; that run is not read
+here (`docs/notes/2026-10-10-the-third-sealed-run.md`).
 The leaning, such as it is, is towards holding the money and sending the case to
 a person rather than towards either party.
 

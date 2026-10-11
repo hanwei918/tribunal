@@ -42,6 +42,16 @@ records a date and a set of digests.
 > section means `wild-v1`, now called **the held-out set (`wild-v1`)**. The
 > section is kept as written.
 
+> **Correction, 2026-10-11.** "Drafted without access to this repository" is too
+> strong, and the sets' own files say so: `eval/external/wild/gen/validate.py`
+> reads this repository's `data/schema.json` and `policy/*.json` from a copy, and
+> the second sealed set's archive ships its own copies of both under
+> `eval/external/wild-v2/data/` and `eval/external/wild-v2/policy/`. What a
+> sealed set's author did not have is the development prompts, the misses and the
+> tuning process; the schema and the policy they had. The provenance table in
+> `README.md` (*Where the test sets came from*) sets out what each set's author
+> had, from the set's own files. The section above is kept as written.
+
 ## What is frozen
 
 The `tribunal/`, `prompts/` and `policy/` trees at the tag `freeze-2026-09-30`.

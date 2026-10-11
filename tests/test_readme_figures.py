@@ -533,7 +533,7 @@ def v6_expected() -> Dict[str, str]:
         "Precedent arm — the same 15, without precedents": without_precedents,
         "Precedent arm — rulings that changed": v6_precedent_changed(),
         "Sample case 901 at version 6": v6_sample_901(),
-        "dev-v2 case 1779 (prompt injection in the chat) at version 6": v6_case_1779(),
+        "dev-v2 case 1779 (prompt injection in the chat) at version 6 — the model refused the planted clause, the draft check escalated": v6_case_1779(),
         "Cost of the version-6 runs, from the transcripts": v6_costs(),
     }
     figures.update(fairness_figures())
@@ -702,9 +702,9 @@ class ReadmeFigureTests(unittest.TestCase):
             "Second set — four-field exact (development)": fraction(
                 self.codex.exact_matches, self.codex.total
             ),
-            "Ablation — admissibility precheck removed, both sets": fraction(*self.admissibility),
-            "Ablation — admissibility removed, case 112": self.case_112,
-            "Ablation — clause notes removed, both sets": fraction(*self.clause_notes),
+            "Ablation — admissibility precheck removed, both sets, policy version 1, 2026-09-29": fraction(*self.admissibility),
+            "Ablation — admissibility removed, case 112, policy version 1, 2026-09-29": self.case_112,
+            "Ablation — clause notes removed, both sets, policy version 1, 2026-09-29": fraction(*self.clause_notes),
             "Baseline — always ESCALATE, both sets": self._baseline("always_escalate"),
             "Baseline — one draft, mean of the four, both sets": self._baseline(
                 "single_draft:mean"
@@ -716,7 +716,7 @@ class ReadmeFigureTests(unittest.TestCase):
                 self.material_cases
             ),
             "Verifier — the switch in every scored run": self._verifier_switch(),
-            "Sample case 901 — under the current pipeline": self.sample_ruling,
+            "Sample case 901 — policy version 1, 2026-09-29": self.sample_ruling,
             "Sample case 901 — the organisers' stated expectation": self.sample_expectation,
         }
         # The README's first block, the frozen system at policy version 6, is a

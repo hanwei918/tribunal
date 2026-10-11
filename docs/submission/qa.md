@@ -20,6 +20,13 @@ drafts prevent one sample deciding.
 the owner, from a frozen tag, and committed as produced: `wild-v1` from
 `freeze-2026-09-30`, `wild-v2` from `freeze-2026-10-03` and `sealed-v1` from
 `freeze-2026-10-09` (README, Results; `docs/notes/2026-10-10-the-third-sealed-run.md`).
+**Under the key as imported, `sealed-v1` is 20/24 rather than 21/24**: case 311's
+key changed to `PARTIAL_REFUND 7.05` under `POL-RD-14` (amendment `0002`), which
+the policy owner wrote after the system ruled `PARTIAL_REFUND` on development
+case 1782, and the run agrees with the key as it stands
+(`docs/notes/2026-10-08-policy-version-3.md`,
+`docs/notes/2026-10-09-policy-version-4.md`,
+`docs/notes/2026-10-10-sealed-v1-key-at-version-6.md`).
 Every figure in the README's results tables is parsed and recomputed from the
 committed runs and keys by `tests/test_readme_figures.py`, which fails when a
 figure is dropped, added or changed, and when any row's `model call` cell is not
@@ -28,9 +35,20 @@ a transport keyed by prompt digests, making no model call, and holds the replay
 to the recording's own requests, ruling, vote and referee ledger (README,
 Concurrency).
 
-**What happens when it is wrong?** Below the confidence floor of 0.70 the case
-gets no ruling and goes to a human reviewer with the fee held (README, What
-Tribunal is). A party may appeal once within 30 days, checked against
+**What happens when it is wrong?** What has actually caught cases in the
+committed runs is not the confidence floor but the checks around it. A panel
+whose drafts disagree, or produce none the code checks accept, voids the vote and
+the case escalates with the fee held — 107, 2749 and 2809 are splits, and 1779,
+2829, 2853 and 3109 are the injected-clause cases; the `POL-GEN-08(1)` scope gate
+routes a safety- or complaint-flagged dispute to a person with **no model call at
+all** (`tribunal/pipeline.py`); and a draft that fails one of the ten code checks
+abstains rather than voting. The floor of 0.70 is the **backstop** behind them:
+no recorded case has ever been escalated by it, because no draft in any committed
+run was abstained by `DRAFT_BELOW_FLOOR` and every draft below the floor already
+proposed `ESCALATE` (README, Fairness and calibration). The scope gate reads the
+two **structured** flags only: an allegation of harassment, discrimination,
+violence or property damage written in free text is not detected (README,
+Limitations). A party may appeal once within 30 days, checked against
 `POL-GEN-04` by `ops/appeal.py`; a reviewer may open an evidence window to both
 parties with `ops/evidence_window.py`; and a human can switch automatic rulings
 off with the kill switch `auto_rulings_enabled` in `ops/config.json` (README,
@@ -49,20 +67,29 @@ quoting the sample's event text, and the policy owner confirmed the wording on
 confidence 0.9, unanimous (README, Results, "Sample case 901 at version 6") —
 which is the charge upheld, the organisers' own stated expectation (README,
 "Sample case 901 — the organisers' stated expectation": Cancellation charge
-UPHELD). The repository still records the organisers' word as a stated
-expectation and not a key, so the run is not scored against it
+UPHELD). `POL-NS-07` pays the driver 80% of the fee; Ryde's published rule
+credits the whole fee to the driver, which the clause's own sources note says;
+the 20% is this system's placeholder parameter. The repository still records the
+organisers' word as a stated expectation and not a key, so the run is not scored
+against it
 (`docs/notes/2026-10-10-the-version-6-development-runs.md`).
 
 **Prompt injection?** `inject-v1` is six invariance pairs — the same trips twice,
 with one adversarial instruction added to party text in the second copy — and by
 the policy owner's definition, written into `eval/answers/inject-v1/DATASHEET.md`,
-all 6 of 6 injected cases pass (README, functional-sets table). The injection
-that did bite is `dev-v2` case 1779: every judge draft cited `POL-RD-99`, a
-clause that does not exist, so the code check `DRAFT_CLAUSE_UNRESOLVED` rejected
-all four and the case escalated
+all 6 of 6 injected cases pass (README, functional-sets table). **The model
+resisted the injections.** In `dev-v2` 1779, `dev-v2-ext` 2829 and 2853 and
+`inject-v1` 3109 every judge draft reached its key's ruling and amount and
+refused the planted clause in terms — "no clause POL-RD-99 exists in the policy
+in force" — and each case escalated only because the drafts *quoted* the id and
+the code check `DRAFT_CLAUSE_UNRESOLVED` voids a draft that names a clause that
+does not resolve. That check accounts for two of `dev-v2-ext`'s five misses and
+for `inject-v1`'s one
 (`docs/notes/2026-10-10-what-went-wrong-at-version-6.md`). What is not covered:
-the injected message still reaches the judge as an ordinary rider message, and
-the fix — a prompt rule that a chat message cannot name a clause the policy does
+the check cannot tell a judge that quotes an invented clause id from one that
+relies on it, so **a party can force a case out of automation by writing a
+non-existent clause id in the chat** (README, Limitations); and the prompt rule
+that would separate the two — a chat message cannot name a clause the policy does
 not carry — is not made, because it would change the frozen `prompts/`
 (`docs/notes/2026-10-10-what-went-wrong-at-version-6.md`, section 2).
 
@@ -70,9 +97,13 @@ not carry — is not made, because it would change the frozen `prompts/`
 USD over the four version-6 runs, and the same runs give a median time to a
 decision of 160.4 s and a 90th percentile of 286.9 s (README, Business value;
 `python3 -m eval.business_value --report`). Throughput beyond that is not
-claimed: the parallel-calls improvement in README, Concurrency, is labelled an
-estimate and not a measurement, so no throughput figure is offered that the
-recorded runs do not carry. A measured development run with the advocates'
+claimed. The parallel speed-up is **not** an unmeasured estimate: every
+version-6 run was made with `--parallel-calls` on, so the median of 160.4 s and
+the 90th percentile of 286.9 s above are that switch's own measurement, against
+the pre-parallel `wild-v2` run's mean of 429.6 s — a comparison across different
+sets at different policy versions, reported as what the parallel runs recorded
+and not as a speed-up attributable to the switch (README, Concurrency). A
+measured development run with the advocates'
 reasoning off cut the median case time from 152.9 s to 61.7 s and the cost by
 about 39%, at 113 against 115 of 120 four-field exact; it is not the submitted
 setting

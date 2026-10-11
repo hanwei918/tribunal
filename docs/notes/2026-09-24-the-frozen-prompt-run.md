@@ -309,6 +309,15 @@ set, drafted without access to this repository and run exactly once after the
 is recorded in `docs/notes/2026-09-25-the-standing-rule-change.md`. This note is
 left as it was written; it records the rule that was in force on 2026-09-24.
 
+**Amended 2026-10-11 — one phrase in the rule it quotes is too strong.** The
+sealed sets were not drafted without access to this repository: their own
+validators read this repository's `data/schema.json` and `policy/*.json` from a
+copy, and `sealed-v1`'s README says the set was authored from `data/SCHEMA.md`,
+`data/schema.json` and `policy/*.json` alone. What they did not have is the
+development prompts, the misses and the tuning process. The provenance table in
+`README.md` (*Where the test sets came from*) sets out what each set's author
+had.
+
 ## 10. What this does not establish
 
 It does not measure the last change against the one before it on the corpus — 27/29 against 27/29, with

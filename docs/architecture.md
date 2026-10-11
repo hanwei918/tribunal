@@ -252,13 +252,17 @@ route to human review, not a ruling. The **assigns** arrow is that reviewer.
 safety, human-review and auto lanes, and `ops/config.json` holds the team's SLA
 targets and the kill switch `auto_rulings_enabled`. A ruling whose amount is
 above `POL-GEN-05`'s SGD 8.00 execution threshold is held for release and placed
-in the human queue; every human-lane case carries `POL-GEN-06(2)`'s 48-hour
-first-review clock beside its lane target; and a chat message that carries a
-threat is fast-tracked into the safety lane ahead of every other lane, read by
-`ops/chat_signals.py`. The **every case** arrow is the run records being read;
-**human, safety** is a dispute going up to the packet; and out-of-scope
-categories land here too. A reader can check that no threshold comes from the
-policy and that the kill switch moves an auto case into human review.
+in the human queue; every human-lane case carries `POL-GEN-06(2)`'s own 48-hour
+limit -- a first-instance case is closed within 48 hours of filing -- beside its
+lane target, the figure read from `ops/config.json`'s `end_to_end_hours`; and a
+chat message that carries a threat is fast-tracked into the safety lane ahead of
+every other lane, read by `ops/chat_signals.py`. The **every case** arrow is the
+run records being read; **human, safety** is a dispute going up to the packet;
+and out-of-scope categories land here too. A reader can check that the two policy
+figures the queue uses are read rather than typed -- `POL-GEN-05`'s
+`execution_threshold_sgd` out of the policy sentence, refused when it has moved,
+and `POL-GEN-06(2)`'s limit out of `ops/config.json`, refused when the config
+states none -- and that the kill switch moves an auto case into human review.
 
 **Notices and the support page.** `ui/v2/build.py` is the product view and the
 site's front door: for each case the ruling, the money and POL-GEN-04's own

@@ -90,8 +90,13 @@ the agreement among the four votes is reported as k-consistency.
 `sealed-v1` import itself opens no case content and no answer value: the import
 note prints structure, counts and digests only, and states that no case content
 and no answer value is printed, quoted or summarised anywhere in the repository
-until the sealed run is committed. The set is registered at policy version 6 and
-has **not** been run.
+until the sealed run is committed. The set is registered at policy version 6, and
+it **has since been run** — once, by the owner, on 2026-10-10, from the commit
+`feb7174`, whose `tribunal/`, `prompts/` and `policy/` trees equal those at
+`freeze-2026-10-09`. The run is read in
+`docs/notes/2026-10-10-the-third-sealed-run.md`, and the one record the
+re-derivation moved is case 311
+(`docs/notes/2026-10-10-sealed-v1-key-at-version-6.md`).
 
 **The files that record it.** `README.md` (*Limitations and disclosures*);
 `docs/notes/2026-10-09-sealed-v1-imported.md`;

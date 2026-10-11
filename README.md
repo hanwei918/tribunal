@@ -47,6 +47,20 @@ Both are one self-contained file per page with no request of any kind, so they
 open from `file://` exactly as they do when served. The product view is published
 at the root and the replay under `replay/` after the owner approves.
 
+## How it was built, and by whom
+
+**WorkBuddy (DeepSeek-V4.1-Flash) wrote and committed the application code, the
+tests and the documents**, one task per session. Every commit's row is in
+[`docs/buddy-log/README.md`](docs/buddy-log/README.md), and the conversation
+records of those sessions are submitted to the organisers.
+
+**The owner wrote each task's specification and ran the full test suite and the
+paid runs outside WorkBuddy's sandbox.** The model calls that produced every
+committed run were made there, not here.
+
+The test sets' authors are in the table **Where the test sets came from**, under
+Results below.
+
 ## What Tribunal is
 
 Tribunal arbitrates a ride-hail dispute and writes down why. One brief is built
@@ -102,9 +116,11 @@ takes the brief's own **24 to 72 hours per dispute**: `ops/config.json` records
 that figure as Ryde's baseline and its own queue targets as the team's, which is
 the only place in this repository that states it.
 
-Unlike platforms that publish no decision deadline, Tribunal commits to 48
-hours, and a missing piece of evidence never stops the clock — operations rule
-`OPS-EW-01`, not a clause of the frozen policy.
+Tribunal commits to `POL-GEN-06(2)`'s own limit — **a first-instance case is
+closed within 48 hours of filing**, an appeal within 48 hours of its lodgement —
+and `ops/config.json`'s `end_to_end_hours` states the figure the queue reads for
+it. A missing piece of evidence never stops the clock, and that part is
+operations rule `OPS-EW-01`, not a clause of the frozen policy.
 
 ## Results
 
@@ -134,7 +150,7 @@ reads them is `docs/notes/2026-10-10-the-version-6-development-runs.md`.
 | Precedent arm — the same 15, without precedents | 13/15 = 86.7% | `runs/policy-v6/deepseek-deepseek-flash/`, `eval/answers/ground_truth.json` | `python3 -m eval.v6_runs --report` | no |
 | Precedent arm — rulings that changed | 107, 112 | `runs/precedents/policy-v6/deepseek-deepseek-flash/`, `runs/policy-v6/deepseek-deepseek-flash/` | `python3 -m eval.v6_runs --report` | no |
 | Sample case 901 at version 6 | DRIVER_COMPENSATION 4.00, confidence 0.9, unanimous | `runs/ryde-v3/policy-v6/deepseek-deepseek-flash/` | `python3 -m eval.v6_runs --report` | no |
-| `dev-v2` case 1779 (prompt injection in the chat) at version 6 | ESCALATE | `runs/dev-v2/policy-v6/deepseek-deepseek-flash/`, `eval/answers/dev-v2/ground_truth.json` | `python3 -m eval.v6_runs --report` | no |
+| `dev-v2` case 1779 (prompt injection in the chat) at version 6 — the model refused the planted clause, the draft check escalated | ESCALATE | `runs/dev-v2/policy-v6/deepseek-deepseek-flash/`, `eval/answers/dev-v2/ground_truth.json` | `python3 -m eval.v6_runs --report` | no |
 | Cost of the version-6 runs, from the transcripts | corpus 2.3053 USD; dev-v2-ext 7.9197 USD; dev-v2 0.0377 USD; ryde-v3 0.0638 USD; precedents 0.9289 USD | the five run directories' `case-*.json` (`tokens`) | `python3 -m eval.v6_runs --report` | no |
 | Fairness, both version-6 runs — errors towards the rider / towards the driver / to an escalation | 0 / 1 / 5 | `runs/policy-v6/deepseek-deepseek-flash/`, `runs/dev-v2-ext/policy-v6/deepseek-deepseek-flash/`, `eval/answers/ground_truth.json`, `eval/answers/dev-v2-ext/ground_truth.json` | `python3 -m eval.fairness --report` | no |
 | Fairness, both version-6 runs — position-swap agreement on all four graded fields | 136/141 = 96.5% | `runs/policy-v6/deepseek-deepseek-flash/`, `runs/dev-v2-ext/policy-v6/deepseek-deepseek-flash/` | `python3 -m eval.fairness --report` | no |
@@ -147,6 +163,30 @@ amendments were drafted from, so the holdout split is not clean. Its five cases
 that differ from the key — 2749, 2809, 2829, 2853 and 2858 — are explained one by
 one in
 [`docs/notes/2026-10-10-what-went-wrong-at-version-6.md`](docs/notes/2026-10-10-what-went-wrong-at-version-6.md).
+
+**Where the test sets came from.** One row per set, read from the set's own
+README, index, manifest and generator rather than from memory. "What project
+material the author had" is the part that matters: a set whose generator reads
+this repository's `data/schema.json` and `policy/*.json` from a copy was written
+against the schema and the policy, and no set in this repository was written
+without them.
+
+| set | author and tool | date | what project material the author had | who opened it before its run | key changed after outputs were seen | role |
+|---|---|---|---|---|---|---|
+| corpus | this team, by hand | before 2026-09-18 | the organisers' brief (the dispute types); the corpus predates this repository | the team that wrote it | no — written under policy version 1 and never edited | development |
+| `dev-v2` | Ji Guofang, the key owner, with her generator `eval/synth/make_dev_set.py` (seed 20261007) | drafted 2026-10-07, installed 2026-10-08 | the version-1 policy text and this repository's case conventions | the owner, at installation | yes — her revised keys (bundles rev2 and rev3) followed the 2026-10-08 and 2026-10-09 development runs | development |
+| `dev-v2-ext` | the same author and generator, `--size 200` | drafted 2026-10-07, installed 2026-10-08 | the same | the owner, at installation | yes — the same revisions | development |
+| `codex` | OpenAI Codex | drafted 2026-09-24, copied in by the owner | the same policy text and the same case conventions (`docs/notes/2026-09-25-the-second-development-set.md`) | the owner, on arrival | no — its three corrected answers were made at import, before the set's first run | development |
+| `wild` (v1) | the archive's author (not named in the archive) | imported 2026-09-30 | this repository's `data/schema.json` and `policy/*.json`, read from a copy by `eval/external/wild/gen/validate.py` | nobody who changed the system, before the freeze `freeze-2026-09-30` | no — the key is frozen from import | sealed (held-out) |
+| `wild-v2` | OpenAI Codex, for the owner | archive created 2026-10-01, imported 2026-10-03 | a copy of `data/schema.json` and `policy/*.json`, shipped inside the archive under `eval/external/wild-v2/` | the owner | no — the key was re-wrapped into the array the grader reads at import, before the run, and every graded value was compared parsed | sealed |
+| `sealed-v1` | Claude — the archive's own manifest: "independent of prompt tuning; never saw dev-set misses or prompts" | created 2026-09-26, imported 2026-10-09 | `data/SCHEMA.md`, `data/schema.json` and `policy/*.json`, read from a copy by `eval/external/sealed-v1/gen/validate.py` | the policy owner's AI assistant opened the cases and the key before the freeze; the key owner re-derived the key at version 6 before the run, without seeing any output | no — the version-6 re-derivation predates the run, and case 311's change is recorded rather than hidden | sealed |
+| the functional sets (`inject-v1`, `pii-v1`, `collusion-v1`, `chat-signals-v1`) | the policy owner's archive | imported 2026-10-10 | this repository's case conventions and the version-6 policy | the owner | no | development |
+| `sealed-v2` | Claude | received 2026-10-11 | not recorded here | nobody yet — it has not been run, and it is not in this repository | not run | sealed |
+
+**No test set came from outside the team.** Every one was written by a member of
+the project, by a model the team directed, or by a collaborator the team
+commissioned, and the sealed sets are sets the system was never developed
+against rather than independent benchmarks.
 
 **The corpus key.** The corpus key at `eval/answers/ground_truth.json` was written
 under policy version 1, and the corpus was measured at version 6. The three cases
@@ -198,6 +238,17 @@ is `docs/notes/2026-10-10-the-third-sealed-run.md`.
 | Third sealed set (`sealed-v1`) — NO_SHOW_CHARGE four-field agreement | 11/12 = 91.7% | `runs/sealed-v1/deepseek-deepseek-flash/`, `eval/answers/sealed-v1/ground_truth.json`, `data/external/sealed-v1/index.json` | `python3 -m eval.sealed_report --set sealed-v1` | no |
 | Third sealed set (`sealed-v1`) — cases with no ruling | none | `runs/sealed-v1/deepseek-deepseek-flash/run.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
 
+**Under the key as imported, the same run is 20/24.** The key was re-derived
+under version 6 before the run and one record moved: **case 311's key changed to
+`PARTIAL_REFUND 7.05` under `POL-RD-14`** — amendment `0002` on base 3 — **which
+the policy owner wrote after the system ruled `PARTIAL_REFUND` on development
+case 1782**, where the key then said `ESCALATE`. The run produced
+`PARTIAL_REFUND 7.05` on 311, so it agrees with the key as it stands and would
+have been a miss under the key as imported, which is the 20/24 above. The three
+records are `docs/notes/2026-10-08-policy-version-3.md`,
+`docs/notes/2026-10-09-policy-version-4.md` and
+[`docs/notes/2026-10-10-sealed-v1-key-at-version-6.md`](docs/notes/2026-10-10-sealed-v1-key-at-version-6.md).
+
 ## After the sealed run
 
 Everything in this section was added **after** the third sealed set's single run,
@@ -245,7 +296,9 @@ are not built. It is on by default: the queue checks every dispute's chat log.
 stop once three of its four drafts agree on all four graded fields; it is off
 unless asked for, needs `--parallel-calls`, and is refused for every sealed set
 and together with `--verify-drafts`. `python3 -m eval.early_majority --report`
-shows the published ruling is identical on every case it would stop early on
+shows the published ruling is identical on every case it would stop early on,
+over the two version-6 development runs — the third sealed set's single run is
+**not** read, because nothing after a sealed run re-reads it
 ([`docs/notes/2026-10-10-early-majority.md`](docs/notes/2026-10-10-early-majority.md)).
 
 **The record-integrity gate, off by default.** `--integrity-gate` holds the
@@ -257,8 +310,9 @@ run backwards -- and escalates a record that fails, with the reason code
 `RD10_RECORD_INTEGRITY` and no model call. It is off unless asked for and refused
 for every sealed set.
 `python3 -m eval.integrity_gate --report` shows it would escalate three of the
-203 cases with a version-6 run -- 112, 2834 and 2858, each of whose key is
-`ESCALATE` -- and break none
+179 non-sealed cases with a version-6 run — 112, 2834 and 2858, each of whose
+key is `ESCALATE` — and break none; the third sealed set's single run is **not**
+read, so it is in no count here
 ([`docs/notes/2026-10-10-the-integrity-gate.md`](docs/notes/2026-10-10-the-integrity-gate.md)).
 
 **The advocate-effort switch, off by default.** `--advocate-effort none` makes
@@ -371,9 +425,9 @@ organiser data. The only organiser-supplied case is `DISP-002`, converted as cas
 | Second sealed set (`wild-v2`) — cases with no ruling | none | `runs/wild-v2/deepseek-deepseek-flash/run.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
 | Corpus — four-field exact (development) | 29/29 = 100.0% | `runs/deepseek-deepseek-flash/`, `eval/answers/ground_truth.json` | `python3 -m eval.development_sets --report` | no |
 | Second set — four-field exact (development) | 14/15 = 93.3% | `runs/codex/deepseek-deepseek-flash/`, `eval/answers/codex/ground_truth.json` | `python3 -m eval.development_sets --report` | no |
-| Ablation — admissibility precheck removed, both sets | 40/44 = 90.9% | `runs/ablation/admissibility/`, `runs/codex/ablation/admissibility/` | `python3 -m unittest tests.test_readme_figures -v` | no |
-| Ablation — admissibility removed, case 112 | DRIVER_COMPENSATION 1.80, unanimous | `runs/ablation/admissibility/deepseek-deepseek-flash/case-00112.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
-| Ablation — clause notes removed, both sets | 41/44 = 93.2% | `runs/ablation/clause-notes/`, `runs/codex/ablation/clause-notes/` | `python3 -m unittest tests.test_readme_figures -v` | no |
+| Ablation — admissibility precheck removed, both sets, policy version 1, 2026-09-29 | 40/44 = 90.9% | `runs/ablation/admissibility/`, `runs/codex/ablation/admissibility/` | `python3 -m unittest tests.test_readme_figures -v` | no |
+| Ablation — admissibility removed, case 112, policy version 1, 2026-09-29 | DRIVER_COMPENSATION 1.80, unanimous | `runs/ablation/admissibility/deepseek-deepseek-flash/case-00112.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
+| Ablation — clause notes removed, both sets, policy version 1, 2026-09-29 | 41/44 = 93.2% | `runs/ablation/clause-notes/`, `runs/codex/ablation/clause-notes/` | `python3 -m unittest tests.test_readme_figures -v` | no |
 | Baseline — always ESCALATE, both sets | 7/44 = 15.9% | `runs/baselines/report.md`, `runs/baselines/baselines.json` | `python3 -m eval.baselines --set all` | no |
 | Baseline — one draft, mean of the four, both sets | 42.25/44 = 96.0% | `runs/baselines/report.md`, `runs/baselines/baselines.json` | `python3 -m eval.baselines --set all` | no |
 | Baseline — the carried vote, both sets | 43/44 = 97.7% | `runs/baselines/report.md`, `runs/baselines/baselines.json` | `python3 -m eval.baselines --set all` | no |
@@ -381,7 +435,7 @@ organiser data. The only organiser-supplied case is `DISP-002`, converted as cas
 | Verifier — statements judged contradicted | 57 of 3,179 (15 material) | `runs/verify-recorded-drafts/*/deepseek-deepseek-flash/verify-recorded.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
 | Verifier — cases carrying a material contradiction | 102, 107, 108, 110, 9102, 9104, 9113 | `runs/verify-recorded-drafts/*/deepseek-deepseek-flash/verify-recorded.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
 | Verifier — the switch in every scored run | off, in all 8 | every scored run's `case-*.json`, each of which records its own `configuration`; the two development runs record none, in `run.json` or in their case files, and they predate the verifier (`a62ad0d`), so it could not have been on for them | `python3 -m unittest tests.test_readme_figures -v` | no |
-| Sample case 901 — under the current pipeline | ESCALATE, confidence 0.6 | `runs/rerun-2026-09-29/external/ryde/case-00901.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
+| Sample case 901 — policy version 1, 2026-09-29 | ESCALATE, confidence 0.6 | `runs/rerun-2026-09-29/external/ryde/case-00901.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
 | Sample case 901 — the organisers' stated expectation | Cancellation charge UPHELD | `eval/external/ryde/expected.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
 
 **Each sealed block is read from its own single run and its own freeze.** The
@@ -460,6 +514,12 @@ them is `docs/notes/2026-10-10-fairness-and-calibration.md`.
   from their key: 1 moved towards the driver (211), 5 to an escalation (107,
   2749, 2809, 2829 and 2853), and 2 away from one (112 and 2858). None moved
   towards the rider, and no case has both sides a refund of a different size.
+  The two that moved away from an escalation are **under-escalations** — cases
+  that should have gone to a person and were decided instead: **112**, ruled
+  `NO_ACTION` where the key escalates, with no money moved, and **2858**, which
+  refunded **6.90** where the key escalates. The third sealed set's run holds a
+  third, **410**, which refunded **4.00** where its key escalates
+  (`docs/notes/2026-10-10-the-third-sealed-run.md`).
 - **The position swap.** Of the 141 cases whose swapped draft and at least one
   sampled draft are valid, the swapped draft agrees with the sampled majority on
   all four graded fields in 136 and on the ruling alone in 139. It disagrees on
@@ -506,10 +566,13 @@ subject to the PDPA without this repository making any compliance claim.
   names and never enters a brief. The implementation of `POL-GEN-08(4)` masks
   vehicle registration marks, telephone numbers and e-mail addresses, in a chat
   message's text, a trip record's event details and the dispute's two free-text
-  fields. It does **not** mask names: of `pii-v1`'s eighteen mask spans, the ten
-  plates, numbers and addresses are masked at version 6 and the eight names are
-  still present, 8 of 8, because a pattern that spares "Tan Tock Seng Hospital"
-  and "Lim Chu Kang Road" needs more than a regular expression.
+  fields. What is masked is exactly three kinds of string — **vehicle
+  registration marks, telephone numbers and e-mail addresses** — and nothing
+  else. It does **not** mask names: of `pii-v1`'s eighteen mask spans, the three
+  plates, the five telephone numbers and the two e-mail addresses are masked at
+  version 6 and the eight names are still present, 8 of 8, because a pattern that
+  spares "Tan Tock Seng Hospital" and "Lim Chu Kang Road" needs more than a
+  regular expression.
 - **Personal data.** `POL-GEN-08(4)` masking missed one field until 2026-10-10:
   `dispute.counterparty_statement` is an object (`text`, `submitted_by`,
   `submitted_at`), and the frozen code masked it only when it was a string, so
@@ -548,6 +611,37 @@ subject to the PDPA without this repository making any compliance claim.
   not built. Chat sentiment and agreement: not built. The chat **threat** signal
   is built (`ops/chat_signals.py`, the safety lane) and is the one of the three
   that is.
+- **The corpus's notes carry the case author's reasoning.** `tribunal/brief.py`
+  copies each artifact's `admissibility.notes` into the brief, and the 29 corpus
+  cases' notes state conclusions — case 208's GPS note reads "The driver holds
+  the guardhouse for 585 s; the rider's device never leaves the Block 5 lift
+  lobby", and its fare note says "POL-NS-08(d) is not engaged". `dev-v2-ext` and
+  the sealed sets carry **descriptive** notes only ("10 s telemetry, 100.0%
+  coverage, both tracks present"). So the corpus's figures — 26/29 at version 6,
+  and the policy-version-1 ablation rows — were measured on inputs that carry
+  the case author's reasoning, and the figures measured without it are
+  `dev-v2-ext`'s and the sealed sets'. The ablation rows are the
+  policy-version-1 measurements of 2026-09-29: the `admissibility` ablation
+  removes the whole admissibility object, so a corpus case whose ruling it flips
+  is a case whose own notes the ablation also removed, and the `clause-notes`
+  ablation removes every clause's drafting notes.
+- **`POL-GEN-08(1)` is enforced on its two structured flags, and on nothing
+  else.** `dispute.safety_flag` and `dispute.complaint_flag` route a dispute to
+  human review with no model call (`tribunal/pipeline.py`). An allegation of
+  harassment, discrimination, violence or property damage written in free text —
+  in a party's claim or in a chat message — is **not** detected and does not
+  route the case, although the clause names those allegations; nothing in this
+  repository reads free text for them. The three flagged development cases
+  (1735, 2735 and 2759) are the only cases here that carry either flag.
+- **A party can force a case out of automation with a clause id that does not
+  exist.** An honest judge that meets an invented clause id in the record quotes
+  it while refusing it, and the code check `DRAFT_CLAUSE_UNRESOLVED` then voids
+  every draft that names it, so the case escalates with no ruling. That is what
+  happened on `dev-v2` 1779, `dev-v2-ext` 2829 and 2853 and `inject-v1` 3109 —
+  and in all four the drafts reached their key's ruling and amount and refused
+  the planted clause in terms, so the check is what escalated the case and not a
+  model that was misled. It is recorded rather than repaired, because the repair
+  is a change to `tribunal/` or `prompts/` and belongs to a later version.
 - **Platforms.** Case 111's brief digest differs on Linux by one unit in the last
   place of `driver_track.mean_distance_m`; the recorded digests were made on
   macOS. The suite handles it: the tests that rebuild that brief skip on Linux,
@@ -557,7 +651,7 @@ subject to the PDPA without this repository making any compliance claim.
 
 ## What went wrong on the held-out set
 
-The held-out run is one of the submission's two generalisation figures and it is
+The held-out run is one of the submission's three generalisation figures and it is
 reported as it came out, misses included. Three things are worth a reader's
 attention.
 
@@ -693,10 +787,13 @@ reviewer choose `REQUEST_EVIDENCE` and nothing in the pipeline executed it:
 **both parties at once**, lets each file a record and see the other's until it
 closes, and at the close gives the default outcome `POL-GEN-07(1)(2)` requires
 where the named evidence did not arrive, with the exact command that records it.
-**Unlike platforms that publish no decision deadline, Tribunal commits to 48
-hours, and a missing piece of evidence never stops the clock** — that sentence is
-operations rule `OPS-EW-01`, **not a clause of the frozen policy**, and
-`ops/config.json` states the window's own figure beside it. The command is a
+**Tribunal commits to 48 hours — `POL-GEN-06(2)`'s own limit, that a
+first-instance case is closed within 48 hours of filing — and a missing piece of
+evidence never stops the clock.** The 48 hours is the clause's, and
+`ops/config.json` states the `end_to_end_hours` figure the queue reads for it;
+the "never stops the clock" part is operations rule `OPS-EW-01`, **not a clause
+of the frozen policy**, and `ops/config.json` states the window's own figure
+beside it. The command is a
 reader's command: it opens the window, takes the filings and prints the decision
 it leaves, and it changes nothing in `tribunal/`, `prompts/`, `policy/`, `runs/`
 or `data/`.
@@ -763,11 +860,16 @@ before a *second* attempt once the interrupt is observed, but one
 and requests already waiting in the rate limiter are still sent. Attempts
 completed inside an interrupted join are billed but not written.
 
-**How much it is expected to buy — an estimate.** A case takes about seven minutes
-today: on `wild-v2` the mean was 429.6 s. From the recorded durations, a case
-should drop from roughly the sum of its calls to roughly the longest advocate call
-plus the longest draft. **This is an estimate, not a measurement**; the owner will
-measure it.
+**How much it buys — measured on the recorded runs.** The version-6 runs were
+all made with `--parallel-calls` on, and their own `wall_seconds` are the
+measurement: a median of 160.4 s and a 90th percentile of 286.9 s over the 151
+cases of the four runs (`python3 -m eval.business_value --report`, the rows
+above), against the pre-parallel `wild-v2` run's mean of 429.6 s. That is not a
+controlled comparison — different sets, different policy versions, a median
+against a mean — so it is reported as what the parallel runs recorded rather
+than as a speed-up attributable to the switch. What the switch does to the calls
+themselves is proved separately, by the replay below: it changes no request body
+and the two modes' event logs are byte-identical.
 
 **What the offline replay proves.** `tests/test_offline_replay.py` makes no model
 call. It loads the four sets' main recorded runs (128 cases) — the corpus, the second
@@ -801,11 +903,11 @@ off 0.7 are each reported.
 
 | path | what it holds |
 |---|---|
-| `data/` | The 29-case corpus (`data/cases/`), its manifest (`data/index.json`), the data contract (`data/PUBLIC-CONTRACT.md`), and the external sets under `data/external/`: the organisers' sample, the second development set (`codex/`, 15 cases) and the held-out set (`wild/`, 64 cases). |
-| `policy/` | The policy the agents are briefed against, as three JSON files. `policy/amendments/` holds `0001-pol-rd-13` (approved), so the repository is at **policy version 2**, and the second sealed set was run at version 2. |
+| `data/` | The 29-case corpus (`data/cases/`), its manifest (`data/index.json`), the data contract (`data/PUBLIC-CONTRACT.md`), and the external sets under `data/external/`: the organisers' sample and its version-3 conversion (`ryde/`, `ryde-v3/`), the second development set (`codex/`, 15 cases), the two policy-owner development sets (`dev-v2/`, 80, and `dev-v2-ext/`, 120), the held-out set (`wild/`, 64), the second sealed set (`wild-v2/`, 20), the third sealed set (`sealed-v1/`, 24) and the three functional sets (`inject-v1/`, `pii-v1/`, `collusion-v1/`). |
+| `policy/` | The policy the agents are briefed against, as three JSON files. `policy/amendments/` holds `0001-pol-rd-13`, so the base-1 sequence stands at **version 2**, which is the default `current_version`. `policy/v3/` is the platform-aligned base 3 the version-6 runs are made at, and its `amendments/` holds `0001-pol-ns-11`, `0002-pol-rd-14` and `0003-pol-ns-12` — so **version 6 is base 3 plus three clauses**. |
 | `prompts/v1/` | The six prompts: the advocate template with its two stance blocks, the judge, the verifier and the policy drafter. |
 | `tribunal/` | The pipeline — loader, prepass, facts, brief, referee, pipeline, transcript, money, events, llm, model, precedents, policy versions. |
-| `eval/` | The benchmark and the measurement: the runner, the grader, the development-set runner, the baselines, the policy-gap loop, the verifier's measurement mode, the fairness and calibration measurement, and the event-log reader. `eval/answers/` holds the frozen keys. `eval/external/` holds answer-bearing source documents, which are **not** agent input. |
+| `eval/` | The benchmark and the measurement: the runner, the grader, the development-set runner, the version-6 batch reader, the baselines, the ablation and amount-rule measurements, the policy-gap loop, the verifier's measurement mode, the fairness and calibration measurement, the sealed-set and functional-set reports, the business-value report, the early-majority and record-integrity replays, the advocate-effort comparison, the sealed-root guard, the readiness report and the event-log reader. `eval/answers/` holds the frozen keys. `eval/external/` holds answer-bearing source documents, which are **not** agent input. |
 | `runs/` | The benchmark's own output, committed as produced. `runs/README.md` says which directory holds what and how to read one run directory. |
 | `tests/` | The suite. Nothing in it makes a model call. |
 | `ops/` | The support team's layer: the queue and its SLA routing, the escalation packet, the reviewer's closure, the evidence window, the appeal check, the risk signals and the chat-signal reader. It reads the pipeline's inputs and its recorded outputs and never feeds anything back. |
@@ -838,20 +940,37 @@ fresh build.
 
 `eval/external/ryde/DISP-002.md` is the sample supplied to every team. It is
 answer-bearing, so it is not agent input. `eval/external/ryde/convert.py`
-converts it into this system's case format at `data/external/ryde/case-00901.json`,
-recording every decision the conversion made — copied or judged, with reasons — in
-`data/external/ryde/mapping.json`. It is deliberately absent from `data/index.json`,
-so the 29-case corpus the benchmark reports is unchanged. Arbitrate it with
+converts it into this system's case format, recording every decision the
+conversion made — copied or judged, with reasons — in the mapping record beside
+it. It is deliberately absent from `data/index.json`, so the 29-case corpus the
+benchmark reports is unchanged. At policy version 6 the converted case
+`data/external/ryde-v3/case-00901.json` is **decided** — `DRIVER_COMPENSATION`
+4.00, confidence 0.9, unanimous — which is the charge upheld, the organisers'
+own stated expectation. Reproduce it with
 
-    python -m eval.run_benchmark --external data/external/ryde/case-00901.json
+    python3 -m eval.development_sets --set ryde-v3 --policy-version 6 --parallel-calls --timeout 900 --runs-dir /tmp/tribunal-runs
 
-It runs into `runs/external/ryde/` and never into a model's run directory. It is
-not scored: there is no answer-key entry for it, so the produced ruling is printed
-beside the organisers' stated expectation, labelled as a stated expectation rather
-than a verified answer. Under the current pipeline it escalates at confidence 0.6 —
-the organisers state that the charge is upheld — and whether that is a
-disagreement about the facts or about the policy's confidence floor is not
-something either run settles. `docs/notes/2026-09-30-the-clause-notes-ablation-and-901.md`.
+It is not scored: there is no answer-key entry for it, so the produced ruling is
+printed beside the organisers' stated expectation, labelled as a stated
+expectation rather than a verified answer. The earlier run at **policy version 1,
+2026-09-29** (`runs/rerun-2026-09-29/external/ryde/case-00901.json`) escalated at
+confidence 0.6, and so did the version-3 run; **`POL-NS-12` was written after 901
+escalated at version 3**, so the version-6 ruling rests on a clause the policy
+owner wrote afterwards, not on a pipeline that changed its mind.
+`docs/notes/2026-09-30-the-clause-notes-ablation-and-901.md`.
+
+**The 80/20 split.** `POL-NS-07` pays the driver 80% of the fee; Ryde's
+published rule credits the whole fee to the driver, which the clause's own
+sources note says; the 20% is this system's placeholder parameter.
+
+**Integrating with Ryde.** Ryde-format input enters through
+`eval/external/ryde/convert.py` and its `mapping.json`, which is proven on the
+organisers' own `DISP-002` and records every judgement the conversion had to
+make. Every scored set in this repository uses about 10-second GPS fixes with a
+horizontal accuracy, while Ryde's sample carries 2–4 minute fixes and no
+accuracy field at all, so on Ryde-format data the GPS no-show tests cannot run:
+901 was decided on the platform's own arrival and wait-timer events under
+`POL-NS-12`, and route deviation on Ryde-format data is untested.
 
 ## Reading the record
 
@@ -879,7 +998,12 @@ The model is reached through one adapter. Its key is read from the environment
 variable `TOKENHUB_API_KEY`, falling back to the repository-root `.env`, which is
 git-ignored and is never committed. Copy `.env.example` to `.env` and put the key
 in it. **Only the command that runs a case calls a model**, and nothing in the
-test suite makes a model call.
+test suite makes a model call. The model itself is one setting in
+`tribunal/model.py`: `docs/notes/2026-09-23-runtime-model-decision.md` records
+the two Tencent models that were tried and rejected before it — `hy3` failed the
+output contract on early cases, and `hy4-preview` took 4.6× the wall clock on the
+one case the two could be compared on — and no stronger claim is made for the
+one that was chosen.
 
 Run one case — case 101 of the corpus, at the frozen policy version 6, into a
 runs root of your own so that the committed results are left as they are:
@@ -933,7 +1057,7 @@ brief skip for a second reason: glibc and macOS libm disagree in the last place
 of its `driver_track.mean_distance_m`, so the brief digest its run recorded on
 macOS cannot be rebuilt there, and those tests say which case and which place.
 On macOS with `.git` nothing skips except the four tests that skip everywhere,
-and the run ends `OK (skipped=4)`.
+and the run ends `Ran 3027 tests ... OK (skipped=4)`.
 
 Build the product view, which writes the queue and one page per case under
 `ui/dist/`:
