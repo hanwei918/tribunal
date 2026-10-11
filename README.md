@@ -785,6 +785,26 @@ subject to the PDPA without this repository making any compliance claim.
   `POL-RD-02` as the arithmetic and `POL-GEN-03` as the wording. The tension is
   **disclosed and not repaired**: `policy/` is frozen for the submission, so
   neither clause is reworded and no refund is capped at the amount contested.
+- **The judge prompt names two keys the judge message does not carry.**
+  `prompts/v1/judge.system.md` calls the judge's input's `referee_ledger` and
+  `referee_flags`, while `tribunal/pipeline.py` builds one `referee` object whose
+  own keys are `ledger` and `flags`; it is the same ledger the prompt describes
+  and the prompt's rule about it still reads correctly, and only the two names
+  differ. **Disclosed and not fixed**, because `prompts/` is frozen for the
+  submission.
+- **The judge prompt never mentions precedents.** A precedent reaches the judge
+  only with `--precedents` on, and it travels in the judge's **message** under a
+  `precedents` key; `prompts/v1/judge.system.md` says nothing about that key, so
+  the judge meets a block the prompt never described, and with the switch off
+  the key is absent and the message is the message it always was. **Disclosed
+  and not fixed**, because `prompts/` is frozen for the submission.
+- **The round-UP quantum is a code default, not a policy read.**
+  `tribunal/money.py`'s `QUANTUM_005` is `Decimal("0.05")`, and the policy's
+  `fare_model.rounding` on `policy/route_deviation.json` is the prose sentence
+  that says the final amount payable is rounded up to the nearest SGD 0.05 — a
+  string, not a number — so the default equals the policy's figure and is not
+  read from it. **Disclosed and not fixed**, because `tribunal/` is frozen for
+  the submission.
 
 ## What went wrong on the held-out set
 

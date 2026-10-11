@@ -11,9 +11,10 @@ goes to a person. <!-- brief -->
 
 The users are Ryde's support team and the two parties. An agent works the queue;
 a reviewer takes an escalation packet and opens an evidence window; both read
-the records through the read-only WorkBuddy connector. The rider and the driver
-each get a notice naming the evidence and the clause it rests on, and either may
-appeal once. <!-- README -->
+the records through the read-only WorkBuddy connector. A decision is written to
+both sides: each ruling produces a notice text for both parties (shown on the
+case page; the prototype sends nothing), naming the evidence and the clause it
+rests on, and either party may appeal once. <!-- README -->
 
 The value is three sentences: a decision arrives in minutes, not days; it
 carries the evidence and the clause it rests on, written to both parties; and a
@@ -24,7 +25,7 @@ The live demo is https://tribunal.edgeone.dev/ - no account, no key. Case 208
 answered by GPS, her own phone's trace and a connected call, the driver
 compensated SGD 6.40. Case 901
 (https://tribunal.edgeone.dev/case-00901.html) is the organisers' own sample;
-the source is https://github.com/<repository URL>. Every dispute on the site is
+the source is https://github.com/hanwei918/tribunal. Every dispute on the site is
 synthetic except 901. <!-- README -->
 
 ### 2. Real World Scenario Insights: Source of Pain Points, Target Audience and Core Problem Solved
