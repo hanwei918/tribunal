@@ -231,6 +231,37 @@ th[aria-sort="descending"] .sort::after{content:"\2193"}
 .legend i.dash{background:none;border-top:3px dashed #6b7280;height:0}
 .legend i.ring{width:10px;height:10px;border-radius:50%;background:none;
   border:1px dashed #9ca3af}
+
+/* 44.1: the debate. The two advocates' claims are drawn as cards, and the
+   panel's four drafts as four cards side by side (two by two on a phone), so
+   the step reads as an argument and not as the agents' raw answers. */
+.debate{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:14px 0 0}
+@media (max-width:700px){.debate{grid-template-columns:minmax(0,1fr)}}
+.claim{background:var(--soft)}
+.claim .cite{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.chip.ev,.chip.clause{height:auto;padding:3px 9px;white-space:normal;text-align:left}
+.chip.ev .k,.chip.clause .ct{font-weight:400;color:var(--muted);margin-left:6px}
+.chip.clause .ct{display:none}
+.chip.clause:focus .ct{display:inline}
+.claimv{margin:.45em 0 0;font-size:.86rem}
+.claimv .why{color:var(--bad)}
+.drafts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:12px 0}
+@media (max-width:900px){.drafts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.dcard{background:var(--soft);border:1px solid var(--line);border-radius:10px;
+  padding:10px 12px;min-width:0}
+.dcard h4{margin:0 0 6px;font-size:.84rem;color:var(--muted);font-weight:600}
+.dcard p{margin:.22em 0;font-size:.86rem}
+.dcard .d-ruling{margin:.3em 0 .5em}
+.d-void{margin:.4em 0 0;padding-left:18px;font-size:.82rem;color:var(--bad)}
+.pill.blue{background:var(--accent-wash);color:var(--accent)}
+
+/* 44.3: on a 375 px phone the nav wrapped, which pushed its Queue pill against
+   the bar's top edge. The nav stays on one line now and scrolls sideways when
+   it has to, and the bar's three children are allowed to shrink around it. */
+.nav{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;min-width:0}
+.nav a{flex:none;white-space:nowrap}
+.brand{flex:none}
+.mode{flex:none}
 </style>
 </head>
 <body>

@@ -69,6 +69,20 @@ reviewer, so its label says whose view it is: the judge's on a decided case, the
 drafts' where a panel ran, and the pipeline's own routing sentence where the
 scope gate stopped before any judge was asked.
 
+The debate, and why it is not the agents' answers
+--------------------------------------------------
+A case page's "How it was decided" tab is how a judge sees the brief's required
+observable inter-agent communication, so it is drawn as a debate and not as the
+agents' answers. **Both sides argue** is two columns of claim cards -- the
+rider's and the driver's -- and each card carries the claim's own text, the
+artifacts it cites with their kind, the clauses it cites with the policy's own
+titles, and the referee's verdict on it. **Citation check** counts what each side
+kept and discarded and gives each discarded claim's reason. **Judge** is the four
+drafts as four cards: the ruling in words, both amounts, the confidence, whether
+the draft carried, and a mark on the drafts that formed the majority; a voided
+draft carries its ``DRAFT_*`` reason in words. No page prints an agent's answer
+as JSON, and a test holds every page to that.
+
 Two builds are byte-identical
 -----------------------------
 There is no clock, no random seed and no dictionary iteration in the output
@@ -142,7 +156,7 @@ import re
 import sys
 from collections import Counter
 from dataclasses import dataclass
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
@@ -318,6 +332,79 @@ TRIGGER_WORDS: Mapping[str, str] = {
     TRIGGER_JUDGE: "the judge escalated under the policy",
 }
 
+# The words a draft's own abstention reason is shown under, before its
+# ``DRAFT_*`` code. A voided draft says in the record why the code checks
+# rejected it, and the reason is a code a reader has to be told the meaning of;
+# the keys are the pipeline's own constants, so a code the pipeline adds and
+# this file does not word is caught by ``tests/test_ui_v2.py`` rather than
+# printed as a bare constant on a page. The code still follows the words in
+# small monospace, so the vocabulary the record names is on the page too.
+DRAFT_WORDS: Mapping[str, str] = {
+    pipeline_module.DRAFT_RULING_NOT_AN_OBJECT: (
+        "the draft's ruling was not an object"
+    ),
+    pipeline_module.DRAFT_UNKNOWN_RULING: (
+        "the draft named a ruling the policy does not have"
+    ),
+    pipeline_module.DRAFT_ESCALATE_WITH_MONEY: (
+        "the draft escalated and named an amount as well"
+    ),
+    pipeline_module.DRAFT_AMOUNT_FIELD_ABSENT: (
+        "the draft named no amount field"
+    ),
+    pipeline_module.DRAFT_AMOUNT_REQUIRED_MISSING: (
+        "the draft left out an amount this ruling requires"
+    ),
+    pipeline_module.DRAFT_AMOUNT_DOES_NOT_MIRROR: (
+        "the draft's two amounts do not mirror each other"
+    ),
+    pipeline_module.DRAFT_CLAUSE_MALFORMED: (
+        "the draft's clause reference was malformed"
+    ),
+    pipeline_module.DRAFT_CLAUSE_UNRESOLVED: (
+        "the draft quoted a clause id that does not resolve in the policy"
+    ),
+    pipeline_module.DRAFT_AMOUNT_NOT_READ_OFF: (
+        "the draft's amount is not read off the brief"
+    ),
+    pipeline_module.DRAFT_BELOW_FLOOR: (
+        "the draft's confidence is below the policy's floor"
+    ),
+}
+
+# The words a referee verdict is shown under. The keys are the referee's own
+# reason codes, read from that module rather than retyped, so a verdict the
+# referee adds and this file does not word is caught by ``tests/test_ui_v2.py``
+# rather than printed as a bare constant in the debate.
+REFEREE_WORDS: Mapping[str, str] = {
+    referee_module.REASON_KEPT: "kept",
+    referee_module.NO_EVIDENCE_ID: "the claim cites no evidence id",
+    referee_module.NO_CLAUSE_ID: "the claim cites no clause id",
+    referee_module.EVIDENCE_UNRESOLVED: (
+        "the claim cites an evidence id that does not resolve in this case"
+    ),
+    referee_module.CLAUSE_UNRESOLVED: (
+        "the claim cites a clause id that is malformed or does not resolve in "
+        "the policy"
+    ),
+    referee_module.IMPAIRMENT_UNDISCLOSED: (
+        "the claim cites an impaired artifact but does not name its issue codes"
+    ),
+    referee_module.PROFILE_FIELD_AS_GROUND: (
+        "the claim rests on a profile field, which POL-GEN-01 allows as context "
+        "only"
+    ),
+}
+
+# The words a draft's kind is shown under. The keys are the pipeline's own
+# constants: a sampled draft is one of the panel asked the same question, and
+# the position-swapped draft is the one asked with the two parties' stances
+# exchanged, which is what makes the panel's agreement mean something.
+DRAFT_KIND_WORDS: Mapping[str, str] = {
+    pipeline_module.DRAFT_SAMPLED: "sampled",
+    pipeline_module.DRAFT_POSITION_SWAPPED: "parties' positions swapped",
+}
+
 # The words the filing party is shown under, by the loader's own role.
 FILED_BY_WORDS: Mapping[str, str] = {
     "RIDER": "Rider",
@@ -389,7 +476,7 @@ CALL_LOG_CHANNEL = "VOICE_CALL_LOG"
 
 # The README's results section, linked from the queue. The queue's own figures
 # are development data, and the README is where the submission's figures -- the
-# three sealed sets among them -- are stated.
+# sealed sets among them -- are stated, with the command that measured each one.
 README_RESULTS_LINK = "../../README.md#results"
 
 # What the queue page says the product is, and what the disputes on it are. Two
@@ -418,6 +505,20 @@ SET_ORDER_INDEX: Mapping[str, int] = {
 }
 
 CASE_FILE_RE = re.compile(r"^case-(\d{5})\.json$")
+
+# A recorded instant: the ISO 8601 strings every timestamp in the record is
+# written as. The chat table and the record's event lines show the clock alone,
+# with the date once above them, because the full string wraps in a cell.
+INSTANT_RE = re.compile(
+    r"^(?P<date>\d{4}-\d{2}-\d{2})T(?P<hour>\d{2}):(?P<minute>\d{2}):(?P<second>\d{2})"
+)
+
+# One call-log entry's own text: what happened, how long the call was, and what
+# became of it -- "Voice call placed by driver, 0:34, answered". Read rather than
+# re-worded, so the one-line record answer quotes the record's own figures.
+CALL_TEXT_RE = re.compile(
+    r"^(?P<what>.*?),\s*(?P<minutes>\d+):(?P<seconds>\d{2}),\s*(?P<state>.+)$"
+)
 
 # The six steps a case page walks. It is a tuple so its order is a fact about
 # this file rather than about a dict.
@@ -576,6 +677,58 @@ def _seconds(value: Any) -> str:
     return "none" if number is None else "{0:.1f} s".format(number)
 
 
+def _whole(value: Any) -> str:
+    """A figure in whole units, rounded half up, or ``none`` where it is absent.
+
+    The record's figures are metres and seconds carrying many decimals; a
+    sentence that quotes one says "585" and not "585.0", and a value the block
+    does not carry is said to be missing rather than shown as a zero.
+    """
+    number = _decimal(value)
+    if number is None:
+        return "none"
+    return str(int(number.quantize(Decimal(1), rounding=ROUND_HALF_UP)))
+
+
+def _clock(value: Any) -> str:
+    """The time of day a recorded instant carries, as ``16:02:26``.
+
+    Every instant in the record is an ISO 8601 string with a UTC offset, which
+    is long enough to wrap inside a table cell. The date is written once above
+    the table and each row carries the clock alone. A value that is not an
+    instant is left exactly as it is rather than cut about.
+    """
+    text = str(value or "")
+    match = INSTANT_RE.match(text)
+    if match is None:
+        return text
+    return "{0}:{1}:{2}".format(
+        match.group("hour"), match.group("minute"), match.group("second")
+    )
+
+
+def _date_of(value: Any) -> str:
+    """The date a recorded instant falls on, as ``2026-07-30``."""
+    text = str(value or "")
+    match = INSTANT_RE.match(text)
+    return match.group("date") if match is not None else text
+
+
+def _call_line(text: Any) -> str:
+    """One call-log entry as a sentence: "a 34 s answered call".
+
+    The entry's own text is "Voice call placed by driver, 0:34, answered", and
+    the duration and the outcome are read out of it rather than retyped. An
+    entry whose text is not that shape is quoted as it stands.
+    """
+    written = str(text or "").strip()
+    match = CALL_TEXT_RE.match(written)
+    if match is None:
+        return written
+    total = int(match.group("minutes")) * 60 + int(match.group("seconds"))
+    return "a {0} s {1} call".format(total, match.group("state").strip())
+
+
 def _cost_usd(prompt: int, cached: int, completion: int) -> Decimal:
     """One case's cost, at the prices ``eval.v6_runs`` bills at.
 
@@ -707,6 +860,16 @@ def trigger_words(trigger: str, votes: int) -> str:
     if trigger == TRIGGER_NO_MAJORITY:
         return "the {0} drafts did not agree".format(votes)
     return TRIGGER_WORDS.get(trigger, trigger)
+
+
+def draft_words(reason_code: str) -> str:
+    """The words one draft-abstention code is shown under, before its code."""
+    return DRAFT_WORDS.get(reason_code, reason_code)
+
+
+def referee_words(reason_code: str) -> str:
+    """The words one referee verdict code is shown under, before its code."""
+    return REFEREE_WORDS.get(reason_code, reason_code)
 
 
 def filed_by_words(value: Any) -> str:
@@ -1584,6 +1747,37 @@ th[aria-sort="descending"] .sort::after{content:"\\2193"}
 .legend i.dash{background:none;border-top:3px dashed #6b7280;height:0}
 .legend i.ring{width:10px;height:10px;border-radius:50%;background:none;
   border:1px dashed #9ca3af}
+
+/* 44.1: the debate. The two advocates' claims are drawn as cards, and the
+   panel's four drafts as four cards side by side (two by two on a phone), so
+   the step reads as an argument and not as the agents' raw answers. */
+.debate{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:14px 0 0}
+@media (max-width:700px){.debate{grid-template-columns:minmax(0,1fr)}}
+.claim{background:var(--soft)}
+.claim .cite{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.chip.ev,.chip.clause{height:auto;padding:3px 9px;white-space:normal;text-align:left}
+.chip.ev .k,.chip.clause .ct{font-weight:400;color:var(--muted);margin-left:6px}
+.chip.clause .ct{display:none}
+.chip.clause:focus .ct{display:inline}
+.claimv{margin:.45em 0 0;font-size:.86rem}
+.claimv .why{color:var(--bad)}
+.drafts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:12px 0}
+@media (max-width:900px){.drafts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.dcard{background:var(--soft);border:1px solid var(--line);border-radius:10px;
+  padding:10px 12px;min-width:0}
+.dcard h4{margin:0 0 6px;font-size:.84rem;color:var(--muted);font-weight:600}
+.dcard p{margin:.22em 0;font-size:.86rem}
+.dcard .d-ruling{margin:.3em 0 .5em}
+.d-void{margin:.4em 0 0;padding-left:18px;font-size:.82rem;color:var(--bad)}
+.pill.blue{background:var(--accent-wash);color:var(--accent)}
+
+/* 44.3: on a 375 px phone the nav wrapped, which pushed its Queue pill against
+   the bar's top edge. The nav stays on one line now and scrolls sideways when
+   it has to, and the bar's three children are allowed to shrink around it. */
+.nav{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;min-width:0}
+.nav a{flex:none;white-space:nowrap}
+.brand{flex:none}
+.mode{flex:none}
 """
 
 _JS = """
@@ -3194,24 +3388,28 @@ def _dispute_block(case: CaseData) -> str:
         if str(message.get("channel")) == CALL_LOG_CHANNEL
     ]
     if chat:
+        # The date is written once above the table and each row carries the
+        # clock alone: a full ISO instant wraps inside a cell on a phone.
         chat_block = (
-            '<div class="tscroll"><table><thead><tr><th>Sent</th><th>From</th>'
-            "<th>Message</th></tr></thead><tbody>{0}</tbody></table></div>"
+            '<p class="cap">{0}</p>'
+            '<div class="tscroll"><table><thead><tr><th>Time</th><th>From</th>'
+            "<th>Message</th></tr></thead><tbody>{1}</tbody></table></div>"
         ).format(
+            _text(_date_of(chat[0].get("sent_at"))),
             "".join(
                 "<tr><td class=\"mono\">{0}</td><td>{1}</td><td>{2}</td></tr>".format(
-                    _text(message.get("sent_at")),
+                    _text(_clock(message.get("sent_at"))),
                     _text(message.get("sender")),
                     _text(message.get("text")),
                 )
                 for message in chat
-            )
+            ),
         )
     else:
         chat_block = '<p class="empty">No chat message is recorded for this trip.</p>'
     call_block = "".join(
         '<p class="cap">Call log: {0} &middot; {1} &middot; {2}</p>'.format(
-            _text(message.get("sent_at")),
+            _text(_clock(message.get("sent_at"))),
             _text(message.get("sender")),
             _text(message.get("text")),
         )
@@ -3290,14 +3488,15 @@ def _record_rows(case: CaseData) -> List[Tuple[str, str]]:
     if near is not None and far is not None:
         first = _fact_value(rider_presence, "first_ts")
         last = _fact_value(rider_presence, "last_ts")
+        # The clock alone, with the date written once above the table.
         rows.append(
             (
                 "Where the rider's device was",
                 "{0} m to {1} m from the pickup point, from {2} to {3}".format(
                     _compact(near),
                     _compact(far),
-                    first or "not recorded",
-                    last or "not recorded",
+                    _clock(first) if first else "not recorded",
+                    _clock(last) if last else "not recorded",
                 ),
             )
         )
@@ -3321,31 +3520,51 @@ def _record_rows(case: CaseData) -> List[Tuple[str, str]]:
     return rows
 
 
+def _record_date(case: CaseData) -> str:
+    """The date the record's own facts fall on, for the line above the table."""
+    for block, key in (("rider_presence", "first_ts"), ("arrival", "arrived_at")):
+        value = _fact_value(_derived_block(case.brief, "GPS_TRACE", block) or {}, key)
+        if value:
+            return _date_of(value)
+    calls = [
+        message
+        for message in _chat_messages(case)
+        if str(message.get("channel")) == CALL_LOG_CHANNEL
+    ]
+    return _date_of(calls[0].get("sent_at")) if calls else ""
+
+
 def _record_block(case: CaseData) -> str:
     """What the record shows for a no-show case, before any model reads it.
 
     The table is the brief's own derived facts laid out, so it adds nothing to
     the record and no fact it shows is one the brief does not carry. A case of
     another category has no such table: the derived facts differ by category,
-    and this one is about arrival and waiting.
+    and this one is about arrival and waiting. The date the facts fall on is
+    written once above the table, and each row carries the clock alone.
     """
     if case.category != "NO_SHOW_CHARGE":
         return ""
     rows = _record_rows(case)
     if not rows:
         return ""
+    date = _record_date(case)
+    caption = "computed from the record, before any model"
+    if date:
+        caption = "{0} &middot; {1}".format(caption, _text(date))
     return (
         '<section class="sec" id="what-the-record-shows">'
         "<h2>What the record shows</h2>"
-        '<p class="cap">computed from the record, before any model</p>'
+        '<p class="cap">{0}</p>'
         '<div class="tscroll"><table><thead><tr><th>Fact</th><th>The record</th>'
-        "</tr></thead><tbody>{0}</tbody></table></div>"
+        "</tr></thead><tbody>{1}</tbody></table></div>"
         "</section>"
     ).format(
+        caption,
         "".join(
             "<tr><td>{0}</td><td>{1}</td></tr>".format(_text(fact), _text(value))
             for fact, value in rows
-        )
+        ),
     )
 
 
@@ -3480,6 +3699,16 @@ STEP_WHO_WORDS: Mapping[str, str] = {
     "outcome": "the outcome",
 }
 
+# The colour each of the three is drawn in: the case page's legend, its stepper
+# circles, and the landing page's how-it-works strip all read them from here, so
+# a reader meets one colour for code, one for the model and one for the outcome
+# wherever they are on the site.
+STEP_COLOURS: Mapping[str, str] = {
+    "code": "#374151",
+    "model": "#1d4ed8",
+    "outcome": "#15803d",
+}
+
 
 def _seconds_for_entries(case: CaseData, indices: Sequence[int]) -> Optional[str]:
     """The seconds the transcript records for the entries at these indices."""
@@ -3506,6 +3735,245 @@ def _seconds_for_roles(case: CaseData, roles: Sequence[str]) -> Optional[str]:
         if isinstance(entry, Mapping) and entry.get("role") in roles
     ]
     return _seconds_for_entries(case, indices)
+
+
+# --------------------------------------------------------------------------
+# The debate: what the two advocates claimed, and what the panel drafted
+# --------------------------------------------------------------------------
+# The "Both sides argue" step is how a judge sees the brief's required
+# observable inter-agent communication, so it is drawn as a debate and not as
+# the advocates' raw answers: each claim is a card carrying the claim's own
+# text, the artifacts and clauses it cites, and the referee's verdict on it.
+def _evidence_kinds(case: CaseData) -> Dict[str, str]:
+    """Each artifact's kind in words, by evidence id, as the brief carries it."""
+    kinds: Dict[str, str] = {}
+    for artifact in _evidence(case.brief):
+        if artifact["evidence_id"] is None:
+            continue
+        kinds[str(artifact["evidence_id"])] = EVIDENCE_KIND_WORDS.get(
+            str(artifact["evidence_type"]), str(artifact["evidence_type"])
+        )
+    return kinds
+
+
+def _evidence_chip(kinds: Mapping[str, str], evidence_id: Any) -> str:
+    """One cited evidence id as a chip, carrying the kind of artifact it names."""
+    kind = kinds.get(str(evidence_id), "not in the brief")
+    return (
+        '<span class="chip ev" title="{0}">{1}<span class="k">{0}</span></span>'
+    ).format(_attribute(kind), _text(evidence_id))
+
+
+def _clause_chip(case: CaseData, clause_id: Any) -> str:
+    """One cited clause id as a chip, its title on hover and in text on focus.
+
+    The title is the loaded policy's own for the clause, so a reader is told
+    what the clause says without the page saying anything about the case. A
+    clause the policy does not carry is shown by its id alone, which is what a
+    voided draft's clause ids are.
+    """
+    title = case.policy.title(str(clause_id))
+    return (
+        '<span class="chip clause" tabindex="0" title="{0}">{1}'
+        '<span class="ct">{0}</span></span>'
+    ).format(_attribute(title), _text(clause_id))
+
+
+def _claim_verdict(claim: Mapping[str, Any]) -> str:
+    """The referee's verdict on one claim: kept, or discarded with its reason."""
+    status = claim["status"]
+    if status == referee_module.STATUS_KEPT:
+        return '<p class="claimv"><span class="pill green">kept</span></p>'
+    if status == referee_module.STATUS_DISCARDED:
+        code = str(claim["reason_code"])
+        return (
+            '<p class="claimv"><span class="pill red">discarded</span> '
+            '<span class="why">{0} ({1}): {2}</span></p>'
+        ).format(
+            _text(referee_words(code)), _text(code), _text(claim["detail"])
+        )
+    return (
+        '<p class="claimv"><span class="pill grey">no referee verdict is '
+        "recorded for this claim</span></p>"
+    )
+
+
+def _claim_card(case: CaseData, claim: Mapping[str, Any], kinds: Mapping[str, str]) -> str:
+    """One claim as a card: its text, what it cites, and the referee's verdict."""
+    evidence = "".join(
+        _evidence_chip(kinds, item) for item in claim["evidence_ids"]
+    )
+    clauses = "".join(_clause_chip(case, item) for item in claim["clause_ids"])
+    return (
+        '<article class="claim"><p>{0}</p>'
+        '<p class="cite">{1}{2}</p>{3}</article>'
+    ).format(
+        _text(claim["text"]),
+        evidence or '<span class="cap">no evidence id</span>',
+        clauses or '<span class="cap">no clause id</span>',
+        _claim_verdict(claim),
+    )
+
+
+def _advocate_column(case: CaseData, side: str) -> str:
+    """One advocate's claims as a column of cards, with its own kept count."""
+    heading = "Rider advocate" if side == "RIDER" else "Driver advocate"
+    claims = _claims(case.transcript, side)
+    if not claims:
+        return (
+            '<article class="side"><header><b>{0}</b></header>'
+            '<p class="empty">No advocate was asked to argue this case, so this '
+            "side made no claim.</p></article>".format(_text(heading))
+        )
+    kept = sum(
+        1 for claim in claims if claim["status"] == referee_module.STATUS_KEPT
+    )
+    kinds = _evidence_kinds(case)
+    return (
+        '<article class="side"><header><b>{0}</b><small>{1} claim(s), {2} '
+        "kept</small></header>{3}</article>"
+    ).format(
+        _text(heading),
+        len(claims),
+        kept,
+        "".join(_claim_card(case, claim, kinds) for claim in claims),
+    )
+
+
+def _citation_detail(case: CaseData) -> str:
+    """The counts kept and discarded per side, and each discarded claim's reason."""
+    counts: List[str] = []
+    discarded: List[Mapping[str, Any]] = []
+    for side, heading in (("RIDER", "Rider advocate"), ("DRIVER", "Driver advocate")):
+        claims = _claims(case.transcript, side)
+        kept = sum(
+            1 for claim in claims if claim["status"] == referee_module.STATUS_KEPT
+        )
+        dropped = [
+            claim
+            for claim in claims
+            if claim["status"] == referee_module.STATUS_DISCARDED
+        ]
+        counts.append(
+            "<li>{0}: {1} kept, {2} discarded</li>".format(
+                _text(heading), kept, len(dropped)
+            )
+        )
+        discarded.extend(dropped)
+    if discarded:
+        reasons = "".join(
+            '<li><span class="pill red">discarded</span> {0} ({1}) -- {2}: {3}</li>'.format(
+                _text(referee_words(str(claim["reason_code"]))),
+                _text(claim["reason_code"]),
+                _text("Rider advocate" if claim["side"] == "RIDER" else "Driver advocate"),
+                _text(claim["detail"]),
+            )
+            for claim in discarded
+        )
+    else:
+        reasons = "<li>No claim was discarded: every claim the referee checked cited what it said it did.</li>"
+    return (
+        '<p class="label">Kept and discarded, by side</p><ul>{0}</ul>'
+        '<p class="label">Each discarded claim and the referee\'s reason</p>'
+        "<ul>{1}</ul>"
+    ).format("".join(counts), reasons)
+
+
+def _draft_card(
+    case: CaseData, draft: Mapping[str, Any], majority: bool
+) -> str:
+    """One draft as a card: its ruling, its money, its confidence, how it voted.
+
+    ``majority`` is whether this draft formed the majority the vote carried. It
+    is the record's own answer -- the drafts whose proposal the reduction
+    carried -- rather than a second reading of the amounts here, so a panel that
+    wrote the same figure ``6.4`` on one draft and ``6.40`` on another is the
+    one panel it is.
+    """
+    currency = case.policy.currency
+    proposal = draft["proposal"] if isinstance(draft["proposal"], Mapping) else {}
+    ruling_value = proposal.get("ruling") or draft["ruling"]
+    amount = proposal.get("amount_sgd") if proposal else draft["amount_sgd"]
+    driver = (
+        proposal.get("driver_compensation_sgd")
+        if proposal
+        else draft["driver_compensation_sgd"]
+    )
+    confidence = draft["confidence"]
+    if not draft["valid"]:
+        voted = '<span class="pill red">voided</span>'
+    elif draft["agrees"]:
+        voted = '<span class="pill green">carried</span>'
+    else:
+        voted = '<span class="pill grey">did not carry</span>'
+    mark = (
+        '<span class="pill blue">in the majority</span>' if majority else ""
+    )
+    return (
+        '<article class="dcard"><h4>Draft {0} &middot; {1}</h4>'
+        '<p class="d-ruling">{2}</p>'
+        "<p>Amount {3}</p><p>Driver compensation {4}</p><p>Confidence {5}</p>"
+        "<p>{6}{7}</p>{8}</article>"
+    ).format(
+        _text(draft["draft"]),
+        _text(DRAFT_KIND_WORDS.get(str(draft["kind"]), str(draft["kind"]))),
+        _coded(ruling_words(ruling_value), ruling_value)
+        if ruling_value
+        else '<span class="cap">no ruling was parsed</span>',
+        _text(_money(amount, currency)),
+        _text(_money(driver, currency)),
+        _text("none" if confidence is None else str(confidence)),
+        voted,
+        " " + mark if mark else "",
+        _abstention_detail(draft["abstention"]) if not draft["valid"] else "",
+    )
+
+
+def _judge_detail(case: CaseData, drafts: Sequence[Mapping[str, Any]], vote: Mapping[str, Any]) -> str:
+    """The panel's four drafts as cards, and the vote they were reduced to."""
+    outcome = str(vote.get("outcome"))
+    carried = outcome in (
+        pipeline_module.VOTE_CARRIED,
+        pipeline_module.VOTE_CARRIED_NOT_UNANIMOUS,
+    )
+    agreement = vote.get("agreement")
+    return (
+        "<p>The judge was asked {0} times on the same inputs: {1} sampled "
+        "drafts and one with the parties' positions swapped. The vote "
+        "agreement is {2}, and the outcome recorded is {3}.</p>"
+        '<div class="drafts">{4}</div>'
+        '<p class="label">Each draft\'s own explanation</p>{5}'
+    ).format(
+        _text(vote.get("votes")),
+        _text(sum(1 for draft in drafts if draft.get("kind") == pipeline_module.DRAFT_SAMPLED)),
+        _text(agreement if agreement is not None else "not recorded"),
+        _text(outcome),
+        "".join(
+            _draft_card(case, draft, bool(draft["agrees"]) and carried)
+            for draft in drafts
+        ),
+        "".join(
+            "<blockquote>{0}</blockquote>".format(_text(draft["explanation"]))
+            for draft in drafts
+        )
+        or '<p class="empty">No draft was asked for.</p>',
+    )
+
+
+def _abstention_detail(abstention: Any) -> str:
+    """A voided draft's own reason, each code worded, then the record's words."""
+    items = []
+    for part in [piece.strip() for piece in str(abstention or "").split(";")]:
+        if not part:
+            continue
+        code, _, message = part.partition(":")
+        code = code.strip()
+        items.append(
+            "<li>{0} ({1}): {2}</li>".format(
+                _text(draft_words(code)), _text(code), _text(message.strip())
+            )
+        )
+    return '<ul class="d-void">{0}</ul>'.format("".join(items)) if items else ""
 
 
 def _decision_tab(case: CaseData) -> str:
@@ -3586,21 +4054,19 @@ def _decision_tab(case: CaseData) -> str:
             ),
             "detail": (
                 "<p>The two advocates ran on the same brief and at the same time: the "
-                "rider advocate made {0} claim(s) and the driver advocate made {1}.</p>"
-                '<p>Their instructions differ -- system_sha256 <span class="mono">{2}'
+                "rider advocate made {0} claim(s) and the driver advocate made {1}. "
+                'Their instructions differ -- system_sha256 <span class="mono">{2}'
                 '</span> against <span class="mono">{3}</span> -- and their brief is '
-                "one digest for both.</p>"
-                "<p class=\"label\">The rider advocate's own claims</p>"
-                "<blockquote>{4}</blockquote>"
-                "<p class=\"label\">The driver advocate's own claims</p>"
-                "<blockquote>{5}</blockquote>"
+                "one digest for both. Each claim is shown with the artifacts and "
+                "clauses it cites and the referee's verdict on it.</p>"
+                '<div class="debate">{4}{5}</div>'
             ).format(
                 claim_count(rider),
                 claim_count(driver),
                 _text((rider or {}).get("system_sha256")),
                 _text((driver or {}).get("system_sha256")),
-                _text(_claims_text(case, "RIDER")),
-                _text(_claims_text(case, "DRIVER")),
+                _advocate_column(case, "RIDER"),
+                _advocate_column(case, "DRIVER"),
             ),
         }
 
@@ -3608,32 +4074,24 @@ def _decision_tab(case: CaseData) -> str:
     rider_claims = _claims(transcript, "RIDER")
     driver_claims = _claims(transcript, "DRIVER")
     all_claims = rider_claims + driver_claims
-    kept = [claim for claim in all_claims if claim["status"] == "KEPT"]
-    discarded = [claim for claim in all_claims if claim["status"] == "DISCARDED"]
+    kept = [
+        claim for claim in all_claims if claim["status"] == referee_module.STATUS_KEPT
+    ]
+    discarded = [
+        claim
+        for claim in all_claims
+        if claim["status"] == referee_module.STATUS_DISCARDED
+    ]
     if all_claims:
         step3 = {
             "title": STEP_TITLES[2],
             "time": None,
             "summary": "{0} kept, {1} discarded".format(len(kept), len(discarded)),
             "detail": (
-                "<p>The referee checked every claim against the artifacts it cites. "
-                "{0} claim(s) kept, {1} discarded.</p>"
-                "<p class=\"label\">Discarded claims and the referee's reason</p>"
-                "<ul>{2}</ul>"
-            ).format(
-                len(kept),
-                len(discarded),
-                "".join(
-                    "<li>{0} ({1}) -- {2}: {3}</li>".format(
-                        _text(claim["reason_code"]),
-                        _text(claim["side"]),
-                        _text(claim["text"]),
-                        _text(claim["detail"]),
-                    )
-                    for claim in discarded
-                )
-                or "<li>none</li>",
-            ),
+                "<p>The referee checked every claim against the artifacts it cites, "
+                "in code and with no model: {0} claim(s) kept, {1} discarded.</p>"
+                "{2}"
+            ).format(len(kept), len(discarded), _citation_detail(case)),
         }
     else:
         step3 = {
@@ -3648,28 +4106,6 @@ def _decision_tab(case: CaseData) -> str:
 
     # 4. The judge.
     drafts = _drafts(transcript)
-    draft_rows = "".join(
-        "<li>draft {0} ({1}, sides {2}): {3}, amount {4}, driver {5}, "
-        "confidence {6}{7}</li>".format(
-            _text(draft["draft"]),
-            _text(draft["kind"]),
-            _text(", ".join(str(side) for side in draft["sides"])),
-            _coded(
-                ruling_words(draft["proposal"].get("ruling")),
-                draft["proposal"].get("ruling"),
-            ),
-            _text(_money(draft["proposal"].get("amount_sgd"), case.policy.currency)),
-            _text(
-                _money(
-                    draft["proposal"].get("driver_compensation_sgd"),
-                    case.policy.currency,
-                )
-            ),
-            _text(draft["confidence"]),
-            "" if draft["valid"] else " (abstained: {0})".format(_text(draft["abstention"])),
-        )
-        for draft in drafts
-    )
     judge_indices = [
         index for draft in drafts for index in draft["entry_indices"]
     ]
@@ -3681,24 +4117,7 @@ def _decision_tab(case: CaseData) -> str:
             "summary": "{0} drafts{1}".format(
                 len(drafts), ", {0}".format(_text(agreement)) if agreement else ""
             ),
-            "detail": (
-                "<p>The judge was asked {0} times on the same inputs: {1} sampled "
-                "drafts and one with the parties' positions swapped. The vote "
-                "agreement is {2}, and the outcome recorded is {3}.</p>"
-                "<p class=\"label\">Each draft</p><ul>{4}</ul>"
-                "<p class=\"label\">Each draft's own explanation</p>{5}"
-            ).format(
-                _text(vote.get("votes")),
-                _text(sum(1 for draft in drafts if draft["kind"] == "sampled")),
-                _text(agreement),
-                _text(vote.get("outcome")),
-                draft_rows or "<li>none</li>",
-                "".join(
-                    "<blockquote>{0}</blockquote>".format(_text(draft["explanation"]))
-                    for draft in drafts
-                )
-                or "<p class=\"empty\">No draft was asked for.</p>",
-            ),
+            "detail": _judge_detail(case, drafts, vote),
         }
     else:
         step4 = {
@@ -3784,7 +4203,7 @@ def _decision_tab(case: CaseData) -> str:
                 ' class="on"' if index == 0 else "",
                 circle,
                 index + 1,
-                _text(step["time"] or "no time recorded"),
+                _text(step["time"] or ""),
                 _text(step["title"]),
                 _text(step["summary"]),
             )
@@ -3802,20 +4221,16 @@ def _decision_tab(case: CaseData) -> str:
     return (
         '<div class="stepper">' + "".join(buttons) + "</div>"
         '<p class="who">'
-        '<span><i style="background:#374151"></i>code</span>'
-        '<span><i style="background:#1d4ed8"></i>model</span>'
-        '<span><i style="background:#15803d"></i>outcome</span>'
+        '<span><i style="background:{0}"></i>code</span>'
+        '<span><i style="background:{1}"></i>model</span>'
+        '<span><i style="background:{2}"></i>outcome</span>'
         "</p>"
         '<div class="detail">' + "".join(panes) + "</div>"
+    ).format(
+        _attribute(STEP_COLOURS["code"]),
+        _attribute(STEP_COLOURS["model"]),
+        _attribute(STEP_COLOURS["outcome"]),
     )
-
-
-def _claims_text(case: CaseData, side: str) -> str:
-    """One advocate's claims as the raw answer carried them, one per line."""
-    for entry in case.transcript.get("entries") or []:
-        if isinstance(entry, Mapping) and entry.get("role") == side + "_ADVOCATE":
-            return str(entry.get("response_text") or "")
-    return ""
 
 
 # --------------------------------------------------------------------------

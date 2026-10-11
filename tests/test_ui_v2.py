@@ -87,6 +87,8 @@ from ops import appeal as appeal_module  # noqa: E402
 from ops import escalation  # noqa: E402
 from ops import review as review_module  # noqa: E402
 from tests import portability  # noqa: E402
+from tribunal import pipeline as pipeline_module  # noqa: E402
+from tribunal import referee as referee_module  # noqa: E402
 from ui.v2 import build as v2  # noqa: E402
 
 # The four runs the site is drawn from, and the case root each set loads through.
@@ -646,6 +648,43 @@ class SelfContainedTests(unittest.TestCase):
         planted = "the token " + "sk" + "-" + "abcdefgh1234" + " was pasted"
         self.assertIsNotNone(pattern.search(planted))
         self.assertIsNone(pattern.search(v2.defuse_key_shaped(planted)))
+
+    def test_no_page_carries_a_raw_agent_answer(self):
+        """No page prints the advocates' or the judge's answer as JSON.
+
+        The agents answer in JSON, and the transcript keeps that answer verbatim.
+        A page that printed it would show a judge
+        ``{"text":"...","evidence_ids":[...],"clause_ids":[...]}`` instead of a
+        debate -- which is what the "How it was decided" tab did before part 44.
+        Every page is read for the two runs of characters a dumped claim always
+        carries.
+        """
+        markers = ('{"text":', '"evidence_ids":')
+        for name, text in sorted(built_pages().items()):
+            with self.subTest(page=name):
+                for marker in markers:
+                    self.assertNotIn(
+                        marker,
+                        text,
+                        "{0} prints a raw agent answer".format(name),
+                    )
+
+    def test_the_raw_answer_scan_can_fire(self):
+        """A positive control, assembled from pieces so it is not a literal."""
+        markers = ('{"text":', '"evidence_ids":')
+        planted = (
+            'a claim dumped whole: '
+            + "{"
+            + '"text"'
+            + ":"
+            + '"the driver never came", '
+            + '"evidence_ids"'
+            + ":"
+            + '["EV-GPS-00208"]}'
+        )
+        for marker in markers:
+            with self.subTest(marker=marker):
+                self.assertIn(marker, planted)
 
 
 # --------------------------------------------------------------------------
@@ -1379,6 +1418,151 @@ class FeaturedCardTests(unittest.TestCase):
         card = card_html(index_text(), 2735)
         self.assertIn(TRIGGER_WORDS["GEN08_SCOPE"].format(votes=votes), card)
         self.assertIn("0 - the scope gate asked no model", card)
+
+
+# --------------------------------------------------------------------------
+# The case page shows a debate
+# --------------------------------------------------------------------------
+def decision_step(page: str, number: int) -> str:
+    """One pane of the "How it was decided" stepper, by its own ``data-pane``."""
+    marker = '<div class="pane'
+    start = page.index('data-pane="{0}"'.format(number))
+    start = page.rindex(marker, 0, start)
+    following = page.find(marker, start + len(marker))
+    end = following if following != -1 else page.index("</div></div>", start)
+    return page[start:end]
+
+
+class DebateViewTests(unittest.TestCase):
+    """The "Both sides argue" and "Judge" steps read as a debate, not as JSON."""
+
+    def test_both_sides_argue_shows_two_columns_of_claim_cards(self):
+        case = loaded_case(208)
+        step = decision_step(built_pages()[case.link], 2)
+        self.assertIn('class="debate"', step)
+        self.assertIn("Rider advocate", step)
+        self.assertIn("Driver advocate", step)
+        self.assertGreaterEqual(step.count('class="claim"'), 19)
+        for side in ("RIDER", "DRIVER"):
+            claims = v2._claims(case.transcript, side)
+            self.assertTrue(claims)
+            for claim in claims[:2]:
+                with self.subTest(side=side, text=claim["text"][:40]):
+                    self.assertIn(v2._text(claim["text"]), step)
+
+    def test_a_claim_carries_the_artifact_kind_and_the_clause_title(self):
+        """The evidence chip names the kind; the clause chip carries the title.
+
+        The title is on the chip's ``title`` for a pointer and inside the chip,
+        revealed when it has focus, for a reader who cannot hover.
+        """
+        case = loaded_case(208)
+        step = decision_step(built_pages()[case.link], 2)
+        kinds = v2._evidence_kinds(case)
+        self.assertIn("GPS trace", step)
+        self.assertEqual("GPS trace", kinds["EV-GPS-00208"])
+        title = case.policy.title("POL-NS-01")
+        self.assertNotEqual("POL-NS-01", title, "the policy states no clause title")
+        self.assertIn('title="{0}"'.format(v2._attribute(title)), step)
+        self.assertIn(
+            '<span class="ct">{0}</span>'.format(v2._text(title)),
+            step,
+            "the clause title is not the chip's own text on focus",
+        )
+
+    def test_the_citation_check_counts_each_side_and_words_each_discard(self):
+        case = loaded_case(104)
+        step = decision_step(built_pages()[case.link], 3)
+        discarded = []
+        for side, heading in (("RIDER", "Rider advocate"), ("DRIVER", "Driver advocate")):
+            claims = v2._claims(case.transcript, side)
+            kept = sum(1 for claim in claims if claim["status"] == "KEPT")
+            dropped = [claim for claim in claims if claim["status"] == "DISCARDED"]
+            with self.subTest(side=side):
+                self.assertIn(
+                    "{0}: {1} kept, {2} discarded".format(heading, kept, len(dropped)),
+                    step,
+                )
+            discarded.extend(dropped)
+        self.assertTrue(discarded, "104 has no discarded claim to check")
+        for claim in discarded:
+            code = str(claim["reason_code"])
+            with self.subTest(code=code):
+                self.assertIn(v2._text(v2.referee_words(code)), step)
+                self.assertIn(v2._text(code), step)
+                self.assertIn(v2._text(claim["detail"]), step)
+
+    def test_the_judge_step_shows_four_draft_cards_and_marks_the_majority(self):
+        case = loaded_case(208)
+        step = decision_step(built_pages()[case.link], 4)
+        drafts = v2._drafts(case.transcript)
+        self.assertEqual(4, len(drafts))
+        self.assertEqual(4, step.count('class="dcard"'))
+        for draft in drafts:
+            with self.subTest(draft=draft["draft"]):
+                self.assertIn(
+                    "Draft {0} &middot;".format(v2._text(draft["draft"])), step
+                )
+        self.assertEqual(4, step.count("in the majority"))
+        self.assertEqual(4, step.count(">carried<"))
+        self.assertIn(v2.ruling_words("DRIVER_COMPENSATION"), step)
+        self.assertIn(v2._money("6.40", case.policy.currency), step)
+
+    def test_a_voided_draft_carries_its_reason_in_words(self):
+        case = loaded_case(1779)
+        step = decision_step(built_pages()[case.link], 4)
+        drafts = v2._drafts(case.transcript)
+        self.assertTrue(drafts)
+        self.assertTrue(all(not draft["valid"] for draft in drafts))
+        self.assertEqual(len(drafts), step.count(">voided<"))
+        self.assertNotIn("in the majority", step)
+        for code in {str(draft["abstention"]).split(":")[0] for draft in drafts}:
+            with self.subTest(code=code):
+                self.assertIn(v2._text(v2.draft_words(code)), step)
+
+    def test_every_reason_code_a_page_can_meet_has_words_of_its_own(self):
+        """No page may print a bare ``DRAFT_*`` or referee code.
+
+        Both mappings are held to the module that defines the codes, so a code
+        the pipeline or the referee adds is caught here rather than drawn as a
+        constant on a page.
+        """
+        for code in pipeline_module.DRAFT_CHECK_CODES:
+            with self.subTest(draft_code=code):
+                self.assertIn(code, v2.DRAFT_WORDS)
+                self.assertNotEqual(code, v2.draft_words(code))
+        for code in referee_module.REASON_CODES:
+            with self.subTest(referee_code=code):
+                self.assertIn(code, v2.REFEREE_WORDS)
+                self.assertNotEqual(code, v2.referee_words(code))
+
+    def test_a_step_header_shows_a_time_only_where_the_run_recorded_one(self):
+        """The two steps that asked a model carry the seconds the run recorded.
+
+        The other four asked no model, so they carry no time at all rather than
+        the words "no time recorded", which were the page saying nothing.
+        """
+        case = loaded_case(208)
+        page = built_pages()[case.link]
+        self.assertNotIn("no time recorded", page)
+        advocate = v2._seconds_for_roles(case, ("RIDER_ADVOCATE", "DRIVER_ADVOCATE"))
+        judge = v2._seconds_for_entries(
+            case,
+            [
+                index
+                for draft in v2._drafts(case.transcript)
+                for index in draft["entry_indices"]
+            ],
+        )
+        self.assertIsNotNone(advocate)
+        self.assertIsNotNone(judge)
+        self.assertIn(v2._text(advocate), page)
+        self.assertIn(v2._text(judge), page)
+        self.assertEqual(
+            len(v2.STEP_TITLES),
+            page.count('<span class="s">'),
+            "a step lost its summary line",
+        )
 
 
 # --------------------------------------------------------------------------
