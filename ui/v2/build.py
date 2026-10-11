@@ -30,9 +30,10 @@ Per case it reads the run's own case file and transcript, the public case file
 the run was made from (through the set's own loader), the loaded policy, and --
 for a case that was sent to a reviewer -- the escalation packet
 :mod:`ops.escalation` builds, which is called rather than re-implemented. The
-only other files read are ``ops/config.json``, for the queue's targets, and
-``docs/architecture.svg``, which is copied into the site byte for byte so the
-architecture link off the queue stays inside ``ui/dist/``.
+only other files read are ``ops/config.json``, for the queue's targets, the four
+``docs/architecture/*.svg`` views, which are copied into the site byte for byte
+so the architecture links off the queue stay inside ``ui/dist/``, and the
+committed link-preview image at ``ui/assets/og-image.png``, copied the same way.
 
 **No answer key is opened anywhere in this module**, and nothing under
 ``eval/answers/sealed-v1/``, ``data/external/sealed-v1/`` or
@@ -194,11 +195,34 @@ INDEX_PATH = DIST_DIR / "index.html"
 REPLAY_INDEX = "replay/index.html"
 REPLAY_LABEL = "Earlier benchmark replay (policy v1 runs)"
 
-# The architecture diagram, copied into the site so the queue's link to it stays
-# inside the published root. The source is the repository's own diagram; the
-# asset is the byte-for-byte copy this builder writes beside the pages.
-ARCHITECTURE_SOURCE = PROJECT_ROOT / "docs" / "architecture.svg"
-ARCHITECTURE_ASSET = DIST_DIR / "architecture.svg"
+# The architecture set, copied into the site so the queue's links to it stay
+# inside the published root. The sources are the repository's own drawings under
+# ``docs/architecture/``; the assets are the byte-for-byte copies this builder
+# writes beside the pages, in a directory of their own so a link to one of them
+# is a file inside ``ui/dist/``. The first view is the **dynamic** one -- one
+# dispute, step by step -- which is the view the README embeds at
+# ``docs/architecture.svg`` and the one the queue's own "Architecture" link
+# opens; the three container views are named beside it, because a reader who
+# wants the system as a whole and a reader who wants one dispute's path are not
+# the same reader. The set is the policy owner's, drawn from the code at the
+# final freeze.
+ARCHITECTURE_DIRNAME = "architecture"
+ARCHITECTURE_SOURCE_DIR = PROJECT_ROOT / "docs" / ARCHITECTURE_DIRNAME
+ARCHITECTURE_ASSET_DIR = DIST_DIR / ARCHITECTURE_DIRNAME
+ARCHITECTURE_VIEWS: Tuple[Tuple[str, str], ...] = (
+    ("3-dynamic-one-dispute.svg", "Architecture"),
+    ("1-system-context.svg", "System context"),
+    ("2a-containers-deciding.svg", "Containers: deciding"),
+    ("2b-containers-after-ruling.svg", "Containers: after a ruling"),
+)
+
+
+def architecture_link(view: str) -> str:
+    """One view's link, as a page writes it: a file under ``ui/dist/``."""
+    return "{0}/{1}".format(ARCHITECTURE_DIRNAME, view)
+
+
+ARCHITECTURE_LINK = architecture_link(ARCHITECTURE_VIEWS[0][0])
 
 # The link-preview image, copied into the site the same way and for the same
 # reason: ``og:image`` has to be an absolute URL a scraper can fetch, so the
@@ -558,14 +582,6 @@ CALL_LOG_CHANNEL = "VOICE_CALL_LOG"
 # repository will have, so the link is correct now and works then.
 README_RESULTS_LINK = "https://github.com/hanwei918/tribunal#results"
 README_RESULTS_WORDS = "How the figures were measured"
-
-# The architecture diagram, linked from the queue's links row. It is a file
-# beside the pages rather than a path out of the site: the link used to be
-# ``../../docs/architecture.md``, which resolves in a checkout -- the
-# repository's own file is two directories above the site -- and 404s wherever
-# ``ui/dist/`` is served on its own. The builder copies the diagram in, and
-# ``tests/test_ui_v2.py`` holds every relative link to a file inside ``ui/dist/``.
-ARCHITECTURE_LINK = "architecture.svg"
 
 # The case the links row sends a reader to for the debate itself: the no-show
 # case the description names, whose "How it was decided" tab shows the two
@@ -2963,20 +2979,28 @@ def _how_it_works() -> str:
 
 
 def _links_row() -> str:
-    """The two links out of the queue's own words: the architecture and a case.
+    """The links out of the queue's own words: the architecture views, and a case.
 
-    The architecture link is a file this builder copies in beside the pages, so
+    Every architecture link is a file this builder copies in beside the pages, so
     it resolves wherever ``ui/dist/`` is served and not only in a checkout. The
-    second link sends a reader to the case whose "How it was decided" tab is the
-    debate itself.
+    dynamic view comes first under the plain label, because it is the one a
+    reader wants first -- one dispute, step by step -- and the three container
+    views are named beside it. The last link sends a reader to the case whose
+    "How it was decided" tab is the debate itself.
     """
+    views = "".join(
+        '<a href="{0}">{1}</a>'.format(
+            _attribute(architecture_link(view)), _text(label)
+        )
+        for view, label in ARCHITECTURE_VIEWS
+    )
     return (
         '<p class="links">'
-        '<a href="{0}">Architecture</a>'
+        "{0}"
         '<a href="{1}">How it was decided: see case {2}</a>'
         "</p>\n"
     ).format(
-        _attribute(ARCHITECTURE_LINK),
+        views,
         _attribute("case-{0:05d}.html".format(HOW_IT_WAS_DECIDED_CASE)),
         _text(HOW_IT_WAS_DECIDED_CASE),
     )
@@ -5813,18 +5837,23 @@ def _write_or_check_bytes(destination: Path, data: bytes, check: bool) -> int:
 def assets() -> List[Tuple[Path, bytes]]:
     """The files this site carries that are not pages, as ``(destination, bytes)``.
 
-    Two: the architecture diagram and the link-preview image, each copied out of
-    the repository byte for byte. The diagram's link off the queue's links row
-    is a file inside the published root instead of a path out of it, and
+    Five: the four architecture views and the link-preview image, each copied out
+    of the repository byte for byte. The views' links off the queue's links row
+    are files inside the published root instead of paths out of it, and
     ``og:image`` names a URL a scraper fetches, so the file it names has to be
     inside the published root too. Like :func:`pages` it is a list a check and a
     writing build both walk, so the two cannot disagree about which files there
     are.
     """
-    return [
-        (ARCHITECTURE_ASSET, ARCHITECTURE_SOURCE.read_bytes()),
-        (OG_IMAGE_ASSET, OG_IMAGE_SOURCE.read_bytes()),
+    out = [
+        (
+            ARCHITECTURE_ASSET_DIR / view,
+            (ARCHITECTURE_SOURCE_DIR / view).read_bytes(),
+        )
+        for view, _label in ARCHITECTURE_VIEWS
     ]
+    out.append((OG_IMAGE_ASSET, OG_IMAGE_SOURCE.read_bytes()))
+    return out
 
 
 def pages() -> List[Tuple[Path, str]]:

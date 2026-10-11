@@ -2556,17 +2556,22 @@ def built_documents() -> Dict[str, dict]:
 
 
 # The files this builder copies into the site rather than rendering: the
-# architecture diagram, and the link-preview image ``ui.v2.build`` writes for
-# the product view's pages. Both are bytes, so the walk below reads the pages
-# and skips them.
-BINARY_ASSETS: Tuple[str, ...] = ("architecture.svg", "og-image.png")
+# link-preview image ``ui.v2.build`` writes for the product view's pages, and
+# nothing else. It is bytes, so the walk below cannot read it as text and skips
+# it by name. The four architecture views ``ui.v2.build`` copies in the same way
+# are **not** skipped: they are ASCII text, so the two checks below scan them
+# like any other published file, and ``tests/test_architecture.py`` holds them to
+# the same rules against the source each was copied from.
+BINARY_ASSETS: Tuple[str, ...] = ("og-image.png",)
 
 
 def committed_pages() -> Dict[str, str]:
-    """Every committed page under ``ui/dist/``, by path relative to it.
+    """Every committed text file under ``ui/dist/``, by path relative to it.
 
     The files that are bytes rather than text are skipped: this walk reads what
-    it finds as UTF-8, and a copied image is not a page.
+    it finds as UTF-8, and a copied image is not a page. Everything else is
+    included -- the pages, and the four architecture views ``ui.v2.build`` copies
+    in -- so the publish scan below covers every published file it can read.
     """
     return {
         str(path.relative_to(build.DIST_DIR)): path.read_text(encoding="utf-8")

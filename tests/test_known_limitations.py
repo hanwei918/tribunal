@@ -15,8 +15,11 @@ holds the writing down to what it claims:
 * **``docs/submission/how-we-built-it.md`` exists** and carries the workflow and
   the four tips, and the session and commit counts it states are the
   repository's own at the commit it names them at;
-* **the four labels the diagram moved are where the fix put them**, and the two
-  that moved clear of the middle column are outside it.
+* **the architecture set makes its own claims**, and the three corrections it was
+  drawn to make -- the evidence collector is a standalone CLI the pipeline does
+  not call, the precedents are shown to the judge and not to the advocates, and
+  the freeze the drawings are made from is the final one -- are each read off the
+  drawing that makes it, together with the rule about calls.
 
 **The limitation check is shown to be capable of failing**, on a copy of the
 README with one limitation taken out, for the reason ``START-HERE.md`` gives: a
@@ -34,7 +37,7 @@ import sys
 import unittest
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import List, Tuple
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -45,7 +48,7 @@ from tests import portability  # noqa: E402
 README = PROJECT_ROOT / "README.md"
 THREAT_MODEL = PROJECT_ROOT / "docs" / "governance" / "threat-model.md"
 HOW_WE_BUILT_IT = PROJECT_ROOT / "docs" / "submission" / "how-we-built-it.md"
-DIAGRAM = PROJECT_ROOT / "docs" / "architecture.svg"
+ARCHITECTURE_DIR = PROJECT_ROOT / "docs" / "architecture"
 
 # The four weaknesses the review confirmed. Each is disclosed in both documents,
 # and the phrase below is the opening of its own sentence there, so a bullet that
@@ -64,21 +67,42 @@ COUNTS_COMMIT = "2731adc"
 STATED_COMMITS = 324
 STATED_SESSIONS = 187
 
-# The four labels the diagram moved, and where the fix put them. Each number was
-# chosen against a rendering: "same artifacts" and "case file" were crossed by a
-# box border, "yes" by the step-10 box's bottom edge, and "approved" by the
-# Policy versions cylinder's top. The two right-hand ones are now outside the
-# middle column, whose borders span x 400 to 910.
-MOVED_LABELS: Dict[str, Tuple[float, float]] = {
-    "same artifacts": (916.0, 192.0),
-    "yes": (364.0, 861.0),
-    "case file": (916.0, 910.0),
-    "approved": (1500.0, 310.0),
-}
+# The four views of the architecture set the policy owner drew, in the order the
+# page walks them, each with the title its own first line carries.
+DIAGRAM_VIEWS: Tuple[Tuple[str, str], ...] = (
+    ("1-system-context.svg", "System Context diagram for Tribunal"),
+    (
+        "2a-containers-deciding.svg",
+        "Container diagram for Tribunal - 2a. Deciding and measuring",
+    ),
+    (
+        "2b-containers-after-ruling.svg",
+        "Container diagram for Tribunal - 2b. After a ruling: operations, "
+        "learning loop, publishing",
+    ),
+    (
+        "3-dynamic-one-dispute.svg",
+        "Dynamic diagram for Tribunal - how one dispute is decided",
+    ),
+)
 
-# The x range every box of the middle column spans.
-MIDDLE_COLUMN_LEFT = 400.0
-MIDDLE_COLUMN_RIGHT = 910.0
+# The claims the set makes, each a phrase one ``<text>`` of that drawing carries
+# whole. The first three are the corrections the set was drawn to make, which the
+# diagram it replaced got wrong: the evidence collector is a standalone CLI the
+# pipeline does not call, the precedents are shown to the judge and not to the
+# advocates, and the freeze the drawings are made from is the final one. The
+# fourth is the rule about calls, which the diagram it replaced did not state at
+# all -- and it is the rule this repository discloses a weakness in, so a drawing
+# that stopped stating it would leave the disclosure standing alone.
+DIAGRAM_CLAIMS: Tuple[Tuple[str, str], ...] = (
+    ("2a-containers-deciding.svg", "Standalone CLI, not wired into the"),
+    ("3-dynamic-one-dispute.svg", "shown to the judge"),
+    ("1-system-context.svg", "freeze-2026-10-11"),
+    (
+        "3-dynamic-one-dispute.svg",
+        "an unusable answer is retried once, an HTTP 429/5xx up to 4 attempts.",
+    ),
+)
 
 
 def read(path: Path) -> str:
@@ -101,18 +125,30 @@ def missing_limitations(text: str) -> List[str]:
     return [phrase for phrase in LIMITATIONS if phrase not in text]
 
 
-def svg_texts(text: str) -> List[Tuple[str, float, float]]:
-    """``[(content, x, y), ...]`` for every placed ``<text>`` in the diagram."""
-    root = ET.fromstring(text)
-    found: List[Tuple[str, float, float]] = []
-    for element in root.iter():
-        if element.tag.rsplit("}", 1)[-1].lower() != "text":
-            continue
-        content = (element.text or "").strip()
-        x, y = element.get("x"), element.get("y")
-        if content and x is not None and y is not None:
-            found.append((content, float(x), float(y)))
-    return found
+def texts_of(view: str) -> List[str]:
+    """Every placed ``<text>`` of one view, stripped, in document order."""
+    root = ET.fromstring(read(ARCHITECTURE_DIR / view))
+    return [
+        (element.text or "").strip()
+        for element in root.iter()
+        if element.tag.rsplit("}", 1)[-1].lower() == "text" and (element.text or "").strip()
+    ]
+
+
+def missing_claims(
+    claims: Tuple[Tuple[str, str], ...] = DIAGRAM_CLAIMS,
+) -> List[str]:
+    """The claims the set does not make, as ``"<view>: <phrase>"``.
+
+    A claim is carried when one ``<text>`` of that view holds the phrase whole,
+    which is the strongest reading available: a phrase that only appeared by
+    running two labels together would not be a claim the drawing makes.
+    """
+    return [
+        "{0}: {1}".format(view, phrase)
+        for view, phrase in claims
+        if not any(phrase in text for text in texts_of(view))
+    ]
 
 
 class TheLimitationsAreDisclosedTests(unittest.TestCase):
@@ -225,36 +261,34 @@ class TheHowWeBuiltItPageTests(unittest.TestCase):
         self.assertEqual(STATED_SESSIONS, len(rows))
 
 
-class TheDiagramLabelsTests(unittest.TestCase):
-    """The four labels the diagram moved sit where the fix put them."""
+class TheDiagramClaimsTests(unittest.TestCase):
+    """The set's own claims, and the three corrections it was drawn to make."""
 
-    def setUp(self):
-        self.found = {
-            content: (x, y) for content, x, y in svg_texts(read(DIAGRAM))
-        }
+    def test_the_set_is_the_four_views_the_page_walks(self):
+        for view, title in DIAGRAM_VIEWS:
+            with self.subTest(view=view):
+                self.assertIn(
+                    title,
+                    texts_of(view),
+                    "the view does not carry the title the page names it by",
+                )
 
-    def test_the_four_labels_are_where_the_fix_put_them(self):
-        for label, position in MOVED_LABELS.items():
-            with self.subTest(label=label):
-                self.assertIn(label, self.found, "{0} is not in the diagram".format(label))
-                self.assertEqual(position, self.found[label])
+    def test_every_claim_the_set_makes_is_in_the_view_that_makes_it(self):
+        self.assertEqual([], missing_claims())
 
-    def test_the_two_that_moved_right_are_outside_the_middle_column(self):
-        """Outside the column, no box border can cross them.
+    def test_a_claim_taken_out_is_reported(self):
+        """The check above is shown capable of failing."""
+        doctored = tuple(
+            (view, "a phrase this drawing does not carry") if index == 0 else (view, phrase)
+            for index, (view, phrase) in enumerate(DIAGRAM_CLAIMS)
+        )
+        self.assertEqual(1, len(missing_claims(doctored)))
 
-        Every box of the middle column spans the same x range, so a label placed
-        wholly to the right of it cannot be touched by any of their borders --
-        which is what these two used to be.
-        """
-        for label in ("same artifacts", "case file"):
-            with self.subTest(label=label):
-                x, _y = self.found[label]
-                self.assertGreaterEqual(x, MIDDLE_COLUMN_RIGHT)
-
-    def test_the_one_that_moved_left_starts_outside_the_column(self):
-        """A three-character label whose x is left of the column cannot reach it."""
-        x, _y = self.found["yes"]
-        self.assertLess(x, MIDDLE_COLUMN_LEFT)
+    def test_the_precedents_are_shown_to_the_judge_and_not_to_the_advocates(self):
+        """The correction: the arrow the old diagram drew pointed at the advocates."""
+        texts = texts_of("3-dynamic-one-dispute.svg")
+        self.assertIn("shown to the judge", texts)
+        self.assertNotIn("shown to the advocates", texts)
 
 
 if __name__ == "__main__":
