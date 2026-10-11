@@ -11,6 +11,16 @@ evidence-windows/
 docs/notes/*balance*
 .workbuddy-ai/
 
+# Other agents' folders and deploy archives: a tool drops these into the working
+# tree and they are never repository content. `tests/test_repository_hygiene.py`
+# asks git itself, and asserts that no rule here reaches a file the repository
+# carries -- none is under `.claude/`, `.codebuddy/` or `.cursor/`, and no
+# tracked file ends in `.zip`.
+.claude/
+.codebuddy/
+.cursor/
+*.zip
+
 # Documents that arrive by hand rather than by a build: an exported PDF, a Word
 # document, a slide deck, a file named after a CV. Matched case-insensitively --
 # the bracket expressions, not `*.pdf` -- because the name is whatever the tool

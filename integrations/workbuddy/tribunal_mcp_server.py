@@ -23,6 +23,13 @@ whether the case agreed with a key.
 
 It makes no model call, opens no socket and launches no browser.
 
+The two operations commands it runs are given a wall clock
+(:data:`COMMAND_TIMEOUT_SECONDS`), and a command that outlasts it is refused
+with a tool error rather than left to hang. Every error text the connector
+returns is repository-relative: a message that would name a path under the
+checkout names the repository's own layout instead, and never the machine's
+absolute path.
+
 The sets offered
 ----------------
 The four committed version-6 runs and the three functional case sets. That list
@@ -141,6 +148,14 @@ QUEUE_COLUMNS: Tuple[str, ...] = (
 # from two different Pythons -- the rule ``eval/func_sets.py`` follows for the
 # commands it runs.
 PYTHON = sys.executable or "python3"
+
+# The wall clock a single operations command is allowed before the connector
+# gives up on it. ``ops.queue`` and ``ops.escalation`` read committed records and
+# print a table, so a run that has not finished in a minute is not slow work: it
+# is a command that will not answer, and a caller is told so rather than left to
+# wait. The command is a subprocess, so a timeout leaves it to be reaped by the
+# operating system; nothing here waits on it further.
+COMMAND_TIMEOUT_SECONDS = 60
 
 QUEUE_MODULE = "ops.queue"
 ESCALATION_MODULE = "ops.escalation"
@@ -271,24 +286,46 @@ def read_case(set_name: str, case_no: int) -> CaseRecord:
 # --------------------------------------------------------------------------
 # Running an operations command
 # --------------------------------------------------------------------------
+def _repository_relative(text: str) -> str:
+    """``text`` with the project root's own absolute path made relative.
+
+    An error a subprocess prints can carry a path under the checkout, and a path
+    under the checkout is the machine's, not the record's: the answer a caller
+    reads names the repository's own layout and never ``/Users/...`` or whatever
+    directory the connector was started from. The substitution is textual, so it
+    reaches a path wherever it appears in a message and not only at the start.
+    """
+    return text.replace(str(PROJECT_ROOT), ".")
+
+
 def run_command(name: str, arguments: Sequence[str]) -> "subprocess.CompletedProcess[str]":
     """Run one operations command from the repository root and refuse a failure.
 
     The commands are run rather than imported: this module must not put an
     ``ops`` import edge into the evaluated system, and ``ops`` is a layer of
     its own. A non-zero exit is a refusal, reported with the command's own
-    message rather than parsed as an empty reading.
+    message rather than parsed as an empty reading. A command that does not
+    finish within :data:`COMMAND_TIMEOUT_SECONDS` is refused too, with a message
+    that says so, rather than left to hang.
     """
-    completed = subprocess.run(
-        [PYTHON, *arguments],
-        cwd=str(PROJECT_ROOT),
-        capture_output=True,
-        text=True,
-    )
+    try:
+        completed = subprocess.run(
+            [PYTHON, *arguments],
+            cwd=str(PROJECT_ROOT),
+            capture_output=True,
+            text=True,
+            timeout=COMMAND_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired:
+        raise ToolRefusal(
+            "the ops command did not finish in {0} s".format(COMMAND_TIMEOUT_SECONDS)
+        )
     if completed.returncode != 0:
         detail = (completed.stderr or "").strip() or (completed.stdout or "").strip()
         raise ToolRefusal(
-            "{0} exited {1}: {2}".format(name, completed.returncode, detail)
+            "{0} exited {1}: {2}".format(
+                name, completed.returncode, _repository_relative(detail)
+            )
         )
     return completed
 
@@ -643,7 +680,11 @@ def _result(identifier: Any, result: Mapping[str, Any]) -> Dict[str, Any]:
 
 
 def _error(identifier: Any, code: int, message: str) -> Dict[str, Any]:
-    return {"jsonrpc": "2.0", "id": identifier, "error": {"code": code, "message": message}}
+    return {
+        "jsonrpc": "2.0",
+        "id": identifier,
+        "error": {"code": code, "message": _repository_relative(message)},
+    }
 
 
 def initialize_result() -> Dict[str, Any]:
@@ -683,7 +724,10 @@ def call_tool(params: Any) -> Dict[str, Any]:
     try:
         text = handler(arguments)
     except ToolRefusal as exc:
-        return {"content": [{"type": "text", "text": str(exc)}], "isError": True}
+        return {
+            "content": [{"type": "text", "text": _repository_relative(str(exc))}],
+            "isError": True,
+        }
     return {"content": [{"type": "text", "text": text}], "isError": False}
 
 
@@ -713,7 +757,7 @@ def handle(message: Any) -> Optional[Dict[str, Any]]:
 
 
 def _log(message: str) -> None:
-    sys.stderr.write("tribunal-mcp: {0}\n".format(message))
+    sys.stderr.write("tribunal-mcp: {0}\n".format(_repository_relative(message)))
     sys.stderr.flush()
 
 

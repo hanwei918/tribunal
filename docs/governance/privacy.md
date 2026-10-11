@@ -60,6 +60,41 @@ counterparty statement, so no brief it built contained one. The fix moves
 exactly one brief in the repository — `pii-v1` case 3202 at version 6 — and every
 recorded run's `brief_sha256` still rebuilds.
 
+## Who receives the data
+
+Every brief `tribunal/brief.py` builds is sent to a model provider outside this
+repository. The provider is **Tencent Cloud MaaS (TokenHub)**, at the endpoint
+`https://tokenhub-intl.tencentcloudmaas.com/v1/chat/completions` recorded in
+`docs/notes/2026-09-21-tokenhub-api-facts.md`; `tribunal/llm.py` is the only
+thing that sends it. One case's brief leaves the repository **once per advocate
+call and once per judge draft** — twice for the two advocates, then once for
+each draft the judge is asked for (`tribunal/pipeline.py`).
+
+What a brief carries to the provider, on a case that has the evidence:
+
+- the **trip record**, and the **driver's and the rider's device GPS traces** —
+  both sides' traces, each reduced to derived facts (`driver_track`, and the
+  rider's own trace) rather than the raw point arrays (`tribunal/brief.py`);
+- the **chat**, with registration marks, telephone numbers and e-mail addresses
+  masked before anything is serialised (`POL-GEN-08(4)`, `_mask_personal_data`);
+- **both parties' profile counters** — the rider's and the driver's
+  `RIDER_PROFILE` and `DRIVER_PROFILE` payloads (`tribunal/brief.py`);
+- the **parties' names, which are not masked** — the gap named above: the mask
+  covers plates, telephone numbers and e-mail addresses and not names, and the
+  one case set that carries names is the synthetic `pii-v1`.
+
+**What the repository commits.** The briefs and the transcripts of the synthetic
+cases are committed under `runs/` (`runs/README.md`): a transcript records what
+each agent was told — the brief — and what it answered. They are committed
+because the data is synthetic; over real party data they would not be.
+
+**What a deployment would still need.** A deployment on real party data would
+have to decide a **retention rule** for what it sends and for what it keeps (the
+*Retention* section below), and it would need a **data-processing agreement with
+the provider** — the terms on which the provider may hold and use a brief it has
+been sent. This repository has neither, and this page makes **no claim about the
+provider's own retention**: nothing here was read from the provider's terms.
+
 ## Who can read what
 
 **The transcripts are committed.** `tribunal/transcript.py` records every call —

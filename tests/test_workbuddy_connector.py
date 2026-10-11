@@ -1,13 +1,18 @@
 """The WorkBuddy connector: a subprocess, its three tools, and its refusals.
 
-The connector is an MCP server started over standard input and output, so this
-module talks to it the way WorkBuddy does: it starts
+The connector is an MCP server started over standard input and output, so most
+of this module talks to it the way WorkBuddy does: it starts
 ``integrations/workbuddy/tribunal_mcp_server.py`` as a subprocess, writes one
-JSON object per line, and reads the answers back off standard output. Nothing
-is imported from the server, because the boundary being tested is the protocol
-boundary and not a function call.
+JSON object per line, and reads the answers back off standard output. The
+boundary being tested there is the protocol boundary and not a function call.
 
-Four things are asserted, and each is asserted on the answer rather than on the
+The one exception is the pair of tests that pin the timeout and the error text
+of the ``ops`` subprocess the connector runs. Those are properties of one
+function, and a function is tested by calling it: ``load_server`` below loads
+the module in-process so ``subprocess.run`` can be patched and the keyword it is
+handed read directly.
+
+Five things are asserted, and each is asserted on the answer rather than on the
 code that produced it:
 
 * the protocol -- ``initialize`` names the server and the ``tools`` capability,
@@ -18,6 +23,9 @@ code that produced it:
   human-review lane;
 * the refusals -- an unknown tool, an unknown method, a set that is not offered
   and a sealed set's case are each refused rather than answered;
+* the ``ops`` subprocess -- it is handed the connector's own timeout, a timeout
+  becomes a tool error, and no error text carries the project root's absolute
+  path;
 * the imports -- the server's own import statements name no network module, and
   nothing outside the standard library and this repository's own packages.
 
@@ -30,6 +38,7 @@ socket is opened by either side.
 from __future__ import annotations
 
 import ast
+import importlib.util
 import json
 import re
 import subprocess
@@ -37,6 +46,7 @@ import sys
 import unittest
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Sequence, Set, Tuple
+from unittest import mock
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -173,6 +183,31 @@ def exchange(
     )
     lines = [line for line in completed.stdout.splitlines() if line.strip()]
     return lines, completed.stderr, completed.returncode
+
+
+def load_server() -> Any:
+    """The server module, loaded in-process for the tests that patch its calls.
+
+    The protocol tests talk to the server as a subprocess, which is the boundary
+    they are about. The timeout and the error text are properties of one
+    function, and a function is tested by calling it: this loads the module so
+    ``subprocess.run`` can be patched in-process and the keyword it is handed
+    read directly. The module is loaded afresh on each call, so one test's patch
+    cannot reach another's.
+    """
+    spec = importlib.util.spec_from_file_location(
+        "tribunal_mcp_server_under_test", SERVER
+    )
+    module = importlib.util.module_from_spec(spec)
+    # The module is registered before it is executed: ``@dataclass`` resolves a
+    # class's own module through ``sys.modules``, and the server has one.
+    sys.modules[spec.name] = module
+    try:
+        spec.loader.exec_module(module)
+    except BaseException:
+        sys.modules.pop(spec.name, None)
+        raise
+    return module
 
 
 def imported_top_level_names(source: str) -> Set[str]:
@@ -367,6 +402,110 @@ class TheConnectorTests(unittest.TestCase):
         """A control: the scan is capable of finding a network import."""
         found = imported_top_level_names("import socket\nfrom urllib import request\n")
         self.assertEqual({"socket", "urllib"}, found & NETWORK_MODULES)
+
+
+class TheOperationsCommandTests(unittest.TestCase):
+    """The ``ops`` subprocess the connector runs: its timeout and its errors.
+
+    ``tribunal_queue`` and ``tribunal_packet`` each run one ``ops`` command as a
+    subprocess. That call is the thing these tests hold: it is handed the
+    connector's own timeout, a timeout becomes a tool error rather than a hang,
+    and every error the connector returns is repository-relative -- it never
+    carries the machine's absolute path.
+
+    ``subprocess.run`` is patched in-process, so no ``ops`` command is started
+    and nothing is read or written by any of this.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.server = load_server()
+
+    def completed(self, returncode=0, stdout="", stderr=""):
+        return subprocess.CompletedProcess(
+            args=[], returncode=returncode, stdout=stdout, stderr=stderr
+        )
+
+    def test_the_ops_command_is_given_a_timeout(self):
+        """``subprocess.run`` is handed the connector's own timeout."""
+        seen: Dict[str, Any] = {}
+
+        def fake_run(*args, **kwargs):
+            seen.update(kwargs)
+            return self.completed()
+
+        with mock.patch.object(self.server.subprocess, "run", fake_run):
+            self.server.run_command("ops.queue", ("-m", "ops.queue"))
+
+        self.assertEqual(
+            self.server.COMMAND_TIMEOUT_SECONDS,
+            seen.get("timeout"),
+            "run_command does not pass the connector's timeout to subprocess.run",
+        )
+        self.assertEqual(60, self.server.COMMAND_TIMEOUT_SECONDS)
+
+    def test_a_timeout_becomes_a_tool_error(self):
+        def fake_run(*args, **kwargs):
+            raise subprocess.TimeoutExpired(cmd=args[0], timeout=kwargs.get("timeout", 0))
+
+        with mock.patch.object(self.server.subprocess, "run", fake_run):
+            with self.assertRaises(self.server.ToolRefusal) as caught:
+                self.server.run_command("ops.queue", ("-m", "ops.queue"))
+
+        self.assertIn("the ops command did not finish in 60 s", str(caught.exception))
+
+    def test_a_timed_out_tool_call_answers_with_an_error_result(self):
+        def fake_run(*args, **kwargs):
+            raise subprocess.TimeoutExpired(cmd=args[0], timeout=kwargs.get("timeout", 0))
+
+        with mock.patch.object(self.server.subprocess, "run", fake_run):
+            response = self.server.call_tool(
+                {"name": "tribunal_queue", "arguments": {"set": "corpus"}}
+            )
+
+        self.assertTrue(response["isError"])
+        self.assertIn("did not finish in 60 s", response["content"][0]["text"])
+
+    def test_no_error_text_carries_the_project_root(self):
+        """Every error these tests provoke is repository-relative."""
+        root = str(self.server.PROJECT_ROOT)
+        leaked = root + "/runs/corpus/nope/case.json"
+
+        def timeout(*args, **kwargs):
+            raise subprocess.TimeoutExpired(cmd=args[0], timeout=kwargs.get("timeout", 0))
+
+        def failing(*args, **kwargs):
+            return self.completed(returncode=2, stdout="", stderr="cannot read " + leaked)
+
+        calls = (
+            (timeout, {"name": "tribunal_queue", "arguments": {"set": "corpus"}}),
+            (failing, {"name": "tribunal_queue", "arguments": {"set": "corpus"}}),
+            (
+                failing,
+                {"name": "tribunal_packet", "arguments": {"set": "corpus", "case": 213}},
+            ),
+        )
+        for fake, request in calls:
+            with self.subTest(tool=request["name"]):
+                with mock.patch.object(self.server.subprocess, "run", fake):
+                    response = self.server.call_tool(request)
+                text = response["content"][0]["text"]
+                self.assertTrue(response["isError"], text)
+                self.assertNotIn(
+                    root,
+                    text,
+                    "an error text carries the project root's absolute path",
+                )
+                self.assertNotIn("/Users/", text, text)
+
+    def test_the_relative_path_rewrite_can_fail(self):
+        """The control: the rewrite is capable of finding the root to remove."""
+        root = str(self.server.PROJECT_ROOT)
+        message = "cannot read " + root + "/runs/nope.json"
+        self.assertIn(root, message)
+        rewritten = self.server._repository_relative(message)
+        self.assertNotIn(root, rewritten)
+        self.assertIn("./runs/nope.json", rewritten)
 
 
 if __name__ == "__main__":

@@ -103,6 +103,17 @@ Four screenshots of a real WorkBuddy session on 2026-10-11 are committed under
 
 Every answer shown there matches the server's own output for the same calls.
 
+## The commands it runs, and the errors it returns
+
+Two tools run an `ops` command as a subprocess -- `ops.queue` for
+`tribunal_queue`, `ops.escalation` for `tribunal_packet`. Each is given **60
+seconds**; a command that has not finished by then is refused with a tool error
+-- "the ops command did not finish in 60 s" -- rather than left to hang.
+
+Every error the connector returns is **repository-relative**. A message that
+would name a path under the checkout names the repository's own layout instead,
+so no error ever carries the machine's absolute path.
+
 ## What it will not do
 
 - **It never reads a sealed set.** `wild`, `wild-v2`, `sealed-v1` and `sealed-v2`

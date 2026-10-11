@@ -1149,8 +1149,12 @@ against a history that is not there. On Linux the tests that rebuild case 111's
 brief skip for a second reason: glibc and macOS libm disagree in the last place
 of its `driver_track.mean_distance_m`, so the brief digest its run recorded on
 macOS cannot be rebuilt there, and those tests say which case and which place.
-On macOS with `.git` nothing skips except the four tests that skip everywhere,
-and the run ends `Ran 3027 tests ... OK (skipped=4)`.
+On macOS with `.git` the full suite passes (`OK`); a test skips only where the
+thing it needs is absent, and it names that reason — the two live-API tests,
+without a `.env` or a `TOKENHUB_API_KEY`; a test whose set or committed run is
+not present; a test that compares a note's cached counts, when the note states
+none; and a test that would refuse a run whose briefs have moved on, while the
+committed run is still current.
 
 Build the product view, which writes the queue and one page per case under
 `ui/dist/`:
