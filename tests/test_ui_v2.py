@@ -135,11 +135,21 @@ TRANSCRIPT_RE = re.compile(r"^case-(\d{5})\.transcript\.json$")
 TRIGGERS = ("GEN08_SCOPE", "NO_VALID_DRAFTS", "NO_MAJORITY", "JUDGE_ESCALATE")
 
 # The links off the site, each as the page writes it and the file it must
-# resolve to. They are repository-relative paths, which the site root reaches
-# the same way it reaches a case page.
+# resolve to. One is left: the queue's results line points at the README beside
+# the code, a repository-relative path the site root reaches the same way it
+# reaches a case page. The architecture link was the second until part 44c, when
+# the diagram started travelling with the site; it is a file inside ``ui/dist/``
+# now, and it is checked below as one.
 REPOSITORY_LINKS: Mapping[str, Path] = {
     v2.README_RESULTS_LINK: PROJECT_ROOT / "README.md",
-    v2.README_ARCHITECTURE_LINK: PROJECT_ROOT / "docs" / "architecture.md",
+}
+
+# The files this site carries that are not pages: the architecture diagram the
+# builder copies into ``ui/dist/`` byte for byte, and the repository file the
+# committed copy must equal. A link to one of these stays inside the site, which
+# is the point of copying it in.
+SITE_ASSETS: Mapping[str, Path] = {
+    v2.ARCHITECTURE_LINK: v2.ARCHITECTURE_SOURCE,
 }
 
 
@@ -396,12 +406,15 @@ def committed_pages() -> Dict[str, str]:
 
     The evaluation replay is a second site under ``replay/``, built by
     ``ui.build`` and committed under the same root, so the walk skips it: a
-    comparison that read it would hold this builder to another one's bytes.
+    comparison that read it would hold this builder to another one's bytes. The
+    architecture diagram is skipped too: it is copied in rather than built, and
+    the check that it equals the repository's own file is its own test.
     """
     return {
         path.relative_to(v2.DIST_DIR).as_posix(): path.read_text(encoding="utf-8")
         for path in sorted(v2.DIST_DIR.rglob("*"))
         if path.is_file()
+        and path != v2.ARCHITECTURE_ASSET
         and REPLAY_DIR not in path.relative_to(v2.DIST_DIR).parts
     }
 
@@ -568,16 +581,18 @@ class SelfContainedTests(unittest.TestCase):
                     self.assertNotIn(tag, text, "{0} embeds {1}".format(name, tag))
 
     def test_every_link_stays_inside_the_site(self):
-        """A link is a page here, the replay, a repository file, or a fragment.
+        """A link is a page here, the replay, a copied asset, a repository file,
+        or a fragment.
 
         Every page carries a link to the evaluation replay beside it. That link
         is checked against the file on disk, because the replay is a second site
-        this builder does not write. The links row and the queue's results line
-        point at files in this repository, one directory above the site's root,
-        and each is checked against the file it must resolve to. Every other
-        link is one of the pages this site commits, or a fragment, which is
-        checked against the page that carries it, so a link to an anchor that is
-        not there is still a failure.
+        this builder does not write. The queue's results line points at the
+        README, one directory above the site's root, and is checked against the
+        file it must resolve to. The architecture link is the diagram the builder
+        copies into the site, and it is checked against the file it must equal.
+        Every other link is one of the pages this site commits, or a fragment,
+        which is checked against the page that carries it, so a link to an anchor
+        that is not there is still a failure.
         """
         names = set(built_pages())
         for name, text in sorted(built_pages().items()):
@@ -599,11 +614,20 @@ class SelfContainedTests(unittest.TestCase):
                             "the replay page {0} is not committed".format(url),
                         )
                         continue
+                    if url in SITE_ASSETS:
+                        # A file the builder copies into the site: it is inside
+                        # ``ui/dist/`` and must be the repository file's own bytes.
+                        target = (v2.DIST_DIR / url).resolve()
+                        self.assertTrue(
+                            target.is_file(),
+                            "the site asset {0} is not committed".format(url),
+                        )
+                        self.assertEqual(SITE_ASSETS[url].read_bytes(), target.read_bytes())
+                        continue
                     if url in REPOSITORY_LINKS:
-                        # The links out of the site: the queue says its figures
-                        # are development data and points at the README, and the
-                        # links row points at the architecture. Both are
-                        # repository-relative paths resolved from the site root.
+                        # The one link out of the site: the queue says its figures
+                        # are development data and points at the README. It is a
+                        # repository-relative path resolved from the site root.
                         target = (v2.DIST_DIR / url.split("#", 1)[0]).resolve()
                         self.assertTrue(
                             target.is_file(),
@@ -695,6 +719,64 @@ class SelfContainedTests(unittest.TestCase):
         for marker in markers:
             with self.subTest(marker=marker):
                 self.assertIn(marker, planted)
+
+
+# --------------------------------------------------------------------------
+# The one file the site carries that is not a page
+# --------------------------------------------------------------------------
+class SiteAssetTests(unittest.TestCase):
+    """The architecture diagram travels with the site, and no link leaves it.
+
+    The queue's architecture link used to be ``../../docs/architecture.md``:
+    inside a checkout it resolved, and on a site served from ``ui/dist/`` alone
+    it was a 404. The builder now copies ``docs/architecture.svg`` in byte for
+    byte and the link is a file beside the pages. These two tests hold that: the
+    committed copy is the repository's own bytes, and every relative href a
+    built page carries resolves to a file inside ``ui/dist/``. The one
+    repository link beside it is named rather than skipped silently.
+    """
+
+    def test_the_architecture_diagram_is_committed_byte_for_byte(self):
+        """A copy that could drift from its source is the bug it replaced."""
+        self.assertTrue(
+            v2.ARCHITECTURE_ASSET.is_file(),
+            "ui/dist/architecture.svg is not committed; run `python3 -m ui.v2.build`",
+        )
+        self.assertEqual(
+            v2.ARCHITECTURE_SOURCE.read_bytes(),
+            v2.ARCHITECTURE_ASSET.read_bytes(),
+            "ui/dist/architecture.svg is not the repository's own diagram",
+        )
+
+    def test_every_relative_link_resolves_inside_the_site(self):
+        """A relative href is a file in ``ui/dist/``, not a path out of the site.
+
+        Every anchor a built page carries that is not a fragment, not an external
+        URL and not one of the repository links this module names must resolve to
+        a file inside the published root. The architecture link is the case this
+        test was written for; the README link beside it is the one deliberate
+        exception, and it is named in ``REPOSITORY_LINKS`` rather than skipped
+        silently.
+        """
+        published = v2.DIST_DIR.resolve()
+        for name, text in sorted(built_pages().items()):
+            scan = _ResourceScan()
+            scan.feed(text)
+            for _tag, url in scan.anchors:
+                with self.subTest(page=name, url=url):
+                    if not url or url.startswith("#") or is_external_reference(url):
+                        continue
+                    if url in REPOSITORY_LINKS:
+                        continue
+                    target = (v2.DIST_DIR / url.split("#", 1)[0]).resolve()
+                    self.assertTrue(
+                        target.is_file(),
+                        "{0} links to {1}, which is not a file".format(name, url),
+                    )
+                    self.assertTrue(
+                        published == target or published in target.parents,
+                        "{0} links to {1}, which is outside ui/dist".format(name, url),
+                    )
 
 
 # --------------------------------------------------------------------------
@@ -1364,10 +1446,16 @@ FEATURED_CASES: Tuple[Tuple[int, str], ...] = (
 
 
 def card_html(text: str, case_no: int) -> str:
-    """The featured card for one case, cut out of the queue page."""
-    link = 'href="case-{0:05d}.html"'.format(case_no)
-    end_of_link = text.index(link)
-    start = text.rindex('<a class="fcard"', 0, end_of_link)
+    """The featured card for one case, cut out of the queue page.
+
+    The card is found by its own opening tag. Part 44b added the links row's
+    "How it was decided: see case 208" above the cards, and that link carries
+    the same ``href="case-00208.html"`` as the card, so searching back from the
+    href found the links row's anchor and no card opening tag at all.
+    """
+    start = text.index(
+        '<a class="fcard" href="case-{0:05d}.html"'.format(case_no)
+    )
     return text[start : text.index("</a>", start)]
 
 
@@ -1504,7 +1592,7 @@ class LandingPageTests(unittest.TestCase):
         text = index_text()
         self.assertIn(
             '<a href="{0}">Architecture</a>'.format(
-                v2._attribute(v2.README_ARCHITECTURE_LINK)
+                v2._attribute(v2.ARCHITECTURE_LINK)
             ),
             text,
         )

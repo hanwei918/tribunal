@@ -30,7 +30,9 @@ Per case it reads the run's own case file and transcript, the public case file
 the run was made from (through the set's own loader), the loaded policy, and --
 for a case that was sent to a reviewer -- the escalation packet
 :mod:`ops.escalation` builds, which is called rather than re-implemented. The
-only other file read is ``ops/config.json``, for the queue's targets.
+only other files read are ``ops/config.json``, for the queue's targets, and
+``docs/architecture.svg``, which is copied into the site byte for byte so the
+architecture link off the queue stays inside ``ui/dist/``.
 
 **No answer key is opened anywhere in this module**, and nothing under
 ``eval/answers/sealed-v1/``, ``data/external/sealed-v1/`` or
@@ -186,6 +188,12 @@ INDEX_PATH = DIST_DIR / "index.html"
 # pipeline these pages show -- and the nav link names it as that.
 REPLAY_INDEX = "replay/index.html"
 REPLAY_LABEL = "Benchmark replay (policy v1)"
+
+# The architecture diagram, copied into the site so the queue's link to it stays
+# inside the published root. The source is the repository's own diagram; the
+# asset is the byte-for-byte copy this builder writes beside the pages.
+ARCHITECTURE_SOURCE = PROJECT_ROOT / "docs" / "architecture.svg"
+ARCHITECTURE_ASSET = DIST_DIR / "architecture.svg"
 
 # The four runs the queue is drawn from, in the order the set selector lists
 # them. The name is the run's name in ``eval.v6_runs``; the label is what a
@@ -492,11 +500,13 @@ CALL_LOG_CHANNEL = "VOICE_CALL_LOG"
 README_RESULTS_LINK = "../../README.md#results"
 README_RESULTS_WORDS = "How the figures were measured"
 
-# The README's architecture section, linked from the queue's links row. The
-# repository is not public yet, so this is the repository-relative path rather
-# than a GitHub URL; it resolves from the site root exactly as the results link
-# does, which is what ``tests/test_ui_v2.py`` holds it to.
-README_ARCHITECTURE_LINK = "../../docs/architecture.md"
+# The architecture diagram, linked from the queue's links row. It is a file
+# beside the pages rather than a path out of the site: the link used to be
+# ``../../docs/architecture.md``, which resolves in a checkout -- the
+# repository's own file is two directories above the site -- and 404s wherever
+# ``ui/dist/`` is served on its own. The builder copies the diagram in, and
+# ``tests/test_ui_v2.py`` holds every relative link to a file inside ``ui/dist/``.
+ARCHITECTURE_LINK = "architecture.svg"
 
 # The case the links row sends a reader to for the debate itself: the no-show
 # case the description names, whose "How it was decided" tab shows the two
@@ -1585,7 +1595,7 @@ p{margin:.5em 0}
 @media (max-width:700px){.wrap{padding:18px 16px 40px}}
 .lede{color:var(--muted);margin:.3em 0 1.1em;max-width:78ch}
 .ids{color:var(--muted);font-size:.86rem;font-variant-numeric:tabular-nums;margin:0}
-.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.85rem;word-break:break-word}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.85rem;overflow-wrap:anywhere;word-break:break-word}
 .num{font-variant-numeric:tabular-nums}
 
 /* chips */
@@ -1693,6 +1703,10 @@ td a{font-weight:600;text-decoration:none}
 .stepper button.on{background:var(--soft)}
 .stepper button.on::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--accent)}
 @media (max-width:900px){.stepper{grid-template-columns:repeat(3,minmax(0,1fr))}.stepper button{border-top:1px solid var(--line)}}
+/* On a phone, three to a row is narrower than the longest step title, so the
+   words broke mid-word ("Evidence" -> "Evidence" / "ce"). Two to a row, and the
+   button no longer breaks a word at all: it wraps at the spaces or not at all. */
+@media (max-width:640px){.stepper{grid-template-columns:repeat(2,minmax(0,1fr))}.stepper button{overflow-wrap:normal;word-break:normal}}
 .who{display:flex;flex-wrap:wrap;gap:16px;font-size:.8rem;color:var(--muted);margin:0 0 16px 4px}
 .who i{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:0;margin-right:5px}
 .detail{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 22px}
@@ -2528,10 +2542,10 @@ def _how_it_works() -> str:
 def _links_row() -> str:
     """The two links out of the queue's own words: the architecture and a case.
 
-    The architecture link is the repository-relative path, because the
-    repository is not public yet and the site resolves it from its own root
-    exactly as it resolves the results link. The second link sends a reader to
-    the case whose "How it was decided" tab is the debate itself.
+    The architecture link is a file this builder copies in beside the pages, so
+    it resolves wherever ``ui/dist/`` is served and not only in a checkout. The
+    second link sends a reader to the case whose "How it was decided" tab is the
+    debate itself.
     """
     return (
         '<p class="links">'
@@ -2539,7 +2553,7 @@ def _links_row() -> str:
         '<a href="{1}">How it was decided: see case {2}</a>'
         "</p>\n"
     ).format(
-        _attribute(README_ARCHITECTURE_LINK),
+        _attribute(ARCHITECTURE_LINK),
         _attribute("case-{0:05d}.html".format(HOW_IT_WAS_DECIDED_CASE)),
         _text(HOW_IT_WAS_DECIDED_CASE),
     )
@@ -4857,6 +4871,45 @@ def _write_or_check(destination: Path, text: str, check: bool) -> int:
     return 0
 
 
+def _write_or_check_bytes(destination: Path, data: bytes, check: bool) -> int:
+    """One copied file, written byte for byte, or compared with the committed one.
+
+    The pages are text and go through :func:`_write_or_check`; a file this
+    builder copies rather than renders is compared and written as bytes, so a
+    re-encoding cannot slip between the source and the site.
+    """
+    if check:
+        if not destination.is_file():
+            print("{0} does not exist; run the build".format(destination))
+            return 1
+        if destination.read_bytes() != data:
+            print(
+                "{0} differs from a fresh build ({1} bytes on disk, {2} rebuilt)".format(
+                    destination,
+                    destination.stat().st_size,
+                    len(data),
+                )
+            )
+            return 1
+        print("{0} is identical to a fresh build".format(destination))
+        return 0
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_bytes(data)
+    print("wrote {0}: {1} bytes".format(destination, len(data)))
+    return 0
+
+
+def assets() -> List[Tuple[Path, bytes]]:
+    """The files this site carries that are not pages, as ``(destination, bytes)``.
+
+    One: the architecture diagram, copied out of ``docs/`` byte for byte, so the
+    link off the queue's links row is a file inside the published root instead of
+    a path out of it. Like :func:`pages` it is a list a check and a writing build
+    both walk, so the two cannot disagree about which files there are.
+    """
+    return [(ARCHITECTURE_ASSET, ARCHITECTURE_SOURCE.read_bytes())]
+
+
 def pages() -> List[Tuple[Path, str]]:
     """Every page this site commits, as ``(destination, text)``.
 
@@ -4882,6 +4935,8 @@ def build(check: bool = False) -> int:
                 "credential".format(destination, defused)
             )
         status |= _write_or_check(destination, text, check)
+    for destination, data in assets():
+        status |= _write_or_check_bytes(destination, data, check)
     return 0 if status == 0 else 1
 
 

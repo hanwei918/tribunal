@@ -47,7 +47,7 @@ p{margin:.5em 0}
 @media (max-width:700px){.wrap{padding:18px 16px 40px}}
 .lede{color:var(--muted);margin:.3em 0 1.1em;max-width:78ch}
 .ids{color:var(--muted);font-size:.86rem;font-variant-numeric:tabular-nums;margin:0}
-.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.85rem;word-break:break-word}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.85rem;overflow-wrap:anywhere;word-break:break-word}
 .num{font-variant-numeric:tabular-nums}
 
 /* chips */
@@ -155,6 +155,10 @@ td a{font-weight:600;text-decoration:none}
 .stepper button.on{background:var(--soft)}
 .stepper button.on::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--accent)}
 @media (max-width:900px){.stepper{grid-template-columns:repeat(3,minmax(0,1fr))}.stepper button{border-top:1px solid var(--line)}}
+/* On a phone, three to a row is narrower than the longest step title, so the
+   words broke mid-word ("Evidence" -> "Evidence" / "ce"). Two to a row, and the
+   button no longer breaks a word at all: it wraps at the spaces or not at all. */
+@media (max-width:640px){.stepper{grid-template-columns:repeat(2,minmax(0,1fr))}.stepper button{overflow-wrap:normal;word-break:normal}}
 .who{display:flex;flex-wrap:wrap;gap:16px;font-size:.8rem;color:var(--muted);margin:0 0 16px 4px}
 .who i{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:0;margin-right:5px}
 .detail{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 22px}
