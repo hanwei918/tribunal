@@ -16,6 +16,9 @@ a number typed in here:
   equal the case file's;
 * the queue's figures equal what the run files give, and its three routing
   counts equal ``eval.business_value``'s;
+* every case page carries the dispute, and a no-show case carries the record's
+  own derived facts;
+* the notice to the parties is on every page and names no profile field;
 * the four featured cards show the run's own facts, and no key-figure tile shows
   a fact the case's derived block does not carry;
 * the trace SVG draws the fixes and never draws the optimal route;
@@ -1248,9 +1251,9 @@ class FrontDoorTests(unittest.TestCase):
         Some explanations open with a one-line salutation -- 104's is "To the
         rider and the driver: this is a provisional automated ruling." -- so the
         summary takes paragraphs until it is at least the sheet's 120 characters.
-        Every paragraph it shows is the explanation's own, verbatim. On a case
-        that went to a reviewer the label says whose reasoning the text is: the
-        panel's drafts', where a panel ran, and the pipeline's own routing
+        Every paragraph it shows is the explanation's own, verbatim. The label
+        says whose reasoning the text is: the judge's, on a decided case; the
+        panel's drafts', where a panel ran; and the pipeline's own routing
         sentence, where the scope gate stopped before any judge was asked.
         """
         for case in loaded_cases():
@@ -1261,7 +1264,7 @@ class FrontDoorTests(unittest.TestCase):
             chosen = v2._summary_paragraphs(explanation)
             whole = len(" ".join(explanation.split()))
             if case.trigger is None:
-                label = "From the judge's explanation"
+                label = v2.JUDGE_TEXT_LABEL
             elif v2._drafts(case.transcript):
                 label = v2.DRAFTS_TEXT_LABEL
             else:
@@ -1361,6 +1364,141 @@ class FeaturedCardTests(unittest.TestCase):
         card = card_html(index_text(), 2735)
         self.assertIn(TRIGGER_WORDS["GEN08_SCOPE"].format(votes=votes), card)
         self.assertIn("0 - the scope gate asked no model", card)
+
+
+# --------------------------------------------------------------------------
+# The dispute, the record, and the notice to the parties
+# --------------------------------------------------------------------------
+NOTICE_RE = re.compile(r'<div class="notice" id="notice">.*?</div>', re.S)
+
+
+class DisputeTests(unittest.TestCase):
+    """Every case page tells the dispute, out of the brief the agents were handed."""
+
+    def test_every_case_page_carries_the_claim(self):
+        for case in loaded_cases():
+            page = built_pages()[case.link]
+            dispute = v2._brief_dispute(case)
+            with self.subTest(case=case.case_no):
+                self.assertIn('id="the-dispute"', page)
+                self.assertIn("The dispute", page)
+                self.assertIn(v2._text(dispute.get("claim_text")), page)
+
+    def test_case_208_carries_the_whole_claim_the_statement_and_the_call(self):
+        """The case the description sends a judge to."""
+        case = loaded_case(208)
+        page = built_pages()[case.link]
+        self.assertIn("guardhouse almost 15 minutes", page)
+        statement = v2._brief_dispute(case).get("counterparty_statement") or {}
+        self.assertIn(v2._text(statement.get("text")), page)
+        calls = [
+            message
+            for message in v2._chat_messages(case)
+            if str(message.get("channel")) == v2.CALL_LOG_CHANNEL
+        ]
+        self.assertTrue(calls, "208 carries no call-log entry to check")
+        for message in calls:
+            self.assertIn(v2._text(message.get("text")), page)
+        self.assertIn("Call log:", page)
+
+    def test_the_chat_is_masked_as_the_brief_masks_it(self):
+        """The page carries the text the agents were handed, not the raw file's.
+
+        208's chat message names the driver's plate. POL-GEN-08(4) replaces it
+        in front of the model, and the page shows the replaced text: a page that
+        carried the plate would be publishing the identifier the mask exists to
+        keep off it.
+        """
+        case = loaded_case(208)
+        page = built_pages()[case.link]
+        self.assertIn("SJK8842P", json.dumps(public_case("corpus", 208)))
+        self.assertNotIn("SJK8842P", page)
+        self.assertIn("[vehicle registration masked]", page)
+
+    def test_a_no_show_page_carries_the_records_own_facts(self):
+        """The table is the brief's derived facts, and only a no-show carries it."""
+        no_shows = [
+            case for case in loaded_cases() if case.category == "NO_SHOW_CHARGE"
+        ]
+        self.assertTrue(no_shows, "no no-show case to check")
+        for case in no_shows:
+            page = built_pages()[case.link]
+            rows = v2._record_rows(case)
+            with self.subTest(case=case.case_no):
+                self.assertTrue(rows)
+                self.assertIn("What the record shows", page)
+                self.assertIn("computed from the record, before any model", page)
+                for fact, value in rows:
+                    self.assertIn(v2._text(fact), page)
+                    self.assertIn(v2._text(value), page)
+        for case in loaded_cases():
+            if case.category == "NO_SHOW_CHARGE":
+                continue
+            with self.subTest(case=case.case_no):
+                self.assertNotIn("What the record shows", built_pages()[case.link])
+
+
+class TheNoticeTests(unittest.TestCase):
+    """The notice to the two parties: on every page, and naming no profile field."""
+
+    def notice_of(self, name: str) -> str:
+        match = NOTICE_RE.search(built_pages()[name])
+        self.assertIsNotNone(match, "{0} carries no notice".format(name))
+        assert match is not None
+        return match.group(0)
+
+    def test_every_case_page_carries_the_notice(self):
+        for case in loaded_cases():
+            notice = self.notice_of(case.link)
+            with self.subTest(case=case.case_no):
+                self.assertIn(v2.NOTICE_TITLE, notice)
+                for line in (
+                    "<b>Outcome.</b>",
+                    "<b>The money.</b>",
+                    "<b>Clauses named in the ruling.</b>",
+                    "<b>Evidence cited.</b>",
+                    "<b>Who decided.</b>",
+                    "<b>Appeal.</b>",
+                ):
+                    self.assertIn(line, notice)
+
+    def test_the_notice_names_no_profile_field_of_either_party(self):
+        for case in loaded_cases():
+            notice = self.notice_of(case.link)
+            with self.subTest(case=case.case_no):
+                self.assertNotIn("rider_profile.", notice)
+                self.assertNotIn("driver_profile.", notice)
+
+    def test_the_notice_states_the_policy_and_the_record_it_rests_on(self):
+        for case in loaded_cases():
+            notice = self.notice_of(case.link)
+            with self.subTest(case=case.case_no):
+                self.assertIn("POL-GEN-04", notice)
+                for clause_id in v2._cited_clause_ids(case):
+                    self.assertIn(case.policy.title(clause_id), notice)
+                for kind in v2._cited_evidence_kinds(case):
+                    self.assertIn(v2.EVIDENCE_KIND_WORDS[kind], notice)
+
+    def test_an_escalated_notice_says_a_person_decides_and_the_money_is_held(self):
+        """The page's own disclosure, and not the record's quoted words.
+
+        Two escalated cases' own drafts write "this is a provisional ruling" in
+        their explanations, and those are shown verbatim: rewriting them would
+        be editing the record. What must not appear is the **page's** disclosure,
+        which described a ruling that was never made.
+        """
+        escalated = [case for case in loaded_cases() if case.trigger is not None]
+        self.assertEqual(26, len(escalated))
+        for case in escalated:
+            page = built_pages()[case.link]
+            with self.subTest(case=case.case_no):
+                self.assertIn(v2.NO_AUTOMATED_RULING, self.notice_of(case.link))
+                self.assertNotIn(v2.DISCLOSURE, page)
+        for case in loaded_cases():
+            if case.trigger is not None:
+                continue
+            with self.subTest(case=case.case_no):
+                self.assertIn(v2.DISCLOSURE, built_pages()[case.link])
 
 
 # --------------------------------------------------------------------------

@@ -272,3 +272,51 @@ which column the rows are ordered by and which way.
 **Two builders, one rebuild each.** `python3 -m ui.v2.build` wrote all 152 pages
 and `python3 -m ui.build` all six replay pages; no test was run here, and no
 model was called.
+
+## Part 37b: case pages tell the dispute (2026-10-11)
+
+The description sends a judge to case 208 — "the rider's three claims answered
+by GPS, her own phone's trace and a connected call" — and the page showed only
+the first sentence of the claim, and neither the driver's statement nor the chat.
+
+**The dispute.** Every case page carries "The dispute" under its heading: the
+filer's full `claim_text`, the other party's `counterparty_statement` and the
+chat messages, all read from the **brief** rather than from the public case file,
+so `POL-GEN-08(4)`'s masking is the masking a reader sees. 208's chat carries
+`[vehicle registration masked]` where the plate was, and the plate appears
+nowhere on the page; a call-log entry — a chat message on the call channel — is
+shown as its own line. A case with no statement from the other party says so.
+
+**What the record shows.** A no-show case carries a short table of the facts the
+brief's derived blocks already compute — the time inside the arrival radius
+against the free waiting period in force, the closest approach against the
+arrival radius, where the rider's device was, and the call-log entries — labelled
+"computed from the record, before any model". No fact the brief does not carry is
+shown, and a case of the other category carries no such table.
+
+**The map.** The legend names the rider's track and the arrival radius, each
+entry written only where the drawing carries it. The extent the fixes are
+projected into already holds both tracks, the two labelled places and the radius,
+so neither track is fitted out of the picture; and a rider's track that never
+moves — a single fix repeated, which draws nothing a reader can see — is marked
+as well as drawn, because where the device was is the fact `POL-NS-04` turns on.
+
+**The notice to the parties.** Above the judge's text on every page sits a short
+notice built from the ruling's fields and the loaded policy alone: the outcome,
+the money, the clauses the ruling names with their policy titles, the record
+kinds it cites, who made the decision, and how to appeal (`POL-GEN-04`). It names
+no field of either party's profile, and on an escalated case it says a person
+will decide and the money is held. The judge's text is retitled **"Reviewer view:
+the judge's full reasoning"**: it is long internal working written for a
+reviewer, and the notice is the part of the decision addressed to the two people
+it is about.
+
+**The tests.** `tests/test_ui_v2.py` carries 208's full claim, the driver's
+statement and the chat's call line; asserts that the chat is the brief's masked
+text and not the raw file's; walks the notice on every page for a profile field
+of either party and finds none; and asserts that no escalated page carries the
+page's own provisional-ruling disclosure. Two escalated cases — 107 and 2829 —
+still contain the words "provisional ruling", inside the drafts' own
+explanations, which are quoted verbatim: editing them would be editing the
+record, and the assertion is about what the page says rather than about what it
+quotes.

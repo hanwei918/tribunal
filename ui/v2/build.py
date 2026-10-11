@@ -46,8 +46,8 @@ that records them, and :func:`build` recomputes all of them from those files on
 every run. A number that cannot be read raises :class:`BuildError` and names
 what was missing rather than defaulting to something plausible.
 
-What the queue counts
----------------------
+What the queue counts, and what a case page tells
+--------------------------------------------------
 The queue's three routing counts are the three
 ``python3 -m eval.business_value --report`` prints: decided and executed,
 decided with the amount held for a person to release under POL-GEN-05, and sent
@@ -55,11 +55,19 @@ to a reviewer with no ruling at all. ``tests/test_ui_v2.py`` holds the page's
 three to that command's own reading of the same four runs, so the page cannot
 count a held case as an automatic one again.
 
-A case sent to a reviewer carries no ruling, so its disclosure says that no
-automatic ruling was made rather than describing a provisional one; the text it
-shows is labelled as the panel's drafts' reasoning where a panel ran, and as the
-pipeline's own routing sentence where the scope gate stopped before any judge was
-asked.
+Every case page carries, under its heading, **the dispute** as the brief carries
+it -- the claim, the other party's statement and the chat, with POL-GEN-08(4)'s
+mask already applied, so a reader sees the text the agents were handed. A
+no-show case carries **what the record shows**: the brief's own derived facts,
+laid out and labelled as computed from the record before any model read it. And
+above the judge's text sits the **notice to the rider and the driver**, built
+from the ruling's fields and the loaded policy alone -- the outcome, the money,
+the clauses the ruling names by their titles, the record kinds it cites, who
+made the decision and how to appeal -- and naming no field of either party's
+profile. The judge's own reasoning is long internal working written for a
+reviewer, so its label says whose view it is: the judge's on a decided case, the
+drafts' where a panel ran, and the pipeline's own routing sentence where the
+scope gate stopped before any judge was asked.
 
 Two builds are byte-identical
 -----------------------------
@@ -326,12 +334,42 @@ NO_AUTOMATED_RULING = (
     "decides this case."
 )
 
-# The label the text a case sent to a reviewer carries is shown under. The text
-# the panel carried is the drafts' reasoning, and a case the scope gate stopped
-# before any judge has no drafts at all: its text is the pipeline's own routing
-# sentence, and it is labelled as that rather than as a panel's reasoning.
+# The label the judge's own text is shown under. On a decided case the text is
+# the judge's reasoning, and it is long internal working -- it carries field
+# names and the other party's account counters -- so the page says whose view it
+# is. On a case that went to a reviewer the text the panel carried is the
+# drafts' reasoning, and a case the scope gate stopped before any judge has no
+# drafts at all: its text is the pipeline's own routing sentence, and it is
+# labelled as that rather than as a panel's reasoning.
+JUDGE_TEXT_LABEL = "Reviewer view: the judge's full reasoning"
 DRAFTS_TEXT_LABEL = "From the judges' drafts' reasoning"
 ROUTING_TEXT_LABEL = "Why no automatic ruling was made"
+
+# The notice every case page carries above the judge's text. It is built from
+# the ruling's own fields and the loaded policy and from nothing else: no
+# profile field of either party, no answer key, no sentence of this file's own
+# about what happened.
+NOTICE_TITLE = "Notice to the rider and the driver"
+
+# The record kinds the notice names, in the order it names them. A kind that is
+# not here is not named: the two profile artifacts are deliberately absent,
+# because a notice to the parties must not tell them their own profiles carried
+# the decision, and POL-GEN-01 forbids a profile establishing a fact about the
+# trip anyway.
+EVIDENCE_KIND_WORDS: Mapping[str, str] = {
+    "GPS_TRACE": "GPS trace",
+    "CHAT_LOG": "chat log",
+    "TRIP_RECORD": "trip record",
+    "FARE_BREAKDOWN": "fare breakdown",
+    "TRAFFIC_ADVISORY": "traffic advisory",
+}
+EVIDENCE_KIND_ORDER: Tuple[str, ...] = tuple(EVIDENCE_KIND_WORDS)
+PROFILE_EVIDENCE_KINDS: Tuple[str, ...] = ("RIDER_PROFILE", "DRIVER_PROFILE")
+
+# The one chat channel a call-log entry is recorded under. A message on it is
+# the record's own line about a call that was placed, answered or missed, and it
+# is shown as its own line rather than as a chat message.
+CALL_LOG_CHANNEL = "VOICE_CALL_LOG"
 
 # The README's results section, linked from the queue. The queue's own figures
 # are development data, and the README is where the submission's figures -- the
@@ -582,6 +620,7 @@ class PolicyFacts:
     confidence_floor: Decimal
     execution_threshold: Decimal
     clause_rules: Mapping[str, str]
+    clause_titles: Mapping[str, str]
 
     def rule(self, clause_id: str) -> str:
         try:
@@ -590,6 +629,10 @@ class PolicyFacts:
             raise BuildError(
                 "the loaded policy carries no clause {0}".format(clause_id)
             ) from exc
+
+    def title(self, clause_id: str) -> str:
+        """The clause's own title, or its id where the policy states none."""
+        return self.clause_titles.get(clause_id) or clause_id
 
 
 def _policy_facts(category: str, version: int) -> PolicyFacts:
@@ -610,9 +653,18 @@ def _policy_facts(category: str, version: int) -> PolicyFacts:
             "the general policy states no confidence floor or execution threshold"
         )
     rules: Dict[str, str] = {}
+    titles: Dict[str, str] = {}
     for clause in general.get("clauses") or []:
         if isinstance(clause, Mapping) and isinstance(clause.get("id"), str):
             rules[clause["id"]] = str(clause.get("rule") or "")
+            titles[clause["id"]] = str(clause.get("title") or "")
+    # The category policy's own clauses are titled the same way and are read
+    # here too, because the notice names the clause titles a ruling relied on
+    # and a ruling cites category clauses (POL-NS-*, POL-RD-*) as often as it
+    # cites general ones.
+    for clause in (policies.get("category") or {}).get("clauses") or []:
+        if isinstance(clause, Mapping) and isinstance(clause.get("id"), str):
+            titles[clause["id"]] = str(clause.get("title") or "")
     return PolicyFacts(
         category=category,
         version=version,
@@ -620,6 +672,7 @@ def _policy_facts(category: str, version: int) -> PolicyFacts:
         confidence_floor=floor,
         execution_threshold=threshold,
         clause_rules=rules,
+        clause_titles=titles,
     )
 
 
@@ -1469,7 +1522,7 @@ textarea,input[type="text"]{font:inherit;color:inherit}
 html,body{max-width:100%}
 body{overflow-wrap:break-word}
 .tscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
-.wrap,.two,.maincol,.rail,.side,.card,.verdict,.tiles,.pagehead{min-width:0}
+.wrap,.two,.maincol,.rail,.side,.card,.verdict,.tiles,.pagehead,.notice{min-width:0}
 .ids,.cap,.legend,.legend span,.kv span,.claim p,.tiles span{overflow-wrap:anywhere}
 svg{max-width:100%}
 pre{overflow-x:auto}
@@ -1488,6 +1541,15 @@ th[aria-sort="descending"] .sort::after{content:"\\2193"}
 /* every control keeps a focus ring a reader can see */
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
+/* the notice to the parties */
+.notice{background:var(--soft);border:1px solid var(--line);border-left:3px solid var(--accent);
+  border-radius:10px;padding:14px 16px;margin:14px 0}
+.notice h2{margin:0 0 8px;font-size:.95rem}
+.notice p{margin:.3em 0;font-size:.88rem}
+.notice b{color:var(--ink)}
+.legend i.dash{background:none;border-top:3px dashed #6b7280;height:0}
+.legend i.ring{width:10px;height:10px;border-radius:50%;background:none;
+  border:1px dashed #9ca3af}
 """
 
 _JS = """
@@ -2507,6 +2569,12 @@ MAP_HEIGHT = 250.0
 MAP_PAD = 12.0
 METRES_PER_DEGREE = 111320.0
 
+# How far a rider's fixes may spread and still be read as one place. A device
+# that never moves reports the same fix over and over, and a polyline through
+# one point is invisible; the radius is the size a mark has to be drawn at to be
+# seen, in the metres the projection works in.
+STATIONARY_TRACK_M = 25.0
+
 
 def _latlngs(points: Any) -> List[Tuple[float, float]]:
     """``[(lat, lng), ...]`` from a trace's point list, skipping anything else."""
@@ -2538,6 +2606,15 @@ def _trace_svg(case: CaseData) -> str:
     the arrival radius around the pickup point with the fixes inside it and the
     rider's own track where the record carries one. The optimal route is a
     distance and not a line, so no optimal line is drawn here.
+
+    **The frame holds both tracks.** The extent every point is projected into is
+    taken over the driven trace, the rider's track, the two labelled places and
+    the arrival radius, so neither track is fitted out of the picture, and the
+    radius the arrival is judged against is on the map rather than off its edge.
+    A rider's track that never moves is a point repeated -- a polyline through
+    it draws nothing a reader can see, and where the device was is the fact
+    ``POL-NS-04`` turns on -- so a track whose fixes lie within
+    :data:`STATIONARY_TRACK_M` of each other is marked as well as drawn.
     """
     # The raw fixes and the labelled places are the case file's; the arrival
     # radius below is the brief's own derived figure.
@@ -2611,6 +2688,21 @@ def _trace_svg(case: CaseData) -> str:
             '<polyline points="{0}" fill="none" stroke="#6b7280" stroke-width="1.5" '
             'stroke-dasharray="4 3"/>'.format(polyline(rider))
         )
+        # A track that never moves is one place, and the place is what matters:
+        # it is marked so a reader can see it at any zoom.
+        rider_metres = [to_metres(point) for point in rider]
+        spread = max(
+            max(x for x, _y in rider_metres) - min(x for x, _y in rider_metres),
+            max(y for _x, y in rider_metres) - min(y for _x, y in rider_metres),
+        )
+        if spread <= STATIONARY_TRACK_M:
+            x, y = to_pixels(rider[len(rider) // 2])
+            parts.append(
+                '<circle cx="{0}" cy="{1}" r="3" fill="none" stroke="#6b7280" '
+                'stroke-width="1.5"><title>{2}</title></circle>'.format(
+                    x, y, _text("the rider's device")
+                )
+            )
     parts.append(
         '<polyline points="{0}" fill="none" stroke="#1d4ed8" stroke-width="2"/>'.format(
             polyline(driver)
@@ -2647,13 +2739,30 @@ def _rail(case: CaseData) -> str:
     """The right rail: the trace, the evidence and the record."""
     svg = _trace_svg(case)
     if svg:
+        # Every line and mark the drawing can carry has its own entry, and an
+        # entry is written only where the drawing carries it: a legend that
+        # named the rider's track on a case with none would be naming a line
+        # that is not there.
+        gps_payload = _case_payload(case.case, "GPS_TRACE")
+        arrival = _derived_block(case.brief, "GPS_TRACE", "arrival") or {}
+        radius_m = _fact_value(arrival, "thresholds", "arrival_radius_m")
+        legend = ['<i style="background:#1d4ed8"></i>driven trace']
+        if _latlngs(gps_payload.get("rider_track")):
+            legend.append(
+                '<i class="dash"></i>rider\'s track'
+            )
+        legend.append('<i class="dot" style="background:#15803d"></i>pickup')
+        legend.append('<i class="dot" style="background:#b91c1c"></i>drop-off')
+        if radius_m is not None:
+            legend.append(
+                '<i class="ring"></i>arrival radius ({0} m)'.format(
+                    _compact(radius_m)
+                )
+            )
         trace = (
             '<div class="map">{0}</div><p class="cap">{1}</p>'
-            '<p class="legend"><i style="background:#1d4ed8"></i>driven trace'
-            '<i class="dot" style="background:#15803d"></i>pickup'
-            '<i class="dot" style="background:#b91c1c"></i>drop-off'
-            "</p>"
-        ).format(svg, _text(_trace_caption(case)))
+            '<p class="legend">{2}</p>'
+        ).format(svg, _text(_trace_caption(case)), "".join(legend))
         trace_block = (
             '<details open><summary>Trace <span>{0}</span></summary>'
             '<div class="in">{1}</div></details>'.format(
@@ -2767,15 +2876,355 @@ def _summary_paragraphs(text: Any, minimum: int = SUMMARY_MINIMUM_CHARS) -> str:
     return "\n\n".join(chosen)
 
 
+# --------------------------------------------------------------------------
+# The notice to the parties, the dispute, and what the record shows
+# --------------------------------------------------------------------------
+def _ruling_text(case: CaseData) -> str:
+    """The ruling's own prose: its explanation and its referrals, joined.
+
+    Both are fields of the ruling, and both are where a ruling writes down what
+    it relied on -- the explanation argues the case and the referrals direct a
+    person. Nothing else about a ruling is prose.
+    """
+    return " ".join(
+        [str(case.ruling.get("explanation") or "")]
+        + [str(referral) for referral in case.ruling.get("referrals") or []]
+    )
+
+
+def _cited_clause_ids(case: CaseData) -> List[str]:
+    """The clause ids the ruling's own text cites, that this policy carries.
+
+    A clause is named only where the loaded policy has it, so a citation of
+    something this policy does not state is not given a title it never had. The
+    set is the ruling's own: ``precedents.CLAUSE_MENTION_RE`` is the reader the
+    packet uses for the same job, called rather than re-implemented.
+    """
+    text = _ruling_text(case)
+    found = set()
+    for mention in precedents_module.CLAUSE_MENTION_RE.findall(text):
+        base = precedents_module.base_clause_id(mention)
+        found.add(base if base is not None else str(mention))
+    return sorted(
+        clause_id
+        for clause_id in found
+        if clause_id in case.policy.clause_titles
+    )
+
+
+def _cited_evidence_kinds(case: CaseData) -> List[str]:
+    """The record kinds the ruling cites, in a fixed order.
+
+    A kind is cited when the artifact's own ``evidence_id`` appears in the
+    ruling's text. The two profile artifacts are never named: ``POL-GEN-01``
+    says a profile may not establish a fact about the trip, and a notice to the
+    parties is the last place to tell them their own profiles carried it.
+    """
+    text = _ruling_text(case)
+    cited = set()
+    for artifact in (case.brief.get("case") or {}).get("evidence") or []:
+        if not isinstance(artifact, Mapping):
+            continue
+        kind = str(artifact.get("evidence_type"))
+        evidence_id = artifact.get("evidence_id")
+        if kind in PROFILE_EVIDENCE_KINDS or not isinstance(evidence_id, str):
+            continue
+        if evidence_id and evidence_id in text:
+            cited.add(kind)
+    return [kind for kind in EVIDENCE_KIND_ORDER if kind in cited]
+
+
+def _notice(case: CaseData) -> str:
+    """The notice to the two parties, built from the ruling and the policy.
+
+    Six lines and no more: what was decided, what money moves, the clauses the
+    ruling's own text names by their own titles, the record kinds it cites, who
+    made the decision, and how to appeal. Every one of them is read from the
+    ruling's fields or from the loaded policy -- no profile field of either
+    party is named, and no sentence here states a fact the record does not
+    carry. The judge's reasoning is long internal working written for a
+    reviewer; this is the part of the decision that is addressed to the two
+    people it is about.
+
+    The clause line says "named in the ruling" and not "relied on": the ruling's
+    prose names the clauses it rejects as well as the ones it rests on, and a
+    notice that called a clause the ruling declined to apply a clause it relied
+    on would be telling the parties something the ruling does not say. What the
+    line can state truthfully is which clauses the ruling names, and it gives
+    each one the title the policy states for it.
+    """
+    policy = case.policy
+    ruling = case.ruling
+    dispute = case.case.get("dispute") or {}
+    if case.trigger is None:
+        outcome = "The panel decided this case: {0}.".format(
+            _coded(
+                ruling_words(ruling.get("ruling")),
+                ruling.get("ruling"),
+                strong=True,
+            )
+        )
+        who = (
+            "An automated system made this decision. The judge answered four "
+            "times and the majority carried."
+        )
+        appeal = appeal_line(policy)
+    else:
+        outcome = _text(NO_AUTOMATED_RULING)
+        who = (
+            "A person decides this case. The automated system produced no "
+            "ruling for it, so it was sent to a reviewer."
+        )
+        appeal = appeal_line_after_a_decision(policy)
+    clauses = _cited_clause_ids(case)
+    clause_line = (
+        "; ".join(
+            "{0}: {1}".format(clause_id, policy.title(clause_id))
+            for clause_id in clauses
+        )
+        if clauses
+        else "The ruling names no clause of the policy in force."
+    )
+    kinds = _cited_evidence_kinds(case)
+    kinds_line = (
+        ", ".join(EVIDENCE_KIND_WORDS[kind] for kind in kinds)
+        if kinds
+        else "The ruling names no record kind."
+    )
+    return (
+        '<div class="notice" id="notice">'
+        "<h2>{0}</h2>"
+        "<p><b>Outcome.</b> {1}</p>"
+        "<p><b>The money.</b> {2}</p>"
+        "<p><b>Clauses named in the ruling.</b> {3}</p>"
+        "<p><b>Evidence cited.</b> {4}</p>"
+        "<p><b>Who decided.</b> {5}</p>"
+        "<p><b>Appeal.</b> {6}</p>"
+        "</div>"
+    ).format(
+        _text(NOTICE_TITLE),
+        outcome,
+        _text(money_statement(ruling, policy.currency, dispute.get("filed_by"))),
+        _text(clause_line),
+        _text(kinds_line),
+        _text(who),
+        _text(appeal),
+    )
+
+
+def _brief_dispute(case: CaseData) -> Mapping[str, Any]:
+    """The dispute as the **brief** carries it, so POL-GEN-08(4) has been applied.
+
+    The page reads the brief rather than the public case file for every word
+    either party wrote: a plate, a telephone number and an e-mail address were
+    replaced in front of the agents, and they are replaced here too, so a reader
+    sees the text the decision was made on.
+    """
+    dispute = (case.brief.get("case") or {}).get("dispute")
+    return dispute if isinstance(dispute, Mapping) else {}
+
+
+def _chat_messages(case: CaseData) -> List[Mapping[str, Any]]:
+    """Every chat message of this trip, as the brief carries it (masked)."""
+    messages = _payload(case.brief, "CHAT_LOG").get("messages")
+    return [message for message in messages or [] if isinstance(message, Mapping)]
+
+
+def _dispute_block(case: CaseData) -> str:
+    """The dispute itself: the claim, the other party's account, and the chat.
+
+    All three come from the brief. A call-log entry -- a chat message recorded
+    on the call channel -- is shown as its own line rather than as a chat
+    message, because the record says what happened to the call and not what
+    either party typed.
+    """
+    dispute = _brief_dispute(case)
+    filed_by = str(dispute.get("filed_by") or "")
+    if filed_by == "RIDER":
+        filer, other = "Rider", "Driver"
+    elif filed_by == "DRIVER":
+        filer, other = "Driver", "Rider"
+    else:
+        filer, other = "Filing party", "Other party"
+    claim = dispute.get("claim_text")
+    statement = dispute.get("counterparty_statement")
+    statement = statement if isinstance(statement, Mapping) else {}
+    messages = _chat_messages(case)
+    chat = [
+        message
+        for message in messages
+        if str(message.get("channel")) != CALL_LOG_CHANNEL
+    ]
+    calls = [
+        message
+        for message in messages
+        if str(message.get("channel")) == CALL_LOG_CHANNEL
+    ]
+    if chat:
+        chat_block = (
+            '<div class="tscroll"><table><thead><tr><th>Sent</th><th>From</th>'
+            "<th>Message</th></tr></thead><tbody>{0}</tbody></table></div>"
+        ).format(
+            "".join(
+                "<tr><td class=\"mono\">{0}</td><td>{1}</td><td>{2}</td></tr>".format(
+                    _text(message.get("sent_at")),
+                    _text(message.get("sender")),
+                    _text(message.get("text")),
+                )
+                for message in chat
+            )
+        )
+    else:
+        chat_block = '<p class="empty">No chat message is recorded for this trip.</p>'
+    call_block = "".join(
+        '<p class="cap">Call log: {0} &middot; {1} &middot; {2}</p>'.format(
+            _text(message.get("sent_at")),
+            _text(message.get("sender")),
+            _text(message.get("text")),
+        )
+        for message in calls
+    )
+    if not statement.get("text"):
+        statement_block = (
+            '<p class="empty">No statement from the other party is recorded for '
+            "this dispute.</p>"
+        )
+    else:
+        statement_block = "<blockquote>{0}</blockquote><p class=\"cap\">Submitted by {1} at {2}</p>".format(
+            _text(statement.get("text")),
+            _text(statement.get("submitted_by")),
+            _text(statement.get("submitted_at")),
+        )
+    return (
+        '<section class="card dispute" id="the-dispute">'
+        "<h2>The dispute</h2>"
+        "<h3>{0}'s account, as filed</h3>"
+        "<blockquote>{1}</blockquote>"
+        "<h3>The {2}'s account</h3>"
+        "{3}"
+        "<h3>The chat, as the record carries it</h3>"
+        "{4}{5}"
+        "</section>"
+    ).format(
+        _text(filer),
+        _text(claim),
+        _text(other.lower()),
+        statement_block,
+        chat_block,
+        call_block,
+    )
+
+
+def _record_rows(case: CaseData) -> List[Tuple[str, str]]:
+    """The no-show facts the brief's derived blocks already compute.
+
+    Each row is a value the brief carries and the policy limit it is tested
+    against, both read from the block rather than typed here. A fact the block
+    does not carry is left out rather than filled in.
+    """
+    arrival = _derived_block(case.brief, "GPS_TRACE", "arrival") or {}
+    driver_track = _derived_block(case.brief, "GPS_TRACE", "driver_track") or {}
+    rider_presence = _derived_block(case.brief, "GPS_TRACE", "rider_presence") or {}
+    rows: List[Tuple[str, str]] = []
+    dwell = _fact_value(arrival, "accumulated_dwell", "longest_run_sec")
+    wait = _fact_value(arrival, "thresholds", "minimum_dwell_sec")
+    if dwell is not None:
+        rows.append(
+            (
+                "Time inside the arrival radius",
+                "{0}, against the free waiting period in force ({1})".format(
+                    _seconds(dwell),
+                    _seconds(wait) if wait is not None else "not recorded",
+                ),
+            )
+        )
+    approach = _fact_value(driver_track, "min_distance_m")
+    radius = _fact_value(arrival, "thresholds", "arrival_radius_m")
+    if approach is not None:
+        rows.append(
+            (
+                "Closest approach to the pickup point",
+                "{0} m, against the arrival radius ({1})".format(
+                    _compact(approach),
+                    "{0} m".format(_compact(radius))
+                    if radius is not None
+                    else "not recorded",
+                ),
+            )
+        )
+    near = _fact_value(rider_presence, "min_distance_m")
+    far = _fact_value(rider_presence, "max_distance_m")
+    if near is not None and far is not None:
+        first = _fact_value(rider_presence, "first_ts")
+        last = _fact_value(rider_presence, "last_ts")
+        rows.append(
+            (
+                "Where the rider's device was",
+                "{0} m to {1} m from the pickup point, from {2} to {3}".format(
+                    _compact(near),
+                    _compact(far),
+                    first or "not recorded",
+                    last or "not recorded",
+                ),
+            )
+        )
+    calls = [
+        message
+        for message in _chat_messages(case)
+        if str(message.get("channel")) == CALL_LOG_CHANNEL
+    ]
+    rows.append(
+        (
+            "Call-log entries",
+            "; ".join(
+                "{0} ({1}, {2})".format(
+                    message.get("text"), message.get("sender"), message.get("sent_at")
+                )
+                for message in calls
+            )
+            or "none recorded in the chat",
+        )
+    )
+    return rows
+
+
+def _record_block(case: CaseData) -> str:
+    """What the record shows for a no-show case, before any model reads it.
+
+    The table is the brief's own derived facts laid out, so it adds nothing to
+    the record and no fact it shows is one the brief does not carry. A case of
+    another category has no such table: the derived facts differ by category,
+    and this one is about arrival and waiting.
+    """
+    if case.category != "NO_SHOW_CHARGE":
+        return ""
+    rows = _record_rows(case)
+    if not rows:
+        return ""
+    return (
+        '<section class="sec" id="what-the-record-shows">'
+        "<h2>What the record shows</h2>"
+        '<p class="cap">computed from the record, before any model</p>'
+        '<div class="tscroll"><table><thead><tr><th>Fact</th><th>The record</th>'
+        "</tr></thead><tbody>{0}</tbody></table></div>"
+        "</section>"
+    ).format(
+        "".join(
+            "<tr><td>{0}</td><td>{1}</td></tr>".format(_text(fact), _text(value))
+            for fact, value in rows
+        )
+    )
+
+
 def _verdict_card(case: CaseData) -> str:
     """The verdict card: the outcome on the left, the key figures on the right.
 
-    The left column carries the outcome in large type, the code and the clauses
-    the ruling cites, the opening of the judge's text verbatim, and -- on a
-    decided case -- POL-GEN-04's appeal route; on a case sent to a reviewer it
-    carries the reviewer line instead, because there is no ruling to appeal, and
-    its disclosure says that no automatic ruling was made rather than that one
-    was.
+    The left column carries the notice to the two parties, the outcome in large
+    type, the code and the clauses the ruling cites, the opening of the judge's
+    text verbatim, and -- on a decided case -- POL-GEN-04's appeal route; on a
+    case sent to a reviewer it carries the reviewer line instead, because there
+    is no ruling to appeal, and its disclosure says that no automatic ruling was
+    made rather than that one was.
     """
     policy = case.policy
     ruling = case.ruling
@@ -2801,7 +3250,7 @@ def _verdict_card(case: CaseData) -> str:
         summary = _summary_paragraphs(ruling.get("explanation"))
         after = "How to appeal: {0}".format(appeal_line(policy))
         disclosure = DISCLOSURE
-        summary_label = "From the judge's explanation"
+        summary_label = JUDGE_TEXT_LABEL
         details = (
             "<details><summary>Read POL-GEN-04 in full</summary>"
             "<blockquote>{0}</blockquote></details>".format(
@@ -2843,6 +3292,7 @@ def _verdict_card(case: CaseData) -> str:
         '<p class="word">{1}</p>'
         "{2}"
         "<p>{3}</p>"
+        "{11}"
         "{4}"
         '<p class="after">{5}</p>'
         "<p>{6}</p>"
@@ -2864,6 +3314,7 @@ def _verdict_card(case: CaseData) -> str:
         note,
         _tiles_html(case),
         awaiting,
+        _notice(case),
     )
 
 
@@ -2878,6 +3329,7 @@ def _ruling_tab(case: CaseData) -> str:
     )
     return (
         _verdict_card(case)
+        + _record_block(case)
         + '<div class="two"><div class="maincol">'
         + sides
         + "</div>"
@@ -3701,6 +4153,7 @@ def build_case_page(case: CaseData) -> str:
         )
         + '<main class="wrap">\n'
         + header
+        + _dispute_block(case)
         + '<div class="tabs" role="tablist">'
         + tab_html
         + "</div>\n"
