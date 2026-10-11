@@ -6,7 +6,8 @@ the test that holds it; each "not covered" says plainly where the control stops.
 
 The system arbitrates a ride-hail dispute and writes down why. It makes model
 calls through one adapter, it reads an answer key it must never show a model,
-and it holds three sealed sets whose single runs are the submission's
+and it holds three sealed sets -- `wild-v2`, `sealed-v1` and `sealed-v2` -- whose
+single runs are the submission's
 generalisation figures. Those three facts set most of the threats below.
 
 | Threat | What could happen | The control in this repository (file and test) | What is **not** covered |

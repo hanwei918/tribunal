@@ -10,15 +10,15 @@ There are two of them, and they are not the same kind of thing:
   ``eval/answers/codex/ground_truth.json``. It is deliberately absent from
   ``data/index.json``, because adding it there would change the corpus.
 
-Both are **development data**. Neither is a test set. A test set has to be
-drafted without access to this repository and seen beforehand by nobody who
-works on the prompt, and the set that meets that description is now in the
-repository: the held-out set, 64 cases under ``data/external/wild/``, keyed by
-``eval/answers/wild/ground_truth.json``. It is **not** a third development
-set and it is never combined with the two above. It is run exactly once, from
-the commit tagged ``freeze-2026-09-30``, and that single run is one of the two
-generalisation figures the submission reports. Nothing here produces that
-figure.
+Both are **development data**. Neither is a test set. A third kind of set is in
+the repository too: the held-out set, 64 cases under ``data/external/wild/``,
+keyed by ``eval/answers/wild/ground_truth.json``, and run exactly once from the
+commit tagged ``freeze-2026-09-30``. **On 2026-10-12 the owner settled that this
+set is development and regression data**, so that single run is history -- the
+held-out run made before the set was opened for development on 2026-10-01 -- and
+it is not a generalisation figure. The generalisation figures the submission
+reports belong to the three sealed sets, each run exactly once. Nothing here
+produces one.
 
 From 2026-10-01 those same 64 cases are registered a second time as
 ``wild-dev``: the same cases and the same key, run into
@@ -256,11 +256,11 @@ SEALED_SET = DevelopmentSet(
     case_root=loader.EXTERNAL_DIR / run_benchmark.SEALED_SET_RUNS_SUBDIR,
     summary=(
         "the held-out set (wild-v1): 64 cases whose author says its traps come "
-        "from real complaints, "
-        "prepared by their author as a development set; nobody who changed the "
-        "system opened them before the freeze tagged freeze-2026-09-30, and they "
-        "were run once from that tag; that single run is one of the three sealed "
-        "generalisation figures the submission reports"
+        "from real complaints; nobody who changed the system opened them before "
+        "the freeze tagged freeze-2026-09-30, and they were run once from that "
+        "tag. The owner settled on 2026-10-12 that the set is development and "
+        "regression data, so that single run is history and it is not a "
+        "generalisation figure"
     ),
     sealed=True,
 )
@@ -713,8 +713,7 @@ DEVELOPMENT_DATA_CAVEAT = (
     "a sum over two sets that were drafted differently and share one template, "
     "so it is not a generalisation figure and does not replace the corpus "
     "number. The generalisation figures the submission reports belong to the "
-    "four sealed sets, each run exactly once: the held-out set's, drafted without "
-    "access to this repository, from the commit tagged freeze-2026-09-30; "
+    "three sealed sets, each run exactly once: "
     "the second sealed set's, prepared by OpenAI Codex -- whether Codex could "
     "read this repository while preparing it is not recorded -- from a commit "
     "whose tribunal/, prompts/ and policy/ trees equal those at "
@@ -722,25 +721,32 @@ DEVELOPMENT_DATA_CAVEAT = (
     "independent of prompt tuning, and opened by the policy owner's assistant "
     "before the freeze (see README), and imported on 2026-10-09, from a commit "
     "whose tribunal/, prompts/ and policy/ trees equal those at freeze-2026-10-09; "
-    "and the fourth sealed set's, made with GPT-6 by the policy owner from a "
+    "and the fourth sealed set's, made by the policy owner with OpenAI Codex "
+    "(model stated by her as GPT-6; not recorded by the tool) from a "
     "written brief, the version-6 policy text and the public contract, with no "
     "repository code, prompts or run results, and imported on 2026-10-11, from a "
     "commit whose tribunal/, prompts/ and policy/ trees equal those at "
     "freeze-2026-10-11. "
-    "Neither figure here is any of them, and no two of the four are "
+    "The held-out set is not one of them: the owner settled on 2026-10-12 that it "
+    "is development and regression data, so its single run, from the commit "
+    "tagged freeze-2026-09-30, is history. "
+    "Neither figure here is any of them, and no two of the three are "
     "ever added to each other."
 )
 
-# The held-out set is printed on its own, and this is why. A sum of a
-# development figure and a generalisation figure is neither, so the two are
-# never added; and a sealed figure is a single run, reported as ``not run``
-# rather than as zero where it is absent.
+# The held-out set is printed on its own, and this is why. Its single run is
+# history rather than a generalisation figure -- the owner settled on 2026-10-12
+# that the set is development and regression data -- and a figure over a set the
+# system has since been developed against must not be read as one it has not; a
+# run is also reported as ``not run`` rather than as zero where it is absent.
 SEALED_SET_CAVEAT = (
-    "The held-out set is not a development set and is never added to the "
-    "combined figure above. It was drafted without access to this repository "
-    "and is run exactly once from the commit tagged freeze-2026-09-30; that "
-    "single run is one of the three sealed figures the submission "
-    "reports. It "
+    "The held-out set is never added to the "
+    "combined figure above. Its 64 cases were drafted without access to this "
+    "repository and were run exactly once from the commit tagged "
+    "freeze-2026-09-30; the owner settled on 2026-10-12 that the set is "
+    "development and regression data, so that single run is history -- the "
+    "held-out run made before the set was opened for development on 2026-10-01 "
+    "-- and it is not a generalisation figure. It "
     "is absent from data/index.json and is graded against "
     "eval/answers/wild/ground_truth.json, which is neither development key."
 )

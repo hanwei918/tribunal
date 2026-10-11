@@ -663,6 +663,17 @@ class ReadmeFigureTests(unittest.TestCase):
             "Third sealed set (sealed-v1) — four-field agreement, over all 24 cases": fraction(
                 third.exact_matches, 24
             ),
+            # The key as imported differs from the key as it stands by exactly
+            # one record -- case 311, whose key moved to ``PARTIAL_REFUND 7.05``
+            # under an amendment the policy owner wrote before the run -- so the
+            # imported figure is one below the standing one. Both rows are in
+            # the README, side by side, and the imported one is recomputed here
+            # rather than transcribed: the run produced ``PARTIAL_REFUND 7.05``
+            # on 311, so 311 is a match under the key as it stands and a miss
+            # under the key as imported.
+            "Third sealed set (sealed-v1) — four-field agreement, over all 24 cases, under the key as imported": fraction(
+                third.exact_matches - 1, 24
+            ),
             "Third sealed set (sealed-v1) — ruling alone, of the cases that produced a ruling": fraction(
                 third.field_tally("ruling")[0], third.total
             ),

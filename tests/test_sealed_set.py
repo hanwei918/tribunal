@@ -289,12 +289,18 @@ class SealedSetRegistryTests(unittest.TestCase):
         self.assertNotEqual(sets.CORPUS.run_dir(MODEL), SEALED.run_dir(MODEL))
         self.assertNotEqual(sets.SECOND_SET.run_dir(MODEL), SEALED.run_dir(MODEL))
 
-    def test_its_summary_names_it_the_held_out_set_run_once(self):
+    def test_its_summary_names_it_the_held_out_set_run_once_and_as_history(self):
+        """The owner settled on 2026-10-12 that the set is development data.
+
+        The summary says so, so a reader who meets this set through its own
+        registration cannot take its single run for a generalisation figure.
+        """
         summary = SEALED.summary
         self.assertIn("held-out set", summary)
         self.assertIn("wild-v1", summary)
         self.assertIn("run once", summary)
-        self.assertIn("generalisation figure", summary)
+        self.assertIn("development and regression data", summary)
+        self.assertIn("not a generalisation figure", summary)
 
     def test_its_cases_are_not_in_the_corpus_manifest(self):
         """Adding them to ``data/index.json`` would change the 29-case corpus."""

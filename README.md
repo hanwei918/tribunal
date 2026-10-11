@@ -137,6 +137,30 @@ operations rule `OPS-EW-01`, not a clause of the frozen policy.
 
 ## Results
 
+**The sets the system was never developed against, each on its own**
+
+Three sets, each reported as the **agreement** against its own key rather than
+as an accuracy, each run once by the owner from its own freeze, and each with
+its own Wilson 95% interval. They are never summed or pooled: one figure over
+20 cases, one over 24 and one over 12 is not a measurement of 56 cases.
+
+| set | figure | Wilson 95% interval |
+|---|---|---|
+| `sealed-v2` (12 cases, `freeze-2026-10-11`) | 12/12 = 100.0% | [75.8%, 100.0%] |
+| `sealed-v1` (24 cases, `freeze-2026-10-09`) | 21/24 = 87.5%, and 20/24 = 83.3% under the key as imported | [69.0%, 95.7%] |
+| `wild-v2` (20 cases, `freeze-2026-10-03`) | 18/20 = 90.0% | [69.9%, 97.2%] |
+
+Both of `sealed-v1`'s figures are the same run against the same set's key in its
+two states, and both sit side by side in that set's own table below: 21/24
+against the key as it stands at the run, and 20/24 against the key as it was
+imported, because case 311's key moved to `PARTIAL_REFUND 7.05` under an
+amendment the policy owner wrote before the run.
+
+**`wild-v1` is not one of the three.** The owner settled on 2026-10-12 that the
+64-case set is **development and regression data**, so its 55/64 is history: it
+is the held-out run made before the set was opened for development on
+2026-10-01, and it is reported as that and never as a generalisation figure.
+
 **The frozen system, at policy version 6**
 
 These are the submission's figures, measured at policy version 6. The owner made
@@ -190,7 +214,7 @@ without them.
 | `dev-v2` | Ji Guofang, the key owner, with her generator `eval/synth/make_dev_set.py` (seed 20261007) | drafted 2026-10-07, installed 2026-10-08 | the version-1 policy text and this repository's case conventions | the owner, at installation | yes — her revised keys (bundles rev2 and rev3) followed the 2026-10-08 and 2026-10-09 development runs | development |
 | `dev-v2-ext` | the same author and generator, `--size 200` | drafted 2026-10-07, installed 2026-10-08 | the same | the owner, at installation | yes — the same revisions | development |
 | `codex` | OpenAI Codex | drafted 2026-09-24, copied in by the owner | the same policy text and the same case conventions (`docs/notes/2026-09-25-the-second-development-set.md`) | the owner, on arrival | no — its three corrected answers were made at import, before the set's first run | development |
-| `wild` (v1) | the archive's author (not named in the archive) | imported 2026-09-30 | this repository's `data/schema.json` and `policy/*.json`, read from a copy by `eval/external/wild/gen/validate.py` | nobody who changed the system, before the freeze `freeze-2026-09-30` | no — the key is frozen from import | sealed (held-out) |
+| `wild` (v1) | the policy owner (Ji Guofang), with Claude | imported 2026-09-30 | this repository's `data/schema.json` and `policy/*.json`, read from a copy by `eval/external/wild/gen/validate.py` | nobody who changed the system, before the freeze `freeze-2026-09-30` | no — the key is frozen from import | development and regression data (its one held-out run, from `freeze-2026-09-30`, is history) |
 | `wild-v2` | OpenAI Codex, for the owner | archive created 2026-10-01, imported 2026-10-03 | a copy of `data/schema.json` and `policy/*.json`, shipped inside the archive under `eval/external/wild-v2/` | the owner | no — the key was re-wrapped into the array the grader reads at import, before the run, and every graded value was compared parsed | sealed |
 | `sealed-v1` | Claude — the archive's own manifest: "independent of prompt tuning; never saw dev-set misses or prompts" | created 2026-09-26, imported 2026-10-09 | `data/SCHEMA.md`, `data/schema.json` and `policy/*.json`, read from a copy by `eval/external/sealed-v1/gen/validate.py` | the policy owner's AI assistant opened the cases and the key before the freeze; the key owner re-derived the key at version 6 before the run, without seeing any output | no — the version-6 re-derivation predates the run, and case 311's change is recorded rather than hidden | sealed |
 | the functional sets (`inject-v1`, `pii-v1`, `collusion-v1`, `chat-signals-v1`) | the policy owner's archive | imported 2026-10-10 | this repository's case conventions and the version-6 policy | the owner | no | development |
@@ -231,8 +255,8 @@ run was made once by the owner, on 2026-10-10, from the commit `feb7174`, whose
 `freeze-2026-10-09`, and it is committed at `runs/sealed-v1/deepseek-deepseek-flash/`.
 The set's own protocol asks for the **agreement** against its key rather than an
 "accuracy", so that is the word used here, and its figure is the submission's
-third generalisation figure: it is **never** pooled with `wild-v1`'s or
-`wild-v2`'s. The key owner re-derived the key under version 6 on 2026-10-10
+third generalisation figure: it is **never** pooled with `wild-v2`'s. The key
+owner re-derived the key under version 6 on 2026-10-10
 without seeing any output on the set; the old and new `answer_key_sha256` are
 `7529d925…` (imported) and `f430f6c0…` (at the run). The note that reads the run
 is `docs/notes/2026-10-10-the-third-sealed-run.md`.
@@ -241,6 +265,7 @@ is `docs/notes/2026-10-10-the-third-sealed-run.md`.
 |---|---|---|---|---|
 | Third sealed set (`sealed-v1`) — four-field agreement, of the cases that produced a ruling | 21/24 = 87.5% | `runs/sealed-v1/deepseek-deepseek-flash/case-*.json`, `eval/answers/sealed-v1/ground_truth.json` | `python3 -m eval.sealed_report --set sealed-v1` | no |
 | Third sealed set (`sealed-v1`) — four-field agreement, over all 24 cases | 21/24 = 87.5% | `runs/sealed-v1/deepseek-deepseek-flash/`, `eval/answers/sealed-v1/ground_truth.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
+| Third sealed set (`sealed-v1`) — four-field agreement, over all 24 cases, under the key as imported | 20/24 = 83.3% | `runs/sealed-v1/deepseek-deepseek-flash/`, `eval/answers/sealed-v1/ground_truth.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
 | Third sealed set (`sealed-v1`) — ruling alone, of the cases that produced a ruling | 21/24 = 87.5% | `runs/sealed-v1/deepseek-deepseek-flash/case-*.json`, `eval/answers/sealed-v1/ground_truth.json` | `python3 -m eval.sealed_report --set sealed-v1` | no |
 | Third sealed set (`sealed-v1`) — Wilson 95% interval | [69.0%, 95.7%] | `runs/sealed-v1/deepseek-deepseek-flash/`, `eval/answers/sealed-v1/ground_truth.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
 | Third sealed set (`sealed-v1`) — escalation precision | 3/5 = 0.6 | `runs/sealed-v1/deepseek-deepseek-flash/case-*.json`, `eval/answers/sealed-v1/ground_truth.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
@@ -271,7 +296,7 @@ run was made once by the owner, on 2026-10-11, from the commit `19c7e5a`, whose
 `runs/sealed-v2/deepseek-deepseek-flash/`. The set's figure is reported as the
 **agreement** against its key rather than as an "accuracy", so that is the word
 used here, and its figure is the submission's fourth generalisation figure: it is
-**never** pooled with `wild-v1`'s, `wild-v2`'s or `sealed-v1`'s. The note that
+**never** pooled with `wild-v2`'s or `sealed-v1`'s. The note that
 reads the run is
 [`docs/notes/2026-10-11-the-fourth-sealed-run.md`](docs/notes/2026-10-11-the-fourth-sealed-run.md).
 The set's **provenance** — that it was made by the policy owner with OpenAI
@@ -300,7 +325,7 @@ difference that moves none of the 12 briefs — is in
 
 Everything in this section was added **after** the third sealed set's single run,
 on 2026-10-10, and before the fourth's. **None of it changes a sealed figure**:
-the four sealed runs were
+the three sealed runs were
 made from their own frozen trees, each exactly once, and nothing here re-runs,
 re-reads or re-scores one of them.
 
@@ -428,11 +453,7 @@ from the earlier freezes; they are kept as they were.
 Read the table below from the top. The first block is the submission's claim;
 every block below it is context that says what that claim is worth.
 
-Four figures are **generalisation** figures, and each is its own. The held-out
-set (`wild-v1`) is 64 cases whose author says its traps come from real
-complaints, prepared by their author as a development set; nobody who changed the
-system opened them before the freeze tagged `freeze-2026-09-30`, and they were
-run once from that tag. The second
+Three figures are **generalisation** figures, and each is its own. The second
 sealed set (`wild-v2`) is 20 cases, run once on 2026-10-04 from a commit whose
 `tribunal/`, `prompts/` and `policy/` trees equal those at the freeze tagged
 `freeze-2026-10-03`. The third sealed set (`sealed-v1`) is 24 cases, run once on
@@ -440,12 +461,17 @@ sealed set (`wild-v2`) is 20 cases, run once on 2026-10-04 from a commit whose
 trees equal those at the freeze tagged `freeze-2026-10-09`. The fourth sealed set
 (`sealed-v2`) is 12 cases, run once on 2026-10-11 from the commit `19c7e5a`,
 whose `tribunal/`, `prompts/` and `policy/` trees equal those at the freeze
-tagged `freeze-2026-10-11`. The corpus and the
+tagged `freeze-2026-10-11`. The held-out set (`wild-v1`) is 64 cases whose author
+says its traps come from real complaints; nobody who changed the system opened
+them before the freeze tagged `freeze-2026-09-30`, and they were run once from
+that tag — but the owner settled on 2026-10-12 that the set is **development and
+regression data**, so that run is history and is not one of the three. The corpus
+and the
 second set are **development** data the system was built against, so a figure
-over them measures fit, not generalisation. **The four sealed figures are never
-summed or pooled** — one figure over 64 cases, one over 20, one over 24 and one
+over them measures fit, not generalisation. **The three sealed figures are never
+summed or pooled** — one figure over 20 cases, one over 24 and one
 over 12 are
-not a measurement of 120 cases — and no sealed set is ever produced by
+not a measurement of 56 cases — and no sealed set is ever produced by
 `--set all`. The second sealed set's run, its figures and its two misses are read
 in `docs/notes/2026-10-04-the-second-sealed-run.md`, the third's in
 `docs/notes/2026-10-10-the-third-sealed-run.md`, and the fourth's in
@@ -762,9 +788,11 @@ subject to the PDPA without this repository making any compliance claim.
 
 ## What went wrong on the held-out set
 
-The held-out run is one of the submission's three generalisation figures and it is
-reported as it came out, misses included. Three things are worth a reader's
-attention.
+The held-out run is **history rather than a generalisation figure**: the owner
+settled on 2026-10-12 that `wild-v1` is development and regression data, so this
+is the held-out run made before the set was opened for development on
+2026-10-01. It is reported as it came out, misses included. Three things are
+worth a reader's attention.
 
 **One miss pays money the policy does not authorise.** Case 523 is the dangerous
 one: the key is `NO_ACTION`, and the run refunded 4.00 as a standalone
@@ -809,12 +837,17 @@ run only by a `POL-NS-07` referral the policy requires and the key omits — and
 is recorded rather than acted on, because editing the expected result so a run
 scores better destroys the only independent measurement this project has.
 
-**One thing the run did not settle.** The held-out set's own README, committed at
-`eval/external/wild/README.md` — translated from the author's Chinese original,
-whose sha256 the note records — calls this 64-case set a development and
-regression set and names a different, 24-case set as the sealed one. The conflict
-is recorded in full in `docs/notes/2026-09-30-the-freeze-and-the-sealed-run.md`
-and is still the owner's to settle before 55/64 is reported as generalisation.
+**The thing the run left open, and how the owner settled it.** The held-out set's
+own README, committed at `eval/external/wild/README.md` — translated from the
+author's Chinese original, whose sha256 the note records — calls this 64-case set
+a development and regression set and names a different, 24-case set as the sealed
+one. The conflict is recorded in full in
+`docs/notes/2026-09-30-the-freeze-and-the-sealed-run.md`. **The owner settled it
+on 2026-10-12: `wild-v1` is development and regression data.** Its single
+held-out run, 55/64 from `freeze-2026-09-30`, is therefore history — the held-out
+run made before the set was opened for development on 2026-10-01 — and it is
+never reported as a generalisation figure. The 55/64 rows below are kept as that
+record.
 
 ## How it works
 
