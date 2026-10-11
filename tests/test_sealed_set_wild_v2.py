@@ -215,7 +215,7 @@ class WildV2RegistryTests(unittest.TestCase):
         self.assertEqual(["corpus", "codex"], [item.name for item in sets.DEVELOPMENT_SETS])
         self.assertNotIn(WILD_V2, sets.DEVELOPMENT_SETS)
         self.assertEqual(
-            ("wild", "wild-v2", "sealed-v1"),
+            ("wild", "wild-v2", "sealed-v1", "sealed-v2"),
             tuple(item.name for item in sets.SEALED_SETS),
         )
         self.assertIn(WILD_V2, sets.SEALED_SETS)
@@ -986,7 +986,7 @@ class WildV2RunDirectoryIsHeadlineTests(unittest.TestCase):
             path.resolve() for path in run_benchmark.headline_run_directories(self.runs, MODEL)
         ]
         self.assertIn(self.sealed_run_dir.resolve(), headline)
-        self.assertEqual(5, len(headline), "the headline directories are not five")
+        self.assertEqual(6, len(headline), "the headline directories are not six")
         self.assertEqual(
             {
                 (self.runs / run_benchmark.model_slug(MODEL)).resolve(),
@@ -996,6 +996,11 @@ class WildV2RunDirectoryIsHeadlineTests(unittest.TestCase):
                 (
                     self.runs
                     / run_benchmark.SEALED_V1_SET_RUNS_SUBDIR
+                    / run_benchmark.model_slug(MODEL)
+                ).resolve(),
+                (
+                    self.runs
+                    / run_benchmark.SEALED_V2_SET_RUNS_SUBDIR
                     / run_benchmark.model_slug(MODEL)
                 ).resolve(),
             },
@@ -1692,6 +1697,16 @@ class WildV2RunArgumentsTests(unittest.TestCase):
             ),
             (
                 sets.SEALED_V1,
+                sets.RunArguments(
+                    model="deepseek/deepseek-flash",
+                    judge_votes=4,
+                    verify_drafts=False,
+                    timeout_seconds=900.0,
+                    concurrency=2,
+                ),
+            ),
+            (
+                sets.SEALED_V2,
                 sets.RunArguments(
                     model="deepseek/deepseek-flash",
                     judge_votes=4,

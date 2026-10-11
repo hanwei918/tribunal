@@ -264,7 +264,7 @@ class SealedV1RegistryTests(unittest.TestCase):
         self.assertEqual(["corpus", "codex"], [item.name for item in sets.DEVELOPMENT_SETS])
         self.assertNotIn(SEALED_V1, sets.DEVELOPMENT_SETS)
         self.assertEqual(
-            ("wild", "wild-v2", "sealed-v1"),
+            ("wild", "wild-v2", "sealed-v1", "sealed-v2"),
             tuple(item.name for item in sets.SEALED_SETS),
         )
         self.assertIn(SEALED_V1, sets.SEALED_SETS)
@@ -330,12 +330,17 @@ class SealedV1RegistryTests(unittest.TestCase):
         runs = Path("/tmp/sealed-v1-registry-runs")
         headline = [path.resolve() for path in run_benchmark.headline_run_directories(runs, MODEL)]
         self.assertIn((runs / "sealed-v1" / run_benchmark.model_slug(MODEL)).resolve(), headline)
-        self.assertEqual(5, len(headline), "the headline directories are not five")
+        self.assertEqual(6, len(headline), "the headline directories are not six")
 
     def test_its_root_is_closed_and_no_permit_opens_it(self):
         """The set has been run, so nothing is created under its root again."""
         self.assertTrue(sets.sealed_root_is_closed(SEALED_V1))
-        self.assertEqual((), run_benchmark.UNRUN_SEALED_RUNS_SUBDIRS)
+        # The un-run list names the fourth sealed set, imported on 2026-10-11 and
+        # not yet run; this set's own run has been made, so no permit opens its
+        # root. Both lists are pinned, so neither can pass by being empty.
+        self.assertEqual(
+            ("sealed-v2",), run_benchmark.UNRUN_SEALED_RUNS_SUBDIRS
+        )
         self.assertEqual(
             ("wild", "wild-v2", "sealed-v1"),
             run_benchmark.MADE_SEALED_RUNS_SUBDIRS,

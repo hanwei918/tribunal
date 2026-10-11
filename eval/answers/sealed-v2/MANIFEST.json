@@ -1,0 +1,92 @@
+{
+  "sealed_set": "tribunal-sealed-v2",
+  "created": "2026-10-11",
+  "author": "OpenAI Codex (GPT-based assistant; exact underlying model name and version are not exposed in this session)",
+  "reviewed_by": "Ji Guofang",
+  "review_status": "PENDING: designated reviewer has not yet supplied case-by-case sign-off",
+  "model_identity_status": "UNVERIFIED: exact underlying model name and version are not exposed to this assistant; no model version has been guessed",
+  "independence": "Cases and reference answers were AI-generated from six supplied policy JSON files (three base files and three amendments), the public contract and the updated authoring instructions. Did not access tribunal/, prompts/, runs/, tests/, eval/answers/, eval/external/ or precedents/ or discuss cases with developers. Supplied policy and contract prose themselves include historical development references; these were encountered as part of the authorized reference files only. Human case-by-case review by Ji Guofang is required and pending, not represented as completed. Not an independent human author.",
+  "tools_used": [
+    "OpenAI Codex assistant",
+    "Python 3 standard library for deterministic synthetic telemetry, Decimal arithmetic, JSON, SHA-256 and ZIP",
+    "python-docx for reading the supplied authoring instructions",
+    "Unmodified check_set.py extracted from the updated authoring instructions",
+    "Additional independent arithmetic and structural audit script"
+  ],
+  "schema_version": "1.2.0",
+  "policy_version": 6,
+  "policy_files": [
+    "policy/v3/amendments/0001-pol-ns-11.json",
+    "policy/v3/amendments/0002-pol-rd-14.json",
+    "policy/v3/amendments/0003-pol-ns-12.json",
+    "policy/v3/general.json",
+    "policy/v3/no_show.json",
+    "policy/v3/route_deviation.json"
+  ],
+  "reference_file_sha256": {
+    "data/PUBLIC-CONTRACT.md": "88d851d0d7774303420720bca56c848ba2aaeb3c55b6f2f79435769f2cb22be2",
+    "policy/v3/amendments/0001-pol-ns-11.json": "0d24461e9a0fe3cc27a16dc78ffb7daa9cc36c05f8e233c0e272e2a168e8f6de",
+    "policy/v3/amendments/0002-pol-rd-14.json": "e254b5f837423e0ee7ee6beec7bb2661fc98e0442c694dc8cc9b4f81c9121703",
+    "policy/v3/amendments/0003-pol-ns-12.json": "9fa988960d049a67e9bdbdbbaa822cb246bb2bc0e806e1b865f730e25852d582",
+    "policy/v3/general.json": "52248998cce5133abf8aa22428cf4eab089ad9cccbfa3c1cc9da76e670be9d2a",
+    "policy/v3/no_show.json": "bef9c2bb217ea1f78266d600291a2b7b21e54825bfbbe67142f8d4054bc668bb",
+    "policy/v3/route_deviation.json": "e49e72ce68cadb7af32ea20426d2693eb7e846767e82694bc2074f688fb5f7f8"
+  },
+  "case_count": 12,
+  "case_numbers": [
+    801,
+    802,
+    803,
+    804,
+    805,
+    806,
+    851,
+    852,
+    853,
+    854,
+    855,
+    856
+  ],
+  "categories": {
+    "ROUTE_DEVIATION": 6,
+    "NO_SHOW_CHARGE": 6
+  },
+  "rulings": {
+    "PARTIAL_REFUND": 3,
+    "FULL_REFUND": 3,
+    "NO_ACTION": 1,
+    "ESCALATE": 2,
+    "DRIVER_COMPENSATION": 3
+  },
+  "difficulty": {
+    "EASY": 3,
+    "HARD": 4,
+    "REVERSAL": 3,
+    "INDETERMINATE": 2
+  },
+  "case_file_sha256": {
+    "case-00801.json": "92b15dbf2f67d08b48e07740e44f19836b12692a0340ebcae4660c72c4fe83c7",
+    "case-00802.json": "acc474352c4fc45844d745c4efcb91053e52aff828e09018ee30e36e5bd04038",
+    "case-00803.json": "66e5d51b11102f672e92a65576a9e5f5e62a8cb6f140fcdef89f80223ad44aa0",
+    "case-00804.json": "f7d9f1c97bff814a3d3db7de96d4f2966279d1bd664b3c1b04a8eba771f9ad1f",
+    "case-00805.json": "9f104d7efad66bafac56d1250e4d84699c4ce8a4439ea65583a5d6878803355f",
+    "case-00806.json": "0c7f685a92a65bc5268909ed39e90b71033421b635f876342831de88f3c814a5",
+    "case-00851.json": "c7bea25126e5e8bd21b8aaf9486b82480209717dfa043dbbd48337916205f7a3",
+    "case-00852.json": "5496839a5a2daf222239b86acca9a471ac37450479d7ec4dc7336f401dba44a7",
+    "case-00853.json": "37cfbcada425bec584ae563ad4d55607f8019cb4ec4792d30fecfe6fabbfcb0a",
+    "case-00854.json": "644203c02f2b25a45a206fd5b4710e69edf2f7714e818cbece0d23f31cf2fb99",
+    "case-00855.json": "b89410fc4da5ed3b81bde3c7b01e23685d829109a856bad0f7a06b31ca9541cf",
+    "case-00856.json": "3d90ebb95bdcec7cbc1a8493885fbab249b4c99bf3158b0c8808301fdcc03b02"
+  },
+  "answer_key_sha256": "d3a09c08f06c8eb328e251e618cba7b035fdb54c7614b041781fd6d564fe3e6f",
+  "protocol": {
+    "runs_allowed": 1,
+    "run_from": "freeze-2026-10-09",
+    "no_tuning_after_run": "Any tuning using this set after the sealed run turns it into a development set; the key is not edited after the run",
+    "run_performed": false
+  },
+  "release_gates": [
+    "Ji Guofang must review and sign all 12 cases against original policy text before the sealed run.",
+    "Obtain exact model name and version from a trustworthy session record before claiming the model-version disclosure requirement is fulfilled."
+  ]
+}

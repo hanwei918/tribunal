@@ -20,7 +20,7 @@ Six things are asserted:
 * **What the collector may read.** It reads the dispute's ``trip_id`` and never
   its ``evidence_ids`` -- asserted by running it over a dispute that records
   every key it is asked for.
-* **The proof.** For all 29 corpus cases and all 353 cases under
+* **The proof.** For all 29 corpus cases and all 365 cases under
   ``data/external/``, each against its own root, the collection equals the case
   file's ``evidence`` array exactly: same artifacts, same order, same canonical
   JSON. And a brief built from the collected case has the ``brief_sha256`` the
@@ -470,14 +470,15 @@ class TheCorpusEqualityTests(unittest.TestCase):
 
 
 class TheExternalEqualityTests(unittest.TestCase):
-    """The same, over the 353 converted cases, each against its own root.
+    """The same, over the 365 converted cases, each against its own root.
 
     ``ryde-v3/`` joined the tree on 2026-10-08: the organisers' sample converted
     for policy version 3, under a path of its own so that the version-1 case the
     recorded run read stays where it is. ``dev-v2/`` and ``dev-v2-ext/`` joined
     it the same day: Ji Guofang's 80 synthetic development cases and their 120
     variants, written for policy version 3. ``sealed-v1/`` joined it on
-    2026-10-09: the third sealed set's 24 cases. ``inject-v1/``, ``pii-v1/`` and
+    2026-10-09: the third sealed set's 24 cases, and ``sealed-v2/`` on
+    2026-10-11: the fourth sealed set's 12. ``inject-v1/``, ``pii-v1/`` and
     ``collusion-v1/`` joined it on 2026-10-10: the three functional case sets,
     28 cases in all, and ``collusion-v1``'s first three are the only cases in the
     repository that share both a rider and a driver. All of them are ordinary
@@ -489,7 +490,7 @@ class TheExternalEqualityTests(unittest.TestCase):
     def setUpClass(cls):
         cls.roots = external_roots()
 
-    def test_the_external_tree_holds_the_eleven_sets(self):
+    def test_the_external_tree_holds_the_twelve_sets(self):
         self.assertEqual(
             [
                 "codex",
@@ -501,6 +502,7 @@ class TheExternalEqualityTests(unittest.TestCase):
                 "ryde",
                 "ryde-v3",
                 "sealed-v1",
+                "sealed-v2",
                 "wild",
                 "wild-v2",
             ],
@@ -536,7 +538,7 @@ class TheExternalEqualityTests(unittest.TestCase):
                             root.name, path.name
                         ),
                     )
-        self.assertEqual(353, total)
+        self.assertEqual(365, total)
 
     def test_two_cases_that_share_both_parties_collect_to_their_own_arrays(self):
         """The collision the collusion set exposed, on a fixture of its own.

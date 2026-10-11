@@ -1,13 +1,16 @@
-"""The last ways into a sealed root are closed, for all three sealed roots.
+"""The last ways into a sealed root are closed, for all four sealed roots.
 
 ``runs/wild/`` holds the held-out set's single run, ``runs/wild-v2/`` the second
-sealed set's and ``runs/sealed-v1/`` the third's. All three runs have been made
-and all three roots are closed outright, so every command that would write under
-one of them has to refuse the whole of the root -- not only the run directory,
-and not only the spelling the path happens to be given in.
+sealed set's, ``runs/sealed-v1/`` the third's and ``runs/sealed-v2/`` the
+fourth's. The first three runs have been made
+and those three roots are closed outright, so every command that would write
+under one of them has to refuse the whole of the root -- not only the run
+directory, and not only the spelling the path happens to be given in. The
+fourth's run has not been made, and its root accepts exactly one destination --
+the plain sealed run's own directory -- for the set that names it.
 
 Each test here is one of those commands, and each is run for **every** root: the
-three are named by their registrations rather than restated, so a fourth sealed
+four are named by their registrations rather than restated, so a fifth sealed
 set would be covered by the same loops.
 
 **Every test runs against a scratch root.** Nothing reads or writes a committed
@@ -155,7 +158,8 @@ class RecordedDraftsDestinationTests(ScratchRunsRootTestCase):
 class OutDirectoryGuardsTests(ScratchRunsRootTestCase):
     """The derived ``--out-dir`` guards refuse a sealed root.
 
-    ``runs/wild/``, ``runs/wild-v2/`` and ``runs/sealed-v1/`` are not run
+    ``runs/wild/``, ``runs/wild-v2/``, ``runs/sealed-v1/`` and
+    ``runs/sealed-v2/`` are not run
     directories with a name a reader could mistake these figures for: they are
     sealed roots, and nothing is created under any of them again. The structural
     walk catches a destination inside a run directory; the sealed-root guard
@@ -295,8 +299,8 @@ class CheckOnAClosedRootTests(ScratchRunsRootTestCase):
     with it, so nothing reads a list that disagrees with the others.
     """
 
-    # ``wild`` fixes no arguments; ``wild-v2`` and ``sealed-v1`` fix the owner's
-    # command, each at the arguments its own registration names.
+    # ``wild`` fixes no arguments; ``wild-v2``, ``sealed-v1`` and ``sealed-v2``
+    # fix the owner's command, each at the arguments its own registration names.
     ARGUMENTS = {
         "wild": ["--set", "wild", "--check"],
         "wild-v2": [
@@ -317,6 +321,15 @@ class CheckOnAClosedRootTests(ScratchRunsRootTestCase):
             "900",
             "--check",
         ],
+        "sealed-v2": [
+            "--set",
+            "sealed-v2",
+            "--concurrency",
+            "2",
+            "--timeout",
+            "900",
+            "--check",
+        ],
     }
 
     def _patch_subdir_lists(self, made, unrun=()):
@@ -331,9 +344,11 @@ class CheckOnAClosedRootTests(ScratchRunsRootTestCase):
             self.addCleanup(patcher.stop)
 
     def test_a_closed_root_prints_the_closure_and_lists_no_cases(self):
-        # All three sealed sets have been run, so all three roots are closed and
-        # the plan branch below is reached only by emptying the lists. The closure
-        # is asserted for every root the registration says has been made, and the
+        # The three sealed sets whose runs have been made have closed roots, and
+        # the plan branch below is reached only by emptying the lists.
+        # ``sealed-v2`` is imported and **not yet run**, so its root is not
+        # closed and the plan test below is where it is covered. The closure is
+        # asserted for every root the registration says has been made, and the
         # list of those is pinned here, so a set cannot pass by being skipped.
         closed = [
             development_set

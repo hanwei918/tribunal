@@ -8,16 +8,20 @@ helper through their own guard: the recorded-drafts measurement, the baselines,
 the amount-rule measurement and the policy-gap report. Each of those paths can
 land somewhere it must not. Two places are refused:
 
-**A sealed set's root.** ``runs/wild/`` holds the held-out set's single run and
-``runs/wild-v2/`` the second sealed set's, and both runs have been made. Each is
-one of the submission's two generalisation figures, so nothing is created under
-either root again -- not a case, not an ablated run, not a run at a later policy
-version, not a report -- because a second thing written there changes what the
-directory means while leaving every file a reader would look at apparently
-intact.
+**A sealed set's root.** ``runs/wild/`` holds the held-out set's single run,
+``runs/wild-v2/`` the second sealed set's, ``runs/sealed-v1/`` the third's and
+``runs/sealed-v2/`` the fourth's. The first three runs have been made; the
+fourth's has not, and its root accepts exactly one destination -- the plain
+sealed run's own directory -- for the one set that names it. Every root is one
+of the submission's generalisation figures, so nothing else is created under any
+of them -- not a case, not an ablated run, not a run at a later policy version,
+not a report -- because a second thing written there changes what the directory
+means while leaving every file a reader would look at apparently intact.
 
 **A headline run directory.** ``runs/<model-slug>/``, ``runs/codex/<model-slug>/``,
-``runs/wild/<model-slug>/`` and ``runs/wild-v2/<model-slug>/`` hold the figures
+``runs/wild/<model-slug>/``, ``runs/wild-v2/<model-slug>/``,
+``runs/sealed-v1/<model-slug>/`` and ``runs/sealed-v2/<model-slug>/`` hold the
+figures
 the submission reports, and a command's own output written there would be read
 as that run's.
 

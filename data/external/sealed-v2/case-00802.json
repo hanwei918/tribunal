@@ -1,0 +1,1761 @@
+{
+  "schema_version": "1.2.0",
+  "case_no": 802,
+  "dispute": {
+    "case_no": 802,
+    "dispute_id": "DSP-00802",
+    "trip_id": "TRP-00802",
+    "category": "ROUTE_DEVIATION",
+    "filed_at": "2026-08-12T15:26:50+08:00",
+    "filed_by": "RIDER",
+    "channel": "IN_APP_SUPPORT",
+    "amount_contested_sgd": 19.65,
+    "claim_text": "The route on EV-GPS-00802 looks longer than the booking estimate on EV-TRIP-00802. Please review the whole fare on EV-FARE-00802.",
+    "counterparty_statement": null,
+    "evidence_ids": [
+      "EV-TRIP-00802",
+      "EV-GPS-00802",
+      "EV-CHAT-00802",
+      "EV-FARE-00802",
+      "EV-RPROF-00802",
+      "EV-DPROF-00802",
+      "EV-ADVIS-00802-01"
+    ],
+    "safety_flag": false,
+    "complaint_flag": false
+  },
+  "evidence": [
+    {
+      "evidence_id": "EV-TRIP-00802",
+      "evidence_type": "TRIP_RECORD",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Synthetic record; timestamps use Singapore local time.",
+        "assessed_at": "2026-08-12T15:28:00+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-00802",
+        "rider_id": "RDR-80802",
+        "driver_id": "DRV-80802",
+        "vehicle_type": "RYDE_X",
+        "requested_at": "2026-08-12T13:53:00+08:00",
+        "accepted_at": "2026-08-12T13:54:00+08:00",
+        "arrived_at": "2026-08-12T13:59:30+08:00",
+        "started_at": "2026-08-12T14:00:00+08:00",
+        "ended_at": "2026-08-12T14:26:50+08:00",
+        "cancelled_at": null,
+        "status": "COMPLETED",
+        "cancelled_by": null,
+        "cancellation_reason_code": null,
+        "pickup": {
+          "label": "Dhoby Ghaut Orchard Road",
+          "lat": 1.2993,
+          "lng": 103.8458,
+          "venue_id": null
+        },
+        "dropoff": {
+          "label": "Somerset Orchard Road",
+          "lat": 1.3005,
+          "lng": 103.8386,
+          "venue_id": null
+        },
+        "pickup_zone_class": "STANDARD",
+        "registered_pickup_points": 1,
+        "optimal_distance_km": 1.1,
+        "optimal_duration_min": 4.0,
+        "optimal_route_source": "PLATFORM_ROUTER_AT_BOOKING",
+        "optimal_route_erp_sgd": 0.0,
+        "actual_distance_km": 10.06,
+        "actual_duration_min": 26.8,
+        "deviation_pct": 814.5,
+        "pickup_amended_at": null,
+        "dropoff_amended_at": null,
+        "original_pickup": null,
+        "original_dropoff": null,
+        "amended_optimal_distance_km": null,
+        "amended_optimal_duration_min": null,
+        "solo_optimal_distance_km": null,
+        "wait_time_min": 0.5,
+        "time_to_arrival_min": 5.5,
+        "in_app_calls": [],
+        "chat_message_count": 0,
+        "platform_policy": null,
+        "scheduled_at": null,
+        "events": [
+          {
+            "event_type": "driver_assigned",
+            "at": "2026-08-12T13:54:00+08:00",
+            "detail": "Vehicle assigned.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_arrived",
+            "at": "2026-08-12T13:59:30+08:00",
+            "detail": "Vehicle stopped at pickup.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "rider_boarded",
+            "at": "2026-08-12T14:00:00+08:00",
+            "detail": "Passenger boarded; distance export starts here.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_completed",
+            "at": "2026-08-12T14:26:50+08:00",
+            "detail": "Passenger alighted; distance export ends here.",
+            "source": "PLATFORM_TELEMETRY"
+          }
+        ]
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-00802",
+      "generated_at": "2026-08-12T15:27:50+08:00"
+    },
+    {
+      "evidence_id": "EV-GPS-00802",
+      "evidence_type": "GPS_TRACE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Synthetic 10-second position export; trace_distance_km is the spherical polyline length rounded to two decimals.",
+        "assessed_at": "2026-08-12T15:28:00+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "points": [
+          {
+            "lat": 1.2993,
+            "lng": 103.8458,
+            "ts": "2026-08-12T14:00:00+08:00",
+            "speed_kph": 0,
+            "heading_deg": 285.8,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.2994545,
+            "lng": 103.8452545,
+            "ts": "2026-08-12T14:00:10+08:00",
+            "speed_kph": 22.69,
+            "heading_deg": 285.8,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.2996091,
+            "lng": 103.8447091,
+            "ts": "2026-08-12T14:00:20+08:00",
+            "speed_kph": 22.69,
+            "heading_deg": 285.8,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.2997636,
+            "lng": 103.8441636,
+            "ts": "2026-08-12T14:00:30+08:00",
+            "speed_kph": 22.69,
+            "heading_deg": 285.8,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.2999182,
+            "lng": 103.8436182,
+            "ts": "2026-08-12T14:00:40+08:00",
+            "speed_kph": 22.69,
+            "heading_deg": 285.8,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3000727,
+            "lng": 103.8430727,
+            "ts": "2026-08-12T14:00:50+08:00",
+            "speed_kph": 22.69,
+            "heading_deg": 285.8,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3002273,
+            "lng": 103.8425273,
+            "ts": "2026-08-12T14:01:00+08:00",
+            "speed_kph": 22.69,
+            "heading_deg": 285.8,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3003818,
+            "lng": 103.8419818,
+            "ts": "2026-08-12T14:01:10+08:00",
+            "speed_kph": 22.69,
+            "heading_deg": 285.8,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3005364,
+            "lng": 103.8414364,
+            "ts": "2026-08-12T14:01:20+08:00",
+            "speed_kph": 22.69,
+            "heading_deg": 285.8,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3006909,
+            "lng": 103.8408909,
+            "ts": "2026-08-12T14:01:30+08:00",
+            "speed_kph": 22.69,
+            "heading_deg": 285.8,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3008455,
+            "lng": 103.8403455,
+            "ts": "2026-08-12T14:01:40+08:00",
+            "speed_kph": 22.69,
+            "heading_deg": 285.8,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.301,
+            "lng": 103.8398,
+            "ts": "2026-08-12T14:01:50+08:00",
+            "speed_kph": 22.69,
+            "heading_deg": 292.9,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.30122,
+            "lng": 103.83928,
+            "ts": "2026-08-12T14:02:00+08:00",
+            "speed_kph": 22.6,
+            "heading_deg": 292.9,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.30144,
+            "lng": 103.83876,
+            "ts": "2026-08-12T14:02:10+08:00",
+            "speed_kph": 22.6,
+            "heading_deg": 292.9,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.30166,
+            "lng": 103.83824,
+            "ts": "2026-08-12T14:02:20+08:00",
+            "speed_kph": 22.6,
+            "heading_deg": 292.9,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.30188,
+            "lng": 103.83772,
+            "ts": "2026-08-12T14:02:30+08:00",
+            "speed_kph": 22.6,
+            "heading_deg": 292.9,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3021,
+            "lng": 103.8372,
+            "ts": "2026-08-12T14:02:40+08:00",
+            "speed_kph": 22.6,
+            "heading_deg": 292.9,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.30232,
+            "lng": 103.83668,
+            "ts": "2026-08-12T14:02:50+08:00",
+            "speed_kph": 22.6,
+            "heading_deg": 292.9,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.30254,
+            "lng": 103.83616,
+            "ts": "2026-08-12T14:03:00+08:00",
+            "speed_kph": 22.6,
+            "heading_deg": 292.9,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.30276,
+            "lng": 103.83564,
+            "ts": "2026-08-12T14:03:10+08:00",
+            "speed_kph": 22.6,
+            "heading_deg": 292.9,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.30298,
+            "lng": 103.83512,
+            "ts": "2026-08-12T14:03:20+08:00",
+            "speed_kph": 22.6,
+            "heading_deg": 292.9,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3032,
+            "lng": 103.8346,
+            "ts": "2026-08-12T14:03:30+08:00",
+            "speed_kph": 22.6,
+            "heading_deg": 292.9,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.30342,
+            "lng": 103.83408,
+            "ts": "2026-08-12T14:03:40+08:00",
+            "speed_kph": 22.6,
+            "heading_deg": 292.9,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.30364,
+            "lng": 103.83356,
+            "ts": "2026-08-12T14:03:50+08:00",
+            "speed_kph": 22.6,
+            "heading_deg": 292.9,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.30386,
+            "lng": 103.83304,
+            "ts": "2026-08-12T14:04:00+08:00",
+            "speed_kph": 22.6,
+            "heading_deg": 292.9,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.30408,
+            "lng": 103.83252,
+            "ts": "2026-08-12T14:04:10+08:00",
+            "speed_kph": 22.6,
+            "heading_deg": 292.9,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3043,
+            "lng": 103.832,
+            "ts": "2026-08-12T14:04:20+08:00",
+            "speed_kph": 22.6,
+            "heading_deg": 280.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3044,
+            "lng": 103.8314615,
+            "ts": "2026-08-12T14:04:30+08:00",
+            "speed_kph": 21.92,
+            "heading_deg": 280.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3045,
+            "lng": 103.8309231,
+            "ts": "2026-08-12T14:04:40+08:00",
+            "speed_kph": 21.92,
+            "heading_deg": 280.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3046,
+            "lng": 103.8303846,
+            "ts": "2026-08-12T14:04:50+08:00",
+            "speed_kph": 21.92,
+            "heading_deg": 280.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3047,
+            "lng": 103.8298462,
+            "ts": "2026-08-12T14:05:00+08:00",
+            "speed_kph": 21.92,
+            "heading_deg": 280.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3048,
+            "lng": 103.8293077,
+            "ts": "2026-08-12T14:05:10+08:00",
+            "speed_kph": 21.92,
+            "heading_deg": 280.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3049,
+            "lng": 103.8287692,
+            "ts": "2026-08-12T14:05:20+08:00",
+            "speed_kph": 21.92,
+            "heading_deg": 280.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.305,
+            "lng": 103.8282308,
+            "ts": "2026-08-12T14:05:30+08:00",
+            "speed_kph": 21.92,
+            "heading_deg": 280.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3051,
+            "lng": 103.8276923,
+            "ts": "2026-08-12T14:05:40+08:00",
+            "speed_kph": 21.92,
+            "heading_deg": 280.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3052,
+            "lng": 103.8271538,
+            "ts": "2026-08-12T14:05:50+08:00",
+            "speed_kph": 21.92,
+            "heading_deg": 280.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3053,
+            "lng": 103.8266154,
+            "ts": "2026-08-12T14:06:00+08:00",
+            "speed_kph": 21.92,
+            "heading_deg": 280.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3054,
+            "lng": 103.8260769,
+            "ts": "2026-08-12T14:06:10+08:00",
+            "speed_kph": 21.92,
+            "heading_deg": 280.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3055,
+            "lng": 103.8255385,
+            "ts": "2026-08-12T14:06:20+08:00",
+            "speed_kph": 21.92,
+            "heading_deg": 280.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3056,
+            "lng": 103.825,
+            "ts": "2026-08-12T14:06:30+08:00",
+            "speed_kph": 21.92,
+            "heading_deg": 279.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3056909,
+            "lng": 103.8244545,
+            "ts": "2026-08-12T14:06:40+08:00",
+            "speed_kph": 22.13,
+            "heading_deg": 279.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3057818,
+            "lng": 103.8239091,
+            "ts": "2026-08-12T14:06:50+08:00",
+            "speed_kph": 22.13,
+            "heading_deg": 279.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3058727,
+            "lng": 103.8233636,
+            "ts": "2026-08-12T14:07:00+08:00",
+            "speed_kph": 22.13,
+            "heading_deg": 279.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3059636,
+            "lng": 103.8228182,
+            "ts": "2026-08-12T14:07:10+08:00",
+            "speed_kph": 22.13,
+            "heading_deg": 279.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3060545,
+            "lng": 103.8222727,
+            "ts": "2026-08-12T14:07:20+08:00",
+            "speed_kph": 22.13,
+            "heading_deg": 279.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3061455,
+            "lng": 103.8217273,
+            "ts": "2026-08-12T14:07:30+08:00",
+            "speed_kph": 22.13,
+            "heading_deg": 279.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3062364,
+            "lng": 103.8211818,
+            "ts": "2026-08-12T14:07:40+08:00",
+            "speed_kph": 22.13,
+            "heading_deg": 279.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3063273,
+            "lng": 103.8206364,
+            "ts": "2026-08-12T14:07:50+08:00",
+            "speed_kph": 22.13,
+            "heading_deg": 279.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3064182,
+            "lng": 103.8200909,
+            "ts": "2026-08-12T14:08:00+08:00",
+            "speed_kph": 22.13,
+            "heading_deg": 279.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3065091,
+            "lng": 103.8195455,
+            "ts": "2026-08-12T14:08:10+08:00",
+            "speed_kph": 22.13,
+            "heading_deg": 279.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3066,
+            "lng": 103.819,
+            "ts": "2026-08-12T14:08:20+08:00",
+            "speed_kph": 22.13,
+            "heading_deg": 316.7,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.307025,
+            "lng": 103.8186,
+            "ts": "2026-08-12T14:08:30+08:00",
+            "speed_kph": 23.36,
+            "heading_deg": 316.7,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.30745,
+            "lng": 103.8182,
+            "ts": "2026-08-12T14:08:40+08:00",
+            "speed_kph": 23.36,
+            "heading_deg": 316.7,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.307875,
+            "lng": 103.8178,
+            "ts": "2026-08-12T14:08:50+08:00",
+            "speed_kph": 23.36,
+            "heading_deg": 316.7,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3083,
+            "lng": 103.8174,
+            "ts": "2026-08-12T14:09:00+08:00",
+            "speed_kph": 23.36,
+            "heading_deg": 316.7,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.308725,
+            "lng": 103.817,
+            "ts": "2026-08-12T14:09:10+08:00",
+            "speed_kph": 23.36,
+            "heading_deg": 316.7,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.30915,
+            "lng": 103.8166,
+            "ts": "2026-08-12T14:09:20+08:00",
+            "speed_kph": 23.36,
+            "heading_deg": 316.7,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.309575,
+            "lng": 103.8162,
+            "ts": "2026-08-12T14:09:30+08:00",
+            "speed_kph": 23.36,
+            "heading_deg": 316.7,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.31,
+            "lng": 103.8158,
+            "ts": "2026-08-12T14:09:40+08:00",
+            "speed_kph": 23.36,
+            "heading_deg": 358.2,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3105636,
+            "lng": 103.8157818,
+            "ts": "2026-08-12T14:09:50+08:00",
+            "speed_kph": 22.57,
+            "heading_deg": 358.2,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3111273,
+            "lng": 103.8157636,
+            "ts": "2026-08-12T14:10:00+08:00",
+            "speed_kph": 22.57,
+            "heading_deg": 358.2,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3116909,
+            "lng": 103.8157455,
+            "ts": "2026-08-12T14:10:10+08:00",
+            "speed_kph": 22.57,
+            "heading_deg": 358.2,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3122545,
+            "lng": 103.8157273,
+            "ts": "2026-08-12T14:10:20+08:00",
+            "speed_kph": 22.57,
+            "heading_deg": 358.2,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3128182,
+            "lng": 103.8157091,
+            "ts": "2026-08-12T14:10:30+08:00",
+            "speed_kph": 22.57,
+            "heading_deg": 358.2,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3133818,
+            "lng": 103.8156909,
+            "ts": "2026-08-12T14:10:40+08:00",
+            "speed_kph": 22.57,
+            "heading_deg": 358.2,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3139455,
+            "lng": 103.8156727,
+            "ts": "2026-08-12T14:10:50+08:00",
+            "speed_kph": 22.57,
+            "heading_deg": 358.2,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3145091,
+            "lng": 103.8156545,
+            "ts": "2026-08-12T14:11:00+08:00",
+            "speed_kph": 22.57,
+            "heading_deg": 358.2,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3150727,
+            "lng": 103.8156364,
+            "ts": "2026-08-12T14:11:10+08:00",
+            "speed_kph": 22.57,
+            "heading_deg": 358.2,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3156364,
+            "lng": 103.8156182,
+            "ts": "2026-08-12T14:11:20+08:00",
+            "speed_kph": 22.57,
+            "heading_deg": 358.2,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3162,
+            "lng": 103.8156,
+            "ts": "2026-08-12T14:11:30+08:00",
+            "speed_kph": 22.57,
+            "heading_deg": 358.2,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3167636,
+            "lng": 103.8155818,
+            "ts": "2026-08-12T14:11:40+08:00",
+            "speed_kph": 22.57,
+            "heading_deg": 358.2,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3173273,
+            "lng": 103.8155636,
+            "ts": "2026-08-12T14:11:50+08:00",
+            "speed_kph": 22.57,
+            "heading_deg": 358.2,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3178909,
+            "lng": 103.8155455,
+            "ts": "2026-08-12T14:12:00+08:00",
+            "speed_kph": 22.57,
+            "heading_deg": 358.2,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3184545,
+            "lng": 103.8155273,
+            "ts": "2026-08-12T14:12:10+08:00",
+            "speed_kph": 22.57,
+            "heading_deg": 358.2,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3190182,
+            "lng": 103.8155091,
+            "ts": "2026-08-12T14:12:20+08:00",
+            "speed_kph": 22.57,
+            "heading_deg": 358.2,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3195818,
+            "lng": 103.8154909,
+            "ts": "2026-08-12T14:12:30+08:00",
+            "speed_kph": 22.57,
+            "heading_deg": 358.2,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3201455,
+            "lng": 103.8154727,
+            "ts": "2026-08-12T14:12:40+08:00",
+            "speed_kph": 22.57,
+            "heading_deg": 358.2,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3207091,
+            "lng": 103.8154545,
+            "ts": "2026-08-12T14:12:50+08:00",
+            "speed_kph": 22.57,
+            "heading_deg": 358.2,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3212727,
+            "lng": 103.8154364,
+            "ts": "2026-08-12T14:13:00+08:00",
+            "speed_kph": 22.57,
+            "heading_deg": 358.2,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3218364,
+            "lng": 103.8154182,
+            "ts": "2026-08-12T14:13:10+08:00",
+            "speed_kph": 22.57,
+            "heading_deg": 358.2,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3224,
+            "lng": 103.8154,
+            "ts": "2026-08-12T14:13:20+08:00",
+            "speed_kph": 22.57,
+            "heading_deg": 60.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.32266,
+            "lng": 103.81586,
+            "ts": "2026-08-12T14:13:30+08:00",
+            "speed_kph": 21.15,
+            "heading_deg": 60.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.32292,
+            "lng": 103.81632,
+            "ts": "2026-08-12T14:13:40+08:00",
+            "speed_kph": 21.15,
+            "heading_deg": 60.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.32318,
+            "lng": 103.81678,
+            "ts": "2026-08-12T14:13:50+08:00",
+            "speed_kph": 21.15,
+            "heading_deg": 60.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.32344,
+            "lng": 103.81724,
+            "ts": "2026-08-12T14:14:00+08:00",
+            "speed_kph": 21.15,
+            "heading_deg": 60.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3237,
+            "lng": 103.8177,
+            "ts": "2026-08-12T14:14:10+08:00",
+            "speed_kph": 21.15,
+            "heading_deg": 60.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.32396,
+            "lng": 103.81816,
+            "ts": "2026-08-12T14:14:20+08:00",
+            "speed_kph": 21.15,
+            "heading_deg": 60.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.32422,
+            "lng": 103.81862,
+            "ts": "2026-08-12T14:14:30+08:00",
+            "speed_kph": 21.15,
+            "heading_deg": 60.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.32448,
+            "lng": 103.81908,
+            "ts": "2026-08-12T14:14:40+08:00",
+            "speed_kph": 21.15,
+            "heading_deg": 60.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.32474,
+            "lng": 103.81954,
+            "ts": "2026-08-12T14:14:50+08:00",
+            "speed_kph": 21.15,
+            "heading_deg": 60.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.325,
+            "lng": 103.82,
+            "ts": "2026-08-12T14:15:00+08:00",
+            "speed_kph": 21.15,
+            "heading_deg": 115.6,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.32475,
+            "lng": 103.8205208,
+            "ts": "2026-08-12T14:15:10+08:00",
+            "speed_kph": 23.12,
+            "heading_deg": 115.6,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3245,
+            "lng": 103.8210417,
+            "ts": "2026-08-12T14:15:20+08:00",
+            "speed_kph": 23.12,
+            "heading_deg": 115.6,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.32425,
+            "lng": 103.8215625,
+            "ts": "2026-08-12T14:15:30+08:00",
+            "speed_kph": 23.12,
+            "heading_deg": 115.6,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.324,
+            "lng": 103.8220833,
+            "ts": "2026-08-12T14:15:40+08:00",
+            "speed_kph": 23.12,
+            "heading_deg": 115.6,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.32375,
+            "lng": 103.8226042,
+            "ts": "2026-08-12T14:15:50+08:00",
+            "speed_kph": 23.12,
+            "heading_deg": 115.6,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3235,
+            "lng": 103.823125,
+            "ts": "2026-08-12T14:16:00+08:00",
+            "speed_kph": 23.12,
+            "heading_deg": 115.6,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.32325,
+            "lng": 103.8236458,
+            "ts": "2026-08-12T14:16:10+08:00",
+            "speed_kph": 23.12,
+            "heading_deg": 115.6,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.323,
+            "lng": 103.8241667,
+            "ts": "2026-08-12T14:16:20+08:00",
+            "speed_kph": 23.12,
+            "heading_deg": 115.6,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.32275,
+            "lng": 103.8246875,
+            "ts": "2026-08-12T14:16:30+08:00",
+            "speed_kph": 23.12,
+            "heading_deg": 115.6,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3225,
+            "lng": 103.8252083,
+            "ts": "2026-08-12T14:16:40+08:00",
+            "speed_kph": 23.12,
+            "heading_deg": 115.6,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.32225,
+            "lng": 103.8257292,
+            "ts": "2026-08-12T14:16:50+08:00",
+            "speed_kph": 23.12,
+            "heading_deg": 115.6,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.322,
+            "lng": 103.82625,
+            "ts": "2026-08-12T14:17:00+08:00",
+            "speed_kph": 23.12,
+            "heading_deg": 115.6,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.32175,
+            "lng": 103.8267708,
+            "ts": "2026-08-12T14:17:10+08:00",
+            "speed_kph": 23.12,
+            "heading_deg": 115.6,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3215,
+            "lng": 103.8272917,
+            "ts": "2026-08-12T14:17:20+08:00",
+            "speed_kph": 23.12,
+            "heading_deg": 115.6,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.32125,
+            "lng": 103.8278125,
+            "ts": "2026-08-12T14:17:30+08:00",
+            "speed_kph": 23.12,
+            "heading_deg": 115.6,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.321,
+            "lng": 103.8283333,
+            "ts": "2026-08-12T14:17:40+08:00",
+            "speed_kph": 23.12,
+            "heading_deg": 115.6,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.32075,
+            "lng": 103.8288542,
+            "ts": "2026-08-12T14:17:50+08:00",
+            "speed_kph": 23.12,
+            "heading_deg": 115.6,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3205,
+            "lng": 103.829375,
+            "ts": "2026-08-12T14:18:00+08:00",
+            "speed_kph": 23.12,
+            "heading_deg": 115.6,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.32025,
+            "lng": 103.8298958,
+            "ts": "2026-08-12T14:18:10+08:00",
+            "speed_kph": 23.12,
+            "heading_deg": 115.6,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.32,
+            "lng": 103.8304167,
+            "ts": "2026-08-12T14:18:20+08:00",
+            "speed_kph": 23.12,
+            "heading_deg": 115.6,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.31975,
+            "lng": 103.8309375,
+            "ts": "2026-08-12T14:18:30+08:00",
+            "speed_kph": 23.12,
+            "heading_deg": 115.6,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3195,
+            "lng": 103.8314583,
+            "ts": "2026-08-12T14:18:40+08:00",
+            "speed_kph": 23.12,
+            "heading_deg": 115.6,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.31925,
+            "lng": 103.8319792,
+            "ts": "2026-08-12T14:18:50+08:00",
+            "speed_kph": 23.12,
+            "heading_deg": 115.6,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.319,
+            "lng": 103.8325,
+            "ts": "2026-08-12T14:19:00+08:00",
+            "speed_kph": 23.12,
+            "heading_deg": 137.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3185714,
+            "lng": 103.8328929,
+            "ts": "2026-08-12T14:19:10+08:00",
+            "speed_kph": 23.27,
+            "heading_deg": 137.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3181429,
+            "lng": 103.8332857,
+            "ts": "2026-08-12T14:19:20+08:00",
+            "speed_kph": 23.27,
+            "heading_deg": 137.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3177143,
+            "lng": 103.8336786,
+            "ts": "2026-08-12T14:19:30+08:00",
+            "speed_kph": 23.27,
+            "heading_deg": 137.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3172857,
+            "lng": 103.8340714,
+            "ts": "2026-08-12T14:19:40+08:00",
+            "speed_kph": 23.27,
+            "heading_deg": 137.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3168571,
+            "lng": 103.8344643,
+            "ts": "2026-08-12T14:19:50+08:00",
+            "speed_kph": 23.27,
+            "heading_deg": 137.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3164286,
+            "lng": 103.8348571,
+            "ts": "2026-08-12T14:20:00+08:00",
+            "speed_kph": 23.27,
+            "heading_deg": 137.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.316,
+            "lng": 103.83525,
+            "ts": "2026-08-12T14:20:10+08:00",
+            "speed_kph": 23.27,
+            "heading_deg": 137.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3155714,
+            "lng": 103.8356429,
+            "ts": "2026-08-12T14:20:20+08:00",
+            "speed_kph": 23.27,
+            "heading_deg": 137.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3151429,
+            "lng": 103.8360357,
+            "ts": "2026-08-12T14:20:30+08:00",
+            "speed_kph": 23.27,
+            "heading_deg": 137.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3147143,
+            "lng": 103.8364286,
+            "ts": "2026-08-12T14:20:40+08:00",
+            "speed_kph": 23.27,
+            "heading_deg": 137.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3142857,
+            "lng": 103.8368214,
+            "ts": "2026-08-12T14:20:50+08:00",
+            "speed_kph": 23.27,
+            "heading_deg": 137.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3138571,
+            "lng": 103.8372143,
+            "ts": "2026-08-12T14:21:00+08:00",
+            "speed_kph": 23.27,
+            "heading_deg": 137.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3134286,
+            "lng": 103.8376071,
+            "ts": "2026-08-12T14:21:10+08:00",
+            "speed_kph": 23.27,
+            "heading_deg": 137.5,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.313,
+            "lng": 103.838,
+            "ts": "2026-08-12T14:21:20+08:00",
+            "speed_kph": 23.27,
+            "heading_deg": 212.3,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3125385,
+            "lng": 103.8377077,
+            "ts": "2026-08-12T14:21:30+08:00",
+            "speed_kph": 21.87,
+            "heading_deg": 212.3,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3120769,
+            "lng": 103.8374154,
+            "ts": "2026-08-12T14:21:40+08:00",
+            "speed_kph": 21.87,
+            "heading_deg": 212.3,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3116154,
+            "lng": 103.8371231,
+            "ts": "2026-08-12T14:21:50+08:00",
+            "speed_kph": 21.87,
+            "heading_deg": 212.3,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3111538,
+            "lng": 103.8368308,
+            "ts": "2026-08-12T14:22:00+08:00",
+            "speed_kph": 21.87,
+            "heading_deg": 212.3,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3106923,
+            "lng": 103.8365385,
+            "ts": "2026-08-12T14:22:10+08:00",
+            "speed_kph": 21.87,
+            "heading_deg": 212.3,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3102308,
+            "lng": 103.8362462,
+            "ts": "2026-08-12T14:22:20+08:00",
+            "speed_kph": 21.87,
+            "heading_deg": 212.3,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3097692,
+            "lng": 103.8359538,
+            "ts": "2026-08-12T14:22:30+08:00",
+            "speed_kph": 21.87,
+            "heading_deg": 212.3,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3093077,
+            "lng": 103.8356615,
+            "ts": "2026-08-12T14:22:40+08:00",
+            "speed_kph": 21.87,
+            "heading_deg": 212.3,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3088462,
+            "lng": 103.8353692,
+            "ts": "2026-08-12T14:22:50+08:00",
+            "speed_kph": 21.87,
+            "heading_deg": 212.3,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3083846,
+            "lng": 103.8350769,
+            "ts": "2026-08-12T14:23:00+08:00",
+            "speed_kph": 21.87,
+            "heading_deg": 212.3,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3079231,
+            "lng": 103.8347846,
+            "ts": "2026-08-12T14:23:10+08:00",
+            "speed_kph": 21.87,
+            "heading_deg": 212.3,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3074615,
+            "lng": 103.8344923,
+            "ts": "2026-08-12T14:23:20+08:00",
+            "speed_kph": 21.87,
+            "heading_deg": 212.3,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.307,
+            "lng": 103.8342,
+            "ts": "2026-08-12T14:23:30+08:00",
+            "speed_kph": 21.87,
+            "heading_deg": 219.2,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.30655,
+            "lng": 103.8338333,
+            "ts": "2026-08-12T14:23:40+08:00",
+            "speed_kph": 23.23,
+            "heading_deg": 219.2,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3061,
+            "lng": 103.8334667,
+            "ts": "2026-08-12T14:23:50+08:00",
+            "speed_kph": 23.23,
+            "heading_deg": 219.2,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.30565,
+            "lng": 103.8331,
+            "ts": "2026-08-12T14:24:00+08:00",
+            "speed_kph": 23.23,
+            "heading_deg": 219.2,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3052,
+            "lng": 103.8327333,
+            "ts": "2026-08-12T14:24:10+08:00",
+            "speed_kph": 23.23,
+            "heading_deg": 219.2,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.30475,
+            "lng": 103.8323667,
+            "ts": "2026-08-12T14:24:20+08:00",
+            "speed_kph": 23.23,
+            "heading_deg": 219.2,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3043,
+            "lng": 103.832,
+            "ts": "2026-08-12T14:24:30+08:00",
+            "speed_kph": 23.23,
+            "heading_deg": 123.4,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.304,
+            "lng": 103.8324545,
+            "ts": "2026-08-12T14:24:40+08:00",
+            "speed_kph": 21.8,
+            "heading_deg": 123.4,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3037,
+            "lng": 103.8329091,
+            "ts": "2026-08-12T14:24:50+08:00",
+            "speed_kph": 21.8,
+            "heading_deg": 123.4,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3034,
+            "lng": 103.8333636,
+            "ts": "2026-08-12T14:25:00+08:00",
+            "speed_kph": 21.8,
+            "heading_deg": 123.4,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3031,
+            "lng": 103.8338182,
+            "ts": "2026-08-12T14:25:10+08:00",
+            "speed_kph": 21.8,
+            "heading_deg": 123.4,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3028,
+            "lng": 103.8342727,
+            "ts": "2026-08-12T14:25:20+08:00",
+            "speed_kph": 21.8,
+            "heading_deg": 123.4,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3025,
+            "lng": 103.8347273,
+            "ts": "2026-08-12T14:25:30+08:00",
+            "speed_kph": 21.8,
+            "heading_deg": 123.4,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3022,
+            "lng": 103.8351818,
+            "ts": "2026-08-12T14:25:40+08:00",
+            "speed_kph": 21.8,
+            "heading_deg": 123.4,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3019,
+            "lng": 103.8356364,
+            "ts": "2026-08-12T14:25:50+08:00",
+            "speed_kph": 21.8,
+            "heading_deg": 123.4,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3016,
+            "lng": 103.8360909,
+            "ts": "2026-08-12T14:26:00+08:00",
+            "speed_kph": 21.8,
+            "heading_deg": 123.4,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3013,
+            "lng": 103.8365455,
+            "ts": "2026-08-12T14:26:10+08:00",
+            "speed_kph": 21.8,
+            "heading_deg": 123.4,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.301,
+            "lng": 103.837,
+            "ts": "2026-08-12T14:26:20+08:00",
+            "speed_kph": 21.8,
+            "heading_deg": 107.4,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3008333,
+            "lng": 103.8375333,
+            "ts": "2026-08-12T14:26:30+08:00",
+            "speed_kph": 22.36,
+            "heading_deg": 107.3,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3006667,
+            "lng": 103.8380667,
+            "ts": "2026-08-12T14:26:40+08:00",
+            "speed_kph": 22.36,
+            "heading_deg": 107.4,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          },
+          {
+            "lat": 1.3005,
+            "lng": 103.8386,
+            "ts": "2026-08-12T14:26:50+08:00",
+            "speed_kph": 22.36,
+            "heading_deg": 0.0,
+            "accuracy_m": 8.0,
+            "venue_id": null
+          }
+        ],
+        "rider_track": [],
+        "point_count": 162,
+        "first_fix_at": "2026-08-12T14:00:00+08:00",
+        "last_fix_at": "2026-08-12T14:26:50+08:00",
+        "expected_interval_sec": 10,
+        "sample_interval_sec": 10,
+        "coverage_pct": 100.0,
+        "max_gap_sec": 10,
+        "gaps": [],
+        "trace_distance_km": 10.06
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-00802",
+      "generated_at": "2026-08-12T15:27:50+08:00"
+    },
+    {
+      "evidence_id": "EV-CHAT-00802",
+      "evidence_type": "CHAT_LOG",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Synthetic record; timestamps use Singapore local time.",
+        "assessed_at": "2026-08-12T15:28:00+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "messages": [],
+        "message_count": 0,
+        "first_message_at": null,
+        "last_message_at": null,
+        "truncated": false
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-00802",
+      "generated_at": "2026-08-12T15:27:50+08:00"
+    },
+    {
+      "evidence_id": "EV-FARE-00802",
+      "evidence_type": "FARE_BREAKDOWN",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Synthetic record; timestamps use Singapore local time.",
+        "assessed_at": "2026-08-12T15:28:00+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "fare_model": "METERED",
+        "quoted_fare_sgd": null,
+        "rate_card_id": "STANDARD-METERED-V3",
+        "per_km_rate_sgd": 0.75,
+        "per_min_rate_sgd": 0.28,
+        "distance_charged_km": 10.06,
+        "time_charged_min": 26.8,
+        "base_fare": 3.8,
+        "distance_fare": 7.55,
+        "time_fare": 7.5,
+        "surge_multiplier": 1.0,
+        "surge_amount": 0.0,
+        "tolls_erp": 0.0,
+        "erp_gantries": [],
+        "airport_surcharge": 0.0,
+        "platform_fee": 0.8,
+        "promo_discount": 0.0,
+        "cancellation_fee": 0.0,
+        "waiting_time_fee": 0.0,
+        "total_charged": 19.65,
+        "currency": "SGD",
+        "payment_status": "CHARGED",
+        "refund_issued_sgd": 0.0,
+        "charged_at": "2026-08-12T14:26:55+08:00"
+      },
+      "schema_version": "1.2.0",
+      "source": "PAYMENTS_LEDGER",
+      "trip_id": "TRP-00802",
+      "generated_at": "2026-08-12T15:27:50+08:00"
+    },
+    {
+      "evidence_id": "EV-RPROF-00802",
+      "evidence_type": "RIDER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Synthetic record; timestamps use Singapore local time.",
+        "assessed_at": "2026-08-12T15:28:00+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "RDR-80802",
+        "party_role": "RIDER",
+        "snapshot_at": "2026-08-12T15:26:50+08:00",
+        "account_age_days": 740,
+        "lifetime_trips": 830,
+        "rating": 4.8,
+        "prior_disputes_filed": 2,
+        "prior_disputes_upheld": 1,
+        "cancellation_rate": 0.02,
+        "prior_no_show_flags": 1,
+        "disputes_with_counterparty_90d": 0,
+        "deviation_claims_60d": 0,
+        "deviation_claims_60d_substantiated": 0,
+        "no_show_disputes_30d": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-00802",
+      "generated_at": "2026-08-12T15:27:50+08:00"
+    },
+    {
+      "evidence_id": "EV-DPROF-00802",
+      "evidence_type": "DRIVER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Synthetic record; timestamps use Singapore local time.",
+        "assessed_at": "2026-08-12T15:28:00+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "DRV-80802",
+        "party_role": "DRIVER",
+        "snapshot_at": "2026-08-12T15:26:50+08:00",
+        "account_age_days": 740,
+        "lifetime_trips": 830,
+        "rating": 4.8,
+        "prior_disputes_filed": 2,
+        "prior_disputes_upheld": 1,
+        "cancellation_rate": 0.02,
+        "prior_no_show_flags": 1,
+        "disputes_with_counterparty_90d": 0,
+        "prior_deviation_flags": 3,
+        "acceptance_rate": 0.96,
+        "vehicle_type": "RYDE_X",
+        "active_region": "Singapore",
+        "deviation_flags_90d": 3,
+        "completed_trips_90d": 200,
+        "no_show_terminations_30d": 1,
+        "completed_trips_30d": 100
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-00802",
+      "generated_at": "2026-08-12T15:27:50+08:00"
+    },
+    {
+      "evidence_id": "EV-ADVIS-00802-01",
+      "evidence_type": "TRAFFIC_ADVISORY",
+      "admissibility": {
+        "status": "MISSING",
+        "issues": [
+          "MISSING_ARTIFACT"
+        ],
+        "weight_multiplier": 0.0,
+        "notes": "No artifact was supplied for this trip.",
+        "assessed_at": "2026-08-12T15:28:00+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": null,
+      "schema_version": "1.2.0",
+      "source": "THIRD_PARTY_LTA",
+      "trip_id": "TRP-00802",
+      "generated_at": "2026-08-12T15:27:50+08:00"
+    }
+  ]
+}
