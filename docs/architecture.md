@@ -1,13 +1,19 @@
 # Tribunal architecture
 
-The drawings are the policy owner's. **Ji Guofang** drew this set of four views
-from the code at the final freeze, `freeze-2026-10-11`, which is policy version
-6, and they are read in the order this page walks them. The **system context**
-says who uses Tribunal and what it depends on. The two **container** views open
-the system itself: 2a for deciding and measuring, 2b for what happens after a
-ruling. The **dynamic** view follows one dispute down the pipeline, step by
-step. Every element names the file that implements it, and every arrow is
-directed and labelled with what it carries.
+The four views are drawn by `tools/c4_diagrams.py`, written in WorkBuddy, from
+the layout specifications in `docs/architecture/spec/` -- one JSON file per
+view, each a transcription of a drawing and nothing else. Those specifications
+transcribe the C4 set the policy owner, **Ji Guofang**, designed from the code
+at the final freeze, `freeze-2026-10-11`, which is policy version 6, and the
+views are read in the order this page walks them. One correction was made, and
+it is the only difference between her drawings and these: the evidence
+collector's box says what `ops/evidence.py` does -- it is given the dispute and
+reads that dispute's trip id -- where the drawing said it was given only a trip
+id. The **system context** says who uses Tribunal and what it depends on. The
+two **container** views open the system itself: 2a for deciding and measuring,
+2b for what happens after a ruling. The **dynamic** view follows one dispute
+down the pipeline, step by step. Every element names the file that implements
+it, and every arrow is directed and labelled with what it carries.
 
 ![Tribunal architecture](architecture.svg)
 

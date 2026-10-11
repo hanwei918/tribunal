@@ -1,0 +1,1620 @@
+{
+ "name": "1-system-context",
+ "canvas": {
+  "viewBox": "0 0 1920 1080",
+  "width": "1920",
+  "height": "1080",
+  "font-family": "Inter, Helvetica, Arial, sans-serif"
+ },
+ "markers": [
+  {
+   "id": "a",
+   "viewBox": "0 0 10 10",
+   "refX": "9.5",
+   "refY": "5",
+   "markerWidth": "8",
+   "markerHeight": "8",
+   "orient": "auto",
+   "path": {
+    "d": "M0,0 L10,5 L0,10 Z",
+    "fill": "#3D444D"
+   }
+  },
+  {
+   "id": "ao",
+   "viewBox": "0 0 10 10",
+   "refX": "9.5",
+   "refY": "5",
+   "markerWidth": "8",
+   "markerHeight": "8",
+   "orient": "auto",
+   "path": {
+    "d": "M0,0 L10,5 L0,10 Z",
+    "fill": "#6E7781"
+   }
+  }
+ ],
+ "elements": [
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "0",
+    "y": "0",
+    "width": "1920",
+    "height": "1080",
+    "fill": "#FFFFFF"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "32",
+    "y": "48",
+    "font-size": "28",
+    "font-weight": "bold",
+    "fill": "#1F2328"
+   },
+   "text": "System Context diagram for Tribunal"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "32",
+    "y": "76",
+    "font-size": "15",
+    "fill": "#57606A"
+   },
+   "text": "C4 level 1 - who uses Tribunal and which systems it depends on.  Code trees as at freeze-2026-10-11 (tribunal/, prompts/, policy/ equal commit 19c7e5a per README); the product runs use --policy-version 6 (34 clauses)."
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M210,217 L210,428",
+    "fill": "none",
+    "stroke": "#FFFFFF",
+    "stroke-width": "7",
+    "stroke-linejoin": "round"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M210,217 L210,428",
+    "fill": "none",
+    "stroke": "#3D444D",
+    "stroke-width": "1.5",
+    "marker-end": "url(#a)"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M380,500 L618,500",
+    "fill": "none",
+    "stroke": "#FFFFFF",
+    "stroke-width": "7",
+    "stroke-linejoin": "round"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M380,500 L618,500",
+    "fill": "none",
+    "stroke": "#3D444D",
+    "stroke-width": "1.5",
+    "marker-end": "url(#a)"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M785,251 L785,408",
+    "fill": "none",
+    "stroke": "#FFFFFF",
+    "stroke-width": "7",
+    "stroke-linejoin": "round"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M785,251 L785,408",
+    "fill": "none",
+    "stroke": "#3D444D",
+    "stroke-width": "1.5",
+    "marker-end": "url(#a)"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M1165,234 L1165,408",
+    "fill": "none",
+    "stroke": "#FFFFFF",
+    "stroke-width": "7",
+    "stroke-linejoin": "round"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M1165,234 L1165,408",
+    "fill": "none",
+    "stroke": "#3D444D",
+    "stroke-width": "1.5",
+    "marker-end": "url(#a)"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M1240,470 L1538,470",
+    "fill": "none",
+    "stroke": "#FFFFFF",
+    "stroke-width": "7",
+    "stroke-linejoin": "round"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M1240,470 L1538,470",
+    "fill": "none",
+    "stroke": "#3D444D",
+    "stroke-width": "1.5",
+    "marker-end": "url(#a)"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M725,570 L725,798",
+    "fill": "none",
+    "stroke": "#FFFFFF",
+    "stroke-width": "7",
+    "stroke-linejoin": "round"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M725,570 L725,798",
+    "fill": "none",
+    "stroke": "#3D444D",
+    "stroke-width": "1.5",
+    "marker-end": "url(#a)"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M1520,852 L1382,852",
+    "fill": "none",
+    "stroke": "#FFFFFF",
+    "stroke-width": "7",
+    "stroke-linejoin": "round"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M1520,852 L1382,852",
+    "fill": "none",
+    "stroke": "#3D444D",
+    "stroke-width": "1.5",
+    "marker-end": "url(#a)"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M1180,800 L1180,572",
+    "fill": "none",
+    "stroke": "#FFFFFF",
+    "stroke-width": "7",
+    "stroke-linejoin": "round"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M1180,800 L1180,572",
+    "fill": "none",
+    "stroke": "#3D444D",
+    "stroke-width": "1.5",
+    "marker-end": "url(#a)"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M1620,790 L1620,550 L1242,550",
+    "fill": "none",
+    "stroke": "#FFFFFF",
+    "stroke-width": "7",
+    "stroke-linejoin": "round"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M1620,790 L1620,550 L1242,550",
+    "fill": "none",
+    "stroke": "#3D444D",
+    "stroke-width": "1.5",
+    "marker-end": "url(#a)"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M1690,914 L1690,990 L760,990 L760,904",
+    "fill": "none",
+    "stroke": "#FFFFFF",
+    "stroke-width": "7",
+    "stroke-linejoin": "round"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M1690,914 L1690,990 L760,990 L760,904",
+    "fill": "none",
+    "stroke": "#3D444D",
+    "stroke-width": "1.5",
+    "marker-end": "url(#a)"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M660,410 L660,300 L300,300 L300,219",
+    "fill": "none",
+    "stroke": "#FFFFFF",
+    "stroke-width": "7",
+    "stroke-linejoin": "round"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M660,410 L660,300 L300,300 L300,219",
+    "fill": "none",
+    "stroke": "#6E7781",
+    "stroke-width": "1.5",
+    "stroke-dasharray": "7 5",
+    "marker-end": "url(#ao)"
+   }
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "32",
+    "y": "610",
+    "width": "500",
+    "height": "168",
+    "rx": "10",
+    "fill": "#FFFFFF",
+    "stroke": "#D0D7DE"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "46",
+    "y": "632",
+    "font-size": "14",
+    "fill": "#1F2328",
+    "font-weight": "bold"
+   },
+   "text": "Key"
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "46",
+    "y": "644",
+    "width": "34",
+    "height": "20",
+    "rx": "5",
+    "fill": "#08427B",
+    "stroke": "#052E56"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "90",
+    "y": "659",
+    "font-size": "12.5",
+    "fill": "#1F2328"
+   },
+   "text": "Person"
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "282",
+    "y": "644",
+    "width": "34",
+    "height": "20",
+    "rx": "5",
+    "fill": "#1168BD",
+    "stroke": "#0B4884"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "326",
+    "y": "659",
+    "font-size": "12.5",
+    "fill": "#1F2328"
+   },
+   "text": "Software system in scope"
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "46",
+    "y": "674",
+    "width": "34",
+    "height": "20",
+    "rx": "5",
+    "fill": "#999999",
+    "stroke": "#6B6B6B"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "90",
+    "y": "689",
+    "font-size": "12.5",
+    "fill": "#1F2328"
+   },
+   "text": "External software system"
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "282",
+    "y": "676",
+    "width": "34",
+    "height": "16",
+    "rx": "8",
+    "fill": "#8250DF"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "326",
+    "y": "689",
+    "font-size": "12.5",
+    "fill": "#1F2328"
+   },
+   "text": "calls a large language model"
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M46,712 L88,712",
+    "stroke": "#3D444D",
+    "stroke-width": "1.5",
+    "marker-end": "url(#a)"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "98",
+    "y": "716.5",
+    "font-size": "12.5",
+    "fill": "#1F2328"
+   },
+   "text": "relationship: intent [technology], read in the arrow's direction"
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M46,734 L88,734",
+    "stroke": "#6E7781",
+    "stroke-width": "1.5",
+    "stroke-dasharray": "7 5",
+    "marker-end": "url(#ao)"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "98",
+    "y": "738.5",
+    "font-size": "12.5",
+    "fill": "#1F2328"
+   },
+   "text": "dashed: a relationship that is not built"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "46",
+    "y": "764",
+    "font-size": "12",
+    "fill": "#57606A"
+   },
+   "text": "Colours are the C4-PlantUML defaults."
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "id": "party",
+    "x": "60",
+    "y": "110",
+    "width": "300",
+    "height": "107",
+    "rx": "12",
+    "fill": "#08427B",
+    "stroke": "#052E56",
+    "stroke-width": "1.5"
+   }
+  },
+  {
+   "tag": "circle",
+   "attrs": {
+    "cx": "210",
+    "cy": "124",
+    "r": "7",
+    "fill": "#FFFFFF"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M199,144 a11,10 0 0 1 22,0 z",
+    "fill": "#FFFFFF"
+   }
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "id": "op",
+    "x": "620",
+    "y": "110",
+    "width": "330",
+    "height": "158",
+    "rx": "12",
+    "fill": "#08427B",
+    "stroke": "#052E56",
+    "stroke-width": "1.5"
+   }
+  },
+  {
+   "tag": "circle",
+   "attrs": {
+    "cx": "785",
+    "cy": "124",
+    "r": "7",
+    "fill": "#FFFFFF"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M774,144 a11,10 0 0 1 22,0 z",
+    "fill": "#FFFFFF"
+   }
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "id": "owner",
+    "x": "1000",
+    "y": "110",
+    "width": "330",
+    "height": "141",
+    "rx": "12",
+    "fill": "#08427B",
+    "stroke": "#052E56",
+    "stroke-width": "1.5"
+   }
+  },
+  {
+   "tag": "circle",
+   "attrs": {
+    "cx": "1165",
+    "cy": "124",
+    "r": "7",
+    "fill": "#FFFFFF"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M1154,144 a11,10 0 0 1 22,0 z",
+    "fill": "#FFFFFF"
+   }
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "id": "ryde",
+    "x": "60",
+    "y": "430",
+    "width": "320",
+    "height": "119",
+    "rx": "12",
+    "fill": "#999999",
+    "stroke": "#6B6B6B",
+    "stroke-width": "1.5"
+   }
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "id": "trib",
+    "x": "620",
+    "y": "410",
+    "width": "620",
+    "height": "160",
+    "rx": "12",
+    "fill": "#1168BD",
+    "stroke": "#0B4884",
+    "stroke-width": "1.5"
+   }
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "838.5",
+    "y": "461",
+    "width": "183",
+    "height": "19",
+    "rx": "9.5",
+    "fill": "#8250DF",
+    "stroke": "#FFFFFF",
+    "stroke-width": "1"
+   }
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "id": "hub",
+    "x": "1540",
+    "y": "400",
+    "width": "340",
+    "height": "102",
+    "rx": "12",
+    "fill": "#999999",
+    "stroke": "#6B6B6B",
+    "stroke-width": "1.5"
+   }
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "id": "eo",
+    "x": "560",
+    "y": "800",
+    "width": "330",
+    "height": "102",
+    "rx": "12",
+    "fill": "#999999",
+    "stroke": "#6B6B6B",
+    "stroke-width": "1.5"
+   }
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "id": "wb",
+    "x": "1060",
+    "y": "800",
+    "width": "320",
+    "height": "102",
+    "rx": "12",
+    "fill": "#999999",
+    "stroke": "#6B6B6B",
+    "stroke-width": "1.5"
+   }
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "id": "rev",
+    "x": "1520",
+    "y": "790",
+    "width": "340",
+    "height": "124",
+    "rx": "12",
+    "fill": "#08427B",
+    "stroke": "#052E56",
+    "stroke-width": "1.5"
+   }
+  },
+  {
+   "tag": "circle",
+   "attrs": {
+    "cx": "1690",
+    "cy": "804",
+    "r": "7",
+    "fill": "#FFFFFF"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M1679,824 a11,10 0 0 1 22,0 z",
+    "fill": "#FFFFFF"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "210",
+    "y": "158",
+    "font-size": "16",
+    "fill": "#FFFFFF",
+    "font-weight": "bold",
+    "text-anchor": "middle",
+    "data-box": "party"
+   },
+   "text": "Rider or driver"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "210",
+    "y": "176",
+    "font-size": "11.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "party"
+   },
+   "text": "[Person]"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "210",
+    "y": "201",
+    "font-size": "12.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "party"
+   },
+   "text": "A party to a dispute about a Ryde trip."
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "785",
+    "y": "158",
+    "font-size": "16",
+    "fill": "#FFFFFF",
+    "font-weight": "bold",
+    "text-anchor": "middle",
+    "data-box": "op"
+   },
+   "text": "Operator"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "785",
+    "y": "176",
+    "font-size": "11.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "op"
+   },
+   "text": "[Person]"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "785",
+    "y": "201",
+    "font-size": "12.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "op"
+   },
+   "text": "The developer. Runs the pipeline and the"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "785",
+    "y": "218",
+    "font-size": "12.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "op"
+   },
+   "text": "evaluations from the command line (no"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "785",
+    "y": "235",
+    "font-size": "12.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "op"
+   },
+   "text": "always-on service); approved amendment"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "785",
+    "y": "252",
+    "font-size": "12.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "op"
+   },
+   "text": "0003 and made both stored closures."
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1165",
+    "y": "158",
+    "font-size": "16",
+    "fill": "#FFFFFF",
+    "font-weight": "bold",
+    "text-anchor": "middle",
+    "data-box": "owner"
+   },
+   "text": "Policy owner"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1165",
+    "y": "176",
+    "font-size": "11.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "owner"
+   },
+   "text": "[Person]"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1165",
+    "y": "201",
+    "font-size": "12.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "owner"
+   },
+   "text": "Owns the policy and most answer keys;"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1165",
+    "y": "218",
+    "font-size": "12.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "owner"
+   },
+   "text": "approved amendments 0001-0002 and"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1165",
+    "y": "235",
+    "font-size": "12.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "owner"
+   },
+   "text": "confirmed 0003 (2026-10-10)."
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "220",
+    "y": "456",
+    "font-size": "16",
+    "fill": "#FFFFFF",
+    "font-weight": "bold",
+    "text-anchor": "middle",
+    "data-box": "ryde"
+   },
+   "text": "Ryde platform"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "220",
+    "y": "474",
+    "font-size": "11.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "ryde"
+   },
+   "text": "[Software System, external - mocked]"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "220",
+    "y": "499",
+    "font-size": "12.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "ryde"
+   },
+   "text": "Trips, GPS, chat, fares, profiles."
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "220",
+    "y": "516",
+    "font-size": "12.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "ryde"
+   },
+   "text": "Here it is the committed case files"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "220",
+    "y": "533",
+    "font-size": "12.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "ryde"
+   },
+   "text": "in data/ (public contract, 1.2.0)."
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "930",
+    "y": "436",
+    "font-size": "16",
+    "fill": "#FFFFFF",
+    "font-weight": "bold",
+    "text-anchor": "middle",
+    "data-box": "trib"
+   },
+   "text": "Tribunal"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "930",
+    "y": "454",
+    "font-size": "11.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "trib"
+   },
+   "text": "[Software System: Python 3.9-3.13, standard library only]"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "930",
+    "y": "475",
+    "font-size": "11",
+    "fill": "#FFFFFF",
+    "font-weight": "bold",
+    "text-anchor": "middle",
+    "data-box": "trib"
+   },
+   "text": "calls a large language model"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "930",
+    "y": "503",
+    "font-size": "12.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "trib"
+   },
+   "text": "Decides one ride dispute against a versioned policy. Two advocates"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "930",
+    "y": "520",
+    "font-size": "12.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "trib"
+   },
+   "text": "argue from one brief; a four-draft judge panel votes; deterministic"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "930",
+    "y": "537",
+    "font-size": "12.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "trib"
+   },
+   "text": "checks gate every draft. A case it may not decide is escalated to"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "930",
+    "y": "554",
+    "font-size": "12.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "trib"
+   },
+   "text": "a person. Every step is written to a hash-chained record."
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1710",
+    "y": "426",
+    "font-size": "16",
+    "fill": "#FFFFFF",
+    "font-weight": "bold",
+    "text-anchor": "middle",
+    "data-box": "hub"
+   },
+   "text": "Tencent Cloud TokenHub"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1710",
+    "y": "444",
+    "font-size": "11.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "hub"
+   },
+   "text": "[Software System, external]"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1710",
+    "y": "469",
+    "font-size": "12.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "hub"
+   },
+   "text": "Model API, Singapore region;"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1710",
+    "y": "486",
+    "font-size": "12.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "hub"
+   },
+   "text": "model deepseek/deepseek-flash."
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "725",
+    "y": "826",
+    "font-size": "16",
+    "fill": "#FFFFFF",
+    "font-weight": "bold",
+    "text-anchor": "middle",
+    "data-box": "eo"
+   },
+   "text": "Tencent EdgeOne Pages"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "725",
+    "y": "844",
+    "font-size": "11.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "eo"
+   },
+   "text": "[Software System, external]"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "725",
+    "y": "869",
+    "font-size": "12.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "eo"
+   },
+   "text": "Static hosting: tribunal.edgeone.dev"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "725",
+    "y": "886",
+    "font-size": "12.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "eo"
+   },
+   "text": "(support site) and /replay/."
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1220",
+    "y": "826",
+    "font-size": "16",
+    "fill": "#FFFFFF",
+    "font-weight": "bold",
+    "text-anchor": "middle",
+    "data-box": "wb"
+   },
+   "text": "WorkBuddy"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1220",
+    "y": "844",
+    "font-size": "11.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "wb"
+   },
+   "text": "[Software System, external]"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1220",
+    "y": "869",
+    "font-size": "12.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "wb"
+   },
+   "text": "AI work assistant; starts the Tribunal"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1220",
+    "y": "886",
+    "font-size": "12.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "wb"
+   },
+   "text": "connector from its mcp.json."
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1690",
+    "y": "838",
+    "font-size": "16",
+    "fill": "#FFFFFF",
+    "font-weight": "bold",
+    "text-anchor": "middle",
+    "data-box": "rev"
+   },
+   "text": "Support reviewer"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1690",
+    "y": "856",
+    "font-size": "11.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "rev"
+   },
+   "text": "[Person]"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1690",
+    "y": "881",
+    "font-size": "12.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "rev"
+   },
+   "text": "Decides every escalated case, clears"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1690",
+    "y": "898",
+    "font-size": "12.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "rev"
+   },
+   "text": "held money, checks appeals."
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "105",
+    "y": "317",
+    "width": "210",
+    "height": "33",
+    "rx": "4",
+    "fill": "#FFFFFF",
+    "fill-opacity": "0.94",
+    "data-plate": "L42"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "210",
+    "y": "330",
+    "font-size": "12",
+    "fill": "#1F2328",
+    "text-anchor": "middle",
+    "data-label": "L42"
+   },
+   "text": "files a dispute"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "210",
+    "y": "344",
+    "font-size": "10.5",
+    "fill": "#57606A",
+    "text-anchor": "middle",
+    "data-label": "L42"
+   },
+   "text": "[Ryde app - outside this repository]"
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "416",
+    "y": "457",
+    "width": "166",
+    "height": "33",
+    "rx": "4",
+    "fill": "#FFFFFF",
+    "fill-opacity": "0.94",
+    "data-plate": "L45"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "499",
+    "y": "470",
+    "font-size": "12",
+    "fill": "#1F2328",
+    "text-anchor": "middle",
+    "data-label": "L45"
+   },
+   "text": "supplies the case record"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "499",
+    "y": "484",
+    "font-size": "10.5",
+    "fill": "#57606A",
+    "text-anchor": "middle",
+    "data-label": "L45"
+   },
+   "text": "[JSON files, contract 1.2.0]"
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "644.25",
+    "y": "323",
+    "width": "281.5",
+    "height": "33",
+    "rx": "4",
+    "fill": "#FFFFFF",
+    "fill-opacity": "0.94",
+    "data-plate": "L48"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "785",
+    "y": "336",
+    "font-size": "12",
+    "fill": "#1F2328",
+    "text-anchor": "middle",
+    "data-label": "L48"
+   },
+   "text": "runs a case set and grades it"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "785",
+    "y": "350",
+    "font-size": "10.5",
+    "fill": "#57606A",
+    "text-anchor": "middle",
+    "data-label": "L48"
+   },
+   "text": "[CLI: eval/run_benchmark.py, development_sets.py]"
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "1016",
+    "y": "303",
+    "width": "298",
+    "height": "48",
+    "rx": "4",
+    "fill": "#FFFFFF",
+    "fill-opacity": "0.94",
+    "data-plate": "L51"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1165",
+    "y": "316",
+    "font-size": "12",
+    "fill": "#1F2328",
+    "text-anchor": "middle",
+    "data-label": "L51"
+   },
+   "text": "writes clauses and answer keys;"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1165",
+    "y": "331",
+    "font-size": "12",
+    "fill": "#1F2328",
+    "text-anchor": "middle",
+    "data-label": "L51"
+   },
+   "text": "approves amendments"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1165",
+    "y": "345",
+    "font-size": "10.5",
+    "fill": "#57606A",
+    "text-anchor": "middle",
+    "data-label": "L51"
+   },
+   "text": "[JSON files by hand, or eval/policy_gaps.py approve]"
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "1282.2",
+    "y": "427",
+    "width": "213.6",
+    "height": "33",
+    "rx": "4",
+    "fill": "#FFFFFF",
+    "fill-opacity": "0.94",
+    "data-plate": "L55"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1389",
+    "y": "440",
+    "font-size": "12",
+    "fill": "#1F2328",
+    "text-anchor": "middle",
+    "data-label": "L55"
+   },
+   "text": "asks the advocates and the judge"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1389",
+    "y": "454",
+    "font-size": "10.5",
+    "fill": "#57606A",
+    "text-anchor": "middle",
+    "data-label": "L55"
+   },
+   "text": "[HTTPS, JSON - 6 calls a case at v6]"
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "600.75",
+    "y": "677",
+    "width": "248.5",
+    "height": "48",
+    "rx": "4",
+    "fill": "#FFFFFF",
+    "fill-opacity": "0.94",
+    "data-plate": "L58"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "725",
+    "y": "690",
+    "font-size": "12",
+    "fill": "#1F2328",
+    "text-anchor": "middle",
+    "data-label": "L58"
+   },
+   "text": "static pages uploaded to"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "725",
+    "y": "705",
+    "font-size": "12",
+    "fill": "#1F2328",
+    "text-anchor": "middle",
+    "data-label": "L58"
+   },
+   "text": "(by hand; no deploy code in the repo)"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "725",
+    "y": "719",
+    "font-size": "10.5",
+    "fill": "#57606A",
+    "text-anchor": "middle",
+    "data-label": "L58"
+   },
+   "text": "[HTML built by ui/v2/build.py, ui/build.py]"
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "1391.45",
+    "y": "823",
+    "width": "119.1",
+    "height": "33",
+    "rx": "4",
+    "fill": "#FFFFFF",
+    "fill-opacity": "0.94",
+    "data-plate": "L62"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1451",
+    "y": "836",
+    "font-size": "12",
+    "fill": "#1F2328",
+    "text-anchor": "middle",
+    "data-label": "L62"
+   },
+   "text": "asks about a case"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1451",
+    "y": "850",
+    "font-size": "10.5",
+    "fill": "#57606A",
+    "text-anchor": "middle",
+    "data-label": "L62"
+   },
+   "text": "[WorkBuddy chat]"
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "1061.25",
+    "y": "677",
+    "width": "237.5",
+    "height": "33",
+    "rx": "4",
+    "fill": "#FFFFFF",
+    "fill-opacity": "0.94",
+    "data-plate": "L65"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1180",
+    "y": "690",
+    "font-size": "12",
+    "fill": "#1F2328",
+    "text-anchor": "middle",
+    "data-label": "L65"
+   },
+   "text": "reads cases, the queue, packets"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1180",
+    "y": "704",
+    "font-size": "10.5",
+    "fill": "#57606A",
+    "text-anchor": "middle",
+    "data-label": "L65"
+   },
+   "text": "[MCP: JSON-RPC 2.0 over stdio; read-only]"
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "1396.1",
+    "y": "627",
+    "width": "219.9",
+    "height": "48",
+    "rx": "4",
+    "fill": "#FFFFFF",
+    "fill-opacity": "0.94",
+    "data-plate": "L68"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1610",
+    "y": "640",
+    "font-size": "12",
+    "fill": "#1F2328",
+    "text-anchor": "end",
+    "data-label": "L68"
+   },
+   "text": "works the queue, closes escalated"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1610",
+    "y": "655",
+    "font-size": "12",
+    "fill": "#1F2328",
+    "text-anchor": "end",
+    "data-label": "L68"
+   },
+   "text": "cases, checks appeals"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1610",
+    "y": "669",
+    "font-size": "10.5",
+    "fill": "#57606A",
+    "text-anchor": "end",
+    "data-label": "L68"
+   },
+   "text": "[CLI: ops/]"
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "1163.6",
+    "y": "972",
+    "width": "112.8",
+    "height": "33",
+    "rx": "4",
+    "fill": "#FFFFFF",
+    "fill-opacity": "0.94",
+    "data-plate": "L72"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1220",
+    "y": "985",
+    "font-size": "12",
+    "fill": "#1F2328",
+    "text-anchor": "middle",
+    "data-label": "L72"
+   },
+   "text": "reads case pages"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1220",
+    "y": "999",
+    "font-size": "10.5",
+    "fill": "#57606A",
+    "text-anchor": "middle",
+    "data-label": "L72"
+   },
+   "text": "[HTTPS, browser]"
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "344.85",
+    "y": "283",
+    "width": "270.3",
+    "height": "33",
+    "rx": "4",
+    "fill": "#FFFFFF",
+    "fill-opacity": "0.94",
+    "data-plate": "L75"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "480",
+    "y": "296",
+    "font-size": "12",
+    "fill": "#1F2328",
+    "text-anchor": "middle",
+    "data-label": "L75"
+   },
+   "text": "notice of the ruling: generated, not sent"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "480",
+    "y": "310",
+    "font-size": "10.5",
+    "fill": "#57606A",
+    "text-anchor": "middle",
+    "data-label": "L75"
+   },
+   "text": "[not built - the static site sends nothing]"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "32",
+    "y": "1060",
+    "font-size": "12",
+    "fill": "#57606A"
+   },
+   "text": "Source: tribunal-main_4, checked against the code. Sheets 2a and 2b (containers) and 3 (dynamic view of one dispute) follow."
+  }
+ ]
+}

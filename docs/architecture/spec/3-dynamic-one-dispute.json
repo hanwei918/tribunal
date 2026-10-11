@@ -1,0 +1,2507 @@
+{
+ "name": "3-dynamic-one-dispute",
+ "canvas": {
+  "viewBox": "0 0 1920 1080",
+  "width": "1920",
+  "height": "1080",
+  "font-family": "Inter, Helvetica, Arial, sans-serif"
+ },
+ "markers": [
+  {
+   "id": "a",
+   "viewBox": "0 0 10 10",
+   "refX": "9.5",
+   "refY": "5",
+   "markerWidth": "8",
+   "markerHeight": "8",
+   "orient": "auto",
+   "path": {
+    "d": "M0,0 L10,5 L0,10 Z",
+    "fill": "#3D444D"
+   }
+  },
+  {
+   "id": "ao",
+   "viewBox": "0 0 10 10",
+   "refX": "9.5",
+   "refY": "5",
+   "markerWidth": "8",
+   "markerHeight": "8",
+   "orient": "auto",
+   "path": {
+    "d": "M0,0 L10,5 L0,10 Z",
+    "fill": "#6E7781"
+   }
+  }
+ ],
+ "elements": [
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "0",
+    "y": "0",
+    "width": "1920",
+    "height": "1080",
+    "fill": "#FFFFFF"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "32",
+    "y": "48",
+    "font-size": "28",
+    "font-weight": "bold",
+    "fill": "#1F2328"
+   },
+   "text": "Dynamic diagram for Tribunal - how one dispute is decided"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "32",
+    "y": "76",
+    "font-size": "15",
+    "fill": "#57606A"
+   },
+   "text": "C4 dynamic view inside the Arbitration pipeline container: one call of run_case() at --policy-version 6 (as in the product runs), steps in run order."
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "70",
+    "y": "245",
+    "width": "1820",
+    "height": "600",
+    "rx": "14",
+    "fill": "#FFFFFF",
+    "stroke": "#1168BD",
+    "stroke-width": "1.6",
+    "stroke-dasharray": "10 6"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1467.08",
+    "y": "267",
+    "font-size": "15",
+    "fill": "#1168BD",
+    "font-weight": "bold"
+   },
+   "text": "Arbitration pipeline"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1640.9",
+    "y": "267",
+    "font-size": "12",
+    "fill": "#57606A"
+   },
+   "text": "[Container: Python package tribunal/]"
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M245,185 L245,278",
+    "fill": "none",
+    "stroke": "#FFFFFF",
+    "stroke-width": "7",
+    "stroke-linejoin": "round"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M245,185 L245,278",
+    "fill": "none",
+    "stroke": "#3D444D",
+    "stroke-width": "1.5",
+    "marker-end": "url(#a)"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M360,280 L360,252 L560,252 L560,197",
+    "fill": "none",
+    "stroke": "#FFFFFF",
+    "stroke-width": "7",
+    "stroke-linejoin": "round"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M360,280 L360,252 L560,252 L560,197",
+    "fill": "none",
+    "stroke": "#3D444D",
+    "stroke-width": "1.5",
+    "marker-end": "url(#a)"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M390,340 L453,340",
+    "fill": "none",
+    "stroke": "#FFFFFF",
+    "stroke-width": "7",
+    "stroke-linejoin": "round"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M390,340 L453,340",
+    "fill": "none",
+    "stroke": "#3D444D",
+    "stroke-width": "1.5",
+    "marker-end": "url(#a)"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M745,340 L808,340",
+    "fill": "none",
+    "stroke": "#FFFFFF",
+    "stroke-width": "7",
+    "stroke-linejoin": "round"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M745,340 L808,340",
+    "fill": "none",
+    "stroke": "#3D444D",
+    "stroke-width": "1.5",
+    "marker-end": "url(#a)"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M1100,340 L1163,340",
+    "fill": "none",
+    "stroke": "#FFFFFF",
+    "stroke-width": "7",
+    "stroke-linejoin": "round"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M1100,340 L1163,340",
+    "fill": "none",
+    "stroke": "#3D444D",
+    "stroke-width": "1.5",
+    "marker-end": "url(#a)"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M1455,340 L1518,340",
+    "fill": "none",
+    "stroke": "#FFFFFF",
+    "stroke-width": "7",
+    "stroke-linejoin": "round"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M1455,340 L1518,340",
+    "fill": "none",
+    "stroke": "#3D444D",
+    "stroke-width": "1.5",
+    "marker-end": "url(#a)"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M720,280 L720,252 L900,252 L900,197",
+    "fill": "none",
+    "stroke": "#FFFFFF",
+    "stroke-width": "7",
+    "stroke-linejoin": "round"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M720,280 L720,252 L900,252 L900,197",
+    "fill": "none",
+    "stroke": "#3D444D",
+    "stroke-width": "1.5",
+    "marker-end": "url(#a)"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M1320,280 L1320,197",
+    "fill": "none",
+    "stroke": "#FFFFFF",
+    "stroke-width": "7",
+    "stroke-linejoin": "round"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M1320,280 L1320,197",
+    "fill": "none",
+    "stroke": "#3D444D",
+    "stroke-width": "1.5",
+    "marker-end": "url(#a)"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M1665,416 L1665,455 L245,455 L245,498",
+    "fill": "none",
+    "stroke": "#FFFFFF",
+    "stroke-width": "7",
+    "stroke-linejoin": "round"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M1665,416 L1665,455 L245,455 L245,498",
+    "fill": "none",
+    "stroke": "#3D444D",
+    "stroke-width": "1.5",
+    "marker-end": "url(#a)"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M1810,340 L1855,340 L1855,760 L1812,760",
+    "fill": "none",
+    "stroke": "#FFFFFF",
+    "stroke-width": "7",
+    "stroke-linejoin": "round"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M1810,340 L1855,340 L1855,760 L1812,760",
+    "fill": "none",
+    "stroke": "#3D444D",
+    "stroke-width": "1.5",
+    "marker-end": "url(#a)"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M390,560 L453,560",
+    "fill": "none",
+    "stroke": "#FFFFFF",
+    "stroke-width": "7",
+    "stroke-linejoin": "round"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M390,560 L453,560",
+    "fill": "none",
+    "stroke": "#3D444D",
+    "stroke-width": "1.5",
+    "marker-end": "url(#a)"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M745,560 L808,560",
+    "fill": "none",
+    "stroke": "#FFFFFF",
+    "stroke-width": "7",
+    "stroke-linejoin": "round"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M745,560 L808,560",
+    "fill": "none",
+    "stroke": "#3D444D",
+    "stroke-width": "1.5",
+    "marker-end": "url(#a)"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M1100,560 L1163,560",
+    "fill": "none",
+    "stroke": "#FFFFFF",
+    "stroke-width": "7",
+    "stroke-linejoin": "round"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M1100,560 L1163,560",
+    "fill": "none",
+    "stroke": "#3D444D",
+    "stroke-width": "1.5",
+    "marker-end": "url(#a)"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M1455,560 L1518,560",
+    "fill": "none",
+    "stroke": "#FFFFFF",
+    "stroke-width": "7",
+    "stroke-linejoin": "round"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M1455,560 L1518,560",
+    "fill": "none",
+    "stroke": "#3D444D",
+    "stroke-width": "1.5",
+    "marker-end": "url(#a)"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M1665,619 L1665,713",
+    "fill": "none",
+    "stroke": "#FFFFFF",
+    "stroke-width": "7",
+    "stroke-linejoin": "round"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M1665,619 L1665,713",
+    "fill": "none",
+    "stroke": "#3D444D",
+    "stroke-width": "1.5",
+    "marker-end": "url(#a)"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M1665,817 L1665,898",
+    "fill": "none",
+    "stroke": "#FFFFFF",
+    "stroke-width": "7",
+    "stroke-linejoin": "round"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M1665,817 L1665,898",
+    "fill": "none",
+    "stroke": "#3D444D",
+    "stroke-width": "1.5",
+    "marker-end": "url(#a)"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M245,643 L245,880 L650,880 L650,908",
+    "fill": "none",
+    "stroke": "#FFFFFF",
+    "stroke-width": "7",
+    "stroke-linejoin": "round"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M245,643 L245,880 L650,880 L650,908",
+    "fill": "none",
+    "stroke": "#3D444D",
+    "stroke-width": "1.5",
+    "marker-end": "url(#a)"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M870,643 L870,908",
+    "fill": "none",
+    "stroke": "#FFFFFF",
+    "stroke-width": "7",
+    "stroke-linejoin": "round"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M870,643 L870,908",
+    "fill": "none",
+    "stroke": "#3D444D",
+    "stroke-width": "1.5",
+    "marker-end": "url(#a)"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M1180,898 L1180,790 L1060,790 L1060,645",
+    "fill": "none",
+    "stroke": "#FFFFFF",
+    "stroke-width": "7",
+    "stroke-linejoin": "round"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M1180,898 L1180,790 L1060,790 L1060,645",
+    "fill": "none",
+    "stroke": "#6E7781",
+    "stroke-width": "1.5",
+    "stroke-dasharray": "7 5",
+    "marker-end": "url(#ao)"
+   }
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "30",
+    "y": "900",
+    "width": "500",
+    "height": "158",
+    "rx": "10",
+    "fill": "#FFFFFF",
+    "stroke": "#D0D7DE"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "44",
+    "y": "922",
+    "font-size": "14",
+    "fill": "#1F2328",
+    "font-weight": "bold"
+   },
+   "text": "Key"
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "44",
+    "y": "934",
+    "width": "34",
+    "height": "20",
+    "rx": "5",
+    "fill": "#85BBF0",
+    "stroke": "#5D82A8"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "88",
+    "y": "949",
+    "font-size": "12.5",
+    "fill": "#1F2328"
+   },
+   "text": "Component; number = order"
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "280",
+    "y": "934",
+    "width": "34",
+    "height": "20",
+    "rx": "5",
+    "fill": "#438DD5",
+    "stroke": "#2E6295"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "324",
+    "y": "949",
+    "font-size": "12.5",
+    "fill": "#1F2328"
+   },
+   "text": "Container"
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M44,968 a17,4 0 0 0 34,0 v12 a17,4 0 0 1 -34,0 z",
+    "fill": "#438DD5",
+    "stroke": "#2E6295"
+   }
+  },
+  {
+   "tag": "ellipse",
+   "attrs": {
+    "cx": "61",
+    "cy": "968",
+    "rx": "17",
+    "ry": "4",
+    "fill": "#438DD5",
+    "stroke": "#2E6295"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "88",
+    "y": "979",
+    "font-size": "12.5",
+    "fill": "#1F2328"
+   },
+   "text": "Data store"
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "280",
+    "y": "964",
+    "width": "34",
+    "height": "20",
+    "rx": "5",
+    "fill": "#999999",
+    "stroke": "#6B6B6B"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "324",
+    "y": "979",
+    "font-size": "12.5",
+    "fill": "#1F2328"
+   },
+   "text": "External system"
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "44",
+    "y": "996",
+    "width": "34",
+    "height": "16",
+    "rx": "8",
+    "fill": "#8250DF"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "88",
+    "y": "1009",
+    "font-size": "12.5",
+    "fill": "#1F2328"
+   },
+   "text": "calls the LLM"
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M44,1032 L86,1032",
+    "stroke": "#6E7781",
+    "stroke-width": "1.5",
+    "stroke-dasharray": "7 5",
+    "marker-end": "url(#ao)"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "96",
+    "y": "1036.5",
+    "font-size": "12.5",
+    "fill": "#1F2328"
+   },
+   "text": "optional: off by default"
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "id": "evalc",
+    "x": "100",
+    "y": "100",
+    "width": "290",
+    "height": "85",
+    "rx": "12",
+    "fill": "#438DD5",
+    "stroke": "#2E6295",
+    "stroke-width": "1.5"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M455,109 a145,9 0 0 0 290,0 v77 a145,9 0 0 1 -290,0 z",
+    "fill": "#438DD5",
+    "stroke": "#2E6295",
+    "stroke-width": "1.5"
+   }
+  },
+  {
+   "tag": "ellipse",
+   "attrs": {
+    "cx": "600",
+    "cy": "109",
+    "rx": "145",
+    "ry": "9",
+    "fill": "#438DD5",
+    "stroke": "#2E6295",
+    "stroke-width": "1.5"
+   }
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "id": "case",
+    "x": "455",
+    "y": "100",
+    "width": "290",
+    "height": "95",
+    "fill": "none",
+    "stroke": "none"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M810,109 a325,9 0 0 0 650,0 v77 a325,9 0 0 1 -650,0 z",
+    "fill": "#438DD5",
+    "stroke": "#2E6295",
+    "stroke-width": "1.5"
+   }
+  },
+  {
+   "tag": "ellipse",
+   "attrs": {
+    "cx": "1135",
+    "cy": "109",
+    "rx": "325",
+    "ry": "9",
+    "fill": "#438DD5",
+    "stroke": "#2E6295",
+    "stroke-width": "1.5"
+   }
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "id": "pol",
+    "x": "810",
+    "y": "100",
+    "width": "650",
+    "height": "95",
+    "fill": "none",
+    "stroke": "none"
+   }
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "id": "s1",
+    "x": "100",
+    "y": "280",
+    "width": "290",
+    "height": "102",
+    "rx": "12",
+    "fill": "#85BBF0",
+    "stroke": "#5D82A8",
+    "stroke-width": "1.5"
+   }
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "id": "s2",
+    "x": "455",
+    "y": "280",
+    "width": "290",
+    "height": "102",
+    "rx": "12",
+    "fill": "#85BBF0",
+    "stroke": "#5D82A8",
+    "stroke-width": "1.5"
+   }
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "id": "s3",
+    "x": "810",
+    "y": "280",
+    "width": "290",
+    "height": "102",
+    "rx": "12",
+    "fill": "#85BBF0",
+    "stroke": "#5D82A8",
+    "stroke-width": "1.5"
+   }
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "id": "s4",
+    "x": "1165",
+    "y": "280",
+    "width": "290",
+    "height": "119",
+    "rx": "12",
+    "fill": "#85BBF0",
+    "stroke": "#5D82A8",
+    "stroke-width": "1.5"
+   }
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "id": "s5",
+    "x": "1520",
+    "y": "280",
+    "width": "290",
+    "height": "136",
+    "rx": "12",
+    "fill": "#85BBF0",
+    "stroke": "#5D82A8",
+    "stroke-width": "1.5"
+   }
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "id": "s6",
+    "x": "100",
+    "y": "500",
+    "width": "290",
+    "height": "143",
+    "rx": "12",
+    "fill": "#85BBF0",
+    "stroke": "#5D82A8",
+    "stroke-width": "1.5"
+   }
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "213.875",
+    "y": "551",
+    "width": "62.25",
+    "height": "19",
+    "rx": "9.5",
+    "fill": "#8250DF",
+    "stroke": "#FFFFFF",
+    "stroke-width": "1"
+   }
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "id": "s7",
+    "x": "455",
+    "y": "500",
+    "width": "290",
+    "height": "119",
+    "rx": "12",
+    "fill": "#85BBF0",
+    "stroke": "#5D82A8",
+    "stroke-width": "1.5"
+   }
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "id": "s8",
+    "x": "810",
+    "y": "500",
+    "width": "290",
+    "height": "143",
+    "rx": "12",
+    "fill": "#85BBF0",
+    "stroke": "#5D82A8",
+    "stroke-width": "1.5"
+   }
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "923.875",
+    "y": "551",
+    "width": "62.25",
+    "height": "19",
+    "rx": "9.5",
+    "fill": "#8250DF",
+    "stroke": "#FFFFFF",
+    "stroke-width": "1"
+   }
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "id": "s9",
+    "x": "1165",
+    "y": "500",
+    "width": "290",
+    "height": "119",
+    "rx": "12",
+    "fill": "#85BBF0",
+    "stroke": "#5D82A8",
+    "stroke-width": "1.5"
+   }
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "id": "s10",
+    "x": "1520",
+    "y": "500",
+    "width": "290",
+    "height": "119",
+    "rx": "12",
+    "fill": "#85BBF0",
+    "stroke": "#5D82A8",
+    "stroke-width": "1.5"
+   }
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "id": "s11",
+    "x": "1520",
+    "y": "715",
+    "width": "290",
+    "height": "102",
+    "rx": "12",
+    "fill": "#85BBF0",
+    "stroke": "#5D82A8",
+    "stroke-width": "1.5"
+   }
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "id": "hub",
+    "x": "560",
+    "y": "910",
+    "width": "330",
+    "height": "85",
+    "rx": "12",
+    "fill": "#999999",
+    "stroke": "#6B6B6B",
+    "stroke-width": "1.5"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M960,909 a150,9 0 0 0 300,0 v77 a150,9 0 0 1 -300,0 z",
+    "fill": "#438DD5",
+    "stroke": "#2E6295",
+    "stroke-width": "1.5"
+   }
+  },
+  {
+   "tag": "ellipse",
+   "attrs": {
+    "cx": "1110",
+    "cy": "909",
+    "rx": "150",
+    "ry": "9",
+    "fill": "#438DD5",
+    "stroke": "#2E6295",
+    "stroke-width": "1.5"
+   }
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "id": "prec",
+    "x": "960",
+    "y": "900",
+    "width": "300",
+    "height": "95",
+    "fill": "none",
+    "stroke": "none"
+   }
+  },
+  {
+   "tag": "path",
+   "attrs": {
+    "d": "M1520,909 a145,9 0 0 0 290,0 v77 a145,9 0 0 1 -290,0 z",
+    "fill": "#438DD5",
+    "stroke": "#2E6295",
+    "stroke-width": "1.5"
+   }
+  },
+  {
+   "tag": "ellipse",
+   "attrs": {
+    "cx": "1665",
+    "cy": "909",
+    "rx": "145",
+    "ry": "9",
+    "fill": "#438DD5",
+    "stroke": "#2E6295",
+    "stroke-width": "1.5"
+   }
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "id": "runs",
+    "x": "1520",
+    "y": "900",
+    "width": "290",
+    "height": "95",
+    "fill": "none",
+    "stroke": "none"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "245",
+    "y": "126",
+    "font-size": "16",
+    "fill": "#FFFFFF",
+    "font-weight": "bold",
+    "text-anchor": "middle",
+    "data-box": "evalc"
+   },
+   "text": "Evaluation and grading"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "245",
+    "y": "144",
+    "font-size": "11.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "evalc"
+   },
+   "text": "[Container: eval/run_benchmark.py]"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "245",
+    "y": "169",
+    "font-size": "12.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "evalc"
+   },
+   "text": "Calls run_case(N) once per case."
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "600",
+    "y": "138",
+    "font-size": "16",
+    "fill": "#FFFFFF",
+    "font-weight": "bold",
+    "text-anchor": "middle",
+    "data-box": "case"
+   },
+   "text": "Case store"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "600",
+    "y": "156",
+    "font-size": "11.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "case"
+   },
+   "text": "[Container: JSON files, data/]"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "600",
+    "y": "181",
+    "font-size": "12.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "case"
+   },
+   "text": "data/cases/*.json, data/index.json"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1135",
+    "y": "138",
+    "font-size": "16",
+    "fill": "#FFFFFF",
+    "font-weight": "bold",
+    "text-anchor": "middle",
+    "data-box": "pol"
+   },
+   "text": "Policy store"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1135",
+    "y": "156",
+    "font-size": "11.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "pol"
+   },
+   "text": "[Container: JSON files, policy/]"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1135",
+    "y": "181",
+    "font-size": "12.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "pol"
+   },
+   "text": "Version 6: integrity table, 34 clauses, confidence floor 0.70"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "245",
+    "y": "306",
+    "font-size": "16",
+    "fill": "#0B2540",
+    "font-weight": "bold",
+    "text-anchor": "middle",
+    "data-box": "s1"
+   },
+   "text": "1.  Load the case"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "245",
+    "y": "324",
+    "font-size": "11.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s1"
+   },
+   "text": "[Component: tribunal/loader.py]"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "245",
+    "y": "349",
+    "font-size": "12.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s1"
+   },
+   "text": "Refuses a malformed record or a"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "245",
+    "y": "366",
+    "font-size": "12.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s1"
+   },
+   "text": "manifest mismatch."
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "600",
+    "y": "306",
+    "font-size": "16",
+    "fill": "#0B2540",
+    "font-weight": "bold",
+    "text-anchor": "middle",
+    "data-box": "s2"
+   },
+   "text": "2.  Weigh the evidence"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "600",
+    "y": "324",
+    "font-size": "11.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s2"
+   },
+   "text": "[Component: prepass.py, called by brief.py]"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "600",
+    "y": "349",
+    "font-size": "12.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s2"
+   },
+   "text": "Issue codes become weights, read from"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "600",
+    "y": "366",
+    "font-size": "12.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s2"
+   },
+   "text": "the policy's integrity table."
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "955",
+    "y": "306",
+    "font-size": "16",
+    "fill": "#0B2540",
+    "font-weight": "bold",
+    "text-anchor": "middle",
+    "data-box": "s3"
+   },
+   "text": "3.  Derive facts and money"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "955",
+    "y": "324",
+    "font-size": "11.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s3"
+   },
+   "text": "[Component: facts.py, money.py, by brief.py]"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "955",
+    "y": "349",
+    "font-size": "12.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s3"
+   },
+   "text": "Geometry, dwell and fare arithmetic;"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "955",
+    "y": "366",
+    "font-size": "12.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s3"
+   },
+   "text": "no model."
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1310",
+    "y": "306",
+    "font-size": "16",
+    "fill": "#0B2540",
+    "font-weight": "bold",
+    "text-anchor": "middle",
+    "data-box": "s4"
+   },
+   "text": "4.  Build one brief"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1310",
+    "y": "324",
+    "font-size": "11.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s4"
+   },
+   "text": "[Component: tribunal/brief.py]"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1310",
+    "y": "349",
+    "font-size": "12.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s4"
+   },
+   "text": "One sha256; refuses an answer-key field;"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1310",
+    "y": "366",
+    "font-size": "12.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s4"
+   },
+   "text": "v6 masks plates, SG phones, e-mails in"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1310",
+    "y": "383",
+    "font-size": "12.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s4"
+   },
+   "text": "free text (names are not masked)."
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1665",
+    "y": "306",
+    "font-size": "16",
+    "fill": "#0B2540",
+    "font-weight": "bold",
+    "text-anchor": "middle",
+    "data-box": "s5"
+   },
+   "text": "5.  Scope gate"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1665",
+    "y": "324",
+    "font-size": "11.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s5"
+   },
+   "text": "[Component: tribunal/pipeline.py]"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1665",
+    "y": "349",
+    "font-size": "12.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s5"
+   },
+   "text": "POL-GEN-08(1), v3 and later: a safety or"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1665",
+    "y": "366",
+    "font-size": "12.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s5"
+   },
+   "text": "complaint flag stops here. Optional"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1665",
+    "y": "383",
+    "font-size": "12.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s5"
+   },
+   "text": "--integrity-gate: POL-RD-10(2)/(4),"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1665",
+    "y": "400",
+    "font-size": "12.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s5"
+   },
+   "text": "route deviation only."
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "245",
+    "y": "526",
+    "font-size": "16",
+    "fill": "#0B2540",
+    "font-weight": "bold",
+    "text-anchor": "middle",
+    "data-box": "s6"
+   },
+   "text": "6.  Two advocates"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "245",
+    "y": "544",
+    "font-size": "11.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s6"
+   },
+   "text": "[Component: prompts/v1/advocate + stance]"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "245",
+    "y": "565",
+    "font-size": "11",
+    "fill": "#FFFFFF",
+    "font-weight": "bold",
+    "text-anchor": "middle",
+    "data-box": "s6"
+   },
+   "text": "LLM x 2"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "245",
+    "y": "593",
+    "font-size": "12.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s6"
+   },
+   "text": "Same brief bytes; only the stance"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "245",
+    "y": "610",
+    "font-size": "12.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s6"
+   },
+   "text": "differs. Unusable after one retry:"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "245",
+    "y": "627",
+    "font-size": "12.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s6"
+   },
+   "text": "the case fails with no ruling."
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "600",
+    "y": "526",
+    "font-size": "16",
+    "fill": "#0B2540",
+    "font-weight": "bold",
+    "text-anchor": "middle",
+    "data-box": "s7"
+   },
+   "text": "7.  Citation referee"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "600",
+    "y": "544",
+    "font-size": "11.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s7"
+   },
+   "text": "[Component: tribunal/referee.py]"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "600",
+    "y": "569",
+    "font-size": "12.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s7"
+   },
+   "text": "Discards a claim whose evidence or clause"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "600",
+    "y": "586",
+    "font-size": "12.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s7"
+   },
+   "text": "id is missing or unresolved, an undisclosed"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "600",
+    "y": "603",
+    "font-size": "12.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s7"
+   },
+   "text": "impairment, or a profile field as ground."
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "955",
+    "y": "526",
+    "font-size": "16",
+    "fill": "#0B2540",
+    "font-weight": "bold",
+    "text-anchor": "middle",
+    "data-box": "s8"
+   },
+   "text": "8.  Judge panel"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "955",
+    "y": "544",
+    "font-size": "11.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s8"
+   },
+   "text": "[Component: prompts/v1/judge.system.md]"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "955",
+    "y": "565",
+    "font-size": "11",
+    "fill": "#FFFFFF",
+    "font-weight": "bold",
+    "text-anchor": "middle",
+    "data-box": "s8"
+   },
+   "text": "LLM x 4"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "955",
+    "y": "593",
+    "font-size": "12.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s8"
+   },
+   "text": "Four drafts: three sampled, one with"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "955",
+    "y": "610",
+    "font-size": "12.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s8"
+   },
+   "text": "the positions swapped. Optional"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "955",
+    "y": "627",
+    "font-size": "12.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s8"
+   },
+   "text": "--verify-drafts: one more call."
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1310",
+    "y": "526",
+    "font-size": "16",
+    "fill": "#0B2540",
+    "font-weight": "bold",
+    "text-anchor": "middle",
+    "data-box": "s9"
+   },
+   "text": "9.  Draft checks"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1310",
+    "y": "544",
+    "font-size": "11.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s9"
+   },
+   "text": "[Component: tribunal/pipeline.py]"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1310",
+    "y": "569",
+    "font-size": "12.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s9"
+   },
+   "text": "Ten DRAFT_* checks, one of them"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1310",
+    "y": "586",
+    "font-size": "12.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s9"
+   },
+   "text": "DRAFT_BELOW_FLOOR; a draft that"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1310",
+    "y": "603",
+    "font-size": "12.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s9"
+   },
+   "text": "fails one abstains."
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1665",
+    "y": "526",
+    "font-size": "16",
+    "fill": "#0B2540",
+    "font-weight": "bold",
+    "text-anchor": "middle",
+    "data-box": "s10"
+   },
+   "text": "10.  Vote and floor"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1665",
+    "y": "544",
+    "font-size": "11.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s10"
+   },
+   "text": "[Component: tribunal/pipeline.py]"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1665",
+    "y": "569",
+    "font-size": "12.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s10"
+   },
+   "text": "3 of 4 must agree; no valid draft,"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1665",
+    "y": "586",
+    "font-size": "12.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s10"
+   },
+   "text": "no majority, or confidence below"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1665",
+    "y": "603",
+    "font-size": "12.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s10"
+   },
+   "text": "0.70: ESCALATE."
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1665",
+    "y": "741",
+    "font-size": "16",
+    "fill": "#0B2540",
+    "font-weight": "bold",
+    "text-anchor": "middle",
+    "data-box": "s11"
+   },
+   "text": "11.  Publish and record"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1665",
+    "y": "759",
+    "font-size": "11.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s11"
+   },
+   "text": "[Component: pipeline.py, transcript.py, events.py]"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1665",
+    "y": "784",
+    "font-size": "12.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s11"
+   },
+   "text": "Returns a ruling, or ESCALATE with its"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1665",
+    "y": "801",
+    "font-size": "12.5",
+    "fill": "#0B2540",
+    "text-anchor": "middle",
+    "data-box": "s11"
+   },
+   "text": "reason, to eval/run_benchmark.py."
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "725",
+    "y": "936",
+    "font-size": "16",
+    "fill": "#FFFFFF",
+    "font-weight": "bold",
+    "text-anchor": "middle",
+    "data-box": "hub"
+   },
+   "text": "Tencent Cloud TokenHub"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "725",
+    "y": "954",
+    "font-size": "11.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "hub"
+   },
+   "text": "[Software System, external]"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "725",
+    "y": "979",
+    "font-size": "12.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "hub"
+   },
+   "text": "deepseek/deepseek-flash, Singapore."
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1110",
+    "y": "938",
+    "font-size": "16",
+    "fill": "#FFFFFF",
+    "font-weight": "bold",
+    "text-anchor": "middle",
+    "data-box": "prec"
+   },
+   "text": "Precedent store"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1110",
+    "y": "956",
+    "font-size": "11.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "prec"
+   },
+   "text": "[Container: JSONL, precedents/]"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1110",
+    "y": "981",
+    "font-size": "12.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "prec"
+   },
+   "text": "Up to 3 closures, no amounts."
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1665",
+    "y": "938",
+    "font-size": "16",
+    "fill": "#FFFFFF",
+    "font-weight": "bold",
+    "text-anchor": "middle",
+    "data-box": "runs"
+   },
+   "text": "Run records"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1665",
+    "y": "956",
+    "font-size": "11.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "runs"
+   },
+   "text": "[Container: JSON / JSONL, runs/]"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1665",
+    "y": "981",
+    "font-size": "12.5",
+    "fill": "#FFFFFF",
+    "text-anchor": "middle",
+    "data-box": "runs"
+   },
+   "text": "Read by the queue (sheet 2b)."
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "203.25",
+    "y": "227",
+    "width": "83.5",
+    "height": "33",
+    "rx": "4",
+    "fill": "#FFFFFF",
+    "fill-opacity": "0.94",
+    "data-plate": "L72"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "245",
+    "y": "240",
+    "font-size": "12",
+    "fill": "#1F2328",
+    "text-anchor": "middle",
+    "data-label": "L72"
+   },
+   "text": "run_case(N)"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "245",
+    "y": "254",
+    "font-size": "10.5",
+    "fill": "#57606A",
+    "text-anchor": "middle",
+    "data-label": "L72"
+   },
+   "text": "[Python call]"
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "437.5",
+    "y": "234",
+    "width": "45",
+    "height": "33",
+    "rx": "4",
+    "fill": "#FFFFFF",
+    "fill-opacity": "0.94",
+    "data-plate": "L75"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "460",
+    "y": "247",
+    "font-size": "12",
+    "fill": "#1F2328",
+    "text-anchor": "middle",
+    "data-label": "L75"
+   },
+   "text": "reads"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "460",
+    "y": "261",
+    "font-size": "10.5",
+    "fill": "#57606A",
+    "text-anchor": "middle",
+    "data-label": "L75"
+   },
+   "text": "[JSON]"
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "402.4",
+    "y": "317",
+    "width": "37.2",
+    "height": "19",
+    "rx": "4",
+    "fill": "#FFFFFF",
+    "fill-opacity": "0.94",
+    "data-plate": "L78"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "421",
+    "y": "330",
+    "font-size": "12",
+    "fill": "#1F2328",
+    "text-anchor": "middle",
+    "data-label": "L78"
+   },
+   "text": "case"
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "747.95",
+    "y": "317",
+    "width": "56.1",
+    "height": "19",
+    "rx": "4",
+    "fill": "#FFFFFF",
+    "fill-opacity": "0.94",
+    "data-plate": "L80"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "776",
+    "y": "330",
+    "font-size": "12",
+    "fill": "#1F2328",
+    "text-anchor": "middle",
+    "data-label": "L80"
+   },
+   "text": "weights"
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "1109.25",
+    "y": "317",
+    "width": "43.5",
+    "height": "19",
+    "rx": "4",
+    "fill": "#FFFFFF",
+    "fill-opacity": "0.94",
+    "data-plate": "L82"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1131",
+    "y": "330",
+    "font-size": "12",
+    "fill": "#1F2328",
+    "text-anchor": "middle",
+    "data-label": "L82"
+   },
+   "text": "facts"
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "1464.25",
+    "y": "317",
+    "width": "43.5",
+    "height": "19",
+    "rx": "4",
+    "fill": "#FFFFFF",
+    "fill-opacity": "0.94",
+    "data-plate": "L84"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1486",
+    "y": "330",
+    "font-size": "12",
+    "fill": "#1F2328",
+    "text-anchor": "middle",
+    "data-label": "L84"
+   },
+   "text": "brief"
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "899.5",
+    "y": "234",
+    "width": "201",
+    "height": "33",
+    "rx": "4",
+    "fill": "#FFFFFF",
+    "fill-opacity": "0.94",
+    "data-plate": "L86"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1000",
+    "y": "247",
+    "font-size": "12",
+    "fill": "#1F2328",
+    "text-anchor": "middle",
+    "data-label": "L86"
+   },
+   "text": "integrity table (no_show.json)"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1000",
+    "y": "261",
+    "font-size": "10.5",
+    "fill": "#57606A",
+    "text-anchor": "middle",
+    "data-label": "L86"
+   },
+   "text": "[JSON, loaded by brief.py]"
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "1165",
+    "y": "237",
+    "width": "155",
+    "height": "33",
+    "rx": "4",
+    "fill": "#FFFFFF",
+    "fill-opacity": "0.94",
+    "data-plate": "L89"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1314",
+    "y": "250",
+    "font-size": "12",
+    "fill": "#1F2328",
+    "text-anchor": "end",
+    "data-label": "L89"
+   },
+   "text": "reads version 6"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1314",
+    "y": "264",
+    "font-size": "10.5",
+    "fill": "#57606A",
+    "text-anchor": "end",
+    "data-label": "L89"
+   },
+   "text": "[JSON, --policy-version 6]"
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "847.45",
+    "y": "437",
+    "width": "245.1",
+    "height": "19",
+    "rx": "4",
+    "fill": "#FFFFFF",
+    "fill-opacity": "0.94",
+    "data-plate": "L92"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "970",
+    "y": "450",
+    "font-size": "12",
+    "fill": "#1F2328",
+    "text-anchor": "middle",
+    "data-label": "L92"
+   },
+   "text": "not flagged: the brief, to both sides"
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "1817.65",
+    "y": "627",
+    "width": "68.7",
+    "height": "49",
+    "rx": "4",
+    "fill": "#FFFFFF",
+    "fill-opacity": "0.94",
+    "data-plate": "L94"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1852",
+    "y": "640",
+    "font-size": "12",
+    "fill": "#1F2328",
+    "text-anchor": "middle",
+    "data-label": "L94"
+   },
+   "text": "stopped:"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1852",
+    "y": "655",
+    "font-size": "12",
+    "fill": "#1F2328",
+    "text-anchor": "middle",
+    "data-label": "L94"
+   },
+   "text": "ESCALATE,"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1852",
+    "y": "670",
+    "font-size": "12",
+    "fill": "#1F2328",
+    "text-anchor": "middle",
+    "data-label": "L94"
+   },
+   "text": "no model"
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "396.1",
+    "y": "537",
+    "width": "49.8",
+    "height": "19",
+    "rx": "4",
+    "fill": "#FFFFFF",
+    "fill-opacity": "0.94",
+    "data-plate": "L98"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "421",
+    "y": "550",
+    "font-size": "12",
+    "fill": "#1F2328",
+    "text-anchor": "middle",
+    "data-label": "L98"
+   },
+   "text": "claims"
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "751.1",
+    "y": "531",
+    "width": "49.8",
+    "height": "34",
+    "rx": "4",
+    "fill": "#FFFFFF",
+    "fill-opacity": "0.94",
+    "data-plate": "L100"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "776",
+    "y": "544",
+    "font-size": "12",
+    "fill": "#1F2328",
+    "text-anchor": "middle",
+    "data-label": "L100"
+   },
+   "text": "kept"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "776",
+    "y": "559",
+    "font-size": "12",
+    "fill": "#1F2328",
+    "text-anchor": "middle",
+    "data-label": "L100"
+   },
+   "text": "claims"
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "1106.1",
+    "y": "537",
+    "width": "49.8",
+    "height": "19",
+    "rx": "4",
+    "fill": "#FFFFFF",
+    "fill-opacity": "0.94",
+    "data-plate": "L103"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1131",
+    "y": "550",
+    "font-size": "12",
+    "fill": "#1F2328",
+    "text-anchor": "middle",
+    "data-label": "L103"
+   },
+   "text": "drafts"
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "1461.1",
+    "y": "531",
+    "width": "49.8",
+    "height": "34",
+    "rx": "4",
+    "fill": "#FFFFFF",
+    "fill-opacity": "0.94",
+    "data-plate": "L105"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1486",
+    "y": "544",
+    "font-size": "12",
+    "fill": "#1F2328",
+    "text-anchor": "middle",
+    "data-label": "L105"
+   },
+   "text": "valid"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1486",
+    "y": "559",
+    "font-size": "12",
+    "fill": "#1F2328",
+    "text-anchor": "middle",
+    "data-label": "L105"
+   },
+   "text": "drafts"
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "1602.3",
+    "y": "659",
+    "width": "125.4",
+    "height": "19",
+    "rx": "4",
+    "fill": "#FFFFFF",
+    "fill-opacity": "0.94",
+    "data-plate": "L108"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1665",
+    "y": "672",
+    "font-size": "12",
+    "fill": "#1F2328",
+    "text-anchor": "middle",
+    "data-label": "L108"
+   },
+   "text": "ruling or ESCALATE"
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "1414.6",
+    "y": "835",
+    "width": "251.4",
+    "height": "48",
+    "rx": "4",
+    "fill": "#FFFFFF",
+    "fill-opacity": "0.94",
+    "data-plate": "L110"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1660",
+    "y": "848",
+    "font-size": "12",
+    "fill": "#1F2328",
+    "text-anchor": "end",
+    "data-label": "L110"
+   },
+   "text": "events into the run's log; eval writes"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1660",
+    "y": "863",
+    "font-size": "12",
+    "fill": "#1F2328",
+    "text-anchor": "end",
+    "data-label": "L110"
+   },
+   "text": "case-*.json and the transcript"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1660",
+    "y": "877",
+    "font-size": "10.5",
+    "fill": "#57606A",
+    "text-anchor": "end",
+    "data-label": "L110"
+   },
+   "text": "[JSONL, JSON]"
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "418.25",
+    "y": "862",
+    "width": "83.5",
+    "height": "33",
+    "rx": "4",
+    "fill": "#FFFFFF",
+    "fill-opacity": "0.94",
+    "data-plate": "L114"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "460",
+    "y": "875",
+    "font-size": "12",
+    "fill": "#1F2328",
+    "text-anchor": "middle",
+    "data-label": "L114"
+   },
+   "text": "2 calls"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "460",
+    "y": "889",
+    "font-size": "10.5",
+    "fill": "#57606A",
+    "text-anchor": "middle",
+    "data-label": "L114"
+   },
+   "text": "[HTTPS, JSON]"
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "876",
+    "y": "857",
+    "width": "83.5",
+    "height": "33",
+    "rx": "4",
+    "fill": "#FFFFFF",
+    "fill-opacity": "0.94",
+    "data-plate": "L117"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "882",
+    "y": "870",
+    "font-size": "12",
+    "fill": "#1F2328",
+    "data-label": "L117"
+   },
+   "text": "4 calls"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "882",
+    "y": "884",
+    "font-size": "10.5",
+    "fill": "#57606A",
+    "data-label": "L117"
+   },
+   "text": "[HTTPS, JSON]"
+  },
+  {
+   "tag": "rect",
+   "attrs": {
+    "x": "1057.3",
+    "y": "772",
+    "width": "125.4",
+    "height": "33",
+    "rx": "4",
+    "fill": "#FFFFFF",
+    "fill-opacity": "0.94",
+    "data-plate": "L120"
+   }
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1120",
+    "y": "785",
+    "font-size": "12",
+    "fill": "#1F2328",
+    "text-anchor": "middle",
+    "data-label": "L120"
+   },
+   "text": "shown to the judge"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "1120",
+    "y": "799",
+    "font-size": "10.5",
+    "fill": "#57606A",
+    "text-anchor": "middle",
+    "data-label": "L120"
+   },
+   "text": "[--precedents]"
+  },
+  {
+   "tag": "text",
+   "attrs": {
+    "x": "32",
+    "y": "1072",
+    "font-size": "12",
+    "fill": "#57606A"
+   },
+   "text": "Arrows inside the container are in-process Python calls; the label names what is passed. Six model calls a case, seven with --verify-drafts, none for a stopped case; an unusable answer is retried once, an HTTP 429/5xx up to 4 attempts."
+  }
+ ]
+}
