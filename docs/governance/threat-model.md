@@ -19,3 +19,32 @@ generalisation figures. Those three facts set most of the threats below.
 | **API keys** | A credential is committed, or a key-shaped string reaches a published page, and the repository is made public before submission. | `.gitignore` ignores `.env` and `.env.*` (keeping `.env.example`); the key is read from `TOKENHUB_API_KEY`, falling back to the root `.env` (`README.md`, *Running it*). The published pages are scanned for key-shaped strings and for a credential's own value: `tests/test_ui_build.py` holds `_PUBLISH_PATTERNS` (an API key `sk-…`, a bearer token, a secret key, `.env`, an absolute path under `/Users/`, the author's account name, an email address) and `_API_KEY_RE` with `_CREDENTIAL_VARIABLES`. The buddy-log's credential rule requires a screenshot to be opened and read for an `sk-` string before it enters `docs/buddy-log/` (`docs/buddy-log/README.md`). | A key pasted into a model **prompt**, or into a committed transcript, is not caught by the page scan. `runs/README.md` requires a run file to be checked against the `sk-` shape before it enters a run directory, and that check is a person's, not a test's. |
 | **A wrong automatic ruling** | The judge decides a case the policy does not decide, and money moves that the policy does not authorise. | The confidence floor (`POL-RD-10` and `POL-NS-09`, read out of the policy by `tribunal/pipeline.py` and never typed as a number) sends any draft below 0.70 to a human; a panel with no valid draft publishes an `ESCALATE` rather than ending the case as a failure; a dispute carrying a safety or complaint flag is routed to human review with no model call at all under `POL-GEN-08(1)` (`tribunal/pipeline.py`). An automatic ruling is provisional and may be appealed once under `POL-GEN-04`, checked by `ops/appeal.py`; an amount above the `POL-GEN-05` execution threshold goes to a reviewer. The kill switch `auto_rulings_enabled` in `ops/config.json`, read by `ops/queue.py`, moves every dispute the pipeline would have ruled on into human review. Tests: `tests/test_pipeline.py`, `tests/test_ops_appeal.py`, `tests/test_ops_queue.py`. | The floor is a confidence threshold, not a guarantee, and **no recorded case has ever been escalated by it**: no draft in any committed run was abstained by `DRAFT_BELOW_FLOOR`, and every draft below the floor already proposed `ESCALATE`. What has caught cases is the checks around it — a split or empty panel, the `POL-GEN-08(1)` scope gate and the ten draft checks. The held-out run refunded case 523, whose key is `NO_ACTION` — money the policy does not authorise — and it is recorded, not fixed (`README.md`, *What went wrong on the held-out set*). The kill switch stops at the router and changes nothing in `tribunal/` (`ops/config.json`). And the `POL-GEN-08(1)` gate reads the two **structured** flags only: an allegation of harassment, discrimination, violence or property damage written in free text is not detected and does not route the case, although the clause names those allegations (`README.md`, *Limitations and disclosures*). |
 | **A threat in the chat log** | A party's chat message threatens the other party's safety, and the dispute is routed as an ordinary one because nothing reads the chat for a threat. | `ops/chat_signals.py` reads one message's text against a documented rule table -- explicit harm, intimidation by location or by third parties, conditional menace, and doxxing, with complaint, idiom and safety-warning exclusions -- and returns `{"threat": bool, "matched": [rule ids]}`. `ops/queue.py` routes a dispute whose `CHAT_LOG` carries a threat to `SAFETY_FAST_TRACK` with the reason `CHAT_THREAT`, ahead of the category, the `POL-GEN-08(1)` flags and the kill switch. The signal is a routing input: it decides a lane and is written nowhere else, so it never enters a brief or a prompt. Tests: `tests/test_ops_chat_signals.py`, `tests/test_ops_queue.py`. | The rules are regular expressions, not a classifier. They were written with the 32-message fixture `eval/fixtures/chat-signals-v1.json` visible, so the 6-of-6 precision and recall `python3 -m eval.func_sets --report` prints is a **development** figure and not a held-out one. Agreement, disagreement and sentiment are not detected, and no case in the corpus, the second set, `dev-v2`, `dev-v2-ext`, `ryde-v3`, `inject-v1`, `pii-v1` or `collusion-v1` carries a message the rules match, so the lane changes no case in the repository. |
+
+## Known limitations of the code (disclosed, not fixed)
+
+An independent review on 2026-10-11 confirmed four weaknesses in the code, each
+against the line cited here. None is fixed: `tribunal/`, `prompts/` and
+`policy/` do not change again before the submission, so each is written down
+instead. The same four are in `README.md`, *Limitations and disclosures*.
+
+- **The confidence floor fails open on a non-numeric confidence.**
+  `tribunal/pipeline.py` applies the 0.70 floor only when a draft's `confidence`
+  is a number; a missing key, `null`, a boolean or a non-numeric string is not
+  held to the floor and the draft votes, and the string `"NaN"` raises
+  `decimal.InvalidOperation` inside the check instead of abstaining. No draft of
+  any committed run carried one.
+- **No retry on a transport error.** `tribunal/llm.py` retries only HTTP 429 and
+  5xx; a timeout, a connection reset or an endpoint that does not resolve fails
+  the case on its first attempt, and an HTTP 4xx is recorded as an unusable
+  answer rather than as an HTTP error. The corpus run's own `invocations.json`
+  records both kinds, and each case was re-run by hand.
+- **A case whose pipeline fails is not queued for a person.**
+  `eval/run_benchmark.py` writes no case file for a failed case, and
+  `ops/queue.py` builds the queue from case files, so a failed dispute is absent
+  from the queue rather than in the human lane. No committed version-6 run has a
+  failed case; the held-out run's 517 and 533 do.
+- **The default policy version is 1.** `eval.run_benchmark` and
+  `eval.development_sets` default to policy version 1, so a command that names
+  no version reproduces version 1 rather than the submitted version 6. Every
+  README command that is meant to reproduce a version-6 figure passes
+  `--policy-version 6`.

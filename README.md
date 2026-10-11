@@ -685,6 +685,49 @@ subject to the PDPA without this repository making any compliance claim.
   naming the case and the last place, and the counts that follow from it are
   taken over the set the platform can rebuild with the case it left out named.
 - **Synthetic data.** Every case except 901 is synthetic or semi-synthetic.
+- **The confidence floor fails open on a draft whose confidence is not a
+  number.** `tribunal/pipeline.py` applies the 0.70 floor only when a draft's
+  `confidence` is a JSON number: `_as_number` returns `None` for a missing key,
+  `null`, a boolean or a non-numeric string, and the gate is
+  `confidence is not None and confidence < floor`, so such a draft is not held to
+  the floor at all and votes like any other. A confidence written as the string
+  `"NaN"` is the one case that raises instead of abstaining — `Decimal("NaN") <
+  floor` is a `decimal.InvalidOperation` inside the check. **No recorded run was
+  affected**: every `confidence` in the committed JSON under `runs/` is a number,
+  and no draft of any committed version-6 or sealed run carried a non-numeric
+  one. It is **disclosed and not fixed**, because `tribunal/` is frozen for the
+  submission; the threat model says the same in *Known limitations of the code*.
+- **No retry on a transport error.** `tribunal/llm.py` retries only HTTP 429 and
+  5xx (`RETRY_STATUSES = (429, 500, 502, 503, 504)`). A read timeout, a
+  connection reset or an endpoint that does not resolve fails the case on its
+  **first** attempt — `_urllib_transport` raises `TransportError` for a
+  `URLError` and lets a timeout propagate — and an HTTP 4xx is handed back as an
+  ordinary result, so the runner records it as an unusable answer rather than as
+  an HTTP error. **Recorded runs were affected**: the corpus run's own
+  `invocations.json` records cases that failed with `TRANSPORT`
+  (`RemoteDisconnected`, `TransportError`) and `TIMEOUT`, and each was re-run by
+  hand until it completed. Every committed version-6 run is complete, with no
+  failed case. **Disclosed and not fixed.**
+- **A case whose pipeline fails is not queued for a person.**
+  `eval/run_benchmark.py` writes a case file only for a case that succeeded —
+  `_persist` says so in its own docstring — and `ops/queue.py` builds the queue
+  by globbing `case-*.json` (`disputes_from_run`), so a failed dispute is
+  **absent** from the queue rather than routed to the human lane: it must be
+  re-run. **No committed version-6 run has a failed case** — every version-6
+  `run.json` records `failures: []` — so nothing is missing from the queue the
+  product view builds. One committed run does have failed cases: the held-out
+  run's 517 and 533 failed with `SHAPE` and left no case file, so a queue built
+  from that directory does not list them. **Disclosed and not fixed.**
+- **The default policy version is 1.** `eval.run_benchmark.DEFAULT_POLICY_VERSION`
+  is 1, and `eval.development_sets`' registration default is 1, while the
+  submitted system is version 6 — so a command that names no version reproduces
+  version 1. **Every README command that is meant to reproduce a version-6
+  figure passes `--policy-version 6`**: the five version-6 development commands,
+  the one-case example and the sample-case command. The commands that do not
+  carry the flag — the development sets of 2026-09-22 to 2026-09-24, the two
+  ablations and the sample case's first run — are the historical version-1 runs,
+  and the tables label them as such; nothing needed fixing. **Disclosed and not
+  fixed**, because the default is part of the frozen code.
 
 ## What went wrong on the held-out set
 
