@@ -18,8 +18,16 @@ drafts prevent one sample deciding.
 
 **Why should anyone trust the figures?** The sealed sets are each run once, by
 the owner, from a frozen tag, and committed as produced: `wild-v1` from
-`freeze-2026-09-30`, `wild-v2` from `freeze-2026-10-03` and `sealed-v1` from
-`freeze-2026-10-09` (README, Results; `docs/notes/2026-10-10-the-third-sealed-run.md`).
+`freeze-2026-09-30`, `wild-v2` from `freeze-2026-10-03`, `sealed-v1` from
+`freeze-2026-10-09` and `sealed-v2` from `freeze-2026-10-11` (README, Results;
+`docs/notes/2026-10-10-the-third-sealed-run.md` and
+`docs/notes/2026-10-11-the-fourth-sealed-run.md`). Each is reported as an
+**agreement** against its own key, and the four are never pooled. `sealed-v1` —
+made by a team member with Claude, with a copy of the schema and the policy — is
+21/24 = 87.5%, Wilson 95% [69.0%, 95.7%]. `sealed-v2` — made by the policy owner
+with GPT-6 from the version-6 policy text and the public contract, with no
+repository code, its answers seen by nobody on the development side — is
+12/12 = 100.0%, Wilson 95% [75.8%, 100.0%].
 **Under the key as imported, `sealed-v1` is 20/24 rather than 21/24**: case 311's
 key changed to `PARTIAL_REFUND 7.05` under `POL-RD-14` (amendment `0002`), which
 the policy owner wrote after the system ruled `PARTIAL_REFUND` on development

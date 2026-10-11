@@ -2,12 +2,10 @@
 
 ``runs/wild/`` holds the held-out set's single run, ``runs/wild-v2/`` the second
 sealed set's, ``runs/sealed-v1/`` the third's and ``runs/sealed-v2/`` the
-fourth's. The first three runs have been made
-and those three roots are closed outright, so every command that would write
+fourth's. All four runs have been made
+and all four roots are closed outright, so every command that would write
 under one of them has to refuse the whole of the root -- not only the run
-directory, and not only the spelling the path happens to be given in. The
-fourth's run has not been made, and its root accepts exactly one destination --
-the plain sealed run's own directory -- for the set that names it.
+directory, and not only the spelling the path happens to be given in.
 
 Each test here is one of those commands, and each is run for **every** root: the
 four are named by their registrations rather than restated, so a fifth sealed
@@ -344,11 +342,9 @@ class CheckOnAClosedRootTests(ScratchRunsRootTestCase):
             self.addCleanup(patcher.stop)
 
     def test_a_closed_root_prints_the_closure_and_lists_no_cases(self):
-        # The three sealed sets whose runs have been made have closed roots, and
-        # the plan branch below is reached only by emptying the lists.
-        # ``sealed-v2`` is imported and **not yet run**, so its root is not
-        # closed and the plan test below is where it is covered. The closure is
-        # asserted for every root the registration says has been made, and the
+        # All four sealed sets have been run, so all four roots are closed and
+        # the plan branch below is reached only by emptying the lists. The closure
+        # is asserted for every root the registration says has been made, and the
         # list of those is pinned here, so a set cannot pass by being skipped.
         closed = [
             development_set
@@ -356,7 +352,8 @@ class CheckOnAClosedRootTests(ScratchRunsRootTestCase):
             if sets.sealed_root_is_closed(development_set)
         ]
         self.assertEqual(
-            ("wild", "wild-v2", "sealed-v1"), tuple(item.name for item in closed)
+            ("wild", "wild-v2", "sealed-v1", "sealed-v2"),
+            tuple(item.name for item in closed),
         )
         for development_set in closed:
             with self.subTest(sealed_set=development_set.name):

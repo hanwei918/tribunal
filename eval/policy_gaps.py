@@ -322,32 +322,35 @@ def assert_not_an_external_run_directory(run_dir: Path, runs_dir: Path) -> Path:
 # The sealed roots whose run directory this loop does not read. ``wild`` is not
 # one of them: its 64 cases have been development data since 2026-10-01, so a
 # source under ``runs/wild/`` is re-run as ``wild-dev`` and the loop does read
-# it. The second and third sealed sets have no such twin -- their cases are not
-# development data and are never re-run -- so a run directory under either root
-# is refused.
+# it. The second, third and fourth sealed sets have no such twin -- their cases
+# are not development data and are never re-run -- so a run directory under any
+# of those roots is refused.
 SEALED_ROOTS_THE_LOOP_DOES_NOT_READ: Tuple[str, ...] = (
     run_benchmark.WILD_V2_SET_RUNS_SUBDIR,
     run_benchmark.SEALED_V1_SET_RUNS_SUBDIR,
+    run_benchmark.SEALED_V2_SET_RUNS_SUBDIR,
 )
 
 
 def assert_not_a_sealed_record_the_loop_does_not_read(run_dir: Path) -> Path:
     """Refuse a run directory of a sealed set this loop does not read.
 
-    ``runs/wild-v2/`` holds the second sealed set's single run and
-    ``runs/sealed-v1/`` the third's. Both runs have been made -- once, on
-    2026-10-04 and 2026-10-10 -- and committed exactly as they were produced, so
-    what the loop has in front of it is a sealed **record**. Neither set is in
+    ``runs/wild-v2/`` holds the second sealed set's single run,
+    ``runs/sealed-v1/`` the third's and ``runs/sealed-v2/`` the fourth's. All
+    three runs have been made -- once, on 2026-10-04, 2026-10-10 and 2026-10-11 --
+    and committed exactly as they were produced, so what the loop has in front of
+    it is a sealed **record**. None of the three sets is in
     ``tribunal.precedents.EXTERNAL_SET_DIRS``, because each is a held-out record
-    and not development data, so a run directory under either root reads as the
-    corpus -- and the report would then say "nothing could be analysed", which is
-    a statement about this loop rather than about the set. So the loop refuses
-    the directory by name.
+    and not development data, so a run directory under any of those roots reads
+    as the corpus -- and the report would then say "nothing could be analysed",
+    which is a statement about this loop rather than about the set. So the loop
+    refuses the directory by name.
 
     The test is **component by component**: the component after the last
     ``runs`` segment must be one of
     :data:`SEALED_ROOTS_THE_LOOP_DOES_NOT_READ`. That catches
-    ``runs/wild-v2/<model>/`` and ``runs/sealed-v1/<model>/`` and nothing else --
+    ``runs/wild-v2/<model>/``, ``runs/sealed-v1/<model>/`` and
+    ``runs/sealed-v2/<model>/`` and nothing else --
     ``runs/wild-dev/`` is a different component and is not caught, and neither is
     a sibling whose name merely starts the same way.
 

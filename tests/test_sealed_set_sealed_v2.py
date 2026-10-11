@@ -6,14 +6,14 @@ bundle it was imported from.
 it, it is **not** a development set: it was made with GPT-6 by the policy owner
 from a written brief, the version-6 policy text and the public contract, with no
 repository code, prompts or run results, and nobody on the development side has
-seen its answers; it was imported on 2026-10-11, it is run exactly once from a
-commit whose ``tribunal/``, ``prompts/`` and ``policy/`` trees equal those at
+seen its answers; it was imported on 2026-10-11, it was run exactly once, on
+2026-10-11, from the commit ``19c7e5a``, whose ``tribunal/``, ``prompts/`` and
+``policy/`` trees equal those at
 ``freeze-2026-10-11``, and that single run is the submission's fourth sealed
 generalisation figure. Its registration fixes policy
-version 6, so it is run at version 6 with no flag and ``--policy-version`` is
-refused for it. Its single run has **not** been made yet, so its root accepts
-exactly one destination -- the plain sealed run's own directory, for this set
-alone -- and every other destination under it is refused.
+version 6, so it was run at version 6 with no flag and ``--policy-version`` is
+refused for it. Its single run **has** been made, so its root is closed outright:
+nothing is created under it again, the plain sealed run included.
 
 What is asserted here:
 
@@ -27,10 +27,9 @@ What is asserted here:
 * **Its switches are refused.** ``--force`` and each of the frozen arguments are
   refused for it, and the frozen invocation's arguments are accepted through the
   refusal function rather than by running it.
-* **Its root is not closed, and the permit is this set's alone.** Its single run
-  has not been made, so the plain sealed run's own directory is the one
-  destination its root accepts -- and only when the set that owns it is the one
-  running; every other destination under it is refused.
+* **Its root is closed.** Its single run has been made, so no permit opens it and
+  every destination under it -- the plain sealed run's own directory included --
+  is refused.
 * **The sealed run is the owner's.** Without ``TRIBUNAL_SEALED_RUN=sealed-v2``
   the invocation is refused before a client is built and writes nothing.
 * **Its structure holds.** All 12 cases load through the set's own loader and
@@ -309,41 +308,27 @@ class SealedV2RegistryTests(unittest.TestCase):
         self.assertIn((runs / "sealed-v2" / run_benchmark.model_slug(MODEL)).resolve(), headline)
         self.assertEqual(6, len(headline), "the headline directories are not six")
 
-    def test_its_root_is_open_to_its_own_plain_run_and_to_nothing_else(self):
-        """The set has **not** been run, so the permit is written for it.
-
-        The plain sealed run's own directory is the one destination the root
-        accepts, and only when the set that owns it is the one running; every
-        other destination under the root is refused, permit or no permit.
-        """
-        self.assertFalse(sets.sealed_root_is_closed(SEALED_V2))
-        self.assertEqual(("sealed-v2",), run_benchmark.UNRUN_SEALED_RUNS_SUBDIRS)
-        self.assertIn(run_benchmark.SEALED_V2_SET_RUNS_SUBDIR, run_benchmark.SET_RUNS_SUBDIRS)
-        self.assertNotIn(
-            run_benchmark.SEALED_V2_SET_RUNS_SUBDIR,
+    def test_its_root_is_closed_and_no_permit_opens_it(self):
+        """The set has been run, so nothing is created under its root again."""
+        self.assertTrue(sets.sealed_root_is_closed(SEALED_V2))
+        self.assertEqual((), run_benchmark.UNRUN_SEALED_RUNS_SUBDIRS)
+        self.assertEqual(
+            ("wild", "wild-v2", "sealed-v1", "sealed-v2"),
             run_benchmark.MADE_SEALED_RUNS_SUBDIRS,
         )
-        runs = Path("/tmp/sealed-v2-open-runs")
+        self.assertIn(run_benchmark.SEALED_V2_SET_RUNS_SUBDIR, run_benchmark.SET_RUNS_SUBDIRS)
+        # And the guard itself: the plain sealed run's own directory is refused,
+        # permit or no permit -- the permit machinery is written for a root whose
+        # run has not been made, and this one's has.
+        runs = Path("/tmp/sealed-v2-closed-runs")
         destination = runs / "sealed-v2" / run_benchmark.model_slug(MODEL)
-        # With the permit, the plain sealed run's own directory is taken.
-        self.assertEqual(
-            destination,
-            run_benchmark.assert_not_under_the_held_out_root(
-                destination, runs, permit=destination
-            ),
-        )
-        # Without it, and for every other destination, the root is refused.
-        for check, permit in (
-            (destination, None),
-            (runs / "sealed-v2" / "ablation" / "x", destination),
-            (runs / "sealed-v2" / "report.md", destination),
-        ):
-            with self.subTest(destination=str(check), permit=permit is not None):
+        for permit in (None, destination):
+            with self.subTest(permit=permit is not None):
                 with self.assertRaises(run_benchmark.BenchmarkError) as caught:
                     run_benchmark.assert_not_under_the_held_out_root(
-                        check, runs, permit=permit
+                        destination, runs, permit=permit
                     )
-                self.assertIn("sealed-v2", str(caught.exception))
+                self.assertIn("nothing is created under it again", str(caught.exception))
 
 
 # --------------------------------------------------------------------------
@@ -466,10 +451,11 @@ class SealedV2SealedRunLockTests(unittest.TestCase):
                 runs, code, _out, err = self._invocation(tmp)
 
             self.assertEqual(1, code, "the sealed run was not locked")
-            # The run has not been made, so the refusal explains the opt-in: the
-            # one command that may set it, and that nothing in this repository
-            # does.
-            self.assertIn("its single run is made by the owner only", err)
+            # The run has been made, so the refusal is the closure's: there is
+            # nothing left to opt in to, and the message says so rather than
+            # explaining an opt-in that could no longer open anything.
+            self.assertIn("its single run has been made", err)
+            self.assertIn("root is closed", err)
             self.assertIn(sets.SEALED_RUN_ENV_VAR, err)
             self.assertIn("sealed-v2", err)
             self.assertFalse(runs.exists(), "the refused invocation created the runs root")
@@ -518,12 +504,15 @@ class SealedV2SwitchGuardTests(unittest.TestCase):
             with self.subTest(development_set=development_set.name):
                 self.assertIsNone(sets.assert_not_sealed(development_set, "--force"))
 
-    def test_the_frozen_arguments_are_accepted_though_the_root_is_open(self):
+    def test_the_frozen_arguments_are_accepted_though_the_root_is_closed(self):
         """A guard that refused everything would pass the test above.
 
         The argument check and the destination check are separate rules. This
         pins the first: the owner's own invocation differs in no argument, so
-        ``run_argument_differences`` is empty.
+        ``run_argument_differences`` is empty. The second now refuses that same
+        invocation, because the set's root is closed --
+        ``test_its_root_is_closed_and_no_permit_opens_it`` is where that is
+        asserted, not here.
         """
         self.assertEqual([], sets.run_argument_differences(SEALED_V2, **_frozen_arguments()))
 

@@ -6,11 +6,11 @@ parses the results tables in ``README.md`` and recomputes each figure from the
 committed runs and the frozen answer keys, so a figure that disagrees fails here
 rather than misleading a reader.
 
-The README carries **five** tables under this header -- the business value of a
-run, the frozen system's at policy version 6, the third sealed set's at the same
-version, the functional sets added after the sealed run, and the earlier blocks'
--- and all five are parsed, so a figure stated in any of them is checked and
-none can be dropped from the check by another appearing above it.
+The README carries **six** tables under this header -- the business value of a
+run, the frozen system's at policy version 6, the third and fourth sealed sets'
+at the same version, the functional sets added after the sealed run, and the
+earlier blocks' -- and all six are parsed, so a figure stated in any of them is
+checked and none can be dropped from the check by another appearing above it.
 
 The tables are parsed rather than restated, so the check is against the README a
 reader actually reads. The labels are matched exactly and in both directions: a
@@ -105,10 +105,10 @@ def _table_rows(text: str) -> List[List[str]]:
 
     Located by their header rather than by position, and each table is read
     until the first line that is not a table row. The README states the figures
-    in five tables under this header -- the business value of a run, the frozen
-    system's at policy version 6, the third sealed set's, the functional sets
-    added after the sealed run, and the earlier blocks' -- and all five are
-    read, so none is left unchecked by another sitting above it.
+    in six tables under this header -- the business value of a run, the frozen
+    system's at policy version 6, the third and fourth sealed sets', the
+    functional sets added after the sealed run, and the earlier blocks' -- and
+    all six are read, so none is left unchecked by another sitting above it.
     """
     lines = text.splitlines()
     rows: List[List[str]] = []
@@ -557,6 +557,11 @@ class ReadmeFigureTests(unittest.TestCase):
         cls.sealed_v2_categories = sealed_categories("wild-v2")
         cls.sealed_v1 = sealed_figures("sealed-v1")
         cls.sealed_v1_categories = sealed_categories("sealed-v1")
+        # The fourth sealed set. Its attribute is not called ``sealed_v2``: that
+        # name is the second sealed set's here, because the registration is
+        # ``wild-v2`` and the two names are not the same thing.
+        cls.fourth = sealed_figures("sealed-v2")
+        cls.fourth_categories = sealed_categories("sealed-v2")
         cls.corpus = graded(development_sets.named("corpus"), development_sets.named("corpus").run_dir(MODEL))
         cls.codex = graded(development_sets.named("codex"), development_sets.named("codex").run_dir(MODEL))
         cls.admissibility = ablation_figures("admissibility")
@@ -575,6 +580,8 @@ class ReadmeFigureTests(unittest.TestCase):
         second_calibration = second.calibration
         third = self.sealed_v1
         third_calibration = third.calibration
+        fourth = self.fourth
+        fourth_calibration = fourth.calibration
         figures = {
             "Held-out set (wild-v1) — four-field exact, of the cases that produced a ruling": fraction(
                 sealed.exact_matches, sealed.total
@@ -694,6 +701,54 @@ class ReadmeFigureTests(unittest.TestCase):
             ),
             "Third sealed set (sealed-v1) — cases with no ruling": case_list(
                 cases_with_no_ruling(development_sets.named("sealed-v1"), third)
+            )
+            or "none",
+            "Fourth sealed set (sealed-v2) — four-field agreement, of the cases that produced a ruling": fraction(
+                fourth.exact_matches, fourth.total
+            ),
+            "Fourth sealed set (sealed-v2) — four-field agreement, over all 12 cases": fraction(
+                fourth.exact_matches, 12
+            ),
+            "Fourth sealed set (sealed-v2) — ruling alone, of the cases that produced a ruling": fraction(
+                fourth.field_tally("ruling")[0], fourth.total
+            ),
+            "Fourth sealed set (sealed-v2) — Wilson 95% interval": v6_wilson(
+                fourth.exact_matches, 12
+            ),
+            "Fourth sealed set (sealed-v2) — escalation precision": ratio(
+                len(
+                    set(fourth_calibration.produced_escalations)
+                    & set(fourth_calibration.expected_escalations)
+                ),
+                len(fourth_calibration.produced_escalations),
+            ),
+            "Fourth sealed set (sealed-v2) — escalation recall": ratio(
+                len(
+                    set(fourth_calibration.produced_escalations)
+                    & set(fourth_calibration.expected_escalations)
+                ),
+                len(fourth_calibration.expected_escalations),
+            ),
+            "Fourth sealed set (sealed-v2) — over-escalations": case_list(
+                fourth_calibration.over_escalations
+            )
+            or "none",
+            "Fourth sealed set (sealed-v2) — under-escalation": case_list(
+                fourth_calibration.under_escalations
+            )
+            or "none",
+            "Fourth sealed set (sealed-v2) — ROUTE_DEVIATION four-field agreement": fraction(
+                *category_four_field(
+                    fourth, self.fourth_categories, "ROUTE_DEVIATION"
+                )
+            ),
+            "Fourth sealed set (sealed-v2) — NO_SHOW_CHARGE four-field agreement": fraction(
+                *category_four_field(
+                    fourth, self.fourth_categories, "NO_SHOW_CHARGE"
+                )
+            ),
+            "Fourth sealed set (sealed-v2) — cases with no ruling": case_list(
+                cases_with_no_ruling(development_sets.named("sealed-v2"), fourth)
             )
             or "none",
             "Corpus — four-field exact (development)": fraction(

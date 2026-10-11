@@ -335,14 +335,12 @@ class SealedV1RegistryTests(unittest.TestCase):
     def test_its_root_is_closed_and_no_permit_opens_it(self):
         """The set has been run, so nothing is created under its root again."""
         self.assertTrue(sets.sealed_root_is_closed(SEALED_V1))
-        # The un-run list names the fourth sealed set, imported on 2026-10-11 and
-        # not yet run; this set's own run has been made, so no permit opens its
-        # root. Both lists are pinned, so neither can pass by being empty.
+        # The un-run list is empty now that all four sealed sets have been run,
+        # so no permit opens any root. Both lists are pinned, so neither can pass
+        # by being empty.
+        self.assertEqual((), run_benchmark.UNRUN_SEALED_RUNS_SUBDIRS)
         self.assertEqual(
-            ("sealed-v2",), run_benchmark.UNRUN_SEALED_RUNS_SUBDIRS
-        )
-        self.assertEqual(
-            ("wild", "wild-v2", "sealed-v1"),
+            ("wild", "wild-v2", "sealed-v1", "sealed-v2"),
             run_benchmark.MADE_SEALED_RUNS_SUBDIRS,
         )
         self.assertIn(run_benchmark.SEALED_V1_SET_RUNS_SUBDIR, run_benchmark.SET_RUNS_SUBDIRS)

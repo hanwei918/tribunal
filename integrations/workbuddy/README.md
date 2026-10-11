@@ -105,7 +105,8 @@ Every answer shown there matches the server's own output for the same calls.
 
 ## What it will not do
 
-- **It never reads a sealed set.** `wild`, `wild-v2` and `sealed-v1` are refused
+- **It never reads a sealed set.** `wild`, `wild-v2`, `sealed-v1` and `sealed-v2`
+  are refused
   by name before any path is resolved, and nothing under `eval/answers/` is
   opened anywhere in the server.
 - **It never answers about the answer key.** A run's own `matched` field and its

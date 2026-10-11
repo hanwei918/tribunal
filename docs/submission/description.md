@@ -65,10 +65,17 @@ Read by `python3 -m eval.business_value --report` over the four version-6 runs'
 and the 90th percentile 286.9 s; the median cost per case is 0.0579 USD; 112 of
 151 = 74.2% are decided automatically and 39 of 151 = 25.8% go to a human. Every
 human-lane case carries the 48-hour first-review commitment, operations rule
-`OPS-EW-01`. The third sealed set, `sealed-v1`, has a four-field **agreement**
-against its key of 21/24 = 87.5%, Wilson 95% [69.0%, 95.7%] (README,
-sealed-v1 table; `python3 -m eval.sealed_report --set sealed-v1`) — one
-sealed set, never pooled. On fairness over both version-6 runs the errors lean
+`OPS-EW-01`. The sealed sets are each reported as an **agreement** against their
+own key, and are never pooled. The third sealed set, `sealed-v1` — made by a team
+member with Claude, with a copy of the schema and the policy — has a four-field
+agreement of 21/24 = 87.5%, Wilson 95% [69.0%, 95.7%], and is 20/24 under the key
+as imported (README, sealed-v1 table; `python3 -m eval.sealed_report --set
+sealed-v1`). The fourth sealed set, `sealed-v2` — made by the policy owner with
+GPT-6 from the version-6 policy text and the public contract, with no repository
+code, its answers seen by nobody on the development side — has a four-field
+agreement of 12/12 = 100.0%, Wilson 95% [75.8%, 100.0%] (README, sealed-v2
+table; `python3 -m eval.sealed_report --set sealed-v2`). The two figures are
+never added together. On fairness over both version-6 runs the errors lean
 towards the rider 0, towards the driver 1 and to an escalation 5, and the
 position-swapped draft agrees with the sampled majority on all four graded
 fields in 136 of 141 = 96.5% (README, fairness rows; `python3 -m

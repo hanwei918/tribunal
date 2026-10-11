@@ -181,7 +181,7 @@ without them.
 | `wild-v2` | OpenAI Codex, for the owner | archive created 2026-10-01, imported 2026-10-03 | a copy of `data/schema.json` and `policy/*.json`, shipped inside the archive under `eval/external/wild-v2/` | the owner | no — the key was re-wrapped into the array the grader reads at import, before the run, and every graded value was compared parsed | sealed |
 | `sealed-v1` | Claude — the archive's own manifest: "independent of prompt tuning; never saw dev-set misses or prompts" | created 2026-09-26, imported 2026-10-09 | `data/SCHEMA.md`, `data/schema.json` and `policy/*.json`, read from a copy by `eval/external/sealed-v1/gen/validate.py` | the policy owner's AI assistant opened the cases and the key before the freeze; the key owner re-derived the key at version 6 before the run, without seeing any output | no — the version-6 re-derivation predates the run, and case 311's change is recorded rather than hidden | sealed |
 | the functional sets (`inject-v1`, `pii-v1`, `collusion-v1`, `chat-signals-v1`) | the policy owner's archive | imported 2026-10-10 | this repository's case conventions and the version-6 policy | the owner | no | development |
-| `sealed-v2` | the policy owner, with GPT-6 | received 2026-10-11 | a written brief (which paraphrases some system behaviour: version-6 weights, GPS gap grading, flag routing, scoring), `policy/v3/` (3 policies, 3 amendments), `data/PUBLIC-CONTRACT.md`, a format checker; no repository code, prompts or run results | nobody on the development side; the policy owner, who had seen development results but no sealed-v2 output | no | sealed, imported at `19c7e5a`, run once from `freeze-2026-10-11` (the result is committed in a later part) |
+| `sealed-v2` | the policy owner, with GPT-6 | received 2026-10-11 | a written brief (which paraphrases some system behaviour: version-6 weights, GPS gap grading, flag routing, scoring), `policy/v3/` (3 policies, 3 amendments), `data/PUBLIC-CONTRACT.md`, a format checker; no repository code, prompts or run results | nobody on the development side; the policy owner, who had seen development results but no sealed-v2 output | no | sealed, imported at `19c7e5a`, run once from `freeze-2026-10-11` |
 
 **No test set came from outside the team.** Every one was written by a member of
 the project, by a model the team directed, or by a collaborator the team
@@ -249,10 +249,38 @@ records are `docs/notes/2026-10-08-policy-version-3.md`,
 `docs/notes/2026-10-09-policy-version-4.md` and
 [`docs/notes/2026-10-10-sealed-v1-key-at-version-6.md`](docs/notes/2026-10-10-sealed-v1-key-at-version-6.md).
 
+**The fourth sealed set (`sealed-v2`), at policy version 6**
+
+`sealed-v2` is 12 cases, imported and registered at policy version 6. Its single
+run was made once by the owner, on 2026-10-11, from the commit `19c7e5a`, whose
+`tribunal/`, `prompts/` and `policy/` trees equal those at the freeze tagged
+`freeze-2026-10-11`, and it is committed at
+`runs/sealed-v2/deepseek-deepseek-flash/`. The set's figure is reported as the
+**agreement** against its key rather than as an "accuracy", so that is the word
+used here, and its figure is the submission's fourth generalisation figure: it is
+**never** pooled with `wild-v1`'s, `wild-v2`'s or `sealed-v1`'s. The note that
+reads the run is
+[`docs/notes/2026-10-11-the-fourth-sealed-run.md`](docs/notes/2026-10-11-the-fourth-sealed-run.md).
+
+| figure | value | read from | recompute with | model call |
+|---|---|---|---|---|
+| Fourth sealed set (`sealed-v2`) — four-field agreement, of the cases that produced a ruling | 12/12 = 100.0% | `runs/sealed-v2/deepseek-deepseek-flash/case-*.json`, `eval/answers/sealed-v2/ground_truth.json` | `python3 -m eval.sealed_report --set sealed-v2` | no |
+| Fourth sealed set (`sealed-v2`) — four-field agreement, over all 12 cases | 12/12 = 100.0% | `runs/sealed-v2/deepseek-deepseek-flash/`, `eval/answers/sealed-v2/ground_truth.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
+| Fourth sealed set (`sealed-v2`) — ruling alone, of the cases that produced a ruling | 12/12 = 100.0% | `runs/sealed-v2/deepseek-deepseek-flash/case-*.json`, `eval/answers/sealed-v2/ground_truth.json` | `python3 -m eval.sealed_report --set sealed-v2` | no |
+| Fourth sealed set (`sealed-v2`) — Wilson 95% interval | [75.8%, 100.0%] | `runs/sealed-v2/deepseek-deepseek-flash/`, `eval/answers/sealed-v2/ground_truth.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
+| Fourth sealed set (`sealed-v2`) — escalation precision | 2/2 = 1.0 | `runs/sealed-v2/deepseek-deepseek-flash/case-*.json`, `eval/answers/sealed-v2/ground_truth.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
+| Fourth sealed set (`sealed-v2`) — escalation recall | 2/2 = 1.0 | `runs/sealed-v2/deepseek-deepseek-flash/case-*.json`, `eval/answers/sealed-v2/ground_truth.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
+| Fourth sealed set (`sealed-v2`) — over-escalations | none | `runs/sealed-v2/deepseek-deepseek-flash/case-*.json`, `eval/answers/sealed-v2/ground_truth.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
+| Fourth sealed set (`sealed-v2`) — under-escalation | none | `runs/sealed-v2/deepseek-deepseek-flash/case-*.json`, `eval/answers/sealed-v2/ground_truth.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
+| Fourth sealed set (`sealed-v2`) — ROUTE_DEVIATION four-field agreement | 6/6 = 100.0% | `runs/sealed-v2/deepseek-deepseek-flash/`, `eval/answers/sealed-v2/ground_truth.json`, `data/external/sealed-v2/index.json` | `python3 -m eval.sealed_report --set sealed-v2` | no |
+| Fourth sealed set (`sealed-v2`) — NO_SHOW_CHARGE four-field agreement | 6/6 = 100.0% | `runs/sealed-v2/deepseek-deepseek-flash/`, `eval/answers/sealed-v2/ground_truth.json`, `data/external/sealed-v2/index.json` | `python3 -m eval.sealed_report --set sealed-v2` | no |
+| Fourth sealed set (`sealed-v2`) — cases with no ruling | none | `runs/sealed-v2/deepseek-deepseek-flash/run.json` | `python3 -m unittest tests.test_readme_figures -v` | no |
+
 ## After the sealed run
 
 Everything in this section was added **after** the third sealed set's single run,
-on 2026-10-10. **None of it changes a sealed figure**: the three sealed runs were
+on 2026-10-10, and before the fourth's. **None of it changes a sealed figure**:
+the four sealed runs were
 made from their own frozen trees, each exactly once, and nothing here re-runs,
 re-reads or re-scores one of them.
 
@@ -297,8 +325,8 @@ stop once three of its four drafts agree on all four graded fields; it is off
 unless asked for, needs `--parallel-calls`, and is refused for every sealed set
 and together with `--verify-drafts`. `python3 -m eval.early_majority --report`
 shows the published ruling is identical on every case it would stop early on,
-over the two version-6 development runs — the third sealed set's single run is
-**not** read, because nothing after a sealed run re-reads it
+over the two version-6 development runs — no sealed set's single run is
+**read**, because nothing after a sealed run re-reads one
 ([`docs/notes/2026-10-10-early-majority.md`](docs/notes/2026-10-10-early-majority.md)).
 
 **The record-integrity gate, off by default.** `--integrity-gate` holds the
@@ -311,8 +339,8 @@ run backwards -- and escalates a record that fails, with the reason code
 for every sealed set.
 `python3 -m eval.integrity_gate --report` shows it would escalate three of the
 179 non-sealed cases with a version-6 run — 112, 2834 and 2858, each of whose
-key is `ESCALATE` — and break none; the third sealed set's single run is **not**
-read, so it is in no count here
+key is `ESCALATE` — and break none; no sealed set's single run is **read**, so
+none is in any count here
 ([`docs/notes/2026-10-10-the-integrity-gate.md`](docs/notes/2026-10-10-the-integrity-gate.md)).
 
 **The advocate-effort switch, off by default.** `--advocate-effort none` makes
@@ -367,7 +395,8 @@ not on by default: nothing opens a window until a reviewer runs the command.
 **The WorkBuddy connector.** `integrations/workbuddy/tribunal_mcp_server.py` is a
 read-only MCP server that answers three questions from the committed records —
 `tribunal_case`, `tribunal_queue` and `tribunal_packet` — with no key and no
-network; it refuses `wild`, `wild-v2` and `sealed-v1` by name before any path is
+network; it refuses `wild`, `wild-v2`, `sealed-v1` and `sealed-v2` by name before
+any path is
 resolved, and it writes nothing. It is **not** enabled by default: a user adds one
 entry to their WorkBuddy `mcp.json` and trusts the server, and nothing here is
 installed into any configuration
@@ -379,7 +408,7 @@ from the earlier freezes; they are kept as they were.
 Read the table below from the top. The first block is the submission's claim;
 every block below it is context that says what that claim is worth.
 
-Three figures are **generalisation** figures, and each is its own. The held-out
+Four figures are **generalisation** figures, and each is its own. The held-out
 set (`wild-v1`) is 64 cases whose author says its traps come from real
 complaints, prepared by their author as a development set; nobody who changed the
 system opened them before the freeze tagged `freeze-2026-09-30`, and they were
@@ -388,14 +417,19 @@ sealed set (`wild-v2`) is 20 cases, run once on 2026-10-04 from a commit whose
 `tribunal/`, `prompts/` and `policy/` trees equal those at the freeze tagged
 `freeze-2026-10-03`. The third sealed set (`sealed-v1`) is 24 cases, run once on
 2026-10-10 from the commit `feb7174`, whose `tribunal/`, `prompts/` and `policy/`
-trees equal those at the freeze tagged `freeze-2026-10-09`. The corpus and the
+trees equal those at the freeze tagged `freeze-2026-10-09`. The fourth sealed set
+(`sealed-v2`) is 12 cases, run once on 2026-10-11 from the commit `19c7e5a`,
+whose `tribunal/`, `prompts/` and `policy/` trees equal those at the freeze
+tagged `freeze-2026-10-11`. The corpus and the
 second set are **development** data the system was built against, so a figure
-over them measures fit, not generalisation. **The three sealed figures are never
-summed or pooled** — one figure over 64 cases, one over 20 and one over 24 are
-not a measurement of 108 cases — and no sealed set is ever produced by
+over them measures fit, not generalisation. **The four sealed figures are never
+summed or pooled** — one figure over 64 cases, one over 20, one over 24 and one
+over 12 are
+not a measurement of 120 cases — and no sealed set is ever produced by
 `--set all`. The second sealed set's run, its figures and its two misses are read
-in `docs/notes/2026-10-04-the-second-sealed-run.md`, and the third's in
-`docs/notes/2026-10-10-the-third-sealed-run.md`.
+in `docs/notes/2026-10-04-the-second-sealed-run.md`, the third's in
+`docs/notes/2026-10-10-the-third-sealed-run.md`, and the fourth's in
+`docs/notes/2026-10-11-the-fourth-sealed-run.md`.
 
 **Where the corpus came from.** The 29-case corpus was written by this team before
 the kick-off, following the dispute types in the organisers' brief. It is **not**
@@ -444,8 +478,10 @@ organiser data. The only organiser-supplied case is `DISP-002`, converted as cas
 from a commit whose `tribunal/`, `prompts/` and `policy/` trees equal those at
 `freeze-2026-10-03`; the `sealed-v1` rows are read from the run of 2026-10-10,
 made from the commit `feb7174`, whose `tribunal/`, `prompts/` and `policy/`
-trees equal those at `freeze-2026-10-09`. No sealed figure is added to another
-sealed figure or to any development figure.
+trees equal those at `freeze-2026-10-09`; and the `sealed-v2` rows are read from
+the run of 2026-10-11, made from the commit `19c7e5a`, whose `tribunal/`,
+`prompts/` and `policy/` trees equal those at `freeze-2026-10-11`. No sealed
+figure is added to another sealed figure or to any development figure.
 
 **Which policy version each block was measured at.** The corpus, the second
 development set and `wild-v1` were all measured at **policy version 1**, the
@@ -494,6 +530,7 @@ protocol. The commands that made them, and which of them were paid for, are:
 | held-out set (`wild-v1`) | `python3 -m eval.development_sets --set wild --concurrency 2 --timeout 900` | once, 2026-09-30, from the commit tagged `freeze-2026-09-30` |
 | second sealed set (`wild-v2`) | `TRIBUNAL_SEALED_RUN=wild-v2 python3 -m eval.development_sets --set wild-v2 --concurrency 2 --timeout 900` | once, 2026-10-04, from a commit whose `tribunal/`, `prompts/` and `policy/` trees equal those at `freeze-2026-10-03` |
 | third sealed set (`sealed-v1`) | `TRIBUNAL_SEALED_RUN=sealed-v1 python3 -m eval.development_sets --set sealed-v1 --parallel-calls --concurrency 2 --timeout 900` | once, 2026-10-10, from the commit `feb7174`, whose `tribunal/`, `prompts/` and `policy/` trees equal those at `freeze-2026-10-09` |
+| fourth sealed set (`sealed-v2`) | `TRIBUNAL_SEALED_RUN=sealed-v2 python3 -m eval.development_sets --set sealed-v2 --parallel-calls --concurrency 2 --timeout 900` | once, 2026-10-11, from the commit `19c7e5a`, whose `tribunal/`, `prompts/` and `policy/` trees equal those at `freeze-2026-10-11` |
 | development sets | `python3 -m eval.run_benchmark`, `python3 -m eval.development_sets --set codex` | 2026-09-22 to 2026-09-24 |
 | ablations | the same two with `--ablate admissibility` or `--ablate clause-notes` | 2026-09-29 |
 | sample case | `python3 -m eval.run_benchmark --external data/external/ryde/case-00901.json --runs-dir runs/rerun-2026-09-29 --timeout 900` | 2026-09-29 |

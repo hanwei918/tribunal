@@ -139,8 +139,8 @@ class SealedSetRegistryTests(unittest.TestCase):
         )
         self.assertIn(SEALED, sets.SEALED_SETS)
         # ``ALL_SETS`` is what the measurements read -- the sets whose recorded
-        # runs there are to read -- and the second and third sealed sets are
-        # deliberately not in it: the amount-rule and recorded-drafts
+        # runs there are to read -- and the second, third and fourth sealed sets
+        # are deliberately not in it: the amount-rule and recorded-drafts
         # measurements have committed results over the three runs it names, and
         # adding a fourth would change figures the submission reports.
         self.assertEqual(

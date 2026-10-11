@@ -13,8 +13,8 @@ this repository: the version-6 runs under ``runs/``, the three functional
 sets' runs, the public case files those runs were made from, the loaded policy,
 and the two operations commands the layer already ships (``ops.queue`` and
 ``ops.escalation``, each run as a subprocess). It opens no answer key: nothing
-under ``eval/answers/`` is read, and the sealed sets -- ``wild``, ``wild-v2``
-and ``sealed-v1`` -- are refused by name and never read at all.
+under ``eval/answers/`` is read, and the sealed sets -- ``wild``, ``wild-v2``,
+``sealed-v1`` and ``sealed-v2`` -- are refused by name and never read at all.
 
 The run's own ``matched`` field and its ``grade`` event are the run's verdict
 against the answer key. They are read by nobody here and surfaced by nothing
