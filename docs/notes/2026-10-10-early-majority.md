@@ -51,10 +51,14 @@ same fields.
 ## What it would have saved, from the record
 
 `python3 -m eval.early_majority --report` is read-only and makes no model call.
-It replays the rule over every version-6 case with four judge drafts --
-`runs/policy-v6/`, `runs/dev-v2-ext/policy-v6/` and `runs/sealed-v1/` -- using
-each draft's own recorded `duration_seconds`, and it **asserts** that the
-published ruling is the same either way. The whole report, pasted as it printed:
+It replays the rule over every version-6 case with four judge drafts in the
+**two development runs** -- `runs/policy-v6/` and
+`runs/dev-v2-ext/policy-v6/` -- using each draft's own recorded
+`duration_seconds`, and it **asserts** that the published ruling is the same
+either way. The third sealed set's run, `runs/sealed-v1/`, is deliberately **not**
+read: nothing after a sealed run re-reads it, and a figure that pooled it into a
+total would print a number no single run supports. The whole report, pasted as it
+printed:
 
 ```
 Early majority, replayed from the version-6 record
@@ -65,27 +69,26 @@ the rule: the position-swapped draft plus 2 sampled drafts back, and 3 of the re
 == The cases ==
    corpus      29 cases, 29 with four judge drafts
    dev-v2-ext  120 cases, 118 with four judge drafts
-   sealed-v1   24 cases, 24 with four judge drafts
-   all         173 cases, 171 with four judge drafts
+   all         149 cases, 147 with four judge drafts
 
 == The rule ==
-   would stop early        105 of 171
-   would wait for all four 66 of 171
-   the published ruling is identical in every case: asserted over all 171 (the four graded fields; 105 would have stopped early)
-   the explanation's vote sentence would differ in 102 of them: 101, 106, 109, 110, 111, 113, 114, 115, 202, 203, 205, 206, 207, 210, 212, 213, 214, 2701, 2702, 2703, 2709, 2711, 2712, 2713, 2714, 2716, 2717, 2718, 2719, 2720, 2722, 2725, 2726, 2727, 2729, 2730, 2731, 2732, 2734, 2736, 2737, 2738, 2739, 2740, 2741, 2746, 2747, 2751, 2753, 2755, 2801, 2802, 2804, 2805, 2806, 2807, 2808, 2812, 2813, 2815, 2816, 2817, 2818, 2824, 2826, 2827, 2828, 2830, 2832, 2833, 2835, 2837, 2839, 2840, 2841, 2842, 2846, 2847, 2849, 2851, 2852, 2854, 2856, 2857, 2859, 2860, 301, 303, 305, 307, 308, 309, 401, 403, 404, 405, 406, 408, 409, 410, 411 and 412
+   would stop early        89 of 147
+   would wait for all four 58 of 147
+   the published ruling is identical in every case: asserted over all 147 (the four graded fields; 89 would have stopped early)
+   the explanation's vote sentence would differ in 86 of them: 101, 106, 109, 110, 111, 113, 114, 115, 202, 203, 205, 206, 207, 210, 212, 213, 214, 2701, 2702, 2703, 2709, 2711, 2712, 2713, 2714, 2716, 2717, 2718, 2719, 2720, 2722, 2725, 2726, 2727, 2729, 2730, 2731, 2732, 2734, 2736, 2737, 2738, 2739, 2740, 2741, 2746, 2747, 2751, 2753, 2755, 2801, 2802, 2804, 2805, 2806, 2807, 2808, 2812, 2813, 2815, 2816, 2817, 2818, 2824, 2826, 2827, 2828, 2830, 2832, 2833, 2835, 2837, 2839, 2840, 2841, 2842, 2846, 2847, 2849, 2851, 2852, 2854, 2856, 2857, 2859 and 2860
      the four graded fields are the same either way; the sentence reads '3 of the 4 agreed' where the whole panel would have read 'every draft agreed', because the draft the rule did not wait for would have agreed
 
 == The judge stage, seconds (the slowest draft the panel waited for) ==
-   with the rule       median    49.0   p90   176.6   max   506.1
-   without it          median    56.2   p90   204.2   max   533.5
-   saved               median     2.5   p90    26.7   max   253.3
-   over the 105 the rule stops early on: median 8.1   p90 50.7   max 253.3
-   the ideal bound -- always stopping at the third-fastest draft -- is median 44.8   p90 140.1   max 455.7
+   with the rule       median    47.3   p90   170.7   max   495.0
+   without it          median    54.5   p90   200.2   max   495.0
+   saved               median     2.6   p90    26.7   max   253.3
+   over the 89 the rule stops early on: median 8.3   p90 50.7   max 253.3
+   the ideal bound -- always stopping at the third-fastest draft -- is median 43.8   p90 139.5   max 455.7
 
 == The whole case, seconds (the slower advocate plus the judge stage) ==
-   with the rule       median   153.1   p90   273.7   max   624.7
-   without it          median   160.3   p90   290.0   max   699.1
-   saved               median     2.5   p90    26.7   max   253.3
+   with the rule       median   153.1   p90   273.3   max   624.7
+   without it          median   161.7   p90   288.8   max   624.7
+   saved               median     2.6   p90    26.7   max   253.3
 
 == These are replayed timings ==
    the durations are the ones the provider reported for calls that were all made together; a live run's panel is rate-limited by the same client and contends with the other cases' calls, and the draft the rule stops waiting for may in a live run be the fast one. A live run may differ.
@@ -100,15 +103,15 @@ rule stops waiting for in a live run may be the fast one. What is *not* a timing
 is the published ruling, and that is asserted rather than assumed -- over all 171
 cases, not only the 105 the rule stops early on.
 
-Three things the figures say. **The rule fires on 105 of 171 cases (61 %).** The
-66 it does not fire on are cases where the swapped draft, or the third agreeing
+Three things the figures say. **The rule fires on 89 of 147 cases (61 %).** The
+58 it does not fire on are cases where the swapped draft, or the third agreeing
 draft, was not back when three had answered. **The saving is smaller than the
 switch's own motivation suggests, and for a reason worth stating:** the ideal
 bound -- always stopping at the third-fastest draft, whatever it is -- is median
-44.8 s / p90 140.1 s, and the rule's own figure is median 49.0 s / p90 176.6 s,
+43.8 s / p90 139.5 s, and the rule's own figure is median 47.3 s / p90 170.7 s,
 because the position-swapped draft is always waited for and a panel whose three
 fastest drafts are all sampled must wait for it. **The four graded fields are
-identical in every case; the vote sentence is not.** In 102 of the 105 the draft
+identical in every case; the vote sentence is not.** In 86 of the 89 the draft
 the rule did not wait for would have agreed, so the whole panel would have
 reported "every draft agreed ... carried unanimously" where the early panel
 reports "3 of the 4 drafts agreed ... carried, not unanimous". The explanation

@@ -7,8 +7,9 @@ waiting for it costs time and buys nothing. ``--early-majority`` publishes at th
 third agreeing draft. This module asks **what that rule would have saved** on the
 runs that were actually made.
 
-It answers four things, over every version-6 case with four judge drafts --
-``runs/policy-v6/``, ``runs/dev-v2-ext/policy-v6/`` and ``runs/sealed-v1/``:
+It answers four things, over every version-6 case with four judge drafts in the
+**two development runs** -- ``runs/policy-v6/`` and
+``runs/dev-v2-ext/policy-v6/``:
 
 * how many cases the rule would have stopped early;
 * whether the published ruling would have been the same, **asserted** rather
@@ -17,6 +18,12 @@ It answers four things, over every version-6 case with four judge drafts --
 * the judge stage's time with and without the rule -- median, 90th percentile
   and maximum; and
 * the whole case's, which is the slower advocate's call plus the judge stage.
+
+**The third sealed set's run is not read.** It was measured once, in
+``runs/sealed-v1/``, and the README promises that nothing after that run
+re-reads it; a figure over it here would break that promise and a pooled total
+would be worse still. The sealed run is therefore neither read nor printed by
+this module, and the figures below are over the two development runs alone.
 
 **The rule is the pipeline's own.** The floor on the sampled drafts is
 :data:`tribunal.pipeline.EARLY_MAJORITY_MIN_SAMPLED`, the two draft kinds are the
@@ -52,18 +59,18 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
-from eval import fairness, run_benchmark, v6_runs
+from eval import fairness, v6_runs
 from tribunal import pipeline, transcript as transcript_module
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
-# The three runs measured. The first two are the ones ``eval.v6_runs`` names;
-# the third is the sealed set's single committed run, whose root component
-# ``eval.run_benchmark`` owns the name of.
+# The two runs measured. Both are the version-6 development runs
+# ``eval.v6_runs`` names. The third sealed set's run is deliberately absent:
+# it is read once by its own report and nothing after that run re-reads it, so
+# no figure here may include it.
 CORPUS = "corpus"
 DEV_V2_EXT = "dev-v2-ext"
-SEALED_V1 = "sealed-v1"
-MEASURED_SETS: Tuple[str, ...] = (CORPUS, DEV_V2_EXT, SEALED_V1)
+MEASURED_SETS: Tuple[str, ...] = (CORPUS, DEV_V2_EXT)
 
 # The panel the rule is replayed at. Every measured run was made with four
 # judge drafts, and the rule's own floor is stated for four; a case that
@@ -112,15 +119,10 @@ class Draft:
 
 
 def measured_runs() -> Tuple[MeasuredRun, ...]:
-    """The three runs, by the paths ``eval.v6_runs`` and the runner name them."""
+    """The two development runs, by the paths ``eval.v6_runs`` names them."""
     runs = {
         CORPUS: v6_runs.run_by_name(CORPUS).run_dir,
         DEV_V2_EXT: v6_runs.run_by_name(DEV_V2_EXT).run_dir,
-        SEALED_V1: (
-            v6_runs.RUNS_DIR
-            / run_benchmark.SEALED_V1_SET_RUNS_SUBDIR
-            / v6_runs.MODEL_SLUG
-        ),
     }
     return tuple(MeasuredRun(name, runs[name]) for name in MEASURED_SETS)
 

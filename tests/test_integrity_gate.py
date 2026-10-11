@@ -45,7 +45,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from eval import development_sets, run_benchmark as runner  # noqa: E402
+from eval import development_sets, integrity_gate, run_benchmark as runner  # noqa: E402
 from tests import test_run_benchmark as rig  # noqa: E402
 from tribunal import brief, loader, money, pipeline  # noqa: E402
 
@@ -365,6 +365,39 @@ class TheSealedSetTests(unittest.TestCase):
 
         self.assertEqual(1, status)
         self.assertNotIn("--integrity-gate", str(err))
+
+
+# --------------------------------------------------------------------------
+# The report's totals
+# --------------------------------------------------------------------------
+class TheMeasuredRunsTests(unittest.TestCase):
+    """Every count is over the non-sealed cases, and the sealed run is not read.
+
+    The third sealed set's single run is read once, by its own report, and the
+    README promises that nothing after that run re-reads it. A module that
+    measured it would break that promise, and one that pooled it into a total
+    would print a figure no single run supports.
+    """
+
+    def test_the_sealed_run_is_not_measured(self):
+        names = [run.name for run in integrity_gate.measured_runs()]
+        self.assertNotIn("sealed-v1", names)
+
+    def test_the_non_sealed_runs_are_measured(self):
+        """The control: the list is not empty, so the check above proves something."""
+        names = [run.name for run in integrity_gate.measured_runs()]
+        self.assertEqual(
+            [
+                "corpus",
+                "dev-v2-ext",
+                "dev-v2",
+                "ryde-v3",
+                "inject-v1",
+                "pii-v1",
+                "collusion-v1",
+            ],
+            names,
+        )
 
 
 if __name__ == "__main__":

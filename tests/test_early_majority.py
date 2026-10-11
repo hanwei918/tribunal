@@ -40,7 +40,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from eval import development_sets, run_benchmark  # noqa: E402
+from eval import development_sets, early_majority, run_benchmark  # noqa: E402
 from tribunal import llm, pipeline, transcript as transcript_module  # noqa: E402
 
 FAKE_KEY = "tok-live-FAKEKEY-0123456789abcdef-DO-NOT-LEAK"
@@ -559,6 +559,35 @@ class EarlyMajorityRefusalTests(unittest.TestCase):
 
         self.assertEqual(1, status)
         self.assertNotIn("--early-majority", str(err))
+
+
+# --------------------------------------------------------------------------
+# The report's totals
+# --------------------------------------------------------------------------
+class TheMeasuredRunsTests(unittest.TestCase):
+    """The report's figures are over the two development runs, and no more.
+
+    The third sealed set's single run is read once, by its own report, and the
+    README promises that nothing after that run re-reads it. A module that
+    measured it would break that promise, and one that pooled it into a total
+    would print a figure no single run supports.
+    """
+
+    def test_the_sealed_run_is_not_measured(self):
+        names = [run.name for run in early_majority.measured_runs()]
+        self.assertEqual(list(early_majority.MEASURED_SETS), names)
+        self.assertNotIn("sealed-v1", names)
+
+    def test_the_two_development_runs_are_measured(self):
+        """The control: the list is not empty, so the check above proves something."""
+        runs = early_majority.measured_runs()
+        self.assertEqual(["corpus", "dev-v2-ext"], [run.name for run in runs])
+        for run in runs:
+            with self.subTest(run=run.name):
+                self.assertTrue(
+                    run.run_dir.is_dir(),
+                    "{0} is not a committed run directory".format(run.run_dir),
+                )
 
 
 if __name__ == "__main__":

@@ -113,10 +113,12 @@ its own words.
 `python3 -m eval.integrity_gate --report` is read-only and makes no model call.
 It rebuilds each case's version-6 brief and runs the pipeline's own
 `record_integrity_limbs` over it, for every committed case that has a run at
-policy version 6 -- the corpus, `dev-v2-ext`, `dev-v2` 1779, the organisers'
-sample 901, `sealed-v1`, and the three functional sets -- and compares the
-limbs with the key's ruling and with the ruling the run recorded. The whole
-report, pasted as it printed:
+policy version 6 **outside the sealed set** -- the corpus, `dev-v2-ext`, `dev-v2`
+1779, the organisers' sample 901, and the three functional sets -- and compares
+the limbs with the key's ruling and with the ruling the run recorded. The third
+sealed set's run, `runs/sealed-v1/`, is deliberately **not** read: nothing after a
+sealed run re-reads it, and a count that pooled it into a total would be a figure
+no single run supports. The whole report, pasted as it printed:
 
 ```
 The record-integrity gate, replayed from the version-6 record
@@ -131,14 +133,13 @@ the gate: POL-RD-10's limbs (2) and (4), on ROUTE_DEVIATION disputes only, off b
    dev-v2-ext        120 cases   the 120-case extension set
    dev-v2               1 case   case 1779 alone, the prompt-injection case
    ryde-v3              1 case   the organisers' sample, case 901
-   sealed-v1          24 cases   the third sealed set's single run
    inject-v1          12 cases   a functional set, run once by the owner
    pii-v1              8 cases   a functional set, run once by the owner
    collusion-v1        8 cases   a functional set, run once by the owner
-   all               203 cases   every committed case with a run at version 6
+   all               179 cases   every committed case with a version-6 run outside the sealed set
 
 == The gate ==
-   would escalate   3 of 203
+   would escalate   3 of 179
    by limb          POL-RD-10(2) 2, POL-RD-10(4) 1
    112    corpus       POL-RD-10(4)              key ESCALATE                      run NO_ACTION
    2834   dev-v2-ext   POL-RD-10(2)              key ESCALATE                      run ESCALATE
@@ -156,8 +157,8 @@ the gate: POL-RD-10's limbs (2) and (4), on ROUTE_DEVIATION disputes only, off b
    the gate is off by default, so a run without --integrity-gate is byte for byte the run it was.
 ```
 
-**It breaks no case.** The gate would escalate three of the 203 cases with a
-version-6 run, and every one of the three has `ESCALATE` as its key. Two of them
+**It breaks no case.** The gate would escalate three of the 179 non-sealed cases
+with a version-6 run, and every one of the three has `ESCALATE` as its key. Two of them
 are the two misses the note of 2026-10-10 names: **112**, where the trace begins
 13 minutes 30 seconds before the trip record says the trip started (limb (4)),
 and **2858**, where the fare ledger is filed under `TRP-02758` while the trip

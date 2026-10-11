@@ -15,9 +15,15 @@ model, and the judge read past both at version 6
 
 ``--integrity-gate`` escalates such a record by code, with no call made. This
 module asks **what that gate would have done on the runs that were actually
-made**, over every committed case that has a run at policy version 6: the
-corpus, ``dev-v2-ext``, ``dev-v2`` 1779, the organisers' sample 901,
-``sealed-v1``, and the three functional sets.
+made**, over every committed case that has a run at policy version 6 outside the
+sealed set: the corpus, ``dev-v2-ext``, ``dev-v2`` 1779, the organisers' sample
+901, and the three functional sets.
+
+**The third sealed set's run is not read.** It was measured once, in
+``runs/sealed-v1/``, and the README promises that nothing after that run
+re-reads it; a figure over it here would break that promise and a pooled total
+would be worse still. The sealed run is therefore neither read nor printed by
+this module, and every count below is over the non-sealed cases alone.
 
 For each case the gate would escalate it names the limb that fired, the key's
 ruling and the ruling the run recorded; then it counts the cases the gate would
@@ -48,7 +54,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
-from eval import development_sets, grade, run_benchmark, v6_runs
+from eval import development_sets, grade, v6_runs
 from tribunal import brief, loader, pipeline
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -88,10 +94,11 @@ class MeasuredRun:
 def measured_runs() -> Tuple[MeasuredRun, ...]:
     """Every run this report reads, in the order it prints them.
 
-    The four runs ``eval.v6_runs`` names, the third sealed set's single run, and
-    the three functional sets' runs. The precedents run is deliberately absent:
-    it is the corpus's fifteen route-deviation cases run again with
-    ``--precedents`` on, so every case of it is already counted here.
+    The four runs ``eval.v6_runs`` names and the three functional sets' runs.
+    The precedents run is deliberately absent: it is the corpus's fifteen
+    route-deviation cases run again with ``--precedents`` on, so every case of
+    it is already counted here. The third sealed set's single run is absent too:
+    nothing after a sealed run re-reads it, so no count here may include it.
     """
     runs: List[MeasuredRun] = [
         MeasuredRun(
@@ -121,17 +128,6 @@ def measured_runs() -> Tuple[MeasuredRun, ...]:
             case_root=loader.EXTERNAL_DIR / "ryde-v3",
             key_path=None,
             note="the organisers' sample, case 901",
-        ),
-        MeasuredRun(
-            name="sealed-v1",
-            run_dir=RUNS_DIR / run_benchmark.SEALED_V1_SET_RUNS_SUBDIR / MODEL_SLUG,
-            case_root=loader.EXTERNAL_DIR / run_benchmark.SEALED_V1_SET_RUNS_SUBDIR,
-            key_path=(
-                ANSWER_DIR
-                / run_benchmark.SEALED_V1_SET_RUNS_SUBDIR
-                / "ground_truth.json"
-            ),
-            note="the third sealed set's single run",
         ),
     ]
     for development_set in development_sets.FUNCTIONAL_SETS:
@@ -336,7 +332,8 @@ def render(
             )
         )
     lines.append(
-        "   {0:<14}{1:>13}   every committed case with a run at version 6".format(
+        "   {0:<14}{1:>13}   every committed case with a version-6 run "
+        "outside the sealed set".format(
             "all", _cases(len(everything))
         )
     )
