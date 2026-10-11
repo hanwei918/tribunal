@@ -1,84 +1,157 @@
-# Tribunal — submission description
+Digital Native Track - Multi-Agent Autonomous Dispute Resolution System (Ryde)
 
-## 1. Overview
+### 1. Project Overview: Target Scenarios, Users, and Value Proposition
 
 Tribunal arbitrates one ride-hail dispute and writes down why. The scenario is
-Ryde's two everyday cases: a route-deviation fare, where the rider says the
-driver took a longer way, and a no-show fee, where the driver says the rider
-never turned up. The users are a support team and the two parties: the team
-works a queue, each party may appeal once. The value is a
-first decision in the minutes a case takes to run, carrying its evidence and its
-clause, and handed to a person with the money held when it cannot decide.
+Ryde's two everyday cases: a route-deviation fare (`ROUTE_DEVIATION`), where the
+rider says the driver took a longer way, and a no-show charge (`NO_SHOW_CHARGE`),
+where the driver says the rider never turned up. Two of the brief's four:
+property damage "requires image analysis" is a stretch goal; a safety incident
+goes to a person. <!-- brief -->
 
-The live demo is at <https://tribunal.edgeone.dev/> — no account, no key. Case
-208 (`/case-00208.html`): the rider's three claims answered by GPS, her own
-phone's trace and a connected call, the driver compensated SGD 6.40. Case 901
-(`/case-00901.html`): the organisers' own sample. Source: the GitHub repository,
-`<repository URL>`.
+The users are Ryde's support team and the two parties. An agent works the queue;
+a reviewer takes an escalation packet and opens an evidence window; both read
+the records through the read-only WorkBuddy connector. The rider and the driver
+each get a notice naming the evidence and the clause it rests on, and either may
+appeal once. <!-- README -->
 
-## 2. The pain point
+The value is three sentences: a decision arrives in minutes, not days; it
+carries the evidence and the clause it rests on, written to both parties; and a
+case the panel cannot decide goes to a person with the money held. <!-- README -->
 
-A dispute reviewed by hand is slow, and its outcome depends on who reads it. The
-team's understanding is that the same facts can be weighed two ways on two days,
-that the reasoning is rarely written down, and that the parties see only the
-outcome. That is the understanding this project is built on, not a claim about
-Ryde's own figures.
+The live demo is https://tribunal.edgeone.dev/ - no account, no key. Case 208
+(https://tribunal.edgeone.dev/case-00208.html): the rider's three claims
+answered by GPS, her own phone's trace and a connected call, the driver
+compensated SGD 6.40. Case 901
+(https://tribunal.edgeone.dev/case-00901.html) is the organisers' own sample;
+the source is https://github.com/<repository URL>. Every dispute on the site is
+synthetic except 901. <!-- README -->
 
-## 3. The solution
+### 2. Real World Scenario Insights: Source of Pain Points, Target Audience and Core Problem Solved
 
-**The flow.** A case comes in as public content and the loaded policy. Out comes
-a ruling; an escalation to a human with the fee held; or, above `POL-GEN-05`'s
-execution threshold (SGD 8.00, `docs/architecture.md`), a ruling whose amount is
-held. A party may appeal once within 30 days under `POL-GEN-04`; a reviewer may
-open an evidence window under `POL-GEN-06(4)`.
+The pain points are Ryde's own, from the track's challenge statement: "High
+operational costs - millions spent annually on human support hours"; "Slow
+resolution times - typically 24-72 hours per dispute"; "Inconsistent rulings -
+different agents reach different conclusions on similar cases"; "User churn -
+customers who feel unfairly treated leave the platform". The sponsor's
+statement, quoted as such, not a claim about Ryde's internal data.
+<!-- challenge statement -->
 
-**The architecture.** `docs/architecture.svg`, written out in
-`docs/architecture.md`: one brief, handed byte-identical to two advocates, one
-for the rider and one for the driver, differing only in stance; a referee that
-discards a claim citing no evidence id, no clause id, an unresolvable citation,
-undisclosed impaired evidence, or a context-only profile field; a judge that
-rules four times, the majority deciding; and a confidence floor of 0.70, below
-which it goes to a human (README, What Tribunal is). At version 6 a scope gate
-routes a safety- or complaint-flagged dispute to a human before any prompt is
-rendered, and an optional record-integrity gate holds the record to
-`POL-RD-10`'s limbs (README, After the sealed run).
+The audience is those three groups: the agents and reviewers, and the rider and
+the driver.
+
+- **Slow.** A decision takes a median of 160.4 seconds and a p90 of 286.9
+  seconds from filing over the 151 version-6 disputes; the 39 sent to a person
+  are not automatic decisions. <!-- eval.business_value -->
+- **Inconsistent.** The judge rules four times, once with the positions swapped:
+  the swapped draft agrees with the sampled majority on all four graded fields
+  in 136 of 141 cases. <!-- eval.fairness -->
+- **Opaque.** Each ruling is a notice naming the evidence and the clause it
+  rests on; the case page carries the six steps. <!-- README -->
+- **Unfair outcomes stuck.** A party may appeal once within 30 days under
+  `POL-GEN-04`; a case the panel cannot decide goes to a person. <!-- README -->
+
+### 3. Comprehensive Solution Design: business and technical architecture, and how prompts drive the AI generation
+
+**The three agents, by the brief's names.** One brief, built from the public
+case content and the loaded policy, is handed **byte-identical to two
+advocates**, the **Rider Advocate Agent** and the **Driver Advocate Agent**,
+differing only in stance; `tribunal/pipeline.py` asserts the rendered prompts
+differ only inside the stance block. The **Judge Agent** rules four times and
+the majority decides. Evidence collection is a **deterministic service**
+(`ops/evidence.py`), not each advocate fetching its own, so neither side can see
+evidence the other cannot - a deliberate departure from the brief. <!-- README -->
+
+**The guards.**
+
+- **Admissibility pre-check** - impaired evidence is carried at its weight, not
+  trusted (107's GPS trace, weight 0.30); removing the pre-check scores 40/44.
+  <!-- README -->
+- **Citation referee** - discards an uncited, unresolvable or
+  undisclosed-impairment claim, or one resting on a context-only profile field
+  (104). <!-- README -->
+- **Four drafts and the vote** - one sample cannot decide: 107, 2749 and 2809
+  split and escalated. <!-- README -->
+- **The 0.70 confidence floor** (`POL-RD-10`) - the backstop: no recorded case
+  has been escalated by it. <!-- README -->
+- **The scope gate** (`POL-GEN-08(1)`) - a flagged dispute goes to a person with
+  no model call (1735, 2735, 2759). <!-- README -->
+- **The draft checks** (`DRAFT_*`) - a draft not read off the brief, or naming a
+  clause that does not resolve, is voided (1779; 517, 533). <!-- README -->
+
+**What the brief asks for.** The MVP is complete: the three agents by name, two
+categories, observable inter-agent communication (the case page's "How it was
+decided" and the replay), a confidence score, a recommended action and amount,
+an explanation to both parties. The stretch goals: Escalation Protocol (the core
+pipeline); Fraud & Bad-Faith Detection, SLA & Routing, Evidence Collection
+(deterministic services beside the pipeline); Policy & Precedent (built, off by
+default, measured once, 15/15 against 13/15); Learning Feedback Loop (the
+policy-gap loop, a person approves every clause); Image Analysis (not done, on
+purpose). Two departures are deliberate: risk signals go to the human reviewer,
+not the judge (`POL-GEN-01`), and the advocates do not gather their own
+evidence. <!-- README -->
 
 **How the prompts drive it.** `prompts/v1/advocate.system.md` is one template
-rendered twice from the two stance files, which the code asserts
-(`tribunal/pipeline.py`). `prompts/v1/judge.system.md` tells the judge to test
-the claims against the record and cap its confidence by the weights of the
-deciding fact's artifacts. The policy is three JSON files; an unresolvable
-clause id is not citable. The `DRAFT_*` codes reject a draft with an unresolved
-clause, a money field that does not mirror, or an amount not read off the brief.
+rendered twice from the two stance files, which the code asserts. The judge
+prompt tests the claims against the record and caps confidence by the deciding
+fact's weights. The policy is three JSON files; an unresolvable clause id is not
+citable, and the `DRAFT_*` codes reject a draft with an unresolved clause, a
+money field that does not mirror, or an amount not read off the brief.
+<!-- prompts/v1 -->
 
 **Built on Tencent Cloud.** Built in WorkBuddy (a row per session in
 `docs/buddy-log/README.md`); every model call goes to Tencent Cloud MaaS
 (TokenHub, endpoint measured in
 `docs/notes/2026-09-21-tokenhub-api-facts.md`) serving DeepSeek; the site is
 hosted on Tencent EdgeOne Pages; support staff reach the records through the
-read-only connector `integrations/workbuddy/`.
+read-only connector `integrations/workbuddy/`. The code, the tests and these
+documents were written in WorkBuddy session by session. <!-- buddy-log -->
 
-## 4. Quantifiable business value
+**Responsible AI.** A person decides every case the panel cannot, and the money
+is held; a party may appeal once within 30 days; a human can switch automatic
+rulings off with `auto_rulings_enabled`. Masking covers registration marks,
+telephone numbers and e-mail addresses, not names. On fairness the errors lean
+towards the rider 0, towards the driver 1, to an escalation 5 and away from one
+2 - the under-escalations 112 and 2858. The limits: every case except 901 is
+synthetic; `POL-GEN-08(1)` covers its two structured flags only, so a free-text
+allegation is not detected; and a judge that quotes an invented clause id voids
+its own drafts, so a party can force a case out of automation with a
+non-existent clause id. <!-- README -->
 
-Read by `python3 -m eval.business_value --report` over the four version-6 runs'
-151 disputes (README, Business value): the median time to a decision is 160.4 s
-and the 90th percentile 286.9 s; the median cost per case is 0.0579 USD; 112 of
-151 = 74.2% are decided automatically and 39 of 151 = 25.8% go to a human. Every
-human-lane case carries the 48-hour first-review commitment, operations rule
-`OPS-EW-01`. The sealed sets are each reported as an **agreement** against their
-own key, and are never pooled. The third sealed set, `sealed-v1` — made by a team
-member with Claude, with a copy of the schema and the policy — has a four-field
-agreement of 21/24 = 87.5%, Wilson 95% [69.0%, 95.7%], and is 20/24 under the key
-as imported (README, sealed-v1 table; `python3 -m eval.sealed_report --set
-sealed-v1`). The fourth sealed set, `sealed-v2` — made by the policy owner with
-GPT-6 from the version-6 policy text and the public contract, with no repository
-code, its answers seen by nobody on the development side — has a four-field
-agreement of 12/12 = 100.0%, Wilson 95% [75.8%, 100.0%] (README, sealed-v2
-table; `python3 -m eval.sealed_report --set sealed-v2`). The two figures are
-never added together. On fairness over both version-6 runs the errors lean
-towards the rider 0, towards the driver 1 and to an escalation 5, and the
-position-swapped draft agrees with the sampled majority on all four graded
-fields in 136 of 141 = 96.5% (README, fairness rows; `python3 -m
-eval.fairness --report`). What is not measured: real Ryde data — every case
-except the organisers' sample 901 is synthetic or semi-synthetic (README,
-Limitations).
+### 4. Business Value: Quantifiable metrics or clearly defined impact
+
+Read by `python3 -m eval.business_value --report` over the 151 disputes of the
+four version-6 runs. The baseline is the brief's: a human review takes 24 to 72
+hours, so the median time to a decision of 160.4 seconds and the 90th percentile
+of 286.9 seconds are that work in minutes. Of the 151, 112 are decided and
+executed (74.2%), 13 are decided with the amount held above `POL-GEN-05`'s SGD
+8.00 threshold (8.6%), and 26 go to a reviewer with no ruling (17.2%) - the
+three figures the live site's tiles carry. The median cost per case is 0.0579
+USD at the published TokenHub prices. <!-- eval.business_value -->
+
+**The sealed sets.** Each is reported as an **agreement** against its own key,
+and they are never pooled. `sealed-v2` - 12 cases made by the policy owner with
+GPT-6 from the version-6 policy text and the public contract, no repository
+code, its answers seen by nobody on the development side - agrees on all four
+graded fields in 12/12 = 100.0%, Wilson 95% [75.8%, 100.0%]; 12 cases is a small
+sample. `sealed-v1` - 24 cases made by a team member with Claude, with a copy of
+the schema and the policy - agrees in 21/24 = 87.5%, Wilson 95% [69.0%, 95.7%],
+and is 20/24 under the key as imported, because case 311's key changed to
+`PARTIAL_REFUND 7.05` under an amendment the policy owner wrote after the system
+ruled that way on development case 1782. The two are never added together; the
+development figures are separate: the corpus 26/29 at version 6 and `dev-v2-ext`
+115/120. <!-- eval.sealed_report -->
+
+**Beyond the hackathon.** Ryde's own format is converted by
+`eval/external/ryde/convert.py`, proven on `DISP-002`. A production feed needs
+either GPS fixes of about 10 to 30 seconds with a horizontal accuracy (Ryde's
+sample carries 2 to 4 minute fixes and none) or the platform's own arrival and
+wait-timer events, which is how 901 was decided. A rollout would start in shadow
+mode with `auto_rulings_enabled` false, then switch on `POL-GEN-05`'s SGD 8.00
+threshold. Throughput is bounded by the provider's measured limits of 1,000,000
+tokens and 60 requests a minute per model; a case makes six model calls, so the
+arithmetic ceiling is ten cases a minute per model - computed, not measured.
+<!-- tokenhub-api-facts -->
+
+What is not measured: real Ryde data. Every case except 901 is synthetic or
+semi-synthetic. <!-- README -->

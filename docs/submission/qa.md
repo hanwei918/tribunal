@@ -104,8 +104,10 @@ not carry — is not made, because it would change the frozen `prompts/`
 **Cost and scale?** The median cost per case at the published prices is 0.0579
 USD over the four version-6 runs, and the same runs give a median time to a
 decision of 160.4 s and a 90th percentile of 286.9 s (README, Business value;
-`python3 -m eval.business_value --report`). Throughput beyond that is not
-claimed. The parallel speed-up is **not** an unmeasured estimate: every
+`python3 -m eval.business_value --report`). The baseline those are set against
+is the brief's own: a human review of the same dispute takes 24 to 72 hours, and
+`ops/config.json` records that figure as Ryde's baseline. Throughput beyond
+that is not claimed. The parallel speed-up is **not** an unmeasured estimate: every
 version-6 run was made with `--parallel-calls` on, so the median of 160.4 s and
 the 90th percentile of 286.9 s above are that switch's own measurement, against
 the pre-parallel `wild-v2` run's mean of 429.6 s — a comparison across different
