@@ -224,7 +224,8 @@ a string. The fix moves exactly one brief in the repository — `pii-v1` case 32
 — and it is applied **after** the third sealed run, which was made from the
 trees frozen at `freeze-2026-10-09` without it
 ([`docs/notes/2026-10-10-the-counterparty-mask.md`](docs/notes/2026-10-10-the-counterparty-mask.md)).
-It is on by default: it is part of every version-6 brief.
+It is on by default for every brief built from now on; the committed version-6
+runs were made before it, and it changes only `pii-v1` case 3202's brief.
 
 **Telephone numbers and e-mail addresses.** The version-6 mask was extended from
 the vehicle registration marks to the telephone numbers and the e-mail

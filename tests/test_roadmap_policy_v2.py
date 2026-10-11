@@ -388,13 +388,18 @@ class TheReadmeSaysWhatItIsTests(unittest.TestCase):
 
         It named the draft as a roadmap and said it was not applied and not
         measured. On 2026-10-08 the draft was added as policy version 3, so the
-        line now says what is true of it: it is added, it is not the default, and
-        no run has been made at it.
+        line came to say what is true of it: it is added and it is not the
+        default. On 2026-10-11 the README's line was corrected again, because
+        the second version said no run had been made at base 3 while the
+        version-6 runs are made at it. This test pins the corrected sentence,
+        word for word, and stays an exact ``assertIn`` so a further edit to the
+        README's line fails here rather than passing silently.
         """
         sentence = (
             "A policy base version 3 aligned with published platform rules is "
-            "added as `policy/v3/`; it is not the default and no run has been "
-            "made at it."
+            "added as `policy/v3/`; it is not the default — `current_version` "
+            "stays 2 — but the version-6 runs are made at it, since version 6 "
+            "is base 3 plus the three amendments under `policy/v3/amendments/`."
         )
         self.assertIn(sentence, " ".join(self.repository.split()))
 

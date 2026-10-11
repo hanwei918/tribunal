@@ -10,6 +10,12 @@ works a queue, each party may appeal once. The value is a
 first decision in the minutes a case takes to run, carrying its evidence and its
 clause, and handed to a person with the money held when it cannot decide.
 
+The live demo is at <https://tribunal.edgeone.dev/> — no account, no key. Case
+208 (`/case-00208.html`): the rider's three claims answered by GPS, her own
+phone's trace and a connected call, the driver compensated SGD 6.40. Case 901
+(`/case-00901.html`): the organisers' own sample. Source: the GitHub repository,
+`<repository URL>`.
+
 ## 2. The pain point
 
 A dispute reviewed by hand is slow, and its outcome depends on who reads it. The
@@ -23,36 +29,36 @@ Ryde's own figures.
 **The flow.** A case comes in as public content and the loaded policy. Out comes
 a ruling; an escalation to a human with the fee held; or, above `POL-GEN-05`'s
 execution threshold (SGD 8.00, `docs/architecture.md`), a ruling whose amount is
-held. After it a party may appeal once within 30 days under `POL-GEN-04`, and a
-reviewer may open an evidence window to both parties under `POL-GEN-06(4)`. The
-48-hour first-review commitment is operations rule `OPS-EW-01`, not a clause of
-the frozen policy (README, Business value). Support staff can also ask WorkBuddy
-about a case through a read-only connector, `integrations/workbuddy/`, which
-answers from the committed records.
+held. A party may appeal once within 30 days under `POL-GEN-04`; a reviewer may
+open an evidence window under `POL-GEN-06(4)`.
 
 **The architecture.** `docs/architecture.svg`, written out in
-`docs/architecture.md`: one brief, handed byte-identical to two advocates
-differing only in stance; a referee that discards a claim citing no evidence id,
-no clause id, an unresolvable citation, undisclosed impaired evidence, or a
-context-only profile field as a ground; a judge that rules four times, the
-majority deciding; and a confidence floor of 0.70, below which it goes to a
-human (README, What Tribunal is). At version 6 a scope gate routes a safety-
-or complaint-flagged dispute to a human before any prompt is rendered, and an
-optional record-integrity gate holds the record to `POL-RD-10`'s limbs (README,
-After the sealed run).
+`docs/architecture.md`: a referee that discards a claim citing no evidence id, no
+clause id, an unresolvable citation, undisclosed impaired evidence, or a
+context-only profile field; a judge that rules four times, the majority
+deciding; and a confidence floor of 0.70, below which it goes to a human (README,
+What Tribunal is). At version 6 a scope gate routes a safety- or complaint-flagged
+dispute to a human before any prompt is rendered, and an optional
+record-integrity gate holds the record to `POL-RD-10`'s limbs (README, After the
+sealed run).
 
-**How the prompts drive it.** `prompts/v1/advocate.system.md` is one template,
-rendered twice by substituting `prompts/v1/stance.rider.md` and
-`prompts/v1/stance.driver.md` at a single placeholder, the code asserting the
-two rendered prompts differ only inside that block (`tribunal/pipeline.py`).
-`prompts/v1/judge.system.md` tells the judge to test the claims against the
-record and cap its confidence by the weights of the artifacts the deciding fact
-rests on. The policy the agents must cite is three JSON files whose clauses carry
-`id`, `title`, `category`, `rule`, `requires`, `licenses`, `favours` and
-`notes`; a clause id that does not resolve is not citable. The code checks that
-reject a draft — the `DRAFT_*` codes in `tribunal/pipeline.py` — include an
-unresolved clause, a money field that does not mirror, and an amount not read
-off the brief.
+**How the prompts drive it.** `prompts/v1/advocate.system.md` is one template
+rendered twice, from `prompts/v1/stance.rider.md` and
+`prompts/v1/stance.driver.md`, differing only in the stance block, which the code
+asserts (`tribunal/pipeline.py`). `prompts/v1/judge.system.md` tells the judge to
+test the claims against the record and cap its confidence by the weights of the
+deciding fact's artifacts. The policy the agents cite is three JSON files
+whose clauses carry `id`, `title`, `category`, `rule`, `requires`, `licenses`,
+`favours` and `notes`; an unresolvable clause id is not citable. The `DRAFT_*`
+codes in `tribunal/pipeline.py` reject a draft with an unresolved clause, a money
+field that does not mirror, or an amount not read off the brief.
+
+**Built on Tencent Cloud.** Built in WorkBuddy (a row per session in
+`docs/buddy-log/README.md`); every model call goes to Tencent Cloud MaaS
+(TokenHub, endpoint measured in
+`docs/notes/2026-09-21-tokenhub-api-facts.md`) serving DeepSeek; the site is
+hosted on Tencent EdgeOne Pages; support staff reach the records through the
+read-only connector `integrations/workbuddy/`.
 
 ## 4. Quantifiable business value
 

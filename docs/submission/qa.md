@@ -82,4 +82,8 @@ setting
 in `docs/buddy-log/README.md` — the task, the files it touched, what was verified
 and how, and the commit. The team ran the tests outside the WorkBuddy sandbox,
 so each row says the suite was not run here, as the rows for parts 27, 29 and 30
-do.
+do. It stands on three Tencent products: WorkBuddy, whose rows are that same
+`docs/buddy-log/README.md`; Tencent Cloud MaaS (TokenHub), the endpoint every
+model call goes to, measured in
+`docs/notes/2026-09-21-tokenhub-api-facts.md`; and Tencent EdgeOne Pages, which
+hosts the live demo.
