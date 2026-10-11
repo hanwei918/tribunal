@@ -127,4 +127,6 @@ do. It stands on three Tencent products: WorkBuddy, whose rows are that same
 `docs/buddy-log/README.md`; Tencent Cloud MaaS (TokenHub), the endpoint every
 model call goes to, measured in
 `docs/notes/2026-09-21-tokenhub-api-facts.md`; and Tencent EdgeOne Pages, which
-hosts the live demo.
+hosts the live demo. The one-page version of this answer, written for the
+submission video's last minute, is
+[`how-we-built-it.md`](how-we-built-it.md).

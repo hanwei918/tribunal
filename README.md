@@ -1,5 +1,15 @@
 # Tribunal
 
+**Start here.**
+
+- **What it is.** Tribunal arbitrates a ride-hail dispute: two AI advocates on one brief, a deterministic citation referee, a four-draft judge, and a person for what the panel cannot decide.
+- **The live demo.** <https://tribunal.edgeone.dev/> — case 208 at `/case-00208.html`, the organisers' sample case 901 at `/case-00901.html`.
+- **The submission's own texts.** [`docs/submission/`](docs/submission/).
+- **The architecture, box by box.** [`docs/architecture.md`](docs/architecture.md).
+- **The results.** [Results](#results), below.
+- **How it was built.** [`docs/submission/how-we-built-it.md`](docs/submission/how-we-built-it.md).
+- **What the code does not do.** [Limitations and disclosures](#limitations-and-disclosures), below.
+
 2026 Tencent Cloud AI Singapore Hackathon / Digital Native / Ryde / Newbee.
 
 **An automatic ruling is a first decision, not the last word: a party may appeal it once within 30 days under `POL-GEN-04`; an amount above the execution threshold of `POL-GEN-05`, and every dispute carrying a safety or complaint flag under `POL-GEN-08(1)`, go to a human reviewer under `POL-GEN-06`; and the kill switch `auto_rulings_enabled` in `ops/config.json` lets a human switch automatic rulings off.**
@@ -57,6 +67,9 @@ records of those sessions are submitted to the organisers.
 **The owner wrote each task's specification and ran the full test suite and the
 paid runs outside WorkBuddy's sandbox.** The model calls that produced every
 committed run were made there, not here.
+
+The one-page account of that workflow, and of four things the tools taught us,
+is [`docs/submission/how-we-built-it.md`](docs/submission/how-we-built-it.md).
 
 The test sets' authors are in the table **Where the test sets came from**, under
 Results below.
