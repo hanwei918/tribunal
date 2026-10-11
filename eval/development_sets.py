@@ -565,8 +565,9 @@ SEALED_V1 = DevelopmentSet(
 )
 
 # The fourth sealed set, imported on 2026-10-11 and run once, on 2026-10-11. Its
-# 12 cases are 801-806 and 851-856; it was made with GPT-6 by the policy owner
-# from a written brief, the version-6 policy text and the public contract, with
+# 12 cases are 801-806 and 851-856; it was made by the policy owner with OpenAI
+# Codex (model stated by her as GPT-6; not recorded by the tool) from a written
+# brief, the version-6 policy text and the public contract, with
 # no repository code, prompts or run results, and nobody on the development side
 # has seen its answers. Its registration fixes policy version 6, the version
 # frozen at the tag ``freeze-2026-10-11``, and its single run was made from the
@@ -587,8 +588,9 @@ SEALED_V2 = DevelopmentSet(
     runs_subdir=run_benchmark.SEALED_V2_SET_RUNS_SUBDIR,
     case_root=loader.EXTERNAL_DIR / run_benchmark.SEALED_V2_SET_RUNS_SUBDIR,
     summary=(
-        "the fourth sealed set (sealed-v2): 12 cases made with GPT-6 by the "
-        "policy owner from a written brief, the version-6 policy text and the "
+        "the fourth sealed set (sealed-v2): 12 cases made by the policy owner "
+        "with OpenAI Codex (model stated by her as GPT-6; not recorded by the "
+        "tool) from a written brief, the version-6 policy text and the "
         "public contract, with no repository code, prompts or run results; "
         "nobody on the development side has seen its answers; it is run once, "
         "from a commit whose tribunal/, prompts/ and policy/ trees equal those "
@@ -785,7 +787,8 @@ SEALED_V1_CAVEAT = (
 SEALED_V2_CAVEAT = (
     "The fourth sealed set is not a development set and is never added to the "
     "combined figure above, to the held-out set's figure, to the second sealed "
-    "set's or to the third's. It was made with GPT-6 by the policy owner from a "
+    "set's or to the third's. It was made by the policy owner with OpenAI Codex "
+    "(model stated by her as GPT-6; not recorded by the tool) from a "
     "written brief, the version-6 policy text and the public contract, with no "
     "repository code, prompts or run results, and nobody on the development side "
     "has seen its answers; it was imported on "

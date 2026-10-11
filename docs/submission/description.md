@@ -134,8 +134,9 @@ USD at the published TokenHub prices. <!-- eval.business_value -->
 
 **The sealed sets.** Each is reported as an **agreement** against its own key,
 and they are never pooled. `sealed-v2` - 12 cases made by the policy owner with
-GPT-6 from the version-6 policy text and the public contract, no repository
-code, its answers seen by nobody on the development side - agrees on all four
+OpenAI Codex (model stated by her as GPT-6; not recorded by the tool) from the
+version-6 policy text and the public contract, no repository code, its answers
+seen by nobody on the development side - agrees on all four
 graded fields in 12/12 = 100.0%, Wilson 95% [75.8%, 100.0%]; 12 cases is a small
 sample. `sealed-v1` - 24 cases made by a team member with Claude, with a copy of
 the schema and the policy - agrees in 21/24 = 87.5%, Wilson 95% [69.0%, 95.7%],

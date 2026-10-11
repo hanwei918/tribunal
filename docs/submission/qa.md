@@ -16,17 +16,22 @@ deciding. Each part prevents a specific failure: two stances prevent a one-sided
 record, the referee prevents uncited claims reaching the merits, and the four
 drafts prevent one sample deciding.
 
-**Why should anyone trust the figures?** The sealed sets are each run once, by
-the owner, from a frozen tag, and committed as produced: `wild-v1` from
-`freeze-2026-09-30`, `wild-v2` from `freeze-2026-10-03`, `sealed-v1` from
-`freeze-2026-10-09` and `sealed-v2` from `freeze-2026-10-11` (README, Results;
+**Why should anyone trust the figures?** Three sealed sets are each run once, by
+the owner, from a frozen tag, and committed as produced: `wild-v2` from
+`freeze-2026-10-03`, `sealed-v1` from `freeze-2026-10-09` and `sealed-v2` from
+`freeze-2026-10-11` (README, Results;
 `docs/notes/2026-10-10-the-third-sealed-run.md` and
 `docs/notes/2026-10-11-the-fourth-sealed-run.md`). Each is reported as an
-**agreement** against its own key, and the four are never pooled. `sealed-v1` —
+**agreement** against its own key, and the three are never pooled. `wild-v1` is
+not one of them: the owner settled on 2026-10-12 that it is development and
+regression data, and its single held-out run — 55/64, from `freeze-2026-09-30` —
+is history, the run made before the set was opened for development on
+2026-10-01 (README, Results). `sealed-v1` —
 made by a team member with Claude, with a copy of the schema and the policy — is
 21/24 = 87.5%, Wilson 95% [69.0%, 95.7%]. `sealed-v2` — made by the policy owner
-with GPT-6 from the version-6 policy text and the public contract, with no
-repository code, its answers seen by nobody on the development side — is
+with OpenAI Codex (model stated by her as GPT-6; not recorded by the tool) from
+the version-6 policy text and the public contract, with no repository code, its
+answers seen by nobody on the development side — is
 12/12 = 100.0%, Wilson 95% [75.8%, 100.0%].
 **Under the key as imported, `sealed-v1` is 20/24 rather than 21/24**: case 311's
 key changed to `PARTIAL_REFUND 7.05` under `POL-RD-14` (amendment `0002`), which

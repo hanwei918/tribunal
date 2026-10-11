@@ -194,7 +194,7 @@ without them.
 | `wild-v2` | OpenAI Codex, for the owner | archive created 2026-10-01, imported 2026-10-03 | a copy of `data/schema.json` and `policy/*.json`, shipped inside the archive under `eval/external/wild-v2/` | the owner | no — the key was re-wrapped into the array the grader reads at import, before the run, and every graded value was compared parsed | sealed |
 | `sealed-v1` | Claude — the archive's own manifest: "independent of prompt tuning; never saw dev-set misses or prompts" | created 2026-09-26, imported 2026-10-09 | `data/SCHEMA.md`, `data/schema.json` and `policy/*.json`, read from a copy by `eval/external/sealed-v1/gen/validate.py` | the policy owner's AI assistant opened the cases and the key before the freeze; the key owner re-derived the key at version 6 before the run, without seeing any output | no — the version-6 re-derivation predates the run, and case 311's change is recorded rather than hidden | sealed |
 | the functional sets (`inject-v1`, `pii-v1`, `collusion-v1`, `chat-signals-v1`) | the policy owner's archive | imported 2026-10-10 | this repository's case conventions and the version-6 policy | the owner | no | development |
-| `sealed-v2` | the policy owner, with GPT-6 | received 2026-10-11 | a written brief (which paraphrases some system behaviour: version-6 weights, GPS gap grading, flag routing, scoring), `policy/v3/` (3 policies, 3 amendments), `data/PUBLIC-CONTRACT.md`, a format checker; no repository code, prompts or run results | nobody on the development side; the policy owner, who had seen development results but no sealed-v2 output | no | sealed, imported at `19c7e5a`, run once from `freeze-2026-10-11` |
+| `sealed-v2` | the policy owner, with OpenAI Codex (model stated by her as GPT-6; not recorded by the tool) | received 2026-10-11 | a written brief (which paraphrases some system behaviour: version-6 weights, GPS gap grading, flag routing, scoring), `policy/v3/` (3 policies, 3 amendments), `data/PUBLIC-CONTRACT.md`, a format checker; no repository code, prompts or run results | nobody on the development side; the policy owner, who had seen development results but no sealed-v2 output | no | sealed, imported at `19c7e5a`, run once from `freeze-2026-10-11` |
 
 **No test set came from outside the team.** Every one was written by a member of
 the project, by a model the team directed, or by a collaborator the team
@@ -274,6 +274,13 @@ used here, and its figure is the submission's fourth generalisation figure: it i
 **never** pooled with `wild-v1`'s, `wild-v2`'s or `sealed-v1`'s. The note that
 reads the run is
 [`docs/notes/2026-10-11-the-fourth-sealed-run.md`](docs/notes/2026-10-11-the-fourth-sealed-run.md).
+The set's **provenance** — that it was made by the policy owner with OpenAI
+Codex, the model name being her attestation and not a recorded fact; that its
+manifest's first release gate, a case-by-case sign-off before the run, was not
+met and the review is still pending; and that its manifest names the tag
+`freeze-2026-10-09` while the run was made from `freeze-2026-10-11`, a
+difference that moves none of the 12 briefs — is in
+[`docs/notes/2026-10-12-sealed-v2-provenance.md`](docs/notes/2026-10-12-sealed-v2-provenance.md).
 
 | figure | value | read from | recompute with | model call |
 |---|---|---|---|---|
