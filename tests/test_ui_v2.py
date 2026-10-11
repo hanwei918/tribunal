@@ -144,13 +144,18 @@ REPOSITORY_LINKS: Mapping[str, Path] = {
     v2.README_RESULTS_LINK: PROJECT_ROOT / "README.md",
 }
 
-# The files this site carries that are not pages: the architecture diagram the
-# builder copies into ``ui/dist/`` byte for byte, and the repository file the
-# committed copy must equal. A link to one of these stays inside the site, which
-# is the point of copying it in.
+# The files this site carries that are not pages: the architecture diagram and
+# the link-preview image, each copied into ``ui/dist/`` byte for byte, and the
+# repository file the committed copy must equal. A link to one of these stays
+# inside the site, which is the point of copying it in.
 SITE_ASSETS: Mapping[str, Path] = {
     v2.ARCHITECTURE_LINK: v2.ARCHITECTURE_SOURCE,
+    v2.OG_IMAGE_LINK: v2.OG_IMAGE_SOURCE,
 }
+
+# The same two, as the paths on disk, so the walk that compares the committed
+# pages with a fresh build can skip the ones that are bytes rather than text.
+SITE_ASSET_PATHS = frozenset({v2.ARCHITECTURE_ASSET, v2.OG_IMAGE_ASSET})
 
 
 # --------------------------------------------------------------------------
@@ -316,7 +321,10 @@ def built_pages() -> Dict[str, str]:
             loaded = [
                 v2._load_case(case["set"], case["case_no"]) for case in cases()
             ]
-            pages: Dict[str, str] = {relative(v2.INDEX_PATH): v2.build_index(loaded)}
+            pages: Dict[str, str] = {
+                relative(v2.INDEX_PATH): v2.build_index(loaded),
+                relative(v2.NOT_FOUND_PATH): v2.build_not_found(loaded),
+            }
             for data in loaded:
                 pages[relative(v2.DIST_DIR / data.link)] = v2.build_case_page(data)
         _LOADED = loaded
@@ -407,14 +415,15 @@ def committed_pages() -> Dict[str, str]:
     The evaluation replay is a second site under ``replay/``, built by
     ``ui.build`` and committed under the same root, so the walk skips it: a
     comparison that read it would hold this builder to another one's bytes. The
-    architecture diagram is skipped too: it is copied in rather than built, and
-    the check that it equals the repository's own file is its own test.
+    files this builder copies in rather than renders -- the architecture diagram
+    and the link-preview image -- are skipped too: they are bytes, and the two
+    checks that they equal the repository's own file are their own tests.
     """
     return {
         path.relative_to(v2.DIST_DIR).as_posix(): path.read_text(encoding="utf-8")
         for path in sorted(v2.DIST_DIR.rglob("*"))
         if path.is_file()
-        and path != v2.ARCHITECTURE_ASSET
+        and path not in SITE_ASSET_PATHS
         and REPLAY_DIR not in path.relative_to(v2.DIST_DIR).parts
     }
 
@@ -511,8 +520,9 @@ class DeterminismTests(unittest.TestCase):
 
     def test_the_site_is_the_queue_and_one_page_per_case(self):
         pages = built_pages()
-        self.assertEqual(1 + len(cases()), len(pages))
+        self.assertEqual(2 + len(cases()), len(pages))
         self.assertIn("index.html", pages)
+        self.assertIn(v2.NOT_FOUND_LINK, pages)
         for case in cases():
             with self.subTest(case=case["case_no"]):
                 self.assertIn(
@@ -587,6 +597,22 @@ def is_external_reference(url: str) -> bool:
     return False
 
 
+# The one ``<link>`` a page may carry: the tab icon, as an inline ``data:`` SVG.
+# A stylesheet, a preload, a font or an icon fetched over the network is what the
+# check below is for, and each of those is a ``<link>`` this pattern does not
+# match.
+ICON_LINK_RE = re.compile(r'<link rel="icon" href="data:image/svg\+xml,')
+
+
+def links_other_than_the_icon(text: str) -> List[str]:
+    """Every ``<link>`` on a page that is not the inline tab icon."""
+    return [
+        match.group(0)
+        for match in re.finditer(r"<link\b[^>]*>", text)
+        if not ICON_LINK_RE.match(match.group(0))
+    ]
+
+
 class SelfContainedTests(unittest.TestCase):
     """One file, no request, no web font, and ASCII throughout."""
 
@@ -599,7 +625,11 @@ class SelfContainedTests(unittest.TestCase):
                     url for _tag, _attr, url in scan.references if is_external_reference(url)
                 ]
                 self.assertEqual([], external, "{0} references an external resource".format(name))
-                self.assertNotIn("<link", text, "{0} embeds a stylesheet link".format(name))
+                self.assertEqual(
+                    [],
+                    links_other_than_the_icon(text),
+                    "{0} carries a <link> that is not the inline tab icon".format(name),
+                )
                 for tag in ("<iframe", "<object", "<embed"):
                     self.assertNotIn(tag, text, "{0} embeds {1}".format(name, tag))
 
@@ -1314,9 +1344,6 @@ class HumanReviewTests(unittest.TestCase):
             "The reviewer varies to NO_ACTION: EV-FARE-00213 and POL-GEN-07 are "
             "cited, and $HOME, a `backtick`, an ! and an ' are literal."
         )
-        # The rule itself, before the command built with it.
-        self.assertEqual("'a'", v2.shell_quote("a"))
-        self.assertEqual("'a'\\''b'", v2.shell_quote("a'b"))
         command = v2.closing_command(
             case,
             "VARY",
@@ -1467,16 +1494,32 @@ class FrontDoorTests(unittest.TestCase):
         )
 
     def test_every_page_carries_the_top_bar_and_a_link_to_the_replay(self):
-        """The nav link names the replay for what it is: the benchmark at v1."""
-        self.assertEqual("Benchmark replay (policy v1)", v2.REPLAY_LABEL)
+        """The header carries the queue; the replay is named in the footer.
+
+        The header used to carry the replay too, labelled for what it is, and a
+        judge who followed it went to the historical version-1 figures first.
+        It sits in the footer now, under the words that say which pipeline it
+        is, and the header keeps the queue.
+        """
+        self.assertEqual("Historical replay (policy v1)", v2.REPLAY_LABEL)
         for name, text in sorted(built_pages().items()):
             with self.subTest(page=name):
                 self.assertIn('<header class="top">', text)
+                self.assertIn(
+                    '<a href="{0}">{1}</a>'.format(
+                        v2.REPLAY_INDEX, v2._text(v2.REPLAY_LABEL)
+                    ),
+                    text,
+                    "the footer does not carry the replay link",
+                )
                 self.assertIn('href="replay/index.html"', text)
                 self.assertIn(v2.REPLAY_LABEL, text)
                 self.assertNotIn("Evaluation replay", text)
                 self.assertIn(">Queue</a>", text)
                 self.assertIn('class="mark"', text)
+                # The nav is the queue alone: the replay link is not in it.
+                nav = text[text.index('<nav class="nav"'):text.index("</nav>")]
+                self.assertNotIn(v2.REPLAY_LABEL, nav)
 
     def test_the_top_bar_names_the_run_every_page_replays(self):
         """The bar says what the pages are; the model is named in the footer."""
@@ -1743,6 +1786,31 @@ class LandingPageTests(unittest.TestCase):
         self.assertIn("Recorded runs, policy version", text)
         self.assertNotIn("Replay - policy", text)
 
+    def test_the_five_steps_are_five_columns_on_a_wide_screen(self):
+        """The strip wrapped into three ragged lines with the arrows at the ends.
+
+        At 1000 px and wider the five steps are five equal columns in one row,
+        with each arrow at its own column's right; below that the strip stacks
+        as it did.
+        """
+        self.assertIn(
+            ".how ol{display:flex;flex-wrap:wrap;", v2._CSS, "the stacked layout moved"
+        )
+        self.assertIn("@media (min-width:1000px){", v2._CSS)
+        self.assertIn(
+            ".how ol{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));",
+            v2._CSS,
+            "the five steps are not five equal columns",
+        )
+        self.assertIn(
+            ".how .arw{position:absolute;right:0;", v2._CSS, "the arrows still wrap"
+        )
+
+    def test_the_trace_box_runs_the_width_of_the_column(self):
+        """A map drawn inside the details' padding loses 32 of the 360 px."""
+        self.assertIn(".rail details.full{padding:0}", v2._CSS)
+        self.assertIn('class="full"', built_pages()[loaded_case(208).link])
+
 
 def decision_step(page: str, number: int) -> str:
     """One pane of the "How it was decided" stepper, by its own ``data-pane``."""
@@ -1752,6 +1820,22 @@ def decision_step(page: str, number: int) -> str:
     following = page.find(marker, start + len(marker))
     end = following if following != -1 else page.index("</div></div>", start)
     return page[start:end]
+
+
+def claim_pieces(text: str) -> List[str]:
+    """The pieces of one claim a page shows: the first sentence, then the rest.
+
+    A claim is a paragraph of 80-200 words, so the page shows its first sentence
+    and keeps the argument for it behind a collapsed detail. The pieces are the
+    paragraph's own; nothing is rewritten.
+    """
+    whole = str(text or "").strip()
+    match = re.search(r"(?<=[.!?])\s+", whole)
+    if match is None:
+        return [whole]
+    first = whole[: match.start()].strip()
+    rest = whole[match.end():].strip()
+    return [first] + ([rest] if rest else [])
 
 
 class DebateViewTests(unittest.TestCase):
@@ -1764,12 +1848,16 @@ class DebateViewTests(unittest.TestCase):
         self.assertIn("Rider advocate", step)
         self.assertIn("Driver advocate", step)
         self.assertGreaterEqual(step.count('class="claim"'), 19)
+        self.assertIn(v2.READ_THE_WHOLE_CLAIM, step)
         for side in ("RIDER", "DRIVER"):
             claims = v2._claims(case.transcript, side)
             self.assertTrue(claims)
             for claim in claims[:2]:
+                pieces = claim_pieces(claim["text"])
                 with self.subTest(side=side, text=claim["text"][:40]):
-                    self.assertIn(v2._text(claim["text"]), step)
+                    self.assertGreaterEqual(len(pieces), 1)
+                    for piece in pieces:
+                        self.assertIn(v2._text(piece), step)
 
     def test_a_claim_carries_the_artifact_kind_and_the_clause_title(self):
         """The evidence chip names the kind; the clause chip carries the title.
@@ -2293,6 +2381,108 @@ class HeldAmountTests(unittest.TestCase):
 
 
 # --------------------------------------------------------------------------
+# Link previews and the tab icon
+# --------------------------------------------------------------------------
+class LinkPreviewTests(unittest.TestCase):
+    """What a scraper reads when a page is shared, and the icon in the tab."""
+
+    def head_of(self, name: str) -> str:
+        text = built_pages()[name]
+        return text[: text.index("<style>")]
+
+    def test_every_page_carries_a_description_a_favicon_and_an_open_graph_card(self):
+        for name in sorted(built_pages()):
+            head = self.head_of(name)
+            with self.subTest(page=name):
+                self.assertIn('<link rel="icon" href="data:image/svg+xml,', head)
+                self.assertIn('<meta name="description" content="', head)
+                for prop in ("og:title", "og:description", "og:type", "og:url", "og:image"):
+                    self.assertIn(
+                        '<meta property="{0}" content="'.format(prop), head
+                    )
+                self.assertIn(
+                    '<meta name="twitter:card" content="summary_large_image">', head
+                )
+
+    def test_the_card_urls_are_absolute_and_the_image_is_the_one_committed(self):
+        image = v2.SITE_ROOT + v2.OG_IMAGE_LINK
+        for name in sorted(built_pages()):
+            head = self.head_of(name)
+            with self.subTest(page=name):
+                self.assertIn(
+                    '<meta property="og:image" content="{0}">'.format(
+                        v2._attribute(image)
+                    ),
+                    head,
+                )
+                url = re.search(r'<meta property="og:url" content="([^"]+)"', head)
+                self.assertIsNotNone(url, "the page carries no og:url")
+                assert url is not None
+                self.assertTrue(url.group(1).startswith(v2.SITE_ROOT))
+                if name == "index.html":
+                    self.assertEqual(v2.SITE_ROOT, url.group(1))
+                else:
+                    self.assertEqual(v2.SITE_ROOT + name, url.group(1))
+
+    def test_the_image_is_in_the_site_and_is_the_owners_file_byte_for_byte(self):
+        committed = v2.DIST_DIR / v2.OG_IMAGE_LINK
+        self.assertTrue(committed.is_file(), "og-image.png is not committed")
+        self.assertEqual(v2.OG_IMAGE_SOURCE.read_bytes(), committed.read_bytes())
+
+    def test_the_tab_icon_is_the_header_mark_and_loads_nothing(self):
+        """The icon is an inline ``data:`` SVG built from the header's own path."""
+        self.assertIn(v2.SCALES_PATH, v2.SCALES_MARK)
+        self.assertTrue(v2.FAVICON_DATA_URI.startswith("data:image/svg+xml,"))
+        self.assertFalse(is_external_reference(v2.FAVICON_DATA_URI))
+        self.assertTrue(v2.FAVICON_DATA_URI.isascii())
+
+    def test_the_description_is_one_sentence_from_the_record(self):
+        for case in loaded_cases():
+            head = self.head_of(case.link)
+            description = re.search(
+                r'<meta name="description" content="([^"]*)"', head
+            )
+            self.assertIsNotNone(description)
+            assert description is not None
+            with self.subTest(case=case.case_no):
+                self.assertIn(
+                    v2._text(v2._summary_line(case.case))[:40], description.group(1)
+                )
+
+
+# --------------------------------------------------------------------------
+# The page a host serves for an address that is not one of the site's
+# --------------------------------------------------------------------------
+class NotFoundTests(unittest.TestCase):
+    """``ui/dist/404.html``: in the site's style, and it links the reader on."""
+
+    def page(self) -> str:
+        return built_pages()[v2.NOT_FOUND_LINK]
+
+    def test_the_page_says_the_page_does_not_exist(self):
+        text = self.page()
+        self.assertIn("This page does not exist", text)
+        self.assertIn(v2.NOT_FOUND_DESCRIPTION, text)
+
+    def test_the_page_links_to_the_queue_and_to_case_208(self):
+        text = self.page()
+        self.assertIn('<a href="index.html">The queue</a>', text)
+        self.assertIn(
+            '<a href="case-{0:05d}.html">'.format(v2.HOW_IT_WAS_DECIDED_CASE), text
+        )
+
+    def test_the_page_is_in_the_site_s_own_shell(self):
+        text = self.page()
+        self.assertIn('<header class="top">', text)
+        self.assertIn('<footer class="foot">', text)
+        self.assertIn('<main class="wrap">', text)
+
+    def test_the_page_is_committed_and_equals_a_fresh_build(self):
+        committed = (v2.DIST_DIR / v2.NOT_FOUND_LINK).read_text(encoding="utf-8")
+        self.assertEqual(self.page(), committed)
+
+
+# --------------------------------------------------------------------------
 # The stylesheet: contrast, keyboard sorting and the width of a table
 # --------------------------------------------------------------------------
 def relative_luminance(colour: str) -> float:
@@ -2541,9 +2731,11 @@ class TraceDrawingTests(unittest.TestCase):
     def test_no_line_is_labelled_optimal(self):
         """No line is labelled optimal anywhere, and the caption says why.
 
-        The caption belongs to the trace: it is written where a trace is drawn
-        and the record carries an optimal distance. A case with no GPS fixes has
-        no trace block at all -- case 213 is one, though its trip record does
+        The caption belongs to the trace: it is written where a trace is drawn,
+        the record carries an optimal distance, and the case is about the route.
+        A no-show case is about where the device was and how long the driver
+        waited, so the route's figure is not on it; and a case with no GPS fixes
+        has no trace block at all -- case 213 is one, though its trip record does
         carry an optimal distance -- so the caption is required only where a
         trace was drawn.
         """
@@ -2551,14 +2743,55 @@ class TraceDrawingTests(unittest.TestCase):
             page = built_pages()[case.link]
             match = TRACE_SVG_RE.search(page)
             optimal = optimal_distance_of(case)
+            route_case = case.category != "NO_SHOW_CHARGE"
             with self.subTest(case=case.case_no):
                 if match is not None:
-                    self.assertNotIn("<text", match.group(1))
                     self.assertNotIn("optimal", match.group(1))
-                if match is not None and optimal is not None:
+                if match is not None and optimal is not None and route_case:
                     self.assertIn("(distance only)", page)
                 else:
                     self.assertNotIn("(distance only)", page)
+
+    def test_every_map_svg_says_what_it_shows(self):
+        """A map is an image: it carries a role and a name."""
+        for case in loaded_cases():
+            match = TRACE_SVG_RE.search(built_pages()[case.link])
+            if match is None:
+                continue
+            with self.subTest(case=case.case_no):
+                self.assertIn('role="img"', match.group(1))
+                self.assertIn('aria-label="The trip trace:', match.group(1))
+
+    def test_a_no_show_map_draws_the_radius_and_the_distance(self):
+        """The no-show map draws its own story, and not the route's figure.
+
+        The case turns on two facts a few hundred metres apart: the arrival
+        radius the driver waited inside, and how far the rider's device was from
+        the pickup point. Both are drawn, the distance is labelled with the
+        figure the derived facts give, and the frame is fitted to them rather
+        than to a driven trace that runs for kilometres.
+        """
+        case = loaded_case(208)
+        match = TRACE_SVG_RE.search(built_pages()[case.link])
+        self.assertIsNotNone(match, "the no-show case drew no trace")
+        assert match is not None
+        svg = match.group(1)
+        radius = v2._fact_value(
+            v2._derived_block(case.brief, "GPS_TRACE", "arrival"),
+            "thresholds",
+            "arrival_radius_m",
+        )
+        distance = v2._device_distance(case)
+        self.assertIsNotNone(radius)
+        self.assertIsNotNone(distance)
+        assert distance is not None
+        self.assertIn(
+            'stroke-dasharray="4 3"', svg, "the arrival radius is not drawn"
+        )
+        self.assertIn("<line", svg, "the device is not joined to the pickup")
+        self.assertIn("<text", svg, "the distance is not labelled")
+        self.assertIn(v2._text(distance), svg)
+        self.assertNotIn("(distance only)", built_pages()[case.link])
 
     def test_the_rail_carries_the_evidence_and_the_record(self):
         for case in loaded_cases():
@@ -2583,7 +2816,11 @@ class WebFontTests(unittest.TestCase):
             with self.subTest(page=name):
                 for needle in ("@import", "@font-face", "url(", "fonts.googleapis", "fonts.gstatic"):
                     self.assertNotIn(needle, styles)
-                self.assertNotIn("<link", text)
+                self.assertEqual(
+                    [],
+                    links_other_than_the_icon(text),
+                    "{0} carries a <link> that is not the inline tab icon".format(name),
+                )
 
 
 # --------------------------------------------------------------------------

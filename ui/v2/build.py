@@ -161,6 +161,7 @@ from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
+from urllib.parse import quote
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
@@ -187,15 +188,39 @@ INDEX_PATH = DIST_DIR / "index.html"
 # The evaluation replay, one level down from this site's own pages. Every page
 # here links to it, and every page it builds links back to this queue. It is the
 # **benchmark** replay at policy version 1 -- a historical record, not the
-# pipeline these pages show -- and the nav link names it as that.
+# pipeline these pages show -- and the footer link names it as that.
 REPLAY_INDEX = "replay/index.html"
-REPLAY_LABEL = "Benchmark replay (policy v1)"
+REPLAY_LABEL = "Historical replay (policy v1)"
 
 # The architecture diagram, copied into the site so the queue's link to it stays
 # inside the published root. The source is the repository's own diagram; the
 # asset is the byte-for-byte copy this builder writes beside the pages.
 ARCHITECTURE_SOURCE = PROJECT_ROOT / "docs" / "architecture.svg"
 ARCHITECTURE_ASSET = DIST_DIR / "architecture.svg"
+
+# The link-preview image, copied into the site the same way and for the same
+# reason: ``og:image`` has to be an absolute URL a scraper can fetch, so the
+# file it names must be inside the published root rather than in ``tmp/``, where
+# the owner's original sits.
+OG_IMAGE_SOURCE = PROJECT_ROOT / "tmp" / "og-image.png"
+OG_IMAGE_ASSET = DIST_DIR / "og-image.png"
+OG_IMAGE_LINK = "og-image.png"
+
+# The site's own root, as the link scrapers need it: ``og:url`` and ``og:image``
+# are absolute URLs or a scraper resolves nothing. It is the address the README
+# and the submission's description publish.
+SITE_ROOT = "https://tribunal.edgeone.dev/"
+
+# The page a host serves for a path that does not exist. It is built with the
+# pages rather than beside them, so ``--check`` covers it too.
+NOT_FOUND_PATH = DIST_DIR / "404.html"
+NOT_FOUND_LINK = "404.html"
+
+# The five steps of the product's own sentence, and the shape of a page's
+# ``og:type``. ``og:type`` is ``website`` for the queue and the 404 page and
+# ``article`` for a case page, which is what the tag means.
+OG_TYPE_SITE = "website"
+OG_TYPE_CASE = "article"
 
 # The four runs the queue is drawn from, in the order the set selector lists
 # them. The name is the run's name in ``eval.v6_runs``; the label is what a
@@ -542,6 +567,14 @@ WHAT_THE_DISPUTES_ARE = (
     "is the organisers' sample."
 )
 WHAT_THE_FIGURES_ARE = "These figures are development data."
+
+# The one-sentence description the 404 page carries, and the title it is shown
+# under. Both are this file's own words: the page is about the site, not about a
+# case.
+NOT_FOUND_TITLE = "Tribunal - page not found"
+NOT_FOUND_DESCRIPTION = (
+    "This page does not exist; the queue lists every dispute this site replays."
+)
 
 # The set order, as an index. The queue's row order is this order and then the
 # case number; nothing about a directory listing or an interpreter's string hash
@@ -1877,9 +1910,34 @@ th[aria-sort="descending"] .sort::after{content:"\\2193"}
 .how ol{display:flex;flex-wrap:wrap;gap:6px 14px;list-style:none;margin:0;padding:0}
 .how li{display:flex;align-items:center;gap:7px;font-size:.86rem;color:var(--muted)}
 .how li b{color:var(--ink);font-weight:600}
-.how i{width:9px;height:9px;border-radius:50%;flex:none}
+.how i{display:inline-block;width:9px;height:9px;border-radius:50%;flex:none}
 .how .arw{color:var(--muted);margin-left:8px}
 .links{display:flex;flex-wrap:wrap;gap:6px 18px;margin:0 0 20px;font-size:.9rem}
+
+/* 46b.8: on a wide screen the five steps of "How it works" wrapped into three
+   ragged lines with the arrows stranded at the line ends. At 1000 px and wider
+   they are five equal columns in one row, each with its arrow at the column's
+   right; below that the strip stacks as it did. */
+@media (min-width:1000px){
+  .how ol{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px 22px}
+  .how li{display:block;position:relative;padding-right:20px}
+  .how li i{vertical-align:middle}
+  .how .arw{position:absolute;right:0;top:1px;margin:0}
+}
+
+/* 46b.10: the trace's own box runs the width of the rail column, so the map is
+   drawn at the width the column has rather than 32 px narrower. */
+.rail details.full{padding:0}
+.rail details.full>summary{padding:12px 16px}
+.rail details.full .in{padding:0 0 14px}
+.rail details.full .cap{padding:6px 16px 0;margin:0}
+.rail details.full .legend{padding:8px 16px 0;margin-top:0}
+
+/* 46b.11: a claim is a paragraph of 80-200 words, so its first sentence is
+   shown and the rest of it sits behind a control that reads as one. */
+.claim details,.side details{margin:.3em 0 0}
+.claim details>summary,.side details>summary{color:var(--accent);cursor:pointer;font-size:.86rem}
+.claim details p,.side details p{margin:.3em 0 0}
 
 /* 44.3: on a 375 px phone the nav wrapped, which pushed its Queue pill against
    the bar's top edge. The nav stays on one line now and scrolls sideways when
@@ -2190,26 +2248,74 @@ _JS = """
 # --------------------------------------------------------------------------
 # The shell every page is built in
 # --------------------------------------------------------------------------
-def _shell(title: str, body: str) -> str:
-    """One self-contained page: inline CSS, inline script, nothing external."""
+def _shell(
+    title: str,
+    body: str,
+    *,
+    description: str,
+    canonical: str,
+    og_type: str,
+) -> str:
+    """One self-contained page: inline CSS, inline script, nothing external.
+
+    The head carries what a link scraper reads as well as what a browser does:
+    a one-sentence description, the tab icon, and an Open Graph card with
+    ``twitter:card`` beside it. Every URL in the card is absolute -- a scraper
+    resolves a relative one against nothing -- and the icon is an inline
+    ``data:`` SVG, so the page still loads nothing and stays one file.
+    """
+    image = SITE_ROOT + OG_IMAGE_LINK
+    head = "".join(
+        (
+            "<title>{0}</title>\n".format(_text(title)),
+            '<meta name="description" content="{0}">\n'.format(
+                _attribute(description)
+            ),
+            '<link rel="icon" href="{0}">\n'.format(_attribute(FAVICON_DATA_URI)),
+            '<meta property="og:title" content="{0}">\n'.format(_attribute(title)),
+            '<meta property="og:description" content="{0}">\n'.format(
+                _attribute(description)
+            ),
+            '<meta property="og:type" content="{0}">\n'.format(_attribute(og_type)),
+            '<meta property="og:url" content="{0}">\n'.format(
+                _attribute(canonical)
+            ),
+            '<meta property="og:image" content="{0}">\n'.format(_attribute(image)),
+            '<meta name="twitter:card" content="summary_large_image">\n',
+        )
+    )
     page = (
         "<!DOCTYPE html>\n"
         '<html lang="en">\n<head>\n<meta charset="utf-8">\n'
         '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
-        "<title>{0}</title>\n<style>{1}</style>\n</head>\n<body>\n"
+        "{0}<style>{1}</style>\n</head>\n<body>\n"
         "{2}\n<script>{3}</script>\n</body>\n</html>\n"
-    ).format(_text(title), _CSS, body, _JS)
+    ).format(head, _CSS, body, _JS)
     return defuse_key_shaped(page)
 
 
 # The product's mark, inline: a beam, a base, a crossbar and two pans. It is
-# drawn here rather than loaded, so the page needs no font and no image.
+# drawn here rather than loaded, so the page needs no font and no image. The
+# same path data draws the tab icon below, so the two cannot drift apart.
+SCALES_PATH = "M12 4v16M8 20h8M5 7h14M5 7L2 13h6zM19 7l-3 6h6z"
 SCALES_MARK = (
     '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" '
     'stroke="#ffffff" stroke-width="2" stroke-linecap="round" '
     'stroke-linejoin="round" aria-hidden="true">'
-    '<path d="M12 4v16M8 20h8M5 7h14M5 7L2 13h6zM19 7l-3 6h6z"/></svg>'
-)
+    '<path d="{0}"/></svg>'
+).format(SCALES_PATH)
+
+# The tab icon: the header's mark on the header's own blue tile, as an inline
+# SVG data URI. A ``data:`` URL is not a request, so the page stays one file
+# with nothing external in it; the ``#`` of each colour is percent-encoded
+# because a bare one would end the URL at the fragment.
+_FAVICON_SVG = (
+    "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'>"
+    "<rect width='24' height='24' rx='5' fill='#1d4ed8'/>"
+    "<path d='{0}' fill='none' stroke='#ffffff' stroke-width='2' "
+    "stroke-linecap='round' stroke-linejoin='round'/></svg>"
+).format(SCALES_PATH)
+FAVICON_DATA_URI = "data:image/svg+xml," + quote(_FAVICON_SVG, safe="'/:=")
 
 
 def _mode_text(version: Any) -> str:
@@ -2223,37 +2329,34 @@ def _mode_text(version: Any) -> str:
 
 
 def _topbar(mode: str, current: str) -> str:
-    """The top bar: the product, the two sites, and the run being replayed."""
-    # Both items are links on every page -- the current one is marked with
-    # ``aria-current`` rather than turned into a span, so the two sit on one
-    # baseline and the page's own item is still a link a reader can follow.
+    """The top bar: the product, the queue, and the run being replayed.
+
+    The header carries the queue alone. The replay beside this site is the
+    benchmark replay at policy version 1 -- historical, and not the pipeline
+    these pages show -- and a judge who met it in the header went to the
+    historical figures first, so it sits in the footer with the label that says
+    which pipeline it is.
+    """
+    # The item is a link on every page -- the current one is marked with
+    # ``aria-current`` rather than turned into a span, so the page's own item is
+    # still a link a reader can follow.
     queue = (
         '<a href="index.html" class="on" aria-current="page">Queue</a>'
         if current == "queue"
         else '<a href="index.html">Queue</a>'
     )
-    # The replay beside this site is the benchmark replay at policy version 1:
-    # historical, and not the pipeline this page shows. The link says so, so a
-    # reader who follows it is not surprised by the version on the other side.
-    replay = (
-        '<a href="{0}" class="on" aria-current="page">{1}</a>'.format(
-            REPLAY_INDEX, _text(REPLAY_LABEL)
-        )
-        if current == "replay"
-        else '<a href="{0}">{1}</a>'.format(REPLAY_INDEX, _text(REPLAY_LABEL))
-    )
     return (
         '<header class="top">\n<div class="top-in">\n'
         '<a class="brand" href="index.html"><span class="mark">{0}</span>Tribunal'
         "</a>\n"
-        '<nav class="nav" aria-label="Sites">{1}{2}</nav>\n'
-        '<span class="mode">{3}</span>\n'
+        '<nav class="nav" aria-label="Sites">{1}</nav>\n'
+        '<span class="mode">{2}</span>\n'
         "</div>\n</header>\n"
-    ).format(SCALES_MARK, queue, replay, _text(mode))
+    ).format(SCALES_MARK, queue, _text(mode))
 
 
 def _footer(case: CaseData) -> str:
-    """The footer every page carries: commit, tag, policy version and model."""
+    """The footer every page carries: commit, tag, policy version, model, replay."""
     configuration = case.document.get("configuration") or {}
     return (
         '<footer class="foot">'
@@ -2261,12 +2364,15 @@ def _footer(case: CaseData) -> str:
         "<span>tag {1}</span>"
         "<span>policy version {2}</span>"
         "<span>model {3}</span>"
+        '<span><a href="{4}">{5}</a></span>'
         "</footer>"
     ).format(
         _text(str(case.document.get("git_commit"))[:7]),
         _text(v6_runs.FREEZE_TAG),
         _text(configuration.get("policy_version")),
         _text(case.document.get("model")),
+        _attribute(REPLAY_INDEX),
+        _text(REPLAY_LABEL),
     )
 
 
@@ -2721,7 +2827,51 @@ def build_index(cases: Sequence[CaseData]) -> str:
         + _footer(cases[0])
         + "\n</main>\n"
     )
-    return _shell("Tribunal - today's disputes", body)
+    return _shell(
+        "Tribunal - today's disputes",
+        body,
+        description=WHAT_TRIBUNAL_DOES,
+        canonical=SITE_ROOT,
+        og_type=OG_TYPE_SITE,
+    )
+
+
+def build_not_found(cases: Sequence[CaseData]) -> str:
+    """The page a host serves for an address that is not one of the site's.
+
+    It is built with the pages rather than beside them, so ``--check`` covers it
+    and a rebuild cannot leave it behind, and it is in the site's own style: the
+    same top bar, the same footer, and the two links a lost reader needs -- the
+    queue, and the no-show case the landing page sends a reader to.
+    """
+    if not cases:
+        raise BuildError("the 404 page needs a case to read the footer from")
+    configuration = cases[0].document.get("configuration") or {}
+    body = (
+        _topbar(_mode_text(configuration.get("policy_version")), "none")
+        + '<main class="wrap">\n'
+        + '<header class="pagehead">\n'
+        + "<h1>This page does not exist</h1>\n"
+        + '<p class="lede">The address you followed is not one of this site\'s '
+        "pages. Every dispute is one page, and the queue lists them all.</p>\n"
+        + "</header>\n"
+        + '<p class="links">'
+        + '<a href="index.html">The queue</a>'
+        + '<a href="{0}">Case {1}: how it was decided</a>'
+        "</p>\n".format(
+            _attribute("case-{0:05d}.html".format(HOW_IT_WAS_DECIDED_CASE)),
+            _text(HOW_IT_WAS_DECIDED_CASE),
+        )
+        + _footer(cases[0])
+        + "\n</main>\n"
+    )
+    return _shell(
+        NOT_FOUND_TITLE,
+        body,
+        description=NOT_FOUND_DESCRIPTION,
+        canonical=SITE_ROOT + NOT_FOUND_LINK,
+        og_type=OG_TYPE_SITE,
+    )
 
 
 # --------------------------------------------------------------------------
@@ -2762,9 +2912,7 @@ def _claims_block(case: CaseData, side: str) -> str:
     kept = sum(1 for claim in claims if claim["status"] == "KEPT")
     items = []
     for claim in claims:
-        text = _text(claim["text"])
-        if claim["status"] == "DISCARDED":
-            text = "<s>{0}</s>".format(text)
+        text = _claim_text(claim["text"], struck=claim["status"] == "DISCARDED")
         refs = '<span class="ref">{0} &middot; {1}</span>'.format(
             _text(", ".join(claim["evidence_ids"]) or "no evidence id"),
             _text(", ".join(claim["clause_ids"]) or "no clause id"),
@@ -3069,6 +3217,81 @@ def _one_latlng(node: Any) -> Optional[Tuple[float, float]]:
         return None
 
 
+def _dwell_points(gps: Mapping[str, Any], arrival: Mapping[str, Any]) -> List[Mapping[str, Any]]:
+    """The driver's fixes inside the arrival radius: the dwell the record names.
+
+    The brief computes the in-geofence dwell as a run of fixes with a first and
+    a last instant, so the fixes are the raw points whose timestamps fall inside
+    that run. A block that carries no run yields nothing rather than a guess.
+    """
+    runs = _fact_value(arrival, "accumulated_dwell", "runs")
+    if not isinstance(runs, list) or not runs:
+        return []
+    first = runs[0]
+    if not isinstance(first, Mapping):
+        return []
+    start = _fact_value(first, "first_ts")
+    end = _fact_value(first, "last_ts")
+    if not start or not end:
+        return []
+    out: List[Mapping[str, Any]] = []
+    for point in gps.get("points") or []:
+        if not isinstance(point, Mapping):
+            continue
+        stamp = point.get("ts")
+        if isinstance(stamp, str) and str(start) <= stamp <= str(end):
+            out.append(point)
+    return out
+
+
+def _device_distance(case: CaseData) -> Optional[str]:
+    """How far the rider's device was from the pickup, as the derived facts give it.
+
+    ``POL-NS-04`` turns on where the device was, and the brief records the
+    nearest and the furthest fix's distance from the pickup. Where the two
+    round to one figure the label is that figure; where they do not, the label
+    is the range, so the page and the featured card cannot disagree about it.
+    """
+    presence = _derived_block(case.brief, "GPS_TRACE", "rider_presence") or {}
+    near = _fact_value(presence, "min_distance_m")
+    far = _fact_value(presence, "max_distance_m")
+    if near is None and far is None:
+        return None
+    # Whole metres, which is how the featured card states the same two figures,
+    # so the map and the card cannot disagree about the distance.
+    if near is None or far is None or _whole(near) == _whole(far):
+        return "{0} m".format(_whole(near if near is not None else far))
+    return "{0}-{1} m".format(_whole(near), _whole(far))
+
+
+def _map_label(
+    case: CaseData,
+    radius_m: Any,
+    dwell_seconds: Any,
+    distance: Optional[str],
+    dropoff: bool,
+) -> str:
+    """The map's accessible name: what the drawing shows, read off the record."""
+    parts = ["The trip trace: the driven route, the pickup point"]
+    if dropoff:
+        parts.append("the drop-off")
+    if radius_m is not None:
+        parts.append(
+            "the arrival radius of {0} m around the pickup".format(_compact(radius_m))
+        )
+    if dwell_seconds is not None:
+        parts.append(
+            "the driver's {0} inside that radius".format(_seconds(dwell_seconds))
+        )
+    if distance is not None:
+        parts.append(
+            "the rider's device {0} away, joined to the pickup by a dashed line".format(
+                distance
+            )
+        )
+    return ", ".join(parts) + "."
+
+
 def _trace_svg(case: CaseData) -> str:
     """The trace, drawn by the builder from the GPS fixes.
 
@@ -3077,14 +3300,21 @@ def _trace_svg(case: CaseData) -> str:
     rider's own track where the record carries one. The optimal route is a
     distance and not a line, so no optimal line is drawn here.
 
-    **The frame holds both tracks.** The extent every point is projected into is
-    taken over the driven trace, the rider's track, the two labelled places and
-    the arrival radius, so neither track is fitted out of the picture, and the
-    radius the arrival is judged against is on the map rather than off its edge.
-    A rider's track that never moves is a point repeated -- a polyline through
-    it draws nothing a reader can see, and where the device was is the fact
-    ``POL-NS-04`` turns on -- so a track whose fixes lie within
+    **The frame holds both tracks.** On a route case the extent every point is
+    projected into is taken over the driven trace, the rider's track, the two
+    labelled places and the arrival radius, so neither track is fitted out of
+    the picture. A rider's track that never moves is a point repeated -- a
+    polyline through it draws nothing a reader can see, and where the device was
+    is the fact ``POL-NS-04`` turns on -- so a track whose fixes lie within
     :data:`STATIONARY_TRACK_M` of each other is marked as well as drawn.
+
+    **A no-show is fitted to its own story.** The driven trace on a no-show case
+    runs for kilometres while the case turns on a few hundred metres -- the
+    arrival radius and the rider's device -- and a frame fitted to the whole
+    trace drew that radius a few pixels across. So on a no-show case the extent
+    is the pickup point, the driver's dwell inside the radius and the rider's
+    device, the frame is the content's own shape rather than a fixed rectangle,
+    and the distance between the device and the pickup is drawn and labelled.
     """
     # The raw fixes and the labelled places are the case file's; the arrival
     # radius below is the brief's own derived figure.
@@ -3098,6 +3328,16 @@ def _trace_svg(case: CaseData) -> str:
     dropoff = _one_latlng(trip.get("dropoff"))
     arrival = _derived_block(case.brief, "GPS_TRACE", "arrival") or {}
     radius_m = _fact_value(arrival, "thresholds", "arrival_radius_m")
+    no_show = case.category == "NO_SHOW_CHARGE"
+    dwell = _dwell_points(gps, arrival) if no_show else []
+    dwell_latlngs = _latlngs(dwell)
+    dwell_seconds = (
+        _fact_value(arrival, "accumulated_dwell", "longest_run_sec")
+        if no_show
+        else None
+    )
+    distance = _device_distance(case) if no_show else None
+    local = no_show and bool(dwell_latlngs) and pickup is not None
 
     lat0 = sum(point[0] for point in driver) / len(driver)
     metres_per_degree_lng = METRES_PER_DEGREE * math.cos(math.radians(lat0))
@@ -3105,17 +3345,18 @@ def _trace_svg(case: CaseData) -> str:
     def to_metres(point: Tuple[float, float]) -> Tuple[float, float]:
         return (point[1] * metres_per_degree_lng, -point[0] * METRES_PER_DEGREE)
 
+    if local:
+        focus = dwell_latlngs + rider + [pickup]
+    else:
+        focus = driver + rider + [
+            point for point in (pickup, dropoff) if point is not None
+        ]
     xs: List[float] = []
     ys: List[float] = []
-    for point in driver + rider:
+    for point in focus:
         x, y = to_metres(point)
         xs.append(x)
         ys.append(y)
-    for point in (pickup, dropoff):
-        if point is not None:
-            x, y = to_metres(point)
-            xs.append(x)
-            ys.append(y)
     if pickup is not None and radius_m is not None:
         x, y = to_metres(pickup)
         xs += [x - float(radius_m), x + float(radius_m)]
@@ -3125,11 +3366,22 @@ def _trace_svg(case: CaseData) -> str:
     min_y, max_y = min(ys), max(ys)
     span_x = max(max_x - min_x, 100.0)
     span_y = max(max_y - min_y, 100.0)
-    scale = min(
-        (MAP_WIDTH - 2 * MAP_PAD) / span_x, (MAP_HEIGHT - 2 * MAP_PAD) / span_y
-    )
+    if local:
+        # The frame takes the content's own aspect ratio, so the drawing fills
+        # the column's width instead of leaving two thirds of it empty; the
+        # height is capped, so a long thin story cannot become a tall ribbon.
+        scale = (MAP_WIDTH - 2 * MAP_PAD) / span_x
+        height = span_y * scale + 2 * MAP_PAD
+        if height > MAP_HEIGHT:
+            scale = (MAP_HEIGHT - 2 * MAP_PAD) / span_y
+            height = MAP_HEIGHT
+    else:
+        scale = min(
+            (MAP_WIDTH - 2 * MAP_PAD) / span_x, (MAP_HEIGHT - 2 * MAP_PAD) / span_y
+        )
+        height = MAP_HEIGHT
     offset_x = (MAP_WIDTH - span_x * scale) / 2 - min_x * scale
-    offset_y = (MAP_HEIGHT - span_y * scale) / 2 - min_y * scale
+    offset_y = (height - span_y * scale) / 2 - min_y * scale
 
     def to_pixels(point: Tuple[float, float]) -> Tuple[float, float]:
         x, y = to_metres(point)
@@ -3140,9 +3392,11 @@ def _trace_svg(case: CaseData) -> str:
             "{0},{1}".format(*to_pixels(point)) for point in points
         )
 
+    label = _map_label(case, radius_m, dwell_seconds, distance, dropoff is not None)
     parts = [
-        '<svg viewBox="0 0 {0} {1}"><title>the trip trace</title>'.format(
-            int(MAP_WIDTH), int(MAP_HEIGHT)
+        '<svg viewBox="0 0 {0} {1}" role="img" aria-label="{2}">'
+        "<title>{3}</title>".format(
+            int(MAP_WIDTH), round(height, 2), _attribute(label), _text(label)
         )
     ]
     if pickup is not None and radius_m is not None:
@@ -3153,6 +3407,7 @@ def _trace_svg(case: CaseData) -> str:
                 centre_x, centre_y, round(float(radius_m) * scale, 2)
             )
         )
+    device: Optional[Tuple[float, float]] = None
     if rider:
         parts.append(
             '<polyline points="{0}" fill="none" stroke="#6b7280" stroke-width="1.5" '
@@ -3166,19 +3421,40 @@ def _trace_svg(case: CaseData) -> str:
             max(y for _x, y in rider_metres) - min(y for _x, y in rider_metres),
         )
         if spread <= STATIONARY_TRACK_M:
-            x, y = to_pixels(rider[len(rider) // 2])
+            device = rider[len(rider) // 2]
+            x, y = to_pixels(device)
             parts.append(
                 '<circle cx="{0}" cy="{1}" r="3" fill="none" stroke="#6b7280" '
                 'stroke-width="1.5"><title>{2}</title></circle>'.format(
                     x, y, _text("the rider's device")
                 )
             )
+    if device is not None and pickup is not None and distance is not None:
+        # The distance the case turns on, drawn: the rider's device was not at
+        # the pickup point, and the two are joined so the gap is on the map
+        # rather than only in the derived facts.
+        start_x, start_y = to_pixels(device)
+        end_x, end_y = to_pixels(pickup)
+        parts.append(
+            '<line x1="{0}" y1="{1}" x2="{2}" y2="{3}" stroke="#6b7280" '
+            'stroke-width="1" stroke-dasharray="2 3"/>'.format(
+                start_x, start_y, end_x, end_y
+            )
+        )
+        parts.append(
+            '<text x="{0}" y="{1}" text-anchor="middle" font-size="12" '
+            'fill="currentColor">{2}</text>'.format(
+                round((start_x + end_x) / 2, 2),
+                round((start_y + end_y) / 2 - 4, 2),
+                _text(distance),
+            )
+        )
     parts.append(
         '<polyline points="{0}" fill="none" stroke="#1d4ed8" stroke-width="2"/>'.format(
             polyline(driver)
         )
     )
-    for point, colour, label in (
+    for point, colour, label_text in (
         (pickup, "#15803d", "pickup"),
         (dropoff, "#b91c1c", "drop-off"),
     ):
@@ -3187,7 +3463,7 @@ def _trace_svg(case: CaseData) -> str:
         x, y = to_pixels(point)
         parts.append(
             '<circle cx="{0}" cy="{1}" r="4" fill="{2}"><title>{3}</title></circle>'.format(
-                x, y, colour, _text(label)
+                x, y, colour, _text(label_text)
             )
         )
     parts.append("</svg>")
@@ -3195,7 +3471,16 @@ def _trace_svg(case: CaseData) -> str:
 
 
 def _trace_caption(case: CaseData) -> str:
-    """The trace's caption: the optimal distance, and the promise not to draw it."""
+    """The trace's caption, or nothing where the figure belongs to another case.
+
+    On a route case the caption states the optimal route's distance and the
+    promise not to draw it, because the route is a distance and not a line. A
+    no-show case is not about the route at all -- what it turns on is where the
+    device was and how long the driver waited -- so it carries no caption rather
+    than a figure about a different dispute.
+    """
+    if case.category == "NO_SHOW_CHARGE":
+        return ""
     deviation = _derived_block(case.brief, "GPS_TRACE", "deviation")
     optimal = _fact_value(deviation, "optimal_distance_km") if deviation else None
     if optimal is None:
@@ -3229,12 +3514,29 @@ def _rail(case: CaseData) -> str:
                     _compact(radius_m)
                 )
             )
+        # The distance line is its own entry, and only where the drawing
+        # carries it: the gap between the device and the pickup is what a
+        # no-show case turns on.
+        distance = _device_distance(case) if case.category == "NO_SHOW_CHARGE" else None
+        if distance is not None and _latlngs(gps_payload.get("rider_track")):
+            legend.append(
+                '<i class="dash"></i>rider\'s device to the pickup ({0})'.format(
+                    _text(distance)
+                )
+            )
+        caption = _trace_caption(case)
         trace = (
-            '<div class="map">{0}</div><p class="cap">{1}</p>'
+            '<div class="map">{0}</div>{1}'
             '<p class="legend">{2}</p>'
-        ).format(svg, _text(_trace_caption(case)), "".join(legend))
+        ).format(
+            svg,
+            '<p class="cap">{0}</p>'.format(_text(caption)) if caption else "",
+            "".join(legend),
+        )
+        # The trace's own box runs the full width of the column: a map drawn
+        # inside the details' padding loses 32 of the 360 px the rail gives it.
         trace_block = (
-            '<details open><summary>Trace <span>{0}</span></summary>'
+            '<details open class="full"><summary>Trace <span>{0}</span></summary>'
             '<div class="in">{1}</div></details>'.format(
                 _text(
                     "{0} fixes".format(
@@ -4108,6 +4410,13 @@ def _seconds_for_roles(case: CaseData, roles: Sequence[str]) -> Optional[str]:
 # observable inter-agent communication, so it is drawn as a debate and not as
 # the advocates' raw answers: each claim is a card carrying the claim's own
 # text, the artifacts and clauses it cites, and the referee's verdict on it.
+#
+# A claim runs to 80-200 words, so the card shows the claim's first sentence and
+# keeps the argument for it one click away. The words are the claim's own; this
+# is the label on the click.
+READ_THE_WHOLE_CLAIM = "Read the whole claim"
+
+
 def _evidence_kinds(case: CaseData) -> Dict[str, str]:
     """Each artifact's kind in words, by evidence id, as the brief carries it."""
     kinds: Dict[str, str] = {}
@@ -4162,6 +4471,40 @@ def _claim_verdict(claim: Mapping[str, Any]) -> str:
     )
 
 
+def _claim_paragraph(text: str, struck: bool) -> str:
+    """One piece of a claim as a paragraph, struck through where it was discarded."""
+    body = _text(text)
+    if struck:
+        body = "<s>{0}</s>".format(body)
+    return "<p>{0}</p>".format(body)
+
+
+def _claim_text(text: Any, struck: bool = False) -> str:
+    """One claim: its first sentence, and the rest behind a collapsed detail.
+
+    Each claim is a paragraph of 80 to 200 words. The first sentence states the
+    claim, and the argument for it is what follows, so the paragraph is shown
+    as its first sentence with the remainder one click away rather than as a
+    wall of small print in the middle of the debate. Nothing is rewritten: the
+    two pieces are the paragraph's own, split after its first sentence, and a
+    claim that is one sentence is shown whole.
+    """
+    whole = str(text or "").strip()
+    match = re.search(r"(?<=[.!?])\s+", whole)
+    if match is None:
+        return _claim_paragraph(whole, struck)
+    first = whole[: match.start()].strip()
+    rest = whole[match.end():].strip()
+    if not rest:
+        return _claim_paragraph(first, struck)
+    return (
+        _claim_paragraph(first, struck)
+        + "<details><summary>{0}</summary>{1}</details>".format(
+            _text(READ_THE_WHOLE_CLAIM), _claim_paragraph(rest, struck)
+        )
+    )
+
+
 def _claim_card(case: CaseData, claim: Mapping[str, Any], kinds: Mapping[str, str]) -> str:
     """One claim as a card: its text, what it cites, and the referee's verdict."""
     evidence = "".join(
@@ -4169,10 +4512,10 @@ def _claim_card(case: CaseData, claim: Mapping[str, Any], kinds: Mapping[str, st
     )
     clauses = "".join(_clause_chip(case, item) for item in claim["clause_ids"])
     return (
-        '<article class="claim"><p>{0}</p>'
+        '<article class="claim">{0}'
         '<p class="cite">{1}{2}</p>{3}</article>'
     ).format(
-        _text(claim["text"]),
+        _claim_text(claim["text"]),
         evidence or '<span class="cap">no evidence id</span>',
         clauses or '<span class="cap">no clause id</span>',
         _claim_verdict(claim),
@@ -5125,6 +5468,11 @@ def build_case_page(case: CaseData) -> str:
     return _shell(
         "Case {0} - {1}".format(case.case_no, category_words),
         body,
+        description="{0} - {1}".format(
+            category_words, _summary_line(case.case)
+        ),
+        canonical=SITE_ROOT + case.link,
+        og_type=OG_TYPE_CASE,
     )
 
 
@@ -5184,22 +5532,33 @@ def _write_or_check_bytes(destination: Path, data: bytes, check: bool) -> int:
 def assets() -> List[Tuple[Path, bytes]]:
     """The files this site carries that are not pages, as ``(destination, bytes)``.
 
-    One: the architecture diagram, copied out of ``docs/`` byte for byte, so the
-    link off the queue's links row is a file inside the published root instead of
-    a path out of it. Like :func:`pages` it is a list a check and a writing build
-    both walk, so the two cannot disagree about which files there are.
+    Two: the architecture diagram and the link-preview image, each copied out of
+    the repository byte for byte. The diagram's link off the queue's links row
+    is a file inside the published root instead of a path out of it, and
+    ``og:image`` names a URL a scraper fetches, so the file it names has to be
+    inside the published root too. Like :func:`pages` it is a list a check and a
+    writing build both walk, so the two cannot disagree about which files there
+    are.
     """
-    return [(ARCHITECTURE_ASSET, ARCHITECTURE_SOURCE.read_bytes())]
+    return [
+        (ARCHITECTURE_ASSET, ARCHITECTURE_SOURCE.read_bytes()),
+        (OG_IMAGE_ASSET, OG_IMAGE_SOURCE.read_bytes()),
+    ]
 
 
 def pages() -> List[Tuple[Path, str]]:
     """Every page this site commits, as ``(destination, text)``.
 
     The one place the site's shape is decided, so ``--check`` and a writing
-    build cannot disagree about which files there are: both walk this list.
+    build cannot disagree about which files there are: both walk this list. The
+    queue, the page a host serves for an address that is not one of these, and
+    one page per case.
     """
     cases = read_every_case()
-    out: List[Tuple[Path, str]] = [(INDEX_PATH, build_index(cases))]
+    out: List[Tuple[Path, str]] = [
+        (INDEX_PATH, build_index(cases)),
+        (NOT_FOUND_PATH, build_not_found(cases)),
+    ]
     for case in cases:
         out.append((DIST_DIR / case.link, build_case_page(case)))
     return out

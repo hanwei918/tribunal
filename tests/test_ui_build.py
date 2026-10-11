@@ -2545,12 +2545,23 @@ def built_documents() -> Dict[str, dict]:
     return _built_documents
 
 
+# The files this builder copies into the site rather than rendering: the
+# architecture diagram, and the link-preview image ``ui.v2.build`` writes for
+# the product view's pages. Both are bytes, so the walk below reads the pages
+# and skips them.
+BINARY_ASSETS: Tuple[str, ...] = ("architecture.svg", "og-image.png")
+
+
 def committed_pages() -> Dict[str, str]:
-    """Every committed page under ``ui/dist/``, by path relative to it."""
+    """Every committed page under ``ui/dist/``, by path relative to it.
+
+    The files that are bytes rather than text are skipped: this walk reads what
+    it finds as UTF-8, and a copied image is not a page.
+    """
     return {
         str(path.relative_to(build.DIST_DIR)): path.read_text(encoding="utf-8")
         for path in sorted(build.DIST_DIR.rglob("*"))
-        if path.is_file()
+        if path.is_file() and path.name not in BINARY_ASSETS
     }
 
 
@@ -3324,7 +3335,17 @@ class EveryPageIsSelfContainedTests(unittest.TestCase):
                 self.assertEqual(
                     [], external, "{0} references an external resource".format(relative)
                 )
-                for tag in ("<link", "<iframe", "<object", "<embed"):
+                # The product view's pages carry one ``<link>``: the tab icon,
+                # as an inline ``data:`` SVG that fetches nothing. Every other
+                # ``<link>`` -- a stylesheet, a preload, an icon file -- is what
+                # this check is for.
+                for match in re.finditer(r"<link\b[^>]*>", text):
+                    with self.subTest(page=relative, link=match.group(0)[:40]):
+                        self.assertRegex(
+                            match.group(0),
+                            r'^<link rel="icon" href="data:image/svg\+xml,',
+                        )
+                for tag in ("<iframe", "<object", "<embed"):
                     self.assertNotIn(tag, text, "{0} embeds {1}".format(relative, tag))
 
     def test_no_published_file_fetches_anything_at_runtime(self):
