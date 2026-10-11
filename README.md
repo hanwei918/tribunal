@@ -1160,6 +1160,10 @@ against a history that is not there. On Linux the tests that rebuild case 111's
 brief skip for a second reason: glibc and macOS libm disagree in the last place
 of its `driver_track.mean_distance_m`, so the brief digest its run recorded on
 macOS cannot be rebuilt there, and those tests say which case and which place.
+The tests that **count** a set of cases do not skip: they leave that one case
+out of the comparison -- the guard's own list, asserted to name case 111 and
+nothing else -- and say so, so the viewer's miss set is still compared with the
+grader's own over every case the platform can rebuild.
 On macOS with `.git` the full suite passes (`OK`); a test skips only where the
 thing it needs is absent, and it names that reason — the two live-API tests,
 without a `.env` or a `TOKENHUB_API_KEY`; a test whose set or committed run is

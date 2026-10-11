@@ -277,6 +277,19 @@ def the_case_111_platform_difference() -> bool:
     return False
 
 
+def the_cases_the_platform_moves() -> List[int]:
+    """The cases a platform difference leaves out of a run's results, by number.
+
+    Empty on a machine that can rebuild every recorded brief, and ``[111]`` on
+    one whose ``libm`` rounds case 111's mean distance one unit in the last
+    place away from the recorded one. It is read from the same guard that
+    decides whether to skip, so a comparison that drops a case drops exactly the
+    cases this names: a test that left out anything else would be hiding a case
+    it could not explain, and the assertion beside the call is what says so.
+    """
+    return [CASE_111] if the_case_111_platform_difference() else []
+
+
 def require_the_same_libm() -> None:
     """Skip, naming the reason, when case 111's brief cannot be rebuilt as recorded.
 

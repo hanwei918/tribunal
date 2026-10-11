@@ -570,12 +570,15 @@ class TheRunTests(unittest.TestCase):
 
         A platform that cannot rebuild case 111's brief leaves that case out of
         the page's own case set, so it is left out of the comparison and of the
-        loop here too: it is named, and it is the only case the platform moves.
+        loop here too. Which cases those are is not typed in here: it is the
+        guard's own list, and the assertion below fixes that list to the one
+        case the guard may move, so nothing else can be dropped silently.
         """
-        skipped = (
-            {portability.CASE_111}
-            if portability.the_case_111_platform_difference()
-            else set()
+        skipped = portability.the_cases_the_platform_moves()
+        self.assertIn(
+            skipped,
+            ([], [portability.CASE_111]),
+            "the platform guard left out a case other than 111",
         )
         produced = {
             case_no: json.loads(
@@ -590,15 +593,22 @@ class TheRunTests(unittest.TestCase):
             case_no for case_no, case in self.cases.items() if not case["grading"]["exact"]
         )
         self.assertEqual(
-            sorted(score.case_no for score in report.failures),
+            sorted(
+                score.case_no for score in report.failures if score.case_no not in skipped
+            ),
             misses,
             "the page's misses are not the grader's",
         )
 
         # The legibility of every case, recomputed: the key's ruling, the ruling
         # the judge produced, and the fields that differ.
-        self.assertEqual(sorted(report.graded_cases), sorted(self.cases))
+        self.assertEqual(
+            sorted(score.case_no for score in report.cases if score.case_no not in skipped),
+            sorted(self.cases),
+        )
         for score in report.cases:
+            if score.case_no in skipped:
+                continue
             case = self.cases[score.case_no]
             with self.subTest(case=score.case_no):
                 self.assertEqual(score.expected.ruling, case["expected"]["ruling"])

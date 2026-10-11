@@ -200,9 +200,13 @@ ARCHITECTURE_ASSET = DIST_DIR / "architecture.svg"
 
 # The link-preview image, copied into the site the same way and for the same
 # reason: ``og:image`` has to be an absolute URL a scraper can fetch, so the
-# file it names must be inside the published root rather than in ``tmp/``, where
-# the owner's original sits.
-OG_IMAGE_SOURCE = PROJECT_ROOT / "tmp" / "og-image.png"
+# file it names must be inside the published root. Its source is a committed
+# file and not the owner's original: the original sat in ``tmp/``, which
+# ``.gitignore`` excludes, so a clean clone could not build this site at all --
+# and a builder that reads a gitignored path is a builder that fails on the
+# machine that did not write it. ``ui/assets/og-image.png`` is the owner's own
+# bytes, committed, and ``ui/dist/og-image.png`` is its copy.
+OG_IMAGE_SOURCE = PROJECT_ROOT / "ui" / "assets" / "og-image.png"
 OG_IMAGE_ASSET = DIST_DIR / "og-image.png"
 OG_IMAGE_LINK = "og-image.png"
 
