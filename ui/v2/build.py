@@ -62,9 +62,9 @@ no-show case carries **what the record shows**: the brief's own derived facts,
 laid out and labelled as computed from the record before any model read it. And
 above the judge's text sits the **notice to the rider and the driver**, built
 from the ruling's fields and the loaded policy alone -- the outcome, the money,
-the clauses the ruling names by their titles, the record kinds it cites, who
-made the decision and how to appeal -- and naming no field of either party's
-profile. The judge's own reasoning is long internal working written for a
+the clauses the ruling rests on by their titles, the record kinds it rests on,
+who made the decision and how to appeal -- and naming no field of either
+party's profile. The judge's own reasoning is long internal working written for a
 reviewer, so its label says whose view it is: the judge's on a decided case, the
 drafts' where a panel ran, and the pipeline's own routing sentence where the
 scope gate stopped before any judge was asked.
@@ -365,6 +365,22 @@ EVIDENCE_KIND_WORDS: Mapping[str, str] = {
 }
 EVIDENCE_KIND_ORDER: Tuple[str, ...] = tuple(EVIDENCE_KIND_WORDS)
 PROFILE_EVIDENCE_KINDS: Tuple[str, ...] = ("RIDER_PROFILE", "DRIVER_PROFILE")
+
+# The most clauses the notice names. The line says what the ruling rests on, and
+# one sentence can name several clauses at once -- a ruling that lists the limbs
+# it applied -- so the line stops at five rather than reciting the policy.
+NOTICE_CLAUSE_LIMIT = 5
+
+# What the clause line says when the ruling refers nothing on and no sentence of
+# its explanation names a clause of the policy in force. The reviewer view is the
+# judge's own reasoning, shown further down the same page.
+NO_CLAUSE_NAMED = "The reviewer view gives the clauses the panel applied."
+
+# The admissibility status that means the artifact is not in the record at all.
+# A kind whose artifact is MISSING is not something a ruling rested on, however
+# often its identifier is named: case 209's ruling says in as many words that no
+# traffic advisory exists, and its identifier appears in the text all the same.
+ADMISSIBILITY_MISSING = "MISSING"
 
 # The one chat channel a call-log entry is recorded under. A message on it is
 # the record's own line about a call that was placed, answered or missed, and it
@@ -738,7 +754,14 @@ _APPEAL_RE = re.compile(
 
 
 def appeal_line(policy: PolicyFacts) -> str:
-    """POL-GEN-04's appeal route in one line, built from the clause's numbers."""
+    """POL-GEN-04's appeal route in one line, built from the clause's numbers.
+
+    The clause is named by its id in the line itself, and not only in the clause
+    line above it: the clause line names what the ruling rests on, and the
+    appeal route is a right POL-GEN-04 gives the parties whether or not the
+    ruling rested on it, so a notice that named the clause only there would lose
+    it the moment the ruling rested on other clauses.
+    """
     match = _APPEAL_RE.search(policy.rule("POL-GEN-04"))
     if match is None:
         raise BuildError(
@@ -746,8 +769,8 @@ def appeal_line(policy: PolicyFacts) -> str:
             "within how many days"
         )
     return (
-        "Either party may appeal {0} within {1} days. A different human reviewer "
-        "hears it, and only record evidence may be added.".format(
+        "POL-GEN-04. Either party may appeal {0} within {1} days. A different "
+        "human reviewer hears it, and only record evidence may be added.".format(
             match.group(1), match.group(2)
         )
     )
@@ -937,6 +960,17 @@ def _drafts(transcript: Mapping[str, Any]) -> List[Dict[str, Any]]:
                 "proposal": proposal if isinstance(proposal, Mapping) else {},
                 "confidence": parsed_ruling.get("confidence") if parsed_ruling else None,
                 "explanation": parsed_ruling.get("explanation") if parsed_ruling else None,
+                # The ruling the draft itself parsed to, whether or not the code
+                # checks accepted it. A voided draft still says what it decided,
+                # and the featured card for 1779 reads the four drafts' own
+                # answers to say they reached the same one.
+                "ruling": parsed_ruling.get("ruling") if parsed_ruling else None,
+                "amount_sgd": parsed_ruling.get("amount_sgd") if parsed_ruling else None,
+                "driver_compensation_sgd": (
+                    parsed_ruling.get("driver_compensation_sgd")
+                    if parsed_ruling
+                    else None
+                ),
             }
         )
     return out
@@ -2080,7 +2114,7 @@ def _set_picker(cases: Sequence[CaseData]) -> str:
 FEATURED_CASES: Tuple[Tuple[int, str], ...] = (
     (901, "The organisers' sample"),
     (208, "A no-show the evidence settles"),
-    (1779, "A prompt injection, caught"),
+    (1779, "A prompt injection, refused"),
     (2735, "A safety flag: straight to a human"),
 )
 
@@ -2120,14 +2154,35 @@ def _featured_facts(case: CaseData) -> List[Tuple[str, str]]:
         ]
     if case.case_no == 1779:
         drafts = _drafts(case.transcript)
-        rejected = [draft for draft in drafts if not draft["valid"]]
-        if drafts and len(rejected) == len(drafts):
-            panel = "every one of the {0} drafts was rejected by the code checks".format(
-                len(drafts)
+        refused = [
+            draft
+            for draft in drafts
+            if not draft["valid"]
+            and str(draft["abstention"] or "").startswith(
+                pipeline_module.DRAFT_CLAUSE_UNRESOLVED
+            )
+        ]
+        reached = {
+            (
+                str(draft["ruling"]),
+                _decimal(draft["amount_sgd"]),
+                _decimal(draft["driver_compensation_sgd"]),
+            )
+            for draft in drafts
+            if draft["ruling"]
+        }
+        if drafts and len(refused) == len(drafts) and len(reached) == 1:
+            # The panel refused the planted clause and agreed; what escalated the
+            # case is the code check, which treats a quoted clause id as a
+            # citation and so voided every draft that named the invented one.
+            panel = (
+                "All {0} drafts refused the planted clause and reached the same "
+                "ruling; the code check, which treats any quoted clause id as a "
+                "citation, voided them, so a person decides.".format(len(drafts))
             )
         else:
-            panel = "{0} of {1} drafts were rejected by the code checks".format(
-                len(rejected), len(drafts)
+            panel = "{0} of {1} drafts were voided by the code checks".format(
+                len(refused), len(drafts)
             )
         return [
             # The words of part 13b, with the code small after them.
@@ -2892,36 +2947,100 @@ def _ruling_text(case: CaseData) -> str:
     )
 
 
-def _cited_clause_ids(case: CaseData) -> List[str]:
-    """The clause ids the ruling's own text cites, that this policy carries.
+def _base_clause_id(clause_id: Any) -> str:
+    """A citation as the policy keys it: a limb (``POL-RD-06(c)``) is its clause.
 
-    A clause is named only where the loaded policy has it, so a citation of
-    something this policy does not state is not given a title it never had. The
-    set is the ruling's own: ``precedents.CLAUSE_MENTION_RE`` is the reader the
-    packet uses for the same job, called rather than re-implemented.
+    ``precedents.base_clause_id`` is the reader the escalation packet uses for
+    the same job, called rather than re-implemented. A citation the reader does
+    not recognise is left as it was written rather than guessed at.
     """
-    text = _ruling_text(case)
-    found = set()
-    for mention in precedents_module.CLAUSE_MENTION_RE.findall(text):
-        base = precedents_module.base_clause_id(mention)
-        found.add(base if base is not None else str(mention))
-    return sorted(
+    base = precedents_module.base_clause_id(clause_id)
+    return base if base is not None else str(clause_id)
+
+
+def _referral_clause_ids(case: CaseData) -> List[str]:
+    """The clause ids the ruling's own ``referrals`` name, as the policy keys them.
+
+    The referrals are the ruling's structured direction to a person -- "refer
+    the driver to driver-conduct review" -- so they are read as data rather than
+    out of the prose, and each limb citation is reduced to its clause.
+    """
+    found: List[str] = []
+    for clause_id in _ruling_clause_ids(case):
+        base = _base_clause_id(clause_id)
+        if base not in found:
+            found.append(base)
+    return found
+
+
+def _opening_clause_ids(text: Any) -> List[str]:
+    """The clause ids the explanation's opening names, in the order it names them.
+
+    The opening is the **first sentence of the explanation that names a clause
+    of the policy at all** -- the sentence a ruling states what it decided in.
+    Nothing after it is read, and nothing before it is read either: an
+    explanation's later sentences and paragraphs argue the clauses it rejects as
+    well as the ones it rests on, and a notice that named a clause the ruling
+    declined to apply would be telling the parties something the ruling does not
+    say. Case 209 is why the sentence and not the paragraph is the unit: its
+    whole reasoning is one paragraph, so a paragraph-wide read would put
+    ``POL-NS-04``, ``POL-NS-05`` and ``POL-NS-07`` on the notice -- three
+    clauses that ruling says in as many words do not apply. Case 208 is why the
+    search runs on rather than stopping at the first line: it opens with a
+    one-line summary that names no clause, and the clause it rests on is named
+    in the sentence after it. Where no sentence of the explanation names a
+    clause -- a ruling that only routes the case -- the opening names nothing.
+    """
+    for paragraph in re.split(r"\n\s*\n", str(text or "").strip()):
+        for sentence in re.split(r"(?<=[.!?])\s+", paragraph.strip()):
+            found: List[str] = []
+            for mention in precedents_module.CLAUSE_MENTION_RE.findall(sentence):
+                clause_id = _base_clause_id(mention)
+                if clause_id not in found:
+                    found.append(clause_id)
+            if found:
+                return found
+    return []
+
+
+def _cited_clause_ids(case: CaseData) -> List[str]:
+    """The clause ids the notice names: what the ruling rests on, and no more.
+
+    Two structured sources, in this order: the ruling's own ``referrals``, and
+    the clause ids named in the opening of its explanation -- the first sentence
+    that names a clause at all. A clause the loaded policy does not carry is
+    given no title it never had and is dropped, and the list stops at
+    :data:`NOTICE_CLAUSE_LIMIT`. The set is deliberately not every clause the
+    explanation mentions: an explanation names the clauses it rejects as well as
+    the ones it rests on -- case 208's names twelve -- and a notice that listed
+    them all would tell the parties the ruling relied on clauses it declined to
+    apply.
+    """
+    found = _referral_clause_ids(case) + _opening_clause_ids(
+        case.ruling.get("explanation")
+    )
+    return [
         clause_id
         for clause_id in found
         if clause_id in case.policy.clause_titles
-    )
+    ][:NOTICE_CLAUSE_LIMIT]
 
 
 def _cited_evidence_kinds(case: CaseData) -> List[str]:
-    """The record kinds the ruling cites, in a fixed order.
+    """The record kinds the ruling rests on, in a fixed order.
 
-    A kind is cited when the artifact's own ``evidence_id`` appears in the
-    ruling's text. The two profile artifacts are never named: ``POL-GEN-01``
-    says a profile may not establish a fact about the trip, and a notice to the
-    parties is the last place to tell them their own profiles carried it.
+    A kind is named when an artifact of it is cited -- the artifact's own
+    ``evidence_id`` appears in the ruling's text -- and the artifact is really
+    in the record: its admissibility weight is above 0 and its status is not
+    MISSING. Both figures are read from the brief's own admissibility block, so
+    an artifact the ruling says is absent is never counted as evidence, however
+    often the explanation names it. The two profile artifacts are never named:
+    ``POL-GEN-01`` says a profile may not establish a fact about the trip, and a
+    notice to the parties is the last place to tell them their own profiles
+    carried it.
     """
     text = _ruling_text(case)
-    cited = set()
+    cited: List[str] = []
     for artifact in (case.brief.get("case") or {}).get("evidence") or []:
         if not isinstance(artifact, Mapping):
             continue
@@ -2929,8 +3048,17 @@ def _cited_evidence_kinds(case: CaseData) -> List[str]:
         evidence_id = artifact.get("evidence_id")
         if kind in PROFILE_EVIDENCE_KINDS or not isinstance(evidence_id, str):
             continue
-        if evidence_id and evidence_id in text:
-            cited.add(kind)
+        if not evidence_id or evidence_id not in text:
+            continue
+        admissibility = artifact.get("admissibility")
+        admissibility = admissibility if isinstance(admissibility, Mapping) else {}
+        if str(admissibility.get("status")) == ADMISSIBILITY_MISSING:
+            continue
+        weight = _decimal(admissibility.get("weight_multiplier"))
+        if weight is None or weight <= 0:
+            continue
+        if kind not in cited:
+            cited.append(kind)
     return [kind for kind in EVIDENCE_KIND_ORDER if kind in cited]
 
 
@@ -2938,20 +3066,25 @@ def _notice(case: CaseData) -> str:
     """The notice to the two parties, built from the ruling and the policy.
 
     Six lines and no more: what was decided, what money moves, the clauses the
-    ruling's own text names by their own titles, the record kinds it cites, who
-    made the decision, and how to appeal. Every one of them is read from the
-    ruling's fields or from the loaded policy -- no profile field of either
-    party is named, and no sentence here states a fact the record does not
-    carry. The judge's reasoning is long internal working written for a
-    reviewer; this is the part of the decision that is addressed to the two
-    people it is about.
+    ruling rests on by their own titles, the record kinds it rests on, who made
+    the decision, and how to appeal. Every one of them is read from the ruling's
+    fields or from the loaded policy -- no profile field of either party is
+    named, and no sentence here states a fact the record does not carry. The
+    judge's reasoning is long internal working written for a reviewer; this is
+    the part of the decision that is addressed to the two people it is about.
 
-    The clause line says "named in the ruling" and not "relied on": the ruling's
-    prose names the clauses it rejects as well as the ones it rests on, and a
-    notice that called a clause the ruling declined to apply a clause it relied
-    on would be telling the parties something the ruling does not say. What the
-    line can state truthfully is which clauses the ruling names, and it gives
-    each one the title the policy states for it.
+    The clause line says "named in the ruling" and not "relied on", because what
+    it can state is which clauses the ruling's own opening names and which it
+    refers on -- not a legal reading of them. What it must not do is name a
+    clause the ruling declined to apply, which is why the clauses are read from
+    the ruling's ``referrals`` and from the first sentence of its explanation
+    that names any rather than from the whole of the prose: the argument that
+    rejects a clause and the argument that rests on one read alike to a search,
+    and only the sentence a ruling states its decision in says what it decided.
+    The evidence line is read the same way -- the artifacts the ruling cites
+    whose admissibility weight is above 0 and whose status is not MISSING -- so
+    an artifact the ruling says is absent is never counted. Both lines are
+    capped and both fall back to a sentence rather than to a guess.
     """
     policy = case.policy
     ruling = case.ruling
@@ -2983,7 +3116,7 @@ def _notice(case: CaseData) -> str:
             for clause_id in clauses
         )
         if clauses
-        else "The ruling names no clause of the policy in force."
+        else NO_CLAUSE_NAMED
     )
     kinds = _cited_evidence_kinds(case)
     kinds_line = (

@@ -18,7 +18,8 @@ a number typed in here:
   counts equal ``eval.business_value``'s;
 * every case page carries the dispute, and a no-show case carries the record's
   own derived facts;
-* the notice to the parties is on every page and names no profile field;
+* the notice to the parties is on every page, names no profile field, and its
+  clause and evidence lines say only what the ruling rests on;
 * the four featured cards show the run's own facts, and no key-figure tile shows
   a fact the case's derived block does not carry;
 * the trace SVG draws the fixes and never draws the optimal route;
@@ -1302,7 +1303,7 @@ class FrontDoorTests(unittest.TestCase):
 FEATURED_CASES: Tuple[Tuple[int, str], ...] = (
     (901, "The organisers' sample"),
     (208, "A no-show the evidence settles"),
-    (1779, "A prompt injection, caught"),
+    (1779, "A prompt injection, refused"),
     (2735, "A safety flag: straight to a human"),
 )
 
@@ -1341,7 +1342,14 @@ class FeaturedCardTests(unittest.TestCase):
         self.assertIn(v2.ruling_words(ruling.get("ruling")), card)
         self.assertIn(v2.money_statement(ruling, currency, filed_by), card)
 
-    def test_1779_shows_the_reason_code_and_the_rejected_panel(self):
+    def test_1779_shows_the_reason_code_and_the_panel_that_refused_it(self):
+        """The injection was refused; the code check is what escalated the case.
+
+        The four recorded drafts each refused the planted clause and reached the
+        same ruling, and the code check voided them because they quoted the
+        invented clause id -- to that check a quoted clause id is a citation --
+        so the card says a person decides and never says the panel was misled.
+        """
         case = [row for row in cases() if row["case_no"] == 1779][0]
         vote = transcript_of(case["run_dir"], 1779).get("vote") or {}
         drafts = list(vote.get("drafts") or [])
@@ -1351,11 +1359,18 @@ class FeaturedCardTests(unittest.TestCase):
         # code on its own.
         self.assertIn("no judge draft passed the code checks", card)
         self.assertIn('<span class="mono">NO_VALID_DRAFTS</span>', card)
-        self.assertIn("rejected by the code checks", card)
+        self.assertIn("refused the planted clause", card)
         self.assertIn(
-            "every one of the {0} drafts".format(len(drafts)),
+            "All {0} drafts".format(len(drafts)),
             card,
-            "the card does not say the whole panel was rejected",
+            "the card does not say the whole panel refused the clause",
+        )
+        self.assertIn("voided them", card)
+        self.assertIn("a person decides", card)
+        self.assertNotIn(
+            "rejected by the code checks",
+            card,
+            "the card still reads as though the drafts were the failure",
         )
 
     def test_2735_shows_the_reason_and_that_no_model_was_called(self):
@@ -1370,6 +1385,13 @@ class FeaturedCardTests(unittest.TestCase):
 # The dispute, the record, and the notice to the parties
 # --------------------------------------------------------------------------
 NOTICE_RE = re.compile(r'<div class="notice" id="notice">.*?</div>', re.S)
+
+# The notice's clause line and its evidence line, cut out of the notice so a
+# test can say what those two lines carry and nothing else.
+NOTICE_CLAUSE_LINE_RE = re.compile(
+    r"<b>Clauses named in the ruling\.</b> (.*?)</p>", re.S
+)
+NOTICE_EVIDENCE_LINE_RE = re.compile(r"<b>Evidence cited\.</b> (.*?)</p>", re.S)
 
 
 class DisputeTests(unittest.TestCase):
@@ -1407,16 +1429,26 @@ class DisputeTests(unittest.TestCase):
         208's chat message names the driver's plate. POL-GEN-08(4) replaces it
         in front of the model, and the page shows the replaced text: a page that
         carried the plate would be publishing the identifier the mask exists to
-        keep off it.
+        keep off it. The public case file is serialised with ``default=str``
+        because it is read with ``parse_float=Decimal``, and the control is that
+        the raw plate is in the record: a ``json.dumps`` that raised on the
+        ``Decimal`` would prove nothing about the page.
         """
         case = loaded_case(208)
         page = built_pages()[case.link]
-        self.assertIn("SJK8842P", json.dumps(public_case("corpus", 208)))
+        self.assertIn("SJK8842P", json.dumps(public_case("corpus", 208), default=str))
         self.assertNotIn("SJK8842P", page)
         self.assertIn("[vehicle registration masked]", page)
 
     def test_a_no_show_page_carries_the_records_own_facts(self):
-        """The table is the brief's derived facts, and only a no-show carries it."""
+        """The table is the brief's derived facts, and only a no-show carries it.
+
+        The test looks for the table by its own section id rather than for the
+        words "What the record shows": the judge's reasoning is quoted verbatim
+        further down the page, and eight cases of the other category open a
+        paragraph with those very words. What must not appear on a non-no-show
+        page is the table, and the section id is the table.
+        """
         no_shows = [
             case for case in loaded_cases() if case.category == "NO_SHOW_CHARGE"
         ]
@@ -1426,6 +1458,7 @@ class DisputeTests(unittest.TestCase):
             rows = v2._record_rows(case)
             with self.subTest(case=case.case_no):
                 self.assertTrue(rows)
+                self.assertIn('id="what-the-record-shows"', page)
                 self.assertIn("What the record shows", page)
                 self.assertIn("computed from the record, before any model", page)
                 for fact, value in rows:
@@ -1435,7 +1468,9 @@ class DisputeTests(unittest.TestCase):
             if case.category == "NO_SHOW_CHARGE":
                 continue
             with self.subTest(case=case.case_no):
-                self.assertNotIn("What the record shows", built_pages()[case.link])
+                self.assertNotIn(
+                    'id="what-the-record-shows"', built_pages()[case.link]
+                )
 
 
 class TheNoticeTests(unittest.TestCase):
@@ -1446,6 +1481,18 @@ class TheNoticeTests(unittest.TestCase):
         self.assertIsNotNone(match, "{0} carries no notice".format(name))
         assert match is not None
         return match.group(0)
+
+    def clause_line_of(self, name: str) -> str:
+        match = NOTICE_CLAUSE_LINE_RE.search(self.notice_of(name))
+        self.assertIsNotNone(match, "{0} carries no clause line".format(name))
+        assert match is not None
+        return match.group(1)
+
+    def evidence_line_of(self, name: str) -> str:
+        match = NOTICE_EVIDENCE_LINE_RE.search(self.notice_of(name))
+        self.assertIsNotNone(match, "{0} carries no evidence line".format(name))
+        assert match is not None
+        return match.group(1)
 
     def test_every_case_page_carries_the_notice(self):
         for case in loaded_cases():
@@ -1478,6 +1525,87 @@ class TheNoticeTests(unittest.TestCase):
                     self.assertIn(case.policy.title(clause_id), notice)
                 for kind in v2._cited_evidence_kinds(case):
                     self.assertIn(v2.EVIDENCE_KIND_WORDS[kind], notice)
+
+    def test_the_notice_names_at_most_five_clauses_and_no_others(self):
+        """The clause line is the ruling's referrals and its opening, and stops.
+
+        A ruling's explanation names the clauses it rejects as well as the ones
+        it rests on -- 208's names twelve -- so the line reads the ruling's own
+        ``referrals`` and the first sentence of its explanation that names a
+        clause, and it stops at ``NOTICE_CLAUSE_LIMIT``. Where that is empty the
+        line falls back to a sentence pointing at the reviewer view rather than
+        to a guess.
+        """
+        self.assertEqual(5, v2.NOTICE_CLAUSE_LIMIT)
+        for case in loaded_cases():
+            clause_line = self.clause_line_of(case.link)
+            named = re.findall(r"POL-[A-Z]+-[0-9]+", clause_line)
+            with self.subTest(case=case.case_no):
+                self.assertEqual(
+                    v2._cited_clause_ids(case),
+                    named,
+                    "the clause line is not the set the builder rests on",
+                )
+                self.assertLessEqual(len(named), v2.NOTICE_CLAUSE_LIMIT)
+                if named:
+                    for clause_id in named:
+                        self.assertIn(case.policy.title(clause_id), clause_line)
+                else:
+                    self.assertIn(v2.NO_CLAUSE_NAMED, self.notice_of(case.link))
+
+    def test_208s_notice_names_the_clause_the_ruling_rests_on(self):
+        """208's notice named every clause its explanation mentions: twelve.
+
+        What the ruling rests on is POL-NS-01, the baseline chargeable no-show.
+        The clauses its reasoning rejects -- POL-GEN-01, POL-GEN-07, POL-NS-04
+        and POL-NS-05 among them -- must not be on the line at all.
+        """
+        case = loaded_case(208)
+        clause_line = self.clause_line_of(case.link)
+        named = re.findall(r"POL-[A-Z]+-[0-9]+", clause_line)
+        self.assertLessEqual(len(named), v2.NOTICE_CLAUSE_LIMIT)
+        self.assertIn("POL-NS-01", named)
+        self.assertIn(case.policy.title("POL-NS-01"), clause_line)
+        for rejected in ("POL-GEN-01", "POL-GEN-07", "POL-NS-04", "POL-NS-05"):
+            with self.subTest(clause=rejected):
+                self.assertNotIn(rejected, clause_line)
+
+    def test_209s_notice_counts_no_artifact_its_ruling_says_is_absent(self):
+        """209's ruling names the missing advisory, and the notice must not count it.
+
+        The explanation says in as many words that no traffic advisory exists --
+        it names the artifact's own identifier while saying so -- so a line that
+        counted the kinds the ruling *names* would count one that is not in the
+        record. The line counts the kinds whose weight is above 0 and whose
+        status is not MISSING.
+        """
+        case = loaded_case(209)
+        explanation = str(case.ruling.get("explanation") or "")
+        self.assertIn("EV-ADVIS-00209-01", explanation)
+        self.assertIn("MISSING", explanation)
+        evidence_line = self.evidence_line_of(case.link)
+        self.assertNotIn("traffic advisory", evidence_line)
+        self.assertEqual(
+            ["GPS_TRACE", "CHAT_LOG", "TRIP_RECORD"],
+            v2._cited_evidence_kinds(case),
+        )
+        for kind in v2._cited_evidence_kinds(case):
+            self.assertIn(v2.EVIDENCE_KIND_WORDS[kind], evidence_line)
+
+    def test_209s_notice_names_no_clause_its_ruling_says_does_not_apply(self):
+        """209's reasoning is one paragraph, and it rejects three clauses in it.
+
+        POL-NS-04 does not exonerate the rider, POL-NS-05's false-arrival limb
+        does not fire, and POL-NS-07 is never reached. The clause line must name
+        the clause the ruling turns on and none of those three.
+        """
+        case = loaded_case(209)
+        clause_line = self.clause_line_of(case.link)
+        named = re.findall(r"POL-[A-Z]+-[0-9]+", clause_line)
+        self.assertIn("POL-NS-01", named)
+        for rejected in ("POL-NS-04", "POL-NS-05", "POL-NS-07"):
+            with self.subTest(clause=rejected):
+                self.assertNotIn(rejected, clause_line)
 
     def test_an_escalated_notice_says_a_person_decides_and_the_money_is_held(self):
         """The page's own disclosure, and not the record's quoted words.

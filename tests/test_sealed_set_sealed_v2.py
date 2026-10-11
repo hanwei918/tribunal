@@ -366,7 +366,7 @@ class SealedV2BundleDigestTests(unittest.TestCase):
         )
         self.assertEqual(
             2,
-            len([name for name, _digest in BUNDLE_FILES if "/external/" in name]),
+            len([name for name, _digest in BUNDLE_FILES if name.startswith("eval/external/")]),
             "the set's own bundle is not the archive's README and CANARY",
         )
 
