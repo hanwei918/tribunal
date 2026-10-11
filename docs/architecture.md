@@ -2,10 +2,11 @@
 
 The diagram is the whole arbitration system as it stands at the freeze tag
 `freeze-2026-10-09`, which is policy version 6, plus the post-sealed changes of
-2026-10-10, drawn as a **container view** in the C4 style: one dispute's path
-down the middle, the model provider and the measurement tooling on the left, the
-learning loop and the human operations on the right. Every element names the file
-that implements it, and every arrow is directed and labelled with what it carries.
+2026-10-10 and 2026-10-11, drawn as a **container view** in the C4 style: one
+dispute's path down the middle, the model provider and the measurement tooling on
+the left, the learning loop and the human operations on the right. Every element
+names the file that implements it, and every arrow is directed and labelled with
+what it carries.
 
 ![Tribunal architecture](architecture.svg)
 
@@ -14,6 +15,15 @@ outline is deterministic code, purple is a call to a language model, orange is a
 person or an operations step, grey is data or a record, green is the learning
 loop, and a grey dashed outline is an external system. A **solid** arrow carries
 every case; a **dashed** arrow or box is optional and is off at the freeze.
+
+**How it was checked.** Nothing may sit on text. Every label was given an
+estimated box -- its `x`, its `y`, its length times 0.55 times its font size for
+a width, and its font size for a height -- and no `<line>`, `<path>` or
+`<polygon>` segment crosses one, nor does one label's box overlap another's. The
+eleven badges' own numbers are read as part of their badge, not as labels. Every
+arrow down the middle of the diagram was re-drawn along the column's left edge,
+beside the numbered badges, and every label that had been written on its own
+arrow was moved clear of it, so the check returns nothing.
 
 ## One dispute, down the middle
 
@@ -70,13 +80,23 @@ verifier is called. It is drawn as a diamond because it decides, and its
 **flagged** branch is the blue ESCALATE line down the right side to step 11;
 its **no flag** branch goes to step 6. A reader can check `scope_gate_flags`,
 `scope_gate_ruling` and that the branch fires before any prompt is rendered.
+Beside it, dashed, is the **integrity gate**: with `--integrity-gate` on, the
+same module holds the assembled record to `POL-RD-10`'s limbs (2) and (4) -- the
+trip identifiers that must all match, and the pickup and dropoff timestamps that
+must not disagree -- and escalates a record that trips either, with no advocate,
+judge or verifier call at all. It is off by default, it is `ROUTE_DEVIATION`
+only, and its dashed arrow runs to the ESCALATE line.
 
 **6. Two advocates.** `prompts/v1/advocate.system.md` is one template; the only
 difference between the two advocates is the stance block,
 `prompts/v1/stance.rider.md` or `prompts/v1/stance.driver.md`. They run in
 parallel on the same brief, so the row carries a purple **LLM x2** badge. A
 reader can check `check_stance_only_difference` and that the rendered prompts
-differ in one region and nowhere else.
+differ in one region and nowhere else. Beside it, dashed, is the
+**advocate-effort** switch: `--advocate-effort none` makes the two advocate
+requests carry `reasoning_effort: none`, and leaves the judge's four drafts and
+the verifier's request exactly as they are. It is off by default, so a run
+without it sends the bytes it always sent.
 
 **7. Citation referee.** `tribunal/referee.py` is deterministic and decides no
 merits. It discards a claim whose evidence ids or clause ids do not resolve in
@@ -121,7 +141,11 @@ under `runs/`, one directory per set and per model. `tribunal/events.py` writes
 a hash-chained event log beside them in which every line carries the previous
 line's digest, and `tribunal/transcript.py` writes one entry per call with the
 prompt digests and the raw response. A reader can check `verify_chain` and that
-a run directory's chain verifies.
+a run directory's chain verifies. The **WorkBuddy connector** reads those records
+and nothing else: `integrations/workbuddy/` is a read-only MCP server that
+answers a support agent's questions about a case, a queue or a packet from the
+committed files, with no key and no network, and the solid arrow from Run records
+is that read.
 
 ## The left column
 
@@ -148,9 +172,13 @@ beside them: `eval/verify_drafts.py` re-checks a run's recorded drafts,
 `eval/verify_rationales.py` audits the answer key's hand-written rationales
 against the package's arithmetic, `eval/amount_rule.py` re-reduces the recorded
 drafts under a second reading rule, `eval/v6_runs.py` reads the version-6 batch,
-`eval/func_sets.py` reads the four functional sets, and `eval/early_majority.py`
+`eval/func_sets.py` reads the four functional sets, `eval/early_majority.py`
 replays the early-majority rule over every version-6 case and asserts the
-published ruling is unchanged. The **grade** arrow comes from the run records.
+published ruling is unchanged, `eval/integrity_gate.py` replays the
+record-integrity gate over every version-6 case and reports which records it
+would escalate, and `eval/advocate_effort.py` compares a run made with reasoning
+off against its baseline, case by case and field by field. The **grade** arrow
+comes from the run records.
 
 **Debate viewer.** `ui/build.py` turns each run's own transcript into the two
 views a person can look at -- each agent's words, in order, replayed from the
@@ -234,9 +262,9 @@ policy and that the kill switch moves an auto case into human review.
 
 **Notices and the support page.** `ui/v2/build.py` is the product view and the
 site's front door: for each case the ruling, the money and POL-GEN-04's own
-appeal route, built from the record with no model call. The **auto** arrow is the
-queue handing a case to it and **appealed** is an appeal coming back up to the
-appeal command.
+appeal route, built from the record with no model call, and the whole site is
+hosted on Tencent EdgeOne Pages. The **auto** arrow is the queue handing a case
+to it and **appealed** is an appeal coming back up to the appeal command.
 
 ## What the arrows carry
 

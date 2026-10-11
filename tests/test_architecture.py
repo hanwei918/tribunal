@@ -184,8 +184,7 @@ class TheDiagramSaysWhatItIsTests(unittest.TestCase):
     TITLE = "Tribunal - how one dispute is decided, and what happens after"
     SUBTITLE = (
         "Container view (C4 style) at freeze-2026-10-09, policy version 6, "
-        "plus the post-sealed changes of 2026-10-10. Each element names the "
-        "file that implements it."
+        "plus the post-sealed changes of 2026-10-10 and 2026-10-11."
     )
     LEGEND = (
         "Code, deterministic",
