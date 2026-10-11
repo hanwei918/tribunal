@@ -39,12 +39,27 @@ counted and not named.
 
 Every number is read, not typed
 -------------------------------
-Nothing in this module writes a figure into a template. The five queue figures,
-the amounts, the confidences, the confidence floor, the execution threshold, the
+Nothing in this module writes a figure into a template. The queue figures, the
+amounts, the confidences, the confidence floor, the execution threshold, the
 appeal window, the token prices and the wall clock are each read from the file
 that records them, and :func:`build` recomputes all of them from those files on
 every run. A number that cannot be read raises :class:`BuildError` and names
 what was missing rather than defaulting to something plausible.
+
+What the queue counts
+---------------------
+The queue's three routing counts are the three
+``python3 -m eval.business_value --report`` prints: decided and executed,
+decided with the amount held for a person to release under POL-GEN-05, and sent
+to a reviewer with no ruling at all. ``tests/test_ui_v2.py`` holds the page's
+three to that command's own reading of the same four runs, so the page cannot
+count a held case as an automatic one again.
+
+A case sent to a reviewer carries no ruling, so its disclosure says that no
+automatic ruling was made rather than describing a provisional one; the text it
+shows is labelled as the panel's drafts' reasoning where a panel ran, and as the
+pipeline's own routing sentence where the scope gate stopped before any judge was
+asked.
 
 Two builds are byte-identical
 -----------------------------
@@ -144,8 +159,11 @@ DIST_DIR = PROJECT_ROOT / "ui" / "dist"
 INDEX_PATH = DIST_DIR / "index.html"
 
 # The evaluation replay, one level down from this site's own pages. Every page
-# here links to it, and every page it builds links back to this queue.
+# here links to it, and every page it builds links back to this queue. It is the
+# **benchmark** replay at policy version 1 -- a historical record, not the
+# pipeline these pages show -- and the nav link names it as that.
 REPLAY_INDEX = "replay/index.html"
+REPLAY_LABEL = "Benchmark replay (policy v1)"
 
 # The four runs the queue is drawn from, in the order the set selector lists
 # them. The name is the run's name in ``eval.v6_runs``; the label is what a
@@ -299,9 +317,43 @@ FILED_BY_WORDS: Mapping[str, str] = {
 }
 
 # What a case sent to a reviewer says where a decided case carries its
-# provisional-ruling disclosure.
+# provisional-ruling disclosure. A case that went to a reviewer produced no
+# ruling at all, so the disclosure above would be a statement about a ruling
+# that was never made: the case says instead that nothing was decided
+# automatically, that the disputed amount is held, and that a person decides.
 NO_AUTOMATED_RULING = (
-    "No automated ruling was issued. A human reviewer decides this case."
+    "No automated ruling was made. The disputed amount is held, and a person "
+    "decides this case."
+)
+
+# The label the text a case sent to a reviewer carries is shown under. The text
+# the panel carried is the drafts' reasoning, and a case the scope gate stopped
+# before any judge has no drafts at all: its text is the pipeline's own routing
+# sentence, and it is labelled as that rather than as a panel's reasoning.
+DRAFTS_TEXT_LABEL = "From the judges' drafts' reasoning"
+ROUTING_TEXT_LABEL = "Why no automatic ruling was made"
+
+# The README's results section, linked from the queue. The queue's own figures
+# are development data, and the README is where the submission's figures -- the
+# three sealed sets among them -- are stated.
+README_RESULTS_LINK = "../../README.md#results"
+
+# What the queue page says the product is, and what the disputes on it are. Two
+# sentences about the system, and then the two disclosures: every dispute shown
+# is synthetic except the organisers' own sample, and the figures are
+# development data rather than a generalisation figure.
+WHAT_TRIBUNAL_DOES = (
+    "Tribunal decides one disputed trip from one evidence brief: two AI "
+    "advocates argue the same brief, a citation referee checks every claim, a "
+    "judge answers four times and its majority decides, and a person decides "
+    "what the panel cannot."
+)
+WHAT_THE_DISPUTES_ARE = (
+    "Every dispute shown here is a synthetic test case, except case 901, which "
+    "is the organisers' sample."
+)
+WHAT_THE_FIGURES_ARE = (
+    "These figures are development data, not a generalisation figure."
 )
 
 # The set order, as an index. The queue's row order is this order and then the
@@ -653,6 +705,31 @@ def appeal_line(policy: PolicyFacts) -> str:
 _REVIEW_TIME_RE = re.compile(
     r"decided within ([0-9]+) hours of entry, within ([0-9]+) hours for a safety flag"
 )
+
+
+def appeal_line_after_a_decision(policy: PolicyFacts) -> str:
+    """POL-GEN-04's route for a case a person has yet to decide.
+
+    The clause's numbers are the same ones :func:`appeal_line` reads, and they
+    are read the same way; what differs is that there is no ruling to appeal
+    yet, so the route is stated as the one that opens when a person has decided.
+    The sentence is deliberately not :func:`appeal_line`'s: that line is the one
+    a decided case carries, and a page that carried it on a case with no ruling
+    would be offering an appeal against a decision nobody made.
+    """
+    match = _APPEAL_RE.search(policy.rule("POL-GEN-04"))
+    if match is None:
+        raise BuildError(
+            "POL-GEN-04 no longer states how many times a party may appeal and "
+            "within how many days"
+        )
+    return (
+        "No ruling has been made yet, so there is nothing to appeal. POL-GEN-04: "
+        "after a person decides, either party may appeal it {0} within {1} days, "
+        "and a different human reviewer hears it.".format(
+            match.group(1), match.group(2)
+        )
+    )
 
 
 def review_time_limit(policy: PolicyFacts) -> str:
@@ -1096,10 +1173,20 @@ def read_every_case() -> List[CaseData]:
 # --------------------------------------------------------------------------
 @dataclass(frozen=True)
 class QueueFigures:
-    """The five figures across the top of the queue, and the reason-code tally."""
+    """The figures across the top of the queue, and the reason-code tally.
+
+    The decided cases are counted twice and never once: ``executed`` is the
+    money that executes on issue, ``held`` is the money POL-GEN-05 holds above
+    the execution threshold for a person to release, and ``reviewer`` is the
+    cases that produced no ruling at all. The three are the figures
+    ``python3 -m eval.business_value --report`` prints, and a test holds them to
+    it: the older page counted the held cases as automatic, which made the queue
+    and the command disagree about the same 151 cases.
+    """
 
     total: int
-    automatic: int
+    executed: int
+    held: int
     reviewer: int
     triggers: Mapping[str, int]
     median_seconds: Decimal
@@ -1109,8 +1196,12 @@ class QueueFigures:
     model: str
 
     @property
-    def automatic_share(self) -> str:
-        return _share(self.automatic, self.total)
+    def executed_share(self) -> str:
+        return _share(self.executed, self.total)
+
+    @property
+    def held_share(self) -> str:
+        return _share(self.held, self.total)
 
     @property
     def reviewer_share(self) -> str:
@@ -1118,10 +1209,15 @@ class QueueFigures:
 
 
 def queue_figures(cases: Sequence[CaseData]) -> QueueFigures:
-    """The five figures, each computed from the cases' own files."""
+    """The figures, each computed from the cases' own files."""
     if not cases:
         raise BuildError("the queue holds no cases")
-    automatic = [case for case in cases if case.trigger is None]
+    decided = [case for case in cases if case.trigger is None]
+    # A decided case whose money is above POL-GEN-05's execution threshold is
+    # issued but not executed: the amount is held for a person to release, and
+    # it is counted as held rather than as automatic, which is how
+    # ``eval.business_value`` counts it.
+    held = [case for case in decided if _money_is_held(case)]
     reviewer = [case for case in cases if case.trigger is not None]
     triggers = Counter(case.trigger for case in reviewer)
     walls: List[Decimal] = []
@@ -1159,7 +1255,8 @@ def queue_figures(cases: Sequence[CaseData]) -> QueueFigures:
         )
     return QueueFigures(
         total=len(cases),
-        automatic=len(automatic),
+        executed=len(decided) - len(held),
+        held=len(held),
         reviewer=len(reviewer),
         triggers={name: triggers.get(name, 0) for name in TRIGGER_ORDER},
         median_seconds=_median(walls),
@@ -1178,8 +1275,13 @@ _CSS = """
    when the system asks for no preference, and the dark palette below replaces
    it only when the system asks for dark. The status colours move with it, so a
    chip keeps the same contrast on either background. */
+/* 37a.6: the muted token is darker than the #6b7280 it was. That colour
+   measured 4.39:1 on the page background and 4.83:1 on a card, and 4.5:1 is the
+   floor body text is held to, so muted text on the page background was below
+   it. #5b6470 measures 5.45:1 on --bg, 6.00:1 on --card and 5.74:1 on --soft;
+   the three figures are recomputed from this file by tests/test_ui_v2.py. */
 :root{
-  --bg:#f3f4f6;--card:#ffffff;--line:#e5e7eb;--ink:#111827;--muted:#6b7280;
+  --bg:#f3f4f6;--card:#ffffff;--line:#e5e7eb;--ink:#111827;--muted:#5b6470;
   --soft:#f9fafb;--accent:#1d4ed8;--accent-wash:#e8effd;
   --ok:#15803d;--ok-wash:#dcfce7;--bad:#b91c1c;--bad-wash:#fee2e2;
   --warn:#92400e;--warn-wash:#fef3c7;--grey:#374151;--grey-wash:#f3f4f6;
@@ -1359,6 +1461,33 @@ textarea,input[type="text"]{font:inherit;color:inherit}
 .decision-fields select,.decision-fields input[type="text"]{font:inherit;color:inherit;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card)}
 .decision-fields select[multiple]{min-width:240px;vertical-align:top}
 .decision-fields .ev{display:inline-flex;align-items:center;gap:6px;margin:0 14px 6px 0;font-size:.9rem}
+
+/* 37a.5: a wide table scrolls inside its own container, and nothing else
+   overflows the page. The queue's table was clipped and could not scroll below
+   about 1230 px, and 23 case pages scrolled sideways at 390 px, so every table
+   now sits in a box that scrolls and every grid track is allowed to shrink. */
+html,body{max-width:100%}
+body{overflow-wrap:break-word}
+.tscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.wrap,.two,.maincol,.rail,.side,.card,.verdict,.tiles,.pagehead{min-width:0}
+.ids,.cap,.legend,.legend span,.kv span,.claim p,.tiles span{overflow-wrap:anywhere}
+svg{max-width:100%}
+pre{overflow-x:auto}
+
+/* the held reason, written under the chip as well as into its title */
+.held-why{display:block;color:var(--muted);font-size:.78rem;margin-top:4px}
+
+/* 37a.6: the header cells are buttons, so sorting is reachable by keyboard and
+   the state a sighted reader reads off the arrow is on the cell as aria-sort. */
+th .sort{appearance:none;border:0;background:transparent;color:inherit;font:inherit;
+  letter-spacing:inherit;text-transform:inherit;padding:0;cursor:pointer}
+th .sort::after{content:"\\2195";margin-left:6px;opacity:.6}
+th[aria-sort="ascending"] .sort::after{content:"\\2191"}
+th[aria-sort="descending"] .sort::after{content:"\\2193"}
+
+/* every control keeps a focus ring a reader can see */
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
 """
 
 _JS = """
@@ -1432,11 +1561,27 @@ _JS = """
       rows.forEach(function(row){ body.appendChild(row); });
     }
 
+    // The header cell says which column the rows are ordered by and which way,
+    // so a reader who cannot see the arrow is told the same thing.
+    function markSort(column){
+      each("th[data-column]", table).forEach(function(head){
+        var mine = head.getAttribute("data-column") === column;
+        head.setAttribute("aria-sort", mine ? (state.up ? "ascending" : "descending") : "none");
+      });
+    }
+
     each("th[data-column]", table).forEach(function(head){
       head.classList.add("sortable");
-      head.addEventListener("click", function(){
-        sortBy(head.getAttribute("data-column"));
-      });
+      function activate(){
+        var column = head.getAttribute("data-column");
+        sortBy(column);
+        markSort(column);
+      }
+      // The button in the cell is what a keyboard reaches -- Enter and Space
+      // fire its click -- and a header cell without one stays clickable.
+      var button = head.querySelector("button.sort");
+      if (button){ button.addEventListener("click", activate); }
+      else { head.addEventListener("click", activate); }
     });
 
     var chosen = {outcome: "all", set: "all"};
@@ -1668,12 +1813,15 @@ def _topbar(mode: str, current: str) -> str:
         if current == "queue"
         else '<a href="index.html">Queue</a>'
     )
+    # The replay beside this site is the benchmark replay at policy version 1:
+    # historical, and not the pipeline this page shows. The link says so, so a
+    # reader who follows it is not surprised by the version on the other side.
     replay = (
-        '<a href="{0}" class="on" aria-current="page">Evaluation replay</a>'.format(
-            REPLAY_INDEX
+        '<a href="{0}" class="on" aria-current="page">{1}</a>'.format(
+            REPLAY_INDEX, _text(REPLAY_LABEL)
         )
         if current == "replay"
-        else '<a href="{0}">Evaluation replay</a>'.format(REPLAY_INDEX)
+        else '<a href="{0}">{1}</a>'.format(REPLAY_INDEX, _text(REPLAY_LABEL))
     )
     return (
         '<header class="top">\n<div class="top-in">\n'
@@ -1759,6 +1907,12 @@ def _queue_row(case: CaseData) -> str:
     # itself stays short so the row's height cannot change, and the figure is one
     # hover away rather than cut off.
     held = held_reason(case) if _money_is_held(case) else ""
+    # The reason a held amount is held is written under the chip as well as
+    # into its title: a tooltip is not text a reader who cannot hover is told,
+    # and the row is where the reader meets the case.
+    status_cell = status_chip(case)
+    if held:
+        status_cell += '<span class="held-why">{0}</span>'.format(_text(held))
     cells = (
         (
             "case",
@@ -1788,7 +1942,7 @@ def _queue_row(case: CaseData) -> str:
             "Amount contested",
             "",
         ),
-        ("status", status_chip(case), case.outcome_kind, "Status", held),
+        ("status", status_cell, case.outcome_kind, "Status", held),
         ("outcome", _text(outcome), str(case.ruling.get("ruling")), "Outcome", ""),
         ("confidence", _text(confidence_text), confidence_text, "Confidence", ""),
         (
@@ -1816,6 +1970,14 @@ def _queue_row(case: CaseData) -> str:
 
 
 def _queue_head() -> str:
+    """The header row: a button per column, so sorting is reachable by keyboard.
+
+    A ``th`` with a click handler is not a control: it cannot be tabbed to and a
+    reader who cannot see it is not told it does anything. Each column carries a
+    real button instead, and the header cell's ``aria-sort`` says which column
+    the rows are ordered by and which way -- the state a sighted reader reads off
+    the arrow.
+    """
     columns = (
         ("case", "Case"),
         ("category", "Category"),
@@ -1828,7 +1990,10 @@ def _queue_head() -> str:
     )
     return "<tr>{0}</tr>".format(
         "".join(
-            '<th data-column="{0}">{1}</th>'.format(_attribute(name), _text(label))
+            '<th data-column="{0}" aria-sort="none">'
+            '<button type="button" class="sort" data-column="{0}">{1}</button></th>'.format(
+                _attribute(name), _text(label)
+            )
             for name, label in columns
         )
     )
@@ -1962,22 +2127,36 @@ def build_index(cases: Sequence[CaseData]) -> str:
     header = (
         '<header class="pagehead">\n'
         "<h1>Today's disputes</h1>\n"
-        '<p class="lede">A replay of the version-6 runs committed in this '
-        "repository; no page calls a model. Every number is read from the run's "
-        "own files.</p>\n"
+        '<p class="lede">{0}</p>\n'
+        '<p class="lede">{1} {2} A replay of the version-6 runs committed in '
+        "this repository; no page calls a model, and every number is read from "
+        "the run's own files. <a href=\"{3}\">The README's results</a>.</p>\n"
         "</header>\n"
+    ).format(
+        _text(WHAT_TRIBUNAL_DOES),
+        _text(WHAT_THE_DISPUTES_ARE),
+        _text(WHAT_THE_FIGURES_ARE),
+        _attribute(README_RESULTS_LINK),
     )
     figure_html = '<div class="figures">' + "".join(
         (
             _figure(
-                "Decided automatically",
-                "{0} of {1}".format(figures.automatic, figures.total),
-                "{0} of the queue".format(figures.automatic_share),
+                "Decided and executed",
+                "{0} of {1}".format(figures.executed, figures.total),
+                "{0} of the queue, executed on issue (POL-GEN-05)".format(
+                    figures.executed_share
+                ),
+            ),
+            _figure(
+                "Decided, amount held for a person to release",
+                "{0} of {1}".format(figures.held, figures.total),
+                "{0} of the queue, held above the POL-GEN-05 execution "
+                "threshold".format(figures.held_share),
             ),
             _figure(
                 "Sent to a reviewer",
                 "{0} of {1}".format(figures.reviewer, figures.total),
-                "{0} of the queue".format(figures.reviewer_share),
+                "{0} of the queue, no ruling issued".format(figures.reviewer_share),
             ),
             _trigger_card(figures),
             _figure("Median time per case", _seconds(figures.median_seconds), "wall clock"),
@@ -2003,9 +2182,13 @@ def build_index(cases: Sequence[CaseData]) -> str:
         "</div>\n".format(_set_picker(cases), len(cases))
     )
     rows = "".join(_queue_row(case) for case in cases)
+    # The table scrolls inside its own box. The card clips what it holds, so
+    # without the box the table was cut off below about 1230 px with no way to
+    # reach the columns past the edge.
     table = (
-        '<div class="card wide">\n<table id="queue">\n<thead>{0}</thead>\n'
-        "<tbody>{1}</tbody>\n</table>\n</div>\n".format(_queue_head(), rows)
+        '<div class="card wide">\n<div class="tscroll"><table id="queue">\n'
+        "<thead>{0}</thead>\n"
+        "<tbody>{1}</tbody>\n</table></div>\n</div>\n".format(_queue_head(), rows)
     )
     body = (
         _topbar(_mode_text(figures.policy_version, figures.model), "queue")
@@ -2588,9 +2771,11 @@ def _verdict_card(case: CaseData) -> str:
     """The verdict card: the outcome on the left, the key figures on the right.
 
     The left column carries the outcome in large type, the code and the clauses
-    the ruling cites, the opening of the judge's explanation verbatim, and -- on
-    a decided case -- POL-GEN-04's appeal route; on a case sent to a reviewer it
-    carries the reviewer line instead, because there is no ruling to appeal.
+    the ruling cites, the opening of the judge's text verbatim, and -- on a
+    decided case -- POL-GEN-04's appeal route; on a case sent to a reviewer it
+    carries the reviewer line instead, because there is no ruling to appeal, and
+    its disclosure says that no automatic ruling was made rather than that one
+    was.
     """
     policy = case.policy
     ruling = case.ruling
@@ -2601,13 +2786,22 @@ def _verdict_card(case: CaseData) -> str:
             trigger_words(str(case.trigger), case.votes), case.trigger, strong=True
         )
         summary = _summary_paragraphs((case.packet or {}).get("explanation"))
-        after = "No automated ruling was issued. {0}".format(review_time_limit(policy))
+        after = "No automated ruling was made. {0}".format(review_time_limit(policy))
+        disclosure = NO_AUTOMATED_RULING
+        # The text a case that went to a reviewer carries is the panel's drafts'
+        # reasoning where there was a panel, and the pipeline's own routing
+        # sentence where the scope gate stopped before any judge was asked.
+        summary_label = (
+            DRAFTS_TEXT_LABEL if _drafts(case.transcript) else ROUTING_TEXT_LABEL
+        )
         details = ""
         note = ""
     else:
         headline = _coded(ruling_words(value), value, strong=True)
         summary = _summary_paragraphs(ruling.get("explanation"))
         after = "How to appeal: {0}".format(appeal_line(policy))
+        disclosure = DISCLOSURE
+        summary_label = "From the judge's explanation"
         details = (
             "<details><summary>Read POL-GEN-04 in full</summary>"
             "<blockquote>{0}</blockquote></details>".format(
@@ -2627,7 +2821,9 @@ def _verdict_card(case: CaseData) -> str:
     )
     summary_block = ""
     if summary:
-        summary_block = '<p class="lbl">From the judge\'s explanation</p>' + "".join(
+        summary_block = '<p class="lbl">{0}</p>'.format(
+            _text(summary_label)
+        ) + "".join(
             '<p class="why">{0}</p>'.format(_text(paragraph))
             for paragraph in summary.split("\n\n")
         )
@@ -2657,7 +2853,7 @@ def _verdict_card(case: CaseData) -> str:
         "{9}"
         "</div>"
     ).format(
-        _text(DISCLOSURE),
+        _text(disclosure),
         headline,
         clause_line,
         _text(money_statement(ruling, policy.currency, dispute.get("filed_by"))),
@@ -3254,18 +3450,21 @@ def _review_tab(case: CaseData) -> str:
         "<h3>The trigger</h3><p>outcome {4} &middot; threshold {5} &middot; valid {6} "
         "&middot; votes {7} &middot; agreement {8} &middot; unanimous {9}</p>"
         "<h3>The judge's explanation, verbatim</h3><blockquote>{10}</blockquote>"
-        "<h3>The drafts</h3><table><thead><tr><th>Draft</th><th>Ruling</th>"
+        "<h3>The drafts</h3>"
+        '<div class="tscroll"><table><thead><tr><th>Draft</th><th>Ruling</th>'
         "<th>Amount</th><th>Confidence</th><th>State</th><th>Abstention</th></tr>"
-        "</thead><tbody>{11}</tbody></table>"
+        "</thead><tbody>{11}</tbody></table></div>"
         "<h3>The advocate briefs, as the packet carries them</h3><ul>{12}</ul>"
-        "<h3>The admissibility report</h3><table><thead><tr><th>Artifact</th>"
+        "<h3>The admissibility report</h3>"
+        '<div class="tscroll"><table><thead><tr><th>Artifact</th>'
         "<th>Type</th><th>Source</th><th>Status</th><th>Weight</th></tr></thead>"
-        "<tbody>{13}</tbody></table>"
+        "<tbody>{13}</tbody></table></div>"
         "<h3>Every clause id relied on</h3><p class=\"mono\">{14}</p>"
         "<h3>The ruling</h3><p>{15} &middot; amount {16} &middot; driver {17} &middot; "
         "confidence {18}</p>"
-        "<h3>The timeline</h3><table><thead><tr><th>Time</th><th>Event</th>"
-        "<th>Role or draft</th><th>Seconds</th></tr></thead><tbody>{19}</tbody></table>"
+        "<h3>The timeline</h3>"
+        '<div class="tscroll"><table><thead><tr><th>Time</th><th>Event</th>'
+        "<th>Role or draft</th><th>Seconds</th></tr></thead><tbody>{19}</tbody></table></div>"
         "</div>"
     ).format(
         _text(digest),

@@ -24,7 +24,10 @@ JavaScript inline. No framework, no CDN, no external request of any kind, so it
 opens from ``file://`` on a laptop with no internet on a projector at Demo Day,
 and serves unchanged from GitHub Pages once the repository is public. The replay
 sits under ``replay/`` because the site's root is the product view
-``ui/v2/build.py`` writes; every page here carries a link back to that queue. The
+``ui/v2/build.py`` writes; every page here carries a link back to that queue, and
+every page carries the banner in :data:`REPLAY_BANNER` -- this site is a
+**historical** benchmark replay, at the policy version its own runs were made at,
+and the product view is the pipeline a reader is looking for. The
 build is deterministic: the same inputs produce the same bytes, and
 ``tests/test_ui_build.py`` requires the committed file to equal a fresh build,
 because the lesson of this repository is that a stored artefact must not be
@@ -214,6 +217,19 @@ FREEZE_TAGS = {
 # set; the second names its two cases, so it is attached to those cases only.
 THE_SEALED_RUN_NOTE = "docs/notes/2026-09-30-the-sealed-run.md"
 THE_SECOND_SEALED_RUN_NOTE = "docs/notes/2026-10-04-the-second-sealed-run.md"
+
+# The banner every page here carries, and why it is on all of them. This site is
+# a **historical** record: the corpus page replays a policy-version-1 run made
+# on 2026-09-27, and the runs beside it are their own committed runs at the
+# versions their registrations fix. The product view -- the site's root, which
+# every page here links back to -- is the policy-version-6 pipeline, and the two
+# figures named in the second sentence are the ones it shows: the corpus at
+# version 6 and the third sealed set's agreement. A reader who took this page's
+# figures for the product's would be reading a figure about an older pipeline.
+REPLAY_BANNER = (
+    "Historical benchmark replay at policy version 1. The product view shows "
+    "policy version 6: corpus 26/29; sealed-v1 21/24 agreement."
+)
 
 
 @dataclass(frozen=True)
@@ -426,8 +442,8 @@ def _build_pages() -> Dict[str, ViewerPage]:
             policy_version=1,
             load_case=_ryde_case_loader(RYDE_RUN_DIR),
             summary=(
-                "the organisers' sample case, re-run under the current "
-                "pipeline; it is not in any answer key and is not graded"
+                "the organisers' sample case, re-run on 2026-09-29 at policy "
+                "version 1; it is not in any answer key and is not graded"
             ),
             title="Tribunal - debate viewer - the organisers' sample case",
             brand="Tribunal - debate viewer - the organisers' sample case",
@@ -2335,6 +2351,11 @@ footer.prov b { color: var(--text); font-weight: 600; }
   border-radius: 8px; background: rgba(216,167,42,0.07); font-size: 13.5px; }
 .lead { color: var(--muted); max-width: 78ch; }
 .hint { color: var(--muted); font-size: 12.5px; margin-top: 10px; }
+/* The banner every page here carries: this site is a historical replay, and the
+   product view it links back to is the policy-version-6 pipeline. */
+.replay-banner { margin: 0 0 12px; padding: 10px 14px; border: 1px solid var(--line);
+  border-left-width: 4px; border-radius: 8px; background: var(--panel-2);
+  color: var(--text); font-size: 13.5px; }
 
 /* ---- the judge's vote ------------------------------------------------- */
 /* A ruling one draft reached and a ruling four drafts agreed on look the same
@@ -4699,6 +4720,7 @@ _BODY = """
   <span class="badge">{badge}</span>
 </header>
 <main>
+  <p class="replay-banner">{banner}</p>
   <noscript>
     <p>This viewer renders itself from data embedded in this file, so it needs
     JavaScript enabled. It makes no network request of any kind.</p>
@@ -4718,14 +4740,15 @@ _BODY = """
 def _body(set_block: Mapping[str, Any]) -> str:
     """The static half of one page, with the set's own words in it.
 
-    Only three things here are the set's: the brand, the badge, and where the
-    Runs link points. Everything else the page says about the set comes out of
-    the data block, so the behavioural script is the same bytes on every page
-    and the appendChild scan has one script to read rather than five.
+    Only four things here are the set's: the brand, the badge, where the Runs
+    link points, and the banner. Everything else the page says about the set
+    comes out of the data block, so the behavioural script is the same bytes on
+    every page and the appendChild scan has one script to read rather than five.
     """
     return _BODY.format(
         brand=_escape_html(set_block.get("brand") or "Tribunal - debate viewer"),
         badge=_escape_html(set_block.get("badge") or "replay of a committed run"),
+        banner=_escape_html(REPLAY_BANNER),
         runs_index_link=_escape_html(set_block.get("runs_index_link") or "runs/index.html"),
         queue_link=_escape_html(set_block.get("queue_link") or "../index.html"),
     )
@@ -4891,6 +4914,7 @@ def render_index(documents: Mapping[str, Mapping[str, Any]]) -> str:
             '  <a class="runs-link" href="../../index.html">Queue</a>\n'
             "</header>\n",
             "<main>\n",
+            '<p class="replay-banner">' + _escape_html(REPLAY_BANNER) + "</p>\n",
             "<h1>The runs</h1>\n",
             '<p class="lead">Every run the viewer draws, with the figure its own '
             "page reports. Each figure is computed from that run, and the two "

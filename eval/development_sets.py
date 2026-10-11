@@ -213,7 +213,12 @@ CORPUS = DevelopmentSet(
     key_path=CORPUS_KEY_PATH,
     runs_subdir=None,
     case_root=None,
-    summary="the 29-case corpus the submission's headline figure is computed on",
+    summary=(
+        "the 29-case corpus at policy version 1, run on 2026-09-27; it is a "
+        "historical benchmark replay and not the product view -- 28 of the 29 "
+        "cases are a judge-only replay, where the advocates' outputs were "
+        "replayed from an earlier run and only the judge was called"
+    ),
 )
 
 SECOND_SET = DevelopmentSet(
@@ -254,9 +259,8 @@ SEALED_SET = DevelopmentSet(
         "from real complaints, "
         "prepared by their author as a development set; nobody who changed the "
         "system opened them before the freeze tagged freeze-2026-09-30, and they "
-        "were run once from that tag; that single run is one of the two "
-        "generalisation figures the submission reports, the other being the "
-        "second sealed set's"
+        "were run once from that tag; that single run is one of the three sealed "
+        "generalisation figures the submission reports"
     ),
     sealed=True,
 )
@@ -495,8 +499,8 @@ WILD_V2 = DevelopmentSet(
         "the owner and imported on 2026-10-03; it was run once from a commit "
         "whose tribunal/, prompts/ and policy/ trees equal those at "
         "freeze-2026-10-03, at the policy version 2 this registration fixes, and "
-        "that single run is one of the two generalisation figures the submission "
-        "reports"
+        "that single run is one of the three sealed generalisation figures the "
+        "submission reports"
     ),
     sealed=True,
     policy_version=2,
@@ -686,7 +690,7 @@ SEALED_SET_CAVEAT = (
     "The held-out set is not a development set and is never added to the "
     "combined figure above. It was drafted without access to this repository "
     "and is run exactly once from the commit tagged freeze-2026-09-30; that "
-    "single run is one of the two generalisation figures the submission "
+    "single run is one of the three sealed figures the submission "
     "reports. It "
     "is absent from data/index.json and is graded against "
     "eval/answers/wild/ground_truth.json, which is neither development key."
@@ -703,8 +707,8 @@ WILD_V2_CAVEAT = (
     "exactly once, on 2026-10-04, from a commit whose tribunal/, prompts/ and "
     "policy/ trees equal those at freeze-2026-10-03 -- every event the run "
     "wrote records the commit it was made from -- at the policy version 2 its "
-    "registration fixes; that single run is one of the two generalisation "
-    "figures the submission reports. It is absent from data/index.json and is "
+    "registration fixes; that single run is one of the three sealed figures the "
+    "submission reports. It is absent from data/index.json and is "
     "graded against eval/answers/wild-v2/ground_truth.json, which is neither "
     "development key and not the held-out set's key either."
 )

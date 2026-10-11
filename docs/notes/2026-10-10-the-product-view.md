@@ -220,3 +220,55 @@ times — once with every file open recorded, once more for the byte-identity
 check, and once through `python3 -m ui.v2.build --check` on the command line —
 and memoises what it read, so no test builds the site for itself. **No test was
 run here**; the owner runs them outside the sandbox.
+
+## Part 37a: the site says one thing everywhere (2026-10-11)
+
+**The queue's routing counts are `eval.business_value`'s.** The queue said
+"decided automatically 125 of 151 (82.8%)", because `queue_figures` counted the
+13 cases whose money `POL-GEN-05` holds above the execution threshold as
+automatic. `python3 -m eval.business_value --report` counts them separately, and
+that command is where the README's business-value rows come from, so the page now
+shows its three figures as three tiles: **decided and executed 112**, **decided
+with the amount held for a person to release 13**, **sent to a reviewer 26**. The
+reason an amount is held is printed in the row as well as in the status cell's
+`title`, and `tests/test_ui_v2.py` holds the page's three counts to
+`eval.business_value.lanes()`.
+
+**What the site is.** The queue's head says what Tribunal does — two AI
+advocates argue one evidence brief, a citation referee checks every claim, a
+judge answers four times and its majority decides, and a person decides what the
+panel cannot — and that every dispute shown is a synthetic test case except case
+901, the organisers' sample. It says the figures are development data and links
+the README's results.
+
+**The replay is historical.** The replay pages called the policy-version-1 corpus
+run "the submission's headline figure", called the wild runs "one of the two
+generalisation figures", and showed 901 "re-run under the current pipeline". The
+corpus summary now says what that run is — policy version 1, run 2026-09-27, a
+judge-only replay for 28 of the 29 cases — the sealed summaries say "one of the
+three sealed generalisation figures", the sample case is "re-run on 2026-09-29 at
+policy version 1", and every replay page carries the banner: *Historical
+benchmark replay at policy version 1. The product view shows policy version 6:
+corpus 26/29; sealed-v1 21/24 agreement.* The product view's nav link to it is
+renamed **Benchmark replay (policy v1)**.
+
+**Escalated pages.** A case sent to a reviewer produced no ruling, so it no
+longer carries the provisional-ruling disclosure; it says instead that no
+automated ruling was made, that the disputed amount is held and that a person
+decides. Its text is labelled as the drafts' reasoning where a panel ran, and as
+the pipeline's own routing sentence where the scope gate stopped before any judge
+was asked.
+
+**Layout and accessibility.** Every wide table sits in a container that scrolls
+(`.tscroll`) and every grid track may shrink, so the queue's table is no longer
+clipped at about 1230 px and a case page does not scroll sideways on a phone.
+The muted token was `#6b7280`, which measured 4.39:1 on the page background —
+below the 4.5:1 floor body text is held to; it is now `#5b6470`, which measures
+5.45:1 on `--bg`, 6.00:1 on `--card` and 5.74:1 on `--soft`, and the test
+recomputes all three figures from the stylesheet. The queue's header cells carry
+buttons, so sorting is reachable by keyboard, and the cell's `aria-sort` says
+which column the rows are ordered by and which way.
+
+**Two builders, one rebuild each.** `python3 -m ui.v2.build` wrote all 152 pages
+and `python3 -m ui.build` all six replay pages; no test was run here, and no
+model was called.

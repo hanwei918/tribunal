@@ -14,7 +14,8 @@ a number typed in here:
   sealed path;
 * for every case page, the ruling, the two amounts and the confidence shown
   equal the case file's;
-* the queue's five figures equal what the run files give;
+* the queue's figures equal what the run files give, and its three routing
+  counts equal ``eval.business_value``'s;
 * the four featured cards show the run's own facts, and no key-figure tile shows
   a fact the case's derived block does not carry;
 * the trace SVG draws the fixes and never draws the optimal route;
@@ -194,6 +195,33 @@ def tokens_of(run_dir: Path, case_no: int) -> Tuple[int, int, int]:
         cached += int(entry.get("cached_tokens") or 0)
         completion += int(entry.get("completion_tokens") or 0)
     return prompt, cached, completion
+
+
+def monetary_effect(ruling: Mapping[str, Any]) -> Decimal:
+    """The money one ruling moves, read the way ``POL-GEN-05`` reads it.
+
+    POL-GEN-03 states the one exception: on a ``DRIVER_COMPENSATION`` ruling
+    ``amount_sgd`` carries the same figure as ``driver_compensation_sgd``, and
+    it is the amount the ruling moves rather than a second payment, so it is
+    counted once. On every other ruling the two are independent and are added.
+    """
+
+    def value(cell: Any) -> Decimal:
+        if cell is None or isinstance(cell, bool):
+            return Decimal(0)
+        return Decimal(str(cell))
+
+    amount = value(ruling.get("amount_sgd"))
+    driver = value(ruling.get("driver_compensation_sgd"))
+    if ruling.get("ruling") == "DRIVER_COMPENSATION" and driver:
+        return driver
+    return amount + driver
+
+
+def execution_threshold() -> Decimal:
+    """POL-GEN-05's own figure, read from the policy file the pages quote."""
+    general = read_json(PROJECT_ROOT / "policy" / "v3" / "general.json")
+    return Decimal(str(general["execution_threshold_sgd"]))
 
 
 def cost_of(run_dir: Path, case_no: int) -> Decimal:
@@ -554,6 +582,19 @@ class SelfContainedTests(unittest.TestCase):
                             "the replay page {0} is not committed".format(url),
                         )
                         continue
+                    if url == v2.README_RESULTS_LINK:
+                        # The one link out of the site: the queue says its
+                        # figures are development data and points at the
+                        # README, which is one directory above the site's root.
+                        target = (v2.DIST_DIR / url.split("#", 1)[0]).resolve()
+                        self.assertTrue(
+                            target.is_file(),
+                            "the README link {0} resolves to nothing".format(url),
+                        )
+                        self.assertEqual(
+                            PROJECT_ROOT / "README.md", target
+                        )
+                        continue
                     self.assertIn(url, names, "{0} links to {1}, which is not a page".format(name, url))
 
     def test_no_page_fetches_anything_at_runtime(self):
@@ -820,8 +861,11 @@ class CasePageFiguresTests(unittest.TestCase):
             with self.subTest(case=case["case_no"]):
                 if case["trigger"] is not None:
                     # A case sent to a reviewer has no ruling to be confident in,
-                    # so the bar is replaced by the reason in words.
-                    self.assertIn("No automated ruling was issued.", page)
+                    # so the bar is replaced by the reason in words -- and the
+                    # disclosure says no ruling was made, rather than describing
+                    # a provisional ruling that does not exist.
+                    self.assertIn(v2.NO_AUTOMATED_RULING, page)
+                    self.assertNotIn(v2.DISCLOSURE, page)
                     self.assertNotIn('role="img"', page)
                     continue
                 confidence = inner_ruling(case["document"]).get("confidence")
@@ -863,13 +907,21 @@ TRIGGER_WORDS: Mapping[str, str] = {
 
 
 class QueueFiguresTests(unittest.TestCase):
-    """The five figures, recomputed from the run files and compared."""
+    """The figures, recomputed from the run files and compared."""
+
+    def held(self, row: Mapping[str, Any]) -> bool:
+        """Whether POL-GEN-05 holds this case's money for a person to release."""
+        if row["trigger"] is not None:
+            return False
+        return monetary_effect(inner_ruling(row["document"])) > execution_threshold()
 
     def figures(self) -> Dict[str, Any]:
         rows = cases()
         total = len(rows)
         reviewer = [row for row in rows if row["trigger"] is not None]
-        automatic = total - len(reviewer)
+        decided = [row for row in rows if row["trigger"] is None]
+        held = [row for row in decided if self.held(row)]
+        executed = len(decided) - len(held)
         counts = {name: 0 for name in TRIGGERS}
         for row in reviewer:
             counts[row["trigger"]] += 1
@@ -892,8 +944,12 @@ class QueueFiguresTests(unittest.TestCase):
         vote_count = votes.pop()
         return {
             "total": str(total),
-            "automatic": "{0} of {1}".format(automatic, total),
-            "automatic_share": "{0:.1f}%".format(Decimal(automatic) * 100 / Decimal(total)),
+            "executed": "{0} of {1}".format(executed, total),
+            "executed_share": "{0:.1f}%".format(
+                Decimal(executed) * 100 / Decimal(total)
+            ),
+            "held": "{0} of {1}".format(len(held), total),
+            "held_share": "{0:.1f}%".format(Decimal(len(held)) * 100 / Decimal(total)),
             "reviewer": "{0} of {1}".format(len(reviewer), total),
             "reviewer_share": "{0:.1f}%".format(Decimal(len(reviewer)) * 100 / Decimal(total)),
             "triggers": [
@@ -907,7 +963,7 @@ class QueueFiguresTests(unittest.TestCase):
             "model": models.pop(),
         }
 
-    def test_the_queue_shows_the_five_figures_the_run_files_give(self):
+    def test_the_queue_shows_the_figures_the_run_files_give(self):
         figures = self.figures()
         text = index_text()
         for key, value in sorted(figures.items()):
@@ -915,6 +971,61 @@ class QueueFiguresTests(unittest.TestCase):
                 continue
             with self.subTest(figure=key):
                 self.assertIn(value, text, "{0} is not on the queue page".format(key))
+
+    def test_the_three_routing_counts_are_business_values_own_numbers(self):
+        """The queue's three counts, against the command that prints them.
+
+        The page counted the 13 cases whose money POL-GEN-05 holds as decided
+        automatically, so the queue said 125 where ``python3 -m
+        eval.business_value --report`` says 112 decided, 13 held and 26 with no
+        ruling. The test reads that command's own reading of the same four runs
+        and holds the page to it, so the two cannot drift apart again.
+        """
+        from eval import business_value
+
+        automatic, human, escalations, held = business_value.lanes()
+        figures = self.figures()
+        self.assertEqual("{0} of 151".format(automatic), figures["executed"])
+        self.assertEqual("{0} of 151".format(held), figures["held"])
+        self.assertEqual("{0} of 151".format(escalations), figures["reviewer"])
+        # The three counts partition the queue, which is what makes them the
+        # three tiles rather than three readings of two overlapping sets.
+        self.assertEqual(151, automatic + held + escalations)
+        self.assertEqual(human, held + escalations)
+        text = index_text()
+        for count in (automatic, held, escalations):
+            with self.subTest(count=count):
+                self.assertIn("{0} of 151".format(count), text)
+
+    def test_the_three_tiles_say_what_each_count_is(self):
+        text = index_text()
+        for label in (
+            "Decided and executed",
+            "Decided, amount held for a person to release",
+            "Sent to a reviewer",
+        ):
+            with self.subTest(label=label):
+                self.assertIn('<p class="k">{0}</p>'.format(label), text)
+        self.assertIn("POL-GEN-05", text)
+
+    def test_the_queue_prints_the_held_reason_in_the_row(self):
+        """The reason is text in the row, not only a tooltip.
+
+        The figure and the threshold it crossed were in the status cell's
+        ``title``, which a reader who cannot hover is never told.
+        """
+        held = [case for case in loaded_cases() if v2._money_is_held(case)]
+        self.assertTrue(held, "no case has a held amount to check")
+        queue = built_pages()["index.html"]
+        for case in held:
+            with self.subTest(case=case.case_no):
+                self.assertIn(
+                    '<span class="held-why">{0}</span>'.format(
+                        v2._text(v2.held_reason(case))
+                    ),
+                    queue,
+                    "the queue row does not print why the amount is held",
+                )
 
     def test_the_reviewer_triggers_card_lists_one_trigger_per_line(self):
         """Each trigger on a line of its own: the words first, then the count."""
@@ -930,12 +1041,14 @@ class QueueFiguresTests(unittest.TestCase):
                 )
 
     def test_the_figures_are_not_the_whole_of_it(self):
-        """The two shares are complements of one queue, not of two."""
+        """The three tiles are one queue cut three ways, not three queues."""
         figures = self.figures()
         self.assertEqual("151", figures["total"])
-        self.assertEqual("125 of 151", figures["automatic"])
+        self.assertEqual("112 of 151", figures["executed"])
+        self.assertEqual("13 of 151", figures["held"])
         self.assertEqual("26 of 151", figures["reviewer"])
-        self.assertEqual("82.8%", figures["automatic_share"])
+        self.assertEqual("74.2%", figures["executed_share"])
+        self.assertEqual("8.6%", figures["held_share"])
         self.assertEqual("17.2%", figures["reviewer_share"])
 
     def test_the_two_medians_are_the_size_the_run_files_say(self):
@@ -1091,11 +1204,14 @@ class FrontDoorTests(unittest.TestCase):
         )
 
     def test_every_page_carries_the_top_bar_and_a_link_to_the_replay(self):
+        """The nav link names the replay for what it is: the benchmark at v1."""
+        self.assertEqual("Benchmark replay (policy v1)", v2.REPLAY_LABEL)
         for name, text in sorted(built_pages().items()):
             with self.subTest(page=name):
                 self.assertIn('<header class="top">', text)
                 self.assertIn('href="replay/index.html"', text)
-                self.assertIn("Evaluation replay", text)
+                self.assertIn(v2.REPLAY_LABEL, text)
+                self.assertNotIn("Evaluation replay", text)
                 self.assertIn(">Queue</a>", text)
                 self.assertIn('class="mark"', text)
 
@@ -1132,7 +1248,10 @@ class FrontDoorTests(unittest.TestCase):
         Some explanations open with a one-line salutation -- 104's is "To the
         rider and the driver: this is a provisional automated ruling." -- so the
         summary takes paragraphs until it is at least the sheet's 120 characters.
-        Every paragraph it shows is the explanation's own, verbatim.
+        Every paragraph it shows is the explanation's own, verbatim. On a case
+        that went to a reviewer the label says whose reasoning the text is: the
+        panel's drafts', where a panel ran, and the pipeline's own routing
+        sentence, where the scope gate stopped before any judge was asked.
         """
         for case in loaded_cases():
             explanation = str(case.ruling.get("explanation") or "").strip()
@@ -1141,6 +1260,12 @@ class FrontDoorTests(unittest.TestCase):
             page = built_pages()[case.link]
             chosen = v2._summary_paragraphs(explanation)
             whole = len(" ".join(explanation.split()))
+            if case.trigger is None:
+                label = "From the judge's explanation"
+            elif v2._drafts(case.transcript):
+                label = v2.DRAFTS_TEXT_LABEL
+            else:
+                label = v2.ROUTING_TEXT_LABEL
             with self.subTest(case=case.case_no):
                 self.assertTrue(chosen, "no summary is shown")
                 self.assertGreaterEqual(
@@ -1148,7 +1273,7 @@ class FrontDoorTests(unittest.TestCase):
                     min(v2.SUMMARY_MINIMUM_CHARS, whole),
                     "the summary is shorter than the sheet's minimum",
                 )
-                self.assertIn("From the judge's explanation", page)
+                self.assertIn('<p class="lbl">{0}</p>'.format(v2._text(label)), page)
                 for paragraph in chosen.split("\n\n"):
                     self.assertIn(
                         v2._text(paragraph),
@@ -1236,6 +1361,108 @@ class FeaturedCardTests(unittest.TestCase):
         card = card_html(index_text(), 2735)
         self.assertIn(TRIGGER_WORDS["GEN08_SCOPE"].format(votes=votes), card)
         self.assertIn("0 - the scope gate asked no model", card)
+
+
+# --------------------------------------------------------------------------
+# The stylesheet: contrast, keyboard sorting and the width of a table
+# --------------------------------------------------------------------------
+def relative_luminance(colour: str) -> float:
+    """WCAG 2.1's relative luminance for a hex colour."""
+    value = colour.lstrip("#")
+    channels = [int(value[index : index + 2], 16) / 255 for index in (0, 2, 4)]
+    linear = [
+        channel / 12.92 if channel <= 0.03928 else ((channel + 0.055) / 1.055) ** 2.4
+        for channel in channels
+    ]
+    return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
+
+
+def contrast_ratio(one: str, other: str) -> float:
+    """WCAG 2.1 contrast, from 1.0 to 21.0."""
+    first, second = relative_luminance(one), relative_luminance(other)
+    return (max(first, second) + 0.05) / (min(first, second) + 0.05)
+
+
+class StylesheetTests(unittest.TestCase):
+    """The muted token, the sort buttons and the table that scrolls."""
+
+    # The figure the stylesheet's own comment states for each pair. A number in
+    # a comment is a claim, and this table is what makes each one a claim the
+    # suite recomputes from the colour the page actually sets.
+    STATED_CONTRAST: Tuple[Tuple[str, str, float], ...] = (
+        ("--muted", "--bg", 5.45),
+        ("--muted", "--card", 6.00),
+        ("--muted", "--soft", 5.74),
+    )
+
+    def root(self) -> Dict[str, str]:
+        """The light theme's custom properties, read out of the stylesheet."""
+        match = re.search(r":root\{([^}]*)\}", v2._CSS)
+        self.assertIsNotNone(match, "the stylesheet declares no :root block")
+        assert match is not None
+        values: Dict[str, str] = {}
+        for piece in match.group(1).split(";"):
+            if ":" not in piece:
+                continue
+            name, value = piece.split(":", 1)
+            values[name.strip()] = value.strip()
+        return values
+
+    def test_the_muted_token_clears_the_floor_on_every_light_background(self):
+        """Muted text is text, and 4.5:1 is the floor it is held to."""
+        root = self.root()
+        muted = root["--muted"]
+        self.assertNotEqual("#6b7280", muted, "the token below the floor is back")
+        for _foreground, background, stated in self.STATED_CONTRAST:
+            with self.subTest(background=background):
+                ratio = contrast_ratio(muted, root[background])
+                self.assertGreaterEqual(round(ratio, 2), 4.5)
+                self.assertEqual(
+                    stated,
+                    round(ratio, 2),
+                    "the ratio the comment states is not the one this colour gives",
+                )
+
+    def test_the_floor_would_have_caught_the_colour_it_replaced(self):
+        """The control: the colour the token was, measured the same way."""
+        root = self.root()
+        self.assertLess(round(contrast_ratio("#6b7280", root["--bg"]), 2), 4.5)
+
+    def test_the_queue_sorts_from_the_keyboard(self):
+        """A header cell carries a button, and the cell carries the sort state."""
+        text = index_text()
+        for column in (
+            "case",
+            "category",
+            "filed_by",
+            "amount",
+            "status",
+            "outcome",
+            "confidence",
+            "time",
+        ):
+            with self.subTest(column=column):
+                self.assertIn(
+                    '<th data-column="{0}" aria-sort="none">'
+                    '<button type="button" class="sort" data-column="{0}">'.format(
+                        column
+                    ),
+                    text,
+                )
+        self.assertIn('head.setAttribute("aria-sort"', text)
+        self.assertIn('"ascending"', text)
+        self.assertIn('"descending"', text)
+        self.assertIn(":focus-visible{outline:2px solid var(--accent)", v2._CSS)
+
+    def test_a_wide_table_scrolls_inside_its_own_container(self):
+        """The queue's table scrolls in a box of its own rather than being cut."""
+        self.assertIn(".tscroll{overflow-x:auto", v2._CSS)
+        self.assertIn('<div class="tscroll"><table id="queue">', index_text())
+        # The box is what scrolls, so every table a case page draws sits in one.
+        for case in loaded_cases():
+            with self.subTest(case=case.case_no):
+                page = built_pages()[case.link]
+                self.assertEqual(page.count("<table"), page.count('class="tscroll"'))
 
 
 # --------------------------------------------------------------------------

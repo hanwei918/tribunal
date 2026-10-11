@@ -243,6 +243,11 @@ footer.prov b { color: var(--text); font-weight: 600; }
   border-radius: 8px; background: rgba(216,167,42,0.07); font-size: 13.5px; }
 .lead { color: var(--muted); max-width: 78ch; }
 .hint { color: var(--muted); font-size: 12.5px; margin-top: 10px; }
+/* The banner every page here carries: this site is a historical replay, and the
+   product view it links back to is the policy-version-6 pipeline. */
+.replay-banner { margin: 0 0 12px; padding: 10px 14px; border: 1px solid var(--line);
+  border-left-width: 4px; border-radius: 8px; background: var(--panel-2);
+  color: var(--text); font-size: 13.5px; }
 
 /* ---- the judge's vote ------------------------------------------------- */
 /* A ruling one draft reached and a ruling four drafts agreed on look the same
@@ -494,6 +499,7 @@ body.projector .marker { font-size: 14px; }
   <span class="badge">replay of a committed development run</span>
 </header>
 <main>
+  <p class="replay-banner">Historical benchmark replay at policy version 1. The product view shows policy version 6: corpus 26/29; sealed-v1 21/24 agreement.</p>
   <noscript>
     <p>This viewer renders itself from data embedded in this file, so it needs
     JavaScript enabled. It makes no network request of any kind.</p>
