@@ -42,7 +42,10 @@ a number typed in here:
   page's header keeps the long chip;
 * the queue's safeguards section names the seven safeguards in order, its
   reviewer figure is the lane tile's own, its two case links resolve inside the
-  site, and it carries no script.
+  site, and it carries no script;
+* an in-page link lands below the sticky header: every element an in-page link
+  can target carries a scroll margin larger than the bar's own height, and every
+  ``href="#..."`` the queue and case 208 carry names an id on that page.
 
 **The suite builds the site five times and says why.** A build reads 151 cases,
 rebuilds each case's brief and builds 26 escalation packets, which is about
@@ -3140,6 +3143,59 @@ class StylesheetTests(unittest.TestCase):
                     assert label is not None
                     self.assertTrue(label.group(1).strip())
         self.assertGreater(wrappers, 0, "no page draws a scrolling table")
+
+    def test_an_in_page_link_lands_below_the_sticky_header(self):
+        """52b.1: the section a link lands on is not hidden by the bar.
+
+        The header ``.top`` is sticky and 58 px tall -- ``.top-in``'s 56 px
+        height plus the 2 px rule along the band's foot -- and the owner
+        measured three in-page links at a 1440 x 900 window: the queue's
+        "Safeguards" link put the "Safeguards" heading 15 px from the top of
+        the window, "How it works" put ``#how`` at 0 px, and a case page's
+        "Why" put ``#panel-ruling`` at 0 px. Each landed under the bar, so the
+        reader arrived at a section whose heading was hidden. Every element an
+        in-page link can target takes a scroll margin larger than the bar, and
+        every ``href="#..."`` the queue and case 208 carry names an id those
+        pages have -- a link to an id that is not there scrolls nowhere.
+        """
+        margin = re.search(r"\[id\]\{scroll-margin-top:(\d+)px\}", v2._CSS)
+        self.assertIsNotNone(
+            margin, "the stylesheet gives an in-page target no scroll margin"
+        )
+        assert margin is not None
+        top_in = re.search(r"\.top-in\{[^}]*height:(\d+)px", v2._CSS)
+        self.assertIsNotNone(top_in, "the header states no height")
+        assert top_in is not None
+        band = re.search(r"\.top\{[^}]*border-bottom:(\d+)px", v2._CSS)
+        self.assertIsNotNone(band, "the header band states no rule along its foot")
+        assert band is not None
+        header = int(top_in.group(1)) + int(band.group(1))
+        self.assertGreater(
+            int(margin.group(1)),
+            header,
+            "the scroll margin is no larger than the bar it has to clear",
+        )
+        case = loaded_case(208)
+        pages = {"index.html": index_text(), case.link: built_pages()[case.link]}
+        for name, page in sorted(pages.items()):
+            # The page's stylesheet is not markup and its comments quote the
+            # selectors these checks look for, so the body is read on its own.
+            body = re.sub(r"<style>.*?</style>", "", page, flags=re.DOTALL)
+            ids = set(re.findall(r'id="([^"]*)"', body))
+            links = re.findall(r'href="#([^"]*)"', body)
+            with self.subTest(page=name):
+                self.assertTrue(links, name + " carries no in-page link to check")
+            for target in links:
+                with self.subTest(page=name, target=target):
+                    self.assertIn(
+                        target,
+                        ids,
+                        "a link on {0} points at an id the page does not "
+                        "carry".format(name),
+                    )
+        self.assertIn("safeguards", re.findall(r'href="#([^"]*)"', index_text()))
+        self.assertIn("how", re.findall(r'href="#([^"]*)"', index_text()))
+        self.assertIn("panel-ruling", re.findall(r'href="#([^"]*)"', pages[case.link]))
 
 
 # --------------------------------------------------------------------------

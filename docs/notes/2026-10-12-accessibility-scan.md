@@ -1,4 +1,4 @@
-# The accessibility scan of the live site: six pages, no violations
+# The accessibility scan of the live site: three pages in two themes, no violations
 
 **2026-10-12.** The owner ran an **axe-core 4.8.2** scan of the deployed site
 after part 51d was deployed, from commit `c17b821`. The scan is the evidence
@@ -25,7 +25,7 @@ Three addresses, each in the **light** and the **dark** theme -- **six scans**:
 ## The result
 
 **0 violations in all six scans.** No rule in the axe-core 4.8.2 set fired on
-any of the six pages, in either theme.
+any of the three pages, in either theme.
 
 ## Two faults an earlier scan reported, and why neither was the site's
 

@@ -77,6 +77,14 @@ p{margin:.5em 0}
    right-hand readout is #c8b8be, so the bar reads the same in either theme; the
    focus ring on it is white rather than the accent, which on #160b0e would be a
    ring a reader could not see. */
+/* 52b.1: the bar is sticky and 58 px tall -- .top-in's 56 px height and the
+   band's 2 px rule -- and an in-page link landed its target underneath it. The
+   owner measured three at a 1440 x 900 window: the queue's "Safeguards" put the
+   heading 15 px from the top, and "How it works" and a case page's "Why" put
+   their sections at 0 px, so the reader arrived at a section whose heading was
+   hidden. Every element an in-page link can target takes a scroll margin larger
+   than the bar, so the page stops with the heading in view. */
+[id]{scroll-margin-top:72px}
 .top{position:sticky;top:0;z-index:5;background:var(--band);
   border-bottom:2px solid;border-image:linear-gradient(90deg,#b91c1c,#6d28d9) 1}
 .top-in{max-width:1280px;margin:0 auto;padding:0 24px;height:56px;display:flex;align-items:center;gap:20px}
