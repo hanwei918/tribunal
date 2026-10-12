@@ -248,6 +248,20 @@ COVER_SOURCE = PROJECT_ROOT / "ui" / "assets" / "cover-1280.jpg"
 COVER_ASSET = DIST_DIR / "cover-1280.jpg"
 COVER_LINK = "cover-1280.jpg"
 
+# The poster's own size, which the hero's ``<img>`` states so the browser can
+# hold the box before the file arrives, and the two lines the front page gives
+# it: an alt text that describes the picture for a reader who cannot see it, and
+# the caption under it, which is the same small print the README carries.
+COVER_WIDTH = 1280
+COVER_HEIGHT = 720
+COVER_ALT = (
+    "Tribunal poster: a robot judge at a bench between a rider holding a phone "
+    "and a driver beside his car"
+)
+COVER_CAPTION = (
+    "Poster made with Miora (Tencent); the people are generated, not real people."
+)
+
 # The site's own root, as the link scrapers need it: ``og:url`` and ``og:image``
 # are absolute URLs or a scraper resolves nothing. It is the address the README
 # and the submission's description publish.
@@ -496,8 +510,9 @@ DRAFT_KIND_WORDS: Mapping[str, str] = {
 
 # The five steps the landing page's strip names, each as (who, what, note). The
 # three ``who`` values are the case page's own -- code, model, outcome -- and
-# the colours below are the ones the case page draws them in, so a reader who
-# has seen the stepper meets the same three colours here.
+# they still say which kind each step is. The strip no longer draws them: 51b.7
+# brings it to the poster's one accent, and the case page's stepper circles and
+# its legend are where the three colours are met.
 HOW_IT_WORKS: Tuple[Tuple[str, str, str], ...] = (
     ("code", "The evidence brief", "the same bytes to both sides"),
     ("model", "Rider and driver advocates", "one advocate for each side, AI"),
@@ -1892,15 +1907,24 @@ _CSS = """
    floor body text is held to, so muted text on the page background was below
    it. #5b6470 measures 5.45:1 on --bg, 6.00:1 on --card and 5.74:1 on --soft;
    the three figures are recomputed from this file by tests/test_ui_v2.py. */
+/* 51b.5/51b.6: the accent is the poster's violet, not the blue it was, so the
+   site belongs to the poster it carries. Measured: #6d28d9 is 7.10:1 on --card
+   (#ffffff), 6.46:1 on --bg (#f3f4f6), 6.80:1 on --soft (#f9fafb) and 5.98:1 on
+   --accent-wash (#ede9fe), and white on #6d28d9 is 7.10:1. In the dark palette
+   #c4b5fd is 7.92:1 on --card (#1e293b), 9.67:1 on --bg (#0f172a) and 8.67:1
+   on --soft (#16213a). The header band is #160b0e in both themes: its right-hand
+   readout #c8b8be is 10.16:1 on it and white is 19.3:1. All ten pairs are in
+   tests/test_ui_v2.py's STATED_CONTRAST and are recomputed from this file. */
 :root{
   --bg:#f3f4f6;--card:#ffffff;--line:#e5e7eb;--ink:#111827;--muted:#5b6470;
-  --soft:#f9fafb;--accent:#1d4ed8;--accent-wash:#e8effd;
+  --soft:#f9fafb;--accent:#6d28d9;--accent-wash:#ede9fe;
   --ok:#15803d;--ok-wash:#dcfce7;--bad:#b91c1c;--bad-wash:#fee2e2;
   --warn:#92400e;--warn-wash:#fef3c7;--grey:#374151;--grey-wash:#f3f4f6;
+  --band:#160b0e;--band-note:#c8b8be;
 }
 @media (prefers-color-scheme:dark){
   :root{--bg:#0f172a;--card:#1e293b;--line:#334155;--ink:#f1f5f9;--muted:#94a3b8;
-    --soft:#16213a;--accent:#93c5fd;--accent-wash:#1e293b;
+    --soft:#16213a;--accent:#c4b5fd;--accent-wash:#2e1065;
     --ok:#86efac;--ok-wash:#14532d;--bad:#fca5a5;--bad-wash:#7f1d1d;
     --warn:#fcd34d;--warn-wash:#78350f;--grey:#cbd5e1;--grey-wash:#1e293b;}
 }
@@ -1912,14 +1936,21 @@ h1{font-size:1.6rem;line-height:1.25;margin:0 0 6px}
 h2{font-size:1rem;margin:0 0 12px}
 h3{font-size:.92rem;margin:16px 0 6px}
 p{margin:.5em 0}
-.top{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line)}
+/* 51b.6: the header is the poster's dark band in both themes, with a crimson to
+   violet rule along its foot. The brand and the nav are white on it and the
+   right-hand readout is #c8b8be, so the bar reads the same in either theme; the
+   focus ring on it is white rather than the accent, which on #160b0e would be a
+   ring a reader could not see. */
+.top{position:sticky;top:0;z-index:5;background:var(--band);
+  border-bottom:2px solid;border-image:linear-gradient(90deg,#b91c1c,#6d28d9) 1}
 .top-in{max-width:1280px;margin:0 auto;padding:0 24px;height:56px;display:flex;align-items:center;gap:20px}
-.brand{display:inline-flex;align-items:center;gap:9px;font-weight:700;font-size:17px;text-decoration:none;color:var(--ink)}
+.top :focus-visible{outline-color:#ffffff}
+.brand{display:inline-flex;align-items:center;gap:9px;font-weight:700;font-size:17px;text-decoration:none;color:#ffffff}
 .mark{width:26px;height:26px;border-radius:7px;background:var(--accent);display:inline-flex;align-items:center;justify-content:center;flex:none}
 .nav{display:flex;align-items:center;gap:2px;flex-wrap:wrap}
-.nav a{padding:7px 12px;border:1px solid transparent;border-radius:8px;text-decoration:none;color:var(--muted);font-weight:500;line-height:1.2}
-.nav a.on{color:var(--ink);background:var(--soft);border-color:var(--line)}
-.mode{margin-left:auto;font-size:13px;color:var(--muted);white-space:nowrap}
+.nav a{padding:7px 12px;border:1px solid rgba(255,255,255,.28);border-radius:8px;text-decoration:none;color:#ffffff;font-weight:500;line-height:1.2}
+.nav a.on{color:#ffffff;background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.5)}
+.mode{margin-left:auto;font-size:13px;color:var(--band-note);white-space:nowrap}
 @media (max-width:700px){.mode{display:none}.top-in{gap:12px;padding:0 16px}}
 .wrap{max-width:1280px;margin:0 auto;padding:26px 24px 56px}
 @media (max-width:700px){.wrap{padding:18px 16px 40px}}
@@ -1939,20 +1970,32 @@ p{margin:.5em 0}
 .featured{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:18px 0 22px}
 @media (max-width:960px){.featured{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:560px){.featured{grid-template-columns:minmax(0,1fr)}}
-.fcard{display:block;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;text-decoration:none;color:var(--ink)}
-.fcard:hover{border-color:var(--accent)}
+.fcard{display:block;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;text-decoration:none;color:var(--ink);
+  transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease}
+/* 51b.9: the whole card is one link, so it lifts under the pointer and carries
+   the way in at its foot. The lift is movement, and that is the one thing the
+   reduce preference takes; the focus ring is the stylesheet's own. */
+.fcard:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.16)}
 .fcard .fcase{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
 .fcard h2{font-size:.95rem;margin:2px 0 8px}
 .fcard p{margin:.25em 0;font-size:13px;color:var(--muted)}
 .fcard b{color:var(--ink);font-weight:600}
+.fcard .fopen{display:block;margin-top:10px;color:var(--accent);font-weight:600;font-size:.85rem}
+@media (prefers-reduced-motion:reduce){.fcard{transition:none}.fcard:hover{transform:none}}
 
 /* figures */
 .figures{display:flex;flex-wrap:wrap;gap:14px;margin:0 0 22px}
 .figure{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 18px;min-width:168px;flex:1 1 168px}
 .figure .k{color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;margin:0 0 6px}
-.figure .v{font-size:1.3rem;font-weight:650;margin:0}
+.figure .v{font-size:1.9rem;font-weight:650;margin:0}
 .figure .s{color:var(--muted);font-size:.85rem;margin:4px 0 0}
 .figure.wide{flex:1 1 100%}
+/* 51b.8: each lane tile carries its lane's own colour on a 3px top border, and
+   the three figures under them carry the accent. */
+.figure.ok{border-top:3px solid var(--ok)}
+.figure.warn{border-top:3px solid var(--warn)}
+.figure.bad{border-top:3px solid var(--bad)}
+.figure.accent{border-top:3px solid var(--accent)}
 .triggers{list-style:none;margin:0;padding:0}
 .triggers li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 14px;padding:4px 0;border-bottom:1px solid var(--line)}
 .triggers li:last-child{border-bottom:0}
@@ -1970,10 +2013,31 @@ tbody tr:last-child td{border-bottom:0}
 tbody tr:hover td{background:var(--soft)}
 th.sortable{cursor:pointer;user-select:none}
 td[data-column="time"],td[data-column="confidence"]{white-space:nowrap}
+/* 51b.10: the Outcome column wrapped into five lines -- "Sent to a reviewer -
+   the judge escalated under the policy" -- while Status had room to spare. The
+   column is given a floor, and the note under a status chip is allowed to wrap
+   rather than push the chip wider. The row hover is the --soft rule above. */
+td[data-column="outcome"]{min-width:11rem}
+td[data-column="status"]{white-space:normal;overflow-wrap:anywhere}
 td a{font-weight:600;text-decoration:none}
 
 /* case page */
 .pagehead{margin:0 0 18px}
+/* 51b.4: the queue's head is a hero -- the words on the left and the poster on
+   the right at 1000 px and wider, the poster under the words below that. The h1
+   grows only here, where the poster sits beside it. */
+.hero{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
+.hero h1{font-size:2rem}
+.hero-art{margin:0;min-width:0}
+.hero-art img{display:block;width:100%;height:auto;border-radius:14px;box-shadow:0 10px 26px rgba(0,0,0,.22)}
+.hero-cta{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 0}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:9px;
+  font-weight:600;font-size:.92rem;text-decoration:none;border:1px solid var(--accent)}
+.btn-fill{background:var(--accent);color:#ffffff}
+.btn-out{background:transparent;color:var(--accent)}
+@media (min-width:1000px){
+  .hero{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:30px;align-items:center}
+}
 .tabs{display:flex;flex-wrap:wrap;gap:6px;border-bottom:1px solid var(--line);margin:0 0 22px}
 .tabs button{appearance:none;border:0;background:transparent;color:var(--muted);font:inherit;font-weight:500;padding:9px 13px;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer}
 .tabs button.tab-on{color:var(--ink);border-bottom-color:var(--accent)}
@@ -2013,6 +2077,10 @@ td a{font-weight:600;text-decoration:none}
 .rail .in{padding:0 0 14px;font-size:.9rem}
 .map{background:var(--soft);border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .map svg{display:block;width:100%;height:auto}
+/* 51b.11: the driven trace was drawn in a literal blue that the accent change
+   did not reach, and on the dark map's --soft it measured under 2:1. It is the
+   accent now, so it follows the theme like everything else on the page. */
+.map .trace{stroke:var(--accent)}
 .cap{color:var(--muted);font-size:.78rem;margin:6px 0 0}
 .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:.78rem;color:var(--muted);margin-top:8px}
 .legend i{display:inline-block;width:16px;height:3px;vertical-align:middle;margin-right:5px;border-radius:2px}
@@ -2139,24 +2207,30 @@ th[aria-sort="descending"] .sort::after{content:"\\2193"}
 
 /* 44.2: the landing page's how-it-works strip and its links row. */
 .how{background:var(--card);border:1px solid var(--line);border-radius:12px;
-  padding:12px 16px;margin:0 0 18px}
-.how h2{margin:0 0 8px;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
-.how ol{display:flex;flex-wrap:wrap;gap:6px 14px;list-style:none;margin:0;padding:0}
-.how li{display:flex;align-items:center;gap:7px;font-size:.86rem;color:var(--muted)}
-.how li b{color:var(--ink);font-weight:600}
-.how i{display:inline-block;width:9px;height:9px;border-radius:50%;flex:none}
+  padding:14px 18px;margin:0 0 18px}
+.how h2{margin:0 0 10px;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.how ol{display:flex;flex-wrap:wrap;gap:10px 16px;list-style:none;margin:0;padding:0}
+.how li{display:flex;align-items:flex-start;gap:9px;font-size:.86rem;color:var(--muted)}
+/* 51b.7: a step is a numbered violet circle, its name in bold on one line and
+   its description under it in muted text. */
+.how .n{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;
+  border-radius:50%;background:var(--accent);color:#ffffff;font-size:11px;font-weight:700;
+  font-style:normal;flex:none}
+.how .st{display:block}
+.how .st b{display:block;color:var(--ink);font-weight:600}
 .how .arw{color:var(--muted);margin-left:8px}
 .links{display:flex;flex-wrap:wrap;gap:6px 18px;margin:0 0 20px;font-size:.9rem}
 
-/* 46b.8: on a wide screen the five steps of "How it works" wrapped into three
-   ragged lines with the arrows stranded at the line ends. At 1000 px and wider
-   they are five equal columns in one row, each with its arrow at the column's
-   right; below that the strip stacks as it did. */
+/* 46b.8, and 51b.7 on top of it: on a wide screen the five steps of "How it
+   works" wrapped into three ragged lines with the arrows stranded at the line
+   ends, so at 1000 px and wider they are five equal columns in one row, each
+   with its arrow at the column's right. The row is a flex row in both layouts
+   now: it was a block here, which dropped the gap and left the circle touching
+   the step's name. Below 1000 px the strip stacks as it did. */
 @media (min-width:1000px){
-  .how ol{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px 22px}
-  .how li{display:block;position:relative;padding-right:20px}
-  .how li i{vertical-align:middle}
-  .how .arw{position:absolute;right:0;top:1px;margin:0}
+  .how ol{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px 22px}
+  .how li{display:flex;position:relative;padding-right:20px}
+  .how .arw{position:absolute;right:0;top:3px;margin:0}
 }
 
 /* 46b.10: the trace's own box runs the width of the rail column, so the map is
@@ -2559,13 +2633,15 @@ SCALES_MARK = (
     '<path d="{0}"/></svg>'
 ).format(SCALES_PATH)
 
-# The tab icon: the header's mark on the header's own blue tile, as an inline
+# The tab icon: the header's mark on the header's own accent tile, as an inline
 # SVG data URI. A ``data:`` URL is not a request, so the page stays one file
 # with nothing external in it; the ``#`` of each colour is percent-encoded
-# because a bare one would end the URL at the fragment.
+# because a bare one would end the URL at the fragment. The tile is the light
+# theme's accent -- one file serves both themes, and the violet is what the mark
+# is drawn on in either.
 _FAVICON_SVG = (
     "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'>"
-    "<rect width='24' height='24' rx='5' fill='#1d4ed8'/>"
+    "<rect width='24' height='24' rx='5' fill='#6d28d9'/>"
     "<path d='{0}' fill='none' stroke='#ffffff' stroke-width='2' "
     "stroke-linecap='round' stroke-linejoin='round'/></svg>"
 ).format(SCALES_PATH)
@@ -2647,11 +2723,19 @@ def _footer(case: CaseData) -> str:
 # --------------------------------------------------------------------------
 # The queue page
 # --------------------------------------------------------------------------
-def _figure(key: str, value: str, note: str = "") -> str:
+def _figure(key: str, value: str, note: str = "", tone: str = "") -> str:
+    """One figure tile, and the lane colour it is drawn under.
+
+    ``tone`` is one of the three status names -- a lane tile carries its lane's
+    own colour on a 3px top border -- or ``accent`` for the three figures under
+    them. It is a class name and not a colour, so the colour stays in the
+    stylesheet where the two themes are.
+    """
     sub = '<p class="s">{0}</p>'.format(_text(note)) if note else ""
+    classes = "figure" if not tone else "figure {0}".format(tone)
     return (
-        '<div class="figure"><p class="k">{0}</p><p class="v">{1}</p>{2}</div>'
-    ).format(_text(key), _text(value), sub)
+        '<div class="{0}"><p class="k">{1}</p><p class="v">{2}</p>{3}</div>'
+    ).format(classes, _text(key), _text(value), sub)
 
 
 def _trigger_card(figures: QueueFigures) -> str:
@@ -2940,7 +3024,12 @@ def _featured_facts(case: CaseData) -> List[Tuple[str, str]]:
 
 
 def _featured_card(case: CaseData, title: str) -> str:
-    """One featured case: a fixed title, and the run's own facts beneath it."""
+    """One featured case: a fixed title, the run's own facts, and the way in.
+
+    The whole card is one link to the case's own page -- it always was -- and
+    51b.9 puts the way in at its foot, so a reader who has read the card is told
+    what following it does.
+    """
     facts = "".join(
         "<p><b>{0}</b> {1}</p>".format(_text(label), value)
         for label, value in _featured_facts(case)
@@ -2948,7 +3037,9 @@ def _featured_card(case: CaseData, title: str) -> str:
     return (
         '<a class="fcard" href="{0}">'
         '<span class="fcase">Case {1}</span>'
-        "<h2>{2}</h2>{3}</a>"
+        "<h2>{2}</h2>{3}"
+        '<span class="fopen">Open case <span aria-hidden="true">&#8594;</span></span>'
+        "</a>"
     ).format(_attribute(case.link), _text(case.case_no), _text(title), facts)
 
 
@@ -2967,25 +3058,29 @@ def _featured_cards(cases: Sequence[CaseData]) -> str:
 
 
 def _how_it_works() -> str:
-    """The five steps of one dispute, one line each, in the case page's colours.
+    """The five steps of one dispute, numbered, in the accent's own circle.
 
-    The three colours are the case page's own -- code, model and outcome -- so a
-    reader who has seen the stepper on a case page meets the same three here.
+    Each step is a violet circle carrying its number, the step's name in bold
+    and its description under it in muted text; the arrows between the steps are
+    kept on a wide screen, where the strip is five columns. The section carries
+    ``id="how"`` because the hero's "How it works" button is an in-page anchor
+    to it (51b.4).
     """
     items = []
-    for index, (who, what, note) in enumerate(HOW_IT_WORKS):
+    for index, (_who, what, note) in enumerate(HOW_IT_WORKS):
         arrow = (
             ""
             if index + 1 == len(HOW_IT_WORKS)
             else '<span class="arw">&#8594;</span>'
         )
         items.append(
-            '<li><i style="background:{0}"></i><b>{1}</b> <span>{2}</span>{3}</li>'.format(
-                _attribute(STEP_COLOURS[who]), _text(what), _text(note), arrow
+            '<li><i class="n">{0}</i><span class="st"><b>{1}</b>'
+            "<span>{2}</span></span>{3}</li>".format(
+                index + 1, _text(what), _text(note), arrow
             )
         )
     return (
-        '<section class="how" aria-label="How a dispute is decided">'
+        '<section class="how" id="how" aria-label="How a dispute is decided">'
         "<h2>How it works</h2><ol>{0}</ol></section>\n"
     ).format("".join(items))
 
@@ -3019,22 +3114,47 @@ def _links_row() -> str:
 
 
 def build_index(cases: Sequence[CaseData]) -> str:
-    """The queue: four featured cases, the figures, a filter row and the table."""
+    """The queue: the hero, four featured cases, the figures, a filter row and the table."""
     figures = queue_figures(cases)
+    # 51b.4: the head is the hero. The words are the ones it always carried --
+    # nothing on this page is rewritten -- and the poster sits beside them at
+    # 1000 px and wider, under them below that. The two buttons under the
+    # paragraphs are the way into the case the site is about and the way down to
+    # the strip that explains the pipeline.
+    case_link = "case-{0:05d}.html".format(HOW_IT_WAS_DECIDED_CASE)
     header = (
-        '<header class="pagehead">\n'
+        '<header class="pagehead hero">\n'
+        '<div class="hero-text">\n'
         "<h1>Today's disputes</h1>\n"
-        '<p class="lede">{0}</p>\n'
-        '<p class="lede">{1} {2} These pages replay the recorded runs committed '
-        "in this repository and call no model; every number is read from the "
-        'run\'s own files. <a href="{3}">{4}</a>.</p>\n'
+        '<p class="lede">{tribunal}</p>\n'
+        '<p class="lede">{disputes} {figures} These pages replay the recorded '
+        "runs committed in this repository and call no model; every number is "
+        'read from the run\'s own files. <a href="{results_link}">{results_words}'
+        "</a>.</p>\n"
+        '<p class="hero-cta">'
+        '<a class="btn btn-fill" href="{case_link}">See case {case_no}</a>'
+        '<a class="btn btn-out" href="#how">How it works</a>'
+        "</p>\n"
+        "</div>\n"
+        '<figure class="hero-art">'
+        '<img src="{cover}" width="{cover_width}" height="{cover_height}" '
+        'alt="{cover_alt}">'
+        '<figcaption class="cap">{cover_caption}</figcaption>'
+        "</figure>\n"
         "</header>\n"
     ).format(
-        _text(WHAT_TRIBUNAL_DOES),
-        _text(WHAT_THE_DISPUTES_ARE),
-        _text(WHAT_THE_FIGURES_ARE),
-        _attribute(README_RESULTS_LINK),
-        _text(README_RESULTS_WORDS),
+        tribunal=_text(WHAT_TRIBUNAL_DOES),
+        disputes=_text(WHAT_THE_DISPUTES_ARE),
+        figures=_text(WHAT_THE_FIGURES_ARE),
+        results_link=_attribute(README_RESULTS_LINK),
+        results_words=_text(README_RESULTS_WORDS),
+        case_link=_attribute(case_link),
+        case_no=_text(HOW_IT_WAS_DECIDED_CASE),
+        cover=_attribute(COVER_LINK),
+        cover_width=COVER_WIDTH,
+        cover_height=COVER_HEIGHT,
+        cover_alt=_attribute(COVER_ALT),
+        cover_caption=_text(COVER_CAPTION),
     )
     figure_html = '<div class="figures">' + "".join(
         (
@@ -3044,31 +3164,41 @@ def build_index(cases: Sequence[CaseData]) -> str:
                 "{0} of the queue: {1} (POL-GEN-05)".format(
                     figures.executed_share, EXECUTED_MEANS
                 ),
+                tone="ok",
             ),
             _figure(
                 "Decided, amount held for a person to release",
                 "{0} of {1}".format(figures.held, figures.total),
                 "{0} of the queue, held above the POL-GEN-05 execution "
                 "threshold".format(figures.held_share),
+                tone="warn",
             ),
             _figure(
                 "Sent to a reviewer",
                 "{0} of {1}".format(figures.reviewer, figures.total),
                 "{0} of the queue, no ruling issued".format(figures.reviewer_share),
+                tone="bad",
             ),
             _trigger_card(figures),
-            _figure("Median time per case", _seconds(figures.median_seconds), "wall clock"),
+            _figure(
+                "Median time per case",
+                _seconds(figures.median_seconds),
+                "wall clock",
+                tone="accent",
+            ),
             _figure(
                 "Median cost per case",
                 _usd(figures.median_cost),
                 "at the published {0} prices the runs are billed at".format(
                     model_module.MODEL_PROVIDER
                 ),
+                tone="accent",
             ),
             _figure(
                 "Policy version and model",
                 "v{0}".format(figures.policy_version),
                 figures.model,
+                tone="accent",
             ),
         )
     ) + "</div>\n"
@@ -3735,7 +3865,7 @@ def _trace_svg(case: CaseData) -> str:
             )
         )
     parts.append(
-        '<polyline points="{0}" fill="none" stroke="#1d4ed8" stroke-width="2"/>'.format(
+        '<polyline class="trace" points="{0}" fill="none" stroke-width="2"/>'.format(
             polyline(driver)
         )
     )
@@ -3786,7 +3916,7 @@ def _rail(case: CaseData) -> str:
         gps_payload = _case_payload(case.case, "GPS_TRACE")
         arrival = _derived_block(case.brief, "GPS_TRACE", "arrival") or {}
         radius_m = _fact_value(arrival, "thresholds", "arrival_radius_m")
-        legend = ['<i style="background:#1d4ed8"></i>driven trace']
+        legend = ['<i style="background:var(--accent)"></i>driven trace']
         if _latlngs(gps_payload.get("rider_track")):
             legend.append(
                 '<i class="dash"></i>rider\'s track'
@@ -4660,13 +4790,15 @@ STEP_WHO_WORDS: Mapping[str, str] = {
     "outcome": "the outcome",
 }
 
-# The colour each of the three is drawn in: the case page's legend, its stepper
-# circles, and the landing page's how-it-works strip all read them from here, so
-# a reader meets one colour for code, one for the model and one for the outcome
-# wherever they are on the site.
+# The colour each of the three is drawn in: the case page's legend and its
+# stepper circles read them from here, so a reader meets one colour for code,
+# one for the model and one for the outcome wherever they are on the site. The
+# model's is the accent rather than a literal, because the stepper's model
+# circles have always been ``var(--accent)`` and a legend that named a fixed
+# blue beside them was the colour 51b.11 went looking for.
 STEP_COLOURS: Mapping[str, str] = {
     "code": "#374151",
-    "model": "#1d4ed8",
+    "model": "var(--accent)",
     "outcome": "#15803d",
 }
 

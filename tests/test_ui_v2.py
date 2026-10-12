@@ -1705,6 +1705,28 @@ class FeaturedCardTests(unittest.TestCase):
             with self.subTest(case=case_no):
                 self.assertIn(title, card_html(text, case_no))
 
+    def test_every_featured_card_is_one_link_to_an_existing_case_page(self):
+        """51b.9: the whole card is the link, and it opens the case it names.
+
+        The card carries its way in at the foot -- "Open case" and an arrow --
+        so the link's own words say what following it does, and every one of the
+        four resolves to a page this site commits.
+        """
+        text = index_text()
+        cards = re.findall(r'<a class="fcard" href="([^"]+)">', text)
+        self.assertEqual(len(v2.FEATURED_CASES), len(cards))
+        self.assertEqual(
+            len(v2.FEATURED_CASES),
+            text.count('<span class="fopen">Open case'),
+            "a featured card carries no way in",
+        )
+        pages = set(built_pages())
+        for href in cards:
+            with self.subTest(href=href):
+                self.assertRegex(href, r"^case-\d{5}\.html$")
+                self.assertIn(href, pages, "{0} is not a page this site commits".format(href))
+                self.assertTrue((v2.DIST_DIR / href).is_file())
+
     def test_901_shows_its_outcome_and_its_confidence(self):
         case = [row for row in cases() if row["case_no"] == 901][0]
         ruling = inner_ruling(case["document"])
@@ -1797,14 +1819,26 @@ class LandingPageTests(unittest.TestCase):
             sorted(positions), positions, "the strip's steps are out of order"
         )
 
-    def test_the_strip_uses_the_case_pages_own_three_colours(self):
-        """Code, model and outcome are one colour each, here and on a case page."""
+    def test_the_strip_is_numbered_and_the_case_page_keeps_the_three_colours(self):
+        """51b.7: the five steps are numbered violet circles now.
+
+        The strip used to carry the case page's three colours on three dots.
+        The poster's palette is one accent, so each step is a circle in it with
+        its number on it. The case page keeps the three -- its stepper circles
+        and its legend -- and that is the half held here, so the two pages
+        cannot drift apart about the vocabulary they share.
+        """
         self.assertEqual({"code", "model", "outcome"}, set(v2.STEP_COLOURS))
         text = index_text()
+        for number in range(1, len(v2.HOW_IT_WORKS) + 1):
+            with self.subTest(number=number):
+                self.assertIn('<i class="n">{0}</i>'.format(number), text)
+        case_page = built_pages()[loaded_case(208).link]
         for who, colour in sorted(v2.STEP_COLOURS.items()):
             with self.subTest(who=who):
-                self.assertIn('<i style="background:{0}"></i>'.format(colour), text)
-                self.assertIn('<i style="background:{0}"></i>'.format(colour), built_pages()[loaded_case(208).link])
+                self.assertIn(
+                    '<i style="background:{0}"></i>'.format(colour), case_page
+                )
 
     def test_the_intro_names_the_sample_and_never_says_generalisation(self):
         text = index_text()
@@ -1883,6 +1917,64 @@ class LandingPageTests(unittest.TestCase):
         """A map drawn inside the details' padding loses 32 of the 360 px."""
         self.assertIn(".rail details.full{padding:0}", v2._CSS)
         self.assertIn('class="full"', built_pages()[loaded_case(208).link])
+
+
+class HeroTests(unittest.TestCase):
+    """51b.4: the queue opens with the poster, and with the two ways in."""
+
+    def test_the_queue_carries_the_poster_with_its_size_and_its_words(self):
+        """The image states its own size, so the box is held before it arrives."""
+        text = index_text()
+        self.assertIn(
+            '<img src="{0}" width="{1}" height="{2}" alt="{3}">'.format(
+                v2._attribute(v2.COVER_LINK),
+                v2.COVER_WIDTH,
+                v2.COVER_HEIGHT,
+                v2._attribute(v2.COVER_ALT),
+            ),
+            text,
+        )
+        self.assertIn(
+            '<figcaption class="cap">{0}</figcaption>'.format(
+                v2._text(v2.COVER_CAPTION)
+            ),
+            text,
+            "the poster carries no caption saying where it came from",
+        )
+        self.assertIn("height:auto", v2._CSS, "the poster is not allowed to scale")
+
+    def test_the_poster_is_a_file_inside_the_site(self):
+        """A hero pointing at a path outside ``ui/dist/`` is a 404 when served."""
+        target = v2.DIST_DIR / v2.COVER_LINK
+        self.assertTrue(target.is_file(), "the poster is not committed")
+        self.assertEqual(v2.COVER_SOURCE.read_bytes(), target.read_bytes())
+
+    def test_the_how_it_works_button_points_at_the_section_it_names(self):
+        text = index_text()
+        self.assertIn(
+            '<a class="btn btn-out" href="#how">How it works</a>',
+            text,
+            "the hero carries no link to the strip",
+        )
+        self.assertIn('id="how"', text, "the strip carries no anchor to land on")
+
+    def test_the_see_case_button_resolves_inside_the_site(self):
+        """The hero's first button is the case the front page is about."""
+        link = "case-{0:05d}.html".format(v2.HOW_IT_WAS_DECIDED_CASE)
+        self.assertIn(
+            '<a class="btn btn-fill" href="{0}">See case {1}</a>'.format(
+                link, v2.HOW_IT_WAS_DECIDED_CASE
+            ),
+            index_text(),
+        )
+        self.assertTrue((v2.DIST_DIR / link).is_file())
+
+    def test_the_hero_is_one_column_until_a_thousand_pixels(self):
+        """Below 1000 px the poster sits under the words, not beside them."""
+        self.assertIn(
+            ".hero{display:grid;grid-template-columns:minmax(0,1fr);", v2._CSS
+        )
+        self.assertIn(".hero h1{font-size:2rem}", v2._CSS)
 
 
 def decision_step(page: str, number: int) -> str:
@@ -2575,40 +2667,115 @@ def contrast_ratio(one: str, other: str) -> float:
     return (max(first, second) + 0.05) / (min(first, second) + 0.05)
 
 
-class StylesheetTests(unittest.TestCase):
-    """The muted token, the sort buttons and the table that scrolls."""
+def custom_properties(block: str) -> Dict[str, str]:
+    """The custom properties one ``:root`` block declares."""
+    values: Dict[str, str] = {}
+    for piece in block.split(";"):
+        if ":" not in piece:
+            continue
+        name, value = piece.split(":", 1)
+        values[name.strip()] = value.strip()
+    return values
 
-    # The figure the stylesheet's own comment states for each pair. A number in
-    # a comment is a claim, and this table is what makes each one a claim the
-    # suite recomputes from the colour the page actually sets.
-    STATED_CONTRAST: Tuple[Tuple[str, str, float], ...] = (
-        ("--muted", "--bg", 5.45),
-        ("--muted", "--card", 6.00),
-        ("--muted", "--soft", 5.74),
+
+class StylesheetTests(unittest.TestCase):
+    """The palette's stated contrasts, the sort buttons and the table that scrolls."""
+
+    # The figure the stylesheet's own comment states for each pair, as
+    # ``(foreground, background, theme, ratio)``. A number in a comment is a
+    # claim, and this table is what makes each one a claim the suite recomputes
+    # from the colour the page actually sets. An entry beginning ``--`` is a
+    # token, read out of the palette that theme declares; anything else is the
+    # colour itself. The first three are 37a.6's muted token, the eight after
+    # them are 51b.5's accent -- four on the light backgrounds and white on it,
+    # three on the dark ones -- and the last two are 51b.6's header band.
+    STATED_CONTRAST: Tuple[Tuple[str, str, str, float], ...] = (
+        ("--muted", "--bg", "light", 5.45),
+        ("--muted", "--card", "light", 6.00),
+        ("--muted", "--soft", "light", 5.74),
+        ("--accent", "--card", "light", 7.10),
+        ("--accent", "--bg", "light", 6.46),
+        ("--accent", "--soft", "light", 6.80),
+        ("--accent", "--accent-wash", "light", 5.98),
+        ("--accent", "--card", "dark", 7.92),
+        ("--accent", "--bg", "dark", 9.67),
+        ("--accent", "--soft", "dark", 8.67),
+        ("#ffffff", "--accent", "light", 7.10),
+        ("--band-note", "--band", "light", 10.16),
+        ("#ffffff", "--band", "light", 19.3),
     )
+
+    def palette(self, theme: str) -> Dict[str, str]:
+        """One theme's custom properties, read out of the stylesheet.
+
+        The light palette is the first ``:root`` block. The dark palette is the
+        block inside ``@media (prefers-color-scheme:dark)`` laid over the light
+        one, which is what the cascade does: a token the dark block does not
+        name keeps the light value, and ``--band`` is one of those.
+        """
+        light = re.search(r":root\{([^}]*)\}", v2._CSS)
+        self.assertIsNotNone(light, "the stylesheet declares no :root block")
+        assert light is not None
+        values = custom_properties(light.group(1))
+        if theme == "light":
+            return values
+        dark = re.search(
+            r"prefers-color-scheme:dark\)\{\s*:root\{([^}]*)\}", v2._CSS
+        )
+        self.assertIsNotNone(dark, "the stylesheet declares no dark palette")
+        assert dark is not None
+        values.update(custom_properties(dark.group(1)))
+        return values
+
+    def colour(self, name: str, theme: str) -> str:
+        """A table entry as a colour: a token of that theme, or the colour itself."""
+        return self.palette(theme)[name] if name.startswith("--") else name
 
     def root(self) -> Dict[str, str]:
         """The light theme's custom properties, read out of the stylesheet."""
-        match = re.search(r":root\{([^}]*)\}", v2._CSS)
-        self.assertIsNotNone(match, "the stylesheet declares no :root block")
-        assert match is not None
-        values: Dict[str, str] = {}
-        for piece in match.group(1).split(";"):
-            if ":" not in piece:
-                continue
-            name, value = piece.split(":", 1)
-            values[name.strip()] = value.strip()
-        return values
+        return self.palette("light")
 
     def test_the_muted_token_clears_the_floor_on_every_light_background(self):
         """Muted text is text, and 4.5:1 is the floor it is held to."""
-        root = self.root()
-        muted = root["--muted"]
+        muted = self.root()["--muted"]
         self.assertNotEqual("#6b7280", muted, "the token below the floor is back")
-        for _foreground, background, stated in self.STATED_CONTRAST:
+        rows = [
+            (background, theme, stated)
+            for foreground, background, theme, stated in self.STATED_CONTRAST
+            if foreground == "--muted"
+        ]
+        self.assertEqual(3, len(rows), "the muted token's three backgrounds moved")
+        for background, theme, stated in rows:
             with self.subTest(background=background):
-                ratio = contrast_ratio(muted, root[background])
+                ratio = contrast_ratio(muted, self.colour(background, theme))
                 self.assertGreaterEqual(round(ratio, 2), 4.5)
+                self.assertEqual(
+                    stated,
+                    round(ratio, 2),
+                    "the ratio the comment states is not the one this colour gives",
+                )
+
+    def test_every_stated_contrast_is_the_one_the_colour_gives(self):
+        """51b.5/51b.6: every pair the stylesheet states, recomputed here.
+
+        The accent's eight pairs and the header band's two are claims written in
+        a comment, and a claim nobody recomputes drifts. Each is measured against
+        the palette the page sets for its own theme and held to 4.5:1, the floor
+        body text is held to, so a pair that fell below it fails here rather than
+        in a reader's eyes.
+        """
+        for foreground, background, theme, stated in self.STATED_CONTRAST:
+            with self.subTest(
+                foreground=foreground, background=background, theme=theme
+            ):
+                ratio = contrast_ratio(
+                    self.colour(foreground, theme), self.colour(background, theme)
+                )
+                self.assertGreaterEqual(
+                    round(ratio, 2),
+                    4.5,
+                    "{0} on {1} is below the floor".format(foreground, background),
+                )
                 self.assertEqual(
                     stated,
                     round(ratio, 2),

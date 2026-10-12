@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tribunal - page not found</title>
 <meta name="description" content="This page does not exist; the queue lists every dispute this site replays.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns=&#x27;http://www.w3.org/2000/svg&#x27;%20viewBox=&#x27;0%200%2024%2024&#x27;%3E%3Crect%20width=&#x27;24&#x27;%20height=&#x27;24&#x27;%20rx=&#x27;5&#x27;%20fill=&#x27;%231d4ed8&#x27;/%3E%3Cpath%20d=&#x27;M12%204v16M8%2020h8M5%207h14M5%207L2%2013h6zM19%207l-3%206h6z&#x27;%20fill=&#x27;none&#x27;%20stroke=&#x27;%23ffffff&#x27;%20stroke-width=&#x27;2&#x27;%20stroke-linecap=&#x27;round&#x27;%20stroke-linejoin=&#x27;round&#x27;/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns=&#x27;http://www.w3.org/2000/svg&#x27;%20viewBox=&#x27;0%200%2024%2024&#x27;%3E%3Crect%20width=&#x27;24&#x27;%20height=&#x27;24&#x27;%20rx=&#x27;5&#x27;%20fill=&#x27;%236d28d9&#x27;/%3E%3Cpath%20d=&#x27;M12%204v16M8%2020h8M5%207h14M5%207L2%2013h6zM19%207l-3%206h6z&#x27;%20fill=&#x27;none&#x27;%20stroke=&#x27;%23ffffff&#x27;%20stroke-width=&#x27;2&#x27;%20stroke-linecap=&#x27;round&#x27;%20stroke-linejoin=&#x27;round&#x27;/%3E%3C/svg%3E">
 <meta property="og:title" content="Tribunal - page not found">
 <meta property="og:description" content="This page does not exist; the queue lists every dispute this site replays.">
 <meta property="og:type" content="website">
@@ -22,15 +22,24 @@
    floor body text is held to, so muted text on the page background was below
    it. #5b6470 measures 5.45:1 on --bg, 6.00:1 on --card and 5.74:1 on --soft;
    the three figures are recomputed from this file by tests/test_ui_v2.py. */
+/* 51b.5/51b.6: the accent is the poster's violet, not the blue it was, so the
+   site belongs to the poster it carries. Measured: #6d28d9 is 7.10:1 on --card
+   (#ffffff), 6.46:1 on --bg (#f3f4f6), 6.80:1 on --soft (#f9fafb) and 5.98:1 on
+   --accent-wash (#ede9fe), and white on #6d28d9 is 7.10:1. In the dark palette
+   #c4b5fd is 7.92:1 on --card (#1e293b), 9.67:1 on --bg (#0f172a) and 8.67:1
+   on --soft (#16213a). The header band is #160b0e in both themes: its right-hand
+   readout #c8b8be is 10.16:1 on it and white is 19.3:1. All ten pairs are in
+   tests/test_ui_v2.py's STATED_CONTRAST and are recomputed from this file. */
 :root{
   --bg:#f3f4f6;--card:#ffffff;--line:#e5e7eb;--ink:#111827;--muted:#5b6470;
-  --soft:#f9fafb;--accent:#1d4ed8;--accent-wash:#e8effd;
+  --soft:#f9fafb;--accent:#6d28d9;--accent-wash:#ede9fe;
   --ok:#15803d;--ok-wash:#dcfce7;--bad:#b91c1c;--bad-wash:#fee2e2;
   --warn:#92400e;--warn-wash:#fef3c7;--grey:#374151;--grey-wash:#f3f4f6;
+  --band:#160b0e;--band-note:#c8b8be;
 }
 @media (prefers-color-scheme:dark){
   :root{--bg:#0f172a;--card:#1e293b;--line:#334155;--ink:#f1f5f9;--muted:#94a3b8;
-    --soft:#16213a;--accent:#93c5fd;--accent-wash:#1e293b;
+    --soft:#16213a;--accent:#c4b5fd;--accent-wash:#2e1065;
     --ok:#86efac;--ok-wash:#14532d;--bad:#fca5a5;--bad-wash:#7f1d1d;
     --warn:#fcd34d;--warn-wash:#78350f;--grey:#cbd5e1;--grey-wash:#1e293b;}
 }
@@ -42,14 +51,21 @@ h1{font-size:1.6rem;line-height:1.25;margin:0 0 6px}
 h2{font-size:1rem;margin:0 0 12px}
 h3{font-size:.92rem;margin:16px 0 6px}
 p{margin:.5em 0}
-.top{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line)}
+/* 51b.6: the header is the poster's dark band in both themes, with a crimson to
+   violet rule along its foot. The brand and the nav are white on it and the
+   right-hand readout is #c8b8be, so the bar reads the same in either theme; the
+   focus ring on it is white rather than the accent, which on #160b0e would be a
+   ring a reader could not see. */
+.top{position:sticky;top:0;z-index:5;background:var(--band);
+  border-bottom:2px solid;border-image:linear-gradient(90deg,#b91c1c,#6d28d9) 1}
 .top-in{max-width:1280px;margin:0 auto;padding:0 24px;height:56px;display:flex;align-items:center;gap:20px}
-.brand{display:inline-flex;align-items:center;gap:9px;font-weight:700;font-size:17px;text-decoration:none;color:var(--ink)}
+.top :focus-visible{outline-color:#ffffff}
+.brand{display:inline-flex;align-items:center;gap:9px;font-weight:700;font-size:17px;text-decoration:none;color:#ffffff}
 .mark{width:26px;height:26px;border-radius:7px;background:var(--accent);display:inline-flex;align-items:center;justify-content:center;flex:none}
 .nav{display:flex;align-items:center;gap:2px;flex-wrap:wrap}
-.nav a{padding:7px 12px;border:1px solid transparent;border-radius:8px;text-decoration:none;color:var(--muted);font-weight:500;line-height:1.2}
-.nav a.on{color:var(--ink);background:var(--soft);border-color:var(--line)}
-.mode{margin-left:auto;font-size:13px;color:var(--muted);white-space:nowrap}
+.nav a{padding:7px 12px;border:1px solid rgba(255,255,255,.28);border-radius:8px;text-decoration:none;color:#ffffff;font-weight:500;line-height:1.2}
+.nav a.on{color:#ffffff;background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.5)}
+.mode{margin-left:auto;font-size:13px;color:var(--band-note);white-space:nowrap}
 @media (max-width:700px){.mode{display:none}.top-in{gap:12px;padding:0 16px}}
 .wrap{max-width:1280px;margin:0 auto;padding:26px 24px 56px}
 @media (max-width:700px){.wrap{padding:18px 16px 40px}}
@@ -69,20 +85,32 @@ p{margin:.5em 0}
 .featured{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:18px 0 22px}
 @media (max-width:960px){.featured{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:560px){.featured{grid-template-columns:minmax(0,1fr)}}
-.fcard{display:block;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;text-decoration:none;color:var(--ink)}
-.fcard:hover{border-color:var(--accent)}
+.fcard{display:block;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;text-decoration:none;color:var(--ink);
+  transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease}
+/* 51b.9: the whole card is one link, so it lifts under the pointer and carries
+   the way in at its foot. The lift is movement, and that is the one thing the
+   reduce preference takes; the focus ring is the stylesheet's own. */
+.fcard:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.16)}
 .fcard .fcase{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
 .fcard h2{font-size:.95rem;margin:2px 0 8px}
 .fcard p{margin:.25em 0;font-size:13px;color:var(--muted)}
 .fcard b{color:var(--ink);font-weight:600}
+.fcard .fopen{display:block;margin-top:10px;color:var(--accent);font-weight:600;font-size:.85rem}
+@media (prefers-reduced-motion:reduce){.fcard{transition:none}.fcard:hover{transform:none}}
 
 /* figures */
 .figures{display:flex;flex-wrap:wrap;gap:14px;margin:0 0 22px}
 .figure{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 18px;min-width:168px;flex:1 1 168px}
 .figure .k{color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;margin:0 0 6px}
-.figure .v{font-size:1.3rem;font-weight:650;margin:0}
+.figure .v{font-size:1.9rem;font-weight:650;margin:0}
 .figure .s{color:var(--muted);font-size:.85rem;margin:4px 0 0}
 .figure.wide{flex:1 1 100%}
+/* 51b.8: each lane tile carries its lane's own colour on a 3px top border, and
+   the three figures under them carry the accent. */
+.figure.ok{border-top:3px solid var(--ok)}
+.figure.warn{border-top:3px solid var(--warn)}
+.figure.bad{border-top:3px solid var(--bad)}
+.figure.accent{border-top:3px solid var(--accent)}
 .triggers{list-style:none;margin:0;padding:0}
 .triggers li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 14px;padding:4px 0;border-bottom:1px solid var(--line)}
 .triggers li:last-child{border-bottom:0}
@@ -100,10 +128,31 @@ tbody tr:last-child td{border-bottom:0}
 tbody tr:hover td{background:var(--soft)}
 th.sortable{cursor:pointer;user-select:none}
 td[data-column="time"],td[data-column="confidence"]{white-space:nowrap}
+/* 51b.10: the Outcome column wrapped into five lines -- "Sent to a reviewer -
+   the judge escalated under the policy" -- while Status had room to spare. The
+   column is given a floor, and the note under a status chip is allowed to wrap
+   rather than push the chip wider. The row hover is the --soft rule above. */
+td[data-column="outcome"]{min-width:11rem}
+td[data-column="status"]{white-space:normal;overflow-wrap:anywhere}
 td a{font-weight:600;text-decoration:none}
 
 /* case page */
 .pagehead{margin:0 0 18px}
+/* 51b.4: the queue's head is a hero -- the words on the left and the poster on
+   the right at 1000 px and wider, the poster under the words below that. The h1
+   grows only here, where the poster sits beside it. */
+.hero{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
+.hero h1{font-size:2rem}
+.hero-art{margin:0;min-width:0}
+.hero-art img{display:block;width:100%;height:auto;border-radius:14px;box-shadow:0 10px 26px rgba(0,0,0,.22)}
+.hero-cta{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 0}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:9px;
+  font-weight:600;font-size:.92rem;text-decoration:none;border:1px solid var(--accent)}
+.btn-fill{background:var(--accent);color:#ffffff}
+.btn-out{background:transparent;color:var(--accent)}
+@media (min-width:1000px){
+  .hero{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:30px;align-items:center}
+}
 .tabs{display:flex;flex-wrap:wrap;gap:6px;border-bottom:1px solid var(--line);margin:0 0 22px}
 .tabs button{appearance:none;border:0;background:transparent;color:var(--muted);font:inherit;font-weight:500;padding:9px 13px;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer}
 .tabs button.tab-on{color:var(--ink);border-bottom-color:var(--accent)}
@@ -143,6 +192,10 @@ td a{font-weight:600;text-decoration:none}
 .rail .in{padding:0 0 14px;font-size:.9rem}
 .map{background:var(--soft);border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .map svg{display:block;width:100%;height:auto}
+/* 51b.11: the driven trace was drawn in a literal blue that the accent change
+   did not reach, and on the dark map's --soft it measured under 2:1. It is the
+   accent now, so it follows the theme like everything else on the page. */
+.map .trace{stroke:var(--accent)}
 .cap{color:var(--muted);font-size:.78rem;margin:6px 0 0}
 .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:.78rem;color:var(--muted);margin-top:8px}
 .legend i{display:inline-block;width:16px;height:3px;vertical-align:middle;margin-right:5px;border-radius:2px}
@@ -269,24 +322,30 @@ th[aria-sort="descending"] .sort::after{content:"\2193"}
 
 /* 44.2: the landing page's how-it-works strip and its links row. */
 .how{background:var(--card);border:1px solid var(--line);border-radius:12px;
-  padding:12px 16px;margin:0 0 18px}
-.how h2{margin:0 0 8px;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
-.how ol{display:flex;flex-wrap:wrap;gap:6px 14px;list-style:none;margin:0;padding:0}
-.how li{display:flex;align-items:center;gap:7px;font-size:.86rem;color:var(--muted)}
-.how li b{color:var(--ink);font-weight:600}
-.how i{display:inline-block;width:9px;height:9px;border-radius:50%;flex:none}
+  padding:14px 18px;margin:0 0 18px}
+.how h2{margin:0 0 10px;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.how ol{display:flex;flex-wrap:wrap;gap:10px 16px;list-style:none;margin:0;padding:0}
+.how li{display:flex;align-items:flex-start;gap:9px;font-size:.86rem;color:var(--muted)}
+/* 51b.7: a step is a numbered violet circle, its name in bold on one line and
+   its description under it in muted text. */
+.how .n{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;
+  border-radius:50%;background:var(--accent);color:#ffffff;font-size:11px;font-weight:700;
+  font-style:normal;flex:none}
+.how .st{display:block}
+.how .st b{display:block;color:var(--ink);font-weight:600}
 .how .arw{color:var(--muted);margin-left:8px}
 .links{display:flex;flex-wrap:wrap;gap:6px 18px;margin:0 0 20px;font-size:.9rem}
 
-/* 46b.8: on a wide screen the five steps of "How it works" wrapped into three
-   ragged lines with the arrows stranded at the line ends. At 1000 px and wider
-   they are five equal columns in one row, each with its arrow at the column's
-   right; below that the strip stacks as it did. */
+/* 46b.8, and 51b.7 on top of it: on a wide screen the five steps of "How it
+   works" wrapped into three ragged lines with the arrows stranded at the line
+   ends, so at 1000 px and wider they are five equal columns in one row, each
+   with its arrow at the column's right. The row is a flex row in both layouts
+   now: it was a block here, which dropped the gap and left the circle touching
+   the step's name. Below 1000 px the strip stacks as it did. */
 @media (min-width:1000px){
-  .how ol{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px 22px}
-  .how li{display:block;position:relative;padding-right:20px}
-  .how li i{vertical-align:middle}
-  .how .arw{position:absolute;right:0;top:1px;margin:0}
+  .how ol{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px 22px}
+  .how li{display:flex;position:relative;padding-right:20px}
+  .how .arw{position:absolute;right:0;top:3px;margin:0}
 }
 
 /* 46b.10: the trace's own box runs the width of the rail column, so the map is
