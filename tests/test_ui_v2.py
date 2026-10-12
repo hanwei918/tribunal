@@ -39,7 +39,10 @@ a number typed in here:
   bare status names the stylesheet's global rules also match;
 * a reviewer's queue row shows the short chip and its trigger words wrap under
   it, no chip in the queue is longer than the four short labels, and the case
-  page's header keeps the long chip.
+  page's header keeps the long chip;
+* the queue's safeguards section names the seven safeguards in order, its
+  reviewer figure is the lane tile's own, its two case links resolve inside the
+  site, and it carries no script.
 
 **The suite builds the site five times and says why.** A build reads 151 cases,
 rebuilds each case's brief and builds 26 escalation packets, which is about
@@ -143,16 +146,27 @@ TRANSCRIPT_RE = re.compile(r"^case-(\d{5})\.transcript\.json$")
 # vote's outcome and the ruling value.
 TRIGGERS = ("GEN08_SCOPE", "NO_VALID_DRAFTS", "NO_MAJORITY", "JUDGE_ESCALATE")
 
-# The one link off the site, as the page writes it. It is the queue's results
-# line, and until part 48 it was the repository-relative path
+# The links off the site, as the pages write them. The first is the queue's
+# results line, and until part 48 it was the repository-relative path
 # ``../../README.md#results``: a path out of ``ui/dist/`` that resolved in a
 # checkout and 404s wherever the site is served on its own, so the
 # inside-the-site link check had to name it as an exception. It is the
 # repository's own page on GitHub now -- an absolute URL, which resolves nowhere
-# in a checkout and therefore needs no exception -- and this is the set the
-# external-reference check expects a page to carry. Every other link a built
-# page carries is a file inside ``ui/dist/``, and is checked as one.
-EXTERNAL_LINKS: FrozenSet[str] = frozenset({v2.README_RESULTS_LINK})
+# in a checkout and therefore needs no exception. The three after it are the
+# safeguards section's: the repository's privacy note, the limits section of its
+# README and the note recording the accessibility scan, each a page the site
+# does not carry and each written in full rather than as a path that would 404.
+# This is the set the external-reference check expects a page to carry. Every
+# other link a built page carries is a file inside ``ui/dist/``, and is checked
+# as one.
+EXTERNAL_LINKS: FrozenSet[str] = frozenset(
+    {
+        v2.README_RESULTS_LINK,
+        v2.PRIVACY_LINK,
+        v2.LIMITATIONS_LINK,
+        v2.ACCESSIBILITY_NOTE_LINK,
+    }
+)
 
 # The files this site carries that are not pages: the four architecture views,
 # the link-preview image and the front page's poster, each copied into
@@ -1926,6 +1940,85 @@ class LandingPageTests(unittest.TestCase):
         """A map drawn inside the details' padding loses 32 of the 360 px."""
         self.assertIn(".rail details.full{padding:0}", v2._CSS)
         self.assertIn('class="full"', built_pages()[loaded_case(208).link])
+
+
+class SafeguardsTests(unittest.TestCase):
+    """52.1: the safeguards card, and the accessibility line under it.
+
+    Two of the ten judging dimensions are responsible AI and accessibility, and
+    neither was named on the front page. The card states the seven things the
+    system does to keep a person in the loop, and the reviewer figure on its
+    second line is the lane tile's own -- read from the same computation rather
+    than typed in here -- so the tile and the card cannot disagree.
+    """
+
+    def section(self) -> str:
+        """The safeguards section alone, from its own opening tag to its close."""
+        text = index_text()
+        start = text.index('<section class="safeguards"')
+        return text[start : text.index("</section>", start)]
+
+    def test_the_queue_carries_one_safeguards_section_with_its_id_and_heading(self):
+        text = index_text()
+        self.assertEqual(1, text.count('<section class="safeguards"'))
+        self.assertIn(
+            '<section class="safeguards" id="safeguards" '
+            'aria-labelledby="safeguards-h">',
+            text,
+        )
+        self.assertIn('<h2 id="safeguards-h">Safeguards</h2>', text)
+        # The links row is the way down to it, and the fragment resolves.
+        self.assertIn('<a href="#safeguards">Safeguards</a>', text)
+
+    def test_the_seven_lead_words_are_there_in_order(self):
+        section = self.section()
+        self.assertEqual(7, len(v2.SAFEGUARD_LEADS))
+        positions = []
+        for lead in v2.SAFEGUARD_LEADS:
+            with self.subTest(lead=lead):
+                self.assertIn(v2._text(lead), section)
+                positions.append(section.index(v2._text(lead)))
+        self.assertEqual(
+            sorted(positions), positions, "the safeguards are out of order"
+        )
+
+    def test_the_reviewer_count_is_the_lane_tiles_own(self):
+        """The figure on line 2 is the tile's, from the one computation."""
+        figures = v2.queue_figures(loaded_cases())
+        lane = "{0} of {1}".format(figures.reviewer, figures.total)
+        self.assertIn('<p class="v">{0}</p>'.format(lane), index_text())
+        self.assertIn(
+            "{0} of {1} queued disputes".format(figures.reviewer, figures.total),
+            self.section(),
+        )
+
+    def test_the_two_case_links_resolve_inside_the_site(self):
+        section = self.section()
+        names = set(built_pages())
+        for case_no in (
+            v2.SAFEGUARD_SAFETY_CASE,
+            v2.SAFEGUARD_PLANTED_CLAUSE_CASE,
+        ):
+            link = "case-{0:05d}.html".format(case_no)
+            with self.subTest(case=case_no):
+                self.assertIn(
+                    '<a href="{0}">case {1}</a>'.format(link, case_no), section
+                )
+                self.assertIn(link, names)
+
+    def test_the_accessibility_line_is_present(self):
+        section = self.section()
+        self.assertIn(v2._text(v2.SAFEGUARDS_ACCESSIBILITY), section)
+        self.assertIn(
+            '<a href="{0}">{1}</a>'.format(
+                v2._attribute(v2.ACCESSIBILITY_NOTE_LINK),
+                v2._text(v2.ACCESSIBILITY_SCAN_WORDS),
+            ),
+            section,
+        )
+
+    def test_the_section_carries_no_script(self):
+        self.assertNotIn("<script", self.section())
 
 
 class HeroTests(unittest.TestCase):

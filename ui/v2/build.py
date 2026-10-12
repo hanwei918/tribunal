@@ -615,6 +615,55 @@ README_RESULTS_WORDS = "How the figures were measured"
 # advocates' claims and the judge's four drafts.
 HOW_IT_WAS_DECIDED_CASE = 208
 
+# The three pages the safeguards section links to that this site does not carry:
+# the repository's privacy note, the limits section of its README, and the note
+# recording the accessibility scan. Each is an absolute URL, because the site is
+# served on its own and a repository-relative path resolves nowhere and 404s
+# there; the tests' own external-link allowance names all three rather than
+# passing them over silently.
+PRIVACY_LINK = (
+    "https://github.com/hanwei918/tribunal/blob/main/docs/governance/privacy.md"
+)
+LIMITATIONS_LINK = (
+    "https://github.com/hanwei918/tribunal#limitations-and-disclosures"
+)
+ACCESSIBILITY_NOTE_LINK = (
+    "https://github.com/hanwei918/tribunal/blob/main/docs/notes/"
+    "2026-10-12-accessibility-scan.md"
+)
+
+# The two case pages the safeguards section links to: the safety flag that
+# stopped before any model was asked, and the planted clause every draft
+# refused. Both are pages this builder writes, so both links stay inside the
+# site and are checked against the pages it commits.
+SAFEGUARD_SAFETY_CASE = 2735
+SAFEGUARD_PLANTED_CLAUSE_CASE = 1779
+
+# The seven lead words of the safeguards section, in the order it prints them.
+# They are what a reader scans for, and the section's own test holds the page to
+# them in this order rather than to a memory of the sentence around each.
+SAFEGUARD_LEADS: Tuple[str, ...] = (
+    "Cited or dropped.",
+    "A person for what the panel cannot decide.",
+    "Safety goes straight to a person.",
+    "A planted clause is not obeyed.",
+    "One appeal.",
+    "Privacy.",
+    "What it does not do.",
+)
+
+# The muted line under the safeguards list. Its first sentence states what the
+# site does for a reader and its second is a link to the note recording the
+# scan; the two are kept apart here so the anchor can carry the sentence whole.
+SAFEGUARDS_ACCESSIBILITY = (
+    "Accessibility: light and dark themes, tables that sort and scroll from the "
+    "keyboard, and text contrast of at least 4.5:1, recomputed by the test "
+    "suite."
+)
+ACCESSIBILITY_SCAN_WORDS = (
+    "An axe-core 4.8.2 scan of the live site on 2026-10-12 found no violations."
+)
+
 # What the queue page says the product is, and what the disputes on it are. Two
 # sentences about the system, and then the two disclosures: every dispute shown
 # is synthetic except the organisers' own sample, and the figures are
@@ -2299,6 +2348,23 @@ th[aria-sort="descending"] .sort::after{content:"\\2193"}
 .how .arw{color:var(--muted);margin-left:8px}
 .links{display:flex;flex-wrap:wrap;gap:6px 18px;margin:0 0 20px;font-size:.9rem}
 
+/* 52.1: the safeguards card. It is the How-it-works card's surface and its h2
+   treatment -- the same border, radius and padding, the same small uppercase
+   heading -- because the two cards are the same kind of thing: what the system
+   is, said once. Each line's lead words are --ink and the rest of it is
+   --muted, and the list is two columns at 1000 px and wider and one below. */
+.safeguards{background:var(--card);border:1px solid var(--line);border-radius:12px;
+  padding:14px 18px;margin:0 0 18px}
+.safeguards h2{margin:0 0 10px;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.safeguards ul{list-style:none;margin:0;padding:0;display:grid;
+  grid-template-columns:minmax(0,1fr);gap:9px 26px;font-size:.86rem;color:var(--muted)}
+.safeguards li{margin:0}
+.safeguards b{color:var(--ink);font-weight:600}
+.safeguards .access{margin:12px 0 0;font-size:.86rem;color:var(--muted)}
+@media (min-width:1000px){
+  .safeguards ul{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
 /* 46b.8, and 51b.7 on top of it: on a wide screen the five steps of "How it
    works" wrapped into three ragged lines with the arrows stranded at the line
    ends, so at 1000 px and wider they are five equal columns in one row, each
@@ -3169,6 +3235,87 @@ def _how_it_works() -> str:
     ).format("".join(items))
 
 
+def _safeguards(figures: QueueFigures) -> str:
+    """The seven safeguards, and the accessibility line under them.
+
+    Two of the ten judging dimensions are responsible AI and accessibility, and
+    neither was named on the front page. Every line here is already true in the
+    repository -- the citation referee, the human lane, the scope gate, the
+    draft checks, the appeal rule, the mask and the disclosed limits -- and the
+    reviewer figure is read from the same :class:`QueueFigures` the lane tile
+    above the table carries, so the two cannot state different numbers. The
+    three links out are absolute URLs to the repository's own pages, because the
+    site is served on its own and a relative path would 404 there.
+    """
+    safety_link = '<a href="{0}">case {1}</a>'.format(
+        _attribute("case-{0:05d}.html".format(SAFEGUARD_SAFETY_CASE)),
+        _text(SAFEGUARD_SAFETY_CASE),
+    )
+    planted_link = '<a href="{0}">case {1}</a>'.format(
+        _attribute("case-{0:05d}.html".format(SAFEGUARD_PLANTED_CLAUSE_CASE)),
+        _text(SAFEGUARD_PLANTED_CLAUSE_CASE),
+    )
+    limits_link = '<a href="{0}">the limits are listed in full</a>'.format(
+        _attribute(LIMITATIONS_LINK)
+    )
+    items: Tuple[Tuple[str, str], ...] = (
+        (
+            "<b>{0}</b>".format(_text(SAFEGUARD_LEADS[0])),
+            "Every claim must name evidence and a clause that exist in the "
+            "record; the citation referee drops any claim that does not.",
+        ),
+        (
+            "<b>{0}</b>".format(_text(SAFEGUARD_LEADS[1])),
+            "{0} of {1} queued disputes went to a reviewer, with no ruling "
+            "issued and the amount held.".format(figures.reviewer, figures.total),
+        ),
+        (
+            "<b>{0}</b>".format(_text(SAFEGUARD_LEADS[2])),
+            "A safety or complaint flag stops the case before any model is "
+            "asked ({0}: 0 model calls).".format(safety_link),
+        ),
+        (
+            "<b>{0}</b>".format(_text(SAFEGUARD_LEADS[3])),
+            "In {0} the record carries a planted clause; all four drafts "
+            "refused it, and the code check voided them, so a person "
+            "decides.".format(planted_link),
+        ),
+        (
+            "<b>{0}</b>".format(_text(SAFEGUARD_LEADS[4])),
+            "Either party may appeal once within 30 days (POL-GEN-04); a "
+            "different human reviewer hears it.",
+        ),
+        (
+            '<a href="{0}"><b>{1}</b></a>'.format(
+                _attribute(PRIVACY_LINK), _text(SAFEGUARD_LEADS[5])
+            ),
+            "Vehicle registration marks, telephone numbers and e-mail "
+            "addresses are masked before a model reads the record; names are "
+            "not.",
+        ),
+        (
+            "<b>{0}</b>".format(_text(SAFEGUARD_LEADS[6])),
+            "Every case shown except 901 is synthetic, and {0}.".format(
+                limits_link
+            ),
+        ),
+    )
+    lines = "".join(
+        "<li>{0} {1}</li>".format(lead, body) for lead, body in items
+    )
+    accessibility = '<p class="access">{0} <a href="{1}">{2}</a></p>'.format(
+        _text(SAFEGUARDS_ACCESSIBILITY),
+        _attribute(ACCESSIBILITY_NOTE_LINK),
+        _text(ACCESSIBILITY_SCAN_WORDS),
+    )
+    return (
+        '<section class="safeguards" id="safeguards" '
+        'aria-labelledby="safeguards-h">'
+        '<h2 id="safeguards-h">Safeguards</h2>'
+        "<ul>{0}</ul>{1}</section>\n"
+    ).format(lines, accessibility)
+
+
 def _links_row() -> str:
     """The links out of the queue's own words: the architecture views, and a case.
 
@@ -3176,8 +3323,9 @@ def _links_row() -> str:
     it resolves wherever ``ui/dist/`` is served and not only in a checkout. The
     dynamic view comes first under the plain label, because it is the one a
     reader wants first -- one dispute, step by step -- and the three container
-    views are named beside it. The last link sends a reader to the case whose
-    "How it was decided" tab is the debate itself.
+    views are named beside it. The "Safeguards" link is the way down to the
+    seven lines the strip's card does not carry. The last link sends a reader to
+    the case whose "How it was decided" tab is the debate itself.
     """
     views = "".join(
         '<a href="{0}">{1}</a>'.format(
@@ -3188,6 +3336,7 @@ def _links_row() -> str:
     return (
         '<p class="links">'
         "{0}"
+        '<a href="#safeguards">Safeguards</a>'
         '<a href="{1}">How it was decided: see case {2}</a>'
         "</p>\n"
     ).format(
@@ -3198,7 +3347,7 @@ def _links_row() -> str:
 
 
 def build_index(cases: Sequence[CaseData]) -> str:
-    """The queue: the hero, four featured cases, the figures, a filter row and the table."""
+    """The queue: the hero, the featured cases, the safeguards, the figures and the table."""
     figures = queue_figures(cases)
     # 51b.4: the head is the hero. The words are the ones it always carried --
     # nothing on this page is rewritten -- and the poster sits beside them at
@@ -3319,6 +3468,7 @@ def build_index(cases: Sequence[CaseData]) -> str:
         + _how_it_works()
         + _links_row()
         + _featured_cards(cases)
+        + _safeguards(figures)
         + figure_html
         + words_note
         + filters
