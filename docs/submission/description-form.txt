@@ -112,13 +112,23 @@ documents were written in WorkBuddy session by session.
 Responsible AI. A person decides every case the panel cannot, and the money
 is held; a party may appeal once within 30 days; a human can switch automatic
 rulings off with auto_rulings_enabled. Masking covers registration marks,
-telephone numbers and e-mail addresses, not names. On fairness the errors lean
+telephone numbers and e-mail addresses, not names. A planted clause in the
+record of case 1779 was refused by all four drafts, and the code check that
+voided those drafts sent the case to a person. On fairness the errors lean
 towards the rider 0, towards the driver 1, to an escalation 5 and away from one
 2 - the under-escalations 112 and 2858. The limits: every case except 901 is
 synthetic; POL-GEN-08(1) covers its two structured flags only, so a free-text
 allegation is not detected; and a judge that quotes an invented clause id voids
 its own drafts, so a party can force a case out of automation with a
 non-existent clause id.
+
+Usability and accessibility. Each case page opens with the outcome, the
+money and who decided, and gives both parties the same notice in plain words
+with the clause codes in brackets. The site has light and dark themes, its
+tables sort and scroll from the keyboard, and every stated text contrast is at
+least 4.5:1 and is recomputed by the test suite; an axe-core 4.8.2 scan of the
+live queue and case pages 107 and 208, in both themes, found no violations on
+2026-10-12.
 
 4. Business Value: Quantifiable metrics or clearly defined impact
 
