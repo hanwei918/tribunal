@@ -1505,6 +1505,20 @@ def release_sentence(policy: PolicyFacts) -> str:
     )
 
 
+# The four short chip labels a status chip is one of, keyed by the lane the
+# queue routes the case into. A chip does not wrap (:func:`status_chip`), so the
+# longest of these is the widest a status chip can be and the queue's Status
+# column cannot grow past it; the queue's own test holds every chip in the built
+# queue to that width, and the labels live here so the chip and the test cannot
+# drift apart.
+CHIP_LABELS: Mapping[str, str] = {
+    "decided": "Decided automatically",
+    "held": "Held for release",
+    "reviewer": "Sent to a reviewer",
+    "none": "No status is recorded",
+}
+
+
 def status_chip(
     case: "CaseData", with_time: bool = False, title: bool = False
 ) -> str:
@@ -1522,14 +1536,16 @@ def status_chip(
     if case.trigger is not None:
         return _chip(
             "bad",
-            "Sent to a reviewer - {0}{1}".format(
-                trigger_words(str(case.trigger), case.votes), suffix
+            "{0} - {1}{2}".format(
+                CHIP_LABELS["reviewer"],
+                trigger_words(str(case.trigger), case.votes),
+                suffix,
             ),
         )
     if _money_is_held(case):
         return _chip(
             "warn",
-            "Held for release{0}".format(suffix),
+            "{0}{1}".format(CHIP_LABELS["held"], suffix),
             title=held_reason(case) if title else None,
         )
     if case.ruling.get("ruling") in (
@@ -1538,8 +1554,31 @@ def status_chip(
         NO_ACTION,
         pipeline_module.DRIVER_COMPENSATION,
     ):
-        return _chip("ok", "Decided automatically{0}".format(suffix))
-    return _chip("grey", "No status is recorded{0}".format(suffix))
+        return _chip("ok", "{0}{1}".format(CHIP_LABELS["decided"], suffix))
+    return _chip("grey", "{0}{1}".format(CHIP_LABELS["none"], suffix))
+
+
+def queue_status_cell(case: "CaseData") -> str:
+    """The queue row's status cell: the short chip, and its detail under it.
+
+    A chip does not wrap, so on a queue row -- where the Status column's width
+    is the whole table's business and not one heading's -- a case sent to a
+    reviewer shows the short chip :data:`CHIP_LABELS` names and the trigger
+    words travel under it in the same small wrapping note a held amount's reason
+    uses (same class, same ``max-width``). The words do not change; only where
+    they sit does. The case page's header keeps the long form,
+    :func:`status_chip` with ``with_time``, where the words are a heading and no
+    column is at stake.
+    """
+    if case.trigger is not None:
+        cell = _chip("bad", CHIP_LABELS["reviewer"])
+        note = trigger_words(str(case.trigger), case.votes)
+    else:
+        cell = status_chip(case)
+        note = held_reason(case) if _money_is_held(case) else ""
+    if note:
+        cell += '<span class="held-why">{0}</span>'.format(_text(note))
+    return cell
 
 
 # --------------------------------------------------------------------------
@@ -1924,9 +1963,20 @@ _CSS = """
    brand mark was the same -- a white glyph on the accent -- so its SVG strokes
    take currentColor and the tile carries the token. Both figures are in
    tests/test_ui_v2.py's STATED_CONTRAST and are recomputed from this file. */
+/* 51d.1: the case page's numbered step circles are a token background too, and
+   their text was white. In the dark theme --grey, --ok and --bad are #cbd5e1,
+   #86efac and #fca5a5, and white on them measured 1.48:1, 1.40:1 and 1.90:1
+   here, all below the 4.5:1 floor. A token --on-status is added -- #ffffff in
+   :root, 10.31:1 on --grey (#374151), 5.02:1 on --ok (#15803d) and 6.47:1 on
+   --bad (#b91c1c), and #0f172a in the dark block, 12.02:1, 12.71:1 and 9.41:1
+   on the same three -- and .stepper button .n i takes it. The model circle
+   keeps --on-accent, because that circle is drawn on the accent and not on one
+   of these. All six pairs are in tests/test_ui_v2.py's STATED_CONTRAST and are
+   recomputed from this file. */
 :root{
   --bg:#f3f4f6;--card:#ffffff;--line:#e5e7eb;--ink:#111827;--muted:#5b6470;
   --soft:#f9fafb;--accent:#6d28d9;--accent-wash:#ede9fe;--on-accent:#ffffff;
+  --on-status:#ffffff;
   --ok:#15803d;--ok-wash:#dcfce7;--bad:#b91c1c;--bad-wash:#fee2e2;
   --warn:#92400e;--warn-wash:#fef3c7;--grey:#374151;--grey-wash:#f3f4f6;
   --band:#160b0e;--band-note:#c8b8be;
@@ -1934,6 +1984,7 @@ _CSS = """
 @media (prefers-color-scheme:dark){
   :root{--bg:#0f172a;--card:#1e293b;--line:#334155;--ink:#f1f5f9;--muted:#94a3b8;
     --soft:#16213a;--accent:#c4b5fd;--accent-wash:#2e1065;--on-accent:#1e1035;
+    --on-status:#0f172a;
     --ok:#86efac;--ok-wash:#14532d;--bad:#fca5a5;--bad-wash:#7f1d1d;
     --warn:#fcd34d;--warn-wash:#78350f;--grey:#cbd5e1;--grey-wash:#1e293b;}
 }
@@ -2111,7 +2162,7 @@ td a{font-weight:600;text-decoration:none}
 .stepper button{appearance:none;text-align:left;border:0;border-left:1px solid var(--line);background:transparent;font:inherit;color:inherit;cursor:pointer;padding:14px 16px;display:flex;flex-direction:column;gap:5px;position:relative}
 .stepper button:first-child{border-left:0}
 .stepper button .n{display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--muted)}
-.stepper button .n i{width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;background:var(--grey);font-style:normal}
+.stepper button .n i{width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--on-status);background:var(--grey);font-style:normal}
 .stepper button .n i.llm{background:var(--accent);color:var(--on-accent)}
 .stepper button .n i.ok{background:var(--ok)}
 .stepper button .n i.bad{background:var(--bad)}
@@ -2818,12 +2869,11 @@ def _queue_row(case: CaseData) -> str:
     # itself stays short so the row's height cannot change, and the figure is one
     # hover away rather than cut off.
     held = held_reason(case) if _money_is_held(case) else ""
-    # The reason a held amount is held is written under the chip as well as
-    # into its title: a tooltip is not text a reader who cannot hover is told,
-    # and the row is where the reader meets the case.
-    status_cell = status_chip(case)
-    if held:
-        status_cell += '<span class="held-why">{0}</span>'.format(_text(held))
+    # The detail a short chip hides -- a held amount's reason, or a reviewer
+    # case's trigger words -- is written under the chip as well as into its
+    # title: a tooltip is not text a reader who cannot hover is told, and the
+    # row is where the reader meets the case.
+    status_cell = queue_status_cell(case)
     cells = (
         (
             "case",

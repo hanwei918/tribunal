@@ -32,10 +32,14 @@ a number typed in here:
   case with nothing to adopt has ADOPT disabled;
 * the appeal text matches ``POL-GEN-04``'s rule text;
 * every rule that paints the accent as a background and sets a colour uses
-  ``--on-accent``, the token that is legible on it in either theme;
+  ``--on-accent``, and no rule pairs white with a token background that changes
+  between the themes -- the tokens that are legible on either are named;
 * the queue's held note is capped so the table fits its wrapper on a desktop
   screen, and the three lane tiles carry ``lane-*`` classes rather than the
-  bare status names the stylesheet's global rules also match.
+  bare status names the stylesheet's global rules also match;
+* a reviewer's queue row shows the short chip and its trigger words wrap under
+  it, no chip in the queue is longer than the four short labels, and the case
+  page's header keeps the long chip.
 
 **The suite builds the site five times and says why.** A build reads 151 cases,
 rebuilds each case's brief and builds 26 escalation packets, which is about
@@ -2726,7 +2730,10 @@ class StylesheetTests(unittest.TestCase):
     # them are 51b.5's accent -- four on the light backgrounds and white on it,
     # three on the dark ones -- the two after those are 51c.1's ``--on-accent``
     # on the accent in each theme (it was the bare ``#ffffff`` row in the light
-    # one, and the dark pair is new), and the last two are 51b.6's header band.
+    # one, and the dark pair is new), the six after those are 51d.1's
+    # ``--on-status`` on the three token backgrounds the case page's step
+    # circles are drawn on in each theme, and the last two are 51b.6's header
+    # band.
     STATED_CONTRAST: Tuple[Tuple[str, str, str, float], ...] = (
         ("--muted", "--bg", "light", 5.45),
         ("--muted", "--card", "light", 6.00),
@@ -2740,6 +2747,12 @@ class StylesheetTests(unittest.TestCase):
         ("--accent", "--soft", "dark", 8.67),
         ("--on-accent", "--accent", "light", 7.10),
         ("--on-accent", "--accent", "dark", 9.63),
+        ("--on-status", "--grey", "light", 10.31),
+        ("--on-status", "--ok", "light", 5.02),
+        ("--on-status", "--bad", "light", 6.47),
+        ("--on-status", "--grey", "dark", 12.02),
+        ("--on-status", "--ok", "dark", 12.71),
+        ("--on-status", "--bad", "dark", 9.41),
         ("--band-note", "--band", "light", 10.16),
         ("#ffffff", "--band", "light", 19.3),
     )
@@ -2795,14 +2808,15 @@ class StylesheetTests(unittest.TestCase):
                 )
 
     def test_every_stated_contrast_is_the_one_the_colour_gives(self):
-        """51b.5/51b.6, and 51c.1: every pair the stylesheet states, recomputed.
+        """51b.5/51b.6, 51c.1 and 51d.1: every pair the stylesheet states.
 
-        The accent's eight pairs, the two ``--on-accent`` pairs 51c.1 added and
-        the header band's two are claims written in a comment, and a claim
-        nobody recomputes drifts. Each is measured against the palette the page
-        sets for its own theme and held to 4.5:1, the floor body text is held
-        to, so a pair that fell below it fails here rather than in a reader's
-        eyes -- which is exactly what white on the dark accent does.
+        The accent's eight pairs, the two ``--on-accent`` pairs 51c.1 added,
+        the six ``--on-status`` pairs 51d.1 added and the header band's two are
+        claims written in a comment, and a claim nobody recomputes drifts. Each
+        is measured against the palette the page sets for its own theme and held
+        to 4.5:1, the floor body text is held to, so a pair that fell below it
+        fails here rather than in a reader's eyes -- which is exactly what white
+        on the dark accent, and white on the dark step circles, both did.
         """
         for foreground, background, theme, stated in self.STATED_CONTRAST:
             with self.subTest(
@@ -2828,7 +2842,7 @@ class StylesheetTests(unittest.TestCase):
         self.assertLess(round(contrast_ratio("#6b7280", root["--bg"]), 2), 4.5)
 
     def test_text_on_the_accent_is_the_token_the_accent_carries(self):
-        """51c.1: a rule that paints the accent and sets a colour uses the token.
+        """51c.1, widened by 51d.1: a rule that paints a token background takes a token.
 
         In the dark theme the accent is #c4b5fd, a light lavender, and white on
         it measures 1.85:1 -- the floor body text is held to is 4.5:1. Two rules
@@ -2838,6 +2852,18 @@ class StylesheetTests(unittest.TestCase):
         Every rule in the stylesheet that sets ``background:var(--accent)`` and
         names a colour must name ``--on-accent``, and no rule may pair the
         accent with white. The four are named, so a fifth cannot arrive quietly.
+
+        51d.1 widened the same walk to the rest of the family. ``.stepper button
+        .n i`` -- the case page's numbered step circles -- painted
+        ``background:var(--grey)`` and set ``color:#fff``; in the dark theme
+        ``--grey`` is #cbd5e1 and white on it measures 1.48:1, with ``i.ok`` on
+        ``--ok`` at 1.40:1 and ``i.bad`` on ``--bad`` at 1.90:1, all under the
+        4.5:1 floor. A token ``--on-status`` carries the text for those three
+        backgrounds in either theme, and the rule takes it. So no rule in the
+        stylesheet may set ``color:#fff`` or ``color:#ffffff`` beside a
+        ``background:var(--...)`` whose token changes between the two themes;
+        the header's own whites sit on ``--band``, which is #160b0e in both, and
+        are the ones left alone.
         """
         painted: List[str] = []
         for selector, declarations in stylesheet_rules(v2._CSS):
@@ -2863,6 +2889,25 @@ class StylesheetTests(unittest.TestCase):
         self.assertEqual("#1e1035", self.palette("dark")["--on-accent"])
         self.assertIn('stroke="currentColor"', v2.SCALES_MARK)
         self.assertIn("color:var(--on-accent)", v2._CSS)
+        # 51d.1: the same fault on the second family of token backgrounds.
+        light = self.palette("light")
+        dark = self.palette("dark")
+        self.assertEqual("#ffffff", light["--on-status"])
+        self.assertEqual("#0f172a", dark["--on-status"])
+        self.assertIn("color:var(--on-status)", v2._CSS)
+        for selector, declarations in stylesheet_rules(v2._CSS):
+            if "color:#fff" not in declarations and "color:#ffffff" not in declarations:
+                continue
+            with self.subTest(selector=selector):
+                for token in re.findall(
+                    r"background:var\((--[a-z0-9-]+)\)", declarations
+                ):
+                    self.assertEqual(
+                        light[token],
+                        dark[token],
+                        "{0} sets white text on {1}, which changes between the "
+                        "themes".format(selector, token),
+                    )
 
     def test_the_held_note_wraps_so_the_queue_fits_a_desktop_screen(self):
         """51c.2: the note under a status chip is capped, so the table fits.
@@ -3056,6 +3101,86 @@ class StatusChipTests(unittest.TestCase):
                     self.assertIn('class="chip ok"', chip)
                 else:
                     self.assertIn('class="chip grey"', chip)
+
+    def test_a_reviewer_row_shows_the_short_chip_and_the_words_under_it(self):
+        """51d: the queue row's reviewer chip is short, its reason wraps below.
+
+        51c capped the held note and the table still did not fit: the widest
+        content in the Status column was the red reviewer chip, which never
+        wraps -- "Sent to a reviewer - no judge draft passed the code checks" is
+        384 px. The row now shows the short chip ``CHIP_LABELS`` names, and the
+        trigger words travel under it in the same small wrapping note a held
+        amount's reason uses, so the table fits its wrapper at 1280 px and
+        wider. The words do not change; only where they sit does.
+        """
+        queue = built_pages()["index.html"]
+        reviewer = [case for case in loaded_cases() if case.trigger is not None]
+        self.assertEqual(26, len(reviewer))
+        for case in reviewer:
+            words = v2._text(v2.trigger_words(str(case.trigger), case.votes))
+            with self.subTest(case=case.case_no):
+                self.assertIn(
+                    '<span class="chip bad">{0}</span>'
+                    '<span class="held-why">{1}</span>'.format(
+                        v2.CHIP_LABELS["reviewer"], words
+                    ),
+                    queue,
+                    "the row does not put the trigger words under the short chip",
+                )
+        # Nothing follows the dash inside a queue chip: the chip is the label
+        # alone, and the words are the note beside it.
+        body = re.sub(r"<style>.*?</style>", "", queue, flags=re.DOTALL)
+        texts = re.findall(r'<span class="chip ([a-z]+)">(.*?)</span>', body)
+        self.assertEqual(
+            {v2.CHIP_LABELS["reviewer"]},
+            {text for kind, text in texts if kind == "bad"},
+            "a queue chip still carries its reason inside the pill",
+        )
+
+    def test_the_case_page_keeps_the_long_reviewer_chip(self):
+        """51d: the header's chip is unchanged -- only the queue row's moved.
+
+        The case page is a heading, not a column, so it keeps
+        ``status_chip(case, with_time=True)``: "Sent to a reviewer - <words> -
+        <time>". The queue row is the one place the words moved under the chip.
+        """
+        reviewer = [case for case in loaded_cases() if case.trigger is not None]
+        self.assertEqual(26, len(reviewer))
+        for case in reviewer:
+            chip = v2.status_chip(case, with_time=True)
+            with self.subTest(case=case.case_no):
+                self.assertIn("Sent to a reviewer - ", chip)
+                self.assertIn(
+                    chip,
+                    built_pages()[case.link],
+                    "the case page's header no longer carries the long chip",
+                )
+
+    def test_no_chip_in_the_queue_is_longer_than_the_short_labels(self):
+        """51d: the widest a chip can be is the longest of the four labels.
+
+        A chip does not wrap, so a chip longer than the longest of the four
+        short labels ("Decided automatically", "Held for release", "Sent to a
+        reviewer", "No status is recorded") is what widened the Status column
+        past its wrapper. Every chip in the built queue is held to that width,
+        so a long chip cannot come back and push the table off a desktop screen.
+        """
+        limit = max(len(label) for label in v2.CHIP_LABELS.values())
+        queue = built_pages()["index.html"]
+        body = re.sub(r"<style>.*?</style>", "", queue, flags=re.DOTALL)
+        texts = re.findall(r'<span class="chip [a-z]+">(.*?)</span>', body)
+        self.assertEqual(
+            len(loaded_cases()),
+            len(texts),
+            "the queue does not draw one status chip per row",
+        )
+        for text in texts:
+            with self.subTest(chip=text):
+                self.assertLessEqual(
+                    len(text),
+                    limit,
+                    "a queue chip is longer than the four short labels",
+                )
 
 
 # --------------------------------------------------------------------------
