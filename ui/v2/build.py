@@ -32,8 +32,10 @@ for a case that was sent to a reviewer -- the escalation packet
 :mod:`ops.escalation` builds, which is called rather than re-implemented. The
 only other files read are ``ops/config.json``, for the queue's targets, the four
 ``docs/architecture/*.svg`` views, which are copied into the site byte for byte
-so the architecture links off the queue stay inside ``ui/dist/``, and the
-committed link-preview image at ``ui/assets/og-image.png``, copied the same way.
+so the architecture links off the queue stay inside ``ui/dist/``, and the two
+committed images under ``ui/assets/`` -- the link-preview image
+``og-image.png`` and the front page's poster ``cover-1280.jpg`` -- copied the
+same way.
 
 **No answer key is opened anywhere in this module**, and nothing under
 ``eval/answers/sealed-v1/``, ``data/external/sealed-v1/`` or
@@ -235,6 +237,16 @@ ARCHITECTURE_LINK = architecture_link(ARCHITECTURE_VIEWS[0][0])
 OG_IMAGE_SOURCE = PROJECT_ROOT / "ui" / "assets" / "og-image.png"
 OG_IMAGE_ASSET = DIST_DIR / "og-image.png"
 OG_IMAGE_LINK = "og-image.png"
+
+# The poster the front page carries (51a.2), copied into the site the same way
+# and for the same reason as the link-preview image: it is a committed file and
+# not the owner's original, which sat in the gitignored scratch directory a
+# clean clone does not have. ``ui/assets/cover-1280.jpg`` is the owner's own
+# bytes -- the poster made with Miora -- and ``ui/dist/cover-1280.jpg`` is its
+# copy, so ``--check`` covers it exactly as it covers the og image.
+COVER_SOURCE = PROJECT_ROOT / "ui" / "assets" / "cover-1280.jpg"
+COVER_ASSET = DIST_DIR / "cover-1280.jpg"
+COVER_LINK = "cover-1280.jpg"
 
 # The site's own root, as the link scrapers need it: ``og:url`` and ``og:image``
 # are absolute URLs or a scraper resolves nothing. It is the address the README
@@ -5837,13 +5849,13 @@ def _write_or_check_bytes(destination: Path, data: bytes, check: bool) -> int:
 def assets() -> List[Tuple[Path, bytes]]:
     """The files this site carries that are not pages, as ``(destination, bytes)``.
 
-    Five: the four architecture views and the link-preview image, each copied out
-    of the repository byte for byte. The views' links off the queue's links row
-    are files inside the published root instead of paths out of it, and
-    ``og:image`` names a URL a scraper fetches, so the file it names has to be
-    inside the published root too. Like :func:`pages` it is a list a check and a
-    writing build both walk, so the two cannot disagree about which files there
-    are.
+    Six: the four architecture views, the link-preview image and the front
+    page's poster, each copied out of the repository byte for byte. The views'
+    links off the queue's links row are files inside the published root instead
+    of paths out of it, and ``og:image`` names a URL a scraper fetches, so the
+    file it names has to be inside the published root too. Like :func:`pages` it
+    is a list a check and a writing build both walk, so the two cannot disagree
+    about which files there are.
     """
     out = [
         (
@@ -5853,6 +5865,7 @@ def assets() -> List[Tuple[Path, bytes]]:
         for view, _label in ARCHITECTURE_VIEWS
     ]
     out.append((OG_IMAGE_ASSET, OG_IMAGE_SOURCE.read_bytes()))
+    out.append((COVER_ASSET, COVER_SOURCE.read_bytes()))
     return out
 
 

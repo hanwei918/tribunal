@@ -145,21 +145,23 @@ TRIGGERS = ("GEN08_SCOPE", "NO_VALID_DRAFTS", "NO_MAJORITY", "JUDGE_ESCALATE")
 # page carries is a file inside ``ui/dist/``, and is checked as one.
 EXTERNAL_LINKS: FrozenSet[str] = frozenset({v2.README_RESULTS_LINK})
 
-# The files this site carries that are not pages: the four architecture views and
-# the link-preview image, each copied into ``ui/dist/`` byte for byte, and the
-# repository file the committed copy must equal. A link to one of these stays
-# inside the site, which is the point of copying it in.
+# The files this site carries that are not pages: the four architecture views,
+# the link-preview image and the front page's poster, each copied into
+# ``ui/dist/`` byte for byte, and the repository file the committed copy must
+# equal. A link to one of these stays inside the site, which is the point of
+# copying it in.
 SITE_ASSETS: Mapping[str, Path] = {
     v2.architecture_link(view): v2.ARCHITECTURE_SOURCE_DIR / view
     for view, _label in v2.ARCHITECTURE_VIEWS
 }
 SITE_ASSETS[v2.OG_IMAGE_LINK] = v2.OG_IMAGE_SOURCE
+SITE_ASSETS[v2.COVER_LINK] = v2.COVER_SOURCE
 
-# The same five, as the paths on disk, so the walk that compares the committed
+# The same six, as the paths on disk, so the walk that compares the committed
 # pages with a fresh build can skip the files it copied in rather than built.
 SITE_ASSET_PATHS = frozenset(
     {v2.ARCHITECTURE_ASSET_DIR / view for view, _label in v2.ARCHITECTURE_VIEWS}
-    | {v2.OG_IMAGE_ASSET}
+    | {v2.OG_IMAGE_ASSET, v2.COVER_ASSET}
 )
 
 
@@ -774,19 +776,21 @@ class SelfContainedTests(unittest.TestCase):
 
 
 # --------------------------------------------------------------------------
-# The one file the site carries that is not a page
+# The files the site carries that are not pages
 # --------------------------------------------------------------------------
 class SiteAssetTests(unittest.TestCase):
-    """The architecture set travels with the site, and no link leaves it.
+    """The architecture set and the two images travel with the site, and no link
+    leaves it.
 
     The queue's architecture link used to be ``../../docs/architecture.md``:
     inside a checkout it resolved, and on a site served from ``ui/dist/`` alone
     it was a 404. The builder now copies the four views of
-    ``docs/architecture/`` in byte for byte and every link is a file beside the
-    pages. These two tests hold that: each committed copy is the repository's
-    own bytes, and every relative href a built page carries resolves to a file
-    inside ``ui/dist/``. The one link that leaves the site is an absolute URL,
-    and it is named in ``EXTERNAL_LINKS`` rather than passed over silently.
+    ``docs/architecture/`` in byte for byte, and the two images under
+    ``ui/assets/`` the same way, so every link is a file beside the pages. These
+    tests hold that: each committed copy is the repository's own bytes, and every
+    relative href a built page carries resolves to a file inside ``ui/dist/``.
+    The one link that leaves the site is an absolute URL, and it is named in
+    ``EXTERNAL_LINKS`` rather than passed over silently.
     """
 
     def test_the_architecture_views_are_committed_byte_for_byte(self):
@@ -805,6 +809,26 @@ class SiteAssetTests(unittest.TestCase):
                     committed.read_bytes(),
                     "the committed copy is not the repository's own view",
                 )
+
+    def test_the_front_pages_poster_is_committed_byte_for_byte(self):
+        """51a.2: the poster is the owner's file, and the site carries its bytes.
+
+        It is copied the way the link-preview image is, so ``--check`` covers
+        it: the file under ``ui/dist/`` must be the committed file under
+        ``ui/assets/`` and not a re-encode of it.
+        """
+        committed = v2.COVER_ASSET
+        self.assertTrue(
+            committed.is_file(),
+            "{0} is not committed; run `python3 -m ui.v2.build`".format(
+                committed.relative_to(v2.DIST_DIR)
+            ),
+        )
+        self.assertTrue(
+            v2.COVER_SOURCE.is_file(),
+            "ui/assets/cover-1280.jpg is not committed",
+        )
+        self.assertEqual(v2.COVER_SOURCE.read_bytes(), committed.read_bytes())
 
     def test_every_relative_link_resolves_inside_the_site(self):
         """A relative href is a file in ``ui/dist/``, not a path out of the site.

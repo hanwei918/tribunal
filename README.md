@@ -1,5 +1,9 @@
 # Tribunal
 
+![Tribunal poster: a robot judge between a rider and a driver](ui/assets/cover-1280.jpg)
+
+<sub>Poster made with Miora (Tencent); the people in it are generated, not real people.</sub>
+
 **Start here.**
 
 - **What it is.** Tribunal arbitrates a ride-hail dispute: two AI advocates on one brief, a deterministic citation referee, a four-draft judge, and a person for what the panel cannot decide.
