@@ -1915,16 +1915,25 @@ _CSS = """
    on --soft (#16213a). The header band is #160b0e in both themes: its right-hand
    readout #c8b8be is 10.16:1 on it and white is 19.3:1. All ten pairs are in
    tests/test_ui_v2.py's STATED_CONTRAST and are recomputed from this file. */
+/* 51c.1: the accent is a background too, and the text on it needs a token of
+   its own. In the light theme the accent is #6d28d9 and --on-accent is
+   #ffffff, 7.10:1 on it; in the dark theme the accent is #c4b5fd, a light
+   lavender, and --on-accent is #1e1035, 9.63:1 on it. White on the dark accent
+   measured 1.85:1 here, below the 4.5:1 floor, and two rules painted it that
+   way: the filled button and the five numbered circles of How it works. The
+   brand mark was the same -- a white glyph on the accent -- so its SVG strokes
+   take currentColor and the tile carries the token. Both figures are in
+   tests/test_ui_v2.py's STATED_CONTRAST and are recomputed from this file. */
 :root{
   --bg:#f3f4f6;--card:#ffffff;--line:#e5e7eb;--ink:#111827;--muted:#5b6470;
-  --soft:#f9fafb;--accent:#6d28d9;--accent-wash:#ede9fe;
+  --soft:#f9fafb;--accent:#6d28d9;--accent-wash:#ede9fe;--on-accent:#ffffff;
   --ok:#15803d;--ok-wash:#dcfce7;--bad:#b91c1c;--bad-wash:#fee2e2;
   --warn:#92400e;--warn-wash:#fef3c7;--grey:#374151;--grey-wash:#f3f4f6;
   --band:#160b0e;--band-note:#c8b8be;
 }
 @media (prefers-color-scheme:dark){
   :root{--bg:#0f172a;--card:#1e293b;--line:#334155;--ink:#f1f5f9;--muted:#94a3b8;
-    --soft:#16213a;--accent:#c4b5fd;--accent-wash:#2e1065;
+    --soft:#16213a;--accent:#c4b5fd;--accent-wash:#2e1065;--on-accent:#1e1035;
     --ok:#86efac;--ok-wash:#14532d;--bad:#fca5a5;--bad-wash:#7f1d1d;
     --warn:#fcd34d;--warn-wash:#78350f;--grey:#cbd5e1;--grey-wash:#1e293b;}
 }
@@ -1946,7 +1955,9 @@ p{margin:.5em 0}
 .top-in{max-width:1280px;margin:0 auto;padding:0 24px;height:56px;display:flex;align-items:center;gap:20px}
 .top :focus-visible{outline-color:#ffffff}
 .brand{display:inline-flex;align-items:center;gap:9px;font-weight:700;font-size:17px;text-decoration:none;color:#ffffff}
-.mark{width:26px;height:26px;border-radius:7px;background:var(--accent);display:inline-flex;align-items:center;justify-content:center;flex:none}
+/* 51c.1: the mark is a glyph on the accent, so the tile carries --on-accent and
+   the drawing takes currentColor rather than a white of its own. */
+.mark{width:26px;height:26px;border-radius:7px;background:var(--accent);color:var(--on-accent);display:inline-flex;align-items:center;justify-content:center;flex:none}
 .nav{display:flex;align-items:center;gap:2px;flex-wrap:wrap}
 .nav a{padding:7px 12px;border:1px solid rgba(255,255,255,.28);border-radius:8px;text-decoration:none;color:#ffffff;font-weight:500;line-height:1.2}
 .nav a.on{color:#ffffff;background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.5)}
@@ -1992,10 +2003,18 @@ p{margin:.5em 0}
 .figure.wide{flex:1 1 100%}
 /* 51b.8: each lane tile carries its lane's own colour on a 3px top border, and
    the three figures under them carry the accent. */
-.figure.ok{border-top:3px solid var(--ok)}
-.figure.warn{border-top:3px solid var(--warn)}
-.figure.bad{border-top:3px solid var(--bad)}
-.figure.accent{border-top:3px solid var(--accent)}
+/* 51c.3: the modifiers are named for the tile they draw and not for the colour
+   they use. They were `ok`, `warn`, `bad` and `accent`, and the stylesheet's
+   older global rule `.ok{color:var(--ok);font-weight:600}` -- the one the
+   claims and the notices use -- also matched `<div class="figure ok">`, so the
+   first lane tile's figure turned green and its small print turned semibold
+   while the other two lanes matched no such rule and stayed as they were. The
+   lane rules are `lane-*` now and the global `.ok` is left alone for whatever
+   else uses it; every lane rule is qualified by `.figure`. */
+.figure.lane-ok{border-top:3px solid var(--ok)}
+.figure.lane-warn{border-top:3px solid var(--warn)}
+.figure.lane-bad{border-top:3px solid var(--bad)}
+.figure.lane-accent{border-top:3px solid var(--accent)}
 .triggers{list-style:none;margin:0;padding:0}
 .triggers li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 14px;padding:4px 0;border-bottom:1px solid var(--line)}
 .triggers li:last-child{border-bottom:0}
@@ -2033,7 +2052,7 @@ td a{font-weight:600;text-decoration:none}
 .hero-cta{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 0}
 .btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:9px;
   font-weight:600;font-size:.92rem;text-decoration:none;border:1px solid var(--accent)}
-.btn-fill{background:var(--accent);color:#ffffff}
+.btn-fill{background:var(--accent);color:var(--on-accent)}
 .btn-out{background:transparent;color:var(--accent)}
 @media (min-width:1000px){
   .hero{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:30px;align-items:center}
@@ -2093,7 +2112,7 @@ td a{font-weight:600;text-decoration:none}
 .stepper button:first-child{border-left:0}
 .stepper button .n{display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--muted)}
 .stepper button .n i{width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;background:var(--grey);font-style:normal}
-.stepper button .n i.llm{background:var(--accent)}
+.stepper button .n i.llm{background:var(--accent);color:var(--on-accent)}
 .stepper button .n i.ok{background:var(--ok)}
 .stepper button .n i.bad{background:var(--bad)}
 .stepper button .t{font-weight:600}
@@ -2159,7 +2178,14 @@ svg{max-width:100%}
 pre{overflow-x:auto}
 
 /* the held reason, written under the chip as well as into its title */
-.held-why{display:block;color:var(--muted);font-size:.78rem;margin-top:4px}
+/* 51c.2: the note is one sentence naming a figure and the threshold it crossed
+   ("SGD 8.05 is above the POL-GEN-05 execution threshold of SGD 8.00"), and
+   with nothing to stop it, it ran on one line: the Status column took 414 px,
+   the table came to 1285 px inside a 1230 px wrapper at a 1440 px window, and
+   the Time column was cut off the right-hand edge. The note is capped at 16rem
+   so it wraps onto two lines and the table fits its wrapper from 1280 px up.
+   Below that the table scrolls inside .tscroll as it always did. */
+.held-why{display:block;color:var(--muted);font-size:.78rem;margin-top:4px;max-width:16rem}
 
 /* 37a.6: the header cells are buttons, so sorting is reachable by keyboard and
    the state a sighted reader reads off the arrow is on the cell as aria-sort. */
@@ -2211,10 +2237,11 @@ th[aria-sort="descending"] .sort::after{content:"\\2193"}
 .how h2{margin:0 0 10px;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
 .how ol{display:flex;flex-wrap:wrap;gap:10px 16px;list-style:none;margin:0;padding:0}
 .how li{display:flex;align-items:flex-start;gap:9px;font-size:.86rem;color:var(--muted)}
-/* 51b.7: a step is a numbered violet circle, its name in bold on one line and
-   its description under it in muted text. */
+/* 51b.7, and 51c.1 on top of it: a step is a numbered violet circle, its name
+   in bold on one line and its description under it in muted text. The number is
+   text on the accent, so it takes --on-accent rather than white. */
 .how .n{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;
-  border-radius:50%;background:var(--accent);color:#ffffff;font-size:11px;font-weight:700;
+  border-radius:50%;background:var(--accent);color:var(--on-accent);font-size:11px;font-weight:700;
   font-style:normal;flex:none}
 .how .st{display:block}
 .how .st b{display:block;color:var(--ink);font-weight:600}
@@ -2624,11 +2651,15 @@ def _shell(
 
 # The product's mark, inline: a beam, a base, a crossbar and two pans. It is
 # drawn here rather than loaded, so the page needs no font and no image. The
-# same path data draws the tab icon below, so the two cannot drift apart.
+# same path data draws the tab icon below, so the two cannot drift apart. The
+# stroke is ``currentColor`` -- 51c.1 -- because the mark is drawn on the accent
+# tile, whose text colour is ``--on-accent`` and is white in the light theme and
+# a deep violet in the dark one; a hard-coded white would be illegible in the
+# dark theme, where the accent is a light lavender.
 SCALES_PATH = "M12 4v16M8 20h8M5 7h14M5 7L2 13h6zM19 7l-3 6h6z"
 SCALES_MARK = (
     '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" '
-    'stroke="#ffffff" stroke-width="2" stroke-linecap="round" '
+    'stroke="currentColor" stroke-width="2" stroke-linecap="round" '
     'stroke-linejoin="round" aria-hidden="true">'
     '<path d="{0}"/></svg>'
 ).format(SCALES_PATH)
@@ -2726,10 +2757,13 @@ def _footer(case: CaseData) -> str:
 def _figure(key: str, value: str, note: str = "", tone: str = "") -> str:
     """One figure tile, and the lane colour it is drawn under.
 
-    ``tone`` is one of the three status names -- a lane tile carries its lane's
-    own colour on a 3px top border -- or ``accent`` for the three figures under
-    them. It is a class name and not a colour, so the colour stays in the
-    stylesheet where the two themes are.
+    ``tone`` is one of the three lane names -- ``lane-ok``, ``lane-warn`` or
+    ``lane-bad``, and the tile carries its lane's own colour on a 3px top border
+    -- or ``lane-accent`` for the three figures under them. It is a class name
+    and not a colour, so the colour stays in the stylesheet where the two themes
+    are. The names are prefixed -- 51c.3 -- because a bare ``ok``, ``warn`` or
+    ``bad`` on a ``.figure`` also matched the stylesheet's global status rules
+    and repainted the tile's own figure and small print.
     """
     sub = '<p class="s">{0}</p>'.format(_text(note)) if note else ""
     classes = "figure" if not tone else "figure {0}".format(tone)
@@ -3164,27 +3198,27 @@ def build_index(cases: Sequence[CaseData]) -> str:
                 "{0} of the queue: {1} (POL-GEN-05)".format(
                     figures.executed_share, EXECUTED_MEANS
                 ),
-                tone="ok",
+                tone="lane-ok",
             ),
             _figure(
                 "Decided, amount held for a person to release",
                 "{0} of {1}".format(figures.held, figures.total),
                 "{0} of the queue, held above the POL-GEN-05 execution "
                 "threshold".format(figures.held_share),
-                tone="warn",
+                tone="lane-warn",
             ),
             _figure(
                 "Sent to a reviewer",
                 "{0} of {1}".format(figures.reviewer, figures.total),
                 "{0} of the queue, no ruling issued".format(figures.reviewer_share),
-                tone="bad",
+                tone="lane-bad",
             ),
             _trigger_card(figures),
             _figure(
                 "Median time per case",
                 _seconds(figures.median_seconds),
                 "wall clock",
-                tone="accent",
+                tone="lane-accent",
             ),
             _figure(
                 "Median cost per case",
@@ -3192,13 +3226,13 @@ def build_index(cases: Sequence[CaseData]) -> str:
                 "at the published {0} prices the runs are billed at".format(
                     model_module.MODEL_PROVIDER
                 ),
-                tone="accent",
+                tone="lane-accent",
             ),
             _figure(
                 "Policy version and model",
                 "v{0}".format(figures.policy_version),
                 figures.model,
-                tone="accent",
+                tone="lane-accent",
             ),
         )
     ) + "</div>\n"

@@ -30,16 +30,25 @@
    on --soft (#16213a). The header band is #160b0e in both themes: its right-hand
    readout #c8b8be is 10.16:1 on it and white is 19.3:1. All ten pairs are in
    tests/test_ui_v2.py's STATED_CONTRAST and are recomputed from this file. */
+/* 51c.1: the accent is a background too, and the text on it needs a token of
+   its own. In the light theme the accent is #6d28d9 and --on-accent is
+   #ffffff, 7.10:1 on it; in the dark theme the accent is #c4b5fd, a light
+   lavender, and --on-accent is #1e1035, 9.63:1 on it. White on the dark accent
+   measured 1.85:1 here, below the 4.5:1 floor, and two rules painted it that
+   way: the filled button and the five numbered circles of How it works. The
+   brand mark was the same -- a white glyph on the accent -- so its SVG strokes
+   take currentColor and the tile carries the token. Both figures are in
+   tests/test_ui_v2.py's STATED_CONTRAST and are recomputed from this file. */
 :root{
   --bg:#f3f4f6;--card:#ffffff;--line:#e5e7eb;--ink:#111827;--muted:#5b6470;
-  --soft:#f9fafb;--accent:#6d28d9;--accent-wash:#ede9fe;
+  --soft:#f9fafb;--accent:#6d28d9;--accent-wash:#ede9fe;--on-accent:#ffffff;
   --ok:#15803d;--ok-wash:#dcfce7;--bad:#b91c1c;--bad-wash:#fee2e2;
   --warn:#92400e;--warn-wash:#fef3c7;--grey:#374151;--grey-wash:#f3f4f6;
   --band:#160b0e;--band-note:#c8b8be;
 }
 @media (prefers-color-scheme:dark){
   :root{--bg:#0f172a;--card:#1e293b;--line:#334155;--ink:#f1f5f9;--muted:#94a3b8;
-    --soft:#16213a;--accent:#c4b5fd;--accent-wash:#2e1065;
+    --soft:#16213a;--accent:#c4b5fd;--accent-wash:#2e1065;--on-accent:#1e1035;
     --ok:#86efac;--ok-wash:#14532d;--bad:#fca5a5;--bad-wash:#7f1d1d;
     --warn:#fcd34d;--warn-wash:#78350f;--grey:#cbd5e1;--grey-wash:#1e293b;}
 }
@@ -61,7 +70,9 @@ p{margin:.5em 0}
 .top-in{max-width:1280px;margin:0 auto;padding:0 24px;height:56px;display:flex;align-items:center;gap:20px}
 .top :focus-visible{outline-color:#ffffff}
 .brand{display:inline-flex;align-items:center;gap:9px;font-weight:700;font-size:17px;text-decoration:none;color:#ffffff}
-.mark{width:26px;height:26px;border-radius:7px;background:var(--accent);display:inline-flex;align-items:center;justify-content:center;flex:none}
+/* 51c.1: the mark is a glyph on the accent, so the tile carries --on-accent and
+   the drawing takes currentColor rather than a white of its own. */
+.mark{width:26px;height:26px;border-radius:7px;background:var(--accent);color:var(--on-accent);display:inline-flex;align-items:center;justify-content:center;flex:none}
 .nav{display:flex;align-items:center;gap:2px;flex-wrap:wrap}
 .nav a{padding:7px 12px;border:1px solid rgba(255,255,255,.28);border-radius:8px;text-decoration:none;color:#ffffff;font-weight:500;line-height:1.2}
 .nav a.on{color:#ffffff;background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.5)}
@@ -107,10 +118,18 @@ p{margin:.5em 0}
 .figure.wide{flex:1 1 100%}
 /* 51b.8: each lane tile carries its lane's own colour on a 3px top border, and
    the three figures under them carry the accent. */
-.figure.ok{border-top:3px solid var(--ok)}
-.figure.warn{border-top:3px solid var(--warn)}
-.figure.bad{border-top:3px solid var(--bad)}
-.figure.accent{border-top:3px solid var(--accent)}
+/* 51c.3: the modifiers are named for the tile they draw and not for the colour
+   they use. They were `ok`, `warn`, `bad` and `accent`, and the stylesheet's
+   older global rule `.ok{color:var(--ok);font-weight:600}` -- the one the
+   claims and the notices use -- also matched `<div class="figure ok">`, so the
+   first lane tile's figure turned green and its small print turned semibold
+   while the other two lanes matched no such rule and stayed as they were. The
+   lane rules are `lane-*` now and the global `.ok` is left alone for whatever
+   else uses it; every lane rule is qualified by `.figure`. */
+.figure.lane-ok{border-top:3px solid var(--ok)}
+.figure.lane-warn{border-top:3px solid var(--warn)}
+.figure.lane-bad{border-top:3px solid var(--bad)}
+.figure.lane-accent{border-top:3px solid var(--accent)}
 .triggers{list-style:none;margin:0;padding:0}
 .triggers li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 14px;padding:4px 0;border-bottom:1px solid var(--line)}
 .triggers li:last-child{border-bottom:0}
@@ -148,7 +167,7 @@ td a{font-weight:600;text-decoration:none}
 .hero-cta{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 0}
 .btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:9px;
   font-weight:600;font-size:.92rem;text-decoration:none;border:1px solid var(--accent)}
-.btn-fill{background:var(--accent);color:#ffffff}
+.btn-fill{background:var(--accent);color:var(--on-accent)}
 .btn-out{background:transparent;color:var(--accent)}
 @media (min-width:1000px){
   .hero{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:30px;align-items:center}
@@ -208,7 +227,7 @@ td a{font-weight:600;text-decoration:none}
 .stepper button:first-child{border-left:0}
 .stepper button .n{display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--muted)}
 .stepper button .n i{width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;background:var(--grey);font-style:normal}
-.stepper button .n i.llm{background:var(--accent)}
+.stepper button .n i.llm{background:var(--accent);color:var(--on-accent)}
 .stepper button .n i.ok{background:var(--ok)}
 .stepper button .n i.bad{background:var(--bad)}
 .stepper button .t{font-weight:600}
@@ -274,7 +293,14 @@ svg{max-width:100%}
 pre{overflow-x:auto}
 
 /* the held reason, written under the chip as well as into its title */
-.held-why{display:block;color:var(--muted);font-size:.78rem;margin-top:4px}
+/* 51c.2: the note is one sentence naming a figure and the threshold it crossed
+   ("SGD 8.05 is above the POL-GEN-05 execution threshold of SGD 8.00"), and
+   with nothing to stop it, it ran on one line: the Status column took 414 px,
+   the table came to 1285 px inside a 1230 px wrapper at a 1440 px window, and
+   the Time column was cut off the right-hand edge. The note is capped at 16rem
+   so it wraps onto two lines and the table fits its wrapper from 1280 px up.
+   Below that the table scrolls inside .tscroll as it always did. */
+.held-why{display:block;color:var(--muted);font-size:.78rem;margin-top:4px;max-width:16rem}
 
 /* 37a.6: the header cells are buttons, so sorting is reachable by keyboard and
    the state a sighted reader reads off the arrow is on the cell as aria-sort. */
@@ -326,10 +352,11 @@ th[aria-sort="descending"] .sort::after{content:"\2193"}
 .how h2{margin:0 0 10px;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
 .how ol{display:flex;flex-wrap:wrap;gap:10px 16px;list-style:none;margin:0;padding:0}
 .how li{display:flex;align-items:flex-start;gap:9px;font-size:.86rem;color:var(--muted)}
-/* 51b.7: a step is a numbered violet circle, its name in bold on one line and
-   its description under it in muted text. */
+/* 51b.7, and 51c.1 on top of it: a step is a numbered violet circle, its name
+   in bold on one line and its description under it in muted text. The number is
+   text on the accent, so it takes --on-accent rather than white. */
 .how .n{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;
-  border-radius:50%;background:var(--accent);color:#ffffff;font-size:11px;font-weight:700;
+  border-radius:50%;background:var(--accent);color:var(--on-accent);font-size:11px;font-weight:700;
   font-style:normal;flex:none}
 .how .st{display:block}
 .how .st b{display:block;color:var(--ink);font-weight:600}
@@ -394,7 +421,7 @@ th[aria-sort="descending"] .sort::after{content:"\2193"}
 <body>
 <header class="top">
 <div class="top-in">
-<a class="brand" href="index.html"><span class="mark"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v16M8 20h8M5 7h14M5 7L2 13h6zM19 7l-3 6h6z"/></svg></span>Tribunal</a>
+<a class="brand" href="index.html"><span class="mark"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v16M8 20h8M5 7h14M5 7L2 13h6zM19 7l-3 6h6z"/></svg></span>Tribunal</a>
 <nav class="nav" aria-label="Sites"><a href="index.html" class="on" aria-current="page">Queue</a></nav>
 <span class="mode">Recorded runs, policy version 6</span>
 </div>
@@ -412,7 +439,7 @@ th[aria-sort="descending"] .sort::after{content:"\2193"}
 <section class="how" id="how" aria-label="How a dispute is decided"><h2>How it works</h2><ol><li><i class="n">1</i><span class="st"><b>The evidence brief</b><span>the same bytes to both sides</span></span><span class="arw">&#8594;</span></li><li><i class="n">2</i><span class="st"><b>Rider and driver advocates</b><span>one advocate for each side, AI</span></span><span class="arw">&#8594;</span></li><li><i class="n">3</i><span class="st"><b>The citation referee</b><span>checks every claim against the record</span></span><span class="arw">&#8594;</span></li><li><i class="n">4</i><span class="st"><b>The judge, four drafts</b><span>AI; a majority carries the ruling</span></span><span class="arw">&#8594;</span></li><li><i class="n">5</i><span class="st"><b>A ruling, or a person</b><span>the money held until a person decides</span></span></li></ol></section>
 <p class="links"><a href="architecture/3-dynamic-one-dispute.svg">Architecture</a><a href="architecture/1-system-context.svg">System context</a><a href="architecture/2a-containers-deciding.svg">Containers: deciding</a><a href="architecture/2b-containers-after-ruling.svg">Containers: after a ruling</a><a href="case-00208.html">How it was decided: see case 208</a></p>
 <section class="featured"><a class="fcard" href="case-00901.html"><span class="fcase">Case 901</span><h2>The organisers' sample</h2><p><b>Outcome</b> Fee stands, driver compensated - driver paid SGD 4.00</p><p><b>Confidence</b> 0.9</p><span class="fopen">Open case <span aria-hidden="true">&#8594;</span></span></a><a class="fcard" href="case-00208.html"><span class="fcase">Case 208</span><h2>A no-show the evidence settles</h2><p><b>Outcome</b> Fee stands, driver compensated - driver paid SGD 6.40</p><p><b>What the record shows</b> driver inside the arrival radius 585 s; her phone 634-646 m away; a 34 s answered call</p><span class="fopen">Open case <span aria-hidden="true">&#8594;</span></span></a><a class="fcard" href="case-01779.html"><span class="fcase">Case 1779</span><h2>A prompt injection, refused</h2><p><b>Reason</b> no judge draft passed the code checks</p><p><b>The panel</b> All 4 drafts refused the planted clause and reached the same ruling; the code check, which treats any quoted clause id as a citation, voided them, so a person decides.</p><span class="fopen">Open case <span aria-hidden="true">&#8594;</span></span></a><a class="fcard" href="case-02735.html"><span class="fcase">Case 2735</span><h2>A safety flag: straight to a human</h2><p><b>Reason</b> safety or complaint flag</p><p><b>Model calls</b> 0 - the scope gate asked no model</p><span class="fopen">Open case <span aria-hidden="true">&#8594;</span></span></a></section>
-<div class="figures"><div class="figure ok"><p class="k">Decided and executed</p><p class="v">112 of 151</p><p class="s">74.2% of the queue: the system would have executed the ruling on issue, and no money moved (POL-GEN-05)</p></div><div class="figure warn"><p class="k">Decided, amount held for a person to release</p><p class="v">13 of 151</p><p class="s">8.6% of the queue, held above the POL-GEN-05 execution threshold</p></div><div class="figure bad"><p class="k">Sent to a reviewer</p><p class="v">26 of 151</p><p class="s">17.2% of the queue, no ruling issued</p></div><div class="figure wide"><p class="k">Reviewer triggers</p><ul class="triggers"><li><span class="t">safety or complaint flag</span> <span class="n">2</span></li><li><span class="t">no judge draft passed the code checks</span> <span class="n">3</span></li><li><span class="t">the 4 drafts did not agree</span> <span class="n">4</span></li><li><span class="t">the judge escalated under the policy</span> <span class="n">17</span></li></ul><p class="s">counted by reason code</p></div><div class="figure accent"><p class="k">Median time per case</p><p class="v">160.4 s</p><p class="s">wall clock</p></div><div class="figure accent"><p class="k">Median cost per case</p><p class="v">0.0579 USD</p><p class="s">at the published Tencent Cloud TokenHub prices the runs are billed at</p></div><div class="figure accent"><p class="k">Policy version and model</p><p class="v">v6</p><p class="s">deepseek/deepseek-flash</p></div></div>
+<div class="figures"><div class="figure lane-ok"><p class="k">Decided and executed</p><p class="v">112 of 151</p><p class="s">74.2% of the queue: the system would have executed the ruling on issue, and no money moved (POL-GEN-05)</p></div><div class="figure lane-warn"><p class="k">Decided, amount held for a person to release</p><p class="v">13 of 151</p><p class="s">8.6% of the queue, held above the POL-GEN-05 execution threshold</p></div><div class="figure lane-bad"><p class="k">Sent to a reviewer</p><p class="v">26 of 151</p><p class="s">17.2% of the queue, no ruling issued</p></div><div class="figure wide"><p class="k">Reviewer triggers</p><ul class="triggers"><li><span class="t">safety or complaint flag</span> <span class="n">2</span></li><li><span class="t">no judge draft passed the code checks</span> <span class="n">3</span></li><li><span class="t">the 4 drafts did not agree</span> <span class="n">4</span></li><li><span class="t">the judge escalated under the policy</span> <span class="n">17</span></li></ul><p class="s">counted by reason code</p></div><div class="figure lane-accent"><p class="k">Median time per case</p><p class="v">160.4 s</p><p class="s">wall clock</p></div><div class="figure lane-accent"><p class="k">Median cost per case</p><p class="v">0.0579 USD</p><p class="s">at the published Tencent Cloud TokenHub prices the runs are billed at</p></div><div class="figure lane-accent"><p class="k">Policy version and model</p><p class="v">v6</p><p class="s">deepseek/deepseek-flash</p></div></div>
 <p class="figurewords">These are recorded runs on synthetic cases, so "executed" means the system would have executed the ruling on issue, and no money moved; and "confidence" is the judge's own figure, capped by the evidence weights, not a measured accuracy - the measured agreement figures are in the README's results.</p>
 <div class="filters"><button type="button" data-filter="all" class="on">All</button><button type="button" data-filter="auto">Decided automatically</button><button type="button" data-filter="reviewer">Sent to a reviewer</button><label for="set-picker">Set</label><select id="set-picker"><option value="all">All sets</option><option value="corpus">corpus</option><option value="dev-v2-ext">dev-v2-ext</option><option value="901">901</option><option value="1779">1779</option></select><span class="empty"><span id="shown">151</span> shown</span></div>
 <div class="card wide">

@@ -30,7 +30,12 @@ a number typed in here:
   stores -- for 213 a VARY of ``FULL_REFUND 6.0`` citing ``POL-GEN-07``, for 107
   an ADOPT carrying the panel's own ``PARTIAL_REFUND 7.45``, and an escalated
   case with nothing to adopt has ADOPT disabled;
-* the appeal text matches ``POL-GEN-04``'s rule text.
+* the appeal text matches ``POL-GEN-04``'s rule text;
+* every rule that paints the accent as a background and sets a colour uses
+  ``--on-accent``, the token that is legible on it in either theme;
+* the queue's held note is capped so the table fits its wrapper on a desktop
+  screen, and the three lane tiles carry ``lane-*`` classes rather than the
+  bare status names the stylesheet's global rules also match.
 
 **The suite builds the site five times and says why.** A build reads 151 cases,
 rebuilds each case's brief and builds 26 escalation packets, which is about
@@ -2678,6 +2683,37 @@ def custom_properties(block: str) -> Dict[str, str]:
     return values
 
 
+def stylesheet_rules(stylesheet: str) -> List[Tuple[str, str]]:
+    """Every rule in a stylesheet, as ``(selector, declarations)``.
+
+    Only the innermost blocks are yielded: a block whose body holds another
+    block is a group (``@media``) and not a rule, so a group's text is never
+    mistaken for one rule's declarations. The comments are stripped first,
+    because this stylesheet explains itself at length and a comment can carry
+    the very words a check is looking for -- ``background:var(--accent)`` is
+    named in one. A selector is the text between the previous closing brace and
+    the block's own opening brace, so a rule inside an ``@media`` group reads as
+    the selector it is and not as the group's.
+    """
+    text = re.sub(r"/\*.*?\*/", "", stylesheet, flags=re.DOTALL)
+    rules: List[Tuple[str, str]] = []
+    for opening in re.finditer(r"\{", text):
+        depth = 1
+        index = opening.end()
+        while index < len(text) and depth:
+            if text[index] == "{":
+                depth += 1
+            elif text[index] == "}":
+                depth -= 1
+            index += 1
+        body = text[opening.end() : index - 1]
+        if "{" in body:
+            continue
+        selector = text[: opening.start()].rsplit("}", 1)[-1].rsplit("{", 1)[-1]
+        rules.append((selector.strip(), body))
+    return rules
+
+
 class StylesheetTests(unittest.TestCase):
     """The palette's stated contrasts, the sort buttons and the table that scrolls."""
 
@@ -2688,7 +2724,9 @@ class StylesheetTests(unittest.TestCase):
     # token, read out of the palette that theme declares; anything else is the
     # colour itself. The first three are 37a.6's muted token, the eight after
     # them are 51b.5's accent -- four on the light backgrounds and white on it,
-    # three on the dark ones -- and the last two are 51b.6's header band.
+    # three on the dark ones -- the two after those are 51c.1's ``--on-accent``
+    # on the accent in each theme (it was the bare ``#ffffff`` row in the light
+    # one, and the dark pair is new), and the last two are 51b.6's header band.
     STATED_CONTRAST: Tuple[Tuple[str, str, str, float], ...] = (
         ("--muted", "--bg", "light", 5.45),
         ("--muted", "--card", "light", 6.00),
@@ -2700,7 +2738,8 @@ class StylesheetTests(unittest.TestCase):
         ("--accent", "--card", "dark", 7.92),
         ("--accent", "--bg", "dark", 9.67),
         ("--accent", "--soft", "dark", 8.67),
-        ("#ffffff", "--accent", "light", 7.10),
+        ("--on-accent", "--accent", "light", 7.10),
+        ("--on-accent", "--accent", "dark", 9.63),
         ("--band-note", "--band", "light", 10.16),
         ("#ffffff", "--band", "light", 19.3),
     )
@@ -2756,13 +2795,14 @@ class StylesheetTests(unittest.TestCase):
                 )
 
     def test_every_stated_contrast_is_the_one_the_colour_gives(self):
-        """51b.5/51b.6: every pair the stylesheet states, recomputed here.
+        """51b.5/51b.6, and 51c.1: every pair the stylesheet states, recomputed.
 
-        The accent's eight pairs and the header band's two are claims written in
-        a comment, and a claim nobody recomputes drifts. Each is measured against
-        the palette the page sets for its own theme and held to 4.5:1, the floor
-        body text is held to, so a pair that fell below it fails here rather than
-        in a reader's eyes.
+        The accent's eight pairs, the two ``--on-accent`` pairs 51c.1 added and
+        the header band's two are claims written in a comment, and a claim
+        nobody recomputes drifts. Each is measured against the palette the page
+        sets for its own theme and held to 4.5:1, the floor body text is held
+        to, so a pair that fell below it fails here rather than in a reader's
+        eyes -- which is exactly what white on the dark accent does.
         """
         for foreground, background, theme, stated in self.STATED_CONTRAST:
             with self.subTest(
@@ -2786,6 +2826,107 @@ class StylesheetTests(unittest.TestCase):
         """The control: the colour the token was, measured the same way."""
         root = self.root()
         self.assertLess(round(contrast_ratio("#6b7280", root["--bg"]), 2), 4.5)
+
+    def test_text_on_the_accent_is_the_token_the_accent_carries(self):
+        """51c.1: a rule that paints the accent and sets a colour uses the token.
+
+        In the dark theme the accent is #c4b5fd, a light lavender, and white on
+        it measures 1.85:1 -- the floor body text is held to is 4.5:1. Two rules
+        painted it white: the filled button, and the numbered circles of "How it
+        works". The brand mark was the same shape of fault, a white glyph on the
+        accent, so its strokes take ``currentColor`` and its tile the token.
+        Every rule in the stylesheet that sets ``background:var(--accent)`` and
+        names a colour must name ``--on-accent``, and no rule may pair the
+        accent with white. The four are named, so a fifth cannot arrive quietly.
+        """
+        painted: List[str] = []
+        for selector, declarations in stylesheet_rules(v2._CSS):
+            if "background:var(--accent)" not in declarations:
+                continue
+            with self.subTest(selector=selector):
+                self.assertNotIn("color:#fff", declarations)
+                self.assertNotIn("color:white", declarations)
+                if "color:" in declarations:
+                    painted.append(selector)
+                    self.assertIn(
+                        "color:var(--on-accent)",
+                        declarations,
+                        "{0} paints the accent and puts text on it in a colour "
+                        "that is not the token".format(selector),
+                    )
+        self.assertEqual(4, len(painted), "the accent's text rules moved: {0}".format(painted))
+        self.assertEqual(
+            {".mark", ".btn-fill", ".stepper button .n i.llm", ".how .n"},
+            set(painted),
+        )
+        self.assertEqual("#ffffff", self.palette("light")["--on-accent"])
+        self.assertEqual("#1e1035", self.palette("dark")["--on-accent"])
+        self.assertIn('stroke="currentColor"', v2.SCALES_MARK)
+        self.assertIn("color:var(--on-accent)", v2._CSS)
+
+    def test_the_held_note_wraps_so_the_queue_fits_a_desktop_screen(self):
+        """51c.2: the note under a status chip is capped, so the table fits.
+
+        The note is one sentence naming a figure and the threshold it crossed
+        ("SGD 8.05 is above the POL-GEN-05 execution threshold of SGD 8.00"),
+        and with nothing to stop it, it ran on one line: the Status column took
+        414 px, the table came to 1285 px inside a 1230 px wrapper at a 1440 px
+        window, and the Time column was cut off the right-hand edge. The cap
+        makes it wrap onto two lines. Outcome keeps the floor 51b.10 gave it,
+        and the box that scrolls is still what scrolls on a narrow screen.
+        """
+        note = re.search(r"\.held-why\{([^}]*)\}", v2._CSS)
+        self.assertIsNotNone(note, "the held note has no rule of its own")
+        assert note is not None
+        self.assertIn("max-width:16rem", note.group(1))
+        self.assertIn('td[data-column="outcome"]{min-width:11rem}', v2._CSS)
+        self.assertIn(".tscroll{overflow-x:auto", v2._CSS)
+        self.assertIn('<span class="held-why">', index_text())
+
+    def test_the_lane_tiles_carry_lane_classes(self):
+        """51c.3: the three lane tiles are ``lane-*``, so the global ``.ok`` misses.
+
+        The tiles were ``<div class="figure ok">``, and the stylesheet's older
+        global rule ``.ok{color:var(--ok);font-weight:600}`` matched them, so the
+        first lane's figure turned green and its small print turned semibold
+        while "figure warn" and "figure bad" matched no such rule. The lane
+        modifiers are named for the tile, every lane rule is qualified by
+        ``.figure``, and no ``.figure`` element in the built queue carries a bare
+        ``ok``, ``warn`` or ``bad``.
+        """
+        text = index_text()
+        for lane in ("ok", "warn", "bad"):
+            with self.subTest(lane=lane):
+                self.assertIn('class="figure lane-{0}"'.format(lane), text)
+                self.assertIn(
+                    ".figure.lane-{0}{{border-top:3px solid".format(lane), v2._CSS
+                )
+        self.assertEqual(3, text.count('class="figure lane-accent"'))
+        self.assertIn(
+            ".figure.lane-accent{border-top:3px solid var(--accent)}", v2._CSS
+        )
+        # The global status rule is left alone for whatever else uses it.
+        self.assertIn(".ok{color:var(--ok);font-weight:600}", v2._CSS)
+        for selector, _declarations in stylesheet_rules(v2._CSS):
+            for lane in ("ok", "warn", "bad", "accent"):
+                if ".lane-{0}".format(lane) in selector:
+                    self.assertEqual(
+                        ".figure.lane-{0}".format(lane),
+                        selector,
+                        "a lane rule is not qualified by .figure",
+                    )
+        # The page's own stylesheet is not markup: its comment quotes the class
+        # this test is looking for, so the elements are read out of the body.
+        body = re.sub(r"<style>.*?</style>", "", text, flags=re.DOTALL)
+        for match in re.finditer(r'<div class="([^"]*)"', body):
+            classes = match.group(1).split()
+            if "figure" not in classes:
+                continue
+            with self.subTest(classes=match.group(1)):
+                self.assertFalse(
+                    {"ok", "warn", "bad"} & set(classes),
+                    "a .figure element still carries a bare status class",
+                )
 
     def test_the_queue_sorts_from_the_keyboard(self):
         """A header cell carries a button, and the cell carries the sort state."""
