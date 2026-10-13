@@ -26,7 +26,13 @@ What is read, and from where
 * the sealed and held-out sets, through the same
   :func:`eval.run_benchmark.grade_run` over the same
   :func:`eval.development_sets.named(...).run_dir` calls that
-  ``tests/test_readme_figures.py`` grades them with.
+  ``tests/test_readme_figures.py`` grades them with;
+* the three version-7 sets -- ``sealed-v4``, ``ryde-v7`` and ``dev-v7``, the
+  policy version 7 runs of 2026-10-13/14 -- through the same call, over the
+  directory each run was **written to**:
+  :func:`eval.development_sets.run_dir_at_its_version` moves a set registered
+  for a policy base one level down (``runs/dev-v7/policy-v7/<model>/``), which
+  is where ``tools/check_figures.py``'s own ``graded_version_seven`` reads them.
 
 The figure names are the module's own; the strings are what the pages show, to
 the page's own formatting -- ``"160.4 s"``, ``"$0.058"``, ``"12/12"`` -- so a
@@ -77,15 +83,22 @@ def cases_by_number() -> Dict[int, "v2.CaseData"]:
 def graded_set(name: str) -> "grade.GradeReport":
     """One set's committed run, graded against its own key.
 
-    The call ``tests/test_readme_figures.py`` makes for the same sets: the set's
-    own run directory, its own key, its own case loader. The held-out set and the
-    third sealed set carry keys of their own; the fourth does too.
+    The ``eval.run_benchmark.grade_run`` call that
+    ``tests/test_readme_figures.py`` grades the same sets with, over the
+    directory the run was **written to**. The held-out set and the sealed sets
+    carry keys of their own and keep their own directory; a set registered for a
+    policy base writes its run one level down under that directory, so
+    ``dev-v7`` and ``ryde-v7`` are read at
+    ``runs/<set>/policy-v7/<model>/`` -- the un-versioned path holds nothing.
+    The briefs are rebuilt at the set's own registered version, which is the one
+    its run was decided under.
     """
     development_set = development_sets.named(name)
     return run_benchmark.grade_run(
-        development_set.run_dir(MODEL),
+        development_sets.run_dir_at_its_version(development_set, MODEL),
         development_set.key(),
         case_loader=development_set.load_case,
+        policy_version=development_set.policy_version,
     )
 
 
@@ -248,6 +261,22 @@ def figures() -> Dict[str, str]:
         bounds[0] * 100, bounds[1] * 100
     )
     figures["sealed_v1_imported"] = pair(sealed["sealed-v1"].exact_matches - 1, 24)
+
+    # Policy version 7 -- Ryde's own Dispute Resolution Policy v2.1, adopted
+    # 2026-10-13. Three sets, one run each, each graded once here. The interval
+    # is the fourth sealed set's, spelt exactly as the second sealed set's is:
+    # the page writes the percent sign once and the two bounds bare.
+    version_seven = {
+        name: graded_set(name) for name in ("sealed-v4", "ryde-v7", "dev-v7")
+    }
+    fourth_v7 = version_seven["sealed-v4"]
+    v7_bounds = v6_runs.wilson(fourth_v7.exact_matches, fourth_v7.total)
+    figures["sealed_v4_exact"] = pair(fourth_v7.exact_matches, 30)
+    figures["sealed_v4_interval"] = "{0:.1f}%, {1:.0f}%".format(
+        v7_bounds[0] * 100, v7_bounds[1] * 100
+    )
+    figures["ryde_v7_exact"] = pair(version_seven["ryde-v7"].exact_matches, 2)
+    figures["dev_v7_exact"] = pair(version_seven["dev-v7"].exact_matches, 40)
     return figures
 
 

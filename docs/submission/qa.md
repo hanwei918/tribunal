@@ -71,13 +71,16 @@ it is the product and not a scramble. The policy is **data** in this system:
 `policy/` is three JSON files read at run time, and every clause a ruling cites
 is resolved out of them. A new version is therefore new policy files, a prompt
 set that pairs with them, a brief builder for the facts v2.1 needs, and a new
-sealed set written for it - **not a rewrite**. Nothing in the pipeline is
-version-7 specific beyond the facts v2.1 reads, and the version is a parameter
-with a version-1 default, which is why **versions 1 to 6 still reproduce byte for
-byte**: every version-1-6 brief, all 194 recorded version-6 case digests, and
-every version-6 run and figure are unchanged (`tests/test_brief_v7.py`). The
-change cost one evening and one sealed set, and the version-6 results are still
-in the record, labelled.
+sealed set written for it - **not a rewrite**. The pipeline's version-7
+additions are the facts v2.1 reads and the gates v2.1 states -- the confidence
+bar by dispute value and fraud flag, the cases only a person may decide, and the
+2 km limb (held off, C1) -- each behind `policy_version >= 7`; the version is a
+parameter with a version-1 default, which is why **versions 1 to 6 still
+reproduce byte for byte**: every version-1-6 brief, all 194 recorded version-6
+case digests, and every version-6 run and figure are unchanged
+(`tests/test_brief_v7.py`). The change took one night (2026-10-13 18:35 to the
+freeze at 02:32 on 2026-10-14) and one sealed set, and the version-6 results are
+still in the record, labelled.
 
 **Which parts of v2.1 did you have to read for yourselves?** Four, and they are
 the four the owner posted to Ryde in the track group on 2026-10-13 (still

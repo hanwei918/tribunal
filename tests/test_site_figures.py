@@ -17,7 +17,9 @@ directions:
 The second is what makes this a check rather than a restatement:
 ``test_the_check_fails_on_a_page_carrying_a_different_figure`` moves one figure
 in one page and shows the first assertion going red, and moves it in the record
-and shows the second going red.
+and shows the second going red;
+``test_the_check_fails_on_a_page_carrying_a_different_version_seven_figure``
+does the same for the results page's version-7 sealed figure.
 
 **The text is the visible text.** Tags are removed and entities resolved before
 the comparison, so the row is a sentence a reader reads and not a fragment of
@@ -30,6 +32,15 @@ same readings ``eval.v6_runs --report``, ``eval.business_value --report``,
 ``eval.func_sets --report`` and ``eval.fairness --report`` make, and
 ``tests/test_readme_figures.py`` recomputes the same sealed and held-out figures
 from the same places.
+
+**The version-7 pages.** Ryde's own Dispute Resolution Policy v2.1 was adopted
+as policy version 7 on 2026-10-13, and ``ui.site.figures`` reads its three sets
+-- the fourth sealed set, Ryde's own two samples and the development set -- from
+their committed runs. The front page, the results page and the about page's
+timeline state those figures, and the version-6 figures they sit beside are
+labelled as version 6's: two further checks hold that block, one that every page
+stating a version-7 figure is a page bound to it here, and one that the
+sentences saying which version a block belongs to are present in both languages.
 """
 
 from __future__ import annotations
@@ -60,6 +71,18 @@ def visible_text(markup: str) -> str:
     text = BLOCK_RE.sub(" ", markup)
     text = TAG_RE.sub(" ", text)
     return " ".join(html.unescape(text).split())
+
+
+def states_a_value(text: str, value: str) -> bool:
+    """Whether a page states one figure's value, and not a piece of another's.
+
+    ``1/2`` sits inside ``21/24``, so a bare containment test would read a page
+    that states the second as stating the first. A digit or a decimal point is
+    what can join two values, so neither may touch the value on either side.
+    """
+    return (
+        re.search(r"(?<![0-9.])" + re.escape(value) + r"(?![0-9])", text) is not None
+    )
 
 
 # ``(page, the text the page shows, the figures that text carries)``.
@@ -309,6 +332,62 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
         "\u7b2c\u56db\u5957\u9690\u85cf\u8003\u9898(sealed-v2)\uff1a12/12\u3002",
         ("sealed_v2_exact",),
     ),
+    # -- version 7, Ryde's own Dispute Resolution Policy v2.1 --------------
+    # The three version-7 sets, each run once and never pooled: the fourth
+    # sealed set, Ryde's own two samples, and the development set the team
+    # tuned against. The front page's sentence carries the sealed set's figure
+    # and its interval, the results page carries all three, and the about
+    # page's timeline carries the sealed set's figure.
+    (
+        "index.html",
+        "Applies Ryde's own Dispute Resolution Policy v2.1 (policy version 7, adopted 2026-10-13): 30/30 on its hidden test set, Wilson 95% [88.6%, 100%].",
+        ("sealed_v4_exact", "sealed_v4_interval"),
+    ),
+    (
+        "index.zh.html",
+        "\u6309 Ryde \u5b98\u65b9\u7684\u300a\u4e89\u8bae\u5904\u7406\u653f\u7b56 v2.1\u300b\u88c1\u51b3\uff08\u7b2c 7 \u7248\u653f\u7b56\uff0c2026-10-13 \u91c7\u7528\uff09\uff1a\u9690\u85cf\u9898 30/30\uff0cWilson 95% [88.6%, 100%]\u3002",
+        ("sealed_v4_exact", "sealed_v4_interval"),
+    ),
+    (
+        "results.html",
+        "30/30 right on 30 hidden cases, Wilson 95% 88.6%, 100%; written by Claude (Opus 5.5) in a fresh claude.ai chat from Ryde's v2.1 and the version-7 files; run once from freeze-2026-10-14.",
+        ("sealed_v4_exact", "sealed_v4_interval"),
+    ),
+    (
+        "results.html",
+        "1/2 -- DISP-001 (route deviation) ruled exactly as Ryde states (partial refund 3.44); DISP-002 (no-show) escalated: the four drafts split 2-2 on whether eight sparse GPS fixes reach the 0.95 confidence v2.1 requires when a party carries a fraud flag.",
+        ("ryde_v7_exact",),
+    ),
+    (
+        "results.html",
+        "dev-v7: 40/40, development data the team tuned against.",
+        ("dev_v7_exact",),
+    ),
+    (
+        "results.zh.html",
+        "30 \u9053\u9690\u85cf\u9898\u5bf9\u4e86 30/30\uff0cWilson 95% 88.6%, 100%\uff1b\u7531 Claude\uff08Opus 5.5\uff09\u5728\u5168\u65b0\u7684 claude.ai \u5bf9\u8bdd\u4e2d\u6309 Ryde v2.1 \u4e0e\u7b2c 7 \u7248\u653f\u7b56\u51fa\u9898\uff1b\u4ece freeze-2026-10-14 \u53ea\u8dd1\u4e00\u6b21\u3002",
+        ("sealed_v4_exact", "sealed_v4_interval"),
+    ),
+    (
+        "results.zh.html",
+        "Ryde \u5b98\u65b9\u6837\u4f8b 1/2\uff1aDISP-001\uff08\u7ed5\u8def\uff09\u4e0e Ryde \u7ed9\u51fa\u7684\u7b54\u6848\u4e00\u81f4\uff08\u90e8\u5206\u9000\u6b3e 3.44\uff09\uff1b",
+        ("ryde_v7_exact",),
+    ),
+    (
+        "results.zh.html",
+        "\u5f00\u53d1\u96c6 40/40\uff08\u56e2\u961f\u636e\u6b64\u8c03\u8bd5\uff0c\u4e0d\u662f\u6cdb\u5316\u6210\u7ee9\uff09\u3002",
+        ("dev_v7_exact",),
+    ),
+    (
+        "about.html",
+        "Version 7 frozen; the sixth hidden set (sealed-v4): 30/30.",
+        ("sealed_v4_exact",),
+    ),
+    (
+        "about.zh.html",
+        "\u7b2c 7 \u7248\u51bb\u7ed3\uff1b\u7b2c\u516d\u5957\u9690\u85cf\u8003\u9898\uff08sealed-v4\uff09\uff1a30/30\u3002",
+        ("sealed_v4_exact",),
+    ),
 )
 
 # The pages this table names. It is asserted to be exactly the pages that state
@@ -322,6 +401,49 @@ PAGES: Tuple[str, ...] = (
     "how-it-works.zh.html",
     "about.html",
     "about.zh.html",
+)
+
+# The figures the version-7 pages state -- Ryde's own Dispute Resolution Policy
+# v2.1, adopted 2026-10-13. A page that states one of these values and has no
+# row above is a page nothing here holds to the record, which is what
+# ``test_no_page_states_a_version_seven_figure_the_module_does_not_compute``
+# refuses; the set of pages is computed from the pages themselves rather than
+# listed, so a page that gains one of the values fails until it is bound.
+VERSION_SEVEN_FIGURES: Tuple[str, ...] = (
+    "sealed_v4_exact",
+    "sealed_v4_interval",
+    "ryde_v7_exact",
+    "dev_v7_exact",
+)
+
+# The sentences that say which policy version a block of figures belongs to.
+# They state no figure, so they are not rows in ``SHOWN``; they are the lines
+# that stop a reader taking the version-6 figures beside them for version 7's.
+VERSION_SENTENCES: Tuple[Tuple[str, str], ...] = (
+    (
+        "index.html",
+        "The figures above are from version 6, the team's own policy.",
+    ),
+    (
+        "index.zh.html",
+        "\u4ee5\u4e0a\u6570\u5b57\u6765\u81ea\u7b2c 6 \u7248\uff08\u56e2\u961f\u81ea\u5b9a\u653f\u7b56\uff09\u3002",
+    ),
+    (
+        "results.html",
+        "The case pages show the version-6 development runs.",
+    ),
+    (
+        "results.zh.html",
+        "\u6848\u4f8b\u9875\u5c55\u793a\u7684\u662f\u7b2c 6 \u7248\u7684\u5f00\u53d1\u8dd1\u5206\u3002",
+    ),
+    (
+        "how-it-works.html",
+        "Since 2026-10-13 the policy is Ryde's v2.1, written as numbered clauses with Tribunal's readings stated where v2.1 is silent (docs/notes/2026-10-13-policy-v7.md).",
+    ),
+    (
+        "how-it-works.zh.html",
+        "\u81ea 2026-10-13 \u8d77\uff0c\u653f\u7b56\u662f Ryde \u7684 v2.1\uff0c\u6539\u5199\u4e3a\u5e26\u7f16\u53f7\u7684\u6761\u6b3e\uff1bv2.1 \u6ca1\u5199\u5230\u7684\u5730\u65b9\uff0c\u6211\u4eec\u7684\u8bfb\u6cd5\u9010\u6761\u5199\u660e\uff08docs/notes/2026-10-13-policy-v7.md\uff09\u3002",
+    ),
 )
 
 
@@ -372,6 +494,45 @@ class SiteFigureTests(unittest.TestCase):
         for page in PAGES:
             self.assertIn(page, self.pages, "{0} is not a page this builder writes".format(page))
 
+    def test_the_pages_say_which_policy_version_they_show(self) -> None:
+        """The version-6 blocks are labelled, and the policy is named.
+
+        None of these sentences states a figure, so none is a row in ``SHOWN``.
+        They are the lines that stop a reader taking the version-6 figures
+        beside them for the version-7 ones, and a page that lost one would do
+        exactly that.
+        """
+        for page, sentence in VERSION_SENTENCES:
+            with self.subTest(page=page):
+                self.assertIn(sentence, self.pages[page])
+
+    def test_no_page_states_a_version_seven_figure_the_module_does_not_compute(
+        self,
+    ) -> None:
+        """Every page that states a version-7 figure is a page bound to it here.
+
+        The pages are computed from the pages themselves, so a page that gains
+        one of these values and no row above fails rather than passing on the
+        pages that are bound. A value is looked for as a value, not as a
+        fragment of another.
+        """
+        for name in VERSION_SEVEN_FIGURES:
+            value = self.figures[name]
+            bound = {page for page, _shown, names in SHOWN if name in names}
+            stating = {
+                page
+                for page, text in self.pages.items()
+                if states_a_value(text, value)
+            }
+            with self.subTest(figure=name):
+                self.assertEqual(
+                    stating,
+                    bound,
+                    "{0} = {1!r}: stated by {2}, bound to {3}".format(
+                        name, value, sorted(stating), sorted(bound)
+                    ),
+                )
+
     def test_every_figure_is_a_figure_the_pages_show(self) -> None:
         """A figure is a short string, not a paragraph that would match anything."""
         for name, value in sorted(self.figures.items()):
@@ -404,6 +565,36 @@ class SiteFigureTests(unittest.TestCase):
                 self.assert_shows(page, "index.html", shown, names)
         finally:
             self.figures["median_wall_seconds"] = figures.named("median_wall_seconds")
+
+    def test_the_check_fails_on_a_page_carrying_a_different_version_seven_figure(
+        self,
+    ) -> None:
+        """The control: ``results.html``'s sealed-v4 figure, moved, is reported.
+
+        The row used is the results page's sealed-v4 one, so the line the report
+        names is that row. The figure is moved in the page and then in the
+        record, one after the other, and each reddens one of the two assertions
+        ``assert_shows`` makes.
+        """
+        shown = (
+            "30/30 right on 30 hidden cases, Wilson 95% 88.6%, 100%; written by "
+            "Claude (Opus 5.5) in a fresh claude.ai chat from Ryde's v2.1 and the "
+            "version-7 files; run once from freeze-2026-10-14."
+        )
+        names = ("sealed_v4_exact", "sealed_v4_interval")
+        page = self.pages["results.html"]
+        moved = page.replace(
+            "30/30 right on 30 hidden cases", "29/30 right on 30 hidden cases"
+        )
+        self.assertNotEqual(page, moved, "the fixture did not move the figure")
+        with self.assertRaises(AssertionError):
+            self.assert_shows(moved, "results.html", shown, names)
+        self.figures["sealed_v4_exact"] = "29/30"
+        try:
+            with self.assertRaises(AssertionError):
+                self.assert_shows(page, "results.html", shown, names)
+        finally:
+            self.figures["sealed_v4_exact"] = figures.named("sealed_v4_exact")
 
 
 if __name__ == "__main__":
