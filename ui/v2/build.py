@@ -11,11 +11,12 @@ policy version 6: today's disputes, what was decided automatically, what went to
 a human, and -- for one case -- the whole decision, step by step, with the
 agents' own words.
 
-It is the **front door**. The site root is this page -- ``ui/dist/index.html``,
-the queue, and ``ui/dist/case-<NNNNN>.html`` beside it -- and the evaluation
-replay ``ui/build.py`` builds now lives one level down under ``ui/dist/replay/``.
-The code still lives in ``ui/v2/``, and every page here carries a link to the
-replay.
+It is the **queue**. This page is ``ui/dist/queue.html`` and one page per case
+sits beside it at ``ui/dist/case-<NNNNN>.html``; the site's front door is the
+product site ``ui/site/build.py`` builds, at ``ui/dist/index.html``, and the
+evaluation replay ``ui/build.py`` builds now lives one level down under
+``ui/dist/replay/``. The code still lives in ``ui/v2/``, and every page here
+carries a link to the replay.
 
 What it reads
 -------------
@@ -186,7 +187,7 @@ from tribunal import referee as referee_module  # noqa: E402
 # Where the site lives
 # --------------------------------------------------------------------------
 DIST_DIR = PROJECT_ROOT / "ui" / "dist"
-INDEX_PATH = DIST_DIR / "index.html"
+INDEX_PATH = DIST_DIR / "queue.html"
 
 # The evaluation replay, one level down from this site's own pages. Every page
 # here links to it, and every page it builds links back to this queue. It is the
@@ -2827,13 +2828,13 @@ def _topbar(mode: str, current: str) -> str:
     # ``aria-current`` rather than turned into a span, so the page's own item is
     # still a link a reader can follow.
     queue = (
-        '<a href="index.html" class="on" aria-current="page">Queue</a>'
+        '<a href="queue.html" class="on" aria-current="page">Queue</a>'
         if current == "queue"
-        else '<a href="index.html">Queue</a>'
+        else '<a href="queue.html">Queue</a>'
     )
     return (
         '<header class="top">\n<div class="top-in">\n'
-        '<a class="brand" href="index.html"><span class="mark">{0}</span>Tribunal'
+        '<a class="brand" href="queue.html"><span class="mark">{0}</span>Tribunal'
         "</a>\n"
         '<nav class="nav" aria-label="Sites">{1}</nav>\n'
         '<span class="mode">{2}</span>\n'
@@ -3513,7 +3514,7 @@ def build_not_found(cases: Sequence[CaseData]) -> str:
         "pages. Every dispute is one page, and the queue lists them all.</p>\n"
         + "</header>\n"
         + '<p class="links">'
-        + '<a href="index.html">The queue</a>'
+        + '<a href="queue.html">The queue</a>'
         + '<a href="{0}">Case {1}: how it was decided</a>'
         "</p>\n".format(
             _attribute("case-{0:05d}.html".format(HOW_IT_WAS_DECIDED_CASE)),
@@ -6282,7 +6283,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = argparse.ArgumentParser(
         prog="python3 -m ui.v2.build",
         description=(
-            "Build the product view: the queue at ui/dist/index.html and one "
+            "Build the product view: the queue at ui/dist/queue.html and one "
             "page per case of the four version-6 runs. Read-only on runs/, data/, "
             "policy/ and ops/config.json; no model call."
         ),

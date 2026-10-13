@@ -61,6 +61,11 @@ STRAY_DOCUMENTS = (
 
 # Paths the repository carries, one from each tree. An ignore rule that matched
 # one of these would be hiding repository content, so each is asserted visible.
+# The last two are `.zip` files, and they are here on purpose: `*.zip` ignores a
+# dropped deploy archive, and the product site ships two archives of its own --
+# Pyodide's `python_stdlib.zip` and the bundle `ui/site/build.py` builds -- so
+# the two negations in `.gitignore` are what keeps them visible, and this is what
+# holds those negations in place.
 REPOSITORY_CONTENT = (
     "README.md",
     "START-HERE.md",
@@ -70,6 +75,8 @@ REPOSITORY_CONTENT = (
     "tests/test_ui_build.py",
     "docs/notes/2026-10-04-the-second-sealed-run.md",
     "docs/buddy-log/README.md",
+    "ui/site/static/try/pyodide/python_stdlib.zip",
+    "ui/dist/try/tribunal-core.zip",
 )
 
 

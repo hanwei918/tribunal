@@ -15,11 +15,16 @@ docs/notes/*balance*
 # tree and they are never repository content. `tests/test_repository_hygiene.py`
 # asks git itself, and asserts that no rule here reaches a file the repository
 # carries -- none is under `.claude/`, `.codebuddy/` or `.cursor/`, and no
-# tracked file ends in `.zip`.
+# tracked file ends in `.zip` except the two the product site ships. Those two
+# are named rather than added with `-f`: the Pyodide distribution's own
+# `python_stdlib.zip`, which the try-it page's runtime loads, and the bundle
+# `ui/site/build.py` builds for the try-it page from this repository's files.
 .claude/
 .codebuddy/
 .cursor/
 *.zip
+!ui/site/static/try/pyodide/python_stdlib.zip
+!ui/dist/try/tribunal-core.zip
 
 # Documents that arrive by hand rather than by a build: an exported PDF, a Word
 # document, a slide deck, a file named after a CV. Matched case-insensitively --

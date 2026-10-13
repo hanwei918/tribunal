@@ -14,18 +14,34 @@ editing the evidence. The exemption is asserted below rather than assumed: the
 walk is checked to cover the rest of the repository and to exclude exactly
 ``runs/``.
 
+**The product site is the second exemption, and it is named file by file.** The
+policy owner, Ji Guofang, designed the product site outside WorkBuddy and wrote
+its text in two languages: eleven of its 22 pages are Chinese, every English
+page carries the language switch's own two characters, and the Chinese pages
+share a script that carries ten more. ``tools/site_import.py`` transcribed her
+files unchanged and ``ui/site/build.py`` builds them back out, so the rule --
+which is about what **this repository writes** -- exempts her site rather than
+rewriting it, exactly as it exempts ``runs/``. The set is derived from the two
+builders rather than typed, and a test below holds it to being the site's own
+files and no wider.
+
 A failure here names the file and the code points, never the characters, so that
 the test's own output stays free of them.
 """
 
 from __future__ import annotations
 
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 from typing import Dict, Iterator, List, Tuple
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from ui.site import build as site_build  # noqa: E402
 
 # The CJK blocks, as inclusive code-point ranges: CJK symbols and punctuation,
 # the two Han ranges, compatibility ideographs, and full-width forms.
@@ -46,6 +62,31 @@ NOT_REPOSITORY_CONTENT = frozenset(
 
 # The one directory that is repository content and is nevertheless exempt.
 EXEMPT_DIRECTORIES = frozenset({"runs"})
+
+
+def imported_files() -> frozenset:
+    """The product site's own files: her sources, and the copies built from them.
+
+    Asked of the two builders rather than typed here, so the set cannot drift
+    from what is imported and built: ``ui/site/src/`` and ``ui/site/static/``
+    are what ``tools/site_import.py`` wrote, and ``ui.site.build``'s own path
+    list is what is published under ``ui/dist/``.
+    """
+    sources = {
+        path.relative_to(PROJECT_ROOT).as_posix()
+        for directory in (site_build.SRC_DIR, site_build.STATIC_DIR)
+        for path in directory.rglob("*")
+        if path.is_file()
+    }
+    built = {"ui/dist/" + name for name in site_build.written_paths()}
+    return frozenset(sources | built)
+
+
+# The exemption itself, named once. It is a set of paths rather than a
+# directory because the product site shares ``ui/dist/`` with two other
+# builders: the queue, the case pages and the replay are this repository's own
+# writing and stay under the rule.
+IMPORTED_PAGES = imported_files()
 
 
 def is_cjk(character: str) -> bool:
@@ -70,7 +111,9 @@ def text_files(root: Path) -> List[Path]:
 
     A file is text if it decodes as UTF-8; anything that does not is a binary
     artifact and carries no prose. ``runs/`` is skipped, so the recorded run
-    files are never read by this module at all.
+    files are never read by this module at all, and so is the product site --
+    the policy owner's design, imported unchanged, which carries Chinese by
+    design and is named file by file in ``IMPORTED_PAGES``.
     """
     found: List[Path] = []
     skip = _directories_to_skip()
@@ -79,6 +122,8 @@ def text_files(root: Path) -> List[Path]:
             continue
         relative = path.relative_to(root)
         if any(part in skip for part in relative.parts[:-1]):
+            continue
+        if relative.as_posix() in IMPORTED_PAGES:
             continue
         try:
             path.read_text(encoding="utf-8")
@@ -149,6 +194,59 @@ class TheDetectorTests(unittest.TestCase):
             )
 
 
+class TheProductSiteTests(unittest.TestCase):
+    """The second exemption: the site's own files, and nothing wider than them."""
+
+    def test_the_exemption_is_the_sites_own_files(self):
+        """Asked of the builders, so it cannot drift from what is imported."""
+        sources = {
+            path.relative_to(PROJECT_ROOT).as_posix()
+            for directory in (site_build.SRC_DIR, site_build.STATIC_DIR)
+            for path in directory.rglob("*")
+            if path.is_file()
+        }
+        built = {"ui/dist/" + name for name in site_build.written_paths()}
+        self.assertEqual(sources | built, set(IMPORTED_PAGES))
+
+    def test_the_exemption_is_not_wider_than_the_site(self):
+        """This repository's own writing is still under the rule."""
+        for name in (
+            "ui/dist/queue.html",
+            "ui/dist/404.html",
+            "ui/dist/case-00208.html",
+            "ui/dist/replay/index.html",
+            "ui/site/build.py",
+            "README.md",
+            "tests/test_language.py",
+        ):
+            with self.subTest(path=name):
+                self.assertNotIn(name, IMPORTED_PAGES)
+
+    def test_the_exemption_covers_every_chinese_page(self):
+        """Eleven Chinese pages, as her sources and as the copies built from them."""
+        chinese = sorted(name for name in IMPORTED_PAGES if name.endswith(".zh.html"))
+        self.assertEqual(2 * 11, len(chinese), chinese)
+        self.assertIn("ui/site/src/pages/index.zh.html", IMPORTED_PAGES)
+        self.assertIn("ui/dist/index.zh.html", IMPORTED_PAGES)
+
+    def test_the_exemption_is_doing_something(self):
+        """The page really does carry the characters the rule looks for."""
+        page = PROJECT_ROOT / "ui/site/src/pages/index.zh.html"
+        self.assertTrue(is_cjk(page.read_text(encoding="utf-8")))
+        self.assertNotIn(
+            "ui/site/src/pages/index.zh.html",
+            {str(path.relative_to(PROJECT_ROOT)) for path in text_files(PROJECT_ROOT)},
+        )
+
+    def test_the_same_bytes_outside_the_site_are_still_reported(self):
+        """The control: the exemption is the file's path, not its contents."""
+        page = (PROJECT_ROOT / "ui/site/src/pages/index.zh.html").read_text(encoding="utf-8")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "page.html").write_text(page, encoding="utf-8")
+            self.assertIn("page.html", violations(root))
+
+
 class TheRepositoryTests(unittest.TestCase):
     """The repository itself, under the rule."""
 
@@ -163,7 +261,7 @@ class TheRepositoryTests(unittest.TestCase):
             "WORKBUDDY-SCOPE.md",
             "eval/development_sets.py",
             "tests/test_language.py",
-            "ui/dist/index.html",
+            "ui/dist/queue.html",
             # One file from each of the three directories the second sealed
             # set's files sit in: the rule covers its cases, its key and its
             # answer-bearing authoring bundle as much as any other file.

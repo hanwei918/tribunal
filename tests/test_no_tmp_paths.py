@@ -8,10 +8,11 @@ everywhere else -- which is what happened until part 48, when
 ``ui/v2/build.py`` copied the link-preview image out of ``tmp/`` and the two
 tests that hold the site to its own bytes went red on a fresh clone.
 
-**What this module reads.** The source of every module under ``tests/`` and of
-every module under ``ui/`` -- the tests and the two builders -- parsed with
-``ast``, so a mention of ``tmp`` in a **comment** is not a hit. Two shapes are
-reported, and they are the two ways this repository names a path:
+**What this module reads.** The source of every module under ``tests/``, every
+module under ``ui/`` -- the tests and the three builders -- every module under
+``tools/`` and every module under ``tryit/``, parsed with ``ast``, so a mention
+of ``tmp`` in a **comment** is not a hit. Two shapes are reported, and they are
+the two ways this repository names a path:
 
 * a **string literal** whose first path component is ``tmp`` and which has at
   least one more component, such as ``"tmp/og-image.png"``. An **absolute** path
@@ -44,6 +45,8 @@ from typing import Dict, List
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 TESTS_DIR = PROJECT_ROOT / "tests"
 UI_DIR = PROJECT_ROOT / "ui"
+TOOLS_DIR = PROJECT_ROOT / "tools"
+TRYIT_DIR = PROJECT_ROOT / "tryit"
 
 # The directory this module is about, assembled from pieces so that this file
 # does not itself carry the literal its own check looks for.
@@ -51,8 +54,16 @@ SCRATCH_DIR_NAME = "tm" + "p"
 
 
 def sources() -> List[Path]:
-    """Every module the check reads: the tests, and the two builders."""
-    found = sorted(TESTS_DIR.rglob("*.py")) + sorted(UI_DIR.rglob("*.py"))
+    """Every module the check reads: the tests, the builders, and the tools.
+
+    ``tools/site_import.py`` transcribes the policy owner's product site and
+    ``tryit/`` is her try-it service, so both are under the rule the tests and
+    the builders are under: a module that named a path under the gitignored
+    scratch directory would work on the machine that wrote it and nowhere else.
+    """
+    found: List[Path] = []
+    for directory in (TESTS_DIR, UI_DIR, TOOLS_DIR, TRYIT_DIR):
+        found += sorted(directory.rglob("*.py"))
     return [path for path in found if path.is_file()]
 
 
@@ -129,11 +140,30 @@ class TheRepositoryTests(unittest.TestCase):
     def test_the_walk_covers_the_tests_and_the_builders(self):
         """A walk that silently found nothing would otherwise pass."""
         found = {path.name for path in sources()}
-        for required in ("build.py", "portability.py", "test_ui_v2.py", "test_ui_build.py"):
+        for required in (
+            "build.py",
+            "portability.py",
+            "test_ui_v2.py",
+            "test_ui_build.py",
+            "site_import.py",
+            "server.py",
+        ):
             self.assertIn(required, found, "{0} was not walked".format(required))
         self.assertTrue(
             (UI_DIR / "v2" / "build.py") in sources(),
             "the product view's builder is not in the walk",
+        )
+        self.assertTrue(
+            (UI_DIR / "site" / "build.py") in sources(),
+            "the product site's builder is not in the walk",
+        )
+        self.assertTrue(
+            (TRYIT_DIR / "case.py") in sources(),
+            "the try-it service is not in the walk",
+        )
+        self.assertTrue(
+            (TOOLS_DIR / "site_import.py") in sources(),
+            "the importer is not in the walk",
         )
 
     def test_no_test_and_no_builder_names_a_path_under_tmp(self):

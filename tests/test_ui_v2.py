@@ -1,11 +1,12 @@
-"""Tests for ``ui.v2``: the product view -- the site's front door -- and its pages.
+"""Tests for ``ui.v2``: the product view -- the queue -- and its pages.
 
-No network, no browser, no credential, no model call. The product view is the
-site's root now (``ui/dist/index.html`` and ``ui/dist/case-<NNNNN>.html``), and
-the evaluation replay ``ui.build`` writes lives beside it under
-``ui/dist/replay/``. What is under test is the properties the sheet names, and
-each is checked against the files the pages were built from rather than against
-a number typed in here:
+No network, no browser, no credential, no model call. This builder writes the
+queue at ``ui/dist/queue.html`` and one page per case beside it at
+``ui/dist/case-<NNNNN>.html``; the site's front door is the product site
+``ui.site.build`` writes at ``ui/dist/index.html``, and the evaluation replay
+``ui.build`` writes lives beside it under ``ui/dist/replay/``. What is under test
+is the properties the sheet names, and each is checked against the files the
+pages were built from rather than against a number typed in here:
 
 * ``--check`` passes, and two builds are byte-identical;
 * no page contains ``fetch(``, an external ``src=`` or ``href=``, ``<link``, a
@@ -104,6 +105,7 @@ from ops import review as review_module  # noqa: E402
 from tests import portability  # noqa: E402
 from tribunal import pipeline as pipeline_module  # noqa: E402
 from tribunal import referee as referee_module  # noqa: E402
+from ui.site import build as site_build  # noqa: E402
 from ui.v2 import build as v2  # noqa: E402
 
 # The four runs the site is drawn from, and the case root each set loads through.
@@ -189,6 +191,14 @@ SITE_ASSET_PATHS = frozenset(
     {v2.ARCHITECTURE_ASSET_DIR / view for view, _label in v2.ARCHITECTURE_VIEWS}
     | {v2.OG_IMAGE_ASSET, v2.COVER_ASSET}
 )
+
+# The paths the product site writes, which share ``ui/dist/`` with this builder.
+# Three builders write into that root -- the queue here, the evaluation replay
+# under ``replay/`` and the product site ``ui.site.build`` -- and each test
+# module covers its own builder's files, so the walk below reads the files this
+# builder writes and skips the site's. The list is asked of the builder that
+# writes them rather than typed here, so it cannot drift from what is built.
+PRODUCT_SITE_PATHS = site_build.written_paths()
 
 
 # --------------------------------------------------------------------------
@@ -443,13 +453,14 @@ REPLAY_DIR = Path(v2.REPLAY_INDEX).parts[0]
 
 
 def committed_pages() -> Dict[str, str]:
-    """This site's committed pages: the root, and not the replay beside it.
+    """This site's committed pages: the queue, and not the replay beside it.
 
     The evaluation replay is a second site under ``replay/``, built by
-    ``ui.build`` and committed under the same root, so the walk skips it: a
-    comparison that read it would hold this builder to another one's bytes. The
-    files this builder copies in rather than renders -- the architecture diagram
-    and the link-preview image -- are skipped too: they are bytes, and the two
+    ``ui.build``, and the product site is a third, built by ``ui.site.build``;
+    both are committed under the same root, so the walk skips them: a
+    comparison that read either would hold this builder to another one's bytes.
+    The files this builder copies in rather than renders -- the architecture
+    diagrams and the two images -- are skipped too: they are bytes, and the two
     checks that they equal the repository's own file are their own tests.
     """
     return {
@@ -458,6 +469,7 @@ def committed_pages() -> Dict[str, str]:
         if path.is_file()
         and path not in SITE_ASSET_PATHS
         and REPLAY_DIR not in path.relative_to(v2.DIST_DIR).parts
+        and path.relative_to(v2.DIST_DIR).as_posix() not in PRODUCT_SITE_PATHS
     }
 
 
@@ -554,7 +566,7 @@ class DeterminismTests(unittest.TestCase):
     def test_the_site_is_the_queue_and_one_page_per_case(self):
         pages = built_pages()
         self.assertEqual(2 + len(cases()), len(pages))
-        self.assertIn("index.html", pages)
+        self.assertIn("queue.html", pages)
         self.assertIn(v2.NOT_FOUND_LINK, pages)
         for case in cases():
             with self.subTest(case=case["case_no"]):
@@ -1288,7 +1300,7 @@ class QueueFiguresTests(unittest.TestCase):
         """
         held = [case for case in loaded_cases() if v2._money_is_held(case)]
         self.assertTrue(held, "no case has a held amount to check")
-        queue = built_pages()["index.html"]
+        queue = built_pages()["queue.html"]
         for case in held:
             with self.subTest(case=case.case_no):
                 self.assertIn(
@@ -1566,7 +1578,7 @@ class FrontDoorTests(unittest.TestCase):
 
     def test_the_builders_paths_are_the_site_root(self):
         self.assertEqual(PROJECT_ROOT / "ui" / "dist", v2.DIST_DIR)
-        self.assertEqual(v2.DIST_DIR / "index.html", v2.INDEX_PATH)
+        self.assertEqual(v2.DIST_DIR / "queue.html", v2.INDEX_PATH)
         self.assertEqual("replay/index.html", v2.REPLAY_INDEX)
         self.assertTrue(
             (v2.DIST_DIR / "replay" / "index.html").is_file(),
@@ -2593,7 +2605,7 @@ class EscalatedPageTests(unittest.TestCase):
                 self.assertIn(v2._text(v2._draft_proposal(case, draft)), page)
                 self.assertIn(v2._text(v2.draft_words("DRAFT_CLAUSE_UNRESOLVED")), page)
         self.assertIn(v2._text("'POL-RD-99' does not resolve in the loaded policy"), page)
-        self.assertIn("refused the planted clause", built_pages()["index.html"])
+        self.assertIn("refused the planted clause", built_pages()["queue.html"])
 
 
 # --------------------------------------------------------------------------
@@ -2689,7 +2701,7 @@ class LinkPreviewTests(unittest.TestCase):
                 self.assertIsNotNone(url, "the page carries no og:url")
                 assert url is not None
                 self.assertTrue(url.group(1).startswith(v2.SITE_ROOT))
-                if name == "index.html":
+                if name == "queue.html":
                     self.assertEqual(v2.SITE_ROOT, url.group(1))
                 else:
                     self.assertEqual(v2.SITE_ROOT + name, url.group(1))
@@ -2736,7 +2748,7 @@ class NotFoundTests(unittest.TestCase):
 
     def test_the_page_links_to_the_queue_and_to_case_208(self):
         text = self.page()
-        self.assertIn('<a href="index.html">The queue</a>', text)
+        self.assertIn('<a href="queue.html">The queue</a>', text)
         self.assertIn(
             '<a href="case-{0:05d}.html">'.format(v2.HOW_IT_WAS_DECIDED_CASE), text
         )
@@ -3121,7 +3133,7 @@ class StylesheetTests(unittest.TestCase):
         self.assertIn(
             ".tscroll:focus-visible{outline:2px solid var(--accent)", v2._CSS
         )
-        pages = {"index.html": index_text()}
+        pages = {"queue.html": index_text()}
         for case in loaded_cases():
             pages[case.link] = built_pages()[case.link]
         wrappers = 0
@@ -3176,7 +3188,7 @@ class StylesheetTests(unittest.TestCase):
             "the scroll margin is no larger than the bar it has to clear",
         )
         case = loaded_case(208)
-        pages = {"index.html": index_text(), case.link: built_pages()[case.link]}
+        pages = {"queue.html": index_text(), case.link: built_pages()[case.link]}
         for name, page in sorted(pages.items()):
             # The page's stylesheet is not markup and its comments quote the
             # selectors these checks look for, so the body is read on its own.
@@ -3212,7 +3224,7 @@ class StatusChipTests(unittest.TestCase):
         """
         held = [case for case in loaded_cases() if v2._money_is_held(case)]
         self.assertTrue(held, "no case has a held amount to check")
-        queue = built_pages()["index.html"]
+        queue = built_pages()["queue.html"]
         for case in held:
             chip = v2.status_chip(case)
             reason = v2.held_reason(case)
@@ -3262,7 +3274,7 @@ class StatusChipTests(unittest.TestCase):
         amount's reason uses, so the table fits its wrapper at 1280 px and
         wider. The words do not change; only where they sit does.
         """
-        queue = built_pages()["index.html"]
+        queue = built_pages()["queue.html"]
         reviewer = [case for case in loaded_cases() if case.trigger is not None]
         self.assertEqual(26, len(reviewer))
         for case in reviewer:
@@ -3315,7 +3327,7 @@ class StatusChipTests(unittest.TestCase):
         so a long chip cannot come back and push the table off a desktop screen.
         """
         limit = max(len(label) for label in v2.CHIP_LABELS.values())
-        queue = built_pages()["index.html"]
+        queue = built_pages()["queue.html"]
         body = re.sub(r"<style>.*?</style>", "", queue, flags=re.DOTALL)
         texts = re.findall(r'<span class="chip [a-z]+">(.*?)</span>', body)
         self.assertEqual(
@@ -3620,6 +3632,13 @@ class ReplayLinkTests(unittest.TestCase):
         self.assertTrue(self.replay_pages(), "the evaluation replay is not committed")
 
     def test_every_replay_page_links_back_to_the_queue(self):
+        # The target is the file the replay's own builder links to, and that
+        # builder is ``ui/build.py``, which this part may not change: its
+        # ``queue_link`` still names ``ui/dist/index.html``, which is the
+        # product site's front page now that the queue is ``queue.html``. The
+        # check is the one it always was -- the replay links back to the file
+        # its builder writes the link for -- and a later part that may touch
+        # ``ui/build.py`` is where that link moves to ``queue.html``.
         queue = (v2.DIST_DIR / "index.html").resolve()
         for path in self.replay_pages():
             scan = _ResourceScan()
