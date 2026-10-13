@@ -1,0 +1,17 @@
+{
+  "expected_ruling": "PARTIAL_REFUND",
+  "expected_amount_sgd": 0.79,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": [
+    "POL-RD-21",
+    "POL-RD-22",
+    "POL-RD-23",
+    "POL-RD-24",
+    "POL-RD-25",
+    "POL-GEN-22",
+    "POL-GEN-02",
+    "POL-GEN-03"
+  ],
+  "reasoning": "Value SGD 34.62 (10-50 band): AI ruling needs confidence >=0.80 (POL-GEN-22, POL-RD-25); no fraud flags, no safety indicator. Deviation = 21.5 - 20.4 = 1.1 km from recorded distances in EV-TRIP-06013 (POL-RD-22), over 1.0 km tolerance; GPS trace 18.171 km not used to re-measure. EV-GPS-06013 and trip events show exit CTE to Thomson/Newton at 08:27, rejoin 08:35. Not informed: EV-CHAT-06013 has 0 messages, no in-app calls; driver admits not disturbing rider (POL-RD-21). Not traffic-justified: EV-ADVIS-06013-01 (LTA, CTE Toa Payoh Rise-Rochor Rd, 07:32-09:02) records no incident, speed bands 4-5; driver's 'jam' assertion alone does not justify (POL-RD-23). Row (d) of POL-RD-24: excess distance fare 1.1 x 0.72 (EV-FARE-06013 per_km_rate, no surge) = 0.792 -> SGD 0.79, PARTIAL_REFUND (POL-GEN-03), not the full fare. All artifacts weight 1.0 (POL-GEN-02), so confidence can exceed 0.80; 2 km limb not applied (and 1.1 <= 2). Profile history is context only (POL-GEN-01). No referrals."
+}

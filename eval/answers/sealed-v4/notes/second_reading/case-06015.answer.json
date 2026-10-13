@@ -1,0 +1,18 @@
+{
+  "expected_ruling": "NO_ACTION",
+  "expected_amount_sgd": null,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": [
+    "POL-RD-22",
+    "POL-RD-23",
+    "POL-RD-21",
+    "POL-RD-24",
+    "POL-RD-25",
+    "POL-GEN-22",
+    "POL-GEN-02",
+    "POL-GEN-01",
+    "POL-GEN-03"
+  ],
+  "reasoning": "Deviation per POL-RD-22 uses recorded distances in EV-TRIP-06015 (weight 1.0): 11.9 - 11.0 = 0.9 km, within the 1.0 km tolerance (v2.1 1.3/1.4). The rider's 3 km assertion is not supported; GPS trace distance (EV-GPS-06015, 10.07 km) is not used to re-measure. EV-ADVIS-06015-01 (LTA, weight 1.0) shows no incident on the KPE segment, speed bands 5-6, so the reroute is not traffic-justified (POL-RD-23); driver's queue claim is unsupported. EV-CHAT-06015 has 0 messages, so the rider was not informed (POL-RD-21), but with no traffic justification and deviation <=1 km, POL-RD-24 row (e) applies: no refund, NO_ACTION (POL-GEN-03). Dispute value SGD 4.00 < 10.00, so AI ruling is final at any confidence (POL-GEN-22, POL-RD-25; 2 km limb not applied); no fraud flags (EV-RPROF/EV-DPROF), no safety indicator. Profile history (rider upheld disputes, driver deviation flags) is context only (POL-GEN-01). All artifacts weight 1.0 (POL-GEN-02)."
+}

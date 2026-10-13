@@ -1,0 +1,18 @@
+{
+  "expected_ruling": "ESCALATE",
+  "expected_amount_sgd": null,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": [
+    "POL-GEN-26",
+    "POL-RD-23",
+    "POL-RD-24",
+    "POL-RD-21",
+    "POL-RD-22",
+    "POL-GEN-02",
+    "POL-RD-25",
+    "POL-GEN-22",
+    "POL-GEN-03"
+  ],
+  "reasoning": "Route deviation, value SGD 6.50 (<10, POL-GEN-22); fraud_flags 0 both parties; no safety indicator (accident was on PIE, not involving the trip, POL-GEN-21 not triggered). Deviation per POL-RD-22 from EV-TRIP-06008: 25.1-23.2 = 1.9 km (>1 km tolerance, <=2 km). EV-CHAT-06008 MSG-06008-003 (18:42:36) gave reason before deviation at 18:45:16 and rider agreed in MSG-06008-004, so notified and agreed (POL-RD-21). POL-RD-24 then turns on traffic justification: row (a) justified = NO_ACTION; row (d) not justified = excess distance fare 1.9 x 0.92 = SGD 1.75. POL-RD-23 needs traffic data for the recommended segment; EV-ADVIS-06008-01 is MISSING (MISSING_ARTIFACT, weight 0.0, LTA feed timeout, expressly not a finding of no traffic) and carries no fact (POL-GEN-02). Whether traffic justified the reroute cannot be established, and no outcome is inferred from absent evidence (POL-GEN-26). Confidence is capped at 0.0 by the missing artifact, below the 0.80 POL-RD-25 requires. ESCALATE (v2.1 1.3, 1.4, 6.2, 6.3); open question: was there an incident on PIE near Bedok in the trip window? Profiles are context only (POL-GEN-01). No referrals."
+}

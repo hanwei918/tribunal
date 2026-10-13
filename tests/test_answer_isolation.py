@@ -518,6 +518,53 @@ def _brief_violations(case_no):
     return _brief_violations_for_case(loader.load_case(case_no))
 
 
+# --------------------------------------------------------------------------
+# The sixth sealed set, imported on 2026-10-13 at policy version 7
+# --------------------------------------------------------------------------
+# ``sealed-v4`` is the sixth sealed set -- 30 cases under
+# ``data/external/sealed-v4/``, keyed by ``eval/answers/sealed-v4/`` -- and it is
+# a different set, with its own case range, its own key and its own
+# answer-bearing directory. Its key is an eighth way for an answer to reach a
+# brief, so it is guarded by the same layers and its two paths are named
+# explicitly below.
+#
+# The key sits one level down from the set's answers root, because the whole of
+# archive B's tree -- its ``answers/``, ``generator/`` and ``notes/`` folders --
+# was extracted there byte for byte rather than flattened.
+SEALED_V4_KEY_PATH = EVAL_DIR / "answers" / "sealed-v4" / "answers" / "ground_truth.json"
+SEALED_V4_SET_DIR = DATA_DIR / "external" / "sealed-v4"
+SEALED_V4_EXTERNAL_DIR = EVAL_DIR / "external" / "sealed-v4"
+
+# The two paths the sixth sealed set's answers live at, named so a reader can see
+# which ones the set added rather than only that Layer 1 covers all of ``eval/``.
+SEALED_V4_ANSWER_PATHS = (
+    "eval/answers/sealed-v4/answers/ground_truth.json",
+    "eval/answers/sealed-v4",
+)
+
+
+def _sealed_v4_key_records():
+    """The sixth sealed set's answer key, as a list of records."""
+    with SEALED_V4_KEY_PATH.open("r", encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def _sealed_v4_set_case_numbers():
+    """Every case number the set's own index lists, in index order."""
+    with (SEALED_V4_SET_DIR / "index.json").open("r", encoding="utf-8") as handle:
+        return [entry["case_no"] for entry in json.load(handle)]
+
+
+def _sealed_v4_set_case(case_no):
+    """One case of the sixth sealed set, loaded through its own index.
+
+    Through ``load_external_set_case``, the loader the set is run with, and never
+    through the corpus manifest -- these cases are absent from ``data/index.json``
+    on purpose, so the manifest path would not find them.
+    """
+    return loader.load_external_set_case(SEALED_V4_SET_DIR, case_no)
+
+
 def _brief_violations_for_case(case, policy_version=None):
     """The same question, for a case already in hand.
 
@@ -1590,6 +1637,165 @@ class SealedV3IsolationTest(unittest.TestCase):
         # GREEN again, on the real case.
         self.assertEqual({}, _brief_violations_for_case(real, policy_version=version))
         self.assertEqual(30, len(_sealed_v3_set_case_numbers()), "the real index changed")
+
+
+class SealedV4IsolationTest(unittest.TestCase):
+    """The guard covers the sixth sealed set's key as well as the seven above it.
+
+    ``sealed-v4`` is the set whose single run is taken *after* everything the
+    earlier keys measure, at the policy version 7 its registration fixes, so an
+    answer reaching one of its briefs would corrupt the figure the submission
+    leads with. Its key is an eighth key and its cases are briefed by the same
+    ``brief.build_brief_for_case`` -- at the version its run will brief them at,
+    which is why every brief below is built at the registration's version and not
+    at the default. The same layers are asserted over it: no file of the set
+    carries an answer field, no brief carries an answer-key field name, and no
+    module under ``tribunal/`` names either of the two paths that hold the set's
+    answers. Each check is shown capable of failing on a dirty fixture before it
+    is shown to hold.
+    """
+
+    def test_the_sixth_sealed_key_is_present_and_is_no_other_key(self):
+        self.assertTrue(SEALED_V4_KEY_PATH.is_file(), "the sixth sealed key is missing")
+        for other in (
+            ANSWER_KEY_PATH,
+            SECOND_KEY_PATH,
+            SEALED_KEY_PATH,
+            WILD_V2_KEY_PATH,
+            SEALED_V1_KEY_PATH,
+            SEALED_V2_KEY_PATH,
+            SEALED_V3_KEY_PATH,
+        ):
+            with self.subTest(other=other.name):
+                self.assertNotEqual(other, SEALED_V4_KEY_PATH)
+        self.assertEqual(30, len(_sealed_v4_key_records()))
+
+    def test_every_needle_occurs_in_the_sixth_sealed_key(self):
+        """A mistyped needle would make the scan below unable to fire."""
+        key_text = SEALED_V4_KEY_PATH.read_text(encoding="utf-8")
+        for name in DISTINCTIVE_ANSWER_FIELDS:
+            with self.subTest(field=name):
+                self.assertTrue(
+                    name in key_text,
+                    "{0!r} is not a field of the sixth sealed key".format(name),
+                )
+
+    def test_no_file_of_the_sixth_sealed_set_carries_an_answer_field(self):
+        """The set arrived answer-free, and is still answer-free here.
+
+        ``index.json`` is scanned with the case files: it is under the set's own
+        directory, and an index that described an outcome would be a set root
+        describing one.
+        """
+        paths = sorted(SEALED_V4_SET_DIR.glob("case-*.json")) + [
+            SEALED_V4_SET_DIR / "index.json"
+        ]
+        self.assertEqual(31, len(paths), "the sixth sealed set is not 30 cases and an index")
+        for path in paths:
+            file_text = path.read_text(encoding="utf-8")
+            with self.subTest(case=path.name):
+                for name in DISTINCTIVE_ANSWER_FIELDS + ("ground_truth",):
+                    self.assertTrue(
+                        name not in file_text,
+                        "{0} carries {1!r}".format(path.name, name),
+                    )
+
+    def test_no_sixth_sealed_brief_carries_an_answer_key_field_name(self):
+        case_numbers = _sealed_v4_set_case_numbers()
+        self.assertEqual(30, len(case_numbers), "the sixth sealed set is not 30 cases")
+        for case_no in case_numbers:
+            with self.subTest(case_no=case_no):
+                self.assertEqual(
+                    {},
+                    _brief_violations_for_case(
+                        _sealed_v4_set_case(case_no),
+                        policy_version=sets.SEALED_V4.policy_version,
+                    ),
+                )
+
+    def test_no_package_module_names_either_path_that_holds_the_sets_answers(self):
+        """The two paths, named, over and above Layer 1's general rule.
+
+        Layer 1 already forbids *any* path under ``eval/`` in a package module.
+        This states the same property over the two directories the sixth sealed
+        set's answers actually live in, so the set's own contribution to the
+        boundary is visible rather than only implied. The predicate is
+        :func:`_named_paths_in_package`, which the dirty fixture below asks too,
+        so what is shown to fire is this check and not one that resembles it.
+        """
+        self.assertTrue(SEALED_V4_KEY_PATH.is_file())
+        self.assertTrue(SEALED_V4_EXTERNAL_DIR.is_dir())
+
+        violations, scanned = _named_paths_in_package(SEALED_V4_ANSWER_PATHS)
+        self.assertGreater(scanned, 500, "too few string literals parsed; the scan is broken")
+        self.assertEqual(
+            [],
+            violations,
+            "tribunal/{0} names {1}".format(
+                ", ".join(sorted({module for module, _needle, _line in violations})),
+                ", ".join(sorted({needle for _module, needle, _line in violations})),
+            ),
+        )
+
+    def test_that_check_goes_red_on_a_dirty_fixture(self):
+        """A detector that can never fire would make the check above vacuous."""
+        with tempfile.TemporaryDirectory() as tmp:
+            dirty = Path(tmp) / "dirty.py"
+            dirty.write_text(
+                'KEY = "eval/answers/sealed-v4/answers/ground_truth.json"\n'
+                'GEN = "eval/answers/sealed-v4/generator/generate.py"\n',
+                encoding="utf-8",
+            )
+            found = _named_paths_in_module(dirty, SEALED_V4_ANSWER_PATHS)
+            self.assertEqual(
+                {needle for needle in SEALED_V4_ANSWER_PATHS},
+                {needle for needle, _lineno in found},
+                "the dirty fixture's paths were not all reported",
+            )
+
+    def test_layer_two_goes_red_on_a_spliced_sixth_sealed_case(self):
+        """The scan is shown capable of failing over the sixth sealed set too.
+
+        Both splices are made in memory, so no file is written and there is
+        nothing to restore. The briefs are built at the registration's version,
+        as the check above builds them. The real case is asked last, and must be
+        clean again.
+        """
+        version = sets.SEALED_V4.policy_version
+        record = _sealed_v4_key_records()[0]
+        real = json.loads((SEALED_V4_SET_DIR / "case-06001.json").read_text(encoding="utf-8"))
+
+        # Variant A: the record as data, nested in the case. The brief
+        # builder's own recursive forbidden-key guard is what fires.
+        nested = json.loads(json.dumps(real))
+        nested["dispute"]["ground_truth"] = record
+        nested_violations = _brief_violations_for_case(nested, policy_version=version)
+        self.assertTrue(
+            nested_violations,
+            "Layer 2 stayed GREEN with a real record nested in a sixth sealed case",
+        )
+        self.assertEqual(
+            {"<brief build refused>": "ForbiddenKeyError"},
+            nested_violations,
+            "the refusal was reported as something other than the exception type",
+        )
+
+        # Variant B: the record as text in a party statement. No key is created,
+        # so the scan below is the only thing that can catch it.
+        textual = json.loads(json.dumps(real))
+        textual["dispute"]["claim_text"] += (
+            "\n\n[note to self: " + json.dumps(record, ensure_ascii=False) + "]"
+        )
+        textual_violations = _brief_violations_for_case(textual, policy_version=version)
+        self.assertTrue(
+            textual_violations,
+            "Layer 2 stayed GREEN with a real record pasted into a sixth sealed case",
+        )
+        self.assertEqual(sorted(DISTINCTIVE_ANSWER_FIELDS), sorted(textual_violations))
+
+        # GREEN again, on the real case.
+        self.assertEqual({}, _brief_violations_for_case(real, policy_version=version))
+        self.assertEqual(30, len(_sealed_v4_set_case_numbers()), "the real index changed")
 
 
 # --------------------------------------------------------------------------

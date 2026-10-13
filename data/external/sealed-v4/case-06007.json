@@ -1,0 +1,882 @@
+{
+  "schema_version": "1.2.0",
+  "case_no": 6007,
+  "dispute": {
+    "case_no": 6007,
+    "dispute_id": "DSP-06007",
+    "trip_id": "TRP-06007",
+    "category": "ROUTE_DEVIATION",
+    "filed_at": "2026-09-28T12:08:23+08:00",
+    "filed_by": "DRIVER",
+    "channel": "IN_APP_SUPPORT",
+    "amount_contested_sgd": 1.01,
+    "claim_text": "I gave notice in the chat before exiting because of an accident on the PIE. The rider complained and Ryde took $1.01 from my earnings. I gave notice like the rule says.",
+    "counterparty_statement": {
+      "text": "I asked him to stay on the PIE and he exited anyway.",
+      "submitted_by": "RIDER",
+      "submitted_at": "2026-09-28T15:00:23+08:00"
+    },
+    "evidence_ids": [
+      "EV-TRIP-06007",
+      "EV-GPS-06007",
+      "EV-CHAT-06007",
+      "EV-FARE-06007",
+      "EV-RPROF-06007",
+      "EV-DPROF-06007",
+      "EV-ADVIS-06007-01"
+    ]
+  },
+  "evidence": [
+    {
+      "evidence_id": "EV-TRIP-06007",
+      "evidence_type": "TRIP_RECORD",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform trip record; timestamps causally ordered; recorded optimal and actual distances present; deviation and rejoin events carried in events[].",
+        "assessed_at": "2026-09-28T12:20:28+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06007",
+        "rider_id": "R-39202",
+        "driver_id": "D-55235",
+        "requested_at": "2026-09-28T08:40:15+08:00",
+        "accepted_at": "2026-09-28T08:40:38+08:00",
+        "arrived_at": "2026-09-28T08:46:53+08:00",
+        "started_at": "2026-09-28T08:48:23+08:00",
+        "ended_at": "2026-09-28T09:16:23+08:00",
+        "cancelled_at": null,
+        "status": "COMPLETED",
+        "cancelled_by": null,
+        "cancellation_reason_code": null,
+        "pickup": {
+          "label": "Woodleigh Mall, Bidadari Park Drive",
+          "lat": 1.3395,
+          "lng": 103.8711,
+          "venue_id": null
+        },
+        "dropoff": {
+          "label": "Science Park I, Science Park Road",
+          "lat": 1.292,
+          "lng": 103.789,
+          "venue_id": null
+        },
+        "vehicle_type": "RYDE_X",
+        "pickup_zone_class": "STANDARD",
+        "chat_message_count": 5,
+        "registered_pickup_points": null,
+        "in_app_calls": [],
+        "optimal_distance_km": 13.4,
+        "optimal_duration_min": 25.4,
+        "optimal_route_source": "PLATFORM_ROUTER",
+        "optimal_route_erp_sgd": 0.0,
+        "actual_distance_km": 14.8,
+        "actual_duration_min": 28.0,
+        "deviation_pct": 10.4,
+        "amended_optimal_distance_km": null,
+        "amended_optimal_duration_min": null,
+        "solo_optimal_distance_km": null,
+        "pickup_amended_at": null,
+        "dropoff_amended_at": null,
+        "original_pickup": null,
+        "original_dropoff": null,
+        "scheduled_at": null,
+        "optimal_route_via": [
+          "Bidadari Park Drive",
+          "Pan-Island Expressway (PIE)",
+          "Clementi Road",
+          "South Buona Vista Road",
+          "Science Park Road"
+        ],
+        "actual_route_via": [
+          "Bidadari Park Drive",
+          "Pan-Island Expressway (PIE)",
+          "Adam Road",
+          "Holland Road",
+          "North Buona Vista Road",
+          "South Buona Vista Road",
+          "Science Park Road"
+        ],
+        "events": [
+          {
+            "event_type": "booking_confirmed",
+            "at": "2026-09-28T08:40:15+08:00",
+            "detail": "Rider R-39202 booked TRP-06007 from Woodleigh Mall, Bidadari Park Drive to Science Park I, Science Park Road. On-demand, metered fare.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_assigned",
+            "at": "2026-09-28T08:40:38+08:00",
+            "detail": "Driver D-55235 (Hyundai Ioniq 5, SLE 8412 Z) assigned. ETA 6 min.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_arrived",
+            "at": "2026-09-28T08:46:53+08:00",
+            "detail": "Driver marked arrived at pickup (button).",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_started",
+            "at": "2026-09-28T08:48:23+08:00",
+            "detail": "Rider on board. Recommended route via Bidadari Park Drive, Pan-Island Expressway (PIE), Clementi Road, South Buona Vista Road, Science Park Road, 13.4 km.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_deviation_detected",
+            "at": "2026-09-28T09:03:37+08:00",
+            "detail": "Vehicle left the recommended route at PIE / Adam Road exit: recommended Pan-Island Expressway (PIE), vehicle took Adam Road.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_rejoined",
+            "at": "2026-09-28T09:14:23+08:00",
+            "detail": "Vehicle rejoined the recommended route at South Buona Vista Road / North Buona Vista Road.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_completed",
+            "at": "2026-09-28T09:16:23+08:00",
+            "detail": "Trip ended at Science Park I, Science Park Road. Recorded distance 14.8 km, duration 28 min 00 s.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "fare_finalised",
+            "at": "2026-09-28T09:16:29+08:00",
+            "detail": "Metered fare SGD 23.10 charged to rider payment method.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "fare_adjusted",
+            "at": "2026-09-28T10:33:23+08:00",
+            "detail": "Interim adjustment after a rider route complaint: SGD 1.01 refunded to rider and recovered from driver earnings pending review.",
+            "source": "PLATFORM_TELEMETRY"
+          }
+        ]
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06007",
+      "generated_at": "2026-09-28T12:20:23+08:00"
+    },
+    {
+      "evidence_id": "EV-GPS-06007",
+      "evidence_type": "GPS_TRACE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver-device trace, 57 fixes at 30 s from trip start to trip end; every fix reports horizontal accuracy (max 8 m) and a map-matched road; no interval exceeds 120 s.",
+        "assessed_at": "2026-09-28T12:20:28+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06007",
+        "points": [
+          {
+            "lat": 1.3395,
+            "lng": 103.8711,
+            "ts": "2026-09-28T08:48:23+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 5,
+            "road": "Bidadari Park Drive"
+          },
+          {
+            "lat": 1.339248,
+            "lng": 103.869091,
+            "ts": "2026-09-28T08:48:53+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 3,
+            "road": "Bidadari Park Drive"
+          },
+          {
+            "lat": 1.338961,
+            "lng": 103.867109,
+            "ts": "2026-09-28T08:49:23+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 8,
+            "road": "Bidadari Park Drive"
+          },
+          {
+            "lat": 1.338728,
+            "lng": 103.865091,
+            "ts": "2026-09-28T08:49:53+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 3,
+            "road": "Bidadari Park Drive"
+          },
+          {
+            "lat": 1.338401,
+            "lng": 103.863103,
+            "ts": "2026-09-28T08:50:23+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 4,
+            "road": "Bidadari Park Drive"
+          },
+          {
+            "lat": 1.338121,
+            "lng": 103.861123,
+            "ts": "2026-09-28T08:50:53+08:00",
+            "speed_kph": 23,
+            "accuracy_m": 5,
+            "road": "Bidadari Park Drive"
+          },
+          {
+            "lat": 1.33781,
+            "lng": 103.859144,
+            "ts": "2026-09-28T08:51:23+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 5,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.337383,
+            "lng": 103.857196,
+            "ts": "2026-09-28T08:51:53+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 8,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.336861,
+            "lng": 103.855236,
+            "ts": "2026-09-28T08:52:23+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 6,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.336391,
+            "lng": 103.853265,
+            "ts": "2026-09-28T08:52:53+08:00",
+            "speed_kph": 38,
+            "accuracy_m": 4,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.335882,
+            "lng": 103.851333,
+            "ts": "2026-09-28T08:53:23+08:00",
+            "speed_kph": 24,
+            "accuracy_m": 7,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.335416,
+            "lng": 103.849349,
+            "ts": "2026-09-28T08:53:53+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 6,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.334979,
+            "lng": 103.847394,
+            "ts": "2026-09-28T08:54:23+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 5,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.334492,
+            "lng": 103.845466,
+            "ts": "2026-09-28T08:54:53+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 8,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.334063,
+            "lng": 103.843495,
+            "ts": "2026-09-28T08:55:23+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 6,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.3336,
+            "lng": 103.841547,
+            "ts": "2026-09-28T08:55:53+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 3,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.333099,
+            "lng": 103.839589,
+            "ts": "2026-09-28T08:56:23+08:00",
+            "speed_kph": 38,
+            "accuracy_m": 4,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.33265,
+            "lng": 103.837587,
+            "ts": "2026-09-28T08:56:53+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 4,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.332175,
+            "lng": 103.835642,
+            "ts": "2026-09-28T08:57:23+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 8,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.331584,
+            "lng": 103.833744,
+            "ts": "2026-09-28T08:57:53+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 5,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.330998,
+            "lng": 103.831806,
+            "ts": "2026-09-28T08:58:23+08:00",
+            "speed_kph": 38,
+            "accuracy_m": 8,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.330364,
+            "lng": 103.82992,
+            "ts": "2026-09-28T08:58:53+08:00",
+            "speed_kph": 38,
+            "accuracy_m": 4,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.329748,
+            "lng": 103.827994,
+            "ts": "2026-09-28T08:59:23+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 4,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.32917,
+            "lng": 103.826063,
+            "ts": "2026-09-28T08:59:53+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 5,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.328538,
+            "lng": 103.824151,
+            "ts": "2026-09-28T09:00:23+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 8,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.327946,
+            "lng": 103.822221,
+            "ts": "2026-09-28T09:00:53+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 5,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.327332,
+            "lng": 103.820311,
+            "ts": "2026-09-28T09:01:23+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 7,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.326696,
+            "lng": 103.818378,
+            "ts": "2026-09-28T09:01:53+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 5,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.326095,
+            "lng": 103.816457,
+            "ts": "2026-09-28T09:02:23+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 3,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.325469,
+            "lng": 103.814571,
+            "ts": "2026-09-28T09:02:53+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 5,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.324626,
+            "lng": 103.812983,
+            "ts": "2026-09-28T09:03:23+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 4,
+            "road": "Adam Road"
+          },
+          {
+            "lat": 1.322615,
+            "lng": 103.812897,
+            "ts": "2026-09-28T09:03:53+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 7,
+            "road": "Adam Road"
+          },
+          {
+            "lat": 1.320602,
+            "lng": 103.812851,
+            "ts": "2026-09-28T09:04:23+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 4,
+            "road": "Adam Road"
+          },
+          {
+            "lat": 1.318588,
+            "lng": 103.812761,
+            "ts": "2026-09-28T09:04:53+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 4,
+            "road": "Adam Road"
+          },
+          {
+            "lat": 1.316559,
+            "lng": 103.812682,
+            "ts": "2026-09-28T09:05:23+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 5,
+            "road": "Adam Road"
+          },
+          {
+            "lat": 1.314556,
+            "lng": 103.812604,
+            "ts": "2026-09-28T09:05:53+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 3,
+            "road": "Adam Road"
+          },
+          {
+            "lat": 1.312556,
+            "lng": 103.812532,
+            "ts": "2026-09-28T09:06:23+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 4,
+            "road": "Adam Road"
+          },
+          {
+            "lat": 1.310551,
+            "lng": 103.812501,
+            "ts": "2026-09-28T09:06:53+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 5,
+            "road": "Adam Road"
+          },
+          {
+            "lat": 1.308492,
+            "lng": 103.812373,
+            "ts": "2026-09-28T09:07:23+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 6,
+            "road": "Adam Road"
+          },
+          {
+            "lat": 1.306539,
+            "lng": 103.812289,
+            "ts": "2026-09-28T09:07:53+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 5,
+            "road": "Adam Road"
+          },
+          {
+            "lat": 1.304519,
+            "lng": 103.812234,
+            "ts": "2026-09-28T09:08:23+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 7,
+            "road": "Adam Road"
+          },
+          {
+            "lat": 1.30269,
+            "lng": 103.811994,
+            "ts": "2026-09-28T09:08:53+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 4,
+            "road": "Holland Road"
+          },
+          {
+            "lat": 1.302399,
+            "lng": 103.809943,
+            "ts": "2026-09-28T09:09:23+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 5,
+            "road": "Holland Road"
+          },
+          {
+            "lat": 1.302186,
+            "lng": 103.807962,
+            "ts": "2026-09-28T09:09:53+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 3,
+            "road": "Holland Road"
+          },
+          {
+            "lat": 1.301929,
+            "lng": 103.805959,
+            "ts": "2026-09-28T09:10:23+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 4,
+            "road": "Holland Road"
+          },
+          {
+            "lat": 1.301697,
+            "lng": 103.803967,
+            "ts": "2026-09-28T09:10:53+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 4,
+            "road": "Holland Road"
+          },
+          {
+            "lat": 1.301471,
+            "lng": 103.801989,
+            "ts": "2026-09-28T09:11:23+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 3,
+            "road": "Holland Road"
+          },
+          {
+            "lat": 1.301205,
+            "lng": 103.799976,
+            "ts": "2026-09-28T09:11:53+08:00",
+            "speed_kph": 39,
+            "accuracy_m": 8,
+            "road": "Holland Road"
+          },
+          {
+            "lat": 1.300962,
+            "lng": 103.797967,
+            "ts": "2026-09-28T09:12:23+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 4,
+            "road": "Holland Road"
+          },
+          {
+            "lat": 1.300744,
+            "lng": 103.795959,
+            "ts": "2026-09-28T09:12:53+08:00",
+            "speed_kph": 23,
+            "accuracy_m": 5,
+            "road": "Holland Road"
+          },
+          {
+            "lat": 1.300469,
+            "lng": 103.79399,
+            "ts": "2026-09-28T09:13:23+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 3,
+            "road": "Holland Road"
+          },
+          {
+            "lat": 1.300242,
+            "lng": 103.791972,
+            "ts": "2026-09-28T09:13:53+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 8,
+            "road": "Holland Road"
+          },
+          {
+            "lat": 1.300001,
+            "lng": 103.790006,
+            "ts": "2026-09-28T09:14:23+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 6,
+            "road": "South Buona Vista Road"
+          },
+          {
+            "lat": 1.297985,
+            "lng": 103.789763,
+            "ts": "2026-09-28T09:14:53+08:00",
+            "speed_kph": 23,
+            "accuracy_m": 5,
+            "road": "South Buona Vista Road"
+          },
+          {
+            "lat": 1.295972,
+            "lng": 103.789517,
+            "ts": "2026-09-28T09:15:23+08:00",
+            "speed_kph": 23,
+            "accuracy_m": 5,
+            "road": "South Buona Vista Road"
+          },
+          {
+            "lat": 1.29396,
+            "lng": 103.789226,
+            "ts": "2026-09-28T09:15:53+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 4,
+            "road": "South Buona Vista Road"
+          },
+          {
+            "lat": 1.292,
+            "lng": 103.789,
+            "ts": "2026-09-28T09:16:23+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 3,
+            "road": "Science Park Road"
+          }
+        ],
+        "point_count": 57,
+        "first_fix_at": "2026-09-28T08:48:23+08:00",
+        "last_fix_at": "2026-09-28T09:16:23+08:00",
+        "sample_interval_sec": 30.0,
+        "expected_interval_sec": 30.0,
+        "gaps": [],
+        "max_gap_sec": 30.0,
+        "coverage_pct": 100.0,
+        "trace_distance_km": 12.49,
+        "rider_track": []
+      },
+      "schema_version": "1.2.0",
+      "source": "DRIVER_DEVICE",
+      "trip_id": "TRP-06007",
+      "generated_at": "2026-09-28T12:20:23+08:00"
+    },
+    {
+      "evidence_id": "EV-CHAT-06007",
+      "evidence_type": "CHAT_LOG",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform chat log, 5 entries, contiguous; matches trip_record.chat_message_count.",
+        "assessed_at": "2026-09-28T12:20:28+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06007",
+        "messages": [
+          {
+            "msg_id": "MSG-06007-001",
+            "sender": "DRIVER",
+            "text": "At Woodleigh Mall drop-off",
+            "sent_at": "2026-09-28T08:47:08+08:00",
+            "read_at": "2026-09-28T08:47:52+08:00",
+            "delivered_at": "2026-09-28T08:47:10+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-06007-002",
+            "sender": "RIDER",
+            "text": "ok",
+            "sent_at": "2026-09-28T08:47:28+08:00",
+            "read_at": "2026-09-28T08:47:52+08:00",
+            "delivered_at": "2026-09-28T08:47:30+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-06007-003",
+            "sender": "DRIVER",
+            "text": "Sir, accident on PIE after Adam Road, I exit Adam Rd and go Holland Road, ok?",
+            "sent_at": "2026-09-28T09:00:37+08:00",
+            "read_at": "2026-09-28T09:01:20+08:00",
+            "delivered_at": "2026-09-28T09:00:40+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-06007-004",
+            "sender": "RIDER",
+            "text": "Please don't, stay on PIE. I'm on a work call and need a steady ride.",
+            "sent_at": "2026-09-28T09:01:12+08:00",
+            "read_at": "2026-09-28T09:01:21+08:00",
+            "delivered_at": "2026-09-28T09:01:14+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-06007-005",
+            "sender": "RIDER",
+            "text": "I said stay on the PIE...",
+            "sent_at": "2026-09-28T09:05:17+08:00",
+            "read_at": "2026-09-28T09:05:53+08:00",
+            "delivered_at": "2026-09-28T09:05:19+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          }
+        ],
+        "message_count": 5,
+        "first_message_at": "2026-09-28T08:47:08+08:00",
+        "last_message_at": "2026-09-28T09:05:17+08:00",
+        "truncated": false
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06007",
+      "generated_at": "2026-09-28T12:20:23+08:00"
+    },
+    {
+      "evidence_id": "EV-FARE-06007",
+      "evidence_type": "FARE_BREAKDOWN",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Payments ledger; itemised lines reconcile to total_charged; tolls_erp equals the gantry list.",
+        "assessed_at": "2026-09-28T12:20:28+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06007",
+        "currency": "SGD",
+        "fare_model": "METERED",
+        "cancellation_fee": 0.0,
+        "total_charged": 23.1,
+        "payment_status": "PARTIALLY_REFUNDED",
+        "refund_issued_sgd": 1.01,
+        "charged_at": "2026-09-28T09:16:29+08:00",
+        "surge_multiplier": 1.2,
+        "rate_card_id": "RC-SG-RYDEX-2026Q3",
+        "base_fare": 2.8,
+        "distance_fare": 10.66,
+        "time_fare": 5.04,
+        "surge_amount": 3.7,
+        "tolls_erp": 0.0,
+        "airport_surcharge": 0.0,
+        "platform_fee": 0.9,
+        "promo_discount": 0.0,
+        "waiting_time_fee": 0.0,
+        "quoted_fare_sgd": null,
+        "distance_charged_km": 14.8,
+        "time_charged_min": 28.0,
+        "per_km_rate_sgd": 0.72,
+        "per_min_rate_sgd": 0.18,
+        "erp_gantries": []
+      },
+      "schema_version": "1.2.0",
+      "source": "PAYMENTS_LEDGER",
+      "trip_id": "TRP-06007",
+      "generated_at": "2026-09-28T12:20:23+08:00"
+    },
+    {
+      "evidence_id": "EV-RPROF-06007",
+      "evidence_type": "RIDER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Rider profile snapshot at filing.",
+        "assessed_at": "2026-09-28T12:20:28+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "R-39202",
+        "party_role": "RIDER",
+        "snapshot_at": "2026-09-28T12:08:23+08:00",
+        "account_age_days": 1826,
+        "lifetime_trips": 111,
+        "rating": 4.69,
+        "prior_disputes_filed": 2,
+        "prior_disputes_upheld": 0,
+        "prior_no_show_flags": 1,
+        "cancellation_rate": 0.055,
+        "no_show_disputes_30d": 1,
+        "deviation_claims_60d": 0,
+        "deviation_claims_60d_substantiated": 0,
+        "disputes_with_counterparty_90d": 0,
+        "fraud_flags": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06007",
+      "generated_at": "2026-09-28T12:20:23+08:00"
+    },
+    {
+      "evidence_id": "EV-DPROF-06007",
+      "evidence_type": "DRIVER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver profile snapshot at filing.",
+        "assessed_at": "2026-09-28T12:20:28+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "D-55235",
+        "party_role": "DRIVER",
+        "snapshot_at": "2026-09-28T12:08:23+08:00",
+        "account_age_days": 1873,
+        "lifetime_trips": 2068,
+        "rating": 4.78,
+        "prior_disputes_filed": 3,
+        "prior_disputes_upheld": 2,
+        "prior_no_show_flags": 2,
+        "vehicle_type": "RYDE_X",
+        "cancellation_rate": 0.047,
+        "prior_deviation_flags": 2,
+        "acceptance_rate": 0.86,
+        "active_region": "EAST",
+        "deviation_flags_90d": 1,
+        "completed_trips_90d": 339,
+        "no_show_terminations_30d": 2,
+        "completed_trips_30d": 104,
+        "disputes_with_counterparty_90d": 0,
+        "fraud_flags": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06007",
+      "generated_at": "2026-09-28T12:20:23+08:00"
+    },
+    {
+      "evidence_id": "EV-ADVIS-06007-01",
+      "evidence_type": "TRAFFIC_ADVISORY",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "LTA historical traffic record for the queried road segment and window; retrieved by the platform, not supplied by a party.",
+        "assessed_at": "2026-09-28T12:20:28+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "advisory_id": "LTA-TI-260928-1900",
+        "provider": "LTA_DATAMALL_TRAFFIC_INCIDENTS",
+        "advisory_type": "ACCIDENT",
+        "road": "Pan-Island Expressway (PIE)",
+        "direction": "towards Tuas",
+        "location_desc": "after Adam Road exit",
+        "lat": 1.325,
+        "lng": 103.805,
+        "message": "(28/9)08:35 Accident on PIE (towards Tuas) after Adam Rd Exit. Avoid lanes 1 and 2.",
+        "valid_from": "2026-09-28T08:35:03+08:00",
+        "valid_to": "2026-09-28T09:48:23+08:00",
+        "speed_band_min": 1,
+        "retrieved_at": "2026-09-28T12:18:23+08:00"
+      },
+      "schema_version": "1.2.0",
+      "source": "THIRD_PARTY_LTA",
+      "trip_id": "TRP-06007",
+      "generated_at": "2026-09-28T12:20:23+08:00"
+    }
+  ]
+}

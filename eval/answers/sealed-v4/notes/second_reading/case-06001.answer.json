@@ -1,0 +1,8 @@
+{
+  "expected_ruling": "PARTIAL_REFUND",
+  "expected_amount_sgd": 1.10,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": ["POL-RD-21", "POL-RD-22", "POL-RD-23", "POL-RD-24", "POL-RD-25", "POL-GEN-22", "POL-GEN-02", "POL-GEN-03", "POL-GEN-01"],
+  "reasoning": "No safety indicator (POL-GEN-21). Deviation per POL-RD-22 from EV-TRIP-06001 recorded distances: 9.4 - 8.2 = 1.2 km > 1.0 km tolerance; GPS trace_distance (7.933 km) is not used to re-measure. EV-GPS-06001 and trip events confirm exit at Bedok North Rd, Upper Changi Rd, rejoin at Still Rd. EV-CHAT-06001 holds only pre-pickup messages and in_app_calls is empty: rider not informed (POL-RD-21). EV-ADVIS-06001-01 (LTA, PIE Bedok North to Still Rd, window covers trip) is advisory_type NONE, no incident/closure; driver's 'always crawl' assertion is not traffic data, so not traffic-justified (POL-RD-23). Row (d) of POL-RD-24: excess distance fare 1.2 x 0.92 (EV-FARE-06001, surge 1.0, none applied) = 1.104 -> SGD 1.10, PARTIAL_REFUND, not the SGD 4.00 asked. Value SGD 4.00 < 10 and fraud_flags 0 on both profiles (POL-GEN-22); all artifacts weight 1.0 (POL-GEN-02) so confidence >= 0.80 is supportable (POL-RD-25; 2 km limb not applied). Other profile fields are context only (POL-GEN-01). No referrals."
+}

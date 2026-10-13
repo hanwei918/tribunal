@@ -1,0 +1,457 @@
+{
+  "schema_version": "1.2.0",
+  "case_no": 6002,
+  "dispute": {
+    "case_no": 6002,
+    "dispute_id": "DSP-06002",
+    "trip_id": "TRP-06002",
+    "category": "ROUTE_DEVIATION",
+    "filed_at": "2026-09-22T18:44:27+08:00",
+    "filed_by": "RIDER",
+    "channel": "IN_APP_SUPPORT",
+    "amount_contested_sgd": 1.5,
+    "claim_text": "Short trip to the hospital and the driver still took a different road from the app, through Jurong Town Hall Road. I want $1.50 back.",
+    "counterparty_statement": {
+      "text": "Bukit Batok Road got roadwork barrier near the junction, I just go the next road. Same thing.",
+      "submitted_by": "DRIVER",
+      "submitted_at": "2026-09-23T01:44:27+08:00"
+    },
+    "evidence_ids": [
+      "EV-TRIP-06002",
+      "EV-GPS-06002",
+      "EV-CHAT-06002",
+      "EV-FARE-06002",
+      "EV-RPROF-06002",
+      "EV-DPROF-06002",
+      "EV-ADVIS-06002-01"
+    ]
+  },
+  "evidence": [
+    {
+      "evidence_id": "EV-TRIP-06002",
+      "evidence_type": "TRIP_RECORD",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform trip record; timestamps causally ordered; recorded optimal and actual distances present; deviation and rejoin events carried in events[].",
+        "assessed_at": "2026-09-22T18:56:32+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06002",
+        "rider_id": "R-33069",
+        "driver_id": "D-72866",
+        "requested_at": "2026-09-22T15:33:10+08:00",
+        "accepted_at": "2026-09-22T15:33:27+08:00",
+        "arrived_at": "2026-09-22T15:41:12+08:00",
+        "started_at": "2026-09-22T15:42:27+08:00",
+        "ended_at": "2026-09-22T15:48:27+08:00",
+        "cancelled_at": null,
+        "status": "COMPLETED",
+        "cancelled_by": null,
+        "cancellation_reason_code": null,
+        "pickup": {
+          "label": "West Mall, Bukit Batok Central",
+          "lat": 1.35,
+          "lng": 103.749,
+          "venue_id": null
+        },
+        "dropoff": {
+          "label": "Ng Teng Fong General Hospital, Jurong East Street 21",
+          "lat": 1.3338,
+          "lng": 103.7457,
+          "venue_id": null
+        },
+        "vehicle_type": "RYDE_X",
+        "pickup_zone_class": "STANDARD",
+        "chat_message_count": 0,
+        "registered_pickup_points": null,
+        "in_app_calls": [],
+        "optimal_distance_km": 2.2,
+        "optimal_duration_min": 5.1,
+        "optimal_route_source": "PLATFORM_ROUTER",
+        "optimal_route_erp_sgd": 0.0,
+        "actual_distance_km": 2.6,
+        "actual_duration_min": 6.0,
+        "deviation_pct": 18.2,
+        "amended_optimal_distance_km": null,
+        "amended_optimal_duration_min": null,
+        "solo_optimal_distance_km": null,
+        "pickup_amended_at": null,
+        "dropoff_amended_at": null,
+        "original_pickup": null,
+        "original_dropoff": null,
+        "scheduled_at": null,
+        "optimal_route_via": [
+          "Bukit Batok Central",
+          "Bukit Batok Road",
+          "Jurong East Street 21"
+        ],
+        "actual_route_via": [
+          "Bukit Batok Central",
+          "Bukit Batok East Avenue 3",
+          "Jurong Town Hall Road",
+          "Jurong East Street 21"
+        ],
+        "events": [
+          {
+            "event_type": "booking_confirmed",
+            "at": "2026-09-22T15:33:10+08:00",
+            "detail": "Rider R-33069 booked TRP-06002 from West Mall, Bukit Batok Central to Ng Teng Fong General Hospital, Jurong East Street 21. On-demand, metered fare.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_assigned",
+            "at": "2026-09-22T15:33:27+08:00",
+            "detail": "Driver D-72866 (Toyota Prius, SLJ 5228 H) assigned. ETA 7 min.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_arrived",
+            "at": "2026-09-22T15:41:12+08:00",
+            "detail": "Driver marked arrived at pickup (button).",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_started",
+            "at": "2026-09-22T15:42:27+08:00",
+            "detail": "Rider on board. Recommended route via Bukit Batok Central, Bukit Batok Road, Jurong East Street 21, 2.2 km.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_deviation_detected",
+            "at": "2026-09-22T15:44:02+08:00",
+            "detail": "Vehicle left the recommended route at Bukit Batok Central / Bukit Batok East Avenue 3: recommended Bukit Batok Road, vehicle took Bukit Batok East Avenue 3.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_rejoined",
+            "at": "2026-09-22T15:47:24+08:00",
+            "detail": "Vehicle rejoined the recommended route at Jurong East Street 21 / Jurong Town Hall Road.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_completed",
+            "at": "2026-09-22T15:48:27+08:00",
+            "detail": "Trip ended at Ng Teng Fong General Hospital, Jurong East Street 21. Recorded distance 2.6 km, duration 6 min 00 s.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "fare_finalised",
+            "at": "2026-09-22T15:48:33+08:00",
+            "detail": "Metered fare SGD 6.65 charged to rider payment method.",
+            "source": "PLATFORM_TELEMETRY"
+          }
+        ]
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06002",
+      "generated_at": "2026-09-22T18:56:27+08:00"
+    },
+    {
+      "evidence_id": "EV-GPS-06002",
+      "evidence_type": "GPS_TRACE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver-device trace, 13 fixes at 30 s from trip start to trip end; every fix reports horizontal accuracy (max 8 m) and a map-matched road; no interval exceeds 120 s.",
+        "assessed_at": "2026-09-22T18:56:32+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06002",
+        "points": [
+          {
+            "lat": 1.35,
+            "lng": 103.749,
+            "ts": "2026-09-22T15:42:27+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 8,
+            "road": "Bukit Batok Central"
+          },
+          {
+            "lat": 1.348423,
+            "lng": 103.748604,
+            "ts": "2026-09-22T15:42:57+08:00",
+            "speed_kph": 20,
+            "accuracy_m": 3,
+            "road": "Bukit Batok Central"
+          },
+          {
+            "lat": 1.346843,
+            "lng": 103.748206,
+            "ts": "2026-09-22T15:43:27+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 4,
+            "road": "Bukit Batok Central"
+          },
+          {
+            "lat": 1.345361,
+            "lng": 103.748437,
+            "ts": "2026-09-22T15:43:57+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 7,
+            "road": "Bukit Batok East Avenue 3"
+          },
+          {
+            "lat": 1.344025,
+            "lng": 103.749388,
+            "ts": "2026-09-22T15:44:27+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 4,
+            "road": "Bukit Batok East Avenue 3"
+          },
+          {
+            "lat": 1.342696,
+            "lng": 103.750369,
+            "ts": "2026-09-22T15:44:57+08:00",
+            "speed_kph": 19,
+            "accuracy_m": 5,
+            "road": "Bukit Batok East Avenue 3"
+          },
+          {
+            "lat": 1.341317,
+            "lng": 103.751316,
+            "ts": "2026-09-22T15:45:27+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 5,
+            "road": "Bukit Batok East Avenue 3"
+          },
+          {
+            "lat": 1.340162,
+            "lng": 103.750532,
+            "ts": "2026-09-22T15:45:57+08:00",
+            "speed_kph": 20,
+            "accuracy_m": 6,
+            "road": "Jurong Town Hall Road"
+          },
+          {
+            "lat": 1.339078,
+            "lng": 103.749314,
+            "ts": "2026-09-22T15:46:27+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 7,
+            "road": "Jurong Town Hall Road"
+          },
+          {
+            "lat": 1.337983,
+            "lng": 103.7481,
+            "ts": "2026-09-22T15:46:57+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 4,
+            "road": "Jurong Town Hall Road"
+          },
+          {
+            "lat": 1.336834,
+            "lng": 103.74697,
+            "ts": "2026-09-22T15:47:27+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 8,
+            "road": "Jurong East Street 21"
+          },
+          {
+            "lat": 1.335294,
+            "lng": 103.746307,
+            "ts": "2026-09-22T15:47:57+08:00",
+            "speed_kph": 20,
+            "accuracy_m": 6,
+            "road": "Jurong East Street 21"
+          },
+          {
+            "lat": 1.3338,
+            "lng": 103.7457,
+            "ts": "2026-09-22T15:48:27+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 8,
+            "road": "Jurong East Street 21"
+          }
+        ],
+        "point_count": 13,
+        "first_fix_at": "2026-09-22T15:42:27+08:00",
+        "last_fix_at": "2026-09-22T15:48:27+08:00",
+        "sample_interval_sec": 30.0,
+        "expected_interval_sec": 30.0,
+        "gaps": [],
+        "max_gap_sec": 30.0,
+        "coverage_pct": 100.0,
+        "trace_distance_km": 2.144,
+        "rider_track": []
+      },
+      "schema_version": "1.2.0",
+      "source": "DRIVER_DEVICE",
+      "trip_id": "TRP-06002",
+      "generated_at": "2026-09-22T18:56:27+08:00"
+    },
+    {
+      "evidence_id": "EV-CHAT-06002",
+      "evidence_type": "CHAT_LOG",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform chat log, 0 entries, contiguous; matches trip_record.chat_message_count.",
+        "assessed_at": "2026-09-22T18:56:32+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06002",
+        "messages": [],
+        "message_count": 0,
+        "first_message_at": null,
+        "last_message_at": null,
+        "truncated": false
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06002",
+      "generated_at": "2026-09-22T18:56:27+08:00"
+    },
+    {
+      "evidence_id": "EV-FARE-06002",
+      "evidence_type": "FARE_BREAKDOWN",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Payments ledger; itemised lines reconcile to total_charged; tolls_erp equals the gantry list.",
+        "assessed_at": "2026-09-22T18:56:32+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06002",
+        "currency": "SGD",
+        "fare_model": "METERED",
+        "cancellation_fee": 0.0,
+        "total_charged": 6.65,
+        "payment_status": "CHARGED",
+        "refund_issued_sgd": 0.0,
+        "charged_at": "2026-09-22T15:48:33+08:00",
+        "surge_multiplier": 1.0,
+        "rate_card_id": "RC-SG-RYDEX-2026Q3",
+        "base_fare": 2.8,
+        "distance_fare": 1.87,
+        "time_fare": 1.08,
+        "surge_amount": 0.0,
+        "tolls_erp": 0.0,
+        "airport_surcharge": 0.0,
+        "platform_fee": 0.9,
+        "promo_discount": 0.0,
+        "waiting_time_fee": 0.0,
+        "quoted_fare_sgd": null,
+        "distance_charged_km": 2.6,
+        "time_charged_min": 6.0,
+        "per_km_rate_sgd": 0.72,
+        "per_min_rate_sgd": 0.18,
+        "erp_gantries": []
+      },
+      "schema_version": "1.2.0",
+      "source": "PAYMENTS_LEDGER",
+      "trip_id": "TRP-06002",
+      "generated_at": "2026-09-22T18:56:27+08:00"
+    },
+    {
+      "evidence_id": "EV-RPROF-06002",
+      "evidence_type": "RIDER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Rider profile snapshot at filing.",
+        "assessed_at": "2026-09-22T18:56:32+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "R-33069",
+        "party_role": "RIDER",
+        "snapshot_at": "2026-09-22T18:44:27+08:00",
+        "account_age_days": 710,
+        "lifetime_trips": 707,
+        "rating": 4.69,
+        "prior_disputes_filed": 3,
+        "prior_disputes_upheld": 0,
+        "prior_no_show_flags": 1,
+        "cancellation_rate": 0.085,
+        "no_show_disputes_30d": 0,
+        "deviation_claims_60d": 1,
+        "deviation_claims_60d_substantiated": 0,
+        "disputes_with_counterparty_90d": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06002",
+      "generated_at": "2026-09-22T18:56:27+08:00"
+    },
+    {
+      "evidence_id": "EV-DPROF-06002",
+      "evidence_type": "DRIVER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver profile snapshot at filing.",
+        "assessed_at": "2026-09-22T18:56:32+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "D-72866",
+        "party_role": "DRIVER",
+        "snapshot_at": "2026-09-22T18:44:27+08:00",
+        "account_age_days": 2020,
+        "lifetime_trips": 3854,
+        "rating": 4.68,
+        "prior_disputes_filed": 1,
+        "prior_disputes_upheld": 0,
+        "prior_no_show_flags": 2,
+        "vehicle_type": "RYDE_X",
+        "cancellation_rate": 0.045,
+        "prior_deviation_flags": 1,
+        "acceptance_rate": 0.85,
+        "active_region": "NORTH",
+        "deviation_flags_90d": 1,
+        "completed_trips_90d": 492,
+        "no_show_terminations_30d": 1,
+        "completed_trips_30d": 246,
+        "disputes_with_counterparty_90d": 0,
+        "fraud_flags": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06002",
+      "generated_at": "2026-09-22T18:56:27+08:00"
+    },
+    {
+      "evidence_id": "EV-ADVIS-06002-01",
+      "evidence_type": "TRAFFIC_ADVISORY",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "LTA historical traffic record for the queried road segment and window; retrieved by the platform, not supplied by a party.",
+        "assessed_at": "2026-09-22T18:56:32+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "advisory_id": "LTA-TI-260922-9430",
+        "provider": "LTA_DATAMALL_TRAFFIC_INCIDENTS",
+        "advisory_type": "NONE",
+        "road": "Bukit Batok Road",
+        "direction": "both directions",
+        "location_desc": "Bukit Batok Central to Jurong East Street 21",
+        "lat": 1.343,
+        "lng": 103.747,
+        "message": "No incident, roadwork or closure recorded for the queried segment and window. Speed bands 5-6 throughout.",
+        "valid_from": "2026-09-22T15:12:27+08:00",
+        "valid_to": "2026-09-22T16:42:27+08:00",
+        "speed_band_min": 5,
+        "retrieved_at": "2026-09-22T18:54:27+08:00"
+      },
+      "schema_version": "1.2.0",
+      "source": "THIRD_PARTY_LTA",
+      "trip_id": "TRP-06002",
+      "generated_at": "2026-09-22T18:56:27+08:00"
+    }
+  ]
+}

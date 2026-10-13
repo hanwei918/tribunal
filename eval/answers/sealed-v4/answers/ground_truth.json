@@ -1,0 +1,542 @@
+[
+  {
+    "case_no": 6001,
+    "dispute_id": "DSP-06001",
+    "ground_truth": {
+      "expected_ruling": "PARTIAL_REFUND",
+      "expected_amount_sgd": 1.1,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-24",
+        "POL-RD-22",
+        "POL-RD-23"
+      ],
+      "difficulty": "EASY",
+      "rationale": "Filed by the rider; dispute value (amount_contested_sgd) SGD 4.00, band below 10.00 (POL-GEN-22). EV-TRIP-06001 records actual_distance_km 9.4 against optimal_distance_km 8.2: deviation 1.2 km (POL-RD-22, v2.1 1.4), over the 1 km tolerance. Not traffic-justified (POL-RD-23, v2.1 1.4): EV-ADVIS-06001-01 shows no incident or congestion on the PIE segment of the recommended route in the trip window; 'always crawl' is the driver's view, not traffic data. EV-CHAT-06001 holds no notice of the reroute before or at the deviation at 09:26:24 (EV-TRIP-06001 route_deviation_detected; EV-GPS-06001) (POL-RD-21, v2.1 1.2). POL-RD-24 (v2.1 1.3) row (d): not traffic-justified, over 1 km - refund of the excess distance fare in full. Excess distance fare = 1.2 km x per_km_rate_sgd 0.92 (EV-FARE-06001) = SGD 1.10, no surge (surge_multiplier 1.0 not applied), rounded to the cent. Confidence cap from the deciding artifacts: 1.0; required 0.80 (POL-RD-25): met. Governing: POL-RD-24 (v2.1 1.3); POL-RD-22 (v2.1 1.3 and 1.4); POL-RD-23 (v2.1 1.4)."
+    }
+  },
+  {
+    "case_no": 6002,
+    "dispute_id": "DSP-06002",
+    "ground_truth": {
+      "expected_ruling": "NO_ACTION",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-24",
+        "POL-RD-22",
+        "POL-RD-23"
+      ],
+      "difficulty": "EASY",
+      "rationale": "Filed by the rider; dispute value (amount_contested_sgd) SGD 1.50, band below 10.00 (POL-GEN-22). EV-TRIP-06002 records actual_distance_km 2.6 against optimal_distance_km 2.2: deviation 0.4 km (POL-RD-22, v2.1 1.4), within the 1 km tolerance. Not traffic-justified (POL-RD-23, v2.1 1.4): EV-ADVIS-06002-01 shows no incident, roadwork or closure on Bukit Batok Road in the trip window. EV-CHAT-06002 holds no notice of the reroute before or at the deviation at 15:43:42 (EV-TRIP-06002 route_deviation_detected; EV-GPS-06002) (POL-RD-21, v2.1 1.2). POL-RD-24 (v2.1 1.3) row (e): not traffic-justified, 1 km or less - within tolerance, no refund. Confidence cap from the deciding artifacts: 1.0; required 0.80 (POL-RD-25): met. Governing: POL-RD-24 (v2.1 1.3); POL-RD-22 (v2.1 1.3 and 1.4); POL-RD-23 (v2.1 1.4)."
+    }
+  },
+  {
+    "case_no": 6003,
+    "dispute_id": "DSP-06003",
+    "ground_truth": {
+      "expected_ruling": "NO_ACTION",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-24",
+        "POL-RD-22",
+        "POL-RD-23",
+        "POL-RD-21"
+      ],
+      "difficulty": "EASY",
+      "rationale": "Filed by the rider; dispute value (amount_contested_sgd) SGD 5.00, band below 10.00 (POL-GEN-22). EV-TRIP-06003 records actual_distance_km 16.8 against optimal_distance_km 15.3: deviation 1.5 km (POL-RD-22, v2.1 1.4), over the 1 km tolerance. EV-ADVIS-06003-01 reports an accident (after Marine Parade exit) on the ECP, a road of the recommended route, overlapping the trip window: the reroute is traffic-justified (POL-RD-23, v2.1 1.4). The driver's notice in EV-CHAT-06003 is at 17:55:39, before the deviation at 17:58:29 (EV-TRIP-06003 route_deviation_detected; EV-GPS-06003 fixes) (POL-RD-21, v2.1 1.2). The rider acknowledged it in chat, so the deviation is agreed. POL-RD-24 (v2.1 1.3) row (a): traffic-justified, informed and agreed, over 1 km - no refund. Confidence cap from the deciding artifacts: 1.0; required 0.80 (POL-RD-25): met. Governing: POL-RD-24 (v2.1 1.3); POL-RD-22 (v2.1 1.3 and 1.4); POL-RD-23 (v2.1 1.4); POL-RD-21 (v2.1 1.1, 1.2 and 1.4)."
+    }
+  },
+  {
+    "case_no": 6004,
+    "dispute_id": "DSP-06004",
+    "ground_truth": {
+      "expected_ruling": "PARTIAL_REFUND",
+      "expected_amount_sgd": 1.22,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-24",
+        "POL-RD-22",
+        "POL-RD-23",
+        "POL-RD-21",
+        "POL-GEN-23"
+      ],
+      "difficulty": "HARD",
+      "rationale": "Filed by the rider; dispute value (amount_contested_sgd) SGD 3.80, band below 10.00 (POL-GEN-22). EV-TRIP-06004 records actual_distance_km 14.8 against optimal_distance_km 13.1: deviation 1.7 km (POL-RD-22, v2.1 1.4), over the 1 km tolerance. EV-ADVIS-06004-01 reports heavy traffic (after Woodlands Avenue 12 exit) on the SLE, a road of the recommended route, overlapping the trip window: the reroute is traffic-justified (POL-RD-23, v2.1 1.4). EV-CHAT-06004 holds no notice of the reroute before or at the deviation at 08:22:57 (EV-TRIP-06004 route_deviation_detected; EV-GPS-06004) (POL-RD-21, v2.1 1.2). POL-RD-24 (v2.1 1.3) row (b): traffic-justified, rider not informed, over 1 km - refund of the excess distance fare. Consistent with precedent 7.1 (DISP-2026-0089), an unnotified traffic reroute (POL-GEN-23). Excess distance fare = 1.7 km x per_km_rate_sgd 0.72 (EV-FARE-06004) = SGD 1.22, no surge (surge_multiplier 1.1 not applied), rounded to the cent. Confidence cap from the deciding artifacts: 1.0; required 0.80 (POL-RD-25): met. Governing: POL-RD-24 (v2.1 1.3); POL-RD-22 (v2.1 1.3 and 1.4); POL-RD-23 (v2.1 1.4); POL-RD-21 (v2.1 1.1, 1.2 and 1.4); POL-GEN-23 (v2.1 7)."
+    }
+  },
+  {
+    "case_no": 6005,
+    "dispute_id": "DSP-06005",
+    "ground_truth": {
+      "expected_ruling": "NO_ACTION",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-24",
+        "POL-RD-22",
+        "POL-RD-23",
+        "POL-RD-21",
+        "POL-GEN-23",
+        "POL-GEN-03"
+      ],
+      "difficulty": "REVERSAL",
+      "rationale": "Filed by the driver; dispute value (amount_contested_sgd) SGD 1.47, band below 10.00 (POL-GEN-22). The driver contests the interim SGD 1.47 recovered from earnings and refunded to the rider (EV-FARE-06005: refund_issued_sgd; EV-TRIP-06005: fare_adjusted). EV-TRIP-06005 records actual_distance_km 13.8 against optimal_distance_km 12.4: deviation 1.4 km (POL-RD-22, v2.1 1.4), over the 1 km tolerance. EV-ADVIS-06005-01 reports a vehicle breakdown (after Braddell Road exit) on the CTE, a road of the recommended route, overlapping the trip window: the reroute is traffic-justified (POL-RD-23, v2.1 1.4). The driver's notice in EV-CHAT-06005 is at 19:24:10, after the deviation at 19:21:10 (EV-TRIP-06005 route_deviation_detected; EV-GPS-06005 fixes) (POL-RD-21, v2.1 1.2); a notice after the point of deviation does not count as informing the rider. POL-RD-24 (v2.1 1.3) row (b): traffic-justified, rider not informed, over 1 km - refund of the excess distance fare. Consistent with precedent 7.1 (DISP-2026-0089), an unnotified traffic reroute (POL-GEN-23). Excess distance fare = 1.4 km x per_km_rate_sgd 1.05 (EV-FARE-06005) = SGD 1.47, no surge (surge_multiplier 1.3 not applied), rounded to the cent. Confidence cap from the deciding artifacts: 1.0; required 0.80 (POL-RD-25): met. The rider is owed exactly the SGD 1.47 already recovered from the driver, so the driver's claim is not supported and the present state stands: NO_ACTION, which is party-relative (POL-GEN-03). Governing: POL-RD-24 (v2.1 1.3); POL-RD-22 (v2.1 1.3 and 1.4); POL-RD-23 (v2.1 1.4); POL-RD-21 (v2.1 1.1, 1.2 and 1.4); POL-GEN-23 (v2.1 7); POL-GEN-03 (v2.1 1.3, 2.2-2.4 and 6)."
+    }
+  },
+  {
+    "case_no": 6006,
+    "dispute_id": "DSP-06006",
+    "ground_truth": {
+      "expected_ruling": "PARTIAL_REFUND",
+      "expected_amount_sgd": 1.15,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-24",
+        "POL-RD-22",
+        "POL-RD-23"
+      ],
+      "difficulty": "REVERSAL",
+      "rationale": "Filed by the rider; dispute value (amount_contested_sgd) SGD 3.00, band below 10.00 (POL-GEN-22). EV-TRIP-06006 records actual_distance_km 11.5 against optimal_distance_km 9.9: deviation 1.6 km (POL-RD-22, v2.1 1.4), over the 1 km tolerance. Not traffic-justified (POL-RD-23, v2.1 1.4): EV-ADVIS-06006-01 shows no incident or congestion on the KPE segment of the recommended route in the trip window; the accident in EV-ADVIS-06006-02 is on Upper Serangoon Road, which is not on the recommended route, so it does not justify leaving the KPE. EV-CHAT-06006 holds no notice of the reroute before or at the deviation at 12:33:26 (EV-TRIP-06006 route_deviation_detected; EV-GPS-06006) (POL-RD-21, v2.1 1.2). POL-RD-24 (v2.1 1.3) row (d): not traffic-justified, over 1 km - refund of the excess distance fare in full. Excess distance fare = 1.6 km x per_km_rate_sgd 0.72 (EV-FARE-06006) = SGD 1.15, no surge (surge_multiplier 1.0 not applied), rounded to the cent. Confidence cap from the deciding artifacts: 1.0; required 0.80 (POL-RD-25): met. Governing: POL-RD-24 (v2.1 1.3); POL-RD-22 (v2.1 1.3 and 1.4); POL-RD-23 (v2.1 1.4)."
+    }
+  },
+  {
+    "case_no": 6007,
+    "dispute_id": "DSP-06007",
+    "ground_truth": {
+      "expected_ruling": "ESCALATE",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-24",
+        "POL-GEN-26",
+        "POL-RD-21",
+        "POL-RD-23"
+      ],
+      "difficulty": "INDETERMINATE",
+      "rationale": "Filed by the driver; dispute value (amount_contested_sgd) SGD 1.01, band below 10.00 (POL-GEN-22). The driver contests the interim SGD 1.01 recovered from earnings and refunded to the rider (EV-FARE-06007: refund_issued_sgd; EV-TRIP-06007: fare_adjusted). EV-TRIP-06007 records actual_distance_km 14.8 against optimal_distance_km 13.4: deviation 1.4 km (POL-RD-22, v2.1 1.4), over the 1 km tolerance. EV-ADVIS-06007-01 reports an accident (after Adam Road exit) on the PIE, a road of the recommended route, overlapping the trip window: the reroute is traffic-justified (POL-RD-23, v2.1 1.4). The driver's notice in EV-CHAT-06007 is at 09:00:37, before the deviation at 09:03:17 (EV-TRIP-06007 route_deviation_detected; EV-GPS-06007 fixes) (POL-RD-21, v2.1 1.2). The rider's reply objects ('Please don't, stay on PIE') and the driver exited anyway. Traffic-justified, rider informed in time but did not agree, deviation over 1 km: the case fits no row of POL-RD-24 (v2.1 1.3 has no row for an informed rider who objects), so it is escalated under POL-GEN-26. Governing: POL-RD-24 (v2.1 1.3); POL-GEN-26 (v2.1 6.3); POL-RD-21 (v2.1 1.1, 1.2 and 1.4); POL-RD-23 (v2.1 1.4)."
+    }
+  },
+  {
+    "case_no": 6008,
+    "dispute_id": "DSP-06008",
+    "ground_truth": {
+      "expected_ruling": "ESCALATE",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-GEN-26",
+        "POL-RD-24",
+        "POL-RD-23",
+        "POL-GEN-02"
+      ],
+      "difficulty": "INDETERMINATE",
+      "rationale": "Filed by the rider; dispute value (amount_contested_sgd) SGD 6.50, band below 10.00 (POL-GEN-22). EV-TRIP-06008 records actual_distance_km 25.1 against optimal_distance_km 23.2: deviation 1.9 km (POL-RD-22, v2.1 1.4), over the 1 km tolerance. Traffic justification cannot be established: EV-ADVIS-06008-01 is MISSING (weight 0.0): no traffic record shows whether the PIE segment of the recommended route was congested, so rows (a) and (d) cannot be told apart (POL-RD-23). The driver's notice in EV-CHAT-06008 is at 18:42:36, before the deviation at 18:44:56 (EV-TRIP-06008 route_deviation_detected; EV-GPS-06008 fixes) (POL-RD-21, v2.1 1.2). The rider acknowledged it in chat, so the deviation is agreed. The open fact decides between rows of POL-RD-24 that give different outcomes, so the case cannot be decided on this record: escalate under POL-GEN-26 with the open question stated. Governing: POL-GEN-26 (v2.1 6.3); POL-RD-24 (v2.1 1.3); POL-RD-23 (v2.1 1.4); POL-GEN-02 (v2.1 6.3)."
+    }
+  },
+  {
+    "case_no": 6009,
+    "dispute_id": "DSP-06009",
+    "ground_truth": {
+      "expected_ruling": "PARTIAL_REFUND",
+      "expected_amount_sgd": 2.21,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-24",
+        "POL-RD-22",
+        "POL-RD-23",
+        "POL-RD-21",
+        "POL-GEN-23",
+        "POL-RD-25",
+        "POL-GEN-22"
+      ],
+      "difficulty": "HARD",
+      "rationale": "Filed by the rider; dispute value (amount_contested_sgd) SGD 30.00, band 10.00-50.00 (POL-GEN-22). EV-TRIP-06009 records actual_distance_km 34.8 against optimal_distance_km 32.4: deviation 2.4 km (POL-RD-22, v2.1 1.4), over the 1 km tolerance. EV-ADVIS-06009-01 reports an accident (after Lower Delta Road exit) on the AYE, a road of the recommended route, overlapping the trip window: the reroute is traffic-justified (POL-RD-23, v2.1 1.4). EV-CHAT-06009 holds no notice of the reroute before or at the deviation at 11:45:25 (EV-TRIP-06009 route_deviation_detected; EV-GPS-06009) (POL-RD-21, v2.1 1.2). POL-RD-24 (v2.1 1.3) row (b): traffic-justified, rider not informed, over 1 km - refund of the excess distance fare. Consistent with precedent 7.1 (DISP-2026-0089), an unnotified traffic reroute (POL-GEN-23). Excess distance fare = 2.4 km x per_km_rate_sgd 0.92 (EV-FARE-06009) = SGD 2.21, no surge (surge_multiplier 1.0 not applied), rounded to the cent. The deviation exceeds 2 km: this answer depends on route_deviation.thresholds.ai_ruling_max_deviation_applied, which is false, so the 2 km limb of POL-RD-25 (v2.1 6.2) is not applied and the AI ruling stands; were it true, the case would be escalated. Confidence cap from the deciding artifacts: 1.0; required 0.80 (POL-RD-25): met. Governing: POL-RD-24 (v2.1 1.3); POL-RD-22 (v2.1 1.3 and 1.4); POL-RD-23 (v2.1 1.4); POL-RD-21 (v2.1 1.1, 1.2 and 1.4); POL-GEN-23 (v2.1 7); POL-RD-25 (v2.1 6.2); POL-GEN-22 (v2.1 6.1-6.3)."
+    }
+  },
+  {
+    "case_no": 6010,
+    "dispute_id": "DSP-06010",
+    "ground_truth": {
+      "expected_ruling": "ESCALATE",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-GEN-22",
+        "POL-RD-25"
+      ],
+      "difficulty": "EASY",
+      "rationale": "Filed by the rider; dispute value (amount_contested_sgd) SGD 117.16, band above 50.00 (POL-GEN-22). EV-DPROF-06010 carries driver_profile.fraud_flags = 1, so a ruling needs confidence 0.95 (POL-GEN-22, v2.1 6.3); the flag is cited only for that threshold and decides nothing (POL-GEN-01). The value SGD 117.16 (the whole metered fare, EV-FARE-06010 total_charged) is above 50.00, so the case always goes to human review and the AI prepares the case file only (POL-GEN-22, POL-RD-25). Escalate. Governing: POL-GEN-22 (v2.1 6.1-6.3); POL-RD-25 (v2.1 6.2)."
+    }
+  },
+  {
+    "case_no": 6011,
+    "dispute_id": "DSP-06011",
+    "ground_truth": {
+      "expected_ruling": "ESCALATE",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-GEN-21"
+      ],
+      "difficulty": "EASY",
+      "rationale": "Filed by the driver; dispute value (amount_contested_sgd) SGD 0.94, band below 10.00 (POL-GEN-22). The driver contests the interim SGD 0.94 recovered from earnings and refunded to the rider (EV-FARE-06011: refund_issued_sgd; EV-TRIP-06011: fare_adjusted). Safety: the dispute is flagged safety-related (dispute.safety_flag = true) and the record carries a safety indicator (claim_text reports a threat of assault and the driver feeling unsafe; EV-CHAT-06011 'Shut up and drive or I give you one punch'); POL-GEN-21 sends it to human review whatever category was chosen, and the AI issues no ruling, fault finding or recommendation on it. Escalate. Governing: POL-GEN-21 (v2.1 5.1-5.3 and 6.2)."
+    }
+  },
+  {
+    "case_no": 6012,
+    "dispute_id": "DSP-06012",
+    "ground_truth": {
+      "expected_ruling": "ESCALATE",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-GEN-02",
+        "POL-RD-25",
+        "POL-GEN-22",
+        "POL-GEN-01"
+      ],
+      "difficulty": "INDETERMINATE",
+      "rationale": "Filed by the rider; dispute value (amount_contested_sgd) SGD 4.80, band below 10.00 (POL-GEN-22). EV-DPROF-06012 carries driver_profile.fraud_flags = 2, so a ruling needs confidence 0.95 (POL-GEN-22, v2.1 6.3); the flag is cited only for that threshold and decides nothing (POL-GEN-01). EV-TRIP-06012 records actual_distance_km 17.6 against optimal_distance_km 16.2: deviation 1.4 km (POL-RD-22, v2.1 1.4), over the 1 km tolerance. EV-ADVIS-06012-01 reports heavy traffic (after Ang Mo Kio Avenue 1 exit) on the CTE, a road of the recommended route, overlapping the trip window: the reroute is traffic-justified (POL-RD-23, v2.1 1.4). The driver's notice in EV-CHAT-06012 is at 10:46:33, before the deviation at 10:49:03 (EV-TRIP-06012 route_deviation_detected; EV-GPS-06012 fixes) (POL-RD-21, v2.1 1.2). The rider acknowledged it in chat, so the deviation is agreed. The facts point to row (a) of POL-RD-24, but the deciding fact rests on an artifact of weight 0.9 (EV-CHAT-06012, SCHEMA_VERSION_MISMATCH, weight 0.9, the only carrier of the notice and of the rider's agreement); under POL-GEN-02(2) confidence cannot exceed 0.9, below the 0.95 this ruling needs (POL-RD-25, POL-GEN-22). Escalate. Admissibility (POL-GEN-02): EV-CHAT-06012 is IMPAIRED (SCHEMA_VERSION_MISMATCH; weight 0.9). Governing: POL-GEN-02 (v2.1 6.3); POL-RD-25 (v2.1 6.2); POL-GEN-22 (v2.1 6.1-6.3); POL-GEN-01 (v2.1 2.5 and 6.3)."
+    }
+  },
+  {
+    "case_no": 6013,
+    "dispute_id": "DSP-06013",
+    "ground_truth": {
+      "expected_ruling": "PARTIAL_REFUND",
+      "expected_amount_sgd": 0.79,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-24",
+        "POL-RD-22",
+        "POL-RD-23",
+        "POL-GEN-22"
+      ],
+      "difficulty": "HARD",
+      "rationale": "Filed by the rider; dispute value (amount_contested_sgd) SGD 34.62, band 10.00-50.00 (POL-GEN-22). EV-TRIP-06013 records actual_distance_km 21.5 against optimal_distance_km 20.4: deviation 1.1 km (POL-RD-22, v2.1 1.4), over the 1 km tolerance. Not traffic-justified (POL-RD-23, v2.1 1.4): EV-ADVIS-06013-01 shows no incident or congestion on the CTE segment of the recommended route in the trip window. EV-CHAT-06013 holds no notice of the reroute before or at the deviation at 08:26:48 (EV-TRIP-06013 route_deviation_detected; EV-GPS-06013) (POL-RD-21, v2.1 1.2). POL-RD-24 (v2.1 1.3) row (d): not traffic-justified, over 1 km - refund of the excess distance fare in full. Excess distance fare = 1.1 km x per_km_rate_sgd 0.72 (EV-FARE-06013) = SGD 0.79, no surge (surge_multiplier 1.3 not applied), rounded to the cent. Confidence cap from the deciding artifacts: 1.0; required 0.80 (POL-RD-25): met. Governing: POL-RD-24 (v2.1 1.3); POL-RD-22 (v2.1 1.3 and 1.4); POL-RD-23 (v2.1 1.4); POL-GEN-22 (v2.1 6.1-6.3)."
+    }
+  },
+  {
+    "case_no": 6014,
+    "dispute_id": "DSP-06014",
+    "ground_truth": {
+      "expected_ruling": "NO_ACTION",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-24",
+        "POL-RD-22",
+        "POL-RD-23",
+        "POL-RD-21",
+        "POL-GEN-23",
+        "POL-GEN-03"
+      ],
+      "difficulty": "HARD",
+      "rationale": "Filed by the driver; dispute value (amount_contested_sgd) SGD 1.58, band below 10.00 (POL-GEN-22). The driver contests the interim SGD 1.58 recovered from earnings and refunded to the rider (EV-FARE-06014: refund_issued_sgd; EV-TRIP-06014: fare_adjusted). EV-TRIP-06014 records actual_distance_km 11.4 against optimal_distance_km 9.9: deviation 1.5 km (POL-RD-22, v2.1 1.4), over the 1 km tolerance. EV-ADVIS-06014-01 reports heavy traffic (after Outram Road exit) on the CTE, a road of the recommended route, overlapping the trip window: the reroute is traffic-justified (POL-RD-23, v2.1 1.4). EV-CHAT-06014 holds no notice of the reroute before or at the deviation at 18:14:28 (EV-TRIP-06014 route_deviation_detected; EV-GPS-06014) (POL-RD-21, v2.1 1.2). POL-RD-24 (v2.1 1.3) row (b): traffic-justified, rider not informed, over 1 km - refund of the excess distance fare. Consistent with precedent 7.1 (DISP-2026-0089), an unnotified traffic reroute (POL-GEN-23). Excess distance fare = 1.5 km x per_km_rate_sgd 1.05 (EV-FARE-06014) = SGD 1.58, no surge (surge_multiplier 1.2 not applied), rounded to the cent. Confidence cap from the deciding artifacts: 1.0; required 0.80 (POL-RD-25): met. The rider is owed exactly the SGD 1.58 already recovered from the driver, so the driver's claim is not supported and the present state stands: NO_ACTION, which is party-relative (POL-GEN-03). That the rider was on a call does not dispense with the notice POL-RD-21 requires; a chat message would have served. Governing: POL-RD-24 (v2.1 1.3); POL-RD-22 (v2.1 1.3 and 1.4); POL-RD-23 (v2.1 1.4); POL-RD-21 (v2.1 1.1, 1.2 and 1.4); POL-GEN-23 (v2.1 7); POL-GEN-03 (v2.1 1.3, 2.2-2.4 and 6)."
+    }
+  },
+  {
+    "case_no": 6015,
+    "dispute_id": "DSP-06015",
+    "ground_truth": {
+      "expected_ruling": "NO_ACTION",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-24",
+        "POL-RD-22",
+        "POL-RD-23"
+      ],
+      "difficulty": "REVERSAL",
+      "rationale": "Filed by the rider; dispute value (amount_contested_sgd) SGD 4.00, band below 10.00 (POL-GEN-22). EV-TRIP-06015 records actual_distance_km 11.9 against optimal_distance_km 11.0: deviation 0.9 km (POL-RD-22, v2.1 1.4), within the 1 km tolerance. Not traffic-justified (POL-RD-23, v2.1 1.4): EV-ADVIS-06015-01 shows no congestion on the recommended KPE segment. EV-CHAT-06015 holds no notice of the reroute before or at the deviation at 14:04:04 (EV-TRIP-06015 route_deviation_detected; EV-GPS-06015) (POL-RD-21, v2.1 1.2). POL-RD-24 (v2.1 1.3) row (e): not traffic-justified, 1 km or less - within tolerance, no refund. Confidence cap from the deciding artifacts: 1.0; required 0.80 (POL-RD-25): met. The rider's '3 km' is contradicted by the recorded distances. Governing: POL-RD-24 (v2.1 1.3); POL-RD-22 (v2.1 1.3 and 1.4); POL-RD-23 (v2.1 1.4)."
+    }
+  },
+  {
+    "case_no": 6051,
+    "dispute_id": "DSP-06051",
+    "ground_truth": {
+      "expected_ruling": "DRIVER_COMPENSATION",
+      "expected_amount_sgd": 5.0,
+      "expected_driver_compensation_sgd": 5.0,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-22",
+        "POL-NS-21",
+        "POL-NS-23",
+        "POL-NS-26"
+      ],
+      "difficulty": "EASY",
+      "rationale": "Filed by the rider; SGD 5.00 no-show/cancellation fee on EV-FARE-06051, charged to the rider. On-demand trip (EV-TRIP-06051 scheduled_at null). EV-TRIP-06051 marks arrival at 06:59:05; EV-GPS-06051 fixes sit 8 m from the pickup pin, inside the STANDARD radius of 50 m, with accuracy within 25 m, so the arrival is corroborated (no_show.json arrival_test). Driver cancelled at 07:05:40, 6 min 35 s after arrival: the 300 s free wait had run (POL-NS-21, v2.1 2.1). EV-CHAT-06051 shows 2 driver chat message(s) before cancellation (first at 06:59:30). Driver call(s) before cancellation: EV-TRIP-06051 in_app_calls placed_by DRIVER at 07:01:50; an unanswered call still counts as placed. Arrival corroborated, free wait run, chat message and call both before cancellation: the fee stands and goes to the driver, so the ruling is DRIVER_COMPENSATION of the fee charged (POL-NS-22, v2.1 2.2). The AI ruling on a no-show is final (POL-NS-26, v2.1 6.2); confidence cap 1.0. Governing: POL-NS-22 (v2.1 2.2); POL-NS-21 (v2.1 2.1); POL-NS-23 (v2.1 2.3); POL-NS-26 (v2.1 6.2 and 6.3)."
+    }
+  },
+  {
+    "case_no": 6052,
+    "dispute_id": "DSP-06052",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 5.0,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-23",
+        "POL-GEN-23",
+        "POL-NS-26"
+      ],
+      "difficulty": "EASY",
+      "rationale": "Filed by the rider; SGD 5.00 no-show/cancellation fee on EV-FARE-06052, charged to the rider. On-demand trip (EV-TRIP-06052 scheduled_at null). EV-TRIP-06052 marks arrival at 14:22:00; EV-GPS-06052 fixes sit 4 m from the pickup pin, inside the STANDARD radius of 50 m, with accuracy within 25 m, so the arrival is corroborated (no_show.json arrival_test). Driver cancelled at 14:28:05, 6 min 05 s after arrival: the 300 s free wait had run (POL-NS-21, v2.1 2.1). EV-CHAT-06052 shows no driver chat message before cancellation. Driver call(s) before cancellation: EV-TRIP-06052 in_app_calls placed_by DRIVER at 14:24:30, 14:26:50; an unanswered call still counts as placed. The contact obligation needs a driver chat message AND a driver call before cancelled_at; an in-app chat message is missing, so the fee is voided and the rider is not charged (POL-NS-23, v2.1 2.3; precedent 7.3, DISP-2026-0211, POL-GEN-23). The AI ruling on a no-show is final (POL-NS-26, v2.1 6.2); confidence cap 1.0. FULL_REFUND of the SGD 5.00 contested, with no driver compensation. Governing: POL-NS-23 (v2.1 2.3); POL-GEN-23 (v2.1 7); POL-NS-26 (v2.1 6.2 and 6.3)."
+    }
+  },
+  {
+    "case_no": 6053,
+    "dispute_id": "DSP-06053",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 5.0,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-23",
+        "POL-GEN-23",
+        "POL-NS-26"
+      ],
+      "difficulty": "REVERSAL",
+      "rationale": "Filed by the rider; SGD 5.00 no-show/cancellation fee on EV-FARE-06053, charged to the rider. On-demand trip (EV-TRIP-06053 scheduled_at null). EV-TRIP-06053 marks arrival at 19:47:40; EV-GPS-06053 fixes sit 2 m from the pickup pin, inside the STANDARD radius of 50 m, with accuracy within 25 m, so the arrival is corroborated (no_show.json arrival_test). Driver cancelled at 19:54:00, 6 min 20 s after arrival: the 300 s free wait had run (POL-NS-21, v2.1 2.1). EV-CHAT-06053 shows 2 driver chat message(s) before cancellation (first at 19:48:00). No call placed by the driver before cancellation in EV-TRIP-06053 in_app_calls or as a VOICE_CALL_LOG entry in EV-CHAT-06053. The contact obligation needs a driver chat message AND a driver call before cancelled_at; an in-app call is missing, so the fee is voided and the rider is not charged (POL-NS-23, v2.1 2.3; precedent 7.3, DISP-2026-0211, POL-GEN-23). The AI ruling on a no-show is final (POL-NS-26, v2.1 6.2); confidence cap 1.0. FULL_REFUND of the SGD 5.00 contested, with no driver compensation. Governing: POL-NS-23 (v2.1 2.3); POL-GEN-23 (v2.1 7); POL-NS-26 (v2.1 6.2 and 6.3)."
+    }
+  },
+  {
+    "case_no": 6054,
+    "dispute_id": "DSP-06054",
+    "ground_truth": {
+      "expected_ruling": "NO_ACTION",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-21",
+        "POL-NS-22",
+        "POL-GEN-03",
+        "POL-NS-26"
+      ],
+      "difficulty": "HARD",
+      "rationale": "Filed by the driver; SGD 5.00 no-show/cancellation fee on EV-FARE-06054, already reversed to the rider on an interim basis (refund_issued_sgd; EV-TRIP-06054 fee_reversed). On-demand trip (EV-TRIP-06054 scheduled_at null). EV-TRIP-06054 marks arrival at 10:37:25; EV-GPS-06054 fixes sit 6 m from the pickup pin, inside the STANDARD radius of 50 m, with accuracy within 25 m, so the arrival is corroborated (no_show.json arrival_test). Driver cancelled at 10:42:10, 4 min 45 s after arrival: the 300 s free wait had NOT run (POL-NS-21, v2.1 2.1). EV-CHAT-06054 shows 2 driver chat message(s) before cancellation (first at 10:37:50). Driver call(s) before cancellation: EV-TRIP-06054 in_app_calls placed_by DRIVER at 10:41:05; an unanswered call still counts as placed. A no-show cancellation is open to the driver only after the free wait; cancelling before it, the fee does not stand (POL-NS-21, POL-NS-22, v2.1 2.1-2.2). The AI ruling on a no-show is final (POL-NS-26, v2.1 6.2); confidence cap 1.0. The fee does not stand and has already been returned to the rider, so the driver's claim is not supported and the present state stands: NO_ACTION, party-relative (POL-GEN-03). Governing: POL-NS-21 (v2.1 2.1); POL-NS-22 (v2.1 2.2); POL-GEN-03 (v2.1 1.3, 2.2-2.4 and 6); POL-NS-26 (v2.1 6.2 and 6.3)."
+    }
+  },
+  {
+    "case_no": 6055,
+    "dispute_id": "DSP-06055",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 5.0,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-24",
+        "POL-NS-26"
+      ],
+      "difficulty": "HARD",
+      "rationale": "Filed by the rider; SGD 5.00 no-show/cancellation fee on EV-FARE-06055, charged to the rider. Scheduled pickup 05:30:00 (EV-TRIP-06055 scheduled_at); the driver-no-show deadline is 05:35:00 (POL-NS-24, v2.1 2.4). EV-TRIP-06055 has no arrival; EV-GPS-06055 places the vehicle 2343 m from the pickup pin at the last fix before cancellation at 05:37:20, outside the 50 m radius: the driver did not reach the pickup. The rider cancelled at 05:37:20 (EV-TRIP-06055). EV-CHAT-06055 shows 2 driver chat message(s) before cancellation (first at 05:31:30). Driver call(s) before cancellation: EV-TRIP-06055 in_app_calls placed_by DRIVER at 05:32:10; an unanswered call still counts as placed. The driver failed to reach the pickup by the scheduled time + 5 minutes, so the rider is not charged: any fee charged is refunded in full (POL-NS-24, v2.1 2.4). The driver did attempt contact, so no goodwill credit is due. The AI ruling on a no-show is final (POL-NS-26, v2.1 6.2); confidence cap 1.0. FULL_REFUND of the SGD 5.00 contested, with no driver compensation. Governing: POL-NS-24 (v2.1 2.4); POL-NS-26 (v2.1 6.2 and 6.3)."
+    }
+  },
+  {
+    "case_no": 6056,
+    "dispute_id": "DSP-06056",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 5.0,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [
+        "POL-NS-24: credit the rider SGD 5.00 goodwill (driver did not reach the pickup by the scheduled time + 5 min and made no contact attempt)"
+      ],
+      "governing_clauses": [
+        "POL-NS-24",
+        "POL-NS-26"
+      ],
+      "difficulty": "REVERSAL",
+      "rationale": "Filed by the rider; SGD 5.00 no-show/cancellation fee on EV-FARE-06056, charged to the rider. Scheduled pickup 16:00:00 (EV-TRIP-06056 scheduled_at); the driver-no-show deadline is 16:05:00 (POL-NS-24, v2.1 2.4). EV-TRIP-06056 marks arrival at 15:58:10, but EV-GPS-06056 places the vehicle 402 m from the pickup pin at that time and up to cancellation, outside the STANDARD radius of 50 m: the arrival is not corroborated and the driver never reached the pickup (arrival_test). EV-CHAT-06056 shows no driver chat message before cancellation. No call placed by the driver before cancellation in EV-TRIP-06056 in_app_calls or as a VOICE_CALL_LOG entry in EV-CHAT-06056; the only call in in_app_calls was placed by the RIDER. The driver failed to reach the pickup by the scheduled time + 5 minutes, so the rider is not charged: any fee charged is refunded in full (POL-NS-24, v2.1 2.4). The driver also made no contact attempt (no driver message, no driver call), so the rider is due the 5.00 goodwill credit, recorded as a referral (POL-NS-24; POL-GEN-03). The AI ruling on a no-show is final (POL-NS-26, v2.1 6.2); confidence cap 1.0. FULL_REFUND of the SGD 5.00 contested, with no driver compensation. Governing: POL-NS-24 (v2.1 2.4); POL-NS-26 (v2.1 6.2 and 6.3)."
+    }
+  },
+  {
+    "case_no": 6057,
+    "dispute_id": "DSP-06057",
+    "ground_truth": {
+      "expected_ruling": "DRIVER_COMPENSATION",
+      "expected_amount_sgd": 5.0,
+      "expected_driver_compensation_sgd": 5.0,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-22",
+        "POL-NS-21",
+        "POL-NS-23",
+        "POL-NS-26"
+      ],
+      "difficulty": "HARD",
+      "rationale": "Filed by the driver; SGD 5.00 no-show/cancellation fee on EV-FARE-06057, already reversed to the rider on an interim basis (refund_issued_sgd; EV-TRIP-06057 fee_reversed). Scheduled pickup 06:50:00 (EV-TRIP-06057 scheduled_at); the driver-no-show deadline is 06:55:00 (POL-NS-24, v2.1 2.4). EV-TRIP-06057 marks arrival at 06:46:30; EV-GPS-06057 fixes sit 6 m from the pickup pin, inside the STANDARD radius of 50 m, with accuracy within 25 m, so the arrival is corroborated (no_show.json arrival_test). The driver arrived before the scheduled time; the free wait is met or missed alike whether it runs from arrival (C2, 11 min 40 s elapsed) or from the scheduled time (8 min 10 s elapsed) (POL-NS-21, v2.1 2.1). EV-CHAT-06057 shows 2 driver chat message(s) before cancellation (first at 06:47:00). Driver call(s) before cancellation: EV-TRIP-06057 in_app_calls placed_by DRIVER at 06:53:20, 06:56:00; an unanswered call still counts as placed. Arrival corroborated, free wait run, chat message and call both before cancellation: the fee stands and goes to the driver, so the ruling is DRIVER_COMPENSATION of the fee charged (POL-NS-22, v2.1 2.2). The AI ruling on a no-show is final (POL-NS-26, v2.1 6.2); confidence cap 1.0. Governing: POL-NS-22 (v2.1 2.2); POL-NS-21 (v2.1 2.1); POL-NS-23 (v2.1 2.3); POL-NS-26 (v2.1 6.2 and 6.3)."
+    }
+  },
+  {
+    "case_no": 6058,
+    "dispute_id": "DSP-06058",
+    "ground_truth": {
+      "expected_ruling": "DRIVER_COMPENSATION",
+      "expected_amount_sgd": 5.0,
+      "expected_driver_compensation_sgd": 5.0,
+      "expected_referrals": [
+        "POL-NS-25: flag rider account R-80737 for Trust & Safety review (3 or more no-show cancellations in 30 days); the ruling on this trip is unchanged"
+      ],
+      "governing_clauses": [
+        "POL-NS-22",
+        "POL-NS-21",
+        "POL-NS-23",
+        "POL-NS-25",
+        "POL-GEN-01",
+        "POL-NS-26"
+      ],
+      "difficulty": "HARD",
+      "rationale": "Filed by the driver; SGD 5.00 no-show/cancellation fee on EV-FARE-06058, already reversed to the rider on an interim basis (refund_issued_sgd; EV-TRIP-06058 fee_reversed). Scheduled pickup 09:00:00 (EV-TRIP-06058 scheduled_at); the driver-no-show deadline is 09:05:00 (POL-NS-24, v2.1 2.4). EV-TRIP-06058 marks arrival at 09:02:40; EV-GPS-06058 fixes sit 5 m from the pickup pin, inside the STANDARD radius of 50 m, with accuracy within 25 m, so the arrival is corroborated (no_show.json arrival_test). Driver cancelled at 09:09:30, 6 min 50 s after arrival: the 300 s free wait had run (POL-NS-21, v2.1 2.1). EV-CHAT-06058 shows 2 driver chat message(s) before cancellation (first at 09:03:00). Driver call(s) before cancellation: EV-TRIP-06058 in_app_calls placed_by DRIVER at 09:05:10; an unanswered call still counts as placed. The driver arrived at 09:02:40, after the scheduled time but before the 09:05:00 deadline, so POL-NS-24 does not apply and the free wait runs from arrival (POL-NS-21). Arrival corroborated, free wait run, chat message and call both before cancellation: the fee stands and goes to the driver, so the ruling is DRIVER_COMPENSATION of the fee charged (POL-NS-22, v2.1 2.2). EV-RPROF-06058 no_show_cancellations_30d = 4; counting this trip, whose fee stands, the 30-day count is at least 3 (POL-NS-25, v2.1 2.5). The AI ruling on a no-show is final (POL-NS-26, v2.1 6.2); confidence cap 1.0. Governing: POL-NS-22 (v2.1 2.2); POL-NS-21 (v2.1 2.1); POL-NS-23 (v2.1 2.3); POL-NS-25 (v2.1 2.5); POL-GEN-01 (v2.1 2.5 and 6.3); POL-NS-26 (v2.1 6.2 and 6.3)."
+    }
+  },
+  {
+    "case_no": 6059,
+    "dispute_id": "DSP-06059",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 4.0,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [
+        "POL-NS-22: fee-amount check - the record charged SGD 4.00, not the 5.00 no-show fee"
+      ],
+      "governing_clauses": [
+        "POL-NS-23",
+        "POL-GEN-23",
+        "POL-NS-22",
+        "POL-NS-26"
+      ],
+      "difficulty": "HARD",
+      "rationale": "Filed by the rider; SGD 4.00 no-show/cancellation fee on EV-FARE-06059, charged to the rider. On-demand trip (EV-TRIP-06059 scheduled_at null). EV-TRIP-06059 marks arrival at 17:26:45; EV-GPS-06059 fixes sit 4 m from the pickup pin, inside the STANDARD radius of 50 m, with accuracy within 25 m, so the arrival is corroborated (no_show.json arrival_test). Driver cancelled at 17:33:10, 6 min 25 s after arrival: the 300 s free wait had run (POL-NS-21, v2.1 2.1). EV-CHAT-06059 shows 2 driver chat message(s) before cancellation (first at 17:27:00). No call placed by the driver before cancellation in EV-TRIP-06059 in_app_calls or as a VOICE_CALL_LOG entry in EV-CHAT-06059. The contact obligation needs a driver chat message AND a driver call before cancelled_at; an in-app call is missing, so the fee is voided and the rider is not charged (POL-NS-23, v2.1 2.3; precedent 7.3, DISP-2026-0211, POL-GEN-23). The record charged SGD 4.00, not 5.00: the ruling acts on the amount charged and a POL-NS-22 referral is added. The AI ruling on a no-show is final (POL-NS-26, v2.1 6.2); confidence cap 1.0. FULL_REFUND of the SGD 4.00 contested, with no driver compensation. Governing: POL-NS-23 (v2.1 2.3); POL-GEN-23 (v2.1 7); POL-NS-22 (v2.1 2.2); POL-NS-26 (v2.1 6.2 and 6.3)."
+    }
+  },
+  {
+    "case_no": 6060,
+    "dispute_id": "DSP-06060",
+    "ground_truth": {
+      "expected_ruling": "DRIVER_COMPENSATION",
+      "expected_amount_sgd": 5.0,
+      "expected_driver_compensation_sgd": 5.0,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-22",
+        "POL-NS-21",
+        "POL-NS-23",
+        "POL-NS-26"
+      ],
+      "difficulty": "REVERSAL",
+      "rationale": "Filed by the driver; SGD 5.00 no-show/cancellation fee on EV-FARE-06060, already reversed to the rider on an interim basis (refund_issued_sgd; EV-TRIP-06060 fee_reversed). On-demand trip (EV-TRIP-06060 scheduled_at null). EV-TRIP-06060 marks arrival at 07:42:00; EV-GPS-06060 fixes sit 128 m from the pickup pin, inside the TRANSPORT_HUB radius of 150 m, with accuracy within 25 m, so the arrival is corroborated (no_show.json arrival_test). Driver cancelled at 07:48:30, 6 min 30 s after arrival: the 300 s free wait had run (POL-NS-21, v2.1 2.1). EV-CHAT-06060 shows 2 driver chat message(s) before cancellation (first at 07:42:20). Driver call(s) before cancellation: EV-TRIP-06060 in_app_calls placed_by DRIVER at 07:44:10; an unanswered call still counts as placed. Arrival corroborated, free wait run, chat message and call both before cancellation: the fee stands and goes to the driver, so the ruling is DRIVER_COMPENSATION of the fee charged (POL-NS-22, v2.1 2.2). The AI ruling on a no-show is final (POL-NS-26, v2.1 6.2); confidence cap 1.0. Governing: POL-NS-22 (v2.1 2.2); POL-NS-21 (v2.1 2.1); POL-NS-23 (v2.1 2.3); POL-NS-26 (v2.1 6.2 and 6.3)."
+    }
+  },
+  {
+    "case_no": 6061,
+    "dispute_id": "DSP-06061",
+    "ground_truth": {
+      "expected_ruling": "ESCALATE",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-GEN-26",
+        "POL-NS-26",
+        "POL-NS-21",
+        "POL-GEN-02"
+      ],
+      "difficulty": "INDETERMINATE",
+      "rationale": "Filed by the rider; SGD 5.00 no-show/cancellation fee on EV-FARE-06061, charged to the rider. On-demand trip (EV-TRIP-06061 scheduled_at null). Arrival cannot be established: EV-TRIP-06061's arrival is a button press at 13:11:50 and EV-GPS-06061 has no fix between 13:09:00 and 13:19:30 (IMPAIRED, GPS_GAP, weight 0.6), so the arrival event is not corroborated and whether the driver reached and waited at the pickup cannot be established; arrived, the fee would stand, not arrived, it would not. EV-CHAT-06061 shows 2 driver chat message(s) before cancellation (first at 13:12:10). Driver call(s) before cancellation: EV-TRIP-06061 in_app_calls placed_by DRIVER at 13:14:20; an unanswered call still counts as placed. The open fact decides the outcome (the fee stands on one reading and is voided on the other), so the case cannot be decided on this record: escalate under POL-GEN-26 with the open question stated. Admissibility (POL-GEN-02): EV-GPS-06061 is IMPAIRED (GPS_GAP; weight 0.6). Governing: POL-GEN-26 (v2.1 6.3); POL-NS-26 (v2.1 6.2 and 6.3); POL-NS-21 (v2.1 2.1); POL-GEN-02 (v2.1 6.3)."
+    }
+  },
+  {
+    "case_no": 6062,
+    "dispute_id": "DSP-06062",
+    "ground_truth": {
+      "expected_ruling": "ESCALATE",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-GEN-22",
+        "POL-NS-26",
+        "POL-GEN-02",
+        "POL-GEN-01"
+      ],
+      "difficulty": "INDETERMINATE",
+      "rationale": "Filed by the driver; SGD 5.00 no-show/cancellation fee on EV-FARE-06062, already reversed to the rider on an interim basis (refund_issued_sgd; EV-TRIP-06062 fee_reversed). EV-RPROF-06062 carries rider_profile.fraud_flags = 1: a ruling needs confidence 0.95 (POL-GEN-22, POL-NS-26, v2.1 6.3); the flag decides nothing about this trip (POL-GEN-01). On-demand trip (EV-TRIP-06062 scheduled_at null). EV-TRIP-06062 marks arrival at 20:22:00; EV-GPS-06062 fixes sit 5 m from the pickup pin, inside the STANDARD radius of 50 m, with accuracy within 25 m, so the arrival is corroborated (no_show.json arrival_test). Driver cancelled at 20:28:40, 6 min 40 s after arrival: the 300 s free wait had run (POL-NS-21, v2.1 2.1). EV-CHAT-06062 shows 2 driver chat message(s) before cancellation (first at 20:22:20). Driver call(s) before cancellation: EV-TRIP-06062 in_app_calls placed_by DRIVER at 20:24:30; an unanswered call still counts as placed. On the record the fee would stand, but the deciding fact rests on an artifact of weight 0.9 (EV-CHAT-06062, SCHEMA_VERSION_MISMATCH, weight 0.9, the only carrier of the driver's chat message); POL-GEN-02(2) caps confidence at 0.9, below the 0.95 a fraud flag requires (POL-GEN-22, POL-NS-26). The evidence is not unequivocal: escalate. Admissibility (POL-GEN-02): EV-CHAT-06062 is IMPAIRED (SCHEMA_VERSION_MISMATCH; weight 0.9). Governing: POL-GEN-22 (v2.1 6.1-6.3); POL-NS-26 (v2.1 6.2 and 6.3); POL-GEN-02 (v2.1 6.3); POL-GEN-01 (v2.1 2.5 and 6.3)."
+    }
+  },
+  {
+    "case_no": 6063,
+    "dispute_id": "DSP-06063",
+    "ground_truth": {
+      "expected_ruling": "ESCALATE",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-GEN-21",
+        "POL-NS-26"
+      ],
+      "difficulty": "EASY",
+      "rationale": "Filed by the rider; SGD 5.00 no-show/cancellation fee on EV-FARE-06063, charged to the rider. Safety: dispute.safety_flag = true; the record carries a safety indicator (EV-CHAT-06063: the driver's message asking about a boyfriend and for her number, and the rider's reply that she will not get in). POL-GEN-21 sends the dispute to human review whatever category was chosen (POL-NS-26 is subject to it); the AI issues no ruling, fault finding or recommendation. Escalate. Governing: POL-GEN-21 (v2.1 5.1-5.3 and 6.2); POL-NS-26 (v2.1 6.2 and 6.3)."
+    }
+  },
+  {
+    "case_no": 6064,
+    "dispute_id": "DSP-06064",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 5.0,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-23",
+        "POL-GEN-23",
+        "POL-GEN-22",
+        "POL-NS-26",
+        "POL-GEN-01"
+      ],
+      "difficulty": "HARD",
+      "rationale": "Filed by the rider; SGD 5.00 no-show/cancellation fee on EV-FARE-06064, charged to the rider. EV-DPROF-06064 carries driver_profile.fraud_flags = 1: a ruling needs confidence 0.95 (POL-GEN-22, POL-NS-26, v2.1 6.3); the flag decides nothing about this trip (POL-GEN-01). On-demand trip (EV-TRIP-06064 scheduled_at null). EV-TRIP-06064 marks arrival at 08:51:50; EV-GPS-06064 fixes sit 6 m from the pickup pin, inside the STANDARD radius of 50 m, with accuracy within 25 m, so the arrival is corroborated (no_show.json arrival_test). Driver cancelled at 08:58:30, 6 min 40 s after arrival: the 300 s free wait had run (POL-NS-21, v2.1 2.1). EV-CHAT-06064 shows 3 driver chat message(s) before cancellation (first at 08:52:10). No call placed by the driver before cancellation in EV-TRIP-06064 in_app_calls or as a VOICE_CALL_LOG entry in EV-CHAT-06064. The contact obligation needs a driver chat message AND a driver call before cancelled_at; an in-app call is missing, so the fee is voided and the rider is not charged (POL-NS-23, v2.1 2.3; precedent 7.3, DISP-2026-0211, POL-GEN-23). Every deciding artifact is COMPLETE (cap 1.0), so the 0.95 confidence the fraud flag requires is reachable and the ruling stands (POL-NS-26). FULL_REFUND of the SGD 5.00 contested, with no driver compensation. Governing: POL-NS-23 (v2.1 2.3); POL-GEN-23 (v2.1 7); POL-GEN-22 (v2.1 6.1-6.3); POL-NS-26 (v2.1 6.2 and 6.3); POL-GEN-01 (v2.1 2.5 and 6.3)."
+    }
+  },
+  {
+    "case_no": 6065,
+    "dispute_id": "DSP-06065",
+    "ground_truth": {
+      "expected_ruling": "ESCALATE",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-GEN-26",
+        "POL-NS-26",
+        "POL-NS-23",
+        "POL-GEN-02"
+      ],
+      "difficulty": "INDETERMINATE",
+      "rationale": "Filed by the driver; SGD 5.00 no-show/cancellation fee on EV-FARE-06065, already reversed to the rider on an interim basis (refund_issued_sgd; EV-TRIP-06065 fee_reversed). On-demand trip (EV-TRIP-06065 scheduled_at null). EV-TRIP-06065 marks arrival at 12:46:50; EV-GPS-06065 fixes sit 3 m from the pickup pin, inside the STANDARD radius of 50 m, with accuracy within 25 m, so the arrival is corroborated (no_show.json arrival_test). Driver cancelled at 12:53:20, 6 min 30 s after arrival: the 300 s free wait had run (POL-NS-21, v2.1 2.1). Whether the driver sent a chat message before cancellation cannot be established: EV-CHAT-06065 is IMPAIRED (TRUNCATED_LOG, weight 0.6): the export stops at 12:41:30, before the arrival, while trip_record.chat_message_count is 3. Driver call(s) before cancellation: EV-TRIP-06065 in_app_calls placed_by DRIVER at 12:49:20; an unanswered call still counts as placed. The open fact decides the outcome (the fee stands on one reading and is voided on the other), so the case cannot be decided on this record: escalate under POL-GEN-26 with the open question stated. Admissibility (POL-GEN-02): EV-CHAT-06065 is IMPAIRED (TRUNCATED_LOG; weight 0.6). Governing: POL-GEN-26 (v2.1 6.3); POL-NS-26 (v2.1 6.2 and 6.3); POL-NS-23 (v2.1 2.3); POL-GEN-02 (v2.1 6.3)."
+    }
+  }
+]

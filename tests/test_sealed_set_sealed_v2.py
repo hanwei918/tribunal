@@ -240,7 +240,7 @@ class SealedV2RegistryTests(unittest.TestCase):
         self.assertEqual(["corpus", "codex"], [item.name for item in sets.DEVELOPMENT_SETS])
         self.assertNotIn(SEALED_V2, sets.DEVELOPMENT_SETS)
         self.assertEqual(
-            ("wild", "wild-v2", "sealed-v1", "sealed-v2", "sealed-v3"),
+            ("wild", "wild-v2", "sealed-v1", "sealed-v2", "sealed-v3", "sealed-v4"),
             tuple(item.name for item in sets.SEALED_SETS),
         )
         self.assertIn(SEALED_V2, sets.SEALED_SETS)
@@ -306,15 +306,17 @@ class SealedV2RegistryTests(unittest.TestCase):
         runs = Path("/tmp/sealed-v2-registry-runs")
         headline = [path.resolve() for path in run_benchmark.headline_run_directories(runs, MODEL)]
         self.assertIn((runs / "sealed-v2" / run_benchmark.model_slug(MODEL)).resolve(), headline)
-        self.assertEqual(7, len(headline), "the headline directories are not seven")
+        self.assertEqual(8, len(headline), "the headline directories are not eight")
 
     def test_its_root_is_closed_and_no_permit_opens_it(self):
         """The set has been run, so nothing is created under its root again."""
         self.assertTrue(sets.sealed_root_is_closed(SEALED_V2))
-        # The un-run list is empty now that all five sealed sets have had their
-        # run; this set's own run has been made, so no permit opens its root.
-        # Both lists are pinned, so neither can pass by being empty.
-        self.assertEqual((), run_benchmark.UNRUN_SEALED_RUNS_SUBDIRS)
+        # The un-run list names the sixth sealed set, imported on 2026-10-13 and
+        # not yet run; this set's own run has been made, so no permit opens its
+        # root. Both lists are pinned, so neither can pass by being empty.
+        self.assertEqual(
+            ("sealed-v4",), run_benchmark.UNRUN_SEALED_RUNS_SUBDIRS
+        )
         self.assertEqual(
             ("wild", "wild-v2", "sealed-v1", "sealed-v2", "sealed-v3"),
             run_benchmark.MADE_SEALED_RUNS_SUBDIRS,
@@ -464,7 +466,7 @@ class SealedV2SealedRunLockTests(unittest.TestCase):
             self.assertFalse(runs.exists(), "the refused invocation created the runs root")
 
     def test_the_opt_in_set_to_any_other_value_is_refused(self):
-        for value in ("wild", "wild-v2", "sealed-v1", "", "1", "SEALED-V2"):
+        for value in ("wild", "wild-v2", "sealed-v1", "sealed-v4", "", "1", "SEALED-V2"):
             with self.subTest(value=value):
                 with tempfile.TemporaryDirectory() as tmp:
                     with mock.patch.dict(os.environ, {sets.SEALED_RUN_ENV_VAR: value}):

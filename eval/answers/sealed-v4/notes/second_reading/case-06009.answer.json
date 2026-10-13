@@ -1,0 +1,8 @@
+{
+  "expected_ruling": "PARTIAL_REFUND",
+  "expected_amount_sgd": 2.21,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": ["POL-RD-21", "POL-RD-22", "POL-RD-23", "POL-RD-24", "POL-RD-25", "POL-GEN-22", "POL-GEN-02", "POL-GEN-03", "POL-GEN-23"],
+  "reasoning": "No safety flag; the AYE accident in EV-ADVIS-06009-01 is a third-party incident the vehicle avoided, not an accident of this trip (POL-GEN-21 not triggered). Deviation per POL-RD-22 from EV-TRIP-06009 recorded distances: 34.8 - 32.4 = 2.4 km (>1 km). POL-RD-23: EV-ADVIS-06009-01 (LTA ACCIDENT, AYE towards Tuas after Lower Delta Rd exit, valid 11:01-12:16) intersects the recommended AYE segment the car left at 11:45:45 and overlaps the trip window, so the reroute is traffic-justified. POL-RD-21: EV-CHAT-06009 (complete, 2 pre-pickup messages) has no deviation notice, in_app_calls is empty and the driver admits not telling the rider; not informed. POL-RD-24 row (b): excess distance fare 2.4 x 0.92 (EV-FARE-06009, surge 1.0, no surge applied) = 2.208 -> SGD 2.21, PARTIAL_REFUND, consistent with precedent 7.1 (POL-GEN-23). Value SGD 30.00 needs 0.80 (POL-GEN-22, POL-RD-25); no fraud flags; all artifacts weight 1.0 (POL-GEN-02); 2 km limb not applied. Profile history is context only (POL-GEN-01). No referrals."
+}

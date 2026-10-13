@@ -1,0 +1,17 @@
+{
+  "expected_ruling": "DRIVER_COMPENSATION",
+  "expected_amount_sgd": 5.0,
+  "expected_driver_compensation_sgd": 5.0,
+  "expected_referrals": [],
+  "governing_clauses": [
+    "POL-NS-21",
+    "POL-NS-22",
+    "POL-NS-23",
+    "POL-NS-26",
+    "POL-GEN-22",
+    "POL-GEN-03",
+    "POL-GEN-01",
+    "POL-GEN-02"
+  ],
+  "reasoning": "Driver-filed no-show, SGD 5.00 (<10, no fraud flags in EV-RPROF/EV-DPROF): AI final at any confidence (POL-GEN-22, POL-NS-26); no safety indicator (POL-GEN-21). Arrival: EV-TRIP-06060 auto-arrival 07:42:00 corroborated by EV-GPS-06060 (w1.0, no gaps, acc<=8 m): every fix 07:42:00-07:48:30 is ~125-134 m from the pin, inside the 150 m TRANSPORT_HUB radius, so the rider's \"driver was not there\" is rebutted and POL-NS-24 does not apply. Free wait (POL-NS-21, on-demand, from arrival) ended 07:47:00; cancelled 07:48:30 after it. Contact (POL-NS-23): EV-CHAT-06060 MSG-001 at 07:42:20 (read 07:42:43) and in_app_calls driver call 07:44:10 (unanswered; placing suffices), both before cancellation; rider's \"never called\" is contradicted. Fee stands: POL-NS-22 -> DRIVER_COMPENSATION of the fee charged, SGD 5.00 (EV-FARE-06060, = 5.00, no amount referral); interim reversal undone, NO_ACTION cannot restore it (POL-GEN-03). Profile history (no_show_terminations_30d, no_show_disputes_30d) is context only (POL-GEN-01); no_show_cancellations_30d absent, so no POL-NS-25 referral. EV-ADVIS-06060-01 MISSING (w0.0) carries no deciding fact (POL-GEN-02). Deciding artifacts all w1.0."
+}

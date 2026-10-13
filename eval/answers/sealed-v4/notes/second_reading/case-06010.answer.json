@@ -1,0 +1,12 @@
+{
+  "expected_ruling": "ESCALATE",
+  "expected_amount_sgd": null,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": [
+    "POL-GEN-22",
+    "POL-RD-25",
+    "POL-GEN-03"
+  ],
+  "reasoning": "Dispute value is dispute.amount_contested_sgd = SGD 117.16 (fare EV-FARE-06010 total_charged 117.16, EV-TRIP-06010). POL-GEN-22 (v2.1 6.1/6.2): above SGD 50.00 the case always goes to human review and the AI prepares the case file only; POL-RD-25 applies POL-GEN-22 on top of the RD rules. Driver fraud_flags=1 (EV-DPROF-06010) would also raise the bar to 0.95, but the value limb already decides. ESCALATE is terminal under POL-GEN-03: no monetary outcome issues, amount held, no referrals. No safety indicator (POL-GEN-21). Case-file notes for the reviewer: recorded deviation 51.2 - 49.5 = 1.7 km > 1.0 km tolerance (POL-RD-22, EV-TRIP-06010, weight 1.0); no in-app chat or calls (EV-CHAT-06010, 0 messages); EV-ADVIS-06010-01 (LTA, weight 1.0) shows no incident on the AYE segment, so the reroute is not traffic-justified (POL-RD-23). Row (d) of POL-RD-24 would give an excess distance fare of 1.7 x 1.05 = SGD 1.79 (no surge), not the whole fare the rider asks for. Profile fields other than fraud_flags are context only (POL-GEN-01)."
+}

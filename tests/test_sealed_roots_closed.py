@@ -1,15 +1,18 @@
 """The last ways into a sealed root are closed, for every sealed root.
 
 ``runs/wild/`` holds the held-out set's single run, ``runs/wild-v2/`` the second
-sealed set's, ``runs/sealed-v1/`` the third's, ``runs/sealed-v2/`` the fourth's
-and ``runs/sealed-v3/`` the fifth's. All five runs have been made -- the fifth's
-was started once on 2026-10-13 and stopped after 8 of its 30 cases -- and all five
-roots are closed outright, so every command that would write
-under one of them has to refuse the whole of the root -- not only the run
-directory, and not only the spelling the path happens to be given in.
+sealed set's, ``runs/sealed-v1/`` the third's, ``runs/sealed-v2/`` the fourth's,
+``runs/sealed-v3/`` the fifth's and ``runs/sealed-v4/`` the sixth's. Five of
+those runs have been made -- the fifth's was started once on 2026-10-13 and
+stopped after 8 of its 30 cases -- and those five roots are closed outright. The
+sixth's run has not been made, and its root accepts exactly one thing, the
+guarded plain run, which is the runner's own permit; every command here holds no
+permit, so it refuses that root too. So every command that would write under one
+of them has to refuse the whole of the root -- not only the run directory, and not
+only the spelling the path happens to be given in.
 
 Each test here is one of those commands, and each is run for **every** root: the
-five are named by their registrations rather than restated, so a further sealed
+six are named by their registrations rather than restated, so a further sealed
 set would be covered by the same loops.
 
 **Every test runs against a scratch root.** Nothing reads or writes a committed
@@ -157,8 +160,8 @@ class RecordedDraftsDestinationTests(ScratchRunsRootTestCase):
 class OutDirectoryGuardsTests(ScratchRunsRootTestCase):
     """The derived ``--out-dir`` guards refuse a sealed root.
 
-    ``runs/wild/``, ``runs/wild-v2/``, ``runs/sealed-v1/``, ``runs/sealed-v2/``
-    and ``runs/sealed-v3/`` are not run
+    ``runs/wild/``, ``runs/wild-v2/``, ``runs/sealed-v1/``, ``runs/sealed-v2/``,
+    ``runs/sealed-v3/`` and ``runs/sealed-v4/`` are not run
     directories with a name a reader could mistake these figures for: they are
     sealed roots, and nothing is created under any of them again. The structural
     walk catches a destination inside a run directory; the sealed-root guard
@@ -298,9 +301,11 @@ class CheckOnAClosedRootTests(ScratchRunsRootTestCase):
     with it, so nothing reads a list that disagrees with the others.
     """
 
-    # ``wild`` fixes no arguments; ``wild-v2``, ``sealed-v1``, ``sealed-v2`` and
-    # ``sealed-v3`` fix the owner's command, each at the arguments its own
-    # registration names.
+    # ``wild`` fixes no arguments; ``wild-v2``, ``sealed-v1``, ``sealed-v2``,
+    # ``sealed-v3`` and ``sealed-v4`` fix the owner's command, each at the
+    # arguments its own registration names. The version-7 set's command names its
+    # prompts directory as well, because a version-7 run may use ``prompts/v2``
+    # and no other.
     ARGUMENTS = {
         "wild": ["--set", "wild", "--check"],
         "wild-v2": [
@@ -337,6 +342,17 @@ class CheckOnAClosedRootTests(ScratchRunsRootTestCase):
             "2",
             "--timeout",
             "900",
+            "--check",
+        ],
+        "sealed-v4": [
+            "--set",
+            "sealed-v4",
+            "--concurrency",
+            "2",
+            "--timeout",
+            "900",
+            "--prompts-dir",
+            "prompts/v2",
             "--check",
         ],
     }

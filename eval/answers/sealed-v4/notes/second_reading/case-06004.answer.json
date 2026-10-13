@@ -1,0 +1,20 @@
+{
+  "expected_ruling": "PARTIAL_REFUND",
+  "expected_amount_sgd": 1.22,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": [
+    "POL-RD-21",
+    "POL-RD-22",
+    "POL-RD-23",
+    "POL-RD-24",
+    "POL-RD-25",
+    "POL-GEN-22",
+    "POL-GEN-02",
+    "POL-GEN-03",
+    "POL-GEN-01",
+    "POL-GEN-21",
+    "POL-GEN-23"
+  ],
+  "reasoning": "Value SGD 3.80 <10, fraud_flags 0 both (POL-GEN-22); no safety indicator (POL-GEN-21); all artifacts weight 1.0 so confidence uncapped, >=0.80 (POL-GEN-02, POL-RD-25). Deviation = 14.8 - 13.1 = 1.7 km from EV-TRIP-06004 recorded distances (POL-RD-22), >1 km tolerance; EV-GPS-06004 confirms exit SLE->Woodlands Ave 12 at 08:23 and Sembawang Rd until rejoin Yishun Ave 2 at 08:32 (trace distance not used). Traffic-justified (POL-RD-23): EV-ADVIS-06004-01, LTA HEAVY_TRAFFIC on SLE towards TPE, Woodlands Ave 12 exit to Yishun Ave 2 exit - the bypassed recommended segment - valid 07:46-09:01, overlapping trip 08:11-08:33. Rider not informed (POL-RD-21): EV-CHAT-06004 complete, only 2 pre-pickup messages, no route notice; in_app_calls empty, no recording; driver statement claims traffic, not notice. Row (b) POL-RD-24: excess distance fare 1.7 x 0.72 (EV-FARE-06004 per_km_rate, no surge) = SGD 1.22, PARTIAL_REFUND (POL-GEN-03), not the 3.80 asked; consistent with precedent 7.1 (POL-GEN-23). Profile histories are context only (POL-GEN-01)."
+}

@@ -1,0 +1,762 @@
+{
+  "schema_version": "1.2.0",
+  "case_no": 6014,
+  "dispute": {
+    "case_no": 6014,
+    "dispute_id": "DSP-06014",
+    "trip_id": "TRP-06014",
+    "category": "ROUTE_DEVIATION",
+    "filed_at": "2026-10-06T20:51:37+08:00",
+    "filed_by": "DRIVER",
+    "channel": "IN_APP_SUPPORT",
+    "amount_contested_sgd": 1.58,
+    "claim_text": "Passenger was on a phone call the whole ride so I did not interrupt. CTE to AYE was jammed so I took Outram and Henderson Road. Ryde deducted $1.58 after he complained. The route saved him time.",
+    "counterparty_statement": {
+      "text": "I was on a call but he could have messaged me. Nobody told me about any route change.",
+      "submitted_by": "RIDER",
+      "submitted_at": "2026-10-07T01:56:37+08:00"
+    },
+    "evidence_ids": [
+      "EV-TRIP-06014",
+      "EV-GPS-06014",
+      "EV-CHAT-06014",
+      "EV-FARE-06014",
+      "EV-RPROF-06014",
+      "EV-DPROF-06014",
+      "EV-ADVIS-06014-01"
+    ]
+  },
+  "evidence": [
+    {
+      "evidence_id": "EV-TRIP-06014",
+      "evidence_type": "TRIP_RECORD",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform trip record; timestamps causally ordered; recorded optimal and actual distances present; deviation and rejoin events carried in events[].",
+        "assessed_at": "2026-10-06T21:03:42+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06014",
+        "rider_id": "R-43158",
+        "driver_id": "D-34123",
+        "requested_at": "2026-10-06T17:58:30+08:00",
+        "accepted_at": "2026-10-06T17:59:07+08:00",
+        "arrived_at": "2026-10-06T18:04:37+08:00",
+        "started_at": "2026-10-06T18:05:37+08:00",
+        "ended_at": "2026-10-06T18:28:37+08:00",
+        "cancelled_at": null,
+        "status": "COMPLETED",
+        "cancelled_by": null,
+        "cancellation_reason_code": null,
+        "pickup": {
+          "label": "City Square Mall, Kitchener Road",
+          "lat": 1.3113,
+          "lng": 103.8564,
+          "venue_id": null
+        },
+        "dropoff": {
+          "label": "Labrador Park MRT Station, Alexandra Road",
+          "lat": 1.2723,
+          "lng": 103.8025,
+          "venue_id": null
+        },
+        "vehicle_type": "RYDE_PREMIUM",
+        "pickup_zone_class": "STANDARD",
+        "chat_message_count": 2,
+        "registered_pickup_points": null,
+        "in_app_calls": [],
+        "optimal_distance_km": 9.9,
+        "optimal_duration_min": 20.0,
+        "optimal_route_source": "PLATFORM_ROUTER",
+        "optimal_route_erp_sgd": 0.0,
+        "actual_distance_km": 11.4,
+        "actual_duration_min": 23.0,
+        "deviation_pct": 15.2,
+        "amended_optimal_distance_km": null,
+        "amended_optimal_duration_min": null,
+        "solo_optimal_distance_km": null,
+        "pickup_amended_at": null,
+        "dropoff_amended_at": null,
+        "original_pickup": null,
+        "original_dropoff": null,
+        "scheduled_at": null,
+        "optimal_route_via": [
+          "Kitchener Road",
+          "Central Expressway (CTE)",
+          "Ayer Rajah Expressway (AYE)",
+          "Alexandra Road"
+        ],
+        "actual_route_via": [
+          "Kitchener Road",
+          "Central Expressway (CTE)",
+          "Outram Road",
+          "Henderson Road",
+          "Alexandra Road"
+        ],
+        "events": [
+          {
+            "event_type": "booking_confirmed",
+            "at": "2026-10-06T17:58:30+08:00",
+            "detail": "Rider R-43158 booked TRP-06014 from City Square Mall, Kitchener Road to Labrador Park MRT Station, Alexandra Road. On-demand, metered fare.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_assigned",
+            "at": "2026-10-06T17:59:07+08:00",
+            "detail": "Driver D-34123 (Lexus ES 300h, SLC 4242 J) assigned. ETA 5 min.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_arrived",
+            "at": "2026-10-06T18:04:37+08:00",
+            "detail": "Driver marked arrived at pickup (button).",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_started",
+            "at": "2026-10-06T18:05:37+08:00",
+            "detail": "Rider on board. Recommended route via Kitchener Road, Central Expressway (CTE), Ayer Rajah Expressway (AYE), Alexandra Road, 9.9 km.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_deviation_detected",
+            "at": "2026-10-06T18:14:48+08:00",
+            "detail": "Vehicle left the recommended route at CTE / Outram Road exit: recommended Central Expressway (CTE), vehicle took Outram Road.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_rejoined",
+            "at": "2026-10-06T18:26:20+08:00",
+            "detail": "Vehicle rejoined the recommended route at Alexandra Road / Henderson Road.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_completed",
+            "at": "2026-10-06T18:28:37+08:00",
+            "detail": "Trip ended at Labrador Park MRT Station, Alexandra Road. Recorded distance 11.4 km, duration 23 min 00 s.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "fare_finalised",
+            "at": "2026-10-06T18:28:43+08:00",
+            "detail": "Metered fare SGD 28.94 charged to rider payment method.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "fare_adjusted",
+            "at": "2026-10-06T19:16:37+08:00",
+            "detail": "Interim adjustment after a rider route complaint: SGD 1.58 refunded to rider and recovered from driver earnings pending review.",
+            "source": "PLATFORM_TELEMETRY"
+          }
+        ]
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06014",
+      "generated_at": "2026-10-06T21:03:37+08:00"
+    },
+    {
+      "evidence_id": "EV-GPS-06014",
+      "evidence_type": "GPS_TRACE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver-device trace, 47 fixes at 30 s from trip start to trip end; every fix reports horizontal accuracy (max 8 m) and a map-matched road; no interval exceeds 120 s.",
+        "assessed_at": "2026-10-06T21:03:42+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06014",
+        "points": [
+          {
+            "lat": 1.3113,
+            "lng": 103.8564,
+            "ts": "2026-10-06T18:05:37+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 3,
+            "road": "Kitchener Road"
+          },
+          {
+            "lat": 1.31021,
+            "lng": 103.854802,
+            "ts": "2026-10-06T18:06:07+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 5,
+            "road": "Kitchener Road"
+          },
+          {
+            "lat": 1.309167,
+            "lng": 103.853256,
+            "ts": "2026-10-06T18:06:37+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 5,
+            "road": "Kitchener Road"
+          },
+          {
+            "lat": 1.308164,
+            "lng": 103.851685,
+            "ts": "2026-10-06T18:07:07+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 3,
+            "road": "Kitchener Road"
+          },
+          {
+            "lat": 1.307087,
+            "lng": 103.850139,
+            "ts": "2026-10-06T18:07:37+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 5,
+            "road": "Kitchener Road"
+          },
+          {
+            "lat": 1.305436,
+            "lng": 103.849252,
+            "ts": "2026-10-06T18:08:07+08:00",
+            "speed_kph": 22,
+            "accuracy_m": 5,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.303783,
+            "lng": 103.848374,
+            "ts": "2026-10-06T18:08:37+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 7,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.302089,
+            "lng": 103.847528,
+            "ts": "2026-10-06T18:09:07+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 8,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.300384,
+            "lng": 103.84669,
+            "ts": "2026-10-06T18:09:37+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 8,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.298746,
+            "lng": 103.84586,
+            "ts": "2026-10-06T18:10:07+08:00",
+            "speed_kph": 23,
+            "accuracy_m": 5,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.297001,
+            "lng": 103.845011,
+            "ts": "2026-10-06T18:10:37+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 5,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.295327,
+            "lng": 103.844195,
+            "ts": "2026-10-06T18:11:07+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 4,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.293605,
+            "lng": 103.843325,
+            "ts": "2026-10-06T18:11:37+08:00",
+            "speed_kph": 23,
+            "accuracy_m": 5,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.291837,
+            "lng": 103.842872,
+            "ts": "2026-10-06T18:12:07+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 5,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.289966,
+            "lng": 103.84268,
+            "ts": "2026-10-06T18:12:37+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 5,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.288029,
+            "lng": 103.842525,
+            "ts": "2026-10-06T18:13:07+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 4,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.286168,
+            "lng": 103.842308,
+            "ts": "2026-10-06T18:13:37+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 3,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.28432,
+            "lng": 103.842164,
+            "ts": "2026-10-06T18:14:07+08:00",
+            "speed_kph": 24,
+            "accuracy_m": 4,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.283303,
+            "lng": 103.841536,
+            "ts": "2026-10-06T18:14:37+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 4,
+            "road": "Outram Road"
+          },
+          {
+            "lat": 1.284345,
+            "lng": 103.839908,
+            "ts": "2026-10-06T18:15:07+08:00",
+            "speed_kph": 24,
+            "accuracy_m": 4,
+            "road": "Outram Road"
+          },
+          {
+            "lat": 1.285371,
+            "lng": 103.838354,
+            "ts": "2026-10-06T18:15:37+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 5,
+            "road": "Outram Road"
+          },
+          {
+            "lat": 1.286403,
+            "lng": 103.836765,
+            "ts": "2026-10-06T18:16:07+08:00",
+            "speed_kph": 23,
+            "accuracy_m": 8,
+            "road": "Outram Road"
+          },
+          {
+            "lat": 1.287446,
+            "lng": 103.835224,
+            "ts": "2026-10-06T18:16:37+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 7,
+            "road": "Outram Road"
+          },
+          {
+            "lat": 1.288469,
+            "lng": 103.833642,
+            "ts": "2026-10-06T18:17:07+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 6,
+            "road": "Outram Road"
+          },
+          {
+            "lat": 1.289545,
+            "lng": 103.832064,
+            "ts": "2026-10-06T18:17:37+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 5,
+            "road": "Outram Road"
+          },
+          {
+            "lat": 1.290565,
+            "lng": 103.830464,
+            "ts": "2026-10-06T18:18:07+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 5,
+            "road": "Outram Road"
+          },
+          {
+            "lat": 1.29163,
+            "lng": 103.828882,
+            "ts": "2026-10-06T18:18:37+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 3,
+            "road": "Outram Road"
+          },
+          {
+            "lat": 1.292608,
+            "lng": 103.827289,
+            "ts": "2026-10-06T18:19:07+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 6,
+            "road": "Outram Road"
+          },
+          {
+            "lat": 1.293645,
+            "lng": 103.825721,
+            "ts": "2026-10-06T18:19:37+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 5,
+            "road": "Outram Road"
+          },
+          {
+            "lat": 1.294704,
+            "lng": 103.824165,
+            "ts": "2026-10-06T18:20:07+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 3,
+            "road": "Outram Road"
+          },
+          {
+            "lat": 1.294633,
+            "lng": 103.822701,
+            "ts": "2026-10-06T18:20:37+08:00",
+            "speed_kph": 24,
+            "accuracy_m": 6,
+            "road": "Henderson Road"
+          },
+          {
+            "lat": 1.293203,
+            "lng": 103.821521,
+            "ts": "2026-10-06T18:21:07+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 8,
+            "road": "Henderson Road"
+          },
+          {
+            "lat": 1.291742,
+            "lng": 103.820339,
+            "ts": "2026-10-06T18:21:37+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 5,
+            "road": "Henderson Road"
+          },
+          {
+            "lat": 1.29025,
+            "lng": 103.819127,
+            "ts": "2026-10-06T18:22:07+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 6,
+            "road": "Henderson Road"
+          },
+          {
+            "lat": 1.288811,
+            "lng": 103.817933,
+            "ts": "2026-10-06T18:22:37+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 7,
+            "road": "Henderson Road"
+          },
+          {
+            "lat": 1.28735,
+            "lng": 103.816717,
+            "ts": "2026-10-06T18:23:07+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 3,
+            "road": "Henderson Road"
+          },
+          {
+            "lat": 1.285914,
+            "lng": 103.815515,
+            "ts": "2026-10-06T18:23:37+08:00",
+            "speed_kph": 23,
+            "accuracy_m": 4,
+            "road": "Henderson Road"
+          },
+          {
+            "lat": 1.284404,
+            "lng": 103.814319,
+            "ts": "2026-10-06T18:24:07+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 7,
+            "road": "Henderson Road"
+          },
+          {
+            "lat": 1.282989,
+            "lng": 103.813105,
+            "ts": "2026-10-06T18:24:37+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 5,
+            "road": "Henderson Road"
+          },
+          {
+            "lat": 1.281515,
+            "lng": 103.811905,
+            "ts": "2026-10-06T18:25:07+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 4,
+            "road": "Henderson Road"
+          },
+          {
+            "lat": 1.280059,
+            "lng": 103.810717,
+            "ts": "2026-10-06T18:25:37+08:00",
+            "speed_kph": 22,
+            "accuracy_m": 3,
+            "road": "Henderson Road"
+          },
+          {
+            "lat": 1.278608,
+            "lng": 103.809498,
+            "ts": "2026-10-06T18:26:07+08:00",
+            "speed_kph": 24,
+            "accuracy_m": 8,
+            "road": "Henderson Road"
+          },
+          {
+            "lat": 1.277284,
+            "lng": 103.808178,
+            "ts": "2026-10-06T18:26:37+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 6,
+            "road": "Alexandra Road"
+          },
+          {
+            "lat": 1.276039,
+            "lng": 103.806772,
+            "ts": "2026-10-06T18:27:07+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 7,
+            "road": "Alexandra Road"
+          },
+          {
+            "lat": 1.274797,
+            "lng": 103.805317,
+            "ts": "2026-10-06T18:27:37+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 6,
+            "road": "Alexandra Road"
+          },
+          {
+            "lat": 1.273512,
+            "lng": 103.803888,
+            "ts": "2026-10-06T18:28:07+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 4,
+            "road": "Alexandra Road"
+          },
+          {
+            "lat": 1.2723,
+            "lng": 103.8025,
+            "ts": "2026-10-06T18:28:37+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 3,
+            "road": "Alexandra Road"
+          }
+        ],
+        "point_count": 47,
+        "first_fix_at": "2026-10-06T18:05:37+08:00",
+        "last_fix_at": "2026-10-06T18:28:37+08:00",
+        "sample_interval_sec": 30.0,
+        "expected_interval_sec": 30.0,
+        "gaps": [],
+        "max_gap_sec": 30.0,
+        "coverage_pct": 100.0,
+        "trace_distance_km": 9.524,
+        "rider_track": []
+      },
+      "schema_version": "1.2.0",
+      "source": "DRIVER_DEVICE",
+      "trip_id": "TRP-06014",
+      "generated_at": "2026-10-06T21:03:37+08:00"
+    },
+    {
+      "evidence_id": "EV-CHAT-06014",
+      "evidence_type": "CHAT_LOG",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform chat log, 2 entries, contiguous; matches trip_record.chat_message_count.",
+        "assessed_at": "2026-10-06T21:03:42+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06014",
+        "messages": [
+          {
+            "msg_id": "MSG-06014-001",
+            "sender": "DRIVER",
+            "text": "At City Square Mall taxi stand, silver Lexus",
+            "sent_at": "2026-10-06T18:04:07+08:00",
+            "read_at": "2026-10-06T18:04:44+08:00",
+            "delivered_at": "2026-10-06T18:04:09+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-06014-002",
+            "sender": "RIDER",
+            "text": "ok",
+            "sent_at": "2026-10-06T18:04:37+08:00",
+            "read_at": "2026-10-06T18:05:15+08:00",
+            "delivered_at": "2026-10-06T18:04:39+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          }
+        ],
+        "message_count": 2,
+        "first_message_at": "2026-10-06T18:04:07+08:00",
+        "last_message_at": "2026-10-06T18:04:37+08:00",
+        "truncated": false
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06014",
+      "generated_at": "2026-10-06T21:03:37+08:00"
+    },
+    {
+      "evidence_id": "EV-FARE-06014",
+      "evidence_type": "FARE_BREAKDOWN",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Payments ledger; itemised lines reconcile to total_charged; tolls_erp equals the gantry list.",
+        "assessed_at": "2026-10-06T21:03:42+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06014",
+        "currency": "SGD",
+        "fare_model": "METERED",
+        "cancellation_fee": 0.0,
+        "total_charged": 28.94,
+        "payment_status": "PARTIALLY_REFUNDED",
+        "refund_issued_sgd": 1.58,
+        "charged_at": "2026-10-06T18:28:43+08:00",
+        "surge_multiplier": 1.2,
+        "rate_card_id": "RC-SG-PREM-2026Q3",
+        "base_fare": 4.5,
+        "distance_fare": 11.97,
+        "time_fare": 6.9,
+        "surge_amount": 4.67,
+        "tolls_erp": 0.0,
+        "airport_surcharge": 0.0,
+        "platform_fee": 0.9,
+        "promo_discount": 0.0,
+        "waiting_time_fee": 0.0,
+        "quoted_fare_sgd": null,
+        "distance_charged_km": 11.4,
+        "time_charged_min": 23.0,
+        "per_km_rate_sgd": 1.05,
+        "per_min_rate_sgd": 0.3,
+        "erp_gantries": []
+      },
+      "schema_version": "1.2.0",
+      "source": "PAYMENTS_LEDGER",
+      "trip_id": "TRP-06014",
+      "generated_at": "2026-10-06T21:03:37+08:00"
+    },
+    {
+      "evidence_id": "EV-RPROF-06014",
+      "evidence_type": "RIDER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Rider profile snapshot at filing.",
+        "assessed_at": "2026-10-06T21:03:42+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "R-43158",
+        "party_role": "RIDER",
+        "snapshot_at": "2026-10-06T20:51:37+08:00",
+        "account_age_days": 1009,
+        "lifetime_trips": 461,
+        "rating": 4.83,
+        "prior_disputes_filed": 3,
+        "prior_disputes_upheld": 2,
+        "prior_no_show_flags": 1,
+        "cancellation_rate": 0.021,
+        "no_show_disputes_30d": 0,
+        "deviation_claims_60d": 1,
+        "deviation_claims_60d_substantiated": 0,
+        "disputes_with_counterparty_90d": 0,
+        "fraud_flags": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06014",
+      "generated_at": "2026-10-06T21:03:37+08:00"
+    },
+    {
+      "evidence_id": "EV-DPROF-06014",
+      "evidence_type": "DRIVER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver profile snapshot at filing.",
+        "assessed_at": "2026-10-06T21:03:42+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "D-34123",
+        "party_role": "DRIVER",
+        "snapshot_at": "2026-10-06T20:51:37+08:00",
+        "account_age_days": 1432,
+        "lifetime_trips": 11075,
+        "rating": 4.88,
+        "prior_disputes_filed": 3,
+        "prior_disputes_upheld": 0,
+        "prior_no_show_flags": 0,
+        "vehicle_type": "RYDE_PREMIUM",
+        "cancellation_rate": 0.039,
+        "prior_deviation_flags": 0,
+        "acceptance_rate": 0.98,
+        "active_region": "WEST",
+        "deviation_flags_90d": 0,
+        "completed_trips_90d": 711,
+        "no_show_terminations_30d": 2,
+        "completed_trips_30d": 310,
+        "disputes_with_counterparty_90d": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06014",
+      "generated_at": "2026-10-06T21:03:37+08:00"
+    },
+    {
+      "evidence_id": "EV-ADVIS-06014-01",
+      "evidence_type": "TRAFFIC_ADVISORY",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "LTA historical traffic record for the queried road segment and window; retrieved by the platform, not supplied by a party.",
+        "assessed_at": "2026-10-06T21:03:42+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "advisory_id": "LTA-TI-261006-7626",
+        "provider": "LTA_DATAMALL_TRAFFIC_INCIDENTS",
+        "advisory_type": "HEAVY_TRAFFIC",
+        "road": "Central Expressway (CTE)",
+        "direction": "towards AYE",
+        "location_desc": "after Outram Road exit",
+        "lat": 1.279,
+        "lng": 103.835,
+        "message": "(6/10)17:43 Heavy traffic on CTE (towards AYE) after Outram Rd Exit.",
+        "valid_from": "2026-10-06T17:43:57+08:00",
+        "valid_to": "2026-10-06T18:55:37+08:00",
+        "speed_band_min": 1,
+        "retrieved_at": "2026-10-06T21:01:37+08:00"
+      },
+      "schema_version": "1.2.0",
+      "source": "THIRD_PARTY_LTA",
+      "trip_id": "TRP-06014",
+      "generated_at": "2026-10-06T21:03:37+08:00"
+    }
+  ]
+}

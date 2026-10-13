@@ -1,0 +1,664 @@
+{
+  "schema_version": "1.2.0",
+  "case_no": 6001,
+  "dispute": {
+    "case_no": 6001,
+    "dispute_id": "DSP-06001",
+    "trip_id": "TRP-06001",
+    "category": "ROUTE_DEVIATION",
+    "filed_at": "2026-09-21T13:08:25+08:00",
+    "filed_by": "RIDER",
+    "channel": "IN_APP_SUPPORT",
+    "amount_contested_sgd": 4.0,
+    "claim_text": "Driver got off the PIE at Bedok North and went through Upper Changi Road instead of staying on the PIE to Still Road like the app route. He didn't tell me why. I want $4 back for the extra distance.",
+    "counterparty_statement": {
+      "text": "Morning PIE Bedok stretch always crawl, I go in Upper Changi faster.",
+      "submitted_by": "DRIVER",
+      "submitted_at": "2026-09-21T15:57:25+08:00"
+    },
+    "evidence_ids": [
+      "EV-TRIP-06001",
+      "EV-GPS-06001",
+      "EV-CHAT-06001",
+      "EV-FARE-06001",
+      "EV-RPROF-06001",
+      "EV-DPROF-06001",
+      "EV-ADVIS-06001-01"
+    ]
+  },
+  "evidence": [
+    {
+      "evidence_id": "EV-TRIP-06001",
+      "evidence_type": "TRIP_RECORD",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform trip record; timestamps causally ordered; recorded optimal and actual distances present; deviation and rejoin events carried in events[].",
+        "assessed_at": "2026-09-21T13:20:30+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06001",
+        "rider_id": "R-20354",
+        "driver_id": "D-71380",
+        "requested_at": "2026-09-21T09:12:30+08:00",
+        "accepted_at": "2026-09-21T09:12:40+08:00",
+        "arrived_at": "2026-09-21T09:18:10+08:00",
+        "started_at": "2026-09-21T09:19:25+08:00",
+        "ended_at": "2026-09-21T09:36:25+08:00",
+        "cancelled_at": null,
+        "status": "COMPLETED",
+        "cancelled_by": null,
+        "cancellation_reason_code": null,
+        "pickup": {
+          "label": "Tampines Mall, Tampines Central 5",
+          "lat": 1.3525,
+          "lng": 103.9446,
+          "venue_id": null
+        },
+        "dropoff": {
+          "label": "i12 Katong, East Coast Road",
+          "lat": 1.3053,
+          "lng": 103.905,
+          "venue_id": null
+        },
+        "vehicle_type": "RYDE_XL",
+        "pickup_zone_class": "STANDARD",
+        "chat_message_count": 2,
+        "registered_pickup_points": null,
+        "in_app_calls": [],
+        "optimal_distance_km": 8.2,
+        "optimal_duration_min": 14.8,
+        "optimal_route_source": "PLATFORM_ROUTER",
+        "optimal_route_erp_sgd": 0.0,
+        "actual_distance_km": 9.4,
+        "actual_duration_min": 17.0,
+        "deviation_pct": 14.6,
+        "amended_optimal_distance_km": null,
+        "amended_optimal_duration_min": null,
+        "solo_optimal_distance_km": null,
+        "pickup_amended_at": null,
+        "dropoff_amended_at": null,
+        "original_pickup": null,
+        "original_dropoff": null,
+        "scheduled_at": null,
+        "optimal_route_via": [
+          "Tampines Central 5",
+          "Tampines Avenue 4",
+          "Pan-Island Expressway (PIE)",
+          "Still Road",
+          "East Coast Road"
+        ],
+        "actual_route_via": [
+          "Tampines Central 5",
+          "Tampines Avenue 4",
+          "Pan-Island Expressway (PIE)",
+          "Bedok North Road",
+          "Upper Changi Road",
+          "Still Road",
+          "East Coast Road"
+        ],
+        "events": [
+          {
+            "event_type": "booking_confirmed",
+            "at": "2026-09-21T09:12:30+08:00",
+            "detail": "Rider R-20354 booked TRP-06001 from Tampines Mall, Tampines Central 5 to i12 Katong, East Coast Road. On-demand, metered fare.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_assigned",
+            "at": "2026-09-21T09:12:40+08:00",
+            "detail": "Driver D-71380 (Toyota Sienta, SLH 6915 L) assigned. ETA 5 min.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_arrived",
+            "at": "2026-09-21T09:18:10+08:00",
+            "detail": "Driver marked arrived at pickup (button).",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_started",
+            "at": "2026-09-21T09:19:25+08:00",
+            "detail": "Rider on board. Recommended route via Tampines Central 5, Tampines Avenue 4, Pan-Island Expressway (PIE), Still Road, East Coast Road, 8.2 km.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_deviation_detected",
+            "at": "2026-09-21T09:26:44+08:00",
+            "detail": "Vehicle left the recommended route at PIE / Bedok North Road exit: recommended Pan-Island Expressway (PIE), vehicle took Bedok North Road.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_rejoined",
+            "at": "2026-09-21T09:33:30+08:00",
+            "detail": "Vehicle rejoined the recommended route at Still Road / Upper Changi Road.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_completed",
+            "at": "2026-09-21T09:36:25+08:00",
+            "detail": "Trip ended at i12 Katong, East Coast Road. Recorded distance 9.4 km, duration 17 min 00 s.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "fare_finalised",
+            "at": "2026-09-21T09:36:31+08:00",
+            "detail": "Metered fare SGD 17.43 charged to rider payment method.",
+            "source": "PLATFORM_TELEMETRY"
+          }
+        ]
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06001",
+      "generated_at": "2026-09-21T13:20:25+08:00"
+    },
+    {
+      "evidence_id": "EV-GPS-06001",
+      "evidence_type": "GPS_TRACE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver-device trace, 35 fixes at 30 s from trip start to trip end; every fix reports horizontal accuracy (max 8 m) and a map-matched road; no interval exceeds 120 s.",
+        "assessed_at": "2026-09-21T13:20:30+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06001",
+        "points": [
+          {
+            "lat": 1.3525,
+            "lng": 103.9446,
+            "ts": "2026-09-21T09:19:25+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 7,
+            "road": "Tampines Central 5"
+          },
+          {
+            "lat": 1.350847,
+            "lng": 103.943306,
+            "ts": "2026-09-21T09:19:55+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 4,
+            "road": "Tampines Central 5"
+          },
+          {
+            "lat": 1.34922,
+            "lng": 103.94197,
+            "ts": "2026-09-21T09:20:25+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 7,
+            "road": "Tampines Central 5"
+          },
+          {
+            "lat": 1.347564,
+            "lng": 103.940622,
+            "ts": "2026-09-21T09:20:55+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 3,
+            "road": "Tampines Avenue 4"
+          },
+          {
+            "lat": 1.346029,
+            "lng": 103.939214,
+            "ts": "2026-09-21T09:21:25+08:00",
+            "speed_kph": 23,
+            "accuracy_m": 6,
+            "road": "Tampines Avenue 4"
+          },
+          {
+            "lat": 1.34441,
+            "lng": 103.937792,
+            "ts": "2026-09-21T09:21:55+08:00",
+            "speed_kph": 40,
+            "accuracy_m": 5,
+            "road": "Tampines Avenue 4"
+          },
+          {
+            "lat": 1.34285,
+            "lng": 103.936435,
+            "ts": "2026-09-21T09:22:25+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 7,
+            "road": "Tampines Avenue 4"
+          },
+          {
+            "lat": 1.341251,
+            "lng": 103.935017,
+            "ts": "2026-09-21T09:22:55+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 3,
+            "road": "Tampines Avenue 4"
+          },
+          {
+            "lat": 1.3397,
+            "lng": 103.93363,
+            "ts": "2026-09-21T09:23:25+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 4,
+            "road": "Tampines Avenue 4"
+          },
+          {
+            "lat": 1.338414,
+            "lng": 103.931988,
+            "ts": "2026-09-21T09:23:55+08:00",
+            "speed_kph": 39,
+            "accuracy_m": 4,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.337297,
+            "lng": 103.930172,
+            "ts": "2026-09-21T09:24:25+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 4,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.336247,
+            "lng": 103.928407,
+            "ts": "2026-09-21T09:24:55+08:00",
+            "speed_kph": 40,
+            "accuracy_m": 5,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.335134,
+            "lng": 103.926556,
+            "ts": "2026-09-21T09:25:25+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 7,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.334053,
+            "lng": 103.924769,
+            "ts": "2026-09-21T09:25:55+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 3,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.332936,
+            "lng": 103.923011,
+            "ts": "2026-09-21T09:26:25+08:00",
+            "speed_kph": 38,
+            "accuracy_m": 5,
+            "road": "Bedok North Road"
+          },
+          {
+            "lat": 1.330856,
+            "lng": 103.923411,
+            "ts": "2026-09-21T09:26:55+08:00",
+            "speed_kph": 39,
+            "accuracy_m": 8,
+            "road": "Bedok North Road"
+          },
+          {
+            "lat": 1.328831,
+            "lng": 103.923815,
+            "ts": "2026-09-21T09:27:25+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 3,
+            "road": "Bedok North Road"
+          },
+          {
+            "lat": 1.326721,
+            "lng": 103.924193,
+            "ts": "2026-09-21T09:27:55+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 6,
+            "road": "Bedok North Road"
+          },
+          {
+            "lat": 1.324698,
+            "lng": 103.924599,
+            "ts": "2026-09-21T09:28:25+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 5,
+            "road": "Bedok North Road"
+          },
+          {
+            "lat": 1.322593,
+            "lng": 103.924972,
+            "ts": "2026-09-21T09:28:55+08:00",
+            "speed_kph": 38,
+            "accuracy_m": 3,
+            "road": "Bedok North Road"
+          },
+          {
+            "lat": 1.320492,
+            "lng": 103.925359,
+            "ts": "2026-09-21T09:29:25+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 6,
+            "road": "Bedok North Road"
+          },
+          {
+            "lat": 1.318455,
+            "lng": 103.925775,
+            "ts": "2026-09-21T09:29:55+08:00",
+            "speed_kph": 23,
+            "accuracy_m": 5,
+            "road": "Bedok North Road"
+          },
+          {
+            "lat": 1.317985,
+            "lng": 103.923869,
+            "ts": "2026-09-21T09:30:25+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 5,
+            "road": "Upper Changi Road"
+          },
+          {
+            "lat": 1.317677,
+            "lng": 103.921812,
+            "ts": "2026-09-21T09:30:55+08:00",
+            "speed_kph": 40,
+            "accuracy_m": 7,
+            "road": "Upper Changi Road"
+          },
+          {
+            "lat": 1.31734,
+            "lng": 103.919699,
+            "ts": "2026-09-21T09:31:25+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 5,
+            "road": "Upper Changi Road"
+          },
+          {
+            "lat": 1.317047,
+            "lng": 103.917648,
+            "ts": "2026-09-21T09:31:55+08:00",
+            "speed_kph": 24,
+            "accuracy_m": 5,
+            "road": "Upper Changi Road"
+          },
+          {
+            "lat": 1.316716,
+            "lng": 103.915543,
+            "ts": "2026-09-21T09:32:25+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 8,
+            "road": "Upper Changi Road"
+          },
+          {
+            "lat": 1.316383,
+            "lng": 103.913437,
+            "ts": "2026-09-21T09:32:55+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 3,
+            "road": "Upper Changi Road"
+          },
+          {
+            "lat": 1.316086,
+            "lng": 103.911386,
+            "ts": "2026-09-21T09:33:25+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 8,
+            "road": "Upper Changi Road"
+          },
+          {
+            "lat": 1.314508,
+            "lng": 103.910156,
+            "ts": "2026-09-21T09:33:55+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 3,
+            "road": "Still Road"
+          },
+          {
+            "lat": 1.31268,
+            "lng": 103.909143,
+            "ts": "2026-09-21T09:34:25+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 6,
+            "road": "Still Road"
+          },
+          {
+            "lat": 1.310816,
+            "lng": 103.90808,
+            "ts": "2026-09-21T09:34:55+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 4,
+            "road": "Still Road"
+          },
+          {
+            "lat": 1.308979,
+            "lng": 103.907066,
+            "ts": "2026-09-21T09:35:25+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 6,
+            "road": "Still Road"
+          },
+          {
+            "lat": 1.307156,
+            "lng": 103.90605,
+            "ts": "2026-09-21T09:35:55+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 5,
+            "road": "Still Road"
+          },
+          {
+            "lat": 1.3053,
+            "lng": 103.905,
+            "ts": "2026-09-21T09:36:25+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 7,
+            "road": "East Coast Road"
+          }
+        ],
+        "point_count": 35,
+        "first_fix_at": "2026-09-21T09:19:25+08:00",
+        "last_fix_at": "2026-09-21T09:36:25+08:00",
+        "sample_interval_sec": 30.0,
+        "expected_interval_sec": 30.0,
+        "gaps": [],
+        "max_gap_sec": 30.0,
+        "coverage_pct": 100.0,
+        "trace_distance_km": 7.933,
+        "rider_track": []
+      },
+      "schema_version": "1.2.0",
+      "source": "DRIVER_DEVICE",
+      "trip_id": "TRP-06001",
+      "generated_at": "2026-09-21T13:20:25+08:00"
+    },
+    {
+      "evidence_id": "EV-CHAT-06001",
+      "evidence_type": "CHAT_LOG",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform chat log, 2 entries, contiguous; matches trip_record.chat_message_count.",
+        "assessed_at": "2026-09-21T13:20:30+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06001",
+        "messages": [
+          {
+            "msg_id": "MSG-06001-001",
+            "sender": "DRIVER",
+            "text": "Hi, at Tampines Mall taxi stand, grey Sienta",
+            "sent_at": "2026-09-21T09:17:50+08:00",
+            "read_at": "2026-09-21T09:17:57+08:00",
+            "delivered_at": "2026-09-21T09:17:53+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-06001-002",
+            "sender": "RIDER",
+            "text": "Ok, 1 min",
+            "sent_at": "2026-09-21T09:18:15+08:00",
+            "read_at": "2026-09-21T09:18:46+08:00",
+            "delivered_at": "2026-09-21T09:18:16+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          }
+        ],
+        "message_count": 2,
+        "first_message_at": "2026-09-21T09:17:50+08:00",
+        "last_message_at": "2026-09-21T09:18:15+08:00",
+        "truncated": false
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06001",
+      "generated_at": "2026-09-21T13:20:25+08:00"
+    },
+    {
+      "evidence_id": "EV-FARE-06001",
+      "evidence_type": "FARE_BREAKDOWN",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Payments ledger; itemised lines reconcile to total_charged; tolls_erp equals the gantry list.",
+        "assessed_at": "2026-09-21T13:20:30+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06001",
+        "currency": "SGD",
+        "fare_model": "METERED",
+        "cancellation_fee": 0.0,
+        "total_charged": 17.43,
+        "payment_status": "CHARGED",
+        "refund_issued_sgd": 0.0,
+        "charged_at": "2026-09-21T09:36:31+08:00",
+        "surge_multiplier": 1.0,
+        "rate_card_id": "RC-SG-RYDEXL-2026Q3",
+        "base_fare": 3.8,
+        "distance_fare": 8.65,
+        "time_fare": 4.08,
+        "surge_amount": 0.0,
+        "tolls_erp": 0.0,
+        "airport_surcharge": 0.0,
+        "platform_fee": 0.9,
+        "promo_discount": 0.0,
+        "waiting_time_fee": 0.0,
+        "quoted_fare_sgd": null,
+        "distance_charged_km": 9.4,
+        "time_charged_min": 17.0,
+        "per_km_rate_sgd": 0.92,
+        "per_min_rate_sgd": 0.24,
+        "erp_gantries": []
+      },
+      "schema_version": "1.2.0",
+      "source": "PAYMENTS_LEDGER",
+      "trip_id": "TRP-06001",
+      "generated_at": "2026-09-21T13:20:25+08:00"
+    },
+    {
+      "evidence_id": "EV-RPROF-06001",
+      "evidence_type": "RIDER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Rider profile snapshot at filing.",
+        "assessed_at": "2026-09-21T13:20:30+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "R-20354",
+        "party_role": "RIDER",
+        "snapshot_at": "2026-09-21T13:08:25+08:00",
+        "account_age_days": 117,
+        "lifetime_trips": 378,
+        "rating": 4.67,
+        "prior_disputes_filed": 3,
+        "prior_disputes_upheld": 3,
+        "prior_no_show_flags": 0,
+        "cancellation_rate": 0.015,
+        "no_show_disputes_30d": 0,
+        "deviation_claims_60d": 1,
+        "deviation_claims_60d_substantiated": 0,
+        "disputes_with_counterparty_90d": 0,
+        "fraud_flags": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06001",
+      "generated_at": "2026-09-21T13:20:25+08:00"
+    },
+    {
+      "evidence_id": "EV-DPROF-06001",
+      "evidence_type": "DRIVER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver profile snapshot at filing.",
+        "assessed_at": "2026-09-21T13:20:30+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "D-71380",
+        "party_role": "DRIVER",
+        "snapshot_at": "2026-09-21T13:08:25+08:00",
+        "account_age_days": 2343,
+        "lifetime_trips": 13006,
+        "rating": 4.73,
+        "prior_disputes_filed": 2,
+        "prior_disputes_upheld": 1,
+        "prior_no_show_flags": 0,
+        "vehicle_type": "RYDE_XL",
+        "cancellation_rate": 0.028,
+        "prior_deviation_flags": 2,
+        "acceptance_rate": 0.92,
+        "active_region": "EAST",
+        "deviation_flags_90d": 0,
+        "completed_trips_90d": 714,
+        "no_show_terminations_30d": 3,
+        "completed_trips_30d": 170,
+        "disputes_with_counterparty_90d": 0,
+        "fraud_flags": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06001",
+      "generated_at": "2026-09-21T13:20:25+08:00"
+    },
+    {
+      "evidence_id": "EV-ADVIS-06001-01",
+      "evidence_type": "TRAFFIC_ADVISORY",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "LTA historical traffic record for the queried road segment and window; retrieved by the platform, not supplied by a party.",
+        "assessed_at": "2026-09-21T13:20:30+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "advisory_id": "LTA-TI-260921-2226",
+        "provider": "LTA_DATAMALL_SPEED_BANDS",
+        "advisory_type": "NONE",
+        "road": "Pan-Island Expressway (PIE)",
+        "direction": "towards Tuas",
+        "location_desc": "Bedok North Road to Still Road",
+        "lat": 1.33,
+        "lng": 103.915,
+        "message": "No incident, roadwork or closure recorded for the queried segment and window. Speed bands 4-6 throughout.",
+        "valid_from": "2026-09-21T08:49:25+08:00",
+        "valid_to": "2026-09-21T10:19:25+08:00",
+        "speed_band_min": 4,
+        "retrieved_at": "2026-09-21T13:18:25+08:00"
+      },
+      "schema_version": "1.2.0",
+      "source": "THIRD_PARTY_LTA",
+      "trip_id": "TRP-06001",
+      "generated_at": "2026-09-21T13:20:25+08:00"
+    }
+  ]
+}

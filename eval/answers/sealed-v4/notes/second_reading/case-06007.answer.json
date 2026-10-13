@@ -1,0 +1,15 @@
+{
+  "expected_ruling": "ESCALATE",
+  "expected_amount_sgd": null,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": [
+    "POL-RD-24",
+    "POL-GEN-26",
+    "POL-RD-21",
+    "POL-RD-22",
+    "POL-RD-23",
+    "POL-GEN-03"
+  ],
+  "reasoning": "Deviation 14.8-13.4=1.4 km (>1 km tolerance) from EV-TRIP-06007 recorded distances (POL-RD-22; GPS trace not used to re-measure). EV-ADVIS-06007-01 (weight 1.0) shows an LTA accident on PIE towards Tuas after Adam Rd exit, valid 08:35-09:48, intersecting the recommended PIE segment within the trip window, so the reroute is traffic-justified (POL-RD-23). EV-CHAT-06007 MSG-003 (09:00:37) gave notice with a reason before the 09:03:37 exit (EV-GPS-06007, EV-TRIP-06007 events), so the rider was informed (POL-RD-21), but MSG-004 and MSG-005 show the rider objected ('stay on PIE'); no acknowledgment, so the deviation was not agreed. Row (a) needs informed AND agreed; rows (b)/(c) need not informed; (d)/(e) need no justification. Informed-but-objected fits no row of POL-RD-24, which sends it to escalation under POL-GEN-26. Value SGD 1.01 is under 10.00 and no fraud flags (POL-GEN-22), but that does not override the matrix. The accident was not a trip incident (pre-dated the trip, vehicle not involved), so POL-GEN-21 is not the basis. Per POL-GEN-03, ESCALATE is terminal: no money moves, the interim SGD 1.01 (1.4x0.72) is held for the human reviewer."
+}

@@ -1,0 +1,703 @@
+{
+  "schema_version": "1.2.0",
+  "case_no": 6006,
+  "dispute": {
+    "case_no": 6006,
+    "dispute_id": "DSP-06006",
+    "trip_id": "TRP-06006",
+    "category": "ROUTE_DEVIATION",
+    "filed_at": "2026-09-26T18:54:06+08:00",
+    "filed_by": "RIDER",
+    "channel": "IN_APP_SUPPORT",
+    "amount_contested_sgd": 3.0,
+    "claim_text": "Driver left the KPE and drove along Airport Road for no reason I could see, then back onto the PIE. App route was the KPE straight. He did not say anything. $3 refund please.",
+    "counterparty_statement": {
+      "text": "KPE was jam, there was an accident, LTA also show. I avoid the jam for the customer.",
+      "submitted_by": "DRIVER",
+      "submitted_at": "2026-09-27T05:48:06+08:00"
+    },
+    "evidence_ids": [
+      "EV-TRIP-06006",
+      "EV-GPS-06006",
+      "EV-CHAT-06006",
+      "EV-FARE-06006",
+      "EV-RPROF-06006",
+      "EV-DPROF-06006",
+      "EV-ADVIS-06006-01",
+      "EV-ADVIS-06006-02"
+    ]
+  },
+  "evidence": [
+    {
+      "evidence_id": "EV-TRIP-06006",
+      "evidence_type": "TRIP_RECORD",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform trip record; timestamps causally ordered; recorded optimal and actual distances present; deviation and rejoin events carried in events[].",
+        "assessed_at": "2026-09-26T19:06:11+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06006",
+        "rider_id": "R-99982",
+        "driver_id": "D-67516",
+        "requested_at": "2026-09-26T12:20:00+08:00",
+        "accepted_at": "2026-09-26T12:20:36+08:00",
+        "arrived_at": "2026-09-26T12:25:21+08:00",
+        "started_at": "2026-09-26T12:27:06+08:00",
+        "ended_at": "2026-09-26T12:46:06+08:00",
+        "cancelled_at": null,
+        "status": "COMPLETED",
+        "cancelled_by": null,
+        "cancellation_reason_code": null,
+        "pickup": {
+          "label": "Rivervale Mall, Rivervale Crescent",
+          "lat": 1.3925,
+          "lng": 103.9045,
+          "venue_id": null
+        },
+        "dropoff": {
+          "label": "Eunos MRT Station, Eunos Road 8",
+          "lat": 1.3197,
+          "lng": 103.9031,
+          "venue_id": null
+        },
+        "vehicle_type": "RYDE_X",
+        "pickup_zone_class": "STANDARD",
+        "chat_message_count": 0,
+        "registered_pickup_points": null,
+        "in_app_calls": [],
+        "optimal_distance_km": 9.9,
+        "optimal_duration_min": 16.4,
+        "optimal_route_source": "PLATFORM_ROUTER",
+        "optimal_route_erp_sgd": 0.0,
+        "actual_distance_km": 11.5,
+        "actual_duration_min": 19.0,
+        "deviation_pct": 16.2,
+        "amended_optimal_distance_km": null,
+        "amended_optimal_duration_min": null,
+        "solo_optimal_distance_km": null,
+        "pickup_amended_at": null,
+        "dropoff_amended_at": null,
+        "original_pickup": null,
+        "original_dropoff": null,
+        "scheduled_at": null,
+        "optimal_route_via": [
+          "Rivervale Crescent",
+          "Sengkang East Road",
+          "Kallang-Paya Lebar Expressway (KPE)",
+          "Pan-Island Expressway (PIE)",
+          "Eunos Road 8"
+        ],
+        "actual_route_via": [
+          "Rivervale Crescent",
+          "Sengkang East Road",
+          "Kallang-Paya Lebar Expressway (KPE)",
+          "Hougang Avenue 2",
+          "Airport Road",
+          "Pan-Island Expressway (PIE)",
+          "Eunos Road 8"
+        ],
+        "events": [
+          {
+            "event_type": "booking_confirmed",
+            "at": "2026-09-26T12:20:00+08:00",
+            "detail": "Rider R-99982 booked TRP-06006 from Rivervale Mall, Rivervale Crescent to Eunos MRT Station, Eunos Road 8. On-demand, metered fare.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_assigned",
+            "at": "2026-09-26T12:20:36+08:00",
+            "detail": "Driver D-67516 (Toyota Prius, SLK 2898 M) assigned. ETA 4 min.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_arrived",
+            "at": "2026-09-26T12:25:21+08:00",
+            "detail": "Driver marked arrived at pickup (button).",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_started",
+            "at": "2026-09-26T12:27:06+08:00",
+            "detail": "Rider on board. Recommended route via Rivervale Crescent, Sengkang East Road, Kallang-Paya Lebar Expressway (KPE), Pan-Island Expressway (PIE), Eunos Road 8, 9.9 km.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_deviation_detected",
+            "at": "2026-09-26T12:33:46+08:00",
+            "detail": "Vehicle left the recommended route at KPE / Hougang Avenue 2 exit: recommended Kallang-Paya Lebar Expressway (KPE), vehicle took Hougang Avenue 2.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_rejoined",
+            "at": "2026-09-26T12:43:13+08:00",
+            "detail": "Vehicle rejoined the recommended route at PIE / KPE interchange.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_completed",
+            "at": "2026-09-26T12:46:06+08:00",
+            "detail": "Trip ended at Eunos MRT Station, Eunos Road 8. Recorded distance 11.5 km, duration 19 min 00 s.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "fare_finalised",
+            "at": "2026-09-26T12:46:12+08:00",
+            "detail": "Metered fare SGD 15.40 charged to rider payment method.",
+            "source": "PLATFORM_TELEMETRY"
+          }
+        ]
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06006",
+      "generated_at": "2026-09-26T19:06:06+08:00"
+    },
+    {
+      "evidence_id": "EV-GPS-06006",
+      "evidence_type": "GPS_TRACE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver-device trace, 39 fixes at 30 s from trip start to trip end; every fix reports horizontal accuracy (max 8 m) and a map-matched road; no interval exceeds 120 s.",
+        "assessed_at": "2026-09-26T19:06:11+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06006",
+        "points": [
+          {
+            "lat": 1.3925,
+            "lng": 103.9045,
+            "ts": "2026-09-26T12:27:06+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 3,
+            "road": "Rivervale Crescent"
+          },
+          {
+            "lat": 1.390441,
+            "lng": 103.903401,
+            "ts": "2026-09-26T12:27:36+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 5,
+            "road": "Rivervale Crescent"
+          },
+          {
+            "lat": 1.388423,
+            "lng": 103.90229,
+            "ts": "2026-09-26T12:28:06+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 6,
+            "road": "Rivervale Crescent"
+          },
+          {
+            "lat": 1.386377,
+            "lng": 103.901196,
+            "ts": "2026-09-26T12:28:36+08:00",
+            "speed_kph": 43,
+            "accuracy_m": 6,
+            "road": "Rivervale Crescent"
+          },
+          {
+            "lat": 1.384181,
+            "lng": 103.900687,
+            "ts": "2026-09-26T12:29:06+08:00",
+            "speed_kph": 39,
+            "accuracy_m": 4,
+            "road": "Sengkang East Road"
+          },
+          {
+            "lat": 1.381905,
+            "lng": 103.900257,
+            "ts": "2026-09-26T12:29:36+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 4,
+            "road": "Sengkang East Road"
+          },
+          {
+            "lat": 1.379595,
+            "lng": 103.899834,
+            "ts": "2026-09-26T12:30:06+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 6,
+            "road": "Sengkang East Road"
+          },
+          {
+            "lat": 1.377313,
+            "lng": 103.899429,
+            "ts": "2026-09-26T12:30:36+08:00",
+            "speed_kph": 44,
+            "accuracy_m": 7,
+            "road": "Sengkang East Road"
+          },
+          {
+            "lat": 1.37504,
+            "lng": 103.899011,
+            "ts": "2026-09-26T12:31:06+08:00",
+            "speed_kph": 39,
+            "accuracy_m": 4,
+            "road": "Sengkang East Road"
+          },
+          {
+            "lat": 1.372914,
+            "lng": 103.898168,
+            "ts": "2026-09-26T12:31:36+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 6,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.370704,
+            "lng": 103.897282,
+            "ts": "2026-09-26T12:32:06+08:00",
+            "speed_kph": 39,
+            "accuracy_m": 4,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.368574,
+            "lng": 103.896421,
+            "ts": "2026-09-26T12:32:36+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 5,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.366442,
+            "lng": 103.895602,
+            "ts": "2026-09-26T12:33:06+08:00",
+            "speed_kph": 38,
+            "accuracy_m": 4,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.364468,
+            "lng": 103.895553,
+            "ts": "2026-09-26T12:33:36+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 4,
+            "road": "Hougang Avenue 2"
+          },
+          {
+            "lat": 1.362916,
+            "lng": 103.897312,
+            "ts": "2026-09-26T12:34:06+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 8,
+            "road": "Hougang Avenue 2"
+          },
+          {
+            "lat": 1.361396,
+            "lng": 103.899022,
+            "ts": "2026-09-26T12:34:36+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 5,
+            "road": "Hougang Avenue 2"
+          },
+          {
+            "lat": 1.35983,
+            "lng": 103.900758,
+            "ts": "2026-09-26T12:35:06+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 5,
+            "road": "Hougang Avenue 2"
+          },
+          {
+            "lat": 1.358313,
+            "lng": 103.902482,
+            "ts": "2026-09-26T12:35:36+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 6,
+            "road": "Hougang Avenue 2"
+          },
+          {
+            "lat": 1.356775,
+            "lng": 103.904238,
+            "ts": "2026-09-26T12:36:06+08:00",
+            "speed_kph": 45,
+            "accuracy_m": 8,
+            "road": "Hougang Avenue 2"
+          },
+          {
+            "lat": 1.355231,
+            "lng": 103.905919,
+            "ts": "2026-09-26T12:36:36+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 5,
+            "road": "Hougang Avenue 2"
+          },
+          {
+            "lat": 1.353695,
+            "lng": 103.907639,
+            "ts": "2026-09-26T12:37:06+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 4,
+            "road": "Hougang Avenue 2"
+          },
+          {
+            "lat": 1.35214,
+            "lng": 103.909376,
+            "ts": "2026-09-26T12:37:36+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 8,
+            "road": "Hougang Avenue 2"
+          },
+          {
+            "lat": 1.350587,
+            "lng": 103.911108,
+            "ts": "2026-09-26T12:38:06+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 8,
+            "road": "Hougang Avenue 2"
+          },
+          {
+            "lat": 1.348922,
+            "lng": 103.911159,
+            "ts": "2026-09-26T12:38:36+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 5,
+            "road": "Airport Road"
+          },
+          {
+            "lat": 1.347108,
+            "lng": 103.909711,
+            "ts": "2026-09-26T12:39:06+08:00",
+            "speed_kph": 44,
+            "accuracy_m": 5,
+            "road": "Airport Road"
+          },
+          {
+            "lat": 1.345278,
+            "lng": 103.908255,
+            "ts": "2026-09-26T12:39:36+08:00",
+            "speed_kph": 39,
+            "accuracy_m": 7,
+            "road": "Airport Road"
+          },
+          {
+            "lat": 1.343442,
+            "lng": 103.906864,
+            "ts": "2026-09-26T12:40:06+08:00",
+            "speed_kph": 42,
+            "accuracy_m": 3,
+            "road": "Airport Road"
+          },
+          {
+            "lat": 1.34155,
+            "lng": 103.905483,
+            "ts": "2026-09-26T12:40:36+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 6,
+            "road": "Airport Road"
+          },
+          {
+            "lat": 1.339793,
+            "lng": 103.904058,
+            "ts": "2026-09-26T12:41:06+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 5,
+            "road": "Airport Road"
+          },
+          {
+            "lat": 1.337935,
+            "lng": 103.902612,
+            "ts": "2026-09-26T12:41:36+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 4,
+            "road": "Airport Road"
+          },
+          {
+            "lat": 1.336101,
+            "lng": 103.901166,
+            "ts": "2026-09-26T12:42:06+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 3,
+            "road": "Airport Road"
+          },
+          {
+            "lat": 1.334274,
+            "lng": 103.899754,
+            "ts": "2026-09-26T12:42:36+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 4,
+            "road": "Airport Road"
+          },
+          {
+            "lat": 1.332431,
+            "lng": 103.898356,
+            "ts": "2026-09-26T12:43:06+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 5,
+            "road": "Airport Road"
+          },
+          {
+            "lat": 1.330398,
+            "lng": 103.898688,
+            "ts": "2026-09-26T12:43:36+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 6,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.328258,
+            "lng": 103.899569,
+            "ts": "2026-09-26T12:44:06+08:00",
+            "speed_kph": 41,
+            "accuracy_m": 6,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.326107,
+            "lng": 103.900426,
+            "ts": "2026-09-26T12:44:36+08:00",
+            "speed_kph": 40,
+            "accuracy_m": 7,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.324,
+            "lng": 103.901351,
+            "ts": "2026-09-26T12:45:06+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 8,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.321833,
+            "lng": 103.902216,
+            "ts": "2026-09-26T12:45:36+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 4,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.3197,
+            "lng": 103.9031,
+            "ts": "2026-09-26T12:46:06+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 3,
+            "road": "Eunos Road 8"
+          }
+        ],
+        "point_count": 39,
+        "first_fix_at": "2026-09-26T12:27:06+08:00",
+        "last_fix_at": "2026-09-26T12:46:06+08:00",
+        "sample_interval_sec": 30.0,
+        "expected_interval_sec": 30.0,
+        "gaps": [],
+        "max_gap_sec": 30.0,
+        "coverage_pct": 100.0,
+        "trace_distance_km": 9.646,
+        "rider_track": []
+      },
+      "schema_version": "1.2.0",
+      "source": "DRIVER_DEVICE",
+      "trip_id": "TRP-06006",
+      "generated_at": "2026-09-26T19:06:06+08:00"
+    },
+    {
+      "evidence_id": "EV-CHAT-06006",
+      "evidence_type": "CHAT_LOG",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform chat log, 0 entries, contiguous; matches trip_record.chat_message_count.",
+        "assessed_at": "2026-09-26T19:06:11+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06006",
+        "messages": [],
+        "message_count": 0,
+        "first_message_at": null,
+        "last_message_at": null,
+        "truncated": false
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06006",
+      "generated_at": "2026-09-26T19:06:06+08:00"
+    },
+    {
+      "evidence_id": "EV-FARE-06006",
+      "evidence_type": "FARE_BREAKDOWN",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Payments ledger; itemised lines reconcile to total_charged; tolls_erp equals the gantry list.",
+        "assessed_at": "2026-09-26T19:06:11+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06006",
+        "currency": "SGD",
+        "fare_model": "METERED",
+        "cancellation_fee": 0.0,
+        "total_charged": 15.4,
+        "payment_status": "CHARGED",
+        "refund_issued_sgd": 0.0,
+        "charged_at": "2026-09-26T12:46:12+08:00",
+        "surge_multiplier": 1.0,
+        "rate_card_id": "RC-SG-RYDEX-2026Q3",
+        "base_fare": 2.8,
+        "distance_fare": 8.28,
+        "time_fare": 3.42,
+        "surge_amount": 0.0,
+        "tolls_erp": 0.0,
+        "airport_surcharge": 0.0,
+        "platform_fee": 0.9,
+        "promo_discount": 0.0,
+        "waiting_time_fee": 0.0,
+        "quoted_fare_sgd": null,
+        "distance_charged_km": 11.5,
+        "time_charged_min": 19.0,
+        "per_km_rate_sgd": 0.72,
+        "per_min_rate_sgd": 0.18,
+        "erp_gantries": []
+      },
+      "schema_version": "1.2.0",
+      "source": "PAYMENTS_LEDGER",
+      "trip_id": "TRP-06006",
+      "generated_at": "2026-09-26T19:06:06+08:00"
+    },
+    {
+      "evidence_id": "EV-RPROF-06006",
+      "evidence_type": "RIDER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Rider profile snapshot at filing.",
+        "assessed_at": "2026-09-26T19:06:11+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "R-99982",
+        "party_role": "RIDER",
+        "snapshot_at": "2026-09-26T18:54:06+08:00",
+        "account_age_days": 1700,
+        "lifetime_trips": 78,
+        "rating": 4.37,
+        "prior_disputes_filed": 0,
+        "prior_disputes_upheld": 0,
+        "prior_no_show_flags": 0,
+        "cancellation_rate": 0.065,
+        "no_show_disputes_30d": 1,
+        "deviation_claims_60d": 1,
+        "deviation_claims_60d_substantiated": 0,
+        "disputes_with_counterparty_90d": 0,
+        "fraud_flags": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06006",
+      "generated_at": "2026-09-26T19:06:06+08:00"
+    },
+    {
+      "evidence_id": "EV-DPROF-06006",
+      "evidence_type": "DRIVER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver profile snapshot at filing.",
+        "assessed_at": "2026-09-26T19:06:11+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "D-67516",
+        "party_role": "DRIVER",
+        "snapshot_at": "2026-09-26T18:54:06+08:00",
+        "account_age_days": 883,
+        "lifetime_trips": 5446,
+        "rating": 4.84,
+        "prior_disputes_filed": 2,
+        "prior_disputes_upheld": 2,
+        "prior_no_show_flags": 0,
+        "vehicle_type": "RYDE_X",
+        "cancellation_rate": 0.046,
+        "prior_deviation_flags": 2,
+        "acceptance_rate": 0.91,
+        "active_region": "CENTRAL",
+        "deviation_flags_90d": 0,
+        "completed_trips_90d": 451,
+        "no_show_terminations_30d": 1,
+        "completed_trips_30d": 204,
+        "disputes_with_counterparty_90d": 0,
+        "fraud_flags": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06006",
+      "generated_at": "2026-09-26T19:06:06+08:00"
+    },
+    {
+      "evidence_id": "EV-ADVIS-06006-01",
+      "evidence_type": "TRAFFIC_ADVISORY",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "LTA historical traffic record for the queried road segment and window; retrieved by the platform, not supplied by a party.",
+        "assessed_at": "2026-09-26T19:06:11+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "advisory_id": "LTA-TI-260926-2479",
+        "provider": "LTA_DATAMALL_SPEED_BANDS",
+        "advisory_type": "NONE",
+        "road": "Kallang-Paya Lebar Expressway (KPE)",
+        "direction": "towards ECP",
+        "location_desc": "Hougang Avenue 2 exit to PIE",
+        "lat": 1.35,
+        "lng": 103.892,
+        "message": "No incident, roadwork or closure recorded for the queried segment and window. Speed bands 5-6 throughout.",
+        "valid_from": "2026-09-26T11:57:06+08:00",
+        "valid_to": "2026-09-26T13:27:06+08:00",
+        "speed_band_min": 5,
+        "retrieved_at": "2026-09-26T19:04:06+08:00"
+      },
+      "schema_version": "1.2.0",
+      "source": "THIRD_PARTY_LTA",
+      "trip_id": "TRP-06006",
+      "generated_at": "2026-09-26T19:06:06+08:00"
+    },
+    {
+      "evidence_id": "EV-ADVIS-06006-02",
+      "evidence_type": "TRAFFIC_ADVISORY",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "LTA historical traffic record for the queried road segment and window; retrieved by the platform, not supplied by a party.",
+        "assessed_at": "2026-09-26T19:06:11+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "advisory_id": "LTA-TI-260926-8232",
+        "provider": "LTA_DATAMALL_TRAFFIC_INCIDENTS",
+        "advisory_type": "ACCIDENT",
+        "road": "Upper Serangoon Road",
+        "direction": "towards City",
+        "location_desc": "near Kovan MRT",
+        "lat": 1.36,
+        "lng": 103.885,
+        "message": "(26/9)12:12 Accident on Upper Serangoon Rd (towards City) near Kovan MRT. Avoid lane 1.",
+        "valid_from": "2026-09-26T12:12:06+08:00",
+        "valid_to": "2026-09-26T13:12:06+08:00",
+        "speed_band_min": 2,
+        "retrieved_at": "2026-09-26T19:04:06+08:00"
+      },
+      "schema_version": "1.2.0",
+      "source": "THIRD_PARTY_LTA",
+      "trip_id": "TRP-06006",
+      "generated_at": "2026-09-26T19:06:06+08:00"
+    }
+  ]
+}

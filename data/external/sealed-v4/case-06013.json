@@ -1,0 +1,917 @@
+{
+  "schema_version": "1.2.0",
+  "case_no": 6013,
+  "dispute": {
+    "case_no": 6013,
+    "dispute_id": "DSP-06013",
+    "trip_id": "TRP-06013",
+    "category": "ROUTE_DEVIATION",
+    "filed_at": "2026-10-05T18:13:06+08:00",
+    "filed_by": "RIDER",
+    "channel": "IN_APP_SUPPORT",
+    "amount_contested_sgd": 34.62,
+    "claim_text": "Morning ride to Raffles Hospital for a check-up. The driver came off the CTE at Toa Payoh and went down Thomson and Newton instead. He did not ask. I am disputing the full fare.",
+    "counterparty_statement": {
+      "text": "CTE morning jam, I use Thomson. Passenger was sleeping, I didn't want to disturb.",
+      "submitted_by": "DRIVER",
+      "submitted_at": "2026-10-06T03:46:06+08:00"
+    },
+    "evidence_ids": [
+      "EV-TRIP-06013",
+      "EV-GPS-06013",
+      "EV-CHAT-06013",
+      "EV-FARE-06013",
+      "EV-RPROF-06013",
+      "EV-DPROF-06013",
+      "EV-ADVIS-06013-01"
+    ]
+  },
+  "evidence": [
+    {
+      "evidence_id": "EV-TRIP-06013",
+      "evidence_type": "TRIP_RECORD",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform trip record; timestamps causally ordered; recorded optimal and actual distances present; deviation and rejoin events carried in events[].",
+        "assessed_at": "2026-10-05T18:25:11+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06013",
+        "rider_id": "R-59390",
+        "driver_id": "D-53313",
+        "requested_at": "2026-10-05T07:55:00+08:00",
+        "accepted_at": "2026-10-05T07:55:21+08:00",
+        "arrived_at": "2026-10-05T08:00:51+08:00",
+        "started_at": "2026-10-05T08:02:06+08:00",
+        "ended_at": "2026-10-05T08:36:06+08:00",
+        "cancelled_at": null,
+        "status": "COMPLETED",
+        "cancelled_by": null,
+        "cancellation_reason_code": null,
+        "pickup": {
+          "label": "Sun Plaza, Sembawang Drive",
+          "lat": 1.4485,
+          "lng": 103.8201,
+          "venue_id": null
+        },
+        "dropoff": {
+          "label": "Raffles Hospital, North Bridge Road",
+          "lat": 1.3008,
+          "lng": 103.8586,
+          "venue_id": null
+        },
+        "vehicle_type": "RYDE_X",
+        "pickup_zone_class": "STANDARD",
+        "chat_message_count": 0,
+        "registered_pickup_points": null,
+        "in_app_calls": [],
+        "optimal_distance_km": 20.4,
+        "optimal_duration_min": 32.3,
+        "optimal_route_source": "PLATFORM_ROUTER",
+        "optimal_route_erp_sgd": 3.0,
+        "actual_distance_km": 21.5,
+        "actual_duration_min": 34.0,
+        "deviation_pct": 5.4,
+        "amended_optimal_distance_km": null,
+        "amended_optimal_duration_min": null,
+        "solo_optimal_distance_km": null,
+        "pickup_amended_at": null,
+        "dropoff_amended_at": null,
+        "original_pickup": null,
+        "original_dropoff": null,
+        "scheduled_at": null,
+        "optimal_route_via": [
+          "Sembawang Drive",
+          "Seletar Expressway (SLE)",
+          "Central Expressway (CTE)",
+          "Rochor Road",
+          "North Bridge Road"
+        ],
+        "actual_route_via": [
+          "Sembawang Drive",
+          "Seletar Expressway (SLE)",
+          "Central Expressway (CTE)",
+          "Thomson Road",
+          "Newton Road",
+          "Bukit Timah Road",
+          "North Bridge Road"
+        ],
+        "events": [
+          {
+            "event_type": "booking_confirmed",
+            "at": "2026-10-05T07:55:00+08:00",
+            "detail": "Rider R-59390 booked TRP-06013 from Sun Plaza, Sembawang Drive to Raffles Hospital, North Bridge Road. On-demand, metered fare.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_assigned",
+            "at": "2026-10-05T07:55:21+08:00",
+            "detail": "Driver D-53313 (Honda Vezel, SLH 6634 Y) assigned. ETA 5 min.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_arrived",
+            "at": "2026-10-05T08:00:51+08:00",
+            "detail": "Driver marked arrived at pickup (button).",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_started",
+            "at": "2026-10-05T08:02:06+08:00",
+            "detail": "Rider on board. Recommended route via Sembawang Drive, Seletar Expressway (SLE), Central Expressway (CTE), Rochor Road, North Bridge Road, 20.4 km.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_deviation_detected",
+            "at": "2026-10-05T08:27:08+08:00",
+            "detail": "Vehicle left the recommended route at CTE / Toa Payoh Rise exit: recommended Central Expressway (CTE), vehicle took Thomson Road.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_rejoined",
+            "at": "2026-10-05T08:35:30+08:00",
+            "detail": "Vehicle rejoined the recommended route at North Bridge Road / Rochor Road.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_completed",
+            "at": "2026-10-05T08:36:06+08:00",
+            "detail": "Trip ended at Raffles Hospital, North Bridge Road. Recorded distance 21.5 km, duration 34 min 00 s.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "fare_finalised",
+            "at": "2026-10-05T08:36:12+08:00",
+            "detail": "Metered fare SGD 34.62 charged to rider payment method.",
+            "source": "PLATFORM_TELEMETRY"
+          }
+        ]
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06013",
+      "generated_at": "2026-10-05T18:25:06+08:00"
+    },
+    {
+      "evidence_id": "EV-GPS-06013",
+      "evidence_type": "GPS_TRACE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver-device trace, 69 fixes at 30 s from trip start to trip end; every fix reports horizontal accuracy (max 8 m) and a map-matched road; no interval exceeds 120 s.",
+        "assessed_at": "2026-10-05T18:25:11+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06013",
+        "points": [
+          {
+            "lat": 1.4485,
+            "lng": 103.8201,
+            "ts": "2026-10-05T08:02:06+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 8,
+            "road": "Sembawang Drive"
+          },
+          {
+            "lat": 1.446455,
+            "lng": 103.821312,
+            "ts": "2026-10-05T08:02:36+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 5,
+            "road": "Sembawang Drive"
+          },
+          {
+            "lat": 1.444365,
+            "lng": 103.822532,
+            "ts": "2026-10-05T08:03:06+08:00",
+            "speed_kph": 42,
+            "accuracy_m": 4,
+            "road": "Sembawang Drive"
+          },
+          {
+            "lat": 1.442234,
+            "lng": 103.823766,
+            "ts": "2026-10-05T08:03:36+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 3,
+            "road": "Sembawang Drive"
+          },
+          {
+            "lat": 1.440172,
+            "lng": 103.824979,
+            "ts": "2026-10-05T08:04:06+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 5,
+            "road": "Sembawang Drive"
+          },
+          {
+            "lat": 1.438078,
+            "lng": 103.826172,
+            "ts": "2026-10-05T08:04:36+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 5,
+            "road": "Sembawang Drive"
+          },
+          {
+            "lat": 1.436054,
+            "lng": 103.827384,
+            "ts": "2026-10-05T08:05:06+08:00",
+            "speed_kph": 38,
+            "accuracy_m": 3,
+            "road": "Sembawang Drive"
+          },
+          {
+            "lat": 1.433801,
+            "lng": 103.828273,
+            "ts": "2026-10-05T08:05:36+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 6,
+            "road": "Seletar Expressway (SLE)"
+          },
+          {
+            "lat": 1.431476,
+            "lng": 103.828786,
+            "ts": "2026-10-05T08:06:06+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 5,
+            "road": "Seletar Expressway (SLE)"
+          },
+          {
+            "lat": 1.42915,
+            "lng": 103.829377,
+            "ts": "2026-10-05T08:06:36+08:00",
+            "speed_kph": 38,
+            "accuracy_m": 4,
+            "road": "Seletar Expressway (SLE)"
+          },
+          {
+            "lat": 1.426777,
+            "lng": 103.829915,
+            "ts": "2026-10-05T08:07:06+08:00",
+            "speed_kph": 44,
+            "accuracy_m": 5,
+            "road": "Seletar Expressway (SLE)"
+          },
+          {
+            "lat": 1.42445,
+            "lng": 103.830468,
+            "ts": "2026-10-05T08:07:36+08:00",
+            "speed_kph": 42,
+            "accuracy_m": 5,
+            "road": "Seletar Expressway (SLE)"
+          },
+          {
+            "lat": 1.422099,
+            "lng": 103.831017,
+            "ts": "2026-10-05T08:08:06+08:00",
+            "speed_kph": 41,
+            "accuracy_m": 4,
+            "road": "Seletar Expressway (SLE)"
+          },
+          {
+            "lat": 1.419752,
+            "lng": 103.83156,
+            "ts": "2026-10-05T08:08:36+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 7,
+            "road": "Seletar Expressway (SLE)"
+          },
+          {
+            "lat": 1.417413,
+            "lng": 103.832105,
+            "ts": "2026-10-05T08:09:06+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 5,
+            "road": "Seletar Expressway (SLE)"
+          },
+          {
+            "lat": 1.415067,
+            "lng": 103.832646,
+            "ts": "2026-10-05T08:09:36+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 6,
+            "road": "Seletar Expressway (SLE)"
+          },
+          {
+            "lat": 1.412755,
+            "lng": 103.833173,
+            "ts": "2026-10-05T08:10:06+08:00",
+            "speed_kph": 42,
+            "accuracy_m": 6,
+            "road": "Seletar Expressway (SLE)"
+          },
+          {
+            "lat": 1.410406,
+            "lng": 103.833733,
+            "ts": "2026-10-05T08:10:36+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 3,
+            "road": "Seletar Expressway (SLE)"
+          },
+          {
+            "lat": 1.408043,
+            "lng": 103.834287,
+            "ts": "2026-10-05T08:11:06+08:00",
+            "speed_kph": 40,
+            "accuracy_m": 5,
+            "road": "Seletar Expressway (SLE)"
+          },
+          {
+            "lat": 1.405696,
+            "lng": 103.834815,
+            "ts": "2026-10-05T08:11:36+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 7,
+            "road": "Seletar Expressway (SLE)"
+          },
+          {
+            "lat": 1.403402,
+            "lng": 103.835537,
+            "ts": "2026-10-05T08:12:06+08:00",
+            "speed_kph": 38,
+            "accuracy_m": 4,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.401102,
+            "lng": 103.836293,
+            "ts": "2026-10-05T08:12:36+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 8,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.398817,
+            "lng": 103.837048,
+            "ts": "2026-10-05T08:13:06+08:00",
+            "speed_kph": 40,
+            "accuracy_m": 4,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.396567,
+            "lng": 103.837844,
+            "ts": "2026-10-05T08:13:36+08:00",
+            "speed_kph": 41,
+            "accuracy_m": 5,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.394253,
+            "lng": 103.838596,
+            "ts": "2026-10-05T08:14:06+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 8,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.391981,
+            "lng": 103.839322,
+            "ts": "2026-10-05T08:14:36+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 6,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.389711,
+            "lng": 103.840093,
+            "ts": "2026-10-05T08:15:06+08:00",
+            "speed_kph": 41,
+            "accuracy_m": 8,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.387402,
+            "lng": 103.840855,
+            "ts": "2026-10-05T08:15:36+08:00",
+            "speed_kph": 46,
+            "accuracy_m": 6,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.385137,
+            "lng": 103.841614,
+            "ts": "2026-10-05T08:16:06+08:00",
+            "speed_kph": 42,
+            "accuracy_m": 4,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.382881,
+            "lng": 103.842393,
+            "ts": "2026-10-05T08:16:36+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 3,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.380532,
+            "lng": 103.843115,
+            "ts": "2026-10-05T08:17:06+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 4,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.378266,
+            "lng": 103.843908,
+            "ts": "2026-10-05T08:17:36+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 6,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.375979,
+            "lng": 103.844683,
+            "ts": "2026-10-05T08:18:06+08:00",
+            "speed_kph": 41,
+            "accuracy_m": 8,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.373713,
+            "lng": 103.845423,
+            "ts": "2026-10-05T08:18:36+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 4,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.371423,
+            "lng": 103.846206,
+            "ts": "2026-10-05T08:19:06+08:00",
+            "speed_kph": 38,
+            "accuracy_m": 7,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.369129,
+            "lng": 103.84695,
+            "ts": "2026-10-05T08:19:36+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 5,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.366854,
+            "lng": 103.847724,
+            "ts": "2026-10-05T08:20:06+08:00",
+            "speed_kph": 43,
+            "accuracy_m": 7,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.36457,
+            "lng": 103.848446,
+            "ts": "2026-10-05T08:20:36+08:00",
+            "speed_kph": 38,
+            "accuracy_m": 3,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.36228,
+            "lng": 103.849239,
+            "ts": "2026-10-05T08:21:06+08:00",
+            "speed_kph": 47,
+            "accuracy_m": 4,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.360027,
+            "lng": 103.849996,
+            "ts": "2026-10-05T08:21:36+08:00",
+            "speed_kph": 47,
+            "accuracy_m": 4,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.357597,
+            "lng": 103.849989,
+            "ts": "2026-10-05T08:22:06+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 5,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.355164,
+            "lng": 103.849976,
+            "ts": "2026-10-05T08:22:36+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 8,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.352786,
+            "lng": 103.850004,
+            "ts": "2026-10-05T08:23:06+08:00",
+            "speed_kph": 46,
+            "accuracy_m": 7,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.350372,
+            "lng": 103.850003,
+            "ts": "2026-10-05T08:23:36+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 8,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.347977,
+            "lng": 103.850007,
+            "ts": "2026-10-05T08:24:06+08:00",
+            "speed_kph": 41,
+            "accuracy_m": 5,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.345575,
+            "lng": 103.849978,
+            "ts": "2026-10-05T08:24:36+08:00",
+            "speed_kph": 46,
+            "accuracy_m": 4,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.343178,
+            "lng": 103.849984,
+            "ts": "2026-10-05T08:25:06+08:00",
+            "speed_kph": 43,
+            "accuracy_m": 8,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.340756,
+            "lng": 103.850017,
+            "ts": "2026-10-05T08:25:36+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 4,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.338365,
+            "lng": 103.849975,
+            "ts": "2026-10-05T08:26:06+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 6,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.335928,
+            "lng": 103.850001,
+            "ts": "2026-10-05T08:26:36+08:00",
+            "speed_kph": 46,
+            "accuracy_m": 4,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.333709,
+            "lng": 103.849342,
+            "ts": "2026-10-05T08:27:06+08:00",
+            "speed_kph": 40,
+            "accuracy_m": 8,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.331518,
+            "lng": 103.848298,
+            "ts": "2026-10-05T08:27:36+08:00",
+            "speed_kph": 45,
+            "accuracy_m": 4,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.329381,
+            "lng": 103.847185,
+            "ts": "2026-10-05T08:28:06+08:00",
+            "speed_kph": 41,
+            "accuracy_m": 6,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.327242,
+            "lng": 103.846118,
+            "ts": "2026-10-05T08:28:36+08:00",
+            "speed_kph": 40,
+            "accuracy_m": 4,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.325081,
+            "lng": 103.845041,
+            "ts": "2026-10-05T08:29:06+08:00",
+            "speed_kph": 44,
+            "accuracy_m": 3,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.322926,
+            "lng": 103.843956,
+            "ts": "2026-10-05T08:29:36+08:00",
+            "speed_kph": 43,
+            "accuracy_m": 8,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.320753,
+            "lng": 103.842905,
+            "ts": "2026-10-05T08:30:06+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 5,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.318609,
+            "lng": 103.841791,
+            "ts": "2026-10-05T08:30:36+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 7,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.31648,
+            "lng": 103.84072,
+            "ts": "2026-10-05T08:31:06+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 8,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.314785,
+            "lng": 103.842232,
+            "ts": "2026-10-05T08:31:36+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 6,
+            "road": "Newton Road"
+          },
+          {
+            "lat": 1.313164,
+            "lng": 103.84394,
+            "ts": "2026-10-05T08:32:06+08:00",
+            "speed_kph": 42,
+            "accuracy_m": 8,
+            "road": "Newton Road"
+          },
+          {
+            "lat": 1.311512,
+            "lng": 103.845745,
+            "ts": "2026-10-05T08:32:36+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 4,
+            "road": "Newton Road"
+          },
+          {
+            "lat": 1.309873,
+            "lng": 103.847491,
+            "ts": "2026-10-05T08:33:06+08:00",
+            "speed_kph": 40,
+            "accuracy_m": 6,
+            "road": "Newton Road"
+          },
+          {
+            "lat": 1.30823,
+            "lng": 103.849256,
+            "ts": "2026-10-05T08:33:36+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 4,
+            "road": "Newton Road"
+          },
+          {
+            "lat": 1.306627,
+            "lng": 103.851009,
+            "ts": "2026-10-05T08:34:06+08:00",
+            "speed_kph": 43,
+            "accuracy_m": 5,
+            "road": "Newton Road"
+          },
+          {
+            "lat": 1.304976,
+            "lng": 103.85278,
+            "ts": "2026-10-05T08:34:36+08:00",
+            "speed_kph": 45,
+            "accuracy_m": 4,
+            "road": "Newton Road"
+          },
+          {
+            "lat": 1.303342,
+            "lng": 103.854539,
+            "ts": "2026-10-05T08:35:06+08:00",
+            "speed_kph": 40,
+            "accuracy_m": 4,
+            "road": "Newton Road"
+          },
+          {
+            "lat": 1.301801,
+            "lng": 103.856384,
+            "ts": "2026-10-05T08:35:36+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 5,
+            "road": "North Bridge Road"
+          },
+          {
+            "lat": 1.3008,
+            "lng": 103.8586,
+            "ts": "2026-10-05T08:36:06+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 4,
+            "road": "North Bridge Road"
+          }
+        ],
+        "point_count": 69,
+        "first_fix_at": "2026-10-05T08:02:06+08:00",
+        "last_fix_at": "2026-10-05T08:36:06+08:00",
+        "sample_interval_sec": 30.0,
+        "expected_interval_sec": 30.0,
+        "gaps": [],
+        "max_gap_sec": 30.0,
+        "coverage_pct": 100.0,
+        "trace_distance_km": 18.171,
+        "rider_track": []
+      },
+      "schema_version": "1.2.0",
+      "source": "DRIVER_DEVICE",
+      "trip_id": "TRP-06013",
+      "generated_at": "2026-10-05T18:25:06+08:00"
+    },
+    {
+      "evidence_id": "EV-CHAT-06013",
+      "evidence_type": "CHAT_LOG",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform chat log, 0 entries, contiguous; matches trip_record.chat_message_count.",
+        "assessed_at": "2026-10-05T18:25:11+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06013",
+        "messages": [],
+        "message_count": 0,
+        "first_message_at": null,
+        "last_message_at": null,
+        "truncated": false
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06013",
+      "generated_at": "2026-10-05T18:25:06+08:00"
+    },
+    {
+      "evidence_id": "EV-FARE-06013",
+      "evidence_type": "FARE_BREAKDOWN",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Payments ledger; itemised lines reconcile to total_charged; tolls_erp equals the gantry list.",
+        "assessed_at": "2026-10-05T18:25:11+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06013",
+        "currency": "SGD",
+        "fare_model": "METERED",
+        "cancellation_fee": 0.0,
+        "total_charged": 34.62,
+        "payment_status": "CHARGED",
+        "refund_issued_sgd": 0.0,
+        "charged_at": "2026-10-05T08:36:12+08:00",
+        "surge_multiplier": 1.3,
+        "rate_card_id": "RC-SG-RYDEX-2026Q3",
+        "base_fare": 2.8,
+        "distance_fare": 15.48,
+        "time_fare": 6.12,
+        "surge_amount": 7.32,
+        "tolls_erp": 2.0,
+        "airport_surcharge": 0.0,
+        "platform_fee": 0.9,
+        "promo_discount": 0.0,
+        "waiting_time_fee": 0.0,
+        "quoted_fare_sgd": null,
+        "distance_charged_km": 21.5,
+        "time_charged_min": 34.0,
+        "per_km_rate_sgd": 0.72,
+        "per_min_rate_sgd": 0.18,
+        "erp_gantries": [
+          {
+            "gantry_id": "ERP-17",
+            "location": "CTE (after Braddell Road)",
+            "passed_at": "2026-10-05T08:20:48+08:00",
+            "amount_sgd": 2.0
+          }
+        ]
+      },
+      "schema_version": "1.2.0",
+      "source": "PAYMENTS_LEDGER",
+      "trip_id": "TRP-06013",
+      "generated_at": "2026-10-05T18:25:06+08:00"
+    },
+    {
+      "evidence_id": "EV-RPROF-06013",
+      "evidence_type": "RIDER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Rider profile snapshot at filing.",
+        "assessed_at": "2026-10-05T18:25:11+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "R-59390",
+        "party_role": "RIDER",
+        "snapshot_at": "2026-10-05T18:13:06+08:00",
+        "account_age_days": 1743,
+        "lifetime_trips": 750,
+        "rating": 4.35,
+        "prior_disputes_filed": 0,
+        "prior_disputes_upheld": 0,
+        "prior_no_show_flags": 0,
+        "cancellation_rate": 0.056,
+        "no_show_disputes_30d": 1,
+        "deviation_claims_60d": 1,
+        "deviation_claims_60d_substantiated": 0,
+        "disputes_with_counterparty_90d": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06013",
+      "generated_at": "2026-10-05T18:25:06+08:00"
+    },
+    {
+      "evidence_id": "EV-DPROF-06013",
+      "evidence_type": "DRIVER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver profile snapshot at filing.",
+        "assessed_at": "2026-10-05T18:25:11+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "D-53313",
+        "party_role": "DRIVER",
+        "snapshot_at": "2026-10-05T18:13:06+08:00",
+        "account_age_days": 1633,
+        "lifetime_trips": 4734,
+        "rating": 4.91,
+        "prior_disputes_filed": 4,
+        "prior_disputes_upheld": 1,
+        "prior_no_show_flags": 2,
+        "vehicle_type": "RYDE_X",
+        "cancellation_rate": 0.028,
+        "prior_deviation_flags": 1,
+        "acceptance_rate": 0.86,
+        "active_region": "EAST",
+        "deviation_flags_90d": 1,
+        "completed_trips_90d": 761,
+        "no_show_terminations_30d": 0,
+        "completed_trips_30d": 134,
+        "disputes_with_counterparty_90d": 0,
+        "fraud_flags": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06013",
+      "generated_at": "2026-10-05T18:25:06+08:00"
+    },
+    {
+      "evidence_id": "EV-ADVIS-06013-01",
+      "evidence_type": "TRAFFIC_ADVISORY",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "LTA historical traffic record for the queried road segment and window; retrieved by the platform, not supplied by a party.",
+        "assessed_at": "2026-10-05T18:25:11+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "advisory_id": "LTA-TI-261005-3963",
+        "provider": "LTA_DATAMALL_SPEED_BANDS",
+        "advisory_type": "NONE",
+        "road": "Central Expressway (CTE)",
+        "direction": "towards City",
+        "location_desc": "Toa Payoh Rise to Rochor Road",
+        "lat": 1.315,
+        "lng": 103.85,
+        "message": "No incident, roadwork or closure recorded for the queried segment and window. Speed bands 4-5 throughout.",
+        "valid_from": "2026-10-05T07:32:06+08:00",
+        "valid_to": "2026-10-05T09:02:06+08:00",
+        "speed_band_min": 4,
+        "retrieved_at": "2026-10-05T18:23:06+08:00"
+      },
+      "schema_version": "1.2.0",
+      "source": "THIRD_PARTY_LTA",
+      "trip_id": "TRP-06013",
+      "generated_at": "2026-10-05T18:25:06+08:00"
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "expected_ruling": "NO_ACTION",
+  "expected_amount_sgd": null,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": ["POL-RD-21", "POL-RD-22", "POL-RD-23", "POL-RD-24", "POL-RD-25", "POL-GEN-02", "POL-GEN-03", "POL-GEN-22"],
+  "reasoning": "Driver-filed; value SGD 1.58 (<10, AI final, POL-GEN-22); no fraud flags, no safety indicator. Deviation from recorded distances EV-TRIP-06014: 11.4 - 9.9 = 1.5 km > 1 km tolerance (POL-RD-22; GPS trace_distance 9.524 not used to re-measure). EV-ADVIS-06014-01 (weight 1.0) shows heavy traffic on CTE towards AYE after Outram exit, 17:43-18:55, on the recommended route and overlapping the trip: traffic-justified (POL-RD-23). EV-CHAT-06014 holds only pre-pickup messages, no in-app calls; driver admits he did not tell the rider: not informed (POL-RD-21, v2.1 1.2). Row (b) of POL-RD-24: rider owed excess distance fare 1.5 x 1.05 (EV-FARE-06014, no surge) = 1.575 -> 1.58, exactly the interim refund already issued. The driver's claim for its return fails; time saved is not a matrix factor. Party-relative NO_ACTION (POL-GEN-03): the 1.58 refund stands. All deciding artifacts weight 1.0, confidence >= 0.80 (POL-GEN-02, POL-RD-25; 2 km limb not applied, 1.5 km anyway). Profile history is context only."
+}

@@ -1,0 +1,18 @@
+{
+  "expected_ruling": "FULL_REFUND",
+  "expected_amount_sgd": 5.0,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": [
+    "POL-NS-23",
+    "POL-NS-21",
+    "POL-NS-22",
+    "POL-NS-26",
+    "POL-GEN-22",
+    "POL-GEN-02",
+    "POL-GEN-03",
+    "POL-GEN-01",
+    "POL-GEN-23"
+  ],
+  "reasoning": "No-show dispute, value 5.00 SGD. Driver arrived 08:51:50 (EV-TRIP-06064 auto-arrival, corroborated by EV-GPS-06064 fixes ~6 m from pickup, STANDARD 50 m radius, accuracy <=9 m); free wait ran to ~08:56:50 and cancellation at 08:58:30 came after it (POL-NS-21), so POL-NS-24 does not apply. Contact obligation (POL-NS-23, v2.1 2.3): EV-CHAT-06064 shows 3 driver in-app messages before cancellation, but EV-TRIP-06064 in_app_calls is empty and the chat log has no voice-call entry; the driver's statement concedes only messaging. No call was placed, so the fee is voided: FULL_REFUND of the 5.00 SGD charged (EV-FARE-06064), no driver compensation (POL-GEN-03; precedent 7.3 DISP-2026-0211, POL-GEN-23). Driver fraud_flags=1 (EV-DPROF-06064) raises the required confidence to 0.95 (POL-GEN-22, POL-NS-26); the deciding artifacts EV-TRIP-06064 and EV-CHAT-06064 both weigh 1.0 (POL-GEN-02) and the fact is undisputed, so confidence can meet 0.95. EV-ADVIS-06064-01 is MISSING (0.0) but carries no needed fact. Other profile fields are context only (POL-GEN-01); no no_show_cancellations_30d field, so no POL-NS-25 referral; fee equals 5.00, no POL-NS-22 referral. No safety indicator (POL-GEN-21)."
+}

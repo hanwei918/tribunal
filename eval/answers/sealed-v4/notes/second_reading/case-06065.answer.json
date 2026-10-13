@@ -1,0 +1,8 @@
+{
+  "expected_ruling": "ESCALATE",
+  "expected_amount_sgd": null,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": ["POL-NS-23", "POL-GEN-26", "POL-GEN-02", "POL-NS-26", "POL-NS-21", "POL-NS-22", "POL-GEN-22", "POL-GEN-03", "POL-GEN-01"],
+  "reasoning": "Driver claims the SGD 5.00 no-show fee (reversed interim). Arrival and wait are established: EV-TRIP-06065 arrived 12:46:50, corroborated by EV-GPS-06065 (~7 m from pickup, STANDARD 50 m radius); on-demand so free wait runs from arrival; cancel at 12:53:20 is after 300 s (POL-NS-21). Call limb met: in_app_calls shows driver call 12:49:20 before cancellation (POL-NS-23). Chat limb cannot be established: EV-CHAT-06065 is IMPAIRED (TRUNCATED_LOG, weight 0.6), exports 1 of 3 messages (only a rider message at 12:41:30) and nothing over arrival or the waiting window; the rider denies a location message. Whether the driver sent a chat before cancelling is a fact POL-NS-23 needs and the record cannot carry, so POL-GEN-26 escalates (POL-NS-26 makes the AI ruling final only subject to POL-GEN-26; POL-GEN-02 caps confidence at 0.6). No fraud flags; value below SGD 10 (POL-GEN-22). ESCALATE holds the amount (POL-GEN-03). Fee was 5.00 (no POL-NS-22 referral); no no_show_cancellations_30d field (no POL-NS-25 referral); profile history is context only (POL-GEN-01). EV-ADVIS-06065-01 MISSING, irrelevant."
+}

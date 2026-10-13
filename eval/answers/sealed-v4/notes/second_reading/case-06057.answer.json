@@ -1,0 +1,8 @@
+{
+  "expected_ruling": "DRIVER_COMPENSATION",
+  "expected_amount_sgd": 5.00,
+  "expected_driver_compensation_sgd": 5.00,
+  "expected_referrals": [],
+  "governing_clauses": ["POL-NS-21", "POL-NS-22", "POL-NS-23", "POL-NS-24", "POL-NS-26", "POL-GEN-22", "POL-GEN-03", "POL-GEN-02"],
+  "reasoning": "Scheduled trip (EV-TRIP-06057 scheduled_at 06:50). Driver arrived 06:46:30, corroborated by EV-GPS-06057 (fix ~8 m from pickup, acc 3 m, STANDARD 50 m radius; stationary to 06:58:00), so no driver no-show (POL-NS-24). Arrived early, so free wait runs from 06:50 to 06:55 (POL-NS-21, v2.1 2.1); cancellation 06:58:10 is after it, refuting the rider's 'few minutes' account. Contact obligation met before cancelled_at: chats 06:47:00 and 06:51:10 (EV-CHAT-06057) and unanswered in-app calls 06:53:20 and 06:56:00 (EV-TRIP-06057) (POL-NS-23, v2.1 2.3). Fee stands at 5.00 as charged (EV-FARE-06057), so driver-filed claim is upheld: DRIVER_COMPENSATION 5.00 reversing the interim refund (POL-NS-22, v2.1 2.2; POL-GEN-03). Value 5.00 < 10, fraud_flags 0 on both profiles: AI ruling final (POL-GEN-22, POL-NS-26). Deciding artifacts all weight 1.0; EV-ADVIS-06057-01 is MISSING (0.0) but carries no deciding fact (POL-GEN-02). No safety indicator; no no_show_cancellations_30d field, so no POL-NS-25 referral; other profile fields context only (POL-GEN-01)."
+}

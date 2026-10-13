@@ -1,0 +1,23 @@
+{
+  "expected_ruling": "DRIVER_COMPENSATION",
+  "expected_amount_sgd": 5.0,
+  "expected_driver_compensation_sgd": 5.0,
+  "expected_referrals": [
+    "POL-NS-25: flag rider R-80737's account for review as a repeat no-show (no_show_cancellations_30d = 4, >= 3): mandatory upfront payment and temporary suspension pending Trust & Safety review"
+  ],
+  "governing_clauses": [
+    "POL-NS-21",
+    "POL-NS-22",
+    "POL-NS-23",
+    "POL-NS-24",
+    "POL-NS-25",
+    "POL-NS-26",
+    "POL-GEN-01",
+    "POL-GEN-02",
+    "POL-GEN-03",
+    "POL-GEN-21",
+    "POL-GEN-22",
+    "POL-GEN-26"
+  ],
+  "reasoning": "Scheduled pickup 09:00 (EV-TRIP-06058). Driver arrived 09:02:40, corroborated by EV-GPS-06058 (fix 09:02:40 ~7 m from pickup, acc 6 m, inside 50 m STANDARD radius; stationary to 09:09:10). Arrival was before 09:05 (scheduled+5 min), so no driver no-show under POL-NS-24; the rider's 'driver was late' does not void the fee. Driver arrived after the scheduled time, so the free wait runs from arrival (POL-NS-21) and ended 09:07:40; cancellation at 09:09:30 came after it. Contact obligation met before cancelling (POL-NS-23): chats 09:03:00 and 09:06:20 (EV-CHAT-06058, both read) and in-app call 09:05:10 (EV-TRIP-06058). Fee stands: 5.00 charged (EV-FARE-06058), equal to the policy fee, so no POL-NS-22 amount referral; ruling DRIVER_COMPENSATION 5.00 (POL-NS-22, POL-GEN-03), undoing the interim reversal. Value 5.00 < 10.00, fraud_flags 0 on both profiles, no safety indicator: AI ruling final (POL-GEN-22, POL-NS-26, POL-GEN-21). EV-ADVIS-06058-01 is MISSING (weight 0.0) but carries no fact a no-show rule needs (POL-GEN-02, POL-GEN-26). Rider no_show_cancellations_30d=4 (>=3) triggers the POL-NS-25 referral; other profile fields are context only (POL-GEN-01)."
+}

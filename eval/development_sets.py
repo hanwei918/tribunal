@@ -502,13 +502,14 @@ RYDE_V7 = DevelopmentSet(
     policy_base=V7_POLICY_VERSION,
 )
 
-# The two sets parts 73 and 74 bring, **declared here and registered only when
-# their data is present**. A set with no case files has no case numbers to list
-# and no index to read, so registering one now would be a registration that
+# The two version-7 sets, **declared here and registered only when their data is
+# present**. A set with no case files has no case numbers to list and no index to
+# read, so registering one before its data arrives would be a registration that
 # fails at import; and an empty directory would be a set that runs nothing while
 # looking as though it ran. So the two constants are written here, in the shape
-# they will be registered in, and the two tuples below take them the moment
-# ``data/external/<name>/index.json`` exists.
+# they are registered in, and the tuples below take them the moment
+# ``data/external/<name>/index.json`` exists -- which both did on 2026-10-13,
+# when part 73 imported them.
 #
 # Their run arguments are sealed-v2's, which is the configuration of every
 # sealed run since 2026-10-03, and their prompts directory is ``prompts/v2``,
@@ -547,14 +548,19 @@ DEV_V7 = DevelopmentSet(
 SEALED_V4 = DevelopmentSet(
     name="sealed-v4",
     cases=(),
-    key_path=ANSWER_DIR / "sealed-v4" / "ground_truth.json",
+    # The set's whole archive-B tree was extracted into ``eval/answers/sealed-v4/``
+    # byte for byte and never opened, so its ``answers/``, ``generator/`` and
+    # ``notes/`` folders sit under that root and the key is one level down from it.
+    key_path=ANSWER_DIR / "sealed-v4" / "answers" / "ground_truth.json",
     runs_subdir="sealed-v4",
     case_root=loader.EXTERNAL_DIR / "sealed-v4",
     summary=(
-        "the sixth sealed set: 65 cases, 6001-6065, written for Ryde's Dispute "
-        "Resolution Policy v2.1. Declared here and registered when its data is "
-        "present; it is run once, plainly, and that single run is one of the "
-        "generalisation figures the submission reports"
+        "the sixth sealed set (sealed-v4): 30 cases made by Claude (Opus 5.5) in "
+        "a fresh claude.ai chat with no project folder or repository access, from "
+        "the owner's prompt, Ryde's Dispute Resolution Policy v2.1, the version-7 "
+        "policy files, the public contract, a format checker and the organisers' "
+        "public sample case; no human reviewed its answers; nobody on the "
+        "development side has seen them; it is run once, at policy version 7"
     ),
     sealed=True,
     policy_version=V7_POLICY_VERSION,
@@ -936,7 +942,7 @@ DEVELOPMENT_DATA_CAVEAT = (
     "a sum over two sets that were drafted differently and share one template, "
     "so it is not a generalisation figure and does not replace the corpus "
     "number. The generalisation figures the submission reports belong to the "
-    "four sealed sets, each run exactly once: "
+    "five sealed sets, each run exactly once: "
     "the second sealed set's, prepared by OpenAI Codex -- whether Codex could "
     "read this repository while preparing it is not recorded -- from a commit "
     "whose tribunal/, prompts/ and policy/ trees equal those at "
@@ -955,11 +961,16 @@ DEVELOPMENT_DATA_CAVEAT = (
     "prompt, the version-6 policy text, the public contract, a format checker and "
     "the organisers' public sample case, and imported on 2026-10-13, from a "
     "commit whose tribunal/, prompts/ and policy/ trees equal those at "
-    "freeze-2026-10-11. "
+    "freeze-2026-10-11; "
+    "and the sixth sealed set's, made by Claude (Opus 5.5) in a fresh claude.ai "
+    "chat with no project folder or repository access, from the owner's prompt, "
+    "Ryde's Dispute Resolution Policy v2.1, the version-7 policy files, the "
+    "public contract, a format checker and the organisers' public sample case, "
+    "and imported on 2026-10-13, at policy version 7. "
     "The held-out set is not one of them: the owner settled on 2026-10-12 that it "
     "is development and regression data, so its single run, from the commit "
     "tagged freeze-2026-09-30, is history. "
-    "Neither figure here is any of them, and no two of the four are "
+    "Neither figure here is any of them, and no two of the five are "
     "ever added to each other."
 )
 
@@ -1058,6 +1069,25 @@ SEALED_V3_CAVEAT = (
     "and not either other sealed set's key."
 )
 
+# The sixth sealed set is printed on its own for the same reasons and with the
+# same one of its own: its registration fixes policy version 7, so its figure is
+# a measurement of version 7 and of nothing else.
+SEALED_V4_CAVEAT = (
+    "The sixth sealed set is not a development set and is never added to the "
+    "combined figure above, to the held-out set's figure, to the second sealed "
+    "set's, to the third's, to the fourth's or to the fifth's. It was made by "
+    "Claude (Opus 5.5) in a fresh claude.ai chat with no project folder or "
+    "repository access, from the owner's prompt, Ryde's Dispute Resolution "
+    "Policy v2.1, the version-7 policy files, the public contract, a format "
+    "checker and the organisers' public sample case, and nobody on the "
+    "development side has seen its answers; it was imported on 2026-10-13, and "
+    "its single run is made at the policy version 7 its registration fixes; that "
+    "single run is the sixth generalisation figure the submission reports. It is "
+    "absent from data/index.json and is graded against "
+    "eval/answers/sealed-v4/answers/ground_truth.json, which is neither "
+    "development key and not either other sealed set's key."
+)
+
 # The heading and the caveat each sealed set is printed under, so a set added to
 # ``SEALED_SETS`` cannot be printed without both.
 SEALED_SET_SECTIONS = {
@@ -1084,6 +1114,11 @@ SEALED_SET_SECTIONS = {
         "The fifth sealed set (sealed-v3), on its own and never in the combined "
         "figure:",
         SEALED_V3_CAVEAT,
+    ),
+    SEALED_V4.name: (
+        "The sixth sealed set (sealed-v4), on its own and never in the combined "
+        "figure:",
+        SEALED_V4_CAVEAT,
     ),
 }
 

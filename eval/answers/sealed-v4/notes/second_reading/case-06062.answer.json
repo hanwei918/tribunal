@@ -1,0 +1,17 @@
+{
+  "expected_ruling": "ESCALATE",
+  "expected_amount_sgd": null,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": [
+    "POL-GEN-22",
+    "POL-NS-26",
+    "POL-GEN-02",
+    "POL-NS-23",
+    "POL-NS-21",
+    "POL-NS-22",
+    "POL-GEN-03",
+    "POL-GEN-01"
+  ],
+  "reasoning": "Driver-filed NO_SHOW_CHARGE, value SGD 5.00; fee reversed interim (EV-TRIP-06062, EV-FARE-06062). On the merits the fee would stand: on-demand trip, arrival 20:22:00 corroborated by EV-GPS-06062 (stationary ~5 m from pickup, inside 50 m STANDARD radius, accuracy <=9 m); free wait ran to 20:27:00 and cancellation was 20:28:40 (POL-NS-21); driver call 20:24:30 in EV-TRIP-06062 and driver chat messages 20:22:20 and 20:25:30 in EV-CHAT-06062, all before cancelled_at (POL-NS-23), which would give DRIVER_COMPENSATION 5.00 (POL-NS-22). But EV-RPROF-06062 carries fraud_flags=1, so POL-GEN-22 and POL-NS-26 require 0.95 confidence even below SGD 10. The chat-message fact, which the rider contests, rests only on EV-CHAT-06062: IMPAIRED, weight 0.9, SCHEMA_VERSION_MISMATCH; trip_record chat_message_count gives neither sender nor timing, so it does not independently carry it. Under POL-GEN-02 confidence is capped at 0.90 < 0.95, so the case is escalated; no money issues and the amount is held (POL-GEN-03). Other profile fields are context only (POL-GEN-01); no safety indicator (POL-GEN-21); EV-ADVIS-06062-01 MISSING and not needed; POL-NS-25 field absent, no referrals."
+}

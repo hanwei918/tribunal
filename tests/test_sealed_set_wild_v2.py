@@ -215,7 +215,7 @@ class WildV2RegistryTests(unittest.TestCase):
         self.assertEqual(["corpus", "codex"], [item.name for item in sets.DEVELOPMENT_SETS])
         self.assertNotIn(WILD_V2, sets.DEVELOPMENT_SETS)
         self.assertEqual(
-            ("wild", "wild-v2", "sealed-v1", "sealed-v2", "sealed-v3"),
+            ("wild", "wild-v2", "sealed-v1", "sealed-v2", "sealed-v3", "sealed-v4"),
             tuple(item.name for item in sets.SEALED_SETS),
         )
         self.assertIn(WILD_V2, sets.SEALED_SETS)
@@ -986,7 +986,7 @@ class WildV2RunDirectoryIsHeadlineTests(unittest.TestCase):
             path.resolve() for path in run_benchmark.headline_run_directories(self.runs, MODEL)
         ]
         self.assertIn(self.sealed_run_dir.resolve(), headline)
-        self.assertEqual(7, len(headline), "the headline directories are not seven")
+        self.assertEqual(8, len(headline), "the headline directories are not eight")
         self.assertEqual(
             {
                 (self.runs / run_benchmark.model_slug(MODEL)).resolve(),
@@ -1006,6 +1006,11 @@ class WildV2RunDirectoryIsHeadlineTests(unittest.TestCase):
                 (
                     self.runs
                     / run_benchmark.SEALED_V3_SET_RUNS_SUBDIR
+                    / run_benchmark.model_slug(MODEL)
+                ).resolve(),
+                (
+                    self.runs
+                    / run_benchmark.SEALED_V4_SET_RUNS_SUBDIR
                     / run_benchmark.model_slug(MODEL)
                 ).resolve(),
             },
@@ -1730,6 +1735,20 @@ class WildV2RunArgumentsTests(unittest.TestCase):
                     concurrency=2,
                 ),
             ),
+            (
+                # The version-7 set is the one row whose prompts directory is a
+                # value rather than the default: a version-7 run may use
+                # ``prompts/v2`` and no other, and the runner refuses any other.
+                sets.SEALED_V4,
+                sets.RunArguments(
+                    model="deepseek/deepseek-flash",
+                    judge_votes=4,
+                    verify_drafts=False,
+                    timeout_seconds=900.0,
+                    concurrency=2,
+                    prompts_dir=Path("prompts/v2"),
+                ),
+            ),
         )
         for development_set, expected in fixed:
             with self.subTest(sealed_set=development_set.name):
@@ -1737,10 +1756,12 @@ class WildV2RunArgumentsTests(unittest.TestCase):
                 self.assertIsNotNone(
                     frozen, "{0} fixes no run arguments".format(development_set.name)
                 )
+                # The comparison is over all eight settings, so each row's own
+                # ``prompts_dir`` is part of what it is held to: ``None`` for
+                # every row but the version-7 one, which states the directory.
                 self.assertEqual(expected, frozen)
                 # "The default" is recorded as the default rather than as today's
                 # number, so the registration cannot start refusing the default.
-                self.assertIsNone(frozen.prompts_dir)
                 self.assertIsNone(frozen.case_deadline_seconds)
                 self.assertIsNone(frozen.token_budget)
         with_frozen_arguments = {item.name for item, _expected in fixed}

@@ -1,0 +1,8 @@
+{
+  "expected_ruling": "ESCALATE",
+  "expected_amount_sgd": null,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": ["POL-GEN-26", "POL-NS-21", "POL-NS-26", "POL-GEN-02", "POL-NS-22", "POL-NS-23", "POL-NS-24", "POL-GEN-22", "POL-GEN-01", "POL-GEN-03"],
+  "reasoning": "Rider says the driver never came to Blk 14. The arrival test needs the arrival event in EV-TRIP-06061 (button, 13:11:50) to be corroborated by GPS within 50 m (STANDARD). EV-GPS-06061 (weight 0.6, GPS_GAP) has no fix 13:08:50-13:19:30, a 640 s gap covering arrival, the whole free wait and the cancellation; the nearest fixes are about 780 m and 570 m from the pickup. Whether and when the driver arrived, from which the POL-NS-21 free wait runs and on which the POL-NS-22 fee depends, cannot be established, so POL-GEN-26 (applied through POL-NS-26) escalates. Contact under POL-NS-23 is met on full-weight evidence: chats at 13:12:10 and 13:15:00 (EV-CHAT-06061) and a call at 13:14:20, all before the 13:18:20 cancellation, but that does not prove arrival. POL-NS-24 cannot be applied because an on-demand trip has no scheduled deadline. The value is SGD 5.00 (below 10) and there are no fraud_flags (POL-GEN-22). Profile history such as the driver's no_show_terminations_30d is context only (POL-GEN-01). EV-ADVIS-06061-01 is MISSING and carries no fact. ESCALATE is terminal: no money and no referrals (POL-GEN-03)."
+}

@@ -1,0 +1,143 @@
+{
+  "set": "tribunal-sealed",
+  "created": "2026-10-13T20:40:00+08:00",
+  "author": "claude-opus-5-5 (Claude Opus 5.5, as stated in this session's system information)",
+  "session": "a fresh claude.ai chat",
+  "session_note": "claude.ai app session with an agentic cloud workspace; no project folder; no earlier turns were visible to the author; the seven reference files and the task prompt arrived as attachments",
+  "prompted_by": "Zhou Hanwei (team owner)",
+  "independence": {
+    "saw": [
+      "ryde-policy-v2.1.md",
+      "general.json",
+      "route_deviation.json",
+      "no_show.json",
+      "PUBLIC-CONTRACT.md",
+      "check_set_v7.py",
+      "case-00901.json",
+      "the task prompt (PROMPT.md)"
+    ],
+    "did_not_see": [
+      "the system's code",
+      "the system's prompts",
+      "the system's runs",
+      "the system's results",
+      "other test sets"
+    ]
+  },
+  "review_status": "no human review; the reference answers are the author's, checked by the author's own second reading",
+  "second_reading_changes": 0,
+  "second_reading": {
+    "method": "one fresh sub-agent per case, seeing only that case file and the four policy files",
+    "readers": 30,
+    "agreed_first_round": 30,
+    "disagreed_first_round": 0,
+    "key_changes": 0,
+    "case_file_clarifications": 0,
+    "agreed_final": 30
+  },
+  "policy": "version 7 (Ryde Dispute Resolution Policy v2.1)",
+  "reference_file_sha256": {
+    "ryde-policy-v2.1.md": "827c4d2cab2d4db9e176521000b079632bbe80c20f69c3ffd0addecc8cbc8699",
+    "general.json": "767f01d69f0bac8ac0cdb9f834d149f048d6b2b68fc54419461db06665b85d93",
+    "route_deviation.json": "ddb3dcf3c6c3d8cb296900a323df5fa18c4aad660e19e1b7787db5db0787c8ca",
+    "no_show.json": "d638a3b68a6b7bc7655dd984dccafa2f541b448c29c2af18355eb10eefc80d3b",
+    "PUBLIC-CONTRACT.md": "88d851d0d7774303420720bca56c848ba2aaeb3c55b6f2f79435769f2cb22be2",
+    "check_set_v7.py": "152d934507a350d2a8b790c0124ebbbe723721bd5399d12b9a54cbe5b910d301",
+    "case-00901.json": "6d16561e8409a5fd4583d149b148fd2d7aab0d89e9a4cfdfbb1c7304e29e8333"
+  },
+  "case_count": 30,
+  "case_numbers": [
+    6001,
+    6002,
+    6003,
+    6004,
+    6005,
+    6006,
+    6007,
+    6008,
+    6009,
+    6010,
+    6011,
+    6012,
+    6013,
+    6014,
+    6015,
+    6051,
+    6052,
+    6053,
+    6054,
+    6055,
+    6056,
+    6057,
+    6058,
+    6059,
+    6060,
+    6061,
+    6062,
+    6063,
+    6064,
+    6065
+  ],
+  "categories": {
+    "NO_SHOW_CHARGE": 15,
+    "ROUTE_DEVIATION": 15
+  },
+  "rulings": {
+    "DRIVER_COMPENSATION": 4,
+    "ESCALATE": 9,
+    "FULL_REFUND": 6,
+    "NO_ACTION": 6,
+    "PARTIAL_REFUND": 5
+  },
+  "difficulty": {
+    "EASY": 8,
+    "HARD": 10,
+    "INDETERMINATE": 6,
+    "REVERSAL": 6
+  },
+  "filed_by": {
+    "DRIVER": 10,
+    "RIDER": 20
+  },
+  "case_file_sha256": {
+    "case-06001.json": "8ed48544f2254a67eca3323cc4d341f165a2ed28ff807076ec8edcee4377995e",
+    "case-06002.json": "c3637cc2f70868dfcc0f44062b45f1ffb2c8feee6c9f359eb6f3876a79448e2f",
+    "case-06003.json": "43b5f52177ab35bc6915db1410ef617c446cc56c4d514cfb9d23e07416274769",
+    "case-06004.json": "d845fcff962be80b0d29f98b51d57a5a8606c5d7d53dc975812bfb4634caf90a",
+    "case-06005.json": "f8b1bc1f30ebaacda30f01782410fd64f088695db98a3d555fa8ad0edc2c2ee7",
+    "case-06006.json": "f558d11e94cd982632311d834a82369a95693f14f2682469a5141dfcc9ea5512",
+    "case-06007.json": "59af82e3b46a1be27fbf29e5799fa460b107278afbdd6732f3f69a49929aa083",
+    "case-06008.json": "04821f52255fbaca54ba519f67a9a257154d6c926dddb3bab5e8599a74e159cc",
+    "case-06009.json": "a904989326256a22b106515a1707884783632f55122322912c39efeec1f31ddf",
+    "case-06010.json": "f55860ab3ee0b2d5b10c5f2ae4e31757b0c3e99ef7d2590631e2ba3367da6432",
+    "case-06011.json": "6105a58c3f020e017584ca48ba515b914bd157adeaedb72e590bc384cb0e867f",
+    "case-06012.json": "f295453f59779e99a302349ede65fe459dc2340ee794384d38dc252d5be47c74",
+    "case-06013.json": "634bc9a52e5576e8c2c1736c45694ac5e99fec13a065fc4974a0a6e324ad8021",
+    "case-06014.json": "2ac72f407bdcd0b2ca7d770799baddc333f24299c24135c0c1fa71c1397eea9b",
+    "case-06015.json": "24af58b073c0fe276bc326fc48ec7091aa4c54f039c3e2754e6d38697bf0c3bb",
+    "case-06051.json": "742cb5540b195bdc7c2068e59e839fe43eaa0e3844570b84b3fdf4933806aafe",
+    "case-06052.json": "1fcd680fc5b239086d04823649e87afb12b091b26b8c1594389932d8cd72b032",
+    "case-06053.json": "26864320fd4505505a68814c5c416e161d09bc8e3bf7c04f2964e5b8d3079272",
+    "case-06054.json": "77f7bbd60cd89fe2f8f7b55f375435ae053c32d243fac9f8f28706824af8a5e8",
+    "case-06055.json": "b087db4cf93b84b1b5e4167661e348e456c5b27204e10729bd9bddb9442b8fb4",
+    "case-06056.json": "a2ca4330173ace998ff144953e10338b984faec57a55a1ce4412996646a422cf",
+    "case-06057.json": "b6466bbecd0e97a2aace1fe2876afe007de9bb34fcd9ab5c93ed9025c49075b5",
+    "case-06058.json": "b22b81babd4e6bbf1d5c98638d5fbaffdf1febdcf3a029c879b830da58b06f08",
+    "case-06059.json": "4e967bc66f9c3159b07349d86cf99d9d0f095c57014b384a1731fc0cd6e2815f",
+    "case-06060.json": "3ab47b26461747b577895d7679f03f79b7ccaf0779a83c4e762db636ca81c309",
+    "case-06061.json": "6675be3f8e3ce59ad5a7e1d7385746bdda72a75c0d2ae3dc6a08bf931460d648",
+    "case-06062.json": "94cdf764e7d04d3e7b51f68d44c88e961583642497bc80c696152b017dd6fbaa",
+    "case-06063.json": "b2481d12c83a3a89e1751e722cdf1097dd31803465b43d7837563784d3a806c2",
+    "case-06064.json": "acf0fb4dc8752153e6adf922cb6b2c9583ba4888f2ff71efbe3f8be72e3a3691",
+    "case-06065.json": "77d26ef1be020ef49f4b81523dd423dee42f86813a88351d76d1ee0dab165249"
+  },
+  "index_json_sha256": "e30613477605a83ed1aa17096f993c3aea684b01998504150936a9c955a72758",
+  "answer_key_sha256": "a416780445f583c1fbaf55c57d4a61ba678c049ae169163d342598f01e3adef4",
+  "canary": "09f2ff96-a77a-4ceb-9b27-8f9a31d7e54a",
+  "check_command": "python3 check_set_v7.py tribunal-sealed-v4/cases tribunal-sealed-v4/answers/ground_truth.json --range 6001 6065",
+  "protocol": {
+    "runs_allowed": 1,
+    "no_tuning_after_run": "Any tuning using this set after its single run turns it into a development set; the key is not edited after the run",
+    "run_performed": false
+  }
+}

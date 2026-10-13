@@ -10,20 +10,25 @@ land somewhere it must not. Two places are refused:
 
 **A sealed set's root.** ``runs/wild/`` holds the held-out set's single run,
 ``runs/wild-v2/`` the second sealed set's, ``runs/sealed-v1/`` the third's,
-``runs/sealed-v2/`` the fourth's and ``runs/sealed-v3/`` the fifth's. All five
-runs have been made -- ``sealed-v3``'s was started once on 2026-10-13 and
-stopped after 8 of its 30 cases, and it is not a sealed figure -- so every root
-is closed outright and nothing is created under any of them: not a case, not an
-ablated run, not a run at a later policy version, not a report, because a second
-thing written there changes what the directory means while leaving every file a
-reader would look at apparently intact.
+``runs/sealed-v2/`` the fourth's, ``runs/sealed-v3/`` the fifth's and
+``runs/sealed-v4/`` the sixth's. Five of those runs have been made --
+``sealed-v3``'s was started once on 2026-10-13 and stopped after 8 of its 30
+cases, and it is not a sealed figure -- so those five roots are closed outright
+and nothing is created under any of them: not a case, not an ablated run, not a
+run at a later policy version, not a report, because a second thing written there
+changes what the directory means while leaving every file a reader would look at
+apparently intact. ``sealed-v4``'s run has not been made, and the permit that
+opens its own plain run directory is the runner's alone: every command here holds
+no permit, so this helper refuses ``runs/sealed-v4/`` outright as it does the
+other five.
 
 **A headline run directory.** ``runs/<model-slug>/``, ``runs/codex/<model-slug>/``,
 ``runs/wild/<model-slug>/``, ``runs/wild-v2/<model-slug>/``,
-``runs/sealed-v1/<model-slug>/``, ``runs/sealed-v2/<model-slug>/`` and
-``runs/sealed-v3/<model-slug>/`` hold a run the submission reports, and
-``sealed-v3``'s holds the record of a stopped run, which reports no figure: a
-command's own output written there would be read as that run's.
+``runs/sealed-v1/<model-slug>/``, ``runs/sealed-v2/<model-slug>/``,
+``runs/sealed-v3/<model-slug>/`` and ``runs/sealed-v4/<model-slug>/`` hold a run
+the submission reports, and ``sealed-v3``'s holds the record of a stopped run,
+which reports no figure: a command's own output written there would be read as
+that run's.
 
 The comparison is **component by component**, not a prefix test on the string,
 and the components are case-folded, because this volume is case-insensitive:

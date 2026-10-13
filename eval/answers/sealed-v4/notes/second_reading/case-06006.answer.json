@@ -1,0 +1,8 @@
+{
+  "expected_ruling": "PARTIAL_REFUND",
+  "expected_amount_sgd": 1.15,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": ["POL-RD-22", "POL-RD-23", "POL-RD-24", "POL-RD-25", "POL-GEN-22", "POL-GEN-02", "POL-GEN-01", "POL-GEN-03", "POL-GEN-21"],
+  "reasoning": "No safety indicator: the driver's 'accident' refers to road traffic, not an accident involving the trip (POL-GEN-21). Deviation per POL-RD-22 from EV-TRIP-06006 recorded distances: 11.5 - 9.9 = 1.6 km > 1.0 km tolerance; EV-GPS-06006 confirms the KPE exit at Hougang Ave 2 via Airport Road back to PIE (trace distance not used). POL-RD-23: EV-ADVIS-06006-01 covers the bypassed KPE segment in the trip window and shows no incident, speed bands 5-6; EV-ADVIS-06006-02 is an accident on Upper Serangoon Rd near Kovan, not on the recommended route, so it does not justify the reroute; the driver's assertion alone does not count. Not traffic-justified, >1 km: row (d) of POL-RD-24, PARTIAL_REFUND of excess distance fare 1.6 x 0.72 (EV-FARE-06006, no surge) = 1.152 -> SGD 1.15, not the SGD 3.00 asked. Notification (EV-CHAT-06006 empty) does not change row (d). Value SGD 3.00 < 10 and fraud_flags 0 on both profiles (POL-GEN-22); all artifacts weight 1.0 so confidence is uncapped and >= 0.80 (POL-GEN-02, POL-RD-25); 2 km limb not applied and 1.6 km is within it anyway. Prior deviation flags/claims are context only (POL-GEN-01)."
+}

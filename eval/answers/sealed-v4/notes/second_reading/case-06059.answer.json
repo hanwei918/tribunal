@@ -1,0 +1,10 @@
+{
+  "expected_ruling": "FULL_REFUND",
+  "expected_amount_sgd": 4.00,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [
+    "POL-NS-22: fee charged on the record (SGD 4.00, EV-FARE-06059) differs from the fixed 5.00 SGD no-show fee; refer for fee-amount check"
+  ],
+  "governing_clauses": ["POL-NS-23", "POL-NS-21", "POL-NS-22", "POL-NS-26", "POL-GEN-22", "POL-GEN-03", "POL-GEN-02", "POL-GEN-01"],
+  "reasoning": "On-demand trip; driver marked arrived 17:26:45 (EV-TRIP-06059), corroborated by EV-GPS-06059 fixes within ~4 m of pickup (STANDARD 50 m radius). Free wait (POL-NS-21) ran to 17:31:45; cancellation at 17:33:10 was after it. Contact obligation (POL-NS-23, v2.1 2.3, precedent 7.3): EV-CHAT-06059 (complete, not truncated) shows 2 driver messages before cancellation, but EV-TRIP-06059 (weight 1.0) records in_app_calls = [] and the chat log has no voice-call entry, so no in-app call was placed. The obligation fails: fee voided, FULL_REFUND of the fee charged, SGD 4.00 (EV-FARE-06059), no driver compensation. Charged amount differs from 5.00, so POL-NS-22 referral. POL-NS-24 not engaged (driver arrived). POL-NS-25 not applicable (no no_show_cancellations_30d field; fee does not stand). Profile history is context only (POL-GEN-01); no fraud flags; value 4.00 < 10, AI ruling final (POL-GEN-22, POL-NS-26); no safety indicator (POL-GEN-21). Deciding artifacts weigh 1.0 (POL-GEN-02); missing EV-ADVIS-06059-01 (weight 0.0) carries no fact needed here."
+}

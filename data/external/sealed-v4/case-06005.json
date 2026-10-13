@@ -1,0 +1,859 @@
+{
+  "schema_version": "1.2.0",
+  "case_no": 6005,
+  "dispute": {
+    "case_no": 6005,
+    "dispute_id": "DSP-06005",
+    "trip_id": "TRP-06005",
+    "category": "ROUTE_DEVIATION",
+    "filed_at": "2026-09-25T21:25:11+08:00",
+    "filed_by": "DRIVER",
+    "channel": "IN_APP_SUPPORT",
+    "amount_contested_sgd": 1.47,
+    "claim_text": "Before I left the CTE I told the passenger about the breakdown and he said ok. Ryde still took back $1.47. I followed the notification rule.",
+    "counterparty_statement": {
+      "text": "He only told me after he had already turned off the CTE, by then there was nothing I could say.",
+      "submitted_by": "RIDER",
+      "submitted_at": "2026-09-26T02:19:11+08:00"
+    },
+    "evidence_ids": [
+      "EV-TRIP-06005",
+      "EV-GPS-06005",
+      "EV-CHAT-06005",
+      "EV-FARE-06005",
+      "EV-RPROF-06005",
+      "EV-DPROF-06005",
+      "EV-ADVIS-06005-01"
+    ]
+  },
+  "evidence": [
+    {
+      "evidence_id": "EV-TRIP-06005",
+      "evidence_type": "TRIP_RECORD",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform trip record; timestamps causally ordered; recorded optimal and actual distances present; deviation and rejoin events carried in events[].",
+        "assessed_at": "2026-09-25T21:37:16+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06005",
+        "rider_id": "R-59266",
+        "driver_id": "D-28347",
+        "requested_at": "2026-09-25T19:05:40+08:00",
+        "accepted_at": "2026-09-25T19:06:11+08:00",
+        "arrived_at": "2026-09-25T19:10:56+08:00",
+        "started_at": "2026-09-25T19:12:41+08:00",
+        "ended_at": "2026-09-25T19:40:11+08:00",
+        "cancelled_at": null,
+        "status": "COMPLETED",
+        "cancelled_by": null,
+        "cancellation_reason_code": null,
+        "pickup": {
+          "label": "Marina Square, Raffles Boulevard",
+          "lat": 1.2911,
+          "lng": 103.8573,
+          "venue_id": null
+        },
+        "dropoff": {
+          "label": "Yio Chu Kang MRT Station, Ang Mo Kio Avenue 6",
+          "lat": 1.3818,
+          "lng": 103.845,
+          "venue_id": null
+        },
+        "vehicle_type": "RYDE_PREMIUM",
+        "pickup_zone_class": "STANDARD",
+        "chat_message_count": 4,
+        "registered_pickup_points": null,
+        "in_app_calls": [],
+        "optimal_distance_km": 12.4,
+        "optimal_duration_min": 24.7,
+        "optimal_route_source": "PLATFORM_ROUTER",
+        "optimal_route_erp_sgd": 2.0,
+        "actual_distance_km": 13.8,
+        "actual_duration_min": 27.5,
+        "deviation_pct": 11.3,
+        "amended_optimal_distance_km": null,
+        "amended_optimal_duration_min": null,
+        "solo_optimal_distance_km": null,
+        "pickup_amended_at": null,
+        "dropoff_amended_at": null,
+        "original_pickup": null,
+        "original_dropoff": null,
+        "scheduled_at": null,
+        "optimal_route_via": [
+          "Raffles Boulevard",
+          "Bras Basah Road",
+          "Central Expressway (CTE)",
+          "Ang Mo Kio Avenue 6"
+        ],
+        "actual_route_via": [
+          "Raffles Boulevard",
+          "Bras Basah Road",
+          "Central Expressway (CTE)",
+          "Thomson Road",
+          "Upper Thomson Road",
+          "Ang Mo Kio Avenue 6"
+        ],
+        "events": [
+          {
+            "event_type": "booking_confirmed",
+            "at": "2026-09-25T19:05:40+08:00",
+            "detail": "Rider R-59266 booked TRP-06005 from Marina Square, Raffles Boulevard to Yio Chu Kang MRT Station, Ang Mo Kio Avenue 6. On-demand, metered fare.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_assigned",
+            "at": "2026-09-25T19:06:11+08:00",
+            "detail": "Driver D-28347 (Mercedes-Benz E 200, SLF 2608 K) assigned. ETA 4 min.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_arrived",
+            "at": "2026-09-25T19:10:56+08:00",
+            "detail": "Driver marked arrived at pickup (button).",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_started",
+            "at": "2026-09-25T19:12:41+08:00",
+            "detail": "Rider on board. Recommended route via Raffles Boulevard, Bras Basah Road, Central Expressway (CTE), Ang Mo Kio Avenue 6, 12.4 km.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_deviation_detected",
+            "at": "2026-09-25T19:21:30+08:00",
+            "detail": "Vehicle left the recommended route at CTE / Balestier Road exit: recommended Central Expressway (CTE), vehicle took Thomson Road.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_rejoined",
+            "at": "2026-09-25T19:38:23+08:00",
+            "detail": "Vehicle rejoined the recommended route at Ang Mo Kio Avenue 6 / Yio Chu Kang Road.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_completed",
+            "at": "2026-09-25T19:40:11+08:00",
+            "detail": "Trip ended at Yio Chu Kang MRT Station, Ang Mo Kio Avenue 6. Recorded distance 13.8 km, duration 27 min 30 s.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "fare_finalised",
+            "at": "2026-09-25T19:40:17+08:00",
+            "detail": "Metered fare SGD 36.31 charged to rider payment method.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "fare_adjusted",
+            "at": "2026-09-25T19:50:11+08:00",
+            "detail": "Interim adjustment after a rider route complaint: SGD 1.47 refunded to rider and recovered from driver earnings pending review.",
+            "source": "PLATFORM_TELEMETRY"
+          }
+        ]
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06005",
+      "generated_at": "2026-09-25T21:37:11+08:00"
+    },
+    {
+      "evidence_id": "EV-GPS-06005",
+      "evidence_type": "GPS_TRACE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver-device trace, 56 fixes at 30 s from trip start to trip end; every fix reports horizontal accuracy (max 8 m) and a map-matched road; no interval exceeds 120 s.",
+        "assessed_at": "2026-09-25T21:37:16+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06005",
+        "points": [
+          {
+            "lat": 1.2911,
+            "lng": 103.8573,
+            "ts": "2026-09-25T19:12:41+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 7,
+            "road": "Raffles Boulevard"
+          },
+          {
+            "lat": 1.292547,
+            "lng": 103.856058,
+            "ts": "2026-09-25T19:13:11+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 7,
+            "road": "Raffles Boulevard"
+          },
+          {
+            "lat": 1.294027,
+            "lng": 103.854801,
+            "ts": "2026-09-25T19:13:41+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 5,
+            "road": "Raffles Boulevard"
+          },
+          {
+            "lat": 1.295409,
+            "lng": 103.853552,
+            "ts": "2026-09-25T19:14:11+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 3,
+            "road": "Raffles Boulevard"
+          },
+          {
+            "lat": 1.296978,
+            "lng": 103.852379,
+            "ts": "2026-09-25T19:14:41+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 3,
+            "road": "Bras Basah Road"
+          },
+          {
+            "lat": 1.298497,
+            "lng": 103.851282,
+            "ts": "2026-09-25T19:15:11+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 8,
+            "road": "Bras Basah Road"
+          },
+          {
+            "lat": 1.300119,
+            "lng": 103.850258,
+            "ts": "2026-09-25T19:15:41+08:00",
+            "speed_kph": 24,
+            "accuracy_m": 6,
+            "road": "Bras Basah Road"
+          },
+          {
+            "lat": 1.301692,
+            "lng": 103.849232,
+            "ts": "2026-09-25T19:16:11+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 8,
+            "road": "Bras Basah Road"
+          },
+          {
+            "lat": 1.303283,
+            "lng": 103.848166,
+            "ts": "2026-09-25T19:16:41+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 5,
+            "road": "Bras Basah Road"
+          },
+          {
+            "lat": 1.304842,
+            "lng": 103.847094,
+            "ts": "2026-09-25T19:17:11+08:00",
+            "speed_kph": 22,
+            "accuracy_m": 4,
+            "road": "Bras Basah Road"
+          },
+          {
+            "lat": 1.306746,
+            "lng": 103.846886,
+            "ts": "2026-09-25T19:17:41+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 5,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.308643,
+            "lng": 103.84673,
+            "ts": "2026-09-25T19:18:11+08:00",
+            "speed_kph": 23,
+            "accuracy_m": 4,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.310511,
+            "lng": 103.846661,
+            "ts": "2026-09-25T19:18:41+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 5,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.312447,
+            "lng": 103.846501,
+            "ts": "2026-09-25T19:19:11+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 4,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.314352,
+            "lng": 103.846358,
+            "ts": "2026-09-25T19:19:41+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 4,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.316211,
+            "lng": 103.846245,
+            "ts": "2026-09-25T19:20:11+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 7,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.318186,
+            "lng": 103.846164,
+            "ts": "2026-09-25T19:20:41+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 7,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.320054,
+            "lng": 103.845975,
+            "ts": "2026-09-25T19:21:11+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 5,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.32165,
+            "lng": 103.844902,
+            "ts": "2026-09-25T19:21:41+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 7,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.323247,
+            "lng": 103.843904,
+            "ts": "2026-09-25T19:22:11+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 7,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.324846,
+            "lng": 103.842836,
+            "ts": "2026-09-25T19:22:41+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 5,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.32644,
+            "lng": 103.841785,
+            "ts": "2026-09-25T19:23:11+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 5,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.328045,
+            "lng": 103.840798,
+            "ts": "2026-09-25T19:23:41+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 8,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.329617,
+            "lng": 103.839693,
+            "ts": "2026-09-25T19:24:11+08:00",
+            "speed_kph": 22,
+            "accuracy_m": 4,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.331242,
+            "lng": 103.838671,
+            "ts": "2026-09-25T19:24:41+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 3,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.332829,
+            "lng": 103.837658,
+            "ts": "2026-09-25T19:25:11+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 8,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.334417,
+            "lng": 103.836586,
+            "ts": "2026-09-25T19:25:41+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 3,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.336018,
+            "lng": 103.835539,
+            "ts": "2026-09-25T19:26:11+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 6,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.337642,
+            "lng": 103.834494,
+            "ts": "2026-09-25T19:26:41+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 7,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.339222,
+            "lng": 103.833456,
+            "ts": "2026-09-25T19:27:11+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 5,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.340809,
+            "lng": 103.832438,
+            "ts": "2026-09-25T19:27:41+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 4,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.342442,
+            "lng": 103.831385,
+            "ts": "2026-09-25T19:28:11+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 5,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.344008,
+            "lng": 103.830364,
+            "ts": "2026-09-25T19:28:41+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 5,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.345622,
+            "lng": 103.829314,
+            "ts": "2026-09-25T19:29:11+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 8,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.347217,
+            "lng": 103.82828,
+            "ts": "2026-09-25T19:29:41+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 5,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.348793,
+            "lng": 103.828915,
+            "ts": "2026-09-25T19:30:11+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 4,
+            "road": "Upper Thomson Road"
+          },
+          {
+            "lat": 1.350414,
+            "lng": 103.829959,
+            "ts": "2026-09-25T19:30:41+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 6,
+            "road": "Upper Thomson Road"
+          },
+          {
+            "lat": 1.352023,
+            "lng": 103.831003,
+            "ts": "2026-09-25T19:31:11+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 4,
+            "road": "Upper Thomson Road"
+          },
+          {
+            "lat": 1.353608,
+            "lng": 103.832055,
+            "ts": "2026-09-25T19:31:41+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 4,
+            "road": "Upper Thomson Road"
+          },
+          {
+            "lat": 1.35517,
+            "lng": 103.833062,
+            "ts": "2026-09-25T19:32:11+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 8,
+            "road": "Upper Thomson Road"
+          },
+          {
+            "lat": 1.356814,
+            "lng": 103.834116,
+            "ts": "2026-09-25T19:32:41+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 5,
+            "road": "Upper Thomson Road"
+          },
+          {
+            "lat": 1.358368,
+            "lng": 103.835175,
+            "ts": "2026-09-25T19:33:11+08:00",
+            "speed_kph": 24,
+            "accuracy_m": 7,
+            "road": "Upper Thomson Road"
+          },
+          {
+            "lat": 1.359975,
+            "lng": 103.836223,
+            "ts": "2026-09-25T19:33:41+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 5,
+            "road": "Upper Thomson Road"
+          },
+          {
+            "lat": 1.361577,
+            "lng": 103.837238,
+            "ts": "2026-09-25T19:34:11+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 5,
+            "road": "Upper Thomson Road"
+          },
+          {
+            "lat": 1.363187,
+            "lng": 103.838311,
+            "ts": "2026-09-25T19:34:41+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 5,
+            "road": "Upper Thomson Road"
+          },
+          {
+            "lat": 1.364805,
+            "lng": 103.83933,
+            "ts": "2026-09-25T19:35:11+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 4,
+            "road": "Upper Thomson Road"
+          },
+          {
+            "lat": 1.366387,
+            "lng": 103.840358,
+            "ts": "2026-09-25T19:35:41+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 6,
+            "road": "Upper Thomson Road"
+          },
+          {
+            "lat": 1.367983,
+            "lng": 103.841431,
+            "ts": "2026-09-25T19:36:11+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 4,
+            "road": "Upper Thomson Road"
+          },
+          {
+            "lat": 1.369561,
+            "lng": 103.842458,
+            "ts": "2026-09-25T19:36:41+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 5,
+            "road": "Upper Thomson Road"
+          },
+          {
+            "lat": 1.371203,
+            "lng": 103.843501,
+            "ts": "2026-09-25T19:37:11+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 3,
+            "road": "Upper Thomson Road"
+          },
+          {
+            "lat": 1.372771,
+            "lng": 103.844547,
+            "ts": "2026-09-25T19:37:41+08:00",
+            "speed_kph": 23,
+            "accuracy_m": 3,
+            "road": "Upper Thomson Road"
+          },
+          {
+            "lat": 1.37433,
+            "lng": 103.845595,
+            "ts": "2026-09-25T19:38:11+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 3,
+            "road": "Upper Thomson Road"
+          },
+          {
+            "lat": 1.37615,
+            "lng": 103.845822,
+            "ts": "2026-09-25T19:38:41+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 5,
+            "road": "Ang Mo Kio Avenue 6"
+          },
+          {
+            "lat": 1.37802,
+            "lng": 103.845566,
+            "ts": "2026-09-25T19:39:11+08:00",
+            "speed_kph": 24,
+            "accuracy_m": 4,
+            "road": "Ang Mo Kio Avenue 6"
+          },
+          {
+            "lat": 1.379913,
+            "lng": 103.84526,
+            "ts": "2026-09-25T19:39:41+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 5,
+            "road": "Ang Mo Kio Avenue 6"
+          },
+          {
+            "lat": 1.3818,
+            "lng": 103.845,
+            "ts": "2026-09-25T19:40:11+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 8,
+            "road": "Ang Mo Kio Avenue 6"
+          }
+        ],
+        "point_count": 56,
+        "first_fix_at": "2026-09-25T19:12:41+08:00",
+        "last_fix_at": "2026-09-25T19:40:11+08:00",
+        "sample_interval_sec": 30.0,
+        "expected_interval_sec": 30.0,
+        "gaps": [],
+        "max_gap_sec": 30.0,
+        "coverage_pct": 100.0,
+        "trace_distance_km": 11.627,
+        "rider_track": []
+      },
+      "schema_version": "1.2.0",
+      "source": "DRIVER_DEVICE",
+      "trip_id": "TRP-06005",
+      "generated_at": "2026-09-25T21:37:11+08:00"
+    },
+    {
+      "evidence_id": "EV-CHAT-06005",
+      "evidence_type": "CHAT_LOG",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform chat log, 4 entries, contiguous; matches trip_record.chat_message_count.",
+        "assessed_at": "2026-09-25T21:37:16+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06005",
+        "messages": [
+          {
+            "msg_id": "MSG-06005-001",
+            "sender": "DRIVER",
+            "text": "Hi at Marina Square main entrance taxi bay",
+            "sent_at": "2026-09-25T19:11:11+08:00",
+            "read_at": "2026-09-25T19:11:30+08:00",
+            "delivered_at": "2026-09-25T19:11:13+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-06005-002",
+            "sender": "RIDER",
+            "text": "ok coming",
+            "sent_at": "2026-09-25T19:11:36+08:00",
+            "read_at": "2026-09-25T19:12:01+08:00",
+            "delivered_at": "2026-09-25T19:11:37+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-06005-003",
+            "sender": "DRIVER",
+            "text": "Boss, CTE got breakdown, I already come out at Thomson, will be faster",
+            "sent_at": "2026-09-25T19:24:10+08:00",
+            "read_at": "2026-09-25T19:24:53+08:00",
+            "delivered_at": "2026-09-25T19:24:13+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-06005-004",
+            "sender": "RIDER",
+            "text": "Ok",
+            "sent_at": "2026-09-25T19:24:50+08:00",
+            "read_at": "2026-09-25T19:25:34+08:00",
+            "delivered_at": "2026-09-25T19:24:52+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          }
+        ],
+        "message_count": 4,
+        "first_message_at": "2026-09-25T19:11:11+08:00",
+        "last_message_at": "2026-09-25T19:24:50+08:00",
+        "truncated": false
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06005",
+      "generated_at": "2026-09-25T21:37:11+08:00"
+    },
+    {
+      "evidence_id": "EV-FARE-06005",
+      "evidence_type": "FARE_BREAKDOWN",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Payments ledger; itemised lines reconcile to total_charged; tolls_erp equals the gantry list.",
+        "assessed_at": "2026-09-25T21:37:16+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06005",
+        "currency": "SGD",
+        "fare_model": "METERED",
+        "cancellation_fee": 0.0,
+        "total_charged": 36.31,
+        "payment_status": "PARTIALLY_REFUNDED",
+        "refund_issued_sgd": 1.47,
+        "charged_at": "2026-09-25T19:40:17+08:00",
+        "surge_multiplier": 1.3,
+        "rate_card_id": "RC-SG-PREM-2026Q3",
+        "base_fare": 4.5,
+        "distance_fare": 14.49,
+        "time_fare": 8.25,
+        "surge_amount": 8.17,
+        "tolls_erp": 0.0,
+        "airport_surcharge": 0.0,
+        "platform_fee": 0.9,
+        "promo_discount": 0.0,
+        "waiting_time_fee": 0.0,
+        "quoted_fare_sgd": null,
+        "distance_charged_km": 13.8,
+        "time_charged_min": 27.5,
+        "per_km_rate_sgd": 1.05,
+        "per_min_rate_sgd": 0.3,
+        "erp_gantries": []
+      },
+      "schema_version": "1.2.0",
+      "source": "PAYMENTS_LEDGER",
+      "trip_id": "TRP-06005",
+      "generated_at": "2026-09-25T21:37:11+08:00"
+    },
+    {
+      "evidence_id": "EV-RPROF-06005",
+      "evidence_type": "RIDER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Rider profile snapshot at filing.",
+        "assessed_at": "2026-09-25T21:37:16+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "R-59266",
+        "party_role": "RIDER",
+        "snapshot_at": "2026-09-25T21:25:11+08:00",
+        "account_age_days": 630,
+        "lifetime_trips": 33,
+        "rating": 4.94,
+        "prior_disputes_filed": 3,
+        "prior_disputes_upheld": 0,
+        "prior_no_show_flags": 0,
+        "cancellation_rate": 0.074,
+        "no_show_disputes_30d": 1,
+        "deviation_claims_60d": 0,
+        "deviation_claims_60d_substantiated": 0,
+        "disputes_with_counterparty_90d": 0,
+        "fraud_flags": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06005",
+      "generated_at": "2026-09-25T21:37:11+08:00"
+    },
+    {
+      "evidence_id": "EV-DPROF-06005",
+      "evidence_type": "DRIVER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver profile snapshot at filing.",
+        "assessed_at": "2026-09-25T21:37:16+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "D-28347",
+        "party_role": "DRIVER",
+        "snapshot_at": "2026-09-25T21:25:11+08:00",
+        "account_age_days": 2649,
+        "lifetime_trips": 2682,
+        "rating": 4.9,
+        "prior_disputes_filed": 0,
+        "prior_disputes_upheld": 0,
+        "prior_no_show_flags": 1,
+        "vehicle_type": "RYDE_PREMIUM",
+        "cancellation_rate": 0.014,
+        "prior_deviation_flags": 1,
+        "acceptance_rate": 0.94,
+        "active_region": "NORTH_EAST",
+        "deviation_flags_90d": 0,
+        "completed_trips_90d": 480,
+        "no_show_terminations_30d": 2,
+        "completed_trips_30d": 207,
+        "disputes_with_counterparty_90d": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06005",
+      "generated_at": "2026-09-25T21:37:11+08:00"
+    },
+    {
+      "evidence_id": "EV-ADVIS-06005-01",
+      "evidence_type": "TRAFFIC_ADVISORY",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "LTA historical traffic record for the queried road segment and window; retrieved by the platform, not supplied by a party.",
+        "assessed_at": "2026-09-25T21:37:16+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "advisory_id": "LTA-TI-260925-6418",
+        "provider": "LTA_DATAMALL_TRAFFIC_INCIDENTS",
+        "advisory_type": "VEHICLE_BREAKDOWN",
+        "road": "Central Expressway (CTE)",
+        "direction": "towards SLE",
+        "location_desc": "after Braddell Road exit",
+        "lat": 1.346,
+        "lng": 103.853,
+        "message": "(25/9)18:54 Vehicle breakdown on CTE (towards SLE) after Braddell Rd Exit. Avoid lane 1.",
+        "valid_from": "2026-09-25T18:54:21+08:00",
+        "valid_to": "2026-09-25T20:02:41+08:00",
+        "speed_band_min": 2,
+        "retrieved_at": "2026-09-25T21:35:11+08:00"
+      },
+      "schema_version": "1.2.0",
+      "source": "THIRD_PARTY_LTA",
+      "trip_id": "TRP-06005",
+      "generated_at": "2026-09-25T21:37:11+08:00"
+    }
+  ]
+}

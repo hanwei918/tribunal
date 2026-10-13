@@ -1,0 +1,8 @@
+{
+  "expected_ruling": "ESCALATE",
+  "expected_amount_sgd": null,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": ["POL-GEN-22", "POL-RD-25", "POL-GEN-02", "POL-GEN-01", "POL-GEN-03", "POL-RD-21", "POL-RD-22", "POL-RD-23", "POL-RD-24"],
+  "reasoning": "Merits point to POL-RD-24 row (a): deviation 17.6-16.2=1.4 km >1.0 (EV-TRIP-06012, POL-RD-22); LTA heavy traffic on CTE towards City after AMK Ave 1, 10:16-11:26, on the recommended route and overlapping the trip (EV-ADVIS-06012-01, POL-RD-23); driver notified at 10:46:33 before leaving the route at 10:49:23 and rider replied 'Ok can, thanks' (EV-CHAT-06012, POL-RD-21) -> NO_ACTION. But the deciding fact (informed and agreed) rests only on EV-CHAT-06012, IMPAIRED, weight 0.9, SCHEMA_VERSION_MISMATCH, so confidence is capped at 0.90 (POL-GEN-02). Driver profile EV-DPROF-06012 carries fraud_flags=2, so POL-GEN-22 (v2.1 6.3) requires 0.95 whatever the value, even though SGD 4.80 is under 10; POL-RD-25 lets the AI ruling stand only where POL-GEN-22 allows. 0.90 < 0.95 -> ESCALATE; no monetary outcome issues, amount held (POL-GEN-03). Other profile fields are context only (POL-GEN-01). The 2 km limb of 6.2 is not applied and 1.4 km is within it anyway."
+}

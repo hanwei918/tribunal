@@ -1,0 +1,978 @@
+{
+  "schema_version": "1.2.0",
+  "case_no": 6008,
+  "dispute": {
+    "case_no": 6008,
+    "dispute_id": "DSP-06008",
+    "trip_id": "TRP-06008",
+    "category": "ROUTE_DEVIATION",
+    "filed_at": "2026-09-28T01:14:24+08:00",
+    "filed_by": "RIDER",
+    "channel": "IN_APP_SUPPORT",
+    "amount_contested_sgd": 6.5,
+    "claim_text": "Family trip to Changi Village. Driver said there was an accident on the PIE and took Upper Changi Road. I agreed, but the fare came out much higher than the estimate and I am not sure there was any accident. Please refund $6.50.",
+    "counterparty_statement": {
+      "text": "There was an accident on PIE near Bedok, I saw it on the map. I told the passenger and he agreed.",
+      "submitted_by": "DRIVER",
+      "submitted_at": "2026-09-28T06:21:24+08:00"
+    },
+    "evidence_ids": [
+      "EV-TRIP-06008",
+      "EV-GPS-06008",
+      "EV-CHAT-06008",
+      "EV-FARE-06008",
+      "EV-RPROF-06008",
+      "EV-DPROF-06008",
+      "EV-ADVIS-06008-01"
+    ]
+  },
+  "evidence": [
+    {
+      "evidence_id": "EV-TRIP-06008",
+      "evidence_type": "TRIP_RECORD",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform trip record; timestamps causally ordered; recorded optimal and actual distances present; deviation and rejoin events carried in events[].",
+        "assessed_at": "2026-09-28T01:26:29+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06008",
+        "rider_id": "R-81793",
+        "driver_id": "D-47254",
+        "requested_at": "2026-09-27T18:20:45+08:00",
+        "accepted_at": "2026-09-27T18:21:24+08:00",
+        "arrived_at": "2026-09-27T18:28:24+08:00",
+        "started_at": "2026-09-27T18:29:24+08:00",
+        "ended_at": "2026-09-27T19:05:24+08:00",
+        "cancelled_at": null,
+        "status": "COMPLETED",
+        "cancelled_by": null,
+        "cancellation_reason_code": null,
+        "pickup": {
+          "label": "Orchard Central, Orchard Road",
+          "lat": 1.3008,
+          "lng": 103.8397,
+          "venue_id": null
+        },
+        "dropoff": {
+          "label": "Changi Village Hawker Centre, Changi Village Road",
+          "lat": 1.389,
+          "lng": 103.9876,
+          "venue_id": null
+        },
+        "vehicle_type": "RYDE_XL",
+        "pickup_zone_class": "STANDARD",
+        "chat_message_count": 4,
+        "registered_pickup_points": null,
+        "in_app_calls": [],
+        "optimal_distance_km": 23.2,
+        "optimal_duration_min": 33.3,
+        "optimal_route_source": "PLATFORM_ROUTER",
+        "optimal_route_erp_sgd": 0.0,
+        "actual_distance_km": 25.1,
+        "actual_duration_min": 36.0,
+        "deviation_pct": 8.2,
+        "amended_optimal_distance_km": null,
+        "amended_optimal_duration_min": null,
+        "solo_optimal_distance_km": null,
+        "pickup_amended_at": null,
+        "dropoff_amended_at": null,
+        "original_pickup": null,
+        "original_dropoff": null,
+        "scheduled_at": null,
+        "optimal_route_via": [
+          "Orchard Road",
+          "Pan-Island Expressway (PIE)",
+          "Loyang Avenue",
+          "Changi Village Road"
+        ],
+        "actual_route_via": [
+          "Orchard Road",
+          "Pan-Island Expressway (PIE)",
+          "New Upper Changi Road",
+          "Upper Changi Road North",
+          "Loyang Avenue",
+          "Changi Village Road"
+        ],
+        "events": [
+          {
+            "event_type": "booking_confirmed",
+            "at": "2026-09-27T18:20:45+08:00",
+            "detail": "Rider R-81793 booked TRP-06008 from Orchard Central, Orchard Road to Changi Village Hawker Centre, Changi Village Road. On-demand, metered fare.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_assigned",
+            "at": "2026-09-27T18:21:24+08:00",
+            "detail": "Driver D-47254 (Toyota Noah, SLS 5819 E) assigned. ETA 7 min.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_arrived",
+            "at": "2026-09-27T18:28:24+08:00",
+            "detail": "Driver marked arrived at pickup (button).",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_started",
+            "at": "2026-09-27T18:29:24+08:00",
+            "detail": "Rider on board. Recommended route via Orchard Road, Pan-Island Expressway (PIE), Loyang Avenue, Changi Village Road, 23.2 km.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_deviation_detected",
+            "at": "2026-09-27T18:45:16+08:00",
+            "detail": "Vehicle left the recommended route at PIE / Bedok North Avenue 3 exit: recommended Pan-Island Expressway (PIE), vehicle took New Upper Changi Road.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_rejoined",
+            "at": "2026-09-27T19:01:07+08:00",
+            "detail": "Vehicle rejoined the recommended route at Loyang Avenue / Upper Changi Road North.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_completed",
+            "at": "2026-09-27T19:05:24+08:00",
+            "detail": "Trip ended at Changi Village Hawker Centre, Changi Village Road. Recorded distance 25.1 km, duration 36 min 00 s.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "fare_finalised",
+            "at": "2026-09-27T19:05:30+08:00",
+            "detail": "Metered fare SGD 39.98 charged to rider payment method.",
+            "source": "PLATFORM_TELEMETRY"
+          }
+        ]
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06008",
+      "generated_at": "2026-09-28T01:26:24+08:00"
+    },
+    {
+      "evidence_id": "EV-GPS-06008",
+      "evidence_type": "GPS_TRACE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver-device trace, 73 fixes at 30 s from trip start to trip end; every fix reports horizontal accuracy (max 8 m) and a map-matched road; no interval exceeds 120 s.",
+        "assessed_at": "2026-09-28T01:26:29+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06008",
+        "points": [
+          {
+            "lat": 1.3008,
+            "lng": 103.8397,
+            "ts": "2026-09-27T18:29:24+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 4,
+            "road": "Orchard Road"
+          },
+          {
+            "lat": 1.302322,
+            "lng": 103.841901,
+            "ts": "2026-09-27T18:29:54+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 8,
+            "road": "Orchard Road"
+          },
+          {
+            "lat": 1.303845,
+            "lng": 103.844043,
+            "ts": "2026-09-27T18:30:24+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 4,
+            "road": "Orchard Road"
+          },
+          {
+            "lat": 1.305356,
+            "lng": 103.846256,
+            "ts": "2026-09-27T18:30:54+08:00",
+            "speed_kph": 52,
+            "accuracy_m": 5,
+            "road": "Orchard Road"
+          },
+          {
+            "lat": 1.306909,
+            "lng": 103.848413,
+            "ts": "2026-09-27T18:31:24+08:00",
+            "speed_kph": 49,
+            "accuracy_m": 4,
+            "road": "Orchard Road"
+          },
+          {
+            "lat": 1.30836,
+            "lng": 103.850613,
+            "ts": "2026-09-27T18:31:54+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 8,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.309675,
+            "lng": 103.852942,
+            "ts": "2026-09-27T18:32:24+08:00",
+            "speed_kph": 45,
+            "accuracy_m": 8,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.310968,
+            "lng": 103.855224,
+            "ts": "2026-09-27T18:32:54+08:00",
+            "speed_kph": 38,
+            "accuracy_m": 8,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.312274,
+            "lng": 103.857571,
+            "ts": "2026-09-27T18:33:24+08:00",
+            "speed_kph": 50,
+            "accuracy_m": 6,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.313602,
+            "lng": 103.859887,
+            "ts": "2026-09-27T18:33:54+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 8,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.314923,
+            "lng": 103.862195,
+            "ts": "2026-09-27T18:34:24+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 7,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.31619,
+            "lng": 103.864493,
+            "ts": "2026-09-27T18:34:54+08:00",
+            "speed_kph": 45,
+            "accuracy_m": 4,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.31753,
+            "lng": 103.866857,
+            "ts": "2026-09-27T18:35:24+08:00",
+            "speed_kph": 41,
+            "accuracy_m": 4,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.318816,
+            "lng": 103.869125,
+            "ts": "2026-09-27T18:35:54+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 3,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.32013,
+            "lng": 103.871459,
+            "ts": "2026-09-27T18:36:24+08:00",
+            "speed_kph": 45,
+            "accuracy_m": 3,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.321457,
+            "lng": 103.873737,
+            "ts": "2026-09-27T18:36:54+08:00",
+            "speed_kph": 44,
+            "accuracy_m": 8,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.32279,
+            "lng": 103.876091,
+            "ts": "2026-09-27T18:37:24+08:00",
+            "speed_kph": 39,
+            "accuracy_m": 4,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.324094,
+            "lng": 103.8784,
+            "ts": "2026-09-27T18:37:54+08:00",
+            "speed_kph": 47,
+            "accuracy_m": 7,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.325159,
+            "lng": 103.880768,
+            "ts": "2026-09-27T18:38:24+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 8,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.32558,
+            "lng": 103.883437,
+            "ts": "2026-09-27T18:38:54+08:00",
+            "speed_kph": 47,
+            "accuracy_m": 4,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.326068,
+            "lng": 103.886041,
+            "ts": "2026-09-27T18:39:24+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 3,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.326484,
+            "lng": 103.888628,
+            "ts": "2026-09-27T18:39:54+08:00",
+            "speed_kph": 40,
+            "accuracy_m": 6,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.326937,
+            "lng": 103.89128,
+            "ts": "2026-09-27T18:40:24+08:00",
+            "speed_kph": 52,
+            "accuracy_m": 8,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.327382,
+            "lng": 103.893902,
+            "ts": "2026-09-27T18:40:54+08:00",
+            "speed_kph": 45,
+            "accuracy_m": 8,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.327829,
+            "lng": 103.896491,
+            "ts": "2026-09-27T18:41:24+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 3,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.328286,
+            "lng": 103.899111,
+            "ts": "2026-09-27T18:41:54+08:00",
+            "speed_kph": 40,
+            "accuracy_m": 3,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.328731,
+            "lng": 103.901763,
+            "ts": "2026-09-27T18:42:24+08:00",
+            "speed_kph": 38,
+            "accuracy_m": 5,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.329171,
+            "lng": 103.904376,
+            "ts": "2026-09-27T18:42:54+08:00",
+            "speed_kph": 38,
+            "accuracy_m": 4,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.329619,
+            "lng": 103.906999,
+            "ts": "2026-09-27T18:43:24+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 4,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.330091,
+            "lng": 103.909612,
+            "ts": "2026-09-27T18:43:54+08:00",
+            "speed_kph": 38,
+            "accuracy_m": 8,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.330522,
+            "lng": 103.912219,
+            "ts": "2026-09-27T18:44:24+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 6,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.330995,
+            "lng": 103.914848,
+            "ts": "2026-09-27T18:44:54+08:00",
+            "speed_kph": 41,
+            "accuracy_m": 5,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.33093,
+            "lng": 103.917482,
+            "ts": "2026-09-27T18:45:24+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 8,
+            "road": "New Upper Changi Road"
+          },
+          {
+            "lat": 1.330961,
+            "lng": 103.920167,
+            "ts": "2026-09-27T18:45:54+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 4,
+            "road": "New Upper Changi Road"
+          },
+          {
+            "lat": 1.330934,
+            "lng": 103.92283,
+            "ts": "2026-09-27T18:46:24+08:00",
+            "speed_kph": 47,
+            "accuracy_m": 8,
+            "road": "New Upper Changi Road"
+          },
+          {
+            "lat": 1.330877,
+            "lng": 103.925481,
+            "ts": "2026-09-27T18:46:54+08:00",
+            "speed_kph": 45,
+            "accuracy_m": 4,
+            "road": "New Upper Changi Road"
+          },
+          {
+            "lat": 1.330833,
+            "lng": 103.92819,
+            "ts": "2026-09-27T18:47:24+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 4,
+            "road": "New Upper Changi Road"
+          },
+          {
+            "lat": 1.330761,
+            "lng": 103.930821,
+            "ts": "2026-09-27T18:47:54+08:00",
+            "speed_kph": 40,
+            "accuracy_m": 5,
+            "road": "New Upper Changi Road"
+          },
+          {
+            "lat": 1.330777,
+            "lng": 103.933416,
+            "ts": "2026-09-27T18:48:24+08:00",
+            "speed_kph": 47,
+            "accuracy_m": 3,
+            "road": "New Upper Changi Road"
+          },
+          {
+            "lat": 1.330732,
+            "lng": 103.936142,
+            "ts": "2026-09-27T18:48:54+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 7,
+            "road": "New Upper Changi Road"
+          },
+          {
+            "lat": 1.330718,
+            "lng": 103.938768,
+            "ts": "2026-09-27T18:49:24+08:00",
+            "speed_kph": 43,
+            "accuracy_m": 6,
+            "road": "New Upper Changi Road"
+          },
+          {
+            "lat": 1.330663,
+            "lng": 103.94144,
+            "ts": "2026-09-27T18:49:54+08:00",
+            "speed_kph": 47,
+            "accuracy_m": 8,
+            "road": "New Upper Changi Road"
+          },
+          {
+            "lat": 1.330642,
+            "lng": 103.944101,
+            "ts": "2026-09-27T18:50:24+08:00",
+            "speed_kph": 49,
+            "accuracy_m": 3,
+            "road": "New Upper Changi Road"
+          },
+          {
+            "lat": 1.330603,
+            "lng": 103.946752,
+            "ts": "2026-09-27T18:50:54+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 4,
+            "road": "New Upper Changi Road"
+          },
+          {
+            "lat": 1.330559,
+            "lng": 103.94941,
+            "ts": "2026-09-27T18:51:24+08:00",
+            "speed_kph": 43,
+            "accuracy_m": 5,
+            "road": "New Upper Changi Road"
+          },
+          {
+            "lat": 1.330551,
+            "lng": 103.952073,
+            "ts": "2026-09-27T18:51:54+08:00",
+            "speed_kph": 47,
+            "accuracy_m": 8,
+            "road": "New Upper Changi Road"
+          },
+          {
+            "lat": 1.330513,
+            "lng": 103.954727,
+            "ts": "2026-09-27T18:52:24+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 5,
+            "road": "New Upper Changi Road"
+          },
+          {
+            "lat": 1.330471,
+            "lng": 103.957354,
+            "ts": "2026-09-27T18:52:54+08:00",
+            "speed_kph": 46,
+            "accuracy_m": 5,
+            "road": "New Upper Changi Road"
+          },
+          {
+            "lat": 1.332349,
+            "lng": 103.958811,
+            "ts": "2026-09-27T18:53:24+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 4,
+            "road": "Upper Changi Road North"
+          },
+          {
+            "lat": 1.334755,
+            "lng": 103.959871,
+            "ts": "2026-09-27T18:53:54+08:00",
+            "speed_kph": 48,
+            "accuracy_m": 5,
+            "road": "Upper Changi Road North"
+          },
+          {
+            "lat": 1.337231,
+            "lng": 103.960921,
+            "ts": "2026-09-27T18:54:24+08:00",
+            "speed_kph": 49,
+            "accuracy_m": 4,
+            "road": "Upper Changi Road North"
+          },
+          {
+            "lat": 1.339661,
+            "lng": 103.961948,
+            "ts": "2026-09-27T18:54:54+08:00",
+            "speed_kph": 47,
+            "accuracy_m": 4,
+            "road": "Upper Changi Road North"
+          },
+          {
+            "lat": 1.342091,
+            "lng": 103.962986,
+            "ts": "2026-09-27T18:55:24+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 6,
+            "road": "Upper Changi Road North"
+          },
+          {
+            "lat": 1.34454,
+            "lng": 103.964088,
+            "ts": "2026-09-27T18:55:54+08:00",
+            "speed_kph": 48,
+            "accuracy_m": 7,
+            "road": "Upper Changi Road North"
+          },
+          {
+            "lat": 1.346986,
+            "lng": 103.965064,
+            "ts": "2026-09-27T18:56:24+08:00",
+            "speed_kph": 51,
+            "accuracy_m": 8,
+            "road": "Upper Changi Road North"
+          },
+          {
+            "lat": 1.34945,
+            "lng": 103.966173,
+            "ts": "2026-09-27T18:56:54+08:00",
+            "speed_kph": 50,
+            "accuracy_m": 5,
+            "road": "Upper Changi Road North"
+          },
+          {
+            "lat": 1.351833,
+            "lng": 103.967205,
+            "ts": "2026-09-27T18:57:24+08:00",
+            "speed_kph": 48,
+            "accuracy_m": 6,
+            "road": "Upper Changi Road North"
+          },
+          {
+            "lat": 1.354336,
+            "lng": 103.968297,
+            "ts": "2026-09-27T18:57:54+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 6,
+            "road": "Upper Changi Road North"
+          },
+          {
+            "lat": 1.356801,
+            "lng": 103.96928,
+            "ts": "2026-09-27T18:58:24+08:00",
+            "speed_kph": 41,
+            "accuracy_m": 6,
+            "road": "Upper Changi Road North"
+          },
+          {
+            "lat": 1.359175,
+            "lng": 103.970357,
+            "ts": "2026-09-27T18:58:54+08:00",
+            "speed_kph": 52,
+            "accuracy_m": 5,
+            "road": "Upper Changi Road North"
+          },
+          {
+            "lat": 1.36166,
+            "lng": 103.971412,
+            "ts": "2026-09-27T18:59:24+08:00",
+            "speed_kph": 43,
+            "accuracy_m": 8,
+            "road": "Upper Changi Road North"
+          },
+          {
+            "lat": 1.364071,
+            "lng": 103.972457,
+            "ts": "2026-09-27T18:59:54+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 6,
+            "road": "Upper Changi Road North"
+          },
+          {
+            "lat": 1.366513,
+            "lng": 103.973496,
+            "ts": "2026-09-27T19:00:24+08:00",
+            "speed_kph": 52,
+            "accuracy_m": 7,
+            "road": "Upper Changi Road North"
+          },
+          {
+            "lat": 1.369003,
+            "lng": 103.974551,
+            "ts": "2026-09-27T19:00:54+08:00",
+            "speed_kph": 51,
+            "accuracy_m": 7,
+            "road": "Upper Changi Road North"
+          },
+          {
+            "lat": 1.371272,
+            "lng": 103.975838,
+            "ts": "2026-09-27T19:01:24+08:00",
+            "speed_kph": 51,
+            "accuracy_m": 5,
+            "road": "Loyang Avenue"
+          },
+          {
+            "lat": 1.373474,
+            "lng": 103.977301,
+            "ts": "2026-09-27T19:01:54+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 3,
+            "road": "Loyang Avenue"
+          },
+          {
+            "lat": 1.375689,
+            "lng": 103.978789,
+            "ts": "2026-09-27T19:02:24+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 8,
+            "road": "Loyang Avenue"
+          },
+          {
+            "lat": 1.377934,
+            "lng": 103.980269,
+            "ts": "2026-09-27T19:02:54+08:00",
+            "speed_kph": 42,
+            "accuracy_m": 5,
+            "road": "Loyang Avenue"
+          },
+          {
+            "lat": 1.380157,
+            "lng": 103.981723,
+            "ts": "2026-09-27T19:03:24+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 4,
+            "road": "Loyang Avenue"
+          },
+          {
+            "lat": 1.382329,
+            "lng": 103.983183,
+            "ts": "2026-09-27T19:03:54+08:00",
+            "speed_kph": 52,
+            "accuracy_m": 4,
+            "road": "Loyang Avenue"
+          },
+          {
+            "lat": 1.384558,
+            "lng": 103.984646,
+            "ts": "2026-09-27T19:04:24+08:00",
+            "speed_kph": 38,
+            "accuracy_m": 8,
+            "road": "Loyang Avenue"
+          },
+          {
+            "lat": 1.386803,
+            "lng": 103.986114,
+            "ts": "2026-09-27T19:04:54+08:00",
+            "speed_kph": 51,
+            "accuracy_m": 8,
+            "road": "Loyang Avenue"
+          },
+          {
+            "lat": 1.389,
+            "lng": 103.9876,
+            "ts": "2026-09-27T19:05:24+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 6,
+            "road": "Changi Village Road"
+          }
+        ],
+        "point_count": 73,
+        "first_fix_at": "2026-09-27T18:29:24+08:00",
+        "last_fix_at": "2026-09-27T19:05:24+08:00",
+        "sample_interval_sec": 30.0,
+        "expected_interval_sec": 30.0,
+        "gaps": [],
+        "max_gap_sec": 30.0,
+        "coverage_pct": 100.0,
+        "trace_distance_km": 21.24,
+        "rider_track": []
+      },
+      "schema_version": "1.2.0",
+      "source": "DRIVER_DEVICE",
+      "trip_id": "TRP-06008",
+      "generated_at": "2026-09-28T01:26:24+08:00"
+    },
+    {
+      "evidence_id": "EV-CHAT-06008",
+      "evidence_type": "CHAT_LOG",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform chat log, 4 entries, contiguous; matches trip_record.chat_message_count.",
+        "assessed_at": "2026-09-28T01:26:29+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06008",
+        "messages": [
+          {
+            "msg_id": "MSG-06008-001",
+            "sender": "DRIVER",
+            "text": "At Orchard Central taxi stand, black Noah",
+            "sent_at": "2026-09-27T18:27:44+08:00",
+            "read_at": "2026-09-27T18:28:33+08:00",
+            "delivered_at": "2026-09-27T18:27:45+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-06008-002",
+            "sender": "RIDER",
+            "text": "Ok coming with family",
+            "sent_at": "2026-09-27T18:28:09+08:00",
+            "read_at": "2026-09-27T18:28:17+08:00",
+            "delivered_at": "2026-09-27T18:28:11+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-06008-003",
+            "sender": "DRIVER",
+            "text": "Hi, PIE got accident near Bedok, I go New Upper Changi Road then Upper Changi Road North, ok?",
+            "sent_at": "2026-09-27T18:42:36+08:00",
+            "read_at": "2026-09-27T18:43:13+08:00",
+            "delivered_at": "2026-09-27T18:42:37+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-06008-004",
+            "sender": "RIDER",
+            "text": "ok, thanks",
+            "sent_at": "2026-09-27T18:43:01+08:00",
+            "read_at": "2026-09-27T18:43:08+08:00",
+            "delivered_at": "2026-09-27T18:43:03+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          }
+        ],
+        "message_count": 4,
+        "first_message_at": "2026-09-27T18:27:44+08:00",
+        "last_message_at": "2026-09-27T18:43:01+08:00",
+        "truncated": false
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06008",
+      "generated_at": "2026-09-28T01:26:24+08:00"
+    },
+    {
+      "evidence_id": "EV-FARE-06008",
+      "evidence_type": "FARE_BREAKDOWN",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Payments ledger; itemised lines reconcile to total_charged; tolls_erp equals the gantry list.",
+        "assessed_at": "2026-09-28T01:26:29+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06008",
+        "currency": "SGD",
+        "fare_model": "METERED",
+        "cancellation_fee": 0.0,
+        "total_charged": 39.98,
+        "payment_status": "CHARGED",
+        "refund_issued_sgd": 0.0,
+        "charged_at": "2026-09-27T19:05:30+08:00",
+        "surge_multiplier": 1.1,
+        "rate_card_id": "RC-SG-RYDEXL-2026Q3",
+        "base_fare": 3.8,
+        "distance_fare": 23.09,
+        "time_fare": 8.64,
+        "surge_amount": 3.55,
+        "tolls_erp": 0.0,
+        "airport_surcharge": 0.0,
+        "platform_fee": 0.9,
+        "promo_discount": 0.0,
+        "waiting_time_fee": 0.0,
+        "quoted_fare_sgd": null,
+        "distance_charged_km": 25.1,
+        "time_charged_min": 36.0,
+        "per_km_rate_sgd": 0.92,
+        "per_min_rate_sgd": 0.24,
+        "erp_gantries": []
+      },
+      "schema_version": "1.2.0",
+      "source": "PAYMENTS_LEDGER",
+      "trip_id": "TRP-06008",
+      "generated_at": "2026-09-28T01:26:24+08:00"
+    },
+    {
+      "evidence_id": "EV-RPROF-06008",
+      "evidence_type": "RIDER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Rider profile snapshot at filing.",
+        "assessed_at": "2026-09-28T01:26:29+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "R-81793",
+        "party_role": "RIDER",
+        "snapshot_at": "2026-09-28T01:14:24+08:00",
+        "account_age_days": 596,
+        "lifetime_trips": 793,
+        "rating": 4.43,
+        "prior_disputes_filed": 2,
+        "prior_disputes_upheld": 0,
+        "prior_no_show_flags": 0,
+        "cancellation_rate": 0.084,
+        "no_show_disputes_30d": 1,
+        "deviation_claims_60d": 0,
+        "deviation_claims_60d_substantiated": 0,
+        "disputes_with_counterparty_90d": 0,
+        "fraud_flags": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06008",
+      "generated_at": "2026-09-28T01:26:24+08:00"
+    },
+    {
+      "evidence_id": "EV-DPROF-06008",
+      "evidence_type": "DRIVER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver profile snapshot at filing.",
+        "assessed_at": "2026-09-28T01:26:29+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "D-47254",
+        "party_role": "DRIVER",
+        "snapshot_at": "2026-09-28T01:14:24+08:00",
+        "account_age_days": 688,
+        "lifetime_trips": 7209,
+        "rating": 4.66,
+        "prior_disputes_filed": 3,
+        "prior_disputes_upheld": 1,
+        "prior_no_show_flags": 1,
+        "vehicle_type": "RYDE_XL",
+        "cancellation_rate": 0.035,
+        "prior_deviation_flags": 2,
+        "acceptance_rate": 0.95,
+        "active_region": "EAST",
+        "deviation_flags_90d": 0,
+        "completed_trips_90d": 680,
+        "no_show_terminations_30d": 0,
+        "completed_trips_30d": 82,
+        "disputes_with_counterparty_90d": 0,
+        "fraud_flags": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06008",
+      "generated_at": "2026-09-28T01:26:24+08:00"
+    },
+    {
+      "evidence_id": "EV-ADVIS-06008-01",
+      "evidence_type": "TRAFFIC_ADVISORY",
+      "admissibility": {
+        "status": "MISSING",
+        "issues": [
+          "MISSING_ARTIFACT"
+        ],
+        "weight_multiplier": 0.0,
+        "notes": "Artifact absent: the platform's request to the LTA historical traffic feed for this trip window failed (feed timeout) and was not retried, so no traffic record was retrieved. The record is silent on traffic on the recommended route; this is not a finding of no traffic. The identifier is minted so that the absence can be cited.",
+        "assessed_at": "2026-09-28T01:26:29+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": null,
+      "schema_version": "1.2.0",
+      "source": "THIRD_PARTY_LTA",
+      "trip_id": "TRP-06008",
+      "generated_at": "2026-09-28T01:26:24+08:00"
+    }
+  ]
+}

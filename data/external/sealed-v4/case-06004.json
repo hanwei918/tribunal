@@ -1,0 +1,746 @@
+{
+  "schema_version": "1.2.0",
+  "case_no": 6004,
+  "dispute": {
+    "case_no": 6004,
+    "dispute_id": "DSP-06004",
+    "trip_id": "TRP-06004",
+    "category": "ROUTE_DEVIATION",
+    "filed_at": "2026-09-24T09:38:43+08:00",
+    "filed_by": "RIDER",
+    "channel": "IN_APP_SUPPORT",
+    "amount_contested_sgd": 3.8,
+    "claim_text": "The driver left the SLE early and drove along Sembawang Road without saying anything. The app route was the SLE all the way. I am asking for $3.80 back.",
+    "counterparty_statement": {
+      "text": "SLE was jam that morning. I took Sembawang Road to save time for the passenger.",
+      "submitted_by": "DRIVER",
+      "submitted_at": "2026-09-24T21:21:43+08:00"
+    },
+    "evidence_ids": [
+      "EV-TRIP-06004",
+      "EV-GPS-06004",
+      "EV-CHAT-06004",
+      "EV-FARE-06004",
+      "EV-RPROF-06004",
+      "EV-DPROF-06004",
+      "EV-ADVIS-06004-01"
+    ]
+  },
+  "evidence": [
+    {
+      "evidence_id": "EV-TRIP-06004",
+      "evidence_type": "TRIP_RECORD",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform trip record; timestamps causally ordered; recorded optimal and actual distances present; deviation and rejoin events carried in events[].",
+        "assessed_at": "2026-09-24T09:50:48+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06004",
+        "rider_id": "R-89729",
+        "driver_id": "D-73840",
+        "requested_at": "2026-09-24T08:05:50+08:00",
+        "accepted_at": "2026-09-24T08:06:28+08:00",
+        "arrived_at": "2026-09-24T08:10:28+08:00",
+        "started_at": "2026-09-24T08:11:43+08:00",
+        "ended_at": "2026-09-24T08:33:43+08:00",
+        "cancelled_at": null,
+        "status": "COMPLETED",
+        "cancelled_by": null,
+        "cancellation_reason_code": null,
+        "pickup": {
+          "label": "Yew Tee Point, Choa Chu Kang North 6",
+          "lat": 1.3974,
+          "lng": 103.7475,
+          "venue_id": null
+        },
+        "dropoff": {
+          "label": "Khoo Teck Puat Hospital, Yishun Central",
+          "lat": 1.4243,
+          "lng": 103.8385,
+          "venue_id": null
+        },
+        "vehicle_type": "RYDE_X",
+        "pickup_zone_class": "STANDARD",
+        "chat_message_count": 2,
+        "registered_pickup_points": null,
+        "in_app_calls": [],
+        "optimal_distance_km": 13.1,
+        "optimal_duration_min": 19.5,
+        "optimal_route_source": "PLATFORM_ROUTER",
+        "optimal_route_erp_sgd": 0.0,
+        "actual_distance_km": 14.8,
+        "actual_duration_min": 22.0,
+        "deviation_pct": 13.0,
+        "amended_optimal_distance_km": null,
+        "amended_optimal_duration_min": null,
+        "solo_optimal_distance_km": null,
+        "pickup_amended_at": null,
+        "dropoff_amended_at": null,
+        "original_pickup": null,
+        "original_dropoff": null,
+        "scheduled_at": null,
+        "optimal_route_via": [
+          "Choa Chu Kang North 6",
+          "Kranji Expressway (KJE)",
+          "Bukit Timah Expressway (BKE)",
+          "Seletar Expressway (SLE)",
+          "Yishun Avenue 2",
+          "Yishun Central"
+        ],
+        "actual_route_via": [
+          "Choa Chu Kang North 6",
+          "Kranji Expressway (KJE)",
+          "Bukit Timah Expressway (BKE)",
+          "Seletar Expressway (SLE)",
+          "Woodlands Avenue 12",
+          "Sembawang Road",
+          "Yishun Avenue 2",
+          "Yishun Central"
+        ],
+        "events": [
+          {
+            "event_type": "booking_confirmed",
+            "at": "2026-09-24T08:05:50+08:00",
+            "detail": "Rider R-89729 booked TRP-06004 from Yew Tee Point, Choa Chu Kang North 6 to Khoo Teck Puat Hospital, Yishun Central. On-demand, metered fare.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_assigned",
+            "at": "2026-09-24T08:06:28+08:00",
+            "detail": "Driver D-73840 (Kia Niro EV, SLK 3944 G) assigned. ETA 4 min.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_arrived",
+            "at": "2026-09-24T08:10:28+08:00",
+            "detail": "Driver marked arrived at pickup (button).",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_started",
+            "at": "2026-09-24T08:11:43+08:00",
+            "detail": "Rider on board. Recommended route via Choa Chu Kang North 6, Kranji Expressway (KJE), Bukit Timah Expressway (BKE), Seletar Expressway (SLE), Yishun Avenue 2, Yishun Central, 13.1 km.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_deviation_detected",
+            "at": "2026-09-24T08:23:17+08:00",
+            "detail": "Vehicle left the recommended route at SLE / Woodlands Avenue 12 exit: recommended Seletar Expressway (SLE), vehicle took Woodlands Avenue 12.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_rejoined",
+            "at": "2026-09-24T08:32:21+08:00",
+            "detail": "Vehicle rejoined the recommended route at Yishun Avenue 2 / Sembawang Road.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_completed",
+            "at": "2026-09-24T08:33:43+08:00",
+            "detail": "Trip ended at Khoo Teck Puat Hospital, Yishun Central. Recorded distance 14.8 km, duration 22 min 00 s.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "fare_finalised",
+            "at": "2026-09-24T08:33:49+08:00",
+            "detail": "Metered fare SGD 20.06 charged to rider payment method.",
+            "source": "PLATFORM_TELEMETRY"
+          }
+        ]
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06004",
+      "generated_at": "2026-09-24T09:50:43+08:00"
+    },
+    {
+      "evidence_id": "EV-GPS-06004",
+      "evidence_type": "GPS_TRACE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver-device trace, 45 fixes at 30 s from trip start to trip end; every fix reports horizontal accuracy (max 8 m) and a map-matched road; no interval exceeds 120 s.",
+        "assessed_at": "2026-09-24T09:50:48+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06004",
+        "points": [
+          {
+            "lat": 1.3974,
+            "lng": 103.7475,
+            "ts": "2026-09-24T08:11:43+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 4,
+            "road": "Choa Chu Kang North 6"
+          },
+          {
+            "lat": 1.397097,
+            "lng": 103.75006,
+            "ts": "2026-09-24T08:12:13+08:00",
+            "speed_kph": 47,
+            "accuracy_m": 4,
+            "road": "Choa Chu Kang North 6"
+          },
+          {
+            "lat": 1.39678,
+            "lng": 103.752585,
+            "ts": "2026-09-24T08:12:43+08:00",
+            "speed_kph": 47,
+            "accuracy_m": 4,
+            "road": "Choa Chu Kang North 6"
+          },
+          {
+            "lat": 1.396563,
+            "lng": 103.755102,
+            "ts": "2026-09-24T08:13:13+08:00",
+            "speed_kph": 45,
+            "accuracy_m": 7,
+            "road": "Choa Chu Kang North 6"
+          },
+          {
+            "lat": 1.396284,
+            "lng": 103.757667,
+            "ts": "2026-09-24T08:13:43+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 4,
+            "road": "Choa Chu Kang North 6"
+          },
+          {
+            "lat": 1.396127,
+            "lng": 103.760137,
+            "ts": "2026-09-24T08:14:13+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 3,
+            "road": "Kranji Expressway (KJE)"
+          },
+          {
+            "lat": 1.397576,
+            "lng": 103.762276,
+            "ts": "2026-09-24T08:14:43+08:00",
+            "speed_kph": 50,
+            "accuracy_m": 6,
+            "road": "Kranji Expressway (KJE)"
+          },
+          {
+            "lat": 1.399031,
+            "lng": 103.764377,
+            "ts": "2026-09-24T08:15:13+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 5,
+            "road": "Kranji Expressway (KJE)"
+          },
+          {
+            "lat": 1.400478,
+            "lng": 103.766475,
+            "ts": "2026-09-24T08:15:43+08:00",
+            "speed_kph": 42,
+            "accuracy_m": 4,
+            "road": "Kranji Expressway (KJE)"
+          },
+          {
+            "lat": 1.401941,
+            "lng": 103.768602,
+            "ts": "2026-09-24T08:16:13+08:00",
+            "speed_kph": 48,
+            "accuracy_m": 4,
+            "road": "Kranji Expressway (KJE)"
+          },
+          {
+            "lat": 1.403393,
+            "lng": 103.770693,
+            "ts": "2026-09-24T08:16:43+08:00",
+            "speed_kph": 42,
+            "accuracy_m": 5,
+            "road": "Kranji Expressway (KJE)"
+          },
+          {
+            "lat": 1.40487,
+            "lng": 103.7728,
+            "ts": "2026-09-24T08:17:13+08:00",
+            "speed_kph": 46,
+            "accuracy_m": 3,
+            "road": "Kranji Expressway (KJE)"
+          },
+          {
+            "lat": 1.406519,
+            "lng": 103.774654,
+            "ts": "2026-09-24T08:17:43+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 4,
+            "road": "Bukit Timah Expressway (BKE)"
+          },
+          {
+            "lat": 1.408263,
+            "lng": 103.776578,
+            "ts": "2026-09-24T08:18:13+08:00",
+            "speed_kph": 45,
+            "accuracy_m": 4,
+            "road": "Bukit Timah Expressway (BKE)"
+          },
+          {
+            "lat": 1.409952,
+            "lng": 103.778487,
+            "ts": "2026-09-24T08:18:43+08:00",
+            "speed_kph": 42,
+            "accuracy_m": 7,
+            "road": "Bukit Timah Expressway (BKE)"
+          },
+          {
+            "lat": 1.411694,
+            "lng": 103.780362,
+            "ts": "2026-09-24T08:19:13+08:00",
+            "speed_kph": 41,
+            "accuracy_m": 8,
+            "road": "Bukit Timah Expressway (BKE)"
+          },
+          {
+            "lat": 1.4134,
+            "lng": 103.782251,
+            "ts": "2026-09-24T08:19:43+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 4,
+            "road": "Bukit Timah Expressway (BKE)"
+          },
+          {
+            "lat": 1.415043,
+            "lng": 103.784205,
+            "ts": "2026-09-24T08:20:13+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 5,
+            "road": "Seletar Expressway (SLE)"
+          },
+          {
+            "lat": 1.415356,
+            "lng": 103.786711,
+            "ts": "2026-09-24T08:20:43+08:00",
+            "speed_kph": 43,
+            "accuracy_m": 6,
+            "road": "Seletar Expressway (SLE)"
+          },
+          {
+            "lat": 1.415751,
+            "lng": 103.789278,
+            "ts": "2026-09-24T08:21:13+08:00",
+            "speed_kph": 44,
+            "accuracy_m": 6,
+            "road": "Seletar Expressway (SLE)"
+          },
+          {
+            "lat": 1.416095,
+            "lng": 103.791787,
+            "ts": "2026-09-24T08:21:43+08:00",
+            "speed_kph": 47,
+            "accuracy_m": 3,
+            "road": "Seletar Expressway (SLE)"
+          },
+          {
+            "lat": 1.416487,
+            "lng": 103.794309,
+            "ts": "2026-09-24T08:22:13+08:00",
+            "speed_kph": 40,
+            "accuracy_m": 8,
+            "road": "Seletar Expressway (SLE)"
+          },
+          {
+            "lat": 1.416819,
+            "lng": 103.796852,
+            "ts": "2026-09-24T08:22:43+08:00",
+            "speed_kph": 45,
+            "accuracy_m": 7,
+            "road": "Seletar Expressway (SLE)"
+          },
+          {
+            "lat": 1.418006,
+            "lng": 103.798926,
+            "ts": "2026-09-24T08:23:13+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 4,
+            "road": "Woodlands Avenue 12"
+          },
+          {
+            "lat": 1.41996,
+            "lng": 103.800655,
+            "ts": "2026-09-24T08:23:43+08:00",
+            "speed_kph": 41,
+            "accuracy_m": 8,
+            "road": "Woodlands Avenue 12"
+          },
+          {
+            "lat": 1.421806,
+            "lng": 103.802347,
+            "ts": "2026-09-24T08:24:13+08:00",
+            "speed_kph": 49,
+            "accuracy_m": 5,
+            "road": "Woodlands Avenue 12"
+          },
+          {
+            "lat": 1.423723,
+            "lng": 103.80406,
+            "ts": "2026-09-24T08:24:43+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 6,
+            "road": "Woodlands Avenue 12"
+          },
+          {
+            "lat": 1.425604,
+            "lng": 103.805773,
+            "ts": "2026-09-24T08:25:13+08:00",
+            "speed_kph": 46,
+            "accuracy_m": 8,
+            "road": "Woodlands Avenue 12"
+          },
+          {
+            "lat": 1.427544,
+            "lng": 103.807487,
+            "ts": "2026-09-24T08:25:43+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 4,
+            "road": "Woodlands Avenue 12"
+          },
+          {
+            "lat": 1.429416,
+            "lng": 103.809203,
+            "ts": "2026-09-24T08:26:13+08:00",
+            "speed_kph": 39,
+            "accuracy_m": 7,
+            "road": "Woodlands Avenue 12"
+          },
+          {
+            "lat": 1.431316,
+            "lng": 103.810917,
+            "ts": "2026-09-24T08:26:43+08:00",
+            "speed_kph": 43,
+            "accuracy_m": 7,
+            "road": "Woodlands Avenue 12"
+          },
+          {
+            "lat": 1.433222,
+            "lng": 103.812606,
+            "ts": "2026-09-24T08:27:13+08:00",
+            "speed_kph": 40,
+            "accuracy_m": 4,
+            "road": "Woodlands Avenue 12"
+          },
+          {
+            "lat": 1.434649,
+            "lng": 103.814387,
+            "ts": "2026-09-24T08:27:43+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 5,
+            "road": "Sembawang Road"
+          },
+          {
+            "lat": 1.433073,
+            "lng": 103.816372,
+            "ts": "2026-09-24T08:28:13+08:00",
+            "speed_kph": 45,
+            "accuracy_m": 5,
+            "road": "Sembawang Road"
+          },
+          {
+            "lat": 1.431487,
+            "lng": 103.818384,
+            "ts": "2026-09-24T08:28:43+08:00",
+            "speed_kph": 39,
+            "accuracy_m": 4,
+            "road": "Sembawang Road"
+          },
+          {
+            "lat": 1.429892,
+            "lng": 103.82045,
+            "ts": "2026-09-24T08:29:13+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 5,
+            "road": "Sembawang Road"
+          },
+          {
+            "lat": 1.428311,
+            "lng": 103.822385,
+            "ts": "2026-09-24T08:29:43+08:00",
+            "speed_kph": 45,
+            "accuracy_m": 6,
+            "road": "Sembawang Road"
+          },
+          {
+            "lat": 1.426711,
+            "lng": 103.824417,
+            "ts": "2026-09-24T08:30:13+08:00",
+            "speed_kph": 47,
+            "accuracy_m": 5,
+            "road": "Sembawang Road"
+          },
+          {
+            "lat": 1.425159,
+            "lng": 103.826425,
+            "ts": "2026-09-24T08:30:43+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 5,
+            "road": "Sembawang Road"
+          },
+          {
+            "lat": 1.423572,
+            "lng": 103.828441,
+            "ts": "2026-09-24T08:31:13+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 5,
+            "road": "Sembawang Road"
+          },
+          {
+            "lat": 1.422005,
+            "lng": 103.830492,
+            "ts": "2026-09-24T08:31:43+08:00",
+            "speed_kph": 42,
+            "accuracy_m": 5,
+            "road": "Sembawang Road"
+          },
+          {
+            "lat": 1.420397,
+            "lng": 103.832436,
+            "ts": "2026-09-24T08:32:13+08:00",
+            "speed_kph": 49,
+            "accuracy_m": 3,
+            "road": "Sembawang Road"
+          },
+          {
+            "lat": 1.421139,
+            "lng": 103.834475,
+            "ts": "2026-09-24T08:32:43+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 4,
+            "road": "Yishun Avenue 2"
+          },
+          {
+            "lat": 1.422737,
+            "lng": 103.836486,
+            "ts": "2026-09-24T08:33:13+08:00",
+            "speed_kph": 39,
+            "accuracy_m": 8,
+            "road": "Yishun Avenue 2"
+          },
+          {
+            "lat": 1.4243,
+            "lng": 103.8385,
+            "ts": "2026-09-24T08:33:43+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 3,
+            "road": "Yishun Central"
+          }
+        ],
+        "point_count": 45,
+        "first_fix_at": "2026-09-24T08:11:43+08:00",
+        "last_fix_at": "2026-09-24T08:33:43+08:00",
+        "sample_interval_sec": 30.0,
+        "expected_interval_sec": 30.0,
+        "gaps": [],
+        "max_gap_sec": 30.0,
+        "coverage_pct": 100.0,
+        "trace_distance_km": 12.403,
+        "rider_track": []
+      },
+      "schema_version": "1.2.0",
+      "source": "DRIVER_DEVICE",
+      "trip_id": "TRP-06004",
+      "generated_at": "2026-09-24T09:50:43+08:00"
+    },
+    {
+      "evidence_id": "EV-CHAT-06004",
+      "evidence_type": "CHAT_LOG",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform chat log, 2 entries, contiguous; matches trip_record.chat_message_count.",
+        "assessed_at": "2026-09-24T09:50:48+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06004",
+        "messages": [
+          {
+            "msg_id": "MSG-06004-001",
+            "sender": "DRIVER",
+            "text": "Reached Yew Tee Point, white Niro",
+            "sent_at": "2026-09-24T08:10:23+08:00",
+            "read_at": "2026-09-24T08:11:07+08:00",
+            "delivered_at": "2026-09-24T08:10:25+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-06004-002",
+            "sender": "RIDER",
+            "text": "ok",
+            "sent_at": "2026-09-24T08:10:38+08:00",
+            "read_at": "2026-09-24T08:11:21+08:00",
+            "delivered_at": "2026-09-24T08:10:41+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          }
+        ],
+        "message_count": 2,
+        "first_message_at": "2026-09-24T08:10:23+08:00",
+        "last_message_at": "2026-09-24T08:10:38+08:00",
+        "truncated": false
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06004",
+      "generated_at": "2026-09-24T09:50:43+08:00"
+    },
+    {
+      "evidence_id": "EV-FARE-06004",
+      "evidence_type": "FARE_BREAKDOWN",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Payments ledger; itemised lines reconcile to total_charged; tolls_erp equals the gantry list.",
+        "assessed_at": "2026-09-24T09:50:48+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06004",
+        "currency": "SGD",
+        "fare_model": "METERED",
+        "cancellation_fee": 0.0,
+        "total_charged": 20.06,
+        "payment_status": "CHARGED",
+        "refund_issued_sgd": 0.0,
+        "charged_at": "2026-09-24T08:33:49+08:00",
+        "surge_multiplier": 1.1,
+        "rate_card_id": "RC-SG-RYDEX-2026Q3",
+        "base_fare": 2.8,
+        "distance_fare": 10.66,
+        "time_fare": 3.96,
+        "surge_amount": 1.74,
+        "tolls_erp": 0.0,
+        "airport_surcharge": 0.0,
+        "platform_fee": 0.9,
+        "promo_discount": 0.0,
+        "waiting_time_fee": 0.0,
+        "quoted_fare_sgd": null,
+        "distance_charged_km": 14.8,
+        "time_charged_min": 22.0,
+        "per_km_rate_sgd": 0.72,
+        "per_min_rate_sgd": 0.18,
+        "erp_gantries": []
+      },
+      "schema_version": "1.2.0",
+      "source": "PAYMENTS_LEDGER",
+      "trip_id": "TRP-06004",
+      "generated_at": "2026-09-24T09:50:43+08:00"
+    },
+    {
+      "evidence_id": "EV-RPROF-06004",
+      "evidence_type": "RIDER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Rider profile snapshot at filing.",
+        "assessed_at": "2026-09-24T09:50:48+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "R-89729",
+        "party_role": "RIDER",
+        "snapshot_at": "2026-09-24T09:38:43+08:00",
+        "account_age_days": 1122,
+        "lifetime_trips": 731,
+        "rating": 4.49,
+        "prior_disputes_filed": 4,
+        "prior_disputes_upheld": 3,
+        "prior_no_show_flags": 1,
+        "cancellation_rate": 0.078,
+        "no_show_disputes_30d": 1,
+        "deviation_claims_60d": 0,
+        "deviation_claims_60d_substantiated": 0,
+        "disputes_with_counterparty_90d": 0,
+        "fraud_flags": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06004",
+      "generated_at": "2026-09-24T09:50:43+08:00"
+    },
+    {
+      "evidence_id": "EV-DPROF-06004",
+      "evidence_type": "DRIVER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver profile snapshot at filing.",
+        "assessed_at": "2026-09-24T09:50:48+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "D-73840",
+        "party_role": "DRIVER",
+        "snapshot_at": "2026-09-24T09:38:43+08:00",
+        "account_age_days": 333,
+        "lifetime_trips": 1172,
+        "rating": 4.69,
+        "prior_disputes_filed": 2,
+        "prior_disputes_upheld": 1,
+        "prior_no_show_flags": 0,
+        "vehicle_type": "RYDE_X",
+        "cancellation_rate": 0.021,
+        "prior_deviation_flags": 1,
+        "acceptance_rate": 0.83,
+        "active_region": "WEST",
+        "deviation_flags_90d": 0,
+        "completed_trips_90d": 434,
+        "no_show_terminations_30d": 1,
+        "completed_trips_30d": 142,
+        "disputes_with_counterparty_90d": 0,
+        "fraud_flags": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06004",
+      "generated_at": "2026-09-24T09:50:43+08:00"
+    },
+    {
+      "evidence_id": "EV-ADVIS-06004-01",
+      "evidence_type": "TRAFFIC_ADVISORY",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "LTA historical traffic record for the queried road segment and window; retrieved by the platform, not supplied by a party.",
+        "assessed_at": "2026-09-24T09:50:48+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "advisory_id": "LTA-TI-260924-1322",
+        "provider": "LTA_DATAMALL_TRAFFIC_INCIDENTS",
+        "advisory_type": "HEAVY_TRAFFIC",
+        "road": "Seletar Expressway (SLE)",
+        "direction": "towards TPE",
+        "location_desc": "after Woodlands Avenue 12 exit to Yishun Avenue 2 exit",
+        "lat": 1.412,
+        "lng": 103.815,
+        "message": "(24/9)07:46 Heavy traffic on SLE (towards TPE) after Woodlands Ave 12 Exit.",
+        "valid_from": "2026-09-24T07:46:43+08:00",
+        "valid_to": "2026-09-24T09:01:43+08:00",
+        "speed_band_min": 1,
+        "retrieved_at": "2026-09-24T09:48:43+08:00"
+      },
+      "schema_version": "1.2.0",
+      "source": "THIRD_PARTY_LTA",
+      "trip_id": "TRP-06004",
+      "generated_at": "2026-09-24T09:50:43+08:00"
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "expected_ruling": "NO_ACTION",
+  "expected_amount_sgd": null,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": ["POL-NS-21", "POL-NS-22", "POL-GEN-03", "POL-NS-26", "POL-GEN-22"],
+  "reasoning": "Driver-filed claim to restore the SGD 5.00 no-show fee. On-demand trip, so under POL-NS-21 (v2.1 2.1) the 300 s free wait runs from trip_record.arrived_at 10:37:25 (EV-TRIP-06054, w1.0). EV-GPS-06054 (w1.0) corroborates the arrival: the driver is stationary about 8 m from the pickup from 10:37:30, inside the 50 m STANDARD radius. The driver cancelled at 10:42:10, only 285 s after arrival, before the free wait ended. POL-NS-22 (v2.1 2.2) allows the fee only when the driver cancels after the free wait, so the fee does not stand. The driver did meet the POL-NS-23 contact duty (chat at 10:37:50 and 10:40:20 in EV-CHAT-06054, plus an unanswered call at 10:41:05), but that does not cure the early cancellation. Profile history is context only (POL-GEN-01). The interim reversal stands: NO_ACTION, party-relative per POL-GEN-03. Both fraud_flags are 0, there is no safety indicator, and the value of 5.00 is under 10.00, so the AI ruling is final (POL-GEN-22, POL-NS-26, v2.1 6.1-6.3). EV-ADVIS-06054-01 is MISSING (w0.0) and carries no deciding fact. No POL-NS-22 amount referral, since 5.00 was charged. POL-NS-25 does not apply: the field is absent and the fee does not stand."
+}

@@ -130,12 +130,13 @@ class SealedSetRegistryTests(unittest.TestCase):
         """``--set all`` and the combined figure both read ``DEVELOPMENT_SETS``."""
         self.assertEqual(["corpus", "codex"], [item.name for item in sets.DEVELOPMENT_SETS])
         self.assertNotIn(SEALED, sets.DEVELOPMENT_SETS)
-        # Five sets are sealed now, and each is printed in a section of its own:
+        # Six sets are sealed now, and each is printed in a section of its own:
         # the held-out set, the second sealed set imported on 2026-10-03, the
-        # third imported on 2026-10-09, the fourth imported on 2026-10-11, and the
-        # fifth imported on 2026-10-13.
+        # third imported on 2026-10-09, the fourth imported on 2026-10-11, the
+        # fifth imported on 2026-10-13, and the sixth imported the same day at
+        # policy version 7.
         self.assertEqual(
-            ("wild", "wild-v2", "sealed-v1", "sealed-v2", "sealed-v3"),
+            ("wild", "wild-v2", "sealed-v1", "sealed-v2", "sealed-v3", "sealed-v4"),
             tuple(item.name for item in sets.SEALED_SETS),
         )
         self.assertIn(SEALED, sets.SEALED_SETS)
@@ -151,6 +152,7 @@ class SealedSetRegistryTests(unittest.TestCase):
         self.assertNotIn("sealed-v1", [item.name for item in sets.ALL_SETS])
         self.assertNotIn("sealed-v2", [item.name for item in sets.ALL_SETS])
         self.assertNotIn("sealed-v3", [item.name for item in sets.ALL_SETS])
+        self.assertNotIn("sealed-v4", [item.name for item in sets.ALL_SETS])
         self.assertFalse(
             any(item.sealed for item in sets.DEVELOPMENT_SETS),
             "a development set is marked sealed",
@@ -521,7 +523,7 @@ class SealedRunDirectoryIsHeadlineTests(unittest.TestCase):
             path.resolve() for path in run_benchmark.headline_run_directories(self.runs, MODEL)
         ]
         self.assertIn(self.sealed_run_dir.resolve(), headline)
-        self.assertEqual(7, len(headline), "the headline directories are not seven")
+        self.assertEqual(8, len(headline), "the headline directories are not eight")
         self.assertEqual(
             {
                 (self.runs / run_benchmark.model_slug(MODEL)).resolve(),
@@ -545,6 +547,11 @@ class SealedRunDirectoryIsHeadlineTests(unittest.TestCase):
                 (
                     self.runs
                     / run_benchmark.SEALED_V3_SET_RUNS_SUBDIR
+                    / run_benchmark.model_slug(MODEL)
+                ).resolve(),
+                (
+                    self.runs
+                    / run_benchmark.SEALED_V4_SET_RUNS_SUBDIR
                     / run_benchmark.model_slug(MODEL)
                 ).resolve(),
             },

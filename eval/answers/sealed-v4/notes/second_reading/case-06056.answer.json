@@ -1,0 +1,20 @@
+{
+  "expected_ruling": "FULL_REFUND",
+  "expected_amount_sgd": 5.0,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [
+    "POL-NS-24: credit the rider SGD 5.00 goodwill (driver failed to arrive and failed to attempt contact)"
+  ],
+  "governing_clauses": [
+    "POL-NS-24",
+    "POL-NS-23",
+    "POL-NS-21",
+    "POL-NS-26",
+    "POL-GEN-22",
+    "POL-GEN-21",
+    "POL-GEN-03",
+    "POL-GEN-02",
+    "POL-GEN-01"
+  ],
+  "reasoning": "Scheduled trip (16:00). EV-TRIP-06056 shows 'arrived' at 15:58:10, but EV-GPS-06056 (weight 1.0, accuracy <=9 m, no gaps) places the driver stationary ~400 m from the Blk 520 pickup from 15:58 to cancellation at 16:09:30, never closer than ~365 m; arrival is not corroborated within the 50 m STANDARD radius, so the driver did not arrive by 16:05 (POL-NS-24, v2.1 2.4). EV-CHAT-06056 holds only rider messages and in_app_calls only a rider call (16:06:10, unanswered): the driver sent no message and placed no call before cancelling, so the fee is void (POL-NS-23, v2.1 2.3; precedent 7.3). FULL_REFUND of the SGD 5.00 charged (EV-FARE-06056); no driver compensation. Driver also failed to attempt contact, so a SGD 5.00 goodwill referral issues under POL-NS-24 (POL-GEN-03: referrals never suppress money). Fee was 5.00, so no POL-NS-22 referral. Value 5.00 < 10, no fraud_flags, no safety indicator: AI ruling final (POL-GEN-22, POL-NS-26, POL-GEN-21). EV-ADVIS-06056-01 is MISSING (weight 0.0) but carries no fact needed here. Profile fields are context only (POL-GEN-01); rider profile lacks no_show_cancellations_30d, so POL-NS-25 does not apply."
+}

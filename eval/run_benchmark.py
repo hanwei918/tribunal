@@ -214,6 +214,7 @@ __all__ = [
     "SEALED_V1_SET_RUNS_SUBDIR",
     "SEALED_V2_SET_RUNS_SUBDIR",
     "SEALED_V3_SET_RUNS_SUBDIR",
+    "SEALED_V4_SET_RUNS_SUBDIR",
     "SET_RUNS_SUBDIRS",
     "headline_run_directories",
     "assert_not_a_headline_directory",
@@ -538,6 +539,13 @@ SEALED_V2_SET_RUNS_SUBDIR = "sealed-v2"
 # from ``wild``, ``wild-v2``, ``sealed-v1`` and ``sealed-v2`` and is never added
 # to any of them, to the combined figure or to ``--set all``.
 SEALED_V3_SET_RUNS_SUBDIR = "sealed-v3"
+# The sixth sealed set, imported on 2026-10-13 and **not yet run**. Its 30 cases
+# are 6001-6015 and 6051-6065, written for Ryde's Dispute Resolution Policy
+# v2.1, and its single run is made at the policy version 7 its registration
+# fixes. It is a different set from ``wild``, ``wild-v2``, ``sealed-v1``,
+# ``sealed-v2`` and ``sealed-v3`` and is never added to any of them, to the
+# combined figure or to ``--set all``.
+SEALED_V4_SET_RUNS_SUBDIR = "sealed-v4"
 SET_RUNS_SUBDIRS: Tuple[str, ...] = (
     SECOND_SET_RUNS_SUBDIR,
     SEALED_SET_RUNS_SUBDIR,
@@ -545,6 +553,7 @@ SET_RUNS_SUBDIRS: Tuple[str, ...] = (
     SEALED_V1_SET_RUNS_SUBDIR,
     SEALED_V2_SET_RUNS_SUBDIR,
     SEALED_V3_SET_RUNS_SUBDIR,
+    SEALED_V4_SET_RUNS_SUBDIR,
 )
 
 
@@ -555,15 +564,16 @@ def headline_run_directories(runs_dir: Path, model: str) -> Tuple[Path, ...]:
     has a directory of its own keeps its at ``<root>/<subdir>/<model-slug>/`` --
 ``runs/codex/`` for the second development set, ``runs/wild/`` for the
 held-out set, ``runs/wild-v2/`` for the second sealed set, ``runs/sealed-v1/``
-for the third, ``runs/sealed-v2/`` for the fourth and ``runs/sealed-v3/`` for
-the fifth, whose run was started and stopped and reports no figure. Called
-with ``runs/`` the seven are the corpus's, the second set's and the five sealed
+for the third, ``runs/sealed-v2/`` for the fourth, ``runs/sealed-v3/`` for
+the fifth, whose run was started and stopped and reports no figure, and
+``runs/sealed-v4/`` for the sixth, whose run has not been made. Called
+with ``runs/`` the eight are the corpus's, the second set's and the six sealed
 sets'; called with a set's own root the first is that set's and the other
-    six are names no run of that root uses, which is harmless because every
+    seven are names no run of that root uses, which is harmless because every
     destination these are checked against lives under a subdirectory of its own
     and so can equal none of them.
 
-    One function rather than seven lists. The ablation, the precedents block, a
+    One function rather than eight lists. The ablation, the precedents block, a
     later policy version, the baselines, the policy-gap report and the
     recorded-drafts measurement all refuse a headline directory, and they must
     refuse the same ones; a set added to :data:`SET_RUNS_SUBDIRS` is refused by
@@ -626,6 +636,9 @@ SEALED_V2_REMEDY = WILD_V2_REMEDY
 # The fifth sealed set's remedy, the same sentence again for the same reason.
 SEALED_V3_REMEDY = WILD_V2_REMEDY
 
+# The sixth sealed set's remedy, the same sentence again for the same reason.
+SEALED_V4_REMEDY = WILD_V2_REMEDY
+
 
 def held_out_runs_root(runs_root: Path = RUNS_DIR) -> Path:
     """``<runs root>/wild/``: the held-out set's own runs root."""
@@ -652,12 +665,12 @@ MADE_SEALED_RUNS_SUBDIRS: Tuple[str, ...] = (
     SEALED_V2_SET_RUNS_SUBDIR,
     SEALED_V3_SET_RUNS_SUBDIR,
 )
-# The sealed roots whose single run has **not** been made. It is empty: the fifth
-# sealed set's run was started once on 2026-10-13 and stopped, and it is never
-# finished or repeated, so no root accepts even the plain sealed run any more.
-# The permit below is written against this tuple, and with it empty nothing opens
-# a sealed root; it is kept because a further sealed set would need exactly it.
-UNRUN_SEALED_RUNS_SUBDIRS: Tuple[str, ...] = ()
+# The sealed roots whose single run has **not** been made. It holds ``sealed-v4``,
+# imported on 2026-10-13 and not yet run: it is what the permit below is written
+# against, so the plain sealed run of that root is accepted for exactly one
+# destination without any of that machinery being rewritten. The other five
+# roots' runs have been made, so they are closed outright.
+UNRUN_SEALED_RUNS_SUBDIRS: Tuple[str, ...] = (SEALED_V4_SET_RUNS_SUBDIR,)
 SEALED_RUNS_SUBDIRS: Tuple[str, ...] = (
     MADE_SEALED_RUNS_SUBDIRS + UNRUN_SEALED_RUNS_SUBDIRS
 )
@@ -687,31 +700,36 @@ def assert_not_under_the_held_out_root(
 ) -> Path:
     """Refuse a destination that lies under a sealed set's own root.
 
-    Five roots hold a single sealed run. Four of them -- ``<runs root>/wild/``,
+    Six roots hold a single sealed run. Five of them -- ``<runs root>/wild/``,
     made once from the commit tagged ``freeze-2026-09-30``,
     ``<runs root>/wild-v2/``, made once on 2026-10-04 from a commit whose
     ``tribunal/``, ``prompts/`` and ``policy/`` trees equal those at
     ``freeze-2026-10-03``, ``<runs root>/sealed-v1/``, made once on 2026-10-10
     from the commit ``feb7174``, whose trees equal those at
-    ``freeze-2026-10-09``, and ``<runs root>/sealed-v2/``, made once on
+    ``freeze-2026-10-09``, ``<runs root>/sealed-v2/``, made once on
     2026-10-11 from the commit ``19c7e5a``, whose trees equal those at
-    ``freeze-2026-10-11`` -- have had their run made, and each is one of the
-    submission's generalisation figures, so nothing may be created under any of
-    them again -- not a case, not an ablated run, not a run at a later policy
-    version, not a report -- because a second thing written there changes what
-    the directory means while leaving every file a reader would look at
-    apparently intact. The fifth, ``<runs root>/sealed-v3/``, was imported on
-    2026-10-13 and its single run was started once on 2026-10-13 from the commit
-    ``9b70387``, whose trees equal those at ``freeze-2026-10-11``, and stopped
-    after 8 of its 30 cases; it is not a sealed figure and is never run again, so
-    it is closed outright like the other four and refuses every destination.
+    ``freeze-2026-10-11``, and ``<runs root>/sealed-v3/``, whose single run was
+    started once on 2026-10-13 from the commit ``9b70387``, whose trees equal
+    those at ``freeze-2026-10-11``, and stopped after 8 of its 30 cases -- have
+    had their run made, and each of the first four is one of the submission's
+    generalisation figures, so nothing may be created under any of them again --
+    not a case, not an ablated run, not a run at a later policy version, not a
+    report -- because a second thing written there changes what the directory
+    means while leaving every file a reader would look at apparently intact.
+    ``sealed-v3``'s stopped run is not a figure and is never run again, so it is
+    closed outright like the other four and refuses every destination. The sixth,
+    ``<runs root>/sealed-v4/``, was imported on 2026-10-13 and its run has not
+    been made, so it accepts exactly one destination -- the plain sealed run's
+    own directory -- and refuses everything else.
 
     ``permit`` is the one thing that could open a sealed root, and it is written
     for a root whose single run has **not** been made yet: it names the plain
     sealed run's own directory, exactly one component below the root, and the
-    permit is honoured only for that destination. All five roots' runs have been
-    made -- ``sealed-v3``'s was started and stopped -- so all five are closed
-    outright; ``UNRUN_SEALED_RUNS_SUBDIRS`` is empty, so the permit opens nothing.
+    permit is honoured only for that destination. Five of the six roots' runs
+    have been made, so those five are closed outright;
+    ``UNRUN_SEALED_RUNS_SUBDIRS`` names ``sealed-v4``, whose single run has not
+    been made, so the permit opens exactly that one root's plain run directory
+    and nothing else.
 
     ``permit`` is **not** a licence any caller may issue for itself. It is
     passed by :func:`eval.development_sets.run_set` alone, and only when the set
@@ -822,6 +840,15 @@ def assert_not_under_the_held_out_root(
                     "is not a sealed figure and is never run again, so nothing is "
                     "created under it. {0}".format(
                         SEALED_V3_REMEDY if remedy is None else remedy
+                    )
+                )
+            elif subdir == SEALED_V4_SET_RUNS_SUBDIR:
+                detail = (
+                    "which holds the sealed set sealed-v4's single run: it is made "
+                    "once, plainly, at the policy version 7 its registration fixes, "
+                    "and its single run is the sixth sealed set's figure, so nothing "
+                    "else is created under it. {0}".format(
+                        SEALED_V4_REMEDY if remedy is None else remedy
                     )
                 )
             else:
@@ -951,7 +978,7 @@ def assert_precedents_policy_v_destination(
     than against ``precedents/*`` or ``policy-v*``, so a run at one version
     cannot land in another's and a plain precedents run cannot land in a
     versioned one. ``runs/<model-slug>/``, ``runs/codex/<model-slug>/`` and the
-    five sealed roots are refused by :func:`assert_not_a_headline_directory` and
+    six sealed roots are refused by :func:`assert_not_a_headline_directory` and
     by :func:`eval.sealed_roots.refuse_a_sealed_destination`, which the callers
     of this helper apply as well.
 
@@ -1153,7 +1180,7 @@ def assert_advocate_effort_destination(
 ) -> Path:
     """Refuse a switched run's directory that is not under the switch's own root.
 
-    ``runs/<model-slug>/``, ``runs/codex/<model-slug>/`` and the five sealed
+    ``runs/<model-slug>/``, ``runs/codex/<model-slug>/`` and the six sealed
     roots hold the figures the submission reports, and a run whose advocates
     reasoned differently is a different measurement: one written there would
     change what that directory means while leaving every file a reader looks at
@@ -3694,11 +3721,12 @@ def run_benchmark(
         run_dir = run_directory(destination_root, model)
         # The one destination an un-run sealed root would accept, and only for
         # the caller that named the set which owns it.
-        # ``UNRUN_SEALED_RUNS_SUBDIRS`` is empty now that all five sealed sets
-        # have had their run -- ``sealed-v3``'s was started and stopped -- so this
-        # issues no permit and every sealed root's plain run directory is refused.
-        # The machinery is the same one a further sealed set would need:
-        # ``sealed_permit_set`` is passed by ``eval.development_sets.run_set``
+        # ``UNRUN_SEALED_RUNS_SUBDIRS`` names ``sealed-v4`` alone: the other five
+        # sealed sets have had their run -- ``sealed-v3``'s was started and
+        # stopped -- so this issues a permit for that one root's plain run
+        # directory and nothing else. The machinery is the same one a further
+        # sealed set would need: ``sealed_permit_set`` is passed by
+        # ``eval.development_sets.run_set``
         # alone and only for the set whose registration names that root, so a
         # direct invocation of this runner -- ``python3 -m eval.run_benchmark
         # --runs-dir runs/wild-v2`` -- issues no permit and is refused, as is any
@@ -3724,12 +3752,13 @@ def run_benchmark(
         # branches above build it, and this is what says a name that resolved
         # anywhere else cannot put such a result where a reported figure lives.
         assert_advocate_effort_destination(run_dir, destination_root, model)
-    # All five sealed roots are closed outright now that ``sealed-v3``'s run has
-    # been started and stopped. A plain run, an ablated run, a run at a later
-    # policy version and a report all refuse a destination under any of them, and
-    # this is the one place a run's own destination is decided, so the check is
-    # made here and before the directory exists: a refused run leaves nothing
-    # behind.
+    # Five of the six sealed roots are closed outright -- ``sealed-v3``'s run has
+    # been started and stopped -- and ``sealed-v4``'s root accepts only the
+    # guarded plain run. A plain run into a closed root, an ablated run, a run at
+    # a later policy version and a report all refuse a destination under any of
+    # them, and this is the one place a run's own destination is decided, so the
+    # check is made here and before the directory exists: a refused run leaves
+    # nothing behind.
     assert_not_under_the_held_out_root(
         run_dir, held_out_root or RUNS_DIR, permit=sealed_permit
     )

@@ -1,0 +1,886 @@
+{
+  "schema_version": "1.2.0",
+  "case_no": 6003,
+  "dispute": {
+    "case_no": 6003,
+    "dispute_id": "DSP-06003",
+    "trip_id": "TRP-06003",
+    "category": "ROUTE_DEVIATION",
+    "filed_at": "2026-09-23T21:27:22+08:00",
+    "filed_by": "RIDER",
+    "channel": "IN_APP_SUPPORT",
+    "amount_contested_sgd": 5.0,
+    "claim_text": "I think I was overcharged. The driver came off the ECP and drove through Marine Parade. Please refund $5.",
+    "counterparty_statement": {
+      "text": "Accident on ECP, I asked the passenger in chat first, she said sure.",
+      "submitted_by": "DRIVER",
+      "submitted_at": "2026-09-24T02:20:22+08:00"
+    },
+    "evidence_ids": [
+      "EV-TRIP-06003",
+      "EV-GPS-06003",
+      "EV-CHAT-06003",
+      "EV-FARE-06003",
+      "EV-RPROF-06003",
+      "EV-DPROF-06003",
+      "EV-ADVIS-06003-01"
+    ]
+  },
+  "evidence": [
+    {
+      "evidence_id": "EV-TRIP-06003",
+      "evidence_type": "TRIP_RECORD",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform trip record; timestamps causally ordered; recorded optimal and actual distances present; deviation and rejoin events carried in events[].",
+        "assessed_at": "2026-09-23T21:39:27+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06003",
+        "rider_id": "R-75408",
+        "driver_id": "D-65731",
+        "requested_at": "2026-09-23T17:40:20+08:00",
+        "accepted_at": "2026-09-23T17:40:52+08:00",
+        "arrived_at": "2026-09-23T17:47:52+08:00",
+        "started_at": "2026-09-23T17:49:22+08:00",
+        "ended_at": "2026-09-23T18:18:22+08:00",
+        "cancelled_at": null,
+        "status": "COMPLETED",
+        "cancelled_by": null,
+        "cancellation_reason_code": null,
+        "pickup": {
+          "label": "Funan, North Bridge Road",
+          "lat": 1.2913,
+          "lng": 103.8497,
+          "venue_id": null
+        },
+        "dropoff": {
+          "label": "Changi General Hospital, Simei Street 3",
+          "lat": 1.3405,
+          "lng": 103.9495,
+          "venue_id": null
+        },
+        "vehicle_type": "RYDE_X",
+        "pickup_zone_class": "STANDARD",
+        "chat_message_count": 4,
+        "registered_pickup_points": null,
+        "in_app_calls": [],
+        "optimal_distance_km": 15.3,
+        "optimal_duration_min": 26.4,
+        "optimal_route_source": "PLATFORM_ROUTER",
+        "optimal_route_erp_sgd": 1.0,
+        "actual_distance_km": 16.8,
+        "actual_duration_min": 29.0,
+        "deviation_pct": 9.8,
+        "amended_optimal_distance_km": null,
+        "amended_optimal_duration_min": null,
+        "solo_optimal_distance_km": null,
+        "pickup_amended_at": null,
+        "dropoff_amended_at": null,
+        "original_pickup": null,
+        "original_dropoff": null,
+        "scheduled_at": null,
+        "optimal_route_via": [
+          "North Bridge Road",
+          "Raffles Avenue",
+          "East Coast Parkway (ECP)",
+          "Bedok South Road",
+          "Simei Street 3"
+        ],
+        "actual_route_via": [
+          "North Bridge Road",
+          "Raffles Avenue",
+          "East Coast Parkway (ECP)",
+          "Fort Road",
+          "Marine Parade Road",
+          "Bedok South Road",
+          "Simei Street 3"
+        ],
+        "events": [
+          {
+            "event_type": "booking_confirmed",
+            "at": "2026-09-23T17:40:20+08:00",
+            "detail": "Rider R-75408 booked TRP-06003 from Funan, North Bridge Road to Changi General Hospital, Simei Street 3. On-demand, metered fare.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_assigned",
+            "at": "2026-09-23T17:40:52+08:00",
+            "detail": "Driver D-65731 (Hyundai Ioniq 5, SLD 7279 D) assigned. ETA 7 min.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_arrived",
+            "at": "2026-09-23T17:47:52+08:00",
+            "detail": "Driver marked arrived at pickup (button).",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_started",
+            "at": "2026-09-23T17:49:22+08:00",
+            "detail": "Rider on board. Recommended route via North Bridge Road, Raffles Avenue, East Coast Parkway (ECP), Bedok South Road, Simei Street 3, 15.3 km.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_deviation_detected",
+            "at": "2026-09-23T17:58:49+08:00",
+            "detail": "Vehicle left the recommended route at ECP / Fort Road exit: recommended East Coast Parkway (ECP), vehicle took Fort Road.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_rejoined",
+            "at": "2026-09-23T18:12:42+08:00",
+            "detail": "Vehicle rejoined the recommended route at Bedok South Road / ECP exit.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_completed",
+            "at": "2026-09-23T18:18:22+08:00",
+            "detail": "Trip ended at Changi General Hospital, Simei Street 3. Recorded distance 16.8 km, duration 29 min 00 s.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "fare_finalised",
+            "at": "2026-09-23T18:18:28+08:00",
+            "detail": "Metered fare SGD 26.04 charged to rider payment method.",
+            "source": "PLATFORM_TELEMETRY"
+          }
+        ]
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06003",
+      "generated_at": "2026-09-23T21:39:22+08:00"
+    },
+    {
+      "evidence_id": "EV-GPS-06003",
+      "evidence_type": "GPS_TRACE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver-device trace, 59 fixes at 30 s from trip start to trip end; every fix reports horizontal accuracy (max 8 m) and a map-matched road; no interval exceeds 120 s.",
+        "assessed_at": "2026-09-23T21:39:27+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06003",
+        "points": [
+          {
+            "lat": 1.2913,
+            "lng": 103.8497,
+            "ts": "2026-09-23T17:49:22+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 7,
+            "road": "North Bridge Road"
+          },
+          {
+            "lat": 1.290961,
+            "lng": 103.851907,
+            "ts": "2026-09-23T17:49:52+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 5,
+            "road": "North Bridge Road"
+          },
+          {
+            "lat": 1.290603,
+            "lng": 103.854076,
+            "ts": "2026-09-23T17:50:22+08:00",
+            "speed_kph": 40,
+            "accuracy_m": 3,
+            "road": "North Bridge Road"
+          },
+          {
+            "lat": 1.29028,
+            "lng": 103.856256,
+            "ts": "2026-09-23T17:50:52+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 3,
+            "road": "North Bridge Road"
+          },
+          {
+            "lat": 1.290059,
+            "lng": 103.858433,
+            "ts": "2026-09-23T17:51:22+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 7,
+            "road": "Raffles Avenue"
+          },
+          {
+            "lat": 1.29033,
+            "lng": 103.860652,
+            "ts": "2026-09-23T17:51:52+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 4,
+            "road": "Raffles Avenue"
+          },
+          {
+            "lat": 1.290594,
+            "lng": 103.862809,
+            "ts": "2026-09-23T17:52:22+08:00",
+            "speed_kph": 38,
+            "accuracy_m": 4,
+            "road": "Raffles Avenue"
+          },
+          {
+            "lat": 1.290841,
+            "lng": 103.865022,
+            "ts": "2026-09-23T17:52:52+08:00",
+            "speed_kph": 40,
+            "accuracy_m": 4,
+            "road": "Raffles Avenue"
+          },
+          {
+            "lat": 1.291079,
+            "lng": 103.867224,
+            "ts": "2026-09-23T17:53:22+08:00",
+            "speed_kph": 38,
+            "accuracy_m": 4,
+            "road": "Raffles Avenue"
+          },
+          {
+            "lat": 1.291359,
+            "lng": 103.869442,
+            "ts": "2026-09-23T17:53:52+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 4,
+            "road": "Raffles Avenue"
+          },
+          {
+            "lat": 1.291617,
+            "lng": 103.871636,
+            "ts": "2026-09-23T17:54:22+08:00",
+            "speed_kph": 41,
+            "accuracy_m": 7,
+            "road": "Raffles Avenue"
+          },
+          {
+            "lat": 1.291849,
+            "lng": 103.873835,
+            "ts": "2026-09-23T17:54:52+08:00",
+            "speed_kph": 41,
+            "accuracy_m": 5,
+            "road": "Raffles Avenue"
+          },
+          {
+            "lat": 1.292384,
+            "lng": 103.875987,
+            "ts": "2026-09-23T17:55:22+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 5,
+            "road": "East Coast Parkway (ECP)"
+          },
+          {
+            "lat": 1.293093,
+            "lng": 103.878064,
+            "ts": "2026-09-23T17:55:52+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 5,
+            "road": "East Coast Parkway (ECP)"
+          },
+          {
+            "lat": 1.293855,
+            "lng": 103.880155,
+            "ts": "2026-09-23T17:56:22+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 4,
+            "road": "East Coast Parkway (ECP)"
+          },
+          {
+            "lat": 1.294555,
+            "lng": 103.88221,
+            "ts": "2026-09-23T17:56:52+08:00",
+            "speed_kph": 41,
+            "accuracy_m": 4,
+            "road": "East Coast Parkway (ECP)"
+          },
+          {
+            "lat": 1.295337,
+            "lng": 103.88433,
+            "ts": "2026-09-23T17:57:22+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 5,
+            "road": "East Coast Parkway (ECP)"
+          },
+          {
+            "lat": 1.296078,
+            "lng": 103.886379,
+            "ts": "2026-09-23T17:57:52+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 7,
+            "road": "East Coast Parkway (ECP)"
+          },
+          {
+            "lat": 1.296827,
+            "lng": 103.888458,
+            "ts": "2026-09-23T17:58:22+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 5,
+            "road": "East Coast Parkway (ECP)"
+          },
+          {
+            "lat": 1.298453,
+            "lng": 103.889775,
+            "ts": "2026-09-23T17:58:52+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 3,
+            "road": "Fort Road"
+          },
+          {
+            "lat": 1.300422,
+            "lng": 103.890835,
+            "ts": "2026-09-23T17:59:22+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 4,
+            "road": "Fort Road"
+          },
+          {
+            "lat": 1.302346,
+            "lng": 103.891902,
+            "ts": "2026-09-23T17:59:52+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 5,
+            "road": "Fort Road"
+          },
+          {
+            "lat": 1.304311,
+            "lng": 103.892924,
+            "ts": "2026-09-23T18:00:22+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 6,
+            "road": "Fort Road"
+          },
+          {
+            "lat": 1.306262,
+            "lng": 103.894028,
+            "ts": "2026-09-23T18:00:52+08:00",
+            "speed_kph": 41,
+            "accuracy_m": 7,
+            "road": "Fort Road"
+          },
+          {
+            "lat": 1.308183,
+            "lng": 103.895031,
+            "ts": "2026-09-23T18:01:22+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 5,
+            "road": "Fort Road"
+          },
+          {
+            "lat": 1.310156,
+            "lng": 103.89608,
+            "ts": "2026-09-23T18:01:52+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 5,
+            "road": "Fort Road"
+          },
+          {
+            "lat": 1.3121,
+            "lng": 103.897174,
+            "ts": "2026-09-23T18:02:22+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 8,
+            "road": "Fort Road"
+          },
+          {
+            "lat": 1.314058,
+            "lng": 103.898189,
+            "ts": "2026-09-23T18:02:52+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 4,
+            "road": "Fort Road"
+          },
+          {
+            "lat": 1.316009,
+            "lng": 103.899202,
+            "ts": "2026-09-23T18:03:22+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 8,
+            "road": "Fort Road"
+          },
+          {
+            "lat": 1.317972,
+            "lng": 103.900319,
+            "ts": "2026-09-23T18:03:52+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 6,
+            "road": "Fort Road"
+          },
+          {
+            "lat": 1.319882,
+            "lng": 103.901348,
+            "ts": "2026-09-23T18:04:22+08:00",
+            "speed_kph": 39,
+            "accuracy_m": 5,
+            "road": "Fort Road"
+          },
+          {
+            "lat": 1.321859,
+            "lng": 103.902385,
+            "ts": "2026-09-23T18:04:52+08:00",
+            "speed_kph": 24,
+            "accuracy_m": 6,
+            "road": "Fort Road"
+          },
+          {
+            "lat": 1.323807,
+            "lng": 103.903437,
+            "ts": "2026-09-23T18:05:22+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 4,
+            "road": "Fort Road"
+          },
+          {
+            "lat": 1.324487,
+            "lng": 103.905095,
+            "ts": "2026-09-23T18:05:52+08:00",
+            "speed_kph": 43,
+            "accuracy_m": 8,
+            "road": "Marine Parade Road"
+          },
+          {
+            "lat": 1.324161,
+            "lng": 103.907307,
+            "ts": "2026-09-23T18:06:22+08:00",
+            "speed_kph": 39,
+            "accuracy_m": 5,
+            "road": "Marine Parade Road"
+          },
+          {
+            "lat": 1.323835,
+            "lng": 103.909502,
+            "ts": "2026-09-23T18:06:52+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 4,
+            "road": "Marine Parade Road"
+          },
+          {
+            "lat": 1.323492,
+            "lng": 103.911702,
+            "ts": "2026-09-23T18:07:22+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 6,
+            "road": "Marine Parade Road"
+          },
+          {
+            "lat": 1.323177,
+            "lng": 103.913883,
+            "ts": "2026-09-23T18:07:52+08:00",
+            "speed_kph": 43,
+            "accuracy_m": 6,
+            "road": "Marine Parade Road"
+          },
+          {
+            "lat": 1.322812,
+            "lng": 103.916068,
+            "ts": "2026-09-23T18:08:22+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 3,
+            "road": "Marine Parade Road"
+          },
+          {
+            "lat": 1.322517,
+            "lng": 103.918237,
+            "ts": "2026-09-23T18:08:52+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 5,
+            "road": "Marine Parade Road"
+          },
+          {
+            "lat": 1.322193,
+            "lng": 103.920416,
+            "ts": "2026-09-23T18:09:22+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 5,
+            "road": "Marine Parade Road"
+          },
+          {
+            "lat": 1.321848,
+            "lng": 103.922642,
+            "ts": "2026-09-23T18:09:52+08:00",
+            "speed_kph": 41,
+            "accuracy_m": 6,
+            "road": "Marine Parade Road"
+          },
+          {
+            "lat": 1.321526,
+            "lng": 103.92482,
+            "ts": "2026-09-23T18:10:22+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 4,
+            "road": "Marine Parade Road"
+          },
+          {
+            "lat": 1.321224,
+            "lng": 103.927008,
+            "ts": "2026-09-23T18:10:52+08:00",
+            "speed_kph": 39,
+            "accuracy_m": 4,
+            "road": "Marine Parade Road"
+          },
+          {
+            "lat": 1.320866,
+            "lng": 103.929185,
+            "ts": "2026-09-23T18:11:22+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 8,
+            "road": "Marine Parade Road"
+          },
+          {
+            "lat": 1.32058,
+            "lng": 103.931378,
+            "ts": "2026-09-23T18:11:52+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 6,
+            "road": "Marine Parade Road"
+          },
+          {
+            "lat": 1.320233,
+            "lng": 103.933596,
+            "ts": "2026-09-23T18:12:22+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 4,
+            "road": "Marine Parade Road"
+          },
+          {
+            "lat": 1.320621,
+            "lng": 103.935421,
+            "ts": "2026-09-23T18:12:52+08:00",
+            "speed_kph": 43,
+            "accuracy_m": 3,
+            "road": "Bedok South Road"
+          },
+          {
+            "lat": 1.322422,
+            "lng": 103.936712,
+            "ts": "2026-09-23T18:13:22+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 4,
+            "road": "Bedok South Road"
+          },
+          {
+            "lat": 1.324229,
+            "lng": 103.938017,
+            "ts": "2026-09-23T18:13:52+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 5,
+            "road": "Bedok South Road"
+          },
+          {
+            "lat": 1.326049,
+            "lng": 103.939275,
+            "ts": "2026-09-23T18:14:22+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 4,
+            "road": "Bedok South Road"
+          },
+          {
+            "lat": 1.327842,
+            "lng": 103.94056,
+            "ts": "2026-09-23T18:14:52+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 7,
+            "road": "Bedok South Road"
+          },
+          {
+            "lat": 1.329666,
+            "lng": 103.941827,
+            "ts": "2026-09-23T18:15:22+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 7,
+            "road": "Bedok South Road"
+          },
+          {
+            "lat": 1.331447,
+            "lng": 103.943099,
+            "ts": "2026-09-23T18:15:52+08:00",
+            "speed_kph": 42,
+            "accuracy_m": 4,
+            "road": "Bedok South Road"
+          },
+          {
+            "lat": 1.333249,
+            "lng": 103.944349,
+            "ts": "2026-09-23T18:16:22+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 7,
+            "road": "Bedok South Road"
+          },
+          {
+            "lat": 1.335078,
+            "lng": 103.945677,
+            "ts": "2026-09-23T18:16:52+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 4,
+            "road": "Bedok South Road"
+          },
+          {
+            "lat": 1.336905,
+            "lng": 103.946952,
+            "ts": "2026-09-23T18:17:22+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 5,
+            "road": "Bedok South Road"
+          },
+          {
+            "lat": 1.338736,
+            "lng": 103.948233,
+            "ts": "2026-09-23T18:17:52+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 5,
+            "road": "Bedok South Road"
+          },
+          {
+            "lat": 1.3405,
+            "lng": 103.9495,
+            "ts": "2026-09-23T18:18:22+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 5,
+            "road": "Simei Street 3"
+          }
+        ],
+        "point_count": 59,
+        "first_fix_at": "2026-09-23T17:49:22+08:00",
+        "last_fix_at": "2026-09-23T18:18:22+08:00",
+        "sample_interval_sec": 30.0,
+        "expected_interval_sec": 30.0,
+        "gaps": [],
+        "max_gap_sec": 30.0,
+        "coverage_pct": 100.0,
+        "trace_distance_km": 14.177,
+        "rider_track": []
+      },
+      "schema_version": "1.2.0",
+      "source": "DRIVER_DEVICE",
+      "trip_id": "TRP-06003",
+      "generated_at": "2026-09-23T21:39:22+08:00"
+    },
+    {
+      "evidence_id": "EV-CHAT-06003",
+      "evidence_type": "CHAT_LOG",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform chat log, 4 entries, contiguous; matches trip_record.chat_message_count.",
+        "assessed_at": "2026-09-23T21:39:27+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06003",
+        "messages": [
+          {
+            "msg_id": "MSG-06003-001",
+            "sender": "DRIVER",
+            "text": "At Funan drop-off point, black Ioniq 5",
+            "sent_at": "2026-09-23T17:47:57+08:00",
+            "read_at": "2026-09-23T17:48:08+08:00",
+            "delivered_at": "2026-09-23T17:47:59+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-06003-002",
+            "sender": "RIDER",
+            "text": "coming",
+            "sent_at": "2026-09-23T17:48:22+08:00",
+            "read_at": "2026-09-23T17:49:12+08:00",
+            "delivered_at": "2026-09-23T17:48:24+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-06003-003",
+            "sender": "DRIVER",
+            "text": "Hi, accident on ECP after Marine Parade, I exit Fort Road and go Marine Parade Road instead ok?",
+            "sent_at": "2026-09-23T17:55:39+08:00",
+            "read_at": "2026-09-23T17:55:48+08:00",
+            "delivered_at": "2026-09-23T17:55:42+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-06003-004",
+            "sender": "RIDER",
+            "text": "Sure no problem",
+            "sent_at": "2026-09-23T17:56:14+08:00",
+            "read_at": "2026-09-23T17:57:03+08:00",
+            "delivered_at": "2026-09-23T17:56:17+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          }
+        ],
+        "message_count": 4,
+        "first_message_at": "2026-09-23T17:47:57+08:00",
+        "last_message_at": "2026-09-23T17:56:14+08:00",
+        "truncated": false
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06003",
+      "generated_at": "2026-09-23T21:39:22+08:00"
+    },
+    {
+      "evidence_id": "EV-FARE-06003",
+      "evidence_type": "FARE_BREAKDOWN",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Payments ledger; itemised lines reconcile to total_charged; tolls_erp equals the gantry list.",
+        "assessed_at": "2026-09-23T21:39:27+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-06003",
+        "currency": "SGD",
+        "fare_model": "METERED",
+        "cancellation_fee": 0.0,
+        "total_charged": 26.04,
+        "payment_status": "CHARGED",
+        "refund_issued_sgd": 0.0,
+        "charged_at": "2026-09-23T18:18:28+08:00",
+        "surge_multiplier": 1.2,
+        "rate_card_id": "RC-SG-RYDEX-2026Q3",
+        "base_fare": 2.8,
+        "distance_fare": 12.1,
+        "time_fare": 5.22,
+        "surge_amount": 4.02,
+        "tolls_erp": 1.0,
+        "airport_surcharge": 0.0,
+        "platform_fee": 0.9,
+        "promo_discount": 0.0,
+        "waiting_time_fee": 0.0,
+        "quoted_fare_sgd": null,
+        "distance_charged_km": 16.8,
+        "time_charged_min": 29.0,
+        "per_km_rate_sgd": 0.72,
+        "per_min_rate_sgd": 0.18,
+        "erp_gantries": [
+          {
+            "gantry_id": "ERP-39",
+            "location": "ECP (Benjamin Sheares Bridge)",
+            "passed_at": "2026-09-23T17:52:16+08:00",
+            "amount_sgd": 1.0
+          }
+        ]
+      },
+      "schema_version": "1.2.0",
+      "source": "PAYMENTS_LEDGER",
+      "trip_id": "TRP-06003",
+      "generated_at": "2026-09-23T21:39:22+08:00"
+    },
+    {
+      "evidence_id": "EV-RPROF-06003",
+      "evidence_type": "RIDER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Rider profile snapshot at filing.",
+        "assessed_at": "2026-09-23T21:39:27+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "R-75408",
+        "party_role": "RIDER",
+        "snapshot_at": "2026-09-23T21:27:22+08:00",
+        "account_age_days": 571,
+        "lifetime_trips": 376,
+        "rating": 4.52,
+        "prior_disputes_filed": 3,
+        "prior_disputes_upheld": 0,
+        "prior_no_show_flags": 1,
+        "cancellation_rate": 0.082,
+        "no_show_disputes_30d": 0,
+        "deviation_claims_60d": 0,
+        "deviation_claims_60d_substantiated": 0,
+        "disputes_with_counterparty_90d": 0,
+        "fraud_flags": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06003",
+      "generated_at": "2026-09-23T21:39:22+08:00"
+    },
+    {
+      "evidence_id": "EV-DPROF-06003",
+      "evidence_type": "DRIVER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver profile snapshot at filing.",
+        "assessed_at": "2026-09-23T21:39:27+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "D-65731",
+        "party_role": "DRIVER",
+        "snapshot_at": "2026-09-23T21:27:22+08:00",
+        "account_age_days": 2664,
+        "lifetime_trips": 5523,
+        "rating": 4.8,
+        "prior_disputes_filed": 2,
+        "prior_disputes_upheld": 2,
+        "prior_no_show_flags": 1,
+        "vehicle_type": "RYDE_X",
+        "cancellation_rate": 0.057,
+        "prior_deviation_flags": 1,
+        "acceptance_rate": 0.98,
+        "active_region": "WEST",
+        "deviation_flags_90d": 0,
+        "completed_trips_90d": 327,
+        "no_show_terminations_30d": 0,
+        "completed_trips_30d": 152,
+        "disputes_with_counterparty_90d": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-06003",
+      "generated_at": "2026-09-23T21:39:22+08:00"
+    },
+    {
+      "evidence_id": "EV-ADVIS-06003-01",
+      "evidence_type": "TRAFFIC_ADVISORY",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "LTA historical traffic record for the queried road segment and window; retrieved by the platform, not supplied by a party.",
+        "assessed_at": "2026-09-23T21:39:27+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "advisory_id": "LTA-TI-260923-1113",
+        "provider": "LTA_DATAMALL_TRAFFIC_INCIDENTS",
+        "advisory_type": "ACCIDENT",
+        "road": "East Coast Parkway (ECP)",
+        "direction": "towards Changi",
+        "location_desc": "after Marine Parade exit",
+        "lat": 1.299,
+        "lng": 103.905,
+        "message": "(23/9)17:34 Accident on ECP (towards Changi) after Marine Parade Exit. Avoid lanes 2 and 3.",
+        "valid_from": "2026-09-23T17:34:22+08:00",
+        "valid_to": "2026-09-23T18:49:22+08:00",
+        "speed_band_min": 1,
+        "retrieved_at": "2026-09-23T21:37:22+08:00"
+      },
+      "schema_version": "1.2.0",
+      "source": "THIRD_PARTY_LTA",
+      "trip_id": "TRP-06003",
+      "generated_at": "2026-09-23T21:39:22+08:00"
+    }
+  ]
+}
