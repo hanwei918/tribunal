@@ -134,6 +134,39 @@ operations rule `OPS-EW-01`, not a clause of the frozen policy.
 
 ## Results
 
+### Version 7 -- Ryde's Dispute Resolution Policy v2.1
+
+Tribunal applies **Ryde's own Dispute Resolution Policy v2.1** as **policy
+version 7**, adopted 2026-10-13; `policy/v7/` holds the three policy files,
+`prompts/v2/` the prompt set that pairs with them, and the readings version 7
+needs where v2.1 is silent are in
+[`docs/notes/2026-10-13-policy-v7.md`](notes/2026-10-13-policy-v7.md). One set
+was written for it and run once on frozen code, from the annotated tag
+`freeze-2026-10-14`; `ryde-v7` is the organisers' own two samples, and `dev-v7`
+is development data. The three are never pooled with each other, with the
+version-6 sets below, or with anything else.
+
+| set | agreement | Wilson 95% | who wrote it, and what was seen early | recompute with |
+|---|---|---|---|---|
+| `sealed-v4` (30 cases) | 30/30 = 100.0% | [88.6%, 100.0%] | Claude Opus 5.5 in a fresh claude.ai chat with no project folder or repository access, from the owner's prompt, Ryde's v2.1, the three version-7 policy files, the public contract, a format checker and the organisers' sample case. The same model is the team's development assistant and helped write the version-7 policy files, and no person reviewed its key, so 30/30 says the system applies those files as that author reads them: it is not an independent benchmark, and 30 cases is a small sample. Nobody on the development side read its answers before its one run, on 2026-10-14 | `python3 -m eval.sealed_report --set sealed-v4` |
+| `ryde-v7` (2 cases) | 1 of 2 against Ryde's stated outcomes | n/a | The organisers' two samples converted for v2.1 by `eval/external/ryde/convert.py --policy-version 7`, keyed by Ryde's own stated outcome for each. 902 (DISP-001, route deviation) is `PARTIAL_REFUND` 3.44 and is matched; 903 (DISP-002, no-show) is `DRIVER_COMPENSATION` 5.00 with the fee upheld, and the panel split 2-2 and escalated, because the rider's fraud flag sets a 0.95 bar that eight sparse GPS fixes cannot reach. Development data that is tuned against, so it is never a generalisation figure | `python3 -m eval.development_sets --report --set ryde-v7` |
+| `dev-v7` (40 cases) | 40/40 = 100.0% | n/a | Claude Opus 5.5, on the same terms as `sealed-v4`: 40 cases, 5001-5020 and 5051-5070. **Development data the team tuned against** -- three attempts and two fixes sit between its first run and this one -- so it is never a generalisation figure | `python3 -m eval.development_sets --report --set dev-v7` |
+
+**What 30 of 30 does and does not show.** The sixth sealed set's author is inside
+the team's tooling and wrote the policy files it is measured against, so its
+figure says the system applies the version-7 files as that author reads them; it
+is not an independent benchmark. 30 cases is a small sample: the Wilson 95% lower
+bound on 30 of 30 is 88.6%, and one case would move the figure by 3.3 points. The
+run itself is recorded in
+[`docs/notes/2026-10-14-version-7-runs.md`](notes/2026-10-14-version-7-runs.md),
+with its command, its commit, its per-case table and the four questions Ryde had
+not answered when it was made.
+
+**Version 7 changes no version-6 figure.** `policy/v1`-`policy/v6`, `prompts/v1`
+and every version-1-6 brief are byte-identical to what they were, and the 194
+recorded version-6 case digests still rebuild unchanged
+(`tests/test_brief_v7.py`). Everything below this point is version 6.
+
 **The sets the system was never developed against, each on its own**
 
 Three sets, each reported as the **agreement** against its own key rather than
@@ -218,7 +251,7 @@ without them.
 | `sealed-v2` | the policy owner, with OpenAI Codex (model stated by her as GPT-6; not recorded by the tool) | received 2026-10-11 | a written brief (which paraphrases some system behaviour: version-6 weights, GPS gap grading, flag routing, scoring), `policy/v3/` (3 policies, 3 amendments), `data/PUBLIC-CONTRACT.md`, a format checker; no repository code, prompts or run results | nobody on the development side; the policy owner, who had seen development results but no sealed-v2 output | no | sealed, imported at `19c7e5a`, run once from `freeze-2026-10-11` |
 | `sealed-v3` | Claude Opus 5.5, in a fresh Claude Code session with no project folder or repository access (the same model the team used as its development assistant) | received 2026-10-13 | the owner's prompt, `PUBLIC-CONTRACT.md`, the version-6 policy files, `check_set.py`, the organisers' public sample case 901 | nobody on the development side | no | sealed; run started 2026-10-13 and stopped after 8 of 30 cases; no figure reported ([the stopped run](notes/2026-10-13-sealed-v3-stopped.md)) |
 | `dev-v7` | Claude Opus 5.5, in a fresh claude.ai chat with no project folder or repository access (the same model the team used as its development assistant) | received 2026-10-13 | the owner's prompt and seven files: Ryde's Dispute Resolution Policy v2.1, the three version-7 policy files, `PUBLIC-CONTRACT.md`, the format checker `check_set_v7.py`, and the organisers' public sample case 901 | nobody on the development side before the set was made; the development side reads it, which is what a development set is for | no — the key is the author's own, and its second reading changed no answer | development (the version-7 development set: 40 cases, 5001-5020 and 5051-5070) |
-| `sealed-v4` | Claude Opus 5.5, in a fresh claude.ai chat with no project folder or repository access (the same model the team used as its development assistant) | received 2026-10-13 | the owner's prompt and seven files: Ryde's Dispute Resolution Policy v2.1, the three version-7 policy files, `PUBLIC-CONTRACT.md`, the format checker `check_set_v7.py`, and the organisers' public sample case 901 | nobody on the development side | no | sealed, imported, not yet run: 30 cases at policy version 7 ([the import](notes/2026-10-13-v7-sets-imported.md)) |
+| `sealed-v4` | Claude Opus 5.5, in a fresh claude.ai chat with no project folder or repository access (the same model the team used as its development assistant) | received 2026-10-13 | the owner's prompt and seven files: Ryde's Dispute Resolution Policy v2.1, the three version-7 policy files, `PUBLIC-CONTRACT.md`, the format checker `check_set_v7.py`, and the organisers' public sample case 901 | nobody on the development side | no | sealed, run once on 2026-10-14: 30 cases at policy version 7 ([the run](notes/2026-10-14-version-7-runs.md)) |
 
 **No test set came from outside the team.** Every one was written by a member of
 the project, by a model the team directed, or by a collaborator the team

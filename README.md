@@ -14,7 +14,9 @@
 
 <p align="center"><sub>Poster made with Miora (Tencent); the people in it are generated, not real people.</sub></p>
 
-**Tribunal settles ride-hail disputes in under three minutes at the median, and stops when it isn't sure.**
+**Tribunal applies Ryde's own Dispute Resolution Policy v2.1** (policy version 7,
+adopted 2026-10-13). It settles ride-hail disputes in under three minutes at the
+median, and stops when it isn't sure.
 Two AI lawyers argue the rider's and the driver's side from the same evidence pack.
 Plain code throws out any point that does not cite real evidence and a real rule.
 An AI judge rules four times, once with the two sides swapped, and three must agree.
@@ -39,9 +41,11 @@ Her design, her page text and her front-end code are hers, imported unchanged an
 
 ## In numbers
 
-151 disputes at policy version 6 (the corpus, `dev-v2-ext`, case 1779 and the
-organisers' case 901), read off the committed runs by
-`python3 -m eval.business_value --report`. No figure below needs a key to recompute.
+**Every figure in this table is from the version-6 runs**, at the team's own
+policy frozen on 2026-10-11. 151 disputes at policy version 6 (the corpus,
+`dev-v2-ext`, case 1779 and the organisers' case 901), read off the committed
+runs by `python3 -m eval.business_value --report`. No figure below needs a key to
+recompute.
 
 | | Tribunal | Today |
 |---|---|---|
@@ -49,6 +53,11 @@ organisers' case 901), read off the committed runs by
 | Model cost per case | **0.0579 USD** median | — |
 | Decided with no person needed | **112 of 151** (74.2%) | every case |
 | Sent to a person | 26 with no ruling, 13 ruled but above SGD 8 so a person releases the money | — |
+
+**At version 7** the sealed run's own median is **139.8 s** a case, with a median
+model cost of **0.0398 USD** a case, over the 30 cases of `sealed-v4`
+(`python3 -m eval.sealed_report --set sealed-v4`). A different set at a different
+policy version: the two rows are never pooled.
 
 ## What makes it different
 
@@ -106,7 +115,17 @@ python3 -m eval.run_benchmark --cases 101 --policy-version 6 --runs-dir /tmp/tri
 
 Agreement with each set's own key, on sets written apart from the code and run once
 on frozen code. They are never pooled. None came from outside the team, and what
-each author had seen is part of the result:
+each author had seen is part of the result.
+
+### Version 7 -- Ryde's Dispute Resolution Policy v2.1
+
+| Set | Agreement | Wilson 95% | Who wrote it, and what was seen early |
+|---|---|---|---|
+| `sealed-v4` (30 cases) | 30/30 | [88.6%, 100.0%] | Claude Opus 5.5 in a fresh claude.ai chat, from the owner's prompt, Ryde's v2.1, the version-7 policy files, the public contract, a format checker and the organisers' sample case. That model is also the team's development assistant and helped write the version-7 policy files, and no person reviewed its key, so 30/30 says the system applies those files as that author reads them: it is not an independent benchmark, and 30 cases is a small sample. Run once on 2026-10-14 |
+| `ryde-v7` (2 cases) | 1 of 2 against Ryde's stated outcomes | n/a | The organisers' two samples converted for v2.1, keyed by Ryde's own stated outcome. 902 (DISP-001, route deviation) is `PARTIAL_REFUND` 3.44, matched; 903 (DISP-002, no-show) is `DRIVER_COMPENSATION` 5.00 with the fee upheld, and the panel split 2-2 and escalated, because the rider's fraud flag sets a 0.95 bar that eight sparse GPS fixes cannot reach. Development data |
+| `dev-v7` (40 cases) | 40/40 | n/a | Claude Opus 5.5, on the same terms as `sealed-v4`. **Development data the team tuned against**: three attempts and two fixes sit between its first run and this one, so it is not a generalisation figure |
+
+### Version 6 -- the team's own policy (frozen 2026-10-11)
 
 | Set | Agreement | Wilson 95% | Who wrote it, and what was seen early |
 |---|---|---|---|

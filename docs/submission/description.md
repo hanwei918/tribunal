@@ -157,19 +157,34 @@ its last column. <!-- challenge statement; eval.business_value; eval.fairness --
 | Inconsistency | the swapped draft agrees with the sampled majority on all four graded fields in 136 of 141 cases, and 4 of 151 cases split | `python3 -m eval.fairness --report` |
 | User churn | both parties get the same notice in plain words, and one appeal within 30 days | `docs/record.md` |
 
-**The sealed sets.** Each is reported as an **agreement** against its own key,
-and they are never pooled. `sealed-v2` - 12 cases made by the policy owner with
-OpenAI Codex (model stated by her as GPT-6; not recorded by the tool) from the
-version-6 policy text and the public contract, no repository code, its answers
-seen by nobody on the development side - agrees on all four
-graded fields in 12/12 = 100.0%, Wilson 95% [75.8%, 100.0%]; 12 cases is a small
-sample. `sealed-v1` - 24 cases made by a team member with Claude, with a copy of
-the schema and the policy - agrees in 21/24 = 87.5%, Wilson 95% [69.0%, 95.7%],
-and is 20/24 under the key as imported, because case 311's key changed to
-`PARTIAL_REFUND 7.05` under an amendment the policy owner wrote after the system
-ruled that way on development case 1782. The two are never added together; the
-development figures are separate: the corpus 26/29 at version 6 and `dev-v2-ext`
-115/120. <!-- eval.sealed_report -->
+**The policy it applies, and the sealed sets.** The system applies **Ryde's own
+Dispute Resolution Policy v2.1** as policy version 7, adopted 2026-10-13. The
+version-7 sealed figure comes first, and each set is reported as an **agreement**
+against its own key; they are never pooled. `sealed-v4` - 30 cases written for
+v2.1 by Claude Opus 5.5 in a fresh claude.ai chat with no project folder or
+repository access, from Ryde's v2.1, the version-7 policy files, the public
+contract, a format checker and the organisers' sample case; that model is also
+the team's development assistant and helped write the version-7 policy files, and
+no person reviewed its key - agrees on all four graded fields in
+30/30 = 100.0%, Wilson 95% [88.6%, 100.0%], run once on 2026-10-14 from the tag
+`freeze-2026-10-14`. 30 cases is a small sample, and the figure says the system
+applies the version-7 files as that author reads them rather than that it is
+independently correct. `ryde-v7`, the organisers' own two samples converted for
+v2.1 and keyed by Ryde's stated outcome, is 1 of 2: 902 (`PARTIAL_REFUND` 3.44)
+matched, and 903 escalated on a 2-2 split against the 0.95 bar the rider's fraud
+flag sets. **At version 6**, the team's own policy frozen on 2026-10-11:
+`sealed-v2` - 12 cases made by the policy owner with OpenAI Codex (model stated
+by her as GPT-6; not recorded by the tool) from the version-6 policy text and the
+public contract, no repository code, its answers seen by nobody on the
+development side - agrees on all four graded fields in 12/12 = 100.0%, Wilson 95%
+[75.8%, 100.0%]; 12 cases is a small sample. `sealed-v1` - 24 cases made by a
+team member with Claude, with a copy of the schema and the policy - agrees in 21/24 = 87.5%, Wilson 95%
+[69.0%, 95.7%], and is 20/24 under the key as imported,
+because case 311's key changed to `PARTIAL_REFUND 7.05` under an amendment the
+policy owner wrote after the system ruled that way on development case 1782. The
+version-7 and version-6 figures are never added together; the development figures
+are separate: `dev-v7` 40/40 (development data), the corpus 26/29 at version 6
+and `dev-v2-ext` 115/120. <!-- eval.sealed_report -->
 
 **Beyond the hackathon.** Ryde's own format is converted by
 `eval/external/ryde/convert.py`, proven on `DISP-002`. A production feed needs

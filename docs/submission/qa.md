@@ -16,7 +16,23 @@ deciding. Each part prevents a specific failure: two stances prevent a one-sided
 record, the referee prevents uncited claims reaching the merits, and the four
 drafts prevent one sample deciding.
 
-**Why should anyone trust the figures?** Three sealed sets are each run once, by
+**Why should anyone trust the figures?** The system applies **Ryde's own Dispute
+Resolution Policy v2.1** (policy version 7, adopted 2026-10-13), and its
+version-7 sealed figure comes first. `sealed-v4` - 30 cases written for v2.1 by
+Claude Opus 5.5 in a fresh claude.ai chat with no project folder or repository
+access, from the owner's prompt, Ryde's v2.1, the three version-7 policy files,
+the public contract, a format checker and the organisers' sample case; the same
+model is the team's development assistant and helped write the version-7 policy
+files, and no person reviewed its key - agrees on all four graded fields in
+30/30 = 100.0%, Wilson 95% [88.6%, 100.0%], from a single run on 2026-10-14 from
+the annotated tag `freeze-2026-10-14`
+(`python3 -m eval.sealed_report --set sealed-v4`). 30 cases is a small sample, and
+the figure says the system applies the version-7 files as that author reads them
+rather than that it is independently correct. The organisers' own two samples,
+converted for v2.1 and keyed by Ryde's stated outcomes (`ryde-v7`), are 1 of 2:
+902 matched at `PARTIAL_REFUND` 3.44, and 903 escalated on a 2-2 split against the
+0.95 bar the rider's fraud flag sets. **At version 6**, the team's own policy,
+frozen 2026-10-11: three sealed sets are each run once, by
 the owner, from a frozen tag, and committed as produced: `wild-v2` from
 `freeze-2026-10-03`, `sealed-v1` from `freeze-2026-10-09` and `sealed-v2` from
 `freeze-2026-10-11` (README, Results;
@@ -47,6 +63,46 @@ figure is dropped, added or changed, and when any row's `model call` cell is not
 a transport keyed by prompt digests, making no model call, and holds the replay
 to the recording's own requests, ruling, vote and referee ledger (README,
 Concurrency).
+
+**Why did you change policy three days before the deadline?** Because Ryde did.
+Ryde released its own **Dispute Resolution Policy v2.1** to the track on
+2026-10-13 at 18:35, and the challenge is to decide Ryde's disputes, so adopting
+it is the product and not a scramble. The policy is **data** in this system:
+`policy/` is three JSON files read at run time, and every clause a ruling cites
+is resolved out of them. A new version is therefore new policy files, a prompt
+set that pairs with them, a brief builder for the facts v2.1 needs, and a new
+sealed set written for it - **not a rewrite**. Nothing in the pipeline is
+version-7 specific beyond the facts v2.1 reads, and the version is a parameter
+with a version-1 default, which is why **versions 1 to 6 still reproduce byte for
+byte**: every version-1-6 brief, all 194 recorded version-6 case digests, and
+every version-6 run and figure are unchanged (`tests/test_brief_v7.py`). The
+change cost one evening and one sealed set, and the version-6 results are still
+in the record, labelled.
+
+**Which parts of v2.1 did you have to read for yourselves?** Four, and they are
+the four the owner posted to Ryde in the track group on 2026-10-13 (still
+unanswered when the version-7 runs were made). Each is recorded with its
+reasoning in `docs/notes/2026-10-13-policy-v7.md`, and what Tribunal chose is:
+
+- **C1, the 2 km limb.** v2.1 6.2 escalates any deviation over 2 km, and Ryde's
+  own DISP-001 rules a 4.30 km deviation itself and expects an AI partial refund
+  of 3.44. Tribunal **holds the limb off** and rules the sample the way the
+  sample does, records the conflict, and switches to 6.2 if Ryde says so.
+- **C2, the free wait.** From `trip_record.scheduled_at` where the trip is
+  scheduled and the driver arrived at or before it, and otherwise from the
+  driver's arrival.
+- **C3, surge.** The excess distance fare is deviation km x
+  `fare_breakdown.per_km_rate_sgd`, with no surge multiplier (DISP-001:
+  4.30 x 0.80 = 3.44).
+- **C5, what "partial" and "full" refund pay.** Both rows pay the whole excess
+  distance fare; "partial" describes the trip fare and "full" the excess distance
+  fare, and the ruling label is `PARTIAL_REFUND` in both.
+
+Every other reading v2.1 is silent on - the dispute value, the fraud-flag field,
+the repeat no-show counter, the fee on the record, rounding, the arrival test,
+the traffic-event vocabulary and the driver's deadline on an on-demand trip - is
+in the same note as C4, C6, C7, C8, C12, C13, C14, C16, C17 and C18, each with
+what Tribunal chose and what would change it.
 
 **Are your hidden sets really hidden?** Plainly: they are hidden from the
 development side, and they are **not** independent benchmarks. Every set was
