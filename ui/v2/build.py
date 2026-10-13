@@ -2098,6 +2098,11 @@ p{margin:.5em 0}
 .chip.ok{background:var(--ok-wash);color:var(--ok);border-color:transparent}
 .chip.bad{background:var(--bad-wash);color:var(--bad);border-color:transparent}
 .chip.warn{background:var(--warn-wash);color:var(--warn);border-color:transparent}
+/* 58a: on a case page the status chip carries the trigger and the time and can
+   be up to 460 px wide, so at 375 px it ran past the screen edge. The chip row
+   is the case page's own; the queue's Status column draws no .chips row, so its
+   chips still do not wrap. */
+@media (max-width:560px){.chips .chip{white-space:normal;height:auto;min-height:24px;max-width:100%;padding:3px 10px;line-height:1.35}}
 
 /* featured cards */
 .featured{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:18px 0 22px}

@@ -182,6 +182,12 @@ html:lang(zh) .feat h3{font-size:34px;font-weight:400;margin:14px 0 18px}
 .paper .stats{border-color:var(--line)}
 .paper .stat+.stat{border-color:var(--line)}
 @media (max-width:900px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.stat:nth-child(3){border-left:0}.stat:nth-child(n+3){border-top:1px solid var(--band-line)}}
+/* 58a: the About page's three-figure row. Above 560 px it is the three columns
+   with dividers it always was; at 560 px or less it stacks into one column, so
+   "3,200+" fits the screen instead of running past it. */
+.stats.s3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.stats.s3 .stat+.stat{border-left:1px solid var(--band-line);border-top:0}
+@media (max-width:560px){.stats.s3{grid-template-columns:minmax(0,1fr)}.stats.s3 .stat+.stat{border-left:0;border-top:1px solid var(--band-line)}}
 .more{text-align:center;margin-top:48px}
 
 /* cards with a light that runs round the edge on hover */
