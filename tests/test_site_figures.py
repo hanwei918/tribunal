@@ -45,6 +45,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from tests import portability  # noqa: E402
 from ui.site import build as site  # noqa: E402
 from ui.site import figures  # noqa: E402
 
@@ -329,6 +330,7 @@ class SiteFigureTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
+        portability.require_the_same_libm()
         cls.pages = {path.name: visible_text(text) for path, text in site.pages()}
         cls.figures = figures.page_figures()
 

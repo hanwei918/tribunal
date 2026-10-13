@@ -33,6 +33,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from tests import portability  # noqa: E402
 from tools import check_figures  # noqa: E402
 
 MODULE = PROJECT_ROOT / "tools" / "check_figures.py"
@@ -50,6 +51,7 @@ class TheCommittedTreeTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
+        portability.require_the_same_libm()
         cls.found = check_figures.check()
 
     def test_the_committed_tree_passes(self):
@@ -118,6 +120,7 @@ class TheControlTests(unittest.TestCase):
     """The check is shown capable of failing, and of noticing a dead pattern."""
 
     def test_an_altered_figure_is_reported_as_a_mismatch(self):
+        portability.require_the_same_libm()
         source = (PROJECT_ROOT / CONTROL_DOCUMENT).read_text(encoding="utf-8")
         altered = source.replace(CONTROL_BEFORE, CONTROL_AFTER)
         self.assertNotEqual(
@@ -142,6 +145,7 @@ class TheControlTests(unittest.TestCase):
 
     def test_a_pattern_that_matches_nothing_is_reported(self):
         """The dead-pattern check is shown capable of firing."""
+        portability.require_the_same_libm()
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             target = root / CONTROL_DOCUMENT

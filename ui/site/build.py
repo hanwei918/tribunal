@@ -312,10 +312,20 @@ def written_paths() -> frozenset:
 
     Exposed so a test can hold the three builders apart: the site's paths and
     the queue's and the replay's are disjoint, and this is the site's own list.
+
+    It **lists the paths without building anything**: the page sources' names,
+    the static tree's relative paths, and the bundle's own path. It calls
+    neither :func:`pages` nor :func:`assets`, and it reads no case, so it
+    answers on a machine whose libm cannot rebuild a recorded brief -- where
+    the pages themselves cannot be built at all. The set is the one the build
+    writes; ``tests/test_linux_runners.py`` holds it to the paths
+    :func:`pages` and :func:`assets` give.
     """
+    static = sorted(path for path in STATIC_DIR.rglob("*") if path.is_file())
     return frozenset(
-        [path.relative_to(DIST_DIR).as_posix() for path, _ in pages()]
-        + [path.relative_to(DIST_DIR).as_posix() for path, _ in assets()]
+        [source.name for source in page_sources()]
+        + [path.relative_to(STATIC_DIR).as_posix() for path in static]
+        + [BUNDLE_PATH.relative_to(DIST_DIR).as_posix()]
     )
 
 

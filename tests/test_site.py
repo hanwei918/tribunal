@@ -39,6 +39,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from tests import portability  # noqa: E402
 from ui import build as replay_build  # noqa: E402
 from ui.site import build as site  # noqa: E402
 from ui.v2 import build as v2  # noqa: E402
@@ -209,6 +210,7 @@ class TheBuildIsCurrentTests(unittest.TestCase):
     """What ``python3 -m ui.site.build --check`` checks, in process."""
 
     def test_every_page_equals_a_fresh_build(self):
+        portability.require_the_same_libm()
         for destination, text in site.pages():
             with self.subTest(page=destination.name):
                 self.assertTrue(
@@ -276,16 +278,19 @@ class ThePagesTests(unittest.TestCase):
     """Twenty-two pages, assembled from the sources with every marker put back."""
 
     def test_the_site_is_the_pages_her_design_names(self):
+        portability.require_the_same_libm()
         self.assertEqual(22, site.PAGE_COUNT)
         self.assertEqual(22, len(pages()))
         self.assertEqual(22, len(site.page_sources()))
 
     def test_every_page_carries_her_two_languages(self):
+        portability.require_the_same_libm()
         english = {name for name in pages() if not name.endswith(".zh.html")}
         self.assertEqual(11, len(english), sorted(english))
         self.assertEqual(22, len(pages()))
 
     def test_no_page_carries_a_marker_left_over(self):
+        portability.require_the_same_libm()
         for name, text in sorted(pages().items()):
             with self.subTest(page=name):
                 self.assertNotIn("/*@include ", text)
@@ -414,17 +419,20 @@ class TheQueueTableTests(unittest.TestCase):
 
     def test_the_english_table_is_the_queue_pages_own_rows(self):
         """The queue page's table body, row for row and byte for byte."""
+        portability.require_the_same_libm()
         queue = (site.DIST_DIR / v2.INDEX_PATH.name).read_text(encoding="utf-8")
         self.assertEqual(self.body_of(queue), self.body_of(pages()["cases.html"]))
 
     def test_the_english_table_is_the_rows_the_row_function_writes(self):
         """The same equality, against the function rather than the built page."""
+        portability.require_the_same_libm()
         expected = "".join(v2._queue_row(case) for case in v2.read_every_case())
         self.assertEqual(expected, self.body_of(pages()["cases.html"]))
         self.assertEqual(151, len(self.rows_of(pages()["cases.html"])))
 
     def test_the_chinese_table_is_the_same_rows_with_the_values_unchanged(self):
         """Same case, amount, confidence, time and status class as the English row."""
+        portability.require_the_same_libm()
         english = self.rows_of(pages()["cases.html"])
         chinese = self.rows_of(pages()["cases.zh.html"])
         self.assertEqual(151, len(chinese))
@@ -438,6 +446,7 @@ class TheQueueTableTests(unittest.TestCase):
                     self.assertEqual(cells[column], self.cells_of(other)[column])
 
     def test_no_english_word_from_the_queue_is_left_in_a_chinese_row(self):
+        portability.require_the_same_libm()
         for row in self.rows_of(pages()["cases.zh.html"]):
             with self.subTest(case=self.cells_of(row)["case"]):
                 for word in sorted(ENGLISH_QUEUE_WORDS):
@@ -456,6 +465,7 @@ class TheQueueTableTests(unittest.TestCase):
         trigger, so the outcome column never falls through to the ruling words
         "Sent to a human reviewer".
         """
+        portability.require_the_same_libm()
         english = self.body_of(pages()["cases.html"])
         for word in (
             "Route deviation",
@@ -494,6 +504,7 @@ class TheLinksTests(unittest.TestCase):
     """Every link inside the site resolves, and nothing is loaded from outside it."""
 
     def test_every_relative_link_and_source_resolves_inside_the_site(self):
+        portability.require_the_same_libm()
         unresolved = [
             (name, url) for name, url in unresolved_links() if url != MISSING_FILM
         ]
@@ -505,10 +516,12 @@ class TheLinksTests(unittest.TestCase):
 
     def test_the_one_file_the_site_does_not_carry_is_the_film(self):
         """Exactly one, and named: a second missing file is a failure."""
+        portability.require_the_same_libm()
         missing = sorted({url for _name, url in unresolved_links()})
         self.assertEqual([MISSING_FILM], missing)
 
     def test_no_page_loads_a_script_a_stylesheet_an_image_or_a_font_from_another_host(self):
+        portability.require_the_same_libm()
         found: List[Tuple[str, str, str]] = []
         for name, text in sorted(pages().items()):
             for tag, attribute, url in scan(text).references:
@@ -521,6 +534,7 @@ class TheLinksTests(unittest.TestCase):
         )
 
     def test_the_only_links_off_the_site_are_the_three_named_ones(self):
+        portability.require_the_same_libm()
         found: Set[str] = set()
         for text in pages().values():
             for url in scan(text).anchors:
@@ -530,6 +544,7 @@ class TheLinksTests(unittest.TestCase):
 
     def test_the_film_is_the_one_file_a_page_names_but_does_not_have(self):
         """The exception is real: the page names it, and the site does not hold it."""
+        portability.require_the_same_libm()
         named = {url for _name, url in unresolved_links()}
         self.assertIn(MISSING_FILM, named)
         self.assertFalse((site.DIST_DIR / MISSING_FILM).exists())
@@ -605,6 +620,7 @@ class TheTryItServiceTests(unittest.TestCase):
         )
 
     def test_the_try_it_page_loads_her_script_and_the_config(self):
+        portability.require_the_same_libm()
         page = pages()["try.html"]
         self.assertIn('src="try/try.js"', page)
         self.assertIn('src="try-config.js"', page)
