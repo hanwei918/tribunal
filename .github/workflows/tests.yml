@@ -1,0 +1,57 @@
+# 58b: run the repository's own claim about itself on a machine that is not the
+# author's. Four runners -- two operating systems by two interpreters -- so a test
+# that passes only on macOS, or only on the author's Python, is seen here rather
+# than in a judge's run. No step reads a credential and no step calls a model.
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One run per ref: a second push to the same branch cancels the first, which is
+# still testing the code it replaced.
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # One red cell must not cancel the other three: which platform and which
+      # interpreter failed is the whole of what this workflow is for.
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python: ["3.9", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The history tests read the log, the tags and `git check-ignore`, so a
+          # shallow clone would skip them or fail them.
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Run the test suite
+        shell: bash
+        run: |
+          set -o pipefail
+          python -m unittest discover -s tests -v 2>&1 | tee test-output.txt
+      - name: Report the skips and the result
+        if: always()
+        shell: bash
+        run: |
+          set -o pipefail
+          grep -o "skipped '.*'" test-output.txt | sort | uniq -c | sort -rn || true
+          grep -E "^(Ran |OK|FAILED)" test-output.txt || true
+      - name: Run the reports and the builders' checks
+        shell: bash
+        run: |
+          set -o pipefail
+          python -m tools.verify --quick
