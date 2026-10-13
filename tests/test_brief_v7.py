@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import copy
 import json
+import math
 import sys
 import unittest
 from decimal import Decimal
@@ -135,6 +136,40 @@ def first_float_outside_the_mean_distance(built):
     return None
 
 
+def the_json_path(path):
+    """A path of keys and indices written as one JSON path, for a message.
+
+    ``("case", "evidence", 3, "payload", "value")`` becomes
+    ``case.evidence[3].payload.value``, so a failure message can name the value
+    a reader would look for in the brief rather than a Python tuple.
+    """
+    written = ""
+    for step in path:
+        if isinstance(step, int):
+            written += "[{0}]".format(step)
+        else:
+            written += ("." if written else "") + str(step)
+    return written
+
+
+def the_moved_float_diagnosis(moved):
+    """What ``portability.which_float_moved`` found, written for a message.
+
+    One line per ``(path, ulps)`` it returned, the path as a JSON path and the
+    number of units in the last place; the sentence the sheet asks for when it
+    returned nothing. It decides nothing and is only ever written into a
+    failure message.
+    """
+    if not moved:
+        return "no single float within 2 ulps reproduces it"
+    return "; ".join(
+        "{0} by {1} ulp{2}".format(
+            the_json_path(path), ulps, "" if ulps == 1 else "s"
+        )
+        for path, ulps in moved
+    )
+
+
 def derived_block(brief_case, evidence_id, key="v7"):
     """One artifact's derived block of a built brief, by evidence id."""
     for artifact in brief_case["case"]["evidence"]:
@@ -216,10 +251,26 @@ class TheRecordedVersionSixDigestsTests(unittest.TestCase):
                 # and a difference of two units, a difference in another field,
                 # or a digest that is not the recorded one for any other reason
                 # reproduces nothing and still fails here.
+                as_the_platform_difference = portability.known_platform_difference(
+                    built, recorded
+                )
+                # The diagnosis is for the failure message and is asked for only
+                # when the case is refused: it names the one float a single move
+                # of at most two units in the last place reproduces the recorded
+                # digest with, or says no single float does, so the Ubuntu log
+                # says which value moved and not only that one did. It decides
+                # nothing and the assertion below does not read it.
+                moved = (
+                    []
+                    if as_the_platform_difference
+                    else portability.which_float_moved(built, recorded)
+                )
                 self.assertTrue(
-                    portability.known_platform_difference(built, recorded),
+                    as_the_platform_difference,
                     "{0} differs from the digest its run recorded by more than "
-                    "the one known last-place difference".format(path),
+                    "the one known last-place difference; {1}".format(
+                        path, the_moved_float_diagnosis(moved)
+                    ),
                 )
                 accepted.append((path, built))
             sets.add(path.relative_to(RUNS_DIR).parts[0])
@@ -316,6 +367,67 @@ class TheRecordedVersionSixDigestsTests(unittest.TestCase):
             "a difference outside the mean distance was accepted as the "
             "platform's",
         )
+
+
+class TheMovedFloatDiagnosisTests(unittest.TestCase):
+    """``portability.which_float_moved``: the value a recorded digest moved at.
+
+    The helper decides nothing -- it is written for the failure message of the
+    class above -- so it is tested on a synthetic brief whose digest is
+    ``tribunal.brief.brief_digest``'s own. A float three levels deep moved one
+    unit in the last place is found with its path; two floats moved are not
+    found; and a change that is not a float is not found. The control removes
+    the neighbour step and shows the one-ulp find disappear, which is what makes
+    the first test capable of failing.
+    """
+
+    # Three levels deep, and two floats, so the path the helper returns is a real
+    # JSON path and there is a second float that can be moved and still not found.
+    SYNTHETIC_BRIEF = {
+        "case": {"dispute": {"amount": 1.5, "note": "unchanged"}, "count": 7},
+        "meta": {"weight": 0.25, "ok": True},
+    }
+    AMOUNT = ("case", "dispute", "amount")
+    WEIGHT = ("meta", "weight")
+
+    def moved(self, document, path, ulps, direction=math.inf):
+        """``document`` with the float at ``path`` moved ``ulps`` in the last place."""
+        shifted = copy.deepcopy(document)
+        value = portability._value_at(shifted, path)
+        for _step in range(ulps):
+            value = math.nextafter(value, direction)
+        portability._replace(shifted, path, value)
+        return shifted
+
+    def test_a_float_three_levels_deep_moved_one_ulp_is_found_with_its_path(self):
+        built = copy.deepcopy(self.SYNTHETIC_BRIEF)
+        recorded = brief.brief_digest(self.moved(built, self.AMOUNT, 1))[1]
+        self.assertEqual(
+            portability.which_float_moved(built, recorded), [(self.AMOUNT, 1)]
+        )
+
+    def test_two_floats_moved_are_not_found(self):
+        built = copy.deepcopy(self.SYNTHETIC_BRIEF)
+        two = self.moved(built, self.AMOUNT, 1)
+        two = self.moved(two, self.WEIGHT, 1)
+        recorded = brief.brief_digest(two)[1]
+        self.assertEqual(portability.which_float_moved(built, recorded), [])
+
+    def test_a_change_that_is_not_a_float_is_not_found(self):
+        built = copy.deepcopy(self.SYNTHETIC_BRIEF)
+        changed = copy.deepcopy(built)
+        changed["case"]["count"] = 8
+        recorded = brief.brief_digest(changed)[1]
+        self.assertEqual(portability.which_float_moved(built, recorded), [])
+
+    def test_without_the_neighbour_step_the_one_ulp_case_is_not_found(self):
+        """The control: with the neighbour step removed, the find above is gone."""
+        built = copy.deepcopy(self.SYNTHETIC_BRIEF)
+        recorded = brief.brief_digest(self.moved(built, self.AMOUNT, 1))[1]
+        with mock.patch.object(
+            portability.math, "nextafter", lambda value, direction: value
+        ):
+            self.assertEqual(portability.which_float_moved(built, recorded), [])
 
 
 class TheExcessDistanceFareTests(unittest.TestCase):

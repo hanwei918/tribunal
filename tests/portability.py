@@ -181,6 +181,61 @@ def known_platform_difference(
     return False
 
 
+def which_float_moved(
+    built: Mapping[str, Any],
+    recorded_digest: str,
+    digest_of: Optional[Callable[[Mapping[str, Any]], Tuple[str, str]]] = None,
+    max_ulps: int = 2,
+) -> List[Tuple[Tuple[Any, ...], int]]:
+    """The float a single last-place move of which reproduces ``recorded_digest``.
+
+    Every float leaf of ``built`` is tried in turn -- the walk is
+    :func:`_mean_distance_paths`'s, but for every float rather than the one
+    field -- and for each leaf the values up to ``max_ulps`` units in the last
+    place away, up and down, are tried one leaf at a time. Each ``(path, ulps)``
+    whose single move reproduces the recorded digest is returned, the path as
+    the tuple of keys and indices a reader can follow into the JSON; the list is
+    empty when no single move does, which is what a difference of two values at
+    once, or a change that is not a float, looks like.
+
+    **It decides nothing.** It is a diagnosis written for a failure message and
+    is never consulted by a guard or an assertion: the one bounded check is
+    :func:`known_platform_difference`, and a caller that wants a decision asks
+    that one. A machine whose library arithmetic is the one that recorded the
+    digests never needs this at all, and a caller that runs it anyway is asking
+    a question for a reader, not for the suite.
+    """
+    if digest_of is None:
+        digest_of = _brief_module().brief_digest
+
+    def float_leaves(
+        node: Any, path: Tuple[Any, ...] = ()
+    ) -> Iterator[Tuple[Any, ...]]:
+        """The path of every float leaf, in ``_mean_distance_paths``'s order."""
+        if isinstance(node, Mapping):
+            for key, value in node.items():
+                yield from float_leaves(value, path + (key,))
+        elif isinstance(node, (list, tuple)):
+            for index, value in enumerate(node):
+                yield from float_leaves(value, path + (index,))
+        elif isinstance(node, float):
+            yield path
+
+    moved: List[Tuple[Tuple[Any, ...], int]] = []
+    for path in float_leaves(built):
+        value = _value_at(built, path)
+        for ulps in range(1, max_ulps + 1):
+            for direction in (math.inf, -math.inf):
+                neighbour = value
+                for _step in range(ulps):
+                    neighbour = math.nextafter(neighbour, direction)
+                candidate = copy.deepcopy(built)
+                _replace(candidate, path, neighbour)
+                if digest_of(candidate)[1] == recorded_digest:
+                    moved.append((path, ulps))
+    return moved
+
+
 def recorded_brief_digest(run_dir: Path, case_no: int) -> Optional[str]:
     """The ``brief_sha256`` a run's own result file records, or ``None``.
 
