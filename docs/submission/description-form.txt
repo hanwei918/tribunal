@@ -141,6 +141,16 @@ executed (74.2%), 13 are decided with the amount held above POL-GEN-05's SGD
 three figures the live site's tiles carry. The median cost per case is 0.0579
 USD at the published TokenHub prices.
 
+The brief's four pain points, against what this system measured. The brief
+names them in its challenge statement; each row below is read from the file in
+its last column.
+
+Pain point (the brief) | What the record shows | Read from
+Cost | 0.0579 USD median model cost a case | python3 -m eval.business_value --report
+Speed | 160.4 s median time to a decision, against 24-72 hours today | python3 -m eval.business_value --report
+Inconsistency | the swapped draft agrees with the sampled majority on all four graded fields in 136 of 141 cases, and 4 of 151 cases split | python3 -m eval.fairness --report
+User churn | both parties get the same notice in plain words, and one appeal within 30 days | docs/record.md
+
 The sealed sets. Each is reported as an agreement against its own key,
 and they are never pooled. sealed-v2 - 12 cases made by the policy owner with
 OpenAI Codex (model stated by her as GPT-6; not recorded by the tool) from the

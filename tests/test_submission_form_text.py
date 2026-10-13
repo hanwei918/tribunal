@@ -87,6 +87,16 @@ class TheFormTextTests(unittest.TestCase):
     def test_every_number_in_it_also_appears_in_the_description(self):
         self.assertEqual([], missing_from_description(self.form, self.description))
 
+    # Part 55 adds one table to the description: the brief's four pain points,
+    # each against the figure the record holds for it. The form carries the same
+    # four rows, because a form that dropped one would be a claim the description
+    # makes and the submitted text does not.
+    def test_it_carries_the_pain_point_table_the_description_carries(self):
+        for pain_point in ("Cost", "Speed", "Inconsistency", "User churn"):
+            with self.subTest(pain_point=pain_point):
+                self.assertIn(pain_point, self.description)
+                self.assertIn(pain_point, self.form)
+
     def test_the_documents_really_carry_the_numbers_it_checks(self):
         """A control: the search is against text that is there, not a blank."""
         self.assertTrue(numbers(self.form))

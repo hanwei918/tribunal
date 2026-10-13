@@ -122,8 +122,14 @@ set's provenance are in [the full record](docs/record.md#results).
 | Document | What's covered |
 |---|---|
 | [The full record](docs/record.md) | Every result table and its command, test-set provenance, limitations, concurrency, how to run everything |
+| [Why a debate](docs/why-debate.md) | The five mechanisms, and the paper the design comes from |
+| [Design choices](docs/design-choices.md) | The two places the build departs from the brief, and what each buys and costs |
+| [Scale and cost](docs/scale.md) | What one model account can carry, and what a month would cost |
+| [Integration](docs/integration.md) | The input contract, the ruling's fields, routing, the queue, the packet, appeals |
+| [Data](docs/data.md) | Who wrote each set, the one organisers' case, and how real data may differ |
 | [Architecture](docs/architecture.md) | The four C4 views, box by box, with the file behind each box |
 | [Submission texts](docs/submission/) | Blurb, description, judges' questions, how we built it |
+| [Demo script](docs/submission/demo-script.md) | A three-minute live demo, step by step |
 | [Governance](docs/governance/) | Threat model, privacy, incidents |
 | [Policy sources](docs/policy-sources.md) | Where each policy clause comes from |
 | [Dated notes](docs/notes/) | One note per change or run, written when it happened |
