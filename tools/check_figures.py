@@ -13,8 +13,10 @@ it and reports whether the value there is the computed one.
 :func:`ui.site.figures.figures`, which reads the four version-6 runs through
 :mod:`eval.business_value` and :mod:`eval.v6_runs`; the position swap's two
 figures come from :mod:`eval.fairness`; the sealed and held-out sets come from
-the same graded reads ``tests/test_readme_figures.py`` makes. No figure is typed
-in here and no figure is read from a second copy of itself.
+the same graded reads ``tests/test_readme_figures.py`` makes; and the version-7
+figures come from the same :func:`eval.run_benchmark.grade_run` call over the
+directory each version-7 run was written to. No figure is typed in here and no
+figure is read from a second copy of itself.
 
 **How a figure is found.** Each figure carries a table of patterns, one per way
 the documents spell it -- ``160.4 s`` in one, ``2.7 min`` in another, ``2.7``
@@ -37,15 +39,18 @@ from __future__ import annotations
 import argparse
 import re
 import sys
+from decimal import Decimal
 from pathlib import Path
-from typing import Dict, List, NamedTuple, Optional, Sequence, Set, Tuple
+from typing import Dict, List, Mapping, NamedTuple, Optional, Sequence, Set, Tuple
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from eval import fairness  # noqa: E402
+from eval import development_sets, fairness, run_benchmark, v6_runs  # noqa: E402
 from ui.site import figures as site_figures  # noqa: E402
+
+MODEL = run_benchmark.resolve_model(None)
 
 
 # --------------------------------------------------------------------------
@@ -372,6 +377,61 @@ FIGURES: Tuple[Figure, ...] = (
             r"so (\d+)/20 is read as",
         ),
     ),
+    # ----------------------------------------------------------------------
+    # Policy version 7 -- Ryde's own Dispute Resolution Policy v2.1
+    # ----------------------------------------------------------------------
+    # Three sets, one run each, and none of them pooled with another. The
+    # patterns are anchored on the set's own name and case count rather than on
+    # the number alone, because 30/30 and 100.0% are values other rows carry:
+    # an unanchored interval pattern would capture sealed-v2's [75.8%, 100.0%]
+    # and report it as a mismatch.
+    Figure(
+        "sealed-v4, four-field agreement",
+        ("30/30",),
+        (
+            r"`sealed-v4` \(30 cases\) \| (\d+/30) \|",
+            r"`sealed-v4` \(30 cases\) \| (\d+/30) = 100\.0% \|",
+            r"graded fields in\s+(\d+/30) = 100\.0%",
+        ),
+    ),
+    Figure(
+        "sealed-v4, Wilson 95% interval",
+        ("88.6", "100"),
+        (
+            r"`sealed-v4` \(30 cases\) \| \d+/30 \| \[(\d+\.\d)%, (\d+\.\d+)%\]",
+            r"`sealed-v4` \(30 cases\) \| \d+/30 = 100\.0% \| \[(\d+\.\d)%, (\d+\.\d+)%\]",
+            r"30/30 = 100\.0%, Wilson 95% \[(\d+\.\d)%, (\d+\.\d+)%\]",
+        ),
+    ),
+    Figure(
+        "ryde-v7, samples matching Ryde's stated outcomes",
+        ("1 of 2",),
+        (
+            r"`ryde-v7` \(2 cases\) \| (1 of 2) against Ryde's stated outcomes",
+            r"keyed by Ryde's stated outcome, is (1 of 2):",
+            r"keyed by Ryde's stated outcomes \(`ryde-v7`\), are (1 of 2):",
+        ),
+    ),
+    Figure(
+        "dev-v7, four-field agreement",
+        ("40/40",),
+        (
+            r"`dev-v7` \(40 cases\) \| (\d+/40) \|",
+            r"`dev-v7` \(40 cases\) \| (\d+/40) = 100\.0% \|",
+            r"`dev-v7` (\d+/40) \(development data\)",
+            r"dev-v7 (\d+/40) \(development data\)",
+        ),
+    ),
+    Figure(
+        "version-7 sealed run, median time to a decision",
+        ("139.8",),
+        (r"median is \*\*(\d+\.\d+) s\*\* a case",),
+    ),
+    Figure(
+        "version-7 sealed run, median model cost",
+        ("0.0398",),
+        (r"model cost of \*\*(\d+\.\d+) USD\*\* a case",),
+    ),
 )
 
 # The figures by name, so the report and the tests can name one.
@@ -384,6 +444,42 @@ BY_NAME: Dict[str, Figure] = {figure.name: figure for figure in FIGURES}
 _COMPUTED: "Optional[Dict[str, str]]" = None
 
 
+def graded_version_seven(name: str) -> "grade.GradeReport":
+    """One version-7 set's committed run, graded against its own key.
+
+    The same :func:`eval.run_benchmark.grade_run` call the sealed and held-out
+    sets are graded with, over the directory the run was **written to**:
+    ``dev-v7`` and ``ryde-v7`` are registered for a policy base, so their runs
+    sit one level down (``runs/<set>/policy-v7/<model>/``) and the un-versioned
+    path holds nothing.
+    """
+    development_set = development_sets.named(name)
+    return run_benchmark.grade_run(
+        development_sets.run_dir_at_its_version(development_set, MODEL),
+        development_set.key(),
+        case_loader=development_set.load_case,
+        policy_version=development_set.policy_version,
+    )
+
+
+def case_cost(document: Mapping[str, object]) -> Decimal:
+    """One case's model cost at the prices ``eval.v6_runs`` bills at.
+
+    The same three prices and the same arithmetic that module's own cost line
+    uses, so a version-7 cost figure is the one ``eval.v6_runs`` would print
+    for those tokens rather than a second reading of them.
+    """
+    tokens = document.get("tokens") or {}
+    prompt = int(tokens.get("prompt_tokens", 0))
+    cached = int(tokens.get("cached_tokens", 0))
+    completion = int(tokens.get("completion_tokens", 0))
+    return (
+        Decimal(prompt - cached) * v6_runs.PRICE_INPUT
+        + Decimal(cached) * v6_runs.PRICE_CACHED_INPUT
+        + Decimal(completion) * v6_runs.PRICE_OUTPUT
+    ) / v6_runs.MILLION
+
+
 def _compute() -> Dict[str, str]:
     """Every headline figure, computed from the committed runs.
 
@@ -393,6 +489,19 @@ def _compute() -> Dict[str, str]:
     """
     values = site_figures.figures()
     _lean, swap, _calibration = fairness.combined_measurements()
+    sealed_v4 = graded_version_seven("sealed-v4")
+    dev_v7 = graded_version_seven("dev-v7")
+    ryde_v7 = graded_version_seven("ryde-v7")
+    v4_bounds = v6_runs.wilson(sealed_v4.exact_matches, sealed_v4.total)
+    v4_run_dir = development_sets.run_dir_at_its_version(
+        development_sets.named("sealed-v4"), MODEL
+    )
+    v4_documents = {
+        case_no: run_benchmark.load_cached(v4_run_dir, case_no)
+        for case_no in sealed_v4.graded_cases
+    }
+    v4_walls = [document.get("wall_seconds") for document in v4_documents.values()]
+    v4_costs = [case_cost(document) for document in v4_documents.values()]
     return {
         "median time to a decision": values["median_wall_seconds"],
         "90th percentile time to a decision": values["p90_wall_seconds"],
@@ -420,6 +529,25 @@ def _compute() -> Dict[str, str]:
         "sealed-v1, four-field agreement": values["sealed_v1_exact"],
         "sealed-v1, the key as imported": values["sealed_v1_imported"],
         "wild-v2, four-field exact": values["wild_v2_exact"],
+        # Policy version 7. The three sets, each graded against its own key.
+        "sealed-v4, four-field agreement": "{0}/{1}".format(
+            sealed_v4.exact_matches, sealed_v4.total
+        ),
+        "sealed-v4, Wilson 95% interval": "{0:.1f}-{1:.1f}%".format(
+            v4_bounds[0] * 100, v4_bounds[1] * 100
+        ),
+        "ryde-v7, samples matching Ryde's stated outcomes": "{0} of {1}".format(
+            ryde_v7.exact_matches, ryde_v7.total
+        ),
+        "dev-v7, four-field agreement": "{0}/{1}".format(
+            dev_v7.exact_matches, dev_v7.total
+        ),
+        "version-7 sealed run, median time to a decision": v6_runs._seconds(
+            v6_runs._median(v4_walls)
+        ),
+        "version-7 sealed run, median model cost": "{0:.4f}".format(
+            v6_runs._median(v4_costs)
+        ),
     }
 
 

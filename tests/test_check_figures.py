@@ -10,7 +10,9 @@ three things:
   rather than a quiet no-op.
 * **The check can fail.** A copy of one document with one figure altered, in a
   temporary directory, is reported as a mismatch; without that control a check
-  that returned nothing would pass the first test.
+  that returned nothing would pass the first test. Two figures are shown failing
+  that way: the version-6 median time in ``docs/record.md``, and the version-7
+  sealed set's agreement in ``README.md``.
 * **The module is ASCII.** The sheet's rule is that the pattern table is written
   in ASCII, with the Chinese patterns as ``\\uXXXX`` escapes, so the module is
   read as bytes and every one is asserted below 128.
@@ -44,6 +46,22 @@ CONTROL_DOCUMENT = "docs/record.md"
 CONTROL_BEFORE = "160.4 s"
 CONTROL_AFTER = "160.5 s"
 CONTROL_FIGURE = "median time to a decision"
+
+# The version-7 figures, and the second control: the sixth sealed set's own
+# agreement, in the README's version-7 table. Altered to 29 of 30, the agreement
+# pattern captures a value that is not one of the figure's spellings.
+VERSION_SEVEN_FIGURES = (
+    "sealed-v4, four-field agreement",
+    "sealed-v4, Wilson 95% interval",
+    "ryde-v7, samples matching Ryde's stated outcomes",
+    "dev-v7, four-field agreement",
+    "version-7 sealed run, median time to a decision",
+    "version-7 sealed run, median model cost",
+)
+VERSION_SEVEN_CONTROL_DOCUMENT = "README.md"
+VERSION_SEVEN_CONTROL_BEFORE = "| 30/30 | [88.6%, 100.0%] |"
+VERSION_SEVEN_CONTROL_AFTER = "| 29/30 | [88.6%, 100.0%] |"
+VERSION_SEVEN_CONTROL_FIGURE = "sealed-v4, four-field agreement"
 
 
 class TheCommittedTreeTests(unittest.TestCase):
@@ -115,6 +133,23 @@ class TheCommittedTreeTests(unittest.TestCase):
         )
         self.assertIn("Every occurrence matches the computed value.", text)
 
+    def test_the_version_seven_figures_are_computed_stated_and_matching(self):
+        """Policy version 7's figures, from the committed runs.
+
+        Each is stated in at least one document and every pattern that finds it
+        matched something, which the class's own two tests above already assert
+        over the whole table; this names the version-7 rows so a table that lost
+        one fails here rather than passing on the rows that remain.
+        """
+        rows = {row.figure: row for row in self.found.rows}
+        for name in VERSION_SEVEN_FIGURES:
+            with self.subTest(figure=name):
+                self.assertIn(name, check_figures.BY_NAME)
+                self.assertIn(name, rows)
+                self.assertTrue(rows[name].value, "no computed value")
+                self.assertTrue(rows[name].documents, "stated in no document")
+                self.assertTrue(rows[name].ok, "a document states another value")
+
 
 class TheControlTests(unittest.TestCase):
     """The check is shown capable of failing, and of noticing a dead pattern."""
@@ -157,6 +192,44 @@ class TheControlTests(unittest.TestCase):
             CONTROL_FIGURE, {pattern.figure for pattern in found.dead}
         )
         self.assertFalse(found.ok)
+
+    def test_an_altered_version_seven_figure_is_reported(self):
+        """The version-7 rows are shown capable of failing too.
+
+        The copy holds the README alone, so the other documents are skipped and
+        the version-7 patterns that read them go dead -- which is a finding of
+        its own and not what this test is about. What it asserts is the
+        mismatch: ``29/30`` is not one of the agreement figure's spellings.
+        """
+        portability.require_the_same_libm()
+        source = (PROJECT_ROOT / VERSION_SEVEN_CONTROL_DOCUMENT).read_text(
+            encoding="utf-8"
+        )
+        altered = source.replace(
+            VERSION_SEVEN_CONTROL_BEFORE, VERSION_SEVEN_CONTROL_AFTER
+        )
+        self.assertNotEqual(
+            source,
+            altered,
+            "the control changed nothing in {0}".format(VERSION_SEVEN_CONTROL_DOCUMENT),
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / VERSION_SEVEN_CONTROL_DOCUMENT
+            target.write_text(altered, encoding="utf-8")
+            found = check_figures.check(root)
+        named = [mismatch for mismatch in found.mismatches if mismatch.value == "29/30"]
+        self.assertTrue(
+            named,
+            "the altered version-7 figure was not reported: {0}".format(
+                found.mismatches
+            ),
+        )
+        for mismatch in named:
+            with self.subTest(document=mismatch.document):
+                self.assertEqual(VERSION_SEVEN_CONTROL_FIGURE, mismatch.figure)
+                self.assertEqual("30/30", mismatch.expected)
+        self.assertFalse(found.ok, "an altered figure left the check OK")
 
 
 class TheModuleTests(unittest.TestCase):
