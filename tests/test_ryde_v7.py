@@ -20,6 +20,11 @@ This module holds the set to the four things the conversion is for:
   whose data has not arrived, and a registration for each one whose data has --
   ``dev-v7`` and ``sealed-v4`` arrive in part 73, and each is registered the
   moment its own ``index.json`` exists;
+* the two fare records are **COMPLETE** at version 7 -- the itemisation Ryde's
+  platform did not export is a difference of format rather than a gap in what
+  v2.1 decides on, and each mapping records the note that says so -- while the
+  two GPS records keep their codes and the two other conversions of DISP-002
+  stay byte-identical;
 * the version and the prompt set are one pair, refused in both directions.
 
 No model call is made. Run from the project root with::
@@ -30,6 +35,7 @@ No model call is made. Run from the project root with::
 from __future__ import annotations
 
 import contextlib
+import importlib.util
 import io
 import json
 import sys
@@ -49,6 +55,15 @@ from eval import run_benchmark as runner  # noqa: E402
 from tests import test_answer_isolation as isolation  # noqa: E402
 from tribunal import brief, loader, pipeline  # noqa: E402
 
+# The converter, loaded by path the way ``tests/test_external_case.py`` loads it:
+# it is a script under ``eval/`` rather than a package module. The fare-record
+# tests below rebuild both cases with it and compare the rebuild with the
+# committed files.
+CONVERTER_PATH = PROJECT_ROOT / "eval" / "external" / "ryde" / "convert.py"
+_spec = importlib.util.spec_from_file_location("ryde_convert", CONVERTER_PATH)
+convert = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(convert)
+
 VERSION_SEVEN = 7
 VERSION_SIX = 6
 
@@ -58,6 +73,11 @@ MODEL = "deepseek/deepseek-flash"
 SET_NAME = "ryde-v7"
 SET_ROOT = loader.EXTERNAL_DIR / SET_NAME
 KEY_PATH = PROJECT_ROOT / "eval" / "answers" / SET_NAME / "ground_truth.json"
+
+# The two other conversions of DISP-002. The version-7 fare rule is version 7's
+# alone, so both of these trees stay exactly as they are.
+RYDE_ROOT = loader.EXTERNAL_DIR / "ryde"
+RYDE_V3_ROOT = loader.EXTERNAL_DIR / "ryde-v3"
 
 # The two cases, by the document they came from.
 ROUTE_DEVIATION_CASE = 902
@@ -158,6 +178,160 @@ class TheSetTests(unittest.TestCase):
 
 
 # --------------------------------------------------------------------------
+# The fare record
+# --------------------------------------------------------------------------
+class TheFareRecordTests(unittest.TestCase):
+    """The fare record is COMPLETE at version 7, and each mapping says why.
+
+    Ryde's fare records state the trip's totals and either a per-kilometre rate
+    or an ``excess_distance_fare``, and itemise neither base, time nor
+    platform-fee lines. Version 7 reads only the rate and the excess figures, so
+    that gap is a difference of format rather than an impairment: both artifacts
+    carry no code and weigh 1.0. The GPS records keep their codes -- a low
+    sample rate is a property of the data rather than of what the record states
+    -- and the two other conversions of DISP-002 are byte-identical.
+    """
+
+    # The words each case's mapping has to carry, and the one place they are
+    # pinned: the converter's constants are read by the same code that wrote the
+    # files, so the file is asserted against its own text rather than against
+    # the constant it came from.
+    NOTE_FRAGMENTS = (
+        "not marked PARTIAL_RECORD at version 7",
+        "version 7 needs only",
+    )
+
+    def artifact(self, case_no: int, evidence_id: str) -> Mapping[str, Any]:
+        return next(
+            artifact
+            for artifact in case(case_no)["evidence"]
+            if artifact["evidence_id"] == evidence_id
+        )
+
+    def issues_entry(self, case_no: int, evidence_id: str) -> Mapping[str, Any]:
+        """One mapping's record of an artifact's code set."""
+        mapping = json.loads(
+            (SET_ROOT / "mapping-{0:05d}.json".format(case_no)).read_text(
+                encoding="utf-8"
+            )
+        )
+        target = "evidence.{0}.admissibility.issues".format(evidence_id)
+        return next(entry for entry in mapping["fields"] if entry["target"] == target)
+
+    def rebuild(self, case_no: int):
+        """The converter's own output for one case, rebuilt from its source."""
+        if case_no == ROUTE_DEVIATION_CASE:
+            block = convert.conversion_input(
+                convert.DISP001_SOURCE_PATH.read_text(encoding="utf-8")
+            )
+            return convert.convert_route_deviation(block)
+        block = convert.conversion_input(convert.SOURCE_PATH.read_text(encoding="utf-8"))
+        return convert.convert(block, VERSION_SEVEN)
+
+    def test_the_route_deviations_fare_record_is_complete(self):
+        admissibility = self.artifact(ROUTE_DEVIATION_CASE, "EV-FARE-00902")[
+            "admissibility"
+        ]
+        self.assertEqual("COMPLETE", admissibility["status"])
+        self.assertEqual([], admissibility["issues"])
+        self.assertEqual(1.0, admissibility["weight_multiplier"])
+
+    def test_the_no_shows_fare_record_is_complete(self):
+        admissibility = self.artifact(NO_SHOW_CASE, "EV-FARE-00903")["admissibility"]
+        self.assertEqual("COMPLETE", admissibility["status"])
+        self.assertEqual([], admissibility["issues"])
+        self.assertEqual(1.0, admissibility["weight_multiplier"])
+
+    def test_each_mapping_records_why_the_fare_is_not_a_partial_record(self):
+        for case_no, evidence_id in (
+            (ROUTE_DEVIATION_CASE, "EV-FARE-00902"),
+            (NO_SHOW_CASE, "EV-FARE-00903"),
+        ):
+            entry = self.issues_entry(case_no, evidence_id)
+            with self.subTest(case=case_no):
+                self.assertEqual([], entry["value"])
+                for fragment in self.NOTE_FRAGMENTS:
+                    self.assertIn(fragment, entry["reason"])
+
+    def test_the_route_deviations_note_names_the_rate_and_the_excess_figure(self):
+        """Both figures are stated by the record, which is what makes it complete."""
+        entry = self.issues_entry(ROUTE_DEVIATION_CASE, "EV-FARE-00902")
+        self.assertIn("excess_distance_fare", entry["reason"])
+        self.assertIn("the rate in its notes", entry["reason"])
+
+    def test_the_two_gps_records_keep_their_issue_codes(self):
+        """A low sample rate is a property of the data, so the rule does not reach it."""
+        self.assertEqual(
+            ["LOW_SAMPLE_RATE"],
+            self.artifact(ROUTE_DEVIATION_CASE, "EV-GPS-00902")["admissibility"]["issues"],
+        )
+        self.assertEqual(
+            ["LOW_SAMPLE_RATE", "PARTIAL_RECORD"],
+            self.artifact(NO_SHOW_CASE, "EV-GPS-00903")["admissibility"]["issues"],
+        )
+
+    def test_the_rule_is_what_leaves_the_route_deviations_fare_unimpaired(self):
+        """The control: remove the rule and 902's fare is a PARTIAL_RECORD again.
+
+        The code set is put back to the one versions 1 and 3 read, through the
+        one name the rule lives at, and the artifact the conversion then builds
+        is IMPAIRED at the pre-pass's 0.75 -- the weight the first version-7 run
+        escalated on.
+        """
+        block = convert.conversion_input(
+            convert.DISP001_SOURCE_PATH.read_text(encoding="utf-8")
+        )
+        with mock.patch.object(
+            convert, "_v7_fare_issue_codes", lambda: ["PARTIAL_RECORD"]
+        ):
+            rebuilt, _mapping = convert.convert_route_deviation(block)
+        admissibility = next(
+            artifact
+            for artifact in rebuilt["evidence"]
+            if artifact["evidence_id"] == "EV-FARE-00902"
+        )["admissibility"]
+        self.assertEqual("IMPAIRED", admissibility["status"])
+        self.assertEqual(["PARTIAL_RECORD"], admissibility["issues"])
+        self.assertEqual(
+            Decimal("0.75"), Decimal(str(admissibility["weight_multiplier"]))
+        )
+
+    def test_the_committed_cases_are_the_converters_own_output(self):
+        """Each file is the converter's output, not a hand edit."""
+        for case_no in (ROUTE_DEVIATION_CASE, NO_SHOW_CASE):
+            built, mapping = self.rebuild(case_no)
+            with self.subTest(case=case_no):
+                self.assertEqual(case_no, built["case_no"])
+                self.assertEqual(
+                    (SET_ROOT / "case-{0:05d}.json".format(case_no)).read_text(
+                        encoding="utf-8"
+                    ),
+                    json.dumps(built, indent=2, ensure_ascii=False) + "\n",
+                )
+                self.assertEqual(
+                    (SET_ROOT / "mapping-{0:05d}.json".format(case_no)).read_text(
+                        encoding="utf-8"
+                    ),
+                    json.dumps(mapping, indent=2, ensure_ascii=False) + "\n",
+                )
+
+    def test_the_other_two_conversions_are_byte_identical(self):
+        """The rule is version 7's alone: versions 1 and 3 write what they wrote."""
+        block = convert.conversion_input(convert.SOURCE_PATH.read_text(encoding="utf-8"))
+        for version, root in ((1, RYDE_ROOT), (3, RYDE_V3_ROOT)):
+            built, mapping = convert.convert(block, version)
+            with self.subTest(version=version):
+                self.assertEqual(
+                    (root / "case-00901.json").read_text(encoding="utf-8"),
+                    json.dumps(built, indent=2, ensure_ascii=False) + "\n",
+                )
+                self.assertEqual(
+                    (root / "mapping.json").read_text(encoding="utf-8"),
+                    json.dumps(mapping, indent=2, ensure_ascii=False) + "\n",
+                )
+
+
+# --------------------------------------------------------------------------
 # The briefs
 # --------------------------------------------------------------------------
 class TheBriefTests(unittest.TestCase):
@@ -178,7 +352,13 @@ class TheBriefTests(unittest.TestCase):
             (path, amount)
             for path, amount in pipeline.published_money_figures(block)
         ]
-        self.assertEqual([("excess_distance_fare_sgd.value", Decimal("3.44"))], figures)
+        self.assertEqual(
+            [
+                ("refund_already_issued_sgd.value", Decimal("0.0")),
+                ("excess_distance_fare_sgd.value", Decimal("3.44")),
+            ],
+            figures,
+        )
 
     def test_902_rate_and_deviation_are_not_published_as_amounts(self):
         """The two context figures POL-RD-24 multiplies together are excluded."""

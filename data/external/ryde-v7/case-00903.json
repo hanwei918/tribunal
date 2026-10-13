@@ -380,12 +380,10 @@
       "generated_at": "2026-09-13T09:20:00+08:00",
       "schema_version": "1.2.0",
       "admissibility": {
-        "status": "IMPAIRED",
-        "issues": [
-          "PARTIAL_RECORD"
-        ],
-        "weight_multiplier": 0.75,
-        "notes": "The ledger carries one line: the 5.00 cancellation fee. It itemises nothing else, so this is still a PARTIAL_RECORD, at the weight this conversion's own pre-pass rule gives that code (0.75). The 5.00 equals the fee in force for this trip: fee_schedule.resolution_rule reads trip_record.platform_policy.cancellation_fee_sgd first, and the record states it as 5.00, so the single line reconciles with the fee and POL-NS-08(d) is NOT engaged. No issue code is minted for the reconciliation, because there is nothing to report: the one line and the fee in force are the same figure.",
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "The ledger carries one line: the 5.00 cancellation fee. It itemises nothing else, but the fee is the only figure version 7 needs from it and the record states it, so no issue code is minted and the artifact is COMPLETE at version 7, at the weight this conversion's own pre-pass rule gives an empty code set (1.0). The 5.00 equals the fee in force for this trip: fee_schedule.resolution_rule reads trip_record.platform_policy.cancellation_fee_sgd first, and the record states it as 5.00, so the single line reconciles with the fee and POL-NS-08(d) is NOT engaged.",
         "assessed_at": "2026-09-13T09:20:05+08:00",
         "assessor_version": "prepass-1.0.0"
       },

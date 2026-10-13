@@ -371,12 +371,10 @@
       "generated_at": "2026-09-12T14:35:00+08:00",
       "schema_version": "1.2.0",
       "admissibility": {
-        "status": "IMPAIRED",
-        "issues": [
-          "PARTIAL_RECORD"
-        ],
-        "weight_multiplier": 0.75,
-        "notes": "The ledger carries the aggregate the source charges (35.00) against the estimate it quoted (28.50) and the per-kilometre rate the distance fare was computed at (0.80, read out of the note). It itemises no lines, which is a PARTIAL_RECORD: no code in this corpus's vocabulary covers a ledger whose itemisation the source platform did not export, so none is minted and the fact is stated here instead.",
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "The ledger carries the aggregate the source charges (35.00) against the estimate it quoted (28.50) and the per-kilometre rate the distance fare was computed at (0.80, read out of the note). It itemises no base, time or platform-fee line, but version 7 needs only the per-kilometre rate and the excess figures, and the record states both: its note gives the rate as 0.80 per kilometre and fare_breakdown.excess_distance_fare states the excess distance fare. That is a difference of format rather than a gap in what v2.1 decides on, so the artifact is COMPLETE at version 7, at the weight this conversion's own pre-pass rule gives an empty code set (1.0). No issue code is minted for the itemisation, because there is nothing to report.",
         "assessed_at": "2026-09-12T14:35:05+08:00",
         "assessor_version": "prepass-1.0.0"
       },

@@ -572,6 +572,48 @@ def admissibility(
 
 
 # --------------------------------------------------------------------------
+# The version-7 fare rule
+# --------------------------------------------------------------------------
+# Ryde's fare records state the trip's totals and either a per-kilometre rate or
+# an ``excess_distance_fare``, and itemise neither base, time nor platform-fee
+# lines. Version 7 needs from them only the per-kilometre rate and the excess
+# figures, and each record states what its own case needs, so at version 7 that
+# gap is a difference of format rather than a gap in what v2.1 decides on. The
+# two notes below are what each case's mapping records in place of the
+# PARTIAL_RECORD the versions 1 and 3 conversions still read.
+V7_FARE_ISSUE_NOTE = (
+    "The record does not itemise base, time and platform-fee lines; version 7 "
+    "needs only the per-kilometre rate and the excess figures, which it states "
+    "(excess_distance_fare, and the rate in its notes), so it is not marked "
+    "PARTIAL_RECORD at version 7."
+)
+V7_FEE_ISSUE_NOTE = (
+    "The record itemises only the 5.00 cancellation fee; version 7 needs only "
+    "that fee, and the record states it, so it is not marked PARTIAL_RECORD at "
+    "version 7."
+)
+
+
+def _v7_fare_issue_codes() -> List[str]:
+    """The issue codes a Ryde fare record carries at policy version 7: none.
+
+    One rule for both samples, and the one place it lives. A fare record that
+    states the trip's totals and either a per-kilometre rate or an
+    ``excess_distance_fare`` is COMPLETE at version 7: the itemisation the source
+    platform did not export is a difference of format, and v2.1 reads the rate
+    and the excess figures, which the record states. So no code is minted and the
+    artifact weighs what ``prepass.weight_for([])`` gives an empty set, 1.0,
+    where versions 1 and 3 still read the same ledger as a PARTIAL_RECORD at
+    0.75.
+
+    A function rather than a constant so the rule has one name a reader -- and a
+    test -- can point at: the version-7 fare tests remove it and show the two
+    artifacts come back IMPAIRED.
+    """
+    return []
+
+
+# --------------------------------------------------------------------------
 # The conversion
 # --------------------------------------------------------------------------
 def convert(
@@ -1564,14 +1606,17 @@ def _fare(
 ) -> Dict[str, Any]:
     """FARE_BREAKDOWN, carrying only the one line the source itemises.
 
-    ``policy_version`` decides the admissibility note, and nothing else. The
-    ledger carries one 5.00 line either way and itemises nothing else either
-    way, so the code set is ``PARTIAL_RECORD`` at both versions and its weight
-    does not move. What moves is what the note says about the fee: at version 1
-    the 5.00 does not reconcile with ``fee_schedule`` and engages POL-NS-08(d)
-    against 4.00, and at version 3 the fee in force is the record's own
-    ``platform_policy.cancellation_fee_sgd``, 5.00, so the ledger reconciles and
-    POL-NS-08(d) is not engaged. The version-1 note is left exactly as it was.
+    ``policy_version`` decides the admissibility note, and at version 7 the code
+    set as well. The ledger carries one 5.00 line either way and itemises nothing
+    else either way. At versions 1 and 3 the code set is ``PARTIAL_RECORD`` and
+    its weight does not move; what moves between them is what the note says about
+    the fee: at version 1 the 5.00 does not reconcile with ``fee_schedule`` and
+    engages POL-NS-08(d) against 4.00, and at version 3 the fee in force is the
+    record's own ``platform_policy.cancellation_fee_sgd``, 5.00, so the ledger
+    reconciles and POL-NS-08(d) is not engaged. At version 7 the fee is the only
+    figure v2.1 needs from the ledger and the record states it, so the record is
+    not marked a PARTIAL_RECORD at all: see :func:`_v7_fare_issue_codes`. The
+    version-1 note is left exactly as it was.
     """
     fee = float(trip["cancellation_fee"])
     payload = {
@@ -1665,6 +1710,8 @@ def _fare(
         "in the corpus's vocabulary covers it and this conversion may not invent one; "
         "the engagement is stated here in prose instead."
     )
+    codes = ["PARTIAL_RECORD"]
+    codes_reason: Optional[str] = None
     if policy_version >= PLATFORM_POLICY_VERSION:
         # The version-3 reading, and the one place the two conversions of this
         # artifact differ. The fee in force is the record's own platform_policy
@@ -1686,9 +1733,29 @@ def _fare(
             "reconciliation, because there is nothing to report: the one line and the "
             "fee in force are the same figure.".format(weight)
         )
+    if policy_version >= V7_POLICY_VERSION:
+        # The version-7 reading: the same ledger, read as a record that states
+        # what v2.1 needs rather than as an itemisation that is missing. The code
+        # set comes from the one rule, and the weight from the same pre-pass rule
+        # the block beside it uses.
+        weight = prepass.weight_for(_v7_fare_issue_codes())
+        codes = _v7_fare_issue_codes()
+        codes_reason = V7_FEE_ISSUE_NOTE
+        notes = (
+            "The ledger carries one line: the 5.00 cancellation fee. It itemises "
+            "nothing else, but the fee is the only figure version 7 needs from it and "
+            "the record states it, so no issue code is minted and the artifact is "
+            "COMPLETE at version 7, at the weight this conversion's own pre-pass rule "
+            "gives an empty code set ({0}). The 5.00 equals the fee in force for this "
+            "trip: fee_schedule.resolution_rule reads "
+            "trip_record.platform_policy.cancellation_fee_sgd first, and the record "
+            "states it as 5.00, so the single line reconciles with the fee and "
+            "POL-NS-08(d) is NOT engaged.".format(weight)
+        )
     return _artifact(
         decisions, "EV-FARE-" + suffix, "FARE_BREAKDOWN", "PAYMENTS_LEDGER",
-        trip["trip_id"], export_at, payload, ["PARTIAL_RECORD"], notes, assessed_at,
+        trip["trip_id"], export_at, payload, codes, notes, assessed_at,
+        codes_reason=codes_reason,
     )
 
 
@@ -1989,13 +2056,23 @@ def _advisory(
 def _artifact(
     decisions: Decisions, evidence_id: str, evidence_type: str, source: str,
     trip_id: str, generated_at: str, payload: Dict[str, Any], codes: List[str],
-    notes: str, assessed_at: str,
+    notes: str, assessed_at: str, codes_reason: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """One evidence artifact in the contract's eight-key shape."""
+    """One evidence artifact in the contract's eight-key shape.
+
+    ``codes_reason`` is how the mapping records the code set where the version-7
+    conversion has something of its own to say about it: the two Ryde fare
+    records, whose itemisation gap is a difference of format rather than an
+    impairment at version 7. Every other artifact leaves it unset and gets the
+    sentence it has always got.
+    """
     decisions.judged(
         "evidence.{0}.admissibility.issues".format(evidence_id), codes,
-        "Codes chosen only from prepass.CODE_WEIGHTS, and the weight is computed by "
-        "prepass.weight_for rather than written here.",
+        codes_reason
+        or (
+            "Codes chosen only from prepass.CODE_WEIGHTS, and the weight is "
+            "computed by prepass.weight_for rather than written here."
+        ),
     )
     return {
         "evidence_id": evidence_id,
@@ -2337,6 +2414,11 @@ def _route_fare(
     it only in prose. It is read out of that sentence by :data:`RATE_RE` and the
     reading is recorded, so a note whose figure moved refuses rather than
     publishing a rate nobody wrote down.
+
+    The artifact is COMPLETE: the source's ledger itemises no base, time or
+    platform-fee line, but version 7 reads only the per-kilometre rate and the
+    excess figures, and the record states both. See
+    :func:`_v7_fare_issue_codes`.
     """
     notes = fare.get("notes")
     match = RATE_RE.search(notes or "")
@@ -2467,17 +2549,25 @@ def _route_fare(
         "than a list of gantries, so the list is empty rather than reconstructed.",
     )
 
+    from tribunal import prepass  # noqa: PLC0415 - see admissibility()
+
+    weight = prepass.weight_for(_v7_fare_issue_codes())
     notes = (
         "The ledger carries the aggregate the source charges (35.00) against the "
         "estimate it quoted (28.50) and the per-kilometre rate the distance fare "
-        "was computed at (0.80, read out of the note). It itemises no lines, which "
-        "is a PARTIAL_RECORD: no code in this corpus's vocabulary covers a ledger "
-        "whose itemisation the source platform did not export, so none is minted "
-        "and the fact is stated here instead."
-    )
+        "was computed at (0.80, read out of the note). It itemises no base, time or "
+        "platform-fee line, but version 7 needs only the per-kilometre rate and the "
+        "excess figures, and the record states both: its note gives the rate as 0.80 "
+        "per kilometre and fare_breakdown.excess_distance_fare states the excess "
+        "distance fare. That is a difference of format rather than a gap in what "
+        "v2.1 decides on, so the artifact is COMPLETE at version 7, at the weight "
+        "this conversion's own pre-pass rule gives an empty code set ({0}). No issue "
+        "code is minted for the itemisation, because there is nothing to report."
+    ).format(weight)
     return _artifact(
         decisions, "EV-FARE-00902", "FARE_BREAKDOWN", "PAYMENTS_LEDGER",
-        trip["trip_id"], export_at, payload, ["PARTIAL_RECORD"], notes, assessed_at,
+        trip["trip_id"], export_at, payload, _v7_fare_issue_codes(), notes,
+        assessed_at, codes_reason=V7_FARE_ISSUE_NOTE,
     )
 
 
