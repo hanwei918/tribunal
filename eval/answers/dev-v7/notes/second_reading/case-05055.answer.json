@@ -1,0 +1,8 @@
+{
+  "expected_ruling": "FULL_REFUND",
+  "expected_amount_sgd": 5.00,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": ["POL-NS-24", "POL-NS-26", "POL-GEN-22", "POL-GEN-03", "POL-GEN-02", "POL-GEN-01"],
+  "reasoning": "Scheduled trip, pickup 07:30 (EV-TRIP-05055), so the POL-NS-24 deadline is 07:35:00. arrived_at is null and the complete GPS trace (EV-GPS-05055, weight 1.0) shows the driver stationary about 1.14 km from the pickup from 07:33:10 until the rider cancelled at 07:37:40. That is far outside the 50 m STANDARD radius, so the driver had not arrived by scheduled+5 min. Under POL-NS-24 (v2.1 2.4) the rider may cancel at no charge, so the SGD 5.00 fee charged (EV-FARE-05055) is refunded in full: FULL_REFUND. There is no goodwill referral because the driver did attempt contact: a chat at 07:31:10 (EV-CHAT-05055) and an answered in-app call at 07:33:20. v2.1 2.4 has no traffic exception, so the driver's jam excuse does not change the outcome, and the missing traffic advisory (EV-ADVIS-05055-01, weight 0.0) decides nothing (POL-GEN-02). Profile fields are context only (POL-GEN-01). No fraud_flags, no no_show_cancellations_30d field, and no safety indicator. The value is 5.00 < 10, so the AI ruling is final (POL-GEN-22, POL-NS-26)."
+}

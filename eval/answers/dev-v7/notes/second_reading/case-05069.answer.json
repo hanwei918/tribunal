@@ -1,0 +1,8 @@
+{
+  "expected_ruling": "DRIVER_COMPENSATION",
+  "expected_amount_sgd": 5.00,
+  "expected_driver_compensation_sgd": 5.00,
+  "expected_referrals": [],
+  "governing_clauses": ["POL-NS-21", "POL-NS-22", "POL-NS-23", "POL-NS-26", "POL-GEN-01", "POL-GEN-02", "POL-GEN-03", "POL-GEN-22"],
+  "reasoning": "On-demand trip; EV-TRIP-05069 arrived_at 13:27:15, corroborated by EV-GPS-05069 (fix 13:27:10 <1 m from pickup, acc 6 m; STANDARD 50 m radius; stationary through 13:33:40). Free wait runs from arrival (POL-NS-21, v2.1 2.1): ends 13:32:15; driver cancelled 13:33:40, after it. Contact (POL-NS-23, v2.1 2.3): EV-CHAT-05069 shows in-app message MSG-05069-001 at 13:27:40 and a VOICE_CALL_LOG entry MSG-05069-002 at 13:30:15 (rang 24 s), both before cancellation; the clause accepts a chat-log voice-call entry even though in_app_calls is empty, so the rider's 'never called' statement is contradicted by the platform record. Fee charged 5.00 per EV-FARE-05069 = policy fee, so no POL-NS-22 referral; the fee stands and the interim reversal is undone: DRIVER_COMPENSATION 5.00 (POL-NS-22, POL-GEN-03, v2.1 2.2). Deciding artifacts all weight 1.0 (POL-GEN-02); EV-ADVIS-05069-01 MISSING is irrelevant to a no-show. Value 5.00 < 10, fraud_flags 0 both sides, no safety indicator: AI ruling final (POL-GEN-22, POL-NS-26, v2.1 6.1-6.3). Profiles context only (POL-GEN-01); no_show_cancellations_30d absent, so no POL-NS-25 referral."
+}

@@ -1,0 +1,18 @@
+{
+  "expected_ruling": "ESCALATE",
+  "expected_amount_sgd": null,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": [
+    "POL-RD-21",
+    "POL-RD-22",
+    "POL-RD-23",
+    "POL-RD-24",
+    "POL-GEN-02",
+    "POL-GEN-26",
+    "POL-GEN-22",
+    "POL-RD-25",
+    "POL-GEN-03"
+  ],
+  "reasoning": "No safety indicator: the PIE accident is an external incident, not one involving this trip (POL-GEN-21 not triggered). Value 37.55 is in the 10-50 band, so the AI ruling needs confidence >= 0.80 (POL-GEN-22, POL-RD-25); no fraud_flags. Deviation 22.9 - 21.3 = 1.6 km > 1 km from EV-TRIP-05011, weight 1.0 (POL-RD-22). EV-ADVIS-05011-01 (LTA, weight 1.0) shows an accident on PIE after Adam Rd, on the recommended route, valid 07:44-08:54, overlapping the trip, so the reroute is traffic-justified (POL-RD-23). The deciding fact is whether the driver informed the rider before or at the deviation (POL-RD-21): row (a) NO_ACTION vs row (b) PARTIAL_REFUND of 1.6 x 0.72 = 1.15 (POL-RD-24). Only EV-CHAT-05011 carries it, and it is IMPAIRED, weight 0.4, CROSS_SOURCE_CONFLICT: MSG-05011-003 sent_at 08:10:49 (device) vs delivered_at 08:14:19 (server) fall on opposite sides of the 08:12:19 deviation, and the rider's 'ok can' came at 08:14:39. Confidence is capped at 0.4 (POL-GEN-02) and notification cannot be established (POL-GEN-26), so ESCALATE; the amount is held (POL-GEN-03). Profile history and the late appointment are not grounds (POL-GEN-01)."
+}

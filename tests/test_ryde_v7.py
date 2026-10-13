@@ -16,8 +16,10 @@ This module holds the set to the four things the conversion is for:
   money block publishes the excess distance fare POL-RD-24 computes (3.44) and
   its authority block puts it in POL-GEN-22's first band, and 903's free wait
   runs from the scheduled time to 08:50 with POL-NS-23's contact obligation met;
-* the registration is a **declaration** for the two sets whose data is not here
-  yet, and a registration for the one whose data is;
+* the registration is a **declaration** for each of the two version-7 sets
+  whose data has not arrived, and a registration for each one whose data has --
+  ``dev-v7`` and ``sealed-v4`` arrive in part 73, and each is registered the
+  moment its own ``index.json`` exists;
 * the version and the prompt set are one pair, refused in both directions.
 
 No model call is made. Run from the project root with::
@@ -61,8 +63,22 @@ KEY_PATH = PROJECT_ROOT / "eval" / "answers" / SET_NAME / "ground_truth.json"
 ROUTE_DEVIATION_CASE = 902
 NO_SHOW_CASE = 903
 
-# The declarations parts 73 and 74 will register.
-DECLARED_NAMES = ("dev-v7", "sealed-v4")
+# The two sets parts 73 and 74 bring, by name: ``dev-v7``, the version-7
+# development set, and ``sealed-v4``, the sixth sealed set. Each is **declared**
+# until its own ``data/external/<name>/index.json`` exists and registered from
+# that moment, so the tests below read which state the set is in rather than
+# pinning one -- the two arrive in different parts.
+V7_SET_NAMES = ("dev-v7", "sealed-v4")
+
+
+def is_registered(name: str) -> bool:
+    """Whether a set's own data is on disk, which is what registers it."""
+    return (loader.EXTERNAL_DIR / name / loader.EXTERNAL_INDEX_FILE).is_file()
+
+
+def set_or_declaration(name: str):
+    """One of the two, as the registry holds it right now."""
+    return sets.BY_NAME.get(name) or sets.DECLARED_SETS[name]
 
 
 def case(case_no: int) -> Mapping[str, Any]:
@@ -304,7 +320,7 @@ class TheKeyTests(unittest.TestCase):
 # The registration
 # --------------------------------------------------------------------------
 class TheRegistrationTests(unittest.TestCase):
-    """One set registered, two declared, and none of them a development set."""
+    """Three sets registered or declared, and none of them a development set."""
 
     def test_ryde_v7_is_registered_as_a_development_set(self):
         registered = sets.BY_NAME[SET_NAME]
@@ -344,34 +360,39 @@ class TheRegistrationTests(unittest.TestCase):
             "the name table is not exactly the registered sets",
         )
 
-    def test_the_two_future_sets_are_declared_and_not_registered(self):
-        for name in DECLARED_NAMES:
+    def test_each_of_the_two_sets_is_registered_or_declared(self):
+        """A set is registered the moment its own index exists, and not before."""
+        for name in V7_SET_NAMES:
             with self.subTest(set=name):
-                self.assertIn(name, sets.DECLARED_SETS)
-                self.assertNotIn(name, sets.BY_NAME)
-                self.assertFalse(
-                    (loader.EXTERNAL_DIR / name).exists(),
-                    "a declared set has data, so it should be registered",
-                )
+                if is_registered(name):
+                    self.assertIn(name, sets.BY_NAME)
+                    self.assertNotIn(name, sets.DECLARED_SETS)
+                else:
+                    self.assertIn(name, sets.DECLARED_SETS)
+                    self.assertNotIn(name, sets.BY_NAME)
+                    self.assertFalse(
+                        (loader.EXTERNAL_DIR / name).exists(),
+                        "a set with data is not registered",
+                    )
 
-    def test_each_declared_set_fixes_version_seven_and_prompts_v2(self):
-        for name in DECLARED_NAMES:
-            declared = sets.DECLARED_SETS[name]
+    def test_each_of_the_two_sets_fixes_version_seven_and_prompts_v2(self):
+        for name in V7_SET_NAMES:
+            found = set_or_declaration(name)
             with self.subTest(set=name):
-                self.assertEqual(VERSION_SEVEN, declared.policy_version)
-                self.assertIsNotNone(declared.run_arguments)
+                self.assertEqual(VERSION_SEVEN, found.policy_version)
+                self.assertIsNotNone(found.run_arguments)
                 self.assertEqual(
-                    Path("prompts/v2"), declared.run_arguments.prompts_dir
+                    Path("prompts/v2"), found.run_arguments.prompts_dir
                 )
 
-    def test_the_declared_sealed_set_is_marked_sealed(self):
-        self.assertTrue(sets.DECLARED_SETS["sealed-v4"].sealed)
-        self.assertFalse(sets.DECLARED_SETS["dev-v7"].sealed)
+    def test_the_sealed_one_is_marked_sealed_and_the_development_one_is_not(self):
+        self.assertTrue(set_or_declaration("sealed-v4").sealed)
+        self.assertFalse(set_or_declaration("dev-v7").sealed)
 
     def test_the_run_arguments_are_sealed_v2_s(self):
         frozen = sets.SEALED_V2.run_arguments
-        for name in DECLARED_NAMES:
-            declared = sets.DECLARED_SETS[name].run_arguments
+        for name in V7_SET_NAMES:
+            declared = set_or_declaration(name).run_arguments
             with self.subTest(set=name):
                 self.assertEqual(frozen.model, declared.model)
                 self.assertEqual(frozen.judge_votes, declared.judge_votes)
@@ -380,8 +401,10 @@ class TheRegistrationTests(unittest.TestCase):
                 self.assertEqual(frozen.concurrency, declared.concurrency)
                 self.assertEqual(Path("prompts/v2"), declared.prompts_dir)
 
-    def test_no_folder_was_created_for_a_declared_set(self):
-        for name in DECLARED_NAMES:
+    def test_no_folder_was_created_for_a_set_whose_data_is_absent(self):
+        for name in V7_SET_NAMES:
+            if is_registered(name):
+                continue
             with self.subTest(set=name):
                 self.assertFalse((loader.EXTERNAL_DIR / name).exists())
 
@@ -397,20 +420,38 @@ class TheCheckTests(unittest.TestCase):
         self.assertEqual("", out.getvalue())
         return errors.getvalue()
 
-    def test_check_for_sealed_v4_before_its_data_exists(self):
-        message = self.check("sealed-v4")
-        self.assertIn("sealed-v4", message)
-        self.assertIn("declared but not registered", message)
-        self.assertIn("index.json", message)
+    def test_the_declaration_message_names_the_set_its_root_and_its_index(self):
+        """The sentence a set with no data is told, kept for a further set.
 
-    def test_check_for_dev_v7_before_its_data_exists(self):
-        message = self.check("dev-v7")
-        self.assertIn("dev-v7", message)
-        self.assertIn("declared but not registered", message)
+        Asserted through ``render_declared_set`` rather than through a command,
+        so it holds whichever of the two sets has arrived: the machinery stays
+        once every set is registered, and this is what says it still answers.
+        """
+        for name in V7_SET_NAMES:
+            with self.subTest(set=name):
+                message = sets.render_declared_set(set_or_declaration(name))
+                self.assertIn(name, message)
+                self.assertIn("declared but not registered", message)
+                self.assertIn("index.json", message)
+                self.assertIn(str(loader.EXTERNAL_DIR / name), message)
 
-    def test_naming_a_declared_set_raises_rather_than_defaulting(self):
+    def test_check_for_a_set_whose_data_has_not_arrived(self):
+        waiting = [name for name in V7_SET_NAMES if not is_registered(name)]
+        if not waiting:
+            self.skipTest("both version-7 sets have arrived, so none is declared")
+        for name in waiting:
+            with self.subTest(set=name):
+                message = self.check(name)
+                self.assertIn(name, message)
+                self.assertIn("declared but not registered", message)
+                self.assertIn("index.json", message)
+
+    def test_naming_a_set_whose_data_has_not_arrived_raises_rather_than_defaulting(self):
+        waiting = [name for name in V7_SET_NAMES if not is_registered(name)]
+        if not waiting:
+            self.skipTest("both version-7 sets have arrived, so none is declared")
         with self.assertRaises(runner.BenchmarkError) as caught:
-            sets.named("sealed-v4")
+            sets.named(waiting[0])
         self.assertIn("declared but not registered", str(caught.exception))
 
 

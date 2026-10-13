@@ -1,0 +1,17 @@
+{
+  "expected_ruling": "NO_ACTION",
+  "expected_amount_sgd": null,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": [
+    "POL-RD-21",
+    "POL-RD-22",
+    "POL-RD-23",
+    "POL-RD-24",
+    "POL-RD-25",
+    "POL-GEN-03",
+    "POL-GEN-22",
+    "POL-GEN-23"
+  ],
+  "reasoning": "Driver-filed ROUTE_DEVIATION contesting the SGD 1.68 interim recovery. Value 1.68 < 10 and no fraud flags on either profile, so AI ruling final (POL-GEN-22, POL-RD-25); no safety indicator. Deviation = 9.9 - 8.3 = 1.6 km > 1.0 km tolerance (EV-TRIP-05016 recorded distances, POL-RD-22; EV-GPS-05016 confirms route CTE > Bukit Timah > Lornie > Upper Thomson). EV-ADVIS-05016-01 (weight 1.0) shows heavy traffic on CTE after Bukit Timah exit to Braddell Rd, 17:57-19:12, on the recommended segment during the trip: traffic-justified (POL-RD-23). EV-CHAT-05016 (complete) has only pre-pickup messages and no in-app calls exist; driver admits he did not wake the rider: rider not informed (POL-RD-21). A sleeping rider is no exception. Row (b) of POL-RD-24 applies: rider due excess distance fare 1.6 x 1.05 = 1.68 (no surge), exactly the amount already refunded and recovered (EV-FARE-05016), consistent with precedent 7.1 (POL-GEN-23). The driver's claim is not supported, so the present state stands: NO_ACTION (POL-GEN-03). Profile history is context only (POL-GEN-01). All deciding artifacts weight 1.0. No referrals."
+}

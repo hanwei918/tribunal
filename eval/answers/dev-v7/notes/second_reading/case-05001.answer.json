@@ -1,0 +1,17 @@
+{
+  "expected_ruling": "PARTIAL_REFUND",
+  "expected_amount_sgd": 1.15,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": [
+    "POL-RD-21",
+    "POL-RD-22",
+    "POL-RD-23",
+    "POL-RD-24",
+    "POL-RD-25",
+    "POL-GEN-22",
+    "POL-GEN-02",
+    "POL-GEN-03"
+  ],
+  "reasoning": "No safety indicator (POL-GEN-21). Deviation per POL-RD-22 from EV-TRIP-05001 recorded distances: 8.3 - 6.7 = 1.6 km, over the 1 km tolerance; EV-GPS-05001 (weight 1.0) confirms Braddell Rd/Toa Payoh Lor 6 instead of Marymount Rd, and its 6.872 km trace length is not used to re-measure. POL-RD-23: EV-ADVIS-05001-01 covers Marymount Rd (recommended segment) 07:39-09:09, overlapping the trip, and shows no incident, speed bands 4-5; the driver's 'sure jam' assertion does not justify the reroute. EV-CHAT-05001 has only pickup messages, no deviation notice (POL-RD-21), irrelevant to row (d). POL-RD-24 row (d): excess distance fare 1.6 x 0.72 (EV-FARE-05001 per_km_rate, no surge) = 1.152 -> SGD 1.15, PARTIAL_REFUND (v2.1 1.3/1.4). Value SGD 3.00 < 10 (POL-GEN-22); no fraud flags; all artifacts weight 1.0 (POL-GEN-02) so confidence >= 0.80 (POL-RD-25); 2 km limb not applied. Profile history is context only (POL-GEN-01)."
+}

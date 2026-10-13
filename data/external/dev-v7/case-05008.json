@@ -1,0 +1,800 @@
+{
+  "schema_version": "1.2.0",
+  "case_no": 5008,
+  "dispute": {
+    "case_no": 5008,
+    "dispute_id": "DSP-05008",
+    "trip_id": "TRP-05008",
+    "category": "ROUTE_DEVIATION",
+    "filed_at": "2026-08-21T22:23:23+08:00",
+    "filed_by": "DRIVER",
+    "channel": "IN_APP_SUPPORT",
+    "amount_contested_sgd": 1.08,
+    "claim_text": "I informed the passenger before exiting the KPE because of the heavy jam. Ryde refunded her $1.08 from my earnings. I gave notice like the policy says.",
+    "counterparty_statement": {
+      "text": "I told him clearly in the chat not to change route and he exited anyway. I should not pay for a route I said no to.",
+      "submitted_by": "RIDER",
+      "submitted_at": "2026-08-22T06:30:23+08:00"
+    },
+    "evidence_ids": [
+      "EV-TRIP-05008",
+      "EV-GPS-05008",
+      "EV-CHAT-05008",
+      "EV-FARE-05008",
+      "EV-RPROF-05008",
+      "EV-DPROF-05008",
+      "EV-ADVIS-05008-01"
+    ]
+  },
+  "evidence": [
+    {
+      "evidence_id": "EV-TRIP-05008",
+      "evidence_type": "TRIP_RECORD",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform trip record; timestamps causally ordered; recorded optimal and actual distances present; deviation and rejoin events carried in events[].",
+        "assessed_at": "2026-08-21T22:35:28+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05008",
+        "rider_id": "R-52566",
+        "driver_id": "D-76892",
+        "requested_at": "2026-08-21T19:22:30+08:00",
+        "accepted_at": "2026-08-21T19:22:53+08:00",
+        "arrived_at": "2026-08-21T19:27:38+08:00",
+        "started_at": "2026-08-21T19:29:23+08:00",
+        "ended_at": "2026-08-21T19:52:23+08:00",
+        "cancelled_at": null,
+        "status": "COMPLETED",
+        "cancelled_by": null,
+        "cancellation_reason_code": null,
+        "pickup": {
+          "label": "Suntec City, Temasek Boulevard",
+          "lat": 1.2953,
+          "lng": 103.8586,
+          "venue_id": null
+        },
+        "dropoff": {
+          "label": "Heartland Mall Kovan, Upper Serangoon Road",
+          "lat": 1.3603,
+          "lng": 103.8852,
+          "venue_id": null
+        },
+        "vehicle_type": "RYDE_X",
+        "pickup_zone_class": "STANDARD",
+        "chat_message_count": 5,
+        "registered_pickup_points": null,
+        "in_app_calls": [],
+        "optimal_distance_km": 9.9,
+        "optimal_duration_min": 20.0,
+        "optimal_route_source": "PLATFORM_ROUTER",
+        "optimal_route_erp_sgd": 1.0,
+        "actual_distance_km": 11.4,
+        "actual_duration_min": 23.0,
+        "deviation_pct": 15.2,
+        "amended_optimal_distance_km": null,
+        "amended_optimal_duration_min": null,
+        "solo_optimal_distance_km": null,
+        "pickup_amended_at": null,
+        "dropoff_amended_at": null,
+        "original_pickup": null,
+        "original_dropoff": null,
+        "scheduled_at": null,
+        "optimal_route_via": [
+          "Temasek Boulevard",
+          "Republic Avenue",
+          "Kallang-Paya Lebar Expressway (KPE)",
+          "Hougang Avenue 1",
+          "Upper Serangoon Road"
+        ],
+        "actual_route_via": [
+          "Temasek Boulevard",
+          "Republic Avenue",
+          "Kallang-Paya Lebar Expressway (KPE)",
+          "Sims Avenue",
+          "Aljunied Road",
+          "Upper Serangoon Road"
+        ],
+        "events": [
+          {
+            "event_type": "booking_confirmed",
+            "at": "2026-08-21T19:22:30+08:00",
+            "detail": "Rider R-52566 booked TRP-05008 from Suntec City, Temasek Boulevard to Heartland Mall Kovan, Upper Serangoon Road. On-demand, metered fare.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_assigned",
+            "at": "2026-08-21T19:22:53+08:00",
+            "detail": "Driver D-76892 (Toyota Prius, SLF 8222 A) assigned. ETA 4 min.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_arrived",
+            "at": "2026-08-21T19:27:38+08:00",
+            "detail": "Driver marked arrived at pickup (button).",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_started",
+            "at": "2026-08-21T19:29:23+08:00",
+            "detail": "Rider on board. Recommended route via Temasek Boulevard, Republic Avenue, Kallang-Paya Lebar Expressway (KPE), Hougang Avenue 1, Upper Serangoon Road, 9.9 km.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_deviation_detected",
+            "at": "2026-08-21T19:37:02+08:00",
+            "detail": "Vehicle left the recommended route at KPE / Sims Way exit: recommended Kallang-Paya Lebar Expressway (KPE), vehicle took Sims Avenue.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_rejoined",
+            "at": "2026-08-21T19:50:37+08:00",
+            "detail": "Vehicle rejoined the recommended route at Upper Serangoon Road / Hougang Avenue 1.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_completed",
+            "at": "2026-08-21T19:52:23+08:00",
+            "detail": "Trip ended at Heartland Mall Kovan, Upper Serangoon Road. Recorded distance 11.4 km, duration 23 min 00 s.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "fare_finalised",
+            "at": "2026-08-21T19:52:29+08:00",
+            "detail": "Metered fare SGD 22.11 charged to rider payment method.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "fare_adjusted",
+            "at": "2026-08-21T20:48:23+08:00",
+            "detail": "Interim adjustment after a rider route complaint: SGD 1.08 refunded to rider and recovered from driver earnings pending review.",
+            "source": "PLATFORM_TELEMETRY"
+          }
+        ]
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05008",
+      "generated_at": "2026-08-21T22:35:23+08:00"
+    },
+    {
+      "evidence_id": "EV-GPS-05008",
+      "evidence_type": "GPS_TRACE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver-device trace, 47 fixes at 30 s from trip start to trip end; every fix reports horizontal accuracy (max 8 m) and a map-matched road; no interval exceeds 120 s.",
+        "assessed_at": "2026-08-21T22:35:28+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05008",
+        "points": [
+          {
+            "lat": 1.2953,
+            "lng": 103.8586,
+            "ts": "2026-08-21T19:29:23+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 4,
+            "road": "Temasek Boulevard"
+          },
+          {
+            "lat": 1.296249,
+            "lng": 103.86022,
+            "ts": "2026-08-21T19:29:53+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 5,
+            "road": "Temasek Boulevard"
+          },
+          {
+            "lat": 1.297182,
+            "lng": 103.861878,
+            "ts": "2026-08-21T19:30:23+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 8,
+            "road": "Temasek Boulevard"
+          },
+          {
+            "lat": 1.298126,
+            "lng": 103.863517,
+            "ts": "2026-08-21T19:30:53+08:00",
+            "speed_kph": 21,
+            "accuracy_m": 5,
+            "road": "Temasek Boulevard"
+          },
+          {
+            "lat": 1.299061,
+            "lng": 103.865148,
+            "ts": "2026-08-21T19:31:23+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 5,
+            "road": "Republic Avenue"
+          },
+          {
+            "lat": 1.300098,
+            "lng": 103.866746,
+            "ts": "2026-08-21T19:31:53+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 8,
+            "road": "Republic Avenue"
+          },
+          {
+            "lat": 1.301111,
+            "lng": 103.868377,
+            "ts": "2026-08-21T19:32:23+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 6,
+            "road": "Republic Avenue"
+          },
+          {
+            "lat": 1.302074,
+            "lng": 103.869932,
+            "ts": "2026-08-21T19:32:53+08:00",
+            "speed_kph": 24,
+            "accuracy_m": 6,
+            "road": "Republic Avenue"
+          },
+          {
+            "lat": 1.303087,
+            "lng": 103.871542,
+            "ts": "2026-08-21T19:33:23+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 4,
+            "road": "Republic Avenue"
+          },
+          {
+            "lat": 1.304148,
+            "lng": 103.873114,
+            "ts": "2026-08-21T19:33:53+08:00",
+            "speed_kph": 24,
+            "accuracy_m": 3,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.305752,
+            "lng": 103.874149,
+            "ts": "2026-08-21T19:34:23+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 6,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.307303,
+            "lng": 103.875205,
+            "ts": "2026-08-21T19:34:53+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 7,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.308849,
+            "lng": 103.876237,
+            "ts": "2026-08-21T19:35:23+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 6,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.310463,
+            "lng": 103.877274,
+            "ts": "2026-08-21T19:35:53+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 4,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.312,
+            "lng": 103.87835,
+            "ts": "2026-08-21T19:36:23+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 7,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.313605,
+            "lng": 103.878602,
+            "ts": "2026-08-21T19:36:53+08:00",
+            "speed_kph": 22,
+            "accuracy_m": 8,
+            "road": "Sims Avenue"
+          },
+          {
+            "lat": 1.315167,
+            "lng": 103.877591,
+            "ts": "2026-08-21T19:37:23+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 4,
+            "road": "Sims Avenue"
+          },
+          {
+            "lat": 1.316783,
+            "lng": 103.876567,
+            "ts": "2026-08-21T19:37:53+08:00",
+            "speed_kph": 22,
+            "accuracy_m": 5,
+            "road": "Sims Avenue"
+          },
+          {
+            "lat": 1.318325,
+            "lng": 103.875526,
+            "ts": "2026-08-21T19:38:23+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 6,
+            "road": "Sims Avenue"
+          },
+          {
+            "lat": 1.319931,
+            "lng": 103.874538,
+            "ts": "2026-08-21T19:38:53+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 8,
+            "road": "Sims Avenue"
+          },
+          {
+            "lat": 1.321528,
+            "lng": 103.873481,
+            "ts": "2026-08-21T19:39:23+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 4,
+            "road": "Sims Avenue"
+          },
+          {
+            "lat": 1.323114,
+            "lng": 103.87245,
+            "ts": "2026-08-21T19:39:53+08:00",
+            "speed_kph": 22,
+            "accuracy_m": 4,
+            "road": "Sims Avenue"
+          },
+          {
+            "lat": 1.324703,
+            "lng": 103.871417,
+            "ts": "2026-08-21T19:40:23+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 6,
+            "road": "Sims Avenue"
+          },
+          {
+            "lat": 1.326287,
+            "lng": 103.870383,
+            "ts": "2026-08-21T19:40:53+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 5,
+            "road": "Sims Avenue"
+          },
+          {
+            "lat": 1.327869,
+            "lng": 103.869372,
+            "ts": "2026-08-21T19:41:23+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 6,
+            "road": "Sims Avenue"
+          },
+          {
+            "lat": 1.329491,
+            "lng": 103.868331,
+            "ts": "2026-08-21T19:41:53+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 5,
+            "road": "Sims Avenue"
+          },
+          {
+            "lat": 1.331046,
+            "lng": 103.867322,
+            "ts": "2026-08-21T19:42:23+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 6,
+            "road": "Sims Avenue"
+          },
+          {
+            "lat": 1.332628,
+            "lng": 103.866287,
+            "ts": "2026-08-21T19:42:53+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 7,
+            "road": "Sims Avenue"
+          },
+          {
+            "lat": 1.334233,
+            "lng": 103.865284,
+            "ts": "2026-08-21T19:43:23+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 4,
+            "road": "Sims Avenue"
+          },
+          {
+            "lat": 1.335692,
+            "lng": 103.865276,
+            "ts": "2026-08-21T19:43:53+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 5,
+            "road": "Aljunied Road"
+          },
+          {
+            "lat": 1.337062,
+            "lng": 103.866592,
+            "ts": "2026-08-21T19:44:23+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 6,
+            "road": "Aljunied Road"
+          },
+          {
+            "lat": 1.338428,
+            "lng": 103.867913,
+            "ts": "2026-08-21T19:44:53+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 6,
+            "road": "Aljunied Road"
+          },
+          {
+            "lat": 1.33976,
+            "lng": 103.869241,
+            "ts": "2026-08-21T19:45:23+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 4,
+            "road": "Aljunied Road"
+          },
+          {
+            "lat": 1.341166,
+            "lng": 103.870536,
+            "ts": "2026-08-21T19:45:53+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 4,
+            "road": "Aljunied Road"
+          },
+          {
+            "lat": 1.342472,
+            "lng": 103.871849,
+            "ts": "2026-08-21T19:46:23+08:00",
+            "speed_kph": 21,
+            "accuracy_m": 8,
+            "road": "Aljunied Road"
+          },
+          {
+            "lat": 1.343866,
+            "lng": 103.873195,
+            "ts": "2026-08-21T19:46:53+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 3,
+            "road": "Aljunied Road"
+          },
+          {
+            "lat": 1.345215,
+            "lng": 103.874516,
+            "ts": "2026-08-21T19:47:23+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 6,
+            "road": "Aljunied Road"
+          },
+          {
+            "lat": 1.346561,
+            "lng": 103.875807,
+            "ts": "2026-08-21T19:47:53+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 5,
+            "road": "Aljunied Road"
+          },
+          {
+            "lat": 1.34796,
+            "lng": 103.877142,
+            "ts": "2026-08-21T19:48:23+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 4,
+            "road": "Aljunied Road"
+          },
+          {
+            "lat": 1.349275,
+            "lng": 103.878423,
+            "ts": "2026-08-21T19:48:53+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 7,
+            "road": "Aljunied Road"
+          },
+          {
+            "lat": 1.350668,
+            "lng": 103.879768,
+            "ts": "2026-08-21T19:49:23+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 3,
+            "road": "Aljunied Road"
+          },
+          {
+            "lat": 1.35201,
+            "lng": 103.881078,
+            "ts": "2026-08-21T19:49:53+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 5,
+            "road": "Aljunied Road"
+          },
+          {
+            "lat": 1.353356,
+            "lng": 103.882393,
+            "ts": "2026-08-21T19:50:23+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 3,
+            "road": "Aljunied Road"
+          },
+          {
+            "lat": 1.354949,
+            "lng": 103.883329,
+            "ts": "2026-08-21T19:50:53+08:00",
+            "speed_kph": 22,
+            "accuracy_m": 3,
+            "road": "Upper Serangoon Road"
+          },
+          {
+            "lat": 1.35673,
+            "lng": 103.883924,
+            "ts": "2026-08-21T19:51:23+08:00",
+            "speed_kph": 24,
+            "accuracy_m": 4,
+            "road": "Upper Serangoon Road"
+          },
+          {
+            "lat": 1.358513,
+            "lng": 103.884576,
+            "ts": "2026-08-21T19:51:53+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 6,
+            "road": "Upper Serangoon Road"
+          },
+          {
+            "lat": 1.3603,
+            "lng": 103.8852,
+            "ts": "2026-08-21T19:52:23+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 4,
+            "road": "Upper Serangoon Road"
+          }
+        ],
+        "point_count": 47,
+        "first_fix_at": "2026-08-21T19:29:23+08:00",
+        "last_fix_at": "2026-08-21T19:52:23+08:00",
+        "sample_interval_sec": 30.0,
+        "expected_interval_sec": 30.0,
+        "gaps": [],
+        "max_gap_sec": 30.0,
+        "coverage_pct": 100.0,
+        "trace_distance_km": 9.584,
+        "rider_track": []
+      },
+      "schema_version": "1.2.0",
+      "source": "DRIVER_DEVICE",
+      "trip_id": "TRP-05008",
+      "generated_at": "2026-08-21T22:35:23+08:00"
+    },
+    {
+      "evidence_id": "EV-CHAT-05008",
+      "evidence_type": "CHAT_LOG",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform chat log, 5 entries, contiguous; matches trip_record.chat_message_count.",
+        "assessed_at": "2026-08-21T22:35:28+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05008",
+        "messages": [
+          {
+            "msg_id": "MSG-05008-001",
+            "sender": "DRIVER",
+            "text": "Hi, at Suntec taxi stand B",
+            "sent_at": "2026-08-21T19:28:03+08:00",
+            "read_at": "2026-08-21T19:28:29+08:00",
+            "delivered_at": "2026-08-21T19:28:06+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-05008-002",
+            "sender": "RIDER",
+            "text": "ok",
+            "sent_at": "2026-08-21T19:28:23+08:00",
+            "read_at": "2026-08-21T19:28:40+08:00",
+            "delivered_at": "2026-08-21T19:28:26+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-05008-003",
+            "sender": "DRIVER",
+            "text": "Miss, KPE very jam after Sims Way, I come out at Sims Ave and go Aljunied ok? Faster.",
+            "sent_at": "2026-08-21T19:34:22+08:00",
+            "read_at": "2026-08-21T19:35:00+08:00",
+            "delivered_at": "2026-08-21T19:34:23+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-05008-004",
+            "sender": "RIDER",
+            "text": "No need, pls just stay on KPE, I don't mind the jam.",
+            "sent_at": "2026-08-21T19:34:52+08:00",
+            "read_at": "2026-08-21T19:34:59+08:00",
+            "delivered_at": "2026-08-21T19:34:55+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-05008-005",
+            "sender": "RIDER",
+            "text": "Eh I said no need already, why still exit",
+            "sent_at": "2026-08-21T19:38:22+08:00",
+            "read_at": "2026-08-21T19:39:03+08:00",
+            "delivered_at": "2026-08-21T19:38:24+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          }
+        ],
+        "message_count": 5,
+        "first_message_at": "2026-08-21T19:28:03+08:00",
+        "last_message_at": "2026-08-21T19:38:22+08:00",
+        "truncated": false
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05008",
+      "generated_at": "2026-08-21T22:35:23+08:00"
+    },
+    {
+      "evidence_id": "EV-FARE-05008",
+      "evidence_type": "FARE_BREAKDOWN",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Payments ledger; itemised lines reconcile to total_charged; tolls_erp equals the gantry list.",
+        "assessed_at": "2026-08-21T22:35:28+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05008",
+        "currency": "SGD",
+        "fare_model": "METERED",
+        "cancellation_fee": 0.0,
+        "total_charged": 22.11,
+        "payment_status": "PARTIALLY_REFUNDED",
+        "refund_issued_sgd": 1.08,
+        "charged_at": "2026-08-21T19:52:29+08:00",
+        "surge_multiplier": 1.4,
+        "rate_card_id": "RC-SG-RYDEX-2026Q3",
+        "base_fare": 2.8,
+        "distance_fare": 8.21,
+        "time_fare": 4.14,
+        "surge_amount": 6.06,
+        "tolls_erp": 0.0,
+        "airport_surcharge": 0.0,
+        "platform_fee": 0.9,
+        "promo_discount": 0.0,
+        "waiting_time_fee": 0.0,
+        "quoted_fare_sgd": null,
+        "distance_charged_km": 11.4,
+        "time_charged_min": 23.0,
+        "per_km_rate_sgd": 0.72,
+        "per_min_rate_sgd": 0.18,
+        "erp_gantries": []
+      },
+      "schema_version": "1.2.0",
+      "source": "PAYMENTS_LEDGER",
+      "trip_id": "TRP-05008",
+      "generated_at": "2026-08-21T22:35:23+08:00"
+    },
+    {
+      "evidence_id": "EV-RPROF-05008",
+      "evidence_type": "RIDER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Rider profile snapshot at filing.",
+        "assessed_at": "2026-08-21T22:35:28+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "R-52566",
+        "party_role": "RIDER",
+        "snapshot_at": "2026-08-21T22:23:23+08:00",
+        "account_age_days": 179,
+        "lifetime_trips": 733,
+        "rating": 4.74,
+        "prior_disputes_filed": 1,
+        "prior_disputes_upheld": 0,
+        "prior_no_show_flags": 1,
+        "cancellation_rate": 0.067,
+        "no_show_disputes_30d": 1,
+        "deviation_claims_60d": 1,
+        "deviation_claims_60d_substantiated": 0,
+        "disputes_with_counterparty_90d": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05008",
+      "generated_at": "2026-08-21T22:35:23+08:00"
+    },
+    {
+      "evidence_id": "EV-DPROF-05008",
+      "evidence_type": "DRIVER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver profile snapshot at filing.",
+        "assessed_at": "2026-08-21T22:35:28+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "D-76892",
+        "party_role": "DRIVER",
+        "snapshot_at": "2026-08-21T22:23:23+08:00",
+        "account_age_days": 1074,
+        "lifetime_trips": 1620,
+        "rating": 4.93,
+        "prior_disputes_filed": 0,
+        "prior_disputes_upheld": 0,
+        "prior_no_show_flags": 1,
+        "vehicle_type": "RYDE_X",
+        "cancellation_rate": 0.014,
+        "prior_deviation_flags": 0,
+        "acceptance_rate": 0.84,
+        "active_region": "EAST",
+        "deviation_flags_90d": 1,
+        "completed_trips_90d": 584,
+        "no_show_terminations_30d": 1,
+        "completed_trips_30d": 231,
+        "disputes_with_counterparty_90d": 0,
+        "fraud_flags": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05008",
+      "generated_at": "2026-08-21T22:35:23+08:00"
+    },
+    {
+      "evidence_id": "EV-ADVIS-05008-01",
+      "evidence_type": "TRAFFIC_ADVISORY",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "LTA historical traffic record for the queried road segment and window; retrieved by the platform, not supplied by a party.",
+        "assessed_at": "2026-08-21T22:35:28+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "advisory_id": "LTA-TI-260821-9393",
+        "provider": "LTA_DATAMALL_TRAFFIC_INCIDENTS",
+        "advisory_type": "HEAVY_TRAFFIC",
+        "road": "Kallang-Paya Lebar Expressway (KPE)",
+        "direction": "towards TPE",
+        "location_desc": "after Sims Way exit",
+        "lat": 1.32,
+        "lng": 103.882,
+        "message": "(21/8)19:09 Heavy traffic on KPE (towards TPE) after Sims Way Exit.",
+        "valid_from": "2026-08-21T19:09:23+08:00",
+        "valid_to": "2026-08-21T20:19:23+08:00",
+        "speed_band_min": 1,
+        "retrieved_at": "2026-08-21T22:33:23+08:00"
+      },
+      "schema_version": "1.2.0",
+      "source": "THIRD_PARTY_LTA",
+      "trip_id": "TRP-05008",
+      "generated_at": "2026-08-21T22:35:23+08:00"
+    }
+  ]
+}

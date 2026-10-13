@@ -1,0 +1,681 @@
+{
+  "schema_version": "1.2.0",
+  "case_no": 5009,
+  "dispute": {
+    "case_no": 5009,
+    "dispute_id": "DSP-05009",
+    "trip_id": "TRP-05009",
+    "category": "ROUTE_DEVIATION",
+    "filed_at": "2026-08-23T17:18:19+08:00",
+    "filed_by": "RIDER",
+    "channel": "IN_APP_SUPPORT",
+    "amount_contested_sgd": 3.5,
+    "claim_text": "Driver said there was an accident on the BKE and went by Woodlands Road. I said ok because I believed him, but I could not find any accident news after. The fare was more. I want $3.50 back.",
+    "counterparty_statement": {
+      "text": "Got accident, I saw the jam on the map. Passenger agreed in chat.",
+      "submitted_by": "DRIVER",
+      "submitted_at": "2026-08-24T06:08:19+08:00"
+    },
+    "evidence_ids": [
+      "EV-TRIP-05009",
+      "EV-GPS-05009",
+      "EV-CHAT-05009",
+      "EV-FARE-05009",
+      "EV-RPROF-05009",
+      "EV-DPROF-05009",
+      "EV-ADVIS-05009-01"
+    ]
+  },
+  "evidence": [
+    {
+      "evidence_id": "EV-TRIP-05009",
+      "evidence_type": "TRIP_RECORD",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform trip record; timestamps causally ordered; recorded optimal and actual distances present; deviation and rejoin events carried in events[].",
+        "assessed_at": "2026-08-23T17:30:24+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05009",
+        "rider_id": "R-21688",
+        "driver_id": "D-59126",
+        "requested_at": "2026-08-23T15:40:00+08:00",
+        "accepted_at": "2026-08-23T15:40:19+08:00",
+        "arrived_at": "2026-08-23T15:45:49+08:00",
+        "started_at": "2026-08-23T15:46:49+08:00",
+        "ended_at": "2026-08-23T16:04:19+08:00",
+        "cancelled_at": null,
+        "status": "COMPLETED",
+        "cancelled_by": null,
+        "cancellation_reason_code": null,
+        "pickup": {
+          "label": "Causeway Point, Woodlands Square",
+          "lat": 1.436,
+          "lng": 103.786,
+          "venue_id": null
+        },
+        "dropoff": {
+          "label": "Hillion Mall, Petir Road",
+          "lat": 1.3784,
+          "lng": 103.7627,
+          "venue_id": null
+        },
+        "vehicle_type": "RYDE_X",
+        "pickup_zone_class": "STANDARD",
+        "chat_message_count": 4,
+        "registered_pickup_points": null,
+        "in_app_calls": [],
+        "optimal_distance_km": 8.5,
+        "optimal_duration_min": 14.9,
+        "optimal_route_source": "PLATFORM_ROUTER",
+        "optimal_route_erp_sgd": 0.0,
+        "actual_distance_km": 10.0,
+        "actual_duration_min": 17.5,
+        "deviation_pct": 17.6,
+        "amended_optimal_distance_km": null,
+        "amended_optimal_duration_min": null,
+        "solo_optimal_distance_km": null,
+        "pickup_amended_at": null,
+        "dropoff_amended_at": null,
+        "original_pickup": null,
+        "original_dropoff": null,
+        "scheduled_at": null,
+        "optimal_route_via": [
+          "Woodlands Square",
+          "Woodlands Avenue 2",
+          "Bukit Timah Expressway (BKE)",
+          "Petir Road"
+        ],
+        "actual_route_via": [
+          "Woodlands Square",
+          "Woodlands Avenue 2",
+          "Woodlands Road",
+          "Bukit Panjang Road",
+          "Petir Road"
+        ],
+        "events": [
+          {
+            "event_type": "booking_confirmed",
+            "at": "2026-08-23T15:40:00+08:00",
+            "detail": "Rider R-21688 booked TRP-05009 from Causeway Point, Woodlands Square to Hillion Mall, Petir Road. On-demand, metered fare.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_assigned",
+            "at": "2026-08-23T15:40:19+08:00",
+            "detail": "Driver D-59126 (Kia Niro EV, SLM 3530 G) assigned. ETA 5 min.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_arrived",
+            "at": "2026-08-23T15:45:49+08:00",
+            "detail": "Driver marked arrived at pickup (button).",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_started",
+            "at": "2026-08-23T15:46:49+08:00",
+            "detail": "Rider on board. Recommended route via Woodlands Square, Woodlands Avenue 2, Bukit Timah Expressway (BKE), Petir Road, 8.5 km.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_deviation_detected",
+            "at": "2026-08-23T15:51:59+08:00",
+            "detail": "Vehicle left the recommended route at Woodlands Avenue 2 / BKE slip road: recommended Bukit Timah Expressway (BKE), vehicle took Woodlands Road.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_rejoined",
+            "at": "2026-08-23T16:03:01+08:00",
+            "detail": "Vehicle rejoined the recommended route at Petir Road / Bukit Panjang Road.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_completed",
+            "at": "2026-08-23T16:04:19+08:00",
+            "detail": "Trip ended at Hillion Mall, Petir Road. Recorded distance 10.0 km, duration 17 min 30 s.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "fare_finalised",
+            "at": "2026-08-23T16:04:25+08:00",
+            "detail": "Metered fare SGD 14.05 charged to rider payment method.",
+            "source": "PLATFORM_TELEMETRY"
+          }
+        ]
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05009",
+      "generated_at": "2026-08-23T17:30:19+08:00"
+    },
+    {
+      "evidence_id": "EV-GPS-05009",
+      "evidence_type": "GPS_TRACE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver-device trace, 36 fixes at 30 s from trip start to trip end; every fix reports horizontal accuracy (max 8 m) and a map-matched road; no interval exceeds 120 s.",
+        "assessed_at": "2026-08-23T17:30:24+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05009",
+        "points": [
+          {
+            "lat": 1.436,
+            "lng": 103.786,
+            "ts": "2026-08-23T15:46:49+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 5,
+            "road": "Woodlands Square"
+          },
+          {
+            "lat": 1.433977,
+            "lng": 103.786758,
+            "ts": "2026-08-23T15:47:19+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 8,
+            "road": "Woodlands Square"
+          },
+          {
+            "lat": 1.43191,
+            "lng": 103.787521,
+            "ts": "2026-08-23T15:47:49+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 5,
+            "road": "Woodlands Square"
+          },
+          {
+            "lat": 1.429897,
+            "lng": 103.788289,
+            "ts": "2026-08-23T15:48:19+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 4,
+            "road": "Woodlands Square"
+          },
+          {
+            "lat": 1.427836,
+            "lng": 103.788913,
+            "ts": "2026-08-23T15:48:49+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 7,
+            "road": "Woodlands Avenue 2"
+          },
+          {
+            "lat": 1.42595,
+            "lng": 103.787872,
+            "ts": "2026-08-23T15:49:19+08:00",
+            "speed_kph": 40,
+            "accuracy_m": 5,
+            "road": "Woodlands Avenue 2"
+          },
+          {
+            "lat": 1.42405,
+            "lng": 103.786826,
+            "ts": "2026-08-23T15:49:49+08:00",
+            "speed_kph": 40,
+            "accuracy_m": 8,
+            "road": "Woodlands Avenue 2"
+          },
+          {
+            "lat": 1.422112,
+            "lng": 103.785791,
+            "ts": "2026-08-23T15:50:19+08:00",
+            "speed_kph": 41,
+            "accuracy_m": 5,
+            "road": "Woodlands Avenue 2"
+          },
+          {
+            "lat": 1.42022,
+            "lng": 103.784698,
+            "ts": "2026-08-23T15:50:49+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 3,
+            "road": "Woodlands Avenue 2"
+          },
+          {
+            "lat": 1.418312,
+            "lng": 103.78371,
+            "ts": "2026-08-23T15:51:19+08:00",
+            "speed_kph": 43,
+            "accuracy_m": 6,
+            "road": "Woodlands Avenue 2"
+          },
+          {
+            "lat": 1.416739,
+            "lng": 103.782347,
+            "ts": "2026-08-23T15:51:49+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 4,
+            "road": "Woodlands Road"
+          },
+          {
+            "lat": 1.415843,
+            "lng": 103.780389,
+            "ts": "2026-08-23T15:52:19+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 5,
+            "road": "Woodlands Road"
+          },
+          {
+            "lat": 1.414945,
+            "lng": 103.778343,
+            "ts": "2026-08-23T15:52:49+08:00",
+            "speed_kph": 42,
+            "accuracy_m": 5,
+            "road": "Woodlands Road"
+          },
+          {
+            "lat": 1.414101,
+            "lng": 103.77639,
+            "ts": "2026-08-23T15:53:19+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 8,
+            "road": "Woodlands Road"
+          },
+          {
+            "lat": 1.413245,
+            "lng": 103.774398,
+            "ts": "2026-08-23T15:53:49+08:00",
+            "speed_kph": 41,
+            "accuracy_m": 3,
+            "road": "Woodlands Road"
+          },
+          {
+            "lat": 1.412378,
+            "lng": 103.772396,
+            "ts": "2026-08-23T15:54:19+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 7,
+            "road": "Woodlands Road"
+          },
+          {
+            "lat": 1.411476,
+            "lng": 103.770422,
+            "ts": "2026-08-23T15:54:49+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 4,
+            "road": "Woodlands Road"
+          },
+          {
+            "lat": 1.410576,
+            "lng": 103.768424,
+            "ts": "2026-08-23T15:55:19+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 5,
+            "road": "Woodlands Road"
+          },
+          {
+            "lat": 1.409735,
+            "lng": 103.766411,
+            "ts": "2026-08-23T15:55:49+08:00",
+            "speed_kph": 38,
+            "accuracy_m": 4,
+            "road": "Woodlands Road"
+          },
+          {
+            "lat": 1.408839,
+            "lng": 103.764408,
+            "ts": "2026-08-23T15:56:19+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 4,
+            "road": "Woodlands Road"
+          },
+          {
+            "lat": 1.407978,
+            "lng": 103.76245,
+            "ts": "2026-08-23T15:56:49+08:00",
+            "speed_kph": 42,
+            "accuracy_m": 3,
+            "road": "Woodlands Road"
+          },
+          {
+            "lat": 1.407074,
+            "lng": 103.760444,
+            "ts": "2026-08-23T15:57:19+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 4,
+            "road": "Woodlands Road"
+          },
+          {
+            "lat": 1.40504,
+            "lng": 103.760825,
+            "ts": "2026-08-23T15:57:49+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 3,
+            "road": "Bukit Panjang Road"
+          },
+          {
+            "lat": 1.402921,
+            "lng": 103.761336,
+            "ts": "2026-08-23T15:58:19+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 7,
+            "road": "Bukit Panjang Road"
+          },
+          {
+            "lat": 1.400793,
+            "lng": 103.761835,
+            "ts": "2026-08-23T15:58:49+08:00",
+            "speed_kph": 38,
+            "accuracy_m": 8,
+            "road": "Bukit Panjang Road"
+          },
+          {
+            "lat": 1.398692,
+            "lng": 103.762318,
+            "ts": "2026-08-23T15:59:19+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 8,
+            "road": "Bukit Panjang Road"
+          },
+          {
+            "lat": 1.396559,
+            "lng": 103.762802,
+            "ts": "2026-08-23T15:59:49+08:00",
+            "speed_kph": 39,
+            "accuracy_m": 3,
+            "road": "Bukit Panjang Road"
+          },
+          {
+            "lat": 1.39444,
+            "lng": 103.763344,
+            "ts": "2026-08-23T16:00:19+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 6,
+            "road": "Bukit Panjang Road"
+          },
+          {
+            "lat": 1.392332,
+            "lng": 103.763841,
+            "ts": "2026-08-23T16:00:49+08:00",
+            "speed_kph": 41,
+            "accuracy_m": 5,
+            "road": "Bukit Panjang Road"
+          },
+          {
+            "lat": 1.39025,
+            "lng": 103.764313,
+            "ts": "2026-08-23T16:01:19+08:00",
+            "speed_kph": 39,
+            "accuracy_m": 6,
+            "road": "Bukit Panjang Road"
+          },
+          {
+            "lat": 1.388087,
+            "lng": 103.764805,
+            "ts": "2026-08-23T16:01:49+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 5,
+            "road": "Bukit Panjang Road"
+          },
+          {
+            "lat": 1.385967,
+            "lng": 103.765312,
+            "ts": "2026-08-23T16:02:19+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 4,
+            "road": "Bukit Panjang Road"
+          },
+          {
+            "lat": 1.383835,
+            "lng": 103.765816,
+            "ts": "2026-08-23T16:02:49+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 4,
+            "road": "Bukit Panjang Road"
+          },
+          {
+            "lat": 1.381945,
+            "lng": 103.765224,
+            "ts": "2026-08-23T16:03:19+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 8,
+            "road": "Petir Road"
+          },
+          {
+            "lat": 1.380157,
+            "lng": 103.763938,
+            "ts": "2026-08-23T16:03:49+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 5,
+            "road": "Petir Road"
+          },
+          {
+            "lat": 1.3784,
+            "lng": 103.7627,
+            "ts": "2026-08-23T16:04:19+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 3,
+            "road": "Petir Road"
+          }
+        ],
+        "point_count": 36,
+        "first_fix_at": "2026-08-23T15:46:49+08:00",
+        "last_fix_at": "2026-08-23T16:04:19+08:00",
+        "sample_interval_sec": 30.0,
+        "expected_interval_sec": 30.0,
+        "gaps": [],
+        "max_gap_sec": 30.0,
+        "coverage_pct": 100.0,
+        "trace_distance_km": 8.42,
+        "rider_track": []
+      },
+      "schema_version": "1.2.0",
+      "source": "DRIVER_DEVICE",
+      "trip_id": "TRP-05009",
+      "generated_at": "2026-08-23T17:30:19+08:00"
+    },
+    {
+      "evidence_id": "EV-CHAT-05009",
+      "evidence_type": "CHAT_LOG",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform chat log, 4 entries, contiguous; matches trip_record.chat_message_count.",
+        "assessed_at": "2026-08-23T17:30:24+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05009",
+        "messages": [
+          {
+            "msg_id": "MSG-05009-001",
+            "sender": "DRIVER",
+            "text": "At Causeway Point pick up, red Niro",
+            "sent_at": "2026-08-23T15:45:19+08:00",
+            "read_at": "2026-08-23T15:45:41+08:00",
+            "delivered_at": "2026-08-23T15:45:20+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-05009-002",
+            "sender": "RIDER",
+            "text": "ok",
+            "sent_at": "2026-08-23T15:45:34+08:00",
+            "read_at": "2026-08-23T15:45:50+08:00",
+            "delivered_at": "2026-08-23T15:45:37+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-05009-003",
+            "sender": "DRIVER",
+            "text": "Hi, BKE got accident near Dairy Farm, I take Woodlands Road ok?",
+            "sent_at": "2026-08-23T15:49:39+08:00",
+            "read_at": "2026-08-23T15:49:50+08:00",
+            "delivered_at": "2026-08-23T15:49:40+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-05009-004",
+            "sender": "RIDER",
+            "text": "ok can",
+            "sent_at": "2026-08-23T15:49:59+08:00",
+            "read_at": "2026-08-23T15:50:31+08:00",
+            "delivered_at": "2026-08-23T15:50:00+08:00",
+            "channel": "IN_APP",
+            "language": "en-SG",
+            "redacted": false,
+            "waypoint_hint": null
+          }
+        ],
+        "message_count": 4,
+        "first_message_at": "2026-08-23T15:45:19+08:00",
+        "last_message_at": "2026-08-23T15:49:59+08:00",
+        "truncated": false
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05009",
+      "generated_at": "2026-08-23T17:30:19+08:00"
+    },
+    {
+      "evidence_id": "EV-FARE-05009",
+      "evidence_type": "FARE_BREAKDOWN",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Payments ledger; itemised lines reconcile to total_charged; tolls_erp equals the gantry list.",
+        "assessed_at": "2026-08-23T17:30:24+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05009",
+        "currency": "SGD",
+        "fare_model": "METERED",
+        "cancellation_fee": 0.0,
+        "total_charged": 14.05,
+        "payment_status": "CHARGED",
+        "refund_issued_sgd": 0.0,
+        "charged_at": "2026-08-23T16:04:25+08:00",
+        "surge_multiplier": 1.0,
+        "rate_card_id": "RC-SG-RYDEX-2026Q3",
+        "base_fare": 2.8,
+        "distance_fare": 7.2,
+        "time_fare": 3.15,
+        "surge_amount": 0.0,
+        "tolls_erp": 0.0,
+        "airport_surcharge": 0.0,
+        "platform_fee": 0.9,
+        "promo_discount": 0.0,
+        "waiting_time_fee": 0.0,
+        "quoted_fare_sgd": null,
+        "distance_charged_km": 10.0,
+        "time_charged_min": 17.5,
+        "per_km_rate_sgd": 0.72,
+        "per_min_rate_sgd": 0.18,
+        "erp_gantries": []
+      },
+      "schema_version": "1.2.0",
+      "source": "PAYMENTS_LEDGER",
+      "trip_id": "TRP-05009",
+      "generated_at": "2026-08-23T17:30:19+08:00"
+    },
+    {
+      "evidence_id": "EV-RPROF-05009",
+      "evidence_type": "RIDER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Rider profile snapshot at filing.",
+        "assessed_at": "2026-08-23T17:30:24+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "R-21688",
+        "party_role": "RIDER",
+        "snapshot_at": "2026-08-23T17:18:19+08:00",
+        "account_age_days": 1575,
+        "lifetime_trips": 425,
+        "rating": 4.73,
+        "prior_disputes_filed": 0,
+        "prior_disputes_upheld": 0,
+        "prior_no_show_flags": 1,
+        "cancellation_rate": 0.014,
+        "no_show_disputes_30d": 0,
+        "deviation_claims_60d": 0,
+        "deviation_claims_60d_substantiated": 0,
+        "disputes_with_counterparty_90d": 0,
+        "fraud_flags": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05009",
+      "generated_at": "2026-08-23T17:30:19+08:00"
+    },
+    {
+      "evidence_id": "EV-DPROF-05009",
+      "evidence_type": "DRIVER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver profile snapshot at filing.",
+        "assessed_at": "2026-08-23T17:30:24+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "D-59126",
+        "party_role": "DRIVER",
+        "snapshot_at": "2026-08-23T17:18:19+08:00",
+        "account_age_days": 1246,
+        "lifetime_trips": 11534,
+        "rating": 4.77,
+        "prior_disputes_filed": 0,
+        "prior_disputes_upheld": 0,
+        "prior_no_show_flags": 0,
+        "vehicle_type": "RYDE_X",
+        "cancellation_rate": 0.052,
+        "prior_deviation_flags": 0,
+        "acceptance_rate": 0.91,
+        "active_region": "NORTH_EAST",
+        "deviation_flags_90d": 0,
+        "completed_trips_90d": 464,
+        "no_show_terminations_30d": 2,
+        "completed_trips_30d": 300,
+        "disputes_with_counterparty_90d": 0,
+        "fraud_flags": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05009",
+      "generated_at": "2026-08-23T17:30:19+08:00"
+    },
+    {
+      "evidence_id": "EV-ADVIS-05009-01",
+      "evidence_type": "TRAFFIC_ADVISORY",
+      "admissibility": {
+        "status": "MISSING",
+        "issues": [
+          "MISSING_ARTIFACT"
+        ],
+        "weight_multiplier": 0.0,
+        "notes": "Artifact absent: the platform's request to the LTA historical traffic feed for this trip window failed (feed timeout) and was not retried, so no traffic record was retrieved. The record is silent on traffic on the recommended route; this is not a finding of no traffic. The identifier is minted so that the absence can be cited.",
+        "assessed_at": "2026-08-23T17:30:24+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": null,
+      "schema_version": "1.2.0",
+      "source": "THIRD_PARTY_LTA",
+      "trip_id": "TRP-05009",
+      "generated_at": "2026-08-23T17:30:19+08:00"
+    }
+  ]
+}

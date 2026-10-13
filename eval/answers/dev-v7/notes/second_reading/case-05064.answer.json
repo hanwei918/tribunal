@@ -1,0 +1,8 @@
+{
+  "expected_ruling": "ESCALATE",
+  "expected_amount_sgd": null,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": ["POL-GEN-26", "POL-NS-26", "POL-GEN-02", "POL-NS-21", "POL-NS-22", "POL-NS-23", "POL-NS-24", "POL-GEN-22", "POL-GEN-03", "POL-GEN-01"],
+  "reasoning": "Driver seeks the reversed SGD 5.00 no-show fee; rider says she was at Blk 33 and never saw the car. Contact duty (POL-NS-23, v2.1 2.3) is met: EV-CHAT-05064 message 15:42:20 and EV-TRIP-05064 in-app call 15:45:10, both before cancel 15:49:00. But the fee stands (POL-NS-22) only if the driver was at the pickup and waited the free wait from arrival (POL-NS-21, on-demand). Arrival rests on a driver-pressed button in EV-TRIP-05064, and the arrival test needs GPS within 50 m (STANDARD). EV-GPS-05064 is IMPAIRED (GPS_GAP, weight 0.6): a 720 s gap 15:38-15:50 covers arrival, the whole wait and the cancellation; the fixes on either side are about 593 m and 566 m from the pickup. Whether and when the driver arrived cannot be established, so the case escalates under POL-GEN-26 (v2.1 6.3), which POL-NS-26 makes override the usual rule that a sub-SGD 10 AI ruling is final (POL-GEN-22). Confidence is capped at 0.6 (POL-GEN-02). Profiles are context only (POL-GEN-01) and neither party has fraud flags. EV-ADVIS-05064-01 is MISSING and irrelevant. Under POL-GEN-03 no money moves and nothing is referred."
+}

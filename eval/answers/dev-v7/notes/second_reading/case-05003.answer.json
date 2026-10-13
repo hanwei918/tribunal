@@ -1,0 +1,19 @@
+{
+  "expected_ruling": "NO_ACTION",
+  "expected_amount_sgd": null,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": [
+    "POL-RD-24",
+    "POL-RD-21",
+    "POL-RD-22",
+    "POL-RD-23",
+    "POL-RD-25",
+    "POL-GEN-22",
+    "POL-GEN-02",
+    "POL-GEN-03",
+    "POL-GEN-21",
+    "POL-GEN-01"
+  ],
+  "reasoning": "Value SGD 4.50 <10: AI final at any confidence (POL-GEN-22, POL-RD-25); no fraud flags (driver 0, rider field absent=0). No safety indicator: the CTE accident in EV-ADVIS-05003-01 involved third parties the trip avoided, not this trip (POL-GEN-21 not triggered). All artifacts weight 1.0, no issues, so no cap (POL-GEN-02). Deviation = 11.4-10.0 = 1.4 km from EV-TRIP-05003 recorded distances, >1 km tolerance (POL-RD-22); EV-GPS-05003 shows exit to Bendemeer Rd at 19:00:36, rejoin Upper Serangoon 19:11:06. Traffic-justified (POL-RD-23): EV-ADVIS-05003-01 LTA accident on CTE towards SLE after Balestier exit, on the recommended CTE->Braddell segment, valid 18:37-19:49, overlapping trip 18:49-19:12; vehicle never reached it. Informed and agreed (POL-RD-21): EV-CHAT-05003 MSG-003 18:57:46 (read 18:58:03) gives reason and new route before the deviation; rider MSG-004 18:58:26 'Ok sure'. POL-RD-24 row (a): traffic-justified, informed and agreed, >1 km = no refund, NO_ACTION (POL-GEN-03), amount null. Driver deviation flags and profile history are context only (POL-GEN-01). No referrals."
+}

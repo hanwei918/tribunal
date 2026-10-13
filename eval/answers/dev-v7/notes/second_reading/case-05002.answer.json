@@ -1,0 +1,18 @@
+{
+  "expected_ruling": "NO_ACTION",
+  "expected_amount_sgd": null,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": [
+    "POL-RD-22",
+    "POL-RD-23",
+    "POL-RD-24",
+    "POL-RD-21",
+    "POL-RD-25",
+    "POL-GEN-22",
+    "POL-GEN-02",
+    "POL-GEN-03",
+    "POL-GEN-01"
+  ],
+  "reasoning": "POL-RD-22: deviation = EV-TRIP-05002 actual 5.2 km - optimal 4.6 km = 0.6 km (recorded distances; GPS trace_distance not used), <= 1.0 km tolerance. EV-GPS-05002 confirms the Jalan Bilal/Siglap Road route. POL-RD-23: EV-ADVIS-05002-01 (LTA, Bedok Road, window covers trip) records advisory_type NONE, no incident/closure, speed bands 4-6, so the reroute is not traffic-justified; driver's traffic assertion alone does not count. POL-RD-21: EV-CHAT-05002 has only pickup messages, no deviation notice; immaterial within tolerance. POL-RD-24 row (e): not justified, <= 1 km -> no refund, NO_ACTION; rider's $2 claim not supported. POL-GEN-22/POL-RD-25: value SGD 2.00 < 10.00, fraud_flags 0 on EV-RPROF/EV-DPROF; all artifacts weight 1.0 (POL-GEN-02), confidence >= 0.80, ruling stands. Profile history is context only (POL-GEN-01). No safety indicator (POL-GEN-21). POL-GEN-03: NO_ACTION, amounts null, no referrals."
+}

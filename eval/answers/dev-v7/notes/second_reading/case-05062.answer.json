@@ -1,0 +1,8 @@
+{
+  "expected_ruling": "NO_ACTION",
+  "expected_amount_sgd": null,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": ["POL-NS-23", "POL-NS-21", "POL-NS-22", "POL-GEN-03", "POL-GEN-22", "POL-NS-26", "POL-GEN-01"],
+  "reasoning": "Driver-filed no-show dispute, SGD 5.00 (<10, AI final at any confidence, POL-GEN-22/POL-NS-26; no safety indicator; fraud_flags 0/absent). EV-TRIP-05062 (weight 1.0) shows on-demand arrival 10:17:00, corroborated by EV-GPS-05062 (~8 m from pickup, STANDARD 50 m), cancellation 10:23:30 after the 300 s free wait (POL-NS-21). EV-CHAT-05062 (1.0) shows two driver messages before cancellation, but EV-TRIP-05062.in_app_calls is empty and the chat log has no voice-call entry, so no in-app call was placed before cancelled_at. POL-NS-23 (v2.1 2.3, precedent 7.3): contact obligation unmet, fee voided, rider not charged, no driver compensation; POL-NS-22 fee does not stand. Driver's claim is unsupported; the interim reversal already refunded the rider, so under POL-GEN-03 the party-relative outcome is NO_ACTION and the present state stands. Profile fields (no_show_terminations_30d etc.) are context only (POL-GEN-01). Fee charged equals 5.00 (no POL-NS-22 referral); no no_show_cancellations_30d field (no POL-NS-25 referral). EV-ADVIS-05062-01 is MISSING (0.0) but irrelevant."
+}

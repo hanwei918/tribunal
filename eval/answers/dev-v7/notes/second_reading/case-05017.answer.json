@@ -1,0 +1,16 @@
+{
+  "expected_ruling": "ESCALATE",
+  "expected_amount_sgd": null,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": [
+    "POL-RD-21",
+    "POL-GEN-26",
+    "POL-RD-22",
+    "POL-RD-23",
+    "POL-RD-24",
+    "POL-GEN-22",
+    "POL-GEN-03"
+  ],
+  "reasoning": "Driver-filed RD dispute over the SGD 0.86 interim recovery (EV-TRIP-05017 fare_adjusted; EV-FARE-05017). No safety indicator: the CTE accident in EV-ADVIS-05017-01 is a third-party incident from 20:23, before the trip, not involving it (POL-GEN-21). Value 0.86 < 10, no fraud flags (POL-GEN-22). Deviation 13.2-12.0 = 1.2 km > 1.0 km tolerance (POL-RD-22, EV-TRIP-05017); excess fare would be 1.2 x 0.72 = 0.86. Advisory (weight 1.0) on the recommended CTE segment overlaps the 20:54 deviation, so the reroute is traffic-justified (POL-RD-23). Row (a) no refund vs row (b) refund 0.86 under POL-RD-24 turns on whether the rider was informed and agreed. EV-CHAT-05017 holds only two pre-pickup messages, no deviation notice; in_app_calls is empty and no call recording is in the record. The driver asserts verbal notice in the car; the rider denies it. Under POL-RD-21 a verbal notice with no recording cannot be established, so POL-GEN-26 applies: the deciding fact is open and no outcome is inferred from its absence. ESCALATE (POL-GEN-03): open question is whether the driver verbally told the rider of the CTE accident before the Braddell Road exit and the rider agreed; the 0.86 is held."
+}

@@ -1,0 +1,780 @@
+{
+  "schema_version": "1.2.0",
+  "case_no": 5015,
+  "dispute": {
+    "case_no": 5015,
+    "dispute_id": "DSP-05015",
+    "trip_id": "TRP-05015",
+    "category": "ROUTE_DEVIATION",
+    "filed_at": "2026-09-05T17:29:11+08:00",
+    "filed_by": "RIDER",
+    "channel": "IN_APP_SUPPORT",
+    "amount_contested_sgd": 6.0,
+    "claim_text": "Driver took the TPE and then all the way round by Braddell Road instead of the PIE. It is a long way round, the app showed the PIE. He never said why. I want $6 back.",
+    "counterparty_statement": {
+      "text": "PIE got roadworks, LTA announced lane closure, so I avoid.",
+      "submitted_by": "DRIVER",
+      "submitted_at": "2026-09-06T05:40:11+08:00"
+    },
+    "evidence_ids": [
+      "EV-TRIP-05015",
+      "EV-GPS-05015",
+      "EV-CHAT-05015",
+      "EV-FARE-05015",
+      "EV-RPROF-05015",
+      "EV-DPROF-05015",
+      "EV-ADVIS-05015-01"
+    ]
+  },
+  "evidence": [
+    {
+      "evidence_id": "EV-TRIP-05015",
+      "evidence_type": "TRIP_RECORD",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform trip record; timestamps causally ordered; recorded optimal and actual distances present; deviation and rejoin events carried in events[].",
+        "assessed_at": "2026-09-05T17:41:16+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05015",
+        "rider_id": "R-89138",
+        "driver_id": "D-19450",
+        "requested_at": "2026-09-05T14:08:00+08:00",
+        "accepted_at": "2026-09-05T14:08:11+08:00",
+        "arrived_at": "2026-09-05T14:15:11+08:00",
+        "started_at": "2026-09-05T14:16:11+08:00",
+        "ended_at": "2026-09-05T14:42:11+08:00",
+        "cancelled_at": null,
+        "status": "COMPLETED",
+        "cancelled_by": null,
+        "cancellation_reason_code": null,
+        "pickup": {
+          "label": "White Sands, Pasir Ris Central Street 3",
+          "lat": 1.3725,
+          "lng": 103.9494,
+          "venue_id": null
+        },
+        "dropoff": {
+          "label": "Toa Payoh HDB Hub, Toa Payoh Lorong 5",
+          "lat": 1.3324,
+          "lng": 103.8473,
+          "venue_id": null
+        },
+        "vehicle_type": "RYDE_X",
+        "pickup_zone_class": "STANDARD",
+        "chat_message_count": 0,
+        "registered_pickup_points": null,
+        "in_app_calls": [],
+        "optimal_distance_km": 15.7,
+        "optimal_duration_min": 22.3,
+        "optimal_route_source": "PLATFORM_ROUTER",
+        "optimal_route_erp_sgd": 0.0,
+        "actual_distance_km": 18.3,
+        "actual_duration_min": 26.0,
+        "deviation_pct": 16.6,
+        "amended_optimal_distance_km": null,
+        "amended_optimal_duration_min": null,
+        "solo_optimal_distance_km": null,
+        "pickup_amended_at": null,
+        "dropoff_amended_at": null,
+        "original_pickup": null,
+        "original_dropoff": null,
+        "scheduled_at": null,
+        "optimal_route_via": [
+          "Pasir Ris Central Street 3",
+          "Pasir Ris Drive 3",
+          "Pan-Island Expressway (PIE)",
+          "Toa Payoh Lorong 6",
+          "Toa Payoh Lorong 5"
+        ],
+        "actual_route_via": [
+          "Pasir Ris Central Street 3",
+          "Pasir Ris Drive 3",
+          "Tampines Expressway (TPE)",
+          "Braddell Road",
+          "Toa Payoh Lorong 6",
+          "Toa Payoh Lorong 5"
+        ],
+        "events": [
+          {
+            "event_type": "booking_confirmed",
+            "at": "2026-09-05T14:08:00+08:00",
+            "detail": "Rider R-89138 booked TRP-05015 from White Sands, Pasir Ris Central Street 3 to Toa Payoh HDB Hub, Toa Payoh Lorong 5. On-demand, metered fare.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_assigned",
+            "at": "2026-09-05T14:08:11+08:00",
+            "detail": "Driver D-19450 (Honda Vezel, SLE 6635 K) assigned. ETA 7 min.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_arrived",
+            "at": "2026-09-05T14:15:11+08:00",
+            "detail": "Driver marked arrived at pickup (button).",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_started",
+            "at": "2026-09-05T14:16:11+08:00",
+            "detail": "Rider on board. Recommended route via Pasir Ris Central Street 3, Pasir Ris Drive 3, Pan-Island Expressway (PIE), Toa Payoh Lorong 6, Toa Payoh Lorong 5, 15.7 km.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_deviation_detected",
+            "at": "2026-09-05T14:18:56+08:00",
+            "detail": "Vehicle left the recommended route at Pasir Ris Drive 3 / TPE slip road: recommended Pan-Island Expressway (PIE), vehicle took Tampines Expressway (TPE).",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_rejoined",
+            "at": "2026-09-05T14:40:41+08:00",
+            "detail": "Vehicle rejoined the recommended route at Braddell Road / Toa Payoh Lorong 6.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_completed",
+            "at": "2026-09-05T14:42:11+08:00",
+            "detail": "Trip ended at Toa Payoh HDB Hub, Toa Payoh Lorong 5. Recorded distance 18.3 km, duration 26 min 00 s.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "fare_finalised",
+            "at": "2026-09-05T14:42:17+08:00",
+            "detail": "Metered fare SGD 21.56 charged to rider payment method.",
+            "source": "PLATFORM_TELEMETRY"
+          }
+        ]
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05015",
+      "generated_at": "2026-09-05T17:41:11+08:00"
+    },
+    {
+      "evidence_id": "EV-GPS-05015",
+      "evidence_type": "GPS_TRACE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver-device trace, 53 fixes at 30 s from trip start to trip end; every fix reports horizontal accuracy (max 8 m) and a map-matched road; no interval exceeds 120 s.",
+        "assessed_at": "2026-09-05T17:41:16+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05015",
+        "points": [
+          {
+            "lat": 1.3725,
+            "lng": 103.9494,
+            "ts": "2026-09-05T14:16:11+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 4,
+            "road": "Pasir Ris Central Street 3"
+          },
+          {
+            "lat": 1.370269,
+            "lng": 103.950877,
+            "ts": "2026-09-05T14:16:41+08:00",
+            "speed_kph": 41,
+            "accuracy_m": 7,
+            "road": "Pasir Ris Central Street 3"
+          },
+          {
+            "lat": 1.368008,
+            "lng": 103.952338,
+            "ts": "2026-09-05T14:17:11+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 7,
+            "road": "Pasir Ris Central Street 3"
+          },
+          {
+            "lat": 1.36604,
+            "lng": 103.95185,
+            "ts": "2026-09-05T14:17:41+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 4,
+            "road": "Pasir Ris Drive 3"
+          },
+          {
+            "lat": 1.364394,
+            "lng": 103.949735,
+            "ts": "2026-09-05T14:18:11+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 5,
+            "road": "Pasir Ris Drive 3"
+          },
+          {
+            "lat": 1.363183,
+            "lng": 103.947522,
+            "ts": "2026-09-05T14:18:41+08:00",
+            "speed_kph": 43,
+            "accuracy_m": 4,
+            "road": "Tampines Expressway (TPE)"
+          },
+          {
+            "lat": 1.364078,
+            "lng": 103.945029,
+            "ts": "2026-09-05T14:19:11+08:00",
+            "speed_kph": 49,
+            "accuracy_m": 8,
+            "road": "Tampines Expressway (TPE)"
+          },
+          {
+            "lat": 1.364977,
+            "lng": 103.942455,
+            "ts": "2026-09-05T14:19:41+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 6,
+            "road": "Tampines Expressway (TPE)"
+          },
+          {
+            "lat": 1.365848,
+            "lng": 103.939946,
+            "ts": "2026-09-05T14:20:11+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 3,
+            "road": "Tampines Expressway (TPE)"
+          },
+          {
+            "lat": 1.36671,
+            "lng": 103.937404,
+            "ts": "2026-09-05T14:20:41+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 8,
+            "road": "Tampines Expressway (TPE)"
+          },
+          {
+            "lat": 1.367647,
+            "lng": 103.93491,
+            "ts": "2026-09-05T14:21:11+08:00",
+            "speed_kph": 46,
+            "accuracy_m": 5,
+            "road": "Tampines Expressway (TPE)"
+          },
+          {
+            "lat": 1.368555,
+            "lng": 103.932344,
+            "ts": "2026-09-05T14:21:41+08:00",
+            "speed_kph": 47,
+            "accuracy_m": 3,
+            "road": "Tampines Expressway (TPE)"
+          },
+          {
+            "lat": 1.369472,
+            "lng": 103.929837,
+            "ts": "2026-09-05T14:22:11+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 4,
+            "road": "Tampines Expressway (TPE)"
+          },
+          {
+            "lat": 1.37035,
+            "lng": 103.927271,
+            "ts": "2026-09-05T14:22:41+08:00",
+            "speed_kph": 43,
+            "accuracy_m": 5,
+            "road": "Tampines Expressway (TPE)"
+          },
+          {
+            "lat": 1.371238,
+            "lng": 103.924749,
+            "ts": "2026-09-05T14:23:11+08:00",
+            "speed_kph": 42,
+            "accuracy_m": 8,
+            "road": "Tampines Expressway (TPE)"
+          },
+          {
+            "lat": 1.372154,
+            "lng": 103.922205,
+            "ts": "2026-09-05T14:23:41+08:00",
+            "speed_kph": 47,
+            "accuracy_m": 4,
+            "road": "Tampines Expressway (TPE)"
+          },
+          {
+            "lat": 1.373078,
+            "lng": 103.919667,
+            "ts": "2026-09-05T14:24:11+08:00",
+            "speed_kph": 42,
+            "accuracy_m": 3,
+            "road": "Tampines Expressway (TPE)"
+          },
+          {
+            "lat": 1.373938,
+            "lng": 103.917149,
+            "ts": "2026-09-05T14:24:41+08:00",
+            "speed_kph": 53,
+            "accuracy_m": 4,
+            "road": "Tampines Expressway (TPE)"
+          },
+          {
+            "lat": 1.374844,
+            "lng": 103.91463,
+            "ts": "2026-09-05T14:25:11+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 5,
+            "road": "Tampines Expressway (TPE)"
+          },
+          {
+            "lat": 1.375725,
+            "lng": 103.912089,
+            "ts": "2026-09-05T14:25:41+08:00",
+            "speed_kph": 50,
+            "accuracy_m": 5,
+            "road": "Tampines Expressway (TPE)"
+          },
+          {
+            "lat": 1.376649,
+            "lng": 103.909518,
+            "ts": "2026-09-05T14:26:11+08:00",
+            "speed_kph": 47,
+            "accuracy_m": 5,
+            "road": "Tampines Expressway (TPE)"
+          },
+          {
+            "lat": 1.377554,
+            "lng": 103.907008,
+            "ts": "2026-09-05T14:26:41+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 7,
+            "road": "Tampines Expressway (TPE)"
+          },
+          {
+            "lat": 1.378437,
+            "lng": 103.904458,
+            "ts": "2026-09-05T14:27:11+08:00",
+            "speed_kph": 51,
+            "accuracy_m": 7,
+            "road": "Tampines Expressway (TPE)"
+          },
+          {
+            "lat": 1.379366,
+            "lng": 103.901904,
+            "ts": "2026-09-05T14:27:41+08:00",
+            "speed_kph": 42,
+            "accuracy_m": 7,
+            "road": "Tampines Expressway (TPE)"
+          },
+          {
+            "lat": 1.380241,
+            "lng": 103.899374,
+            "ts": "2026-09-05T14:28:11+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 4,
+            "road": "Tampines Expressway (TPE)"
+          },
+          {
+            "lat": 1.381123,
+            "lng": 103.896854,
+            "ts": "2026-09-05T14:28:41+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 7,
+            "road": "Tampines Expressway (TPE)"
+          },
+          {
+            "lat": 1.382021,
+            "lng": 103.894372,
+            "ts": "2026-09-05T14:29:11+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 4,
+            "road": "Tampines Expressway (TPE)"
+          },
+          {
+            "lat": 1.382683,
+            "lng": 103.891869,
+            "ts": "2026-09-05T14:29:41+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 5,
+            "road": "Braddell Road"
+          },
+          {
+            "lat": 1.38066,
+            "lng": 103.89006,
+            "ts": "2026-09-05T14:30:11+08:00",
+            "speed_kph": 48,
+            "accuracy_m": 5,
+            "road": "Braddell Road"
+          },
+          {
+            "lat": 1.378687,
+            "lng": 103.888262,
+            "ts": "2026-09-05T14:30:41+08:00",
+            "speed_kph": 43,
+            "accuracy_m": 4,
+            "road": "Braddell Road"
+          },
+          {
+            "lat": 1.376726,
+            "lng": 103.886413,
+            "ts": "2026-09-05T14:31:11+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 4,
+            "road": "Braddell Road"
+          },
+          {
+            "lat": 1.374748,
+            "lng": 103.884584,
+            "ts": "2026-09-05T14:31:41+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 8,
+            "road": "Braddell Road"
+          },
+          {
+            "lat": 1.37274,
+            "lng": 103.882834,
+            "ts": "2026-09-05T14:32:11+08:00",
+            "speed_kph": 42,
+            "accuracy_m": 4,
+            "road": "Braddell Road"
+          },
+          {
+            "lat": 1.370759,
+            "lng": 103.880972,
+            "ts": "2026-09-05T14:32:41+08:00",
+            "speed_kph": 43,
+            "accuracy_m": 7,
+            "road": "Braddell Road"
+          },
+          {
+            "lat": 1.368747,
+            "lng": 103.879125,
+            "ts": "2026-09-05T14:33:11+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 5,
+            "road": "Braddell Road"
+          },
+          {
+            "lat": 1.366745,
+            "lng": 103.87736,
+            "ts": "2026-09-05T14:33:41+08:00",
+            "speed_kph": 47,
+            "accuracy_m": 6,
+            "road": "Braddell Road"
+          },
+          {
+            "lat": 1.364813,
+            "lng": 103.875545,
+            "ts": "2026-09-05T14:34:11+08:00",
+            "speed_kph": 50,
+            "accuracy_m": 5,
+            "road": "Braddell Road"
+          },
+          {
+            "lat": 1.36279,
+            "lng": 103.87374,
+            "ts": "2026-09-05T14:34:41+08:00",
+            "speed_kph": 38,
+            "accuracy_m": 5,
+            "road": "Braddell Road"
+          },
+          {
+            "lat": 1.360815,
+            "lng": 103.871923,
+            "ts": "2026-09-05T14:35:11+08:00",
+            "speed_kph": 51,
+            "accuracy_m": 5,
+            "road": "Braddell Road"
+          },
+          {
+            "lat": 1.358823,
+            "lng": 103.870109,
+            "ts": "2026-09-05T14:35:41+08:00",
+            "speed_kph": 50,
+            "accuracy_m": 8,
+            "road": "Braddell Road"
+          },
+          {
+            "lat": 1.356863,
+            "lng": 103.868291,
+            "ts": "2026-09-05T14:36:11+08:00",
+            "speed_kph": 41,
+            "accuracy_m": 4,
+            "road": "Braddell Road"
+          },
+          {
+            "lat": 1.35487,
+            "lng": 103.866496,
+            "ts": "2026-09-05T14:36:41+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 4,
+            "road": "Braddell Road"
+          },
+          {
+            "lat": 1.352837,
+            "lng": 103.864681,
+            "ts": "2026-09-05T14:37:11+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 7,
+            "road": "Braddell Road"
+          },
+          {
+            "lat": 1.350914,
+            "lng": 103.862834,
+            "ts": "2026-09-05T14:37:41+08:00",
+            "speed_kph": 50,
+            "accuracy_m": 8,
+            "road": "Braddell Road"
+          },
+          {
+            "lat": 1.348927,
+            "lng": 103.861051,
+            "ts": "2026-09-05T14:38:11+08:00",
+            "speed_kph": 38,
+            "accuracy_m": 3,
+            "road": "Braddell Road"
+          },
+          {
+            "lat": 1.346936,
+            "lng": 103.859236,
+            "ts": "2026-09-05T14:38:41+08:00",
+            "speed_kph": 49,
+            "accuracy_m": 5,
+            "road": "Braddell Road"
+          },
+          {
+            "lat": 1.344922,
+            "lng": 103.857391,
+            "ts": "2026-09-05T14:39:11+08:00",
+            "speed_kph": 45,
+            "accuracy_m": 5,
+            "road": "Braddell Road"
+          },
+          {
+            "lat": 1.342958,
+            "lng": 103.855589,
+            "ts": "2026-09-05T14:39:41+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 8,
+            "road": "Braddell Road"
+          },
+          {
+            "lat": 1.340936,
+            "lng": 103.853801,
+            "ts": "2026-09-05T14:40:11+08:00",
+            "speed_kph": 38,
+            "accuracy_m": 4,
+            "road": "Braddell Road"
+          },
+          {
+            "lat": 1.338974,
+            "lng": 103.851951,
+            "ts": "2026-09-05T14:40:41+08:00",
+            "speed_kph": 44,
+            "accuracy_m": 5,
+            "road": "Toa Payoh Lorong 6"
+          },
+          {
+            "lat": 1.336811,
+            "lng": 103.85044,
+            "ts": "2026-09-05T14:41:11+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 5,
+            "road": "Toa Payoh Lorong 6"
+          },
+          {
+            "lat": 1.334582,
+            "lng": 103.848861,
+            "ts": "2026-09-05T14:41:41+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 6,
+            "road": "Toa Payoh Lorong 6"
+          },
+          {
+            "lat": 1.3324,
+            "lng": 103.8473,
+            "ts": "2026-09-05T14:42:11+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 6,
+            "road": "Toa Payoh Lorong 5"
+          }
+        ],
+        "point_count": 53,
+        "first_fix_at": "2026-09-05T14:16:11+08:00",
+        "last_fix_at": "2026-09-05T14:42:11+08:00",
+        "sample_interval_sec": 30.0,
+        "expected_interval_sec": 30.0,
+        "gaps": [],
+        "max_gap_sec": 30.0,
+        "coverage_pct": 100.0,
+        "trace_distance_km": 15.434,
+        "rider_track": []
+      },
+      "schema_version": "1.2.0",
+      "source": "DRIVER_DEVICE",
+      "trip_id": "TRP-05015",
+      "generated_at": "2026-09-05T17:41:11+08:00"
+    },
+    {
+      "evidence_id": "EV-CHAT-05015",
+      "evidence_type": "CHAT_LOG",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform chat log, 0 entries, contiguous; matches trip_record.chat_message_count.",
+        "assessed_at": "2026-09-05T17:41:16+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05015",
+        "messages": [],
+        "message_count": 0,
+        "first_message_at": null,
+        "last_message_at": null,
+        "truncated": false
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05015",
+      "generated_at": "2026-09-05T17:41:11+08:00"
+    },
+    {
+      "evidence_id": "EV-FARE-05015",
+      "evidence_type": "FARE_BREAKDOWN",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Payments ledger; itemised lines reconcile to total_charged; tolls_erp equals the gantry list.",
+        "assessed_at": "2026-09-05T17:41:16+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05015",
+        "currency": "SGD",
+        "fare_model": "METERED",
+        "cancellation_fee": 0.0,
+        "total_charged": 21.56,
+        "payment_status": "CHARGED",
+        "refund_issued_sgd": 0.0,
+        "charged_at": "2026-09-05T14:42:17+08:00",
+        "surge_multiplier": 1.0,
+        "rate_card_id": "RC-SG-RYDEX-2026Q3",
+        "base_fare": 2.8,
+        "distance_fare": 13.18,
+        "time_fare": 4.68,
+        "surge_amount": 0.0,
+        "tolls_erp": 0.0,
+        "airport_surcharge": 0.0,
+        "platform_fee": 0.9,
+        "promo_discount": 0.0,
+        "waiting_time_fee": 0.0,
+        "quoted_fare_sgd": null,
+        "distance_charged_km": 18.3,
+        "time_charged_min": 26.0,
+        "per_km_rate_sgd": 0.72,
+        "per_min_rate_sgd": 0.18,
+        "erp_gantries": []
+      },
+      "schema_version": "1.2.0",
+      "source": "PAYMENTS_LEDGER",
+      "trip_id": "TRP-05015",
+      "generated_at": "2026-09-05T17:41:11+08:00"
+    },
+    {
+      "evidence_id": "EV-RPROF-05015",
+      "evidence_type": "RIDER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Rider profile snapshot at filing.",
+        "assessed_at": "2026-09-05T17:41:16+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "R-89138",
+        "party_role": "RIDER",
+        "snapshot_at": "2026-09-05T17:29:11+08:00",
+        "account_age_days": 1860,
+        "lifetime_trips": 192,
+        "rating": 4.93,
+        "prior_disputes_filed": 1,
+        "prior_disputes_upheld": 0,
+        "prior_no_show_flags": 0,
+        "cancellation_rate": 0.011,
+        "no_show_disputes_30d": 1,
+        "deviation_claims_60d": 0,
+        "deviation_claims_60d_substantiated": 0,
+        "disputes_with_counterparty_90d": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05015",
+      "generated_at": "2026-09-05T17:41:11+08:00"
+    },
+    {
+      "evidence_id": "EV-DPROF-05015",
+      "evidence_type": "DRIVER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver profile snapshot at filing.",
+        "assessed_at": "2026-09-05T17:41:16+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "D-19450",
+        "party_role": "DRIVER",
+        "snapshot_at": "2026-09-05T17:29:11+08:00",
+        "account_age_days": 1551,
+        "lifetime_trips": 10309,
+        "rating": 4.62,
+        "prior_disputes_filed": 1,
+        "prior_disputes_upheld": 1,
+        "prior_no_show_flags": 0,
+        "vehicle_type": "RYDE_X",
+        "cancellation_rate": 0.024,
+        "prior_deviation_flags": 2,
+        "acceptance_rate": 0.93,
+        "active_region": "WEST",
+        "deviation_flags_90d": 0,
+        "completed_trips_90d": 389,
+        "no_show_terminations_30d": 0,
+        "completed_trips_30d": 233,
+        "disputes_with_counterparty_90d": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05015",
+      "generated_at": "2026-09-05T17:41:11+08:00"
+    },
+    {
+      "evidence_id": "EV-ADVIS-05015-01",
+      "evidence_type": "TRAFFIC_ADVISORY",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "LTA historical traffic record for the queried road segment and window; retrieved by the platform, not supplied by a party.",
+        "assessed_at": "2026-09-05T17:41:16+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "advisory_id": "LTA-TI-260905-2467",
+        "provider": "LTA_DATAMALL_TRAFFIC_INCIDENTS",
+        "advisory_type": "ROADWORK",
+        "road": "Pan-Island Expressway (PIE)",
+        "direction": "towards Tuas",
+        "location_desc": "after Tampines Avenue 10 exit",
+        "lat": 1.345,
+        "lng": 103.93,
+        "message": "(5/9)23:00 Roadworks on PIE (towards Tuas) after Tampines Ave 10 Exit. Lanes 1 and 2 closed.",
+        "valid_from": "2026-09-05T23:00:00+08:00",
+        "valid_to": "2026-09-06T05:00:00+08:00",
+        "speed_band_min": 3,
+        "retrieved_at": "2026-09-05T17:39:11+08:00"
+      },
+      "schema_version": "1.2.0",
+      "source": "THIRD_PARTY_LTA",
+      "trip_id": "TRP-05015",
+      "generated_at": "2026-09-05T17:41:11+08:00"
+    }
+  ]
+}

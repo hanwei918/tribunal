@@ -1,0 +1,15 @@
+{
+  "expected_ruling": "NO_ACTION",
+  "expected_amount_sgd": null,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": [
+    "POL-RD-22",
+    "POL-RD-23",
+    "POL-RD-24",
+    "POL-RD-25",
+    "POL-GEN-22",
+    "POL-GEN-03"
+  ],
+  "reasoning": "POL-RD-22 (v2.1 1.4): deviation = EV-TRIP-05007 actual_distance_km 8.3 - optimal_distance_km 7.3 = 1.0 km exactly; the GPS trace length (EV-GPS-05007, 6.996 km) is not used to re-measure. 1.0 km is within the 1.0 km tolerance (v2.1 1.3). POL-RD-23: EV-ADVIS-05007-01 covers Seletar Road, Yishun Ave 1 to Sengkang West Ave, 12:51-14:21, overlapping the trip, and records no incident or congestion (speed bands 5-6), so the reroute is not traffic-justified; the driver's 'smoother road' statement is not traffic data. EV-CHAT-05007 has 0 messages (no notice under POL-RD-21), but notice is irrelevant to row (e). POL-RD-24 row (e): not justified, deviation <= 1 km -> no refund, NO_ACTION (POL-GEN-03). All artifacts weight 1.0; no fraud_flags; no safety indicator. Value SGD 2.50 < 10, so the AI ruling is final under POL-GEN-22/POL-RD-25 (2 km limb not applied). Profile history (deviation claims, prior flags) is context only (POL-GEN-01)."
+}

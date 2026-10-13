@@ -1,0 +1,814 @@
+{
+  "schema_version": "1.2.0",
+  "case_no": 5010,
+  "dispute": {
+    "case_no": 5010,
+    "dispute_id": "DSP-05010",
+    "trip_id": "TRP-05010",
+    "category": "ROUTE_DEVIATION",
+    "filed_at": "2026-08-26T23:00:50+08:00",
+    "filed_by": "RIDER",
+    "channel": "IN_APP_SUPPORT",
+    "amount_contested_sgd": 36.3,
+    "claim_text": "Came back from a work trip. Driver went by the PIE and through Lavender instead of the ECP which the app showed. No reason given. The whole ride felt like a detour. I am disputing the whole fare.",
+    "counterparty_statement": {
+      "text": "ECP sometimes jam near Marina, PIE also fast. Passenger never say anything during the ride.",
+      "submitted_by": "DRIVER",
+      "submitted_at": "2026-08-27T08:30:50+08:00"
+    },
+    "evidence_ids": [
+      "EV-TRIP-05010",
+      "EV-GPS-05010",
+      "EV-CHAT-05010",
+      "EV-FARE-05010",
+      "EV-RPROF-05010",
+      "EV-DPROF-05010",
+      "EV-ADVIS-05010-01"
+    ]
+  },
+  "evidence": [
+    {
+      "evidence_id": "EV-TRIP-05010",
+      "evidence_type": "TRIP_RECORD",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform trip record; timestamps causally ordered; recorded optimal and actual distances present; deviation and rejoin events carried in events[].",
+        "assessed_at": "2026-08-26T23:12:55+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05010",
+        "rider_id": "R-48365",
+        "driver_id": "D-29893",
+        "requested_at": "2026-08-26T14:25:00+08:00",
+        "accepted_at": "2026-08-26T14:25:20+08:00",
+        "arrived_at": "2026-08-26T14:32:20+08:00",
+        "started_at": "2026-08-26T14:33:20+08:00",
+        "ended_at": "2026-08-26T14:59:50+08:00",
+        "cancelled_at": null,
+        "status": "COMPLETED",
+        "cancelled_by": null,
+        "cancellation_reason_code": null,
+        "pickup": {
+          "label": "Changi Airport Terminal 1, Arrival Pick-up Point",
+          "lat": 1.3615,
+          "lng": 103.9903,
+          "venue_id": null
+        },
+        "dropoff": {
+          "label": "Bugis Junction, Victoria Street",
+          "lat": 1.2993,
+          "lng": 103.8555,
+          "venue_id": null
+        },
+        "vehicle_type": "RYDE_XL",
+        "pickup_zone_class": "AIRPORT",
+        "chat_message_count": 2,
+        "registered_pickup_points": null,
+        "in_app_calls": [],
+        "optimal_distance_km": 19.7,
+        "optimal_duration_min": 23.7,
+        "optimal_route_source": "PLATFORM_ROUTER",
+        "optimal_route_erp_sgd": 0.0,
+        "actual_distance_km": 22.0,
+        "actual_duration_min": 26.5,
+        "deviation_pct": 11.7,
+        "amended_optimal_distance_km": null,
+        "amended_optimal_duration_min": null,
+        "solo_optimal_distance_km": null,
+        "pickup_amended_at": null,
+        "dropoff_amended_at": null,
+        "original_pickup": null,
+        "original_dropoff": null,
+        "scheduled_at": null,
+        "optimal_route_via": [
+          "Airport Boulevard",
+          "East Coast Parkway (ECP)",
+          "Republic Avenue",
+          "Raffles Boulevard",
+          "Victoria Street"
+        ],
+        "actual_route_via": [
+          "Airport Boulevard",
+          "Pan-Island Expressway (PIE)",
+          "Sims Way",
+          "Lavender Street",
+          "Victoria Street"
+        ],
+        "events": [
+          {
+            "event_type": "booking_confirmed",
+            "at": "2026-08-26T14:25:00+08:00",
+            "detail": "Rider R-48365 booked TRP-05010 from Changi Airport Terminal 1, Arrival Pick-up Point to Bugis Junction, Victoria Street. On-demand, metered fare.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_assigned",
+            "at": "2026-08-26T14:25:20+08:00",
+            "detail": "Driver D-29893 (Toyota Noah, SLJ 5257 Z) assigned. ETA 7 min.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_arrived",
+            "at": "2026-08-26T14:32:20+08:00",
+            "detail": "Driver marked arrived at pickup (button).",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_started",
+            "at": "2026-08-26T14:33:20+08:00",
+            "detail": "Rider on board. Recommended route via Airport Boulevard, East Coast Parkway (ECP), Republic Avenue, Raffles Boulevard, Victoria Street, 19.7 km.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_deviation_detected",
+            "at": "2026-08-26T14:36:54+08:00",
+            "detail": "Vehicle left the recommended route at Airport Boulevard / PIE-ECP split: recommended East Coast Parkway (ECP), vehicle took Pan-Island Expressway (PIE).",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_rejoined",
+            "at": "2026-08-26T14:58:48+08:00",
+            "detail": "Vehicle rejoined the recommended route at Victoria Street / Lavender Street.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_completed",
+            "at": "2026-08-26T14:59:50+08:00",
+            "detail": "Trip ended at Bugis Junction, Victoria Street. Recorded distance 22.0 km, duration 26 min 30 s.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "fare_finalised",
+            "at": "2026-08-26T14:59:56+08:00",
+            "detail": "Metered fare SGD 36.30 charged to rider payment method.",
+            "source": "PLATFORM_TELEMETRY"
+          }
+        ]
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05010",
+      "generated_at": "2026-08-26T23:12:50+08:00"
+    },
+    {
+      "evidence_id": "EV-GPS-05010",
+      "evidence_type": "GPS_TRACE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver-device trace, 54 fixes at 30 s from trip start to trip end; every fix reports horizontal accuracy (max 8 m) and a map-matched road; no interval exceeds 120 s.",
+        "assessed_at": "2026-08-26T23:12:55+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05010",
+        "points": [
+          {
+            "lat": 1.3615,
+            "lng": 103.9903,
+            "ts": "2026-08-26T14:33:20+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 5,
+            "road": "Airport Boulevard"
+          },
+          {
+            "lat": 1.359416,
+            "lng": 103.987938,
+            "ts": "2026-08-26T14:33:50+08:00",
+            "speed_kph": 45,
+            "accuracy_m": 7,
+            "road": "Airport Boulevard"
+          },
+          {
+            "lat": 1.3573,
+            "lng": 103.985555,
+            "ts": "2026-08-26T14:34:20+08:00",
+            "speed_kph": 50,
+            "accuracy_m": 4,
+            "road": "Airport Boulevard"
+          },
+          {
+            "lat": 1.355233,
+            "lng": 103.983178,
+            "ts": "2026-08-26T14:34:50+08:00",
+            "speed_kph": 38,
+            "accuracy_m": 5,
+            "road": "Airport Boulevard"
+          },
+          {
+            "lat": 1.353154,
+            "lng": 103.980768,
+            "ts": "2026-08-26T14:35:20+08:00",
+            "speed_kph": 54,
+            "accuracy_m": 5,
+            "road": "Airport Boulevard"
+          },
+          {
+            "lat": 1.351037,
+            "lng": 103.978457,
+            "ts": "2026-08-26T14:35:50+08:00",
+            "speed_kph": 50,
+            "accuracy_m": 5,
+            "road": "Airport Boulevard"
+          },
+          {
+            "lat": 1.348952,
+            "lng": 103.976059,
+            "ts": "2026-08-26T14:36:20+08:00",
+            "speed_kph": 50,
+            "accuracy_m": 4,
+            "road": "Airport Boulevard"
+          },
+          {
+            "lat": 1.348212,
+            "lng": 103.97331,
+            "ts": "2026-08-26T14:36:50+08:00",
+            "speed_kph": 48,
+            "accuracy_m": 3,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.348705,
+            "lng": 103.970161,
+            "ts": "2026-08-26T14:37:20+08:00",
+            "speed_kph": 44,
+            "accuracy_m": 4,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.349096,
+            "lng": 103.967041,
+            "ts": "2026-08-26T14:37:50+08:00",
+            "speed_kph": 46,
+            "accuracy_m": 5,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.349593,
+            "lng": 103.963874,
+            "ts": "2026-08-26T14:38:20+08:00",
+            "speed_kph": 51,
+            "accuracy_m": 8,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.350002,
+            "lng": 103.960794,
+            "ts": "2026-08-26T14:38:50+08:00",
+            "speed_kph": 39,
+            "accuracy_m": 3,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.350422,
+            "lng": 103.957635,
+            "ts": "2026-08-26T14:39:20+08:00",
+            "speed_kph": 41,
+            "accuracy_m": 5,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.350874,
+            "lng": 103.954513,
+            "ts": "2026-08-26T14:39:50+08:00",
+            "speed_kph": 59,
+            "accuracy_m": 7,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.351299,
+            "lng": 103.951376,
+            "ts": "2026-08-26T14:40:20+08:00",
+            "speed_kph": 57,
+            "accuracy_m": 6,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.35173,
+            "lng": 103.948246,
+            "ts": "2026-08-26T14:40:50+08:00",
+            "speed_kph": 39,
+            "accuracy_m": 3,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.352199,
+            "lng": 103.945105,
+            "ts": "2026-08-26T14:41:20+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 4,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.352637,
+            "lng": 103.942005,
+            "ts": "2026-08-26T14:41:50+08:00",
+            "speed_kph": 52,
+            "accuracy_m": 7,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.353041,
+            "lng": 103.93883,
+            "ts": "2026-08-26T14:42:20+08:00",
+            "speed_kph": 55,
+            "accuracy_m": 5,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.353498,
+            "lng": 103.935707,
+            "ts": "2026-08-26T14:42:50+08:00",
+            "speed_kph": 54,
+            "accuracy_m": 6,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.353939,
+            "lng": 103.932566,
+            "ts": "2026-08-26T14:43:20+08:00",
+            "speed_kph": 41,
+            "accuracy_m": 6,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.354356,
+            "lng": 103.929475,
+            "ts": "2026-08-26T14:43:50+08:00",
+            "speed_kph": 46,
+            "accuracy_m": 6,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.354808,
+            "lng": 103.926351,
+            "ts": "2026-08-26T14:44:20+08:00",
+            "speed_kph": 59,
+            "accuracy_m": 3,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.355232,
+            "lng": 103.923208,
+            "ts": "2026-08-26T14:44:50+08:00",
+            "speed_kph": 53,
+            "accuracy_m": 4,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.355682,
+            "lng": 103.92008,
+            "ts": "2026-08-26T14:45:20+08:00",
+            "speed_kph": 43,
+            "accuracy_m": 5,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.356126,
+            "lng": 103.916917,
+            "ts": "2026-08-26T14:45:50+08:00",
+            "speed_kph": 57,
+            "accuracy_m": 4,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.356537,
+            "lng": 103.913777,
+            "ts": "2026-08-26T14:46:20+08:00",
+            "speed_kph": 57,
+            "accuracy_m": 4,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.357009,
+            "lng": 103.910675,
+            "ts": "2026-08-26T14:46:50+08:00",
+            "speed_kph": 53,
+            "accuracy_m": 8,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.357442,
+            "lng": 103.907498,
+            "ts": "2026-08-26T14:47:20+08:00",
+            "speed_kph": 51,
+            "accuracy_m": 8,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.357053,
+            "lng": 103.904731,
+            "ts": "2026-08-26T14:47:50+08:00",
+            "speed_kph": 40,
+            "accuracy_m": 6,
+            "road": "Sims Way"
+          },
+          {
+            "lat": 1.354607,
+            "lng": 103.902672,
+            "ts": "2026-08-26T14:48:20+08:00",
+            "speed_kph": 52,
+            "accuracy_m": 5,
+            "road": "Sims Way"
+          },
+          {
+            "lat": 1.352168,
+            "lng": 103.900649,
+            "ts": "2026-08-26T14:48:50+08:00",
+            "speed_kph": 42,
+            "accuracy_m": 7,
+            "road": "Sims Way"
+          },
+          {
+            "lat": 1.349765,
+            "lng": 103.898603,
+            "ts": "2026-08-26T14:49:20+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 8,
+            "road": "Sims Way"
+          },
+          {
+            "lat": 1.347363,
+            "lng": 103.896584,
+            "ts": "2026-08-26T14:49:50+08:00",
+            "speed_kph": 39,
+            "accuracy_m": 8,
+            "road": "Sims Way"
+          },
+          {
+            "lat": 1.344946,
+            "lng": 103.894571,
+            "ts": "2026-08-26T14:50:20+08:00",
+            "speed_kph": 54,
+            "accuracy_m": 6,
+            "road": "Sims Way"
+          },
+          {
+            "lat": 1.342539,
+            "lng": 103.892476,
+            "ts": "2026-08-26T14:50:50+08:00",
+            "speed_kph": 45,
+            "accuracy_m": 4,
+            "road": "Sims Way"
+          },
+          {
+            "lat": 1.340098,
+            "lng": 103.890459,
+            "ts": "2026-08-26T14:51:20+08:00",
+            "speed_kph": 48,
+            "accuracy_m": 5,
+            "road": "Sims Way"
+          },
+          {
+            "lat": 1.337662,
+            "lng": 103.888424,
+            "ts": "2026-08-26T14:51:50+08:00",
+            "speed_kph": 39,
+            "accuracy_m": 5,
+            "road": "Sims Way"
+          },
+          {
+            "lat": 1.335303,
+            "lng": 103.886359,
+            "ts": "2026-08-26T14:52:20+08:00",
+            "speed_kph": 60,
+            "accuracy_m": 4,
+            "road": "Sims Way"
+          },
+          {
+            "lat": 1.332858,
+            "lng": 103.88434,
+            "ts": "2026-08-26T14:52:50+08:00",
+            "speed_kph": 44,
+            "accuracy_m": 7,
+            "road": "Sims Way"
+          },
+          {
+            "lat": 1.330443,
+            "lng": 103.882306,
+            "ts": "2026-08-26T14:53:20+08:00",
+            "speed_kph": 44,
+            "accuracy_m": 4,
+            "road": "Sims Way"
+          },
+          {
+            "lat": 1.328019,
+            "lng": 103.880259,
+            "ts": "2026-08-26T14:53:50+08:00",
+            "speed_kph": 57,
+            "accuracy_m": 8,
+            "road": "Sims Way"
+          },
+          {
+            "lat": 1.325626,
+            "lng": 103.87821,
+            "ts": "2026-08-26T14:54:20+08:00",
+            "speed_kph": 51,
+            "accuracy_m": 5,
+            "road": "Sims Way"
+          },
+          {
+            "lat": 1.323179,
+            "lng": 103.876213,
+            "ts": "2026-08-26T14:54:50+08:00",
+            "speed_kph": 58,
+            "accuracy_m": 4,
+            "road": "Sims Way"
+          },
+          {
+            "lat": 1.320775,
+            "lng": 103.874148,
+            "ts": "2026-08-26T14:55:20+08:00",
+            "speed_kph": 40,
+            "accuracy_m": 5,
+            "road": "Sims Way"
+          },
+          {
+            "lat": 1.318336,
+            "lng": 103.872099,
+            "ts": "2026-08-26T14:55:50+08:00",
+            "speed_kph": 52,
+            "accuracy_m": 6,
+            "road": "Sims Way"
+          },
+          {
+            "lat": 1.315936,
+            "lng": 103.870119,
+            "ts": "2026-08-26T14:56:20+08:00",
+            "speed_kph": 55,
+            "accuracy_m": 7,
+            "road": "Sims Way"
+          },
+          {
+            "lat": 1.313492,
+            "lng": 103.868044,
+            "ts": "2026-08-26T14:56:50+08:00",
+            "speed_kph": 51,
+            "accuracy_m": 4,
+            "road": "Sims Way"
+          },
+          {
+            "lat": 1.311091,
+            "lng": 103.86598,
+            "ts": "2026-08-26T14:57:20+08:00",
+            "speed_kph": 58,
+            "accuracy_m": 8,
+            "road": "Sims Way"
+          },
+          {
+            "lat": 1.308682,
+            "lng": 103.863961,
+            "ts": "2026-08-26T14:57:50+08:00",
+            "speed_kph": 55,
+            "accuracy_m": 5,
+            "road": "Sims Way"
+          },
+          {
+            "lat": 1.30631,
+            "lng": 103.861932,
+            "ts": "2026-08-26T14:58:20+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 6,
+            "road": "Sims Way"
+          },
+          {
+            "lat": 1.303869,
+            "lng": 103.85988,
+            "ts": "2026-08-26T14:58:50+08:00",
+            "speed_kph": 42,
+            "accuracy_m": 8,
+            "road": "Victoria Street"
+          },
+          {
+            "lat": 1.301605,
+            "lng": 103.857689,
+            "ts": "2026-08-26T14:59:20+08:00",
+            "speed_kph": 48,
+            "accuracy_m": 3,
+            "road": "Victoria Street"
+          },
+          {
+            "lat": 1.2993,
+            "lng": 103.8555,
+            "ts": "2026-08-26T14:59:50+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 3,
+            "road": "Victoria Street"
+          }
+        ],
+        "point_count": 54,
+        "first_fix_at": "2026-08-26T14:33:20+08:00",
+        "last_fix_at": "2026-08-26T14:59:50+08:00",
+        "sample_interval_sec": 30.0,
+        "expected_interval_sec": 30.0,
+        "gaps": [],
+        "max_gap_sec": 30.0,
+        "coverage_pct": 100.0,
+        "trace_distance_km": 18.564,
+        "rider_track": []
+      },
+      "schema_version": "1.2.0",
+      "source": "DRIVER_DEVICE",
+      "trip_id": "TRP-05010",
+      "generated_at": "2026-08-26T23:12:50+08:00"
+    },
+    {
+      "evidence_id": "EV-CHAT-05010",
+      "evidence_type": "CHAT_LOG",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform chat log, 2 entries, contiguous; matches trip_record.chat_message_count.",
+        "assessed_at": "2026-08-26T23:12:55+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05010",
+        "messages": [
+          {
+            "msg_id": "MSG-05010-001",
+            "sender": "DRIVER",
+            "text": "Hi, I'm at pick-up point lane B, black Noah",
+            "sent_at": "2026-08-26T14:31:30+08:00",
+            "read_at": "2026-08-26T14:32:01+08:00",
+            "delivered_at": "2026-08-26T14:31:32+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-05010-002",
+            "sender": "RIDER",
+            "text": "Ok coming out with 2 luggage",
+            "sent_at": "2026-08-26T14:32:20+08:00",
+            "read_at": "2026-08-26T14:33:06+08:00",
+            "delivered_at": "2026-08-26T14:32:23+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          }
+        ],
+        "message_count": 2,
+        "first_message_at": "2026-08-26T14:31:30+08:00",
+        "last_message_at": "2026-08-26T14:32:20+08:00",
+        "truncated": false
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05010",
+      "generated_at": "2026-08-26T23:12:50+08:00"
+    },
+    {
+      "evidence_id": "EV-FARE-05010",
+      "evidence_type": "FARE_BREAKDOWN",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Payments ledger; itemised lines reconcile to total_charged; tolls_erp equals the gantry list.",
+        "assessed_at": "2026-08-26T23:12:55+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05010",
+        "currency": "SGD",
+        "fare_model": "METERED",
+        "cancellation_fee": 0.0,
+        "total_charged": 36.3,
+        "payment_status": "CHARGED",
+        "refund_issued_sgd": 0.0,
+        "charged_at": "2026-08-26T14:59:56+08:00",
+        "surge_multiplier": 1.0,
+        "rate_card_id": "RC-SG-RYDEXL-2026Q3",
+        "base_fare": 3.8,
+        "distance_fare": 20.24,
+        "time_fare": 6.36,
+        "surge_amount": 0.0,
+        "tolls_erp": 0.0,
+        "airport_surcharge": 5.0,
+        "platform_fee": 0.9,
+        "promo_discount": 0.0,
+        "waiting_time_fee": 0.0,
+        "quoted_fare_sgd": null,
+        "distance_charged_km": 22.0,
+        "time_charged_min": 26.5,
+        "per_km_rate_sgd": 0.92,
+        "per_min_rate_sgd": 0.24,
+        "erp_gantries": []
+      },
+      "schema_version": "1.2.0",
+      "source": "PAYMENTS_LEDGER",
+      "trip_id": "TRP-05010",
+      "generated_at": "2026-08-26T23:12:50+08:00"
+    },
+    {
+      "evidence_id": "EV-RPROF-05010",
+      "evidence_type": "RIDER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Rider profile snapshot at filing.",
+        "assessed_at": "2026-08-26T23:12:55+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "R-48365",
+        "party_role": "RIDER",
+        "snapshot_at": "2026-08-26T23:00:50+08:00",
+        "account_age_days": 2318,
+        "lifetime_trips": 656,
+        "rating": 4.53,
+        "prior_disputes_filed": 4,
+        "prior_disputes_upheld": 1,
+        "prior_no_show_flags": 1,
+        "cancellation_rate": 0.086,
+        "no_show_disputes_30d": 1,
+        "deviation_claims_60d": 0,
+        "deviation_claims_60d_substantiated": 0,
+        "disputes_with_counterparty_90d": 0,
+        "fraud_flags": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05010",
+      "generated_at": "2026-08-26T23:12:50+08:00"
+    },
+    {
+      "evidence_id": "EV-DPROF-05010",
+      "evidence_type": "DRIVER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver profile snapshot at filing.",
+        "assessed_at": "2026-08-26T23:12:55+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "D-29893",
+        "party_role": "DRIVER",
+        "snapshot_at": "2026-08-26T23:00:50+08:00",
+        "account_age_days": 2899,
+        "lifetime_trips": 8708,
+        "rating": 4.64,
+        "prior_disputes_filed": 3,
+        "prior_disputes_upheld": 2,
+        "prior_no_show_flags": 1,
+        "vehicle_type": "RYDE_XL",
+        "cancellation_rate": 0.014,
+        "prior_deviation_flags": 1,
+        "acceptance_rate": 0.91,
+        "active_region": "CENTRAL",
+        "deviation_flags_90d": 1,
+        "completed_trips_90d": 402,
+        "no_show_terminations_30d": 1,
+        "completed_trips_30d": 80,
+        "disputes_with_counterparty_90d": 0,
+        "fraud_flags": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05010",
+      "generated_at": "2026-08-26T23:12:50+08:00"
+    },
+    {
+      "evidence_id": "EV-ADVIS-05010-01",
+      "evidence_type": "TRAFFIC_ADVISORY",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "LTA historical traffic record for the queried road segment and window; retrieved by the platform, not supplied by a party.",
+        "assessed_at": "2026-08-26T23:12:55+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "advisory_id": "LTA-TI-260826-8661",
+        "provider": "LTA_DATAMALL_SPEED_BANDS",
+        "advisory_type": "NONE",
+        "road": "East Coast Parkway (ECP)",
+        "direction": "towards City",
+        "location_desc": "Tanah Merah Coast Road to Benjamin Sheares Bridge",
+        "lat": 1.305,
+        "lng": 103.93,
+        "message": "No incident, roadwork or closure recorded on ECP (towards City) between Tanah Merah Coast Rd and Benjamin Sheares Bridge in the queried window. Speed bands 5-7 throughout.",
+        "valid_from": "2026-08-26T14:03:20+08:00",
+        "valid_to": "2026-08-26T15:33:20+08:00",
+        "speed_band_min": 6,
+        "retrieved_at": "2026-08-26T23:10:50+08:00"
+      },
+      "schema_version": "1.2.0",
+      "source": "THIRD_PARTY_LTA",
+      "trip_id": "TRP-05010",
+      "generated_at": "2026-08-26T23:12:50+08:00"
+    }
+  ]
+}

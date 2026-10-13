@@ -1,0 +1,8 @@
+{
+  "expected_ruling": "FULL_REFUND",
+  "expected_amount_sgd": 5.00,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": ["POL-NS-21", "POL-NS-22", "POL-GEN-03", "POL-GEN-22", "POL-NS-26"],
+  "reasoning": "On-demand trip, so the 300 s free wait runs from arrival (POL-NS-21, v2.1 2.1). EV-TRIP-05054 (weight 1.0) records arrived_at 09:47:05, corroborated by EV-GPS-05054 (1.0; stationary within ~4 m of pickup from 09:46:50, under the 50 m STANDARD radius). Cancelled 09:51:25: 260 s after arrival (275 s even from the first stationary fix), short of 300 s. The fee under POL-NS-22 (v2.1 2.2) arises only when the driver cancels after the free wait, so it does not stand; the driver's claim of waiting over 5 minutes is contradicted by the record. Contact was made (EV-CHAT-05054 msg 09:47:30; call 09:50:30), but POL-NS-23 cannot cure an early cancellation. Rider entirely right: FULL_REFUND of the 5.00 charged (EV-FARE-05054) under POL-GEN-03; no driver compensation. Value 5.00 < 10.00, no fraud_flags, no safety indicator: AI ruling final (POL-GEN-22, POL-NS-26, v2.1 6.1-6.3). Profile fields are context only (POL-GEN-01); no no_show_cancellations_30d field, so no POL-NS-25 referral. EV-ADVIS-05054-01 is MISSING (0.0) but carries no deciding fact."
+}

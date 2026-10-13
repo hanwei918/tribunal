@@ -1,0 +1,788 @@
+{
+  "schema_version": "1.2.0",
+  "case_no": 5003,
+  "dispute": {
+    "case_no": 5003,
+    "dispute_id": "DSP-05003",
+    "trip_id": "TRP-05003",
+    "category": "ROUTE_DEVIATION",
+    "filed_at": "2026-08-05T22:16:44+08:00",
+    "filed_by": "RIDER",
+    "channel": "IN_APP_SUPPORT",
+    "amount_contested_sgd": 4.5,
+    "claim_text": "Fare was higher than my usual ride home. Driver changed route halfway through. I want $4.50 back.",
+    "counterparty_statement": {
+      "text": "I told the passenger in the app before I exit, CTE got accident, he said ok. Route was faster than sitting in the jam.",
+      "submitted_by": "DRIVER",
+      "submitted_at": "2026-08-06T08:12:44+08:00"
+    },
+    "evidence_ids": [
+      "EV-TRIP-05003",
+      "EV-GPS-05003",
+      "EV-CHAT-05003",
+      "EV-FARE-05003",
+      "EV-RPROF-05003",
+      "EV-DPROF-05003",
+      "EV-ADVIS-05003-01"
+    ]
+  },
+  "evidence": [
+    {
+      "evidence_id": "EV-TRIP-05003",
+      "evidence_type": "TRIP_RECORD",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform trip record; timestamps causally ordered; recorded optimal and actual distances present; deviation and rejoin events carried in events[].",
+        "assessed_at": "2026-08-05T22:28:49+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05003",
+        "rider_id": "R-30760",
+        "driver_id": "D-96022",
+        "requested_at": "2026-08-05T18:41:20+08:00",
+        "accepted_at": "2026-08-05T18:41:29+08:00",
+        "arrived_at": "2026-08-05T18:47:44+08:00",
+        "started_at": "2026-08-05T18:49:44+08:00",
+        "ended_at": "2026-08-05T19:12:44+08:00",
+        "cancelled_at": null,
+        "status": "COMPLETED",
+        "cancelled_by": null,
+        "cancellation_reason_code": null,
+        "pickup": {
+          "label": "One Raffles Place, Raffles Quay",
+          "lat": 1.2839,
+          "lng": 103.8515,
+          "venue_id": null
+        },
+        "dropoff": {
+          "label": "NEX, Serangoon Central",
+          "lat": 1.3508,
+          "lng": 103.8722,
+          "venue_id": null
+        },
+        "vehicle_type": "RYDE_X",
+        "pickup_zone_class": "STANDARD",
+        "chat_message_count": 4,
+        "registered_pickup_points": null,
+        "in_app_calls": [],
+        "optimal_distance_km": 10.0,
+        "optimal_duration_min": 20.2,
+        "optimal_route_source": "PLATFORM_ROUTER",
+        "optimal_route_erp_sgd": 3.0,
+        "actual_distance_km": 11.4,
+        "actual_duration_min": 23.0,
+        "deviation_pct": 14.0,
+        "amended_optimal_distance_km": null,
+        "amended_optimal_duration_min": null,
+        "solo_optimal_distance_km": null,
+        "pickup_amended_at": null,
+        "dropoff_amended_at": null,
+        "original_pickup": null,
+        "original_dropoff": null,
+        "scheduled_at": null,
+        "optimal_route_via": [
+          "Raffles Quay",
+          "Central Expressway (CTE)",
+          "Braddell Road",
+          "Upper Serangoon Road",
+          "Serangoon Central"
+        ],
+        "actual_route_via": [
+          "Raffles Quay",
+          "Central Expressway (CTE)",
+          "Bendemeer Road",
+          "Upper Serangoon Road",
+          "Serangoon Central"
+        ],
+        "events": [
+          {
+            "event_type": "booking_confirmed",
+            "at": "2026-08-05T18:41:20+08:00",
+            "detail": "Rider R-30760 booked TRP-05003 from One Raffles Place, Raffles Quay to NEX, Serangoon Central. On-demand, metered fare.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_assigned",
+            "at": "2026-08-05T18:41:29+08:00",
+            "detail": "Driver D-96022 (Hyundai Ioniq 5, SLJ 979 G) assigned. ETA 6 min.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_arrived",
+            "at": "2026-08-05T18:47:44+08:00",
+            "detail": "Driver marked arrived at pickup (button).",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_started",
+            "at": "2026-08-05T18:49:44+08:00",
+            "detail": "Rider on board. Recommended route via Raffles Quay, Central Expressway (CTE), Braddell Road, Upper Serangoon Road, Serangoon Central, 10.0 km.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_deviation_detected",
+            "at": "2026-08-05T19:00:36+08:00",
+            "detail": "Vehicle left the recommended route at CTE / Bendemeer Road exit: recommended Central Expressway (CTE), vehicle took Bendemeer Road.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_rejoined",
+            "at": "2026-08-05T19:11:06+08:00",
+            "detail": "Vehicle rejoined the recommended route at Upper Serangoon Road / Braddell Road.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_completed",
+            "at": "2026-08-05T19:12:44+08:00",
+            "detail": "Trip ended at NEX, Serangoon Central. Recorded distance 11.4 km, duration 23 min 00 s.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "fare_finalised",
+            "at": "2026-08-05T19:12:50+08:00",
+            "detail": "Metered fare SGD 22.60 charged to rider payment method.",
+            "source": "PLATFORM_TELEMETRY"
+          }
+        ]
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05003",
+      "generated_at": "2026-08-05T22:28:44+08:00"
+    },
+    {
+      "evidence_id": "EV-GPS-05003",
+      "evidence_type": "GPS_TRACE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver-device trace, 47 fixes at 30 s from trip start to trip end; every fix reports horizontal accuracy (max 8 m) and a map-matched road; no interval exceeds 120 s.",
+        "assessed_at": "2026-08-05T22:28:49+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05003",
+        "points": [
+          {
+            "lat": 1.2839,
+            "lng": 103.8515,
+            "ts": "2026-08-05T18:49:44+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 3,
+            "road": "Raffles Quay"
+          },
+          {
+            "lat": 1.285306,
+            "lng": 103.850238,
+            "ts": "2026-08-05T18:50:14+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 6,
+            "road": "Raffles Quay"
+          },
+          {
+            "lat": 1.286733,
+            "lng": 103.848974,
+            "ts": "2026-08-05T18:50:44+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 3,
+            "road": "Raffles Quay"
+          },
+          {
+            "lat": 1.28815,
+            "lng": 103.84769,
+            "ts": "2026-08-05T18:51:14+08:00",
+            "speed_kph": 21,
+            "accuracy_m": 3,
+            "road": "Raffles Quay"
+          },
+          {
+            "lat": 1.289607,
+            "lng": 103.846519,
+            "ts": "2026-08-05T18:51:44+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 7,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.291482,
+            "lng": 103.846375,
+            "ts": "2026-08-05T18:52:14+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 3,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.293366,
+            "lng": 103.846285,
+            "ts": "2026-08-05T18:52:44+08:00",
+            "speed_kph": 24,
+            "accuracy_m": 7,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.295253,
+            "lng": 103.846131,
+            "ts": "2026-08-05T18:53:14+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 4,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.297155,
+            "lng": 103.846035,
+            "ts": "2026-08-05T18:53:44+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 8,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.299059,
+            "lng": 103.845924,
+            "ts": "2026-08-05T18:54:14+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 5,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.300908,
+            "lng": 103.845827,
+            "ts": "2026-08-05T18:54:44+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 4,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.302822,
+            "lng": 103.845721,
+            "ts": "2026-08-05T18:55:14+08:00",
+            "speed_kph": 24,
+            "accuracy_m": 8,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.304754,
+            "lng": 103.845619,
+            "ts": "2026-08-05T18:55:44+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 6,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.306482,
+            "lng": 103.845905,
+            "ts": "2026-08-05T18:56:14+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 3,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.307901,
+            "lng": 103.847179,
+            "ts": "2026-08-05T18:56:44+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 4,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.309324,
+            "lng": 103.848403,
+            "ts": "2026-08-05T18:57:14+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 7,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.310744,
+            "lng": 103.849659,
+            "ts": "2026-08-05T18:57:44+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 3,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.31216,
+            "lng": 103.850935,
+            "ts": "2026-08-05T18:58:14+08:00",
+            "speed_kph": 23,
+            "accuracy_m": 6,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.313586,
+            "lng": 103.852195,
+            "ts": "2026-08-05T18:58:44+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 7,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.31502,
+            "lng": 103.853371,
+            "ts": "2026-08-05T18:59:14+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 6,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.316472,
+            "lng": 103.854643,
+            "ts": "2026-08-05T18:59:44+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 5,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.317877,
+            "lng": 103.855881,
+            "ts": "2026-08-05T19:00:14+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 5,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.318673,
+            "lng": 103.857634,
+            "ts": "2026-08-05T19:00:44+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 5,
+            "road": "Bendemeer Road"
+          },
+          {
+            "lat": 1.319402,
+            "lng": 103.859389,
+            "ts": "2026-08-05T19:01:14+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 8,
+            "road": "Bendemeer Road"
+          },
+          {
+            "lat": 1.320099,
+            "lng": 103.861088,
+            "ts": "2026-08-05T19:01:44+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 6,
+            "road": "Bendemeer Road"
+          },
+          {
+            "lat": 1.320843,
+            "lng": 103.862847,
+            "ts": "2026-08-05T19:02:14+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 4,
+            "road": "Bendemeer Road"
+          },
+          {
+            "lat": 1.321584,
+            "lng": 103.864637,
+            "ts": "2026-08-05T19:02:44+08:00",
+            "speed_kph": 21,
+            "accuracy_m": 5,
+            "road": "Bendemeer Road"
+          },
+          {
+            "lat": 1.322283,
+            "lng": 103.866369,
+            "ts": "2026-08-05T19:03:14+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 8,
+            "road": "Bendemeer Road"
+          },
+          {
+            "lat": 1.32299,
+            "lng": 103.868156,
+            "ts": "2026-08-05T19:03:44+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 4,
+            "road": "Bendemeer Road"
+          },
+          {
+            "lat": 1.323742,
+            "lng": 103.869905,
+            "ts": "2026-08-05T19:04:14+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 5,
+            "road": "Bendemeer Road"
+          },
+          {
+            "lat": 1.324473,
+            "lng": 103.871641,
+            "ts": "2026-08-05T19:04:44+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 4,
+            "road": "Bendemeer Road"
+          },
+          {
+            "lat": 1.325206,
+            "lng": 103.873404,
+            "ts": "2026-08-05T19:05:14+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 4,
+            "road": "Bendemeer Road"
+          },
+          {
+            "lat": 1.326024,
+            "lng": 103.874949,
+            "ts": "2026-08-05T19:05:44+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 4,
+            "road": "Upper Serangoon Road"
+          },
+          {
+            "lat": 1.327825,
+            "lng": 103.874387,
+            "ts": "2026-08-05T19:06:14+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 4,
+            "road": "Upper Serangoon Road"
+          },
+          {
+            "lat": 1.329668,
+            "lng": 103.873808,
+            "ts": "2026-08-05T19:06:44+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 7,
+            "road": "Upper Serangoon Road"
+          },
+          {
+            "lat": 1.33145,
+            "lng": 103.873262,
+            "ts": "2026-08-05T19:07:14+08:00",
+            "speed_kph": 23,
+            "accuracy_m": 3,
+            "road": "Upper Serangoon Road"
+          },
+          {
+            "lat": 1.333275,
+            "lng": 103.872726,
+            "ts": "2026-08-05T19:07:44+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 5,
+            "road": "Upper Serangoon Road"
+          },
+          {
+            "lat": 1.335121,
+            "lng": 103.87216,
+            "ts": "2026-08-05T19:08:14+08:00",
+            "speed_kph": 23,
+            "accuracy_m": 5,
+            "road": "Upper Serangoon Road"
+          },
+          {
+            "lat": 1.336925,
+            "lng": 103.871617,
+            "ts": "2026-08-05T19:08:44+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 5,
+            "road": "Upper Serangoon Road"
+          },
+          {
+            "lat": 1.338707,
+            "lng": 103.871086,
+            "ts": "2026-08-05T19:09:14+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 3,
+            "road": "Upper Serangoon Road"
+          },
+          {
+            "lat": 1.340543,
+            "lng": 103.870519,
+            "ts": "2026-08-05T19:09:44+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 5,
+            "road": "Upper Serangoon Road"
+          },
+          {
+            "lat": 1.342331,
+            "lng": 103.869961,
+            "ts": "2026-08-05T19:10:14+08:00",
+            "speed_kph": 23,
+            "accuracy_m": 3,
+            "road": "Upper Serangoon Road"
+          },
+          {
+            "lat": 1.344179,
+            "lng": 103.869399,
+            "ts": "2026-08-05T19:10:44+08:00",
+            "speed_kph": 22,
+            "accuracy_m": 4,
+            "road": "Upper Serangoon Road"
+          },
+          {
+            "lat": 1.345911,
+            "lng": 103.869276,
+            "ts": "2026-08-05T19:11:14+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 7,
+            "road": "Upper Serangoon Road"
+          },
+          {
+            "lat": 1.347529,
+            "lng": 103.870227,
+            "ts": "2026-08-05T19:11:44+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 4,
+            "road": "Upper Serangoon Road"
+          },
+          {
+            "lat": 1.349162,
+            "lng": 103.871209,
+            "ts": "2026-08-05T19:12:14+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 6,
+            "road": "Upper Serangoon Road"
+          },
+          {
+            "lat": 1.3508,
+            "lng": 103.8722,
+            "ts": "2026-08-05T19:12:44+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 3,
+            "road": "Serangoon Central"
+          }
+        ],
+        "point_count": 47,
+        "first_fix_at": "2026-08-05T18:49:44+08:00",
+        "last_fix_at": "2026-08-05T19:12:44+08:00",
+        "sample_interval_sec": 30.0,
+        "expected_interval_sec": 30.0,
+        "gaps": [],
+        "max_gap_sec": 30.0,
+        "coverage_pct": 100.0,
+        "trace_distance_km": 9.652,
+        "rider_track": []
+      },
+      "schema_version": "1.2.0",
+      "source": "DRIVER_DEVICE",
+      "trip_id": "TRP-05003",
+      "generated_at": "2026-08-05T22:28:44+08:00"
+    },
+    {
+      "evidence_id": "EV-CHAT-05003",
+      "evidence_type": "CHAT_LOG",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform chat log, 4 entries, contiguous; matches trip_record.chat_message_count.",
+        "assessed_at": "2026-08-05T22:28:49+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05003",
+        "messages": [
+          {
+            "msg_id": "MSG-05003-001",
+            "sender": "DRIVER",
+            "text": "Hi I'm at the taxi stand along Raffles Quay, blue Ioniq 5",
+            "sent_at": "2026-08-05T18:48:04+08:00",
+            "read_at": "2026-08-05T18:48:22+08:00",
+            "delivered_at": "2026-08-05T18:48:06+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-05003-002",
+            "sender": "RIDER",
+            "text": "Ok walking over",
+            "sent_at": "2026-08-05T18:48:24+08:00",
+            "read_at": "2026-08-05T18:48:57+08:00",
+            "delivered_at": "2026-08-05T18:48:25+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-05003-003",
+            "sender": "DRIVER",
+            "text": "Hi sir, CTE got accident after Balestier, very jam. I exit Bendemeer and go Upper Serangoon ok? Should be faster.",
+            "sent_at": "2026-08-05T18:57:46+08:00",
+            "read_at": "2026-08-05T18:58:03+08:00",
+            "delivered_at": "2026-08-05T18:57:48+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-05003-004",
+            "sender": "RIDER",
+            "text": "Ok sure, thanks for telling",
+            "sent_at": "2026-08-05T18:58:26+08:00",
+            "read_at": "2026-08-05T18:58:49+08:00",
+            "delivered_at": "2026-08-05T18:58:27+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          }
+        ],
+        "message_count": 4,
+        "first_message_at": "2026-08-05T18:48:04+08:00",
+        "last_message_at": "2026-08-05T18:58:26+08:00",
+        "truncated": false
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05003",
+      "generated_at": "2026-08-05T22:28:44+08:00"
+    },
+    {
+      "evidence_id": "EV-FARE-05003",
+      "evidence_type": "FARE_BREAKDOWN",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Payments ledger; itemised lines reconcile to total_charged; tolls_erp equals the gantry list.",
+        "assessed_at": "2026-08-05T22:28:49+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05003",
+        "currency": "SGD",
+        "fare_model": "METERED",
+        "cancellation_fee": 0.0,
+        "total_charged": 22.6,
+        "payment_status": "CHARGED",
+        "refund_issued_sgd": 0.0,
+        "charged_at": "2026-08-05T19:12:50+08:00",
+        "surge_multiplier": 1.3,
+        "rate_card_id": "RC-SG-RYDEX-2026Q3",
+        "base_fare": 2.8,
+        "distance_fare": 8.21,
+        "time_fare": 4.14,
+        "surge_amount": 4.55,
+        "tolls_erp": 2.0,
+        "airport_surcharge": 0.0,
+        "platform_fee": 0.9,
+        "promo_discount": 0.0,
+        "waiting_time_fee": 0.0,
+        "quoted_fare_sgd": null,
+        "distance_charged_km": 11.4,
+        "time_charged_min": 23.0,
+        "per_km_rate_sgd": 0.72,
+        "per_min_rate_sgd": 0.18,
+        "erp_gantries": [
+          {
+            "gantry_id": "ERP-57",
+            "location": "CTE (after Chin Swee Road)",
+            "passed_at": "2026-08-05T18:52:30+08:00",
+            "amount_sgd": 2.0
+          }
+        ]
+      },
+      "schema_version": "1.2.0",
+      "source": "PAYMENTS_LEDGER",
+      "trip_id": "TRP-05003",
+      "generated_at": "2026-08-05T22:28:44+08:00"
+    },
+    {
+      "evidence_id": "EV-RPROF-05003",
+      "evidence_type": "RIDER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Rider profile snapshot at filing.",
+        "assessed_at": "2026-08-05T22:28:49+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "R-30760",
+        "party_role": "RIDER",
+        "snapshot_at": "2026-08-05T22:16:44+08:00",
+        "account_age_days": 153,
+        "lifetime_trips": 171,
+        "rating": 4.94,
+        "prior_disputes_filed": 0,
+        "prior_disputes_upheld": 0,
+        "prior_no_show_flags": 1,
+        "cancellation_rate": 0.062,
+        "no_show_disputes_30d": 0,
+        "deviation_claims_60d": 0,
+        "deviation_claims_60d_substantiated": 0,
+        "disputes_with_counterparty_90d": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05003",
+      "generated_at": "2026-08-05T22:28:44+08:00"
+    },
+    {
+      "evidence_id": "EV-DPROF-05003",
+      "evidence_type": "DRIVER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver profile snapshot at filing.",
+        "assessed_at": "2026-08-05T22:28:49+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "D-96022",
+        "party_role": "DRIVER",
+        "snapshot_at": "2026-08-05T22:16:44+08:00",
+        "account_age_days": 2116,
+        "lifetime_trips": 8018,
+        "rating": 4.67,
+        "prior_disputes_filed": 3,
+        "prior_disputes_upheld": 2,
+        "prior_no_show_flags": 2,
+        "vehicle_type": "RYDE_X",
+        "cancellation_rate": 0.029,
+        "prior_deviation_flags": 1,
+        "acceptance_rate": 0.84,
+        "active_region": "WEST",
+        "deviation_flags_90d": 1,
+        "completed_trips_90d": 743,
+        "no_show_terminations_30d": 3,
+        "completed_trips_30d": 263,
+        "disputes_with_counterparty_90d": 0,
+        "fraud_flags": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05003",
+      "generated_at": "2026-08-05T22:28:44+08:00"
+    },
+    {
+      "evidence_id": "EV-ADVIS-05003-01",
+      "evidence_type": "TRAFFIC_ADVISORY",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "LTA historical traffic record for the queried road segment and window; retrieved by the platform, not supplied by a party.",
+        "assessed_at": "2026-08-05T22:28:49+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "advisory_id": "LTA-TI-260805-1205",
+        "provider": "LTA_DATAMALL_TRAFFIC_INCIDENTS",
+        "advisory_type": "ACCIDENT",
+        "road": "Central Expressway (CTE)",
+        "direction": "towards SLE",
+        "location_desc": "after Balestier Road exit",
+        "lat": 1.3245,
+        "lng": 103.85,
+        "message": "(5/8)18:37 Accident on CTE (towards SLE) after Balestier Rd Exit. Avoid lanes 1 and 2.",
+        "valid_from": "2026-08-05T18:37:44+08:00",
+        "valid_to": "2026-08-05T19:49:44+08:00",
+        "speed_band_min": 1,
+        "retrieved_at": "2026-08-05T22:26:44+08:00"
+      },
+      "schema_version": "1.2.0",
+      "source": "THIRD_PARTY_LTA",
+      "trip_id": "TRP-05003",
+      "generated_at": "2026-08-05T22:28:44+08:00"
+    }
+  ]
+}

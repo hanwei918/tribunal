@@ -1,0 +1,8 @@
+{
+  "expected_ruling": "ESCALATE",
+  "expected_amount_sgd": null,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": ["POL-GEN-22", "POL-NS-26", "POL-GEN-02", "POL-NS-23", "POL-NS-21", "POL-NS-22", "POL-GEN-01", "POL-GEN-03"],
+  "reasoning": "On-demand trip: arrival 20:46:45 (EV-TRIP-05066) corroborated by EV-GPS-05066 (fixes ~3 m from pickup, acc<=9 m, STANDARD 50 m); free wait ran to 20:51:45, cancel 20:53:00 is after it (POL-NS-21). Driver placed an in-app call 20:49:30 (EV-TRIP in_app_calls) and sent two chat messages 20:47:00 and 20:50:20 before cancellation (EV-CHAT-05066), so POL-NS-23 is met on the record and the 5.00 fee (EV-FARE-05066) would stand as DRIVER_COMPENSATION 5.00 under POL-NS-22; rider's 'no message or call' claim is contradicted. But the message fact rests only on EV-CHAT-05066, IMPAIRED weight 0.85 (UNREAD_MESSAGE; delivered, unread), so confidence is capped at 0.85 (POL-GEN-02). EV-DPROF-05066 carries fraud_flags=1, so POL-GEN-22/POL-NS-26 require 0.95 whatever the 5.00 value; 0.85 < 0.95, so the case is escalated to human review, amount held, no referrals (fee is 5.00; no_show_cancellations_30d absent). Other profile fields are context only (POL-GEN-01); EV-ADVIS-05066-01 is MISSING and not needed. No safety indicator (POL-GEN-21)."
+}

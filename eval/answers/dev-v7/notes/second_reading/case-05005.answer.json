@@ -1,0 +1,8 @@
+{
+  "expected_ruling": "PARTIAL_REFUND",
+  "expected_amount_sgd": 1.56,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": ["POL-RD-21", "POL-RD-22", "POL-RD-23", "POL-RD-24", "POL-RD-25", "POL-GEN-22", "POL-GEN-02", "POL-GEN-03"],
+  "reasoning": "No safety indicator (POL-GEN-21). Deviation per POL-RD-22 from EV-TRIP-05005 recorded distances: 13.8 - 12.1 = 1.7 km > 1.0 km tolerance. Traffic-justified per POL-RD-23: EV-ADVIS-05005-01 (LTA, weight 1.0) shows a KPE breakdown towards ECP after the Upper Paya Lebar Rd exit, on the recommended KPE segment, valid 09:59-10:54, overlapping the 10:14-10:38 trip. Notice per POL-RD-21 must be before or at the point of deviation: EV-TRIP-05005 and EV-GPS-05005 put the exit onto Upper Serangoon Rd at 10:21:30-10:21:38, but EV-CHAT-05005 shows the driver's first route message at 10:24:30, about 3 min later; the rider's 10:25:00 'ok noted' acknowledges a late notice. The driver's statement that he told her first is contradicted by the chat log. So the rider was not informed in time, and POL-RD-24 row (b) applies: excess distance fare 1.7 x 0.92 (EV-FARE-05005 per-km rate, no surge) = 1.564, rounded to SGD 1.56, PARTIAL_REFUND. Value SGD 5.00 < 10 (POL-GEN-22). No fraud flags on either profile. All artifacts weight 1.0 (POL-GEN-02), so confidence of 0.80 or more is reachable (POL-RD-25). The 2 km limb is not applied. Matches precedent 7.1."
+}

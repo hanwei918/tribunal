@@ -1,0 +1,835 @@
+{
+  "schema_version": "1.2.0",
+  "case_no": 5020,
+  "dispute": {
+    "case_no": 5020,
+    "dispute_id": "DSP-05020",
+    "trip_id": "TRP-05020",
+    "category": "ROUTE_DEVIATION",
+    "filed_at": "2026-09-14T21:49:30+08:00",
+    "filed_by": "DRIVER",
+    "channel": "IN_APP_SUPPORT",
+    "amount_contested_sgd": 1.3,
+    "claim_text": "Bukit Timah Road had a road closure, LTA announced it, so I took Holland Road and told the passenger first, she agreed. Ryde still deducted $1.30. I want it back.",
+    "counterparty_statement": {
+      "text": "There was no closure when we drove, the road was open and moving. I agreed only because he said it was closed.",
+      "submitted_by": "RIDER",
+      "submitted_at": "2026-09-15T09:52:30+08:00"
+    },
+    "evidence_ids": [
+      "EV-TRIP-05020",
+      "EV-GPS-05020",
+      "EV-CHAT-05020",
+      "EV-FARE-05020",
+      "EV-RPROF-05020",
+      "EV-DPROF-05020",
+      "EV-ADVIS-05020-01"
+    ]
+  },
+  "evidence": [
+    {
+      "evidence_id": "EV-TRIP-05020",
+      "evidence_type": "TRIP_RECORD",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform trip record; timestamps causally ordered; recorded optimal and actual distances present; deviation and rejoin events carried in events[].",
+        "assessed_at": "2026-09-14T22:01:35+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05020",
+        "rider_id": "R-78242",
+        "driver_id": "D-59361",
+        "requested_at": "2026-09-14T18:28:40+08:00",
+        "accepted_at": "2026-09-14T18:29:00+08:00",
+        "arrived_at": "2026-09-14T18:33:00+08:00",
+        "started_at": "2026-09-14T18:34:30+08:00",
+        "ended_at": "2026-09-14T19:00:30+08:00",
+        "cancelled_at": null,
+        "status": "COMPLETED",
+        "cancelled_by": null,
+        "cancellation_reason_code": null,
+        "pickup": {
+          "label": "Beauty World Centre, Upper Bukit Timah Road",
+          "lat": 1.3419,
+          "lng": 103.7758,
+          "venue_id": null
+        },
+        "dropoff": {
+          "label": "Great World, Kim Seng Promenade",
+          "lat": 1.2935,
+          "lng": 103.832,
+          "venue_id": null
+        },
+        "vehicle_type": "RYDE_X",
+        "pickup_zone_class": "STANDARD",
+        "chat_message_count": 4,
+        "registered_pickup_points": null,
+        "in_app_calls": [],
+        "optimal_distance_km": 9.8,
+        "optimal_duration_min": 22.0,
+        "optimal_route_source": "PLATFORM_ROUTER",
+        "optimal_route_erp_sgd": 0.0,
+        "actual_distance_km": 11.6,
+        "actual_duration_min": 26.0,
+        "deviation_pct": 18.4,
+        "amended_optimal_distance_km": null,
+        "amended_optimal_duration_min": null,
+        "solo_optimal_distance_km": null,
+        "pickup_amended_at": null,
+        "dropoff_amended_at": null,
+        "original_pickup": null,
+        "original_dropoff": null,
+        "scheduled_at": null,
+        "optimal_route_via": [
+          "Upper Bukit Timah Road",
+          "Bukit Timah Road",
+          "Kim Seng Road",
+          "Kim Seng Promenade"
+        ],
+        "actual_route_via": [
+          "Upper Bukit Timah Road",
+          "Bukit Timah Road",
+          "Holland Road",
+          "Napier Road",
+          "Kim Seng Road",
+          "Kim Seng Promenade"
+        ],
+        "events": [
+          {
+            "event_type": "booking_confirmed",
+            "at": "2026-09-14T18:28:40+08:00",
+            "detail": "Rider R-78242 booked TRP-05020 from Beauty World Centre, Upper Bukit Timah Road to Great World, Kim Seng Promenade. On-demand, metered fare.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_assigned",
+            "at": "2026-09-14T18:29:00+08:00",
+            "detail": "Driver D-59361 (Toyota Corolla Altis, SLP 1862 X) assigned. ETA 4 min.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_arrived",
+            "at": "2026-09-14T18:33:00+08:00",
+            "detail": "Driver marked arrived at pickup (button).",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_started",
+            "at": "2026-09-14T18:34:30+08:00",
+            "detail": "Rider on board. Recommended route via Upper Bukit Timah Road, Bukit Timah Road, Kim Seng Road, Kim Seng Promenade, 9.8 km.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_deviation_detected",
+            "at": "2026-09-14T18:44:22+08:00",
+            "detail": "Vehicle left the recommended route at Bukit Timah Road / Farrer Road: recommended Bukit Timah Road, vehicle took Holland Road.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_rejoined",
+            "at": "2026-09-14T18:57:37+08:00",
+            "detail": "Vehicle rejoined the recommended route at Kim Seng Road / Tanglin Road.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_completed",
+            "at": "2026-09-14T19:00:30+08:00",
+            "detail": "Trip ended at Great World, Kim Seng Promenade. Recorded distance 11.6 km, duration 26 min 00 s.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "fare_finalised",
+            "at": "2026-09-14T19:00:36+08:00",
+            "detail": "Metered fare SGD 21.48 charged to rider payment method.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "fare_adjusted",
+            "at": "2026-09-14T20:14:30+08:00",
+            "detail": "Interim adjustment after a rider route complaint: SGD 1.30 refunded to rider and recovered from driver earnings pending review.",
+            "source": "PLATFORM_TELEMETRY"
+          }
+        ]
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05020",
+      "generated_at": "2026-09-14T22:01:30+08:00"
+    },
+    {
+      "evidence_id": "EV-GPS-05020",
+      "evidence_type": "GPS_TRACE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver-device trace, 53 fixes at 30 s from trip start to trip end; every fix reports horizontal accuracy (max 8 m) and a map-matched road; no interval exceeds 120 s.",
+        "assessed_at": "2026-09-14T22:01:35+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05020",
+        "points": [
+          {
+            "lat": 1.3419,
+            "lng": 103.7758,
+            "ts": "2026-09-14T18:34:30+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 4,
+            "road": "Upper Bukit Timah Road"
+          },
+          {
+            "lat": 1.340702,
+            "lng": 103.777025,
+            "ts": "2026-09-14T18:35:00+08:00",
+            "speed_kph": 21,
+            "accuracy_m": 4,
+            "road": "Upper Bukit Timah Road"
+          },
+          {
+            "lat": 1.339521,
+            "lng": 103.778286,
+            "ts": "2026-09-14T18:35:30+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 7,
+            "road": "Upper Bukit Timah Road"
+          },
+          {
+            "lat": 1.338338,
+            "lng": 103.779465,
+            "ts": "2026-09-14T18:36:00+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 7,
+            "road": "Upper Bukit Timah Road"
+          },
+          {
+            "lat": 1.337173,
+            "lng": 103.780696,
+            "ts": "2026-09-14T18:36:30+08:00",
+            "speed_kph": 19,
+            "accuracy_m": 5,
+            "road": "Upper Bukit Timah Road"
+          },
+          {
+            "lat": 1.335976,
+            "lng": 103.781936,
+            "ts": "2026-09-14T18:37:00+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 3,
+            "road": "Upper Bukit Timah Road"
+          },
+          {
+            "lat": 1.334794,
+            "lng": 103.783161,
+            "ts": "2026-09-14T18:37:30+08:00",
+            "speed_kph": 21,
+            "accuracy_m": 4,
+            "road": "Upper Bukit Timah Road"
+          },
+          {
+            "lat": 1.333586,
+            "lng": 103.784416,
+            "ts": "2026-09-14T18:38:00+08:00",
+            "speed_kph": 20,
+            "accuracy_m": 4,
+            "road": "Upper Bukit Timah Road"
+          },
+          {
+            "lat": 1.332571,
+            "lng": 103.785723,
+            "ts": "2026-09-14T18:38:30+08:00",
+            "speed_kph": 22,
+            "accuracy_m": 4,
+            "road": "Bukit Timah Road"
+          },
+          {
+            "lat": 1.331715,
+            "lng": 103.787231,
+            "ts": "2026-09-14T18:39:00+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 5,
+            "road": "Bukit Timah Road"
+          },
+          {
+            "lat": 1.330824,
+            "lng": 103.788664,
+            "ts": "2026-09-14T18:39:30+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 4,
+            "road": "Bukit Timah Road"
+          },
+          {
+            "lat": 1.329938,
+            "lng": 103.790159,
+            "ts": "2026-09-14T18:40:00+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 4,
+            "road": "Bukit Timah Road"
+          },
+          {
+            "lat": 1.329112,
+            "lng": 103.791644,
+            "ts": "2026-09-14T18:40:30+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 5,
+            "road": "Bukit Timah Road"
+          },
+          {
+            "lat": 1.328229,
+            "lng": 103.793102,
+            "ts": "2026-09-14T18:41:00+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 4,
+            "road": "Bukit Timah Road"
+          },
+          {
+            "lat": 1.327397,
+            "lng": 103.794565,
+            "ts": "2026-09-14T18:41:30+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 4,
+            "road": "Bukit Timah Road"
+          },
+          {
+            "lat": 1.326502,
+            "lng": 103.796043,
+            "ts": "2026-09-14T18:42:00+08:00",
+            "speed_kph": 19,
+            "accuracy_m": 3,
+            "road": "Bukit Timah Road"
+          },
+          {
+            "lat": 1.325638,
+            "lng": 103.79753,
+            "ts": "2026-09-14T18:42:30+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 3,
+            "road": "Bukit Timah Road"
+          },
+          {
+            "lat": 1.324772,
+            "lng": 103.798964,
+            "ts": "2026-09-14T18:43:00+08:00",
+            "speed_kph": 21,
+            "accuracy_m": 5,
+            "road": "Bukit Timah Road"
+          },
+          {
+            "lat": 1.323906,
+            "lng": 103.800447,
+            "ts": "2026-09-14T18:43:30+08:00",
+            "speed_kph": 20,
+            "accuracy_m": 5,
+            "road": "Bukit Timah Road"
+          },
+          {
+            "lat": 1.323048,
+            "lng": 103.801922,
+            "ts": "2026-09-14T18:44:00+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 4,
+            "road": "Bukit Timah Road"
+          },
+          {
+            "lat": 1.321368,
+            "lng": 103.802147,
+            "ts": "2026-09-14T18:44:30+08:00",
+            "speed_kph": 19,
+            "accuracy_m": 8,
+            "road": "Holland Road"
+          },
+          {
+            "lat": 1.31969,
+            "lng": 103.802264,
+            "ts": "2026-09-14T18:45:00+08:00",
+            "speed_kph": 24,
+            "accuracy_m": 7,
+            "road": "Holland Road"
+          },
+          {
+            "lat": 1.317985,
+            "lng": 103.802418,
+            "ts": "2026-09-14T18:45:30+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 6,
+            "road": "Holland Road"
+          },
+          {
+            "lat": 1.316298,
+            "lng": 103.802584,
+            "ts": "2026-09-14T18:46:00+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 6,
+            "road": "Holland Road"
+          },
+          {
+            "lat": 1.314595,
+            "lng": 103.802664,
+            "ts": "2026-09-14T18:46:30+08:00",
+            "speed_kph": 20,
+            "accuracy_m": 4,
+            "road": "Holland Road"
+          },
+          {
+            "lat": 1.312887,
+            "lng": 103.802822,
+            "ts": "2026-09-14T18:47:00+08:00",
+            "speed_kph": 22,
+            "accuracy_m": 8,
+            "road": "Holland Road"
+          },
+          {
+            "lat": 1.31123,
+            "lng": 103.802981,
+            "ts": "2026-09-14T18:47:30+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 5,
+            "road": "Holland Road"
+          },
+          {
+            "lat": 1.30949,
+            "lng": 103.80311,
+            "ts": "2026-09-14T18:48:00+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 4,
+            "road": "Holland Road"
+          },
+          {
+            "lat": 1.307813,
+            "lng": 103.80323,
+            "ts": "2026-09-14T18:48:30+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 5,
+            "road": "Holland Road"
+          },
+          {
+            "lat": 1.306064,
+            "lng": 103.803407,
+            "ts": "2026-09-14T18:49:00+08:00",
+            "speed_kph": 22,
+            "accuracy_m": 5,
+            "road": "Holland Road"
+          },
+          {
+            "lat": 1.304355,
+            "lng": 103.803495,
+            "ts": "2026-09-14T18:49:30+08:00",
+            "speed_kph": 21,
+            "accuracy_m": 7,
+            "road": "Holland Road"
+          },
+          {
+            "lat": 1.302675,
+            "lng": 103.803674,
+            "ts": "2026-09-14T18:50:00+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 8,
+            "road": "Holland Road"
+          },
+          {
+            "lat": 1.301018,
+            "lng": 103.803804,
+            "ts": "2026-09-14T18:50:30+08:00",
+            "speed_kph": 21,
+            "accuracy_m": 6,
+            "road": "Holland Road"
+          },
+          {
+            "lat": 1.299937,
+            "lng": 103.804525,
+            "ts": "2026-09-14T18:51:00+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 3,
+            "road": "Napier Road"
+          },
+          {
+            "lat": 1.300097,
+            "lng": 103.806224,
+            "ts": "2026-09-14T18:51:30+08:00",
+            "speed_kph": 23,
+            "accuracy_m": 8,
+            "road": "Napier Road"
+          },
+          {
+            "lat": 1.300263,
+            "lng": 103.807942,
+            "ts": "2026-09-14T18:52:00+08:00",
+            "speed_kph": 24,
+            "accuracy_m": 6,
+            "road": "Napier Road"
+          },
+          {
+            "lat": 1.300407,
+            "lng": 103.809614,
+            "ts": "2026-09-14T18:52:30+08:00",
+            "speed_kph": 21,
+            "accuracy_m": 8,
+            "road": "Napier Road"
+          },
+          {
+            "lat": 1.300586,
+            "lng": 103.811318,
+            "ts": "2026-09-14T18:53:00+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 7,
+            "road": "Napier Road"
+          },
+          {
+            "lat": 1.300717,
+            "lng": 103.813025,
+            "ts": "2026-09-14T18:53:30+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 7,
+            "road": "Napier Road"
+          },
+          {
+            "lat": 1.300885,
+            "lng": 103.814719,
+            "ts": "2026-09-14T18:54:00+08:00",
+            "speed_kph": 19,
+            "accuracy_m": 4,
+            "road": "Napier Road"
+          },
+          {
+            "lat": 1.30103,
+            "lng": 103.816428,
+            "ts": "2026-09-14T18:54:30+08:00",
+            "speed_kph": 19,
+            "accuracy_m": 8,
+            "road": "Napier Road"
+          },
+          {
+            "lat": 1.301203,
+            "lng": 103.818152,
+            "ts": "2026-09-14T18:55:00+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 8,
+            "road": "Napier Road"
+          },
+          {
+            "lat": 1.301358,
+            "lng": 103.819799,
+            "ts": "2026-09-14T18:55:30+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 3,
+            "road": "Napier Road"
+          },
+          {
+            "lat": 1.30149,
+            "lng": 103.821534,
+            "ts": "2026-09-14T18:56:00+08:00",
+            "speed_kph": 22,
+            "accuracy_m": 5,
+            "road": "Napier Road"
+          },
+          {
+            "lat": 1.301641,
+            "lng": 103.823217,
+            "ts": "2026-09-14T18:56:30+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 8,
+            "road": "Napier Road"
+          },
+          {
+            "lat": 1.301817,
+            "lng": 103.824923,
+            "ts": "2026-09-14T18:57:00+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 4,
+            "road": "Napier Road"
+          },
+          {
+            "lat": 1.301974,
+            "lng": 103.826637,
+            "ts": "2026-09-14T18:57:30+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 4,
+            "road": "Napier Road"
+          },
+          {
+            "lat": 1.300846,
+            "lng": 103.82769,
+            "ts": "2026-09-14T18:58:00+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 5,
+            "road": "Kim Seng Road"
+          },
+          {
+            "lat": 1.299355,
+            "lng": 103.828547,
+            "ts": "2026-09-14T18:58:30+08:00",
+            "speed_kph": 24,
+            "accuracy_m": 6,
+            "road": "Kim Seng Road"
+          },
+          {
+            "lat": 1.297926,
+            "lng": 103.829404,
+            "ts": "2026-09-14T18:59:00+08:00",
+            "speed_kph": 24,
+            "accuracy_m": 4,
+            "road": "Kim Seng Road"
+          },
+          {
+            "lat": 1.296481,
+            "lng": 103.830252,
+            "ts": "2026-09-14T18:59:30+08:00",
+            "speed_kph": 21,
+            "accuracy_m": 7,
+            "road": "Kim Seng Road"
+          },
+          {
+            "lat": 1.294966,
+            "lng": 103.831132,
+            "ts": "2026-09-14T19:00:00+08:00",
+            "speed_kph": 22,
+            "accuracy_m": 4,
+            "road": "Kim Seng Road"
+          },
+          {
+            "lat": 1.2935,
+            "lng": 103.832,
+            "ts": "2026-09-14T19:00:30+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 4,
+            "road": "Kim Seng Promenade"
+          }
+        ],
+        "point_count": 53,
+        "first_fix_at": "2026-09-14T18:34:30+08:00",
+        "last_fix_at": "2026-09-14T19:00:30+08:00",
+        "sample_interval_sec": 30.0,
+        "expected_interval_sec": 30.0,
+        "gaps": [],
+        "max_gap_sec": 30.0,
+        "coverage_pct": 100.0,
+        "trace_distance_km": 9.795,
+        "rider_track": []
+      },
+      "schema_version": "1.2.0",
+      "source": "DRIVER_DEVICE",
+      "trip_id": "TRP-05020",
+      "generated_at": "2026-09-14T22:01:30+08:00"
+    },
+    {
+      "evidence_id": "EV-CHAT-05020",
+      "evidence_type": "CHAT_LOG",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform chat log, 4 entries, contiguous; matches trip_record.chat_message_count.",
+        "assessed_at": "2026-09-14T22:01:35+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05020",
+        "messages": [
+          {
+            "msg_id": "MSG-05020-001",
+            "sender": "DRIVER",
+            "text": "At Beauty World pick up point",
+            "sent_at": "2026-09-14T18:33:00+08:00",
+            "read_at": "2026-09-14T18:33:31+08:00",
+            "delivered_at": "2026-09-14T18:33:02+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-05020-002",
+            "sender": "RIDER",
+            "text": "ok",
+            "sent_at": "2026-09-14T18:33:20+08:00",
+            "read_at": "2026-09-14T18:33:49+08:00",
+            "delivered_at": "2026-09-14T18:33:22+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-05020-003",
+            "sender": "DRIVER",
+            "text": "Bukit Timah Road got road closure, I go Holland Road ok?",
+            "sent_at": "2026-09-14T18:41:22+08:00",
+            "read_at": "2026-09-14T18:41:33+08:00",
+            "delivered_at": "2026-09-14T18:41:23+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-05020-004",
+            "sender": "RIDER",
+            "text": "ok sure",
+            "sent_at": "2026-09-14T18:41:47+08:00",
+            "read_at": "2026-09-14T18:42:30+08:00",
+            "delivered_at": "2026-09-14T18:41:50+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          }
+        ],
+        "message_count": 4,
+        "first_message_at": "2026-09-14T18:33:00+08:00",
+        "last_message_at": "2026-09-14T18:41:47+08:00",
+        "truncated": false
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05020",
+      "generated_at": "2026-09-14T22:01:30+08:00"
+    },
+    {
+      "evidence_id": "EV-FARE-05020",
+      "evidence_type": "FARE_BREAKDOWN",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Payments ledger; itemised lines reconcile to total_charged; tolls_erp equals the gantry list.",
+        "assessed_at": "2026-09-14T22:01:35+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05020",
+        "currency": "SGD",
+        "fare_model": "METERED",
+        "cancellation_fee": 0.0,
+        "total_charged": 21.48,
+        "payment_status": "PARTIALLY_REFUNDED",
+        "refund_issued_sgd": 1.3,
+        "charged_at": "2026-09-14T19:00:36+08:00",
+        "surge_multiplier": 1.3,
+        "rate_card_id": "RC-SG-RYDEX-2026Q3",
+        "base_fare": 2.8,
+        "distance_fare": 8.35,
+        "time_fare": 4.68,
+        "surge_amount": 4.75,
+        "tolls_erp": 0.0,
+        "airport_surcharge": 0.0,
+        "platform_fee": 0.9,
+        "promo_discount": 0.0,
+        "waiting_time_fee": 0.0,
+        "quoted_fare_sgd": null,
+        "distance_charged_km": 11.6,
+        "time_charged_min": 26.0,
+        "per_km_rate_sgd": 0.72,
+        "per_min_rate_sgd": 0.18,
+        "erp_gantries": []
+      },
+      "schema_version": "1.2.0",
+      "source": "PAYMENTS_LEDGER",
+      "trip_id": "TRP-05020",
+      "generated_at": "2026-09-14T22:01:30+08:00"
+    },
+    {
+      "evidence_id": "EV-RPROF-05020",
+      "evidence_type": "RIDER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Rider profile snapshot at filing.",
+        "assessed_at": "2026-09-14T22:01:35+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "R-78242",
+        "party_role": "RIDER",
+        "snapshot_at": "2026-09-14T21:49:30+08:00",
+        "account_age_days": 2047,
+        "lifetime_trips": 831,
+        "rating": 4.82,
+        "prior_disputes_filed": 5,
+        "prior_disputes_upheld": 4,
+        "prior_no_show_flags": 0,
+        "cancellation_rate": 0.038,
+        "no_show_disputes_30d": 0,
+        "deviation_claims_60d": 0,
+        "deviation_claims_60d_substantiated": 0,
+        "disputes_with_counterparty_90d": 0,
+        "fraud_flags": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05020",
+      "generated_at": "2026-09-14T22:01:30+08:00"
+    },
+    {
+      "evidence_id": "EV-DPROF-05020",
+      "evidence_type": "DRIVER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver profile snapshot at filing.",
+        "assessed_at": "2026-09-14T22:01:35+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "D-59361",
+        "party_role": "DRIVER",
+        "snapshot_at": "2026-09-14T21:49:30+08:00",
+        "account_age_days": 2243,
+        "lifetime_trips": 9417,
+        "rating": 4.94,
+        "prior_disputes_filed": 1,
+        "prior_disputes_upheld": 1,
+        "prior_no_show_flags": 2,
+        "vehicle_type": "RYDE_X",
+        "cancellation_rate": 0.029,
+        "prior_deviation_flags": 2,
+        "acceptance_rate": 0.91,
+        "active_region": "NORTH_EAST",
+        "deviation_flags_90d": 1,
+        "completed_trips_90d": 380,
+        "no_show_terminations_30d": 0,
+        "completed_trips_30d": 122,
+        "disputes_with_counterparty_90d": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05020",
+      "generated_at": "2026-09-14T22:01:30+08:00"
+    },
+    {
+      "evidence_id": "EV-ADVIS-05020-01",
+      "evidence_type": "TRAFFIC_ADVISORY",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "LTA historical traffic record for the queried road segment and window; retrieved by the platform, not supplied by a party.",
+        "assessed_at": "2026-09-14T22:01:35+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "advisory_id": "LTA-TI-260914-6951",
+        "provider": "LTA_DATAMALL_TRAFFIC_INCIDENTS",
+        "advisory_type": "ROAD_CLOSURE",
+        "road": "Bukit Timah Road",
+        "direction": "towards City",
+        "location_desc": "between Farrer Road and Cluny Road",
+        "lat": 1.318,
+        "lng": 103.81,
+        "message": "(14/9)00:30 Road closure on Bukit Timah Rd (towards City) between Farrer Rd and Cluny Rd for utility works. Diversion via Holland Rd.",
+        "valid_from": "2026-09-14T00:30:00+08:00",
+        "valid_to": "2026-09-14T05:30:00+08:00",
+        "speed_band_min": null,
+        "retrieved_at": "2026-09-14T21:59:30+08:00"
+      },
+      "schema_version": "1.2.0",
+      "source": "THIRD_PARTY_LTA",
+      "trip_id": "TRP-05020",
+      "generated_at": "2026-09-14T22:01:30+08:00"
+    }
+  ]
+}

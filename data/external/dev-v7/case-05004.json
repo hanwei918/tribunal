@@ -1,0 +1,686 @@
+{
+  "schema_version": "1.2.0",
+  "case_no": 5004,
+  "dispute": {
+    "case_no": 5004,
+    "dispute_id": "DSP-05004",
+    "trip_id": "TRP-05004",
+    "category": "ROUTE_DEVIATION",
+    "filed_at": "2026-08-11T18:11:22+08:00",
+    "filed_by": "RIDER",
+    "channel": "IN_APP_SUPPORT",
+    "amount_contested_sgd": 4.0,
+    "claim_text": "Driver left the PIE at Clementi and drove through Commonwealth instead of the app route, never asked me. Extra distance on a metered fare. Requesting a $4 refund.",
+    "counterparty_statement": {
+      "text": "PIE that morning very jam after Clementi, I took the faster way for the customer. Forgot to inform, sorry.",
+      "submitted_by": "DRIVER",
+      "submitted_at": "2026-08-12T03:29:22+08:00"
+    },
+    "evidence_ids": [
+      "EV-TRIP-05004",
+      "EV-GPS-05004",
+      "EV-CHAT-05004",
+      "EV-FARE-05004",
+      "EV-RPROF-05004",
+      "EV-DPROF-05004",
+      "EV-ADVIS-05004-01"
+    ]
+  },
+  "evidence": [
+    {
+      "evidence_id": "EV-TRIP-05004",
+      "evidence_type": "TRIP_RECORD",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform trip record; timestamps causally ordered; recorded optimal and actual distances present; deviation and rejoin events carried in events[].",
+        "assessed_at": "2026-08-11T18:23:27+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05004",
+        "rider_id": "R-91576",
+        "driver_id": "D-86853",
+        "requested_at": "2026-08-11T08:30:10+08:00",
+        "accepted_at": "2026-08-11T08:30:22+08:00",
+        "arrived_at": "2026-08-11T08:36:37+08:00",
+        "started_at": "2026-08-11T08:37:22+08:00",
+        "ended_at": "2026-08-11T08:55:22+08:00",
+        "cancelled_at": null,
+        "status": "COMPLETED",
+        "cancelled_by": null,
+        "cancellation_reason_code": null,
+        "pickup": {
+          "label": "Westgate, Gateway Drive",
+          "lat": 1.3343,
+          "lng": 103.7424,
+          "venue_id": null
+        },
+        "dropoff": {
+          "label": "Holland Village, Lorong Mambong",
+          "lat": 1.3117,
+          "lng": 103.7962,
+          "venue_id": null
+        },
+        "vehicle_type": "RYDE_X",
+        "pickup_zone_class": "STANDARD",
+        "chat_message_count": 2,
+        "registered_pickup_points": null,
+        "in_app_calls": [],
+        "optimal_distance_km": 8.1,
+        "optimal_duration_min": 15.3,
+        "optimal_route_source": "PLATFORM_ROUTER",
+        "optimal_route_erp_sgd": 1.0,
+        "actual_distance_km": 9.5,
+        "actual_duration_min": 18.0,
+        "deviation_pct": 17.3,
+        "amended_optimal_distance_km": null,
+        "amended_optimal_duration_min": null,
+        "solo_optimal_distance_km": null,
+        "pickup_amended_at": null,
+        "dropoff_amended_at": null,
+        "original_pickup": null,
+        "original_dropoff": null,
+        "scheduled_at": null,
+        "optimal_route_via": [
+          "Gateway Drive",
+          "Jurong Town Hall Road",
+          "Pan-Island Expressway (PIE)",
+          "Clementi Road",
+          "Holland Road",
+          "Lorong Mambong"
+        ],
+        "actual_route_via": [
+          "Gateway Drive",
+          "Jurong Town Hall Road",
+          "Pan-Island Expressway (PIE)",
+          "Clementi Avenue 6",
+          "Commonwealth Avenue West",
+          "Holland Road",
+          "Lorong Mambong"
+        ],
+        "events": [
+          {
+            "event_type": "booking_confirmed",
+            "at": "2026-08-11T08:30:10+08:00",
+            "detail": "Rider R-91576 booked TRP-05004 from Westgate, Gateway Drive to Holland Village, Lorong Mambong. On-demand, metered fare.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_assigned",
+            "at": "2026-08-11T08:30:22+08:00",
+            "detail": "Driver D-86853 (Toyota Corolla Altis, SLG 9011 E) assigned. ETA 6 min.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_arrived",
+            "at": "2026-08-11T08:36:37+08:00",
+            "detail": "Driver marked arrived at pickup (button).",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_started",
+            "at": "2026-08-11T08:37:22+08:00",
+            "detail": "Rider on board. Recommended route via Gateway Drive, Jurong Town Hall Road, Pan-Island Expressway (PIE), Clementi Road, Holland Road, Lorong Mambong, 8.1 km.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_deviation_detected",
+            "at": "2026-08-11T08:42:55+08:00",
+            "detail": "Vehicle left the recommended route at PIE / Clementi Avenue 6 exit: recommended Pan-Island Expressway (PIE), vehicle took Clementi Avenue 6.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_rejoined",
+            "at": "2026-08-11T08:53:16+08:00",
+            "detail": "Vehicle rejoined the recommended route at Holland Road / Commonwealth Avenue West.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_completed",
+            "at": "2026-08-11T08:55:22+08:00",
+            "detail": "Trip ended at Holland Village, Lorong Mambong. Recorded distance 9.5 km, duration 18 min 00 s.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "fare_finalised",
+            "at": "2026-08-11T08:55:28+08:00",
+            "detail": "Metered fare SGD 14.78 charged to rider payment method.",
+            "source": "PLATFORM_TELEMETRY"
+          }
+        ]
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05004",
+      "generated_at": "2026-08-11T18:23:22+08:00"
+    },
+    {
+      "evidence_id": "EV-GPS-05004",
+      "evidence_type": "GPS_TRACE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver-device trace, 37 fixes at 30 s from trip start to trip end; every fix reports horizontal accuracy (max 8 m) and a map-matched road; no interval exceeds 120 s.",
+        "assessed_at": "2026-08-11T18:23:27+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05004",
+        "points": [
+          {
+            "lat": 1.3343,
+            "lng": 103.7424,
+            "ts": "2026-08-11T08:37:22+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 4,
+            "road": "Gateway Drive"
+          },
+          {
+            "lat": 1.333757,
+            "lng": 103.744335,
+            "ts": "2026-08-11T08:37:52+08:00",
+            "speed_kph": 39,
+            "accuracy_m": 4,
+            "road": "Gateway Drive"
+          },
+          {
+            "lat": 1.333204,
+            "lng": 103.746241,
+            "ts": "2026-08-11T08:38:22+08:00",
+            "speed_kph": 38,
+            "accuracy_m": 5,
+            "road": "Gateway Drive"
+          },
+          {
+            "lat": 1.333109,
+            "lng": 103.748195,
+            "ts": "2026-08-11T08:38:52+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 8,
+            "road": "Jurong Town Hall Road"
+          },
+          {
+            "lat": 1.333319,
+            "lng": 103.75026,
+            "ts": "2026-08-11T08:39:22+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 5,
+            "road": "Jurong Town Hall Road"
+          },
+          {
+            "lat": 1.333544,
+            "lng": 103.752181,
+            "ts": "2026-08-11T08:39:52+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 8,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.33381,
+            "lng": 103.754215,
+            "ts": "2026-08-11T08:40:22+08:00",
+            "speed_kph": 23,
+            "accuracy_m": 6,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.334051,
+            "lng": 103.75619,
+            "ts": "2026-08-11T08:40:52+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 8,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.33433,
+            "lng": 103.758186,
+            "ts": "2026-08-11T08:41:22+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 5,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.334644,
+            "lng": 103.760161,
+            "ts": "2026-08-11T08:41:52+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 8,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.334879,
+            "lng": 103.762145,
+            "ts": "2026-08-11T08:42:22+08:00",
+            "speed_kph": 22,
+            "accuracy_m": 5,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.333881,
+            "lng": 103.763255,
+            "ts": "2026-08-11T08:42:52+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 4,
+            "road": "Clementi Avenue 6"
+          },
+          {
+            "lat": 1.331952,
+            "lng": 103.76368,
+            "ts": "2026-08-11T08:43:22+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 5,
+            "road": "Clementi Avenue 6"
+          },
+          {
+            "lat": 1.329956,
+            "lng": 103.764126,
+            "ts": "2026-08-11T08:43:52+08:00",
+            "speed_kph": 39,
+            "accuracy_m": 8,
+            "road": "Clementi Avenue 6"
+          },
+          {
+            "lat": 1.328029,
+            "lng": 103.76456,
+            "ts": "2026-08-11T08:44:22+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 7,
+            "road": "Clementi Avenue 6"
+          },
+          {
+            "lat": 1.326063,
+            "lng": 103.764976,
+            "ts": "2026-08-11T08:44:52+08:00",
+            "speed_kph": 39,
+            "accuracy_m": 8,
+            "road": "Clementi Avenue 6"
+          },
+          {
+            "lat": 1.324082,
+            "lng": 103.765387,
+            "ts": "2026-08-11T08:45:22+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 4,
+            "road": "Clementi Avenue 6"
+          },
+          {
+            "lat": 1.322154,
+            "lng": 103.765873,
+            "ts": "2026-08-11T08:45:52+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 3,
+            "road": "Clementi Avenue 6"
+          },
+          {
+            "lat": 1.320191,
+            "lng": 103.766309,
+            "ts": "2026-08-11T08:46:22+08:00",
+            "speed_kph": 39,
+            "accuracy_m": 4,
+            "road": "Clementi Avenue 6"
+          },
+          {
+            "lat": 1.318189,
+            "lng": 103.766713,
+            "ts": "2026-08-11T08:46:52+08:00",
+            "speed_kph": 23,
+            "accuracy_m": 4,
+            "road": "Clementi Avenue 6"
+          },
+          {
+            "lat": 1.316265,
+            "lng": 103.767162,
+            "ts": "2026-08-11T08:47:22+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 8,
+            "road": "Clementi Avenue 6"
+          },
+          {
+            "lat": 1.314312,
+            "lng": 103.767596,
+            "ts": "2026-08-11T08:47:52+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 5,
+            "road": "Clementi Avenue 6"
+          },
+          {
+            "lat": 1.314244,
+            "lng": 103.769392,
+            "ts": "2026-08-11T08:48:22+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 5,
+            "road": "Commonwealth Avenue West"
+          },
+          {
+            "lat": 1.314402,
+            "lng": 103.771388,
+            "ts": "2026-08-11T08:48:52+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 5,
+            "road": "Commonwealth Avenue West"
+          },
+          {
+            "lat": 1.314575,
+            "lng": 103.773393,
+            "ts": "2026-08-11T08:49:22+08:00",
+            "speed_kph": 39,
+            "accuracy_m": 4,
+            "road": "Commonwealth Avenue West"
+          },
+          {
+            "lat": 1.314757,
+            "lng": 103.775377,
+            "ts": "2026-08-11T08:49:52+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 7,
+            "road": "Commonwealth Avenue West"
+          },
+          {
+            "lat": 1.314944,
+            "lng": 103.777393,
+            "ts": "2026-08-11T08:50:22+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 3,
+            "road": "Commonwealth Avenue West"
+          },
+          {
+            "lat": 1.315136,
+            "lng": 103.779378,
+            "ts": "2026-08-11T08:50:52+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 6,
+            "road": "Commonwealth Avenue West"
+          },
+          {
+            "lat": 1.315336,
+            "lng": 103.781384,
+            "ts": "2026-08-11T08:51:22+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 3,
+            "road": "Commonwealth Avenue West"
+          },
+          {
+            "lat": 1.315494,
+            "lng": 103.783411,
+            "ts": "2026-08-11T08:51:52+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 4,
+            "road": "Commonwealth Avenue West"
+          },
+          {
+            "lat": 1.315682,
+            "lng": 103.785374,
+            "ts": "2026-08-11T08:52:22+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 4,
+            "road": "Commonwealth Avenue West"
+          },
+          {
+            "lat": 1.315837,
+            "lng": 103.787376,
+            "ts": "2026-08-11T08:52:52+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 3,
+            "road": "Commonwealth Avenue West"
+          },
+          {
+            "lat": 1.315823,
+            "lng": 103.789332,
+            "ts": "2026-08-11T08:53:22+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 5,
+            "road": "Holland Road"
+          },
+          {
+            "lat": 1.314772,
+            "lng": 103.791044,
+            "ts": "2026-08-11T08:53:52+08:00",
+            "speed_kph": 39,
+            "accuracy_m": 3,
+            "road": "Holland Road"
+          },
+          {
+            "lat": 1.313749,
+            "lng": 103.792786,
+            "ts": "2026-08-11T08:54:22+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 4,
+            "road": "Holland Road"
+          },
+          {
+            "lat": 1.312719,
+            "lng": 103.794497,
+            "ts": "2026-08-11T08:54:52+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 6,
+            "road": "Holland Road"
+          },
+          {
+            "lat": 1.3117,
+            "lng": 103.7962,
+            "ts": "2026-08-11T08:55:22+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 7,
+            "road": "Lorong Mambong"
+          }
+        ],
+        "point_count": 37,
+        "first_fix_at": "2026-08-11T08:37:22+08:00",
+        "last_fix_at": "2026-08-11T08:55:22+08:00",
+        "sample_interval_sec": 30.0,
+        "expected_interval_sec": 30.0,
+        "gaps": [],
+        "max_gap_sec": 30.0,
+        "coverage_pct": 100.0,
+        "trace_distance_km": 7.935,
+        "rider_track": []
+      },
+      "schema_version": "1.2.0",
+      "source": "DRIVER_DEVICE",
+      "trip_id": "TRP-05004",
+      "generated_at": "2026-08-11T18:23:22+08:00"
+    },
+    {
+      "evidence_id": "EV-CHAT-05004",
+      "evidence_type": "CHAT_LOG",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform chat log, 2 entries, contiguous; matches trip_record.chat_message_count.",
+        "assessed_at": "2026-08-11T18:23:27+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05004",
+        "messages": [
+          {
+            "msg_id": "MSG-05004-001",
+            "sender": "DRIVER",
+            "text": "Hi I'm at Westgate taxi stand, white Corolla",
+            "sent_at": "2026-08-11T08:35:52+08:00",
+            "read_at": "2026-08-11T08:36:13+08:00",
+            "delivered_at": "2026-08-11T08:35:55+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-05004-002",
+            "sender": "RIDER",
+            "text": "Ok",
+            "sent_at": "2026-08-11T08:36:12+08:00",
+            "read_at": "2026-08-11T08:36:47+08:00",
+            "delivered_at": "2026-08-11T08:36:13+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          }
+        ],
+        "message_count": 2,
+        "first_message_at": "2026-08-11T08:35:52+08:00",
+        "last_message_at": "2026-08-11T08:36:12+08:00",
+        "truncated": false
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05004",
+      "generated_at": "2026-08-11T18:23:22+08:00"
+    },
+    {
+      "evidence_id": "EV-FARE-05004",
+      "evidence_type": "FARE_BREAKDOWN",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Payments ledger; itemised lines reconcile to total_charged; tolls_erp equals the gantry list.",
+        "assessed_at": "2026-08-11T18:23:27+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05004",
+        "currency": "SGD",
+        "fare_model": "METERED",
+        "cancellation_fee": 0.0,
+        "total_charged": 14.78,
+        "payment_status": "CHARGED",
+        "refund_issued_sgd": 0.0,
+        "charged_at": "2026-08-11T08:55:28+08:00",
+        "surge_multiplier": 1.0,
+        "rate_card_id": "RC-SG-RYDEX-2026Q3",
+        "base_fare": 2.8,
+        "distance_fare": 6.84,
+        "time_fare": 3.24,
+        "surge_amount": 0.0,
+        "tolls_erp": 1.0,
+        "airport_surcharge": 0.0,
+        "platform_fee": 0.9,
+        "promo_discount": 0.0,
+        "waiting_time_fee": 0.0,
+        "quoted_fare_sgd": null,
+        "distance_charged_km": 9.5,
+        "time_charged_min": 18.0,
+        "per_km_rate_sgd": 0.72,
+        "per_min_rate_sgd": 0.18,
+        "erp_gantries": [
+          {
+            "gantry_id": "ERP-42",
+            "location": "PIE (after Jurong Town Hall Road)",
+            "passed_at": "2026-08-11T08:40:36+08:00",
+            "amount_sgd": 1.0
+          }
+        ]
+      },
+      "schema_version": "1.2.0",
+      "source": "PAYMENTS_LEDGER",
+      "trip_id": "TRP-05004",
+      "generated_at": "2026-08-11T18:23:22+08:00"
+    },
+    {
+      "evidence_id": "EV-RPROF-05004",
+      "evidence_type": "RIDER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Rider profile snapshot at filing.",
+        "assessed_at": "2026-08-11T18:23:27+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "R-91576",
+        "party_role": "RIDER",
+        "snapshot_at": "2026-08-11T18:11:22+08:00",
+        "account_age_days": 247,
+        "lifetime_trips": 155,
+        "rating": 4.89,
+        "prior_disputes_filed": 2,
+        "prior_disputes_upheld": 2,
+        "prior_no_show_flags": 0,
+        "cancellation_rate": 0.086,
+        "no_show_disputes_30d": 1,
+        "deviation_claims_60d": 1,
+        "deviation_claims_60d_substantiated": 0,
+        "disputes_with_counterparty_90d": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05004",
+      "generated_at": "2026-08-11T18:23:22+08:00"
+    },
+    {
+      "evidence_id": "EV-DPROF-05004",
+      "evidence_type": "DRIVER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver profile snapshot at filing.",
+        "assessed_at": "2026-08-11T18:23:27+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "D-86853",
+        "party_role": "DRIVER",
+        "snapshot_at": "2026-08-11T18:11:22+08:00",
+        "account_age_days": 655,
+        "lifetime_trips": 10241,
+        "rating": 4.9,
+        "prior_disputes_filed": 1,
+        "prior_disputes_upheld": 1,
+        "prior_no_show_flags": 1,
+        "vehicle_type": "RYDE_X",
+        "cancellation_rate": 0.024,
+        "prior_deviation_flags": 1,
+        "acceptance_rate": 0.97,
+        "active_region": "WEST",
+        "deviation_flags_90d": 0,
+        "completed_trips_90d": 883,
+        "no_show_terminations_30d": 3,
+        "completed_trips_30d": 192,
+        "disputes_with_counterparty_90d": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05004",
+      "generated_at": "2026-08-11T18:23:22+08:00"
+    },
+    {
+      "evidence_id": "EV-ADVIS-05004-01",
+      "evidence_type": "TRAFFIC_ADVISORY",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "LTA historical traffic record for the queried road segment and window; retrieved by the platform, not supplied by a party.",
+        "assessed_at": "2026-08-11T18:23:27+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "advisory_id": "LTA-TI-260811-1963",
+        "provider": "LTA_DATAMALL_TRAFFIC_INCIDENTS",
+        "advisory_type": "HEAVY_TRAFFIC",
+        "road": "Pan-Island Expressway (PIE)",
+        "direction": "towards Changi",
+        "location_desc": "after Clementi Avenue 6 exit to Clementi Road exit",
+        "lat": 1.336,
+        "lng": 103.77,
+        "message": "(11/8)08:15 Heavy traffic on PIE (towards Changi) after Clementi Ave 6 Exit to Clementi Rd Exit.",
+        "valid_from": "2026-08-11T08:15:42+08:00",
+        "valid_to": "2026-08-11T09:27:22+08:00",
+        "speed_band_min": 1,
+        "retrieved_at": "2026-08-11T18:21:22+08:00"
+      },
+      "schema_version": "1.2.0",
+      "source": "THIRD_PARTY_LTA",
+      "trip_id": "TRP-05004",
+      "generated_at": "2026-08-11T18:23:22+08:00"
+    }
+  ]
+}

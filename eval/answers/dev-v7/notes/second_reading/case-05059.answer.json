@@ -1,0 +1,10 @@
+{
+  "expected_ruling": "DRIVER_COMPENSATION",
+  "expected_amount_sgd": 5.00,
+  "expected_driver_compensation_sgd": 5.00,
+  "expected_referrals": [
+    "POL-NS-25: flag rider account R-17281 for repeat no-show review (no_show_cancellations_30d = 3 with this trip's fee standing; mandatory upfront payment, temporary suspension pending Trust & Safety review)"
+  ],
+  "governing_clauses": ["POL-NS-21", "POL-NS-22", "POL-NS-23", "POL-NS-25", "POL-NS-26", "POL-GEN-01", "POL-GEN-02", "POL-GEN-03", "POL-GEN-22"],
+  "reasoning": "On-demand trip, so free wait runs from arrival (POL-NS-21, v2.1 2.1): EV-TRIP-05059 arrived_at 08:29:10, corroborated by EV-GPS-05059 (stationary ~10 m from pickup, accuracy <=9 m, within 50 m STANDARD radius). Cancelled 08:35:30, 380 s after arrival, past the 300 s wait. Contact obligation met before cancellation (POL-NS-23, v2.1 2.3): chats MSG-05059-001 08:29:30 and -002 08:32:45 delivered (EV-CHAT-05059, weight 0.85, UNREAD_MESSAGE; unread does not matter, the rule requires sending; EV-TRIP chat_message_count 2 corroborates) and driver in-app call 08:33:40 (EV-TRIP in_app_calls). Rider's 'cancelled too fast' claim is unsupported. Fee 5.00 stands as charged (EV-FARE-05059): DRIVER_COMPENSATION 5.00 (POL-NS-22, POL-GEN-03). Value 5.00 < 10, no fraud flags, no safety indicator: AI ruling final (POL-GEN-22, POL-NS-26, v2.1 6.1-6.3). EV-ADVIS-05059-01 missing (0.0) is irrelevant. Rider no_show_cancellations_30d = 3 (EV-RPROF-05059) triggers POL-NS-25 referral (v2.1 2.5); other profile fields are context only (POL-GEN-01)."
+}

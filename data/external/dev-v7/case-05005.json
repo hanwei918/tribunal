@@ -1,0 +1,789 @@
+{
+  "schema_version": "1.2.0",
+  "case_no": 5005,
+  "dispute": {
+    "case_no": 5005,
+    "dispute_id": "DSP-05005",
+    "trip_id": "TRP-05005",
+    "category": "ROUTE_DEVIATION",
+    "filed_at": "2026-08-15T19:16:08+08:00",
+    "filed_by": "RIDER",
+    "channel": "IN_APP_SUPPORT",
+    "amount_contested_sgd": 5.0,
+    "claim_text": "Driver came off the TPE onto Upper Serangoon Road instead of taking the KPE like the app showed. He only messaged me after he had already turned off, so I had no say. The fare went up. Asking for $5 back.",
+    "counterparty_statement": {
+      "text": "I informed the passenger before I changed route because of the breakdown in the KPE tunnel, and she replied ok. I did nothing wrong.",
+      "submitted_by": "DRIVER",
+      "submitted_at": "2026-08-16T09:41:08+08:00"
+    },
+    "evidence_ids": [
+      "EV-TRIP-05005",
+      "EV-GPS-05005",
+      "EV-CHAT-05005",
+      "EV-FARE-05005",
+      "EV-RPROF-05005",
+      "EV-DPROF-05005",
+      "EV-ADVIS-05005-01"
+    ]
+  },
+  "evidence": [
+    {
+      "evidence_id": "EV-TRIP-05005",
+      "evidence_type": "TRIP_RECORD",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform trip record; timestamps causally ordered; recorded optimal and actual distances present; deviation and rejoin events carried in events[].",
+        "assessed_at": "2026-08-15T19:28:13+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05005",
+        "rider_id": "R-85781",
+        "driver_id": "D-87850",
+        "requested_at": "2026-08-15T10:05:30+08:00",
+        "accepted_at": "2026-08-15T10:06:08+08:00",
+        "arrived_at": "2026-08-15T10:13:53+08:00",
+        "started_at": "2026-08-15T10:14:38+08:00",
+        "ended_at": "2026-08-15T10:38:08+08:00",
+        "cancelled_at": null,
+        "status": "COMPLETED",
+        "cancelled_by": null,
+        "cancellation_reason_code": null,
+        "pickup": {
+          "label": "Waterway Point, Punggol Central",
+          "lat": 1.4067,
+          "lng": 103.9022,
+          "venue_id": null
+        },
+        "dropoff": {
+          "label": "Paya Lebar Quarter, Paya Lebar Road",
+          "lat": 1.3176,
+          "lng": 103.8927,
+          "venue_id": null
+        },
+        "vehicle_type": "RYDE_XL",
+        "pickup_zone_class": "STANDARD",
+        "chat_message_count": 4,
+        "registered_pickup_points": null,
+        "in_app_calls": [],
+        "optimal_distance_km": 12.1,
+        "optimal_duration_min": 20.6,
+        "optimal_route_source": "PLATFORM_ROUTER",
+        "optimal_route_erp_sgd": 0.0,
+        "actual_distance_km": 13.8,
+        "actual_duration_min": 23.5,
+        "deviation_pct": 14.0,
+        "amended_optimal_distance_km": null,
+        "amended_optimal_duration_min": null,
+        "solo_optimal_distance_km": null,
+        "pickup_amended_at": null,
+        "dropoff_amended_at": null,
+        "original_pickup": null,
+        "original_dropoff": null,
+        "scheduled_at": null,
+        "optimal_route_via": [
+          "Punggol Central",
+          "Tampines Expressway (TPE)",
+          "Kallang-Paya Lebar Expressway (KPE)",
+          "Paya Lebar Road"
+        ],
+        "actual_route_via": [
+          "Punggol Central",
+          "Tampines Expressway (TPE)",
+          "Upper Serangoon Road",
+          "Upper Paya Lebar Road",
+          "Paya Lebar Road"
+        ],
+        "events": [
+          {
+            "event_type": "booking_confirmed",
+            "at": "2026-08-15T10:05:30+08:00",
+            "detail": "Rider R-85781 booked TRP-05005 from Waterway Point, Punggol Central to Paya Lebar Quarter, Paya Lebar Road. On-demand, metered fare.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_assigned",
+            "at": "2026-08-15T10:06:08+08:00",
+            "detail": "Driver D-87850 (Toyota Noah, SLE 1044 Z) assigned. ETA 7 min.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_arrived",
+            "at": "2026-08-15T10:13:53+08:00",
+            "detail": "Driver marked arrived at pickup (button).",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_started",
+            "at": "2026-08-15T10:14:38+08:00",
+            "detail": "Rider on board. Recommended route via Punggol Central, Tampines Expressway (TPE), Kallang-Paya Lebar Expressway (KPE), Paya Lebar Road, 12.1 km.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_deviation_detected",
+            "at": "2026-08-15T10:21:30+08:00",
+            "detail": "Vehicle left the recommended route at TPE / Upper Serangoon Road exit: recommended Kallang-Paya Lebar Expressway (KPE), vehicle took Upper Serangoon Road.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_rejoined",
+            "at": "2026-08-15T10:35:21+08:00",
+            "detail": "Vehicle rejoined the recommended route at Paya Lebar Road / Upper Paya Lebar Road.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_completed",
+            "at": "2026-08-15T10:38:08+08:00",
+            "detail": "Trip ended at Paya Lebar Quarter, Paya Lebar Road. Recorded distance 13.8 km, duration 23 min 30 s.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "fare_finalised",
+            "at": "2026-08-15T10:38:14+08:00",
+            "detail": "Metered fare SGD 23.04 charged to rider payment method.",
+            "source": "PLATFORM_TELEMETRY"
+          }
+        ]
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05005",
+      "generated_at": "2026-08-15T19:28:08+08:00"
+    },
+    {
+      "evidence_id": "EV-GPS-05005",
+      "evidence_type": "GPS_TRACE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver-device trace, 48 fixes at 30 s from trip start to trip end; every fix reports horizontal accuracy (max 8 m) and a map-matched road; no interval exceeds 120 s.",
+        "assessed_at": "2026-08-15T19:28:13+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05005",
+        "points": [
+          {
+            "lat": 1.4067,
+            "lng": 103.9022,
+            "ts": "2026-08-15T10:14:38+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 5,
+            "road": "Punggol Central"
+          },
+          {
+            "lat": 1.404528,
+            "lng": 103.902721,
+            "ts": "2026-08-15T10:15:08+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 6,
+            "road": "Punggol Central"
+          },
+          {
+            "lat": 1.402333,
+            "lng": 103.90326,
+            "ts": "2026-08-15T10:15:38+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 3,
+            "road": "Punggol Central"
+          },
+          {
+            "lat": 1.400124,
+            "lng": 103.903772,
+            "ts": "2026-08-15T10:16:08+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 6,
+            "road": "Punggol Central"
+          },
+          {
+            "lat": 1.397966,
+            "lng": 103.904295,
+            "ts": "2026-08-15T10:16:38+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 6,
+            "road": "Punggol Central"
+          },
+          {
+            "lat": 1.3958,
+            "lng": 103.904844,
+            "ts": "2026-08-15T10:17:08+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 5,
+            "road": "Punggol Central"
+          },
+          {
+            "lat": 1.393759,
+            "lng": 103.904202,
+            "ts": "2026-08-15T10:17:38+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 5,
+            "road": "Tampines Expressway (TPE)"
+          },
+          {
+            "lat": 1.391914,
+            "lng": 103.903024,
+            "ts": "2026-08-15T10:18:08+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 7,
+            "road": "Tampines Expressway (TPE)"
+          },
+          {
+            "lat": 1.390045,
+            "lng": 103.901766,
+            "ts": "2026-08-15T10:18:38+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 7,
+            "road": "Tampines Expressway (TPE)"
+          },
+          {
+            "lat": 1.388151,
+            "lng": 103.900512,
+            "ts": "2026-08-15T10:19:08+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 6,
+            "road": "Tampines Expressway (TPE)"
+          },
+          {
+            "lat": 1.386279,
+            "lng": 103.899296,
+            "ts": "2026-08-15T10:19:38+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 5,
+            "road": "Tampines Expressway (TPE)"
+          },
+          {
+            "lat": 1.384393,
+            "lng": 103.898081,
+            "ts": "2026-08-15T10:20:08+08:00",
+            "speed_kph": 39,
+            "accuracy_m": 8,
+            "road": "Tampines Expressway (TPE)"
+          },
+          {
+            "lat": 1.382545,
+            "lng": 103.896827,
+            "ts": "2026-08-15T10:20:38+08:00",
+            "speed_kph": 44,
+            "accuracy_m": 3,
+            "road": "Tampines Expressway (TPE)"
+          },
+          {
+            "lat": 1.380633,
+            "lng": 103.895578,
+            "ts": "2026-08-15T10:21:08+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 6,
+            "road": "Tampines Expressway (TPE)"
+          },
+          {
+            "lat": 1.378951,
+            "lng": 103.894127,
+            "ts": "2026-08-15T10:21:38+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 5,
+            "road": "Upper Serangoon Road"
+          },
+          {
+            "lat": 1.377277,
+            "lng": 103.892565,
+            "ts": "2026-08-15T10:22:08+08:00",
+            "speed_kph": 42,
+            "accuracy_m": 4,
+            "road": "Upper Serangoon Road"
+          },
+          {
+            "lat": 1.375644,
+            "lng": 103.891074,
+            "ts": "2026-08-15T10:22:38+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 5,
+            "road": "Upper Serangoon Road"
+          },
+          {
+            "lat": 1.373984,
+            "lng": 103.889597,
+            "ts": "2026-08-15T10:23:08+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 4,
+            "road": "Upper Serangoon Road"
+          },
+          {
+            "lat": 1.372279,
+            "lng": 103.888056,
+            "ts": "2026-08-15T10:23:38+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 8,
+            "road": "Upper Serangoon Road"
+          },
+          {
+            "lat": 1.370694,
+            "lng": 103.886545,
+            "ts": "2026-08-15T10:24:08+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 4,
+            "road": "Upper Serangoon Road"
+          },
+          {
+            "lat": 1.368976,
+            "lng": 103.885046,
+            "ts": "2026-08-15T10:24:38+08:00",
+            "speed_kph": 43,
+            "accuracy_m": 7,
+            "road": "Upper Serangoon Road"
+          },
+          {
+            "lat": 1.367358,
+            "lng": 103.883524,
+            "ts": "2026-08-15T10:25:08+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 4,
+            "road": "Upper Serangoon Road"
+          },
+          {
+            "lat": 1.365683,
+            "lng": 103.882025,
+            "ts": "2026-08-15T10:25:38+08:00",
+            "speed_kph": 38,
+            "accuracy_m": 4,
+            "road": "Upper Serangoon Road"
+          },
+          {
+            "lat": 1.363994,
+            "lng": 103.880506,
+            "ts": "2026-08-15T10:26:08+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 5,
+            "road": "Upper Serangoon Road"
+          },
+          {
+            "lat": 1.36238,
+            "lng": 103.878978,
+            "ts": "2026-08-15T10:26:38+08:00",
+            "speed_kph": 42,
+            "accuracy_m": 8,
+            "road": "Upper Serangoon Road"
+          },
+          {
+            "lat": 1.36068,
+            "lng": 103.877476,
+            "ts": "2026-08-15T10:27:08+08:00",
+            "speed_kph": 40,
+            "accuracy_m": 4,
+            "road": "Upper Serangoon Road"
+          },
+          {
+            "lat": 1.359011,
+            "lng": 103.875955,
+            "ts": "2026-08-15T10:27:38+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 8,
+            "road": "Upper Serangoon Road"
+          },
+          {
+            "lat": 1.357397,
+            "lng": 103.874449,
+            "ts": "2026-08-15T10:28:08+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 3,
+            "road": "Upper Serangoon Road"
+          },
+          {
+            "lat": 1.355538,
+            "lng": 103.874951,
+            "ts": "2026-08-15T10:28:38+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 8,
+            "road": "Upper Paya Lebar Road"
+          },
+          {
+            "lat": 1.353618,
+            "lng": 103.876191,
+            "ts": "2026-08-15T10:29:08+08:00",
+            "speed_kph": 43,
+            "accuracy_m": 7,
+            "road": "Upper Paya Lebar Road"
+          },
+          {
+            "lat": 1.351726,
+            "lng": 103.877383,
+            "ts": "2026-08-15T10:29:38+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 6,
+            "road": "Upper Paya Lebar Road"
+          },
+          {
+            "lat": 1.349815,
+            "lng": 103.878555,
+            "ts": "2026-08-15T10:30:08+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 3,
+            "road": "Upper Paya Lebar Road"
+          },
+          {
+            "lat": 1.34791,
+            "lng": 103.879745,
+            "ts": "2026-08-15T10:30:38+08:00",
+            "speed_kph": 43,
+            "accuracy_m": 7,
+            "road": "Upper Paya Lebar Road"
+          },
+          {
+            "lat": 1.34603,
+            "lng": 103.880962,
+            "ts": "2026-08-15T10:31:08+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 7,
+            "road": "Upper Paya Lebar Road"
+          },
+          {
+            "lat": 1.344116,
+            "lng": 103.882118,
+            "ts": "2026-08-15T10:31:38+08:00",
+            "speed_kph": 43,
+            "accuracy_m": 4,
+            "road": "Upper Paya Lebar Road"
+          },
+          {
+            "lat": 1.342207,
+            "lng": 103.883323,
+            "ts": "2026-08-15T10:32:08+08:00",
+            "speed_kph": 39,
+            "accuracy_m": 8,
+            "road": "Upper Paya Lebar Road"
+          },
+          {
+            "lat": 1.340328,
+            "lng": 103.88453,
+            "ts": "2026-08-15T10:32:38+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 5,
+            "road": "Upper Paya Lebar Road"
+          },
+          {
+            "lat": 1.338422,
+            "lng": 103.885683,
+            "ts": "2026-08-15T10:33:08+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 4,
+            "road": "Upper Paya Lebar Road"
+          },
+          {
+            "lat": 1.336489,
+            "lng": 103.886942,
+            "ts": "2026-08-15T10:33:38+08:00",
+            "speed_kph": 38,
+            "accuracy_m": 7,
+            "road": "Upper Paya Lebar Road"
+          },
+          {
+            "lat": 1.334597,
+            "lng": 103.888121,
+            "ts": "2026-08-15T10:34:08+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 3,
+            "road": "Upper Paya Lebar Road"
+          },
+          {
+            "lat": 1.332745,
+            "lng": 103.889297,
+            "ts": "2026-08-15T10:34:38+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 7,
+            "road": "Upper Paya Lebar Road"
+          },
+          {
+            "lat": 1.33082,
+            "lng": 103.890475,
+            "ts": "2026-08-15T10:35:08+08:00",
+            "speed_kph": 40,
+            "accuracy_m": 7,
+            "road": "Upper Paya Lebar Road"
+          },
+          {
+            "lat": 1.32871,
+            "lng": 103.891162,
+            "ts": "2026-08-15T10:35:38+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 4,
+            "road": "Paya Lebar Road"
+          },
+          {
+            "lat": 1.326508,
+            "lng": 103.891451,
+            "ts": "2026-08-15T10:36:08+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 5,
+            "road": "Paya Lebar Road"
+          },
+          {
+            "lat": 1.324301,
+            "lng": 103.8918,
+            "ts": "2026-08-15T10:36:38+08:00",
+            "speed_kph": 43,
+            "accuracy_m": 7,
+            "road": "Paya Lebar Road"
+          },
+          {
+            "lat": 1.322056,
+            "lng": 103.892105,
+            "ts": "2026-08-15T10:37:08+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 6,
+            "road": "Paya Lebar Road"
+          },
+          {
+            "lat": 1.31983,
+            "lng": 103.89238,
+            "ts": "2026-08-15T10:37:38+08:00",
+            "speed_kph": 39,
+            "accuracy_m": 4,
+            "road": "Paya Lebar Road"
+          },
+          {
+            "lat": 1.3176,
+            "lng": 103.8927,
+            "ts": "2026-08-15T10:38:08+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 8,
+            "road": "Paya Lebar Road"
+          }
+        ],
+        "point_count": 48,
+        "first_fix_at": "2026-08-15T10:14:38+08:00",
+        "last_fix_at": "2026-08-15T10:38:08+08:00",
+        "sample_interval_sec": 30.0,
+        "expected_interval_sec": 30.0,
+        "gaps": [],
+        "max_gap_sec": 30.0,
+        "coverage_pct": 100.0,
+        "trace_distance_km": 11.677,
+        "rider_track": []
+      },
+      "schema_version": "1.2.0",
+      "source": "DRIVER_DEVICE",
+      "trip_id": "TRP-05005",
+      "generated_at": "2026-08-15T19:28:08+08:00"
+    },
+    {
+      "evidence_id": "EV-CHAT-05005",
+      "evidence_type": "CHAT_LOG",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform chat log, 4 entries, contiguous; matches trip_record.chat_message_count.",
+        "assessed_at": "2026-08-15T19:28:13+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05005",
+        "messages": [
+          {
+            "msg_id": "MSG-05005-001",
+            "sender": "DRIVER",
+            "text": "Hi, at Waterway Point taxi stand, black Noah",
+            "sent_at": "2026-08-15T10:12:38+08:00",
+            "read_at": "2026-08-15T10:12:44+08:00",
+            "delivered_at": "2026-08-15T10:12:41+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-05005-002",
+            "sender": "RIDER",
+            "text": "Coming with my mum, 2 min",
+            "sent_at": "2026-08-15T10:13:03+08:00",
+            "read_at": "2026-08-15T10:13:09+08:00",
+            "delivered_at": "2026-08-15T10:13:05+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-05005-003",
+            "sender": "DRIVER",
+            "text": "Sorry ah, KPE got breakdown inside the tunnel so I go Upper Serangoon Road instead",
+            "sent_at": "2026-08-15T10:24:30+08:00",
+            "read_at": "2026-08-15T10:25:10+08:00",
+            "delivered_at": "2026-08-15T10:24:33+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-05005-004",
+            "sender": "RIDER",
+            "text": "ok noted",
+            "sent_at": "2026-08-15T10:25:00+08:00",
+            "read_at": "2026-08-15T10:25:38+08:00",
+            "delivered_at": "2026-08-15T10:25:03+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          }
+        ],
+        "message_count": 4,
+        "first_message_at": "2026-08-15T10:12:38+08:00",
+        "last_message_at": "2026-08-15T10:25:00+08:00",
+        "truncated": false
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05005",
+      "generated_at": "2026-08-15T19:28:08+08:00"
+    },
+    {
+      "evidence_id": "EV-FARE-05005",
+      "evidence_type": "FARE_BREAKDOWN",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Payments ledger; itemised lines reconcile to total_charged; tolls_erp equals the gantry list.",
+        "assessed_at": "2026-08-15T19:28:13+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05005",
+        "currency": "SGD",
+        "fare_model": "METERED",
+        "cancellation_fee": 0.0,
+        "total_charged": 23.04,
+        "payment_status": "CHARGED",
+        "refund_issued_sgd": 0.0,
+        "charged_at": "2026-08-15T10:38:14+08:00",
+        "surge_multiplier": 1.0,
+        "rate_card_id": "RC-SG-RYDEXL-2026Q3",
+        "base_fare": 3.8,
+        "distance_fare": 12.7,
+        "time_fare": 5.64,
+        "surge_amount": 0.0,
+        "tolls_erp": 0.0,
+        "airport_surcharge": 0.0,
+        "platform_fee": 0.9,
+        "promo_discount": 0.0,
+        "waiting_time_fee": 0.0,
+        "quoted_fare_sgd": null,
+        "distance_charged_km": 13.8,
+        "time_charged_min": 23.5,
+        "per_km_rate_sgd": 0.92,
+        "per_min_rate_sgd": 0.24,
+        "erp_gantries": []
+      },
+      "schema_version": "1.2.0",
+      "source": "PAYMENTS_LEDGER",
+      "trip_id": "TRP-05005",
+      "generated_at": "2026-08-15T19:28:08+08:00"
+    },
+    {
+      "evidence_id": "EV-RPROF-05005",
+      "evidence_type": "RIDER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Rider profile snapshot at filing.",
+        "assessed_at": "2026-08-15T19:28:13+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "R-85781",
+        "party_role": "RIDER",
+        "snapshot_at": "2026-08-15T19:16:08+08:00",
+        "account_age_days": 749,
+        "lifetime_trips": 582,
+        "rating": 4.91,
+        "prior_disputes_filed": 1,
+        "prior_disputes_upheld": 0,
+        "prior_no_show_flags": 1,
+        "cancellation_rate": 0.033,
+        "no_show_disputes_30d": 0,
+        "deviation_claims_60d": 0,
+        "deviation_claims_60d_substantiated": 0,
+        "disputes_with_counterparty_90d": 0,
+        "fraud_flags": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05005",
+      "generated_at": "2026-08-15T19:28:08+08:00"
+    },
+    {
+      "evidence_id": "EV-DPROF-05005",
+      "evidence_type": "DRIVER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver profile snapshot at filing.",
+        "assessed_at": "2026-08-15T19:28:13+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "D-87850",
+        "party_role": "DRIVER",
+        "snapshot_at": "2026-08-15T19:16:08+08:00",
+        "account_age_days": 2029,
+        "lifetime_trips": 4698,
+        "rating": 4.85,
+        "prior_disputes_filed": 4,
+        "prior_disputes_upheld": 4,
+        "prior_no_show_flags": 1,
+        "vehicle_type": "RYDE_XL",
+        "cancellation_rate": 0.057,
+        "prior_deviation_flags": 1,
+        "acceptance_rate": 0.87,
+        "active_region": "NORTH",
+        "deviation_flags_90d": 0,
+        "completed_trips_90d": 709,
+        "no_show_terminations_30d": 0,
+        "completed_trips_30d": 177,
+        "disputes_with_counterparty_90d": 0,
+        "fraud_flags": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05005",
+      "generated_at": "2026-08-15T19:28:08+08:00"
+    },
+    {
+      "evidence_id": "EV-ADVIS-05005-01",
+      "evidence_type": "TRAFFIC_ADVISORY",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "LTA historical traffic record for the queried road segment and window; retrieved by the platform, not supplied by a party.",
+        "assessed_at": "2026-08-15T19:28:13+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "advisory_id": "LTA-TI-260815-0132",
+        "provider": "LTA_DATAMALL_TRAFFIC_INCIDENTS",
+        "advisory_type": "VEHICLE_BREAKDOWN",
+        "road": "Kallang-Paya Lebar Expressway (KPE)",
+        "direction": "towards ECP",
+        "location_desc": "after Upper Paya Lebar Road exit",
+        "lat": 1.346,
+        "lng": 103.888,
+        "message": "(15/8)09:59 Vehicle breakdown on KPE (towards ECP) after Upper Paya Lebar Rd Exit. Avoid lane 3.",
+        "valid_from": "2026-08-15T09:59:38+08:00",
+        "valid_to": "2026-08-15T10:54:38+08:00",
+        "speed_band_min": 2,
+        "retrieved_at": "2026-08-15T19:26:08+08:00"
+      },
+      "schema_version": "1.2.0",
+      "source": "THIRD_PARTY_LTA",
+      "trip_id": "TRP-05005",
+      "generated_at": "2026-08-15T19:28:08+08:00"
+    }
+  ]
+}

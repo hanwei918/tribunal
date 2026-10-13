@@ -1,0 +1,8 @@
+{
+  "expected_ruling": "NO_ACTION",
+  "expected_amount_sgd": null,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": ["POL-RD-22", "POL-RD-23", "POL-RD-24", "POL-RD-25", "POL-GEN-22", "POL-GEN-01", "POL-GEN-03"],
+  "reasoning": "No safety indicator (POL-GEN-21). Value SGD 5.00 < 10.00, so the AI ruling is final at any confidence; fraud_flags 0 for rider, absent (=0) for driver (POL-GEN-22, POL-RD-25; 2 km limb not applied). All artifacts weight 1.0 (POL-GEN-02). Deviation per POL-RD-22 uses recorded distances in EV-TRIP-05018: 12.8 - 12.0 = 0.8 km, within the 1.0 km tolerance; the GPS trace (EV-GPS-05018, 10.789 km) only confirms the Tampines Ave 7 / Simei Ave route and is not used to re-measure. The rider's '4 km' claim is not supported. EV-ADVIS-05018-01 (LTA, advisory_type NONE, speed bands 4-5 on TPE towards PIE in the trip window) shows no congestion, so the reroute is not traffic-justified (POL-RD-23); the driver's queue assertion is unsupported. No chat notice (EV-CHAT-05018, 0 messages), but notification does not matter in row (e): not justified, deviation <= 1 km -> no refund (POL-RD-24(e), v2.1 1.3). The rider's appeal to the driver's history is discarded under POL-GEN-01; profiles (EV-RPROF/EV-DPROF-05018) are context only. NO_ACTION: claim not supported, SGD 19.64 fare stands (POL-GEN-03)."
+}

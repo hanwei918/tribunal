@@ -1,0 +1,819 @@
+{
+  "schema_version": "1.2.0",
+  "case_no": 5019,
+  "dispute": {
+    "case_no": 5019,
+    "dispute_id": "DSP-05019",
+    "trip_id": "TRP-05019",
+    "category": "ROUTE_DEVIATION",
+    "filed_at": "2026-09-12T20:58:25+08:00",
+    "filed_by": "RIDER",
+    "channel": "IN_APP_SUPPORT",
+    "amount_contested_sgd": 3.0,
+    "claim_text": "Driver went off the PIE at Adam Road and through Thomson instead of the CTE. The app showed the CTE. Longer route, I want $3 back.",
+    "counterparty_statement": {
+      "text": "PIE was slow, I messaged the passenger and she said ok.",
+      "submitted_by": "DRIVER",
+      "submitted_at": "2026-09-13T10:58:25+08:00"
+    },
+    "evidence_ids": [
+      "EV-TRIP-05019",
+      "EV-GPS-05019",
+      "EV-CHAT-05019",
+      "EV-FARE-05019",
+      "EV-RPROF-05019",
+      "EV-DPROF-05019",
+      "EV-ADVIS-05019-01"
+    ]
+  },
+  "evidence": [
+    {
+      "evidence_id": "EV-TRIP-05019",
+      "evidence_type": "TRIP_RECORD",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform trip record; timestamps causally ordered; recorded optimal and actual distances present; deviation and rejoin events carried in events[].",
+        "assessed_at": "2026-09-12T21:10:30+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05019",
+        "rider_id": "R-86130",
+        "driver_id": "D-44606",
+        "requested_at": "2026-09-12T16:45:10+08:00",
+        "accepted_at": "2026-09-12T16:45:25+08:00",
+        "arrived_at": "2026-09-12T16:50:55+08:00",
+        "started_at": "2026-09-12T16:52:25+08:00",
+        "ended_at": "2026-09-12T17:18:25+08:00",
+        "cancelled_at": null,
+        "status": "COMPLETED",
+        "cancelled_by": null,
+        "cancellation_reason_code": null,
+        "pickup": {
+          "label": "Anchorpoint, Alexandra Road",
+          "lat": 1.2888,
+          "lng": 103.8053,
+          "venue_id": null
+        },
+        "dropoff": {
+          "label": "Junction 8, Bishan Place",
+          "lat": 1.35027,
+          "lng": 103.84871,
+          "venue_id": null
+        },
+        "vehicle_type": "RYDE_X",
+        "pickup_zone_class": "STANDARD",
+        "chat_message_count": 4,
+        "registered_pickup_points": null,
+        "in_app_calls": [],
+        "optimal_distance_km": 11.8,
+        "optimal_duration_min": 23.4,
+        "optimal_route_source": "PLATFORM_ROUTER",
+        "optimal_route_erp_sgd": 0.0,
+        "actual_distance_km": 13.1,
+        "actual_duration_min": 26.0,
+        "deviation_pct": 11.0,
+        "amended_optimal_distance_km": null,
+        "amended_optimal_duration_min": null,
+        "solo_optimal_distance_km": null,
+        "pickup_amended_at": null,
+        "dropoff_amended_at": null,
+        "original_pickup": null,
+        "original_dropoff": null,
+        "scheduled_at": null,
+        "optimal_route_via": [
+          "Alexandra Road",
+          "Queensway",
+          "Pan-Island Expressway (PIE)",
+          "Central Expressway (CTE)",
+          "Braddell Road",
+          "Bishan Road",
+          "Bishan Place"
+        ],
+        "actual_route_via": [
+          "Alexandra Road",
+          "Queensway",
+          "Pan-Island Expressway (PIE)",
+          "Adam Road",
+          "Thomson Road",
+          "Bishan Road",
+          "Bishan Place"
+        ],
+        "events": [
+          {
+            "event_type": "booking_confirmed",
+            "at": "2026-09-12T16:45:10+08:00",
+            "detail": "Rider R-86130 booked TRP-05019 from Anchorpoint, Alexandra Road to Junction 8, Bishan Place. On-demand, metered fare.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_assigned",
+            "at": "2026-09-12T16:45:25+08:00",
+            "detail": "Driver D-44606 (Toyota Prius, SLB 4354 A) assigned. ETA 5 min.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_arrived",
+            "at": "2026-09-12T16:50:55+08:00",
+            "detail": "Driver marked arrived at pickup (button).",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_started",
+            "at": "2026-09-12T16:52:25+08:00",
+            "detail": "Rider on board. Recommended route via Alexandra Road, Queensway, Pan-Island Expressway (PIE), Central Expressway (CTE), Braddell Road, Bishan Road, Bishan Place, 11.8 km.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_deviation_detected",
+            "at": "2026-09-12T17:04:15+08:00",
+            "detail": "Vehicle left the recommended route at PIE / Adam Road exit: recommended Pan-Island Expressway (PIE), vehicle took Adam Road.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_rejoined",
+            "at": "2026-09-12T17:16:09+08:00",
+            "detail": "Vehicle rejoined the recommended route at Bishan Road / Braddell Road.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_completed",
+            "at": "2026-09-12T17:18:25+08:00",
+            "detail": "Trip ended at Junction 8, Bishan Place. Recorded distance 13.1 km, duration 26 min 00 s.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "fare_finalised",
+            "at": "2026-09-12T17:18:31+08:00",
+            "detail": "Metered fare SGD 17.81 charged to rider payment method.",
+            "source": "PLATFORM_TELEMETRY"
+          }
+        ]
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05019",
+      "generated_at": "2026-09-12T21:10:25+08:00"
+    },
+    {
+      "evidence_id": "EV-GPS-05019",
+      "evidence_type": "GPS_TRACE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver-device trace, 53 fixes at 30 s from trip start to trip end; every fix reports horizontal accuracy (max 8 m) and a map-matched road; no interval exceeds 120 s.",
+        "assessed_at": "2026-09-12T21:10:30+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05019",
+        "points": [
+          {
+            "lat": 1.2888,
+            "lng": 103.8053,
+            "ts": "2026-09-12T16:52:25+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 7,
+            "road": "Alexandra Road"
+          },
+          {
+            "lat": 1.29063,
+            "lng": 103.804724,
+            "ts": "2026-09-12T16:52:55+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 3,
+            "road": "Alexandra Road"
+          },
+          {
+            "lat": 1.292463,
+            "lng": 103.804108,
+            "ts": "2026-09-12T16:53:25+08:00",
+            "speed_kph": 22,
+            "accuracy_m": 3,
+            "road": "Alexandra Road"
+          },
+          {
+            "lat": 1.294298,
+            "lng": 103.803499,
+            "ts": "2026-09-12T16:53:55+08:00",
+            "speed_kph": 38,
+            "accuracy_m": 7,
+            "road": "Alexandra Road"
+          },
+          {
+            "lat": 1.29612,
+            "lng": 103.802981,
+            "ts": "2026-09-12T16:54:25+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 4,
+            "road": "Queensway"
+          },
+          {
+            "lat": 1.297949,
+            "lng": 103.802387,
+            "ts": "2026-09-12T16:54:55+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 5,
+            "road": "Queensway"
+          },
+          {
+            "lat": 1.299775,
+            "lng": 103.801823,
+            "ts": "2026-09-12T16:55:25+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 6,
+            "road": "Queensway"
+          },
+          {
+            "lat": 1.301624,
+            "lng": 103.801255,
+            "ts": "2026-09-12T16:55:55+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 8,
+            "road": "Queensway"
+          },
+          {
+            "lat": 1.303459,
+            "lng": 103.800655,
+            "ts": "2026-09-12T16:56:25+08:00",
+            "speed_kph": 24,
+            "accuracy_m": 8,
+            "road": "Queensway"
+          },
+          {
+            "lat": 1.305272,
+            "lng": 103.800083,
+            "ts": "2026-09-12T16:56:55+08:00",
+            "speed_kph": 22,
+            "accuracy_m": 4,
+            "road": "Queensway"
+          },
+          {
+            "lat": 1.30713,
+            "lng": 103.799547,
+            "ts": "2026-09-12T16:57:25+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 6,
+            "road": "Queensway"
+          },
+          {
+            "lat": 1.308964,
+            "lng": 103.798944,
+            "ts": "2026-09-12T16:57:55+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 8,
+            "road": "Queensway"
+          },
+          {
+            "lat": 1.31081,
+            "lng": 103.798374,
+            "ts": "2026-09-12T16:58:25+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 5,
+            "road": "Queensway"
+          },
+          {
+            "lat": 1.312427,
+            "lng": 103.79853,
+            "ts": "2026-09-12T16:58:55+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 5,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.313701,
+            "lng": 103.79995,
+            "ts": "2026-09-12T16:59:25+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 7,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.314952,
+            "lng": 103.801383,
+            "ts": "2026-09-12T16:59:55+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 6,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.316214,
+            "lng": 103.802874,
+            "ts": "2026-09-12T17:00:25+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 4,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.317467,
+            "lng": 103.804277,
+            "ts": "2026-09-12T17:00:55+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 5,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.318698,
+            "lng": 103.805762,
+            "ts": "2026-09-12T17:01:25+08:00",
+            "speed_kph": 23,
+            "accuracy_m": 5,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.319949,
+            "lng": 103.807197,
+            "ts": "2026-09-12T17:01:55+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 3,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.32123,
+            "lng": 103.80868,
+            "ts": "2026-09-12T17:02:25+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 7,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.322491,
+            "lng": 103.81012,
+            "ts": "2026-09-12T17:02:55+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 8,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.323739,
+            "lng": 103.811579,
+            "ts": "2026-09-12T17:03:25+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 8,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.325028,
+            "lng": 103.813023,
+            "ts": "2026-09-12T17:03:55+08:00",
+            "speed_kph": 24,
+            "accuracy_m": 5,
+            "road": "Adam Road"
+          },
+          {
+            "lat": 1.326759,
+            "lng": 103.813808,
+            "ts": "2026-09-12T17:04:25+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 3,
+            "road": "Adam Road"
+          },
+          {
+            "lat": 1.328511,
+            "lng": 103.814625,
+            "ts": "2026-09-12T17:04:55+08:00",
+            "speed_kph": 24,
+            "accuracy_m": 3,
+            "road": "Adam Road"
+          },
+          {
+            "lat": 1.330238,
+            "lng": 103.815453,
+            "ts": "2026-09-12T17:05:25+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 4,
+            "road": "Adam Road"
+          },
+          {
+            "lat": 1.332036,
+            "lng": 103.816253,
+            "ts": "2026-09-12T17:05:55+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 4,
+            "road": "Adam Road"
+          },
+          {
+            "lat": 1.333719,
+            "lng": 103.817075,
+            "ts": "2026-09-12T17:06:25+08:00",
+            "speed_kph": 23,
+            "accuracy_m": 8,
+            "road": "Adam Road"
+          },
+          {
+            "lat": 1.335481,
+            "lng": 103.817889,
+            "ts": "2026-09-12T17:06:55+08:00",
+            "speed_kph": 22,
+            "accuracy_m": 5,
+            "road": "Adam Road"
+          },
+          {
+            "lat": 1.337202,
+            "lng": 103.818672,
+            "ts": "2026-09-12T17:07:25+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 7,
+            "road": "Adam Road"
+          },
+          {
+            "lat": 1.338986,
+            "lng": 103.819461,
+            "ts": "2026-09-12T17:07:55+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 3,
+            "road": "Adam Road"
+          },
+          {
+            "lat": 1.340724,
+            "lng": 103.82023,
+            "ts": "2026-09-12T17:08:25+08:00",
+            "speed_kph": 24,
+            "accuracy_m": 4,
+            "road": "Adam Road"
+          },
+          {
+            "lat": 1.34245,
+            "lng": 103.821087,
+            "ts": "2026-09-12T17:08:55+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 5,
+            "road": "Adam Road"
+          },
+          {
+            "lat": 1.344186,
+            "lng": 103.821878,
+            "ts": "2026-09-12T17:09:25+08:00",
+            "speed_kph": 23,
+            "accuracy_m": 8,
+            "road": "Adam Road"
+          },
+          {
+            "lat": 1.345935,
+            "lng": 103.822718,
+            "ts": "2026-09-12T17:09:55+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 7,
+            "road": "Adam Road"
+          },
+          {
+            "lat": 1.346078,
+            "lng": 103.824314,
+            "ts": "2026-09-12T17:10:25+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 5,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.345697,
+            "lng": 103.826221,
+            "ts": "2026-09-12T17:10:55+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 5,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.345335,
+            "lng": 103.828105,
+            "ts": "2026-09-12T17:11:25+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 5,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.345043,
+            "lng": 103.829987,
+            "ts": "2026-09-12T17:11:55+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 5,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.344631,
+            "lng": 103.831917,
+            "ts": "2026-09-12T17:12:25+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 4,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.344273,
+            "lng": 103.833785,
+            "ts": "2026-09-12T17:12:55+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 5,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.343927,
+            "lng": 103.835678,
+            "ts": "2026-09-12T17:13:25+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 4,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.343606,
+            "lng": 103.837572,
+            "ts": "2026-09-12T17:13:55+08:00",
+            "speed_kph": 24,
+            "accuracy_m": 8,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.343249,
+            "lng": 103.839451,
+            "ts": "2026-09-12T17:14:25+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 4,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.342858,
+            "lng": 103.841344,
+            "ts": "2026-09-12T17:14:55+08:00",
+            "speed_kph": 23,
+            "accuracy_m": 4,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.342518,
+            "lng": 103.843234,
+            "ts": "2026-09-12T17:15:25+08:00",
+            "speed_kph": 23,
+            "accuracy_m": 4,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.342184,
+            "lng": 103.845117,
+            "ts": "2026-09-12T17:15:55+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 8,
+            "road": "Thomson Road"
+          },
+          {
+            "lat": 1.342958,
+            "lng": 103.846305,
+            "ts": "2026-09-12T17:16:25+08:00",
+            "speed_kph": 22,
+            "accuracy_m": 5,
+            "road": "Bishan Road"
+          },
+          {
+            "lat": 1.344775,
+            "lng": 103.846909,
+            "ts": "2026-09-12T17:16:55+08:00",
+            "speed_kph": 22,
+            "accuracy_m": 4,
+            "road": "Bishan Road"
+          },
+          {
+            "lat": 1.346625,
+            "lng": 103.847534,
+            "ts": "2026-09-12T17:17:25+08:00",
+            "speed_kph": 38,
+            "accuracy_m": 6,
+            "road": "Bishan Road"
+          },
+          {
+            "lat": 1.348458,
+            "lng": 103.848133,
+            "ts": "2026-09-12T17:17:55+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 6,
+            "road": "Bishan Road"
+          },
+          {
+            "lat": 1.35027,
+            "lng": 103.84871,
+            "ts": "2026-09-12T17:18:25+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 3,
+            "road": "Bishan Place"
+          }
+        ],
+        "point_count": 53,
+        "first_fix_at": "2026-09-12T16:52:25+08:00",
+        "last_fix_at": "2026-09-12T17:18:25+08:00",
+        "sample_interval_sec": 30.0,
+        "expected_interval_sec": 30.0,
+        "gaps": [],
+        "max_gap_sec": 30.0,
+        "coverage_pct": 100.0,
+        "trace_distance_km": 10.989,
+        "rider_track": []
+      },
+      "schema_version": "1.2.0",
+      "source": "DRIVER_DEVICE",
+      "trip_id": "TRP-05019",
+      "generated_at": "2026-09-12T21:10:25+08:00"
+    },
+    {
+      "evidence_id": "EV-CHAT-05019",
+      "evidence_type": "CHAT_LOG",
+      "admissibility": {
+        "status": "IMPAIRED",
+        "issues": [
+          "TRUNCATED_LOG"
+        ],
+        "weight_multiplier": 0.6,
+        "notes": "Chat export ends after 2 entries, both before pickup; trip_record.chat_message_count is 4, so the last 2 entries are absent.",
+        "assessed_at": "2026-09-12T21:10:30+08:00",
+        "assessor_version": "prepass-1.0.0",
+        "issue_details": [
+          {
+            "code": "TRUNCATED_LOG",
+            "severity": "MEDIUM",
+            "detail": "2 of 4 entries exported; nothing after the pickup."
+          }
+        ]
+      },
+      "payload": {
+        "trip_id": "TRP-05019",
+        "messages": [
+          {
+            "msg_id": "MSG-05019-001",
+            "sender": "DRIVER",
+            "text": "At the Anchorpoint taxi stand, silver Prius",
+            "sent_at": "2026-09-12T16:50:25+08:00",
+            "read_at": "2026-09-12T16:50:35+08:00",
+            "delivered_at": "2026-09-12T16:50:27+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-05019-002",
+            "sender": "RIDER",
+            "text": "ok 2 min",
+            "sent_at": "2026-09-12T16:50:55+08:00",
+            "read_at": "2026-09-12T16:51:43+08:00",
+            "delivered_at": "2026-09-12T16:50:58+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          }
+        ],
+        "message_count": 2,
+        "first_message_at": "2026-09-12T16:50:25+08:00",
+        "last_message_at": "2026-09-12T16:50:55+08:00",
+        "truncated": true
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05019",
+      "generated_at": "2026-09-12T21:10:25+08:00"
+    },
+    {
+      "evidence_id": "EV-FARE-05019",
+      "evidence_type": "FARE_BREAKDOWN",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Payments ledger; itemised lines reconcile to total_charged; tolls_erp equals the gantry list.",
+        "assessed_at": "2026-09-12T21:10:30+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05019",
+        "currency": "SGD",
+        "fare_model": "METERED",
+        "cancellation_fee": 0.0,
+        "total_charged": 17.81,
+        "payment_status": "CHARGED",
+        "refund_issued_sgd": 0.0,
+        "charged_at": "2026-09-12T17:18:31+08:00",
+        "surge_multiplier": 1.0,
+        "rate_card_id": "RC-SG-RYDEX-2026Q3",
+        "base_fare": 2.8,
+        "distance_fare": 9.43,
+        "time_fare": 4.68,
+        "surge_amount": 0.0,
+        "tolls_erp": 0.0,
+        "airport_surcharge": 0.0,
+        "platform_fee": 0.9,
+        "promo_discount": 0.0,
+        "waiting_time_fee": 0.0,
+        "quoted_fare_sgd": null,
+        "distance_charged_km": 13.1,
+        "time_charged_min": 26.0,
+        "per_km_rate_sgd": 0.72,
+        "per_min_rate_sgd": 0.18,
+        "erp_gantries": []
+      },
+      "schema_version": "1.2.0",
+      "source": "PAYMENTS_LEDGER",
+      "trip_id": "TRP-05019",
+      "generated_at": "2026-09-12T21:10:25+08:00"
+    },
+    {
+      "evidence_id": "EV-RPROF-05019",
+      "evidence_type": "RIDER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Rider profile snapshot at filing.",
+        "assessed_at": "2026-09-12T21:10:30+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "R-86130",
+        "party_role": "RIDER",
+        "snapshot_at": "2026-09-12T20:58:25+08:00",
+        "account_age_days": 1743,
+        "lifetime_trips": 47,
+        "rating": 4.39,
+        "prior_disputes_filed": 5,
+        "prior_disputes_upheld": 4,
+        "prior_no_show_flags": 0,
+        "cancellation_rate": 0.077,
+        "no_show_disputes_30d": 0,
+        "deviation_claims_60d": 0,
+        "deviation_claims_60d_substantiated": 0,
+        "disputes_with_counterparty_90d": 0,
+        "fraud_flags": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05019",
+      "generated_at": "2026-09-12T21:10:25+08:00"
+    },
+    {
+      "evidence_id": "EV-DPROF-05019",
+      "evidence_type": "DRIVER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver profile snapshot at filing.",
+        "assessed_at": "2026-09-12T21:10:30+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "D-44606",
+        "party_role": "DRIVER",
+        "snapshot_at": "2026-09-12T20:58:25+08:00",
+        "account_age_days": 1442,
+        "lifetime_trips": 8730,
+        "rating": 4.76,
+        "prior_disputes_filed": 2,
+        "prior_disputes_upheld": 2,
+        "prior_no_show_flags": 0,
+        "vehicle_type": "RYDE_X",
+        "cancellation_rate": 0.05,
+        "prior_deviation_flags": 1,
+        "acceptance_rate": 0.9,
+        "active_region": "EAST",
+        "deviation_flags_90d": 1,
+        "completed_trips_90d": 322,
+        "no_show_terminations_30d": 1,
+        "completed_trips_30d": 165,
+        "disputes_with_counterparty_90d": 0,
+        "fraud_flags": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05019",
+      "generated_at": "2026-09-12T21:10:25+08:00"
+    },
+    {
+      "evidence_id": "EV-ADVIS-05019-01",
+      "evidence_type": "TRAFFIC_ADVISORY",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "LTA historical traffic record for the queried road segment and window; retrieved by the platform, not supplied by a party.",
+        "assessed_at": "2026-09-12T21:10:30+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "advisory_id": "LTA-TI-260912-8625",
+        "provider": "LTA_DATAMALL_SPEED_BANDS",
+        "advisory_type": "NONE",
+        "road": "Pan-Island Expressway (PIE)",
+        "direction": "towards Changi",
+        "location_desc": "Adam Road to CTE interchange",
+        "lat": 1.33,
+        "lng": 103.83,
+        "message": "No incident, roadwork or closure recorded for the queried segment and window. Speed bands 4-5 throughout.",
+        "valid_from": "2026-09-12T16:22:25+08:00",
+        "valid_to": "2026-09-12T17:52:25+08:00",
+        "speed_band_min": 4,
+        "retrieved_at": "2026-09-12T21:08:25+08:00"
+      },
+      "schema_version": "1.2.0",
+      "source": "THIRD_PARTY_LTA",
+      "trip_id": "TRP-05019",
+      "generated_at": "2026-09-12T21:10:25+08:00"
+    }
+  ]
+}

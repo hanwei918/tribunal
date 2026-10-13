@@ -1445,6 +1445,10 @@ class PipelinePrecedentsTests(unittest.TestCase):
 # ``ryde-v7`` was registered on 2026-10-13 and is absent for the same reason, on
 # the same terms: the table is frozen, it has no run yet, and ``--precedents``
 # is refused for it.
+#
+# ``dev-v7`` was registered on 2026-10-13 and is absent for the same reason, on
+# the same terms: the table is frozen, it has no run yet, and ``--precedents``
+# is refused for it.
 NOT_YET_IN_PRECEDENTS = frozenset(
     {
         "wild-v2",
@@ -1453,6 +1457,7 @@ NOT_YET_IN_PRECEDENTS = frozenset(
         "sealed-v3",
         "dev-v2",
         "dev-v2-ext",
+        "dev-v7",
         "ryde-v3",
         "ryde-v7",
         "inject-v1",

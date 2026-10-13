@@ -526,14 +526,18 @@ V7_RUN_ARGUMENTS = RunArguments(
 DEV_V7 = DevelopmentSet(
     name="dev-v7",
     cases=(),
-    key_path=ANSWER_DIR / "dev-v7" / "ground_truth.json",
+    # The set's whole archive-B tree was extracted into ``eval/answers/dev-v7/``
+    # byte for byte, so its ``answers/``, ``generator/`` and ``notes/`` folders
+    # sit under that root and the key is one level down from it.
+    key_path=ANSWER_DIR / "dev-v7" / "answers" / "ground_truth.json",
     runs_subdir="dev-v7",
     case_root=loader.EXTERNAL_DIR / "dev-v7",
     summary=(
-        "the version-7 development set: 70 cases, 5001-5070, written for Ryde's "
-        "Dispute Resolution Policy v2.1. Declared here and registered when its "
-        "data is present; development data that is tuned against, so it is never "
-        "a generalisation figure"
+        "the version-7 development set: 40 cases, 5001-5020 and 5051-5070, "
+        "written for Ryde's Dispute Resolution Policy v2.1 by Claude (Opus 5.5) "
+        "in a fresh claude.ai chat with no project folder or repository access. "
+        "Declared here and registered when its data is present; development data "
+        "that is tuned against, so it is never a generalisation figure"
     ),
     policy_version=V7_POLICY_VERSION,
     policy_base=V7_POLICY_VERSION,

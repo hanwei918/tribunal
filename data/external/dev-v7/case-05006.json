@@ -1,0 +1,874 @@
+{
+  "schema_version": "1.2.0",
+  "case_no": 5006,
+  "dispute": {
+    "case_no": 5006,
+    "dispute_id": "DSP-05006",
+    "trip_id": "TRP-05006",
+    "category": "ROUTE_DEVIATION",
+    "filed_at": "2026-08-19T03:31:34+08:00",
+    "filed_by": "DRIVER",
+    "channel": "IN_APP_SUPPORT",
+    "amount_contested_sgd": 1.37,
+    "claim_text": "Passenger agreed in chat when I said AYE jam and I go West Coast Highway. Now Ryde take back $1.37 from my earning. I informed her before and she said ok, why still deduct?",
+    "counterparty_statement": {
+      "text": "He said the AYE was jammed but when we passed the slip road the AYE looked clear to me. The longer road cost more.",
+      "submitted_by": "RIDER",
+      "submitted_at": "2026-08-19T04:23:34+08:00"
+    },
+    "evidence_ids": [
+      "EV-TRIP-05006",
+      "EV-GPS-05006",
+      "EV-CHAT-05006",
+      "EV-FARE-05006",
+      "EV-RPROF-05006",
+      "EV-DPROF-05006",
+      "EV-ADVIS-05006-01",
+      "EV-ADVIS-05006-02"
+    ]
+  },
+  "evidence": [
+    {
+      "evidence_id": "EV-TRIP-05006",
+      "evidence_type": "TRIP_RECORD",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform trip record; timestamps causally ordered; recorded optimal and actual distances present; deviation and rejoin events carried in events[].",
+        "assessed_at": "2026-08-19T03:43:39+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05006",
+        "rider_id": "R-27563",
+        "driver_id": "D-14860",
+        "requested_at": "2026-08-18T17:52:05+08:00",
+        "accepted_at": "2026-08-18T17:52:34+08:00",
+        "arrived_at": "2026-08-18T17:58:49+08:00",
+        "started_at": "2026-08-18T17:59:34+08:00",
+        "ended_at": "2026-08-18T18:25:34+08:00",
+        "cancelled_at": null,
+        "status": "COMPLETED",
+        "cancelled_by": null,
+        "cancellation_reason_code": null,
+        "pickup": {
+          "label": "The Clementi Mall, Commonwealth Avenue West",
+          "lat": 1.315,
+          "lng": 103.7645,
+          "venue_id": null
+        },
+        "dropoff": {
+          "label": "Tanjong Pagar Centre, Wallich Street",
+          "lat": 1.2765,
+          "lng": 103.8457,
+          "venue_id": null
+        },
+        "vehicle_type": "RYDE_X",
+        "pickup_zone_class": "STANDARD",
+        "chat_message_count": 4,
+        "registered_pickup_points": null,
+        "in_app_calls": [],
+        "optimal_distance_km": 12.7,
+        "optimal_duration_min": 22.6,
+        "optimal_route_source": "PLATFORM_ROUTER",
+        "optimal_route_erp_sgd": 2.5,
+        "actual_distance_km": 14.6,
+        "actual_duration_min": 26.0,
+        "deviation_pct": 15.0,
+        "amended_optimal_distance_km": null,
+        "amended_optimal_duration_min": null,
+        "solo_optimal_distance_km": null,
+        "pickup_amended_at": null,
+        "dropoff_amended_at": null,
+        "original_pickup": null,
+        "original_dropoff": null,
+        "scheduled_at": null,
+        "optimal_route_via": [
+          "Clementi Avenue 2",
+          "Ayer Rajah Expressway (AYE)",
+          "Keppel Road",
+          "Wallich Street"
+        ],
+        "actual_route_via": [
+          "Clementi Avenue 2",
+          "Ayer Rajah Expressway (AYE)",
+          "West Coast Highway",
+          "Pasir Panjang Road",
+          "Telok Blangah Road",
+          "Keppel Road",
+          "Wallich Street"
+        ],
+        "events": [
+          {
+            "event_type": "booking_confirmed",
+            "at": "2026-08-18T17:52:05+08:00",
+            "detail": "Rider R-27563 booked TRP-05006 from The Clementi Mall, Commonwealth Avenue West to Tanjong Pagar Centre, Wallich Street. On-demand, metered fare.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_assigned",
+            "at": "2026-08-18T17:52:34+08:00",
+            "detail": "Driver D-14860 (BYD Atto 3, SLT 188 U) assigned. ETA 6 min.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_arrived",
+            "at": "2026-08-18T17:58:49+08:00",
+            "detail": "Driver marked arrived at pickup (button).",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_started",
+            "at": "2026-08-18T17:59:34+08:00",
+            "detail": "Rider on board. Recommended route via Clementi Avenue 2, Ayer Rajah Expressway (AYE), Keppel Road, Wallich Street, 12.7 km.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_deviation_detected",
+            "at": "2026-08-18T18:05:06+08:00",
+            "detail": "Vehicle left the recommended route at AYE / West Coast Highway exit: recommended Ayer Rajah Expressway (AYE), vehicle took West Coast Highway.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_rejoined",
+            "at": "2026-08-18T18:20:12+08:00",
+            "detail": "Vehicle rejoined the recommended route at Keppel Road / Telok Blangah Road.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_completed",
+            "at": "2026-08-18T18:25:34+08:00",
+            "detail": "Trip ended at Tanjong Pagar Centre, Wallich Street. Recorded distance 14.6 km, duration 26 min 00 s.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "fare_finalised",
+            "at": "2026-08-18T18:25:40+08:00",
+            "detail": "Metered fare SGD 23.99 charged to rider payment method.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "fare_adjusted",
+            "at": "2026-08-19T01:56:34+08:00",
+            "detail": "Interim adjustment after a rider route complaint: SGD 1.37 refunded to rider and recovered from driver earnings pending review.",
+            "source": "PLATFORM_TELEMETRY"
+          }
+        ]
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05006",
+      "generated_at": "2026-08-19T03:43:34+08:00"
+    },
+    {
+      "evidence_id": "EV-GPS-05006",
+      "evidence_type": "GPS_TRACE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver-device trace, 53 fixes at 30 s from trip start to trip end; every fix reports horizontal accuracy (max 8 m) and a map-matched road; no interval exceeds 120 s.",
+        "assessed_at": "2026-08-19T03:43:39+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05006",
+        "points": [
+          {
+            "lat": 1.315,
+            "lng": 103.7645,
+            "ts": "2026-08-18T17:59:34+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 6,
+            "road": "Clementi Avenue 2"
+          },
+          {
+            "lat": 1.313058,
+            "lng": 103.765343,
+            "ts": "2026-08-18T18:00:04+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 4,
+            "road": "Clementi Avenue 2"
+          },
+          {
+            "lat": 1.311067,
+            "lng": 103.76622,
+            "ts": "2026-08-18T18:00:34+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 3,
+            "road": "Clementi Avenue 2"
+          },
+          {
+            "lat": 1.309146,
+            "lng": 103.767034,
+            "ts": "2026-08-18T18:01:04+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 5,
+            "road": "Clementi Avenue 2"
+          },
+          {
+            "lat": 1.307164,
+            "lng": 103.767903,
+            "ts": "2026-08-18T18:01:34+08:00",
+            "speed_kph": 41,
+            "accuracy_m": 5,
+            "road": "Clementi Avenue 2"
+          },
+          {
+            "lat": 1.30571,
+            "lng": 103.769451,
+            "ts": "2026-08-18T18:02:04+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 3,
+            "road": "Ayer Rajah Expressway (AYE)"
+          },
+          {
+            "lat": 1.304249,
+            "lng": 103.771041,
+            "ts": "2026-08-18T18:02:34+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 5,
+            "road": "Ayer Rajah Expressway (AYE)"
+          },
+          {
+            "lat": 1.302851,
+            "lng": 103.772616,
+            "ts": "2026-08-18T18:03:04+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 3,
+            "road": "Ayer Rajah Expressway (AYE)"
+          },
+          {
+            "lat": 1.301392,
+            "lng": 103.774196,
+            "ts": "2026-08-18T18:03:34+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 6,
+            "road": "Ayer Rajah Expressway (AYE)"
+          },
+          {
+            "lat": 1.299972,
+            "lng": 103.775815,
+            "ts": "2026-08-18T18:04:04+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 7,
+            "road": "Ayer Rajah Expressway (AYE)"
+          },
+          {
+            "lat": 1.298571,
+            "lng": 103.777383,
+            "ts": "2026-08-18T18:04:34+08:00",
+            "speed_kph": 42,
+            "accuracy_m": 3,
+            "road": "Ayer Rajah Expressway (AYE)"
+          },
+          {
+            "lat": 1.296763,
+            "lng": 103.778489,
+            "ts": "2026-08-18T18:05:04+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 7,
+            "road": "West Coast Highway"
+          },
+          {
+            "lat": 1.294797,
+            "lng": 103.779301,
+            "ts": "2026-08-18T18:05:34+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 7,
+            "road": "West Coast Highway"
+          },
+          {
+            "lat": 1.292837,
+            "lng": 103.780137,
+            "ts": "2026-08-18T18:06:04+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 6,
+            "road": "West Coast Highway"
+          },
+          {
+            "lat": 1.290831,
+            "lng": 103.780926,
+            "ts": "2026-08-18T18:06:34+08:00",
+            "speed_kph": 38,
+            "accuracy_m": 8,
+            "road": "West Coast Highway"
+          },
+          {
+            "lat": 1.288863,
+            "lng": 103.781732,
+            "ts": "2026-08-18T18:07:04+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 5,
+            "road": "West Coast Highway"
+          },
+          {
+            "lat": 1.286897,
+            "lng": 103.782576,
+            "ts": "2026-08-18T18:07:34+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 4,
+            "road": "West Coast Highway"
+          },
+          {
+            "lat": 1.284929,
+            "lng": 103.783338,
+            "ts": "2026-08-18T18:08:04+08:00",
+            "speed_kph": 24,
+            "accuracy_m": 3,
+            "road": "West Coast Highway"
+          },
+          {
+            "lat": 1.282952,
+            "lng": 103.784132,
+            "ts": "2026-08-18T18:08:34+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 4,
+            "road": "West Coast Highway"
+          },
+          {
+            "lat": 1.280962,
+            "lng": 103.784979,
+            "ts": "2026-08-18T18:09:04+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 7,
+            "road": "West Coast Highway"
+          },
+          {
+            "lat": 1.278994,
+            "lng": 103.785766,
+            "ts": "2026-08-18T18:09:34+08:00",
+            "speed_kph": 41,
+            "accuracy_m": 8,
+            "road": "West Coast Highway"
+          },
+          {
+            "lat": 1.277002,
+            "lng": 103.786544,
+            "ts": "2026-08-18T18:10:04+08:00",
+            "speed_kph": 40,
+            "accuracy_m": 8,
+            "road": "West Coast Highway"
+          },
+          {
+            "lat": 1.275041,
+            "lng": 103.787411,
+            "ts": "2026-08-18T18:10:34+08:00",
+            "speed_kph": 39,
+            "accuracy_m": 6,
+            "road": "West Coast Highway"
+          },
+          {
+            "lat": 1.27307,
+            "lng": 103.788217,
+            "ts": "2026-08-18T18:11:04+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 5,
+            "road": "West Coast Highway"
+          },
+          {
+            "lat": 1.271082,
+            "lng": 103.789026,
+            "ts": "2026-08-18T18:11:34+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 5,
+            "road": "West Coast Highway"
+          },
+          {
+            "lat": 1.269123,
+            "lng": 103.789789,
+            "ts": "2026-08-18T18:12:04+08:00",
+            "speed_kph": 24,
+            "accuracy_m": 7,
+            "road": "West Coast Highway"
+          },
+          {
+            "lat": 1.26755,
+            "lng": 103.790857,
+            "ts": "2026-08-18T18:12:34+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 7,
+            "road": "Pasir Panjang Road"
+          },
+          {
+            "lat": 1.267929,
+            "lng": 103.792954,
+            "ts": "2026-08-18T18:13:04+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 4,
+            "road": "Pasir Panjang Road"
+          },
+          {
+            "lat": 1.268248,
+            "lng": 103.795081,
+            "ts": "2026-08-18T18:13:34+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 6,
+            "road": "Pasir Panjang Road"
+          },
+          {
+            "lat": 1.268596,
+            "lng": 103.797185,
+            "ts": "2026-08-18T18:14:04+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 4,
+            "road": "Pasir Panjang Road"
+          },
+          {
+            "lat": 1.268988,
+            "lng": 103.79931,
+            "ts": "2026-08-18T18:14:34+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 4,
+            "road": "Pasir Panjang Road"
+          },
+          {
+            "lat": 1.269298,
+            "lng": 103.801409,
+            "ts": "2026-08-18T18:15:04+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 5,
+            "road": "Pasir Panjang Road"
+          },
+          {
+            "lat": 1.26972,
+            "lng": 103.803514,
+            "ts": "2026-08-18T18:15:34+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 8,
+            "road": "Pasir Panjang Road"
+          },
+          {
+            "lat": 1.270052,
+            "lng": 103.805619,
+            "ts": "2026-08-18T18:16:04+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 3,
+            "road": "Pasir Panjang Road"
+          },
+          {
+            "lat": 1.270402,
+            "lng": 103.807701,
+            "ts": "2026-08-18T18:16:34+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 8,
+            "road": "Pasir Panjang Road"
+          },
+          {
+            "lat": 1.270775,
+            "lng": 103.809796,
+            "ts": "2026-08-18T18:17:04+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 6,
+            "road": "Pasir Panjang Road"
+          },
+          {
+            "lat": 1.271132,
+            "lng": 103.811963,
+            "ts": "2026-08-18T18:17:34+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 7,
+            "road": "Pasir Panjang Road"
+          },
+          {
+            "lat": 1.271515,
+            "lng": 103.814056,
+            "ts": "2026-08-18T18:18:04+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 4,
+            "road": "Pasir Panjang Road"
+          },
+          {
+            "lat": 1.271834,
+            "lng": 103.816145,
+            "ts": "2026-08-18T18:18:34+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 8,
+            "road": "Pasir Panjang Road"
+          },
+          {
+            "lat": 1.27221,
+            "lng": 103.818275,
+            "ts": "2026-08-18T18:19:04+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 4,
+            "road": "Pasir Panjang Road"
+          },
+          {
+            "lat": 1.272555,
+            "lng": 103.820377,
+            "ts": "2026-08-18T18:19:34+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 3,
+            "road": "Pasir Panjang Road"
+          },
+          {
+            "lat": 1.272905,
+            "lng": 103.82247,
+            "ts": "2026-08-18T18:20:04+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 6,
+            "road": "Pasir Panjang Road"
+          },
+          {
+            "lat": 1.273261,
+            "lng": 103.824564,
+            "ts": "2026-08-18T18:20:34+08:00",
+            "speed_kph": 41,
+            "accuracy_m": 4,
+            "road": "Keppel Road"
+          },
+          {
+            "lat": 1.273563,
+            "lng": 103.826671,
+            "ts": "2026-08-18T18:21:04+08:00",
+            "speed_kph": 42,
+            "accuracy_m": 6,
+            "road": "Keppel Road"
+          },
+          {
+            "lat": 1.273903,
+            "lng": 103.828797,
+            "ts": "2026-08-18T18:21:34+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 4,
+            "road": "Keppel Road"
+          },
+          {
+            "lat": 1.27423,
+            "lng": 103.830913,
+            "ts": "2026-08-18T18:22:04+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 6,
+            "road": "Keppel Road"
+          },
+          {
+            "lat": 1.27458,
+            "lng": 103.833031,
+            "ts": "2026-08-18T18:22:34+08:00",
+            "speed_kph": 24,
+            "accuracy_m": 3,
+            "road": "Keppel Road"
+          },
+          {
+            "lat": 1.274858,
+            "lng": 103.835161,
+            "ts": "2026-08-18T18:23:04+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 3,
+            "road": "Keppel Road"
+          },
+          {
+            "lat": 1.275204,
+            "lng": 103.83727,
+            "ts": "2026-08-18T18:23:34+08:00",
+            "speed_kph": 38,
+            "accuracy_m": 4,
+            "road": "Keppel Road"
+          },
+          {
+            "lat": 1.275504,
+            "lng": 103.839364,
+            "ts": "2026-08-18T18:24:04+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 5,
+            "road": "Keppel Road"
+          },
+          {
+            "lat": 1.275849,
+            "lng": 103.841509,
+            "ts": "2026-08-18T18:24:34+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 3,
+            "road": "Keppel Road"
+          },
+          {
+            "lat": 1.276195,
+            "lng": 103.843566,
+            "ts": "2026-08-18T18:25:04+08:00",
+            "speed_kph": 38,
+            "accuracy_m": 4,
+            "road": "Keppel Road"
+          },
+          {
+            "lat": 1.2765,
+            "lng": 103.8457,
+            "ts": "2026-08-18T18:25:34+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 6,
+            "road": "Wallich Street"
+          }
+        ],
+        "point_count": 53,
+        "first_fix_at": "2026-08-18T17:59:34+08:00",
+        "last_fix_at": "2026-08-18T18:25:34+08:00",
+        "sample_interval_sec": 30.0,
+        "expected_interval_sec": 30.0,
+        "gaps": [],
+        "max_gap_sec": 30.0,
+        "coverage_pct": 100.0,
+        "trace_distance_km": 12.318,
+        "rider_track": []
+      },
+      "schema_version": "1.2.0",
+      "source": "DRIVER_DEVICE",
+      "trip_id": "TRP-05006",
+      "generated_at": "2026-08-19T03:43:34+08:00"
+    },
+    {
+      "evidence_id": "EV-CHAT-05006",
+      "evidence_type": "CHAT_LOG",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform chat log, 4 entries, contiguous; matches trip_record.chat_message_count.",
+        "assessed_at": "2026-08-19T03:43:39+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05006",
+        "messages": [
+          {
+            "msg_id": "MSG-05006-001",
+            "sender": "DRIVER",
+            "text": "Reached, at the Clementi Mall taxi stand",
+            "sent_at": "2026-08-18T17:57:44+08:00",
+            "read_at": "2026-08-18T17:58:19+08:00",
+            "delivered_at": "2026-08-18T17:57:46+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-05006-002",
+            "sender": "RIDER",
+            "text": "ok",
+            "sent_at": "2026-08-18T17:58:04+08:00",
+            "read_at": "2026-08-18T17:58:29+08:00",
+            "delivered_at": "2026-08-18T17:58:06+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-05006-003",
+            "sender": "DRIVER",
+            "text": "Miss, AYE jam already, I go West Coast Highway can?",
+            "sent_at": "2026-08-18T18:01:46+08:00",
+            "read_at": "2026-08-18T18:02:06+08:00",
+            "delivered_at": "2026-08-18T18:01:48+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-05006-004",
+            "sender": "RIDER",
+            "text": "ok",
+            "sent_at": "2026-08-18T18:02:11+08:00",
+            "read_at": "2026-08-18T18:02:35+08:00",
+            "delivered_at": "2026-08-18T18:02:12+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          }
+        ],
+        "message_count": 4,
+        "first_message_at": "2026-08-18T17:57:44+08:00",
+        "last_message_at": "2026-08-18T18:02:11+08:00",
+        "truncated": false
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05006",
+      "generated_at": "2026-08-19T03:43:34+08:00"
+    },
+    {
+      "evidence_id": "EV-FARE-05006",
+      "evidence_type": "FARE_BREAKDOWN",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Payments ledger; itemised lines reconcile to total_charged; tolls_erp equals the gantry list.",
+        "assessed_at": "2026-08-19T03:43:39+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05006",
+        "currency": "SGD",
+        "fare_model": "METERED",
+        "cancellation_fee": 0.0,
+        "total_charged": 23.99,
+        "payment_status": "PARTIALLY_REFUNDED",
+        "refund_issued_sgd": 1.37,
+        "charged_at": "2026-08-18T18:25:40+08:00",
+        "surge_multiplier": 1.2,
+        "rate_card_id": "RC-SG-RYDEX-2026Q3",
+        "base_fare": 2.8,
+        "distance_fare": 10.51,
+        "time_fare": 4.68,
+        "surge_amount": 3.6,
+        "tolls_erp": 1.5,
+        "airport_surcharge": 0.0,
+        "platform_fee": 0.9,
+        "promo_discount": 0.0,
+        "waiting_time_fee": 0.0,
+        "quoted_fare_sgd": null,
+        "distance_charged_km": 14.6,
+        "time_charged_min": 26.0,
+        "per_km_rate_sgd": 0.72,
+        "per_min_rate_sgd": 0.18,
+        "erp_gantries": [
+          {
+            "gantry_id": "ERP-99",
+            "location": "AYE (after Clementi Road)",
+            "passed_at": "2026-08-18T18:03:12+08:00",
+            "amount_sgd": 1.5
+          }
+        ]
+      },
+      "schema_version": "1.2.0",
+      "source": "PAYMENTS_LEDGER",
+      "trip_id": "TRP-05006",
+      "generated_at": "2026-08-19T03:43:34+08:00"
+    },
+    {
+      "evidence_id": "EV-RPROF-05006",
+      "evidence_type": "RIDER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Rider profile snapshot at filing.",
+        "assessed_at": "2026-08-19T03:43:39+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "R-27563",
+        "party_role": "RIDER",
+        "snapshot_at": "2026-08-19T03:31:34+08:00",
+        "account_age_days": 575,
+        "lifetime_trips": 116,
+        "rating": 4.33,
+        "prior_disputes_filed": 5,
+        "prior_disputes_upheld": 5,
+        "prior_no_show_flags": 0,
+        "cancellation_rate": 0.021,
+        "no_show_disputes_30d": 0,
+        "deviation_claims_60d": 1,
+        "deviation_claims_60d_substantiated": 0,
+        "disputes_with_counterparty_90d": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05006",
+      "generated_at": "2026-08-19T03:43:34+08:00"
+    },
+    {
+      "evidence_id": "EV-DPROF-05006",
+      "evidence_type": "DRIVER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver profile snapshot at filing.",
+        "assessed_at": "2026-08-19T03:43:39+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "D-14860",
+        "party_role": "DRIVER",
+        "snapshot_at": "2026-08-19T03:31:34+08:00",
+        "account_age_days": 2266,
+        "lifetime_trips": 4777,
+        "rating": 4.83,
+        "prior_disputes_filed": 4,
+        "prior_disputes_upheld": 4,
+        "prior_no_show_flags": 2,
+        "vehicle_type": "RYDE_X",
+        "cancellation_rate": 0.024,
+        "prior_deviation_flags": 2,
+        "acceptance_rate": 0.9,
+        "active_region": "WEST",
+        "deviation_flags_90d": 1,
+        "completed_trips_90d": 859,
+        "no_show_terminations_30d": 1,
+        "completed_trips_30d": 300,
+        "disputes_with_counterparty_90d": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05006",
+      "generated_at": "2026-08-19T03:43:34+08:00"
+    },
+    {
+      "evidence_id": "EV-ADVIS-05006-01",
+      "evidence_type": "TRAFFIC_ADVISORY",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "LTA historical traffic record for the queried road segment and window; retrieved by the platform, not supplied by a party.",
+        "assessed_at": "2026-08-19T03:43:39+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "advisory_id": "LTA-TI-260818-6717",
+        "provider": "LTA_DATAMALL_SPEED_BANDS",
+        "advisory_type": "NONE",
+        "road": "Ayer Rajah Expressway (AYE)",
+        "direction": "towards City",
+        "location_desc": "Clementi Road to Keppel Viaduct",
+        "lat": 1.295,
+        "lng": 103.79,
+        "message": "No incident, roadwork or closure recorded on AYE (towards City) between Clementi Rd and Keppel Viaduct in the queried window. Speed bands 4-6 throughout.",
+        "valid_from": "2026-08-18T17:29:34+08:00",
+        "valid_to": "2026-08-18T18:59:34+08:00",
+        "speed_band_min": 4,
+        "retrieved_at": "2026-08-19T03:41:34+08:00"
+      },
+      "schema_version": "1.2.0",
+      "source": "THIRD_PARTY_LTA",
+      "trip_id": "TRP-05006",
+      "generated_at": "2026-08-19T03:43:34+08:00"
+    },
+    {
+      "evidence_id": "EV-ADVIS-05006-02",
+      "evidence_type": "TRAFFIC_ADVISORY",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "LTA historical traffic record for the queried road segment and window; retrieved by the platform, not supplied by a party.",
+        "assessed_at": "2026-08-19T03:43:39+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "advisory_id": "LTA-TI-260818-8539",
+        "provider": "LTA_DATAMALL_TRAFFIC_INCIDENTS",
+        "advisory_type": "ROADWORK",
+        "road": "Pasir Panjang Road",
+        "direction": "towards Telok Blangah",
+        "location_desc": "near Pasir Panjang Wholesale Centre",
+        "lat": 1.29,
+        "lng": 103.79,
+        "message": "(18/8)09:00 Roadworks on Pasir Panjang Rd (towards Telok Blangah) near Pasir Panjang Wholesale Ctr. Lane 1 closed.",
+        "valid_from": "2026-08-18T09:00:00+08:00",
+        "valid_to": "2026-08-18T23:00:00+08:00",
+        "speed_band_min": 3,
+        "retrieved_at": "2026-08-19T03:41:34+08:00"
+      },
+      "schema_version": "1.2.0",
+      "source": "THIRD_PARTY_LTA",
+      "trip_id": "TRP-05006",
+      "generated_at": "2026-08-19T03:43:34+08:00"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "expected_ruling": "PARTIAL_REFUND",
+  "expected_amount_sgd": 1.01,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": [
+    "POL-RD-21",
+    "POL-RD-22",
+    "POL-RD-23",
+    "POL-RD-24",
+    "POL-RD-25",
+    "POL-GEN-22",
+    "POL-GEN-02",
+    "POL-GEN-03"
+  ],
+  "reasoning": "Route deviation, rider claims SGD 4.00 (<10: AI final, POL-GEN-22); no safety indicator (POL-GEN-21); no fraud_flags on either profile. All artifacts weight 1.0 (POL-GEN-02). Deviation = 9.5 - 8.1 = 1.4 km from EV-TRIP-05004 recorded distances (POL-RD-22), over 1 km tolerance; GPS EV-GPS-05004 confirms exit at PIE/Clementi Ave 6 at 08:42 and Commonwealth Ave West route. Not informed: EV-CHAT-05004 has only 2 pre-pickup messages, no in-app calls in EV-TRIP-05004, and driver admits he forgot to inform (POL-RD-21). Traffic-justified: EV-ADVIS-05004-01 (LTA, weight 1.0) reports heavy traffic on PIE towards Changi after Clementi Ave 6 exit to Clementi Rd exit, valid 08:15-09:27, which is the recommended segment the driver skipped and overlaps the trip window (POL-RD-23). Row (b) of POL-RD-24: refund the excess distance fare 1.4 km x SGD 0.72 (EV-FARE-05004, surge 1.0) = 1.008, rounded to SGD 1.01; PARTIAL_REFUND (POL-GEN-03). Confidence high, deviation under 2 km (POL-RD-25). Profile history (deviation_claims_60d etc.) is context only (POL-GEN-01). Precedent 7.1 consistent (POL-GEN-23)."
+}

@@ -1,0 +1,10 @@
+{
+  "expected_ruling": "DRIVER_COMPENSATION",
+  "expected_amount_sgd": 6.50,
+  "expected_driver_compensation_sgd": 6.50,
+  "expected_referrals": [
+    "POL-NS-22: fee charged SGD 6.50 differs from the fixed 5.00 SGD no-show fee; refer the fee-amount discrepancy for review"
+  ],
+  "governing_clauses": ["POL-NS-21", "POL-NS-22", "POL-NS-23", "POL-NS-26", "POL-GEN-22", "POL-GEN-03", "POL-GEN-02", "POL-GEN-01"],
+  "reasoning": "Driver-filed no-show, value 6.50 < 10.00 and no fraud flags or safety indicator: AI ruling final (POL-GEN-22, POL-NS-26, POL-GEN-21). On-demand trip, so free wait runs from arrival (POL-NS-21): EV-TRIP-05060 arrived 14:09:15, corroborated by EV-GPS-05060 (fixes ~7 m from pickup, accuracy <=9 m, stationary to 14:15:25, no gaps); cancelled 14:15:40, 385 s after arrival, after the 300 s wait. Contact obligation met before cancellation (POL-NS-23): chat MSG-05060-001 at 14:09:40 (EV-CHAT-05060) and in-app call at 14:12:10 (EV-TRIP-05060 in_app_calls). The fee therefore stands; the 17:00:40 reversal was interim pending review. EV-FARE-05060 shows 6.50 charged, not 5.00, so the ruling acts on the amount charged with a POL-NS-22 referral (v2.1 2.2). DRIVER_COMPENSATION 6.50, both amount fields equal (POL-GEN-03). All deciding artifacts weight 1.0 (POL-GEN-02); EV-ADVIS-05060-01 is MISSING (weight 0.0) but carries no fact needed here. Profile fields (driver no_show_terminations_30d, prior disputes) are context only (POL-GEN-01); rider no_show_cancellations_30d absent, so no POL-NS-25 referral."
+}

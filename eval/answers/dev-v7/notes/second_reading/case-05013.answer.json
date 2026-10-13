@@ -1,0 +1,8 @@
+{
+  "expected_ruling": "ESCALATE",
+  "expected_amount_sgd": null,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": ["POL-GEN-21", "POL-GEN-03"],
+  "reasoning": "dispute.safety_flag is true and the record carries safety indicators: the claim alleges speeding and that the rider felt very unsafe, and EV-CHAT-05013 MSG-05013-002 ('Please slow down... I feel scared') corroborates the complaint was raised in-trip. Under POL-GEN-21 (v2.1 5.1-5.3, 6.2) a safety-flagged dispute goes to human review whatever category the filer chose (here ROUTE_DEVIATION), and the AI may not rule, determine fault or recommend a resolution. That the value (SGD 8.00) is under the POL-GEN-22 AI-final threshold does not change this. ESCALATE is terminal and replaces any ruling, so no amount issues and no referral attaches (POL-GEN-03). Case file for the reviewer: EV-TRIP-05013 records 24.3 vs 22.4 km (1.9 km, Loyang Avenue/Loyang Way instead of TPE); EV-ADVIS-05013-01 shows no incident on the TPE segment; EV-CHAT-05013 shows no driver notice before the 01:38:36 deviation; EV-GPS-05013 speeds and the driver's account (EV-CHAT MSG-05013-003, counterparty statement) are for the human to weigh. All artifacts weight 1.0."
+}

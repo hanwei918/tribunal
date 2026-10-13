@@ -1,0 +1,626 @@
+{
+  "schema_version": "1.2.0",
+  "case_no": 5007,
+  "dispute": {
+    "case_no": 5007,
+    "dispute_id": "DSP-05007",
+    "trip_id": "TRP-05007",
+    "category": "ROUTE_DEVIATION",
+    "filed_at": "2026-08-20T20:46:45+08:00",
+    "filed_by": "RIDER",
+    "channel": "IN_APP_SUPPORT",
+    "amount_contested_sgd": 2.5,
+    "claim_text": "Driver took Yio Chu Kang and Jalan Kayu instead of Seletar Road. I checked, it is at least 1 km more. Please refund $2.50.",
+    "counterparty_statement": {
+      "text": "Jalan Kayu road is smoother. Distance about the same.",
+      "submitted_by": "DRIVER",
+      "submitted_at": "2026-08-21T09:02:45+08:00"
+    },
+    "evidence_ids": [
+      "EV-TRIP-05007",
+      "EV-GPS-05007",
+      "EV-CHAT-05007",
+      "EV-FARE-05007",
+      "EV-RPROF-05007",
+      "EV-DPROF-05007",
+      "EV-ADVIS-05007-01"
+    ]
+  },
+  "evidence": [
+    {
+      "evidence_id": "EV-TRIP-05007",
+      "evidence_type": "TRIP_RECORD",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform trip record; timestamps causally ordered; recorded optimal and actual distances present; deviation and rejoin events carried in events[].",
+        "assessed_at": "2026-08-20T20:58:50+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05007",
+        "rider_id": "R-89285",
+        "driver_id": "D-75880",
+        "requested_at": "2026-08-20T13:14:45+08:00",
+        "accepted_at": "2026-08-20T13:15:00+08:00",
+        "arrived_at": "2026-08-20T13:20:30+08:00",
+        "started_at": "2026-08-20T13:21:15+08:00",
+        "ended_at": "2026-08-20T13:37:45+08:00",
+        "cancelled_at": null,
+        "status": "COMPLETED",
+        "cancelled_by": null,
+        "cancellation_reason_code": null,
+        "pickup": {
+          "label": "Northpoint City, Yishun Avenue 2",
+          "lat": 1.4296,
+          "lng": 103.8357,
+          "venue_id": null
+        },
+        "dropoff": {
+          "label": "The Seletar Mall, Sengkang West Avenue",
+          "lat": 1.3916,
+          "lng": 103.8762,
+          "venue_id": null
+        },
+        "vehicle_type": "RYDE_X",
+        "pickup_zone_class": "STANDARD",
+        "chat_message_count": 0,
+        "registered_pickup_points": null,
+        "in_app_calls": [],
+        "optimal_distance_km": 7.3,
+        "optimal_duration_min": 14.5,
+        "optimal_route_source": "PLATFORM_ROUTER",
+        "optimal_route_erp_sgd": 0.0,
+        "actual_distance_km": 8.3,
+        "actual_duration_min": 16.5,
+        "deviation_pct": 13.7,
+        "amended_optimal_distance_km": null,
+        "amended_optimal_duration_min": null,
+        "solo_optimal_distance_km": null,
+        "pickup_amended_at": null,
+        "dropoff_amended_at": null,
+        "original_pickup": null,
+        "original_dropoff": null,
+        "scheduled_at": null,
+        "optimal_route_via": [
+          "Yishun Avenue 2",
+          "Yishun Avenue 1",
+          "Seletar Road",
+          "Sengkang West Avenue"
+        ],
+        "actual_route_via": [
+          "Yishun Avenue 2",
+          "Yishun Avenue 1",
+          "Yio Chu Kang Road",
+          "Jalan Kayu",
+          "Sengkang West Avenue"
+        ],
+        "events": [
+          {
+            "event_type": "booking_confirmed",
+            "at": "2026-08-20T13:14:45+08:00",
+            "detail": "Rider R-89285 booked TRP-05007 from Northpoint City, Yishun Avenue 2 to The Seletar Mall, Sengkang West Avenue. On-demand, metered fare.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_assigned",
+            "at": "2026-08-20T13:15:00+08:00",
+            "detail": "Driver D-75880 (Kia Niro EV, SLP 1884 H) assigned. ETA 5 min.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_arrived",
+            "at": "2026-08-20T13:20:30+08:00",
+            "detail": "Driver marked arrived at pickup (button).",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_started",
+            "at": "2026-08-20T13:21:15+08:00",
+            "detail": "Rider on board. Recommended route via Yishun Avenue 2, Yishun Avenue 1, Seletar Road, Sengkang West Avenue, 7.3 km.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_deviation_detected",
+            "at": "2026-08-20T13:28:02+08:00",
+            "detail": "Vehicle left the recommended route at Yishun Avenue 1 / Yio Chu Kang Road: recommended Seletar Road, vehicle took Yio Chu Kang Road.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_rejoined",
+            "at": "2026-08-20T13:35:58+08:00",
+            "detail": "Vehicle rejoined the recommended route at Sengkang West Avenue / Jalan Kayu.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_completed",
+            "at": "2026-08-20T13:37:45+08:00",
+            "detail": "Trip ended at The Seletar Mall, Sengkang West Avenue. Recorded distance 8.3 km, duration 16 min 30 s.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "fare_finalised",
+            "at": "2026-08-20T13:37:51+08:00",
+            "detail": "Metered fare SGD 12.65 charged to rider payment method.",
+            "source": "PLATFORM_TELEMETRY"
+          }
+        ]
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05007",
+      "generated_at": "2026-08-20T20:58:45+08:00"
+    },
+    {
+      "evidence_id": "EV-GPS-05007",
+      "evidence_type": "GPS_TRACE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver-device trace, 34 fixes at 30 s from trip start to trip end; every fix reports horizontal accuracy (max 8 m) and a map-matched road; no interval exceeds 120 s.",
+        "assessed_at": "2026-08-20T20:58:50+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05007",
+        "points": [
+          {
+            "lat": 1.4296,
+            "lng": 103.8357,
+            "ts": "2026-08-20T13:21:15+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 6,
+            "road": "Yishun Avenue 2"
+          },
+          {
+            "lat": 1.428407,
+            "lng": 103.837186,
+            "ts": "2026-08-20T13:21:45+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 5,
+            "road": "Yishun Avenue 2"
+          },
+          {
+            "lat": 1.427187,
+            "lng": 103.838693,
+            "ts": "2026-08-20T13:22:15+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 4,
+            "road": "Yishun Avenue 2"
+          },
+          {
+            "lat": 1.425959,
+            "lng": 103.840147,
+            "ts": "2026-08-20T13:22:45+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 6,
+            "road": "Yishun Avenue 2"
+          },
+          {
+            "lat": 1.424798,
+            "lng": 103.841621,
+            "ts": "2026-08-20T13:23:15+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 4,
+            "road": "Yishun Avenue 2"
+          },
+          {
+            "lat": 1.42354,
+            "lng": 103.843116,
+            "ts": "2026-08-20T13:23:45+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 3,
+            "road": "Yishun Avenue 2"
+          },
+          {
+            "lat": 1.422295,
+            "lng": 103.844606,
+            "ts": "2026-08-20T13:24:15+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 5,
+            "road": "Yishun Avenue 2"
+          },
+          {
+            "lat": 1.420975,
+            "lng": 103.846,
+            "ts": "2026-08-20T13:24:45+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 4,
+            "road": "Yishun Avenue 1"
+          },
+          {
+            "lat": 1.419624,
+            "lng": 103.847385,
+            "ts": "2026-08-20T13:25:15+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 6,
+            "road": "Yishun Avenue 1"
+          },
+          {
+            "lat": 1.418277,
+            "lng": 103.848729,
+            "ts": "2026-08-20T13:25:45+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 7,
+            "road": "Yishun Avenue 1"
+          },
+          {
+            "lat": 1.416932,
+            "lng": 103.850082,
+            "ts": "2026-08-20T13:26:15+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 5,
+            "road": "Yishun Avenue 1"
+          },
+          {
+            "lat": 1.41553,
+            "lng": 103.851399,
+            "ts": "2026-08-20T13:26:45+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 7,
+            "road": "Yishun Avenue 1"
+          },
+          {
+            "lat": 1.414216,
+            "lng": 103.852746,
+            "ts": "2026-08-20T13:27:15+08:00",
+            "speed_kph": 22,
+            "accuracy_m": 4,
+            "road": "Yishun Avenue 1"
+          },
+          {
+            "lat": 1.413013,
+            "lng": 103.854157,
+            "ts": "2026-08-20T13:27:45+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 4,
+            "road": "Yio Chu Kang Road"
+          },
+          {
+            "lat": 1.412974,
+            "lng": 103.856094,
+            "ts": "2026-08-20T13:28:15+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 8,
+            "road": "Yio Chu Kang Road"
+          },
+          {
+            "lat": 1.412893,
+            "lng": 103.858031,
+            "ts": "2026-08-20T13:28:45+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 4,
+            "road": "Yio Chu Kang Road"
+          },
+          {
+            "lat": 1.412912,
+            "lng": 103.859926,
+            "ts": "2026-08-20T13:29:15+08:00",
+            "speed_kph": 21,
+            "accuracy_m": 4,
+            "road": "Yio Chu Kang Road"
+          },
+          {
+            "lat": 1.412814,
+            "lng": 103.86188,
+            "ts": "2026-08-20T13:29:45+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 6,
+            "road": "Yio Chu Kang Road"
+          },
+          {
+            "lat": 1.412862,
+            "lng": 103.863774,
+            "ts": "2026-08-20T13:30:15+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 6,
+            "road": "Yio Chu Kang Road"
+          },
+          {
+            "lat": 1.41279,
+            "lng": 103.865713,
+            "ts": "2026-08-20T13:30:45+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 5,
+            "road": "Yio Chu Kang Road"
+          },
+          {
+            "lat": 1.412747,
+            "lng": 103.867605,
+            "ts": "2026-08-20T13:31:15+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 8,
+            "road": "Yio Chu Kang Road"
+          },
+          {
+            "lat": 1.412683,
+            "lng": 103.869551,
+            "ts": "2026-08-20T13:31:45+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 3,
+            "road": "Yio Chu Kang Road"
+          },
+          {
+            "lat": 1.411113,
+            "lng": 103.870077,
+            "ts": "2026-08-20T13:32:15+08:00",
+            "speed_kph": 21,
+            "accuracy_m": 4,
+            "road": "Jalan Kayu"
+          },
+          {
+            "lat": 1.4092,
+            "lng": 103.870347,
+            "ts": "2026-08-20T13:32:45+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 3,
+            "road": "Jalan Kayu"
+          },
+          {
+            "lat": 1.407344,
+            "lng": 103.870555,
+            "ts": "2026-08-20T13:33:15+08:00",
+            "speed_kph": 23,
+            "accuracy_m": 7,
+            "road": "Jalan Kayu"
+          },
+          {
+            "lat": 1.405413,
+            "lng": 103.870827,
+            "ts": "2026-08-20T13:33:45+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 4,
+            "road": "Jalan Kayu"
+          },
+          {
+            "lat": 1.403502,
+            "lng": 103.871125,
+            "ts": "2026-08-20T13:34:15+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 7,
+            "road": "Jalan Kayu"
+          },
+          {
+            "lat": 1.401618,
+            "lng": 103.871337,
+            "ts": "2026-08-20T13:34:45+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 5,
+            "road": "Jalan Kayu"
+          },
+          {
+            "lat": 1.399725,
+            "lng": 103.87163,
+            "ts": "2026-08-20T13:35:15+08:00",
+            "speed_kph": 22,
+            "accuracy_m": 4,
+            "road": "Jalan Kayu"
+          },
+          {
+            "lat": 1.397817,
+            "lng": 103.871896,
+            "ts": "2026-08-20T13:35:45+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 8,
+            "road": "Jalan Kayu"
+          },
+          {
+            "lat": 1.396106,
+            "lng": 103.872674,
+            "ts": "2026-08-20T13:36:15+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 4,
+            "road": "Sengkang West Avenue"
+          },
+          {
+            "lat": 1.394628,
+            "lng": 103.873848,
+            "ts": "2026-08-20T13:36:45+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 3,
+            "road": "Sengkang West Avenue"
+          },
+          {
+            "lat": 1.393092,
+            "lng": 103.875027,
+            "ts": "2026-08-20T13:37:15+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 8,
+            "road": "Sengkang West Avenue"
+          },
+          {
+            "lat": 1.3916,
+            "lng": 103.8762,
+            "ts": "2026-08-20T13:37:45+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 5,
+            "road": "Sengkang West Avenue"
+          }
+        ],
+        "point_count": 34,
+        "first_fix_at": "2026-08-20T13:21:15+08:00",
+        "last_fix_at": "2026-08-20T13:37:45+08:00",
+        "sample_interval_sec": 30.0,
+        "expected_interval_sec": 30.0,
+        "gaps": [],
+        "max_gap_sec": 30.0,
+        "coverage_pct": 100.0,
+        "trace_distance_km": 6.996,
+        "rider_track": []
+      },
+      "schema_version": "1.2.0",
+      "source": "DRIVER_DEVICE",
+      "trip_id": "TRP-05007",
+      "generated_at": "2026-08-20T20:58:45+08:00"
+    },
+    {
+      "evidence_id": "EV-CHAT-05007",
+      "evidence_type": "CHAT_LOG",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform chat log, 0 entries, contiguous; matches trip_record.chat_message_count.",
+        "assessed_at": "2026-08-20T20:58:50+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05007",
+        "messages": [],
+        "message_count": 0,
+        "first_message_at": null,
+        "last_message_at": null,
+        "truncated": false
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05007",
+      "generated_at": "2026-08-20T20:58:45+08:00"
+    },
+    {
+      "evidence_id": "EV-FARE-05007",
+      "evidence_type": "FARE_BREAKDOWN",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Payments ledger; itemised lines reconcile to total_charged; tolls_erp equals the gantry list.",
+        "assessed_at": "2026-08-20T20:58:50+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05007",
+        "currency": "SGD",
+        "fare_model": "METERED",
+        "cancellation_fee": 0.0,
+        "total_charged": 12.65,
+        "payment_status": "CHARGED",
+        "refund_issued_sgd": 0.0,
+        "charged_at": "2026-08-20T13:37:51+08:00",
+        "surge_multiplier": 1.0,
+        "rate_card_id": "RC-SG-RYDEX-2026Q3",
+        "base_fare": 2.8,
+        "distance_fare": 5.98,
+        "time_fare": 2.97,
+        "surge_amount": 0.0,
+        "tolls_erp": 0.0,
+        "airport_surcharge": 0.0,
+        "platform_fee": 0.9,
+        "promo_discount": 0.0,
+        "waiting_time_fee": 0.0,
+        "quoted_fare_sgd": null,
+        "distance_charged_km": 8.3,
+        "time_charged_min": 16.5,
+        "per_km_rate_sgd": 0.72,
+        "per_min_rate_sgd": 0.18,
+        "erp_gantries": []
+      },
+      "schema_version": "1.2.0",
+      "source": "PAYMENTS_LEDGER",
+      "trip_id": "TRP-05007",
+      "generated_at": "2026-08-20T20:58:45+08:00"
+    },
+    {
+      "evidence_id": "EV-RPROF-05007",
+      "evidence_type": "RIDER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Rider profile snapshot at filing.",
+        "assessed_at": "2026-08-20T20:58:50+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "R-89285",
+        "party_role": "RIDER",
+        "snapshot_at": "2026-08-20T20:46:45+08:00",
+        "account_age_days": 844,
+        "lifetime_trips": 538,
+        "rating": 4.32,
+        "prior_disputes_filed": 2,
+        "prior_disputes_upheld": 1,
+        "prior_no_show_flags": 0,
+        "cancellation_rate": 0.015,
+        "no_show_disputes_30d": 0,
+        "deviation_claims_60d": 1,
+        "deviation_claims_60d_substantiated": 0,
+        "disputes_with_counterparty_90d": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05007",
+      "generated_at": "2026-08-20T20:58:45+08:00"
+    },
+    {
+      "evidence_id": "EV-DPROF-05007",
+      "evidence_type": "DRIVER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver profile snapshot at filing.",
+        "assessed_at": "2026-08-20T20:58:50+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "D-75880",
+        "party_role": "DRIVER",
+        "snapshot_at": "2026-08-20T20:46:45+08:00",
+        "account_age_days": 267,
+        "lifetime_trips": 1250,
+        "rating": 4.71,
+        "prior_disputes_filed": 4,
+        "prior_disputes_upheld": 0,
+        "prior_no_show_flags": 2,
+        "vehicle_type": "RYDE_X",
+        "cancellation_rate": 0.016,
+        "prior_deviation_flags": 2,
+        "acceptance_rate": 0.93,
+        "active_region": "CENTRAL",
+        "deviation_flags_90d": 0,
+        "completed_trips_90d": 806,
+        "no_show_terminations_30d": 1,
+        "completed_trips_30d": 80,
+        "disputes_with_counterparty_90d": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05007",
+      "generated_at": "2026-08-20T20:58:45+08:00"
+    },
+    {
+      "evidence_id": "EV-ADVIS-05007-01",
+      "evidence_type": "TRAFFIC_ADVISORY",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "LTA historical traffic record for the queried road segment and window; retrieved by the platform, not supplied by a party.",
+        "assessed_at": "2026-08-20T20:58:50+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "advisory_id": "LTA-TI-260820-4884",
+        "provider": "LTA_DATAMALL_SPEED_BANDS",
+        "advisory_type": "NONE",
+        "road": "Seletar Road",
+        "direction": "both directions",
+        "location_desc": "Yishun Avenue 1 to Sengkang West Avenue",
+        "lat": 1.405,
+        "lng": 103.865,
+        "message": "No incident, roadwork or closure recorded for the queried segment and window. Speed bands 5-6 throughout.",
+        "valid_from": "2026-08-20T12:51:15+08:00",
+        "valid_to": "2026-08-20T14:21:15+08:00",
+        "speed_band_min": 5,
+        "retrieved_at": "2026-08-20T20:56:45+08:00"
+      },
+      "schema_version": "1.2.0",
+      "source": "THIRD_PARTY_LTA",
+      "trip_id": "TRP-05007",
+      "generated_at": "2026-08-20T20:58:45+08:00"
+    }
+  ]
+}

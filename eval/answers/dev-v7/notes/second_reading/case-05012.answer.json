@@ -1,0 +1,8 @@
+{
+  "expected_ruling": "ESCALATE",
+  "expected_amount_sgd": null,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": ["POL-GEN-22", "POL-RD-25", "POL-GEN-03"],
+  "reasoning": "No safety indicator in the dispute or record (POL-GEN-21 not engaged). Dispute value is dispute.amount_contested_sgd = SGD 90.99 (rider asks the whole metered fare, EV-FARE-05012 total_charged 90.99), above 50.00, so under POL-GEN-22 (v2.1 6.1/6.2) the case always goes to human review and the AI prepares the case file only; POL-RD-25 adds nothing that could keep it with the AI. Per POL-GEN-03 ESCALATE is terminal, no monetary outcome issues, amount held; no referral clause (NS-22/24/25) applies. Case-file note for the reviewer: all artifacts weight 1.0; EV-TRIP-05012 recorded 40.1 - 38.3 = 1.8 km deviation (POL-RD-22), PIE/KPE instead of AYE/MCE; EV-CHAT-05012 has 0 messages and no in-app calls, so rider not informed (POL-RD-21); EV-ADVIS-05012-01 shows no incident on the AYE segment, speed bands 6-8, so not traffic-justified (POL-RD-23); the merits would fit POL-RD-24 row (d), excess distance fare 1.8 x 0.92 = SGD 1.66 without surge, not the whole fare. Driver's surge remark is context; fraud_flags 0 on both profiles (EV-RPROF/EV-DPROF)."
+}

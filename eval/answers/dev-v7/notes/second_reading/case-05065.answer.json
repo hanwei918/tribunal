@@ -1,0 +1,8 @@
+{
+  "expected_ruling": "ESCALATE",
+  "expected_amount_sgd": null,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": ["POL-NS-23", "POL-GEN-26", "POL-NS-26", "POL-GEN-02", "POL-NS-21"],
+  "reasoning": "Driver-filed no-show, SGD 5.00, on-demand. EV-TRIP-05065 (1.0) arrival 11:11:50 corroborated by EV-GPS-05065 (1.0; fixes ~6 m from pickup, accuracy <=9 m, no gaps); cancel 11:18:10 is after the 300 s free wait (POL-NS-21). Call limb of POL-NS-23 met: driver in-app call 11:14:20 in EV-TRIP-05065. Chat limb cannot be established: EV-CHAT-05065 is IMPAIRED (TRUNCATED_LOG, weight 0.6), exporting 1 of 3 messages (a rider message at 11:06); the 2 missing entries, covering arrival and the wait, have unknown sender and time, and the rider denies any message. Whether the driver messaged before cancelling is exactly the open question POL-GEN-26 names; no outcome may be inferred from absent evidence, so neither DRIVER_COMPENSATION (POL-NS-22) nor a void (POL-NS-23) can issue. POL-NS-26 makes the no-show ruling final only subject to POL-GEN-26, so the case is escalated (POL-GEN-03: terminal, amount held). No safety indicator; fraud_flags 0 both (POL-GEN-22). No POL-NS-25 referral (no no_show_cancellations_30d field); fee charged 5.00 so no POL-NS-22 referral; other profile fields context only (POL-GEN-01). EV-ADVIS-05065-01 MISSING, irrelevant."
+}

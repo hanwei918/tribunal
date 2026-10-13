@@ -1,0 +1,19 @@
+{
+  "expected_ruling": "PARTIAL_REFUND",
+  "expected_amount_sgd": 1.08,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": [
+    "POL-RD-21",
+    "POL-RD-22",
+    "POL-RD-23",
+    "POL-RD-24",
+    "POL-RD-25",
+    "POL-GEN-02",
+    "POL-GEN-03",
+    "POL-GEN-21",
+    "POL-GEN-22",
+    "POL-GEN-26"
+  ],
+  "reasoning": "Not safety (POL-GEN-21): the BKE accident is an unverified third-party claim, not an accident on this trip. Value SGD 3.50 <10, fraud_flags 0 (POL-GEN-22). Deviation per POL-RD-22 from EV-TRIP-05009 recorded distances: 10.0-8.5=1.5 km >1 km tolerance (GPS trace_distance 8.42 not used). EV-CHAT-05009: driver gave reason at 15:49:39, rider replied ok can 15:49:59, before deviation 15:51:59, so informed and agreed (POL-RD-21). But POL-RD-23: traffic-justified only where a TRAFFIC_ADVISORY shows an incident; EV-ADVIS-05009-01 is MISSING (MISSING_ARTIFACT, weight 0.0, carries no fact, POL-GEN-02), and a driver assertion with no such data does not justify the reroute. POL-RD-23 is the rule that says so, so POL-GEN-26 does not escalate. Row (a) needs justification; row (d) applies regardless of consent: refund excess distance fare 1.5 x 0.72 (EV-FARE-05009, no surge) = SGD 1.08, PARTIAL_REFUND (POL-RD-24, POL-GEN-03), not the 3.50 asked. Deciding facts rest on EV-TRIP/EV-FARE/EV-CHAT at weight 1.0, confidence >=0.80, deviation <=2 km limb not applied (POL-RD-25). No referrals."
+}

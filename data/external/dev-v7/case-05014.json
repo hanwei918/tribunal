@@ -1,0 +1,775 @@
+{
+  "schema_version": "1.2.0",
+  "case_no": 5014,
+  "dispute": {
+    "case_no": 5014,
+    "dispute_id": "DSP-05014",
+    "trip_id": "TRP-05014",
+    "category": "ROUTE_DEVIATION",
+    "filed_at": "2026-09-04T05:25:05+08:00",
+    "filed_by": "RIDER",
+    "channel": "IN_APP_SUPPORT",
+    "amount_contested_sgd": 4.2,
+    "claim_text": "Driver exited the KPE and went through MacPherson and Upper Paya Lebar. I told him don't charge me more and he still did. I want $4.20 back.",
+    "counterparty_statement": {
+      "text": "There was accident on KPE. I asked the passenger and she said ok.",
+      "submitted_by": "DRIVER",
+      "submitted_at": "2026-09-04T12:13:05+08:00"
+    },
+    "evidence_ids": [
+      "EV-TRIP-05014",
+      "EV-GPS-05014",
+      "EV-CHAT-05014",
+      "EV-FARE-05014",
+      "EV-RPROF-05014",
+      "EV-DPROF-05014",
+      "EV-ADVIS-05014-01"
+    ]
+  },
+  "evidence": [
+    {
+      "evidence_id": "EV-TRIP-05014",
+      "evidence_type": "TRIP_RECORD",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform trip record; timestamps causally ordered; recorded optimal and actual distances present; deviation and rejoin events carried in events[].",
+        "assessed_at": "2026-09-04T05:37:10+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05014",
+        "rider_id": "R-92904",
+        "driver_id": "D-94158",
+        "requested_at": "2026-09-03T21:10:15+08:00",
+        "accepted_at": "2026-09-03T21:10:50+08:00",
+        "arrived_at": "2026-09-03T21:14:50+08:00",
+        "started_at": "2026-09-03T21:16:05+08:00",
+        "ended_at": "2026-09-03T21:38:05+08:00",
+        "cancelled_at": null,
+        "status": "COMPLETED",
+        "cancelled_by": null,
+        "cancellation_reason_code": null,
+        "pickup": {
+          "label": "Kallang Wave Mall, Stadium Place",
+          "lat": 1.3027,
+          "lng": 103.8751,
+          "venue_id": null
+        },
+        "dropoff": {
+          "label": "Hougang Mall, Hougang Avenue 10",
+          "lat": 1.3726,
+          "lng": 103.8937,
+          "venue_id": null
+        },
+        "vehicle_type": "RYDE_X",
+        "pickup_zone_class": "STANDARD",
+        "chat_message_count": 4,
+        "registered_pickup_points": null,
+        "in_app_calls": [],
+        "optimal_distance_km": 9.6,
+        "optimal_duration_min": 19.4,
+        "optimal_route_source": "PLATFORM_ROUTER",
+        "optimal_route_erp_sgd": 0.0,
+        "actual_distance_km": 10.9,
+        "actual_duration_min": 22.0,
+        "deviation_pct": 13.5,
+        "amended_optimal_distance_km": null,
+        "amended_optimal_duration_min": null,
+        "solo_optimal_distance_km": null,
+        "pickup_amended_at": null,
+        "dropoff_amended_at": null,
+        "original_pickup": null,
+        "original_dropoff": null,
+        "scheduled_at": null,
+        "optimal_route_via": [
+          "Stadium Boulevard",
+          "Kallang-Paya Lebar Expressway (KPE)",
+          "Hougang Avenue 3",
+          "Hougang Avenue 10"
+        ],
+        "actual_route_via": [
+          "Stadium Boulevard",
+          "Kallang-Paya Lebar Expressway (KPE)",
+          "MacPherson Road",
+          "Upper Paya Lebar Road",
+          "Hougang Avenue 3",
+          "Hougang Avenue 10"
+        ],
+        "events": [
+          {
+            "event_type": "booking_confirmed",
+            "at": "2026-09-03T21:10:15+08:00",
+            "detail": "Rider R-92904 booked TRP-05014 from Kallang Wave Mall, Stadium Place to Hougang Mall, Hougang Avenue 10. On-demand, metered fare.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_assigned",
+            "at": "2026-09-03T21:10:50+08:00",
+            "detail": "Driver D-94158 (BYD Atto 3, SLR 9222 E) assigned. ETA 4 min.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_arrived",
+            "at": "2026-09-03T21:14:50+08:00",
+            "detail": "Driver marked arrived at pickup (button).",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_started",
+            "at": "2026-09-03T21:16:05+08:00",
+            "detail": "Rider on board. Recommended route via Stadium Boulevard, Kallang-Paya Lebar Expressway (KPE), Hougang Avenue 3, Hougang Avenue 10, 9.6 km.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_deviation_detected",
+            "at": "2026-09-03T21:22:26+08:00",
+            "detail": "Vehicle left the recommended route at KPE / MacPherson Road exit: recommended Kallang-Paya Lebar Expressway (KPE), vehicle took MacPherson Road.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_rejoined",
+            "at": "2026-09-03T21:34:06+08:00",
+            "detail": "Vehicle rejoined the recommended route at Hougang Avenue 3 / Upper Paya Lebar Road.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_completed",
+            "at": "2026-09-03T21:38:05+08:00",
+            "detail": "Trip ended at Hougang Mall, Hougang Avenue 10. Recorded distance 10.9 km, duration 22 min 00 s.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "fare_finalised",
+            "at": "2026-09-03T21:38:11+08:00",
+            "detail": "Metered fare SGD 16.97 charged to rider payment method.",
+            "source": "PLATFORM_TELEMETRY"
+          }
+        ]
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05014",
+      "generated_at": "2026-09-04T05:37:05+08:00"
+    },
+    {
+      "evidence_id": "EV-GPS-05014",
+      "evidence_type": "GPS_TRACE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver-device trace, 45 fixes at 30 s from trip start to trip end; every fix reports horizontal accuracy (max 8 m) and a map-matched road; no interval exceeds 120 s.",
+        "assessed_at": "2026-09-04T05:37:10+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05014",
+        "points": [
+          {
+            "lat": 1.3027,
+            "lng": 103.8751,
+            "ts": "2026-09-03T21:16:05+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 4,
+            "road": "Stadium Boulevard"
+          },
+          {
+            "lat": 1.30425,
+            "lng": 103.876213,
+            "ts": "2026-09-03T21:16:35+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 3,
+            "road": "Stadium Boulevard"
+          },
+          {
+            "lat": 1.305761,
+            "lng": 103.877312,
+            "ts": "2026-09-03T21:17:05+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 8,
+            "road": "Stadium Boulevard"
+          },
+          {
+            "lat": 1.30727,
+            "lng": 103.878414,
+            "ts": "2026-09-03T21:17:35+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 4,
+            "road": "Stadium Boulevard"
+          },
+          {
+            "lat": 1.308908,
+            "lng": 103.879361,
+            "ts": "2026-09-03T21:18:05+08:00",
+            "speed_kph": 22,
+            "accuracy_m": 6,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.310648,
+            "lng": 103.880051,
+            "ts": "2026-09-03T21:18:35+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 4,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.312401,
+            "lng": 103.880771,
+            "ts": "2026-09-03T21:19:05+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 6,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.314137,
+            "lng": 103.881501,
+            "ts": "2026-09-03T21:19:35+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 7,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.315914,
+            "lng": 103.882174,
+            "ts": "2026-09-03T21:20:05+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 6,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.317672,
+            "lng": 103.882871,
+            "ts": "2026-09-03T21:20:35+08:00",
+            "speed_kph": 21,
+            "accuracy_m": 5,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.319416,
+            "lng": 103.883554,
+            "ts": "2026-09-03T21:21:05+08:00",
+            "speed_kph": 35,
+            "accuracy_m": 8,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.32119,
+            "lng": 103.884274,
+            "ts": "2026-09-03T21:21:35+08:00",
+            "speed_kph": 21,
+            "accuracy_m": 5,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.322918,
+            "lng": 103.884975,
+            "ts": "2026-09-03T21:22:05+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 5,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.324568,
+            "lng": 103.884065,
+            "ts": "2026-09-03T21:22:35+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 5,
+            "road": "MacPherson Road"
+          },
+          {
+            "lat": 1.326177,
+            "lng": 103.883137,
+            "ts": "2026-09-03T21:23:05+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 4,
+            "road": "MacPherson Road"
+          },
+          {
+            "lat": 1.327807,
+            "lng": 103.88217,
+            "ts": "2026-09-03T21:23:35+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 5,
+            "road": "MacPherson Road"
+          },
+          {
+            "lat": 1.329417,
+            "lng": 103.881216,
+            "ts": "2026-09-03T21:24:05+08:00",
+            "speed_kph": 37,
+            "accuracy_m": 4,
+            "road": "MacPherson Road"
+          },
+          {
+            "lat": 1.331055,
+            "lng": 103.880257,
+            "ts": "2026-09-03T21:24:35+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 4,
+            "road": "MacPherson Road"
+          },
+          {
+            "lat": 1.332686,
+            "lng": 103.879306,
+            "ts": "2026-09-03T21:25:05+08:00",
+            "speed_kph": 23,
+            "accuracy_m": 7,
+            "road": "MacPherson Road"
+          },
+          {
+            "lat": 1.334359,
+            "lng": 103.878352,
+            "ts": "2026-09-03T21:25:35+08:00",
+            "speed_kph": 21,
+            "accuracy_m": 5,
+            "road": "MacPherson Road"
+          },
+          {
+            "lat": 1.335933,
+            "lng": 103.877395,
+            "ts": "2026-09-03T21:26:05+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 7,
+            "road": "MacPherson Road"
+          },
+          {
+            "lat": 1.337569,
+            "lng": 103.876409,
+            "ts": "2026-09-03T21:26:35+08:00",
+            "speed_kph": 22,
+            "accuracy_m": 8,
+            "road": "MacPherson Road"
+          },
+          {
+            "lat": 1.339217,
+            "lng": 103.875458,
+            "ts": "2026-09-03T21:27:05+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 4,
+            "road": "MacPherson Road"
+          },
+          {
+            "lat": 1.340832,
+            "lng": 103.874489,
+            "ts": "2026-09-03T21:27:35+08:00",
+            "speed_kph": 24,
+            "accuracy_m": 6,
+            "road": "MacPherson Road"
+          },
+          {
+            "lat": 1.342432,
+            "lng": 103.873521,
+            "ts": "2026-09-03T21:28:05+08:00",
+            "speed_kph": 36,
+            "accuracy_m": 6,
+            "road": "MacPherson Road"
+          },
+          {
+            "lat": 1.343737,
+            "lng": 103.874861,
+            "ts": "2026-09-03T21:28:35+08:00",
+            "speed_kph": 21,
+            "accuracy_m": 6,
+            "road": "Upper Paya Lebar Road"
+          },
+          {
+            "lat": 1.344994,
+            "lng": 103.876212,
+            "ts": "2026-09-03T21:29:05+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 7,
+            "road": "Upper Paya Lebar Road"
+          },
+          {
+            "lat": 1.346333,
+            "lng": 103.877568,
+            "ts": "2026-09-03T21:29:35+08:00",
+            "speed_kph": 23,
+            "accuracy_m": 5,
+            "road": "Upper Paya Lebar Road"
+          },
+          {
+            "lat": 1.347643,
+            "lng": 103.878979,
+            "ts": "2026-09-03T21:30:05+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 4,
+            "road": "Upper Paya Lebar Road"
+          },
+          {
+            "lat": 1.348876,
+            "lng": 103.880314,
+            "ts": "2026-09-03T21:30:35+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 3,
+            "road": "Upper Paya Lebar Road"
+          },
+          {
+            "lat": 1.350225,
+            "lng": 103.881725,
+            "ts": "2026-09-03T21:31:05+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 3,
+            "road": "Upper Paya Lebar Road"
+          },
+          {
+            "lat": 1.35152,
+            "lng": 103.8831,
+            "ts": "2026-09-03T21:31:35+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 4,
+            "road": "Upper Paya Lebar Road"
+          },
+          {
+            "lat": 1.352825,
+            "lng": 103.884483,
+            "ts": "2026-09-03T21:32:05+08:00",
+            "speed_kph": 23,
+            "accuracy_m": 4,
+            "road": "Upper Paya Lebar Road"
+          },
+          {
+            "lat": 1.354099,
+            "lng": 103.885856,
+            "ts": "2026-09-03T21:32:35+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 4,
+            "road": "Upper Paya Lebar Road"
+          },
+          {
+            "lat": 1.355407,
+            "lng": 103.887174,
+            "ts": "2026-09-03T21:33:05+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 5,
+            "road": "Upper Paya Lebar Road"
+          },
+          {
+            "lat": 1.356699,
+            "lng": 103.888604,
+            "ts": "2026-09-03T21:33:35+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 5,
+            "road": "Upper Paya Lebar Road"
+          },
+          {
+            "lat": 1.357978,
+            "lng": 103.889952,
+            "ts": "2026-09-03T21:34:05+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 3,
+            "road": "Upper Paya Lebar Road"
+          },
+          {
+            "lat": 1.359811,
+            "lng": 103.890442,
+            "ts": "2026-09-03T21:34:35+08:00",
+            "speed_kph": 24,
+            "accuracy_m": 8,
+            "road": "Hougang Avenue 3"
+          },
+          {
+            "lat": 1.361646,
+            "lng": 103.890903,
+            "ts": "2026-09-03T21:35:05+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 5,
+            "road": "Hougang Avenue 3"
+          },
+          {
+            "lat": 1.363424,
+            "lng": 103.891375,
+            "ts": "2026-09-03T21:35:35+08:00",
+            "speed_kph": 22,
+            "accuracy_m": 3,
+            "road": "Hougang Avenue 3"
+          },
+          {
+            "lat": 1.365282,
+            "lng": 103.891842,
+            "ts": "2026-09-03T21:36:05+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 6,
+            "road": "Hougang Avenue 3"
+          },
+          {
+            "lat": 1.367116,
+            "lng": 103.892299,
+            "ts": "2026-09-03T21:36:35+08:00",
+            "speed_kph": 23,
+            "accuracy_m": 4,
+            "road": "Hougang Avenue 3"
+          },
+          {
+            "lat": 1.368936,
+            "lng": 103.892772,
+            "ts": "2026-09-03T21:37:05+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 7,
+            "road": "Hougang Avenue 3"
+          },
+          {
+            "lat": 1.370779,
+            "lng": 103.893251,
+            "ts": "2026-09-03T21:37:35+08:00",
+            "speed_kph": 23,
+            "accuracy_m": 4,
+            "road": "Hougang Avenue 3"
+          },
+          {
+            "lat": 1.3726,
+            "lng": 103.8937,
+            "ts": "2026-09-03T21:38:05+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 3,
+            "road": "Hougang Avenue 10"
+          }
+        ],
+        "point_count": 45,
+        "first_fix_at": "2026-09-03T21:16:05+08:00",
+        "last_fix_at": "2026-09-03T21:38:05+08:00",
+        "sample_interval_sec": 30.0,
+        "expected_interval_sec": 30.0,
+        "gaps": [],
+        "max_gap_sec": 30.0,
+        "coverage_pct": 100.0,
+        "trace_distance_km": 9.226,
+        "rider_track": []
+      },
+      "schema_version": "1.2.0",
+      "source": "DRIVER_DEVICE",
+      "trip_id": "TRP-05014",
+      "generated_at": "2026-09-04T05:37:05+08:00"
+    },
+    {
+      "evidence_id": "EV-CHAT-05014",
+      "evidence_type": "CHAT_LOG",
+      "admissibility": {
+        "status": "IMPAIRED",
+        "issues": [
+          "LANGUAGE_AMBIGUITY"
+        ],
+        "weight_multiplier": 0.85,
+        "notes": "The rider's reply to the reroute message (MSG-05014-004) mixes assent with a condition on the fare; whether it acknowledges or objects to the reroute is ambiguous.",
+        "assessed_at": "2026-09-04T05:37:10+08:00",
+        "assessor_version": "prepass-1.0.0",
+        "issue_details": [
+          {
+            "code": "LANGUAGE_AMBIGUITY",
+            "severity": "MEDIUM",
+            "detail": "MSG-05014-004 combines 'ok lor whatever u say' with 'dun charge me more ah'."
+          }
+        ]
+      },
+      "payload": {
+        "trip_id": "TRP-05014",
+        "messages": [
+          {
+            "msg_id": "MSG-05014-001",
+            "sender": "DRIVER",
+            "text": "Hi, at Stadium Place drop-off, white Atto 3",
+            "sent_at": "2026-09-03T21:14:35+08:00",
+            "read_at": "2026-09-03T21:14:47+08:00",
+            "delivered_at": "2026-09-03T21:14:38+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-05014-002",
+            "sender": "RIDER",
+            "text": "coming",
+            "sent_at": "2026-09-03T21:15:05+08:00",
+            "read_at": "2026-09-03T21:15:44+08:00",
+            "delivered_at": "2026-09-03T21:15:07+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-05014-003",
+            "sender": "DRIVER",
+            "text": "Accident on KPE ahead, I exit MacPherson then go Upper Paya Lebar, can?",
+            "sent_at": "2026-09-03T21:19:56+08:00",
+            "read_at": "2026-09-03T21:20:23+08:00",
+            "delivered_at": "2026-09-03T21:19:58+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-05014-004",
+            "sender": "RIDER",
+            "text": "aiyo can meh... ok lor whatever u say but dun charge me more ah",
+            "sent_at": "2026-09-03T21:20:41+08:00",
+            "read_at": "2026-09-03T21:21:15+08:00",
+            "delivered_at": "2026-09-03T21:20:42+08:00",
+            "channel": "IN_APP",
+            "language": "en-SG",
+            "redacted": false,
+            "waypoint_hint": null
+          }
+        ],
+        "message_count": 4,
+        "first_message_at": "2026-09-03T21:14:35+08:00",
+        "last_message_at": "2026-09-03T21:20:41+08:00",
+        "truncated": false
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05014",
+      "generated_at": "2026-09-04T05:37:05+08:00"
+    },
+    {
+      "evidence_id": "EV-FARE-05014",
+      "evidence_type": "FARE_BREAKDOWN",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Payments ledger; itemised lines reconcile to total_charged; tolls_erp equals the gantry list.",
+        "assessed_at": "2026-09-04T05:37:10+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05014",
+        "currency": "SGD",
+        "fare_model": "METERED",
+        "cancellation_fee": 0.0,
+        "total_charged": 16.97,
+        "payment_status": "CHARGED",
+        "refund_issued_sgd": 0.0,
+        "charged_at": "2026-09-03T21:38:11+08:00",
+        "surge_multiplier": 1.1,
+        "rate_card_id": "RC-SG-RYDEX-2026Q3",
+        "base_fare": 2.8,
+        "distance_fare": 7.85,
+        "time_fare": 3.96,
+        "surge_amount": 1.46,
+        "tolls_erp": 0.0,
+        "airport_surcharge": 0.0,
+        "platform_fee": 0.9,
+        "promo_discount": 0.0,
+        "waiting_time_fee": 0.0,
+        "quoted_fare_sgd": null,
+        "distance_charged_km": 10.9,
+        "time_charged_min": 22.0,
+        "per_km_rate_sgd": 0.72,
+        "per_min_rate_sgd": 0.18,
+        "erp_gantries": []
+      },
+      "schema_version": "1.2.0",
+      "source": "PAYMENTS_LEDGER",
+      "trip_id": "TRP-05014",
+      "generated_at": "2026-09-04T05:37:05+08:00"
+    },
+    {
+      "evidence_id": "EV-RPROF-05014",
+      "evidence_type": "RIDER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Rider profile snapshot at filing.",
+        "assessed_at": "2026-09-04T05:37:10+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "R-92904",
+        "party_role": "RIDER",
+        "snapshot_at": "2026-09-04T05:25:05+08:00",
+        "account_age_days": 2101,
+        "lifetime_trips": 751,
+        "rating": 4.34,
+        "prior_disputes_filed": 0,
+        "prior_disputes_upheld": 0,
+        "prior_no_show_flags": 0,
+        "cancellation_rate": 0.089,
+        "no_show_disputes_30d": 1,
+        "deviation_claims_60d": 1,
+        "deviation_claims_60d_substantiated": 0,
+        "disputes_with_counterparty_90d": 0,
+        "fraud_flags": 1
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05014",
+      "generated_at": "2026-09-04T05:37:05+08:00"
+    },
+    {
+      "evidence_id": "EV-DPROF-05014",
+      "evidence_type": "DRIVER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver profile snapshot at filing.",
+        "assessed_at": "2026-09-04T05:37:10+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "D-94158",
+        "party_role": "DRIVER",
+        "snapshot_at": "2026-09-04T05:25:05+08:00",
+        "account_age_days": 2435,
+        "lifetime_trips": 12779,
+        "rating": 4.94,
+        "prior_disputes_filed": 2,
+        "prior_disputes_upheld": 1,
+        "prior_no_show_flags": 1,
+        "vehicle_type": "RYDE_X",
+        "cancellation_rate": 0.012,
+        "prior_deviation_flags": 0,
+        "acceptance_rate": 0.85,
+        "active_region": "NORTH",
+        "deviation_flags_90d": 1,
+        "completed_trips_90d": 492,
+        "no_show_terminations_30d": 1,
+        "completed_trips_30d": 317,
+        "disputes_with_counterparty_90d": 0,
+        "fraud_flags": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05014",
+      "generated_at": "2026-09-04T05:37:05+08:00"
+    },
+    {
+      "evidence_id": "EV-ADVIS-05014-01",
+      "evidence_type": "TRAFFIC_ADVISORY",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "LTA historical traffic record for the queried road segment and window; retrieved by the platform, not supplied by a party.",
+        "assessed_at": "2026-09-04T05:37:10+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "advisory_id": "LTA-TI-260903-6975",
+        "provider": "LTA_DATAMALL_TRAFFIC_INCIDENTS",
+        "advisory_type": "ACCIDENT",
+        "road": "Kallang-Paya Lebar Expressway (KPE)",
+        "direction": "towards TPE",
+        "location_desc": "after MacPherson Road exit",
+        "lat": 1.329,
+        "lng": 103.887,
+        "message": "(3/9)21:06 Accident on KPE (towards TPE) after MacPherson Rd Exit. Avoid lane 1.",
+        "valid_from": "2026-09-03T21:06:05+08:00",
+        "valid_to": "2026-09-03T22:16:05+08:00",
+        "speed_band_min": 1,
+        "retrieved_at": "2026-09-04T05:35:05+08:00"
+      },
+      "schema_version": "1.2.0",
+      "source": "THIRD_PARTY_LTA",
+      "trip_id": "TRP-05014",
+      "generated_at": "2026-09-04T05:37:05+08:00"
+    }
+  ]
+}

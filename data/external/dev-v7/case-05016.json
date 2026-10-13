@@ -1,0 +1,731 @@
+{
+  "schema_version": "1.2.0",
+  "case_no": 5016,
+  "dispute": {
+    "case_no": 5016,
+    "dispute_id": "DSP-05016",
+    "trip_id": "TRP-05016",
+    "category": "ROUTE_DEVIATION",
+    "filed_at": "2026-09-08T01:58:37+08:00",
+    "filed_by": "DRIVER",
+    "channel": "IN_APP_SUPPORT",
+    "amount_contested_sgd": 1.68,
+    "claim_text": "Passenger was sleeping in the back, I did not want to wake him. CTE super jam after Bukit Timah so I took Adam Road and Lornie, faster for him. Ryde deducted $1.68 from my earnings. Not fair, I saved him time.",
+    "counterparty_statement": {
+      "text": "I was not sleeping, I was on my phone the whole time. He never said a word about changing route.",
+      "submitted_by": "RIDER",
+      "submitted_at": "2026-09-08T10:36:37+08:00"
+    },
+    "evidence_ids": [
+      "EV-TRIP-05016",
+      "EV-GPS-05016",
+      "EV-CHAT-05016",
+      "EV-FARE-05016",
+      "EV-RPROF-05016",
+      "EV-DPROF-05016",
+      "EV-ADVIS-05016-01"
+    ]
+  },
+  "evidence": [
+    {
+      "evidence_id": "EV-TRIP-05016",
+      "evidence_type": "TRIP_RECORD",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform trip record; timestamps causally ordered; recorded optimal and actual distances present; deviation and rejoin events carried in events[].",
+        "assessed_at": "2026-09-08T02:10:42+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05016",
+        "rider_id": "R-79574",
+        "driver_id": "D-57181",
+        "requested_at": "2026-09-07T18:15:30+08:00",
+        "accepted_at": "2026-09-07T18:15:52+08:00",
+        "arrived_at": "2026-09-07T18:21:22+08:00",
+        "started_at": "2026-09-07T18:22:37+08:00",
+        "ended_at": "2026-09-07T18:43:37+08:00",
+        "cancelled_at": null,
+        "status": "COMPLETED",
+        "cancelled_by": null,
+        "cancellation_reason_code": null,
+        "pickup": {
+          "label": "National Library, Victoria Street",
+          "lat": 1.2977,
+          "lng": 103.8542,
+          "venue_id": null
+        },
+        "dropoff": {
+          "label": "Thomson Plaza, Upper Thomson Road",
+          "lat": 1.3548,
+          "lng": 103.8307,
+          "venue_id": null
+        },
+        "vehicle_type": "RYDE_PREMIUM",
+        "pickup_zone_class": "STANDARD",
+        "chat_message_count": 2,
+        "registered_pickup_points": null,
+        "in_app_calls": [],
+        "optimal_distance_km": 8.3,
+        "optimal_duration_min": 17.6,
+        "optimal_route_source": "PLATFORM_ROUTER",
+        "optimal_route_erp_sgd": 2.5,
+        "actual_distance_km": 9.9,
+        "actual_duration_min": 21.0,
+        "deviation_pct": 19.3,
+        "amended_optimal_distance_km": null,
+        "amended_optimal_duration_min": null,
+        "solo_optimal_distance_km": null,
+        "pickup_amended_at": null,
+        "dropoff_amended_at": null,
+        "original_pickup": null,
+        "original_dropoff": null,
+        "scheduled_at": null,
+        "optimal_route_via": [
+          "Victoria Street",
+          "Central Expressway (CTE)",
+          "Braddell Road",
+          "Upper Thomson Road"
+        ],
+        "actual_route_via": [
+          "Victoria Street",
+          "Central Expressway (CTE)",
+          "Bukit Timah Road",
+          "Adam Road",
+          "Lornie Road",
+          "Upper Thomson Road"
+        ],
+        "events": [
+          {
+            "event_type": "booking_confirmed",
+            "at": "2026-09-07T18:15:30+08:00",
+            "detail": "Rider R-79574 booked TRP-05016 from National Library, Victoria Street to Thomson Plaza, Upper Thomson Road. On-demand, metered fare.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_assigned",
+            "at": "2026-09-07T18:15:52+08:00",
+            "detail": "Driver D-57181 (Toyota Camry Hybrid, SLB 9559 T) assigned. ETA 5 min.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_arrived",
+            "at": "2026-09-07T18:21:22+08:00",
+            "detail": "Driver marked arrived at pickup (button).",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_started",
+            "at": "2026-09-07T18:22:37+08:00",
+            "detail": "Rider on board. Recommended route via Victoria Street, Central Expressway (CTE), Braddell Road, Upper Thomson Road, 8.3 km.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_deviation_detected",
+            "at": "2026-09-07T18:27:35+08:00",
+            "detail": "Vehicle left the recommended route at CTE / Bukit Timah Road exit: recommended Central Expressway (CTE), vehicle took Bukit Timah Road.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_rejoined",
+            "at": "2026-09-07T18:40:38+08:00",
+            "detail": "Vehicle rejoined the recommended route at Upper Thomson Road / Lornie Road.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_completed",
+            "at": "2026-09-07T18:43:37+08:00",
+            "detail": "Trip ended at Thomson Plaza, Upper Thomson Road. Recorded distance 9.9 km, duration 21 min 00 s.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "fare_finalised",
+            "at": "2026-09-07T18:43:43+08:00",
+            "detail": "Metered fare SGD 26.34 charged to rider payment method.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "fare_adjusted",
+            "at": "2026-09-08T00:23:37+08:00",
+            "detail": "Interim adjustment after a rider route complaint: SGD 1.68 refunded to rider and recovered from driver earnings pending review.",
+            "source": "PLATFORM_TELEMETRY"
+          }
+        ]
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05016",
+      "generated_at": "2026-09-08T02:10:37+08:00"
+    },
+    {
+      "evidence_id": "EV-GPS-05016",
+      "evidence_type": "GPS_TRACE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver-device trace, 43 fixes at 30 s from trip start to trip end; every fix reports horizontal accuracy (max 8 m) and a map-matched road; no interval exceeds 120 s.",
+        "assessed_at": "2026-09-08T02:10:42+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05016",
+        "points": [
+          {
+            "lat": 1.2977,
+            "lng": 103.8542,
+            "ts": "2026-09-07T18:22:37+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 3,
+            "road": "Victoria Street"
+          },
+          {
+            "lat": 1.299109,
+            "lng": 103.853109,
+            "ts": "2026-09-07T18:23:07+08:00",
+            "speed_kph": 22,
+            "accuracy_m": 4,
+            "road": "Victoria Street"
+          },
+          {
+            "lat": 1.300514,
+            "lng": 103.851961,
+            "ts": "2026-09-07T18:23:37+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 8,
+            "road": "Victoria Street"
+          },
+          {
+            "lat": 1.301908,
+            "lng": 103.850874,
+            "ts": "2026-09-07T18:24:07+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 6,
+            "road": "Victoria Street"
+          },
+          {
+            "lat": 1.303286,
+            "lng": 103.849716,
+            "ts": "2026-09-07T18:24:37+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 3,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.304586,
+            "lng": 103.848399,
+            "ts": "2026-09-07T18:25:07+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 5,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.305848,
+            "lng": 103.847166,
+            "ts": "2026-09-07T18:25:37+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 8,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.30713,
+            "lng": 103.845879,
+            "ts": "2026-09-07T18:26:07+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 7,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.308381,
+            "lng": 103.844601,
+            "ts": "2026-09-07T18:26:37+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 3,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.309659,
+            "lng": 103.84334,
+            "ts": "2026-09-07T18:27:07+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 7,
+            "road": "Central Expressway (CTE)"
+          },
+          {
+            "lat": 1.31075,
+            "lng": 103.84195,
+            "ts": "2026-09-07T18:27:37+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 3,
+            "road": "Bukit Timah Road"
+          },
+          {
+            "lat": 1.311791,
+            "lng": 103.840456,
+            "ts": "2026-09-07T18:28:07+08:00",
+            "speed_kph": 28,
+            "accuracy_m": 4,
+            "road": "Bukit Timah Road"
+          },
+          {
+            "lat": 1.312843,
+            "lng": 103.839036,
+            "ts": "2026-09-07T18:28:37+08:00",
+            "speed_kph": 21,
+            "accuracy_m": 3,
+            "road": "Bukit Timah Road"
+          },
+          {
+            "lat": 1.313866,
+            "lng": 103.837519,
+            "ts": "2026-09-07T18:29:07+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 4,
+            "road": "Bukit Timah Road"
+          },
+          {
+            "lat": 1.314944,
+            "lng": 103.83606,
+            "ts": "2026-09-07T18:29:37+08:00",
+            "speed_kph": 21,
+            "accuracy_m": 6,
+            "road": "Bukit Timah Road"
+          },
+          {
+            "lat": 1.315982,
+            "lng": 103.834589,
+            "ts": "2026-09-07T18:30:07+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 6,
+            "road": "Bukit Timah Road"
+          },
+          {
+            "lat": 1.316989,
+            "lng": 103.833158,
+            "ts": "2026-09-07T18:30:37+08:00",
+            "speed_kph": 22,
+            "accuracy_m": 8,
+            "road": "Bukit Timah Road"
+          },
+          {
+            "lat": 1.318054,
+            "lng": 103.83171,
+            "ts": "2026-09-07T18:31:07+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 8,
+            "road": "Bukit Timah Road"
+          },
+          {
+            "lat": 1.319048,
+            "lng": 103.830197,
+            "ts": "2026-09-07T18:31:37+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 7,
+            "road": "Bukit Timah Road"
+          },
+          {
+            "lat": 1.320147,
+            "lng": 103.828767,
+            "ts": "2026-09-07T18:32:07+08:00",
+            "speed_kph": 20,
+            "accuracy_m": 4,
+            "road": "Bukit Timah Road"
+          },
+          {
+            "lat": 1.321145,
+            "lng": 103.827283,
+            "ts": "2026-09-07T18:32:37+08:00",
+            "speed_kph": 22,
+            "accuracy_m": 7,
+            "road": "Bukit Timah Road"
+          },
+          {
+            "lat": 1.322196,
+            "lng": 103.825807,
+            "ts": "2026-09-07T18:33:07+08:00",
+            "speed_kph": 25,
+            "accuracy_m": 4,
+            "road": "Bukit Timah Road"
+          },
+          {
+            "lat": 1.323274,
+            "lng": 103.82436,
+            "ts": "2026-09-07T18:33:37+08:00",
+            "speed_kph": 26,
+            "accuracy_m": 5,
+            "road": "Bukit Timah Road"
+          },
+          {
+            "lat": 1.324468,
+            "lng": 103.823671,
+            "ts": "2026-09-07T18:34:07+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 7,
+            "road": "Lornie Road"
+          },
+          {
+            "lat": 1.326052,
+            "lng": 103.824552,
+            "ts": "2026-09-07T18:34:37+08:00",
+            "speed_kph": 24,
+            "accuracy_m": 5,
+            "road": "Lornie Road"
+          },
+          {
+            "lat": 1.327635,
+            "lng": 103.825419,
+            "ts": "2026-09-07T18:35:07+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 4,
+            "road": "Lornie Road"
+          },
+          {
+            "lat": 1.329176,
+            "lng": 103.826311,
+            "ts": "2026-09-07T18:35:37+08:00",
+            "speed_kph": 21,
+            "accuracy_m": 4,
+            "road": "Lornie Road"
+          },
+          {
+            "lat": 1.33079,
+            "lng": 103.827163,
+            "ts": "2026-09-07T18:36:07+08:00",
+            "speed_kph": 31,
+            "accuracy_m": 3,
+            "road": "Lornie Road"
+          },
+          {
+            "lat": 1.332369,
+            "lng": 103.828043,
+            "ts": "2026-09-07T18:36:37+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 3,
+            "road": "Lornie Road"
+          },
+          {
+            "lat": 1.333932,
+            "lng": 103.828893,
+            "ts": "2026-09-07T18:37:07+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 5,
+            "road": "Lornie Road"
+          },
+          {
+            "lat": 1.335486,
+            "lng": 103.829769,
+            "ts": "2026-09-07T18:37:37+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 5,
+            "road": "Lornie Road"
+          },
+          {
+            "lat": 1.33708,
+            "lng": 103.830628,
+            "ts": "2026-09-07T18:38:07+08:00",
+            "speed_kph": 23,
+            "accuracy_m": 3,
+            "road": "Lornie Road"
+          },
+          {
+            "lat": 1.338615,
+            "lng": 103.831491,
+            "ts": "2026-09-07T18:38:37+08:00",
+            "speed_kph": 27,
+            "accuracy_m": 5,
+            "road": "Lornie Road"
+          },
+          {
+            "lat": 1.340236,
+            "lng": 103.832349,
+            "ts": "2026-09-07T18:39:07+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 8,
+            "road": "Lornie Road"
+          },
+          {
+            "lat": 1.341789,
+            "lng": 103.833225,
+            "ts": "2026-09-07T18:39:37+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 6,
+            "road": "Lornie Road"
+          },
+          {
+            "lat": 1.343349,
+            "lng": 103.834099,
+            "ts": "2026-09-07T18:40:07+08:00",
+            "speed_kph": 30,
+            "accuracy_m": 3,
+            "road": "Lornie Road"
+          },
+          {
+            "lat": 1.3449,
+            "lng": 103.834946,
+            "ts": "2026-09-07T18:40:37+08:00",
+            "speed_kph": 22,
+            "accuracy_m": 6,
+            "road": "Lornie Road"
+          },
+          {
+            "lat": 1.346581,
+            "lng": 103.834306,
+            "ts": "2026-09-07T18:41:07+08:00",
+            "speed_kph": 29,
+            "accuracy_m": 7,
+            "road": "Upper Thomson Road"
+          },
+          {
+            "lat": 1.348214,
+            "lng": 103.833591,
+            "ts": "2026-09-07T18:41:37+08:00",
+            "speed_kph": 32,
+            "accuracy_m": 7,
+            "road": "Upper Thomson Road"
+          },
+          {
+            "lat": 1.349842,
+            "lng": 103.832899,
+            "ts": "2026-09-07T18:42:07+08:00",
+            "speed_kph": 23,
+            "accuracy_m": 3,
+            "road": "Upper Thomson Road"
+          },
+          {
+            "lat": 1.351518,
+            "lng": 103.832142,
+            "ts": "2026-09-07T18:42:37+08:00",
+            "speed_kph": 34,
+            "accuracy_m": 5,
+            "road": "Upper Thomson Road"
+          },
+          {
+            "lat": 1.353157,
+            "lng": 103.831424,
+            "ts": "2026-09-07T18:43:07+08:00",
+            "speed_kph": 33,
+            "accuracy_m": 5,
+            "road": "Upper Thomson Road"
+          },
+          {
+            "lat": 1.3548,
+            "lng": 103.8307,
+            "ts": "2026-09-07T18:43:37+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 8,
+            "road": "Upper Thomson Road"
+          }
+        ],
+        "point_count": 43,
+        "first_fix_at": "2026-09-07T18:22:37+08:00",
+        "last_fix_at": "2026-09-07T18:43:37+08:00",
+        "sample_interval_sec": 30.0,
+        "expected_interval_sec": 30.0,
+        "gaps": [],
+        "max_gap_sec": 30.0,
+        "coverage_pct": 100.0,
+        "trace_distance_km": 8.343,
+        "rider_track": []
+      },
+      "schema_version": "1.2.0",
+      "source": "DRIVER_DEVICE",
+      "trip_id": "TRP-05016",
+      "generated_at": "2026-09-08T02:10:37+08:00"
+    },
+    {
+      "evidence_id": "EV-CHAT-05016",
+      "evidence_type": "CHAT_LOG",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform chat log, 2 entries, contiguous; matches trip_record.chat_message_count.",
+        "assessed_at": "2026-09-08T02:10:42+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05016",
+        "messages": [
+          {
+            "msg_id": "MSG-05016-001",
+            "sender": "DRIVER",
+            "text": "Hi, waiting at the library drop-off, black Camry",
+            "sent_at": "2026-09-07T18:21:17+08:00",
+            "read_at": "2026-09-07T18:21:44+08:00",
+            "delivered_at": "2026-09-07T18:21:19+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-05016-002",
+            "sender": "RIDER",
+            "text": "thanks coming",
+            "sent_at": "2026-09-07T18:21:57+08:00",
+            "read_at": "2026-09-07T18:22:29+08:00",
+            "delivered_at": "2026-09-07T18:21:59+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          }
+        ],
+        "message_count": 2,
+        "first_message_at": "2026-09-07T18:21:17+08:00",
+        "last_message_at": "2026-09-07T18:21:57+08:00",
+        "truncated": false
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05016",
+      "generated_at": "2026-09-08T02:10:37+08:00"
+    },
+    {
+      "evidence_id": "EV-FARE-05016",
+      "evidence_type": "FARE_BREAKDOWN",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Payments ledger; itemised lines reconcile to total_charged; tolls_erp equals the gantry list.",
+        "assessed_at": "2026-09-08T02:10:42+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05016",
+        "currency": "SGD",
+        "fare_model": "METERED",
+        "cancellation_fee": 0.0,
+        "total_charged": 26.34,
+        "payment_status": "PARTIALLY_REFUNDED",
+        "refund_issued_sgd": 1.68,
+        "charged_at": "2026-09-07T18:43:43+08:00",
+        "surge_multiplier": 1.2,
+        "rate_card_id": "RC-SG-PREM-2026Q3",
+        "base_fare": 4.5,
+        "distance_fare": 10.4,
+        "time_fare": 6.3,
+        "surge_amount": 4.24,
+        "tolls_erp": 0.0,
+        "airport_surcharge": 0.0,
+        "platform_fee": 0.9,
+        "promo_discount": 0.0,
+        "waiting_time_fee": 0.0,
+        "quoted_fare_sgd": null,
+        "distance_charged_km": 9.9,
+        "time_charged_min": 21.0,
+        "per_km_rate_sgd": 1.05,
+        "per_min_rate_sgd": 0.3,
+        "erp_gantries": []
+      },
+      "schema_version": "1.2.0",
+      "source": "PAYMENTS_LEDGER",
+      "trip_id": "TRP-05016",
+      "generated_at": "2026-09-08T02:10:37+08:00"
+    },
+    {
+      "evidence_id": "EV-RPROF-05016",
+      "evidence_type": "RIDER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Rider profile snapshot at filing.",
+        "assessed_at": "2026-09-08T02:10:42+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "R-79574",
+        "party_role": "RIDER",
+        "snapshot_at": "2026-09-08T01:58:37+08:00",
+        "account_age_days": 1521,
+        "lifetime_trips": 873,
+        "rating": 4.75,
+        "prior_disputes_filed": 3,
+        "prior_disputes_upheld": 2,
+        "prior_no_show_flags": 0,
+        "cancellation_rate": 0.012,
+        "no_show_disputes_30d": 1,
+        "deviation_claims_60d": 0,
+        "deviation_claims_60d_substantiated": 0,
+        "disputes_with_counterparty_90d": 0,
+        "fraud_flags": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05016",
+      "generated_at": "2026-09-08T02:10:37+08:00"
+    },
+    {
+      "evidence_id": "EV-DPROF-05016",
+      "evidence_type": "DRIVER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver profile snapshot at filing.",
+        "assessed_at": "2026-09-08T02:10:42+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "D-57181",
+        "party_role": "DRIVER",
+        "snapshot_at": "2026-09-08T01:58:37+08:00",
+        "account_age_days": 2362,
+        "lifetime_trips": 5110,
+        "rating": 4.77,
+        "prior_disputes_filed": 0,
+        "prior_disputes_upheld": 0,
+        "prior_no_show_flags": 2,
+        "vehicle_type": "RYDE_PREMIUM",
+        "cancellation_rate": 0.022,
+        "prior_deviation_flags": 1,
+        "acceptance_rate": 0.95,
+        "active_region": "NORTH_EAST",
+        "deviation_flags_90d": 1,
+        "completed_trips_90d": 640,
+        "no_show_terminations_30d": 2,
+        "completed_trips_30d": 320,
+        "disputes_with_counterparty_90d": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05016",
+      "generated_at": "2026-09-08T02:10:37+08:00"
+    },
+    {
+      "evidence_id": "EV-ADVIS-05016-01",
+      "evidence_type": "TRAFFIC_ADVISORY",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "LTA historical traffic record for the queried road segment and window; retrieved by the platform, not supplied by a party.",
+        "assessed_at": "2026-09-08T02:10:42+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "advisory_id": "LTA-TI-260907-3222",
+        "provider": "LTA_DATAMALL_TRAFFIC_INCIDENTS",
+        "advisory_type": "HEAVY_TRAFFIC",
+        "road": "Central Expressway (CTE)",
+        "direction": "towards SLE",
+        "location_desc": "after Bukit Timah Road exit to Braddell Road",
+        "lat": 1.32,
+        "lng": 103.846,
+        "message": "(7/9)17:57 Heavy traffic on CTE (towards SLE) after Bukit Timah Rd Exit.",
+        "valid_from": "2026-09-07T17:57:37+08:00",
+        "valid_to": "2026-09-07T19:12:37+08:00",
+        "speed_band_min": 1,
+        "retrieved_at": "2026-09-08T02:08:37+08:00"
+      },
+      "schema_version": "1.2.0",
+      "source": "THIRD_PARTY_LTA",
+      "trip_id": "TRP-05016",
+      "generated_at": "2026-09-08T02:10:37+08:00"
+    }
+  ]
+}

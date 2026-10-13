@@ -1,0 +1,18 @@
+{
+  "expected_ruling": "FULL_REFUND",
+  "expected_amount_sgd": 5.0,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": [
+    "POL-NS-24",
+    "POL-NS-21",
+    "POL-NS-22",
+    "POL-NS-23",
+    "POL-NS-26",
+    "POL-GEN-22",
+    "POL-GEN-03",
+    "POL-GEN-01",
+    "POL-GEN-02"
+  ],
+  "reasoning": "EV-TRIP-05057: scheduled trip, pickup Blk 251 Hougang Ave 3 at 08:10; driver pressed 'arrived' 08:06:50, cancelled RIDER_NO_SHOW 08:19:10; EV-FARE-05057 shows SGD 5.00 fee charged. EV-GPS-05057 (weight 1.0, 47 fixes, accuracy <=9 m, no gaps) puts the driver stationary ~650 m from the booked pickup from 08:06:50 to cancellation, never closer than ~477 m; EV-CHAT-05057 confirms he was at 'Blk 215 carpark'. The arrival event is not corroborated within the 50 m STANDARD radius, so the driver never arrived at the pickup by the 08:15 deadline (scheduled+5 min): POL-NS-24 driver no-show, fee refunded in full; no valid free wait (POL-NS-21) so the fee cannot stand under POL-NS-22. Driver did message (08:07:10, 08:14:00) and call (08:15:20) before cancelling, so POL-NS-23 is met and no POL-NS-24 goodwill credit. Fee charged equals 5.00 (no NS-22 referral); no_show_cancellations_30d absent (no NS-25). Profiles context only (POL-GEN-01). Value 5.00 < 10, no fraud flags, no safety: AI final (POL-GEN-22, POL-NS-26). EV-ADVIS-05057-01 missing but carries no needed fact."
+}

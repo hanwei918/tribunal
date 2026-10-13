@@ -1,0 +1,8 @@
+{
+  "expected_ruling": "NO_ACTION",
+  "expected_amount_sgd": null,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": ["POL-NS-23", "POL-NS-21", "POL-NS-22", "POL-NS-26", "POL-GEN-03", "POL-GEN-22", "POL-GEN-02", "POL-GEN-01"],
+  "reasoning": "Driver-filed no-show claim seeking restoration of the SGD 5.00 fee reversed after the rider's complaint. EV-TRIP-05063 and EV-GPS-05063 (both 1.0) show the driver arrived at 18:36:50, stationary about 7 m from the pickup, and cancelled at 18:43:20, after the 300 s free wait (POL-NS-21). EV-CHAT-05063 shows a driver message at 18:37:10. However, the only in-app call in EV-TRIP-05063.in_app_calls was placed by the RIDER at 18:38:40, and the chat log has no voice-call entry. So the driver never placed a call to the rider before cancelling, and POL-NS-23 (v2.1 2.3, precedent 7.3) voids the fee: the rider is not charged and the driver gets no compensation. POL-NS-22 therefore does not license DRIVER_COMPENSATION. The present state (EV-FARE-05063: SGD 5.00 refunded to the rider and withheld from the driver) already matches this, so the filing driver's claim is unsupported: NO_ACTION (POL-GEN-03). The value is SGD 5.00, under 10, and there are no fraud flags, so the AI ruling is final (POL-GEN-22, POL-NS-26). There is no safety indicator. EV-ADVIS-05063-01 is MISSING (0.0) and not needed. Profile fields are context only (POL-GEN-01). No referrals apply."
+}

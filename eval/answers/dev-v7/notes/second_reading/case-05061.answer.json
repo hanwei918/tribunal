@@ -1,0 +1,8 @@
+{
+  "expected_ruling": "DRIVER_COMPENSATION",
+  "expected_amount_sgd": 5.00,
+  "expected_driver_compensation_sgd": 5.00,
+  "expected_referrals": [],
+  "governing_clauses": ["POL-NS-21", "POL-NS-22", "POL-NS-23", "POL-NS-26", "POL-GEN-22", "POL-GEN-03", "POL-GEN-02"],
+  "reasoning": "Driver-filed NO_SHOW_CHARGE, value 5.00 (<10, POL-GEN-22; final per POL-NS-26); no safety indicator, fraud_flags 0 both parties. Arrival: EV-TRIP-05061 arrived_at 17:53:40 corroborated by EV-GPS-05061 (weight 1.0, accuracy <=9 m) - driver stationary 90-98 m from the pickup pin 17:53:30-18:00:00, inside the 120 m LARGE_VENUE radius. On-demand, free wait 300 s from arrival ends 17:58:40; cancelled 18:00:10, after it (POL-NS-21, v2.1 2.1). Contact (POL-NS-23, v2.1 2.3): EV-CHAT-05061 shows driver messages 17:54:00 and 17:57:10 (both read); EV-TRIP-05061 in_app_calls shows a driver call 17:58:20, all before cancellation - obligation met, so the rider's 'never called' is contradicted. EV-FARE-05061 shows 5.00 charged, so no fee-amount referral. Fee stands (POL-NS-22, v2.1 2.2): the interim reversal is undone and the driver's claim is upheld as DRIVER_COMPENSATION 5.00 (POL-GEN-03; NO_ACTION would leave the reversal standing). EV-ADVIS-05061-01 is MISSING (weight 0.0) but carries no fact a no-show rule needs (POL-GEN-02). POL-NS-24 inapplicable (driver arrived); POL-NS-25 inapplicable (no_show_cancellations_30d absent); profile fields are context only (POL-GEN-01)."
+}

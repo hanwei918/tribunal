@@ -1,0 +1,989 @@
+{
+  "schema_version": "1.2.0",
+  "case_no": 5012,
+  "dispute": {
+    "case_no": 5012,
+    "dispute_id": "DSP-05012",
+    "trip_id": "TRP-05012",
+    "category": "ROUTE_DEVIATION",
+    "filed_at": "2026-08-31T01:27:57+08:00",
+    "filed_by": "RIDER",
+    "channel": "IN_APP_SUPPORT",
+    "amount_contested_sgd": 90.99,
+    "claim_text": "Late flight, I booked a ride from Jurong Point to T4. Driver took the PIE all the way and then the KPE instead of the AYE and MCE route shown in the app. The fare was far more than I expected. I want the whole fare refunded.",
+    "counterparty_statement": {
+      "text": "Night time PIE is faster, no difference much. Surge was high because it is late, not my fault.",
+      "submitted_by": "DRIVER",
+      "submitted_at": "2026-08-31T03:40:57+08:00"
+    },
+    "evidence_ids": [
+      "EV-TRIP-05012",
+      "EV-GPS-05012",
+      "EV-CHAT-05012",
+      "EV-FARE-05012",
+      "EV-RPROF-05012",
+      "EV-DPROF-05012",
+      "EV-ADVIS-05012-01"
+    ]
+  },
+  "evidence": [
+    {
+      "evidence_id": "EV-TRIP-05012",
+      "evidence_type": "TRIP_RECORD",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform trip record; timestamps causally ordered; recorded optimal and actual distances present; deviation and rejoin events carried in events[].",
+        "assessed_at": "2026-08-31T01:40:02+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05012",
+        "rider_id": "R-85462",
+        "driver_id": "D-88141",
+        "requested_at": "2026-08-30T23:40:10+08:00",
+        "accepted_at": "2026-08-30T23:40:27+08:00",
+        "arrived_at": "2026-08-30T23:45:57+08:00",
+        "started_at": "2026-08-30T23:47:57+08:00",
+        "ended_at": "2026-08-31T00:26:57+08:00",
+        "cancelled_at": null,
+        "status": "COMPLETED",
+        "cancelled_by": null,
+        "cancellation_reason_code": null,
+        "pickup": {
+          "label": "Jurong Point, Jurong West Central 2",
+          "lat": 1.3398,
+          "lng": 103.7065,
+          "venue_id": null
+        },
+        "dropoff": {
+          "label": "Changi Airport Terminal 4, Departure Drop-off",
+          "lat": 1.3378,
+          "lng": 103.9833,
+          "venue_id": null
+        },
+        "vehicle_type": "RYDE_XL",
+        "pickup_zone_class": "STANDARD",
+        "chat_message_count": 0,
+        "registered_pickup_points": null,
+        "in_app_calls": [],
+        "optimal_distance_km": 38.3,
+        "optimal_duration_min": 37.2,
+        "optimal_route_source": "PLATFORM_ROUTER",
+        "optimal_route_erp_sgd": 0.0,
+        "actual_distance_km": 40.1,
+        "actual_duration_min": 39.0,
+        "deviation_pct": 4.7,
+        "amended_optimal_distance_km": null,
+        "amended_optimal_duration_min": null,
+        "solo_optimal_distance_km": null,
+        "pickup_amended_at": null,
+        "dropoff_amended_at": null,
+        "original_pickup": null,
+        "original_dropoff": null,
+        "scheduled_at": null,
+        "optimal_route_via": [
+          "Jurong West Central 2",
+          "Ayer Rajah Expressway (AYE)",
+          "Marina Coastal Expressway (MCE)",
+          "East Coast Parkway (ECP)",
+          "Airport Boulevard"
+        ],
+        "actual_route_via": [
+          "Jurong West Central 2",
+          "Pan-Island Expressway (PIE)",
+          "Kallang-Paya Lebar Expressway (KPE)",
+          "East Coast Parkway (ECP)",
+          "Airport Boulevard"
+        ],
+        "events": [
+          {
+            "event_type": "booking_confirmed",
+            "at": "2026-08-30T23:40:10+08:00",
+            "detail": "Rider R-85462 booked TRP-05012 from Jurong Point, Jurong West Central 2 to Changi Airport Terminal 4, Departure Drop-off. On-demand, metered fare.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_assigned",
+            "at": "2026-08-30T23:40:27+08:00",
+            "detail": "Driver D-88141 (Kia Carnival, SLS 4443 L) assigned. ETA 5 min.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_arrived",
+            "at": "2026-08-30T23:45:57+08:00",
+            "detail": "Driver marked arrived at pickup (button).",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_started",
+            "at": "2026-08-30T23:47:57+08:00",
+            "detail": "Rider on board. Recommended route via Jurong West Central 2, Ayer Rajah Expressway (AYE), Marina Coastal Expressway (MCE), East Coast Parkway (ECP), Airport Boulevard, 38.3 km.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_deviation_detected",
+            "at": "2026-08-30T23:50:00+08:00",
+            "detail": "Vehicle left the recommended route at Jurong West Avenue 2 / PIE slip road: recommended Ayer Rajah Expressway (AYE), vehicle took Pan-Island Expressway (PIE).",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "route_rejoined",
+            "at": "2026-08-31T00:14:25+08:00",
+            "detail": "Vehicle rejoined the recommended route at ECP / KPE interchange.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_completed",
+            "at": "2026-08-31T00:26:57+08:00",
+            "detail": "Trip ended at Changi Airport Terminal 4, Departure Drop-off. Recorded distance 40.1 km, duration 39 min 00 s.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "fare_finalised",
+            "at": "2026-08-31T00:27:03+08:00",
+            "detail": "Metered fare SGD 90.99 charged to rider payment method.",
+            "source": "PLATFORM_TELEMETRY"
+          }
+        ]
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05012",
+      "generated_at": "2026-08-31T01:39:57+08:00"
+    },
+    {
+      "evidence_id": "EV-GPS-05012",
+      "evidence_type": "GPS_TRACE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver-device trace, 79 fixes at 30 s from trip start to trip end; every fix reports horizontal accuracy (max 8 m) and a map-matched road; no interval exceeds 120 s.",
+        "assessed_at": "2026-08-31T01:40:02+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05012",
+        "points": [
+          {
+            "lat": 1.3398,
+            "lng": 103.7065,
+            "ts": "2026-08-30T23:47:57+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 4,
+            "road": "Jurong West Central 2"
+          },
+          {
+            "lat": 1.339857,
+            "lng": 103.71044,
+            "ts": "2026-08-30T23:48:27+08:00",
+            "speed_kph": 49,
+            "accuracy_m": 6,
+            "road": "Jurong West Central 2"
+          },
+          {
+            "lat": 1.339923,
+            "lng": 103.714354,
+            "ts": "2026-08-30T23:48:57+08:00",
+            "speed_kph": 64,
+            "accuracy_m": 4,
+            "road": "Jurong West Central 2"
+          },
+          {
+            "lat": 1.339961,
+            "lng": 103.718228,
+            "ts": "2026-08-30T23:49:27+08:00",
+            "speed_kph": 54,
+            "accuracy_m": 5,
+            "road": "Jurong West Central 2"
+          },
+          {
+            "lat": 1.338743,
+            "lng": 103.721762,
+            "ts": "2026-08-30T23:49:57+08:00",
+            "speed_kph": 73,
+            "accuracy_m": 5,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.336485,
+            "lng": 103.724968,
+            "ts": "2026-08-30T23:50:27+08:00",
+            "speed_kph": 76,
+            "accuracy_m": 6,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.334197,
+            "lng": 103.728129,
+            "ts": "2026-08-30T23:50:57+08:00",
+            "speed_kph": 67,
+            "accuracy_m": 3,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.331887,
+            "lng": 103.731367,
+            "ts": "2026-08-30T23:51:27+08:00",
+            "speed_kph": 65,
+            "accuracy_m": 8,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.329636,
+            "lng": 103.734558,
+            "ts": "2026-08-30T23:51:57+08:00",
+            "speed_kph": 73,
+            "accuracy_m": 4,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.327354,
+            "lng": 103.7377,
+            "ts": "2026-08-30T23:52:27+08:00",
+            "speed_kph": 43,
+            "accuracy_m": 4,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.325094,
+            "lng": 103.740902,
+            "ts": "2026-08-30T23:52:57+08:00",
+            "speed_kph": 55,
+            "accuracy_m": 5,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.322852,
+            "lng": 103.74409,
+            "ts": "2026-08-30T23:53:27+08:00",
+            "speed_kph": 67,
+            "accuracy_m": 8,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.3205,
+            "lng": 103.7473,
+            "ts": "2026-08-30T23:53:57+08:00",
+            "speed_kph": 65,
+            "accuracy_m": 8,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.318281,
+            "lng": 103.750497,
+            "ts": "2026-08-30T23:54:27+08:00",
+            "speed_kph": 54,
+            "accuracy_m": 5,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.316007,
+            "lng": 103.753681,
+            "ts": "2026-08-30T23:54:57+08:00",
+            "speed_kph": 49,
+            "accuracy_m": 7,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.313733,
+            "lng": 103.756841,
+            "ts": "2026-08-30T23:55:27+08:00",
+            "speed_kph": 47,
+            "accuracy_m": 6,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.311449,
+            "lng": 103.760039,
+            "ts": "2026-08-30T23:55:57+08:00",
+            "speed_kph": 56,
+            "accuracy_m": 7,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.309172,
+            "lng": 103.763244,
+            "ts": "2026-08-30T23:56:27+08:00",
+            "speed_kph": 49,
+            "accuracy_m": 3,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.306891,
+            "lng": 103.76646,
+            "ts": "2026-08-30T23:56:57+08:00",
+            "speed_kph": 54,
+            "accuracy_m": 3,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.304594,
+            "lng": 103.769647,
+            "ts": "2026-08-30T23:57:27+08:00",
+            "speed_kph": 64,
+            "accuracy_m": 4,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.30232,
+            "lng": 103.772792,
+            "ts": "2026-08-30T23:57:57+08:00",
+            "speed_kph": 77,
+            "accuracy_m": 5,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.300055,
+            "lng": 103.776021,
+            "ts": "2026-08-30T23:58:27+08:00",
+            "speed_kph": 56,
+            "accuracy_m": 5,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.297806,
+            "lng": 103.77921,
+            "ts": "2026-08-30T23:58:57+08:00",
+            "speed_kph": 53,
+            "accuracy_m": 4,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.295506,
+            "lng": 103.782369,
+            "ts": "2026-08-30T23:59:27+08:00",
+            "speed_kph": 63,
+            "accuracy_m": 5,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.293221,
+            "lng": 103.785605,
+            "ts": "2026-08-30T23:59:57+08:00",
+            "speed_kph": 73,
+            "accuracy_m": 4,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.290953,
+            "lng": 103.788779,
+            "ts": "2026-08-31T00:00:27+08:00",
+            "speed_kph": 67,
+            "accuracy_m": 6,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.288724,
+            "lng": 103.791936,
+            "ts": "2026-08-31T00:00:57+08:00",
+            "speed_kph": 69,
+            "accuracy_m": 4,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.286398,
+            "lng": 103.795186,
+            "ts": "2026-08-31T00:01:27+08:00",
+            "speed_kph": 66,
+            "accuracy_m": 8,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.28417,
+            "lng": 103.798356,
+            "ts": "2026-08-31T00:01:57+08:00",
+            "speed_kph": 63,
+            "accuracy_m": 7,
+            "road": "Pan-Island Expressway (PIE)"
+          },
+          {
+            "lat": 1.284136,
+            "lng": 103.802098,
+            "ts": "2026-08-31T00:02:27+08:00",
+            "speed_kph": 60,
+            "accuracy_m": 4,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.284683,
+            "lng": 103.805971,
+            "ts": "2026-08-31T00:02:57+08:00",
+            "speed_kph": 50,
+            "accuracy_m": 8,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.285239,
+            "lng": 103.809894,
+            "ts": "2026-08-31T00:03:27+08:00",
+            "speed_kph": 61,
+            "accuracy_m": 5,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.285759,
+            "lng": 103.813761,
+            "ts": "2026-08-31T00:03:57+08:00",
+            "speed_kph": 66,
+            "accuracy_m": 8,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.286333,
+            "lng": 103.817613,
+            "ts": "2026-08-31T00:04:27+08:00",
+            "speed_kph": 52,
+            "accuracy_m": 6,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.286832,
+            "lng": 103.821518,
+            "ts": "2026-08-31T00:04:57+08:00",
+            "speed_kph": 65,
+            "accuracy_m": 5,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.287359,
+            "lng": 103.825394,
+            "ts": "2026-08-31T00:05:27+08:00",
+            "speed_kph": 77,
+            "accuracy_m": 5,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.287911,
+            "lng": 103.829234,
+            "ts": "2026-08-31T00:05:57+08:00",
+            "speed_kph": 50,
+            "accuracy_m": 7,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.288426,
+            "lng": 103.833154,
+            "ts": "2026-08-31T00:06:27+08:00",
+            "speed_kph": 56,
+            "accuracy_m": 6,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.288981,
+            "lng": 103.837017,
+            "ts": "2026-08-31T00:06:57+08:00",
+            "speed_kph": 76,
+            "accuracy_m": 4,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.289506,
+            "lng": 103.840919,
+            "ts": "2026-08-31T00:07:27+08:00",
+            "speed_kph": 61,
+            "accuracy_m": 4,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.290067,
+            "lng": 103.844816,
+            "ts": "2026-08-31T00:07:57+08:00",
+            "speed_kph": 63,
+            "accuracy_m": 8,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.290586,
+            "lng": 103.848672,
+            "ts": "2026-08-31T00:08:27+08:00",
+            "speed_kph": 54,
+            "accuracy_m": 6,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.291125,
+            "lng": 103.852587,
+            "ts": "2026-08-31T00:08:57+08:00",
+            "speed_kph": 72,
+            "accuracy_m": 7,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.291684,
+            "lng": 103.856465,
+            "ts": "2026-08-31T00:09:27+08:00",
+            "speed_kph": 54,
+            "accuracy_m": 7,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.292211,
+            "lng": 103.860314,
+            "ts": "2026-08-31T00:09:57+08:00",
+            "speed_kph": 72,
+            "accuracy_m": 7,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.292744,
+            "lng": 103.864212,
+            "ts": "2026-08-31T00:10:27+08:00",
+            "speed_kph": 73,
+            "accuracy_m": 4,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.293281,
+            "lng": 103.86812,
+            "ts": "2026-08-31T00:10:57+08:00",
+            "speed_kph": 59,
+            "accuracy_m": 4,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.293819,
+            "lng": 103.871987,
+            "ts": "2026-08-31T00:11:27+08:00",
+            "speed_kph": 63,
+            "accuracy_m": 4,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.29437,
+            "lng": 103.875843,
+            "ts": "2026-08-31T00:11:57+08:00",
+            "speed_kph": 62,
+            "accuracy_m": 7,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.294864,
+            "lng": 103.879725,
+            "ts": "2026-08-31T00:12:27+08:00",
+            "speed_kph": 62,
+            "accuracy_m": 7,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.295402,
+            "lng": 103.883638,
+            "ts": "2026-08-31T00:12:57+08:00",
+            "speed_kph": 53,
+            "accuracy_m": 4,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.295926,
+            "lng": 103.887506,
+            "ts": "2026-08-31T00:13:27+08:00",
+            "speed_kph": 54,
+            "accuracy_m": 7,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.296528,
+            "lng": 103.891375,
+            "ts": "2026-08-31T00:13:57+08:00",
+            "speed_kph": 44,
+            "accuracy_m": 4,
+            "road": "Kallang-Paya Lebar Expressway (KPE)"
+          },
+          {
+            "lat": 1.297097,
+            "lng": 103.895238,
+            "ts": "2026-08-31T00:14:27+08:00",
+            "speed_kph": 44,
+            "accuracy_m": 5,
+            "road": "East Coast Parkway (ECP)"
+          },
+          {
+            "lat": 1.298307,
+            "lng": 103.898951,
+            "ts": "2026-08-31T00:14:57+08:00",
+            "speed_kph": 51,
+            "accuracy_m": 7,
+            "road": "East Coast Parkway (ECP)"
+          },
+          {
+            "lat": 1.299544,
+            "lng": 103.902725,
+            "ts": "2026-08-31T00:15:27+08:00",
+            "speed_kph": 53,
+            "accuracy_m": 5,
+            "road": "East Coast Parkway (ECP)"
+          },
+          {
+            "lat": 1.300706,
+            "lng": 103.906449,
+            "ts": "2026-08-31T00:15:57+08:00",
+            "speed_kph": 75,
+            "accuracy_m": 7,
+            "road": "East Coast Parkway (ECP)"
+          },
+          {
+            "lat": 1.301952,
+            "lng": 103.910107,
+            "ts": "2026-08-31T00:16:27+08:00",
+            "speed_kph": 54,
+            "accuracy_m": 7,
+            "road": "East Coast Parkway (ECP)"
+          },
+          {
+            "lat": 1.303167,
+            "lng": 103.913887,
+            "ts": "2026-08-31T00:16:57+08:00",
+            "speed_kph": 70,
+            "accuracy_m": 5,
+            "road": "East Coast Parkway (ECP)"
+          },
+          {
+            "lat": 1.30439,
+            "lng": 103.917561,
+            "ts": "2026-08-31T00:17:27+08:00",
+            "speed_kph": 46,
+            "accuracy_m": 7,
+            "road": "East Coast Parkway (ECP)"
+          },
+          {
+            "lat": 1.305611,
+            "lng": 103.921311,
+            "ts": "2026-08-31T00:17:57+08:00",
+            "speed_kph": 76,
+            "accuracy_m": 6,
+            "road": "East Coast Parkway (ECP)"
+          },
+          {
+            "lat": 1.30682,
+            "lng": 103.925039,
+            "ts": "2026-08-31T00:18:27+08:00",
+            "speed_kph": 56,
+            "accuracy_m": 5,
+            "road": "East Coast Parkway (ECP)"
+          },
+          {
+            "lat": 1.307998,
+            "lng": 103.92878,
+            "ts": "2026-08-31T00:18:57+08:00",
+            "speed_kph": 70,
+            "accuracy_m": 7,
+            "road": "East Coast Parkway (ECP)"
+          },
+          {
+            "lat": 1.309283,
+            "lng": 103.932514,
+            "ts": "2026-08-31T00:19:27+08:00",
+            "speed_kph": 45,
+            "accuracy_m": 4,
+            "road": "East Coast Parkway (ECP)"
+          },
+          {
+            "lat": 1.310497,
+            "lng": 103.936216,
+            "ts": "2026-08-31T00:19:57+08:00",
+            "speed_kph": 53,
+            "accuracy_m": 4,
+            "road": "East Coast Parkway (ECP)"
+          },
+          {
+            "lat": 1.3117,
+            "lng": 103.939953,
+            "ts": "2026-08-31T00:20:27+08:00",
+            "speed_kph": 74,
+            "accuracy_m": 4,
+            "road": "East Coast Parkway (ECP)"
+          },
+          {
+            "lat": 1.312917,
+            "lng": 103.943696,
+            "ts": "2026-08-31T00:20:57+08:00",
+            "speed_kph": 57,
+            "accuracy_m": 3,
+            "road": "East Coast Parkway (ECP)"
+          },
+          {
+            "lat": 1.314126,
+            "lng": 103.947391,
+            "ts": "2026-08-31T00:21:27+08:00",
+            "speed_kph": 56,
+            "accuracy_m": 6,
+            "road": "East Coast Parkway (ECP)"
+          },
+          {
+            "lat": 1.315658,
+            "lng": 103.950957,
+            "ts": "2026-08-31T00:21:57+08:00",
+            "speed_kph": 64,
+            "accuracy_m": 5,
+            "road": "East Coast Parkway (ECP)"
+          },
+          {
+            "lat": 1.317863,
+            "lng": 103.954179,
+            "ts": "2026-08-31T00:22:27+08:00",
+            "speed_kph": 63,
+            "accuracy_m": 4,
+            "road": "East Coast Parkway (ECP)"
+          },
+          {
+            "lat": 1.320094,
+            "lng": 103.957446,
+            "ts": "2026-08-31T00:22:57+08:00",
+            "speed_kph": 45,
+            "accuracy_m": 3,
+            "road": "East Coast Parkway (ECP)"
+          },
+          {
+            "lat": 1.322303,
+            "lng": 103.96065,
+            "ts": "2026-08-31T00:23:27+08:00",
+            "speed_kph": 49,
+            "accuracy_m": 7,
+            "road": "East Coast Parkway (ECP)"
+          },
+          {
+            "lat": 1.324531,
+            "lng": 103.963918,
+            "ts": "2026-08-31T00:23:57+08:00",
+            "speed_kph": 61,
+            "accuracy_m": 6,
+            "road": "East Coast Parkway (ECP)"
+          },
+          {
+            "lat": 1.32671,
+            "lng": 103.967145,
+            "ts": "2026-08-31T00:24:27+08:00",
+            "speed_kph": 70,
+            "accuracy_m": 3,
+            "road": "East Coast Parkway (ECP)"
+          },
+          {
+            "lat": 1.328936,
+            "lng": 103.970364,
+            "ts": "2026-08-31T00:24:57+08:00",
+            "speed_kph": 50,
+            "accuracy_m": 5,
+            "road": "East Coast Parkway (ECP)"
+          },
+          {
+            "lat": 1.331183,
+            "lng": 103.973584,
+            "ts": "2026-08-31T00:25:27+08:00",
+            "speed_kph": 77,
+            "accuracy_m": 5,
+            "road": "East Coast Parkway (ECP)"
+          },
+          {
+            "lat": 1.333313,
+            "lng": 103.976826,
+            "ts": "2026-08-31T00:25:57+08:00",
+            "speed_kph": 67,
+            "accuracy_m": 4,
+            "road": "East Coast Parkway (ECP)"
+          },
+          {
+            "lat": 1.335578,
+            "lng": 103.980064,
+            "ts": "2026-08-31T00:26:27+08:00",
+            "speed_kph": 63,
+            "accuracy_m": 4,
+            "road": "East Coast Parkway (ECP)"
+          },
+          {
+            "lat": 1.3378,
+            "lng": 103.9833,
+            "ts": "2026-08-31T00:26:57+08:00",
+            "speed_kph": 0,
+            "accuracy_m": 5,
+            "road": "Airport Boulevard"
+          }
+        ],
+        "point_count": 79,
+        "first_fix_at": "2026-08-30T23:47:57+08:00",
+        "last_fix_at": "2026-08-31T00:26:57+08:00",
+        "sample_interval_sec": 30.0,
+        "expected_interval_sec": 30.0,
+        "gaps": [],
+        "max_gap_sec": 30.0,
+        "coverage_pct": 100.0,
+        "trace_distance_km": 33.934,
+        "rider_track": []
+      },
+      "schema_version": "1.2.0",
+      "source": "DRIVER_DEVICE",
+      "trip_id": "TRP-05012",
+      "generated_at": "2026-08-31T01:39:57+08:00"
+    },
+    {
+      "evidence_id": "EV-CHAT-05012",
+      "evidence_type": "CHAT_LOG",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Platform chat log, 0 entries, contiguous; matches trip_record.chat_message_count.",
+        "assessed_at": "2026-08-31T01:40:02+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05012",
+        "messages": [],
+        "message_count": 0,
+        "first_message_at": null,
+        "last_message_at": null,
+        "truncated": false
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05012",
+      "generated_at": "2026-08-31T01:39:57+08:00"
+    },
+    {
+      "evidence_id": "EV-FARE-05012",
+      "evidence_type": "FARE_BREAKDOWN",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Payments ledger; itemised lines reconcile to total_charged; tolls_erp equals the gantry list.",
+        "assessed_at": "2026-08-31T01:40:02+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-05012",
+        "currency": "SGD",
+        "fare_model": "METERED",
+        "cancellation_fee": 0.0,
+        "total_charged": 90.99,
+        "payment_status": "CHARGED",
+        "refund_issued_sgd": 0.0,
+        "charged_at": "2026-08-31T00:27:03+08:00",
+        "surge_multiplier": 1.8,
+        "rate_card_id": "RC-SG-RYDEXL-2026Q3",
+        "base_fare": 3.8,
+        "distance_fare": 36.89,
+        "time_fare": 9.36,
+        "surge_amount": 40.04,
+        "tolls_erp": 0.0,
+        "airport_surcharge": 0.0,
+        "platform_fee": 0.9,
+        "promo_discount": 0.0,
+        "waiting_time_fee": 0.0,
+        "quoted_fare_sgd": null,
+        "distance_charged_km": 40.1,
+        "time_charged_min": 39.0,
+        "per_km_rate_sgd": 0.92,
+        "per_min_rate_sgd": 0.24,
+        "erp_gantries": []
+      },
+      "schema_version": "1.2.0",
+      "source": "PAYMENTS_LEDGER",
+      "trip_id": "TRP-05012",
+      "generated_at": "2026-08-31T01:39:57+08:00"
+    },
+    {
+      "evidence_id": "EV-RPROF-05012",
+      "evidence_type": "RIDER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Rider profile snapshot at filing.",
+        "assessed_at": "2026-08-31T01:40:02+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "R-85462",
+        "party_role": "RIDER",
+        "snapshot_at": "2026-08-31T01:27:57+08:00",
+        "account_age_days": 2145,
+        "lifetime_trips": 265,
+        "rating": 4.36,
+        "prior_disputes_filed": 0,
+        "prior_disputes_upheld": 0,
+        "prior_no_show_flags": 0,
+        "cancellation_rate": 0.063,
+        "no_show_disputes_30d": 0,
+        "deviation_claims_60d": 1,
+        "deviation_claims_60d_substantiated": 0,
+        "disputes_with_counterparty_90d": 0,
+        "fraud_flags": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05012",
+      "generated_at": "2026-08-31T01:39:57+08:00"
+    },
+    {
+      "evidence_id": "EV-DPROF-05012",
+      "evidence_type": "DRIVER_PROFILE",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver profile snapshot at filing.",
+        "assessed_at": "2026-08-31T01:40:02+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "D-88141",
+        "party_role": "DRIVER",
+        "snapshot_at": "2026-08-31T01:27:57+08:00",
+        "account_age_days": 1714,
+        "lifetime_trips": 7234,
+        "rating": 4.88,
+        "prior_disputes_filed": 2,
+        "prior_disputes_upheld": 1,
+        "prior_no_show_flags": 0,
+        "vehicle_type": "RYDE_XL",
+        "cancellation_rate": 0.059,
+        "prior_deviation_flags": 1,
+        "acceptance_rate": 0.88,
+        "active_region": "NORTH_EAST",
+        "deviation_flags_90d": 1,
+        "completed_trips_90d": 862,
+        "no_show_terminations_30d": 2,
+        "completed_trips_30d": 104,
+        "disputes_with_counterparty_90d": 0,
+        "fraud_flags": 0
+      },
+      "schema_version": "1.2.0",
+      "source": "PLATFORM_TELEMETRY",
+      "trip_id": "TRP-05012",
+      "generated_at": "2026-08-31T01:39:57+08:00"
+    },
+    {
+      "evidence_id": "EV-ADVIS-05012-01",
+      "evidence_type": "TRAFFIC_ADVISORY",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "LTA historical traffic record for the queried road segment and window; retrieved by the platform, not supplied by a party.",
+        "assessed_at": "2026-08-31T01:40:02+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "advisory_id": "LTA-TI-260830-4565",
+        "provider": "LTA_DATAMALL_SPEED_BANDS",
+        "advisory_type": "NONE",
+        "road": "Ayer Rajah Expressway (AYE)",
+        "direction": "towards City",
+        "location_desc": "Jurong Town Hall Road to MCE",
+        "lat": 1.3,
+        "lng": 103.78,
+        "message": "No incident, roadwork or closure recorded for the queried segment and window. Speed bands 6-8 throughout.",
+        "valid_from": "2026-08-30T23:17:57+08:00",
+        "valid_to": "2026-08-31T00:57:57+08:00",
+        "speed_band_min": 7,
+        "retrieved_at": "2026-08-31T01:37:57+08:00"
+      },
+      "schema_version": "1.2.0",
+      "source": "THIRD_PARTY_LTA",
+      "trip_id": "TRP-05012",
+      "generated_at": "2026-08-31T01:39:57+08:00"
+    }
+  ]
+}

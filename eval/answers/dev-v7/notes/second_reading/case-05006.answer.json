@@ -1,0 +1,19 @@
+{
+  "expected_ruling": "NO_ACTION",
+  "expected_amount_sgd": null,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": [
+    "POL-RD-21",
+    "POL-RD-22",
+    "POL-RD-23",
+    "POL-RD-24",
+    "POL-RD-25",
+    "POL-GEN-03",
+    "POL-GEN-22",
+    "POL-GEN-02",
+    "POL-GEN-01",
+    "POL-GEN-21"
+  ],
+  "reasoning": "Driver-filed RD dispute against the SGD 1.37 interim recovery (EV-TRIP-05006 fare_adjusted). POL-RD-22: deviation = 14.6 - 12.7 = 1.9 km (EV-TRIP-05006), over the 1 km tolerance; detour via West Coast Hwy/Pasir Panjang Rd shown by EV-GPS-05006. POL-RD-21: driver gave notice before the 18:05:06 deviation and rider replied 'ok' (EV-CHAT-05006 MSG-05006-003/004). POL-RD-23: the advisory on the recommended route, EV-ADVIS-05006-01 (AYE Clementi Rd-Keppel Viaduct, trip window), is type NONE, no incident, speed bands 4-6; EV-ADVIS-05006-02 roadwork is on Pasir Panjang Rd, the detour, not the recommended route. Not traffic-justified, so POL-RD-24 row (d) applies whatever the notice: excess distance fare 1.9 x 0.72 = 1.368 -> 1.37 (no surge), equal to the refund already issued (EV-FARE-05006). The driver's claim is unsupported: POL-GEN-03 NO_ACTION, present state stands, no further money moves. Value 1.37 < 10, no fraud_flags, all artifacts weight 1.0, no safety indicator: AI ruling final (POL-GEN-22, POL-RD-25, POL-GEN-02, POL-GEN-21). Profile history is context only (POL-GEN-01)."
+}

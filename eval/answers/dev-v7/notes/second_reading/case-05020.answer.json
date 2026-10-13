@@ -1,0 +1,17 @@
+{
+  "expected_ruling": "NO_ACTION",
+  "expected_amount_sgd": null,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": [
+    "POL-RD-22",
+    "POL-RD-23",
+    "POL-RD-24",
+    "POL-RD-21",
+    "POL-GEN-03",
+    "POL-GEN-22",
+    "POL-RD-25",
+    "POL-GEN-02"
+  ],
+  "reasoning": "Driver filed to recover SGD 1.30 deducted after the rider's complaint. Deviation per POL-RD-22: EV-TRIP-05020 actual 11.6 km - optimal 9.8 km = 1.8 km (>1 km tolerance); EV-GPS-05020 confirms the Holland/Napier Rd route, left Bukit Timah Rd at 18:44. POL-RD-23: EV-ADVIS-05020-01 closure on Bukit Timah Rd was valid 00:30-05:30 on 14 Sep; the trip ran 18:34-19:00, so no advisory overlaps the trip window and the reroute is not traffic-justified. The chat notice and rider 'ok sure' (EV-CHAT-05020, 18:41, before deviation) do not matter under POL-RD-24 row (d): rider is owed the excess distance fare, 1.8 x 0.72 (EV-FARE-05020, no surge) = SGD 1.30. The interim adjustment (EV-TRIP-05020 fare_adjusted; EV-FARE-05020 refund_issued 1.30) already gave the rider exactly that, so the driver's claim is unsupported and the present state stands: NO_ACTION per POL-GEN-03, no money moves. Value 1.30 < 10, no fraud flags, all artifacts weight 1.0 (POL-GEN-22, POL-RD-25, POL-GEN-02): AI ruling final. No safety indicator; no referral."
+}

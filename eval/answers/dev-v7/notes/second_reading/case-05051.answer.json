@@ -1,0 +1,8 @@
+{
+  "expected_ruling": "DRIVER_COMPENSATION",
+  "expected_amount_sgd": 5.00,
+  "expected_driver_compensation_sgd": 5.00,
+  "expected_referrals": [],
+  "governing_clauses": ["POL-NS-21", "POL-NS-22", "POL-NS-23", "POL-NS-26", "POL-GEN-22", "POL-GEN-03"],
+  "reasoning": "On-demand trip: free wait runs from arrival (POL-NS-21, v2.1 2.1). EV-TRIP-05051 arrived_at 08:04:20, corroborated by EV-GPS-05051 (fixes within ~5 m of the STANDARD pickup from 08:04:31 to 08:10:01, all within 50 m, accuracy <=8 m, no gaps, weight 1.0). Free wait ended 08:09:20; driver cancelled 08:10:05, after it. Contact obligation met (POL-NS-23, v2.1 2.3): EV-CHAT-05051 driver messages 08:04:40 and 08:08:30 (both read) and an in-app call 08:07:10 in EV-TRIP-05051, all before cancellation. 'Drop-off point' wording is a slip; GPS and 'in front of Blk 128' place the driver at the pickup. Rider's slow lift is no policy exception; rider's own message came at 08:11:40, after cancellation. POL-NS-24 inapplicable (driver arrived). EV-FARE-05051 charged 5.00 = fixed fee, so no POL-NS-22 referral; fee stands: DRIVER_COMPENSATION 5.00 (POL-NS-22, v2.1 2.2; POL-GEN-03). Value 5.00 < 10.00, no fraud_flags, no safety indicator: AI final (POL-GEN-22, POL-NS-26). EV-ADVIS-05051-01 MISSING (0.0) carries no deciding fact. Profile fields are context only (POL-GEN-01); no no_show_cancellations_30d, so no POL-NS-25 referral."
+}

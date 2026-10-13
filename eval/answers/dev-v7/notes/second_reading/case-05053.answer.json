@@ -1,0 +1,8 @@
+{
+  "expected_ruling": "FULL_REFUND",
+  "expected_amount_sgd": 5.00,
+  "expected_driver_compensation_sgd": null,
+  "expected_referrals": [],
+  "governing_clauses": ["POL-NS-23", "POL-NS-21", "POL-NS-22", "POL-NS-26", "POL-GEN-22", "POL-GEN-03", "POL-GEN-01"],
+  "reasoning": "On-demand trip; EV-TRIP-05053 arrival 12:15:30 corroborated by EV-GPS-05053 (fixes ~6 m from pickup, STANDARD 50 m radius, weight 1.0). Free wait (POL-NS-21) ran to 12:20:30; cancel at 12:21:10 was after it. POL-NS-23 needs at least one driver in-app chat message AND one in-app call before cancelled_at. Calls: two unanswered driver calls (12:17:55, 12:19:40) in EV-TRIP-05053. Chat: EV-CHAT-05053 (COMPLETE, weight 1.0, count matches trip record) holds a single RIDER message at 12:21:50, after cancellation; the driver sent no message. Obligation unmet, so the fee is voided: FULL_REFUND of the SGD 5.00 charged (EV-FARE-05053), no driver compensation (v2.1 2.3, precedent 7.3). Rider's phone being silent does not cure the missing chat. Fee equals 5.00, so no POL-NS-22 referral; POL-NS-25 counter absent and fee does not stand; driver arrived, so POL-NS-24 is inapplicable. Profile history is context only (POL-GEN-01). EV-ADVIS-05053-01 is MISSING (0.0) but carries no fact needed here. Value 5.00 < 10, no safety indicator, no fraud flags: AI ruling final (POL-GEN-22, POL-NS-26)."
+}

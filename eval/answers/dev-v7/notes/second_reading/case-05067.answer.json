@@ -1,0 +1,19 @@
+{
+  "expected_ruling": "DRIVER_COMPENSATION",
+  "expected_amount_sgd": 5.0,
+  "expected_driver_compensation_sgd": 5.0,
+  "expected_referrals": [],
+  "governing_clauses": [
+    "POL-NS-21",
+    "POL-NS-22",
+    "POL-NS-23",
+    "POL-NS-26",
+    "POL-NS-25",
+    "POL-GEN-22",
+    "POL-GEN-02",
+    "POL-GEN-03",
+    "POL-GEN-01",
+    "POL-GEN-25"
+  ],
+  "reasoning": "On-demand trip (EV-TRIP-05067): arrived 09:21:45, free wait 300 s ended 09:26:45 (POL-NS-21); driver cancelled 09:30:10, 505 s after arrival. EV-GPS-05067 (wt 1.0, 29 fixes, acc<=9 m, no gaps) puts driver within 5 m of the pickup from 09:21:50 to 09:29:50, inside the 50 m STANDARD radius, so the rider's 'never came' statement (no evidence id) is contradicted and discarded (POL-GEN-25). Contact met before cancellation (POL-NS-23): 3 chats in EV-CHAT-05067 (all read) and 2 in-app calls 09:24:10, 09:27:20. Fee 5.00 per EV-FARE-05067 stands; interim reversal does not change it: DRIVER_COMPENSATION 5.00, both fields equal (POL-NS-22, POL-GEN-03). Value 5.00 <10, but rider fraud_flags=3 raises the bar to 0.95 (POL-GEN-22, POL-NS-26); deciding facts sit on weight-1.0 artifacts so confidence can reach it (POL-GEN-02). EV-ADVIS-05067-01 is MISSING (0.0) but carries no no-show fact. POL-NS-24 n/a (driver arrived). POL-NS-25: no_show_cancellations_30d 1 (+1 =2) <3, no referral; fee is 5.00, no NS-22 referral. Other profile fields context only (POL-GEN-01). No safety indicator (POL-GEN-21)."
+}
