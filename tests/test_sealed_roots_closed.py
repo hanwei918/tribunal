@@ -2,14 +2,14 @@
 
 ``runs/wild/`` holds the held-out set's single run, ``runs/wild-v2/`` the second
 sealed set's, ``runs/sealed-v1/`` the third's, ``runs/sealed-v2/`` the fourth's,
-``runs/sealed-v3/`` the fifth's and ``runs/sealed-v4/`` the sixth's. Five of
+``runs/sealed-v3/`` the fifth's and ``runs/sealed-v4/`` the sixth's. All six of
 those runs have been made -- the fifth's was started once on 2026-10-13 and
-stopped after 8 of its 30 cases -- and those five roots are closed outright. The
-sixth's run has not been made, and its root accepts exactly one thing, the
-guarded plain run, which is the runner's own permit; every command here holds no
-permit, so it refuses that root too. So every command that would write under one
-of them has to refuse the whole of the root -- not only the run directory, and not
-only the spelling the path happens to be given in.
+stopped after 8 of its 30 cases, and the sixth's was made once on 2026-10-14 --
+and all six roots are closed outright. No root accepts even the guarded plain
+run any more, which is the runner's own permit; every command here holds no
+permit, so it refuses every one of them. So every command that would write under
+one of them has to refuse the whole of the root -- not only the run directory,
+and not only the spelling the path happens to be given in.
 
 Each test here is one of those commands, and each is run for **every** root: the
 six are named by their registrations rather than restated, so a further sealed
@@ -369,9 +369,9 @@ class CheckOnAClosedRootTests(ScratchRunsRootTestCase):
             self.addCleanup(patcher.stop)
 
     def test_a_closed_root_prints_the_closure_and_lists_no_cases(self):
-        # All five sealed sets have been run, so all five roots are closed and
-        # the plan branch below is reached only by emptying the lists. The closure
-        # is asserted for every root the registration says has been made, and the
+        # All six sealed sets have been run, so all six roots are closed and the
+        # plan branch below is reached only by emptying the lists. The closure is
+        # asserted for every root the registration says has been made, and the
         # list of those is pinned here, so a set cannot pass by being skipped.
         closed = [
             development_set
@@ -379,7 +379,7 @@ class CheckOnAClosedRootTests(ScratchRunsRootTestCase):
             if sets.sealed_root_is_closed(development_set)
         ]
         self.assertEqual(
-            ("wild", "wild-v2", "sealed-v1", "sealed-v2", "sealed-v3"),
+            ("wild", "wild-v2", "sealed-v1", "sealed-v2", "sealed-v3", "sealed-v4"),
             tuple(item.name for item in closed),
         )
         for development_set in closed:

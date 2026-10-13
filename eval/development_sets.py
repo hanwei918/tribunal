@@ -560,7 +560,9 @@ SEALED_V4 = DevelopmentSet(
         "the owner's prompt, Ryde's Dispute Resolution Policy v2.1, the version-7 "
         "policy files, the public contract, a format checker and the organisers' "
         "public sample case; no human reviewed its answers; nobody on the "
-        "development side has seen them; it is run once, at policy version 7"
+        "development side has seen them; it is run once, at policy version 7; its "
+        "run was made once on 2026-10-14 from the commit 8157af8, the commit the "
+        "annotated tag freeze-2026-10-14 points at"
     ),
     sealed=True,
     policy_version=V7_POLICY_VERSION,
@@ -1867,11 +1869,48 @@ def _print_stated_expectation(development_set: DevelopmentSet) -> None:
 # --------------------------------------------------------------------------
 # Reporting the sets separately and combined
 # --------------------------------------------------------------------------
+def run_dir_at_its_version(
+    development_set: DevelopmentSet, model: str, runs_dir: Path = RUNS_DIR
+) -> Path:
+    """Where one set's run for one model **actually is**, version level included.
+
+    :meth:`DevelopmentSet.run_dir` is the set's own root one level under
+    ``runs/``, and that is deliberately the un-versioned path: ``run_set``
+    asserts *that* path is not a headline directory, because a set whose results
+    landed in a model's corpus directory would change what the reported figure
+    covers. It is not, however, always where the run is. A set registered for a
+    policy **base** moves its run one level down at any version above 1 --
+    ``runs/dev-v7/policy-v7/<model>/`` -- which is what
+    :func:`version_moves_the_run` decides, what ``run_set`` passes the runner as
+    ``policy_version_moves_the_run``, and what
+    :func:`eval.func_sets.run_directory` already builds for its three sets.
+
+    The report reads a run to grade it, so it has to read the directory the run
+    was written to: a versioned run read from the un-versioned path is a set the
+    report calls not run while its 40 cases sit one level below, and a figure
+    read from the wrong directory is not a figure. Every set whose version does
+    not move its run -- every set registered before the version-3 bases, and the
+    sealed sets, whose version is part of what the set *is* -- gets
+    :meth:`DevelopmentSet.run_dir` unchanged.
+    """
+    if version_moves_the_run(development_set, None):
+        return run_benchmark.policy_v_run_directory(
+            development_set.runs_dir(runs_dir),
+            resolved_policy_version(development_set, None),
+            model,
+        )
+    return development_set.run_dir(model, runs_dir)
+
+
 def cached_cases(
     development_set: DevelopmentSet, model: str, runs_dir: Path = RUNS_DIR
 ) -> List[int]:
     """The set's cases this model has a cached ruling for, in set order."""
-    present = set(run_benchmark.cached_case_numbers(development_set.run_dir(model, runs_dir)))
+    present = set(
+        run_benchmark.cached_case_numbers(
+            run_dir_at_its_version(development_set, model, runs_dir)
+        )
+    )
     return [case_no for case_no in development_set.cases if case_no in present]
 
 
@@ -1914,7 +1953,7 @@ def figures_for(
     Over the cases the set has actually produced a ruling for, so a set that has
     not been run reports nothing rather than reporting every case as a miss.
     """
-    run_dir = development_set.run_dir(model, runs_dir)
+    run_dir = run_dir_at_its_version(development_set, model, runs_dir)
     produced_cases = cached_cases(development_set, model, runs_dir)
     if not produced_cases:
         return SetFigures(
@@ -1982,11 +2021,43 @@ def combined_figures(
     return len(produced), grade.grade(produced, subset, corpus=key)
 
 
+def registered_prompts_dir(development_set: DevelopmentSet) -> Path:
+    """The prompts directory one set's cached results belong to.
+
+    Two answers, in this order, and both of them name **the prompts directory
+    the run used**.
+
+    * A set whose registration records the arguments its run is made with
+      records the prompt set that run uses, and that is the directory its
+      results were produced under -- ``prompts/v2`` for ``dev-v7`` and
+      ``sealed-v4``.
+    * A set that records none is answered by its **policy version**, through
+      :func:`eval.run_benchmark.prompts_directory_for`. That is the pairing the
+      runner itself enforces -- a version-7 run with any prompts directory but
+      ``prompts/v2`` is refused before a client is built, and versions 1 to 6
+      are run with ``prompts/v1`` -- so the version is enough to say which
+      directory a set's results came from. ``ryde-v7`` is the set this reaches:
+      it is development data and fixes no run arguments, so its registration
+      names no prompts directory, while its committed run was made with
+      ``prompts/v2`` like every other version-7 run.
+
+    For every set registered before the version-7 pair existed the second
+    answer is :data:`eval.run_benchmark.PROMPTS_DIR` itself, which is the
+    directory those sets were run with, so their readings do not move.
+    """
+    arguments = development_set.run_arguments
+    if arguments is not None and arguments.prompts_dir is not None:
+        return Path(arguments.prompts_dir)
+    return run_benchmark.prompts_directory_for(
+        resolved_policy_version(development_set, None)
+    )
+
+
 def currency_for(
     development_set: DevelopmentSet,
     model: str,
     runs_dir: Path = RUNS_DIR,
-    prompts_dir: Path = run_benchmark.PROMPTS_DIR,
+    prompts_dir: Optional[Path] = None,
 ) -> grade.Staleness:
     """Whether one set's cached results still belong to this code.
 
@@ -2002,8 +2073,18 @@ def currency_for(
     that version, so a checker that rebuilt the briefs at version 1 would report
     every case of a correct run as a moved brief -- a set that reads as stale
     when nothing has moved.
+
+    ``prompts_dir`` is the same decision one channel further on, and its default
+    is the set's own rather than a constant: the two prompt sets are not
+    interchangeable, and a version-7 run is run with ``prompts/v2``, so a
+    checker handed ``prompts/v1`` compares every case's recorded prompt digests
+    with a directory no call of that run was ever given. ``None`` means the
+    prompts directory this set's registration fixes
+    (:func:`registered_prompts_dir`); an explicit argument still wins.
     """
-    run_dir = development_set.run_dir(model, runs_dir)
+    if prompts_dir is None:
+        prompts_dir = registered_prompts_dir(development_set)
+    run_dir = run_dir_at_its_version(development_set, model, runs_dir)
     checker = run_benchmark.BriefStaleness(
         run_benchmark.brief_digest_for(
             development_set.load_case, policy_version=development_set.policy_version

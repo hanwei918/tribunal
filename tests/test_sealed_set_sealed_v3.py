@@ -305,17 +305,14 @@ class SealedV3RegistryTests(unittest.TestCase):
 class SealedV3RootIsClosedTests(unittest.TestCase):
     """Its single run has been started and stopped, so its root is closed."""
 
-    def test_its_root_is_closed_and_the_un_run_list_names_the_sixth_set(self):
+    def test_its_root_is_closed_and_no_root_is_left_un_run(self):
         self.assertTrue(sets.sealed_root_is_closed(SEALED_V3))
-        # The un-run list names the sixth sealed set, imported on 2026-10-13 and
-        # not yet run; this set's own run was started and stopped, so no permit
-        # opens its root. Both lists are pinned, so neither can pass by being
-        # empty.
+        # The un-run list is empty -- the sixth sealed set's run was made on
+        # 2026-10-14 -- so no permit opens any root. Both lists are pinned, so
+        # neither can pass by being empty.
+        self.assertEqual((), run_benchmark.UNRUN_SEALED_RUNS_SUBDIRS)
         self.assertEqual(
-            ("sealed-v4",), run_benchmark.UNRUN_SEALED_RUNS_SUBDIRS
-        )
-        self.assertEqual(
-            ("wild", "wild-v2", "sealed-v1", "sealed-v2", "sealed-v3"),
+            ("wild", "wild-v2", "sealed-v1", "sealed-v2", "sealed-v3", "sealed-v4"),
             run_benchmark.MADE_SEALED_RUNS_SUBDIRS,
         )
         self.assertIn(

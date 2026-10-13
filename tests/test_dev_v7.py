@@ -28,7 +28,14 @@ What is asserted:
 * **the registration.** It is registered by name, marked not sealed, fixes
   policy version 7 and the ``prompts/v2`` prompt set, and is in none of the
   tuples ``--set all``, the combined figure and the recorded-drafts measurement
-  read.
+  read;
+* **the prompt channel.** Its committed run reads current on both staleness
+  channels, and so do the other two version-7 runs: the checker
+  ``currency_for`` builds is handed the prompts directory the run used --
+  ``prompts/v2`` -- rather than the ``prompts/v1`` default, which would compare
+  every case's recorded digests with a prompt set no call of that run was given.
+  The control puts the default back and shows the 30 cases read
+  ``stale_prompts``.
 
 No model is called anywhere in this module, and nothing is written.
 """
@@ -39,6 +46,7 @@ import json
 import sys
 import unittest
 from pathlib import Path
+from unittest import mock
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -360,6 +368,101 @@ class DevV7StructureTests(unittest.TestCase):
                     brief.build_brief_for_case(SET.load_case(case_no), policy_version=7)
                 )
                 self.assertNotIn(canary, canonical)
+
+
+# --------------------------------------------------------------------------
+# The prompt channel: the checker reads the prompts the run used
+# --------------------------------------------------------------------------
+class TheVersionSevenCurrencyTests(unittest.TestCase):
+    """The three version-7 runs read current, and the prompt set is why.
+
+    ``currency_for`` builds the same checker the runner builds before a run, and
+    its prompt channel is answered against a **directory**: each case's recorded
+    prompt digests are compared with what this code renders from that directory
+    now. A version-7 run is run with ``prompts/v2`` and records that set's
+    digests, so a checker handed ``prompts/v1`` -- which is what
+    ``run_benchmark.PROMPTS_DIR`` is -- compares every case against a prompt set
+    no call of that run was ever given and reports a correct run as having moved
+    its prompts. Every version-7 console log ends with exactly that line, and
+    the report's currency line for ``sealed-v4`` printed it too.
+
+    The counts are the committed runs' own, written down rather than read off
+    the sets, so a run that lost a case fails here instead of agreeing with
+    itself. Nothing is written and no model is called.
+    """
+
+    MODEL = "deepseek/deepseek-flash"
+
+    # One row per version-7 set: the cases it has committed a ruling for.
+    VERSION_SEVEN = (("sealed-v4", 30), ("dev-v7", 40), ("ryde-v7", 2))
+
+    def test_each_version_seven_run_reads_current_on_both_channels(self):
+        for name, produced in self.VERSION_SEVEN:
+            development_set = sets.named(name)
+            with self.subTest(set=name):
+                self.assertEqual(
+                    produced,
+                    len(sets.cached_cases(development_set, self.MODEL)),
+                    "the committed run does not hold the set's cases",
+                )
+                staleness = sets.currency_for(development_set, self.MODEL)
+                self.assertTrue(staleness.checked)
+                self.assertEqual((), staleness.stale)
+                self.assertEqual((), staleness.stale_brief)
+                self.assertEqual((), staleness.stale_prompts)
+                self.assertEqual((), staleness.unknown)
+
+    def test_the_checker_is_handed_the_prompts_directory_the_run_used(self):
+        for name, _produced in self.VERSION_SEVEN:
+            with self.subTest(set=name):
+                self.assertEqual(
+                    Path("prompts/v2"),
+                    sets.registered_prompts_dir(sets.named(name)),
+                )
+        # And the two sets whose registration records the arguments their run is
+        # fixed at record it themselves, which is the first answer.
+        for name in ("dev-v7", "sealed-v4"):
+            with self.subTest(set=name):
+                self.assertEqual(
+                    Path("prompts/v2"), sets.BY_NAME[name].run_arguments.prompts_dir
+                )
+        # ``ryde-v7`` is development data and fixes no run arguments, so its
+        # answer comes from the pairing the runner enforces instead.
+        self.assertIsNone(sets.RYDE_V7.run_arguments)
+
+    def test_a_version_six_set_is_checked_against_the_prompts_it_was_run_with(self):
+        """The other half of the pairing: versions 1 to 6 are run with prompts/v1."""
+        for name in ("corpus", "codex", "dev-v2"):
+            with self.subTest(set=name):
+                self.assertEqual(
+                    run_benchmark.PROMPTS_DIR,
+                    sets.registered_prompts_dir(sets.named(name)),
+                )
+        staleness = sets.currency_for(sets.named("codex"), self.MODEL)
+        self.assertTrue(staleness.checked)
+        self.assertEqual((), staleness.stale_brief)
+        self.assertEqual((), staleness.unknown)
+
+    def test_the_control_the_version_six_prompts_report_the_cases_as_moved(self):
+        """The control: the default is what the change replaced.
+
+        With ``registered_prompts_dir`` answering ``prompts/v1`` -- which is
+        what the checker was handed before it read the set -- all 30 of
+        ``sealed-v4``'s cases read ``stale_prompts``: their recorded
+        ``prompts/v2`` digests are compared with ``prompts/v1``. That is the
+        line the run's own console log ends with and the line the report printed
+        for this set, so the positive reading above fails if this one comes
+        back.
+        """
+        development_set = sets.named("sealed-v4")
+        with mock.patch.object(
+            sets, "registered_prompts_dir", return_value=run_benchmark.PROMPTS_DIR
+        ):
+            staleness = sets.currency_for(development_set, self.MODEL)
+        self.assertEqual(30, len(staleness.stale_prompts))
+        self.assertEqual(30, len(staleness.stale))
+        self.assertEqual((), staleness.stale_brief)
+        self.assertEqual((), staleness.unknown)
 
 
 if __name__ == "__main__":

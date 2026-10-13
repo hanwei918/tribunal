@@ -228,6 +228,26 @@ class TheFareRecordTests(unittest.TestCase):
         block = convert.conversion_input(convert.SOURCE_PATH.read_text(encoding="utf-8"))
         return convert.convert(block, VERSION_SEVEN)
 
+    def require_the_source_document(self):
+        """Skip when the organisers' source document is not in this checkout.
+
+        ``tmp/`` is gitignored scratch: ``tmp/ryde-v21/DISP-001.md`` is present
+        on the machine the set was converted on and absent from a clean clone,
+        because the organisers' documents are cited rather than redistributed
+        until redistribution is confirmed. The two tests that rebuild case 902
+        from that document skip there, naming the file that is missing and what
+        is checked instead; every other test in this module reads a committed
+        file, so the set, its briefs and its key are still held to what is
+        committed. The path and the sentence are the converter's own, so this
+        module names no path under the gitignored root.
+        """
+        if not convert.DISP001_SOURCE_PATH.is_file():
+            self.skipTest(
+                "the organisers' source document {0} is not committed; the "
+                "converter's output is checked against the committed case files "
+                "instead".format(convert.DISP001_SOURCE_DOCUMENT)
+            )
+
     def test_the_route_deviations_fare_record_is_complete(self):
         admissibility = self.artifact(ROUTE_DEVIATION_CASE, "EV-FARE-00902")[
             "admissibility"
@@ -275,9 +295,10 @@ class TheFareRecordTests(unittest.TestCase):
 
         The code set is put back to the one versions 1 and 3 read, through the
         one name the rule lives at, and the artifact the conversion then builds
-        is IMPAIRED at the pre-pass's 0.75 -- the weight the first version-7 run
+        is IMPAIRED at the pre-pass's 0.75 --         the weight the first version-7 run
         escalated on.
         """
+        self.require_the_source_document()
         block = convert.conversion_input(
             convert.DISP001_SOURCE_PATH.read_text(encoding="utf-8")
         )
@@ -298,6 +319,7 @@ class TheFareRecordTests(unittest.TestCase):
 
     def test_the_committed_cases_are_the_converters_own_output(self):
         """Each file is the converter's output, not a hand edit."""
+        self.require_the_source_document()
         for case_no in (ROUTE_DEVIATION_CASE, NO_SHOW_CASE):
             built, mapping = self.rebuild(case_no)
             with self.subTest(case=case_no):

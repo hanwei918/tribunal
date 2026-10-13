@@ -11,16 +11,17 @@ land somewhere it must not. Two places are refused:
 **A sealed set's root.** ``runs/wild/`` holds the held-out set's single run,
 ``runs/wild-v2/`` the second sealed set's, ``runs/sealed-v1/`` the third's,
 ``runs/sealed-v2/`` the fourth's, ``runs/sealed-v3/`` the fifth's and
-``runs/sealed-v4/`` the sixth's. Five of those runs have been made --
+``runs/sealed-v4/`` the sixth's. All six of those runs have been made --
 ``sealed-v3``'s was started once on 2026-10-13 and stopped after 8 of its 30
-cases, and it is not a sealed figure -- so those five roots are closed outright
-and nothing is created under any of them: not a case, not an ablated run, not a
-run at a later policy version, not a report, because a second thing written there
-changes what the directory means while leaving every file a reader would look at
-apparently intact. ``sealed-v4``'s run has not been made, and the permit that
-opens its own plain run directory is the runner's alone: every command here holds
-no permit, so this helper refuses ``runs/sealed-v4/`` outright as it does the
-other five.
+cases, and it is not a sealed figure, and ``sealed-v4``'s was made once on
+2026-10-14 from the commit the annotated tag ``freeze-2026-10-14`` points at --
+so every root is closed outright and nothing is created under any of them: not a
+case, not an ablated run, not a run at a later policy version, not a report,
+because a second thing written there changes what the directory means while
+leaving every file a reader would look at apparently intact. The permit that
+would open an un-run root's own plain run directory is the runner's alone and no
+root is un-run, so every command here holds no permit and this helper refuses
+``runs/sealed-v4/`` outright as it does the other five.
 
 **A headline run directory.** ``runs/<model-slug>/``, ``runs/codex/<model-slug>/``,
 ``runs/wild/<model-slug>/``, ``runs/wild-v2/<model-slug>/``,

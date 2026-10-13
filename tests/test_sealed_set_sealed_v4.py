@@ -8,10 +8,11 @@ fresh claude.ai chat with no project folder or repository access, from the
 owner's prompt, Ryde's Dispute Resolution Policy v2.1, the version-7 policy
 files, the public contract, a format checker and the organisers' public sample
 case, and nobody on the development side has seen its answers. It was imported on
-2026-10-13, and it has **not been run**: its registration fixes policy version 7,
-so it is run at version 7 with no flag and ``--policy-version`` is refused for
-it. Its root is the one sealed root still open, and the permit opens exactly one
-destination under it -- the guarded plain run.
+2026-10-13 and its single run was made once on 2026-10-14 from the commit
+``8157af8``, the commit the annotated tag ``freeze-2026-10-14`` points at: its
+registration fixes policy version 7, so it was run at version 7 with no flag and
+``--policy-version`` is refused for it. Its root is closed outright, like the
+other five sealed roots.
 
 What is asserted here:
 
@@ -26,10 +27,10 @@ What is asserted here:
 * **Its switches are refused.** ``--force`` and each of the frozen arguments are
   refused for it, and the frozen invocation's arguments are accepted through the
   refusal function rather than by running it.
-* **Its root is open for one thing only.** Its single run has not been made, so
-  the permit opens its own plain run directory and every other destination under
-  the root is refused -- and the six commands that write to a path a caller names
-  hold no permit, so they refuse the whole root.
+* **Its root is closed.** Its single run has been made, so no destination under
+  the root is accepted -- with the permit or without it -- and the six commands
+  that write to a path a caller names hold no permit, so they refuse the whole
+  root as well.
 * **The sealed run is the owner's.** Without ``TRIBUNAL_SEALED_RUN=sealed-v4``
   the invocation is refused before a client is built and writes nothing.
 * **Its structure holds.** All 30 cases load by path and by number, their briefs
@@ -304,6 +305,12 @@ class SealedV4RegistryTests(unittest.TestCase):
         self.assertIn("Claude (Opus 5.5)", summary)
         self.assertIn("policy version 7", summary)
         self.assertIn("nobody on the development side has seen them", summary)
+        # And that its single run has been made, from the commit the freeze tag
+        # points at: the summary a report prints says so rather than leaving a
+        # reader to infer it from the root's closure.
+        self.assertIn("its run was made once on 2026-10-14", summary)
+        self.assertIn("8157af8", summary)
+        self.assertIn("freeze-2026-10-14", summary)
 
     def test_its_cases_are_not_in_the_corpus_manifest(self):
         with (PROJECT_ROOT / "data" / "index.json").open("r", encoding="utf-8") as handle:
@@ -318,24 +325,22 @@ class SealedV4RegistryTests(unittest.TestCase):
 
 
 # --------------------------------------------------------------------------
-# Its root is open for its own run, and for nothing else
+# Its root is closed
 # --------------------------------------------------------------------------
-class SealedV4RootIsOpenTests(unittest.TestCase):
-    """Its single run has not been made, so one destination is still accepted."""
+class SealedV4RootIsClosedTests(unittest.TestCase):
+    """Its single run has been made, so nothing opens its root."""
 
-    def test_its_root_is_the_one_un_run_root(self):
-        self.assertFalse(
+    def test_its_root_is_closed_and_no_root_is_left_un_run(self):
+        self.assertTrue(
             sets.sealed_root_is_closed(SEALED_V4),
-            "the sixth sealed set's root is closed, so its run cannot be made",
+            "the sixth sealed set's root is open, so its run is not committed",
         )
-        # The un-run list names this set alone, and the made list is the five
-        # sets whose runs have been made. Both are pinned, so neither can pass
-        # by being empty.
+        # The un-run list is empty: this set's own run was made on 2026-10-14,
+        # so no root accepts even the plain sealed run any more. Both lists are
+        # pinned, so neither can pass by being empty.
+        self.assertEqual((), run_benchmark.UNRUN_SEALED_RUNS_SUBDIRS)
         self.assertEqual(
-            ("sealed-v4",), run_benchmark.UNRUN_SEALED_RUNS_SUBDIRS
-        )
-        self.assertEqual(
-            ("wild", "wild-v2", "sealed-v1", "sealed-v2", "sealed-v3"),
+            ("wild", "wild-v2", "sealed-v1", "sealed-v2", "sealed-v3", "sealed-v4"),
             run_benchmark.MADE_SEALED_RUNS_SUBDIRS,
         )
         self.assertIn(
@@ -345,18 +350,19 @@ class SealedV4RootIsOpenTests(unittest.TestCase):
             run_benchmark.SEALED_V4_SET_RUNS_SUBDIR, run_benchmark.SEALED_RUNS_SUBDIRS
         )
 
-    def test_the_permit_opens_the_plain_run_directory_and_nothing_else(self):
-        """The one destination this root accepts, and only for the set that owns it."""
-        runs = Path("/tmp/sealed-v4-open-runs")
+    def test_no_permit_opens_the_plain_run_directory(self):
+        """The one destination an un-run sealed root would accept is refused.
+
+        The permit names the plain sealed run's own directory and is honoured
+        only for a root whose run has not been made. This set's run has been
+        made, so the permit is not honoured: the plain run directory is refused
+        like anything else under the root, with the permit and without it.
+        """
+        runs = Path("/tmp/sealed-v4-closed-runs")
         run_dir = runs / "sealed-v4" / run_benchmark.model_slug(MODEL)
-        self.assertEqual(
-            run_dir.resolve(),
-            run_benchmark.assert_not_under_the_held_out_root(
-                run_dir, runs, permit=run_dir
-            ).resolve(),
-        )
         for destination, permit in (
             (run_dir, None),
+            (run_dir, run_dir),
             (run_dir / "case-06001.json", run_dir),
             (runs / "sealed-v4" / run_benchmark.ABLATION_DIRNAME / run_benchmark.model_slug(MODEL), run_dir),
         ):
@@ -367,8 +373,8 @@ class SealedV4RootIsOpenTests(unittest.TestCase):
                     )
                 self.assertIn("sealed-v4", str(caught.exception))
 
-    def test_the_other_five_roots_are_still_closed(self):
-        """The permit opens this set's root and no other."""
+    def test_every_root_is_closed(self):
+        """The permit opens no root, this set's included."""
         runs = Path("/tmp/sealed-v4-other-roots-runs")
         for subdir in run_benchmark.MADE_SEALED_RUNS_SUBDIRS:
             with self.subTest(sealed_root=subdir):
@@ -433,7 +439,13 @@ class SealedV4BundleDigestTests(unittest.TestCase):
         )
 
     def test_the_manifest_records_that_the_set_has_not_been_run(self):
-        """The protocol's own count, which is what makes this root the open one."""
+        """The archive's own record, written when the set was made.
+
+        It states the protocol it was made under -- one run allowed, none
+        performed at that moment -- and it is not edited by the run: the run's
+        own record is the committed run under ``runs/sealed-v4/``, which is what
+        closes the root.
+        """
         protocol = _manifest()["protocol"]
         self.assertEqual(1, protocol["runs_allowed"])
         self.assertIs(False, protocol["run_performed"])
@@ -514,12 +526,12 @@ class SealedV4BundleDigestTests(unittest.TestCase):
 class SealedV4SealedRunLockTests(unittest.TestCase):
     """The sealed run is the owner's, and only the owner's.
 
-    The set's run has not been made, so the gate's message is the lock's: the
-    variable must name this set. No test here sets it to ``sealed-v4`` -- that is
-    the one value that would let the run start -- and none can build a client:
-    ``_run_cli`` patches the class to raise. None of them writes either: the runs
-    root is a temporary directory, and both modules are made to believe it is the
-    repository's own.
+    The set's run has been made, so the gate's message is the closure's: the
+    root is closed and no value of the variable opens it. No test here sets it
+    to ``sealed-v4`` -- that is the one value that would have let the run start
+    while the root was open -- and none can build a client: ``_run_cli`` patches
+    the class to raise. None of them writes either: the runs root is a temporary
+    directory, and both modules are made to believe it is the repository's own.
     """
 
     def _invocation(self, tmp, *extra):
@@ -539,7 +551,8 @@ class SealedV4SealedRunLockTests(unittest.TestCase):
             self.assertEqual(1, code, "the sealed run was not locked")
             self.assertIn(sets.SEALED_RUN_ENV_VAR, err)
             self.assertIn("sealed-v4", err)
-            self.assertIn("made by the owner only", err)
+            self.assertIn("its single run has been made", err)
+            self.assertIn("nothing is created under it again", err)
             self.assertFalse(runs.exists(), "the refused invocation created the runs root")
 
     def test_the_opt_in_set_to_any_other_value_is_refused(self):
@@ -586,14 +599,14 @@ class SealedV4SwitchGuardTests(unittest.TestCase):
             with self.subTest(development_set=development_set.name):
                 self.assertIsNone(sets.assert_not_sealed(development_set, "--force"))
 
-    def test_the_frozen_arguments_are_accepted_while_the_root_is_open(self):
+    def test_the_frozen_arguments_are_still_what_the_run_was_made_with(self):
         """A guard that refused everything would pass the test above.
 
         The argument check and the destination check are separate rules. This
         pins the first: the owner's own invocation differs in no argument, so
-        ``run_argument_differences`` is empty. The second accepts that same
-        invocation's own destination, because this set's run has not been made --
-        ``SealedV4RootIsOpenTests`` is where that is asserted.
+        ``run_argument_differences`` is empty. The second refuses that same
+        invocation's own destination, because this set's run has been made --
+        ``SealedV4RootIsClosedTests`` is where that is asserted.
         """
         self.assertEqual([], sets.run_argument_differences(SEALED_V4, **_frozen_arguments()))
 
@@ -669,8 +682,14 @@ class SealedV4RunArgumentsTests(unittest.TestCase):
             self.assertIn("fixes policy version 7", err)
             self.assertFalse(runs.exists())
 
-    def test_check_prints_the_plan_for_the_one_open_root(self):
-        """``--check`` needs no opt-in, builds no client and creates nothing."""
+    def test_check_prints_the_closure_of_the_closed_root(self):
+        """``--check`` needs no opt-in, builds no client and creates nothing.
+
+        The set's single run has been made, so there is no plan to print: the
+        whole output is the closure, the three empty counts included, and the
+        plan branch is not reached. Asserted whole rather than by a substring,
+        so a header that still offered to run the 30 cases would fail here.
+        """
         with tempfile.TemporaryDirectory() as tmp:
             runs = Path(tmp) / "runs"
             with mock.patch.object(sets, "RUNS_DIR", runs), mock.patch.object(
@@ -678,11 +697,17 @@ class SealedV4RunArgumentsTests(unittest.TestCase):
             ):
                 code, out, err = _run_cli(FROZEN_INVOCATION + ["--check"])
             self.assertEqual(0, code, err)
-            self.assertTrue(
-                out.startswith("sealed set sealed-v4 -- what one plain invocation would run"),
+            self.assertEqual(
+                "sealed set sealed-v4 -- its root is closed: the single run is "
+                "committed\n"
+                "  would run (0): nothing\n"
+                "  would not run (0):\n"
+                "    nothing\n"
+                "  attempts that do not count (0):\n"
+                "    nothing\n",
                 out,
             )
-            self.assertIn("would run (30):", out)
+            self.assertNotIn("would run (30", out)
             self.assertFalse(runs.exists(), "the check created the runs root")
 
 
