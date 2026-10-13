@@ -3347,6 +3347,69 @@ class StatusChipTests(unittest.TestCase):
 # --------------------------------------------------------------------------
 # 47.1: the outcome first
 # --------------------------------------------------------------------------
+class RefundAndDriverCompensationTests(unittest.TestCase):
+    """A refund that also pays the driver names both amounts, wherever it is drawn.
+
+    Three cases on record are a full refund whose ruling also carries a driver
+    payment. ``_outcome_text`` used to print only the refund, so the queue row,
+    the featured card and the draft table each showed "Full refund - SGD 4.00"
+    for a ruling that moves SGD 6.00. The row now names both, and this is the
+    check that every such case does.
+    """
+
+    def refund_and_driver(self) -> List[Any]:
+        return [
+            case
+            for case in loaded_cases()
+            if str(case.ruling.get("ruling")) in ("FULL_REFUND", "PARTIAL_REFUND")
+            and case.ruling.get("driver_compensation_sgd") is not None
+        ]
+
+    def test_the_three_cases_are_the_ones_this_is_about(self):
+        """The set is not empty and is the set the sheet names."""
+        self.assertEqual(
+            [206, 2713, 2714], sorted(case.case_no for case in self.refund_and_driver())
+        )
+
+    def test_every_such_case_shows_both_amounts(self):
+        queue = built_pages()["queue.html"]
+        for case in self.refund_and_driver():
+            currency = case.policy.currency
+            words = v2._outcome_text(
+                case.ruling, currency, case.trigger, case.votes
+            )
+            refund = v2._money(case.ruling.get("amount_sgd"), currency)
+            driver = v2._money(case.ruling.get("driver_compensation_sgd"), currency)
+            with self.subTest(case=case.case_no):
+                self.assertIn(refund, words, "the refund is not named")
+                self.assertIn(driver, words, "the driver's payment is not named")
+                self.assertIn("driver paid", words)
+                self.assertIn(
+                    v2._text(words),
+                    queue,
+                    "the queue row does not carry the outcome the case page words",
+                )
+
+    def test_a_refund_without_a_driver_payment_is_unchanged(self):
+        """The control: the one-amount row is still one amount."""
+        plain = [
+            case
+            for case in loaded_cases()
+            if str(case.ruling.get("ruling")) in ("FULL_REFUND", "PARTIAL_REFUND")
+            and case.ruling.get("driver_compensation_sgd") is None
+        ]
+        self.assertTrue(plain, "no refund without a driver payment to check")
+        for case in plain:
+            words = v2._outcome_text(
+                case.ruling, case.policy.currency, case.trigger, case.votes
+            )
+            with self.subTest(case=case.case_no):
+                self.assertNotIn("driver paid", words)
+
+
+# --------------------------------------------------------------------------
+# 47.1: the outcome first
+# --------------------------------------------------------------------------
 class SummaryBarTests(unittest.TestCase):
     """The one line a case page opens with, read from the ruling and the lane."""
 
@@ -3632,14 +3695,12 @@ class ReplayLinkTests(unittest.TestCase):
         self.assertTrue(self.replay_pages(), "the evaluation replay is not committed")
 
     def test_every_replay_page_links_back_to_the_queue(self):
-        # The target is the file the replay's own builder links to, and that
-        # builder is ``ui/build.py``, which this part may not change: its
-        # ``queue_link`` still names ``ui/dist/index.html``, which is the
-        # product site's front page now that the queue is ``queue.html``. The
-        # check is the one it always was -- the replay links back to the file
-        # its builder writes the link for -- and a later part that may touch
-        # ``ui/build.py`` is where that link moves to ``queue.html``.
-        queue = (v2.DIST_DIR / "index.html").resolve()
+        # The target is the queue itself, which is what the replay's own builder
+        # links to: ``ui/build.py``'s ``queue_link`` names ``queue.html``, and
+        # ``ui/dist/index.html`` is the product site's front page rather than
+        # the queue. The check is the one it always was -- the replay links back
+        # to the file its builder writes the link for.
+        queue = (v2.DIST_DIR / "queue.html").resolve()
         for path in self.replay_pages():
             scan = _ResourceScan()
             scan.feed(path.read_text(encoding="utf-8"))

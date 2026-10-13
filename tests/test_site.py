@@ -290,6 +290,7 @@ class ThePagesTests(unittest.TestCase):
             with self.subTest(page=name):
                 self.assertNotIn("/*@include ", text)
                 self.assertNotIn("@include", text)
+                self.assertNotIn("@queue-rows", text)
 
     def test_the_sources_do_carry_the_markers(self):
         """The control: the check above would pass on a page with no block at all."""
@@ -310,6 +311,180 @@ class ThePagesTests(unittest.TestCase):
         """A marker is a promise that the block is there, and it is kept."""
         with self.assertRaises(site.BuildError):
             site.assemble("<style>/*@include not-a-block.css*/</style>", site.shared_blocks())
+
+    def test_a_queue_marker_for_a_language_the_builder_does_not_write_is_refused(self):
+        """A marker naming a language with no rows would otherwise stay in the page."""
+        with self.assertRaises(site.BuildError):
+            site.assemble(
+                "<tbody>/*@queue-rows fr*/</tbody>",
+                site.shared_blocks(),
+                {"en": "<tr></tr>", "zh": "<tr></tr>"},
+            )
+
+    def test_a_queue_marker_is_put_back_with_the_rows_it_names(self):
+        """The mechanism, on a fixture, so the rows are the builder's own."""
+        rows = {"en": "<tr><td>en</td></tr>", "zh": "<tr><td>zh</td></tr>"}
+        self.assertEqual(
+            "<tbody><tr><td>zh</td></tr></tbody>",
+            site.assemble(
+                "<tbody>/*@queue-rows zh*/</tbody>", site.shared_blocks(), rows
+            ),
+        )
+
+
+# --------------------------------------------------------------------------
+# The queue table, built from the queue's own rows
+# --------------------------------------------------------------------------
+# One table cell, and one status chip. The cells are read by column so the two
+# languages' rows can be compared column by column rather than as markup.
+QUEUE_CELL_RE = re.compile(r'<td data-column="([a-z_]+)"([^>]*)>(.*?)</td>', re.S)
+QUEUE_CHIP_RE = re.compile(r'<span class="chip ([a-z]+)"')
+
+# The English vocabulary the queue writes into a row. None of it may appear in a
+# Chinese row: a translated table that left one word behind would be a table that
+# reads in two languages at once.
+ENGLISH_QUEUE_WORDS = frozenset(
+    set(v2.CATEGORY_WORDS.values())
+    | set(v2.FILED_BY_WORDS.values())
+    | set(v2.CHIP_LABELS.values())
+    | set(v2.RULING_WORDS.values())
+    | set(v2.TRIGGER_WORDS.values())
+    | {"Sent to a reviewer", "Sent to a person", "driver paid"}
+    | {
+        "Case",
+        "Category",
+        "Filed by",
+        "Amount contested",
+        "Status",
+        "Outcome",
+        "Confidence",
+        "Time",
+    }
+)
+
+# The four columns whose cells are the run's own values and are written the same
+# in both languages.
+SAME_IN_BOTH = ("case", "amount", "confidence", "time")
+
+
+class TheQueueTableTests(unittest.TestCase):
+    """``cases.html``'s table body and ``cases.zh.html``'s, built not copied.
+
+    Until part 53b the Chinese body was a copy of the English one, so every
+    category, the filing party, the status and the outcome were English on a
+    Chinese page. The builder now writes both from ``ui.v2.build``'s own row
+    function, and these are the checks that say so.
+    """
+
+    def body_of(self, markup: str) -> str:
+        match = re.search(r"<tbody>(.*)</tbody>", markup, re.S)
+        self.assertIsNotNone(match, "the page carries no table body")
+        assert match is not None
+        return match.group(1)
+
+    def rows_of(self, markup: str) -> List[str]:
+        return re.findall(r"<tr\b.*?</tr>", self.body_of(markup), re.S)
+
+    def cells_of(self, row: str) -> Dict[str, str]:
+        return {
+            name: value
+            for name, _attributes, value in QUEUE_CELL_RE.findall(row)
+        }
+
+    def sorts_of(self, row: str) -> Dict[str, str]:
+        found = {}
+        for name, attributes, _value in QUEUE_CELL_RE.findall(row):
+            match = re.search(r'data-sort="([^"]*)"', attributes)
+            found[name] = match.group(1) if match else ""
+        return found
+
+    def chip_classes_of(self, row: str) -> List[str]:
+        return QUEUE_CHIP_RE.findall(row)
+
+    def test_the_sources_carry_a_marker_rather_than_the_rows(self):
+        for name, language in (("cases.html", "en"), ("cases.zh.html", "zh")):
+            source = (site.PAGES_DIR / name).read_text(encoding="utf-8")
+            with self.subTest(page=name):
+                self.assertIn("/*@queue-rows {0}*/".format(language), source)
+                self.assertLess(
+                    len(source),
+                    30_000,
+                    "the 151 rows are still written out in the source",
+                )
+
+    def test_the_english_table_is_the_queue_pages_own_rows(self):
+        """The queue page's table body, row for row and byte for byte."""
+        queue = (site.DIST_DIR / v2.INDEX_PATH.name).read_text(encoding="utf-8")
+        self.assertEqual(self.body_of(queue), self.body_of(pages()["cases.html"]))
+
+    def test_the_english_table_is_the_rows_the_row_function_writes(self):
+        """The same equality, against the function rather than the built page."""
+        expected = "".join(v2._queue_row(case) for case in v2.read_every_case())
+        self.assertEqual(expected, self.body_of(pages()["cases.html"]))
+        self.assertEqual(151, len(self.rows_of(pages()["cases.html"])))
+
+    def test_the_chinese_table_is_the_same_rows_with_the_values_unchanged(self):
+        """Same case, amount, confidence, time and status class as the English row."""
+        english = self.rows_of(pages()["cases.html"])
+        chinese = self.rows_of(pages()["cases.zh.html"])
+        self.assertEqual(151, len(chinese))
+        self.assertEqual(len(english), len(chinese))
+        for one, other in zip(english, chinese):
+            cells = self.cells_of(one)
+            with self.subTest(case=cells["case"]):
+                self.assertEqual(self.sorts_of(one), self.sorts_of(other))
+                self.assertEqual(self.chip_classes_of(one), self.chip_classes_of(other))
+                for column in SAME_IN_BOTH:
+                    self.assertEqual(cells[column], self.cells_of(other)[column])
+
+    def test_no_english_word_from_the_queue_is_left_in_a_chinese_row(self):
+        for row in self.rows_of(pages()["cases.zh.html"]):
+            with self.subTest(case=self.cells_of(row)["case"]):
+                for word in sorted(ENGLISH_QUEUE_WORDS):
+                    self.assertNotIn(
+                        word,
+                        row,
+                        "a Chinese row still carries the English word {0!r}".format(word),
+                    )
+
+    def test_the_english_rows_do_carry_the_words_the_chinese_ones_do_not(self):
+        """The control: the words the check looks for are in the English rows.
+
+        Every word the vocabulary states that this table actually draws is
+        named. Two are not: no case in the four runs reaches the grey chip, so
+        "No status is recorded" is never drawn, and every ``ESCALATE`` case has a
+        trigger, so the outcome column never falls through to the ruling words
+        "Sent to a human reviewer".
+        """
+        english = self.body_of(pages()["cases.html"])
+        for word in (
+            "Route deviation",
+            "No-show fee",
+            "Rider",
+            "Driver",
+            "Decided automatically",
+            "Held for release",
+            "Sent to a reviewer",
+            "Full refund",
+            "Partial refund",
+            "No change",
+            "Fee stands, driver compensated",
+            "safety or complaint flag",
+            "no judge draft passed the code checks",
+            "the judge escalated under the policy",
+            "driver paid",
+            "Case",
+            "Category",
+            "Filed by",
+            "Amount contested",
+            "Status",
+            "Outcome",
+            "Confidence",
+            "Time",
+        ):
+            with self.subTest(word=word):
+                self.assertIn(word, english)
+                self.assertIn(word, ENGLISH_QUEUE_WORDS)
 
 
 # --------------------------------------------------------------------------

@@ -27,7 +27,16 @@ Three trees, all committed:
   ``tribunal/*.py``, ``tryit/*.py``, ``ops/chat_signals.py``,
   ``policy/**/*.json``, the four template cases and ``data/index.json``.
 
-Nothing here reads a file outside those three trees, and nothing here makes a
+One part of a page is neither copied nor assembled from a block: the 151 rows of
+``cases.html``'s queue table, and the same 151 rows in Chinese in
+``cases.zh.html``. Both are built at build time from ``ui.v2.build``'s own row
+function over the same four version-6 runs the queue page is drawn from -- the
+English body is the queue page's own rows, and the Chinese body is those cases
+through :mod:`ui.site.queue_rows`' fixed vocabulary. The page sources carry a
+``/*@queue-rows en*/`` or ``/*@queue-rows zh*/`` marker where the rows go, in the
+same spirit as the include marker beside it.
+
+Nothing here reads a file outside those trees, and nothing here makes a
 model call or touches the network.
 
 The site's root, and who owns which page
@@ -61,9 +70,14 @@ import re
 import sys
 import zipfile
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence, Tuple
+from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from ui.site import queue_rows as site_rows  # noqa: E402
+from ui.v2 import build as v2  # noqa: E402
 
 # The site's own trees, and the published root the three builders share.
 SITE_DIR = PROJECT_ROOT / "ui" / "site"
@@ -79,6 +93,13 @@ DIST_DIR = PROJECT_ROOT / "ui" / "dist"
 # The marker a page carries where a shared block was. It names one file directly
 # under ``src/``, which is what is put back in its place.
 INCLUDE_RE = re.compile(r"/\*@include ([A-Za-z0-9._-]+)\*/")
+
+# The marker a page carries where its queue table's rows go. It names a language,
+# and the rows are built from the queue's own row function rather than copied
+# into the source: the two tables are 151 rows each and a copy is a copy that can
+# drift away from the page it was taken from. A language the builder does not
+# write is refused rather than left in the page.
+QUEUE_ROWS_RE = re.compile(r"/\*@queue-rows ([A-Za-z0-9_-]+)\*/")
 
 # The bundle the try-it page loads, and the 39 paths it holds. The list is the
 # one her own bundle carried, read off its listing and written out here rather
@@ -159,8 +180,15 @@ def shared_blocks() -> Dict[str, str]:
     }
 
 
-def assemble(text: str, blocks: Dict[str, str]) -> str:
-    """One page's sources with every marker replaced by its shared block."""
+def assemble(
+    text: str, blocks: Dict[str, str], rows: Optional[Mapping[str, str]] = None
+) -> str:
+    """One page's sources with every marker replaced by what it names.
+
+    Two markers are put back: a shared block, and the queue table's rows. The
+    rows are built only when a page carries their marker, so a page that does not
+    is assembled without reading the runs.
+    """
 
     def replacement(match: "re.Match") -> str:
         name = match.group(1)
@@ -171,7 +199,43 @@ def assemble(text: str, blocks: Dict[str, str]) -> str:
             )
         return blocks[name]
 
-    return INCLUDE_RE.sub(replacement, text)
+    assembled = INCLUDE_RE.sub(replacement, text)
+    if QUEUE_ROWS_RE.search(assembled):
+        table = queue_table_bodies() if rows is None else rows
+        assembled = QUEUE_ROWS_RE.sub(
+            lambda match: rows_for(match.group(1), table), assembled
+        )
+    return assembled
+
+
+def rows_for(language: str, table: Mapping[str, str]) -> str:
+    """One language's queue rows, refusing a language this builder does not write."""
+    if language not in table:
+        raise BuildError(
+            "a page carries a queue-rows marker for {0!r}, which is not one of "
+            "the languages this builder writes: {1}".format(
+                language, ", ".join(sorted(table))
+            )
+        )
+    return table[language]
+
+
+# The two queue table bodies, built once for the process. The English body is the
+# queue page's own rows, read through the function that writes them, and the
+# Chinese body is the same cases through the fixed vocabulary beside this module.
+_QUEUE_TABLE_BODIES: "Dict[str, str] | None" = None
+
+
+def queue_table_bodies() -> Dict[str, str]:
+    """The 151 queue rows in each language, keyed by the marker's language."""
+    global _QUEUE_TABLE_BODIES
+    if _QUEUE_TABLE_BODIES is None:
+        cases = v2.read_every_case()
+        _QUEUE_TABLE_BODIES = {
+            "en": "".join(v2._queue_row(case) for case in cases),
+            "zh": site_rows.rows(cases),
+        }
+    return _QUEUE_TABLE_BODIES
 
 
 def page_sources() -> List[Path]:
@@ -193,8 +257,12 @@ def pages() -> List[Tuple[Path, str]]:
     ``--check`` cannot disagree about which files there are.
     """
     blocks = shared_blocks()
+    rows = queue_table_bodies()
     return [
-        (DIST_DIR / source.name, assemble(source.read_text(encoding="utf-8"), blocks))
+        (
+            DIST_DIR / source.name,
+            assemble(source.read_text(encoding="utf-8"), blocks, rows),
+        )
         for source in page_sources()
     ]
 

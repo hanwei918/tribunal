@@ -1463,7 +1463,10 @@ def _outcome_text(
     The ruling code belongs on the case page, so this cell carries the words a
     reader meets first and the figure the ruling moves -- "Partial refund -
     SGD 8.05". On a ``DRIVER_COMPENSATION`` ruling the figure is never called a
-    refund: POL-GEN-03 says the fee stands and the driver is paid.
+    refund: POL-GEN-03 says the fee stands and the driver is paid. A refund that
+    also pays the driver -- three cases on record -- names both amounts, because
+    a cell that showed only the refund would leave the second payment out of the
+    one place a reader meets the outcome.
     """
     value = str(ruling.get("ruling"))
     if value == ESCALATE and trigger is not None:
@@ -1474,6 +1477,10 @@ def _outcome_text(
     if value == pipeline_module.DRIVER_COMPENSATION and driver is not None:
         return "{0} - driver paid {1}".format(words, _money(driver, currency))
     if value in REFUND_RULINGS and amount is not None:
+        if driver is not None:
+            return "{0} - {1}; driver paid {2}".format(
+                words, _money(amount, currency), _money(driver, currency)
+            )
         return "{0} - {1}".format(words, _money(amount, currency))
     return words
 
@@ -3489,7 +3496,7 @@ def build_index(cases: Sequence[CaseData]) -> str:
         "Tribunal - today's disputes",
         body,
         description=WHAT_TRIBUNAL_DOES,
-        canonical=SITE_ROOT,
+        canonical=SITE_ROOT + INDEX_PATH.name,
         og_type=OG_TYPE_SITE,
     )
 

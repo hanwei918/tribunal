@@ -1985,9 +1985,10 @@ def _set_block(
         # The corpus page is the one at ``ui/dist/replay/index.html``; every other
         # page and the index itself sit one directory down.
         "runs_index_link": "../" * page.depth + "runs/index.html",
-        # And the queue -- the product view -- is one directory above the replay
-        # root, so every page here links back to the site's front door.
-        "queue_link": "../" * (page.depth + 1) + "index.html",
+        # And the queue -- the product view -- sits beside the site's front page,
+        # so every page here links back to the queue itself rather than to the
+        # front page the product site now writes.
+        "queue_link": "../" * (page.depth + 1) + "queue.html",
     }
 
 
@@ -4765,7 +4766,7 @@ def _body(set_block: Mapping[str, Any]) -> str:
         badge=_escape_html(set_block.get("badge") or "replay of a committed run"),
         banner=_escape_html(REPLAY_BANNER),
         runs_index_link=_escape_html(set_block.get("runs_index_link") or "runs/index.html"),
-        queue_link=_escape_html(set_block.get("queue_link") or "../index.html"),
+        queue_link=_escape_html(set_block.get("queue_link") or "../" + INDEX_PATH.name),
     )
 
 
@@ -4926,7 +4927,7 @@ def render_index(documents: Mapping[str, Mapping[str, Any]]) -> str:
             '<header class="top">\n'
             '  <span class="brand">Tribunal - the runs</span>\n'
             '  <span class="spacer"></span>\n'
-            '  <a class="runs-link" href="../../index.html">Queue</a>\n'
+            '  <a class="runs-link" href="../../queue.html">Queue</a>\n'
             "</header>\n",
             "<main>\n",
             '<p class="replay-banner">' + _escape_html(REPLAY_BANNER) + "</p>\n",
