@@ -94,6 +94,16 @@ def is_cjk(character: str) -> bool:
     return any(low <= ord(character) <= high for low, high in CJK_RANGES)
 
 
+def holds_cjk(text: str) -> bool:
+    """Whether any character of a whole text falls in a CJK block.
+
+    The whole-text check the per-character one is for: ``is_cjk`` takes exactly
+    one character, so a caller that hands it a page gets ``TypeError`` from
+    ``ord`` rather than an answer, and the check it meant to make never runs.
+    """
+    return any(is_cjk(character) for character in text)
+
+
 def _directories_to_skip() -> frozenset:
     """The directory names the walk never descends into.
 
@@ -232,7 +242,7 @@ class TheProductSiteTests(unittest.TestCase):
     def test_the_exemption_is_doing_something(self):
         """The page really does carry the characters the rule looks for."""
         page = PROJECT_ROOT / "ui/site/src/pages/index.zh.html"
-        self.assertTrue(is_cjk(page.read_text(encoding="utf-8")))
+        self.assertTrue(holds_cjk(page.read_text(encoding="utf-8")))
         self.assertNotIn(
             "ui/site/src/pages/index.zh.html",
             {str(path.relative_to(PROJECT_ROOT)) for path in text_files(PROJECT_ROOT)},

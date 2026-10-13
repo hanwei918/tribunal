@@ -33,6 +33,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from tests import portability  # noqa: E402
+from ui.site import build as site_build  # noqa: E402
 
 # Documents a tool drops into the working tree: an exported PDF, a Word
 # document, a slide deck, and a file named after a CV. Each is listed in the
@@ -61,11 +62,12 @@ STRAY_DOCUMENTS = (
 
 # Paths the repository carries, one from each tree. An ignore rule that matched
 # one of these would be hiding repository content, so each is asserted visible.
-# The last two are `.zip` files, and they are here on purpose: `*.zip` ignores a
-# dropped deploy archive, and the product site ships two archives of its own --
-# Pyodide's `python_stdlib.zip` and the bundle `ui/site/build.py` builds -- so
-# the two negations in `.gitignore` are what keeps them visible, and this is what
-# holds those negations in place.
+# The last three are `.zip` files, and they are here on purpose: `*.zip` ignores
+# a dropped deploy archive, and the product site ships three archives of its own
+# -- Pyodide's `python_stdlib.zip` as her source and as the copy the builder
+# publishes, and the bundle `ui/site/build.py` builds -- so the three negations
+# in `.gitignore` are what keeps them visible, and this is what holds those
+# negations in place.
 REPOSITORY_CONTENT = (
     "README.md",
     "START-HERE.md",
@@ -76,6 +78,7 @@ REPOSITORY_CONTENT = (
     "docs/notes/2026-10-04-the-second-sealed-run.md",
     "docs/buddy-log/README.md",
     "ui/site/static/try/pyodide/python_stdlib.zip",
+    "ui/dist/try/pyodide/python_stdlib.zip",
     "ui/dist/try/tribunal-core.zip",
 )
 
@@ -160,6 +163,48 @@ class TheLicenceTests(unittest.TestCase):
         self.assertTrue(
             (PROJECT_ROOT / "LICENSE").read_text(encoding="utf-8").startswith("MIT License")
         )
+
+
+class ThePublishedFilesAreTrackedTests(unittest.TestCase):
+    """An ignore rule cannot hide a file the builder publishes.
+
+    ``ui/dist/try/pyodide/python_stdlib.zip`` was published and ignored at once:
+    ``*.zip`` matched it, so the clean-clone run of part 53a had no copy of it,
+    the build was not current, and a site deployed from the repository broke the
+    try-it page. The three negations in ``.gitignore`` are what keep the three
+    archives visible; this holds every published path to being one git tracks,
+    so a fourth cannot be added and hidden in the same way.
+    """
+
+    def tracked(self, relative: str) -> bool:
+        """Whether git tracks one repository-relative path.
+
+        Asked of git itself, for the same reason the rules above are: a check
+        against a second copy of the ignore rules can agree with itself while
+        disagreeing with the repository. ``--error-unmatch`` makes an untracked
+        path a failure rather than an empty listing.
+        """
+        done = subprocess.run(
+            ["git", "ls-files", "--error-unmatch", "--", relative],
+            cwd=str(PROJECT_ROOT),
+            capture_output=True,
+            text=True,
+        )
+        return done.returncode == 0
+
+    def test_every_file_the_site_builds_is_tracked(self):
+        portability.require_git_history()
+        published = sorted(site_build.written_paths())
+        # The control: a set that named nothing would make the check vacuous.
+        for name in ("try/pyodide/python_stdlib.zip", "try/tribunal-core.zip"):
+            self.assertIn(name, published, "{0} is not published by the site".format(name))
+        for name in published:
+            with self.subTest(path=name):
+                self.assertTrue(
+                    self.tracked("ui/dist/" + name),
+                    "ui/dist/{0} is published but not tracked; an ignore rule is "
+                    "hiding a file the site ships".format(name),
+                )
 
 
 if __name__ == "__main__":
