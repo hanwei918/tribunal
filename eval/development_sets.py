@@ -45,7 +45,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
@@ -299,6 +299,11 @@ DEVELOPMENT_SETS: Tuple[DevelopmentSet, ...] = (CORPUS, SECOND_SET)
 # switch on the invocation -- the same reason ``wild-v2`` fixes version 2.
 VERSION_THREE = 3
 
+# The policy version Ryde's own Dispute Resolution Policy v2.1 is published as,
+# and the base the three version-7 sets below are written for. Named here rather
+# than typed three times, for the reason every other version in this file is.
+V7_POLICY_VERSION = 7
+
 # They are registered with their own runs subdirectory and their own loader, and
 # they are deliberately **outside** ``DEVELOPMENT_SETS``: that tuple is what
 # ``--set all`` runs, what the combined figure sums and what ``ALL_SETS`` (the
@@ -460,10 +465,134 @@ FUNCTIONAL_SET_NAMES = tuple(
     development_set.name for development_set in FUNCTIONAL_SETS
 )
 
+# --------------------------------------------------------------------------
+# The version-7 sets
+# --------------------------------------------------------------------------
+# Policy version 7 is Ryde's own Dispute Resolution Policy v2.1, a separate base
+# whose clause ids start at 21 (see ``policy/v7/``). The organisers' two samples
+# are converted into it at ``data/external/ryde-v7/`` by
+# ``eval/external/ryde/convert.py --policy-version 7``: DISP-001, the
+# route-deviation sample, as case 902, and DISP-002, the no-show sample, as case
+# 903.
+#
+# It is registered exactly as ``ryde-v3`` is -- a development set that is tuned
+# against, never a generalisation figure -- and it carries ``policy_base=7`` and
+# ``policy_version=7`` for the same reason ``dev-v2`` carries version 3: the
+# cases are written for that base, so the set accepts any version on it and runs
+# at the latest one when no version is named. It is outside ``DEVELOPMENT_SETS``
+# (what ``--set all`` runs and the combined figure sums) and outside ``ALL_SETS``
+# (what the recorded-drafts measurement reads).
+RYDE_V7 = DevelopmentSet(
+    name="ryde-v7",
+    cases=tuple(
+        entry["case_no"]
+        for entry in loader.load_external_index(loader.EXTERNAL_DIR / "ryde-v7")
+    ),
+    key_path=ANSWER_DIR / "ryde-v7" / "ground_truth.json",
+    runs_subdir="ryde-v7",
+    case_root=loader.EXTERNAL_DIR / "ryde-v7",
+    summary=(
+        "the organisers' two samples converted for policy version 7 by "
+        "eval/external/ryde/convert.py --policy-version 7: DISP-001 as case 902 "
+        "(a route deviation) and DISP-002 as case 903 (a no-show). Ryde's own "
+        "stated outcomes are the set's key. Development data that is tuned "
+        "against, so it is never a generalisation figure"
+    ),
+    policy_version=V7_POLICY_VERSION,
+    policy_base=V7_POLICY_VERSION,
+)
+
+# The two sets parts 73 and 74 bring, **declared here and registered only when
+# their data is present**. A set with no case files has no case numbers to list
+# and no index to read, so registering one now would be a registration that
+# fails at import; and an empty directory would be a set that runs nothing while
+# looking as though it ran. So the two constants are written here, in the shape
+# they will be registered in, and the two tuples below take them the moment
+# ``data/external/<name>/index.json`` exists.
+#
+# Their run arguments are sealed-v2's, which is the configuration of every
+# sealed run since 2026-10-03, and their prompts directory is ``prompts/v2``,
+# which is the version-7 prompt set -- ``eval.run_benchmark`` refuses a version-7
+# run with any other.
+V7_RUN_ARGUMENTS = RunArguments(
+    model=RUNTIME_MODEL,
+    judge_votes=4,
+    verify_drafts=False,
+    timeout_seconds=900.0,
+    concurrency=2,
+    prompts_dir=Path("prompts/v2"),
+)
+
+DEV_V7 = DevelopmentSet(
+    name="dev-v7",
+    cases=(),
+    key_path=ANSWER_DIR / "dev-v7" / "ground_truth.json",
+    runs_subdir="dev-v7",
+    case_root=loader.EXTERNAL_DIR / "dev-v7",
+    summary=(
+        "the version-7 development set: 70 cases, 5001-5070, written for Ryde's "
+        "Dispute Resolution Policy v2.1. Declared here and registered when its "
+        "data is present; development data that is tuned against, so it is never "
+        "a generalisation figure"
+    ),
+    policy_version=V7_POLICY_VERSION,
+    policy_base=V7_POLICY_VERSION,
+    run_arguments=V7_RUN_ARGUMENTS,
+)
+
+SEALED_V4 = DevelopmentSet(
+    name="sealed-v4",
+    cases=(),
+    key_path=ANSWER_DIR / "sealed-v4" / "ground_truth.json",
+    runs_subdir="sealed-v4",
+    case_root=loader.EXTERNAL_DIR / "sealed-v4",
+    summary=(
+        "the sixth sealed set: 65 cases, 6001-6065, written for Ryde's Dispute "
+        "Resolution Policy v2.1. Declared here and registered when its data is "
+        "present; it is run once, plainly, and that single run is one of the "
+        "generalisation figures the submission reports"
+    ),
+    sealed=True,
+    policy_version=V7_POLICY_VERSION,
+    run_arguments=V7_RUN_ARGUMENTS,
+)
+
+
+def external_set_data_present(name: str) -> bool:
+    """Whether a declared set's own data is on disk yet.
+
+    Read off the set's ``index.json`` rather than its directory, because a
+    directory with no index is a set that cannot be loaded and not one that can.
+    """
+    return (loader.EXTERNAL_DIR / name / loader.EXTERNAL_INDEX_FILE).is_file()
+
+
+def registered(development_set: DevelopmentSet) -> DevelopmentSet:
+    """A declared set with the case numbers its index lists.
+
+    Returns the set unchanged when its data is not present, so the two tuples
+    below can be written as one expression each and the declaration above stays
+    the single place a set's name, root, key and arguments are written down.
+    """
+    if not external_set_data_present(development_set.name):
+        return development_set
+    return replace(
+        development_set,
+        cases=tuple(
+            entry["case_no"]
+            for entry in loader.load_external_index(
+                loader.EXTERNAL_DIR / development_set.name
+            )
+        ),
+    )
+
+
 # The sets that are run by name and are in none of the tuples above: ``--set
 # all`` does not run them, the combined figure does not sum them, and the
 # recorded-drafts measurement does not read them.
-NAMED_SETS: Tuple[DevelopmentSet, ...] = VERSION_THREE_SETS + FUNCTIONAL_SETS
+NAMED_SETS: Tuple[DevelopmentSet, ...] = (
+    VERSION_THREE_SETS + FUNCTIONAL_SETS + (RYDE_V7,)
+) + ((registered(DEV_V7),) if external_set_data_present(DEV_V7.name) else ())
 
 # The second sealed set, imported on 2026-10-03 and run once, on 2026-10-04, from
 # a commit whose ``tribunal/``, ``prompts/`` and ``policy/`` trees equal those at
@@ -663,7 +792,7 @@ SEALED_SETS: Tuple[DevelopmentSet, ...] = (
     SEALED_V1,
     SEALED_V2,
     SEALED_V3,
-)
+) + ((registered(SEALED_V4),) if external_set_data_present(SEALED_V4.name) else ())
 
 # The sets that exist to be run again. They are registered by name and are
 # deliberately outside the tuples above: ``--set all``, the combined figure
@@ -688,11 +817,48 @@ BY_NAME = {
 }
 
 
+# The sets that are declared above and are **not** registered, by name. A set
+# with no case files is not one this layer can run, and naming one is told that
+# rather than told it does not exist: "its data is not there yet" and "there is
+# no such set" are different answers, and only one of them is true.
+DECLARED_SETS: Dict[str, DevelopmentSet] = {
+    development_set.name: development_set
+    for development_set in (DEV_V7, SEALED_V4)
+    if not external_set_data_present(development_set.name)
+}
+
+
+def render_declared_set(development_set: DevelopmentSet) -> str:
+    """What a set that is declared but not registered is told.
+
+    One sentence per thing a reader needs: which set, where its data would be,
+    and that nothing is created for it -- because the failure this message
+    replaces is a run that creates an empty directory and reports a set with no
+    cases in it.
+    """
+    root = loader.EXTERNAL_DIR / development_set.name
+    return (
+        "FATAL: {0} is declared but not registered: {1} does not exist, so there "
+        "is no case to list, no plan to print and nothing to run. It is "
+        "registered when that file arrives, and nothing is created for it "
+        "before then.".format(development_set.name, root / loader.EXTERNAL_INDEX_FILE)
+    )
+
+
 def named(name: str) -> DevelopmentSet:
     """One set by name. An unknown name raises rather than defaulting."""
     try:
         return BY_NAME[name]
     except KeyError:
+        waiting = DECLARED_SETS.get(name)
+        if waiting is not None:
+            raise run_benchmark.BenchmarkError(
+                "{0} is declared but not registered: {1} does not exist, so "
+                "there is no case to list and no plan to print. It is registered "
+                "when its own index.json arrives".format(
+                    name, loader.EXTERNAL_DIR / name / loader.EXTERNAL_INDEX_FILE
+                )
+            ) from None
         raise run_benchmark.BenchmarkError(
             "unknown development set {0!r}; known sets: {1}".format(
                 name, ", ".join(sorted(BY_NAME))
@@ -2346,6 +2512,16 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     # "all" is the two development sets. The held-out set is deliberately not in
     # that list: it is run once, and an invocation that ran it as a side effect
     # of running everything would be a run nobody chose to make.
+    # A set that is declared and whose data is not on disk is told that before
+    # anything else: it is not a set this invocation can plan, run or report,
+    # and "its data is not there yet" is not the same answer as "there is no
+    # such set". ``--check`` prints it too, because a plan is exactly what there
+    # is not one of.
+    waiting = DECLARED_SETS.get(args.set_name)
+    if waiting is not None:
+        print(render_declared_set(waiting), file=sys.stderr)
+        return 1
+
     selected = (
         [named(args.set_name)] if args.set_name != "all" else list(DEVELOPMENT_SETS)
     )

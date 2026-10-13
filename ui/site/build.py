@@ -23,7 +23,7 @@ Three trees, all committed:
   path, byte for byte.
 * the repository itself, for one file it **builds** rather than copies:
   ``ui/dist/try/tribunal-core.zip``, the Python the browser runs, assembled
-  from the 39 paths in :data:`BUNDLE_PATHS` -- this repository's own
+  from the 42 paths in :data:`BUNDLE_PATHS` -- this repository's own
   ``tribunal/*.py``, ``tryit/*.py``, ``ops/chat_signals.py``,
   ``policy/**/*.json``, the four template cases and ``data/index.json``.
 
@@ -101,11 +101,15 @@ INCLUDE_RE = re.compile(r"/\*@include ([A-Za-z0-9._-]+)\*/")
 # write is refused rather than left in the page.
 QUEUE_ROWS_RE = re.compile(r"/\*@queue-rows ([A-Za-z0-9_-]+)\*/")
 
-# The bundle the try-it page loads, and the 39 paths it holds. The list is the
+# The bundle the try-it page loads, and the 42 paths it holds. The list is the
 # one her own bundle carried, read off its listing and written out here rather
 # than globbed, so the bundle's contents are a fact this repository states and a
 # file that appeared beside them cannot slip in. It is sorted, and the entries
 # are written in this order.
+#
+# The three ``policy/v7/*.json`` files are the last three added, when version 7
+# was published: her builder globs ``policy/**/*.json``, so her own list grew by
+# exactly those three and this one has to grow with it.
 BUNDLE_PATH = DIST_DIR / "try" / "tribunal-core.zip"
 BUNDLE_PATHS: Tuple[str, ...] = (
     "data/cases/case-00103.json",
@@ -129,6 +133,9 @@ BUNDLE_PATHS: Tuple[str, ...] = (
     "policy/v3/proposals/0002-pol-rd-14.json",
     "policy/v3/proposals/0003-pol-ns-12.json",
     "policy/v3/route_deviation.json",
+    "policy/v7/general.json",
+    "policy/v7/no_show.json",
+    "policy/v7/route_deviation.json",
     "tribunal/__init__.py",
     "tribunal/brief.py",
     "tribunal/events.py",

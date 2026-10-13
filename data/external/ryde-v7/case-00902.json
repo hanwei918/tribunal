@@ -1,0 +1,567 @@
+{
+  "schema_version": "1.2.0",
+  "case_no": 902,
+  "dispute": {
+    "dispute_id": "DISP-001",
+    "trip_id": "TRIP-2026-09871",
+    "case_no": 902,
+    "category": "ROUTE_DEVIATION",
+    "filed_by": "RIDER",
+    "filed_at": "2026-09-12T14:35:00+08:00",
+    "claim_text": "The driver took a significantly longer route from Orchard Central to Changi Airport T3. I normally take the PIE which takes about 35 minutes and costs around $28. On this trip the driver went through Geylang and East Coast area, taking 37 minutes and the fare was $35. The driver did not inform me about any route change or traffic. The extra distance was 4.3 km and I was overcharged. I am requesting a refund of the excess fare.",
+    "amount_contested_sgd": 6.5,
+    "counterparty_statement": null,
+    "channel": "IN_APP_SUPPORT",
+    "evidence_ids": [
+      "EV-TRIP-00902",
+      "EV-GPS-00902",
+      "EV-CHAT-00902",
+      "EV-FARE-00902",
+      "EV-RPROF-00902",
+      "EV-DPROF-00902",
+      "EV-ADVIS-00902-01",
+      "EV-ADVIS-00902-02",
+      "EV-ADVIS-00902-03"
+    ]
+  },
+  "evidence": [
+    {
+      "evidence_id": "EV-TRIP-00902",
+      "evidence_type": "TRIP_RECORD",
+      "trip_id": "TRIP-2026-09871",
+      "source": "PLATFORM_TELEMETRY",
+      "generated_at": "2026-09-12T14:35:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "The source's own trip record, with both recorded distances: 24.8 km actual against 20.5 km on the recommended route, which is what POL-RD-22 subtracts. The trace is not used to re-measure either, because POL-RD-22 says so and a sparse trace understates a route's length. No fix carries a reported accuracy, so POL-NS-02's presence test is not this case's and no arrival is established from the trace. pickup_zone_class and vehicle_type are stated assumptions, recorded in the mapping record; the source gives neither.",
+        "assessed_at": "2026-09-12T14:35:05+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRIP-2026-09871",
+        "rider_id": "R-4521",
+        "driver_id": "D-1187",
+        "started_at": "2026-09-12T13:15:00+08:00",
+        "ended_at": "2026-09-12T13:52:00+08:00",
+        "status": "COMPLETED",
+        "actual_distance_km": 24.8,
+        "optimal_distance_km": 20.5,
+        "optimal_duration_min": 35,
+        "actual_duration_min": 37,
+        "pickup": {
+          "label": "Orchard Central",
+          "lat": 1.3048,
+          "lng": 103.8318,
+          "venue_id": null
+        },
+        "dropoff": {
+          "label": "Changi Airport T3",
+          "lat": 1.3644,
+          "lng": 103.9915,
+          "venue_id": null
+        },
+        "vehicle_type": "RYDE_X",
+        "pickup_zone_class": "STANDARD",
+        "chat_message_count": 6,
+        "in_app_calls": [],
+        "deviation_pct": 20.98,
+        "requested_at": null,
+        "accepted_at": null,
+        "arrived_at": null,
+        "cancelled_at": null,
+        "cancelled_by": null,
+        "cancellation_reason_code": null,
+        "optimal_route_source": null,
+        "optimal_route_erp_sgd": null,
+        "amended_optimal_distance_km": null,
+        "amended_optimal_duration_min": null,
+        "solo_optimal_distance_km": null,
+        "registered_pickup_points": null,
+        "pickup_amended_at": null,
+        "dropoff_amended_at": null,
+        "original_pickup": null,
+        "original_dropoff": null
+      }
+    },
+    {
+      "evidence_id": "EV-GPS-00902",
+      "evidence_type": "GPS_TRACE",
+      "trip_id": "TRIP-2026-09871",
+      "source": "DRIVER_DEVICE",
+      "generated_at": "2026-09-12T14:35:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "IMPAIRED",
+        "issues": [
+          "LOW_SAMPLE_RATE"
+        ],
+        "weight_multiplier": 0.8,
+        "notes": "Sparse telemetry with no reported accuracy, showing the route taken. The intervals between the source's own timestamps are [120.0, 150.0, 150.0, 150.0, 150.0, 150.0, 150.0, 120.0, 120.0, 120.0, 180.0, 180.0, 210.0, 150.0, 120.0] s, 10 of the 15 exceeding the version-7 policy's 120 s limb. No fix carries accuracy_m, so under POL-NS-02 every one of them is evidence of neither presence nor absence; no version-7 route-deviation clause reads the trace's geometry, because POL-RD-22 measures the deviation from the trip record's own two distances.",
+        "assessed_at": "2026-09-12T14:35:05+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRIP-2026-09871",
+        "points": [
+          {
+            "lat": 1.3048,
+            "lng": 103.8318,
+            "ts": "2026-09-12T13:15:00+08:00",
+            "speed_kph": 0
+          },
+          {
+            "lat": 1.3065,
+            "lng": 103.836,
+            "ts": "2026-09-12T13:17:00+08:00",
+            "speed_kph": 35
+          },
+          {
+            "lat": 1.302,
+            "lng": 103.844,
+            "ts": "2026-09-12T13:19:30+08:00",
+            "speed_kph": 40
+          },
+          {
+            "lat": 1.2975,
+            "lng": 103.853,
+            "ts": "2026-09-12T13:22:00+08:00",
+            "speed_kph": 35
+          },
+          {
+            "lat": 1.2935,
+            "lng": 103.862,
+            "ts": "2026-09-12T13:24:30+08:00",
+            "speed_kph": 45
+          },
+          {
+            "lat": 1.29,
+            "lng": 103.871,
+            "ts": "2026-09-12T13:27:00+08:00",
+            "speed_kph": 50
+          },
+          {
+            "lat": 1.3,
+            "lng": 103.878,
+            "ts": "2026-09-12T13:29:30+08:00",
+            "speed_kph": 38
+          },
+          {
+            "lat": 1.3065,
+            "lng": 103.885,
+            "ts": "2026-09-12T13:32:00+08:00",
+            "speed_kph": 42
+          },
+          {
+            "lat": 1.31,
+            "lng": 103.8905,
+            "ts": "2026-09-12T13:34:00+08:00",
+            "speed_kph": 40
+          },
+          {
+            "lat": 1.3125,
+            "lng": 103.896,
+            "ts": "2026-09-12T13:36:00+08:00",
+            "speed_kph": 55
+          },
+          {
+            "lat": 1.316,
+            "lng": 103.905,
+            "ts": "2026-09-12T13:38:00+08:00",
+            "speed_kph": 70
+          },
+          {
+            "lat": 1.3225,
+            "lng": 103.92,
+            "ts": "2026-09-12T13:41:00+08:00",
+            "speed_kph": 75
+          },
+          {
+            "lat": 1.335,
+            "lng": 103.945,
+            "ts": "2026-09-12T13:44:00+08:00",
+            "speed_kph": 65
+          },
+          {
+            "lat": 1.35,
+            "lng": 103.97,
+            "ts": "2026-09-12T13:47:30+08:00",
+            "speed_kph": 60
+          },
+          {
+            "lat": 1.358,
+            "lng": 103.983,
+            "ts": "2026-09-12T13:50:00+08:00",
+            "speed_kph": 40
+          },
+          {
+            "lat": 1.3644,
+            "lng": 103.9915,
+            "ts": "2026-09-12T13:52:00+08:00",
+            "speed_kph": 0
+          }
+        ],
+        "point_count": 16,
+        "first_fix_at": "2026-09-12T13:15:00+08:00",
+        "last_fix_at": "2026-09-12T13:52:00+08:00",
+        "sample_interval_sec": 150.0,
+        "expected_interval_sec": null,
+        "gaps": [
+          {
+            "from": "2026-09-12T13:17:00+08:00",
+            "to": "2026-09-12T13:19:30+08:00",
+            "gap_sec": 150.0
+          },
+          {
+            "from": "2026-09-12T13:19:30+08:00",
+            "to": "2026-09-12T13:22:00+08:00",
+            "gap_sec": 150.0
+          },
+          {
+            "from": "2026-09-12T13:22:00+08:00",
+            "to": "2026-09-12T13:24:30+08:00",
+            "gap_sec": 150.0
+          },
+          {
+            "from": "2026-09-12T13:24:30+08:00",
+            "to": "2026-09-12T13:27:00+08:00",
+            "gap_sec": 150.0
+          },
+          {
+            "from": "2026-09-12T13:27:00+08:00",
+            "to": "2026-09-12T13:29:30+08:00",
+            "gap_sec": 150.0
+          },
+          {
+            "from": "2026-09-12T13:29:30+08:00",
+            "to": "2026-09-12T13:32:00+08:00",
+            "gap_sec": 150.0
+          },
+          {
+            "from": "2026-09-12T13:38:00+08:00",
+            "to": "2026-09-12T13:41:00+08:00",
+            "gap_sec": 180.0
+          },
+          {
+            "from": "2026-09-12T13:41:00+08:00",
+            "to": "2026-09-12T13:44:00+08:00",
+            "gap_sec": 180.0
+          },
+          {
+            "from": "2026-09-12T13:44:00+08:00",
+            "to": "2026-09-12T13:47:30+08:00",
+            "gap_sec": 210.0
+          },
+          {
+            "from": "2026-09-12T13:47:30+08:00",
+            "to": "2026-09-12T13:50:00+08:00",
+            "gap_sec": 150.0
+          }
+        ],
+        "max_gap_sec": 210.0,
+        "coverage_pct": null,
+        "trace_distance_km": null,
+        "rider_track": []
+      }
+    },
+    {
+      "evidence_id": "EV-CHAT-00902",
+      "evidence_type": "CHAT_LOG",
+      "trip_id": "TRIP-2026-09871",
+      "source": "PLATFORM_TELEMETRY",
+      "generated_at": "2026-09-12T14:35:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "The source's own chat log, six entries, contiguous by construction. The rider asks whether the route is the usual one at 13:24 and the driver does not explain it: POL-RD-21's reading of the messages sent while the trip ran is published in the brief, and the text stays here.",
+        "assessed_at": "2026-09-12T14:35:05+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRIP-2026-09871",
+        "messages": [
+          {
+            "msg_id": "MSG-00902-001",
+            "sender": "RIDER",
+            "text": "Hi! I'm at the Orchard Central main entrance, wearing a blue dress. White Toyota Vios right?",
+            "sent_at": "2026-09-12T13:08:00+08:00",
+            "read_at": null,
+            "delivered_at": null,
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-00902-002",
+            "sender": "DRIVER",
+            "text": "Yes that's me! I can see you, coming now. 1 min.",
+            "sent_at": "2026-09-12T13:09:00+08:00",
+            "read_at": null,
+            "delivered_at": null,
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-00902-003",
+            "sender": "RIDER",
+            "text": "Great thanks! Heading to Changi T3, my flight is at 3:30pm.",
+            "sent_at": "2026-09-12T13:10:00+08:00",
+            "read_at": null,
+            "delivered_at": null,
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-00902-004",
+            "sender": "DRIVER",
+            "text": "Sure, no problem. We will get there in time.",
+            "sent_at": "2026-09-12T13:10:30+08:00",
+            "read_at": null,
+            "delivered_at": null,
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-00902-005",
+            "sender": "RIDER",
+            "text": "Hey, are we going the right way? This doesn't look like the usual route to the airport.",
+            "sent_at": "2026-09-12T13:24:00+08:00",
+            "read_at": null,
+            "delivered_at": null,
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-00902-006",
+            "sender": "DRIVER",
+            "text": "Don't worry, I know the way. We will reach on time.",
+            "sent_at": "2026-09-12T13:25:00+08:00",
+            "read_at": null,
+            "delivered_at": null,
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          }
+        ],
+        "message_count": 6,
+        "first_message_at": "2026-09-12T13:08:00+08:00",
+        "last_message_at": "2026-09-12T13:25:00+08:00",
+        "truncated": false
+      }
+    },
+    {
+      "evidence_id": "EV-FARE-00902",
+      "evidence_type": "FARE_BREAKDOWN",
+      "trip_id": "TRIP-2026-09871",
+      "source": "PAYMENTS_LEDGER",
+      "generated_at": "2026-09-12T14:35:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "IMPAIRED",
+        "issues": [
+          "PARTIAL_RECORD"
+        ],
+        "weight_multiplier": 0.75,
+        "notes": "The ledger carries the aggregate the source charges (35.00) against the estimate it quoted (28.50) and the per-kilometre rate the distance fare was computed at (0.80, read out of the note). It itemises no lines, which is a PARTIAL_RECORD: no code in this corpus's vocabulary covers a ledger whose itemisation the source platform did not export, so none is minted and the fact is stated here instead.",
+        "assessed_at": "2026-09-12T14:35:05+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRIP-2026-09871",
+        "currency": "SGD",
+        "fare_model": "METERED",
+        "quoted_fare_sgd": 28.5,
+        "total_charged": 35.0,
+        "distance_charged_km": 24.8,
+        "time_charged_min": 37,
+        "per_km_rate_sgd": 0.8,
+        "charged_at": "2026-09-12T13:52:00+08:00",
+        "payment_status": "CHARGED",
+        "refund_issued_sgd": 0.0,
+        "base_fare": 0.0,
+        "distance_fare": 0.0,
+        "time_fare": 0.0,
+        "surge_amount": 0.0,
+        "tolls_erp": 0.0,
+        "airport_surcharge": 0.0,
+        "platform_fee": 0.0,
+        "promo_discount": 0.0,
+        "waiting_time_fee": 0.0,
+        "cancellation_fee": 0.0,
+        "per_min_rate_sgd": null,
+        "rate_card_id": null,
+        "surge_multiplier": null,
+        "erp_gantries": []
+      }
+    },
+    {
+      "evidence_id": "EV-RPROF-00902",
+      "evidence_type": "RIDER_PROFILE",
+      "trip_id": "TRIP-2026-09871",
+      "source": "PLATFORM_TELEMETRY",
+      "generated_at": "2026-09-12T14:35:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "The rider's own counters, complete for every field the source states. The corpus's schema has five fields the source does not speak to (cancellation_rate, no_show_disputes_30d, the two deviation counters, and disputes_with_counterparty_90d); each is null, and none is zero, because zero would assert a count nobody recorded. No issue code in the corpus's vocabulary covers a profile field the source is silent on, so none is minted.",
+        "assessed_at": "2026-09-12T14:35:05+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "R-4521",
+        "party_role": "RIDER",
+        "snapshot_at": "2026-09-12T14:35:00+08:00",
+        "account_age_days": 540,
+        "lifetime_trips": 187,
+        "rating": 4.8,
+        "prior_disputes_filed": 2,
+        "prior_disputes_upheld": 1,
+        "prior_no_show_flags": 0,
+        "fraud_flags": 0,
+        "cancellation_rate": null,
+        "no_show_disputes_30d": null,
+        "deviation_claims_60d": null,
+        "deviation_claims_60d_substantiated": null,
+        "disputes_with_counterparty_90d": null
+      }
+    },
+    {
+      "evidence_id": "EV-DPROF-00902",
+      "evidence_type": "DRIVER_PROFILE",
+      "trip_id": "TRIP-2026-09871",
+      "source": "PLATFORM_TELEMETRY",
+      "generated_at": "2026-09-12T14:35:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "The driver's own counters, complete for every field the source states. Nine corpus fields the source does not speak to are null, not zero. no_show_terminations_30d being null makes POL-NS-07's anti-farming check undecidable on this case rather than passed, which is the honest state and is recorded in the mapping. No issue code is minted for the gaps, because no code in the corpus's vocabulary covers a field the source is silent on.",
+        "assessed_at": "2026-09-12T14:35:05+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "D-1187",
+        "party_role": "DRIVER",
+        "snapshot_at": "2026-09-12T14:35:00+08:00",
+        "account_age_days": 720,
+        "lifetime_trips": 2143,
+        "rating": 4.7,
+        "prior_disputes_filed": 3,
+        "prior_disputes_upheld": 1,
+        "prior_no_show_flags": 0,
+        "vehicle_type": "RYDE_X",
+        "fraud_flags": 0,
+        "cancellation_rate": 0.03,
+        "prior_deviation_flags": null,
+        "acceptance_rate": null,
+        "active_region": null,
+        "deviation_flags_90d": null,
+        "completed_trips_90d": null,
+        "no_show_terminations_30d": null,
+        "completed_trips_30d": null,
+        "disputes_with_counterparty_90d": null
+      }
+    },
+    {
+      "evidence_id": "EV-ADVIS-00902-01",
+      "evidence_type": "TRAFFIC_ADVISORY",
+      "trip_id": "TRIP-2026-09871",
+      "source": "THIRD_PARTY_LTA",
+      "generated_at": "2026-09-12T14:35:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "The source's own traffic condition, with its type and severity upper-cased and its route reading judged from the source's traffic_analysis. It carries no geometry, because the source gives none.",
+        "assessed_at": "2026-09-12T14:35:05+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "advisory_id": "TC-001",
+        "road_name": "PIE (Pan-Island Expressway)",
+        "type": "VEHICLE_FIRE",
+        "severity": "HIGH",
+        "active_from": "2026-09-12T13:05:00+08:00",
+        "active_to": "2026-09-12T13:50:00+08:00",
+        "description": "Vehicle fire on PIE eastbound between Paya Lebar and Hougang. Lanes 1 and 2 blocked. Heavy congestion and long delays reported from 13:05.",
+        "advisory_source": "SOURCE_RECORD",
+        "intersects_route": true,
+        "overlaps_trip_window": true
+      }
+    },
+    {
+      "evidence_id": "EV-ADVIS-00902-02",
+      "evidence_type": "TRAFFIC_ADVISORY",
+      "trip_id": "TRIP-2026-09871",
+      "source": "THIRD_PARTY_LTA",
+      "generated_at": "2026-09-12T14:35:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "The source's own traffic condition, with its type and severity upper-cased and its route reading judged from the source's traffic_analysis. It carries no geometry, because the source gives none.",
+        "assessed_at": "2026-09-12T14:35:05+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "advisory_id": "TC-002",
+        "road_name": "PIE exit ramp — Changi Airport exit",
+        "type": "HEAVY_CONGESTION",
+        "severity": "MODERATE",
+        "active_from": "2026-09-12T13:15:00+08:00",
+        "active_to": "2026-09-12T13:40:00+08:00",
+        "description": "Heavy congestion on PIE near the airport exit, likely a secondary effect of the vehicle fire upstream.",
+        "advisory_source": "SOURCE_RECORD",
+        "intersects_route": true,
+        "overlaps_trip_window": true
+      }
+    },
+    {
+      "evidence_id": "EV-ADVIS-00902-03",
+      "evidence_type": "TRAFFIC_ADVISORY",
+      "trip_id": "TRIP-2026-09871",
+      "source": "THIRD_PARTY_LTA",
+      "generated_at": "2026-09-12T14:35:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "The source's own traffic condition, with its type and severity upper-cased and its route reading judged from the source's traffic_analysis. It carries no geometry, because the source gives none.",
+        "assessed_at": "2026-09-12T14:35:05+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "advisory_id": "TC-003",
+        "road_name": "ECP (East Coast Parkway)",
+        "type": "TRAFFIC_FLOW",
+        "severity": "LOW",
+        "active_from": "2026-09-12T13:30:00+08:00",
+        "active_to": null,
+        "description": "ECP eastbound flowing smoothly. No incidents. The driver's reroute through ECP was a reasonable alternative given PIE conditions.",
+        "advisory_source": "SOURCE_RECORD",
+        "intersects_route": false,
+        "overlaps_trip_window": true
+      }
+    }
+  ]
+}

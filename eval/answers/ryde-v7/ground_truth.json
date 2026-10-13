@@ -1,0 +1,37 @@
+[
+  {
+    "case_no": 902,
+    "dispute_id": "DISP-001",
+    "ground_truth": {
+      "expected_ruling": "PARTIAL_REFUND",
+      "expected_amount_sgd": 3.44,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-21",
+        "POL-RD-22",
+        "POL-RD-24"
+      ],
+      "difficulty": "MEDIUM",
+      "rationale": "DISP-001, the organisers' route-deviation sample, read under Ryde's Dispute Resolution Policy v2.1. The deviation is the platform's own two recorded distances (POL-RD-22): EV-TRIP-00902 carries 24.8 km actual against 20.5 km on the recommended route, a difference of 4.30 km, above the 1.0 km tolerance. POL-RD-23 is satisfied by the second traffic advisory: EV-ADVIS-00902-02 (heavy congestion on the PIE, the recommended route, inside the trip window) justifies the reroute, so the driver's reason is a real one. The rider was not informed -- POL-RD-21's index of the messages sent while the trip ran holds the rider's own query at 13:24 and no notice from the driver before or at the point of deviation -- so POL-RD-24's row (b) applies and the excess distance fare is refunded. That figure is the deviation distance times the per-kilometre rate POL-RD-24 names (4.30 x 0.80 = 3.44), and it is the same figure the organisers' own sample states. The rider asked for the excess fare (6.50), not for the whole charge, so the refund is partial and the tolls the sample also lists are not part of it: POL-RD-24 refunds the excess distance fare and nothing else. Referrals are empty because the ruling is the clause's own remedy rather than an instruction to another party."
+    }
+  },
+  {
+    "case_no": 903,
+    "dispute_id": "DISP-002",
+    "ground_truth": {
+      "expected_ruling": "DRIVER_COMPENSATION",
+      "expected_amount_sgd": 5.0,
+      "expected_driver_compensation_sgd": 5.0,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-GEN-22",
+        "POL-NS-21",
+        "POL-NS-22",
+        "POL-NS-23"
+      ],
+      "difficulty": "MEDIUM",
+      "rationale": "DISP-002, the organisers' no-show sample, converted for version 7 as case 903. The trip is scheduled for 08:45 and the driver arrived at 08:43, at or before it, so POL-NS-21's free wait runs from the scheduled time and ends at 08:50; the driver cancelled at 08:51, one minute after it elapsed. POL-NS-23's contact obligation is met: the chat log holds the driver's four messages before 08:51 and one placed call at 08:47:05, and the call is recorded once although it sits both in trip_record.in_app_calls and as a VOICE_CALL_LOG entry in the chat log. The fee charged is 5.00, which is the policy's own fee (POL-NS-22), so it stands. v2.1 2.2 makes the fee the driver's compensation for time and fuel, so the ruling is DRIVER_COMPENSATION and the amount mirrors the charge: 5.00 to the driver, which is the outcome the organisers' own sample states. POL-GEN-22 raises the bar this ruling needs to 0.95, because the rider's profile carries fraud_flags of 1 -- the counter is read on either party and it is on the record. Referrals are empty: the ruling is POL-NS-22's own remedy and the repeat-cancellation flag POL-NS-25 raises is the reviewer's, not a referral of this ruling."
+    }
+  }
+]

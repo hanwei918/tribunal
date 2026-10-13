@@ -1,0 +1,2102 @@
+{
+  "source_document": "eval/external/ryde/DISP-002.md",
+  "source_dispute_id": "DISP-002",
+  "converted_case_no": 903,
+  "converted_case_file": "external/ryde-v7/case-00903.json",
+  "note": "Every field of the converted case, with whether the conversion copied it or judged it, and why. The source's title and Evidence Summary are not listed anywhere here because nothing in them reached the conversion.",
+  "fields": [
+    {
+      "target": "trip_id",
+      "kind": "copied",
+      "source": "dispute_ticket.trip_id",
+      "value": "TRIP-2026-09945",
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence[*].generated_at",
+      "kind": "judged",
+      "source": "dispute_ticket.filed_at",
+      "value": "2026-09-13T09:20:00+08:00",
+      "reason": "The source states no export time. The dispute's own filing time is used, because it is a real timestamp from the source and falls after every event the records describe, which is what an export time has to be."
+    },
+    {
+      "target": "evidence[*].admissibility.assessed_at",
+      "kind": "judged",
+      "source": null,
+      "value": "2026-09-13T09:20:05+08:00",
+      "reason": "The admissibility pre-pass runs when the records are assembled. The corpus stamps its own blocks five seconds after generated_at, so the same offset is used rather than a second invented instant."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.requested_at",
+      "kind": "copied",
+      "source": "app_events[booking_confirmed].timestamp",
+      "value": "2026-09-13T08:30:00+08:00",
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.accepted_at",
+      "kind": "copied",
+      "source": "app_events[driver_assigned].timestamp",
+      "value": "2026-09-13T08:30:15+08:00",
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.arrived_at",
+      "kind": "copied",
+      "source": "trip_data.driver_arrival_time, app_events[driver_arrived].timestamp",
+      "value": "2026-09-13T08:43:00+08:00",
+      "reason": "Copied from the source's own arrival time. The driver_arrived event states the same instant, so both are named here rather than the second being left unrecorded."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.cancelled_at",
+      "kind": "copied",
+      "source": "trip_data.cancellation_time",
+      "value": "2026-09-13T08:51:00+08:00",
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.wait_time_min",
+      "kind": "judged",
+      "source": "trip_data.driver_wait_start, trip_data.cancellation_time",
+      "value": 8.0,
+      "reason": "Computed from the source's own wait start (08:43) and cancellation (08:51), which is 480 s. The source states no wait figure."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.time_to_arrival_min",
+      "kind": "judged",
+      "source": null,
+      "value": 12.7,
+      "reason": "Computed from the source's own en-route event (08:30:20) to arrival (08:43), which is 760 s. The source states no arrival-time figure."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.trip_id",
+      "kind": "copied",
+      "source": "trip_data.trip_id",
+      "value": "TRIP-2026-09945",
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.rider_id",
+      "kind": "copied",
+      "source": "trip_data.rider_id",
+      "value": "R-7823",
+      "reason": "Copied unchanged. The source's id form (R-7823) differs from this corpus's (RDR-02073); the value is carried as given rather than re-formatted, because the form is not this converter's to change."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.driver_id",
+      "kind": "copied",
+      "source": "trip_data.driver_id",
+      "value": "D-2398",
+      "reason": "Copied unchanged, for the same reason as rider_id (source form D-2398)."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.started_at",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "The trip never started: it was cancelled on a rider no-show. Null is what the corpus records for a trip that did not run."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.ended_at",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "The trip never ended because it never started."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.status",
+      "kind": "judged",
+      "source": "chat_logs[system].content",
+      "value": "CANCELLED_BY_DRIVER",
+      "reason": "The source's system message says 'Trip cancelled by driver'. CANCELLED_BY_DRIVER is this corpus's token for that."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.cancelled_by",
+      "kind": "judged",
+      "source": "chat_logs[system].content",
+      "value": "DRIVER",
+      "reason": "Same fact as status, in the corpus's separate field."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.cancellation_reason_code",
+      "kind": "judged",
+      "source": "trip_data.cancellation_reason",
+      "value": "RIDER_NO_SHOW",
+      "reason": "The source writes 'rider_no_show'; RIDER_NO_SHOW is this corpus's token. It is one of the three codes POL-NS-01(d) admits."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.pickup.label",
+      "kind": "copied",
+      "source": "trip_data.pickup_location.name",
+      "value": "Tiong Bahru Plaza",
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.pickup.lat",
+      "kind": "copied",
+      "source": "trip_data.pickup_location.lat",
+      "value": 1.2847,
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.pickup.lng",
+      "kind": "copied",
+      "source": "trip_data.pickup_location.lng",
+      "value": 103.8382,
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.pickup.venue_id",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "The source carries no venue identifier. Minting one would let POL-NS-03's venue_id corroboration test run on a value nobody recorded, which is the one thing that test must not do."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.dropoff.label",
+      "kind": "copied",
+      "source": "trip_data.dropoff_location.name",
+      "value": "VivoCity",
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.dropoff.lat",
+      "kind": "copied",
+      "source": "trip_data.dropoff_location.lat",
+      "value": 1.2648,
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.dropoff.lng",
+      "kind": "copied",
+      "source": "trip_data.dropoff_location.lng",
+      "value": 103.8223,
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.dropoff.venue_id",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "The source carries no venue identifier, for the same reason as pickup."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.vehicle_type",
+      "kind": "judged",
+      "source": "driver_profile.vehicle",
+      "value": "RYDE_X",
+      "reason": "The source names a Honda HR-V, which is not a tier in this corpus. RYDE_X is the base tier; the fee comparison under POL-NS-08(d) depends on this choice and it is recorded as an assumption."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.pickup_zone_class",
+      "kind": "judged",
+      "source": null,
+      "value": "STANDARD",
+      "reason": "The source states no zone class. STANDARD is used as an explicitly stated assumption and not inferred from the place name, because inferring it would be world knowledge about places. The dwell minimum, the arrival radius and the zone fee all depend on it."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.chat_message_count",
+      "kind": "judged",
+      "source": null,
+      "value": 6,
+      "reason": "The count of chat_logs entries the source supplies, which is what POL-NS-08(c) compares the chat artifact against."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.registered_pickup_points",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "The source does not say how many registered pickup points the location has. POL-NS-03(ii) reads this field, so a minted 1 or 2 would decide a limb on a value nobody recorded."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.in_app_calls[0].call_id",
+      "kind": "judged",
+      "source": null,
+      "value": "CALL-00903-001",
+      "reason": "Minted. The source describes the call but gives it no identifier."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.in_app_calls[0].initiated_at",
+      "kind": "copied",
+      "source": "chat_logs[call].timestamp",
+      "value": "2026-09-13T08:47:05+08:00",
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.in_app_calls[0].initiated_by",
+      "kind": "judged",
+      "source": "chat_logs[call].sender",
+      "value": "DRIVER",
+      "reason": "The source says 'Outgoing call to rider' and the sender is the driver."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.in_app_calls[0].answered",
+      "kind": "judged",
+      "source": "chat_logs[call].content",
+      "value": false,
+      "reason": "The source says the call was not answered."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.in_app_calls[0].duration_sec",
+      "kind": "judged",
+      "source": "chat_logs[call].content",
+      "value": 22,
+      "reason": "Read out of the source's own description ('rang 22s, no response'), because the source states it only in prose and nowhere as a field."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.in_app_calls",
+      "kind": "judged",
+      "source": null,
+      "value": [
+        {
+          "call_id": "CALL-00903-001",
+          "initiated_at": "2026-09-13T08:47:05+08:00",
+          "initiated_by": "DRIVER",
+          "answered": false,
+          "duration_sec": 22
+        }
+      ],
+      "reason": "The source records one in-app call in chat_logs. POL-NS-04(b) reads this field, so the call the source does describe is carried rather than left out of the trip record."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.optimal_distance_km",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "Null rather than a plausible figure: no route was quoted in the source."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.optimal_duration_min",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "Null rather than a plausible figure: no route was quoted in the source."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.optimal_route_source",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "Null rather than a plausible figure: no routing engine is named in the source."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.optimal_route_erp_sgd",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "Null rather than a plausible figure: no ERP figure is given in the source."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.actual_distance_km",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "Null rather than a plausible figure: the trip was cancelled before it ran."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.actual_duration_min",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "Null rather than a plausible figure: the trip was cancelled before it ran."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.deviation_pct",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "Null rather than a plausible figure: a route-deviation figure has no meaning on a no-show."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.amended_optimal_distance_km",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "Null rather than a plausible figure: the pickup was never amended."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.amended_optimal_duration_min",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "Null rather than a plausible figure: the pickup was never amended."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.solo_optimal_distance_km",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "Null rather than a plausible figure: there is no co-rider data in the source."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.pickup_amended_at",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "Null: the source records no amendment to either end of the trip."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.dropoff_amended_at",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "Null: the source records no amendment to either end of the trip."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.original_pickup",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "Null: the source records no amendment to either end of the trip."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.original_dropoff",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "Null: the source records no amendment to either end of the trip."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.scheduled_at",
+      "kind": "copied",
+      "source": "trip_data.scheduled_time",
+      "value": "2026-09-13T08:45:00+08:00",
+      "reason": "The source states it; the version-1 conversion dropped it. POL-NS-10(b) reads it, and POL-NS-01(c) uses it to say where a scheduled trip's waiting clock starts."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.platform_policy.grace_after_match_sec",
+      "kind": "judged",
+      "source": null,
+      "value": 180,
+      "reason": "The source states no grace after matching. fee_schedule.defaults (Ryde's published 3 minutes) is written in so that the block is complete; POL-NS-10(a) reads it."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.platform_policy.advance_grace_before_scheduled_sec",
+      "kind": "judged",
+      "source": null,
+      "value": 900,
+      "reason": "The source states no advance grace for a scheduled trip. fee_schedule.defaults (Ryde's published 15 minutes) is written in, as above; POL-NS-10(b) reads it."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.platform_policy.free_wait_sec",
+      "kind": "copied",
+      "source": "cancellation_policy.free_wait_time_min",
+      "value": 300,
+      "reason": "The source states 5 minutes; carried as seconds, because POL-NS-01(c) reads a free waiting period in seconds and this is the period the sample's own wait timer runs."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.platform_policy.no_show_threshold_sec",
+      "kind": "copied",
+      "source": "cancellation_policy.no_show_threshold_min",
+      "value": 480,
+      "reason": "The source states 8 minutes; POL-NS-01(c) requires the cancellation to fall at or after it where it is longer than free_wait_sec, and the sample's cancellation at 08:51:00 falls exactly on it."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.platform_policy.cancellation_fee_sgd",
+      "kind": "copied",
+      "source": "cancellation_policy.cancellation_fee_after_wait",
+      "value": 5.0,
+      "reason": "The source states the fee; fee_schedule.resolution_rule now reads this field first, which resolves the version-1 divergence between the sample's figure and the schedule's."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.platform_policy.rider_gross_cancellation_fee_sgd",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "The source gives one figure only: no rider-side gross amount is stated, and none is derived. Null rather than the fee repeated."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.platform_policy.waiting_fee_sgd",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "The source states no waiting-time fee. POL-NS-10(d) reads this field, so a figure here would decide a limb on a value nobody recorded."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.platform_policy.fee_goes_to",
+      "kind": "judged",
+      "source": "cancellation_policy.fee_goes_to",
+      "value": "DRIVER",
+      "reason": "The source writes 'driver_compensation'; DRIVER is this contract's token for the same instruction, and POL-NS-07 compensates the driver under it."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.platform_policy.arrival_marker",
+      "kind": "judged",
+      "source": "app_events[driver_arrived].details",
+      "value": "GPS_AUTO",
+      "reason": "Read off the source's own arrival event, whose text is 'Driver GPS within 10m of pickup point. Speed 0 km/h. Auto-arrival confirmed.': the marker was auto-confirmed from a GPS measurement rather than a driver button press, so GPS_AUTO is the marker this record carries."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.platform_policy.source",
+      "kind": "judged",
+      "source": null,
+      "value": "RECORD-PLATFORM",
+      "reason": "An opaque code: the block came from the record itself. The human-readable provenance is in the mapping record and never in the case file, because the block reaches the model."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.events[*]",
+      "kind": "judged",
+      "source": "app_events[booking_confirmed], app_events[driver_assigned], app_events[driver_en_route], app_events[driver_arrived], app_events[rider_notified], app_events[wait_timer_started], app_events[driver_called_rider], app_events[wait_timer_expired], app_events[cancellation_fee_applied], app_events[driver_released]",
+      "value": [
+        {
+          "event_type": "booking_confirmed",
+          "at": "2026-09-13T08:30:00+08:00",
+          "detail": "Rider R-7823 booked trip TRIP-2026-09945 from Tiong Bahru Plaza to VivoCity. Scheduled pickup 08:45.",
+          "source": "PLATFORM_TELEMETRY"
+        },
+        {
+          "event_type": "driver_assigned",
+          "at": "2026-09-13T08:30:15+08:00",
+          "detail": "Driver D-2398 (Honda HR-V SGP 4521 M) assigned. ETA 13 min.",
+          "source": "PLATFORM_TELEMETRY"
+        },
+        {
+          "event_type": "driver_en_route",
+          "at": "2026-09-13T08:30:20+08:00",
+          "detail": "Driver started navigating to pickup location. Live tracking enabled.",
+          "source": "PLATFORM_TELEMETRY"
+        },
+        {
+          "event_type": "driver_arrived",
+          "at": "2026-09-13T08:43:00+08:00",
+          "detail": "Driver GPS within 10m of pickup point. Speed 0 km/h. Auto-arrival confirmed.",
+          "source": "PLATFORM_TELEMETRY"
+        },
+        {
+          "event_type": "rider_notified",
+          "at": "2026-09-13T08:43:05+08:00",
+          "detail": "Push notification + in-app alert sent to rider: 'Your driver has arrived.'",
+          "source": "PLATFORM_TELEMETRY"
+        },
+        {
+          "event_type": "wait_timer_started",
+          "at": "2026-09-13T08:43:10+08:00",
+          "detail": "Free wait timer started. 5 min free wait period ends at 08:48.",
+          "source": "PLATFORM_TELEMETRY"
+        },
+        {
+          "event_type": "driver_called_rider",
+          "at": "2026-09-13T08:47:05+08:00",
+          "detail": "Driver initiated in-app call to rider. Call rang 22s, no answer.",
+          "source": "PLATFORM_TELEMETRY"
+        },
+        {
+          "event_type": "wait_timer_expired",
+          "at": "2026-09-13T08:48:10+08:00",
+          "detail": "Free 5-min wait period expired. Rider had not boarded. Cancellation fee now applicable per policy.",
+          "source": "PLATFORM_TELEMETRY"
+        },
+        {
+          "event_type": "cancellation_fee_applied",
+          "at": "2026-09-13T08:51:00+08:00",
+          "detail": "No-show threshold (8 min) reached. $5.00 cancellation fee charged to rider payment method.",
+          "source": "PLATFORM_TELEMETRY"
+        },
+        {
+          "event_type": "driver_released",
+          "at": "2026-09-13T08:51:05+08:00",
+          "detail": "Driver D-2398 released from trip. Trip status: cancelled (rider_no_show).",
+          "source": "PLATFORM_TELEMETRY"
+        }
+      ],
+      "reason": "Copied: the source's platform event log, 10 events, each with its own event_type, timestamp and details and the evidence source PLATFORM_TELEMETRY. The version-1 conversion dropped it, which left the dwell carried by the GPS trace alone and capped confidence at the trace's 0.6 weight under POL-GEN-02(2); with the platform's own wait-timer events present the dwell has two independent carriers."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.events[driver_assigned].detail",
+      "kind": "judged",
+      "source": "app_events[driver_assigned].details",
+      "value": "Driver D-2398 (Honda HR-V SGP 4521 M) assigned. ETA 13 min.",
+      "reason": "The driver's name is dropped from the event text, as driver_profile.name already is. The plate stays, as it does in the chat_log."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.events[cancellation_fee_applied].detail",
+      "kind": "judged",
+      "source": "app_events[cancellation_fee_applied].details",
+      "value": "No-show threshold (8 min) reached. $5.00 cancellation fee charged to rider payment method.",
+      "reason": "The rider's payment method is dropped from the event text, as rider_profile.payment_method already is."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.payload.optimal_distance_km, optimal_duration_min, optimal_route_source, optimal_route_erp_sgd",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "These four are null here, and are null in NO corpus trip record: all 29 carry a quoted route. The deviation is deliberate and is NOT marked as an admissibility defect. No limb of POL-NS-01 to POL-NS-09 reads a route field on a no-show, because the trip was cancelled before it ran; the absence is a property of the source platform's export rather than of the record; and no issue code is minted for it, because the corpus's PARTIAL_RECORD was applied to a ledger missing its itemisation, not to a field the source platform does not export. Filling them with a plausible route would be inventing the quote."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.admissibility.notes",
+      "kind": "judged",
+      "source": "app_events[driver_arrived].details",
+      "value": null,
+      "reason": "The source's driver_arrived details are carried into this artifact's admissibility notes, verbatim and labelled. The text is 'Driver GPS within 10m of pickup point. Speed 0 km/h. Auto-arrival confirmed.'. It is the platform's own DISTANCE claim and NOT a reported horizontal accuracy: it supplies no fix with a reported accuracy, it is not turned into a GPS fix of its own, and it makes no fix qualifying under POL-NS-02. Its consequence is recorded too, because it bears on independence: the arrival marker was produced from the same GPS measurement the trace is built from, so under POL-GEN-02 the marker and the trace are ONE carrier and not two."
+    },
+    {
+      "target": "evidence.EV-TRIP-00903.admissibility.issues",
+      "kind": "judged",
+      "source": null,
+      "value": [],
+      "reason": "Codes chosen only from prepass.CODE_WEIGHTS, and the weight is computed by prepass.weight_for rather than written here."
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].lat",
+      "kind": "copied",
+      "source": "gps_telemetry[*].lat",
+      "value": 1.292,
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].lng",
+      "kind": "copied",
+      "source": "gps_telemetry[*].lng",
+      "value": 103.845,
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].ts",
+      "kind": "copied",
+      "source": "gps_telemetry[*].timestamp",
+      "value": "2026-09-13T08:31:00+08:00",
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].speed_kph",
+      "kind": "copied",
+      "source": "gps_telemetry[*].speed_kmh",
+      "value": 42,
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].status",
+      "kind": "judged",
+      "source": "gps_telemetry[*].status",
+      "value": null,
+      "reason": "The source's per-fix 'status' (en_route / arrived / waiting / cancelled) has no counterpart in this corpus's point schema. It is dropped rather than carried as a ninth key, and the drop is recorded here. The information is not lost: speed_kph separates moving from stationary."
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].lat",
+      "kind": "copied",
+      "source": "gps_telemetry[*].lat",
+      "value": 1.289,
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].lng",
+      "kind": "copied",
+      "source": "gps_telemetry[*].lng",
+      "value": 103.843,
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].ts",
+      "kind": "copied",
+      "source": "gps_telemetry[*].timestamp",
+      "value": "2026-09-13T08:34:00+08:00",
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].speed_kph",
+      "kind": "copied",
+      "source": "gps_telemetry[*].speed_kmh",
+      "value": 38,
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].status",
+      "kind": "judged",
+      "source": "gps_telemetry[*].status",
+      "value": null,
+      "reason": "The source's per-fix 'status' (en_route / arrived / waiting / cancelled) has no counterpart in this corpus's point schema. It is dropped rather than carried as a ninth key, and the drop is recorded here. The information is not lost: speed_kph separates moving from stationary."
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].lat",
+      "kind": "copied",
+      "source": "gps_telemetry[*].lat",
+      "value": 1.2865,
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].lng",
+      "kind": "copied",
+      "source": "gps_telemetry[*].lng",
+      "value": 103.84,
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].ts",
+      "kind": "copied",
+      "source": "gps_telemetry[*].timestamp",
+      "value": "2026-09-13T08:38:00+08:00",
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].speed_kph",
+      "kind": "copied",
+      "source": "gps_telemetry[*].speed_kmh",
+      "value": 25,
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].status",
+      "kind": "judged",
+      "source": "gps_telemetry[*].status",
+      "value": null,
+      "reason": "The source's per-fix 'status' (en_route / arrived / waiting / cancelled) has no counterpart in this corpus's point schema. It is dropped rather than carried as a ninth key, and the drop is recorded here. The information is not lost: speed_kph separates moving from stationary."
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].lat",
+      "kind": "copied",
+      "source": "gps_telemetry[*].lat",
+      "value": 1.2852,
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].lng",
+      "kind": "copied",
+      "source": "gps_telemetry[*].lng",
+      "value": 103.8388,
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].ts",
+      "kind": "copied",
+      "source": "gps_telemetry[*].timestamp",
+      "value": "2026-09-13T08:41:00+08:00",
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].speed_kph",
+      "kind": "copied",
+      "source": "gps_telemetry[*].speed_kmh",
+      "value": 12,
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].status",
+      "kind": "judged",
+      "source": "gps_telemetry[*].status",
+      "value": null,
+      "reason": "The source's per-fix 'status' (en_route / arrived / waiting / cancelled) has no counterpart in this corpus's point schema. It is dropped rather than carried as a ninth key, and the drop is recorded here. The information is not lost: speed_kph separates moving from stationary."
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].lat",
+      "kind": "copied",
+      "source": "gps_telemetry[*].lat",
+      "value": 1.2847,
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].lng",
+      "kind": "copied",
+      "source": "gps_telemetry[*].lng",
+      "value": 103.8382,
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].ts",
+      "kind": "copied",
+      "source": "gps_telemetry[*].timestamp",
+      "value": "2026-09-13T08:43:00+08:00",
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].speed_kph",
+      "kind": "copied",
+      "source": "gps_telemetry[*].speed_kmh",
+      "value": 0,
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].status",
+      "kind": "judged",
+      "source": "gps_telemetry[*].status",
+      "value": null,
+      "reason": "The source's per-fix 'status' (en_route / arrived / waiting / cancelled) has no counterpart in this corpus's point schema. It is dropped rather than carried as a ninth key, and the drop is recorded here. The information is not lost: speed_kph separates moving from stationary."
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].lat",
+      "kind": "copied",
+      "source": "gps_telemetry[*].lat",
+      "value": 1.2847,
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].lng",
+      "kind": "copied",
+      "source": "gps_telemetry[*].lng",
+      "value": 103.8382,
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].ts",
+      "kind": "copied",
+      "source": "gps_telemetry[*].timestamp",
+      "value": "2026-09-13T08:45:00+08:00",
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].speed_kph",
+      "kind": "copied",
+      "source": "gps_telemetry[*].speed_kmh",
+      "value": 0,
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].status",
+      "kind": "judged",
+      "source": "gps_telemetry[*].status",
+      "value": null,
+      "reason": "The source's per-fix 'status' (en_route / arrived / waiting / cancelled) has no counterpart in this corpus's point schema. It is dropped rather than carried as a ninth key, and the drop is recorded here. The information is not lost: speed_kph separates moving from stationary."
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].lat",
+      "kind": "copied",
+      "source": "gps_telemetry[*].lat",
+      "value": 1.2847,
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].lng",
+      "kind": "copied",
+      "source": "gps_telemetry[*].lng",
+      "value": 103.8382,
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].ts",
+      "kind": "copied",
+      "source": "gps_telemetry[*].timestamp",
+      "value": "2026-09-13T08:48:00+08:00",
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].speed_kph",
+      "kind": "copied",
+      "source": "gps_telemetry[*].speed_kmh",
+      "value": 0,
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].status",
+      "kind": "judged",
+      "source": "gps_telemetry[*].status",
+      "value": null,
+      "reason": "The source's per-fix 'status' (en_route / arrived / waiting / cancelled) has no counterpart in this corpus's point schema. It is dropped rather than carried as a ninth key, and the drop is recorded here. The information is not lost: speed_kph separates moving from stationary."
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].lat",
+      "kind": "copied",
+      "source": "gps_telemetry[*].lat",
+      "value": 1.2847,
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].lng",
+      "kind": "copied",
+      "source": "gps_telemetry[*].lng",
+      "value": 103.8382,
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].ts",
+      "kind": "copied",
+      "source": "gps_telemetry[*].timestamp",
+      "value": "2026-09-13T08:51:00+08:00",
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].speed_kph",
+      "kind": "copied",
+      "source": "gps_telemetry[*].speed_kmh",
+      "value": 0,
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.points[*].status",
+      "kind": "judged",
+      "source": "gps_telemetry[*].status",
+      "value": null,
+      "reason": "The source's per-fix 'status' (en_route / arrived / waiting / cancelled) has no counterpart in this corpus's point schema. It is dropped rather than carried as a ninth key, and the drop is recorded here. The information is not lost: speed_kph separates moving from stationary."
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.point_count",
+      "kind": "judged",
+      "source": null,
+      "value": 8,
+      "reason": "The number of fixes the source supplies."
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.first_fix_at",
+      "kind": "judged",
+      "source": null,
+      "value": "2026-09-13T08:31:00+08:00",
+      "reason": "The first fix timestamp the source supplies."
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.last_fix_at",
+      "kind": "judged",
+      "source": null,
+      "value": "2026-09-13T08:51:00+08:00",
+      "reason": "The last fix timestamp the source supplies."
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.sample_interval_sec",
+      "kind": "judged",
+      "source": null,
+      "value": 180.0,
+      "reason": "Measured from the source's own timestamps: the intervals between consecutive fixes are [180.0, 240.0, 180.0, 120.0, 120.0, 180.0, 180.0] s, whose median is 180.0 s. The source states no nominal rate."
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.expected_interval_sec",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "The source names no nominal sampling rate, so there is nothing to call expected. Setting one would make the measured interval look like a deviation from a standard the source never claimed."
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.gaps",
+      "kind": "judged",
+      "source": null,
+      "value": [
+        {
+          "from": "2026-09-13T08:31:00+08:00",
+          "to": "2026-09-13T08:34:00+08:00",
+          "gap_sec": 180.0
+        },
+        {
+          "from": "2026-09-13T08:34:00+08:00",
+          "to": "2026-09-13T08:38:00+08:00",
+          "gap_sec": 240.0
+        },
+        {
+          "from": "2026-09-13T08:38:00+08:00",
+          "to": "2026-09-13T08:41:00+08:00",
+          "gap_sec": 180.0
+        },
+        {
+          "from": "2026-09-13T08:45:00+08:00",
+          "to": "2026-09-13T08:48:00+08:00",
+          "gap_sec": 180.0
+        },
+        {
+          "from": "2026-09-13T08:48:00+08:00",
+          "to": "2026-09-13T08:51:00+08:00",
+          "gap_sec": 180.0
+        }
+      ],
+      "reason": "Intervals longer than POL-NS-08(b)'s own 120 s limb, measured from the source's timestamps: 5 of the 7 exceed it."
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.max_gap_sec",
+      "kind": "judged",
+      "source": null,
+      "value": 240.0,
+      "reason": "The longest interval measured from the source's timestamps."
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.coverage_pct",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "Coverage is a ratio against an expected rate. The source names no rate, so a percentage would be computed against a denominator nobody supplied."
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.trace_distance_km",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "The source gives no distance, and summing eight fixes three minutes apart would understate the driven path by an unknown amount."
+    },
+    {
+      "target": "evidence.EV-GPS-00903.payload.rider_track",
+      "kind": "judged",
+      "source": null,
+      "value": [],
+      "reason": "There is no rider GPS track in the source. An empty list is carried rather than points minted, because minting them would decide POL-NS-04(c) and the rider-presence test on evidence nobody recorded. The consequence is intended: POL-NS-04(c) is UNDECIDABLE on this trace, and POL-NS-08(b) is engaged because the trace omits a rider_track."
+    },
+    {
+      "target": "evidence.EV-GPS-00903.admissibility.issues",
+      "kind": "judged",
+      "source": null,
+      "value": [
+        "LOW_SAMPLE_RATE",
+        "PARTIAL_RECORD"
+      ],
+      "reason": "Codes chosen only from prepass.CODE_WEIGHTS, and the weight is computed by prepass.weight_for rather than written here."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].msg_id",
+      "kind": "judged",
+      "source": null,
+      "value": "MSG-00903-001",
+      "reason": "Minted consecutively. POL-NS-08(c) tests the chat for gaps in its own msg_id sequence, so a minted sequence must be contiguous and this one is."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].sender",
+      "kind": "judged",
+      "source": "chat_logs[*].sender",
+      "value": "DRIVER",
+      "reason": "The source's lower-case sender, upper-cased to this corpus's vocabulary."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].text",
+      "kind": "copied",
+      "source": "chat_logs[*].content",
+      "value": "I've arrived at the pickup point, I'm at the lobby area.",
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].sent_at",
+      "kind": "copied",
+      "source": "chat_logs[*].timestamp",
+      "value": "2026-09-13T08:43:00+08:00",
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].read_at",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "The source carries no read receipt for any message. Null rather than a copy of sent_at, which would assert a read that was never recorded."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].delivered_at",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "The source carries no delivery receipt, for the same reason."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].channel",
+      "kind": "judged",
+      "source": "chat_logs[*].type",
+      "value": "IN_APP",
+      "reason": "The source's chat log is the in-app log and carries no channel field. From policy version 7 the entry it types 'call' is carried as VOICE_CALL_LOG, because POL-NS-23 reads a placed call from there and never counts one as a message; versions 1 and 3 write IN_APP for every entry."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].language",
+      "kind": "judged",
+      "source": null,
+      "value": "en",
+      "reason": "The source's messages are written in English. The field is carried because POL-NS-08 and the language-ambiguity code read it."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].redacted",
+      "kind": "judged",
+      "source": null,
+      "value": false,
+      "reason": "Nothing in the source is marked as redacted, and no text is withheld."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].waypoint_hint",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "The source names no waypoint. POL-NS-03 reads this field, so minting a hint would decide a fault allocation."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].msg_id",
+      "kind": "judged",
+      "source": null,
+      "value": "MSG-00903-002",
+      "reason": "Minted consecutively. POL-NS-08(c) tests the chat for gaps in its own msg_id sequence, so a minted sequence must be contiguous and this one is."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].sender",
+      "kind": "judged",
+      "source": "chat_logs[*].sender",
+      "value": "DRIVER",
+      "reason": "The source's lower-case sender, upper-cased to this corpus's vocabulary."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].text",
+      "kind": "copied",
+      "source": "chat_logs[*].content",
+      "value": "I'm waiting at the lobby area, white Honda HR-V plate SGP 4521 M.",
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].sent_at",
+      "kind": "copied",
+      "source": "chat_logs[*].timestamp",
+      "value": "2026-09-13T08:45:20+08:00",
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].read_at",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "The source carries no read receipt for any message. Null rather than a copy of sent_at, which would assert a read that was never recorded."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].delivered_at",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "The source carries no delivery receipt, for the same reason."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].channel",
+      "kind": "judged",
+      "source": "chat_logs[*].type",
+      "value": "IN_APP",
+      "reason": "The source's chat log is the in-app log and carries no channel field. From policy version 7 the entry it types 'call' is carried as VOICE_CALL_LOG, because POL-NS-23 reads a placed call from there and never counts one as a message; versions 1 and 3 write IN_APP for every entry."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].language",
+      "kind": "judged",
+      "source": null,
+      "value": "en",
+      "reason": "The source's messages are written in English. The field is carried because POL-NS-08 and the language-ambiguity code read it."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].redacted",
+      "kind": "judged",
+      "source": null,
+      "value": false,
+      "reason": "Nothing in the source is marked as redacted, and no text is withheld."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].waypoint_hint",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "The source names no waypoint. POL-NS-03 reads this field, so minting a hint would decide a fault allocation."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].msg_id",
+      "kind": "judged",
+      "source": null,
+      "value": "MSG-00903-003",
+      "reason": "Minted consecutively. POL-NS-08(c) tests the chat for gaps in its own msg_id sequence, so a minted sequence must be contiguous and this one is."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].sender",
+      "kind": "judged",
+      "source": "chat_logs[*].sender",
+      "value": "DRIVER",
+      "reason": "The source's lower-case sender, upper-cased to this corpus's vocabulary."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].text",
+      "kind": "copied",
+      "source": "chat_logs[*].content",
+      "value": "Outgoing call to rider — not answered (rang 22s, no response).",
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].sent_at",
+      "kind": "copied",
+      "source": "chat_logs[*].timestamp",
+      "value": "2026-09-13T08:47:05+08:00",
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].read_at",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "The source carries no read receipt for any message. Null rather than a copy of sent_at, which would assert a read that was never recorded."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].delivered_at",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "The source carries no delivery receipt, for the same reason."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].channel",
+      "kind": "judged",
+      "source": "chat_logs[*].type",
+      "value": "VOICE_CALL_LOG",
+      "reason": "The source's chat log is the in-app log and carries no channel field. From policy version 7 the entry it types 'call' is carried as VOICE_CALL_LOG, because POL-NS-23 reads a placed call from there and never counts one as a message; versions 1 and 3 write IN_APP for every entry."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].language",
+      "kind": "judged",
+      "source": null,
+      "value": "en",
+      "reason": "The source's messages are written in English. The field is carried because POL-NS-08 and the language-ambiguity code read it."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].redacted",
+      "kind": "judged",
+      "source": null,
+      "value": false,
+      "reason": "Nothing in the source is marked as redacted, and no text is withheld."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].waypoint_hint",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "The source names no waypoint. POL-NS-03 reads this field, so minting a hint would decide a fault allocation."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].msg_id",
+      "kind": "judged",
+      "source": null,
+      "value": "MSG-00903-004",
+      "reason": "Minted consecutively. POL-NS-08(c) tests the chat for gaps in its own msg_id sequence, so a minted sequence must be contiguous and this one is."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].sender",
+      "kind": "judged",
+      "source": "chat_logs[*].sender",
+      "value": "DRIVER",
+      "reason": "The source's lower-case sender, upper-cased to this corpus's vocabulary."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].text",
+      "kind": "copied",
+      "source": "chat_logs[*].content",
+      "value": "Hi, are you coming down? I've been waiting a while.",
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].sent_at",
+      "kind": "copied",
+      "source": "chat_logs[*].timestamp",
+      "value": "2026-09-13T08:49:30+08:00",
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].read_at",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "The source carries no read receipt for any message. Null rather than a copy of sent_at, which would assert a read that was never recorded."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].delivered_at",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "The source carries no delivery receipt, for the same reason."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].channel",
+      "kind": "judged",
+      "source": "chat_logs[*].type",
+      "value": "IN_APP",
+      "reason": "The source's chat log is the in-app log and carries no channel field. From policy version 7 the entry it types 'call' is carried as VOICE_CALL_LOG, because POL-NS-23 reads a placed call from there and never counts one as a message; versions 1 and 3 write IN_APP for every entry."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].language",
+      "kind": "judged",
+      "source": null,
+      "value": "en",
+      "reason": "The source's messages are written in English. The field is carried because POL-NS-08 and the language-ambiguity code read it."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].redacted",
+      "kind": "judged",
+      "source": null,
+      "value": false,
+      "reason": "Nothing in the source is marked as redacted, and no text is withheld."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].waypoint_hint",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "The source names no waypoint. POL-NS-03 reads this field, so minting a hint would decide a fault allocation."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].msg_id",
+      "kind": "judged",
+      "source": null,
+      "value": "MSG-00903-005",
+      "reason": "Minted consecutively. POL-NS-08(c) tests the chat for gaps in its own msg_id sequence, so a minted sequence must be contiguous and this one is."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].sender",
+      "kind": "judged",
+      "source": "chat_logs[*].sender",
+      "value": "DRIVER",
+      "reason": "The source's lower-case sender, upper-cased to this corpus's vocabulary."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].text",
+      "kind": "copied",
+      "source": "chat_logs[*].content",
+      "value": "Please let me know, otherwise I'll have to cancel the trip.",
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].sent_at",
+      "kind": "copied",
+      "source": "chat_logs[*].timestamp",
+      "value": "2026-09-13T08:50:45+08:00",
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].read_at",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "The source carries no read receipt for any message. Null rather than a copy of sent_at, which would assert a read that was never recorded."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].delivered_at",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "The source carries no delivery receipt, for the same reason."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].channel",
+      "kind": "judged",
+      "source": "chat_logs[*].type",
+      "value": "IN_APP",
+      "reason": "The source's chat log is the in-app log and carries no channel field. From policy version 7 the entry it types 'call' is carried as VOICE_CALL_LOG, because POL-NS-23 reads a placed call from there and never counts one as a message; versions 1 and 3 write IN_APP for every entry."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].language",
+      "kind": "judged",
+      "source": null,
+      "value": "en",
+      "reason": "The source's messages are written in English. The field is carried because POL-NS-08 and the language-ambiguity code read it."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].redacted",
+      "kind": "judged",
+      "source": null,
+      "value": false,
+      "reason": "Nothing in the source is marked as redacted, and no text is withheld."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].waypoint_hint",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "The source names no waypoint. POL-NS-03 reads this field, so minting a hint would decide a fault allocation."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].msg_id",
+      "kind": "judged",
+      "source": null,
+      "value": "MSG-00903-006",
+      "reason": "Minted consecutively. POL-NS-08(c) tests the chat for gaps in its own msg_id sequence, so a minted sequence must be contiguous and this one is."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].sender",
+      "kind": "judged",
+      "source": "chat_logs[*].sender",
+      "value": "SYSTEM",
+      "reason": "The source's lower-case sender, upper-cased to this corpus's vocabulary."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].text",
+      "kind": "copied",
+      "source": "chat_logs[*].content",
+      "value": "Trip cancelled by driver. Reason: rider_no_show. Cancellation fee of $5.00 applied.",
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].sent_at",
+      "kind": "copied",
+      "source": "chat_logs[*].timestamp",
+      "value": "2026-09-13T08:51:00+08:00",
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].read_at",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "The source carries no read receipt for any message. Null rather than a copy of sent_at, which would assert a read that was never recorded."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].delivered_at",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "The source carries no delivery receipt, for the same reason."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].channel",
+      "kind": "judged",
+      "source": "chat_logs[*].type",
+      "value": "IN_APP",
+      "reason": "The source's chat log is the in-app log and carries no channel field. From policy version 7 the entry it types 'call' is carried as VOICE_CALL_LOG, because POL-NS-23 reads a placed call from there and never counts one as a message; versions 1 and 3 write IN_APP for every entry."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].language",
+      "kind": "judged",
+      "source": null,
+      "value": "en",
+      "reason": "The source's messages are written in English. The field is carried because POL-NS-08 and the language-ambiguity code read it."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].redacted",
+      "kind": "judged",
+      "source": null,
+      "value": false,
+      "reason": "Nothing in the source is marked as redacted, and no text is withheld."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.messages[*].waypoint_hint",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "The source names no waypoint. POL-NS-03 reads this field, so minting a hint would decide a fault allocation."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.message_count",
+      "kind": "judged",
+      "source": null,
+      "value": 6,
+      "reason": "The number of chat_logs entries the source supplies, including the system entry, which is how the corpus counts them."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.first_message_at",
+      "kind": "judged",
+      "source": null,
+      "value": "2026-09-13T08:43:00+08:00",
+      "reason": "The first chat_logs timestamp the source supplies."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.last_message_at",
+      "kind": "judged",
+      "source": null,
+      "value": "2026-09-13T08:51:00+08:00",
+      "reason": "The last chat_logs timestamp the source supplies."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.payload.truncated",
+      "kind": "judged",
+      "source": null,
+      "value": false,
+      "reason": "Nothing in the source indicates the log was cut short, and its msg_id sequence is contiguous by construction."
+    },
+    {
+      "target": "evidence.EV-CHAT-00903.admissibility.issues",
+      "kind": "judged",
+      "source": null,
+      "value": [],
+      "reason": "Codes chosen only from prepass.CODE_WEIGHTS, and the weight is computed by prepass.weight_for rather than written here."
+    },
+    {
+      "target": "evidence.EV-FARE-00903.payload.trip_id",
+      "kind": "copied",
+      "source": "trip_data.trip_id",
+      "value": "TRIP-2026-09945",
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-FARE-00903.payload.currency",
+      "kind": "judged",
+      "source": null,
+      "value": "SGD",
+      "reason": "The source's amounts are in Singapore dollars, which is also this corpus's currency and the policy's."
+    },
+    {
+      "target": "evidence.EV-FARE-00903.payload.fare_model",
+      "kind": "judged",
+      "source": null,
+      "value": "METERED",
+      "reason": "The source states no fare model. METERED is used because the source quotes no upfront fare, and UPFRONT_QUOTE would assert a quote that does not exist here."
+    },
+    {
+      "target": "evidence.EV-FARE-00903.payload.cancellation_fee",
+      "kind": "copied",
+      "source": "trip_data.cancellation_fee",
+      "value": 5.0,
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-FARE-00903.payload.total_charged",
+      "kind": "judged",
+      "source": "trip_data.cancellation_fee",
+      "value": 5.0,
+      "reason": "The cancellation fee is the only amount the source charges, so it is the whole of what was charged."
+    },
+    {
+      "target": "evidence.EV-FARE-00903.payload.payment_status",
+      "kind": "judged",
+      "source": "chat_logs[system].content",
+      "value": "CHARGED",
+      "reason": "The source says the fee was applied to the rider's e-wallet and the dispute is a request to reverse it, so the charge stands as CHARGED."
+    },
+    {
+      "target": "evidence.EV-FARE-00903.payload.refund_issued_sgd",
+      "kind": "judged",
+      "source": "dispute_ticket.status",
+      "value": 0.0,
+      "reason": "No refund has been issued: the dispute is open and the rider is asking for one."
+    },
+    {
+      "target": "evidence.EV-FARE-00903.payload.charged_at",
+      "kind": "copied",
+      "source": "trip_data.cancellation_time",
+      "value": "2026-09-13T08:51:00+08:00",
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-FARE-00903.payload.surge_multiplier",
+      "kind": "judged",
+      "source": null,
+      "value": 1.0,
+      "reason": "The source records no surge. 1.0 is no surge, and no amount in the source reflects one."
+    },
+    {
+      "target": "evidence.EV-FARE-00903.payload.rate_card_id",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "The source names no rate card. The corpus's ids encode a quarter and a tier; minting one would assert a rate card that was never issued."
+    },
+    {
+      "target": "evidence.EV-FARE-00903.payload.base_fare",
+      "kind": "judged",
+      "source": null,
+      "value": 0.0,
+      "reason": "Zero, not null: the source itemises no such line, and this trip ran no metered distance, so there is no amount for it to carry."
+    },
+    {
+      "target": "evidence.EV-FARE-00903.payload.distance_fare",
+      "kind": "judged",
+      "source": null,
+      "value": 0.0,
+      "reason": "Zero, not null: the source itemises no such line, and this trip ran no metered distance, so there is no amount for it to carry."
+    },
+    {
+      "target": "evidence.EV-FARE-00903.payload.time_fare",
+      "kind": "judged",
+      "source": null,
+      "value": 0.0,
+      "reason": "Zero, not null: the source itemises no such line, and this trip ran no metered distance, so there is no amount for it to carry."
+    },
+    {
+      "target": "evidence.EV-FARE-00903.payload.surge_amount",
+      "kind": "judged",
+      "source": null,
+      "value": 0.0,
+      "reason": "Zero, not null: the source itemises no such line, and this trip ran no metered distance, so there is no amount for it to carry."
+    },
+    {
+      "target": "evidence.EV-FARE-00903.payload.tolls_erp",
+      "kind": "judged",
+      "source": null,
+      "value": 0.0,
+      "reason": "Zero, not null: the source itemises no such line, and this trip ran no metered distance, so there is no amount for it to carry."
+    },
+    {
+      "target": "evidence.EV-FARE-00903.payload.airport_surcharge",
+      "kind": "judged",
+      "source": null,
+      "value": 0.0,
+      "reason": "Zero, not null: the source itemises no such line, and this trip ran no metered distance, so there is no amount for it to carry."
+    },
+    {
+      "target": "evidence.EV-FARE-00903.payload.platform_fee",
+      "kind": "judged",
+      "source": null,
+      "value": 0.0,
+      "reason": "Zero, not null: the source itemises no such line, and this trip ran no metered distance, so there is no amount for it to carry."
+    },
+    {
+      "target": "evidence.EV-FARE-00903.payload.promo_discount",
+      "kind": "judged",
+      "source": null,
+      "value": 0.0,
+      "reason": "Zero, not null: the source itemises no such line, and this trip ran no metered distance, so there is no amount for it to carry."
+    },
+    {
+      "target": "evidence.EV-FARE-00903.payload.waiting_time_fee",
+      "kind": "judged",
+      "source": null,
+      "value": 0.0,
+      "reason": "Zero, not null: the source itemises no such line, and this trip ran no metered distance, so there is no amount for it to carry."
+    },
+    {
+      "target": "evidence.EV-FARE-00903.payload.quoted_fare_sgd",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "Null: the trip never ran, so there is no distance, duration or rate to state. The source supplies none."
+    },
+    {
+      "target": "evidence.EV-FARE-00903.payload.distance_charged_km",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "Null: the trip never ran, so there is no distance, duration or rate to state. The source supplies none."
+    },
+    {
+      "target": "evidence.EV-FARE-00903.payload.time_charged_min",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "Null: the trip never ran, so there is no distance, duration or rate to state. The source supplies none."
+    },
+    {
+      "target": "evidence.EV-FARE-00903.payload.per_km_rate_sgd",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "Null: the trip never ran, so there is no distance, duration or rate to state. The source supplies none."
+    },
+    {
+      "target": "evidence.EV-FARE-00903.payload.per_min_rate_sgd",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "Null: the trip never ran, so there is no distance, duration or rate to state. The source supplies none."
+    },
+    {
+      "target": "evidence.EV-FARE-00903.payload.erp_gantries",
+      "kind": "judged",
+      "source": null,
+      "value": [],
+      "reason": "The trip never ran, so it passed no gantries. The source names none."
+    },
+    {
+      "target": "evidence.EV-FARE-00903.admissibility.issues",
+      "kind": "judged",
+      "source": null,
+      "value": [
+        "PARTIAL_RECORD"
+      ],
+      "reason": "Codes chosen only from prepass.CODE_WEIGHTS, and the weight is computed by prepass.weight_for rather than written here."
+    },
+    {
+      "target": "evidence.EV-RPROF-00903.payload.party_id",
+      "kind": "copied",
+      "source": "rider_profile.rider_id",
+      "value": "R-7823",
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-RPROF-00903.payload.party_role",
+      "kind": "judged",
+      "source": null,
+      "value": "RIDER",
+      "reason": "This is the rider's profile; the corpus's token is RIDER."
+    },
+    {
+      "target": "evidence.EV-RPROF-00903.payload.snapshot_at",
+      "kind": "judged",
+      "source": null,
+      "value": "2026-09-13T09:20:00+08:00",
+      "reason": "The source gives no snapshot time. The case's export time is used, which is when these counters were read."
+    },
+    {
+      "target": "evidence.EV-RPROF-00903.payload.account_age_days",
+      "kind": "copied",
+      "source": "rider_profile.account_age_days",
+      "value": 210,
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-RPROF-00903.payload.lifetime_trips",
+      "kind": "copied",
+      "source": "rider_profile.total_trips",
+      "value": 34,
+      "reason": "The source calls this total_trips; lifetime_trips is this corpus's name for the same counter."
+    },
+    {
+      "target": "evidence.EV-RPROF-00903.payload.rating",
+      "kind": "copied",
+      "source": "rider_profile.avg_rating",
+      "value": 3.9,
+      "reason": "The source calls this avg_rating; rating is this corpus's name for it."
+    },
+    {
+      "target": "evidence.EV-RPROF-00903.payload.prior_disputes_filed",
+      "kind": "copied",
+      "source": "rider_profile.dispute_history.total_disputes",
+      "value": 4,
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-RPROF-00903.payload.prior_disputes_upheld",
+      "kind": "copied",
+      "source": "rider_profile.dispute_history.upheld",
+      "value": 1,
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-RPROF-00903.payload.prior_no_show_flags",
+      "kind": "judged",
+      "source": "rider_profile.fraud_flags",
+      "value": 1,
+      "reason": "The source's fraud_flags counter is carried here, because its own detail text describes the flag as 'frequent late cancellations', which is the no-show family. POL-NS-09(d) explicitly does NOT read this field - it reads no_show_disputes_30d - so carrying it here decides no limb."
+    },
+    {
+      "target": "evidence.EV-RPROF-00903.payload.fraud_flags",
+      "kind": "copied",
+      "source": "rider_profile.fraud_flags",
+      "value": 1,
+      "reason": "The source's own fraud counter, under the name POL-GEN-22 reads it. The version-1 and version-3 conversions carried this counter as prior_no_show_flags, which no version-7 clause reads; from version 7 it is carried here as well, and POL-GEN-22 raises the confidence a ruling needs to 0.95 where either party's counter is 1 or more."
+    },
+    {
+      "target": "rider_profile.dispute_history.rejected",
+      "kind": "judged",
+      "source": "rider_profile.dispute_history.rejected",
+      "value": null,
+      "reason": "The source's 'rejected' count has no counterpart in this corpus's profile schema. It is dropped rather than mapped onto a field that means something else. prior_disputes_filed and prior_disputes_upheld carry the rest of the history."
+    },
+    {
+      "target": "rider_profile.name / payment_method",
+      "kind": "judged",
+      "source": "rider_profile.name, rider_profile.payment_method",
+      "value": null,
+      "reason": "The source carries the rider's name and payment method. This corpus's profile schema has no field for either, and the name is personal data that no clause reads, so neither is carried."
+    },
+    {
+      "target": "evidence.EV-RPROF-00903.payload.cancellation_rate",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "Null rather than zero: the source states no cancellation rate, and zero would assert there were none."
+    },
+    {
+      "target": "evidence.EV-RPROF-00903.payload.no_show_disputes_30d",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "Null rather than zero: the source gives four disputes over an unstated window; a 30-day figure cannot be derived from it, and zero would assert there were none."
+    },
+    {
+      "target": "evidence.EV-RPROF-00903.payload.deviation_claims_60d",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "Null rather than zero: a route-deviation counter has no meaning on a no-show, and zero would assert there were none."
+    },
+    {
+      "target": "evidence.EV-RPROF-00903.payload.deviation_claims_60d_substantiated",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "Null rather than zero: a route-deviation counter has no meaning on a no-show, and zero would assert there were none."
+    },
+    {
+      "target": "evidence.EV-RPROF-00903.payload.disputes_with_counterparty_90d",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "Null rather than zero: the source does not say how many of these disputes were with this same driver, and zero would assert there were none."
+    },
+    {
+      "target": "evidence.EV-RPROF-00903.admissibility.issues",
+      "kind": "judged",
+      "source": null,
+      "value": [],
+      "reason": "Codes chosen only from prepass.CODE_WEIGHTS, and the weight is computed by prepass.weight_for rather than written here."
+    },
+    {
+      "target": "evidence.EV-DPROF-00903.payload.party_id",
+      "kind": "copied",
+      "source": "driver_profile.driver_id",
+      "value": "D-2398",
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-DPROF-00903.payload.party_role",
+      "kind": "judged",
+      "source": null,
+      "value": "DRIVER",
+      "reason": "This is the driver's profile; the corpus's token is DRIVER."
+    },
+    {
+      "target": "evidence.EV-DPROF-00903.payload.snapshot_at",
+      "kind": "judged",
+      "source": null,
+      "value": "2026-09-13T09:20:00+08:00",
+      "reason": "The source gives no snapshot time; the case's export time is used."
+    },
+    {
+      "target": "evidence.EV-DPROF-00903.payload.account_age_days",
+      "kind": "copied",
+      "source": "driver_profile.account_age_days",
+      "value": 900,
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-DPROF-00903.payload.lifetime_trips",
+      "kind": "copied",
+      "source": "driver_profile.total_trips",
+      "value": 3201,
+      "reason": "The source calls this total_trips; lifetime_trips is this corpus's name."
+    },
+    {
+      "target": "evidence.EV-DPROF-00903.payload.rating",
+      "kind": "copied",
+      "source": "driver_profile.avg_rating",
+      "value": 4.9,
+      "reason": "The source calls this avg_rating; rating is this corpus's name."
+    },
+    {
+      "target": "evidence.EV-DPROF-00903.payload.prior_disputes_filed",
+      "kind": "copied",
+      "source": "driver_profile.dispute_history.total_disputes",
+      "value": 1,
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "evidence.EV-DPROF-00903.payload.prior_disputes_upheld",
+      "kind": "copied",
+      "source": "driver_profile.dispute_history.upheld_against",
+      "value": 0,
+      "reason": "The source's upheld_against is the count of disputes decided against the driver, which is what prior_disputes_upheld records here."
+    },
+    {
+      "target": "evidence.EV-DPROF-00903.payload.prior_no_show_flags",
+      "kind": "judged",
+      "source": "driver_profile.fraud_flags",
+      "value": 0,
+      "reason": "The driver's fraud_flags counter is carried, as with the rider's. It is a lifetime counter and POL-NS-07 explicitly does not read it."
+    },
+    {
+      "target": "evidence.EV-DPROF-00903.payload.vehicle_type",
+      "kind": "judged",
+      "source": "driver_profile.vehicle",
+      "value": "RYDE_X",
+      "reason": "The source names a Honda HR-V, which is not a tier in this corpus; RYDE_X is the base tier. The assumption is stated in the mapping record and the POL-NS-08(d) fee comparison depends on it."
+    },
+    {
+      "target": "evidence.EV-DPROF-00903.payload.fraud_flags",
+      "kind": "copied",
+      "source": "driver_profile.fraud_flags",
+      "value": 0,
+      "reason": "The source's own fraud counter, under the name POL-GEN-22 reads it, for the same reason as the rider's. It is zero here."
+    },
+    {
+      "target": "driver_profile.vehicle",
+      "kind": "judged",
+      "source": "driver_profile.vehicle",
+      "value": null,
+      "reason": "The source's vehicle string ('Honda HR-V (SGP 4521 M)') carries a plate and a model. The corpus's schema has a tier, not a model; the tier is assumed and the string itself is dropped rather than carried into a field that means something else."
+    },
+    {
+      "target": "evidence.EV-DPROF-00903.payload.cancellation_rate",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "Null rather than zero: the source states no cancellation rate, and zero would assert there were none."
+    },
+    {
+      "target": "evidence.EV-DPROF-00903.payload.prior_deviation_flags",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "Null rather than zero: the source states no deviation flags, and zero would assert there were none."
+    },
+    {
+      "target": "evidence.EV-DPROF-00903.payload.acceptance_rate",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "Null rather than zero: the source states no acceptance rate, and zero would assert there were none."
+    },
+    {
+      "target": "evidence.EV-DPROF-00903.payload.active_region",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "Null rather than zero: inferring a region from the pickup place name would be world knowledge about places, which this repository forbids, and zero would assert there were none."
+    },
+    {
+      "target": "evidence.EV-DPROF-00903.payload.deviation_flags_90d",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "Null rather than zero: a route-deviation counter has no meaning on a no-show, and zero would assert there were none."
+    },
+    {
+      "target": "evidence.EV-DPROF-00903.payload.completed_trips_90d",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "Null rather than zero: the source gives a lifetime trip count only, and zero would assert there were none."
+    },
+    {
+      "target": "evidence.EV-DPROF-00903.payload.no_show_terminations_30d",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "Null rather than zero: the source states no 30-day termination count; POL-NS-07's anti-farming check therefore cannot be run on this case and is undecidable, not passed, and zero would assert there were none."
+    },
+    {
+      "target": "evidence.EV-DPROF-00903.payload.completed_trips_30d",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "Null rather than zero: the source states no 30-day trip count, and zero would assert there were none."
+    },
+    {
+      "target": "evidence.EV-DPROF-00903.payload.disputes_with_counterparty_90d",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "Null rather than zero: the source does not say how many disputes were with this same rider, and zero would assert there were none."
+    },
+    {
+      "target": "evidence.EV-DPROF-00903.admissibility.issues",
+      "kind": "judged",
+      "source": null,
+      "value": [],
+      "reason": "Codes chosen only from prepass.CODE_WEIGHTS, and the weight is computed by prepass.weight_for rather than written here."
+    },
+    {
+      "target": "evidence.EV-ADVIS-00903-01",
+      "kind": "judged",
+      "source": null,
+      "value": "MISSING",
+      "reason": "The source carries no traffic advisory. A MISSING artifact asserts absence, not presence, and is this corpus's convention: 25 of its 30 advisories are MISSING with a null payload. Minting it keeps the converted case in the same shape as every corpus case, and POL-NS-06(i) is explicitly unavailable against a MISSING advisory, which is the correct state here."
+    },
+    {
+      "target": "chat_logs[*].type",
+      "kind": "judged",
+      "source": "chat_logs[*].type",
+      "value": null,
+      "reason": "Read, not carried: the type is what separates the log's messages from its call and from the platform's own entry, and each is carried where it belongs - the call as EV-TRIP-00903.payload.in_app_calls[0], the rest as messages on EV-CHAT-00903. Neither payload schema has a field for the type itself."
+    },
+    {
+      "target": "rider_profile.fraud_flag_details",
+      "kind": "judged",
+      "source": "rider_profile.fraud_flag_details",
+      "value": null,
+      "reason": "Read, not carried: the text ('flagged_for_frequent_late_cancellations') is what identifies the rider's flag counter as belonging to the no-show family, which is why the counter is carried as prior_no_show_flags. This corpus's profile schema has no field for the detail text."
+    },
+    {
+      "target": "driver_profile.name",
+      "kind": "judged",
+      "source": "driver_profile.name",
+      "value": null,
+      "reason": "Dropped: this corpus's profile schema has no field for a name, and no clause reads one. The same decision is recorded for the rider's name."
+    },
+    {
+      "target": "driver_profile.dispute_history.rejected",
+      "kind": "judged",
+      "source": "driver_profile.dispute_history.rejected",
+      "value": null,
+      "reason": "Dropped: this corpus's profile schema has no counterpart field. total_disputes and upheld_against carry the rest of the driver's history."
+    },
+    {
+      "target": "app_events[booking_confirmed]",
+      "kind": "judged",
+      "source": "app_events[booking_confirmed].timestamp, app_events[booking_confirmed].event_type, app_events[booking_confirmed].details",
+      "value": null,
+      "reason": "This event is accounted for here, field by field. Carried in EV-TRIP-00903.payload.events[] with its own event_type, timestamp and details. Carried: its timestamp is EV-TRIP-00903.payload.requested_at."
+    },
+    {
+      "target": "app_events[driver_assigned]",
+      "kind": "judged",
+      "source": "app_events[driver_assigned].timestamp, app_events[driver_assigned].event_type, app_events[driver_assigned].details",
+      "value": null,
+      "reason": "This event is accounted for here, field by field. Carried in EV-TRIP-00903.payload.events[] with its own event_type, timestamp and details. Carried: its timestamp is EV-TRIP-00903.payload.accepted_at."
+    },
+    {
+      "target": "app_events[driver_en_route]",
+      "kind": "judged",
+      "source": "app_events[driver_en_route].timestamp, app_events[driver_en_route].event_type, app_events[driver_en_route].details",
+      "value": null,
+      "reason": "This event is accounted for here, field by field. Carried in EV-TRIP-00903.payload.events[] with its own event_type, timestamp and details. Read, not carried: EV-TRIP-00903.payload.time_to_arrival_min is measured from its timestamp, and no field holds the event itself."
+    },
+    {
+      "target": "app_events[driver_arrived]",
+      "kind": "judged",
+      "source": "app_events[driver_arrived].timestamp, app_events[driver_arrived].event_type, app_events[driver_arrived].details",
+      "value": null,
+      "reason": "This event is accounted for here, field by field. Carried in EV-TRIP-00903.payload.events[] with its own event_type, timestamp and details. Carried: its timestamp is EV-TRIP-00903.payload.arrived_at, and its details are carried into EV-TRIP-00903's admissibility notes."
+    },
+    {
+      "target": "app_events[rider_notified]",
+      "kind": "judged",
+      "source": "app_events[rider_notified].timestamp, app_events[rider_notified].event_type, app_events[rider_notified].details",
+      "value": null,
+      "reason": "This event is accounted for here, field by field. Carried in EV-TRIP-00903.payload.events[] with its own event_type, timestamp and details. Dropped: no field in either payload schema holds a notification, and no limb of POL-NS-01 to POL-NS-09 reads one. It records the platform's act, not the rider's."
+    },
+    {
+      "target": "app_events[wait_timer_started]",
+      "kind": "judged",
+      "source": "app_events[wait_timer_started].timestamp, app_events[wait_timer_started].event_type, app_events[wait_timer_started].details",
+      "value": null,
+      "reason": "This event is accounted for here, field by field. Carried in EV-TRIP-00903.payload.events[] with its own event_type, timestamp and details. Dropped: no field holds a timer. The free-wait period it starts is the source platform's own rule rather than this system's, and POL-NS-01(c) measures the dwell from a GPS fix instead."
+    },
+    {
+      "target": "app_events[driver_called_rider]",
+      "kind": "judged",
+      "source": "app_events[driver_called_rider].timestamp, app_events[driver_called_rider].event_type, app_events[driver_called_rider].details",
+      "value": null,
+      "reason": "This event is accounted for here, field by field. Carried in EV-TRIP-00903.payload.events[] with its own event_type, timestamp and details. Carried: EV-TRIP-00903.payload.in_app_calls[0] holds the call it records, with its time, initiator and duration."
+    },
+    {
+      "target": "app_events[wait_timer_expired]",
+      "kind": "judged",
+      "source": "app_events[wait_timer_expired].timestamp, app_events[wait_timer_expired].event_type, app_events[wait_timer_expired].details",
+      "value": null,
+      "reason": "This event is accounted for here, field by field. Carried in EV-TRIP-00903.payload.events[] with its own event_type, timestamp and details. Dropped, for the same reason as wait_timer_started: no field holds a timer."
+    },
+    {
+      "target": "app_events[cancellation_fee_applied]",
+      "kind": "judged",
+      "source": "app_events[cancellation_fee_applied].timestamp, app_events[cancellation_fee_applied].event_type, app_events[cancellation_fee_applied].details",
+      "value": null,
+      "reason": "This event is accounted for here, field by field. Carried in EV-TRIP-00903.payload.events[] with its own event_type, timestamp and details. Carried: its timestamp is EV-FARE-00903.payload.charged_at and its amount is EV-FARE-00903.payload.cancellation_fee."
+    },
+    {
+      "target": "app_events[driver_released]",
+      "kind": "judged",
+      "source": "app_events[driver_released].timestamp, app_events[driver_released].event_type, app_events[driver_released].details",
+      "value": null,
+      "reason": "This event is accounted for here, field by field. Carried in EV-TRIP-00903.payload.events[] with its own event_type, timestamp and details. Dropped as an event: EV-TRIP-00903.payload.status and cancelled_by carry the fact it records, and no field holds a release."
+    },
+    {
+      "target": "dispute.dispute_id",
+      "kind": "copied",
+      "source": "dispute_ticket.dispute_id",
+      "value": "DISP-002",
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "dispute.case_no",
+      "kind": "judged",
+      "source": null,
+      "value": 903,
+      "reason": "A converted case is numbered outside the corpus range (101-115, 201-214) so it can never be mistaken for a corpus case."
+    },
+    {
+      "target": "dispute.category",
+      "kind": "judged",
+      "source": "dispute_ticket.dispute_type",
+      "value": "NO_SHOW_CHARGE",
+      "reason": "The source calls this dispute_type 'no_show_charge'. NO_SHOW_CHARGE is this system's token for that, and it is what selects policy/no_show.json."
+    },
+    {
+      "target": "dispute.filed_by",
+      "kind": "judged",
+      "source": "dispute_ticket.filed_by",
+      "value": "RIDER",
+      "reason": "Copied in substance and upper-cased: the source writes 'rider' and this corpus's vocabulary is RIDER."
+    },
+    {
+      "target": "dispute.filed_at",
+      "kind": "copied",
+      "source": "dispute_ticket.filed_at",
+      "value": "2026-09-13T09:20:00+08:00",
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "dispute.claim_text",
+      "kind": "copied",
+      "source": "dispute_ticket.description",
+      "value": "I was at the pickup point at Tiong Bahru Plaza on time but the driver never showed up. I waited 10 minutes at the lobby and couldn't find the car. The app charged me a $5.00 cancellation fee for a 'no-show' which is completely unfair — I was there, the driver was not. I want the charge reversed immediately.",
+      "reason": "the source states this value and the converted case carries it"
+    },
+    {
+      "target": "dispute.amount_contested_sgd",
+      "kind": "judged",
+      "source": "trip_data.cancellation_fee",
+      "value": 5.0,
+      "reason": "The source has no 'amount contested' field. The cancellation fee is what the rider's claim asks to have reversed, and it is the figure the fare breakdown charges, so it is the figure contested."
+    },
+    {
+      "target": "dispute.counterparty_statement",
+      "kind": "judged",
+      "source": null,
+      "value": null,
+      "reason": "The source carries no statement from the driver. It is left null rather than substituted with an empty string or reconstructed from the chat log, which is a different artifact."
+    },
+    {
+      "target": "dispute.channel",
+      "kind": "judged",
+      "source": null,
+      "value": "IN_APP_SUPPORT",
+      "reason": "The source states no filing channel. IN_APP_SUPPORT is this corpus's value in 28 of 29 cases and the dispute is an in-app dispute; the field is presentation and no clause in either policy reads it."
+    },
+    {
+      "target": "dispute.evidence_ids",
+      "kind": "judged",
+      "source": null,
+      "value": [
+        "EV-TRIP-00903",
+        "EV-GPS-00903",
+        "EV-CHAT-00903",
+        "EV-FARE-00903",
+        "EV-RPROF-00903",
+        "EV-DPROF-00903",
+        "EV-ADVIS-00903-01"
+      ],
+      "reason": "The ids are minted by this conversion. The corpus cites every artifact the case holds, so every minted artifact is cited."
+    },
+    {
+      "target": "schema_version",
+      "kind": "copied",
+      "source": "the corpus contract",
+      "value": "1.2.0",
+      "reason": "data/PUBLIC-CONTRACT.md fixes the top-level value as \"1.2.0\" in all 29 corpus cases; a converted case is not a corpus case and may differ."
+    }
+  ],
+  "policy_divergences": [
+    {
+      "finding": "The source's cancellation fee of SGD 5.00 matches no entry in fee_schedule.",
+      "source_policy": "cancellation_fee_after_wait: 5.00",
+      "this_system": "fee_schedule.zone_class_fee_sgd for STANDARD is 4.00 and vehicle_tier_fee_sgd for RYDE_X is 4.00; the greater is 4.00. No combination of zone class and vehicle tier in the schedule produces 5.00.",
+      "effect": "The converted case carries the source's 5.00 unchanged, because changing it would be editing the evidence. POL-NS-08(d) is therefore engaged on the converted case.",
+      "depends_on_assumptions": [
+        "pickup zone class is STANDARD",
+        "vehicle tier is RYDE_X"
+      ],
+      "resolution": "fee_schedule.resolution_rule reads trip_record.platform_policy.cancellation_fee_sgd (5.00) first; POL-NS-08(d) is no longer engaged on the converted case."
+    },
+    {
+      "finding": "The source's 8-minute no-show threshold has no counterpart in POL-NS.",
+      "source_policy": "no_show_threshold_min: 8",
+      "this_system": "POL-NS-01(c) sets the dwell minimum from fee_schedule.minimum_dwell_sec: 300 s (5 min) for STANDARD, LARGE_VENUE and TRANSPORT_HUB, 480 s (8 min) for AIRPORT. The source's flat 8 minutes is not this system's rule, and this system's figure varies by zone class where the source's does not.",
+      "effect": "The converted case carries no threshold of its own: the threshold is read from the loaded policy at arbitration time, as it is for every case.",
+      "depends_on_assumptions": [
+        "pickup zone class is STANDARD"
+      ],
+      "resolution": "POL-NS-01(c) reads platform_policy.free_wait_sec (300) and no_show_threshold_sec (480); the cancellation at 08:51:00 falls at the 8-minute threshold measured from the 08:43 arrival."
+    },
+    {
+      "finding": "Whether the waiting clock runs from arrival or from the scheduled time is a question this system's policy does not address.",
+      "source_policy": "scheduled_time 08:45, driver_arrival_time 08:43; the source's own app events start the free-wait timer at arrival (wait_timer_started at 08:43:10), and the cancellation at 08:51:00 falls exactly on an 8-minute threshold measured from arrival.",
+      "this_system": "POL-NS-01(c) measures the dwell 'from the first qualifying in-geofence GPS fix and not from the arrived event'. That answers a different question from the one the source's timers answer: it fixes the start of the dwell, and is silent on whether a scheduled time could start anything.",
+      "effect": "Recorded and NOT resolved. On this case the point does not bite, because no fix carries an accuracy value and POL-NS-02 therefore yields no qualifying in-geofence fix at all, so the dwell cannot be measured either way.",
+      "depends_on_assumptions": [],
+      "resolution": "scheduled_at is now carried as trip_record.scheduled_at, and POL-NS-10(b) reads it. POL-NS-01(c) still runs the clock from the first qualifying in-geofence fix, and the platform's own wait_timer_started event (08:43:10) is a second, independent carrier of the same start."
+    },
+    {
+      "finding": "The source's fee goes to driver_compensation without the platform share this system applies.",
+      "source_policy": "fee_goes_to: driver_compensation",
+      "this_system": "POL-NS-07 compensates the driver at 80 percent of the fee, the residual 20 percent being retained as the platform service fee.",
+      "effect": "The converted case carries no compensation figure; POL-NS-07 computes it from the fee at arbitration time.",
+      "depends_on_assumptions": []
+    },
+    {
+      "finding": "The source's dispute vocabulary is not this system's.",
+      "source_policy": "dispute_id DISP-002, status 'open', dispute_type 'no_show_charge', cancellation_reason 'rider_no_show'",
+      "this_system": "This corpus's dispute ids are DSP-<case_no>, its reason code token is RIDER_NO_SHOW, and it has no 'status' key. The source's tokens are translated where this system has an equivalent and recorded where it does not.",
+      "effect": "dispute_id is carried unchanged as DISP-002, so the converted case can be traced back to the organisers' document; status is dropped.",
+      "depends_on_assumptions": []
+    }
+  ],
+  "assumptions": [
+    {
+      "assumption": "pickup zone class is STANDARD",
+      "depends_on_it": [
+        "fee_schedule.zone_class_fee_sgd for STANDARD (4.00)",
+        "fee_schedule.minimum_dwell_sec for STANDARD (300 s)",
+        "fee_schedule.arrival_radius_m for STANDARD (50 m)",
+        "fee_schedule.rider_presence_radius_m for STANDARD (100 m)",
+        "the POL-NS-01 dwell comparison and the POL-NS-08(d) fee comparison"
+      ],
+      "reason": "The source gives a pickup place name and no zone class. Inferring one from what the place is would be world knowledge about places, which this repository's prompts forbid."
+    },
+    {
+      "assumption": "vehicle tier is RYDE_X",
+      "depends_on_it": [
+        "fee_schedule.vehicle_tier_fee_sgd for RYDE_X (4.00)",
+        "the POL-NS-08(d) fee comparison"
+      ],
+      "reason": "The source names a Honda HR-V, which is not a tier name in this corpus. RYDE_X is this corpus's base tier; the choice is recorded because the fee comparison turns on it."
+    }
+  ],
+  "policy_version": 7
+}

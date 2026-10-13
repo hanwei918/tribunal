@@ -6004,6 +6004,50 @@ def run_external_case(
     return outcome, run_dir
 
 
+# --------------------------------------------------------------------------
+# The prompts directory a policy version is run with
+# --------------------------------------------------------------------------
+# A prompt set states the clause ids its policy carries. ``prompts/v1`` is
+# written for versions 1 to 6 and ``prompts/v2`` for version 7 and later, whose
+# clause ids start at 21 and none of whose version-6 ids exists. A run that
+# pairs them the other way round hands the agents a prompt citing clauses their
+# policy does not carry -- a version-7 run with the version-6 judge prompt would
+# be told to cite POL-RD-10 and POL-NS-09, neither of which version 7 has -- so
+# the pair is refused by name, in both directions, before a client is built.
+V7_PROMPTS_DIR = PROJECT_ROOT / "prompts" / "v2"
+V7_PROMPTS_VERSION = 7
+
+
+def prompts_directory_for(policy_version: int) -> Path:
+    """The prompts directory a policy version is run with."""
+    return V7_PROMPTS_DIR if policy_version >= V7_PROMPTS_VERSION else PROMPTS_DIR
+
+
+def mismatched_prompts_directory(
+    policy_version: int, prompts_dir: Path
+) -> Optional[str]:
+    """Why this policy version and this prompts directory do not go together.
+
+    ``None`` when they do. The message names both directories and the version,
+    because the point of the refusal is that a reader can see which of the two
+    moved.
+    """
+    wanted = prompts_directory_for(policy_version)
+    named = Path(prompts_dir)
+    try:
+        same = named.resolve() == wanted.resolve()
+    except OSError:  # pragma: no cover - a path that cannot be resolved
+        same = named == wanted
+    if same:
+        return None
+    return (
+        "policy version {0} is run with {1}, and this invocation names {2}: a "
+        "prompt set states the clause ids its policy carries, and prompts/v1 is "
+        "written for versions 1 to 6 while prompts/v2 is written for version 7 "
+        "and later".format(policy_version, wanted, named)
+    )
+
+
 def policy_version_argument(text: str) -> int:
     """``--policy-version`` as an integer, refused below 1 while it is read.
 
@@ -6311,6 +6355,20 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--runs-dir", type=Path, default=RUNS_DIR)
     parser.add_argument("--prompts-dir", type=Path, default=PROMPTS_DIR)
     args = parser.parse_args(argv)
+
+    # The version and the prompt set are one pair. Refused before every other
+    # check, so an invocation that names the wrong one is told about that rather
+    # than about a switch it also named -- but only for a version this repository
+    # has, because a version that names nothing is the runner's own refusal and
+    # its message has to be the one that names it.
+    try:
+        highest = policy_versions.highest_available_version()
+    except policy_versions.AmendmentError:
+        highest = args.policy_version
+    if args.policy_version <= highest:
+        mismatch = mismatched_prompts_directory(args.policy_version, args.prompts_dir)
+        if mismatch is not None:
+            parser.error(mismatch)
 
     if args.ablate is not None:
         # An ablation changes what every agent is given, so it cannot be

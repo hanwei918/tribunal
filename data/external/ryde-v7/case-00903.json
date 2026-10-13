@@ -1,0 +1,511 @@
+{
+  "schema_version": "1.2.0",
+  "case_no": 903,
+  "dispute": {
+    "dispute_id": "DISP-002",
+    "trip_id": "TRIP-2026-09945",
+    "case_no": 903,
+    "category": "NO_SHOW_CHARGE",
+    "filed_by": "RIDER",
+    "filed_at": "2026-09-13T09:20:00+08:00",
+    "claim_text": "I was at the pickup point at Tiong Bahru Plaza on time but the driver never showed up. I waited 10 minutes at the lobby and couldn't find the car. The app charged me a $5.00 cancellation fee for a 'no-show' which is completely unfair — I was there, the driver was not. I want the charge reversed immediately.",
+    "amount_contested_sgd": 5.0,
+    "counterparty_statement": null,
+    "channel": "IN_APP_SUPPORT",
+    "evidence_ids": [
+      "EV-TRIP-00903",
+      "EV-GPS-00903",
+      "EV-CHAT-00903",
+      "EV-FARE-00903",
+      "EV-RPROF-00903",
+      "EV-DPROF-00903",
+      "EV-ADVIS-00903-01"
+    ]
+  },
+  "evidence": [
+    {
+      "evidence_id": "EV-TRIP-00903",
+      "evidence_type": "TRIP_RECORD",
+      "trip_id": "TRIP-2026-09945",
+      "source": "PLATFORM_TELEMETRY",
+      "generated_at": "2026-09-13T09:20:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "The source's own trip record, causally ordered. Arrival marker 08:43:00 is the nearest GPS fix timestamp to the second, so the POL-NS-08(a) 90 s clock limb is not engaged. The source's own driver_arrived event reads 'Driver GPS within 10m of pickup point. Speed 0 km/h. Auto-arrival confirmed.': the marker was auto-confirmed from a GPS measurement, so under POL-GEN-02 the marker and the trace are one carrier rather than two, and the ten-metre figure is the platform's distance claim rather than a reported horizontal accuracy, so no fix here is measurable under POL-NS-02 and none establishes arrival. pickup_zone_class and vehicle_type are stated assumptions, recorded in the mapping record; the source gives neither.",
+        "assessed_at": "2026-09-13T09:20:05+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRIP-2026-09945",
+        "rider_id": "R-7823",
+        "driver_id": "D-2398",
+        "requested_at": "2026-09-13T08:30:00+08:00",
+        "accepted_at": "2026-09-13T08:30:15+08:00",
+        "arrived_at": "2026-09-13T08:43:00+08:00",
+        "started_at": null,
+        "ended_at": null,
+        "cancelled_at": "2026-09-13T08:51:00+08:00",
+        "status": "CANCELLED_BY_DRIVER",
+        "cancelled_by": "DRIVER",
+        "cancellation_reason_code": "RIDER_NO_SHOW",
+        "pickup": {
+          "label": "Tiong Bahru Plaza",
+          "lat": 1.2847,
+          "lng": 103.8382,
+          "venue_id": null
+        },
+        "dropoff": {
+          "label": "VivoCity",
+          "lat": 1.2648,
+          "lng": 103.8223,
+          "venue_id": null
+        },
+        "vehicle_type": "RYDE_X",
+        "pickup_zone_class": "STANDARD",
+        "chat_message_count": 6,
+        "registered_pickup_points": null,
+        "in_app_calls": [
+          {
+            "call_id": "CALL-00903-001",
+            "initiated_at": "2026-09-13T08:47:05+08:00",
+            "initiated_by": "DRIVER",
+            "answered": false,
+            "duration_sec": 22
+          }
+        ],
+        "optimal_distance_km": null,
+        "optimal_duration_min": null,
+        "optimal_route_source": null,
+        "optimal_route_erp_sgd": null,
+        "actual_distance_km": null,
+        "actual_duration_min": null,
+        "deviation_pct": null,
+        "amended_optimal_distance_km": null,
+        "amended_optimal_duration_min": null,
+        "solo_optimal_distance_km": null,
+        "pickup_amended_at": null,
+        "dropoff_amended_at": null,
+        "original_pickup": null,
+        "original_dropoff": null,
+        "scheduled_at": "2026-09-13T08:45:00+08:00",
+        "platform_policy": {
+          "grace_after_match_sec": 180,
+          "advance_grace_before_scheduled_sec": 900,
+          "free_wait_sec": 300,
+          "no_show_threshold_sec": 480,
+          "cancellation_fee_sgd": 5.0,
+          "rider_gross_cancellation_fee_sgd": null,
+          "waiting_fee_sgd": null,
+          "fee_goes_to": "DRIVER",
+          "arrival_marker": "GPS_AUTO",
+          "source": "RECORD-PLATFORM"
+        },
+        "events": [
+          {
+            "event_type": "booking_confirmed",
+            "at": "2026-09-13T08:30:00+08:00",
+            "detail": "Rider R-7823 booked trip TRIP-2026-09945 from Tiong Bahru Plaza to VivoCity. Scheduled pickup 08:45.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_assigned",
+            "at": "2026-09-13T08:30:15+08:00",
+            "detail": "Driver D-2398 (Honda HR-V SGP 4521 M) assigned. ETA 13 min.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_en_route",
+            "at": "2026-09-13T08:30:20+08:00",
+            "detail": "Driver started navigating to pickup location. Live tracking enabled.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_arrived",
+            "at": "2026-09-13T08:43:00+08:00",
+            "detail": "Driver GPS within 10m of pickup point. Speed 0 km/h. Auto-arrival confirmed.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "rider_notified",
+            "at": "2026-09-13T08:43:05+08:00",
+            "detail": "Push notification + in-app alert sent to rider: 'Your driver has arrived.'",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "wait_timer_started",
+            "at": "2026-09-13T08:43:10+08:00",
+            "detail": "Free wait timer started. 5 min free wait period ends at 08:48.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_called_rider",
+            "at": "2026-09-13T08:47:05+08:00",
+            "detail": "Driver initiated in-app call to rider. Call rang 22s, no answer.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "wait_timer_expired",
+            "at": "2026-09-13T08:48:10+08:00",
+            "detail": "Free 5-min wait period expired. Rider had not boarded. Cancellation fee now applicable per policy.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "cancellation_fee_applied",
+            "at": "2026-09-13T08:51:00+08:00",
+            "detail": "No-show threshold (8 min) reached. $5.00 cancellation fee charged to rider payment method.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_released",
+            "at": "2026-09-13T08:51:05+08:00",
+            "detail": "Driver D-2398 released from trip. Trip status: cancelled (rider_no_show).",
+            "source": "PLATFORM_TELEMETRY"
+          }
+        ]
+      }
+    },
+    {
+      "evidence_id": "EV-GPS-00903",
+      "evidence_type": "GPS_TRACE",
+      "trip_id": "TRIP-2026-09945",
+      "source": "DRIVER_DEVICE",
+      "generated_at": "2026-09-13T09:20:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "IMPAIRED",
+        "issues": [
+          "LOW_SAMPLE_RATE",
+          "PARTIAL_RECORD"
+        ],
+        "weight_multiplier": 0.6,
+        "notes": "Sparse telemetry with no reported accuracy. The intervals between the source's own timestamps are [180.0, 240.0, 180.0, 120.0, 120.0, 180.0, 180.0] s, 5 of the 7 exceeding POL-NS-08(b)'s 120 s gap limb, and the waiting window from arrival to cancellation holds 4 fixes, fewer than the six that limb requires. The trace is impaired for policy, not merely for admissibility, and POL-NS-08(b)'s rider_track limb is engaged too, because no rider track was supplied. No fix carries accuracy_m, so under POL-NS-02 every one of them is evidence of neither presence nor absence and none establishes arrival. The fixes are the driver's alone; the driver's own arrival marker still comes from trip_record.",
+        "assessed_at": "2026-09-13T09:20:05+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRIP-2026-09945",
+        "points": [
+          {
+            "lat": 1.292,
+            "lng": 103.845,
+            "ts": "2026-09-13T08:31:00+08:00",
+            "speed_kph": 42
+          },
+          {
+            "lat": 1.289,
+            "lng": 103.843,
+            "ts": "2026-09-13T08:34:00+08:00",
+            "speed_kph": 38
+          },
+          {
+            "lat": 1.2865,
+            "lng": 103.84,
+            "ts": "2026-09-13T08:38:00+08:00",
+            "speed_kph": 25
+          },
+          {
+            "lat": 1.2852,
+            "lng": 103.8388,
+            "ts": "2026-09-13T08:41:00+08:00",
+            "speed_kph": 12
+          },
+          {
+            "lat": 1.2847,
+            "lng": 103.8382,
+            "ts": "2026-09-13T08:43:00+08:00",
+            "speed_kph": 0
+          },
+          {
+            "lat": 1.2847,
+            "lng": 103.8382,
+            "ts": "2026-09-13T08:45:00+08:00",
+            "speed_kph": 0
+          },
+          {
+            "lat": 1.2847,
+            "lng": 103.8382,
+            "ts": "2026-09-13T08:48:00+08:00",
+            "speed_kph": 0
+          },
+          {
+            "lat": 1.2847,
+            "lng": 103.8382,
+            "ts": "2026-09-13T08:51:00+08:00",
+            "speed_kph": 0
+          }
+        ],
+        "point_count": 8,
+        "first_fix_at": "2026-09-13T08:31:00+08:00",
+        "last_fix_at": "2026-09-13T08:51:00+08:00",
+        "sample_interval_sec": 180.0,
+        "expected_interval_sec": null,
+        "gaps": [
+          {
+            "from": "2026-09-13T08:31:00+08:00",
+            "to": "2026-09-13T08:34:00+08:00",
+            "gap_sec": 180.0
+          },
+          {
+            "from": "2026-09-13T08:34:00+08:00",
+            "to": "2026-09-13T08:38:00+08:00",
+            "gap_sec": 240.0
+          },
+          {
+            "from": "2026-09-13T08:38:00+08:00",
+            "to": "2026-09-13T08:41:00+08:00",
+            "gap_sec": 180.0
+          },
+          {
+            "from": "2026-09-13T08:45:00+08:00",
+            "to": "2026-09-13T08:48:00+08:00",
+            "gap_sec": 180.0
+          },
+          {
+            "from": "2026-09-13T08:48:00+08:00",
+            "to": "2026-09-13T08:51:00+08:00",
+            "gap_sec": 180.0
+          }
+        ],
+        "max_gap_sec": 240.0,
+        "coverage_pct": null,
+        "trace_distance_km": null,
+        "rider_track": []
+      }
+    },
+    {
+      "evidence_id": "EV-CHAT-00903",
+      "evidence_type": "CHAT_LOG",
+      "trip_id": "TRIP-2026-09945",
+      "source": "PLATFORM_TELEMETRY",
+      "generated_at": "2026-09-13T09:20:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "The source's own chat log, six entries, contiguous by construction. The largest interval between entries is 140 s, so no gap of more than 5 minutes spans the arrival marker and POL-NS-08(c) is not engaged. The in-app call is carried as a message here and as a call record on trip_record, which is where POL-NS-04(b) reads it.",
+        "assessed_at": "2026-09-13T09:20:05+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRIP-2026-09945",
+        "messages": [
+          {
+            "msg_id": "MSG-00903-001",
+            "sender": "DRIVER",
+            "text": "I've arrived at the pickup point, I'm at the lobby area.",
+            "sent_at": "2026-09-13T08:43:00+08:00",
+            "read_at": null,
+            "delivered_at": null,
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-00903-002",
+            "sender": "DRIVER",
+            "text": "I'm waiting at the lobby area, white Honda HR-V plate SGP 4521 M.",
+            "sent_at": "2026-09-13T08:45:20+08:00",
+            "read_at": null,
+            "delivered_at": null,
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-00903-003",
+            "sender": "DRIVER",
+            "text": "Outgoing call to rider — not answered (rang 22s, no response).",
+            "sent_at": "2026-09-13T08:47:05+08:00",
+            "read_at": null,
+            "delivered_at": null,
+            "channel": "VOICE_CALL_LOG",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-00903-004",
+            "sender": "DRIVER",
+            "text": "Hi, are you coming down? I've been waiting a while.",
+            "sent_at": "2026-09-13T08:49:30+08:00",
+            "read_at": null,
+            "delivered_at": null,
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-00903-005",
+            "sender": "DRIVER",
+            "text": "Please let me know, otherwise I'll have to cancel the trip.",
+            "sent_at": "2026-09-13T08:50:45+08:00",
+            "read_at": null,
+            "delivered_at": null,
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-00903-006",
+            "sender": "SYSTEM",
+            "text": "Trip cancelled by driver. Reason: rider_no_show. Cancellation fee of $5.00 applied.",
+            "sent_at": "2026-09-13T08:51:00+08:00",
+            "read_at": null,
+            "delivered_at": null,
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          }
+        ],
+        "message_count": 6,
+        "first_message_at": "2026-09-13T08:43:00+08:00",
+        "last_message_at": "2026-09-13T08:51:00+08:00",
+        "truncated": false
+      }
+    },
+    {
+      "evidence_id": "EV-FARE-00903",
+      "evidence_type": "FARE_BREAKDOWN",
+      "trip_id": "TRIP-2026-09945",
+      "source": "PAYMENTS_LEDGER",
+      "generated_at": "2026-09-13T09:20:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "IMPAIRED",
+        "issues": [
+          "PARTIAL_RECORD"
+        ],
+        "weight_multiplier": 0.75,
+        "notes": "The ledger carries one line: the 5.00 cancellation fee. It itemises nothing else, so this is still a PARTIAL_RECORD, at the weight this conversion's own pre-pass rule gives that code (0.75). The 5.00 equals the fee in force for this trip: fee_schedule.resolution_rule reads trip_record.platform_policy.cancellation_fee_sgd first, and the record states it as 5.00, so the single line reconciles with the fee and POL-NS-08(d) is NOT engaged. No issue code is minted for the reconciliation, because there is nothing to report: the one line and the fee in force are the same figure.",
+        "assessed_at": "2026-09-13T09:20:05+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRIP-2026-09945",
+        "currency": "SGD",
+        "fare_model": "METERED",
+        "cancellation_fee": 5.0,
+        "total_charged": 5.0,
+        "payment_status": "CHARGED",
+        "refund_issued_sgd": 0.0,
+        "charged_at": "2026-09-13T08:51:00+08:00",
+        "surge_multiplier": 1.0,
+        "rate_card_id": null,
+        "base_fare": 0.0,
+        "distance_fare": 0.0,
+        "time_fare": 0.0,
+        "surge_amount": 0.0,
+        "tolls_erp": 0.0,
+        "airport_surcharge": 0.0,
+        "platform_fee": 0.0,
+        "promo_discount": 0.0,
+        "waiting_time_fee": 0.0,
+        "quoted_fare_sgd": null,
+        "distance_charged_km": null,
+        "time_charged_min": null,
+        "per_km_rate_sgd": null,
+        "per_min_rate_sgd": null,
+        "erp_gantries": []
+      }
+    },
+    {
+      "evidence_id": "EV-RPROF-00903",
+      "evidence_type": "RIDER_PROFILE",
+      "trip_id": "TRIP-2026-09945",
+      "source": "PLATFORM_TELEMETRY",
+      "generated_at": "2026-09-13T09:20:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "The rider's own counters, complete for every field the source states. The corpus's schema has five fields the source does not speak to (cancellation_rate, no_show_disputes_30d, the two deviation counters, and disputes_with_counterparty_90d); each is null, and none is zero, because zero would assert a count nobody recorded. No issue code in the corpus's vocabulary covers a profile field the source is silent on, so none is minted.",
+        "assessed_at": "2026-09-13T09:20:05+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "R-7823",
+        "party_role": "RIDER",
+        "snapshot_at": "2026-09-13T09:20:00+08:00",
+        "account_age_days": 210,
+        "lifetime_trips": 34,
+        "rating": 3.9,
+        "prior_disputes_filed": 4,
+        "prior_disputes_upheld": 1,
+        "prior_no_show_flags": 1,
+        "fraud_flags": 1,
+        "cancellation_rate": null,
+        "no_show_disputes_30d": null,
+        "deviation_claims_60d": null,
+        "deviation_claims_60d_substantiated": null,
+        "disputes_with_counterparty_90d": null
+      }
+    },
+    {
+      "evidence_id": "EV-DPROF-00903",
+      "evidence_type": "DRIVER_PROFILE",
+      "trip_id": "TRIP-2026-09945",
+      "source": "PLATFORM_TELEMETRY",
+      "generated_at": "2026-09-13T09:20:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "The driver's own counters, complete for every field the source states. Nine corpus fields the source does not speak to are null, not zero. no_show_terminations_30d being null makes POL-NS-07's anti-farming check undecidable on this case rather than passed, which is the honest state and is recorded in the mapping. No issue code is minted for the gaps, because no code in the corpus's vocabulary covers a field the source is silent on.",
+        "assessed_at": "2026-09-13T09:20:05+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "D-2398",
+        "party_role": "DRIVER",
+        "snapshot_at": "2026-09-13T09:20:00+08:00",
+        "account_age_days": 900,
+        "lifetime_trips": 3201,
+        "rating": 4.9,
+        "prior_disputes_filed": 1,
+        "prior_disputes_upheld": 0,
+        "prior_no_show_flags": 0,
+        "vehicle_type": "RYDE_X",
+        "fraud_flags": 0,
+        "cancellation_rate": null,
+        "prior_deviation_flags": null,
+        "acceptance_rate": null,
+        "active_region": null,
+        "deviation_flags_90d": null,
+        "completed_trips_90d": null,
+        "no_show_terminations_30d": null,
+        "completed_trips_30d": null,
+        "disputes_with_counterparty_90d": null
+      }
+    },
+    {
+      "evidence_id": "EV-ADVIS-00903-01",
+      "evidence_type": "TRAFFIC_ADVISORY",
+      "trip_id": "TRIP-2026-09945",
+      "source": "THIRD_PARTY_LTA",
+      "generated_at": "2026-09-13T09:20:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "MISSING",
+        "issues": [
+          "MISSING_ARTIFACT"
+        ],
+        "weight_multiplier": 0.0,
+        "notes": "Artifact absent. The identifier is minted anyway so that the absence itself can be cited by either advocate.",
+        "assessed_at": "2026-09-13T09:20:05+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": null
+    }
+  ]
+}

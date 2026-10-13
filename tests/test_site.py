@@ -556,8 +556,8 @@ class TheLinksTests(unittest.TestCase):
 class TheBundleTests(unittest.TestCase):
     """``try/tribunal-core.zip``: this repository's own Python, and nothing else."""
 
-    def test_the_list_is_the_thirty_nine_paths(self):
-        self.assertEqual(39, len(site.BUNDLE_PATHS))
+    def test_the_list_is_the_forty_two_paths(self):
+        self.assertEqual(42, len(site.BUNDLE_PATHS))
         self.assertEqual(sorted(site.BUNDLE_PATHS), list(site.BUNDLE_PATHS))
         self.assertEqual(len(set(site.BUNDLE_PATHS)), len(site.BUNDLE_PATHS))
 
@@ -573,7 +573,7 @@ class TheBundleTests(unittest.TestCase):
         expected = sorted(
             path.relative_to(PROJECT_ROOT).as_posix() for path in build_bundle.core_files()
         )
-        self.assertEqual(39, len(expected), expected)
+        self.assertEqual(42, len(expected), expected)
         self.assertEqual(expected, sorted(site.BUNDLE_PATHS))
 
     def test_every_entry_is_the_repositorys_own_file(self):
