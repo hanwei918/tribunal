@@ -10,8 +10,13 @@ both ways on a brief that is not the repository's own:
   is the known platform difference;
 * a difference of two units is not, and neither is a difference in another
   field, nor a brief that already matches;
-* on macOS the helper never answers "yes" -- the recorded digests were made
-  there, so there is nothing to explain -- and the guard therefore never skips.
+* the second difference is named rather than generalised: the one value of the
+  one case ``NAMED_PLATFORM_DIFFERENCES`` records is accepted within its own
+  bound and nothing else is, so the same path on another case, another path on
+  the same case, and one more unit are all refused, and an empty table accepts
+  nothing;
+* on macOS neither check ever answers "yes" -- the recorded digests were made
+  there, so there is nothing to explain -- and the guards therefore never skip.
 
 No model call, no browser, no credential, and nothing here reads a run.
 """
@@ -63,6 +68,53 @@ def shifted(brief_object: dict, units: int) -> dict:
 
 def digest(brief_object: dict) -> str:
     return brief.brief_digest(brief_object)[1]
+
+
+# The run directory, case number and value path the named table records, written
+# here as the sheet writes them rather than read from the table, so a test can
+# empty the table and still ask about the same run, case and value. The first
+# test below pins them to the table, so the two cannot drift apart.
+NAMED_RUN_DIR = "runs/dev-v2-ext/policy-v6/deepseek-deepseek-flash"
+NAMED_CASE_NO = 2745
+NAMED_PATH_TAIL = ("rider_presence", "min_distance_m", "value")
+
+
+def named_brief() -> dict:
+    """A brief carrying the named value, and a second float for the control.
+
+    The named value sits where the repository's own brief puts it -- under the
+    case's first evidence artifact, beside the driver's track -- so the helper
+    finds it by the path's tail, which is what the table records, and not by an
+    index typed in here.
+    """
+    return {
+        "case": {
+            "evidence": [
+                {
+                    "payload": {
+                        "derived": {
+                            "rider_presence": {"min_distance_m": {"value": 784.5}},
+                            "driver_track": {"mean_distance_m": {"value": 1234.5}},
+                        }
+                    }
+                }
+            ]
+        },
+        "dispute": {"claim_text": "the fare is wrong"},
+    }
+
+
+def named_shifted(brief_object: dict, units: int) -> dict:
+    """A copy of the brief with the named value moved ``units`` last places."""
+    out = copy.deepcopy(brief_object)
+    field = out["case"]["evidence"][0]["payload"]["derived"]["rider_presence"][
+        "min_distance_m"
+    ]
+    value = field["value"]
+    for _step in range(abs(units)):
+        value = math.nextafter(value, math.inf if units > 0 else -math.inf)
+    field["value"] = value
+    return out
 
 
 class TheKnownPlatformDifferenceTests(unittest.TestCase):
@@ -118,6 +170,103 @@ class TheKnownPlatformDifferenceTests(unittest.TestCase):
         """
         with mock.patch.object(sys, "platform", "darwin"):
             portability.require_the_same_libm()
+
+
+class TheNamedPlatformDifferenceTests(unittest.TestCase):
+    """The second difference is one named value of one case, and nothing wider.
+
+    Each test asks about the value the table records, and the refusals are the
+    point: the same path on another case, another path on the same case, one
+    more unit, and an empty table all reproduce nothing.
+    """
+
+    def test_the_table_names_exactly_the_one_case_the_sheet_names(self):
+        """The one entry, so a widened table is a failure here and not a shrug."""
+        self.assertEqual(
+            (
+                (
+                    "runs/dev-v2-ext/policy-v6/deepseek-deepseek-flash",
+                    2745,
+                    ("rider_presence", "min_distance_m", "value"),
+                    2,
+                ),
+            ),
+            portability.NAMED_PLATFORM_DIFFERENCES,
+            "the table of named platform differences is not the one the sheet names",
+        )
+
+    def test_two_units_in_the_last_place_of_the_named_value_is_accepted(self):
+        built = named_brief()
+        recorded = digest(named_shifted(built, 2))
+        with mock.patch.object(sys, "platform", "linux"):
+            self.assertTrue(
+                portability.named_platform_difference(
+                    NAMED_RUN_DIR, NAMED_CASE_NO, built, recorded
+                ),
+                "the named value moved two units in the last place was not accepted",
+            )
+
+    def test_three_units_in_the_last_place_is_not_accepted(self):
+        built = named_brief()
+        recorded = digest(named_shifted(built, 3))
+        with mock.patch.object(sys, "platform", "linux"):
+            self.assertFalse(
+                portability.named_platform_difference(
+                    NAMED_RUN_DIR, NAMED_CASE_NO, built, recorded
+                ),
+                "a three-unit difference was taken for the named one",
+            )
+
+    def test_the_same_path_on_another_case_is_not_accepted(self):
+        built = named_brief()
+        recorded = digest(named_shifted(built, 2))
+        with mock.patch.object(sys, "platform", "linux"):
+            self.assertFalse(
+                portability.named_platform_difference(
+                    NAMED_RUN_DIR, NAMED_CASE_NO + 1, built, recorded
+                ),
+                "a case the table does not name was accepted",
+            )
+
+    def test_another_path_on_the_named_case_is_not_accepted(self):
+        built = named_brief()
+        other = named_shifted(built, 2)
+        field = other["case"]["evidence"][0]["payload"]["derived"]["driver_track"][
+            "mean_distance_m"
+        ]
+        field["value"] = math.nextafter(field["value"], math.inf)
+        with mock.patch.object(sys, "platform", "linux"):
+            self.assertFalse(
+                portability.named_platform_difference(
+                    NAMED_RUN_DIR, NAMED_CASE_NO, built, digest(other)
+                ),
+                "a value the table does not name was accepted",
+            )
+
+    def test_on_macos_nothing_is_accepted(self):
+        built = named_brief()
+        recorded = digest(named_shifted(built, 2))
+        with mock.patch.object(sys, "platform", "darwin"):
+            self.assertFalse(
+                portability.named_platform_difference(
+                    NAMED_RUN_DIR, NAMED_CASE_NO, built, recorded
+                ),
+                "the named difference was accepted on the platform that recorded it",
+            )
+
+    def test_the_table_is_what_accepts_it(self):
+        """The control: with the table emptied, the two-unit acceptance goes."""
+        built = named_brief()
+        recorded = digest(named_shifted(built, 2))
+        with mock.patch.object(portability, "NAMED_PLATFORM_DIFFERENCES", ()):
+            with mock.patch.object(sys, "platform", "linux"):
+                self.assertFalse(
+                    portability.named_platform_difference(
+                        NAMED_RUN_DIR, NAMED_CASE_NO, built, recorded
+                    ),
+                    "the two-unit acceptance survived an empty table, so the "
+                    "table is not what accepts it",
+                )
 
 
 class TheShiftedCasesTests(unittest.TestCase):

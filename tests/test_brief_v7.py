@@ -104,6 +104,15 @@ def the_case_of(path):
     return loader.load_external_set_case(loader.EXTERNAL_DIR / set_name, case_no)
 
 
+def the_case_number_of(path):
+    """The case number a recorded run file is named for.
+
+    ``case-02745.json`` names case 2745, the same parse ``the_case_of`` makes, so
+    the number a run directory is asked about is the number its own file records.
+    """
+    return int(path.name[len("case-"):-len(".json")])
+
+
 def leaf_paths(node, path=()):
     """The path of every leaf of a brief, in a fixed walk order."""
     if isinstance(node, dict):
@@ -213,18 +222,21 @@ class TheRecordedVersionSixDigestsTests(unittest.TestCase):
         """194 recorded case files, seven run directories, no digest moved.
 
         The digests were recorded on macOS, and glibc and macOS ``libm`` can
-        round ``driver_track.mean_distance_m`` one unit in the last place apart
-        -- ``tests/portability.py`` names that difference for case 111 and holds
-        the bounded check, :func:`portability.known_platform_difference`, which
-        accepts **only** a brief that reproduces the recorded digest when that
-        one value is moved one unit in the last place, up or down. Off macOS a
-        rebuilt digest that differs is therefore accepted only when that check
-        says the difference is the one known value; the files accepted that way
-        are printed below so the Actions log names them, and each is held to
-        carrying a ``driver_track.mean_distance_m`` for the guard to have moved.
-        On macOS the comparison fails as it always did, no other difference is
-        accepted on any platform, and the count and the run directories walked
-        are asserted exactly as before.
+        round a distance computed through a trigonometric function in the last
+        place apart -- ``tests/portability.py`` names each such difference and
+        holds a bounded check for it: :func:`portability.known_platform_difference`
+        for case 111's ``driver_track.mean_distance_m``, one unit in the last
+        place, and :func:`portability.named_platform_difference` for case 2745's
+        ``rider_presence.min_distance_m``, two units, the one entry of
+        ``NAMED_PLATFORM_DIFFERENCES``. Each accepts **only** a brief that
+        reproduces the recorded digest when its own one value is moved within its
+        own bound. Off macOS a rebuilt digest that differs is therefore accepted
+        only when one of those two checks says the difference is the known one;
+        the files accepted that way are printed below so the Actions log names
+        them, and each is held to carrying a ``driver_track.mean_distance_m`` for
+        the guard to have moved. On macOS the comparison fails as it always did,
+        no other difference is accepted on any platform, and the count and the run
+        directories walked are asserted exactly as before.
         """
         checked = 0
         sets = set()
@@ -246,13 +258,25 @@ class TheRecordedVersionSixDigestsTests(unittest.TestCase):
                     # The recorded digests are this code's own on macOS, so a
                     # difference here is a defect and fails as it always did.
                     self.assertEqual(digest, recorded, str(path))
-                # Off macOS the one known last-place difference is accepted, and
-                # only it: ``portability`` states the rule and holds the bound,
-                # and a difference of two units, a difference in another field,
-                # or a digest that is not the recorded one for any other reason
-                # reproduces nothing and still fails here.
+                # Off macOS two differences are accepted, and only those two:
+                # the one known last-place difference of
+                # ``driver_track.mean_distance_m``, and the one named difference
+                # of a second case's ``rider_presence.min_distance_m``.
+                # ``portability`` states both rules and holds both bounds, and a
+                # difference of two units in any other value, a difference in
+                # another field, or a digest that is not the recorded one for any
+                # other reason reproduces nothing and still fails here.
                 as_the_platform_difference = portability.known_platform_difference(
                     built, recorded
+                )
+                as_a_named_difference = (
+                    not as_the_platform_difference
+                    and portability.named_platform_difference(
+                        path.parent, the_case_number_of(path), built, recorded
+                    )
+                )
+                as_a_known_difference = (
+                    as_the_platform_difference or as_a_named_difference
                 )
                 # The diagnosis is for the failure message and is asked for only
                 # when the case is refused: it names the one float a single move
@@ -262,13 +286,14 @@ class TheRecordedVersionSixDigestsTests(unittest.TestCase):
                 # nothing and the assertion below does not read it.
                 moved = (
                     []
-                    if as_the_platform_difference
+                    if as_a_known_difference
                     else portability.which_float_moved(built, recorded)
                 )
                 self.assertTrue(
-                    as_the_platform_difference,
+                    as_a_known_difference,
                     "{0} differs from the digest its run recorded by more than "
-                    "the one known last-place difference; {1}".format(
+                    "the one known last-place difference or the one named "
+                    "difference; {1}".format(
                         path, the_moved_float_diagnosis(moved)
                     ),
                 )

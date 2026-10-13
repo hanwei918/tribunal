@@ -21,8 +21,17 @@ and compares the two goes red for a reason that is not a defect, so the tests
 that depend on the digest skip, naming case 111 and the one unit in the last
 place; the tests that *count* a set of cases count the set the platform can
 rebuild and say which case they left out. Anything else -- a difference of two
-units, a difference in another field, a rebuilt digest that is not the recorded
-one for any other reason -- still fails.
+units in any other value, a difference in another field, a rebuilt digest that
+is not the recorded one for any other reason -- still fails.
+
+**A second difference, named rather than generalised.** A distance is computed
+with a trigonometric function in more than one place: on Linux case 2745's
+``rider_presence.min_distance_m`` moves two units in the last place, and that
+one value of that one case is named in ``NAMED_PLATFORM_DIFFERENCES`` and
+accepted by :func:`named_platform_difference`. Naming it is the whole point:
+nothing here is widened to "any float" or "any distance", so a two-unit
+difference in any other value, or in any other case, reproduces nothing and
+still fails.
 
 Nothing here changes what a test asserts when its condition holds: the guards
 are conditional on exactly the state they name, and a machine that has the
@@ -181,6 +190,136 @@ def known_platform_difference(
     return False
 
 
+# --------------------------------------------------------------------------
+# The second platform difference, named one case at a time
+# --------------------------------------------------------------------------
+# The differences that are named one at a time, because each is one value of one
+# case and none of them may be widened into a tolerance for "any float" or "any
+# distance". Each entry is ``(the run directory relative to the repository, the
+# case number, the tail of the brief path whose value moved, the most units in
+# the last place it moved by)``.
+#
+# The one entry, and the line that named it -- the Actions run for ``9772136``,
+# Ubuntu, 2026-10-14:
+#
+#     runs/dev-v2-ext/policy-v6/deepseek-deepseek-flash/case-02745.json differs
+#     from the digest its run recorded by more than the one known last-place
+#     difference; case.evidence[1].payload.derived.rider_presence.min_distance_m.value
+#     by 2 ulps
+#
+# It is the same kind of difference as case 111's ``driver_track.mean_distance_m``
+# -- a distance computed through ``math.sin``/``cos``/``asin``, which glibc and
+# macOS libm round differently -- in another value and by two units.
+NAMED_PLATFORM_DIFFERENCES: Tuple[Tuple[str, int, Tuple[str, ...], int], ...] = (
+    (
+        "runs/dev-v2-ext/policy-v6/deepseek-deepseek-flash",
+        2745,
+        ("rider_presence", "min_distance_m", "value"),
+        2,
+    ),
+)
+
+
+def _float_paths(node: Any, path: Tuple[Any, ...] = ()) -> Iterator[Tuple[Any, ...]]:
+    """The path of every float leaf of a brief, in a fixed walk order."""
+    if isinstance(node, Mapping):
+        for key, value in node.items():
+            yield from _float_paths(value, path + (key,))
+    elif isinstance(node, (list, tuple)):
+        for index, value in enumerate(node):
+            yield from _float_paths(value, path + (index,))
+    elif isinstance(node, float):
+        yield path
+
+
+def _named_value_paths(
+    built: Mapping[str, Any], tail: Tuple[str, ...]
+) -> Iterator[Tuple[Any, ...]]:
+    """The path of every float of ``built`` whose path ends with ``tail``.
+
+    The tail is what the table records rather than the whole path, because a
+    brief's evidence list is the case's own and the index into it is not ours to
+    write down: the named value sits at
+    ``case.evidence[1].payload.derived.rider_presence.min_distance_m.value``,
+    which ends with ``("rider_presence", "min_distance_m", "value")``, and so
+    does the same value of any other case at whatever index its evidence sits.
+    """
+    for path in _float_paths(built):
+        if tuple(path[-len(tail):]) == tail:
+            yield path
+
+
+def _named_entry(run_dir: Path, case_no: int) -> Optional[Tuple[Tuple[str, ...], int]]:
+    """The table's entry for one run directory and case, or ``None``.
+
+    The table names its run directory relative to the repository, as the sheet
+    writes it; a caller may pass either that form or an absolute path, and a
+    directory outside the repository matches no entry.
+    """
+    directory = Path(run_dir)
+    if not directory.is_absolute():
+        directory = PROJECT_ROOT / directory
+    try:
+        key = str(directory.relative_to(PROJECT_ROOT))
+    except ValueError:
+        return None
+    for named_dir, named_case, tail, max_ulps in NAMED_PLATFORM_DIFFERENCES:
+        if named_dir == key and named_case == case_no:
+            return (tuple(tail), max_ulps)
+    return None
+
+
+def named_platform_difference(
+    run_dir: Path,
+    case_no: int,
+    built: Mapping[str, Any],
+    recorded_digest: str,
+    digest_of: Optional[Callable[[Mapping[str, Any]], Tuple[str, str]]] = None,
+) -> bool:
+    """Whether ``built`` differs from ``recorded_digest`` by one named value.
+
+    The second platform difference, named one case at a time: it is a different
+    value of a different case than case 111's, and nothing here is a tolerance
+    for a class of differences. It is asked the same way as
+    :func:`known_platform_difference` -- only of a brief whose rebuilt digest is
+    not the recorded one -- and it is answered in three steps:
+
+    * the platform is not macOS (``sys.platform != "darwin"``). On macOS the
+      recorded digests were made by this code, so there is nothing to explain
+      and the answer is always ``False``;
+    * the table names this run directory and this case number. A case with no
+      entry is refused whatever its brief looks like;
+    * rebuilding the brief with that entry's one value replaced by a value 1 to
+      ``max_ulps`` units in the last place away -- up or down, since which way
+      the two libraries round is not something to assume -- reproduces the
+      recorded digest.
+
+    Only when all three hold is the difference the named one. A difference of
+    one more unit, a difference in another value, and a difference in another
+    case reproduce nothing and are still a failure.
+    """
+    if sys.platform == "darwin":
+        return False
+    entry = _named_entry(run_dir, case_no)
+    if entry is None:
+        return False
+    tail, max_ulps = entry
+    if digest_of is None:
+        digest_of = _brief_module().brief_digest
+    for path in _named_value_paths(built, tail):
+        value = _value_at(built, path)
+        for ulps in range(1, max_ulps + 1):
+            for direction in (math.inf, -math.inf):
+                neighbour = value
+                for _step in range(ulps):
+                    neighbour = math.nextafter(neighbour, direction)
+                candidate = copy.deepcopy(built)
+                _replace(candidate, path, neighbour)
+                if digest_of(candidate)[1] == recorded_digest:
+                    return True
+    return False
+
+
 def which_float_moved(
     built: Mapping[str, Any],
     recorded_digest: str,
@@ -199,11 +338,12 @@ def which_float_moved(
     once, or a change that is not a float, looks like.
 
     **It decides nothing.** It is a diagnosis written for a failure message and
-    is never consulted by a guard or an assertion: the one bounded check is
-    :func:`known_platform_difference`, and a caller that wants a decision asks
-    that one. A machine whose library arithmetic is the one that recorded the
-    digests never needs this at all, and a caller that runs it anyway is asking
-    a question for a reader, not for the suite.
+    is never consulted by a guard or an assertion: the two bounded checks are
+    :func:`known_platform_difference` and :func:`named_platform_difference`, and
+    a caller that wants a decision asks one of those. A machine whose library
+    arithmetic is the one that recorded the digests never needs this at all, and
+    a caller that runs it anyway is asking a question for a reader, not for the
+    suite.
     """
     if digest_of is None:
         digest_of = _brief_module().brief_digest
