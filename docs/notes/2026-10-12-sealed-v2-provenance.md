@@ -1,5 +1,7 @@
 # The fourth sealed set's provenance, said exactly (2026-10-12)
 
+Update 2026-10-13: reviewed after the run and adopted by the policy owner -- see 2026-10-13-sealed-v2-post-run-review.md
+
 **Where this starts.** The current `main`, after part 48 (`b4c6d56`). This part
 changes documents, the summary strings in `eval/development_sets.py`, and the
 tests that pin what it changes. **No model call was made and no test was run

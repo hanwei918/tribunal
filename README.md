@@ -112,7 +112,7 @@ each author had seen is part of the result:
 |---|---|---|---|
 | `wild-v2` (20 cases) | 18/20 | [69.9%, 97.2%] | OpenAI Codex for the policy owner; nobody on the development side opened it |
 | `sealed-v1` (24 cases) | 21/24 (20/24 under the key as imported) | [69.0%, 95.7%] | Claude; the policy owner's AI assistant opened the cases and key before the freeze, and case 311's key changed before the run |
-| `sealed-v2` (12 cases) | 12/12 | [75.8%, 100.0%] | The policy owner with OpenAI Codex, after seeing development results; the case-by-case sign-off is still pending |
+| `sealed-v2` (12 cases) | 12/12 | [75.8%, 100.0%] | The policy owner with OpenAI Codex, after seeing development results. Reviewed case by case after the run (2026-10-13) and adopted by the policy owner as her sign-off; the review was made with her AI assistant (Claude), which knew the 12/12 result. All 12 answers were found consistent with the version-6 policy, and none was changed. The pre-run sign-off the manifest asked for was not made |
 
 Development data, reported as such: `dev-v2-ext` 115/120 and the 29-case corpus
 26/29 at version 6. The full tables, every figure's recompute command, and each

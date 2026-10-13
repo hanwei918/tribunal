@@ -299,10 +299,17 @@ reads the run is
 The set's **provenance** — that it was made by the policy owner with OpenAI
 Codex, the model name being her attestation and not a recorded fact; that its
 manifest's first release gate, a case-by-case sign-off before the run, was not
-met and the review is still pending; and that its manifest names the tag
-`freeze-2026-10-09` while the run was made from `freeze-2026-10-11`, a
-difference that moves none of the 12 briefs — is in
+met; and that its manifest names the tag `freeze-2026-10-09` while the run was
+made from `freeze-2026-10-11`, a difference that moves none of the 12 briefs —
+is in
 [`docs/notes/2026-10-12-sealed-v2-provenance.md`](notes/2026-10-12-sealed-v2-provenance.md).
+The review is in
+[`docs/notes/2026-10-13-sealed-v2-post-run-review.md`](notes/2026-10-13-sealed-v2-post-run-review.md).
+Reviewed case by case after the run (2026-10-13) and adopted by the policy
+owner as her sign-off; the review was made with her AI assistant (Claude),
+which knew the 12/12 result. All 12 answers were found consistent with the
+version-6 policy, and none was changed. The pre-run sign-off the manifest
+asked for was not made.
 
 | figure | value | read from | recompute with | model call |
 |---|---|---|---|---|

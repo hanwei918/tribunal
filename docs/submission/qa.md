@@ -75,9 +75,14 @@ this answer reads):
   `docs/notes/2026-10-10-sealed-v1-key-at-version-6.md`.
 - **`sealed-v2`** — the policy owner, with OpenAI Codex, received 2026-10-11.
   Sealed, and made **after** she had seen development results. Its manifest's
-  first release gate, a case-by-case sign-off before the run, **was not met**:
-  the sign-off is still pending and will be made after the run if it is made
-  (`docs/notes/2026-10-12-sealed-v2-provenance.md`).
+  first release gate, a case-by-case sign-off before the run, **was not met**.
+  Reviewed case by case after the run (2026-10-13) and adopted by the policy
+  owner as her sign-off; the review was made with her AI assistant (Claude),
+  which knew the 12/12 result. All 12 answers were found consistent with the
+  version-6 policy, and none was changed. The pre-run sign-off the manifest
+  asked for was not made
+  (`docs/notes/2026-10-12-sealed-v2-provenance.md`,
+  `docs/notes/2026-10-13-sealed-v2-post-run-review.md`).
 
 One more disclosure a reader should have: **`dev-v2-ext`'s cases 2734, 2758 and
 2832 were used to draft amendments to the policy**, so that set's holdout split
