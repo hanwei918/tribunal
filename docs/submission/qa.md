@@ -48,6 +48,41 @@ a transport keyed by prompt digests, making no model call, and holds the replay
 to the recording's own requests, ruling, vote and referee ledger (README,
 Concurrency).
 
+**Are your hidden sets really hidden?** Plainly: they are hidden from the
+development side, and they are **not** independent benchmarks. Every set was
+written by a member of the project, by a model the team directed, or by a
+collaborator the team commissioned, and **none came from outside the team**
+(`docs/record.md`, Results, "Where the test sets came from", which is the table
+this answer reads):
+
+- **The 29-case corpus** — this team, by hand, before 2026-09-18, against the
+  organisers' brief's dispute types. Development data.
+- **`dev-v2` and `dev-v2-ext`** — Ji Guofang, the key owner, with her generator
+  `eval/synth/make_dev_set.py`. Development data.
+- **`codex`** — OpenAI Codex, drafted 2026-09-24, copied in by the owner.
+  Development data.
+- **`wild` (v1)** — the policy owner, Ji Guofang, with Claude. The owner settled
+  on 2026-10-12 that it is development and regression data.
+- **`wild-v2`** — OpenAI Codex, for the owner, imported 2026-10-03. Sealed.
+- **`sealed-v1`** — Claude, created 2026-09-26, imported 2026-10-09. Sealed, and
+  two things about it are disclosed rather than hidden: **the policy owner's AI
+  assistant opened the set's cases and its key before the freeze**, and **case
+  311's key changed before the run** — it moved to `PARTIAL_REFUND 7.05` under
+  `POL-RD-14`, an amendment the policy owner wrote after the system ruled that
+  way on development case 1782. Both are in that set's own row and in
+  `docs/notes/2026-10-10-sealed-v1-key-at-version-6.md`.
+- **`sealed-v2`** — the policy owner, with OpenAI Codex, received 2026-10-11.
+  Sealed, and made **after** she had seen development results. Its manifest's
+  first release gate, a case-by-case sign-off before the run, **was not met**:
+  the sign-off is still pending and will be made after the run if it is made
+  (`docs/notes/2026-10-12-sealed-v2-provenance.md`).
+
+One more disclosure a reader should have: **`dev-v2-ext`'s cases 2734, 2758 and
+2832 were used to draft amendments to the policy**, so that set's holdout split
+is not clean. The record says so in its own words, and
+`python3 -m eval.v6_runs --report` prints the same three case numbers beside the
+set's split (`docs/record.md`, Results).
+
 **What happens when it is wrong?** What has actually caught cases in the
 committed runs is not the confidence floor but the checks around it. A panel
 whose drafts disagree, or produce none the code checks accept, voids the vote and
