@@ -1,0 +1,23 @@
+{
+  "scenario": "call only",
+  "why": "POL-NS-23 requires both limbs. One placed call before the cancellation and no message leaves the obligation unmet.",
+  "cancelled_at": "2026-07-30T16:12:10+08:00",
+  "chat_log_complete": true,
+  "messages": [],
+  "in_app_calls": [
+    {
+      "placed_by": "DRIVER",
+      "placed_at": "2026-07-30T16:09:40+08:00",
+      "duration_sec": 34,
+      "answered": true
+    }
+  ],
+  "expect": {
+    "messages": [],
+    "calls": ["2026-07-30T16:09:40+08:00"],
+    "message_count": 0,
+    "call_count": 1,
+    "obligation_met": false,
+    "complete": true
+  }
+}

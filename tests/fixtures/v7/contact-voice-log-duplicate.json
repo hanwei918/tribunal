@@ -1,0 +1,38 @@
+{
+  "scenario": "the same call in both records",
+  "why": "POL-NS-23 reads a call from trip_record.in_app_calls or from a voice-call entry in the chat log, and the same call can be in both. Counted once, on the second it was placed in: one call. The voice-call entry is a call and never a message.",
+  "cancelled_at": "2026-07-30T16:12:10+08:00",
+  "chat_log_complete": true,
+  "messages": [
+    {
+      "msg_id": "MSG-FIX-007",
+      "sender": "DRIVER",
+      "channel": "IN_APP",
+      "sent_at": "2026-07-30T16:04:00+08:00",
+      "text": "Calling you now"
+    },
+    {
+      "msg_id": "MSG-FIX-008",
+      "sender": "DRIVER",
+      "channel": "VOICE_CALL_LOG",
+      "sent_at": "2026-07-30T16:09:40+08:00",
+      "text": "Outgoing call, 34 s"
+    }
+  ],
+  "in_app_calls": [
+    {
+      "placed_by": "DRIVER",
+      "placed_at": "2026-07-30T16:09:40+08:00",
+      "duration_sec": 34,
+      "answered": true
+    }
+  ],
+  "expect": {
+    "messages": ["MSG-FIX-007"],
+    "calls": ["2026-07-30T16:09:40+08:00"],
+    "message_count": 1,
+    "call_count": 1,
+    "obligation_met": true,
+    "complete": true
+  }
+}

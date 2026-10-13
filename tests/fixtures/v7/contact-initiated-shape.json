@@ -1,0 +1,31 @@
+{
+  "scenario": "the second call shape",
+  "why": "The record holds a placed call as placed_by/placed_at or as initiated_by/initiated_at. POL-NS-23 reads both, so a call in the second shape is a call.",
+  "cancelled_at": "2026-07-30T16:12:10+08:00",
+  "chat_log_complete": true,
+  "messages": [
+    {
+      "msg_id": "MSG-FIX-006",
+      "sender": "DRIVER",
+      "channel": "IN_APP",
+      "sent_at": "2026-07-30T16:05:00+08:00",
+      "text": "At the lobby"
+    }
+  ],
+  "in_app_calls": [
+    {
+      "initiated_by": "DRIVER",
+      "initiated_at": "2026-07-30T16:06:00+08:00",
+      "duration_sec": 12,
+      "answered": true
+    }
+  ],
+  "expect": {
+    "messages": ["MSG-FIX-006"],
+    "calls": ["2026-07-30T16:06:00+08:00"],
+    "message_count": 1,
+    "call_count": 1,
+    "obligation_met": true,
+    "complete": true
+  }
+}

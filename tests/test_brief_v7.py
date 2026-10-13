@@ -1,0 +1,638 @@
+"""Tests for the version-7 brief -- ``tribunal.brief.build_v7_brief``.
+
+Version 7 is Ryde's own Dispute Resolution Policy v2.1, and its clauses test
+facts the version-6 brief never computed: whether the driver messaged **and**
+called before cancelling, when the free wait started and ended, whether the
+driver reached the pickup by the deadline, the deviation between the
+**recorded** distances and the excess distance fare POL-RD-24 charges on it,
+whether a traffic advisory justifies the reroute, and the value band and
+confidence a ruling needs. The version-6 path also reads clauses version 7 does
+not have, so version 7 has a builder of its own, entered at the top of
+``build_brief_for_case`` when ``policy_version >= 7``.
+
+**The one rule this module holds the builder to: versions 1 to 6 do not move.**
+The first class below rebuilds every recorded version-6 digest from the runs
+themselves -- 194 case files across seven run directories -- and asserts each
+one still hashes to the value its run recorded. The second half of that class is
+the control: the same rebuild at version 7 does **not** hash to the recorded
+value, so the comparison is shown to be capable of failing.
+
+The rest of the module tests the new arithmetic and the new readings against
+the policy's own numbers, over the fixtures in ``tests/fixtures/v7/`` for the
+contact reading and over the real corpus for everything else. The last class
+builds a version-7 brief for every corpus case and for the organisers' sample
+case and holds each one to ``_assert_no_forbidden_keys``.
+
+No model is called and no sealed root is read.
+"""
+
+from __future__ import annotations
+
+import copy
+import json
+import sys
+import unittest
+from decimal import Decimal
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from tribunal import brief, facts, loader, money  # noqa: E402
+
+FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "v7"
+RUNS_DIR = PROJECT_ROOT / "runs"
+INDEX_PATH = PROJECT_ROOT / "data" / "index.json"
+
+# The recorded version-6 runs. A corpus run lives at ``runs/<V6_RUN_DIRNAME>/<slug>/``
+# and any other set's at ``runs/<set>/<V6_RUN_DIRNAME>/<slug>/``. Two of those set
+# names brief the 29-case corpus and are loaded by number from ``data/cases/``;
+# every other set's cases live under ``data/external/<set>/``.
+#
+# The run directory's name is a constant rather than a literal in the two
+# listings below, because a listing of a directory whose name spells "policy"
+# is what ``tests/test_policy_versions.py`` refuses: the hazard it guards is a
+# module that lists ``policy/`` rather than reading the three files by name.
+V6_RUN_DIRNAME = "policy-v6"
+CORPUS_RUN_SETS = frozenset({V6_RUN_DIRNAME, "precedents"})
+
+# The fixtures that exercise POL-NS-23's contact reading, one scenario each.
+CONTACT_FIXTURES = (
+    "contact-messages-only.json",
+    "contact-call-only.json",
+    "contact-both.json",
+    "contact-after-cancel.json",
+    "contact-initiated-shape.json",
+    "contact-voice-log-duplicate.json",
+    "contact-truncated-log.json",
+    "contact-missing-log.json",
+)
+
+
+def corpus_case_numbers():
+    """Every case number of the 29-case corpus, from the manifest."""
+    return [entry["case_no"] for entry in json.loads(INDEX_PATH.read_text(encoding="utf-8"))]
+
+
+def recorded_run_files():
+    """Every recorded version-6 case file, corpus runs and set runs alike.
+
+    The two listings are disjoint: ``runs/<V6_RUN_DIRNAME>/<slug>/`` is the
+    corpus run and ``runs/<set>/<V6_RUN_DIRNAME>/<slug>/`` is every other
+    set's, and the corpus run is not reachable through the second pattern.
+    """
+    paths = list((RUNS_DIR / V6_RUN_DIRNAME).glob("*/case-*.json"))
+    paths += list(RUNS_DIR.glob("*/" + V6_RUN_DIRNAME + "/*/case-*.json"))
+    return sorted(path for path in paths if not path.name.endswith(".transcript.json"))
+
+
+def the_case_of(path):
+    """The case one recorded run file briefs, loaded from that run's own set."""
+    set_name = path.relative_to(RUNS_DIR).parts[0]
+    case_no = int(path.name[len("case-"):-len(".json")])
+    if set_name in CORPUS_RUN_SETS:
+        return loader.load_case(case_no)
+    return loader.load_external_set_case(loader.EXTERNAL_DIR / set_name, case_no)
+
+
+def derived_block(brief_case, evidence_id, key="v7"):
+    """One artifact's derived block of a built brief, by evidence id."""
+    for artifact in brief_case["case"]["evidence"]:
+        if artifact["evidence_id"] == evidence_id:
+            return (artifact.get("payload") or {}).get("derived", {}).get(key)
+    raise AssertionError("no artifact {0!r} in the brief".format(evidence_id))
+
+
+def case_with(case_no, value=None, safety=None, fraud_flags=None):
+    """A corpus case, edited in memory only, for the authority readings.
+
+    Nothing here is written back: the case files under ``data/`` are frozen, and
+    an authority reading is a function of the record, so the record is edited in
+    a copy and the brief is built from that.
+    """
+    case = copy.deepcopy(loader.load_case(case_no))
+    if value is not None:
+        case["dispute"]["amount_contested_sgd"] = value
+    if safety is not None:
+        case["dispute"]["safety_flag"] = safety
+    if fraud_flags is not None:
+        for artifact in case["evidence"]:
+            if artifact["evidence_type"] == "RIDER_PROFILE":
+                artifact["payload"]["fraud_flags"] = fraud_flags
+    return case
+
+
+def authority_of(case):
+    """``case.authority`` of a version-7 brief, with the wrappers unwrapped."""
+    brief_case = brief.build_brief_for_case(case, policy_version=7)
+    return {
+        name: (item["value"] if isinstance(item, dict) and "value" in item else item)
+        for name, item in brief_case["case"]["authority"].items()
+    }
+
+
+class TheRecordedVersionSixDigestsTests(unittest.TestCase):
+    """Version 6 is untouched: every recorded brief rebuilds to the digest it recorded."""
+
+    def test_every_recorded_version_six_digest_rebuilds_unchanged(self):
+        """194 recorded case files, seven run directories, no digest moved."""
+        checked = 0
+        sets = set()
+        for path in recorded_run_files():
+            document = json.loads(path.read_text(encoding="utf-8"))
+            configuration = document.get("configuration") or {}
+            self.assertEqual(
+                configuration.get("policy_version"),
+                6,
+                "{0} is not a version-6 run".format(path),
+            )
+            case = the_case_of(path)
+            _canonical, digest = brief.brief_digest(
+                brief.build_brief_for_case(case, policy_version=6)
+            )
+            self.assertEqual(digest, document["brief_sha256"], str(path))
+            sets.add(path.relative_to(RUNS_DIR).parts[0])
+            checked += 1
+
+        self.assertEqual(checked, 194, "the recorded runs walked are not the ones on disk")
+        self.assertEqual(
+            sets,
+            {
+                "policy-v6",
+                "precedents",
+                "dev-v2",
+                "dev-v2-ext",
+                "ryde-v3",
+                "inject-v1",
+                "pii-v1",
+                "collusion-v1",
+            },
+            "the run directories walked are not the ones on disk",
+        )
+
+    def test_the_corpus_run_is_walked_at_its_own_root(self):
+        """``runs/<V6_RUN_DIRNAME>/`` is the run the sheet names, and its 29 cases are in the walk."""
+        roots = {path.relative_to(RUNS_DIR).parts[0] for path in recorded_run_files()}
+        self.assertIn(V6_RUN_DIRNAME, roots)
+        corpus = [
+            path
+            for path in recorded_run_files()
+            if path.relative_to(RUNS_DIR).parts[0] == V6_RUN_DIRNAME
+        ]
+        self.assertEqual(len(corpus), 29)
+
+    def test_the_comparison_can_fail(self):
+        """The control: the same rebuild at version 7 does not hash to the recorded value."""
+        path = recorded_run_files()[0]
+        document = json.loads(path.read_text(encoding="utf-8"))
+        case = the_case_of(path)
+        _canonical, digest = brief.brief_digest(
+            brief.build_brief_for_case(case, policy_version=7)
+        )
+        self.assertNotEqual(digest, document["brief_sha256"])
+
+
+class TheExcessDistanceFareTests(unittest.TestCase):
+    """POL-RD-24's excess distance fare: no surge, to the cent, half up."""
+
+    def test_the_three_products_the_sheet_pins(self):
+        self.assertEqual(
+            money.excess_distance_fare(Decimal("4.3"), Decimal("0.80")), Decimal("3.44")
+        )
+        self.assertEqual(
+            money.excess_distance_fare(Decimal("1.25"), Decimal("0.75")), Decimal("0.94")
+        )
+        self.assertEqual(
+            money.excess_distance_fare(Decimal("0.125"), Decimal("1.00")), Decimal("0.13")
+        )
+
+    def test_the_figures_are_decimal_and_never_float(self):
+        for deviation, rate in (("4.3", "0.80"), ("1.25", "0.75"), ("0.125", "1.00")):
+            figure = money.excess_distance_fare(Decimal(deviation), Decimal(rate))
+            self.assertIsInstance(figure, Decimal)
+            self.assertEqual(figure.as_tuple().exponent, -2, "a cent figure is written to two places")
+
+    def test_a_float_implementation_fails_one_of_them(self):
+        """The control: the same arithmetic in binary floating point is not the same figure.
+
+        ``0.125`` is exactly representable in binary, so a float implementation
+        rounds it to even and writes ``0.12`` where the clause says ``0.13``.
+        Two of the three products happen to survive the float path; the third
+        does not, which is why the arithmetic is Decimal.
+        """
+        products = ((4.3, 0.80, "3.44"), (1.25, 0.75, "0.94"), (0.125, 1.00, "0.13"))
+        wrong = [
+            text
+            for left, right, text in products
+            if "{0:.2f}".format(left * right) != text
+        ]
+        self.assertEqual(wrong, ["0.13"])
+
+
+class TheContactBeforeCancelTests(unittest.TestCase):
+    """POL-NS-23's contact reading, over one fixture per scenario."""
+
+    def reading_of(self, name):
+        fixture = json.loads((FIXTURE_DIR / name).read_text(encoding="utf-8"))
+        return fixture, facts.contact_before_cancel(
+            fixture["messages"],
+            fixture["in_app_calls"],
+            fixture["cancelled_at"],
+            chat_log_complete=fixture["chat_log_complete"],
+        )
+
+    def test_the_fixtures_are_the_scenarios_the_sheet_names(self):
+        on_disk = sorted(path.name for path in FIXTURE_DIR.glob("contact-*.json"))
+        self.assertEqual(on_disk, sorted(CONTACT_FIXTURES))
+
+    def test_every_fixture_reads_as_its_own_expectation_says(self):
+        for name in CONTACT_FIXTURES:
+            fixture, reading = self.reading_of(name)
+            expect = fixture["expect"]
+            self.assertEqual(
+                [message["msg_id"] for message in reading["messages"]],
+                expect["messages"],
+                name,
+            )
+            self.assertEqual(
+                [call["placed_at"] for call in reading["calls"]], expect["calls"], name
+            )
+            self.assertEqual(reading["message_count"], expect["message_count"], name)
+            self.assertEqual(reading["call_count"], expect["call_count"], name)
+            self.assertIs(reading["obligation_met"], expect["obligation_met"], name)
+            self.assertIs(reading["complete"], expect["complete"], name)
+
+    def test_the_obligation_needs_both_limbs(self):
+        """One message and no call, and one call and no message, are both short."""
+        _fixture, only_messages = self.reading_of("contact-messages-only.json")
+        _fixture, only_calls = self.reading_of("contact-call-only.json")
+        _fixture, both = self.reading_of("contact-both.json")
+        self.assertIs(only_messages["obligation_met"], False)
+        self.assertIs(only_calls["obligation_met"], False)
+        self.assertIs(both["obligation_met"], True)
+
+    def test_a_duplicate_call_is_counted_once_and_carries_its_answers(self):
+        """The call is in ``in_app_calls`` and in the chat log, at the same second."""
+        _fixture, reading = self.reading_of("contact-voice-log-duplicate.json")
+        self.assertEqual(len(reading["calls"]), 1)
+        self.assertEqual(
+            reading["calls"][0],
+            {
+                "placed_at": "2026-07-30T16:09:40+08:00",
+                "answered": True,
+                "duration_sec": 34,
+                "source": facts.CALLS_SOURCE,
+            },
+        )
+        self.assertEqual([message["msg_id"] for message in reading["messages"]], ["MSG-FIX-007"])
+
+    def test_the_second_call_shape_is_read(self):
+        _fixture, reading = self.reading_of("contact-initiated-shape.json")
+        self.assertEqual(
+            [call["placed_at"] for call in reading["calls"]],
+            ["2026-07-30T16:06:00+08:00"],
+        )
+
+    def test_a_call_at_the_cancellation_second_is_not_before_it(self):
+        _fixture, reading = self.reading_of("contact-after-cancel.json")
+        self.assertEqual(reading["calls"], [])
+        self.assertEqual(reading["message_count"], 1)
+
+    def test_an_incomplete_log_says_so_rather_than_counting_zero(self):
+        _fixture, truncated = self.reading_of("contact-truncated-log.json")
+        _fixture, missing = self.reading_of("contact-missing-log.json")
+        self.assertIs(truncated["complete"], False)
+        self.assertIs(missing["complete"], False)
+        self.assertIs(missing["obligation_met"], False)
+
+    def test_a_truncated_corpus_log_makes_the_brief_say_so(self):
+        """Case 210's chat log is TRUNCATED, so its trip record's block is incomplete."""
+        built = brief.build_brief_for_case(loader.load_case(210), policy_version=7)
+        block = derived_block(built, "EV-TRIP-00210")["contact_before_cancel"]
+        self.assertIs(block["complete"]["value"], False)
+        self.assertEqual(block["reason"], brief.V7_CHAT_LOG_INCOMPLETE_REASON)
+
+    def test_case_208_met_the_obligation_and_says_which_records_show_it(self):
+        built = brief.build_brief_for_case(loader.load_case(208), policy_version=7)
+        block = derived_block(built, "EV-TRIP-00208")["contact_before_cancel"]
+        self.assertIs(block["obligation_met"]["value"], True)
+        self.assertIs(block["complete"]["value"], True)
+        self.assertEqual(block["message_count"]["value"], 3)
+        self.assertEqual(block["message_count"]["evidence_id"], "EV-CHAT-00208")
+        self.assertEqual(block["call_count"]["value"], 1)
+        self.assertEqual(block["call_count"]["evidence_id"], "EV-TRIP-00208")
+        self.assertEqual(block["calls"][0]["answered"], True)
+        self.assertEqual(block["calls"][0]["duration_sec"], 34)
+
+
+class TheFreeWaitAndDeadlineTests(unittest.TestCase):
+    """POL-NS-21's free wait and POL-NS-24's deadline, on the policy's own numbers."""
+
+    def test_an_on_demand_trip_runs_from_the_arrival(self):
+        reading = facts.free_wait(
+            "2026-07-30T16:02:25+08:00", None, 300, "2026-07-30T16:12:10+08:00"
+        )
+        self.assertEqual(reading["starts_from"], facts.FREE_WAIT_FROM_ARRIVAL)
+        self.assertEqual(reading["starts_at"], "2026-07-30T16:02:25+08:00")
+        self.assertEqual(reading["ends_at"], "2026-07-30T16:07:25+08:00")
+        self.assertIs(reading["cancelled_after_free_wait"], True)
+        self.assertEqual(reading["seconds_from_start_to_cancel"], 585.0)
+
+    def test_a_scheduled_trip_the_driver_reached_early_runs_from_the_schedule(self):
+        reading = facts.free_wait(
+            "2026-07-30T08:43:00+08:00",
+            "2026-07-30T08:45:00+08:00",
+            300,
+            "2026-07-30T08:50:01+08:00",
+        )
+        self.assertEqual(reading["starts_from"], facts.FREE_WAIT_FROM_SCHEDULE)
+        self.assertEqual(reading["starts_at"], "2026-07-30T08:45:00+08:00")
+        self.assertEqual(reading["ends_at"], "2026-07-30T08:50:00+08:00")
+
+    def test_a_scheduled_trip_the_driver_reached_late_runs_from_the_arrival(self):
+        reading = facts.free_wait(
+            "2026-07-30T08:47:00+08:00",
+            "2026-07-30T08:45:00+08:00",
+            300,
+            "2026-07-30T08:50:00+08:00",
+        )
+        self.assertEqual(reading["starts_from"], facts.FREE_WAIT_FROM_ARRIVAL)
+        self.assertEqual(reading["starts_at"], "2026-07-30T08:47:00+08:00")
+        self.assertEqual(reading["ends_at"], "2026-07-30T08:52:00+08:00")
+        self.assertIs(reading["cancelled_after_free_wait"], False)
+
+    def test_the_moment_the_wait_elapses_is_after_it_and_the_second_before_is_not(self):
+        cases = (
+            ("2026-07-30T08:49:59+08:00", False),
+            ("2026-07-30T08:50:00+08:00", True),
+            ("2026-07-30T08:50:01+08:00", True),
+        )
+        for cancelled_at, expected in cases:
+            reading = facts.free_wait(
+                "2026-07-30T08:43:00+08:00",
+                "2026-07-30T08:45:00+08:00",
+                300,
+                cancelled_at,
+            )
+            self.assertIs(reading["cancelled_after_free_wait"], expected, cancelled_at)
+
+    def test_an_on_demand_trip_fixes_no_deadline(self):
+        reading = facts.driver_deadline(None, "2026-07-30T08:43:00+08:00", 300)
+        self.assertIsNone(reading["deadline"])
+        self.assertEqual(reading["reason"], facts.ON_DEMAND_REASON)
+        self.assertNotIn("arrived_by_deadline", reading)
+
+    def test_a_scheduled_trip_measures_the_arrival_against_the_deadline(self):
+        early = facts.driver_deadline(
+            "2026-07-30T08:45:00+08:00", "2026-07-30T08:43:00+08:00", 300
+        )
+        late = facts.driver_deadline(
+            "2026-07-30T08:45:00+08:00", "2026-07-30T08:51:00+08:00", 300
+        )
+        never = facts.driver_deadline("2026-07-30T08:45:00+08:00", None, 300)
+        self.assertEqual(early["deadline"], "2026-07-30T08:50:00+08:00")
+        self.assertIs(early["arrived_by_deadline"], True)
+        self.assertIs(late["arrived_by_deadline"], False)
+        self.assertIs(never["arrived_by_deadline"], False)
+
+    def test_the_brief_publishes_the_wait_and_the_deadline_for_case_208(self):
+        built = brief.build_brief_for_case(loader.load_case(208), policy_version=7)
+        block = derived_block(built, "EV-TRIP-00208")
+        self.assertEqual(block["free_wait"]["free_wait_sec"]["value"], 300)
+        self.assertEqual(block["free_wait"]["free_wait_sec"]["clause_id"], "POL-NS-21")
+        self.assertIs(block["free_wait"]["cancelled_after_free_wait"]["value"], True)
+        self.assertIsNone(block["driver_deadline"]["deadline"])
+        self.assertEqual(block["driver_deadline"]["reason"], facts.ON_DEMAND_REASON)
+        self.assertEqual(
+            block["driver_deadline"]["driver_late_after_scheduled_sec"]["clause_id"], "POL-NS-24"
+        )
+
+
+class TheDeviationTests(unittest.TestCase):
+    """POL-RD-22's recorded-distance deviation and POL-RD-25's 2 km limb."""
+
+    def test_the_recorded_distances_give_the_deviation(self):
+        reading = facts.deviation(
+            Decimal("24.8"), Decimal("20.5"), Decimal("1.0"), Decimal("2.0"), False
+        )
+        self.assertIs(reading["available"], True)
+        self.assertEqual(reading["deviation_km"], Decimal("4.30"))
+        self.assertIs(reading["within_tolerance"], False)
+        self.assertIs(reading["over_ai_limit"], True)
+        self.assertIs(reading["ai_limit_applied"], False)
+
+    def test_a_deviation_of_exactly_the_tolerance_is_within_it(self):
+        reading = facts.deviation(
+            Decimal("21.0"), Decimal("20.0"), Decimal("1.0"), Decimal("2.0"), False
+        )
+        self.assertIs(reading["within_tolerance"], True)
+        self.assertIs(reading["over_ai_limit"], False)
+
+    def test_a_null_distance_leaves_the_deviation_unestablished(self):
+        reading = facts.deviation(None, Decimal("20.0"), Decimal("1.0"), Decimal("2.0"), False)
+        self.assertIs(reading["available"], False)
+        self.assertNotIn("deviation_km", reading)
+        self.assertEqual(reading["reason"], facts.DEVIATION_NOT_MEASURABLE_REASON)
+
+    def test_an_impaired_record_leaves_it_unestablished_too(self):
+        reading = facts.deviation(
+            Decimal("24.8"), Decimal("20.5"), Decimal("1.0"), Decimal("2.0"), False, impaired=True
+        )
+        self.assertIs(reading["available"], False)
+        self.assertNotIn("deviation_km", reading)
+
+    def test_case_101_deviation_and_its_excess_distance_fare(self):
+        built = brief.build_brief_for_case(loader.load_case(101), policy_version=7)
+        deviation = derived_block(built, "EV-TRIP-00101")["deviation"]
+        money_block = derived_block(built, "EV-FARE-00101", key="money")
+        self.assertEqual(deviation["deviation_km"]["value"], Decimal("6.20"))
+        self.assertIs(deviation["over_ai_limit"]["value"], True)
+        self.assertIs(deviation["ai_limit_applied"]["value"], False)
+        self.assertEqual(deviation["tolerance_km"]["clause_id"], "POL-RD-22")
+        self.assertEqual(deviation["ai_limit_km"]["clause_id"], "POL-RD-25")
+        self.assertEqual(money_block["excess_distance_fare_sgd"]["value"], Decimal("4.65"))
+        self.assertEqual(money_block["per_km_rate_sgd"]["value"], Decimal("0.75"))
+        self.assertEqual(money_block["deviation_km"]["value"], Decimal("6.20"))
+
+    def test_the_message_index_holds_what_was_sent_while_the_trip_ran(self):
+        built = brief.build_brief_for_case(loader.load_case(101), policy_version=7)
+        block = derived_block(built, "EV-TRIP-00101")["messages_during_trip"]
+        self.assertEqual(block["clause_id"], "POL-RD-21")
+        self.assertEqual(
+            [message["sender"] for message in block["messages"]],
+            ["RIDER", "DRIVER", "RIDER"],
+        )
+        self.assertEqual(
+            [message["sent_at"] for message in block["messages"]],
+            [
+                "2026-07-12T10:41:12+08:00",
+                "2026-07-12T10:42:05+08:00",
+                "2026-07-12T10:42:31+08:00",
+            ],
+        )
+
+    def test_a_missing_advisory_says_it_is_missing_rather_than_justifying_nothing(self):
+        built = brief.build_brief_for_case(loader.load_case(101), policy_version=7)
+        block = derived_block(built, "EV-ADVIS-00101-01")
+        self.assertIs(block["available"], False)
+        self.assertIn("MISSING", block["reason"])
+        self.assertIs(block["justifies_reroute"]["value"], False)
+
+    def test_an_advisory_of_a_kind_the_clause_names_justifies_the_reroute(self):
+        built = brief.build_brief_for_case(loader.load_case(103), policy_version=7)
+        block = derived_block(built, "EV-ADVIS-00103-01")
+        self.assertEqual(block["type"]["value"], "CLOSURE")
+        self.assertIs(block["justifies_reroute"]["value"], True)
+        self.assertEqual(block["admissible_types"]["clause_id"], "POL-RD-23")
+        self.assertEqual(block["admissible_types"]["value"], ["congestion", "incident", "closure"])
+
+    def test_an_advisory_that_does_not_intersect_the_route_justifies_nothing(self):
+        built = brief.build_brief_for_case(loader.load_case(104), policy_version=7)
+        block = derived_block(built, "EV-ADVIS-00104-02")
+        self.assertIs(block["intersects_route"]["value"], False)
+        self.assertIs(block["justifies_reroute"]["value"], False)
+        self.assertIn("does not intersect the recommended route", block["reason"])
+
+    def test_a_kind_the_clause_does_not_name_is_reported_as_such(self):
+        """POL-RD-23 names congestion, an incident and a closure, and nothing else.
+
+        The corpus's ``ACCIDENT`` is not one of those three words, so the block
+        says so in the negative rather than silently justifying the reroute --
+        and it publishes the kinds it compared against, so the reading is
+        legible rather than merely asserted. Every condition that failed is
+        named, not only the first: this advisory intersects the route and
+        overlaps the trip, so the type is the only one that does not hold.
+        """
+        built = brief.build_brief_for_case(loader.load_case(104), policy_version=7)
+        block = derived_block(built, "EV-ADVIS-00104-01")
+        self.assertEqual(block["type"]["value"], "ACCIDENT")
+        self.assertIs(block["justifies_reroute"]["value"], False)
+        self.assertIn("not one of the kinds POL-RD-23 names", block["reason"])
+        self.assertNotIn("does not intersect", block["reason"])
+
+
+class TheAuthorityTests(unittest.TestCase):
+    """POL-GEN-22's bands and bars, POL-GEN-21's safety limb, POL-RD-25's 0.80."""
+
+    def test_the_band_edges_are_the_policys_own(self):
+        edges = (
+            ("9.99", "AI_FINAL", 0.0),
+            ("10.00", "CONFIDENCE_0_80", 0.80),
+            ("50.00", "CONFIDENCE_0_80", 0.80),
+            ("50.01", "HUMAN_ONLY", 0.0),
+        )
+        for value, band, confidence in edges:
+            authority = authority_of(case_with(208, value=Decimal(value)))
+            self.assertEqual(authority["value_band"], band, value)
+            self.assertEqual(authority["required_confidence"], Decimal(str(confidence)), value)
+
+    def test_only_a_value_above_the_second_band_is_a_persons(self):
+        self.assertIs(authority_of(case_with(208, value=Decimal("50.00")))["human_only"], False)
+        self.assertIs(authority_of(case_with(208, value=Decimal("50.01")))["human_only"], True)
+
+    def test_a_fraud_flag_raises_the_bar_to_the_policys_own_figure(self):
+        authority = authority_of(case_with(208, value=Decimal("50.00"), fraud_flags=1))
+        self.assertEqual(authority["fraud_flags"], 1)
+        self.assertEqual(authority["required_confidence"], Decimal("0.95"))
+
+    def test_a_safety_flag_is_a_persons_however_small_the_amount(self):
+        authority = authority_of(case_with(208, value=Decimal("4.00"), safety=True))
+        self.assertIs(authority["safety_flag"], True)
+        self.assertIs(authority["human_only"], True)
+        self.assertEqual(authority["value_band"], "AI_FINAL")
+
+    def test_a_route_deviation_needs_the_policys_own_confidence_at_any_band(self):
+        for value in ("4.00", "30.00"):
+            authority = authority_of(case_with(101, value=Decimal(value)))
+            self.assertEqual(authority["required_confidence"], Decimal("0.80"), value)
+
+    def test_a_route_deviation_reports_the_2_km_limb_and_its_switch(self):
+        authority = authority_of(case_with(101))
+        self.assertIs(authority["over_ai_limit"], True)
+        self.assertIs(authority["ai_limit_applied"], False)
+
+    def test_a_no_show_below_the_first_band_has_no_bar(self):
+        authority = authority_of(case_with(208))
+        self.assertEqual(authority["required_confidence"], Decimal("0.0"))
+        self.assertEqual(authority["value_band"], "AI_FINAL")
+
+    def test_the_authority_names_the_clause_each_reading_rests_on(self):
+        built = brief.build_brief_for_case(loader.load_case(208), policy_version=7)
+        authority = built["case"]["authority"]
+        self.assertEqual(authority["value_band"]["clause_id"], "POL-GEN-22")
+        self.assertEqual(authority["dispute_value_sgd"]["clause_id"], "POL-GEN-22")
+        self.assertEqual(authority["safety_flag"]["clause_id"], "POL-GEN-21")
+        # A no-show below the first band has no bar, and POL-NS-26 is the clause
+        # that makes its ruling final; a route deviation's bar is POL-RD-25's.
+        self.assertEqual(authority["required_confidence"]["clause_id"], "POL-NS-26")
+        route = brief.build_brief_for_case(loader.load_case(101), policy_version=7)
+        self.assertEqual(
+            route["case"]["authority"]["required_confidence"]["clause_id"], "POL-RD-25"
+        )
+        self.assertEqual(
+            route["case"]["authority"]["over_ai_limit"]["clause_id"], "POL-RD-25"
+        )
+
+    def test_the_profiles_travel_with_their_optional_counters(self):
+        """POL-GEN-22 and POL-NS-25 read two optional profile fields; both survive."""
+        built = brief.build_brief_for_case(loader.load_case(208), policy_version=7)
+        profiles = {
+            artifact["evidence_type"]: artifact["payload"]
+            for artifact in built["case"]["evidence"]
+            if artifact["evidence_type"] in ("RIDER_PROFILE", "DRIVER_PROFILE")
+        }
+        self.assertEqual(set(profiles), {"RIDER_PROFILE", "DRIVER_PROFILE"})
+        source = loader.load_case(208)
+        for artifact in source["evidence"]:
+            if artifact["evidence_type"] in profiles:
+                self.assertEqual(artifact["payload"], profiles[artifact["evidence_type"]])
+
+
+class EveryVersionSevenBriefBuildsTests(unittest.TestCase):
+    """The whole corpus and the organisers' sample case, at version 7."""
+
+    def test_every_corpus_case_builds_and_carries_no_forbidden_key(self):
+        numbers = corpus_case_numbers()
+        self.assertEqual(len(numbers), 29)
+        for case_no in numbers:
+            with self.subTest(case=case_no):
+                built = brief.build_brief_for_case(loader.load_case(case_no), policy_version=7)
+                brief._assert_no_forbidden_keys(built)
+                self.assertIn("authority", built["case"])
+
+    def test_the_organisers_sample_case_builds_at_version_seven(self):
+        sample = loader.load_external_set_case(loader.EXTERNAL_DIR / "ryde-v3", 901)
+        built = brief.build_brief_for_case(sample, policy_version=7)
+        brief._assert_no_forbidden_keys(built)
+        self.assertEqual(built["case"]["case_no"], 901)
+        self.assertIn("authority", built["case"])
+
+    def test_the_brief_is_serialisable_with_its_decimals(self):
+        """A version-7 brief carries Decimals, and the canonical serialiser writes them."""
+        built = brief.build_brief_for_case(loader.load_case(101), policy_version=7)
+        canonical, digest = brief.brief_digest(built)
+        self.assertIn('"excess_distance_fare_sgd":{"clause_id":"POL-RD-24"', canonical)
+        self.assertNotIn('"4.65"', canonical, "a Decimal is written as a number, not quoted")
+        self.assertEqual(len(digest), 64)
+
+    def test_no_version_six_clause_id_reaches_a_version_seven_brief(self):
+        """The version-7 policy's own ids, and none of the clauses version 7 does not have."""
+        built = brief.build_brief_for_case(loader.load_case(101), policy_version=7)
+        canonical, _digest = brief.brief_digest(built)
+        for gone in ("POL-RD-01", "POL-RD-02", "POL-RD-03", "POL-RD-07", "POL-NS-06", "POL-RD-11"):
+            self.assertNotIn(gone, canonical)
+
+    def test_the_version_six_path_is_still_the_version_six_path(self):
+        """A version-6 brief carries no version-7 block, and the version-7 one does."""
+        six = brief.build_brief_for_case(loader.load_case(101), policy_version=6)
+        seven = brief.build_brief_for_case(loader.load_case(101), policy_version=7)
+        for artifact in six["case"]["evidence"]:
+            derived = (artifact.get("payload") or {}).get("derived") or {}
+            self.assertNotIn("v7", derived)
+        self.assertIn("authority", seven["case"])
+        self.assertNotIn("authority", six["case"])
+
+
+if __name__ == "__main__":
+    unittest.main()

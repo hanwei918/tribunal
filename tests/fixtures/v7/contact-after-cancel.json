@@ -1,0 +1,38 @@
+{
+  "scenario": "a call and a message after the cancellation",
+  "why": "POL-NS-23 reads what the driver did BEFORE trip_record.cancelled_at. A call at the cancellation second and a message after it are not contact before cancelling, so neither is counted.",
+  "cancelled_at": "2026-07-30T16:12:10+08:00",
+  "chat_log_complete": true,
+  "messages": [
+    {
+      "msg_id": "MSG-FIX-004",
+      "sender": "DRIVER",
+      "channel": "IN_APP",
+      "sent_at": "2026-07-30T16:11:00+08:00",
+      "text": "Still waiting"
+    },
+    {
+      "msg_id": "MSG-FIX-005",
+      "sender": "DRIVER",
+      "channel": "IN_APP",
+      "sent_at": "2026-07-30T16:12:11+08:00",
+      "text": "Cancelling now"
+    }
+  ],
+  "in_app_calls": [
+    {
+      "placed_by": "DRIVER",
+      "placed_at": "2026-07-30T16:12:10+08:00",
+      "duration_sec": 0,
+      "answered": false
+    }
+  ],
+  "expect": {
+    "messages": ["MSG-FIX-004"],
+    "calls": [],
+    "message_count": 1,
+    "call_count": 0,
+    "obligation_met": false,
+    "complete": true
+  }
+}

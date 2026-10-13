@@ -725,3 +725,87 @@ def dumps_canonical(obj: Any) -> str:
 def canonical_sha256(obj: Any) -> str:
     """The SHA-256 hex digest of ``obj``'s canonical serialisation."""
     return hashlib.sha256(dumps_canonical(obj).encode("utf-8")).hexdigest()
+
+
+# --------------------------------------------------------------------------
+# POL-RD-24 and POL-NS-22: the version-7 money figures
+# --------------------------------------------------------------------------
+# Version 7 states two money figures no earlier version did, and both are
+# computed here rather than in the brief:
+#
+# * POL-RD-24's excess distance fare -- "the deviation distance times
+#   fare_breakdown.per_km_rate_sgd, without surge, rounded to the cent"; and
+# * POL-NS-22's no-show fee, the driver's share of it, and POL-NS-24's goodwill
+#   credit.
+#
+# The rate, the fee, the share and the credit all arrive as arguments, read
+# from the loaded policy and the record by the caller. Neither the fee nor the
+# credit is a literal here, and neither is a default: this module still holds
+# no policy number.
+
+
+def excess_distance_fare(deviation_km: Any, per_km_rate_sgd: Any) -> Decimal:
+    """POL-RD-24's excess distance fare: ``deviation_km x per_km_rate_sgd``.
+
+    POL-RD-24: "The excess distance fare is the deviation distance times
+    fare_breakdown.per_km_rate_sgd, without surge, rounded to the cent." Two
+    things the clause fixes and this function therefore does:
+
+    * **No surge.** The trip's own surge multiplier is never applied -- the
+      excess distance fare is the deviation times the per-kilometre rate and
+      nothing else.
+    * **To the cent, half up.** ``1.25`` km at ``0.75`` is ``0.9375`` and comes
+      back ``0.94``, not ``0.93``; ``0.125`` at ``1.00`` comes back ``0.13``.
+
+    The product is taken in ``Decimal``, so no binary float touches it: the
+    float product of ``0.8`` and ``4.3`` is ``3.4400000000000004``, and a
+    figure of that shape must never reach a ruling.
+    """
+    return (_dec(deviation_km) * _dec(per_km_rate_sgd)).quantize(
+        PLACES, rounding=ROUND_HALF_UP
+    )
+
+
+def fee_figures(
+    fee_charged: Any,
+    policy_fee: Any,
+    fee_share_to_driver: Any,
+    goodwill_credit: Any,
+) -> Dict[str, Any]:
+    """POL-NS-22 and POL-NS-24: the no-show fee, and what turns on it.
+
+    POL-NS-22: "When the driver cancels after the free wait, a no-show
+    cancellation fee of 5.00 SGD is charged to the rider and transferred to the
+    driver as compensation for time and fuel. ... Where the record charged an
+    amount other than 5.00 SGD, the ruling acts on the amount charged and adds a
+    referral naming this clause." POL-NS-24: "If the driver fails to arrive at
+    the pickup location by the scheduled pickup time plus 5 minutes, the rider
+    may cancel at no charge: any fee charged is refunded in full (FULL_REFUND).
+    If the driver also failed to attempt contact, the rider is due a 5.00 SGD
+    goodwill credit."
+
+    Three of the six figures come from the policy rather than the record and
+    arrive as arguments: the fee POL-NS-22 fixes, the share of it that clause
+    transfers to the driver, and POL-NS-24's goodwill credit. The other three
+    are read off the charge:
+
+    * ``fee_matches_policy`` is what POL-NS-22's third sentence tests, and it
+      is a finding in its own right -- a fee the record charged that is not the
+      policy's fee is a referral, not a licence to change the amount;
+    * ``driver_compensation_if_upheld_sgd`` is the fee charged times the share,
+      to the cent;
+    * ``refund_if_voided_sgd`` is the fee charged, whole. A refund of an amount
+      already charged is not a computed payable and is never rounded -- the
+      rule :func:`_refund_decision` states for POL-RD-02 is the same rule here.
+    """
+    charged = _dec(fee_charged)
+    return {
+        "fee_charged_sgd": charged.quantize(PLACES, rounding=ROUND_HALF_UP),
+        "policy_fee_sgd": _dec(policy_fee),
+        "fee_matches_policy": charged == _dec(policy_fee),
+        "driver_compensation_if_upheld_sgd": (_dec(fee_share_to_driver) * charged).quantize(
+            PLACES, rounding=ROUND_HALF_UP
+        ),
+        "refund_if_voided_sgd": charged.quantize(PLACES, rounding=ROUND_HALF_UP),
+        "goodwill_credit_sgd": _dec(goodwill_credit),
+    }

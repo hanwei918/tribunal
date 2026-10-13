@@ -1,0 +1,38 @@
+{
+  "scenario": "both limbs",
+  "why": "One message and one call, both before the cancellation: POL-NS-23's obligation is met and the call carries the answers the record holds.",
+  "cancelled_at": "2026-07-30T16:12:10+08:00",
+  "chat_log_complete": true,
+  "messages": [
+    {
+      "msg_id": "MSG-FIX-002",
+      "sender": "DRIVER",
+      "channel": "IN_APP",
+      "sent_at": "2026-07-30T16:02:40+08:00",
+      "text": "Two minutes"
+    },
+    {
+      "msg_id": "MSG-FIX-003",
+      "sender": "RIDER",
+      "channel": "IN_APP",
+      "sent_at": "2026-07-30T16:03:00+08:00",
+      "text": "Ok"
+    }
+  ],
+  "in_app_calls": [
+    {
+      "placed_by": "DRIVER",
+      "placed_at": "2026-07-30T16:09:40+08:00",
+      "duration_sec": 34,
+      "answered": true
+    }
+  ],
+  "expect": {
+    "messages": ["MSG-FIX-002"],
+    "calls": ["2026-07-30T16:09:40+08:00"],
+    "message_count": 1,
+    "call_count": 1,
+    "obligation_met": true,
+    "complete": true
+  }
+}

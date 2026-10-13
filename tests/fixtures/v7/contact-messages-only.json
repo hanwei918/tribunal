@@ -1,0 +1,24 @@
+{
+  "scenario": "messages only",
+  "why": "POL-NS-23 requires a message AND a call. One message before the cancellation and no call at all leaves the obligation unmet.",
+  "cancelled_at": "2026-07-30T16:12:10+08:00",
+  "chat_log_complete": true,
+  "messages": [
+    {
+      "msg_id": "MSG-FIX-001",
+      "sender": "DRIVER",
+      "channel": "IN_APP",
+      "sent_at": "2026-07-30T16:08:20+08:00",
+      "text": "I am at the guardhouse"
+    }
+  ],
+  "in_app_calls": [],
+  "expect": {
+    "messages": ["MSG-FIX-001"],
+    "calls": [],
+    "message_count": 1,
+    "call_count": 0,
+    "obligation_met": false,
+    "complete": true
+  }
+}

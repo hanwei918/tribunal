@@ -24,13 +24,22 @@ position and being in motion, all arrive as parameters for that reason. So does
 POL-RD-09(4)'s radius: :func:`gantry_proximity` reports distances and decides
 no match, because the threshold that turns a distance into a match is the
 clause's.
+
+The **version-7** facts -- POL-NS-21 to POL-NS-24 (a no-show) and POL-RD-21 to
+POL-RD-25 (a route deviation) -- are computed here under the same rule. The free
+wait, the late-after-schedule allowance, the arrival window, the arrival radius,
+the accuracy filter, the deviation tolerance and v2.1 6.2's ceiling with its
+switch all arrive as parameters, read from the loaded policy by the caller.
 """
 
 from __future__ import annotations
 
 import math
-from datetime import datetime
+from datetime import datetime, timedelta
+from decimal import ROUND_HALF_UP
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
+
+from . import money
 
 # Mean Earth radius in metres. A geodetic constant, not a policy threshold.
 EARTH_RADIUS_M = 6371000.0
@@ -836,3 +845,571 @@ def deviation_status(
     if excess_pct > material_pct or excess_km > material_km:
         return MATERIAL
     return ESTABLISHED
+
+
+# --------------------------------------------------------------------------
+# Policy version 7: the facts Ryde's Dispute Resolution Policy v2.1 tests
+# --------------------------------------------------------------------------
+# POL-NS-21 to POL-NS-24 (a no-show) and POL-RD-21 to POL-RD-25 (a route
+# deviation) test facts the version-6 brief never computed: where the free wait
+# started and ended, whether the driver messaged **and** called before
+# cancelling, whether the driver reached the pickup by the deadline, the
+# deviation between the **recorded** distances and its excess distance fare,
+# whether a traffic advisory justifies the reroute, and the confidence a ruling
+# needs. Every one of them is computed here, from plain values, so the brief
+# publishes figures and decides nothing.
+#
+# The module's design rule is unchanged and every threshold still arrives as a
+# parameter: the free wait, the late-after-schedule allowance, the arrival
+# window and radius, the accuracy filter, the deviation tolerance, v2.1 6.2's
+# ceiling with its switch, and the kinds of traffic event POL-RD-23 names.
+
+# The two readings POL-NS-21's structured ``free_wait_starts`` field names, and
+# the value that says which one produced a reading.
+FREE_WAIT_FROM_SCHEDULE = "scheduled_at"
+FREE_WAIT_FROM_ARRIVAL = "arrived_at"
+
+# POL-NS-24's own words for the record that fixes no deadline. Not a policy
+# value: it is the reason a figure is absent, and it says which limb applies.
+ON_DEMAND_REASON = "on-demand trip: no scheduled time"
+
+# POL-NS-23 reads a placed call from ``trip_record.in_app_calls`` **or** from a
+# voice-call entry in the chat log, and the record holds the first in either of
+# two shapes. These are the record's own field names, not the policy's; the two
+# source labels say which record a counted call came from, so a reader can see
+# that a call logged in both places was counted once.
+CALL_LOG_CHANNEL = "VOICE_CALL_LOG"
+DRIVER_ROLE = "DRIVER"
+RIDER_ROLE = "RIDER"
+CALL_ACTOR_FIELDS = (("placed_by", "placed_at"), ("initiated_by", "initiated_at"))
+CALLS_SOURCE = "in_app_calls"
+CHAT_CALL_SOURCE = "chat_log"
+
+# Why POL-RD-22's deviation cannot be established. The clause's own words: the
+# deviation is the difference between the platform's recorded distances, so a
+# missing or impaired record leaves nothing to subtract.
+DEVIATION_NOT_MEASURABLE_REASON = (
+    "either recorded distance is missing or the trip record is impaired, so the "
+    "deviation cannot be established (POL-RD-22, POL-GEN-26)"
+)
+
+# Why a traffic advisory justifies nothing: there is no advisory at all.
+ADVISORY_ARTIFACT_MISSING_REASON = (
+    "{0} is MISSING, and a MISSING artifact carries no fact (POL-GEN-02), so "
+    "POL-RD-23 has no traffic data to read"
+)
+
+
+def _instant(stamp: Any) -> Optional[datetime]:
+    """One ISO-8601 timestamp as a ``datetime``, or ``None`` when it is not one."""
+    if not isinstance(stamp, str) or not stamp:
+        return None
+    try:
+        return datetime.fromisoformat(stamp)
+    except ValueError:
+        return None
+
+
+def _after_seconds(stamp: Any, seconds: Any) -> Optional[str]:
+    """``stamp`` plus ``seconds``, written back in the same ISO-8601 form.
+
+    The offset the record wrote is carried through unchanged, so an instant
+    derived from a ``+08:00`` stamp is a ``+08:00`` stamp: a reader comparing
+    two of them compares two instants, not two spellings.
+    """
+    instant = _instant(stamp)
+    if instant is None or seconds is None:
+        return None
+    return (instant + timedelta(seconds=int(seconds))).isoformat()
+
+
+def _between_seconds(start: Any, end: Any) -> Optional[float]:
+    """Seconds from ``start`` to ``end``, or ``None`` when either is unreadable."""
+    if _instant(start) is None or _instant(end) is None:
+        return None
+    return elapsed_seconds(start, end)
+
+
+def _number(value: Any) -> Optional[float]:
+    """One recorded figure as a float, or ``None`` when it is not a figure."""
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def free_wait(
+    arrived_at: Any,
+    scheduled_at: Any,
+    free_wait_sec: Any,
+    cancelled_at: Any,
+) -> Dict[str, Any]:
+    """POL-NS-21: where the free wait starts and ends, and whether the cancellation fell after it.
+
+    POL-NS-21: "The driver waits a free wait time of 5 minutes (300 s) from the
+    scheduled pickup time; after it, the driver may cancel the trip as a rider
+    no-show. For an on-demand trip, or a scheduled trip where the driver arrived
+    after the scheduled time, the free wait runs from the driver's arrival."
+
+    The policy's structured ``free_wait_starts`` field states the same reading
+    as a rule: the clock starts at ``trip_record.scheduled_at`` where the trip is
+    scheduled **and** the driver arrived at or before it, and at
+    ``trip_record.arrived_at`` otherwise. ``starts_from`` names which of the two
+    produced the reading, so a judge can see why the clock started where it did
+    rather than inferring it.
+
+    A cancellation **at** ``ends_at`` is after the free wait. The clause says
+    the driver may cancel "after it", and the wait is satisfied at the moment it
+    elapses -- which is how POL-NS-01 limb (d) reads the same clock ("at or
+    after the moment the required dwell elapsed"). One second before it is
+    before it.
+    """
+    arrived = _instant(arrived_at)
+    scheduled = _instant(scheduled_at)
+    if scheduled is not None and arrived is not None and arrived <= scheduled:
+        starts_at, starts_from = scheduled_at, FREE_WAIT_FROM_SCHEDULE
+    else:
+        starts_at, starts_from = arrived_at, FREE_WAIT_FROM_ARRIVAL
+
+    ends_at = _after_seconds(starts_at, free_wait_sec)
+    cancelled = _instant(cancelled_at)
+    ends = _instant(ends_at)
+    return {
+        "arrived_at": arrived_at,
+        "scheduled_at": scheduled_at,
+        "starts_at": starts_at,
+        "starts_from": starts_from,
+        "ends_at": ends_at,
+        "cancelled_at": cancelled_at,
+        "cancelled_after_free_wait": (
+            None if cancelled is None or ends is None else cancelled >= ends
+        ),
+        "seconds_from_start_to_cancel": _between_seconds(starts_at, cancelled_at),
+    }
+
+
+def driver_deadline(
+    scheduled_at: Any,
+    arrived_at: Any,
+    driver_late_after_scheduled_sec: Any,
+) -> Dict[str, Any]:
+    """POL-NS-24: the moment the driver had to be at the pickup by, and whether he was.
+
+    POL-NS-24: "If the driver fails to arrive at the pickup location by the
+    scheduled pickup time plus 5 minutes, the rider may cancel at no charge."
+    The addition is the policy's own ``driver_late_after_scheduled_sec``.
+
+    An on-demand trip has no scheduled time, so the record fixes no deadline and
+    none is invented: the block says so, names the limb in its reason, and
+    POL-GEN-26 applies. Where the trip is scheduled, an arrival after the
+    deadline is a failure to arrive by it; no arrival at all is a failure too,
+    which is why ``arrived_by_deadline`` is false rather than absent.
+    """
+    if _instant(scheduled_at) is None:
+        return {"deadline": None, "reason": ON_DEMAND_REASON}
+
+    deadline = _after_seconds(scheduled_at, driver_late_after_scheduled_sec)
+    arrived = _instant(arrived_at)
+    limit = _instant(deadline)
+    return {
+        "deadline": deadline,
+        "arrived_by_deadline": bool(
+            arrived is not None and limit is not None and arrived <= limit
+        ),
+    }
+
+
+def contact_before_cancel(
+    messages: Any,
+    in_app_calls: Any,
+    cancelled_at: Any,
+    chat_log_complete: bool = True,
+) -> Dict[str, Any]:
+    """POL-NS-23: whether the driver messaged **and** called before cancelling.
+
+    POL-NS-23: "Before cancelling for no-show, the driver must have sent at
+    least one in-app chat message to the rider AND placed at least one in-app
+    call to the rider (trip_record.in_app_calls, or a voice-call entry in the
+    chat log), both before trip_record.cancelled_at."
+
+    Four things the record makes easy to get wrong, and this function gets
+    right:
+
+    * the two call shapes. ``in_app_calls`` holds a call as
+      ``placed_by``/``placed_at`` or as ``initiated_by``/``initiated_at``, and
+      both are read;
+    * the same call recorded twice. A call can sit in ``in_app_calls`` **and**
+      appear as a ``VOICE_CALL_LOG`` entry in the chat log; the two are counted
+      once, keyed on the second they were placed in, so a driver who called once
+      has one call;
+    * the channel. A ``VOICE_CALL_LOG`` entry is a call, not a message, so it is
+      never counted as one -- and a message is a message whatever else it is;
+    * the clock. A message or a call sent at or after ``cancelled_at`` is not
+      "before cancelling" and is not counted.
+
+    ``chat_log_complete`` is the caller's reading of the chat log's own
+    admissibility. A MISSING or TRUNCATED log establishes nothing, and a count
+    of zero read off it would be a fact the record does not carry: the block
+    says ``complete: false`` and the counts travel beside it for what they are
+    worth rather than as the answer.
+    """
+    cancel = _instant(cancelled_at)
+
+    def _before(stamp: Any) -> bool:
+        moment = _instant(stamp)
+        return moment is not None and cancel is not None and moment < cancel
+
+    def _second(stamp: Any) -> Optional[str]:
+        moment = _instant(stamp)
+        return None if moment is None else moment.replace(microsecond=0).isoformat()
+
+    sent = [
+        {"msg_id": message.get("msg_id"), "sent_at": message.get("sent_at")}
+        for message in messages or []
+        if isinstance(message, Mapping)
+        and message.get("sender") == DRIVER_ROLE
+        and message.get("channel") != CALL_LOG_CHANNEL
+        and _before(message.get("sent_at"))
+    ]
+
+    calls: List[Dict[str, Any]] = []
+    counted: set = set()
+    for record in in_app_calls or []:
+        if not isinstance(record, Mapping):
+            continue
+        actor = moment = None
+        for who, when in CALL_ACTOR_FIELDS:
+            if record.get(who) is not None and record.get(when) is not None:
+                actor, moment = record.get(who), record.get(when)
+                break
+        if actor != DRIVER_ROLE or not _before(moment):
+            continue
+        key = _second(moment)
+        if key in counted:
+            continue
+        counted.add(key)
+        calls.append({
+            "placed_at": moment,
+            "answered": record.get("answered"),
+            "duration_sec": record.get("duration_sec"),
+            "source": CALLS_SOURCE,
+        })
+
+    for message in messages or []:
+        if not isinstance(message, Mapping):
+            continue
+        if message.get("channel") != CALL_LOG_CHANNEL:
+            continue
+        if message.get("sender") != DRIVER_ROLE or not _before(message.get("sent_at")):
+            continue
+        key = _second(message.get("sent_at"))
+        if key in counted:
+            continue
+        counted.add(key)
+        calls.append({
+            "placed_at": message.get("sent_at"),
+            "answered": message.get("answered"),
+            "duration_sec": message.get("duration_sec"),
+            "source": CHAT_CALL_SOURCE,
+        })
+
+    return {
+        "messages": sent,
+        "calls": calls,
+        "message_count": len(sent),
+        "call_count": len(calls),
+        "obligation_met": bool(sent) and bool(calls),
+        "complete": bool(chat_log_complete) and isinstance(messages, list),
+    }
+
+
+def deviation(
+    actual_distance_km: Any,
+    optimal_distance_km: Any,
+    tolerance_km: Any,
+    ai_limit_km: Any,
+    ai_limit_applied: Any,
+    impaired: bool = False,
+) -> Dict[str, Any]:
+    """POL-RD-22 and POL-RD-25: the deviation between the recorded distances.
+
+    POL-RD-22: "The deviation distance is the actual route distance minus the
+    recommended route distance, in km: trip_record.actual_distance_km minus
+    trip_record.optimal_distance_km, the platform's recorded distances. The GPS
+    trace shows which route was taken and when; it is not used to re-measure the
+    distance, because a sparse trace understates a route's length. A deviation
+    of 1.0 km or less is within tolerance. Where either recorded distance is
+    missing or impaired, the deviation cannot be established (POL-GEN-26)."
+
+    Three readings the clause fixes:
+
+    * the **recorded** distances govern, never the trace's own length;
+    * the tolerance is inclusive -- "1.0 km or less is within tolerance" -- so a
+      deviation of exactly the tolerance is within it;
+    * a null distance, or an impaired record, leaves the deviation
+      **unestablished**: the block says so and publishes no figure, because a
+      deviation computed on an impaired record is the number the clause refuses
+      to establish rather than a weaker version of it.
+
+    POL-RD-25's own limb is v2.1 6.2's ceiling on the deviation, and the policy
+    holds it in ``ai_ruling_max_deviation_applied``: the ceiling and whether the
+    deviation crosses it are reported, and ``ai_limit_applied`` says whether the
+    limb is switched on, so the reading travels beside the switch rather than
+    being decided by it.
+
+    The difference is taken in ``Decimal`` and written to two places, so
+    ``24.8`` minus ``20.5`` is ``4.30`` and not ``4.300000000000001``.
+    """
+    if impaired or actual_distance_km is None or optimal_distance_km is None:
+        return {"available": False, "reason": DEVIATION_NOT_MEASURABLE_REASON}
+
+    actual = money._dec(actual_distance_km)
+    optimal = money._dec(optimal_distance_km)
+    difference = (actual - optimal).quantize(money.PLACES, rounding=ROUND_HALF_UP)
+    tolerance = money._dec(tolerance_km)
+    limit = money._dec(ai_limit_km)
+    return {
+        "available": True,
+        "actual_distance_km": actual,
+        "optimal_distance_km": optimal,
+        "deviation_km": difference,
+        "tolerance_km": tolerance,
+        "within_tolerance": difference <= tolerance,
+        "ai_limit_km": limit,
+        "ai_limit_applied": bool(ai_limit_applied),
+        "over_ai_limit": difference > limit,
+    }
+
+
+def messages_during_trip(
+    messages: Any,
+    started_at: Any,
+    ended_at: Any,
+) -> List[Dict[str, Any]]:
+    """POL-RD-21: the in-app messages the two parties exchanged while the trip ran.
+
+    POL-RD-21 requires the driver to inform the rider of a deviation "before or
+    at the point of deviation", so *when* a message was sent is what the clause
+    tests and the text is not: the texts stay in the chat log, and this is the
+    index of who sent what, and when, between ``started_at`` and ``ended_at``.
+    Both ends are inclusive -- a message at the moment the trip started or ended
+    is during it -- and a call-log entry is not a message.
+    """
+    start = _instant(started_at)
+    end = _instant(ended_at)
+    if start is None or end is None:
+        return []
+
+    during: List[Dict[str, Any]] = []
+    for message in messages or []:
+        if not isinstance(message, Mapping):
+            continue
+        if message.get("channel") == CALL_LOG_CHANNEL:
+            continue
+        if message.get("sender") not in (DRIVER_ROLE, RIDER_ROLE):
+            continue
+        moment = _instant(message.get("sent_at"))
+        if moment is None or moment < start or moment > end:
+            continue
+        during.append({
+            "msg_id": message.get("msg_id"),
+            "sender": message.get("sender"),
+            "sent_at": message.get("sent_at"),
+        })
+    return during
+
+
+def trace_summary(payload: Any) -> Dict[str, Any]:
+    """POL-RD-22's informative trace figures, taken from the trace's own summary.
+
+    POL-RD-22: "The GPS trace shows which route was taken and when; it is not
+    used to re-measure the distance, because a sparse trace understates a
+    route's length." The figures are therefore the trace's own recorded summary
+    where it carries one -- ``point_count``, ``first_fix_at``, ``last_fix_at``,
+    ``max_gap_sec`` and ``trace_distance_km`` -- and are derived from its points
+    where it does not, so a brief built from a partial trace still says what the
+    trace holds instead of inventing a distance. Nothing here decides anything;
+    the deviation POL-RD-22 tests is measured from the trip record's recorded
+    distances, not from this.
+    """
+    trace = payload if isinstance(payload, Mapping) else {}
+    points = [fix for fix in (trace.get("points") or []) if isinstance(fix, Mapping)]
+    gaps = [gap for gap in (trace.get("gaps") or []) if isinstance(gap, Mapping)]
+
+    try:
+        point_count = int(trace.get("point_count"))
+    except (TypeError, ValueError):
+        point_count = len(points)
+
+    recorded_gap = _number(trace.get("max_gap_sec"))
+    if recorded_gap is None:
+        durations = [
+            duration
+            for duration in (_number(gap.get("duration_sec")) for gap in gaps)
+            if duration is not None
+        ]
+        recorded_gap = max(durations) if durations else (0.0 if points else None)
+
+    return {
+        "point_count": point_count,
+        "first_fix_at": trace.get("first_fix_at") or (points[0].get("ts") if points else None),
+        "last_fix_at": trace.get("last_fix_at") or (points[-1].get("ts") if points else None),
+        "max_gap_sec": recorded_gap,
+        "trace_distance_km": trace.get("trace_distance_km"),
+    }
+
+
+def arrival_check(
+    points: Any,
+    pickup: Any,
+    arrived_at: Any,
+    window_sec: Any,
+    radius_m: Any,
+    accuracy_max_m: Any,
+) -> Dict[str, Any]:
+    """POL-NS-21's arrival test: whether the trace corroborates the arrival marker.
+
+    The policy's own ``arrival_test`` block: "The driver is at the pickup when
+    the trip record's arrival event is corroborated by the GPS trace within the
+    arrival radius below." The test reads one fix: the one **nearest the pickup**
+    among the fixes within ``window_sec`` of the arrival marker. It corroborates
+    the marker when that fix lies inside the zone's arrival radius **and** its
+    own reported accuracy passes the policy's filter.
+
+    A fix whose accuracy is missing is of unknown accuracy and corroborates
+    nothing -- it is not treated as an inaccurate fix either, the same reading
+    :func:`_is_qualifying` takes. Where the marker, the pickup point, the window,
+    the radius or the filter is absent, nothing is tested and the block says so
+    by carrying no fix: the fact is unestablished rather than disproved, and
+    POL-GEN-26 is the clause that decides what follows.
+    """
+    marker = _instant(arrived_at)
+    located = (
+        isinstance(pickup, Mapping)
+        and pickup.get("lat") is not None
+        and pickup.get("lng") is not None
+    )
+    if marker is None or not located or None in (window_sec, radius_m, accuracy_max_m):
+        return {
+            "arrived_at": arrived_at,
+            "window_sec": window_sec,
+            "arrival_radius_m": radius_m,
+            "gps_accuracy_filter_m": accuracy_max_m,
+            "nearest_fix": None,
+            "corroborated": False,
+        }
+
+    lat, lng = float(pickup["lat"]), float(pickup["lng"])
+    limit = float(window_sec)
+    best: Optional[Tuple[float, int, Mapping[str, Any]]] = None
+    for index, fix in enumerate(points or []):
+        if not isinstance(fix, Mapping):
+            continue
+        if fix.get("lat") is None or fix.get("lng") is None:
+            continue
+        moment = _instant(fix.get("ts"))
+        if moment is None or abs((moment - marker).total_seconds()) > limit:
+            continue
+        distance = haversine_m(float(fix["lat"]), float(fix["lng"]), lat, lng)
+        if best is None or distance < best[0]:
+            best = (distance, index, fix)
+
+    nearest = None
+    corroborated = False
+    if best is not None:
+        distance, index, fix = best
+        accuracy = _number(fix.get("accuracy_m"))
+        nearest = {
+            "index": index,
+            "ts": fix.get("ts"),
+            "distance_m": distance,
+            "accuracy_m": accuracy,
+        }
+        corroborated = (
+            distance <= float(radius_m)
+            and accuracy is not None
+            and accuracy <= float(accuracy_max_m)
+        )
+
+    return {
+        "arrived_at": arrived_at,
+        "window_sec": window_sec,
+        "arrival_radius_m": radius_m,
+        "gps_accuracy_filter_m": accuracy_max_m,
+        "nearest_fix": nearest,
+        "corroborated": corroborated,
+    }
+
+
+def _fold(text: Any) -> str:
+    """A traffic-event name folded for comparison: no case, no spaces or hyphens."""
+    return str(text).strip().lower().replace(" ", "_").replace("-", "_")
+
+
+def names_a_kind(kind: Any, kinds: Any) -> bool:
+    """Whether one ``traffic_advisory.type`` names one of the kinds a clause lists.
+
+    POL-RD-23 names the kinds in words -- "congestion, an incident or a closure"
+    -- and the record names its advisories in tokens, so the two are compared
+    folded (no case, spaces and hyphens normalised) and either way round: a
+    recorded ``ROAD_CLOSURE`` carries the clause's "closure", and a clause's
+    "closure" carries a recorded ``CLOSURE``.
+
+    What it does **not** do is decide that two different words mean the same
+    thing. A recorded type the clause does not name is not one of the kinds the
+    clause names, and the block publishes both the type and the kinds so a
+    reader can see the comparison the boolean rests on.
+    """
+    if not isinstance(kind, str):
+        return False
+    token = _fold(kind)
+    return any(
+        _fold(word) in token or token in _fold(word)
+        for word in (kinds or [])
+        if isinstance(word, str) and word
+    )
+
+
+def advisory_justification(
+    evidence_id: Any,
+    payload: Any,
+    admissible_types: Any,
+) -> Dict[str, Any]:
+    """POL-RD-23: whether one traffic advisory justifies the reroute.
+
+    POL-RD-23: "A reroute is traffic-justified only where traffic data for the
+    recommended route segment at the trip time shows congestion, an incident or
+    a closure: a TRAFFIC_ADVISORY that intersects the recommended route and
+    overlaps the trip window. A driver's assertion of traffic with no such data
+    does not justify the reroute."
+
+    Three conditions, all of them required: the advisory intersects the
+    recommended route, its window overlaps the trip, and its type is one of the
+    kinds the clause names. ``admissible_types`` is that list, read from the
+    clause by the caller -- this module still holds no policy value.
+
+    A MISSING advisory has no payload at all, which is not the same as an
+    advisory that fails the test: the block says which it is.
+    """
+    kinds = [word for word in (admissible_types or []) if isinstance(word, str) and word]
+    if not isinstance(payload, Mapping) or not payload:
+        return {
+            "available": False,
+            "reason": ADVISORY_ARTIFACT_MISSING_REASON.format(evidence_id),
+            "justifies_reroute": False,
+        }
+
+    kind = payload.get("type")
+    return {
+        "available": True,
+        "intersects_route": payload.get("intersects_route"),
+        "overlaps_trip_window": payload.get("overlaps_trip_window"),
+        "type": kind,
+        "severity": payload.get("severity"),
+        "admissible_types": kinds,
+        "justifies_reroute": (
+            payload.get("intersects_route") is True
+            and payload.get("overlaps_trip_window") is True
+            and names_a_kind(kind, kinds)
+        ),
+    }

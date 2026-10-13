@@ -2890,6 +2890,835 @@ def _masked_artifact_registrations(artifact: Any) -> Any:
     return new_artifact
 
 
+# --------------------------------------------------------------------------
+# Policy version 7: the brief Ryde's Dispute Resolution Policy v2.1 needs
+# --------------------------------------------------------------------------
+# Version 7 (``policy/v7/``, part 70) is Ryde's own policy, and its clauses are
+# not the version-6 ones. POL-RD-01, POL-RD-02/03, POL-RD-07, POL-NS-06 and
+# POL-RD-11 do not exist at version 7, and the facts v2.1's clauses test --
+# whether the driver messaged **and** called before cancelling, when the free
+# wait started and ended, whether the driver reached the pickup by the deadline,
+# the deviation from the **recorded** distances and its excess distance fare,
+# whether a traffic advisory justifies the reroute, the dispute's value band and
+# the confidence the ruling needs -- are facts the version-6 builder never
+# computed. Briefing a version-7 case through the version-6 path would raise on
+# a clause that is not there, or publish version-6 numbers on a version-7
+# policy, so version 7 gets its own builder.
+#
+# The one rule that governs this section: **every brief at versions 1 to 6
+# stays byte-identical.** The version-6 path is not edited; this builder is
+# entered at the top of :func:`build_brief_for_case` when
+# ``policy_version >= 7`` and returns its own brief. It calls the
+# version-independent helpers -- :func:`_without_provenance`,
+# :func:`_integrity_reading`, :func:`_recomputed_admissibility`,
+# :func:`_with_recomputed_admissibility`, :func:`_masked_artifact_registrations`,
+# :func:`_masked_dispute`, :func:`_attach_derived`, :func:`_assert_no_forbidden_keys`,
+# :func:`_policies_without_notes`, :func:`_sourced`, :func:`_threshold`,
+# :func:`_clause_threshold`, :func:`_money`, :func:`_clause_of` -- and none of
+# the version-6 clause readers.
+#
+# Every threshold it publishes is read from the version-7 policy's structured
+# fields (``thresholds``, ``arrival_test``, ``integrity``). Where the policy
+# states a value only in a clause's prose -- POL-RD-23's kinds of traffic event
+# -- it is read out of that clause's own ``rule`` string by a reader below,
+# exactly as :func:`_deviation_thresholds` reads POL-RD-01's lines, so the value
+# still comes from the loaded policy rather than from a literal here.
+#
+# Two shapes the version-7 blocks keep from version 6, because a reader of the
+# pipeline expects them: the money block hangs under ``payload.derived.money``
+# and every money figure is wrapped by :func:`_money`; and a block that cannot
+# be computed publishes ``available: false`` with a ``reason`` rather than a
+# figure that looks like an answer.
+BRIEF_V7_VERSION = 7
+
+# The key every version-7 derived block hangs under. One key for the version, so
+# a reader can tell a version-7 reading from a version-6 one by the block's own
+# name.
+V7_KEY = "v7"
+
+# The version-7 policy's structured blocks, by the name the policy gives them.
+V7_THRESHOLDS_KEY = "thresholds"
+V7_ARRIVAL_TEST_KEY = "arrival_test"
+
+# The trip-record field the free wait and the driver's deadline are read from.
+# The other two the block reads are already named above, beside the version-3
+# waiting window that reads them too. The fare-breakdown field POL-NS-22's fee
+# charged is read off is named here as well: it is the record's own field name,
+# and it is not the ``cancellation_fee_sgd`` the platform-policy block carries.
+SCHEDULED_AT_KEY = "scheduled_at"
+FARE_CANCELLATION_FEE_KEY = "cancellation_fee"
+
+# The two profile artifacts POL-GEN-22 reads an optional fraud flag off. They
+# travel unchanged; the authority block reads their counters and changes nothing
+# on them.
+RIDER_PROFILE_EVIDENCE_TYPE = "RIDER_PROFILE"
+DRIVER_PROFILE_EVIDENCE_TYPE = "DRIVER_PROFILE"
+
+# POL-GEN-22's three bands, as the values the brief publishes. The edges are the
+# policy's own: below ``ai_final_below_sgd`` the AI ruling is final, from there
+# up to ``human_above_sgd`` it stands at the stated confidence, and above that
+# the case is a person's.
+VALUE_BAND_AI_FINAL = "AI_FINAL"
+VALUE_BAND_CONFIDENCE = "CONFIDENCE_0_80"
+VALUE_BAND_HUMAN_ONLY = "HUMAN_ONLY"
+
+# The confidence a ruling needs where no clause raises one. POL-NS-26 makes a
+# no-show's AI ruling final below POL-GEN-22's first band, so the bar is none.
+# Not a policy number: it is the absence of a bar, named so that a reader of the
+# block can see it is deliberate rather than missing.
+NO_CONFIDENCE_BAR = 0.0
+
+# The clause ids the version-7 blocks cite. They are the version-7 policy's own
+# ids, and they are named here the way every other clause id in this module is.
+POL_GEN_21 = "POL-GEN-21"
+POL_GEN_22 = "POL-GEN-22"
+POL_NS_21 = "POL-NS-21"
+POL_NS_22 = "POL-NS-22"
+POL_NS_23 = "POL-NS-23"
+POL_NS_24 = "POL-NS-24"
+POL_NS_26 = "POL-NS-26"
+POL_RD_21 = "POL-RD-21"
+POL_RD_22 = "POL-RD-22"
+POL_RD_23 = "POL-RD-23"
+POL_RD_24 = "POL-RD-24"
+POL_RD_25 = "POL-RD-25"
+
+# POL-RD-23's kinds, read out of the clause's own sentence: "where traffic data
+# for the recommended route segment at the trip time shows congestion, an
+# incident or a closure". The words are the clause's; the list is what the
+# advisory block compares a recorded ``type`` against, and it is published
+# beside the boolean so a reader can see the comparison the boolean rests on.
+ADVISORY_KINDS_RE = re.compile(r"at the trip time shows\s+(.*?):")
+ADVISORY_KIND_STOPWORDS = frozenset({"a", "an", "the", "or", "and"})
+
+# The sentences a block publishes where a figure is absent or a reading is
+# negative. None of them is a policy value: each says what the record or the
+# clause left unestablished, which is the whole reason the block carries it.
+V7_TRACE_NOTE = (
+    "POL-RD-22: the trace shows which route was taken and when; it is not used "
+    "to re-measure the distance, because a sparse trace understates a route's "
+    "length"
+)
+V7_CHAT_LOG_INCOMPLETE_REASON = (
+    "the chat log is MISSING or TRUNCATED, so whether the driver messaged and "
+    "called before cancelling cannot be established from it (POL-NS-23, "
+    "POL-GEN-26)"
+)
+V7_EXCESS_FARE_UNAVAILABLE_REASON = (
+    "the fare breakdown states no per-kilometre rate, or the deviation cannot be "
+    "established, so POL-RD-24's excess distance fare cannot be computed"
+)
+V7_FEE_UNAVAILABLE_REASON = (
+    "the fare breakdown carries no cancellation-fee line, so POL-NS-22's fee "
+    "charged cannot be read off it"
+)
+
+
+def _v7_structured(policy: Dict[str, Any], block: str) -> Dict[str, Any]:
+    """One of the version-7 policy's structured blocks, or a refusal.
+
+    The version-7 policy states every number its clauses test in ``thresholds``
+    (and, for the arrival test, ``arrival_test``), so the builder reads them
+    there rather than out of a clause's prose. A policy that carries no such
+    block is refused: a silent fallback would be a number typed in this module
+    wearing the policy's name.
+    """
+    structured = policy.get(block)
+    if not isinstance(structured, dict) or not structured:
+        raise loader.LoaderError(
+            "the version-7 policy carries no {0!r} block, so the numbers its "
+            "clauses test cannot be read from it".format(block)
+        )
+    return structured
+
+
+def _v7_advisory_kinds(category_policy: Dict[str, Any]) -> List[str]:
+    """The kinds of traffic event POL-RD-23 names, read from the clause's own sentence.
+
+    Returns ``[]`` when the loaded policy carries no POL-RD-23, which is how a
+    no-show case is recognised: a NO_SHOW_CHARGE brief carries no advisory block
+    at all, exactly as it carries no deviation block.
+    """
+    clause = _clause_of(category_policy, POL_RD_23)
+    if not isinstance(clause, dict):
+        return []
+    listed = ADVISORY_KINDS_RE.search(clause.get("rule", ""))
+    if listed is None:
+        raise loader.LoaderError(
+            "POL-RD-23's rule does not state the kinds of traffic event it "
+            "admits, so whether an advisory justifies a reroute cannot be "
+            "decided without retyping them"
+        )
+    return [
+        word
+        for word in re.findall(r"[a-z]+", listed.group(1).lower())
+        if word not in ADVISORY_KIND_STOPWORDS
+    ]
+
+
+def _v7_admissibility(
+    artifact: Dict[str, Any],
+    trip_payload: Any,
+    weights: Dict[str, Any],
+    gap_threshold: Optional[int],
+) -> Optional[Dict[str, Any]]:
+    """One artifact's ``admissibility`` as version 7 reads it.
+
+    The weights come from the version-7 policy's own ``integrity`` block, and
+    the corpus's single ``GPS_GAP`` tag is graded into the variant the policy's
+    window reading puts it in.
+
+    Version 7 carries **no POL-RD-07** -- the clause that grades a
+    route-deviation gap at versions 3 to 6 -- so no such limits are passed, and
+    at version 7 the window reading is the only gap reading the policy has, for
+    either category: the ``integrity`` block's three ``GPS_GAP_*`` weights are
+    written for exactly that reading. :func:`_recomputed_admissibility` selects
+    the reading by category, so the window reading is selected by handing it the
+    no-show category. A completed trip fixes no waiting window, so its gaps fall
+    outside one, which is what the policy's own reading says of a gap on a trip
+    that was never cancelled.
+    """
+    return _recomputed_admissibility(
+        artifact, trip_payload, weights, gap_threshold, NO_SHOW_CHARGE_CATEGORY
+    )
+
+
+def _v7_evidence_payload(
+    case: Dict[str, Any], evidence_type: str
+) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+    """One artifact's payload and evidence_id, in the case's own order."""
+    for artifact in case["evidence"]:
+        if artifact["evidence_type"] == evidence_type:
+            return artifact.get("payload"), artifact["evidence_id"]
+    return None, None
+
+
+def _v7_trip_block(
+    category: str,
+    trip_payload: Dict[str, Any],
+    trip_evidence_id: Optional[str],
+    messages: Any,
+    chat_evidence_id: Optional[str],
+    chat_complete: bool,
+    thresholds: Dict[str, Any],
+    deviation: Optional[Dict[str, Any]],
+    policy_id: str,
+) -> Dict[str, Any]:
+    """The version-7 facts that hang off the trip record.
+
+    A no-show gets POL-NS-21's free wait, POL-NS-24's deadline and POL-NS-23's
+    contact reading; a route deviation gets POL-RD-22's deviation and POL-RD-21's
+    index of the messages sent while the trip ran. Each category gets the other
+    category's clauses nowhere, because the clause does not exist on its policy.
+
+    ``deviation`` is POL-RD-22's reading, computed by the caller: the money block
+    publishes the same reading as the context of its excess distance fare, and
+    one reading read twice cannot disagree with itself.
+
+    Two shapes are deliberate. A list of records -- the messages and calls a
+    contact reading counts, and the messages a trip index lists -- travels as
+    plain records, because each record already carries its own identity (its
+    ``msg_id``, its timestamp, the source it was read from) and wrapping every
+    field of every record would triple the block's size for nothing. Every
+    scalar a clause supplies or a record fixes is wrapped, and every clause
+    number names its clause id.
+    """
+    block: Dict[str, Any] = {}
+
+    if category == NO_SHOW_CHARGE_CATEGORY:
+        reading = facts.free_wait(
+            trip_payload.get(ARRIVED_AT_KEY),
+            trip_payload.get(SCHEDULED_AT_KEY),
+            thresholds.get("free_wait_sec"),
+            trip_payload.get(CANCELLED_AT_KEY),
+        )
+        block["free_wait"] = {
+            "arrived_at": _sourced(reading["arrived_at"], trip_evidence_id or ""),
+            "scheduled_at": _sourced(reading["scheduled_at"], trip_evidence_id or ""),
+            "starts_at": _sourced(reading["starts_at"], trip_evidence_id or ""),
+            "starts_from": _clause_threshold(reading["starts_from"], policy_id, POL_NS_21),
+            "ends_at": _sourced(reading["ends_at"], trip_evidence_id or ""),
+            "free_wait_sec": _clause_threshold(
+                thresholds.get("free_wait_sec"), policy_id, POL_NS_21
+            ),
+            "cancelled_at": _sourced(reading["cancelled_at"], trip_evidence_id or ""),
+            "cancelled_after_free_wait": _sourced(
+                reading["cancelled_after_free_wait"], trip_evidence_id or ""
+            ),
+            "seconds_from_start_to_cancel": _sourced(
+                reading["seconds_from_start_to_cancel"], trip_evidence_id or ""
+            ),
+        }
+
+        deadline = facts.driver_deadline(
+            trip_payload.get(SCHEDULED_AT_KEY),
+            trip_payload.get(ARRIVED_AT_KEY),
+            thresholds.get("driver_late_after_scheduled_sec"),
+        )
+        block["driver_deadline"] = {
+            "deadline": (
+                None
+                if deadline.get("deadline") is None
+                else _sourced(deadline["deadline"], trip_evidence_id or "")
+            ),
+            "driver_late_after_scheduled_sec": _clause_threshold(
+                thresholds.get("driver_late_after_scheduled_sec"), policy_id, POL_NS_24
+            ),
+        }
+        if deadline.get("deadline") is None:
+            block["driver_deadline"]["reason"] = deadline["reason"]
+        else:
+            block["driver_deadline"]["arrived_by_deadline"] = _sourced(
+                deadline["arrived_by_deadline"], trip_evidence_id or ""
+            )
+
+        contact = facts.contact_before_cancel(
+            messages,
+            trip_payload.get("in_app_calls"),
+            trip_payload.get(CANCELLED_AT_KEY),
+            chat_log_complete=chat_complete,
+        )
+        block["contact_before_cancel"] = {
+            "clause_id": POL_NS_23,
+            "messages": contact["messages"],
+            "calls": contact["calls"],
+            "message_count": _sourced(contact["message_count"], chat_evidence_id or ""),
+            "call_count": _sourced(contact["call_count"], trip_evidence_id or ""),
+            "obligation_met": _sourced(contact["obligation_met"], chat_evidence_id or ""),
+            "complete": _sourced(contact["complete"], chat_evidence_id or ""),
+        }
+        if not contact["complete"]:
+            block["contact_before_cancel"]["reason"] = V7_CHAT_LOG_INCOMPLETE_REASON
+
+    if category == ROUTE_DEVIATION_CATEGORY:
+        reading = deviation or {}
+        if not reading.get("available"):
+            block["deviation"] = {
+                "available": False,
+                "reason": reading.get("reason") or facts.DEVIATION_NOT_MEASURABLE_REASON,
+            }
+        else:
+            block["deviation"] = {
+                "available": True,
+                "actual_distance_km": _sourced(
+                    reading["actual_distance_km"], trip_evidence_id or ""
+                ),
+                "optimal_distance_km": _sourced(
+                    reading["optimal_distance_km"], trip_evidence_id or ""
+                ),
+                "deviation_km": _sourced(reading["deviation_km"], trip_evidence_id or ""),
+                "tolerance_km": _clause_threshold(
+                    reading["tolerance_km"], policy_id, POL_RD_22
+                ),
+                "within_tolerance": _sourced(
+                    reading["within_tolerance"], trip_evidence_id or ""
+                ),
+                "ai_limit_km": _clause_threshold(reading["ai_limit_km"], policy_id, POL_RD_25),
+                "ai_limit_applied": _clause_threshold(
+                    reading["ai_limit_applied"], policy_id, POL_RD_25
+                ),
+                "over_ai_limit": _sourced(reading["over_ai_limit"], trip_evidence_id or ""),
+            }
+
+        block["messages_during_trip"] = {
+            "clause_id": POL_RD_21,
+            "messages": facts.messages_during_trip(
+                messages, trip_payload.get("started_at"), trip_payload.get("ended_at")
+            ),
+        }
+
+    return block
+
+
+def _v7_trace_block(
+    category: str,
+    gps_payload: Dict[str, Any],
+    gps_evidence_id: Optional[str],
+    trip_payload: Dict[str, Any],
+    trip_evidence_id: Optional[str],
+    arrival_test: Optional[Dict[str, Any]],
+    window_sec: Optional[int],
+    policy_id: str,
+) -> Dict[str, Any]:
+    """The version-7 facts that hang off the GPS trace.
+
+    The summary is POL-RD-22's informative reading of the trace and decides
+    nothing; a no-show's ``arrival_check`` is POL-NS-21's arrival test, read
+    with the policy's own ``arrival_test`` block. The raw ``points`` array is
+    not carried -- it never was, and POL-RD-22 is explicit that the trace is not
+    used to re-measure a distance.
+    """
+    summary = facts.trace_summary(gps_payload)
+    block: Dict[str, Any] = {
+        "point_count": _sourced(summary["point_count"], gps_evidence_id or ""),
+        "first_fix_at": _sourced(summary["first_fix_at"], gps_evidence_id or ""),
+        "last_fix_at": _sourced(summary["last_fix_at"], gps_evidence_id or ""),
+        "max_gap_sec": _sourced(summary["max_gap_sec"], gps_evidence_id or ""),
+        "trace_distance_km": _sourced(summary["trace_distance_km"], gps_evidence_id or ""),
+        "note": V7_TRACE_NOTE,
+    }
+
+    if category != NO_SHOW_CHARGE_CATEGORY:
+        return block
+
+    zone = trip_payload.get("pickup_zone_class")
+    radii = (arrival_test or {}).get("arrival_radius_m")
+    radius = radii.get(zone) if isinstance(radii, dict) else None
+    accuracy_max = (arrival_test or {}).get("gps_accuracy_filter_m")
+
+    check = facts.arrival_check(
+        facts.driver_points(gps_payload),
+        trip_payload.get("pickup"),
+        trip_payload.get(ARRIVED_AT_KEY),
+        window_sec,
+        radius,
+        accuracy_max,
+    )
+    nearest = check["nearest_fix"]
+    block["arrival_check"] = {
+        "pickup_zone_class": _sourced(zone, trip_evidence_id or ""),
+        "arrived_at": _sourced(check["arrived_at"], trip_evidence_id or ""),
+        "window_sec": _clause_threshold(check["window_sec"], policy_id, POL_NS_21),
+        "arrival_radius_m": _clause_threshold(check["arrival_radius_m"], policy_id, POL_NS_21),
+        "gps_accuracy_filter_m": _clause_threshold(
+            check["gps_accuracy_filter_m"], policy_id, POL_NS_21
+        ),
+        "nearest_fix": (
+            None
+            if nearest is None
+            else {
+                "index": _sourced(nearest["index"], gps_evidence_id or ""),
+                "ts": _sourced(nearest["ts"], gps_evidence_id or ""),
+                "distance_m": _sourced(nearest["distance_m"], gps_evidence_id or ""),
+                "accuracy_m": _sourced(nearest["accuracy_m"], gps_evidence_id or ""),
+            }
+        ),
+        "corroborated": _sourced(check["corroborated"], gps_evidence_id or ""),
+    }
+    return block
+
+
+def _v7_advisory_block(
+    artifact: Dict[str, Any], kinds: List[str], policy_id: str
+) -> Dict[str, Any]:
+    """One traffic advisory's version-7 reading (POL-RD-23).
+
+    A MISSING advisory gets a block that says so -- ``available: false`` and the
+    reason -- because "there is no advisory" and "there is one and it justifies
+    nothing" are different findings, and POL-GEN-02 gives a MISSING artifact
+    weight 0.0 rather than treating it as an absent fact.
+    """
+    evidence_id = artifact["evidence_id"]
+    reading = facts.advisory_justification(evidence_id, artifact.get("payload"), kinds)
+    if not reading["available"]:
+        return {
+            "available": False,
+            "reason": reading["reason"],
+            "justifies_reroute": _sourced(False, evidence_id),
+        }
+
+    block: Dict[str, Any] = {
+        "available": True,
+        "intersects_route": _sourced(reading["intersects_route"], evidence_id),
+        "overlaps_trip_window": _sourced(reading["overlaps_trip_window"], evidence_id),
+        "type": _sourced(reading["type"], evidence_id),
+        "severity": _sourced(reading["severity"], evidence_id),
+        "admissible_types": _clause_threshold(reading["admissible_types"], policy_id, POL_RD_23),
+        "justifies_reroute": _sourced(reading["justifies_reroute"], evidence_id),
+    }
+    if not reading["justifies_reroute"]:
+        # Every condition that failed, not only the first: POL-RD-23's three are
+        # conjunctive, and a judge told only one of them may spend its argument
+        # on a condition the other side then concedes. This is the reading
+        # :func:`_unavailable_accumulation` already takes for POL-NS-06(i).
+        failures = []
+        if reading["intersects_route"] is not True:
+            failures.append("it does not intersect the recommended route")
+        if reading["overlaps_trip_window"] is not True:
+            failures.append("its active window does not overlap the trip window")
+        if not facts.names_a_kind(reading["type"], kinds):
+            failures.append(
+                "its type {0} is not one of the kinds POL-RD-23 names ({1})".format(
+                    reading["type"], ", ".join(kinds)
+                )
+            )
+        block["reason"] = "POL-RD-23 is not satisfied: " + "; ".join(failures)
+    return block
+
+
+def _v7_money_block(
+    category: str,
+    fare_payload: Optional[Dict[str, Any]],
+    fare_evidence_id: Optional[str],
+    trip_evidence_id: Optional[str],
+    thresholds: Dict[str, Any],
+    deviation: Optional[Dict[str, Any]],
+    policy_id: str,
+) -> Optional[Dict[str, Any]]:
+    """The version-7 money block, under the key and in the wrapper version 6 uses.
+
+    POL-RD-24's excess distance fare for a route deviation, and POL-NS-22's fee
+    with what turns on it for a no-show. Every figure is a ``Decimal`` wrapped
+    by :func:`_money`, and the two figures a ruling may **not** carry as an
+    amount -- the per-kilometre rate and the deviation distance, which are
+    context for the fare -- travel in the same block so a reader can see the
+    multiplication the fare came from. Returns ``None`` where there is no fare
+    breakdown to compute on, exactly as the version-6 block does.
+    """
+    if not isinstance(fare_payload, dict) or fare_evidence_id is None:
+        return None
+
+    block: Dict[str, Any] = {
+        "policy_id": policy_id,
+        "category": category,
+        "currency": _money(fare_payload.get("currency"), fare_evidence_id, policy_id),
+    }
+
+    if category == ROUTE_DEVIATION_CATEGORY:
+        rate = fare_payload.get("per_km_rate_sgd")
+        measured = deviation or {}
+        distance = measured.get("deviation_km") if measured.get("available") else None
+        if rate is None or distance is None:
+            block["available"] = False
+            block["reason"] = V7_EXCESS_FARE_UNAVAILABLE_REASON
+            return block
+        block["available"] = True
+        block["excess_distance_fare_sgd"] = _money(
+            money.excess_distance_fare(distance, rate),
+            fare_evidence_id,
+            policy_id,
+            clause_id=POL_RD_24,
+        )
+        block["per_km_rate_sgd"] = _money(
+            money._dec(rate), fare_evidence_id, policy_id, clause_id=POL_RD_24
+        )
+        block["deviation_km"] = _money(
+            distance, trip_evidence_id, policy_id, clause_id=POL_RD_22
+        )
+        return block
+
+    charged = fare_payload.get(FARE_CANCELLATION_FEE_KEY)
+    if charged is None:
+        block["available"] = False
+        block["reason"] = V7_FEE_UNAVAILABLE_REASON
+        return block
+
+    figures = money.fee_figures(
+        charged,
+        thresholds.get("no_show_fee_sgd"),
+        thresholds.get("fee_share_to_driver"),
+        thresholds.get("goodwill_credit_sgd"),
+    )
+    block["available"] = True
+    block["fee_charged_sgd"] = _money(
+        figures["fee_charged_sgd"], fare_evidence_id, policy_id, clause_id=POL_NS_22
+    )
+    block["policy_fee_sgd"] = _money(
+        figures["policy_fee_sgd"], None, policy_id, clause_id=POL_NS_22, structured=True
+    )
+    block["fee_matches_policy"] = _sourced(figures["fee_matches_policy"], fare_evidence_id)
+    block["driver_compensation_if_upheld_sgd"] = _money(
+        figures["driver_compensation_if_upheld_sgd"],
+        fare_evidence_id,
+        policy_id,
+        clause_id=POL_NS_22,
+    )
+    block["refund_if_voided_sgd"] = _money(
+        figures["refund_if_voided_sgd"], fare_evidence_id, policy_id, clause_id=POL_NS_24
+    )
+    block["goodwill_credit_sgd"] = _money(
+        figures["goodwill_credit_sgd"], None, policy_id, clause_id=POL_NS_24, structured=True
+    )
+    return block
+
+
+def _v7_counter(value: Any) -> int:
+    """One optional profile counter as an int, or ``0`` where it is not one.
+
+    POL-GEN-22 reads an absent ``fraud_flags`` as ``0``, so a value the record
+    states as nothing, or as something that is not a count, contributes no flag
+    rather than raising: a profile field is context, and a malformed one is not
+    a reason to refuse the case.
+    """
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _v7_authority(
+    case: Dict[str, Any],
+    general_policy: Dict[str, Any],
+    category: str,
+    deviation: Optional[Dict[str, Any]],
+    policy_id: str,
+) -> Dict[str, Any]:
+    """``case.authority``: who decides a version-7 dispute, and at what confidence.
+
+    The block part 72's gate reads. POL-GEN-22 states the value bands and the
+    two confidence bars, POL-GEN-21 makes a safety flag a person's whatever the
+    value, POL-RD-25 adds a route deviation's own 0.80 bar, and POL-NS-26 makes
+    a no-show's ruling final below the first band. Every number is read from the
+    general policy's ``thresholds``; the band edges are the policy's own, so
+    ``10.00`` is the first band's top edge and ``50.00`` the second's.
+
+    ``fraud_flags`` is the higher of the two profiles' optional counters, and
+    ``0`` where neither carries one, which is how POL-GEN-22 reads an absent
+    field. ``human_only`` is true where the value is above the second band's
+    edge **or** the dispute carries a safety flag: POL-GEN-21's limb is not a
+    value test, and a safety-flagged dispute is a person's however small the
+    amount.
+    """
+    thresholds = _v7_structured(general_policy, V7_THRESHOLDS_KEY)
+    dispute = case["dispute"] if isinstance(case.get("dispute"), dict) else {}
+
+    below = money._dec(thresholds.get("ai_final_below_sgd"))
+    above = money._dec(thresholds.get("human_above_sgd"))
+    between = money._dec(thresholds.get("confidence_required_between_sgd"))
+    with_fraud = money._dec(thresholds.get("confidence_required_with_fraud_flag"))
+    minimum = int(thresholds.get("fraud_flag_minimum") or 0)
+    value = money._dec(dispute.get("amount_contested_sgd"))
+
+    if value < below:
+        band = VALUE_BAND_AI_FINAL
+    elif value <= above:
+        band = VALUE_BAND_CONFIDENCE
+    else:
+        band = VALUE_BAND_HUMAN_ONLY
+
+    fraud_flags = max(
+        [
+            _v7_counter(
+                (artifact.get("payload") or {}).get(thresholds.get("fraud_flag_field") or "")
+            )
+            for artifact in case["evidence"]
+            if artifact["evidence_type"]
+            in (RIDER_PROFILE_EVIDENCE_TYPE, DRIVER_PROFILE_EVIDENCE_TYPE)
+            and isinstance(artifact.get("payload"), dict)
+        ]
+        or [0]
+    )
+    safety_flag = dispute.get("safety_flag") is True
+
+    if fraud_flags >= minimum > 0:
+        required, required_clause, basis = (
+            with_fraud,
+            POL_GEN_22,
+            "a fraud flag on a party's profile (POL-GEN-22)",
+        )
+    elif category == ROUTE_DEVIATION_CATEGORY or band == VALUE_BAND_CONFIDENCE:
+        required, required_clause, basis = (
+            between,
+            POL_RD_25 if category == ROUTE_DEVIATION_CATEGORY else POL_GEN_22,
+            "a route deviation (POL-RD-25)" if category == ROUTE_DEVIATION_CATEGORY
+            else "a dispute value in POL-GEN-22's middle band",
+        )
+    else:
+        required, required_clause, basis = (
+            money._dec(NO_CONFIDENCE_BAR),
+            POL_NS_26,
+            "a no-show below POL-GEN-22's first band, where POL-NS-26 makes the "
+            "AI ruling final",
+        )
+
+    authority: Dict[str, Any] = {
+        "dispute_value_sgd": _money(
+            value, None, policy_id, clause_id=POL_GEN_22, structured=True
+        ),
+        "value_band": _clause_threshold(band, policy_id, POL_GEN_22),
+        "fraud_flags": _clause_threshold(fraud_flags, policy_id, POL_GEN_22),
+        "required_confidence": _clause_threshold(required, policy_id, required_clause),
+        "required_confidence_basis": basis,
+        "safety_flag": _clause_threshold(safety_flag, policy_id, POL_GEN_21),
+        "human_only": _clause_threshold(
+            value > above or safety_flag, policy_id, POL_GEN_21 if safety_flag else POL_GEN_22
+        ),
+        "human_only_basis": (
+            "a safety flag on the dispute (POL-GEN-21)" if safety_flag
+            else "a dispute value above POL-GEN-22's second band"
+            if value > above
+            else "neither a safety flag nor a value above POL-GEN-22's second band"
+        ),
+    }
+    if category == ROUTE_DEVIATION_CATEGORY:
+        measured = deviation or {}
+        available = bool(measured.get("available"))
+        authority["over_ai_limit"] = _clause_threshold(
+            measured.get("over_ai_limit") if available else None, policy_id, POL_RD_25
+        )
+        authority["ai_limit_applied"] = _clause_threshold(
+            measured.get("ai_limit_applied") if available else None, policy_id, POL_RD_25
+        )
+    return authority
+
+
+def build_v7_brief(
+    case: Dict[str, Any],
+    include_clause_notes: bool = True,
+    *,
+    ablate: Optional[str] = None,
+) -> Dict[str, Any]:
+    """The version-7 brief: the same outer shape, the facts v2.1's clauses need.
+
+    Entered from :func:`build_brief_for_case` when ``policy_version >= 7``. The
+    outer shape is every brief's -- ``{"case": {case_no, schema_version,
+    dispute, evidence}, "policies": ...}`` -- with provenance stripped,
+    admissibility recomputed from the version-7 ``integrity`` block, and plates,
+    telephone numbers and e-mail addresses masked, exactly as version 6 does;
+    ``case`` gains ``authority``, the block part 72's gate reads.
+
+    What it does **not** do is read a version-6 clause. The version-6 path is
+    untouched and this builder shares none of its clause readers, so a version-7
+    case cannot pick up a version-6 number by accident.
+
+    ``ablate`` is honoured here as it is at version 6, because an ablation is one
+    brief built without part of it rather than a second builder: ``clause-notes``
+    removes every clause's ``notes`` and ``admissibility`` removes the
+    recomputed admissibility object from every artifact. Neither reaches the
+    version-6 path, which is what keeps versions 1 to 6 byte-identical.
+    """
+    if ablate is not None and not ablation_known(ablate):
+        raise AblationError(
+            "no ablation called {0!r}; the ablations are {1}".format(
+                ablate, ", ".join(ABLATIONS)
+            )
+        )
+    if ablate == ABLATION_CLAUSE_NOTES:
+        include_clause_notes = False
+
+    category = case["dispute"].get("category")
+    policies = _without_provenance(loader.load_policies(category, BRIEF_V7_VERSION))
+    general_policy = policies.get("general") or {}
+    category_policy = policies.get("category") or {}
+    policy_id = category_policy.get("policy_id", "")
+
+    thresholds = _v7_structured(category_policy, V7_THRESHOLDS_KEY)
+    arrival_test = category_policy.get(V7_ARRIVAL_TEST_KEY)
+    arrival_test = arrival_test if isinstance(arrival_test, dict) else None
+    kinds = _v7_advisory_kinds(category_policy)
+    weights, gap_threshold = _integrity_reading(category_policy, BRIEF_V7_VERSION)
+
+    trip_payload, trip_evidence_id = _v7_evidence_payload(case, TRIP_EVIDENCE_TYPE)
+    gps_payload, gps_evidence_id = _v7_evidence_payload(case, GPS_EVIDENCE_TYPE)
+    chat_payload, chat_evidence_id = _v7_evidence_payload(case, CHAT_LOG_EVIDENCE_TYPE)
+    fare_payload, fare_evidence_id = _v7_evidence_payload(case, FARE_EVIDENCE_TYPE)
+
+    # The arrival window is the policy's own trace tolerance where
+    # ``arrival_test`` states no window of its own: version 7 states none, and
+    # ``integrity.gps_gap_policy_threshold_sec`` is the longest interval between
+    # fixes the policy allows. No number is typed here.
+    window_sec = (
+        arrival_test.get("arrival_window_sec") if arrival_test else None
+    )
+    if window_sec is None:
+        window_sec = gap_threshold
+
+    recomputed = {
+        artifact["evidence_id"]: _v7_admissibility(
+            artifact, trip_payload, weights, gap_threshold
+        )
+        for artifact in case["evidence"]
+    }
+    trip_reading = recomputed.get(trip_evidence_id) or {}
+    trip_weight = trip_reading.get(WEIGHT_MULTIPLIER_KEY) if trip_reading else None
+    impaired = trip_weight is not None and float(trip_weight) < prepass.FULL_WEIGHT
+
+    messages = chat_payload.get("messages") if isinstance(chat_payload, dict) else None
+    chat_complete = isinstance(chat_payload, dict) and chat_payload.get("truncated") is not True
+
+    deviation = (
+        facts.deviation(
+            trip_payload.get("actual_distance_km"),
+            trip_payload.get("optimal_distance_km"),
+            thresholds.get("tolerance_km"),
+            thresholds.get("ai_ruling_max_deviation_km"),
+            thresholds.get("ai_ruling_max_deviation_applied"),
+            impaired=impaired,
+        )
+        if category == ROUTE_DEVIATION_CATEGORY and isinstance(trip_payload, dict)
+        else None
+    )
+    trip_block = (
+        _v7_trip_block(
+            category,
+            trip_payload,
+            trip_evidence_id,
+            messages,
+            chat_evidence_id,
+            chat_complete,
+            thresholds,
+            deviation,
+            policy_id,
+        )
+        if isinstance(trip_payload, dict)
+        else None
+    )
+    trace_block = (
+        _v7_trace_block(
+            category,
+            gps_payload,
+            gps_evidence_id,
+            trip_payload if isinstance(trip_payload, dict) else {},
+            trip_evidence_id,
+            arrival_test,
+            window_sec,
+            policy_id,
+        )
+        if isinstance(gps_payload, dict)
+        else None
+    )
+    money_block = _v7_money_block(
+        category,
+        fare_payload,
+        fare_evidence_id,
+        trip_evidence_id,
+        thresholds,
+        deviation,
+        policy_id,
+    )
+
+    evidence: List[Dict[str, Any]] = []
+    for artifact in case["evidence"]:
+        updated = _with_recomputed_admissibility(
+            artifact, recomputed.get(artifact["evidence_id"])
+        )
+        if trip_block is not None and updated["evidence_id"] == trip_evidence_id:
+            updated = _attach_derived(updated, V7_KEY, trip_block)
+        if trace_block is not None and updated["evidence_id"] == gps_evidence_id:
+            updated = _attach_derived(updated, V7_KEY, trace_block)
+        if category == ROUTE_DEVIATION_CATEGORY and (
+            updated["evidence_type"] == TRAFFIC_ADVISORY_EVIDENCE_TYPE
+        ):
+            updated = _attach_derived(
+                updated, V7_KEY, _v7_advisory_block(updated, kinds, policy_id)
+            )
+        if money_block is not None and updated["evidence_id"] == fare_evidence_id:
+            updated = _attach_derived(updated, MONEY_KEY, money_block)
+        if ablate == ABLATION_ADMISSIBILITY:
+            updated = _without_admissibility(updated)
+        evidence.append(_masked_artifact_registrations(updated))
+
+    brief = {
+        "case": {
+            "case_no": case["case_no"],
+            "schema_version": case["schema_version"],
+            "dispute": _masked_dispute(case["dispute"]),
+            "evidence": evidence,
+            "authority": _v7_authority(
+                case,
+                general_policy,
+                category,
+                deviation if isinstance(deviation, dict) else None,
+                policy_id,
+            ),
+        },
+        "policies": policies if include_clause_notes else _policies_without_notes(policies),
+    }
+
+    _assert_no_forbidden_keys(brief)
+    return brief
+
+
 def build_brief(case_no: int, include_clause_notes: bool = True) -> Dict[str, Any]:
     """Return the evidence package for one case.
 
@@ -2972,6 +3801,13 @@ def build_brief_for_case(
     :func:`_masked_artifact_registrations`, through
     :func:`_mask_personal_data`, see ``VEHICLE_MASK_VERSION``). Names are not
     masked; the disclosure says so.
+
+    And from version 7 on the brief is a different brief, not a later reading of
+    this one: version 7 is Ryde's own policy, and its clauses test facts this
+    path never computed and read clauses that do not exist here. It is therefore
+    built by :func:`build_v7_brief` and returned from the top of this function,
+    before any version-6 clause is read -- so no version-6 number can reach a
+    version-7 brief, and **nothing on this path changes for versions 1 to 6**.
     """
     if ablate is not None and not ablation_known(ablate):
         raise AblationError(
@@ -2979,6 +3815,8 @@ def build_brief_for_case(
                 ablate, ", ".join(ABLATIONS)
             )
         )
+    if policy_version >= BRIEF_V7_VERSION:
+        return build_v7_brief(case, include_clause_notes, ablate=ablate)
     if ablate == ABLATION_CLAUSE_NOTES:
         include_clause_notes = False
 
