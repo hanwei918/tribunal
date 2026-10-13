@@ -26,6 +26,7 @@ import sys
 import unittest
 from pathlib import Path
 from typing import Callable, List, Sequence
+from unittest import mock
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -90,6 +91,16 @@ class TheStepListTests(unittest.TestCase):
 
 class TheStubTests(unittest.TestCase):
     """A failing step, with every step replaced by a stub."""
+
+    def setUp(self):
+        # These tests are about the step list and the exit code, not the
+        # platform: on Linux the platform skip reports the four case-reading
+        # steps as SKIP before any stub is reached, so it is forced off here.
+        patcher = mock.patch.object(
+            verify, "the_platform_moves_a_recorded_brief", lambda: False
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     def test_every_step_passing_exits_zero(self):
         buffer = io.StringIO()
