@@ -28,6 +28,11 @@ documents, and made no model call for any committed run. The runs' own provenanc
 says the same thing: every case file records the commit, the prompts digest and
 the interpreter that produced it.
 
+The product site's design, page text and front-end code are the policy owner's
+(Ji Guofang), made outside WorkBuddy; `tools/site_import.py` and
+`ui/site/build.py`, written in WorkBuddy, import them unchanged and build the
+site, and the try-it service `tryit/` is hers, imported unchanged.
+
 ## Four tips, each a measured lesson
 
 **1. Run the tests outside the agent's sandbox.** The sandbox's file broker

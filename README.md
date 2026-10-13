@@ -28,38 +28,23 @@ The submission's own texts — a one-line blurb, a description and the judges' q
 
 The read-only WorkBuddy connector — an MCP server that answers from the committed records, with no key and no network — is in [`integrations/workbuddy/`](integrations/workbuddy/).
 
+## The product site
+
+The site's front page is the **product site** the policy owner, Ji Guofang, designed outside WorkBuddy: 22 pages, each in English (`*.html`) and Chinese (`*.zh.html`), with the images they carry and a try-it page that runs this repository's own Python in the browser. Her design, her page text and her front-end code are hers; `tools/site_import.py` and `ui/site/build.py`, written in WorkBuddy, import them unchanged and build the site, and the try-it service `tryit/` is hers, imported unchanged.
+
+`python3 -m ui.site.build` writes the 22 pages into `ui/dist/`, copies the images and the try-it page's own files there, and builds the bundle the browser runs, `ui/dist/try/tribunal-core.zip`, from this repository's own modules, policy and template cases; `--check` holds every one of them to a fresh build. The queue the product view used to open on is at `ui/dist/queue.html`, and the live try-it service stays **off**: `try-config.js` leaves `window.TRIBUNAL_TRY_API` empty, so the page's in-browser checks run and no live run is offered.
+
 ## The live demo
 
-The product view is live at <https://tribunal.edgeone.dev/>: today's 151
-disputes, one line each, with the ones decided automatically and the ones sent to
-a human. The evaluation replay is one level down at
-<https://tribunal.edgeone.dev/replay/>, and its runs index — one line per set —
-is at <https://tribunal.edgeone.dev/replay/runs/>.
+The front page is live at <https://tribunal.edgeone.dev/> — the product site, above. The queue is at <https://tribunal.edgeone.dev/queue.html>: today's 151 disputes, one line each, with the ones decided automatically and the ones sent to a human. The evaluation replay is one level down at <https://tribunal.edgeone.dev/replay/>, and its runs index — one line per set — is at <https://tribunal.edgeone.dev/replay/runs/>.
 
-Both sites are static replays of the runs committed in this repository: every
-page is built from a run's own recorded files, so neither makes a **model call**
-and neither needs a key. They are hosted on Tencent EdgeOne Pages, and the same
-pages are committed at `ui/dist/`, where they open straight from `file://`.
+The queue and the replay are static replays of the runs committed in this repository: every page is built from a run's own recorded files, so neither makes a **model call** and neither needs a key. The product site is static too — built from sources committed here, with its own images and the try-it page's own files beside it — and its try-it page runs the repository's own code in the browser with no server. All three are hosted on Tencent EdgeOne Pages, and the same files are committed at `ui/dist/`, where they open straight from `file://`.
 
-**The root is the product view**, built by `python3 -m ui.v2.build` from the four
-committed version-6 runs. It is the page a support team would work from rather
-than a page about the benchmark: four featured cases, the queue's figures, and,
-for each case, the ruling, the key figures set against the policy limits they are
-tested against, both advocates' claims with the referee's verdict on each, a
-trace drawn from the GPS fixes, the evidence with the weight the admissibility
-precheck gave it, the six steps of how it was decided — expandable down to the
-agents' own words — and, for a case that went to a reviewer, the escalation
-packet with its digest and a form that builds the closing command.
+**The queue**, at `ui/dist/queue.html`, is built by `python3 -m ui.v2.build` from the four committed version-6 runs. It is the page a support team would work from rather than a page about the benchmark: four featured cases, the queue's figures, and, for each case, the ruling, the key figures set against the policy limits they are tested against, both advocates' claims with the referee's verdict on each, a trace drawn from the GPS fixes, the evidence with the weight the admissibility precheck gave it, the six steps of how it was decided — expandable down to the agents' own words — and, for a case that went to a reviewer, the escalation packet with its digest and a form that builds the closing command.
 
-**The evaluation replay is under `replay/`**, built by `python3 -m ui.build`. It
-is the benchmark page: the 29 corpus cases at policy version 1 with an answer key
-beside them and a miss marked where the ruling and the key disagree, and, beside
-it, the held-out set, the second sealed set and the organisers' sample case.
-Every page there carries a link back to the queue.
+**The evaluation replay is under `replay/`**, built by `python3 -m ui.build`. It is the benchmark page: the 29 corpus cases at policy version 1 with an answer key beside them and a miss marked where the ruling and the key disagree, and, beside it, the held-out set, the second sealed set and the organisers' sample case. Every page there carries its builder's own link back to `ui/dist/index.html`.
 
-Both are one self-contained file per page with no request of any kind, so they
-open from `file://` exactly as they do when served. The product view is published
-at the root and the replay under `replay/` after the owner approves.
+The queue and the replay are one self-contained file per page with no request of any kind, so they open from `file://` exactly as they do when served; the product site loads its images and the try-it page's own files from beside it and requests nothing else. The product site is published at the root, the queue beside it and the replay under `replay/` after the owner approves.
 
 ## How it was built, and by whom
 
@@ -1080,7 +1065,7 @@ off 0.7 are each reported.
 | `tests/` | The suite. Nothing in it makes a model call. |
 | `ops/` | The support team's layer: the queue and its SLA routing, the escalation packet, the reviewer's closure, the evidence window, the appeal check, the risk signals and the chat-signal reader. It reads the pipeline's inputs and its recorded outputs and never feeds anything back. |
 | `integrations/` | The read-only WorkBuddy connector (`integrations/workbuddy/`): an MCP server that answers from the committed records, with no key and no network. |
-| `ui/` | `ui/v2/build.py`, which builds the site's front door — the queue at `ui/dist/index.html` and one page per case — from the four version-6 runs, and `ui/build.py`, which builds the evaluation replay under `ui/dist/replay/`. |
+| `ui/` | `ui/site/build.py`, which builds the product site's 22 pages — the front page at `ui/dist/index.html` and its siblings — from the policy owner's sources under `ui/site/src/`, copies `ui/site/static/` in beside them and builds the bundle the try-it page loads; `ui/v2/build.py`, which builds the queue at `ui/dist/queue.html` and one page per case from the four version-6 runs; and `ui/build.py`, which builds the evaluation replay under `ui/dist/replay/`. |
 | `docs/` | `docs/notes/` — the dated decisions behind every number here; `docs/buddy-log/` — the WorkBuddy sessions; `docs/submission/` — the submission's own texts; `docs/governance/` — the incidents, threat model and privacy pages; `docs/roadmap/` — the policy base Ji Guofang drafted, kept as a roadmap and read by nothing. |
 | `precedents/` | The precedent library: human closures of decided cases. It holds the two closures `P-0001` and `P-0002`, and grows only when a reviewer closes one. |
 | `START-HERE.md` | The standing operating procedure for a session in this repository. Read it before changing anything. |
