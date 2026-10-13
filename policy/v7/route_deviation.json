@@ -18,19 +18,30 @@
     "traffic_justification_types": {
       "congestion": [
         "CONGESTION",
-        "HEAVY_CONGESTION"
+        "HEAVY_CONGESTION",
+        "HEAVY_TRAFFIC"
       ],
       "incident": [
         "ACCIDENT",
         "VEHICLE_FIRE",
+        "FIRE",
         "BREAKDOWN",
-        "INCIDENT"
+        "VEHICLE_BREAKDOWN",
+        "INCIDENT",
+        "OBSTACLE",
+        "UNATTENDED_VEHICLE",
+        "PLANT_FAILURE"
       ],
       "closure": [
         "CLOSURE",
-        "ROADWORKS"
+        "ROAD_CLOSURE",
+        "ROAD_BLOCK",
+        "ROADWORKS",
+        "ROADWORK",
+        "DIVERSION"
       ],
-      "note": "C18: the TRAFFIC_ADVISORY types the schema uses, mapped onto v2.1 1.1's 'traffic conditions, road closures, or congestion'. Any other type (for example KERB_RESTRICTION, TRAFFIC_FLOW) does not justify a reroute. ROADWORKS counts as a closure."
+      "normalisation": "upper-case; spaces and hyphens become underscores; then an exact match",
+      "note": "C18: the TRAFFIC_ADVISORY types the data uses (the corpus vocabulary and LTA DataMall's traffic-incident types) mapped onto v2.1 1.1's 'traffic conditions, road closures, or congestion'. Any other type (for example NONE, KERB_RESTRICTION, TRAFFIC_FLOW, WEATHER, MISC) does not justify a reroute."
     }
   },
   "integrity": {

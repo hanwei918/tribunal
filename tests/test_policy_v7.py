@@ -78,9 +78,15 @@ KEPT_IDS = {"POL-GEN-01", "POL-GEN-02", "POL-GEN-03"}
 # advisory types each of POL-RD-23's three kinds admits) and C16's amended
 # ``arrival_test.accuracy_filter_applies`` (the accuracy filter reaches only a
 # fix that reports an accuracy). ``general.json`` is unchanged.
+#
+# ``route_deviation.json`` was re-copied once more, byte for byte, later that
+# same evening: C18's map gained LTA DataMall's traffic-incident vocabulary --
+# ``HEAVY_TRAFFIC``, ``VEHICLE_BREAKDOWN``, ``ROAD_CLOSURE``, ``ROADWORK`` and
+# the rest -- and the ``normalisation`` rule a recorded type is folded by before
+# it is matched. No clause text changed then either.
 V7_FILE_SHA256 = {
     "general.json": "767f01d69f0bac8ac0cdb9f834d149f048d6b2b68fc54419461db06665b85d93",
-    "route_deviation.json": "63436dd217750304087185f752f8fef4c1dae43e32522fcd25bc2c17eb8d9315",
+    "route_deviation.json": "2c6ef648068592f91984339f50044b8194980e4a15147b4016933eeba7c6949c",
     "no_show.json": "e4f02dba531cdd759e3d5acbe611864c90e7c2ee4c80b6f59522b18d18e9e021",
 }
 
@@ -237,24 +243,42 @@ class VersionSevenPolicyTests(unittest.TestCase):
         """C18's type map and C16's accuracy rule, read off the loaded policy.
 
         Both are **structured fields**, not clause prose: the type map is where
-        ``brief.py`` reads POL-RD-23's kinds and the recorded types each admits,
-        and the accuracy rule is where the arrival test's filter is read. Pinning
-        their values here is what makes a re-worded or re-mapped file a failing
-        test rather than a silent change of reading. No clause text changed.
+        ``brief.py`` reads POL-RD-23's kinds, the recorded types each admits and
+        the ``normalisation`` rule a recorded type is folded by, and the accuracy
+        rule is where the arrival test's filter is read. Pinning their values
+        here is what makes a re-worded or re-mapped file a failing test rather
+        than a silent change of reading. No clause text changed.
         """
         deviation = loader.load_policies("ROUTE_DEVIATION", 7)["category"]["thresholds"]
         no_show = loader.load_policies("NO_SHOW_CHARGE", 7)["category"]
 
         mapped = deviation["traffic_justification_types"]
         self.assertEqual(
-            ["congestion", "incident", "closure", "note"],
+            ["congestion", "incident", "closure", "normalisation", "note"],
             list(mapped),
         )
         self.assertEqual(
             {
-                "congestion": ["CONGESTION", "HEAVY_CONGESTION"],
-                "incident": ["ACCIDENT", "VEHICLE_FIRE", "BREAKDOWN", "INCIDENT"],
-                "closure": ["CLOSURE", "ROADWORKS"],
+                "congestion": ["CONGESTION", "HEAVY_CONGESTION", "HEAVY_TRAFFIC"],
+                "incident": [
+                    "ACCIDENT",
+                    "VEHICLE_FIRE",
+                    "FIRE",
+                    "BREAKDOWN",
+                    "VEHICLE_BREAKDOWN",
+                    "INCIDENT",
+                    "OBSTACLE",
+                    "UNATTENDED_VEHICLE",
+                    "PLANT_FAILURE",
+                ],
+                "closure": [
+                    "CLOSURE",
+                    "ROAD_CLOSURE",
+                    "ROAD_BLOCK",
+                    "ROADWORKS",
+                    "ROADWORK",
+                    "DIVERSION",
+                ],
             },
             {
                 kind: types
@@ -263,10 +287,15 @@ class VersionSevenPolicyTests(unittest.TestCase):
             },
         )
         self.assertEqual(
-            "C18: the TRAFFIC_ADVISORY types the schema uses, mapped onto v2.1 "
-            "1.1's 'traffic conditions, road closures, or congestion'. Any other "
-            "type (for example KERB_RESTRICTION, TRAFFIC_FLOW) does not justify a "
-            "reroute. ROADWORKS counts as a closure.",
+            "upper-case; spaces and hyphens become underscores; then an exact match",
+            mapped["normalisation"],
+        )
+        self.assertEqual(
+            "C18: the TRAFFIC_ADVISORY types the data uses (the corpus vocabulary "
+            "and LTA DataMall's traffic-incident types) mapped onto v2.1 1.1's "
+            "'traffic conditions, road closures, or congestion'. Any other type "
+            "(for example NONE, KERB_RESTRICTION, TRAFFIC_FLOW, WEATHER, MISC) "
+            "does not justify a reroute.",
             mapped["note"],
         )
 

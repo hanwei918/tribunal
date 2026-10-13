@@ -2996,8 +2996,11 @@ POL_RD_25 = "POL-RD-25"
 # ``traffic_advisory.type`` values that belong to it. The map is the policy's,
 # not this module's: the kinds are read from the field's own keys and the types
 # from its own lists, so an accident is an incident because the policy says so
-# and not because the two words are close. Nothing here parses the clause's
-# sentence for the kinds.
+# and not because the two words are close. The same field states, in its own
+# ``normalisation`` entry, the rule that folds a recorded type before it is
+# matched; that rule is read as a rule and implemented once, in
+# :func:`facts.normalise_advisory_type`, so the two places a type is folded
+# cannot drift apart. Nothing here parses the clause's sentence for the kinds.
 V7_TRAFFIC_JUSTIFICATION_TYPES_KEY = "traffic_justification_types"
 
 # The arrival test's own rule for the accuracy filter, and the block that
@@ -3089,7 +3092,11 @@ def _v7_justification_types(
     ``traffic_advisory.type`` values belong to each in
     ``thresholds.traffic_justification_types``. The map is read from that field
     rather than parsed out of the clause's sentence, so a type the policy does
-    not list cannot be folded onto a word it merely resembles.
+    not list cannot be folded onto a word it merely resembles. The field also
+    carries the ``normalisation`` rule a recorded type is folded by before the
+    match, and that rule travels with the map so the block publishes the whole
+    of what POL-RD-23 was read through; the rule itself is implemented once, in
+    :func:`facts.normalise_advisory_type`.
 
     A policy that carries POL-RD-23 but no such field is a **refusal** rather
     than a fallback: a kind table written in this file would be a policy value
@@ -3371,10 +3378,10 @@ def _v7_trace_block(
 def _v7_kind_names(justification_types: Dict[str, Any]) -> List[str]:
     """The kinds a type map names: the entries that list recorded types.
 
-    The map's own ``note`` is prose rather than a kind, so the kinds are read
-    from the entries whose value is a list -- the same shape
-    :func:`facts.justification_kind` matches a recorded type against. Nothing
-    here types a kind's name.
+    The map's own ``note`` and its ``normalisation`` rule are prose rather than
+    kinds, so the kinds are read from the entries whose value is a list -- the
+    same shape :func:`facts.justification_kind` matches a recorded type against.
+    Nothing here types a kind's name.
     """
     return sorted(
         kind for kind, types in justification_types.items() if isinstance(types, list)

@@ -912,6 +912,12 @@ ADVISORY_ARTIFACT_MISSING_REASON = (
 #   ``road`` with a ``segment``.
 ADVISORY_TYPE_FIELDS = ("type", "advisory_type")
 ADVISORY_WINDOW_FIELDS = (("active_from", "active_to"), ("valid_from", "valid_to"))
+
+# The two separators the policy's ``normalisation`` rule folds into an
+# underscore -- "spaces and hyphens become underscores" -- named here once so
+# that rule is implemented in one place, :func:`normalise_advisory_type`, rather
+# than folded again at each comparison.
+ADVISORY_TYPE_SEPARATORS = (" ", "-")
 ADVISORY_LOCATION_FIELDS = ("road", "road_name", "direction", "location_desc", "segment")
 
 # The short phrases a reading carries where POL-RD-23 cannot be decided: which
@@ -1371,24 +1377,47 @@ def arrival_check(
     }
 
 
+def normalise_advisory_type(value: Any) -> Optional[str]:
+    """One recorded advisory type, normalised the way the policy states.
+
+    ``thresholds.traffic_justification_types`` carries the rule itself in its
+    ``normalisation`` entry: "upper-case; spaces and hyphens become underscores;
+    then an exact match". A sentence cannot be matched with, so the rule is read
+    as a rule rather than as a value to compare against, and it is implemented
+    **once**, here: the advisory's own type is normalised by this function and
+    the comparison that follows is the exact match the rule ends with, so no
+    second piece of code folds a type a second way.
+
+    ``None`` where the value is not a string or holds nothing but whitespace,
+    which names no type rather than an empty one.
+    """
+    if not isinstance(value, str):
+        return None
+    token = value.strip().upper()
+    if not token:
+        return None
+    for separator in ADVISORY_TYPE_SEPARATORS:
+        token = token.replace(separator, "_")
+    return token
+
+
 def advisory_type_token(payload: Mapping[str, Any]) -> Optional[str]:
     """The type an advisory is matched on, from whichever shape it holds.
 
     The corpus and road-segment shapes record ``type``; the LTA shape records
-    ``advisory_type`` and writes it in upper case. The LTA value is upper-cased
-    here so the comparison with the policy's map stays **exact** rather than
-    case-folded in two places; a ``type`` the schema already writes in upper
-    case travels unchanged. Neither field carrying a string leaves the token
-    ``None``, which names no kind rather than a kind guessed from a neighbouring
-    word.
+    ``advisory_type``. Whichever field carries the type, the value is normalised
+    by :func:`normalise_advisory_type` -- the one implementation of the policy's
+    own ``normalisation`` rule -- so that a recorded ``Vehicle breakdown`` or
+    ``road-closure`` names the same kind the policy's ``VEHICLE_BREAKDOWN`` and
+    ``ROAD_CLOSURE`` do, and the comparison that follows stays **exact** rather
+    than case-folded in two places. Neither field carrying a string leaves the
+    token ``None``, which names no kind rather than a kind guessed from a
+    neighbouring word.
     """
-    primary, fallback = ADVISORY_TYPE_FIELDS
-    value = payload.get(primary)
-    if isinstance(value, str) and value.strip():
-        return value.strip()
-    value = payload.get(fallback)
-    if isinstance(value, str) and value.strip():
-        return value.strip().upper()
+    for field in ADVISORY_TYPE_FIELDS:
+        token = normalise_advisory_type(payload.get(field))
+        if token:
+            return token
     return None
 
 
@@ -1456,10 +1485,11 @@ def justification_kind(advisory_type: Any, types_by_kind: Any) -> Optional[str]:
     POL-RD-23 names three kinds in words -- "congestion, an incident or a
     closure" -- and the policy states which recorded ``traffic_advisory.type``
     values belong to each in ``thresholds.traffic_justification_types``. The
-    advisory's type is compared with those values **exactly**, in upper case:
-    both sides are the schema's own tokens, so a type the policy does not list
-    names no kind and is reported as such rather than folded onto a word it
-    merely resembles.
+    type handed in is the one :func:`normalise_advisory_type` already
+    normalised, and the comparison against those lists is the **exact match**
+    the policy's own ``normalisation`` rule ends with: both sides are the
+    schema's own tokens, so a type the policy does not list names no kind and is
+    reported as such rather than folded onto a word it merely resembles.
 
     What it does **not** do is decide that two different words mean the same
     thing. A type is a kind because the policy's map lists it under that kind,
@@ -1469,20 +1499,19 @@ def justification_kind(advisory_type: Any, types_by_kind: Any) -> Optional[str]:
 
     ``types_by_kind`` is the policy's own mapping, handed in by the caller --
     this module still holds no policy value. An entry whose value is not a list
-    of strings is skipped, which is how the mapping's own ``note`` is passed
-    over without the note's key being named here.
+    of strings is skipped, which is how the mapping's own ``note`` and its
+    ``normalisation`` rule are passed over without either key being named here.
     """
     if not isinstance(advisory_type, str):
         return None
-    token = advisory_type.strip().upper()
+    token = advisory_type.strip()
     if not token or not isinstance(types_by_kind, Mapping):
         return None
     for kind, listed in types_by_kind.items():
         if not isinstance(listed, (list, tuple)):
             continue
         if any(
-            isinstance(candidate, str) and candidate.strip().upper() == token
-            for candidate in listed
+            isinstance(candidate, str) and candidate == token for candidate in listed
         ):
             return kind
     return None
@@ -1507,10 +1536,11 @@ def advisory_justification(
     shape and the road-segment shape. Each condition is read from whichever
     field the payload carries.
 
-    - the type is ``type``, or the LTA shape's ``advisory_type`` upper-cased,
-      matched **exactly** against the policy's own ``traffic_justification_types``
-      map. The kind the map gives that type is reported, and ``None`` where the
-      map gives it no kind.
+    - the type is ``type``, or the LTA shape's ``advisory_type``, normalised by
+      :func:`normalise_advisory_type` the way the policy's own ``normalisation``
+      rule says and then matched **exactly** against the policy's own
+      ``traffic_justification_types`` map. The kind the map gives that type is
+      reported, and ``None`` where the map gives it no kind.
     - the window is ``active_from``/``active_to`` or ``valid_from``/``valid_to``,
       measured against the trip record's ``started_at``/``ended_at``. Where the
       payload states ``overlaps_trip_window`` of its own, the payload's reading

@@ -46,6 +46,11 @@ FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "v7"
 RUNS_DIR = PROJECT_ROOT / "runs"
 INDEX_PATH = PROJECT_ROOT / "data" / "index.json"
 
+# The version-7 development set, whose advisories record LTA DataMall's own
+# traffic-incident vocabulary. Loaded through the loader every other version-7
+# test uses, so its case files are held to their own index's digests.
+DEV_V7_DIR = loader.EXTERNAL_DIR / "dev-v7"
+
 # The recorded version-6 runs. A corpus run lives at ``runs/<V6_RUN_DIRNAME>/<slug>/``
 # and any other set's at ``runs/<set>/<V6_RUN_DIRNAME>/<slug>/``. Two of those set
 # names brief the 29-case corpus and are loaded by number from ``data/cases/``;
@@ -489,7 +494,7 @@ class TheDeviationTests(unittest.TestCase):
         self.assertEqual(block["admissible_types"]["clause_id"], "POL-RD-23")
         self.assertEqual(
             sorted(block["admissible_types"]["value"]),
-            ["closure", "congestion", "incident", "note"],
+            ["closure", "congestion", "incident", "normalisation", "note"],
         )
 
     def test_an_advisory_that_does_not_intersect_the_route_justifies_nothing(self):
@@ -790,6 +795,140 @@ class TheAdvisoryShapeTests(unittest.TestCase):
         self.assertIsNone(block["justification_kind"]["value"])
         self.assertIs(block["justifies_reroute"]["value"], False)
         self.assertIn("not one of the kinds POL-RD-23 names", block["reason"])
+
+
+class TheAdvisoryVocabularyTests(unittest.TestCase):
+    """The types the version-7 sets record, read against the policy's own map.
+
+    dev-v7 and sealed-v4 record LTA DataMall's traffic-incident vocabulary --
+    ``HEAVY_TRAFFIC``, ``VEHICLE_BREAKDOWN``, ``ROAD_CLOSURE``, ``ROADWORK``,
+    ``ACCIDENT``, ``NONE`` -- while C18's map was written from the corpus's
+    spellings. The map is the policy's and not this module's: a type names a
+    kind because the policy lists it under that kind, and a type the map does
+    not carry names none. The policy's own ``normalisation`` rule folds a
+    recorded type before the match, so a ``Vehicle breakdown`` or a
+    ``road-closure`` names the same kind the map's upper-case tokens do.
+    """
+
+    def dev_v7(self, case_no):
+        """One dev-v7 case, loaded from the set's own directory."""
+        return loader.load_external_set_case(DEV_V7_DIR, case_no)
+
+    def mapped_types(self):
+        """The policy's own type map, as the version-7 reader is handed it."""
+        return loader.load_policies("ROUTE_DEVIATION", 7)["category"]["thresholds"][
+            "traffic_justification_types"
+        ]
+
+    def block_of(self, case, evidence_id):
+        """One advisory's version-7 block of a built brief."""
+        return derived_block(
+            brief.build_brief_for_case(case, policy_version=7), evidence_id
+        )
+
+    def lta_case(self, case_no, **fields):
+        """A dev-v7 case with its LTA advisory's payload edited in memory only."""
+        case = copy.deepcopy(self.dev_v7(case_no))
+        for artifact in case["evidence"]:
+            if artifact["evidence_type"] == "TRAFFIC_ADVISORY":
+                artifact["payload"].update(fields)
+        return case
+
+    def test_each_type_the_version_seven_sets_use_names_its_kind(self):
+        """The four LTA types the two version-7 sets record, each its own kind."""
+        for type_value, kind in (
+            ("HEAVY_TRAFFIC", "congestion"),
+            ("VEHICLE_BREAKDOWN", "incident"),
+            ("ROAD_CLOSURE", "closure"),
+            ("ROADWORK", "closure"),
+        ):
+            with self.subTest(type=type_value):
+                block = self.block_of(
+                    self.lta_case(5011, advisory_type=type_value), "EV-ADVIS-05011-01"
+                )
+                self.assertEqual(block["type"]["value"], type_value)
+                self.assertEqual(block["justification_kind"]["value"], kind)
+
+    def test_a_spaced_or_hyphenated_type_is_normalised_before_it_is_matched(self):
+        """The policy's rule: upper case, then an underscore for a space or hyphen."""
+        for written, token, kind in (
+            ("Vehicle breakdown", "VEHICLE_BREAKDOWN", "incident"),
+            ("road-closure", "ROAD_CLOSURE", "closure"),
+        ):
+            with self.subTest(type=written):
+                block = self.block_of(
+                    self.lta_case(5011, advisory_type=written), "EV-ADVIS-05011-01"
+                )
+                self.assertEqual(block["type"]["value"], token)
+                self.assertEqual(block["justification_kind"]["value"], kind)
+
+    def test_the_types_the_policy_does_not_name_still_name_no_kind(self):
+        """``NONE`` and the three the policy's own note names as justifying nothing."""
+        for type_value in ("NONE", "WEATHER", "KERB_RESTRICTION", "TRAFFIC_FLOW"):
+            with self.subTest(type=type_value):
+                block = self.block_of(
+                    self.lta_case(5011, advisory_type=type_value), "EV-ADVIS-05011-01"
+                )
+                self.assertEqual(block["type"]["value"], type_value)
+                self.assertIsNone(block["justification_kind"]["value"])
+
+    def test_every_typed_advisory_of_dev_v7_names_a_kind(self):
+        """Read from the set's own case files: 41 advisories, 11 of them typed.
+
+        The 21 with no payload at all are MISSING artifacts and carry no type;
+        the nine recorded ``NONE`` name no kind on purpose and are read by
+        :meth:`test_the_types_the_policy_does_not_name_still_name_no_kind`. What
+        is left is every advisory the set records a traffic event for, and each
+        of them now names one of POL-RD-23's three kinds.
+        """
+        mapped = self.mapped_types()
+        advisories = 0
+        typed = 0
+        entries = json.loads((DEV_V7_DIR / "index.json").read_text(encoding="utf-8"))
+        for entry in entries:
+            case = self.dev_v7(entry["case_no"])
+            for artifact in case["evidence"]:
+                if artifact["evidence_type"] != "TRAFFIC_ADVISORY":
+                    continue
+                advisories += 1
+                payload = artifact.get("payload")
+                token = (
+                    facts.advisory_type_token(payload)
+                    if isinstance(payload, dict)
+                    else None
+                )
+                if token is None or token == "NONE":
+                    continue
+                with self.subTest(case=entry["case_no"], type=token):
+                    typed += 1
+                    self.assertIsNotNone(
+                        facts.justification_kind(token, mapped),
+                        "{0} names no kind".format(token),
+                    )
+        self.assertEqual(41, advisories, "the advisories walked are not the ones on disk")
+        self.assertEqual(11, typed, "the typed advisories are not the ones on disk")
+
+    def test_the_normalisation_is_what_makes_a_spaced_type_match(self):
+        """The control: with the normalisation step removed, the spaced type fails.
+
+        The same case, the same advisory and the same brief, with
+        :func:`facts.normalise_advisory_type` replaced by the identity: the
+        recorded ``Vehicle breakdown`` is matched as it was written and names no
+        kind, which is what shows the assertion in
+        :meth:`test_a_spaced_or_hyphenated_type_is_normalised_before_it_is_matched`
+        rests on the policy's own rule rather than on the reader folding the two
+        words anyway.
+        """
+        written = self.lta_case(5011, advisory_type="Vehicle breakdown")
+        self.assertEqual(
+            self.block_of(written, "EV-ADVIS-05011-01")["justification_kind"]["value"],
+            "incident",
+        )
+
+        with mock.patch.object(facts, "normalise_advisory_type", lambda value: value):
+            block = self.block_of(written, "EV-ADVIS-05011-01")
+        self.assertEqual(block["type"]["value"], "Vehicle breakdown")
+        self.assertIsNone(block["justification_kind"]["value"])
 
 
 class TheArrivalAccuracyFilterTests(unittest.TestCase):
