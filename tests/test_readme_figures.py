@@ -50,7 +50,9 @@ from eval import (  # noqa: E402
 )
 from tests import portability  # noqa: E402
 
-README = PROJECT_ROOT / "README.md"
+# The results tables moved, whole, from README.md to docs/record.md on 2026-10-13,
+# when the README became a short front page; the tables are checked where they now live.
+README = PROJECT_ROOT / "docs" / "record.md"
 MODEL = run_benchmark.resolve_model(None)
 MODEL_SLUG = run_benchmark.model_slug(MODEL)
 

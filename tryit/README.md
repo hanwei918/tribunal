@@ -1,0 +1,63 @@
+# The try-it service
+
+A visitor's scenario, run through the real pipeline. It is a small
+standard-library HTTP server in front of
+`tribunal.pipeline.run_loaded_case`, run with the settings of the recorded
+version-6 runs — four judge drafts, policy version 6, parallel calls. It adds
+nothing to the arbitration: the scenario is built by `tryit/case.py`, the same
+code the website runs in the browser, and the pipeline is called as the
+benchmark calls it. Each run costs about 0.06 USD in model calls and takes two
+to five minutes.
+
+```
+TOKENHUB_API_KEY=... python3 -m tryit.server --port 8787
+```
+
+## Endpoints
+
+JSON in and out:
+
+| Endpoint | What it answers |
+|---|---|
+| `GET /api/health` | is a live run available, and how many are left today |
+| `POST /api/run` | `{"scenario": {...}}` -> `{"id": ..., "position": n}` |
+| `GET /api/run/<id>` | progress while it runs, the result when it is done |
+
+## Limits
+
+All from the environment, so nobody edits code to change them:
+
+| Variable | Meaning | Default |
+|---|---|---|
+| `TRY_ALLOW_ORIGINS` | comma-separated origins allowed to call it | `https://tribunal.edgeone.dev` |
+| `TRY_DAILY_CAP` | live runs per UTC day, all visitors together | `60` |
+| `TRY_PER_VISITOR` | live runs per visitor address per UTC day | `3` |
+| `TRY_WORKERS` | cases run at the same time | `2` |
+| `TRY_MODEL` | model id | `deepseek/deepseek-flash` |
+| `TRY_STORE` | where each run's scenario, events and result are kept | `./tryit-runs` |
+| `TRY_TRUST_PROXY` | `1` to read the visitor address from `X-Forwarded-For` | unset |
+
+## Testing without a key
+
+- `--recorded-test` answers each call from case 208's recorded run, by role,
+  instead of calling a model, and `GET /api/health` says so with
+  `"mode": "recorded-test"`. The answers are real recorded model output, but
+  they were written for the unedited case, so a scenario run this way is a test
+  of the plumbing and not a ruling on the scenario. No key, no cost.
+- `--once SCENARIO_JSON` runs one scenario file — the one the try-it page lets a
+  visitor download — prints the result and exits. Add `--recorded-test` to it
+  for a keyless end-to-end check:
+
+```
+python3 -m tryit.server --once scenario.json --recorded-test
+```
+
+## On the published site the live service is off
+
+The site's try-it page loads `try/try-config.js`, and that file leaves
+`window.TRIBUNAL_TRY_API` empty. With no address the page offers no live run and
+only its in-browser checks run: the visitor's scenario is built and shown by
+`tryit/case.py` under Pyodide, with no model call and no server. Point
+`TRIBUNAL_TRY_API` at a running instance to switch live runs on. The page's own
+files and the bundle it loads are built by `ui/site/build.py`;
+`tryit/build_bundle.py` computes the same paths from this tree.

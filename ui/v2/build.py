@@ -599,16 +599,20 @@ ADMISSIBILITY_MISSING = "MISSING"
 # is shown as its own line rather than as a chat message.
 CALL_LOG_CHANNEL = "VOICE_CALL_LOG"
 
-# The README's results section, linked from the queue. The queue's own figures
-# are development data, and the README is where the submission's figures -- the
+# The record's results section, linked from the queue. The queue's own figures
+# are development data, and the record is where the submission's figures -- the
 # sealed sets among them -- are stated, with the command that measured each one.
-# The link is the repository's own page and not a path out of the site: it was
+# The section was the README's until 2026-10-13, when the README became a short
+# front page and the whole record moved to ``docs/record.md``. The link is the
+# repository's own page and not a path out of the site: it was
 # ``../../README.md#results``, which resolved in a checkout -- the repository's
 # file is two directories above the site -- and 404s wherever ``ui/dist/`` is
 # served on its own, which is where this site is served. The repository is
 # private until the owner opens it on 2026-10-16; the address is the one the
 # repository will have, so the link is correct now and works then.
-README_RESULTS_LINK = "https://github.com/hanwei918/tribunal#results"
+README_RESULTS_LINK = (
+    "https://github.com/hanwei918/tribunal/blob/main/docs/record.md#results"
+)
 README_RESULTS_WORDS = "How the figures were measured"
 
 # The case the links row sends a reader to for the debate itself: the no-show
@@ -617,16 +621,18 @@ README_RESULTS_WORDS = "How the figures were measured"
 HOW_IT_WAS_DECIDED_CASE = 208
 
 # The three pages the safeguards section links to that this site does not carry:
-# the repository's privacy note, the limits section of its README, and the note
-# recording the accessibility scan. Each is an absolute URL, because the site is
-# served on its own and a repository-relative path resolves nowhere and 404s
-# there; the tests' own external-link allowance names all three rather than
-# passing them over silently.
+# the repository's privacy note, the limits section of its record (in
+# ``docs/record.md`` since 2026-10-13, when the README became a front page), and
+# the note recording the accessibility scan. Each is an absolute URL, because
+# the site is served on its own and a repository-relative path resolves nowhere
+# and 404s there; the tests' own external-link allowance names all three rather
+# than passing them over silently.
 PRIVACY_LINK = (
     "https://github.com/hanwei918/tribunal/blob/main/docs/governance/privacy.md"
 )
 LIMITATIONS_LINK = (
-    "https://github.com/hanwei918/tribunal#limitations-and-disclosures"
+    "https://github.com/hanwei918/tribunal/blob/main/docs/record.md"
+    "#limitations-and-disclosures"
 )
 ACCESSIBILITY_NOTE_LINK = (
     "https://github.com/hanwei918/tribunal/blob/main/docs/notes/"

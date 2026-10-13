@@ -53,7 +53,8 @@ from tribunal import policy_versions  # noqa: E402
 
 ROADMAP = PROJECT_ROOT / "docs" / "roadmap" / "policy-v2"
 ROADMAP_README = ROADMAP / "README.md"
-REPOSITORY_README = PROJECT_ROOT / "README.md"
+# The README's roadmap line moved, with the rest of the record, to docs/record.md on 2026-10-13.
+REPOSITORY_README = PROJECT_ROOT / "docs" / "record.md"
 
 # The archive the folder was unpacked from, and its digest. Named here because
 # the README's claim about it is a claim worth being able to check.

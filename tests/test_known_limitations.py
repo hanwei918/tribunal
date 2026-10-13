@@ -46,6 +46,8 @@ if str(PROJECT_ROOT) not in sys.path:
 from tests import portability  # noqa: E402
 
 README = PROJECT_ROOT / "README.md"
+# The limitations section moved, whole, to docs/record.md on 2026-10-13.
+RECORD = PROJECT_ROOT / "docs" / "record.md"
 THREAT_MODEL = PROJECT_ROOT / "docs" / "governance" / "threat-model.md"
 HOW_WE_BUILT_IT = PROJECT_ROOT / "docs" / "submission" / "how-we-built-it.md"
 ARCHITECTURE_DIR = PROJECT_ROOT / "docs" / "architecture"
@@ -155,7 +157,7 @@ class TheLimitationsAreDisclosedTests(unittest.TestCase):
     """The same four weaknesses are in both documents, and the check can fail."""
 
     def test_the_readme_discloses_all_four(self):
-        self.assertEqual([], missing_limitations(prose(README)))
+        self.assertEqual([], missing_limitations(prose(RECORD)))
 
     def test_the_threat_model_discloses_all_four(self):
         self.assertEqual([], missing_limitations(prose(THREAT_MODEL)))
@@ -163,12 +165,12 @@ class TheLimitationsAreDisclosedTests(unittest.TestCase):
     def test_a_document_with_one_taken_out_is_reported(self):
         """The check above is shown capable of failing."""
         dropped = LIMITATIONS[2]
-        doctored = prose(README).replace(dropped, "a different sentence")
+        doctored = prose(RECORD).replace(dropped, "a different sentence")
         self.assertEqual([dropped], missing_limitations(doctored))
 
     def test_the_documents_really_carry_the_phrases(self):
         """A control: the search is against prose that is there, not against a blank."""
-        for path in (README, THREAT_MODEL):
+        for path in (RECORD, THREAT_MODEL):
             with self.subTest(document=path.name):
                 self.assertGreater(len(prose(path)), 1000)
 
