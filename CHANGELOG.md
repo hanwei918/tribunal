@@ -1,0 +1,30 @@
+# Changelog
+
+Every change since `freeze-2026-10-11`, one line per part. That tag freezes the
+evaluated system: `tribunal/`, `prompts/` and `policy/` do not change again
+before the submission, so every part below is documentation, a test, a built
+page, an asset or the repository's own tooling. The command that proves it
+prints nothing:
+
+```bash
+git diff --stat freeze-2026-10-11 HEAD -- tribunal prompts policy
+```
+
+| part | date | what changed, and why it is outside the frozen tree |
+|---|---|---|
+| 41 | 2026-10-11 | `sealed-v2`, the fourth sealed set, imported, verified and registered at policy version 6 without reading its answers (`19c7e5a`, the commit the tag `freeze-2026-10-11` points at). The registration moves `eval/`, `data/external/` and the answer key; `tribunal/`, `prompts/` and `policy/` are exactly what the tag freezes. |
+| 42 | 2026-10-11 | the fourth sealed set's single run, committed exactly as produced under `runs/sealed-v2/`, with a manifest recording every file's size and sha256 (`84a563a`). Run records and their manifest only. |
+| 43 | 2026-10-11 | the four code weaknesses an independent review confirmed, disclosed in the README and the threat model and deliberately **not fixed** (`18e09ee`); and, as 43b, the Start-here box, the one-page build account and the architecture diagram's last four labels (`86d7986`). Documents and one generated diagram only. |
+| 44 | 2026-10-11 | the product view's "How it was decided" tab turned into a debate rather than the agents' raw JSON, the landing page's own explanation and the header, and three follow-ups the part left (`cdf5264`, `40421c4`, `8637ec3`). Built pages and their tests only. |
+| 45 | 2026-10-11 | a stale test count, a privacy page that named no recipient, a `.gitignore` that missed other agents' folders, and a read-only connector given a timeout (`7a2c8bf`). Documents, `.gitignore` and the connector. |
+| 46 | 2026-10-11 | what the pages say about a held case and a case sent to a person, the review form, the cost tile and the replay banner (`983177c`); then the polish -- link previews, the tab icon, the 404 page, the nav, the no-show map and the long claims (`d906641`). Built pages and their assets. |
+| 47 | 2026-10-11 | the outcome first on a case page, what two loaded words mean, the refund shown against the amount contested, and the tables a keyboard can reach (`e781d0d`). Built pages only. |
+| 48 | 2026-10-12 | a clean clone must pass: the link-preview image moves out of `tmp/`, the Linux comparison drops exactly the case the platform guard drops, and a new test fails if any test or builder names a path under `tmp/` (`fa386d3`); then the last dead link, the notice as a preview, the replay's label and which code made the runs (`660f8e1`); then the policy owner's four C4 views replace the old diagram (`b4c6d56`). Site sources, assets and tests. |
+| 49 | 2026-10-12 | the fourth sealed set's provenance stated exactly and the brief-equality check behind it (`82ed6f0`); `wild-v1` declared development and regression data, with the Results opened by the three sets the system was never developed against (`565b6b2`); the four smaller corrections and the three limitations the files confirm (`3e9b75d`); and the two replay pages rebuilt (`45c2c9c`). Documents, one set summary and two built pages. |
+| 50 | 2026-10-12 | the four C4 views drawn by the repository's own generator from layout specifications, with the evidence collector's input corrected (`fb1bee5`). A generator, its specifications and the five generated SVGs. |
+| 51 | 2026-10-12 | the poster as the site's link preview and the front page's own image (`13afc05`); the site brought to the poster's look (`df22981`); three faults that look introduced, then the queue's Status column and the case page's step circles (`8634abd`, `c17b821`). Site assets, styling and tests. |
+| 52 | 2026-10-12 | the queue and the project description state the safeguards and the accessibility where the judges look (`c1b3915`, `6425121`), the scan note is written down, and an in-page link no longer lands under the sticky header (`3327aeb`). Built pages, the description and a note. |
+| 53 | 2026-10-13 | the policy owner's product site imported into this repository's sources and built from them, with the queue moved to `queue.html` (`402c530`); the README and the submission credit it (`b0eba10`); the clean-clone faults fixed (`f2e8de6`, `b0cf518`); the site's words corrected in both languages (`087a00d`); and its figures bound to the records they come from (`69ee233`). Site sources, `ui/site/`, `tools/site_import.py` and tests. |
+| 54 | 2026-10-13 | the README becomes a 140-line front page and the whole record moves, word for word, to `docs/record.md` (`52b60fc`). Documents only. |
+| 55 | 2026-10-13 | the six documents a judge asks for, each linked once from the README's Documentation table (`d98245e`); and the hidden-set question answered plainly in the judges' questions, with a new test holding the six documents to their figures, links and one reference (`92613d4`). Documents and one test. |
+| 56 | 2026-10-13 | the owner's read-through corrections to part 55's documents and the 29-case corpus's author said truly, with one assertion per fix (`92bcd3e`); `tools/check_figures.py`, which computes each headline figure from the committed runs and checks every place it is stated, with its test; `tools/verify.py`, one command running all nine checks, with its test; and this changelog. Documents, the product site's two results pages and their built copies, two new tools and two new tests. |

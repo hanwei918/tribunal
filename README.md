@@ -71,6 +71,7 @@ Python 3.9 and 3.13 (both tested) and nothing else: `requirements.txt` declares 
 
 ```bash
 git clone <this repository> && cd tribunal
+python3 -m tools.verify                   # every check below, in one command
 python3 -m eval.v6_runs --report          # every development figure, from the committed runs
 python3 -m eval.business_value --report   # the numbers above
 python3 -m unittest discover -s tests     # the full suite
@@ -136,6 +137,7 @@ set's provenance are in [the full record](docs/record.md#results).
 | [WorkBuddy log](docs/buddy-log/README.md) | One row per WorkBuddy session, with screenshots |
 | [WorkBuddy connector](integrations/workbuddy/) | A read-only MCP server over the committed records |
 | [Try-it service](tryit/README.md) | The website's live-run service, its limits and how to run it |
+| [Changelog](CHANGELOG.md) | Every change since `freeze-2026-10-11`, one line per part, and the command that shows the frozen tree has not moved |
 
 ## Team and licence
 
