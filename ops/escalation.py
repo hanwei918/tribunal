@@ -216,15 +216,25 @@ def _timeline(run_dir: Path, case_no: int) -> List[Dict[str, Any]]:
     return rows
 
 
-def _risk_section(case: Mapping[str, Any], policies: Mapping[str, Any], case_root: Path) -> Dict[str, Any]:
+def _risk_section(
+    case: Mapping[str, Any],
+    policies: Mapping[str, Any],
+    case_root: Path,
+    policy_version: Optional[int] = None,
+) -> Dict[str, Any]:
     """Part 1's signals, as the packet carries them.
 
     The signals go to the reviewer and to the queue and never to the judge: they
-    are the same five policy tests the judge applies through the policy, read
-    again here so that the person who has to settle the case sees which of them
+    are the same policy tests the judge applies through the policy, read again
+    here so that the person who has to settle the case sees which of them
     tripped without having to re-derive them.
+
+    ``policy_version`` is the version the run recorded, and it decides which
+    tests those are -- the version-6 five, or v2.1's own two from version 7. A
+    packet built from a version-7 run without it would ask for a clause version
+    7 does not carry and fail on the reading rather than on the case.
     """
-    assessment = risk.assess(case, policies, case_root)
+    assessment = risk.assess(case, policies, case_root, policy_version)
     return {
         "signals": [
             {
@@ -515,7 +525,7 @@ def build_packet(
             "confidence": inner.get("confidence"),
             "referrals": list(inner.get("referrals") or []),
         },
-        "risk": _risk_section(case, policies, case_root),
+        "risk": _risk_section(case, policies, case_root, policy_version),
         "fare_lines": _fare_lines(case),
         "timeline": _timeline(run_dir, case_no),
     }

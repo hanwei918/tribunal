@@ -17,6 +17,16 @@ its clause names and no other profile field, and the module is tested twice for
 that: once against the declaration below, and once against profile payloads that
 record every key they are asked for.
 
+**Version 7 has two tests of its own.** Policy version 7 is Ryde's own Dispute
+Resolution Policy v2.1, a separate base whose clause ids start at 21, so none of
+the five clauses above exists there and reading a version-7 case with the
+version-6 patterns is a refusal. :func:`signals_for` therefore takes the policy
+version, and at version 7 reports v2.1's two signals: a fraud flag on either
+party (POL-GEN-22, read off both profiles and reported against ``PAIR``) and a
+rider with three or more no-show cancellations in the trailing thirty days
+(POL-NS-25). The version is a parameter whose default is the version-6 five, so
+every caller written before it reads exactly what it read before.
+
 **The reading of POL-NS-09(c).** The clause says the two counters "together
 show" the no-show disputes between the same rider and driver in the trailing 90
 days. Both counters count the **same disputes**, one from each side, so the
@@ -144,6 +154,12 @@ SIDE_DRIVER = "DRIVER"
 SIDE_PAIR = "PAIR"
 SIDES: Tuple[str, ...] = (SIDE_RIDER, SIDE_DRIVER, SIDE_PAIR)
 
+# The category a clause that belongs to no one category carries. POL-GEN-22 is
+# a general clause, and a general test applies to every dispute whatever its
+# category; the signal it produces is reported under the case's own category, so
+# a reader of the output sees the same word they see on every other line.
+GENERAL_CATEGORY = "GENERAL"
+
 
 class PolicyTest(NamedTuple):
     """One of the five policy tests, as the clause states it."""
@@ -203,6 +219,55 @@ POLICY_TESTS: Tuple[PolicyTest, ...] = (
 
 # The clause that names a counter on each profile and reads the larger of them.
 PAIR_CLAUSE = "POL-NS-09(c)"
+
+# --------------------------------------------------------------------------
+# The version-7 tests, which are v2.1's own
+# --------------------------------------------------------------------------
+# Policy version 7 is Ryde's own Dispute Resolution Policy v2.1, a separate base
+# whose clause ids start at 21. None of the five version-6 clauses above exists
+# there, so a version-7 case read with the version-6 patterns is a refusal --
+# which is what ``POL-RD-06``'s absence produced before this table existed, and
+# what broke ``ops.queue``. v2.1 has two signals of its own, and they are read
+# here the way the five are: the sentence is matched as the clause states it,
+# number included, and a sentence that has moved is a refusal rather than a
+# threshold nobody reviewed.
+V7_SIGNALS_VERSION = 7
+
+V7_THRESHOLD_PATTERNS: Dict[str, "re.Pattern[str]"] = {
+    "POL-GEN-22": re.compile(
+        r"Where either party's profile carries fraud_flags of "
+        r"(?P<min_flags>1) or more"
+    ),
+    "POL-NS-25": re.compile(
+        r"rider_profile\.no_show_cancellations_30d, counting this trip if its fee "
+        r"stands, is (?P<min_cancellations>3) or more"
+    ),
+}
+
+# The two tests, in clause order. POL-GEN-22 is general -- it applies to a
+# dispute of either category, and the counter it reads is on each profile, so it
+# is reported against ``PAIR`` as POL-NS-09(c) is. POL-NS-25 names one counter
+# on the rider's profile.
+V7_FRAUD_CLAUSE = "POL-GEN-22"
+V7_REPEAT_NO_SHOW_CLAUSE = "POL-NS-25"
+
+V7_POLICY_TESTS: Tuple[PolicyTest, ...] = (
+    PolicyTest(
+        clause=V7_FRAUD_CLAUSE,
+        category=GENERAL_CATEGORY,
+        side=SIDE_PAIR,
+        fields=(
+            "rider_profile.fraud_flags",
+            "driver_profile.fraud_flags",
+        ),
+    ),
+    PolicyTest(
+        clause=V7_REPEAT_NO_SHOW_CLAUSE,
+        category="NO_SHOW_CHARGE",
+        side=SIDE_RIDER,
+        fields=("rider_profile.no_show_cancellations_30d",),
+    ),
+)
 
 # Which clause a test's sentence lives in. Four tests are a whole clause; the two
 # limbs of POL-NS-09 are limbs of one clause, and the sentence each reads is a
@@ -271,7 +336,7 @@ def clause_rule_text(test_clause: str, policies: Mapping[str, Any]) -> str:
 
 
 def read_threshold_sentence(
-    clause_id: str, policies: Mapping[str, Any]
+    clause_id: str, policies: Mapping[str, Any], patterns: Optional[Mapping[str, Any]] = None
 ) -> Tuple[str, Dict[str, Decimal]]:
     """The threshold sentence and its numbers, read out of the loaded policy.
 
@@ -280,11 +345,17 @@ def read_threshold_sentence(
     Raises :class:`RiskPolicyError` when the clause is absent, carries no rule
     text, or states no sentence this code can read, because a sentence that has
     moved is a refusal and not a default.
+
+    ``patterns`` is the table the sentence is matched against, and it defaults
+    to the five version-6 clauses': a caller reading a version-7 case passes
+    :data:`V7_THRESHOLD_PATTERNS` instead, because the sentences v2.1 states are
+    not the sentences version 6 states.
     """
-    pattern = THRESHOLD_PATTERNS.get(clause_id)
+    pattern = (THRESHOLD_PATTERNS if patterns is None else patterns).get(clause_id)
     if pattern is None:
         raise RiskPolicyError(
-            "{0} is not one of the five tests this module reads".format(clause_id)
+            "{0} is not one of the tests this module reads at this policy "
+            "version".format(clause_id)
         )
     text = clause_rule_text(clause_id, policies)
     match = pattern.search(text)
@@ -398,7 +469,23 @@ def _trips(clause: str, values: Mapping[str, Optional[Any]], numbers: Mapping[st
             return False
         return disputes >= numbers["min_disputes"]
 
-    raise RiskError("{0} is not one of the five tests this module reads".format(clause))
+    if clause == V7_FRAUD_CLAUSE:
+        counters = [
+            _as_number(values["rider_profile.fraud_flags"]),
+            _as_number(values["driver_profile.fraud_flags"]),
+        ]
+        present = [counter for counter in counters if counter is not None]
+        if not present:
+            return False
+        return max(present) >= numbers["min_flags"]
+
+    if clause == V7_REPEAT_NO_SHOW_CLAUSE:
+        cancellations = _as_number(values["rider_profile.no_show_cancellations_30d"])
+        if cancellations is None:
+            return False
+        return cancellations >= numbers["min_cancellations"]
+
+    raise RiskError("{0} is not one of the tests this module reads".format(clause))
 
 
 def _notes_for(
@@ -420,19 +507,57 @@ def _notes_for(
     return tuple(sorted(notes))
 
 
-def signals_for(case: Mapping[str, Any], policies: Mapping[str, Any]) -> Tuple[Signal, ...]:
-    """Every test of this case's category, tripped or not, sorted by clause."""
+def _as_version(value: Any) -> Optional[int]:
+    """A recorded policy version as an ``int``, or ``None`` when it is not one.
+
+    A run records its version as a number, but a caller may hand this layer a
+    string from a document it read itself, and ``"7" >= 7`` is a ``TypeError``
+    rather than an answer. A value that is not a version is read as "no version
+    named", which is the version-6 five -- the reading every caller before this
+    parameter got.
+    """
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def signals_for(
+    case: Mapping[str, Any],
+    policies: Mapping[str, Any],
+    policy_version: Optional[int] = None,
+) -> Tuple[Signal, ...]:
+    """Every test of this case's category, tripped or not, sorted by clause.
+
+    ``policy_version`` selects which tests are the policy's own. ``None`` -- and
+    every version below 7 -- is the five version-6 clauses, so every caller
+    written before this parameter existed reads exactly what it read before. At
+    version 7 the two tests are v2.1's: a fraud flag on either party
+    (POL-GEN-22) and a rider with three or more no-show cancellations in the
+    trailing thirty days (POL-NS-25).
+
+    A general test -- POL-GEN-22 belongs to no one category -- applies to a
+    dispute of either category, and its signal is reported under the case's own
+    category so that every line of one case names the same one.
+    """
+    version = _as_version(policy_version)
+    version_seven = version is not None and version >= V7_SIGNALS_VERSION
+    tests = V7_POLICY_TESTS if version_seven else POLICY_TESTS
+    patterns = V7_THRESHOLD_PATTERNS if version_seven else THRESHOLD_PATTERNS
+
     category = case["dispute"]["category"]
     found: List[Signal] = []
-    for test in POLICY_TESTS:
-        if test.category != category:
+    for test in tests:
+        if test.category not in (category, GENERAL_CATEGORY):
             continue
-        sentence, numbers = read_threshold_sentence(test.clause, policies)
+        sentence, numbers = read_threshold_sentence(test.clause, policies, patterns)
         values = {path: profile_value(case, path) for path in test.fields}
         found.append(
             Signal(
                 clause=test.clause,
-                category=test.category,
+                category=category,
                 side=test.side,
                 fields=tuple(sorted(values.items())),
                 threshold=sentence,
@@ -551,16 +676,25 @@ class Assessment(NamedTuple):
 
 
 def assess(
-    case: Mapping[str, Any], policies: Mapping[str, Any], case_root: Path
+    case: Mapping[str, Any],
+    policies: Mapping[str, Any],
+    case_root: Path,
+    policy_version: Optional[int] = None,
 ) -> Assessment:
-    """Every signal and every attention flag for one case."""
+    """Every signal and every attention flag for one case.
+
+    ``policy_version`` is the version the case was read at, and it decides which
+    tests are the policy's own -- see :func:`signals_for`. It defaults to
+    ``None``, which is the version-6 five, so a caller that does not name one
+    reads exactly what it read before.
+    """
     dispute = case["dispute"]
     return Assessment(
         case_no=case["case_no"],
         category=dispute["category"],
         filed_by=dispute["filed_by"],
         filed_at=_filed_at(case),
-        signals=signals_for(case, policies),
+        signals=signals_for(case, policies, policy_version),
         attention=repeat_party_flags(case, case_root),
     )
 

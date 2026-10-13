@@ -59,11 +59,15 @@ says so in its own ``note``.
 held, and it is read with :func:`ops.appeal.read_execution_threshold`, so a
 sentence that has moved is refused rather than resolved against a number written
 here; versions 1 and 2 carry no ``POL-GEN-05``, so there is no threshold and no
-hold. ``POL-GEN-06(2)``'s first-review deadline is the one figure the queue takes
-from ``ops/config.json`` instead of the clause -- the team's own
-``end_to_end_hours``, refused when the config states none rather than defaulted.
-Part 1's five tests still reach a lane through ``ops.risk``, which reads them out
-of the loaded policy and refuses a moved sentence. The config's own targets are
+hold, and from version 7 the clause does not exist at all -- v2.1 states the
+same hold in POL-GEN-22's bands and POL-GEN-21's safety rule, and both make the
+case a person's outright, so the human lane is the ruling's own ``ESCALATE``
+(see :data:`GEN05_HOLD_LAST_VERSION`). ``POL-GEN-06(2)``'s first-review deadline
+is the one figure the queue takes from ``ops/config.json`` instead of the clause
+-- the team's own ``end_to_end_hours``, refused when the config states none
+rather than defaulted. Part 1's tests still reach a lane through ``ops.risk``,
+which reads them out of the loaded policy -- the version-6 five, or v2.1's own
+two from version 7 -- and refuses a moved sentence. The config's own targets are
 required rather than defaulted, the same rule applied to the file the team owns.
 
 **Determinism.** No wall clock is read unless ``--now`` is given; without it the
@@ -134,6 +138,15 @@ REASON_GEN05_RELEASE = "GEN05_RELEASE"
 # message is read by ``ops.chat_signals``, the layer's own deterministic
 # detector, and the signal never enters a brief or a prompt.
 REASON_CHAT_THREAT = "CHAT_THREAT"
+
+# The last policy version that carries ``POL-GEN-05``'s execution threshold.
+# From version 7 the clause does not exist: v2.1 states the same hold in
+# POL-GEN-22's value bands and in POL-GEN-21's safety rule, and both of those
+# make the case a person's outright rather than issuing the ruling and holding
+# its money. So there is no threshold to read at version 7 and no release to
+# hold a case for -- the human lane is the ruling's own ``ESCALATE``, which
+# already covers a value above 50.00 SGD and a safety flag.
+GEN05_HOLD_LAST_VERSION = 6
 
 # The status a human-lane case carries once its first-review deadline has passed.
 # It is ``POL-GEN-06(2)``'s own consequence: "a review past its limit is escalated
@@ -289,8 +302,9 @@ class Dispute(NamedTuple):
     complaint_flag: bool = False
     # The ruling's money, and the run's policy version's ``POL-GEN-05`` threshold.
     # The threshold is ``None`` at versions 1 and 2, which carry no ``POL-GEN-05``,
-    # and ``None`` for a category the pipeline does not adjudicate -- neither has a
-    # hold to apply.
+    # ``None`` from version 7, where the clause does not exist, and ``None`` for a
+    # category the pipeline does not adjudicate -- none of the three has a hold to
+    # apply.
     amount_sgd: Optional[Decimal] = None
     driver_compensation_sgd: Optional[Decimal] = None
     execution_threshold_sgd: Optional[Decimal] = None
@@ -583,33 +597,56 @@ def chat_log_has_threat(case: Mapping[str, Any]) -> bool:
 
 
 def _risk_tripped(case: Mapping[str, Any], document: Mapping[str, Any], development_set) -> bool:
-    """Whether any of part 1's five tests trips for this case.
+    """Whether any of part 1's tests trips for this case.
 
     A category the pipeline does not adjudicate has no signals to read, because
     the tests are clauses of the policy that category has none of. The policy
     version is the one the run recorded for the case, as the closure rules use
-    it: a case briefed at version 2 is read at version 2.
+    it: a case briefed at version 2 is read at version 2, and a case briefed at
+    version 7 is read at v2.1's own two tests rather than at the version-6 five,
+    none of which exists there.
     """
     category = case["dispute"]["category"]
     if category not in loader.CATEGORY_POLICY_FILES:
         return False
     configuration = document.get("configuration")
     version = configuration.get("policy_version") if isinstance(configuration, Mapping) else None
-    policies = loader.load_policies(category, version or development_set.policy_version)
-    return any(signal.tripped for signal in risk.signals_for(case, policies))
+    policy_version = version or development_set.policy_version
+    policies = loader.load_policies(category, policy_version)
+    return any(
+        signal.tripped
+        for signal in risk.signals_for(case, policies, policy_version)
+    )
+
+
+def _version_number(value: Any) -> Optional[int]:
+    """A recorded policy version as an ``int``, or ``None`` when it is not one."""
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _execution_threshold(category: Any, policy_version: Any) -> Optional[Decimal]:
     """The run's policy version's ``POL-GEN-05`` threshold, or ``None``.
 
     ``None`` when there is no ``POL-GEN-05`` to read: a version-1 or version-2
-    run carries none, and a category the pipeline does not adjudicate has no
-    policy of its own. Where the clause **is** there its sentence is read with
-    :func:`ops.appeal.read_execution_threshold`, so a sentence that has moved is
-    a refusal rather than a figure nobody reviewed -- the rule every threshold in
-    this layer obeys.
+    run carries none, a category the pipeline does not adjudicate has no policy
+    of its own, and from version 7 the clause does not exist at all -- see
+    :data:`GEN05_HOLD_LAST_VERSION`. Where the clause **is** there its sentence
+    is read with :func:`ops.appeal.read_execution_threshold`, so a sentence that
+    has moved is a refusal rather than a figure nobody reviewed -- the rule
+    every threshold in this layer obeys.
     """
     if category not in loader.CATEGORY_POLICY_FILES:
+        return None
+    version = _version_number(policy_version)
+    if version is not None and version > GEN05_HOLD_LAST_VERSION:
+        # Stated rather than left to the clause lookup below, so that a later
+        # policy which re-used the id could not quietly re-enable a version-7
+        # hold: at version 7 the human lane is the ruling's own ESCALATE.
         return None
     try:
         policies = loader.load_policies(category, policy_version)
