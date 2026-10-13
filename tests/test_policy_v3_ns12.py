@@ -460,10 +460,10 @@ V6_RUN_SET_NAMES = {
 }
 
 # How many non-sealed cases the registry holds: 29 corpus, 15 second-set, 80
-# dev-v2, 120 dev-v2-ext, 1 sample, 12 inject-v1, 8 pii-v1 and 8 collusion-v1.
-# Pinned so a set that dropped out of the reading fails here rather than
-# shrinking the check quietly.
-NON_SEALED_CASES = 273
+# dev-v2, 120 dev-v2-ext, 1 sample, 12 inject-v1, 8 pii-v1, 8 collusion-v1 and
+# the 2 cases of the version-7 sample set ryde-v7. Pinned so a set that dropped
+# out of the reading fails here rather than shrinking the check quietly.
+NON_SEALED_CASES = 275
 
 
 def non_sealed_sets():

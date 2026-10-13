@@ -517,7 +517,7 @@ class TheGateInThePipelineTests(unittest.TestCase):
         self.assertIn(
             transcript.ROLE_JUDGE, transport.roles_for(MIDDLE_BAND_CASE)
         )
-        self.assertEqual(pipeline.NO_ACTION, result.ruling["ruling"]["ruling"])
+        self.assertEqual("NO_ACTION", result.ruling["ruling"]["ruling"])
 
     def test_a_version_six_case_above_fifty_reaches_the_judge(self):
         """No version-6 clause makes a value above 50.00 a person's."""
@@ -525,7 +525,7 @@ class TheGateInThePipelineTests(unittest.TestCase):
         result = run_case(HUMAN_ONLY_CASE, transport, version=VERSION_SIX)
         self.assertIsNone(result.scope_gate)
         self.assertIn(transcript.ROLE_JUDGE, transport.roles_for(HUMAN_ONLY_CASE))
-        self.assertEqual(pipeline.NO_ACTION, result.ruling["ruling"]["ruling"])
+        self.assertEqual("NO_ACTION", result.ruling["ruling"]["ruling"])
 
     def test_the_version_six_scope_gate_still_refuses_every_call(self):
         """A flagged case at version 6 makes no call at all, as it always did."""
@@ -571,7 +571,7 @@ class TheNoValidDraftsEscalationTests(unittest.TestCase):
     def test_a_panel_at_the_bar_carries_its_ruling(self):
         transport = GateTransport([ruling_object(confidence="0.90")])
         result = run_case(MIDDLE_BAND_CASE, transport, version=VERSION_SEVEN)
-        self.assertEqual(pipeline.NO_ACTION, result.ruling["ruling"]["ruling"])
+        self.assertEqual("NO_ACTION", result.ruling["ruling"]["ruling"])
         self.assertEqual(pipeline.VOTE_CARRIED, result.judge_vote["outcome"])
 
     def test_a_carried_ruling_below_the_bar_is_escalated_after_the_vote(self):

@@ -20,7 +20,7 @@ Six things are asserted:
 * **What the collector may read.** It reads the dispute's ``trip_id`` and never
   its ``evidence_ids`` -- asserted by running it over a dispute that records
   every key it is asked for.
-* **The proof.** For all 29 corpus cases and all 395 cases under
+* **The proof.** For all 29 corpus cases and all 397 cases under
   ``data/external/``, each against its own root, the collection equals the case
   file's ``evidence`` array exactly: same artifacts, same order, same canonical
   JSON. And a brief built from the collected case has the ``brief_sha256`` the
@@ -470,7 +470,7 @@ class TheCorpusEqualityTests(unittest.TestCase):
 
 
 class TheExternalEqualityTests(unittest.TestCase):
-    """The same, over the 395 converted cases, each against its own root.
+    """The same, over the 397 converted cases, each against its own root.
 
     ``ryde-v3/`` joined the tree on 2026-10-08: the organisers' sample converted
     for policy version 3, under a path of its own so that the version-1 case the
@@ -479,19 +479,20 @@ class TheExternalEqualityTests(unittest.TestCase):
     variants, written for policy version 3. ``sealed-v1/`` joined it on
     2026-10-09: the third sealed set's 24 cases, ``sealed-v2/`` on
     2026-10-11: the fourth sealed set's 12, and ``sealed-v3/`` on
-    2026-10-13: the fifth sealed set's 30. ``inject-v1/``, ``pii-v1/`` and
-    ``collusion-v1/`` joined it on 2026-10-10: the three functional case sets,
-    28 cases in all, and ``collusion-v1``'s first three are the only cases in the
-    repository that share both a rider and a driver. All of them are ordinary
-    agent-visible, answer-free external cases, so the same two checks apply to
-    every one.
+    2026-10-13: the fifth sealed set's 30. ``ryde-v7/`` joined it the same day:
+    the organisers' two samples converted for policy version 7. ``inject-v1/``,
+    ``pii-v1/`` and ``collusion-v1/`` joined it on 2026-10-10: the three
+    functional case sets, 28 cases in all, and ``collusion-v1``'s first three
+    are the only cases in the repository that share both a rider and a driver.
+    All of them are ordinary agent-visible, answer-free external cases, so the
+    same two checks apply to every one.
     """
 
     @classmethod
     def setUpClass(cls):
         cls.roots = external_roots()
 
-    def test_the_external_tree_holds_the_thirteen_sets(self):
+    def test_the_external_tree_holds_the_fourteen_sets(self):
         self.assertEqual(
             [
                 "codex",
@@ -502,6 +503,7 @@ class TheExternalEqualityTests(unittest.TestCase):
                 "pii-v1",
                 "ryde",
                 "ryde-v3",
+                "ryde-v7",
                 "sealed-v1",
                 "sealed-v2",
                 "sealed-v3",
@@ -540,7 +542,7 @@ class TheExternalEqualityTests(unittest.TestCase):
                             root.name, path.name
                         ),
                     )
-        self.assertEqual(395, total)
+        self.assertEqual(397, total)
 
     def test_two_cases_that_share_both_parties_collect_to_their_own_arrays(self):
         """The collision the collusion set exposed, on a fixture of its own.
