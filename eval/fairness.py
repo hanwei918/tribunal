@@ -38,9 +38,10 @@ Three things are measured, over the corpus run (``runs/policy-v6/``) and the
 keys (``eval/answers/ground_truth.json`` and
 ``eval/answers/dev-v2-ext/ground_truth.json``), the two runs' transcripts, and
 the two sets' own public, answer-free case files under ``data/cases/`` and
-``data/external/dev-v2-ext/`` -- read for the one fact the runs do not record,
-which party filed each dispute. No other answer path is opened, and nothing
-under a sealed root is opened at all.
+``data/external/dev-v2-ext/`` -- read for the three facts the runs do not
+record: which party filed each dispute, its category, and the amount it
+contests. No other answer path is opened, and nothing under a sealed root is
+opened at all.
 
 **The draft readings are the pipeline's own.** A draft's four graded fields are
 reduced by :func:`tribunal.pipeline.vote_key`, the same reduction the judge's
@@ -59,6 +60,18 @@ draws, and every rate here is reported as a count over drafts with that said in
 the note. The bins are the sheet's, and the 0.70 boundary is the confidence
 floor read out of the loaded policy: a floor that has moved refuses rather than
 being silently honoured at its old value.
+
+**Two more readings of the same errors, appended as sections 4 and 5.** Section
+4 splits each run's cases -- and both runs together -- by
+``dispute.category`` (``ROUTE_DEVIATION``, ``NO_SHOW_CHARGE``) and section 5 by
+``dispute.amount_contested_sgd`` read as a ``Decimal``, in three bands
+(``<= 5.00``, ``5.01 to 15.00``, ``> 15.00``). Each block is section 1's own
+block for that group's cases -- the same :func:`error_lean`, never a second
+classifier -- followed by the two escalation rates the key and the system give,
+each with a Wilson 95% interval. The two facts come from the same public case
+files the filed-by split reads, because no run records either. The groups are
+small, so each section ends by naming the smallest of them: read the rows as
+counts.
 
 Run from the project root with::
 
@@ -156,6 +169,25 @@ BIN_EDGES: Tuple[Decimal, ...] = (
     Decimal("0.9"),
     Decimal("1.0"),
 )
+
+# --------------------------------------------------------------------------
+# The two breakdowns: by category, and by the amount contested
+# --------------------------------------------------------------------------
+# The two categories the measured sets carry. Every case of both sets carries
+# exactly one of them, so the category blocks partition a run's cases; a case
+# carrying a third category would fall into no block and the partition would
+# fail rather than the case being silently dropped.
+CATEGORIES: Tuple[str, ...] = ("ROUTE_DEVIATION", "NO_SHOW_CHARGE")
+
+# The three bands of ``dispute.amount_contested_sgd``. The boundaries are read
+# as ``Decimal`` and never as floats, so ``5.00`` is in the first band and
+# ``15.00`` in the second, exactly as the bands are written.
+BAND_LOW = "<= 5.00"
+BAND_MIDDLE = "5.01 to 15.00"
+BAND_HIGH = "> 15.00"
+BANDS: Tuple[str, ...] = (BAND_LOW, BAND_MIDDLE, BAND_HIGH)
+BAND_LOW_MAX = Decimal("5.00")
+BAND_MIDDLE_MAX = Decimal("15.00")
 
 
 class FairnessError(Exception):
@@ -749,6 +781,43 @@ def case_count(set_name: str) -> int:
     return sum(1 for path in CASE_ROOTS[set_name].glob("case-*.json"))
 
 
+def case_facts(set_name: str) -> Dict[int, Tuple[str, Decimal]]:
+    """Each of one set's cases: its category, and the amount it contests.
+
+    Read from the set's own public case files, because neither fact is recorded
+    in a run. The amount is read as the ``Decimal`` the file states -- never as
+    a float -- so the band boundaries are exact rather than nearly exact, which
+    is the reading ``ops.appeal`` takes of the same field.
+    """
+    root = CASE_ROOTS[set_name]
+    found: Dict[int, Tuple[str, Decimal]] = {}
+    for path in sorted(root.glob("case-*.json")):
+        match = v6_runs.CASE_FILE_RE.match(path.name)
+        if match is None:
+            continue
+        dispute = v6_runs.read_json(path).get("dispute") or {}
+        amount = dispute.get("amount_contested_sgd")
+        if isinstance(amount, bool) or not isinstance(amount, (int, Decimal)):
+            raise FairnessError(
+                "case {0} of the {1} set states no amount_contested_sgd as a "
+                "number: {2!r}".format(match.group(1), set_name, amount)
+            )
+        found[int(match.group(1))] = (
+            str(dispute.get("category")),
+            amount if isinstance(amount, Decimal) else Decimal(amount),
+        )
+    return found
+
+
+def band_of(amount: Decimal) -> str:
+    """Which of the three bands an amount falls in, each boundary inclusive below."""
+    if amount <= BAND_LOW_MAX:
+        return BAND_LOW
+    if amount <= BAND_MIDDLE_MAX:
+        return BAND_MIDDLE
+    return BAND_HIGH
+
+
 # --------------------------------------------------------------------------
 # Rendering
 # --------------------------------------------------------------------------
@@ -887,11 +956,144 @@ def _calibration_block(
     return lines
 
 
+# --------------------------------------------------------------------------
+# 4 and 5. The breakdowns, one block per category and one per band
+# --------------------------------------------------------------------------
+@dataclass(frozen=True)
+class Group:
+    """One row of a breakdown: a label, its cases' lean, and two escalation counts.
+
+    ``escalated_by_system`` counts the cases whose produced ruling is
+    ``ESCALATE`` and ``escalated_in_key`` the cases whose key says so; each is
+    reported as a rate with a Wilson 95% interval, the formatting section 2
+    already uses.
+    """
+
+    label: str
+    lean: ErrorLean
+    escalated_by_system: int
+    escalated_in_key: int
+
+
+def report_over(
+    report: grade.GradeReport, cases: Sequence[int]
+) -> grade.GradeReport:
+    """One report restricted to a set of its own cases.
+
+    ``error_lean`` reads ``cases`` and ``total``. The escalation block is
+    recomputed over the subset rather than carried from the whole report, so the
+    report handed to the classifier is a report of these cases and not a report
+    of all of them wearing a block that belongs to another set.
+    """
+    wanted = set(cases)
+    chosen = tuple(score for score in report.cases if score.case_no in wanted)
+    return grade.GradeReport(cases=chosen, calibration=grade.calibrate(chosen))
+
+
+def combined_report(
+    reports: Mapping[str, grade.GradeReport]
+) -> grade.GradeReport:
+    """One report over every measured run's cases together, for the both-runs rows."""
+    cases = tuple(score for report in reports.values() for score in report.cases)
+    return grade.GradeReport(cases=cases, calibration=grade.calibrate(cases))
+
+
+def groups_over(
+    report: grade.GradeReport,
+    attributes: Mapping[int, Any],
+    values: Sequence[Any],
+    name: str,
+) -> List[Group]:
+    """One group per value, over one report's cases.
+
+    The groups partition the report's cases whenever every case carries one of
+    the values, which is what the two breakdowns below are of. Each group's lean
+    is :func:`error_lean` over that group's cases alone -- the classifier
+    section 1 uses, never a second one -- so a direction counted here is the
+    direction counted there, and the blocks of a run sum to that run's own block.
+    """
+    groups: List[Group] = []
+    for value in values:
+        chosen = tuple(
+            score for score in report.cases if attributes.get(score.case_no) == value
+        )
+        groups.append(
+            Group(
+                label="{0}, {1}".format(name, value),
+                lean=error_lean(report_over(report, [s.case_no for s in chosen])),
+                escalated_by_system=sum(
+                    1 for score in chosen if score.produced_escalates
+                ),
+                escalated_in_key=sum(
+                    1 for score in chosen if score.expected_escalates
+                ),
+            )
+        )
+    return groups
+
+
+def _group_block(group: Group) -> List[str]:
+    """One group: section 1's block for its cases, then its two escalation rates."""
+    lines = _error_lean_block(group.label, group.lean)
+    total = group.lean.total
+    lines.append(
+        "   escalated by the system    {0}   Wilson 95% {1}".format(
+            _rate(group.escalated_by_system, total),
+            v6_runs.wilson_text(group.escalated_by_system, total),
+        )
+    )
+    lines.append(
+        "   escalated in the key       {0}   Wilson 95% {1}".format(
+            _rate(group.escalated_in_key, total),
+            v6_runs.wilson_text(group.escalated_in_key, total),
+        )
+    )
+    return lines
+
+
+def _breakdown_block(groups: Sequence[Group]) -> List[str]:
+    """Every group of one breakdown, then the one line saying how to read them.
+
+    The groups are small, so the line names the smallest of them: a share over
+    fourteen cases is a count with a percentage on it, not a rate. The
+    filed-by split stays unreported here for the reason section 0 gives.
+    """
+    lines: List[str] = []
+    for group in groups:
+        lines.extend(_group_block(group))
+    lines.append(
+        "   the rows are small -- the smallest group holds {0} case(s) -- so read "
+        "them as counts; a split by dispute.filed_by stays unreported for the "
+        "reason section 0 gives.".format(min(group.lean.total for group in groups))
+    )
+    return lines
+
+
+def _breakdown(
+    reports: Mapping[str, grade.GradeReport],
+    attributes: Mapping[str, Mapping[int, Any]],
+    values: Sequence[Any],
+) -> List[Group]:
+    """Every measured run's groups, then the both-runs groups, in that order."""
+    groups: List[Group] = []
+    for name in MEASURED_SETS:
+        groups.extend(
+            groups_over(reports[name], attributes[name], values, name)
+        )
+    pooled = combined_report(reports)
+    pooled_attributes: Dict[int, Any] = {}
+    for name in MEASURED_SETS:
+        pooled_attributes.update(attributes[name])
+    groups.extend(groups_over(pooled, pooled_attributes, values, "both runs"))
+    return groups
+
+
 def report() -> str:
     """The whole measurement, printed. Reads; writes nothing."""
     runs = {name: measured_run(name) for name in MEASURED_SETS}
     transcript_maps = {name: transcripts(runs[name]) for name in MEASURED_SETS}
-    leans = {name: error_lean(graded_report(runs[name])) for name in MEASURED_SETS}
+    graded = {name: graded_report(runs[name]) for name in MEASURED_SETS}
+    leans = {name: error_lean(graded[name]) for name in MEASURED_SETS}
     swaps = {
         name: position_swap(transcript_maps[name]) for name in MEASURED_SETS
     }
@@ -976,6 +1178,26 @@ def report() -> str:
         "   the chart is written by: python3 -m eval.fairness --chart "
         "docs/calibration-v6.svg"
     )
+
+    # -- 4. By category ---------------------------------------------------
+    # The two breakdowns read the two facts a run does not record -- the
+    # category and the amount contested -- from the sets' own public case
+    # files, and lean on section 1's classifier for the directions.
+    facts = {name: case_facts(name) for name in MEASURED_SETS}
+    categories = {
+        name: {case_no: category for case_no, (category, _amount) in facts[name].items()}
+        for name in MEASURED_SETS
+    }
+    bands = {
+        name: {case_no: band_of(amount) for case_no, (_category, amount) in facts[name].items()}
+        for name in MEASURED_SETS
+    }
+    lines.append("")
+    lines.append("== 4. By category ==")
+    lines.extend(_breakdown_block(_breakdown(graded, categories, CATEGORIES)))
+    lines.append("")
+    lines.append("== 5. By the contested amount ==")
+    lines.extend(_breakdown_block(_breakdown(graded, bands, BANDS)))
     return "\n".join(lines).rstrip("\n") + "\n"
 
 
