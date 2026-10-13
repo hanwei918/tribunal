@@ -1,5 +1,7 @@
 # The accessibility scan of the live site: three pages in two themes, no violations
 
+Update 2026-10-13: every built page, both themes and a 375 px window -- see 2026-10-13-accessibility-scan-all-pages.md
+
 **2026-10-12.** The owner ran an **axe-core 4.8.2** scan of the deployed site
 after part 51d was deployed, from commit `c17b821`. The scan is the evidence
 behind the sentence the queue page's safeguards card and the project description

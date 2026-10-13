@@ -17,7 +17,11 @@ builder. What it holds:
 * the built About pages, English and Chinese, give the stats row the ``stats s3``
   class and carry no inline ``grid-template-columns``;
 * the built site stylesheet carries the three ``.stats.s3`` rules, the 560 px one
-  included.
+  included;
+* and, from part 59, that a clock stays on one line: every ``mono`` cell of the
+  built case page carries ``clock``, the built stylesheet carries the ``.clock``
+  rule, and the scan of every built page is committed with the digest the sheet
+  records.
 
 Every failure names the file it read, so a reader knows which page moved.
 
@@ -26,6 +30,7 @@ No model call, no browser, and nothing here reads a run.
 
 from __future__ import annotations
 
+import hashlib
 import re
 import unittest
 from pathlib import Path
@@ -39,6 +44,21 @@ CHIP_RULE = (
     "@media (max-width:560px){.chips .chip{white-space:normal;height:auto;"
     "min-height:24px;max-width:100%;padding:3px 10px;line-height:1.35}}"
 )
+
+# The rule item 0 of part 59 adds after ``.mono``, as ``ui/v2/build.py`` writes it,
+# and the class the chat table's time cell carries beside ``mono``.
+CLOCK_RULE = ".clock{white-space:nowrap;overflow-wrap:normal;word-break:normal}"
+
+# The case page whose chat table is read -- its time cell is a clock that the
+# monospace style would otherwise break across two lines -- and the shared
+# stylesheet every built page carries the new rule in.
+CLOCK_CASE_PAGE = "case-02853.html"
+CLOCK_PAGES = ("case-02853.html", "queue.html")
+
+# The note part 59 copies in beside this module's subject, and the digest it is
+# held to. The note's link to the 2026-10-12 scan resolves from the same folder.
+SCAN_NOTE = PROJECT_ROOT / "docs" / "notes" / "2026-10-13-accessibility-scan-all-pages.md"
+SCAN_NOTE_SHA256 = "dece4e4204056c84cd2a6792ec4f7cadf17ce24213911afd67418e6e04adf197"
 
 # The three rules item 2 adds to the site stylesheet.
 S3_COLUMNS_RULE = ".stats.s3{grid-template-columns:repeat(3,minmax(0,1fr))}"
@@ -141,6 +161,49 @@ class TheAboutStatsFitTests(unittest.TestCase):
                     css,
                     "ui/dist/about.html's stylesheet does not carry the .stats.s3 rule",
                 )
+
+
+class TheClockStaysOnOneLineTests(unittest.TestCase):
+    """Part 59 item 0: the chat table's clock no longer breaks across two lines."""
+
+    def test_every_mono_cell_of_the_case_page_is_a_clock_cell(self):
+        """``.mono`` allows a break anywhere, so a time cell must add ``clock``."""
+        page = built(CLOCK_CASE_PAGE)
+        cells = re.findall(r'<td class="([^"]*\bmono\b[^"]*)">', page)
+        self.assertTrue(
+            cells,
+            "ui/dist/{0} carries no mono cell to check".format(CLOCK_CASE_PAGE),
+        )
+        for classes in cells:
+            with self.subTest(classes=classes):
+                self.assertIn(
+                    "clock",
+                    classes.split(),
+                    "ui/dist/{0} has a mono cell that is not a clock cell".format(
+                        CLOCK_CASE_PAGE
+                    ),
+                )
+
+    def test_the_built_stylesheet_carries_the_clock_rule(self):
+        for name in CLOCK_PAGES:
+            with self.subTest(page=name):
+                self.assertIn(
+                    CLOCK_RULE,
+                    built(name),
+                    "ui/dist/{0} does not carry the .clock rule".format(name),
+                )
+
+    def test_the_scan_of_every_page_is_committed_with_its_digest(self):
+        self.assertTrue(
+            SCAN_NOTE.is_file(),
+            "docs/notes/{0} is not committed".format(SCAN_NOTE.name),
+        )
+        digest = hashlib.sha256(SCAN_NOTE.read_bytes()).hexdigest()
+        self.assertEqual(
+            SCAN_NOTE_SHA256,
+            digest,
+            "docs/notes/{0} is not the note the sheet records".format(SCAN_NOTE.name),
+        )
 
 
 if __name__ == "__main__":

@@ -2090,6 +2090,7 @@ p{margin:.5em 0}
 .lede{color:var(--muted);margin:.3em 0 1.1em;max-width:78ch}
 .ids{color:var(--muted);font-size:.86rem;font-variant-numeric:tabular-nums;margin:0}
 .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.85rem;overflow-wrap:anywhere;word-break:break-word}
+.clock{white-space:nowrap;overflow-wrap:normal;word-break:normal}
 .num{font-variant-numeric:tabular-nums}
 
 /* chips */
@@ -4611,7 +4612,7 @@ def _dispute_block(case: CaseData) -> str:
         ).format(
             _text(_date_of(chat[0].get("sent_at"))),
             "".join(
-                "<tr><td class=\"mono\">{0}</td><td>{1}</td><td>{2}</td></tr>".format(
+                "<tr><td class=\"mono clock\">{0}</td><td>{1}</td><td>{2}</td></tr>".format(
                     _text(_clock(message.get("sent_at"))),
                     _text(message.get("sender")),
                     _text(message.get("text")),
