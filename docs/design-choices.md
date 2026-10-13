@@ -13,15 +13,20 @@ feeding structured evidence to the advocate agents". The repository quotes that
 sentence at the head of [`ops/evidence.py`](../ops/evidence.py) and again at the
 head of [`ops/sources.py`](../ops/sources.py).
 
-**What Tribunal does instead.** Evidence collection is a deterministic service,
-not a model. [`ops/sources.py`](../ops/sources.py) builds one index over a case
-root and six adapters that answer key lookups against it;
+**What Tribunal does instead.** The brief is built by code from the **case
+record**, not by a model and not from the collector:
+[`tribunal/brief.py`](../tribunal/brief.py) reads the case file's own evidence
+array and hands one brief, **byte-identical**, to both advocates. Evidence
+collection is a **stand-alone** deterministic tool rather than part of that path:
+[`ops/sources.py`](../ops/sources.py) builds one index over a case root and six
+adapters that answer key lookups against it, and
 [`ops/evidence.py`](../ops/evidence.py) is given **only the dispute object**, asks
 those adapters for what the trip and the parties have, and returns the artifacts
-in the order every case file files them.
-[`tribunal/brief.py`](../tribunal/brief.py) then builds one brief from that, and
-that one brief is handed **byte-identical** to both advocates.
-`python3 -m ops.evidence --case N` runs the collector on its own.
+in the order every case file files them. It is a standalone CLI, **not wired into
+the pipeline** ([the architecture](architecture.md), "Evidence collector"), and
+what it shows is that the case record can be assembled from the source systems
+without a model: its output equals the case file's evidence array, which is what
+its own `check` reports. `python3 -m ops.evidence --case N` runs it on its own.
 
 **What that buys.** The brief's fingerprint is recorded per case — the run writes
 `brief_sha256` on the result, and the case page shows it — so a reader can
@@ -71,7 +76,7 @@ with the layer in use or not
 
 | the brief | this repository | the file |
 |---|---|---|
-| a model orchestrates evidence retrieval | `ops/sources.py` and `ops/evidence.py`, deterministic, run before any model call | `ops/evidence.py` |
+| a model orchestrates evidence retrieval | the brief is built by code from the case record and given byte-identical to both advocates; `ops/sources.py` and `ops/evidence.py` are a deterministic standalone tool whose output equals the case file's evidence array | `ops/evidence.py` |
 | risk signals feed the Judge Agent | risk signals go to the reviewer's packet and the queue, under `POL-GEN-01` | `ops/risk.py`, `ops/escalation.py` |
 
 Both departures are stated as departures in the submission description

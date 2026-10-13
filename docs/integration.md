@@ -30,7 +30,7 @@ block's own `ruling` object carries the fields a caller needs:
 | `ruling` | one of `POL-GEN-03`'s five values |
 | `amount_sgd` | the money the ruling moves, or `null` |
 | `driver_compensation_sgd` | the driver's share of it, or `null` |
-| `referrals` | the clause ids the ruling refers the reader to, as a list |
+| `referrals` | a list of instructions to a person, each naming the clause it rests on |
 | `confidence` | the judge's own confidence in the ruling |
 | `explanation` | the ruling written out for both parties |
 

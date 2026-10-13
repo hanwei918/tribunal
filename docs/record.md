@@ -207,7 +207,7 @@ without them.
 
 | set | author and tool | date | what project material the author had | who opened it before its run | key changed after outputs were seen | role |
 |---|---|---|---|---|---|---|
-| corpus | this team, by hand | before 2026-09-18 | the organisers' brief (the dispute types); the corpus predates this repository | the team that wrote it | no — written under policy version 1 and never edited | development |
+| corpus | this team, with Claude Code: 29 case specifications expanded into evidence by a deterministic generator (`random.Random(42)`), both written with Claude Code before the hackathon; the generator is not in this repository | before 2026-09-18 | the organisers' brief (the dispute types); the corpus predates this repository | the team that wrote it | no — written under policy version 1 and never edited | development |
 | `dev-v2` | Ji Guofang, the key owner, with her generator `eval/synth/make_dev_set.py` (seed 20261007) | drafted 2026-10-07, installed 2026-10-08 | the version-1 policy text and this repository's case conventions | the owner, at installation | yes — her revised keys (bundles rev2 and rev3) followed the 2026-10-08 and 2026-10-09 development runs | development |
 | `dev-v2-ext` | the same author and generator, `--size 200` | drafted 2026-10-07, installed 2026-10-08 | the same | the owner, at installation | yes — the same revisions | development |
 | `codex` | OpenAI Codex | drafted 2026-09-24, copied in by the owner | the same policy text and the same case conventions (`docs/notes/2026-09-25-the-second-development-set.md`) | the owner, on arrival | no — its three corrected answers were made at import, before the set's first run | development |

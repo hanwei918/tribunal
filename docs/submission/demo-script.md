@@ -2,8 +2,8 @@
 
 Five steps, three minutes, on the published site. Each step says what to click
 and what to say. The site is at <https://tribunal.edgeone.dev/> and every page
-below is also committed under `ui/dist/`, so the demo runs offline from
-`file://` as well.
+below is also committed under `ui/dist/`, so it also runs locally with
+`python3 -m http.server --directory ui/dist`.
 
 ## 1. The front page — 20 s
 
@@ -27,7 +27,7 @@ called. The first load fetches about 14 MB of Python; after that the checks take
 about a second."
 
 Then scroll to the facts the code worked out — 585 s in the pickup zone, the
-rider's device never leaving the lift lobby, and SGD 6.40 to the driver — and to
+rider's phone 634-646 m from the pickup point, and SGD 6.40 to the driver — and to
 the evidence pack's fingerprint.
 
 Say: "The waiting time, the driver's share and the brief's fingerprint are

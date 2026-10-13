@@ -11,7 +11,7 @@ The rows below are the record's own provenance table, condensed
 
 | set | author and tool | role |
 |---|---|---|
-| the 29-case corpus | this team, by hand, before 2026-09-18 | development |
+| the 29-case corpus | this team, with Claude Code: 29 case specifications expanded into evidence by a deterministic generator (`random.Random(42)`), before 2026-09-18; the generator is not in this repository | development |
 | `dev-v2`, `dev-v2-ext` | Ji Guofang, the key owner, with her generator `eval/synth/make_dev_set.py` | development |
 | `codex` | OpenAI Codex, drafted 2026-09-24, copied in by the owner | development |
 | `wild` (v1) | the policy owner, Ji Guofang, with Claude | development and regression data |
@@ -21,11 +21,12 @@ The rows below are the record's own provenance table, condensed
 | `sealed-v2` | the policy owner, with OpenAI Codex | sealed |
 
 **The 29-case corpus's origin, in the record's own words.** Its row reads "this
-team, by hand", dated "before 2026-09-18", with the project material it was
-written against named as "the organisers' brief (the dispute types); the corpus
-predates this repository", and its key recorded as written "under policy version
-1 and never edited". It is this team's own work; it is not a set the organisers
-supplied.
+team, with Claude Code: 29 case specifications expanded into evidence by a
+deterministic generator (`random.Random(42)`)", dated "before 2026-09-18", with
+the project material it was written against named as "the organisers' brief (the
+dispute types); the corpus predates this repository", and its key recorded as
+written "under policy version 1 and never edited". It is this team's own work; it
+is not a set the organisers supplied.
 
 **No test set came from outside the team.** Every one was written by a member of
 the project, by a model the team directed, or by a collaborator the team

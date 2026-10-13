@@ -58,9 +58,13 @@ case content and the loaded policy, is handed byte-identical to two
 advocates, the Rider Advocate Agent and the Driver Advocate Agent,
 differing only in stance; tribunal/pipeline.py asserts the rendered prompts
 differ only inside the stance block. The Judge Agent rules four times and
-the majority decides. Evidence collection is a deterministic service
-(ops/evidence.py), not each advocate fetching its own, so neither side can see
-evidence the other cannot - a deliberate departure from the brief.
+the majority decides. The brief is built by code from the case record and
+handed byte-identical to both advocates, not each advocate fetching its own, so
+neither side can see evidence the other cannot; ops/evidence.py is a
+deterministic stand-alone tool, not wired into the pipeline, that shows the
+case record can be assembled from the source systems without a model, its
+output equal to the case file's evidence array - a deliberate departure from
+the brief.
 
 The guards.
 

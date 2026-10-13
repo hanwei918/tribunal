@@ -55,8 +55,10 @@ collaborator the team commissioned, and **none came from outside the team**
 (`docs/record.md`, Results, "Where the test sets came from", which is the table
 this answer reads):
 
-- **The 29-case corpus** — this team, by hand, before 2026-09-18, against the
-  organisers' brief's dispute types. Development data.
+- **The 29-case corpus** — this team, with Claude Code, before 2026-09-18: 29
+  case specifications expanded into evidence by a deterministic generator
+  (`random.Random(42)`), against the organisers' brief's dispute types; the
+  generator is not in this repository. Development data.
 - **`dev-v2` and `dev-v2-ext`** — Ji Guofang, the key owner, with her generator
   `eval/synth/make_dev_set.py`. Development data.
 - **`codex`** — OpenAI Codex, drafted 2026-09-24, copied in by the owner.

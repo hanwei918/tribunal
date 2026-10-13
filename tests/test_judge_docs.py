@@ -13,14 +13,16 @@ otherwise go unchecked:
 * **Every relative link inside them resolves.** A path that resolves nowhere
   reads as a citation and is not one.
 * **Every number in the demo script, in ``scale.md``'s 1,000-case paragraph and
-  in the description's new pain-point table is in a report command's output or
-  in ``docs/record.md``.** The four commands are run here and their output is
-  read, rather than the figures being restated in this module: a second copy of
-  a figure is a copy that can agree with itself while disagreeing with the
-  repository. ``scale.md``'s monthly cost table is deliberately **not** covered
-  -- it is arithmetic over three assumed volumes and says so -- and neither is
-  the rest of the new documents, whose figures are read from the run directories
-  and named beside them.
+  in the description's new pain-point table is in a report command's output, in
+  ``docs/record.md`` or in the try-it page's own committed facts.** The demo
+  script's step 2 says what the try-it page shows, so the numbers it states
+  about that page are read from the page's own file as well. The four commands
+  are run here and their output is read, rather than the figures being restated
+  in this module: a second copy of a figure is a copy that can agree with itself
+  while disagreeing with the repository. ``scale.md``'s monthly cost table is
+  deliberately **not** covered -- it is arithmetic over three assumed volumes and
+  says so -- and neither is the rest of the new documents, whose figures are read
+  from the run directories and named beside them.
 * **``why-debate.md`` names one paper and no other**, and **no new document
   calls the corpus "official"**.
 
@@ -51,6 +53,11 @@ if str(PROJECT_ROOT) not in sys.path:
 README = PROJECT_ROOT / "README.md"
 RECORD = PROJECT_ROOT / "docs" / "record.md"
 DESCRIPTION = PROJECT_ROOT / "docs" / "submission" / "description.md"
+
+# The try-it page's own committed facts. The demo script's step 2 says what that
+# page shows, so the numbers it states about the page are read from the page's
+# own file rather than from a second copy of them.
+TRY_PAGE_FACTS = PROJECT_ROOT / "ui" / "site" / "static" / "try" / "recorded.json"
 
 # The six documents part 55 adds, each named by the path the README links.
 NEW_DOCUMENTS: Tuple[str, ...] = (
@@ -89,6 +96,74 @@ ARXIV = re.compile(r"arXiv:\s*(\d{4}\.\d{4,5})")
 # control below.
 FABRICATED = "424242"
 
+# Part 56's corrections to part 55's documents, one row per fix: the wording that
+# must be gone and the wording that must be there. A fix that was reverted, or
+# applied to one of the two files and not the other, fails one of the two tests
+# below. The strings are compared against the document with every run of
+# whitespace collapsed, so a sentence the markdown wraps still matches.
+REMOVED: Tuple[Tuple[str, str], ...] = (
+    ("docs/why-debate.md", "the file the run wrote"),
+    (
+        "docs/design-choices.md",
+        "Evidence collection is a deterministic service, not a model",
+    ),
+    ("docs/submission/description.md", "Evidence collection is a **deterministic service**"),
+    (
+        "docs/submission/description-form.txt",
+        "Evidence collection is a deterministic service",
+    ),
+    ("docs/submission/demo-script.md", "never leaving the lift lobby"),
+    ("docs/submission/demo-script.md", "offline from"),
+    ("docs/integration.md", "the clause ids the ruling refers the reader to"),
+)
+ADDED: Tuple[Tuple[str, str], ...] = (
+    ("docs/why-debate.md", "no line was deleted, inserted, reordered or edited"),
+    (
+        "docs/why-debate.md",
+        "One interrupted attempt on `wild-v2` (2026-10-03 14:14) partly called "
+        "cases 701 and 702 before it was stopped",
+    ),
+    ("docs/design-choices.md", "not wired into the pipeline"),
+    (
+        "docs/design-choices.md",
+        "its output equals the case file's evidence array",
+    ),
+    ("docs/submission/description.md", "deterministic stand-alone tool"),
+    ("docs/submission/description-form.txt", "deterministic stand-alone tool"),
+    (
+        "docs/submission/demo-script.md",
+        "the rider's phone 634-646 m from the pickup point",
+    ),
+    (
+        "docs/submission/demo-script.md",
+        "python3 -m http.server --directory ui/dist",
+    ),
+    (
+        "docs/integration.md",
+        "a list of instructions to a person, each naming the clause it rests on",
+    ),
+)
+
+# Every document that states who wrote the 29-case corpus. Part 56 corrects the
+# author in all of them: the corpus was made with Claude Code, not "by hand".
+CORPUS_AUTHOR_DOCUMENTS: Tuple[str, ...] = (
+    "docs/record.md",
+    "docs/data.md",
+    "docs/submission/qa.md",
+    "ui/site/src/pages/results.html",
+    "ui/site/src/pages/results.zh.html",
+)
+
+# The three spellings the corpus's old author is written in: the markdown's
+# "this team, by hand", and the two results pages' own sentences. Each is a
+# phrase about the corpus, not the whole word "hand", because the record uses
+# "re-run by hand" of the verifier measurement and that sentence is not a claim
+# about who wrote the corpus. The Chinese is escaped so this module is ASCII.
+CORPUS_BY_HAND = "team, by hand"
+CORPUS_BY_HAND_ZH = "\u8bed\u6599\u96c6\u7531\u56e2\u961f\u7f16\u5199"
+CORPUS_WRITTEN_BY_TEAM = "The corpus was written by the team"
+CORPUS_TOOL = "Claude Code"
+
 
 # --------------------------------------------------------------------------
 # Reading the documents
@@ -96,6 +171,15 @@ FABRICATED = "424242"
 def text_of(relative: str) -> str:
     """One repository-relative file, read as text."""
     return (PROJECT_ROOT / relative).read_text(encoding="utf-8")
+
+
+def flat(text: str) -> str:
+    """A document's text with every run of whitespace collapsed to one space.
+
+    A sentence the markdown wraps is one sentence, and a check written against
+    the unwrapped wording must not depend on where the line breaks fell.
+    """
+    return " ".join(text.split())
 
 
 def relative_links(text: str) -> List[str]:
@@ -192,7 +276,11 @@ def digit_runs(text: str) -> Set[str]:
 
 def sourced_numbers() -> Set[str]:
     """Every number a figure in these documents may be read from."""
-    return digit_runs(report_output()) | digit_runs(RECORD.read_text(encoding="utf-8"))
+    return (
+        digit_runs(report_output())
+        | digit_runs(RECORD.read_text(encoding="utf-8"))
+        | digit_runs(TRY_PAGE_FACTS.read_text(encoding="utf-8"))
+    )
 
 
 def unsourced(text: str, sourced: Set[str]) -> List[str]:
@@ -299,6 +387,56 @@ class TheSourcedFiguresTests(unittest.TestCase):
             [FABRICATED],
             unsourced("the cost is {0} USD a case".format(FABRICATED), self.sourced),
         )
+
+
+class TheCorrectionsTests(unittest.TestCase):
+    """Part 56's corrections: the old wording gone, the new wording there."""
+
+    def test_every_corrected_sentence_is_gone(self):
+        for name, phrase in REMOVED:
+            with self.subTest(document=name, phrase=phrase):
+                self.assertNotIn(
+                    phrase,
+                    flat(text_of(name)),
+                    "{0} still carries {1!r}".format(name, phrase),
+                )
+
+    def test_every_replacement_is_present(self):
+        for name, phrase in ADDED:
+            with self.subTest(document=name, phrase=phrase):
+                self.assertIn(
+                    phrase,
+                    flat(text_of(name)),
+                    "{0} does not carry {1!r}".format(name, phrase),
+                )
+
+
+class TheCorpusAuthorTests(unittest.TestCase):
+    """The 29-case corpus's author, said truly in every document that states it."""
+
+    def test_no_document_still_says_the_corpus_was_written_by_hand(self):
+        for name in CORPUS_AUTHOR_DOCUMENTS:
+            with self.subTest(document=name):
+                text = flat(text_of(name))
+                for phrase in (
+                    CORPUS_BY_HAND,
+                    CORPUS_BY_HAND_ZH,
+                    CORPUS_WRITTEN_BY_TEAM,
+                ):
+                    self.assertNotIn(
+                        phrase,
+                        text,
+                        "{0} still carries {1!r} of the corpus".format(name, phrase),
+                    )
+
+    def test_every_document_names_the_tool_the_corpus_was_made_with(self):
+        for name in CORPUS_AUTHOR_DOCUMENTS:
+            with self.subTest(document=name):
+                self.assertIn(
+                    CORPUS_TOOL,
+                    text_of(name),
+                    "{0} does not name {1!r}".format(name, CORPUS_TOOL),
+                )
 
 
 if __name__ == "__main__":

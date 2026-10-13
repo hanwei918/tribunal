@@ -53,7 +53,9 @@ reported as the **agreement** against its own key, and the three are never
 pooled or summed ([the full record](record.md), "Results").
 
 A set that has been run is never re-run, so no figure here is the best of
-several attempts.
+several attempts. One interrupted attempt on `wild-v2` (2026-10-03 14:14) partly
+called cases 701 and 702 before it was stopped; its record was deleted and it is
+not a run ([the full record](record.md), "wild-v2").
 
 ## The tamper-evident event log
 
@@ -66,8 +68,8 @@ no longer agrees with its predecessor.
 As [`tribunal/events.py`](../tribunal/events.py) says in its own words, **the
 chain is not a signature**.
 It cannot prove the file was never rewritten by someone who rewrote all of it;
-it can only prove that the file a reader holds is the file the run wrote, which
-is the question worth being able to answer.
+it shows that no line was deleted, inserted, reordered or edited without every
+hash after it being recomputed.
 
 ## The reference this design comes from
 
