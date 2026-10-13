@@ -248,7 +248,7 @@ class VersionSevenPolicyTests(unittest.TestCase):
         mapped = deviation["traffic_justification_types"]
         self.assertEqual(
             ["congestion", "incident", "closure", "note"],
-            sorted(mapped),
+            list(mapped),
         )
         self.assertEqual(
             {

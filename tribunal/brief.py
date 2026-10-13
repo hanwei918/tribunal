@@ -2948,6 +2948,13 @@ V7_ARRIVAL_TEST_KEY = "arrival_test"
 SCHEDULED_AT_KEY = "scheduled_at"
 FARE_CANCELLATION_FEE_KEY = "cancellation_fee"
 
+# The trip record's own window. POL-RD-23 measures an advisory's active window
+# against it, and the same pair POL-RD-21 reads the messages during the trip
+# between. Named here rather than spelled twice, so the two readers of the trip
+# window cannot drift apart.
+STARTED_AT_KEY = "started_at"
+ENDED_AT_KEY = "ended_at"
+
 # The two profile artifacts POL-GEN-22 reads an optional fraud flag off. They
 # travel unchanged; the authority block reads their counters and changes nothing
 # on them.
@@ -3024,6 +3031,33 @@ V7_EXCESS_FARE_UNAVAILABLE_REASON = (
 V7_FEE_UNAVAILABLE_REASON = (
     "the fare breakdown carries no cancellation-fee line, so POL-NS-22's fee "
     "charged cannot be read off it"
+)
+
+# POL-RD-23's one condition no shape of the record can answer. The schema
+# carries no recommended-route geometry, so where a payload states no
+# ``intersects_route`` the block says the record does not say rather than
+# defaulting the fact to false, and names the Judge as the one who decides it
+# from the advisory's own road, direction and location. The window's note is the
+# same rule for the other fact the record may leave open; the disagreement note
+# is what the block says where the payload's own overlap reading and the one
+# computed from its window differ -- the payload's is reported, and the computed
+# one travels beside it.
+V7_ADVISORY_DETERMINED_BY = "judge"
+V7_ADVISORY_ROUTE_UNDETERMINED_NOTE = (
+    "the record does not say whether this advisory lies on the recommended "
+    "route; the Judge decides from its road, direction and location against the "
+    "trip (POL-RD-23)"
+)
+V7_ADVISORY_WINDOW_UNDETERMINED_NOTE = (
+    "the record does not say whether this advisory's window overlaps the trip "
+    "window; the Judge decides from the advisory's own window against the trip "
+    "(POL-RD-23)"
+)
+V7_ADVISORY_WINDOW_DISAGREEMENT_NOTE = (
+    "the payload states overlaps_trip_window of its own and the advisory's own "
+    "window measured against the trip record's started_at/ended_at gives the "
+    "other reading; the payload's reading is the one reported above, and the "
+    "computed one travels beside it"
 )
 
 
@@ -3348,7 +3382,10 @@ def _v7_kind_names(justification_types: Dict[str, Any]) -> List[str]:
 
 
 def _v7_advisory_block(
-    artifact: Dict[str, Any], justification_types: Dict[str, Any], policy_id: str
+    artifact: Dict[str, Any],
+    justification_types: Dict[str, Any],
+    policy_id: str,
+    trip_payload: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """One traffic advisory's version-7 reading (POL-RD-23).
 
@@ -3357,14 +3394,33 @@ def _v7_advisory_block(
     nothing" are different findings, and POL-GEN-02 gives a MISSING artifact
     weight 0.0 rather than treating it as an absent fact.
 
+    The record holds three advisory shapes and the contract fixes none of them,
+    so the reading comes from :func:`facts.advisory_justification`, which takes
+    each of POL-RD-23's three conditions from whichever field the payload
+    carries: the type from ``type`` or ``advisory_type``, the window from
+    ``active_from``/``active_to`` or ``valid_from``/``valid_to`` measured against
+    the trip record's own window, and whether the advisory lies on the
+    recommended route from the payload's ``intersects_route``.
+
+    Where the payload answers nothing about the recommended route the block
+    publishes ``intersects_route: null`` with ``determined_by: "judge"`` and a
+    sentence saying so, rather than a ``false`` the record does not hold: the
+    schema carries no recommended-route geometry, so the Judge decides from the
+    advisory's road, direction and location, which travel in the block. The
+    ``justifies_reroute`` reading is ``null`` beside it, never ``false``.
+
     The block publishes the policy's own type map, under POL-RD-23, and the kind
     the advisory's type matched, so the comparison the boolean rests on is
-    legible: a reader can see which of the three kinds the type named rather
-    than only that the reroute was or was not justified.
+    legible: a reader can see which of the three kinds the type named rather than
+    only that the reroute was or was not justified.
     """
     evidence_id = artifact["evidence_id"]
+    trip = trip_payload if isinstance(trip_payload, dict) else {}
     reading = facts.advisory_justification(
-        evidence_id, artifact.get("payload"), justification_types
+        evidence_id,
+        artifact.get("payload"),
+        justification_types,
+        (trip.get(STARTED_AT_KEY), trip.get(ENDED_AT_KEY)),
     )
     if not reading["available"]:
         return {
@@ -3375,24 +3431,47 @@ def _v7_advisory_block(
 
     block: Dict[str, Any] = {
         "available": True,
-        "intersects_route": _sourced(reading["intersects_route"], evidence_id),
-        "overlaps_trip_window": _sourced(reading["overlaps_trip_window"], evidence_id),
         "type": _sourced(reading["type"], evidence_id),
         "severity": _sourced(reading["severity"], evidence_id),
-        "admissible_types": _clause_threshold(reading["admissible_types"], policy_id, POL_RD_23),
+        "location": {
+            field: _sourced(value, evidence_id)
+            for field, value in reading["location"].items()
+        },
+        "admissible_types": _clause_threshold(justification_types, policy_id, POL_RD_23),
         "justification_kind": _sourced(reading["justification_kind"], evidence_id),
+        "intersects_route": _sourced(reading["intersects_route"], evidence_id),
+        "overlaps_trip_window": _sourced(reading["overlaps_trip_window"], evidence_id),
         "justifies_reroute": _sourced(reading["justifies_reroute"], evidence_id),
     }
-    if not reading["justifies_reroute"]:
-        # Every condition that failed, not only the first: POL-RD-23's three are
-        # conjunctive, and a judge told only one of them may spend its argument
-        # on a condition the other side then concedes. This is the reading
-        # :func:`_unavailable_accumulation` already takes for POL-NS-06(i).
+    if reading["overlaps_trip_window_computed"] is not None:
+        block["overlaps_trip_window_computed"] = _sourced(
+            reading["overlaps_trip_window_computed"], evidence_id
+        )
+        if reading["window_disagrees"]:
+            block["overlaps_trip_window_note"] = V7_ADVISORY_WINDOW_DISAGREEMENT_NOTE
+    if reading["intersects_route"] is None:
+        block["determined_by"] = V7_ADVISORY_DETERMINED_BY
+
+    if reading["justifies_reroute"] is None:
+        block["undetermined"] = reading["undetermined"]
+        block["reason"] = (
+            V7_ADVISORY_ROUTE_UNDETERMINED_NOTE
+            if reading["intersects_route"] is None
+            else V7_ADVISORY_WINDOW_UNDETERMINED_NOTE
+        )
+    elif not reading["justifies_reroute"]:
+        # Every condition **known** to have failed, not only the first:
+        # POL-RD-23's three are conjunctive, and a judge told only one of them
+        # may spend its argument on a condition the other side then concedes. A
+        # condition the record does not state is not a failure and is not
+        # listed, so the block never reports a fact it does not hold as false.
+        # This is the reading :func:`_unavailable_accumulation` already takes
+        # for POL-NS-06(i).
         failures = []
-        if reading["intersects_route"] is not True:
+        if reading["intersects_route"] is False:
             failures.append("it does not intersect the recommended route")
-        if reading["overlaps_trip_window"] is not True:
-            failures.append("its active window does not overlap the trip window")
+        if reading["overlaps_trip_window"] is False:
+            failures.append("its active window falls outside the trip window")
         if reading["justification_kind"] is None:
             failures.append(
                 "its type {0} is not one of the kinds POL-RD-23 names ({1})".format(
@@ -3747,7 +3826,11 @@ def build_v7_brief(
             updated["evidence_type"] == TRAFFIC_ADVISORY_EVIDENCE_TYPE
         ):
             updated = _attach_derived(
-                updated, V7_KEY, _v7_advisory_block(updated, justification_types, policy_id)
+                updated,
+                V7_KEY,
+                _v7_advisory_block(
+                    updated, justification_types, policy_id, trip_payload
+                ),
             )
         if money_block is not None and updated["evidence_id"] == fare_evidence_id:
             updated = _attach_derived(updated, MONEY_KEY, money_block)

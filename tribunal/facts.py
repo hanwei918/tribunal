@@ -899,6 +899,27 @@ ADVISORY_ARTIFACT_MISSING_REASON = (
     "POL-RD-23 has no traffic data to read"
 )
 
+# The three advisory shapes the record holds, and the fields each spells its own
+# reading with. Nothing here decides which shape is right -- the schema fixes
+# none of them -- so a reader takes the first field it finds, in the order below,
+# and the payload keeps the fields it has.
+#
+# - the corpus shape: ``type``, ``active_from``/``active_to``, ``intersects_route``,
+#   ``overlaps_trip_window``, and the road under ``road_name``;
+# - the LTA shape: ``advisory_type``, ``valid_from``/``valid_to``, the road under
+#   ``road`` with a ``direction`` and a ``location_desc``;
+# - the road-segment shape: ``type``, ``valid_from``/``valid_to``, the road under
+#   ``road`` with a ``segment``.
+ADVISORY_TYPE_FIELDS = ("type", "advisory_type")
+ADVISORY_WINDOW_FIELDS = (("active_from", "active_to"), ("valid_from", "valid_to"))
+ADVISORY_LOCATION_FIELDS = ("road", "road_name", "direction", "location_desc", "segment")
+
+# The short phrases a reading carries where POL-RD-23 cannot be decided: which
+# fact the record leaves unestablished. Not policy values -- each names what the
+# payload does not say, which is the whole reason the reading reports it.
+ADVISORY_UNDETERMINED_ROUTE = "on the recommended route"
+ADVISORY_UNDETERMINED_WINDOW = "whether the advisory's window overlaps the trip"
+
 
 def _instant(stamp: Any) -> Optional[datetime]:
     """One ISO-8601 timestamp as a ``datetime``, or ``None`` when it is not one."""
@@ -1350,6 +1371,85 @@ def arrival_check(
     }
 
 
+def advisory_type_token(payload: Mapping[str, Any]) -> Optional[str]:
+    """The type an advisory is matched on, from whichever shape it holds.
+
+    The corpus and road-segment shapes record ``type``; the LTA shape records
+    ``advisory_type`` and writes it in upper case. The LTA value is upper-cased
+    here so the comparison with the policy's map stays **exact** rather than
+    case-folded in two places; a ``type`` the schema already writes in upper
+    case travels unchanged. Neither field carrying a string leaves the token
+    ``None``, which names no kind rather than a kind guessed from a neighbouring
+    word.
+    """
+    primary, fallback = ADVISORY_TYPE_FIELDS
+    value = payload.get(primary)
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    value = payload.get(fallback)
+    if isinstance(value, str) and value.strip():
+        return value.strip().upper()
+    return None
+
+
+def advisory_window(payload: Mapping[str, Any]) -> Tuple[Any, Any]:
+    """An advisory's own active window, from whichever shape it holds.
+
+    ``active_from``/``active_to`` where the corpus shape writes them,
+    ``valid_from``/``valid_to`` where the LTA and road-segment shapes do. The
+    pair is returned as the record spells it; a payload carrying neither returns
+    ``(None, None)``, which is a window that cannot be established rather than an
+    empty one.
+    """
+    for from_field, to_field in ADVISORY_WINDOW_FIELDS:
+        if payload.get(from_field) is not None or payload.get(to_field) is not None:
+            return payload.get(from_field), payload.get(to_field)
+    return None, None
+
+
+def advisory_location(payload: Mapping[str, Any]) -> Dict[str, Any]:
+    """The road facts an advisory states, from whichever shape it holds.
+
+    The Judge decides the one thing the record does not say -- whether the
+    advisory lies on the recommended route -- from these, so they are carried
+    whether or not the payload answers ``intersects_route``. Only the fields the
+    payload holds are returned: an absent one is absent rather than null.
+    """
+    return {
+        field: payload[field]
+        for field in ADVISORY_LOCATION_FIELDS
+        if payload.get(field) is not None
+    }
+
+
+def window_overlaps(
+    window_from: Any, window_to: Any, trip_from: Any, trip_to: Any
+) -> Optional[bool]:
+    """Whether an advisory's window overlaps the trip's, or ``None`` unknown.
+
+    POL-RD-23 requires the advisory's window to overlap the trip window, and any
+    overlap is an overlap: no minimum duration is required. The trip's own window
+    is the trip record's ``started_at``/``ended_at``, and an end the record does
+    not fix is not read as a boundary it never stated -- a missing trip window
+    leaves the overlap ``None``, and so does a missing advisory window. Only a
+    window known to end before the trip starts, or to start after it ends, is
+    reported ``False``.
+    """
+    trip_start = _instant(trip_from)
+    trip_end = _instant(trip_to)
+    if trip_start is None or trip_end is None:
+        return None
+    start = _instant(window_from)
+    end = _instant(window_to)
+    if start is None and end is None:
+        return None
+    if start is not None and start >= trip_end:
+        return False
+    if end is not None and end <= trip_start:
+        return False
+    return True
+
+
 def justification_kind(advisory_type: Any, types_by_kind: Any) -> Optional[str]:
     """The kind of traffic event an advisory's ``type`` names, or ``None``.
 
@@ -1392,6 +1492,7 @@ def advisory_justification(
     evidence_id: Any,
     payload: Any,
     types_by_kind: Any,
+    trip_window: Any = None,
 ) -> Dict[str, Any]:
     """POL-RD-23: whether one traffic advisory justifies the reroute.
 
@@ -1401,12 +1502,33 @@ def advisory_justification(
     overlaps the trip window. A driver's assertion of traffic with no such data
     does not justify the reroute."
 
-    Three conditions, all of them required: the advisory intersects the
-    recommended route, its window overlaps the trip, and its type is one of the
-    recorded types the policy's ``traffic_justification_types`` map admits.
-    ``types_by_kind`` is that map, read from the loaded policy by the caller --
-    this module still holds no policy value -- and the kind the type matched is
-    reported beside the boolean.
+    Three conditions, all of them required -- and the public contract fixes the
+    shape of none of them. The record holds three: the corpus shape, the LTA
+    shape and the road-segment shape. Each condition is read from whichever
+    field the payload carries.
+
+    - the type is ``type``, or the LTA shape's ``advisory_type`` upper-cased,
+      matched **exactly** against the policy's own ``traffic_justification_types``
+      map. The kind the map gives that type is reported, and ``None`` where the
+      map gives it no kind.
+    - the window is ``active_from``/``active_to`` or ``valid_from``/``valid_to``,
+      measured against the trip record's ``started_at``/``ended_at``. Where the
+      payload states ``overlaps_trip_window`` of its own, the payload's reading
+      is the one reported and the computed one travels beside it.
+    - whether the advisory lies on the recommended route is the payload's
+      ``intersects_route``. **Where the payload has none, nothing is computed and
+      nothing is defaulted to false**: the schema carries no recommended-route
+      geometry, so the reading is ``None`` and the Judge decides from the
+      advisory's road, direction and location.
+
+    ``types_by_kind`` is the policy's own map, read from the loaded policy by the
+    caller -- this module still holds no policy value. ``trip_window`` is the
+    pair ``(started_at, ended_at)`` of the trip record, or ``None``.
+
+    ``justifies_reroute`` is ``True`` only where all three conditions hold,
+    ``False`` where one of them is known not to hold, and ``None`` where the
+    route -- or, with the route established, the window -- is a fact the record
+    does not hold. It is **never** ``False`` for a fact the record does not hold.
 
     A MISSING advisory has no payload at all, which is not the same as an
     advisory that fails the test: the block says which it is.
@@ -1419,19 +1541,41 @@ def advisory_justification(
             "justifies_reroute": False,
         }
 
-    kind = payload.get("type")
-    matched = justification_kind(kind, kinds)
-    return {
+    trip_from, trip_to = trip_window if trip_window else (None, None)
+    token = advisory_type_token(payload)
+    kind = justification_kind(token, kinds)
+    window_from, window_to = advisory_window(payload)
+    computed = window_overlaps(window_from, window_to, trip_from, trip_to)
+    recorded = payload.get("overlaps_trip_window")
+    overlap = computed if recorded is None else recorded
+    intersects = payload.get("intersects_route")
+
+    justifies: Optional[bool]
+    if kind is None or overlap is False or intersects is False:
+        justifies = False
+    elif overlap is True and intersects is True:
+        justifies = True
+    else:
+        justifies = None
+
+    reading: Dict[str, Any] = {
         "available": True,
-        "intersects_route": payload.get("intersects_route"),
-        "overlaps_trip_window": payload.get("overlaps_trip_window"),
-        "type": kind,
+        "type": token,
         "severity": payload.get("severity"),
-        "admissible_types": kinds,
-        "justification_kind": matched,
-        "justifies_reroute": (
-            payload.get("intersects_route") is True
-            and payload.get("overlaps_trip_window") is True
-            and matched is not None
+        "location": advisory_location(payload),
+        "intersects_route": intersects,
+        "overlaps_trip_window": overlap,
+        "overlaps_trip_window_computed": None if recorded is None else computed,
+        "window_disagrees": (
+            recorded is not None and computed is not None and computed != recorded
         ),
+        "justification_kind": kind,
+        "justifies_reroute": justifies,
     }
+    if justifies is None:
+        reading["undetermined"] = (
+            ADVISORY_UNDETERMINED_ROUTE
+            if intersects is None
+            else ADVISORY_UNDETERMINED_WINDOW
+        )
+    return reading

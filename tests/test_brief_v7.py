@@ -581,6 +581,217 @@ class TheDeviationTests(unittest.TestCase):
         self.assertIn("not one of the kinds POL-RD-23 names", block["reason"])
 
 
+class TheAdvisoryShapeTests(unittest.TestCase):
+    """POL-RD-23 reads every advisory shape the record holds.
+
+    The public contract fixes the shape of no condition the clause tests, and the
+    data holds three shapes: the corpus shape (``type``,
+    ``active_from``/``active_to``, ``intersects_route``, ``overlaps_trip_window``),
+    the LTA shape (``advisory_type``, ``valid_from``/``valid_to``, ``road``,
+    ``direction``, ``location_desc``) and the road-segment shape (``type``,
+    ``valid_from``/``valid_to``, ``road``, ``segment``).
+
+    Read only the corpus way, the block told every LTA advisory that it named no
+    type, overlapped no window and did not intersect the route -- case 5011, an
+    accident on the PIE on the recommended route inside the trip window, was
+    told it had no traffic justification at all. The one condition no shape can
+    answer is whether the advisory lies on the recommended route, and that is
+    reported ``null`` with the Judge named as the one who decides it, never
+    ``false``.
+    """
+
+    def dev_v7(self, case_no):
+        """One dev-v7 case, loaded from the set's own directory."""
+        return loader.load_external_set_case(loader.EXTERNAL_DIR / "dev-v7", case_no)
+
+    def block_of(self, case, evidence_id):
+        """One advisory's version-7 block of a built brief."""
+        return derived_block(
+            brief.build_brief_for_case(case, policy_version=7), evidence_id
+        )
+
+    def lta_case(self, case_no, **fields):
+        """A dev-v7 case with its LTA advisory's payload edited in memory only.
+
+        The case files under ``data/`` are frozen, so the record is edited in a
+        copy and the brief is built from that, exactly as :func:`case_with` does
+        for the authority readings.
+        """
+        case = copy.deepcopy(self.dev_v7(case_no))
+        for artifact in case["evidence"]:
+            if artifact["evidence_type"] == "TRAFFIC_ADVISORY":
+                artifact["payload"].update(fields)
+        return case
+
+    def test_dev_v7_5011s_accident_is_an_incident_and_the_route_is_the_judges(self):
+        """The LTA shape: ``advisory_type``, ``valid_from``/``valid_to``, no route.
+
+        Case 5011's advisory is an accident on the PIE, in the trip window. Its
+        type now comes from ``advisory_type``, its window is computed from
+        ``valid_from``/``valid_to`` against the trip record's
+        ``started_at``/``ended_at``, and the route -- the one fact the payload
+        does not state -- is ``null`` with ``determined_by: "judge"`` rather than
+        a ``false`` the record does not hold.
+        """
+        block = self.block_of(self.dev_v7(5011), "EV-ADVIS-05011-01")
+        self.assertIs(block["available"], True)
+        self.assertEqual(block["type"]["value"], "ACCIDENT")
+        self.assertEqual(block["justification_kind"]["value"], "incident")
+        # The payload states no overlap of its own, so the one reading published
+        # is the computed one, and there is no second to disagree with it.
+        self.assertIs(block["overlaps_trip_window"]["value"], True)
+        self.assertNotIn("overlaps_trip_window_computed", block)
+        self.assertIsNone(block["intersects_route"]["value"])
+        self.assertIsNone(block["justifies_reroute"]["value"])
+        self.assertEqual(block["determined_by"], "judge")
+        self.assertEqual(block["undetermined"], "on the recommended route")
+        self.assertEqual(
+            "the record does not say whether this advisory lies on the "
+            "recommended route; the Judge decides from its road, direction and "
+            "location against the trip (POL-RD-23)",
+            block["reason"],
+        )
+        # The facts the Judge decides it from travel in the block.
+        self.assertEqual(
+            block["location"]["road"]["value"], "Pan-Island Expressway (PIE)"
+        )
+        self.assertEqual(block["location"]["direction"]["value"], "towards Changi")
+        self.assertEqual(
+            block["location"]["location_desc"]["value"], "after Adam Road exit"
+        )
+
+    def test_an_lta_window_ending_before_the_trip_starts_justifies_nothing(self):
+        """The window is measured, and the route is not turned into a failure.
+
+        The same advisory with its window moved before the trip's
+        ``started_at``: the overlap is computed ``false``, so POL-RD-23 is not
+        satisfied -- and the reason names the window alone. The route, which this
+        shape never states, is not listed as a second failure, because the block
+        never reports a fact the record does not hold as false.
+        """
+        case = self.lta_case(
+            5011,
+            valid_from="2026-08-28T06:00:00+08:00",
+            valid_to="2026-08-28T07:00:00+08:00",
+        )
+        block = self.block_of(case, "EV-ADVIS-05011-01")
+        self.assertEqual(block["justification_kind"]["value"], "incident")
+        self.assertIs(block["overlaps_trip_window"]["value"], False)
+        self.assertIs(block["justifies_reroute"]["value"], False)
+        self.assertIn("outside the trip window", block["reason"])
+        self.assertNotIn("does not intersect the recommended route", block["reason"])
+
+    def test_an_lta_kerb_restriction_names_no_kind_and_justifies_nothing(self):
+        """A type the policy's own map does not carry, read through the LTA field."""
+        case = self.lta_case(5011, advisory_type="KERB_RESTRICTION")
+        block = self.block_of(case, "EV-ADVIS-05011-01")
+        self.assertEqual(block["type"]["value"], "KERB_RESTRICTION")
+        self.assertIsNone(block["justification_kind"]["value"])
+        self.assertIs(block["justifies_reroute"]["value"], False)
+        self.assertIn("not one of the kinds POL-RD-23 names", block["reason"])
+
+    def test_the_corpus_shape_reads_exactly_as_it_did(self):
+        """Case 104's two advisories and case 902's three, unchanged.
+
+        Both shapes here spell every condition the corpus way, so the three-shape
+        reader must give them the readings the block gave before it: 104's first
+        justifies as an incident, its second fails on the route alone, and 902's
+        three read incident, congestion and no-kind.
+        """
+        first = self.block_of(loader.load_case(104), "EV-ADVIS-00104-01")
+        self.assertEqual(first["type"]["value"], "ACCIDENT")
+        self.assertEqual(first["justification_kind"]["value"], "incident")
+        self.assertIs(first["intersects_route"]["value"], True)
+        self.assertIs(first["overlaps_trip_window"]["value"], True)
+        self.assertIs(first["justifies_reroute"]["value"], True)
+        self.assertNotIn("reason", first)
+
+        second = self.block_of(loader.load_case(104), "EV-ADVIS-00104-02")
+        self.assertIs(second["intersects_route"]["value"], False)
+        self.assertIs(second["justifies_reroute"]["value"], False)
+        self.assertIn("does not intersect the recommended route", second["reason"])
+
+        sample = loader.load_external_set_case(loader.EXTERNAL_DIR / "ryde-v7", 902)
+        expected = (
+            ("EV-ADVIS-00902-01", "VEHICLE_FIRE", "incident", True, True),
+            ("EV-ADVIS-00902-02", "HEAVY_CONGESTION", "congestion", True, True),
+            ("EV-ADVIS-00902-03", "TRAFFIC_FLOW", None, False, False),
+        )
+        for evidence_id, type_value, kind, intersects, justifies in expected:
+            with self.subTest(evidence_id=evidence_id):
+                block = self.block_of(sample, evidence_id)
+                self.assertEqual(block["type"]["value"], type_value)
+                self.assertEqual(block["justification_kind"]["value"], kind)
+                self.assertIs(block["intersects_route"]["value"], intersects)
+                self.assertIs(block["justifies_reroute"]["value"], justifies)
+                # The payload states its own overlap, and the window computed
+                # from it against the trip record agrees with it.
+                self.assertIs(block["overlaps_trip_window"]["value"], True)
+                self.assertIs(block["overlaps_trip_window_computed"]["value"], True)
+                self.assertNotIn("overlaps_trip_window_note", block)
+
+    def test_the_road_segment_shape_builds_and_reads_no_kind(self):
+        """sealed-v3's shape, read from its own payload and from no key.
+
+        sealed-v3 is closed and is never run again; this only proves the reader
+        holds the third shape. Case 4059 is a no-show, so a version-7 brief
+        carries no advisory block for it at all -- POL-RD-23 is a route-deviation
+        clause -- and the payload is read through the block builder directly.
+        Nothing under ``eval/`` is read, and no answer key is opened.
+        """
+        case = loader.load_external_set_case(loader.EXTERNAL_DIR / "sealed-v3", 4059)
+        advisory = next(
+            artifact
+            for artifact in case["evidence"]
+            if artifact["evidence_type"] == "TRAFFIC_ADVISORY"
+        )
+        trip = next(
+            artifact["payload"]
+            for artifact in case["evidence"]
+            if artifact["evidence_type"] == "TRIP_RECORD"
+        )
+        policy = loader.load_policies("ROUTE_DEVIATION", 7)["category"]
+        block = brief._v7_advisory_block(
+            advisory,
+            policy["thresholds"]["traffic_justification_types"],
+            policy["policy_id"],
+            trip,
+        )
+        self.assertIs(block["available"], True)
+        self.assertEqual(block["type"]["value"], "KERB_RESTRICTION")
+        self.assertIsNone(block["justification_kind"]["value"])
+        self.assertIs(block["justifies_reroute"]["value"], False)
+        self.assertIn("not one of the kinds POL-RD-23 names", block["reason"])
+        self.assertEqual(block["location"]["road"]["value"], "Serangoon Road")
+        self.assertIn("bus lane", block["location"]["segment"]["value"])
+
+    def test_the_5011_reading_fails_when_the_advisory_type_fallback_is_removed(self):
+        """The control: the type is the LTA shape's field, not a guess.
+
+        The same case, the same advisory and the same brief, with the reader
+        made to look only at the corpus field ``type``: the accident names no
+        kind and justifies nothing, so the assertions of the 5011 test above are
+        the ones that fail. That is what shows the reading rests on the LTA
+        shape's own type field rather than on anything else in the payload.
+        """
+        case = self.dev_v7(5011)
+        self.assertEqual(
+            self.block_of(case, "EV-ADVIS-05011-01")["justification_kind"]["value"],
+            "incident",
+        )
+
+        def corpus_field_only(payload):
+            value = payload.get("type")
+            return value.strip() if isinstance(value, str) and value.strip() else None
+
+        with mock.patch.object(facts, "advisory_type_token", corpus_field_only):
+            block = self.block_of(case, "EV-ADVIS-05011-01")
+        self.assertIsNone(block["type"]["value"])
+        self.assertIsNone(block["justification_kind"]["value"])
+        self.assertIs(block["justifies_reroute"]["value"], False)
+        self.assertIn("not one of the kinds POL-RD-23 names", block["reason"])
+
+
 class TheArrivalAccuracyFilterTests(unittest.TestCase):
     """POL-NS-21's arrival test, and the policy's rule for its accuracy filter.
 
