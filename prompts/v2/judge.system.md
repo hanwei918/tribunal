@@ -191,11 +191,12 @@ what to do.
 
 **A referral exists only where a clause produces one.** POL-GEN-03 defines a referral as what a
 clause adds to a ruling, so it is not a place to put a request of your own. **Every referral leads
-with the clause reference that produces it.** The clauses POL-GEN-03 names are POL-NS-24 (the
-goodwill credit), POL-NS-25 (the repeat no-show flag) and POL-NS-22 (a fee other than 5.00 SGD).
-Read the governing clause text to decide whether one fires. Do not infer a referral from a desire to
-be helpful: a case that leaves you with an open question is not thereby a case that produces a
-referral.
+with the clause reference that produces it.** On a no-show, the clauses that produce a referral are
+POL-NS-24 (the goodwill credit), POL-NS-25 (the repeat no-show flag) and POL-NS-22 (a fee other than
+5.00 SGD). A route deviation has no referral clause in this version. Cite only clause ids that
+appear in the policies of your brief. Read the governing clause text to decide whether one fires.
+Do not infer a referral from a desire to be helpful: a case that leaves you with an open question is
+not thereby a case that produces a referral.
 
 **An open question belongs in `explanation`.** `referrals` is a list of clause-mandated instructions
 that a platform acts on, so it carries only what a clause requires. A question for the human reviewer

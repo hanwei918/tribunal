@@ -3075,8 +3075,20 @@ V7_ADVISORY_WINDOW_DISAGREEMENT_NOTE = (
 # the amounts in front of it.
 #
 # None of this is a policy value: every line is POL-GEN-03's own five values and
-# its own party-relative reading, written out for one filer, and the two clauses
-# that can add a referral or fix a fee are named where they bear.
+# its own party-relative reading, written out for one filer, and the clause that
+# can fix a fee is named where it bears.
+#
+# **The words are category-aware, because a clause id may be named only where
+# the case's own policy holds it.** A brief loads the general policy and its own
+# category's and nothing else, so a no-show clause does not exist in a route
+# deviation's brief. The second dev-v7 run (2026-10-14 00:5x) voided two of the
+# four judge drafts on the rider-filed route deviations 5001 and 5003 with
+# ``DRAFT_CLAUSE_UNRESOLVED: 'POL-NS-22' does not resolve in the loaded
+# policy``: the rider-filed words named POL-NS-22's sentence on every category,
+# and a route-deviation brief loads no no-show clause for a draft that followed
+# the frame to cite. The three sentences a rider's claim can end in travel on
+# either category -- they are POL-GEN-03's own and name no category clause --
+# and the no-show sentence travels only where the record is a no-show.
 V7_FILING_RIDER_WORDS = (
     "the rider is owed {contested} SGD -> FULL_REFUND, with amount_sgd "
     "{contested} (the whole contested amount) and driver_compensation_sgd null",
@@ -3084,8 +3096,13 @@ V7_FILING_RIDER_WORDS = (
     "that is owed",
     "the rider is owed nothing -> NO_ACTION, with both amounts null: the rider's "
     "claim is not supported and the present state stands",
+)
+# POL-NS-22's sentence, and the only line here that names a category clause: the
+# clause is the no-show policy's own, so it is published on a no-show and on
+# nothing else.
+V7_FILING_RIDER_NOSHOW_WORD = (
     "on a no-show where the fee stands -> DRIVER_COMPENSATION, with amount_sgd "
-    "and driver_compensation_sgd both the fee (POL-NS-22)",
+    "and driver_compensation_sgd both the fee (POL-NS-22)"
 )
 V7_FILING_DRIVER_CONTESTING_WORDS = (
     "the rider is owed the {moved} SGD already refunded -> the driver's claim "
@@ -3664,6 +3681,7 @@ def _v7_moved_event_names(events: List[Dict[str, Any]]) -> str:
 
 def _v7_filing_frame(
     case: Dict[str, Any],
+    category: str,
     fare_payload: Any,
     trip_payload: Any,
 ) -> Dict[str, Any]:
@@ -3700,6 +3718,14 @@ def _v7_filing_frame(
     files with nothing already moved is read under POL-GEN-03's general
     vocabulary, because the clause's driver-specific reading is the one about
     money already moved and this record has none.
+
+    ``category`` is the case's own, and it decides one line: POL-NS-22's
+    no-show sentence is published only on a no-show, because that clause is the
+    no-show policy's and a route-deviation brief does not load it. A brief may
+    name only the clauses its own ``policies`` hold, and a draft that followed
+    the frame onto a clause the brief does not carry is a draft the judge
+    cannot resolve -- which is exactly what the second dev-v7 run recorded on
+    the rider-filed route deviations 5001 and 5003.
     """
     dispute = case["dispute"] if isinstance(case.get("dispute"), dict) else {}
     filed_by = dispute.get("filed_by")
@@ -3712,6 +3738,8 @@ def _v7_filing_frame(
             template.format(contested=money.payable_string(contested))
             for template in V7_FILING_RIDER_WORDS
         ]
+        if category == NO_SHOW_CHARGE_CATEGORY:
+            words.append(V7_FILING_RIDER_NOSHOW_WORD)
         basis = V7_FILING_RIDER_BASIS
     elif already_moved > money.ZERO:
         moved = money.payable_string(already_moved)
@@ -3777,8 +3805,8 @@ def _v7_authority(
     ``filing_frame`` is POL-GEN-03's reading of the same record, and it belongs
     in this block because it is about who decides what: the party who filed, the
     amount they contest and the money the platform has already moved, with the
-    clause's outcome vocabulary written out for that party by
-    :func:`_v7_filing_frame`.
+    clause's outcome vocabulary written out for that party, and for this case's
+    own category, by :func:`_v7_filing_frame`.
     """
     thresholds = _v7_structured(general_policy, V7_THRESHOLDS_KEY)
     dispute = case["dispute"] if isinstance(case.get("dispute"), dict) else {}
@@ -3857,7 +3885,9 @@ def _v7_authority(
     # is read off the fare breakdown beside them.
     fare_payload, _fare_evidence_id = _v7_evidence_payload(case, FARE_EVIDENCE_TYPE)
     trip_payload, _trip_evidence_id = _v7_evidence_payload(case, TRIP_EVIDENCE_TYPE)
-    authority["filing_frame"] = _v7_filing_frame(case, fare_payload, trip_payload)
+    authority["filing_frame"] = _v7_filing_frame(
+        case, category, fare_payload, trip_payload
+    )
     if category == ROUTE_DEVIATION_CATEGORY:
         measured = deviation or {}
         available = bool(measured.get("available"))

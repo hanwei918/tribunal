@@ -104,10 +104,11 @@ V6_LOADED_SHA256 = {
 PROMPTS_V1_SHA256 = "5b8510cd900aa9da58e06fd2a865f94df5ede1bdb3c73006077576411858ea61"
 
 # The same digest over ``prompts/v2/``, which is the version-7 set. It moved in
-# part 79, when the judge's prompt gained the party-relative paragraph: the
-# prompt is the set's own, so its digest is pinned here rather than left to
-# drift, exactly as ``prompts/v1/`` is.
-PROMPTS_V2_SHA256 = "2e9de056012938cfd214582aee8d30d882615582f16482456a5b431fefd170f1"
+# part 79, when the judge's prompt gained the party-relative paragraph, and
+# again in part 79c, when the referral paragraph was scoped to the category that
+# has the clauses: the prompt is the set's own, so its digest is pinned here
+# rather than left to drift, exactly as ``prompts/v1/`` is.
+PROMPTS_V2_SHA256 = "22632cd34844e0081074113a839ba6ace2b861ccd53624978403e6b8c0e1f3d5"
 
 # The five prompt files a run reads from its prompts directory.
 RUN_PROMPT_FILES = (

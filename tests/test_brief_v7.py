@@ -8,9 +8,12 @@ driver reached the pickup by the deadline, the deviation between the
 whether a traffic advisory justifies the reroute, and the value band and
 confidence a ruling needs. Since part 79 the frame POL-GEN-03's party-relative
 reading rests on travels too: the party who filed, the amount they contest and
-the money the platform has already moved. The version-6 path also reads clauses
-version 7 does not have, so version 7 has a builder of its own, entered at the
-top of ``build_brief_for_case`` when ``policy_version >= 7``.
+the money the platform has already moved. Since part 79c that frame's outcome
+words are the case's **own category's**, because a brief may name only the
+clauses its own ``policies`` hold: the no-show sentence names POL-NS-22, and a
+route-deviation brief loads no no-show clause at all. The version-6 path also
+reads clauses version 7 does not have, so version 7 has a builder of its own,
+entered at the top of ``build_brief_for_case`` when ``policy_version >= 7``.
 
 **The one rule this module holds the builder to: versions 1 to 6 do not move.**
 The first class below rebuilds every recorded version-6 digest from the runs
@@ -21,9 +24,13 @@ value, so the comparison is shown to be capable of failing.
 
 The rest of the module tests the new arithmetic and the new readings against
 the policy's own numbers, over the fixtures in ``tests/fixtures/v7/`` for the
-contact reading and over the real corpus for everything else. The last class
-builds a version-7 brief for every corpus case and for the organisers' sample
-case and holds each one to ``_assert_no_forbidden_keys``.
+contact reading and over the real corpus for everything else. Two classes read
+the version-7 sets instead: one builds a version-7 brief for every ``dev-v7``
+and ``ryde-v7`` case and holds every clause id it names outside ``policies`` to
+the clauses those policies carry, and one reads the referral paragraph of the
+two prompt sets. The last class builds a version-7 brief for every corpus case
+and for the organisers' sample case and holds each one to
+``_assert_no_forbidden_keys``.
 
 No model is called and no sealed root is read.
 """
@@ -33,6 +40,7 @@ from __future__ import annotations
 import copy
 import json
 import math
+import re
 import sys
 import unittest
 from decimal import Decimal
@@ -54,6 +62,29 @@ INDEX_PATH = PROJECT_ROOT / "data" / "index.json"
 # traffic-incident vocabulary. Loaded through the loader every other version-7
 # test uses, so its case files are held to their own index's digests.
 DEV_V7_DIR = loader.EXTERNAL_DIR / "dev-v7"
+
+# The organisers' sample case converted to version 7: two cases, one of each
+# category, both filed by the rider. It is the second set the guard below reads.
+RYDE_V7_DIR = loader.EXTERNAL_DIR / "ryde-v7"
+
+# The two prompt sets: ``v1`` is the version-6 set and must not move, and ``v2``
+# is the version-7 set. The judge's system prompt is where a draft learns which
+# clauses can produce a referral.
+PROMPTS_V1_DIR = PROJECT_ROOT / "prompts" / "v1"
+PROMPTS_V2_DIR = PROJECT_ROOT / "prompts" / "v2"
+JUDGE_PROMPT_FILE = "judge.system.md"
+
+# The clause-id shape the policy's own clauses are named by, and the two field
+# names a version-7 brief carries that are prose rather than a citation:
+# ``admissibility.notes`` is the conversion's own account of the record -- a
+# converted route deviation's notes name POL-NS-02 and POL-NS-07, which are
+# version-6 ids and are in no version-7 policy -- and a ``note`` is a block's own
+# sentence about the record, which names the clause it describes (the trace note
+# names POL-RD-22 on either category). Neither is the brief citing a clause for a
+# reading it publishes, so neither is read by the guard; every other string of
+# the brief is.
+CLAUSE_ID_RE = re.compile(r"POL-[A-Z]{2,4}-\d{2}")
+NOT_A_CITATION_FIELDS = ("note", "notes")
 
 # The recorded version-6 runs. A corpus run lives at ``runs/<V6_RUN_DIRNAME>/<slug>/``
 # and any other set's at ``runs/<set>/<V6_RUN_DIRNAME>/<slug>/``. Two of those set
@@ -235,6 +266,61 @@ def money_block_of(case):
         if artifact["evidence_type"] == "FARE_BREAKDOWN":
             return (artifact.get("payload") or {}).get("derived", {}).get("money")
     raise AssertionError("no fare breakdown in the brief")
+
+
+def external_set_case_numbers(directory):
+    """The case numbers an external set's own index records, in its own order."""
+    index = json.loads((directory / "index.json").read_text(encoding="utf-8"))
+    return [entry["case_no"] for entry in index]
+
+
+def named_clause_ids(node, path=()):
+    """Every ``POL-XX-NN`` id a brief's own words name, with where it was found.
+
+    One ``(path, id)`` per occurrence, in :func:`leaf_paths`'s walk order, the
+    path as the tuple of keys and indices a reader can follow into the brief. A
+    ``note`` or ``notes`` field is skipped -- :data:`NOT_A_CITATION_FIELDS` says
+    why those are the record's words rather than the brief's citation -- and
+    every other string is read, so an id named inside a sentence counts exactly
+    as an id named by a ``clause_id``.
+    """
+    if isinstance(node, dict):
+        for key, value in node.items():
+            if key in NOT_A_CITATION_FIELDS:
+                continue
+            yield from named_clause_ids(value, path + (key,))
+    elif isinstance(node, (list, tuple)):
+        for index, value in enumerate(node):
+            yield from named_clause_ids(value, path + (index,))
+    elif isinstance(node, str):
+        for found in CLAUSE_ID_RE.findall(node):
+            yield path, found
+
+
+def the_clause_ids_the_brief_holds(built):
+    """Every clause id the brief's own ``policies`` carry.
+
+    Read from the brief and not from ``policy/``: the question the guard asks is
+    whether the brief names a clause *it* carries, and the brief is what the
+    judge is handed.
+    """
+    held = set()
+    for document in built["policies"].values():
+        for clause in (document or {}).get("clauses") or []:
+            held.add(clause["id"])
+    return held
+
+
+def version_seven_briefs():
+    """Every brief the guard reads: ``dev-v7``'s 40 cases and ``ryde-v7``'s 2."""
+    briefs = []
+    for set_name, directory in (("dev-v7", DEV_V7_DIR), ("ryde-v7", RYDE_V7_DIR)):
+        for case_no in external_set_case_numbers(directory):
+            case = loader.load_external_set_case(directory, case_no)
+            briefs.append(
+                (set_name, case_no, brief.build_brief_for_case(case, policy_version=7))
+            )
+    return briefs
 
 
 class TheRecordedVersionSixDigestsTests(unittest.TestCase):
@@ -1376,6 +1462,15 @@ class TheFilingFrameTests(unittest.TestCase):
     ``case.authority.filing_frame`` states the party, the amount contested, the
     money already moved and the clause's vocabulary for that party, so the
     ruling value is read off the clause rather than inferred from the claim.
+
+    Since part 79c those words are the case's **own category's**, because a
+    brief may name only the clauses its own ``policies`` hold. The second dev-v7
+    run (2026-10-14 00:5x) voided two of the four judge drafts on the rider-filed
+    route deviations 5001 and 5003 with ``DRAFT_CLAUSE_UNRESOLVED: 'POL-NS-22'
+    does not resolve in the loaded policy``: the rider-filed words carried
+    POL-NS-22's no-show sentence on every category, and a route-deviation brief
+    loads no no-show clause. A rider-filed route deviation now names no POL-NS
+    id at all, and the sentence is still there on a no-show.
     """
 
     def test_dev_v7_5006_the_driver_filed_and_the_frame_names_that_outcome(self):
@@ -1405,7 +1500,7 @@ class TheFilingFrameTests(unittest.TestCase):
         self.assertEqual(Decimal("1.37"), figure["value"])
         self.assertEqual("POL-GEN-03", figure["clause_id"])
 
-    def test_dev_v7_5001_the_rider_filed_and_nothing_has_moved(self):
+    def test_dev_v7_5001_the_rider_filed_a_route_deviation_and_nothing_has_moved(self):
         frame = filing_frame_of(dev_v7_case(5001))
         self.assertEqual("RIDER", frame["filed_by"])
         self.assertEqual(Decimal("3.00"), frame["contested_sgd"])
@@ -1414,8 +1509,47 @@ class TheFilingFrameTests(unittest.TestCase):
         words = " ".join(frame["outcome_words"])
         self.assertIn("the rider is owed 3.00 SGD -> FULL_REFUND", words)
         self.assertIn("the rider is owed nothing -> NO_ACTION", words)
-        self.assertIn("DRIVER_COMPENSATION", words)
         self.assertNotIn("the driver's claim fails", words)
+        # A route deviation: no no-show sentence, and no no-show clause id. The
+        # clause is the no-show policy's own and this brief does not load it.
+        self.assertNotIn("DRIVER_COMPENSATION", words)
+        self.assertNotIn("no-show", words)
+        self.assertNotIn("POL-NS", words)
+
+    def test_dev_v7_5051_the_rider_filed_a_no_show_and_keeps_the_fee_sentence(self):
+        frame = filing_frame_of(dev_v7_case(5051))
+        self.assertEqual("RIDER", frame["filed_by"])
+        self.assertEqual(Decimal("5.00"), frame["contested_sgd"])
+        words = " ".join(frame["outcome_words"])
+        self.assertIn("the rider is owed 5.00 SGD -> FULL_REFUND", words)
+        self.assertIn(
+            "on a no-show where the fee stands -> DRIVER_COMPENSATION, with "
+            "amount_sgd and driver_compensation_sgd both the fee (POL-NS-22)",
+            words,
+        )
+        # The clause is this brief's own: a no-show loads the no-show policy.
+        self.assertIn("POL-NS-22", the_clause_ids_the_brief_holds(
+            brief.build_brief_for_case(dev_v7_case(5051), policy_version=7)
+        ))
+
+    def test_a_driver_filed_frame_names_no_category_clause_either_way(self):
+        """The driver-filed words are POL-GEN-03's own, so they name no clause.
+
+        ``5058`` is a no-show and ``5006`` a route deviation; both are
+        driver-filed, both contest money the platform has already moved, and
+        both carry the same three sentences -- which is what the frame published
+        before part 79c and still does.
+        """
+        for case_no in (5006, 5058):
+            with self.subTest(case=case_no):
+                frame = filing_frame_of(dev_v7_case(case_no))
+                words = " ".join(frame["outcome_words"])
+                self.assertEqual(3, len(frame["outcome_words"]))
+                self.assertIn("the rider is owed the", words)
+                self.assertIn("the driver is owed the whole", words)
+                self.assertIn("the driver is owed part of the", words)
+                self.assertNotIn("POL-NS", words)
+                self.assertNotIn("POL-RD", words)
 
     def test_dev_v7_5058_the_reversed_fee_is_what_has_already_moved(self):
         """A driver-filed no-show: the fee was charged, then reversed."""
@@ -1452,6 +1586,88 @@ class TheFilingFrameTests(unittest.TestCase):
             " ".join(frame["outcome_words"]),
         )
         self.assertEqual(Decimal("0"), block["refund_already_issued_sgd"]["value"])
+
+
+class NoBriefNamesAClauseItsOwnPolicyLacksTests(unittest.TestCase):
+    """A version-7 brief names only clause ids its own ``policies`` hold.
+
+    A brief loads the general policy and **one** category's and nothing else, so
+    a no-show clause does not exist in a route-deviation brief and the other way
+    round. The second dev-v7 run (2026-10-14 00:5x) voided two of the four judge
+    drafts on the rider-filed route deviations 5001 and 5003 with
+    ``DRAFT_CLAUSE_UNRESOLVED: 'POL-NS-22' does not resolve in the loaded
+    policy``, because the filing frame published POL-NS-22's no-show sentence on
+    every category. This is the guard for the whole class rather than for that
+    one sentence: every ``POL-XX-NN`` id a version-7 brief names outside its
+    ``policies`` -- in a derived block, in the money block, in ``authority`` --
+    is the id of a clause those policies carry. ``note`` and ``notes`` fields are
+    not read; :data:`NOT_A_CITATION_FIELDS` says why they are the record's words
+    rather than the brief's citation.
+
+    The control reverts part 79c's category-awareness -- the no-show sentence
+    back in the words every rider-filed case gets -- and shows the guard fire on
+    5001, the case the sheet names.
+    """
+
+    def test_every_dev_v7_and_ryde_v7_brief_names_only_its_own_clauses(self):
+        briefs = version_seven_briefs()
+        self.assertEqual(42, len(briefs))
+        for set_name, case_no, built in briefs:
+            held = the_clause_ids_the_brief_holds(built)
+            for path, found in named_clause_ids(built["case"]):
+                with self.subTest(set=set_name, case=case_no, named=found):
+                    self.assertIn(
+                        found,
+                        held,
+                        "the {0} brief of case {1} names {2} at {3}, which its own "
+                        "policies do not carry".format(
+                            set_name, case_no, found, the_json_path(path)
+                        ),
+                    )
+
+    def test_the_guard_fires_when_the_frame_names_the_other_categorys_clause(self):
+        reverted = brief.V7_FILING_RIDER_WORDS + (brief.V7_FILING_RIDER_NOSHOW_WORD,)
+        with mock.patch.object(brief, "V7_FILING_RIDER_WORDS", reverted):
+            built = brief.build_brief_for_case(dev_v7_case(5001), policy_version=7)
+        named = [found for _path, found in named_clause_ids(built["case"])]
+        self.assertIn("POL-NS-22", named)
+        self.assertNotIn("POL-NS-22", the_clause_ids_the_brief_holds(built))
+
+
+class TheReferralParagraphIsScopedToItsCategoryTests(unittest.TestCase):
+    """``prompts/v2`` says which clauses produce a referral, and which category has them.
+
+    The judge prompt is where a draft learns that a referral exists only where a
+    clause produces one. The clauses POL-GEN-03 names are the no-show policy's,
+    so the version-7 paragraph says so and tells the judge to cite only clause
+    ids its own brief's policies carry. ``prompts/v1`` is the version-6 set and
+    keeps the paragraph it had, naming its own clauses.
+    """
+
+    def test_prompts_v2_scopes_the_referral_clauses_to_a_no_show(self):
+        words = " ".join(
+            (PROMPTS_V2_DIR / JUDGE_PROMPT_FILE).read_text(encoding="utf-8").split()
+        )
+        self.assertIn(
+            "On a no-show, the clauses that produce a referral are POL-NS-24 (the "
+            "goodwill credit), POL-NS-25 (the repeat no-show flag) and POL-NS-22 "
+            "(a fee other than 5.00 SGD).",
+            words,
+        )
+        self.assertIn("A route deviation has no referral clause in this version.", words)
+        self.assertIn(
+            "Cite only clause ids that appear in the policies of your brief.", words
+        )
+
+    def test_prompts_v1_keeps_its_own_referral_paragraph(self):
+        words = " ".join(
+            (PROMPTS_V1_DIR / JUDGE_PROMPT_FILE).read_text(encoding="utf-8").split()
+        )
+        self.assertIn("The clauses POL-GEN-03 names are POL-RD-06(c)", words)
+        self.assertNotIn("On a no-show, the clauses that produce a referral are", words)
+        self.assertNotIn(
+            "Cite only clause ids that appear in the policies of your brief.", words
+        )
 
 
 class EveryVersionSevenBriefBuildsTests(unittest.TestCase):
