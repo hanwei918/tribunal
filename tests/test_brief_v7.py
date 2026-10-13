@@ -6,9 +6,11 @@ called before cancelling, when the free wait started and ended, whether the
 driver reached the pickup by the deadline, the deviation between the
 **recorded** distances and the excess distance fare POL-RD-24 charges on it,
 whether a traffic advisory justifies the reroute, and the value band and
-confidence a ruling needs. The version-6 path also reads clauses version 7 does
-not have, so version 7 has a builder of its own, entered at the top of
-``build_brief_for_case`` when ``policy_version >= 7``.
+confidence a ruling needs. Since part 79 the frame POL-GEN-03's party-relative
+reading rests on travels too: the party who filed, the amount they contest and
+the money the platform has already moved. The version-6 path also reads clauses
+version 7 does not have, so version 7 has a builder of its own, entered at the
+top of ``build_brief_for_case`` when ``policy_version >= 7``.
 
 **The one rule this module holds the builder to: versions 1 to 6 do not move.**
 The first class below rebuilds every recorded version-6 digest from the runs
@@ -213,6 +215,26 @@ def authority_of(case):
         name: (item["value"] if isinstance(item, dict) and "value" in item else item)
         for name, item in brief_case["case"]["authority"].items()
     }
+
+
+def dev_v7_case(case_no):
+    """One dev-v7 case, loaded from the set's own directory."""
+    return loader.load_external_set_case(DEV_V7_DIR, case_no)
+
+
+def filing_frame_of(case):
+    """``case.authority.filing_frame`` of a version-7 brief."""
+    built = brief.build_brief_for_case(case, policy_version=7)
+    return built["case"]["authority"]["filing_frame"]
+
+
+def money_block_of(case):
+    """The fare breakdown's version-7 money block of a built brief."""
+    built = brief.build_brief_for_case(case, policy_version=7)
+    for artifact in built["case"]["evidence"]:
+        if artifact["evidence_type"] == "FARE_BREAKDOWN":
+            return (artifact.get("payload") or {}).get("derived", {}).get("money")
+    raise AssertionError("no fare breakdown in the brief")
 
 
 class TheRecordedVersionSixDigestsTests(unittest.TestCase):
@@ -1337,6 +1359,99 @@ class TheAuthorityTests(unittest.TestCase):
         for artifact in source["evidence"]:
             if artifact["evidence_type"] in profiles:
                 self.assertEqual(artifact["payload"], profiles[artifact["evidence_type"]])
+
+
+class TheFilingFrameTests(unittest.TestCase):
+    """POL-GEN-03 is party-relative: the frame names the outcome for the filer.
+
+    The first dev-v7 run got every driver-filed case wrong in the same way. A
+    driver-filed route deviation where the platform had already refunded the
+    rider and recovered the amount from the driver -- ``refund_issued_sgd`` > 0,
+    a ``fare_adjusted`` event -- is not a case in which part of the charge comes
+    back: the rider is owed exactly the excess distance fare already refunded,
+    the driver is contesting that, and POL-GEN-03's own words make the ruling
+    NO_ACTION, "the filing party's claim is not supported and the present state
+    stands". The facts and the money were right; the ruling value was not.
+
+    ``case.authority.filing_frame`` states the party, the amount contested, the
+    money already moved and the clause's vocabulary for that party, so the
+    ruling value is read off the clause rather than inferred from the claim.
+    """
+
+    def test_dev_v7_5006_the_driver_filed_and_the_frame_names_that_outcome(self):
+        frame = filing_frame_of(dev_v7_case(5006))
+        self.assertEqual("POL-GEN-03", frame["clause_id"])
+        self.assertEqual("DRIVER", frame["filed_by"])
+        self.assertEqual(Decimal("1.37"), frame["contested_sgd"])
+        self.assertEqual(Decimal("1.37"), frame["already_moved"])
+        self.assertEqual(
+            [{"event_type": "fare_adjusted", "at": "2026-08-19T01:56:34+08:00"}],
+            frame["already_moved_events"],
+        )
+        words = " ".join(frame["outcome_words"])
+        # The driver-filed sentences, each naming the figure already moved.
+        self.assertIn(
+            "the rider is owed the 1.37 SGD already refunded -> the driver's "
+            "claim fails and the present state stands: NO_ACTION",
+            words,
+        )
+        self.assertIn("the driver is owed the whole 1.37 SGD back", words)
+        self.assertIn("the driver is owed part of the 1.37 SGD back", words)
+        # Not the rider-filed vocabulary: the rider did not file this dispute.
+        self.assertNotIn("the rider is owed 1.37 SGD -> FULL_REFUND", words)
+
+    def test_dev_v7_5006_the_money_block_publishes_what_was_already_issued(self):
+        figure = money_block_of(dev_v7_case(5006))["refund_already_issued_sgd"]
+        self.assertEqual(Decimal("1.37"), figure["value"])
+        self.assertEqual("POL-GEN-03", figure["clause_id"])
+
+    def test_dev_v7_5001_the_rider_filed_and_nothing_has_moved(self):
+        frame = filing_frame_of(dev_v7_case(5001))
+        self.assertEqual("RIDER", frame["filed_by"])
+        self.assertEqual(Decimal("3.00"), frame["contested_sgd"])
+        self.assertEqual(Decimal("0"), frame["already_moved"])
+        self.assertEqual([], frame["already_moved_events"])
+        words = " ".join(frame["outcome_words"])
+        self.assertIn("the rider is owed 3.00 SGD -> FULL_REFUND", words)
+        self.assertIn("the rider is owed nothing -> NO_ACTION", words)
+        self.assertIn("DRIVER_COMPENSATION", words)
+        self.assertNotIn("the driver's claim fails", words)
+
+    def test_dev_v7_5058_the_reversed_fee_is_what_has_already_moved(self):
+        """A driver-filed no-show: the fee was charged, then reversed."""
+        case = dev_v7_case(5058)
+        frame = filing_frame_of(case)
+        refund = next(
+            artifact["payload"]["refund_issued_sgd"]
+            for artifact in case["evidence"]
+            if artifact["evidence_type"] == "FARE_BREAKDOWN"
+        )
+        self.assertEqual("DRIVER", frame["filed_by"])
+        self.assertEqual(refund, frame["already_moved"])
+        self.assertEqual(Decimal("5.00"), frame["already_moved"])
+        self.assertEqual(
+            [{"event_type": "fee_reversed", "at": "2026-08-24T07:59:40+08:00"}],
+            frame["already_moved_events"],
+        )
+
+    def test_the_5006_reading_fails_when_the_refund_field_is_ignored(self):
+        """The control: ignore ``refund_issued_sgd`` and the 5006 reading does not hold.
+
+        ``money.refund_already_issued`` is the one reader of the field, so
+        patching it to zero is exactly "the field is ignored": the frame reads
+        no money moved, takes the reading for a driver who filed with nothing
+        already moved, and the money block publishes 0. Every assertion the 5006
+        test makes about the amount then fails.
+        """
+        with mock.patch.object(money, "refund_already_issued", return_value=money.ZERO):
+            frame = filing_frame_of(dev_v7_case(5006))
+            block = money_block_of(dev_v7_case(5006))
+        self.assertEqual(Decimal("0"), frame["already_moved"])
+        self.assertNotIn(
+            "the driver is owed the whole 1.37 SGD back",
+            " ".join(frame["outcome_words"]),
+        )
+        self.assertEqual(Decimal("0"), block["refund_already_issued_sgd"]["value"])
 
 
 class EveryVersionSevenBriefBuildsTests(unittest.TestCase):

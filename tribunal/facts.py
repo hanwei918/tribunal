@@ -1246,6 +1246,51 @@ def messages_during_trip(
     return during
 
 
+# The two trip-record events that record money the platform has already moved
+# against a party: an interim adjustment after a rider route complaint (a
+# deviation's refund, recovered from the driver) and an interim reversal of a
+# cancellation fee (the same move on a no-show). Named here once, because
+# POL-GEN-03's party-relative reading turns on *whether* money has moved and the
+# record states it in these two events and nowhere else.
+MOVED_MONEY_EVENT_TYPES = ("fare_adjusted", "fee_reversed")
+
+# The two fields of a trip event this reading keeps. A trip event carries no id
+# -- the schema fixes none -- so an event is named by what it is and when it
+# happened, which is what a ruling citing it can quote.
+EVENT_TYPE_KEY = "event_type"
+EVENT_AT_KEY = "at"
+
+
+def money_already_moved_events(trip_payload: Any) -> List[Dict[str, Any]]:
+    """The trip record's own events that record money the platform has moved.
+
+    POL-GEN-03 makes a ruling party-relative, so whether the platform has
+    already taken money from the party now contesting it is the fact the ruling
+    turns on, and the trip record is where the record states it: a
+    ``fare_adjusted`` event is a route deviation's refund already issued to the
+    rider and recovered from the driver, and a ``fee_reversed`` event is the
+    same move on a no-show fee.
+
+    Every such event is reported, in the record's own order, with its type and
+    its time. Nothing is decided here: the events say *that* money moved, and
+    the amount it moved is read off the fare breakdown by
+    :func:`money.refund_already_issued`. An event of any other type is not
+    reported -- a booking, an arrival and a completion record no money moved.
+    """
+    if not isinstance(trip_payload, Mapping):
+        return []
+    found: List[Dict[str, Any]] = []
+    for event in trip_payload.get("events") or []:
+        if not isinstance(event, Mapping):
+            continue
+        if event.get(EVENT_TYPE_KEY) in MOVED_MONEY_EVENT_TYPES:
+            found.append({
+                EVENT_TYPE_KEY: event.get(EVENT_TYPE_KEY),
+                EVENT_AT_KEY: event.get(EVENT_AT_KEY),
+            })
+    return found
+
+
 def trace_summary(payload: Any) -> Dict[str, Any]:
     """POL-RD-22's informative trace figures, taken from the trace's own summary.
 

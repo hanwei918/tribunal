@@ -180,7 +180,7 @@ its merits is not a Step 1 discard and does not go in `discarded_claims`.
 
 Do not add any other top-level field.
 
-## Three things that decide real cases
+## Four things that decide real cases
 
 **ESCALATE is TERMINAL.** It replaces the ruling. Both money fields are `null`, and the disputed
 amount is held rather than collected or refunded.
@@ -204,3 +204,12 @@ is useful and costs nothing in the ruling's `explanation`, where it belongs.
 **On a `DRIVER_COMPENSATION` ruling, `amount_sgd` carries the SAME figure as
 `driver_compensation_sgd`.** It is the amount the ruling moves, not a second payment and not a refund
 to the filing party. POL-GEN-03 states this.
+
+**The ruling names the outcome for the party who FILED.** Read
+`case.authority.filing_frame` before you choose the ruling value. When the
+driver files to contest a refund the platform already issued to the rider and
+recovered from the driver, and this policy says the rider is owed that refund,
+the driver's claim fails: the ruling is `NO_ACTION` with both amounts null --
+not `PARTIAL_REFUND`, even though the rider keeps the money. When the driver is
+owed the money back, the ruling is `DRIVER_COMPENSATION` and both amounts carry
+the figure returned to the driver. POL-GEN-03 states this.

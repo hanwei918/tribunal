@@ -103,6 +103,12 @@ V6_LOADED_SHA256 = {
 # record it over ``prompts/v1/``, so ``v1`` must not change by a byte.
 PROMPTS_V1_SHA256 = "5b8510cd900aa9da58e06fd2a865f94df5ede1bdb3c73006077576411858ea61"
 
+# The same digest over ``prompts/v2/``, which is the version-7 set. It moved in
+# part 79, when the judge's prompt gained the party-relative paragraph: the
+# prompt is the set's own, so its digest is pinned here rather than left to
+# drift, exactly as ``prompts/v1/`` is.
+PROMPTS_V2_SHA256 = "2e9de056012938cfd214582aee8d30d882615582f16482456a5b431fefd170f1"
+
 # The five prompt files a run reads from its prompts directory.
 RUN_PROMPT_FILES = (
     "advocate.system.md",
@@ -333,6 +339,30 @@ class VersionSevenPromptsTests(unittest.TestCase):
 
     def test_prompts_v1_is_byte_identical_to_mains(self):
         self.assertEqual(PROMPTS_V1_SHA256, runner.hash_directory(PROMPTS_V1))
+
+    def test_prompts_v2_is_pinned_by_its_own_digest(self):
+        self.assertEqual(PROMPTS_V2_SHA256, runner.hash_directory(PROMPTS_V2))
+
+    def test_the_judge_prompt_names_the_party_who_filed(self):
+        """POL-GEN-03's party-relative reading is stated in the version-7 judge prompt.
+
+        The first dev-v7 run ruled PARTIAL_REFUND on driver-filed route
+        deviations where the platform had already refunded the rider and
+        recovered the amount from the driver -- and the ruling for the driver who
+        contests that is NO_ACTION, because the clause is party-relative. The
+        paragraph names ``case.authority.filing_frame`` as what to read before
+        choosing the ruling value, and it is the fourth thing the section lists.
+        """
+        text = (PROMPTS_V2 / "judge.system.md").read_text(encoding="utf-8")
+        self.assertIn("## Four things that decide real cases", text)
+        self.assertIn("**The ruling names the outcome for the party who FILED.**", text)
+        self.assertIn("`case.authority.filing_frame`", text)
+        self.assertIn("the ruling is `NO_ACTION` with both amounts null", text)
+        self.assertIn("POL-GEN-03 states this.", text)
+        # ``prompts/v1/`` is the version-6 set and carries none of it.
+        self.assertNotIn(
+            "filing_frame", (PROMPTS_V1 / "judge.system.md").read_text(encoding="utf-8")
+        )
 
     def test_prompts_v2_holds_the_same_prompt_files(self):
         names = sorted(path.name for path in PROMPTS_V2.iterdir() if path.is_file())

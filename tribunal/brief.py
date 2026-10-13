@@ -2977,6 +2977,7 @@ NO_CONFIDENCE_BAR = 0.0
 
 # The clause ids the version-7 blocks cite. They are the version-7 policy's own
 # ids, and they are named here the way every other clause id in this module is.
+POL_GEN_03 = "POL-GEN-03"
 POL_GEN_21 = "POL-GEN-21"
 POL_GEN_22 = "POL-GEN-22"
 POL_NS_21 = "POL-NS-21"
@@ -3061,6 +3062,61 @@ V7_ADVISORY_WINDOW_DISAGREEMENT_NOTE = (
     "window measured against the trip record's started_at/ended_at gives the "
     "other reading; the payload's reading is the one reported above, and the "
     "computed one travels beside it"
+)
+
+# POL-GEN-03's outcome vocabulary for the party who **filed**, as the version-7
+# filing frame publishes it. The clause is party-relative -- NO_ACTION means
+# "the filing party's claim is not supported and the present state stands", and
+# never "restore a charge" -- so the same record yields a different ruling
+# depending on who brought the dispute, and the frame writes the clause's own
+# vocabulary out for the filer the record names. Each template is formatted
+# with the record's own figures by :func:`_v7_filing_frame`, and the figures are
+# named rather than pointed at, because a judge choosing a ruling value needs
+# the amounts in front of it.
+#
+# None of this is a policy value: every line is POL-GEN-03's own five values and
+# its own party-relative reading, written out for one filer, and the two clauses
+# that can add a referral or fix a fee are named where they bear.
+V7_FILING_RIDER_WORDS = (
+    "the rider is owed {contested} SGD -> FULL_REFUND, with amount_sgd "
+    "{contested} (the whole contested amount) and driver_compensation_sgd null",
+    "the rider is owed less than {contested} SGD -> PARTIAL_REFUND of the part "
+    "that is owed",
+    "the rider is owed nothing -> NO_ACTION, with both amounts null: the rider's "
+    "claim is not supported and the present state stands",
+    "on a no-show where the fee stands -> DRIVER_COMPENSATION, with amount_sgd "
+    "and driver_compensation_sgd both the fee (POL-NS-22)",
+)
+V7_FILING_DRIVER_CONTESTING_WORDS = (
+    "the rider is owed the {moved} SGD already refunded -> the driver's claim "
+    "fails and the present state stands: NO_ACTION, with both amounts null",
+    "the driver is owed the whole {moved} SGD back -> DRIVER_COMPENSATION, with "
+    "amount_sgd and driver_compensation_sgd both {moved}",
+    "the driver is owed part of the {moved} SGD back -> DRIVER_COMPENSATION of "
+    "that part",
+)
+V7_FILING_DRIVER_WORDS = (
+    "the driver is owed X -> DRIVER_COMPENSATION, with amount_sgd and "
+    "driver_compensation_sgd both X",
+    "the driver is owed nothing -> NO_ACTION, with both amounts null: the "
+    "driver's claim is not supported and the present state stands",
+)
+
+# The sentence the frame publishes beside the words, naming which of the three
+# readings the record produced and why. Not a policy value: it says what the
+# record states, which is the whole reason the frame carries it.
+V7_FILING_RIDER_BASIS = (
+    "the rider filed the dispute, so POL-GEN-03's outcome is read from the "
+    "rider's claim against the record"
+)
+V7_FILING_DRIVER_CONTESTING_BASIS = (
+    "the driver filed, and the fare breakdown records {moved} SGD already "
+    "refunded to the rider and recovered from the driver{events}, so POL-GEN-03's "
+    "outcome is read from the driver's claim against the present state"
+)
+V7_FILING_DRIVER_BASIS = (
+    "the driver filed, and the record shows no money already moved from the "
+    "driver, so POL-GEN-03's general vocabulary is read from the driver's claim"
 )
 
 
@@ -3507,6 +3563,14 @@ def _v7_money_block(
     context for the fare -- travel in the same block so a reader can see the
     multiplication the fare came from. Returns ``None`` where there is no fare
     breakdown to compute on, exactly as the version-6 block does.
+
+    ``refund_already_issued_sgd`` is POL-GEN-03's figure, and it is published
+    for either category: it is the amount the platform has already refunded to
+    the rider and, where it recovered it, taken back from the driver, so it is
+    the amount a ``DRIVER_COMPENSATION`` ruling may carry when the driver wins
+    it back. It is read off the fare breakdown and never computed, and ``0``
+    where the record names no such field, which is the record saying that
+    nothing has moved.
     """
     if not isinstance(fare_payload, dict) or fare_evidence_id is None:
         return None
@@ -3515,6 +3579,12 @@ def _v7_money_block(
         "policy_id": policy_id,
         "category": category,
         "currency": _money(fare_payload.get("currency"), fare_evidence_id, policy_id),
+        "refund_already_issued_sgd": _money(
+            money.refund_already_issued(fare_payload),
+            fare_evidence_id,
+            policy_id,
+            clause_id=POL_GEN_03,
+        ),
     }
 
     if category == ROUTE_DEVIATION_CATEGORY:
@@ -3575,6 +3645,98 @@ def _v7_money_block(
     return block
 
 
+def _v7_moved_event_names(events: List[Dict[str, Any]]) -> str:
+    """The parenthesis naming the trip events that recorded a money move.
+
+    A trip event carries no id -- the schema fixes none -- so an event is named
+    by what it is and when it happened: `` (fare_adjusted at
+    2026-08-19T01:56:34+08:00)``, or nothing where the record carries no such
+    event. The reading itself is :func:`facts.money_already_moved_events`.
+    """
+    if not events:
+        return ""
+    named = ", ".join(
+        "{0} at {1}".format(event.get(facts.EVENT_TYPE_KEY), event.get(facts.EVENT_AT_KEY))
+        for event in events
+    )
+    return " ({0})".format(named)
+
+
+def _v7_filing_frame(
+    case: Dict[str, Any],
+    fare_payload: Any,
+    trip_payload: Any,
+) -> Dict[str, Any]:
+    """``case.authority.filing_frame``: POL-GEN-03's outcome for the party who filed.
+
+    POL-GEN-03 is **party-relative**: NO_ACTION means "the filing party's claim
+    is not supported and the present state stands", and never "restore a
+    charge". The first dev-v7 run turned on exactly that -- a driver-filed route
+    deviation where the platform had already refunded the rider and recovered
+    the amount from the driver -- and the frame exists so the party the ruling is
+    relative to is read off the record rather than inferred from the claim text.
+
+    Three things travel, all of them deterministic and all of them the record's
+    own: **who filed** (``dispute.filed_by``), **what they contest**
+    (``dispute.amount_contested_sgd``), and **what the platform has already
+    moved** (``fare_breakdown.refund_issued_sgd``, ``0`` where the record names
+    none, with the trip events that record the move named beside it). The
+    vocabulary that turns those into a ruling is POL-GEN-03's own, and it is
+    written out for **this** filer, in sentences naming the figures, so the judge
+    chooses a ruling value from the clause rather than from the shape of the
+    claim.
+
+    The clause is cited **once, on the block**: every sentence here is
+    POL-GEN-03's reading of the record's figures, so the frame names the clause
+    it is a reading of rather than repeating it on each line. The figures are
+    plain rather than wrapped because the frame is the clause's vocabulary
+    applied to two figures, and the citable amount a DRIVER_COMPENSATION ruling
+    may carry is published, wrapped, in the money block beside it.
+
+    The three readings are the ones the record supports. A rider who files is
+    owed the contested amount or part of it, or nothing; a driver who files to
+    contest money the platform has already taken from them is asking for the
+    present state to stand where the rider was owed that money; and a driver who
+    files with nothing already moved is read under POL-GEN-03's general
+    vocabulary, because the clause's driver-specific reading is the one about
+    money already moved and this record has none.
+    """
+    dispute = case["dispute"] if isinstance(case.get("dispute"), dict) else {}
+    filed_by = dispute.get("filed_by")
+    contested = money._dec(dispute.get("amount_contested_sgd"))
+    already_moved = money.refund_already_issued(fare_payload)
+    events = facts.money_already_moved_events(trip_payload)
+
+    if filed_by == facts.RIDER_ROLE:
+        words = [
+            template.format(contested=money.payable_string(contested))
+            for template in V7_FILING_RIDER_WORDS
+        ]
+        basis = V7_FILING_RIDER_BASIS
+    elif already_moved > money.ZERO:
+        moved = money.payable_string(already_moved)
+        words = [
+            template.format(moved=moved)
+            for template in V7_FILING_DRIVER_CONTESTING_WORDS
+        ]
+        basis = V7_FILING_DRIVER_CONTESTING_BASIS.format(
+            moved=moved, events=_v7_moved_event_names(events)
+        )
+    else:
+        words = list(V7_FILING_DRIVER_WORDS)
+        basis = V7_FILING_DRIVER_BASIS
+
+    return {
+        "clause_id": POL_GEN_03,
+        "filed_by": filed_by,
+        "contested_sgd": contested,
+        "already_moved": already_moved,
+        "already_moved_events": events,
+        "basis": basis,
+        "outcome_words": words,
+    }
+
+
 def _v7_counter(value: Any) -> int:
     """One optional profile counter as an int, or ``0`` where it is not one.
 
@@ -3611,6 +3773,12 @@ def _v7_authority(
     edge **or** the dispute carries a safety flag: POL-GEN-21's limb is not a
     value test, and a safety-flagged dispute is a person's however small the
     amount.
+
+    ``filing_frame`` is POL-GEN-03's reading of the same record, and it belongs
+    in this block because it is about who decides what: the party who filed, the
+    amount they contest and the money the platform has already moved, with the
+    clause's outcome vocabulary written out for that party by
+    :func:`_v7_filing_frame`.
     """
     thresholds = _v7_structured(general_policy, V7_THRESHOLDS_KEY)
     dispute = case["dispute"] if isinstance(case.get("dispute"), dict) else {}
@@ -3683,6 +3851,13 @@ def _v7_authority(
             else "neither a safety flag nor a value above POL-GEN-22's second band"
         ),
     }
+    # POL-GEN-03's outcome for the party who filed. The frame is built here
+    # rather than in the money block because the party and the amount contested
+    # are the dispute's own fields, and the money the platform has already moved
+    # is read off the fare breakdown beside them.
+    fare_payload, _fare_evidence_id = _v7_evidence_payload(case, FARE_EVIDENCE_TYPE)
+    trip_payload, _trip_evidence_id = _v7_evidence_payload(case, TRIP_EVIDENCE_TYPE)
+    authority["filing_frame"] = _v7_filing_frame(case, fare_payload, trip_payload)
     if category == ROUTE_DEVIATION_CATEGORY:
         measured = deviation or {}
         available = bool(measured.get("available"))

@@ -809,3 +809,36 @@ def fee_figures(
         "refund_if_voided_sgd": charged.quantize(PLACES, rounding=ROUND_HALF_UP),
         "goodwill_credit_sgd": _dec(goodwill_credit),
     }
+
+
+# --------------------------------------------------------------------------
+# POL-GEN-03: the money the platform has already moved
+# --------------------------------------------------------------------------
+# A ruling is party-relative (POL-GEN-03), and the party who filed may be the
+# one the platform has already taken money from: a route deviation it refunded
+# to the rider and recovered from the driver, or a no-show fee it reversed the
+# same way. That figure is a fact of the record and not a computed payable --
+# nothing here rounds it -- so it is read exactly as the record states it.
+
+# The fare-breakdown field the figure is read from, named once so the version-7
+# money block and the filing frame cannot spell it two ways.
+REFUND_ISSUED_KEY = "refund_issued_sgd"
+
+
+def refund_already_issued(fare_payload: Any) -> Decimal:
+    """``fare_breakdown.refund_issued_sgd``: what the platform has already refunded.
+
+    POL-GEN-03's party-relative reading turns on whether money has already
+    moved: a driver who files to contest a refund already issued to the rider
+    and recovered from the driver is asking for the present state to stand, and
+    the ruling for that party is NO_ACTION. The figure is the record's own, so
+    it is neither recomputed nor rounded -- a refund of an amount already
+    charged is not a computed payable, which is the rule
+    :func:`_refund_decision` states for POL-RD-02.
+
+    ``0`` where the record names no such field: that is the record's own
+    statement that nothing has moved, rather than a figure this module supplied.
+    """
+    if not isinstance(fare_payload, Mapping):
+        return ZERO
+    return _dec(fare_payload.get(REFUND_ISSUED_KEY))
