@@ -379,8 +379,52 @@ COMPLAINT_FLAG = "complaint_flag"
 SCOPE_GATE_FLAGS: Tuple[str, ...] = (SAFETY_FLAG, COMPLAINT_FLAG)
 
 # The clause that does the gating, and the reason code the gate records.
+#
+# At version 7 ``POL-GEN-08`` does not exist. The clause that makes a flagged
+# dispute a person's there is ``POL-GEN-21``, and the gate that reads it is
+# :func:`authority_gate` below -- the same shape, moved after the advocates and
+# citing POL-GEN-21 rather than POL-GEN-08(1). See ``V7_SCOPE_GATE_CLAUSE``.
 SCOPE_GATE_CLAUSE = "POL-GEN-08(1)"
 GEN08_SCOPE = "GEN08_SCOPE"
+
+# --------------------------------------------------------------------------
+# Version 7: v2.1's own decision gates
+# --------------------------------------------------------------------------
+# Part 71's brief carries ``case.authority`` -- the value band, the bar a ruling
+# needs, whether the dispute is a person's whatever the drafts say, and a route
+# deviation's own ceiling. Version 6's gates cannot express any of it:
+# ``confidence_floor`` reads POL-RD-10(1) and POL-NS-09(a), which version 7 does
+# not carry, and POL-GEN-08 -- the clause the scope gate above cites -- does not
+# exist at version 7 either. Everything below is therefore **version-gated**: at
+# versions 1 to 6 the pipeline reads the clauses it always read, applies the
+# gates where it always applied them, and a run is byte for byte the run it was.
+V7_GATE_VERSION = 7
+
+# The block part 71's builder attaches to ``case``, and the leaves this module
+# reads off it. Each leaf is a ``brief._clause_threshold`` wrapper --
+# ``{value, policy_id, clause_id}`` -- so a reading travels with the clause that
+# states it and a reader can see which clause a version-7 decision was held to.
+AUTHORITY_KEY = "authority"
+REQUIRED_CONFIDENCE_KEY = "required_confidence"
+HUMAN_ONLY_KEY = "human_only"
+SAFETY_FLAG_KEY = "safety_flag"
+OVER_AI_LIMIT_KEY = "over_ai_limit"
+AI_LIMIT_APPLIED_KEY = "ai_limit_applied"
+
+# The clauses a version-7 gate cites. POL-GEN-21 makes a safety-flagged dispute
+# a person's, POL-GEN-22 the value bands and the 0.95 bar, POL-RD-25 the route
+# deviation's own 0.80 bar and its 2 km ceiling, and POL-GEN-26 sends a case
+# whose facts cannot be established to a person rather than deciding it.
+V7_SCOPE_GATE_CLAUSE = "POL-GEN-21"
+V7_HUMAN_ONLY_CLAUSE = "POL-GEN-22"
+V7_AI_LIMIT_CLAUSE = "POL-RD-25"
+V7_NO_VALID_DRAFTS_CLAUSE = "POL-GEN-26"
+
+# The reason codes the version-7 gates record. They are the pipeline's own, as
+# ``GEN08_SCOPE`` is, so a reader of the record can tell which gate stopped the
+# ruling without parsing the explanation.
+V7_HUMAN_ONLY = "V7_HUMAN_ONLY"
+V7_AI_LIMIT = "V7_AI_LIMIT"
 
 
 class PipelineError(Exception):
@@ -1655,6 +1699,20 @@ NOT_MONEY_FIGURES = frozenset(
         "distance_m",
         "across_gap_distance_m",
         "index",
+        # The version-7 block's own non-amount leaves, and the authority block's.
+        # A rate and a distance are context for a fare, not a fare: POL-RD-24
+        # multiplies ``deviation_km`` by ``per_km_rate_sgd`` to get the excess
+        # distance fare, and a draft that read either off as an amount would be
+        # claiming the multiplier as its product. ``ai_limit_km`` is POL-RD-25's
+        # ceiling in kilometres, ``fraud_flags`` a count of flags and
+        # ``required_confidence`` the bar itself. None of the five is a figure
+        # the block publishes as money, and none of them appears in a version-1
+        # or version-6 money block at all.
+        "per_km_rate_sgd",
+        "deviation_km",
+        "ai_limit_km",
+        "fraud_flags",
+        "required_confidence",
     )
 )
 
@@ -2113,10 +2171,195 @@ def confidence_floor(brief_object: Any) -> Tuple[Decimal, Tuple[str, ...]]:
     return floor, tuple(references)
 
 
+def required_confidence(
+    brief_object: Any, policy_version: int = policy_versions.BASE_VERSION
+) -> Tuple[Decimal, Tuple[str, ...]]:
+    """The bar a draft's own confidence is held to, and the clauses that state it.
+
+    At versions 1 to 6 the bar is the platform-wide floor the loaded policy
+    states twice, and it is read out of the clause text by
+    :func:`confidence_floor` -- this function is that reading and nothing else,
+    so a version-1 or version-6 draft is held to exactly the number it always
+    was.
+
+    At version 7 the policy is v2.1, which states **three** bars rather than one
+    floor: 0.80 from 10.00 to 50.00 SGD, 0.95 where a party carries a fraud flag,
+    0.80 for a route deviation, and none at all below the first band. The brief
+    already holds the bar its own case needs -- part 71's builder resolves the
+    bands and the category rules into ``case.authority.required_confidence`` --
+    so this reads it there rather than re-deriving it. The clause that states it
+    travels on the same leaf, and it is returned beside the number so a refusal
+    can name the clause the draft fell below.
+
+    The version is a **parameter** and not a global: the same module serves both
+    policies, and a version-1 run has to be unaffected by anything version 7
+    adds.
+    """
+    if policy_version >= V7_GATE_VERSION:
+        return _v7_required_confidence(brief_object)
+    return confidence_floor(brief_object)
+
+
+def _authority_block(brief_object: Any) -> Optional[Mapping[str, Any]]:
+    """The brief's ``case.authority`` block, or ``None`` when it carries none."""
+    if not isinstance(brief_object, Mapping):
+        return None
+    case = brief_object.get("case")
+    if not isinstance(case, Mapping):
+        return None
+    authority = case.get(AUTHORITY_KEY)
+    return authority if isinstance(authority, Mapping) else None
+
+
+def _authority_leaf(authority: Mapping[str, Any], key: str) -> Any:
+    """One authority leaf's value, or ``None`` when it is absent or unwrapped."""
+    leaf = authority.get(key)
+    if isinstance(leaf, Mapping):
+        return leaf.get("value")
+    return leaf
+
+
+def _v7_required_confidence(brief_object: Any) -> Tuple[Decimal, Tuple[str, ...]]:
+    """The version-7 bar, read off the brief's authority block.
+
+    A refusal rather than a default, for the reason :func:`confidence_floor`
+    refuses one: a bar that fell back to a number written in this file would be
+    the silent override v2.1's own notes forbid, and a bar that silently became
+    ``0`` would let every draft vote.
+    """
+    authority = _authority_block(brief_object)
+    if authority is None:
+        raise PipelineError(
+            "a version-7 brief carries no case.{0} block, so the confidence bar "
+            "POL-GEN-22 and POL-RD-25 state cannot be read from it".format(
+                AUTHORITY_KEY
+            )
+        )
+    leaf = authority.get(REQUIRED_CONFIDENCE_KEY)
+    bar = _as_number(_authority_leaf(authority, REQUIRED_CONFIDENCE_KEY))
+    if bar is None:
+        raise PipelineError(
+            "case.{0}.{1} states no number, so the confidence bar this case needs "
+            "cannot be read".format(AUTHORITY_KEY, REQUIRED_CONFIDENCE_KEY)
+        )
+    clause = leaf.get("clause_id") if isinstance(leaf, Mapping) else None
+    references: Tuple[str, ...] = (
+        (clause,) if isinstance(clause, str) and clause else ()
+    )
+    return bar, references
+
+
+def authority_gate(case: Any, brief_object: Any) -> Optional[Dict[str, Any]]:
+    """The version-7 gate a case trips, or ``None`` when it trips none.
+
+    Three rules of v2.1, each read off the brief's ``case.authority`` block, and
+    each ending the same way: the case is a person's, so no ruling is published
+    whatever a draft would have said. The advocates have already run when this is
+    asked -- v2.1 6.1's "AI agent prepares case file only", which is why the gate
+    sits after them and not before -- and the judge is not asked at all.
+
+    * a flag on the dispute. ``POL-GEN-08`` does not exist at version 7; the
+      clause that makes a flagged dispute a person's is ``POL-GEN-21``, and it
+      is what this gate cites where a flag set it.
+    * ``authority.human_only``, which part 71's builder sets where the contested
+      value is above POL-GEN-22's second band edge **or** the dispute carries a
+      safety flag. The clause cited is the one the leaf itself names, so a
+      safety flag cites POL-GEN-21 and a value cites POL-GEN-22.
+    * ``POL-RD-25``'s 2 km ceiling, where the policy's own switch says the limb
+      applies. While ``ai_ruling_max_deviation_applied`` is false the ceiling is
+      held rather than applied, so this gate never fires and the reading travels
+      in the brief for a reader instead.
+
+    The order is the order of the clauses: a flagged dispute is a person's
+    whatever the value, and a value above the band is a person's whatever the
+    deviation.
+    """
+    authority = _authority_block(brief_object)
+    if authority is None:
+        return None
+
+    flags = scope_gate_flags(case)
+    if flags:
+        return {
+            "reason_code": V7_HUMAN_ONLY,
+            "clause": V7_SCOPE_GATE_CLAUSE,
+            "flags": list(flags),
+            "basis": (
+                "the dispute carries {0}, and {1} makes a flagged dispute a "
+                "person's whatever the category and whatever the value".format(
+                    " and ".join("dispute.{0}".format(flag) for flag in flags),
+                    V7_SCOPE_GATE_CLAUSE,
+                )
+            ),
+        }
+
+    if _authority_leaf(authority, HUMAN_ONLY_KEY) is True:
+        leaf = authority.get(HUMAN_ONLY_KEY)
+        clause = leaf.get("clause_id") if isinstance(leaf, Mapping) else None
+        clause = clause if isinstance(clause, str) and clause else V7_HUMAN_ONLY_CLAUSE
+        basis = authority.get("human_only_basis")
+        return {
+            "reason_code": V7_HUMAN_ONLY,
+            "clause": clause,
+            "flags": [],
+            "basis": (
+                basis
+                if isinstance(basis, str) and basis
+                else "the dispute is a person's whatever the drafts say"
+            ),
+        }
+
+    if _authority_leaf(authority, AI_LIMIT_APPLIED_KEY) is True and (
+        _authority_leaf(authority, OVER_AI_LIMIT_KEY) is True
+    ):
+        return {
+            "reason_code": V7_AI_LIMIT,
+            "clause": V7_AI_LIMIT_CLAUSE,
+            "flags": [],
+            "basis": (
+                "the deviation is over the {0} ceiling this policy applies to an "
+                "AI ruling, so the ruling does not stand".format(V7_AI_LIMIT_CLAUSE)
+            ),
+        }
+    return None
+
+
+def authority_gate_ruling(gate: Mapping[str, Any]) -> Dict[str, Any]:
+    """The ``ESCALATE`` a version-7 gate publishes, with no referral.
+
+    ``confidence`` is 0 and both money fields are ``null`` because no ruling is
+    published for an amount or a confidence to attach to, and ``referrals`` is
+    **empty**: a referral is a clause-mandated instruction a draft ruling
+    carries, and a gate that issues no draft ruling does not. The explanation
+    names the clause, the condition and the reason code, so a reader of one case
+    file can see why the case went to a person rather than to the judge.
+    """
+    clause = gate.get("clause")
+    basis = gate.get("basis")
+    explanation = (
+        "Under {0}, {1}. The AI prepared the case file -- both advocates were "
+        "asked -- and no ruling is issued, so the dispute is escalated to a human "
+        "reviewer with both amounts null and no referral. The reason code is "
+        "{2}.".format(clause, basis, gate.get("reason_code"))
+    )
+    return {
+        "ruling": {
+            "ruling": ESCALATE,
+            "amount_sgd": None,
+            "driver_compensation_sgd": None,
+            "referrals": [],
+            "confidence": 0.0,
+            "explanation": explanation,
+        },
+        "discarded_claims": [],
+    }
+
+
 def check_judge_draft(
     ruling: Any,
     brief_object: Any,
     amount_rule: str = DEFAULT_AMOUNT_RULE,
+    policy_version: int = policy_versions.BASE_VERSION,
 ) -> Tuple[Tuple[str, ...], Tuple[str, ...]]:
     """The code checks one draft must pass before it may vote.
 
@@ -2136,6 +2379,13 @@ def check_judge_draft(
     judged by, and the refusal names the rule it was made under, so a signed
     run's record says which rule rejected a draft rather than leaving a reader
     to infer it from a directory name.
+
+    ``policy_version`` decides which bar the draft's own confidence is held to,
+    and nothing else: at versions 1 to 6 it is the platform-wide floor the
+    loaded policy states in POL-RD-10(1) and POL-NS-09(a), and at version 7 it is
+    the bar v2.1 gives this case -- see :func:`required_confidence`. It defaults
+    to version 1, so every caller written before the parameter existed holds a
+    draft to exactly the number it held it to before.
     """
     failures: List[str] = []
     unverifiable: List[str] = []
@@ -2244,7 +2494,7 @@ def check_judge_draft(
     # this check is for.
     if value in RULING_VALUES and value != ESCALATE:
         confidence = _as_number(inner.get("confidence"))
-        floor, references = confidence_floor(brief_object)
+        floor, references = required_confidence(brief_object, policy_version)
         if confidence is not None and confidence < floor:
             failures.append(
                 "{0}: the draft's own confidence is {1}, below the floor of {2} "
@@ -2763,7 +3013,9 @@ def record_integrity_ruling(limbs: Sequence[str]) -> Dict[str, Any]:
 
 
 def _no_valid_drafts_escalation(
-    drafts: Sequence[JudgeDraft], referee_result: Any
+    drafts: Sequence[JudgeDraft],
+    referee_result: Any,
+    policy_version: int = policy_versions.BASE_VERSION,
 ) -> Any:
     """The ESCALATE a version-3 panel with no valid draft publishes.
 
@@ -2774,6 +3026,12 @@ def _no_valid_drafts_escalation(
     case 1779's guard held (all four drafts cited ``POL-RD-99``, a clause the
     policy does not carry, so no ruling rests on it) and the case still ended
     with no ruling at all.
+
+    From version 7 the explanation also cites ``POL-GEN-26``, the clause that
+    sends a case whose facts cannot be established to a person rather than
+    deciding it. Versions 3 to 6 cite no clause here, because the version-6
+    policy states no clause of that kind, and their escalations are byte for
+    byte the ones they were.
 
     The explanation names every draft's abstention codes, and for a
     :data:`DRAFT_CLAUSE_UNRESOLVED` abstention the cited id that did not resolve.
@@ -2806,6 +3064,14 @@ def _no_valid_drafts_escalation(
         "No draft voted, so there is no agreement figure and no majority to "
         "carry. The reason code is {0}.".format(VOTE_NO_VALID_DRAFTS)
     )
+    if policy_version >= V7_GATE_VERSION:
+        lines.append(
+            "Under {0}, a fact a rule of this version needs cannot be established "
+            "from the record, so the case is escalated and the open question is "
+            "the reviewer's to settle. The reason code is {1}.".format(
+                V7_NO_VALID_DRAFTS_CLAUSE, VOTE_NO_VALID_DRAFTS
+            )
+        )
     return {
         "ruling": {
             "ruling": ESCALATE,
@@ -2961,7 +3227,11 @@ def _vote_escalation(
     }
 
 
-def _below_floor_escalation(published: Any, brief_object: Any) -> Optional[Any]:
+def _below_floor_escalation(
+    published: Any,
+    brief_object: Any,
+    policy_version: int = policy_versions.BASE_VERSION,
+) -> Optional[Any]:
     """The ESCALATE a carried ruling becomes when its own confidence is below the floor.
 
     **Unreachable through this pipeline.** :func:`check_judge_draft` abstains
@@ -2980,6 +3250,13 @@ def _below_floor_escalation(published: Any, brief_object: Any) -> Optional[Any]:
     published for an amount or a referral to attach to, and ``confidence`` is
     0.0 for the same reason ``_vote_escalation`` sets it: the panel's own
     agreement is a separate figure, recorded as ``vote_agreement``.
+
+    ``policy_version`` decides which bar the ruling is held to, and nothing
+    else: at versions 1 to 6 it is the platform-wide floor the loaded policy
+    states, and at version 7 it is the bar v2.1 gives this case -- 0.80 from
+    10.00 to 50.00 SGD, 0.95 where a party carries a fraud flag, 0.80 for a
+    route deviation, and none below the first band. See
+    :func:`required_confidence`.
     """
     inner = published.get("ruling") if isinstance(published, Mapping) else None
     if not isinstance(inner, Mapping) or inner.get("ruling") == ESCALATE:
@@ -2987,7 +3264,7 @@ def _below_floor_escalation(published: Any, brief_object: Any) -> Optional[Any]:
     confidence = _as_number(inner.get("confidence"))
     if confidence is None:
         return None
-    floor, references = confidence_floor(brief_object)
+    floor, references = required_confidence(brief_object, policy_version)
     if confidence >= floor:
         return None
     return {
@@ -3059,7 +3336,7 @@ def _reduce_vote(
             drafts, votes, threshold, None, (), VOTE_NO_VALID_DRAFTS
         )
         if policy_version >= NO_VALID_DRAFTS_ESCALATION_VERSION:
-            published = _no_valid_drafts_escalation(drafts, referee_result)
+            published = _no_valid_drafts_escalation(drafts, referee_result, policy_version)
             return JudgeVote(
                 ruling=published,
                 findings=tuple(validate_ruling_shape(published)),
@@ -3092,7 +3369,7 @@ def _reduce_vote(
         outcome = VOTE_CARRIED if agreeing == votes else VOTE_CARRIED_NOT_UNANIMOUS
         published = _with_vote_sentence(winner_drafts[0].ruling, votes, agreeing, agreement)
         if brief_object is not None:
-            floored = _below_floor_escalation(published, brief_object)
+            floored = _below_floor_escalation(published, brief_object, policy_version)
             if floored is not None:
                 published = floored
                 outcome = VOTE_ESCALATED
@@ -3210,6 +3487,13 @@ def _run_judge_vote(
             "full panel would not have carried"
         )
     sampled = votes - 1
+    # The version the drafts are checked against, with "not recorded" read as
+    # version 1 -- which is what this parameter meant before version 7 gave it a
+    # second reading, and what keeps a caller that does not name a version
+    # holding its drafts to the floor it always did.
+    check_version = (
+        policy_versions.BASE_VERSION if policy_version is None else policy_version
+    )
     if sampled > len(JUDGE_VOTE_SEEDS):
         raise PipelineError(
             "a judge vote of {0} needs {1} distinct seeds and JUDGE_VOTE_SEEDS "
@@ -3315,7 +3599,9 @@ def _run_judge_vote(
         if call.exception is not None or call.value is None:
             return None
         ruling = _assemble_ruling(call.value, referee_result)
-        failures, _unverifiable = check_judge_draft(ruling, brief_object, amount_rule)
+        failures, _unverifiable = check_judge_draft(
+            ruling, brief_object, amount_rule, check_version
+        )
         if failures:
             return None
         return vote_key(ruling)
@@ -3447,7 +3733,7 @@ def _run_judge_vote(
         else:
             ruling = _assemble_ruling(parsed, referee_result)
             failures, unverifiable = check_judge_draft(
-                ruling, brief_object, amount_rule
+                ruling, brief_object, amount_rule, check_version
             )
             if failures:
                 # A malformed draft abstains with its reason codes, which is
@@ -4177,6 +4463,7 @@ def recorded_judge_drafts(
     referee_result: Any,
     brief_object: Any,
     amount_rule: str = DEFAULT_AMOUNT_RULE,
+    policy_version: int = policy_versions.BASE_VERSION,
 ) -> List[JudgeDraft]:
     """Rebuild the drafts a recorded vote was reduced from.
 
@@ -4193,6 +4480,11 @@ def recorded_judge_drafts(
     able to rebuild them under it. The default is the rule they were rebuilt
     under before this parameter existed, so a caller that does not name one gets
     exactly what it got before.
+
+    ``policy_version`` is the bar the drafts' own confidences are held to, and
+    it is a parameter for the same reason. It defaults to version 1, which is
+    the floor every recorded run was judged by, so a caller that does not name a
+    version rebuilds the drafts it always rebuilt.
     """
     rebuilt: List[JudgeDraft] = []
     for record in vote_block.get("drafts") or []:
@@ -4221,7 +4513,9 @@ def recorded_judge_drafts(
             )
             continue
         ruling = _assemble_ruling(parsed, referee_result)
-        failures, unverifiable = check_judge_draft(ruling, brief_object, amount_rule)
+        failures, unverifiable = check_judge_draft(
+            ruling, brief_object, amount_rule, policy_version
+        )
         if failures:
             rebuilt.append(
                 JudgeDraft(
@@ -4548,7 +4842,16 @@ def run_loaded_case(
     # record is built, before a prompt is rendered and before any call is made --
     # so a flagged case reaches no model at all. It is checked against the loaded
     # version, so versions 1 and 2 ask the model exactly as they always did.
-    if policy_version >= SCOPE_GATE_VERSION:
+    #
+    # **From version 7 it does not fire here.** POL-GEN-08 does not exist at
+    # version 7, and v2.1's clause -- POL-GEN-21 -- says something different
+    # about the same dispute: "The AI may gather evidence, summarise accounts and
+    # prepare the case file; it may not issue a ruling." So a flagged version-7
+    # dispute is *not* refused a model call; the advocates run, and the ruling is
+    # refused afterwards by :func:`authority_gate`, which cites POL-GEN-21 rather
+    # than POL-GEN-08(1). Versions 3 to 6 keep the gate exactly where and as it
+    # was.
+    if SCOPE_GATE_VERSION <= policy_version < V7_GATE_VERSION:
         gate_flags = scope_gate_flags(case)
         if gate_flags:
             if events_log is not None:
@@ -4775,7 +5078,40 @@ def run_loaded_case(
     precedents_block: Optional[Dict[str, Any]] = None
     precedents_shown: Tuple[str, ...] = ()
 
-    if failed_agent is None:
+    # v2.1's own gates, and where they sit. The case file has been prepared --
+    # both advocates were asked, which is v2.1 6.1's "AI agent prepares case file
+    # only" -- and the judge is not asked at all, so no draft is produced and
+    # nothing a draft would have said can reach the ruling. The gate fires on
+    # the loaded version alone, so a version-1 to version-6 run reaches the
+    # judge exactly as it always did.
+    authority_gate_record: Optional[Dict[str, Any]] = None
+    if failed_agent is None and policy_version >= V7_GATE_VERSION:
+        gate = authority_gate(case, case_brief)
+        if gate is not None:
+            # The block is the scope gate's own shape, which is the only gate
+            # block a case file carries: the reason code names which gate fired,
+            # the clause is the one it cites, and ``calls`` is the number of
+            # calls actually made -- two advocates and no judge, rather than the
+            # scope gate's zero.
+            authority_gate_record = {
+                "reason_code": gate["reason_code"],
+                "clause": gate["clause"],
+                "flags": list(gate["flags"]),
+                "calls": len(transcript),
+            }
+            if events_log is not None:
+                events_log.record(
+                    events.EVENT_SCOPE_GATE,
+                    case_no=case_no,
+                    reason_code=gate["reason_code"],
+                    clause=gate["clause"],
+                    flags=list(gate["flags"]),
+                    calls=len(transcript),
+                )
+            ruling = authority_gate_ruling(gate)
+            findings = validate_ruling_shape(ruling)
+
+    if failed_agent is None and authority_gate_record is None:
         referee_result = referee.referee(case_brief, rider_claims, driver_claims)
         referee_record = referee_result.as_dict()
         if events_log is not None:
@@ -4948,6 +5284,10 @@ def run_loaded_case(
         # ``None`` when the switch was off, so "the judge was shown no
         # precedent" is a sentence only a run that asked the question can say.
         precedents_shown=None if precedents is None else tuple(precedents_shown),
+        # The version-7 gate's block, when it fired. ``None`` for every case no
+        # gate fired on -- every version-1 to version-6 case among them -- so a
+        # run without a gate is the result it always was.
+        scope_gate=authority_gate_record,
     )
 
 
@@ -5473,7 +5813,38 @@ def replay_case(
     vote_record: Optional[Dict[str, Any]] = None
     verification_record: Optional[Dict[str, Any]] = None
 
-    if judge_votes == 1:
+    # v2.1's own gates, in the place a full run applies them: the advocates'
+    # answers are in hand -- replayed, which is what a replay is for -- and no
+    # ruling is issued. The brief is parsed back out of the recorded bytes,
+    # because a ``Replayable`` carries the brief as the judge was handed it and
+    # nothing else; the gate reads ``case.authority`` and the dispute's flags,
+    # and both travel in those bytes. A source briefed at version 6 or earlier
+    # reaches the judge exactly as it always did, because the gate is keyed on
+    # the source's own policy version.
+    authority_gate_record: Optional[Dict[str, Any]] = None
+    if replay.source.policy_version >= V7_GATE_VERSION:
+        replay_brief = _parse(replay.brief_json)
+        gate = authority_gate(replay_brief.get("case"), replay_brief)
+        if gate is not None:
+            authority_gate_record = {
+                "reason_code": gate["reason_code"],
+                "clause": gate["clause"],
+                "flags": list(gate["flags"]),
+                "calls": 0,
+            }
+            if events_log is not None:
+                events_log.record(
+                    events.EVENT_SCOPE_GATE,
+                    case_no=replay.case_no,
+                    reason_code=gate["reason_code"],
+                    clause=gate["clause"],
+                    flags=list(gate["flags"]),
+                    calls=0,
+                )
+            ruling = authority_gate_ruling(gate)
+            findings = validate_ruling_shape(ruling)
+
+    if authority_gate_record is None and judge_votes == 1:
         judge_user = _checked_judge_message(
             referee_result.kept_claims[referee.SIDE_RIDER],
             referee_result.kept_claims[referee.SIDE_DRIVER],
@@ -5520,7 +5891,7 @@ def replay_case(
                 unverifiable=[],
                 valid=judge_failure is None,
             )
-    else:
+    elif authority_gate_record is None:
         vote = _run_judge_vote(
             client=client,
             judge_prompt=replay.judge_prompt,
@@ -5537,6 +5908,16 @@ def replay_case(
             verify=verify_drafts,
             verifier_prompt=verifier_prompt,
             brief_sha256=replay.brief_sha256,
+            # The version the drafts are checked against. It is passed only
+            # where the source was briefed at version 7 or later, because that
+            # is the only version whose bar is not the version-6 floor: naming a
+            # version-1 or version-2 source here would be a change to a replay
+            # this code already reproduces byte for byte.
+            policy_version=(
+                replay.source.policy_version
+                if replay.source.policy_version >= V7_GATE_VERSION
+                else None
+            ),
         )
         vote_record = vote.record
         if vote.failure_reason is not None:
@@ -5604,6 +5985,10 @@ def replay_case(
             reasoning_tokens=borrowed_totals["reasoning_tokens"],
             cached_tokens=borrowed_totals["cached_tokens"],
         ),
+        # The version-7 gate's block, when it fired. ``None`` for every source
+        # briefed at version 6 or earlier, which is every replay this code made
+        # before the gate existed.
+        scope_gate=authority_gate_record,
     )
 
 
