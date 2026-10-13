@@ -71,10 +71,17 @@ KEPT_IDS = {"POL-GEN-01", "POL-GEN-02", "POL-GEN-03"}
 # The three version-7 policy files, by sha256, exactly as ``tmp/v7/policy/``
 # shipped them. They are the policy text the policy owner reviews, so a
 # reformat, a re-key or a re-word moves one of these.
+#
+# ``route_deviation.json`` and ``no_show.json`` were re-copied byte for byte on
+# 2026-10-13 in the evening, each gaining one structured field and no clause
+# text: C18's ``thresholds.traffic_justification_types`` (which recorded
+# advisory types each of POL-RD-23's three kinds admits) and C16's amended
+# ``arrival_test.accuracy_filter_applies`` (the accuracy filter reaches only a
+# fix that reports an accuracy). ``general.json`` is unchanged.
 V7_FILE_SHA256 = {
     "general.json": "767f01d69f0bac8ac0cdb9f834d149f048d6b2b68fc54419461db06665b85d93",
-    "route_deviation.json": "ddb3dcf3c6c3d8cb296900a323df5fa18c4aad660e19e1b7787db5db0787c8ca",
-    "no_show.json": "d638a3b68a6b7bc7655dd984dccafa2f541b448c29c2af18355eb10eefc80d3b",
+    "route_deviation.json": "63436dd217750304087185f752f8fef4c1dae43e32522fcd25bc2c17eb8d9315",
+    "no_show.json": "e4f02dba531cdd759e3d5acbe611864c90e7c2ee4c80b6f59522b18d18e9e021",
 }
 
 # The canonical digest of ``load_policies(category, 6)`` for both categories,
@@ -225,6 +232,51 @@ class VersionSevenPolicyTests(unittest.TestCase):
         self.assertEqual(Decimal("5.00"), Decimal(no_show["goodwill_credit_sgd"]))
         self.assertEqual(3, no_show["repeat_no_show_count"])
         self.assertEqual(30, no_show["repeat_no_show_window_days"])
+
+    def test_the_two_structured_additions_of_2026_10_13_evening_are_pinned(self):
+        """C18's type map and C16's accuracy rule, read off the loaded policy.
+
+        Both are **structured fields**, not clause prose: the type map is where
+        ``brief.py`` reads POL-RD-23's kinds and the recorded types each admits,
+        and the accuracy rule is where the arrival test's filter is read. Pinning
+        their values here is what makes a re-worded or re-mapped file a failing
+        test rather than a silent change of reading. No clause text changed.
+        """
+        deviation = loader.load_policies("ROUTE_DEVIATION", 7)["category"]["thresholds"]
+        no_show = loader.load_policies("NO_SHOW_CHARGE", 7)["category"]
+
+        mapped = deviation["traffic_justification_types"]
+        self.assertEqual(
+            ["congestion", "incident", "closure", "note"],
+            sorted(mapped),
+        )
+        self.assertEqual(
+            {
+                "congestion": ["CONGESTION", "HEAVY_CONGESTION"],
+                "incident": ["ACCIDENT", "VEHICLE_FIRE", "BREAKDOWN", "INCIDENT"],
+                "closure": ["CLOSURE", "ROADWORKS"],
+            },
+            {
+                kind: types
+                for kind, types in mapped.items()
+                if isinstance(types, list)
+            },
+        )
+        self.assertEqual(
+            "C18: the TRAFFIC_ADVISORY types the schema uses, mapped onto v2.1 "
+            "1.1's 'traffic conditions, road closures, or congestion'. Any other "
+            "type (for example KERB_RESTRICTION, TRAFFIC_FLOW) does not justify a "
+            "reroute. ROADWORKS counts as a closure.",
+            mapped["note"],
+        )
+
+        self.assertEqual(25, no_show["arrival_test"]["gps_accuracy_filter_m"])
+        self.assertEqual(
+            "only to a fix that reports an accuracy; a fix with no reported "
+            "accuracy is used at its reported position (v2.1 states no accuracy "
+            "rule; C16)",
+            no_show["arrival_test"]["accuracy_filter_applies"],
+        )
 
     def test_the_three_files_are_byte_for_byte_the_ones_imported(self):
         for name, digest in sorted(V7_FILE_SHA256.items()):

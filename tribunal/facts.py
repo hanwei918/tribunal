@@ -1276,12 +1276,19 @@ def arrival_check(
     the marker when that fix lies inside the zone's arrival radius **and** its
     own reported accuracy passes the policy's filter.
 
-    A fix whose accuracy is missing is of unknown accuracy and corroborates
-    nothing -- it is not treated as an inaccurate fix either, the same reading
-    :func:`_is_qualifying` takes. Where the marker, the pickup point, the window,
-    the radius or the filter is absent, nothing is tested and the block says so
-    by carrying no fix: the fact is unestablished rather than disproved, and
-    POL-GEN-26 is the clause that decides what follows.
+    The filter applies **only to a fix that reports an accuracy** -- the
+    policy's own ``arrival_test.accuracy_filter_applies`` sentence, which the
+    caller reads and the brief publishes beside this reading. A fix that reports
+    none is of unknown accuracy, and it is used at its **reported position**
+    rather than dropped: dropping it would treat "no accuracy stated" as
+    "inaccurate", which the policy does not say. The reading says which it was,
+    so a corroboration that rests on an unreported accuracy is legible rather
+    than silent.
+
+    Where the marker, the pickup point, the window, the radius or the filter is
+    absent, nothing is tested and the block says so by carrying no fix: the fact
+    is unestablished rather than disproved, and POL-GEN-26 is the clause that
+    decides what follows.
     """
     marker = _instant(arrived_at)
     located = (
@@ -1296,6 +1303,7 @@ def arrival_check(
             "arrival_radius_m": radius_m,
             "gps_accuracy_filter_m": accuracy_max_m,
             "nearest_fix": None,
+            "accuracy_reported": None,
             "corroborated": False,
         }
 
@@ -1315,20 +1323,20 @@ def arrival_check(
             best = (distance, index, fix)
 
     nearest = None
+    accuracy_reported = None
     corroborated = False
     if best is not None:
         distance, index, fix = best
         accuracy = _number(fix.get("accuracy_m"))
+        accuracy_reported = accuracy is not None
         nearest = {
             "index": index,
             "ts": fix.get("ts"),
             "distance_m": distance,
             "accuracy_m": accuracy,
         }
-        corroborated = (
-            distance <= float(radius_m)
-            and accuracy is not None
-            and accuracy <= float(accuracy_max_m)
+        corroborated = distance <= float(radius_m) and (
+            accuracy is None or accuracy <= float(accuracy_max_m)
         )
 
     return {
@@ -1337,43 +1345,53 @@ def arrival_check(
         "arrival_radius_m": radius_m,
         "gps_accuracy_filter_m": accuracy_max_m,
         "nearest_fix": nearest,
+        "accuracy_reported": accuracy_reported,
         "corroborated": corroborated,
     }
 
 
-def _fold(text: Any) -> str:
-    """A traffic-event name folded for comparison: no case, no spaces or hyphens."""
-    return str(text).strip().lower().replace(" ", "_").replace("-", "_")
+def justification_kind(advisory_type: Any, types_by_kind: Any) -> Optional[str]:
+    """The kind of traffic event an advisory's ``type`` names, or ``None``.
 
-
-def names_a_kind(kind: Any, kinds: Any) -> bool:
-    """Whether one ``traffic_advisory.type`` names one of the kinds a clause lists.
-
-    POL-RD-23 names the kinds in words -- "congestion, an incident or a closure"
-    -- and the record names its advisories in tokens, so the two are compared
-    folded (no case, spaces and hyphens normalised) and either way round: a
-    recorded ``ROAD_CLOSURE`` carries the clause's "closure", and a clause's
-    "closure" carries a recorded ``CLOSURE``.
+    POL-RD-23 names three kinds in words -- "congestion, an incident or a
+    closure" -- and the policy states which recorded ``traffic_advisory.type``
+    values belong to each in ``thresholds.traffic_justification_types``. The
+    advisory's type is compared with those values **exactly**, in upper case:
+    both sides are the schema's own tokens, so a type the policy does not list
+    names no kind and is reported as such rather than folded onto a word it
+    merely resembles.
 
     What it does **not** do is decide that two different words mean the same
-    thing. A recorded type the clause does not name is not one of the kinds the
-    clause names, and the block publishes both the type and the kinds so a
-    reader can see the comparison the boolean rests on.
+    thing. A type is a kind because the policy's map lists it under that kind,
+    and a type the map does not carry is not one of the kinds the policy names;
+    the block publishes both the type and the map so a reader can see the
+    comparison the boolean rests on.
+
+    ``types_by_kind`` is the policy's own mapping, handed in by the caller --
+    this module still holds no policy value. An entry whose value is not a list
+    of strings is skipped, which is how the mapping's own ``note`` is passed
+    over without the note's key being named here.
     """
-    if not isinstance(kind, str):
-        return False
-    token = _fold(kind)
-    return any(
-        _fold(word) in token or token in _fold(word)
-        for word in (kinds or [])
-        if isinstance(word, str) and word
-    )
+    if not isinstance(advisory_type, str):
+        return None
+    token = advisory_type.strip().upper()
+    if not token or not isinstance(types_by_kind, Mapping):
+        return None
+    for kind, listed in types_by_kind.items():
+        if not isinstance(listed, (list, tuple)):
+            continue
+        if any(
+            isinstance(candidate, str) and candidate.strip().upper() == token
+            for candidate in listed
+        ):
+            return kind
+    return None
 
 
 def advisory_justification(
     evidence_id: Any,
     payload: Any,
-    admissible_types: Any,
+    types_by_kind: Any,
 ) -> Dict[str, Any]:
     """POL-RD-23: whether one traffic advisory justifies the reroute.
 
@@ -1385,13 +1403,15 @@ def advisory_justification(
 
     Three conditions, all of them required: the advisory intersects the
     recommended route, its window overlaps the trip, and its type is one of the
-    kinds the clause names. ``admissible_types`` is that list, read from the
-    clause by the caller -- this module still holds no policy value.
+    recorded types the policy's ``traffic_justification_types`` map admits.
+    ``types_by_kind`` is that map, read from the loaded policy by the caller --
+    this module still holds no policy value -- and the kind the type matched is
+    reported beside the boolean.
 
     A MISSING advisory has no payload at all, which is not the same as an
     advisory that fails the test: the block says which it is.
     """
-    kinds = [word for word in (admissible_types or []) if isinstance(word, str) and word]
+    kinds = types_by_kind if isinstance(types_by_kind, Mapping) else {}
     if not isinstance(payload, Mapping) or not payload:
         return {
             "available": False,
@@ -1400,6 +1420,7 @@ def advisory_justification(
         }
 
     kind = payload.get("type")
+    matched = justification_kind(kind, kinds)
     return {
         "available": True,
         "intersects_route": payload.get("intersects_route"),
@@ -1407,9 +1428,10 @@ def advisory_justification(
         "type": kind,
         "severity": payload.get("severity"),
         "admissible_types": kinds,
+        "justification_kind": matched,
         "justifies_reroute": (
             payload.get("intersects_route") is True
             and payload.get("overlaps_trip_window") is True
-            and names_a_kind(kind, kinds)
+            and matched is not None
         ),
     }

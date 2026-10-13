@@ -34,6 +34,7 @@ import sys
 import unittest
 from decimal import Decimal
 from pathlib import Path
+from unittest import mock
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -484,8 +485,12 @@ class TheDeviationTests(unittest.TestCase):
         block = derived_block(built, "EV-ADVIS-00103-01")
         self.assertEqual(block["type"]["value"], "CLOSURE")
         self.assertIs(block["justifies_reroute"]["value"], True)
+        self.assertEqual(block["justification_kind"]["value"], "closure")
         self.assertEqual(block["admissible_types"]["clause_id"], "POL-RD-23")
-        self.assertEqual(block["admissible_types"]["value"], ["congestion", "incident", "closure"])
+        self.assertEqual(
+            sorted(block["admissible_types"]["value"]),
+            ["closure", "congestion", "incident", "note"],
+        )
 
     def test_an_advisory_that_does_not_intersect_the_route_justifies_nothing(self):
         built = brief.build_brief_for_case(loader.load_case(104), policy_version=7)
@@ -494,22 +499,161 @@ class TheDeviationTests(unittest.TestCase):
         self.assertIs(block["justifies_reroute"]["value"], False)
         self.assertIn("does not intersect the recommended route", block["reason"])
 
-    def test_a_kind_the_clause_does_not_name_is_reported_as_such(self):
-        """POL-RD-23 names congestion, an incident and a closure, and nothing else.
+    def test_an_accident_on_the_route_in_the_window_justifies_as_an_incident(self):
+        """The policy's type map, not the clause's three words, decides the kind.
 
-        The corpus's ``ACCIDENT`` is not one of those three words, so the block
-        says so in the negative rather than silently justifying the reroute --
-        and it publishes the kinds it compared against, so the reading is
-        legible rather than merely asserted. Every condition that failed is
-        named, not only the first: this advisory intersects the route and
-        overlaps the trip, so the type is the only one that does not hold.
+        POL-RD-23 names "congestion, an incident or a closure", and the policy
+        states which recorded types each admits in
+        ``thresholds.traffic_justification_types``: an accident is an incident
+        because the policy lists it under that kind. This advisory intersects
+        the route and overlaps the trip window, so the type is the only
+        condition in question and it holds.
         """
         built = brief.build_brief_for_case(loader.load_case(104), policy_version=7)
         block = derived_block(built, "EV-ADVIS-00104-01")
         self.assertEqual(block["type"]["value"], "ACCIDENT")
+        self.assertIs(block["intersects_route"]["value"], True)
+        self.assertIs(block["overlaps_trip_window"]["value"], True)
+        self.assertIs(block["justifies_reroute"]["value"], True)
+        self.assertEqual(block["justification_kind"]["value"], "incident")
+        self.assertNotIn("reason", block)
+
+    def test_a_kerb_restriction_and_a_traffic_flow_justify_nothing(self):
+        """Two recorded types the policy's own note says do not justify a reroute.
+
+        Neither value is in the policy's map, so neither names a kind -- and the
+        reason says so, naming the three kinds the map does carry rather than
+        the values the two advisories happen to hold. The kerb restriction is
+        the corpus's own case 214 advisory, which intersects the route and
+        overlaps the trip, read through the reader the block calls: case 214 is
+        a no-show, and a no-show brief carries no advisory block at all. The
+        traffic flow is DISP-001's third advisory, read through the brief.
+        """
+        mapped = loader.load_policies("ROUTE_DEVIATION", 7)["category"]["thresholds"][
+            "traffic_justification_types"
+        ]
+        kerb = {
+            "type": "KERB_RESTRICTION",
+            "intersects_route": True,
+            "overlaps_trip_window": True,
+            "severity": "MODERATE",
+        }
+        reading = facts.advisory_justification("EV-ADVIS-00214-01", kerb, mapped)
+        self.assertIs(reading["justifies_reroute"], False)
+        self.assertIsNone(reading["justification_kind"])
+
+        sample = loader.load_external_set_case(loader.EXTERNAL_DIR / "ryde-v7", 902)
+        built = brief.build_brief_for_case(sample, policy_version=7)
+        flow = derived_block(built, "EV-ADVIS-00902-03")
+        self.assertEqual(flow["type"]["value"], "TRAFFIC_FLOW")
+        self.assertIs(flow["justifies_reroute"]["value"], False)
+        self.assertIsNone(flow["justification_kind"]["value"])
+        self.assertIn("not one of the kinds POL-RD-23 names", flow["reason"])
+        self.assertIn("closure, congestion, incident", flow["reason"])
+
+    def test_rydes_vehicle_fire_advisory_justifies_as_an_incident(self):
+        """DISP-001's first advisory, which the clause's three words did not name."""
+        sample = loader.load_external_set_case(loader.EXTERNAL_DIR / "ryde-v7", 902)
+        built = brief.build_brief_for_case(sample, policy_version=7)
+        block = derived_block(built, "EV-ADVIS-00902-01")
+        self.assertEqual(block["type"]["value"], "VEHICLE_FIRE")
+        self.assertIs(block["justifies_reroute"]["value"], True)
+        self.assertEqual(block["justification_kind"]["value"], "incident")
+
+    def test_the_accident_reading_fails_when_the_type_map_is_emptied(self):
+        """The control: the justification is the map's, not the word's.
+
+        The same case, the same advisory and the same brief, with the policy's
+        type map replaced by an empty one: the ACCIDENT advisory no longer
+        justifies anything, which is what shows the first assertion above rests
+        on the map rather than on the word ``ACCIDENT``.
+        """
+        built = brief.build_brief_for_case(loader.load_case(104), policy_version=7)
+        self.assertIs(
+            derived_block(built, "EV-ADVIS-00104-01")["justifies_reroute"]["value"], True
+        )
+
+        with mock.patch.object(brief, "_v7_justification_types", lambda *a, **k: {}):
+            emptied = brief.build_brief_for_case(loader.load_case(104), policy_version=7)
+        block = derived_block(emptied, "EV-ADVIS-00104-01")
         self.assertIs(block["justifies_reroute"]["value"], False)
+        self.assertIsNone(block["justification_kind"]["value"])
         self.assertIn("not one of the kinds POL-RD-23 names", block["reason"])
-        self.assertNotIn("does not intersect", block["reason"])
+
+
+class TheArrivalAccuracyFilterTests(unittest.TestCase):
+    """POL-NS-21's arrival test, and the policy's rule for its accuracy filter.
+
+    The policy states the rule in ``arrival_test.accuracy_filter_applies``: the
+    filter reaches **only a fix that reports an accuracy**. A fix that reports
+    none is used at its reported position rather than dropped, and the block
+    says its accuracy is unreported; a fix that reports one is filtered as it
+    always was.
+    """
+
+    def test_rydes_no_show_reads_corroborated_with_an_unreported_accuracy(self):
+        """Case 903's nearest fix is at the pickup and reports no accuracy.
+
+        DISP-002's trace has the vehicle at 0 m from the pin at the arrival
+        marker with no accuracy in the record. Under the policy's rule the fix
+        is used as it stands, so the arrival is corroborated -- and the block
+        says the accuracy is unreported rather than leaving the reader to
+        notice it.
+        """
+        sample = loader.load_external_set_case(loader.EXTERNAL_DIR / "ryde-v7", 903)
+        built = brief.build_brief_for_case(sample, policy_version=7)
+        block = derived_block(built, "EV-GPS-00903")["arrival_check"]
+        self.assertIs(block["accuracy_reported"]["value"], False)
+        self.assertIs(block["corroborated"]["value"], True)
+        self.assertIsNone(block["nearest_fix"]["accuracy_m"]["value"])
+        self.assertEqual(Decimal("0.0"), block["nearest_fix"]["distance_m"]["value"])
+        self.assertIn("reports no accuracy", block["accuracy_note"])
+        self.assertIn("accuracy_filter_applies", block["accuracy_note"])
+
+    def test_the_policys_own_rule_is_published_beside_the_reading(self):
+        sample = loader.load_external_set_case(loader.EXTERNAL_DIR / "ryde-v7", 903)
+        built = brief.build_brief_for_case(sample, policy_version=7)
+        block = derived_block(built, "EV-GPS-00903")["arrival_check"]
+        self.assertEqual("POL-NS-21", block["accuracy_filter_applies"]["clause_id"])
+        self.assertIn(
+            "only to a fix that reports an accuracy",
+            block["accuracy_filter_applies"]["value"],
+        )
+
+    def test_a_fix_reporting_a_poor_accuracy_inside_the_radius_is_filtered_out(self):
+        """The filter is not switched off: 40 m of accuracy fails the 25 m one.
+
+        The fix is about 10 m from the pin -- well inside the 50 m arrival
+        radius -- so the only condition that can fail is the accuracy, and the
+        reading is asserted to have failed on exactly that one.
+        """
+        pickup = {"lat": 1.2847, "lng": 103.8382}
+        points = [
+            {
+                "lat": 1.28479,
+                "lng": 103.8382,
+                "ts": "2026-09-13T08:43:00+08:00",
+                "accuracy_m": 40,
+            }
+        ]
+        reading = facts.arrival_check(
+            points, pickup, "2026-09-13T08:43:00+08:00", 120, 50, 25
+        )
+        self.assertIs(reading["accuracy_reported"], True)
+        self.assertLess(reading["nearest_fix"]["distance_m"], 50)
+        self.assertEqual(40, reading["nearest_fix"]["accuracy_m"])
+        self.assertIs(reading["corroborated"], False)
+
+    def test_the_same_fix_with_no_reported_accuracy_is_used_as_it_stands(self):
+        """The control for the test above: the filter is the accuracy's absence."""
+        pickup = {"lat": 1.2847, "lng": 103.8382}
+        points = [{"lat": 1.28479, "lng": 103.8382, "ts": "2026-09-13T08:43:00+08:00"}]
+        reading = facts.arrival_check(
+            points, pickup, "2026-09-13T08:43:00+08:00", 120, 50, 25
+        )
+        self.assertIs(reading["accuracy_reported"], False)
+        self.assertLess(reading["nearest_fix"]["distance_m"], 50)
+        self.assertIs(reading["corroborated"], True)
 
 
 class TheAuthorityTests(unittest.TestCase):

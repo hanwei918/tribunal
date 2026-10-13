@@ -276,6 +276,29 @@ class TheKeyTests(unittest.TestCase):
             [], sorted(set(self.key) & set(corpus)), "a case number is in both keys"
         )
 
+    def test_each_difficulty_is_one_of_the_graders_four(self):
+        """The key's labels, in the vocabulary the grader's reports use.
+
+        ``eval.grade`` reads ``difficulty`` for one thing -- whether an
+        escalation is an ``INDETERMINATE`` one -- and the vocabulary is EASY,
+        HARD, REVERSAL and INDETERMINATE. Both records were drafted as MEDIUM,
+        which is not in it, and both were corrected on 2026-10-13: 902 to HARD,
+        and 903 to REVERSAL, because the rider's "the driver never showed up" is
+        contradicted by the record the driver's own messages and the trace make.
+        """
+        records = json.loads(KEY_PATH.read_text(encoding="utf-8"))
+        difficulties = {
+            record["case_no"]: record["ground_truth"]["difficulty"]
+            for record in records
+        }
+        self.assertEqual(
+            {ROUTE_DEVIATION_CASE: "HARD", NO_SHOW_CASE: "REVERSAL"}, difficulties
+        )
+        self.assertTrue(
+            set(difficulties.values()) <= {"EASY", "HARD", "REVERSAL", "INDETERMINATE"},
+            "a difficulty outside the grader's vocabulary",
+        )
+
 
 # --------------------------------------------------------------------------
 # The registration

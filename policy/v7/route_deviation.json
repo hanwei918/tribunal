@@ -14,6 +14,23 @@
       "formula": "deviation_km x fare_breakdown.per_km_rate_sgd",
       "surge_applied": false,
       "rounding": "to the cent, half up"
+    },
+    "traffic_justification_types": {
+      "congestion": [
+        "CONGESTION",
+        "HEAVY_CONGESTION"
+      ],
+      "incident": [
+        "ACCIDENT",
+        "VEHICLE_FIRE",
+        "BREAKDOWN",
+        "INCIDENT"
+      ],
+      "closure": [
+        "CLOSURE",
+        "ROADWORKS"
+      ],
+      "note": "C18: the TRAFFIC_ADVISORY types the schema uses, mapped onto v2.1 1.1's 'traffic conditions, road closures, or congestion'. Any other type (for example KERB_RESTRICTION, TRAFFIC_FLOW) does not justify a reroute. ROADWORKS counts as a closure."
     }
   },
   "integrity": {

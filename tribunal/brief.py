@@ -2918,10 +2918,10 @@ def _masked_artifact_registrations(artifact: Any) -> Any:
 # the version-6 clause readers.
 #
 # Every threshold it publishes is read from the version-7 policy's structured
-# fields (``thresholds``, ``arrival_test``, ``integrity``). Where the policy
-# states a value only in a clause's prose -- POL-RD-23's kinds of traffic event
-# -- it is read out of that clause's own ``rule`` string by a reader below,
-# exactly as :func:`_deviation_thresholds` reads POL-RD-01's lines, so the value
+# fields (``thresholds``, ``arrival_test``, ``integrity``). Nothing is parsed
+# out of a clause's prose: POL-RD-23's kinds and the recorded types each admits
+# are read from ``thresholds.traffic_justification_types``, and the arrival
+# test's rule for its accuracy filter from ``arrival_test``, so every value
 # still comes from the loaded policy rather than from a literal here.
 #
 # Two shapes the version-7 blocks keep from version 6, because a reader of the
@@ -2983,13 +2983,26 @@ POL_RD_23 = "POL-RD-23"
 POL_RD_24 = "POL-RD-24"
 POL_RD_25 = "POL-RD-25"
 
-# POL-RD-23's kinds, read out of the clause's own sentence: "where traffic data
-# for the recommended route segment at the trip time shows congestion, an
-# incident or a closure". The words are the clause's; the list is what the
-# advisory block compares a recorded ``type`` against, and it is published
-# beside the boolean so a reader can see the comparison the boolean rests on.
-ADVISORY_KINDS_RE = re.compile(r"at the trip time shows\s+(.*?):")
-ADVISORY_KIND_STOPWORDS = frozenset({"a", "an", "the", "or", "and"})
+# POL-RD-23's kinds, read from the version-7 policy's own structured field:
+# ``thresholds.traffic_justification_types`` maps each kind the clause names in
+# words ("congestion, an incident or a closure") onto the recorded
+# ``traffic_advisory.type`` values that belong to it. The map is the policy's,
+# not this module's: the kinds are read from the field's own keys and the types
+# from its own lists, so an accident is an incident because the policy says so
+# and not because the two words are close. Nothing here parses the clause's
+# sentence for the kinds.
+V7_TRAFFIC_JUSTIFICATION_TYPES_KEY = "traffic_justification_types"
+
+# The arrival test's own rule for the accuracy filter, and the block that
+# carries it: the field name in the policy's ``arrival_test`` block, the key the
+# brief publishes it under, and the sentence a corroboration that rests on a fix
+# reporting no accuracy carries so the reading is legible rather than silent.
+V7_ACCURACY_FILTER_KEY = "accuracy_filter_applies"
+V7_ACCURACY_UNREPORTED_NOTE = (
+    "the fix nearest the pickup reports no accuracy, so the policy's filter is "
+    "not applied to it and the fix is used at its reported position (POL-NS-21's "
+    "arrival test, accuracy_filter_applies)"
+)
 
 # The sentences a block publishes where a figure is absent or a reading is
 # negative. None of them is a policy value: each says what the record or the
@@ -3032,28 +3045,37 @@ def _v7_structured(policy: Dict[str, Any], block: str) -> Dict[str, Any]:
     return structured
 
 
-def _v7_advisory_kinds(category_policy: Dict[str, Any]) -> List[str]:
-    """The kinds of traffic event POL-RD-23 names, read from the clause's own sentence.
+def _v7_justification_types(
+    category_policy: Dict[str, Any], thresholds: Dict[str, Any]
+) -> Dict[str, Any]:
+    """POL-RD-23's kinds, and the recorded types each admits, from the policy.
 
-    Returns ``[]`` when the loaded policy carries no POL-RD-23, which is how a
+    The clause names the kinds in words -- "congestion, an incident or a
+    closure" -- and the version-7 policy states which recorded
+    ``traffic_advisory.type`` values belong to each in
+    ``thresholds.traffic_justification_types``. The map is read from that field
+    rather than parsed out of the clause's sentence, so a type the policy does
+    not list cannot be folded onto a word it merely resembles.
+
+    A policy that carries POL-RD-23 but no such field is a **refusal** rather
+    than a fallback: a kind table written in this file would be a policy value
+    hard-coded in ``tribunal/``, and a silent default would justify every
+    reroute whose advisory happens to be recorded.
+
+    Returns ``{}`` when the loaded policy carries no POL-RD-23, which is how a
     no-show case is recognised: a NO_SHOW_CHARGE brief carries no advisory block
     at all, exactly as it carries no deviation block.
     """
-    clause = _clause_of(category_policy, POL_RD_23)
-    if not isinstance(clause, dict):
-        return []
-    listed = ADVISORY_KINDS_RE.search(clause.get("rule", ""))
-    if listed is None:
+    if not isinstance(_clause_of(category_policy, POL_RD_23), dict):
+        return {}
+    listed = thresholds.get(V7_TRAFFIC_JUSTIFICATION_TYPES_KEY)
+    if not isinstance(listed, dict) or not listed:
         raise loader.LoaderError(
-            "POL-RD-23's rule does not state the kinds of traffic event it "
-            "admits, so whether an advisory justifies a reroute cannot be "
-            "decided without retyping them"
+            "POL-RD-23's kinds are not stated as a structured field, so whether "
+            "an advisory justifies a reroute cannot be decided without retyping "
+            "them"
         )
-    return [
-        word
-        for word in re.findall(r"[a-z]+", listed.group(1).lower())
-        if word not in ADVISORY_KIND_STOPWORDS
-    ]
+    return listed
 
 
 def _v7_admissibility(
@@ -3265,6 +3287,16 @@ def _v7_trace_block(
     radii = (arrival_test or {}).get("arrival_radius_m")
     radius = radii.get(zone) if isinstance(radii, dict) else None
     accuracy_max = (arrival_test or {}).get("gps_accuracy_filter_m")
+    # The policy's own rule for the filter, and a refusal where it is absent:
+    # the filter's reach is the policy's to state, and a brief that applied it
+    # on its own terms would be reading a rule the policy does not carry.
+    accuracy_rule = (arrival_test or {}).get(V7_ACCURACY_FILTER_KEY)
+    if not isinstance(accuracy_rule, str) or not accuracy_rule:
+        raise loader.LoaderError(
+            "the version-7 policy's arrival test does not state "
+            "{0!r}, so how far the accuracy filter reaches cannot be read from "
+            "it".format(V7_ACCURACY_FILTER_KEY)
+        )
 
     check = facts.arrival_check(
         facts.driver_points(gps_payload),
@@ -3283,6 +3315,7 @@ def _v7_trace_block(
         "gps_accuracy_filter_m": _clause_threshold(
             check["gps_accuracy_filter_m"], policy_id, POL_NS_21
         ),
+        "accuracy_filter_applies": _clause_threshold(accuracy_rule, policy_id, POL_NS_21),
         "nearest_fix": (
             None
             if nearest is None
@@ -3293,13 +3326,29 @@ def _v7_trace_block(
                 "accuracy_m": _sourced(nearest["accuracy_m"], gps_evidence_id or ""),
             }
         ),
+        "accuracy_reported": _sourced(check["accuracy_reported"], gps_evidence_id or ""),
         "corroborated": _sourced(check["corroborated"], gps_evidence_id or ""),
     }
+    if check["accuracy_reported"] is False:
+        block["arrival_check"]["accuracy_note"] = V7_ACCURACY_UNREPORTED_NOTE
     return block
 
 
+def _v7_kind_names(justification_types: Dict[str, Any]) -> List[str]:
+    """The kinds a type map names: the entries that list recorded types.
+
+    The map's own ``note`` is prose rather than a kind, so the kinds are read
+    from the entries whose value is a list -- the same shape
+    :func:`facts.justification_kind` matches a recorded type against. Nothing
+    here types a kind's name.
+    """
+    return sorted(
+        kind for kind, types in justification_types.items() if isinstance(types, list)
+    )
+
+
 def _v7_advisory_block(
-    artifact: Dict[str, Any], kinds: List[str], policy_id: str
+    artifact: Dict[str, Any], justification_types: Dict[str, Any], policy_id: str
 ) -> Dict[str, Any]:
     """One traffic advisory's version-7 reading (POL-RD-23).
 
@@ -3307,9 +3356,16 @@ def _v7_advisory_block(
     reason -- because "there is no advisory" and "there is one and it justifies
     nothing" are different findings, and POL-GEN-02 gives a MISSING artifact
     weight 0.0 rather than treating it as an absent fact.
+
+    The block publishes the policy's own type map, under POL-RD-23, and the kind
+    the advisory's type matched, so the comparison the boolean rests on is
+    legible: a reader can see which of the three kinds the type named rather
+    than only that the reroute was or was not justified.
     """
     evidence_id = artifact["evidence_id"]
-    reading = facts.advisory_justification(evidence_id, artifact.get("payload"), kinds)
+    reading = facts.advisory_justification(
+        evidence_id, artifact.get("payload"), justification_types
+    )
     if not reading["available"]:
         return {
             "available": False,
@@ -3324,6 +3380,7 @@ def _v7_advisory_block(
         "type": _sourced(reading["type"], evidence_id),
         "severity": _sourced(reading["severity"], evidence_id),
         "admissible_types": _clause_threshold(reading["admissible_types"], policy_id, POL_RD_23),
+        "justification_kind": _sourced(reading["justification_kind"], evidence_id),
         "justifies_reroute": _sourced(reading["justifies_reroute"], evidence_id),
     }
     if not reading["justifies_reroute"]:
@@ -3336,10 +3393,10 @@ def _v7_advisory_block(
             failures.append("it does not intersect the recommended route")
         if reading["overlaps_trip_window"] is not True:
             failures.append("its active window does not overlap the trip window")
-        if not facts.names_a_kind(reading["type"], kinds):
+        if reading["justification_kind"] is None:
             failures.append(
                 "its type {0} is not one of the kinds POL-RD-23 names ({1})".format(
-                    reading["type"], ", ".join(kinds)
+                    reading["type"], ", ".join(_v7_kind_names(justification_types))
                 )
             )
         block["reason"] = "POL-RD-23 is not satisfied: " + "; ".join(failures)
@@ -3595,7 +3652,7 @@ def build_v7_brief(
     thresholds = _v7_structured(category_policy, V7_THRESHOLDS_KEY)
     arrival_test = category_policy.get(V7_ARRIVAL_TEST_KEY)
     arrival_test = arrival_test if isinstance(arrival_test, dict) else None
-    kinds = _v7_advisory_kinds(category_policy)
+    justification_types = _v7_justification_types(category_policy, thresholds)
     weights, gap_threshold = _integrity_reading(category_policy, BRIEF_V7_VERSION)
 
     trip_payload, trip_evidence_id = _v7_evidence_payload(case, TRIP_EVIDENCE_TYPE)
@@ -3690,7 +3747,7 @@ def build_v7_brief(
             updated["evidence_type"] == TRAFFIC_ADVISORY_EVIDENCE_TYPE
         ):
             updated = _attach_derived(
-                updated, V7_KEY, _v7_advisory_block(updated, kinds, policy_id)
+                updated, V7_KEY, _v7_advisory_block(updated, justification_types, policy_id)
             )
         if money_block is not None and updated["evidence_id"] == fare_evidence_id:
             updated = _attach_derived(updated, MONEY_KEY, money_block)
