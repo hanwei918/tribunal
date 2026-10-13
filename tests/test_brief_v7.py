@@ -40,6 +40,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from tests import portability  # noqa: E402
 from tribunal import brief, facts, loader, money  # noqa: E402
 
 FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "v7"
@@ -102,6 +103,38 @@ def the_case_of(path):
     return loader.load_external_set_case(loader.EXTERNAL_DIR / set_name, case_no)
 
 
+def leaf_paths(node, path=()):
+    """The path of every leaf of a brief, in a fixed walk order."""
+    if isinstance(node, dict):
+        for key, value in node.items():
+            yield from leaf_paths(value, path + (key,))
+    elif isinstance(node, (list, tuple)):
+        for index, value in enumerate(node):
+            yield from leaf_paths(value, path + (index,))
+    else:
+        yield path
+
+
+def first_float_outside_the_mean_distance(built):
+    """The path of the first float that is not ``driver_track.mean_distance_m``.
+
+    The platform guard may move only the mean distance, so the control that
+    shows it accepts nothing else has to move something else. A float whose last
+    place ``1.0`` cannot reach would leave the digest unchanged and the control
+    vacuous, so the first float the change actually moves is the one taken.
+    ``None`` where the brief carries no such float. The mean distance is skipped
+    by the field name ``portability`` itself names, and the path and the value
+    are read with ``portability``'s own helpers.
+    """
+    for path in leaf_paths(built):
+        if portability.MEAN_DISTANCE_FIELD in path:
+            continue
+        value = portability._value_at(built, path)
+        if isinstance(value, float) and value + 1.0 != value:
+            return path
+    return None
+
+
 def derived_block(brief_case, evidence_id, key="v7"):
     """One artifact's derived block of a built brief, by evidence id."""
     for artifact in brief_case["case"]["evidence"]:
@@ -142,9 +175,25 @@ class TheRecordedVersionSixDigestsTests(unittest.TestCase):
     """Version 6 is untouched: every recorded brief rebuilds to the digest it recorded."""
 
     def test_every_recorded_version_six_digest_rebuilds_unchanged(self):
-        """194 recorded case files, seven run directories, no digest moved."""
+        """194 recorded case files, seven run directories, no digest moved.
+
+        The digests were recorded on macOS, and glibc and macOS ``libm`` can
+        round ``driver_track.mean_distance_m`` one unit in the last place apart
+        -- ``tests/portability.py`` names that difference for case 111 and holds
+        the bounded check, :func:`portability.known_platform_difference`, which
+        accepts **only** a brief that reproduces the recorded digest when that
+        one value is moved one unit in the last place, up or down. Off macOS a
+        rebuilt digest that differs is therefore accepted only when that check
+        says the difference is the one known value; the files accepted that way
+        are printed below so the Actions log names them, and each is held to
+        carrying a ``driver_track.mean_distance_m`` for the guard to have moved.
+        On macOS the comparison fails as it always did, no other difference is
+        accepted on any platform, and the count and the run directories walked
+        are asserted exactly as before.
+        """
         checked = 0
         sets = set()
+        accepted = []
         for path in recorded_run_files():
             document = json.loads(path.read_text(encoding="utf-8"))
             configuration = document.get("configuration") or {}
@@ -154,12 +203,45 @@ class TheRecordedVersionSixDigestsTests(unittest.TestCase):
                 "{0} is not a version-6 run".format(path),
             )
             case = the_case_of(path)
-            _canonical, digest = brief.brief_digest(
-                brief.build_brief_for_case(case, policy_version=6)
-            )
-            self.assertEqual(digest, document["brief_sha256"], str(path))
+            built = brief.build_brief_for_case(case, policy_version=6)
+            _canonical, digest = brief.brief_digest(built)
+            recorded = document["brief_sha256"]
+            if digest != recorded:
+                if sys.platform == "darwin":
+                    # The recorded digests are this code's own on macOS, so a
+                    # difference here is a defect and fails as it always did.
+                    self.assertEqual(digest, recorded, str(path))
+                # Off macOS the one known last-place difference is accepted, and
+                # only it: ``portability`` states the rule and holds the bound,
+                # and a difference of two units, a difference in another field,
+                # or a digest that is not the recorded one for any other reason
+                # reproduces nothing and still fails here.
+                self.assertTrue(
+                    portability.known_platform_difference(built, recorded),
+                    "{0} differs from the digest its run recorded by more than "
+                    "the one known last-place difference".format(path),
+                )
+                accepted.append((path, built))
             sets.add(path.relative_to(RUNS_DIR).parts[0])
             checked += 1
+
+        if accepted:
+            print(
+                "\nrecorded version-6 digests rebuilt only by the known "
+                "last-place difference of driver_track.mean_distance_m on {0}: "
+                "{1}\n".format(
+                    sys.platform,
+                    ", ".join(str(path) for path, _built in accepted),
+                ),
+                file=sys.stderr,
+            )
+        for path, built in accepted:
+            with self.subTest(accepted_as_the_platform_difference=str(path)):
+                self.assertTrue(
+                    list(portability._mean_distance_paths(built)),
+                    "{0} was accepted as the platform difference but its brief "
+                    "carries no driver_track.mean_distance_m".format(path),
+                )
 
         self.assertEqual(checked, 194, "the recorded runs walked are not the ones on disk")
         self.assertEqual(
@@ -197,6 +279,43 @@ class TheRecordedVersionSixDigestsTests(unittest.TestCase):
             brief.build_brief_for_case(case, policy_version=7)
         )
         self.assertNotEqual(digest, document["brief_sha256"])
+
+    def test_a_different_float_is_not_the_platform_difference(self):
+        """The control: the guard accepts the mean distance and nothing else.
+
+        The same comparison the test above makes is handed a brief whose
+        **other** float is moved by ``1.0``: the digest moves, and
+        :func:`portability.known_platform_difference` refuses it -- on every
+        platform, since moving the mean distance one unit in the last place
+        cannot reproduce a digest that differs somewhere else. That is what
+        shows the acceptance above is the one value in the last place and not a
+        tolerance for any difference. ``portability``'s own helpers are used and
+        no tolerance is added here.
+        """
+        path = recorded_run_files()[0]
+        document = json.loads(path.read_text(encoding="utf-8"))
+        recorded = document["brief_sha256"]
+        built = brief.build_brief_for_case(the_case_of(path), policy_version=6)
+        moved = first_float_outside_the_mean_distance(built)
+        self.assertIsNotNone(
+            moved,
+            "{0}'s brief carries no float outside the mean distance".format(path),
+        )
+        changed = copy.deepcopy(built)
+        portability._replace(
+            changed, moved, portability._value_at(changed, moved) + 1.0
+        )
+        self.assertNotEqual(
+            recorded,
+            brief.brief_digest(changed)[1],
+            "moving a float that is not the mean distance left the digest "
+            "unchanged, so the control proves nothing",
+        )
+        self.assertFalse(
+            portability.known_platform_difference(changed, recorded),
+            "a difference outside the mean distance was accepted as the "
+            "platform's",
+        )
 
 
 class TheExcessDistanceFareTests(unittest.TestCase):
