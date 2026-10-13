@@ -413,11 +413,22 @@ class TheVersionSevenCurrencyTests(unittest.TestCase):
                 self.assertEqual((), staleness.unknown)
 
     def test_the_checker_is_handed_the_prompts_directory_the_run_used(self):
+        # One directory has two spellings here: ``dev-v7`` and ``sealed-v4``
+        # register the relative ``Path("prompts/v2")``, and ``ryde-v7``, which
+        # registers none, is answered ``run_benchmark.prompts_directory_for(7)``
+        # -- the absolute ``PROJECT_ROOT / "prompts" / "v2"``. Both name the same
+        # directory, so the answer is compared as a directory: a relative one is
+        # resolved against the project root first. A set answering ``prompts/v1``
+        # in either spelling still fails.
         for name, _produced in self.VERSION_SEVEN:
             with self.subTest(set=name):
+                named = sets.registered_prompts_dir(sets.named(name))
+                if not named.is_absolute():
+                    named = run_benchmark.PROJECT_ROOT / named
                 self.assertEqual(
-                    Path("prompts/v2"),
-                    sets.registered_prompts_dir(sets.named(name)),
+                    (run_benchmark.PROJECT_ROOT / "prompts" / "v2").resolve(),
+                    named.resolve(),
+                    "{0} is checked against {1!r}".format(name, named),
                 )
         # And the two sets whose registration records the arguments their run is
         # fixed at record it themselves, which is the first answer.

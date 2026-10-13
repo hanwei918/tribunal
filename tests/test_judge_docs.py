@@ -86,7 +86,7 @@ DOCUMENTATION_HEADER: Tuple[str, str] = ("document", "what's covered")
 # opens the description's new table and the one that closes it.
 THOUSAND_CASE_HEADING = "## 1,000 cases in figures"
 PAIN_POINT_OPENING = "**The brief's four pain points"
-PAIN_POINT_CLOSING = "**The sealed sets.**"
+PAIN_POINT_CLOSING = "**The policy it applies, and the sealed sets.**"
 
 LINK = re.compile(r"\[([^\]]*)\]\(([^)]+)\)")
 DIGITS = re.compile(r"\d+")
