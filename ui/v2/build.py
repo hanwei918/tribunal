@@ -3558,15 +3558,16 @@ def _summary_line(case: Mapping[str, Any]) -> str:
     """One line of the dispute's own claim text, masked as the brief masks it.
 
     The mask is :func:`tribunal.brief`'s own -- the same function the version-6
-    brief applies to ``claim_text`` -- so a registration mark is replaced on the
-    page exactly as it was replaced in front of the agents. The line is the
-    claim's first sentence, with its newlines flattened.
+    brief applies to ``claim_text`` -- so a registration mark, a telephone number
+    and an e-mail address are replaced on the page exactly as they were replaced
+    in front of the agents. The line is the claim's first sentence, with its
+    newlines flattened.
     """
     dispute = case.get("dispute") or {}
     text = dispute.get("claim_text")
     if not isinstance(text, str) or not text.strip():
         raise BuildError("the dispute records no claim_text")
-    masked = brief_module._mask_registrations(text)
+    masked = brief_module._mask_personal_data(text)
     collapsed = " ".join(str(masked).split())
     end = collapsed.find(". ")
     return collapsed if end < 0 else collapsed[: end + 1]

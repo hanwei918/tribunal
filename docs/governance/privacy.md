@@ -60,6 +60,20 @@ counterparty statement, so no brief it built contained one. The fix moves
 exactly one brief in the repository — `pii-v1` case 3202 at version 6 — and every
 recorded run's `brief_sha256` still rebuilds.
 
+**The reviewer's packet and the case page apply the same three masks, since part
+59.** Two things outside the brief are read by a person rather than by a model,
+and both were masked less than the brief was. The escalation packet a human
+reviewer reads (`ops/escalation.py`) copied `claim_text` and the counterparty
+statement's `text` straight from the public case file, unmasked, so `pii-v1`
+case 3201's claim showed a telephone number and case 3203 showed an e-mail
+address and one too. And the one line a case page takes from the public case
+file (`ui/v2/build.py`, `_summary_line`) masked registration marks only. Both now
+call `tribunal.brief._mask_personal_data` — imported, not copied — so the packet
+and the case page's summary line replace a registration mark, a telephone number
+and an e-mail address exactly as the brief does. **Names are still not masked in
+either**, for the reason given above: the mask covers plates, telephone numbers
+and e-mail addresses and not names.
+
 ## Who receives the data
 
 Every brief `tribunal/brief.py` builds is sent to a model provider outside this

@@ -14,6 +14,14 @@ calls.
 stated, so paraphrasing it would replace the question the reviewer has to settle
 with this module's reading of it.
 
+**The case's two free-text fields are masked.** ``POL-GEN-08(4)`` says telephone
+numbers and vehicle registration marks are "masked before display", and the
+version-6 brief masks them -- and e-mail addresses -- through
+:func:`tribunal.brief._mask_personal_data`. The packet is a thing a person reads,
+so ``claim_text`` and the counterparty statement's ``text`` go through that same
+function, imported rather than copied, and the case file itself is not changed.
+Names are still not masked, exactly as the brief does not mask them.
+
 **What is never carried, and never read.** The run's event log holds a ``grade``
 event per case, carrying the answer key's ``expected`` ruling and whether the
 recorded ruling ``matched`` it. Those events are filtered out of the timeline by
@@ -56,6 +64,7 @@ from ops import (
     risk,
 )
 from tribunal import events, loader, money, precedents
+from tribunal.brief import _mask_personal_data
 
 # The ruling value a packet is built for.
 ESCALATE = "ESCALATE"
@@ -269,6 +278,23 @@ def _fare_lines(case: Mapping[str, Any]) -> List[Dict[str, Any]]:
     return []
 
 
+def _masked_statement(statement: Any) -> Any:
+    """The counterparty statement with its ``text`` masked, whatever shape it has.
+
+    The field is an object (``text``, ``submitted_by``, ``submitted_at``) on the
+    cases that carry one and a bare string on a case that recorded it that way;
+    both go through the mask, and every other key is left as it was.
+    """
+    if isinstance(statement, str):
+        return _mask_personal_data(statement)
+    if isinstance(statement, Mapping):
+        masked = dict(statement)
+        if "text" in masked:
+            masked["text"] = _mask_personal_data(masked["text"])
+        return masked
+    return statement
+
+
 # --------------------------------------------------------------------------
 # The packet
 # --------------------------------------------------------------------------
@@ -347,6 +373,12 @@ def build_packet(
     ]
 
     # -- 1. The case --------------------------------------------------------
+    # ``POL-GEN-08(4)`` says telephone numbers and vehicle registration marks
+    # are masked before display, and the version-6 brief masks them (and e-mail
+    # addresses) through ``tribunal.brief._mask_personal_data``. The packet is
+    # a thing a person reads, so its two free-text fields go through the same
+    # mask: the case file itself is not changed, exactly as the brief does not
+    # change it. Names are still not masked, as the brief does not mask them.
     dispute = case["dispute"]
     packet_case = {
         "case_no": case["case_no"],
@@ -356,8 +388,10 @@ def build_packet(
         "filed_at": dispute.get("filed_at"),
         "channel": dispute.get("channel"),
         "amount_contested_sgd": dispute.get("amount_contested_sgd"),
-        "claim_text": dispute.get("claim_text"),
-        "counterparty_statement": dispute.get("counterparty_statement"),
+        "claim_text": _mask_personal_data(dispute.get("claim_text")),
+        "counterparty_statement": _masked_statement(
+            dispute.get("counterparty_statement")
+        ),
     }
 
     # -- 4. The drafts ------------------------------------------------------
