@@ -519,17 +519,19 @@ class VersionThreeTests(unittest.TestCase):
         self.assertEqual(2, policy_versions.current_version())
         # Base 1's own sequence is still at 2 -- one amendment -- and base 3's is
         # at 6, because ``POL-NS-11``, ``POL-RD-14`` and ``POL-NS-12`` are its
-        # three amendments. The two sequences are independent, so the highest is
-        # 6 and ``current_version`` does not move.
-        self.assertEqual(6, policy_versions.highest_available_version())
+        # three amendments. Base 7 is a separate base of its own with no
+        # amendment yet, so it is at 7. The sequences are independent, so the
+        # highest is 7 and ``current_version`` does not move.
+        self.assertEqual(7, policy_versions.highest_available_version())
         self.assertEqual(6, policy_versions.version_on_base(3))
         self.assertEqual(2, policy_versions.version_on_base(1))
-        # A scratch root with no amendments is at version 1, and base 3 there is
-        # the base alone, so the highest there is 3: the two sequences are
-        # independent, and neither reads the other's directory.
+        # A scratch root with no amendments is at version 1, and each separate
+        # base there is the base alone, so the highest there is 7 -- base 7's own
+        # number: the sequences are independent, and none reads another's
+        # directory.
         with tempfile.TemporaryDirectory() as tmp:
             self.assertEqual(1, policy_versions.current_version(tmp))
-            self.assertEqual(3, policy_versions.highest_available_version(tmp))
+            self.assertEqual(7, policy_versions.highest_available_version(tmp))
             self.assertEqual(3, policy_versions.version_on_base(3, tmp))
 
     def test_an_amendment_that_would_compute_a_separate_base_is_refused(self):
@@ -537,7 +539,14 @@ class VersionThreeTests(unittest.TestCase):
             with self.subTest(version=version):
                 with self.assertRaises(policy_versions.AmendmentError) as caught:
                     policy_versions.refuse_a_taken_version(version)
-                self.assertIn("policy/v3/", str(caught.exception))
+                # Each base is named by its own directory: version 3 is kept at
+                # ``policy/v3/`` and version 7 at ``policy/v7/``.
+                self.assertIn(
+                    "policy/{0}/".format(
+                        policy_versions.SEPARATE_BASE_VERSIONS[version]
+                    ),
+                    str(caught.exception),
+                )
         # Every version base 3 owns is refused on base 1, not only the base
         # itself: amendment 0002 on base 1 would compute 3 and amendment 0003
         # would compute 4, and 4 and 5 are base 3's own amendment versions.
@@ -1312,10 +1321,10 @@ class RunBenchmarkCommandLineTests(unittest.TestCase):
         # The same shape as the development-set test below: the runs root is a
         # scratch one, so nothing here resolves a destination under the
         # repository's own runs/. The amendment sequence is at version 2 since
-        # 2026-10-01, version 3 is a separate base since 2026-10-08, version 4 is
-        # that base with its first amendment, version 5 is it with the second and
-        # version 6 is it with the third, so the version the repository does not
-        # have is 7.
+        # 2026-10-01, version 3 is a separate base since 2026-10-08, versions 4,
+        # 5 and 6 are that base with its three amendments, and version 7 is a
+        # second separate base since 2026-10-13, so the version the repository
+        # does not have is 8.
         with tempfile.TemporaryDirectory() as tmp:
             with mock.patch.object(
                 runner,
@@ -1328,12 +1337,12 @@ class RunBenchmarkCommandLineTests(unittest.TestCase):
                             [
                                 "--model", MODEL,
                                 "--cases", "101",
-                                "--policy-version", "7",
+                                "--policy-version", "8",
                                 "--runs-dir", str(Path(tmp) / "runs"),
                             ]
                         )
         self.assertEqual(1, code)
-        self.assertIn("there is no policy version 7", errors.getvalue())
+        self.assertIn("there is no policy version 8", errors.getvalue())
 
     def test_version_1_is_accepted_and_writes_to_the_ordinary_directory(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -1403,8 +1412,9 @@ class DevelopmentSetsCommandLineTests(unittest.TestCase):
         # parser error: it is refused by the runner with a message naming the
         # version the repository is actually at. The amendment sequence is at
         # version 2 since 2026-10-01, version 3 is a separate base since
-        # 2026-10-08, and versions 4, 5 and 6 are that base with its three
-        # amendments, so the version that names nothing is 7. The runs root is a
+        # 2026-10-08, versions 4, 5 and 6 are that base with its three
+        # amendments, and version 7 is a second separate base since 2026-10-13,
+        # so the version that names nothing is 8. The runs root is a
         # scratch one, so the refusal is about the version and this test never
         # resolves a destination under the repository's own runs/.
         with tempfile.TemporaryDirectory() as tmp:
@@ -1413,7 +1423,7 @@ class DevelopmentSetsCommandLineTests(unittest.TestCase):
                     "--set",
                     "codex",
                     "--policy-version",
-                    "7",
+                    "8",
                     "--cases",
                     "9101",
                     "--runs-dir",
@@ -1421,7 +1431,7 @@ class DevelopmentSetsCommandLineTests(unittest.TestCase):
                 ]
             )
         self.assertEqual(1, code)
-        self.assertIn("there is no policy version 7", message)
+        self.assertIn("there is no policy version 8", message)
 
 
 # --------------------------------------------------------------------------
