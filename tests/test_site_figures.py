@@ -23,7 +23,7 @@ and shows the second going red.
 the comparison, so the row is a sentence a reader reads and not a fragment of
 markup; and the unit a figure is written with is the page's, which is why the
 figures themselves are bare numbers where the two languages write the unit
-differently (``585 s`` in English, ``585 秒`` in Chinese).
+differently (``585 s`` in English, ``585 \u79d2`` in Chinese).
 
 **No model call.** ``ui.site.figures`` reads committed runs and frozen keys, the
 same readings ``eval.v6_runs --report``, ``eval.business_value --report``,
@@ -115,38 +115,38 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
     ),
     # -- the front page, in Chinese ---------------------------------------
     ("index.zh.html", "160.4 s; p90 286.9 s.", ("median_wall_seconds", "p90_wall_seconds")),
-    ("index.zh.html", "2.7 分钟", ("median_wall_minutes",)),
+    ("index.zh.html", "2.7 \u5206\u949f", ("median_wall_minutes",)),
     ("index.zh.html", "$0.058", ("median_cost_dollars",)),
     ("index.zh.html", "0.0579 USD", ("median_cost_usd",)),
     ("index.zh.html", "74%", ("decided_share",)),
     ("index.zh.html", "112 / 151", ("decided_automatically", "cases_total")),
     (
         "index.zh.html",
-        "112 由 AI 判 13 已判，等人放款 26 没判，交给人",
+        "112 \u7531 AI \u5224 13 \u5df2\u5224\uff0c\u7b49\u4eba\u653e\u6b3e 26 \u6ca1\u5224\uff0c\u4ea4\u7ed9\u4eba",
         ("decided_automatically", "held_for_release", "no_ruling"),
     ),
     ("index.zh.html", "26 /151", ("no_ruling", "cases_total")),
-    ("index.zh.html", "136 /141：", ("position_swap_agreed", "position_swap_total")),
+    ("index.zh.html", "136 /141\uff1a", ("position_swap_agreed", "position_swap_total")),
     (
         "index.zh.html",
-        "6 次攻击：5 个不变，1 个转人工",
+        "6 \u6b21\u653b\u51fb\uff1a5 \u4e2a\u4e0d\u53d8\uff0c1 \u4e2a\u8f6c\u4eba\u5de5",
         ("inject_total", "inject_unchanged", "inject_sent_to_a_person"),
     ),
-    ("index.zh.html", "585 秒", ("case_208_waiting_seconds",)),
+    ("index.zh.html", "585 \u79d2", ("case_208_waiting_seconds",)),
     (
         "index.zh.html",
-        "司机获 SGD 6.40 / 置信度 0.95",
+        "\u53f8\u673a\u83b7 SGD 6.40 / \u7f6e\u4fe1\u5ea6 0.95",
         ("case_208_driver_amount", "case_208_confidence"),
     ),
     (
         "index.zh.html",
-        "司机获 SGD 4.00 / 置信度 0.9",
+        "\u53f8\u673a\u83b7 SGD 4.00 / \u7f6e\u4fe1\u5ea6 0.9",
         ("case_901_driver_amount", "case_901_confidence"),
     ),
-    ("index.zh.html", "0 次模型调用", ("case_2735_model_calls",)),
+    ("index.zh.html", "0 \u6b21\u6a21\u578b\u8c03\u7528", ("case_2735_model_calls",)),
     (
         "index.zh.html",
-        "12/12 从没见过的考题全部判对 sealed-v2, Wilson 95% [75.8%, 100%]",
+        "12/12 \u4ece\u6ca1\u89c1\u8fc7\u7684\u8003\u9898\u5168\u90e8\u5224\u5bf9 sealed-v2, Wilson 95% [75.8%, 100%]",
         ("sealed_v2_exact", "sealed_v2_interval"),
     ),
     # -- results ----------------------------------------------------------
@@ -182,20 +182,20 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
     ("results.html", "15/15 / 13/15", ("precedents_with", "precedents_without")),
     # -- results, in Chinese ----------------------------------------------
     ("results.zh.html", "160.4 s", ("median_wall_seconds",)),
-    ("results.zh.html", "在 4.8 分钟内完成", ("p90_wall_minutes",)),
+    ("results.zh.html", "\u5728 4.8 \u5206\u949f\u5185\u5b8c\u6210", ("p90_wall_minutes",)),
     ("results.zh.html", "$0.0579", ("median_cost_usd",)),
     ("results.zh.html", "112", ("decided_automatically",)),
     ("results.zh.html", "13", ("held_for_release",)),
     ("results.zh.html", "26", ("no_ruling",)),
     (
         "results.zh.html",
-        "安全类 2、没过检查 3、意见分歧 4、法官依政策转人工 17。",
+        "\u5b89\u5168\u7c7b 2\u3001\u6ca1\u8fc7\u68c0\u67e5 3\u3001\u610f\u89c1\u5206\u6b67 4\u3001\u6cd5\u5b98\u4f9d\u653f\u7b56\u8f6c\u4eba\u5de5 17\u3002",
         ("trigger_safety", "trigger_failed_checks", "trigger_split", "trigger_judge"),
     ),
     ("results.zh.html", "~$68", ("cost_per_1000_usd",)),
     (
         "results.zh.html",
-        "151 个第 6 版案子共 10.33 美元",
+        "151 \u4e2a\u7b2c 6 \u7248\u6848\u5b50\u5171 10.33 \u7f8e\u5143",
         ("cost_sum_usd", "cases_total"),
     ),
     ("results.zh.html", "12/12", ("sealed_v2_exact",)),
@@ -206,7 +206,7 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
     ("results.zh.html", "0.088", ("calibration_error",)),
     (
         "results.zh.html",
-        "6 次攻击：5 次无效，1 次转给人",
+        "6 \u6b21\u653b\u51fb\uff1a5 \u6b21\u65e0\u6548\uff0c1 \u6b21\u8f6c\u7ed9\u4eba",
         ("inject_total", "inject_unchanged", "inject_sent_to_a_person"),
     ),
     ("results.zh.html", "115/120", ("dev_v2_ext_exact",)),
@@ -251,40 +251,40 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
         ("inject_flipped", "inject_unchanged", "inject_sent_to_a_person"),
     ),
     # -- how it works, in Chinese -----------------------------------------
-    ("how-it-works.zh.html", "7 项证据", ("case_208_evidence",)),
+    ("how-it-works.zh.html", "7 \u9879\u8bc1\u636e", ("case_208_evidence",)),
     (
         "how-it-works.zh.html",
-        "7 vs 12 条主张",
+        "7 vs 12 \u6761\u4e3b\u5f20",
         ("case_208_rider_points", "case_208_driver_points"),
     ),
-    ("how-it-works.zh.html", "19/19 条主张保留", ("case_208_claims_kept",)),
-    ("how-it-works.zh.html", "置信度 0.95", ("case_208_confidence",)),
+    ("how-it-works.zh.html", "19/19 \u6761\u4e3b\u5f20\u4fdd\u7559", ("case_208_claims_kept",)),
+    ("how-it-works.zh.html", "\u7f6e\u4fe1\u5ea6 0.95", ("case_208_confidence",)),
     (
         "how-it-works.zh.html",
-        "SGD 6.40 判给司机，用时 277.9 秒",
+        "SGD 6.40 \u5224\u7ed9\u53f8\u673a\uff0c\u7528\u65f6 277.9 \u79d2",
         ("case_208_driver_amount", "case_208_wall_seconds"),
     ),
     (
         "how-it-works.zh.html",
-        "151 个案子中：26 个交给人，13 个等人签字。",
+        "151 \u4e2a\u6848\u5b50\u4e2d\uff1a26 \u4e2a\u4ea4\u7ed9\u4eba\uff0c13 \u4e2a\u7b49\u4eba\u7b7e\u5b57\u3002",
         ("cases_total", "no_ruling", "held_for_release"),
     ),
-    ("how-it-works.zh.html", "136 个结论不变", ("position_swap_agreed",)),
-    ("how-it-works.zh.html", "141 个案子里", ("position_swap_total",)),
+    ("how-it-works.zh.html", "136 \u4e2a\u7ed3\u8bba\u4e0d\u53d8", ("position_swap_agreed",)),
+    ("how-it-works.zh.html", "141 \u4e2a\u6848\u5b50\u91cc", ("position_swap_total",)),
     (
         "how-it-works.zh.html",
-        "案例 208：等了 585 秒，司机获赔 6.40 新元。",
+        "\u6848\u4f8b 208\uff1a\u7b49\u4e86 585 \u79d2\uff0c\u53f8\u673a\u83b7\u8d54 6.40 \u65b0\u5143\u3002",
         ("case_208_waiting_seconds",),
     ),
-    ("how-it-works.zh.html", "12/12 和 21/24。", ("sealed_v2_exact", "sealed_v1_exact")),
+    ("how-it-works.zh.html", "12/12 \u548c 21/24\u3002", ("sealed_v2_exact", "sealed_v1_exact")),
     (
         "how-it-works.zh.html",
-        "有先例 15/15，无 13/15",
+        "\u6709\u5148\u4f8b 15/15\uff0c\u65e0 13/15",
         ("precedents_with", "precedents_without"),
     ),
     (
         "how-it-works.zh.html",
-        "6 次攻击测试：0 个判决被改反(5 个不变，1 个转人工)。",
+        "6 \u6b21\u653b\u51fb\u6d4b\u8bd5\uff1a0 \u4e2a\u5224\u51b3\u88ab\u6539\u53cd(5 \u4e2a\u4e0d\u53d8\uff0c1 \u4e2a\u8f6c\u4eba\u5de5)\u3002",
         ("inject_flipped", "inject_unchanged", "inject_sent_to_a_person"),
     ),
     # -- about ------------------------------------------------------------
@@ -300,12 +300,12 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
     ),
     (
         "about.zh.html",
-        "第三套隐藏考题(sealed-v1)跑一次：21/24。",
+        "\u7b2c\u4e09\u5957\u9690\u85cf\u8003\u9898(sealed-v1)\u8dd1\u4e00\u6b21\uff1a21/24\u3002",
         ("sealed_v1_exact",),
     ),
     (
         "about.zh.html",
-        "第四套隐藏考题(sealed-v2)：12/12。",
+        "\u7b2c\u56db\u5957\u9690\u85cf\u8003\u9898(sealed-v2)\uff1a12/12\u3002",
         ("sealed_v2_exact",),
     ),
 )

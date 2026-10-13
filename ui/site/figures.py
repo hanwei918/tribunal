@@ -170,7 +170,7 @@ def figures() -> Dict[str, str]:
     figures: Dict[str, str] = {
         # Time and cost, over the 151 cases of the four version-6 runs. The
         # seconds are bare numbers because the two languages write the unit
-        # differently -- "585 s" in English, "585 秒" in Chinese -- and the page
+        # differently -- "585 s" in English, "585 \u79d2" in Chinese -- and the page
         # is what carries the unit.
         "median_wall_seconds": v6_runs._seconds(median_wall),
         "median_wall_minutes": "{0:.1f}".format(median_wall / 60),

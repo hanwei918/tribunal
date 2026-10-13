@@ -67,66 +67,66 @@ def chip(kind: str, text: str, title: Any = None) -> str:
         attribute(kind), extra, words(text)
     )
 
-# The category, as the Chinese pages name the two the track defines. ``绕路`` is
+# The category, as the Chinese pages name the two the track defines. ``\u7ed5\u8def`` is
 # the phrase the try-it page's own case chips use for a route deviation and
-# ``未到场`` the one they use for a no-show charge.
+# ``\u672a\u5230\u573a`` the one they use for a no-show charge.
 ZH_CATEGORY: Mapping[str, str] = {
-    "ROUTE_DEVIATION": "绕路",
-    "NO_SHOW_CHARGE": "未到场",
+    "ROUTE_DEVIATION": "\u7ed5\u8def",
+    "NO_SHOW_CHARGE": "\u672a\u5230\u573a",
 }
 
 # Who filed the dispute, as the table's own header names the column.
 ZH_FILED_BY: Mapping[str, str] = {
-    "RIDER": "乘客",
-    "DRIVER": "司机",
+    "RIDER": "\u4e58\u5ba2",
+    "DRIVER": "\u53f8\u673a",
 }
 
 # The four short status labels, keyed by the lane ``ui.v2.build`` assigns.
 ZH_CHIP: Mapping[str, str] = {
-    "decided": "已自动判决",
-    "held": "已判，等人放款",
-    "reviewer": "已转人工",
-    "none": "无状态记录",
+    "decided": "\u5df2\u81ea\u52a8\u5224\u51b3",
+    "held": "\u5df2\u5224\uff0c\u7b49\u4eba\u653e\u6b3e",
+    "reviewer": "\u5df2\u8f6c\u4eba\u5de5",
+    "none": "\u65e0\u72b6\u6001\u8bb0\u5f55",
 }
 
 # The ruling values, as the outcome column words them.
 ZH_RULING: Mapping[str, str] = {
-    "FULL_REFUND": "全额退款",
-    "PARTIAL_REFUND": "部分退款",
-    "NO_ACTION": "维持原状",
-    "DRIVER_COMPENSATION": "费用维持，司机获补偿",
-    "ESCALATE": "转人工",
+    "FULL_REFUND": "\u5168\u989d\u9000\u6b3e",
+    "PARTIAL_REFUND": "\u90e8\u5206\u9000\u6b3e",
+    "NO_ACTION": "\u7ef4\u6301\u539f\u72b6",
+    "DRIVER_COMPENSATION": "\u8d39\u7528\u7ef4\u6301\uff0c\u53f8\u673a\u83b7\u8865\u507f",
+    "ESCALATE": "\u8f6c\u4eba\u5de5",
 }
 
 # The reviewer triggers. ``NO_MAJORITY`` names the panel size, so it is built by
 # :func:`trigger_words` rather than typed here.
 ZH_TRIGGER: Mapping[str, str] = {
-    v2.TRIGGER_SCOPE: "安全或投诉标记",
-    v2.TRIGGER_NO_VALID_DRAFTS: "没有一份法官草稿通过代码检查",
-    v2.TRIGGER_JUDGE: "法官依政策转人工",
+    v2.TRIGGER_SCOPE: "\u5b89\u5168\u6216\u6295\u8bc9\u6807\u8bb0",
+    v2.TRIGGER_NO_VALID_DRAFTS: "\u6ca1\u6709\u4e00\u4efd\u6cd5\u5b98\u8349\u7a3f\u901a\u8fc7\u4ee3\u7801\u68c0\u67e5",
+    v2.TRIGGER_JUDGE: "\u6cd5\u5b98\u4f9d\u653f\u7b56\u8f6c\u4eba\u5de5",
 }
 
-ZH_NO_MAJORITY = "{0} 份草稿没有达成一致"
+ZH_NO_MAJORITY = "{0} \u4efd\u8349\u7a3f\u6ca1\u6709\u8fbe\u6210\u4e00\u81f4"
 
 # What a case sent to a reviewer says where a decided case carries its ruling.
-ZH_SENT_TO_A_REVIEWER = "转人工"
+ZH_SENT_TO_A_REVIEWER = "\u8f6c\u4eba\u5de5"
 
 # The ``data-label`` a cell carries for the mobile card view, matching the
 # Chinese header row the page itself writes.
 ZH_LABEL: Mapping[str, str] = {
-    "case": "案件",
-    "category": "类别",
-    "filed_by": "提交方",
-    "amount": "争议金额",
-    "status": "状态",
-    "outcome": "结果",
-    "confidence": "置信度",
-    "time": "用时",
+    "case": "\u6848\u4ef6",
+    "category": "\u7c7b\u522b",
+    "filed_by": "\u63d0\u4ea4\u65b9",
+    "amount": "\u4e89\u8bae\u91d1\u989d",
+    "status": "\u72b6\u6001",
+    "outcome": "\u7ed3\u679c",
+    "confidence": "\u7f6e\u4fe1\u5ea6",
+    "time": "\u7528\u65f6",
 }
 
 # The confidence cell of a decided case whose ruling carries no figure: the
 # English table says ``none``, and a Chinese table says so in Chinese.
-ZH_NO_CONFIDENCE = "无"
+ZH_NO_CONFIDENCE = "\u65e0"
 
 
 def trigger_words(trigger: str, votes: int) -> str:
@@ -142,7 +142,7 @@ def held_reason(case: "v2.CaseData") -> str:
     The clause id and both figures are the policy's own and are written
     unchanged; only the sentence around them is Chinese.
     """
-    return "{0} 超过 POL-GEN-05 的 {1} 执行门槛".format(
+    return "{0} \u8d85\u8fc7 POL-GEN-05 \u7684 {1} \u6267\u884c\u95e8\u69db".format(
         v2._money(v2.monetary_effect(case.ruling), case.policy.currency),
         v2._money(case.policy.execution_threshold, case.policy.currency),
     )
@@ -198,10 +198,10 @@ def outcome_text(case: "v2.CaseData") -> str:
     driver = v2._decimal(ruling.get("driver_compensation_sgd"))
     words = ZH_RULING.get(value, value)
     if value == v2.pipeline_module.DRIVER_COMPENSATION and driver is not None:
-        return "{0} - 司机获 {1}".format(words, v2._money(driver, currency))
+        return "{0} - \u53f8\u673a\u83b7 {1}".format(words, v2._money(driver, currency))
     if value in v2.REFUND_RULINGS and amount is not None:
         if driver is not None:
-            return "{0} - {1}；司机获 {2}".format(
+            return "{0} - {1}\uff1b\u53f8\u673a\u83b7 {2}".format(
                 words, v2._money(amount, currency), v2._money(driver, currency)
             )
         return "{0} - {1}".format(words, v2._money(amount, currency))

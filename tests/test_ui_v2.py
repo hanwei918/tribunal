@@ -2701,10 +2701,7 @@ class LinkPreviewTests(unittest.TestCase):
                 self.assertIsNotNone(url, "the page carries no og:url")
                 assert url is not None
                 self.assertTrue(url.group(1).startswith(v2.SITE_ROOT))
-                if name == "queue.html":
-                    self.assertEqual(v2.SITE_ROOT, url.group(1))
-                else:
-                    self.assertEqual(v2.SITE_ROOT + name, url.group(1))
+                self.assertEqual(v2.SITE_ROOT + name, url.group(1))
 
     def test_the_image_is_in_the_site_and_is_the_owners_file_byte_for_byte(self):
         committed = v2.DIST_DIR / v2.OG_IMAGE_LINK
