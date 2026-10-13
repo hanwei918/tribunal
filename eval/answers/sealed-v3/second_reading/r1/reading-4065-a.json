@@ -1,0 +1,42 @@
+{
+  "case_no": 4065,
+  "ruling": "FULL_REFUND",
+  "amount_sgd": 8.0,
+  "driver_compensation_sgd": null,
+  "referrals": [],
+  "governing_clauses": [
+    "POL-NS-06",
+    "POL-NS-01",
+    "POL-NS-02"
+  ],
+  "difficulty_opinion": "EASY",
+  "deciding_facts": [
+    {
+      "evidence_id": "EV-TRIP-04065",
+      "fact": "free waiting period in force (platform_policy.free_wait_sec, source AUTHORED-V1)",
+      "value": "300 s"
+    },
+    {
+      "evidence_id": "EV-GPS-04065",
+      "fact": "first fix inside the 150 m TRANSPORT_HUB arrival radius with accuracy <= 25 m",
+      "value": "18:12:30, 76.3 m, accuracy 5.2 m; all 12 fixes 18:12:30-18:14:05 within 150 m and accuracy <= 9.9 m"
+    },
+    {
+      "evidence_id": "EV-TRIP-04065",
+      "fact": "driver cancellation time, reason RIDER_NO_SHOW",
+      "value": "18:14:05"
+    },
+    {
+      "evidence_id": "EV-GPS-04065",
+      "fact": "in-geofence dwell from first qualifying fix to cancellation",
+      "value": "95 s (shortfall 205 s against 300 s)"
+    },
+    {
+      "evidence_id": "EV-FARE-04065",
+      "fact": "cancellation fee charged, refund issued",
+      "value": "8.00 charged, 0.00 refunded"
+    }
+  ],
+  "reasoning": "1. Scope: category NO_SHOW_CHARGE, no safety/complaint flag; automated ruling permitted (POL-GEN-08(1)). Route-deviation clauses (POL-RD-01..13, POL-RD-14) do not apply to this category. 2. Figures in force (fee_schedule.resolution_rule): the record carries platform_policy (AUTHORED-V1): free_wait_sec 300, cancellation_fee_sgd 8.00 (= the v1 greater-of rule: TRANSPORT_HUB 6.00 vs RYDE_XL 8.00). EV-FARE-04065 cancellation_fee 8.00 reconciles, so no POL-NS-08(d) defect. 3. POL-NS-02: pickup (1.3249, 103.9292), zone TRANSPORT_HUB, radius 150 m. Haversine (R=6371.0088): 18:12:30 76.3 m (acc 5.2), 18:12:40 30.5 m, 18:12:50 19.1 m, then 17.0-21.3 m through 18:14:05 (18.9 m). Well over 3 consecutive qualifying fixes, so arrival is established; POL-NS-01(a) and (b) hold (in-geofence at 18:12:30, before the 18:12:50 arrival event). 4. POL-NS-05: at the arrival marker 18:12:50 the coincident fix is 19.1 m from the pin at 0 km/h; not >300 m and not >=15 km/h, so the marker is not false. 5. POL-NS-01(c): dwell runs from the first qualifying in-geofence fix, 18:12:30, to the cancellation 18:14:05 = 95 s (from the arrival tap it is only 75 s). Required 300 s; shortfall 205 s. Limb (c) fails, so the fee is not chargeable under POL-NS-01 and POL-NS-07 cannot pay compensation. Even on the 180 s default the dwell would fall short. 6. POL-NS-06: effective dwell 95 s < 300 s, so the fee is refunded in full whether or not the rider was present. Limb (i) is not engaged: the driver never left the geofence, and EV-ADVIS-04065-01 is MISSING (weight 0.0) so no advisory could sum intervals anyway; the driver's 'peak hour' remark is not a traffic advisory and cannot reduce the minimum (limb (ii)). Refund = fare_breakdown cancellation-fee line 8.00 = amount_contested_sgd 8.00, so FULL_REFUND 8.00, no driver compensation. 7. POL-NS-04 not needed and would not apply: rider message MSG-04065-005 (18:13:20) drew a driver reply at 18:13:45 (25 s), and rider_track places the rider 298.7-437.6 m from the pin (> 200 m) on all fixes. The rider was indeed absent and late against her own 5-minute estimate (MSG-04065-002, 18:09:00), but POL-NS-06 is strict liability on the waiting period. 8. POL-NS-10: driver-initiated cancellation; grace limbs (a),(f),(g) concern rider cancellations and do not apply; no waiting-time fee line. POL-NS-03: driver was inside the radius, not applicable. 9. POL-NS-08: arrival event 18:12:50 coincides with a fix (0 s skew); cancellation 18:14:05 matches a fix; no gaps (max 10 s); 11-12 fixes in window; chat 7/7 messages, sequential, longest interval spanning the arrival 210 s < 5 min; fare reconciles. No impairment. 10. POL-NS-09: (c) disputes_with_counterparty_90d 0 + 0; (d) no_show_terminations_30d 1 (< 4; 1/150 = 0.0067), rider no_show_disputes_30d 0; no contradiction between artifacts; deciding fact (dwell) rests on EV-GPS-04065 and EV-TRIP-04065, both weight 1.0, so confidence cap 1.0 (POL-GEN-02) and above the 0.70 floor. The MISSING advisory carries no deciding fact. 11. POL-GEN-01: no profile field used as a ground; ratings, prior_no_show_flags etc. are context only. POL-NS-11 (rider_track present) and POL-NS-12 (arrival_marker BUTTON, not GPS_AUTO) do not apply. 12. POL-GEN-05: monetary effect 8.00 does not exceed execution_threshold_sgd 8.00, so it executes automatically, subject to appeal under POL-GEN-04. No referrals arise: no false arrival (POL-NS-05), no mis-selected reason code (POL-NS-01(d) in-radius DRIVER_UNABLE_TO_LOCATE).",
+  "doubts": "Little genuine doubt. The rider's '1.5 minutes' matches the record (75 s from the tap, 95 s from GPS entry). One could argue the rider was plainly absent (300-440 m away) and late against her own estimate, which on a fault view might favour NO_ACTION/DRIVER_COMPENSATION, but POL-NS-01(c) and POL-NS-06 make the 300 s wait a strict condition; even the 180 s default would not be met. Minor: the 8.00 refund equals the 8.00 execution threshold exactly; 'does not exceed' means it auto-executes, but a reader treating the threshold as exclusive would route it to the human release queue (execution only, not the ruling)."
+}

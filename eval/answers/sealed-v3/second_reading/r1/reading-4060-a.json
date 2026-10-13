@@ -1,0 +1,36 @@
+{
+  "case_no": 4060,
+  "ruling": "FULL_REFUND",
+  "amount_sgd": 6.61,
+  "driver_compensation_sgd": null,
+  "referrals": [],
+  "governing_clauses": [
+    "POL-NS-10",
+    "POL-NS-06"
+  ],
+  "difficulty_opinion": "EASY",
+  "deciding_facts": [
+    {
+      "evidence_id": "EV-TRIP-04060",
+      "fact": "accepted_at to cancelled_at (rider cancellation)",
+      "value": "07:42:20 -> 07:45:05 = 165 s, inside grace_after_match_sec 180 (15 s to spare)"
+    },
+    {
+      "evidence_id": "EV-TRIP-04060",
+      "fact": "cancelled_by / status / scheduled_at",
+      "value": "RIDER / CANCELLED_BY_RIDER / null (on-demand)"
+    },
+    {
+      "evidence_id": "EV-GPS-04060",
+      "fact": "first qualifying in-geofence fix and dwell to cancellation",
+      "value": "07:43:45, 18.4 m, acc 5.1 m; dwell to 07:45:05 = 80 s < free_wait_sec 180"
+    },
+    {
+      "evidence_id": "EV-FARE-04060",
+      "fact": "cancellation fee charged, not refunded",
+      "value": "cancellation_fee 6.61 = total_charged 6.61, CHARGED, refund_issued_sgd 0.00 (equals platform_policy gross 6.61)"
+    }
+  ],
+  "reasoning": "1. Scope: NO_SHOW_CHARGE, rider-filed, no safety/complaint flag -> in scope (POL-GEN-08(1)); route_deviation clauses and POL-RD-14 do not apply to this category. 2. Admissibility (POL-GEN-02): EV-TRIP, EV-GPS, EV-CHAT, EV-FARE, EV-RPROF, EV-DPROF all COMPLETE, weight 1.0. EV-ADVIS-04060-01 is MISSING, weight 0.0, carries no fact and is relied on by nobody. POL-NS-08: (a) arrival 07:43:55 coincides with GPS fix 07:43:55 (0 s skew); (b) 17 fixes at 10 s, max gap 10 s, 8 fixes in arrival-to-cancel window; rider_track present but all 3 fixes accuracy 35-44.7 m (>25 m) - relevant only to POL-NS-04, and POL-NS-11 says that does not impair the driver evidence; (c) chat 4 msgs sequential = chat_message_count 4, no gap; (d) fare line 6.61 = platform_policy.rider_gross_cancellation_fee_sgd 6.61, reconciles. No policy-level impairment. 3. POL-NS-10(a) (deciding): rider cancelled at 07:45:05; accepted_at 07:42:20 (EV-TRIP-04060); interval 165 s < grace_after_match_sec 180 (platform_policy). The cancellation is not chargeable 'whatever the driver's position; a driver's early arrival does not shorten the grace'. Limb (b) n/a (scheduled_at null). Limb (c): fee charged on a cancellation limb (a) makes non-chargeable is refunded in full with no driver compensation -> FULL_REFUND of 6.61 (EV-FARE-04060). Limb (f) applies only after the grace; limb (g) requires in-geofence dwell already exceeding free_wait_sec - first qualifying in-radius fix 07:43:45 (18.4 m, acc 5.1 m, 7 km/h), dwell to cancel 80 s < 180 s (and even from the arrival tap, 70 s), so (g) fails. 4. POL-NS-01: fails limb (c) (80 s < 180 s) and limb (d) (terminated by the rider, reason RIDER_CANCELLED, not driver with RIDER_NO_SHOW/RIDER_UNREACHABLE/EXCESSIVE_WAIT) -> fee not chargeable under NS-01; NS-07 compensation is therefore not reached. 5. POL-NS-02: satisfied - 10 consecutive qualifying fixes within 50 m (STANDARD) from 07:43:45 to 07:45:15, 4.6-18.4 m, accuracy 3.5-9.0 m; the driver did arrive. POL-NS-03: n/a (stationary fixes inside radius). POL-NS-05: arrival-marker fix 07:43:55 is 4.6 m, 0 km/h -> marker not false; no referral. POL-NS-04: rider's only message 'sorry need to cancel, plans changed' is not locating/coordinating and the rider (not the driver) terminated; n/a; limb (c) would be undecidable anyway (all rider fixes >25 m) per POL-NS-11. POL-NS-06: effective dwell 80 s < 180 s -> fee not chargeable, full refund, no compensation - concurrent and consistent with NS-10. POL-NS-12: arrival_marker is BUTTON, not GPS_AUTO -> n/a. 6. POL-NS-09: (a) confidence high - deciding fact rests on EV-TRIP-04060 timestamps (weight 1.0); (b) no contradiction - driver's statement 'already downstairs' is true on EV-GPS but legally irrelevant under NS-10(a); (c) disputes_with_counterparty_90d 0+0 = 0 < 2; (d) anti-farming not reached and would not trip (no_show_terminations_30d 1 < 4; 1/150 = 0.0067 <= 0.08); rider no_show_disputes_30d 0 < 3; (e) no impaired sole evidence. No escalation. 7. POL-GEN-01: no profile field used as a ground; rating, cancellation_rate etc. context only. 8. POL-GEN-03: FULL_REFUND, amount_sgd = amount_contested_sgd 6.61, driver_compensation null, no referrals. 9. POL-GEN-05: monetary effect 6.61 <= execution_threshold_sgd 8.00 -> executes automatically, subject to appeal under POL-GEN-04.",
+  "doubts": "Little genuine ambiguity. (1) The rider's 'about 2 minutes' understates the 165 s (2 min 45 s) interval but the record still places the cancellation 15 s inside the 180 s grace; a reader using requested_at (07:41:30, 215 s) instead of accepted_at would wrongly find it outside the grace and could then reach NO_ACTION under NS-10(f) - the clause expressly measures from accepted_at. (2) Driver's argument that he arrived early (07:43:55, 95 s after acceptance) is expressly excluded by NS-10(a). (3) Choice of governing clauses: NS-10(a)/(c) is the specific rule; NS-06 (80 s dwell shortfall) independently gives the same FULL_REFUND, so a reader might list only one of them. No alternative outcome is realistically supported."
+}

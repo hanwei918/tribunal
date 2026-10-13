@@ -1,0 +1,58 @@
+{
+  "case_no": 4059,
+  "ruling": "NO_ACTION",
+  "amount_sgd": null,
+  "driver_compensation_sgd": null,
+  "referrals": [],
+  "governing_clauses": [
+    "POL-NS-06",
+    "POL-NS-01",
+    "POL-NS-02",
+    "POL-GEN-03"
+  ],
+  "difficulty_opinion": "HARD",
+  "deciding_facts": [
+    {
+      "evidence_id": "EV-TRIP-04059",
+      "fact": "platform_policy.free_wait_sec / cancellation_fee_sgd / arrival_marker; pickup_zone_class",
+      "value": "180 s / SGD 4.50 net (6.61 gross) / BUTTON; STANDARD (arrival radius 50 m)"
+    },
+    {
+      "evidence_id": "EV-TRIP-04059",
+      "fact": "arrived_at, cancelled_at, status/reason",
+      "value": "18:21:00, 18:26:05 (305 s after the tap), CANCELLED_BY_DRIVER / RIDER_NO_SHOW"
+    },
+    {
+      "evidence_id": "EV-GPS-04059",
+      "fact": "first in-geofence interval (fixes <=50 m, accuracy <=25 m)",
+      "value": "18:20:50 (27.1 m) to 18:21:50 (22.5 m, 15 km/h) = 60 s; 18:22:00 at 60.8 m"
+    },
+    {
+      "evidence_id": "EV-GPS-04059",
+      "fact": "loop away from the pin",
+      "value": "18:22:00-18:24:40 all outside 50 m, max 182.6 m (< 300 m leash)"
+    },
+    {
+      "evidence_id": "EV-GPS-04059",
+      "fact": "second in-geofence interval",
+      "value": "18:24:50 (38.6 m) to cancellation 18:26:05 = 75 s"
+    },
+    {
+      "evidence_id": "EV-ADVIS-04059-01",
+      "fact": "KERB_RESTRICTION bus lane covering pickup road and waiting window",
+      "value": "segment line 4.0 m from pin; valid 07:30-23:00 on 2026-09-25"
+    },
+    {
+      "evidence_id": "EV-GPS-04059",
+      "fact": "cumulative in-geofence dwell under POL-NS-06(i) vs required 180 s",
+      "value": "60 + 75 = 135 s (most generous edge-to-edge reading 70 + 85 = 155 s); shortfall 45 s (at least 25 s)"
+    },
+    {
+      "evidence_id": "EV-FARE-04059",
+      "fact": "present state of the fee",
+      "value": "cancellation_fee 6.61 charged, payment_status REFUNDED, refund_issued_sgd 6.61"
+    }
+  ],
+  "reasoning": "1. Scope: NO_SHOW_CHARGE, driver-filed, contesting SGD 4.50 (net fee) that support already reversed to the rider (EV-FARE-04059: 6.61 gross refunded). No safety/complaint flag; POL-GEN-08(1) satisfied. Route-deviation clauses (incl. amendment POL-RD-14) are out of category and do not apply. 2. Fee figures (fee_schedule.resolution_rule): record carries platform_policy -> free_wait_sec 180, cancellation_fee_sgd 4.50 net, gross 6.61; fare line 6.61 equals the gross figure, so no POL-NS-08(d) defect. Zone STANDARD -> arrival radius 50 m, accuracy filter 25 m. 3. POL-NS-01(a): driver_arrived event at 18:21:00 (BUTTON) - satisfied. POL-NS-02: fixes 18:20:50 (27.1 m, acc 3.9), 18:21:00 (10.2 m, acc 6.9), 18:21:10 (6.8 m) ... are >=3 consecutive qualifying in-radius fixes - driver arrived; POL-NS-01(b) satisfied (in geofence at 18:20:50, before the event). POL-NS-05: at the 18:21:00 marker the driver is 10.2 m from the pin at 0 km/h -> marker is not false; no referral. POL-NS-03: driver's stationary fixes are inside the 50 m radius, so the wrong-entrance clause does not apply. POL-NS-12 (amendment): arrival_marker is BUTTON, not GPS_AUTO, and there are no wait_timer events -> clause not engaged. 4. POL-NS-01(c): continuous in-geofence dwell from the first qualifying fix 18:20:50 runs only to 18:21:50 (60 s); at 18:22:00 the driver is 60.8 m out at 18 km/h and every fix to 18:24:40 is outside 50 m (max 182.6 m, haversine R=6371.0088). Continuous dwell 60 s < 180 s -> limb (c) fails; fee not chargeable under POL-NS-01, which sends the refund to POL-NS-06. 5. POL-NS-06(i): accumulation IS available here - the driver left and re-entered the radius without exceeding 300 m (max 182.6 m), and EV-ADVIS-04059-01 is a populated KERB_RESTRICTION (full-day bus lane, no stopping) whose line passes 4.0 m from the pin (computed 4.03 m, perpendicular foot at the segment midpoint) and whose window 07:30-23:00 covers 18:21:00-18:26:05. So the bus-lane excuse is accepted to the extent the policy allows: the two in-geofence intervals are summed. Interval 1: 18:20:50-18:21:50 = 60 s. Interval 2: 18:24:50 (38.6 m) to the cancellation at 18:26:05 = 75 s (fixes after cancellation do not count). Sum 135 s; even the most generous edge reading (18:20:50-18:22:00 = 70 s, 18:24:40-18:26:05 = 85 s) gives 155 s. Both < 180 s. POL-NS-06(ii): the advisory never reduces the minimum and the time spent circling outside the geofence does not count; cumulative shortfall -> full refund of the fee to the rider stands, no driver compensation. The driver's '5 minutes' is the 305 s from the I'm Here tap to the cancel, but only 135 s of it was inside the arrival geofence. 6. POL-NS-04: rider message 18:24:30 'ok coming down now' is at most coordinating, but the driver replied at 18:24:55 (25 s) and placed an in-app call at 18:23:20, so limb (b) fails; also limb (c) is undecidable in the window (all rider fixes up to 18:26:20 have accuracy 30.9-44.6 m > 25 m; the two good fixes are at 18:26:40/18:27:00, after cancellation) - POL-NS-11 confirms this is neutral and does not impair the driver's track. Not needed; the outcome comes from POL-NS-06. 7. POL-NS-10: driver cancellation on an on-demand trip; limbs (a)-(g) concern rider cancellations / waiting-time fee - not engaged. POL-NS-07: not reached (POL-NS-01 not satisfied); anti-farming counter 1 termination / 150 trips would not trip anyway. 8. POL-NS-08: (a) arrival event coincides with the 18:21:00 fix (0 s); termination 18:26:05 lies between fixes 18:26:00 and 18:26:10 (<=5 s) - no skew. (b) max interval 10 s, 31 fixes in window, rider_track not relied on for the deciding fact - no defect. (c) MSG-001..007 sequential, 7 = chat_message_count, interval spanning the marker 160 s < 5 min - no defect. (d) 6.61 = gross - no defect. Nothing impaired for policy purposes. 9. POL-NS-09: (a) confidence high - deciding facts carried by EV-GPS-04059, EV-TRIP-04059, EV-ADVIS-04059-01, all weight 1.0; (b) no direct contradiction between admissible artifacts (rider's 'car was not there' fits the trace: the driver was 93-152 m away driving off at 18:26:30-18:26:40 when her accurate fixes put her at the pin); (c) 0 + 0 counterparty disputes; (d) no anti-farming trip, rider no_show_disputes_30d 0. No escalation. 10. POL-GEN-01/02: EV-DPROF-04059 is IMPAIRED (CROSS_SOURCE_CONFLICT, weight 0.4; vehicle_type RYDE_XL vs RYDE_X on the trip) but carries no deciding fact; profile fields (rating, prior_no_show_flags 2, prior disputes) are context only and are not used. The cap under POL-GEN-02(2) is 1.0 from the artifacts that carry the deciding facts. 11. Disposition (POL-GEN-03): the filing party is the DRIVER; his claim to have the SGD 4.50 restored is not supported because the fee was not chargeable under POL-NS-06. NO_ACTION is party-relative: the present state (rider refunded 6.61, payment_status REFUNDED) stands; it does not mean restoring the charge. amount_sgd and driver_compensation_sgd null; no referrals (the POL-NS-01 reason-code referral is only for in-radius DRIVER_UNABLE_TO_LOCATE; POL-NS-05 referral not triggered). POL-GEN-05: monetary effect 0.00 <= 8.00 threshold.",
+  "doubts": "(1) Dwell boundary convention: counting from first to last in-geofence fix gives 60 + 75 = 135 s; counting to the first out-of-radius fix / from the last out-of-radius fix gives at most 155 s. Either way well short of 180 s, so the outcome is insensitive to the convention. (2) A reader who treats the bus-lane advisory as excusing the whole waiting period (counting the 305 s from tap to cancel) would reach DRIVER_COMPENSATION SGD 3.60 (80% of 4.50) under POL-NS-01/07; POL-NS-06(ii) expressly forbids this ('never reduces the required minimum and never excuses a shortfall on its own; it only permits separate in-geofence intervals to be summed'). (3) The 18:21:50 fix is inside 50 m but moving at 15 km/h; if 'held position' excludes moving fixes, interval 1 shrinks to 50 s and the shortfall widens - same result. (4) Whether the rider's 18:24:30 message counts as 'coordinating' under POL-NS-04(a) is debatable but immaterial because limb (b) fails (driver replied within 25 s and had called). (5) Difficulty: the driver's narrative is broadly honest (he did go round and come back); it is the policy arithmetic, not a contradiction of his story, that decides it, so HARD rather than REVERSAL."
+}

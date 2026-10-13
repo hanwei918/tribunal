@@ -1,0 +1,53 @@
+{
+  "case_no": 4059,
+  "ruling": "NO_ACTION",
+  "amount_sgd": null,
+  "driver_compensation_sgd": null,
+  "referrals": [],
+  "governing_clauses": [
+    "POL-NS-06",
+    "POL-NS-01",
+    "POL-NS-02",
+    "POL-GEN-03"
+  ],
+  "difficulty_opinion": "HARD",
+  "deciding_facts": [
+    {
+      "evidence_id": "EV-GPS-04059",
+      "fact": "First in-geofence interval (qualifying fixes, accuracy <=25 m, within 50 m STANDARD radius)",
+      "value": "18:20:50 (27.1 m) to 18:21:50 (22.5 m) = 60 s; next fix 18:22:00 at 60.8 m"
+    },
+    {
+      "evidence_id": "EV-GPS-04059",
+      "fact": "Driver outside the radius on the loop",
+      "value": "18:22:00-18:24:40 all outside 50 m, farthest 182.6 m at 18:23:30 (< 300 m leash)"
+    },
+    {
+      "evidence_id": "EV-GPS-04059",
+      "fact": "Second in-geofence interval up to cancellation",
+      "value": "18:24:50 (38.6 m) to cancellation 18:26:05 = 75 s"
+    },
+    {
+      "evidence_id": "EV-GPS-04059",
+      "fact": "Cumulative in-geofence dwell vs free wait",
+      "value": "60 + 75 = 135 s < 180 s (shortfall 45 s); most generous bracketing 80 + 85 = 165 s, still < 180 s"
+    },
+    {
+      "evidence_id": "EV-TRIP-04059",
+      "fact": "free_wait_sec in platform_policy; arrival marker BUTTON 18:21:00; cancelled by driver 18:26:05 RIDER_NO_SHOW",
+      "value": "180 s; elapsed arrival->cancel 305 s (wall clock, not dwell)"
+    },
+    {
+      "evidence_id": "EV-ADVIS-04059-01",
+      "fact": "KERB_RESTRICTION bus lane on Serangoon Road covering the pickup (line 4.0 m from pin) valid 07:30-23:00",
+      "value": "POL-NS-06(i) summing permitted; does not reduce the 180 s minimum (POL-NS-06(ii))"
+    },
+    {
+      "evidence_id": "EV-FARE-04059",
+      "fact": "Cancellation fee line and present state",
+      "value": "6.61 gross (reconciles with platform_policy gross); payment_status REFUNDED, refund_issued_sgd 6.61"
+    }
+  ],
+  "reasoning": "1. Category NO_SHOW_CHARGE, filed by the DRIVER seeking reinstatement of the SGD 4.50 net fee that support already refunded to the rider (EV-TRIP-04059 fee_refunded 2026-09-26 10:20; EV-FARE-04059 payment_status REFUNDED, refund_issued_sgd 6.61). 2. Figures in force (fee_schedule.resolution_rule): trip_record.platform_policy free_wait_sec 180, cancellation_fee_sgd 4.50 net / 6.61 gross, no_show_threshold_sec null, arrival_marker BUTTON; pickup_zone_class STANDARD so arrival radius 50 m, accuracy filter 25 m. 3. POL-NS-01(a): arrived event 18:21:00 present. POL-NS-02: fixes 18:20:50-18:21:50 (7 fixes, 5.5-27.1 m, accuracy 3.9-8.6 m) are >=3 consecutive qualifying in-radius fixes, so arrival is satisfied; limb (b) holds. POL-NS-05: the fix at the marker (18:21:00) is 10.2 m from the pin at 0 km/h, so the marker is not false (not >300 m, not >=15 km/h); no clock skew (0 s, POL-NS-08(a)). POL-NS-03 not engaged (stationary fixes inside the radius). 4. POL-NS-01(c) dwell, measured from the first qualifying in-geofence fix (haversine R=6371.0088): continuous dwell 18:20:50-18:21:50 = 60 s, then the driver left (18:22:00 at 60.8 m; up to 182.6 m at 18:23:30) and re-entered at 18:24:50 (38.6 m), cancelling at 18:26:05 = 75 s. No continuous interval reaches 180 s, so limb (c) fails on its own terms. 5. POL-NS-06(i): EV-ADVIS-04059-01 is a populated KERB_RESTRICTION (full-day bus lane, no stopping) whose geometry passes 4.0 m from the pin (verified: 4.0 m, 520.6 m segment) and whose window 07:30-23:00 covers the waiting period; the driver never exceeded 300 m (max 182.6 m). Summing is therefore permitted: 60 + 75 = 135 s. Even on the most generous bracketing (from the last outside fix before each entry to the first outside fix / cancellation: 18:20:40-18:22:00 = 80 s and 18:24:40-18:26:05 = 85 s) the total is 165 s. Either way short of 180 s (shortfall 45 s, or 15 s at best). POL-NS-06(ii): the advisory never reduces the minimum nor excuses the shortfall. Hence the fee is not chargeable and the rider is entitled to the full refund of the cancellation-fee line. The driver's 'waited 5 minutes' is the wall-clock 305 s from the BUTTON marker to cancellation, not in-geofence dwell, which POL-NS-01(c) and POL-NS-06 measure. 6. POL-NS-04: rider message MSG-04059-005 18:24:30 'ok coming down now' is at most marginally coordinating; limb (b) fails in any case - driver replied 25 s later (MSG-04059-006 18:24:55) and placed an in-app call at 18:23:20 (CALL-04059-001). Limb (c): all rider_track fixes in the window are >25 m accuracy; the only qualifying ones (18:26:40, 18:27:00) fall after the cancellation, so limb (c) is undecidable (POL-NS-11) - immaterial because (b) fails. Not relied on. 7. POL-NS-07 not reached (POL-NS-01 not satisfied); anti-farming check would not trip anyway (no_show_terminations_30d 1 < 4; 1/150 = 0.0067). POL-NS-10 not applicable (driver cancellation; not within the 180 s match grace; no completed trip). POL-NS-12 not applicable (arrival_marker BUTTON). 8. POL-NS-08: no GPS gap (max 10 s), 31 fixes in the window; chat 7 = chat_message_count, sequence complete, gap spanning the marker 160 s < 5 min; fare line 6.61 equals the gross figure, so no fare defect. No policy-level impairment of the deciding artifacts. POL-NS-09: (a) confidence cap under POL-GEN-02 is 1.0 (EV-GPS-04059, EV-TRIP-04059, EV-ADVIS-04059-01 all weight 1.0); (b) no direct contradiction - the trip_record wall-clock and the GPS dwell are consistent; (c) disputes_with_counterparty_90d 0 + 0; (d) no anti-farming trip, rider no_show_disputes_30d 0; (e) not engaged. No escalation. 9. POL-GEN-01/02: EV-DPROF-04059 is IMPAIRED (weight 0.4, CROSS_SOURCE_CONFLICT on vehicle_type RYDE_XL vs RYDE_X); it carries no deciding fact and only its citable counters would be used, so the finding is unaffected. Rider prior_no_show_flags 1 / driver prior_no_show_flags 2, ratings etc. are context only and not used. 10. Disposition (POL-GEN-03): on the policy the fee is refundable to the rider in full, which is the present state. The driver's claim for return of SGD 4.50 is not supported, so the ruling for the filing party is NO_ACTION: payment_status REFUNDED and refund_issued_sgd 6.61 stand; amount_sgd and driver_compensation_sgd null; no referrals (reason code RIDER_NO_SHOW is not a mis-selection on a POL-NS-06 shortfall; no false-arrival marker). POL-GEN-05: monetary effect SGD 0.00, below the 8.00 execution threshold.",
+  "doubts": "(1) Dwell bracketing: whether intervals run fix-to-fix (135 s), stationary-only (40 + 65 = 105 s) or from last-outside to first-outside fix (165 s); all are below 180 s, so the outcome does not turn on it. (2) One could argue the advisory should excuse the loop time itself (driver lawfully could not wait), giving 305 s and DRIVER_COMPENSATION 3.60 (80% of 4.50) under POL-NS-01/POL-NS-07; POL-NS-06(ii) expressly forbids that reading, so I reject it. (3) A reader might label this a REVERSAL because the driver asserts he 'waited the full time' and the GPS shows 135 s in-geofence; I call it HARD because his factual narrative (arrival 18:21, one loop, return) is corroborated and only his policy conclusion fails. (4) Rider's statement that the car was not there is partly contradicted (driver was at 5-7 m from the pin 18:25:00-18:26:10, rider's first accurate fix 18:26:40) but rider presence is not the deciding fact."
+}

@@ -1,0 +1,42 @@
+Audit self-test for build/audit_rd.py (ROUTE_DEVIATION cases 4001-4015), run 2026-10-13.
+The audit must pass on the generated set and fail on deliberately corrupted temp copies (made by a throwaway script under tmp/; the copies were deleted afterwards).
+Result: clean run PASS; both corrupted runs FAIL with exit code 1, naming the corrupted cases.
+
+Audit self-test for build/audit_rd.py (cases 4001-4015)
+Clean run: python3 build/audit_rd.py tmp/rd
+AUDIT PASS: 957 checks over 15 cases
+exit code 0
+
+A: case 4011 GPS fix #80 moved +0.0027 deg lat (about 300 m); case 4002 time_fare +0.10
+Corrupted run A: python3 build/audit_rd.py tmp/rd_corrupt_A
+AUDIT FAIL case 4002: index sha256 matches the file
+AUDIT FAIL case 4002: fare lines sum to total_charged to the cent
+AUDIT FAIL case 4002: fare lines recomputed from distance_charged_km / time_charged_min / rate card / surge
+AUDIT FAIL case 4002: fare line time_fare equals the blueprint
+AUDIT FAIL case 4011: index sha256 matches the file
+AUDIT FAIL case 4011: trace_distance_km re-summed from the fixes
+AUDIT FAIL case 4011: largest step equals blueprint
+AUDIT FAILED: 7 of 957 checks
+exit code 1
+
+B: case 4006 ERP gantry moved onto GPS fix #60; key record 4011 amount +0.05
+Corrupted run B: python3 build/audit_rd.py tmp/rd_corrupt_B
+AUDIT FAIL case 4006: index sha256 matches the file
+AUDIT FAIL case 4006: one phantom gantry line
+AUDIT FAIL case 4006: ruling: derived / blueprint / key agree
+AUDIT FAIL case 4006: amount: derived / blueprint / key agree
+AUDIT FAIL case 4006: referrals agree
+AUDIT FAIL case 4006: null money
+AUDIT FAIL case 4011: amount: derived / blueprint / key agree
+AUDIT FAILED: 7 of 953 checks
+exit code 1
+
+
+Round-1 fix (4001, 4009 rationale corrections), run 2026-10-13.
+New checks: d4001 establishment fails on the POL-RD-04 adjusted optimal and the rationale states the adjusted figure and percentage; d4009 only the tagged gap exceeds 30 s and the rationale states each POL-RD-07 limb against its own figure.
+Corrupted run: python3 build/audit_rd.py tmp/fix-rd-r1-base (the set generated before the fix, carrying the old 4001/4009 rationales)
+AUDIT FAIL case 4001: rationale states the deciding figure (x2)
+AUDIT FAIL case 4009: rationale states the deciding figure (x3)
+AUDIT FAILED: 5 of 964 checks
+Clean run: python3 build/audit_rd.py tmp/fix-rd-r1
+AUDIT PASS: 964 checks over 15 cases

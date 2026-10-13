@@ -1,0 +1,58 @@
+{
+  "case_no": 4052,
+  "verdict": "CASE_FIX",
+  "differences": [
+    {
+      "field": "difficulty",
+      "key": "EASY",
+      "reader_a": "REVERSAL",
+      "reader_b": "REVERSAL",
+      "resolution": "Genuine two-reading point; resolved by a case fix that keeps EASY. The rider's counterparty_statement ('the driver took very long, the car was stuck at the junction for a long time so I walked out to the main road') is contradicted by the record: EV-TRIP-04052 driver_assigned 19:24:00 with ETA 7 min shown and driver_arrived 19:31:00 (0 s late); EV-GPS-04052 approach fixes report 11-29 km/h through 19:30:40 at a 10 s cadence with no stationary fix before the 19:30:50 roll-in; rider_track is 23.4 m from the pin at 19:27:00 and already 132.4 m away at 19:28:30, before she asked 'how long more?' (MSG-04052-002) and before the driver's 'jam at the junction' reply (MSG-04052-003, 19:28:50). On the brief's literal definition (a party's story is contradicted by the record) that is a REVERSAL, which both blind readers reached. On the key's reading the contradicted story goes only to the POL-NS-10(f) ETA exception, which POL-NS-10(g) expressly excludes, so no contested fact decides the case and the outcome is plain arithmetic on clean telemetry (EASY, the blueprint's intent). Both readings are defensible as the file stands; the rider statement is unintended (the blueprint's traps and design_checks never use it), so the case is changed, not the key."
+    },
+    {
+      "field": "governing_clauses",
+      "key": [
+        "POL-NS-10",
+        "POL-NS-07"
+      ],
+      "reader_a": [
+        "POL-NS-10",
+        "POL-NS-07",
+        "POL-NS-02",
+        "POL-NS-01",
+        "POL-GEN-03"
+      ],
+      "reader_b": [
+        "POL-NS-10",
+        "POL-NS-07",
+        "POL-NS-02",
+        "POL-NS-01",
+        "POL-GEN-03",
+        "POL-GEN-01"
+      ],
+      "resolution": "Key stands. POL-NS-10 licenses DRIVER_COMPENSATION on limb (g) and POL-NS-07 fixes the amount; together they decide the case. POL-NS-02 and the POL-NS-01(c) measure are tests that limb (g) imports, POL-GEN-03 is the universal vocabulary clause the brief says not to lean on, and POL-GEN-01 licenses nothing. The readers' extra ids are harmless and not a reason to change the key."
+    },
+    {
+      "field": "rationale (reader-side detail only)",
+      "key": "no error found",
+      "reader_a": "no factual error",
+      "reader_b": "states rider fixes 19:31:00-19:36:00 at 288.9-303.4 m (the 19:36:00 fix is 288.7 m, after the cancellation) and driver accuracy 3.6-8.9 m for the in-radius run (that run is 3.6-8.8 m; 8.9 m is an approach fix at 19:25:10)",
+      "resolution": "Reader slips, immaterial; no key change."
+    }
+  ],
+  "analysis": "Agreed by key and both readers, and confirmed independently: ruling DRIVER_COMPENSATION, amount_sgd 3.60, driver_compensation_sgd 3.60, referrals []. Working (Python, haversine R = 6371.0088 km, Decimal for money): (1) POL-NS-10(a): EV-TRIP-04052 accepted_at 19:24:00, cancelled_at 19:35:30 (CANCELLED_BY_RIDER, RIDER_CANCELLED) = 690 s > platform_policy.grace_after_match_sec 180; scheduled_at null so (b) is out. (2) POL-NS-02 on EV-GPS-04052 (STANDARD, 50 m, accuracy filter 25 m): 19:30:30 88.3 m and 19:30:40 56.5 m are outside; from 19:30:50 (16.0 m, 5 km/h, acc 7.2 m) every fix to 19:35:30 is inside, 29 consecutive qualifying fixes, 1.2-16.0 m from the pin, accuracy 3.6-8.8 m, 10 s cadence. Arrival holds. (3) POL-NS-01(c) measure: dwell from the first qualifying fix 19:30:50 to the 19:35:30 cancellation = 280 s (270 s even from the 19:31:00 marker) > free_wait_sec 180, so POL-NS-10(g) applies: the fee stands at cancellation_fee_sgd 4.50 as if driver-terminated for a no-show, limb (f)'s exceptions do not apply, POL-NS-07 fixes the payout. POL-NS-01 limb (d) fails as written (rider cancellation), which is exactly why (g) is the route; POL-NS-07's text names (g) as a trigger. (4) POL-NS-07 anti-farming on EV-DPROF-04052: no_show_terminations_30d 0 (< 4) and 0/143 = 0 (<= 0.08), not tripped. Payout = 0.80 x 4.50 = 3.600 -> 3.60 (net figure; the gross 6.61 is never used). (5) POL-GEN-03: a driver payment is the outcome, so DRIVER_COMPENSATION with amount_sgd mirroring 3.60; the support refund (EV-FARE-04052 REFUNDED 4.50) is not a ruling value. (6) Displacing/other clauses: POL-NS-03 n/a (inside radius); POL-NS-05: at the 19:31:00 marker the fix is 7.7 m and 0 km/h (position-derived 5.5 km/h), 0 s skew, not false, no referral; POL-NS-04: the only rider message (19:28:30) precedes the window and was answered in 20 s, and limb (c) fails affirmatively (10 rider fixes 19:31:00-19:35:30 at 288.9-303.4 m, accuracy <= 11.0 m, all > 100 m); POL-NS-06: no shortfall, limb (i) unneeded and CONGESTION is not a limb (i) type; POL-NS-08 (a)-(d) all clean (0 s skew, max interval 10 s, 28 fixes marker-to-cancel, chat 5 = 5 sequential with a 140 s interval over the marker, fare line 4.50 = net); POL-NS-09 (a)-(e) none fire (deciding artifacts EV-TRIP-04052, EV-GPS-04052, EV-FARE-04052, EV-DPROF-04052 all weight 1.0; counters 0 + 0; rider no_show_disputes_30d 0); POL-NS-11 n/a (rider_track present); POL-NS-12 n/a (BUTTON marker). EV-ADVIS-04052-01 (0.5, ADVISORY_UNCORROBORATED) carries no deciding fact and does not cap confidence under POL-GEN-02(2). POL-GEN-05: 3.60 <= 8.00. Key rationale checked figure by figure (690 s, 180 s, 19:30:50, 19:31:00, accuracy 3.6-8.8 m, 1.2-16.0 m, 280 s, 4.50, 19:24:10, 7 min ETA, 0 of 143, 0.80 x 4.50 = 3.60, weight 0.5, ADVISORY_UNCORROBORATED, weight 1.0): all correct; its evidence ids and clause ids are right. The only live difference is difficulty. Both readers call it REVERSAL because the rider's counterparty statement is factually contradicted by the record (on-ETA arrival, no stationary period on the approach, and the rider walking away from 19:27:00 before any delay was signalled). The key calls it EASY because that statement bears only on the POL-NS-10(f) late-arrival exception, which limb (g) switches off, so nothing a party contests decides the case. Under the brief's definition the literal reading favours REVERSAL; under the materiality reading EASY is right, and the blueprint intended EASY with no story-versus-record trap (traps listed are missing NS-10(g), FULL_REFUND vocabulary for a driver filer, and paying on the gross). Relabelling would push the set to 6 EASY / 8 REVERSAL against the 7 / 7 target; removing the unintended contradiction keeps the key and the target and leaves one reading. Hence CASE_FIX: rewrite the rider's statement so that it no longer asserts a delay the record disproves, keeping her position that she should not pay. After the fix the driver's account (on-time arrival, more than 4 min wait, rider cancelled, support refunded) and the rider's account are both consistent with the record, and the case is decided by arithmetic on clean telemetry: EASY.",
+  "corrected_ground_truth": null,
+  "case_fix_instructions": {
+    "summary": "Replace the rider's counterparty_statement text so it no longer claims the driver was late or stuck; change nothing else in the facts. The key (DRIVER_COMPENSATION 3.60, POL-NS-10 + POL-NS-07, EASY) and its rationale stay exactly as they are.",
+    "where": "build/blueprint_ns.json, case 4052: facts.dispute.counterparty_statement.text (then regenerate out/cases/case-04052.json and out/cases/index.json with build/generate.py and re-run ref/check_set.py; the sha256 in index.json changes)",
+    "old_text": "The driver took very long, the car was stuck at the junction for a long time so I walked out to the main road and took a taxi. Support already refunded me and I do not think I should pay.",
+    "new_text": "Paiseh, I decided to walk out to the main road and catch a taxi there instead, so I cancelled the booking. Support already refunded me and I do not think I should pay.",
+    "keep_unchanged": "submitted_by RIDER, submitted_at 2026-09-24T13:10:00+08:00; claim_text; every evidence artifact (including MSG-04052-003 'abt 2 min, jam at the junction', which is accurate: arrival 130 s later, and EV-ADVIS-04052-01).",
+    "checks_after_fix": [
+      "new_text is ASCII and contains none of the forbidden words",
+      "new_text is consistent with rider_track (walks away from 19:27:00 and stands about 289-303 m out from 19:31:00 to 19:36:00) and with her cancellation at 19:35:30; the taxi itself is not on the record and is neither supported nor contradicted",
+      "no party statement now asserts lateness, a stop at the junction, or anything else EV-TRIP-04052 / EV-GPS-04052 / EV-CHAT-04052 disprove",
+      "ruling, amounts, referrals, governing clauses and rationale unchanged"
+    ]
+  }
+}

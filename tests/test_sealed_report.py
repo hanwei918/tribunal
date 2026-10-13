@@ -191,7 +191,7 @@ class SecondSealedSetFiguresTests(unittest.TestCase):
         self.assertEqual("", text)
         self.assertIn(
             "FATAL: 'codex' is not a sealed set; the sealed sets are "
-            "sealed-v1, sealed-v2, wild, wild-v2",
+            "sealed-v1, sealed-v2, sealed-v3, wild, wild-v2",
             errors.getvalue(),
         )
 

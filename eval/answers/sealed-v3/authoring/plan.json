@@ -1,0 +1,2226 @@
+[
+  {
+    "case_no": 4001,
+    "category": "ROUTE_DEVIATION",
+    "filed_by": "RIDER",
+    "channel": "IN_APP_SUPPORT",
+    "intended_ruling": "NO_ACTION",
+    "difficulty": "REVERSAL",
+    "escalation_kind": null,
+    "mechanism": "POL-RD-04 decides it. The rider's own message MSG-04001-002, sent about 35 s after pickup and before the vehicle leaves the optimal corridor, asks the driver to stop at Jurong Point to collect a parcel; its waypoint_hint resolves to the Jurong Point drop-off and the trace passes within about 40 m of it and stops 3 min, so limbs (a)-(c) and the corroboration test all hold. The detour is a clean out-and-back spur that leaves and rejoins the optimal corridor at the same junction (Boon Lay Way), so the excluded excess is the spur's own trace length (target 1.90 km); the measured excess 9.56 - 7.40 = 2.16 km (29.2%) would establish a deviation on its own, but after exclusion only about 0.26 km remains, failing both POL-RD-01 tests, so the outcome is NO_ACTION (POL-RD-09(3): no ERP refund; no driver compensation because the metered fare billed the full trace distance). The trap is to run POL-RD-01/02 on the raw 2.16 km and award a PARTIAL_REFUND of 3.30, or to treat the Malay wording flagged LANGUAGE_AMBIGUITY as making the instruction too vague to act on.",
+    "messy_evidence": [
+      {
+        "artifact": "CHAT_LOG",
+        "codes": [
+          "LANGUAGE_AMBIGUITY"
+        ],
+        "carries_deciding_fact": true,
+        "why": "The instruction uses Malay 'singgah' and 'kejap'; the place itself is fixed by waypoint_hint, and 0.85 stays above the 0.70 floor, so the instruction still carries the exclusion."
+      },
+      {
+        "artifact": "TRAFFIC_ADVISORY",
+        "codes": [
+          "MISSING_ARTIFACT"
+        ],
+        "carries_deciding_fact": false,
+        "why": "No advisory on file and no party asserts a traffic cause, so nothing turns on it (it is not cited, so POL-RD-10(5) is not engaged)."
+      }
+    ],
+    "setting": {
+      "place": "Pioneer MRT (Jurong West St 63) to Bukit Batok West Ave 6 HDB, with a stop at Jurong Point",
+      "day_time": "Saturday 2026-08-22 10:05 SGT",
+      "product": "RYDE_X",
+      "fare_model": "METERED"
+    },
+    "filer_story": "The rider says the driver took a roundabout way through Boon Lay and she wants 4.00 back.",
+    "counterparty_story": "The driver says the rider herself asked in the chat to stop at Jurong Point to collect a parcel and he waited for her there.",
+    "targets": {
+      "optimal_distance_km": 7.4,
+      "optimal_duration_min": 15,
+      "trace_distance_km_target": 9.56,
+      "spur_out_and_back_km": 1.9,
+      "billed_km": 9.56,
+      "billed_min": 21,
+      "surge": 1.0,
+      "erp": [],
+      "total_charged": 17.65,
+      "amount_contested_sgd": 4.0,
+      "filed_at": "2026-08-23",
+      "careless_rd02_refund": 3.3,
+      "expected": {
+        "ruling": "NO_ACTION",
+        "amount": null,
+        "driver_comp": null,
+        "referrals": [],
+        "governing": [
+          "POL-RD-04",
+          "POL-RD-01",
+          "POL-RD-09"
+        ]
+      },
+      "rider_track": [],
+      "rider_profile": {
+        "deviation_claims_60d": 1,
+        "deviation_claims_60d_substantiated": 0
+      },
+      "driver_profile": {
+        "deviation_flags_90d": 0,
+        "completed_trips_90d": 260,
+        "prior_deviation_flags": 1
+      }
+    }
+  },
+  {
+    "case_no": 4002,
+    "category": "ROUTE_DEVIATION",
+    "filed_by": "RIDER",
+    "channel": "IN_APP_SUPPORT",
+    "intended_ruling": "PARTIAL_REFUND",
+    "difficulty": "HARD",
+    "escalation_kind": null,
+    "mechanism": "POL-RD-03 with its cap, then POL-RD-01 and POL-RD-02 on the closure-adjusted optimal. Advisory EV-ADVIS-04002-01 (CLOSURE of the CTE southbound city tunnel section, valid Sat 23:30 to Sun 05:00, shortest_lawful_alternative_km 15.2) names a segment the optimal route uses, covers the 00:40 trip, and the trace leaves the corridor before it and rejoins after, so exoneration applies but is capped: measured excess 22.40 - 13.0 = 9.40 km; cap 1.30 x (15.2 - 13.0) + 1.00 = 3.86 km; adjusted optimal 16.86 km with duration 17 x 16.86 / 13.0 = 22.0 min (amended_optimal_duration_min null). The remaining 5.54 km (32.9% of 16.86) still establishes a deviation and is not material, because materiality is judged on the remaining excess; POL-RD-02 gives recomputed 3.80 + 0.75 x 16.86 + 0.28 x 22.0 + 0.80 = 23.405, charged 29.52, refund 6.115 rounded UP to 6.15 against 12.00 contested. Traps: no exoneration (10.45), full exoneration by applying 130% to the whole 15.2 km route (NO_ACTION), calling the 9.40 km first-measured excess material, or rounding 6.115 down.",
+    "messy_evidence": [
+      {
+        "artifact": "TRAFFIC_ADVISORY",
+        "codes": [],
+        "carries_deciding_fact": true,
+        "why": "COMPLETE closure advisory with a populated shortest_lawful_alternative_km; it carries the cap and must stay at weight 1.0."
+      }
+    ],
+    "setting": {
+      "place": "Ang Mo Kio Hub (Ang Mo Kio Ave 3) to Outram Park (Outram Rd)",
+      "day_time": "Sunday 2026-09-06 00:40 SGT",
+      "product": "RYDE_X",
+      "fare_model": "METERED"
+    },
+    "filer_story": "The rider says the driver went all the way round by the PIE and AYE late at night and wants 12.00 back.",
+    "counterparty_story": "The driver says the CTE tunnel towards the city was closed for night works, so he had to divert.",
+    "targets": {
+      "optimal_distance_km": 13.0,
+      "optimal_duration_min": 17,
+      "shortest_lawful_alternative_km": 15.2,
+      "advisory_valid": "2026-09-05T23:30+08:00 to 2026-09-06T05:00+08:00",
+      "trace_distance_km_target": 22.4,
+      "billed_km": 22.4,
+      "billed_min": 29,
+      "surge": 1.0,
+      "erp": [],
+      "total_charged": 29.52,
+      "amount_contested_sgd": 12.0,
+      "justified_excess_km": 3.86,
+      "adjusted_optimal_km": 16.86,
+      "adjusted_duration_min": 22.0,
+      "recomputed": 23.405,
+      "filed_at": "2026-09-07",
+      "expected": {
+        "ruling": "PARTIAL_REFUND",
+        "amount": 6.15,
+        "driver_comp": null,
+        "referrals": [],
+        "governing": [
+          "POL-RD-03",
+          "POL-RD-01",
+          "POL-RD-02"
+        ]
+      },
+      "rider_track": [],
+      "rider_profile": {
+        "deviation_claims_60d": 1,
+        "deviation_claims_60d_substantiated": 0
+      },
+      "driver_profile": {
+        "deviation_flags_90d": 0,
+        "completed_trips_90d": 260,
+        "prior_deviation_flags": 1
+      }
+    }
+  },
+  {
+    "case_no": 4003,
+    "category": "ROUTE_DEVIATION",
+    "filed_by": "RIDER",
+    "channel": "EMAIL",
+    "intended_ruling": "ESCALATE",
+    "difficulty": "INDETERMINATE",
+    "escalation_kind": "EVIDENCE",
+    "mechanism": "POL-RD-07 and POL-RD-10(3). The trace has a 450 s gap (14:08:40 to 14:16:10) inside the disputed segment while the car ran through the KPE and MCE tunnels, so RD-07 limbs (a) (gap > 90 s) and (b) (straight-line jump of about 7 km > 500 m) fire; bridged by the straight line, the trace reads 17.60 km against optimal 13.5 km (excess 4.10 km, 30.4%), but RD-07(ii) forbids establishing a deviation on the trace alone. None of the independent corroborators exists: the driver filed no statement and admits nothing in chat, no ERP was charged (Sunday), and both trip_record.actual_distance_km and fare distance_charged_km are copies of the same bridged trace figure, so RD-07(iii) and RD-10(3) require ESCALATE rather than NO_ACTION; the trace's 0.6 weight also caps confidence below 0.70 (POL-GEN-02(2), RD-10(1)). Nothing rescues it: RD-13 expressly leaves RD-07 in force and RD-01 cannot be run on an impaired trace. Traps: an RD-02 refund of 4.80 from the bridged figure, NO_ACTION because the deviation is unproven, or reading the copied distances as corroboration.",
+    "messy_evidence": [
+      {
+        "artifact": "GPS_TRACE",
+        "codes": [
+          "GPS_GAP"
+        ],
+        "carries_deciding_fact": true,
+        "why": "Long gap inside the disputed segment (GPS_GAP_LONG_INSIDE_WINDOW, weight 0.6); it is policy-impaired under POL-RD-07(a)/(b) and is the reason the case escalates."
+      },
+      {
+        "artifact": "TRAFFIC_ADVISORY",
+        "codes": [
+          "MISSING_ARTIFACT"
+        ],
+        "carries_deciding_fact": false,
+        "why": "No advisory on file and no party asserts a traffic cause, so nothing turns on it (it is not cited, so POL-RD-10(5) is not engaged)."
+      }
+    ],
+    "setting": {
+      "place": "Hougang Ave 1 HDB to Marina Bay Financial Centre",
+      "day_time": "Sunday 2026-08-16 14:00 SGT",
+      "product": "RYDE_X",
+      "fare_model": "METERED"
+    },
+    "filer_story": "The rider writes in that the driver took the KPE and MCE instead of the CTE and she wants 6.00 back.",
+    "counterparty_story": "The driver submitted no statement (counterparty_statement null) and the chat holds only routine pickup messages.",
+    "targets": {
+      "optimal_distance_km": 13.5,
+      "optimal_duration_min": 20,
+      "trace_distance_km_target": 17.6,
+      "gap": "14:08:40 to 14:16:10 (450 s) inside the disputed segment",
+      "billed_km": 17.6,
+      "billed_min": 26,
+      "surge": 1.0,
+      "erp": [],
+      "trip_record_actual_distance_km": 17.6,
+      "total_charged": 25.08,
+      "amount_contested_sgd": 6.0,
+      "careless_rd02_refund": 4.8,
+      "filed_at": "2026-08-18",
+      "expected": {
+        "ruling": "ESCALATE",
+        "amount": null,
+        "driver_comp": null,
+        "referrals": [],
+        "governing": [
+          "POL-RD-07",
+          "POL-RD-10",
+          "POL-GEN-02"
+        ]
+      },
+      "rider_track": [],
+      "rider_profile": {
+        "deviation_claims_60d": 1,
+        "deviation_claims_60d_substantiated": 0
+      },
+      "driver_profile": {
+        "deviation_flags_90d": 0,
+        "completed_trips_90d": 260,
+        "prior_deviation_flags": 1
+      }
+    }
+  },
+  {
+    "case_no": 4004,
+    "category": "ROUTE_DEVIATION",
+    "filed_by": "RIDER",
+    "channel": "IN_APP_SUPPORT",
+    "intended_ruling": "FULL_REFUND",
+    "difficulty": "EASY",
+    "escalation_kind": null,
+    "mechanism": "POL-RD-11(a). The fare is UPFRONT_QUOTE with quoted_fare_sgd 17.90, but the platform re-rated the trip to 24.40 after the driver's longer route; there is no ERP, airport or waiting line, so the excess over the quote plus properly chargeable pass-throughs is 24.40 - 17.90 = 6.50 (already a multiple of 0.05), refunded in full, which equals the rider's contested 6.50. POL-RD-02 does not run on an upfront fare. The deviation (16.32 vs 12.1 km, 34.9%) is established but not material, so POL-RD-06 is not consulted. Traps: running RD-02 against the optimal (recomputed 19.275, refund 5.15, a PARTIAL_REFUND) or reading RD-11 as barring every refund on an upfront trip.",
+    "messy_evidence": [
+      {
+        "artifact": "TRAFFIC_ADVISORY",
+        "codes": [
+          "MISSING_ARTIFACT"
+        ],
+        "carries_deciding_fact": false,
+        "why": "No advisory on file and no party asserts a traffic cause, so nothing turns on it (it is not cited, so POL-RD-10(5) is not engaged)."
+      }
+    ],
+    "setting": {
+      "place": "Paya Lebar Quarter to Downtown East, Pasir Ris",
+      "day_time": "Thursday 2026-09-17 20:40 SGT",
+      "product": "RYDE_X",
+      "fare_model": "UPFRONT_QUOTE"
+    },
+    "filer_story": "The rider says she was quoted 17.90 but charged 24.40 because the driver went the long way, and wants the 6.50 difference back.",
+    "counterparty_story": "The driver says he followed the navigation and does not set the fare.",
+    "targets": {
+      "optimal_distance_km": 12.1,
+      "optimal_duration_min": 20,
+      "quoted_fare_sgd": 17.9,
+      "trace_distance_km_target": 16.32,
+      "billed_km": 16.32,
+      "billed_min": 27,
+      "surge": 1.0,
+      "erp": [],
+      "total_charged": 24.4,
+      "amount_contested_sgd": 6.5,
+      "careless_rd02_refund": 5.15,
+      "filed_at": "2026-09-18",
+      "expected": {
+        "ruling": "FULL_REFUND",
+        "amount": 6.5,
+        "driver_comp": null,
+        "referrals": [],
+        "governing": [
+          "POL-RD-11"
+        ]
+      },
+      "rider_track": [],
+      "rider_profile": {
+        "deviation_claims_60d": 1,
+        "deviation_claims_60d_substantiated": 0
+      },
+      "driver_profile": {
+        "deviation_flags_90d": 0,
+        "completed_trips_90d": 260,
+        "prior_deviation_flags": 1
+      }
+    }
+  },
+  {
+    "case_no": 4005,
+    "category": "ROUTE_DEVIATION",
+    "filed_by": "DRIVER",
+    "channel": "IN_APP_SUPPORT",
+    "intended_ruling": "DRIVER_COMPENSATION",
+    "difficulty": "HARD",
+    "escalation_kind": null,
+    "mechanism": "POL-RD-04's compensation limb, reached through POL-RD-11. The rider's message at 16:01, before the car leaves the corridor, asks for a stop at Sembawang Shopping Centre; its waypoint_hint resolves there and the trace passes within about 50 m with a 6 min stop, so the detour is rider-requested and corroborated. The fare is UPFRONT_QUOTE (quoted and charged 22.25, distance_charged_km 14.20), so the rider owes nothing more, and RD-11 sends the driver's unrecovered cost on a rider-requested detour to RD-04: unbilled distance = trace 20.57 - billed 14.20 = 6.37 km (> 1.0 km), x 0.75 = 4.7775, rounded UP to 4.80, under the 15.00 cap. Ruling DRIVER_COMPENSATION 4.80 with amount_sgd mirroring it (POL-GEN-03); the contested 6.00 is the driver's own estimate. Traps: NO_ACTION because an upfront fare fixes distance, 4.78 without rounding up, or refund vocabulary for a driver filer.",
+    "messy_evidence": [
+      {
+        "artifact": "TRAFFIC_ADVISORY",
+        "codes": [
+          "MISSING_ARTIFACT"
+        ],
+        "carries_deciding_fact": false,
+        "why": "No advisory on file and no party asserts a traffic cause, so nothing turns on it (it is not cited, so POL-RD-10(5) is not engaged)."
+      }
+    ],
+    "setting": {
+      "place": "Causeway Point, Woodlands to Ang Mo Kio Hub, with a stop at Sembawang Shopping Centre",
+      "day_time": "Sunday 2026-09-27 16:00 SGT",
+      "product": "RYDE_X",
+      "fare_model": "UPFRONT_QUOTE"
+    },
+    "filer_story": "The driver says the rider asked for a detour to Sembawang Shopping Centre, he drove more than 6 km extra on a fixed fare, and he asks for 6.00.",
+    "counterparty_story": "The rider agrees she asked for the stop but says the fare was fixed upfront, so it is not her problem.",
+    "targets": {
+      "optimal_distance_km": 14.2,
+      "optimal_duration_min": 25,
+      "quoted_fare_sgd": 22.25,
+      "billed_km": 14.2,
+      "billed_min": 25,
+      "trace_distance_km_target": 20.57,
+      "trace_distance_km_window": "(20.534, 20.600] so that 0.75 x (trace - 14.20) rounds up to exactly 4.80",
+      "surge": 1.0,
+      "erp": [],
+      "total_charged": 22.25,
+      "amount_contested_sgd": 6.0,
+      "filed_at": "2026-09-29",
+      "expected": {
+        "ruling": "DRIVER_COMPENSATION",
+        "amount": 4.8,
+        "driver_comp": 4.8,
+        "referrals": [],
+        "governing": [
+          "POL-RD-04",
+          "POL-RD-11"
+        ]
+      },
+      "rider_track": [],
+      "rider_profile": {
+        "deviation_claims_60d": 1,
+        "deviation_claims_60d_substantiated": 0
+      },
+      "driver_profile": {
+        "deviation_flags_90d": 0,
+        "completed_trips_90d": 260,
+        "prior_deviation_flags": 1
+      }
+    }
+  },
+  {
+    "case_no": 4006,
+    "category": "ROUTE_DEVIATION",
+    "filed_by": "RIDER",
+    "channel": "IN_APP_SUPPORT",
+    "intended_ruling": "PARTIAL_REFUND",
+    "difficulty": "REVERSAL",
+    "escalation_kind": null,
+    "mechanism": "POL-RD-01 fails, and POL-RD-09(4) refunds a phantom gantry. The trace measures 9.85 km against optimal 8.70 km: the 1.15 km excess passes the 0.8 km test but is only 13.2% (< 20%), so no deviation exists and the distance claim fails - the rider's claim of 4-5 km extra is contradicted by the trace (as built: 9.84 km, excess 1.14 km, 13.1 %; see design_notes_rd.md). [r1: claim now states the 4-5 km magnitude so that REVERSAL rests on a contradiction in the record; see revisions_rd_r1.md] But fare_breakdown carries an ERP line 'CTE (southbound) after Braddell Road' 2.00 whose gantry coordinates lie more than 1 km from every fix (the car used Upper Thomson and Thomson Road), so the trace never passes it: it is refunded in full as a standalone correction (2.00) with a billing-integrity referral, and POL-RD-10(8) is expressly not triggered by a line refunded under RD-09(4). Ruling PARTIAL_REFUND 2.00 of 6.00 contested. Traps: NO_ACTION by stopping at RD-01 (RD-01 itself saves the RD-09(4) refund), ESCALATE under RD-10(8), or a deviation built on rounded figures.",
+    "messy_evidence": [
+      {
+        "artifact": "TRAFFIC_ADVISORY",
+        "codes": [
+          "MISSING_ARTIFACT"
+        ],
+        "carries_deciding_fact": false,
+        "why": "No advisory on file and no party asserts a traffic cause, so nothing turns on it (it is not cited, so POL-RD-10(5) is not engaged)."
+      }
+    ],
+    "setting": {
+      "place": "Ang Mo Kio Ave 6 HDB to Novena Medical Center",
+      "day_time": "Tuesday 2026-08-25 08:20 SGT",
+      "product": "RYDE_X",
+      "fare_model": "METERED"
+    },
+    "filer_story": "The rider says the driver went round by Yio Chu Kang, 'must be 4-5km extra', and also charged her a CTE ERP gantry although they never went on the CTE; she wants 6.00 back.",
+    "counterparty_story": "The driver says he took Upper Thomson and Thomson Road, the normal way, and never used the CTE.",
+    "targets": {
+      "optimal_distance_km": 8.7,
+      "optimal_duration_min": 15,
+      "optimal_route_erp_sgd": 0.0,
+      "trace_distance_km_target": 9.85,
+      "billed_km": 9.84,
+      "billed_min": 17,
+      "surge": 1.0,
+      "erp": [
+        {
+          "name": "CTE (southbound) after Braddell Road",
+          "amount_sgd": 2.0,
+          "note": "phantom: > 1 km from every fix"
+        }
+      ],
+      "total_charged": 18.74,
+      "amount_contested_sgd": 6.0,
+      "filed_at": "2026-08-25",
+      "expected": {
+        "ruling": "PARTIAL_REFUND",
+        "amount": 2.0,
+        "driver_comp": null,
+        "referrals": [
+          "POL-RD-09(4): billing-integrity finding (ERP line for a gantry the trace never passes)"
+        ],
+        "governing": [
+          "POL-RD-09",
+          "POL-RD-01"
+        ]
+      },
+      "rider_track": [],
+      "rider_profile": {
+        "deviation_claims_60d": 1,
+        "deviation_claims_60d_substantiated": 0
+      },
+      "driver_profile": {
+        "deviation_flags_90d": 0,
+        "completed_trips_90d": 260,
+        "prior_deviation_flags": 1
+      }
+    }
+  },
+  {
+    "case_no": 4007,
+    "category": "ROUTE_DEVIATION",
+    "filed_by": "RIDER",
+    "channel": "IN_APP_SUPPORT",
+    "intended_ruling": "ESCALATE",
+    "difficulty": "HARD",
+    "escalation_kind": "POLICY",
+    "mechanism": "POL-RD-10(8). This completed metered trip's fare_breakdown carries a cancellation_fee line of 4.50 (total 24.24) that has no counterpart anywhere: trip_record status COMPLETED, cancelled_at null, cancellation_reason_code null, no cancellation event, nothing in the trace. POL-RD-09(4) covers only gantry and airport-surcharge lines, so RD-10(8)'s carve-out does not apply and the Judge must not issue a ruling: the facts are clear, but the policy requires a person. The deviation itself is clean and clear (trace 11.60 vs optimal 7.9 km, 46.8%, not material), which is the trap: RD-02 would give a tidy PARTIAL_REFUND of 9.25, and a reader might refund the 4.50 under RD-09(4) by analogy.",
+    "messy_evidence": [
+      {
+        "artifact": "TRAFFIC_ADVISORY",
+        "codes": [
+          "MISSING_ARTIFACT"
+        ],
+        "carries_deciding_fact": false,
+        "why": "No advisory on file and no party asserts a traffic cause, so nothing turns on it (it is not cited, so POL-RD-10(5) is not engaged)."
+      }
+    ],
+    "setting": {
+      "place": "Toa Payoh Lorong 1 HDB to Kallang Wave Mall",
+      "day_time": "Monday 2026-09-14 20:30 SGT",
+      "product": "RYDE_TAXI",
+      "fare_model": "METERED"
+    },
+    "filer_story": "The rider says the driver went round by the PIE and her receipt also shows a 4.50 cancellation fee though she cancelled nothing; she wants 10.00 back.",
+    "counterparty_story": "The driver says the expressway was faster and the 4.50 has nothing to do with him.",
+    "targets": {
+      "optimal_distance_km": 7.9,
+      "optimal_duration_min": 16,
+      "trace_distance_km_target": 11.6,
+      "billed_km": 11.6,
+      "billed_min": 23,
+      "surge": 1.0,
+      "erp": [],
+      "cancellation_fee_line": 4.5,
+      "total_charged": 24.24,
+      "amount_contested_sgd": 10.0,
+      "careless_rd02_refund": 9.25,
+      "filed_at": "2026-09-16",
+      "expected": {
+        "ruling": "ESCALATE",
+        "amount": null,
+        "driver_comp": null,
+        "referrals": [],
+        "governing": [
+          "POL-RD-10"
+        ]
+      },
+      "rider_track": [],
+      "rider_profile": {
+        "deviation_claims_60d": 1,
+        "deviation_claims_60d_substantiated": 0
+      },
+      "driver_profile": {
+        "deviation_flags_90d": 0,
+        "completed_trips_90d": 260,
+        "prior_deviation_flags": 1
+      }
+    }
+  },
+  {
+    "case_no": 4008,
+    "category": "ROUTE_DEVIATION",
+    "filed_by": "RIDER",
+    "channel": "IN_APP_SUPPORT",
+    "intended_ruling": "NO_ACTION",
+    "difficulty": "EASY",
+    "escalation_kind": null,
+    "mechanism": "POL-RD-12. On this RYDE_POOL trip the trip_record identifies the matched itinerary (a pool_matched event naming the co-rider's pickup at Hougang Ave 1, optimal_route_source MATCHED_POOL_ITINERARY), with optimal_distance_km 11.6 for that itinerary and solo_optimal_distance_km 8.9 for reference only. The trace measures 12.12 km: excess over the matched itinerary 0.52 km (4.5%) fails both POL-RD-01 tests, so the outcome is NO_ACTION. The rider's 3.22 km is measured against the solo optimal, the wrong field, and fails on that ground; the ruling names both figures. Trap: measuring against solo (36.2%) and paying an RD-02 refund.",
+    "messy_evidence": [
+      {
+        "artifact": "CHAT_LOG",
+        "codes": [
+          "CLOCK_SKEW"
+        ],
+        "carries_deciding_fact": false,
+        "why": "Chat timestamps run 47 s ahead of trip_record (weight 0.5); the chat decides nothing in a pool-baseline case, and 47 s is far below POL-RD-10(4)'s 10 minutes."
+      },
+      {
+        "artifact": "TRAFFIC_ADVISORY",
+        "codes": [
+          "MISSING_ARTIFACT"
+        ],
+        "carries_deciding_fact": false,
+        "why": "No advisory on file and no party asserts a traffic cause, so nothing turns on it (it is not cited, so POL-RD-10(5) is not engaged)."
+      }
+    ],
+    "setting": {
+      "place": "NEX, Serangoon Central to Waterway Point, Punggol (pooled; co-rider collected at Hougang Ave 1)",
+      "day_time": "Wednesday 2026-08-05 21:15 SGT",
+      "product": "RYDE_POOL",
+      "fare_model": "METERED"
+    },
+    "filer_story": "The rider says she was driven about 3 km more than her usual route and wants 4.00 back.",
+    "counterparty_story": "The driver says the app sent him to collect and drop another pool passenger in Hougang.",
+    "targets": {
+      "optimal_distance_km": 11.6,
+      "solo_optimal_distance_km": 8.9,
+      "optimal_duration_min": 22,
+      "trace_distance_km_target": 12.12,
+      "billed_km": 12.12,
+      "billed_min": 24,
+      "surge": 1.0,
+      "promo_discount": 2.5,
+      "erp": [],
+      "total_charged": 17.91,
+      "amount_contested_sgd": 4.0,
+      "filed_at": "2026-08-06",
+      "expected": {
+        "ruling": "NO_ACTION",
+        "amount": null,
+        "driver_comp": null,
+        "referrals": [],
+        "governing": [
+          "POL-RD-12",
+          "POL-RD-01"
+        ]
+      },
+      "rider_track": [],
+      "rider_profile": {
+        "deviation_claims_60d": 1,
+        "deviation_claims_60d_substantiated": 0
+      },
+      "driver_profile": {
+        "deviation_flags_90d": 0,
+        "completed_trips_90d": 260,
+        "prior_deviation_flags": 1
+      }
+    }
+  },
+  {
+    "case_no": 4009,
+    "category": "ROUTE_DEVIATION",
+    "filed_by": "RIDER",
+    "channel": "EMAIL",
+    "intended_ruling": "FULL_REFUND",
+    "difficulty": "HARD",
+    "escalation_kind": null,
+    "mechanism": "POL-RD-01 material deviation plus POL-RD-06(b). The trace measures 18.96 km against optimal 10.3 km: the 8.66 km excess (84.1%) is established and MATERIAL (> 50% and > 8.0 km), substantiated on this trip's own trace. Because it is material, RD-06 is consulted: driver_profile.deviation_flags_90d = 4 (>= 3) establishes a pattern, so limb (b) licenses FULL_REFUND of charged_total 27.50 instead of the RD-02 partial (recomputed 17.085, refund 10.415 rounded up to 10.45, stated side by side); there is no ERP, toll or airport line to carve out to RD-09, and limb (c) adds a driver-conduct referral. Contested 27.50 = charged_total, already a multiple of 0.05. Traps: stopping at the RD-02 figure 10.45; treating 27.50 above the 8.00 execution threshold (POL-GEN-05) as an escalation; reading the schema GPS_GAP tag (75 s in the pickup carpark, outside the disputed segment, jump about 200 m) as an RD-07 impairment.",
+    "messy_evidence": [
+      {
+        "artifact": "GPS_TRACE",
+        "codes": [
+          "GPS_GAP"
+        ],
+        "carries_deciding_fact": true,
+        "why": "Short gap outside the disputed segment (GPS_GAP_SHORT_OR_OUTSIDE_WINDOW, 0.85): schema-impaired but policy-clean under RD-07 (75 s < 90 s, about 200 m < 500 m), and 0.85 keeps the finding above the floor."
+      },
+      {
+        "artifact": "CHAT_LOG",
+        "codes": [
+          "MISSING_ARTIFACT"
+        ],
+        "carries_deciding_fact": false,
+        "why": "No chat on file; nobody asserts a rider instruction, so no clause needs it."
+      },
+      {
+        "artifact": "TRAFFIC_ADVISORY",
+        "codes": [
+          "MISSING_ARTIFACT"
+        ],
+        "carries_deciding_fact": false,
+        "why": "No advisory on file and no party asserts a traffic cause, so nothing turns on it (it is not cited, so POL-RD-10(5) is not engaged)."
+      }
+    ],
+    "setting": {
+      "place": "Gardens by the Bay (Bayfront Ave drop-off) to Holland Village (Lorong Mambong)",
+      "day_time": "Saturday 2026-09-19 23:10 SGT",
+      "product": "RYDE_TAXI",
+      "fare_model": "METERED"
+    },
+    "filer_story": "A visitor writes in that the driver drove them round the East Coast before heading west and wants the whole 27.50 back.",
+    "counterparty_story": "The driver says he used the expressways because they were faster at night.",
+    "targets": {
+      "optimal_distance_km": 10.3,
+      "optimal_duration_min": 17,
+      "trace_distance_km_target": 18.96,
+      "billed_km": 18.96,
+      "billed_min": 31,
+      "surge": 1.0,
+      "erp": [],
+      "total_charged": 27.5,
+      "amount_contested_sgd": 27.5,
+      "rd02_figure": 10.45,
+      "driver_profile": {
+        "deviation_flags_90d": 4,
+        "completed_trips_90d": 380,
+        "prior_deviation_flags": 6
+      },
+      "filed_at": "2026-09-24",
+      "expected": {
+        "ruling": "FULL_REFUND",
+        "amount": 27.5,
+        "driver_comp": null,
+        "referrals": [
+          "POL-RD-06(c): driver-conduct review"
+        ],
+        "governing": [
+          "POL-RD-06",
+          "POL-RD-01",
+          "POL-RD-02"
+        ]
+      },
+      "rider_track": [],
+      "rider_profile": {
+        "deviation_claims_60d": 1,
+        "deviation_claims_60d_substantiated": 0
+      }
+    }
+  },
+  {
+    "case_no": 4010,
+    "category": "ROUTE_DEVIATION",
+    "filed_by": "DRIVER",
+    "channel": "EMAIL",
+    "intended_ruling": "ESCALATE",
+    "difficulty": "INDETERMINATE",
+    "escalation_kind": "EVIDENCE",
+    "mechanism": "POL-RD-05 cannot be run, so POL-RD-10(5) fires. The rider changed the destination in chat at 22:21 from Tampines Hub to Paya Lebar Quarter; trip_record records dropoff_amended_at 22:21:30 and original_dropoff, but amended_optimal_distance_km and amended_optimal_duration_min are null, so the re-quote is missing from the record. The driver invokes the relocation to defend a 16.20 km trace against the 9.8 km booked optimal; RD-05 says that with an amendment timestamp and a null re-quote the clause cannot be run, RD-10(5) applies, and the Judge must not derive a substitute figure, so the deciding fact (the optimal between the amended endpoints) is not in the record. Traps: measuring against the booked optimal (a careless RD-02 refund of 8.20, more than the 5.15 the platform refunded) or estimating a Paya Lebar re-quote from geography and ruling NO_ACTION.",
+    "messy_evidence": [
+      {
+        "artifact": "TRIP_RECORD",
+        "codes": [
+          "PARTIAL_RECORD"
+        ],
+        "carries_deciding_fact": true,
+        "why": "dropoff_amended_at set but amended_optimal_distance_km and amended_optimal_duration_min null (weight 0.75); the missing field is the escalation reason."
+      },
+      {
+        "artifact": "TRAFFIC_ADVISORY",
+        "codes": [
+          "MISSING_ARTIFACT"
+        ],
+        "carries_deciding_fact": false,
+        "why": "No advisory on file and no party asserts a traffic cause, so nothing turns on it (it is not cited, so POL-RD-10(5) is not engaged)."
+      }
+    ],
+    "setting": {
+      "place": "Waterway Point, Punggol to Tampines Hub (booked), changed mid-trip to Paya Lebar Quarter",
+      "day_time": "Wednesday 2026-09-30 22:10 SGT",
+      "product": "RYDE_X",
+      "fare_model": "METERED"
+    },
+    "filer_story": "The driver writes in that the platform deducted 5.15 from his earnings for a long route, but the rider changed the destination halfway.",
+    "counterparty_story": "The rider says she did change to Paya Lebar Quarter but the driver still went round by Bedok.",
+    "targets": {
+      "optimal_distance_km": 9.8,
+      "optimal_duration_min": 15,
+      "amended_optimal_distance_km": null,
+      "amended_optimal_duration_min": null,
+      "dropoff_amended_at": "2026-09-30T22:21:30+08:00",
+      "trace_distance_km_target": 16.2,
+      "billed_km": 16.2,
+      "billed_min": 27,
+      "surge": 1.0,
+      "erp": [],
+      "total_charged": 24.31,
+      "refund_issued_sgd": 5.15,
+      "payment_status": "PARTIALLY_REFUNDED",
+      "amount_contested_sgd": 5.15,
+      "careless_rd02_refund": 8.2,
+      "filed_at": "2026-10-03",
+      "expected": {
+        "ruling": "ESCALATE",
+        "amount": null,
+        "driver_comp": null,
+        "referrals": [],
+        "governing": [
+          "POL-RD-05",
+          "POL-RD-10"
+        ]
+      },
+      "rider_track": [],
+      "rider_profile": {
+        "deviation_claims_60d": 1,
+        "deviation_claims_60d_substantiated": 0
+      },
+      "driver_profile": {
+        "deviation_flags_90d": 0,
+        "completed_trips_90d": 260,
+        "prior_deviation_flags": 1
+      }
+    }
+  },
+  {
+    "case_no": 4011,
+    "category": "ROUTE_DEVIATION",
+    "filed_by": "RIDER",
+    "channel": "IN_APP_SUPPORT",
+    "intended_ruling": "PARTIAL_REFUND",
+    "difficulty": "EASY",
+    "escalation_kind": null,
+    "mechanism": "POL-RD-01 and POL-RD-02, plainly. The trace measures 13.92 km against optimal 10.4 km: the 3.52 km excess (33.8%) is established and not material, and the driver offers no exculpatory clause (POL-RD-08: 'I followed the navigation app' cites no artifact, and no traffic cause is asserted). Recomputed 3.80 + 0.75 x 10.4 + 0.28 x 19 + 0.80 = 17.72 with surge 1.0 and no ERP; charged 22.32; refund 4.60 (already a multiple of 0.05), against 6.00 contested.",
+    "messy_evidence": [
+      {
+        "artifact": "TRAFFIC_ADVISORY",
+        "codes": [
+          "MISSING_ARTIFACT"
+        ],
+        "carries_deciding_fact": false,
+        "why": "No advisory on file and no party asserts a traffic cause, so nothing turns on it (it is not cited, so POL-RD-10(5) is not engaged)."
+      }
+    ],
+    "setting": {
+      "place": "Compass One, Sengkang to Junction 8, Bishan",
+      "day_time": "Saturday 2026-08-08 11:20 SGT",
+      "product": "RYDE_X",
+      "fare_model": "METERED"
+    },
+    "filer_story": "The rider says she usually pays about 16 for this trip but was charged 22.32 after the driver went by Yio Chu Kang Road; she wants 6.00 back.",
+    "counterparty_story": "The driver says he followed the navigation app and did not go the long way on purpose.",
+    "targets": {
+      "optimal_distance_km": 10.4,
+      "optimal_duration_min": 19,
+      "trace_distance_km_target": 13.92,
+      "billed_km": 13.92,
+      "billed_min": 26,
+      "surge": 1.0,
+      "erp": [],
+      "total_charged": 22.32,
+      "amount_contested_sgd": 6.0,
+      "recomputed": 17.72,
+      "filed_at": "2026-08-08",
+      "expected": {
+        "ruling": "PARTIAL_REFUND",
+        "amount": 4.6,
+        "driver_comp": null,
+        "referrals": [],
+        "governing": [
+          "POL-RD-01",
+          "POL-RD-02",
+          "POL-RD-08"
+        ]
+      },
+      "rider_track": [],
+      "rider_profile": {
+        "deviation_claims_60d": 1,
+        "deviation_claims_60d_substantiated": 0
+      },
+      "driver_profile": {
+        "deviation_flags_90d": 0,
+        "completed_trips_90d": 260,
+        "prior_deviation_flags": 1
+      }
+    }
+  },
+  {
+    "case_no": 4012,
+    "category": "ROUTE_DEVIATION",
+    "filed_by": "DRIVER",
+    "channel": "IN_APP_SUPPORT",
+    "intended_ruling": "NO_ACTION",
+    "difficulty": "REVERSAL",
+    "escalation_kind": null,
+    "mechanism": "POL-RD-03 fails on its location limb, so the deviation stands and the platform's earlier refund is exactly the POL-RD-02 figure; the trace measures 19.32 km against optimal 14.6 km: 4.72 km (32.3%), established, not material. The driver says the PIE was closed at Eunos, but the only PIE notice, EV-ADVIS-04012-01, is a CLOSURE of the PIE towards Tuas between the Adam Road and Eng Neo Avenue exits, valid 05:00-11:00 (covering the trip), and the booked route leaves the PIE for Toa Payoh before that section (about 4 km west of the dropoff, more than 3.3 km from every fix): RD-03(a) fails ('covering a corridor the optimal route never uses') and so does (c), and the driver's account is contradicted. EV-ADVIS-04012-02 (ROADWORKS on the TPE, the driver's own road) names no optimal-route segment; both advisories cover the trip window and carry shortest_lawful_alternative_km, so POL-RD-10(5) has nothing to act on. RD-02: recomputed 3.80 + 10.95 + 5.88 + 0.80 = 21.43, charged 26.93, refund 5.50, equal to refund_issued_sgd 5.50, so the driver's claim to reverse it is unsupported: NO_ACTION, which on this driver-filed dispute leaves the rider refunded (POL-GEN-03). Traps: accepting the PIE notice because it names the PIE and is in force (or applying RD-03's 1.00 km tolerance), escalating under RD-10(5), or reading NO_ACTION as restoring the charge. [r1: replaces the expired-closure mechanism, which a reader could escalate under RD-10(5) 'does not cover the trip window'; see revisions_rd_r1.md]",
+    "messy_evidence": [
+      {
+        "artifact": "TRAFFIC_ADVISORY",
+        "codes": [],
+        "carries_deciding_fact": true,
+        "why": "EV-ADVIS-04012-01 is COMPLETE; its segment (a PIE section beyond the booked route's Toa Payoh exit) is what defeats the driver's exoneration, so it must stay at weight 1.0. It covers the trip window and carries shortest_lawful_alternative_km, so POL-RD-10(5) is not engaged."
+      },
+      {
+        "artifact": "TRAFFIC_ADVISORY",
+        "codes": [],
+        "carries_deciding_fact": false,
+        "why": "EV-ADVIS-04012-02 is a COMPLETE roadworks notice on a road the optimal route never uses (shortest_lawful_alternative_km populated); a distractor."
+      }
+    ],
+    "setting": {
+      "place": "Tampines Ave 4 HDB to Toa Payoh Lorong 4 HDB",
+      "day_time": "Sunday 2026-10-04 07:45 SGT",
+      "product": "RYDE_X",
+      "fare_model": "METERED"
+    },
+    "filer_story": "The driver says the PIE was closed at Eunos so he had to divert, and the 5.50 deducted from his earnings should be returned.",
+    "counterparty_story": "The rider says the PIE from Tampines was open that morning and support already refunded her the extra.",
+    "targets": {
+      "optimal_distance_km": 14.6,
+      "optimal_duration_min": 21,
+      "trace_distance_km_target": 19.32,
+      "billed_km": 19.32,
+      "billed_min": 28,
+      "surge": 1.0,
+      "erp": [],
+      "total_charged": 26.93,
+      "refund_issued_sgd": 5.5,
+      "payment_status": "PARTIALLY_REFUNDED",
+      "amount_contested_sgd": 5.5,
+      "advisory_01_valid": "2026-10-04T05:00+08:00 to 2026-10-04T11:00+08:00; PIE (towards Tuas) Adam Road exit to Eng Neo Avenue exit, off the booked route",
+      "filed_at": "2026-10-06",
+      "expected": {
+        "ruling": "NO_ACTION",
+        "amount": null,
+        "driver_comp": null,
+        "referrals": [],
+        "governing": [
+          "POL-RD-03",
+          "POL-RD-02",
+          "POL-RD-01"
+        ]
+      },
+      "rider_track": [],
+      "rider_profile": {
+        "deviation_claims_60d": 1,
+        "deviation_claims_60d_substantiated": 0
+      },
+      "driver_profile": {
+        "deviation_flags_90d": 0,
+        "completed_trips_90d": 260,
+        "prior_deviation_flags": 1
+      }
+    }
+  },
+  {
+    "case_no": 4013,
+    "category": "ROUTE_DEVIATION",
+    "filed_by": "RIDER",
+    "channel": "IN_APP_SUPPORT",
+    "intended_ruling": "PARTIAL_REFUND",
+    "difficulty": "REVERSAL",
+    "escalation_kind": null,
+    "mechanism": "POL-RD-14 (amendment 0002), then POL-RD-01 and POL-RD-02. The rider's message about 1 min after pickup asks the driver to stop at Bukit Timah Plaza (waypoint_hint resolved there), which meets RD-04(a)-(c); the trace never comes within 200 m of the waypoint (closest about 2 km) and never travels a requested road, so under RD-14 the instruction did not cause the excess: RD-04 does not apply, nothing is excluded, and this is not the RD-10(7) contradiction (base text would have escalated on RD-10(7)'s own example). The trace measures 15.92 km against 11.2 km: 4.72 km (42.1%), established, not material; recomputed 3.80 + 8.40 + 5.88 + 0.80 = 18.88, charged 24.66, refund 5.78 rounded up to 5.80 against 8.00 contested. The driver's story that he followed the rider's request is contradicted by the trace; his appeal to her prior_disputes_filed (9) is context only (POL-GEN-01), and deviation_claims_60d is 2, so RD-08's extra-corroboration factor is not engaged (the excess is above 30% anyway).",
+    "messy_evidence": [
+      {
+        "artifact": "TRAFFIC_ADVISORY",
+        "codes": [
+          "MISSING_ARTIFACT"
+        ],
+        "carries_deciding_fact": false,
+        "why": "No advisory on file and no party asserts a traffic cause, so nothing turns on it (it is not cited, so POL-RD-10(5) is not engaged)."
+      }
+    ],
+    "setting": {
+      "place": "Clementi Mall to Novena Square",
+      "day_time": "Sunday 2026-08-30 14:30 SGT",
+      "product": "RYDE_X",
+      "fare_model": "METERED"
+    },
+    "filer_story": "The rider says the driver went round by the AYE and Orchard, never stopped at Bukit Timah Plaza anyway, and she wants 8.00 back.",
+    "counterparty_story": "The driver says the rider herself asked to go by Bukit Timah Plaza and that she complains a lot.",
+    "targets": {
+      "optimal_distance_km": 11.2,
+      "optimal_duration_min": 21,
+      "trace_distance_km_target": 15.92,
+      "billed_km": 15.92,
+      "billed_min": 29,
+      "surge": 1.0,
+      "erp": [],
+      "total_charged": 24.66,
+      "amount_contested_sgd": 8.0,
+      "recomputed": 18.88,
+      "waypoint_min_distance_m": "about 2000 (must be > 200 for every fix)",
+      "rider_profile": {
+        "prior_disputes_filed": 9,
+        "deviation_claims_60d": 2,
+        "deviation_claims_60d_substantiated": 1
+      },
+      "filed_at": "2026-08-31",
+      "expected": {
+        "ruling": "PARTIAL_REFUND",
+        "amount": 5.8,
+        "driver_comp": null,
+        "referrals": [],
+        "governing": [
+          "POL-RD-14",
+          "POL-RD-01",
+          "POL-RD-02"
+        ]
+      },
+      "rider_track": [],
+      "driver_profile": {
+        "deviation_flags_90d": 0,
+        "completed_trips_90d": 260,
+        "prior_deviation_flags": 1
+      }
+    }
+  },
+  {
+    "case_no": 4014,
+    "category": "ROUTE_DEVIATION",
+    "filed_by": "DRIVER",
+    "channel": "IN_APP_SUPPORT",
+    "intended_ruling": "ESCALATE",
+    "difficulty": "INDETERMINATE",
+    "escalation_kind": "EVIDENCE",
+    "mechanism": "POL-RD-10(5), with POL-RD-13(1)'s own carve-out. The clean trace measures 17.88 km against optimal 12.8 km (5.08 km, 39.7%), so the deviation is established and the driver must discharge it with an exculpatory clause. He invokes an accident on the PIE and cites EV-ADVIS-04014-01 by its id, but that advisory is MISSING (weight 0.0). RD-13(1) discards an assertion that cites no advisory, but expressly leaves RD-10(5) in force where the party cites the missing identifier: an exculpatory clause invoked against a cited artifact missing from the pool escalates, and whether an incident existed on the optimal corridor cannot be settled on the record. Traps: applying RD-13(2) and ruling NO_ACTION on the driver's claim (the RD-02 figure 6.05 equals the platform's refund), or accepting the uncorroborated accident.",
+    "messy_evidence": [
+      {
+        "artifact": "TRAFFIC_ADVISORY",
+        "codes": [
+          "MISSING_ARTIFACT"
+        ],
+        "carries_deciding_fact": true,
+        "why": "The filer cites EV-ADVIS-04014-01 by id and it is MISSING; its absence is the escalation trigger."
+      }
+    ],
+    "setting": {
+      "place": "Jalan Kembangan to Bishan St 13 HDB",
+      "day_time": "Saturday 2026-09-12 15:20 SGT",
+      "product": "RYDE_X",
+      "fare_model": "METERED"
+    },
+    "filer_story": "The driver says there was an accident on the PIE, cites the LTA advisory EV-ADVIS-04014-01 on the trip, and wants the 6.05 deducted from him returned.",
+    "counterparty_story": "The rider says she saw no accident and the driver went the long way by Eunos and Upper Paya Lebar.",
+    "targets": {
+      "optimal_distance_km": 12.8,
+      "optimal_duration_min": 19,
+      "trace_distance_km_target": 17.88,
+      "billed_km": 17.88,
+      "billed_min": 27,
+      "surge": 1.0,
+      "erp": [],
+      "total_charged": 25.57,
+      "refund_issued_sgd": 6.05,
+      "payment_status": "PARTIALLY_REFUNDED",
+      "amount_contested_sgd": 6.05,
+      "filed_at": "2026-09-15",
+      "expected": {
+        "ruling": "ESCALATE",
+        "amount": null,
+        "driver_comp": null,
+        "referrals": [],
+        "governing": [
+          "POL-RD-10",
+          "POL-RD-13"
+        ]
+      },
+      "rider_track": [],
+      "rider_profile": {
+        "deviation_claims_60d": 1,
+        "deviation_claims_60d_substantiated": 0
+      },
+      "driver_profile": {
+        "deviation_flags_90d": 0,
+        "completed_trips_90d": 260,
+        "prior_deviation_flags": 1
+      }
+    }
+  },
+  {
+    "case_no": 4015,
+    "category": "ROUTE_DEVIATION",
+    "filed_by": "RIDER",
+    "channel": "IN_APP_SUPPORT",
+    "intended_ruling": "PARTIAL_REFUND",
+    "difficulty": "HARD",
+    "escalation_kind": null,
+    "mechanism": "POL-RD-02 with surge and POL-RD-09(1), after POL-RD-06 finds no pattern and POL-RD-13(2) discards an uncited excuse. The trace measures 21.60 km against optimal 13.9 km: 7.70 km (55.4%) is established and MATERIAL, so RD-06 is consulted: deviation_flags_90d = 1 with completed_trips_90d = 412 (0.24%) is no pattern, so there is no uplift; prior_deviation_flags = 7 is the lifetime near-synonym and may not be used (POL-GEN-01). The driver's 'accident on the ECP' cites no advisory id and the advisory is MISSING, so under RD-13(1)-(2) it is discarded, the measured excess stands, and RD-10(5) is not engaged. RD-02 with surge 1.3 read from fare_breakdown: recomputed (3.80 + 0.75 x 13.9 + 0.28 x 22) x 1.3 + 0.80 + 0.00 on-route ERP = 27.3005; charged 43.04 including 3.50 of off-route ERP; refund 15.7395 rounded up to 15.75, which already contains the off-route ERP (RD-09(1): itemise, never add). PARTIAL_REFUND 15.75 of 18.00 contested; above the 8.00 threshold it is held for release (POL-GEN-05), not escalated. Traps: ignoring surge (21.90, then FULL), adding the ERP on top (19.25, then FULL), a lifetime-flag uplift to 43.04, escalating on the missing advisory.",
+    "messy_evidence": [
+      {
+        "artifact": "RIDER_PROFILE",
+        "codes": [
+          "STALE_SNAPSHOT"
+        ],
+        "carries_deciding_fact": false,
+        "why": "Snapshot taken 41 days before the trip (0.75); the rider profile decides nothing here (excess above 30%, so RD-08's factor is not in play)."
+      },
+      {
+        "artifact": "TRAFFIC_ADVISORY",
+        "codes": [
+          "MISSING_ARTIFACT"
+        ],
+        "carries_deciding_fact": false,
+        "why": "The driver asserts an accident without citing any advisory id, so the absence is a gap in the bundle (POL-RD-13(1)), not an escalation trigger."
+      }
+    ],
+    "setting": {
+      "place": "Guoco Tower, Tanjong Pagar to Bedok North Ave 3 HDB",
+      "day_time": "Friday 2026-08-28 18:35 SGT",
+      "product": "RYDE_PLUS",
+      "fare_model": "METERED"
+    },
+    "filer_story": "The rider says the driver took the CTE, PIE and TPE instead of the ECP, ran her through two ERP gantries, and she wants 18.00 back.",
+    "counterparty_story": "The driver says the ECP was jammed by an accident near Marine Parade, so he used the PIE.",
+    "targets": {
+      "optimal_distance_km": 13.9,
+      "optimal_duration_min": 22,
+      "optimal_route_erp_sgd": 0.0,
+      "trace_distance_km_target": 21.6,
+      "billed_km": 21.6,
+      "billed_min": 35,
+      "surge": 1.3,
+      "surge_amount": 8.94,
+      "erp": [
+        {
+          "name": "CTE (northbound) after Braddell Road",
+          "amount_sgd": 2.0
+        },
+        {
+          "name": "PIE (eastbound) after Kallang Bahru",
+          "amount_sgd": 1.5
+        }
+      ],
+      "total_charged": 43.04,
+      "amount_contested_sgd": 18.0,
+      "recomputed": 27.3005,
+      "driver_profile": {
+        "deviation_flags_90d": 1,
+        "completed_trips_90d": 412,
+        "prior_deviation_flags": 7
+      },
+      "filed_at": "2026-08-29",
+      "expected": {
+        "ruling": "PARTIAL_REFUND",
+        "amount": 15.75,
+        "driver_comp": null,
+        "referrals": [],
+        "governing": [
+          "POL-RD-02",
+          "POL-RD-09",
+          "POL-RD-06",
+          "POL-RD-13",
+          "POL-RD-01",
+          "POL-GEN-01"
+        ]
+      },
+      "rider_track": [],
+      "rider_profile": {
+        "deviation_claims_60d": 1,
+        "deviation_claims_60d_substantiated": 0
+      }
+    }
+  },
+  {
+    "case_no": 4051,
+    "category": "NO_SHOW_CHARGE",
+    "filed_by": "RIDER",
+    "channel": "IN_APP_SUPPORT",
+    "intended_ruling": "FULL_REFUND",
+    "difficulty": "REVERSAL",
+    "escalation_kind": null,
+    "mechanism": "POL-NS-04 exonerates the rider and displaces POL-NS-01/07. The driver arrived inside the 50 m STANDARD radius at 08:07:00 and held it 250 s before cancelling RIDER_NO_SHOW at 08:11:10, which alone would satisfy NS-01; but the rider sent two locating messages inside the window (08:07:50 'at the void deck beside the letterbox, where are u', 08:09:40 'cannot see ur car'), the driver posted nothing within 120 s of either and trip_record.in_app_calls is empty, and the rider_track's qualifying fixes (2 of 10 filtered at 32-38 m accuracy) place her within the 100 m presence radius for 7 of 8. FULL_REFUND of the 6.61 line (gross; contested 6.61) with no compensation. The driver's 'I called her twice' is contradicted by the empty call record; his appeal to the rider's 'record' rests on prior_no_show_flags = 5, a lifetime counter (POL-GEN-01), while no_show_disputes_30d = 1, so NS-09(d) is not engaged. Traps: DRIVER_COMPENSATION on the dwell, ESCALATE on the lifetime counter.",
+    "messy_evidence": [
+      {
+        "artifact": "CHAT_LOG",
+        "codes": [
+          "UNREAD_MESSAGE"
+        ],
+        "carries_deciding_fact": true,
+        "why": "The rider's two messages were delivered but never read (0.85); NS-04 does not require the driver to read them and 0.85 stays above the floor."
+      },
+      {
+        "artifact": "TRAFFIC_ADVISORY",
+        "codes": [
+          "MISSING_ARTIFACT"
+        ],
+        "carries_deciding_fact": false,
+        "why": "No advisory on file; POL-NS-06(i) is not in play, so nothing turns on it."
+      }
+    ],
+    "setting": {
+      "place": "Tampines St 81 HDB block, void deck drop-off",
+      "day_time": "Thursday 2026-09-03 08:05 SGT",
+      "product": "RYDE_X",
+      "zone_class": "STANDARD"
+    },
+    "filer_story": "The rider says she was at the void deck messaging the driver, who never answered and cancelled, and she was charged 6.61.",
+    "counterparty_story": "The driver says he waited more than 4 minutes, called her twice, and this rider always does not show up.",
+    "targets": {
+      "platform_policy": {
+        "grace_after_match_sec": 180,
+        "advance_grace_before_scheduled_sec": 900,
+        "free_wait_sec": 180,
+        "no_show_threshold_sec": null,
+        "cancellation_fee_sgd": 4.5,
+        "rider_gross_cancellation_fee_sgd": 6.61,
+        "waiting_fee_sgd": 5.0,
+        "fee_goes_to": "DRIVER",
+        "arrival_marker": "BUTTON",
+        "source": "PLATFORM-PUBLISHED-2026-10-07"
+      },
+      "timeline": {
+        "requested": "08:03:40",
+        "accepted": "08:04:00",
+        "arrived": "08:07:00",
+        "cancelled": "08:11:10"
+      },
+      "dwell_sec": 250,
+      "fee_line": 6.61,
+      "total_charged": 6.61,
+      "amount_contested_sgd": 6.61,
+      "in_app_calls": [],
+      "rider_track": "10 fixes 08:07-08:11; 2 at 32-38 m accuracy; of 8 qualifying, 7 within 40-80 m of pin, 1 at 115 m",
+      "rider_profile": {
+        "prior_no_show_flags": 5,
+        "no_show_disputes_30d": 1,
+        "disputes_with_counterparty_90d": 0
+      },
+      "filed_at": "2026-09-03",
+      "expected": {
+        "ruling": "FULL_REFUND",
+        "amount": 6.61,
+        "driver_comp": null,
+        "referrals": [],
+        "governing": [
+          "POL-NS-04",
+          "POL-GEN-01"
+        ]
+      },
+      "driver_profile": {
+        "no_show_terminations_30d": 1,
+        "completed_trips_30d": 150
+      }
+    }
+  },
+  {
+    "case_no": 4052,
+    "category": "NO_SHOW_CHARGE",
+    "filed_by": "DRIVER",
+    "channel": "IN_APP_SUPPORT",
+    "intended_ruling": "DRIVER_COMPENSATION",
+    "difficulty": "EASY",
+    "escalation_kind": null,
+    "mechanism": "POL-NS-10(g) then POL-NS-07. The driver arrived on his ETA and held the 50 m geofence from 19:31:00 (three or more qualifying fixes); the rider cancelled at 19:35:30, 270 s into the dwell and past free_wait 180, so the fee stands as if the driver had terminated for a no-show, NS-10(f)'s exceptions do not apply, and NS-07 pays 80% of the net 4.50 = 3.60. Support had reversed the 4.50 on the rider's complaint; the driver contests 4.50. Anti-farming is clean (no_show_terminations_30d 0 of 143). Ruling DRIVER_COMPENSATION 3.60. Trap: treating a rider-triggered cancellation as outside NS-07 (NO_ACTION) or using refund vocabulary for a driver filer.",
+    "messy_evidence": [
+      {
+        "artifact": "TRAFFIC_ADVISORY",
+        "codes": [
+          "ADVISORY_UNCORROBORATED"
+        ],
+        "carries_deciding_fact": false,
+        "why": "A CONGESTION notice on Hougang Ave 8 (0.5) that nobody relies on; NS-06(i) is not in play because the dwell was continuous and long enough."
+      }
+    ],
+    "setting": {
+      "place": "Hougang Ave 8 HDB",
+      "day_time": "Tuesday 2026-09-22 19:30 SGT",
+      "product": "RYDE_X",
+      "zone_class": "STANDARD"
+    },
+    "filer_story": "The driver says he reached on time and waited more than 4 minutes, the rider cancelled, and support wrongly reversed his fee.",
+    "counterparty_story": "The rider says the driver took too long and she found another ride.",
+    "targets": {
+      "platform_policy": {
+        "grace_after_match_sec": 180,
+        "advance_grace_before_scheduled_sec": 900,
+        "free_wait_sec": 180,
+        "no_show_threshold_sec": null,
+        "cancellation_fee_sgd": 4.5,
+        "rider_gross_cancellation_fee_sgd": 6.61,
+        "waiting_fee_sgd": 5.0,
+        "fee_goes_to": "DRIVER",
+        "arrival_marker": "BUTTON",
+        "source": "PLATFORM-PUBLISHED-2026-10-07"
+      },
+      "timeline": {
+        "requested": "19:23:40",
+        "accepted": "19:24:00",
+        "eta_shown_min": 7,
+        "arrived": "19:31:00",
+        "rider_cancelled": "19:35:30"
+      },
+      "dwell_sec_at_cancel": 270,
+      "fee_line": 4.5,
+      "total_charged": 4.5,
+      "refund_issued_sgd": 4.5,
+      "payment_status": "REFUNDED",
+      "amount_contested_sgd": 4.5,
+      "driver_profile": {
+        "no_show_terminations_30d": 0,
+        "completed_trips_30d": 143
+      },
+      "filed_at": "2026-09-24",
+      "expected": {
+        "ruling": "DRIVER_COMPENSATION",
+        "amount": 3.6,
+        "driver_comp": 3.6,
+        "referrals": [],
+        "governing": [
+          "POL-NS-10",
+          "POL-NS-07"
+        ]
+      },
+      "rider_track": "rider about 300 m away at the Hougang Ave 8 bus stop from 19:31 onward (she had walked out to find another ride)",
+      "rider_profile": {
+        "no_show_disputes_30d": 0,
+        "disputes_with_counterparty_90d": 0
+      }
+    }
+  },
+  {
+    "case_no": 4053,
+    "category": "NO_SHOW_CHARGE",
+    "filed_by": "DRIVER",
+    "channel": "IN_APP_SUPPORT",
+    "intended_ruling": "ESCALATE",
+    "difficulty": "INDETERMINATE",
+    "escalation_kind": "EVIDENCE",
+    "mechanism": "POL-NS-08(b) and POL-NS-09(e). BUTTON arrival at 21:14:00; seven in-radius fixes to 21:15:00, then no fix until 21:17:50 (170 s), while the driver cancelled RIDER_NO_SHOW at 21:17:20, 200 s after arrival against free_wait 180. Whether he held the geofence continuously through the cancellation is the deciding fact and the trace is its only carrier (the 21:16:30 call record places nobody); a gap over 120 s inside the window makes the trace policy-impaired, so the case escalates (NS-08's closing sentence, NS-09(e)), and its weight 0.6 x 0.75 = 0.45 also caps confidence (POL-GEN-02(2), NS-09(a)). NS-12 cannot help: the arrival marker is BUTTON. Traps: DRIVER_COMPENSATION 3.60 reading the 21:17:50 fix as continuity, or NO_ACTION reading the measurable 60 s as a short dwell.",
+    "messy_evidence": [
+      {
+        "artifact": "GPS_TRACE",
+        "codes": [
+          "GPS_GAP",
+          "PARTIAL_RECORD"
+        ],
+        "carries_deciding_fact": true,
+        "why": "GPS_GAP_STRADDLING_CANCELLATION (0.6) x PARTIAL_RECORD for the empty rider_track (0.75) = 0.45; the gap is the escalation reason."
+      },
+      {
+        "artifact": "TRAFFIC_ADVISORY",
+        "codes": [
+          "MISSING_ARTIFACT"
+        ],
+        "carries_deciding_fact": false,
+        "why": "No advisory on file; POL-NS-06(i) is not in play, so nothing turns on it."
+      }
+    ],
+    "setting": {
+      "place": "Ang Mo Kio Ave 10 HDB",
+      "day_time": "Wednesday 2026-08-19 21:14 SGT",
+      "product": "RYDE_X",
+      "zone_class": "STANDARD"
+    },
+    "filer_story": "The driver says he waited more than 3 minutes and called, but support reversed his fee after the rider complained.",
+    "counterparty_story": "The rider says the driver cancelled almost immediately while she was coming down in the lift.",
+    "targets": {
+      "platform_policy": {
+        "grace_after_match_sec": 180,
+        "advance_grace_before_scheduled_sec": 900,
+        "free_wait_sec": 180,
+        "no_show_threshold_sec": null,
+        "cancellation_fee_sgd": 4.5,
+        "rider_gross_cancellation_fee_sgd": 6.61,
+        "waiting_fee_sgd": 5.0,
+        "fee_goes_to": "DRIVER",
+        "arrival_marker": "BUTTON",
+        "source": "PLATFORM-PUBLISHED-2026-10-07"
+      },
+      "timeline": {
+        "requested": "21:05:30",
+        "accepted": "21:05:50",
+        "arrived": "21:14:00",
+        "call": "21:16:30",
+        "cancelled": "21:17:20"
+      },
+      "fixes": "10 s cadence 21:14:00-21:15:00 in radius; gap 21:15:00-21:17:50; 21:17:50 in radius",
+      "fee_line": 6.61,
+      "total_charged": 6.61,
+      "refund_issued_sgd": 6.61,
+      "payment_status": "REFUNDED",
+      "amount_contested_sgd": 4.5,
+      "trace_weight": 0.45,
+      "filed_at": "2026-08-21",
+      "expected": {
+        "ruling": "ESCALATE",
+        "amount": null,
+        "driver_comp": null,
+        "referrals": [],
+        "governing": [
+          "POL-NS-08",
+          "POL-NS-09",
+          "POL-GEN-02"
+        ]
+      },
+      "driver_profile": {
+        "no_show_terminations_30d": 1,
+        "completed_trips_30d": 150
+      },
+      "rider_profile": {
+        "no_show_disputes_30d": 0,
+        "disputes_with_counterparty_90d": 0
+      }
+    }
+  },
+  {
+    "case_no": 4054,
+    "category": "NO_SHOW_CHARGE",
+    "filed_by": "RIDER",
+    "channel": "IN_APP_SUPPORT",
+    "intended_ruling": "NO_ACTION",
+    "difficulty": "REVERSAL",
+    "escalation_kind": null,
+    "mechanism": "POL-NS-10(f). The rider cancelled at 12:45:20, 370 s after accepted_at 12:39:10 (the 180 s grace spent) and before the driver arrived, so the fee is chargeable at 4.50 (the line shows the gross 6.61, which reconciles under NS-08(d)) unless the record shows an exception, and it shows none: the trace has a 40 s U-turn then a steady approach from 12:39:55 (moving toward the pickup within the grace); the first ETA shown was 9 min, so 'not arrived within 180 s of the first ETA' could not have run out by 12:45:20; no request to cancel in the chat; vehicle as booked. The fee stands: NO_ACTION, and there is no NS-07 payout because NS-07 runs only under NS-01 or NS-10(g). The rider's 'the car was going the other way' is contradicted by the trace. Traps: FULL_REFUND because the driver never arrived (NS-01/02 do not govern a rider's own cancellation) or DRIVER_COMPENSATION.",
+    "messy_evidence": [
+      {
+        "artifact": "TRAFFIC_ADVISORY",
+        "codes": [
+          "MISSING_ARTIFACT"
+        ],
+        "carries_deciding_fact": false,
+        "why": "No advisory on file; POL-NS-06(i) is not in play, so nothing turns on it."
+      }
+    ],
+    "setting": {
+      "place": "Toa Payoh Lorong 8 HDB",
+      "day_time": "Saturday 2026-08-29 12:40 SGT",
+      "product": "RYDE_TAXI",
+      "zone_class": "STANDARD"
+    },
+    "filer_story": "The rider says the car icon was moving away from her, so she cancelled after 6 minutes and was still charged 6.61.",
+    "counterparty_story": "The driver says he had to U-turn at the junction and was on the way within his ETA.",
+    "targets": {
+      "platform_policy": {
+        "grace_after_match_sec": 180,
+        "advance_grace_before_scheduled_sec": 900,
+        "free_wait_sec": 180,
+        "no_show_threshold_sec": null,
+        "cancellation_fee_sgd": 4.5,
+        "rider_gross_cancellation_fee_sgd": 6.61,
+        "waiting_fee_sgd": 5.0,
+        "fee_goes_to": "DRIVER",
+        "arrival_marker": "BUTTON",
+        "source": "PLATFORM-PUBLISHED-2026-10-07"
+      },
+      "timeline": {
+        "requested": "12:38:50",
+        "accepted": "12:39:10",
+        "eta_shown_min": 9,
+        "en_route": "12:39:15",
+        "rider_cancelled": "12:45:20"
+      },
+      "driver_distance_at_cancel_m": 900,
+      "fee_line": 6.61,
+      "total_charged": 6.61,
+      "amount_contested_sgd": 6.61,
+      "filed_at": "2026-08-29",
+      "expected": {
+        "ruling": "NO_ACTION",
+        "amount": null,
+        "driver_comp": null,
+        "referrals": [],
+        "governing": [
+          "POL-NS-10"
+        ]
+      },
+      "rider_track": "rider at the void deck pin (within 30 m) throughout; she never left",
+      "driver_profile": {
+        "no_show_terminations_30d": 1,
+        "completed_trips_30d": 150
+      },
+      "rider_profile": {
+        "no_show_disputes_30d": 0,
+        "disputes_with_counterparty_90d": 0
+      }
+    }
+  },
+  {
+    "case_no": 4055,
+    "category": "NO_SHOW_CHARGE",
+    "filed_by": "RIDER",
+    "channel": "IN_APP_SUPPORT",
+    "intended_ruling": "DRIVER_COMPENSATION",
+    "difficulty": "HARD",
+    "escalation_kind": null,
+    "mechanism": "POL-NS-11 (amendment 0001) decides it. The rider messaged at 09:23:30 'I'm at Lobby B, where are you' (locating, NS-04(a)) and the driver neither replied within 120 s nor called (NS-04(b)), but rider_track is empty, so NS-04(c) is undecidable: under NS-11, NS-04 cannot exonerate, the missing rider_track does not impair the driver's trace or lower its cap, and the dispute is decided on the driver's own evidence. That evidence is clean: arrival inside the 120 m LARGE_VENUE radius at the guardhouse pin from 09:22:00, a 340 s dwell against free_wait 180, RIDER_NO_SHOW after the dwell, so NS-01 holds and NS-07 pays 80% of 4.50 = 3.60: DRIVER_COMPENSATION, not NO_ACTION (POL-GEN-03). Anti-farming: no_show_terminations_30d 2 of 121, no flag; the rider's appeal to the driver's prior_no_show_flags = 9 is a lifetime counter (POL-GEN-01). Under the base text NS-04 would call the trace NS-08(b)-impaired and the case could escalate. Traps: FULL_REFUND under NS-04, ESCALATE, or NO_ACTION.",
+    "messy_evidence": [
+      {
+        "artifact": "GPS_TRACE",
+        "codes": [
+          "PARTIAL_RECORD"
+        ],
+        "carries_deciding_fact": true,
+        "why": "Empty rider_track (0.75); the driver's own fixes are complete, 0.75 stays above the floor, and NS-11 says the absence does not lower the cap anyway."
+      },
+      {
+        "artifact": "TRAFFIC_ADVISORY",
+        "codes": [
+          "MISSING_ARTIFACT"
+        ],
+        "carries_deciding_fact": false,
+        "why": "No advisory on file; POL-NS-06(i) is not in play, so nothing turns on it."
+      }
+    ],
+    "setting": {
+      "place": "Condominium guardhouse drop-off, Simei St 4",
+      "day_time": "Sunday 2026-09-13 09:20 SGT",
+      "product": "RYDE_X",
+      "zone_class": "LARGE_VENUE"
+    },
+    "filer_story": "The rider says she was waiting at Lobby B and messaged, the driver ignored her and charged a no-show, and she adds that he has many no-show flags.",
+    "counterparty_story": "The driver says he waited at the guardhouse pickup point for more than 5 minutes and the rider never came.",
+    "targets": {
+      "platform_policy": {
+        "grace_after_match_sec": 180,
+        "advance_grace_before_scheduled_sec": 900,
+        "free_wait_sec": 180,
+        "no_show_threshold_sec": null,
+        "cancellation_fee_sgd": 4.5,
+        "rider_gross_cancellation_fee_sgd": 6.61,
+        "waiting_fee_sgd": 5.0,
+        "fee_goes_to": "DRIVER",
+        "arrival_marker": "BUTTON",
+        "source": "PLATFORM-PUBLISHED-2026-10-07"
+      },
+      "timeline": {
+        "requested": "09:12:10",
+        "accepted": "09:12:30",
+        "arrived": "09:22:00",
+        "rider_msg": "09:23:30",
+        "cancelled": "09:27:40"
+      },
+      "dwell_sec": 340,
+      "fee_line": 4.5,
+      "total_charged": 4.5,
+      "amount_contested_sgd": 4.5,
+      "in_app_calls": [],
+      "rider_track": [],
+      "driver_profile": {
+        "no_show_terminations_30d": 2,
+        "completed_trips_30d": 121,
+        "prior_no_show_flags": 9
+      },
+      "filed_at": "2026-09-14",
+      "expected": {
+        "ruling": "DRIVER_COMPENSATION",
+        "amount": 3.6,
+        "driver_comp": 3.6,
+        "referrals": [],
+        "governing": [
+          "POL-NS-11",
+          "POL-NS-01",
+          "POL-NS-07",
+          "POL-NS-04",
+          "POL-GEN-01"
+        ]
+      },
+      "rider_profile": {
+        "no_show_disputes_30d": 0,
+        "disputes_with_counterparty_90d": 0
+      }
+    }
+  },
+  {
+    "case_no": 4056,
+    "category": "NO_SHOW_CHARGE",
+    "filed_by": "RIDER",
+    "channel": "EMAIL",
+    "intended_ruling": "FULL_REFUND",
+    "difficulty": "HARD",
+    "escalation_kind": null,
+    "mechanism": "POL-NS-03(ii), a compound ruling. The driver's fixes (accuracy 6-12 m, venue_id equal to the pickup's) hold a stationary point about 210 m from the Northpoint City pin: outside the 120 m LARGE_VENUE radius of POL-NS-02 but inside 400 m, for 380 s (>= free_wait 300), so NS-01(b) fails and the 4.50 fee is refunded in full (contested 4.50). Fault: both parties' locating messages were answered within 120 s (so NS-04 does not apply) and neither names an entrance, wing or block, while trip_record.registered_pickup_points = 3, so the mislocation is pin ambiguity: a platform-funded goodwill payment of 50% x 4.50 = 2.25 to the driver, independent of the refund and never netted against it (POL-GEN-03). Ruling FULL_REFUND 4.50 with driver_compensation 2.25. Traps: DRIVER_COMPENSATION 3.60 because 'he waited 6 minutes at the mall', NS-03(i) with no compensation, or netting 4.50 - 2.25.",
+    "messy_evidence": [
+      {
+        "artifact": "TRAFFIC_ADVISORY",
+        "codes": [
+          "MISSING_ARTIFACT"
+        ],
+        "carries_deciding_fact": false,
+        "why": "No advisory on file; POL-NS-06(i) is not in play, so nothing turns on it."
+      }
+    ],
+    "setting": {
+      "place": "Northpoint City, Yishun (three registered pickup points)",
+      "day_time": "Saturday 2026-10-03 15:10 SGT",
+      "product": "RYDE_X",
+      "zone_class": "LARGE_VENUE"
+    },
+    "filer_story": "The rider writes in that she waited downstairs at the mall, the driver never came to her, and she was charged 4.50.",
+    "counterparty_story": "The driver says he waited more than 6 minutes at the pickup and messaged her that he was there.",
+    "targets": {
+      "platform_policy": {
+        "grace_after_match_sec": 180,
+        "advance_grace_before_scheduled_sec": 900,
+        "free_wait_sec": 300,
+        "no_show_threshold_sec": null,
+        "cancellation_fee_sgd": 4.5,
+        "rider_gross_cancellation_fee_sgd": null,
+        "waiting_fee_sgd": 5.0,
+        "fee_goes_to": "DRIVER",
+        "arrival_marker": "BUTTON",
+        "source": "RECORD-PLATFORM"
+      },
+      "timeline": {
+        "requested": "15:02:00",
+        "accepted": "15:02:20",
+        "arrived": "15:12:40",
+        "cancelled": "15:19:00"
+      },
+      "stationary_distance_from_pin_m": 210,
+      "registered_pickup_points": 3,
+      "dwell_sec": 380,
+      "fee_line": 4.5,
+      "total_charged": 4.5,
+      "amount_contested_sgd": 4.5,
+      "chat": "rider 15:13:30 / driver 15:14:05 / rider 15:16:10 / driver 15:16:40; no entrance, wing or block named",
+      "filed_at": "2026-10-04",
+      "expected": {
+        "ruling": "FULL_REFUND",
+        "amount": 4.5,
+        "driver_comp": 2.25,
+        "referrals": [],
+        "governing": [
+          "POL-NS-03",
+          "POL-NS-02"
+        ]
+      },
+      "rider_track": "rider within 25 m of the mall pin throughout (main entrance)",
+      "venue_id": "pickup venue_id and the stationary fixes' venue_id identical",
+      "driver_profile": {
+        "no_show_terminations_30d": 1,
+        "completed_trips_30d": 150
+      },
+      "rider_profile": {
+        "no_show_disputes_30d": 0,
+        "disputes_with_counterparty_90d": 0
+      }
+    }
+  },
+  {
+    "case_no": 4057,
+    "category": "NO_SHOW_CHARGE",
+    "filed_by": "DRIVER",
+    "channel": "IN_APP_SUPPORT",
+    "intended_ruling": "DRIVER_COMPENSATION",
+    "difficulty": "EASY",
+    "escalation_kind": null,
+    "mechanism": "POL-NS-01 and POL-NS-07, clean. The driver entered the 50 m geofence at 07:17:00 and held it 420 s against the record's free_wait 240, placed two unanswered in-app calls, and cancelled RIDER_NO_SHOW at 07:24:00; the rider sent no message (so NS-04 is not in play) and admits she overslept. No clause from NS-03 to NS-06 displaces NS-01; anti-farming is clean (1 of 168). Support had refunded the rider; the driver contests his 4.00 fee. NS-07 pays 80% of 4.00 = 3.20: DRIVER_COMPENSATION.",
+    "messy_evidence": [
+      {
+        "artifact": "TRAFFIC_ADVISORY",
+        "codes": [
+          "MISSING_ARTIFACT"
+        ],
+        "carries_deciding_fact": false,
+        "why": "No advisory on file; POL-NS-06(i) is not in play, so nothing turns on it."
+      }
+    ],
+    "setting": {
+      "place": "Jurong West St 64 HDB",
+      "day_time": "Monday 2026-09-07 07:15 SGT",
+      "product": "RYDE_X",
+      "zone_class": "STANDARD"
+    },
+    "filer_story": "The driver says he waited 7 minutes and called twice, but support refunded the rider anyway.",
+    "counterparty_story": "The rider says she overslept and came down late, and support already refunded her.",
+    "targets": {
+      "platform_policy": {
+        "grace_after_match_sec": 180,
+        "advance_grace_before_scheduled_sec": 900,
+        "free_wait_sec": 240,
+        "no_show_threshold_sec": null,
+        "cancellation_fee_sgd": 4.0,
+        "rider_gross_cancellation_fee_sgd": null,
+        "waiting_fee_sgd": 5.0,
+        "fee_goes_to": "DRIVER",
+        "arrival_marker": "BUTTON",
+        "source": "RECORD-PLATFORM"
+      },
+      "timeline": {
+        "requested": "07:08:20",
+        "accepted": "07:08:40",
+        "arrived": "07:17:00",
+        "calls": [
+          "07:19:30",
+          "07:22:10"
+        ],
+        "cancelled": "07:24:00"
+      },
+      "dwell_sec": 420,
+      "fee_line": 4.0,
+      "total_charged": 4.0,
+      "refund_issued_sgd": 4.0,
+      "payment_status": "REFUNDED",
+      "amount_contested_sgd": 4.0,
+      "rider_track": "a few indoor fixes at 35-50 m accuracy (all filtered)",
+      "driver_profile": {
+        "no_show_terminations_30d": 1,
+        "completed_trips_30d": 168
+      },
+      "filed_at": "2026-09-09",
+      "expected": {
+        "ruling": "DRIVER_COMPENSATION",
+        "amount": 3.2,
+        "driver_comp": 3.2,
+        "referrals": [],
+        "governing": [
+          "POL-NS-01",
+          "POL-NS-07"
+        ]
+      },
+      "rider_profile": {
+        "no_show_disputes_30d": 0,
+        "disputes_with_counterparty_90d": 0
+      }
+    }
+  },
+  {
+    "case_no": 4058,
+    "category": "NO_SHOW_CHARGE",
+    "filed_by": "DRIVER",
+    "channel": "EMAIL",
+    "intended_ruling": "ESCALATE",
+    "difficulty": "HARD",
+    "escalation_kind": "POLICY",
+    "mechanism": "POL-NS-07's anti-farming check, escalated under POL-NS-09(d). The no-show itself is clear: inside the 150 m AIRPORT radius at the T3 arrival pickup from 23:42:00, a continuous 570 s dwell (free_wait 300, no_show_threshold 480), two unanswered in-app calls, RIDER_NO_SHOW at 23:51:30; the rider's 'still at the baggage belt' message was answered within 50 s, so NS-04 does not apply, and NS-01 holds. But driver_profile.no_show_terminations_30d = 5 (>= 4) and 5/54 = 0.093 (> 0.08): compensation is withheld and the case escalates, with the packet directing the reviewer to refund the rider's 6.00; the pipeline pays and refunds nothing. The facts are clear and the policy requires a person. prior_no_show_flags (lifetime) = 1 looks clean and is not the counter (POL-GEN-01, the reverse trap). Traps: DRIVER_COMPENSATION 4.80, or a FULL_REFUND to the rider instead of escalating.",
+    "messy_evidence": [
+      {
+        "artifact": "TRAFFIC_ADVISORY",
+        "codes": [
+          "MISSING_ARTIFACT"
+        ],
+        "carries_deciding_fact": false,
+        "why": "No advisory on file; POL-NS-06(i) is not in play, so nothing turns on it."
+      }
+    ],
+    "setting": {
+      "place": "Changi Airport Terminal 3 Arrival, private-hire pickup point",
+      "day_time": "Thursday 2026-08-13 23:40 SGT",
+      "product": "RYDE_PLUS",
+      "zone_class": "AIRPORT"
+    },
+    "filer_story": "The driver writes in that he waited more than 9 minutes at T3, the rider never came out, and his 6.00 no-show payout is being withheld.",
+    "counterparty_story": "The rider says she was stuck at the baggage belt and had told the driver she needed more time.",
+    "targets": {
+      "platform_policy": {
+        "grace_after_match_sec": 180,
+        "advance_grace_before_scheduled_sec": 900,
+        "free_wait_sec": 300,
+        "no_show_threshold_sec": 480,
+        "cancellation_fee_sgd": 6.0,
+        "rider_gross_cancellation_fee_sgd": null,
+        "waiting_fee_sgd": 5.0,
+        "fee_goes_to": "DRIVER",
+        "arrival_marker": "BUTTON",
+        "source": "RECORD-PLATFORM"
+      },
+      "timeline": {
+        "requested": "23:38:30",
+        "accepted": "23:39:00",
+        "arrived": "23:42:00",
+        "calls": [
+          "23:45:10",
+          "23:49:20"
+        ],
+        "rider_msg": "23:46:00",
+        "driver_reply": "23:46:50",
+        "cancelled": "23:51:30"
+      },
+      "dwell_sec": 570,
+      "fee_line": 6.0,
+      "total_charged": 6.0,
+      "payment_status": "CHARGED",
+      "amount_contested_sgd": 6.0,
+      "rider_track": "rider inside the terminal about 350 m from the pin (beyond the 200 m presence radius)",
+      "driver_profile": {
+        "no_show_terminations_30d": 5,
+        "completed_trips_30d": 54,
+        "prior_no_show_flags": 1
+      },
+      "filed_at": "2026-08-17",
+      "expected": {
+        "ruling": "ESCALATE",
+        "amount": null,
+        "driver_comp": null,
+        "referrals": [],
+        "governing": [
+          "POL-NS-07",
+          "POL-NS-09",
+          "POL-NS-01"
+        ]
+      },
+      "rider_profile": {
+        "no_show_disputes_30d": 0,
+        "disputes_with_counterparty_90d": 0
+      }
+    }
+  },
+  {
+    "case_no": 4059,
+    "category": "NO_SHOW_CHARGE",
+    "filed_by": "DRIVER",
+    "channel": "IN_APP_SUPPORT",
+    "intended_ruling": "NO_ACTION",
+    "difficulty": "HARD",
+    "escalation_kind": null,
+    "mechanism": "POL-NS-06 limbs (i) and (ii). The driver arrived inside the 50 m radius at 18:21:00 but left it because of the Serangoon Road bus lane (KERB_RESTRICTION advisory EV-ADVIS-04059-01, covering the pickup road and 07:30-20:00), looped within about 260 m of the pin and came back; his in-geofence intervals were 60 s (18:21:00-18:22:00) and 75 s (18:24:50-18:26:05), together 135 s against free_wait 180, although 5 min 05 s passed between arrival and the RIDER_NO_SHOW cancellation. Limb (i) lets the two intervals be summed; limb (ii) forbids the advisory excusing the shortfall, so the fee is not chargeable. Support had already refunded the rider; the driver's claim is unsupported: NO_ACTION, which on a driver-filed dispute leaves the rider refunded (POL-GEN-03). Traps: counting elapsed time (DRIVER_COMPENSATION 3.60), letting the advisory excuse the shortfall, or 'restoring the charge'.",
+    "messy_evidence": [
+      {
+        "artifact": "TRAFFIC_ADVISORY",
+        "codes": [],
+        "carries_deciding_fact": true,
+        "why": "COMPLETE KERB_RESTRICTION advisory; it permits the summing under NS-06(i) and must stay at weight 1.0."
+      },
+      {
+        "artifact": "DRIVER_PROFILE",
+        "codes": [
+          "CROSS_SOURCE_CONFLICT"
+        ],
+        "carries_deciding_fact": false,
+        "why": "Profile vehicle_type RYDE_XL disagrees with trip_record RYDE_X (0.4); nothing on this outcome rests on the driver profile."
+      }
+    ],
+    "setting": {
+      "place": "Serangoon Road shophouse, Little India",
+      "day_time": "Friday 2026-09-25 18:20 SGT",
+      "product": "RYDE_X",
+      "zone_class": "STANDARD"
+    },
+    "filer_story": "The driver says he waited 5 minutes, had to circle because of the bus lane, and support wrongly reversed his fee.",
+    "counterparty_story": "The rider says she came down and the car was nowhere to be seen, then the driver cancelled.",
+    "targets": {
+      "platform_policy": {
+        "grace_after_match_sec": 180,
+        "advance_grace_before_scheduled_sec": 900,
+        "free_wait_sec": 180,
+        "no_show_threshold_sec": null,
+        "cancellation_fee_sgd": 4.5,
+        "rider_gross_cancellation_fee_sgd": 6.61,
+        "waiting_fee_sgd": 5.0,
+        "fee_goes_to": "DRIVER",
+        "arrival_marker": "BUTTON",
+        "source": "RECORD-PLATFORM"
+      },
+      "timeline": {
+        "requested": "18:12:00",
+        "accepted": "18:12:20",
+        "arrived": "18:21:00",
+        "cancelled": "18:26:05"
+      },
+      "in_geofence_intervals": [
+        "18:21:00-18:22:00 (60 s)",
+        "18:24:50-18:26:05 (75 s)"
+      ],
+      "max_distance_from_pin_m": 260,
+      "advisory": "KERB_RESTRICTION, Serangoon Road full-day bus lane 07:30-20:00, geometry covering the pickup frontage",
+      "fee_line": 6.61,
+      "total_charged": 6.61,
+      "refund_issued_sgd": 6.61,
+      "payment_status": "REFUNDED",
+      "amount_contested_sgd": 4.5,
+      "filed_at": "2026-09-28",
+      "expected": {
+        "ruling": "NO_ACTION",
+        "amount": null,
+        "driver_comp": null,
+        "referrals": [],
+        "governing": [
+          "POL-NS-06"
+        ]
+      },
+      "rider_track": "rider indoors until 18:26:20, at the shophouse frontage (inside 50 m) from 18:26:40, after the cancellation",
+      "driver_profile": {
+        "no_show_terminations_30d": 1,
+        "completed_trips_30d": 150
+      },
+      "rider_profile": {
+        "no_show_disputes_30d": 0,
+        "disputes_with_counterparty_90d": 0
+      }
+    }
+  },
+  {
+    "case_no": 4060,
+    "category": "NO_SHOW_CHARGE",
+    "filed_by": "RIDER",
+    "channel": "IN_APP_SUPPORT",
+    "intended_ruling": "FULL_REFUND",
+    "difficulty": "EASY",
+    "escalation_kind": null,
+    "mechanism": "POL-NS-10(a) and (c). The rider cancelled at 07:45:05, 165 s after accepted_at 07:42:20, inside the 180 s grace, so the cancellation is not chargeable whatever the driver's position; the driver's early arrival tap at 07:43:55 does not shorten the grace. The 6.61 line (gross) is refunded in full with no driver compensation; contested 6.61. Trap: measuring from requested_at (07:41:30, 215 s) or upholding the fee because the driver had already arrived.",
+    "messy_evidence": [
+      {
+        "artifact": "TRAFFIC_ADVISORY",
+        "codes": [
+          "MISSING_ARTIFACT"
+        ],
+        "carries_deciding_fact": false,
+        "why": "No advisory on file; POL-NS-06(i) is not in play, so nothing turns on it."
+      }
+    ],
+    "setting": {
+      "place": "Punggol Field HDB (Punggol Drive)",
+      "day_time": "Tuesday 2026-08-11 07:41 SGT",
+      "product": "RYDE_X",
+      "zone_class": "STANDARD"
+    },
+    "filer_story": "The rider says she cancelled about 2 minutes after being matched and was still charged 6.61.",
+    "counterparty_story": "The driver says he was already downstairs waiting when she cancelled.",
+    "targets": {
+      "platform_policy": {
+        "grace_after_match_sec": 180,
+        "advance_grace_before_scheduled_sec": 900,
+        "free_wait_sec": 180,
+        "no_show_threshold_sec": null,
+        "cancellation_fee_sgd": 4.5,
+        "rider_gross_cancellation_fee_sgd": 6.61,
+        "waiting_fee_sgd": 5.0,
+        "fee_goes_to": "DRIVER",
+        "arrival_marker": "BUTTON",
+        "source": "PLATFORM-PUBLISHED-2026-10-07"
+      },
+      "timeline": {
+        "requested": "07:41:30",
+        "accepted": "07:42:20",
+        "arrived": "07:43:55",
+        "rider_cancelled": "07:45:05"
+      },
+      "fee_line": 6.61,
+      "total_charged": 6.61,
+      "amount_contested_sgd": 6.61,
+      "filed_at": "2026-08-11",
+      "expected": {
+        "ruling": "FULL_REFUND",
+        "amount": 6.61,
+        "driver_comp": null,
+        "referrals": [],
+        "governing": [
+          "POL-NS-10"
+        ]
+      },
+      "rider_track": "a few indoor fixes in her block at 30-45 m accuracy",
+      "driver_profile": {
+        "no_show_terminations_30d": 1,
+        "completed_trips_30d": 150
+      },
+      "rider_profile": {
+        "no_show_disputes_30d": 0,
+        "disputes_with_counterparty_90d": 0
+      }
+    }
+  },
+  {
+    "case_no": 4061,
+    "category": "NO_SHOW_CHARGE",
+    "filed_by": "DRIVER",
+    "channel": "IN_APP_SUPPORT",
+    "intended_ruling": "DRIVER_COMPENSATION",
+    "difficulty": "HARD",
+    "escalation_kind": null,
+    "mechanism": "POL-NS-12 (amendment 0003) supplies the carrier. arrival_marker is GPS_AUTO and trip_record.events holds the platform's driver_arrived event (13:06:00, geofence test 16 m from the pin, 0 km/h), wait_timer_started 13:06:05 and wait_timer_expired 13:11:05, all before the RIDER_NO_SHOW termination at 13:14:10 (8 min 10 s, past no_show_threshold 420). The exported trace is sparse (3 fixes in the window, about 190 s apart, no accuracy_m: NS-08(b)-impaired, weight 0.6), but under NS-12 it does not impair the events and is weighed only for contradiction, and none of its fixes is outside the 120 m radius or moving. NS-01 holds and NS-07 pays 80% of the NET fee 5.00 = 4.00, not 80% of the 7.35 gross line (5.88). Support reversed the fee because the trace looked thin; the driver contests 5.00. Under the base text this escalates (NS-08(b), NS-09(e)); version 6 rules DRIVER_COMPENSATION 4.00.",
+    "messy_evidence": [
+      {
+        "artifact": "GPS_TRACE",
+        "codes": [
+          "LOW_SAMPLE_RATE",
+          "PARTIAL_RECORD"
+        ],
+        "carries_deciding_fact": false,
+        "why": "0.8 x 0.75 = 0.6 (sparse, no accuracy field, empty rider_track); under NS-12 the events, not the export, carry arrival and wait, and no fix contradicts them."
+      },
+      {
+        "artifact": "TRAFFIC_ADVISORY",
+        "codes": [
+          "MISSING_ARTIFACT"
+        ],
+        "carries_deciding_fact": false,
+        "why": "No advisory on file; POL-NS-06(i) is not in play, so nothing turns on it."
+      }
+    ],
+    "setting": {
+      "place": "Bukit Panjang Plaza (Jelebu Road side)",
+      "day_time": "Wednesday 2026-08-26 13:05 SGT",
+      "product": "RYDE_X",
+      "zone_class": "LARGE_VENUE"
+    },
+    "filer_story": "The driver says the app itself confirmed his arrival and ran the wait timer, but support reversed his fee saying his GPS had too few points.",
+    "counterparty_story": "The rider says the driver was not there when she came down and support already refunded her.",
+    "targets": {
+      "platform_policy": {
+        "grace_after_match_sec": 180,
+        "advance_grace_before_scheduled_sec": 900,
+        "free_wait_sec": 300,
+        "no_show_threshold_sec": 420,
+        "cancellation_fee_sgd": 5.0,
+        "rider_gross_cancellation_fee_sgd": 7.35,
+        "waiting_fee_sgd": 5.0,
+        "fee_goes_to": "DRIVER",
+        "arrival_marker": "GPS_AUTO",
+        "source": "RECORD-PLATFORM"
+      },
+      "timeline": {
+        "requested": "12:57:50",
+        "accepted": "12:58:10",
+        "arrived_event": "13:06:00",
+        "wait_timer_started": "13:06:05",
+        "wait_timer_expired": "13:11:05",
+        "call": "13:09:00",
+        "cancelled": "13:14:10"
+      },
+      "export_fixes": "13:02:50 (approach, ~900 m, 32 km/h), 13:06:20, 13:09:30, 13:12:40 (15-35 m from pin, 0 km/h), accuracy_m null on all",
+      "fee_line": 7.35,
+      "total_charged": 7.35,
+      "refund_issued_sgd": 7.35,
+      "payment_status": "REFUNDED",
+      "amount_contested_sgd": 5.0,
+      "driver_profile": {
+        "no_show_terminations_30d": 1,
+        "completed_trips_30d": 97
+      },
+      "filed_at": "2026-08-28",
+      "expected": {
+        "ruling": "DRIVER_COMPENSATION",
+        "amount": 4.0,
+        "driver_comp": 4.0,
+        "referrals": [],
+        "governing": [
+          "POL-NS-12",
+          "POL-NS-01",
+          "POL-NS-07"
+        ]
+      },
+      "rider_profile": {
+        "no_show_disputes_30d": 0,
+        "disputes_with_counterparty_90d": 0
+      }
+    }
+  },
+  {
+    "case_no": 4062,
+    "category": "NO_SHOW_CHARGE",
+    "filed_by": "RIDER",
+    "channel": "IN_APP_SUPPORT",
+    "intended_ruling": "ESCALATE",
+    "difficulty": "INDETERMINATE",
+    "escalation_kind": "EVIDENCE",
+    "mechanism": "POL-GEN-02(2) cap with POL-NS-09(a). Arrival is BUTTON (NS-12 does not apply) and the only carrier of arrival and dwell is the driver's trace, which the pre-pass tagged GPS_DRIFT (Raffles Place urban canyon: stationary fixes jumping 80-140 m between consecutive readings although each reports 12-22 m accuracy) and PARTIAL_RECORD (no rider_track), weight 0.5 x 0.75 = 0.375, written as 0.38 by the 2-dp pre-pass. NS-08(a)-(d) are not engaged (10 s cadence, no gap, no skew, the fee line reconciles), so NS-08's escalation sentence does not apply; but POL-GEN-02(2) caps confidence at 0.38 < 0.70 for any ruling resting on that trace - arrival and dwell (DRIVER_COMPENSATION), wrong face under NS-03, or never-arrived under NS-02 alike - so NS-09(a) escalates. NS-04 is out because the driver replied within 40 s. Traps: treating '<= 25 m accuracy' as clean and ruling DRIVER_COMPENSATION, or FULL_REFUND on the outlying fixes.",
+    "messy_evidence": [
+      {
+        "artifact": "GPS_TRACE",
+        "codes": [
+          "GPS_DRIFT",
+          "PARTIAL_RECORD"
+        ],
+        "carries_deciding_fact": true,
+        "why": "0.5 x 0.75 = 0.375, written 0.38; the drifting trace is the sole carrier of the deciding fact, which is why the case escalates."
+      },
+      {
+        "artifact": "TRAFFIC_ADVISORY",
+        "codes": [
+          "MISSING_ARTIFACT"
+        ],
+        "carries_deciding_fact": false,
+        "why": "No advisory on file; POL-NS-06(i) is not in play, so nothing turns on it."
+      }
+    ],
+    "setting": {
+      "place": "Raffles Place, beside the MRT exit near One Raffles Place",
+      "day_time": "Thursday 2026-10-01 12:30 SGT",
+      "product": "RYDE_X",
+      "zone_class": "STANDARD"
+    },
+    "filer_story": "The rider says she stood at the pickup by the MRT exit and the car never came, yet she was charged 6.61.",
+    "counterparty_story": "The driver says he was at the pickup point the whole time and answered her message.",
+    "targets": {
+      "platform_policy": {
+        "grace_after_match_sec": 180,
+        "advance_grace_before_scheduled_sec": 900,
+        "free_wait_sec": 180,
+        "no_show_threshold_sec": null,
+        "cancellation_fee_sgd": 4.5,
+        "rider_gross_cancellation_fee_sgd": 6.61,
+        "waiting_fee_sgd": 5.0,
+        "fee_goes_to": "DRIVER",
+        "arrival_marker": "BUTTON",
+        "source": "PLATFORM-PUBLISHED-2026-10-07"
+      },
+      "timeline": {
+        "requested": "12:24:10",
+        "accepted": "12:24:30",
+        "arrived": "12:33:00",
+        "rider_msg": "12:34:00",
+        "driver_reply": "12:34:40",
+        "cancelled": "12:38:10"
+      },
+      "fixes": "10 s cadence, accuracy 12-22 m, positions scattered 20-150 m from the pin with 80-140 m jumps at 0 km/h",
+      "fee_line": 6.61,
+      "total_charged": 6.61,
+      "amount_contested_sgd": 6.61,
+      "trace_weight": 0.38,
+      "filed_at": "2026-10-01",
+      "expected": {
+        "ruling": "ESCALATE",
+        "amount": null,
+        "driver_comp": null,
+        "referrals": [],
+        "governing": [
+          "POL-GEN-02",
+          "POL-NS-09"
+        ]
+      },
+      "driver_profile": {
+        "no_show_terminations_30d": 1,
+        "completed_trips_30d": 150
+      },
+      "rider_profile": {
+        "no_show_disputes_30d": 0,
+        "disputes_with_counterparty_90d": 0
+      }
+    }
+  },
+  {
+    "case_no": 4063,
+    "category": "NO_SHOW_CHARGE",
+    "filed_by": "RIDER",
+    "channel": "IN_APP_SUPPORT",
+    "intended_ruling": "NO_ACTION",
+    "difficulty": "REVERSAL",
+    "escalation_kind": null,
+    "mechanism": "POL-NS-10(d) on a completed trip. The waiting-time fee (platform_policy.waiting_fee_sgd 5.00) is chargeable if the in-geofence dwell before boarding, measured from the first qualifying fix as NS-01(c) measures it, exceeded free_wait 180. The first qualifying in-radius fix is 08:02:20 (arrival tap 08:02:00) and boarding is 08:08:45: 385 s, so the line stands and the outcome is NO_ACTION; no cancellation fee is on the trip. The rider's 'he only arrived at about 8:06' is contradicted by more than six minutes of in-radius fixes before boarding. Traps: refunding under NS-10(e) on the rider's word, or measuring from a later point.",
+    "messy_evidence": [
+      {
+        "artifact": "CHAT_LOG",
+        "codes": [
+          "CONTENT_REDACTED"
+        ],
+        "carries_deciding_fact": false,
+        "why": "A phone number the rider typed was masked by the data-minimisation filter (0.8); the chat decides nothing here."
+      },
+      {
+        "artifact": "TRAFFIC_ADVISORY",
+        "codes": [
+          "MISSING_ARTIFACT"
+        ],
+        "carries_deciding_fact": false,
+        "why": "No advisory on file; POL-NS-06(i) is not in play, so nothing turns on it."
+      }
+    ],
+    "setting": {
+      "place": "Woodlands Drive 50 HDB to Woodlands Civic Centre",
+      "day_time": "Monday 2026-08-03 08:02 SGT",
+      "product": "RYDE_X",
+      "zone_class": "STANDARD"
+    },
+    "filer_story": "The rider says the driver only arrived at about 8:06 and she came straight down, so the 5.00 waiting fee is unfair.",
+    "counterparty_story": "The driver says he arrived at 8:02 and waited more than 6 minutes.",
+    "targets": {
+      "platform_policy": {
+        "grace_after_match_sec": 180,
+        "advance_grace_before_scheduled_sec": 900,
+        "free_wait_sec": 180,
+        "no_show_threshold_sec": null,
+        "cancellation_fee_sgd": 4.5,
+        "rider_gross_cancellation_fee_sgd": 6.61,
+        "waiting_fee_sgd": 5.0,
+        "fee_goes_to": "DRIVER",
+        "arrival_marker": "BUTTON",
+        "source": "PLATFORM-PUBLISHED-2026-10-07"
+      },
+      "timeline": {
+        "requested": "07:53:30",
+        "accepted": "07:53:50",
+        "arrived": "08:02:00",
+        "first_in_radius_fix": "08:02:20",
+        "started": "08:08:45",
+        "ended": "08:21:30"
+      },
+      "dwell_before_boarding_sec": 385,
+      "waiting_time_fee": 5.0,
+      "amount_contested_sgd": 5.0,
+      "total_charged": "full completed fare including the 5.00 waiting line",
+      "filed_at": "2026-08-04",
+      "expected": {
+        "ruling": "NO_ACTION",
+        "amount": null,
+        "driver_comp": null,
+        "referrals": [],
+        "governing": [
+          "POL-NS-10"
+        ]
+      },
+      "rider_track": "indoor fixes (35-50 m accuracy) until 08:08:00, then at the pin 08:08:30",
+      "driver_profile": {
+        "no_show_terminations_30d": 1,
+        "completed_trips_30d": 150
+      },
+      "rider_profile": {
+        "no_show_disputes_30d": 0,
+        "disputes_with_counterparty_90d": 0
+      }
+    }
+  },
+  {
+    "case_no": 4064,
+    "category": "NO_SHOW_CHARGE",
+    "filed_by": "DRIVER",
+    "channel": "IN_APP_SUPPORT",
+    "intended_ruling": "DRIVER_COMPENSATION",
+    "difficulty": "HARD",
+    "escalation_kind": null,
+    "mechanism": "POL-NS-05(iii), then POL-NS-01 and POL-NS-07. The driver tapped arrived at 19:06:00 when the matching fix places him 650 m from the pin at 38 km/h on Bukit Timah Road, so the marker is false and the clock is recomputed from the first qualifying in-geofence fix at 19:07:50. The corrected dwell to the RIDER_NO_SHOW cancellation at 19:13:00 is 310 s against free_wait 180, so under limb (iii) the fee stands and NS-07 pays 80% of 5.50 = 4.40, with the false-arrival event recorded in referrals. NS-04 cannot exonerate: the driver placed an in-app call at 19:09:30 (limb b fails) and the rider_track places the rider 1.1 km away (limb c fails). Support had reversed the fee on the rider's 'he marked arrived from far away' and the driver contests 5.50; the ruling is DRIVER_COMPENSATION 4.40 plus the NS-05(iii) referral. Traps: NO_ACTION because the marker was false, compensation without the referral, or reading the truncated chat as hiding an exoneration.",
+    "messy_evidence": [
+      {
+        "artifact": "CHAT_LOG",
+        "codes": [
+          "TRUNCATED_LOG"
+        ],
+        "carries_deciding_fact": false,
+        "why": "MSG-04064-002 is missing (0.6, NS-08(c)); NS-04 fails on the recorded call and the rider_track whatever that message said."
+      },
+      {
+        "artifact": "TRAFFIC_ADVISORY",
+        "codes": [
+          "MISSING_ARTIFACT"
+        ],
+        "carries_deciding_fact": false,
+        "why": "No advisory on file; POL-NS-06(i) is not in play, so nothing turns on it."
+      }
+    ],
+    "setting": {
+      "place": "Landed house off Bukit Timah Road, Sixth Avenue area",
+      "day_time": "Saturday 2026-09-26 19:05 SGT",
+      "product": "RYDE_X",
+      "zone_class": "STANDARD"
+    },
+    "filer_story": "The driver says he waited more than 5 minutes outside the house and called, but support reversed his fee because he pressed arrived early.",
+    "counterparty_story": "The rider says the driver marked arrived while he was still far away and she should not pay for that.",
+    "targets": {
+      "platform_policy": {
+        "grace_after_match_sec": 180,
+        "advance_grace_before_scheduled_sec": 900,
+        "free_wait_sec": 180,
+        "no_show_threshold_sec": null,
+        "cancellation_fee_sgd": 5.5,
+        "rider_gross_cancellation_fee_sgd": null,
+        "waiting_fee_sgd": 5.0,
+        "fee_goes_to": "DRIVER",
+        "arrival_marker": "BUTTON",
+        "source": "RECORD-PLATFORM"
+      },
+      "timeline": {
+        "requested": "18:58:00",
+        "accepted": "18:58:20",
+        "arrived_tap": "19:06:00",
+        "first_in_geofence_fix": "19:07:50",
+        "call": "19:09:30",
+        "cancelled": "19:13:00"
+      },
+      "fix_at_tap": "650 m from pin, 38 km/h",
+      "corrected_dwell_sec": 310,
+      "fee_line": 5.5,
+      "total_charged": 5.5,
+      "refund_issued_sgd": 5.5,
+      "payment_status": "REFUNDED",
+      "amount_contested_sgd": 5.5,
+      "rider_track": "rider about 1.1 km away throughout",
+      "driver_profile": {
+        "no_show_terminations_30d": 1,
+        "completed_trips_30d": 132
+      },
+      "filed_at": "2026-09-29",
+      "expected": {
+        "ruling": "DRIVER_COMPENSATION",
+        "amount": 4.4,
+        "driver_comp": 4.4,
+        "referrals": [
+          "POL-NS-05(iii): false-arrival event recorded against the driver"
+        ],
+        "governing": [
+          "POL-NS-05",
+          "POL-NS-01",
+          "POL-NS-07"
+        ]
+      },
+      "rider_profile": {
+        "no_show_disputes_30d": 0,
+        "disputes_with_counterparty_90d": 0
+      }
+    }
+  },
+  {
+    "case_no": 4065,
+    "category": "NO_SHOW_CHARGE",
+    "filed_by": "RIDER",
+    "channel": "EMAIL",
+    "intended_ruling": "FULL_REFUND",
+    "difficulty": "EASY",
+    "escalation_kind": null,
+    "mechanism": "POL-NS-06 with POL-NS-01(c). The fee and free wait come from the record's platform_policy (an AUTHORED-V1 backfill for a RYDE_XL at a transport hub: fee 8.00 by the greater-of rule, free_wait 300). The driver's first in-radius fix (150 m TRANSPORT_HUB) is 18:12:30 and he cancelled RIDER_NO_SHOW at 18:14:05: 95 s, short of 300 s (and of the 180 s default too), so the fee is not chargeable and the 8.00 is refunded in full with no compensation. The driver's 'bay too crowded to wait' cites no advisory, and NS-06(ii) says an advisory would not excuse a shortfall anyway.",
+    "messy_evidence": [
+      {
+        "artifact": "TRAFFIC_ADVISORY",
+        "codes": [
+          "MISSING_ARTIFACT"
+        ],
+        "carries_deciding_fact": false,
+        "why": "No advisory on file; POL-NS-06(i) is not in play, so nothing turns on it."
+      }
+    ],
+    "setting": {
+      "place": "Bedok Bus Interchange private-hire pickup bay",
+      "day_time": "Friday 2026-08-14 18:10 SGT",
+      "product": "RYDE_XL",
+      "zone_class": "TRANSPORT_HUB"
+    },
+    "filer_story": "The rider writes in that the driver cancelled after barely a minute and a half while she was walking over from the MRT, and she was charged 8.00.",
+    "counterparty_story": "The driver says the bay was crowded and he could not hold his position there.",
+    "targets": {
+      "platform_policy": {
+        "grace_after_match_sec": 180,
+        "advance_grace_before_scheduled_sec": 900,
+        "free_wait_sec": 300,
+        "no_show_threshold_sec": null,
+        "cancellation_fee_sgd": 8.0,
+        "rider_gross_cancellation_fee_sgd": null,
+        "waiting_fee_sgd": null,
+        "fee_goes_to": "DRIVER",
+        "arrival_marker": "BUTTON",
+        "source": "AUTHORED-V1"
+      },
+      "timeline": {
+        "requested": "18:04:00",
+        "accepted": "18:04:20",
+        "arrived": "18:12:30",
+        "cancelled": "18:14:05"
+      },
+      "dwell_sec": 95,
+      "fee_line": 8.0,
+      "total_charged": 8.0,
+      "amount_contested_sgd": 8.0,
+      "filed_at": "2026-08-15",
+      "expected": {
+        "ruling": "FULL_REFUND",
+        "amount": 8.0,
+        "driver_comp": null,
+        "referrals": [],
+        "governing": [
+          "POL-NS-06",
+          "POL-NS-01"
+        ]
+      },
+      "rider_track": "rider walking from Bedok MRT, 250-400 m from the bay at the cancellation",
+      "driver_profile": {
+        "no_show_terminations_30d": 1,
+        "completed_trips_30d": 150
+      },
+      "rider_profile": {
+        "no_show_disputes_30d": 0,
+        "disputes_with_counterparty_90d": 0
+      }
+    }
+  }
+]

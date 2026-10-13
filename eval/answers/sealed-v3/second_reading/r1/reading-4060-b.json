@@ -1,0 +1,40 @@
+{
+  "case_no": 4060,
+  "ruling": "FULL_REFUND",
+  "amount_sgd": 6.61,
+  "driver_compensation_sgd": null,
+  "referrals": [],
+  "governing_clauses": [
+    "POL-NS-10"
+  ],
+  "difficulty_opinion": "EASY",
+  "deciding_facts": [
+    {
+      "evidence_id": "EV-TRIP-04060",
+      "fact": "accepted_at",
+      "value": "2026-08-11T07:42:20+08:00"
+    },
+    {
+      "evidence_id": "EV-TRIP-04060",
+      "fact": "cancelled_at / cancelled_by",
+      "value": "2026-08-11T07:45:05+08:00, RIDER (CANCELLED_BY_RIDER, reason RIDER_CANCELLED)"
+    },
+    {
+      "evidence_id": "EV-TRIP-04060",
+      "fact": "seconds from acceptance to rider cancellation vs platform_policy.grace_after_match_sec",
+      "value": "165 s < 180 s"
+    },
+    {
+      "evidence_id": "EV-TRIP-04060",
+      "fact": "scheduled_at",
+      "value": "null (on-demand trip; POL-NS-10(b) not engaged)"
+    },
+    {
+      "evidence_id": "EV-FARE-04060",
+      "fact": "cancellation_fee charged / refund_issued_sgd / payment_status",
+      "value": "6.61 (gross figure) / 0.00 / CHARGED"
+    }
+  ],
+  "reasoning": "1. Category NO_SHOW_CHARGE, filed by RIDER, contesting SGD 6.61. The trip_record carries platform_policy (RECORD-PLATFORM), so per fee_schedule.resolution_rule all figures come from it: grace_after_match_sec 180, free_wait_sec 180, cancellation_fee_sgd 4.50 net, rider_gross 6.61, arrival_marker BUTTON. 2. POL-NS-10(a): EV-TRIP-04060 accepted_at 07:42:20, cancelled_at 07:45:05 by the RIDER; 07:45:05 - 07:42:20 = 165 s, which is inside the 180 s grace. Limb (a) makes the cancellation not chargeable 'whatever the driver's position', and 'a driver's early arrival does not shorten the grace'. POL-NS-10(c): a fee charged on a cancellation limb (a) makes non-chargeable is refunded in full with no driver compensation. EV-FARE-04060 shows the fee line 6.61 CHARGED, refund_issued 0.00, so the full contested amount 6.61 is returned (FULL_REFUND under POL-GEN-03, amount_sgd = amount_contested_sgd = 6.61; driver_compensation_sgd null). 3. The driver's statement ('already downstairs waiting') is true on the record - EV-GPS-04060 places him 4.6 m from the pin at 0 km/h (accuracy 3.5 m) at the 07:43:55 arrival tap, and 8.1-9.4 m at 0 km/h through 07:45:05; first qualifying in-radius fix 07:43:45 (18.4 m, acc 5.1 m) - but limb (a) expressly makes his position irrelevant, so it does not defeat the refund. 4. Limbs not reached / not applicable: POL-NS-10(f) applies only after the grace; POL-NS-10(g) requires a rider cancellation after the in-geofence dwell has exceeded free_wait_sec - dwell from first in-geofence fix 07:43:45 to cancellation 07:45:05 is 80 s (70 s from the arrival tap) < 180 s, so (g) fails independently of the grace. POL-NS-10(b): scheduled_at null. POL-NS-10(d)/(e): no waiting-time line (waiting_time_fee 0.00). 5. POL-NS-01: limb (d) fails - the trip was terminated by the rider, not by the driver with RIDER_NO_SHOW/RIDER_UNREACHABLE/EXCESSIVE_WAIT - and limb (c) fails (80 s < 180 s); the fee is therefore not chargeable under POL-NS-01 and POL-NS-07 (driver compensation) is never reached. POL-NS-06 would independently give the same full refund (effective dwell 80 s < 180 s free wait, no advisory; EV-ADVIS-04060-01 is MISSING, weight 0.0, limb (i) unavailable but irrelevant since no re-entry intervals exist), consistent with the POL-NS-10 result. POL-NS-02: satisfied (>=3 consecutive in-radius fixes with accuracy <=25 m, STANDARD 50 m radius); POL-NS-03 not engaged (driver inside radius). POL-NS-05: arrival-tap fix 4.6 m, 0 km/h - marker not false, no referral. POL-NS-12: arrival_marker is BUTTON, clause not engaged. POL-NS-04/POL-NS-11: the rider's only message MSG-04060-003 ('sorry need to cancel, plans changed') is not locating/coordinating, so limb (a) fails; all three rider_track fixes have accuracy 35-44.7 m (>25 m) so limb (c) is undecidable (POL-NS-11), which does not matter - the refund rests on POL-NS-10, not POL-NS-04. 6. Integrity (POL-NS-08): (a) arrival event 07:43:55 coincides with a GPS fix (0 s skew); (b) 17 fixes, max interval 10 s, no gap >120 s; rider_track not relied on; (c) chat 4 messages, sequential, equals chat_message_count 4, largest gap 80 s; (d) fare line 6.61 equals the gross figure in platform_policy. No policy-level impairment. POL-GEN-02: the deciding facts (accepted_at, cancelled_at, cancelled_by) are carried by EV-TRIP-04060 at weight 1.0, so the confidence cap is 1.0; the MISSING advisory (weight 0.0) carries no deciding fact. POL-NS-09: (a) confidence high; (b) no contradiction between admissible artifacts; (c) disputes_with_counterparty_90d 0 + 0 = 0 < 2; (d) anti-farming check not run since POL-NS-07 not reached, and in any case no_show_terminations_30d 1 < 4 (1/150 = 0.0067 < 0.08); rider no_show_disputes_30d 0 < 3; (e) no impaired sole evidence. No escalation. 7. POL-GEN-01: no profile field is used as a ground; rating, cancellation_rate, prior_disputes etc. are context only. 8. POL-GEN-05: monetary effect 6.61 <= execution_threshold_sgd 8.00, executed automatically subject to POL-GEN-04 appeal. POL-GEN-07 not needed (POL-NS-10 licenses the outcome). POL-GEN-08: category in scope, no safety/complaint flag. Route-deviation clauses (POL-RD-01..14 incl. amendment POL-RD-14) do not apply to a NO_SHOW_CHARGE dispute. 9. Referrals: none - POL-NS-01's driver-education referral needs an in-radius DRIVER_UNABLE_TO_LOCATE termination, and POL-NS-05's false-arrival referral needs a false marker; neither exists.",
+  "doubts": "Minimal. (1) The rider says 'about 2 minutes'; the record shows 165 s (2 min 45 s) - imprecise but on the same side of the 180 s grace, so not a contradiction. (2) Refund amount: the ledger charged the rider's gross 6.61 while the net fee in force is 4.50; POL-NS-10(c) refunds 'the fee charged' in full and POL-GEN-03 FULL_REFUND returns the whole contested amount, so 6.61 - an alternative reading refunding only the net 4.50 (PARTIAL_REFUND 4.50) is not supported by the text. (3) Some might also cite POL-NS-06 (dwell 80 s < 180 s) as a concurrent governing clause; it yields the same FULL_REFUND 6.61 and changes nothing."
+}

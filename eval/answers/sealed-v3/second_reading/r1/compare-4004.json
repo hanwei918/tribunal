@@ -1,0 +1,49 @@
+{
+  "case_no": 4004,
+  "verdict": "AGREE",
+  "differences": [
+    {
+      "field": "ruling / amount_sgd / driver_compensation_sgd / referrals",
+      "key": "FULL_REFUND, 6.50, null, []",
+      "reader_a": "FULL_REFUND, 6.50, null, []",
+      "reader_b": "FULL_REFUND, 6.50, null, []",
+      "resolution": "No difference. Both readers match the key to the cent."
+    },
+    {
+      "field": "governing_clauses",
+      "key": [
+        "POL-RD-11"
+      ],
+      "reader_a": [
+        "POL-RD-11",
+        "POL-RD-01",
+        "POL-RD-09",
+        "POL-GEN-03"
+      ],
+      "reader_b": [
+        "POL-RD-11",
+        "POL-RD-01",
+        "POL-RD-08",
+        "POL-GEN-03"
+      ],
+      "resolution": "Key right. POL-RD-11 alone both licenses FULL_REFUND (licenses NO_ACTION, PARTIAL_REFUND, FULL_REFUND, ESCALATE) and fixes the amount under its limb (a). The readers' extra clauses are harmless context: POL-RD-01 licenses only NO_ACTION/PARTIAL_REFUND and its establishment test passes, so it neither bars nor sizes the remedy; POL-RD-09 is referenced by RD-11(a) for pass-through lines but every pass-through line is 0.00 and limb (4) has nothing to refund; POL-RD-08 burden is not what sizes RD-11(a); POL-GEN-03 is the vocabulary clause the brief says not to lean on. No clause is missing from the key and none listed is inapplicable."
+    },
+    {
+      "field": "difficulty",
+      "key": "EASY",
+      "reader_a": "HARD (reader a records EASY as also defensible)",
+      "reader_b": "EASY",
+      "resolution": "Key kept. No party's story is contradicted by the record (rider says the longer KPE/TPE route raised the fare; trace and fare_rerated event confirm it; driver's statement is a bare assertion that is not decisive under RD-11(a)), so not REVERSAL; not ESCALATE, so not INDETERMINATE. The RD-02 trap exists, but the RD-11 trigger is two explicit fields (fare_model UPFRONT_QUOTE, quoted_fare_sgd 17.90 non-null) and RD-02 expressly excludes UPFRONT_QUOTE, and the arithmetic is one subtraction with no pass-through lines. EASY is the right grade; reader a's HARD is a defensible preference, not a key error."
+    },
+    {
+      "field": "rationale",
+      "key": "as written",
+      "reader_a": "n/a",
+      "reader_b": "n/a",
+      "resolution": "Every number, evidence id and clause id checked: EV-FARE-04004 fare_model UPFRONT_QUOTE, quoted_fare_sgd 17.90, total_charged 24.40, tolls_erp/airport_surcharge/waiting_time_fee 0.00, erp_gantries []; fare_rerated event on EV-TRIP-04004; 24.40 - 17.90 = 6.50 (multiple of 0.05) = amount_contested_sgd 6.50; EV-GPS-04004 trace_distance_km 16.32 (recomputed 16.320261 km, haversine R 6371.0088), optimal 12.1 km, excess 4.220 km = 34.876 % -> 34.88 %, below 50 % and 8.0 km so not material; RD-02 counterfactual 3.80 + 0.75x12.1 + 0.28x20 = 18.475, x1.0 + 0.80 = 19.275, 24.40 - 19.275 = 5.125 -> 5.15. All correct. Length 702 chars, ASCII."
+    }
+  ],
+  "analysis": "Worked from the version-6 text. (1) Scope: ROUTE_DEVIATION, rider-filed, no safety/complaint flag, no damage/conduct allegation -> automated under POL-GEN-08(1). (2) Integrity: trip_id TRP-04004 matches on EV-TRIP-04004, EV-GPS-04004, EV-FARE-04004; started_at 20:47:20 and ended_at 21:14:29 equal the first/last of 164 fixes; recomputed max interval 10 s, max step 150.1 m (implied 54 km/h), so POL-RD-07(a)-(c) not met and POL-RD-10(3)/(4) do not fire. All deciding artifacts COMPLETE at weight 1.0 (POL-GEN-02 cap 1.0). (3) POL-RD-01 on gps_trace.trace_distance_km 16.32 (recomputed 16.3203) vs optimal 12.1: excess 4.22 km = 34.88 % -> established (>20 %, >0.8 km), not material (<50 %, <8.0 km); POL-RD-06 check not required and in any event deviation_flags_90d 0 of 280 (no pattern); prior_deviation_flags 2 is lifetime, context only (POL-GEN-01). Rider deviation_claims_60d 1 < 4, so POL-RD-08 extra corroboration not engaged. (4) Exculpation: no rider instruction or waypoint_hint (POL-RD-04/RD-14 out), no amendment (RD-05 out), RYDE_X (RD-12 out), driver asserts no traffic cause and cites no advisory, so the MISSING EV-ADVIS-04004-01 is not invoked against anyone (POL-RD-13(1); RD-10(5) does not fire). (5) Remedy: fare_breakdown.fare_model UPFRONT_QUOTE with quoted_fare_sgd 17.90 non-null -> POL-RD-11 governs, POL-RD-02 does not run (its own text). RD-11(a): charged_total 24.40 exceeds quote 17.90 plus properly chargeable pass-through lines (ERP 0.00, airport 0.00, waiting 0.00) by 6.50, refunded in full; rounding up to 0.05 leaves 6.50. RD-11(b)/RD-09(4): no gantries, no surcharge, nothing to correct, no billing-integrity referral. POL-RD-10(8): every ledger line has a counterpart (distance 16.32 = trace, time 27 min ~ trace 27.15 min, base and platform fee), so no escalation; RD-10(6) 6.50 < 150 and < 24.40. (6) POL-GEN-03: 6.50 equals the whole amount_contested_sgd 6.50 -> FULL_REFUND, driver compensation null (RD-11: the detour cost is the driver's and is not recoverable; nothing owed to him). No referrals. Alternative readings checked and rejected on the text: RD-02 partial 5.15 (RD-02 excludes UPFRONT_QUOTE explicitly); NO_ACTION by reading RD-11 as barring every refund (RD-11(a) expressly refunds the excess over the quote); treating the re-rate as converting the trip to METERED (the governing field is fare_breakdown.fare_model, which reads UPFRONT_QUOTE). No genuine second defensible answer, so no case fix. Both readers reached the key's ruling, amount, compensation and referrals; their differences are an extra-clause list and a difficulty preference, neither a key error. check_set.py on out/cases with the key: 30 cases, 0 failures.",
+  "corrected_ground_truth": null,
+  "case_fix_instructions": null
+}

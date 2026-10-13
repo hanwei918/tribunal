@@ -1,0 +1,524 @@
+{
+  "schema_version": "1.2.0",
+  "case_no": 4061,
+  "dispute": {
+    "dispute_id": "DSP-04061",
+    "trip_id": "TRP-04061",
+    "case_no": 4061,
+    "category": "NO_SHOW_CHARGE",
+    "filed_by": "DRIVER",
+    "filed_at": "2026-08-28T08:45:00+08:00",
+    "claim_text": "The app itself confirmed my arrival at Bukit Panjang Plaza and ran the wait timer. I waited more than 8 minutes and called the rider two times, and only cancelled after the no-show threshold. Support reversed my fee saying my GPS only had a few points. The app's own arrival record shows I was there. Please give back my 6.00.",
+    "amount_contested_sgd": 6.0,
+    "counterparty_statement": {
+      "text": "When I came down to the plaza the driver was not there. Support already refunded me.",
+      "submitted_by": "RIDER",
+      "submitted_at": "2026-08-28T12:20:00+08:00"
+    },
+    "channel": "IN_APP_SUPPORT",
+    "evidence_ids": [
+      "EV-TRIP-04061",
+      "EV-GPS-04061",
+      "EV-CHAT-04061",
+      "EV-FARE-04061",
+      "EV-RPROF-04061",
+      "EV-DPROF-04061",
+      "EV-ADVIS-04061-01"
+    ]
+  },
+  "evidence": [
+    {
+      "evidence_id": "EV-TRIP-04061",
+      "evidence_type": "TRIP_RECORD",
+      "trip_id": "TRP-04061",
+      "source": "PLATFORM_TELEMETRY",
+      "generated_at": "2026-08-28T08:45:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Timestamps run forward: requested 12:57:50, accepted 12:58:10, arrived 13:06:00, cancelled 13:14:10 (CANCELLED_BY_DRIVER, RIDER_NO_SHOW). arrival_marker GPS_AUTO. 13 events, all PLATFORM_TELEMETRY: driver_arrived 13:06:00 states its geofence check (16 m from the pickup point, 0 km/h); wait_timer_started 13:06:05; wait_timer_expired 13:10:05; no_show_threshold_reached 13:12:00; trip_cancelled 13:14:10. The nearest gps_trace fix to the arrival event is 20 s from it. in_app_calls: two DRIVER calls, 13:08:20 and 13:11:15, not answered, 25 s and 30 s. chat_message_count 4 equals the chat_log's count.",
+        "assessed_at": "2026-08-28T08:45:05+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-04061",
+        "rider_id": "R-8530",
+        "driver_id": "D-9213",
+        "requested_at": "2026-08-26T12:57:50+08:00",
+        "accepted_at": "2026-08-26T12:58:10+08:00",
+        "arrived_at": "2026-08-26T13:06:00+08:00",
+        "started_at": null,
+        "ended_at": null,
+        "cancelled_at": "2026-08-26T13:14:10+08:00",
+        "status": "CANCELLED_BY_DRIVER",
+        "cancelled_by": "DRIVER",
+        "cancellation_reason_code": "RIDER_NO_SHOW",
+        "pickup": {
+          "label": "Bukit Panjang Plaza (Jelebu Road side drop-off)",
+          "lat": 1.37985,
+          "lng": 103.76455,
+          "venue_id": null
+        },
+        "dropoff": {
+          "label": "Lot One, Choa Chu Kang",
+          "lat": 1.385,
+          "lng": 103.7445,
+          "venue_id": null
+        },
+        "vehicle_type": "RYDE_X",
+        "pickup_zone_class": "LARGE_VENUE",
+        "chat_message_count": 4,
+        "registered_pickup_points": 1,
+        "in_app_calls": [
+          {
+            "call_id": "CALL-04061-001",
+            "initiated_at": "2026-08-26T13:08:20+08:00",
+            "initiated_by": "DRIVER",
+            "answered": false,
+            "duration_sec": 25
+          },
+          {
+            "call_id": "CALL-04061-002",
+            "initiated_at": "2026-08-26T13:11:15+08:00",
+            "initiated_by": "DRIVER",
+            "answered": false,
+            "duration_sec": 30
+          }
+        ],
+        "optimal_distance_km": null,
+        "optimal_duration_min": null,
+        "optimal_route_source": null,
+        "optimal_route_erp_sgd": null,
+        "actual_distance_km": null,
+        "actual_duration_min": null,
+        "deviation_pct": null,
+        "amended_optimal_distance_km": null,
+        "amended_optimal_duration_min": null,
+        "solo_optimal_distance_km": null,
+        "pickup_amended_at": null,
+        "dropoff_amended_at": null,
+        "original_pickup": null,
+        "original_dropoff": null,
+        "scheduled_at": null,
+        "platform_policy": {
+          "grace_after_match_sec": 180,
+          "advance_grace_before_scheduled_sec": 900,
+          "free_wait_sec": 240,
+          "no_show_threshold_sec": 360,
+          "cancellation_fee_sgd": 6.0,
+          "rider_gross_cancellation_fee_sgd": 8.81,
+          "waiting_fee_sgd": 5.0,
+          "fee_goes_to": "DRIVER",
+          "arrival_marker": "GPS_AUTO",
+          "source": "RECORD-PLATFORM"
+        },
+        "events": [
+          {
+            "event_type": "booking_confirmed",
+            "at": "2026-08-26T12:57:50+08:00",
+            "detail": "Rider R-8530 booked TRP-04061 (RYDE_X), pickup Bukit Panjang Plaza (Jelebu Road side), drop-off Lot One, Choa Chu Kang. On-demand trip.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_assigned",
+            "at": "2026-08-26T12:58:10+08:00",
+            "detail": "Driver D-9213 assigned, blue Toyota C-HR. ETA 8 min shown to rider.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_en_route",
+            "at": "2026-08-26T12:58:15+08:00",
+            "detail": "Driver started navigating to the pickup point.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_arrived",
+            "at": "2026-08-26T13:06:00+08:00",
+            "detail": "Platform geofence check passed: driver 16 m from the pickup point, speed 0 km/h. Arrival marked automatically.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "rider_notified",
+            "at": "2026-08-26T13:06:03+08:00",
+            "detail": "Push notification sent to rider: your driver has arrived.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "wait_timer_started",
+            "at": "2026-08-26T13:06:05+08:00",
+            "detail": "Free waiting period 240 s running (to 13:10:05).",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_called_rider",
+            "at": "2026-08-26T13:08:20+08:00",
+            "detail": "In-app call from driver to rider, rang 25 s, not answered.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "wait_timer_expired",
+            "at": "2026-08-26T13:10:05+08:00",
+            "detail": "Free waiting period ended at 13:10:05; no boarding recorded.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "driver_called_rider",
+            "at": "2026-08-26T13:11:15+08:00",
+            "detail": "In-app call from driver to rider, rang 30 s, not answered.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "no_show_threshold_reached",
+            "at": "2026-08-26T13:12:00+08:00",
+            "detail": "No-show threshold of 360 s from arrival reached. Driver may cancel for rider no-show.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "trip_cancelled",
+            "at": "2026-08-26T13:14:10+08:00",
+            "detail": "Trip cancelled by driver. Reason code RIDER_NO_SHOW.",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "cancellation_fee_applied",
+            "at": "2026-08-26T13:14:12+08:00",
+            "detail": "Cancellation fee SGD 8.81 charged to rider payment method (SGD 6.00 net to driver).",
+            "source": "PLATFORM_TELEMETRY"
+          },
+          {
+            "event_type": "fee_refunded",
+            "at": "2026-08-27T09:40:00+08:00",
+            "detail": "Cancellation fee SGD 8.81 refunded to rider by support after review of the driver's GPS export.",
+            "source": "PLATFORM_TELEMETRY"
+          }
+        ]
+      }
+    },
+    {
+      "evidence_id": "EV-GPS-04061",
+      "evidence_type": "GPS_TRACE",
+      "trip_id": "TRP-04061",
+      "source": "DRIVER_DEVICE",
+      "generated_at": "2026-08-28T08:45:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "IMPAIRED",
+        "issues": [
+          "LOW_SAMPLE_RATE",
+          "PARTIAL_RECORD",
+          "UNVERIFIED_SOURCE"
+        ],
+        "weight_multiplier": 0.3,
+        "notes": "Driver-device export: 6 fixes 12:58:45-13:14:50, intervals 245, 210, 190, 190, 130 s; no fix reports accuracy_m. The first fix is 35 s after accepted_at and the last 40 s after the trip_record cancellation. Between the arrival event (13:06:00) and the cancellation (13:14:10) the export holds 3 fixes (13:06:20, 13:09:30, 13:12:40), each speed 0 and 5.6/17.8/8.0 m from the pickup pin; every interval in that window exceeds 120 s. The fix before the window (13:02:50) is 825.5 m from the pin at 22 km/h; the fix after it (13:14:50) 260.7 m at 30 km/h. rider_track is empty. The file was exported from the driver's own device and is not reconciled against platform telemetry.",
+        "assessed_at": "2026-08-28T08:45:05+08:00",
+        "assessor_version": "prepass-1.0.0",
+        "issue_details": [
+          {
+            "code": "LOW_SAMPLE_RATE",
+            "severity": "HIGH",
+            "detail": "Export sampled every 130-245 s; no accuracy field."
+          },
+          {
+            "code": "PARTIAL_RECORD",
+            "severity": "MEDIUM",
+            "detail": "rider_track empty: no fixes from the rider's device."
+          },
+          {
+            "code": "UNVERIFIED_SOURCE",
+            "severity": "MEDIUM",
+            "detail": "File exported from the driver's own device; not reconciled against platform telemetry."
+          }
+        ]
+      },
+      "payload": {
+        "trip_id": "TRP-04061",
+        "points": [
+          {
+            "lat": 1.36017,
+            "lng": 103.775462,
+            "ts": "2026-08-26T12:58:45+08:00",
+            "speed_kph": 28,
+            "accuracy_m": null
+          },
+          {
+            "lat": 1.37346,
+            "lng": 103.768331,
+            "ts": "2026-08-26T13:02:50+08:00",
+            "speed_kph": 22,
+            "accuracy_m": null
+          },
+          {
+            "lat": 1.379855,
+            "lng": 103.7646,
+            "ts": "2026-08-26T13:06:20+08:00",
+            "speed_kph": 0,
+            "accuracy_m": null
+          },
+          {
+            "lat": 1.37969,
+            "lng": 103.764559,
+            "ts": "2026-08-26T13:09:30+08:00",
+            "speed_kph": 0,
+            "accuracy_m": null
+          },
+          {
+            "lat": 1.379786,
+            "lng": 103.764582,
+            "ts": "2026-08-26T13:12:40+08:00",
+            "speed_kph": 0,
+            "accuracy_m": null
+          },
+          {
+            "lat": 1.381624,
+            "lng": 103.763016,
+            "ts": "2026-08-26T13:14:50+08:00",
+            "speed_kph": 30,
+            "accuracy_m": null
+          }
+        ],
+        "point_count": 6,
+        "first_fix_at": "2026-08-26T12:58:45+08:00",
+        "last_fix_at": "2026-08-26T13:14:50+08:00",
+        "sample_interval_sec": 190.0,
+        "expected_interval_sec": null,
+        "gaps": [
+          {
+            "from": "2026-08-26T12:58:45+08:00",
+            "to": "2026-08-26T13:02:50+08:00",
+            "gap_sec": 245.0
+          },
+          {
+            "from": "2026-08-26T13:02:50+08:00",
+            "to": "2026-08-26T13:06:20+08:00",
+            "gap_sec": 210.0
+          },
+          {
+            "from": "2026-08-26T13:06:20+08:00",
+            "to": "2026-08-26T13:09:30+08:00",
+            "gap_sec": 190.0
+          },
+          {
+            "from": "2026-08-26T13:09:30+08:00",
+            "to": "2026-08-26T13:12:40+08:00",
+            "gap_sec": 190.0
+          },
+          {
+            "from": "2026-08-26T13:12:40+08:00",
+            "to": "2026-08-26T13:14:50+08:00",
+            "gap_sec": 130.0
+          }
+        ],
+        "max_gap_sec": 245.0,
+        "coverage_pct": null,
+        "trace_distance_km": 2.799,
+        "rider_track": []
+      }
+    },
+    {
+      "evidence_id": "EV-CHAT-04061",
+      "evidence_type": "CHAT_LOG",
+      "trip_id": "TRP-04061",
+      "source": "PLATFORM_TELEMETRY",
+      "generated_at": "2026-08-28T08:45:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "4 messages, MSG-04061-001 to -004, sequential; the count equals trip_record.chat_message_count. No RIDER message. Largest interval 475 s (13:06:15 to 13:14:10); the interval containing the arrival event is 135 s (13:04:00 to 13:06:15).",
+        "assessed_at": "2026-08-28T08:45:05+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-04061",
+        "messages": [
+          {
+            "msg_id": "MSG-04061-001",
+            "sender": "DRIVER",
+            "text": "On the way",
+            "sent_at": "2026-08-26T12:58:30+08:00",
+            "read_at": "2026-08-26T12:58:50+08:00",
+            "delivered_at": "2026-08-26T12:58:31+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-04061-002",
+            "sender": "DRIVER",
+            "text": "nearly there",
+            "sent_at": "2026-08-26T13:04:00+08:00",
+            "read_at": "2026-08-26T13:04:20+08:00",
+            "delivered_at": "2026-08-26T13:04:01+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-04061-003",
+            "sender": "DRIVER",
+            "text": "Hi, I'm at the Jelebu Road side drop off of the plaza, blue C-HR",
+            "sent_at": "2026-08-26T13:06:15+08:00",
+            "read_at": "2026-08-26T13:12:50+08:00",
+            "delivered_at": "2026-08-26T13:06:16+08:00",
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          },
+          {
+            "msg_id": "MSG-04061-004",
+            "sender": "SYSTEM",
+            "text": "Trip cancelled by driver. Reason: rider no-show. Cancellation fee SGD 8.81 applied.",
+            "sent_at": "2026-08-26T13:14:10+08:00",
+            "read_at": null,
+            "delivered_at": null,
+            "channel": "IN_APP",
+            "language": "en",
+            "redacted": false,
+            "waypoint_hint": null
+          }
+        ],
+        "message_count": 4,
+        "first_message_at": "2026-08-26T12:58:30+08:00",
+        "last_message_at": "2026-08-26T13:14:10+08:00",
+        "truncated": false
+      }
+    },
+    {
+      "evidence_id": "EV-FARE-04061",
+      "evidence_type": "FARE_BREAKDOWN",
+      "trip_id": "TRP-04061",
+      "source": "PAYMENTS_LEDGER",
+      "generated_at": "2026-08-28T08:45:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "One ledger line: cancellation_fee 8.81 = total_charged 8.81; payment_status REFUNDED, refund_issued_sgd 8.81. trip_record.platform_policy states cancellation_fee_sgd 6.00 and rider_gross_cancellation_fee_sgd 8.81.",
+        "assessed_at": "2026-08-28T08:45:05+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "trip_id": "TRP-04061",
+        "currency": "SGD",
+        "fare_model": "METERED",
+        "cancellation_fee": 8.81,
+        "total_charged": 8.81,
+        "payment_status": "REFUNDED",
+        "refund_issued_sgd": 8.81,
+        "charged_at": "2026-08-26T13:14:12+08:00",
+        "surge_multiplier": 1.0,
+        "rate_card_id": null,
+        "base_fare": 0.0,
+        "distance_fare": 0.0,
+        "time_fare": 0.0,
+        "surge_amount": 0.0,
+        "tolls_erp": 0.0,
+        "airport_surcharge": 0.0,
+        "platform_fee": 0.0,
+        "promo_discount": 0.0,
+        "waiting_time_fee": 0.0,
+        "quoted_fare_sgd": null,
+        "distance_charged_km": null,
+        "time_charged_min": null,
+        "per_km_rate_sgd": null,
+        "per_min_rate_sgd": null,
+        "erp_gantries": []
+      }
+    },
+    {
+      "evidence_id": "EV-RPROF-04061",
+      "evidence_type": "RIDER_PROFILE",
+      "trip_id": "TRP-04061",
+      "source": "PLATFORM_TELEMETRY",
+      "generated_at": "2026-08-28T08:45:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Rider counters complete at the snapshot: no_show_disputes_30d 0, disputes_with_counterparty_90d 0.",
+        "assessed_at": "2026-08-28T08:45:05+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "R-8530",
+        "party_role": "RIDER",
+        "snapshot_at": "2026-08-28T08:45:00+08:00",
+        "account_age_days": 410,
+        "lifetime_trips": 88,
+        "rating": 4.62,
+        "prior_disputes_filed": 2,
+        "prior_disputes_upheld": 1,
+        "prior_no_show_flags": 1,
+        "cancellation_rate": 0.07,
+        "no_show_disputes_30d": 0,
+        "deviation_claims_60d": 0,
+        "deviation_claims_60d_substantiated": 0,
+        "disputes_with_counterparty_90d": 0
+      }
+    },
+    {
+      "evidence_id": "EV-DPROF-04061",
+      "evidence_type": "DRIVER_PROFILE",
+      "trip_id": "TRP-04061",
+      "source": "PLATFORM_TELEMETRY",
+      "generated_at": "2026-08-28T08:45:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "COMPLETE",
+        "issues": [],
+        "weight_multiplier": 1.0,
+        "notes": "Driver counters complete at the snapshot: no_show_terminations_30d 1, completed_trips_30d 97, disputes_with_counterparty_90d 0; vehicle_type RYDE_X as on trip_record.",
+        "assessed_at": "2026-08-28T08:45:05+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": {
+        "party_id": "D-9213",
+        "party_role": "DRIVER",
+        "snapshot_at": "2026-08-28T08:45:00+08:00",
+        "account_age_days": 980,
+        "lifetime_trips": 4060,
+        "rating": 4.86,
+        "prior_disputes_filed": 1,
+        "prior_disputes_upheld": 1,
+        "prior_no_show_flags": 1,
+        "vehicle_type": "RYDE_X",
+        "cancellation_rate": 0.03,
+        "prior_deviation_flags": 0,
+        "acceptance_rate": 0.92,
+        "active_region": "WEST",
+        "deviation_flags_90d": 0,
+        "completed_trips_90d": 301,
+        "no_show_terminations_30d": 1,
+        "completed_trips_30d": 97,
+        "disputes_with_counterparty_90d": 0
+      }
+    },
+    {
+      "evidence_id": "EV-ADVIS-04061-01",
+      "evidence_type": "TRAFFIC_ADVISORY",
+      "trip_id": "TRP-04061",
+      "source": "THIRD_PARTY_LTA",
+      "generated_at": "2026-08-28T08:45:00+08:00",
+      "schema_version": "1.2.0",
+      "admissibility": {
+        "status": "MISSING",
+        "issues": [
+          "MISSING_ARTIFACT"
+        ],
+        "weight_multiplier": 0.0,
+        "notes": "Artifact absent: no traffic advisory was returned for the pickup road and the trip window. The identifier is minted so that the absence itself can be cited.",
+        "assessed_at": "2026-08-28T08:45:05+08:00",
+        "assessor_version": "prepass-1.0.0"
+      },
+      "payload": null
+    }
+  ]
+}

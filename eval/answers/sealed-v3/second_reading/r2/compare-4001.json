@@ -1,0 +1,36 @@
+{
+  "case_no": 4001,
+  "verdict": "AGREE",
+  "differences": [
+    {
+      "field": "ruling / amount_sgd / driver_compensation_sgd / referrals / difficulty",
+      "key": "NO_ACTION / null / null / [] / REVERSAL",
+      "reader_a": "NO_ACTION / null / null / [] / REVERSAL",
+      "reader_b": "NO_ACTION / null / null / [] / REVERSAL",
+      "resolution": "No difference. All three agree."
+    },
+    {
+      "field": "governing_clauses",
+      "key": ["POL-RD-04", "POL-RD-01"],
+      "reader_a": ["POL-RD-04", "POL-RD-01", "POL-RD-08"],
+      "reader_b": ["POL-RD-04", "POL-RD-01", "POL-RD-08", "POL-GEN-02", "POL-GEN-03"],
+      "resolution": "Key stands. POL-RD-04 (exclusion of the rider-requested spur) and POL-RD-01 (both establishment tests fail on the remaining excess) are the clauses that decide the case, and both license NO_ACTION. POL-RD-08 is in play (the burden shifts after the raw 2.160 km excess and is discharged through POL-RD-04), but it does not change the outcome and leaving it out is not an error. POL-GEN-02 (confidence cap 0.85 >= 0.70) is narrated in the key's rationale and is a constraint, not a deciding clause. POL-GEN-03 is the universal vocabulary licence the brief says not to lean on. The readers' additions are harmless extras, not grounds to change the key."
+    },
+    {
+      "field": "method of applying the POL-RD-04 exclusion",
+      "key": "Adjusted optimal 7.4 + 1.900 = 9.300 km; remaining excess 9.560 - 9.300 = 0.260 km = 2.80 % of 9.300 (3.51 % of booked 7.4).",
+      "reader_a": "Same as key.",
+      "reader_b": "Subtracts the spur from actual: 9.560 - 1.900 = 7.660 km; excess 0.260 km = 3.51 % of 7.4.",
+      "resolution": "No outcome difference. POL-RD-01 defines optimal_distance_km as 'the adjusted optimal produced by ... POL-RD-04 ... where one of those clauses applies', which is the key's method; the key also states the 3.51 % figure against the booked 7.4 km. Either method leaves 0.260 km, failing both the > 0.8 km and the > 20 % tests."
+    },
+    {
+      "field": "reader doubts (not differences from the key)",
+      "reader_a": "Corridor exit/rejoin is inferred from the trace; time component of the fare.",
+      "reader_b": "Corridor geometry; whether the driver's counterparty statement, which names no evidence id, discharges the shifted burden under POL-RD-08 (alternative PARTIAL_REFUND 3.30, which reader B itself rejects); time component.",
+      "resolution": "None of these creates a second defensible answer. (1) Corridor: the trace leaves and rejoins the booked corridor at the identical coordinate (1.3465, 103.704), fixes 19 and 65; the outcome needs an exclusion of only >= 1.36 km to fail the 0.8 km test (>= 0.567 km to fail the 20 % test on the adjusted optimal, >= 0.68 km on the booked optimal), and even the straight-line J-stop-J reading (2 x 771.5 m = 1.543 km) fails both tests. (2) Uncited driver statement: POL-RD-04 is a test run on the record ('attributable to a rider instruction recorded in the chat_log'); if the 'no evidence id, no weight' rule were applied to raw party statements it would equally discard the rider's claim_text, which also cites no id, so the rider would fail the initial POL-RD-08 burden and the result would still be NO_ACTION. The 3.30 partial refund is reachable only by applying the rule to one side and not the other, which is not a careful reading. (3) Time: POL-RD-01 is a distance gate; with no deviation established, POL-RD-02 never runs and no clause licenses a time-only refund."
+    }
+  ],
+  "analysis": "Worked independently from the version-6 text with Python (check_set.km, R = 6371.0088; Decimal for money). Facts verified on case-04001.json: EV-GPS-04001 is COMPLETE, 130 fixes, haversine sum 9.560011 km (written 9.56), largest interval 10 s, smallest 3 s, largest step 122.3 m, highest implied speed 44.0 km/h, so no POL-RD-07(a)-(c) limb fires. Raw excess 9.560 - 7.4 = 2.160 km = 29.19 % of 7.4, above both POL-RD-01 tests, so the rider shows a prima facie deviation and the burden shifts (POL-RD-08); not MATERIAL (< 50 %, < 8 km). POL-RD-04: MSG-04001-002 on EV-CHAT-04001 is (a) from the RIDER, (b) sent 10:11:40, before trip start 10:12:40 and 243 s before fix 19 at the junction (1.3465, 103.704) at 10:15:43, (c) names Jurong Point with platform waypoint_hint (1.33975, 103.7064). Corroboration: the nearest fix (index 33, and the 19 stationary fixes 33-51 at (1.3401, 103.70668), 10:18:02 to 10:21:02, 180 s) is 49.83 m from the hint, inside 200 m, so POL-RD-14 does not apply and POL-RD-10(7) is not engaged (fully corroborated, cleanly separable out-and-back). The trace between fixes 19 and 65 (same coordinate) measures 1.900119 km; trace outside the spur 7.659892 km. Adjusted optimal 7.4 + 1.900 = 9.300 km; remaining excess 0.260 km = 2.796 % of 9.300 (3.514 % of 7.4): fails both tests, no deviation, NO_ACTION under POL-RD-01 with POL-RD-04. POL-RD-02 never runs. POL-RD-04 compensation limb: distance_charged_km 9.56 equals the trace, no shortfall. POL-RD-09: no ERP lines, (3) rider-caused detour carries no ERP refund, nothing phantom. POL-RD-10: ids match, start/end equal first/last fix, fare lines 3.80 + 7.17 + 5.88 + 0.80 = 17.65 all have counterparts, the MISSING advisory EV-ADVIS-04001-01 is cited by nobody (POL-RD-13(1)). POL-RD-11/12 not applicable (METERED, RYDE_X). POL-GEN-02: EV-CHAT-04001 IMPAIRED, LANGUAGE_AMBIGUITY, weight 0.85 (matches the integrity table), deciding fact cap 0.85 >= 0.70; place fixed by waypoint_hint. POL-GEN-01: rider deviation_claims_60d 1 (< 4), no profile field used. Difficulty REVERSAL is right: the rider's 'big round at Boon Lay' story is contradicted by her own chat request and the trace. Every number, evidence id and clause id in the key's rationale checks out (9.560, 7.4, 2.160, 29.19 %, 10:11:40, 243 s, 10:15:43, (1.3465, 103.704), (1.33975, 103.7064), 180 s, (1.3401, 103.70668), 49.8 m, 0.85, 1.900, 9.300, 0.260, 2.80 %, 3.51 %, 9.56 km). Rationale is 1219 ASCII characters. The key is correct and the case file supports only this answer; no change needed.",
+  "corrected_ground_truth": null,
+  "case_fix_instructions": null
+}

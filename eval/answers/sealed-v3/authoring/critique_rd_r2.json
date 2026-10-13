@@ -1,0 +1,180 @@
+[
+ {
+  "case_no": 4001,
+  "verdict": "OK",
+  "issues": [
+   "Verified independently: trace rebuilt from build_recipe (common.drive/dwell/concat, rng(case,'trace')) reproduces every stated measurement (trace_distance_km, point_count, first/last fix, gaps, largest step, max implied speed) and check_set's km() gives the same 3-dp figure; fare lines and tolls_erp reconcile in Decimal; 0 < contested <= total_charged; trip timestamps causal; trip inside 2026-08-01..10-05 and filed within 30 days; profile snapshots and counterparty statement precede generated_at; ASCII; no forbidden word in any case-bound field; no party id shared with any other RD/NS case; nothing from the organisers' sample reused.",
+   "Derived from facts before reading intent: raw excess 9.560 - 7.4 = 2.160 km (29.19 %). MSG-04001-002 (RIDER, 10:11:40, before boarding at 10:12:40 and 243 s before the trace leaves the corridor at J 10:15:43) names Jurong Point, waypoint_hint (1.33975, 103.7064); nearest fix 49.8 m (< 200 m); 180 s stationary at the taxi stand. Spur between the two J fixes re-measured 1.9001 km; remaining 0.260 km (3.51 %) fails both RD-01 tests -> NO_ACTION; distance_charged_km 9.56 = trace, no RD-04 compensation. Even a one-way exclusion (0.95 km) leaves 16.4 % < 20 %. Chat weight 0.85 >= 0.70. Agrees with intent (NO_ACTION, RD-04/RD-01, REVERSAL).",
+   "optional (realism): MSG-04001-004 'coming back to the car now' at 10:20:45 and the car is moving by the 10:21:12 fix; fine if read as typed while walking up to the car."
+  ],
+  "fixes": [
+   "none required"
+  ]
+ },
+ {
+  "case_no": 4002,
+  "verdict": "OK",
+  "issues": [
+   "Verified independently: trace rebuilt from build_recipe (common.drive/dwell/concat, rng(case,'trace')) reproduces every stated measurement (trace_distance_km, point_count, first/last fix, gaps, largest step, max implied speed) and check_set's km() gives the same 3-dp figure; fare lines and tolls_erp reconcile in Decimal; 0 < contested <= total_charged; trip timestamps causal; trip inside 2026-08-01..10-05 and filed within 30 days; profile snapshots and counterparty statement precede generated_at; ASCII; no forbidden word in any case-bound field; no party id shared with any other RD/NS case; nothing from the organisers' sample reused.",
+   "Derived: 22.400 - 13.0 = 9.400 km (72.31 %). EV-ADVIS-04002-01 CLOSURE names the CTE city tunnel the route_planned event uses; valid 23:30-05:00 covers the ~00:48 arrival at the segment; trace leaves the CTE at the PIE interchange at 00:47:00 (fix exactly on the waypoint), never within 852.8 m of the closed segment, reaches Outram Rd at the destination. Cap min(9.400, 1.30 x 2.2 + 1.00 = 3.860); adjusted 16.86 km, duration 17 x 16.86/13.0 = 22.0477 -> 22.0; remaining 5.540 km (32.86 % of 16.86, 42.6 % of 13.0) not material either way; recomputed 23.405; refund 6.115 -> 6.15 (unrounded duration also gives 6.15). Agrees with intent (PARTIAL_REFUND 6.15, HARD).",
+   "optional (realism): rider's 'usually 16-17 dollars' is below the booked-route figure of about 19.11; harmless rider memory."
+  ],
+  "fixes": [
+   "none required"
+  ]
+ },
+ {
+  "case_no": 4003,
+  "verdict": "OK",
+  "issues": [
+   "Verified independently: trace rebuilt from build_recipe (common.drive/dwell/concat, rng(case,'trace')) reproduces every stated measurement (trace_distance_km, point_count, first/last fix, gaps, largest step, max implied speed) and check_set's km() gives the same 3-dp figure; fare lines and tolls_erp reconcile in Decimal; 0 < contested <= total_charged; trip timestamps causal; trip inside 2026-08-01..10-05 and filed within 30 days; profile snapshots and counterparty statement precede generated_at; ASCII; no forbidden word in any case-bound field; no party id shared with any other RD/NS case; nothing from the organisers' sample reused.",
+   "Derived: one 450 s interval 14:11:30-14:19:00 with bounding fixes 8,489.6 m apart (pre-gap 6.178 km, chord 8.490, post-gap 2.933) fires RD-07(a) and (b) inside the disputed KPE/MCE stretch; the chord-inclusive 17.600 km is a lower bound (30.37 %), but RD-07(ii) forbids establishing on the trace alone; no chat admission, no ERP (Sunday), counterparty null, actual_distance_km 17.6 and distance_charged_km 17.60 are copies (trip_completed event names the driver-app trace) -> RD-07(iii)/RD-10(3) ESCALATE; GPS weight 0.6 < 0.70 also caps confidence. Agrees with intent (ESCALATE, EVIDENCE, INDETERMINATE)."
+  ],
+  "fixes": [
+   "none required"
+  ]
+ },
+ {
+  "case_no": 4004,
+  "verdict": "OK",
+  "issues": [
+   "Verified independently: trace rebuilt from build_recipe (common.drive/dwell/concat, rng(case,'trace')) reproduces every stated measurement (trace_distance_km, point_count, first/last fix, gaps, largest step, max implied speed) and check_set's km() gives the same 3-dp figure; fare lines and tolls_erp reconcile in Decimal; 0 < contested <= total_charged; trip timestamps causal; trip inside 2026-08-01..10-05 and filed within 30 days; profile snapshots and counterparty statement precede generated_at; ASCII; no forbidden word in any case-bound field; no party id shared with any other RD/NS case; nothing from the organisers' sample reused.",
+   "Derived: UPFRONT_QUOTE with quoted_fare_sgd 17.90 -> RD-11 governs, RD-02 does not run; re-rated 24.40 (fare_rerated event) with no ERP/airport/waiting lines; RD-11(a) refund 24.40 - 17.90 = 6.50 = contested -> FULL_REFUND 6.50; deviation 4.220 km (34.88 %) not material, no RD-06 referral. Agrees with intent (EASY)."
+  ],
+  "fixes": [
+   "none required"
+  ]
+ },
+ {
+  "case_no": 4005,
+  "verdict": "OK",
+  "issues": [
+   "Verified independently: trace rebuilt from build_recipe (common.drive/dwell/concat, rng(case,'trace')) reproduces every stated measurement (trace_distance_km, point_count, first/last fix, gaps, largest step, max implied speed) and check_set's km() gives the same 3-dp figure; fare lines and tolls_erp reconcile in Decimal; 0 < contested <= total_charged; trip timestamps causal; trip inside 2026-08-01..10-05 and filed within 30 days; profile snapshots and counterparty statement precede generated_at; ASCII; no forbidden word in any case-bound field; no party id shared with any other RD/NS case; nothing from the organisers' sample reused.",
+   "Derived: MSG-04005-003 (RIDER, 15:59:50, before boarding, 707 s before the J fix) names Northpoint, waypoint_hint 55.0 m from the 360 s stop; spur re-measured 6.350 km; upfront fare charged at the quote, so RD-11 sends the rider-requested detour to RD-04's compensation limb: 20.570 - 14.20 = 6.370 km unbilled -> 0.75 x 6.370 = 4.7775 -> 4.80 (spur-only 6.350 also gives 4.80; cap 15.00 not reached). DRIVER_COMPENSATION 4.80 below the 6.00 claimed. Agrees with intent (HARD).",
+   "optional (realism): MSG-04005-006 'ok coming back now' at 16:22:10 and the stop ends at 16:22:26 (16 s); same pattern as 4001."
+  ],
+  "fixes": [
+   "optional: move MSG-04005-006 to about 16:21:40 and word it 'ok coming out now, paiseh' (update chat notes: last message time and largest interval); no effect on any deciding figure"
+  ]
+ },
+ {
+  "case_no": 4006,
+  "verdict": "OK",
+  "issues": [
+   "Verified independently: trace rebuilt from build_recipe (common.drive/dwell/concat, rng(case,'trace')) reproduces every stated measurement (trace_distance_km, point_count, first/last fix, gaps, largest step, max implied speed) and check_set's km() gives the same 3-dp figure; fare lines and tolls_erp reconcile in Decimal; 0 < contested <= total_charged; trip timestamps causal; trip inside 2026-08-01..10-05 and filed within 30 days; profile snapshots and counterparty statement precede generated_at; ASCII; no forbidden word in any case-bound field; no party id shared with any other RD/NS case; nothing from the organisers' sample reused.",
+   "Derived: 9.840 - 8.7 = 1.140 km (13.10 %): fails the 20 % test, no deviation; ERP-G-046 (CTE southbound after Braddell Rd, 2.00) nearest fix 1,843.9 m (> 250 m) -> RD-09(4) refund 2.00 + billing-integrity referral; RD-10(8) carve-out applies. PARTIAL_REFUND 2.00 of 6.00. The round-1 label concern is resolved: the claim now asserts '4-5km extra', which the trace contradicts (1.140 km), so REVERSAL is earned.",
+   "optional (realism): 'usually 12-13 only' is about 2.30 below the booked-route figure (15.33) at morning peak; harmless."
+  ],
+  "fixes": [
+   "none required"
+  ]
+ },
+ {
+  "case_no": 4007,
+  "verdict": "OK",
+  "issues": [
+   "Verified independently: trace rebuilt from build_recipe (common.drive/dwell/concat, rng(case,'trace')) reproduces every stated measurement (trace_distance_km, point_count, first/last fix, gaps, largest step, max implied speed) and check_set's km() gives the same 3-dp figure; fare lines and tolls_erp reconcile in Decimal; 0 < contested <= total_charged; trip timestamps causal; trip inside 2026-08-01..10-05 and filed within 30 days; profile snapshots and counterparty statement precede generated_at; ASCII; no forbidden word in any case-bound field; no party id shared with any other RD/NS case; nothing from the organisers' sample reused.",
+   "Derived: cancellation_fee 4.50 on a COMPLETED metered trip with cancelled_at/by/reason null, no cancellation event and a continuous trace: no counterpart in trace or trip_record; RD-09(4) covers only phantom gantries and non-airport airport surcharges, so the RD-10(8) carve-out does not apply and RD-10 is terminal -> ESCALATE (facts clear: POLICY). The careless RD-02 figure (9.25) would absorb the 4.50, but RD-10 forbids any final ruling. Agrees with intent (HARD)."
+  ],
+  "fixes": [
+   "none required"
+  ]
+ },
+ {
+  "case_no": 4008,
+  "verdict": "OK",
+  "issues": [
+   "Verified independently: trace rebuilt from build_recipe (common.drive/dwell/concat, rng(case,'trace')) reproduces every stated measurement (trace_distance_km, point_count, first/last fix, gaps, largest step, max implied speed) and check_set's km() gives the same 3-dp figure; fare lines and tolls_erp reconcile in Decimal; 0 < contested <= total_charged; trip timestamps causal; trip inside 2026-08-01..10-05 and filed within 30 days; profile snapshots and counterparty statement precede generated_at; ASCII; no forbidden word in any case-bound field; no party id shared with any other RD/NS case; nothing from the organisers' sample reused.",
+   "Derived: RYDE_POOL, optimal_route_source MATCHED_POOL_ITINERARY, pool_matched event names the itinerary -> RD-12 baseline 11.6; 12.120 - 11.6 = 0.520 km (4.48 %) fails both tests -> NO_ACTION; rider measured against solo 8.9 (wrong field). Chat CLOCK_SKEW (+47 s on all six SYSTEM mirrors, re-checked) weight 0.5 decides nothing; far below RD-10(4)'s 10 minutes. Agrees with intent (EASY).",
+   "optional (data nit): MSG-04008-003 (rider 'coming down', 21:21:05) is sent 2 s before the rider's read_at on MSG-04008-002 (21:21:07)."
+  ],
+  "fixes": [
+   "optional: set MSG-04008-002 read_at to 21:21:01"
+  ]
+ },
+ {
+  "case_no": 4009,
+  "verdict": "OK",
+  "issues": [
+   "Verified independently: trace rebuilt from build_recipe (common.drive/dwell/concat, rng(case,'trace')) reproduces every stated measurement (trace_distance_km, point_count, first/last fix, gaps, largest step, max implied speed) and check_set's km() gives the same 3-dp figure; fare lines and tolls_erp reconcile in Decimal; 0 < contested <= total_charged; trip timestamps causal; trip inside 2026-08-01..10-05 and filed within 30 days; profile snapshots and counterparty statement precede generated_at; ASCII; no forbidden word in any case-bound field; no party id shared with any other RD/NS case; nothing from the organisers' sample reused.",
+   "Derived: 18.960 - 10.3 = 8.660 km (84.08 %), established and MATERIAL; the single 70 s / 194.6 m interval at the start is under RD-07(a)/(b) and is not a sustained cadence under (c), so the trace is policy-clean at 0.85; nobody invokes RD-04 against the MISSING chat (driver says the passenger said nothing), so RD-10(5) is not engaged; deviation_flags_90d 4 >= 3 (pattern holds even if this trip is counted); RD-06(b) full refund of charged_total 27.50 (RD-02 figure 10.45 side by side), no pass-through lines; RD-06(c) referral; 27.50 > 8.00 held for release, not escalated. Agrees with intent (FULL_REFUND 27.50, HARD).",
+   "optional (realism): expressway legs at 46-47 km/h at 23:16-23:47 on a Saturday sit oddly with the driver's 'night time I use expressway because faster'."
+  ],
+  "fixes": [
+   "optional only (would need re-tuning of time_fare and contested amount): raise the ECP/MCE/AYE segment speeds to 65-75 km/h and recompute duration, time_fare, total and amount_contested (FULL_REFUND must equal total_charged)"
+  ]
+ },
+ {
+  "case_no": 4010,
+  "verdict": "OK",
+  "issues": [
+   "Verified independently: trace rebuilt from build_recipe (common.drive/dwell/concat, rng(case,'trace')) reproduces every stated measurement (trace_distance_km, point_count, first/last fix, gaps, largest step, max implied speed) and check_set's km() gives the same 3-dp figure; fare lines and tolls_erp reconcile in Decimal; 0 < contested <= total_charged; trip timestamps causal; trip inside 2026-08-01..10-05 and filed within 30 days; profile snapshots and counterparty statement precede generated_at; ASCII; no forbidden word in any case-bound field; no party id shared with any other RD/NS case; nothing from the organisers' sample reused.",
+   "Derived: dropoff_amended_at 22:21:30 (original_dropoff Our Tampines Hub, dropoff PLQ), amended_optimal_distance_km/duration null with route_requote_failed -> RD-05 cannot be run and sends the case to RD-10(5), whose own example this is -> ESCALATE; the deciding figure (optimal between amended endpoints; 6.22 km driven before the amendment, 9.98 km after, 7.55 km straight line from the amendment fix to PLQ) is not in the record. Trip record weight 0.75 is disclosed. Agrees with intent (EVIDENCE, INDETERMINATE).",
+   "optional (realism): MSG-04010-003 says 'I changed in the app already' at 22:21:05, 25 s before the destination_changed event (22:21:30)."
+  ],
+  "fixes": [
+   "optional: reword MSG-04010-003 to 'uncle sorry ah can change to Paya Lebar Quarter? I changing in the app now'"
+  ]
+ },
+ {
+  "case_no": 4011,
+  "verdict": "OK",
+  "issues": [
+   "Verified independently: trace rebuilt from build_recipe (common.drive/dwell/concat, rng(case,'trace')) reproduces every stated measurement (trace_distance_km, point_count, first/last fix, gaps, largest step, max implied speed) and check_set's km() gives the same 3-dp figure; fare lines and tolls_erp reconcile in Decimal; 0 < contested <= total_charged; trip timestamps causal; trip inside 2026-08-01..10-05 and filed within 30 days; profile snapshots and counterparty statement precede generated_at; ASCII; no forbidden word in any case-bound field; no party id shared with any other RD/NS case; nothing from the organisers' sample reused.",
+   "Derived: 13.920 - 10.4 = 3.520 km (33.85 %), established, not material; 'followed the navigation app' cites nothing; recomputed 3.80 + 7.80 + 5.32 + 0.80 = 17.72; refund 22.32 - 17.72 = 4.60 (exact multiple) -> PARTIAL_REFUND 4.60 of 6.00. Agrees with intent (EASY)."
+  ],
+  "fixes": [
+   "none required"
+  ]
+ },
+ {
+  "case_no": 4012,
+  "verdict": "OK",
+  "issues": [
+   "Verified independently: trace rebuilt from build_recipe (common.drive/dwell/concat, rng(case,'trace')) reproduces every stated measurement (trace_distance_km, point_count, first/last fix, gaps, largest step, max implied speed) and check_set's km() gives the same 3-dp figure; fare lines and tolls_erp reconcile in Decimal; 0 < contested <= total_charged; trip timestamps causal; trip inside 2026-08-01..10-05 and filed within 30 days; profile snapshots and counterparty statement precede generated_at; ASCII; no forbidden word in any case-bound field; no party id shared with any other RD/NS case; nothing from the organisers' sample reused.",
+   "Derived: 19.320 - 14.6 = 4.720 km (32.33 %), established, not material. The only PIE notice (EV-ADVIS-04012-01) closes Adam Rd-Eng Neo (towards Tuas), 3,331.4 m from every fix and 3,975.2 m west of the dropoff, beyond the booked route's Toa Payoh exit: RD-03 fails on (a)/(c) and its last sentence (corridor the optimal route never uses). Round-1 RD-10(5) hooks are closed: validity 05:00-11:00 covers the trip and shortest_lawful_alternative_km is populated on both notices. TPE roadworks lie on the driver's own route (0.3 m). RD-02: 26.93 - 21.43 = 5.50 = refund_issued_sgd -> the driver's claim fails, NO_ACTION leaves the rider refunded (party-relative). Agrees with intent (REVERSAL)."
+  ],
+  "fixes": [
+   "none required"
+  ]
+ },
+ {
+  "case_no": 4013,
+  "verdict": "OK",
+  "issues": [
+   "Verified independently: trace rebuilt from build_recipe (common.drive/dwell/concat, rng(case,'trace')) reproduces every stated measurement (trace_distance_km, point_count, first/last fix, gaps, largest step, max implied speed) and check_set's km() gives the same 3-dp figure; fare lines and tolls_erp reconcile in Decimal; 0 < contested <= total_charged; trip timestamps causal; trip inside 2026-08-01..10-05 and filed within 30 days; profile snapshots and counterparty statement precede generated_at; ASCII; no forbidden word in any case-bound field; no party id shared with any other RD/NS case; nothing from the organisers' sample reused.",
+   "Derived: 15.920 - 11.2 = 4.720 km (42.14 %), established, not material; MSG-04013-002 (RIDER, 14:33:40, before boarding) meets RD-04(a)-(c) with waypoint_hint Bukit Timah Plaza, but the nearest fix is 3,058.9 m away and no road is named -> RD-14: nothing excluded, RD-10(7) not engaged; recomputed 18.88; 24.66 - 18.88 = 5.78 -> 5.80 of 8.00. Driver's appeal to prior_disputes_filed 9 is context only (GEN-01); deviation_claims_60d 2 < 4. Agrees with intent (PARTIAL_REFUND 5.80, REVERSAL).",
+   "optional (realism, carried from round 1 and still open): the fixes 14:51:40-14:57:00 run north-west then west between Clemenceau Ave and Tanglin along the Orchard Road line, and path_description says 'Orchard Rd west to Tanglin'; Orchard Road is one-way towards Dhoby Ghaut, so a plotted trace reads as driving against the flow. The fixes sit 150-300 m off Orchard Road itself, so the case file alone is ambiguous; only the internal description is plainly wrong."
+  ],
+  "fixes": [
+   "optional: rename the internal path to Orchard Boulevard / Grange Rd westbound; if waypoints are nudged onto Orchard Boulevard keep trace_distance_km within about (15.88, 15.94] so distance_fare stays in (11.91, 11.96] and the refund still rounds to 5.80"
+  ]
+ },
+ {
+  "case_no": 4014,
+  "verdict": "FIX",
+  "issues": [
+   "Verified independently: trace rebuilt from build_recipe (common.drive/dwell/concat, rng(case,'trace')) reproduces every stated measurement (trace_distance_km, point_count, first/last fix, gaps, largest step, max implied speed) and check_set's km() gives the same 3-dp figure; fare lines and tolls_erp reconcile in Decimal; 0 < contested <= total_charged; trip timestamps causal; trip inside 2026-08-01..10-05 and filed within 30 days; profile snapshots and counterparty statement precede generated_at; ASCII; no forbidden word in any case-bound field; no party id shared with any other RD/NS case; nothing from the organisers' sample reused.",
+   "Derived: 17.880 - 12.8 = 5.080 km (39.69 %), established; the driver invokes RD-03 and cites EV-ADVIS-04014-01 by id; it is MISSING; RD-10(5) fires and RD-13(1) states it does not narrow RD-10(5) where the missing identifier is cited -> ESCALATE (RD-02 would equal the 6.05 already refunded). Ruling agrees with intent.",
+   "Label/facts tension: the case is keyed INDETERMINATE / escalation_kind EVIDENCE on the ground that whether an advisory or incident existed cannot be settled, but the MISSING advisory's admissibility note reads 'No traffic advisory was on file for this trip window.' A careful reader takes that as the platform affirmatively recording that no advisory existed, which settles the RD-03/RD-13 question against the driver and turns the case into a policy-forced escalation on clear facts (the POLICY kind, like 4007). That makes the INDETERMINATE label contestable and blurs the brief's 5 + 2 split.",
+   "The same sentence is used on all 13 RD MISSING advisories, so editing 4014 alone would make its note unique and act as a tell."
+  ],
+  "fixes": [
+   "Replace the MISSING-advisory note on all 13 RD cases (4001, 4003-4011, 4013, 4014, 4015), in both traffic_advisories[].admissibility.notes and the admissibility map, with neutral wording that records only the retrieval result, for example: 'Artifact absent: no advisory payload was retrieved for this identifier when the bundle was assembled. The identifier is minted so that the absence itself can be cited.' Status MISSING, issues [MISSING_ARTIFACT], weight 0.0 unchanged. For the uncited cases (4015 and the rest), RD-13 still applies because it keys on the MISSING status, so no ruling changes.",
+   "Keep the claim's 'EV-ADVIS-04014-01' citation (it is what makes RD-13(1)'s carve-out bite). Optionally make it read more like a driver: 'the dispute page show one LTA advisory for this trip, EV-ADVIS-04014-01, pls check'.",
+   "No change to ruling, difficulty or escalation_kind."
+  ]
+ },
+ {
+  "case_no": 4015,
+  "verdict": "OK",
+  "issues": [
+   "Verified independently: trace rebuilt from build_recipe (common.drive/dwell/concat, rng(case,'trace')) reproduces every stated measurement (trace_distance_km, point_count, first/last fix, gaps, largest step, max implied speed) and check_set's km() gives the same 3-dp figure; fare lines and tolls_erp reconcile in Decimal; 0 < contested <= total_charged; trip timestamps causal; trip inside 2026-08-01..10-05 and filed within 30 days; profile snapshots and counterparty statement precede generated_at; ASCII; no forbidden word in any case-bound field; no party id shared with any other RD/NS case; nothing from the organisers' sample reused.",
+   "Derived: 21.601 - 13.9 = 7.701 km (55.40 %), established and MATERIAL (on the percentage). RD-06: deviation_flags_90d 1 of 412, so no pattern (lifetime prior_deviation_flags 7 is not usable, GEN-01). Uncited ECP-accident assertion with a MISSING advisory falls under RD-13(1)-(2): discarded, RD-10(5) not engaged. RD-02 with surge 1.3 from the fare: (3.80 + 10.425 + 6.16) x 1.3 + 0.80 = 27.3005; 43.04 - 27.3005 = 15.7395 -> 15.75. Both gantries are crossed (24.4 m, 23.8 m), off-route, and already inside the refund under RD-09(1). STALE rider profile (0.75) decides nothing; 15.75 > 8.00 is held for release. Agrees with intent (PARTIAL_REFUND 15.75, HARD).",
+   "optional (realism): ERP-G-051 'CTE (northbound) after Moulmein Road' sits at (1.3089, 103.84786), near the Bukit Timah Rd end of the CTE rather than north of Moulmein Rd. Internally consistent (the trace crosses it); the naming could be tightened."
+  ],
+  "fixes": [
+   "optional: rename ERP-G-051 to a name that matches its position (e.g. 'CTE (northbound) after Bukit Timah Road'), or move both the gantry and the trace waypoint north of Moulmein Rd; no effect on any figure"
+  ]
+ }
+]

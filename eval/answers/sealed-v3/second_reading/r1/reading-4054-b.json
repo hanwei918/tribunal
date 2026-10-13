@@ -1,0 +1,46 @@
+{
+  "case_no": 4054,
+  "ruling": "NO_ACTION",
+  "amount_sgd": null,
+  "driver_compensation_sgd": null,
+  "referrals": [],
+  "governing_clauses": [
+    "POL-NS-10",
+    "POL-GEN-03"
+  ],
+  "difficulty_opinion": "REVERSAL",
+  "deciding_facts": [
+    {
+      "evidence_id": "EV-TRIP-04054",
+      "fact": "Rider cancelled; accepted_at to cancelled_at",
+      "value": "12:39:10 -> 12:45:20 = 370 s, outside grace_after_match_sec 180 (grace ended 12:42:10); status CANCELLED_BY_RIDER"
+    },
+    {
+      "evidence_id": "EV-TRIP-04054",
+      "fact": "First ETA shown to rider and the POL-NS-10(f) ETA tolerance",
+      "value": "ETA 9 min at 12:39:10 -> 12:48:10; +180 s -> 12:51:10; cancellation at 12:45:20 is 170 s before the ETA itself, so the late-arrival exception cannot have been met"
+    },
+    {
+      "evidence_id": "EV-TRIP-04054",
+      "fact": "Driver began moving toward pickup within the grace",
+      "value": "driver_en_route event at 12:39:15 (5 s after acceptance)"
+    },
+    {
+      "evidence_id": "EV-GPS-04054",
+      "fact": "Driver distance to pickup pin (haversine, R=6371.0088 km)",
+      "value": "2887.5 m at 12:39:10, rising to 3077.9 m at 12:39:40 (30 s moving away), falling at every fix from 12:39:50 (3061.2 m) to 2124.0 m at 12:42:10 (grace end) and 898.0 m at 12:45:20; closing speed about 6.56 m/s; all 39 fixes accuracy 3.5-8.8 m, 10 s interval, no gaps"
+    },
+    {
+      "evidence_id": "EV-CHAT-04054",
+      "fact": "No driver request to cancel, no vehicle mismatch; driver replied to rider's locating message in 25 s",
+      "value": "MSG-001 12:41:00 rider asks where; MSG-002 12:41:25 driver: U-turn, coming; MSG-003 12:44:50 rider 'so long ah... nvm'"
+    },
+    {
+      "evidence_id": "EV-FARE-04054",
+      "fact": "Charged cancellation fee reconciles with platform_policy",
+      "value": "cancellation_fee 6.61 = rider_gross_cancellation_fee_sgd 6.61 (net 4.50); payment_status CHARGED, refund_issued_sgd 0.00"
+    }
+  ],
+  "reasoning": "1. Scope (POL-GEN-08(1)): NO_SHOW_CHARGE, no safety/complaint flag, rider-filed in-app; in scope. 2. Clause selection: this is a rider's own cancellation before any arrival. POL-NS-01 cannot be the baseline: there is no arrived event (EV-TRIP arrived_at null), the trip was not driver-terminated and the reason code is RIDER_CANCELLED, so limbs (a) and (d) fail; POL-NS-01 sends the case to POL-NS-02/03/05/06/10 'as applicable'. POL-NS-10 is the clause that decides a fee the rider's own cancellation triggered (its notes say it is the only such clause), and limb (f) states expressly that such a fee is chargeable 'whether or not the driver had arrived'. POL-NS-02, -03, -05 and -06 are drafted around a driver-terminated no-show (arrival, dwell, wrong entrance, false marker, premature driver cancellation) and would make limb (f) a dead letter if they were read to refund every pre-arrival rider cancellation; they yield to the specific POL-NS-10(f). 3. POL-NS-10(a): accepted 12:39:10, cancelled 12:45:20 = 370 s > grace_after_match_sec 180 (platform_policy). Not within grace. POL-NS-10(b): on-demand trip, scheduled_at null; n/a. 4. POL-NS-10(f) exceptions, each tested on the record: (i) driver had not begun moving toward pickup within the grace (12:39:10-12:42:10): EV-TRIP driver_en_route at 12:39:15; EV-GPS distance to pin rises 2887.5 -> 3077.9 m only until 12:39:40 (the U-turn the driver describes, ~30-40 s, consistent with his 'less than a minute' statement and MSG-002), then falls at every fix to 2124.0 m by 12:42:10, i.e. about 937 m closer than at its peak within the grace. Exception not met. (ii) not arrived within 180 s of the first ETA shown: ETA 9 min at 12:39:10 = 12:48:10, tolerance to 12:51:10; the rider cancelled at 12:45:20, before even the ETA, so the driver was never late on the record. At the observed closing rate (~6.56 m/s, 3061.2 m at 12:39:50 to 898.0 m at 12:45:20 over 330 s) the remaining 898 m projects to roughly 12:47:37, inside the ETA - supporting, not decisive. Exception not met. (iii) driver asked rider to cancel: EV-CHAT shows no such message (MSG-002 says 'coming already'). Not met. (iv) vehicle/driver mismatch: nothing in EV-TRIP or EV-CHAT. Not met. 5. Therefore under POL-NS-10(f) the fee stands at platform_policy.cancellation_fee_sgd 4.50 net; EV-FARE line 6.61 equals rider_gross_cancellation_fee_sgd 6.61, which fee_schedule.resolution_rule and POL-NS-08(d) accept, so there is no fare defect. 6. Rider's account contradicted by the record: 'the car icon kept moving away' holds only for the first ~30 s after acceptance; EV-GPS shows steady approach for the remaining ~5.5 min. 'Still nowhere near' at 898 m is true but irrelevant: the 9-minute ETA had not elapsed. 7. Other clauses: POL-NS-04 does not apply (driver replied 25 s after MSG-001, within 120 s; also no driver termination). POL-NS-05 no arrival marker. POL-NS-07 not engaged (no verified no-show, no POL-NS-10(g) since the driver never arrived); POL-NS-10 licenses DRIVER_COMPENSATION only on limb (g), so no driver payment - the driver keeps the fee via fee_goes_to DRIVER as the present state. For completeness the anti-farming counters are 1 termination / 150 trips, well under 4 and 0.08. POL-NS-08: no clock skew, no gaps (max 10 s, 39 fixes), chat 4/4 sequential, fare reconciles; not impaired. POL-NS-09: (a) deciding artifacts EV-TRIP, EV-GPS, EV-CHAT, EV-FARE all weight 1.0, confidence cap 1.0 under POL-GEN-02(2); (b) no contradiction between admissible artifacts; (c) disputes_with_counterparty_90d 0+0 < 2; (d) rider no_show_disputes_30d 0, anti-farming not tripped; (e) no impairment. No escalation. POL-NS-11 n/a (rider_track present: 14 fixes 7.0-18.7 m from pin). POL-NS-12 n/a (arrival_marker BUTTON, no arrival event). EV-ADVIS-04054-01 is MISSING (weight 0.0) and carries no fact; no one relies on it (POL-GEN-02). 8. POL-GEN-01: rider rating/cancellation_rate 0.12, driver rating/prior_no_show_flags etc. are context only and are not used. 9. Outcome per POL-GEN-03: the rider's claim is not supported; charge stands; NO_ACTION, amount_sgd null, driver_compensation_sgd null, no referrals. POL-GEN-05: monetary effect 0.00, below execution_threshold_sgd 8.00. POL-GEN-04 appeal route available. POL-RD-14 and route_deviation clauses: wrong category, not applicable.",
+  "doubts": "(1) Literal POL-NS-02 text: 'where the gps_trace contains no qualifying in-radius fix at any point in the 15 minutes preceding the cancellation, the driver never arrived ... and the rider is entitled to a full refund', and POL-NS-06 (zero dwell < 180 s -> refund 'whether or not the rider was present'). Read literally against any pre-arrival cancellation these would give FULL_REFUND 6.61. I reject that reading because POL-NS-10(f) specifically makes a post-grace rider cancellation chargeable 'whether or not the driver had arrived', and those clauses presuppose a driver-terminated no-show (POL-NS-01 routing). A reader who takes POL-NS-02 at face value would rule FULL_REFUND 6.61 citing POL-NS-02/POL-NS-01(b). (2) Exception (i) 'had not begun moving toward the pickup within the grace': the first 30 s the driver moved away; a strict reader might argue the vehicle was not 'moving toward' at that instant, but within the 180 s grace it plainly began approaching (from 12:39:50) and the en-route event is at 12:39:15, so the exception is not met on any reasonable reading. (3) The ETA exception is measured against the first ETA shown (9 min); the rider's subjective expectation is irrelevant. No genuine ambiguity on the amount: no refund, no driver compensation."
+}

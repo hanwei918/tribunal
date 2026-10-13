@@ -1,0 +1,37 @@
+{
+ "case_no": 4005,
+ "verdict": "AGREE",
+ "differences": [
+  {
+   "field": "ruling / amount_sgd / driver_compensation_sgd / referrals",
+   "key": "DRIVER_COMPENSATION, 4.80, 4.80, []",
+   "reader_a": "DRIVER_COMPENSATION, 4.80, 4.80, []",
+   "reader_b": "DRIVER_COMPENSATION, 4.80, 4.80, []",
+   "resolution": "No difference. Both readers match the key to the cent. Independently verified: trace_distance_km 20.570 (recomputed 20.56994, R 6371.0088) minus distance_charged_km 14.20 = 6.370 km > 1.0; 0.75 x 6.370 = 4.7775, rounded UP to 0.05 = 4.80 (Decimal), below the 15.00 cap. Alternative bases a reader might use all give 4.80: spur only 6.350 x 0.75 = 4.7625 -> 4.80; trip_record 20.6 - 14.2 = 6.40 x 0.75 = 4.80. No referral clause fires (not MATERIAL after the RD-04 exclusion, deviation_flags_90d 0, no ERP lines)."
+  },
+  {
+   "field": "governing_clauses",
+   "key": "POL-RD-04, POL-RD-11",
+   "reader_a": "POL-RD-04, POL-RD-11, POL-RD-01, POL-GEN-03",
+   "reader_b": "POL-RD-04, POL-RD-11, POL-RD-01, POL-GEN-03",
+   "resolution": "Key kept. POL-RD-04 licenses DRIVER_COMPENSATION and its compensation limb fixes the rate, rounding and cap; POL-RD-11 applies (fare_model UPFRONT_QUOTE, quoted_fare_sgd non-null) and is the clause that closes the rider-refund route and sends a rider-requested detour on an upfront trip to POL-RD-04 compensation. The readers' extra POL-RD-01 (measurement step, no deviation survives the exclusion) and POL-GEN-03 (ruling vocabulary, amount mirror) are harmless context; the brief says not to lean on POL-GEN-03's universal licence, and neither extra clause decides the ruling or the amount. Not a reason to change the key."
+  },
+  {
+   "field": "difficulty",
+   "key": "HARD",
+   "reader_a": "EASY",
+   "reader_b": "EASY",
+   "resolution": "Key kept. Not REVERSAL: no party's story is contradicted by the record (driver: >6 km extra, 6 min wait, upfront 22.25 - trace 6.37 km excess / 6.35 km spur, 360 s at the stop, quote 22.25 all agree; rider admits the request and is not charged more). Not INDETERMINATE: no escalation. Between EASY and HARD the key's label is a defensible judgment, not an error: the right answer needs a three-step clause chain (RD-04 exclusion of the corroborated spur, RD-11 closing the distance refund and routing the detour cost, then RD-04's separate 'Separately ... may be granted' compensation limb), the obvious trap readings (NO_ACTION because the fare was fixed or because RD-01 finds no deviation after exclusion; paying the 6.00 claimed; 4.78 without rounding up; refund vocabulary for a driver filer) are live, and both readers themselves flag the permissive 'may be granted' and the shortfall-basis question as doubts. Clean evidence and agreed facts alone do not make the policy path easy. A label preference is not grounds to churn the key."
+  },
+  {
+   "field": "rationale",
+   "key": "As written in ground_truth.json for 4005.",
+   "reader_a": "n/a",
+   "reader_b": "n/a",
+   "resolution": "Every number, evidence id and clause id checked and correct: MSG-04005-003 sender RIDER at 15:59:50 (trip started 16:00:20, so before boarding); waypoint_hint (1.4289, 103.8357); first fix at junction (1.4, 103.8335) is index 68 at 16:11:37, 707 s after the message; the vehicle sits at (1.428473, 103.83545) from 16:16:26 to 16:22:26 = 360 s; that point is 55.0 m from the hint (< 200 m); spur between the J fixes 6.350 km; EV-FARE-04005 UPFRONT_QUOTE, quoted_fare_sgd 22.25 = total_charged 22.25; distance_charged_km 14.20; trace_distance_km 20.570; shortfall 6.370; 0.75 x 6.370 = 4.7775 -> 4.80; cap 15.00. Evidence ids EV-CHAT-04005, EV-GPS-04005, EV-FARE-04005 and clause ids POL-RD-04, POL-RD-11, POL-GEN-03 all exist and are used correctly."
+  }
+ ],
+ "analysis": "Both blind readers reach the key's ruling, amount, compensation and referrals exactly; they differ only on difficulty (EASY v key HARD) and add two harmless clauses. Worked from version-6 text: (1) Integrity: TRP-04005 matches on EV-TRIP/EV-GPS/EV-FARE; started_at/ended_at equal first/last fix; 195 fixes, intervals 7-10 s, max step 216.7 m - POL-RD-07(a)-(c) do not fire; every deciding artifact COMPLETE at 1.0, so the POL-GEN-02 cap is 1.0. EV-ADVIS-04005-01 is MISSING but no party asserts a traffic cause or cites it, so POL-RD-10(5)/RD-13 are not engaged. (2) POL-RD-01 as first measured: 20.570 - 14.2 = 6.370 km = 44.86 % (> 20 % and > 0.8 km; not MATERIAL). (3) POL-RD-04: MSG-04005-003 is from the rider, sent before the vehicle leaves the corridor, names Northpoint, waypoint_hint (1.4289, 103.8357); the trace reaches 55.0 m of it (41 fixes within 200 m) and dwells 360 s; the rider's counterparty statement admits the request. POL-RD-14 does not apply (corroborated) and POL-RD-10(7) does not apply (fully corroborated and separable: the out-and-back between the two fixes at J is 6.350 km, trace outside it 14.220 km v optimal 14.2, residual 0.020 km). (4) POL-RD-11: UPFRONT_QUOTE with quoted 22.25 = charged 22.25, no ERP, no waiting fee, so neither RD-11(a) nor (b) yields anything; POL-RD-02 does not run; the rider-requested detour cost is 'compensated under POL-RD-04 instead'. (5) POL-RD-04 compensation limb: billed distance 14.20 < trace 20.570, shortfall 6.370 > 1.0 km; 0.75 x 6.370 = 4.7775 -> UP to 4.80, under 15.00. Every alternative shortfall basis (spur 6.350, rounded trip_record 20.6) also gives 4.80, so the amount is robust. (6) POL-GEN-03: DRIVER_COMPENSATION, amount_sgd mirrors 4.80, rider's charge stands; the payment is platform-funded, consistent with the rider's statement that she should not pay more. POL-GEN-05: 4.80 <= 8.00. No referral (RD-06 not engaged; RD-09(3) no ERP; no RD-09(4) phantom line). Possible competing readings considered and rejected: NO_ACTION via RD-01's 'no deviation exists' (that sentence concerns the rider's deviation claim; the compensation limb is expressly separate and RD-11 routes to it); NO_ACTION via 'may be granted' (RD-11's 'it is compensated under POL-RD-04 instead' is directive and both readers read it so); compensation for the 6-minute wait (no route-deviation clause pays mid-trip waiting; inventing one would breach POL-GEN-07). None gives a second defensible answer on this record, so no case fix is needed. Difficulty HARD is a defensible design label for this multi-clause chain and is kept. Verdict AGREE.",
+ "corrected_ground_truth": null,
+ "case_fix_instructions": null
+}

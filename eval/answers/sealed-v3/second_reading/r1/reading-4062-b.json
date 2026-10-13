@@ -1,0 +1,58 @@
+{
+  "case_no": 4062,
+  "ruling": "ESCALATE",
+  "amount_sgd": null,
+  "driver_compensation_sgd": null,
+  "referrals": [],
+  "governing_clauses": [
+    "POL-NS-09",
+    "POL-GEN-02",
+    "POL-NS-01",
+    "POL-NS-06"
+  ],
+  "difficulty_opinion": "INDETERMINATE",
+  "deciding_facts": [
+    {
+      "evidence_id": "EV-GPS-04062",
+      "fact": "Admissibility of the trace that alone carries the driver's position during the waiting window",
+      "value": "IMPAIRED, weight_multiplier 0.38, issues GPS_DRIFT (HIGH) and PARTIAL_RECORD; GPS_DRIFT alone is 0.5 in the integrity table"
+    },
+    {
+      "evidence_id": "EV-GPS-04062",
+      "fact": "Fixes from arrival marker 12:33:00 to cancellation 12:38:10 (310 s)",
+      "value": "32 fixes, all speed 0, all accuracy <= 21.7 m (all pass the 25 m filter); 16 at 6.2-29.8 m from pin (centroid 6.3 m), 16 at 93.1-137.9 m (centroid 117.9 m); positions alternate between the two clusters; none beyond 400 m"
+    },
+    {
+      "evidence_id": "EV-GPS-04062",
+      "fact": "POL-NS-02 arrival test (3 consecutive qualifying fixes within 50 m, STANDARD zone)",
+      "value": "Met: 12:32:50 (24.1 m), 12:33:00 (14.7 m), 12:33:10 (26.0 m), 12:33:20 (22.6 m)"
+    },
+    {
+      "evidence_id": "EV-GPS-04062",
+      "fact": "Longest continuous in-geofence dwell from first qualifying fix (POL-NS-01(c))",
+      "value": "12:32:50 to 12:33:20, i.e. 30 s on the face of the trace (next fix 12:33:30 at 115.8 m); required 180 s; whether the out-of-radius fixes are drift or the true position cannot be settled on the record"
+    },
+    {
+      "evidence_id": "EV-TRIP-04062",
+      "fact": "Arrival marker type and position at the marker",
+      "value": "BUTTON (driver-pressed, so POL-NS-12 does not apply); fix at 12:33:00 is 14.7 m from pin at 0 km/h, so POL-NS-05 not triggered"
+    },
+    {
+      "evidence_id": "EV-CHAT-04062",
+      "fact": "Driver replies to rider locating messages",
+      "value": "12:34:00 rider -> 12:34:40 driver (40 s); 12:36:30 rider -> 12:36:55 driver (25 s); both within 120 s, so POL-NS-04(b) fails"
+    },
+    {
+      "evidence_id": "EV-DPROF-04062",
+      "fact": "POL-NS-07 anti-farming counters",
+      "value": "no_show_terminations_30d 1 (< 4), 1/150 = 0.0067 (<= 0.08): not tripped"
+    },
+    {
+      "evidence_id": "EV-FARE-04062",
+      "fact": "Charged cancellation fee",
+      "value": "6.61 = platform_policy rider_gross_cancellation_fee_sgd; net 4.50; no POL-NS-08(d) defect"
+    }
+  ],
+  "reasoning": "1. Scope (POL-GEN-08(1)): NO_SHOW_CHARGE, no safety/complaint flag; in scope. Rider-filed, amount_contested 6.61.\n2. Fee figures: EV-TRIP-04062 carries platform_policy (free_wait_sec 180, cancellation_fee_sgd 4.50, gross 6.61, arrival_marker BUTTON, no_show_threshold_sec null); EV-FARE-04062 line 6.61 equals the gross figure, so POL-NS-08(d) is not engaged.\n3. POL-NS-10: the driver cancelled (CANCELLED_BY_DRIVER, RIDER_NO_SHOW), not the rider; limbs (a)-(g) do not apply; not a scheduled trip; no waiting-time fee line.\n4. POL-NS-04: rider's locating messages MSG-04062-003 (12:34:00) and -005 (12:36:30) were answered by the driver in 40 s and 25 s (MSG-04062-004, -006), so limb (b) fails and the clause does not apply. Limb (c) is in any case undecidable because rider_track is empty; under POL-NS-11 that neither helps the rider nor impairs the driver's track, and does not by itself engage POL-NS-08(b)/POL-NS-09(e). The test could not be run; no inference that the rider was elsewhere.\n5. POL-NS-05: at the arrival marker (12:33:00) the coincident fix is 14.7 m from the pin at 0 km/h (haversine, R=6371.0088 km): not >300 m and not >=15 km/h, so the marker is not false; no false-arrival referral. POL-NS-12 does not apply because the marker is BUTTON.\n6. POL-NS-02 (STANDARD, radius 50 m, accuracy filter 25 m): every fix from 12:31:00 onward has accuracy <= 21.9 m and passes the filter. Fixes 12:32:50 (24.1 m), 12:33:00 (14.7 m), 12:33:10 (26.0 m), 12:33:20 (22.6 m) are 4 consecutive qualifying in-radius fixes, so arrival is established and POL-NS-01(a),(b) and (d) (RIDER_NO_SHOW, no boarding, cancellation at 12:38:10 = 310 s after the marker) are met.\n7. POL-NS-01(c) dwell, measured from the first qualifying in-geofence fix (12:32:50): on the face of the trace the driver is in-radius continuously only until 12:33:20 (30 s); at 12:33:30 an admissible fix (acc 19.6 m) is 115.8 m out. Across 12:33:00-12:38:10 the 32 fixes split 16 in (6.2-29.8 m, centroid 6.3 m) and 16 out (93.1-137.9 m, centroid 117.9 m), alternating, every one at 0 km/h, with consecutive jumps of up to 146.8 m. Read literally, continuous dwell 30 s < 180 s -> NS-01(c) fails and POL-NS-06 would refund in full. Read as drift around a stationary car (driver's statement, all-zero speeds), the driver may have held the pin for 310 s >= 180 s -> NS-01 satisfied and POL-NS-07 would pay 0.8 x 4.50 = 3.60. A third reading (car actually at the ~118 m cluster) would send it to POL-NS-03 (within 400 m) with a full refund. Which position is true is exactly what the impaired trace cannot settle.\n8. POL-NS-08: not engaged. (a) marker-to-fix skew 0 s; termination 12:38:10 matches last fix. (b) no gap > 120 s (max 10 s), 32 fixes in window; missing rider_track is neutralised by POL-NS-11. (c) chat MSG-001..007 sequential, 7 = chat_message_count, interval spanning the marker 150 s < 300 s. (d) fare reconciles. So POL-NS-08's PARTIAL_REFUND/escalation sentence does not apply; the GPS_DRIFT tag is a schema-level impairment handled under POL-GEN-02 only.\n9. POL-GEN-02(2): the deciding fact (whether the driver held position inside the 50 m geofence for 180 s, or was outside it) is carried solely by EV-GPS-04062, weight 0.38 (GPS_DRIFT HIGH, PARTIAL_RECORD); even disregarding PARTIAL_RECORD per POL-NS-11 the GPS_DRIFT weight is 0.5. No independent carrier exists: the trip_record arrival is a driver-pressed BUTTON and states no geofence test; the chat holds only the parties' contradictory assertions (driver 'at the pin', rider 'dont see any black car'); EV-ADVIS-04062-01 is MISSING (0.0) and no one invokes it, so POL-NS-06(i) is simply unavailable. Confidence in any ruling - refund or compensation - is therefore capped at <= 0.5 < 0.70, and POL-GEN-02 states that such a fact escalates automatically under POL-NS-09(a).\n10. POL-NS-09: limb (a) triggers (confidence below 0.70). Limbs (c) (0+0 disputes with counterparty), (d) (anti-farming: 1 termination, 1/150 = 0.0067; rider no_show_disputes_30d 0) and (e) (no POL-NS-08 impairment) do not trigger. Escalation is terminal; no monetary ruling; the 6.61 fee is held. Open question for the reviewer: was the stationary car at the pin (6.3 m cluster) or ~118 m away, i.e. did the driver serve a 180 s in-geofence dwell? Record-type evidence (e.g. a full-resolution platform GPS export or dashcam/photo with capture time) would settle it.\n11. POL-GEN-01: profile fields such as ratings, prior_no_show_flags (driver 2) and prior disputes are context only and were not used. POL-GEN-03: ESCALATE carries null amount and null driver compensation. POL-GEN-05: no monetary effect issues. No referral-producing clause fires (no false arrival, no billing integrity issue, no in-radius DRIVER_UNABLE_TO_LOCATE). Route-deviation clauses and POL-RD-14 are out of category.",
+  "doubts": "(1) A strictly literal reader may say every fix passed the 25 m accuracy filter, so the out-of-radius fixes are admissible evidence of absence; continuous dwell is 30 s and POL-NS-06 gives FULL_REFUND 6.61 (or POL-NS-03 FULL_REFUND if the 118 m cluster is taken as the true position, possibly with 50% goodwill 2.25 to the driver under NS-03(ii) since registered_pickup_points is 2 - though the rider named 'by the MRT exit', which is just the pin label). That reading ignores POL-GEN-02's cap, which applies whichever way the trace is read, since the 0.38-weighted trace is the sole carrier. (2) A reader who treats the drift as noise around a stationary car at the pin (in-cluster centroid 6.3 m, all speeds 0, driver statement) would find NS-01 satisfied and rule DRIVER_COMPENSATION 3.60 (0.8 x 4.50) - but that finding too rests solely on the drifting trace and is capped below 0.70. (3) Whether POL-NS-11 lifts PARTIAL_RECORD from the cap (0.5 instead of 0.38) does not matter; both are below the 0.70 floor."
+}

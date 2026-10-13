@@ -1,0 +1,79 @@
+{
+  "case_no": 4062,
+  "verdict": "AGREE",
+  "differences": [
+    {
+      "field": "ruling",
+      "key": "ESCALATE",
+      "reader_a": "ESCALATE",
+      "reader_b": "ESCALATE",
+      "resolution": "All agree. The deciding fact (where the car was 12:33:00-12:38:10, i.e. whether a 180 s in-geofence dwell was served) is carried solely by EV-GPS-04062 at weight 0.38 (GPS_DRIFT 0.5 x PARTIAL_RECORD 0.75 = 0.375). Even with the PARTIAL_RECORD factor set aside under POL-NS-11 the cap is 0.5 < 0.70, so POL-GEN-02(2) sends the case to POL-NS-09(a). No independent carrier: marker is BUTTON (POL-NS-12 inapplicable), the chat holds party assertions, EV-ADVIS-04062-01 is MISSING. Key right."
+    },
+    {
+      "field": "amount_sgd",
+      "key": null,
+      "reader_a": null,
+      "reader_b": null,
+      "resolution": "All null; ESCALATE carries no money (POL-GEN-03, POL-NS-09)."
+    },
+    {
+      "field": "driver_compensation_sgd",
+      "key": null,
+      "reader_a": null,
+      "reader_b": null,
+      "resolution": "All null."
+    },
+    {
+      "field": "referrals",
+      "key": [],
+      "reader_a": [],
+      "reader_b": [],
+      "resolution": "All empty. POL-NS-05 not triggered (marker fix 0 s, 14.7 m, 0 km/h); the POL-NS-01 mis-selected-code referral concerns DRIVER_UNABLE_TO_LOCATE only, here RIDER_NO_SHOW."
+    },
+    {
+      "field": "governing_clauses",
+      "key": [
+        "POL-GEN-02",
+        "POL-NS-09"
+      ],
+      "reader_a": [
+        "POL-NS-09",
+        "POL-GEN-02",
+        "POL-NS-01",
+        "POL-NS-02",
+        "POL-NS-06"
+      ],
+      "reader_b": [
+        "POL-NS-09",
+        "POL-GEN-02",
+        "POL-NS-01",
+        "POL-NS-06"
+      ],
+      "resolution": "Readers add POL-NS-01, POL-NS-02 (A) and POL-NS-06 as the clauses framing the undecided fact; none of them licenses ESCALATE or decides this outcome. The key lists exactly the two clauses that license and fire the escalation (POL-GEN-02(2) cap, POL-NS-09(a) trigger). Readers' extras are harmless; key right."
+    },
+    {
+      "field": "difficulty",
+      "key": "INDETERMINATE",
+      "reader_a": "INDETERMINATE",
+      "reader_b": "INDETERMINATE",
+      "resolution": "All agree: ESCALATE because the evidence cannot settle the deciding fact."
+    },
+    {
+      "field": "rationale: in-radius run length",
+      "key": "no run within 50 m longer than 3 fixes (in the 12:33:00-12:38:10 window)",
+      "reader_a": "4 fixes 12:32:50-12:33:20",
+      "reader_b": "4 fixes 12:32:50-12:33:20",
+      "resolution": "Not a conflict: readers count from the first qualifying fix 12:32:50 (outside the marker-to-cancellation window); within the window the longest run is 12:33:00-12:33:20 = 3 fixes, recomputed with check_set's haversine. Key right."
+    },
+    {
+      "field": "rationale: confidence cap",
+      "key": "0.38, or 0.5 if the rider_track factor is set aside under POL-NS-11",
+      "reader_a": "0.38",
+      "reader_b": "<= 0.5 (0.38, or 0.5 net of PARTIAL_RECORD)",
+      "resolution": "Same conclusion: below 0.70 on either figure. Key's disjunctive statement is accurate and covers POL-NS-11; no change."
+    }
+  ],
+  "analysis": "Recomputed from the case file with check_set's haversine (R = 6371.0088 km): 82 fixes, trace_distance_km 4.539 matches; window 12:33:00-12:38:10 has 32 fixes, all speed 0, accuracy 12.1-21.7 m (all pass the 25 m filter), 16 within 50 m (6.2-29.8 m) and 16 at 93.1-137.9 m to the north-east (far-cluster centroid 117.9 m), 13 of 31 consecutive pairs 84.1-146.8 m apart, longest in-window run within 50 m = 3. Marker 12:33:00 coincides with a fix 14.7 m / 0 km/h (POL-NS-05 not triggered; POL-NS-08(a) no skew). POL-NS-08(b) not engaged (10 s cadence, max gap 10 s, 32 fixes; missing rider_track neutralised by POL-NS-11), (c) chat 7 = 7, sequential, 150 s interval spanning the marker, (d) line 6.61 = gross. So no POL-NS-08/NS-09(e) escalation; the impairment acts through POL-GEN-02 only. Every candidate ruling - POL-NS-01 + POL-NS-07 DRIVER_COMPENSATION 3.60 (0.8 x 4.50), POL-NS-06 FULL_REFUND on a literal 30 s dwell, POL-NS-03 FULL_REFUND with possible 2.25 goodwill on the far cluster - rests solely on EV-GPS-04062, whose weight (0.38; 0.5 net of PARTIAL_RECORD under POL-NS-11) is below 0.70; POL-GEN-02(2) states such a fact escalates automatically under POL-NS-09(a). The burden-of-proof route to a refund (POL-GEN-07(1)/(2)) is reserved to the reviewer and cannot be used by the Judge. POL-NS-04 fails on limb (b) (driver replies at 40 s and 25 s); POL-NS-07 anti-farming 1 < 4 and 1/150 = 0.0067; POL-NS-09(c) 0 + 0, (d) 0; POL-NS-10 n/a (driver termination); POL-NS-12 n/a (BUTTON). Rationale checked number by number (6.61, 3.60, 0.38 = 0.5 x 0.75, 32 fixes, 16/16, 93-138 m, up to 147 m, run 3, 40 s, quoted chat phrases, evidence ids) - all correct. The readers' alternative readings (literal NS-06 refund, drift-as-noise compensation) both depend on the same capped artifact, so they do not make another answer defensible; no case change is needed.",
+  "corrected_ground_truth": null,
+  "case_fix_instructions": null
+}

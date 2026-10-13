@@ -1,0 +1,147 @@
+[
+  {
+    "case_no": 4051,
+    "verdict": "OK",
+    "issues": [
+      "Independently derived before reading intent: POL-NS-04 (a) MSG-04051-002/-003 locating, in the 08:07:00-08:11:10 window; (b) no DRIVER post after 08:04:20 and in_app_calls []; (c) rider_track 8 qualifying fixes, 7 within 100 m (54.9-68.1 m), 1 at 114.0 m -> majority; NS-04 displaces NS-01 (260 s dwell from 08:06:50). FULL_REFUND 6.61 = contested; matches intent. Recomputed: trace 1.5705 km -> 1.571; tap fix 0 s, 7.2 m, 0 km/h, 6.8 km/h into it; chat 4 = 4; weights 0.85 (UNREAD_MESSAGE) / 1.0; no NS-08 limb; no allegation under GEN-08(1)."
+    ],
+    "fixes": []
+  },
+  {
+    "case_no": 4052,
+    "verdict": "OK",
+    "issues": [
+      "Independently derived: rider cancelled 690 s after accepted_at (> 180 grace); NS-02 arrival from 19:30:50 (16.0 m, 3+ qualifying fixes); dwell 280 s > 180 at the 19:35:30 cancellation -> POL-NS-10(g), (f) exceptions excluded (and none on the record: en route 19:24:10, arrival = 7 min ETA); NS-07 clean (0/143) -> DRIVER_COMPENSATION 0.80 x 4.50 = 3.60; matches intent. Trace 2.5544 -> 2.554 km; tap 0 s / 7.7 m / 0 km/h, 5.5 km/h into it; CONGESTION advisory (0.5) decides nothing.",
+      "[optional, does not affect the verdict] Realism across the set: the rider-side fee line here (and in 4055) is the net 4.50 although platform_policy names a gross 6.61, while 4051/4053/4054/4059/4060/4062 charge riders 6.61 under an identical RECORD-PLATFORM block in the same weeks. fee_schedule.resolution_rule and POL-NS-08(d) allow either figure, so nothing is wrong; it only reads as two billing behaviours on one platform."
+    ],
+    "fixes": [
+      "[optional, does not affect the verdict] Either leave as a deliberate net-line variant, or charge the rider 6.61 (fare line, events 'Cancellation fee SGD 6.61 charged ... (SGD 4.50 net to driver)', fee_refunded 6.61, SYSTEM chat text) and keep amount_contested_sgd 4.50 (the driver's net payout); the ruling stays 3.60 and the gross-line trap becomes live."
+    ]
+  },
+  {
+    "case_no": 4053,
+    "verdict": "OK",
+    "issues": [
+      "Independently derived: required continuous dwell 180 s from the first qualifying fix 21:13:50; observed in-radius only to 21:15:00, then a 170 s gap 21:15:00-21:17:50 that contains the 21:17:20 termination -> POL-NS-08(b) (gap > 120 s inside the window) on the sole carrier (BUTTON marker, no NS-12 events; call and chat carry no position) -> NS-08 closing sentence / NS-09(e); GEN-02 cap 0.45 (0.6 net of the rider_track factor per NS-11) < 0.70 -> NS-09(a). ESCALATE (evidence); matches intent. The bounding fixes (9.2 m, 21.9 m moving 8 km/h) do not prove continuity and no NS clause lets a reader bridge the gap. Weight 0.6 x 0.75 = 0.45 exact."
+    ],
+    "fixes": []
+  },
+  {
+    "case_no": 4054,
+    "verdict": "OK",
+    "issues": [
+      "Independently derived: rider cancellation 370 s after acceptance (> 180); NS-10(f) applies 'whether or not the driver had arrived'; exceptions: moving toward the pickup from 12:39:40 (distance falls at every fix, 2124.0 m at grace end), ETA 12:48:10 + 180 s not reached at 12:45:20, no request to cancel, vehicle as booked -> fee stands, NO_ACTION; matches intent. The NS-02 'no in-radius fix in 15 minutes -> full refund' sentence is the designed trap; NS-10(f)'s specific wording and its notes ('the only clause that decides a fee the rider's own cancellation triggered') settle it. Trace 2.4504 -> 2.450 km."
+    ],
+    "fixes": []
+  },
+  {
+    "case_no": 4055,
+    "verdict": "OK",
+    "issues": [
+      "Independently derived: NS-04 (a)(b) hold (MSG-04055-004 09:23:30, no reply, no call), (c) undecidable (rider_track []) -> POL-NS-11: NS-04 cannot exonerate, decide on the driver's evidence; NS-01 holds (in 120 m from 09:21:40, 360 s dwell, RIDER_NO_SHOW); NS-07 clean (2/121) -> DRIVER_COMPENSATION 3.60; matches intent. 'Lobby B' is irrelevant because the driver is inside the radius (NS-03 needs stationary fixes outside it).",
+      "[optional, does not affect the verdict] Approach into the BUTTON tap: the 09:22:00 tap fix reports 0 km/h but the 10 s into it is 35.4 m (12.7 km/h position-derived) after a fix reporting 10 km/h, i.e. a near-instant stop - the pattern r1 smoothed in 4051/4052/4053/4057/4059/4060 but not here. Below 15 km/h on every reading, so POL-NS-05 does not fire; if a reader did call the marker false, NS-05(iii) would attach a false-arrival referral to the same 3.60.",
+      "[optional, does not affect the verdict] governing_clauses lists POL-NS-04, which does not decide this case (NS-11 disables it) and licenses neither D nor anything that applies here; the deciding set is POL-NS-11, POL-NS-01, POL-NS-07 (POL-GEN-01 for the discarded reputational ask).",
+      "[optional, does not affect the verdict] Rider charged the net 4.50 under a block naming gross 6.61 (same cross-set note as 4052)."
+    ],
+    "fixes": [
+      "[optional, does not affect the verdict] Apply the r1 roll-in to the last approach leg (a 10 s slowing segment and a ~20 m, 10 s roll-in into the unchanged 09:22:00 tap fix so position-derived speed into it is <= 10 km/h); keep a qualifying fix inside 120 m before 09:22:00; re-emit and recompute trace_distance_km (3 dp from the written points), fq fields, dwell (stays far above 180 s) and the GPS notes' 'first fix within 120 m' sentence.",
+      "[optional, does not affect the verdict] Trim governing_clauses to POL-NS-11, POL-NS-01, POL-NS-07, POL-GEN-01."
+    ]
+  },
+  {
+    "case_no": 4056,
+    "verdict": "OK",
+    "issues": [
+      "Independently derived: driver stationary 15:12:40-15:19:00 (380 s >= free_wait 300) at 211.7-217.4 m, outside 120 m and within 400 m; tap 214.6 m / 0 km/h (not false: < 300 m, < 15 km/h) -> POL-NS-03: FULL_REFUND 4.50; NS-04 out (replies after 35 s and 30 s); no sub-location from either party and registered_pickup_points 3 -> NS-03(ii) goodwill 0.50 x 4.50 = 2.25, not netted; venue_id match corroborates. Matches intent. GEN-05 sum 6.75 <= 8.00. Trace 3.3454 -> 3.345 km."
+    ],
+    "fixes": []
+  },
+  {
+    "case_no": 4057,
+    "verdict": "OK",
+    "issues": [
+      "Independently derived: free_wait 240 / fee 4.00 from the record; arrival from 07:16:50, 430 s dwell, RIDER_NO_SHOW; no rider message (NS-04 (a) fails); NS-07 1/168 clean -> DRIVER_COMPENSATION 3.20; matches intent. Rider admits oversleeping; filtered rider fixes (35-45 m accuracy) decide nothing. Trace 3.3087 -> 3.309 km; tap 0 s / 8.6 m / 0 km/h, 7.9 km/h into it."
+    ],
+    "fixes": []
+  },
+  {
+    "case_no": 4058,
+    "verdict": "FIX",
+    "issues": [
+      "Ruling re-derived and confirmed (NS-01 holds: in 150 m from 23:41:40, 590 s to the 23:51:30 termination >= 300 and >= the 480 s threshold; NS-04 fails on the 50 s reply, the calls and the 339-361 m rider track; POL-NS-07 anti-farming trips on both limbs, 5 >= 4 and 5/54 = 0.0926 > 0.08 -> POL-NS-09(d) ESCALATE). The defect is in the approach geometry, not the outcome.",
+      "Approach into the BUTTON tap is the one r1 left unsmoothed and it sits on POL-NS-05's speed line: fix 23:41:40 is 133.3 m out at 32 km/h, fix 23:41:50 is 45.0 m out reporting 30 km/h, and the tap fix 23:42:00 (17.2 m) reports 0 km/h; the 10 s into the tap is 41.0 m = 14.8 km/h position-derived, 0.2 km/h under the 15 km/h trigger, with fix accuracies of 8.3 and 8.9 m. The design leg ('into the arrival pickup lane', 132.6 m in 20 s, weights 1.0/0.5) ends at speed and stops instantly at the tap. Every other BUTTON case in the set now has <= 10 km/h into the tap (design check 'approach: position-derived speed into the tap fix <= 10 km/h'); this one would fail that check.",
+      "Effect: a reader who matches the marker by finite difference with an accuracy allowance, or who reads the 30 km/h fix 10 s before the tap, can call the marker false. The ruling stays ESCALATE (NS-05(iii) -> NS-01 -> NS-07 -> NS-09(d)), but a 'POL-NS-05(iii) false-arrival' referral could then be attached, and the case meant to test only the anti-farming escalation acquires a second, near-knife-edge question."
+    ],
+    "fixes": [
+      "Re-time the last approach leg as r1 did elsewhere: e.g. 23:41:30 ~150-190 m at ~20 km/h, 23:41:40 ~90-120 m at <= 18 km/h (keep this fix inside 150 m so the first qualifying fix still precedes the tap), 23:41:50 ~35-40 m at <= 12 km/h, and a 10 s roll-in of <= 25 m into the unchanged tap fix (23:42:00, 17.2 m, 0 km/h) so position-derived speed into it is <= 10 km/h; leave the hold, the departure, the rider_track and every profile counter unchanged.",
+      "Re-emit and recompute from the written points: trace_distance_km (check_set km, 3 dp), max_implied_kph / max_jump_m, fq_ts/fq_d/fq_v, dwell_fq_s (still about 590 s; >= 300 and >= 480 hold), the GPS_TRACE notes sentence 'the first fix within 150 m is 23:41:40 (...)', the deciding_facts/derivation figures that quote 23:41:40 / 133.3 m, and add the 'into the tap <= 10 km/h' design check to 4058."
+    ]
+  },
+  {
+    "case_no": 4059,
+    "verdict": "OK",
+    "issues": [
+      "Independently derived: in-radius runs 18:20:50-18:21:50 (60 s) and 18:24:50 to the 18:26:05 termination (75 s); loop max 182.6 m (< 300); KERB_RESTRICTION advisory line passes 4.0 m from the pin (recomputed 4.03 m), window 07:30-23:00 covers the wait -> NS-06(i) summation 135 s (generous 165 s) < 180 -> NS-06(ii) refund stands, no compensation; driver-filed against a refunded fee -> NO_ACTION; matches intent. NS-03 not engaged (driver moving during the loop). DRIVER_PROFILE 0.4 (CROSS_SOURCE_CONFLICT on vehicle_type) carries no deciding fact. 2026-09-25 is a Friday, so full-day bus-lane hours apply."
+    ],
+    "fixes": []
+  },
+  {
+    "case_no": 4060,
+    "verdict": "OK",
+    "issues": [
+      "Independently derived: rider cancellation 165 s after accepted_at (07:42:20 -> 07:45:05) < 180 -> NS-10(a)/(c): FULL_REFUND 6.61, no compensation; NS-10(g) not reached (80 s dwell). Matches intent. 15 s margin on exact timestamps is not a knife-edge. Trace 0.5592 -> 0.559 km."
+    ],
+    "fixes": []
+  },
+  {
+    "case_no": 4061,
+    "verdict": "OK",
+    "issues": [
+      "Independently derived: GPS_AUTO; driver_arrived 13:06:00 states its geofence test (16 m, 0 km/h); wait_timer_started 13:06:05 / expired 13:10:05 before the 13:14:10 termination; no_show_threshold 360 met (490 s) -> POL-NS-12 carries NS-01(b)(c) independently of the export; export window fixes 5.6/17.8/8.0 m at 0 km/h (null accuracy) contradict nothing; NS-08(b) engaged on the export but it is not the only evidence; NS-08(a) clear (nearest fix 20 s; export spans +35 s / +40 s); NS-07 1/97 -> DRIVER_COMPENSATION 0.80 x 6.00 = 4.80; matches intent. Export weight 0.8 x 0.75 x 0.5 = 0.30 exact.",
+      "[optional, does not affect the verdict] Template echo of the organisers' sample: the wait_timer_expired detail 'Rider had not boarded.' is the sample's sentence verbatim, and the event run (auto-arrival with distance and speed, rider_notified, wait_timer_started, driver_called_rider, wait_timer_expired) follows the sample's order. Numbers, places and story are de-echoed and the mechanism is what POL-NS-12 is about, so this is wording only.",
+      "[optional, does not affect the verdict] Set-level realism: RYDE_X cancellation fees under RECORD-PLATFORM are 4.50 (most cases), 4.00 (4057), 5.50 (4064) and 6.00/8.81 here within Aug-Oct 2026; policy-legal (resolution_rule reads the record) but more spread than one platform's published flat fee."
+    ],
+    "fixes": [
+      "[optional, does not affect the verdict] Reword the timer details in the set's own voice, e.g. wait_timer_started 'Free waiting period 240 s running (to 13:10:05).' and wait_timer_expired 'Free waiting period ended at 13:10:05; no boarding recorded.'"
+    ]
+  },
+  {
+    "case_no": 4062,
+    "verdict": "OK",
+    "issues": [
+      "Independently derived: sole carrier of the driver's position 12:33:00-12:38:10 is EV-GPS-04062 (BUTTON, no NS-12 events, rider_track empty); recomputed window: 32 fixes at 0 km/h, accuracy 12.1-21.7 m, 16 within 50 m (max 29.8 m) and 16 at 93.1-137.9 m, 13 of 31 jumps 84.1-146.8 m, longest in-window run 3; NS-08 not engaged; GEN-02 cap 0.38 (0.5 net of the rider_track factor) < 0.70 -> NS-09(a) ESCALATE; matches intent. Any NS-01/NS-03/NS-06 finding would rest on the same 0.5 artifact.",
+      "[optional, does not affect the verdict] Weight 0.38 is the 2-dp rounding of the product 0.375 (BRIEF section 3 says the weight is the product); FOUNDATION's weight_for rounds to 2 dp by convention and both values are far below 0.70, so nothing moves.",
+      "[optional, does not affect the verdict] GPS notes say 'The longest run of consecutive fixes within 50 m is 3'; true of the arrival-to-cancellation window, but the whole trace has a 4-fix run 12:32:50-12:33:20 that starts 10 s before the marker. A reader checking the note against the trace could think it wrong."
+    ],
+    "fixes": [
+      "[optional, does not affect the verdict] Write 'The longest run of consecutive fixes within 50 m in that window is 3'. Optionally write the weight as 0.375 if the generator's 2-dp convention is relaxed."
+    ]
+  },
+  {
+    "case_no": 4063,
+    "verdict": "OK",
+    "issues": [
+      "Independently derived: completed trip; NS-10(d) measured as NS-01(c) from the first qualifying fix 08:02:20 (20.0 m) to boarding 08:08:45 = 385 s > 180 -> waiting line supported, NS-10(e) not engaged -> NO_ACTION; matches intent. Tap fix 96.2 m at 12 km/h (neither NS-05 trigger). Fare recomputed with Decimal: 3.80 + 1.17 + 1.68 + 0.80 + 5.00 = 12.45; trip segment 1.5586 km = billed 1.56; last fix 1.1 m from the drop-off. Rider's own 'ok wait ah, coming down' at 08:03:10 contradicts her 08:06 story."
+    ],
+    "fixes": []
+  },
+  {
+    "case_no": 4064,
+    "verdict": "OK",
+    "issues": [
+      "Independently derived: tap fix 0 s, 655.8 m, 38 km/h -> POL-NS-05 false; recomputed clock from 19:07:50 (27.4 m), 310 s to the 19:13:00 termination >= 180 -> NS-05(iii) -> NS-01 on the recomputed clock; NS-04 fails on the 19:09:30 in-app call and on the rider_track (1007.8-1246.3 m); NS-07 1/132 -> DRIVER_COMPENSATION 0.80 x 5.50 = 4.40 with the NS-05(iii) false-arrival referral; matches intent. NS-08(c) engaged on the chat (missing -002, 5 vs 6, 470 s spanning the marker) but the chat decides nothing. Trace 4.8751 -> 4.875 km."
+    ],
+    "fixes": []
+  },
+  {
+    "case_no": 4065,
+    "verdict": "OK",
+    "issues": [
+      "Independently derived: AUTHORED-V1 block (fee 8.00 = greater of hub 6.00 and XL 8.00; free_wait 300 after the 2026-09-03 hub change, trip 2026-09-18); first qualifying fix 18:12:30 (98.3 m), 95 s to the 18:14:05 termination < 300 (and < 180) -> POL-NS-06 FULL_REFUND 8.00, no compensation; matches intent. NS-06(i) not asserted (driver's excuse is impatience). Trace 2.4103 -> 2.410 km.",
+      "[optional, does not affect the verdict] Approach: the tap fix 18:12:50 reports 0 km/h after 37.8 m in 10 s (13.6 km/h position-derived) and a 13 km/h fix, a near-instant stop; fix 18:12:20 reports 31 km/h against 14.6 km/h position-derived. If a reader called the marker false, NS-05(i) gives the same FULL_REFUND with no referral, so the outcome is unaffected."
+    ],
+    "fixes": [
+      "[optional, does not affect the verdict] Same roll-in smoothing as r1 (<= 10 km/h into the tap) and align fix 18:12:20's reported speed with its displacement; recompute trace_distance_km and notes."
+    ]
+  }
+]

@@ -1,0 +1,74 @@
+{
+ "case_no": 4012,
+ "verdict": "AGREE",
+ "differences": [
+  {
+   "field": "ruling / amount_sgd / driver_compensation_sgd",
+   "key": "NO_ACTION, null, null",
+   "reader_a": "NO_ACTION, null, null",
+   "reader_b": "NO_ACTION, null, null",
+   "resolution": "No difference. Recomputed with check_set's haversine (R 6371.0088): 170 fixes sum to 19.32006 km, written 19.32 on EV-GPS-04012 (notes 19.320). Max interval 10 s, min 3 s (last fix), max step 166.77 m: POL-RD-07(a)-(c) not met, trace policy-clean. Excess 19.32 - 14.6 = 4.72 km = 32.33 % of the booked optimal on EV-TRIP-04012: > 20 % and > 0.8 km, so ESTABLISHED; < 50 % and < 8.0 km, so not MATERIAL. POL-RD-02 with Decimal, surge 1.0 read from EV-FARE-04012, on-optimal ERP 0.00, waiting 0.00, promo 0.00: recomputed (3.80 + 10.95 + 5.88) x 1.0 + 0.80 = 21.43; refund 26.93 - 21.43 = 5.50 (already a 0.05 multiple; 20.42 % of charged, so not FULL; above de minimis) = refund_issued_sgd 5.50 on EV-FARE-04012. The driver's claim to recover the 5.50 is therefore unsupported and NO_ACTION (party-relative, POL-GEN-03) leaves the rider refunded. Fare lines reconcile: 3.80 + 14.49 + 7.84 + 0.80 = 26.93."
+  },
+  {
+   "field": "POL-RD-03 exoneration (deciding point for the driver)",
+   "key": "fails on limbs (a) and (c); nothing exonerated",
+   "reader_a": "fails on (a) and (c); trap path considered and rejected",
+   "reader_b": "fails on (a) and (c); trap path considered and rejected",
+   "resolution": "No difference. EV-ADVIS-04012-01 closes the PIE (towards Tuas) between the Adam Road and Eng Neo Avenue exits, geometry lng 103.8068-103.815, while the route_planned event on EV-TRIP-04012 leaves the PIE for Toa Payoh Lor 6 and the dropoff is at lng 103.8502. Recomputed: segment's nearest point to the dropoff 3,975.2 m; nearest fix 3,331.4 m (08:16:00); trace never west of lng 103.843573. The optimal route never uses the closed section, so limb (a) fails and RD-03's last sentence (corridor the optimal route never uses) bars any exoneration; limbs (b) and (c) cannot be met either because the vehicle would never reach that segment on the booked route. Corroborating: the advisory's own shortest_lawful_alternative_km 14.6 equals the booked optimal, i.e. the closure adds no distance to this trip. EV-ADVIS-04012-02 (TPE lane-1 roadworks) lies on the driver's own route (segment within 0.3 m of the 08:03:50 fix) and not on the optimal route. Independently, the driver's claim cites no evidence id, so under POL-RD-08 it carries no weight in any case. The alternative reading both readers flagged (apply RD-03's 1.00 km tolerance: justified 1.000, adjusted 15.6 km / 22.4 min, recomputed 22.572, refund 4.358 -> 4.40, i.e. 1.10 back to the driver) is not one a careful reader could reasonably reach on this record; no case fix needed."
+  },
+  {
+   "field": "escalation triggers",
+   "key": "POL-RD-10 not engaged",
+   "reader_a": "not engaged",
+   "reader_b": "not engaged",
+   "resolution": "No difference. RD-10(5): both advisories are present (COMPLETE, weight 1.0), cover the trip window (01: 05:00-11:00; 02: 06:00-12:00; trip 07:51:10-08:19:13) and carry every field RD-03 uses; the driver cites no evidence id, and RD-13's missing-advisory mechanics do not arise. RD-10(1),(2),(3),(4),(6),(7),(8) none fire (all artifacts weight 1.0, ids match, trace clean, timestamps consistent, refund well under 150.00 and under charged_total, no rider instruction in EV-CHAT-04012, every fare line has a counterpart)."
+  },
+  {
+   "field": "referrals",
+   "key": [],
+   "reader_a": [],
+   "reader_b": [],
+   "resolution": "No difference. POL-RD-06 not engaged (not material) and in any case deviation_flags_90d 1 (< 3) and 1/312 = 0.0032 (< 0.05): no pattern, no RD-06(c) referral. No ERP or airport lines, so no RD-09(4) billing-integrity finding."
+  },
+  {
+   "field": "governing_clauses",
+   "key": [
+    "POL-RD-03",
+    "POL-RD-02",
+    "POL-RD-01"
+   ],
+   "reader_a": [
+    "POL-RD-01",
+    "POL-RD-02",
+    "POL-RD-03",
+    "POL-RD-08",
+    "POL-GEN-03"
+   ],
+   "reader_b": [
+    "POL-RD-01",
+    "POL-RD-02",
+    "POL-RD-03",
+    "POL-RD-08",
+    "POL-GEN-03"
+   ],
+   "resolution": "Readers add POL-RD-08 (burden shift) and POL-GEN-03 (party-relative NO_ACTION). Both are relevant but optional: the key already lists the clauses that decide the case and fix the figure (RD-01 establishes the deviation, RD-03 is the invoked excuse that fails, RD-02 fixes 5.50), all three licensing NO_ACTION, and the brief tells authors not to lean on GEN-03's universal licence. Extra harmless clauses in readers' lists are not a reason to change the key. Every key clause applies."
+  },
+  {
+   "field": "difficulty",
+   "key": "REVERSAL",
+   "reader_a": "REVERSAL (notes HARD also arguable)",
+   "reader_b": "REVERSAL (notes HARD also arguable)",
+   "resolution": "No difference. The filing driver's account (an LTA notice closing the PIE at Eunos) is contradicted by the record: the only PIE notice on file closes a section west of the booked route's Toa Payoh exit, and the booked route's PIE stretch past Eunos is covered by no notice. That is a party's story contradicted by the record."
+  },
+  {
+   "field": "rationale facts",
+   "key": "19.320 km, 14.6, 4.720 km, 32.33 %, 05:00-11:00, 3,975.2 m, 3,331.4 m, 21.43, 5.50, evidence ids EV-GPS/TRIP/ADVIS-01/ADVIS-02/FARE-04012, clauses RD-01/02/03/10(5), GEN-03",
+   "reader_a": "same figures; endpoint distances 40-73 m quoted for advisory 02 (reader's own imprecision: the segment itself passes within 0.3 m of a fix)",
+   "reader_b": "same figures; same 40-73 m endpoint remark",
+   "resolution": "Every number, evidence id and clause id in the key rationale verified correct (rationale 1,307 chars, ASCII). '3,331.4 m from every fix' reads as the minimum distance and is accurate in substance; wording only, not changed."
+  }
+ ],
+ "analysis": "Independent re-derivation from the version-6 text matches the key on every compared field. Trace 19.32 km (recomputed 19.32006) vs booked optimal 14.6 km: excess 4.72 km, 32.33 %, established but not material; trace policy-clean under POL-RD-07. The driver's excuse fails under POL-RD-03: the only PIE closure (EV-ADVIS-04012-01) is on a section (Adam Road to Eng Neo Avenue) that the booked route never uses, 3,975.2 m from the dropoff and at least 3,331.4 m from every fix, so limb (a) fails and the clause's last sentence bars exoneration; limb (c) cannot be met; the TPE roadworks notice is on the driver's own route. POL-RD-08 adds that the driver's assertion cites no evidence id. POL-RD-10(5) is not engaged because both advisories are present, cover the window and are fully populated. POL-RD-02 gives 26.93 - 21.43 = 5.50, exactly the refund already issued, so the driver recovers nothing and NO_ACTION under POL-GEN-03 leaves the rider refunded. No referrals (no pattern, no ERP lines). Both blind readers reached the same ruling, money, referrals and difficulty; their only differences are two extra relevant clauses in governing_clauses and a minor imprecision about advisory-02 distances, neither of which warrants a change. The trap reading (applying RD-03's 1.00 km tolerance for a 4.40 refund) is not reasonably supportable on the record, so no case fix is needed.",
+ "corrected_ground_truth": null,
+ "case_fix_instructions": null
+}

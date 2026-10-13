@@ -1,0 +1,84 @@
+{
+  "case_no": 4001,
+  "verdict": "KEY_FIX",
+  "differences": [
+    {
+      "field": "ruling",
+      "key": "NO_ACTION",
+      "reader_a": "NO_ACTION",
+      "reader_b": "NO_ACTION",
+      "resolution": "All agree. Key right."
+    },
+    {
+      "field": "amount_sgd / driver_compensation_sgd",
+      "key": "null / null",
+      "reader_a": "null / null",
+      "reader_b": "null / null",
+      "resolution": "All agree. Key right: no deviation survives, so POL-RD-02 never runs; distance_charged_km 9.56 equals the trace 9.560 km, so the POL-RD-04 compensation limb (shortfall > 1.0 km) is not met."
+    },
+    {
+      "field": "referrals",
+      "key": "[]",
+      "reader_a": "[]",
+      "reader_b": "[]",
+      "resolution": "All agree. No POL-RD-06(c) (not material, deviation_flags_90d 0) and no POL-RD-09(4) (no phantom line)."
+    },
+    {
+      "field": "governing_clauses",
+      "key": [
+        "POL-RD-04",
+        "POL-RD-01"
+      ],
+      "reader_a": [
+        "POL-RD-01",
+        "POL-RD-04",
+        "POL-RD-08",
+        "POL-GEN-02",
+        "POL-GEN-03"
+      ],
+      "reader_b": [
+        "POL-RD-04",
+        "POL-RD-01",
+        "POL-RD-08",
+        "POL-GEN-02",
+        "POL-GEN-03"
+      ],
+      "resolution": "Readers add POL-RD-08 (burden shift), POL-GEN-02 (disclosure of the 0.85 chat) and POL-GEN-03 (vocabulary). These are harmless extras that support but do not decide the ruling; POL-RD-04 and POL-RD-01 both license NO_ACTION and are the deciding pair. Key list stands."
+    },
+    {
+      "field": "difficulty",
+      "key": "REVERSAL",
+      "reader_a": "REVERSAL",
+      "reader_b": "REVERSAL",
+      "resolution": "All agree. The rider's 'one big round' story is contradicted by her own MSG-04001-002 request and the trace stop at Jurong Point."
+    },
+    {
+      "field": "rationale: remaining-excess percentage under POL-RD-01",
+      "key": "0.260 km = 3.51 % (i.e. of the booked 7.4 km)",
+      "reader_a": "0.260 km = 2.8 % of adjusted optimal 9.3 km (also notes 7.660 vs 7.4 = 3.5 %)",
+      "reader_b": "0.260 km = 3.51 % of 7.4",
+      "resolution": "POL-RD-01 defines optimal_distance_km as the adjusted optimal produced by POL-RD-04 where that clause applies, and the 20 % test is against optimal_distance_km; POL-RD-01 also fixes actual_distance_km as gps_trace.trace_distance_km (9.560), so the exclusion goes into the optimal, not the actual. The test figure is therefore 0.260 / 9.300 = 2.80 %. The key's 3.51 % uses the booked 7.4 km as denominator. Outcome unaffected (both far below 20 % and 0.260 < 0.8 km), but the stated POL-RD-01 test number is on the wrong base; key rationale corrected to state 2.80 % of 9.300 km (keeping 3.51 % of 7.4 km as a labelled robustness figure)."
+    },
+    {
+      "field": "rationale: other numbers and ids",
+      "key": "9.560 km, 7.4, 2.160 km, 29.19 %, 10:11:40, 243 s, junction (1.3465, 103.704) at 10:15:43, waypoint_hint (1.33975, 103.7064), stop 180 s at (1.3401, 103.70668), 49.8 m, 0.85, 1.900 km, 9.56 km",
+      "reader_a": "same values",
+      "reader_b": "same values",
+      "resolution": "Recomputed with check_set's haversine (R 6371.0088): trace 9.56001 km; J fixes at index 19 (10:15:43) and 65 (10:23:22); spur 1.90012 km (out 0.95083, back 0.94929); outside spur 7.65989 km; closest fix to waypoint_hint 49.83 m at 10:18:02, 18 speed-0 fixes to 10:21:02 at the same coordinate; MSG-04001-002 10:11:40 is 243 s before the J inbound fix; 2.160/7.4 = 29.19 %. All correct; evidence ids EV-GPS-04001, EV-TRIP-04001, EV-CHAT-04001, MSG-04001-002 correct."
+    }
+  ],
+  "analysis": "Policy v6 applied to the record. POL-RD-08(a): TRP-04001 on EV-TRIP-04001, EV-GPS-04001 and EV-FARE-04001; started_at 10:12:40 equals the first fix. POL-RD-07: 130 fixes, intervals 3-10 s, largest step 122.3 m, no limb (a)-(c) fires; trace weight 1.0. POL-RD-01 raw: trace 9.560 km (governs; trip_record 9.6 not citable) vs booked optimal 7.4 km, excess 2.160 km = 29.19 % > 20 % and > 0.8 km, so the rider's burden is met and it shifts to the driver, whose statement points to the chat. POL-RD-04: MSG-04001-002 is (a) from the RIDER, (b) sent 10:11:40, before the trip started and 243 s before the trace leaves the booked corridor at junction (1.3465, 103.704) at 10:15:43, (c) names Jurong Point with platform waypoint_hint (1.33975, 103.7064). Corroboration: closest fix 49.8 m (< 200 m), and the vehicle holds that coordinate 10:18:02-10:21:02 (180 s), matching MSG-04001-004 and the driver's account. The trace leaves and returns to the identical junction coordinate (fixes 19 and 65); the out-and-back between them is 1.900 km, all attributable to the instruction, so POL-RD-14 (uncorroborated) and POL-RD-10(7) (partly corroborated) are not engaged. POL-RD-01 re-applied with the adjusted optimal 9.300 km: excess 0.260 km = 2.80 % of 9.300 (3.51 % of 7.4 on the alternative base), failing both tests -> no deviation -> NO_ACTION. Robust to any reasonable corridor bracket (straight-line J-stop-J exclusion 1.543 km still leaves 0.617 km). POL-GEN-02: EV-CHAT-04001 IMPAIRED (LANGUAGE_AMBIGUITY, 0.85) carries the instruction; the place is fixed by waypoint_hint and the trace (1.0) corroborates; cap 0.85 >= 0.70, no POL-RD-10(1). POL-RD-10(5) not engaged: the MISSING advisory EV-ADVIS-04001-01 is cited by no party and no traffic cause is asserted (POL-RD-13). POL-RD-09: no ERP lines; (3) bars ERP refund anyway; fare reconciles 3.80 + 7.17 + 5.88 + 0.80 = 17.65. POL-RD-04 compensation limb: billed 9.56 km = trace, no shortfall. POL-RD-05/11/12 not applicable. Ruling, money, referrals, governing clauses and difficulty in the key are right. The only error is the POL-RD-01 percentage in the rationale, which uses the booked 7.4 km rather than the adjusted optimal 9.300 km that POL-RD-01 prescribes once POL-RD-04 applies; corrected. No case fix needed: the alternative answers the readers considered (PARTIAL_REFUND 3.30 on the raw excess, or rejecting POL-RD-04 for the Malay wording) are not defensible on the text because waypoint_hint fixes the place and the trace corroborates it to 50 m.",
+  "corrected_ground_truth": {
+    "expected_ruling": "NO_ACTION",
+    "expected_amount_sgd": null,
+    "expected_driver_compensation_sgd": null,
+    "expected_referrals": [],
+    "governing_clauses": [
+      "POL-RD-04",
+      "POL-RD-01"
+    ],
+    "difficulty": "REVERSAL",
+    "rationale": "NO_ACTION. EV-GPS-04001 (COMPLETE) measures 9.560 km against optimal_distance_km 7.4 on EV-TRIP-04001, a raw excess of 2.160 km (29.19 %), so the burden shifts. POL-RD-04 then excludes the detour: MSG-04001-002 on EV-CHAT-04001 is from the rider, sent 10:11:40 before boarding, 243 s before the trace leaves the corridor at junction (1.3465, 103.704) at 10:15:43, and names Jurong Point with waypoint_hint (1.33975, 103.7064); the trace stops 180 s at (1.3401, 103.70668), 49.8 m from the hint. EV-CHAT-04001 is IMPAIRED (LANGUAGE_AMBIGUITY, weight 0.85) for the Malay words singgah and kejap, but the place is fixed by waypoint_hint and 0.85 is above the 0.70 floor (POL-GEN-02). The out-and-back spur between the junction fixes measures 1.900 km and is excluded: the POL-RD-04 adjusted optimal is 7.4 + 1.900 = 9.300 km, and the remaining excess 9.560 - 9.300 = 0.260 km is 2.80 % of 9.300 km (3.51 % even against the booked 7.4 km), below both 20 % and 0.8 km, failing both POL-RD-01 tests, so no deviation exists. POL-RD-09(3) bars an ERP refund on a rider-caused detour and the fare billed the full 9.56 km, so no compensation arises. The rider's claim of a roundabout route is contradicted by her own instruction."
+  },
+  "case_fix_instructions": null
+}

@@ -1,0 +1,48 @@
+{
+ "case_no": 4007,
+ "verdict": "AGREE",
+ "differences": [
+  {
+   "field": "ruling / amount_sgd / driver_compensation_sgd / referrals",
+   "key": "ESCALATE, null, null, []",
+   "reader_a": "ESCALATE, null, null, []",
+   "reader_b": "ESCALATE, null, null, []",
+   "resolution": "No difference. Both readers match the key. Escalation trigger named by all three: POL-RD-10(8)."
+  },
+  {
+   "field": "governing_clauses",
+   "key": [
+    "POL-RD-10"
+   ],
+   "reader_a": [
+    "POL-RD-10",
+    "POL-RD-01",
+    "POL-RD-09",
+    "POL-GEN-03"
+   ],
+   "reader_b": [
+    "POL-RD-10",
+    "POL-RD-09",
+    "POL-GEN-03"
+   ],
+   "resolution": "Key right. POL-RD-10 licenses ESCALATE (licenses array ESCALATE only) and its limb (8) is the trigger that fires; no amount is fixed on an ESCALATE. The readers' extras are harmless context, not errors in the key: POL-RD-09 is read only to show that its limb (4) does NOT reach a cancellation-fee line (so RD-10(8)'s carve-out is unavailable) - it does not apply and so is correctly left out of the key; POL-RD-01 would establish a non-material deviation but cannot issue a ruling under RD-10; POL-GEN-03 is the universal vocabulary clause the brief says not to lean on. No clause is missing from the key and none listed is inapplicable."
+  },
+  {
+   "field": "difficulty",
+   "key": "HARD",
+   "reader_a": "HARD",
+   "reader_b": "HARD",
+   "resolution": "No difference. Not INDETERMINATE: every deciding fact is settled by COMPLETE weight-1.0 artifacts; the escalation is required by policy text (a POLICY escalation). Not REVERSAL: no party's story is contradicted by the record (rider's PIE/Eunos route and 'never cancel' are borne out; driver's 'never cancel' is borne out; his 'PIE faster' is unsupported, not contradicted). Not EASY: the obvious RD-02 refund must be withheld because of RD-10(8) and the narrow RD-09(4) carve-out."
+  },
+  {
+   "field": "rationale (numbers, evidence ids, clause ids)",
+   "key": "EV-FARE-04007 cancellation_fee 4.50, total 24.24; EV-TRIP-04007 COMPLETED, cancellation fields null, no cancellation event; EV-GPS-04007 continuous trip; 11.600 vs 7.9 km, 46.84 %, not material; RD-02 would give 9.25; 10.00 contested held; POL-RD-10(8), POL-RD-09(4), POL-RD-02 cited.",
+   "reader_a": "Same facts and figures (trace recomputed 11.5997; recomputed fare 15.005; refund 9.235 -> 9.25).",
+   "reader_b": "Same facts and figures (trace recomputed 11.5997; recomputed fare 15.005; refund 9.235 -> 9.25).",
+   "resolution": "Every number, evidence id and clause id in the key's rationale verified independently (see analysis). The phrase 'an airport surcharge on a non-airport trip' paraphrases RD-09(4)'s 'a trip that does not ORIGINATE at an airport'; this is a stylistic compression, not a factual error about this case (no airport line exists here), and is not a reason to change the key. Rationale is 898 characters, ASCII."
+  }
+ ],
+ "analysis": "Independent working on the version-6 text. (1) Scope and identity: ROUTE_DEVIATION, no safety_flag or complaint_flag, no damage/cleaning/violence/harassment/discrimination allegation, so POL-GEN-08(1) does not route it. trip_id TRP-04007 matches on EV-TRIP-04007, EV-GPS-04007 and EV-FARE-04007; started_at 20:36:10 and ended_at 20:58:57 equal the first and last fix; no timestamp runs backwards. RD-10(2) and RD-10(4) do not fire. (2) Trace integrity: 138 fixes, every interval 10 s or less (max gap 10.0 s), largest consecutive step 136.18 m (checker haversine, R 6371.0088), cadence 10 s; none of POL-RD-07(a)-(c) is met and all deciding artifacts are COMPLETE at weight 1.0. RD-10(1) and RD-10(3) do not fire. (3) POL-RD-01: haversine sum over the 138 fixes = 11.59968 km, written 11.6 (11.600); first fix 0 m from the pickup pin and last fix 0 m from the dropoff pin. Excess 11.600 - 7.9 = 3.700 km = 46.835 % of 7.9: above 20 % and above 0.8 km, so established; below 50 % and below 8.0 km, so not material. The trace reaches lng 103.9033 (Eunos) before returning west, matching the rider's account. (4) Exculpatory clauses: no traffic advisory (EV-ADVIS-04007-01 MISSING, weight 0.0) and the driver's 'PIE faster' cites no evidence id, so under POL-RD-13(1) it is not a POL-RD-10(5) trigger and under RD-08/RD-13(2) it carries no weight. Chat has no rider routing instruction and no waypoint_hint (RD-04/RD-14 not engaged); no amendment fields (RD-05); RYDE_TAXI not pool (RD-12); METERED (RD-11 not engaged); RD-06 not consulted on a non-material deviation, and deviation_flags_90d 0 of 350 would give no pattern anyway. (5) Would-be RD-02 figure, Decimal arithmetic: recomputed_fare = (3.80 + 0.75 x 7.9 + 0.28 x 16) x 1.0 (surge from EV-FARE-04007) + 0.80 + 0.00 on-route ERP + 0.00 waiting - 0.00 promo = 15.005; charged_total 24.24 (fare lines 3.80 + 8.70 + 6.44 + 0 + 0 + 0 + 0.80 + 4.50 + 0 - 0 = 24.24, reconciles); refund 9.235, rounded up to 9.25 = 38.1 % of charged_total, above de minimis, below 90 %, below 150.00 and below charged_total. (6) Deciding point, POL-RD-10(8): every fare line except one has a counterpart - base 3.80 and platform fee 0.80 inherent to the trip, distance 0.75 x 11.60 = 8.70 against the trace, time 0.28 x 23 = 6.44 against a 22.78-min trip recorded as 23 min in the trip_completed event. The cancellation_fee line 4.50 has no counterpart anywhere in the gps_trace or trip_record: status COMPLETED, cancelled_at / cancelled_by / cancellation_reason_code all null, none of the six events is a cancellation, platform_policy null, and the trace is an unbroken pickup-to-dropoff carriage. RD-10(8)'s only carve-out is a line refunded under POL-RD-09(4), whose text is limited to 'a charge line for a gantry the gps_trace never passes, or an airport surcharge on a trip that does not ORIGINATE at an airport'; a cancellation fee is neither, so the carve-out is unavailable. RD-10 is mandatory ('must NOT issue a final ruling ... whenever any of the following holds') and terminal (POL-GEN-03): ESCALATE, null money, 10.00 held, no referral (RD-09(4) referral attaches only to lines refunded under that limb; RD-06(c) needs a pattern). (7) No other clause rescues the case: the no-show file governs NO_SHOW_CHARGE disputes, and even read across, POL-NS-01's non-chargeable route sends the refund to NS-02/03/05/06/10, none of which fits a trip with no cancellation; POL-GEN-07 would also yield ESCALATE. (8) Alternative considered and rejected (raised by both readers in their doubts and also the blueprint's named trap): PARTIAL_REFUND 9.25 on the theory that the RD-02 refund already returns the 4.50 because it is inside charged_total. That reading needs either an unwritten carve-out to RD-10(8) for lines comprehended by RD-02, or an extension of RD-09(4) beyond its two named line types; RD-09(1)'s 'comprehended' language is confined to off-route ERP. On the text it is not a defensible answer for a careful reader, and both blind readers independently rejected it on exactly these grounds, so the case does not need a fact change. Conclusion: the key's ruling, null amounts, empty referrals, governing clause POL-RD-10, difficulty HARD and every figure in the rationale are correct. Verdict AGREE.",
+ "corrected_ground_truth": null,
+ "case_fix_instructions": null
+}

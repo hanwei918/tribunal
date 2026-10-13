@@ -1,0 +1,58 @@
+{
+  "case_no": 4004,
+  "ruling": "FULL_REFUND",
+  "amount_sgd": 6.5,
+  "driver_compensation_sgd": null,
+  "referrals": [],
+  "governing_clauses": [
+    "POL-RD-11",
+    "POL-RD-01",
+    "POL-RD-08",
+    "POL-GEN-03"
+  ],
+  "difficulty_opinion": "EASY",
+  "deciding_facts": [
+    {
+      "evidence_id": "EV-FARE-04004",
+      "fact": "fare_model",
+      "value": "UPFRONT_QUOTE"
+    },
+    {
+      "evidence_id": "EV-FARE-04004",
+      "fact": "quoted_fare_sgd",
+      "value": 17.9
+    },
+    {
+      "evidence_id": "EV-FARE-04004",
+      "fact": "total_charged (re-rated metered: 3.80 + 0.75x16.32 + 0.28x27 + 0.80)",
+      "value": 24.4
+    },
+    {
+      "evidence_id": "EV-FARE-04004",
+      "fact": "pass-through/statutory lines properly chargeable (tolls_erp, airport_surcharge, waiting_time_fee); erp_gantries empty",
+      "value": 0.0
+    },
+    {
+      "evidence_id": "EV-TRIP-04004",
+      "fact": "fare_rerated event: upfront 17.90 replaced by metered 24.40 'after route change'; no pickup/dropoff amendment (pickup_amended_at, dropoff_amended_at null)",
+      "value": "re-rating not justified by any policy clause"
+    },
+    {
+      "evidence_id": "EV-CHAT-04004",
+      "fact": "no rider route instruction; no waypoint_hint (2 pickup-coordination messages only)",
+      "value": "POL-RD-04 not engaged"
+    },
+    {
+      "evidence_id": "EV-GPS-04004",
+      "fact": "trace_distance_km recomputed (haversine R=6371.0088), 164 fixes, max interval 10 s, max step 150.1 m",
+      "value": 16.3203
+    },
+    {
+      "evidence_id": "EV-TRIP-04004",
+      "fact": "optimal_distance_km / optimal_duration_min",
+      "value": "12.1 / 20"
+    }
+  ],
+  "reasoning": "1. Scope: category ROUTE_DEVIATION, rider-filed, no safety/complaint flag, no property-damage allegation -> in scope under POL-GEN-08(1). No-show clauses POL-NS-01..10 and amendments POL-NS-11 and POL-NS-12 concern cancellation fees on no-show trips; this is a COMPLETED trip with cancellation_fee 0.00 and platform_policy null, so none applies. 2. Identity (POL-RD-08(a), POL-RD-10(2),(4)): trip_id TRP-04004 matches on EV-TRIP-04004, EV-GPS-04004, EV-FARE-04004; first/last GPS fixes equal started_at 20:47:20 and ended_at 21:14:29 and the pickup/dropoff coordinates exactly; no timestamps run backwards. 3. Trace integrity (POL-RD-07): recomputed 164 fixes, max interval 10 s (<90 s), max step 150.1 m (<500 m), cadence 10 s (<30 s) -> not impaired; all core artifacts weight 1.0. 4. POL-RD-01 threshold on gps_trace.trace_distance_km: recomputed 16.3203 km (record 16.32). Excess = 16.3203 - 12.1 = 4.2203 km = 34.88% of optimal: >20% and >0.8 km -> deviation ESTABLISHED; <50% and <8.0 km -> NOT material, so the POL-RD-06 check is not required (and driver_profile.deviation_flags_90d = 0 of 280 completed_trips_90d would establish no pattern anyway; prior_deviation_flags 2 is a lifetime counter, context only under POL-GEN-01). POL-RD-08: rider_profile.deviation_claims_60d = 1 (<4), so no extra corroboration requirement. 5. Exculpation: no traffic_advisory (EV-ADVIS-04004-01 MISSING, weight 0.0); the driver asserts only 'I just follow the navigation', cites no evidence ID and invokes no clause -> discarded under POL-RD-08; no external traffic cause is asserted, so POL-RD-13 is not engaged, and since no party invoked an exculpatory clause against the missing advisory POL-RD-10(5) does not fire. POL-RD-04/POL-RD-14: chat_log holds no rider instruction. POL-RD-05: no amendment. POL-RD-12: vehicle RYDE_X, not pool. 6. Remedy: fare_breakdown.fare_model is UPFRONT_QUOTE and quoted_fare_sgd 17.90 is non-null, so POL-RD-11 governs and POL-RD-02 does not run. Under POL-RD-11(a) the rider is refunded in full any amount by which charged_total exceeds quoted_fare_sgd plus properly chargeable pass-through lines: ERP 0.00 (no gantries), airport surcharge 0.00, waiting_time_fee 0.00, so the ceiling is 17.90. Refund = 24.40 - 17.90 = 6.50; rounding up to SGD 0.05 leaves 6.50. The platform's fare_rerated event replaced the binding upfront quote with a metered fare for a route change that no clause attributes to the rider (no chat instruction, no pin/address amendment); under POL-RD-11 the loss from a detour falls on the driver/platform, not the rider. POL-RD-09(4): no phantom gantry or wrongly applied airport surcharge -> no billing-integrity referral. POL-RD-10(8): every ledger line (base, distance 16.32 km = trace, time 27 min ~ trace 27.15 min, platform fee) has a counterpart in the trace/record -> not triggered. POL-RD-10(6): 6.50 < 150 and < 24.40. 7. Ruling vocabulary (POL-GEN-03): the refund equals the whole amount_contested_sgd 6.50 -> FULL_REFUND, amount_sgd 6.50, no driver compensation. Confidence: deciding facts on EV-FARE-04004 and EV-TRIP-04004, both weight 1.0, cap 1.0 (POL-GEN-02) -> above the 0.70 floor. POL-GEN-05: 6.50 <= execution_threshold_sgd 8.00, executed automatically, subject to POL-GEN-04 appeal. Referrals: none (deviation not material, no pattern, no billing-integrity finding under POL-RD-09(4)).",
+  "doubts": "(1) One could argue the platform's re-rating to a metered fare converts the trip to METERED, so POL-RD-02 runs instead: recomputed_fare = 3.80 + 0.75x12.1 + 0.28x20 + 0.80 = 19.275, refund 24.40 - 19.275 = 5.125 -> 5.15 PARTIAL_REFUND. I reject this because fare_breakdown.fare_model is recorded as UPFRONT_QUOTE with quoted_fare_sgd non-null, which is exactly the trigger POL-RD-11 names, and POL-RD-11(a) is written for a charge exceeding the quote. (2) Whether the excess over the quote is better labelled a billing-integrity finding under POL-RD-09(4) (adding a referral) - the limb is confined to phantom gantries and wrong airport surcharges, so I add no referral. (3) PARTIAL_REFUND vs FULL_REFUND label: under POL-GEN-03 FULL_REFUND means the whole contested amount (6.50) is returned, which it is, even though it is not the whole fare; POL-RD-11 licenses FULL_REFUND."
+}

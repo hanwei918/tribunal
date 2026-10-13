@@ -1,0 +1,49 @@
+{
+  "case_no": 4012,
+  "ruling": "NO_ACTION",
+  "amount_sgd": null,
+  "driver_compensation_sgd": null,
+  "referrals": [],
+  "governing_clauses": [
+    "POL-RD-01",
+    "POL-RD-02",
+    "POL-RD-03",
+    "POL-RD-08",
+    "POL-GEN-03"
+  ],
+  "difficulty_opinion": "REVERSAL",
+  "deciding_facts": [
+    {
+      "evidence_id": "EV-GPS-04012",
+      "fact": "trace_distance_km (governs under POL-RD-01; recomputed haversine R=6371.0088 over 170 fixes = 19.3201)",
+      "value": 19.32
+    },
+    {
+      "evidence_id": "EV-TRIP-04012",
+      "fact": "optimal_distance_km / optimal_duration_min stored at booking (PLATFORM_ROUTER_AT_BOOKING); booked route leaves the PIE for Toa Payoh Lor 6",
+      "value": "14.6 km / 21 min"
+    },
+    {
+      "evidence_id": "EV-GPS-04012",
+      "fact": "excess over booked optimal and percentage",
+      "value": "4.72 km = 32.33% (established: >20% and >0.8 km; not material: <50% and <8 km)"
+    },
+    {
+      "evidence_id": "EV-ADVIS-04012-01",
+      "fact": "PIE closure segment is between Adam Road exit and Eng Neo Avenue exit (lng 103.807-103.815), west of the dropoff (lng 103.8502); not at Eunos; booked route never reaches it; closest trace fix is 3.33 km away",
+      "value": "corridor not on optimal route - POL-RD-03(a) fails"
+    },
+    {
+      "evidence_id": "EV-ADVIS-04012-02",
+      "fact": "TPE lane-1 roadworks lie on the route the driver actually drove (trace passes within 40-73 m of its geometry), not on the optimal route",
+      "value": "corridor not on optimal route - POL-RD-03(a) fails"
+    },
+    {
+      "evidence_id": "EV-FARE-04012",
+      "fact": "METERED, surge 1.0, total_charged 26.93, no ERP lines, refund_issued_sgd 5.50 already paid to the rider",
+      "value": "POL-RD-02 refund = 26.93 - 21.43 = 5.50"
+    }
+  ],
+  "reasoning": "1. Scope/vocabulary: driver-filed ROUTE_DEVIATION dispute contesting the SGD 5.50 the platform refunded to the rider (EV-FARE-04012 payment_status PARTIALLY_REFUNDED, refund_issued_sgd 5.50). Under POL-GEN-03 NO_ACTION on a driver-filed dispute leaves the rider refunded. All eight artifacts are admissibility COMPLETE, weight 1.0, so POL-GEN-02 imposes no disclosure or cap. No safety/complaint flag (POL-GEN-08(1) not engaged).\n2. Identity/integrity (POL-RD-08(a), POL-RD-10(2),(4)): trip_id TRP-04012 matches on trip_record, gps_trace and fare_breakdown; first fix 07:51:10 = started_at and equals the pickup coordinate, last fix 08:19:13 = ended_at at the dropoff coordinate. POL-RD-07: max interval 10 s, max step 166.8 m, no gaps -> trace is not impaired; RD-07 consequences and RD-10(3) do not fire.\n3. POL-RD-01: trace_distance_km 19.32 (EV-GPS-04012; my recomputation 19.3201) governs. Optimal 14.6 km (EV-TRIP-04012). Excess = 19.32 - 14.6 = 4.72 km = 32.33% of optimal: > 20% and > 0.8 km, so a deviation is ESTABLISHED. Not MATERIAL (32.33% < 50%, 4.72 < 8.0 km), so POL-RD-06 is not mandatorily consulted; in any case deviation_flags_90d = 1 and 1/312 = 0.0032 < 0.05, so no pattern and no RD-06(c) referral. POL-RD-08 rider-side factor: deviation_claims_60d = 1 (< 4), no extra corroboration needed. Other profile fields (rating, prior_deviation_flags 2, prior_disputes etc.) are context only under POL-GEN-01 and are not used.\n4. Burden shifts to the driver (POL-RD-08), who invokes a closure (POL-RD-03). POL-RD-03(a) requires an advisory naming a road/segment the OPTIMAL route traverses. EV-ADVIS-04012-01 is a PIE (towards Tuas) closure between the Adam Road and Eng Neo Avenue exits, geometry lng 103.807-103.815; the booked route (route_planned event) leaves the PIE for Toa Payoh Lor 6 and the dropoff is at lng 103.8502, so the optimal route never reaches that segment, and nothing in the record places a closure 'at Eunos' as the driver claims. EV-ADVIS-04012-02 is a TPE lane closure on the route the driver chose (trace within 40-73 m of its geometry), which the optimal route never uses. Under POL-RD-03's last sentence an advisory covering a corridor the optimal route never uses exonerates nothing. Limb (c) also fails: the vehicle left the PIE corridor at Tampines and never rejoined the PIE (closest fix to the closure 3.33 km). POL-RD-03 unavailable; no partial exoneration. The driver's claim 'got LTA notice' cites no evidence id; the advisories that are in the pool exist and cover the window, so POL-RD-10(5) is not triggered - the clause is simply not met on the artifacts. POL-RD-13 consequences concern a MISSING advisory and do not apply. POL-RD-04/RD-14: the chat (EV-CHAT-04012, 2 messages, pre-trip greetings) holds no rider instruction. POL-RD-05: no amendment timestamps. POL-RD-11: METERED, not upfront. POL-RD-12: RYDE_X, not pooled. POL-RD-09: no ERP/airport lines, nothing to pass through or flag; every fare line has a counterpart (RD-10(8) not fired).\n5. POL-RD-02 arithmetic (METERED, surge 1.0 read from EV-FARE-04012): charged_total = 26.93 (3.80 + 0.75x19.32=14.49 + 0.28x28=7.84 + 0.80, reconciles). recomputed_fare = (3.80 + 0.75x14.6 + 0.28x21) x 1.0 + 0.80 + 0 ERP + 0 surcharge + 0 waiting - 0 promo = (3.80 + 10.95 + 5.88) + 0.80 = 21.43. Refund = 26.93 - 21.43 = 5.50, rounded up to 0.05 = 5.50; above 0.50 de minimis and 20.4% of charged_total (< 90%, so partial not full). The rider is owed exactly the 5.50 already refunded.\n6. Disposition: the driver's claim that the 5.50 deduction was unwarranted is not supported; the platform refund equals the policy figure. Ruling NO_ACTION (POL-GEN-03): payment_status and refund_issued_sgd stay as they are; amount_sgd and driver_compensation_sgd null; no referrals. Monetary effect of this ruling is 0, below the POL-GEN-05 threshold of 8.00. Confidence high (all deciding artifacts weight 1.0; above 0.70 floor, so POL-RD-10(1) not engaged). Provisional ruling, appealable under POL-GEN-04.",
+  "doubts": "(1) If a reader treated EV-ADVIS-04012-01 as covering the booked PIE corridor (e.g. accepting the driver's 'closed at Eunos' description), POL-RD-03 would cap the justified excess at min(4.72, 1.30x(14.6-14.6)+1.00) = 1.00 km; adjusted optimal 15.6 km, duration 21x15.6/14.6 = 22.4 min, recomputed fare 3.80+11.70+6.272+0.80 = 22.572, refund 4.358 -> 4.40 to the rider, so the driver would recover 1.10 (PARTIAL_REFUND 1.10). I reject this because the advisory's segment (Adam Road-Eng Neo, west of the dropoff) is plainly off the booked route and not at Eunos. (2) The driver mentions 'LTA notice' without an evidence id; one could argue the notice he means is absent from the pool and invoke POL-RD-10(5) (ESCALATE), but two LTA advisories covering the window are in the pool and the driver's claim is tested against them; I do not consider that a missing cited artifact. (3) Difficulty: labelled REVERSAL because the filing driver's account (PIE closed at Eunos per LTA notice) is contradicted by the LTA record itself; HARD would also be defensible."
+}

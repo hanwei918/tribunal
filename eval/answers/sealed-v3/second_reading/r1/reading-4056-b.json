@@ -1,0 +1,64 @@
+{
+  "case_no": 4056,
+  "ruling": "FULL_REFUND",
+  "amount_sgd": 4.5,
+  "driver_compensation_sgd": 2.25,
+  "referrals": [],
+  "governing_clauses": [
+    "POL-NS-03",
+    "POL-NS-01",
+    "POL-NS-02",
+    "POL-NS-04",
+    "POL-GEN-03"
+  ],
+  "difficulty_opinion": "HARD",
+  "deciding_facts": [
+    {
+      "evidence_id": "EV-GPS-04056",
+      "fact": "Driver stationary block 15:12:40-15:19:00 (39 fixes, speed 0, accuracy 6.0-11.9 m): haversine distance to trip_record.pickup (1.4295,103.836)",
+      "value": "211.7-217.4 m; outside LARGE_VENUE arrival radius 120 m, within 400 m ceiling"
+    },
+    {
+      "evidence_id": "EV-GPS-04056",
+      "fact": "Qualifying in-radius driver fixes (accuracy <=25 m, <=120 m from pin) anywhere in trace / in 15 min before 15:19:00",
+      "value": "0; nearest approach 211.7 m"
+    },
+    {
+      "evidence_id": "EV-GPS-04056",
+      "fact": "Stationary dwell outside radius vs required free_wait_sec 300 (trip_record.platform_policy)",
+      "value": "380 s (15:12:40 to 15:19:00), >= 300 s; max sample gap 10 s"
+    },
+    {
+      "evidence_id": "EV-GPS-04056",
+      "fact": "venue_id on stationary fixes vs trip_record.pickup.venue_id",
+      "value": "VEN-YS-0031 = VEN-YS-0031 (match: wrong face of same venue corroborated)"
+    },
+    {
+      "evidence_id": "EV-TRIP-04056",
+      "fact": "Arrival marker 15:12:40 matched to GPS fix 15:12:40",
+      "value": "214.6 m from pin, 0 km/h: not a false marker under POL-NS-05 (<=300 m, <15 km/h)"
+    },
+    {
+      "evidence_id": "EV-CHAT-04056",
+      "fact": "Rider locating messages answered by driver within 120 s",
+      "value": "15:13:30 -> 15:14:05 (35 s); 15:16:10 -> 15:16:40 (30 s); POL-NS-04 limb (b) fails"
+    },
+    {
+      "evidence_id": "EV-CHAT-04056",
+      "fact": "Sub-location (entrance/block/bay) named by either party",
+      "value": "None; rider: 'I'm here already', 'I don't see any white car'; driver: 'at the pickup point', 'at the pin location'"
+    },
+    {
+      "evidence_id": "EV-TRIP-04056",
+      "fact": "registered_pickup_points",
+      "value": "3 (>=2)"
+    },
+    {
+      "evidence_id": "EV-FARE-04056",
+      "fact": "Cancellation fee charged",
+      "value": "SGD 4.50 = platform_policy.cancellation_fee_sgd 4.50; refund_issued 0.00"
+    }
+  ],
+  "reasoning": "1. Scope/figures: category NO_SHOW_CHARGE, rider-filed, contested SGD 4.50; no safety/complaint flag (POL-GEN-08(1) in scope). Figures from trip_record.platform_policy (fee_schedule.resolution_rule): free_wait_sec 300, cancellation_fee_sgd 4.50, no_show_threshold_sec null, arrival_marker BUTTON. pickup_zone_class LARGE_VENUE -> arrival radius 120 m, rider presence radius 150 m, wrong-entrance ceiling 400 m. Route-deviation clauses (POL-RD-01..14 incl. amendment POL-RD-14) do not apply to this category.\n2. Integrity (POL-NS-08, POL-GEN-02): (a) arrived_at 15:12:40 coincides with a GPS fix at 15:12:40 (0 s skew); cancellation 15:19:00 matches a fix. (b) 104 fixes, max interval 10 s, rider_track present (15 fixes). (c) chat msg_ids 001-006 sequential, 6 = chat_message_count 6, largest interval 240 s < 5 min. (d) fare line 4.50 = net figure. TRIP, GPS, CHAT, FARE, profiles all weight 1.0. EV-ADVIS-04056-01 is MISSING (weight 0.0) but carries no deciding fact; it only makes POL-NS-06(i) interval-summing unavailable, which is not needed. No impairment; confidence cap 1.0.\n3. POL-NS-10(a)/(b)/(f)/(g): not a rider cancellation (cancelled_by DRIVER at 1000 s after acceptance; on-demand). Not engaged.\n4. POL-NS-01: (a) arrived event present; (d) driver-terminated RIDER_NO_SHOW, no boarding. Limb (b) fails: haversine (R=6371.0088) from pin to all 39 stationary fixes 15:12:40-15:19:00 = 211.7-217.4 m > 120 m; zero qualifying fixes within 120 m anywhere in the trace (POL-NS-02). The clause itself routes: stationary fixes outside the radius but <=400 m -> decided under POL-NS-03.\n5. POL-NS-05: arrival-time fix 214.6 m, 0 km/h -> neither >300 m nor >=15 km/h; marker not false; clause's last sentence sends a stationary driver within 300 m but outside radius to POL-NS-03. No false-arrival referral.\n6. POL-NS-04: (a) rider sent locating messages at 15:13:30 ('where are you?') and 15:16:10 ('I don't see any white car'); (b) FAILS - driver replied at 15:14:05 (35 s) and 15:16:40 (30 s), both within 120 s; (c) would be satisfied (15/15 rider fixes 6.3-20.9 m from pin, accuracy 5.1-9.5 m, all within 150 m), but the clause requires all three. Per its last sentence, residual mislocation is decided under POL-NS-03. POL-NS-11 not engaged (rider_track present and runnable).\n7. POL-NS-02: no qualifying in-radius fix in the 15 min before cancellation, but 'subject to POL-NS-03': driver was stationary for the required dwell within 400 m, so POL-NS-03 governs the outcome including compensation.\n8. POL-NS-03: driver stationary 380 s (15:12:40-15:19:00, continuous 10 s fixes, speed 0) >= required 300 s, at 211.7-217.4 m from pin (outside 120 m, <=400 m). Stationary fixes carry venue_id VEN-YS-0031 = pickup venue_id -> wrong face of the same venue corroborated. Fee not chargeable: full refund of SGD 4.50 to rider. Fault allocation from EV-CHAT-04056: limb (i) not met - rider never named an entrance, block, tower or bay (only 'I'm here already', 'I don't see any white car here'); limb (ii) met - neither party specified a sub-location and registered_pickup_points = 3 >= 2 -> pin ambiguity; platform-funded goodwill = 0.5 x 4.50 = SGD 2.25 (exact, no rounding needed), never recovered from rider.\n9. POL-NS-06: driver's in-geofence dwell is 0 s < 300 s, which also points to full refund; I read POL-NS-01/02/05's explicit routing of the outside-radius-within-400-m stationary case to POL-NS-03 ('governs the outcome including the driver's compensation') as the specific rule, so the goodwill under NS-03(ii) stands.\n10. POL-NS-07: not reached (NS-01 not satisfied). Anti-farming check would not trip anyway (no_show_terminations_30d 1 < 4; 1/150 = 0.0067). POL-NS-09: (a) confidence high, all deciding artifacts weight 1.0; (b) the driver's chat/statement 'at the pin location' vs GPS 214 m is a party assertion contradicted by telemetry, not two admissible artifacts in unresolved conflict - NS-03 resolves it; (c) disputes_with_counterparty_90d 0+0; (d) rider no_show_disputes_30d 0, anti-farming not tripped; (e) no NS-08 impairment. No escalation. POL-NS-12 not engaged (arrival_marker BUTTON).\n11. POL-GEN-01: no profile field used as a ground; ratings, prior_no_show_flags (driver 1), etc. are context only and not relied on. POL-GEN-03: compound outcome - ruling names the filing rider's outcome FULL_REFUND, amount_sgd 4.50; driver_compensation_sgd 2.25 independent, not netted. POL-NS-03 produces no referral; referrals []. POL-GEN-05: monetary effect 4.50 + 2.25 = 6.75 <= 8.00 threshold -> auto-executes, subject to appeal (POL-GEN-04).",
+  "doubts": "(1) POL-NS-06 also fires literally (in-geofence dwell 0 s < 300 s) and its closing words say no driver compensation where dwell falls short; reading NS-06 as controlling would give FULL_REFUND 4.50 with driver_compensation_sgd null. I prefer NS-03 because NS-01, NS-02 and NS-05 each expressly route the stationary-outside-radius-within-400-m case to NS-03 and NS-02 says NS-03 governs 'including the driver's compensation'. (2) Whether the rider's 'I'm here already' counts as stating a sub-location under NS-03(i); I read it as not naming an entrance/block/tower/bay, so (ii) applies; the alternative (i) would give no compensation. (3) Difficulty: the driver's statement that he was 'at the pin location' is contradicted by GPS (214 m away), which could be classed REVERSAL; I mark HARD because the outcome follows the filing rider's claim and the difficulty is the NS-03/NS-04/NS-06 clause interplay and the goodwill limb."
+}

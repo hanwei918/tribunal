@@ -1,0 +1,71 @@
+{
+  "case_no": 4015,
+  "ruling": "PARTIAL_REFUND",
+  "amount_sgd": 15.75,
+  "driver_compensation_sgd": null,
+  "referrals": [],
+  "governing_clauses": [
+    "POL-RD-01",
+    "POL-RD-02",
+    "POL-RD-13",
+    "POL-RD-08",
+    "POL-RD-09",
+    "POL-RD-06",
+    "POL-GEN-01"
+  ],
+  "difficulty_opinion": "EASY",
+  "deciding_facts": [
+    {
+      "evidence_id": "EV-GPS-04015",
+      "fact": "trace_distance_km (recomputed haversine over 212 fixes, R 6371.0088)",
+      "value": "21.601 km (recomputed 21.6008)"
+    },
+    {
+      "evidence_id": "EV-TRIP-04015",
+      "fact": "booked optimal distance / duration / ERP on optimal route",
+      "value": "13.9 km / 22 min / SGD 0.00 (route MCE-ECP)"
+    },
+    {
+      "evidence_id": "EV-GPS-04015",
+      "fact": "excess over booked optimal",
+      "value": "7.701 km = 55.40% (> 20% = 2.78 km and > 0.8 km: established; > 50% = 6.95 km: MATERIAL)"
+    },
+    {
+      "evidence_id": "EV-GPS-04015",
+      "fact": "POL-RD-07 integrity",
+      "value": "max interval 10 s, max step 133.4 m, cadence 10 s: not impaired"
+    },
+    {
+      "evidence_id": "EV-GPS-04015",
+      "fact": "route shape",
+      "value": "passes ~480 m from dropoff at 19:04:20, continues east to lng 103.9569 (2.79 km from dropoff) at 19:09:40, returns to dropoff 19:16:40"
+    },
+    {
+      "evidence_id": "EV-FARE-04015",
+      "fact": "fare model, surge, total charged",
+      "value": "METERED, surge_multiplier 1.3, total_charged 43.04 (reconciles: 29.80 x 1.3 + 3.50 ERP + 0.80)"
+    },
+    {
+      "evidence_id": "EV-FARE-04015",
+      "fact": "ERP gantries matched to trace (250 m)",
+      "value": "ERP-G-051 CTE 2.00 nearest fix 24.4 m at 18:49:30; ERP-G-034 PIE 1.50 nearest fix 23.8 m at 18:55:30; both crossed, both off the optimal route"
+    },
+    {
+      "evidence_id": "EV-ADVIS-04015-01",
+      "fact": "traffic advisory",
+      "value": "MISSING, weight 0.0; driver's ECP-accident assertion cites no evidence ID"
+    },
+    {
+      "evidence_id": "EV-CHAT-04015",
+      "fact": "rider route instruction",
+      "value": "none (2 pickup-coordination messages, no waypoint_hint)"
+    },
+    {
+      "evidence_id": "EV-DPROF-04015",
+      "fact": "deviation_flags_90d / completed_trips_90d",
+      "value": "1 / 412 = 0.0024: no pattern"
+    }
+  ],
+  "reasoning": "1. Scope (POL-GEN-08(1)): ROUTE_DEVIATION, no safety/complaint flag; automated ruling allowed. Same trip (POL-RD-08(a)): TRP-04015 on trip_record, gps_trace and fare_breakdown; trip started 18:41:30 = first GPS fix; ended 19:16:40 = last fix = fare charged_at. POL-RD-10(2)/(4) not engaged.\n2. POL-RD-07: EV-GPS-04015 has 212 fixes at 10 s cadence, largest gap 10 s, largest step 133.4 m, accuracy 3.0-7.9 m. None of limbs (a)-(c) met; trace usable at full weight 1.0.\n3. POL-RD-01: actual = gps_trace.trace_distance_km 21.601 (my recomputation 21.6008; trip_record 21.6 is the rounded copy and is not cited). Optimal = 13.9 km (EV-TRIP-04015, PLATFORM_ROUTER_AT_BOOKING). Excess 21.601 - 13.9 = 7.701 km = 55.40% of optimal. 7.701 > 2.78 (20%) and > 0.8 km: deviation ESTABLISHED. 7.701 > 6.95 (50%): MATERIAL. The trace corroborates the rider: it passes about 480 m from the dropoff at 19:04:20, runs on east to about lng 103.957 (2.79 km beyond the dropoff) at 19:09:40 and comes back, arriving 19:16:40.\n4. Exculpatory clauses: POL-RD-03 unavailable - EV-ADVIS-04015-01 is MISSING (weight 0.0). POL-RD-13: the driver's statement ('ECP was jam because got accident near Marine Parade') names no evidence ID, so per POL-RD-13(1) this is not a POL-RD-10(5) escalation; per POL-RD-13(2) and POL-RD-08 the assertion carries no weight, the deviation stands at the measured figure and POL-RD-02 runs against the booked optimal. The driver's assertion is discarded and no advisory was on file. (Even on its own terms the excuse would not explain running 2.8 km past the dropoff.) POL-RD-04 / POL-RD-14: no rider instruction in EV-CHAT-04015 (two pickup messages, no waypoint_hint) - nothing to exclude. POL-RD-05: no amendment timestamps. POL-RD-11: fare_model METERED, not UPFRONT_QUOTE. POL-RD-12: RYDE_PLUS, not pool.\n5. POL-RD-08: rider's burden (same trip + threshold excess on an unimpaired trace) is met; the burden shifted and the driver cited no artifact. The rider-claim-frequency test reads rider_profile.deviation_claims_60d = 0 (EV-RPROF-04015 is IMPAIRED, STALE_SNAPSHOT, weight 0.75); the test is not engaged (counter < 4 and excess 55.4% > 30%), so the impaired profile carries no deciding fact and the finding survives the discount untouched.\n6. POL-RD-06 (material): driver_profile.deviation_flags_90d 1 (< 3); 1/412 = 0.0024 (< 0.05) with completed_trips_90d 412 >= 40: no pattern. No FULL_REFUND uplift, no conduct referral. prior_deviation_flags 7 is a lifetime counter and, like rating/prior_disputes/etc., is context only under POL-GEN-01 and is not used.\n7. POL-RD-02 (METERED): surge read from EV-FARE-04015.fare_breakdown.surge_multiplier = 1.3. recomputed_fare = (3.80 + 0.75 x 13.9 + 0.28 x 22) x 1.3 + 0.80 + ERP on optimal route 0.00 + airport 0.00 + waiting_time_fee 0.00 - promo 0.00 = (3.80 + 10.425 + 6.16) x 1.3 + 0.80 = 20.385 x 1.3 + 0.80 = 26.5005 + 0.80 = 27.3005.\n   charged_total = 43.04\n   recomputed_fare = 27.3005\n   refund = 43.04 - 27.3005 = 15.7395, rounded UP to 0.05 = 15.75.\n   15.75 >= 0.50 (not de minimis); 15.7395/43.04 = 36.6% < 90% (not FULL_REFUND). 15.75 <= amount_contested 18.00 and <= 150 (POL-RD-10(6) not engaged).\n8. POL-RD-09: both ERP lines (ERP-G-051 CTE 2.00, ERP-G-034 PIE 1.50, total 3.50) are matched to the trace within 250 m (24.4 m and 23.8 m, at the charged_at times), so no billing-integrity defect under (4) and no POL-RD-10(8). Both are off the optimal route (optimal ERP 0.00) and under limb (1) are already comprehended in the 15.75 refund - itemised for transparency, NOT added on top.\n9. POL-GEN-02: deciding facts rest on EV-GPS-04015, EV-TRIP-04015, EV-FARE-04015, all weight 1.0; confidence not capped below 0.70; POL-RD-10(1) not engaged. The missing advisory carries no fact and its absence is cited only to show POL-RD-03 cannot run.\n10. POL-GEN-03: PARTIAL_REFUND, amount_sgd 15.75 to the rider, driver_compensation null, referrals none. POL-GEN-05: 15.75 exceeds execution_threshold_sgd 8.00, so the ruling issues but is held in the human queue for release (procedural, not an escalation). POL-GEN-04 appeal route applies.",
+  "doubts": "(a) The driver's congestion excuse vs POL-RD-10(5) ('a closure asserted with no traffic_advisory'): POL-RD-13(1) resolves it because the driver cited no advisory ID; if one read the minted EV-ADVIS-04015-01 in the dispute's evidence_ids as 'cited' by the driver, the alternative would be ESCALATE under POL-RD-10(5) - I reject that, as the counterparty statement names no ID. (b) Even if an advisory had existed for ECP at Marine Parade, POL-RD-03 would cap the justified excess and the drive 2.8 km past the dropoff and back would remain unexonerated; that hypothetical would only reduce the refund and could add a standalone ERP refund under POL-RD-09(2). (c) Whether to list POL-RD-06 / POL-GEN-01 among governing clauses: they are cited because the deviation is material and the check was run (no pattern), not because they move money. No real ambiguity on the amount: 15.75."
+}

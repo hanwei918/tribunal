@@ -1,0 +1,45 @@
+{
+ "case_no": 4013,
+ "verdict": "AGREE",
+ "differences": [
+  {
+   "field": "difficulty",
+   "key": "REVERSAL",
+   "reader_a": "HARD",
+   "reader_b": "HARD",
+   "resolution": "Key stands. The brief defines REVERSAL as a party's story contradicted by the record, without limiting it to the filing party. The driver's counterparty_statement says the route differed because the rider asked to go by Bukit Timah Plaza. The record contradicts that causal claim: on EV-GPS-04013 the closest fix to the MSG-04013-002 waypoint_hint (1.3388, 103.7781) is 3,058.9 m away, at the pickup fix itself. From there the car heads south (maximum latitude on the trace 1.3203, the dropoff), and it is on the AYE at 14:45:10 (1.285655, 103.818816, 55 km/h), when the rider protests in MSG-04013-004. Both readers say in their doubts that REVERSAL fits this definition. They chose HARD only because the filer's own story holds up, and the definition does not ask for that. This is a label preference, not an error in the key."
+  },
+  {
+   "field": "governing_clauses",
+   "key": [
+    "POL-RD-14",
+    "POL-RD-01",
+    "POL-RD-02"
+   ],
+   "reader_a": [
+    "POL-RD-01",
+    "POL-RD-02",
+    "POL-RD-14"
+   ],
+   "reader_b": [
+    "POL-RD-01",
+    "POL-RD-02",
+    "POL-RD-14",
+    "POL-RD-04",
+    "POL-RD-08",
+    "POL-GEN-01"
+   ],
+   "resolution": "Key stands. Reader a lists the same set as the key. Reader b adds three clauses. POL-RD-08 (burden; the rider-profile factor is not engaged) and POL-GEN-01 (discarding the reputation appeal) are reasoning constraints and harmless extras; neither decides the ruling or the amount. POL-RD-04 is a reader error: under POL-RD-14, 'POL-RD-04 does not apply'. Its limbs (a) to (c) are only the gateway test that brings POL-RD-14 into play, and its compensation limb does not arise because 15.92 km was billed against a 15.92 km trace. The key correctly leaves it out. All three key clauses license PARTIAL_REFUND (RD-01 NP, RD-02 PFN, RD-14 PFN), and together they fix the amount."
+  },
+  {
+   "field": "rationale (no key change)",
+   "key": "no percentage of charged_total stated",
+   "reader_a": "5.78 is 23.4% of charged_total",
+   "reader_b": "23.4% of charged",
+   "resolution": "No effect. 5.78 / 24.66 = 23.44 % and 5.80 / 24.66 = 23.52 %. Either figure is far below the 90 % FULL_REFUND line. The key's rationale does not state this percentage, so nothing in the key needs correcting."
+  }
+ ],
+ "analysis": "Ruling, amount, driver compensation and referrals agree across the key and both readers: PARTIAL_REFUND, 5.80, null, []. I re-derived them from the version-6 text, using Python and check_set's haversine. (1) Integrity under POL-RD-07: EV-GPS-04013 has 178 fixes from 14:34:30 to 15:03:54. The largest interval is 10 s (smallest 4 s, the last one), the largest step 155.67 m, the highest implied speed 56.0 km/h and accuracy 3.0 to 7.9 m, so limbs (a) to (c) are not met and every deciding artifact has weight 1.0. The trip ids match, and the first and last fixes equal started_at/ended_at and the pickup/dropoff pins to 0 m. (2) POL-RD-01: the trace sums to 15.91994 km, written as 15.92, against a booked optimal of 11.2 km (PLATFORM_ROUTER_AT_BOOKING). The excess is 4.72 km = 42.14 %: over 20 % and over 0.8 km, so the deviation is ESTABLISHED; under 50 % and under 8.0 km, so it is not material. POL-RD-06 is therefore not engaged (in any case deviation_flags_90d is 0 of 240 trips), and there is no referral. (3) POL-RD-08: deviation_claims_60d is 2 (< 4), so the rider-profile factor is not engaged; the excess is above 30 % anyway. The driver's 'can check her record' points to prior_disputes_filed 9, which is context only under POL-GEN-01 and is discarded. (4) MSG-04013-002 is from the RIDER. It was sent at 14:33:40, before the trip started at 14:34:30 and so before the vehicle left the booked Clementi Rd corridor, and it names a specific place with waypoint_hint (1.3388, 103.7781), so POL-RD-04 (a) to (c) are met. No fix comes within 200 m of the hint (the minimum is 3,058.9 m, at the first fix), and no road is named. POL-RD-14 therefore governs: the instruction did not cause the excess, POL-RD-04 does not apply, no distance is excluded, and POL-RD-10(7) is not engaged, because nothing is partly corroborated. (5) Other clauses: POL-RD-03 and POL-RD-13 are not engaged, since no party asserts a traffic cause and the MISSING advisory EV-ADVIS-04013-01 is cited by no one, so POL-RD-10(5) does not fire either. POL-RD-05 has no amendment fields, POL-RD-11 does not apply to a METERED fare, and POL-RD-12 does not apply to RYDE_X. POL-RD-09 has no ERP, toll or airport lines. Under POL-RD-10(8), every charge line maps to the trace or trip record. Under POL-RD-10(6), the refund is below SGD 150 and below charged_total. (6) POL-RD-02, with surge 1.0 read from EV-FARE-04013 and optimal_route_erp_sgd 0.00: recomputed = 3.80 + 0.75 x 11.2 + 0.28 x 21 + 0.80 = 3.80 + 8.40 + 5.88 + 0.80 = 18.88. The ledger reconciles: 3.80 + 11.94 + 8.12 + 0.80 = 24.66. Refund 24.66 - 18.88 = 5.78, rounded UP to 0.05 = 5.80. That is not de minimis, it is 23.4 % of the charge (under 90 %), and it is below the 8.00 contested, so PARTIAL_REFUND 5.80. Every number, evidence id and clause id in the key's rationale checks out: 15.920, 11.2, 4.720, 42.14 %, 14:33:40, (1.3388, 103.7781), 3,058.9 m, 18.88, 5.78, 5.80, 8.00, prior_disputes_filed 9 and deviation_claims_60d 2. The rationale also records, as POL-RD-14 requires, that the instruction was found and not corroborated. The rationale is 919 ASCII characters. Possible ambiguities checked: (a) POL-RD-10(7)'s base example matches these facts, but amendment POL-RD-14 expressly displaces it at version 6 ('This is not the contradiction POL-RD-10(7) describes'). (b) Limb (b) of POL-RD-04 is met on any reading, because the message predates boarding. If it were not met, the outcome would still be RD-01/RD-02. (c) The request names a place, not a road, so the road limb cannot rescue corroboration. (d) The trace moves away from the waypoint from the first fix, so there is no partial-corroboration argument for POL-RD-10(7). No careful reader could reach another defensible ruling, so no case fix is needed. The only real difference between the readers and the key is the difficulty label, and the brief's definition supports the key's REVERSAL.",
+ "corrected_ground_truth": null,
+ "case_fix_instructions": null
+}

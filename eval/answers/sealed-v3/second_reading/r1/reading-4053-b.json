@@ -1,0 +1,45 @@
+{
+  "case_no": 4053,
+  "ruling": "ESCALATE",
+  "amount_sgd": null,
+  "driver_compensation_sgd": null,
+  "referrals": [],
+  "governing_clauses": [
+    "POL-NS-01",
+    "POL-NS-08",
+    "POL-NS-09",
+    "POL-GEN-02",
+    "POL-NS-11",
+    "POL-GEN-03"
+  ],
+  "difficulty_opinion": "INDETERMINATE",
+  "deciding_facts": [
+    {
+      "evidence_id": "EV-TRIP-04053",
+      "fact": "arrival marker type, arrival and cancellation times; driver-pressed BUTTON so POL-NS-12 does not apply",
+      "value": "arrival_marker BUTTON; arrived 21:14:00; cancelled 21:17:20 by DRIVER, RIDER_NO_SHOW; 200 s after marker"
+    },
+    {
+      "evidence_id": "EV-GPS-04053",
+      "fact": "first in-radius fix and observed in-geofence dwell before the gap (STANDARD radius 50 m, accuracy filter 25 m)",
+      "value": "21:13:50 at 24.9 m (acc 6.1 m, 8 km/h); 21:14:00-21:15:00 seven fixes 8.7-11.9 m, 0 km/h; observed dwell 70 s from 21:13:50 (60 s from 21:14:00) against 180 s required"
+    },
+    {
+      "evidence_id": "EV-GPS-04053",
+      "fact": "sampling gap inside the waiting window, straddling the cancellation",
+      "value": "170 s gap 21:15:00-21:17:50 (> 120 s POL-NS-08(b) threshold); 140 s of the 200 s marker-to-cancellation window unobserved; next fix 21:17:50 at 21.9 m, 8 km/h"
+    },
+    {
+      "evidence_id": "EV-GPS-04053",
+      "fact": "admissibility weight",
+      "value": "0.45 (GPS_GAP HIGH, PARTIAL_RECORD); 0.60 for the gap alone once the rider_track component is set aside under POL-NS-11 - both below the 0.70 floor"
+    },
+    {
+      "evidence_id": "EV-FARE-04053",
+      "fact": "fee already refunded to rider; ledger reconciles with gross figure",
+      "value": "cancellation_fee 6.61 = rider_gross_cancellation_fee_sgd; REFUNDED 6.61; contested net 4.50"
+    }
+  ],
+  "reasoning": "1. Scope: NO_SHOW_CHARGE, driver-filed, no safety/complaint flag (POL-GEN-08(1)); ROUTE_DEVIATION clauses incl. POL-RD-14 do not apply. The driver seeks reinstatement of the SGD 4.50 net fee that support refunded to the rider (EV-FARE-04053: 6.61 charged, REFUNDED 6.61). 2. Fee figures (fee_schedule.resolution_rule): platform_policy carried on EV-TRIP-04053: free_wait_sec 180, no_show_threshold_sec null, cancellation_fee_sgd 4.50, gross 6.61. Ledger line 6.61 equals the gross figure, so POL-NS-08(d) is not engaged. 3. POL-NS-01(a): driver_arrived event at 21:14:00 present - holds. (d): terminated by driver, RIDER_NO_SHOW, no boarding - code satisfied; timing depends on (c). 4. POL-NS-02 / (b): pickup zone STANDARD, radius 50 m. Haversine (R=6371.0088) from pin (1.3642,103.8546): 21:13:50 24.9 m acc 6.1; 21:14:00-21:15:00 seven fixes 8.7-11.9 m, acc 3.7-8.1 m, speed 0. At least 3 consecutive qualifying in-radius fixes, at or before the arrival event -> (b) holds. POL-NS-05: at the marker the driver is 8.7 m and 0 km/h -> marker not false. POL-NS-03: stationary fixes inside radius -> not engaged. 5. POL-NS-01(c) is the deciding fact: a continuous in-geofence dwell of 180 s measured from the first qualifying in-geofence fix (21:13:50, or 21:14:00 if the moving 8 km/h fix is not counted), so the dwell would elapse at 21:16:50 / 21:17:00, before the 21:17:20 cancellation - IF the driver held position. The trace observes the driver in the geofence only to 21:15:00: 70 s (or 60 s) of the required 180 s. Fixes then stop for 170 s (21:15:00-21:17:50); the cancellation at 21:17:20 falls inside the gap; 140 s of the 200 s window is unobserved. The post-gap fix (21:17:50) is again inside the radius (21.9 m) but moving at 8 km/h. Continuous presence 21:15:00-21:17:20 is an inference, not a measurement. 6. POL-NS-08(b): a sampling gap longer than 120 s inside the waiting window -> EV-GPS-04053 is impaired for policy purposes (the integrity block confirms: a gap > 120 s inside the waiting window is a policy-level impairment; the notes name a gap straddling the cancellation as the classic way a short dwell is made to look complete). No other artifact carries the driver's position during 21:15:00-21:17:20: the arrival marker is a driver-pressed BUTTON, so POL-NS-12 (GPS_AUTO only) supplies no independent carrier; the driver's in-app call at 21:16:30 (EV-TRIP-04053) and chat 'reached, at the drop off' at 21:14:10 (EV-CHAT-04053) prove activity, not position; there is no wait_timer event. The sole evidence for the deciding fact is therefore impaired under POL-NS-08(b): the ruling may not exceed PARTIAL_REFUND and the case escalates under POL-NS-09(e). 7. POL-GEN-02(2): the deciding fact rests solely on EV-GPS-04053, weight 0.45 (GPS_GAP, PARTIAL_RECORD). Under POL-NS-11 the empty rider_track does not lower the cap on a finding resting on the driver's track, but the gap component alone (GPS_GAP_STRADDLING_CANCELLATION, 0.60 in the integrity weights) still caps confidence below the 0.70 floor -> POL-NS-09(a) independently. 8. Rider-exonerating routes do not resolve it the other way: POL-NS-04 fails on (b) - rider's 'ok coming down' (21:12:30) was answered within 100 s ('reached, at the drop off' 21:14:10) and the driver placed an in-app call at 21:16:30; its limb (c) is undecidable (rider_track empty) and per POL-NS-11 that neither exonerates the rider nor impairs the driver's arrival. POL-NS-06 would refund only if the dwell were shown to be short; the record cannot show that either - it is the same unobserved interval. POL-NS-10 does not apply (driver cancelled; 690 s after accept). POL-NS-06(i) unavailable: EV-ADVIS-04053-01 is MISSING (weight 0.0) and nobody relies on it. 9. Other triggers: POL-NS-07 anti-farming not tripped (no_show_terminations_30d 1 < 4; 1/150 = 0.0067 <= 0.08). POL-NS-09(c) 0+0 < 2; (d) rider no_show_disputes_30d 0 < 3. POL-NS-08(a): arrival 0 s from nearest fix; (c): chat 4 sequential messages, count matches, interval containing the marker 100 s - not impaired. Profile fields rating, prior_no_show_flags, prior_disputes_* are context only under POL-GEN-01 and are not used. 10. Party stories: the rider's 'he cancelled almost immediately' is contradicted by EV-TRIP-04053 (cancellation 200 s after the marker, after a call at 21:16:30), but that does not prove the 180 s continuous dwell the fee requires. 11. Outcome (POL-GEN-03, POL-NS-09): ESCALATE, terminal, no monetary ruling; amount_sgd and driver_compensation_sgd null; the disputed fee is held. Open question for the reviewer: did the driver remain within 50 m of the pin from 21:15:00 to 21:17:20 (record-type evidence such as a full-resolution GPS export would settle it)? If yes, POL-NS-01 holds and POL-NS-07 gives DRIVER_COMPENSATION 0.8 x 4.50 = 3.60; if no, POL-NS-06 refunds the rider in full. Amount 4.50 is below the 8.00 POL-GEN-05 threshold, irrelevant on escalation. No referral arises (no false marker, no mis-selected reason code).",
+  "doubts": "(1) A reader could infer continuous presence from the gap endpoints (9.2 m at 21:15:00, 21.9 m at 21:17:50, both inside 50 m) plus the 21:16:30 call, find POL-NS-01 satisfied and rule DRIVER_COMPENSATION 3.60 (amount_sgd 3.60, governing POL-NS-01, POL-NS-07); POL-NS-08(b) and its notes make that inference impermissible as the sole basis, and the 0.45/0.60 weight caps confidence below 0.70 anyway. (2) Whether the 21:13:50 fix (24.9 m, moving 8 km/h) starts the dwell clock is unclear; it changes the dwell end from 21:17:00 to 21:16:50 but not the outcome. (3) POL-NS-08 says the ruling 'may not exceed PARTIAL_REFUND and the case escalates'; a reader might read that as licensing a split fee, but POL-NS-09 makes escalation terminal, so ESCALATE governs. (4) Whether POL-NS-11 lifts the cap from 0.45 to 0.60 is immaterial: both are below 0.70."
+}

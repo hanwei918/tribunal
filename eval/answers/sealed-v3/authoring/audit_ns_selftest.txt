@@ -1,0 +1,25 @@
+audit_ns self-test (answer-bearing; stays under build/)
+
+Purpose: show that build/audit_ns.py can fail. Corrupted copies of the generated set were made by tmp/nsgen/corrupt.py
+(copies of tmp/ns/cases and tmp/ns/answers; one edit each), and the audit was run on the clean set and on each copy.
+Expected: clean set passes; each corrupted copy reports at least one FAIL and exits 1.
+Result: as expected (see the output below).
+
+== clean: python3 build/audit_ns.py tmp/ns
+audit_ns: 15 cases, 662 checks, 0 failures
+exit 0
+
+== corruption 1: case 4057, fix at 07:20:00 moved 120 m north (inside the waiting window): python3 build/audit_ns.py tmp/ns_corrupt_fix
+FAIL 4057: trace_distance_km 3.309 vs recomputed 3.545
+FAIL 4057: ruling: derived NO_ACTION, intent DRIVER_COMPENSATION, key DRIVER_COMPENSATION
+FAIL 4057: amount: derived None, intent 3.20, key 3.2
+FAIL 4057: compensation: derived None, intent 3.20, key 3.2
+FAIL 4057: rationale states 230 s
+audit_ns: 15 cases, 657 checks, 5 failures
+exit 1
+
+== corruption 2: case 4052, fare line cancellation_fee 4.50 -> 4.60, total_charged unchanged: python3 build/audit_ns.py tmp/ns_corrupt_fare
+FAIL 4052: fare lines sum 4.6 vs total 4.5
+FAIL 4052: NS-08 limbs d vs intent []
+audit_ns: 15 cases, 662 checks, 2 failures
+exit 1

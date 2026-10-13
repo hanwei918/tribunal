@@ -1,0 +1,50 @@
+{
+  "case_no": 4051,
+  "ruling": "FULL_REFUND",
+  "amount_sgd": 6.61,
+  "driver_compensation_sgd": null,
+  "referrals": [],
+  "governing_clauses": [
+    "POL-NS-04",
+    "POL-NS-01",
+    "POL-NS-02",
+    "POL-GEN-01",
+    "POL-GEN-02",
+    "POL-GEN-03"
+  ],
+  "difficulty_opinion": "REVERSAL",
+  "deciding_facts": [
+    {
+      "evidence_id": "EV-CHAT-04051",
+      "fact": "Rider sent locating/coordinating messages during the waiting window (after the 08:07:00 arrival marker, before the 08:11:10 cancellation)",
+      "value": "MSG-04051-002 08:07:50 'at the void deck beside the letterbox, where are u?'; MSG-04051-003 08:09:40 'cannot see ur car, which side u park?'"
+    },
+    {
+      "evidence_id": "EV-CHAT-04051",
+      "fact": "Driver posted no chat reply after either rider message before terminating (only driver message is MSG-04051-001 at 08:04:20)",
+      "value": "0 driver replies; 200 s and 90 s of silence from the two messages to cancellation, no reply within 120 s of either"
+    },
+    {
+      "evidence_id": "EV-TRIP-04051",
+      "fact": "No in-app voice call recorded, contradicting the driver's statement that he called twice",
+      "value": "in_app_calls = []"
+    },
+    {
+      "evidence_id": "EV-GPS-04051",
+      "fact": "Rider device within the 100 m STANDARD rider_presence_radius for the majority of qualifying (accuracy <= 25 m) rider_track fixes",
+      "value": "7 of 8 qualifying fixes within 100 m (54.9-68.1 m; one at 114.0 m); 2 fixes filtered (32.3 m, 37.0 m accuracy)"
+    },
+    {
+      "evidence_id": "EV-GPS-04051",
+      "fact": "Driver arrival and dwell (POL-NS-01 limbs b,c) would otherwise be satisfied",
+      "value": "first qualifying in-radius fix 08:06:50 (18.5 m), continuous in-radius to 08:11:10, dwell 260 s >= free_wait_sec 180; arrival fix 08:07:00 at 7.2 m, 0 km/h"
+    },
+    {
+      "evidence_id": "EV-FARE-04051",
+      "fact": "Amount charged to rider",
+      "value": "cancellation_fee 6.61 (gross; net 4.50), CHARGED, refund_issued 0.00"
+    }
+  ],
+  "reasoning": "1. Scope (POL-GEN-08(1)): NO_SHOW_CHARGE, no safety/complaint flag -> automated ruling permitted. Route-deviation clauses (POL-RD-01..14, incl. amendment POL-RD-14) do not apply to this category. 2. Fee in force (fee_schedule.resolution_rule): record carries platform_policy -> cancellation_fee_sgd 4.50 net, rider gross 6.61, free_wait_sec 180, no_show_threshold null, arrival_marker BUTTON, zone STANDARD (arrival radius 50 m, rider_presence_radius 100 m). EV-FARE-04051 line 6.61 equals the gross figure, so no POL-NS-08(d) defect. 3. POL-NS-01 / POL-NS-02 / POL-NS-05 (driver side): (a) driver_arrived event 08:07:00 (EV-TRIP-04051). (b) POL-NS-02: haversine (R=6371.0088 km) from pickup pin 1.34905,103.93485: fixes from 08:06:50 (18.5 m, acc 4.3 m) to 08:11:10 are all within 50 m with accuracy <= 25 m (27 consecutive fixes, max 18.5 m, max interval 10 s) -> arrived; the first qualifying fix precedes the marker. POL-NS-05: fix at marker time 08:07:00 is 7.2 m, 0 km/h -> marker not false. (c) Dwell from first qualifying fix 08:06:50 to cancellation 08:11:10 = 260 s >= 180 s (250 s even from the marker). (d) CANCELLED_BY_DRIVER, RIDER_NO_SHOW, no boarding, cancelled after dwell elapsed. So POL-NS-01's four limbs hold on the driver's evidence - but POL-NS-01 lets the fee stand only where no clause from POL-NS-03 to POL-NS-06 displaces it. POL-NS-03 does not apply (driver inside the 50 m radius). POL-NS-06 does not apply (dwell 260 s >= 180 s; the MISSING EV-ADVIS-04051-01 is irrelevant because limb (i) is not needed and nobody relies on it). 4. POL-NS-04 (displacing clause): (a) Rider messages MSG-04051-002 (08:07:50) and MSG-04051-003 (08:09:40), both inside the waiting window 08:07:00-08:11:10, state her position (void deck beside the letterbox), ask for the driver's position and say she cannot see the car - locating content. (b) The driver's only chat message is MSG-04051-001 at 08:04:20, before both; no reply within 120 s of either (08:07:50+120=08:09:50; 08:09:40+120=08:11:40, and the driver cancelled at 08:11:10 without replying), and trip_record.in_app_calls is empty, so no in-app call was placed at any point before termination. The driver's counterparty statement that he 'called her twice' is contradicted by EV-TRIP-04051 in_app_calls (weight 1.0) and is not evidence of a call. (c) rider_track: 10 fixes; 2 filtered for accuracy worse than 25 m (08:08:25 acc 32.3 m; 08:10:05 acc 37.0 m); of the 8 qualifying fixes, 7 lie within 100 m of the pin (67.9, 68.1, 64.4, 62.7, 54.9, 63.3, 64.5 m) and 1 does not (08:09:15, 114.0 m) -> 7/8 = majority -> limb (c) satisfied. All three limbs hold: rider exonerated, cancellation fee refunded in full, no driver compensation payable. POL-NS-07 therefore does not run (POL-NS-01 is displaced). 5. Amendments: POL-NS-11 not engaged (rider_track present and 8 fixes survive the filter; limb (c) is decidable). POL-NS-12 not engaged (arrival_marker BUTTON, not GPS_AUTO). POL-RD-14 is route-deviation only. 6. Integrity (POL-GEN-02, POL-NS-08): EV-CHAT-04051 is IMPAIRED at the schema level, weight 0.85, issue UNREAD_MESSAGE (the two rider messages delivered, never read). It does not meet POL-NS-08(c): msg_id sequence 001-004 complete, 4 messages = chat_message_count 4, largest gap 210 s < 5 min. So it is down-weighted for confidence only. The finding survives the discount: the unread status does not undermine that the messages were sent and delivered, and the absence of a reply/call is independently carried by trip_record (in_app_calls, weight 1.0). Confidence cap = min over deciding artifacts = 0.85 (chat) >= 0.70 floor -> no POL-NS-09(a) escalation. EV-GPS-04051 and EV-TRIP-04051 weight 1.0; no POL-NS-08(a)/(b) defect (arrival marker coincides with a fix, max gap 10 s, 27 fixes in window). EV-ADVIS-04051-01 is MISSING (weight 0.0) and carries no fact; no clause needs it. 7. POL-NS-09: (b) no direct contradiction between admissible artifacts (driver at the porch pin, rider ~55-68 m away at the void deck is consistent). (c) disputes_with_counterparty_90d 0 + 0 = 0 < 2. (d) driver no_show_terminations_30d 1 < 4 (and 1/150 = 0.0067 <= 0.08) -> anti-farming not tripped; rider no_show_disputes_30d 1 < 3. (e) not engaged. No escalation. 8. POL-GEN-01: the driver's 'this rider always like that... check her record' points to rider_profile.prior_no_show_flags 5, a lifetime context-only counter; it is discarded and may not ground any finding. POL-NS-09(d)'s citable field is no_show_disputes_30d = 1, which does not trigger. 9. Outcome (POL-GEN-03): filing party (rider) entirely right -> FULL_REFUND of amount_contested_sgd 6.61 (the gross amount actually charged, EV-FARE-04051); driver_compensation_sgd null; no referral is produced by any applicable clause (POL-NS-01's driver-education referral applies only to DRIVER_UNABLE_TO_LOCATE; POL-NS-05 not triggered). POL-GEN-05: 6.61 <= 8.00 execution_threshold_sgd -> executes automatically, appealable under POL-GEN-04.",
+  "doubts": "(1) Possible argument that the driver called by ordinary phone outside the app: POL-NS-04(b) reads only trip_record.in_app_calls, so an off-app call is not on the record; if a reviewer credited the driver's statement, limb (b) would fail and the outcome would be DRIVER_COMPENSATION 3.60 (80% of 4.50 net under POL-NS-07) - but POL-GEN-06(5)/the record rule does not let a statement substitute for a call record. (2) Whether the 08:06:50 fix (18.5 m, moving at 8 km/h) counts as the start of dwell: POL-NS-02 has no stationarity requirement; either way dwell is 250-260 s >= 180 s, so immaterial. (3) Refund amount: POL-NS-04 refunds 'the cancellation fee in full'; the rider was charged the gross 6.61 and contested 6.61, so the refund is 6.61, not the 4.50 net figure. (4) Some might weigh the chat's UNREAD_MESSAGE impairment as making the driver unaware of the messages; POL-NS-04(b) does not depend on read status, and the 0.85 weight stays above the 0.70 floor. Difficulty labelled REVERSAL because the driver's decisive 'called her twice' claim is contradicted by in_app_calls = []; HARD would also be defensible since the driver's arrival/dwell claim is true and POL-NS-01 is fully met before POL-NS-04 displaces it."
+}

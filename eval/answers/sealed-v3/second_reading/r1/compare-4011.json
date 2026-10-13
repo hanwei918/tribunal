@@ -1,0 +1,49 @@
+{
+  "case_no": 4011,
+  "verdict": "AGREE",
+  "differences": [
+    {
+      "field": "ruling / amount_sgd / driver_compensation_sgd / referrals",
+      "key": "PARTIAL_REFUND, 4.60, null, []",
+      "reader_a": "PARTIAL_REFUND, 4.60, null, []",
+      "reader_b": "PARTIAL_REFUND, 4.60, null, []",
+      "resolution": "No difference. Both readers match the key to the cent; independently recomputed below."
+    },
+    {
+      "field": "governing_clauses",
+      "key": [
+        "POL-RD-01",
+        "POL-RD-02",
+        "POL-RD-08"
+      ],
+      "reader_a": [
+        "POL-RD-01",
+        "POL-RD-02",
+        "POL-RD-08"
+      ],
+      "reader_b": [
+        "POL-RD-01",
+        "POL-RD-02",
+        "POL-RD-08"
+      ],
+      "resolution": "No difference. RD-01 establishes the deviation, RD-08 shifts the burden and discards the driver's uncited statement, RD-02 fixes the amount; all three license PARTIAL_REFUND. Both readers raised in their doubts whether POL-RD-13 belongs: it does not. RD-13 is engaged only where a party asserts an external traffic cause (queue, breakdown, closure, incident). The driver's statement 'I followed the navigation app. Did not go the long way on purpose.' asserts no traffic cause, so RD-13 is not engaged and the key is right to omit it."
+    },
+    {
+      "field": "difficulty",
+      "key": "EASY",
+      "reader_a": "EASY",
+      "reader_b": "EASY",
+      "resolution": "No difference. The filer's account (long route via Yio Chu Kang Rd / Upper Thomson, 22.32 charged) is borne out by the record; the driver's statement is not contradicted by any artifact (the record holds no in-trip navigation log), it is simply uncited and discarded under POL-RD-08. Not a REVERSAL, not INDETERMINATE."
+    },
+    {
+      "field": "rationale",
+      "key": "numbers, evidence ids and clause ids checked",
+      "reader_a": "n/a",
+      "reader_b": "n/a",
+      "resolution": "Every figure in the key rationale is correct: 13.920 km (trace, recomputed 13.9198), optimal 10.4, excess 3.520 km = 33.85 %, surge 1.0 from EV-FARE-04011, on-route ERP 0.00, 3.80 + 7.80 + 5.32 + 0.80 = 17.72, charged 22.32, refund 4.60, contested 6.00. Evidence ids EV-GPS-04011, EV-TRIP-04011, EV-FARE-04011 and clause ids POL-RD-01, POL-RD-08, POL-RD-02 are the right ones. Omitting the 90 % / de minimis lines and the missing advisory EV-ADVIS-04011-01 is stylistic, not an error."
+    }
+  ],
+  "analysis": "Independent check from the version-6 text, with Python (Decimal money, check_set haversine R 6371.0088). Scope: ROUTE_DEVIATION, rider-filed, no safety/complaint flag, no POL-GEN-08(1) allegation. Identity (POL-RD-08(a), POL-RD-10(2)/(4)): TRP-04011 on EV-TRIP-04011, EV-GPS-04011, EV-FARE-04011; started_at 11:26:40 and ended_at 11:52:49 equal the first and last of 158 fixes; first/last fix 0 m from the pickup/dropoff pins; fare charged_at equals ended_at; no timestamp runs backwards. Trace integrity (POL-RD-07): intervals 9-10 s (limit 90 s, sustained limit 30 s), largest step 108.4 m (limit 500 m), accuracy 3.0-8.0 m; weight 1.0, so the POL-GEN-02 cap is 1.0. POL-RD-01: haversine sum 13.919755 km, written 13.92 (governs; trip_record.actual_distance_km 13.9 and deviation_pct 33.7 are the convenience copy and not cited). Optimal 10.4 km booked (no RD-03/04/05/12 adjustment: advisory MISSING and uncited, no rider instruction and no waypoint_hint in EV-CHAT-04011, amendment fields null, RYDE_X). Excess 3.52 km = 33.85 %: > 20 % and > 0.8 km, established; < 50 % and < 8.0 km, not material, so RD-06 is not triggered (and deviation_flags_90d 0 of 260 anyway). POL-RD-08: burden shifts; rider_profile.deviation_claims_60d 1 (< 4) so the extra-corroboration limb is off; the driver's statement cites no artifact and invokes no exculpatory clause and is discarded. POL-RD-13 not engaged (no traffic cause asserted); POL-RD-10(5) not engaged (no exculpatory clause invoked against a cited artifact). POL-RD-11 off (METERED). POL-RD-02: (3.80 + 0.75 x 10.4 + 0.28 x 19) x 1.0 + 0.80 + 0.00 ERP on optimal + 0.00 surcharge + 0.00 waiting - 0.00 promo = 17.72; charged 22.32 (lines reconcile: 3.80 + 10.44 + 7.28 + 0.80); refund 4.60, already a 0.05 multiple, >= 0.50, 20.61 % of charged (< 90 %) -> PARTIAL_REFUND, below the 6.00 contested. POL-RD-09: no ERP/airport lines, nothing to pass through or refer; POL-RD-10(6)/(8) not engaged. No POL-RD-10 trigger fires. POL-GEN-05: 4.60 <= 8.00, auto-executes. The answer is unique: NO_ACTION would need a failed RD-01 test or an exculpatory clause with a cited artifact, ESCALATE would need an RD-10 trigger, FULL_REFUND would need the 90 % test or an RD-06 pattern; none is available on this record. Both blind readers reached the key's ruling, amount, compensation, referrals, clauses and difficulty independently. check_set.py passes on the set. No key or case change needed.",
+  "corrected_ground_truth": null,
+  "case_fix_instructions": null
+}

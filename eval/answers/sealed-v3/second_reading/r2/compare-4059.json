@@ -1,0 +1,49 @@
+{
+  "case_no": 4059,
+  "verdict": "AGREE",
+  "differences": [
+    {
+      "field": "ruling / amount_sgd / driver_compensation_sgd / referrals / difficulty",
+      "key": "NO_ACTION / null / null / [] / HARD",
+      "reader_a": "NO_ACTION / null / null / [] / HARD",
+      "reader_b": "NO_ACTION / null / null / [] / HARD",
+      "resolution": "No difference. All three agree."
+    },
+    {
+      "field": "governing_clauses",
+      "key": [
+        "POL-NS-06"
+      ],
+      "reader_a": [
+        "POL-NS-06",
+        "POL-NS-01",
+        "POL-NS-02",
+        "POL-GEN-03"
+      ],
+      "reader_b": [
+        "POL-NS-06",
+        "POL-NS-01",
+        "POL-NS-02",
+        "POL-GEN-03"
+      ],
+      "resolution": "Key stands. POL-NS-06 licenses NO_ACTION (licenses FULL_REFUND, NO_ACTION) and is the clause that decides the case (summed in-geofence dwell short of free_wait_sec -> fee not chargeable, no compensation). POL-NS-01 and POL-NS-02 are steps NS-06 itself incorporates (dwell computed under POL-NS-02, minimum from POL-NS-01(c)); POL-GEN-03 is the universal vocabulary clause the brief says not to lean on. The readers' extra clauses are harmless additions, not errors in the key, and no clause the key lists fails to apply."
+    },
+    {
+      "field": "rationale: generous-boundary dwell figure",
+      "key": "bracketing each run from the last outside fix before it to the first outside fix after it or the termination: 18:20:40-18:22:00 = 80 s + 18:24:40-18:26:05 = 85 s = 165 s",
+      "reader_a": "70 + 85 = 155 s called 'most generous'",
+      "reader_b": "70 + 75 = 145 s called 'generous'",
+      "resolution": "Key arithmetic verified: 18:20:40 is 59.0 m (outside), 18:22:00 is 60.8 m (outside), 18:24:40 is 75.0 m (outside), the next outside fix after the second run is 18:26:30, so the termination 18:26:05 bounds it; 80 + 85 = 165 s. The readers used narrower conventions; their figures are not the most generous reading, which is a reader slip. All conventions (135, 145, 155, 165 s) are below 180 s, so the outcome does not depend on the convention."
+    },
+    {
+      "field": "rationale: moving fix at 18:21:50",
+      "key": "counts 18:21:50 (22.5 m) inside run 1",
+      "reader_a": "notes it is at 15 km/h; excluding it only shortens run 1",
+      "reader_b": "same doubt, same conclusion",
+      "resolution": "Immaterial: excluding moving fixes shortens the dwell and widens the shortfall. No change."
+    }
+  ],
+  "analysis": "Independent re-derivation from the version-6 text (base files plus POL-NS-11, POL-RD-14, POL-NS-12), with check_set's haversine (R = 6371.0088 km) in tmp/c4059.py. Figures: EV-TRIP-04059 carries platform_policy -> free_wait_sec 180, cancellation_fee_sgd 4.50 net, gross 6.61, arrival_marker BUTTON, zone STANDARD (radius 50 m, accuracy filter 25 m). EV-FARE-04059 line 6.61 = gross, so no POL-NS-08(d) defect; payment_status REFUNDED, refund_issued_sgd 6.61. POL-NS-12 not engaged (BUTTON, no wait-timer events). POL-NS-02 / NS-01(a)(b): driver_arrived 18:21:00; fixes 18:20:50 (27.1 m, acc 3.9), 18:21:00 (10.2 m), 18:21:10 (6.8 m) are three consecutive qualifying in-radius fixes, first at or before the marker. POL-NS-05: marker fix 10.2 m at 0 km/h (position-derived 6.6 km/h) -> not false, no referral. NS-01(c): continuous dwell from 18:20:50 to 18:21:50 = 60 s; 18:22:00 is 60.8 m out and every fix 18:22:00-18:24:40 is outside 50 m (min 60.8 m, max 182.6 m at 18:23:30) -> limb (c) fails. POL-NS-06(i): driver left and re-entered without exceeding 300 m; EV-ADVIS-04059-01 is a populated KERB_RESTRICTION, 520.6 m segment whose line passes 4.03 m from the pin (foot at the segment midpoint), window 07:30-23:00 on 2026-09-25 covering 18:21:00-18:26:05 -> summation available. Run 2: 18:24:50 (38.6 m) to the 18:26:05 termination = 75 s. Sum 60 + 75 = 135 s < 180 s (shortfall 45 s); most generous bracketing 80 + 85 = 165 s, still short. POL-NS-06(ii): the advisory never excuses a shortfall; time circling outside the radius is not dwell. Result: fee not chargeable, refunded to the rider in full, no driver compensation; POL-NS-07 not reached. The driver filed for his 4.50; the refund has already issued; under POL-GEN-03 NO_ACTION is party-relative and leaves the rider refunded, licensed here by POL-NS-06. Other clauses: NS-03 no (no stationary dwell outside radius); NS-04 no (rider message 18:24:30 answered at 18:24:55 = 25 s, call CALL-04059-001 at 18:23:20; limb (c) undecidable as all in-window rider fixes have accuracy 30.9-44.6 m, neutral under POL-NS-11); NS-08 no limb (31 fixes in window, 10 s cadence, marker coincides with a fix, chat 7/7 sequential, 160 s interval spanning the marker); NS-09 no trigger (deciding artifacts EV-TRIP/EV-GPS/EV-ADVIS all 1.0; counterparty 0+0; rider no_show_disputes_30d 0; driver 1/150); NS-10 no (driver cancellation). EV-DPROF-04059 at 0.4 (CROSS_SOURCE_CONFLICT) decides nothing. Difficulty: the driver's factual narrative (arrived about 18:21, looped because of the bus lane, came back, cancelled about 5 min after the tap) matches the record and the rider's 'car was not there' fits the trace (driver 37.2 m and moving at 18:26:20, 151.6 m at 18:26:40 when her first accurate fix puts her 8.5 m from the pin); nothing a party says is contradicted, the case turns on the policy measure of dwell -> HARD, not REVERSAL. Every number, evidence id and clause id in the key rationale was checked: 60 s, 75 s, 135 s, 45 s, 80 s, 85 s, 165 s, 182.6 m, 25 s, weight 0.4, 18:26:10 (5.4 m) and 18:26:20 (37.2 m) in-radius after termination - all correct. Rationale is 1802 characters, ASCII. Non-material observation, no change requested: the EV-GPS-04059 admissibility note lists in-radius fixes as 18:20:50-18:21:50 and 18:24:50-18:26:00, omitting the post-termination in-radius fixes 18:26:10 and 18:26:20; those fixes come after the 18:26:05 termination and cannot count as waiting under any reading, so the note does not open a second defensible answer. No CASE_FIX: no careful reader can reach another answer - DRIVER_COMPENSATION 3.60 requires counting loop time, which POL-NS-06(ii) forbids, and no escalation trigger fires.",
+  "corrected_ground_truth": null,
+  "case_fix_instructions": null
+}

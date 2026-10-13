@@ -1,0 +1,67 @@
+{
+  "case_no": 4061,
+  "verdict": "AGREE",
+  "differences": [
+    {
+      "field": "ruling",
+      "key": "DRIVER_COMPENSATION",
+      "reader_a": "DRIVER_COMPENSATION",
+      "reader_b": "DRIVER_COMPENSATION",
+      "resolution": "All agree. arrival_marker GPS_AUTO and EV-TRIP-04061 carries driver_arrived 13:06:00 stating its geofence test (16 m, 0 km/h), wait_timer_started 13:06:05 and wait_timer_expired 13:10:05, so POL-NS-12 makes the platform events an independent carrier for POL-NS-01(b)/(c). No admissible export fix in the 13:06:00-13:14:10 window is outside 120 m or at >= 15 km/h (13:06:20 5.6 m, 13:09:30 17.8 m, 13:12:40 8.0 m, all 0 km/h). NS-01(d): CANCELLED_BY_DRIVER, RIDER_NO_SHOW at 13:14:10, after the 360 s threshold (13:12:00). Nothing in NS-03..NS-06 displaces; POL-NS-07 anti-farming clean -> DRIVER_COMPENSATION (NS-01 notes, NS-07 last sentences, POL-GEN-03)."
+    },
+    {
+      "field": "amount_sgd / driver_compensation_sgd",
+      "key": "4.80 / 4.80",
+      "reader_a": "4.80 / 4.80",
+      "reader_b": "4.80 / 4.80",
+      "resolution": "All agree. Decimal: 0.80 x platform_policy.cancellation_fee_sgd 6.00 (net, per fee_schedule.resolution_rule) = 4.80; the gross trap 0.80 x 8.81 = 7.048 is not the figure. amount_sgd mirrors driver_compensation_sgd on DRIVER_COMPENSATION (POL-GEN-03). FULL_REFUND of the 6.00 is not licensed: NS-01 licenses FULL_REFUND only for the in-radius DRIVER_UNABLE_TO_LOCATE outcome and NS-07 never pays the full net fee."
+    },
+    {
+      "field": "referrals",
+      "key": "[]",
+      "reader_a": "[]",
+      "reader_b": "[]",
+      "resolution": "All agree. Marker not false (POL-NS-05: nearest fix 20 s after the event at 5.6 m, 0 km/h; even linear interpolation between 13:02:50 and 13:06:20 gives 80.9 m at 13:06:00), reason code RIDER_NO_SHOW is a qualifying code, no conduct issue."
+    },
+    {
+      "field": "governing_clauses",
+      "key": [
+        "POL-NS-12",
+        "POL-NS-01",
+        "POL-NS-07"
+      ],
+      "reader_a": [
+        "POL-NS-01",
+        "POL-NS-12",
+        "POL-NS-07",
+        "POL-GEN-03",
+        "POL-GEN-02",
+        "POL-GEN-01"
+      ],
+      "reader_b": [
+        "POL-NS-01",
+        "POL-NS-12",
+        "POL-NS-07",
+        "POL-GEN-03"
+      ],
+      "resolution": "Both readers include the key's three clauses. Their additions (POL-GEN-03 vocabulary/mirroring; reader a also POL-GEN-02 confidence cap and POL-GEN-01 counter constraint) are general constraints that apply but do not decide; harmless extras, and the brief says not to lean on GEN-03's universal licence. NS-01 and NS-07 license DRIVER_COMPENSATION; NS-12 licenses nothing but is the clause that carries limbs (b)/(c) and so applies. Key list stands."
+    },
+    {
+      "field": "difficulty",
+      "key": "HARD",
+      "reader_a": "HARD",
+      "reader_b": "REVERSAL",
+      "resolution": "Key right; reader b's REVERSAL is a reader error. REVERSAL needs a party's story contradicted by the record. The filer's story is corroborated point by point: arrival 13:06:00 to cancel 13:14:10 = 490 s ('more than 8 minutes'), two unanswered driver calls 13:08:20 and 13:11:15 ('called two times'), cancel after no_show_threshold_reached 13:12:00. The rider's statement ('when I came down to the plaza the driver was not there') is untimed: she read the driver's location message MSG-04061-003 only at 13:12:50, the trip was cancelled at 13:14:10 and the 13:14:50 export fix has the car 260.7 m away at 30 km/h, so a rider reaching the kerb after about 13:14 would indeed find no car. Nothing in the record places the rider anywhere (rider_track empty), so the record does not contradict her statement; it merely does not bear on the fee, which turns on the driver's arrival and dwell. 'Support already refunded me' is true (EV-FARE-04061 REFUNDED 8.81). Support's reversal is the platform's act, not a party's story. The case is HARD because of the policy trap (sparse, accuracy-less, unverified export impaired under NS-08(b), tempting NS-08 closing sentence / NS-09(e) / GEN-02(2) escalation, or NS-02 'no qualifying fix'; plus net vs gross), which NS-12 resolves."
+    },
+    {
+      "field": "rationale",
+      "key": "as written",
+      "reader_a": "same facts and numbers",
+      "reader_b": "same facts and numbers",
+      "resolution": "Every figure re-checked against the record with check_set's haversine (R = 6371.0088 km) and Decimal: platform_policy GPS_AUTO / 240 / 360 / 6.00 / 8.81; events 13:06:00 (16 m, 0 km/h), 13:06:05, 13:10:05 (240 s timer), 13:14:10; arrival->cancel 490 s > 360; window fixes 5.6 / 17.8 / 8.0 m at 0 km/h, all inside the LARGE_VENUE 120 m radius; GPS weight 0.8 x 0.75 x 0.5 = 0.30; window fixes 190 s apart (intervals 190, 190; 3 fixes < 6) -> NS-08(b); nearest fix 20 s from the arrival event; export starts 35 s after acceptance (12:58:10 -> 12:58:45) and ends 40 s after termination (13:14:10 -> 13:14:50) -> NS-08(a) not engaged; anti-farming 1 of 97 (= 0.0103, count < 4); payout 0.80 x 6.00 = 4.80; cap max(1.0, 0.3) = 1.0. Evidence ids EV-FARE-04061, EV-TRIP-04061, EV-GPS-04061, EV-DPROF-04061 and clause ids are correct. 'no accuracy field' sits beside the NS-08(b) grounds but is true of the trace and the operative NS-08(b) grounds (gaps > 120 s, fewer than 6 fixes) are stated; stylistic, no change. Length 1785 chars, within 120-2500."
+    }
+  ],
+  "analysis": "Worked from the version-6 text. (1) POL-NS-12 conditions all hold on EV-TRIP-04061: arrival_marker GPS_AUTO; PLATFORM_TELEMETRY driver_arrived 13:06:00 stating distance (16 m) and speed (0 km/h); wait_timer_started 13:06:05 and wait_timer_expired 13:10:05; expiry precedes the 13:14:10 termination. Contradiction test on EV-GPS-04061 (admissible, weight 0.3, LOW_SAMPLE_RATE x PARTIAL_RECORD x UNVERIFIED_SOURCE): the only fixes inside 13:06:00-13:14:10 are 13:06:20 (5.6 m), 13:09:30 (17.8 m), 13:12:40 (8.0 m), all 0 km/h; 13:02:50 (825.5 m, 22 km/h) is before the window and 13:14:50 (260.7 m, 30 km/h) is 40 s after the cancellation. So arrival is established at 13:06:00 and the free wait served. (2) POL-NS-01: (a) event present; (b)/(c) via NS-12; threshold 360 s reached 13:12:00 and cancellation 13:14:10 is after it (490 s from arrival; 470 s even from the first export fix); (d) no boarding, CANCELLED_BY_DRIVER, RIDER_NO_SHOW. (3) No displacement: NS-02's 'no qualifying in-radius fix' is not proof of absence because null-accuracy fixes are neither counted nor excluded (integrity note) and NS-02's notes send a too-sparse trace to NS-08(b), while NS-12 supplies the arrival for a GPS_AUTO marker; NS-03 not engaged (inside 120 m); NS-04(a) fails (no RIDER message in EV-CHAT-04061) and (b) fails (two driver in-app calls), NS-11 makes the empty rider_track neutral; NS-05 not engaged; NS-06 no shortfall, MISSING EV-ADVIS-04061-01 not relied on; NS-10 not engaged (driver cancelled, on-demand). (4) Integrity: NS-08(b) impairs the export (in-window intervals 190/190 s > 120, 3 fixes < 6) but it is not the only evidence for the deciding fact - EV-TRIP-04061 at 1.0 carries it independently and is not impaired under (a)-(d) (arrival event vs nearest fix 20 s; termination vs last fix 40 s); NS-08(c) not engaged (chat 4 = chat_message_count 4, sequential, the interval containing 13:06:00 is 135 s; the 475 s gap 13:06:15-13:14:10 does not span the marker); NS-08(d) ledger 8.81 = gross. So NS-08's closing sentence and NS-09(e) do not fire. GEN-02(2) cap = max(1.0, 0.3) = 1.0 >= 0.70. NS-09(b) no artifact-to-artifact contradiction (the rider's statement is a party statement); (c) 0 + 0 < 2; (d) anti-farming 1 (< 4) and 1/97 = 0.0103 (<= 0.08), rider no_show_disputes_30d 0. (5) POL-NS-07: 0.80 x net 6.00 = 4.80; DRIVER_COMPENSATION with amount_sgd = driver_compensation_sgd = 4.80 (POL-GEN-03); referrals []. The only reader difference is reader b's REVERSAL, which fails because no party's story is contradicted by the record (see differences). No ambiguity in ruling, money, referrals or clauses that a careful reader could resolve differently: both blind readers reach the key's ruling, amounts, referrals and core clauses. Observation only (no action on the case): build/blueprint_ns.json's chat admissibility note says the largest interval is 330 s, while the shipped case file correctly says 475 s (13:06:15 to 13:14:10); the case file is right and the key does not depend on it.",
+  "corrected_ground_truth": null,
+  "case_fix_instructions": null
+}

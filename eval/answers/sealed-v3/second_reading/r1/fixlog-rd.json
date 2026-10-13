@@ -1,0 +1,18 @@
+[
+ {
+  "case_no": 4001,
+  "applied": true,
+  "key_changed": true,
+  "case_file_changed": false,
+  "what": "KEY_FIX applied (rationale only; ruling, money, referrals, clauses, difficulty unchanged). Checked against POL-RD-01: optimal_distance_km is the adjusted optimal produced by POL-RD-04 where it applies, and actual_distance_km stays gps_trace.trace_distance_km, so the remaining-excess test is 0.260 km against 7.4 + 1.900 = 9.300 km = 2.80 %, with 3.51 % of the booked 7.4 kept as a labelled robustness figure. build/cases_rd_keys.py k4001 now computes the adjusted optimal, asserts the remaining excess fails on both bases, and assembles the corrected rationale (generated text equals compare-4001 corrected_ground_truth exactly). build/blueprint_rd.json: intent.rationale, derivation step 8 and the remaining/robustness arithmetic lines restated on the adjusted base. build/audit_rd.py d4001: checks establishment fails on the adjusted optimal and requires the adjusted figure and percentage in the rationale. Case file bytes unchanged.",
+  "why_not": null
+ },
+ {
+  "case_no": 4009,
+  "applied": true,
+  "key_changed": true,
+  "case_file_changed": false,
+  "what": "KEY_FIX applied (rationale only; ruling, amount, referral, clauses, difficulty unchanged). Checked against POL-RD-07: limb (c) is a sustained sampling interval above 30 s, so the single 70 s interval belongs under limb (a) and the old wording set it against the 30 s threshold; the rationale now states each limb against its own measured figure (70 s gap, 194.6 m step, 10 s sustained cadence), quotes the driver verbatim and records that the MISSING chat and advisory are uncited (POL-RD-10(5) not engaged, POL-RD-13(1)). build/cases_rd_keys.py k4009 rewritten to compute every figure from the written case (gap times, other-interval max, median cadence, gap span, RD-02 parts) with added assertions; generated text equals compare-4009 corrected_ground_truth exactly. build/blueprint_rd.json: intent.rationale and derivation step 2 updated. build/audit_rd.py d4009: checks only the tagged gap exceeds 30 s and requires the per-limb statements in the rationale. Case file bytes unchanged.",
+  "why_not": null
+ }
+]

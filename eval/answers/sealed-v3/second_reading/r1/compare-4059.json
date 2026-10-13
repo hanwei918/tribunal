@@ -1,0 +1,80 @@
+{
+  "case_no": 4059,
+  "verdict": "KEY_FIX",
+  "differences": [
+    {
+      "field": "ruling",
+      "key": "NO_ACTION",
+      "reader_a": "NO_ACTION",
+      "reader_b": "NO_ACTION",
+      "resolution": "All agree. Key right: POL-NS-06 makes the fee non-chargeable (summed in-geofence dwell 135 s < 180 s free_wait_sec); the rider is already refunded (EV-FARE-04059 REFUNDED 6.61), so on this DRIVER-filed dispute the party-relative outcome is NO_ACTION (POL-GEN-03), not FULL_REFUND and not DRIVER_COMPENSATION."
+    },
+    {
+      "field": "amount_sgd / driver_compensation_sgd",
+      "key": "null / null",
+      "reader_a": "null / null",
+      "reader_b": "null / null",
+      "resolution": "All agree. Key right: NO_ACTION carries no money; POL-NS-06(ii) says no driver compensation on a shortfall; POL-NS-07 never runs because POL-NS-01(c) fails."
+    },
+    {
+      "field": "referrals",
+      "key": "[]",
+      "reader_a": "[]",
+      "reader_b": "[]",
+      "resolution": "All agree. Key right: the POL-NS-01 mis-selected-reason referral belongs to the in-radius DRIVER_UNABLE_TO_LOCATE outcome (reason code here is RIDER_NO_SHOW); the arrival marker is not false (fix at 18:21:00 is 10.2 m from the pin at 0 km/h, position-derived 6.6 km/h), so no POL-NS-05 referral."
+    },
+    {
+      "field": "governing_clauses",
+      "key": [
+        "POL-NS-06"
+      ],
+      "reader_a": [
+        "POL-NS-06",
+        "POL-NS-01",
+        "POL-NS-02",
+        "POL-GEN-03"
+      ],
+      "reader_b": [
+        "POL-NS-06",
+        "POL-NS-01",
+        "POL-NS-02",
+        "POL-GEN-03"
+      ],
+      "resolution": "Key right. POL-NS-06 decides the case (limb (i) summing, limb (ii) shortfall) and its licences include NO_ACTION. The readers' extra POL-NS-01, POL-NS-02 and POL-GEN-03 all genuinely apply (arrival test, failed limb (c), party-relative NO_ACTION) and are harmless, but none is needed to license the ruling; no change."
+    },
+    {
+      "field": "difficulty",
+      "key": "HARD",
+      "reader_a": "HARD",
+      "reader_b": "HARD",
+      "resolution": "All agree. Key right: the driver's factual narrative (arrived 18:21, one loop, back, cancelled) is corroborated by EV-GPS-04059 and EV-TRIP-04059; only his policy conclusion ('waited the full time') fails. The rider's statement is also consistent with the record (her only accurate fixes, 18:26:40 and 18:27:00, come after the driver pulled away at 18:26:10-18:26:20). Not a REVERSAL; not ESCALATE, so not INDETERMINATE."
+    },
+    {
+      "field": "rationale (key-internal, found on independent check)",
+      "key": "'even counting from the last outside fix before each run to the next outside fix, 80 + 85 = 165 s'",
+      "reader_a": "brackets run 2 to 'first outside fix / cancellation' (85 s)",
+      "reader_b": "brackets run 2 to the cancellation (18:24:40-18:26:05 = 85 s)",
+      "resolution": "Key rationale wrong as worded. For run 2 the next outside fix is 18:26:30 (18:26:10 is 5.4 m and 18:26:20 is 37.2 m from the pin, both inside 50 m), so the method the key describes gives 18:24:40-18:26:30 = 110 s and a total of 190 s, which is above 180 and contradicts 'still short'. The 85 s figure is the bracket capped at the 18:26:05 termination, which is the correct generous reading (no waiting after the trip is cancelled; POL-NS-01(d)). Number right, stated method wrong: rationale wording corrected; every other field unchanged."
+    },
+    {
+      "field": "reader factual slips (no effect on key)",
+      "key": "-",
+      "reader_a": "doubts (4): rider's statement 'partly contradicted'",
+      "reader_b": "'16 consecutive fixes 18:22:00-18:24:40'",
+      "resolution": "Reader errors. 18:22:00-18:24:40 at 10 s cadence is 17 fixes (60.8-182.6 m). The rider's statement that the car was not there is consistent with her first accurate fix at 18:26:40, when the driver was 151.6 m away and moving."
+    }
+  ],
+  "analysis": "Independent working from the version-6 text (haversine R = 6371.0088 km, check_set km()). Figures in force from EV-TRIP-04059 platform_policy: free_wait_sec 180, no_show_threshold_sec null, cancellation_fee_sgd 4.50 net, rider_gross 6.61, arrival_marker BUTTON; STANDARD zone so arrival radius 50 m and 25 m accuracy filter. POL-NS-02: 18:20:50 (27.1 m, acc 3.9), 18:21:00 (10.2 m), 18:21:10 (6.8 m) ... are >= 3 consecutive qualifying in-radius fixes at or before the 18:21:00 marker, so NS-01(a)/(b) hold. POL-NS-05: marker fix 10.2 m, reported 0 km/h, position-derived 6.6 km/h from 18:20:50: not false. Dwell: run 1 18:20:50-18:21:50 = 60 s (18:22:00 is 60.8 m out); 17 fixes 18:22:00-18:24:40 all outside 50 m, 60.8-182.6 m, moving 11-20 km/h; run 2 18:24:50 (38.6 m) to termination 18:26:05 = 75 s. No continuous run reaches 180 s, so NS-01(c) fails on its own terms. POL-NS-06(i): EV-ADVIS-04059-01 KERB_RESTRICTION, populated, geometry 520.6 m whose segment passes 4.0 m from the pin, window 07:30-23:00 covering 18:21:00-18:26:05; leash never exceeded (max 182.6 m < 300 m); summing allowed: 60 + 75 = 135 s, short by 45 s. Generous bracketing capped at termination: 80 + 85 = 165 s, still short by 15 s; stationary-only fixes give 40 + 65 = 105 s. Every pre-termination convention is below 180, so the result is not knife-edge. POL-NS-06(ii): the advisory never excuses the shortfall; fee not chargeable, full refund stands, no compensation. Fee is already refunded (EV-FARE-04059 payment_status REFUNDED, refund_issued_sgd 6.61); on a driver-filed dispute POL-GEN-03 makes this NO_ACTION with both money fields null. Other clauses: NS-03 not engaged (no stationary out-of-radius fixes); NS-04(b) fails (rider message 18:24:30 answered 18:24:55, 25 s; call CALL-04059-001 at 18:23:20); NS-07 not reached (anti-farming moot, no_show_terminations_30d 1); NS-08 no limb (max interval 10 s, 31 fixes in window, chat 7 = 7 sequential, 160 s interval across marker, 6.61 = gross); NS-09 no trigger (counters 0/0, no contradiction, deciding artifacts at 1.0; EV-DPROF-04059 at 0.4 carries no deciding fact); NS-10 not engaged (driver termination); NS-12 not engaged (BUTTON). No ESCALATE trigger and no other defensible answer: the only alternative (count the 305 s marker-to-cancel wall clock, DRIVER_COMPENSATION 3.60) is expressly barred by NS-06(ii). No case fix needed. The key's ruling, money, referrals, governing clause and difficulty are right; the only defect is the rationale's description of the generous bracket for run 2, which as written ('to the next outside fix') yields 110 s and 190 s total because the 18:26:10 and 18:26:20 fixes are inside 50 m; corrected to bracket to the first outside fix or the termination, whichever comes first. Non-blocking observation on the case file: EV-GPS-04059 admissibility notes list in-radius fixes as '18:24:50-18:26:00', which reads correctly as 'up to the cancellation' but omits the post-cancellation in-radius fixes at 18:26:10 and 18:26:20; it does not touch the answer and is not a case fix.",
+  "corrected_ground_truth": {
+    "expected_ruling": "NO_ACTION",
+    "expected_amount_sgd": null,
+    "expected_driver_compensation_sgd": null,
+    "expected_referrals": [],
+    "governing_clauses": [
+      "POL-NS-06"
+    ],
+    "difficulty": "HARD",
+    "rationale": "POL-NS-06, limbs (i) and (ii); NO_ACTION. Driver D-8394 contests 4.50 after support refunded the 6.61 line (EV-FARE-04059). Free wait in force is 180 s (EV-TRIP-04059 platform_policy). EV-GPS-04059 places the driver inside the 50 m STANDARD radius only from 18:20:50 (rolling to the kerb 10 s before the 18:21:00 arrival marker) to 18:21:50 (60 s) and from 18:24:50 to the 18:26:05 RIDER_NO_SHOW termination (75 s); between, he drove round the block, every fix outside 50 m and none farther than 182.6 m from the pin. EV-ADVIS-04059-01 is a KERB_RESTRICTION (full-day bus lane) whose geometry covers the Serangoon Road frontage and whose window 07:30-23:00 covers the wait, so NS-06(i) lets the two intervals be summed: 60 + 75 = 135 s, short of 180 by 45 s (even bracketing each run from the last outside fix before it to the first outside fix after it or the termination, whichever comes first - 18:20:40-18:22:00 = 80 s and 18:24:40-18:26:05 = 85 s - the total is 165 s; the in-radius fixes at 18:26:10 and 18:26:20 come after the termination and are not waiting). NS-06(ii): the advisory never reduces the minimum or excuses the shortfall. The fee is therefore not chargeable and belongs refunded to the rider; no driver compensation is payable, and POL-NS-07 cannot run because POL-NS-01(c) fails. The driver's claim to his 4.50 is unsupported; NO_ACTION, which on this driver-filed dispute leaves the rider refunded (POL-GEN-03; it never restores the charge). The 5 min 05 s that elapsed between the arrival marker and the cancellation is not in-geofence dwell. POL-NS-04 plays no part (the rider's message was answered in 25 s and an in-app call is recorded). EV-DPROF-04059 (weight 0.4, CROSS_SOURCE_CONFLICT on vehicle_type) carries nothing this ruling rests on. Deciding artifacts are at 1.0."
+  },
+  "case_fix_instructions": null
+}

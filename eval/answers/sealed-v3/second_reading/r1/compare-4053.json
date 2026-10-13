@@ -1,0 +1,74 @@
+{
+  "case_no": 4053,
+  "verdict": "AGREE",
+  "differences": [
+    {
+      "field": "ruling",
+      "key": "ESCALATE",
+      "reader_a": "ESCALATE",
+      "reader_b": "ESCALATE",
+      "resolution": "All agree. The deciding fact is POL-NS-01(c): a continuous in-geofence dwell of free_wait_sec 180 (EV-TRIP-04053 platform_policy) from the first qualifying fix, elapsing before the 21:17:20 RIDER_NO_SHOW termination (limb (d)). Its only carrier is EV-GPS-04053, which observes the driver in the 50 m STANDARD radius only 21:13:50-21:15:00 and then has a 170 s gap (21:15:00-21:17:50) containing the cancellation; 140 s of the arrival-to-cancellation window is unobserved, so POL-NS-08(b) (gap > 120 s inside the waiting window) impairs it for policy purposes. No independent carrier: arrival_marker BUTTON so POL-NS-12 is out; the 21:16:30 call and the chat record no position. POL-NS-08 closing sentence + POL-NS-09(e) escalate; independently POL-GEN-02(2) caps confidence at 0.45 (0.60 once POL-NS-11 removes the rider_track factor), below 0.70 -> POL-NS-09(a). Key right."
+    },
+    {
+      "field": "amount_sgd",
+      "key": null,
+      "reader_a": null,
+      "reader_b": null,
+      "resolution": "All agree. ESCALATE is terminal and carries no money (POL-GEN-03, POL-NS-09)."
+    },
+    {
+      "field": "driver_compensation_sgd",
+      "key": null,
+      "reader_a": null,
+      "reader_b": null,
+      "resolution": "All agree. POL-NS-07 cannot run because POL-NS-01 cannot be established; both readers note the counterfactual would be 0.8 x 4.50 = 3.60 (Decimal check: 3.600), which is the trap, not the answer."
+    },
+    {
+      "field": "referrals",
+      "key": [],
+      "reader_a": [],
+      "reader_b": [],
+      "resolution": "All agree. POL-NS-05 not engaged (marker fix 21:14:00 is 8.7 m from the pin at 0 km/h; position-derived speed over the preceding 10 s 21.4 m = 7.7 km/h), so no false-arrival record; reason code RIDER_NO_SHOW, so no mis-selected-code referral under POL-NS-01."
+    },
+    {
+      "field": "governing_clauses",
+      "key": [
+        "POL-NS-08",
+        "POL-NS-09",
+        "POL-GEN-02"
+      ],
+      "reader_a": [
+        "POL-NS-01",
+        "POL-NS-08",
+        "POL-NS-09",
+        "POL-GEN-02"
+      ],
+      "reader_b": [
+        "POL-NS-01",
+        "POL-NS-08",
+        "POL-NS-09",
+        "POL-GEN-02",
+        "POL-NS-11",
+        "POL-GEN-03"
+      ],
+      "resolution": "Readers add POL-NS-01 (both), POL-NS-11 and POL-GEN-03 (reader b). The key lists the three clauses that license and trigger the ESCALATE (POL-NS-08 closing sentence, POL-NS-09(e)/(a), POL-GEN-02(2)); each licenses ESCALATE per its licenses array, and none listed fails to apply. POL-NS-01 defines the deciding fact but licenses no ESCALATE and fixes no amount here; POL-NS-11 licenses nothing; POL-GEN-03 is the universal vocabulary clause the brief says not to lean on. The additions are harmless and their absence from the key is not an error. No change."
+    },
+    {
+      "field": "difficulty",
+      "key": "INDETERMINATE",
+      "reader_a": "INDETERMINATE",
+      "reader_b": "INDETERMINATE",
+      "resolution": "All agree. ESCALATE because the evidence cannot settle the deciding fact (driver position 21:15:00-21:17:20). The rider's 'cancelled almost immediately' is contradicted by EV-TRIP-04053 (200 s after the marker), but the escalation is evidential, so INDETERMINATE, not REVERSAL."
+    },
+    {
+      "field": "rationale",
+      "key": "(see key)",
+      "reader_a": "n/a",
+      "reader_b": "n/a",
+      "resolution": "Checked every figure against the case file with check_set's haversine (R 6371.0088): first in-radius fix 21:13:50 at 24.9 m (acc 6.1, 8 km/h), 10 s before the 21:14:00 marker; 8 fixes 21:13:50-21:15:00 (70 s), 21:14:00-21:15:00 fixes 8.7-11.9 m at 0 km/h; gap 170 s 21:15:00-21:17:50; 21:15:00 to 21:17:20 = 140 s of 210 s unobserved; weight 0.6 x 0.75 = 0.45; fee 4.50 net / 6.61 gross REFUNDED (EV-FARE-04053); 3.60 = 0.8 x 4.50; call 21:16:30. Evidence ids EV-TRIP-04053, EV-GPS-04053, EV-FARE-04053 and clause ids POL-NS-01(c), POL-NS-08(b), POL-NS-09(a)/(e), POL-GEN-02(2), POL-NS-11, POL-NS-12 all exist and are used correctly. Length 1575 chars, ASCII. No factual error."
+    }
+  ],
+  "analysis": "No substantive difference: both blind readers reach ESCALATE / null / null / no referrals / INDETERMINATE, matching the key; the only difference is extra harmless clauses in their governing lists. Independent check on the version-6 text. Scope: NO_SHOW_CHARGE, driver-filed (contests the 4.50 net fee after support refunded the 6.61 gross line), no flags. Figures from platform_policy: free_wait_sec 180, fee 4.50 net / 6.61 gross, arrival_marker BUTTON, zone STANDARD (radius 50 m, accuracy filter 25 m). POL-NS-01(a) arrived event 21:14:00 holds; (b)/POL-NS-02: 21:13:40 is 63.2 m (outside), 21:13:50 24.9 m and 21:14:00-21:15:00 seven fixes 8.7-11.9 m, all accuracy <= 8.1 m -> at least 3 consecutive qualifying fixes at/before the marker, (b) holds. POL-NS-05 not engaged (8.7 m, 0 km/h at the marker; arrival-event to fix skew 0 s). (c) is the deciding limb: 180 s from 21:13:50 elapses at 21:16:50 (21:17:00 from the marker), before the 21:17:20 termination, so the fee turns on whether the driver held the radius through the 170 s gap 21:15:00-21:17:50. The bracketing fixes (9.2 m and 21.9 m, 31 m apart) make presence likely but do not measure it; the NS-08 notes name a gap straddling the cancellation as the classic way a short dwell is made to look complete. POL-NS-08(b): the gap is 170 s long and 140 s of it lies inside the arrival-to-cancellation waiting window, so it exceeds 120 s on either measure; fewer-than-6-fixes limb not engaged (7-8 fixes). The trace is the sole carrier (BUTTON marker -> POL-NS-12 inapplicable; call and chat place nobody), so POL-NS-08's closing sentence and POL-NS-09(e) require ESCALATE. Robustness: even a reader who took 'waiting window' to mean only the 180 s free-wait period (in-window gap portion 110-120 s, not longer than 120 s) still escalates, because POL-GEN-02(2) caps confidence at the sole carrier's weight, 0.45, or 0.60 after POL-NS-11 removes the PARTIAL_RECORD (rider_track) factor, below the 0.70 floor -> POL-NS-09(a). So no alternative answer is defensible and no case fix is needed. Rejected alternatives: DRIVER_COMPENSATION 3.60 (reads continuity across the impaired gap; the impaired trace cannot alone support a ruling against the rider, and the cap is below 0.70); NO_ACTION via POL-NS-06 on a 70 s observed dwell (rests on the same impaired trace against the driver; NS-02 notes treat a sparse trace as impaired, not proof of absence) or via POL-GEN-07 burden (GEN-07 applies only where no clause licenses an outcome, and NS-09 licenses ESCALATE). POL-NS-04 fails on (a) (rider's only message 21:12:30 precedes the window) and (b) (driver replied at 21:14:10 and called at 21:16:30); limb (c) undecidable under POL-NS-11. POL-NS-10 not applicable (driver cancellation). POL-NS-08(a),(c),(d) clean. POL-NS-09(c) 0+0; (d) driver 1/150, rider 0 -> not tripped. POL-NS-03 n/a (stationary fixes inside the radius). EV-ADVIS-04053-01 MISSING, relied on by nobody. Key ground truth stands unchanged.",
+  "corrected_ground_truth": null,
+  "case_fix_instructions": null
+}

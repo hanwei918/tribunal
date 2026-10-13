@@ -1,0 +1,70 @@
+{
+  "case_no": 4063,
+  "verdict": "AGREE",
+  "differences": [
+    {
+      "field": "ruling",
+      "key": "NO_ACTION",
+      "reader_a": "NO_ACTION",
+      "reader_b": "NO_ACTION",
+      "resolution": "All agree. POL-NS-10(d): the waiting-time fee is chargeable where the trip was completed (EV-TRIP-04063 status COMPLETED, ended 08:14:45) and the in-geofence dwell before boarding, measured as POL-NS-01(c) measures it, exceeded platform_policy.free_wait_sec 180. Recomputed with check_set's haversine: pin 1.4401,103.7956, STANDARD radius 50 m; 08:02:00 96.2 m, 08:02:10 62.4 m (outside); 08:02:20 19.95 m acc 3.8, 08:02:30 9.0 m, 08:02:40 9.9 m - first run of three qualifying fixes starts 08:02:20; all 40 fixes 08:02:20-08:08:45 are inside 50 m (max 19.95 m, accuracy <= 8.9 m, max interval 10 s). Dwell to trip_started 08:08:45 = 385 s > 180. The line is supported, NS-10(e) refunds nothing, cancellation_fee 0.00 so the never-both rule holds. Rider claim not supported; POL-GEN-03 NO_ACTION leaves payment_status CHARGED and refund 0.00. Not DRIVER_COMPENSATION: NS-10 licenses it only on limb (g) through POL-NS-07, and there is no cancellation here."
+    },
+    {
+      "field": "amount_sgd",
+      "key": null,
+      "reader_a": null,
+      "reader_b": null,
+      "resolution": "All agree: NO_ACTION carries null money (POL-GEN-03)."
+    },
+    {
+      "field": "driver_compensation_sgd",
+      "key": null,
+      "reader_a": null,
+      "reader_b": null,
+      "resolution": "All agree: no POL-NS-07 payout on a completed trip with no cancellation; the waiting fee itself goes to the driver (fee_goes_to DRIVER)."
+    },
+    {
+      "field": "referrals",
+      "key": [],
+      "reader_a": [],
+      "reader_b": [],
+      "resolution": "All agree. POL-NS-05 does not fire: at the 08:02:00 BUTTON tap the matching fix is 96.2 m from the pin (not > 300 m) at reported 12 km/h; position-derived speeds into and out of that fix are 10.1 and 12.2 km/h (all < 15). No other referral-producing clause applies in this category on these facts."
+    },
+    {
+      "field": "governing_clauses",
+      "key": [
+        "POL-NS-10"
+      ],
+      "reader_a": [
+        "POL-NS-10",
+        "POL-NS-01",
+        "POL-NS-02",
+        "POL-GEN-03"
+      ],
+      "reader_b": [
+        "POL-NS-10",
+        "POL-NS-01",
+        "POL-NS-02",
+        "POL-GEN-03"
+      ],
+      "resolution": "Readers list the key's clause plus POL-NS-01, POL-NS-02 and POL-GEN-03. The extras are harmless: POL-NS-01(c) is the measuring rule NS-10(d) imports by reference, POL-NS-02 supplies the radius and accuracy filter, POL-GEN-03 is the vocabulary clause. The key's POL-NS-10 both licenses NO_ACTION (its licenses array) and decides the fee under limbs (d)/(e); listing NS-01 would be acceptable but is not required, since NS-01's own fee test (cancellation, limbs (a),(b),(d)) is not engaged. No inapplicable clause is listed. No change."
+    },
+    {
+      "field": "difficulty",
+      "key": "REVERSAL",
+      "reader_a": "REVERSAL",
+      "reader_b": "REVERSAL",
+      "resolution": "All agree. The rider says the driver only reached at about 8.06 and she did not make him wait; the full-weight trace places him inside the radius from 08:02:20 and stationary from 08:02:30, and her own MSG-04063-004 at 08:03:10 ('ok wait ah, coming down') answers the driver's 08:02:35 arrival message. The rider's story is contradicted by the record."
+    },
+    {
+      "field": "rationale",
+      "key": "checked",
+      "reader_a": "n/a",
+      "reader_b": "n/a",
+      "resolution": "Every figure verified: fare 3.80+1.17+1.68+0.80+5.00 = 12.45 (Decimal) = total_charged; waiting_fee_sgd 5.00 and free_wait_sec 180 from EV-TRIP-04063 platform_policy; first qualifying fix 08:02:20 at 20.0 m (19.95); 40 in-radius fixes to boarding 08:08:45; 385 s > 180; ended 08:14:45; cancellation_fee 0.00; 08:03:10 chat quote matches MSG-04063-004; 08:06 -> 08:08:45 = 165 s; EV-CHAT-04063 weight 0.8 CONTENT_REDACTED; deciding artifacts EV-GPS-04063, EV-TRIP-04063, EV-FARE-04063 at 1.0. Evidence ids and clause ids (POL-NS-10(d)/(e), POL-NS-01(c)) are correct. 'at a 10 s cadence' is the stated sample interval; the last interval 08:08:40-08:08:45 is 5 s, which does not make the statement wrong. Length 1207 characters, ASCII. No change."
+    }
+  ],
+  "analysis": "Both blind readings reach the key's ruling (NO_ACTION), null money, no referrals and REVERSAL; the only difference is that the readers list POL-NS-01, POL-NS-02 and POL-GEN-03 beside POL-NS-10, which is a harmless addition. Worked independently from the version-6 text: the dispute is a rider challenge to a waiting_time_fee on a COMPLETED trip, which only POL-NS-10(d)/(e) governs. NS-10(d) measures the dwell as POL-NS-01(c) does, from the first qualifying in-geofence GPS fix, not the tap. Haversine (R = 6371.0088) against pin 1.4401,103.7956 with the STANDARD 50 m radius and 25 m accuracy filter gives the first three-fix qualifying run starting 08:02:20 (19.95 m, 3.8 m accuracy), and every fix from 08:02:20 to boarding 08:08:45 is inside the radius (40 fixes, max 19.95 m, max interval 10 s, trace COMPLETE weight 1.0). Dwell 385 s > 180 s. Alternative start points do not change the result: from the first stationary fix 08:02:30 it is 375 s, from the tap 08:02:00 it is 405 s; only the rider's 08:06 story (165 s) would fall short, and that story is contradicted by the trace and by her own 08:03:10 message. The 5.00 line equals platform_policy.waiting_fee_sgd, there is no cancellation fee, so NS-10(e) has nothing to refund and POL-GEN-03 NO_ACTION follows. POL-NS-05 is not engaged (tap fix 96.2 m, 12 km/h reported, 10.1-12.2 km/h position-derived). POL-NS-08 limbs (a)-(d) are clean (tap, start and end coincide with fixes; no gap > 120 s; chat 8 = 8, sequential, 245 s interval spanning the marker; no cancellation line). POL-NS-09 triggers absent (counterparty disputes 0+0; driver 1/150; rider no_show_disputes_30d 0; cap 1.0). The MISSING advisory and the CONTENT_REDACTED chat (0.8) decide nothing; NS-04/NS-11 rider-presence questions do not arise on a waiting-fee claim. A noted oddity - the 08:02:10->08:02:20 step is 42.5 m (15.3 km/h position-derived) against a reported 8 km/h at 08:02:20 - is outside the NS-05 tap test and cannot move the dwell below 375 s, so it creates no second defensible answer. No case change is needed.",
+  "corrected_ground_truth": null,
+  "case_fix_instructions": null
+}

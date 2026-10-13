@@ -1,0 +1,44 @@
+{
+ "case_no": 4003,
+ "verdict": "AGREE",
+ "differences": [
+  {
+   "field": "ruling / amount_sgd / driver_compensation_sgd / referrals",
+   "key": "ESCALATE, null, null, []",
+   "reader_a": "ESCALATE, null, null, []",
+   "reader_b": "ESCALATE, null, null, []",
+   "resolution": "No difference. ESCALATE carries null money (POL-GEN-03, POL-RD-10). No referral: POL-RD-06(c) needs a pattern (deviation_flags_90d 0 of completed_trips_90d 245 on EV-DPROF-04003) and POL-RD-09(4) needs a phantom ERP or surcharge line (EV-FARE-04003 has none)."
+  },
+  {
+   "field": "difficulty",
+   "key": "INDETERMINATE",
+   "reader_a": "HARD",
+   "reader_b": "HARD",
+   "resolution": "Key right. Neither reader argues for HARD; both put the escalation down to missing evidence, which is the INDETERMINATE definition. The escalation is an evidence escalation, not a policy-requires-a-person escalation on clear facts. POL-RD-07(iii) itself calls the outcome 'a data failure and not a finding for the driver'. The deciding fact (the deviation across 14:11:30-14:19:00) rests only on EV-GPS-04003 at weight 0.6 with no RD-07(ii) corroborator. New record-type evidence (a platform-derived distance independent of the driver-app trace, an ERP or toll record, a driver admission or a counterparty statement) could change the outcome either way. For example, an independent platform distance near 13.5 km would remove the deviation. A policy-mandated escalation (RD-10(6), NS-07 anti-farming, GEN-08 flags) cannot be resolved by more evidence. This one can. Readers' HARD is the readers' error."
+  },
+  {
+   "field": "governing_clauses",
+   "key": "POL-RD-07, POL-RD-10, POL-GEN-02",
+   "reader_a": "POL-RD-07, POL-RD-10, POL-GEN-02",
+   "reader_b": "POL-RD-07, POL-RD-10, POL-RD-08, POL-RD-01, POL-GEN-02",
+   "resolution": "Key right. All three key clauses apply and license ESCALATE. RD-07(ii)/(iii) states the outcome, RD-10(3) is the named trigger, and GEN-02(2) caps confidence at 0.6, which fires RD-10(1). Reader B's extra RD-08 is relevant (limb (b) cannot be discharged) but not needed. RD-01 is used for measurement and does not license ESCALATE. Both extras are harmless and are not a reason to change the key."
+  },
+  {
+   "field": "rationale facts",
+   "key": "450 s gap 14:11:30-14:19:00; chord 8,489.6 m; trace 17.600 km vs optimal 13.5 km = 30.37 %; no corroborator; weight 0.6",
+   "reader_a": "Same figures; also states the counterfactual RD-02 figure 4.80",
+   "reader_b": "Same figures; also states the counterfactual RD-02 figure 4.80",
+   "resolution": "Every number, evidence id and clause id in the key rationale checks out against the record and the policy text (see analysis). The readers' own side figures have small slips that do not touch the key. Reader A gives the counterfactual as '18.96% of charged': that is the raw 4.755 / 25.08, and the payable 4.80 is 19.14 %. Reader B gives the northernmost pre-gap fix as 2.66 km from the pickup; it is 2.71 km. Both are reader-side and cosmetic."
+  },
+  {
+   "field": "alternative reading raised in both readers' doubts (PARTIAL_REFUND 4.80)",
+   "key": "ESCALATE",
+   "reader_a": "Considered and rejected",
+   "reader_b": "Considered and rejected",
+   "resolution": "Checked as a possible CASE_FIX and rejected: it is not a reasonable reading of the text, so no case change is needed. A 4.80 refund needs two separate errors. The first is reading RD-07(ii) as conditional, when it is categorical ('may NOT be established on the gps_trace alone'), and RD-13's last sentence confirms that RD-10(3) still governs. The second is ignoring GEN-02(2)'s cap at 0.6, below the 0.70 floor, which escalates under RD-10(1) by itself. The 'disputed segment' cannot be narrowed to the clean pre-gap loop either. The claim text on the dispute names the KPE and MCE. The bounding fixes (1.355532, 103.896328) and (1.287039, 103.862588) span that stretch, which is off the booked PIE/CTE corridor stored on EV-TRIP-04003."
+  }
+ ],
+ "analysis": "Re-derived from the version-6 text with Python (check_set's haversine, R 6371.0088; Decimal for money). Scope: ROUTE_DEVIATION, rider-filed, no safety or complaint flag, so POL-GEN-08(1) does not route it. Identity: trip_id TRP-04003 matches on EV-TRIP-04003, EV-GPS-04003 and EV-FARE-04003. The first and last fixes (14:00:10, 14:26:06) equal started_at and ended_at, and timestamps are ordered, so RD-10(2) and RD-10(4) do not fire. Geometry: 113 fixes. The polyline is 17.600356 km: pre-gap 6.178049 + chord 8.489563 + post-gap 2.932745. Written trace_distance_km 17.6 is correct. There is exactly one interval above 10 s: 450 s, 14:11:30 to 14:19:00, implied 67.9 km/h. The largest other step is 177.8 m and every other interval is <= 10 s. So RD-07(a) (450 > 90 s) and (b) (8,489.6 > 500 m) fire inside the disputed KPE/MCE stretch, and (c) does not. Straight-line reading (RD-07(i)): excess 17.600 - 13.5 = 4.100 km = 30.37 % of optimal. That is above 20 % and 0.8 km, below 50 % and 8.0 km. RD-07(ii) corroborators, all absent: (1) EV-CHAT-04003 has two pre-trip messages and no driver admission. (2) EV-FARE-04003 erp_gantries is empty and tolls_erp is 0.00. (3) counterparty_statement is null. (4) EV-TRIP-04003 actual_distance_km 17.6 is not independent: the admissibility note calls it the trace figure rounded, the trip_completed event says the meter ran on the driver-app exported trace, and RD-01 bars citing it. The billed 17.60 km is the same copy, which RD-07(ii) excludes. So RD-07(iii) applies: not sustained, ESCALATE rather than NO_ACTION, and RD-10(3) fires. Separately, GEN-02(2): the deciding fact is carried solely by EV-GPS-04003 at weight 0.6, GPS_GAP graded long-inside-window per the integrity table. Copies are not independent carriers, so the cap is 0.6 < 0.70 and RD-10(1) fires as well. No clause rescues the case: RD-03 and RD-13 (no traffic cause asserted; the MISSING EV-ADVIS-04003-01 is cited by nobody, and RD-13 says RD-10(3) still governs), RD-04 and RD-14 (no instruction; waypoint_hint null), RD-05 (no amendment), RD-11 (METERED), RD-12 (RYDE_X). RD-09 and RD-10(8) are clean: 3.80 + 13.20 + 7.28 + 0.80 = 25.08 to the cent. No referral; null money; the 6.00 is held. For reference only, had the deviation been corroborated: RD-02 recomputed fare is (3.80 + 0.75 x 13.5 + 0.28 x 20) x 1.0 + 0.80 = 20.325. 25.08 - 20.325 = 4.755, rounded up to 4.80. Key rationale: 1023 ASCII chars. Every figure (450 s, 8,489.6 m, 17.600, 13.5, 30.37 %, 0.6, 6.00), evidence id and clause id in it is correct. Ruling, money, referrals, governing clauses, difficulty and rationale all stand. The only reader disagreement on a key field is difficulty (both HARD), and the policy text supports the key's INDETERMINATE. Verdict AGREE.",
+ "corrected_ground_truth": null,
+ "case_fix_instructions": null
+}

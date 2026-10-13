@@ -1,0 +1,72 @@
+{
+  "case_no": 4051,
+  "verdict": "AGREE",
+  "differences": [
+    {
+      "field": "ruling",
+      "key": "FULL_REFUND",
+      "reader_a": "FULL_REFUND",
+      "reader_b": "FULL_REFUND",
+      "resolution": "All agree. POL-NS-04 (a), (b) and (c) all hold on the record (verified below); NS-04 is within POL-NS-03..06 and displaces POL-NS-01 and therefore POL-NS-07. Key right."
+    },
+    {
+      "field": "amount_sgd",
+      "key": 6.61,
+      "reader_a": 6.61,
+      "reader_b": 6.61,
+      "resolution": "All agree. NS-04 refunds the cancellation fee in full; EV-FARE-04051 line cancellation_fee 6.61 (the platform_policy gross figure rider_gross_cancellation_fee_sgd 6.61, net 4.50) = total_charged = amount_contested_sgd 6.61. FULL_REFUND amount equals the contested amount exactly."
+    },
+    {
+      "field": "driver_compensation_sgd",
+      "key": null,
+      "reader_a": null,
+      "reader_b": null,
+      "resolution": "All agree. NS-04 states no driver compensation is payable; POL-NS-07 does not run because POL-NS-01 is displaced."
+    },
+    {
+      "field": "referrals",
+      "key": [],
+      "reader_a": [],
+      "reader_b": [],
+      "resolution": "All agree. No referral-producing clause fires: POL-NS-05 not engaged (fix at the 08:07:00 marker is 7.2 m from the pin at 0 km/h; position-derived speed into it 6.8 km/h); POL-NS-01's driver-education referral is only for an in-radius DRIVER_UNABLE_TO_LOCATE code, and the code here is RIDER_NO_SHOW."
+    },
+    {
+      "field": "governing_clauses",
+      "key": [
+        "POL-NS-04",
+        "POL-GEN-01"
+      ],
+      "reader_a": [
+        "POL-NS-04",
+        "POL-NS-01",
+        "POL-GEN-01"
+      ],
+      "reader_b": [
+        "POL-NS-04",
+        "POL-NS-01",
+        "POL-NS-02",
+        "POL-GEN-01",
+        "POL-GEN-02",
+        "POL-GEN-03"
+      ],
+      "resolution": "Key right; reader additions are harmless extras, not a reason to change the key. POL-NS-04 licenses FULL_REFUND and fixes the amount (fee refunded in full). POL-GEN-01 genuinely applies: the driver's 'check her record' must be discarded and the reasoning must say so (prior_no_show_flags 5 is a lifetime context-only counter). POL-NS-01 is displaced here and its FULL_REFUND licence covers only the in-radius DRIVER_UNABLE_TO_LOCATE outcome, so it neither licenses this ruling nor fixes the amount; POL-NS-02 is satisfied but immaterial once NS-04 exonerates; POL-GEN-02 is a narration/cap rule (licenses only ESCALATE); POL-GEN-03 is the universal vocabulary clause the brief says not to lean on. No clause in the key fails to apply."
+    },
+    {
+      "field": "difficulty",
+      "key": "REVERSAL",
+      "reader_a": "HARD",
+      "reader_b": "REVERSAL",
+      "resolution": "Key right. REVERSAL = a party's story is contradicted by the record. The driver's counterparty statement says he 'called her twice' and that the rider 'never come down'; EV-TRIP-04051 in_app_calls is [] (weight 1.0, PLATFORM_TELEMETRY; under POL-GEN-08(4) parties see masked identifiers, and NS-04(b) reads only that field), and EV-GPS-04051 rider_track places the rider within the 100 m presence radius on 7 of 8 qualifying fixes. The driver's story on the deciding NS-04 facts is contradicted by the record. Reader A's HARD reflects the NS-01-satisfied-but-displaced trap, which is real, but it does not make the key's REVERSAL wrong; reader B itself notes REVERSAL. Not a key error."
+    },
+    {
+      "field": "rationale",
+      "key": "verified",
+      "reader_a": "n/a",
+      "reader_b": "n/a",
+      "resolution": "Every number, evidence id and clause id in the key rationale checked against the case file with Python (haversine R = 6371.0088 km): rider messages 08:07:50 and 08:09:40 inside the 08:07:00-08:11:10 window; last DRIVER post 08:04:20; in_app_calls empty; rider_track 10 fixes, 2 filtered (32.3, 37.0 m accuracy), 8 qualifying of which 7 at 54.9-68.1 m and 1 at 114.0 m; first qualifying in-radius driver fix 08:06:50 at 18.5 m (accuracy 4.3 m), every fix to 08:11:10 within 50 m; dwell 260 s vs free_wait_sec 180; chat weight 0.85 UNREAD_MESSAGE; prior_no_show_flags 5; no_show_disputes_30d 1. All correct."
+    }
+  ],
+  "analysis": "Readers and key agree on ruling (FULL_REFUND), amount 6.61, compensation null and referrals []; they differ only on extra governing clauses (both readers) and difficulty (reader A HARD). Worked independently from the version-6 text. Figures in force (fee_schedule.resolution_rule): EV-TRIP-04051 platform_policy free_wait_sec 180, no_show_threshold_sec null, cancellation_fee_sgd 4.50 net, rider_gross 6.61, arrival_marker BUTTON, pickup_zone_class STANDARD (arrival radius 50 m, rider_presence_radius 100 m). POL-NS-01 on the driver's evidence: (a) driver_arrived 08:07:00; (b) EV-GPS-04051 fixes from 08:06:50 (18.5 m, acc 4.3) through 08:11:10 all within 50 m with accuracy <= 8.4 m, so >= 3 consecutive qualifying fixes at or before the marker (POL-NS-02 satisfied); (c) continuous dwell 08:06:50-08:11:10 = 260 s >= 180 s; (d) CANCELLED_BY_DRIVER, RIDER_NO_SHOW, no boarding, after the dwell elapsed (08:09:50). All four limbs hold, so the fee stands only if no clause in POL-NS-03..06 displaces it. POL-NS-04: (a) MSG-04051-002 (RIDER 08:07:50: own position at the void deck by the letterbox plus a request for the driver's position) and MSG-04051-003 (RIDER 08:09:40: cannot see the car, which side parked) are locating messages inside the window; (b) the only DRIVER message is MSG-04051-001 at 08:04:20, so no reply within 120 s of 08:07:50 (window closes 08:09:50, before the 08:11:10 termination) and none at all before termination, and trip_record.in_app_calls is [] - the driver's 'called twice' is a statement with no record and cannot defeat a limb that reads only in_app_calls; unread status (UNREAD_MESSAGE) is not a condition of the limb; (c) rider_track 10 fixes 08:07:10-08:10:55, all inside the window; 2 ignored for accuracy > 25 m; 7 of 8 qualifying within 100 m (64.4, 67.9, 68.1, 62.7, 54.9, 63.3, 64.5 m) and 1 at 114.0 m: a clear majority (and 9 of 10 even unfiltered). All three limbs hold: fee refunded in full, no compensation. Not engaged: POL-NS-03 (driver inside the 50 m radius, not outside it); POL-NS-05 (marker fix 7.2 m, 0 km/h); POL-NS-06 (no shortfall; MISSING EV-ADVIS-04051-01 not invoked by anyone); POL-NS-10 (driver-terminated on-demand trip); POL-NS-11 (rider_track present and decidable); POL-NS-12 (BUTTON marker). POL-NS-08: (a) marker coincides with a fix (0 s); (b) max interval 10 s, 26 driver fixes in window, rider_track present; (c) ids 001-004 sequential, 4 = chat_message_count, largest interval 210 s < 300 s; (d) line 6.61 equals the gross figure - nothing engaged. POL-NS-09: (a) cap = min(chat 0.85, trip 1.0, gps 1.0) = 0.85 >= 0.70; (b) the driver's statement is not an artifact, no artifact-vs-artifact conflict; (c) 0 + 0 < 2; (d) rider no_show_disputes_30d 1 < 3, driver no_show_terminations_30d 1 < 4 (1/150 = 0.0067); (e) not engaged. POL-GEN-01 discards the reputation argument. Ambiguity check for a CASE_FIX: no second defensible answer found. The only alternative outcome (DRIVER_COMPENSATION 3.60 via NS-01 + NS-07) requires either crediting an unrecorded call against NS-04(b)'s express field or reading NS-04 as requiring the message to be read; both readers considered and rejected each on the clause text, and the margins (200 s of silence after MSG-002, 7/8 presence) are not knife-edge. The key's governing clauses contain the licensing clause (POL-NS-04) and a clause that genuinely applies (POL-GEN-01); readers' extra clauses are harmless. Difficulty REVERSAL fits the definition (driver's call and no-show assertions contradicted by in_app_calls [] and rider_track). Rationale verified figure by figure. check_set.py --range 4001 4065 reports 0 failures. Verdict AGREE.",
+  "corrected_ground_truth": null,
+  "case_fix_instructions": null
+}

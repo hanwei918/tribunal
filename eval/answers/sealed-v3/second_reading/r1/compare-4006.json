@@ -1,0 +1,61 @@
+{
+ "case_no": 4006,
+ "verdict": "AGREE",
+ "differences": [
+  {
+   "field": "ruling / amount_sgd / driver_compensation_sgd",
+   "key": "PARTIAL_REFUND, 2.00, null",
+   "reader_a": "PARTIAL_REFUND, 2.00, null",
+   "reader_b": "PARTIAL_REFUND, 2.00, null",
+   "resolution": "No difference. Recomputed: trace 9.83960 km (haversine R 6371.0088 over 104 fixes) written 9.84; excess 9.84 - 8.7 = 1.14 km passes > 0.8 km but 1.14/8.7 = 13.10 % fails > 20 % (20 % = 1.74 km), so POL-RD-01 establishes no deviation and POL-RD-02 never runs. EV-FARE-04006 carries one ERP line ERP-G-046 at (1.3412, 103.8559), 2.00; nearest of the 104 fixes is 1,843.9 m (08:34:30), fix at charged_at 08:33:00 is 2,456.9 m away, trace never east of lng 103.8495, so no fix within 250 m: POL-RD-09(4) phantom line refunded in full, 2.00 (already a multiple of 0.05). 2.00 < 6.00 contested -> PARTIAL_REFUND per POL-GEN-03; no driver payment."
+  },
+  {
+   "field": "referrals",
+   "key": [
+    "POL-RD-09(4): billing-integrity finding - ERP line ERP-G-046 'CTE (southbound) after Braddell Road' 2.00 for a gantry the gps_trace never passes"
+   ],
+   "reader_a": [
+    "POL-RD-09(4) billing-integrity finding on ERP-G-046 2.00 (same clause, same event)"
+   ],
+   "reader_b": [
+    "POL-RD-09(4) billing-integrity finding on ERP-G-046 2.00 (same clause, same event)"
+   ],
+   "resolution": "No difference: same clause, same line. Wording differences only."
+  },
+  {
+   "field": "governing_clauses",
+   "key": [
+    "POL-RD-09",
+    "POL-RD-01"
+   ],
+   "reader_a": [
+    "POL-RD-01",
+    "POL-RD-09"
+   ],
+   "reader_b": [
+    "POL-RD-01",
+    "POL-RD-09",
+    "POL-RD-08",
+    "POL-GEN-03"
+   ],
+   "resolution": "Key right. POL-RD-01 decides that the distance part fails (no deviation) and its last sentence preserves the POL-RD-09(4) refund; POL-RD-09 licenses PARTIAL_REFUND and fixes the 2.00. Reader b's POL-RD-08 (rider burden on the distance limb, rider-history factor not engaged) and POL-GEN-03 (vocabulary) are harmless extras; the brief says not to lean on POL-GEN-03. No deciding clause is missing and no listed clause is inapplicable."
+  },
+  {
+   "field": "difficulty",
+   "key": "REVERSAL",
+   "reader_a": "HARD",
+   "reader_b": "HARD",
+   "resolution": "Key right. The set definition is REVERSAL = a party's story is contradicted by the record. The rider's central story (a long way round, 'must be 4-5km extra', fare 'usually 12-13') is contradicted by EV-GPS-04006 and EV-TRIP-04006: the measured excess is 1.14 km (13.10 %), well under the 1.74 km the 20 % test needs, and a 4-5 km excess would have been 46-57 % of optimal; the booked-route fare at the record's own constants is 15.325, not 12-13. Both readers themselves note that the rider's distance story is contradicted and call REVERSAL arguable; they prefer HARD only because the separate ERP point is upheld. A correctly upheld side point does not undo the contradiction of the deviation claim the dispute is about, and the 4.00 of the 6.00 contested that rests on that story is denied. The label does not change any ruling value; no reason to change the key."
+  },
+  {
+   "field": "rationale",
+   "key": "states 9.840 km, 8.7, 1.140 km, 13.10 %, 0.8 km / 20 % tests, ERP-G-046 at (1.3412, 103.8559) 2.00, nearest fix 1,843.9 m, 250 m radius, POL-RD-10(8) carve-out, 2.00 of 6.00; cites EV-GPS-04006, EV-TRIP-04006, EV-FARE-04006, POL-RD-01, POL-RD-09(4), POL-RD-10(8)",
+   "reader_a": "n/a",
+   "reader_b": "n/a",
+   "resolution": "Every number, evidence id and clause id verified against the case file with Python (Decimal for money, check_set haversine): 9.84 written / 9.83960 recomputed; 1.14 km; 13.103 %; 1,843.94 m; 18.74 reconciles (3.80 + 7.38 + 4.76 + 0 + 2.00 + 0 + 0.80 + 0 + 0 - 0). The road names (Yio Chu Kang Rd, Upper Thomson Rd) are the ones both parties give and match the trace's westward excursion to lng 103.828. 948 characters, ASCII. No factual error."
+  }
+ ],
+ "analysis": "Both blind readings agree with the key on ruling, amount, compensation, referral and the two deciding clauses; they differ only on the difficulty label (HARD vs the key's REVERSAL) and reader b lists two extra harmless clauses. Worked independently from the version-6 text: scope is in (ROUTE_DEVIATION, no flags, no POL-GEN-08(1) allegation). Identity matches across EV-TRIP-04006, EV-GPS-04006 and EV-FARE-04006; first/last fixes equal started_at/ended_at and sit 0 m from the pickup and dropoff pins. POL-RD-07: 104 fixes, intervals 7-10 s, largest step 114.0 m, so limbs (a)-(c) do not fire and the trace is clean (weight 1.0). POL-RD-01: governing actual distance is gps_trace.trace_distance_km 9.84 (trip_record.actual_distance_km 9.8 / deviation_pct 12.6 is the rounded copy and also fails); optimal 8.7 with no RD-03/04/05/12 adjustment (advisory MISSING and uncited, no rider instruction - chat holds only 'Here already, at the void deck' / 'coming', no waypoint_hint; no amendment timestamps; RYDE_X). Excess 1.14 km > 0.8 km but 13.10 % <= 20 %, so no deviation; POL-RD-02 and POL-RD-06 do not run. POL-RD-09(4): the single ERP line ERP-G-046 'CTE (southbound) after Braddell Road' 2.00 has no fix within 250 m (nearest 1,843.9 m), so it is a billing-integrity failure refunded in full whether or not a deviation exists, and recorded as a referral. POL-RD-10: (8) is carved out because the only unmatched line is the one refunded under RD-09(4); base 3.80, distance 0.75 x 9.84 = 7.38 (billed distance equals the trace), time 0.28 x 17 = 4.76 (trace 17.12 min), platform fee 0.80 all have counterparts; (5) is not engaged because no party asserts a traffic cause or cites EV-ADVIS-04006-01 (POL-RD-13(1)); (7) not engaged - driver statement and trace agree (Upper Thomson / Thomson, never CTE); (1) confidence cap 1.0 (EV-GPS-04006 and EV-FARE-04006 both weight 1.0). POL-RD-08 rider-history factor not engaged (deviation_claims_60d 1). POL-GEN-01: no context-only profile field is used (driver prior_deviation_flags 2 is lifetime and irrelevant; deviation_flags_90d 0). Outcome under POL-GEN-03: 2.00 of the 6.00 contested is returned -> PARTIAL_REFUND 2.00, driver_compensation null, one POL-RD-09(4) referral; 2.00 <= 8.00 so it executes automatically under POL-GEN-05. Alternative readings checked and rejected: NO_ACTION (RD-01's own text saves the RD-09(4) refund, and POL-GEN-03 says referrals never suppress money); ESCALATE under RD-10(8) (express carve-out) or RD-10(5) (nothing cited against the missing advisory); a deviation from rounded figures (9.8 gives 12.64 %, also fails). The numbers are not knife-edge (1.14 vs 1.74 km; 1,844 m vs 250 m). The case has exactly one defensible ruling and amount, and the key states it. The difficulty difference is a labelling preference, not a key error: the rider's deviation story is contradicted by the record, which is the set's REVERSAL definition.",
+ "corrected_ground_truth": null,
+ "case_fix_instructions": null
+}

@@ -1,0 +1,66 @@
+{
+  "case_no": 4055,
+  "ruling": "DRIVER_COMPENSATION",
+  "amount_sgd": 3.6,
+  "driver_compensation_sgd": 3.6,
+  "referrals": [],
+  "governing_clauses": [
+    "POL-NS-01",
+    "POL-NS-02",
+    "POL-NS-04",
+    "POL-NS-11",
+    "POL-NS-07",
+    "POL-GEN-01",
+    "POL-GEN-03"
+  ],
+  "difficulty_opinion": "HARD",
+  "deciding_facts": [
+    {
+      "evidence_id": "EV-TRIP-04055",
+      "fact": "pickup_zone_class / arrival radius (fee_schedule.arrival_radius_m)",
+      "value": "LARGE_VENUE -> 120 m"
+    },
+    {
+      "evidence_id": "EV-TRIP-04055",
+      "fact": "arrival marker type, arrived_at, cancelled_at, status/reason",
+      "value": "BUTTON; 09:22:00; 09:27:40; CANCELLED_BY_DRIVER / RIDER_NO_SHOW; no boarding event"
+    },
+    {
+      "evidence_id": "EV-GPS-04055",
+      "fact": "first qualifying in-geofence fix (acc <=25 m, <=120 m)",
+      "value": "09:21:40, 76.4 m, acc 6.3 m; all 37 fixes 09:21:40-09:27:40 in radius (09:22:00-09:27:40 within 5.8-14.5 m, 0 km/h), max gap 10 s"
+    },
+    {
+      "evidence_id": "EV-GPS-04055",
+      "fact": "fix at arrival marker",
+      "value": "09:22:00, 9.4 m from pin, 0 km/h (POL-NS-05 not triggered)"
+    },
+    {
+      "evidence_id": "EV-GPS-04055",
+      "fact": "continuous in-geofence dwell to cancellation",
+      "value": "360 s from first qualifying fix (340 s from marker) >= free_wait_sec 180"
+    },
+    {
+      "evidence_id": "EV-CHAT-04055",
+      "fact": "rider locating message and driver response",
+      "value": "MSG-04055-004 09:23:30 'I'm at Lobby B, where are you?' read 09:23:50; no DRIVER message after it; in_app_calls empty (POL-NS-04(a),(b) met)"
+    },
+    {
+      "evidence_id": "EV-GPS-04055",
+      "fact": "rider_track",
+      "value": "empty -> POL-NS-04(c) undecidable (POL-NS-11)"
+    },
+    {
+      "evidence_id": "EV-DPROF-04055",
+      "fact": "anti-farming check (no_show_terminations_30d / completed_trips_30d)",
+      "value": "2 / 121 = 0.0165; count < 4, not tripped"
+    },
+    {
+      "evidence_id": "EV-FARE-04055",
+      "fact": "cancellation fee charged vs platform_policy",
+      "value": "4.50 = platform_policy.cancellation_fee_sgd 4.50 (net); no POL-NS-08(d) defect"
+    }
+  ],
+  "reasoning": "1. Scope: NO_SHOW_CHARGE, rider-filed, no safety/complaint flag (POL-GEN-08(1)); route_deviation clauses and POL-RD-14 do not apply. Fee figures from EV-TRIP-04055.platform_policy (resolution_rule): free_wait_sec 180, no_show_threshold null, cancellation_fee_sgd 4.50, arrival_marker BUTTON. 2. POL-NS-02: zone LARGE_VENUE -> 120 m radius. EV-GPS-04055 (weight 0.75, PARTIAL_RECORD: rider_track empty) has 37 consecutive fixes 09:21:40-09:27:40 all inside 120 m with accuracy 3.7-9.5 m (first qualifying 09:21:40 at 76.4 m; from 09:22:00 to 09:27:40 within 5.8-14.5 m at 0 km/h). Arrival test satisfied. 3. POL-NS-01: (a) driver_arrived event 09:22:00 (EV-TRIP-04055); (b) driver in geofence at/before marker (09:21:40, 09:21:50 33.7 m, 09:22:00 9.4 m); (c) dwell from first qualifying fix 09:21:40 to cancellation 09:27:40 = 360 s (>=180; 340 s even from the marker), continuous, max fix interval 10 s; (d) no boarding, terminated by driver with RIDER_NO_SHOW at 09:27:40, after the dwell elapsed (09:24:40). All four limbs hold. 4. Displacing clauses: POL-NS-03 - driver stationary inside the radius, not 120-400 m out; not engaged. POL-NS-05 - marker fix 9.4 m, 0 km/h (<300 m, <15 km/h); marker not false, no referral. POL-NS-06 - dwell 360 s >= 180; no shortfall; traffic advisory EV-ADVIS-04055-01 MISSING (weight 0.0) is irrelevant since no one needs limb (i). POL-NS-10 - driver, not rider, cancelled; (a)/(b)/(f)/(g) not engaged; (d)/(e) no waiting fee line. POL-NS-04 - (a) MSG-04055-004 at 09:23:30 is a locating message ('I'm at Lobby B, where are you?') inside the waiting window; (b) no DRIVER message after it (250 s to cancellation) and in_app_calls empty - both met, the rider's account of being ignored is true on the record; (c) rider_track is empty, so limb (c) cannot be run. Under POL-NS-11 (amendment, governs over POL-NS-04's 'impaired under POL-NS-08(b)' wording) the limb is undecidable, POL-NS-04 cannot exonerate the rider, and the fee is decided on the driver's own evidence; I do not infer the rider was elsewhere. Note the driver had already stated his position at 09:22:10 ('Reached, at the guardhouse drop off', read 09:22:40) and the pickup label is the guardhouse drop-off. 5. POL-NS-08: (a) arrival marker and cancellation each coincide with a fix (0 s skew); (b) no gap >120 s, 35+ fixes in window; missing rider_track does not engage (b) per POL-NS-11; (c) chat sequential 001-005, count 5 = chat_message_count, interval spanning marker 170 s < 300 s; (d) fare line 4.50 = net fee. No policy-level impairment. 6. POL-NS-09: (a) the deciding fact (driver arrival and dwell) is carried by EV-GPS-04055 (0.75) and corroborated by EV-TRIP-04055 (1.0); per POL-GEN-02(2) and POL-NS-11 the cap is >= 0.75 > 0.70, and the impairment (rider_track missing) does not touch the driver's track, so the finding survives the discount; (b) no contradiction between artifacts; (c) disputes_with_counterparty_90d 0 + 0 = 0 < 2; (d) driver no_show_terminations_30d 2 (< 4; 2/121 = 0.0165 <= 0.08), rider no_show_disputes_30d 0 < 3; (e) not engaged. No escalation. 7. POL-GEN-01: the rider's allegation that the driver 'does this to other passengers' and driver_profile.prior_no_show_flags 9 (lifetime, context only) are discarded as grounds; only no_show_terminations_30d/completed_trips_30d are read, for POL-NS-07. 8. POL-NS-07: fee stands; driver compensation = 0.80 x 4.50 = 3.60 (net fee, not gross 6.61). Per POL-GEN-03 the ruling value is DRIVER_COMPENSATION with amount_sgd = driver_compensation_sgd = 3.60; the rider's 4.50 charge stands. No clause produces a referral (POL-NS-05 not engaged; the rider's request to 'check this driver' has no referral clause). POL-GEN-05: monetary effect 3.60 <= 8.00, auto-executed subject to appeal (POL-GEN-04).",
+  "doubts": "(1) The rider's facts are true (locating message, no driver reply within 120 s, no call): POL-NS-04 fails only because rider_track is empty. A reader who treated undecidable limb (c) as not blocking (or who believed the rider was at Lobby B within 150 m) would give FULL_REFUND 4.50 under POL-NS-04; POL-NS-11 forecloses that. (2) A reader applying base POL-NS-04/POL-NS-08(b) text without POL-NS-11 might escalate under POL-NS-08 closing sentence / POL-NS-09(e) because rider_track is 'impaired'; the amendment says it does not engage those. (3) Whether 'Lobby B' is a separate sub-location of a LARGE_VENUE condo is not decidable from coordinates (no venue_id, registered_pickup_points 1); POL-NS-03 is not reachable anyway since the driver was inside the radius. (4) Dwell start: 09:21:40 (first qualifying fix, still moving at 17 km/h) vs 09:22:00 (first stationary fix); either gives >= 340 s, so it does not change the outcome. (5) governing_clauses list includes POL-NS-04/POL-NS-11 as the clauses that dispose of the rider's argument; a narrower list would be POL-NS-01 and POL-NS-07 only."
+}

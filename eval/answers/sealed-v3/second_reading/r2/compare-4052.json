@@ -1,0 +1,66 @@
+{
+  "case_no": 4052,
+  "verdict": "AGREE",
+  "differences": [
+    {
+      "field": "ruling",
+      "key": "DRIVER_COMPENSATION",
+      "reader_a": "DRIVER_COMPENSATION",
+      "reader_b": "DRIVER_COMPENSATION",
+      "resolution": "no difference"
+    },
+    {
+      "field": "amount_sgd / driver_compensation_sgd",
+      "key": "3.60 / 3.60",
+      "reader_a": "3.60 / 3.60",
+      "reader_b": "3.60 / 3.60",
+      "resolution": "no difference; 0.80 x 4.50 = 3.60 (Decimal), net figure from trip_record.platform_policy.cancellation_fee_sgd, multiple of 0.05"
+    },
+    {
+      "field": "referrals",
+      "key": [],
+      "reader_a": [],
+      "reader_b": [],
+      "resolution": "no difference; marker not false (POL-NS-05), driver inside radius on a rider cancellation so no mis-selected driver reason code (POL-NS-01(d))"
+    },
+    {
+      "field": "governing_clauses",
+      "key": [
+        "POL-NS-10",
+        "POL-NS-07"
+      ],
+      "reader_a": [
+        "POL-NS-10",
+        "POL-NS-07",
+        "POL-NS-02",
+        "POL-NS-01",
+        "POL-GEN-03"
+      ],
+      "reader_b": [
+        "POL-NS-10",
+        "POL-NS-02",
+        "POL-NS-01",
+        "POL-NS-07",
+        "POL-GEN-03"
+      ],
+      "resolution": "key stands. POL-NS-10 (limb g) licenses DRIVER_COMPENSATION and POL-NS-07 fixes the 80 percent payout; both are listed. The readers' extra POL-NS-02 / POL-NS-01 (tests that NS-10(g) imports) and POL-GEN-03 (vocabulary) are harmless additions, not omissions in the key."
+    },
+    {
+      "field": "difficulty",
+      "key": "EASY",
+      "reader_a": "HARD",
+      "reader_b": "EASY",
+      "resolution": "key stands. No party's story is contradicted by the record (not REVERSAL), it is not an escalation (not INDETERMINATE); all deciding artifacts are COMPLETE at weight 1.0, one clause limb (NS-10(g)) decides the case, and the dwell clears free_wait_sec by 100 s (90 s on the stricter count). Reader A's HARD reflects the vocabulary traps (NS-01(d) literal failure, 80 percent of net, DRIVER_COMPENSATION on a reversed fee), which is a judgment call and not an error in the key; reader B agrees with the key."
+    },
+    {
+      "field": "rationale",
+      "key": "all numbers, evidence ids and clause ids checked",
+      "reader_a": "n/a",
+      "reader_b": "n/a",
+      "resolution": "no factual error found"
+    }
+  ],
+  "analysis": "Independent working from the version-6 text. Scope: NO_SHOW_CHARGE, driver-filed, no flags (POL-GEN-08(1) not engaged). Fee figures from EV-TRIP-04052 platform_policy: cancellation_fee_sgd 4.50 net (gross 6.61), free_wait_sec 180, grace_after_match_sec 180, arrival_marker BUTTON (so POL-NS-12 is out). EV-FARE-04052 line 4.50 = net, REFUNDED 4.50: no POL-NS-08(d) defect. POL-NS-10(a): cancelled 19:35:30 - accepted 19:24:00 = 690 s > 180 s; (b) scheduled_at null. POL-NS-02 (haversine R = 6371.0088 km from pin 1.3744,103.8861, STANDARD 50 m): 19:30:40 is 56.5 m (out), 19:30:50 16.0 m acc 7.2 m at 5 km/h is the first qualifying in-radius fix, then 28 fixes 19:31:00-19:35:30 at 1.2-9.8 m, speed 0; 29 qualifying fixes to the cancellation, accuracy 3.6-8.8 m, 10 s cadence, so >= 3 consecutive fixes: arrived. POL-NS-01(c) dwell from first qualifying fix = 280 s (270 s from the first stationary fix 19:31:00); both exceed 180 s. POL-NS-10(g) therefore applies: rider cancelled after NS-02 arrival with dwell already past free_wait_sec, the fee stands at 4.50 as if driver-terminated for no-show, limb (f) exceptions excluded (and none on the record anyway: driver_en_route 19:24:10; ETA 7 min from 19:24:00 = 19:31:00, arrival 19:31:00; no request to cancel in EV-CHAT-04052; no vehicle mismatch). Displacers: POL-NS-03 no (inside radius); POL-NS-04 no (no rider message in the waiting window - MSG-04052-002 at 19:28:30 predates arrival and was answered in 20 s; rider_track admissible and 288.9-303.4 m from the pin from 19:31:00, beyond the 100 m presence radius); POL-NS-05 no (marker fix 0 s offset, 7.7 m, 0 km/h; position-derived speed into it 5.5 km/h); POL-NS-06 no (280 s >= 180 s; EV-ADVIS-04052-01 is CONGESTION, weight 0.5, decides nothing); POL-NS-11 not engaged (rider_track present). POL-NS-08 (a)-(d) none fire. POL-NS-09: confidence cap 1.0 (TRIP, GPS, FARE, DPROF all 1.0), counterparty disputes 0+0, rider no_show_disputes_30d 0, anti-farming not tripped. POL-NS-07: no_show_terminations_30d 0 (< 4), 0/143 = 0 (<= 0.08), so compensation is paid at 0.80 x 4.50 = 3.60; per POL-NS-07 and POL-GEN-03 the ruling value is DRIVER_COMPENSATION with amount_sgd mirroring 3.60. No defensible alternative: NO_ACTION would ignore NS-10(g); FULL_REFUND/PARTIAL_REFUND are refund vocabulary for a filer who paid nothing and NS-07 fixes 80 percent of net, not the contested 4.50 or the gross. Rationale checked figure by figure (690 s, 19:30:50, 3.6-8.8 m, 1.2-16.0 m, 280 s, 19:24:10, 7 min ETA, 0 of 143, 3.60, weight 0.5 / ADVISORY_UNCORROBORATED): all correct; length 1376 chars, ASCII. Both readers reached the key's ruling, amount, compensation and referrals; the only differences are harmless extra clauses and one reader's difficulty opinion. No case change is needed: the outcome does not turn on the 270 vs 280 s dwell start, and the support-refund execution question raised in the readers' doubts does not affect any ruling field.",
+  "corrected_ground_truth": null,
+  "case_fix_instructions": null
+}

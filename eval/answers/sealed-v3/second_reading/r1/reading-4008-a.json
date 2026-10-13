@@ -1,0 +1,41 @@
+{
+ "case_no": 4008,
+ "ruling": "NO_ACTION",
+ "amount_sgd": null,
+ "driver_compensation_sgd": null,
+ "referrals": [],
+ "governing_clauses": [
+  "POL-RD-12",
+  "POL-RD-01"
+ ],
+ "difficulty_opinion": "EASY",
+ "deciding_facts": [
+  {
+   "evidence_id": "EV-TRIP-04008",
+   "fact": "vehicle_type and baseline: RYDE_POOL trip; matched-itinerary optimal_distance_km (optimal_route_source MATCHED_POOL_ITINERARY); solo_optimal_distance_km is reference only",
+   "value": "RYDE_POOL; optimal 11.6 km / 22 min; solo 8.9 km"
+  },
+  {
+   "evidence_id": "EV-TRIP-04008",
+   "fact": "pool itinerary identified by platform: pool_matched event names co-rider pick-up Hougang Ave 1 and set-down Sengkang General Hospital; pool_pickup 21:28:22, pool_dropoff 21:39:10",
+   "value": "itinerary identified"
+  },
+  {
+   "evidence_id": "EV-GPS-04008",
+   "fact": "trace_distance_km (recomputed haversine R=6371.0088 over 147 fixes: 12.1196 km); no gap >10 s, max step 144.5 m, accuracy 3.1-8.0 m; not impaired under POL-RD-07(a)-(c)",
+   "value": "12.12 km"
+  },
+  {
+   "evidence_id": "EV-GPS-04008",
+   "fact": "trace stationary at 1.3485,103.9005 from 21:28:32-21:29:52 and at 1.3953,103.8930 from 21:39:10-21:40:10, matching the co-rider pick-up and set-down events",
+   "value": "co-rider stops corroborated"
+  },
+  {
+   "evidence_id": "EV-TRIP-04008",
+   "fact": "excess against matched-itinerary optimal: 12.12 - 11.6",
+   "value": "0.52 km = 4.48% (fails >20% and >0.8 km tests)"
+  }
+ ],
+ "reasoning": "1. Scope (POL-GEN-08(1)): ROUTE_DEVIATION, no safety/complaint flag; in scope. Artifacts all carry trip_id TRP-04008 and consistent start/end times (POL-RD-08(a), POL-RD-10(2),(4) not engaged). 2. POL-RD-12: EV-TRIP-04008 vehicle_type RYDE_POOL, so the POL-RD-01 baseline is the matched-itinerary optimal_distance_km 11.6 km (22 min), not solo_optimal_distance_km 8.9 km. The itinerary is identified by the pool_matched event (co-rider pick-up Hougang Ave 1, set-down Sengkang General Hospital), so the POL-RD-10(5) incomplete-record limb of RD-12 does not apply. The rider's claim ('less than 9km normally but this trip 12km') measures excess against the solo figure and has cited the wrong field; on that ground alone it fails. Both figures: solo 8.9 km, matched itinerary 11.6 km. 3. POL-RD-01: actual distance is EV-GPS-04008 trace_distance_km 12.12 (my recompute 12.1196 km); trip_record.actual_distance_km 12.1 not used. Excess = 12.12 - 11.6 = 0.52 km = 4.48% of 11.6. Both establishment tests fail (needs >20% i.e. >2.32 km AND >0.8 km). No deviation exists -> NO_ACTION. Not material, so POL-RD-06 driver_profile check is not required (deviation_flags_90d 0 / 270 in any case: no pattern). 4. The trace corroborates the pool stops: stationary fixes 21:28:32-21:29:52 and 21:39:10-21:40:10 coincide with pool_pickup 21:28:22 and pool_dropoff 21:39:10. The driver's counterparty statement is consistent with the telemetry. 5. POL-RD-07: max interval 10 s, max step 144.5 m, cadence 10 s -> not impaired; POL-RD-10(3) not engaged. 6. POL-RD-02 not reached (no deviation). For transparency only: recomputed fare on matched optimal = 3.80 + 0.75x11.6 + 0.28x22 = 18.66 x surge 1.0 (EV-FARE-04008) + 0.80 - 2.50 promo = 16.96; charged 17.91; difference 0.95 - not payable because RD-01 fails. 7. POL-RD-03/POL-RD-13: no party asserts a traffic cause; EV-ADVIS-04008-01 is MISSING (weight 0.0), cited only as absent; irrelevant. POL-RD-04/POL-RD-14: no rider instruction naming a waypoint in EV-CHAT-04008 (MSG-006 is a complaint, not an instruction); not engaged. No unbilled-distance shortfall (billed 12.12 = trace 12.12), so no RD-04 driver compensation. POL-RD-05: no amendment timestamps. POL-RD-09: no ERP lines, no airport surcharge (trip did not originate or end at an airport); no billing-integrity referral. POL-RD-10(8): every charge line has a counterpart (promo 2.50 = pool_discount_applied event; distance 12.12 = trace; time 24 = trace 24.03 min); fare reconciles 3.80+9.09+6.72+0.80-2.50 = 17.91. POL-RD-11: fare_model METERED, not applicable. POL-RD-08: rider_profile deviation_claims_60d 1 (<4), no extra corroboration rule. 8. POL-GEN-01: no profile field used as a ground; ratings, prior disputes etc. are context only. POL-GEN-02: deciding facts rest on EV-TRIP-04008 and EV-GPS-04008, both weight 1.0, so confidence cap 1.0. EV-CHAT-04008 is IMPAIRED (weight 0.5, CLOCK_SKEW +47 s constant) but carries no deciding fact; it is consistent with the record (MSG-005 system notice of co-rider pick-up; MSG-001 informed rider it was a pool ride). 9. POL-GEN-03: rider-filed, claim unsupported -> NO_ACTION, amount_sgd null, driver_compensation_sgd null; charge of 17.91 stands. POL-GEN-05: no monetary effect. POL-GEN-04/08(2): provisional, appeal route applies. No escalation trigger in POL-RD-10 fires. No no-show clauses or NS amendments (POL-NS-11, POL-NS-12) apply to this route-deviation case; POL-RD-14 amendment considered and not engaged.",
+ "doubts": "Minimal. Only conceivable alternative: the 0.52 km excess over the matched itinerary would yield a 0.95 POL-RD-02 figure if a deviation were established, but POL-RD-01 fails both gates so no refund is licensed. One might also classify the case as REVERSAL since the rider's grievance is explained by the record, but the rider's raw distances (8.9 vs 12.1 km) are accurate - the claim fails on the baseline rule (POL-RD-12), not because the record contradicts the rider's facts - so EASY."
+}

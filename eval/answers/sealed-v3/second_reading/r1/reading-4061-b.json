@@ -1,0 +1,53 @@
+{
+  "case_no": 4061,
+  "ruling": "DRIVER_COMPENSATION",
+  "amount_sgd": 4.8,
+  "driver_compensation_sgd": 4.8,
+  "referrals": [],
+  "governing_clauses": [
+    "POL-NS-01",
+    "POL-NS-12",
+    "POL-NS-07",
+    "POL-GEN-03"
+  ],
+  "difficulty_opinion": "REVERSAL",
+  "deciding_facts": [
+    {
+      "evidence_id": "EV-TRIP-04061",
+      "fact": "arrival_marker and platform geofence arrival event (POL-NS-12 carrier)",
+      "value": "GPS_AUTO; driver_arrived 13:06:00, geofence check 16 m from pickup, 0 km/h (LARGE_VENUE radius 120 m)"
+    },
+    {
+      "evidence_id": "EV-TRIP-04061",
+      "fact": "free waiting period served before termination",
+      "value": "wait_timer_started 13:06:05, wait_timer_expired 13:10:05 (240 s = free_wait_sec), trip_cancelled 13:14:10"
+    },
+    {
+      "evidence_id": "EV-TRIP-04061",
+      "fact": "no_show_threshold_sec 360 met",
+      "value": "threshold reached 13:12:00 (arrival + 360 s); cancellation 130 s later; arrival-to-cancel 490 s"
+    },
+    {
+      "evidence_id": "EV-TRIP-04061",
+      "fact": "termination limb (d)",
+      "value": "no boarding; CANCELLED_BY_DRIVER, RIDER_NO_SHOW; two unanswered driver calls 13:08:20 and 13:11:15"
+    },
+    {
+      "evidence_id": "EV-GPS-04061",
+      "fact": "exported trace does not contradict (weight 0.3; LOW_SAMPLE_RATE, PARTIAL_RECORD, UNVERIFIED_SOURCE)",
+      "value": "in-window fixes 13:06:20 / 13:09:30 / 13:12:40 at 5.6 / 17.8 / 8.0 m, all 0 km/h; first post-cancel fix 13:14:50 at 260.7 m, 30 km/h is outside the window"
+    },
+    {
+      "evidence_id": "EV-DPROF-04061",
+      "fact": "POL-NS-07 anti-farming check",
+      "value": "no_show_terminations_30d 1 (< 4); 1/97 = 0.0103 (< 0.08) -> not tripped"
+    },
+    {
+      "evidence_id": "EV-FARE-04061",
+      "fact": "fee in force and ledger state",
+      "value": "platform_policy net 6.00 / gross 8.81; ledger 8.81 = gross (POL-NS-08(d) reconciles); REFUNDED 8.81"
+    }
+  ],
+  "reasoning": "1. Scope and posture. NO_SHOW_CHARGE is in automated scope (POL-GEN-08(1)); no safety/complaint flag. Driver-filed: the driver contests support's reversal of his SGD 6.00 net no-show fee (EV-FARE-04061: 8.81 gross charged and refunded 8.81). Under POL-GEN-03, NO_ACTION would leave the rider refunded; the question is whether the fee was chargeable under POL-NS-01 and so whether the driver is owed money. Fee figures from trip_record.platform_policy per fee_schedule.resolution_rule: free_wait_sec 240, no_show_threshold_sec 360, cancellation_fee_sgd 6.00 net, 8.81 gross; zone LARGE_VENUE -> arrival radius 120 m.\n2. POL-NS-12 (amendment, policy v6). arrival_marker is GPS_AUTO (EV-TRIP-04061); the driver_arrived event (13:06:00, PLATFORM_TELEMETRY) states its geofence test (16 m from the pickup point, 0 km/h), and wait_timer_started (13:06:05) and wait_timer_expired (13:10:05) are present. So arrival is established at 13:06:00 and the free waiting period is served because wait_timer_expired (13:10:05) precedes termination (13:14:10), unless an admissible fix in the export affirmatively places the driver outside 120 m or at >= 15 km/h in the window. Haversine (R 6371.0088 km) from the pickup pin (1.37985, 103.76455): fixes in the arrival-to-cancel window are 13:06:20 5.6 m 0 km/h, 13:09:30 17.8 m 0 km/h, 13:12:40 8.0 m 0 km/h - all inside 120 m and stationary. The 13:02:50 fix (825.5 m, 22 km/h) is before arrival (en route) and the 13:14:50 fix (260.7 m, 30 km/h) is 40 s after the cancellation - neither is in the window. No contradiction; NS-12 applies and the platform events are an independent carrier of POL-NS-01(b)/(c).\n3. POL-NS-01. (a) driver_arrived event present. (b) arrival established 13:06:00 via NS-12 (corroborated by trace fixes at 5.6/17.8/8.0 m). (c) free wait 240 s served (timer 13:06:05->13:10:05); platform_policy.no_show_threshold_sec 360 > 240, so cancellation must also fall at/after the threshold: 13:06:00 + 360 s = 13:12:00 (no_show_threshold_reached event), cancellation 13:14:10 is 130 s after; arrival-to-cancel 490 s; first in-window fix to cancel 470 s. (d) no boarding, status CANCELLED_BY_DRIVER, reason RIDER_NO_SHOW, after the required dwell. All four limbs hold.\n4. Displacing clauses. POL-NS-02: superseded for this record by NS-12 (the export has no accuracy field, integrity.accuracy_missing_treatment UNKNOWN); in any case 3 consecutive in-radius fixes exist and none is outside. POL-NS-03: driver stationary inside the radius, not 120-400 m out - not engaged. POL-NS-04: limb (a) fails - the chat_log (EV-CHAT-04061) holds no RIDER message at all; limb (b) also fails - driver placed two in-app calls (13:08:20, 13:11:15, unanswered) and posted his location at 13:06:15. Not engaged. POL-NS-11: rider_track empty, so NS-04(c) is undecidable; it neither helps the rider nor impairs the driver's arrival/dwell evidence. POL-NS-05: arrival event 13:06:00, nearest fix 13:06:20 (20 s) at 5.6 m and 0 km/h - not >300 m nor >=15 km/h; marker not false, no referral. POL-NS-06: dwell 240 s free wait served and 360 s threshold met, no shortfall; limb (i) not needed, so the MISSING EV-ADVIS-04061-01 (weight 0.0) is not relied on and NS-06's MISSING-advisory trigger is not engaged since nobody asserts an advisory. POL-NS-10: the rider did not cancel; scheduled_at null; limbs (a)-(c),(f),(g) not engaged; (d)/(e) no waiting-time line.\n5. Integrity. POL-NS-08(a): arrival event vs nearest fix 20 s (<= 90); termination 13:14:10 vs last fix 13:14:50 = 40 s; no skew. (b): EV-GPS-04061 IS impaired at policy level - in-window gaps 190, 190, 130 s (> 120) and only 3 fixes in the window (< 6). But it is not the only evidence for the deciding fact: under NS-12 the platform events in EV-TRIP-04061 (weight 1.0, COMPLETE) are an independent carrier, and a sparse export does not impair them. So NS-08's 'only evidence impaired' sentence and POL-NS-09(e) are not engaged. (c): chat MSG-001..004 sequential, count 4 = chat_message_count; interval spanning the arrival marker 13:04:00-13:06:15 = 135 s (< 5 min). Not impaired. (d): ledger 8.81 = gross 8.81. Not impaired. POL-GEN-02: deciding fact carried by EV-TRIP-04061 (1.0) and EV-GPS-04061 (0.3; LOW_SAMPLE_RATE, PARTIAL_RECORD, UNVERIFIED_SOURCE); two independent carriers -> cap = max = 1.0; the finding survives the discount on the trace because the platform telemetry carries it at full weight and the trace only corroborates. Confidence well above 0.70.\n6. POL-NS-09. (a) confidence >= 0.70. (b) no two admissible artifacts conflict - trip_record and gps_trace agree; the rider's statement ('the driver was not there') is a party statement, not an artifact, and is contradicted by the record (16 m geofence event; three stationary fixes within 17.8 m; driver's location message MSG-04061-003 read by the rider at 13:12:50). (c) disputes_with_counterparty_90d 0 + 0 = 0 < 2. (d) anti-farming not tripped (below); rider_profile.no_show_disputes_30d 0 < 3. (e) not engaged (step 5). No escalation. Support's reversal 'because the GPS only had a few points' is exactly the reading NS-12 rejects.\n7. POL-NS-07. driver_profile.no_show_terminations_30d 1 (needs >= 4) and 1/97 = 0.0103 (needs > 0.08): not tripped; compensation paid at 80% of the NET fee in force: 6.00 x 0.80 = 4.80 (never the 8.81 gross). POL-GEN-01: only no_show_terminations_30d and completed_trips_30d used; prior_no_show_flags (1 on each profile), ratings, cancellation_rate etc. are context only and not relied on.\n8. Ruling. POL-NS-01 satisfied in full and not displaced -> POL-NS-07 -> ruling DRIVER_COMPENSATION, driver_compensation_sgd 4.80, amount_sgd mirrors 4.80 per POL-GEN-03. No referrals (no false marker, no mis-selected reason code, no conduct issue). POL-GEN-05: monetary effect 4.80 <= execution_threshold_sgd 8.00, executes automatically, appealable under POL-GEN-04.",
+  "doubts": "(1) Amount vs claim: the driver asks for 6.00 back (amount_contested_sgd 6.00). POL-NS-07 fixes payout at 80% of the net fee = 4.80, and POL-NS-01 notes say a verified no-show is emitted as DRIVER_COMPENSATION; a reader treating the driver as a filing party 'entirely right' could argue FULL_REFUND 6.00, but nothing in the policy pays the driver the full net fee. (2) Whether the rider's 8.81 is re-collected is an execution matter the ruling object does not express; POL-GEN-03 says NO_ACTION never restores a charge but is silent on a driver-filed DRIVER_COMPENSATION after a platform refund - the compensation is effectively platform/fee-funded. (3) Without NS-12 the export alone would fail NS-08(b) (gaps 190/190/130 s, 3 fixes) and, being the only carrier, would force ESCALATE under NS-08/NS-09(e) at weight 0.3 - that was the pre-v6 answer; NS-12 is explicitly drafted for this pattern (owner confirmation noted as pending in the amendment note, but the task states v6 is in force). (4) NS-01(c) says dwell is measured from the first qualifying in-geofence fix; NS-12 lets the platform events carry it; even from the first trace fix 13:06:20 the dwell to cancel is 470 s >= 360 s, so the answer does not move."
+}

@@ -1,0 +1,66 @@
+{
+ "case_no": 4054,
+ "verdict": "AGREE",
+ "differences": [
+  {
+   "field": "ruling",
+   "key": "NO_ACTION",
+   "reader_a": "NO_ACTION",
+   "reader_b": "NO_ACTION",
+   "resolution": "All agree. Key right: POL-NS-10(f) makes the rider's post-grace cancellation chargeable and none of its four exceptions is shown on the record."
+  },
+  {
+   "field": "amount_sgd / driver_compensation_sgd",
+   "key": "null / null",
+   "reader_a": "null / null",
+   "reader_b": "null / null",
+   "resolution": "All agree. NO_ACTION carries no money (POL-GEN-03). POL-NS-07 pays only where POL-NS-01 is satisfied or POL-NS-10(g) applies; arrived_at is null, no driver fix is within 50 m (closest 829.7 m at 12:45:30, 898.0 m at the cancellation), so neither applies."
+  },
+  {
+   "field": "referrals",
+   "key": "[]",
+   "reader_a": "[]",
+   "reader_b": "[]",
+   "resolution": "All agree. No arrival marker was pressed, so no POL-NS-05 false-arrival referral; no POL-NS-01 mis-selected reason code (the rider, not the driver, cancelled)."
+  },
+  {
+   "field": "governing_clauses",
+   "key": [
+    "POL-NS-10"
+   ],
+   "reader_a": [
+    "POL-NS-10",
+    "POL-GEN-03"
+   ],
+   "reader_b": [
+    "POL-NS-10",
+    "POL-GEN-03"
+   ],
+   "resolution": "Readers add POL-GEN-03 (ruling vocabulary). Harmless extra; the brief says not to lean on GEN-03's universal licence. POL-NS-10 licenses NO_ACTION and is the deciding clause. Key list stands."
+  },
+  {
+   "field": "difficulty",
+   "key": "REVERSAL",
+   "reader_a": "REVERSAL",
+   "reader_b": "REVERSAL",
+   "resolution": "All agree. The rider's account that the taxi 'kept moving away' and 'went the wrong way' is contradicted by EV-GPS-04054: distance to the pin rises only for the first 30 s (2887.5 m to 3077.9 m at 12:39:40) and falls at every one of the following 35 fixes."
+  },
+  {
+   "field": "rationale",
+   "key": "as written",
+   "reader_a": "same facts and numbers",
+   "reader_b": "same facts and numbers",
+   "resolution": "Every figure re-checked with check_set's haversine (R = 6371.0088 km) and the record: 370 s accept-to-cancel; grace 180 s from platform_policy, ending 12:42:10; driver_en_route 12:39:15; 2887.5 m at 12:39:10, peak 3077.9 m at 12:39:40, 2124.0 m at 12:42:10, 898.0 m at 12:45:20, distance strictly decreasing from 12:39:50 onward; ETA 9 min at 12:39:10 = 12:48:10 (ETA + 180 s = 12:51:10, after the cancellation); fare line 6.61 = rider_gross_cancellation_fee_sgd, net 4.50; all deciding artifacts weight 1.0. Evidence ids and clause ids correct. 1605 chars, ASCII. No factual error."
+  },
+  {
+   "field": "reader doubts (not a difference in answer)",
+   "key": "NS-10(f) governs; NS-02/NS-06 not applied",
+   "reader_a": "flags a literal POL-NS-02 reading (no in-radius fix in 15 min -> FULL_REFUND 6.61) and rejects it",
+   "reader_b": "flags literal POL-NS-02 and POL-NS-06 readings and rejects them",
+   "resolution": "Both readers reached the key's answer and rejected the alternative for the reasons the policy text itself gives; see analysis. Not a CASE_FIX: the tension is resolved in the text and cannot be removed by changing facts."
+  }
+ ],
+ "analysis": "Facts (EV-TRIP-04054, all weight 1.0): rider-cancelled on-demand RYDE_TAXI trip, status CANCELLED_BY_RIDER, reason RIDER_CANCELLED, accepted 12:39:10, cancelled 12:45:20 = 370 s; scheduled_at null; arrived_at null; events show driver_assigned with 'ETA 9 min shown to rider' at 12:39:10 and driver_en_route at 12:39:15; platform_policy grace_after_match_sec 180, cancellation_fee_sgd 4.50, rider_gross_cancellation_fee_sgd 6.61. EV-GPS-04054: 39 fixes every 10 s, accuracy 3.5-8.8 m, max jump 74.6 m; recomputed distances to the pin match the pre-pass notes exactly; trace_distance_km 2.45 = haversine sum 2.4504 km. rider_track 14 fixes 7.0-18.7 m from the pin. EV-CHAT-04054: 4/4 sequential; driver reply at 12:41:25 says he must U-turn and is 'coming already'; no request to cancel. EV-FARE-04054: 6.61 charged, refund 0.00.\nClause selection. POL-NS-10 limb (a): 370 s > 180 s, grace spent; (b) not scheduled; (g) needs arrival plus dwell, absent. Limb (f): a rider's own cancellation after the grace 'is chargeable at platform_policy.cancellation_fee_sgd whether or not the driver had arrived', refunded only where the record shows one of four exceptions. (1) Not begun moving toward the pickup within the grace: driver_en_route at 12:39:15 and the trace closes on the pin at every fix from 12:39:50 (40 s after acceptance), 2124.0 m at grace end vs 2887.5 m at acceptance; not shown. (2) Not arrived within 180 s of the first ETA shown: 12:48:10 + 180 s = 12:51:10; the cancellation at 12:45:20 precedes even the ETA (and even measuring from requested_at 12:38:50 the bound is 12:50:50); not shown. (3) Driver asked rider to cancel: no such message. (4) Vehicle/driver mismatch: none on the record or in the chat. The fee therefore stands. The fare line 6.61 equals the gross figure, which fee_schedule.resolution_rule and POL-NS-08(d) expressly allow, so there is no partial refund of the net/gross difference.\nLiteral POL-NS-02 / POL-NS-06 reading (both readers' doubt). POL-NS-02 says that with no qualifying in-radius fix in the 15 minutes before cancellation 'POL-NS-01 limb (b) fails, and the rider is entitled to a full refund'. Read onto a rider's own pre-arrival cancellation this would refund every such fee and make POL-NS-10(f) a dead letter: (f) expressly covers the case 'whether or not the driver had arrived', and its second exception (driver not arrived within ETA + 180 s) only makes sense if a pre-arrival rider cancellation is otherwise chargeable. POL-NS-10's notes call it 'the only clause that decides a fee the rider's own cancellation triggered'. POL-NS-01's closing sentence sends a failed-limb case to NS-02/03/05/06/10 'as applicable', and NS-01/02 are framed around a driver-terminated no-show (limb (d)); POL-NS-06's notes likewise describe a driver cancelling early. The specific clause governs; the key's reading is the only one consistent with the text as a whole. Both blind readers reached it. Because this tension lives in the policy structure (it arises for any post-grace rider cancellation before arrival) and is resolved by the policy's own words, no change to this case's facts would remove it, and none is needed.\nOther clauses: POL-NS-04 fails limb (b) (driver replied in 25 s) and no driver termination; POL-NS-03/05 no stationary dwell and no arrival marker; POL-NS-07 not reached (anti-farming would not trip anyway: 1 termination, 1/150); POL-NS-08 no limb engaged; POL-NS-09 (a)-(e) none (counters 0, all deciding weights 1.0); POL-NS-11 rider_track present; POL-NS-12 marker BUTTON and never pressed; EV-ADVIS-04054-01 MISSING carries no fact and nobody relies on it. Route-deviation clauses are out of category.\nConclusion: the key's ruling, null money, empty referrals, governing clause POL-NS-10 and REVERSAL are correct; the rationale's numbers, evidence ids and clause ids are all correct. Reader differences are limited to a harmless extra POL-GEN-03. Verdict AGREE.",
+ "corrected_ground_truth": null,
+ "case_fix_instructions": null
+}

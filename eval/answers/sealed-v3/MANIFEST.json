@@ -1,0 +1,150 @@
+{
+  "sealed_set": "tribunal-sealed-v3",
+  "created": "2026-10-13",
+  "author": "Claude, in a fresh Claude Code desktop session started with no project folder and no repository access (a scratch workspace only), not a claude.ai chat; model: Opus 5.5 (claude-opus-5-5), as stated in the session's own system information. Workflow subagents were launched without a model override and so ran on the session model.",
+  "prompted_by": "Zhou Hanwei (team owner), who supplied the nine files and this prompt",
+  "independence": {
+    "saw": [
+      "the nine reference files listed in reference_file_sha256",
+      "the owner's prompt for this set",
+      "the owner's general Claude Code instructions loaded automatically into every session, which name the hackathon project and the folder of its code but contain none of its code, prompts, runs or results"
+    ],
+    "did_not_see": [
+      "the system's code",
+      "the system's prompts",
+      "any run of the system or its results",
+      "any other test set or answer key",
+      "any discussion of the system, its runs or other sets"
+    ],
+    "how": "All work ran in a scratch workspace holding copies of the nine files. The orchestrating session and its subagents were instructed not to open, list or search anything outside it, and the subagents' file accesses were audited afterwards (see second_reading/SUMMARY.json and the author's report). Second readers saw only one case file and the six policy files (plus the public contract)."
+  },
+  "review_status": "no human review; the reference answers are the author's, checked by the author's own second reading",
+  "second_reading_changes": 3,
+  "second_reading_case_file_changes": 1,
+  "tools_used": [
+    "Python 3.11 standard library (json, decimal, math, random, hashlib, uuid, datetime, zipfile)",
+    "check_set.py as received, unmodified",
+    "Claude Code Workflow tool: subagents for planning, blueprint design and adversarial critique, generator code and audits, two blind second readers per case, and a comparison of each reading with the key",
+    "per-category audit scripts that re-derive the deciding measurements from the generated files and were shown to fail on a corrupted copy"
+  ],
+  "schema_version": "1.2.0",
+  "policy_version": 6,
+  "policy_files": [
+    "general.json",
+    "no_show.json",
+    "route_deviation.json",
+    "0001-pol-ns-11.json",
+    "0002-pol-rd-14.json",
+    "0003-pol-ns-12.json"
+  ],
+  "reference_file_sha256": {
+    "PUBLIC-CONTRACT.md": "88d851d0d7774303420720bca56c848ba2aaeb3c55b6f2f79435769f2cb22be2",
+    "general.json": "52248998cce5133abf8aa22428cf4eab089ad9cccbfa3c1cc9da76e670be9d2a",
+    "no_show.json": "bef9c2bb217ea1f78266d600291a2b7b21e54825bfbbe67142f8d4054bc668bb",
+    "route_deviation.json": "e49e72ce68cadb7af32ea20426d2693eb7e846767e82694bc2074f688fb5f7f8",
+    "0001-pol-ns-11.json": "0d24461e9a0fe3cc27a16dc78ffb7daa9cc36c05f8e233c0e272e2a168e8f6de",
+    "0002-pol-rd-14.json": "e254b5f837423e0ee7ee6beec7bb2661fc98e0442c694dc8cc9b4f81c9121703",
+    "0003-pol-ns-12.json": "9fa988960d049a67e9bdbdbbaa822cb246bb2bc0e806e1b865f730e25852d582",
+    "check_set.py": "c61ed3571e318c2edf7702e16c3ada2fff352822396e8b30af3b02bcf7776463",
+    "case-00901.json": "6d16561e8409a5fd4583d149b148fd2d7aab0d89e9a4cfdfbb1c7304e29e8333"
+  },
+  "case_count": 30,
+  "case_numbers": [
+    4001,
+    4002,
+    4003,
+    4004,
+    4005,
+    4006,
+    4007,
+    4008,
+    4009,
+    4010,
+    4011,
+    4012,
+    4013,
+    4014,
+    4015,
+    4051,
+    4052,
+    4053,
+    4054,
+    4055,
+    4056,
+    4057,
+    4058,
+    4059,
+    4060,
+    4061,
+    4062,
+    4063,
+    4064,
+    4065
+  ],
+  "categories": {
+    "NO_SHOW_CHARGE": 15,
+    "ROUTE_DEVIATION": 15
+  },
+  "rulings": {
+    "DRIVER_COMPENSATION": 6,
+    "ESCALATE": 7,
+    "FULL_REFUND": 6,
+    "NO_ACTION": 6,
+    "PARTIAL_REFUND": 5
+  },
+  "difficulty": {
+    "EASY": 7,
+    "HARD": 11,
+    "INDETERMINATE": 5,
+    "REVERSAL": 7
+  },
+  "filed_by": {
+    "DRIVER": 11,
+    "RIDER": 19
+  },
+  "case_file_sha256": {
+    "case-04001.json": "76a13f2a9a21e615e779ca56a9543b8cb5475efd8d4105130a1c193eb2eae1cf",
+    "case-04002.json": "1d4cbb2f6e07ae73b380f3a1f8b4371ff67ab965a464ddc38193fd4e445f7590",
+    "case-04003.json": "901fb534833b00578361492f56ae603e4d9b1e41d81c5bcfed0c72d9d0bb8b13",
+    "case-04004.json": "e5f49f11615102bdb389066c70df59ae9045e2df9f6afb4c7948205b504179b4",
+    "case-04005.json": "f5419bee464c13a33930435b2763c10eec10f0e658853bec7efbe720fd05c2a5",
+    "case-04006.json": "53d28a3b188adae9893df3108918d879e39cc90e783018f538aa30d7cc6eb5e2",
+    "case-04007.json": "b3a86e0d0148182c09d3fabe818d8f3057c3577aa1f8273e6541edfc3e3dc04d",
+    "case-04008.json": "92b1c6382f280ed42d2b03d2db94012732e91c205452200037186bbd1c3c5bf3",
+    "case-04009.json": "02e891df26f229cf354116bca5bdaf13c42bdfeff5a500eebb86d6ea9fd83ab3",
+    "case-04010.json": "bb94e241c34b37c4dca961ab374b6bec8bb3c11e087f656782dac098881056ff",
+    "case-04011.json": "0a34671381d61f503393ae699551e8a238480b580cd766d7642b4636f5cfd330",
+    "case-04012.json": "e3e6f88d7ba40f9de2b56238116c0994e935d190b8a926e447019c1710774d7f",
+    "case-04013.json": "dfacbc8a1eb996750c9d437de717db001539f7f95dcfdc3a0cf425965216a37f",
+    "case-04014.json": "9859ea89545d37832b4e8f0eda78181f5ea188b544267a3e545dc6c40908abbf",
+    "case-04015.json": "505d9de3c01db3a969ca709f683bce5dc2933f9b7e9109e6d4aa10def8a97934",
+    "case-04051.json": "308ef252ad883dbda3a0bc52df125bb160b7fc754ad5fc6b7150fe855867783d",
+    "case-04052.json": "78920c6eb046a12a5c5f14f4419c7983c1e84478ad5539e52a28485cfcbc69aa",
+    "case-04053.json": "76035a64e749f596fb43964de1b231c7ffd0bf0f0297b25b9f0a95f5dcc157ed",
+    "case-04054.json": "86fcf1a635d34d2417adcaa4123ad1c8798b887a1919630daa355bf746afa899",
+    "case-04055.json": "6e90d8a89affd866dfde04ccf693c11ae95bd0b23696e9a47bfa668bd2a0e632",
+    "case-04056.json": "bcabcd684c543a81df6e27a40899f70c055968410f7a5a880ccf897a01e87eba",
+    "case-04057.json": "7f39549093ad434f414eb4cd13f0c9808a5e69ff20d5846670568c93c969e888",
+    "case-04058.json": "0ba3b7cbb70f554aba1d870a36be9b4bccfecc1720559d7021b8253b6769dc28",
+    "case-04059.json": "576782948709087af0c4557aa8f944cbd50c0344db85f245add1d4cae416613e",
+    "case-04060.json": "2b9ed99f1edd54895173c996f27e30da8ca06d5ce734f7418857680127b77b2d",
+    "case-04061.json": "a5f0ba4f075aa35f228264ac73747decf00cf3a2caed8300b2d73223e764f5cc",
+    "case-04062.json": "8fd2695a3455df1f9fd5fac89bf65878c0148505ed814a33e71983b221170853",
+    "case-04063.json": "f729933011950c30b7e523c55b7fe02ee5182164bf74b39d9a0c4426ee29a815",
+    "case-04064.json": "26053746e05e74add2d60242a067aafccdb943831a7ecd38ab8849bef7140f15",
+    "case-04065.json": "fa0309eaf0f9aa2f8693ddffd612d2ed4720d5fb4457533837407b4385d369a9"
+  },
+  "other_case_folder_files_sha256": {
+    "index.json": "d2aaebb5bfb568ead09753f290d40075d5ef1ebb06fc1414dcd0885373d44d22",
+    "CANARY.txt": "221d7ce801a6ecef0bd823a7dce44e8f0bc6da3fd1b6e16d4214a5cee2279468",
+    "README.md": "ab08fb65b2aa777b7e37e55bd6f50b16d1ba293b3fd7d5b45136b5c0800390ac"
+  },
+  "answer_key_sha256": "c58d5610574a5341dffa2f64108dd4f1eb0712db585853f01ba976de344a4117",
+  "canary": "1d037756-aad8-411b-96ea-3a2f5c0dc497",
+  "protocol": {
+    "runs_allowed": 1,
+    "run_from": "freeze-2026-10-11",
+    "no_tuning_after_run": "Any tuning using this set after the sealed run turns it into a development set; the key is not edited after the run",
+    "run_performed": false
+  }
+}

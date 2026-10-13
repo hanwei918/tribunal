@@ -607,10 +607,59 @@ SEALED_V2 = DevelopmentSet(
     ),
 )
 
+# The fifth sealed set, imported on 2026-10-13 and **not yet run**. Its 30 cases
+# are 4001-4015 and 4051-4065; it was made by Claude (Opus 5.5) in a fresh Claude
+# Code session with no project folder or repository access, from the owner's
+# prompt, the version-6 policy text, the public contract, a format checker and the
+# organisers' public sample case, and nobody on the development side has seen its
+# answers. Its registration fixes policy version 6, the version frozen at the tag
+# ``freeze-2026-10-11``, and its single run is made from a commit whose
+# ``tribunal/``, ``prompts/`` and ``policy/`` trees equal those at that tag, at
+# the arguments recorded below -- the configuration of the four earlier sealed
+# runs. It is a different set from ``wild``, ``wild-v2``, ``sealed-v1`` and
+# ``sealed-v2`` and is never added to any of them, to the combined figure or to
+# ``--set all``.
+SEALED_V3 = DevelopmentSet(
+    name="sealed-v3",
+    cases=tuple(
+        entry["case_no"]
+        for entry in loader.load_external_index(
+            loader.EXTERNAL_DIR / run_benchmark.SEALED_V3_SET_RUNS_SUBDIR
+        )
+    ),
+    key_path=ANSWER_DIR / run_benchmark.SEALED_V3_SET_RUNS_SUBDIR / "ground_truth.json",
+    runs_subdir=run_benchmark.SEALED_V3_SET_RUNS_SUBDIR,
+    case_root=loader.EXTERNAL_DIR / run_benchmark.SEALED_V3_SET_RUNS_SUBDIR,
+    summary=(
+        "the fifth sealed set (sealed-v3): 30 cases made by Claude (Opus 5.5) in a "
+        "fresh Claude Code session with no project folder or repository access, "
+        "from the owner's prompt, the version-6 policy text, the public contract, a "
+        "format checker and the organisers' public sample case; no human reviewed "
+        "its answers; nobody on the development side has seen them; it is run once, "
+        "from a commit whose tribunal/, prompts/ and policy/ trees equal those at "
+        "freeze-2026-10-11, at policy version 6"
+    ),
+    sealed=True,
+    policy_version=6,
+    run_arguments=RunArguments(
+        model=RUNTIME_MODEL,
+        judge_votes=4,
+        verify_drafts=False,
+        timeout_seconds=900.0,
+        concurrency=2,
+    ),
+)
+
 # The sets that are run **once**, in the order the report prints them. Each is
 # printed in a section of its own and is never part of ``--set all`` or of the
 # combined figure.
-SEALED_SETS: Tuple[DevelopmentSet, ...] = (SEALED_SET, WILD_V2, SEALED_V1, SEALED_V2)
+SEALED_SETS: Tuple[DevelopmentSet, ...] = (
+    SEALED_SET,
+    WILD_V2,
+    SEALED_V1,
+    SEALED_V2,
+    SEALED_V3,
+)
 
 # The sets that exist to be run again. They are registered by name and are
 # deliberately outside the tuples above: ``--set all``, the combined figure
@@ -713,7 +762,7 @@ DEVELOPMENT_DATA_CAVEAT = (
     "a sum over two sets that were drafted differently and share one template, "
     "so it is not a generalisation figure and does not replace the corpus "
     "number. The generalisation figures the submission reports belong to the "
-    "three sealed sets, each run exactly once: "
+    "four sealed sets, each run exactly once: "
     "the second sealed set's, prepared by OpenAI Codex -- whether Codex could "
     "read this repository while preparing it is not recorded -- from a commit "
     "whose tribunal/, prompts/ and policy/ trees equal those at "
@@ -721,16 +770,22 @@ DEVELOPMENT_DATA_CAVEAT = (
     "independent of prompt tuning, and opened by the policy owner's assistant "
     "before the freeze (see README), and imported on 2026-10-09, from a commit "
     "whose tribunal/, prompts/ and policy/ trees equal those at freeze-2026-10-09; "
-    "and the fourth sealed set's, made by the policy owner with OpenAI Codex "
+    "the fourth sealed set's, made by the policy owner with OpenAI Codex "
     "(model stated by her as GPT-6; not recorded by the tool) from a "
     "written brief, the version-6 policy text and the public contract, with no "
     "repository code, prompts or run results, and imported on 2026-10-11, from a "
+    "commit whose tribunal/, prompts/ and policy/ trees equal those at "
+    "freeze-2026-10-11; "
+    "and the fifth sealed set's, made by Claude (Opus 5.5) in a fresh Claude Code "
+    "session with no project folder or repository access, from the owner's "
+    "prompt, the version-6 policy text, the public contract, a format checker and "
+    "the organisers' public sample case, and imported on 2026-10-13, from a "
     "commit whose tribunal/, prompts/ and policy/ trees equal those at "
     "freeze-2026-10-11. "
     "The held-out set is not one of them: the owner settled on 2026-10-12 that it "
     "is development and regression data, so its single run, from the commit "
     "tagged freeze-2026-09-30, is history. "
-    "Neither figure here is any of them, and no two of the three are "
+    "Neither figure here is any of them, and no two of the four are "
     "ever added to each other."
 )
 
@@ -808,6 +863,27 @@ SEALED_V2_CAVEAT = (
     "and not either other sealed set's key."
 )
 
+# The fifth sealed set is printed on its own for the same reasons and with the
+# same one of its own: its registration fixes policy version 6, so its figure is
+# a measurement of version 6 and of nothing else.
+SEALED_V3_CAVEAT = (
+    "The fifth sealed set is not a development set and is never added to the "
+    "combined figure above, to the held-out set's figure, to the second sealed "
+    "set's, to the third's or to the fourth's. It was made by Claude (Opus 5.5) "
+    "in a fresh Claude Code session with no project folder or repository access, "
+    "from the owner's prompt, the version-6 policy text, the public contract, a "
+    "format checker and the organisers' public sample case, and nobody on the "
+    "development side has seen its answers; it was imported on "
+    "2026-10-13, and its single run is made from a commit whose tribunal/, "
+    "prompts/ and policy/ trees equal those at freeze-2026-10-11 -- every event "
+    "the run writes records the commit it was made from -- at the policy "
+    "version 6 its registration fixes; that single run is the fifth "
+    "generalisation figure the submission reports. It is absent from "
+    "data/index.json and is graded against "
+    "eval/answers/sealed-v3/ground_truth.json, which is neither development key "
+    "and not either other sealed set's key."
+)
+
 # The heading and the caveat each sealed set is printed under, so a set added to
 # ``SEALED_SETS`` cannot be printed without both.
 SEALED_SET_SECTIONS = {
@@ -829,6 +905,11 @@ SEALED_SET_SECTIONS = {
         "The fourth sealed set (sealed-v2), on its own and never in the combined "
         "figure:",
         SEALED_V2_CAVEAT,
+    ),
+    SEALED_V3.name: (
+        "The fifth sealed set (sealed-v3), on its own and never in the combined "
+        "figure:",
+        SEALED_V3_CAVEAT,
     ),
 }
 

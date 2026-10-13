@@ -1,0 +1,54 @@
+{
+ "case_no": 4001,
+ "ruling": "NO_ACTION",
+ "amount_sgd": null,
+ "driver_compensation_sgd": null,
+ "referrals": [],
+ "governing_clauses": [
+  "POL-RD-01",
+  "POL-RD-04",
+  "POL-RD-08",
+  "POL-GEN-02",
+  "POL-GEN-03"
+ ],
+ "difficulty_opinion": "REVERSAL",
+ "deciding_facts": [
+  {
+   "evidence_id": "EV-GPS-04001",
+   "fact": "gps_trace.trace_distance_km (governing actual distance, recomputed from 130 fixes, haversine R=6371.0088)",
+   "value": "9.560 km"
+  },
+  {
+   "evidence_id": "EV-TRIP-04001",
+   "fact": "booked optimal_distance_km / optimal_duration_min (PLATFORM_ROUTER_AT_BOOKING)",
+   "value": "7.4 km / 15 min"
+  },
+  {
+   "evidence_id": "EV-CHAT-04001",
+   "fact": "MSG-04001-002, sender RIDER, 10:11:40 (before trip start 10:12:40), asks to stop at Jurong Point to collect a parcel at the POPStation; platform waypoint_hint Jurong Point (1.33975, 103.7064); driver agrees in MSG-04001-003 10:12:00; rider MSG-04001-004 10:20:45 'coming back to the car now'",
+   "value": "rider instruction meets POL-RD-04(a)-(c)"
+  },
+  {
+   "evidence_id": "EV-GPS-04001",
+   "fact": "closest approach to waypoint_hint; vehicle stationary (speed 0) at 1.3401,103.70668 from 10:18:02 to 10:21:02",
+   "value": "49.8 m (<200 m); 180 s stop"
+  },
+  {
+   "evidence_id": "EV-GPS-04001",
+   "fact": "out-and-back spur to Jurong Point: leaves at fix 19 (1.3465,103.704, 10:15:43) and rejoins at the identical point at fix 65 (10:23:22)",
+   "value": "1.900 km (out 0.951 + back 0.949)"
+  },
+  {
+   "evidence_id": "EV-GPS-04001",
+   "fact": "residual excess after excluding rider-requested spur",
+   "value": "9.560 - (7.4 + 1.900) = 0.260 km = 2.8% of adjusted optimal 9.3 km (fails both >20% and >0.8 km)"
+  },
+  {
+   "evidence_id": "EV-FARE-04001",
+   "fact": "fare_model METERED, surge 1.0, total_charged reconciles; no ERP, toll or airport lines",
+   "value": "3.80 + 7.17 + 5.88 + 0.80 = 17.65"
+  }
+ ],
+ "reasoning": "1. Scope (POL-GEN-08(1)): ROUTE_DEVIATION, rider-filed, no safety/complaint flag; adjudicable. Identifiers TRP-04001 match across EV-TRIP-04001, EV-GPS-04001, EV-FARE-04001 (POL-RD-08(a), POL-RD-10(2) not engaged).\n2. Trace integrity (POL-RD-07): EV-GPS-04001 has 130 fixes 10:12:40-10:33:55, max interval 10 s, max step 122.3 m, cadence 10 s; none of limbs (a)-(c) fire; weight 1.0. started_at/ended_at equal first/last fix (POL-RD-10(4) not engaged).\n3. POL-RD-01 raw measurement: actual = gps_trace.trace_distance_km 9.560 km (recomputed 9.5600; trip_record.actual_distance_km 9.6 is the rounded copy and is not cited). Optimal 7.4 km (EV-TRIP-04001). Raw excess 2.160 km = 29.2% (>20%) and >0.8 km, so on the face a deviation is shown and under POL-RD-08 the burden shifts to the driver.\n4. Driver's exculpation (POL-RD-04): the driver's statement points to the chat, and EV-CHAT-04001 MSG-04001-002 (sender RIDER, 10:11:40) asks to 'singgah Jurong Point kejap' to collect a parcel at the POPStation, 3 min. (a) from the rider - yes; (b) timestamped before the vehicle left the corridor (spur starts 10:15:43; message precedes even trip start 10:12:40) - yes; (c) names a specific place (Jurong Point) - yes. Corroboration: waypoint_hint (1.33975, 103.7064) is the platform-resolved coordinate (no geocoding by me); the trace comes within 49.8 m (<200 m) and sits stationary there 10:18:02-10:21:02 (180 s, matching the driver's 'about 3 min'), and MSG-04001-004 at 10:20:45 ('coming back to the car now') confirms the rider left and re-entered the car. The trace leaves the onward path at fix 19 (1.3465, 103.704, 10:15:43), runs south to Jurong Point and returns by the same road to the identical coordinate at fix 65 (10:23:22) before continuing east; the leaving-to-rejoining distance is 1.900 km (0.951 out + 0.949 back), all attributable to the rider's stop. Fully corroborated, so POL-RD-14 (uncorroborated instruction) and POL-RD-10(7) (partly corroborated/contradictory) are not engaged.\n5. Re-apply POL-RD-01 with the 1.900 km excluded: adjusted optimal 7.4 + 1.900 = 9.300 km; excess 9.560 - 9.300 = 0.260 km = 2.8% (equivalently 7.660 vs 7.4 = 3.5%); both establishment tests fail (0.260 < 0.8 km; <20%). No deviation exists -> NO_ACTION under POL-RD-01. POL-RD-02 recomputation is therefore not run; POL-RD-06 not reached (no MATERIAL deviation; in any case deviation_flags_90d = 0 of 260, no pattern).\n6. Rider's assertions: 'usual trip ~7 km', 'normally 13 plus' cite no evidence id and carry no weight (POL-RD-08); the 'big round at Boon Lay' is the Jurong Point stop she herself requested (EV-CHAT-04001) - her account is contradicted by the record. rider_profile.deviation_claims_60d = 1 (<4), so the POL-RD-08 extra-corroboration rule does not apply; no other profile field used (POL-GEN-01).\n7. POL-GEN-02 disclosure/narration: EV-CHAT-04001 is IMPAIRED, weight 0.85, issue LANGUAGE_AMBIGUITY (LOW) on MSG-04001-002 (mixed Malay 'singgah'/'kejap' with English). The finding survives the discount: the place, purpose ('collect parcel at the POPStation') and duration ('3 min only') are in English, the platform resolved the waypoint_hint, the driver's reply confirms the understanding, and the GPS trace (weight 1.0) independently shows the stop at the waypoint. The rider-request fact rests on the chat (0.85) corroborated by the trace (1.0); confidence cap 0.85 >= 0.70 floor, so POL-RD-10(1) does not fire. Chat is not policy-impaired (4 contiguous messages, count matches chat_message_count 4). EV-ADVIS-04001-01 is MISSING (weight 0.0) and carries no fact; no party asserts a traffic cause and none cites it, so POL-RD-03 and POL-RD-13 are not engaged and POL-RD-10(5) does not fire.\n8. Other clauses: POL-RD-05 n/a (pickup_amended_at/dropoff_amended_at null; the stop is a POL-RD-04 matter); POL-RD-09: no ERP/toll/airport lines, nothing to pass through, (3) rider-caused detour would bar ERP refund anyway, (4) no phantom line; fare reconciles 3.80 + 0.75x9.56 (7.17) + 0.28x21 (5.88) + 0.80 = 17.65; POL-RD-10(8) all lines have counterparts. POL-RD-11 n/a (METERED). POL-RD-12 n/a (RYDE_X). POL-RD-04 driver-compensation limb n/a (distance_charged_km 9.56 = trace 9.56, no unbilled shortfall). POL-RD-10(6) n/a (no refund). No-show clauses and amendments POL-NS-11/NS-12 do not apply to this category.\n9. Outcome (POL-GEN-03): NO_ACTION - the rider's claim is not supported; payment_status CHARGED and refund_issued_sgd 0.00 stand. amount_sgd and driver_compensation_sgd null; no referrals. Monetary effect 0.00, below the POL-GEN-05 threshold of 8.00. Provisional; appeal route per POL-GEN-04.",
+ "doubts": "(1) Exact corridor exit/rejoin points: the optimal route is stored only as road names, so I took the out-and-back spur from the identical coordinate (1.3465,103.704) at fixes 19 and 65 as the leave/rejoin; any reasonable alternative bracket leaves the residual excess well under 0.8 km, so the outcome is robust. (2) If an adjudicator rejected POL-RD-04 (e.g. treating the LANGUAGE_AMBIGUITY on MSG-04001-002 as defeating limb (c)), the raw excess 2.160 km (29.2%) would establish a non-material deviation and POL-RD-02 would give recomputed_fare = 3.80 + 0.75x7.4 + 0.28x15 + 0.80 = 14.35, refund 17.65 - 14.35 = 3.30 -> PARTIAL_REFUND 3.30; I consider that wrong because the place name is English, the waypoint_hint is resolved and the trace corroborates the stop. (3) The 3 min stopped time is billed in time_fare; no clause excludes rider-caused time when no deviation is established, so it does not change the result."
+}

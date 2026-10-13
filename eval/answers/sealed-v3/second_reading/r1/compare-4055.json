@@ -1,0 +1,73 @@
+{
+  "case_no": 4055,
+  "verdict": "AGREE",
+  "differences": [
+    {
+      "field": "ruling",
+      "key": "DRIVER_COMPENSATION",
+      "reader_a": "DRIVER_COMPENSATION",
+      "reader_b": "DRIVER_COMPENSATION",
+      "resolution": "All agree. Key right."
+    },
+    {
+      "field": "amount_sgd / driver_compensation_sgd",
+      "key": "3.60 / 3.60",
+      "reader_a": "3.60 / 3.60",
+      "reader_b": "3.60 / 3.60",
+      "resolution": "All agree. POL-NS-07: 0.80 x platform_policy.cancellation_fee_sgd 4.50 (net, not gross 6.61) = 3.60 (Decimal); POL-GEN-03 mirrors amount_sgd."
+    },
+    {
+      "field": "referrals",
+      "key": "[]",
+      "reader_a": "[]",
+      "reader_b": "[]",
+      "resolution": "All agree. POL-NS-05 not engaged (marker fix 09:22:00 is 9.4 m from pin, reported 0 km/h, position-derived 8.9 km/h into it); POL-NS-01 mis-selected-code referral applies only to in-radius DRIVER_UNABLE_TO_LOCATE, here the code is RIDER_NO_SHOW; the rider's 'check this driver' request has no referral-producing clause."
+    },
+    {
+      "field": "governing_clauses",
+      "key": [
+        "POL-NS-11",
+        "POL-NS-01",
+        "POL-NS-07",
+        "POL-GEN-01"
+      ],
+      "reader_a": [
+        "POL-NS-01",
+        "POL-NS-02",
+        "POL-NS-04",
+        "POL-NS-11",
+        "POL-NS-07",
+        "POL-GEN-01",
+        "POL-GEN-03"
+      ],
+      "reader_b": [
+        "POL-NS-01",
+        "POL-NS-02",
+        "POL-NS-07",
+        "POL-NS-04",
+        "POL-NS-11",
+        "POL-GEN-03",
+        "POL-GEN-01",
+        "POL-GEN-02"
+      ],
+      "resolution": "Readers are supersets of the key. The key holds the licensing and amount-fixing pair (POL-NS-01 licenses DRIVER_COMPENSATION, POL-NS-07 licenses it and fixes 80 % of the net fee), the amendment that disposes of the rider's only route (POL-NS-11) and the profile constraint the rider's request invokes (POL-GEN-01). Every key clause applies. The readers' extras (POL-NS-02 incorporated by NS-01(b); POL-NS-04 as the clause that fails to exonerate; POL-GEN-03 vocabulary; POL-GEN-02 cap) are harmless supporting cites, not missing deciding clauses. Key list stands."
+    },
+    {
+      "field": "difficulty",
+      "key": "HARD",
+      "reader_a": "HARD",
+      "reader_b": "HARD",
+      "resolution": "All agree. Neither story is contradicted by the record: the rider's locating message and the driver's silence/no call are true on EV-CHAT-04055 and EV-TRIP-04055; the driver's 'more than 5 minutes at the guardhouse pin' is true (340 s from the marker). The difficulty is the amendment trap (POL-NS-04 base text vs POL-NS-11), so not REVERSAL; not ESCALATE, so not INDETERMINATE."
+    },
+    {
+      "field": "rationale facts",
+      "key": "as written",
+      "reader_a": "consistent",
+      "reader_b": "consistent",
+      "resolution": "Every number, evidence id and clause id in the key rationale verified against the case file (see analysis). One non-material wording nit: the rationale calls the rider 'her'; the case file states no rider gender. Not a number, id or clause and not a deciding fact; no change required (optional: 'the rider's 09:23:30 message')."
+    }
+  ],
+  "analysis": "Scope: NO_SHOW_CHARGE, rider-filed, no safety_flag/complaint_flag; the 'check this driver, he does this to other passengers' line is not one of the POL-GEN-08(1) allegation types (property damage, cleaning, violence, harassment, discrimination), so the case is in the automated path. Fee figures from EV-TRIP-04055.platform_policy (resolution_rule): free_wait_sec 180, no_show_threshold_sec null, cancellation_fee_sgd 4.50, gross 6.61, arrival_marker BUTTON (so POL-NS-12 does not apply; the driver_arrived event is the driver's tap, not an independent carrier). Geometry recomputed with check_set's haversine (R 6371.0088 km) from pin 1.3469,103.9576: 09:21:30 140.6 m (outside), 09:21:40 76.4 m acc 6.3, 09:21:50 33.7 m acc 4.2, 09:22:00 9.4 m acc 6.3 - three consecutive qualifying fixes inside the LARGE_VENUE 120 m radius by the 09:22:00 marker (POL-NS-02; NS-01(b)). Every fix from 09:21:40 to 09:27:40 is inside 120 m (no exit); 09:22:00-09:27:40 holds 35 fixes, 5.8-14.5 m, reported speed 0, 10 s cadence, accuracy max 9.5 m. trace_distance_km recomputes to 4.030 = 4.03 as written; point_count 95. NS-01(c): dwell 360 s from the first qualifying fix (340 s from the first stationary fix/marker) >= 180; required dwell elapsed 09:24:40. NS-01(d): no boarding, CANCELLED_BY_DRIVER RIDER_NO_SHOW at 09:27:40, after 09:24:40. All four limbs hold. Displacers: NS-03 needs stationary fixes outside the radius - driver is ~10 m from the pin, so Lobby B's identity never arises (and venue_id is null, registered_pickup_points 1). NS-05: marker fix 9.4 m / 0 km/h, not false. NS-06: no shortfall; the MISSING advisory EV-ADVIS-04055-01 is relied on by nobody. NS-10: driver termination, no rider cancellation, no waiting line. NS-04: (a) MSG-04055-004 (RIDER 09:23:30, 'I'm at Lobby B, where are you?') is locating, inside the window; (b) no DRIVER message after it (250 s to cancellation; read 09:23:50, 230 s before) and in_app_calls []; (c) rider_track [] - no fixes, so the test cannot be run. POL-NS-11 (v6) governs over NS-04's base 'impaired under POL-NS-08(b)' wording: limb (c) undecidable, NS-04 cannot exonerate, decide on the driver's evidence; the missing rider_track does not engage NS-08(b) or NS-09(e) and does not lower the GEN-02 cap. Hence no FULL_REFUND under NS-04 and no ESCALATE. An empty array is 'absent' for this purpose (no fix exists to run the test on); both readers and the key read it so, and no careful reader could run limb (c) on it. Integrity: NS-08(a) marker and cancellation coincide with fixes (0 s); (b) no gap > 120 s, 35 fixes in window; (c) chat 001-005 sequential, 5 = chat_message_count, interval spanning the marker 170 s; (d) fare line 4.50 = net. NS-09: (a) the deciding fact (driver arrival/dwell) rests on EV-GPS-04055 at 0.75 (PARTIAL_RECORD, disclosed), >= 0.70; (b) no artifact contradiction; (c) 0 + 0 counterparty disputes; (d) driver 2 < 4 and 2/121 = 0.0165 <= 0.08, rider no_show_disputes_30d 0. POL-NS-07: anti-farming not tripped; compensation 0.80 x 4.50 = 3.60; POL-GEN-03: DRIVER_COMPENSATION, amount_sgd = driver_compensation_sgd = 3.60, rider's charge stands. POL-GEN-01: driver prior_no_show_flags 9 is lifetime, context only, discarded as a ground for the rider's 'he does this to others' assertion. Result: the version-6 text yields exactly the key's ruling, money, referrals and difficulty; the key's clause list contains the clauses that license and fix the amount and none that does not apply; its rationale's numbers (4.50, 09:23:30, 0.75, 120 m, 09:21:40, 09:22:00, 5.8-14.5 m, 10 s, 09:27:40, 340 s, 360 s, 180, 2 of 121, 0.80 x 4.50 = 3.60, prior_no_show_flags 9) and ids (EV-FARE/CHAT/TRIP/GPS/DPROF-04055; POL-NS-11/01/03/04/07/08/09, POL-GEN-01/03) all check. Both readers reached the key's answer independently; no case ambiguity found that a careful reader could resolve differently, so no case fix.",
+  "corrected_ground_truth": null,
+  "case_fix_instructions": null
+}

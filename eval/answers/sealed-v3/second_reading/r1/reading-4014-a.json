@@ -1,0 +1,50 @@
+{
+  "case_no": 4014,
+  "ruling": "ESCALATE",
+  "amount_sgd": null,
+  "driver_compensation_sgd": null,
+  "referrals": [],
+  "governing_clauses": [
+    "POL-RD-10",
+    "POL-RD-13",
+    "POL-RD-03",
+    "POL-RD-01",
+    "POL-GEN-02",
+    "POL-GEN-03"
+  ],
+  "difficulty_opinion": "HARD",
+  "deciding_facts": [
+    {
+      "evidence_id": "EV-ADVIS-04014-01",
+      "fact": "Traffic advisory the driver expressly cites by id is MISSING (payload null, status MISSING, issue MISSING_ARTIFACT)",
+      "value": "weight_multiplier 0.0"
+    },
+    {
+      "evidence_id": "EV-GPS-04014",
+      "fact": "gps_trace.trace_distance_km (recomputed by haversine R=6371.0088 over 163 fixes)",
+      "value": "17.88 km (recomputed 17.8803)"
+    },
+    {
+      "evidence_id": "EV-GPS-04014",
+      "fact": "Trace integrity under POL-RD-07(a)-(c)",
+      "value": "max interval 10 s, max step 166.7 m, cadence 10 s: not impaired"
+    },
+    {
+      "evidence_id": "EV-TRIP-04014",
+      "fact": "Booked optimal route (PIE westbound past Kallang, CTE) distance/duration",
+      "value": "12.8 km / 19 min"
+    },
+    {
+      "evidence_id": "EV-FARE-04014",
+      "fact": "Metered fare, surge 1.0, total_charged and refund already issued to rider",
+      "value": "25.57 charged; 6.05 refunded (PARTIALLY_REFUNDED)"
+    },
+    {
+      "evidence_id": "EV-CHAT-04014",
+      "fact": "No rider routing instruction; no waypoint_hint",
+      "value": "2 pickup-coordination messages only"
+    }
+  ],
+  "reasoning": "1. Scope (POL-GEN-08(1)): ROUTE_DEVIATION, no safety/complaint flag, in scope. Filed by the DRIVER, contesting the 6.05 already refunded to the rider (EV-FARE-04014 refund_issued_sgd 6.05, payment_status PARTIALLY_REFUNDED). 2. Integrity: EV-TRIP, EV-GPS, EV-CHAT, EV-FARE all COMPLETE weight 1.0; trip ids match (POL-RD-10(2) not engaged); timestamps consistent, trace first/last fix = started_at/ended_at, trace starts 0 m from pickup and ends 0 m from dropoff (POL-RD-10(4) not engaged). POL-RD-07: largest interval 10 s (<90), largest step 166.7 m (<500), cadence 10 s (<30) -> not impaired; POL-RD-10(3) not engaged. 3. POL-RD-01: actual = gps_trace.trace_distance_km 17.88 (my haversine 17.8803); optimal 12.8 (no amendment, not pool, so POL-RD-05/12 n/a). Excess 5.08 km = 39.69% of optimal: >20% and >0.8 km -> deviation ESTABLISHED; <50% and <8 km -> not MATERIAL, so POL-RD-06 need not be consulted (deviation_flags_90d 1 of 298 = 0.34%, no pattern anyway; prior_deviation_flags is lifetime and context only under POL-GEN-01). POL-RD-08: rider's initial burden met on an unimpaired trace; rider_profile deviation_claims_60d 1 (<4) so no extra corroboration test. 4. POL-RD-02 (METERED, surge 1.0 from EV-FARE-04014): recomputed_fare = (3.80 + 0.75x12.8 + 0.28x19) x 1.0 + 0.80 + 0 ERP + 0 waiting - 0 promo = 18.72 + 0.80 = 19.52; charged_total 25.57; refund = 6.05 (already a multiple of 0.05; 23.7% of charged, so partial, above de minimis). This equals exactly the 6.05 the platform refunded and the driver contests. POL-RD-09: no ERP lines, no airport surcharge; nothing to pass through or flag. 5. Burden shifts to driver (POL-RD-08). Driver invokes an external traffic cause (accident on PIE near Kallang) and expressly cites EV-ADVIS-04014-01 to engage POL-RD-03. The trace does run KPE north (lng ~103.89-103.90 up to lat 1.388) then TPE west and CTE south, never touching the PIE/Kallang segment, so POL-RD-03(c) shape would be consistent - but POL-RD-03(a)/(b) and the cap need the advisory payload (named segment, validity window, shortest_lawful_alternative_km), and EV-ADVIS-04014-01 is MISSING, weight 0.0, can carry no fact (POL-GEN-02). POL-RD-04 n/a (no rider instruction; EV-CHAT-04014 only 'Reached...'/'coming out', no waypoint_hint); POL-RD-14 n/a; POL-RD-11 n/a (METERED). 6. Which clause governs the missing advisory: POL-RD-13 consequence (2) would leave the deviation at the measured figure and pay POL-RD-02 (i.e. the rider keeps 6.05), but POL-RD-13(1) expressly says the clause 'does not narrow POL-RD-10(5) where the party does cite the missing identifier; that case still escalates'. Here the driver names EV-ADVIS-04014-01 by id in claim_text, so this is an exculpatory clause (POL-RD-03) invoked against a cited artifact missing from the pool - POL-RD-10(5) fires ('a closure asserted with no traffic_advisory'). 7. POL-RD-10 escalation is terminal and replaces the ruling (POL-GEN-03): ruling ESCALATE, amount_sgd and driver_compensation_sgd null, no referrals (no material deviation/pattern for POL-RD-06(c), no billing-integrity line for POL-RD-09(4)). Trigger named: POL-RD-10(5). Evidence that would resolve it: the LTA advisory record EV-ADVIS-04014-01 (road/segment named, validity window vs. ~15:30-15:35 when the vehicle would have reached PIE at Kallang, shortest_lawful_alternative_km for the POL-RD-03 cap). If it exists and qualifies, the justified excess = min(5.08, 1.30 x (alt - 12.8) + 1.00) and the rider refund shrinks accordingly; if not, POL-RD-02's 6.05 stands. Rider's counter-statement ('didn't see any accident') cites no evidence and carries no weight (POL-RD-08). Profile fields rating/lifetime/prior disputes are context only (POL-GEN-01) and were not used.",
+  "doubts": "The main tension is inside POL-RD-13: consequence (2) (unimpaired trace, threshold met -> deviation stands at measured figure, POL-RD-02 runs) on its face also fits these facts and would give NO_ACTION on this driver-filed dispute (rider keeps the 6.05 refund, which is exactly the POL-RD-02 figure; POL-GEN-03 party-relative NO_ACTION). I read the express carve-out in POL-RD-13(1) - cited missing identifier 'still escalates' - as controlling over the general consequence (2), and POL-RD-10 as mandatory. A reader who treats (2) as independent of (1) would rule NO_ACTION, amount null, governing POL-RD-13/RD-01/RD-02/RD-08. Minor: whether the driver 'cites' the advisory when he says the dispute page shows it - he quotes the exact evidence_id, so I treat it as cited."
+}

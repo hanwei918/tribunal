@@ -1,0 +1,48 @@
+{
+  "case_no": 4006,
+  "ruling": "PARTIAL_REFUND",
+  "amount_sgd": 2.0,
+  "driver_compensation_sgd": null,
+  "referrals": [
+    "POL-RD-09(4): billing-integrity finding - ERP line ERP-G-046 'CTE (southbound) after Braddell Road' (SGD 2.00) charged on EV-FARE-04006 but never crossed by the gps_trace EV-GPS-04006 (nearest fix 1,844 m from the gantry, threshold 250 m)"
+  ],
+  "governing_clauses": [
+    "POL-RD-01",
+    "POL-RD-09"
+  ],
+  "difficulty_opinion": "HARD",
+  "deciding_facts": [
+    {
+      "evidence_id": "EV-GPS-04006",
+      "fact": "trace_distance_km (governing actual distance under POL-RD-01), recomputed by haversine R=6371.0088 over 104 fixes",
+      "value": "9.840 km (recomputed 9.83960)"
+    },
+    {
+      "evidence_id": "EV-TRIP-04006",
+      "fact": "optimal_distance_km stored at booking (PLATFORM_ROUTER_AT_BOOKING); no amendment, pooled or rider-instruction adjustment",
+      "value": "8.7 km"
+    },
+    {
+      "evidence_id": "EV-GPS-04006",
+      "fact": "excess over optimal vs POL-RD-01 relative test (20% of 8.7 = 1.74 km)",
+      "value": "1.14 km = 13.1%; relative test fails, so no deviation"
+    },
+    {
+      "evidence_id": "EV-FARE-04006",
+      "fact": "ERP gantry line ERP-G-046 CTE southbound after Braddell Road at (1.3412, 103.8559), SGD 2.00, charged_at 08:33:00",
+      "value": "SGD 2.00"
+    },
+    {
+      "evidence_id": "EV-GPS-04006",
+      "fact": "minimum distance from any trace fix to gantry ERP-G-046 (POL-RD-09(4) crossing radius 250 m)",
+      "value": "1,843.9 m (fix 76, 08:34:30, 1.338829/103.839483); gantry not crossed"
+    },
+    {
+      "evidence_id": "EV-GPS-04006",
+      "fact": "POL-RD-07 integrity limbs (a)-(c)",
+      "value": "max interval 10 s, max step 114.0 m, cadence 10 s; not impaired"
+    }
+  ],
+  "reasoning": "1. Scope and record (POL-GEN-08(1), POL-RD-10(2),(4)): ROUTE_DEVIATION, rider-filed, no safety/complaint flag. trip_id TRP-04006 matches on trip_record, gps_trace and fare_breakdown; first/last fixes 08:21:50 and 08:38:57 equal started_at/ended_at; first fix is exactly the pickup pin and last fix exactly the dropoff pin (0 m). POL-RD-08(a) shown.\n2. POL-RD-07: trace has 104 fixes at 10 s cadence (max interval 10 s, max consecutive step 114.0 m, accuracy 3.1-7.9 m). None of limbs (a) >90 s gap, (b) >500 m jump, (c) >30 s sustained interval holds; trace is clean, weight 1.0. POL-RD-10(3) not engaged.\n3. POL-RD-01: governing actual distance is gps_trace.trace_distance_km 9.84 (recomputed 9.8396 km; trip_record.actual_distance_km 9.8 is the rounded copy and not cited). optimal_distance_km 8.7 (EV-TRIP-04006); no POL-RD-03/04/05/12 adjustment (no advisory, no rider instruction, no amended endpoints, vehicle RYDE_X). Excess = 9.84 - 8.7 = 1.14 km. Relative test: 20% x 8.7 = 1.74 km; 1.14 < 1.74, FAILS (13.1%). Absolute test 1.14 > 0.8 passes but both must pass. No deviation is established; POL-RD-02 does not run and the distance/time charges stand. The rider's '4-5 km extra' is contradicted by the trace; the trace does go west via Yio Chu Kang/Upper Thomson (lng reaches 103.828) and then Thomson Rd, consistent with the driver's statement, but the extra length is only 1.14 km. Not material (13.1% < 50%, 1.14 < 8.0), so POL-RD-06 is not consulted for materiality; in any case driver_profile.deviation_flags_90d = 0 so no pattern (prior_deviation_flags 2 is a lifetime counter and context only, POL-GEN-01).\n4. POL-RD-09(4): EV-FARE-04006 carries one ERP line, ERP-G-046 'CTE (southbound) after Braddell Road', at (1.3412, 103.8559), SGD 2.00, charged_at 08:33:00. Matching against every fix of EV-GPS-04006 (haversine R=6371.0088): nearest fix is 1,843.9 m away (fix 76, 08:34:30), far outside the 250 m crossing radius; at 08:33 the vehicle was on Thomson Rd around lng 103.835-103.837, nowhere near the CTE. The trip_record's booked route also carried ERP 0.00 (optimal_route_erp_sgd 0.00). This is a phantom gantry line: refunded in full as a standalone billing-integrity correction, available whether or not a deviation exists (POL-RD-01 final sentence), and recorded in referrals. Amount 2.00, rounded up to nearest 0.05 = 2.00; above the 0.50 de minimis. Rider's ERP assertion is supported; driver's 'never go CTE' is corroborated.\n5. POL-RD-10(8) is not triggered: the only unmatched charge line is the one refunded under POL-RD-09(4). Other lines reconcile: 3.80 + 0.75 x 9.84 (7.38) + 0.28 x 17 (4.76) + 0 surge (surge_multiplier 1.0 on EV-FARE-04006) + 2.00 ERP + 0.80 = 18.74 = total_charged; billed distance 9.84 equals the trace, so no POL-RD-04 unbilled-distance compensation.\n6. Clauses not engaged: POL-RD-02 (no deviation); POL-RD-03 and POL-RD-13 (EV-ADVIS-04006-01 MISSING, weight 0.0, but no party asserts a traffic cause or cites it; it carries no fact); POL-RD-04 and POL-RD-14 (chat EV-CHAT-04006 holds only 'Here already' / 'coming', no rider instruction, waypoint_hint null); POL-RD-05 (no amendment timestamps); POL-RD-11 (fare_model METERED); POL-RD-12 (not RYDE_POOL); POL-RD-08 rider-history limb (deviation_claims_60d = 1 < 4); POL-RD-10(1)-(8) none fire. POL-GEN-01: rating, lifetime and prior-dispute fields are context only and not used. POL-GEN-02: deciding facts rest on EV-GPS-04006 and EV-FARE-04006, both weight 1.0; confidence cap 1.0, above the 0.70 floor. No-show clauses and amendments POL-NS-11/NS-12 are outside this category and not engaged.\n7. Outcome (POL-GEN-03): part of the contested SGD 6.00 is returned: PARTIAL_REFUND of SGD 2.00 (2.00 / 18.74 = 10.7% of charged_total, well below the 90% full-refund line). POL-GEN-05: 2.00 <= execution_threshold_sgd 8.00, executes automatically subject to POL-GEN-04 appeal.",
+  "doubts": "(1) Ruling label: the refund rests solely on the POL-RD-09(4) pass-through correction while the deviation claim itself fails under POL-RD-01, whose text says the outcome is NO_ACTION 'save for a billing-integrity refund under POL-RD-09(4)'. A reader treating the deviation result as the ruling with the ERP correction as an add-on might still label it PARTIAL_REFUND 2.00; I see no reading that supports NO_ACTION with 0 money, since POL-RD-09(4) says the line 'is refunded in full'. (2) Governing clauses: some might list POL-RD-01 alone or add POL-RD-10(8) (as the non-trigger). (3) Difficulty: could be labelled REVERSAL because the rider's '4-5 km extra' story is contradicted by the trace (1.14 km), but the rider's ERP story is upheld, so I rate it HARD rather than REVERSAL."
+}

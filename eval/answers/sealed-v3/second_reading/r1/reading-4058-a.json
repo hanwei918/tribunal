@@ -1,0 +1,55 @@
+{
+  "case_no": 4058,
+  "ruling": "ESCALATE",
+  "amount_sgd": null,
+  "driver_compensation_sgd": null,
+  "referrals": [],
+  "governing_clauses": [
+    "POL-NS-07",
+    "POL-NS-09",
+    "POL-NS-01",
+    "POL-NS-02",
+    "POL-GEN-01",
+    "POL-GEN-03"
+  ],
+  "difficulty_opinion": "HARD",
+  "deciding_facts": [
+    {
+      "evidence_id": "EV-DPROF-04058",
+      "fact": "driver_profile.no_show_terminations_30d",
+      "value": 5
+    },
+    {
+      "evidence_id": "EV-DPROF-04058",
+      "fact": "driver_profile.completed_trips_30d",
+      "value": 54
+    },
+    {
+      "evidence_id": "EV-DPROF-04058",
+      "fact": "no_show_terminations_30d / completed_trips_30d (anti-farming rate, threshold > 0.08 with count >= 4)",
+      "value": "5/54 = 0.0926"
+    },
+    {
+      "evidence_id": "EV-GPS-04058",
+      "fact": "first of 3+ consecutive in-radius fixes (AIRPORT radius 150 m, accuracy <= 25 m); every fix to cancellation stays inside radius",
+      "value": "23:41:30 at 105.7 m (acc 6.9 m); 23:42:00-23:51:30 all 12.0-20.8 m, speed 0"
+    },
+    {
+      "evidence_id": "EV-TRIP-04058",
+      "fact": "in-geofence dwell to driver cancellation vs free_wait_sec 300 and no_show_threshold_sec 480",
+      "value": "600 s from first qualifying fix (570 s from arrival marker); cancellation 23:51:30 is after 23:49:30 (first fix + 480 s)"
+    },
+    {
+      "evidence_id": "EV-TRIP-04058",
+      "fact": "termination",
+      "value": "CANCELLED_BY_DRIVER, RIDER_NO_SHOW, no boarding event, started_at null"
+    },
+    {
+      "evidence_id": "EV-FARE-04058",
+      "fact": "cancellation fee line vs platform_policy.cancellation_fee_sgd",
+      "value": "6.00 = 6.00, CHARGED, refund_issued 0.00"
+    }
+  ],
+  "reasoning": "1. Scope (POL-GEN-08(1)): NO_SHOW_CHARGE, no safety or complaint flag; automated path open. Driver-filed: the driver asks for the 6.00 fee to be credited to his earnings.\n2. Fee schedule: trip_record carries platform_policy (RECORD-PLATFORM), so per fee_schedule.resolution_rule free_wait_sec 300, no_show_threshold_sec 480, cancellation_fee_sgd 6.00; zone class AIRPORT gives arrival radius 150 m and rider presence radius 200 m. EV-FARE-04058 line 6.00 reconciles (POL-NS-08(d) not engaged).\n3. POL-NS-02 / POL-NS-01(a)-(d), on EV-TRIP-04058 and EV-GPS-04058 (both weight 1.0). (a) driver_arrived event 23:42:00. (b) haversine (R=6371.0088) from pickup pin (1.3556, 103.9864): fixes 23:41:30 105.7 m, 23:41:40 55.4 m, 23:41:50 23.2 m, all accuracy <= 25 m - three consecutive in-radius fixes, the first at 23:41:30, at/before the arrival marker. (c) all 61 fixes from 23:41:30 to 23:51:30 are inside 150 m; from 23:42:00 the driver is stationary (speed 0) at 12.0-20.8 m. Dwell 23:41:30->23:51:30 = 600 s >= 300 s (570 s even from the marker); cancellation at 23:51:30 is after the 480 s threshold whether counted from 23:41:30 (23:49:30) or the marker (23:50:00). Max fix interval 10 s. (d) no boarding, CANCELLED_BY_DRIVER with RIDER_NO_SHOW after the dwell elapsed. All four limbs hold.\n4. Displacing clauses NS-03 to NS-06: NS-03 no - the stationary fixes are inside the radius. NS-04 no - even reading MSG-04058-003 (23:46:00, 'at the belt') as a locating message, the driver replied at 23:46:50 (50 s < 120 s) and placed in-app calls at 23:45:10 and 23:49:20, so limb (b) fails; limb (c) also fails affirmatively: all 10 rider_track fixes are admissible (accuracy 10.4-19.6 m) and lie 339.2-361.4 m from the pin, 0 of 10 within 200 m. NS-05 no - at the arrival marker the fix is 17.2 m and 0 km/h. NS-06 no - dwell 600 s exceeds 300 s; the MISSING traffic advisory (EV-ADVIS-04058-01, weight 0.0) is not needed and nobody relies on it. NS-10 no - the driver, not the rider, cancelled; 750 s after accept, outside the 180 s grace. NS-11 not engaged (rider_track present and admissible). NS-12 not engaged (arrival_marker BUTTON).\n5. So on the merits the fee would stand and POL-NS-07 would fix the payout at 80% of 6.00 = 4.80. But POL-NS-07's anti-farming check, read only from the trailing-window fields POL-GEN-01 permits: driver_profile.no_show_terminations_30d = 5 (>= 4) AND 5 / 54 = 0.0926 > 0.08 (EV-DPROF-04058, weight 1.0). Both limbs trip: compensation is WITHHELD and the case escalates under POL-NS-09(d). The lifetime prior_no_show_flags (1) is not the field and is not used; rating, cancellation_rate etc. are context only.\n6. Other POL-NS-09 triggers: (c) disputes_with_counterparty_90d 0 + 0 - no; rider no_show_disputes_30d 0 - no; (b) no artifact contradiction; (e) no POL-NS-08 impairment (clock skew 0 s at the marker, max gap 10 s, chat 5 of 5 sequential, fare reconciles). Confidence cap under POL-GEN-02 is 1.0 (deciding artifacts all weight 1.0), so (a) does not fire; the escalation is solely from (d) via POL-NS-07.\n7. Disposition (POL-GEN-03, POL-NS-09): ESCALATE is terminal and replaces the ruling; amount_sgd and driver_compensation_sgd null; the 6.00 fee is held, neither credited to the driver nor refunded. Per POL-NS-07 the escalation packet must direct the reviewer to refund the rider's 6.00 cancellation fee in full; that is a packet instruction, not a referral or a monetary ruling. Open question for the reviewer: whether the driver's trailing-30-day no-show pattern (5 of 54) indicates fee farming, given that this trip on its own record is a verified airport no-show (rider 340-360 m away at the belt for the whole window). No referrals arise (no false arrival, no mis-selected reason code, no RD clause engaged). Route-deviation clauses and POL-RD-14 are outside the category. POL-GEN-05 not reached (no executed amount).",
+  "doubts": "(1) The policy outcome is hard on a driver whose trip record is a clean verified no-show (600 s in-radius dwell at an airport, two unanswered calls, rider 340 m away); a reader who stops at POL-NS-01 would rule DRIVER_COMPENSATION 4.80 (amount_sgd 4.80), but POL-NS-07 expressly withholds compensation and escalates once 5 >= 4 and 5/54 > 0.08. (2) Whether the POL-NS-07 'direct the reviewer to refund the rider in full' instruction should be listed in referrals; I treat it as an escalation-packet instruction (POL-NS-09: 'records any instruction a displaced clause directs into the packet') and leave referrals empty. (3) Whether the dwell clock starts at 23:41:30 (first of three consecutive qualifying fixes, while still moving at 18 km/h) or at 23:42:00 (first stationary fix); either way 570-600 s exceeds 300 s and the 480 s threshold, so nothing turns on it."
+}

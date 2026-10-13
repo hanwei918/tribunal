@@ -1,0 +1,87 @@
+{
+  "case_no": 4064,
+  "verdict": "AGREE",
+  "differences": [
+    {
+      "field": "ruling",
+      "key": "DRIVER_COMPENSATION",
+      "reader_a": "DRIVER_COMPENSATION",
+      "reader_b": "DRIVER_COMPENSATION",
+      "resolution": "All agree. The BUTTON arrival tap at 19:06:00 (EV-TRIP-04064) matches an EV-GPS-04064 fix at 0 s skew that is 655.8 m from the pin at 38 km/h: both POL-NS-05 triggers fire (> 300 m; >= 15 km/h), the marker is false and the clock is recomputed. The recomputed dwell (310 s) meets free_wait_sec 180, so POL-NS-05(iii) hands the case to POL-NS-01, which holds on all four limbs; nothing in POL-NS-03..06 displaces it (NS-03: stationary fixes are inside 50 m; NS-04: limb (b) fails on the driver's 20 s reply MSG-04064-004 and on CALL-04064-001 at 19:09:30, limb (c) fails affirmatively on 8 admissible rider fixes 1007.8-1246.3 m from the pin; NS-06: no shortfall; NS-10: driver termination). POL-NS-07 anti-farming is clean, so the ruling value is DRIVER_COMPENSATION (POL-NS-07 last sentences, POL-GEN-03). Key right."
+    },
+    {
+      "field": "amount_sgd",
+      "key": 4.4,
+      "reader_a": 4.4,
+      "reader_b": 4.4,
+      "resolution": "All agree to the cent. Decimal: 0.80 x 5.50 (platform_policy.cancellation_fee_sgd, net; no gross figure named) = 4.40. On DRIVER_COMPENSATION amount_sgd mirrors driver_compensation_sgd (POL-GEN-03)."
+    },
+    {
+      "field": "driver_compensation_sgd",
+      "key": 4.4,
+      "reader_a": 4.4,
+      "reader_b": 4.4,
+      "resolution": "All agree: POL-NS-07 pays 80 percent of the net fee in force, 4.40. Not FULL_REFUND 5.50 to the filing driver: no clause licenses a full-fee payout to a driver, and POL-NS-01's FULL_REFUND licence is limited to the in-radius DRIVER_UNABLE_TO_LOCATE outcome."
+    },
+    {
+      "field": "referrals",
+      "key": [
+        "POL-NS-05(iii): false-arrival event recorded against the driver"
+      ],
+      "reader_a": [
+        "POL-NS-05(iii): false-arrival event recorded against driver D-8861 (with tap time, distance and speed)"
+      ],
+      "reader_b": [
+        "POL-NS-05(iii): false-arrival event recorded against driver D-8861 (with tap time, distance and speed)"
+      ],
+      "resolution": "Same clause, same event; readers only add detail. POL-NS-05(iii) expressly requires the false-arrival referral even where the fee stands, and it never suppresses the money (POL-GEN-03). No change."
+    },
+    {
+      "field": "governing_clauses",
+      "key": [
+        "POL-NS-05",
+        "POL-NS-01",
+        "POL-NS-07"
+      ],
+      "reader_a": [
+        "POL-NS-05",
+        "POL-NS-01",
+        "POL-NS-02",
+        "POL-NS-07",
+        "POL-GEN-03"
+      ],
+      "reader_b": [
+        "POL-NS-05",
+        "POL-NS-01",
+        "POL-NS-02",
+        "POL-NS-07",
+        "POL-GEN-03"
+      ],
+      "resolution": "Readers add POL-NS-02 (the arrival-geofence test that POL-NS-01(b) and POL-NS-05 point to) and POL-GEN-03 (ruling vocabulary). Both are harmless extras, not errors. The key already lists the clauses that license the ruling (POL-NS-01, POL-NS-07), fix the amount (POL-NS-07) and route the case and produce the referral (POL-NS-05), and lists no clause that does not apply. No change."
+    },
+    {
+      "field": "difficulty",
+      "key": "HARD",
+      "reader_a": "HARD",
+      "reader_b": "HARD",
+      "resolution": "All agree. Not REVERSAL: the rider's statement (the tap was made far away on Bukit Timah Road) is true on the record, and the driver's story (waited more than 5 minutes at the house, called, no answer) is corroborated (310 s in-geofence dwell; CALL-04064-001 unanswered); the rider never claimed to be at the pickup, so her distant rider_track contradicts no story she told. The difficulty is in the NS-05(iii) hand-back to NS-01, the party-relative 80 percent payout on an already-refunded fee, the mandatory referral and the truncated-chat distractor. HARD is right."
+    },
+    {
+      "field": "rationale",
+      "key": "numbers, evidence ids and clause ids as written",
+      "reader_a": "n/a",
+      "reader_b": "n/a",
+      "resolution": "Every figure re-derived with check_set's km() (R = 6371.0088) and Decimal: tap fix 19:06:00 655.8 m, 38 km/h, 0 s skew; 19:07:40 fix 64.1 m; first in-radius fix 19:07:50 27.4 m (accuracy 3.6 m), no in-radius fix earlier; 32 fixes 19:07:50-19:13:00 all within 27.4 m, accuracy <= 8.5 m, max interval 10 s; dwell 310 s vs 180; dwell elapsed 19:10:50 before the 19:13:00 RIDER_NO_SHOW termination; rider_track 8 fixes 1007.8-1246.3 m (1.0-1.25 km), accuracy 8.4-14.0 m; EV-CHAT-04064 weight 0.6 TRUNCATED_LOG, MSG-04064-002 missing; 1 of 132 (0.0076) clean; 0.80 x 5.50 = 4.40; deciding artifacts EV-TRIP/GPS/FARE/DPROF-04064 all weight 1.0. Clause ids correct. Rationale is 1521 characters, ASCII. The only quibble is the pronoun 'her' for the rider, which the record never states; it is not a number, evidence id or clause id and changes nothing, so it is not churned."
+    },
+    {
+      "field": "start of the recomputed clock (reader doubts)",
+      "key": "19:07:50 (310 s)",
+      "reader_a": "19:07:50; notes 290 s if measured from the third fix of the run",
+      "reader_b": "19:07:50; notes 300 s if measured from the first 0 km/h fix (19:08:00)",
+      "resolution": "Not a difference in outcome. POL-NS-01(c) measures from the first qualifying in-geofence fix (19:07:50, 27.4 m, accuracy 3.6 m, start of a 32-fix in-radius run). Any alternative start (19:08:00 -> 300 s; 19:08:10 -> 290 s) still clears 180 s by >= 110 s and still ends before the 19:13:00 termination, so the answer is not knife-edge and no case fix is needed."
+    }
+  ],
+  "analysis": "Both blind readings reach the key's ruling, amount, compensation, referral and difficulty exactly; the only differences are two harmless extra governing clauses and fuller referral wording. Worked independently on the version-6 text: figures come from EV-TRIP-04064 platform_policy (free_wait_sec 180, no_show_threshold_sec null, cancellation_fee_sgd 5.50 net, rider gross null, arrival_marker BUTTON, so POL-NS-12 is out); zone STANDARD gives a 50 m arrival radius and 100 m rider-presence radius. POL-NS-08(a): the tap at 19:06:00 has a fix at the same second, so matching is safe. POL-NS-05: that fix is 655.8 m from the pin at 38 km/h, so the marker is false on both triggers; recomputed from the first qualifying in-geofence fix (19:07:50, 27.4 m, followed by in-radius fixes to 19:13:00), the dwell is 310 s >= 180, so limb (iii) applies: the false marker alone does not defeat the fee, POL-NS-01 governs on the recomputed clock, and the false-arrival event goes into referrals. POL-NS-01: (a) arrived event present; (b) satisfied at the recomputed clock start as limb (b) now states; (c) 310 s continuous, threshold null; (d) started_at null, CANCELLED_BY_DRIVER with RIDER_NO_SHOW at 19:13:00, after the dwell elapsed at 19:10:50. No displacing clause: NS-03 needs stationary fixes 50-400 m out (they are 4.4-11.1 m); NS-04(b) fails on the 20 s chat reply and independently on the in-app call in trip_record, NS-04(c) fails affirmatively on admissible rider fixes all > 1000 m; NS-06 no shortfall (the MISSING advisory EV-ADVIS-04064-01 is never needed); NS-10 does not reach a driver termination; NS-11 not engaged (rider_track present). POL-NS-08(c) is engaged on EV-CHAT-04064 (MSG-04064-002 missing, 5 held vs chat_message_count 6, 470 s interval spanning the marker), but the chat is not the only evidence for any deciding fact: arrival and dwell rest on the weight-1.0 GPS trace and trip record, and NS-04(b) is defeated by the call record alone, so the missing message cannot revive an exoneration and the POL-NS-08 closing sentence / POL-NS-09(e) do not fire. POL-NS-09: (a) cap 1.0; (b) the marker-vs-GPS conflict is resolved by POL-NS-05; (c) 0 + 0 < 2; (d) anti-farming clean (1 < 4; 1/132 = 0.0076 <= 0.08) and rider no_show_disputes_30d 0 < 3; (e) not engaged. POL-NS-07: 0.80 x 5.50 = 4.40; ruling DRIVER_COMPENSATION with amount_sgd = driver_compensation_sgd = 4.40 and the NS-05(iii) referral. Party-relative FULL_REFUND 5.50 to the driver is not licensed by any clause. The key is right on every compared field and its rationale's numbers, evidence ids and clause ids all check. The case file supports only this answer, so no case fix is needed.",
+  "corrected_ground_truth": null,
+  "case_fix_instructions": null
+}

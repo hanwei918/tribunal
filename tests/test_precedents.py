@@ -1431,6 +1431,10 @@ class PipelinePrecedentsTests(unittest.TestCase):
 # on the same terms: the table is frozen, it has no run yet, and ``--precedents``
 # is refused for it.
 #
+# ``sealed-v3`` was registered on 2026-10-13 and is absent for the same reason,
+# on the same terms: the table is frozen, it has no run yet, and ``--precedents``
+# is refused for it.
+#
 # ``inject-v1``, ``pii-v1`` and ``collusion-v1`` were registered on 2026-10-10
 # and are absent for the first reason only, like the three above them: the table
 # is frozen. None of them has a run yet, so nothing reads a closure of theirs,
@@ -1442,6 +1446,7 @@ NOT_YET_IN_PRECEDENTS = frozenset(
         "wild-v2",
         "sealed-v1",
         "sealed-v2",
+        "sealed-v3",
         "dev-v2",
         "dev-v2-ext",
         "ryde-v3",

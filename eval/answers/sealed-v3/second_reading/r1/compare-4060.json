@@ -1,0 +1,58 @@
+{
+ "case_no": 4060,
+ "verdict": "AGREE",
+ "differences": [
+  {
+   "field": "ruling",
+   "key": "FULL_REFUND",
+   "reader_a": "FULL_REFUND",
+   "reader_b": "FULL_REFUND",
+   "resolution": "All agree. POL-NS-10(a): rider cancelled at 07:45:05, 165 s after accepted_at 07:42:20 (EV-TRIP-04060), inside platform_policy.grace_after_match_sec 180; not chargeable whatever the driver's position, and the driver's early arrival does not shorten the grace. POL-NS-10(c) refunds the fee charged in full with no driver compensation."
+  },
+  {
+   "field": "amount_sgd / driver_compensation_sgd",
+   "key": "6.61 / null",
+   "reader_a": "6.61 / null",
+   "reader_b": "6.61 / null",
+   "resolution": "All agree to the cent. EV-FARE-04060 cancellation_fee line 6.61 (the gross figure, which reconciles under POL-NS-08(d)) = total_charged = amount_contested_sgd 6.61. NS-10(c) says 'refunded in full', so a net-4.50 partial reading (raised and rejected by reader B) has no textual footing. No compensation: NS-10(c) excludes it, and NS-10(g) fails (in-geofence dwell 80 s < free_wait_sec 180)."
+  },
+  {
+   "field": "referrals",
+   "key": "[]",
+   "reader_a": "[]",
+   "reader_b": "[]",
+   "resolution": "All agree. Arrival-marker fix 07:43:55 is 4.6 m from the pin at 0 km/h, so no POL-NS-05 false-arrival referral; no driver termination with DRIVER_UNABLE_TO_LOCATE, so no POL-NS-01 driver-education referral."
+  },
+  {
+   "field": "governing_clauses",
+   "key": [
+    "POL-NS-10"
+   ],
+   "reader_a": [
+    "POL-NS-10",
+    "POL-NS-06"
+   ],
+   "reader_b": [
+    "POL-NS-10"
+   ],
+   "resolution": "Reader A adds POL-NS-06 as a concurrent route (dwell 80 s < 180 s). POL-NS-06 is not the deciding clause for a fee the rider's own cancellation triggered: POL-NS-10 is, by its notes, the only clause deciding such a fee, and reading NS-06 onto rider cancellations would contradict NS-10(f), which makes a post-grace rider cancellation chargeable whether or not the driver had arrived. The outcome is the same either way, so A's extra entry is a harmless reader addition; the key's list (POL-NS-10 alone, which licenses FULL_REFUND) is right and must not add NS-06."
+  },
+  {
+   "field": "difficulty",
+   "key": "EASY",
+   "reader_a": "EASY",
+   "reader_b": "EASY",
+   "resolution": "All agree. Single timestamp subtraction on a weight-1.0 artifact with 15 s margin. Not REVERSAL: the rider's 'about 2 minutes' is imprecise (record 165 s) but on the same side of the grace, and the driver's 'already downstairs' is true on EV-GPS-04060 though irrelevant under NS-10(a)."
+  },
+  {
+   "field": "rationale",
+   "key": "as written",
+   "reader_a": "consistent",
+   "reader_b": "consistent",
+   "resolution": "Every figure verified: accepted 07:42:20 to cancelled 07:45:05 = 165 s; requested 07:41:30 to cancel = 215 s; fix 07:43:35 is 58.1 m (outside 50 m STANDARD radius), first in-radius fix 07:43:45 at 18.4 m (acc 5.1 m), 10 s before the 07:43:55 marker; dwell to cancellation 80 s; fare line 6.61 gross; evidence ids EV-TRIP-04060, EV-GPS-04060, EV-FARE-04060 correct; deciding artifacts all weight 1.0 (the MISSING advisory decides nothing)."
+  }
+ ],
+ "analysis": "Independent working from version-6 text. Category NO_SHOW_CHARGE, rider-filed, no safety/complaint flag, in scope. platform_policy present (RECORD-PLATFORM): grace_after_match_sec 180, free_wait_sec 180, cancellation_fee_sgd 4.50 net, rider_gross 6.61, arrival_marker BUTTON (POL-NS-12 not engaged). Deciding fact: rider cancellation time relative to accepted_at, both on EV-TRIP-04060 (COMPLETE, 1.0). 07:45:05 - 07:42:20 = 165 s < 180 s, so POL-NS-10(a) makes the cancellation non-chargeable regardless of the driver's position; scheduled_at null so (b) is not engaged; (c) refunds the fee charged in full with no driver compensation. (f) applies only after the grace. (g) also fails on its own terms: haversine (R 6371.0088) puts the 07:43:35 fix at 58.1 m and the 07:43:45 fix at 18.4 m (acc 5.1 m), so the in-geofence dwell to the cancellation is 80 s, below free_wait_sec 180. POL-NS-01 fails at (c) and (d) (rider, not driver, terminated; reason RIDER_CANCELLED), so POL-NS-07 is never reached. POL-NS-05: marker fix 4.6 m, 0 km/h, not false. POL-NS-04 not engaged (rider's only message is not locating; rider_track fixes all 35-44.7 m accuracy, undecidable per POL-NS-11, irrelevant here). POL-NS-08: 0 s arrival skew, 10 s cadence, chat sequential 4 = 4, fare line equals the gross figure; no policy-level impairment. POL-NS-09: (c) 0+0 < 2; (d) 1 < 4 and 1/150 = 0.0067 <= 0.08, rider no_show_disputes_30d 0 < 3; no escalation. FULL_REFUND of the 6.61 line = amount contested; driver compensation null; referrals none; governing clause POL-NS-10. Both readers reach the key's answer on every scored field; the only difference is reader A's extra POL-NS-06, which does not govern a rider-triggered fee but changes nothing. No defensible alternative answer on this record (15 s margin on a clean artifact; 'refunded in full' fixes the amount), so no case change is needed.",
+ "corrected_ground_truth": null,
+ "case_fix_instructions": null
+}

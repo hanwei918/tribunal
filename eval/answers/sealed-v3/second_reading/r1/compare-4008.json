@@ -1,0 +1,48 @@
+{
+ "case_no": 4008,
+ "verdict": "AGREE",
+ "differences": [
+  {
+   "field": "ruling / amount_sgd / driver_compensation_sgd / referrals",
+   "key": "NO_ACTION, null, null, []",
+   "reader_a": "NO_ACTION, null, null, []",
+   "reader_b": "NO_ACTION, null, null, []",
+   "resolution": "No difference. All three agree; verified independently below."
+  },
+  {
+   "field": "governing_clauses",
+   "key": [
+    "POL-RD-12",
+    "POL-RD-01"
+   ],
+   "reader_a": [
+    "POL-RD-12",
+    "POL-RD-01"
+   ],
+   "reader_b": [
+    "POL-RD-12",
+    "POL-RD-01",
+    "POL-RD-08",
+    "POL-GEN-03"
+   ],
+   "resolution": "Key right. POL-RD-12 fixes the baseline (matched-itinerary optimal_distance_km, not solo_optimal_distance_km) and licenses NO_ACTION; POL-RD-01 runs the establishment test on that baseline, fails, and licenses NO_ACTION. Those two clauses decide the case. Reader B's extras are harmless: POL-RD-08 (rider fails limb (b) on the correct baseline, so the burden never shifts) is consistent context and licenses NO_ACTION, and POL-GEN-03 is the vocabulary clause the brief says not to lean on. Neither is missing from the key in a way that matters, and no clause in the key is inapplicable."
+  },
+  {
+   "field": "difficulty",
+   "key": "EASY",
+   "reader_a": "EASY",
+   "reader_b": "EASY",
+   "resolution": "No difference. Both readers considered and rejected REVERSAL: the rider's stated figures (about 12 km driven against a usual route under 9 km) are accurate on the record (trace 12.12 km, solo_optimal_distance_km 8.9); the claim fails because POL-RD-12 names the solo figure as the wrong baseline, not because the record contradicts the rider's account. The case turns on one express sentence of POL-RD-12 and a single subtraction, so EASY stands."
+  },
+  {
+   "field": "rationale",
+   "key": "numbers 11.6, 8.9, 12.120, 0.520, 4.48 %, 3.22, weight 0.5, +47 s, 10 minutes; ids EV-TRIP-04008, EV-GPS-04008, EV-CHAT-04008; clauses POL-RD-12, POL-RD-01, POL-RD-10(4)",
+   "reader_a": "same figures (12.1196 recomputed, 0.52 km, 4.48 %)",
+   "reader_b": "same figures, plus 3.22 km / 36.2 % against the solo figure",
+   "resolution": "Every number, evidence id and clause id in the key rationale checks out against the file (see analysis). No factual error."
+  }
+ ],
+ "analysis": "Independent check from the version-6 text. (1) Scope: ROUTE_DEVIATION, no safety_flag or complaint_flag, no POL-GEN-08(1) allegation; NO_SHOW clauses and POL-NS-11/POL-NS-12 do not apply; POL-RD-14 needs a rider instruction meeting POL-RD-04(a)-(c) and there is none (MSG-04008-006 'why go Hougang' is a complaint naming no requested waypoint, waypoint_hint null). (2) POL-RD-12: EV-TRIP-04008 vehicle_type RYDE_POOL; optimal_distance_km 11.6 / 22 min with optimal_route_source MATCHED_POOL_ITINERARY and a pool_matched event naming the itinerary (co-rider pick-up Hougang Ave 1, set-down Sengkang General Hospital), plus pool_pickup 21:28:22 and pool_dropoff 21:39:10 events; the record therefore identifies the pooled itinerary and the incomplete-record sentence (POL-RD-10(5)) does not fire. solo_optimal_distance_km 8.9 is reference only. The trace is stationary at 1.3485,103.9005 from 21:28:22 to 21:29:52 and at 1.3953,103.893 from 21:39:10 to 21:40:10, matching the co-rider events. (3) POL-RD-07: recomputed with check_set's haversine (R 6371.0088): 147 fixes, total 12.119625 km (12.120 at 3 dp, file writes 12.12), max interval 10 s, max step 144.53 m, max implied 52.03 km/h; none of limbs (a)-(c) met, so the trace is policy-clean and weight 1.0. First and last fixes sit exactly on the pickup and dropoff pins. (4) POL-RD-01 with Decimal: excess = 12.12 - 11.6 = 0.52 km; 0.52 / 11.6 = 4.4828 %. Test 1 needs > 20 % (> 2.32 km): fails. Test 2 needs > 0.8 km: fails. No deviation exists, so the outcome is NO_ACTION; POL-RD-02 never runs (for information only the matched-baseline recomputation would be 16.96 against 17.91, but it is not reached). Against the solo figure the excess would be 3.22 km = 36.18 %, which is exactly the measurement POL-RD-12 says fails on the wrong-field ground alone. (5) No other clause rescues or redirects: POL-RD-03/POL-RD-13 not engaged (no traffic cause asserted; EV-ADVIS-04008-01 MISSING and uncited, so POL-RD-13(1) keeps it outside POL-RD-10(5)); POL-RD-04 compensation limb not engaged (billed 12.12 km = trace 12.12 km); POL-RD-05 no amendment timestamps; POL-RD-06 not material and deviation_flags_90d 0; POL-RD-08 rider deviation_claims_60d 1 (< 4); POL-RD-09 no ERP lines, no airport surcharge, so no billing-integrity referral; POL-RD-10: ids match, start/end equal first/last fix, chat skew 47 s is far under the 10-minute limb (4), every fare line has a counterpart (promo 2.50 = pool_discount_applied event); POL-RD-11 not applicable (METERED). Fare reconciles with Decimal: 3.80 + 9.09 + 6.72 + 0.80 - 2.50 = 17.91. (6) POL-GEN-02: deciding facts carried by EV-TRIP-04008 and EV-GPS-04008, both 1.0; EV-CHAT-04008 IMPAIRED CLOCK_SKEW at 0.5 matches the no_show.json integrity weight for CLOCK_SKEW and carries no deciding fact (constant +47 s on all six SYSTEM/event pairs verified). (7) Key rationale: 11.6, 8.9, 12.120, 0.520, 4.48 %, 3.22, weight 0.5, +47 s and the POL-RD-10(4) 10-minute reference are all correct; length 730 characters, ASCII. Ambiguity check: no careful reader can reach a different ruling - the only alternative baseline is the one POL-RD-12 expressly rejects, every deciding artifact is at 1.0, and no escalation trigger fires. Both blind readings reached the key's ruling, amount, compensation, referrals and difficulty independently. Minor non-deciding observation, no change requested: the co-rider pick-up coordinate is labelled Hougang Ave 1 only by the platform events; no clause asks the reader to geocode it, so it cannot affect the answer.",
+ "corrected_ground_truth": null,
+ "case_fix_instructions": null
+}

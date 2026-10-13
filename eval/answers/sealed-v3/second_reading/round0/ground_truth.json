@@ -1,0 +1,498 @@
+[
+  {
+    "case_no": 4001,
+    "dispute_id": "DSP-04001",
+    "ground_truth": {
+      "expected_ruling": "NO_ACTION",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-04",
+        "POL-RD-01"
+      ],
+      "difficulty": "REVERSAL",
+      "rationale": "NO_ACTION. EV-GPS-04001 (COMPLETE) measures 9.560 km against optimal_distance_km 7.4 on EV-TRIP-04001, a raw excess of 2.160 km (29.19 %), so the burden shifts. POL-RD-04 then excludes the detour: MSG-04001-002 on EV-CHAT-04001 is from the rider, sent 10:11:40 before boarding, 243 s before the trace leaves the corridor at junction (1.3465, 103.704) at 10:15:43, and names Jurong Point with waypoint_hint (1.33975, 103.7064); the trace stops 180 s at (1.3401, 103.70668), 49.8 m from the hint. EV-CHAT-04001 is IMPAIRED (LANGUAGE_AMBIGUITY, weight 0.85) for the Malay words singgah and kejap, but the place is fixed by waypoint_hint and 0.85 is above the 0.70 floor (POL-GEN-02). The out-and-back spur between the junction fixes measures 1.900 km and is excluded: remaining excess 9.560 - 7.4 - 1.900 = 0.260 km = 3.51 %, failing both POL-RD-01 tests, so no deviation exists. POL-RD-09(3) bars an ERP refund on a rider-caused detour and the fare billed the full 9.56 km, so no compensation arises. The rider's claim of a roundabout route is contradicted by her own instruction."
+    }
+  },
+  {
+    "case_no": 4002,
+    "dispute_id": "DSP-04002",
+    "ground_truth": {
+      "expected_ruling": "PARTIAL_REFUND",
+      "expected_amount_sgd": 6.15,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-03",
+        "POL-RD-01",
+        "POL-RD-02"
+      ],
+      "difficulty": "HARD",
+      "rationale": "PARTIAL_REFUND 6.15. EV-GPS-04002 (COMPLETE) measures 22.400 km against optimal_distance_km 13.0 on EV-TRIP-04002, an excess of 9.400 km. The driver's closure is real: EV-ADVIS-04002-01 is a CLOSURE of the CTE city tunnel, which the booked route uses (POL-RD-03(a)); it is valid 23:30 to 05:00 and the trip began 00:40:30 (b); the trace leaves the CTE at the PIE interchange before the segment, stays 852.8 m from it and rejoins at Outram Rd after it (c). The exoneration is capped: min(9.400, 1.30 x (15.2 - 13.0) + 1.00) = 3.860 km, adjusted optimal 16.86 km, duration 17 x 16.86 / 13.0 = 22.0 min (amended duration null). Remaining excess 22.400 - 16.86 = 5.540 km = 32.86 % still establishes a deviation under POL-RD-01 and is not material. POL-RD-02 with surge 1.0 from EV-FARE-04002 and 0.00 on-route ERP: recomputed 3.80 + 12.645 + 6.16 + 0.80 = 23.405; charged_total 29.52; refund 6.115 rounded up to 6.15 of the 12.00 contested. No ERP lines, so POL-RD-09 has nothing to settle."
+    }
+  },
+  {
+    "case_no": 4003,
+    "dispute_id": "DSP-04003",
+    "ground_truth": {
+      "expected_ruling": "ESCALATE",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-07",
+        "POL-RD-10",
+        "POL-GEN-02"
+      ],
+      "difficulty": "INDETERMINATE",
+      "rationale": "ESCALATE under POL-RD-10(3) via POL-RD-07(iii). EV-GPS-04003 is IMPAIRED (GPS_GAP, weight 0.6): one 450 s interval from 14:11:30 to 14:19:00 with bounding fixes 8,489.6 m apart sits in the KPE/MCE stretch the rider disputes, so POL-RD-07 limbs (a) (> 90 s) and (b) (> 500 m) fire. Read across the gap as a straight line (RD-07(i)) the trace gives 17.600 km against optimal_distance_km 13.5 on EV-TRIP-04003, 30.37 %, but RD-07(ii) forbids establishing a deviation on the trace alone. No independent corroborator exists: EV-CHAT-04003 holds only pickup messages, EV-FARE-04003 charges no ERP gantry, the counterparty_statement is null, and actual_distance_km 17.6 and distance_charged_km 17.60 are copies of the same trace (trip_completed event; RD-01). The claim is not sustained and RD-07(iii) requires ESCALATE rather than NO_ACTION; the sole carrier's 0.6 weight also caps confidence below the 0.70 floor (POL-GEN-02, RD-10(1)). The 6.00 is held; a full-resolution location export for 14:11:30-14:19:00 would resolve it."
+    }
+  },
+  {
+    "case_no": 4004,
+    "dispute_id": "DSP-04004",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 6.5,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-11"
+      ],
+      "difficulty": "EASY",
+      "rationale": "FULL_REFUND 6.50. EV-FARE-04004 shows fare_model UPFRONT_QUOTE with quoted_fare_sgd 17.90, but the trip was re-rated to 24.40 after the longer route (fare_rerated event on EV-TRIP-04004). POL-RD-11 governs and POL-RD-02 does not run. Under POL-RD-11(a) the rider recovers in full any amount by which charged_total exceeds the quote plus properly chargeable pass-through lines; there are none (no ERP, airport or waiting line), so 24.40 - 17.90 = 6.50, already a multiple of 0.05, which is exactly the 6.50 contested. The deviation on EV-GPS-04004 (16.320 km against 12.1 km, 34.88 %) is not material, so no POL-RD-06 check or referral arises. A POL-RD-02 recomputation (5.15) would be the wrong clause."
+    }
+  },
+  {
+    "case_no": 4005,
+    "dispute_id": "DSP-04005",
+    "ground_truth": {
+      "expected_ruling": "DRIVER_COMPENSATION",
+      "expected_amount_sgd": 4.8,
+      "expected_driver_compensation_sgd": 4.8,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-04",
+        "POL-RD-11"
+      ],
+      "difficulty": "HARD",
+      "rationale": "DRIVER_COMPENSATION 4.80 (amount_sgd mirrors it, POL-GEN-03). EV-CHAT-04005 holds MSG-04005-003 from the rider at 15:59:50, before boarding, asking to stop at Northpoint, waypoint_hint (1.4289, 103.8357), sent 707 s before the trace leaves the SLE corridor at 16:11:37; EV-GPS-04005 stops 360 s at (1.428473, 103.83545), 55.0 m from the hint, so POL-RD-04 (a) to (c) and corroboration hold and the 6.350 km spur is the rider's detour. EV-FARE-04005 is UPFRONT_QUOTE, quoted and charged 22.25, so the rider has nothing to recover and POL-RD-11 sends the driver's unrecovered cost on a rider-requested detour to POL-RD-04's compensation limb: billed distance_charged_km 14.20 against trace_distance_km 20.570 is a shortfall of 6.370 km (> 1.0); 0.75 x 6.370 = 4.7775, rounded up to 4.80, under the 15.00 cap. The 6.00 claimed is the driver's estimate."
+    }
+  },
+  {
+    "case_no": 4006,
+    "dispute_id": "DSP-04006",
+    "ground_truth": {
+      "expected_ruling": "PARTIAL_REFUND",
+      "expected_amount_sgd": 2.0,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [
+        "POL-RD-09(4): billing-integrity finding - ERP line ERP-G-046 'CTE (southbound) after Braddell Road' 2.00 for a gantry the gps_trace never passes"
+      ],
+      "governing_clauses": [
+        "POL-RD-09",
+        "POL-RD-01"
+      ],
+      "difficulty": "REVERSAL",
+      "rationale": "PARTIAL_REFUND 2.00 with a POL-RD-09(4) billing-integrity referral. EV-GPS-04006 (COMPLETE) measures 9.840 km against optimal_distance_km 8.7 on EV-TRIP-04006: excess 1.140 km is above 0.8 km but only 13.10 %, so POL-RD-01's 20 % test fails, no deviation exists and the distance claim fails; the rider's claim of 4-5 km extra via Yio Chu Kang is contradicted by the trace, which does use Yio Chu Kang Rd and Upper Thomson Rd but measures only 1.140 km over the booked route. EV-FARE-04006 nevertheless charges ERP line ERP-G-046 'CTE (southbound) after Braddell Road' 2.00 at (1.3412, 103.8559); the nearest fix is 1,843.9 m away, so the trace never passes within 250 m. Under POL-RD-09(4) that line is refunded in full as a standalone correction, whether or not a deviation exists, and recorded as a billing-integrity finding; POL-RD-10(8) is not engaged because the only unmatched line is the one refunded. 2.00 of the 6.00 contested is returned."
+    }
+  },
+  {
+    "case_no": 4007,
+    "dispute_id": "DSP-04007",
+    "ground_truth": {
+      "expected_ruling": "ESCALATE",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-10"
+      ],
+      "difficulty": "HARD",
+      "rationale": "ESCALATE under POL-RD-10(8). EV-FARE-04007 bills a cancellation_fee line of 4.50 on a completed metered trip (total 24.24), but EV-TRIP-04007 records status COMPLETED with cancelled_at, cancelled_by and cancellation_reason_code null and no cancellation event, and EV-GPS-04007 shows a continuous completed trip: the line has no counterpart anywhere in the gps_trace or trip_record. POL-RD-09(4) refunds only a gantry line the trace never passes or an airport surcharge on a non-airport trip, so this line is not refunded under it and the RD-10(8) carve-out does not apply. RD-10 is terminal: no final ruling issues, no money moves and the 10.00 contested is held. The deviation itself is clear (11.600 km against 7.9 km, 46.84 %, not material; POL-RD-02 would give 9.25), so this is the policy requiring a person rather than missing evidence; the ledger entry behind the 4.50 line would resolve it."
+    }
+  },
+  {
+    "case_no": 4008,
+    "dispute_id": "DSP-04008",
+    "ground_truth": {
+      "expected_ruling": "NO_ACTION",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-12",
+        "POL-RD-01"
+      ],
+      "difficulty": "EASY",
+      "rationale": "NO_ACTION. EV-TRIP-04008 is a RYDE_POOL trip whose record identifies the matched itinerary (optimal_route_source MATCHED_POOL_ITINERARY; pool_matched event naming the co-rider pick-up at Hougang Ave 1 and set-down at Sengkang General Hospital), so under POL-RD-12 the baseline is optimal_distance_km 11.6, not solo_optimal_distance_km 8.9. EV-GPS-04008 (COMPLETE) measures 12.120 km: excess 0.520 km = 4.48 %, failing both POL-RD-01 tests, so no deviation exists. The rider's 3.22 km is measured against the solo figure, the wrong field, and fails on that ground; both figures must be named. EV-CHAT-04008 is IMPAIRED (CLOCK_SKEW, weight 0.5; chat clock +47 s) but decides nothing, and 47 s is far below POL-RD-10(4)'s 10 minutes."
+    }
+  },
+  {
+    "case_no": 4009,
+    "dispute_id": "DSP-04009",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 27.5,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [
+        "POL-RD-06(c): driver-conduct review"
+      ],
+      "governing_clauses": [
+        "POL-RD-06",
+        "POL-RD-01",
+        "POL-RD-02"
+      ],
+      "difficulty": "HARD",
+      "rationale": "FULL_REFUND 27.50 with a POL-RD-06(c) driver-conduct referral. EV-GPS-04009 measures 18.960 km against optimal_distance_km 10.3 on EV-TRIP-04009: excess 8.660 km = 84.08 %, established and MATERIAL under POL-RD-01. The trace is IMPAIRED (GPS_GAP, weight 0.85) by one 70 s interval at the start with bounding fixes 194.6 m apart, below every POL-RD-07 limb (90 s, 500 m, 30 s), so it stays usable and 0.85 is above the 0.70 floor (POL-GEN-02). The driver's 'expressway faster' cites no artifact (POL-RD-08). Because the deviation is material, EV-DPROF-04009 is consulted: deviation_flags_90d 4 is a pattern under POL-RD-06 (lifetime prior_deviation_flags is not read). POL-RD-06(b) then licenses a full refund of charged_total 27.50 in place of the POL-RD-02 partial, shown side by side: recomputed 17.085, POL-RD-02 refund 10.45. No ERP or surcharge line is carved out. 27.50 equals the contested amount; above the 8.00 threshold it is held for release (POL-GEN-05), not escalated."
+    }
+  },
+  {
+    "case_no": 4010,
+    "dispute_id": "DSP-04010",
+    "ground_truth": {
+      "expected_ruling": "ESCALATE",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-05",
+        "POL-RD-10"
+      ],
+      "difficulty": "INDETERMINATE",
+      "rationale": "ESCALATE under POL-RD-10(5) via POL-RD-05. EV-TRIP-04010 records dropoff_amended_at 22:21:30 (original_dropoff Our Tampines Hub, dropoff Paya Lebar Quarter, matching MSG-04010-003 on EV-CHAT-04010), but amended_optimal_distance_km and amended_optimal_duration_min are null (event route_requote_failed); the record is IMPAIRED (PARTIAL_RECORD, weight 0.75). The driver relies on the relocation to explain the 16.200 km on EV-GPS-04010 against the booked 9.8 km. POL-RD-05 says that where an amendment timestamp is present and the re-quote is null the clause cannot be run, POL-RD-10(5) applies and no substitute figure may be derived; RD-10(5) gives exactly this as its example. The deciding fact, the optimal distance between the amended endpoints, is not in the record, and measuring against the booked 9.8 km would count post-amendment distance against the driver. No money moves; the platform's re-quote for the amended destination would resolve the case."
+    }
+  },
+  {
+    "case_no": 4011,
+    "dispute_id": "DSP-04011",
+    "ground_truth": {
+      "expected_ruling": "PARTIAL_REFUND",
+      "expected_amount_sgd": 4.6,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-01",
+        "POL-RD-02",
+        "POL-RD-08"
+      ],
+      "difficulty": "EASY",
+      "rationale": "PARTIAL_REFUND 4.60. EV-GPS-04011 (COMPLETE) measures 13.920 km against optimal_distance_km 10.4 on EV-TRIP-04011: excess 3.520 km = 33.85 %, established under POL-RD-01 and not material. Under POL-RD-08 the burden shifts and the driver's 'followed the navigation app' cites no artifact or clause, so it is discarded; no traffic cause, chat instruction or amendment is in play. POL-RD-02 with surge_multiplier 1.0 from EV-FARE-04011 and 0.00 on-route ERP: recomputed 3.80 + 7.80 + 5.32 + 0.80 = 17.72; charged_total 22.32; refund 4.60, already a multiple of 0.05, of the 6.00 contested."
+    }
+  },
+  {
+    "case_no": 4012,
+    "dispute_id": "DSP-04012",
+    "ground_truth": {
+      "expected_ruling": "NO_ACTION",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-03",
+        "POL-RD-02",
+        "POL-RD-01"
+      ],
+      "difficulty": "REVERSAL",
+      "rationale": "NO_ACTION. EV-GPS-04012 (COMPLETE) measures 19.320 km against optimal_distance_km 14.6 on EV-TRIP-04012, an established, non-material deviation of 4.720 km (32.33 %) under POL-RD-01, so the driver must discharge it. He says the PIE was closed at Eunos. The only PIE notice, EV-ADVIS-04012-01, closes the PIE (towards Tuas) between the Adam Road and Eng Neo Avenue exits; it is valid 05:00 to 11:00 and covers the trip, but the booked route (route_planned on EV-TRIP-04012) leaves the PIE for Toa Payoh before that section, whose nearest point is 3,975.2 m west of the dropoff and 3,331.4 m from every fix. POL-RD-03 fails on limb (a), since an advisory covering a corridor the optimal route never uses exonerates nothing, and on limb (c); nothing closed the PIE at Eunos, so the driver's account is contradicted. EV-ADVIS-04012-02 is roadworks on the TPE, the driver's own route, and exonerates nothing. Both advisories are present, cover the trip window and carry shortest_lawful_alternative_km, so POL-RD-10(5) is not engaged. POL-RD-02: recomputed 3.80 + 10.95 + 5.88 + 0.80 = 21.43; 26.93 - 21.43 = 5.50, exactly the refund_issued_sgd 5.50 on EV-FARE-04012. The driver's claim to have the 5.50 returned is not supported; under POL-GEN-03 NO_ACTION on this driver-filed dispute leaves the rider refunded."
+    }
+  },
+  {
+    "case_no": 4013,
+    "dispute_id": "DSP-04013",
+    "ground_truth": {
+      "expected_ruling": "PARTIAL_REFUND",
+      "expected_amount_sgd": 5.8,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-14",
+        "POL-RD-01",
+        "POL-RD-02"
+      ],
+      "difficulty": "REVERSAL",
+      "rationale": "PARTIAL_REFUND 5.80. EV-GPS-04013 (COMPLETE) measures 15.920 km against optimal_distance_km 11.2 on EV-TRIP-04013: excess 4.720 km = 42.14 %, established, not material (POL-RD-01). The driver relies on the rider's request: MSG-04013-002 on EV-CHAT-04013 is from the rider, sent at 14:33:40 before boarding, and names Bukit Timah Plaza with waypoint_hint (1.3388, 103.7781), meeting POL-RD-04 (a) to (c). But the nearest trace fix is 3,058.9 m from the hint and no road was named, so under POL-RD-14 the instruction did not cause the excess: it was found and not corroborated, nothing is excluded, and POL-RD-10(7) is not engaged. POL-RD-02 with surge 1.0 from EV-FARE-04013: recomputed 3.80 + 8.40 + 5.88 + 0.80 = 18.88; 24.66 - 18.88 = 5.78, rounded up to 5.80 of the 8.00 contested. The driver's appeal to the rider's prior_disputes_filed (9) on EV-RPROF-04013 is context only (POL-GEN-01); deviation_claims_60d is 2."
+    }
+  },
+  {
+    "case_no": 4014,
+    "dispute_id": "DSP-04014",
+    "ground_truth": {
+      "expected_ruling": "ESCALATE",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-10",
+        "POL-RD-13"
+      ],
+      "difficulty": "INDETERMINATE",
+      "rationale": "ESCALATE under POL-RD-10(5). EV-GPS-04014 (COMPLETE) measures 17.880 km against optimal_distance_km 12.8 on EV-TRIP-04014, an established deviation of 5.080 km (39.69 %), so the driver must discharge it. He invokes POL-RD-03, asserting an accident on the PIE near Kallang on the booked route, and cites the LTA advisory EV-ADVIS-04014-01 by its identifier; that artifact is MISSING (weight 0.0, payload null). POL-RD-10(5) forbids a ruling where an exculpatory clause is invoked against a cited artifact missing from the pool. POL-RD-13 discards only uncited traffic assertions and states that it does not narrow POL-RD-10(5) where the party cites the missing identifier, so the case still escalates. The advisory's admissibility note records only that no payload was retrieved, not that no advisory was issued, so whether the incident existed cannot be settled on the record; the 6.05 is held, and the advisory payload would resolve it."
+    }
+  },
+  {
+    "case_no": 4015,
+    "dispute_id": "DSP-04015",
+    "ground_truth": {
+      "expected_ruling": "PARTIAL_REFUND",
+      "expected_amount_sgd": 15.75,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-RD-02",
+        "POL-RD-09",
+        "POL-RD-06",
+        "POL-RD-13",
+        "POL-RD-01",
+        "POL-GEN-01"
+      ],
+      "difficulty": "HARD",
+      "rationale": "PARTIAL_REFUND 15.75. EV-GPS-04015 (COMPLETE) measures 21.601 km against optimal_distance_km 13.9 on EV-TRIP-04015: excess 7.701 km = 55.40 %, established and MATERIAL under POL-RD-01. POL-RD-06 is therefore consulted on EV-DPROF-04015: deviation_flags_90d 1 of completed_trips_90d 412 is no pattern, so no uplift; prior_deviation_flags 7 is the lifetime near-synonym and may not be used (POL-GEN-01). The driver's ECP accident cites no advisory and EV-ADVIS-04015-01 is MISSING, so under POL-RD-13(1)-(2) the assertion is discarded, POL-RD-10(5) is not engaged and the deviation stands at the measured figure. POL-RD-02 with surge_multiplier 1.3 from EV-FARE-04015 and on-route ERP 0.00: recomputed (3.80 + 10.425 + 6.16) x 1.3 + 0.80 = 27.3005; charged_total 43.04; refund 15.7395 rounded up to 15.75. The two matched off-route gantries (2.00 and 1.50) are already inside that figure (POL-RD-09(1)) and are not added. 15.75 of the 18.00 contested; above 8.00 it is held for release (POL-GEN-05)."
+    }
+  },
+  {
+    "case_no": 4051,
+    "dispute_id": "DSP-04051",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 6.61,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-04",
+        "POL-GEN-01"
+      ],
+      "difficulty": "REVERSAL",
+      "rationale": "POL-NS-04 decides. Rider R-5126 filed against a 6.61 no-show line. EV-CHAT-04051 (weight 0.85, UNREAD_MESSAGE: the rider's messages were delivered and not read; NS-04 does not require them to be read) holds two rider messages inside the waiting window 08:07:00-08:11:10: 08:07:50 giving her position at the void deck by the letterbox and asking where the driver is, and 08:09:40 saying she cannot see the car. NS-04(b): the driver posted nothing after 08:04:20 and EV-TRIP-04051 in_app_calls is empty, so there is no reply within 120 s and no in-app call before the RIDER_NO_SHOW termination; the driver's 'called twice' has no record. NS-04(c): EV-GPS-04051 rider_track holds 10 fixes in the window, 2 filtered at 32.3 and 37.0 m accuracy; of the 8 qualifying fixes 7 lie within the 100 m STANDARD presence radius (54.9-68.1 m) and 1 at 114.0 m, a majority. The driver's own trace would satisfy POL-NS-01 (qualifying fixes inside 50 m from 08:06:50, 10 s before the 08:07:00 marker; a 260 s dwell to the termination against free_wait 180), but NS-04 displaces NS-01 and POL-NS-07, so the fee is refunded in full with no driver compensation: FULL_REFUND 6.61, the gross line EV-FARE-04051 charged and the amount contested. POL-GEN-01: the driver's appeal to the rider's record rests on prior_no_show_flags 5, a lifetime counter, and is discarded; the citable no_show_disputes_30d is 1, so POL-NS-09(d) is not engaged. Confidence is capped at 0.85 by EV-CHAT-04051, above the 0.70 floor; no POL-NS-08 limb is engaged."
+    }
+  },
+  {
+    "case_no": 4052,
+    "dispute_id": "DSP-04052",
+    "ground_truth": {
+      "expected_ruling": "DRIVER_COMPENSATION",
+      "expected_amount_sgd": 3.6,
+      "expected_driver_compensation_sgd": 3.6,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-10",
+        "POL-NS-07"
+      ],
+      "difficulty": "EASY",
+      "rationale": "POL-NS-10(g) with POL-NS-07. Driver D-6015 filed after support reversed the 4.50 fee (EV-FARE-04052: line 4.50, REFUNDED 4.50). EV-TRIP-04052 shows the rider cancelled at 19:35:30, 690 s after accepted_at 19:24:00, so the POL-NS-10(a) grace of 180 s does not apply. EV-GPS-04052 places the driver inside the 50 m STANDARD radius from 19:30:50, rolling to a stop 10 s before the 19:31:00 arrival marker, with qualifying fixes (accuracy 3.6-8.8 m, 1.2-16.0 m from the pin) continuously to the cancellation: the POL-NS-02 arrival holds and the in-geofence dwell measured as POL-NS-01(c) measures it was 280 s, past free_wait_sec 180. Under NS-10(g) the fee stands at platform_policy.cancellation_fee_sgd 4.50 as if the driver had terminated for a no-show, limb (f)'s exceptions do not apply (and none is on the record: en route at 19:24:10, arrival on the 7 min ETA, no request to cancel, vehicle as booked), and POL-NS-07 fixes the payout. Anti-farming check on EV-DPROF-04052: no_show_terminations_30d 0 of completed_trips_30d 143, below both limbs. Compensation = 0.80 x 4.50 = 3.60 (net figure). Ruling DRIVER_COMPENSATION, amount_sgd 3.60 = driver_compensation_sgd 3.60 per POL-GEN-03. EV-ADVIS-04052-01 (weight 0.5, ADVISORY_UNCORROBORATED) decides nothing: POL-NS-06(i) is not in play and a congestion notice does not excuse anything. Deciding artifacts are at weight 1.0."
+    }
+  },
+  {
+    "case_no": 4053,
+    "dispute_id": "DSP-04053",
+    "ground_truth": {
+      "expected_ruling": "ESCALATE",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-08",
+        "POL-NS-09",
+        "POL-GEN-02"
+      ],
+      "difficulty": "INDETERMINATE",
+      "rationale": "ESCALATE under POL-NS-08 and POL-NS-09(e), with POL-GEN-02(2) and POL-NS-09(a). Driver D-8127 contests 4.50 after support refunded the 6.61 line (EV-FARE-04053). The fee needs POL-NS-01(c): a continuous in-geofence dwell of free_wait_sec 180 before the 21:17:20 RIDER_NO_SHOW termination. The only carrier of the driver's position is EV-GPS-04053 (weight 0.45: GPS_GAP straddling the cancellation 0.6 x PARTIAL_RECORD 0.75). It shows the driver rolling into the 50 m radius at 21:13:50, 10 s before the 21:14:00 arrival marker, and qualifying fixes to 21:15:00 (eight fixes, 70 s), then no fix for 170 s until 21:17:50, a gap that contains the cancellation; 140 s of the 210 s from the first qualifying fix to the cancellation is unobserved. That is a sampling gap over 120 s inside the waiting window, so the trace is impaired under POL-NS-08(b), and it is the sole evidence for the deciding fact: the arrival marker is BUTTON (POL-NS-12 does not apply), and the 21:16:30 call in EV-TRIP-04053 and the chat place nobody. POL-NS-08's closing sentence and POL-NS-09(e) send the case to a person; the gap factor alone (0.6) also caps confidence below 0.70 (POL-GEN-02(2), POL-NS-09(a)); POL-NS-11 removes only the rider_track factor from that cap. Neither the 3.60 payout (continuity read across the gap) nor a short-dwell finding against the driver (a claim on an impaired artifact cannot alone support a ruling against the party it disfavours) can issue. The open question for the reviewer: where was the driver between 21:15:00 and 21:17:20. The fee is held; no money moves."
+    }
+  },
+  {
+    "case_no": 4054,
+    "dispute_id": "DSP-04054",
+    "ground_truth": {
+      "expected_ruling": "NO_ACTION",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-10"
+      ],
+      "difficulty": "REVERSAL",
+      "rationale": "POL-NS-10(f) decides; NO_ACTION. Rider R-5703 cancelled at 12:45:20 (EV-TRIP-04054, CANCELLED_BY_RIDER), 370 s after accepted_at 12:39:10, so the 180 s grace of POL-NS-10(a) had run out; scheduled_at is null. Under NS-10(f) a rider's own cancellation after the grace is chargeable at platform_policy.cancellation_fee_sgd 'whether or not the driver had arrived', and stands unless the record shows one of four exceptions; none is shown. (1) Movement toward the pickup within the grace: EV-TRIP-04054 driver_en_route 12:39:15, and EV-GPS-04054 shows the taxi heading away only until the U-turn (peak 3077.9 m at 12:39:40), then closer at every fix: 2887.5 m at acceptance, 2124.0 m at 12:42:10 when the grace ended, 898.0 m at the cancellation. (2) The first ETA shown was 9 min (12:48:10), so 'not arrived within 180 s of the first ETA' could not have occurred by 12:45:20. (3) EV-CHAT-04054 has no request to cancel; the driver explained the U-turn and said he was coming. (4) Vehicle and driver match the booking. The fee stands; the 6.61 line (EV-FARE-04054) is the gross figure and reconciles under POL-NS-08(d). POL-NS-07 pays only under POL-NS-01 or NS-10(g), neither of which applies, so there is no driver compensation: the rider's claim is not supported and the charge stays as it is. The rider's 'moving away' account is true only of the first 30 s. POL-NS-02's never-arrived refund concerns the no-show fee on a driver termination (it is framed as POL-NS-01(b) failing); NS-10(f) expressly makes the rider's late cancellation chargeable without arrival. All deciding artifacts are at weight 1.0."
+    }
+  },
+  {
+    "case_no": 4055,
+    "dispute_id": "DSP-04055",
+    "ground_truth": {
+      "expected_ruling": "DRIVER_COMPENSATION",
+      "expected_amount_sgd": 3.6,
+      "expected_driver_compensation_sgd": 3.6,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-11",
+        "POL-NS-01",
+        "POL-NS-07",
+        "POL-GEN-01"
+      ],
+      "difficulty": "HARD",
+      "rationale": "POL-NS-11 (amendment 0001) decides, with POL-NS-01 and POL-NS-07. Rider R-7718 contests the 4.50 fee (EV-FARE-04055). POL-NS-04 limbs (a) and (b) hold on EV-CHAT-04055 and EV-TRIP-04055: her 09:23:30 message ('I'm at Lobby B, where are you?') is locating, and the driver neither replied nor placed an in-app call. But EV-GPS-04055 carries no rider_track, so limb (c) cannot be run: under POL-NS-11 it is undecidable, NS-04 cannot exonerate the rider, and the dispute is decided on the driver's own evidence; the missing rider_track does not impair the trace for the driver's arrival or dwell, does not engage POL-NS-08(b) or POL-NS-09(e) and does not lower the cap (the trace's 0.75 PARTIAL_RECORD weight, disclosed, is above 0.70 in any case). The driver's evidence satisfies POL-NS-01: qualifying fixes inside the 120 m LARGE_VENUE radius from 09:21:40, before the 09:22:00 arrival marker (NS-02, limb b); at the guardhouse pin 5.8-14.5 m away, speed 0, at a 10 s cadence to the 09:27:40 cancellation, a 340 s dwell from the marker (360 s from the first qualifying fix) against free_wait_sec 180 (limb c); RIDER_NO_SHOW after the dwell (limb d). The driver was inside the radius, so POL-NS-03 has nothing to decide; no clause from NS-03 to NS-06 displaces NS-01. POL-NS-07 anti-farming on EV-DPROF-04055: no_show_terminations_30d 2 of completed_trips_30d 121, neither limb tripped; payout 0.80 x 4.50 = 3.60. Ruling DRIVER_COMPENSATION 3.60 (amount_sgd = driver_compensation_sgd, POL-GEN-03); the rider's charge stands. POL-GEN-01: the rider's request to 'check this driver' cannot be answered from driver_profile.prior_no_show_flags 9, a lifetime counter that is context only; the citable trailing-window counters are the NS-07 figures above (2 of 121)."
+    }
+  },
+  {
+    "case_no": 4056,
+    "dispute_id": "DSP-04056",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 4.5,
+      "expected_driver_compensation_sgd": 2.25,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-03",
+        "POL-NS-02"
+      ],
+      "difficulty": "HARD",
+      "rationale": "POL-NS-03(ii), a compound ruling, with POL-NS-02. Rider R-8204 contests the 4.50 fee (EV-FARE-04056). EV-GPS-04056 shows the driver stationary (speed 0) from the 15:12:40 arrival marker to the 15:19:00 RIDER_NO_SHOW termination, 380 s against free_wait_sec 300 (EV-TRIP-04056 platform_policy), at a point 211.7-217.4 m from the Northpoint City pin: outside the 120 m LARGE_VENUE arrival radius, inside the 400 m ceiling; no fix in the 15 minutes before the cancellation comes within 120 m. POL-NS-02 therefore yields to POL-NS-03: POL-NS-01(b) fails and the fee is refunded to the rider in full, 4.50, the amount contested. POL-NS-05 does not apply: the marker was pressed while stationary within 300 m. The stationary fixes carry venue_id VEN-YS-0031, the pickup's own, corroborating a wrong face of the same venue. Fault for the driver's compensation is read from EV-CHAT-04056: each rider message was answered within 120 s (35 s and 30 s), so POL-NS-04 does not apply, and neither party named an entrance, wing, block or bay ('I'm here', 'at the pickup point', 'at the pin location'), so limb (i) does not apply; EV-TRIP-04056 registered_pickup_points is 3, so under limb (ii) the mislocation is pin ambiguity and the driver receives a platform-funded goodwill payment of 50 % x 4.50 = 2.25, never recovered from the rider. POL-GEN-03: the two payments are independent and not netted; the ruling value names the filing party's outcome, FULL_REFUND, amount_sgd 4.50, driver_compensation_sgd 2.25. No POL-NS-07 payout arises (NS-01 fails). All deciding artifacts are at weight 1.0."
+    }
+  },
+  {
+    "case_no": 4057,
+    "dispute_id": "DSP-04057",
+    "ground_truth": {
+      "expected_ruling": "DRIVER_COMPENSATION",
+      "expected_amount_sgd": 3.2,
+      "expected_driver_compensation_sgd": 3.2,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-01",
+        "POL-NS-07"
+      ],
+      "difficulty": "EASY",
+      "rationale": "POL-NS-01 and POL-NS-07. Driver D-7869 contests the 4.00 fee that support refunded (EV-FARE-04057: line 4.00, REFUNDED 4.00). EV-TRIP-04057 platform_policy (RECORD-PLATFORM) sets free_wait_sec 240 and cancellation_fee_sgd 4.00. (a) The trip_record has the 07:17:00 arrival. (b) EV-GPS-04057 has qualifying fixes (accuracy under 9 m) inside the 50 m STANDARD radius from 07:16:50, as the car rolled to a stop 10 s before the marker, and from the marker 5.8-12.0 m from the pin. (c) The driver held the radius at a 10 s cadence for 430 s to the 07:24:00 cancellation, against 240 s. (d) RIDER_NO_SHOW, no boarding, after the dwell. Two unanswered in-app calls (07:19:30, 07:22:10) are recorded. No clause from POL-NS-03 to POL-NS-06 displaces NS-01: the driver was in the radius, the marker fix was at the pin at 0 km/h, the dwell is long, and POL-NS-04 has no rider message to start from (her four device fixes are all filtered at 35.4-44.8 m accuracy, which would leave limb (c) undecidable in any case). The rider admits she overslept. POL-NS-07 anti-farming on EV-DPROF-04057: no_show_terminations_30d 1 of completed_trips_30d 168, neither limb tripped. Payout 0.80 x 4.00 = 3.20. Ruling DRIVER_COMPENSATION, amount_sgd 3.20 = driver_compensation_sgd 3.20 (POL-GEN-03). All deciding artifacts are at weight 1.0."
+    }
+  },
+  {
+    "case_no": 4058,
+    "dispute_id": "DSP-04058",
+    "ground_truth": {
+      "expected_ruling": "ESCALATE",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-07",
+        "POL-NS-09",
+        "POL-NS-01"
+      ],
+      "difficulty": "HARD",
+      "rationale": "ESCALATE under POL-NS-07's anti-farming check and POL-NS-09(d); the facts are clear and the policy requires a person. Driver D-5928 asks for his payout on the 6.00 fee (EV-FARE-04058, CHARGED). POL-NS-01 is satisfied: EV-GPS-04058 places him inside the 150 m AIRPORT radius at the T3 arrival pickup from before the 23:42:00 marker (qualifying fixes from 23:41:30, 105.7 m out and slowing) and holding position at a 10 s cadence to the 23:51:30 RIDER_NO_SHOW termination, 570 s from the marker against free_wait_sec 300, the cancellation also past no_show_threshold_sec 480 (EV-TRIP-04058 platform_policy); two unanswered in-app calls are recorded. POL-NS-04 does not apply: the rider's 23:46:00 message was answered at 23:46:50, and her device stayed 339-361 m away. No clause from NS-03 to NS-06 displaces NS-01. POL-NS-07's check on EV-DPROF-04058: no_show_terminations_30d 5 (>= 4) and 5 / completed_trips_30d 54 = 0.0926 (> 0.08): both limbs trip, so compensation is withheld and the case escalates under POL-NS-09(d), the packet directing the reviewer to refund the rider's 6.00 in full; the automated pipeline pays nothing and refunds nothing, the fee is held (POL-GEN-03: ESCALATE replaces the ruling, null money). POL-GEN-01: the lifetime prior_no_show_flags 1 is not the counter and cannot clear the driver. A DRIVER_COMPENSATION of 0.80 x 6.00 = 4.80 is exactly what NS-07 withholds."
+    }
+  },
+  {
+    "case_no": 4059,
+    "dispute_id": "DSP-04059",
+    "ground_truth": {
+      "expected_ruling": "NO_ACTION",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-06"
+      ],
+      "difficulty": "HARD",
+      "rationale": "POL-NS-06, limbs (i) and (ii); NO_ACTION. Driver D-8394 contests 4.50 after support refunded the 6.61 line (EV-FARE-04059). Free wait in force is 180 s (EV-TRIP-04059 platform_policy). EV-GPS-04059 places the driver inside the 50 m STANDARD radius only from 18:20:50 (rolling to the kerb 10 s before the 18:21:00 arrival marker) to 18:21:50 (60 s) and from 18:24:50 to the 18:26:05 RIDER_NO_SHOW termination (75 s); between, he drove round the block, every fix outside 50 m and none farther than 182.6 m from the pin. EV-ADVIS-04059-01 is a KERB_RESTRICTION (full-day bus lane) whose geometry covers the Serangoon Road frontage and whose window 07:30-23:00 covers the wait, so NS-06(i) lets the two intervals be summed: 60 + 75 = 135 s, short of 180 by 45 s (even counting from the last outside fix before each run to the next outside fix, 80 + 85 = 165 s). NS-06(ii): the advisory never reduces the minimum or excuses the shortfall. The fee is therefore not chargeable and belongs refunded to the rider; no driver compensation is payable, and POL-NS-07 cannot run because POL-NS-01(c) fails. The driver's claim to his 4.50 is unsupported; NO_ACTION, which on this driver-filed dispute leaves the rider refunded (POL-GEN-03; it never restores the charge). The 5 min 05 s that elapsed between the arrival marker and the cancellation is not in-geofence dwell. POL-NS-04 plays no part (the rider's message was answered in 25 s and an in-app call is recorded). EV-DPROF-04059 (weight 0.4, CROSS_SOURCE_CONFLICT on vehicle_type) carries nothing this ruling rests on. Deciding artifacts are at 1.0."
+    }
+  },
+  {
+    "case_no": 4060,
+    "dispute_id": "DSP-04060",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 6.61,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-10"
+      ],
+      "difficulty": "EASY",
+      "rationale": "POL-NS-10(a) and (c); FULL_REFUND 6.61. Rider R-5951 cancelled at 07:45:05 (EV-TRIP-04060, CANCELLED_BY_RIDER), 165 s after accepted_at 07:42:20, inside grace_after_match_sec 180 (platform_policy). Under NS-10(a) that cancellation is not chargeable 'whatever the driver's position', and a driver's early arrival does not shorten the grace: the 07:43:55 arrival marker and the driver's fixes at the pin (EV-GPS-04060) change nothing. NS-10(g) cannot apply either: the in-geofence dwell at the cancellation, from the first qualifying fix at 07:43:45 (10 s before the marker), was 80 s, not past free_wait_sec 180. NS-10(c): the fee charged on a non-chargeable cancellation is refunded in full with no driver compensation: the 6.61 line (EV-FARE-04060, the gross figure) = the amount contested. The grace runs from accepted_at, not from requested_at 07:41:30 (which would give 215 s). All deciding artifacts are at weight 1.0."
+    }
+  },
+  {
+    "case_no": 4061,
+    "dispute_id": "DSP-04061",
+    "ground_truth": {
+      "expected_ruling": "DRIVER_COMPENSATION",
+      "expected_amount_sgd": 4.8,
+      "expected_driver_compensation_sgd": 4.8,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-12",
+        "POL-NS-01",
+        "POL-NS-07"
+      ],
+      "difficulty": "HARD",
+      "rationale": "POL-NS-12 (amendment 0003) supplies the carrier; POL-NS-01 and POL-NS-07 decide. Driver D-9213 contests the 6.00 net fee after support refunded the 8.81 gross line (EV-FARE-04061). EV-TRIP-04061 platform_policy states arrival_marker GPS_AUTO, free_wait_sec 240, no_show_threshold_sec 360, cancellation_fee_sgd 6.00, gross 8.81. Its PLATFORM_TELEMETRY events hold the platform's own arrival event at 13:06:00 stating the geofence test (16 m from the pickup point, 0 km/h), wait_timer_started 13:06:05 and wait_timer_expired 13:10:05, both before the 13:14:10 RIDER_NO_SHOW termination, which is 490 s after arrival and so past the 360 s threshold. Under NS-12 these events are an independent carrier for POL-NS-01(b) and (c): arrival is established at 13:06:00 and the free waiting period is established as served. The exported EV-GPS-04061 (weight 0.3: LOW_SAMPLE_RATE x PARTIAL_RECORD x UNVERIFIED_SOURCE; impaired under POL-NS-08(b): three fixes about 190 s apart in the window, no accuracy field) does not impair the events and is weighed only for contradiction: its window fixes 13:06:20, 13:09:30 and 13:12:40 lie 5.6/17.8/8.0 m from the pin at 0 km/h, inside the 120 m radius, so nothing contradicts the platform. NS-08's escalation sentence does not apply because the impaired export is not the only evidence, and NS-08(a) is not engaged (nearest fix 20 s from the arrival event; the export runs from 35 s after acceptance to 40 s after the termination). NS-01(d) holds. POL-NS-04 has no rider message to start from. POL-NS-07 anti-farming on EV-DPROF-04061: 1 of 97, clean. Payout = 0.80 x the NET 6.00 = 4.80 (never 0.80 x 8.81). Ruling DRIVER_COMPENSATION, amount_sgd 4.80 = driver_compensation_sgd 4.80 (POL-GEN-03). Confidence rests on EV-TRIP-04061 at 1.0 (POL-GEN-02(2))."
+    }
+  },
+  {
+    "case_no": 4062,
+    "dispute_id": "DSP-04062",
+    "ground_truth": {
+      "expected_ruling": "ESCALATE",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-GEN-02",
+        "POL-NS-09"
+      ],
+      "difficulty": "INDETERMINATE",
+      "rationale": "ESCALATE under POL-GEN-02(2) and POL-NS-09(a). Rider R-6875 contests the 6.61 fee (EV-FARE-04062). Every possible ruling turns on where the driver was from the 12:33:00 marker to the 12:38:10 RIDER_NO_SHOW termination: inside the 50 m radius for 180 s (POL-NS-01, DRIVER_COMPENSATION 3.60), stationary outside 50 m but within 400 m (POL-NS-03, full refund, goodwill depending on the chat), or never arrived (POL-NS-02). The only carrier is EV-GPS-04062, weight 0.38 (GPS_DRIFT 0.5 x PARTIAL_RECORD 0.75): in that window its 32 fixes all report speed 0 and accuracy 12-22 m, yet sit in two clusters, 16 within 50 m and 16 at 93-138 m to the north-east, with consecutive readings jumping up to 147 m; no run within 50 m is longer than 3 fixes. The marker is BUTTON, so POL-NS-12 gives no platform carrier; EV-TRIP-04062 records only the tap; EV-CHAT-04062 holds two competing assertions ('at the pickup by the MRT exit', 'at the pin'); rider_track is empty. None of POL-NS-08(a)-(d) is engaged (10 s cadence, no gap, marker on a fix, chat complete, fee reconciles), so this is not an NS-08 escalation, but POL-GEN-02(2) caps confidence at the weight of the artifact carrying the deciding fact: 0.38, or 0.5 if the rider_track factor is set aside under POL-NS-11, below the 0.70 floor either way, and POL-NS-09(a) escalates. POL-NS-04 cannot rescue the rider: the driver answered within 40 s. The reviewer must establish the vehicle's position 12:33:00-12:38:10 from a non-drifting source. No money moves; the fee is held."
+    }
+  },
+  {
+    "case_no": 4063,
+    "dispute_id": "DSP-04063",
+    "ground_truth": {
+      "expected_ruling": "NO_ACTION",
+      "expected_amount_sgd": null,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-10"
+      ],
+      "difficulty": "REVERSAL",
+      "rationale": "POL-NS-10(d); NO_ACTION. Rider R-9402 contests the 5.00 waiting_time_fee on a completed trip (EV-FARE-04063: base 3.80 + distance 1.17 + time 1.68 + platform 0.80 + waiting 5.00 = 12.45). NS-10(d) makes the waiting fee (platform_policy.waiting_fee_sgd 5.00, EV-TRIP-04063) chargeable where the trip was completed and the driver's in-geofence dwell before boarding, measured as POL-NS-01(c) measures it (from the first qualifying in-geofence fix, not the arrival tap), exceeded free_wait_sec 180. EV-GPS-04063: the first fix within the 50 m STANDARD radius with accuracy under 25 m is 08:02:20 (20.0 m), and every fix from then to boarding at 08:08:45 (EV-TRIP-04063 started_at) is inside the radius at a 10 s cadence: 385 s, which exceeds 180. The trip was completed (ended 08:14:45) and no cancellation fee is on it, so the one-fee rule is respected. The waiting line stands and NS-10(e) has nothing to refund. The rider's 'he only reached at about 8.06' is contradicted by the trace (and her own 08:03:10 chat 'ok wait ah, coming down'); from 08:06 the wait would have been 165 s. EV-CHAT-04063 (weight 0.8, CONTENT_REDACTED: a contact number masked) decides nothing. Deciding artifacts are at weight 1.0."
+    }
+  },
+  {
+    "case_no": 4064,
+    "dispute_id": "DSP-04064",
+    "ground_truth": {
+      "expected_ruling": "DRIVER_COMPENSATION",
+      "expected_amount_sgd": 4.4,
+      "expected_driver_compensation_sgd": 4.4,
+      "expected_referrals": [
+        "POL-NS-05(iii): false-arrival event recorded against the driver"
+      ],
+      "governing_clauses": [
+        "POL-NS-05",
+        "POL-NS-01",
+        "POL-NS-07"
+      ],
+      "difficulty": "HARD",
+      "rationale": "POL-NS-05(iii), then POL-NS-01 and POL-NS-07; DRIVER_COMPENSATION 4.40 with a false-arrival referral. Driver D-8861 contests the 5.50 fee support refunded (EV-FARE-04064). The 19:06:00 arrival tap (EV-TRIP-04064) matches an EV-GPS-04064 fix at the same second placing him 655.8 m from the pin at 38 km/h on Bukit Timah Road: more than 300 m and at 15 km/h or above, so the marker is false and the clock is recomputed from the first qualifying in-geofence fix, 19:07:50 (27.4 m, inside the 50 m radius; the 19:07:40 fix was 64.1 m). From 19:07:50 every fix is inside 50 m at a 10 s cadence to the 19:13:00 RIDER_NO_SHOW termination: a corrected dwell of 310 s against free_wait_sec 180. Limb (iii): the false marker does not by itself defeat the fee; POL-NS-01 holds on the recomputed clock (limb b as NS-01 now states, limb c 310 s, limb d after the dwell), and POL-NS-07 fixes the payout; the false-arrival event is recorded in referrals. POL-NS-04 cannot exonerate the rider: an in-app call at 19:09:30 is recorded (limb b) and her rider_track lies 1.0-1.25 km away (limb c), so the TRUNCATED_LOG on EV-CHAT-04064 (weight 0.6, MSG-04064-002 missing, POL-NS-08(c)) touches no deciding fact. Anti-farming on EV-DPROF-04064: 1 of 132, clean. Payout 0.80 x 5.50 = 4.40. Ruling DRIVER_COMPENSATION, amount_sgd 4.40 = driver_compensation_sgd 4.40, referral 'POL-NS-05(iii): false-arrival event recorded against the driver' (a referral, not an escalation; it does not suppress the money). Deciding artifacts are at weight 1.0."
+    }
+  },
+  {
+    "case_no": 4065,
+    "dispute_id": "DSP-04065",
+    "ground_truth": {
+      "expected_ruling": "FULL_REFUND",
+      "expected_amount_sgd": 8.0,
+      "expected_driver_compensation_sgd": null,
+      "expected_referrals": [],
+      "governing_clauses": [
+        "POL-NS-06",
+        "POL-NS-01"
+      ],
+      "difficulty": "EASY",
+      "rationale": "POL-NS-06 with POL-NS-01(c); FULL_REFUND 8.00. Rider R-8318 contests the 8.00 fee (EV-FARE-04065). The figures in force come from EV-TRIP-04065 platform_policy (fee_schedule.resolution_rule), an AUTHORED-V1 record for a RYDE_XL at a TRANSPORT_HUB: cancellation_fee_sgd 8.00 (the greater of zone 6.00 and tier 8.00) and free_wait_sec 300. EV-GPS-04065 places the driver's first fix inside the 150 m hub radius at 18:12:30 (76.3 m, accuracy under 10 m; the 18:12:20 fix was 164.4 m), stopping in the bay at the 18:12:50 tap, and he cancelled RIDER_NO_SHOW at 18:14:05: an in-geofence dwell of 95 s, short of 300 s (and of the 180 s default). POL-NS-06: the fee is not chargeable and is refunded in full, 8.00, with no driver compensation, whether or not the rider was present. The driver's reason, that at peak hour he would not keep waiting for one passenger, is no ground: NS-06 is strict liability; its limb (i) only lets separate in-geofence intervals be summed, and he held the bay once without leaving and re-entering; nobody relies on a traffic advisory (EV-ADVIS-04065-01 is MISSING). POL-NS-04 is not the route (the rider's 18:13:20 message was answered at 18:13:45; her track was 299-438 m away); POL-NS-07 cannot run. All deciding artifacts are at weight 1.0."
+    }
+  }
+]

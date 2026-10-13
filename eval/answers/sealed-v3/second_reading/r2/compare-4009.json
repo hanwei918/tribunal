@@ -1,0 +1,74 @@
+{
+ "case_no": 4009,
+ "verdict": "AGREE",
+ "differences": [
+  {
+   "field": "ruling / amount_sgd / driver_compensation_sgd",
+   "key": "FULL_REFUND / 27.50 / null",
+   "reader_a": "FULL_REFUND / 27.50 / null",
+   "reader_b": "FULL_REFUND / 27.50 / null",
+   "resolution": "No difference. Verified independently (see analysis)."
+  },
+  {
+   "field": "referrals",
+   "key": [
+    "POL-RD-06(c): driver-conduct review"
+   ],
+   "reader_a": [
+    "POL-RD-06(c): driver-conduct review (deviation pattern established, deviation_flags_90d 4 >= 3)"
+   ],
+   "reader_b": [
+    "POL-RD-06(c): driver-conduct review - repeat deviation pattern (driver_profile.deviation_flags_90d = 4) on a MATERIAL deviation"
+   ],
+   "resolution": "Same clause, same event; the readers only add explanatory words. No change."
+  },
+  {
+   "field": "governing_clauses",
+   "key": [
+    "POL-RD-06",
+    "POL-RD-01",
+    "POL-RD-02"
+   ],
+   "reader_a": [
+    "POL-RD-01",
+    "POL-RD-06",
+    "POL-RD-02",
+    "POL-RD-07",
+    "POL-RD-08",
+    "POL-RD-13",
+    "POL-GEN-01",
+    "POL-GEN-02",
+    "POL-GEN-03"
+   ],
+   "reader_b": [
+    "POL-RD-01",
+    "POL-RD-02",
+    "POL-RD-06",
+    "POL-RD-08",
+    "POL-RD-07",
+    "POL-RD-13",
+    "POL-GEN-01",
+    "POL-GEN-02",
+    "POL-GEN-03"
+   ],
+   "resolution": "Both readers contain the key's three clauses and add constraint, procedural or not-engaged clauses (POL-RD-07 is checked and does not fire; POL-RD-08 is the burden step; POL-RD-13 is not strictly engaged because no external traffic cause is asserted; POL-GEN-01/02/03 are constraints and vocabulary). These extras are harmless in a reader's list and are not needed in the key. The key lists POL-RD-06, whose licences include FULL_REFUND and whose limb (b) fixes the amount at charged_total, POL-RD-01, which establishes the deviation and its materiality (the precondition of POL-RD-06(b)), and POL-RD-02, whose figure POL-RD-06(b) requires to be stated side by side. Each applies; none is missing. No change."
+  },
+  {
+   "field": "difficulty",
+   "key": "HARD",
+   "reader_a": "EASY",
+   "reader_b": "HARD",
+   "resolution": "Key stands. The rider's story is borne out by the trace, so this is not a REVERSAL, and the facts are settled, so not INDETERMINATE. The right answer requires several non-obvious steps that each have a tempting wrong exit: a schema-IMPAIRED trace (GPS_GAP 0.85) that is policy-clean under POL-RD-07(a)-(c); two MISSING artifacts (chat with chat_message_count 2, advisory) that do not engage POL-RD-10(5) because no exculpatory clause is invoked; the POL-RD-06(b) uplift from the POL-RD-02 figure 10.45 to charged_total 27.50, read from the 90-day counter and not the lifetime prior_deviation_flags 6; and an amount above the 8.00 execution threshold that is held for release, not escalated. That is HARD, not EASY. Reader A's EASY is a reader judgment, not a key error."
+  },
+  {
+   "field": "rationale",
+   "key": "numbers, evidence ids and clause ids as written",
+   "reader_a": "same figures",
+   "reader_b": "same figures",
+   "resolution": "Every figure checked with Python (below) and correct. One parenthetical, '(for the advisory, POL-RD-13(1))', cross-references a clause whose trigger is an asserted external traffic cause, which the driver's 'expressway because faster' arguably is not; the sentence's conclusion (POL-RD-10(5) not engaged because nobody cites the missing advisory) is right on POL-RD-10(5)'s own words either way, and both readers make the same cross-reference. Stylistic, not a factual error. No change."
+  }
+ ],
+ "analysis": "Independent working on the version-6 text. (1) Scope and identity: ROUTE_DEVIATION, no safety_flag or complaint_flag, no allegation within POL-GEN-08(1). trip_id TRP-04009 on EV-TRIP-04009, EV-GPS-04009 and EV-FARE-04009; first and last fixes equal started_at 23:16:40 and ended_at 23:47:42 to the second and lie 0 m from the pickup and dropoff pins; no POL-RD-10(2) or (4) trigger. (2) Trace integrity: recomputed with check_set's km() (R 6371.0088): 182 fixes, sum 18.96007 km, written 18.96 (matches). Intervals: one of 70 s (23:16:50-23:18:00), all others 10 s or less (minimum 5 s); exactly one interval above 30 s, so nothing is sustained; largest step 194.57 m (the gap chord, written 194.6 m); highest implied speed 47.0 km/h. POL-RD-07 (a) 70 <= 90, (b) 194.6 <= 500, (c) cadence 10 s: no limb fires, so POL-RD-07(i)-(iii) and POL-RD-10(3) are not engaged and the GPS_GAP tag only caps confidence under POL-GEN-02(2) at 0.85 (>= 0.70). trip_record.actual_distance_km 19.0 is a rounded copy and is not cited. (3) POL-RD-01: excess 18.96 - 10.3 = 8.66 km; 8.66 / 10.3 = 84.08 %. Established (> 20 % and > 0.8 km) and MATERIAL (> 50 %, and also > 8.0 km); not knife-edge (the 50 % limb alone carries materiality with wide margin). No POL-RD-03/04/05/12 adjustment: no advisory payload, no rider instruction asserted (the driver says the passenger said nothing), no amendment timestamps, RYDE_TAXI. (4) POL-RD-08: rider shows (a) and (b) on a policy-clean trace; rider_profile.deviation_claims_60d 1 (< 4), no extra-corroboration limb. Driver's statement cites no evidence id and no clause: discarded. EV-CHAT-04009 and EV-ADVIS-04009-01 are MISSING (0.0) but no exculpatory clause is invoked against either, so POL-RD-10(5) does not fire; POL-RD-14 has no instruction to act on; POL-RD-10(7) has no contradictory admissible evidence. (5) POL-RD-02 (METERED; surge_multiplier 1.0 read from EV-FARE-04009): recomputed = (3.80 + 7.725 + 4.76) x 1.0 + 0.80 + 0.00 on-route ERP + 0 surcharge + 0 waiting - 0 promo = 17.085; refund 27.50 - 17.085 = 10.415 -> 10.45 (rounded up to 0.05); 37.87 % of charged_total, below 90 %. Ledger check (Decimal): 3.80 + 14.22 + 8.68 + 0 + 0 + 0 + 0.80 = 27.50. (6) POL-RD-06: consulted because material. deviation_flags_90d 4 >= 3, pattern established (rate limb 4/380 = 1.05 % not needed; lifetime prior_deviation_flags 6 not read, POL-GEN-01). 'Where a pattern is established ... these three effects follow': limb (b), a deviation MATERIAL and substantiated on this trip's own trace, gives FULL_REFUND of charged_total rather than the POL-RD-02 partial; there are no ERP, toll or airport lines to carve out to POL-RD-09, so the uplifted figure is 27.50 = amount_contested_sgd. Limb (c) adds the driver-conduct referral, which does not suppress money (POL-GEN-03). Limb (b) reads as a consequence ('effects follow'), not a discretion, so PARTIAL_REFUND 10.45 is not a second defensible answer; both readers reached FULL_REFUND independently. (7) POL-RD-10(6): POL-RD-02 refund 10.45 <= 150 and < charged_total; (8): every charge line has a counterpart (distance 18.96 = trace, time 31 = 31.03 min trip). POL-RD-09: nothing to settle. POL-GEN-05: 27.50 > 8.00, issued and held for release, not an escalation. Conclusion: ruling FULL_REFUND, amount 27.50, compensation null, referral POL-RD-06(c), governing POL-RD-06/01/02, difficulty HARD, rationale figures correct. The key is right; the only disagreement (reader A's EASY) is a reader judgment. No case ambiguity found that a careful reader could resolve differently: the GPS gap sits well inside POL-RD-07's thresholds, the missing artifacts are uncited, and the uplift is stated as a consequence.",
+ "corrected_ground_truth": null,
+ "case_fix_instructions": null
+}

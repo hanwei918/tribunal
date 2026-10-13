@@ -1,0 +1,48 @@
+{
+  "case_no": 4063,
+  "ruling": "NO_ACTION",
+  "amount_sgd": null,
+  "driver_compensation_sgd": null,
+  "referrals": [],
+  "governing_clauses": [
+    "POL-NS-10",
+    "POL-NS-01",
+    "POL-NS-02",
+    "POL-GEN-03"
+  ],
+  "difficulty_opinion": "REVERSAL",
+  "deciding_facts": [
+    {
+      "evidence_id": "EV-GPS-04063",
+      "fact": "First qualifying in-geofence fix (start of a run of >=3 consecutive fixes, accuracy <=25 m, within the 50 m STANDARD radius of the pickup pin 1.4401,103.7956)",
+      "value": "08:02:20 (20.0 m, acc 3.8 m); every fix 08:02:20-08:08:45 within 50 m (max 12.0 m from 08:02:30), stationary 0 km/h, max interval 10 s"
+    },
+    {
+      "evidence_id": "EV-TRIP-04063",
+      "fact": "Rider boarded / trip_started",
+      "value": "08:08:45; status COMPLETED"
+    },
+    {
+      "evidence_id": "EV-GPS-04063",
+      "fact": "In-geofence dwell before boarding, measured as POL-NS-01(c) measures it",
+      "value": "385 s (08:02:20 -> 08:08:45) vs free_wait_sec 180 s: exceeds by 205 s"
+    },
+    {
+      "evidence_id": "EV-TRIP-04063",
+      "fact": "platform_policy waiting_fee_sgd / free_wait_sec",
+      "value": "5.00 / 180"
+    },
+    {
+      "evidence_id": "EV-FARE-04063",
+      "fact": "waiting_time_fee line; cancellation_fee; total_charged",
+      "value": "5.00; 0.00; 12.45 (3.80+1.17+1.68+0.80+5.00 = 12.45), CHARGED, refund 0.00"
+    },
+    {
+      "evidence_id": "EV-TRIP-04063",
+      "fact": "Arrival marker position/speed (POL-NS-05 test)",
+      "value": "08:02:00 BUTTON tap; matching fix 96.2 m from pin at 12 km/h: not >300 m, not >=15 km/h, so not a false marker"
+    }
+  ],
+  "reasoning": "1. Category NO_SHOW_CHARGE, rider-filed, contesting the SGD 5.00 waiting-time fee on a COMPLETED trip (EV-TRIP-04063, EV-FARE-04063). In scope under POL-GEN-08(1); no safety/complaint flag. The governing clause for a waiting-time fee is POL-NS-10(d)/(e): the fee is chargeable only where the trip was completed and the driver's in-geofence dwell before boarding, measured as POL-NS-01(c) measures it (from the first qualifying in-geofence GPS fix, not from the arrival tap), exceeded platform_policy.free_wait_sec. Figures read from trip_record.platform_policy (fee_schedule.resolution_rule): free_wait_sec 180, waiting_fee_sgd 5.00, zone STANDARD -> arrival radius 50 m (POL-NS-02).\n2. Arrival under POL-NS-02 (EV-GPS-04063, weight 1.0, 127 fixes, max interval 10 s): haversine (R=6371.0088 km) from pickup pin. Fixes 08:00:00-08:02:10 are approaching (506 m down to 62.4 m). 08:02:20 = 20.0 m (acc 3.8), 08:02:30 = 9.0 m (acc 4.9), 08:02:40 = 9.9 m (acc 5.1): three consecutive qualifying fixes, so arrival is established and the clock starts at 08:02:20. From 08:02:30 to 08:08:40 every fix is 4.3-12.0 m from the pin at 0 km/h; the in-radius run continues to 08:09:00.\n3. Dwell before boarding: trip_started (rider boarded) 08:08:45 (EV-TRIP-04063, matching GPS fix 6.0 m). 08:08:45 - 08:02:20 = 385 s > 180 s free wait, by 205 s. POL-NS-10(d) is satisfied; limb (e) does not fire; the 5.00 line (= platform_policy.waiting_fee_sgd) stands. No cancellation fee was charged (cancellation_fee 0.00), so the never-both rule of NS-10(d) is respected.\n4. The rider's account (driver 'only reached at about 8.06', 'did not make him wait') is contradicted by the GPS trace, which has the vehicle stationary ~9 m from the pin from 08:02:30, and by the rider's own chat MSG-04063-004 at 08:03:10 ('ok wait ah, coming down') replying to the driver's 08:02:35 arrival message, plus MSG-04063-005/-007 and the answered in-app call at 08:06:50 (in_app_calls). The driver's statement (reached 08:02, waited >6 min) is corroborated: 08:02:20 -> 08:08:45 is 6 min 25 s.\n5. POL-NS-05: the BUTTON arrival tap at 08:02:00 coincides with a fix 96.2 m from the pin at 12 km/h - neither >300 m nor >=15 km/h, so the marker is not false and no false-arrival referral arises; in any case the clock was measured from GPS (08:02:20), 20 s later than the tap, and still exceeds 180 s. POL-NS-12 does not apply (arrival_marker is BUTTON, not GPS_AUTO).\n6. Clauses not engaged: POL-NS-01 limb (d)/POL-NS-07 (no cancellation; completed trip; the waiting fee already goes to the driver per fee_goes_to, and NS-07 compensation is reserved for a verified no-show or NS-10(g) rider cancellation - so DRIVER_COMPENSATION is not licensed); POL-NS-03 (driver within radius); POL-NS-04 (no cancellation; rider_track: first 6 fixes acc 35.7-47.5 m filtered, only 08:08:30 qualifies at 2.3 m - immaterial; POL-NS-11 notes the presence test simply does not help the rider and does not impair the driver's trace); POL-NS-06 (dwell not short; EV-ADVIS-04063-01 MISSING, weight 0.0, not relied on and no party invoked it); POL-NS-10(a)(b)(f)(g) (no cancellation, not scheduled).\n7. Integrity: POL-NS-08(a) arrival tap coincides with a fix (0 s); start 08:08:45 and end 08:14:45 match fixes exactly. (b) no gap >120 s (max 10 s), 40+ fixes in window. (c) chat 8 msgs = chat_message_count, sequential ids, gap spanning arrival 07:58:30->08:02:35 = 245 s < 300 s. (d) cancellation_fee line 0.00 - no cancellation fee charged; waiting line 5.00 reconciles with platform_policy. No policy-level impairment. POL-GEN-02: EV-CHAT-04063 is schema-impaired, weight 0.8, CONTENT_REDACTED (MSG-04063-006 masked contact number); it is corroborative only - the deciding fact (dwell) rests on EV-GPS-04063 and EV-TRIP-04063 at weight 1.0, so the confidence cap is 1.0 and the finding survives without the chat.\n8. POL-NS-09: (a) confidence high; (b) no contradiction between admissible artifacts - trip record and GPS agree; (c) disputes_with_counterparty_90d 0 + 0; (d) driver no_show_terminations_30d 1 (<4; 1/150 = 0.0067), rider no_show_disputes_30d 0. No escalation. POL-GEN-01: no profile field used for the outcome (rating, lifetime counters etc. context only).\n9. Outcome per POL-GEN-03: the rider's claim is not supported; the charge stands as it is (payment_status CHARGED, refund_issued 0.00 unchanged) -> NO_ACTION, amount_sgd null, driver_compensation_sgd null, no referrals. Monetary effect 0.00, below the POL-GEN-05 threshold of 8.00. Provisional; appealable under POL-GEN-04.",
+  "doubts": "Minor: (1) whether the dwell clock starts at 08:02:20 (first fix of the qualifying 3-fix run, 20.0 m) or 08:02:30 (first stationary fix) - 385 s vs 375 s, both far above 180 s, so no effect. (2) One could argue for DRIVER_COMPENSATION by analogy with POL-NS-07, but NS-07 applies only to a verified no-show (NS-01 satisfied, which needs a driver termination) or NS-10(g); on a completed trip the waiting fee itself is the driver's payment (fee_goes_to DRIVER), so NO_ACTION is the correct value. No genuine ambiguity on the deciding fact."
+}

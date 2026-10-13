@@ -1,0 +1,79 @@
+{
+ "case_no": 4057,
+ "verdict": "AGREE",
+ "differences": [
+  {
+   "field": "ruling",
+   "key": "DRIVER_COMPENSATION",
+   "reader_a": "DRIVER_COMPENSATION",
+   "reader_b": "DRIVER_COMPENSATION",
+   "resolution": "All agree. POL-NS-01 holds on all four limbs, no clause from POL-NS-03 to POL-NS-06 displaces it, and the POL-NS-07 anti-farming check does not trip, so compensation is paid and POL-NS-07 states the emitted ruling is DRIVER_COMPENSATION, not NO_ACTION. The support refund of 2026-09-08 (EV-TRIP-04057 fee_refunded; EV-FARE-04057 REFUNDED 4.00) does not change this: POL-GEN-03's party-relative NO_ACTION applies only where the filing party's claim is not supported, and here the driver's claim is supported."
+  },
+  {
+   "field": "amount_sgd",
+   "key": 3.2,
+   "reader_a": 3.2,
+   "reader_b": 3.2,
+   "resolution": "All agree. On DRIVER_COMPENSATION amount_sgd mirrors driver_compensation_sgd (POL-GEN-03). Not the contested 4.00: POL-NS-07 pays 80 percent of the net fee."
+  },
+  {
+   "field": "driver_compensation_sgd",
+   "key": 3.2,
+   "reader_a": 3.2,
+   "reader_b": 3.2,
+   "resolution": "All agree. Fee in force read from EV-TRIP-04057 platform_policy (resolution_rule): cancellation_fee_sgd 4.00 net, rider_gross null. Decimal: 0.8 x 4.00 = 3.20, already a multiple of 0.05 (POL-NS-07 itself quotes 3.20 of 4.00)."
+  },
+  {
+   "field": "referrals",
+   "key": [],
+   "reader_a": [],
+   "reader_b": [],
+   "resolution": "All agree. POL-NS-05 not engaged (fix at the 07:17:00 marker is 8.6 m from the pin at 0 km/h; position-derived speed into it 7.9 km/h), so no false-arrival record; the reason code is RIDER_NO_SHOW, so POL-NS-01's mis-selected-code referral does not arise; no other referral-producing clause applies in this category."
+  },
+  {
+   "field": "governing_clauses",
+   "key": [
+    "POL-NS-01",
+    "POL-NS-07"
+   ],
+   "reader_a": [
+    "POL-NS-01",
+    "POL-NS-02",
+    "POL-NS-07",
+    "POL-GEN-03"
+   ],
+   "reader_b": [
+    "POL-NS-01",
+    "POL-NS-02",
+    "POL-NS-07",
+    "POL-NS-11",
+    "POL-GEN-03"
+   ],
+   "resolution": "Key right; reader additions are harmless extras and no reason to change the key. POL-NS-01 establishes the fee and licenses DRIVER_COMPENSATION; POL-NS-07 fixes the payout and licenses DRIVER_COMPENSATION. Both apply. POL-NS-02 is the arrival test POL-NS-01(b) incorporates; it is satisfied but licenses only FULL_REFUND/NO_ACTION and fixes no amount here. POL-NS-11 licenses nothing and is not needed: POL-NS-04 already fails on limb (a) (no RIDER message) and limb (b) (two driver in-app calls), so the undecidable limb (c) never matters. POL-GEN-03 is the universal vocabulary clause the brief says not to lean on. No clause in the key fails to apply."
+  },
+  {
+   "field": "difficulty",
+   "key": "EASY",
+   "reader_a": "EASY",
+   "reader_b": "EASY",
+   "resolution": "All agree. No party's story is contradicted by the record: the driver's 7-minute wait (marker to cancellation 420 s) and two unanswered calls are what EV-TRIP-04057 and EV-GPS-04057 show, and the rider admits oversleeping. Not ESCALATE, so not INDETERMINATE."
+  },
+  {
+   "field": "rationale",
+   "key": "verified",
+   "reader_a": "n/a",
+   "reader_b": "n/a",
+   "resolution": "Every number, evidence id and clause id in the key rationale checked against the case file with Python (haversine R = 6371.0088 km): free_wait_sec 240 and cancellation_fee_sgd 4.00 (RECORD-PLATFORM); arrival 07:17:00; first qualifying in-radius fix 07:16:50 at 24.0 m (accuracy 5.4 m, 9 km/h), the 07:16:40 fix being outside at 59.8 m; marker-to-cancellation fixes 43, all 5.8-12.0 m from the pin at 0 km/h; accuracy over 07:16:50-07:24:00 at most 8.8 m (under 9 m); continuous 10 s cadence 07:16:50-07:24:00 = 430 s vs 240 s; RIDER_NO_SHOW, no boarding; calls 07:19:30 and 07:22:10 unanswered; rider_track 4 fixes all filtered at 35.4-44.8 m accuracy; no RIDER message in EV-CHAT-04057; no_show_terminations_30d 1, completed_trips_30d 168 (1/168 = 0.006); 0.80 x 4.00 = 3.20; all deciding artifacts weight 1.0. Rationale 1313 characters, ASCII. Stylistic only, no change: 'the marker fix was at the pin' means inside the radius at 8.6 m; the rider is called 'she' though the record states no gender."
+  },
+  {
+   "field": "reader_errors",
+   "key": "n/a",
+   "reader_a": "none material",
+   "reader_b": "says 50 consecutive qualifying fixes 07:16:50-07:24:10; the count is 45 (44 to the 07:24:00 cancellation)",
+   "resolution": "Reader B's count is the reader's error and does not touch any outcome; the key does not use that figure."
+  }
+ ],
+ "analysis": "Both blind readings match the key on ruling, amount, compensation, referrals and difficulty; they differ only by listing extra governing clauses. Worked independently on the version-6 text (three base files plus POL-NS-11, POL-RD-14, POL-NS-12). Scope: NO_SHOW_CHARGE, no safety or complaint flag, no damage allegation, so POL-GEN-08(1) permits an automated ruling. Figures in force (fee_schedule.resolution_rule): EV-TRIP-04057 platform_policy free_wait_sec 240, no_show_threshold_sec null, cancellation_fee_sgd 4.00 net, rider_gross null, arrival_marker BUTTON; zone STANDARD so arrival radius 50 m, rider presence radius 100 m, accuracy filter 25 m. POL-NS-02: fixes from 07:16:50 (24.0 m) through 07:24:10 lie within 50 m with accuracy at most 8.8 m - far more than 3 consecutive qualifying fixes, arrival established. POL-NS-01: (a) driver_arrived 07:17:00; (b) in the geofence at 07:16:50 and 07:17:00, at or before the event; (c) dwell from the first qualifying in-geofence fix 07:16:50 to cancellation 07:24:00 = 430 s, continuous at 10 s, against 240 s (420 s if counted from the first stationary fix, immaterial); (d) CANCELLED_BY_DRIVER with RIDER_NO_SHOW at 07:24:00, started_at null, after the dwell elapsed at 07:20:50. Displacing clauses: POL-NS-03 not engaged (stationary inside the radius); POL-NS-04 fails on (a) no RIDER message and (b) two DRIVER in-app calls, and (c) is undecidable because all four rider fixes are filtered (35.4-44.8 m accuracy), which under POL-NS-11 neither helps the rider nor impairs the driver's trace; POL-NS-05 not engaged (8.6 m, 0 km/h at the marker); POL-NS-06 not engaged (430 s >= 240 s; the MISSING advisory EV-ADVIS-04057-01 is relied on by nobody and limb (i) is not needed); POL-NS-10 not engaged (driver termination; the support refund is not a rider cancellation); POL-NS-12 not applicable (BUTTON). POL-NS-08: arrival and cancellation coincide with fixes (0 s skew), no gap over 120 s, 43 fixes in the window, chat ids 001-005 sequential and count 5 = chat_message_count 5, interval spanning the marker 220 s, fare line 4.00 = net 4.00 - no limb engaged. POL-NS-09: confidence capped at 1.0 (all deciding artifacts weight 1.0), no contradiction, counterparty disputes 0 + 0, driver no_show_terminations_30d 1 (< 4) and rider no_show_disputes_30d 0 (< 3), no impairment - no trigger. POL-GEN-01: prior_no_show_flags, ratings and the like are context only and nobody relies on them. POL-NS-07: anti-farming needs both 4 or more and a rate above 0.08; 1 and 0.006 trip neither, so compensation = 0.80 x 4.00 = 3.20 (Decimal), emitted as DRIVER_COMPENSATION with amount_sgd = driver_compensation_sgd = 3.20 (POL-GEN-03). POL-GEN-05: 3.20 <= 8.00 execution threshold. Alternatives considered and rejected on the text: NO_ACTION because support already refunded the rider (POL-NS-07 expressly says that reading is wrong where compensation is paid); 4.00 to the driver (POL-NS-07 retains 20 percent); ESCALATE over the filtered rider_track (POL-NS-11 removes that route, and POL-NS-04 fails on limbs (a) and (b) anyway). The case file supports exactly one defensible answer, which is the key's. Verdict AGREE.",
+ "corrected_ground_truth": null,
+ "case_fix_instructions": null
+}

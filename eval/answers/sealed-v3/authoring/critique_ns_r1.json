@@ -1,0 +1,152 @@
+[
+  {
+    "case_no": 4051,
+    "verdict": "OK",
+    "issues": [
+      "[optional, does not affect the verdict] trip_record.platform_policy.source is PLATFORM-PUBLISHED-2026-10-07 on a trip of 2026-09-03 whose artifacts were generated 2026-09-03: the record cites a publication dated after the case file was assembled (a timeline oddity a careful reader can notice; no figure or outcome depends on it).",
+      "[optional, does not affect the verdict] The fix matched to the BUTTON tap (08:07:00) reports speed_kph 0, but the previous fix is 59.0 m away 10 s earlier (implied 21.3 km/h; previous fix reports 22 km/h): the car arrives at full approach speed and is at 0 at the tap. Physically possible only with a hard stop in the last 1-2 s. POL-NS-05 reads the speed of the single matched fix (0), so the marker is not false on the clause's own test; but a finite-difference reading would call it >= 15 km/h and add an unplanned POL-NS-05(iii) false-arrival referral (the ruling would still be the planned one, but the key's referrals [] would then differ)."
+    ],
+    "fixes": [
+      "[optional] Set platform_policy.source to RECORD-PLATFORM (values unchanged), or make the set-wide convention explicit; resolution_rule reads platform_policy either way, so nothing else moves.",
+      "[optional] Smooth the approach so the 10 s segment into the tap fix implies <= 10 km/h (e.g. lower the last approach leg's speed weight or end the route leg 10-20 s before the tap with a 5-8 km/h roll-in), keeping the tap fix itself at the same position and 0 km/h; re-measure nothing else."
+    ]
+  },
+  {
+    "case_no": 4052,
+    "verdict": "OK",
+    "issues": [
+      "[optional, does not affect the verdict] trip_record.platform_policy.source is PLATFORM-PUBLISHED-2026-10-07 on a trip of 2026-09-22 whose artifacts were generated 2026-09-24: the record cites a publication dated after the case file was assembled (a timeline oddity a careful reader can notice; no figure or outcome depends on it).",
+      "[optional, does not affect the verdict] The fix matched to the BUTTON tap (19:31:00) reports speed_kph 0, but the previous fix is 54.2 m away 10 s earlier (implied 19.5 km/h; previous fix reports 19 km/h): the car arrives at full approach speed and is at 0 at the tap. Physically possible only with a hard stop in the last 1-2 s. POL-NS-05 reads the speed of the single matched fix (0), so the marker is not false on the clause's own test; but a finite-difference reading would call it >= 15 km/h and add an unplanned POL-NS-05(iii) false-arrival referral (NS-10(g) still pays the same 80 %, but a referral could be added against the key's [])."
+    ],
+    "fixes": [
+      "[optional] Set platform_policy.source to RECORD-PLATFORM (values unchanged), or make the set-wide convention explicit; resolution_rule reads platform_policy either way, so nothing else moves.",
+      "[optional] Smooth the approach so the 10 s segment into the tap fix implies <= 10 km/h (e.g. lower the last approach leg's speed weight or end the route leg 10-20 s before the tap with a 5-8 km/h roll-in), keeping the tap fix itself at the same position and 0 km/h; re-measure nothing else."
+    ]
+  },
+  {
+    "case_no": 4053,
+    "verdict": "OK",
+    "issues": [
+      "[optional, does not affect the verdict] trip_record.platform_policy.source is PLATFORM-PUBLISHED-2026-10-07 on a trip of 2026-08-19 whose artifacts were generated 2026-08-21: the record cites a publication dated after the case file was assembled (a timeline oddity a careful reader can notice; no figure or outcome depends on it)."
+    ],
+    "fixes": [
+      "[optional] Set platform_policy.source to RECORD-PLATFORM (values unchanged), or make the set-wide convention explicit; resolution_rule reads platform_policy either way, so nothing else moves."
+    ]
+  },
+  {
+    "case_no": 4054,
+    "verdict": "OK",
+    "issues": [
+      "[optional, does not affect the verdict] trip_record.platform_policy.source is PLATFORM-PUBLISHED-2026-10-07 on a trip of 2026-08-29 whose artifacts were generated 2026-08-29: the record cites a publication dated after the case file was assembled (a timeline oddity a careful reader can notice; no figure or outcome depends on it)."
+    ],
+    "fixes": [
+      "[optional] Set platform_policy.source to RECORD-PLATFORM (values unchanged), or make the set-wide convention explicit; resolution_rule reads platform_policy either way, so nothing else moves."
+    ]
+  },
+  {
+    "case_no": 4055,
+    "verdict": "FIX",
+    "issues": [
+      "Realism / planted trap: the rider's claim_text says 'he has a lot of no-show flags on his record'. A rider has no access to a driver's internal profile counters, so the sentence reads as authored to plant the POL-GEN-01 trap (prior_no_show_flags 9) rather than as something a rider would know or write.",
+      "[optional, does not affect the verdict] trip_record.platform_policy.source is PLATFORM-PUBLISHED-2026-10-07 on a trip of 2026-09-13 whose artifacts were generated 2026-09-14: the record cites a publication dated after the case file was assembled (a timeline oddity a careful reader can notice; no figure or outcome depends on it)."
+    ],
+    "fixes": [
+      "Reword the last sentence of claim_text so the rider asks for a reputational finding without claiming knowledge of the profile, e.g. 'Also please check this driver, I think he does this to other passengers also.' Keep driver_profile.prior_no_show_flags 9 and no_show_terminations_30d 2 / completed_trips_30d 121 as they are, so the POL-GEN-01 / POL-NS-07 trap (lifetime counter vs trailing counter) is unchanged.",
+      "[optional] Set platform_policy.source to RECORD-PLATFORM (values unchanged), or make the set-wide convention explicit; resolution_rule reads platform_policy either way, so nothing else moves."
+    ]
+  },
+  {
+    "case_no": 4056,
+    "verdict": "OK",
+    "issues": [],
+    "fixes": []
+  },
+  {
+    "case_no": 4057,
+    "verdict": "OK",
+    "issues": [
+      "[optional, does not affect the verdict] The fix matched to the BUTTON tap (07:17:00) reports speed_kph 0, but the previous fix is 61.8 m away 10 s earlier (implied 22.3 km/h; previous fix reports 24 km/h): the car arrives at full approach speed and is at 0 at the tap. Physically possible only with a hard stop in the last 1-2 s. POL-NS-05 reads the speed of the single matched fix (0), so the marker is not false on the clause's own test; but a finite-difference reading would call it >= 15 km/h and add an unplanned POL-NS-05(iii) false-arrival referral to a DRIVER_COMPENSATION whose key carries referrals []."
+    ],
+    "fixes": [
+      "[optional] Smooth the approach so the 10 s segment into the tap fix implies <= 10 km/h (e.g. lower the last approach leg's speed weight or end the route leg 10-20 s before the tap with a 5-8 km/h roll-in), keeping the tap fix itself at the same position and 0 km/h; re-measure nothing else."
+    ]
+  },
+  {
+    "case_no": 4058,
+    "verdict": "FIX",
+    "issues": [
+      "Text that leans toward the answer and is unexplained by the record: the driver's claim says 'my payout for it is on hold and has not been credited to me'. Nothing in EV-TRIP-04058 or EV-FARE-04058 records a hold (payment_status CHARGED, refund 0.00, no hold event), so the only explanation a reader can supply is that the platform already flagged this driver - which is the POL-NS-07 anti-farming outcome the case is meant to make the judge compute from no_show_terminations_30d / completed_trips_30d. It nudges a HARD case toward ESCALATE before the counters are read."
+    ],
+    "fixes": [
+      "Remove 'on hold' from claim_text and give a neutral reason, e.g. '...The 6.00 no-show fee was charged to the passenger but it is not in my earnings yet. Please credit my 6.00.' Leave every record field as it is; the escalation must come only from the counters (5 >= 4 and 5/54 = 0.0926 > 0.08)."
+    ]
+  },
+  {
+    "case_no": 4059,
+    "verdict": "OK",
+    "issues": [],
+    "fixes": []
+  },
+  {
+    "case_no": 4060,
+    "verdict": "OK",
+    "issues": [
+      "[optional, does not affect the verdict] trip_record.platform_policy.source is PLATFORM-PUBLISHED-2026-10-07 on a trip of 2026-08-11 whose artifacts were generated 2026-08-11: the record cites a publication dated after the case file was assembled (a timeline oddity a careful reader can notice; no figure or outcome depends on it)."
+    ],
+    "fixes": [
+      "[optional] Set platform_policy.source to RECORD-PLATFORM (values unchanged), or make the set-wide convention explicit; resolution_rule reads platform_policy either way, so nothing else moves."
+    ]
+  },
+  {
+    "case_no": 4061,
+    "verdict": "FIX",
+    "issues": [
+      "Reuse of the organisers' sample (BRIEF: never reuse its numbers): the figures and evidence pattern mirror case-00901 - cancellation_fee_sgd 5.00 and free_wait_sec 300 (both identical to the sample's platform_policy), arrival_marker GPS_AUTO with a sparse DRIVER_DEVICE export whose fixes carry no accuracy, the identical code pair LOW_SAMPLE_RATE + PARTIAL_RECORD giving the sample's exact weight 0.6, an empty rider_track, and a single unanswered driver in-app call. The NS-12 mechanism is legitimately needed, but the numbers should not echo the sample.",
+      "POL-NS-08(a) edge that can flip the ruling: the export's last fix (13:15:50) is 100 s after the trip_record termination (13:14:10), and its first fix (12:59:40) is exactly 90 s after accepted_at (12:58:10). A reader who compares the export's span with the trip_record times can say the two 'disagree on trip termination time by more than 90 seconds'. NS-08(a) does not say which artifact is then impaired; if the trip_record (the NS-12 carrier) is read as impaired, the platform events are no longer an unimpaired independent carrier, the impaired export is the only evidence, and NS-08's closing sentence / NS-09(e) escalate - a second defensible outcome. The design note moved the last fix away from a 90 s edge but landed on 100 s on the other side."
+    ],
+    "fixes": [
+      "Move the post-termination export fix to about 13:14:50 (40 s after the 13:14:10 termination; on the departure leg, about 250-300 m from the pin at about 28 km/h) so last_fix_at is well within 90 s of the termination; the 13:12:40 -> 13:14:50 interval (130 s) keeps NS-08(b) engaged on the export as designed, and the fix stays outside the waiting window so it cannot contradict the platform events. Move the first export fix to about 12:58:45 (35 s after acceptance) and re-place it on the approach route. Recompute trace_distance_km, gaps and the GPS notes.",
+      "De-echo the sample while keeping the NS-12 test: e.g. platform_policy cancellation_fee_sgd 6.00 with rider_gross_cancellation_fee_sgd 8.81, free_wait_sec 240, no_show_threshold_sec 360; wait_timer_started 13:06:05, wait_timer_expired 13:10:05, no_show_threshold_reached 13:12:00, termination unchanged at 13:14:10 (490 s >= 360). Fare line and refund become 8.81 (gross), amount_contested_sgd 6.00 (net), payout 0.80 x 6.00 = 4.80 (ruling and difficulty unchanged; any non-sample net fee works, payout = 0.80 x net, a multiple of 0.05).",
+      "Optionally also change the export's code pair so its weight is not the sample's 0.6: give rider_track a few accuracy-filtered rider fixes (> 25 m) so PARTIAL_RECORD drops and the export is LOW_SAMPLE_RATE only (0.8). NS-12 is still required, because NS-02 cannot run on accuracy-less fixes and NS-08(b) still fires on the export (3 fixes, gaps > 120 s). Update the event detail, claim_text and notes for the new figures."
+    ]
+  },
+  {
+    "case_no": 4062,
+    "verdict": "OK",
+    "issues": [
+      "[optional, does not affect the verdict] trip_record.platform_policy.source is PLATFORM-PUBLISHED-2026-10-07 on a trip of 2026-10-01 whose artifacts were generated 2026-10-01: the record cites a publication dated after the case file was assembled (a timeline oddity a careful reader can notice; no figure or outcome depends on it)."
+    ],
+    "fixes": [
+      "[optional] Set platform_policy.source to RECORD-PLATFORM (values unchanged), or make the set-wide convention explicit; resolution_rule reads platform_policy either way, so nothing else moves."
+    ]
+  },
+  {
+    "case_no": 4063,
+    "verdict": "FIX",
+    "issues": [
+      "Chat wording creates a 5-second side argument: MSG-04063-005 (DRIVER, 08:05:40) says 'still waiting ya, waiting fee will start after 3 min'. Read naturally it promises three more free minutes, i.e. a fee from about 08:08:40; the rider boards at 08:08:45. That invites a 'the driver told me the fee starts later / I boarded on time by his own words' argument and a knife-edge feel the design otherwise avoids (dwell 385 s vs 180 s). It is also inconsistent with the record: by 08:05:40 the GPS dwell from 08:02:20 already exceeds 180 s.",
+      "[optional, does not affect the verdict] trip_record.platform_policy.source is PLATFORM-PUBLISHED-2026-10-07 on a trip of 2026-08-03 whose artifacts were generated 2026-08-04: the record cites a publication dated after the case file was assembled (a timeline oddity a careful reader can notice; no figure or outcome depends on it)."
+    ],
+    "fixes": [
+      "Reword MSG-04063-005 so it states that the free wait is already over, e.g. 'still waiting ya, already more than 3 min, waiting fee start liao' (keep sender, time, read_at). The rider's 'I did not make him wait' is then contradicted by her own chat as well as by the GPS, which suits the REVERSAL label; nothing in the derivation changes.",
+      "[optional] Set platform_policy.source to RECORD-PLATFORM (values unchanged), or make the set-wide convention explicit; resolution_rule reads platform_policy either way, so nothing else moves."
+    ]
+  },
+  {
+    "case_no": 4064,
+    "verdict": "OK",
+    "issues": [],
+    "fixes": []
+  },
+  {
+    "case_no": 4065,
+    "verdict": "FIX",
+    "issues": [
+      "Second defensible outcome via POL-NS-06's own text: 'a MISSING traffic_advisory makes limb (i) unavailable, and asserting it against a MISSING artifact triggers POL-NS-09 rather than exonerating anyone.' The driver's counterparty_statement ('buses and cars behind me were honking, I could not hold my position there for long') and MSG-04065-006 ('bay very crowded cannot wait long') assert precisely limb (i)'s predicate - that holding position was not possible - while EV-ADVIS-04065-01 is MISSING. A careful reader can treat that as limb (i) asserted against a missing advisory and escalate under NS-09, instead of the planned FULL_REFUND, on a case labelled EASY. (The better reading is that limb (i) only sums separate in-geofence intervals and the driver never left the radius, but the case should not depend on winning that argument; NS has no counterpart of POL-RD-13 to settle it.)"
+    ],
+    "fixes": [
+      "Recommended: reword the driver's excuse as impatience, not an external kerb condition. counterparty_statement e.g. 'She said walking over 5 min, when I reached she still say 2 more min. Peak hour I cannot keep waiting for one passenger, so I cancelled.' MSG-04065-006 e.g. 'still 2 min ah? I cannot wait so long leh'. The trap (upholding the fee because the driver felt he had waited enough) is kept; nothing else changes (dwell 95 s vs 300 s, FULL_REFUND 8.00).",
+      "Alternative if the crowding story is wanted: make EV-ADVIS-04065-01 present with a non-qualifying type (e.g. CONGESTION on the interchange access road, covering the window), so nothing is asserted against a MISSING artifact; limb (i) then fails on type and on the absence of separate intervals, and NS-06(ii) keeps the refund."
+    ]
+  }
+]

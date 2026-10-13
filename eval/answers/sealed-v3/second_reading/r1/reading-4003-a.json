@@ -1,0 +1,57 @@
+{
+  "case_no": 4003,
+  "ruling": "ESCALATE",
+  "amount_sgd": null,
+  "driver_compensation_sgd": null,
+  "referrals": [],
+  "governing_clauses": [
+    "POL-RD-07",
+    "POL-RD-10",
+    "POL-GEN-02"
+  ],
+  "difficulty_opinion": "HARD",
+  "deciding_facts": [
+    {
+      "evidence_id": "EV-GPS-04003",
+      "fact": "Mid-trip gap between consecutive fixes (14:11:30 -> 14:19:00), inside the disputed route; exceeds POL-RD-07(a) 90 s",
+      "value": "450 s"
+    },
+    {
+      "evidence_id": "EV-GPS-04003",
+      "fact": "Straight-line jump between the gap's bounding fixes (1.355532,103.896328)->(1.287039,103.862588); exceeds POL-RD-07(b) 500 m",
+      "value": "8.4896 km (implied 67.9 km/h)"
+    },
+    {
+      "evidence_id": "EV-GPS-04003",
+      "fact": "Recomputed trace length (haversine R=6371.0088), with the gap read as a straight line per POL-RD-07(i): pre-gap 6.178 + gap 8.490 + post-gap 2.933",
+      "value": "17.600 km"
+    },
+    {
+      "evidence_id": "EV-TRIP-04003",
+      "fact": "Booked optimal route (PIE/CTE) stored at booking; excess on the driver-favourable reading 17.600-13.5",
+      "value": "optimal 13.5 km; excess 4.1 km = 30.37% (passes POL-RD-01, not MATERIAL)"
+    },
+    {
+      "evidence_id": "EV-TRIP-04003",
+      "fact": "trip_record.actual_distance_km is the trace figure rounded (admissibility note; trip_completed event: metered from the driver-app GPS trace) - not independent of the trace",
+      "value": "17.6 km"
+    },
+    {
+      "evidence_id": "EV-FARE-04003",
+      "fact": "distance_charged_km is a copy of the trace figure; no ERP gantries charged",
+      "value": "17.60 km; erp_gantries []"
+    },
+    {
+      "evidence_id": "EV-CHAT-04003",
+      "fact": "Only two pre-pickup messages; no driver admission of route, no rider instruction",
+      "value": "2 messages, no waypoint_hint"
+    },
+    {
+      "evidence_id": "EV-GPS-04003",
+      "fact": "admissibility weight of the only artifact carrying the deviation (GPS_GAP HIGH)",
+      "value": "0.6"
+    }
+  ],
+  "reasoning": "1. Scope/identity (POL-GEN-08(1), POL-RD-08(a), POL-RD-10(2),(4)): ROUTE_DEVIATION, rider-filed, no safety/complaint flag. trip_id TRP-04003 matches on trip_record, gps_trace and fare_breakdown; first/last GPS fixes equal started_at 14:00:10 and ended_at 14:26:06 and the pickup/dropoff coordinates exactly; no timestamp disagreement. No trigger under RD-10(2) or (4).\n2. Measurement (POL-RD-01): recomputed EV-GPS-04003 polyline = 17.6004 km (113 fixes): 6.178 km before the gap, 8.4896 km straight line across the gap, 2.9327 km after. trace_distance_km 17.600 governs. Optimal (EV-TRIP-04003) 13.5 km / 20 min. Excess = 17.600 - 13.5 = 4.1 km = 30.37% of optimal: > 20% and > 0.8 km, so on the trace the threshold is met; < 50% and < 8.0 km, so not MATERIAL. Duration 25.93 min vs 20.\n3. Policy-level impairment (POL-RD-07): within the disputed route the trace has a 450 s gap (14:11:30 -> 14:19:00; limb (a), > 90 s) and an 8,489.6 m jump between consecutive fixes (limb (b), > 500 m). The gap covers exactly the KPE/MCE leg the rider complains of. So the trace is IMPAIRED under POL-RD-07(a) and (b), not just schema-impaired. Limb (i): the gap is already read as a straight line (driver-favourable) and the excess still reaches 4.1 km - but limb (ii) says a deviation may NOT be established on the gps_trace alone and needs an INDEPENDENT corroborating source.\n4. Corroboration search (POL-RD-07(ii)): driver admission in chat - none (EV-CHAT-04003 has only 'reached' / 'ok 1 min' before pickup); ERP gantries charged - none (EV-FARE-04003 erp_gantries [] and tolls_erp 0.00); counterparty_statement - null; trip_record.actual_distance_km derived independently - no: EV-TRIP-04003's admissibility note says 17.6 is the trace figure rounded, and its trip_completed event says the meter ran from the driver-app GPS trace (the exported trace). The billed distance 17.60 km in EV-FARE-04003 is the same copy, and RD-07(ii) excludes it expressly. The rider's own 'usually about 19' is an uncited assertion and is not on the list. No independent corroboration exists.\n5. Consequence: POL-RD-07(iii) - the claim is not sustained on the present record and the outcome is ESCALATE, not NO_ACTION; POL-RD-10(3) fires on the same facts (impaired under RD-07(a)-(c), no RD-07(ii) corroborator). Independently, POL-GEN-02(2): the deciding fact (the excess) is carried only by EV-GPS-04003 at weight_multiplier 0.6 (GPS_GAP, HIGH); confidence is capped at 0.6 < 0.70, so POL-RD-10(1) also fires. The trip_record and fare_breakdown copies of the same measurement are not independent carriers, so the cap is not lifted to 1.0. ESCALATE is terminal (POL-GEN-03, POL-RD-10); amount_sgd and driver_compensation_sgd null; disputed SGD 6.00 held.\n6. Other clauses: POL-RD-03 - no party asserts a closure; EV-ADVIS-04003-01 MISSING (weight 0.0), cited by no one, so POL-RD-13(1) keeps it out of RD-10(5); RD-13(2) does not help the rider because the trace IS impaired, and RD-13 itself says RD-10(3) still governs. POL-RD-04/POL-RD-14 - no rider instruction in chat; no billed-distance shortfall (17.60 billed = 17.60 traced), so no driver compensation. POL-RD-05 - no amendment timestamps. POL-RD-06 - not MATERIAL; driver deviation_flags_90d 0 / 245 in any case, so no pattern and no referral. POL-RD-08 - rider cannot discharge limb (b) because the trace is impaired and no RD-07(ii) source exists; rider deviation_claims_60d = 1 (< 4), so the extra-corroboration rule is not engaged. POL-RD-09 - no ERP, toll or airport lines; nothing for (4). POL-RD-10(8) - every fare line reconciles (3.80 + 0.75x17.60 + 0.28x26 + 0.80 = 25.08) and has a counterpart. POL-RD-11 - METERED, not applicable. POL-RD-12 - RYDE_X, not pooled. POL-GEN-01 - profile ratings, prior_disputes_upheld and so on are context only and were not used. POL-GEN-05 not reached (no monetary effect). POL-NS-* and amendments POL-NS-11 and POL-NS-12 are no-show clauses and do not apply; POL-RD-14 does not apply because there is no instruction.\n7. Reviewer package: trigger POL-RD-07(iii) / POL-RD-10(3), plus RD-10(1) via the GEN-02 cap of 0.6. Any one of these would resolve it: a platform-side distance independent of the driver-app trace (for example the platform's own full-resolution track), or ERP/toll records for the KPE/MCE corridor. For reference, if the deviation were corroborated, POL-RD-02 would give: charged_total 25.08; recomputed_fare (3.80 + 0.75x13.5 + 0.28x20) x 1.0 + 0.80 + 0 ERP + 0 waiting - 0 promo = 20.325; refund 4.755, rounded up to 4.80 (18.96% of charged, so partial, above de minimis), below the 8.00 POL-GEN-05 threshold.",
+  "doubts": "(1) The pre-gap stretch 14:00:10-14:11:30 is clean (10 s cadence, accuracy 3-8 m) and shows the vehicle driving 6.178 km north to lat 1.3814 (towards Buangkok) and back, ending only 0.737 km from the pickup pin. With the gap read as a straight line (the reading most favourable to the driver), the excess is still 4.1 km / 30.4%. A reader who confines the 'disputed segment' of POL-RD-07 to the clean northward loop, or treats the straight-line lower bound as enough, would rule PARTIAL_REFUND SGD 4.80 under POL-RD-01/POL-RD-02 (not the 6.00 asked). I reject that because RD-07(ii) bars establishing a deviation on the impaired trace alone, the gap sits squarely on the KPE/MCE leg the rider disputes, and the GEN-02 cap of 0.6 forces escalation under RD-10(1) anyway. (2) The time charge (26 min vs 20 optimal) comes from trip_record timestamps, not from trace distance, but it is not on RD-07(ii)'s exhaustive list and cannot by itself establish a distance deviation."
+}

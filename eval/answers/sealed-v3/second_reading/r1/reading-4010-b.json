@@ -1,0 +1,56 @@
+{
+  "case_no": 4010,
+  "ruling": "ESCALATE",
+  "amount_sgd": null,
+  "driver_compensation_sgd": null,
+  "referrals": [],
+  "governing_clauses": [
+    "POL-RD-05",
+    "POL-RD-10"
+  ],
+  "difficulty_opinion": "INDETERMINATE",
+  "deciding_facts": [
+    {
+      "evidence_id": "EV-TRIP-04010",
+      "fact": "dropoff_amended_at set (rider changed destination Our Tampines Hub -> Paya Lebar Quarter in app; events destination_changed 22:21:30)",
+      "value": "2026-09-30T22:21:30+08:00"
+    },
+    {
+      "evidence_id": "EV-TRIP-04010",
+      "fact": "amended_optimal_distance_km / amended_optimal_duration_min",
+      "value": "null / null (event route_requote_failed 22:21:31, router timeout); artifact IMPAIRED, PARTIAL_RECORD, weight 0.75"
+    },
+    {
+      "evidence_id": "EV-TRIP-04010",
+      "fact": "booked optimal (to the ORIGINAL destination Our Tampines Hub)",
+      "value": "9.8 km / 15 min"
+    },
+    {
+      "evidence_id": "EV-GPS-04010",
+      "fact": "trace_distance_km (recomputed haversine R=6371.0088), of which before / after the amendment",
+      "value": "16.200 km total; 6.219 km before 22:21:30; 9.982 km after"
+    },
+    {
+      "evidence_id": "EV-GPS-04010",
+      "fact": "vehicle position at amendment time",
+      "value": "1.366657,103.939921 - 1.52 km straight-line from Our Tampines Hub, 7.55 km straight-line from Paya Lebar Quarter"
+    },
+    {
+      "evidence_id": "EV-CHAT-04010",
+      "fact": "rider's request to change destination (MSG-04010-003, 22:21:05), system confirmation MSG-04010-004, driver 'ok noted' MSG-04010-005; waypoint_hint null on all",
+      "value": "destination change rider-initiated and acknowledged"
+    },
+    {
+      "evidence_id": "EV-FARE-04010",
+      "fact": "METERED, surge 1.0, total 24.31 (3.80 + 0.75x16.20 + 0.28x27 + 0.80), no ERP; refund_issued_sgd 5.15 to rider, PARTIALLY_REFUNDED",
+      "value": "24.31 / 5.15"
+    },
+    {
+      "evidence_id": "EV-ADVIS-04010-01",
+      "fact": "traffic advisory",
+      "value": "MISSING, weight 0.0, cited by no party"
+    }
+  ],
+  "reasoning": "1. Scope (POL-GEN-08(1)): ROUTE_DEVIATION, no safety/complaint flag - in scope. Filing party is the DRIVER, contesting a 5.15 deduction that the platform already refunded to the rider (EV-FARE-04010 refund_issued_sgd 5.15, PARTIALLY_REFUNDED). Under POL-GEN-03 NO_ACTION would leave the rider refunded; FULL_REFUND would return 5.15 to the driver.\n2. Integrity: trip ids match across EV-TRIP/EV-GPS/EV-FARE (POL-RD-10(2) not engaged). Timestamps ordered; started_at/ended_at equal first/last fix (22:13:20 / 22:40:32, 27.2 min) (POL-RD-10(4) not engaged). GPS trace: 165 fixes, max interval 10 s, max step 166.7 m, recomputed length 16.200 km = trace_distance_km - not impaired under POL-RD-07(a)-(c), weight 1.0. Fare reconciles: 3.80 + 12.15 + 7.56 + 0.80 = 24.31; billed 16.20 km = trace, so no POL-RD-04 unbilled-km compensation; no ERP lines, no airport surcharge, so POL-RD-09 and POL-RD-10(8) are not engaged.\n3. The booked optimal (9.8 km / 15 min) is to Our Tampines Hub, but the trip ended at Paya Lebar Quarter after a rider-initiated in-app destination change at 22:21:30 (EV-TRIP-04010 dropoff_amended_at, events destination_changed; EV-CHAT-04010 MSG-04010-003/004/005). The naive POL-RD-01 comparison 16.2 vs 9.8 km (excess 6.4 km, 65.3%) measures the trace against the optimal to a different destination and is not a valid deviation test.\n4. POL-RD-05 governs a dropoff amended after booking: POL-RD-01 must be re-applied against trip_record.amended_optimal_distance_km / amended_optimal_duration_min. Both are null (route_requote_failed at 22:21:31; EV-TRIP-04010 IMPAIRED, PARTIAL_RECORD, weight 0.75 - the impairment is exactly the missing field). POL-RD-05 states: where an amendment timestamp is present but amended_optimal_distance_km is null, the clause cannot be run, POL-RD-10(5) applies, and the Judge must not derive a substitute figure. The driver's claim invokes precisely this exculpation (destination change), and POL-RD-10(5) names 'a POL-RD-05 amendment with amended_optimal_distance_km null' as an escalation trigger.\n5. Measurements that cannot substitute for the missing re-quote: 6.219 km was driven before the amendment (never excess against the driver under POL-RD-05); 9.982 km after it. At 22:21:30 the car was 1.52 km from Our Tampines Hub and 7.55 km straight-line from PLQ; it then continued south past Our Tampines Hub (closest 140 m at 22:24:20), down through the Tampines/Bedok corridor (lng ~103.936) and west along ~lat 1.32 to PLQ - consistent with both the driver's account (change came near Tampines) and the rider's ('went round by Bedok'). Whether 9.98 km post-amendment exceeds the amended optimal by >20% and >0.8 km cannot be decided without the stored re-quote, and a straight-line or general-knowledge route figure is forbidden by POL-RD-05.\n6. Other clauses: POL-RD-03/POL-RD-13 - no traffic cause asserted; advisory MISSING but cited by no party, so no effect. POL-RD-04 - the chat request is a destination change, not a detour waypoint; waypoint_hint null; POL-RD-05 is the specific clause. POL-RD-14 - no uncorroborated detour (the car did reach PLQ). POL-RD-06 - deviation_flags_90d 1, 1/300 = 0.0033 < 0.05, no pattern; lifetime prior_deviation_flags is context only (POL-GEN-01); no referral. POL-RD-08 - neither the platform's deduction nor the rider can show an excess against the correct (amended) baseline; the driver has invoked POL-RD-05 with a specific artifact, which cannot be run. POL-RD-11/12 not applicable (METERED, RYDE_X). POL-RD-02 not reached. (For information only: POL-RD-02 against the BOOKED optimal would give 3.80+7.35+4.20+0.80 = 16.15, 24.31-16.15 = 8.16 -> 8.20, which does not match the 5.15 actually deducted, so the platform's 5.15 cannot be traced to any clause on this record either.) NO_SHOW clauses and amendments POL-NS-11/POL-NS-12 do not apply to this category.\n7. Outcome: ESCALATE under POL-RD-10(5) via POL-RD-05; terminal, no monetary outcome, 5.15 held (POL-GEN-03). Evidence that would resolve it: the platform router's re-quote (amended_optimal_distance_km / duration_min) from the vehicle position at 22:21:30 (or from the booked endpoints per platform convention) to Paya Lebar Quarter. Narration (POL-GEN-02(3)): EV-TRIP-04010 weight 0.75, PARTIAL_RECORD; it is relied on for the amendment timestamp and the null field, which is the trigger itself.",
+  "doubts": "(a) A reader could hold that the driver, as the party asserting money is owed, failed to discharge his burden and rule NO_ACTION (rider stays refunded) - but POL-RD-05 expressly routes a null re-quote to POL-RD-10(5) and forbids a substitute, and the platform's own deduction is equally unsupported, so ESCALATE is the policy answer. (b) Conversely a reader might treat the 6.22 km pre-amendment distance and the rider-initiated change as obviously explaining the excess and give FULL_REFUND 5.15 to the driver; that requires deriving an amended optimal (forbidden). (c) Ambiguity whether the amended optimal runs from the amendment position or from the pickup via the change point; immaterial here since neither figure is on record. (d) The 5.15 deducted does not match the POL-RD-02 figure against the booked optimal (8.20), an unexplained platform figure worth flagging to the reviewer."
+}

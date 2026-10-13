@@ -1,0 +1,47 @@
+{
+  "case_no": 4011,
+  "ruling": "PARTIAL_REFUND",
+  "amount_sgd": 4.6,
+  "driver_compensation_sgd": null,
+  "referrals": [],
+  "governing_clauses": [
+    "POL-RD-01",
+    "POL-RD-02",
+    "POL-RD-08"
+  ],
+  "difficulty_opinion": "EASY",
+  "deciding_facts": [
+    {
+      "evidence_id": "EV-GPS-04011",
+      "fact": "gps_trace.trace_distance_km (governs under POL-RD-01; recomputed from 158 fixes with haversine R=6371.0088 = 13.9198 km)",
+      "value": 13.92
+    },
+    {
+      "evidence_id": "EV-TRIP-04011",
+      "fact": "optimal_distance_km / optimal_duration_min stored at booking (PLATFORM_ROUTER_AT_BOOKING, ERP on route 0.00); no amendment fields",
+      "value": "10.4 km / 19 min"
+    },
+    {
+      "evidence_id": "EV-GPS-04011",
+      "fact": "excess over optimal and percentage",
+      "value": "3.52 km = 33.85% (>20% and >0.8 km: established; <50% and <8 km: not material)"
+    },
+    {
+      "evidence_id": "EV-FARE-04011",
+      "fact": "fare_model, surge_multiplier, total_charged, ERP/airport/waiting/promo lines",
+      "value": "METERED, 1.0, 22.32, all 0.00"
+    },
+    {
+      "evidence_id": "EV-CHAT-04011",
+      "fact": "no rider routing instruction; only pickup coordination ('ok'), no waypoint_hint",
+      "value": "2 messages, none a detour request"
+    },
+    {
+      "evidence_id": "EV-ADVIS-04011-01",
+      "fact": "traffic advisory MISSING, weight 0.0, cited by no party",
+      "value": "MISSING"
+    }
+  ],
+  "reasoning": "1. Scope/integrity (POL-GEN-08, POL-RD-10(2),(4)): category ROUTE_DEVIATION, no safety/complaint flag; trip_id TRP-04011 matches on EV-TRIP-04011, EV-GPS-04011, EV-FARE-04011; trip_record started/ended 11:26:40/11:52:49 equal first/last GPS fixes; timestamps ordered. 2. Trace integrity (POL-RD-07, POL-GEN-02): 158 fixes, max interval 10 s (<90 s), max step 108.4 m (<500 m), sustained cadence 10 s (<30 s); accuracy 3.0-8.0 m; weight 1.0. Not impaired; first fix 0 m from pickup, last fix 0 m from dropoff. 3. POL-RD-01: trace_distance_km 13.92 governs (my haversine recompute 13.9198); optimal 10.4 km from EV-TRIP-04011 (no POL-RD-03/04/05/12 adjustment). Excess 13.92-10.4 = 3.52 km; 3.52/10.4 = 33.85% > 20% and 3.52 > 0.8 km -> deviation ESTABLISHED. Not MATERIAL (33.85% < 50%, 3.52 < 8.0 km), so POL-RD-06 is not required; in any case deviation_flags_90d = 0 / 260 trips, no pattern, no referral. 4. POL-RD-08: (a) same trip shown, (b) threshold excess shown on an unimpaired trace -> burden shifts to driver. Driver's statement 'followed the navigation app' cites no evidence ID and invokes no exculpatory clause (RD-03/04/05/11/12); it is discarded. rider_profile.deviation_claims_60d = 1 (<4), so the extra-corroboration limb does not apply. Profile context fields (ratings, lifetime trips etc.) not used (POL-GEN-01). 5. Exculpatory clauses: POL-RD-03 unavailable - EV-ADVIS-04011-01 is MISSING (weight 0.0) and no party cites it or asserts a closure; POL-RD-10(5) not engaged (POL-RD-13(1) logic: no exculpatory clause invoked against a cited artifact). POL-RD-04/RD-14: EV-CHAT-04011 holds no rider routing instruction, no waypoint_hint. POL-RD-05: no pickup/dropoff amendment. POL-RD-11: fare_model METERED, not upfront. POL-RD-12: RYDE_X, not pool. 6. POL-RD-02 (METERED, surge 1.0 read from EV-FARE-04011): recomputed_fare = (3.80 + 0.75x10.4 + 0.28x19) x 1.0 + 0.80 + ERP on optimal 0.00 + surcharge 0.00 + waiting 0.00 - promo 0.00 = (3.80+7.80+5.32) + 0.80 = 17.72. charged_total = 22.32 (ledger reconciles: 3.80+10.44+7.28+0.80). Refund = 22.32 - 17.72 = 4.60; already a multiple of 0.05; >= 0.50 (not de minimis); 4.60/22.32 = 20.6% < 90%, so PARTIAL_REFUND. 7. POL-RD-09: no ERP/toll/airport lines; nothing to pass through, no billing-integrity referral; POL-RD-10(8) not engaged. POL-RD-10(6): 4.60 < 150 and < charged_total. 8. The rider asked for 6.00 based on a usual fare of ~16 with no evidence ID; the refund is arithmetic under POL-RD-02 and capped by it, so 4.60 of the 6.00 contested. Confidence ~0.95, deciding facts on weight-1.0 artifacts (POL-GEN-02 cap 1.0), above the 0.70 floor. POL-GEN-05: 4.60 <= execution_threshold_sgd 8.00, auto-executed subject to POL-GEN-04 appeal.",
+  "doubts": "Minor: POL-RD-13 could be cited alongside, but the driver asserts route-app compliance, not an external traffic cause, so I treat it as not engaged; outcome is the same either way. The time line uses the booked optimal_duration_min 19 (not scaled), per POL-RD-02 with no adjustment. If one read the driver's 'followed the navigation app' as an unrecorded platform reroute requiring an amended optimal, there is no such field on the record and POL-RD-08 discards it; no credible alternative answer beyond NO_ACTION, which the established deviation rules out."
+}

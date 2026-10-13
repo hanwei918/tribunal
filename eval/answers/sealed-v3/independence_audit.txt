@@ -1,0 +1,27 @@
+Independence audit of the workflow subagents' tool calls (tools/audit_access.py), 2026-10-13.
+Scope: every tool_use input of all 120 subagents, scanned for paths outside the scratch workspace and, for blind second readers, for any reference to answers, generator, plans, blueprints, reviews or other readings.
+Excluded as benign: the harness's own tool-results files (large outputs of the same agent, saved by Claude Code and read back) and paths under the workspace's tmp/.
+Result: no access to the Desktop, to any repository or project folder, or to any other test set. Second readers: 0 references to answers, generator, plans, blueprints, reviews or other readings.
+Minor deviations, listed in full below: some readers listed ref/ or the shared review/r1 output folder (file names only, no other reading opened); two agents wrote their own scratch file to the system temp folder.
+
+agents: 120 | tool calls: 2311
+agents with findings: 84
+  design ns                    outside-ws        /private/tmp/claude-501/bp_backup.json
+  read 4001b r1                reader-listing    Bash
+  read 4003b r1                reader-listing    Bash
+  read 4004a r1                reader-listing    Bash
+  read 4004b r1                reader-listing    Bash
+  read 4009a r1                reader-listing    Bash
+  read 4011b r1                reader-listing    Bash
+  read 4012b r1                reader-listing    Bash
+  read 4013b r1                reader-listing    Bash
+  read 4014a r1                reader-listing    Bash
+  read 4015a r1                reader-listing    Bash
+  read 4052a r1                reader-listing    Bash
+  read 4055a r1                reader-listing    Bash
+  read 4055b r1                reader-listing    Bash
+  read 4056a r1                outside-ws        /private/tmp/claude-501/ns.txt
+  read 4056a r1                outside-ws        /private/tmp/claude-501/ns.txt;
+  read 4059b r2                reader-listing    Bash
+  read 4061b r1                reader-listing    Bash
+  read 4064a r1                reader-listing    Bash

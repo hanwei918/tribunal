@@ -1,0 +1,53 @@
+{
+  "case_no": 4059,
+  "ruling": "NO_ACTION",
+  "amount_sgd": null,
+  "driver_compensation_sgd": null,
+  "referrals": [],
+  "governing_clauses": [
+    "POL-NS-06",
+    "POL-NS-01",
+    "POL-NS-02",
+    "POL-GEN-03"
+  ],
+  "difficulty_opinion": "HARD",
+  "deciding_facts": [
+    {
+      "evidence_id": "EV-TRIP-04059",
+      "fact": "Pickup zone class / arrival radius; free wait in force; arrival marker; termination",
+      "value": "STANDARD, 50 m; platform_policy.free_wait_sec 180; BUTTON arrived_at 18:21:00; CANCELLED_BY_DRIVER RIDER_NO_SHOW at 18:26:05; net fee 4.50, gross 6.61"
+    },
+    {
+      "evidence_id": "EV-GPS-04059",
+      "fact": "First in-geofence run (3+ consecutive fixes <=50 m, accuracy <=25 m)",
+      "value": "18:20:50-18:21:50 (27.1, 10.2, 6.8, 8.1, 10.5, 5.5, 22.5 m); 60 s first-to-last fix, 70 s to first out-of-radius fix (18:22:00, 60.8 m)"
+    },
+    {
+      "evidence_id": "EV-GPS-04059",
+      "fact": "Excursion out of geofence (bus-lane loop)",
+      "value": "18:22:00-18:24:40 every fix outside 50 m, farthest 182.6 m at 18:23:30 (< 300 m leash), moving 11-20 km/h"
+    },
+    {
+      "evidence_id": "EV-GPS-04059",
+      "fact": "Second in-geofence run up to the cancellation",
+      "value": "18:24:50 (38.6 m) to 18:26:05 cancellation = 75 s"
+    },
+    {
+      "evidence_id": "EV-GPS-04059",
+      "fact": "Cumulative in-geofence dwell before cancellation (POL-NS-06(i) summation)",
+      "value": "135 s conservative (60+75) / 145 s generous (70+75); required 180 s; shortfall 35-45 s"
+    },
+    {
+      "evidence_id": "EV-ADVIS-04059-01",
+      "fact": "Kerb restriction permits summation of intervals",
+      "value": "KERB_RESTRICTION full-day bus lane, Serangoon Road, segment passes 4.0 m from pin, valid 07:30-23:00 on 2026-09-25 covering 18:21:00-18:26:05"
+    },
+    {
+      "evidence_id": "EV-FARE-04059",
+      "fact": "Present state of the fee",
+      "value": "cancellation_fee 6.61 (gross), payment_status REFUNDED, refund_issued_sgd 6.61"
+    }
+  ],
+  "reasoning": "1. Scope and category: NO_SHOW_CHARGE, driver-filed, contesting the platform's reversal of a 4.50 net (6.61 gross) cancellation fee; no safety/complaint flag, in scope under POL-GEN-08(1). Route-deviation clauses (POL-RD-01..14) do not apply to this category.\n2. Fee figures (fee_schedule.resolution_rule): EV-TRIP-04059 carries platform_policy, so free_wait_sec = 180 s, cancellation_fee_sgd 4.50 net, gross 6.61; STANDARD zone, arrival radius 50 m (fee_schedule.arrival_radius_m), 25 m accuracy filter. EV-FARE-04059 line 6.61 equals the gross figure, so no POL-NS-08(d) defect.\n3. POL-NS-12 does not apply: arrival_marker is BUTTON, not GPS_AUTO; arrival must be tested under POL-NS-02.\n4. POL-NS-02 / POL-NS-01(a)-(b): EV-TRIP-04059 has a driver_arrived event at 18:21:00. EV-GPS-04059 (weight 1.0) has 3+ consecutive qualifying fixes inside 50 m from 18:20:50 (27.1 m, acc 3.9 m) through 18:21:50, so the driver arrived, and the first qualifying fix (18:20:50) is at or before the arrival event. Limbs (a) and (b) hold.\n5. POL-NS-05: the fix at the arrival marker 18:21:00 is 10.2 m from the pin at 0 km/h (haversine, R=6371.0088 km), so the marker is not false (<300 m, <15 km/h); no false-arrival referral.\n6. POL-NS-01(c): continuous dwell from the first qualifying in-geofence fix: 18:20:50 to 18:21:50 = 60 s (70 s if credited to the first out-of-radius fix at 18:22:00, 60.8 m). The driver then left the radius; every fix 18:22:00-18:24:40 is outside 50 m, farthest 182.6 m. Continuous dwell 60-70 s < 180 s, so limb (c) fails and the fee is not chargeable under POL-NS-01; POL-NS-07 is therefore never reached (and its anti-farming check, no_show_terminations_30d 1, would not trip anyway).\n7. POL-NS-06(i): summation of separate in-geofence intervals is permitted here: the driver left and re-entered the radius in one pickup attempt, never more than 300 m from the pin (max 182.6 m), and EV-ADVIS-04059-01 is a populated KERB_RESTRICTION (full-day bus lane) whose 520.6 m segment passes 4.0 m from the pin and whose window 07:30-23:00 covers 18:21:00-18:26:05. So the driver's bus-lane loop is credited as lawful, and both runs are summed: run 1 = 60 s (generous 70 s); run 2 = 18:24:50 to the cancellation at 18:26:05 = 75 s (fixes after 18:26:05 cannot count). Cumulative = 135 s (generous 145 s) < 180 s; shortfall 45 s (35 s generous). POL-NS-06(ii): the advisory only permits summation and never reduces the minimum or excuses the shortfall. Outcome under POL-NS-06: the fee is not chargeable, refunded to the rider in full, no driver compensation. The time spent circling (18:22:00-18:24:40, ~160 s) is not in-geofence dwell and cannot be counted; the driver's '5 minutes' is the wall-clock 305 s from the I'm Here tap (18:21:00) to cancellation (18:26:05), which is not the POL-NS-01(c) measure.\n8. POL-NS-03 does not apply (the driver's stationary fixes are inside the radius, not outside). POL-NS-10 does not apply (driver, not rider, cancelled; on-demand; no waiting-time fee line).\n9. POL-NS-04 (rider exoneration) does not apply and is not needed: the rider's only message, MSG-04059-005 'ok coming down now' (18:24:30), is not clearly a locating message; in any case limb (b) fails because the driver replied 25 s later (MSG-04059-006, 18:24:55) and placed an in-app call (CALL-04059-001, 18:23:20). Limb (c) cannot be run: all 9 rider_track fixes up to 18:26:20 report accuracy 30.9-44.6 m (>25 m, filtered), and the two accurate fixes (18:26:40, 18:27:00; 8.5 m and 7.2 m) fall after the cancellation; under POL-NS-11 this is undecidable and is not evidence for any deciding fact. The rider's statement that 'the car was not there' is not needed: the driver was in the radius 18:24:50-18:26:00, and the rider's first accurate fix is after he left; POL-NS-06 is strict liability regardless of rider presence.\n10. POL-NS-08: (a) arrival marker coincides with a fix (0 s skew); (b) no gap >120 s (max interval 10 s), 31 fixes in the window; the rider_track deficiency does not impair the driver trace (POL-NS-11); (c) chat 7/7 messages, sequential, max interval spanning the arrival 160 s < 5 min; (d) fare line reconciles to gross. No policy-level impairment.\n11. POL-NS-09: (a) the deciding facts (dwell, excursion, advisory) rest on EV-GPS-04059, EV-TRIP-04059 and EV-ADVIS-04059-01, all weight 1.0, so the POL-GEN-02 cap is 1.0 and confidence is well above 0.70; (b) no contradiction between admissible artifacts; (c) disputes_with_counterparty_90d 0+0 = 0; (d) anti-farming not tripped, rider no_show_disputes_30d 0; (e) no impaired sole evidence. No escalation.\n12. POL-GEN-01/02: EV-DPROF-04059 is IMPAIRED at weight 0.4 (CROSS_SOURCE_CONFLICT: profile vehicle_type RYDE_XL vs trip RYDE_X); it is not relied on for any deciding fact, so it does not cap confidence. Context-only profile fields (ratings, prior_no_show_flags 2 on the driver, 1 on the rider) are not used.\n13. Disposition (POL-GEN-03): the policy result on the fee is that the rider is entitled to a full refund with no driver compensation, and EV-FARE-04059 shows that refund has already issued (REFUNDED, 6.61). On this driver-filed dispute the driver's claim to have the 4.50 restored is not supported; NO_ACTION is party-relative and leaves the rider refunded. amount_sgd and driver_compensation_sgd are null; no referral arises (no false-arrival under POL-NS-05, no mis-selected reason code under POL-NS-01(d)). POL-GEN-05: monetary effect 0.00, below the 8.00 execution threshold. POL-GEN-07 not needed; a clause licenses the outcome.",
+  "doubts": "(1) Dwell measurement convention: counting each run first-fix-to-last-fix gives 135 s, counting to the next out-of-radius fix gives 145 s; both are short of 180 s, so the outcome is robust. Only if the whole bus-lane loop (18:22:00-18:24:40) were counted as waiting - which POL-NS-06(ii) expressly forbids (the advisory permits summation of in-geofence intervals, it does not credit time outside) - would the 180 s be met (wall-clock 305 s), supporting DRIVER_COMPENSATION 3.60 (80% of 4.50) under POL-NS-01/POL-NS-07. (2) Some readers might emit FULL_REFUND because POL-NS-06's licensed outcome is 'refund in full'; but the filing party is the driver, the refund to the rider has already issued, and POL-GEN-03 makes NO_ACTION the party-relative disposition that leaves it standing. (3) The 18:21:50 fix (22.5 m) is in radius but moving at 15 km/h; excluding it shortens run 1 to 50-60 s and only widens the shortfall. (4) Whether 'ok coming down now' is a locating/coordinating message under POL-NS-04(a) is debatable, but immaterial because limb (b) fails."
+}

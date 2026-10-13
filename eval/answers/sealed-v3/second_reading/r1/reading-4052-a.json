@@ -1,0 +1,54 @@
+{
+ "case_no": 4052,
+ "ruling": "DRIVER_COMPENSATION",
+ "amount_sgd": 3.6,
+ "driver_compensation_sgd": 3.6,
+ "referrals": [],
+ "governing_clauses": [
+  "POL-NS-10",
+  "POL-NS-07",
+  "POL-NS-02",
+  "POL-NS-01",
+  "POL-GEN-03"
+ ],
+ "difficulty_opinion": "REVERSAL",
+ "deciding_facts": [
+  {
+   "evidence_id": "EV-TRIP-04052",
+   "fact": "rider cancelled (CANCELLED_BY_RIDER) after the grace after match",
+   "value": "accepted 19:24:00, cancelled 19:35:30 = 690 s > grace_after_match_sec 180"
+  },
+  {
+   "evidence_id": "EV-TRIP-04052",
+   "fact": "driver began moving within the grace and arrived within 180 s of the first ETA shown",
+   "value": "driver_en_route 19:24:10; ETA 7 min from 19:24:00 = 19:31:00; arrived_at 19:31:00 (0 s late)"
+  },
+  {
+   "evidence_id": "EV-GPS-04052",
+   "fact": "POL-NS-02 arrival: >=3 consecutive in-radius fixes, accuracy <=25 m, STANDARD radius 50 m",
+   "value": "first qualifying fix 19:30:50 at 16.0 m; 19:30:50-19:35:30 every fix 1.2-16.0 m from pin, accuracy 3.6-8.8 m, 29 consecutive fixes, no gap > 10 s"
+  },
+  {
+   "evidence_id": "EV-GPS-04052",
+   "fact": "continuous in-geofence dwell before the rider's cancellation exceeds free_wait_sec 180",
+   "value": "280 s from first qualifying fix (270 s from the arrival marker); required dwell elapsed 19:33:50, cancellation 19:35:30"
+  },
+  {
+   "evidence_id": "EV-GPS-04052",
+   "fact": "rider_track places the rider 288.9-303.4 m from the pin throughout the waiting window (walked away from the pin from 19:27)",
+   "value": "10 rider fixes 19:31:00-19:35:30, 0 within 100 m"
+  },
+  {
+   "evidence_id": "EV-DPROF-04052",
+   "fact": "POL-NS-07 anti-farming check",
+   "value": "no_show_terminations_30d 0 (completed_trips_30d 143): not tripped"
+  },
+  {
+   "evidence_id": "EV-FARE-04052",
+   "fact": "cancellation fee in force (net) and current state",
+   "value": "cancellation_fee 4.50 = platform_policy.cancellation_fee_sgd 4.50; payment_status REFUNDED, refund_issued_sgd 4.50"
+  }
+ ],
+ "reasoning": "1. Scope (POL-GEN-08): NO_SHOW_CHARGE, no safety/complaint flag; automated ruling may issue. Driver filed; contested SGD 4.50 (the cancellation fee support refunded to the rider on 2026-09-23).\n2. Figures (fee_schedule.resolution_rule): record carries platform_policy - grace_after_match 180 s, free_wait 180 s, no_show_threshold null, cancellation_fee 4.50 net (gross 6.61), fee_goes_to DRIVER, arrival_marker BUTTON. Pickup zone STANDARD: arrival radius 50 m, rider presence radius 100 m, accuracy filter 25 m.\n3. The trip was terminated by the RIDER (cancelled_by RIDER, reason RIDER_CANCELLED), so POL-NS-01 limb (d) (driver termination with a no-show code) is not met as written; the clause that decides a fee triggered by the rider's own cancellation is POL-NS-10.\n4. POL-NS-10(a): cancellation 19:35:30 minus accepted 19:24:00 = 690 s > 180 s grace: chargeable. (b) not a scheduled trip (scheduled_at null).\n5. POL-NS-10(g): needs arrival under POL-NS-02 and POL-NS-01(c) dwell > free_wait_sec before the rider cancelled. Haversine (R=6371.0088) from pickup pin (1.3744,103.8861) on EV-GPS-04052: fixes 19:30:30 (88.3 m) and 19:30:40 (56.5 m) outside 50 m; from 19:30:50 (16.0 m, 5 km/h, acc 7.2 m) through 19:35:30 (4.5 m) every fix is inside 50 m with accuracy 3.6-8.8 m: 29 consecutive qualifying fixes at 10 s cadence, max distance 16.0 m, speed 0 from 19:31:00. POL-NS-02 satisfied. Continuous dwell measured from first qualifying fix 19:30:50 to cancellation 19:35:30 = 280 s (270 s even if measured from the 19:31:00 marker) > 180 s. Limb (g) applies: the fee stands as if driver-terminated for no-show, limb (f) exceptions do not apply, and POL-NS-07 fixes the payout. (For completeness the limb (f) exceptions would fail anyway: en route 19:24:10 within grace; first ETA 7 min from 19:24:00 = 19:31:00 and arrival 19:31:00 is 0 s late, inside the 180 s tolerance; no request to cancel in EV-CHAT-04052; no vehicle mismatch.)\n6. Rider-exonerating clauses: POL-NS-03 n/a (driver inside radius). POL-NS-04: the rider's only message 'how long more?' (MSG-04052-002, 19:28:30) precedes arrival and was answered in 20 s (MSG-04052-003, 19:28:50), so limb (b) fails; limb (c) also affirmatively fails - rider_track present (POL-NS-11 not engaged), all 10 rider fixes in 19:31:00-19:35:30 lie 288.9-303.4 m from pin (> 100 m), accuracy <= 11.6 m. POL-NS-05: at the 19:31:00 marker the driver is 7.7 m from the pin at 0 km/h - marker not false, no referral. POL-NS-06: dwell 280 s >= 180 s, no shortfall; limb (i) not needed. POL-NS-12: arrival_marker BUTTON - not covered.\n7. Integrity (POL-NS-08): (a) arrival event coincides with a fix (0 s skew); (b) no gap > 10 s, 29 fixes in window, rider_track present; (c) 5 messages, sequential, equals chat_message_count 5, largest interval 260 s; (d) fare line 4.50 = net figure. No policy-level impairment. EV-ADVIS-04052-01 is IMPAIRED (weight 0.5, ADVISORY_UNCORROBORATED); it is not a deciding artifact (it would bear only on POL-NS-06(i) summation, which is unnecessary; and a CONGESTION type is not one of the limb (i) types), so per POL-GEN-02(2) it does not cap confidence. Deciding facts rest on EV-TRIP-04052 and EV-GPS-04052, both weight 1.0: confidence cap 1.0 > 0.70.\n8. POL-NS-09: (a) confidence above floor; (b) no contradiction between admissible artifacts - the rider's statement that the car was 'stuck at the junction for a long time' is contradicted by the record (arrival exactly at the 7-min ETA shown, driver moving 11-29 km/h throughout approach) and is a statement, not a record; her walking away is confirmed by rider_track; (c) disputes_with_counterparty_90d 0 + 0; (d) anti-farming not tripped, rider no_show_disputes_30d 0; (e) no impaired sole evidence. No escalation.\n9. POL-NS-07: no_show_terminations_30d 0 (< 4) - compensation paid at 80% of the net fee in force: 0.80 x 4.50 = 3.60 (never the gross 6.61). POL-GEN-01: no non-citable profile field (rating, cancellation_rate, prior_disputes etc.) is used.\n10. POL-GEN-03: ruling DRIVER_COMPENSATION, driver_compensation_sgd 3.60, amount_sgd mirrors 3.60. NO_ACTION would wrongly leave the driver unpaid on a verified post-dwell rider cancellation; the full 4.50 is not owed because POL-NS-07 retains 20% as the platform service fee. No referrals (no false arrival, no mis-coded reason, no pattern). POL-GEN-05: monetary effect 3.60 <= 8.00 execution threshold - executes automatically, subject to appeal under POL-GEN-04.",
+ "doubts": "(1) Whether the earlier support refund to the rider should be reversed is not decided by the ruling field: POL-GEN-03 says DRIVER_COMPENSATION is the outcome and on it 'the filing party's own charge stands'; I read the 3.60 as owed to the driver regardless of how the platform settles the rider side. (2) The driver asks for the whole 4.50; an adjudicator reading fee_goes_to DRIVER / Ryde's 'driver receives $4.50' literally might award 4.50, but POL-NS-07 fixes 80% of the net fee = 3.60. (3) A strict reader of POL-NS-01(d) might say a rider-cancelled trip can never satisfy POL-NS-01 and so POL-NS-07 cannot be reached; POL-NS-10(g) expressly routes this pattern to POL-NS-07, so DRIVER_COMPENSATION stands. (4) The dwell start fix 19:30:50 shows 5 km/h (still rolling in); measuring from 19:31:00 gives 270 s, still well above 180 s, so the outcome does not turn on it."
+}

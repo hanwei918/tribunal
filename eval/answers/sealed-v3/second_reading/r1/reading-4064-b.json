@@ -1,0 +1,61 @@
+{
+  "case_no": 4064,
+  "ruling": "DRIVER_COMPENSATION",
+  "amount_sgd": 4.4,
+  "driver_compensation_sgd": 4.4,
+  "referrals": [
+    "POL-NS-05(iii): false-arrival event recorded against driver D-8861 - 'I'm Here' tapped at 19:06:00 while the GPS fix placed him 655.8 m from the pickup pin at 38 km/h"
+  ],
+  "governing_clauses": [
+    "POL-NS-05",
+    "POL-NS-01",
+    "POL-NS-02",
+    "POL-NS-07",
+    "POL-GEN-03"
+  ],
+  "difficulty_opinion": "HARD",
+  "deciding_facts": [
+    {
+      "evidence_id": "EV-TRIP-04064",
+      "fact": "arrival marker is a driver-pressed BUTTON event; arrived_at",
+      "value": "2026-09-26T19:06:00+08:00, arrival_marker BUTTON"
+    },
+    {
+      "evidence_id": "EV-GPS-04064",
+      "fact": "driver position and speed at the arrival-marker fix (19:06:00)",
+      "value": "655.8 m from pickup pin, 38 km/h -> false marker under POL-NS-05 (>300 m and >=15 km/h)"
+    },
+    {
+      "evidence_id": "EV-GPS-04064",
+      "fact": "first qualifying in-geofence fix (start of 3+ consecutive fixes within 50 m STANDARD radius, accuracy <=25 m)",
+      "value": "19:07:50, 27.4 m, accuracy 3.6 m (19:07:40 fix was 64.1 m)"
+    },
+    {
+      "evidence_id": "EV-GPS-04064",
+      "fact": "continuous in-geofence dwell from 19:07:50 to cancellation 19:13:00",
+      "value": "310 s; 32 fixes all <=27.4 m from pin, max interval 10 s; free_wait_sec 180 -> met"
+    },
+    {
+      "evidence_id": "EV-TRIP-04064",
+      "fact": "termination",
+      "value": "CANCELLED_BY_DRIVER, RIDER_NO_SHOW at 19:13:00, no boarding (started_at null); required dwell elapsed at 19:10:50"
+    },
+    {
+      "evidence_id": "EV-TRIP-04064",
+      "fact": "cancellation fee in force (platform_policy)",
+      "value": "SGD 5.50 net; rider_gross null; fare_breakdown line 5.50 reconciles"
+    },
+    {
+      "evidence_id": "EV-DPROF-04064",
+      "fact": "POL-NS-07 anti-farming check",
+      "value": "no_show_terminations_30d 1 (<4); 1/132 = 0.0076 (<=0.08) -> not tripped"
+    },
+    {
+      "evidence_id": "EV-GPS-04064",
+      "fact": "rider_track distance from pin during waiting window (POL-NS-04(c))",
+      "value": "1007.8-1246.3 m, accuracy 8.4-14.0 m; 0 of 8 fixes within 100 m"
+    }
+  ],
+  "reasoning": "1. Scope (POL-GEN-08): NO_SHOW_CHARGE, no safety/complaint flag; automated ruling may issue. Driver-filed: driver seeks return of the SGD 5.50 cancellation fee that support reversed to the rider on 2026-09-27 (EV-FARE-04064 payment_status REFUNDED, refund_issued_sgd 5.50).\n2. Figures in force (fee_schedule.resolution_rule): EV-TRIP-04064 carries platform_policy -> free_wait_sec 180, no_show_threshold_sec null, cancellation_fee_sgd 5.50 net, arrival_marker BUTTON. Zone STANDARD -> arrival radius 50 m, rider presence radius 100 m, accuracy filter 25 m.\n3. POL-NS-05 (false arrival): the 'I'm Here' tap at 19:06:00 coincides exactly with a GPS fix (EV-GPS-04064) at 655.8 m from the pin (haversine, R=6371.0088) moving at 38 km/h. Both triggers fire (>300 m; >=15 km/h). The marker is FALSE and the clock is recomputed from the first qualifying in-geofence fix under POL-NS-02. The driver admits pressing early on Bukit Timah Road in his own claim.\n4. POL-NS-02: the first run of 3 consecutive fixes within 50 m with accuracy <=25 m starts at 19:07:50 (27.4 m, acc 3.6 m; then 19:08:00, 19:08:10 ...). From 19:07:50 to 19:13:00 all 32 fixes lie within 27.4 m, max interval 10 s. Arrival established at 19:07:50.\n5. Recomputed dwell = 19:13:00 - 19:07:50 = 310 s >= 180 s free wait (even measured from the first 0 km/h fix at 19:08:00 it is 300 s). POL-NS-05(i) and (ii) do not apply; POL-NS-05(iii) applies: the false marker does not by itself defeat the fee, POL-NS-01 governs read from the recomputed clock, and the false marker is recorded as a referral.\n6. POL-NS-01: (a) arrived event present; (b) satisfied on the recomputed clock at 19:07:50; (c) continuous dwell 310 s >= 180 s, no_show_threshold_sec null; (d) no boarding, CANCELLED_BY_DRIVER with RIDER_NO_SHOW at 19:13:00, after the dwell elapsed at 19:10:50. All four limbs hold.\n7. Displacing clauses: POL-NS-03 not engaged (stationary fixes are inside the 50 m radius, not 50-400 m). POL-NS-04: MSG-04064-003 (19:06:30, 'where are you') is a coordinating message, but limb (b) fails - driver replied 20 s later (MSG-04064-004, 19:06:50) and placed an in-app call at 19:09:30 (CALL-04064-001) - and limb (c) affirmatively fails on admissible fixes: all 8 rider_track fixes (accuracy 8.4-14.0 m) are 1007.8-1246.3 m from the pin, none within 100 m. POL-NS-06: no shortfall (310 >= 180); limb (i) not needed so the MISSING advisory EV-ADVIS-04064-01 is immaterial and nobody relies on it. POL-NS-10: rider did not cancel; limbs (a),(b),(f),(g) not engaged; (d)/(e) no waiting-time fee line (waiting_time_fee 0.0). None displaces POL-NS-01.\n8. POL-NS-08: (a) no clock skew - arrived_at 19:06:00 matches a fix at 0 s; cancellation 19:13:00 has a fix at 0 s. (b) no gap >120 s (max 10 s), >6 fixes, rider_track present. (c) chat_log IS impaired under limb (c): MSG-04064-002 missing from sequence, 5 held vs chat_message_count 6, and a 470 s gap (18:58:40-19:06:30) spans the arrival marker. (d) fare line 5.50 equals platform_policy net 5.50 - no defect. The chat_log is not the evidence for any deciding fact: arrival, dwell and termination rest on EV-GPS-04064 and EV-TRIP-04064 (both COMPLETE, weight 1.0). The missing message could not revive POL-NS-04 because limb (b) is defeated by the driver's 19:06:50 reply and the recorded in-app call, and limb (c) by rider_track. So the POL-NS-08 closing sentence and POL-NS-09(e) are not engaged.\n9. POL-GEN-02: EV-CHAT-04064 weight 0.6 (TRUNCATED_LOG) is narrated but not relied on for the deciding fact; confidence cap = min weight of the deciding carriers EV-TRIP-04064 (1.0) and EV-GPS-04064 (1.0) = 1.0, above the 0.70 floor. EV-ADVIS-04064-01 is MISSING (weight 0.0) and carries nothing.\n10. POL-NS-09: (a) confidence not below 0.70; (b) trip_record's arrival marker and gps_trace disagree on arrival, but POL-NS-05 resolves that conflict expressly; (c) disputes_with_counterparty_90d 0 + 0 = 0 < 2; (d) anti-farming not tripped (1 < 4; 1/132 = 0.0076), rider no_show_disputes_30d 0 < 3; (e) not engaged. No escalation.\n11. POL-NS-07: fee stands as verified no-show; driver compensated at 80% of the net fee in force: 0.8 x 5.50 = SGD 4.40 (Decimal). POL-GEN-01: only no_show_terminations_30d, completed_trips_30d, disputes_with_counterparty_90d and no_show_disputes_30d are used; prior_no_show_flags (1, lifetime), rating, cancellation_rate etc. are context only and not used.\n12. Ruling under POL-GEN-03/POL-NS-07: DRIVER_COMPENSATION, driver_compensation_sgd 4.40 and amount_sgd mirroring 4.40. The ruling moves money to the driver; it does not order the rider's charge restored (NO_ACTION/POL-GEN-03 never means 'restore the charge'; fare_breakdown state is left as is). Referral under POL-NS-05(iii) for the false-arrival event. POL-GEN-05: 4.40 <= 8.00 execution threshold -> auto-executes, subject to POL-GEN-04 appeal. POL-NS-11 not engaged (rider_track present); POL-NS-12 not engaged (arrival_marker BUTTON). POL-RD-14 and route_deviation clauses are out of category.",
+  "doubts": "(1) Party-relative remedy: the driver is the filing party and asks for the full SGD 5.50. One could read FULL_REFUND 5.50 (whole contested amount returned to the filing party, fee_goes_to DRIVER), but no clause licenses a full fee payout to the driver; POL-NS-07 fixes the payout at 80% (4.40) and is the only licensed driver remedy, so DRIVER_COMPENSATION 4.40 is preferred. (2) Whether the rider's charge should be re-collected: POL-GEN-03 says no ruling restores a charge; the compensation is platform/fee-funded and I leave the rider refunded. A reader who treats the verified no-show as reinstating the fee would still emit DRIVER_COMPENSATION 4.40. (3) The truncated chat (missing MSG-04064-002, 470 s gap spanning the marker) is a POL-NS-08(c) defect; a reader who treats it as engaging POL-NS-08's closing sentence would reach ESCALATE under POL-NS-09(e), but the chat is not the sole evidence for the deciding fact (dwell rests on clean GPS), so I reject that. (4) The 19:07:50 fix is at 13 km/h; if the clock is started only at the first stationary fix (19:08:00) dwell is 300 s - same outcome. (5) Referral wording/format may differ between readers; some may omit it, but POL-NS-05(iii) expressly requires it."
+}

@@ -25,6 +25,14 @@ rewriting it, exactly as it exempts ``runs/``. The set is derived from the two
 builders rather than typed, and a test below holds it to being the site's own
 files and no wider.
 
+**One delivered file is the third exemption, and it is named by its full path.**
+The fifth sealed set's own authoring material is delivered byte for byte under
+``eval/answers/sealed-v3/``; one of its files, ``authoring/finalize.py``, carries
+four Chinese characters that are part of the owner's folder name in a file path
+the author's script names. It is delivered material and not this repository's
+writing, so it is exempt by its full path -- and a test below holds the
+exemption to being exactly that one file and no wider.
+
 A failure here names the file and the code points, never the characters, so that
 the test's own output stays free of them.
 """
@@ -88,6 +96,16 @@ def imported_files() -> frozenset:
 # writing and stay under the rule.
 IMPORTED_PAGES = imported_files()
 
+# The one **delivered** file that carries Chinese characters, named by its full
+# path. It is the fifth sealed set's own authoring material, delivered byte for
+# byte under the physically isolated answers root: the four characters are part
+# of the owner's folder name, in a file path the author's script names. It is not
+# this repository's writing, so the rule exempts it rather than rewriting it --
+# exactly as it exempts ``runs/`` and the product site.
+DELIVERED_ANSWERS_FILES = frozenset(
+    {"eval/answers/sealed-v3/authoring/finalize.py"}
+)
+
 
 def is_cjk(character: str) -> bool:
     """Whether one character falls in any CJK block."""
@@ -134,6 +152,8 @@ def text_files(root: Path) -> List[Path]:
         if any(part in skip for part in relative.parts[:-1]):
             continue
         if relative.as_posix() in IMPORTED_PAGES:
+            continue
+        if relative.as_posix() in DELIVERED_ANSWERS_FILES:
             continue
         try:
             path.read_text(encoding="utf-8")
@@ -255,6 +275,41 @@ class TheProductSiteTests(unittest.TestCase):
             root = Path(tmp)
             (root / "page.html").write_text(page, encoding="utf-8")
             self.assertIn("page.html", violations(root))
+
+
+class TheDeliveredAnswersTests(unittest.TestCase):
+    """The third exemption: one delivered file, named by its full path."""
+
+    def test_the_exemption_is_exactly_the_file_it_names(self):
+        """Named once, and no wider: the set is the one path and nothing else."""
+        self.assertEqual(
+            frozenset({"eval/answers/sealed-v3/authoring/finalize.py"}),
+            DELIVERED_ANSWERS_FILES,
+        )
+        self.assertEqual(1, len(DELIVERED_ANSWERS_FILES))
+
+    def test_the_exemption_is_not_wider_than_that_file(self):
+        """The rest of the delivered tree is under the rule like anything else."""
+        for name in (
+            "eval/answers/sealed-v3/ground_truth.json",
+            "eval/answers/sealed-v3/MANIFEST.json",
+            "eval/external/sealed-v3/README.md",
+            "data/external/sealed-v3/index.json",
+            "tests/test_language.py",
+        ):
+            with self.subTest(path=name):
+                self.assertNotIn(name, DELIVERED_ANSWERS_FILES)
+
+    def test_the_walk_does_not_read_it(self):
+        """The exemption is applied before the file is read."""
+        self.assertTrue(
+            (PROJECT_ROOT / "eval/answers/sealed-v3/authoring/finalize.py").is_file(),
+            "the delivered file the exemption names is not in the repository",
+        )
+        found = {
+            str(path.relative_to(PROJECT_ROOT)) for path in text_files(PROJECT_ROOT)
+        }
+        self.assertNotIn("eval/answers/sealed-v3/authoring/finalize.py", found)
 
 
 class TheRepositoryTests(unittest.TestCase):

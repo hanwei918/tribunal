@@ -1,0 +1,70 @@
+{
+  "case_no": 4009,
+  "ruling": "FULL_REFUND",
+  "amount_sgd": 27.5,
+  "driver_compensation_sgd": null,
+  "referrals": [
+    "POL-RD-06(c): driver-conduct review of D-4536 - repeat deviation pattern (deviation_flags_90d 4 >= 3) with a MATERIAL deviation on this trip"
+  ],
+  "governing_clauses": [
+    "POL-RD-01",
+    "POL-RD-02",
+    "POL-RD-06",
+    "POL-RD-07",
+    "POL-RD-08",
+    "POL-RD-13",
+    "POL-GEN-01",
+    "POL-GEN-02",
+    "POL-GEN-03"
+  ],
+  "difficulty_opinion": "HARD",
+  "deciding_facts": [
+    {
+      "evidence_id": "EV-GPS-04009",
+      "fact": "trace_distance_km (recomputed haversine R=6371.0088 over 182 fixes, matches payload.trace_distance_km)",
+      "value": "18.960 km"
+    },
+    {
+      "evidence_id": "EV-TRIP-04009",
+      "fact": "optimal_distance_km / optimal_duration_min stored at booking (PLATFORM_ROUTER_AT_BOOKING, ERP 0.00); no amended optimal, not RYDE_POOL",
+      "value": "10.3 km / 17 min"
+    },
+    {
+      "evidence_id": "EV-GPS-04009",
+      "fact": "excess = 18.960 - 10.3",
+      "value": "8.660 km = 84.08% of optimal (>20% and >0.8 km: ESTABLISHED; >50% and >8.0 km: MATERIAL)"
+    },
+    {
+      "evidence_id": "EV-GPS-04009",
+      "fact": "route shape: trace runs east from pickup to lng 103.902 at 23:25:25, U-turns, and only passes back west of the pickup longitude at 23:32:25 (~9.71 km of trace) before 9.25 km onward to Holland Village",
+      "value": "eastward loop, corroborates the rider's account"
+    },
+    {
+      "evidence_id": "EV-GPS-04009",
+      "fact": "POL-RD-07 policy-level integrity: max interval 70 s (<=90), max step 194.6 m (<=500), cadence 10 s (not >30 s); schema GPS_GAP LOW, weight 0.85",
+      "value": "not impaired under POL-RD-07(a)-(c); POL-GEN-02 confidence cap 0.85"
+    },
+    {
+      "evidence_id": "EV-FARE-04009",
+      "fact": "fare_model METERED, surge_multiplier 1.0, total_charged 27.50, no ERP/airport/waiting/promo lines, refund_issued 0.00",
+      "value": "27.50"
+    },
+    {
+      "evidence_id": "EV-DPROF-04009",
+      "fact": "driver_profile.deviation_flags_90d (citable under POL-GEN-01 for POL-RD-06)",
+      "value": "4 (>=3: pattern ESTABLISHED; 4/380 = 0.0105 ratio limb not needed)"
+    },
+    {
+      "evidence_id": "EV-ADVIS-04009-01",
+      "fact": "traffic_advisory MISSING, weight 0.0, not cited by the driver",
+      "value": "POL-RD-03 unavailable; POL-RD-13(1): no POL-RD-10(5) escalation"
+    },
+    {
+      "evidence_id": "EV-CHAT-04009",
+      "fact": "chat_log MISSING (chat_message_count 2), weight 0.0; no party invokes POL-RD-04 - driver says passenger never said anything",
+      "value": "no exculpatory clause invoked against it; POL-RD-10(5) not engaged"
+    }
+  ],
+  "reasoning": "1. Scope/category: ROUTE_DEVIATION, rider-filed, no safety/complaint flag, no damage allegation - in scope under POL-GEN-08(1). NO_SHOW clauses (POL-NS-01..12, incl. amendments POL-NS-11, POL-NS-12) do not apply to this category. POL-RD-14 (amendment) needs a rider instruction in the chat_log; the chat_log is MISSING and none is alleged, so it does not apply.\n2. Identity / burden (POL-RD-08(a)): trip_id TRP-04009 on EV-TRIP-04009, EV-GPS-04009 and EV-FARE-04009; trip started_at 23:16:40 = first fix, ended_at 23:47:42 = last fix = fare charged_at; first fix is exactly the pickup coordinate, last fix exactly the dropoff. No timestamp disagreement or reversal (POL-RD-10(2),(4) not triggered).\n3. Trace integrity: EV-GPS-04009 is schema-IMPAIRED (GPS_GAP, LOW, weight 0.85): one 70 s interval 23:16:50-23:18:00 at the start of the trip, bounding fixes 194.6 m apart. Under POL-RD-07 this is NOT a policy impairment: gap 70 s <= 90 s (a), largest step 194.6 m <= 500 m (b), cadence 10 s (c). So POL-RD-07(i)-(iii) and POL-RD-10(3) are not engaged; the trace alone may establish the deviation. Under POL-GEN-02 the finding rests on EV-GPS-04009 (weight 0.85, GPS_GAP); trip_record.actual_distance_km 19.0 is a rounded copy of the same trace measurement and is not an independent carrier, so the cap is 0.85 > 0.70 floor - the finding survives the discount because the 70 s gap spans only 194.6 m at the start, far too little to move an 8.66 km excess below either threshold.\n4. POL-RD-01: actual = trace_distance_km 18.960 (recomputed 18.960075 km; the trip_record 19.0 figure is not cited). Optimal = 10.3 km (booked; no POL-RD-03/04/05/12 adjustment applies - no advisory, no rider instruction, no amendment timestamps, vehicle RYDE_TAXI). Excess = 8.660 km = 84.08% of 10.3. Establishment: 84.08% > 20% and 8.660 > 0.8 km -> ESTABLISHED. Materiality: 84.08% > 50% (and 8.660 > 8.0 km) -> MATERIAL. The trace shows the vehicle running east to 103.902 E (23:25:25) and only regaining the pickup longitude at 23:32:25, ~9.71 km of trace spent going east and back, which matches the rider's account.\n5. Burden shift (POL-RD-08): rider has shown (a) and (b) on a policy-unimpaired trace. rider_profile.deviation_claims_60d = 1 (<4), so the extra-corroboration limb is not engaged. The driver must cite a specific artifact and clause for POL-RD-03/04/05/11/12. His statement ('expressway because faster'; 'passenger never say anything') cites no evidence id and invokes no exculpatory clause: discarded under POL-RD-08. It is also contradicted by the record: actual duration 31.03 min vs optimal 17 min. Rider silence during the trip is not an exculpatory ground in any clause. To the extent 'night time ... faster' is read as an external-traffic excuse, POL-RD-13 applies: EV-ADVIS-04009-01 is MISSING (weight 0.0) and uncited, so POL-RD-03 is unavailable, the assertion carries no weight, it is not a POL-RD-10(5) trigger (POL-RD-13(1)), and the deviation stands at the measured figure against the booked optimal (POL-RD-13(2)). The MISSING chat_log (EV-CHAT-04009, chat_message_count 2) is likewise not invoked by anyone for POL-RD-04, so POL-RD-10(5) does not fire on it.\n6. POL-RD-11 does not apply: fare_model METERED, quoted_fare_sgd null. POL-RD-02 runs: surge_multiplier 1.0 read from EV-FARE-04009. recomputed_fare = (3.80 + 0.75 x 10.3 + 0.28 x 17) x 1.0 + 0.80 + 0 ERP (optimal_route_erp 0.00) + 0 surcharge + 0 waiting - 0 promo = (3.80 + 7.725 + 4.76) + 0.80 = 17.085. charged_total = 27.50 (ledger reconciles: 3.80 + 14.22 + 8.68 + 0.80). POL-RD-02 refund = 27.50 - 17.085 = 10.415 -> rounded up to 0.05 = 10.45; 10.45/27.50 = 38% < 90%, so on POL-RD-02 alone it would be PARTIAL_REFUND 10.45.\n7. POL-RD-06: material deviation -> consult driver_profile. deviation_flags_90d = 4 >= 3 -> pattern ESTABLISHED (ratio 4/380 = 0.0105 not needed). Per POL-GEN-01 only deviation_flags_90d / completed_trips_90d are cited; prior_deviation_flags (6, lifetime), rating 4.62, prior_disputes_* etc. are context only and not used. The finding of deviation rests on this trip's trace alone (step 4). Limb (b): deviation is MATERIAL and substantiated on this trip's own evidence -> FULL_REFUND of charged_total instead of the POL-RD-02 partial; there are no ERP, toll or airport lines to carve out to POL-RD-09. Side by side: POL-RD-02 figure 10.45; uplifted figure 27.50 (uplift 17.05). Limb (c): referral to driver-conduct review, which does not displace the money (POL-GEN-03).\n8. POL-RD-09: no ERP/toll/surcharge lines; (4) no phantom line. POL-RD-10 triggers checked: (1) confidence ~0.85 >= 0.70; (2) ids match; (3) trace not policy-impaired; (4) timestamps consistent; (5) no exculpatory clause invoked against a missing cited artifact; (6) POL-RD-02 refund 10.45 <= 150 and <= charged_total (the uplifted 27.50 equals, does not exceed, charged_total); (7) no contradictory evidence of comparable strength; (8) every fare line (base, distance 18.96 km = trace, time 31 min = trip duration, platform fee) has a counterpart. No escalation.\n9. Ruling (POL-GEN-03): FULL_REFUND, amount_sgd 27.50 (= amount_contested_sgd), driver_compensation_sgd null, referral under POL-RD-06(c). POL-GEN-05: monetary effect 27.50 exceeds execution_threshold_sgd 8.00, so the ruling issues but is held for human release; this is routing, not an escalation. POL-GEN-04 appeal route applies (provisional ruling).",
+  "doubts": "(1) Main alternative: PARTIAL_REFUND 10.45 under POL-RD-02 alone, if a reader does not apply the POL-RD-06(b) uplift (e.g. reads 'substantiated' as requiring corroboration beyond the gps_trace, borrowing the limb (a) 'at least one artifact other than the gps_trace' test). I read limb (b)'s 'substantiated on this trip's own evidence' as satisfied by a policy-clean trace; limb (a)'s extra-artifact requirement attaches only to the 'genuinely balanced' situation. (2) The trace is schema-IMPAIRED (0.85); a reader who wrongly treats the pre-pass tag as a POL-RD-07 impairment would look for independent corroboration (none: trip_record.actual_distance_km and the billed 18.96 km are copies of the trace) and ESCALATE under POL-RD-07(iii)/POL-RD-10(3); POL-RD-07 expressly excludes that since 70 s <= 90 s and 194.6 m <= 500 m. (3) The MISSING chat_log with chat_message_count 2: two unseen messages could in principle have contained a rider instruction, but no party asserts one (the driver says the passenger said nothing), so POL-RD-04/POL-RD-14 and POL-RD-10(5) are not engaged; a cautious reader might still escalate on the gap, which I think the policy does not license. (4) The driver's 'expressway because faster' is arguably not an external-traffic assertion at all, so POL-RD-13 may be only confirmatory; the outcome is the same under POL-RD-08 alone."
+}

@@ -1,0 +1,70 @@
+{
+  "case_no": 4058,
+  "ruling": "ESCALATE",
+  "amount_sgd": null,
+  "driver_compensation_sgd": null,
+  "referrals": [],
+  "governing_clauses": [
+    "POL-NS-07",
+    "POL-NS-09",
+    "POL-NS-01",
+    "POL-NS-02",
+    "POL-GEN-01",
+    "POL-GEN-03"
+  ],
+  "difficulty_opinion": "HARD",
+  "deciding_facts": [
+    {
+      "evidence_id": "EV-DPROF-04058",
+      "fact": "driver_profile.no_show_terminations_30d",
+      "value": 5
+    },
+    {
+      "evidence_id": "EV-DPROF-04058",
+      "fact": "driver_profile.completed_trips_30d",
+      "value": 54
+    },
+    {
+      "evidence_id": "EV-DPROF-04058",
+      "fact": "anti-farming ratio 5/54 vs 0.08",
+      "value": "0.0926 > 0.08 and 5 >= 4: check trips"
+    },
+    {
+      "evidence_id": "EV-GPS-04058",
+      "fact": "first of 3 consecutive in-radius fixes (AIRPORT radius 150 m, accuracy <= 25 m)",
+      "value": "23:41:30, 105.7 m, acc 6.9 m; all 61 fixes 23:41:30-23:51:30 within 105.7 m"
+    },
+    {
+      "evidence_id": "EV-TRIP-04058",
+      "fact": "arrived_at / cancelled_at / reason",
+      "value": "23:42:00 / 23:51:30 / CANCELLED_BY_DRIVER RIDER_NO_SHOW; no boarding"
+    },
+    {
+      "evidence_id": "EV-GPS-04058",
+      "fact": "in-geofence dwell to cancellation",
+      "value": "600 s from first qualifying fix (570 s from arrival marker) vs free_wait_sec 300 and no_show_threshold_sec 480"
+    },
+    {
+      "evidence_id": "EV-GPS-04058",
+      "fact": "fix at arrival marker",
+      "value": "23:42:00, 17.2 m from pin, 0 km/h (marker not false)"
+    },
+    {
+      "evidence_id": "EV-CHAT-04058",
+      "fact": "driver replied to rider message within 120 s",
+      "value": "rider 23:46:00, driver 23:46:50 (50 s); plus two in-app calls 23:45:10, 23:49:20"
+    },
+    {
+      "evidence_id": "EV-GPS-04058",
+      "fact": "rider_track distance from pin",
+      "value": "339.2-361.4 m on all 10 fixes (accuracy 10.4-19.6 m), outside 200 m presence radius"
+    },
+    {
+      "evidence_id": "EV-FARE-04058",
+      "fact": "cancellation_fee line",
+      "value": "6.00 = platform_policy.cancellation_fee_sgd 6.00, CHARGED, refund 0.00"
+    }
+  ],
+  "reasoning": "1. Scope (POL-GEN-08(1)): NO_SHOW_CHARGE, no safety/complaint flag; automated ruling may issue. Driver-filed claim for the 6.00 fee (amount_contested_sgd 6.00). 2. Fee schedule: record carries platform_policy (free_wait_sec 300, no_show_threshold_sec 480, cancellation_fee_sgd 6.00, arrival_marker BUTTON); defaults and zone/tier tables not applied. Zone AIRPORT -> arrival radius 150 m, rider presence radius 200 m, accuracy filter 25 m. 3. POL-NS-02: haversine (R=6371.0088) from pickup pin (1.3556,103.9864): fixes 23:41:30 (105.7 m, acc 6.9), 23:41:40, 23:41:50 (23.2 m) are 3 consecutive qualifying fixes; every fix 23:41:30-23:51:30 (61 fixes) is within 105.7 m, accuracy <= 9.9 m, max sample gap 10 s. Arrival satisfied. 4. POL-NS-01: (a) driver_arrived event 23:42:00 (EV-TRIP-04058); (b) in geofence at/before that event (fix 23:42:00 at 17.2 m, 0 km/h); (c) continuous dwell from first qualifying fix 23:41:30 to cancellation 23:51:30 = 600 s >= 300 s free wait; cancellation 570 s after the arrival marker and 600 s after first fix, both >= no_show_threshold_sec 480; (d) no boarding, terminated by driver with RIDER_NO_SHOW after the dwell elapsed. All four limbs hold. 5. Displacing clauses: POL-NS-03 n/a (driver stationary inside radius, 12-21 m). POL-NS-04: rider message MSG-04058-003 at 23:46:00 ('at the belt') arguably locating, but limb (b) fails - driver replied 23:46:50 (50 s < 120 s) and placed two in-app calls (23:45:10, 23:49:20, unanswered); limb (c) also fails affirmatively: all 10 rider fixes (accuracy 10.4-19.6 m, all admissible) lie 339.2-361.4 m from the pin, > 200 m. POL-NS-05 n/a: marker fix 17.2 m, 0 km/h. POL-NS-06 n/a: dwell 600 s >= 300 s; advisory MISSING (EV-ADVIS-04058-01, weight 0.0) is irrelevant since limb (i) is not needed and nobody asserts it. POL-NS-10: driver cancellation, cancellation 750 s after accept; limbs (a)-(g) concern rider cancellations or waiting fees - n/a. The rider's late-flight/luggage account is not a ground under any clause. 6. POL-NS-08: no clock skew (arrival marker coincides with a fix, 0 s); no gap > 120 s, 58 fixes in the window; rider_track present; chat 5 messages sequential = chat_message_count 5, no 5-min gap over the marker (170 s); fare line 6.00 = platform_policy 6.00 (no gross figure named). No policy-level impairment. All deciding artifacts weight 1.0 (POL-GEN-02): confidence cap 1.0. POL-NS-11 n/a (rider_track present and admissible). POL-NS-12 n/a (arrival_marker BUTTON). 7. POL-NS-07: fee would stand and compensation would be 0.8 x 6.00 = 4.80, BUT the anti-farming check on the citable counters (POL-GEN-01): no_show_terminations_30d 5 >= 4 AND 5/54 = 0.0926 > 0.08 -> compensation WITHHELD and case escalates under POL-NS-09(d). Packet must direct the reviewer to refund the rider's 6.00 fee in full; fee held, neither collected nor refunded by the pipeline. 8. POL-NS-09: (d) trips via the anti-farming check; (c) does not (disputes_with_counterparty_90d 0 + 0); rider no_show_disputes_30d 0. Escalation is terminal (POL-GEN-03): ruling ESCALATE, amount_sgd and driver_compensation_sgd null, no referrals. 9. POL-GEN-01: driver prior_no_show_flags 1, cancellation_rate 0.11, rating, prior_disputes etc. and rider rating/history are context only and not used; only no_show_terminations_30d and completed_trips_30d are cited, as POL-NS-07 names them. POL-GEN-05 threshold 8.00 not reached since no monetary ruling issues (the would-be 4.80 is below it). RD-14 is route-deviation only, n/a.",
+  "doubts": "The merits fully favour the driver (POL-NS-01 met, rider 340-360 m away and her own chat says she was at the belt), so an adjudicator focused on the story might rule DRIVER_COMPENSATION 4.80 (amount_sgd 4.80). That would ignore the POL-NS-07 anti-farming check, which is mechanical and trips (5 >= 4; 5/54 = 0.0926 > 0.08); I hold ESCALATE. Minor: whether the reviewer instruction to refund the rider in full belongs in referrals - I treated it as packet content under POL-NS-09, not a referral (POL-GEN-03 says ESCALATE replaces the ruling), so referrals is []. Whether the 23:41:30 fix at 18 km/h counts as 'holding position' does not matter: from the 23:42:00 stationary fix the dwell is still 570 s >= 480."
+}

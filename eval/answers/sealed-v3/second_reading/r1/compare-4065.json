@@ -1,0 +1,76 @@
+{
+ "case_no": 4065,
+ "verdict": "AGREE",
+ "differences": [
+  {
+   "field": "ruling",
+   "key": "FULL_REFUND",
+   "reader_a": "FULL_REFUND",
+   "reader_b": "FULL_REFUND",
+   "resolution": "All agree. EV-TRIP-04065 platform_policy (AUTHORED-V1) sets free_wait_sec 300. EV-GPS-04065: first fix inside the 150 m TRANSPORT_HUB radius with accuracy <= 25 m is 18:12:30 (76.3 m, acc 5.2 m; 18:12:20 was 164.4 m); all 11 fixes 18:12:30-18:14:05 lie within 150 m (17.0-76.3 m, acc 4.6-9.8 m); driver cancelled RIDER_NO_SHOW at 18:14:05. POL-NS-01(c) dwell 95 s (75 s from the 18:12:50 tap) < 300 s, so POL-NS-06 refunds the fee in full, whether or not the rider was present. Key right."
+  },
+  {
+   "field": "amount_sgd",
+   "key": 8.0,
+   "reader_a": 8.0,
+   "reader_b": 8.0,
+   "resolution": "All agree to the cent. EV-FARE-04065 cancellation_fee 8.00, refund_issued_sgd 0.00; amount_contested_sgd 8.00; Decimal 8.00 - 0.00 = 8.00 = contested, so FULL_REFUND 8.00."
+  },
+  {
+   "field": "driver_compensation_sgd",
+   "key": null,
+   "reader_a": null,
+   "reader_b": null,
+   "resolution": "All agree: POL-NS-06 pays no compensation on a shortfall; POL-NS-07 is not reached because POL-NS-01(c) fails."
+  },
+  {
+   "field": "referrals",
+   "key": [],
+   "reader_a": [],
+   "reader_b": [],
+   "resolution": "All agree. No POL-NS-05 false-arrival referral (tap fix 19.1 m, 0 km/h; position-derived speed into it 6.6 km/h); no POL-NS-01(d) mis-selected-code referral (reason code RIDER_NO_SHOW, not DRIVER_UNABLE_TO_LOCATE)."
+  },
+  {
+   "field": "governing_clauses",
+   "key": [
+    "POL-NS-06",
+    "POL-NS-01"
+   ],
+   "reader_a": [
+    "POL-NS-06",
+    "POL-NS-01",
+    "POL-NS-02"
+   ],
+   "reader_b": [
+    "POL-NS-06",
+    "POL-NS-01",
+    "POL-NS-02"
+   ],
+   "resolution": "Readers add POL-NS-02 (the geofence test that locates the first qualifying fix). Harmless extra clause, not a reason to change the key. The key's pair is right: POL-NS-06 licenses FULL_REFUND and fixes the refund as the whole cancellation-fee line; POL-NS-01(c) supplies the free wait in force and the GPS-entry dwell measure that POL-NS-06 reads, and its failure is what routes the case to POL-NS-06. No listed clause is inapplicable."
+  },
+  {
+   "field": "difficulty",
+   "key": "EASY",
+   "reader_a": "EASY",
+   "reader_b": "EASY",
+   "resolution": "All agree. Neither party's story is contradicted by the record: the rider's 'about a minute and a half' matches 75-95 s, and the driver's account (she said 5 min, then 2 more min) matches MSG-04065-002 and -005. The only lure is the rider's absence (298.7-437.6 m away), which POL-NS-06 expressly makes irrelevant. A single arithmetic shortfall on weight-1.0 artifacts is EASY."
+  },
+  {
+   "field": "rationale",
+   "key": "(see key)",
+   "reader_a": "n/a",
+   "reader_b": "n/a",
+   "resolution": "Every figure in the key rationale verified with check_set's haversine (R = 6371.0088 km): 18:12:30 fix 76.3 m acc 5.2 m (under 10 m); 18:12:20 fix 164.4 m; 18:12:50 tap fix 19.1 m at 0 km/h; cancellation 18:14:05; dwell 95 s; rider message MSG-04065-005 18:13:20 answered 18:13:45; rider_track 298.7-437.6 m (written 299-438); zone 6.00 vs tier 8.00 greater-of = 8.00; free_wait_sec 300; deciding artifacts EV-TRIP/EV-GPS/EV-FARE all weight 1.0; EV-ADVIS-04065-01 MISSING. No factual error."
+  },
+  {
+   "field": "reader_detail",
+   "key": null,
+   "reader_a": "deciding_facts says 'all 12 fixes 18:12:30-18:14:05'",
+   "reader_b": "11 consecutive fixes",
+   "resolution": "Reader A miscounts: there are 11 fixes from 18:12:30 to 18:14:05 inclusive (10 s cadence to 18:14:00, then 18:14:05). Reader error only; the key does not state the count and nothing turns on it (>= 3 needed for POL-NS-02)."
+  }
+ ],
+ "analysis": "Both blind readings match the key on ruling, amount, compensation, referrals and difficulty; the only differences are a harmless extra POL-NS-02 in both readers' clause lists and a fix-count slip in reader A. Worked independently from the version-6 text: the record carries platform_policy (AUTHORED-V1), so fee_schedule.resolution_rule takes cancellation_fee_sgd 8.00 and free_wait_sec 300 from EV-TRIP-04065 (minimum_dwell_sec is never applied to a record carrying platform_policy; the default 180 s would give the same result). The fare line 8.00 reconciles with the net figure, so no POL-NS-08(d) defect. POL-NS-02: zone TRANSPORT_HUB, radius 150 m; 11 consecutive fixes 18:12:30-18:14:05 inside it at accuracy 4.6-9.8 m, first qualifying fix 18:12:30 (76.3 m), so arrival is established. POL-NS-05: the 18:12:50 tap coincides with a fix at 19.1 m and 0 km/h, so the marker is not false and no referral arises; POL-NS-12 does not apply (arrival_marker BUTTON). POL-NS-01(c): dwell from 18:12:30 to the 18:14:05 driver cancellation = 95 s < 300 s, so limb (c) fails and the fee is not chargeable. POL-NS-06: effective dwell 95 s < 300 s, refund in full whether or not the rider was present; limb (i) cannot help (one continuous interval, and EV-ADVIS-04065-01 is MISSING), and limb (ii) bars any advisory or peak-hour excuse. Refund = 8.00 = amount_contested_sgd, FULL_REFUND 8.00, no compensation, no referrals. Other clauses: POL-NS-03 no (driver inside the radius); POL-NS-04 does not apply (MSG-04065-005 answered in 25 s; rider fixes all > 200 m on admissible accuracy) but is not needed; POL-NS-10 no (driver termination, no waiting-time line); POL-NS-11 no (rider_track present); POL-NS-07/09 not reached, and counters are clean anyway (no_show_terminations_30d 1 of 150; rider no_show_disputes_30d 0; counterparty disputes 0 + 0). POL-NS-08: no skew (tap and cancellation coincide with fixes), max gap 10 s, chat 7/7 sequential with a 210 s interval over the arrival marker, fare reconciles; no limb engaged. Confidence cap 1.0 (POL-GEN-02). There is no second defensible answer: the shortfall is 205 s on clean evidence and survives every alternative clock (75 s from the tap, 180 s default). Key right; no case change needed.",
+ "corrected_ground_truth": null,
+ "case_fix_instructions": null
+}

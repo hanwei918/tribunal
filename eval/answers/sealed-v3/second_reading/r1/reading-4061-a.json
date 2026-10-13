@@ -1,0 +1,65 @@
+{
+  "case_no": 4061,
+  "ruling": "DRIVER_COMPENSATION",
+  "amount_sgd": 4.8,
+  "driver_compensation_sgd": 4.8,
+  "referrals": [],
+  "governing_clauses": [
+    "POL-NS-01",
+    "POL-NS-12",
+    "POL-NS-07",
+    "POL-GEN-03",
+    "POL-GEN-02",
+    "POL-GEN-01"
+  ],
+  "difficulty_opinion": "HARD",
+  "deciding_facts": [
+    {
+      "evidence_id": "EV-TRIP-04061",
+      "fact": "platform_policy.arrival_marker",
+      "value": "GPS_AUTO"
+    },
+    {
+      "evidence_id": "EV-TRIP-04061",
+      "fact": "driver_arrived event geofence test (PLATFORM_TELEMETRY)",
+      "value": "13:06:00, 16 m from pickup, 0 km/h (LARGE_VENUE radius 120 m)"
+    },
+    {
+      "evidence_id": "EV-TRIP-04061",
+      "fact": "wait_timer_started / wait_timer_expired vs termination",
+      "value": "13:06:05 / 13:10:05; cancellation 13:14:10 (expired 245 s before termination)"
+    },
+    {
+      "evidence_id": "EV-TRIP-04061",
+      "fact": "no_show_threshold_sec 360 from arrival vs cancellation",
+      "value": "threshold 13:12:00; cancelled 13:14:10 (130 s after); arrival->cancel 490 s >= free_wait_sec 240"
+    },
+    {
+      "evidence_id": "EV-TRIP-04061",
+      "fact": "termination",
+      "value": "CANCELLED_BY_DRIVER, RIDER_NO_SHOW, no boarding/start event"
+    },
+    {
+      "evidence_id": "EV-GPS-04061",
+      "fact": "export fixes inside arrival->cancel window (weight 0.3; LOW_SAMPLE_RATE, PARTIAL_RECORD, UNVERIFIED_SOURCE)",
+      "value": "13:06:20 5.6 m, 13:09:30 17.8 m, 13:12:40 8.0 m, all 0 km/h - no contradiction"
+    },
+    {
+      "evidence_id": "EV-CHAT-04061",
+      "fact": "rider messages",
+      "value": "none; MSG-04061-003 location message read by rider 13:12:50"
+    },
+    {
+      "evidence_id": "EV-DPROF-04061",
+      "fact": "no_show_terminations_30d / completed_trips_30d",
+      "value": "1 / 97 (rate 0.0103) - anti-farming check not tripped"
+    },
+    {
+      "evidence_id": "EV-TRIP-04061",
+      "fact": "platform_policy.cancellation_fee_sgd (net)",
+      "value": "6.00 -> compensation 0.8 x 6.00 = 4.80"
+    }
+  ],
+  "reasoning": "1. Scope (POL-GEN-08(1)): NO_SHOW_CHARGE, no safety/complaint flag, no damage allegation -> automated ruling permitted. Driver-filed; contested 6.00 is the net fee that support reversed on 2026-08-27 (EV-FARE-04061 payment_status REFUNDED, refund 8.81 gross). ROUTE_DEVIATION clauses (POL-RD-01..14, incl. amendment POL-RD-14) do not apply to this category.\n2. POL-NS-12 (amendment, policy v6): arrival_marker is GPS_AUTO (EV-TRIP-04061 platform_policy); events carry driver_arrived 13:06:00 stating its geofence test (16 m, 0 km/h), wait_timer_started 13:06:05 and wait_timer_expired 13:10:05, all PLATFORM_TELEMETRY. These are an independent carrier for POL-NS-01(b) and (c): arrival established at 13:06:00; free wait served because wait_timer_expired (13:10:05) precedes termination (13:14:10) by 245 s. Contradiction check against the export (EV-GPS-04061, haversine R=6371.0088): fixes in the window 13:06:20 = 5.6 m, 13:09:30 = 17.8 m, 13:12:40 = 8.0 m, all 0 km/h, all inside the 120 m LARGE_VENUE radius; the 13:02:50 fix (825.5 m, 22 km/h) is before arrival and the 13:14:50 fix (260.7 m, 30 km/h) is 40 s after cancellation, so neither falls in the window. No admissible fix places the driver outside the radius or moving >=15 km/h during the window -> NS-12 holds.\n3. POL-NS-01: (a) arrived event present. (b) satisfied via NS-12 at 13:06:00 (export also corroborates: nearest fix 13:06:20, 20 s later, 5.6 m). (c) free_wait_sec in force 240 (platform_policy); dwell arrival->cancel 490 s (from first in-radius export fix 13:06:20: 470 s) >= 240; no_show_threshold_sec 360 is longer, so cancellation must fall at/after 13:12:00 (or 13:12:20 if measured from 13:06:20) - cancelled 13:14:10, satisfied. (d) no boarding event; CANCELLED_BY_DRIVER with RIDER_NO_SHOW after the dwell elapsed. All four limbs hold.\n4. Displacing clauses: POL-NS-02 satisfied (in-radius, via NS-12; export's lack of accuracy field and sparse fixes means its own 3-consecutive-fix test cannot be run on the export, which is the gap NS-12 fills). POL-NS-03 n/a (driver inside radius, not 120-400 m). POL-NS-04 n/a: limb (a) fails - EV-CHAT-04061 has no RIDER message; limb (b) also fails - two driver in-app calls 13:08:20 and 13:11:15 (unanswered). POL-NS-11: rider_track empty so NS-04(c) undecidable, said so; it does not impair the driver's evidence. POL-NS-05 n/a: at the arrival time the nearest fix (20 s later) is 5.6 m and 0 km/h, not >300 m or >=15 km/h. POL-NS-06 n/a: dwell 490 s > 240 s; MISSING traffic advisory (EV-ADVIS-04061-01, weight 0.0) irrelevant since limb (i) is not needed. POL-NS-10 n/a: driver cancelled, not the rider; no scheduled trip; no waiting-time fee line.\n5. Integrity: POL-NS-08(a) clock skew - arrival vs nearest fix 20 s, cancel vs last fix 40 s, both <=90 s: not engaged. POL-NS-08(b): export has gaps of 190 s inside the waiting window and only 3 fixes there, so the export is impaired under (b); but per NS-12 a sparse export does not impair the platform events, and the deciding facts (arrival, dwell) are carried independently by EV-TRIP-04061 (weight 1.0), so the 'only evidence impaired' sentence and POL-NS-09(e) are not engaged. POL-NS-08(c): chat 4 messages = chat_message_count 4, sequential; gap 13:06:15->13:14:10 is 475 s but does not span the arrival marker (13:06:00 lies in 13:04:00->13:06:15, 135 s) -> not impaired. POL-NS-08(d): fare line 8.81 equals platform_policy gross 8.81 -> reconciles. POL-GEN-02: EV-GPS-04061 weight 0.3 (LOW_SAMPLE_RATE, PARTIAL_RECORD, UNVERIFIED_SOURCE) is named; the finding survives because it rests on EV-TRIP-04061 at 1.0 and the export only fails to contradict; with two independent carriers the cap is max(1.0, 0.3) = 1.0, confidence well above 0.70.\n6. POL-NS-09: (a) confidence >= 0.70; (b) no direct contradiction between admissible artifacts (the rider's statement that the driver 'was not there' when she came down is a party statement, not an artifact; she read the driver's location message only at 13:12:50 and her time of arrival downstairs is unrecorded; support's earlier reversal is not evidence); (c) disputes_with_counterparty_90d 0 + 0 < 2; (d) no_show_terminations_30d 1 (<4; rate 1/97 = 0.0103 <= 0.08), rider no_show_disputes_30d 0 (<3); (e) not engaged. No escalation.\n7. POL-NS-07: anti-farming check not tripped -> driver compensated at 80% of the net fee in force: platform_policy.cancellation_fee_sgd 6.00 x 0.8 = 4.80 (net figure, never the 8.81 gross). Per NS-07/NS-01 notes and POL-GEN-03 the ruling value is DRIVER_COMPENSATION with amount_sgd = driver_compensation_sgd = 4.80. POL-GEN-01: only no_show_terminations_30d/completed_trips_30d (NS-07) and the NS-09(c)/(d) counters were used; rating, prior_no_show_flags, prior_disputes etc. are context only and were not relied on. POL-GEN-05: monetary effect 4.80 <= execution_threshold 8.00 -> executes automatically, subject to POL-GEN-04 appeal. No referrals: NS-05 false-arrival not found, no mis-selected reason code.",
+  "doubts": "(1) Amount: the driver asks for 6.00 (the full net fee). POL-NS-07 pays 80% of the net fee (4.80), even though platform_policy says the 6.00 net already goes to the driver; a reader treating the claim as a refund of the reversed fee to the filing party could argue FULL_REFUND 6.00, but NS-01 notes and NS-07 say the emitted ruling on a verified no-show is DRIVER_COMPENSATION at 80%. (2) Whether the rider's statement plus support's reversal on the GPS export should be treated as a NS-09(b) conflict -> ESCALATE; I do not, because a party statement is not an admissible artifact and the export, though sparse, agrees with the platform events (5.6-17.8 m, 0 km/h). (3) If POL-NS-12 were disregarded (amendment approved by Zhou Hanwei pending owner confirmation, though the note says its revised wording follows her request), the export alone (weight 0.3, no accuracy, gaps >120 s) could not run POL-NS-02 and the case would ESCALATE under POL-NS-08/POL-NS-09(e) and POL-GEN-02(2). (4) governing_clauses: POL-NS-12 licenses no value but is what carries limbs (b)/(c); some readers may list only POL-NS-01 and POL-NS-07."
+}

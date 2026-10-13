@@ -1,0 +1,48 @@
+{
+  "case_no": 4007,
+  "ruling": "ESCALATE",
+  "amount_sgd": null,
+  "driver_compensation_sgd": null,
+  "referrals": [],
+  "governing_clauses": [
+    "POL-RD-10",
+    "POL-RD-01",
+    "POL-RD-09",
+    "POL-GEN-03"
+  ],
+  "difficulty_opinion": "HARD",
+  "deciding_facts": [
+    {
+      "evidence_id": "EV-FARE-04007",
+      "fact": "fare_breakdown carries a cancellation_fee line on this trip",
+      "value": "cancellation_fee 4.50 of total_charged 24.24 (3.80+8.70+6.44+0+0+0.80+4.50=24.24)"
+    },
+    {
+      "evidence_id": "EV-TRIP-04007",
+      "fact": "trip_record shows no cancellation: status COMPLETED, cancelled_at/cancelled_by/cancellation_reason_code null, 6 events none a cancellation, platform_policy null",
+      "value": "no counterpart for the 4.50 line"
+    },
+    {
+      "evidence_id": "EV-GPS-04007",
+      "fact": "trace runs continuously pickup->dropoff (first fix 0 m from pickup, last fix 0 m from dropoff); no cancellation counterpart in the trace",
+      "value": "138 fixes, 10 s max gap, 136.2 m max step"
+    },
+    {
+      "evidence_id": "EV-GPS-04007",
+      "fact": "recomputed trace_distance_km (haversine R=6371.0088)",
+      "value": "11.5997 km (field 11.600)"
+    },
+    {
+      "evidence_id": "EV-TRIP-04007",
+      "fact": "booked optimal",
+      "value": "7.9 km / 16 min, ERP 0.00"
+    },
+    {
+      "evidence_id": "EV-ADVIS-04007-01",
+      "fact": "traffic advisory MISSING, weight 0.0; driver cites no advisory id",
+      "value": "MISSING_ARTIFACT"
+    }
+  ],
+  "reasoning": "1. Scope (POL-GEN-08(1)): ROUTE_DEVIATION, no safety/complaint flag -> in automated scope. 2. Identity/timestamps (POL-RD-08(a), POL-RD-10(2),(4)): trip_id TRP-04007 matches on trip_record, gps_trace, fare_breakdown; started_at 20:36:10 and ended_at 20:58:57 equal first/last GPS fix; timestamps ordered. No trigger. 3. Trace integrity (POL-RD-07): 138 fixes, max interval 10 s (<90 s), max step 136.2 m (<500 m), cadence 10 s (<30 s) -> not impaired; admissibility weight 1.0 on trip, GPS, fare, chat. 4. POL-RD-01: trace_distance_km governs = 11.600 (my recomputation 11.5997). Excess = 11.600 - 7.9 = 3.700 km = 46.84% of 7.9; >20% and >0.8 km -> deviation ESTABLISHED; <50% and <8.0 km -> NOT material. Trace runs east to lng 103.9033 (Eunos) and back, consistent with the rider's PIE/Eunos account. 5. Exculpatory clauses: POL-RD-03 unavailable - EV-ADVIS-04007-01 is MISSING (weight 0.0); driver's 'PIE faster at that time' cites no evidence id, so under POL-RD-13(1) this is not a POL-RD-10(5) trigger and under POL-RD-08/POL-RD-13(2) it is discarded. POL-RD-04/POL-RD-14: the two chat messages (EV-CHAT-04007) are a pickup notice and 'ok 1 min'; no rider routing instruction -> not engaged. POL-RD-05: no amendment timestamps. POL-RD-12: RYDE_TAXI, not pool. POL-RD-11: fare_model METERED, not engaged. 6. POL-RD-06: not material; driver_profile.deviation_flags_90d 0 / 350 -> no pattern; lifetime prior_deviation_flags 2 is context only (POL-GEN-01). POL-RD-08 rider check: deviation_claims_60d 1 (<4) -> no extra corroboration needed. Other profile fields (ratings, prior disputes) context only. 7. Draft POL-RD-02 figure (for the reviewer): surge_multiplier 1.0 read from EV-FARE-04007; recomputed_fare = (3.80 + 0.75x7.9 + 0.28x16) x 1.0 + 0.80 + 0 ERP + 0 waiting - 0 promo = 15.005; charged_total 24.24; refund = 9.235 -> rounded up 9.25 (38.1% of charged, < 90%, > 0.50, < 150, <= contested 10.00). 8. Billing integrity: EV-FARE-04007 carries a cancellation_fee line of 4.50 on a trip EV-TRIP-04007 records as COMPLETED with cancelled_at, cancelled_by and cancellation_reason_code null and no cancellation event; the GPS trace shows an uninterrupted pickup-to-dropoff journey. Both parties say no one cancelled. That line therefore has no counterpart anywhere in the gps_trace or trip_record. POL-RD-09(4) - the only route to a standalone billing-integrity refund in the RD category - covers only a gantry line the trace never passes or an airport surcharge on a non-airport origin; it does not cover a cancellation-fee line, so the POL-RD-10(8) carve-out ('OTHER than a line refunded under POL-RD-09(4)') does not apply. POL-RD-10(8) is therefore engaged, and POL-RD-10 is mandatory and terminal: no final ruling may issue (POL-GEN-03: ESCALATE replaces the ruling; amount held). The no-show policy cannot be used to settle the line: it governs NO_SHOW_CHARGE disputes, and NS-01's only FULL_REFUND licence is the in-radius DRIVER_UNABLE_TO_LOCATE outcome, which this is not. 9. Trigger named: POL-RD-10(8). Evidence that resolves it: the payments ledger/billing audit trail explaining the origin of the 4.50 cancellation_fee line (e.g., a misapplied fee from another booking by R-2715). Reviewer options: POL-RD-02 refund 9.25 (which already returns the 4.50 because charged_total includes it), or 4.75 distance/time refund plus a separate correction of the 4.50 line (= 9.25 in total). POL-GEN-05: the candidate monetary effect 9.25 exceeds the 8.00 execution threshold, so it would have been held for human release anyway.",
+  "doubts": "Main alternative: PARTIAL_REFUND 9.25 under POL-RD-01/POL-RD-02 (+POL-RD-13(2)), on the reading that the 4.50 line is already swept into charged_total - recomputed_fare, so the RD-02 refund mechanically returns it and nothing is left unexplained in a way that affects money; possibly with a billing-integrity referral by analogy to POL-RD-09(4). I reject it because POL-RD-10(8) is mandatory and its only carve-out is a line refunded under POL-RD-09(4), whose text is limited to ERP gantries and airport surcharges. A further reading would treat the 4.50 as a separate no-show-category matter and refund it outright, but no RD clause licenses that and the NS clauses apply to NO_SHOW_CHARGE disputes."
+}

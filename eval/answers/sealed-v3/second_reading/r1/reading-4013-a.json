@@ -1,0 +1,62 @@
+{
+  "case_no": 4013,
+  "ruling": "PARTIAL_REFUND",
+  "amount_sgd": 5.8,
+  "driver_compensation_sgd": null,
+  "referrals": [],
+  "governing_clauses": [
+    "POL-RD-01",
+    "POL-RD-02",
+    "POL-RD-14"
+  ],
+  "difficulty_opinion": "HARD",
+  "deciding_facts": [
+    {
+      "evidence_id": "EV-GPS-04013",
+      "fact": "gps_trace.trace_distance_km (recomputed haversine R=6371.0088 over 178 fixes)",
+      "value": "15.92 km (15.91994)"
+    },
+    {
+      "evidence_id": "EV-TRIP-04013",
+      "fact": "booked optimal_distance_km / optimal_duration_min; no amendment, not pool",
+      "value": "11.2 km / 21 min; amended fields null; vehicle RYDE_X"
+    },
+    {
+      "evidence_id": "EV-GPS-04013",
+      "fact": "POL-RD-07 integrity: max interval / max step / cadence",
+      "value": "10 s / 155.7 m / 10 s - not impaired"
+    },
+    {
+      "evidence_id": "EV-CHAT-04013",
+      "fact": "MSG-04013-002 rider instruction, sent 14:33:40 before trip start 14:34:30, waypoint_hint Bukit Timah Plaza",
+      "value": "(1.3388, 103.7781); meets POL-RD-04(a)-(c)"
+    },
+    {
+      "evidence_id": "EV-GPS-04013",
+      "fact": "closest approach of trace to waypoint_hint",
+      "value": "3058.9 m (at pickup fix 14:34:30); max trace lat 1.3203; never within 200 m"
+    },
+    {
+      "evidence_id": "EV-FARE-04013",
+      "fact": "fare_model, surge_multiplier, charged_total, ERP lines",
+      "value": "METERED, 1.0, 24.66, no ERP/airport/promo/waiting lines"
+    },
+    {
+      "evidence_id": "EV-DPROF-04013",
+      "fact": "deviation_flags_90d / completed_trips_90d",
+      "value": "0 / 240 - no pattern"
+    },
+    {
+      "evidence_id": "EV-RPROF-04013",
+      "fact": "deviation_claims_60d / substantiated",
+      "value": "2 / 1 - POL-RD-08 extra-corroboration rule not engaged"
+    },
+    {
+      "evidence_id": "EV-ADVIS-04013-01",
+      "fact": "traffic advisory",
+      "value": "MISSING, weight 0.0; no party asserted a traffic cause"
+    }
+  ],
+  "reasoning": "1. Scope/identity (POL-GEN-08(1), POL-RD-08(a), POL-RD-10(2),(4)): ROUTE_DEVIATION, no safety/complaint flag; trip_id TRP-04013 matches on EV-TRIP, EV-GPS, EV-FARE; trip start 14:34:30 and end 15:03:54 equal first/last GPS fixes. No-show clauses (POL-NS-01..12 incl. amendments 0001 and 0003) do not apply to this category. 2. POL-RD-07: EV-GPS-04013 has 178 fixes at 10 s cadence, max gap 10 s, max step 155.7 m, all accuracy <=7.9 m: not impaired under (a)-(c); weight 1.0, so no POL-GEN-02 disclosure issue. 3. POL-RD-01: trace_distance_km 15.92 (my recomputation 15.91994) governs; trip_record.actual_distance_km 15.9 not cited. Optimal 11.2 (EV-TRIP, PLATFORM_ROUTER_AT_BOOKING). Excess = 15.92 - 11.2 = 4.72 km = 42.14% of optimal: >20% and >0.8 km, so a deviation is ESTABLISHED; <50% and <8.0 km, so not MATERIAL. 4. Exculpatory clauses (burden shifts under POL-RD-08 once (a) and (b) shown). POL-RD-04 / POL-RD-14: the driver's statement relies on MSG-04013-002 (rider, 14:33:40, before the trip started, specific place, waypoint_hint 1.3388,103.7781) - this meets POL-RD-04(a)-(c). But the trace never comes within 200 m of the waypoint: closest approach 3,058.9 m, at the pickup fix itself; the vehicle went south onto the AYE (max latitude on trace 1.3203 vs waypoint 1.3388), and the rider objected in MSG-04013-004 at 14:45:10. No road was named, so the 'travels the requested road' limb has nothing to test. Under POL-RD-14 the instruction did not cause the excess: POL-RD-04 does not apply, no distance is excluded, and this is NOT the POL-RD-10(7) contradiction (no partial corroboration). The ruling records that the instruction was found and the trace did not corroborate it. POL-RD-04 compensation limb: billed distance 15.92 = trace 15.92, no unbilled shortfall, so no DRIVER_COMPENSATION. POL-RD-03/POL-RD-13: EV-ADVIS-04013-01 is MISSING (weight 0.0); no party asserted a traffic cause or cited it, so POL-RD-03 is unavailable and POL-RD-10(5) is not engaged (POL-RD-13(1)). POL-RD-05: pickup_amended_at/dropoff_amended_at null - n/a. POL-RD-11: fare_model METERED, quoted_fare null - n/a. POL-RD-12: RYDE_X, solo_optimal null - n/a. 5. POL-RD-06: not engaged (deviation not material, evidence not balanced); in any case deviation_flags_90d 0 of 240 trips - no pattern, no referral. POL-RD-08 rider-profile limb: deviation_claims_60d 2 (<4) - not engaged. POL-GEN-01: the driver's 'this passenger always complain one, can check her record' appeals to history (prior_disputes_filed 9 / upheld 3 are CONTEXT ONLY) and is discarded. 6. POL-RD-02 (METERED, surge 1.0 read from EV-FARE-04013.surge_multiplier): recomputed_fare = (3.80 + 0.75 x 11.2 + 0.28 x 21) x 1.0 + 0.80 + 0.00 ERP on optimal route (optimal_route_erp_sgd 0.00) + 0 surcharge + 0 waiting - 0 promo = (3.80 + 8.40 + 5.88) + 0.80 = 18.88. charged_total = 24.66 (ledger reconciles: 3.80 + 11.94 + 8.12 + 0.80). refund = 24.66 - 18.88 = 5.78, rounded up to nearest 0.05 = 5.80. 5.78 is 23.4% of charged_total (<90%, so partial) and >= 0.50 (not de minimis). 7. POL-RD-09: no ERP gantries, tolls or airport surcharge billed - nothing to settle or itemise; no phantom line, so no billing-integrity referral; POL-RD-10(8) not engaged (every charge line maps to trace distance/time). 8. POL-RD-10: (1) confidence capped at 1.0 (deciding facts carried by EV-GPS, EV-TRIP, EV-FARE, EV-CHAT all weight 1.0), above 0.70; (2)-(8) none fires; refund 5.80 < charged_total and < 150. 9. Outcome: PARTIAL_REFUND of SGD 5.80 to the rider (less than the 8.00 requested; the refund is arithmetic, not the rider's figure). No referrals. POL-GEN-05: 5.80 does not exceed execution_threshold_sgd 8.00, so it executes automatically, subject to appeal under POL-GEN-04.",
+  "doubts": "(a) POL-RD-10(7) base text gives 'a chat_log detour request whose waypoint the gps_trace never approaches' as its escalation example - exactly these facts. Amendment 0002 (POL-RD-14) displaces that reading and governs at policy version 6; without it the alternative answer is ESCALATE under POL-RD-10(7). (b) The rider's request was a stop before going to Novena; one could argue the driver's departure from the booked route was in some attenuated sense 'in response to' the request (e.g. heading for Bukit Timah via another road), but the trace moves away from the waypoint immediately (closest approach at pickup), so no partial corroboration exists. (c) Difficulty: the driver's account (detour caused by the rider's request) is contradicted by the trace, which could be labelled REVERSAL under the given definition; I rate it HARD because the rider's own story is borne out and the difficulty lies in RD-14 vs RD-10(7). (d) Time: actual duration 29.4 min, billed 29 min; RD-02 uses booked optimal_duration_min 21 directly, so no ambiguity in the arithmetic."
+}

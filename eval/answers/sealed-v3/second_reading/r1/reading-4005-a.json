@@ -1,0 +1,53 @@
+{
+ "case_no": 4005,
+ "ruling": "DRIVER_COMPENSATION",
+ "amount_sgd": 4.8,
+ "driver_compensation_sgd": 4.8,
+ "referrals": [],
+ "governing_clauses": [
+  "POL-RD-04",
+  "POL-RD-11",
+  "POL-RD-01",
+  "POL-GEN-03"
+ ],
+ "difficulty_opinion": "EASY",
+ "deciding_facts": [
+  {
+   "evidence_id": "EV-FARE-04005",
+   "fact": "fare_model and billed distance",
+   "value": "UPFRONT_QUOTE; quoted_fare_sgd 22.25 = total_charged 22.25; distance_charged_km 14.20; no ERP lines; surge 1.0"
+  },
+  {
+   "evidence_id": "EV-GPS-04005",
+   "fact": "trace_distance_km (recomputed haversine R=6371.0088)",
+   "value": "20.570 km over 195 fixes; max interval 10 s, max step 216.7 m, accuracy 3-8 m (not impaired under POL-RD-07)"
+  },
+  {
+   "evidence_id": "EV-CHAT-04005",
+   "fact": "rider stop request with waypoint_hint",
+   "value": "MSG-04005-003 from RIDER at 15:59:50, 'stop at Northpoint first', waypoint_hint Northpoint City 1.4289,103.8357; driver 'ok can' 16:00:05"
+  },
+  {
+   "evidence_id": "EV-GPS-04005",
+   "fact": "corroboration of waypoint",
+   "value": "closest fix 55.0 m from waypoint_hint (fix 97, 16:16:26); 41 fixes within 200 m from 16:16:07 to 16:22:46; stationary ~16:16:26-16:22:36"
+  },
+  {
+   "evidence_id": "EV-GPS-04005",
+   "fact": "detour spur leaving/rejoining SLE corridor",
+   "value": "leaves at fix 68 (16:11:37, 1.4000,103.8335, cum 8.908 km), rejoins at fix 162 (16:27:15, same point, cum 15.258 km): spur 6.350 km"
+  },
+  {
+   "evidence_id": "EV-TRIP-04005",
+   "fact": "booked optimal",
+   "value": "optimal_distance_km 14.2, optimal_duration_min 25, route Woodlands Ave 2 - SLE - CTE - AMK Ave 3; no amendment; RYDE_X"
+  },
+  {
+   "evidence_id": "EV-ADVIS-04005-01",
+   "fact": "traffic advisory",
+   "value": "MISSING, weight 0.0; not cited by either party and not relied on"
+  }
+ ],
+ "reasoning": "1. Scope (POL-GEN-08(1)): ROUTE_DEVIATION, no safety/complaint flag, in scope. Filed by DRIVER, claiming SGD 6.00 for extra distance on a fixed upfront fare. 2. Integrity (POL-RD-10(2),(4), POL-RD-07): trip_id TRP-04005 matches on EV-TRIP, EV-GPS, EV-FARE; started_at 16:00:20 and ended_at 16:32:35 equal first/last fixes; timestamps ordered. Trace has 10 s cadence, max gap 10 s, max step 216.7 m - none of POL-RD-07(a)-(c) fires; all deciding artifacts weight 1.0 (POL-GEN-02 cap 1.0). 3. POL-RD-01: trace_distance_km 20.570 governs (not the rounded 20.6). Excess = 20.570 - 14.2 = 6.370 km = 44.86% of optimal; > 20% (2.84 km) and > 0.8 km, so a deviation is established as first measured; not MATERIAL (<50%, <8.0 km). 4. POL-RD-04: MSG-04005-003 is (a) from the RIDER, (b) sent 15:59:50, before trip start and well before the vehicle left the SLE corridor at 16:11:37, (c) names a specific place (Northpoint) with platform waypoint_hint 1.4289,103.8357. Corroboration: trace passes 55.0 m from the waypoint (<200 m) and dwells there ~6 min, consistent with MSG-04005-005/006 and the driver's '6 min'. The rider's counterparty statement also admits the request. The excess between leaving (fix 68) and rejoining (fix 162) the corridor is 6.350 km and is excluded; residual excess 6.370 - 6.350 = 0.020 km fails both POL-RD-01 tests, so no driver deviation survives. POL-RD-14 does not apply (the trace corroborates the instruction); POL-RD-10(7) does not apply (no contradiction). 5. POL-RD-11: fare_model UPFRONT_QUOTE, quoted 22.25 = charged 22.25; POL-RD-02 does not run; the detour loss falls on the driver and, being rider-requested, is compensated under POL-RD-04, not recovered from the rider beyond the quote. The rider's objection that the price was fixed is correct as to her own charge (it stands) but does not defeat the driver's platform-funded POL-RD-04 compensation. 6. POL-RD-04 compensation limb: fare_breakdown distance_charged_km 14.20 vs gps 20.570 -> shortfall 6.370 km > 1.0 km. 6.370 x 0.75 = 4.7775, rounded UP to nearest 0.05 = 4.80; below the 15.00 cap. The driver's asked 6.00 is a round figure with no policy basis; only the arithmetic figure is payable. (Restricting to the detour spur alone gives 6.350 x 0.75 = 4.7625 -> 4.80, the same.) No per-minute compensation exists for the wait. 7. POL-RD-09: no ERP/toll/surcharge lines; RD-09(3) rider-caused - no ERP issue; no billing-integrity referral. POL-RD-10(8): every charge line (base, distance 14.20, time 25, platform fee) has a counterpart in the trip_record quote. 8. POL-RD-03/RD-13: no traffic cause asserted; advisory MISSING (weight 0.0) is uncited and irrelevant; POL-RD-10(5) not engaged. POL-RD-05 (no amendment), POL-RD-12 (RYDE_X) n/a. POL-RD-06 not triggered (not material; deviation_flags_90d 0 anyway). POL-RD-08: the party asserting money owed (driver) cites EV-CHAT, EV-GPS, EV-FARE and POL-RD-04; burden met. POL-GEN-01: no profile field used. 9. POL-GEN-03: ruling DRIVER_COMPENSATION, driver_compensation_sgd 4.80 and amount_sgd 4.80 (same figure); rider's charge of 22.25 stands. POL-GEN-05: 4.80 <= 8.00 execution threshold, auto-executes subject to appeal under POL-GEN-04. No referrals. No-show amendments POL-NS-11/NS-12 are NO_SHOW_CHARGE clauses and do not apply.",
+ "doubts": "(1) Measure of 'unbilled kilometres': the limb compares billed distance with the whole gps_trace (6.370 km -> 4.80); restricting to the rider-requested spur (6.350 km -> 4.7625 -> 4.80) gives the same payable figure, so the ambiguity is immaterial here. Using the rounded trip_record 20.6 km would give 6.40 x 0.75 = 4.80 too. (2) A reader could treat the driver's SGD 6.00 as the contested amount and think of a PARTIAL outcome, but POL-GEN-03 gives DRIVER_COMPENSATION as the ruling value when the driver is owed money. (3) 'may be granted' in POL-RD-04 is permissive; I read it as granted where its arithmetic conditions are met on an uncontradicted, rider-admitted request. An alternative reading treating the fixed upfront fare as allocating the risk to the driver would give NO_ACTION, but POL-RD-11 expressly routes rider-requested detours on upfront trips to POL-RD-04 compensation."
+}

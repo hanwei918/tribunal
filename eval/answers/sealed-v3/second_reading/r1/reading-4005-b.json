@@ -1,0 +1,48 @@
+{
+ "case_no": 4005,
+ "ruling": "DRIVER_COMPENSATION",
+ "amount_sgd": 4.8,
+ "driver_compensation_sgd": 4.8,
+ "referrals": [],
+ "governing_clauses": [
+  "POL-RD-04",
+  "POL-RD-11",
+  "POL-RD-01",
+  "POL-GEN-03"
+ ],
+ "difficulty_opinion": "EASY",
+ "deciding_facts": [
+  {
+   "evidence_id": "EV-FARE-04005",
+   "fact": "fare_model and quoted fare; distance billed",
+   "value": "UPFRONT_QUOTE, quoted_fare_sgd 22.25 = total_charged; distance_charged_km 14.20; surge 1.0; no ERP, no waiting_time_fee"
+  },
+  {
+   "evidence_id": "EV-GPS-04005",
+   "fact": "trace distance pickup to dropoff (recomputed haversine R 6371.0088)",
+   "value": "20.5699 km (trace_distance_km 20.570); 195 fixes, max gap 10 s, max step 216.7 m, accuracy <= 8.0 m - not impaired under POL-RD-07"
+  },
+  {
+   "evidence_id": "EV-CHAT-04005",
+   "fact": "rider instruction to stop at a named place",
+   "value": "MSG-04005-003 from RIDER at 15:59:50, before trip start and before the vehicle left the corridor (16:11:37): 'stop at Northpoint first ... then go AMK'; waypoint_hint Northpoint City 1.4289,103.8357; driver agreed MSG-04005-004"
+  },
+  {
+   "evidence_id": "EV-GPS-04005",
+   "fact": "trace corroborates waypoint",
+   "value": "closest fix 55.0 m from waypoint_hint (<200 m), stationary there 16:16:26-16:22:26 (360 s); spur leaves/rejoins corridor at (1.4,103.8335) 16:11:37 / 16:27:15, spur length 6.35 km; trace minus spur 14.22 km vs optimal 14.2"
+  },
+  {
+   "evidence_id": "EV-TRIP-04005",
+   "fact": "booked optimal",
+   "value": "optimal_distance_km 14.2, optimal_duration_min 25; no amendments; RYDE_X (not pool)"
+  },
+  {
+   "evidence_id": "EV-ADVIS-04005-01",
+   "fact": "traffic advisory",
+   "value": "MISSING, weight 0.0; cited by no party, no traffic cause asserted - not deciding"
+  }
+ ],
+ "reasoning": "1. Scope/integrity: category ROUTE_DEVIATION is in scope (POL-GEN-08(1)); no safety/complaint flag. trip_id TRP-04005 matches on EV-TRIP, EV-GPS, EV-FARE; trip start/end equal first/last fix; no backward timestamps (POL-RD-10(2),(4) not fired). Trace clean under POL-RD-07: max gap 10 s (<90), max step 216.7 m (<500), cadence 10 s (<30). All deciding artifacts weight 1.0 (POL-GEN-02 cap 1.0).\n2. POL-RD-01 measurement: governing trace distance 20.570 km (my recompute 20.5699). Excess vs booked optimal 14.2 = 6.370 km = 44.86% (>20% i.e. >2.84 km, and >0.8 km): a deviation is measured; not MATERIAL as first measured (44.86% <50%, 6.37 <8.0), so POL-RD-06 is not engaged.\n3. POL-RD-04: MSG-04005-003 is (a) from the rider, (b) sent 15:59:50, before the vehicle left the optimal corridor at 16:11:37, (c) names Northpoint specifically; waypoint_hint 1.4289,103.8357. The trace passes 55.0 m from it and sits stationary there 360 s; the counterparty statement also admits the request. The spur between leaving and rejoining the corridor at (1.4,103.8335) is 6.35 km; excluded, residual excess 20.57-6.35-14.2 = 0.02 km, below the 0.8 km and 20% gates: no deviation against the driver survives. POL-RD-14 does not apply (instruction IS corroborated); POL-RD-10(7) not engaged (fully, not partly, corroborated and separable).\n4. POL-RD-11: fare_model UPFRONT_QUOTE, quoted 22.25 = charged 22.25 (3.80 + 0.75x14.20=10.65 + 0.28x25=7.00 + 0.80 = 22.25). Distance/time were fixed at booking; the rider owes nothing more and is not charged for the stop, consistent with the rider's statement. POL-RD-11 directs that a rider-requested detour on an upfront trip is compensated to the driver under POL-RD-04 instead.\n5. POL-RD-04 compensation limb: billed distance 14.20 km (EV-FARE distance_charged_km) vs trace 20.570 km -> shortfall 6.370 km (>1.0 km). 0.75 x 6.370 = 4.7775 -> rounded UP to nearest 0.05 = 4.80; under the 15.00 cap. (Computing on the detour spur alone, 0.75 x 6.35 = 4.7625 -> 4.80; same answer.) Driver asked 6.00; the policy figure is 4.80, so the claim is upheld in part at the arithmetic figure.\n6. Output per POL-GEN-03: ruling DRIVER_COMPENSATION, driver_compensation_sgd 4.80, amount_sgd mirrors 4.80; rider's charge stands (no refund to rider). Not a refund to the filing party.\n7. Clauses not applied: POL-RD-02 (METERED only; and no deviation survives); POL-RD-03 and POL-RD-13 (no traffic cause asserted; EV-ADVIS-04005-01 MISSING weight 0.0, cited by nobody, so POL-RD-10(5) not triggered); POL-RD-05 (no amendments); POL-RD-06 (not material; profile not consulted - DPROF/RPROF fields context only under POL-GEN-01); POL-RD-07 (not impaired); POL-RD-08 (rider not claimant; burden on driver as party asserting money owed is discharged by EV-FARE, EV-GPS, EV-CHAT); POL-RD-09 (no ERP/surcharge lines; (3) no ERP refund on rider-caused detour anyway); POL-RD-10 none of (1)-(8) fire; POL-RD-12 (RYDE_X). No-show clauses POL-NS-01..12 (incl. amendments NS-11, NS-12) do not apply to a ROUTE_DEVIATION dispute; NS-10(d) waiting fee concerns pre-boarding dwell and is not claimed. POL-GEN-05: 4.80 <= 8.00 execution threshold -> auto-executes, subject to appeal (POL-GEN-04). No referrals.",
+ "doubts": "(1) The driver also cites a 6-minute wait at Northpoint (360 s stationary on the trace). No route-deviation clause compensates mid-trip waiting at a rider-requested stop, and the driver's 6.00 is framed as distance; if a reviewer read the wait as compensable (e.g. by analogy to the waiting_time_fee) the figure could rise toward 6.00, but no clause licenses that, and constructing it would breach POL-GEN-07. (2) Shortfall basis: trace minus billed (6.370 km) vs detour spur only (6.35 km) - both round up to 4.80, so not outcome-relevant. (3) Funding source of the payment (platform vs rider) is not stated by POL-RD-04; POL-RD-11 says the rider is not charged more, so this is a driver payment, not a rider charge; the outcome value is unaffected."
+}

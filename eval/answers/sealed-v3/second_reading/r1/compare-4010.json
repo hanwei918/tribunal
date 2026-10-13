@@ -1,0 +1,55 @@
+{
+ "case_no": 4010,
+ "verdict": "AGREE",
+ "differences": [
+  {
+   "field": "ruling / amount_sgd / driver_compensation_sgd",
+   "key": "ESCALATE, null, null",
+   "reader_a": "ESCALATE, null, null",
+   "reader_b": "ESCALATE, null, null",
+   "resolution": "No difference. Verified independently: POL-RD-05 applies by its own terms because EV-TRIP-04010 shows dropoff_amended_at 2026-09-30T22:21:30+08:00 (original_dropoff Our Tampines Hub, dropoff Paya Lebar Quarter), and amended_optimal_distance_km / amended_optimal_duration_min are null (route_requote_failed 22:21:31). RD-05 then says the clause cannot be run, POL-RD-10(5) applies and no substitute figure may be derived; RD-10(5) lists exactly 'a POL-RD-05 amendment with amended_optimal_distance_km null'. ESCALATE is terminal with null money (POL-GEN-03, RD-10)."
+  },
+  {
+   "field": "referrals",
+   "key": [],
+   "reader_a": [],
+   "reader_b": [],
+   "resolution": "No difference. POL-RD-06: deviation_flags_90d 1 (< 3) and 1/300 = 0.0033 (< 0.05), no pattern, and no deviation is established anyway, so no RD-06(c) referral. POL-RD-09(4): erp_gantries empty, tolls_erp 0.00, airport_surcharge 0.00, so no billing-integrity referral."
+  },
+  {
+   "field": "governing_clauses",
+   "key": [
+    "POL-RD-05",
+    "POL-RD-10"
+   ],
+   "reader_a": [
+    "POL-RD-05",
+    "POL-RD-10",
+    "POL-GEN-03",
+    "POL-GEN-02"
+   ],
+   "reader_b": [
+    "POL-RD-05",
+    "POL-RD-10"
+   ],
+   "resolution": "Key right. POL-RD-05 is the clause whose own text routes the case to escalation, and POL-RD-10 (licenses ESCALATE) is the trigger that fires (limb 5). Reader A's extras are harmless: POL-GEN-03 is the vocabulary clause the brief says not to lean on, and POL-GEN-02 is narration only here (EV-TRIP-04010 at 0.75 is relied on for the null field itself; the escalation is RD-10(5), not a confidence cap). Neither is a missing deciding clause, and no clause in the key is inapplicable."
+  },
+  {
+   "field": "difficulty",
+   "key": "INDETERMINATE",
+   "reader_a": "INDETERMINATE",
+   "reader_b": "INDETERMINATE",
+   "resolution": "No difference. The deciding fact (the optimal route between the amended endpoints, against which RD-01 must be re-applied for the 9.982 km driven after the amendment) is not in the record, so the evidence cannot settle whether any deviation exists. Not REVERSAL: the driver's account (destination changed mid-trip while near Tampines; amendment point 1.519 km straight-line from Our Tampines Hub) and the rider's account (changed to PLQ; route then ran south through the Tampines/Bedok corridor near lng 103.936 before turning west along lat ~1.32) are both consistent with EV-TRIP-04010, EV-CHAT-04010 and EV-GPS-04010."
+  },
+  {
+   "field": "rationale",
+   "key": "ESCALATE under POL-RD-10(5) via POL-RD-05; amendment 22:21:30, MSG-04010-003, nulls, PARTIAL_RECORD 0.75, 16.200 km vs booked 9.8 km; resolving evidence = platform re-quote.",
+   "reader_a": "Same trigger and facts; adds pre/post split 6.219 / 9.982 km and straight-line 7.548 km.",
+   "reader_b": "Same trigger and facts; adds the same split and straight-line distances.",
+   "resolution": "Every number, evidence id and clause id in the key's rationale checks out: dropoff_amended_at 22:21:30; original_dropoff Our Tampines Hub; dropoff Paya Lebar Quarter; MSG-04010-003 (rider, 22:21:05) on EV-CHAT-04010; amended_optimal_distance_km and amended_optimal_duration_min null with event route_requote_failed; EV-TRIP-04010 IMPAIRED PARTIAL_RECORD 0.75; EV-GPS-04010 haversine (R 6371.0088) over 165 fixes = 16.200291 -> 16.200 km, written 16.2; booked optimal_distance_km 9.8. The RD-05 and RD-10(5) paraphrases match the clause text. The readers' extra measurements are correct but optional; not a reason to change the key."
+  }
+ ],
+ "analysis": "Independent check against the version-6 text. Scope: ROUTE_DEVIATION, safety_flag and complaint_flag absent, no damage/cleaning/violence/harassment/discrimination allegation, so POL-GEN-08(1) does not route it. Integrity: trip_id TRP-04010 matches on EV-TRIP-04010, EV-GPS-04010 and EV-FARE-04010 (RD-10(2) not engaged); trip_record started_at/ended_at equal the first/last fix 22:13:20 / 22:40:32 and no artifact runs backwards (RD-10(4) not engaged). EV-GPS-04010: 165 fixes, max interval 10 s, max consecutive step 166.7 m, max implied speed 60.0 km/h, so the trace is not impaired under POL-RD-07(a)-(c) and RD-10(3) does not arise; recomputed length 16.200 km. EV-FARE-04010 reconciles with Decimal: 3.80 + 12.15 (0.75 x 16.20) + 7.56 (0.28 x 27) + 0.80 = 24.31; METERED, surge 1.0, no ERP, no airport surcharge; every line has a counterpart (RD-10(8) not engaged); billed 16.20 km equals the trace, so no RD-04 unbilled-km limb. Deciding point: EV-TRIP-04010 records a rider-initiated dropoff amendment at 22:21:30 (events destination_changed; EV-CHAT-04010 MSG-04010-003 and SYSTEM MSG-04010-004), so POL-RD-05 requires POL-RD-01 to be re-applied against amended_optimal_distance_km. That field and its duration are null (route_requote_failed 22:21:31). POL-RD-05: 'this clause cannot be run and POL-RD-10(5) applies; the Judge must not derive a substitute figure.' RD-10(5) gives this exact fact pattern as its example. RD-05 is triggered by the trip_record itself, not by which party cites it, so the alternative path of discarding the driver's uncited assertion and measuring against the booked 9.8 km (excess 6.400 km, 65.31 %; careless RD-02 gives 24.31 - 16.15 = 8.16 -> 8.20) is foreclosed by RD-01, whose optimal is the RD-05 adjusted figure where RD-05 applies. POL-RD-13(1) narrows RD-10(5) only for uncited traffic assertions and does not reach RD-05. Measurements that cannot substitute for the re-quote: 6.219 km before 22:21:30 (never excess against the driver under RD-05) and 9.982 km after; amendment point (1.366657, 103.939921) is 7.548 km straight-line from PLQ (ratio 1.322), so whether the post-amendment leg exceeds an amended optimal by > 20 % and > 0.8 km depends on the missing figure. No other clause rescues the case: RD-03/RD-13 (no traffic cause asserted; EV-ADVIS-04010-01 MISSING and uncited), RD-04 (destination change is RD-05's case; waypoint_hint null, no road named), RD-14 (no uncorroborated detour; the car reached PLQ), RD-11/RD-12 (METERED, RYDE_X), RD-07 (trace clean), POL-GEN-07 (a clause does name the outcome). POL-NS-01 to POL-NS-12 belong to NO_SHOW_CHARGE and do not apply. Ruling ESCALATE, amounts null, referrals [], governing clauses POL-RD-05 and POL-RD-10, difficulty INDETERMINATE: the key is right on every point. Side note, not a defect: the platform's 5.15 deduction does not match any RD-02 figure on the record (booked-optimal recompute would be 8.20); both readers noticed it, it is context for the reviewer and does not support any other ruling, so no case change is warranted. Format: check_set.py over out/cases with the key reports 30 cases, 0 failures.",
+ "corrected_ground_truth": null,
+ "case_fix_instructions": null
+}

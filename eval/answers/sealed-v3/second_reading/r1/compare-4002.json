@@ -1,0 +1,60 @@
+{
+ "case_no": 4002,
+ "verdict": "AGREE",
+ "differences": [
+  {
+   "field": "ruling / amount_sgd / driver_compensation_sgd / referrals",
+   "key": "PARTIAL_REFUND, 6.15, null, []",
+   "reader_a": "PARTIAL_REFUND, 6.15, null, []",
+   "reader_b": "PARTIAL_REFUND, 6.15, null, []",
+   "resolution": "No difference. Both readers match the key to the cent. Independently recomputed with Decimal (tmp/c4002_money.py): excess 22.4 - 13.0 = 9.4 km (72.31 %); POL-RD-03 cap 1.30 x (15.2 - 13.0) + 1.00 = 3.860, justified min(9.4, 3.860) = 3.860; adjusted optimal 16.860 km; duration 17 x 16.86 / 13.0 = 22.0477 -> 22.0 (amended_optimal_duration_min null); recomputed (3.80 + 12.645 + 6.16) x 1.0 + 0.80 = 23.405; charged 29.52; refund 6.115 -> up to 6.15 (>= 0.50, 20.83 % of charged < 90 %, < 12.00 contested). Referrals: POL-RD-06 not reached (remaining excess not material; deviation_flags_90d 0 of 310 anyway), POL-RD-09(4) has no line to correct (erp_gantries [], airport_surcharge 0.00)."
+  },
+  {
+   "field": "governing_clauses",
+   "key": [
+    "POL-RD-03",
+    "POL-RD-01",
+    "POL-RD-02"
+   ],
+   "reader_a": [
+    "POL-RD-01",
+    "POL-RD-03",
+    "POL-RD-02",
+    "POL-RD-08",
+    "POL-RD-09",
+    "POL-GEN-03"
+   ],
+   "reader_b": [
+    "POL-RD-01",
+    "POL-RD-03",
+    "POL-RD-02",
+    "POL-RD-08"
+   ],
+   "resolution": "Key right. Each of its three clauses applies and licenses PARTIAL_REFUND: POL-RD-01 establishes the deviation (first measured and again on the adjusted optimal, 5.540 km = 32.86 % > 20 % and > 0.8 km) and fixes non-materiality; POL-RD-03 supplies the capped exoneration and the adjusted optimal distance and duration; POL-RD-02 fixes the amount. Both readers list all three. Their extras are harmless context: POL-RD-08 is the burden-shifting step, POL-RD-09 has nothing to settle (no ERP lines), POL-GEN-03 is the vocabulary clause. No clause is missing from the key and none listed is inapplicable."
+  },
+  {
+   "field": "difficulty",
+   "key": "HARD",
+   "reader_a": "HARD",
+   "reader_b": "HARD",
+   "resolution": "No difference. Neither party's factual story is contradicted: the rider's 22 km and 29.52 are true (trace 22.4002 km, ledger 29.52) and the driver's closure is real (EV-ADVIS-04002-01 COMPLETE). The difficulty is the capped exoneration, the duration scaling and the rounding, which is HARD, not REVERSAL; nothing is indeterminate."
+  },
+  {
+   "field": "rationale",
+   "key": "numbers, evidence ids and clause ids as written in the key",
+   "reader_a": "same figures (22.400/22.4002, 9.4, 3.86, 16.86, 22.0, 5.54, 32.86 %, 23.405, 6.115, 6.15)",
+   "reader_b": "same figures",
+   "resolution": "Every number in the key rationale checks: 22.400 (recomputed haversine R 6371.0088 = 22.40021 km over 177 fixes), 13.0, 9.400, 15.2, 3.860, 16.86, 22.0, 5.540, 32.86 %, 852.8 m (nearest fix to the closed segment geometry is the dropoff fix, 852.77 m; nearest fix to the segment start 2.158 km), 00:40:30, 23:30-05:00, 3.80 + 12.645 + 6.16 + 0.80 = 23.405, 29.52, 6.115 -> 6.15, 12.00. Evidence ids (EV-GPS-04002, EV-TRIP-04002, EV-ADVIS-04002-01, EV-FARE-04002) and clause ids (POL-RD-03, POL-RD-01, POL-RD-02, POL-RD-09) are correct. 'stays 852.8 m from it' means the closest approach; a wording preference, not an error. Length 987 characters."
+  },
+  {
+   "field": "reader doubts (no reader departed from the key)",
+   "key": "POL-RD-03(c) satisfied; POL-RD-03 available on the advisory in the bundle",
+   "reader_a": "doubt (4): the trace rejoins the booked corridor only at Outram Rd near the dropoff; resolved as satisfying limb (c). doubt (1): unrounded duration gives 6.1016 -> 6.15, no effect.",
+   "reader_b": "doubt (1): same rejoin point; resolved as satisfying limb (c). doubt (2): driver's statement cites no evidence id, strict POL-RD-08 could deny POL-RD-03 (would give 10.45); not adopted.",
+   "resolution": "Both doubts settled for the key on the text. (c): the optimal corridor after the closed segment is Chin Swee Rd exit -> Outram Rd -> dropoff; the trace reaches that corridor at the dropoff, which lies after the segment, having left the CTE about 00:47 near (1.3323, 103.8534), 2.16 km before the segment start. POL-RD-03 measures the alternative as 'the TOTAL length of that alternative route between the booked endpoints', so the clause itself contemplates alternatives that meet the booked route only at its endpoints; refusing exoneration because the detour converges at the destination would defeat the clause while its cap already polices detour length. Driver citation: POL-RD-13 provides that an asserted external traffic cause 'is tested against the traffic_advisory for this trip and nothing else', and makes POL-RD-03 unavailable only where no advisory covering the trip window is in the bundle; here EV-ADVIS-04002-01 is COMPLETE, names the closure the driver describes and covers the window, so the assertion is tested against it and POL-RD-03 runs on its objective limbs (a)-(c). The evidence-id citation rule of POL-RD-08 binds the advocates' claims in the debate (the driver's advocate cites EV-ADVIS-04002-01), not the lay party statement. Neither alternative (10.45 or NO_ACTION) is a defensible reading of the version-6 text, so no CASE_FIX."
+  }
+ ],
+ "analysis": "Read case-04002.json in full, the 4002 key record, both readings, all version-6 policy text (general.json, route_deviation.json, no_show.json, amendments 0001/0002/0003) and the blueprint entry. Both readers match the key on ruling, amount, compensation, referrals and difficulty; their governing-clause lists contain all three key clauses plus harmless extras. Independent checks: trace 177 fixes, intervals 9-10 s, largest step 177.9 m, so POL-RD-07(a)-(c) do not fire and every deciding artifact is COMPLETE at 1.0 (POL-GEN-02 cap 1.0, POL-RD-10(1) not engaged). POL-RD-01: 22.4 - 13.0 = 9.4 km, 72.3 %, established. POL-RD-03: (a) the CLOSURE advisory names CTE (towards AYE) Bukit Timah Rd entrance to Chin Swee Rd exit, which the route_planned event says the booked route uses; (b) valid 2026-09-05 23:30 to 2026-09-06 05:00, issued 09-03, and the booked route would reach the tunnel about 00:48-00:50, so overlap is certain with or without the 15-min buffers; (c) the trace leaves the CTE before the segment and never comes within 852.8 m of it, reaching the corridor after the segment at the dropoff. Cap 3.860 km bites (measured 9.4); adjusted optimal 16.86 km / 22.0 min. Remaining excess 5.540 km (32.86 % of 16.86; 42.6 % of 13.0; < 8.0 km): still established, not material, POL-RD-06 not required. POL-RD-02 METERED, surge 1.0 from EV-FARE-04002, on-route ERP 0.00, no surcharge, waiting 0, promo 0: recomputed 23.405, refund 6.115 -> 6.15 PARTIAL_REFUND of 12.00 contested. POL-RD-09: no ERP or surcharge lines. POL-RD-04/14: chat holds only two pickup messages, no instruction, waypoint_hint null. POL-RD-05/11/12/13: not engaged. POL-RD-10: no trigger (6.15 < 150 and < 29.52; all lines matched). POL-GEN-05: 6.15 <= 8.00 executes automatically. Key stands as written.",
+ "corrected_ground_truth": null,
+ "case_fix_instructions": null
+}

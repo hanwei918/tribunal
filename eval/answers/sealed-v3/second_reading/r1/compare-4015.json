@@ -1,0 +1,58 @@
+{
+  "case_no": 4015,
+  "verdict": "AGREE",
+  "differences": [
+    {
+      "field": "ruling / amount_sgd / driver_compensation_sgd / referrals",
+      "key": "PARTIAL_REFUND, 15.75, null, []",
+      "reader_a": "PARTIAL_REFUND, 15.75, null, []",
+      "reader_b": "PARTIAL_REFUND, 15.75, null, []",
+      "resolution": "No difference. All three agree to the cent; verified independently (see analysis)."
+    },
+    {
+      "field": "governing_clauses",
+      "key": [
+        "POL-RD-02",
+        "POL-RD-09",
+        "POL-RD-06",
+        "POL-RD-13",
+        "POL-RD-01",
+        "POL-GEN-01"
+      ],
+      "reader_a": [
+        "POL-RD-01",
+        "POL-RD-02",
+        "POL-RD-08",
+        "POL-RD-09",
+        "POL-RD-13"
+      ],
+      "reader_b": [
+        "POL-RD-01",
+        "POL-RD-02",
+        "POL-RD-13",
+        "POL-RD-08",
+        "POL-RD-09",
+        "POL-RD-06",
+        "POL-GEN-01"
+      ],
+      "resolution": "Key right. POL-RD-01 establishes the deviation and licenses PARTIAL_REFUND; POL-RD-02 fixes the amount and licenses PARTIAL_REFUND; POL-RD-13 decides that the uncited accident excuse is discarded, that POL-RD-10(5) is not engaged and that POL-RD-02 runs against the booked optimal (licenses PARTIAL_REFUND); POL-RD-09(1) applies because off-route ERP exists and must not be added on top. POL-RD-06 applies: its rule says the driver_profile is consulted whenever POL-RD-01 records a MATERIAL deviation, and 55.40 % > 50 % is material, so the check is mandatory even though it finds no pattern; POL-GEN-01 governs that read (lifetime prior_deviation_flags 7 is context only, and misreading it is the live uplift trap). Reader A's omission of POL-RD-06 and POL-GEN-01 is the reader's error, not the key's - both clauses do apply. Both readers' extra POL-RD-08 is a harmless addition (it licenses PARTIAL_REFUND and is the burden rule POL-RD-13 refers to), but POL-RD-13 already states the consequence that decides the case, so its absence from the key is not an error. No clause in the key fails to apply."
+    },
+    {
+      "field": "difficulty",
+      "key": "HARD",
+      "reader_a": "EASY",
+      "reader_b": "EASY",
+      "resolution": "Key right. Neither REVERSAL nor INDETERMINATE fits: the trace corroborates the filing rider (CTE then PIE, about 2.79 km beyond the dropoff and back), and the driver's excuse is discarded as uncited rather than contradicted (POL-RD-13(1) itself calls an uncited missing advisory a gap in the bundle, not a contradiction); the ruling is not ESCALATE. Between EASY and HARD the case carries several outcome-changing steps, each of which a reader can get wrong: (i) the POL-RD-10(5) vs POL-RD-13 tension over a closure asserted with no traffic_advisory (both readers recorded it as their main doubt; misread, it escalates with no money); (ii) materiality rests on the percentage limb only (7.701 km < 8.0 km) and then requires the POL-RD-06 check, where the lifetime prior_deviation_flags 7 would, if misused as the 90-day counter, produce a FULL_REFUND uplift; (iii) surge must be read from the fare breakdown (ignoring it gives 21.90); (iv) the 3.50 off-route ERP must not be added on top (19.25). Readers who solved it correctly calling it easy is an opinion, not a policy error; HARD is a correct label for a multi-clause case with an amendment-resolved conflict and several live traps."
+    },
+    {
+      "field": "rationale",
+      "key": "numbers 21.601, 13.9, 7.701, 55.40 %, deviation_flags_90d 1, completed_trips_90d 412, prior_deviation_flags 7, surge 1.3, on-route ERP 0.00, (3.80 + 10.425 + 6.16) x 1.3 + 0.80 = 27.3005, 43.04, 15.7395 -> 15.75, gantries 2.00 and 1.50, 18.00, 8.00; ids EV-GPS-04015, EV-TRIP-04015, EV-DPROF-04015, EV-ADVIS-04015-01, EV-FARE-04015; clauses POL-RD-01, POL-RD-06, POL-GEN-01, POL-RD-13(1)-(2), POL-RD-10(5), POL-RD-02, POL-RD-09(1), POL-GEN-05",
+      "reader_a": "same figures and ids (recomputed trace 21.6008; 1/412 = 0.0024)",
+      "reader_b": "same figures and ids (recomputed trace 21.6008; 15.7395/43.04 = 36.6 %)",
+      "resolution": "Every number, evidence id and clause id in the key rationale checks out against the case file and the version-6 text (see analysis). 997 characters, ASCII. No factual error."
+    }
+  ],
+  "analysis": "Independent check from the version-6 text, arithmetic in Decimal and geometry with check_set's haversine (R 6371.0088 km) in tmp/verify4015.py. (1) Scope: ROUTE_DEVIATION, no safety_flag or complaint_flag, no POL-GEN-08(1) allegation; the NO_SHOW clauses, POL-NS-11 and POL-NS-12 do not apply; POL-RD-14 needs a rider instruction and EV-CHAT-04015 holds only two pickup-coordination messages with waypoint_hint null, so POL-RD-04/POL-RD-14 have nothing to act on. POL-RD-05 (no amendment fields), POL-RD-11 (METERED, quoted_fare_sgd null) and POL-RD-12 (RYDE_PLUS) do not apply. (2) Same trip (POL-RD-08(a)): TRP-04015 on trip record, trace and fare; first fix 18:41:30 = started_at and lies 0 m from the pickup pin; last fix 19:16:40 = ended_at = fare charged_at and lies 0 m from the dropoff pin. (3) POL-RD-07: 212 fixes, every interval exactly 10 s, largest step 133.4 m, highest implied speed 48.0 km/h, accuracy 3.0-7.9 m - no limb (a)-(c) met; trace weight 1.0. (4) POL-RD-01: recomputed trace length 21.60082 km, written 21.601; excess 21.601 - 13.9 = 7.701 km = 55.4029 % of optimal; > 20 % (2.78 km) and > 0.8 km so ESTABLISHED; > 50 % so MATERIAL (absolute 7.701 < 8.0). Not knife-edge: even the forbidden 21.6 copy gives 7.7 km = 55.40 %. (5) POL-RD-13: the driver asserts an accident near Marine Parade (an incident, so within RD-13's 'external traffic cause'); the counterparty statement names no evidence id; EV-ADVIS-04015-01 is MISSING, weight 0.0. RD-03 is unavailable, the assertion carries no weight (POL-RD-08), RD-13(1) takes the case outside POL-RD-10(5), and RD-13(2) applies because the rider's excess stands on an unimpaired trace: the deviation stands at the measured figure and RD-02 runs on the booked optimal. Both readers raised whether the minted id in dispute.evidence_ids counts as the driver 'citing' it; RD-13(1) turns on whether the asserting party names the id, the driver's statement names none, and RD-13's notes describe exactly this pattern (an identifier minted so its absence can be cited, with an uncited driver traffic excuse) as settled by an ordinary RD-02 refund. Not a genuine second answer, so no case fix. (6) POL-RD-06 (material): deviation_flags_90d 1 (< 3), 1/412 = 0.00243 (< 0.05, completed_trips_90d >= 40): no pattern, no uplift, no referral; prior_deviation_flags 7 is lifetime and barred by RD-06 and POL-GEN-01. (7) POL-RD-02 (METERED): surge_multiplier 1.3 from EV-FARE-04015; on-route ERP 0.00 (trip_record.optimal_route_erp_sgd and the route_planned event); airport 0.00, waiting 0.00, promo 0.00. recomputed = (3.80 + 0.75 x 13.9 + 0.28 x 22) x 1.3 + 0.80 = 20.385 x 1.3 + 0.80 = 27.3005. Fare lines reconcile: 3.80 + 16.20 + 9.80 + 8.94 + 3.50 + 0.80 = 43.04 = total_charged. refund = 43.04 - 27.3005 = 15.7395 -> rounded UP to 0.05 = 15.75. >= 0.50 (not de minimis); 15.7395/43.04 = 36.57 % < 90 % (38.736) so PARTIAL not FULL; 15.75 < 18.00 contested and < 150 and < charged_total, so POL-RD-10(6) not engaged. (8) POL-RD-09: ERP-G-051 (2.00) nearest fix 24.4 m at 18:49:30 and ERP-G-034 (1.50) nearest fix 23.8 m at 18:55:30, each with 4 fixes inside 250 m and the nearest fix at the charged_at second: both crossed, no phantom line, no RD-09(4) refund or referral, no RD-10(8). Both lie off the optimal route (on-route ERP 0.00), so under RD-09(1) the 3.50 is already comprehended in 15.75 and is not added. (9) POL-RD-10: no trigger. (1) deciding artifacts EV-GPS-04015, EV-TRIP-04015, EV-FARE-04015 and EV-DPROF-04015 all weight 1.0; EV-RPROF-04015 (STALE_SNAPSHOT 0.75) decides nothing because deviation_claims_60d is 0 and the excess is above 30 %; (2) ids match; (3) trace clean; (4) no timestamp disagreement; (5) not engaged per RD-13(1); (6)-(8) not engaged as above. (10) POL-GEN-03/05: PARTIAL_REFUND, amount_sgd 15.75, driver_compensation_sgd null, referrals []; 15.75 > 8.00 so execution is held for human release, which is procedural and not an escalation. Result: ruling, amount, compensation, referrals, governing clauses, difficulty and every figure, id and clause in the rationale are correct. Reader differences are on governing-clause selection (reader A omits two applicable clauses; both add a harmless POL-RD-08) and on a difficulty opinion; neither shows a key error, and the case file supports only the key's answer.",
+  "corrected_ground_truth": null,
+  "case_fix_instructions": null
+}

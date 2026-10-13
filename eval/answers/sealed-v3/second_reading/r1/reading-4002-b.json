@@ -1,0 +1,48 @@
+{
+ "case_no": 4002,
+ "ruling": "PARTIAL_REFUND",
+ "amount_sgd": 6.15,
+ "driver_compensation_sgd": null,
+ "referrals": [],
+ "governing_clauses": [
+  "POL-RD-01",
+  "POL-RD-03",
+  "POL-RD-02",
+  "POL-RD-08"
+ ],
+ "difficulty_opinion": "HARD",
+ "deciding_facts": [
+  {
+   "evidence_id": "EV-GPS-04002",
+   "fact": "gps_trace.trace_distance_km (governing actual distance under POL-RD-01); recomputed by haversine R=6371.0088 over 177 fixes = 22.4002 km",
+   "value": 22.4
+  },
+  {
+   "evidence_id": "EV-GPS-04002",
+   "fact": "trace integrity under POL-RD-07: max interval / max straight-line step between consecutive fixes",
+   "value": "10 s / 177.9 m - not impaired (limbs a-c all fail)"
+  },
+  {
+   "evidence_id": "EV-TRIP-04002",
+   "fact": "booked optimal distance / duration (PLATFORM_ROUTER_AT_BOOKING), route CTE southbound through the city tunnel to Chin Swee Rd exit, ERP 0.00",
+   "value": "13.0 km / 17 min"
+  },
+  {
+   "evidence_id": "EV-ADVIS-04002-01",
+   "fact": "LTA CLOSURE of CTE city tunnel (Bukit Timah Rd entrance to Chin Swee Rd exit), valid 2026-09-05 23:30 to 2026-09-06 05:00, issued 2026-09-03 (before trip); shortest_lawful_alternative_km",
+   "value": 15.2
+  },
+  {
+   "evidence_id": "EV-GPS-04002",
+   "fact": "vehicle left the CTE at ~1.3328,103.8545 (00:46:50) before the closure start point; nearest fix to closure start 2.16 km; route PIE west -> south -> AYE east, never enters closed segment; converges with booked route only on Outram Rd at dropoff (closure end point 0.85 km from dropoff)",
+   "value": "leaves before / rejoins after closed segment"
+  },
+  {
+   "evidence_id": "EV-FARE-04002",
+   "fact": "fare_model METERED, surge_multiplier 1.0, total_charged, no ERP/airport/waiting/promo lines",
+   "value": 29.52
+  }
+ ],
+ "reasoning": "1. Scope/category: ROUTE_DEVIATION, rider-filed, no safety/complaint flag - in scope under POL-GEN-08(1). No-show clauses (POL-NS-01..12, incl. amendments POL-NS-11/12) do not apply to this category. POL-RD-14 (amendment) does not apply: the chat log (EV-CHAT-04002) has only a pickup arrival message and 'ok coming down', no rider route instruction; POL-RD-04 likewise unavailable (no instruction, waypoint_hint null) and its driver-compensation limb does not arise (billed 22.40 km = trace 22.40 km, no shortfall). POL-RD-05 n/a (no amendment timestamps). POL-RD-12 n/a (RYDE_X). POL-RD-11 n/a (METERED, quoted_fare null). POL-RD-13 n/a (an advisory covering the trip window is on file).\n2. Same trip (POL-RD-08(a)/POL-RD-10(2),(4)): trip_id TRP-04002 on trip record, trace and fare; started_at/ended_at equal first/last fix to the second; first and last fix coincide with pickup and dropoff pins (0 m). No escalation trigger.\n3. Trace integrity (POL-RD-07): 177 fixes, max interval 10 s, max step 177.9 m, no gaps - not impaired; all artifacts weight 1.0 (POL-GEN-02 cap 1.0).\n4. POL-RD-01 first measurement: actual = gps_trace.trace_distance_km 22.4 (recomputed 22.4002); booked optimal 13.0; excess 9.4 km (72.3%) > 20% (2.6) and > 0.8 km -> deviation established on the raw figures; rider's initial burden under POL-RD-08 met (rider_profile.deviation_claims_60d = 1 < 4, so no extra corroboration needed).\n5. Burden shifts; closure defence under POL-RD-03 tested against EV-ADVIS-04002-01 (the driver's statement refers to the LTA notice and the advisory is in the bundle): (a) advisory names the CTE city tunnel between the Bukit Timah Rd entrance and Chin Swee Rd exit, which the booked route (EV-TRIP-04002 route_planned event: 'CTE southbound through the city tunnel, Chin Swee Rd exit') traverses; (b) validity 23:30 on 09-05 to 05:00 on 09-06 covers the whole trip 00:40:30-01:09:49, issued 09-03 before the trip; (c) the trace leaves the CTE at ~00:46:50 near the PIE interchange (north of the closure start at 1.3095,103.8453, nearest fix 2.16 km), runs PIE west, south, then AYE east, never enters the closed segment, and comes back to the booked corridor only on Outram Rd at the destination, after the closed segment (which ends 0.85 km from the dropoff). Exoneration applies but is capped: justified = min(9.4, 1.30 x (15.2 - 13.0) + 1.00) = min(9.4, 3.86) = 3.86 km. Closure-adjusted optimal = 13.0 + 3.86 = 16.86 km; duration = 17 x 16.86/13.0 = 22.0477 -> 22.0 min (amended_optimal_duration_min null).\n6. POL-RD-01 re-run on adjusted optimal: remaining excess 22.4 - 16.86 = 5.54 km > 20% of 16.86 (3.372) and > 0.8 km -> deviation established for the uncapped part. Materiality on remaining excess: 5.54 < 50% of 16.86 (8.43) and < 8.0 km -> NOT material (also < 50% of booked 13.0 = 6.5). POL-RD-06 therefore not triggered; in any case driver_profile.deviation_flags_90d = 0 (0/310), no pattern, no uplift, no referral. Driver prior_deviation_flags (1, lifetime) and other context fields not used (POL-GEN-01).\n7. POL-RD-02 against the closure-adjusted optimal, surge 1.0 read from EV-FARE-04002: recomputed_fare = (3.80 + 0.75 x 16.86 + 0.28 x 22.0) x 1.0 + 0.80 + 0.00 ERP + 0 surcharge + 0 waiting - 0 promo = 3.80 + 12.645 + 6.16 + 0.80 = 23.405. charged_total = 29.52 (ledger reconciles: 3.80 + 16.80 + 8.12 + 0.80). Refund = 29.52 - 23.405 = 6.115 -> rounded up to 0.05 = 6.15. Above de minimis 0.50; 20.7% of charged, below 90% -> PARTIAL_REFUND. Within amount_contested 12.00.\n8. POL-RD-09: no ERP lines, no airport surcharge; nothing under limbs (2) or (4); no billing-integrity referral. POL-RD-10: confidence high (all deciding artifacts weight 1.0), refund < 150 and < charged_total, every charge line matched, no contradiction -> no escalation.\n9. POL-GEN-05: monetary effect 6.15 <= execution_threshold 8.00 -> executes automatically, provisional and appealable under POL-GEN-04.\nResult: PARTIAL_REFUND SGD 6.15 to the rider; the rider's claim (22 km, 29.52) is true but the closure excuses 3.86 km of the 9.4 km excess; the rider's requested 12.00 is not supported in full.",
+ "doubts": "(1) POL-RD-03(c) 'rejoins it after': the trace converges with the booked corridor only on Outram Rd at the destination (approaching from the west, while the booked route arrives from the Chin Swee exit to the north-east). I treat convergence at Outram Rd after the closed segment as rejoining. If a reader held that the route never rejoined the optimal corridor, POL-RD-03 would be unavailable and POL-RD-02 would run on the booked 13.0 km / 17 min: recomputed 19.11, refund 10.41 -> PARTIAL_REFUND 10.45 (excess 9.4 km would then be MATERIAL, >50% and >8.0 km; POL-RD-06 still finds no pattern, deviation_flags_90d 0, so no uplift/referral; 10.45 > 8.00 would be held for human release under POL-GEN-05). (2) The driver's statement cites no evidence ID; strict reading of POL-RD-08 could say his burden is undischarged, but the advisory is in the bundle and identifies itself; same doubt would give 10.45. (3) Whether the POL-RD-01 20% test after adjustment uses the adjusted (3.372) or booked (2.6) optimal - immaterial here, both pass; materiality also fails under either base."
+}

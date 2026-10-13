@@ -1,0 +1,61 @@
+{
+ "case_no": 4014,
+ "verdict": "AGREE",
+ "differences": [
+  {
+   "field": "ruling / amount_sgd / driver_compensation_sgd / referrals",
+   "key": "ESCALATE, null, null, []",
+   "reader_a": "ESCALATE, null, null, []",
+   "reader_b": "ESCALATE, null, null, []",
+   "resolution": "No difference. All three agree; verified independently in the analysis."
+  },
+  {
+   "field": "difficulty",
+   "key": "INDETERMINATE",
+   "reader_a": "HARD",
+   "reader_b": "INDETERMINATE",
+   "resolution": "Key right; reader A's label is the reader's error. HARD on an ESCALATE is reserved for an escalation the policy demands although the facts are clear. Here the deciding fact - whether an incident on the booked PIE-near-Kallang segment existed in the window, and the shortest_lawful_alternative_km that fixes the POL-RD-03 cap - is carried only by EV-ADVIS-04014-01, which is MISSING (weight 0.0, payload null). Its admissibility note records only that no payload was retrieved, not that no advisory was issued. The outcome genuinely turns on it: with no qualifying advisory the 6.05 stays with the rider (POL-RD-02 figure equals refund_issued_sgd); with a qualifying one POL-RD-03 limb (c) is not excluded by the trace (the trace leaves the booked corridor before the PIE, never comes within about 2.4 km of the Kallang stretch, and returns to the booked approach to Bishan St 22), so some or all of 6.05 would return to the driver under min(5.080, 1.30 x (alt - 12.8) + 1.00). That is an evidence-cannot-settle escalation: INDETERMINATE. No party's story is contradicted by the record (not REVERSAL)."
+  },
+  {
+   "field": "governing_clauses",
+   "key": [
+    "POL-RD-10",
+    "POL-RD-13"
+   ],
+   "reader_a": [
+    "POL-RD-10",
+    "POL-RD-13",
+    "POL-RD-03",
+    "POL-RD-01",
+    "POL-GEN-02",
+    "POL-GEN-03"
+   ],
+   "reader_b": [
+    "POL-RD-10",
+    "POL-RD-13",
+    "POL-RD-03",
+    "POL-RD-01",
+    "POL-GEN-02",
+    "POL-GEN-03"
+   ],
+   "resolution": "Key right. POL-RD-10 licenses ESCALATE and its limb (5) is the trigger; POL-RD-13 is the clause that decides whether limb (5) or the RD-13(2) refund path governs, and its limb (1) carve-out ('that case still escalates' where the party cites the missing identifier) is what fixes the outcome. Both apply and neither is inapplicable. The readers' extras (POL-RD-03 as the invoked clause, POL-RD-01 for the establishment step, POL-GEN-02 for the weight-0.0 artifact, POL-GEN-03 for ESCALATE semantics) are relevant context and harmless; the brief says not to lean on POL-GEN-03, and adding them to the key is not required. No change."
+  },
+  {
+   "field": "rationale",
+   "key": "numbers 17.880 km, 12.8, 5.080 km, 39.69 %, weight 0.0, 6.05; ids EV-GPS-04014, EV-TRIP-04014, EV-ADVIS-04014-01; clauses POL-RD-10(5), POL-RD-03, POL-RD-13",
+   "reader_a": "same figures (17.8803 recomputed, 5.08 km, 39.69 %), plus RD-02 recomputation 19.52 / 6.05",
+   "reader_b": "same figures (17.8803 recomputed, 5.0803 km, 39.69 %), plus RD-02 recomputation 19.52 / 6.05",
+   "resolution": "Every number, evidence id and clause id in the key rationale checks out against the file. No factual error. The pronoun 'He' for the driver is stylistic and not a ground for change."
+  },
+  {
+   "field": "readers' stated doubts (no difference in answer)",
+   "key": "ESCALATE under POL-RD-10(5)",
+   "reader_a": "flags RD-13(2) NO_ACTION as the alternative reading; rejects it on the RD-13(1) carve-out",
+   "reader_b": "flags RD-13(2) NO_ACTION as the alternative reading; rejects it on the RD-13(1) carve-out",
+   "resolution": "Not a genuine second defensible answer, so no CASE_FIX. RD-13's last sentence of limb (1) addresses exactly this fact pattern in the operative rule text: a party who cites the missing advisory identifier is not narrowed out of POL-RD-10(5) and 'that case still escalates'. RD-13(2) is the general consequence for the uncited case; the specific carve-out controls. The notes' remark about human closures concerns the uncited cluster and cannot override the rule text."
+  }
+ ],
+ "analysis": "Independent check from the version-6 text (base files plus POL-NS-11, POL-RD-14, POL-NS-12; the two NS amendments and POL-RD-14 do not touch this case: completed ROUTE_DEVIATION trip, no rider instruction). (1) Scope, POL-GEN-08(1): ROUTE_DEVIATION, no safety_flag or complaint_flag, no allegation of damage, cleaning, violence, harassment or discrimination: in scope. Filed by the DRIVER for the 6.05 the platform refunded to the rider (EV-FARE-04014 payment_status PARTIALLY_REFUNDED, refund_issued_sgd 6.05). (2) Identity and timestamps: TRP-04014 on trip record, trace and fare; started_at 15:26:20 and ended_at 15:53:18 equal the first and last fixes; nothing runs backwards; POL-RD-10(2) and (4) not engaged. (3) POL-RD-07: recomputed with check_set's haversine (R 6371.0088) over 163 fixes: 17.8803 km (field 17.88), largest interval 10 s (< 90), largest step 166.7 m (< 500), cadence 10 s (< 30): not impaired; POL-RD-10(3) not engaged. (4) POL-RD-01: trace_distance_km 17.88 governs (trip_record 17.9 is the rounded copy); excess 17.88 - 12.8 = 5.08 km = 39.6875 % of optimal: > 20 % and > 0.8 km, ESTABLISHED; < 50 % and < 8.0 km, not MATERIAL, so POL-RD-06 is not consulted (deviation_flags_90d 1, 1/298 = 0.0034: no pattern in any case; prior_deviation_flags is lifetime and context only under POL-GEN-01). POL-RD-08 rider-profile factor not engaged (deviation_claims_60d 1). (5) POL-RD-02 for contrast (METERED, surge 1.0 read from EV-FARE-04014, optimal_route_erp_sgd 0.00, waiting fee 0, promo 0): (3.80 + 0.75 x 12.8 + 0.28 x 19) x 1.0 + 0.80 = 19.52; 25.57 - 19.52 = 6.05, already a 0.05 multiple, 23.66 % of charged (partial, above de minimis), equal to refund_issued_sgd. No ERP lines, no airport surcharge: POL-RD-09 nothing to do, no POL-RD-09(4) referral. POL-RD-04/14 (no rider instruction, waypoint_hint null), POL-RD-05 (no amendment fields), POL-RD-11 (METERED), POL-RD-12 (RYDE_X) do not apply. (6) Exculpation: the driver asserts an accident on the PIE near Kallang, a segment the booked route traverses (route_planned event: 'PIE westbound past Kallang'), and names EV-ADVIS-04014-01 by its identifier in claim_text. That artifact is MISSING, weight 0.0, payload null, so under POL-GEN-02 it carries no fact and POL-RD-03 limbs (a), (b) and the cap cannot be run. POL-RD-10(5): an exculpatory clause invoked against a cited artifact missing from the pool ('a closure asserted with no traffic_advisory') - fires. POL-RD-13 would otherwise discard the assertion and run RD-13(2), but its limb (1) states it does not narrow POL-RD-10(5) where the party cites the missing identifier and 'that case still escalates'; the driver cites it. Considered and rejected: (i) that the driver did not 'invoke' POL-RD-03 because claim_text names no clause id - RD-13(1) frames the test purely as whether the party names the advisory's evidence id, and the assertion is unmistakably the RD-03 closure/incident excuse; (ii) that POL-GEN-02(1) discards the driver's citation for non-disclosure of impairment - that limb binds advocates citing an impaired artifact in the debate, not the party's filing, and RD-13(1) speaks of what the party cites. (7) Result: ESCALATE, terminal (POL-RD-10, POL-GEN-03), amount_sgd and driver_compensation_sgd null, the 6.05 held, no referrals. Trigger POL-RD-10(5); what would resolve it is the LTA advisory payload behind EV-ADVIS-04014-01 (segment, validity window against the roughly 15:30-15:35 time the vehicle would have reached the PIE at Kallang, shortest_lawful_alternative_km). (8) Difficulty INDETERMINATE as explained in differences. Key fully confirmed; reader A's HARD is the reader's error; readers' extra governing clauses are harmless.",
+ "corrected_ground_truth": null,
+ "case_fix_instructions": null
+}

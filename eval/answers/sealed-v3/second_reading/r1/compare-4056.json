@@ -1,0 +1,74 @@
+{
+ "case_no": 4056,
+ "verdict": "AGREE",
+ "differences": [
+  {
+   "field": "ruling",
+   "key": "FULL_REFUND",
+   "reader_a": "FULL_REFUND",
+   "reader_b": "FULL_REFUND",
+   "resolution": "All agree. Driver stationary 380 s (15:12:40-15:19:00, 39 fixes, speed 0) at 211.67-217.38 m from the pin (check_set km, R 6371.0088): outside the 120 m LARGE_VENUE radius, within 400 m; POL-NS-01 and POL-NS-02 route this geometry to POL-NS-03, which refunds the fee in full. Key right."
+  },
+  {
+   "field": "amount_sgd",
+   "key": 4.5,
+   "reader_a": 4.5,
+   "reader_b": 4.5,
+   "resolution": "All agree: full cancellation fee 4.50 (platform_policy.cancellation_fee_sgd 4.50, no gross figure; fare line 4.50) = amount_contested_sgd 4.50."
+  },
+  {
+   "field": "driver_compensation_sgd",
+   "key": 2.25,
+   "reader_a": 2.25,
+   "reader_b": 2.25,
+   "resolution": "All agree: POL-NS-03(ii) pin-ambiguity goodwill 0.5 x 4.50 = 2.25 (Decimal, exact, multiple of 0.05). Limb (i) fails (rider named no entrance/block/tower/bay); limb (ii) holds (no sub-location from either party; registered_pickup_points 3)."
+  },
+  {
+   "field": "referrals",
+   "key": [],
+   "reader_a": [],
+   "reader_b": [],
+   "resolution": "All agree. POL-NS-01 driver-education referral is for in-radius stationary fixes only; POL-NS-05 false-arrival referral not triggered (marker fix 214.57 m, 0 km/h); POL-NS-03 produces none."
+  },
+  {
+   "field": "governing_clauses",
+   "key": [
+    "POL-NS-03",
+    "POL-NS-02"
+   ],
+   "reader_a": [
+    "POL-NS-03",
+    "POL-NS-01",
+    "POL-NS-02",
+    "POL-NS-04",
+    "POL-NS-05",
+    "POL-GEN-03"
+   ],
+   "reader_b": [
+    "POL-NS-03",
+    "POL-NS-01",
+    "POL-NS-02",
+    "POL-NS-04",
+    "POL-GEN-03"
+   ],
+   "resolution": "Key right. POL-NS-03 licenses FULL_REFUND and fixes both the refund and the 2.25 goodwill; POL-NS-02 supplies the arrival-radius test that fails and expressly yields to NS-03 'including the driver's compensation'. Readers' extras are their own: NS-04 and NS-05 were found inapplicable by the readers themselves; NS-01 only routes (its FULL_REFUND licence is the in-radius DRIVER_UNABLE_TO_LOCATE outcome); GEN-03 is vocabulary. Adding NS-01 would be harmless but is not required; no change."
+  },
+  {
+   "field": "difficulty",
+   "key": "HARD",
+   "reader_a": "REVERSAL",
+   "reader_b": "HARD",
+   "resolution": "Key right. The filing rider's story is borne out by the record (rider_track 15 fixes 6.28-20.92 m from the pin; no car came to her; cancel about 6 min after the marker). The driver's verifiable facts (stationary 380 s, hazard-light message, replies) are also borne out; only his belief that his kerb was 'the pickup point' is wrong, and POL-NS-03(ii) itself attributes that mislocation to pin ambiguity 'rather than to either party' (venue_id match, 3 registered points). The record does not reverse either party's account; the case turns on the NS-01/02/03/04/05/06 routing and the goodwill limb, which is HARD. Reader A itself marked the label uncertain."
+  },
+  {
+   "field": "rationale",
+   "key": "numbers and ids checked",
+   "reader_a": "n/a",
+   "reader_b": "n/a",
+   "resolution": "Every figure in the key rationale verified: 15:12:40 marker and 15:19:00 termination, 380 s vs free_wait_sec 300, 211.7-217.4 m, 120 m / 400 m, no fix within 120 m in the 15 min before cancellation, marker fix within 300 m and stationary, venue_id VEN-YS-0031 on every stationary fix and on the pickup, replies 35 s and 30 s, registered_pickup_points 3, 50 % x 4.50 = 2.25, all deciding artifacts weight 1.0. Evidence ids EV-FARE/GPS/TRIP/CHAT-04056 correct. Length 1582, ASCII."
+  }
+ ],
+ "analysis": "Independent working from the version-6 text. Figures from EV-TRIP-04056.platform_policy (fee_schedule.resolution_rule): free_wait_sec 300, cancellation_fee_sgd 4.50, gross null, arrival_marker BUTTON (POL-NS-12 not engaged); LARGE_VENUE arrival radius 120 m, rider presence radius 150 m. Geometry with check_set km(): 104 driver fixes, accuracy <= 12.0 m, max interval 10 s, trace 3.345 km as written; nearest approach to the pin 211.67 m anywhere in the trace (so zero qualifying in-radius fixes in the 15 min before 15:19:00 and POL-NS-01(b) fails). Stationary block 15:12:40-15:19:00: 39 fixes, speed 0, 211.67-217.38 m, every fix venue_id VEN-YS-0031 = pickup venue_id; dwell 380 s >= 300. POL-NS-05: marker fix 214.57 m, 0 km/h - neither trigger; its last sentence sends this driver to POL-NS-03. POL-NS-04: rider locating messages MSG-04056-002 (15:13:30) and -004 (15:16:10) answered by MSG-04056-003 after 35 s and -005 after 30 s; limb (b) fails, residual mislocation to NS-03. POL-NS-03: refund 4.50 in full; fault from EV-CHAT-04056: no entrance/block/tower/bay named by either party ('I'm here already', 'I don't see any white car here', 'at the pickup point', 'at the pin location' name no sub-location), registered_pickup_points 3 -> limb (ii) goodwill 0.5 x 4.50 = 2.25, platform-funded, not netted (POL-GEN-03); ruling value FULL_REFUND for the filing rider. Reader B's POL-NS-06 doubt: NS-06 measures an 'in-geofence dwell computed under POL-NS-02' and addresses premature cancellation after arrival; its 'no driver compensation' sentence closes the advisory-summation qualification (cumulative dwell). Where the driver never entered the radius but was stationary within 400 m for the required dwell, NS-01, NS-02 ('POL-NS-03 governs the outcome including the driver's compensation, and this clause yields to it') and NS-05 each route expressly to NS-03; the specific routing controls, and both readers reached the key's answer. Not a competing defensible answer; no case change. Reader A's sub-location doubt: 'at the pin location' and 'I'm here' do not name an entrance, block, tower or bay and do not distinguish among the three registered pickup points, which is precisely the pin ambiguity limb (ii) addresses. Integrity: POL-NS-08(a) 0 s marker skew; (b) 10 s cadence, 39 fixes; (c) msg ids 001-006 sequential, 6 = chat_message_count, largest interval 240 s < 300 s; (d) fare 4.50 = net. POL-NS-09: counters 0/0, rider no_show_disputes_30d 0, anti-farming not reached; no artifact-vs-artifact contradiction (the driver-pressed marker is not a position measurement and NS-03/NS-05 resolve it). Missing advisory EV-ADVIS-04056-01 carries no deciding fact. POL-GEN-05: 4.50 + 2.25 = 6.75 <= 8.00 (procedural). Key correct on every field; readers' differences are reader-side.",
+ "corrected_ground_truth": null,
+ "case_fix_instructions": null
+}

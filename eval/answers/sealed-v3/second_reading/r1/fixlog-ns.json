@@ -1,0 +1,18 @@
+[
+ {
+  "case_no": 4052,
+  "applied": true,
+  "key_changed": false,
+  "case_file_changed": true,
+  "what": "CASE_FIX applied as instructed after checking POL-NS-10(f)/(g) and POL-NS-01(c): the rider's counterparty_statement no longer asserts a late or stuck driver (which EV-TRIP-04052 / EV-GPS-04052 disprove); new text: 'Paiseh, I decided to walk out to the main road and catch a taxi there instead, so I cancelled the booking. Support already refunded me and I do not think I should pay.' Changed in build/ns_texts.py (template) and build/blueprint_ns.json (facts.dispute.counterparty_statement.text). Nothing else in the case changed (verified field by field against the pre-fix build); the key (DRIVER_COMPENSATION 3.60, POL-NS-10 + POL-NS-07, EASY, rationale) is byte-identical. New text checked against rider_track (walking away from 19:27:00, 288.9-303.4 m out from 19:31:00) and the 19:35:30 rider cancellation. build/audit_ns.py gains a content check (NO_LATENESS_CLAIM) that the 4052 counterparty statement asserts no late/stuck/delayed arrival; it fails on the pre-fix build and passes now.",
+  "why_not": null
+ },
+ {
+  "case_no": 4059,
+  "applied": true,
+  "key_changed": true,
+  "case_file_changed": false,
+  "what": "KEY_FIX applied (rationale wording only; ruling, money, referrals, clauses, difficulty unchanged). Independently re-measured EV-GPS-04059: 18:26:10 (5.4 m) and 18:26:20 (37.2 m) are inside 50 m, so the old wording 'last outside fix before each run to the next outside fix' would give 18:24:40-18:26:30 = 110 s and 190 s total; the 85 s figure is the bracket capped at the 18:26:05 termination. The rationale template in build/ns_texts.py now states each bracket (18:20:40-18:22:00 = 80 s, 18:24:40-18:26:05 = 85 s, total 165 s) and that the post-termination in-radius fixes are not waiting; the figures are filled from new values computed in build/cases_ns.py values() with assertions (brackets open on outside fixes, figures equal i1/i2_generous, run-2 uncapped bracket would reach the free wait). Generated rationale equals the corrected_ground_truth in compare-4059.json exactly. build/blueprint_ns.json key_rationale, derivation step 5 and design_checks updated; build/audit_ns.py now re-derives the capped brackets and checks they equal the design, stay below free_wait_sec and are stated in the rationale (fails on the pre-fix key, passes now). build/design_notes_ns.md wording aligned. Case file byte-identical to the pre-fix build.",
+  "why_not": null
+ }
+]
