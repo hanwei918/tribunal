@@ -607,18 +607,19 @@ SEALED_V2 = DevelopmentSet(
     ),
 )
 
-# The fifth sealed set, imported on 2026-10-13 and **not yet run**. Its 30 cases
-# are 4001-4015 and 4051-4065; it was made by Claude (Opus 5.5) in a fresh Claude
-# Code session with no project folder or repository access, from the owner's
-# prompt, the version-6 policy text, the public contract, a format checker and the
-# organisers' public sample case, and nobody on the development side has seen its
-# answers. Its registration fixes policy version 6, the version frozen at the tag
-# ``freeze-2026-10-11``, and its single run is made from a commit whose
-# ``tribunal/``, ``prompts/`` and ``policy/`` trees equal those at that tag, at
-# the arguments recorded below -- the configuration of the four earlier sealed
-# runs. It is a different set from ``wild``, ``wild-v2``, ``sealed-v1`` and
-# ``sealed-v2`` and is never added to any of them, to the combined figure or to
-# ``--set all``.
+# The fifth sealed set, imported on 2026-10-13. Its 30 cases are 4001-4015 and
+# 4051-4065; it was made by Claude (Opus 5.5) in a fresh Claude Code session with
+# no project folder or repository access, from the owner's prompt, the version-6
+# policy text, the public contract, a format checker and the organisers' public
+# sample case, and nobody on the development side has seen its answers. Its
+# registration fixes policy version 6, the version frozen at the tag
+# ``freeze-2026-10-11``, and its single run was started once on 2026-10-13 from
+# the commit ``9b70387``, whose ``tribunal/``, ``prompts/`` and ``policy/`` trees
+# equal those at that tag, at the arguments recorded below -- the configuration of
+# the four earlier sealed runs -- and was stopped after 8 of its 30 cases. It is
+# not a sealed figure and is never run again. It is a different set from
+# ``wild``, ``wild-v2``, ``sealed-v1`` and ``sealed-v2`` and is never added to any
+# of them, to the combined figure or to ``--set all``.
 SEALED_V3 = DevelopmentSet(
     name="sealed-v3",
     cases=tuple(
@@ -637,7 +638,10 @@ SEALED_V3 = DevelopmentSet(
         "format checker and the organisers' public sample case; no human reviewed "
         "its answers; nobody on the development side has seen them; it is run once, "
         "from a commit whose tribunal/, prompts/ and policy/ trees equal those at "
-        "freeze-2026-10-11, at policy version 6"
+        "freeze-2026-10-11, at policy version 6; its run was started once on "
+        "2026-10-13 and stopped after 8 of its 30 cases (a network drop, then the "
+        "switch to Ryde's policy v2.1); it is not a sealed figure and is never run "
+        "again"
     ),
     sealed=True,
     policy_version=6,

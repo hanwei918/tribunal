@@ -1,5 +1,10 @@
 # The fifth sealed set imported and registered
 
+**Update 2026-10-13:** the set's single run was started once and stopped after 8
+of its 30 cases, and the run is recorded at
+[`2026-10-13-sealed-v3-stopped.md`](2026-10-13-sealed-v3-stopped.md) -- it is not
+a sealed figure.
+
 **2026-10-13.** This is the fifth-freeze import task, recorded from the files it
 produced. The tag `freeze-2026-10-11` already exists and is **not** created or
 moved here: the set's single run is made from a commit whose `tribunal/`,

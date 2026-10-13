@@ -2,10 +2,9 @@
 
 ``runs/wild/`` holds the held-out set's single run, ``runs/wild-v2/`` the second
 sealed set's, ``runs/sealed-v1/`` the third's, ``runs/sealed-v2/`` the fourth's
-and ``runs/sealed-v3/`` the fifth's. The first four runs have been made and those
-four roots are closed outright; the fifth's run has not been made, and its root
-accepts exactly one thing -- the guarded plain run -- while every other write
-into it is refused. So every command that would write
+and ``runs/sealed-v3/`` the fifth's. All five runs have been made -- the fifth's
+was started once on 2026-10-13 and stopped after 8 of its 30 cases -- and all five
+roots are closed outright, so every command that would write
 under one of them has to refuse the whole of the root -- not only the run
 directory, and not only the spelling the path happens to be given in.
 
@@ -354,7 +353,7 @@ class CheckOnAClosedRootTests(ScratchRunsRootTestCase):
             self.addCleanup(patcher.stop)
 
     def test_a_closed_root_prints_the_closure_and_lists_no_cases(self):
-        # All four sealed sets have been run, so all four roots are closed and
+        # All five sealed sets have been run, so all five roots are closed and
         # the plan branch below is reached only by emptying the lists. The closure
         # is asserted for every root the registration says has been made, and the
         # list of those is pinned here, so a set cannot pass by being skipped.
@@ -364,7 +363,7 @@ class CheckOnAClosedRootTests(ScratchRunsRootTestCase):
             if sets.sealed_root_is_closed(development_set)
         ]
         self.assertEqual(
-            ("wild", "wild-v2", "sealed-v1", "sealed-v2"),
+            ("wild", "wild-v2", "sealed-v1", "sealed-v2", "sealed-v3"),
             tuple(item.name for item in closed),
         )
         for development_set in closed:

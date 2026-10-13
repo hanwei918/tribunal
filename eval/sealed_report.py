@@ -38,6 +38,16 @@ what it is: a run with a no-ruling list and not a set that has never been run.
 Its key is not read on the not-run path either -- there is nothing to grade with
 it -- so this command is safe to run before the sealed run is committed, and
 safe on a set whose key is under the sealed-content rule.
+
+**A run that did not finish the set prints its counts and no rate.** When a run
+directory holds a log and some of the set's cases were neither ruled on nor
+recorded as failed, the run stopped before it reached them. The command then
+prints how many cases have a ruling, how many failed and how many were not run,
+and no agreement rate and no interval: the few answers a stopped run left are
+not the whole set the figure would be about, so a rate over them is not a figure
+the set can support. The key is not read on this path either -- the counts come
+from the run directory and its own log -- so the command reports a stopped run
+without opening an answer.
 """
 
 from __future__ import annotations
@@ -45,7 +55,7 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Set, Tuple
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -87,6 +97,89 @@ def _has_a_run(run_dir: Path) -> bool:
     if (run_dir / events.EVENTS_FILE).exists():
         return True
     return (run_dir / run_benchmark.METADATA_FILE).exists()
+
+
+# What a run that did not finish the set prints instead of an agreement rate. A
+# stopped run's few answers are not the whole set, so a rate over them would be a
+# figure the set cannot support: the counts are printed and no rate is.
+STOPPED_COUNTS = "Stopped: {0} of {1} with a ruling, {2} failed, {3} not run."
+STOPPED_REASON = (
+    "No agreement rate and no interval are reported: this run was stopped before "
+    "it finished the set."
+)
+
+
+def _failed_cases(path: Path) -> Set[int]:
+    """Every case number the log records a failure for.
+
+    A case may have been attempted more than once and may carry more than one
+    failure; what a reader wants is which cases the run left with no ruling and a
+    recorded reason, so the set is what is returned and not the count.
+    """
+    failed: Set[int] = set()
+    for event in events.read_events(path):
+        if event.get("event") != events.EVENT_CASE_FAILED:
+            continue
+        case_no = event.get("case")
+        if isinstance(case_no, int):
+            failed.add(case_no)
+    return failed
+
+
+def _stopped_counts(
+    development_set: development_sets.DevelopmentSet, run_dir: Path
+) -> Optional[Tuple[int, int, int, int]]:
+    """The counts of a run that did not finish the set, or ``None``.
+
+    A run of a sealed set is asked for every case in the set. A case that left a
+    ruling, or that the run's own log records as failed, was reached; a case with
+    neither was never attempted, because the run stopped before it got there.
+    When there is at least one such case the run did not finish the set, and the
+    four counts are returned -- with a ruling, in the set, failed, not run.
+
+    ``None`` when every case was reached, which is a run reported in full, and
+    ``None`` when the run directory holds no log: without one there is no record
+    of what was attempted, and the run is reported the way it always was.
+    """
+    log = Path(run_dir) / events.EVENTS_FILE
+    if not log.exists():
+        return None
+    requested = list(development_set.cases)
+    ruled = {
+        case_no
+        for case_no in run_benchmark.cached_case_numbers(run_dir)
+        if run_benchmark.load_cached(run_dir, case_no) is not None
+    }
+    failed = _failed_cases(log)
+    wanted = set(requested)
+    not_run = [
+        case_no
+        for case_no in requested
+        if case_no not in ruled and case_no not in failed
+    ]
+    if not not_run:
+        return None
+    return (len(ruled & wanted), len(requested), len(failed & wanted), len(not_run))
+
+
+def _stopped_report(
+    development_set: development_sets.DevelopmentSet,
+    model: str,
+    run_dir: Path,
+    counts: Tuple[int, int, int, int],
+) -> str:
+    """The whole of what a stopped run prints: the counts, and no rate."""
+    ruled, requested, failed, not_run = counts
+    return "\n".join(
+        [
+            "Sealed set {0} — {1}".format(development_set.name, model),
+            "Run: {0}".format(_relative(run_dir)),
+            "",
+            STOPPED_COUNTS.format(ruled, requested, failed, not_run),
+            STOPPED_REASON,
+            "",
+        ]
+    )
 
 
 def _relative(path: Path) -> str:
@@ -205,6 +298,13 @@ def render(
     # it is not allowed to read.
     if not _has_a_run(run_dir):
         return not_run_line(development_set, model, runs_dir) + "\n"
+
+    # Decided before the key is loaded, for the same reason the not-run check is:
+    # a stopped run is reported from its own counts, so the sealed key is not
+    # opened to say what it did not finish.
+    stopped = _stopped_counts(development_set, run_dir)
+    if stopped is not None:
+        return _stopped_report(development_set, model, run_dir, stopped)
 
     key = development_set.key()
     produced = _produced(run_dir, key)
