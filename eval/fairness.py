@@ -643,7 +643,9 @@ def draft_outcomes(
     return tuple(outcomes)
 
 
-def calibrate(outcomes: Sequence[DraftOutcome]) -> Calibration:
+def calibrate(
+    outcomes: Sequence[DraftOutcome], floor: Decimal = FLOOR
+) -> Calibration:
     """The bins, the expected calibration error and the floor split.
 
     The expected calibration error is the count-weighted mean of each bin's
@@ -651,6 +653,15 @@ def calibrate(outcomes: Sequence[DraftOutcome]) -> Calibration:
     ``sum over bins of (count / total) * |mean confidence - share correct|`` --
     and it is ``0`` for no drafts rather than undefined, because a set with no
     drafts has no error to report and not a missing one.
+
+    ``floor`` is where the floor split is taken, and it is the version-6 floor
+    unless a caller names another. A later policy states a different bar -- the
+    version-8 bar is ``0.80`` -- and the split has to be taken at the bar the
+    runs were judged under rather than at this module's own. The **bins** are
+    unchanged by it: their edges are the sheet's and the 0.70 boundary is still
+    read out of the loaded policy, so a caller that moves the split moves only
+    which side of the floor each draft is counted on. With the default every
+    version-6 output is byte-identical.
     """
     edges = bin_edges()
     total = len(outcomes)
@@ -672,8 +683,8 @@ def calibrate(outcomes: Sequence[DraftOutcome]) -> Calibration:
         if count and mean is not None:
             share = Decimal(correct) / Decimal(count)
             ece += (Decimal(count) / Decimal(total)) * abs(mean - share)
-    below = [o for o in outcomes if o.confidence < FLOOR]
-    at_or_above = [o for o in outcomes if o.confidence >= FLOOR]
+    below = [o for o in outcomes if o.confidence < floor]
+    at_or_above = [o for o in outcomes if o.confidence >= floor]
     return Calibration(
         total=total,
         bins=tuple(bins),

@@ -10,13 +10,14 @@ three things:
   rather than a quiet no-op.
 * **The check can fail.** A copy of one document with one figure altered, in a
   temporary directory, is reported as a mismatch; without that control a check
-  that returned nothing would pass the first test. Three figures are shown
+  that returned nothing would pass the first test. Four figures are shown
   failing that way: the version-6 median time in ``docs/record.md``, the
-  version-7 sealed set's agreement in ``README.md``, and the version-8
-  ``dev-v8`` agreement in ``README.md``. Two **claims** are shown failing the
-  same way, each by putting the corrected sentence back: ``split 2-2`` on the
-  version-8 row of ``README.md``, and the fare sentence in
-  ``tests/test_ryde_v7.py``.
+  version-7 sealed set's agreement in ``README.md``, the version-8 ``dev-v8``
+  agreement in ``README.md``, and the version-8 ``decided with no person``
+  measurement in ``docs/notes/2026-10-14-version-8-measurements.md``. Two
+  **claims** are shown failing the same way, each by putting the corrected
+  sentence back: ``split 2-2`` on the version-8 row of ``README.md``, and the
+  fare sentence in ``tests/test_ryde_v7.py``.
 * **The module is ASCII.** The sheet's rule is that the pattern table is written
   in ASCII, with the Chinese patterns as ``\\uXXXX`` escapes, so the module is
   read as bytes and every one is asserted below 128.
@@ -81,6 +82,21 @@ VERSION_EIGHT_CONTROL_DOCUMENT = "README.md"
 VERSION_EIGHT_CONTROL_BEFORE = "| `dev-v8` (40 cases) | 39/40 |"
 VERSION_EIGHT_CONTROL_AFTER = "| `dev-v8` (40 cases) | 38/40 |"
 VERSION_EIGHT_CONTROL_FIGURE = "dev-v8, four-field agreement"
+
+# The four version-8 **measurement** figures part 90 adds, and the fourth
+# control: the note states the table ``eval.v8_report --report`` prints, and its
+# ``decided with no person`` row altered from 28 to 27 captures a value that is
+# not one of the figure's spellings.
+VERSION_EIGHT_MEASUREMENT_FIGURES = (
+    "dev-v8 decided with no person",
+    "dev-v8 position swap",
+    "dev-v8 ECE",
+    "dev-v8 drafts",
+)
+MEASUREMENT_CONTROL_DOCUMENT = "docs/notes/2026-10-14-version-8-measurements.md"
+MEASUREMENT_CONTROL_BEFORE = "| decided with no person | 28 of 40 |"
+MEASUREMENT_CONTROL_AFTER = "| decided with no person | 27 of 40 |"
+MEASUREMENT_CONTROL_FIGURE = "dev-v8 decided with no person"
 
 # The claim controls. Each copy puts back one sentence the part corrected and
 # shows the claim check reporting it. ``split 2-2`` goes back on the version-8
@@ -221,6 +237,31 @@ class TheCommittedTreeTests(unittest.TestCase):
                 self.assertTrue(rows[name].documents, "stated in no document")
                 self.assertTrue(rows[name].ok, "a document states another value")
 
+    def test_the_version_eight_measurement_figures_are_computed_stated_and_matching(
+        self,
+    ):
+        """The version-8 measurements, read out of the note that states them.
+
+        The same check the version-7 and version-8 rows get: each is stated in
+        at least one document, its patterns matched, and the value the note
+        states is the computed one. ``docs/notes/2026-10-14-version-8-measurements.md``
+        is the document that states the table ``eval.v8_report --report`` prints,
+        and it is named in ``DOCUMENTS`` for these four rows.
+        """
+        rows = {row.figure: row for row in self.found.rows}
+        for name in VERSION_EIGHT_MEASUREMENT_FIGURES:
+            with self.subTest(figure=name):
+                self.assertIn(name, check_figures.BY_NAME)
+                self.assertIn(name, rows)
+                self.assertTrue(rows[name].value, "no computed value")
+                self.assertTrue(rows[name].documents, "stated in no document")
+                self.assertIn(
+                    MEASUREMENT_CONTROL_DOCUMENT,
+                    rows[name].documents,
+                    "the note does not state this figure",
+                )
+                self.assertTrue(rows[name].ok, "a document states another value")
+
 
 class TheControlTests(unittest.TestCase):
     """The check is shown capable of failing, and of noticing a dead pattern."""
@@ -338,6 +379,45 @@ class TheControlTests(unittest.TestCase):
             with self.subTest(document=mismatch.document):
                 self.assertEqual(VERSION_EIGHT_CONTROL_FIGURE, mismatch.figure)
                 self.assertEqual("39/40", mismatch.expected)
+        self.assertFalse(found.ok, "an altered figure left the check OK")
+
+    def test_an_altered_version_eight_measurement_is_reported(self):
+        """The version-8 measurement rows are shown capable of failing too.
+
+        The copy holds the note alone, so the other documents are skipped and
+        the figures that read them go dead -- a finding of its own and not what
+        this test is about. What it asserts is the mismatch: ``27 of 40`` is not
+        one of the ``decided with no person`` figure's spellings.
+        """
+        portability.require_the_same_libm()
+        source = (PROJECT_ROOT / MEASUREMENT_CONTROL_DOCUMENT).read_text(
+            encoding="utf-8"
+        )
+        altered = source.replace(
+            MEASUREMENT_CONTROL_BEFORE, MEASUREMENT_CONTROL_AFTER
+        )
+        self.assertNotEqual(
+            source,
+            altered,
+            "the control changed nothing in {0}".format(MEASUREMENT_CONTROL_DOCUMENT),
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / MEASUREMENT_CONTROL_DOCUMENT
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(altered, encoding="utf-8")
+            found = check_figures.check(root)
+        named = [mismatch for mismatch in found.mismatches if mismatch.value == "27 of 40"]
+        self.assertTrue(
+            named,
+            "the altered version-8 measurement was not reported: {0}".format(
+                found.mismatches
+            ),
+        )
+        for mismatch in named:
+            with self.subTest(document=mismatch.document):
+                self.assertEqual(MEASUREMENT_CONTROL_FIGURE, mismatch.figure)
+                self.assertEqual("28 of 40", mismatch.expected)
         self.assertFalse(found.ok, "an altered figure left the check OK")
 
     def test_a_two_two_split_put_back_on_the_version_eight_row_is_reported(self):

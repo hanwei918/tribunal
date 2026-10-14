@@ -13,10 +13,13 @@ it and reports whether the value there is the computed one.
 :func:`ui.site.figures.figures`, which reads the four version-6 runs through
 :mod:`eval.business_value` and :mod:`eval.v6_runs`; the position swap's two
 figures come from :mod:`eval.fairness`; the sealed and held-out sets come from
-the same graded reads ``tests/test_readme_figures.py`` makes; and the version-7
-and version-8 figures come from the same :func:`eval.run_benchmark.grade_run`
-call over the directory each of those runs was written to. No figure is typed in
-here and no figure is read from a second copy of itself.
+the same graded reads ``tests/test_readme_figures.py`` makes; the version-7 and
+version-8 figures come from the same :func:`eval.run_benchmark.grade_run` call
+over the directory each of those runs was written to; and the four version-8
+measurements -- decided with no person, the position swap, the calibration error
+and the draft count -- come from :func:`eval.v8_report.figures`, which measures
+them off the same two runs. No figure is typed in here and no figure is read
+from a second copy of itself.
 
 **How a figure is found.** Each figure carries a table of patterns, one per way
 the documents spell it -- ``160.4 s`` in one, ``2.7 min`` in another, ``2.7``
@@ -55,7 +58,13 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from eval import development_sets, fairness, run_benchmark, v6_runs  # noqa: E402
+from eval import (  # noqa: E402
+    development_sets,
+    fairness,
+    run_benchmark,
+    v6_runs,
+    v8_report,
+)
 from ui.site import figures as site_figures  # noqa: E402
 
 MODEL = run_benchmark.resolve_model(None)
@@ -86,6 +95,10 @@ DOCUMENTS: Tuple[str, ...] = (
     "ui/dist/index.zh.html",
     "ui/dist/results.zh.html",
     "ui/dist/how-it-works.zh.html",
+    # The note part 90 adds, which states the table `eval.v8_report --report`
+    # prints. It is named here so the version-8 measurements below are read out
+    # of the document that states them rather than out of nothing.
+    "docs/notes/2026-10-14-version-8-measurements.md",
 )
 
 
@@ -502,6 +515,44 @@ FIGURES: Tuple[Figure, ...] = (
             r"does\s+not\s+have;\s+three\s+must\s+agree",
         ),
     ),
+    # ----------------------------------------------------------------------
+    # The version-8 measurements part 90 adds, read by ``eval.v8_report``
+    # ----------------------------------------------------------------------
+    # Four figures off the same run the version-8 rows above read, measured
+    # there rather than recomputed here: the value is
+    # :func:`eval.v8_report.figures`, and every pattern reads the note that
+    # states the table ``python3 -m eval.v8_report --report`` prints. Each is
+    # anchored on the row's own label, so the ``dev-v8`` and ``ryde-v8`` columns
+    # of one row cannot capture for each other -- ``decided with no person`` is
+    # ``28 of 40`` and ``0 of 2`` on the same line.
+    Figure(
+        "dev-v8 decided with no person",
+        ("28 of 40",),
+        (
+            r"\| decided with no person \| (\d+ of 40)\b",
+        ),
+    ),
+    Figure(
+        "dev-v8 position swap",
+        ("33 of 34",),
+        (
+            r"\| position swap, all four fields \| (\d+ of 34)\b",
+        ),
+    ),
+    Figure(
+        "dev-v8 ECE",
+        ("0.097",),
+        (
+            r"\| valid drafts, ECE \| \d+, (\d+\.\d+)\b",
+        ),
+    ),
+    Figure(
+        "dev-v8 drafts",
+        ("139",),
+        (
+            r"\| valid drafts, ECE \| (\d+)\b",
+        ),
+    ),
 )
 
 # The figures by name, so the report and the tests can name one.
@@ -648,6 +699,10 @@ def _compute() -> Dict[str, str]:
     }
     v8_walls = [document.get("wall_seconds") for document in v8_documents.values()]
     v8_costs = [case_cost(document) for document in v8_documents.values()]
+    # The version-8 measurements are computed by the module that measures them,
+    # so a figure this command checks is the figure ``eval.v8_report`` prints
+    # rather than a second reading of the same runs.
+    measured_eight = v8_report.figures()
     return {
         "median time to a decision": values["median_wall_seconds"],
         "90th percentile time to a decision": values["p90_wall_seconds"],
@@ -710,6 +765,11 @@ def _compute() -> Dict[str, str]:
             no_show_drafts["fee"],
             no_show_drafts["voided"],
         ),
+        # The four version-8 measurements, read off ``eval.v8_report``.
+        "dev-v8 decided with no person": measured_eight["dev-v8 decided with no person"],
+        "dev-v8 position swap": measured_eight["dev-v8 position swap"],
+        "dev-v8 ECE": measured_eight["dev-v8 ECE"],
+        "dev-v8 drafts": measured_eight["dev-v8 drafts"],
     }
 
 
