@@ -1,7 +1,7 @@
 """The version-8 case pages, held to the runs they are drawn from.
 
 ``ui/v8/build.py`` gives each of the 42 version-8 cases a page of its own, in
-English and in Chinese, plus an index. This module holds it to five things:
+English and in Chinese, plus an index. This module holds it to seven things:
 
 * **The pages are there, and they are the ones the builder writes.** 42 case
   pages in each language plus the two index pages, every one of them committed
@@ -12,6 +12,15 @@ English and in Chinese, plus an index. This module holds it to five things:
   drafts are the ones the transcript records, kind by kind and validity by
   validity -- 903's two escalations, its one upheld fee and its one draft voided
   for citing ``POL-NS-08`` among them.
+* **Nothing on a page is Python.** No page prints a dictionary's ``repr`` --
+  ``{'`` and ``'value':`` are the shape a ``{value, evidence_id}`` leaf takes
+  when it is printed rather than rendered -- and no element's whole text is a
+  bare ``None``, ``True`` or ``False``. 903's driver deadline is the leaf that
+  was printed, and its page now shows the time and the evidence id instead.
+* **Every table scrolls in its own box.** Each ``table.dt`` on every page is the
+  only child of a ``div.scroll-x``, the class ``ui/site/src/site.css`` defines,
+  so the five-column drafts table and the run's 40-character commit cannot make
+  the page wider than a phone.
 * **The index's counts are the rows'.** The four figures above the table are
   recomputed here from the committed runs and asserted against the page.
 * **The pages stay inside their own corner of ``ui/dist/``.** Every path this
@@ -19,7 +28,8 @@ English and in Chinese, plus an index. This module holds it to five things:
   queue's, and the version-6 case pages are not touched.
 * **The check can fail.** A temporary copy of the ``dev-v8`` run with one case's
   ruling changed makes that case's page differ, which is what shows the page is
-  drawn from the run document rather than written down.
+  drawn from the run document rather than written down; and a page string with
+  the dictionary put back is reported by the check for printed Python.
 
 **No model call is made and no network is reached**: every reading is a
 committed run, a committed key or a committed case file. The build reads every
@@ -75,6 +85,19 @@ CONTROL_RULING = {
 # The page every check reads the drafts off, and the table that carries them.
 DRAFTS_HEADER = "Kind"
 
+# What a page looks like when a Python value is printed instead of rendered: a
+# dictionary's own repr, and a bare ``None``, ``True`` or ``False`` standing as
+# an element's whole text. A page's prose may say the English word "None"
+# ("None of the six chat entries"), so the bare token is only an offence when it
+# is all an element holds; the dictionary's repr is one wherever it appears.
+PYTHON_REPR_TOKENS = ("{'", "'value':", "{&#x27;")
+PYTHON_WORD_RE = re.compile(r"\A(?:None|True|False)\Z")
+SCRIPT_RE = re.compile(r"<script\b[^>]*>.*?</script>", re.S)
+TAG_RE = re.compile(r"<[^>]+>")
+TABLE_RE = re.compile(r'<table class="dt">.*?</table>', re.S)
+SCROLL_OPEN = '<div class="scroll-x">'
+SCROLL_CLOSE = "</div>"
+
 _CASES: "List[v8.V8Case] | None" = None
 _PAGES: "Dict[str, str] | None" = None
 
@@ -118,7 +141,63 @@ def text_of(page: str) -> str:
 
 def tables_of(page: str) -> List[str]:
     """Every ``.dt`` table on a page."""
-    return re.findall(r'<table class="dt">.*?</table>', page, re.S)
+    return TABLE_RE.findall(page)
+
+
+def without_scripts(page: str) -> str:
+    """A page with every ``<script>`` element taken out, tags and all.
+
+    A ``<script>`` element's content is raw text, so stripping tags alone would
+    leave it in the visible text; what a reader meets is the page without it.
+    """
+    return SCRIPT_RE.sub(" ", page)
+
+
+def visible_text(page: str) -> str:
+    """A page as a reader meets it: scripts out, tags out, references decoded."""
+    return html.unescape(TAG_RE.sub(" ", without_scripts(page)))
+
+
+def printed_python(page: str) -> List[str]:
+    """Every place a page prints a Python value instead of the fact it holds.
+
+    Two shapes, both of which a reader would meet as punctuation soup: a
+    dictionary's ``repr`` (``{'``, ``'value':``), which is what a
+    ``{value, evidence_id}`` leaf looks like when it is printed rather than
+    rendered, and a bare ``None``, ``True`` or ``False`` that is an element's
+    whole text. The first is looked for in the visible text and in the source
+    (a reference-escaped apostrophe spells it ``{&#x27;``); the second only when
+    the token is everything the element holds, because a page quotes the run's
+    own prose and that prose says "None of the six chat entries".
+    """
+    source = without_scripts(page)
+    text = visible_text(page)
+    out = [token for token in PYTHON_REPR_TOKENS if token in text or token in source]
+    for element in TAG_RE.split(source):
+        word = html.unescape(element).strip()
+        if PYTHON_WORD_RE.match(word):
+            out.append(word)
+    return out
+
+
+def scroll_box_offenders(page: str) -> List[str]:
+    """Every ``table.dt`` that is not the only child of a ``div.scroll-x``."""
+    out: List[str] = []
+    for match in TABLE_RE.finditer(page):
+        before = page[max(0, match.start() - len(SCROLL_OPEN)):match.start()]
+        after = page[match.end():match.end() + len(SCROLL_CLOSE)]
+        if before != SCROLL_OPEN or after != SCROLL_CLOSE:
+            out.append(match.group(0)[:60])
+    return out
+
+
+def row_with_label(page: str, label: str) -> List[str]:
+    """The first body row of any ``.dt`` table whose label cell is ``label``."""
+    for table in tables_of(page):
+        for row in rows_of(table):
+            if row and row[0] == label:
+                return row
+    raise AssertionError("no table row is labelled {0!r}".format(label))
 
 
 def rows_of(table: str) -> List[List[str]]:
@@ -191,6 +270,29 @@ class ThePagesTests(unittest.TestCase):
                     {ord(character) for character in self.pages[name] if ord(character) >= 128}
                 )
                 self.assertEqual([], offenders, "a page carries a non-ASCII character")
+
+    def test_no_page_prints_a_python_value(self):
+        """No page shows a dictionary's repr or a bare ``None``/``True``/``False``.
+
+        A ``{value, evidence_id}`` leaf printed rather than rendered is what put
+        ``{'value': ..., 'evidence_id': ...}`` on 903's page, and the builder now
+        refuses a mapping or a list that reaches text, so this is the property
+        the refusal buys.
+        """
+        for name in sorted(self.pages):
+            with self.subTest(page=name):
+                self.assertEqual([], printed_python(self.pages[name]))
+
+    def test_every_table_is_the_only_child_of_a_scroll_box(self):
+        """Every ``table.dt`` sits in the site's own ``.scroll-x`` box.
+
+        The drafts table's five columns and the run's 40-character commit are
+        wider than a phone; without the box the whole page scrolls sideways.
+        """
+        for name in sorted(self.pages):
+            with self.subTest(page=name):
+                self.assertIn('<table class="dt">', self.pages[name])
+                self.assertEqual([], scroll_box_offenders(self.pages[name]))
 
     def test_every_link_on_every_page_resolves(self):
         for name in sorted(self.pages):
@@ -341,6 +443,22 @@ class TheOutcomeTests(unittest.TestCase):
         self.assertEqual(["valid", "valid", "valid"], [row[4] for row in rows[:3]])
         self.assertIn("DRAFT_CLAUSE_UNRESOLVED", rows[3][4])
         self.assertIn("POL-NS-08", rows[3][4])
+
+    def test_case_903s_driver_deadline_is_the_time_and_its_evidence_id(self):
+        """The one leaf that printed as a dictionary, in both languages.
+
+        The brief wraps the deadline as ``{value, evidence_id}``. Its page shows
+        the time of day and the evidence id beside it -- ``08:50:00
+        (EV-TRIP-00903)`` -- and not the wrapper it arrives in.
+        """
+        case = next(case for case in self.loaded if case.case_no == 903)
+        for language in v8.LANGUAGES:
+            page = page_for(case, language)
+            row = row_with_label(page, v8.label("Driver deadline", language))
+            with self.subTest(language=language):
+                self.assertEqual("08:50:00 (EV-TRIP-00903)", row[1])
+                self.assertIn("08:50:00", text_of(page))
+                self.assertIn("EV-TRIP-00903", text_of(page))
 
     def test_every_page_quotes_the_ruling_explanation_the_run_published(self):
         for case in self.loaded:
@@ -551,6 +669,34 @@ def version_six_paths() -> set:
 
 class TheControlTests(unittest.TestCase):
     """A changed ruling in the run makes that case's page differ."""
+
+    def test_the_check_for_printed_python_reports_a_dictionary_put_back(self):
+        """The control: the page check sees the shape it is written to see.
+
+        ``v8-00903.html``'s driver-deadline cell is read, the dictionary that
+        was there before this part is put back in its place, and the check for
+        printed Python is asked about the result. The bare-token limb is shown
+        the same way, with an index cell's ``no`` replaced by ``None``.
+        """
+        page = committed("v8-00903.html")
+        self.assertEqual([], printed_python(page))
+        put_back = page.replace(
+            "<td>08:50:00 (EV-TRIP-00903)</td>",
+            "<td>{'value': '2026-09-13T08:50:00+08:00', "
+            "'evidence_id': 'EV-TRIP-00903'}</td>",
+            1,
+        )
+        self.assertNotEqual(page, put_back, "the deadline cell was not found")
+        self.assertIn("{'", printed_python(put_back))
+        self.assertIn("'value':", printed_python(put_back))
+
+        index = committed(v8.INDEX_PAGE)
+        self.assertEqual([], printed_python(index))
+        self.assertIn("<td>no</td>", index)
+        self.assertIn(
+            "None",
+            printed_python(index.replace("<td>no</td>", "<td>None</td>", 1)),
+        )
 
     def test_a_changed_ruling_changes_that_cases_page(self):
         portability.require_the_same_libm()

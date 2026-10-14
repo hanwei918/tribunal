@@ -44,6 +44,12 @@ header, language switch and footer -- taken from
 with :func:`ui.site.build.assemble`, with its ``<main>``, title, description and
 ``hreflang`` alternates set for the case. No stylesheet is added.
 
+Every ``table.dt`` this builder writes is the only child of a
+``<div class="scroll-x">`` -- a class ``ui/site/src/site.css`` already defines
+(``.scroll-x{overflow-x:auto}``) -- because the drafts table's five columns and
+the run's 40-character commit are wider than a phone and a page that scrolled
+sideways would carry the whole layout with it.
+
 Every page is **ASCII**: a character outside ASCII is written as a numeric
 character reference, or, inside a ``<script>`` element, as a JavaScript
 ``\\uXXXX`` escape -- which is how ``ui.v2.build`` writes its own pages, and
@@ -884,7 +890,19 @@ def decision_of(case: V8Case) -> Decision:
 # Rendering
 # --------------------------------------------------------------------------
 def _t(value: Any) -> str:
-    """A value as HTML text, ASCII only (``ui.v2.build``'s own writer)."""
+    """A value as HTML text, ASCII only (``ui.v2.build``'s own writer).
+
+    Every leaf a page prints reaches text here, so this is the one place an
+    unknown shape is stopped rather than printed. A mapping or a list that
+    arrives is a fact this code has not been taught to render -- a
+    ``{value, evidence_id}`` wrapper passed on whole, say -- and rendering it
+    would put Python's own ``repr`` on the page, so it is refused and the build
+    fails with the shape named.
+    """
+    if isinstance(value, (Mapping, list)):
+        raise BuildError(
+            "a leaf reaches text as a {0}: {1!r}".format(type(value).__name__, value)
+        )
     return v2._text(value)
 
 
@@ -904,13 +922,25 @@ def _paragraphs(text: Any) -> str:
     )
 
 
+def _scroll(table: str) -> str:
+    """A table inside the site's own horizontal-scroll box.
+
+    ``ui/site/src/site.css`` defines ``.scroll-x{overflow-x:auto}`` and this
+    builder adds no stylesheet of its own. A five-column drafts table, and the
+    run's 40-character commit, are wider than a phone, so every ``table.dt``
+    this builder writes is the only child of one of these and the page itself
+    stays the width of the viewport.
+    """
+    return '<div class="scroll-x">{0}</div>'.format(table)
+
+
 def _table(rows: Sequence[Tuple[str, str]]) -> str:
     """A ``.dt`` table: a label and its value, one row each."""
     body = "".join(
         '<tr><th scope="row">{0}</th><td>{1}</td></tr>'.format(_t(name), value)
         for name, value in rows
     )
-    return '<table class="dt"><tbody>{0}</tbody></table>'.format(body)
+    return _scroll('<table class="dt"><tbody>{0}</tbody></table>'.format(body))
 
 
 def _heading(text: str, language: str, number: Optional[int] = None) -> str:
@@ -1111,14 +1141,18 @@ def dispute_body(case: V8Case, language: str) -> str:
         ),
         '<div class="cards c2">{0}</div>'.format("".join(cards)),
         _heading(label("Evidence", language), language),
-        '<table class="dt"><thead><tr><th>{0}</th><th>{1}</th></tr></thead>'
-        "<tbody>{2}</tbody></table>".format(
-            _t(label("Evidence id", language)),
-            _t(label("Evidence type", language)),
-            "".join(
-                '<tr><td class="n">{0}</td><td>{1}</td></tr>'.format(_t(name), detail)
-                for name, detail in evidence_rows
-            ),
+        _scroll(
+            '<table class="dt"><thead><tr><th>{0}</th><th>{1}</th></tr></thead>'
+            "<tbody>{2}</tbody></table>".format(
+                _t(label("Evidence id", language)),
+                _t(label("Evidence type", language)),
+                "".join(
+                    '<tr><td class="n">{0}</td><td>{1}</td></tr>'.format(
+                        _t(name), detail
+                    )
+                    for name, detail in evidence_rows
+                ),
+            )
         ),
     ]
     if language == ZH:
@@ -1192,13 +1226,30 @@ def _free_wait_rows(free_wait: Mapping[str, Any], language: str) -> List[Tuple[s
     ]
 
 
+def _sourced_instant(leaf: Any) -> str:
+    """A ``{value, evidence_id}`` instant: the time of day, and its evidence id.
+
+    The brief wraps a derived instant with the artifact it came from. The free
+    wait's own times are read through ``_leaf`` and shown as the clock alone;
+    the driver's deadline is the one instant the page shows with its source
+    beside it, the way the page's other sourced figures carry the clause they
+    come from, so it is rendered ``08:50:00 (EV-TRIP-00903)`` and never as the
+    wrapper it arrives in.
+    """
+    if not isinstance(leaf, Mapping):
+        return _t(v2._clock(leaf))
+    clock = _t(v2._clock(leaf.get("value")))
+    evidence = leaf.get("evidence_id")
+    return "{0} ({1})".format(clock, _t(evidence)) if evidence else clock
+
+
 def _deadline_rows(deadline: Mapping[str, Any], language: str) -> List[Tuple[str, str]]:
     """The driver's deadline, or the record's reason for having none."""
     when = deadline.get("deadline")
     return [
         (
             label("Driver deadline", language),
-            _t(v2._clock(when)) if when else _t(deadline.get("reason")),
+            _sourced_instant(when) if when else _t(deadline.get("reason")),
         ),
         (
             label("Late seconds", language),
@@ -1477,16 +1528,18 @@ def drafts_body(case: V8Case, language: str) -> str:
                 _t(validity),
             )
         )
-    return (
-        '<table class="dt"><thead><tr><th>{0}</th><th>{1}</th><th>{2}</th>'
-        "<th>{3}</th><th>{4}</th></tr></thead><tbody>{5}</tbody></table>"
-    ).format(
-        _t(label("Draft", language)),
-        _t(label("Kind", language)),
-        _t(label("Proposed", language)),
-        _t(label("Confidence", language)),
-        _t(label("Validity", language)),
-        "".join(rows),
+    return _scroll(
+        (
+            '<table class="dt"><thead><tr><th>{0}</th><th>{1}</th><th>{2}</th>'
+            "<th>{3}</th><th>{4}</th></tr></thead><tbody>{5}</tbody></table>"
+        ).format(
+            _t(label("Draft", language)),
+            _t(label("Kind", language)),
+            _t(label("Proposed", language)),
+            _t(label("Confidence", language)),
+            _t(label("Validity", language)),
+            "".join(rows),
+        )
     )
 
 
@@ -1748,17 +1801,18 @@ def index_main(cases: Sequence[V8Case], language: str) -> str:
             )
         ),
     )
-    table = (
-        '<section class="paper"><div class="wrap">\n'
-        '<div class="cards c4">{0}</div>\n'
-        '<div class="tscroll" tabindex="0" role="region"><table class="dt">'
-        "<thead><tr>{1}</tr></thead><tbody>{2}</tbody></table></div>\n"
-        "</div></section>"
+    table_html = (
+        '<table class="dt"><thead><tr>{0}</tr></thead><tbody>{1}</tbody></table>'
     ).format(
-        cards_html,
         "".join("<th>{0}</th>".format(_t(sentence(key, language))) for key in columns),
         "".join(rows),
     )
+    table = (
+        '<section class="paper"><div class="wrap">\n'
+        '<div class="cards c4">{0}</div>\n'
+        '<div class="tscroll" tabindex="0" role="region">{1}</div>\n'
+        "</div></section>"
+    ).format(cards_html, _scroll(table_html))
     return hero + "\n" + table
 
 
