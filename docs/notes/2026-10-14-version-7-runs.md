@@ -51,6 +51,10 @@ each is recorded with its reasoning in
   comes back, and "full" describes the excess distance fare. The ruling label is
   `PARTIAL_REFUND` in both.
 
+Correction, 2026-10-14: three were posted -- C1, C2 and C3; C5 was not. Ryde
+answered on 2026-10-14: see
+[`2026-10-14-policy-v8.md`](2026-10-14-policy-v8.md).
+
 ## 2. The one wrong line in every version-7 console log
 
 Every version-7 console log ends its figure with *"cached 30 of 30 results this

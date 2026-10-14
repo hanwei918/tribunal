@@ -17,8 +17,8 @@ record, the referee prevents uncited claims reaching the merits, and the four
 drafts prevent one sample deciding.
 
 **Why should anyone trust the figures?** The system applies **Ryde's own Dispute
-Resolution Policy v2.1** (policy version 7, adopted 2026-10-13), and its
-version-7 sealed figure comes first. `sealed-v4` - 30 cases written for v2.1 by
+Resolution Policy v2.1 with Ryde's answers of 2026-10-14** (policy version 8),
+and its sealed figure is at version 7. `sealed-v4` - 30 cases written for v2.1 by
 Claude Opus 5.5 in a fresh claude.ai chat with no project folder or repository
 access, from the owner's prompt, Ryde's v2.1, the three version-7 policy files,
 the public contract, a format checker and the organisers' sample case; the same
@@ -26,11 +26,15 @@ model is the team's development assistant and helped write the version-7 policy
 files, and no person reviewed its key - agrees on all four graded fields in
 30/30 = 100.0%, Wilson 95% [88.6%, 100.0%], from a single run on 2026-10-14 from
 the annotated tag `freeze-2026-10-14`
-(`python3 -m eval.sealed_report --set sealed-v4`). 30 cases is a small sample, and
+(`python3 -m eval.sealed_report --set sealed-v4`); it is labelled at version 7
+because a sealed set is run once, and version 8 changes its key on one case
+(6009, 2.4 km), which version 8's 2 km gate escalates before the judge is asked,
+while the other 29 were not run at version 8. 30 cases is a small sample, and
 the figure says the system applies the version-7 files as that author reads them
 rather than that it is independently correct. The organisers' own two samples,
-converted for v2.1 and keyed by Ryde's stated outcomes (`ryde-v7`), are 1 of 2:
-902 matched at `PARTIAL_REFUND` 3.44, and 903 escalated on a 2-2 split against the
+converted for v2.1 and keyed by Ryde's stated outcomes as amended by Ryde's
+answer of 2026-10-14 (`ryde-v8`), are 1 of 2: 902 escalated by version 8's 2 km
+gate, which is what Ryde answered, and 903 escalated on a 2-2 split against the
 0.95 bar the rider's fraud flag sets. **At version 6**, the team's own policy,
 frozen 2026-10-11: three sealed sets are each run once, by
 the owner, from a frozen tag, and committed as produced: `wild-v2` from
@@ -80,23 +84,17 @@ reproduce byte for byte**: every version-1-6 brief, all 194 recorded version-6
 case digests, and every version-6 run and figure are unchanged
 (`tests/test_brief_v7.py`). The change took one night (2026-10-13 18:35 to the
 freeze at 02:32 on 2026-10-14) and one sealed set, and the version-6 results are
-still in the record, labelled.
+still in the record, labelled. Ryde's answers the next morning became version 8
+the same day, for the same reason.
 
-**Which parts of v2.1 did you have to read for yourselves?** Four, and they are
-the four the owner posted to Ryde in the track group on 2026-10-13 (still
-unanswered when the version-7 runs were made). Each is recorded with its
-reasoning in `docs/notes/2026-10-13-policy-v7.md`, and what Tribunal chose is:
+**Which parts of v2.1 did you have to read for yourselves?** Three were put to
+Ryde in the track group on 2026-10-13 and answered on 2026-10-14 - C1, C2 and
+C3 - and version 8 applies the answers: the 2 km limb applies, so a route
+deviation over 2 km is escalated rather than ruled; the free wait runs from the
+driver's arrival; and no surge is applied to the excess distance fare. **C5 and
+the other readings remain Tribunal's**, each recorded with its reasoning in
+`docs/notes/2026-10-13-policy-v7.md`:
 
-- **C1, the 2 km limb.** v2.1 6.2 escalates any deviation over 2 km, and Ryde's
-  own DISP-001 rules a 4.30 km deviation itself and expects an AI partial refund
-  of 3.44. Tribunal **holds the limb off** and rules the sample the way the
-  sample does, records the conflict, and switches to 6.2 if Ryde says so.
-- **C2, the free wait.** From `trip_record.scheduled_at` where the trip is
-  scheduled and the driver arrived at or before it, and otherwise from the
-  driver's arrival.
-- **C3, surge.** The excess distance fare is deviation km x
-  `fare_breakdown.per_km_rate_sgd`, with no surge multiplier (DISP-001:
-  4.30 x 0.80 = 3.44).
 - **C5, what "partial" and "full" refund pay.** Both rows pay the whole excess
   distance fare; "partial" describes the trip fare and "full" the excess distance
   fare, and the ruling label is `PARTIAL_REFUND` in both.
@@ -106,6 +104,16 @@ the repeat no-show counter, the fee on the record, rounding, the arrival test,
 the traffic-event vocabulary and the driver's deadline on an on-demand trip - is
 in the same note as C4, C6, C7, C8, C12, C13, C14, C16, C17 and C18, each with
 what Tribunal chose and what would change it.
+
+**Your sealed figure is at version 7 -- why not re-run it?** A sealed set is run
+once, and a second run would be a second figure rather than a better one:
+`sealed-v4` was run once on 2026-10-14 from the annotated tag
+`freeze-2026-10-14`, and that run is the figure. Version 8 changes its key on one
+case - 6009, at a deviation of 2.4 km - and version 8's 2 km gate escalates that
+case before the judge is asked, so a version-8 run of it would be a gate firing
+rather than a judgment about the case. The other 29 were not re-run, and nothing
+claims what they would have produced
+(`docs/notes/2026-10-14-policy-v8.md`).
 
 **Are your hidden sets really hidden?** Plainly: they are hidden from the
 development side, and they are **not** independent benchmarks. Every set was

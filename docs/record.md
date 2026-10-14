@@ -137,6 +137,33 @@ operations rule `OPS-EW-01`, not a clause of the frozen policy.
 
 ## Results
 
+### Version 8 -- v2.1 with Ryde's answers (2026-10-14)
+
+Tribunal applies **Ryde's own Dispute Resolution Policy v2.1 with Ryde's answers
+of 2026-10-14** as **policy version 8**, adopted the same day; `policy/v8/` is
+version 7 edited at fifteen JSON paths, `prompts/v2/` still pairs with it, and
+the three answers and what they settle are in
+[`docs/notes/2026-10-14-policy-v8.md`](notes/2026-10-14-policy-v8.md). The two
+version-8 sets were run once on frozen code, from the annotated tag
+`freeze-2026-10-14-v8`; `ryde-v8` is the organisers' own two samples, and
+`dev-v8` is development data. They are never pooled with each other, with the
+version-7 sets below, or with anything else.
+
+| set | agreement | Wilson 95% | who wrote it, and what was seen early | recompute with |
+|---|---|---|---|---|
+| `ryde-v8` (2 cases) | 1 of 2 against Ryde's stated outcomes as amended by its answer | n/a | The organisers' two samples, keyed by Ryde's own stated outcomes as amended by Ryde's answer of 2026-10-14. 902 (DISP-001, route deviation 4.3 km) is `ESCALATE`, which version 8's 2 km gate produces before the judge is asked and which is what Ryde answered, and it is matched; 903 (DISP-002, no-show) is `DRIVER_COMPENSATION` 5.00 with the fee upheld, and the panel split 2-2 and escalated, because the rider's fraud flag sets a 0.95 bar that eight sparse GPS fixes cannot reach. Development data that is tuned against, so it is never a generalisation figure | `python3 -m eval.development_sets --report --set ryde-v8` |
+| `dev-v8` (40 cases) | 39/40 | n/a | The dev-v7 cases with the version-8 key, whose two changed entries are 5010 and 5015 and whose one miss is 5017 -- a notice that can be established neither way, which the judge read as not informed and which is not a version-8 change -- so **development data the team tuned against**, never a generalisation figure. Median time to a decision 153.1 s a case and a median model cost of 0.0390 USD a case | `python3 -m eval.development_sets --report --set dev-v8` |
+
+**Version 8's one sealed figure is version 7's.** `sealed-v4` was run once, at
+version 7, and was not re-run: version 8 changes its key on one case (6009, 2.4
+km), which version 8's 2 km gate escalates before the judge is asked, and the
+other 29 were not run at version 8
+([`docs/notes/2026-10-14-policy-v8.md`](notes/2026-10-14-policy-v8.md)).
+
+**Version 8 changes no version-7 figure.** `policy/v7/`, `prompts/v2/` and every
+run made at version 7 are unchanged, and the version-7 brief still rebuilds byte
+for byte, so the version-7 section below reads as it did.
+
 ### Version 7 -- Ryde's Dispute Resolution Policy v2.1
 
 Tribunal applies **Ryde's own Dispute Resolution Policy v2.1** as **policy
@@ -162,8 +189,8 @@ is not an independent benchmark. 30 cases is a small sample: the Wilson 95% lowe
 bound on 30 of 30 is 88.6%, and one case would move the figure by 3.3 points. The
 run itself is recorded in
 [`docs/notes/2026-10-14-version-7-runs.md`](notes/2026-10-14-version-7-runs.md),
-with its command, its commit, its per-case table and the four questions Ryde had
-not answered when it was made.
+with its command, its commit, its per-case table and the three questions Ryde
+answered later that day.
 
 **Version 7 changes no version-6 figure.** `policy/v1`-`policy/v6`, `prompts/v1`
 and every version-1-6 brief are byte-identical to what they were, and the 194
