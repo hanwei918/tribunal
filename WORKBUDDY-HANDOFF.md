@@ -1,3 +1,5 @@
+Development procedure for the WorkBuddy sessions that built this repository. The project is described in README.md.
+
 # WorkBuddy project handoff
 
 User constraints: starting from 2026-09-18; a team of three, each member has 1,000 activity credits in total; a single member's WorkBuddy and CodeBuddy usage is managed as one shared credit pool and must not be counted as 1,000 each; WorkBuddy is the primary development tool.

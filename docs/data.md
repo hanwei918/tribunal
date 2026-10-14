@@ -1,12 +1,17 @@
 # What is synthetic, and how real data may differ
 
+**This document describes policy version 8**: Ryde's own Dispute Resolution
+Policy v2.1 with Ryde's answers of 2026-10-14. The version-6 sets below are the
+team's own policy, frozen on 2026-10-11, and every row says which it is.
+
 Every dispute this repository reports on is synthetic, semi-synthetic, or the
 organisers' own sample. This file says which is which, who wrote each set, and
 where Ryde's real traffic would differ from what was measured.
 
 ## Who wrote each set
 
-The rows below are the record's own provenance table, condensed
+The rows below are the **version-6** sets, written for the team's own policy
+frozen on 2026-10-11. They are the record's own provenance table, condensed
 ([the full record](record.md), "Results", "Where the test sets came from").
 
 | set | author and tool | role |
@@ -27,6 +32,23 @@ the project material it was written against named as "the organisers' brief (the
 dispute types); the corpus predates this repository", and its key recorded as
 written "under policy version 1 and never edited". It is this team's own work; it
 is not a set the organisers supplied.
+
+## The version-7 and version-8 sets
+
+These five sets were written for the policy Tribunal applies now, and each is
+graded against its own key. `dev-v8` and `ryde-v8` brief the same case files as
+`dev-v7` and `ryde-v7` at policy version 8 and move only the key, so their cases
+live under `data/external/dev-v7/` and `data/external/ryde-v7/`; each set is
+loaded by number through `tribunal.loader.load_external_set_case`, and none is
+pooled with another.
+
+| set | size | author | key | role |
+|---|---|---|---|---|
+| `dev-v7` | 40 cases, 5001-5020 and 5051-5070 | Claude Opus 5.5, in a fresh claude.ai chat with no project folder or repository access | `eval/answers/dev-v7/answers/ground_truth.json` | development: the version-7 development set, tuned against, so it is never a generalisation figure |
+| `ryde-v7` | 2 cases, 902 and 903 | the organisers' own two samples, converted for v2.1 by `eval/external/ryde/convert.py --policy-version 7` | `eval/answers/ryde-v7/ground_truth.json` | development: keyed by Ryde's own stated outcome for each sample |
+| `sealed-v4` | 30 cases, 6001-6015 and 6051-6065 | Claude Opus 5.5, in a fresh claude.ai chat with no project folder or repository access | `eval/answers/sealed-v4/answers/ground_truth.json` | sealed: run once, at version 7, on 2026-10-14 |
+| `dev-v8` | 40 cases, the `dev-v7` cases at version 8 | Claude Opus 5.5, on the same terms as `dev-v7` | `eval/answers/dev-v8/ground_truth.json` | development: tuned against, so it is never a generalisation figure |
+| `ryde-v8` | 2 cases, 902 and 903 | the organisers' own two samples at version 8 | `eval/answers/ryde-v8/ground_truth.json` | development: keyed by Ryde's stated outcomes as amended by Ryde's answer of 2026-10-14 |
 
 **No test set came from outside the team.** Every one was written by a member of
 the project, by a model the team directed, or by a collaborator the team

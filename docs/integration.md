@@ -1,5 +1,9 @@
 # How Ryde would plug it in
 
+**This document describes policy version 8**: Ryde's own Dispute Resolution
+Policy v2.1 with Ryde's answers of 2026-10-14. Where a paragraph below is the
+team's own version-6 policy's, it says so.
+
 Everything below is read from the files named beside it. Nothing here is a plan
 that the repository does not already carry.
 
@@ -19,6 +23,36 @@ through the converter [`eval/external/ryde/convert.py`](../eval/external/ryde/co
 which records every judgement it had to make in the mapping record beside the
 converted case; the converted case is answer-free and is named by its path, never
 by a manifest lookup.
+
+## The version-8 input fields, and the gates and bars
+
+Version 8 reads four things a version-6 brief did not, and each is a field of the
+public case file rather than a new system:
+
+- **`fraud_flags`** — the counter on a party. One flag or more raises the
+  confidence a ruling needs from 0.80 to 0.95 (`policy/v8/general.json`,
+  `thresholds.fraud_flag_field` and `confidence_required_with_fraud_flag`;
+  `POL-GEN-01`, `POL-GEN-22`).
+- **`scheduled_at`** — the scheduled pickup time. Where a driver reached the
+  pickup early, the free wait starts from the driver's own arrival
+  (`trip_record.arrived_at`): that is C2, answered by Ryde on 2026-10-14, and it
+  is `thresholds.free_wait_starts_from` in `policy/v8/no_show.json`.
+- **`in_app_calls`** — the in-app call records, which `POL-NS-23` reads
+  (`policy/v8/no_show.json`).
+- **The advisory types** — the kinds of traffic event a reroute needs, with the
+  types each admits and the normalisation rule
+  (`thresholds.traffic_justification_types` in `policy/v8/route_deviation.json`,
+  read by `POL-RD-23` and `POL-RD-24`).
+
+**The gates and the bars, in the order a case meets them.** The authority gate
+runs after the two advocates and before the judge: a safety flag, a dispute value
+over SGD 50 or a route deviation over 2 km goes to a person with the case file
+prepared (`tribunal/pipeline.py`; `POL-GEN-21`, `POL-GEN-22`, `POL-RD-25`). A
+ruling then stands only at the confidence v2.1 asks — 0.80, or 0.95 where a party
+carries a fraud flag — and a panel whose drafts split produces no ruling at all.
+The value at stake is `dispute.amount_contested_sgd` (`thresholds.value_field`),
+and the money a ruling moves is computed by code and handed to the judge rather
+than read out of prose.
 
 ## What a ruling is, field by field
 
@@ -50,6 +84,9 @@ A caller reads the same fields off every case: `ruling` says what happened,
 is what both parties are told.
 
 ## What routes a case to a person
+
+This section is version 6's. Version 8 routes a case by v2.1's own gates, and the
+section below states them.
 
 Three things take a case out of the automatic lane, and they happen at different
 points.

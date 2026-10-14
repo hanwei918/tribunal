@@ -1,5 +1,10 @@
 ## Policy sources
 
+**This document describes policy version 8**: Ryde's own Dispute Resolution
+Policy v2.1 with Ryde's answers of 2026-10-14. The clause-by-clause provenance
+below is the team's own policy's, and the two paragraphs after the table say how
+the policy in force was reached.
+
 Rulings cite only the clauses in `policy/`. Where those clauses came from is recorded here and, clause by clause, in each clause's `sources` key (all fetched 2026-10-07). `notes` is guidance the model reads; `sources` is for people and is dropped when the policies are injected, so no provenance reaches the advocates or the judge.
 
 | Source | What it supplies | Where |
@@ -13,5 +18,9 @@ Rulings cite only the clauses in `policy/`. Where those clauses came from is rec
 | **This system's additions** | Arrival radii and the 25 m accuracy filter, the 400 m wrong-entrance ceiling, the 480 s airport dwell, the 80 / 20 fee split in POL-NS-07, the 120 s trace-gap threshold, the execution threshold, the reviewer rules, the residual principles | marked "this system's addition" in the relevant sources |
 
 Policy base version 2 (2026-10-07) folded amendment 0001 into the base text, added `fee_schedule.defaults`, the `integrity` block and clauses POL-NS-10 and POL-GEN-04 to POL-GEN-08; the version-1 bytes are under `policy/history/v1/`. Peer policies change (Grab shortened its grace period in 2025; Zig introduced its fees in September and October 2025), so every `[Source]` sentence carries the fetch date.
+
+**From the team's own policy to Ryde's.** Policy version 7 is **Ryde's own Dispute Resolution Policy v2.1**, released to the track on 2026-10-13: `policy/v7/` holds its three files, `prompts/v2/` the prompt set that pairs with them, and the readings v2.1 does not settle -- the ones this prototype has to make -- are in [the version-7 note](notes/2026-10-13-policy-v7.md). Policy version 8 is version 7 with **Ryde's answers of 2026-10-14** applied at fifteen JSON paths, so `policy/v8/` differs from `policy/v7/` in those paths and nowhere else; the three answers and what each settles are in [the version-8 note](notes/2026-10-14-policy-v8.md). Versions 1 to 6 stay byte-identical, and the recorded version-6 case digests still rebuild unchanged (`tests/test_brief_v7.py`).
+
+**The tables above are version 6's.** The clauses, their `sources` keys and the fetch dates are the team's own policy's; v2.1's own provenance is in its text, and `policy/v8/` carries the clauses the submission applies.
 
 Links: Ryde cancellation and waiting-time policy <https://help.rydesharing.com/hc/en-us/articles/33362932998937-Cancellation-and-Waiting-Time-Policy> · rider statement <https://help.rydesharing.com/hc/en-us/articles/23534478435353-Cancellation-and-Waiting-Fee> · driver cancellation fee <https://help.rydesharing.com/hc/en-us/articles/4408070838297-How-Does-the-Cancellation-Fee-Work> · waiting fee <https://help.rydesharing.com/hc/en-us/articles/4408071347993-How-Does-the-Waiting-Fee-Work> · waiver requests <https://help.rydesharing.com/hc/en-us/articles/18229758389017> and <https://help.rydesharing.com/hc/en-us/articles/27085468660505> · driver appeals <https://help.rydesharing.com/hc/en-us/articles/23575142762393-I-wish-to-make-an-appeal> · ERP <https://help.rydesharing.com/hc/en-us/articles/115001438614> and <https://help.rydesharing.com/hc/en-us/articles/900005170163> · fare structure <https://help.rydesharing.com/hc/en-us/articles/46946509938073-Understanding-the-Fare-Structure> · Grab SG <https://www.grab.com/sg/cancellationpolicy/> · Gojek SG <https://gojek.com/sg/blog/news-cancellation-fee-gojek-singapore-updates> · Zig <https://help.zig.live/hc/en-gb/categories/48930499051545-Cancellation-Fees> · Uber <https://help.uber.com/h/6bec690f-ee35-40ba-96ee-c38a8ae796e0> and <https://help.uber.com/h/ff65490e-2ffb-41cf-a709-4611521c7b24>.

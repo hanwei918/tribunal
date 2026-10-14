@@ -1,16 +1,31 @@
 # Changelog
 
-Every change since `freeze-2026-10-11`, one line per part. That tag freezes the
-evaluated system: `tribunal/`, `prompts/` and `policy/` do not change again
-before the submission, so every part below is documentation, a test, a built
-page, an asset or the repository's own tooling. The command that proves it
-prints nothing:
+Every change since `freeze-2026-10-11`, one line per part, and the **three
+freezes** that came after it. Each freeze is the `tribunal/`, `prompts/` and
+`policy/` tree a run was made from, and the command beside it shows what has
+moved under that tree since:
 
-```bash
-git diff --stat freeze-2026-10-11 HEAD -- tribunal prompts policy
-```
+| freeze | version | what it freezes | the command, and what it prints |
+|---|---|---|---|
+| `freeze-2026-10-11` | 6 | the team's own policy | `git diff --stat freeze-2026-10-11 HEAD -- tribunal prompts policy` — version 7's and version 8's moves |
+| `freeze-2026-10-14` | 7 | Ryde's Dispute Resolution Policy v2.1 | `git diff --stat freeze-2026-10-14 HEAD -- tribunal prompts policy` — version 8's moves |
+| `freeze-2026-10-14-v8` | 8 | v2.1 with Ryde's answers of 2026-10-14 | `git diff --stat freeze-2026-10-14-v8 HEAD -- tribunal prompts policy` — prints nothing |
 
-| part | date | what changed, and why it is outside the frozen tree |
+**The version-6 tag is the one that moved.** `freeze-2026-10-11` froze the
+team's own policy at version 6, and `tribunal/`, `prompts/` and `policy/` did
+move after it: for version 7, Ryde's own Dispute Resolution Policy v2.1, and for
+version 8, v2.1 with Ryde's answers of 2026-10-14. `freeze-2026-10-14` froze
+version 7, and version 8's files sit after it. `freeze-2026-10-14-v8` froze
+version 8, and nothing under those three trees has moved since — the third
+command above prints nothing. Every row below says which of the three it stands
+under, and a row that touched a frozen tree says so.
+
+The rows before 41 are in this file's history; the rows from 41 to 61 are below,
+and the rows from 70 to 93 follow them. Parts 62 to 69 were never carried out in
+this branch: nothing under `ops/` names a review console, and `git log` holds no
+commit between `0fe400f` (part 61) and `afcbe62` (part 70).
+
+| part | date | what changed, and whether it touched the frozen trees |
 |---|---|---|
 | 41 | 2026-10-11 | `sealed-v2`, the fourth sealed set, imported, verified and registered at policy version 6 without reading its answers (`19c7e5a`, the commit the tag `freeze-2026-10-11` points at). The registration moves `eval/`, `data/external/` and the answer key; `tribunal/`, `prompts/` and `policy/` are exactly what the tag freezes. |
 | 42 | 2026-10-11 | the fourth sealed set's single run, committed exactly as produced under `runs/sealed-v2/`, with a manifest recording every file's size and sha256 (`84a563a`). Run records and their manifest only. |
@@ -35,3 +50,28 @@ git diff --stat freeze-2026-10-11 HEAD -- tribunal prompts policy
 | 59 | 2026-10-13 | a clock stays on one line and the scan of every built page is recorded (`8c4f3bf`); the reviewer's packet and the case page's summary line masked as the brief is (`9c2d702`); the fairness report's errors broken down by category and by the amount contested (`5f1f167`); and a closer who is a party to the case refused, with this changelog. Built pages, notes, the ops layer, the fairness report, tests and documents. |
 | 60 | 2026-10-13 | `sealed-v3`, the fifth sealed set, imported, verified and registered at policy version 6 without reading its answers, and not yet run. The registration moves `eval/`, `data/external/` and the answer key; `tribunal/`, `prompts/` and `policy/` are exactly what the tag `freeze-2026-10-11` freezes. |
 | 61 | 2026-10-13 | the fifth sealed set's single run, started once and stopped after 8 of its 30 cases, committed exactly as it was left under `runs/sealed-v3/` with a manifest of every file; `runs/sealed-v3/` closed outright like the other four sealed roots, and `eval.sealed_report --set sealed-v3` printing the counts and no agreement rate. Run records, `eval/`, a note and documents. |
+| 70 | 2026-10-13 | policy version 7 is Ryde's own Dispute Resolution Policy v2.1, adopted as a third policy base (`afcbe62`). **Touched the frozen trees**: `policy/v7/` is new and `prompts/v2/` is new, and `tribunal/policy_versions.py` gains the version. |
+| 71 | 2026-10-13 | the version-7 brief: the facts v2.1 needs, and the money (`9c2e3ea`). **Touched**: `tribunal/brief.py`, `tribunal/facts.py`, `tribunal/money.py`. |
+| 72 | 2026-10-13 | the version-7 decision gates, the ops layer at version 7, Ryde's samples converted, the version-7 sets registered, the prompts pair guarded and the try-it bundle rebuilt (`5273a64`, `9426d23`, `af36ef8`). **Touched**: `tribunal/pipeline.py`; `ops/`, `eval/` and the site. |
+| 73 | 2026-10-13 | part 72's seven failures fixed, the policy's own type map, `dev-v7` imported and registered, and `sealed-v4` imported unread and registered (`6f9d83c`, `0e47be5`, `f52c149`, `03ebff8`). `eval/`, `data/external/` and the answer key. |
+| 74 | 2026-10-13 | the version-7 advisory block reads every advisory shape the record holds (`d8699ee`). `tribunal/brief.py`. |
+| 75 | 2026-10-13 | C18's type map gains the LTA DataMall vocabulary the version-7 sets use (`8ac560a`). `tribunal/`. |
+| 76 | 2026-10-13 | the recorded-version-6 digest test meets the known Linux last-place difference (`ebcb753`). A test. |
+| 77 | 2026-10-14 | the recorded-version-6 digest test's refusal now names the value that moved (`9772136`). A test. |
+| 78 | 2026-10-14 | the second Linux difference is named exactly, so the digest test accepts it without widening anything (`d9192a1`). A test and `tests/portability.py`. |
+| 79 | 2026-10-14 | the ruling names the outcome for the party who filed; Ryde's fare record completed for what v2.1 needs; the filing frame names only the clauses the case's own policy holds (`3fd5ef8`, `9294549`, `8157af8`). **Touched**: `tribunal/brief.py`, `prompts/v2/judge.system.md`, `eval/external/ryde/convert.py`. |
+| 80 | 2026-10-14 | the six version-7 runs committed byte for byte with `runs/sealed-v4/` closed; version 7 told as the result; the version-7 figures in `tools/check_figures.py` (`6a650d5`, `9035a19`, `89f5c0e`). Run records, documents and a tool. |
+| 81 | 2026-10-14 | the product site says Tribunal applies Ryde's v2.1, and every version-7 figure on it is computed from the committed runs (`83fa168`). Site sources, `ui/site/` and built pages. |
+| 82 | 2026-10-14 | the two tests part 80 moved: a renamed heading and one directory in two spellings (`ff59f95`). Two tests. |
+| 83 | 2026-10-14 | the run records stop carrying the absolute path of the temporary checkout each run was launched from (`598ab98`). Run records, a tool and documents. |
+| 84 | 2026-10-14 | `84a` policy version 8 — version 7 with Ryde's answers of 2026-10-14 applied at fifteen JSON paths, reached only at `policy_version >= 8` (`3f64cae`); `84b` the two version-8 sets, their keys, the note, the tests and the rebuilt site (`af2b5ca`). **Touched**: `policy/v8/`, `tribunal/facts.py`, `tribunal/policy_versions.py`. |
+| 85 | 2026-10-14 | the six tests version 8 moved, the try bundle's three new files, and one paragraph of the version-8 note (`464230c`). Tests, a bundle and a note. |
+| 86 | 2026-10-14 | `86a` the version-8 runs committed byte for byte, with part 83's path replacement applied to exactly the six new files that carry one (`28b0148`); `86b` the submission applies v2.1 with Ryde's answers of 2026-10-14, the results tables lead with version 8, and the record's "four questions" is corrected to three (`c14d982`); `86c` the version-8 figures in the figure table, computed through the same read the version-7 ones get (`7dca8a4`). Run records, documents and a tool. |
+| 87 | 2026-10-14 | the product site says Tribunal applies v2.1 with Ryde's answers of 2026-10-14, and the version-8 figures it states come from the committed runs (`e581435`). Site sources, `ui/site/` and built pages. |
+| 88 | 2026-10-14 | Ryde's own two samples, at version 8, on the cases page, and the version each page shows (`7607e75`). `ui/site/` and built pages. |
+| 89 | 2026-10-14 | three claims the files themselves contradict are corrected everywhere they are made, and the figure check is taught to catch them (`53c4fe2`). Documents, a tool, a test and `data/external/ryde-v7/README.md`. |
+| 90 | 2026-10-14 | the version-8 measurements: the position swap, calibration, the automatic share, the clock and the cost, read off the committed runs by the same functions the version-6 figures were (`76c5ff9`). **Touched**: `eval/fairness.py`'s one keyword and the new `eval/v8_report.py`. |
+| 91 | 2026-10-14 | `91` a page for every version-8 case, in English and in Chinese, drawn from the committed runs by a new builder that refuses a case whose rebuilt brief does not match its run (`17c99c0`); `91b` the version-8 case pages stop scrolling sideways and stop printing Python (`086bd5d`). A builder, its tests and built pages. |
+| 92 | 2026-10-14 | the product site describes version 8 — its rules, its figures and its example case — and version 6 survives only where a heading or a sentence says so (`2fa991f`). Site sources, `ui/site/`, built pages, a tool, tests and documents. |
+| 93a | 2026-10-14 | the README and the record say version 8, and the figure check reads the version-8 figures the README states. The README's Start here, product site, In numbers, What makes it different, Quick start, Commands and Documentation sections are version 8's, a Roadmap and known limits section is new, and the record gains "Version 8 at a glance" as its first section, rewrites its limitations for version 8 with the version-6 ones kept under "Version 6 (history)", and marks the six sections that describe version-6 behaviour. Documents, `tools/check_figures.py` and its test. |
+| 93b | 2026-10-14 | the changelog tells the three freezes and carries a row per part from 70 to 93; `START-HERE.md`, `WORKBUDDY-SCOPE.md` and `WORKBUDDY-HANDOFF.md` each open with the one line saying what they are; `docs/data.md`, `docs/policy-sources.md`, `docs/integration.md` and `docs/scale.md` each say at their top which policy version they describe and state version 8; and the submission texts — `how-we-built-it.md`'s recomputed counts, and `description.md` and `description-form.txt` — lead with version 8's rules and figures, with the version-6 figures labelled. Documents only. |

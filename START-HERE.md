@@ -1,3 +1,5 @@
+Development procedure for the WorkBuddy sessions that built this repository. The project is described in README.md.
+
 # Start here — WorkBuddy operating procedure
 
 This is the standing procedure for running a WorkBuddy task on this project. It is not day-one

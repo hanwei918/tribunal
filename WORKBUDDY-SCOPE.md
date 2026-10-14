@@ -1,3 +1,5 @@
+Development procedure for the WorkBuddy sessions that built this repository. The project is described in README.md.
+
 # WorkBuddy file scope
 
 This directory is the complete permitted workspace for WorkBuddy.

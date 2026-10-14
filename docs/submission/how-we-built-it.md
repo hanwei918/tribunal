@@ -13,12 +13,19 @@ is added to them.
 The owner wrote a specification for each part and handed it over whole; WorkBuddy
 carried that part out in one session and committed it with a row in the buddy log
 naming the task, the files it touched, what was verified and how, and the commit.
-At `2731adc` -- the commit before this part -- `git log` holds **324 commits** and
-the buddy log holds **187 dated rows**, one per task session. The two numbers are
-not the same because one session may make several commits (24 rows list more than
-one) and some sessions committed nothing (15 rows list none). The session records
-themselves are submitted to the organisers separately, because they carry
-directory listings of the owner's machine.
+At `2731adc` -- the commit before part 31, when this page was first written --
+`git log` holds **324 commits** and the buddy log holds **187 dated rows**, one
+per task session. The two numbers are not the same because one session may make
+several commits (24 rows list more than one) and some sessions committed nothing
+(15 rows list none). The session records themselves are submitted to the
+organisers separately, because they carry directory listings of the owner's
+machine.
+
+**Both counts are recomputed here, and the commands are these.** At `2fa991f`,
+the commit before the part that wrote this paragraph, `git rev-list --count
+2fa991f` reads **408 commits**, and `git show
+2fa991f:docs/buddy-log/README.md` piped to `grep -c '^| 2026-'` reads **271 dated
+rows** -- the rows the log held at that commit.
 
 **The owner ran the tests and the paid runs, and read every report.** The full
 test suite and every run that made a model call were run by the owner outside

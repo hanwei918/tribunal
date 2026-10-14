@@ -1,5 +1,10 @@
 # What one account can carry, and what it costs
 
+**This document describes policy version 8**: Ryde's own Dispute Resolution
+Policy v2.1 with Ryde's answers of 2026-10-14. The per-case and monthly figures
+below are the **version-6** runs' and say so; the section "At version 8" states
+the version-8 ones beside them.
+
 Every figure here is either read from a committed run or computed from one, and
 each one says which. Nothing in this file is measured on a live deployment.
 
@@ -23,6 +28,15 @@ not known ([the endpoint note](notes/2026-09-21-tokenhub-api-facts.md)). This is
 arithmetic over published limits and a recorded median, **computed, not
 measured**; the same figures are stated in
 [the description](submission/description.md), "Throughput".
+
+## At version 8
+
+The ceiling above is the **version-6** runs'. At version 8 the `dev-v8` run -- 40
+cases of development data the team tuned against -- records a median of 153.1 s a
+case and a median model cost of 0.0390 USD a case, 1.823 USD over the 40
+(`python3 -m eval.v8_report --report`). Read beside the version-6 figures above,
+the clock is about the same and the cost is about a third lower, and neither
+column is pooled with the other.
 
 ## Scaling out
 
