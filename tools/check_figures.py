@@ -95,6 +95,8 @@ DOCUMENTS: Tuple[str, ...] = (
     "ui/dist/index.zh.html",
     "ui/dist/results.zh.html",
     "ui/dist/how-it-works.zh.html",
+    "ui/dist/safety.html",
+    "ui/dist/safety.zh.html",
     # The note part 90 adds, which states the table `eval.v8_report --report`
     # prints. It is named here so the version-8 measurements below are read out
     # of the document that states them rather than out of nothing.
@@ -131,12 +133,10 @@ FIGURES: Tuple[Figure, ...] = (
             r"(\d+\.\d+) s median time",
             r"median time to a decision of (\d+\.\d+) seconds",
             r"median of (\d+\.\d+) seconds",
-            r"median of (\d+\.\d+) s",
             r"decision of (\d+\.\d+) s and a 90th",
             r"class=\"big\">(\d+\.\d+) s</span><h3>",
             r"num\">(\d+\.\d+)<small>min</small>",
             r"num\">(\d+\.\d+)<small>\u5206\u949f</small>",
-            r"\u4e2d\u4f4d (\d+\.\d+) \u79d2",
             r"in (\d+\.\d+) min at the median",
             r"At the (\d+\.\d+) s median",
             r"(\d+\.\d+) s; p90",
@@ -146,7 +146,7 @@ FIGURES: Tuple[Figure, ...] = (
         "90th percentile time to a decision",
         ("286.9", "4.8"),
         (
-            r"(\d+\.\d+) s at the 90th percentile",
+            r"median, (\d+\.\d+) s at the 90th percentile",
             r"90th percentile wall clock \| (\d+\.\d+) s",
             r"p90 of (\d+\.\d+)\s+seconds",
             r"90th percentile\s+of (\d+\.\d+)\s+seconds",
@@ -183,8 +183,6 @@ FIGURES: Tuple[Figure, ...] = (
             r"the 151, (\d+) are decided",
             r"class=\"big\">(\d+)</span><h3>Decided and executed",
             r"class=\"big\">(\d+)</span><h3>\u5224\u51b3\u5e76\u6267\u884c",
-            r"<i></i>(\d+) ruled by the AI",
-            r"<i></i>(\d+) \u7531 AI \u5224",
             r"src\">(\d+) / 151</span>",
         ),
     ),
@@ -195,10 +193,6 @@ FIGURES: Tuple[Figure, ...] = (
             r"(\d+) ruled but above SGD 8",            r"(\d+) are decided with the amount held",
             r"class=\"big\">(\d+)</span><h3>Decided, money held",
             r"class=\"big\">(\d+)</span><h3>\u5df2\u5224\u51b3\uff0c\u6b3e\u9879\u51bb\u7ed3",
-            r"<i class=\"h\"></i>(\d+) ruled, payout waits",
-            r"<i class=\"h\"></i>(\d+) \u5df2\u5224",
-            r"(\d+) waited for sign-off",
-            r"(\d+) \u4e2a\u7b49\u4eba\u7b7e\u5b57",
         ),
     ),
     Figure(
@@ -208,10 +202,6 @@ FIGURES: Tuple[Figure, ...] = (
             r"\| (\d+) with no ruling",
             r"class=\"big\">(\d+)</span><h3>No ruling issued",
             r"class=\"big\">(\d+)</span><h3>\u4e0d\u51fa\u5224\u51b3",
-            r"<i class=\"p\"></i>(\d+) no ruling",
-            r"<i class=\"p\"></i>(\d+) \u6ca1\u5224",
-            r"(\d+) went to a person",
-            r"\uff1a(\d+) \u4e2a\u4ea4\u7ed9\u4eba",
         ),
     ),
     Figure(
@@ -221,10 +211,7 @@ FIGURES: Tuple[Figure, ...] = (
             r"\*\*112 of (\d+)\*\*",
             r"112/(\d+) = ",
             r"Of the (\d+), 112 are decided",
-            r"</span><small>/(\d+)</small>",
             r"(\d+) version-6 cases",
-            r"Of (\d+) cases:",
-            r"(\d+) \u4e2a\u6848\u5b50\u4e2d\uff1a",
             r"(\d+) \u4e2a\u7b2c 6 \u7248\u6848\u5b50",
         ),
     ),
@@ -246,9 +233,6 @@ FIGURES: Tuple[Figure, ...] = (
             r"graded fields \| (\d+)/141 = ",
             r"graded fields in (\d+) and on the ruling",
             r"class=\"big\">(\d+)/141</span>",
-            r"nothing in (\d+) of 141 cases",
-            r"\u540e\u6709 (\d+) \u4e2a\u7ed3\u8bba\u4e0d\u53d8",
-            r"data-count=\"(\d+)\">\d+</span><small>/141",
         ),
     ),
     Figure(
@@ -342,8 +326,6 @@ FIGURES: Tuple[Figure, ...] = (
             r"(\d+)/12 = 100\.0%",
             r"class=\"big\">(\d+)/12</span>",
             r"num\">(\d+)/12</div>",
-            r"Hidden tests: (\d+)/12",
-            r"\u9690\u85cf\u8003\u9898\uff1a(\d+)/12",
         ),
     ),
     Figure(
@@ -368,8 +350,6 @@ FIGURES: Tuple[Figure, ...] = (
             r"agrees in (\d+)/24 = 87\.5%",
             r"(\d+)/24 = 87\.5%",
             r"class=\"big\">(\d+)/24</span>",
-            r"Hidden tests: 12/12 and (\d+)/24",
-            r"\u9690\u85cf\u8003\u9898\uff1a12/12 \u548c (\d+)/24",
             r"rather than (\d+)/24",
         ),
     ),
@@ -491,6 +471,27 @@ FIGURES: Tuple[Figure, ...] = (
         (
             r"records a median time of \*\*(\d+\.\d+) s\*\* a case",
             r"Median time to a decision (\d+\.\d+) s a case",
+            # the product site's own statements of the same measurement
+            r"median of (\d+\.\d+) s is slow for a chat reply",
+            r"(\d+\.\d+) s at the median and \d+\.\d+ s at the 90th",
+            r"\u4e2d\u4f4d (\d+\.\d+) s\uff0c\u7b2c 90",
+            r"\u4e2d\u4f4d (\d+\.\d+) s \u5bf9\u804a\u5929",
+            r"\(\u4e2d\u4f4d (\d+\.\d+) s\)",
+        ),
+    ),
+    Figure(
+        "dev-v8, 90th percentile time to a decision",
+        ("299.4",),
+        (
+            r"and (\d+\.\d+) s at the 90th percentile",
+            r"\u7b2c 90 \u767e\u5206\u4f4d (\d+\.\d+) s",
+        ),
+    ),
+    Figure(
+        "dev-v8, the median in minutes",
+        ("2.6",),
+        (
+            r"class=\"big\">(\d+\.\d+) min</span><h3>Median per case",
         ),
     ),
     Figure(
@@ -499,6 +500,8 @@ FIGURES: Tuple[Figure, ...] = (
         (
             r"a median model cost of \*\*(\d+\.\d+) USD\*\* a case",
             r"a median model cost of (\d+\.\d+) USD a case",
+            r"(\d+\.\d+) USD of model cost a case",
+            r"\u6a21\u578b\u6210\u672c\u4e2d\u4f4d\u6570 (\d+\.\d+) USD",
         ),
     ),
     # The no-show sample's four version-8 drafts, counted by what each one did.
@@ -530,13 +533,18 @@ FIGURES: Tuple[Figure, ...] = (
         ("28 of 40",),
         (
             r"\| decided with no person \| (\d+ of 40)\b",
+            r"(\d+ of 40) ruled by the AI",
+            r"class=\"big\">(\d+ of 40)</span><h3>Ruled by the AI",
         ),
     ),
     Figure(
         "dev-v8 position swap",
-        ("33 of 34",),
+        ("33 of 34", "33"),
         (
             r"\| position swap, all four fields \| (\d+ of 34)\b",
+            r"data-count=\"(\d+)\">\d+</span><small> of 34",
+            r"(\d+ of 34) at version 8",
+            r"class=\"big\">(\d+ of 34)</span><h3>Agreed when the sides were swapped",
         ),
     ),
     Figure(
@@ -544,6 +552,8 @@ FIGURES: Tuple[Figure, ...] = (
         ("0.097",),
         (
             r"\| valid drafts, ECE \| \d+, (\d+\.\d+)\b",
+            r"Expected calibration error (\d+\.\d+) over",
+            r"\u671f\u671b\u6821\u51c6\u8bef\u5dee (\d+\.\d+)\uff0c\u57fa\u4e8e",
         ),
     ),
     Figure(
@@ -551,6 +561,163 @@ FIGURES: Tuple[Figure, ...] = (
         ("139",),
         (
             r"\| valid drafts, ECE \| (\d+)\b",
+            r"over (\d+) drafts, at the version-8 bar",
+            r"\u57fa\u4e8e (\d+) \u4efd\u8349\u7a3f",
+        ),
+    ),
+    Figure(
+        "dev-v8, cases that went to a person",
+        ("12",),
+        (
+            r"(\d+) to a person --",
+            r"(\d+) went to a person:",
+            r"(\d+) \u4e2a\u4ea4\u7ed9\u4eba\uff1a",
+            r"(\d+) \u4e2a\u4ea4\u7ed9\u4eba\u2014\u2014",
+        ),
+    ),
+    Figure(
+        "dev-v8, the gate's cases",
+        ("5",),
+        (
+            r"(\d+) stopped by a v2.1 rule before the judge",
+            r"the three limbs stopped (\d+) between them",
+            r"\u4e09\u4e2a\u9650\u5236\u5171\u62e6\u4e0b (\d+) \u4e2a",
+        ),
+    ),
+    Figure(
+        "dev-v8, the gate's 2 km limb",
+        ("2",),
+        (
+            r"(\d+) on the 2 km limit",
+            r"(\d+) \u4e2a\u51fa\u5728 2 \u516c\u91cc\u4e0a\u9650",
+        ),
+    ),
+    Figure(
+        "dev-v8, the gate's value limb",
+        ("1",),
+        (
+            r"(\d+) on the value",
+            r"(\d+) \u4e2a\u51fa\u5728\u91d1\u989d",
+        ),
+    ),
+    Figure(
+        "dev-v8, the gate's safety limb",
+        ("2",),
+        (
+            r"(\d+) on a safety flag",
+            r"(\d+) \u4e2a\u51fa\u5728\u5b89\u5168\u6807\u8bb0",
+        ),
+    ),
+    Figure(
+        "dev-v8, the panel's escalations",
+        ("6",),
+        (
+            r"(\d+) the panel sent on",
+        ),
+    ),
+    Figure(
+        "dev-v8, the panels without a majority",
+        ("1",),
+        (
+            r"(\d+) without a majority",
+        ),
+    ),
+    Figure(
+        "dev-v8, route deviation limit",
+        ("2",),
+        (
+            r"route deviation over (\d+) km",
+            r"over the (\d+) km an AI may rule on",
+            r"\u7ed5\u8def\u8d85\u8fc7 (\d+) \u516c\u91cc",
+            r"\u53ef\u4ee5\u88c1\u51b3\u7684 (\d+) km",
+        ),
+    ),
+    Figure(
+        "dev-v8, the value a person decides above",
+        ("50",),
+        (
+            r"over SGD (\d+)",
+        ),
+    ),
+    Figure(
+        "dev-v8, confidence the policy asks",
+        ("0.8",),
+        (
+            r"\((\d+\.\d+); 0\.95 with a fraud flag\)",
+            r"\uff08(\d+\.\d+)\uff1b\u5e26\u6b3a\u8bc8\u6807\u8bb0\u65f6 0\.95\uff09",
+            r"the version-8 bar of (\d+\.\d+)",
+        ),
+    ),
+    Figure(
+        "case 5051, evidence items",
+        ("7",),
+        (
+            r"Case 5051: (\d+) pieces of evidence",
+            r"\u6848\u4f8b 5051\uff1a(\d+) \u9879\u8bc1\u636e",
+        ),
+    ),
+    Figure(
+        "case 5051, the rider's and the driver's points",
+        ("3", "8"),
+        (
+            r"Case 5051: (\d+) points for the rider, (\d+) for the driver",
+            r"\u6848\u4f8b 5051\uff1a\u4e58\u5ba2\u65b9\u63d0\u4e86 (\d+) \u70b9\uff0c\u53f8\u673a\u65b9 (\d+) \u70b9",
+        ),
+    ),
+    Figure(
+        "case 5051, claims kept",
+        ("10/11",),
+        (
+            r"Case 5051: (\d+/\d+) claims kept",
+            r"\u4e3b\u5f20\u4fdd\u7559 (\d+/\d+)",
+        ),
+    ),
+    Figure(
+        "case 5051, the dropped point",
+        ("1",),
+        (
+            r"Case 5051: (\d+) of \d+ points thrown out",
+            r"\u6848\u4f8b 5051\uff1a\d+ \u70b9\u91cc\u6709 (\d+) \u70b9",
+        ),
+    ),
+    Figure(
+        "case 5051, the amount to the driver",
+        ("SGD 5.00",),
+        (
+            r"driver paid (SGD \d+\.\d+)",
+            r"\u53f8\u673a\u83b7 (SGD \d+\.\d+)",
+        ),
+    ),
+    Figure(
+        "case 5051, the wall clock",
+        ("254.8",),
+        (
+            r"to the driver, (\d+\.\d+)&nbsp;s",
+            r"\u7528\u65f6 (\d+\.\d+)&nbsp;s",
+        ),
+    ),
+    Figure(
+        "case 5051, the wait and the free wait",
+        ("345", "300"),
+        (
+            r"waited (\d+) s from the wait's start to the cancellation, (\d+) s of it free",
+            r"\u5171\u7b49\u4e86 (\d+) \u79d2\uff0c\u5176\u4e2d (\d+) \u79d2\u662f\u514d\u8d39\u7b49\u5f85",
+        ),
+    ),
+    Figure(
+        "version-8 case pages",
+        ("42",),
+        (
+            r"All (\d+) version-8 cases",
+            r"\u5168\u90e8 (\d+) \u9053\u7b2c 8 \u7248\u6848\u4ef6",
+        ),
+    ),
+    Figure(
+        "sealed-v4, cases that needed a person",
+        ("9",),
+        (
+            r"all (\d+) cases that needed a person got one",
+            r"(\d+) \u4e2a\u8be5\u4ea4\u7ed9\u4eba\u7684\u6848\u5b50\u90fd\u4ea4\u4e86",
         ),
     ),
 )
@@ -759,6 +926,9 @@ def _compute() -> Dict[str, str]:
         "dev-v8, median time to a decision": v6_runs._seconds(
             v6_runs._median(v8_walls)
         ),
+        "dev-v8, 90th percentile time to a decision": v6_runs._seconds(
+            v6_runs._percentile(v8_walls, Decimal("0.9"))
+        ),
         "dev-v8, median model cost": "{0:.4f}".format(v6_runs._median(v8_costs)),
         "ryde-v8, 903's drafts counted by outcome": "{0} escalate, {1} fee, {2} voided".format(
             no_show_drafts["escalate"],
@@ -770,6 +940,30 @@ def _compute() -> Dict[str, str]:
         "dev-v8 position swap": measured_eight["dev-v8 position swap"],
         "dev-v8 ECE": measured_eight["dev-v8 ECE"],
         "dev-v8 drafts": measured_eight["dev-v8 drafts"],
+        # The version-8 figures the product site states, read from the module
+        # that computes them: a figure checked here is the figure a page shows.
+        "dev-v8, the median in minutes": values["v8_median_minutes"].split(" ")[0],
+        "dev-v8, cases that went to a person": values["v8_to_person"],
+        "dev-v8, the gate's cases": values["v8_gate_total"],
+        "dev-v8, the gate's 2 km limb": values["v8_gate_2km"],
+        "dev-v8, the gate's value limb": values["v8_gate_value"],
+        "dev-v8, the gate's safety limb": values["v8_gate_safety"],
+        "dev-v8, the panel's escalations": values["v8_panel_escalated"],
+        "dev-v8, the panels without a majority": values["v8_no_majority"],
+        "dev-v8, route deviation limit": values["v8_route_limit_km"],
+        "dev-v8, the value a person decides above": values["v8_human_above"],
+        "dev-v8, confidence the policy asks": values["v8_confidence_between"],
+        "case 5051, evidence items": values["case5051_evidence"],
+        "case 5051, the rider's and the driver's points": "{0} and {1}".format(
+            values["case5051_rider_points"], values["case5051_driver_points"]
+        ),
+        "case 5051, claims kept": values["case5051_claims_kept"],
+        "case 5051, the dropped point": values["case5051_dropped"],
+        "case 5051, the amount to the driver": values["case5051_amount"],
+        "case 5051, the wall clock": values["case5051_wall"].split(" ")[0],
+        "case 5051, the wait and the free wait": values["case5051_wait_seconds"],
+        "version-8 case pages": values["v8_case_pages"],
+        "sealed-v4, cases that needed a person": values["sealed_v4_to_person"],
     }
 
 

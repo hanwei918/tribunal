@@ -98,6 +98,39 @@ MEASUREMENT_CONTROL_BEFORE = "| decided with no person | 28 of 40 |"
 MEASUREMENT_CONTROL_AFTER = "| decided with no person | 27 of 40 |"
 MEASUREMENT_CONTROL_FIGURE = "dev-v8 decided with no person"
 
+# The version-8 figures the product site states, and the fifth control: the
+# front page's position-swap figure, altered. The copy holds ``ui/dist/index.html``
+# alone, so the figures that read the other documents go dead -- a finding of its
+# own and not what this test is about. What it asserts is the mismatch: the
+# front page states 32 where the committed run says 33 of 34.
+VERSION_EIGHT_SITE_FIGURES = (
+    "dev-v8, median time to a decision",
+    "dev-v8, 90th percentile time to a decision",
+    "dev-v8, median model cost",
+    "dev-v8 decided with no person",
+    "dev-v8 position swap",
+    "dev-v8 ECE",
+    "dev-v8 drafts",
+    "dev-v8, cases that went to a person",
+    "dev-v8, the gate's three limbs",
+    "dev-v8, route deviation limit",
+    "dev-v8, the value a person decides above",
+    "dev-v8, confidence the policy asks",
+    "case 5051, evidence items",
+    "case 5051, the rider's and the driver's points",
+    "case 5051, claims kept",
+    "case 5051, the dropped point",
+    "case 5051, the amount to the driver",
+    "case 5051, the wall clock",
+    "case 5051, the wait and the free wait",
+    "version-8 case pages",
+    "sealed-v4, cases that needed a person",
+)
+SWAP_CONTROL_DOCUMENT = "ui/dist/index.html"
+SWAP_CONTROL_BEFORE = '<span data-count="33">33</span><small> of 34:</small>'
+SWAP_CONTROL_AFTER = '<span data-count="32">32</span><small> of 34:</small>'
+SWAP_CONTROL_FIGURE = "dev-v8 position swap"
+
 # The claim controls. Each copy puts back one sentence the part corrected and
 # shows the claim check reporting it. ``split 2-2`` goes back on the version-8
 # row of the README, which names ``ryde-v8`` and 903 on one line; the fare
@@ -230,6 +263,24 @@ class TheCommittedTreeTests(unittest.TestCase):
         """
         rows = {row.figure: row for row in self.found.rows}
         for name in VERSION_EIGHT_FIGURES:
+            with self.subTest(figure=name):
+                self.assertIn(name, check_figures.BY_NAME)
+                self.assertIn(name, rows)
+                self.assertTrue(rows[name].value, "no computed value")
+                self.assertTrue(rows[name].documents, "stated in no document")
+                self.assertTrue(rows[name].ok, "a document states another value")
+
+    def test_the_version_eight_site_figures_are_computed_stated_and_matching(self):
+        """The version-8 figures the product site states, from the committed runs.
+
+        The same check the other version-8 rows get: each is stated in at least
+        one document -- one of them is a built page -- every pattern that finds
+        it matched something, and the value the documents state is the computed
+        one. This names the rows so a table that lost one fails here rather than
+        passing on the rows that remain.
+        """
+        rows = {row.figure: row for row in self.found.rows}
+        for name in VERSION_EIGHT_SITE_FIGURES:
             with self.subTest(figure=name):
                 self.assertIn(name, check_figures.BY_NAME)
                 self.assertIn(name, rows)
@@ -418,6 +469,41 @@ class TheControlTests(unittest.TestCase):
             with self.subTest(document=mismatch.document):
                 self.assertEqual(MEASUREMENT_CONTROL_FIGURE, mismatch.figure)
                 self.assertEqual("28 of 40", mismatch.expected)
+        self.assertFalse(found.ok, "an altered figure left the check OK")
+
+    def test_an_altered_version_eight_swap_on_the_front_page_is_reported(self):
+        """The front page's version-8 swap figure is shown capable of failing.
+
+        The copy holds ``ui/dist/index.html`` alone, so the figures that read the
+        other documents go dead -- a finding of its own and not what this test is
+        about. What it asserts is the mismatch: the page states 32 where the
+        committed run's position swap says 33 of 34.
+        """
+        portability.require_the_same_libm()
+        source = (PROJECT_ROOT / SWAP_CONTROL_DOCUMENT).read_text(encoding="utf-8")
+        altered = source.replace(SWAP_CONTROL_BEFORE, SWAP_CONTROL_AFTER)
+        self.assertNotEqual(
+            source,
+            altered,
+            "the control changed nothing in {0}".format(SWAP_CONTROL_DOCUMENT),
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / SWAP_CONTROL_DOCUMENT
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(altered, encoding="utf-8")
+            found = check_figures.check(root)
+        named = [mismatch for mismatch in found.mismatches if mismatch.value == "32"]
+        self.assertTrue(
+            named,
+            "the altered version-8 swap was not reported: {0}".format(
+                found.mismatches
+            ),
+        )
+        for mismatch in named:
+            with self.subTest(document=mismatch.document):
+                self.assertEqual(SWAP_CONTROL_FIGURE, mismatch.figure)
+                self.assertEqual("33 of 34", mismatch.expected)
         self.assertFalse(found.ok, "an altered figure left the check OK")
 
     def test_a_two_two_split_put_back_on_the_version_eight_row_is_reported(self):

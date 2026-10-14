@@ -27,6 +27,16 @@ Three trees, all committed:
   ``tribunal/*.py``, ``tryit/*.py``, ``ops/chat_signals.py``,
   ``policy/**/*.json``, the four template cases and ``data/index.json``.
 
+One part of the front pages is neither copied nor assembled from a block
+either: the film. ``ui/site/static/assets/tribunal-film.mp4`` has not been
+delivered, and a published page that offered a film the site does not carry
+would offer a film that cannot play. The two elements that depend on the file
+-- the front page's "Watch the film" button and its ``<video>`` element -- are
+marked in the page sources between ``<!--@film-->`` and ``<!--/@film-->``, and
+the build keeps them when the file is there and removes them when it is not.
+The source pages keep both either way, so delivering the film is a matter of
+dropping the file in beside the other assets.
+
 One part of a page is neither copied nor assembled from a block: the 151 rows of
 ``cases.html``'s queue table, and the same 151 rows in Chinese in
 ``cases.zh.html``. Both are built at build time from ``ui.v2.build``'s own row
@@ -101,6 +111,11 @@ INCLUDE_RE = re.compile(r"/\*@include ([A-Za-z0-9._-]+)\*/")
 # write is refused rather than left in the page.
 QUEUE_ROWS_RE = re.compile(r"/\*@queue-rows ([A-Za-z0-9_-]+)\*/")
 
+# The marker a page carries around the elements that depend on the film, and the
+# file they depend on. The file is absent today, so the built pages carry
+# neither element; the markers come off a page either way.
+FILM_MARKER_RE = re.compile(r"<!--@film-->(.*?)<!--/@film-->", re.DOTALL)
+
 # The bundle the try-it page loads, and the 45 paths it holds. The list is the
 # one her own bundle carried, read off its listing and written out here rather
 # than globbed, so the bundle's contents are a fact this repository states and a
@@ -172,6 +187,11 @@ BUNDLE_COMPRESS_LEVEL = 9
 # pages. A build that found another number would be a build from other sources.
 PAGE_COUNT = 22
 
+# The film the front page's button and <video> element name, if it is ever
+# delivered. Its absence is not an error: it is what the build reads to decide
+# whether those two elements belong on the published page.
+FILM_PATH = STATIC_DIR / "assets" / "tribunal-film.mp4"
+
 
 class BuildError(Exception):
     """A source is not the shape this builder can assemble."""
@@ -191,14 +211,36 @@ def shared_blocks() -> Dict[str, str]:
     }
 
 
+def film_is_here() -> bool:
+    """Whether the film file is committed beside the pages."""
+    return FILM_PATH.is_file()
+
+
+def film_elements(text: str, film: Optional[bool] = None) -> str:
+    """A page with the film's two elements kept or removed, markers gone.
+
+    ``None`` asks the file itself, which is what a build does. The markers come
+    off either way, so a built page never carries one.
+    """
+    if film is None:
+        film = film_is_here()
+    return FILM_MARKER_RE.sub(
+        (lambda match: match.group(1)) if film else (lambda match: ""), text
+    )
+
+
 def assemble(
-    text: str, blocks: Dict[str, str], rows: Optional[Mapping[str, str]] = None
+    text: str,
+    blocks: Dict[str, str],
+    rows: Optional[Mapping[str, str]] = None,
+    film: Optional[bool] = None,
 ) -> str:
     """One page's sources with every marker replaced by what it names.
 
-    Two markers are put back: a shared block, and the queue table's rows. The
-    rows are built only when a page carries their marker, so a page that does not
-    is assembled without reading the runs.
+    Three markers are put back or taken out: a shared block, the queue table's
+    rows, and the film's two elements. The rows are built only when a page
+    carries their marker, so a page that does not is assembled without reading
+    the runs; the film's elements are kept only when the film is there.
     """
 
     def replacement(match: "re.Match") -> str:
@@ -216,7 +258,7 @@ def assemble(
         assembled = QUEUE_ROWS_RE.sub(
             lambda match: rows_for(match.group(1), table), assembled
         )
-    return assembled
+    return film_elements(assembled, film)
 
 
 def rows_for(language: str, table: Mapping[str, str]) -> str:

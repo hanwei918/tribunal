@@ -29,11 +29,13 @@ from __future__ import annotations
 import io
 import re
 import sys
+import tempfile
 import unittest
 import zipfile
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Dict, List, Set, Tuple
+from unittest import mock
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -44,11 +46,12 @@ from ui import build as replay_build  # noqa: E402
 from ui.site import build as site  # noqa: E402
 from ui.v2 import build as v2  # noqa: E402
 
-# The one file the pages name that the site does not carry: the film, which has
-# not been delivered, and which the front page shows as "Film coming soon"
-# without. It is named rather than skipped in silence, so a second missing file
-# is a failure rather than a second exception.
-MISSING_FILM = "assets/tribunal-film.mp4"
+# The film, which has not been delivered. It is the one file the **page
+# sources** name and the site does not carry: the build takes the two elements
+# that depend on it -- the front page's "Watch the film" button and its <video>
+# element -- off the published page when the file is not there, so the 22 built
+# pages name no file the site does not hold.
+FILM = "assets/tribunal-film.mp4"
 
 # The links off the site, by name. Every other link a page carries is a file
 # inside ``ui/dist/``, and is checked as one. The three are the sources the
@@ -296,6 +299,7 @@ class ThePagesTests(unittest.TestCase):
                 self.assertNotIn("/*@include ", text)
                 self.assertNotIn("@include", text)
                 self.assertNotIn("@queue-rows", text)
+                self.assertNotIn("@film", text)
 
     def test_the_sources_do_carry_the_markers(self):
         """The control: the check above would pass on a page with no block at all."""
@@ -505,20 +509,29 @@ class TheLinksTests(unittest.TestCase):
 
     def test_every_relative_link_and_source_resolves_inside_the_site(self):
         portability.require_the_same_libm()
-        unresolved = [
-            (name, url) for name, url in unresolved_links() if url != MISSING_FILM
-        ]
+        unresolved = unresolved_links()
         self.assertEqual(
             [],
             unresolved,
             "a page links to a file the site does not carry: {0}".format(unresolved),
         )
 
-    def test_the_one_file_the_site_does_not_carry_is_the_film(self):
-        """Exactly one, and named: a second missing file is a failure."""
+    def test_the_built_pages_name_no_file_the_site_does_not_carry(self):
+        """The film is the one file a **source** page names and the site lacks.
+
+        The built front pages carry neither the button nor the ``<video>``
+        element, so the 22 published pages resolve completely; the film is still
+        named by the two page sources, and the site still does not hold it.
+        """
         portability.require_the_same_libm()
-        missing = sorted({url for _name, url in unresolved_links()})
-        self.assertEqual([MISSING_FILM], missing)
+        self.assertEqual([], unresolved_links())
+        self.assertFalse((site.DIST_DIR / FILM).exists())
+        naming = [
+            source.name
+            for source in site.page_sources()
+            if FILM in source.read_text(encoding="utf-8")
+        ]
+        self.assertEqual(["index.html", "index.zh.html"], naming)
 
     def test_no_page_loads_a_script_a_stylesheet_an_image_or_a_font_from_another_host(self):
         portability.require_the_same_libm()
@@ -542,12 +555,75 @@ class TheLinksTests(unittest.TestCase):
                     found.add(url.strip())
         self.assertEqual(EXTERNAL_LINKS, found)
 
-    def test_the_film_is_the_one_file_a_page_names_but_does_not_have(self):
-        """The exception is real: the page names it, and the site does not hold it."""
+    def test_the_film_is_the_one_file_a_source_names_and_the_site_lacks(self):
+        """The exception is real: the sources name it, and the site lacks it."""
         portability.require_the_same_libm()
-        named = {url for _name, url in unresolved_links()}
-        self.assertIn(MISSING_FILM, named)
-        self.assertFalse((site.DIST_DIR / MISSING_FILM).exists())
+        self.assertFalse((site.DIST_DIR / FILM).exists())
+        self.assertIn(
+            FILM, (site.PAGES_DIR / "index.html").read_text(encoding="utf-8")
+        )
+
+
+# --------------------------------------------------------------------------
+# The film's two elements, kept or removed by the build
+# --------------------------------------------------------------------------
+class TheFilmTests(unittest.TestCase):
+    """The button and the ``<video>`` element are on the page only with the film.
+
+    ``ui/site/static/assets/tribunal-film.mp4`` has not been delivered, so the
+    built front pages carry neither: the build removes what the two page sources
+    marked for it. The sources keep both, so delivering the film is a matter of
+    dropping the file in beside the other assets -- which is what the temporary
+    file below stands for.
+    """
+
+    def test_the_film_is_absent_and_the_built_pages_do_not_name_it(self):
+        portability.require_the_same_libm()
+        self.assertFalse(site.FILM_PATH.exists(), "the film has been delivered")
+        for name in ("index.html", "index.zh.html"):
+            with self.subTest(page=name):
+                page = pages()[name]
+                self.assertNotIn('<a class="btn" href="#film">', page)
+                self.assertNotIn("<video", page)
+                self.assertNotIn("film-video", page)
+                self.assertNotIn(FILM, page)
+                self.assertNotIn("@film", page)
+
+    def test_the_source_pages_keep_both_elements_and_their_markers(self):
+        """The control: the build removes what the sources still carry."""
+        for name in ("index.html", "index.zh.html"):
+            source = (site.PAGES_DIR / name).read_text(encoding="utf-8")
+            with self.subTest(page=name):
+                self.assertIn('<a class="btn" href="#film">', source)
+                self.assertIn('<video id="film-video"', source)
+                self.assertIn(FILM, source)
+                self.assertEqual(2, source.count("<!--@film-->"))
+                self.assertEqual(2, source.count("<!--/@film-->"))
+
+    def test_both_cases_on_a_temporary_file(self):
+        """The file present and the file absent, and the markers off either way."""
+        source = (site.PAGES_DIR / "index.html").read_text(encoding="utf-8")
+        blocks = site.shared_blocks()
+        with tempfile.TemporaryDirectory() as directory:
+            here = Path(directory) / "tribunal-film.mp4"
+            here.write_bytes(b"a film, for as long as this test runs\n")
+            with mock.patch.object(site, "FILM_PATH", here):
+                self.assertTrue(site.film_is_here())
+                present = site.assemble(source, blocks)
+            with mock.patch.object(
+                site, "FILM_PATH", Path(directory) / "not-delivered.mp4"
+            ):
+                self.assertFalse(site.film_is_here())
+                absent = site.assemble(source, blocks)
+        self.assertIn('<a class="btn" href="#film">', present)
+        self.assertIn('<video id="film-video"', present)
+        self.assertIn(FILM, present)
+        self.assertNotIn("@film", present)
+        self.assertNotIn('<a class="btn" href="#film">', absent)
+        self.assertNotIn("<video", absent)
+        self.assertNotIn(FILM, absent)
+        self.assertNotIn("@film", absent)
+        self.assertEqual(absent, pages()["index.html"])
 
 
 # --------------------------------------------------------------------------

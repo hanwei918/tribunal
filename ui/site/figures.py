@@ -50,6 +50,7 @@ test can assert the page carries the figure rather than a number near it.
 from __future__ import annotations
 
 import json
+import re
 import sys
 from decimal import Decimal
 from pathlib import Path
@@ -67,6 +68,7 @@ from eval import (  # noqa: E402
     grade,
     run_benchmark,
     v6_runs,
+    v8_report,
 )
 from tribunal import brief as brief_module  # noqa: E402
 from tribunal import pipeline as pipeline_module  # noqa: E402
@@ -76,19 +78,37 @@ from ui.v2 import build as v2  # noqa: E402
 
 MODEL = run_benchmark.resolve_model(None)
 
-# The case the how-it-works page walks through, the organisers' sample, and the
-# safety flag the featured cards name. Named here so a reading of another case
-# is a change to this list rather than a number typed into a function.
-FEATURED_CASE = 208
-SAMPLE_CASE = 901
-SAFETY_CASE = 2735
-
 # The organisers' own two samples, read at policy version 8 -- the set that
 # carries v2.1 with Ryde's answers of 2026-10-14. The two cases are the ones the
 # version-7 set already held, keyed as Ryde's own answer of that day leaves them.
 RYDE_SAMPLES_SET = "ryde-v8"
 RYDE_DEVIATION_CASE = 902
 RYDE_NO_SHOW_CASE = 903
+
+# Policy version 8 -- v2.1 with Ryde's answers of 2026-10-14 -- is what the
+# submission applies, and it is what the pages describe as how Tribunal decides
+# now. Every version-8 figure is measured on the ``dev-v8`` run's 40 development
+# cases unless a name says otherwise, and the case the how-it-works page walks
+# through is 5051.
+V8_SET = "dev-v8"
+V8_CASE = 5051
+
+# The version-8 authority gate's three limbs, as a gated case's own ruling
+# explanation opens. A case the gate stopped has **no vote in its transcript**
+# and an explanation that begins "Under <clause>"; the clause it opens with is
+# the limb that fired.
+V8_GATE_CLAUSES: Mapping[str, str] = {
+    "POL-RD-25": "2km",
+    "POL-GEN-22": "value",
+    "POL-GEN-21": "safety",
+}
+V8_GATE_OPENING_RE = re.compile(r"^Under (POL-[A-Z]+-\d+)\b")
+
+# The two vote outcomes that mean the panel carried what its drafts agreed on.
+CARRIED_OUTCOMES: Tuple[str, ...] = (
+    pipeline_module.VOTE_CARRIED,
+    pipeline_module.VOTE_CARRIED_NOT_UNANIMOUS,
+)
 
 
 # --------------------------------------------------------------------------
@@ -197,8 +217,6 @@ def figures() -> Dict[str, str]:
     with_precedents, without_precedents = precedent_pair()
     dev_bounds = v6_runs.wilson(dev.exact_matches, dev.total)
 
-    featured = featured_case_figures()
-
     # The organisers' own two samples, at version 8 -- Ryde's own Dispute
     # Resolution Policy v2.1 with Ryde's answers of 2026-10-14. Every figure is
     # read: the two version-8 briefs' own distances, excess distance fare and
@@ -241,6 +259,18 @@ def figures() -> Dict[str, str]:
     drafts = ryde_no_show_drafts()
     thresholds = version_eight_thresholds()
 
+    # Policy version 8 -- the same policy text the two samples above are read
+    # at, measured over the 40 cases of ``dev-v8``. The measurements come from
+    # ``eval.v8_report``, which reads the committed run itself, and the lane
+    # counts from each escalated case's own document.
+    measured = version_eight_measurements()
+    v8_escalations = version_eight_escalations()
+    walkthrough = case_fifty_one_figures()
+    version_eight_cases = (
+        len(development_sets.named(V8_SET).cases)
+        + len(development_sets.named(RYDE_SAMPLES_SET).cases)
+    )
+
     figures: Dict[str, str] = {
         # Time and cost, over the 151 cases of the four version-6 runs. The
         # seconds are bare numbers because the two languages write the unit
@@ -273,23 +303,6 @@ def figures() -> Dict[str, str]:
         "inject_flipped": str(flipped),
         "inject_unchanged": str(unchanged),
         "inject_sent_to_a_person": str(injected_escalations),
-        # The featured cases.
-        "case_208_evidence": str(featured["208"]["evidence"]),
-        "case_208_rider_points": str(featured["208"]["rider_points"]),
-        "case_208_driver_points": str(featured["208"]["driver_points"]),
-        "case_208_claims": str(featured["208"]["claims"]),
-        "case_208_claims_kept": pair(featured["208"]["kept"], featured["208"]["claims"]),
-        "case_208_driver_amount": v2._money(
-            featured["208"]["driver_amount"], featured["208"]["currency"]
-        ),
-        "case_208_confidence": str(featured["208"]["confidence"]),
-        "case_208_waiting_seconds": v2._whole(featured["208"]["waiting"]),
-        "case_208_wall_seconds": v2._seconds(featured["208"]["wall"]).split(" ")[0],
-        "case_901_driver_amount": v2._money(
-            featured["901"]["driver_amount"], featured["901"]["currency"]
-        ),
-        "case_901_confidence": str(featured["901"]["confidence"]),
-        "case_2735_model_calls": str(featured["2735"]["calls"]),
         # The development sets at policy version 6.
         "dev_v2_ext_exact": pair(dev.exact_matches, dev.total),
         "dev_v2_ext_interval": interval(dev_bounds[0], dev_bounds[1], "-"),
@@ -324,6 +337,66 @@ def figures() -> Dict[str, str]:
         "v8_human_above": thresholds["human_above"],
         "v8_confidence_between": thresholds["confidence_between"],
         "v8_confidence_fraud": thresholds["confidence_fraud"],
+        # Policy version 8's own measurements, over ``dev-v8``'s 40 cases: the
+        # clock, the cost, the share the AI decided, the lanes the other cases
+        # took, the position swap and the calibration.
+        "v8_cases": str(measured.cases),
+        "v8_case_pages": str(version_eight_cases),
+        "v8_median_seconds": "{0} s".format(v6_runs._seconds(measured.wall_median)),
+        "v8_median_minutes": "{0:.1f} min".format(measured.wall_median / 60),
+        "v8_p90_seconds": "{0} s".format(v6_runs._seconds(measured.wall_p90)),
+        "v8_median_cost_usd": "{0:.4f}".format(measured.cost_median),
+        "v8_median_cost_cents": "about {0:.0f} cents".format(
+            measured.cost_median * 100
+        ),
+        "v8_median_cost_cents_zh": "\u7ea6 {0:.0f} \u7f8e\u5206".format(
+            measured.cost_median * 100
+        ),
+        "v8_decided": "{0} of {1}".format(
+            measured.decided_with_no_person, measured.cases
+        ),
+        "v8_decided_count": str(measured.decided_with_no_person),
+        "v8_decided_share": "{0:.0f}%".format(
+            Decimal(measured.decided_with_no_person)
+            / Decimal(measured.cases)
+            * 100
+        ),
+        "v8_to_person": str(measured.escalated_produced),
+        "v8_route_limit_km": version_eight_route_limit(),
+        "v8_gate_2km": str(v8_escalations["2km"]),
+        "v8_gate_value": str(v8_escalations["value"]),
+        "v8_gate_safety": str(v8_escalations["safety"]),
+        "v8_gate_total": str(
+            v8_escalations["2km"]
+            + v8_escalations["value"]
+            + v8_escalations["safety"]
+        ),
+        "v8_panel_escalated": str(v8_escalations["panel"]),
+        "v8_no_majority": str(v8_escalations["no_majority"]),
+        "v8_swap": "{0} of {1}".format(
+            measured.swap.agree_all_four, measured.swap.total
+        ),
+        "v8_swap_agreed": str(measured.swap.agree_all_four),
+        "v8_swap_total": str(measured.swap.total),
+        "v8_ece": fairness.render_ece(measured.calibration.ece),
+        "v8_drafts": str(measured.calibration.total),
+        # The case the how-it-works page walks through, case 5051 of dev-v8.
+        "case5051_evidence": str(walkthrough["evidence"]),
+        "case5051_rider_points": str(walkthrough["rider_points"]),
+        "case5051_driver_points": str(walkthrough["driver_points"]),
+        "case5051_claims": str(walkthrough["claims"]),
+        "case5051_claims_kept": pair(walkthrough["kept"], walkthrough["claims"]),
+        "case5051_dropped": str(walkthrough["claims"] - walkthrough["kept"]),
+        "case5051_agree": "{0} of {1}".format(
+            walkthrough["agreeing"], walkthrough["votes"]
+        ),
+        "case5051_confidence": str(walkthrough["confidence"]),
+        "case5051_wait_seconds": v2._whole(walkthrough["wait"]),
+        "case5051_free_wait_seconds": v2._whole(walkthrough["free_wait"]),
+        "case5051_amount": v2._money(
+            walkthrough["driver_amount"], walkthrough["currency"]
+        ),
+        "case5051_wall": v2._seconds(walkthrough["wall"]),
     }
 
     # The sealed and held-out sets, graded through the same calls the README's
@@ -360,6 +433,12 @@ def figures() -> Dict[str, str]:
     )
     figures["ryde_v7_exact"] = pair(version_seven["ryde-v7"].exact_matches, 2)
     figures["dev_v7_exact"] = pair(version_seven["dev-v7"].exact_matches, 40)
+    # The sixth hidden set's own lane: the cases that needed a person. The run
+    # sent the same nine the key does, which is why the sentence says all nine
+    # got one.
+    figures["sealed_v4_to_person"] = str(
+        len(fourth_v7.calibration.produced_escalations)
+    )
 
     # Policy version 8 -- v2.1 with Ryde's answers of 2026-10-14. Two sets, one
     # run each, each graded once here. ``ryde-v8`` and ``dev-v8`` reuse the
@@ -402,39 +481,6 @@ def precedent_pair() -> Tuple[Tuple[int, int], Tuple[int, int]]:
         (with_precedents.exact_matches, with_precedents.total),
         (without_precedents.exact_matches, without_precedents.total),
     )
-
-
-def featured_case_figures() -> Dict[str, Dict[str, Any]]:
-    """The three cases the pages name, read off their own run records.
-
-    Every number is read: the brief's evidence list and its dwell, the two
-    advocates' own claim lists, the referee's verdict on each claim, the ruling's
-    amount and confidence, and the run's wall clock. A model call count is the
-    number of entries the transcript recorded, which is zero for a case the
-    scope gate stopped before any client was built.
-    """
-    cases = cases_by_number()
-    found: Dict[str, Dict[str, Any]] = {}
-    for case_no in (FEATURED_CASE, SAMPLE_CASE, SAFETY_CASE):
-        case = cases[case_no]
-        claims = v2._claims(case.transcript, "RIDER") + v2._claims(case.transcript, "DRIVER")
-        arrival = v2._derived_block(case.brief, "GPS_TRACE", "arrival")
-        found[str(case_no)] = {
-            "currency": case.policy.currency,
-            "evidence": len(v2._evidence(case.brief)),
-            "rider_points": len(v2._claims(case.transcript, "RIDER")),
-            "driver_points": len(v2._claims(case.transcript, "DRIVER")),
-            "claims": len(claims),
-            "kept": sum(
-                1 for claim in claims if claim["status"] == referee_module.STATUS_KEPT
-            ),
-            "waiting": v2._fact_value(arrival or {}, "accumulated_dwell", "longest_run_sec"),
-            "wall": case.document.get("wall_seconds"),
-            "driver_amount": case.ruling.get("driver_compensation_sgd"),
-            "confidence": case.ruling.get("confidence"),
-            "calls": len(case.transcript.get("entries") or []),
-        }
-    return found
 
 
 # --------------------------------------------------------------------------
@@ -550,6 +596,194 @@ def version_eight_thresholds() -> Dict[str, str]:
         "confidence_between": str(thresholds["confidence_required_between_sgd"]),
         "confidence_fraud": str(thresholds["confidence_required_with_fraud_flag"]),
     }
+
+
+# --------------------------------------------------------------------------
+# Policy version 8 -- v2.1 with Ryde's answers of 2026-10-14
+# --------------------------------------------------------------------------
+def _inner_ruling(document: Mapping[str, Any]) -> Mapping[str, Any]:
+    """A run document's ruling, one level down -- the shape ``ui.v2.build`` reads."""
+    block = document.get("ruling")
+    inner = block.get("ruling") if isinstance(block, Mapping) else None
+    return inner if isinstance(inner, Mapping) else {}
+
+
+def version_eight_run_dir() -> Path:
+    """The directory the ``dev-v8`` run was written to.
+
+    ``dev-v8`` is registered for the version-8 policy base, so its run sits one
+    level down at ``runs/dev-v8/policy-v8/<model>/`` -- the path
+    :func:`graded_set` and ``ui.v8.build`` both read.
+    """
+    return development_sets.run_dir_at_its_version(
+        development_sets.named(V8_SET), MODEL
+    )
+
+
+def version_eight_measurements() -> "v8_report.Measurements":
+    """The ``dev-v8`` measurements, by the module that measures them.
+
+    ``eval.v8_report`` (part 90) reads the committed run through the same
+    functions ``eval.v6_runs`` measures the version-6 runs with, so a figure the
+    pages state here is the figure ``python3 -m eval.v8_report --report`` prints
+    rather than a second reading of the same files: the wall clock's median and
+    90th percentile, the model cost's median, the cases decided with no person,
+    the position swap, the calibration error and the draft count.
+    """
+    return v8_report.measure(V8_SET)
+
+
+def _gate_limb(explanation: Any) -> str:
+    """Which version-8 limb stopped a case, from its own explanation's first words.
+
+    A gated case's explanation opens "Under <clause>". The clause is read rather
+    than the reason code, and a case whose explanation opens with a clause this
+    table does not state is refused rather than counted somewhere else.
+    """
+    match = V8_GATE_OPENING_RE.match(str(explanation or ""))
+    if match is None or match.group(1) not in V8_GATE_CLAUSES:
+        raise KeyError(
+            "an escalated case's explanation opens with {0!r}, which is not one "
+            "of the version-8 gate's clauses: {1}".format(
+                str(explanation or "")[:40], ", ".join(sorted(V8_GATE_CLAUSES))
+            )
+        )
+    return V8_GATE_CLAUSES[match.group(1)]
+
+
+def version_eight_escalations() -> Dict[str, int]:
+    """The ``dev-v8`` cases that went to a person, by how they got there.
+
+    **The rule.** A case the version-8 authority gate stopped **before the judge
+    was asked** has no ``vote`` in its transcript, and its ruling explanation
+    begins "Under POL-RD-25" (the 2 km ceiling on an AI ruling), "Under
+    POL-GEN-22" (a value above the second band edge) or "Under POL-GEN-21" (a
+    safety flag); the clause the explanation opens with is the limb that fired,
+    and the three limbs are counted apart. Every other escalated case **was**
+    asked of the judge: one whose vote outcome is ``carried`` is a panel that
+    sent the case on, and one whose vote did not carry is a panel with no
+    majority.
+
+    Read off each escalated case's own run document and the transcript that
+    document names, so a case that moves from one lane to another moves the
+    figure with it.
+    """
+    run_dir = version_eight_run_dir()
+    counts = {"2km": 0, "value": 0, "safety": 0, "panel": 0, "no_majority": 0}
+    for case_no in sorted(development_sets.named(V8_SET).cases):
+        document = json.loads(
+            (run_dir / "case-{0:05d}.json".format(case_no)).read_text(
+                encoding="utf-8"
+            )
+        )
+        ruling = _inner_ruling(document)
+        if ruling.get("ruling") != pipeline_module.ESCALATE:
+            continue
+        transcript = json.loads(
+            (run_dir / document["transcript_file"]).read_text(encoding="utf-8")
+        )
+        vote = transcript.get("vote")
+        if vote is None:
+            counts[_gate_limb(ruling.get("explanation"))] += 1
+        elif vote.get("outcome") in CARRIED_OUTCOMES:
+            counts["panel"] += 1
+        else:
+            counts["no_majority"] += 1
+    return counts
+
+
+def version_eight_route_limit() -> str:
+    """The route deviation above which v2.1 sends a case to a person.
+
+    Read from ``policy/v8/route_deviation.json`` -- the file the version-8
+    briefs are built from -- rather than from a second copy of the number, and
+    written as whole kilometres because that is how the pages state it.
+    """
+    route = json.loads(
+        (policy_versions.base_directory(8) / "route_deviation.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    return _sgd_whole(route["thresholds"]["ai_ruling_max_deviation_km"])
+
+
+def case_fifty_one_figures() -> Dict[str, Any]:
+    """Case 5051 of ``dev-v8``, read off its own run, brief and vote.
+
+    Every figure the how-it-works page walks through: the brief's own evidence
+    list, the two advocates' own claim lists, the referee's verdict on each
+    claim (one of the driver's eight was discarded, for
+    ``IMPAIRMENT_UNDISCLOSED``), the vote's agreement over its four drafts, the
+    ruling's confidence and the amount it pays the driver, the free wait's two
+    clocks -- how long from the wait's start to the cancellation, and the free
+    wait the policy allows -- and the run's wall clock.
+    """
+    development_set = development_sets.named(V8_SET)
+    run_dir = version_eight_run_dir()
+    document = json.loads(
+        (run_dir / "case-{0:05d}.json".format(V8_CASE)).read_text(encoding="utf-8")
+    )
+    transcript = json.loads(
+        (run_dir / document["transcript_file"]).read_text(encoding="utf-8")
+    )
+    brief = brief_module.build_brief_for_case(
+        development_set.load_case(V8_CASE),
+        policy_version=development_set.policy_version,
+    )
+    claims = v2._claims(transcript, "RIDER") + v2._claims(transcript, "DRIVER")
+    vote = transcript.get("vote") or {}
+    votes = int(vote.get("votes") or 0)
+    agreement = vote.get("agreement")
+    agreeing = (
+        int((Decimal(str(agreement)) * votes).quantize(Decimal(1)))
+        if agreement is not None
+        else 0
+    )
+    ruling = _inner_ruling(document)
+    return {
+        "currency": str(
+            _derived_value(brief, "FARE_BREAKDOWN", brief_module.MONEY_KEY, "currency")
+        ),
+        "evidence": len(v2._evidence(brief)),
+        "rider_points": len(v2._claims(transcript, "RIDER")),
+        "driver_points": len(v2._claims(transcript, "DRIVER")),
+        "claims": len(claims),
+        "kept": sum(
+            1 for claim in claims if claim["status"] == referee_module.STATUS_KEPT
+        ),
+        "agreeing": agreeing,
+        "votes": votes,
+        "confidence": ruling.get("confidence"),
+        "driver_amount": ruling.get("driver_compensation_sgd"),
+        "wait": _derived_value(
+            brief,
+            "TRIP_RECORD",
+            brief_module.V7_KEY,
+            "free_wait",
+            "seconds_from_start_to_cancel",
+        ),
+        "free_wait": _derived_value(
+            brief,
+            "TRIP_RECORD",
+            brief_module.V7_KEY,
+            "free_wait",
+            "free_wait_sec",
+        ),
+        "wall": document.get("wall_seconds"),
+    }
+
+
+def _derived_block(
+    brief: Mapping[str, Any], evidence_type: str, block: str
+) -> Mapping[str, Any]:
+    """One derived block, off the artifact of ``evidence_type`` that carries it."""
+    for artifact in brief["case"]["evidence"]:
+        if artifact.get("evidence_type") != evidence_type:
+            continue
+        payload = artifact.get("payload") or {}
+        found = (payload.get("derived") or {}).get(block)
+        return found if isinstance(found, Mapping) else {}
+    return {}
 
 
 def page_figures() -> Dict[str, str]:

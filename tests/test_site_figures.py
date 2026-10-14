@@ -59,6 +59,7 @@ page therefore join the pages this table covers.
 from __future__ import annotations
 
 import html
+import json
 import re
 import sys
 import unittest
@@ -69,7 +70,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from eval import development_sets  # noqa: E402
 from tests import portability  # noqa: E402
+from tribunal import pipeline as pipeline_module  # noqa: E402
 from ui.site import build as site  # noqa: E402
 from ui.site import figures  # noqa: E402
 
@@ -105,340 +108,1187 @@ def states_a_value(text: str, value: str) -> bool:
 # ``test_the_table_covers_the_pages_and_the_figures`` is what says the set of
 # pages here is the set that states a figure.
 SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
-    # -- the front page ---------------------------------------------------
-    ("index.html", "160.4 s; p90 286.9 s.", ("median_wall_seconds", "p90_wall_seconds")),
-    ("index.html", "2.7 min", ("median_wall_minutes",)),
-    ("index.html", "$0.058", ("median_cost_dollars",)),
-    ("index.html", "0.0579 USD", ("median_cost_usd",)),
-    ("index.html", "74%", ("decided_share",)),
-    ("index.html", "112 / 151", ("decided_automatically", "cases_total")),
+    # ``(page, the text the page shows, the figures that text carries)``.
+    #
+    # One row per place a figure is stated. The pages that state none -- ``try``,
+    # ``developers``, ``docs``, ``why`` and ``architecture`` -- are absent, and
+    # ``test_the_table_covers_the_pages_and_the_figures`` is what says the set of
+    # pages here is the set that states a figure.
     (
         "index.html",
-        "112 ruled by the AI 13 ruled, payout waits for a person "
-        "26 no ruling: a person decides",
-        ("decided_automatically", "held_for_release", "no_ruling"),
+        "160.4 s; p90 286.9 s.",
+        (
+            "median_wall_seconds",
+            "p90_wall_seconds",
+        ),
     ),
-    ("index.html", "26 /151 disputes got no AI ruling", ("no_ruling", "cases_total")),
     (
         "index.html",
-        "136 /141:",
-        ("position_swap_agreed", "position_swap_total"),
+        "2.7 min",
+        (
+            "median_wall_minutes",
+        ),
+    ),
+    (
+        "index.html",
+        "$0.058",
+        (
+            "median_cost_dollars",
+        ),
+    ),
+    (
+        "index.html",
+        "0.0579 USD",
+        (
+            "median_cost_usd",
+        ),
+    ),
+    (
+        "index.html",
+        "74%",
+        (
+            "decided_share",
+        ),
+    ),
+    (
+        "index.html",
+        "112 / 151",
+        (
+            "decided_automatically",
+            "cases_total",
+        ),
+    ),
+    (
+        "index.html",
+        "12/12 right on test cases it had never seen sealed-v2, Wilson 95% [75.8%, 100%]",
+        (
+            "sealed_v2_exact",
+            "sealed_v2_interval",
+        ),
     ),
     (
         "index.html",
         "6 tries: 5 unchanged, 1 sent to a person",
-        ("inject_total", "inject_unchanged", "inject_sent_to_a_person"),
+        (
+            "inject_total",
+            "inject_unchanged",
+            "inject_sent_to_a_person",
+        ),
     ),
     (
         "index.html",
-        "Case 208: 7 points for the rider, 12 for the driver.",
-        ("case_208_rider_points", "case_208_driver_points"),
+        "Typically decided in under 3 minutes, for about 4 cents.",
+        (
+            "v8_median_cost_cents",
+        ),
     ),
-    ("index.html", "19 of 19 points passed", ("case_208_claims",)),
-    ("index.html", "585 s", ("case_208_waiting_seconds",)),
-    ("index.html", "SGD 6.40", ("case_208_driver_amount",)),
-    ("index.html", "conf. 0.95", ("case_208_confidence",)),
     (
         "index.html",
-        "Driver paid SGD 4.00 / conf. 0.9",
-        ("case_901_driver_amount", "case_901_confidence"),
+        "a median of 153.1 s is slow for a chat reply",
+        (
+            "v8_median_seconds",
+        ),
     ),
-    ("index.html", "0 model calls", ("case_2735_model_calls",)),
     (
         "index.html",
-        "12/12 right on test cases it had never seen sealed-v2, "
-        "Wilson 95% [75.8%, 100%]",
-        ("sealed_v2_exact", "sealed_v2_interval"),
-    ),
-    # -- the front page, in Chinese ---------------------------------------
-    ("index.zh.html", "160.4 s; p90 286.9 s.", ("median_wall_seconds", "p90_wall_seconds")),
-    ("index.zh.html", "2.7 \u5206\u949f", ("median_wall_minutes",)),
-    ("index.zh.html", "$0.058", ("median_cost_dollars",)),
-    ("index.zh.html", "0.0579 USD", ("median_cost_usd",)),
-    ("index.zh.html", "74%", ("decided_share",)),
-    ("index.zh.html", "112 / 151", ("decided_automatically", "cases_total")),
-    (
-        "index.zh.html",
-        "112 \u7531 AI \u5224 13 \u5df2\u5224\uff0c\u7b49\u4eba\u653e\u6b3e 26 \u6ca1\u5224\uff0c\u4ea4\u7ed9\u4eba",
-        ("decided_automatically", "held_for_release", "no_ruling"),
-    ),
-    ("index.zh.html", "26 /151", ("no_ruling", "cases_total")),
-    ("index.zh.html", "136 /141\uff1a", ("position_swap_agreed", "position_swap_total")),
-    (
-        "index.zh.html",
-        "6 \u6b21\u653b\u51fb\uff1a5 \u4e2a\u4e0d\u53d8\uff0c1 \u4e2a\u8f6c\u4eba\u5de5",
-        ("inject_total", "inject_unchanged", "inject_sent_to_a_person"),
-    ),
-    ("index.zh.html", "585 \u79d2", ("case_208_waiting_seconds",)),
-    (
-        "index.zh.html",
-        "\u53f8\u673a\u83b7 SGD 6.40 / \u7f6e\u4fe1\u5ea6 0.95",
-        ("case_208_driver_amount", "case_208_confidence"),
+        "Case 5051: 3 points for the rider, 8 for the driver.",
+        (
+            "case5051_rider_points",
+            "case5051_driver_points",
+        ),
     ),
     (
-        "index.zh.html",
-        "\u53f8\u673a\u83b7 SGD 4.00 / \u7f6e\u4fe1\u5ea6 0.9",
-        ("case_901_driver_amount", "case_901_confidence"),
+        "index.html",
+        "Case 5051: 1 of 11 points thrown out by code before the judge saw them.",
+        (
+            "case5051_dropped",
+            "case5051_claims",
+        ),
     ),
-    ("index.zh.html", "0 \u6b21\u6a21\u578b\u8c03\u7528", ("case_2735_model_calls",)),
+    (
+        "index.html",
+        "SGD 3.44 = 4.30 km x 0.80, worked out by code for Ryde's DISP-001 and handed to the person who decides.",
+        (
+            "ryde902_excess_sgd",
+            "ryde902_deviation_km",
+            "ryde902_rate_sgd",
+        ),
+    ),
+    (
+        "index.html",
+        "33 of 34:",
+        (
+            "v8_swap",
+        ),
+    ),
+    (
+        "index.html",
+        "28 ruled by the AI 12 to a person",
+        (
+            "v8_decided_count",
+            "v8_to_person",
+        ),
+    ),
+    (
+        "index.html",
+        "12 /40 28 of 40 ruled by the AI; 12 to a person -- 5 stopped by a v2.1 rule before the judge (2 km, over SGD 50, safety), 6 the panel sent on, 1 without a majority.",
+        (
+            "v8_to_person",
+            "v8_cases",
+            "v8_decided",
+            "v8_gate_total",
+            "v8_route_limit_km",
+            "v8_human_above",
+            "v8_panel_escalated",
+            "v8_no_majority",
+        ),
+    ),
+    (
+        "index.html",
+        "Over SGD 50, a safety flag, or a route deviation over 2 km? A person decides.",
+        (
+            "v8_human_above",
+            "v8_route_limit_km",
+        ),
+    ),
+    (
+        "index.html",
+        "Ryde's own sample: the trip ran 4.30 km past the recommended route, over the 2 km an AI may rule on. A person decides, as Ryde answered. Over 2 km: escalated, as Ryde answered",
+        (
+            "ryde902_deviation_km",
+            "v8_route_limit_km",
+        ),
+    ),
+    (
+        "index.html",
+        "Fee stands: driver paid SGD 5.00",
+        (
+            "case5051_amount",
+        ),
+    ),
+    (
+        "index.html",
+        "All 42 version-8 cases",
+        (
+            "v8_case_pages",
+        ),
+    ),
+    (
+        "index.zh.html",
+        "160.4 s; p90 286.9 s.",
+        (
+            "median_wall_seconds",
+            "p90_wall_seconds",
+        ),
+    ),
+    (
+        "index.zh.html",
+        "2.7 \u5206\u949f",
+        (
+            "median_wall_minutes",
+        ),
+    ),
+    (
+        "index.zh.html",
+        "$0.058",
+        (
+            "median_cost_dollars",
+        ),
+    ),
+    (
+        "index.zh.html",
+        "0.0579 USD",
+        (
+            "median_cost_usd",
+        ),
+    ),
+    (
+        "index.zh.html",
+        "74%",
+        (
+            "decided_share",
+        ),
+    ),
+    (
+        "index.zh.html",
+        "112 / 151",
+        (
+            "decided_automatically",
+            "cases_total",
+        ),
+    ),
     (
         "index.zh.html",
         "12/12 \u4ece\u6ca1\u89c1\u8fc7\u7684\u8003\u9898\u5168\u90e8\u5224\u5bf9 sealed-v2, Wilson 95% [75.8%, 100%]",
-        ("sealed_v2_exact", "sealed_v2_interval"),
+        (
+            "sealed_v2_exact",
+            "sealed_v2_interval",
+        ),
     ),
-    # -- results ----------------------------------------------------------
-    ("results.html", "160.4 s", ("median_wall_seconds",)),
-    ("results.html", "within 4.8 minutes", ("p90_wall_minutes",)),
-    ("results.html", "$0.0579", ("median_cost_usd",)),
-    ("results.html", "112", ("decided_automatically",)),
-    ("results.html", "13", ("held_for_release",)),
-    ("results.html", "26", ("no_ruling",)),
+    (
+        "index.zh.html",
+        "6 \u6b21\u653b\u51fb\uff1a5 \u4e2a\u4e0d\u53d8\uff0c1 \u4e2a\u8f6c\u4eba\u5de5",
+        (
+            "inject_total",
+            "inject_unchanged",
+            "inject_sent_to_a_person",
+        ),
+    ),
+    (
+        "index.zh.html",
+        "\u4e00\u822c\u4e0d\u5230 3 \u5206\u949f\uff0c\u6210\u672c\u7ea6 4 \u7f8e\u5206\u3002",
+        (
+            "v8_median_cost_cents_zh",
+        ),
+    ),
+    (
+        "index.zh.html",
+        "\u4e2d\u4f4d 153.1 s \u5bf9\u804a\u5929\u56de\u590d\u6765\u8bf4\u504f\u6162",
+        (
+            "v8_median_seconds",
+        ),
+    ),
+    (
+        "index.zh.html",
+        "\u6848\u4f8b 5051\uff1a\u4e58\u5ba2\u65b9 3 \u70b9\uff0c\u53f8\u673a\u65b9 8 \u70b9\u3002",
+        (
+            "case5051_rider_points",
+            "case5051_driver_points",
+        ),
+    ),
+    (
+        "index.zh.html",
+        "\u6848\u4f8b 5051\uff1a11 \u70b9\u91cc\u6709 1 \u70b9\u88ab\u4ee3\u7801\u5728\u6cd5\u5b98\u770b\u5230\u4e4b\u524d\u6254\u6389\u3002",
+        (
+            "case5051_dropped",
+            "case5051_claims",
+        ),
+    ),
+    (
+        "index.zh.html",
+        "= 4.30 km x 0.80\uff0c\u7531\u4ee3\u7801\u4e3a Ryde \u7684 DISP-001 \u7b97\u51fa\uff0c\u4ea4\u7ed9\u8d1f\u8d23\u51b3\u5b9a\u7684\u4eba\u3002",
+        (
+            "ryde902_deviation_km",
+            "ryde902_rate_sgd",
+        ),
+    ),
+    (
+        "index.zh.html",
+        "33 of 34\uff1a",
+        (
+            "v8_swap",
+        ),
+    ),
+    (
+        "index.zh.html",
+        "28 \u7531 AI \u5224 12 \u4ea4\u7ed9\u4eba",
+        (
+            "v8_decided_count",
+            "v8_to_person",
+        ),
+    ),
+    (
+        "index.zh.html",
+        "12 /40 40 \u4e2a\u91cc 28 \u4e2a\u7531 AI \u5224\uff1b12 \u4e2a\u4ea4\u7ed9\u4eba\u2014\u20145 \u4e2a\u88ab v2.1 \u7684\u89c4\u5219\u5728\u6cd5\u5b98\u4e4b\u524d\u62e6\u4e0b\uff082 \u516c\u91cc\u3001\u8d85\u8fc7 50 \u65b0\u5143\u3001\u5b89\u5168\uff09\uff0c6 \u4e2a\u7531\u5408\u8bae\u5ead\u8f6c\u51fa\uff0c1 \u4e2a\u6ca1\u6709\u5f62\u6210\u591a\u6570\u3002",
+        (
+            "v8_to_person",
+            "v8_cases",
+            "v8_decided_count",
+            "v8_gate_total",
+            "v8_route_limit_km",
+            "v8_human_above",
+            "v8_panel_escalated",
+            "v8_no_majority",
+        ),
+    ),
+    (
+        "index.zh.html",
+        "\u8d85\u8fc7 50 \u65b0\u5143\u3001\u6709\u5b89\u5168\u6807\u8bb0\u3001\u6216\u7ed5\u8def\u8d85\u8fc7 2 \u516c\u91cc\uff0c\u90fd\u7531\u4eba\u51b3\u5b9a\u3002",
+        (
+            "v8_human_above",
+            "v8_route_limit_km",
+        ),
+    ),
+    (
+        "index.zh.html",
+        "Ryde \u81ea\u5df1\u7684\u6837\u4f8b\uff1a\u5b9e\u9645\u6bd4\u63a8\u8350\u8def\u7ebf\u591a\u8d70\u4e86 4.30 km\uff0c\u8d85\u8fc7 AI \u53ef\u4ee5\u88c1\u51b3\u7684 2 km\u3002\u6309 Ryde \u7684\u7b54\u590d\uff0c\u8f6c\u4eba\u5de5\u3002 \u8d85\u8fc7 2 km\uff1a\u8f6c\u4eba\u5de5\uff0c\u4e0e Ryde \u7b54\u590d\u4e00\u81f4",
+        (
+            "ryde902_deviation_km",
+            "v8_route_limit_km",
+        ),
+    ),
+    (
+        "index.zh.html",
+        "\u8d39\u7528\u6210\u7acb\uff1a\u53f8\u673a\u83b7 SGD 5.00",
+        (
+            "case5051_amount",
+        ),
+    ),
+    (
+        "index.zh.html",
+        "\u5168\u90e8 42 \u9053\u7b2c 8 \u7248\u6848\u4ef6",
+        (
+            "v8_case_pages",
+        ),
+    ),
     (
         "results.html",
-        "Safety 2, failed checks 3, split decisions 4, "
-        "judge escalated under the policy 17.",
-        ("trigger_safety", "trigger_failed_checks", "trigger_split", "trigger_judge"),
+        "160.4 s",
+        (
+            "median_wall_seconds",
+        ),
     ),
-    ("results.html", "~$68", ("cost_per_1000_usd",)),
-    ("results.html", "10.33 USD over the 151 version-6 cases", ("cost_sum_usd", "cases_total")),
-    ("results.html", "12/12", ("sealed_v2_exact",)),
-    ("results.html", "21/24", ("sealed_v1_exact",)),
-    ("results.html", "20/24", ("sealed_v1_imported",)),
-    ("results.html", "18/20", ("wild_v2_exact",)),
-    ("results.html", "136/141", ("position_swap_agreed", "position_swap_total")),
-    ("results.html", "0.088", ("calibration_error",)),
+    (
+        "results.html",
+        "within 4.8 minutes",
+        (
+            "p90_wall_minutes",
+        ),
+    ),
+    (
+        "results.html",
+        "$0.0579",
+        (
+            "median_cost_usd",
+        ),
+    ),
+    (
+        "results.html",
+        "112",
+        (
+            "decided_automatically",
+        ),
+    ),
+    (
+        "results.html",
+        "13",
+        (
+            "held_for_release",
+        ),
+    ),
+    (
+        "results.html",
+        "26",
+        (
+            "no_ruling",
+        ),
+    ),
+    (
+        "results.html",
+        "Safety 2, failed checks 3, split decisions 4, judge escalated under the policy 17.",
+        (
+            "trigger_safety",
+            "trigger_failed_checks",
+            "trigger_split",
+            "trigger_judge",
+        ),
+    ),
+    (
+        "results.html",
+        "~$68",
+        (
+            "cost_per_1000_usd",
+        ),
+    ),
+    (
+        "results.html",
+        "10.33 USD over the 151 version-6 cases",
+        (
+            "cost_sum_usd",
+            "cases_total",
+        ),
+    ),
+    (
+        "results.html",
+        "12/12",
+        (
+            "sealed_v2_exact",
+        ),
+    ),
+    (
+        "results.html",
+        "21/24",
+        (
+            "sealed_v1_exact",
+        ),
+    ),
+    (
+        "results.html",
+        "20/24",
+        (
+            "sealed_v1_imported",
+        ),
+    ),
+    (
+        "results.html",
+        "18/20",
+        (
+            "wild_v2_exact",
+        ),
+    ),
+    (
+        "results.html",
+        "136/141",
+        (
+            "position_swap_agreed",
+            "position_swap_total",
+        ),
+    ),
+    (
+        "results.html",
+        "0.088",
+        (
+            "calibration_error",
+        ),
+    ),
     (
         "results.html",
         "6 attacks: 5 had no effect, 1 was sent to a person",
-        ("inject_total", "inject_unchanged", "inject_sent_to_a_person"),
+        (
+            "inject_total",
+            "inject_unchanged",
+            "inject_sent_to_a_person",
+        ),
     ),
-    ("results.html", "115/120", ("dev_v2_ext_exact",)),
-    ("results.html", "Wilson 90.6-98.2%", ("dev_v2_ext_interval",)),
-    ("results.html", "16/20 / 16/17", ("dev_v2_ext_precision", "dev_v2_ext_recall")),
-    ("results.html", "26/29", ("corpus_v6_exact",)),
-    ("results.html", "15/15 / 13/15", ("precedents_with", "precedents_without")),
-    # -- results, in Chinese ----------------------------------------------
-    ("results.zh.html", "160.4 s", ("median_wall_seconds",)),
-    ("results.zh.html", "\u5728 4.8 \u5206\u949f\u5185\u5b8c\u6210", ("p90_wall_minutes",)),
-    ("results.zh.html", "$0.0579", ("median_cost_usd",)),
-    ("results.zh.html", "112", ("decided_automatically",)),
-    ("results.zh.html", "13", ("held_for_release",)),
-    ("results.zh.html", "26", ("no_ruling",)),
+    (
+        "results.html",
+        "115/120",
+        (
+            "dev_v2_ext_exact",
+        ),
+    ),
+    (
+        "results.html",
+        "Wilson 90.6-98.2%",
+        (
+            "dev_v2_ext_interval",
+        ),
+    ),
+    (
+        "results.html",
+        "16/20 / 16/17",
+        (
+            "dev_v2_ext_precision",
+            "dev_v2_ext_recall",
+        ),
+    ),
+    (
+        "results.html",
+        "26/29",
+        (
+            "corpus_v6_exact",
+        ),
+    ),
+    (
+        "results.html",
+        "15/15 / 13/15",
+        (
+            "precedents_with",
+            "precedents_without",
+        ),
+    ),
+    (
+        "results.html",
+        "2.6 min",
+        (
+            "v8_median_minutes",
+        ),
+    ),
+    (
+        "results.html",
+        "153.1 s at the median and 299.4 s at the 90th percentile; 0.0390 USD of model cost a case (dev-v8, development data).",
+        (
+            "v8_median_seconds",
+            "v8_p90_seconds",
+            "v8_median_cost_usd",
+        ),
+    ),
+    (
+        "results.html",
+        "28 of 40",
+        (
+            "v8_decided",
+        ),
+    ),
+    (
+        "results.html",
+        "28 of 40 ruled by the AI, 70% of the set; 12 went to a person: 5 stopped by a v2.1 rule before the judge (2 km, over SGD 50, safety), 6 the panel sent on, 1 without a majority (dev-v8, development data).",
+        (
+            "v8_decided",
+            "v8_decided_share",
+            "v8_to_person",
+            "v8_gate_total",
+            "v8_route_limit_km",
+            "v8_human_above",
+            "v8_panel_escalated",
+            "v8_no_majority",
+        ),
+    ),
+    (
+        "results.html",
+        "33 of 34",
+        (
+            "v8_swap",
+        ),
+    ),
+    (
+        "results.html",
+        "Expected calibration error 0.097 over 139 drafts, at the version-8 bar of 0.80 (dev-v8, development data).",
+        (
+            "v8_ece",
+            "v8_drafts",
+            "v8_confidence_between",
+        ),
+    ),
+    (
+        "results.zh.html",
+        "160.4 s",
+        (
+            "median_wall_seconds",
+        ),
+    ),
+    (
+        "results.zh.html",
+        "\u5728 4.8 \u5206\u949f\u5185\u5b8c\u6210",
+        (
+            "p90_wall_minutes",
+        ),
+    ),
+    (
+        "results.zh.html",
+        "$0.0579",
+        (
+            "median_cost_usd",
+        ),
+    ),
+    (
+        "results.zh.html",
+        "112",
+        (
+            "decided_automatically",
+        ),
+    ),
+    (
+        "results.zh.html",
+        "13",
+        (
+            "held_for_release",
+        ),
+    ),
+    (
+        "results.zh.html",
+        "26",
+        (
+            "no_ruling",
+        ),
+    ),
     (
         "results.zh.html",
         "\u5b89\u5168\u7c7b 2\u3001\u6ca1\u8fc7\u68c0\u67e5 3\u3001\u610f\u89c1\u5206\u6b67 4\u3001\u6cd5\u5b98\u4f9d\u653f\u7b56\u8f6c\u4eba\u5de5 17\u3002",
-        ("trigger_safety", "trigger_failed_checks", "trigger_split", "trigger_judge"),
+        (
+            "trigger_safety",
+            "trigger_failed_checks",
+            "trigger_split",
+            "trigger_judge",
+        ),
     ),
-    ("results.zh.html", "~$68", ("cost_per_1000_usd",)),
+    (
+        "results.zh.html",
+        "~$68",
+        (
+            "cost_per_1000_usd",
+        ),
+    ),
     (
         "results.zh.html",
         "151 \u4e2a\u7b2c 6 \u7248\u6848\u5b50\u5171 10.33 \u7f8e\u5143",
-        ("cost_sum_usd", "cases_total"),
+        (
+            "cost_sum_usd",
+            "cases_total",
+        ),
     ),
-    ("results.zh.html", "12/12", ("sealed_v2_exact",)),
-    ("results.zh.html", "21/24", ("sealed_v1_exact",)),
-    ("results.zh.html", "20/24", ("sealed_v1_imported",)),
-    ("results.zh.html", "18/20", ("wild_v2_exact",)),
-    ("results.zh.html", "136/141", ("position_swap_agreed", "position_swap_total")),
-    ("results.zh.html", "0.088", ("calibration_error",)),
+    (
+        "results.zh.html",
+        "12/12",
+        (
+            "sealed_v2_exact",
+        ),
+    ),
+    (
+        "results.zh.html",
+        "21/24",
+        (
+            "sealed_v1_exact",
+        ),
+    ),
+    (
+        "results.zh.html",
+        "20/24",
+        (
+            "sealed_v1_imported",
+        ),
+    ),
+    (
+        "results.zh.html",
+        "18/20",
+        (
+            "wild_v2_exact",
+        ),
+    ),
+    (
+        "results.zh.html",
+        "136/141",
+        (
+            "position_swap_agreed",
+            "position_swap_total",
+        ),
+    ),
+    (
+        "results.zh.html",
+        "0.088",
+        (
+            "calibration_error",
+        ),
+    ),
     (
         "results.zh.html",
         "6 \u6b21\u653b\u51fb\uff1a5 \u6b21\u65e0\u6548\uff0c1 \u6b21\u8f6c\u7ed9\u4eba",
-        ("inject_total", "inject_unchanged", "inject_sent_to_a_person"),
-    ),
-    ("results.zh.html", "115/120", ("dev_v2_ext_exact",)),
-    ("results.zh.html", "Wilson 90.6-98.2%", ("dev_v2_ext_interval",)),
-    ("results.zh.html", "16/20 / 16/17", ("dev_v2_ext_precision", "dev_v2_ext_recall")),
-    ("results.zh.html", "26/29", ("corpus_v6_exact",)),
-    ("results.zh.html", "15/15 / 13/15", ("precedents_with", "precedents_without")),
-    # -- how it works -----------------------------------------------------
-    ("how-it-works.html", "7 evidence items", ("case_208_evidence",)),
-    (
-        "how-it-works.html",
-        "7 vs 12 claims, rider vs driver",
-        ("case_208_rider_points", "case_208_driver_points"),
-    ),
-    ("how-it-works.html", "19/19 claims kept", ("case_208_claims_kept",)),
-    ("how-it-works.html", "conf. 0.95", ("case_208_confidence",)),
-    (
-        "how-it-works.html",
-        "SGD 6.40 to the driver, 277.9 s",
-        ("case_208_driver_amount", "case_208_wall_seconds"),
+        (
+            "inject_total",
+            "inject_unchanged",
+            "inject_sent_to_a_person",
+        ),
     ),
     (
-        "how-it-works.html",
-        "Of 151 cases: 26 went to a person, 13 waited for sign-off.",
-        ("cases_total", "no_ruling", "held_for_release"),
+        "results.zh.html",
+        "115/120",
+        (
+            "dev_v2_ext_exact",
+        ),
     ),
-    ("how-it-works.html", "136 of 141", ("position_swap_agreed", "position_swap_total")),
+    (
+        "results.zh.html",
+        "Wilson 90.6-98.2%",
+        (
+            "dev_v2_ext_interval",
+        ),
+    ),
+    (
+        "results.zh.html",
+        "16/20 / 16/17",
+        (
+            "dev_v2_ext_precision",
+            "dev_v2_ext_recall",
+        ),
+    ),
+    (
+        "results.zh.html",
+        "26/29",
+        (
+            "corpus_v6_exact",
+        ),
+    ),
+    (
+        "results.zh.html",
+        "15/15 / 13/15",
+        (
+            "precedents_with",
+            "precedents_without",
+        ),
+    ),
+    (
+        "results.zh.html",
+        "2.6 min",
+        (
+            "v8_median_minutes",
+        ),
+    ),
+    (
+        "results.zh.html",
+        "\u4e2d\u4f4d 153.1 s\uff0c\u7b2c 90 \u767e\u5206\u4f4d 299.4 s\uff1b\u6bcf\u6848\u6a21\u578b\u6210\u672c\u4e2d\u4f4d\u6570 0.0390 USD\uff08dev-v8\uff0c\u5f00\u53d1\u6570\u636e\uff09\u3002",
+        (
+            "v8_median_seconds",
+            "v8_p90_seconds",
+            "v8_median_cost_usd",
+        ),
+    ),
+    (
+        "results.zh.html",
+        "28 of 40",
+        (
+            "v8_decided",
+        ),
+    ),
+    (
+        "results.zh.html",
+        "40 \u4e2a\u91cc 28 \u4e2a\u7531 AI \u5224\uff0c\u5360 70%\uff1b12 \u4e2a\u4ea4\u7ed9\u4eba\uff1a5 \u4e2a\u88ab v2.1 \u7684\u89c4\u5219\u5728\u6cd5\u5b98\u4e4b\u524d\u62e6\u4e0b\uff082 \u516c\u91cc\u3001\u8d85\u8fc7 SGD 50\u3001\u5b89\u5168\uff09\uff0c6 \u4e2a\u7531\u5408\u8bae\u5ead\u8f6c\u51fa\uff0c1 \u4e2a\u6ca1\u6709\u5f62\u6210\u591a\u6570\uff08dev-v8\uff0c\u5f00\u53d1\u6570\u636e\uff09\u3002",
+        (
+            "v8_decided_count",
+            "v8_cases",
+            "v8_decided_share",
+            "v8_to_person",
+            "v8_gate_total",
+            "v8_route_limit_km",
+            "v8_human_above",
+            "v8_panel_escalated",
+            "v8_no_majority",
+        ),
+    ),
+    (
+        "results.zh.html",
+        "33 of 34",
+        (
+            "v8_swap",
+        ),
+    ),
+    (
+        "results.zh.html",
+        "\u671f\u671b\u6821\u51c6\u8bef\u5dee 0.097\uff0c\u57fa\u4e8e 139 \u4efd\u8349\u7a3f\uff0c\u6309\u7b2c 8 \u7248\u7684 0.80 \u4e0b\u9650\u5212\u5206\uff08dev-v8\uff0c\u5f00\u53d1\u6570\u636e\uff09\u3002",
+        (
+            "v8_ece",
+            "v8_drafts",
+            "v8_confidence_between",
+        ),
+    ),
     (
         "how-it-works.html",
-        "Case 208: 585 s of waiting, driver paid SGD 6.40.",
-        ("case_208_waiting_seconds", "case_208_driver_amount"),
+        "Case 5051: 3 points for the rider, 8 for the driver.",
+        (
+            "case5051_rider_points",
+            "case5051_driver_points",
+        ),
     ),
-    ("how-it-works.html", "Hidden tests: 12/12 and 21/24.", ("sealed_v2_exact", "sealed_v1_exact")),
+    (
+        "how-it-works.html",
+        "33 of 34 at version 8.",
+        (
+            "v8_swap",
+        ),
+    ),
+    (
+        "how-it-works.html",
+        "Case 5051: 345 s of waiting, driver paid SGD 5.00.",
+        (
+            "case5051_wait_seconds",
+            "case5051_amount",
+        ),
+    ),
+    (
+        "how-it-works.html",
+        "A safety flag, a value over SGD 50 or a route deviation over 2 km goes to a person before the judge is asked.",
+        (
+            "v8_human_above",
+            "v8_route_limit_km",
+        ),
+    ),
+    (
+        "how-it-works.html",
+        "In the sixth hidden set (sealed-v4, version 7), all 9 cases that needed a person got one.",
+        (
+            "sealed_v4_to_person",
+        ),
+    ),
+    (
+        "how-it-works.html",
+        "6 attack tests, version 6: 0 rulings flipped (5 unchanged, 1 sent to a person).",
+        (
+            "inject_flipped",
+            "inject_unchanged",
+            "inject_sent_to_a_person",
+        ),
+    ),
+    (
+        "how-it-works.html",
+        "Hidden test (version 7): 30/30.",
+        (
+            "sealed_v4_exact",
+        ),
+    ),
+    (
+        "how-it-works.html",
+        "A safety flag, a value over SGD 50 or a route deviation over 2 km goes to a person; the lawyers have prepared the case file and the judge is not asked.",
+        (
+            "v8_human_above",
+            "v8_route_limit_km",
+        ),
+    ),
+    (
+        "how-it-works.html",
+        "Below the confidence v2.1 asks (0.80; 0.95 with a fraud flag), or with the drafts split, the money is held and a person decides.",
+        (
+            "v8_confidence_between",
+            "v8_confidence_fraud",
+        ),
+    ),
+    (
+        "how-it-works.html",
+        "Case 5051: 7 pieces of evidence, one pack.",
+        (
+            "case5051_evidence",
+        ),
+    ),
+    (
+        "how-it-works.html",
+        "Case 5051: 10/11 claims kept.",
+        (
+            "case5051_claims_kept",
+        ),
+    ),
+    (
+        "how-it-works.html",
+        "4 of 4 agree; conf. 0.95",
+        (
+            "case5051_agree",
+            "case5051_confidence",
+        ),
+    ),
+    (
+        "how-it-works.html",
+        "28 of 40 ruled by the AI; 12 to a person -- 5 stopped by a v2.1 rule before the judge, 6 the panel sent on, 1 without a majority.",
+        (
+            "v8_decided",
+            "v8_to_person",
+            "v8_gate_total",
+            "v8_panel_escalated",
+            "v8_no_majority",
+        ),
+    ),
+    (
+        "how-it-works.html",
+        "The trip record says the driver waited 345 s from the wait's start to the cancellation, 300 s of it free, before cancelling.",
+        (
+            "case5051_wait_seconds",
+            "case5051_free_wait_seconds",
+        ),
+    ),
+    (
+        "how-it-works.html",
+        "7 evidence items",
+        (
+            "case5051_evidence",
+        ),
+    ),
+    (
+        "how-it-works.html",
+        "3 vs 8 claims, rider vs driver",
+        (
+            "case5051_rider_points",
+            "case5051_driver_points",
+        ),
+    ),
+    (
+        "how-it-works.html",
+        "10/11 claims kept",
+        (
+            "case5051_claims_kept",
+        ),
+    ),
+    (
+        "how-it-works.html",
+        "conf. 0.95",
+        (
+            "case5051_confidence",
+        ),
+    ),
+    (
+        "how-it-works.html",
+        "SGD 5.00 to the driver, 254.8 s",
+        (
+            "case5051_amount",
+            "case5051_wall",
+        ),
+    ),
     (
         "how-it-works.html",
         "15/15 with, 13/15 without",
-        ("precedents_with", "precedents_without"),
-    ),
-    (
-        "how-it-works.html",
-        "6 attack tests: 0 rulings flipped (5 unchanged, 1 sent to a person).",
-        ("inject_flipped", "inject_unchanged", "inject_sent_to_a_person"),
-    ),
-    # -- how it works, in Chinese -----------------------------------------
-    ("how-it-works.zh.html", "7 \u9879\u8bc1\u636e", ("case_208_evidence",)),
-    (
-        "how-it-works.zh.html",
-        "7 vs 12 \u6761\u4e3b\u5f20",
-        ("case_208_rider_points", "case_208_driver_points"),
-    ),
-    ("how-it-works.zh.html", "19/19 \u6761\u4e3b\u5f20\u4fdd\u7559", ("case_208_claims_kept",)),
-    ("how-it-works.zh.html", "\u7f6e\u4fe1\u5ea6 0.95", ("case_208_confidence",)),
-    (
-        "how-it-works.zh.html",
-        "SGD 6.40 \u5224\u7ed9\u53f8\u673a\uff0c\u7528\u65f6 277.9 \u79d2",
-        ("case_208_driver_amount", "case_208_wall_seconds"),
+        (
+            "precedents_with",
+            "precedents_without",
+        ),
     ),
     (
         "how-it-works.zh.html",
-        "151 \u4e2a\u6848\u5b50\u4e2d\uff1a26 \u4e2a\u4ea4\u7ed9\u4eba\uff0c13 \u4e2a\u7b49\u4eba\u7b7e\u5b57\u3002",
-        ("cases_total", "no_ruling", "held_for_release"),
+        "\u6848\u4f8b 5051\uff1a\u4e58\u5ba2\u65b9\u63d0\u4e86 3 \u70b9\uff0c\u53f8\u673a\u65b9 8 \u70b9\u3002",
+        (
+            "case5051_rider_points",
+            "case5051_driver_points",
+        ),
     ),
-    ("how-it-works.zh.html", "136 \u4e2a\u7ed3\u8bba\u4e0d\u53d8", ("position_swap_agreed",)),
-    ("how-it-works.zh.html", "141 \u4e2a\u6848\u5b50\u91cc", ("position_swap_total",)),
     (
         "how-it-works.zh.html",
-        "\u6848\u4f8b 208\uff1a\u7b49\u4e86 585 \u79d2\uff0c\u53f8\u673a\u83b7\u8d54 6.40 \u65b0\u5143\u3002",
-        ("case_208_waiting_seconds",),
+        "34 \u4e2a\u6848\u5b50\u91cc\uff0c\u5bf9\u8c03\u53cc\u65b9\u540e\u6709 33 \u4e2a\u7ed3\u8bba\u4e0d\u53d8",
+        (
+            "v8_swap_agreed",
+            "v8_swap_total",
+        ),
     ),
-    ("how-it-works.zh.html", "12/12 \u548c 21/24\u3002", ("sealed_v2_exact", "sealed_v1_exact")),
+    (
+        "how-it-works.zh.html",
+        "\u6848\u4f8b 5051\uff1a\u7b49\u4e86 345 \u79d2\uff0c\u53f8\u673a\u83b7 SGD 5.00\u3002",
+        (
+            "case5051_wait_seconds",
+            "case5051_amount",
+        ),
+    ),
+    (
+        "how-it-works.zh.html",
+        "\u6709\u5b89\u5168\u6807\u8bb0\u3001\u91d1\u989d\u8d85\u8fc7 SGD 50\u3001\u6216\u7ed5\u8def\u8d85\u8fc7 2 \u516c\u91cc\uff0c\u90fd\u5728\u6cd5\u5b98\u4e4b\u524d\u8f6c\u7ed9\u4eba\u3002",
+        (
+            "v8_human_above",
+            "v8_route_limit_km",
+        ),
+    ),
+    (
+        "how-it-works.zh.html",
+        "\u7b2c\u516d\u5957\u9690\u85cf\u8003\u9898(sealed-v4\uff0c\u7b2c 7 \u7248)\u91cc\uff0c9 \u4e2a\u8be5\u4ea4\u7ed9\u4eba\u7684\u6848\u5b50\u90fd\u4ea4\u4e86\u3002",
+        (
+            "sealed_v4_to_person",
+        ),
+    ),
+    (
+        "how-it-works.zh.html",
+        "6 \u6b21\u653b\u51fb\u6d4b\u8bd5\uff08\u7b2c 6 \u7248\uff09\uff1a0 \u4e2a\u5224\u51b3\u88ab\u6539\u53cd(5 \u4e2a\u4e0d\u53d8\uff0c1 \u4e2a\u8f6c\u4eba\u5de5)\u3002",
+        (
+            "inject_flipped",
+            "inject_unchanged",
+            "inject_sent_to_a_person",
+        ),
+    ),
+    (
+        "how-it-works.zh.html",
+        "\u9690\u85cf\u8003\u9898\uff08\u7b2c 7 \u7248\uff09\uff1a30/30\u3002",
+        (
+            "sealed_v4_exact",
+        ),
+    ),
+    (
+        "how-it-works.zh.html",
+        "\u6709\u5b89\u5168\u6807\u8bb0\u3001\u91d1\u989d\u8d85\u8fc7 SGD 50\u3001\u6216\u7ed5\u8def\u8d85\u8fc7 2 \u516c\u91cc\uff0c\u5c31\u4ea4\u7ed9\u4eba\uff1b\u53cc\u65b9\u5f8b\u5e08\u5df2\u7ecf\u51c6\u5907\u597d\u6848\u5377\uff0c\u4e0d\u8be2\u95ee\u6cd5\u5b98\u3002",
+        (
+            "v8_human_above",
+            "v8_route_limit_km",
+        ),
+    ),
+    (
+        "how-it-works.zh.html",
+        "\u4f4e\u4e8e v2.1 \u8981\u6c42\u7684\u7f6e\u4fe1\u5ea6\uff080.80\uff1b\u5e26\u6b3a\u8bc8\u6807\u8bb0\u65f6 0.95\uff09\uff0c\u6216\u8349\u7a3f\u610f\u89c1\u4e0d\u4e00\uff0c\u5c31\u51bb\u7ed3\u6b3e\u9879\uff0c\u4ea4\u7ed9\u4eba\u5b9a\u3002",
+        (
+            "v8_confidence_between",
+            "v8_confidence_fraud",
+        ),
+    ),
+    (
+        "how-it-works.zh.html",
+        "\u6848\u4f8b 5051\uff1a7 \u9879\u8bc1\u636e\uff0c\u4e00\u4e2a\u8bc1\u636e\u5305\u3002",
+        (
+            "case5051_evidence",
+        ),
+    ),
+    (
+        "how-it-works.zh.html",
+        "\u6848\u4f8b 5051\uff1a\u4e3b\u5f20\u4fdd\u7559 10/11\u3002",
+        (
+            "case5051_claims_kept",
+        ),
+    ),
+    (
+        "how-it-works.zh.html",
+        "40 \u4e2a\u91cc 28 \u4e2a\u7531 AI \u5224\uff1b12 \u4e2a\u4ea4\u7ed9\u4eba\u2014\u20145 \u4e2a\u88ab v2.1 \u7684\u89c4\u5219\u5728\u6cd5\u5b98\u4e4b\u524d\u62e6\u4e0b\uff0c6 \u4e2a\u7531\u5408\u8bae\u5ead\u8f6c\u51fa\uff0c1 \u4e2a\u6ca1\u6709\u5f62\u6210\u591a\u6570\u3002",
+        (
+            "v8_decided_count",
+            "v8_cases",
+            "v8_to_person",
+            "v8_gate_total",
+            "v8_panel_escalated",
+            "v8_no_majority",
+        ),
+    ),
+    (
+        "how-it-works.zh.html",
+        "\u53f8\u673a\u5728\u4e0a\u8f66\u70b9\u4ece\u7b49\u5f85\u5f00\u59cb\u5230\u53d6\u6d88\u5171\u7b49\u4e86 345 \u79d2\uff0c\u5176\u4e2d 300 \u79d2\u662f\u514d\u8d39\u7b49\u5f85\u3002",
+        (
+            "case5051_wait_seconds",
+            "case5051_free_wait_seconds",
+        ),
+    ),
+    (
+        "how-it-works.zh.html",
+        "7 \u9879\u8bc1\u636e",
+        (
+            "case5051_evidence",
+        ),
+    ),
+    (
+        "how-it-works.zh.html",
+        "3 vs 8 \u6761\u4e3b\u5f20",
+        (
+            "case5051_rider_points",
+            "case5051_driver_points",
+        ),
+    ),
+    (
+        "how-it-works.zh.html",
+        "10/11 \u6761\u4e3b\u5f20\u4fdd\u7559",
+        (
+            "case5051_claims_kept",
+        ),
+    ),
+    (
+        "how-it-works.zh.html",
+        "\u7f6e\u4fe1\u5ea6 0.95",
+        (
+            "case5051_confidence",
+        ),
+    ),
+    (
+        "how-it-works.zh.html",
+        "SGD 5.00 \u5224\u7ed9\u53f8\u673a\uff0c\u7528\u65f6 254.8 s",
+        (
+            "case5051_amount",
+            "case5051_wall",
+        ),
+    ),
     (
         "how-it-works.zh.html",
         "\u6709\u5148\u4f8b 15/15\uff0c\u65e0 13/15",
-        ("precedents_with", "precedents_without"),
+        (
+            "precedents_with",
+            "precedents_without",
+        ),
     ),
-    (
-        "how-it-works.zh.html",
-        "6 \u6b21\u653b\u51fb\u6d4b\u8bd5\uff1a0 \u4e2a\u5224\u51b3\u88ab\u6539\u53cd(5 \u4e2a\u4e0d\u53d8\uff0c1 \u4e2a\u8f6c\u4eba\u5de5)\u3002",
-        ("inject_flipped", "inject_unchanged", "inject_sent_to_a_person"),
-    ),
-    # -- about ------------------------------------------------------------
     (
         "about.html",
         "the third hidden set (sealed-v1) run once: 21/24.",
-        ("sealed_v1_exact",),
+        (
+            "sealed_v1_exact",
+        ),
     ),
     (
         "about.html",
         "the fourth hidden set (sealed-v2): 12/12.",
-        ("sealed_v2_exact",),
+        (
+            "sealed_v2_exact",
+        ),
     ),
     (
         "about.zh.html",
         "\u7b2c\u4e09\u5957\u9690\u85cf\u8003\u9898(sealed-v1)\u8dd1\u4e00\u6b21\uff1a21/24\u3002",
-        ("sealed_v1_exact",),
+        (
+            "sealed_v1_exact",
+        ),
     ),
     (
         "about.zh.html",
         "\u7b2c\u56db\u5957\u9690\u85cf\u8003\u9898(sealed-v2)\uff1a12/12\u3002",
-        ("sealed_v2_exact",),
+        (
+            "sealed_v2_exact",
+        ),
     ),
-    # -- version 7, Ryde's own Dispute Resolution Policy v2.1 --------------
-    # The three version-7 sets, each run once and never pooled: the fourth
-    # sealed set, Ryde's own two samples, and the development set the team
-    # tuned against. The front page's sentence carries the sealed set's figure
-    # and its interval, the results page carries all three, and the about
-    # page's timeline carries the sealed set's figure.
     (
         "index.html",
         "Applies Ryde's own Dispute Resolution Policy v2.1 with Ryde's answers of 2026-10-14 (policy version 8). Hidden test set, run at version 7: 30/30, Wilson 95% [88.6%, 100%].",
-        ("sealed_v4_exact", "sealed_v4_interval"),
+        (
+            "sealed_v4_exact",
+            "sealed_v4_interval",
+        ),
     ),
     (
         "index.zh.html",
         "\u6309 Ryde \u5b98\u65b9\u7684\u300a\u4e89\u8bae\u5904\u7406\u653f\u7b56 v2.1\u300b\u53ca Ryde 2026-10-14 \u7684\u7b54\u590d\u88c1\u51b3\uff08\u7b2c 8 \u7248\u653f\u7b56\uff09\u3002\u9690\u85cf\u9898\uff08\u5728\u7b2c 7 \u7248\u4e0a\u8dd1\uff09\uff1a30/30\uff0cWilson 95% [88.6%, 100%]\u3002",
-        ("sealed_v4_exact", "sealed_v4_interval"),
+        (
+            "sealed_v4_exact",
+            "sealed_v4_interval",
+        ),
     ),
     (
         "results.html",
         "30/30 right on 30 hidden cases, Wilson 95% 88.6%, 100%; written by Claude (Opus 5.5) in a fresh claude.ai chat from Ryde's v2.1 and the version-7 files; run once from freeze-2026-10-14.",
-        ("sealed_v4_exact", "sealed_v4_interval"),
+        (
+            "sealed_v4_exact",
+            "sealed_v4_interval",
+        ),
     ),
     (
         "results.html",
-        "1/2 -- DISP-001 (route deviation) ruled exactly as Ryde states (partial refund 3.44); DISP-002 (no-show) escalated: the four drafts split 2-2 on whether eight sparse GPS fixes reach the 0.95 confidence v2.1 requires when a party carries a fraud flag.",
-        ("ryde_v7_exact",),
+        "1/2 -- DISP-001 (route deviation) ruled exactly as Ryde states (partial refund 3.44); DISP-002 (no-show) escalated: the four drafts split 2-2 on whether eight sparse GPS fixes reach the 0.95 confidence Tribunal's version-7 policy requires -- its reading of v2.1 6.3 (C15) -- when a party carries a fraud flag.",
+        (
+            "ryde_v7_exact",
+        ),
     ),
     (
         "results.html",
         "dev-v7: 40/40, development data the team tuned against.",
-        ("dev_v7_exact",),
+        (
+            "dev_v7_exact",
+        ),
     ),
     (
         "results.zh.html",
         "30 \u9053\u9690\u85cf\u9898\u5bf9\u4e86 30/30\uff0cWilson 95% 88.6%, 100%\uff1b\u7531 Claude\uff08Opus 5.5\uff09\u5728\u5168\u65b0\u7684 claude.ai \u5bf9\u8bdd\u4e2d\u6309 Ryde v2.1 \u4e0e\u7b2c 7 \u7248\u653f\u7b56\u51fa\u9898\uff1b\u4ece freeze-2026-10-14 \u53ea\u8dd1\u4e00\u6b21\u3002",
-        ("sealed_v4_exact", "sealed_v4_interval"),
+        (
+            "sealed_v4_exact",
+            "sealed_v4_interval",
+        ),
     ),
     (
         "results.zh.html",
         "Ryde \u5b98\u65b9\u6837\u4f8b 1/2\uff1aDISP-001\uff08\u7ed5\u8def\uff09\u4e0e Ryde \u7ed9\u51fa\u7684\u7b54\u6848\u4e00\u81f4\uff08\u90e8\u5206\u9000\u6b3e 3.44\uff09\uff1b",
-        ("ryde_v7_exact",),
+        (
+            "ryde_v7_exact",
+        ),
     ),
     (
         "results.zh.html",
         "\u5f00\u53d1\u96c6 40/40\uff08\u56e2\u961f\u636e\u6b64\u8c03\u8bd5\uff0c\u4e0d\u662f\u6cdb\u5316\u6210\u7ee9\uff09\u3002",
-        ("dev_v7_exact",),
+        (
+            "dev_v7_exact",
+        ),
     ),
     (
         "about.html",
         "Version 7 frozen; the sixth hidden set (sealed-v4): 30/30.",
-        ("sealed_v4_exact",),
+        (
+            "sealed_v4_exact",
+        ),
     ),
     (
         "about.zh.html",
         "\u7b2c 7 \u7248\u51bb\u7ed3\uff1b\u7b2c\u516d\u5957\u9690\u85cf\u8003\u9898\uff08sealed-v4\uff09\uff1a30/30\u3002",
-        ("sealed_v4_exact",),
+        (
+            "sealed_v4_exact",
+        ),
     ),
-    # -- version 8, v2.1 with Ryde's answers of 2026-10-14 ------------------
-    # The two version-8 sets, each run once and never pooled: Ryde's own two
-    # samples, keyed as Ryde's answer of 2026-10-14 leaves them, and the
-    # development set the team tuned against. The results page carries both.
     (
         "results.html",
-        "1/2: DISP-001 (route deviation, 4.3 km) escalated, as Ryde answered on 2026-10-14 that the 2 km limb applies; DISP-002 (no-show) escalated: the drafts did not agree on whether eight sparse GPS fixes reach the 0.95 confidence v2.1 requires when a party carries a fraud flag.",
-        ("ryde_v8_exact",),
+        "1/2: DISP-001 (route deviation, 4.3 km) escalated, as Ryde answered on 2026-10-14 that the 2 km limb applies; DISP-002 (no-show) escalated: the drafts did not agree on whether eight sparse GPS fixes reach the 0.95 confidence Tribunal's version-8 policy requires -- its reading of v2.1 6.3 (C15); v2.1 6.2 makes a no-show ruling AI-final and Ryde's outcome upholds the fee, so the question is with Ryde.",
+        (
+            "ryde_v8_exact",
+        ),
     ),
     (
         "results.html",
         "dev-v8: 39/40, development data the team tuned against.",
-        ("dev_v8_exact",),
+        (
+            "dev_v8_exact",
+        ),
     ),
     (
         "results.zh.html",
-        "Ryde \u5b98\u65b9\u6837\u4f8b 1/2\uff1aDISP-001\uff08\u7ed5\u8def 4.3 km\uff09\u8f6c\u4eba\u5de5\u2014\u2014Ryde \u4e8e 2026-10-14 \u7b54\u590d 2 km \u89c4\u5219\u9002\u7528\uff1bDISP-002\uff08\u672a\u51fa\u73b0\uff09\u8f6c\u4eba\u5de5\uff1a\u4e58\u5ba2\u5e26\u6b3a\u8bc8\u6807\u8bb0\u65f6 v2.1 \u8981\u6c42 0.95 \u7684\u7f6e\u4fe1\u5ea6\uff0c\u8349\u7a3f\u5728 8 \u4e2a\u7a00\u758f GPS \u70b9\u662f\u5426\u8db3\u591f\u4e0a\u6ca1\u6709\u8fbe\u6210\u4e00\u81f4\u3002",
-        ("ryde_v8_exact",),
+        "Ryde \u5b98\u65b9\u6837\u4f8b 1/2\uff1aDISP-001\uff08\u7ed5\u8def 4.3 km\uff09\u8f6c\u4eba\u5de5\u2014\u2014Ryde \u4e8e 2026-10-14 \u7b54\u590d 2 km \u89c4\u5219\u9002\u7528\uff1bDISP-002\uff08\u672a\u51fa\u73b0\uff09\u8f6c\u4eba\u5de5\uff1a\u4e58\u5ba2\u5e26\u6b3a\u8bc8\u6807\u8bb0\u65f6\uff0cTribunal \u7684\u7b2c 8 \u7248\u653f\u7b56\u8981\u6c42 0.95 \u7684\u7f6e\u4fe1\u5ea6\u2014\u2014\u8fd9\u662f\u5b83\u5bf9 v2.1 \u7b2c 6.3 \u6761\u7684\u8bfb\u6cd5\uff08C15\uff09\uff1bv2.1 \u7b2c 6.2 \u6761\u4f7f\u672a\u51fa\u73b0\u88c1\u51b3\u6210\u4e3a\u6700\u7ec8\uff0c\u800c Ryde \u7ed9\u51fa\u7684\u7ed3\u679c\u662f\u7ef4\u6301\u6536\u8d39\uff0c\u6240\u4ee5\u8fd9\u4e2a\u95ee\u9898\u5728 Ryde \u90a3\u8fb9\u3002",
+        (
+            "ryde_v8_exact",
+        ),
     ),
     (
         "results.zh.html",
         "\u5f00\u53d1\u96c6 39/40\uff08\u56e2\u961f\u636e\u6b64\u8c03\u8bd5\uff0c\u4e0d\u662f\u6cdb\u5316\u6210\u7ee9\uff09\u3002",
-        ("dev_v8_exact",),
+        (
+            "dev_v8_exact",
+        ),
     ),
-    # -- the organisers' own two samples, on the cases page ------------------
-    # Ryde's two samples decided under v2.1 with Ryde's answers of 2026-10-14,
-    # the section the cases page now opens with. The distances and the excess
-    # distance fare are the version-8 brief's, the four drafts are the committed
-    # run's own vote block, and the version line under the section says the case
-    # pages and the queue below are the version-6 runs.
     (
         "cases.html",
-        "The trip record gives 24.8 km driven against 20.5 km on the recommended "
-        "route: a deviation of 4.30 km, over the 2.0 km limit of v2.1 6.2. Ryde "
-        "answered on 2026-10-14 that the limit applies, so version 8 sends the "
-        "case to a person before the judge is asked, with the excess distance "
-        "fare the code computed: SGD 3.44 (4.30 km x 0.80). Result: escalated, "
-        "as Ryde answered.",
+        "The trip record gives 24.8 km driven against 20.5 km on the recommended route: a deviation of 4.30 km, over the 2.0 km limit of v2.1 6.2. Ryde answered on 2026-10-14 that the limit applies, so version 8 sends the case to a person before the judge is asked, with the excess distance fare the code computed: SGD 3.44 (4.30 km x 0.80). Result: escalated, as Ryde answered.",
         (
             "ryde902_actual_km",
             "ryde902_optimal_km",
@@ -450,14 +1300,40 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
     ),
     (
         "cases.html",
-        "The driver arrived at 08:43; the free wait ran to 08:48 and the trip was "
-        "cancelled at 08:51, after it. The rider's profile carries a fraud flag, "
-        "so v2.1 requires a confidence of 0.95, and the arrival rests on 8 GPS "
-        "fixes two to four minutes apart. Of the judge's four drafts, 2 "
-        "escalated, 1 upheld the fee and 1 was voided for citing a clause that "
-        "does not exist; three must agree, so the case went to a person with the "
-        "fee held. Ryde's stated outcome is the fee upheld: this is our one "
-        "known divergence.",
+        "The driver arrived at 08:43; the free wait ran to 08:48 and the trip was cancelled at 08:51, after it. The rider's profile carries a fraud flag, so Tribunal's version-8 policy requires a confidence of 0.95 -- its reading of v2.1 6.3 (C15); v2.1 6.2 makes a no-show ruling AI-final and Ryde's outcome upholds the fee, so the question is with Ryde -- and the arrival rests on 8 GPS fixes two to four minutes apart. Of the judge's four drafts, 2 escalated, 1 upheld the fee and 1 was voided for citing a clause that does not exist; three must agree, so the case went to a person with the fee held. Ryde's stated outcome is the fee upheld: this is our one known divergence.",
+        (
+            "ryde903_arrived",
+            "ryde903_free_wait_ends",
+            "ryde903_cancelled",
+            "ryde903_required_confidence",
+            "ryde903_gps_fixes",
+            "ryde903_drafts_escalate",
+            "ryde903_drafts_fee",
+            "ryde903_drafts_voided",
+        ),
+    ),
+    (
+        "cases.html",
+        "All 42 version-8 cases",
+        (
+            "v8_case_pages",
+        ),
+    ),
+    (
+        "cases.zh.html",
+        "\u884c\u7a0b\u8bb0\u5f55\uff1a\u5b9e\u9645 24.8 km\uff0c\u63a8\u8350\u8def\u7ebf 20.5 km\uff0c\u7ed5\u8def 4.30 km\uff0c\u8d85\u8fc7 v2.1 \u7b2c 6.2 \u6761\u7684 2.0 km \u4e0a\u9650\u3002Ryde \u4e8e 2026-10-14 \u7b54\u590d\u8be5\u4e0a\u9650\u9002\u7528\uff0c\u6240\u4ee5\u7b2c 8 \u7248\u5728\u6cd5\u5b98\u4e4b\u524d\u76f4\u63a5\u8f6c\u4eba\u5de5\uff0c\u5e76\u9644\u4e0a\u4ee3\u7801\u7b97\u51fa\u7684\u8d85\u989d\u91cc\u7a0b\u8d39\uff1aSGD 3.44\uff084.30 km \u00d7 0.80\uff09\u3002\u7ed3\u679c\uff1a\u8f6c\u4eba\u5de5\uff0c\u4e0e Ryde \u7684\u7b54\u590d\u4e00\u81f4\u3002",
+        (
+            "ryde902_actual_km",
+            "ryde902_optimal_km",
+            "ryde902_deviation_km",
+            "ryde902_limit_km",
+            "ryde902_excess_sgd",
+            "ryde902_rate_sgd",
+        ),
+    ),
+    (
+        "cases.zh.html",
+        "\u53f8\u673a 08:43 \u5230\u8fbe\uff0c\u514d\u8d39\u7b49\u5f85\u5230 08:48\uff0c\u884c\u7a0b\u5728 08:51 \u53d6\u6d88\uff0c\u5df2\u8fc7\u514d\u8d39\u7b49\u5f85\u3002\u4e58\u5ba2\u5e26\u6b3a\u8bc8\u6807\u8bb0\uff0cTribunal \u7684\u7b2c 8 \u7248\u653f\u7b56\u8981\u6c42\u7f6e\u4fe1\u5ea6 0.95\u2014\u2014\u8fd9\u662f\u5b83\u5bf9 v2.1 \u7b2c 6.3 \u6761\u7684\u8bfb\u6cd5\uff08C15\uff09\uff1bv2.1 \u7b2c 6.2 \u6761\u4f7f\u672a\u51fa\u73b0\u88c1\u51b3\u6210\u4e3a\u6700\u7ec8\uff0c\u800c Ryde \u7ed9\u51fa\u7684\u7ed3\u679c\u662f\u7ef4\u6301\u6536\u8d39\uff0c\u6240\u4ee5\u8fd9\u4e2a\u95ee\u9898\u5728 Ryde \u90a3\u8fb9\u2014\u2014\u800c\u5230\u8fbe\u53ea\u9760 8 \u4e2a\u76f8\u9694\u4e24\u5230\u56db\u5206\u949f\u7684 GPS \u70b9\u3002\u6cd5\u5b98\u7684\u56db\u4efd\u8349\u7a3f\u4e2d\uff0c2 \u4efd\u8f6c\u4eba\u5de5\uff0c1 \u4efd\u7ef4\u6301\u6536\u8d39\uff0c1 \u4efd\u56e0\u5f15\u7528\u4e0d\u5b58\u5728\u7684\u6761\u6b3e\u88ab\u4f5c\u5e9f\uff1b\u9700\u8981\u4e09\u4efd\u4e00\u81f4\uff0c\u6240\u4ee5\u8f6c\u7ed9\u4eba\uff0c\u8d39\u7528\u6682\u6263\u3002Ryde \u7ed9\u51fa\u7684\u7ed3\u679c\u662f\u7ef4\u6301\u6536\u8d39\uff1a\u8fd9\u662f\u6211\u4eec\u552f\u4e00\u5df2\u77e5\u7684\u5206\u6b67\u3002",
         (
             "ryde903_arrived",
             "ryde903_free_wait_ends",
@@ -471,58 +1347,51 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
     ),
     (
         "cases.zh.html",
-        "\u884c\u7a0b\u8bb0\u5f55\uff1a\u5b9e\u9645 24.8 km\uff0c\u63a8\u8350\u8def"
-        "\u7ebf 20.5 km\uff0c\u7ed5\u8def 4.30 km\uff0c\u8d85\u8fc7 v2.1 \u7b2c"
-        " 6.2 \u6761\u7684 2.0 km \u4e0a\u9650\u3002Ryde \u4e8e 2026-10-14 \u7b54"
-        "\u590d\u8be5\u4e0a\u9650\u9002\u7528\uff0c\u6240\u4ee5\u7b2c 8 \u7248\u5728"
-        "\u6cd5\u5b98\u4e4b\u524d\u76f4\u63a5\u8f6c\u4eba\u5de5\uff0c\u5e76\u9644"
-        "\u4e0a\u4ee3\u7801\u7b97\u51fa\u7684\u8d85\u989d\u91cc\u7a0b\u8d39\uff1a"
-        "SGD 3.44\uff084.30 km \u00d7 0.80\uff09\u3002\u7ed3\u679c\uff1a\u8f6c"
-        "\u4eba\u5de5\uff0c\u4e0e Ryde \u7684\u7b54\u590d\u4e00\u81f4\u3002",
+        "\u5168\u90e8 42 \u9053\u7b2c 8 \u7248\u6848\u4ef6",
         (
-            "ryde902_actual_km",
-            "ryde902_optimal_km",
-            "ryde902_deviation_km",
-            "ryde902_limit_km",
-            "ryde902_excess_sgd",
-            "ryde902_rate_sgd",
+            "v8_case_pages",
         ),
     ),
-    (
-        "cases.zh.html",
-        "\u53f8\u673a 08:43 \u5230\u8fbe\uff0c\u514d\u8d39\u7b49\u5f85\u5230 08:48"
-        "\uff0c\u884c\u7a0b\u5728 08:51 \u53d6\u6d88\uff0c\u5df2\u8fc7\u514d\u8d39"
-        "\u7b49\u5f85\u3002\u4e58\u5ba2\u5e26\u6b3a\u8bc8\u6807\u8bb0\uff0cv2.1 "
-        "\u8981\u6c42\u7f6e\u4fe1\u5ea6 0.95\uff0c\u800c\u5230\u8fbe\u53ea\u9760 8 "
-        "\u4e2a\u76f8\u9694\u4e24\u5230\u56db\u5206\u949f\u7684 GPS \u70b9\u3002"
-        "\u6cd5\u5b98\u7684\u56db\u4efd\u8349\u7a3f\u4e2d\uff0c2 \u4efd\u8f6c\u4eba"
-        "\u5de5\uff0c1 \u4efd\u7ef4\u6301\u6536\u8d39\uff0c1 \u4efd\u56e0\u5f15"
-        "\u7528\u4e0d\u5b58\u5728\u7684\u6761\u6b3e\u88ab\u4f5c\u5e9f\uff1b\u9700"
-        "\u8981\u4e09\u4efd\u4e00\u81f4\uff0c\u6240\u4ee5\u8f6c\u7ed9\u4eba\uff0c"
-        "\u8d39\u7528\u6682\u6263\u3002Ryde \u7ed9\u51fa\u7684\u7ed3\u679c\u662f"
-        "\u7ef4\u6301\u6536\u8d39\uff1a\u8fd9\u662f\u6211\u4eec\u552f\u4e00\u5df2"
-        "\u77e5\u7684\u5206\u6b67\u3002",
-        (
-            "ryde903_arrived",
-            "ryde903_free_wait_ends",
-            "ryde903_cancelled",
-            "ryde903_required_confidence",
-            "ryde903_gps_fixes",
-            "ryde903_drafts_escalate",
-            "ryde903_drafts_fee",
-            "ryde903_drafts_voided",
-        ),
-    ),
-    # -- version 8's own sign-off, on the safety page ------------------------
-    # The safety page stated the version-6 SGD 8 sign-off and no figure at all;
-    # the sentence beside it now states version 8's three bands, so the page
-    # joins the pages this table covers.
     (
         "safety.html",
-        "The SGD 8 sign-off is version 6's rule. Version 8 applies v2.1's own: "
-        "below SGD 10 the AI ruling is final, from 10 to 50 it stands only at a "
-        "confidence of 0.80 or more (0.95 with a fraud flag), and above 50 a "
-        "person decides.",
+        "The SGD 8 sign-off is version 6's rule. Version 8 applies v2.1's own: below SGD 10 the AI ruling is final, from 10 to 50 it stands only at a confidence of 0.80 or more (0.95 with a fraud flag), and above 50 a person decides.",
+        (
+            "v8_ai_final_below",
+            "v8_human_above",
+            "v8_confidence_between",
+            "v8_confidence_fraud",
+        ),
+    ),
+    (
+        "safety.html",
+        "The AI wasn't sure or its drafts split, the amount is over SGD 50, it's about safety, or the route deviates by over 2 km.",
+        (
+            "v8_human_above",
+            "v8_route_limit_km",
+        ),
+    ),
+    (
+        "safety.html",
+        "slow for a chat reply (median 153.1 s)",
+        (
+            "v8_median_seconds",
+        ),
+    ),
+    (
+        "safety.html",
+        "On the 40 version-8 cases the three limbs stopped 5 between them: 2 on the 2 km limit, 1 on the value, 2 on a safety flag.",
+        (
+            "v8_cases",
+            "v8_gate_total",
+            "v8_gate_2km",
+            "v8_gate_value",
+            "v8_gate_safety",
+            "v8_route_limit_km",
+        ),
+    ),
+    (
+        "safety.zh.html",
+        "SGD 8 \u7b7e\u6838\u662f\u7b2c 6 \u7248\u7684\u89c4\u5219\u3002\u7b2c 8 \u7248\u7528 v2.1 \u81ea\u5df1\u7684\u89c4\u5219\uff1a\u4f4e\u4e8e SGD 10 \u65f6 AI \u5224\u51b3\u5373\u4e3a\u6700\u7ec8\uff1b10 \u5230 50 \u4e4b\u95f4\uff0c\u7f6e\u4fe1\u5ea6\u987b\u8fbe 0.80\uff08\u6709\u6b3a\u8bc8\u6807\u8bb0\u65f6 0.95\uff09\uff1b\u9ad8\u4e8e 50 \u7531\u4eba\u51b3\u5b9a\u3002",
         (
             "v8_ai_final_below",
             "v8_human_above",
@@ -532,17 +1401,29 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
     ),
     (
         "safety.zh.html",
-        "SGD 8 \u7b7e\u6838\u662f\u7b2c 6 \u7248\u7684\u89c4\u5219\u3002\u7b2c 8 "
-        "\u7248\u7528 v2.1 \u81ea\u5df1\u7684\u89c4\u5219\uff1a\u4f4e\u4e8e SGD "
-        "10 \u65f6 AI \u5224\u51b3\u5373\u4e3a\u6700\u7ec8\uff1b10 \u5230 50 "
-        "\u4e4b\u95f4\uff0c\u7f6e\u4fe1\u5ea6\u987b\u8fbe 0.80\uff08\u6709\u6b3a"
-        "\u8bc8\u6807\u8bb0\u65f6 0.95\uff09\uff1b\u9ad8\u4e8e 50 \u7531\u4eba\u51b3"
-        "\u5b9a\u3002",
+        "AI \u6ca1\u628a\u63e1\u6216\u610f\u89c1\u4e0d\u4e00\u3001\u91d1\u989d\u8d85\u8fc7 SGD 50\u3001\u6d89\u53ca\u5b89\u5168\uff0c\u6216\u7ed5\u8def\u8d85\u8fc7 2 \u516c\u91cc\u3002",
         (
-            "v8_ai_final_below",
             "v8_human_above",
-            "v8_confidence_between",
-            "v8_confidence_fraud",
+            "v8_route_limit_km",
+        ),
+    ),
+    (
+        "safety.zh.html",
+        "\u5bf9\u804a\u5929\u56de\u590d\u800c\u8a00\u504f\u6162(\u4e2d\u4f4d 153.1 s)",
+        (
+            "v8_median_seconds",
+        ),
+    ),
+    (
+        "safety.zh.html",
+        "40 \u4e2a\u7b2c 8 \u7248\u6848\u5b50\u91cc\uff0c\u4e09\u4e2a\u9650\u5236\u5171\u62e6\u4e0b 5 \u4e2a\uff1a2 \u4e2a\u51fa\u5728 2 \u516c\u91cc\u4e0a\u9650\uff0c1 \u4e2a\u51fa\u5728\u91d1\u989d\uff0c2 \u4e2a\u51fa\u5728\u5b89\u5168\u6807\u8bb0\u3002",
+        (
+            "v8_cases",
+            "v8_gate_total",
+            "v8_gate_2km",
+            "v8_gate_value",
+            "v8_gate_safety",
+            "v8_route_limit_km",
         ),
     ),
 )
@@ -609,11 +1490,11 @@ VERSION_SENTENCES: Tuple[Tuple[str, str], ...] = (
     ),
     (
         "how-it-works.html",
-        "Since 2026-10-14 the policy is Ryde's v2.1 with Ryde's answers to the team's three questions (the 2 km limb applies, the free wait runs from the driver's arrival, no surge on the excess distance fare), written as numbered clauses (docs/notes/2026-10-14-policy-v8.md). The stages and figures on this page are from version 6 unless they say otherwise.",
+        "Since 2026-10-14 the policy is Ryde's v2.1 with Ryde's answers to the team's three questions (the 2 km limb applies, the free wait runs from the driver's arrival, no surge on the excess distance fare), written as numbered clauses (docs/notes/2026-10-14-policy-v8.md).",
     ),
     (
         "how-it-works.zh.html",
-        "\u81ea 2026-10-14 \u8d77\uff0c\u653f\u7b56\u662f Ryde \u7684 v2.1 \u52a0\u4e0a Ryde \u5bf9\u56e2\u961f\u4e09\u4e2a\u95ee\u9898\u7684\u7b54\u590d\uff082 km \u89c4\u5219\u9002\u7528\uff1b\u514d\u8d39\u7b49\u5f85\u4ece\u53f8\u673a\u5230\u8fbe\u8d77\u7b97\uff1b\u8d85\u989d\u91cc\u7a0b\u8d39\u4e0d\u52a0 surge\uff09\uff0c\u6539\u5199\u4e3a\u5e26\u7f16\u53f7\u7684\u6761\u6b3e\uff08docs/notes/2026-10-14-policy-v8.md\uff09\u3002\u672c\u9875\u7684\u6d41\u7a0b\u548c\u6570\u5b57\u9664\u7279\u522b\u6ce8\u660e\u5916\uff0c\u6765\u81ea\u7b2c 6 \u7248\u3002",
+        "\u81ea 2026-10-14 \u8d77\uff0c\u653f\u7b56\u662f Ryde \u7684 v2.1 \u52a0\u4e0a Ryde \u5bf9\u56e2\u961f\u4e09\u4e2a\u95ee\u9898\u7684\u7b54\u590d\uff082 km \u89c4\u5219\u9002\u7528\uff1b\u514d\u8d39\u7b49\u5f85\u4ece\u53f8\u673a\u5230\u8fbe\u8d77\u7b97\uff1b\u8d85\u989d\u91cc\u7a0b\u8d39\u4e0d\u52a0 surge\uff09\uff0c\u6539\u5199\u4e3a\u5e26\u7f16\u53f7\u7684\u6761\u6b3e\uff08docs/notes/2026-10-14-policy-v8.md\uff09\u3002",
     ),
     (
         "try.html",
@@ -868,7 +1749,196 @@ class SiteFigureTests(unittest.TestCase):
         finally:
             self.figures["ryde902_deviation_km"] = figures.named(
                 "ryde902_deviation_km"
+            )# --------------------------------------------------------------------------
+# The version-6 phrases, and the one rule the gate counts are read by
+# --------------------------------------------------------------------------
+# The phrases that state a version-6 rule as though it were the current one.
+# None may stand in a block that does not name version 6 for itself.
+VERSION_SIX_PHRASES: Tuple[str, ...] = (
+    "over SGD 8",
+    "Over SGD 8",
+    "0.70",
+    "prompts/v1",
+    "within 30 days",
+    "never reach the AI",
+)
+
+# The one phrase that is still stated, and the pages that state it. Both are the
+# appeal sentence, which names version 6 in its own words; every other phrase is
+# gone from the site.
+VERSION_SIX_PLACES: Tuple[Tuple[str, str], ...] = (
+    ("index.html", "within 30 days"),
+    ("safety.html", "within 30 days"),
+)
+
+# What a block that states a version-6 rule must say for itself.
+VERSION_SIX_WORDS: Tuple[str, ...] = ("version 6", "version-6", "Version 6", "Version-6")
+
+# The closing tag of a block. A block is the text a reader meets between two of
+# them, which is the unit a heading or a sentence labels.
+BLOCK_END_RE = re.compile(r"</(?:p|li|h1|h2|h3|h4|td|th|button|pre|figcaption|div)>")
+
+
+def text_blocks(markup: str) -> Tuple[str, ...]:
+    """A page's visible text, split into the blocks a heading or sentence labels."""
+    blocks: list = []
+    position = 0
+    for match in BLOCK_END_RE.finditer(markup):
+        blocks.append(visible_text(markup[position : match.end()]))
+        position = match.end()
+    blocks.append(visible_text(markup[position:]))
+    return tuple(block for block in blocks if block)
+
+
+class TheVersionSixPhrasesTests(unittest.TestCase):
+    """No built page states a version-6 rule as the one in force.
+
+    Every page under ``ui/dist`` is read. The product site's own pages -- the 22
+    this part rewrites -- are read **block by block**, the unit a heading or a
+    sentence labels: a block that carries one of :data:`VERSION_SIX_PHRASES`
+    must name version 6 itself, and the blocks that do are
+    :data:`VERSION_SIX_PLACES`. The pages the other builders write are read
+    **whole**: they are the version-6 support site and the version-8 case pages,
+    neither of which this part changes, and each says which policy version it
+    replays in its own top bar, so a page is the section there.
+    """
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        portability.require_the_same_libm()
+        cls.site_pages = frozenset(source.name for source in site.page_sources())
+        cls.raw = {
+            path.name: path.read_text(encoding="utf-8")
+            for path in sorted(site.DIST_DIR.glob("*.html"))
+        }
+
+    def test_no_block_states_a_version_six_rule_without_naming_version_six(self):
+        for name, markup in sorted(self.raw.items()):
+            if name not in self.site_pages:
+                continue
+            for block in text_blocks(markup):
+                for phrase in VERSION_SIX_PHRASES:
+                    if phrase not in block:
+                        continue
+                    with self.subTest(page=name, phrase=phrase):
+                        self.assertTrue(
+                            any(word in block for word in VERSION_SIX_WORDS),
+                            "{0} states {1!r} in a block that does not name version "
+                            "6: {2!r}".format(name, phrase, block),
+                        )
+
+    def test_the_blocks_that_state_one_are_the_ones_listed(self):
+        found = set()
+        for name, markup in sorted(self.raw.items()):
+            if name not in self.site_pages:
+                continue
+            for block in text_blocks(markup):
+                for phrase in VERSION_SIX_PHRASES:
+                    if phrase in block:
+                        found.add((name, phrase))
+        self.assertEqual(
+            set(VERSION_SIX_PLACES),
+            found,
+            "the pages state version-6 phrases at {0}, and the table lists {1}".format(
+                sorted(found), sorted(VERSION_SIX_PLACES)
+            ),
+        )
+
+    def test_the_other_builders_pages_name_the_version_they_replay(self):
+        """The pages this part does not write say which policy version they are.
+
+        The version-6 support site and the version-8 case pages are the other
+        two builders'; the support site's top bar reads "Recorded runs, policy
+        version 6" and the case pages are named by the version their own index
+        states. A page that states one of the phrases and does not name version
+        6 would be a page stating a version-6 rule as the current one.
+        """
+        others = {
+            name: markup for name, markup in self.raw.items() if name not in self.site_pages
+        }
+        self.assertTrue(others, "ui/dist holds no page but the site's own")
+        for name, markup in sorted(others.items()):
+            text = visible_text(markup)
+            stated = [phrase for phrase in VERSION_SIX_PHRASES if phrase in text]
+            if not stated:
+                continue
+            with self.subTest(page=name):
+                self.assertIn("version 6", text)
+
+
+class TheVersionEightGateTests(unittest.TestCase):
+    """The rule the gate counts are read by, held against the committed run.
+
+    ``ui.site.figures.version_eight_escalations`` states its rule in its own
+    docstring: a case the version-8 gate stopped has **no vote** in its
+    transcript and a ruling explanation that opens "Under <clause>", and every
+    other escalated case was asked of the judge. These are that rule read
+    independently, and the cross-check that the five lanes cover the run's own
+    escalation count -- the figure ``eval.v8_report`` measures.
+    """
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        portability.require_the_same_libm()
+        cls.counts = figures.version_eight_escalations()
+        cls.run_dir = figures.version_eight_run_dir()
+        cls.cases = sorted(development_sets.named(figures.V8_SET).cases)
+        cls.measured = figures.version_eight_measurements()
+
+    def escalated(self) -> Tuple[Tuple[int, Dict, Dict], ...]:
+        """Every case the run published as an escalation, with its own record."""
+        found = []
+        for case_no in self.cases:
+            document = json.loads(
+                (self.run_dir / "case-{0:05d}.json".format(case_no)).read_text(
+                    encoding="utf-8"
+                )
             )
+            transcript = json.loads(
+                (self.run_dir / document["transcript_file"]).read_text(
+                    encoding="utf-8"
+                )
+            )
+            ruling = figures._inner_ruling(document)
+            if ruling.get("ruling") == pipeline_module.ESCALATE:
+                found.append((case_no, ruling, transcript))
+        return tuple(found)
+
+    def test_a_gated_case_has_no_vote_and_opens_with_its_clause(self):
+        for case_no, ruling, transcript in self.escalated():
+            if "vote" in transcript:
+                continue
+            with self.subTest(case=case_no):
+                match = figures.V8_GATE_OPENING_RE.match(
+                    str(ruling.get("explanation") or "")
+                )
+                self.assertIsNotNone(
+                    match,
+                    "case {0}'s explanation does not open with a clause".format(case_no),
+                )
+                assert match is not None
+                self.assertIn(match.group(1), figures.V8_GATE_CLAUSES)
+
+    def test_a_case_the_judge_was_asked_is_never_counted_in_a_gate_lane(self):
+        asked = [case_no for case_no, _r, t in self.escalated() if "vote" in t]
+        gated = [case_no for case_no, _r, t in self.escalated() if "vote" not in t]
+        self.assertEqual(len(asked) + len(gated), len(self.escalated()))
+        self.assertEqual(
+            self.counts["panel"] + self.counts["no_majority"], len(asked)
+        )
+        self.assertEqual(
+            self.counts["2km"] + self.counts["value"] + self.counts["safety"],
+            len(gated),
+        )
+
+    def test_the_five_lanes_cover_the_run_s_own_escalation_count(self):
+        self.assertEqual(sum(self.counts.values()), self.measured.escalated_produced)
+
+    def test_a_clause_the_gate_does_not_state_is_refused(self):
+        with self.assertRaises(KeyError):
+            figures._gate_limb("Under POL-XX-99, the case goes to a person.")
+        with self.assertRaises(KeyError):
+            figures._gate_limb("the judge was asked")
 
 
 if __name__ == "__main__":
