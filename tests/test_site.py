@@ -624,7 +624,9 @@ class TheFilmTests(unittest.TestCase):
         self.assertNotIn("<video", absent)
         self.assertNotIn(FILM, absent)
         self.assertNotIn("@film", absent)
-        self.assertEqual(absent, pages()["index.html"])
+        self.assertEqual(
+            absent, (site.DIST_DIR / "index.html").read_text(encoding="utf-8")
+        )
 
 
 # --------------------------------------------------------------------------
