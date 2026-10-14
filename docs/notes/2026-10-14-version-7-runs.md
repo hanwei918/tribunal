@@ -192,6 +192,12 @@ to four minutes apart -- which cannot carry 0.95. That is the system declining
 to rule on evidence it does not have, and the case goes to a person with the fee
 held.
 
+Correction, 2026-10-14 (evening): 903 escalates because Tribunal's version-8
+policy requires a confidence of 0.95 when a party carries a fraud flag
+(POL-GEN-22). That is Tribunal's reading of v2.1 6.3 (C15); v2.1 6.2 makes a
+no-show ruling AI-final and Ryde's stated outcome upholds the fee, so the
+question was put to Ryde on 2026-10-14.
+
 The first attempt at this set escalated both samples, at 0.75 and 0.6; it is
 kept as `runs/ryde-v7-attempt-1/` and reports no figure.
 

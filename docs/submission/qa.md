@@ -34,9 +34,11 @@ the figure says the system applies the version-7 files as that author reads them
 rather than that it is independently correct. The organisers' own two samples,
 converted for v2.1 and keyed by Ryde's stated outcomes as amended by Ryde's
 answer of 2026-10-14 (`ryde-v8`), are 1 of 2: 902 escalated by version 8's 2 km
-gate, which is what Ryde answered, and 903 escalated on a 2-2 split against the
-0.95 bar the rider's fraud flag sets. **At version 6**, the team's own policy,
-frozen 2026-10-11: three sealed sets are each run once, by
+gate, which is what Ryde answered, and 903 escalated on the 0.95 bar Tribunal
+reads v2.1 6.3 as setting on a no-show (C15), which Ryde's sample does not
+share: two drafts escalated, one upheld the fee and one was voided for citing a
+clause version 8 does not have; three must agree. **At version 6**, the team's
+own policy, frozen 2026-10-11: three sealed sets are each run once, by
 the owner, from a frozen tag, and committed as produced: `wild-v2` from
 `freeze-2026-10-03`, `sealed-v1` from `freeze-2026-10-09` and `sealed-v2` from
 `freeze-2026-10-11` (README, Results;
@@ -104,6 +106,21 @@ the repeat no-show counter, the fee on the record, rounding, the arrival test,
 the traffic-event vocabulary and the driver's deadline on an on-demand trip - is
 in the same note as C4, C6, C7, C8, C12, C13, C14, C16, C17 and C18, each with
 what Tribunal chose and what would change it.
+
+**Why does Tribunal escalate both of Ryde's samples?** Neither escalation is a
+failure to decide: each is the version-8 gate or reading doing what it says, and
+both samples' keys are the fee or refund the run leaves on the file. **902** is
+escalated by version 8's gate before the judge is asked: Ryde answered on
+2026-10-14 that v2.1 6.2's 2 km limb applies, and 902's deviation is 4.30 km, so
+the gate escalates it with the 3.44 excess distance fare in the case file.
+**903** is escalated by Tribunal's reading C15: Tribunal's version-8 policy
+requires a confidence of 0.95 when a party carries a fraud flag (POL-GEN-22),
+which is Tribunal's reading of v2.1 6.3; v2.1 6.2 makes a no-show ruling
+AI-final and Ryde's stated outcome upholds the fee, so the question was put to
+Ryde on 2026-10-14. A version with C15 turned off would follow if Ryde answers
+that a no-show ruling is AI-final whatever the fraud flag
+(`docs/notes/2026-10-14-version-7-runs.md`,
+`docs/notes/2026-10-14-version-8-runs.md`).
 
 **Your sealed figure is at version 7 -- why not re-run it?** A sealed set is run
 once, and a second run would be a second figure rather than a better one:

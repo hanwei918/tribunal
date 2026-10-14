@@ -28,7 +28,7 @@ against a reading of the policy.
 | case | sample | the key | what the system ruled | |
 |---|---|---|---|---|
 | 902 | DISP-001, route deviation 4.3 km | `ESCALATE` | `ESCALATE`, by version 8's 2 km gate (POL-RD-25) before the judge was asked | **match** |
-| 903 | DISP-002, no-show | `DRIVER_COMPENSATION` 5.00, the fee upheld | `ESCALATE` -- the panel split 2-2 | **miss** |
+| 903 | DISP-002, no-show | `DRIVER_COMPENSATION` 5.00, the fee upheld | `ESCALATE` -- two drafts escalated, one upheld the fee and one was voided for citing a clause version 8 does not have; three must agree | **miss** |
 
 **902 is what Ryde answered.** Ryde's answer of 2026-10-14 is that v2.1 6.2's
 2 km limb applies, so a route deviation of more than 2 km is escalated rather
@@ -49,9 +49,18 @@ to 0.95, and the arrival rests on eight GPS fixes two to four minutes apart,
 which cannot carry 0.95. Version 8's answers move no fact of this case, so this
 is the same divergence as at version 7, and it is reported rather than fixed.
 
+Correction, 2026-10-14 (evening): 903 escalates because Tribunal's version-8
+policy requires a confidence of 0.95 when a party carries a fraud flag
+(POL-GEN-22). That is Tribunal's reading of v2.1 6.3 (C15); v2.1 6.2 makes a
+no-show ruling AI-final and Ryde's stated outcome upholds the fee, so the
+question was put to Ryde on 2026-10-14.
+
 Wall clock median 256.2 s over the two, and a model cost of 0.126 USD for the
 two at the repository's prices (`eval/v6_runs.py`). Both cases' results match
 the brief and the prompts this code builds.
+
+Corrected 2026-10-14: the table first said the panel split 2-2, which was the
+version-7 run.
 
 ## 2. `dev-v8`, development data
 

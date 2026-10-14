@@ -28,6 +28,14 @@ anywhere is reported too: a pattern that has died is a place nobody is checking.
 The table is ASCII only, so the Chinese patterns are written as ``\\uXXXX``
 escapes and the module carries no Han character.
 
+**The claims, which are sentences rather than values.** A figure is a number and
+a claim is a sentence a document may not make -- three about version 8 were found
+on 2026-10-14 that the runs themselves contradict. :data:`CLAIMS` names the
+documents each is read in, a pattern a line must match for the claim to speak
+about it, and a pattern the line must then not match. A hit is reported the way a
+mismatched figure is, and a claim is written so that the version-7 sentence it
+resembles (``the panel split 2-2``) is left alone.
+
 **No model call, no network.** Every reading is a committed run, a committed key
 or a built page. Run from the project root with::
 
@@ -480,10 +488,86 @@ FIGURES: Tuple[Figure, ...] = (
             r"a median model cost of (\d+\.\d+) USD a case",
         ),
     ),
+    # The no-show sample's four version-8 drafts, counted by what each one did.
+    # The sentence the pattern reads is the one every place 903 is described at
+    # version 8 uses, so a document that counts the drafts differently -- three
+    # that escalated, two that upheld the fee -- captures a word that is not one
+    # of the figure's spellings and is reported.
+    Figure(
+        "ryde-v8, 903's drafts counted by outcome",
+        ("two", "one"),
+        (
+            r"(two)\s+drafts\s+escalated,\s+(one)\s+upheld\s+the\s+fee\s+and\s+"
+            r"(one)\s+was\s+voided\s+for\s+citing\s+a\s+clause\s+version\s+8\s+"
+            r"does\s+not\s+have;\s+three\s+must\s+agree",
+        ),
+    ),
 )
 
 # The figures by name, so the report and the tests can name one.
 BY_NAME: Dict[str, Figure] = {figure.name: figure for figure in FIGURES}
+
+
+# --------------------------------------------------------------------------
+# The claims: sentences a named document may not make
+# --------------------------------------------------------------------------
+# A figure is a value; a claim is a sentence. Three claims about version 8 were
+# found in the documents on 2026-10-14 that the runs themselves contradict, and
+# this table holds them closed: a line that says one of them is reported the way
+# a mismatched figure is. Each claim names the documents it reads and a pattern
+# the line must match for the claim to speak about it, so a sentence that is
+# true at version 7 (``the panel split 2-2``) is left alone while the same words
+# at version 8 are a finding.
+class Claim(NamedTuple):
+    """One thing no line of a named document may say.
+
+    ``files`` are the documents the claim reads. ``applies`` are regular
+    expressions a line must **all** match for the claim to speak about it; an
+    empty tuple means every line. ``forbidden`` are regular expressions a line
+    the claim speaks about must not match.
+    """
+
+    name: str
+    files: Tuple[str, ...]
+    applies: Tuple[str, ...]
+    forbidden: Tuple[str, ...]
+
+
+# The submission texts, the whole directory: each carries the version-8 summary.
+SUBMISSION_DOCUMENTS: Tuple[str, ...] = (
+    "docs/submission/blurb.md",
+    "docs/submission/demo-script.md",
+    "docs/submission/description-form.txt",
+    "docs/submission/description.md",
+    "docs/submission/how-we-built-it.md",
+    "docs/submission/qa.md",
+)
+
+# The documents a version-8 claim is read in. The two built pages under ``ui/``
+# state the version-8 samples too, but ``ui/`` is frozen for this part, so they
+# are named here neither as a claim nor as a figure document for these claims.
+VERSION_EIGHT_CLAIM_DOCUMENTS: Tuple[str, ...] = (
+    "README.md",
+    "docs/record.md",
+) + SUBMISSION_DOCUMENTS + (
+    "docs/notes/2026-10-14-version-8-runs.md",
+)
+
+CLAIMS: Tuple[Claim, ...] = (
+    Claim(
+        "version-8 903 is not a 2-2 split",
+        VERSION_EIGHT_CLAIM_DOCUMENTS,
+        (r"ryde-v8|version 8", r"903"),
+        (r"2-2", r"2:2"),
+    ),
+    Claim(
+        "v2.1 does not route a fare dispute to a person",
+        VERSION_EIGHT_CLAIM_DOCUMENTS
+        + ("data/external/ryde-v7/README.md", "tests/test_ryde_v7.py"),
+        (),
+        (r"v2\.1[^\n]{0,80}?(?:route|send)\w*[^\n]{0,80}?fare\s+dispute",),
+    ),
+)
 
 
 # --------------------------------------------------------------------------
@@ -554,6 +638,7 @@ def _compute() -> Dict[str, str]:
     v4_costs = [case_cost(document) for document in v4_documents.values()]
     ryde_v8 = graded_version_seven("ryde-v8")
     dev_v8 = graded_version_seven("dev-v8")
+    no_show_drafts = site_figures.ryde_no_show_drafts()
     v8_run_dir = development_sets.run_dir_at_its_version(
         development_sets.named("dev-v8"), MODEL
     )
@@ -620,6 +705,11 @@ def _compute() -> Dict[str, str]:
             v6_runs._median(v8_walls)
         ),
         "dev-v8, median model cost": "{0:.4f}".format(v6_runs._median(v8_costs)),
+        "ryde-v8, 903's drafts counted by outcome": "{0} escalate, {1} fee, {2} voided".format(
+            no_show_drafts["escalate"],
+            no_show_drafts["fee"],
+            no_show_drafts["voided"],
+        ),
     }
 
 
@@ -663,6 +753,14 @@ class DeadPattern(NamedTuple):
     pattern: str
 
 
+class ClaimHit(NamedTuple):
+    """One line a claim forbids, in one document."""
+
+    claim: str
+    document: str
+    line: str
+
+
 class Row(NamedTuple):
     """One line of the report."""
 
@@ -678,19 +776,21 @@ class Report(NamedTuple):
     rows: Tuple[Row, ...]
     mismatches: Tuple[Mismatch, ...]
     dead: Tuple[DeadPattern, ...]
+    claims: Tuple[ClaimHit, ...] = ()
 
     @property
     def ok(self) -> bool:
-        return not self.mismatches and not self.dead
+        return not self.mismatches and not self.dead and not self.claims
 
 
 def check(root: Path = PROJECT_ROOT) -> Report:
-    """Every figure, against every document under ``root``.
+    """Every figure, and every claim, against every document under ``root``.
 
-    ``root`` is a directory the relative names in :data:`DOCUMENTS` are read
-    under, so the check can be pointed at a copy of one file and shown to fail.
-    A document that is not there is skipped rather than reported: a copy holding
-    one file is exactly what the control uses.
+    ``root`` is a directory the relative names in :data:`DOCUMENTS` and in each
+    claim's own ``files`` are read under, so the check can be pointed at a copy
+    of one file and shown to fail. A document that is not there is skipped
+    rather than reported: a copy holding one file is exactly what the controls
+    use.
     """
     values = computed()
     rows: List[Row] = []
@@ -724,7 +824,21 @@ def check(root: Path = PROJECT_ROOT) -> Report:
             if pattern not in matched:
                 dead.append(DeadPattern(figure.name, pattern))
         rows.append(Row(figure.name, values[figure.name], tuple(sorted(documents)), ok))
-    return Report(tuple(rows), tuple(mismatches), tuple(dead))
+    claims: List[ClaimHit] = []
+    for claim in CLAIMS:
+        for name in claim.files:
+            path = root / name
+            if not path.is_file():
+                continue
+            text = path.read_text(encoding="utf-8")
+            for line in text.splitlines():
+                if any(
+                    re.search(pattern, line) is None for pattern in claim.applies
+                ):
+                    continue
+                if any(re.search(pattern, line) for pattern in claim.forbidden):
+                    claims.append(ClaimHit(claim.name, name, line.strip()))
+    return Report(tuple(rows), tuple(mismatches), tuple(dead), tuple(claims))
 
 
 # --------------------------------------------------------------------------
@@ -778,6 +892,16 @@ def report(root: Path = PROJECT_ROOT, found: "Optional[Report]" = None) -> str:
         lines.append("Patterns that match nothing anywhere:")
         for pattern in found.dead:
             lines.append("  {0}: {1}".format(pattern.figure, pattern.pattern))
+    if found.claims:
+        lines.append("")
+        lines.append("Claims a document may not make:")
+        for hit in found.claims:
+            lines.append(
+                "  {0}: {1} says {2!r}".format(hit.claim, hit.document, hit.line)
+            )
+    else:
+        lines.append("")
+        lines.append("No document makes a forbidden claim.")
     return "\n".join(lines) + "\n"
 
 
@@ -821,6 +945,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         for pattern in found.dead:
             sys.stdout.write(
                 "DEAD {0}: {1}\n".format(pattern.figure, pattern.pattern)
+            )
+        for hit in found.claims:
+            sys.stdout.write(
+                "CLAIM {0}: {1} says {2!r}\n".format(
+                    hit.claim, hit.document, hit.line
+                )
             )
         sys.stdout.write(
             "check_figures: {0}\n".format("OK" if found.ok else "FAILED")

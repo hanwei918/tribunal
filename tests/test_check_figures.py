@@ -13,7 +13,10 @@ three things:
   that returned nothing would pass the first test. Three figures are shown
   failing that way: the version-6 median time in ``docs/record.md``, the
   version-7 sealed set's agreement in ``README.md``, and the version-8
-  ``dev-v8`` agreement in ``README.md``.
+  ``dev-v8`` agreement in ``README.md``. Two **claims** are shown failing the
+  same way, each by putting the corrected sentence back: ``split 2-2`` on the
+  version-8 row of ``README.md``, and the fare sentence in
+  ``tests/test_ryde_v7.py``.
 * **The module is ASCII.** The sheet's rule is that the pattern table is written
   in ASCII, with the Chinese patterns as ``\\uXXXX`` escapes, so the module is
   read as bytes and every one is asserted below 128.
@@ -72,11 +75,35 @@ VERSION_EIGHT_FIGURES = (
     "dev-v8, four-field agreement",
     "dev-v8, median time to a decision",
     "dev-v8, median model cost",
+    "ryde-v8, 903's drafts counted by outcome",
 )
 VERSION_EIGHT_CONTROL_DOCUMENT = "README.md"
 VERSION_EIGHT_CONTROL_BEFORE = "| `dev-v8` (40 cases) | 39/40 |"
 VERSION_EIGHT_CONTROL_AFTER = "| `dev-v8` (40 cases) | 38/40 |"
 VERSION_EIGHT_CONTROL_FIGURE = "dev-v8, four-field agreement"
+
+# The claim controls. Each copy puts back one sentence the part corrected and
+# shows the claim check reporting it. ``split 2-2`` goes back on the version-8
+# row of the README, which names ``ryde-v8`` and 903 on one line; the fare
+# sentence goes back into the ``tests/test_ryde_v7.py`` docstring.
+CLAIM_CONTROL_DOCUMENT = "README.md"
+CLAIM_CONTROL_BEFORE = "and it escalated on the 0.95 bar Tribunal reads"
+CLAIM_CONTROL_AFTER = (
+    "and the panel split 2-2 and escalated on the 0.95 bar Tribunal reads"
+)
+CLAIM_CONTROL_NAME = "version-8 903 is not a 2-2 split"
+
+FARE_CLAIM_CONTROL_DOCUMENT = "tests/test_ryde_v7.py"
+FARE_CLAIM_CONTROL_BEFORE = (
+    "this prototype's scope, stated in Tribunal's own POL-GEN-24; v2.1 itself "
+    "lets\nthe AI rule a fare dispute (Section 6.2), and fare disputes are on the "
+    "roadmap."
+)
+FARE_CLAIM_CONTROL_AFTER = (
+    "what POL-GEN-24 says about it, since v2.1 routes a fare dispute to a person\n"
+    "rather than adjudicating it."
+)
+FARE_CLAIM_CONTROL_NAME = "v2.1 does not route a fare dispute to a person"
 
 
 class TheCommittedTreeTests(unittest.TestCase):
@@ -115,6 +142,17 @@ class TheCommittedTreeTests(unittest.TestCase):
             "\n".join(
                 "{0}: {1}".format(pattern.figure, pattern.pattern)
                 for pattern in self.found.dead
+            ),
+        )
+
+    def test_no_document_makes_a_forbidden_claim(self):
+        """No line a claim reads says what the claim forbids."""
+        self.assertEqual(
+            (),
+            self.found.claims,
+            "\n".join(
+                "{0}: {1} says {2!r}".format(hit.claim, hit.document, hit.line)
+                for hit in self.found.claims
             ),
         )
 
@@ -302,6 +340,73 @@ class TheControlTests(unittest.TestCase):
                 self.assertEqual("39/40", mismatch.expected)
         self.assertFalse(found.ok, "an altered figure left the check OK")
 
+    def test_a_two_two_split_put_back_on_the_version_eight_row_is_reported(self):
+        """The 2-2 claim is shown capable of firing on the version-8 row.
+
+        The copy holds the README alone, so the figures that read other
+        documents go dead -- a finding of its own and not what this test is
+        about. What it asserts is the claim: a line naming ``ryde-v8`` and 903
+        that says ``2-2`` is reported.
+        """
+        portability.require_the_same_libm()
+        source = (PROJECT_ROOT / CLAIM_CONTROL_DOCUMENT).read_text(encoding="utf-8")
+        altered = source.replace(CLAIM_CONTROL_BEFORE, CLAIM_CONTROL_AFTER)
+        self.assertNotEqual(
+            source,
+            altered,
+            "the control changed nothing in {0}".format(CLAIM_CONTROL_DOCUMENT),
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / CLAIM_CONTROL_DOCUMENT
+            target.write_text(altered, encoding="utf-8")
+            found = check_figures.check(root)
+        named = [hit for hit in found.claims if hit.claim == CLAIM_CONTROL_NAME]
+        self.assertTrue(
+            named,
+            "the put-back claim was not reported: {0}".format(found.claims),
+        )
+        for hit in named:
+            with self.subTest(document=hit.document):
+                self.assertEqual(CLAIM_CONTROL_DOCUMENT, hit.document)
+                self.assertIn("2-2", hit.line)
+        self.assertFalse(found.ok, "a forbidden claim left the check OK")
+
+    def test_the_fare_sentence_put_back_is_reported(self):
+        """The fare claim is shown capable of firing.
+
+        The copy holds ``tests/test_ryde_v7.py`` alone, so the figures that read
+        other documents go dead -- a finding of its own and not what this test is
+        about. What it asserts is the claim: a line that says v2.1 routes a fare
+        dispute to a person is reported.
+        """
+        portability.require_the_same_libm()
+        source = (PROJECT_ROOT / FARE_CLAIM_CONTROL_DOCUMENT).read_text(
+            encoding="utf-8"
+        )
+        altered = source.replace(FARE_CLAIM_CONTROL_BEFORE, FARE_CLAIM_CONTROL_AFTER)
+        self.assertNotEqual(
+            source,
+            altered,
+            "the control changed nothing in {0}".format(FARE_CLAIM_CONTROL_DOCUMENT),
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / FARE_CLAIM_CONTROL_DOCUMENT
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(altered, encoding="utf-8")
+            found = check_figures.check(root)
+        named = [hit for hit in found.claims if hit.claim == FARE_CLAIM_CONTROL_NAME]
+        self.assertTrue(
+            named,
+            "the put-back fare claim was not reported: {0}".format(found.claims),
+        )
+        for hit in named:
+            with self.subTest(document=hit.document):
+                self.assertEqual(FARE_CLAIM_CONTROL_DOCUMENT, hit.document)
+                self.assertIn("routes a fare dispute to a person", hit.line)
+        self.assertFalse(found.ok, "a forbidden claim left the check OK")
+
 
 class TheModuleTests(unittest.TestCase):
     """The pattern table's own rules."""
@@ -327,6 +432,15 @@ class TheModuleTests(unittest.TestCase):
                         1,
                         "{0} has no capture group".format(pattern),
                     )
+
+    def test_every_claim_names_documents_and_a_forbidden_pattern(self):
+        """A claim that reads nothing or forbids nothing checks nothing."""
+        for claim in check_figures.CLAIMS:
+            with self.subTest(claim=claim.name):
+                self.assertTrue(claim.files, "the claim names no document")
+                self.assertTrue(claim.forbidden, "the claim forbids nothing")
+                for pattern in claim.forbidden:
+                    re.compile(pattern)
 
 
 if __name__ == "__main__":

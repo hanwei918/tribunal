@@ -5,8 +5,8 @@ supplied three samples and only two of them can be carried: DISP-001, a route
 deviation, becomes case 902 and DISP-002, a no-show, becomes case 903, and
 DISP-003, a fare dispute, is not converted at all because this repository's case
 format carries no ``FARE_DISPUTE`` category for it to declare -- which is also
-what POL-GEN-24 says about it, since v2.1 routes a fare dispute to a person
-rather than adjudicating it.
+this prototype's scope, stated in Tribunal's own POL-GEN-24; v2.1 itself lets
+the AI rule a fare dispute (Section 6.2), and fare disputes are on the roadmap.
 
 This module holds the set to the four things the conversion is for:
 

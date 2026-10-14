@@ -34,8 +34,11 @@ version 8 changes its key on one case (6009, 2.4 km), which version 8's 2 km gat
 escalates before the judge is asked, while the other 29 were not run at version
 8. `ryde-v8`, the organisers' own two samples keyed by Ryde's stated outcome as
 amended by Ryde's answer of 2026-10-14, is 1 of 2: 902 escalated by version 8's
-2 km gate, which is what Ryde answered, and 903 escalated on a 2-2 split against
-the 0.95 bar the rider's fraud flag sets. At version 6, the team's own policy
-frozen 2026-10-11: `sealed-v2` 12/12 = 100.0% [75.8%, 100.0%], `sealed-v1` 21/24
+2 km gate, which is what Ryde answered, and 903 escalated on the 0.95 bar
+Tribunal reads v2.1 6.3 as setting on a no-show (C15), which Ryde's sample does
+not share: two drafts escalated, one upheld the fee and one was voided for
+citing a clause version 8 does not have; three must agree. At version 6, the
+team's own policy frozen 2026-10-11: `sealed-v2` 12/12 = 100.0% [75.8%, 100.0%],
+`sealed-v1` 21/24
 = 87.5% [69.0%, 95.7%], `wild-v2` 18/20 [69.9%, 97.2%]. The policy versions are
 never pooled, and 30 cases is a small sample.

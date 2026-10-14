@@ -48,11 +48,12 @@ A fare dispute has no category to declare and no policy file to select, so a
 converted case declaring one would be refused by the loader rather than loaded.
 The category that would carry it, `FARE_DISPUTE`, does not exist here.
 
-That is consistent with what v2.1 says about the dispute: POL-GEN-24 states that
-fare and surge disputes are "not adjudicated by the AI in this version" and are
-routed to human review with the section that governs them named in the case file.
-A case the policy sends to a person is a case the pipeline is not asked to rule
-on, so there is nothing for a conversion to feed.
+That is this prototype's scope rather than v2.1's rule. Tribunal's own POL-GEN-24
+states that fare and surge disputes are not adjudicated by the AI in this version
+and are routed to human review; v2.1 itself lets the AI rule a fare dispute
+(Section 6.2: final below SGD 10, at a confidence of 0.80 between 10 and 50, a
+person above 50). A case the policy sends to a person is a case the pipeline is
+not asked to rule on, so there is nothing for a conversion to feed.
 
 ## What each case carries
 
