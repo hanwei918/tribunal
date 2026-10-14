@@ -569,14 +569,81 @@ SEALED_V4 = DevelopmentSet(
     run_arguments=V7_RUN_ARGUMENTS,
 )
 
+# Policy version 8 is version 7 with Ryde's answers of 2026-10-14 applied (see
+# ``policy/v8/``): the 2 km limb of v2.1 6.2 applies, so a route deviation over
+# 2 km is escalated, and the no-show free wait runs from the driver's arrival.
+#
+# The two version-8 sets are **the version-7 sets briefed at version 8**, not new
+# case files: there is no ``data/external/dev-v8/`` or ``data/external/ryde-v8/``,
+# and each set's ``case_root`` is the version-7 directory its 40 or 2 case files
+# already live in. Only the key moves, because only the expected outcomes move.
+# They are declared and registered exactly where the version-7 pair is, and like
+# it they are development data that is tuned against, so no figure from them is
+# ever a generalisation figure.
+V8_POLICY_VERSION = 8
 
-def external_set_data_present(name: str) -> bool:
+# The same configuration the version-7 runs are made with -- the same model,
+# votes, timeout, concurrency and ``prompts/v2`` -- because a version-8 run is a
+# version-7 run against a later policy on the same base.
+V8_RUN_ARGUMENTS = V7_RUN_ARGUMENTS
+
+DEV_V8 = DevelopmentSet(
+    name="dev-v8",
+    cases=(),
+    key_path=ANSWER_DIR / "dev-v8" / "ground_truth.json",
+    runs_subdir="dev-v8",
+    # The same 40 case files ``dev-v7`` lists: 5001-5020 and 5051-5070.
+    case_root=loader.EXTERNAL_DIR / "dev-v7",
+    summary=(
+        "the dev-v7 cases at policy version 8: 40 cases, 5001-5020 and "
+        "5051-5070, written for Ryde's Dispute Resolution Policy v2.1 and "
+        "briefed against version 8, which is version 7 with Ryde's answers of "
+        "2026-10-14 applied. Development data that is tuned against, so it is "
+        "never a generalisation figure"
+    ),
+    policy_version=V8_POLICY_VERSION,
+    policy_base=V8_POLICY_VERSION,
+    run_arguments=V8_RUN_ARGUMENTS,
+)
+
+RYDE_V8 = DevelopmentSet(
+    name="ryde-v8",
+    cases=tuple(
+        entry["case_no"]
+        for entry in loader.load_external_index(loader.EXTERNAL_DIR / "ryde-v7")
+    ),
+    key_path=ANSWER_DIR / "ryde-v8" / "ground_truth.json",
+    runs_subdir="ryde-v8",
+    case_root=loader.EXTERNAL_DIR / "ryde-v7",
+    summary=(
+        "the organisers' two samples at policy version 8: DISP-001 as case 902 "
+        "(a route deviation) and DISP-002 as case 903 (a no-show). Keyed by "
+        "Ryde's stated outcomes as amended by Ryde's answer of 2026-10-14. "
+        "Development data that is tuned against, so it is never a "
+        "generalisation figure"
+    ),
+    policy_version=V8_POLICY_VERSION,
+    policy_base=V8_POLICY_VERSION,
+)
+
+
+def external_set_data_present(development_set: DevelopmentSet) -> bool:
     """Whether a declared set's own data is on disk yet.
 
-    Read off the set's ``index.json`` rather than its directory, because a
-    directory with no index is a set that cannot be loaded and not one that can.
+    Read off the set's ``case_root`` -- the directory its case files and its index
+    sit in -- rather than ``EXTERNAL_DIR / name``, because a later policy version
+    of a set **reuses the earlier version's case files**: ``dev-v8`` and
+    ``ryde-v8`` are the version-7 cases briefed at version 8, so their root is
+    ``data/external/dev-v7`` and ``data/external/ryde-v7`` and there is no
+    directory named after them at all. For every set registered before those two
+    the two paths are the same one, so nothing about them moves.
+
+    The index rather than the directory, because a directory with no index is a
+    set that cannot be loaded and not one that can.
     """
-    return (loader.EXTERNAL_DIR / name / loader.EXTERNAL_INDEX_FILE).is_file()
+    if development_set.case_root is None:
+        return False
+    return (development_set.case_root / loader.EXTERNAL_INDEX_FILE).is_file()
 
 
 def registered(development_set: DevelopmentSet) -> DevelopmentSet:
@@ -585,16 +652,19 @@ def registered(development_set: DevelopmentSet) -> DevelopmentSet:
     Returns the set unchanged when its data is not present, so the two tuples
     below can be written as one expression each and the declaration above stays
     the single place a set's name, root, key and arguments are written down.
+
+    The index it reads is the one at the set's own ``case_root``, which is what
+    lets a later policy version of a set be registered without a second copy of
+    its case files: ``dev-v8`` reads ``data/external/dev-v7/index.json`` and lists
+    the same 40 cases ``dev-v7`` does.
     """
-    if not external_set_data_present(development_set.name):
+    if not external_set_data_present(development_set):
         return development_set
     return replace(
         development_set,
         cases=tuple(
             entry["case_no"]
-            for entry in loader.load_external_index(
-                loader.EXTERNAL_DIR / development_set.name
-            )
+            for entry in loader.load_external_index(development_set.case_root)
         ),
     )
 
@@ -603,8 +673,10 @@ def registered(development_set: DevelopmentSet) -> DevelopmentSet:
 # all`` does not run them, the combined figure does not sum them, and the
 # recorded-drafts measurement does not read them.
 NAMED_SETS: Tuple[DevelopmentSet, ...] = (
-    VERSION_THREE_SETS + FUNCTIONAL_SETS + (RYDE_V7,)
-) + ((registered(DEV_V7),) if external_set_data_present(DEV_V7.name) else ())
+    VERSION_THREE_SETS + FUNCTIONAL_SETS + (RYDE_V7, RYDE_V8)
+) + ((registered(DEV_V7),) if external_set_data_present(DEV_V7) else ()) + (
+    (registered(DEV_V8),) if external_set_data_present(DEV_V8) else ()
+)
 
 # The second sealed set, imported on 2026-10-03 and run once, on 2026-10-04, from
 # a commit whose ``tribunal/``, ``prompts/`` and ``policy/`` trees equal those at
@@ -804,7 +876,7 @@ SEALED_SETS: Tuple[DevelopmentSet, ...] = (
     SEALED_V1,
     SEALED_V2,
     SEALED_V3,
-) + ((registered(SEALED_V4),) if external_set_data_present(SEALED_V4.name) else ())
+) + ((registered(SEALED_V4),) if external_set_data_present(SEALED_V4) else ())
 
 # The sets that exist to be run again. They are registered by name and are
 # deliberately outside the tuples above: ``--set all``, the combined figure
@@ -836,7 +908,7 @@ BY_NAME = {
 DECLARED_SETS: Dict[str, DevelopmentSet] = {
     development_set.name: development_set
     for development_set in (DEV_V7, SEALED_V4)
-    if not external_set_data_present(development_set.name)
+    if not external_set_data_present(development_set)
 }
 
 
