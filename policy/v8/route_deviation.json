@@ -1,0 +1,150 @@
+{
+  "policy_id": "POLICY-ROUTE-DEVIATION",
+  "category": "ROUTE_DEVIATION",
+  "version": "8.0.0",
+  "jurisdiction": "Singapore",
+  "currency": "SGD",
+  "last_reviewed": "2026-10-14",
+  "thresholds": {
+    "tolerance_km": "1.0",
+    "ai_ruling_max_deviation_km": "2.0",
+    "ai_ruling_max_deviation_applied": true,
+    "ai_ruling_max_deviation_note": "C1, settled by Ryde on 2026-10-14: v2.1 6.2's 2 km limb applies; a route deviation over 2 km is escalated (DISP-001's 4.3 km included).",
+    "excess_distance_fare": {
+      "formula": "deviation_km x fare_breakdown.per_km_rate_sgd",
+      "surge_applied": false,
+      "rounding": "to the cent, half up"
+    },
+    "traffic_justification_types": {
+      "congestion": [
+        "CONGESTION",
+        "HEAVY_CONGESTION",
+        "HEAVY_TRAFFIC"
+      ],
+      "incident": [
+        "ACCIDENT",
+        "VEHICLE_FIRE",
+        "FIRE",
+        "BREAKDOWN",
+        "VEHICLE_BREAKDOWN",
+        "INCIDENT",
+        "OBSTACLE",
+        "UNATTENDED_VEHICLE",
+        "PLANT_FAILURE"
+      ],
+      "closure": [
+        "CLOSURE",
+        "ROAD_CLOSURE",
+        "ROAD_BLOCK",
+        "ROADWORKS",
+        "ROADWORK",
+        "DIVERSION"
+      ],
+      "normalisation": "upper-case; spaces and hyphens become underscores; then an exact match",
+      "note": "C18: the TRAFFIC_ADVISORY types the data uses (the corpus vocabulary and LTA DataMall's traffic-incident types) mapped onto v2.1 1.1's 'traffic conditions, road closures, or congestion'. Any other type (for example NONE, KERB_RESTRICTION, TRAFFIC_FLOW, WEATHER, MISC) does not justify a reroute."
+    }
+  },
+  "integrity": {
+    "gps_gap_policy_threshold_sec": 120,
+    "weights": {
+      "MISSING_ARTIFACT": 0.0,
+      "CROSS_SOURCE_CONFLICT": 0.4,
+      "TRUNCATED_LOG": 0.6,
+      "PARTIAL_RECORD": 0.75,
+      "STALE_SNAPSHOT": 0.75,
+      "CONTENT_REDACTED": 0.8,
+      "LOW_SAMPLE_RATE": 0.8,
+      "LANGUAGE_AMBIGUITY": 0.85,
+      "UNREAD_MESSAGE": 0.85,
+      "SCHEMA_VERSION_MISMATCH": 0.9,
+      "GPS_GAP_SHORT_OR_OUTSIDE_WINDOW": 0.85,
+      "GPS_GAP_LONG_INSIDE_WINDOW": 0.6,
+      "GPS_GAP_STRADDLING_CANCELLATION": 0.6,
+      "LOW_COVERAGE": 0.65,
+      "GPS_DRIFT": 0.5,
+      "IMPLAUSIBLE_SPEED": 0.6,
+      "ADVISORY_UNCORROBORATED": 0.5,
+      "UNVERIFIED_SOURCE": 0.5,
+      "CLOCK_SKEW": 0.5
+    },
+    "accuracy_missing_treatment": "UNKNOWN",
+    "note": "POL-NS-08(b) makes a gap longer than 120 s inside the waiting window a policy-level impairment. A schema-level GPS_GAP tag must not, on its own, cap confidence below the 0.70 floor, or the half of POL-NS-08(b) that permits a ruling on a short gap can never operate; the pre-pass therefore grades the tag by the gap's length and position, measured from the trace itself, reading this block rather than a fixed table; the other weights are the version-1 pre-pass table moved here unchanged, so that every weight the pre-pass applies is read from policy. A fix with no reported horizontal accuracy is treated as of unknown accuracy for POL-NS-02 and is neither counted nor excluded by the 25 m filter."
+  },
+  "clauses": [
+    {
+      "id": "POL-RD-21",
+      "title": "The driver must inform the rider of a deviation",
+      "category": "ROUTE_DEVIATION",
+      "rule": "A driver may reroute from the recommended route in response to real-time traffic, a road closure or congestion, but must inform the rider of the deviation by in-app chat, or verbally with the trip call recording as evidence, before or at the point of deviation. A brief reason is enough. Where the chat log or a call recording confirms the rider's acknowledgment, the deviation is agreed. A verbal notice with no recording in the record cannot be established (POL-GEN-26).",
+      "requires": [
+        "chat_log",
+        "gps_trace"
+      ],
+      "licenses": [],
+      "favours": "NEUTRAL",
+      "notes": "Tribunal's reading where v2.1 is silent or ambiguous; to be confirmed with Ryde. C11: the records carry no call recordings.",
+      "sources": "[Source] Ryde Dispute Resolution Policy v2.1 (effective 2026-01-01), released to the Digital Native track on 2026-10-13, Sections 1.1, 1.2 and 1.4"
+    },
+    {
+      "id": "POL-RD-22",
+      "title": "Measuring the deviation",
+      "category": "ROUTE_DEVIATION",
+      "rule": "The deviation distance is the actual route distance minus the recommended route distance, in km: trip_record.actual_distance_km minus trip_record.optimal_distance_km, the platform's recorded distances. The GPS trace shows which route was taken and when; it is not used to re-measure the distance, because a sparse trace understates a route's length. A deviation of 1.0 km or less is within tolerance. Where either recorded distance is missing or impaired, the deviation cannot be established (POL-GEN-26).",
+      "requires": [
+        "trip_record",
+        "gps_trace"
+      ],
+      "licenses": [],
+      "favours": "NEUTRAL",
+      "notes": "v2.1 1.4 formula; the 1 km tolerance is v2.1 1.3's. Tribunal's reading where v2.1 is silent or ambiguous; to be confirmed with Ryde. C17: the recorded distances, as DISP-001 uses them (24.8 - 20.5 = 4.3 km); DISP-001's 16-fix trace measures only 20.75 km and would give 0.85 km.",
+      "sources": "[Source] Ryde Dispute Resolution Policy v2.1 (effective 2026-01-01), released to the Digital Native track on 2026-10-13, Sections 1.3 and 1.4"
+    },
+    {
+      "id": "POL-RD-23",
+      "title": "Traffic justification",
+      "category": "ROUTE_DEVIATION",
+      "rule": "A reroute is traffic-justified only where traffic data for the recommended route segment at the trip time shows congestion, an incident or a closure: a TRAFFIC_ADVISORY that intersects the recommended route and overlaps the trip window. A driver's assertion of traffic with no such data does not justify the reroute.",
+      "requires": [
+        "traffic_advisory"
+      ],
+      "licenses": [],
+      "favours": "NEUTRAL",
+      "notes": "Tribunal's reading where v2.1 is silent or ambiguous; to be confirmed with Ryde. v2.1 1.4 says traffic justification is verified via historical traffic API data; the TRAFFIC_ADVISORY artifact is that data in this schema.",
+      "sources": "[Source] Ryde Dispute Resolution Policy v2.1 (effective 2026-01-01), released to the Digital Native track on 2026-10-13, Section 1.4"
+    },
+    {
+      "id": "POL-RD-24",
+      "title": "Refund matrix",
+      "category": "ROUTE_DEVIATION",
+      "rule": "Exactly one row applies. (a) Traffic-justified, rider informed and agreed, deviation over 1 km: no refund (NO_ACTION). (b) Traffic-justified, rider not informed, deviation over 1 km: refund of the excess distance fare (PARTIAL_REFUND). (c) Traffic-justified, rider not informed, deviation 1 km or less: no refund, within tolerance (NO_ACTION). (d) Not traffic-justified, deviation over 1 km: refund of the excess distance fare in full (PARTIAL_REFUND). (e) Not traffic-justified, deviation 1 km or less: no refund, within tolerance (NO_ACTION). The excess distance fare is the deviation distance times fare_breakdown.per_km_rate_sgd, without surge, rounded to the cent. A case that fits no row (for example, informed but the rider objected) is escalated under POL-GEN-26.",
+      "requires": [
+        "gps_trace",
+        "trip_record",
+        "fare_breakdown",
+        "chat_log",
+        "traffic_advisory"
+      ],
+      "licenses": [
+        "NO_ACTION",
+        "PARTIAL_REFUND",
+        "ESCALATE"
+      ],
+      "favours": "NEUTRAL",
+      "notes": "Tribunal's reading where v2.1 is silent or ambiguous; to be confirmed with Ryde. C3, confirmed by Ryde on 2026-10-14: the excess distance fare is at the base per-km rate, without surge (DISP-001: 4.3 x 0.80 = 3.44). C5: rows (b) and (d) both pay the whole excess distance fare; 'partial' and 'full' in v2.1 1.3 are read as describing the trip fare and the excess distance fare respectively. Ruling label PARTIAL_REFUND, because neither returns the whole trip fare.",
+      "sources": "[Source] Ryde Dispute Resolution Policy v2.1 (effective 2026-01-01), released to the Digital Native track on 2026-10-13, Section 1.3"
+    },
+    {
+      "id": "POL-RD-25",
+      "title": "Who decides a route deviation",
+      "category": "ROUTE_DEVIATION",
+      "rule": "The AI ruling on a route deviation stands only where POL-GEN-22 allows it, its confidence is 0.80 or more, and the deviation is 2 km or less (v2.1 6.2); otherwise the case is escalated.",
+      "requires": [],
+      "licenses": [
+        "ESCALATE"
+      ],
+      "favours": "NEUTRAL",
+      "notes": "v2.1 6.2. The 2 km limb was confirmed by Ryde on 2026-10-14 (C1): DISP-001's 4.3 km deviation is escalated, not ruled.",
+      "sources": "[Source] Ryde Dispute Resolution Policy v2.1 (effective 2026-01-01), released to the Digital Native track on 2026-10-13, Section 6.2"
+    }
+  ]
+}

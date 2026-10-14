@@ -970,6 +970,8 @@ def free_wait(
     scheduled_at: Any,
     free_wait_sec: Any,
     cancelled_at: Any,
+    *,
+    starts_from: Any = None,
 ) -> Dict[str, Any]:
     """POL-NS-21: where the free wait starts and ends, and whether the cancellation fell after it.
 
@@ -985,18 +987,40 @@ def free_wait(
     produced the reading, so a judge can see why the clock started where it did
     rather than inferring it.
 
+    ``starts_from`` is the caller's reading of the policy's own
+    ``free_wait_starts_from`` field, and it is the one thing that can overrule
+    the rule above. Where it is :data:`FREE_WAIT_FROM_ARRIVAL` the clock starts at
+    ``arrived_at`` **whatever** the trip's schedule and the driver's arrival say,
+    and the reading reports ``"arrived_at"``; version 8 is the policy that states
+    it, because Ryde settled on 2026-10-14 that the free wait runs from the
+    driver's arrival. Where it is ``None`` the clock is read from the record
+    exactly as it always was, which is what keeps every version-7 brief
+    byte-identical. Any other value is refused rather than defaulted: a policy
+    field this function does not implement must not quietly become the reading it
+    replaced, so the error names the field.
+
     A cancellation **at** ``ends_at`` is after the free wait. The clause says
     the driver may cancel "after it", and the wait is satisfied at the moment it
     elapses -- which is how POL-NS-01 limb (d) reads the same clock ("at or
     after the moment the required dwell elapsed"). One second before it is
     before it.
     """
+    if starts_from is not None and starts_from != FREE_WAIT_FROM_ARRIVAL:
+        raise ValueError(
+            "free_wait_starts_from is {0!r}; the only value this reading knows "
+            "is {1!r}, and no value reads the clock from the record".format(
+                starts_from, FREE_WAIT_FROM_ARRIVAL
+            )
+        )
+
     arrived = _instant(arrived_at)
     scheduled = _instant(scheduled_at)
-    if scheduled is not None and arrived is not None and arrived <= scheduled:
-        starts_at, starts_from = scheduled_at, FREE_WAIT_FROM_SCHEDULE
+    if starts_from == FREE_WAIT_FROM_ARRIVAL:
+        starts_at, reading_from = arrived_at, FREE_WAIT_FROM_ARRIVAL
+    elif scheduled is not None and arrived is not None and arrived <= scheduled:
+        starts_at, reading_from = scheduled_at, FREE_WAIT_FROM_SCHEDULE
     else:
-        starts_at, starts_from = arrived_at, FREE_WAIT_FROM_ARRIVAL
+        starts_at, reading_from = arrived_at, FREE_WAIT_FROM_ARRIVAL
 
     ends_at = _after_seconds(starts_at, free_wait_sec)
     cancelled = _instant(cancelled_at)
@@ -1005,7 +1029,7 @@ def free_wait(
         "arrived_at": arrived_at,
         "scheduled_at": scheduled_at,
         "starts_at": starts_at,
-        "starts_from": starts_from,
+        "starts_from": reading_from,
         "ends_at": ends_at,
         "cancelled_at": cancelled_at,
         "cancelled_after_free_wait": (

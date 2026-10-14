@@ -1,0 +1,149 @@
+{
+  "policy_id": "POLICY-GENERAL",
+  "category": "GENERAL",
+  "version": "8.0.0",
+  "jurisdiction": "Singapore",
+  "currency": "SGD",
+  "last_reviewed": "2026-10-14",
+  "applies_to": [
+    "ROUTE_DEVIATION",
+    "NO_SHOW_CHARGE"
+  ],
+  "source_policy": {
+    "title": "Ryde Dispute Resolution Policy v2.1",
+    "effective": "2026-01-01",
+    "received": "2026-10-13",
+    "rule": "Where v2.1 states a rule, a number or an outcome, this version states the same and nothing else."
+  },
+  "thresholds": {
+    "value_field": "dispute.amount_contested_sgd",
+    "ai_final_below_sgd": "10.00",
+    "human_above_sgd": "50.00",
+    "confidence_required_between_sgd": "0.80",
+    "confidence_required_with_fraud_flag": "0.95",
+    "fraud_flag_field": "fraud_flags",
+    "fraud_flag_minimum": 1
+  },
+  "clauses": [
+    {
+      "id": "POL-GEN-01",
+      "title": "Party profiles are context, except the two fields v2.1 uses",
+      "category": "GENERAL",
+      "rule": "A rider_profile or driver_profile may inform how closely a party's assertions are scrutinised. It may never, on its own or in combination with another profile, establish a fact about THIS trip or decide its outcome. Only two profile fields may be cited, and only for the rules that name them: rider_profile.fraud_flags and driver_profile.fraud_flags (POL-GEN-22, which raises the confidence an AI ruling needs; it never decides the trip) and rider_profile.no_show_cancellations_30d (POL-NS-25, a referral that never changes the ruling). Every other field on either profile - rating, account_age_days, lifetime_trips, cancellation_rate, prior_disputes_filed, prior_disputes_upheld, prior_no_show_flags, prior_deviation_flags, no_show_disputes_30d, deviation_flags_90d, deviation_claims_60d, disputes_with_counterparty_90d, acceptance_rate, active_region - is CONTEXT ONLY. A claim that cites one of those fields as a reason for the outcome is discarded on the same footing as an uncited claim, and the Judge says so.",
+      "requires": [
+        "rider_profile",
+        "driver_profile"
+      ],
+      "licenses": [],
+      "favours": "NEUTRAL",
+      "notes": "v2.1 uses party history in two places only: 6.3 (a fraud flag raises the confidence an AI ruling needs) and 2.5 (a repeat no-show flag). Neither decides a trip. This clause keeps that boundary and names the two fields.",
+      "sources": "[Source] Ryde Dispute Resolution Policy v2.1 (effective 2026-01-01), released to the Digital Native track on 2026-10-13, Sections 2.5 and 6.3"
+    },
+    {
+      "id": "POL-GEN-02",
+      "title": "Admissibility weight, disclosure, and how impairment enters confidence",
+      "category": "GENERAL",
+      "rule": "Every evidence artifact carries admissibility.weight_multiplier in [0.0, 1.0], produced by the pre-pass before the debate opens. (1) DISCLOSURE. An advocate citing an artifact below 1.0 states in the same claim that it is impaired and which issue codes fired; a claim that does not is discarded. (2) CONFIDENCE. The Judge's confidence must not exceed the lowest weight_multiplier among the artifacts that carry the deciding fact (the highest, where two or more independent artifacts carry it). This is how v2.1 6.3's 'evidence completeness' enters confidence; the threshold the confidence is then held to is POL-GEN-22's. (3) NARRATION. A ruling that relies on an artifact below 1.0 names it, its weight and its issue codes. A MISSING artifact has weight 0.0 and carries no fact.",
+      "requires": [],
+      "licenses": [
+        "ESCALATE"
+      ],
+      "favours": "NEUTRAL",
+      "notes": "Tribunal's reading where v2.1 is silent or ambiguous; to be confirmed with Ryde. v2.1 6.3 lists evidence completeness among what confidence is based on; this clause is how Tribunal measures it.",
+      "sources": "[Source] Ryde Dispute Resolution Policy v2.1 (effective 2026-01-01), released to the Digital Native track on 2026-10-13, Section 6.3"
+    },
+    {
+      "id": "POL-GEN-03",
+      "title": "Ruling vocabulary, party-relative outcomes and compound rulings",
+      "category": "GENERAL",
+      "rule": "The five ruling values mean the following, and nothing else. FULL_REFUND: the filing party is entirely right and the whole contested amount is returned. PARTIAL_REFUND: part of the trip's charge is returned. NO_ACTION: the filing party's claim is not supported and the present state stands; it is party-relative and never means 'restore a charge'. DRIVER_COMPENSATION: the driver is owed money; where the ruling is DRIVER_COMPENSATION, amount_sgd carries the same figure as driver_compensation_sgd (the money the ruling moves, not a second payment). ESCALATE: the case goes to a human reviewer, no monetary outcome issues, and the amount is held; ESCALATE is always terminal and replaces any ruling. A rule that adds something to a monetary ruling - the POL-NS-24 goodwill credit, the POL-NS-25 repeat no-show flag, the POL-NS-22 fee-amount check - produces a REFERRAL, not an escalation, and referrals never suppress the money. A ruling object carries: ruling, amount_sgd (null where none), driver_compensation_sgd (null where none), referrals (each naming the clause it rests on), confidence, and the written explanation.",
+      "requires": [],
+      "licenses": [
+        "FULL_REFUND",
+        "PARTIAL_REFUND",
+        "NO_ACTION",
+        "DRIVER_COMPENSATION",
+        "ESCALATE"
+      ],
+      "favours": "NEUTRAL",
+      "notes": "Tribunal's reading where v2.1 is silent or ambiguous; to be confirmed with Ryde. v2.1 names outcomes in its own words (refund, partial refund, fee upheld, fee voided, goodwill credit, escalate); C9 of the draft maps them onto these five.",
+      "sources": "[Source] Ryde Dispute Resolution Policy v2.1 (effective 2026-01-01), released to the Digital Native track on 2026-10-13, Sections 1.3, 2.2-2.4 and 6"
+    },
+    {
+      "id": "POL-GEN-21",
+      "title": "Safety is always human",
+      "category": "GENERAL",
+      "rule": "A dispute flagged as safety-related (dispute.safety_flag), or whose record carries a safety indicator - reckless or dangerous driving, physical or verbal harassment, assault or a threat of assault, inappropriate behaviour or conduct, a traffic accident during the trip, a rider or driver feeling unsafe - is escalated to human review whatever the category the filer chose. The AI may gather evidence, summarise accounts and prepare the case file; it may not issue a ruling, determine fault or recommend a resolution on it. Interim measures are the human reviewer's.",
+      "requires": [],
+      "licenses": [
+        "ESCALATE"
+      ],
+      "favours": "NEUTRAL",
+      "notes": "v2.1 5.1-5.3 and 6.2 (safety incident: always human review).",
+      "sources": "[Source] Ryde Dispute Resolution Policy v2.1 (effective 2026-01-01), released to the Digital Native track on 2026-10-13, Sections 5.1, 5.2, 5.3 and 6.2"
+    },
+    {
+      "id": "POL-GEN-22",
+      "title": "Who decides: dispute value, confidence and fraud flags",
+      "category": "GENERAL",
+      "rule": "The dispute value is dispute.amount_contested_sgd. Below 10.00 SGD the AI ruling is final at any confidence. From 10.00 to 50.00 SGD the AI ruling stands only at a confidence of 0.80 or more; otherwise the case is escalated. Above 50.00 SGD the case always goes to human review and the AI prepares the case file only. Where either party's profile carries fraud_flags of 1 or more, the confidence required is 0.95 whatever the value. POL-RD-25 and POL-NS-26 add each category's own rule on top of this one.",
+      "requires": [
+        "dispute"
+      ],
+      "licenses": [
+        "ESCALATE"
+      ],
+      "favours": "NEUTRAL",
+      "notes": "Tribunal's reading where v2.1 is silent or ambiguous; to be confirmed with Ryde. C4: the value is the amount the filer asks back, not the trip fare. C6: fraud_flags is an optional profile field (0 when absent).",
+      "sources": "[Source] Ryde Dispute Resolution Policy v2.1 (effective 2026-01-01), released to the Digital Native track on 2026-10-13, Sections 6.1, 6.2 and 6.3"
+    },
+    {
+      "id": "POL-GEN-23",
+      "title": "Precedents",
+      "category": "GENERAL",
+      "rule": "Past rulings on similar cases are referenced for consistency, searched by dispute type and key facts, and cited in the rationale where one is relied on. v2.1's precedents 7.1 (DISP-2026-0089), 7.2 (DISP-2026-0142) and 7.3 (DISP-2026-0211) are precedents of this version.",
+      "requires": [],
+      "licenses": [],
+      "favours": "NEUTRAL",
+      "notes": "v2.1 Section 7.",
+      "sources": "[Source] Ryde Dispute Resolution Policy v2.1 (effective 2026-01-01), released to the Digital Native track on 2026-10-13, Section 7"
+    },
+    {
+      "id": "POL-GEN-24",
+      "title": "Categories this version does not adjudicate",
+      "category": "GENERAL",
+      "rule": "Fare and surge disputes (v2.1 Section 3) and property-damage claims (v2.1 Section 4) are not adjudicated by the AI in this version. They are routed to human review with the v2.1 section that governs them named in the case file.",
+      "requires": [],
+      "licenses": [
+        "ESCALATE"
+      ],
+      "favours": "NEUTRAL",
+      "notes": "A scope decision, not a v2.1 rule: the track asks for two of the four categories, and Section 4 needs verifiable in-app photographs.",
+      "sources": "[Source] Ryde Dispute Resolution Policy v2.1 (effective 2026-01-01), released to the Digital Native track on 2026-10-13, Sections 3 and 4"
+    },
+    {
+      "id": "POL-GEN-25",
+      "title": "Cite or it does not count",
+      "category": "GENERAL",
+      "rule": "Every claim and every ruling cites the evidence id it rests on and the clause it applies, and the explanation names the v2.1 section that clause carries. A claim with no evidence id or no clause is discarded.",
+      "requires": [],
+      "licenses": [],
+      "favours": "NEUTRAL",
+      "notes": "v2.1 closes: 'All AI agents must cite the applicable policy section in their ruling rationale.'",
+      "sources": "[Source] Ryde Dispute Resolution Policy v2.1 (effective 2026-01-01), released to the Digital Native track on 2026-10-13, closing line"
+    },
+    {
+      "id": "POL-GEN-26",
+      "title": "A fact the record cannot establish",
+      "category": "GENERAL",
+      "rule": "Where a fact a rule of this version needs - the deviation distance, whether the driver notified the rider, whether traffic justified the reroute, when the driver arrived, whether the driver messaged and called before cancelling - cannot be established because the evidence that would carry it is missing or impaired, the case is escalated and the explanation states the open question. No outcome is inferred from the absence of evidence except where a rule says so.",
+      "requires": [],
+      "licenses": [
+        "ESCALATE"
+      ],
+      "favours": "NEUTRAL",
+      "notes": "Tribunal's reading where v2.1 is silent or ambiguous; to be confirmed with Ryde. the conservative reading of v2.1 6.3 (evidence completeness); it adds no outcome of its own.",
+      "sources": "[Source] Ryde Dispute Resolution Policy v2.1 (effective 2026-01-01), released to the Digital Native track on 2026-10-13, Section 6.3"
+    }
+  ]
+}

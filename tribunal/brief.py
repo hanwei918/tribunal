@@ -3267,6 +3267,7 @@ def _v7_trip_block(
             trip_payload.get(SCHEDULED_AT_KEY),
             thresholds.get("free_wait_sec"),
             trip_payload.get(CANCELLED_AT_KEY),
+            starts_from=thresholds.get("free_wait_starts_from"),
         )
         block["free_wait"] = {
             "arrived_at": _sourced(reading["arrived_at"], trip_evidence_id or ""),
@@ -3905,6 +3906,7 @@ def build_v7_brief(
     include_clause_notes: bool = True,
     *,
     ablate: Optional[str] = None,
+    policy_version: int = BRIEF_V7_VERSION,
 ) -> Dict[str, Any]:
     """The version-7 brief: the same outer shape, the facts v2.1's clauses need.
 
@@ -3918,6 +3920,16 @@ def build_v7_brief(
     What it does **not** do is read a version-6 clause. The version-6 path is
     untouched and this builder shares none of its clause readers, so a version-7
     case cannot pick up a version-6 number by accident.
+
+    ``policy_version`` is the version of the policy to brief against, and it
+    defaults to :data:`BRIEF_V7_VERSION`. It is the **only** version-7 number
+    this builder reads from a literal: every other version-7 block, the derived
+    block's own key included, stays as it is, because a later version on this
+    base is the same policy text with a settled reading rather than a second
+    brief. Version 8 is that case -- version 7 plus Ryde's answers of
+    2026-10-14 -- and it is briefed by this builder, at its own version, from
+    ``policy/v8/``. At version 7 the output is byte-identical to what it always
+    was.
 
     ``ablate`` is honoured here as it is at version 6, because an ablation is one
     brief built without part of it rather than a second builder: ``clause-notes``
@@ -3935,7 +3947,7 @@ def build_v7_brief(
         include_clause_notes = False
 
     category = case["dispute"].get("category")
-    policies = _without_provenance(loader.load_policies(category, BRIEF_V7_VERSION))
+    policies = _without_provenance(loader.load_policies(category, policy_version))
     general_policy = policies.get("general") or {}
     category_policy = policies.get("category") or {}
     policy_id = category_policy.get("policy_id", "")
@@ -3944,7 +3956,7 @@ def build_v7_brief(
     arrival_test = category_policy.get(V7_ARRIVAL_TEST_KEY)
     arrival_test = arrival_test if isinstance(arrival_test, dict) else None
     justification_types = _v7_justification_types(category_policy, thresholds)
-    weights, gap_threshold = _integrity_reading(category_policy, BRIEF_V7_VERSION)
+    weights, gap_threshold = _integrity_reading(category_policy, policy_version)
 
     trip_payload, trip_evidence_id = _v7_evidence_payload(case, TRIP_EVIDENCE_TYPE)
     gps_payload, gps_evidence_id = _v7_evidence_payload(case, GPS_EVIDENCE_TYPE)
@@ -4168,7 +4180,9 @@ def build_brief_for_case(
             )
         )
     if policy_version >= BRIEF_V7_VERSION:
-        return build_v7_brief(case, include_clause_notes, ablate=ablate)
+        return build_v7_brief(
+            case, include_clause_notes, ablate=ablate, policy_version=policy_version
+        )
     if ablate == ABLATION_CLAUSE_NOTES:
         include_clause_notes = False
 

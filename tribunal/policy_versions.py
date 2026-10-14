@@ -49,12 +49,13 @@ versions 1 and 2 are exactly what they were.
 That gives every version one owner. Base 1 owns versions 1 and 2, and its
 sequence can never grow past ``0001`` -- amendment ``0002`` there would compute
 version 3, which base 3 owns -- so :func:`refuse_a_taken_version` refuses it.
-Base 3 owns 3 through 6 and base 7 owns 7 and up. An amendment is refused when the
-version it would compute belongs to a **different** base, and allowed when it
-belongs to its own, which is what lets base 3's own first amendment compute
-version 4. With base 7 added on 2026-10-13,
-:func:`highest_available_version` is 7, base 3's next amendment would compute 7
-and is refused, and a set registered on base 3 cannot be run at 7.
+Base 3 owns 3 through 6, base 7 owns 7, and base 8 owns 8 and up. An amendment is
+refused when the version it would compute belongs to a **different** base, and
+allowed when it belongs to its own, which is what lets base 3's own first
+amendment compute version 4. With base 8 added on 2026-10-14,
+:func:`highest_available_version` is 8; base 3's next amendment would compute 7
+and base 7's next would compute 8, so both are refused, and a set registered on
+base 3 cannot be run at 7 and one registered on base 7 cannot be run at 8.
 """
 
 from __future__ import annotations
@@ -85,12 +86,14 @@ BASE_VERSION = 1
 # amendment applied to it** -- the clause amendment ``0001`` adds to version 1 is
 # already part of version 3's own text. Version 7 is Ryde's own Dispute
 # Resolution Policy v2.1, added on 2026-10-13: a third base under ``policy/v7/``,
+# read whole the same way. Version 8 is version 7 with Ryde's answers of
+# 2026-10-14 applied, added on 2026-10-14: a fourth base under ``policy/v8/``,
 # read whole the same way.
 #
 # The version numbers here are reserved. An amendment that computed one of them
 # would be a second policy under one number, so :func:`refuse_a_taken_version`
 # refuses one, and it is why ``policy/amendments/`` can never reach 0002.
-SEPARATE_BASE_VERSIONS = {3: "v3", 7: "v7"}
+SEPARATE_BASE_VERSIONS = {3: "v3", 7: "v7", 8: "v8"}
 
 # What a file's ``version`` string gains once an amendment has reached it. The
 # number it carries is the highest one that file received.

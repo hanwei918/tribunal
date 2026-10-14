@@ -1,0 +1,147 @@
+{
+  "policy_id": "POLICY-NO-SHOW",
+  "category": "NO_SHOW_CHARGE",
+  "version": "8.0.0",
+  "jurisdiction": "Singapore",
+  "currency": "SGD",
+  "last_reviewed": "2026-10-14",
+  "thresholds": {
+    "free_wait_sec": 300,
+    "no_show_fee_sgd": "5.00",
+    "fee_share_to_driver": "1.00",
+    "driver_late_after_scheduled_sec": 300,
+    "goodwill_credit_sgd": "5.00",
+    "repeat_no_show_count": 3,
+    "repeat_no_show_window_days": 30,
+    "free_wait_starts": "trip_record.arrived_at (C2, settled by Ryde on 2026-10-14)",
+    "free_wait_starts_from": "arrived_at"
+  },
+  "arrival_test": {
+    "rule": "The driver is at the pickup when the trip record's arrival event is corroborated by the GPS trace within the arrival radius below. v2.1 does not define a test; this is Tribunal's evidence procedure.",
+    "arrival_radius_m": {
+      "STANDARD": 50,
+      "LARGE_VENUE": 120,
+      "TRANSPORT_HUB": 150,
+      "AIRPORT": 150
+    },
+    "gps_accuracy_filter_m": 25,
+    "accuracy_filter_applies": "only to a fix that reports an accuracy; a fix with no reported accuracy is used at its reported position (v2.1 states no accuracy rule; C16)"
+  },
+  "integrity": {
+    "gps_gap_policy_threshold_sec": 120,
+    "weights": {
+      "MISSING_ARTIFACT": 0.0,
+      "CROSS_SOURCE_CONFLICT": 0.4,
+      "TRUNCATED_LOG": 0.6,
+      "PARTIAL_RECORD": 0.75,
+      "STALE_SNAPSHOT": 0.75,
+      "CONTENT_REDACTED": 0.8,
+      "LOW_SAMPLE_RATE": 0.8,
+      "LANGUAGE_AMBIGUITY": 0.85,
+      "UNREAD_MESSAGE": 0.85,
+      "SCHEMA_VERSION_MISMATCH": 0.9,
+      "GPS_GAP_SHORT_OR_OUTSIDE_WINDOW": 0.85,
+      "GPS_GAP_LONG_INSIDE_WINDOW": 0.6,
+      "GPS_GAP_STRADDLING_CANCELLATION": 0.6,
+      "LOW_COVERAGE": 0.65,
+      "GPS_DRIFT": 0.5,
+      "IMPLAUSIBLE_SPEED": 0.6,
+      "ADVISORY_UNCORROBORATED": 0.5,
+      "UNVERIFIED_SOURCE": 0.5,
+      "CLOCK_SKEW": 0.5
+    },
+    "accuracy_missing_treatment": "UNKNOWN",
+    "note": "POL-NS-08(b) makes a gap longer than 120 s inside the waiting window a policy-level impairment. A schema-level GPS_GAP tag must not, on its own, cap confidence below the 0.70 floor, or the half of POL-NS-08(b) that permits a ruling on a short gap can never operate; the pre-pass therefore grades the tag by the gap's length and position, measured from the trace itself, reading this block rather than a fixed table; the other weights are the version-1 pre-pass table moved here unchanged, so that every weight the pre-pass applies is read from policy. A fix with no reported horizontal accuracy is treated as of unknown accuracy for POL-NS-02 and is neither counted nor excluded by the 25 m filter."
+  },
+  "clauses": [
+    {
+      "id": "POL-NS-21",
+      "title": "Free wait",
+      "category": "NO_SHOW_CHARGE",
+      "rule": "The driver waits a free wait time of 5 minutes (300 s) from the driver's arrival at the pickup; after it, the driver may cancel the trip as a rider no-show.",
+      "requires": [
+        "trip_record",
+        "gps_trace"
+      ],
+      "licenses": [],
+      "favours": "NEUTRAL",
+      "notes": "v2.1's free wait, with its start settled by Ryde on 2026-10-14 (C2): the clock runs from the driver's arrival, scheduled trip or not.",
+      "sources": "[Source] Ryde Dispute Resolution Policy v2.1 (effective 2026-01-01), released to the Digital Native track on 2026-10-13, Section 2.1"
+    },
+    {
+      "id": "POL-NS-22",
+      "title": "The no-show fee",
+      "category": "NO_SHOW_CHARGE",
+      "rule": "When the driver cancels after the free wait, a no-show cancellation fee of 5.00 SGD is charged to the rider and transferred to the driver as compensation for time and fuel. Where the fee stands, the ruling is DRIVER_COMPENSATION with both amount fields equal to the fee charged. Where the record charged an amount other than 5.00 SGD, the ruling acts on the amount charged and adds a referral naming this clause.",
+      "requires": [
+        "fare_breakdown"
+      ],
+      "licenses": [
+        "DRIVER_COMPENSATION",
+        "NO_ACTION"
+      ],
+      "favours": "DRIVER",
+      "notes": "Tribunal's reading where v2.1 is silent or ambiguous; to be confirmed with Ryde. C8 (fee on the record) and C9 (vocabulary).",
+      "sources": "[Source] Ryde Dispute Resolution Policy v2.1 (effective 2026-01-01), released to the Digital Native track on 2026-10-13, Section 2.2"
+    },
+    {
+      "id": "POL-NS-23",
+      "title": "The driver's contact obligation",
+      "category": "NO_SHOW_CHARGE",
+      "rule": "Before cancelling for no-show, the driver must have sent at least one in-app chat message to the rider AND placed at least one in-app call to the rider (trip_record.in_app_calls, or a voice-call entry in the chat log), both before trip_record.cancelled_at. If either is missing, the fee is voided and the rider is not charged: FULL_REFUND of the fee charged, with no driver compensation.",
+      "requires": [
+        "chat_log",
+        "trip_record"
+      ],
+      "licenses": [
+        "FULL_REFUND"
+      ],
+      "favours": "RIDER",
+      "notes": "v2.1 2.3; precedent 7.3.",
+      "sources": "[Source] Ryde Dispute Resolution Policy v2.1 (effective 2026-01-01), released to the Digital Native track on 2026-10-13, Section 2.3"
+    },
+    {
+      "id": "POL-NS-24",
+      "title": "Driver no-show",
+      "category": "NO_SHOW_CHARGE",
+      "rule": "If the driver fails to arrive at the pickup location by the scheduled pickup time plus 5 minutes, the rider may cancel at no charge: any fee charged is refunded in full (FULL_REFUND). If the driver also failed to attempt contact, the rider is due a 5.00 SGD goodwill credit, recorded as a referral naming this clause.",
+      "requires": [
+        "trip_record",
+        "gps_trace",
+        "chat_log"
+      ],
+      "licenses": [
+        "FULL_REFUND"
+      ],
+      "favours": "RIDER",
+      "notes": "Tribunal's reading where v2.1 is silent or ambiguous; to be confirmed with Ryde. an on-demand trip has no scheduled time; where the record carries none and the deadline cannot be fixed, POL-GEN-26 applies.",
+      "sources": "[Source] Ryde Dispute Resolution Policy v2.1 (effective 2026-01-01), released to the Digital Native track on 2026-10-13, Section 2.4"
+    },
+    {
+      "id": "POL-NS-25",
+      "title": "Repeat no-show flag",
+      "category": "NO_SHOW_CHARGE",
+      "rule": "Where rider_profile.no_show_cancellations_30d, counting this trip if its fee stands, is 3 or more, the rider's account is flagged for review (mandatory upfront payment; temporary suspension pending Trust & Safety review). This is a referral naming this clause; it never changes the ruling on the trip.",
+      "requires": [
+        "rider_profile"
+      ],
+      "licenses": [],
+      "favours": "NEUTRAL",
+      "notes": "Tribunal's reading where v2.1 is silent or ambiguous; to be confirmed with Ryde. C7: the counter is an optional profile field; the rule applies only when it is present.",
+      "sources": "[Source] Ryde Dispute Resolution Policy v2.1 (effective 2026-01-01), released to the Digital Native track on 2026-10-13, Section 2.5"
+    },
+    {
+      "id": "POL-NS-26",
+      "title": "Who decides a no-show",
+      "category": "NO_SHOW_CHARGE",
+      "rule": "The AI ruling on a no-show is final (the fee is fixed at 5.00 SGD), subject to POL-GEN-21 (safety), to the 0.95 confidence POL-GEN-22 requires where a party carries a fraud flag, and to POL-GEN-26.",
+      "requires": [],
+      "licenses": [
+        "ESCALATE"
+      ],
+      "favours": "NEUTRAL",
+      "notes": "Tribunal's reading where v2.1 is silent or ambiguous; to be confirmed with Ryde. C15: 6.3's fraud-flag bar applies 'regardless of dispute value', so it is read as applying to no-shows too.",
+      "sources": "[Source] Ryde Dispute Resolution Policy v2.1 (effective 2026-01-01), released to the Digital Native track on 2026-10-13, Sections 6.2 and 6.3"
+    }
+  ]
+}
