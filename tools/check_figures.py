@@ -14,9 +14,9 @@ it and reports whether the value there is the computed one.
 :mod:`eval.business_value` and :mod:`eval.v6_runs`; the position swap's two
 figures come from :mod:`eval.fairness`; the sealed and held-out sets come from
 the same graded reads ``tests/test_readme_figures.py`` makes; and the version-7
-figures come from the same :func:`eval.run_benchmark.grade_run` call over the
-directory each version-7 run was written to. No figure is typed in here and no
-figure is read from a second copy of itself.
+and version-8 figures come from the same :func:`eval.run_benchmark.grade_run`
+call over the directory each of those runs was written to. No figure is typed in
+here and no figure is read from a second copy of itself.
 
 **How a figure is found.** Each figure carries a table of patterns, one per way
 the documents spell it -- ``160.4 s`` in one, ``2.7 min`` in another, ``2.7``
@@ -408,8 +408,6 @@ FIGURES: Tuple[Figure, ...] = (
         ("1 of 2",),
         (
             r"`ryde-v7` \(2 cases\) \| (1 of 2) against Ryde's stated outcomes",
-            r"keyed by Ryde's stated outcome, is (1 of 2):",
-            r"keyed by Ryde's stated outcomes \(`ryde-v7`\), are (1 of 2):",
         ),
     ),
     Figure(
@@ -425,12 +423,62 @@ FIGURES: Tuple[Figure, ...] = (
     Figure(
         "version-7 sealed run, median time to a decision",
         ("139.8",),
-        (r"median is \*\*(\d+\.\d+) s\*\* a case",),
+        (
+            r"At version 7\*\* the sealed run's own median is \*\*(\d+\.\d+) s\*\* a case",
+        ),
     ),
     Figure(
         "version-7 sealed run, median model cost",
         ("0.0398",),
-        (r"model cost of \*\*(\d+\.\d+) USD\*\* a case",),
+        (
+            r"At version 7\*\* the sealed run's own median is \*\*[\d.]+ s\*\* a case,"
+            r" with a median\s+model cost of \*\*(\d+\.\d+) USD\*\* a case",
+        ),
+    ),
+    # ----------------------------------------------------------------------
+    # Policy version 8 -- v2.1 with Ryde's answers of 2026-10-14
+    # ----------------------------------------------------------------------
+    # Two sets, one run each, never pooled with another. The patterns are
+    # anchored on the set's own name and case count rather than on the number
+    # alone, because ``1 of 2`` and ``39/40`` are values other rows could
+    # carry: the version-7 medians' own patterns are anchored on "At version 7"
+    # for the same reason, so the version-8 medians below cannot capture for
+    # them.
+    Figure(
+        "ryde-v8, samples matching Ryde's stated outcomes",
+        ("1 of 2",),
+        (
+            r"`ryde-v8` \(2 cases\) \| (1 of 2) against Ryde's stated outcomes",
+            r"keyed by Ryde's stated\s+outcome as\s+amended by\s+Ryde's answer of"
+            r" 2026-10-14, is (1 of 2):",
+            r"stated outcomes as amended by Ryde's\s+answer of 2026-10-14"
+            r" \(`ryde-v8`\), are (1 of 2):",
+        ),
+    ),
+    Figure(
+        "dev-v8, four-field agreement",
+        ("39/40",),
+        (
+            r"`dev-v8` \(40 cases\) \| (\d+/40) \|",
+            r"`dev-v8` (\d+/40) and `dev-v7`",
+            r"dev-v8 (\d+/40) and dev-v7",
+        ),
+    ),
+    Figure(
+        "dev-v8, median time to a decision",
+        ("153.1",),
+        (
+            r"records a median time of \*\*(\d+\.\d+) s\*\* a case",
+            r"Median time to a decision (\d+\.\d+) s a case",
+        ),
+    ),
+    Figure(
+        "dev-v8, median model cost",
+        ("0.039",),
+        (
+            r"a median model cost of \*\*(\d+\.\d+) USD\*\* a case",
+            r"a median model cost of (\d+\.\d+) USD a case",
+        ),
     ),
 )
 
@@ -445,13 +493,15 @@ _COMPUTED: "Optional[Dict[str, str]]" = None
 
 
 def graded_version_seven(name: str) -> "grade.GradeReport":
-    """One version-7 set's committed run, graded against its own key.
+    """One registered set's committed run, graded against its own key.
 
     The same :func:`eval.run_benchmark.grade_run` call the sealed and held-out
-    sets are graded with, over the directory the run was **written to**:
-    ``dev-v7`` and ``ryde-v7`` are registered for a policy base, so their runs
-    sit one level down (``runs/<set>/policy-v7/<model>/``) and the un-versioned
-    path holds nothing.
+    sets are graded with, over the directory the run was **written to**: the
+    version-7 pair ``dev-v7`` and ``ryde-v7`` and the version-8 pair ``dev-v8``
+    and ``ryde-v8`` are registered for a policy base, so their runs sit one
+    level down (``runs/<set>/policy-<version>/<model>/``) and the un-versioned
+    path holds nothing. The name is the one ``ui/site/figures.py`` cites, and
+    the read is the same for a set at either policy version.
     """
     development_set = development_sets.named(name)
     return run_benchmark.grade_run(
@@ -502,6 +552,17 @@ def _compute() -> Dict[str, str]:
     }
     v4_walls = [document.get("wall_seconds") for document in v4_documents.values()]
     v4_costs = [case_cost(document) for document in v4_documents.values()]
+    ryde_v8 = graded_version_seven("ryde-v8")
+    dev_v8 = graded_version_seven("dev-v8")
+    v8_run_dir = development_sets.run_dir_at_its_version(
+        development_sets.named("dev-v8"), MODEL
+    )
+    v8_documents = {
+        case_no: run_benchmark.load_cached(v8_run_dir, case_no)
+        for case_no in dev_v8.graded_cases
+    }
+    v8_walls = [document.get("wall_seconds") for document in v8_documents.values()]
+    v8_costs = [case_cost(document) for document in v8_documents.values()]
     return {
         "median time to a decision": values["median_wall_seconds"],
         "90th percentile time to a decision": values["p90_wall_seconds"],
@@ -548,6 +609,17 @@ def _compute() -> Dict[str, str]:
         "version-7 sealed run, median model cost": "{0:.4f}".format(
             v6_runs._median(v4_costs)
         ),
+        # Policy version 8. The two sets, each graded against its own key.
+        "ryde-v8, samples matching Ryde's stated outcomes": "{0} of {1}".format(
+            ryde_v8.exact_matches, ryde_v8.total
+        ),
+        "dev-v8, four-field agreement": "{0}/{1}".format(
+            dev_v8.exact_matches, dev_v8.total
+        ),
+        "dev-v8, median time to a decision": v6_runs._seconds(
+            v6_runs._median(v8_walls)
+        ),
+        "dev-v8, median model cost": "{0:.4f}".format(v6_runs._median(v8_costs)),
     }
 
 
