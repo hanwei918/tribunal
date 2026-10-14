@@ -20,7 +20,7 @@ This module holds the three parts of that to their word.
   ``tests.test_ui_v2`` with ``read_every_case`` raising does not raise, which is
   what those two modules need: each asks the builder for its path list while it
   is being imported.
-* **``tools.verify`` skips rather than fails.** The four steps that read every
+* **``tools.verify`` skips rather than fails.** The five steps that read every
   case are reported as ``SKIP``, with ``tests.portability``'s reason, when the
   platform helper the command asks answers true; the other five run; the exit
   status is 0, and a step that ran and failed still makes it 1. With the helper

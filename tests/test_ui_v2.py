@@ -107,6 +107,7 @@ from tribunal import pipeline as pipeline_module  # noqa: E402
 from tribunal import referee as referee_module  # noqa: E402
 from ui.site import build as site_build  # noqa: E402
 from ui.v2 import build as v2  # noqa: E402
+from ui.v8 import build as v8_build  # noqa: E402
 
 # The four runs the site is drawn from, and the case root each set loads through.
 # The order is the builder's own set order -- the order the set selector lists the
@@ -192,13 +193,14 @@ SITE_ASSET_PATHS = frozenset(
     | {v2.OG_IMAGE_ASSET, v2.COVER_ASSET}
 )
 
-# The paths the product site writes, which share ``ui/dist/`` with this builder.
-# Three builders write into that root -- the queue here, the evaluation replay
-# under ``replay/`` and the product site ``ui.site.build`` -- and each test
-# module covers its own builder's files, so the walk below reads the files this
-# builder writes and skips the site's. The list is asked of the builder that
-# writes them rather than typed here, so it cannot drift from what is built.
-PRODUCT_SITE_PATHS = site_build.written_paths()
+# The paths the other builders write, which share ``ui/dist/`` with this one.
+# Four builders write into that root -- the queue here, the evaluation replay
+# under ``replay/``, the product site ``ui.site.build`` and the version-8 case
+# pages ``ui.v8.build`` -- and each test module covers its own builder's files,
+# so the walk below reads the files this builder writes and skips theirs. The
+# lists are asked of the builders that write them rather than typed here, so
+# they cannot drift from what is built.
+PRODUCT_SITE_PATHS = site_build.written_paths() | v8_build.written_paths()
 
 
 # --------------------------------------------------------------------------
