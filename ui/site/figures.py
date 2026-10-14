@@ -32,7 +32,10 @@ What is read, and from where
   directory each run was **written to**:
   :func:`eval.development_sets.run_dir_at_its_version` moves a set registered
   for a policy base one level down (``runs/dev-v7/policy-v7/<model>/``), which
-  is where ``tools/check_figures.py``'s own ``graded_version_seven`` reads them.
+  is where ``tools/check_figures.py``'s own ``graded_version_seven`` reads them;
+* the two version-8 sets -- ``ryde-v8`` and ``dev-v8``, the policy version 8
+  runs of 2026-10-14, v2.1 with Ryde's answers -- through the same call, over
+  ``runs/<set>/policy-v8/<model>/`` for the same reason.
 
 The figure names are the module's own; the strings are what the pages show, to
 the page's own formatting -- ``"160.4 s"``, ``"$0.058"``, ``"12/12"`` -- so a
@@ -277,6 +280,16 @@ def figures() -> Dict[str, str]:
     )
     figures["ryde_v7_exact"] = pair(version_seven["ryde-v7"].exact_matches, 2)
     figures["dev_v7_exact"] = pair(version_seven["dev-v7"].exact_matches, 40)
+
+    # Policy version 8 -- v2.1 with Ryde's answers of 2026-10-14. Two sets, one
+    # run each, each graded once here. ``ryde-v8`` and ``dev-v8`` reuse the
+    # version-7 case files and are registered for the version-8 base, so
+    # :func:`graded_set` reads them at ``runs/<set>/policy-v8/<model>/``.
+    version_eight = {
+        name: graded_set(name) for name in ("ryde-v8", "dev-v8")
+    }
+    figures["ryde_v8_exact"] = pair(version_eight["ryde-v8"].exact_matches, 2)
+    figures["dev_v8_exact"] = pair(version_eight["dev-v8"].exact_matches, 40)
     return figures
 
 

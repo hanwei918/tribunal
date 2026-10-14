@@ -19,7 +19,9 @@ The second is what makes this a check rather than a restatement:
 in one page and shows the first assertion going red, and moves it in the record
 and shows the second going red;
 ``test_the_check_fails_on_a_page_carrying_a_different_version_seven_figure``
-does the same for the results page's version-7 sealed figure.
+does the same for the results page's version-7 sealed figure, and
+``test_the_check_fails_on_a_page_carrying_a_different_version_eight_figure``
+for the results page's version-8 Ryde-samples figure.
 
 **The text is the visible text.** Tags are removed and entities resolved before
 the comparison, so the row is a sentence a reader reads and not a fragment of
@@ -340,12 +342,12 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
     # page's timeline carries the sealed set's figure.
     (
         "index.html",
-        "Applies Ryde's own Dispute Resolution Policy v2.1 (policy version 7, adopted 2026-10-13): 30/30 on its hidden test set, Wilson 95% [88.6%, 100%].",
+        "Applies Ryde's own Dispute Resolution Policy v2.1 with Ryde's answers of 2026-10-14 (policy version 8). Hidden test set, run at version 7: 30/30, Wilson 95% [88.6%, 100%].",
         ("sealed_v4_exact", "sealed_v4_interval"),
     ),
     (
         "index.zh.html",
-        "\u6309 Ryde \u5b98\u65b9\u7684\u300a\u4e89\u8bae\u5904\u7406\u653f\u7b56 v2.1\u300b\u88c1\u51b3\uff08\u7b2c 7 \u7248\u653f\u7b56\uff0c2026-10-13 \u91c7\u7528\uff09\uff1a\u9690\u85cf\u9898 30/30\uff0cWilson 95% [88.6%, 100%]\u3002",
+        "\u6309 Ryde \u5b98\u65b9\u7684\u300a\u4e89\u8bae\u5904\u7406\u653f\u7b56 v2.1\u300b\u53ca Ryde 2026-10-14 \u7684\u7b54\u590d\u88c1\u51b3\uff08\u7b2c 8 \u7248\u653f\u7b56\uff09\u3002\u9690\u85cf\u9898\uff08\u5728\u7b2c 7 \u7248\u4e0a\u8dd1\uff09\uff1a30/30\uff0cWilson 95% [88.6%, 100%]\u3002",
         ("sealed_v4_exact", "sealed_v4_interval"),
     ),
     (
@@ -388,6 +390,30 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
         "\u7b2c 7 \u7248\u51bb\u7ed3\uff1b\u7b2c\u516d\u5957\u9690\u85cf\u8003\u9898\uff08sealed-v4\uff09\uff1a30/30\u3002",
         ("sealed_v4_exact",),
     ),
+    # -- version 8, v2.1 with Ryde's answers of 2026-10-14 ------------------
+    # The two version-8 sets, each run once and never pooled: Ryde's own two
+    # samples, keyed as Ryde's answer of 2026-10-14 leaves them, and the
+    # development set the team tuned against. The results page carries both.
+    (
+        "results.html",
+        "1/2: DISP-001 (route deviation, 4.3 km) escalated, as Ryde answered on 2026-10-14 that the 2 km limb applies; DISP-002 (no-show) escalated: the drafts did not agree on whether eight sparse GPS fixes reach the 0.95 confidence v2.1 requires when a party carries a fraud flag.",
+        ("ryde_v8_exact",),
+    ),
+    (
+        "results.html",
+        "dev-v8: 39/40, development data the team tuned against.",
+        ("dev_v8_exact",),
+    ),
+    (
+        "results.zh.html",
+        "Ryde \u5b98\u65b9\u6837\u4f8b 1/2\uff1aDISP-001\uff08\u7ed5\u8def 4.3 km\uff09\u8f6c\u4eba\u5de5\u2014\u2014Ryde \u4e8e 2026-10-14 \u7b54\u590d 2 km \u89c4\u5219\u9002\u7528\uff1bDISP-002\uff08\u672a\u51fa\u73b0\uff09\u8f6c\u4eba\u5de5\uff1a\u4e58\u5ba2\u5e26\u6b3a\u8bc8\u6807\u8bb0\u65f6 v2.1 \u8981\u6c42 0.95 \u7684\u7f6e\u4fe1\u5ea6\uff0c\u8349\u7a3f\u5728 8 \u4e2a\u7a00\u758f GPS \u70b9\u662f\u5426\u8db3\u591f\u4e0a\u6ca1\u6709\u8fbe\u6210\u4e00\u81f4\u3002",
+        ("ryde_v8_exact",),
+    ),
+    (
+        "results.zh.html",
+        "\u5f00\u53d1\u96c6 39/40\uff08\u56e2\u961f\u636e\u6b64\u8c03\u8bd5\uff0c\u4e0d\u662f\u6cdb\u5316\u6210\u7ee9\uff09\u3002",
+        ("dev_v8_exact",),
+    ),
 )
 
 # The pages this table names. It is asserted to be exactly the pages that state
@@ -418,7 +444,9 @@ VERSION_SEVEN_FIGURES: Tuple[str, ...] = (
 
 # The sentences that say which policy version a block of figures belongs to.
 # They state no figure, so they are not rows in ``SHOWN``; they are the lines
-# that stop a reader taking the version-6 figures beside them for version 7's.
+# that stop a reader taking the version-6 figures beside them for version 7's,
+# and -- on the try page, which states no figure at all -- the line that says
+# which policy the browser runs against the one the submission applies.
 VERSION_SENTENCES: Tuple[Tuple[str, str], ...] = (
     (
         "index.html",
@@ -438,11 +466,19 @@ VERSION_SENTENCES: Tuple[Tuple[str, str], ...] = (
     ),
     (
         "how-it-works.html",
-        "Since 2026-10-13 the policy is Ryde's v2.1, written as numbered clauses with Tribunal's readings stated where v2.1 is silent (docs/notes/2026-10-13-policy-v7.md).",
+        "Since 2026-10-14 the policy is Ryde's v2.1 with Ryde's answers to the team's three questions (the 2 km limb applies, the free wait runs from the driver's arrival, no surge on the excess distance fare), written as numbered clauses (docs/notes/2026-10-14-policy-v8.md). The stages and figures on this page are from version 6 unless they say otherwise.",
     ),
     (
         "how-it-works.zh.html",
-        "\u81ea 2026-10-13 \u8d77\uff0c\u653f\u7b56\u662f Ryde \u7684 v2.1\uff0c\u6539\u5199\u4e3a\u5e26\u7f16\u53f7\u7684\u6761\u6b3e\uff1bv2.1 \u6ca1\u5199\u5230\u7684\u5730\u65b9\uff0c\u6211\u4eec\u7684\u8bfb\u6cd5\u9010\u6761\u5199\u660e\uff08docs/notes/2026-10-13-policy-v7.md\uff09\u3002",
+        "\u81ea 2026-10-14 \u8d77\uff0c\u653f\u7b56\u662f Ryde \u7684 v2.1 \u52a0\u4e0a Ryde \u5bf9\u56e2\u961f\u4e09\u4e2a\u95ee\u9898\u7684\u7b54\u590d\uff082 km \u89c4\u5219\u9002\u7528\uff1b\u514d\u8d39\u7b49\u5f85\u4ece\u53f8\u673a\u5230\u8fbe\u8d77\u7b97\uff1b\u8d85\u989d\u91cc\u7a0b\u8d39\u4e0d\u52a0 surge\uff09\uff0c\u6539\u5199\u4e3a\u5e26\u7f16\u53f7\u7684\u6761\u6b3e\uff08docs/notes/2026-10-14-policy-v8.md\uff09\u3002\u672c\u9875\u7684\u6d41\u7a0b\u548c\u6570\u5b57\u9664\u7279\u522b\u6ce8\u660e\u5916\uff0c\u6765\u81ea\u7b2c 6 \u7248\u3002",
+    ),
+    (
+        "try.html",
+        "This page runs the team's version-6 policy in your browser; the submission applies version 8.",
+    ),
+    (
+        "try.zh.html",
+        "\u672c\u9875\u5728\u6d4f\u89c8\u5668\u91cc\u8fd0\u884c\u7684\u662f\u56e2\u961f\u7684\u7b2c 6 \u7248\u653f\u7b56\uff1b\u63d0\u4ea4\u7684\u7cfb\u7edf\u7528\u7684\u662f\u7b2c 8 \u7248\u3002",
     ),
 )
 
@@ -500,7 +536,8 @@ class SiteFigureTests(unittest.TestCase):
         None of these sentences states a figure, so none is a row in ``SHOWN``.
         They are the lines that stop a reader taking the version-6 figures
         beside them for the version-7 ones, and a page that lost one would do
-        exactly that.
+        exactly that. The try page states no figure either, and its line is the
+        one that says which policy the browser runs against the submission's.
         """
         for page, sentence in VERSION_SENTENCES:
             with self.subTest(page=page):
@@ -595,6 +632,39 @@ class SiteFigureTests(unittest.TestCase):
                 self.assert_shows(page, "results.html", shown, names)
         finally:
             self.figures["sealed_v4_exact"] = figures.named("sealed_v4_exact")
+
+    def test_the_check_fails_on_a_page_carrying_a_different_version_eight_figure(
+        self,
+    ) -> None:
+        """The control: ``results.html``'s ryde-v8 figure, moved, is reported.
+
+        The row used is the results page's version-8 Ryde-samples one, so the
+        line the report names is that row. The figure is moved in the page and
+        then in the record, one after the other, and each reddens one of the
+        two assertions ``assert_shows`` makes.
+        """
+        shown = (
+            "1/2: DISP-001 (route deviation, 4.3 km) escalated, as Ryde answered "
+            "on 2026-10-14 that the 2 km limb applies; DISP-002 (no-show) "
+            "escalated: the drafts did not agree on whether eight sparse GPS "
+            "fixes reach the 0.95 confidence v2.1 requires when a party carries "
+            "a fraud flag."
+        )
+        names = ("ryde_v8_exact",)
+        page = self.pages["results.html"]
+        moved = page.replace(
+            "1/2: DISP-001 (route deviation, 4.3 km)",
+            "1/3: DISP-001 (route deviation, 4.3 km)",
+        )
+        self.assertNotEqual(page, moved, "the fixture did not move the figure")
+        with self.assertRaises(AssertionError):
+            self.assert_shows(moved, "results.html", shown, names)
+        self.figures["ryde_v8_exact"] = "1/3"
+        try:
+            with self.assertRaises(AssertionError):
+                self.assert_shows(page, "results.html", shown, names)
+        finally:
+            self.figures["ryde_v8_exact"] = figures.named("ryde_v8_exact")
 
 
 if __name__ == "__main__":
