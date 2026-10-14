@@ -21,7 +21,9 @@ and shows the second going red;
 ``test_the_check_fails_on_a_page_carrying_a_different_version_seven_figure``
 does the same for the results page's version-7 sealed figure, and
 ``test_the_check_fails_on_a_page_carrying_a_different_version_eight_figure``
-for the results page's version-8 Ryde-samples figure.
+for the results page's version-8 Ryde-samples figure, and
+``test_the_check_fails_on_a_page_carrying_a_different_ryde_sample_figure`` for
+the cases page's new version-8 section.
 
 **The text is the visible text.** Tags are removed and entities resolved before
 the comparison, so the row is a sentence a reader reads and not a fragment of
@@ -43,6 +45,15 @@ timeline state those figures, and the version-6 figures they sit beside are
 labelled as version 6's: two further checks hold that block, one that every page
 stating a version-7 figure is a page bound to it here, and one that the
 sentences saying which version a block belongs to are present in both languages.
+
+**The organisers' samples on the cases page.** Version 8 is v2.1 with Ryde's
+answers of 2026-10-14, and the cases page opens with a section about Ryde's own
+two samples decided under it. Its figures come from the version-8 briefs of the
+two cases, the committed ``ryde-v8`` run's own transcript for the judge's four
+drafts, and ``policy/v8/general.json`` for the thresholds the safety page
+states; the front page links to the section by its id, and the safety page's
+version-6 sign-off is followed by version 8's own. The cases page and the safety
+page therefore join the pages this table covers.
 """
 
 from __future__ import annotations
@@ -90,9 +101,9 @@ def states_a_value(text: str, value: str) -> bool:
 # ``(page, the text the page shows, the figures that text carries)``.
 #
 # One row per place a figure is stated. The pages that state none -- ``try``,
-# ``safety``, ``developers``, ``docs``, ``why`` and ``architecture`` -- are
-# absent, and ``test_the_table_covers_the_pages_and_the_figures`` is what says
-# the set of pages here is the set that states a figure.
+# ``developers``, ``docs``, ``why`` and ``architecture`` -- are absent, and
+# ``test_the_table_covers_the_pages_and_the_figures`` is what says the set of
+# pages here is the set that states a figure.
 SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
     # -- the front page ---------------------------------------------------
     ("index.html", "160.4 s; p90 286.9 s.", ("median_wall_seconds", "p90_wall_seconds")),
@@ -414,6 +425,126 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
         "\u5f00\u53d1\u96c6 39/40\uff08\u56e2\u961f\u636e\u6b64\u8c03\u8bd5\uff0c\u4e0d\u662f\u6cdb\u5316\u6210\u7ee9\uff09\u3002",
         ("dev_v8_exact",),
     ),
+    # -- the organisers' own two samples, on the cases page ------------------
+    # Ryde's two samples decided under v2.1 with Ryde's answers of 2026-10-14,
+    # the section the cases page now opens with. The distances and the excess
+    # distance fare are the version-8 brief's, the four drafts are the committed
+    # run's own vote block, and the version line under the section says the case
+    # pages and the queue below are the version-6 runs.
+    (
+        "cases.html",
+        "The trip record gives 24.8 km driven against 20.5 km on the recommended "
+        "route: a deviation of 4.30 km, over the 2.0 km limit of v2.1 6.2. Ryde "
+        "answered on 2026-10-14 that the limit applies, so version 8 sends the "
+        "case to a person before the judge is asked, with the excess distance "
+        "fare the code computed: SGD 3.44 (4.30 km x 0.80). Result: escalated, "
+        "as Ryde answered.",
+        (
+            "ryde902_actual_km",
+            "ryde902_optimal_km",
+            "ryde902_deviation_km",
+            "ryde902_limit_km",
+            "ryde902_excess_sgd",
+            "ryde902_rate_sgd",
+        ),
+    ),
+    (
+        "cases.html",
+        "The driver arrived at 08:43; the free wait ran to 08:48 and the trip was "
+        "cancelled at 08:51, after it. The rider's profile carries a fraud flag, "
+        "so v2.1 requires a confidence of 0.95, and the arrival rests on 8 GPS "
+        "fixes two to four minutes apart. Of the judge's four drafts, 2 "
+        "escalated, 1 upheld the fee and 1 was voided for citing a clause that "
+        "does not exist; three must agree, so the case went to a person with the "
+        "fee held. Ryde's stated outcome is the fee upheld: this is our one "
+        "known divergence.",
+        (
+            "ryde903_arrived",
+            "ryde903_free_wait_ends",
+            "ryde903_cancelled",
+            "ryde903_required_confidence",
+            "ryde903_gps_fixes",
+            "ryde903_drafts_escalate",
+            "ryde903_drafts_fee",
+            "ryde903_drafts_voided",
+        ),
+    ),
+    (
+        "cases.zh.html",
+        "\u884c\u7a0b\u8bb0\u5f55\uff1a\u5b9e\u9645 24.8 km\uff0c\u63a8\u8350\u8def"
+        "\u7ebf 20.5 km\uff0c\u7ed5\u8def 4.30 km\uff0c\u8d85\u8fc7 v2.1 \u7b2c"
+        " 6.2 \u6761\u7684 2.0 km \u4e0a\u9650\u3002Ryde \u4e8e 2026-10-14 \u7b54"
+        "\u590d\u8be5\u4e0a\u9650\u9002\u7528\uff0c\u6240\u4ee5\u7b2c 8 \u7248\u5728"
+        "\u6cd5\u5b98\u4e4b\u524d\u76f4\u63a5\u8f6c\u4eba\u5de5\uff0c\u5e76\u9644"
+        "\u4e0a\u4ee3\u7801\u7b97\u51fa\u7684\u8d85\u989d\u91cc\u7a0b\u8d39\uff1a"
+        "SGD 3.44\uff084.30 km \u00d7 0.80\uff09\u3002\u7ed3\u679c\uff1a\u8f6c"
+        "\u4eba\u5de5\uff0c\u4e0e Ryde \u7684\u7b54\u590d\u4e00\u81f4\u3002",
+        (
+            "ryde902_actual_km",
+            "ryde902_optimal_km",
+            "ryde902_deviation_km",
+            "ryde902_limit_km",
+            "ryde902_excess_sgd",
+            "ryde902_rate_sgd",
+        ),
+    ),
+    (
+        "cases.zh.html",
+        "\u53f8\u673a 08:43 \u5230\u8fbe\uff0c\u514d\u8d39\u7b49\u5f85\u5230 08:48"
+        "\uff0c\u884c\u7a0b\u5728 08:51 \u53d6\u6d88\uff0c\u5df2\u8fc7\u514d\u8d39"
+        "\u7b49\u5f85\u3002\u4e58\u5ba2\u5e26\u6b3a\u8bc8\u6807\u8bb0\uff0cv2.1 "
+        "\u8981\u6c42\u7f6e\u4fe1\u5ea6 0.95\uff0c\u800c\u5230\u8fbe\u53ea\u9760 8 "
+        "\u4e2a\u76f8\u9694\u4e24\u5230\u56db\u5206\u949f\u7684 GPS \u70b9\u3002"
+        "\u6cd5\u5b98\u7684\u56db\u4efd\u8349\u7a3f\u4e2d\uff0c2 \u4efd\u8f6c\u4eba"
+        "\u5de5\uff0c1 \u4efd\u7ef4\u6301\u6536\u8d39\uff0c1 \u4efd\u56e0\u5f15"
+        "\u7528\u4e0d\u5b58\u5728\u7684\u6761\u6b3e\u88ab\u4f5c\u5e9f\uff1b\u9700"
+        "\u8981\u4e09\u4efd\u4e00\u81f4\uff0c\u6240\u4ee5\u8f6c\u7ed9\u4eba\uff0c"
+        "\u8d39\u7528\u6682\u6263\u3002Ryde \u7ed9\u51fa\u7684\u7ed3\u679c\u662f"
+        "\u7ef4\u6301\u6536\u8d39\uff1a\u8fd9\u662f\u6211\u4eec\u552f\u4e00\u5df2"
+        "\u77e5\u7684\u5206\u6b67\u3002",
+        (
+            "ryde903_arrived",
+            "ryde903_free_wait_ends",
+            "ryde903_cancelled",
+            "ryde903_required_confidence",
+            "ryde903_gps_fixes",
+            "ryde903_drafts_escalate",
+            "ryde903_drafts_fee",
+            "ryde903_drafts_voided",
+        ),
+    ),
+    # -- version 8's own sign-off, on the safety page ------------------------
+    # The safety page stated the version-6 SGD 8 sign-off and no figure at all;
+    # the sentence beside it now states version 8's three bands, so the page
+    # joins the pages this table covers.
+    (
+        "safety.html",
+        "The SGD 8 sign-off is version 6's rule. Version 8 applies v2.1's own: "
+        "below SGD 10 the AI ruling is final, from 10 to 50 it stands only at a "
+        "confidence of 0.80 or more (0.95 with a fraud flag), and above 50 a "
+        "person decides.",
+        (
+            "v8_ai_final_below",
+            "v8_human_above",
+            "v8_confidence_between",
+            "v8_confidence_fraud",
+        ),
+    ),
+    (
+        "safety.zh.html",
+        "SGD 8 \u7b7e\u6838\u662f\u7b2c 6 \u7248\u7684\u89c4\u5219\u3002\u7b2c 8 "
+        "\u7248\u7528 v2.1 \u81ea\u5df1\u7684\u89c4\u5219\uff1a\u4f4e\u4e8e SGD "
+        "10 \u65f6 AI \u5224\u51b3\u5373\u4e3a\u6700\u7ec8\uff1b10 \u5230 50 "
+        "\u4e4b\u95f4\uff0c\u7f6e\u4fe1\u5ea6\u987b\u8fbe 0.80\uff08\u6709\u6b3a"
+        "\u8bc8\u6807\u8bb0\u65f6 0.95\uff09\uff1b\u9ad8\u4e8e 50 \u7531\u4eba\u51b3"
+        "\u5b9a\u3002",
+        (
+            "v8_ai_final_below",
+            "v8_human_above",
+            "v8_confidence_between",
+            "v8_confidence_fraud",
+        ),
+    ),
 )
 
 # The pages this table names. It is asserted to be exactly the pages that state
@@ -427,6 +558,10 @@ PAGES: Tuple[str, ...] = (
     "how-it-works.zh.html",
     "about.html",
     "about.zh.html",
+    "cases.html",
+    "cases.zh.html",
+    "safety.html",
+    "safety.zh.html",
 )
 
 # The figures the version-7 pages state -- Ryde's own Dispute Resolution Policy
@@ -465,6 +600,14 @@ VERSION_SENTENCES: Tuple[Tuple[str, str], ...] = (
         "\u6848\u4f8b\u9875\u5c55\u793a\u7684\u662f\u7b2c 6 \u7248\u7684\u5f00\u53d1\u8dd1\u5206\u3002",
     ),
     (
+        "cases.html",
+        "The case pages and the queue below show the version-6 runs.",
+    ),
+    (
+        "cases.zh.html",
+        "\u4e0b\u9762\u7684\u6848\u4ef6\u9875\u548c\u961f\u5217\u5c55\u793a\u7684\u662f\u7b2c 6 \u7248\u7684\u8dd1\u5206\u3002",
+    ),
+    (
         "how-it-works.html",
         "Since 2026-10-14 the policy is Ryde's v2.1 with Ryde's answers to the team's three questions (the 2 km limb applies, the free wait runs from the driver's arrival, no surge on the excess distance fare), written as numbered clauses (docs/notes/2026-10-14-policy-v8.md). The stages and figures on this page are from version 6 unless they say otherwise.",
     ),
@@ -489,7 +632,9 @@ class SiteFigureTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         portability.require_the_same_libm()
-        cls.pages = {path.name: visible_text(text) for path, text in site.pages()}
+        written = site.pages()
+        cls.raw = {path.name: text for path, text in written}
+        cls.pages = {name: visible_text(text) for name, text in cls.raw.items()}
         cls.figures = figures.page_figures()
 
     def assert_shows(
@@ -665,6 +810,65 @@ class SiteFigureTests(unittest.TestCase):
                 self.assert_shows(page, "results.html", shown, names)
         finally:
             self.figures["ryde_v8_exact"] = figures.named("ryde_v8_exact")
+
+    def test_the_index_links_to_the_samples_section_in_both_languages(self) -> None:
+        """The front page's line to the new section resolves to that section.
+
+        The line names the cases page and the section's own id, and the two are
+        checked together: the line is on the front page with the words it
+        carries, and the page it points at is the page that holds the id. Both
+        languages, because the two front pages link to the two cases pages.
+        """
+        for page, target, label in (
+            (
+                "index.html",
+                "cases.html#ryde",
+                "Ryde's own two samples, at version 8 ->",
+            ),
+            (
+                "index.zh.html",
+                "cases.zh.html#ryde",
+                "Ryde \u5b98\u65b9\u7684\u4e24\u9053\u6837\u4f8b\uff08\u7b2c 8"
+                " \u7248\uff09 ->",
+            ),
+        ):
+            with self.subTest(page=page):
+                self.assertIn('href="{0}"'.format(target), self.raw[page])
+                self.assertIn(label, self.pages[page])
+                self.assertIn('id="ryde"', self.raw[target.split("#", 1)[0]])
+
+    def test_the_check_fails_on_a_page_carrying_a_different_ryde_sample_figure(
+        self,
+    ) -> None:
+        """The control: ``cases.html``'s deviation figure, moved, is reported.
+
+        The row used is the new section's DISP-001 one, so the line the report
+        names is that row. The figure is moved in the page and then in the
+        record, one after the other, and each reddens one of the two assertions
+        ``assert_shows`` makes.
+        """
+        shown = (
+            "The trip record gives 24.8 km driven against 20.5 km on the recommended "
+            "route: a deviation of 4.30 km, over the 2.0 km limit of v2.1 6.2. Ryde "
+            "answered on 2026-10-14 that the limit applies, so version 8 sends the "
+            "case to a person before the judge is asked, with the excess distance "
+            "fare the code computed: SGD 3.44 (4.30 km x 0.80). Result: escalated, "
+            "as Ryde answered."
+        )
+        names = ("ryde902_deviation_km",)
+        page = self.pages["cases.html"]
+        moved = page.replace("a deviation of 4.30 km", "a deviation of 4.31 km")
+        self.assertNotEqual(page, moved, "the fixture did not move the figure")
+        with self.assertRaises(AssertionError):
+            self.assert_shows(moved, "cases.html", shown, names)
+        self.figures["ryde902_deviation_km"] = "4.31"
+        try:
+            with self.assertRaises(AssertionError):
+                self.assert_shows(page, "cases.html", shown, names)
+        finally:
+            self.figures["ryde902_deviation_km"] = figures.named(
+                "ryde902_deviation_km"
+            )
 
 
 if __name__ == "__main__":

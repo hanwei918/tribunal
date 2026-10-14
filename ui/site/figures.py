@@ -35,7 +35,12 @@ What is read, and from where
   is where ``tools/check_figures.py``'s own ``graded_version_seven`` reads them;
 * the two version-8 sets -- ``ryde-v8`` and ``dev-v8``, the policy version 8
   runs of 2026-10-14, v2.1 with Ryde's answers -- through the same call, over
-  ``runs/<set>/policy-v8/<model>/`` for the same reason.
+  ``runs/<set>/policy-v8/<model>/`` for the same reason;
+* the organisers' own two samples, at version 8, off the ``ryde-v8`` set's own
+  case files: their version-8 briefs for the distances, the excess distance fare
+  and the free wait, the committed run's own case document and transcript for
+  the judge's four drafts, and ``policy/v8/general.json`` for the thresholds the
+  safety page states.
 
 The figure names are the module's own; the strings are what the pages show, to
 the page's own formatting -- ``"160.4 s"``, ``"$0.058"``, ``"12/12"`` -- so a
@@ -44,6 +49,7 @@ test can assert the page carries the figure rather than a number near it.
 
 from __future__ import annotations
 
+import json
 import sys
 from decimal import Decimal
 from pathlib import Path
@@ -62,6 +68,9 @@ from eval import (  # noqa: E402
     run_benchmark,
     v6_runs,
 )
+from tribunal import brief as brief_module  # noqa: E402
+from tribunal import pipeline as pipeline_module  # noqa: E402
+from tribunal import policy_versions  # noqa: E402
 from tribunal import referee as referee_module  # noqa: E402
 from ui.v2 import build as v2  # noqa: E402
 
@@ -73,6 +82,13 @@ MODEL = run_benchmark.resolve_model(None)
 FEATURED_CASE = 208
 SAMPLE_CASE = 901
 SAFETY_CASE = 2735
+
+# The organisers' own two samples, read at policy version 8 -- the set that
+# carries v2.1 with Ryde's answers of 2026-10-14. The two cases are the ones the
+# version-7 set already held, keyed as Ryde's own answer of that day leaves them.
+RYDE_SAMPLES_SET = "ryde-v8"
+RYDE_DEVIATION_CASE = 902
+RYDE_NO_SHOW_CASE = 903
 
 
 # --------------------------------------------------------------------------
@@ -183,6 +199,48 @@ def figures() -> Dict[str, str]:
 
     featured = featured_case_figures()
 
+    # The organisers' own two samples, at version 8 -- Ryde's own Dispute
+    # Resolution Policy v2.1 with Ryde's answers of 2026-10-14. Every figure is
+    # read: the two version-8 briefs' own distances, excess distance fare and
+    # free wait, the committed run's own case document and transcript for the
+    # judge's four drafts, and the version-8 general policy for the thresholds
+    # the safety page states.
+    deviation_brief = version_eight_brief(RYDE_DEVIATION_CASE)
+    no_show_brief = version_eight_brief(RYDE_NO_SHOW_CASE)
+    actual_km = _derived_value(
+        deviation_brief, "TRIP_RECORD", "v7", "deviation", "actual_distance_km"
+    )
+    optimal_km = _derived_value(
+        deviation_brief, "TRIP_RECORD", "v7", "deviation", "optimal_distance_km"
+    )
+    deviation_km = _derived_value(
+        deviation_brief, "TRIP_RECORD", "v7", "deviation", "deviation_km"
+    )
+    limit_km = _derived_value(
+        deviation_brief, "TRIP_RECORD", "v7", "deviation", "ai_limit_km"
+    )
+    excess_sgd = _derived_value(
+        deviation_brief, "FARE_BREAKDOWN", "money", "excess_distance_fare_sgd"
+    )
+    rate_sgd = _derived_value(
+        deviation_brief, "FARE_BREAKDOWN", "money", "per_km_rate_sgd"
+    )
+    arrived_at = _derived_value(
+        no_show_brief, "TRIP_RECORD", "v7", "free_wait", "arrived_at"
+    )
+    wait_ends_at = _derived_value(
+        no_show_brief, "TRIP_RECORD", "v7", "free_wait", "ends_at"
+    )
+    cancelled_at = _derived_value(
+        no_show_brief, "TRIP_RECORD", "v7", "free_wait", "cancelled_at"
+    )
+    required_confidence = no_show_brief["case"]["authority"]["required_confidence"][
+        "value"
+    ]
+    gps_fixes = _derived_value(no_show_brief, "GPS_TRACE", "v7", "point_count")
+    drafts = ryde_no_show_drafts()
+    thresholds = version_eight_thresholds()
+
     figures: Dict[str, str] = {
         # Time and cost, over the 151 cases of the four version-6 runs. The
         # seconds are bare numbers because the two languages write the unit
@@ -244,6 +302,28 @@ def figures() -> Dict[str, str]:
         "corpus_v6_exact": pair(corpus.exact_matches, corpus.total),
         "precedents_with": pair(with_precedents[0], with_precedents[1]),
         "precedents_without": pair(without_precedents[0], without_precedents[1]),
+        # The organisers' two samples at version 8. A distance and an amount are
+        # written to the decimal place their unit is read at -- the brief holds
+        # "0.8" where the page states "0.80" -- and the three clock times are the
+        # hour and minute the record carries.
+        "ryde902_actual_km": "{0:.1f}".format(Decimal(str(actual_km))),
+        "ryde902_optimal_km": "{0:.1f}".format(Decimal(str(optimal_km))),
+        "ryde902_deviation_km": "{0:.2f}".format(Decimal(str(deviation_km))),
+        "ryde902_limit_km": "{0:.1f}".format(Decimal(str(limit_km))),
+        "ryde902_excess_sgd": "{0:.2f}".format(Decimal(str(excess_sgd))),
+        "ryde902_rate_sgd": "{0:.2f}".format(Decimal(str(rate_sgd))),
+        "ryde903_arrived": _clock(arrived_at),
+        "ryde903_free_wait_ends": _clock(wait_ends_at),
+        "ryde903_cancelled": _clock(cancelled_at),
+        "ryde903_required_confidence": str(required_confidence),
+        "ryde903_gps_fixes": str(gps_fixes),
+        "ryde903_drafts_escalate": str(drafts["escalate"]),
+        "ryde903_drafts_fee": str(drafts["fee"]),
+        "ryde903_drafts_voided": str(drafts["voided"]),
+        "v8_ai_final_below": thresholds["ai_final_below"],
+        "v8_human_above": thresholds["human_above"],
+        "v8_confidence_between": thresholds["confidence_between"],
+        "v8_confidence_fraud": thresholds["confidence_fraud"],
     }
 
     # The sealed and held-out sets, graded through the same calls the README's
@@ -355,6 +435,121 @@ def featured_case_figures() -> Dict[str, Dict[str, Any]]:
             "calls": len(case.transcript.get("entries") or []),
         }
     return found
+
+
+# --------------------------------------------------------------------------
+# The organisers' own two samples, at version 8
+# --------------------------------------------------------------------------
+def version_eight_brief(case_no: int) -> Dict[str, Any]:
+    """One of the organisers' samples, briefed at the version its run used.
+
+    ``build_brief_for_case`` at the version the ``ryde-v8`` registration fixes,
+    over the case file the set's own ``case_root`` holds. That version is 8 --
+    version 7's policy text with Ryde's answers of 2026-10-14 -- and it is read
+    off the registration rather than typed here, so the brief is the one the
+    committed run was decided under.
+    """
+    development_set = development_sets.named(RYDE_SAMPLES_SET)
+    return brief_module.build_brief_for_case(
+        development_set.load_case(case_no),
+        policy_version=development_set.policy_version,
+    )
+
+
+def _derived_value(brief: Mapping[str, Any], evidence_type: str, *path: str) -> Any:
+    """One derived figure, off the artifact of ``evidence_type`` that carries it.
+
+    The path is the artifact's own. The version-7 block is keyed ``v7`` because
+    a later version on this base is the same policy text with a settled reading
+    rather than a second brief, and the fare record's money block sits at the top
+    of the same object rather than under that key.
+    """
+    for artifact in brief["case"]["evidence"]:
+        if artifact.get("evidence_type") != evidence_type:
+            continue
+        node: Any = (artifact.get("payload") or {}).get("derived") or {}
+        for key in path:
+            node = node[key]
+        return node["value"]
+    raise KeyError(
+        "the brief carries no {0} artifact, so {1} cannot be read".format(
+            evidence_type, "/".join(path)
+        )
+    )
+
+
+def _clock(timestamp: Any) -> str:
+    """A recorded timestamp as the page writes it: the hour and minute it carries."""
+    return str(timestamp).split("T", 1)[1][:5]
+
+
+def _sgd_whole(value: Any) -> str:
+    """A threshold in whole SGD, without the cents the policy file spells it with."""
+    return format(Decimal(str(value)).normalize(), "f")
+
+
+def ryde_sample_run_dir() -> Path:
+    """The directory the organisers' two samples were run into.
+
+    ``run_dir_at_its_version`` moves a set registered for a policy base one level
+    down, so the run is at ``runs/ryde-v8/policy-v8/<model>/``.
+    """
+    development_set = development_sets.named(RYDE_SAMPLES_SET)
+    return development_sets.run_dir_at_its_version(development_set, MODEL)
+
+
+def ryde_no_show_drafts() -> Dict[str, int]:
+    """The no-show sample's four judge drafts, counted by what each one did.
+
+    Read from the run's own case document, which names the transcript beside it,
+    and that transcript's vote block. Each draft records the proposal it made, so
+    a draft that proposed ``ESCALATE``, a draft that upheld the fee by proposing
+    ``DRIVER_COMPENSATION``, and a draft the code checks refused -- its proposal
+    is ``null`` and its abstention names the reason -- are counted apart.
+    """
+    run_dir = ryde_sample_run_dir()
+    document = json.loads(
+        (run_dir / "case-{0:05d}.json".format(RYDE_NO_SHOW_CASE)).read_text(
+            encoding="utf-8"
+        )
+    )
+    transcript = json.loads(
+        (run_dir / document["transcript_file"]).read_text(encoding="utf-8")
+    )
+    proposals = [
+        (draft.get("proposal") or {}).get("ruling")
+        for draft in transcript["vote"]["drafts"]
+    ]
+    return {
+        "escalate": sum(
+            1 for ruling in proposals if ruling == pipeline_module.ESCALATE
+        ),
+        "fee": sum(
+            1 for ruling in proposals if ruling == pipeline_module.DRIVER_COMPENSATION
+        ),
+        "voided": sum(1 for ruling in proposals if ruling is None),
+    }
+
+
+def version_eight_thresholds() -> Dict[str, str]:
+    """``policy/v8/general.json``'s thresholds, as the safety page writes them.
+
+    Read from the version-8 base's own general policy file -- the file the
+    version-8 briefs are built from -- rather than from a second copy of the
+    numbers.
+    """
+    general = json.loads(
+        (policy_versions.base_directory(8) / "general.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    thresholds = general["thresholds"]
+    return {
+        "ai_final_below": _sgd_whole(thresholds["ai_final_below_sgd"]),
+        "human_above": _sgd_whole(thresholds["human_above_sgd"]),
+        "confidence_between": str(thresholds["confidence_required_between_sgd"]),
+        "confidence_fraud": str(thresholds["confidence_required_with_fraud_flag"]),
+    }
 
 
 def page_figures() -> Dict[str, str]:
