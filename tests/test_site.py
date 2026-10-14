@@ -585,7 +585,8 @@ class TheFilmTests(unittest.TestCase):
                 page = pages()[name]
                 self.assertNotIn('<a class="btn" href="#film">', page)
                 self.assertNotIn("<video", page)
-                self.assertNotIn("film-video", page)
+                self.assertNotIn('id="film-video"', page)
+                self.assertIn("if (box && video)", page)
                 self.assertNotIn(FILM, page)
                 self.assertNotIn("@film", page)
 

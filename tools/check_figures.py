@@ -572,7 +572,7 @@ FIGURES: Tuple[Figure, ...] = (
         ("139",),
         (
             r"\| valid drafts, ECE \| (\d+)\b",
-            r"over (\d+) drafts, at the version-8 bar",
+            r"over (\d+) drafts,\s+at the version-8 bar",
             r"\u57fa\u4e8e (\d+) \u4efd\u8349\u7a3f",
         ),
     ),
