@@ -7,6 +7,7 @@
 <p align="center">
   <a href="https://tribunal.edgeone.dev/"><img src="https://img.shields.io/badge/live%20demo-tribunal.edgeone.dev-6d28d9" alt="Live demo"></a>
   <a href="https://tribunal.edgeone.dev/try.html"><img src="https://img.shields.io/badge/try%20it-in%20your%20browser-6d28d9" alt="Try it"></a>
+  <a href="https://github.com/hanwei918/tribunal/actions/workflows/tests.yml"><img src="https://github.com/hanwei918/tribunal/actions/workflows/tests.yml/badge.svg?branch=main" alt="Tests"></a>
   <img src="https://img.shields.io/badge/python-3.9%20%7C%203.13-blue" alt="Python 3.9 and 3.13 (both tested)">
   <img src="https://img.shields.io/badge/dependencies-none-brightgreen" alt="No dependencies">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT licence"></a>

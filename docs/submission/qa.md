@@ -122,6 +122,14 @@ that a no-show ruling is AI-final whatever the fraud flag
 (`docs/notes/2026-10-14-version-7-runs.md`,
 `docs/notes/2026-10-14-version-8-runs.md`).
 
+**Why does Tribunal not handle fare and surge disputes, or Ryde's DISP-003?**
+v2.1 Section 3 and the organisers' third sample, DISP-003, are fare and surge
+disputes. This prototype covers the two categories the challenge brief asks for
+-- any two of four -- route deviation and no-show, and leaving fare disputes out
+is its own choice, stated in its own `POL-GEN-24`, which routes them to a
+person. v2.1 itself lets the AI rule a fare dispute (Section 6.2); covering it
+is on the roadmap (README, Roadmap and known limits).
+
 **Your sealed figure is at version 7 -- why not re-run it?** A sealed set is run
 once, and a second run would be a second figure rather than a better one:
 `sealed-v4` was run once on 2026-10-14 from the annotated tag
