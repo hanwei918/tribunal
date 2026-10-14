@@ -99,7 +99,7 @@ DIAGRAM_VIEWS: Tuple[Tuple[str, str], ...] = (
 DIAGRAM_CLAIMS: Tuple[Tuple[str, str], ...] = (
     ("2a-containers-deciding.svg", "Standalone CLI, not wired into the"),
     ("3-dynamic-one-dispute.svg", "shown to the judge"),
-    ("1-system-context.svg", "freeze-2026-10-11"),
+    ("1-system-context.svg", "freeze-2026-10-14-v8"),
     (
         "3-dynamic-one-dispute.svg",
         "an unusable answer is retried once, an HTTP 429/5xx up to 4 attempts.",

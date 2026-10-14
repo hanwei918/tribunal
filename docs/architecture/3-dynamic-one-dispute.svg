@@ -2,7 +2,7 @@
 <defs><marker id="a" viewBox="0 0 10 10" refX="9.5" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#3D444D"/></marker><marker id="ao" viewBox="0 0 10 10" refX="9.5" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#6E7781"/></marker></defs>
 <rect x="0" y="0" width="1920" height="1080" fill="#FFFFFF"/>
 <text x="32" y="48" font-size="28" font-weight="bold" fill="#1F2328">Dynamic diagram for Tribunal - how one dispute is decided</text>
-<text x="32" y="76" font-size="15" fill="#57606A">C4 dynamic view inside the Arbitration pipeline container: one call of run_case() at --policy-version 6 (as in the product runs), steps in run order.</text>
+<text x="32" y="76" font-size="15" fill="#57606A">C4 dynamic view inside the Arbitration pipeline container: one call of run_case() at --policy-version 8 (as in the product runs), steps in run order.</text>
 <rect x="70" y="245" width="1820" height="600" rx="14" fill="#FFFFFF" stroke="#1168BD" stroke-width="1.6" stroke-dasharray="10 6"/>
 <text x="1467.08" y="267" font-size="15" fill="#1168BD" font-weight="bold">Arbitration pipeline</text>
 <text x="1640.9" y="267" font-size="12" fill="#57606A">[Container: Python package tribunal/]</text>
@@ -22,10 +22,10 @@
 <path d="M720,280 L720,252 L900,252 L900,197" fill="none" stroke="#3D444D" stroke-width="1.5" marker-end="url(#a)"/>
 <path d="M1320,280 L1320,197" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round"/>
 <path d="M1320,280 L1320,197" fill="none" stroke="#3D444D" stroke-width="1.5" marker-end="url(#a)"/>
-<path d="M1665,416 L1665,455 L245,455 L245,498" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round"/>
-<path d="M1665,416 L1665,455 L245,455 L245,498" fill="none" stroke="#3D444D" stroke-width="1.5" marker-end="url(#a)"/>
-<path d="M1810,340 L1855,340 L1855,760 L1812,760" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round"/>
-<path d="M1810,340 L1855,340 L1855,760 L1812,760" fill="none" stroke="#3D444D" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M1665,423 L1665,440 L245,440 L245,498" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round"/>
+<path d="M1665,423 L1665,440 L245,440 L245,498" fill="none" stroke="#3D444D" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M320,500 L320,485 L1855,485 L1855,760 L1812,760" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round"/>
+<path d="M320,500 L320,485 L1855,485 L1855,760 L1812,760" fill="none" stroke="#3D444D" stroke-width="1.5" marker-end="url(#a)"/>
 <path d="M390,560 L453,560" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round"/>
 <path d="M390,560 L453,560" fill="none" stroke="#3D444D" stroke-width="1.5" marker-end="url(#a)"/>
 <path d="M745,560 L808,560" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round"/>
@@ -38,8 +38,8 @@
 <path d="M1665,619 L1665,713" fill="none" stroke="#3D444D" stroke-width="1.5" marker-end="url(#a)"/>
 <path d="M1665,817 L1665,898" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round"/>
 <path d="M1665,817 L1665,898" fill="none" stroke="#3D444D" stroke-width="1.5" marker-end="url(#a)"/>
-<path d="M245,643 L245,880 L650,880 L650,908" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round"/>
-<path d="M245,643 L245,880 L650,880 L650,908" fill="none" stroke="#3D444D" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M1810,340 L1875,340 L1875,1010 L725,1010 L725,997" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round"/>
+<path d="M1810,340 L1875,340 L1875,1010 L725,1010 L725,997" fill="none" stroke="#3D444D" stroke-width="1.5" marker-end="url(#a)"/>
 <path d="M870,643 L870,908" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round"/>
 <path d="M870,643 L870,908" fill="none" stroke="#3D444D" stroke-width="1.5" marker-end="url(#a)"/>
 <path d="M1180,898 L1180,790 L1060,790 L1060,645" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round"/>
@@ -70,9 +70,9 @@
 <rect id="s2" x="455" y="280" width="290" height="102" rx="12" fill="#85BBF0" stroke="#5D82A8" stroke-width="1.5"/>
 <rect id="s3" x="810" y="280" width="290" height="102" rx="12" fill="#85BBF0" stroke="#5D82A8" stroke-width="1.5"/>
 <rect id="s4" x="1165" y="280" width="290" height="119" rx="12" fill="#85BBF0" stroke="#5D82A8" stroke-width="1.5"/>
-<rect id="s5" x="1520" y="280" width="290" height="136" rx="12" fill="#85BBF0" stroke="#5D82A8" stroke-width="1.5"/>
-<rect id="s6" x="100" y="500" width="290" height="143" rx="12" fill="#85BBF0" stroke="#5D82A8" stroke-width="1.5"/>
-<rect x="213.875" y="551" width="62.25" height="19" rx="9.5" fill="#8250DF" stroke="#FFFFFF" stroke-width="1"/>
+<rect id="s5" x="1520" y="280" width="290" height="143" rx="12" fill="#85BBF0" stroke="#5D82A8" stroke-width="1.5"/>
+<rect id="s6" x="100" y="500" width="290" height="136" rx="12" fill="#85BBF0" stroke="#5D82A8" stroke-width="1.5"/>
+<rect x="1633.875" y="331" width="62.25" height="19" rx="9.5" fill="#8250DF" stroke="#FFFFFF" stroke-width="1"/>
 <rect id="s7" x="455" y="500" width="290" height="119" rx="12" fill="#85BBF0" stroke="#5D82A8" stroke-width="1.5"/>
 <rect id="s8" x="810" y="500" width="290" height="143" rx="12" fill="#85BBF0" stroke="#5D82A8" stroke-width="1.5"/>
 <rect x="923.875" y="551" width="62.25" height="19" rx="9.5" fill="#8250DF" stroke="#FFFFFF" stroke-width="1"/>
@@ -94,7 +94,7 @@
 <text x="600" y="181" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="case">data/cases/*.json, data/index.json</text>
 <text x="1135" y="138" font-size="16" fill="#FFFFFF" font-weight="bold" text-anchor="middle" data-box="pol">Policy store</text>
 <text x="1135" y="156" font-size="11.5" fill="#FFFFFF" text-anchor="middle" data-box="pol">[Container: JSON files, policy/]</text>
-<text x="1135" y="181" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pol">Version 6: integrity table, 34 clauses, confidence floor 0.70</text>
+<text x="1135" y="181" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pol">Version 8: integrity table, v2.1&#x27;s clauses, the bar the brief carries</text>
 <text x="245" y="306" font-size="16" fill="#0B2540" font-weight="bold" text-anchor="middle" data-box="s1">1.  Load the case</text>
 <text x="245" y="324" font-size="11.5" fill="#0B2540" text-anchor="middle" data-box="s1">[Component: tribunal/loader.py]</text>
 <text x="245" y="349" font-size="12.5" fill="#0B2540" text-anchor="middle" data-box="s1">Refuses a malformed record or a</text>
@@ -110,27 +110,27 @@
 <text x="1310" y="306" font-size="16" fill="#0B2540" font-weight="bold" text-anchor="middle" data-box="s4">4.  Build one brief</text>
 <text x="1310" y="324" font-size="11.5" fill="#0B2540" text-anchor="middle" data-box="s4">[Component: tribunal/brief.py]</text>
 <text x="1310" y="349" font-size="12.5" fill="#0B2540" text-anchor="middle" data-box="s4">One sha256; refuses an answer-key field;</text>
-<text x="1310" y="366" font-size="12.5" fill="#0B2540" text-anchor="middle" data-box="s4">v6 masks plates, SG phones, e-mails in</text>
+<text x="1310" y="366" font-size="12.5" fill="#0B2540" text-anchor="middle" data-box="s4">masks plates, SG phones, e-mails in</text>
 <text x="1310" y="383" font-size="12.5" fill="#0B2540" text-anchor="middle" data-box="s4">free text (names are not masked).</text>
-<text x="1665" y="306" font-size="16" fill="#0B2540" font-weight="bold" text-anchor="middle" data-box="s5">5.  Scope gate</text>
-<text x="1665" y="324" font-size="11.5" fill="#0B2540" text-anchor="middle" data-box="s5">[Component: tribunal/pipeline.py]</text>
-<text x="1665" y="349" font-size="12.5" fill="#0B2540" text-anchor="middle" data-box="s5">POL-GEN-08(1), v3 and later: a safety or</text>
-<text x="1665" y="366" font-size="12.5" fill="#0B2540" text-anchor="middle" data-box="s5">complaint flag stops here. Optional</text>
-<text x="1665" y="383" font-size="12.5" fill="#0B2540" text-anchor="middle" data-box="s5">--integrity-gate: POL-RD-10(2)/(4),</text>
-<text x="1665" y="400" font-size="12.5" fill="#0B2540" text-anchor="middle" data-box="s5">route deviation only.</text>
-<text x="245" y="526" font-size="16" fill="#0B2540" font-weight="bold" text-anchor="middle" data-box="s6">6.  Two advocates</text>
-<text x="245" y="544" font-size="11.5" fill="#0B2540" text-anchor="middle" data-box="s6">[Component: prompts/v1/advocate + stance]</text>
-<text x="245" y="565" font-size="11" fill="#FFFFFF" font-weight="bold" text-anchor="middle" data-box="s6">LLM x 2</text>
-<text x="245" y="593" font-size="12.5" fill="#0B2540" text-anchor="middle" data-box="s6">Same brief bytes; only the stance</text>
-<text x="245" y="610" font-size="12.5" fill="#0B2540" text-anchor="middle" data-box="s6">differs. Unusable after one retry:</text>
-<text x="245" y="627" font-size="12.5" fill="#0B2540" text-anchor="middle" data-box="s6">the case fails with no ruling.</text>
+<text x="1665" y="306" font-size="16" fill="#0B2540" font-weight="bold" text-anchor="middle" data-box="s5">5.  Two advocates</text>
+<text x="1665" y="324" font-size="11.5" fill="#0B2540" text-anchor="middle" data-box="s5">[Component: prompts/v2/advocate + stance]</text>
+<text x="1665" y="345" font-size="12.5" fill="#0B2540" text-anchor="middle" data-box="s5">LLM x 2</text>
+<text x="1665" y="373" font-size="12.5" fill="#0B2540" text-anchor="middle" data-box="s5">Same brief bytes; only the stance</text>
+<text x="1665" y="390" font-size="12.5" fill="#0B2540" text-anchor="middle" data-box="s5">differs. Unusable after one retry:</text>
+<text x="1665" y="407" font-size="12.5" fill="#0B2540" text-anchor="middle" data-box="s5">the case fails with no ruling.</text>
+<text x="245" y="526" font-size="16" fill="#0B2540" font-weight="bold" text-anchor="middle" data-box="s6">6.  Authority gate</text>
+<text x="245" y="544" font-size="11.5" fill="#0B2540" text-anchor="middle" data-box="s6">[Component: tribunal/pipeline.py]</text>
+<text x="245" y="569" font-size="12.5" fill="#0B2540" text-anchor="middle" data-box="s6">POL-GEN-21 (a flag), POL-GEN-22 (a</text>
+<text x="245" y="586" font-size="12.5" fill="#0B2540" text-anchor="middle" data-box="s6">value over SGD 50) and POL-RD-25 (a</text>
+<text x="245" y="603" font-size="12.5" fill="#0B2540" text-anchor="middle" data-box="s6">route deviation over 2 km): ESCALATE,</text>
+<text x="245" y="620" font-size="12.5" fill="#0B2540" text-anchor="middle" data-box="s6">and the judge is not asked.</text>
 <text x="600" y="526" font-size="16" fill="#0B2540" font-weight="bold" text-anchor="middle" data-box="s7">7.  Citation referee</text>
 <text x="600" y="544" font-size="11.5" fill="#0B2540" text-anchor="middle" data-box="s7">[Component: tribunal/referee.py]</text>
 <text x="600" y="569" font-size="12.5" fill="#0B2540" text-anchor="middle" data-box="s7">Discards a claim whose evidence or clause</text>
 <text x="600" y="586" font-size="12.5" fill="#0B2540" text-anchor="middle" data-box="s7">id is missing or unresolved, an undisclosed</text>
 <text x="600" y="603" font-size="12.5" fill="#0B2540" text-anchor="middle" data-box="s7">impairment, or a profile field as ground.</text>
 <text x="955" y="526" font-size="16" fill="#0B2540" font-weight="bold" text-anchor="middle" data-box="s8">8.  Judge panel</text>
-<text x="955" y="544" font-size="11.5" fill="#0B2540" text-anchor="middle" data-box="s8">[Component: prompts/v1/judge.system.md]</text>
+<text x="955" y="544" font-size="11.5" fill="#0B2540" text-anchor="middle" data-box="s8">[Component: prompts/v2/judge.system.md]</text>
 <text x="955" y="565" font-size="11" fill="#FFFFFF" font-weight="bold" text-anchor="middle" data-box="s8">LLM x 4</text>
 <text x="955" y="593" font-size="12.5" fill="#0B2540" text-anchor="middle" data-box="s8">Four drafts: three sampled, one with</text>
 <text x="955" y="610" font-size="12.5" fill="#0B2540" text-anchor="middle" data-box="s8">the positions swapped. Optional</text>
@@ -140,11 +140,11 @@
 <text x="1310" y="569" font-size="12.5" fill="#0B2540" text-anchor="middle" data-box="s9">Ten DRAFT_* checks, one of them</text>
 <text x="1310" y="586" font-size="12.5" fill="#0B2540" text-anchor="middle" data-box="s9">DRAFT_BELOW_FLOOR; a draft that</text>
 <text x="1310" y="603" font-size="12.5" fill="#0B2540" text-anchor="middle" data-box="s9">fails one abstains.</text>
-<text x="1665" y="526" font-size="16" fill="#0B2540" font-weight="bold" text-anchor="middle" data-box="s10">10.  Vote and floor</text>
+<text x="1665" y="526" font-size="16" fill="#0B2540" font-weight="bold" text-anchor="middle" data-box="s10">10.  Vote and the bar</text>
 <text x="1665" y="544" font-size="11.5" fill="#0B2540" text-anchor="middle" data-box="s10">[Component: tribunal/pipeline.py]</text>
 <text x="1665" y="569" font-size="12.5" fill="#0B2540" text-anchor="middle" data-box="s10">3 of 4 must agree; no valid draft,</text>
 <text x="1665" y="586" font-size="12.5" fill="#0B2540" text-anchor="middle" data-box="s10">no majority, or confidence below</text>
-<text x="1665" y="603" font-size="12.5" fill="#0B2540" text-anchor="middle" data-box="s10">0.70: ESCALATE.</text>
+<text x="1665" y="603" font-size="12.5" fill="#0B2540" text-anchor="middle" data-box="s10">the bar v2.1 asks: ESCALATE.</text>
 <text x="1665" y="741" font-size="16" fill="#0B2540" font-weight="bold" text-anchor="middle" data-box="s11">11.  Publish and record</text>
 <text x="1665" y="759" font-size="11.5" fill="#0B2540" text-anchor="middle" data-box="s11">[Component: pipeline.py, transcript.py, events.py]</text>
 <text x="1665" y="784" font-size="12.5" fill="#0B2540" text-anchor="middle" data-box="s11">Returns a ruling, or ESCALATE with its</text>
@@ -176,14 +176,12 @@
 <text x="1000" y="247" font-size="12" fill="#1F2328" text-anchor="middle" data-label="L86">integrity table (no_show.json)</text>
 <text x="1000" y="261" font-size="10.5" fill="#57606A" text-anchor="middle" data-label="L86">[JSON, loaded by brief.py]</text>
 <rect x="1165" y="237" width="155" height="33" rx="4" fill="#FFFFFF" fill-opacity="0.94" data-plate="L89"/>
-<text x="1314" y="250" font-size="12" fill="#1F2328" text-anchor="end" data-label="L89">reads version 6</text>
-<text x="1314" y="264" font-size="10.5" fill="#57606A" text-anchor="end" data-label="L89">[JSON, --policy-version 6]</text>
-<rect x="847.45" y="437" width="245.1" height="19" rx="4" fill="#FFFFFF" fill-opacity="0.94" data-plate="L92"/>
-<text x="970" y="450" font-size="12" fill="#1F2328" text-anchor="middle" data-label="L92">not flagged: the brief, to both sides</text>
-<rect x="1817.65" y="627" width="68.7" height="49" rx="4" fill="#FFFFFF" fill-opacity="0.94" data-plate="L94"/>
-<text x="1852" y="640" font-size="12" fill="#1F2328" text-anchor="middle" data-label="L94">stopped:</text>
-<text x="1852" y="655" font-size="12" fill="#1F2328" text-anchor="middle" data-label="L94">ESCALATE,</text>
-<text x="1852" y="670" font-size="12" fill="#1F2328" text-anchor="middle" data-label="L94">no model</text>
+<text x="1314" y="250" font-size="12" fill="#1F2328" text-anchor="end" data-label="L89">reads version 8</text>
+<text x="1314" y="264" font-size="10.5" fill="#57606A" text-anchor="end" data-label="L89">[JSON, --policy-version 8]</text>
+<rect x="834.55" y="422" width="270.9" height="19" rx="4" fill="#FFFFFF" fill-opacity="0.94" data-plate="L92"/>
+<text x="970" y="435" font-size="12" fill="#1F2328" text-anchor="middle" data-label="L92">both advocates ran: the brief, to the gate</text>
+<rect x="1580" y="466" width="238.65" height="19" rx="4" fill="#FFFFFF" fill-opacity="0.94" data-plate="L94"/>
+<text x="1699.325" y="479" font-size="12" fill="#1F2328" text-anchor="middle" data-label="L94">stopped: ESCALATE after the advocates</text>
 <rect x="396.1" y="537" width="49.8" height="19" rx="4" fill="#FFFFFF" fill-opacity="0.94" data-plate="L98"/>
 <text x="421" y="550" font-size="12" fill="#1F2328" text-anchor="middle" data-label="L98">claims</text>
 <rect x="751.1" y="531" width="49.8" height="34" rx="4" fill="#FFFFFF" fill-opacity="0.94" data-plate="L100"/>
@@ -200,14 +198,14 @@
 <text x="1660" y="848" font-size="12" fill="#1F2328" text-anchor="end" data-label="L110">events into the run&#x27;s log; eval writes</text>
 <text x="1660" y="863" font-size="12" fill="#1F2328" text-anchor="end" data-label="L110">case-*.json and the transcript</text>
 <text x="1660" y="877" font-size="10.5" fill="#57606A" text-anchor="end" data-label="L110">[JSONL, JSON]</text>
-<rect x="418.25" y="862" width="83.5" height="33" rx="4" fill="#FFFFFF" fill-opacity="0.94" data-plate="L114"/>
-<text x="460" y="875" font-size="12" fill="#1F2328" text-anchor="middle" data-label="L114">2 calls</text>
-<text x="460" y="889" font-size="10.5" fill="#57606A" text-anchor="middle" data-label="L114">[HTTPS, JSON]</text>
+<rect x="1358.25" y="993.5" width="83.5" height="33" rx="4" fill="#FFFFFF" fill-opacity="0.94" data-plate="L114"/>
+<text x="1400" y="1006.5" font-size="12" fill="#1F2328" text-anchor="middle" data-label="L114">2 calls</text>
+<text x="1400" y="1020.5" font-size="10.5" fill="#57606A" text-anchor="middle" data-label="L114">[HTTPS, JSON]</text>
 <rect x="876" y="857" width="83.5" height="33" rx="4" fill="#FFFFFF" fill-opacity="0.94" data-plate="L117"/>
 <text x="882" y="870" font-size="12" fill="#1F2328" data-label="L117">4 calls</text>
 <text x="882" y="884" font-size="10.5" fill="#57606A" data-label="L117">[HTTPS, JSON]</text>
 <rect x="1057.3" y="772" width="125.4" height="33" rx="4" fill="#FFFFFF" fill-opacity="0.94" data-plate="L120"/>
 <text x="1120" y="785" font-size="12" fill="#1F2328" text-anchor="middle" data-label="L120">shown to the judge</text>
 <text x="1120" y="799" font-size="10.5" fill="#57606A" text-anchor="middle" data-label="L120">[--precedents]</text>
-<text x="32" y="1072" font-size="12" fill="#57606A">Arrows inside the container are in-process Python calls; the label names what is passed. Six model calls a case, seven with --verify-drafts, none for a stopped case; an unusable answer is retried once, an HTTP 429/5xx up to 4 attempts.</text>
+<text x="32" y="1072" font-size="12" fill="#57606A">Arrows inside the container are in-process Python calls; the label names what is passed. Six model calls a case, seven with --verify-drafts, two for a case the authority gate stops; an unusable answer is retried once, an HTTP 429/5xx up to 4 attempts.</text>
 </svg>

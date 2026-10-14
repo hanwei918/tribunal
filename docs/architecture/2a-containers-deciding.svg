@@ -128,18 +128,17 @@
 <text x="880" y="344" font-size="11.5" fill="#FFFFFF" text-anchor="middle" data-box="pipe">[Container: Python package, tribunal/]</text>
 <text x="880" y="365" font-size="11" fill="#FFFFFF" font-weight="bold" text-anchor="middle" data-box="pipe">calls the LLM</text>
 <text x="880" y="393" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pipe">Decides one case: one brief, two</text>
-<text x="880" y="410" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pipe">advocates, a citation referee, four</text>
-<text x="880" y="427" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pipe">judge drafts, ten DRAFT_* checks,</text>
-<text x="880" y="444" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pipe">a 3-of-4 vote with a 0.70 floor.</text>
-<text x="880" y="461" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pipe">Returns a ruling or ESCALATE to</text>
-<text x="880" y="478" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pipe">its caller; 6 model calls a case.</text>
+<text x="880" y="410" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pipe">advocates, the authority gate, a citation</text>
+<text x="880" y="427" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pipe">referee, four judge drafts, ten DRAFT_*</text>
+<text x="880" y="444" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pipe">checks and a 3-of-4 vote against the bar</text>
+<text x="880" y="461" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pipe">v2.1 states (POL-GEN-22, POL-RD-25).</text>
+<text x="880" y="478" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pipe">Returns a ruling or ESCALATE; 6 calls a case.</text>
 <text x="880" y="512" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pipe">Switches (off by default):</text>
 <text x="880" y="529" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pipe">--policy-version N (default 1; the</text>
-<text x="880" y="546" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pipe">product runs use 6), --parallel-calls,</text>
-<text x="880" y="563" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pipe">--integrity-gate, --verify-drafts,</text>
-<text x="880" y="580" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pipe">--precedents, --early-majority,</text>
-<text x="880" y="597" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pipe">--advocate-effort, --amount-rule,</text>
-<text x="880" y="614" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pipe">--ablate, --judge-votes.</text>
+<text x="880" y="546" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pipe">product runs use 8), --parallel-calls,</text>
+<text x="880" y="563" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pipe">--verify-drafts, --precedents,</text>
+<text x="880" y="580" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pipe">--early-majority, --advocate-effort,</text>
+<text x="880" y="597" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pipe">--amount-rule, --ablate, --judge-votes.</text>
 <text x="880" y="648" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pipe">Step by step: sheet 3.</text>
 <text x="1280" y="338" font-size="16" fill="#FFFFFF" font-weight="bold" text-anchor="middle" data-box="case">Case store</text>
 <text x="1280" y="356" font-size="11.5" fill="#FFFFFF" text-anchor="middle" data-box="case">[Container: JSON files, data/]</text>
@@ -148,10 +147,10 @@
 <text x="1280" y="415" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="case">data/external/. No answers.</text>
 <text x="1280" y="488" font-size="16" fill="#FFFFFF" font-weight="bold" text-anchor="middle" data-box="pol">Policy store</text>
 <text x="1280" y="506" font-size="11.5" fill="#FFFFFF" text-anchor="middle" data-box="pol">[Container: JSON files, policy/]</text>
-<text x="1280" y="531" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pol">Versions 1-6; version 6 = policy/v3 +</text>
-<text x="1280" y="548" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pol">amendments 0001-0003, 34 clauses.</text>
+<text x="1280" y="531" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pol">Versions 1-8; policy/v7/ and policy/v8/ sit</text>
+<text x="1280" y="548" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pol">beside the older bases; the runs read v8.</text>
 <text x="1280" y="638" font-size="16" fill="#FFFFFF" font-weight="bold" text-anchor="middle" data-box="pr">Prompt templates</text>
-<text x="1280" y="656" font-size="11.5" fill="#FFFFFF" text-anchor="middle" data-box="pr">[Container: Markdown, prompts/v1/]</text>
+<text x="1280" y="656" font-size="11.5" fill="#FFFFFF" text-anchor="middle" data-box="pr">[Container: Markdown, prompts/v2/]</text>
 <text x="1280" y="681" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pr">advocate + two stances, judge,</text>
 <text x="1280" y="698" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pr">verifier, policy drafter.</text>
 <text x="1280" y="788" font-size="16" fill="#FFFFFF" font-weight="bold" text-anchor="middle" data-box="prec">Precedent store</text>
@@ -227,5 +226,5 @@
 <rect x="1332.85" y="132" width="144.3" height="33" rx="4" fill="#FFFFFF" fill-opacity="0.94" data-plate="L137"/>
 <text x="1405" y="145" font-size="12" fill="#1F2328" text-anchor="middle" data-label="L137">supplies case records</text>
 <text x="1405" y="159" font-size="10.5" fill="#57606A" text-anchor="middle" data-label="L137">[JSON, contract 1.2.0]</text>
-<text x="32" y="1072" font-size="12" fill="#57606A">Source: tribunal-main_4. Code trees as at freeze-2026-10-11 (tribunal/, prompts/, policy/ equal commit 19c7e5a per README); the product runs use --policy-version 6 (34 clauses).</text>
+<text x="32" y="1072" font-size="12" fill="#57606A">Source: tribunal-main_4. Code trees as at freeze-2026-10-14-v8 (tribunal/, prompts/, policy/ equal commit af2b5ca); the product runs use --policy-version 8 (Ryde&#x27;s v2.1 + Ryde&#x27;s answers of 2026-10-14).</text>
 </svg>

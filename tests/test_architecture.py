@@ -1,7 +1,9 @@
 """The architecture set is a self-contained, honest document.
 
 The set is the policy owner's: four C4-style views, drawn from the code at the
-final freeze and committed under ``docs/architecture/``. ``docs/architecture.svg``
+freeze the submission applies -- ``freeze-2026-10-14-v8``, policy version 8,
+Ryde's Dispute Resolution Policy v2.1 with Ryde's answers of 2026-10-14 -- and
+committed under ``docs/architecture/``. ``docs/architecture.svg``
 is a byte-for-byte copy of the dynamic view, because the README embeds that file
 and the queue's own "Architecture" link opens it. ``docs/architecture.md``
 explains the four views element by element, in the same order. Four properties
@@ -333,7 +335,7 @@ class TheExtractorTests(unittest.TestCase):
             ("2b-containers-after-ruling.svg", "precedents/precedents.jsonl"),
             ("3-dynamic-one-dispute.svg", "tribunal/pipeline.py"),
             ("3-dynamic-one-dispute.svg", "tribunal/loader.py"),
-            ("3-dynamic-one-dispute.svg", "prompts/v1/judge.system.md"),
+            ("3-dynamic-one-dispute.svg", "prompts/v2/judge.system.md"),
             ("3-dynamic-one-dispute.svg", "data/index.json"),
             ("architecture.svg", "tribunal/brief.py"),
             ("architecture.svg", "tribunal/referee.py"),

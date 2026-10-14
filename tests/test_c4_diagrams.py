@@ -27,10 +27,17 @@ halves together:
   gitignored and therefore absent from a clean clone -- a generator that read
   it would work only on the machine that wrote it.
 
+The set draws **version 8**, so three more things are asserted here: no
+specification states a version-6 rule -- a clause, a path, a figure -- except
+inside a label that says version 6 for itself; the dynamic view's boxes are
+numbered in the order the sheet lists the steps, with the advocates before the
+authority gate; and every path a specification writes is a path that is here.
+
 The check is shown to be capable of failing: a render of one specification with
 one string changed is compared with the committed file and is required to
 differ, and a doctored claim is required to be reported, so neither check can
-pass by looking at nothing.
+pass by looking at nothing. Three more controls do the same for the version-6
+rule, for the step order and for the path check.
 
 No model call is made and no browser is launched. Run from the project root
 with::
@@ -41,8 +48,10 @@ with::
 from __future__ import annotations
 
 import ast
+import copy
 import importlib.util
 import json
+import re
 import unittest
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -64,13 +73,68 @@ SCRATCH_DIR_NAME = "tm" + "p"
 # a drawing that lost or gained an element is reported against them.
 SPECS: Tuple[Tuple[str, int], ...] = (
     ("1-system-context", 137),
-    ("2a-containers-deciding", 228),
-    ("2b-containers-after-ruling", 223),
-    ("3-dynamic-one-dispute", 210),
+    ("2a-containers-deciding", 227),
+    ("2b-containers-after-ruling", 227),
+    ("3-dynamic-one-dispute", 208),
 )
 
 # The view ``docs/architecture.svg`` is a copy of, and the one the README embeds.
 DYNAMIC_VIEW = "3-dynamic-one-dispute"
+
+# The dynamic view's eleven steps, in the order the sheet lists them: the boxes
+# are numbered as that list numbers them, so the two advocates come before the
+# authority gate and the gate before the citation referee. The number each box
+# carries is read off the specification and compared with this list.
+DYNAMIC_STEPS: Tuple[str, ...] = (
+    "1.  Load the case",
+    "2.  Weigh the evidence",
+    "3.  Derive facts and money",
+    "4.  Build one brief",
+    "5.  Two advocates",
+    "6.  Authority gate",
+    "7.  Citation referee",
+    "8.  Judge panel",
+    "9.  Draft checks",
+    "10.  Vote and the bar",
+    "11.  Publish and record",
+)
+
+# A step's own label: a number, a period and a space. Nothing else in the
+# dynamic view opens that way.
+STEP_LABEL = re.compile(r"^(\d+)\.\s")
+
+# A repository path as a specification writes one, in the shape
+# ``tests/test_architecture.py`` reads the drawings' paths in, so the two read
+# one path the same way. The longer extension is listed first so ``.jsonl`` is
+# not read as ``.json`` with a trailing letter, and the lookahead stops a match
+# in the middle of a word.
+PATH_TOKEN = re.compile(
+    r"[A-Za-z0-9_][A-Za-z0-9_./-]*/[A-Za-z0-9_./-]*"
+    r"\.(?:jsonl|json|py|md|svg|html)(?![A-Za-z0-9])"
+)
+
+# The phrases that state a **version-6** rule -- the freeze the drawings were
+# first made from, the scope gate, the floor, the policy and prompt directories
+# and the release threshold -- and the words a label must carry to state one for
+# itself. The list is the support site's own (``tests/test_site_figures.py``),
+# because the same rule holds of a drawing: a specification may name a
+# version-6 clause, path or figure, but only where it says version 6.
+VERSION_SIX_PHRASES: Tuple[str, ...] = (
+    "freeze-2026-10-11",
+    "--policy-version 6",
+    "policy/v3",
+    "prompts/v1",
+    "0.70",
+    "POL-GEN-08",
+    "SGD 8",
+)
+
+VERSION_SIX_WORDS: Tuple[str, ...] = (
+    "version 6",
+    "version-6",
+    "Version 6",
+    "Version-6",
+)
 
 # The correction 2a carries, and the sentence it replaces. The first is what
 # ``ops/evidence.py`` does -- it is given the dispute and reads that dispute's
@@ -106,6 +170,48 @@ def local_name(tag: str) -> str:
 def spec_of(name: str) -> Dict[str, Any]:
     """One layout specification, read from its committed file."""
     return json.loads((SPEC_DIR / "{0}.json".format(name)).read_text(encoding="utf-8"))
+
+
+def spec_texts(name: str) -> List[str]:
+    """Every string one specification carries, in drawing order.
+
+    A label is the unit the version-6 rule is stated in: the ``<text>``'s own
+    string, and not the box it sits in, so a phrase cannot lean on a heading
+    somewhere above it to say which version it belongs to.
+    """
+    return [
+        element["text"]
+        for element in spec_of(name)["elements"]
+        if element.get("text")
+    ]
+
+
+def step_labels(elements: Any) -> List[str]:
+    """Every text that opens as a step label: a number, a period, a space."""
+    return [
+        element["text"]
+        for element in elements
+        if element.get("text") and STEP_LABEL.match(element["text"])
+    ]
+
+
+def unnamed_version_six_phrases(elements: Any) -> List[str]:
+    """Every version-6 phrase a specification states without naming version 6.
+
+    A label that says version 6 for itself may name the freeze, the clause, the
+    directory or the figure it belongs to -- that is what a history is. A label
+    that does not is stating one as the rule in force, which is what the four
+    views were drawn at version 8 to stop doing.
+    """
+    offences: List[str] = []
+    for element in elements:
+        text = element.get("text")
+        if not text or any(word in text for word in VERSION_SIX_WORDS):
+            continue
+        for phrase in VERSION_SIX_PHRASES:
+            if phrase in text:
+                offences.append("{0}: {1}".format(phrase, text))
+    return offences
 
 
 def placed_elements(path: Path) -> List[str]:
@@ -292,6 +398,97 @@ class TheCorrectionTests(unittest.TestCase):
         """The check above is shown capable of failing."""
         text = (VIEW_DIR / "2a-containers-deciding.svg").read_text(encoding="utf-8")
         self.assertIn(REPLACED_CLAIM, text.replace(CORRECTED_CLAIM, REPLACED_CLAIM))
+
+
+class TheVersionSixTests(unittest.TestCase):
+    """No specification states a version-6 rule as the one in force.
+
+    The four views draw version 8: v2.1's authority gate in place of the scope
+    gate, v2.1's bar in place of the 0.70 floor, ``policy/v7`` and ``policy/v8``
+    in place of ``policy/v3``, ``prompts/v2`` in place of ``prompts/v1``, and
+    the freeze of 2026-10-14 in place of the freeze of 2026-10-11. Where a
+    version-6 fact still stands -- the operations layer reads version-6 runs,
+    and its release threshold is version 6's -- it stands inside a label that
+    says so.
+    """
+
+    def test_no_specification_states_one_without_naming_version_six(self):
+        for name, _count in SPECS:
+            with self.subTest(spec=name):
+                self.assertEqual(
+                    [],
+                    unnamed_version_six_phrases(spec_of(name)["elements"]),
+                    "{0} states a version-6 rule as the one in force".format(name),
+                )
+
+    def test_a_phrase_that_lost_its_label_is_reported(self):
+        """The check above is shown capable of failing."""
+        elements = copy.deepcopy(spec_of("2b-containers-after-ruling")["elements"])
+        for element in elements:
+            if element.get("text") == "review; kill switch; version 6: above SGD 8.00":
+                element["text"] = "review; kill switch; above SGD 8.00 listed"
+        self.assertEqual(
+            1, len(unnamed_version_six_phrases(elements)), "the control did not fire"
+        )
+
+    def test_the_version_six_labels_that_remain_are_labelled(self):
+        """A control: the exception is exercised, so the rule is not vacuous."""
+        texts = spec_texts("2b-containers-after-ruling")
+        self.assertIn("Version 6 = policy/v3 + 0001-0003 by hand", texts)
+        self.assertIn("review; kill switch; version 6: above SGD 8.00", texts)
+
+
+class TheDynamicOrderTests(unittest.TestCase):
+    """The dynamic view's boxes are numbered in the order the sheet lists."""
+
+    def test_the_steps_are_the_order_the_sheet_lists(self):
+        self.assertEqual(
+            list(DYNAMIC_STEPS),
+            step_labels(spec_of(DYNAMIC_VIEW)["elements"]),
+            "the dynamic view's steps are not numbered in the sheet's order",
+        )
+
+    def test_the_steps_are_eleven_and_the_drawing_carries_them(self):
+        """The numbers are the specification's and the drawing's alike."""
+        numbers = [
+            int(STEP_LABEL.match(text).group(1))
+            for text in step_labels(spec_of(DYNAMIC_VIEW)["elements"])
+        ]
+        self.assertEqual(list(range(1, 12)), numbers)
+
+    def test_a_spec_with_five_and_six_swapped_back_is_reported(self):
+        """The control: the order is a fact about the specification.
+
+        Version 6's drawing had the scope gate at step 5 and the two advocates
+        at step 6. A specification that put them back that way -- the drawing
+        this part replaces -- must fail the test above.
+        """
+        elements = copy.deepcopy(spec_of(DYNAMIC_VIEW)["elements"])
+        five = [e for e in elements if e.get("text") == DYNAMIC_STEPS[4]][0]
+        six = [e for e in elements if e.get("text") == DYNAMIC_STEPS[5]][0]
+        five["text"], six["text"] = six["text"], five["text"]
+        self.assertNotEqual(list(DYNAMIC_STEPS), step_labels(elements))
+
+
+class TheFilesNamedTests(unittest.TestCase):
+    """Every box that names a file names one that is here."""
+
+    def test_every_path_a_specification_writes_exists(self):
+        for name, _count in SPECS:
+            written = sorted(set(PATH_TOKEN.findall(json.dumps(spec_of(name)))))
+            self.assertTrue(written, "{0} names no file at all".format(name))
+            for token in written:
+                with self.subTest(spec=name, path=token):
+                    self.assertTrue(
+                        (PROJECT_ROOT / token).exists(),
+                        "{0} names {1}, which is not in the repository".format(name, token),
+                    )
+
+    def test_a_path_that_is_not_here_is_reported(self):
+        """The check above is shown capable of failing."""
+        absent = "docs/notes/this-note-does-not-exist.md"
+        self.assertEqual([absent], PATH_TOKEN.findall("see {0} for it".format(absent)))
+        self.assertFalse((PROJECT_ROOT / absent).exists())
 
 
 class TheScratchDirectoryTests(unittest.TestCase):

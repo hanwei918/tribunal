@@ -24,8 +24,8 @@
 <path d="M1280,520 L1280,414" fill="none" stroke="#3D444D" stroke-width="1.5" marker-end="url(#a)"/>
 <path d="M1130,590 L1032,590" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round"/>
 <path d="M1130,590 L1032,590" fill="none" stroke="#3D444D" stroke-width="1.5" marker-end="url(#a)"/>
-<path d="M1350,724 L1350,788" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round"/>
-<path d="M1350,724 L1350,788" fill="none" stroke="#3D444D" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M1350,741 L1350,788" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round"/>
+<path d="M1350,741 L1350,788" fill="none" stroke="#3D444D" stroke-width="1.5" marker-end="url(#a)"/>
 <path d="M1530,600 L1432,600" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round"/>
 <path d="M1530,600 L1432,600" fill="none" stroke="#3D444D" stroke-width="1.5" marker-end="url(#a)"/>
 <path d="M600,790 L600,740 L760,740 L760,654" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round"/>
@@ -82,8 +82,8 @@
 <path d="M730,549 a150,9 0 0 0 300,0 v94 a150,9 0 0 1 -300,0 z" fill="#438DD5" stroke="#2E6295" stroke-width="1.5"/>
 <ellipse cx="880" cy="549" rx="150" ry="9" fill="#438DD5" stroke="#2E6295" stroke-width="1.5"/>
 <rect id="runs" x="730" y="540" width="300" height="112" fill="none" stroke="none"/>
-<rect id="ops" x="1130" y="520" width="300" height="204" rx="12" fill="#438DD5" stroke="#2E6295" stroke-width="1.5"/>
-<rect id="site" x="330" y="790" width="300" height="102" rx="12" fill="#438DD5" stroke="#2E6295" stroke-width="1.5"/>
+<rect id="ops" x="1130" y="520" width="300" height="221" rx="12" fill="#438DD5" stroke="#2E6295" stroke-width="1.5"/>
+<rect id="site" x="330" y="790" width="300" height="153" rx="12" fill="#438DD5" stroke="#2E6295" stroke-width="1.5"/>
 <rect id="mcp" x="730" y="790" width="300" height="119" rx="12" fill="#438DD5" stroke="#2E6295" stroke-width="1.5"/>
 <path d="M1130,799 a150,9 0 0 0 300,0 v94 a150,9 0 0 1 -300,0 z" fill="#438DD5" stroke="#2E6295" stroke-width="1.5"/>
 <ellipse cx="1280" cy="799" rx="150" ry="9" fill="#438DD5" stroke="#2E6295" stroke-width="1.5"/>
@@ -110,7 +110,7 @@
 <text x="135" y="856" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="eo">tribunal.edgeone.dev</text>
 <text x="480" y="338" font-size="16" fill="#FFFFFF" font-weight="bold" text-anchor="middle" data-box="pol">Policy store</text>
 <text x="480" y="356" font-size="11.5" fill="#FFFFFF" text-anchor="middle" data-box="pol">[Container: JSON files, policy/]</text>
-<text x="480" y="381" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pol">v6 = policy/v3 + 0001-0003, placed by hand</text>
+<text x="480" y="381" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pol">Version 6 = policy/v3 + 0001-0003 by hand</text>
 <text x="480" y="398" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pol">(no policy_gaps report); 0003 by Zhou Hanwei.</text>
 <text x="880" y="326" font-size="16" fill="#FFFFFF" font-weight="bold" text-anchor="middle" data-box="gap">Policy-gap tool</text>
 <text x="880" y="344" font-size="11.5" fill="#FFFFFF" text-anchor="middle" data-box="gap">[Container: Python CLI, eval/policy_gaps.py]</text>
@@ -126,7 +126,7 @@
 <text x="1280" y="381" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="prec">Append-only, hash-chained; P-0001/0002 by</text>
 <text x="1280" y="398" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="prec">tribunal.precedents close (before review.py).</text>
 <text x="480" y="578" font-size="16" fill="#FFFFFF" font-weight="bold" text-anchor="middle" data-box="pr">Prompt templates</text>
-<text x="480" y="596" font-size="11.5" fill="#FFFFFF" text-anchor="middle" data-box="pr">[Container: Markdown, prompts/v1/]</text>
+<text x="480" y="596" font-size="11.5" fill="#FFFFFF" text-anchor="middle" data-box="pr">[Container: Markdown, prompts/v2/]</text>
 <text x="480" y="621" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pr">policy_drafter.system.md is the</text>
 <text x="480" y="638" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pr">draft step&#x27;s prompt.</text>
 <text x="880" y="578" font-size="16" fill="#FFFFFF" font-weight="bold" text-anchor="middle" data-box="runs">Run records</text>
@@ -135,18 +135,22 @@
 <text x="880" y="638" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="runs">digest, transcript and grade (sheet 2a).</text>
 <text x="1280" y="546" font-size="16" fill="#FFFFFF" font-weight="bold" text-anchor="middle" data-box="ops">Operations CLI</text>
 <text x="1280" y="564" font-size="11.5" fill="#FFFFFF" text-anchor="middle" data-box="ops">[Container: Python CLI, ops/ - no model call]</text>
-<text x="1280" y="589" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="ops">queue.py: lanes (safety fast track, human</text>
-<text x="1280" y="606" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="ops">review, auto); chat_signals.py threat first;</text>
-<text x="1280" y="623" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="ops">risk.py orders review; kill switch; above</text>
-<text x="1280" y="640" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="ops">SGD 8.00 listed for release; 48 h target.</text>
-<text x="1280" y="657" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="ops">escalation.py packet; review.py closure</text>
-<text x="1280" y="674" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="ops">needs the packet&#x27;s sha256; evidence_window</text>
-<text x="1280" y="691" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="ops">36 h, never paused; appeal.py six checks.</text>
-<text x="1280" y="708" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="ops">Thresholds read from the policy.</text>
+<text x="1280" y="589" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="ops">Version 6: reads version-6 runs; version 8</text>
+<text x="1280" y="606" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="ops">is on the roadmap. queue.py: lanes (safety</text>
+<text x="1280" y="623" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="ops">fast track, human review, auto);</text>
+<text x="1280" y="640" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="ops">chat_signals.py threat first; risk.py orders</text>
+<text x="1280" y="657" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="ops">review; kill switch; version 6: above SGD 8.00</text>
+<text x="1280" y="674" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="ops">listed for release; 48 h target.</text>
+<text x="1280" y="691" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="ops">escalation.py packet; review.py closure needs</text>
+<text x="1280" y="708" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="ops">the packet&#x27;s sha256; evidence_window 36 h,</text>
+<text x="1280" y="725" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="ops">never paused; appeal.py six checks.</text>
 <text x="480" y="816" font-size="16" fill="#FFFFFF" font-weight="bold" text-anchor="middle" data-box="site">Support site build</text>
 <text x="480" y="834" font-size="11.5" fill="#FFFFFF" text-anchor="middle" data-box="site">[Container: Python, ui/v2/build.py]</text>
 <text x="480" y="859" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="site">Case pages, queue, review form from the</text>
-<text x="480" y="876" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="site">v6 runs (10-09); also reads data/, policy.</text>
+<text x="480" y="876" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="site">v6 runs (10-09); the version-8 case pages</text>
+<text x="480" y="893" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="site">(ui/v8/build.py, ui/dist/v8-*.html) are</text>
+<text x="480" y="910" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="site">what a reviewer reads for a v8 run. Also</text>
+<text x="480" y="927" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="site">reads data/ and policy/.</text>
 <text x="880" y="816" font-size="16" fill="#FFFFFF" font-weight="bold" text-anchor="middle" data-box="mcp">WorkBuddy connector</text>
 <text x="880" y="834" font-size="11.5" fill="#FFFFFF" text-anchor="middle" data-box="mcp">[Container: Python MCP server, integrations/]</text>
 <text x="880" y="859" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="mcp">Tools tribunal_case, _queue, _packet;</text>
@@ -189,9 +193,9 @@
 <text x="1081" y="576" font-size="12" fill="#1F2328" text-anchor="middle" data-label="L97">reads</text>
 <text x="1081" y="591" font-size="12" fill="#1F2328" text-anchor="middle" data-label="L97">rulings</text>
 <text x="1081" y="605" font-size="10.5" fill="#57606A" text-anchor="middle" data-label="L97">[JSON]</text>
-<rect x="1268.4" y="725" width="163.2" height="33" rx="4" fill="#FFFFFF" fill-opacity="0.94" data-plate="L101"/>
-<text x="1350" y="738" font-size="12" fill="#1F2328" text-anchor="middle" data-label="L101">rebuilds the packet from</text>
-<text x="1350" y="752" font-size="10.5" fill="#57606A" text-anchor="middle" data-label="L101">[JSON]</text>
+<rect x="1268.4" y="742" width="163.2" height="33" rx="4" fill="#FFFFFF" fill-opacity="0.94" data-plate="L101"/>
+<text x="1350" y="755" font-size="12" fill="#1F2328" text-anchor="middle" data-label="L101">rebuilds the packet from</text>
+<text x="1350" y="769" font-size="10.5" fill="#57606A" text-anchor="middle" data-label="L101">[JSON]</text>
 <rect x="1444.75" y="573" width="72.5" height="48" rx="4" fill="#FFFFFF" fill-opacity="0.94" data-plate="L104"/>
 <text x="1481" y="586" font-size="12" fill="#1F2328" text-anchor="middle" data-label="L104">works</text>
 <text x="1481" y="601" font-size="12" fill="#1F2328" text-anchor="middle" data-label="L104">the queue</text>
@@ -222,5 +226,5 @@
 <rect x="503.6" y="1023" width="112.8" height="33" rx="4" fill="#FFFFFF" fill-opacity="0.94" data-plate="L131"/>
 <text x="560" y="1036" font-size="12" fill="#1F2328" text-anchor="middle" data-label="L131">reads case pages</text>
 <text x="560" y="1050" font-size="10.5" fill="#57606A" text-anchor="middle" data-label="L131">[HTTPS, browser]</text>
-<text x="32" y="1072" font-size="12" fill="#57606A">Source: tribunal-main_4; approvals from policy/v3/amendments/*.json and docs/notes/2026-10-10-ns-12-confirmed-by-policy-owner.md.</text>
+<text x="32" y="1072" font-size="12" fill="#57606A">Source: tribunal-main_4; version 6&#x27;s amendments are policy/v3/amendments/*.json (docs/notes/2026-10-10-ns-12-confirmed-by-policy-owner.md); version 8 is Ryde&#x27;s v2.1 with Ryde&#x27;s answers of 2026-10-14 (docs/notes/2026-10-14-policy-v8.md).</text>
 </svg>

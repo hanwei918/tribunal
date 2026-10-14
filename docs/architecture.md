@@ -3,17 +3,20 @@
 The four views are drawn by `tools/c4_diagrams.py`, written in WorkBuddy, from
 the layout specifications in `docs/architecture/spec/` -- one JSON file per
 view, each a transcription of a drawing and nothing else. Those specifications
-transcribe the C4 set the policy owner, **Ji Guofang**, designed from the code
-at the final freeze, `freeze-2026-10-11`, which is policy version 6, and the
-views are read in the order this page walks them. One correction was made, and
-it is the only difference between her drawings and these: the evidence
-collector's box says what `ops/evidence.py` does -- it is given the dispute and
-reads that dispute's trip id -- where the drawing said it was given only a trip
-id. The **system context** says who uses Tribunal and what it depends on. The
-two **container** views open the system itself: 2a for deciding and measuring,
-2b for what happens after a ruling. The **dynamic** view follows one dispute
-down the pipeline, step by step. Every element names the file that implements
-it, and every arrow is directed and labelled with what it carries.
+transcribe the C4 set the policy owner, **Ji Guofang**, designed, redrawn for
+the policy the submission applies: **version 8**, Ryde's own Dispute Resolution
+Policy v2.1 with Ryde's answers of 2026-10-14. The `tribunal/`, `prompts/` and
+`policy/` trees the views are drawn from are the annotated tag
+`freeze-2026-10-14-v8` (commit `af2b5ca`), and the views are read in the order
+this page walks them. One correction was made, and it is the only difference
+between her drawings and these: the evidence collector's box says what
+`ops/evidence.py` does -- it is given the dispute and reads that dispute's trip
+id -- where the drawing said it was given only a trip id. The **system context**
+says who uses Tribunal and what it depends on. The two **container** views open
+the system itself: 2a for deciding and measuring, 2b for what happens after a
+ruling. The **dynamic** view follows one dispute down the pipeline, step by
+step. Every element names the file that implements it, and every arrow is
+directed and labelled with what it carries.
 
 ![Tribunal architecture](architecture.svg)
 
@@ -30,6 +33,14 @@ default. Each drawing's own legend names its swatches, and the colours are the
 C4-PlantUML defaults. Nothing in the set is a link, a script or an embedded
 image: each file stands alone.
 
+**Where a part is still version 6.** The views draw version 8, and three parts
+of the system are deliberately still version 6: the **operations layer** -- the
+queue, the escalation packet, the review, the appeal and the risk signals under
+`ops/`, which read the version-6 runs; the **try-it page**, which briefs at
+version 6 in the browser; and the **151 version-6 case pages** under
+`ui/dist/case-*.html`, which are history. The README says so in its own words,
+one line each, in [Roadmap and known limits](../README.md#roadmap-and-known-limits).
+
 ## 1. System context: who uses it, and what it needs
 
 **Rider or driver.** A person files a dispute about a Ryde trip. The app itself
@@ -45,7 +56,10 @@ and made both stored closures.
 She wrote the dev-v2 and sealed-v2 keys and re-derived sealed-v1, approved
 amendments `0001` and `0002`, and confirmed `0003`; the note that records the
 confirmation is
-`docs/notes/2026-10-10-ns-12-confirmed-by-policy-owner.md`.
+`docs/notes/2026-10-10-ns-12-confirmed-by-policy-owner.md`. The policy in force
+at version 8 is Ryde's, not hers: what version 7 and version 8 change is in
+[the version-7 note](notes/2026-10-13-policy-v7.md) and
+[the version-8 note](notes/2026-10-14-policy-v8.md).
 
 **Ryde platform.** The external system the dispute comes from: trips, GPS, chat,
 fares and profiles. Here it is **mocked**, and what stands in for its export is
@@ -53,10 +67,11 @@ the committed case files under `data/`, whose shape `data/PUBLIC-CONTRACT.md`
 fixes at contract version 1.2.0.
 
 **Tribunal.** The system itself: Python 3.9 to 3.13, standard library only. It
-decides one ride dispute against a versioned policy -- two advocates argue from
-one brief, a four-draft judge panel votes, and deterministic checks gate every
-draft -- and a case it may not decide is escalated to a person. Every step is
-written to a hash-chained record.
+decides one ride dispute against a versioned policy -- at version 8, Ryde's
+v2.1 with Ryde's answers of 2026-10-14 -- two advocates argue from one brief, a
+four-draft judge panel votes, and deterministic checks gate every draft -- and a
+case it may not decide, whether by a code check or by v2.1's own authority gate,
+is escalated to a person. Every step is written to a hash-chained record.
 
 **Tencent Cloud TokenHub.** The model provider: its API in Singapore, serving
 `deepseek/deepseek-flash`. The request is JSON over HTTPS, and `tribunal/llm.py`
@@ -79,7 +94,7 @@ money and checks appeals, through the commands under `ops/`.
 `eval/run_benchmark.py`, or from `eval/development_sets.py` for a named set.
 
 **Tencent Cloud TokenHub.** The model API, reached once per advocate and once
-per judge draft: six calls a case at version 6.
+per judge draft: six calls a case, the same six at version 8.
 
 **Ryde platform.** The committed case files again, supplying the record the run
 is made from.
@@ -102,22 +117,31 @@ sets among them. Nothing under `tribunal/` may read them.
 agent's words beside the answer key.
 
 **Arbitration pipeline.** `tribunal/` decides one case: one brief, two
-advocates, a citation referee, four judge drafts, the ten `DRAFT_*` checks and a
-3-of-4 vote against the 0.70 floor. It returns a ruling or `ESCALATE` to its
-caller, and it makes six model calls a case. The switches the container names are
-the command line's, and every one is off by default: `--policy-version N`
-(default 1, and the product runs use 6), `--parallel-calls`, `--integrity-gate`,
-`--verify-drafts`, `--precedents`, `--early-majority`, `--advocate-effort`,
-`--amount-rule`, `--ablate` and `--judge-votes`.
+advocates, v2.1's authority gate, a citation referee, four judge drafts, the ten
+`DRAFT_*` checks and a 3-of-4 vote against the bar v2.1 states -- `POL-GEN-22`
+and `POL-RD-25`, not a single floor. It returns a ruling or `ESCALATE` to its
+caller, and it makes six model calls a case. The switches the container names
+are the command line's, and every one is off by default: `--policy-version N`
+(default 1, and the product runs use 8), `--parallel-calls`, `--verify-drafts`,
+`--precedents`, `--early-majority`, `--advocate-effort`, `--amount-rule`,
+`--ablate` and `--judge-votes`. `--integrity-gate` is not among them: it is the
+version-6 record-integrity gate, and version 8's policy carries no `POL-RD-10`
+for it to read.
 
 **Case store.** `data/`: the 29-case corpus and its `index.json`, 7 or 8
 artifacts each, plus the sets under `data/external/`. No answers.
 
-**Policy store.** `policy/`: versions 1 to 6. Version 6 is `policy/v3/` plus the
-three amendments under `policy/v3/amendments/`, 34 clauses in all.
+**Policy store.** `policy/`: versions 1 to 8, in three separate bases.
+Versions 1 to 6 are the team's own policy, version 6 being the `v3` base plus
+the three amendments under `policy/v3/amendments/`, 34 clauses in all. Version 7
+is Ryde's v2.1 under `policy/v7/`, and version 8 -- the one the product runs
+read -- is `policy/v8/`, v2.1 with the fifteen JSON paths Ryde's answers of
+2026-10-14 move. Versions 1 to 6 stay byte-identical, which is what lets the
+recorded version-6 case digests rebuild unchanged.
 
-**Prompt templates.** `prompts/v1/`: the advocate, the two stances, the judge,
-the verifier and the policy drafter.
+**Prompt templates.** `prompts/v2/`: the version-8 set -- the advocate, the two
+stances, the judge, the verifier and the policy drafter. `prompts/v1/` is the
+version-6 set, unchanged, and a version-8 run that is handed it is refused.
 
 **Precedent store.** `precedents/precedents.jsonl`: closures a person made,
 append-only and hash-chained. It is written on sheet 2b.
@@ -137,29 +161,31 @@ and a transcript of every call; per run an `events.jsonl` hash chain,
 **Policy owner.** Owns the policy, approved amendments `0001` and `0002`, and
 confirmed `0003`.
 
-**Policy store.** `policy/`: version 6 is `policy/v3/` plus `0001` to `0003`,
+**Policy store.** `policy/`: version 6 is the `v3` base plus `0001` to `0003`,
 placed by hand, with no policy-gap report behind any of them; `0003` was
-approved by Zhou Hanwei and then confirmed by the policy owner.
+approved by Zhou Hanwei and then confirmed by the policy owner. Version 8, which
+the runs read, is `policy/v8/` -- see 2a.
 
 **Policy-gap tool.** `eval/policy_gaps.py`: `report` groups the cases the policy
 could not decide and makes no model call; `draft` asks a model for one clause
 for a flagged cluster; `approve` and `reject` are a named person's alone;
 `rerun` runs the affected cases at the new version, and `diff` compares before
 and after, making no model call either. The drafter's prompt is
-`prompts/v1/policy_drafter.system.md`.
+`prompts/v2/policy_drafter.system.md`.
 
 **Precedent store.** `precedents/precedents.jsonl`: `P-0001` and `P-0002` were
 appended by `tribunal/precedents.py close`, and `ops/review.py` is the wrapper a
 reviewer closes a case through.
 
-**Prompt templates.** `prompts/v1/policy_drafter.system.md` is the draft step's
+**Prompt templates.** `prompts/v2/policy_drafter.system.md` is the draft step's
 prompt.
 
 **Run records.** Every case's ruling or `ESCALATE`, its brief digest, its
 transcript and its grade, read by the queue.
 
-**Operations CLI.** `ops/`, which makes no model call anywhere: `ops/queue.py`
-sorts the disputes into the safety, human-review and auto lanes;
+**Operations CLI.** `ops/`, which makes no model call anywhere -- and which is
+still the **version-6** layer, reading the version-6 runs: `ops/queue.py` sorts
+the disputes into the safety, human-review and auto lanes;
 `ops/chat_signals.py` reads a chat log for a threat ahead of every other lane;
 `ops/risk.py` orders review; the kill switch `auto_rulings_enabled` is in
 `ops/config.json`; an amount above SGD 8.00 is listed for release; and the
@@ -168,10 +194,15 @@ end-to-end target is 48 hours. `ops/escalation.py` builds the packet, and
 `ops/evidence_window.py` is the 36-hour window that never pauses for a missing
 piece of evidence; and `ops/appeal.py` checks an appeal against the clause's six
 named checks. Every threshold the layer uses is read from the policy or from
-`ops/config.json` rather than typed.
+`ops/config.json` rather than typed. Version 8's own appeal clause does not
+exist yet: this layer is on the roadmap.
 
 **Support site build.** `ui/v2/build.py`: the case pages, the queue and the
 review form, drawn from the version-6 runs. It also reads `data/` and `policy/`.
+The **version-8 case pages** are `ui/v8/build.py`'s: `ui/dist/v8-cases.html`
+indexes all 42 version-8 cases and each has a page of its own in both languages,
+86 files in all, built from the committed version-8 runs -- these are what a
+reviewer reads for a version-8 run.
 
 **WorkBuddy connector.** `integrations/workbuddy/`: a read-only MCP server whose
 tools are `tribunal_case`, `tribunal_queue` and `tribunal_packet`. It refuses
@@ -189,56 +220,56 @@ in the repository records a release -- and checks appeals, through `ops/`.
 
 ## 3. Dynamic: one dispute, step by step
 
+The dynamic view draws one call of `run_case()` at `--policy-version 8`, and its
+eleven boxes are numbered in the order the pipeline runs them:
+
+1. **Load the case.** `tribunal/loader.py` loads one case and refuses a
+   malformed record or a manifest mismatch.
+2. **Weigh the evidence.** `tribunal/prepass.py`, called by `tribunal/brief.py`:
+   an artifact's issue codes become weights, read from the policy's integrity
+   table.
+3. **Derive facts and money.** `tribunal/facts.py` and `tribunal/money.py`,
+   called by `tribunal/brief.py`: the geometry, the dwell and the fare
+   arithmetic, with no model anywhere in it.
+4. **Build one brief.** `tribunal/brief.py`: one object, one sha256, a refusal
+   of any answer-key field, and the masking of registration plates, Singapore
+   telephone numbers and e-mail addresses in the free text. Names are
+   deliberately not masked.
+5. **Two advocates.** `prompts/v2/advocate.system.md` with
+   `prompts/v2/stance.rider.md` and `prompts/v2/stance.driver.md`: the same
+   brief bytes on both sides, only the stance differing, and two model calls. An
+   answer that is unusable after one retry fails the case with no ruling.
+6. **Authority gate.** `tribunal/pipeline.py`: v2.1's own gate, and it fires
+   **after** the advocates and **before** the judge, so the case file is
+   prepared and no ruling is issued. Three limbs, in the order of the clauses: a
+   safety or complaint flag is a person's whatever the value (`POL-GEN-21`); a
+   contested value above SGD 50 is a person's whatever the category
+   (`POL-GEN-22`); and a route deviation over 2 km is outside what an AI ruling
+   may carry (`POL-RD-25`). The judge is not asked at all, so a stopped case has
+   had two calls and no more.
+7. **Citation referee.** `tribunal/referee.py`, deterministic and deciding no
+   merits: it discards a claim whose evidence or clause id is missing or
+   unresolved, a claim that cites an impaired artifact without naming its issue
+   code, and a claim grounded on a profile field.
+8. **Judge panel.** `prompts/v2/judge.system.md`: four drafts, three sampled and
+   one position-swapped, four model calls. Optional `--verify-drafts` adds one
+   more call.
+9. **Draft checks.** `tribunal/pipeline.py`: the ten `DRAFT_*` checks a draft
+   must pass, one of them `DRAFT_BELOW_FLOOR`. A draft that fails one abstains
+   rather than being counted.
+10. **Vote and the bar.** `tribunal/pipeline.py`: 3 of 4 must agree. No valid
+    draft, no majority, or a confidence below the bar v2.1 asks -- 0.80 from
+    10.00 to 50.00 SGD, 0.95 where a party carries a fraud flag, 0.80 for a
+    route deviation, and none below the first band -- is `ESCALATE`. The bar is
+    read off the brief's authority block rather than typed here.
+11. **Publish and record.** `tribunal/pipeline.py`, `tribunal/transcript.py` and
+    `tribunal/events.py`: the ruling, or `ESCALATE` with its reason, goes back
+    to `eval/run_benchmark.py`, which writes the case file and the transcript.
+
 **Evaluation and grading.** `eval/run_benchmark.py` calls the pipeline once per
 case and writes what comes back. **Case store.** `data/cases/` and
-`data/index.json`, read once. **Policy store.** Version 6: the integrity table,
-34 clauses and the confidence floor of 0.70.
-
-**1. Load the case.** `tribunal/loader.py` loads one case and refuses a
-malformed record or a manifest mismatch.
-
-**2. Weigh the evidence.** `tribunal/prepass.py`, called by `tribunal/brief.py`:
-an artifact's issue codes become weights, read from the policy's integrity
-table.
-
-**3. Derive facts and money.** `tribunal/facts.py` and `tribunal/money.py`,
-called by `tribunal/brief.py`: the geometry, the dwell and the fare arithmetic,
-with no model anywhere in it.
-
-**4. Build one brief.** `tribunal/brief.py`: one object, one sha256, a refusal
-of any answer-key field, and version 6's masking of registration plates,
-Singapore telephone numbers and e-mail addresses in the free text. Names are
-deliberately not masked.
-
-**5. Scope gate.** `tribunal/pipeline.py`: `POL-GEN-08(1)` from version 3 on, so
-a safety or complaint flag stops here and no model is called. Beside it,
-optional, is `--integrity-gate`: `POL-RD-10`'s limbs (2) and (4), route
-deviation only.
-
-**6. Two advocates.** `prompts/v1/advocate.system.md` with
-`prompts/v1/stance.rider.md` and `prompts/v1/stance.driver.md`: the same brief
-bytes on both sides, only the stance differing, and two model calls. An answer
-that is unusable after one retry fails the case with no ruling.
-
-**7. Citation referee.** `tribunal/referee.py`, deterministic and deciding no
-merits: it discards a claim whose evidence or clause id is missing or
-unresolved, a claim that cites an impaired artifact without naming its issue
-code, and a claim grounded on a profile field.
-
-**8. Judge panel.** `prompts/v1/judge.system.md`: four drafts, three sampled and
-one position-swapped, four model calls. Optional `--verify-drafts` adds one more
-call.
-
-**9. Draft checks.** `tribunal/pipeline.py`: the ten `DRAFT_*` checks a draft
-must pass, one of them `DRAFT_BELOW_FLOOR`. A draft that fails one abstains
-rather than being counted.
-
-**10. Vote and floor.** `tribunal/pipeline.py`: 3 of 4 must agree. No valid
-draft, no majority, or a confidence below 0.70 is `ESCALATE`.
-
-**11. Publish and record.** `tribunal/pipeline.py`, `tribunal/transcript.py` and
-`tribunal/events.py`: the ruling, or `ESCALATE` with its reason, goes back to
-`eval/run_benchmark.py`, which writes the case file and the transcript.
+`data/index.json`, read once. **Policy store.** Version 8: the integrity table,
+v2.1's clauses and the bar the brief carries.
 
 **Tencent Cloud TokenHub.** The model API the two advocate calls and the four
 draft calls are made to. **Precedent store.** `precedents/precedents.jsonl`: up
@@ -246,9 +277,9 @@ to three closures, with no amounts in them, shown to the judge only and only
 with `--precedents`. **Run records.** `runs/`, which the queue reads.
 
 **The rule the dynamic view states about calls.** Six model calls a case, seven
-with `--verify-drafts`, and none at all for a case the scope gate stops; an
-unusable answer is retried once, and an HTTP 429 or 5xx response is attempted up
-to four times.
+with `--verify-drafts`, and **two** for a case the authority gate stops, because
+the gate sits after the advocates: an unusable answer is retried once, and an
+HTTP 429 or 5xx response is attempted up to four times.
 
 ## What the arrows carry
 
@@ -271,8 +302,8 @@ the drafter prompt`, `reads runs; rerun writes new ones`, `appends a closure
 `reads`, `pages uploaded to`, `reads`, `runs ops.queue, ops.escalation`, `reads
 the public case`, `asks about a case`, `calls the tools` and `reads case pages`.
 On the **dynamic** view they are `run_case(N)`, `reads`, `case`, `weights`,
-`facts`, `brief`, `integrity table (no_show.json)`, `reads version 6`, `not
-flagged: the brief, to both sides`, `stopped: ESCALATE, no model`, `claims`,
-`kept claims`, `drafts`, `valid drafts`, `ruling or ESCALATE`, `events into the
-run's log; eval writes case-*.json and the transcript`, `2 calls`, `4 calls` and
-`shown to the judge`.
+`facts`, `brief`, `integrity table (no_show.json)`, `reads version 8`, `both
+advocates ran: the brief, to the gate`, `stopped: ESCALATE after the advocates`,
+`claims`, `kept claims`, `drafts`, `valid drafts`, `ruling or ESCALATE`, `events
+into the run's log; eval writes case-*.json and the transcript`, `2 calls`,
+`4 calls` and `shown to the judge`.

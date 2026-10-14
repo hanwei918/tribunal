@@ -2,7 +2,7 @@
 <defs><marker id="a" viewBox="0 0 10 10" refX="9.5" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#3D444D"/></marker><marker id="ao" viewBox="0 0 10 10" refX="9.5" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#6E7781"/></marker></defs>
 <rect x="0" y="0" width="1920" height="1080" fill="#FFFFFF"/>
 <text x="32" y="48" font-size="28" font-weight="bold" fill="#1F2328">System Context diagram for Tribunal</text>
-<text x="32" y="76" font-size="15" fill="#57606A">C4 level 1 - who uses Tribunal and which systems it depends on.  Code trees as at freeze-2026-10-11 (tribunal/, prompts/, policy/ equal commit 19c7e5a per README); the product runs use --policy-version 6 (34 clauses).</text>
+<text x="32" y="76" font-size="15" fill="#57606A">C4 level 1 - who uses Tribunal and which systems it depends on.  Code trees as at freeze-2026-10-14-v8 (tribunal/, prompts/, policy/ equal commit af2b5ca); the product runs use --policy-version 8 (Ryde&#x27;s v2.1 + Ryde&#x27;s answers of 2026-10-14).</text>
 <path d="M210,217 L210,428" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round"/>
 <path d="M210,217 L210,428" fill="none" stroke="#3D444D" stroke-width="1.5" marker-end="url(#a)"/>
 <path d="M380,500 L618,500" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round"/>
@@ -115,7 +115,7 @@
 <text x="1165" y="345" font-size="10.5" fill="#57606A" text-anchor="middle" data-label="L51">[JSON files by hand, or eval/policy_gaps.py approve]</text>
 <rect x="1282.2" y="427" width="213.6" height="33" rx="4" fill="#FFFFFF" fill-opacity="0.94" data-plate="L55"/>
 <text x="1389" y="440" font-size="12" fill="#1F2328" text-anchor="middle" data-label="L55">asks the advocates and the judge</text>
-<text x="1389" y="454" font-size="10.5" fill="#57606A" text-anchor="middle" data-label="L55">[HTTPS, JSON - 6 calls a case at v6]</text>
+<text x="1389" y="454" font-size="10.5" fill="#57606A" text-anchor="middle" data-label="L55">[HTTPS, JSON - 6 calls a case at v8]</text>
 <rect x="600.75" y="677" width="248.5" height="48" rx="4" fill="#FFFFFF" fill-opacity="0.94" data-plate="L58"/>
 <text x="725" y="690" font-size="12" fill="#1F2328" text-anchor="middle" data-label="L58">static pages uploaded to</text>
 <text x="725" y="705" font-size="12" fill="#1F2328" text-anchor="middle" data-label="L58">(by hand; no deploy code in the repo)</text>
