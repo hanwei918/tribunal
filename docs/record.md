@@ -39,6 +39,53 @@ The submission's own texts — a one-line blurb, a description and the judges' q
 
 The read-only WorkBuddy connector — an MCP server that answers from the committed records, with no key and no network — is in [`integrations/workbuddy/`](../integrations/workbuddy/).
 
+## Version 8 at a glance
+
+Tribunal applies **Ryde's own Dispute Resolution Policy v2.1 with Ryde's answers
+of 2026-10-14** as **policy version 8**. This is the first section because it is
+what the system does now; the sections below it that describe the team's own
+version-6 policy say so under their own headings.
+
+**The rules.** A safety flag, a value over SGD 50 or a route deviation over 2 km
+goes to a person after the lawyers have prepared the case file and before the
+judge is asked, and a case the panel cannot settle goes to a person with the money
+held (`tribunal/pipeline.py`, the authority gate). A ruling stands only at the
+confidence v2.1 asks: 0.80, and 0.95 where a party carries a fraud flag, which is
+Tribunal's reading C15 of v2.1 6.3 for a no-show. Every claim that cites no
+evidence id or no clause id, or cites one that does not exist, is thrown out by
+code before the judge reads it (`tribunal/referee.py`).
+
+**The figures, and the command that prints them.** `dev-v8` is 40 cases of
+**development data** the team tuned against, and `ryde-v8` is the organisers' two
+samples; neither is a generalisation figure. `python3 -m eval.v8_report --report`
+prints all of the `dev-v8` column from the committed runs, and
+`python3 -m eval.development_sets --report --set dev-v8` prints the agreement.
+
+| figure | value | command |
+|---|---|---|
+| time to a decision, `dev-v8` | a median of 153.1 s a case, and 299.4 s at the 90th percentile | `python3 -m eval.v8_report --report` |
+| model cost, `dev-v8` | a median model cost of 0.0390 USD a case, 1.823 USD over the 40 | `python3 -m eval.v8_report --report` |
+| decided with no person | 28 of 40 | `python3 -m eval.v8_report --report` |
+| sent to a person | 12 to a person -- 5 stopped by a v2.1 rule before the judge (2 on the 2 km limit, 1 on the value, 2 on a safety flag), 6 the panel sent on, 1 without a majority | `python3 -m eval.v8_report --report` |
+| position swap, all four fields | 33 of 34 | `python3 -m eval.v8_report --report` |
+| calibration | Expected calibration error 0.097 over 139 drafts, at the version-8 bar | `python3 -m eval.v8_report --report` |
+| agreement, `dev-v8` | 39/40 | `python3 -m eval.development_sets --report --set dev-v8` |
+| agreement, `ryde-v8` | 1 of 2 | `python3 -m eval.development_sets --report --set ryde-v8` |
+
+**What is still version 6.** Eleven things, each with the file or run that shows
+it, in [Limitations and disclosures](#limitations-and-disclosures): fare and surge
+disputes; property damage and image analysis; the C15 question, which is with
+Ryde; the absent appeal clause and the operations layer; the try-it page; the 151
+version-6 case pages; the v2.1 precedents; the confidence figure; the sealed
+figure and its author; one model family; and synthetic data.
+
+**The three version-8 notes.** What Ryde's answers changed is
+[`docs/notes/2026-10-14-policy-v8.md`](notes/2026-10-14-policy-v8.md); the two
+sets' single runs, case by case, are
+[`docs/notes/2026-10-14-version-8-runs.md`](notes/2026-10-14-version-8-runs.md);
+and the figures above, with the table `eval.v8_report` prints, are
+[`docs/notes/2026-10-14-version-8-measurements.md`](notes/2026-10-14-version-8-measurements.md).
+
 ## The product site
 
 The site's front page is the **product site** the policy owner, Ji Guofang, designed outside WorkBuddy: 22 pages, each in English (`*.html`) and Chinese (`*.zh.html`), with the images they carry and a try-it page that runs this repository's own Python in the browser. Her design, her page text and her front-end code are hers; `tools/site_import.py` and `ui/site/build.py`, written in WorkBuddy, import them unchanged and build the site, and the try-it service `tryit/` is hers, imported unchanged.
@@ -105,6 +152,8 @@ addresses** is applied to the brief, so none of them reaches an advocate, a
 judge or a reviewer.
 
 ## Business value
+
+This section describes version 6. Version 8 differs as "Version 8 at a glance" says.
 
 The figures below are read off the four version-6 runs the product view is built
 from — the corpus, `dev-v2-ext`, the `dev-v2` prompt-injection case and the
@@ -710,6 +759,58 @@ subject to the PDPA without this repository making any compliance claim.
 
 ## Limitations and disclosures
 
+**Version 8.** Eleven things, each with the file or the run that shows it.
+
+- **Fare and surge disputes are not covered.** v2.1 Section 3 and `DISP-003` name
+  them, and this prototype's own `POL-GEN-24` routes them to a person rather than
+  adjudicating them -- that is this prototype's scope and not v2.1's
+  ([`policy/v8/general.json`](../policy/v8/general.json), `POL-GEN-24`;
+  [`tests/test_ryde_v7.py`](../tests/test_ryde_v7.py)).
+- **Property damage and image analysis are not covered.** v2.1 Section 4 needs
+  verifiable in-app photographs, which the pipeline does not read
+  ([`policy/v8/general.json`](../policy/v8/general.json), `POL-GEN-24`).
+- **The C15 question is with Ryde.** Tribunal reads v2.1 6.3 as setting a 0.95 bar
+  on a no-show, where v2.1 6.2 makes a no-show ruling AI-final and Ryde's own
+  sample upholds the fee; the question is with Ryde and is not settled here
+  ([the policy-v8 note](notes/2026-10-14-policy-v8.md),
+  [the version-8 runs](notes/2026-10-14-version-8-runs.md)).
+- **Version 8 has no appeal clause.** v2.1 has none, and the operations layer that
+  offers one appeal within 30 days -- the appeal, the queue, the review, the risk
+  signals and the escalation packet -- reads the version-6 runs
+  ([`ops/appeal.py`](../ops/appeal.py), [`ops/queue.py`](../ops/queue.py),
+  [`ops/review.py`](../ops/review.py), [`ops/risk.py`](../ops/risk.py),
+  [`ops/escalation.py`](../ops/escalation.py)).
+- **The try-it page runs version 6.** Its in-browser checks are the team's own
+  policy and not v2.1, and the live service is off
+  ([`ui/dist/try-config.js`](../ui/dist/try-config.js), [`tryit/`](../tryit/)).
+- **The 151 version-6 case pages are history.** They are the team's own policy
+  frozen on 2026-10-11, not what Tribunal applies now
+  ([`ui/dist/case-*.html`](../ui/dist), [`ui/v2/build.py`](../ui/v2/build.py)).
+- **The v2.1 precedents are not in the precedent library.** v2.1 7.1, 7.2 and 7.3
+  are named as precedents of this version, and none of the three is in
+  [`precedents/precedents.jsonl`](../precedents/precedents.jsonl); the judge is
+  not shown them by default, because the switch is off unless it is asked for
+  ([`tribunal/precedents.py`](../tribunal/precedents.py)).
+- **Confidence is the judge's own figure capped by the evidence weights**, not
+  v2.1 6.3's four components
+  ([`prompts/v2/judge.system.md`](../prompts/v2/judge.system.md),
+  [`tribunal/pipeline.py`](../tribunal/pipeline.py)).
+- **The sealed figure is at version 7, and its author is the team's own
+  development assistant.** `sealed-v4` is 30/30 against a key written by the same
+  model that helped write the version-7 policy files, and no person reviewed it
+  ([`runs/sealed-v4/`](../runs/sealed-v4),
+  [the version-7 runs](notes/2026-10-14-version-7-runs.md)).
+- **One model family.** Every committed run was made with the one runtime model in
+  [`tribunal/model.py`](../tribunal/model.py); no second family was measured.
+- **Synthetic data.** Every case except the organisers' samples 901, 902 and 903
+  is synthetic or semi-synthetic ([`data/`](../data)).
+
+### Version 6 (history)
+
+The limitations below are the team's own version-6 policy's. They are kept
+because they are what the version-6 runs were measured under, and none of them is
+a statement about version 8.
+
 - **Personal data.** No case set in this repository other than the functional set
   `pii-v1` contains a telephone number or a name. `pii-v1` carries them on
   purpose — eight synthetic cases built to measure `POL-GEN-08(4)`'s masking —
@@ -941,6 +1042,8 @@ record.
 
 ## How it works
 
+This section describes version 6. Version 8 differs as "Version 8 at a glance" says.
+
 `tribunal/pipeline.py` runs one case through a fixed sequence. Every stage is
 deterministic except the three agents.
 
@@ -996,6 +1099,8 @@ and `SHAPE`.
 
 ## Stretch goals
 
+This section describes version 6. Version 8 differs as "Version 8 at a glance" says.
+
 The brief names seven stretch goals beside the core arbitration. What follows is
 the honest status of each, and what implements it. Five of them are the `ops/`
 layer: a support team's layer that **reads** the pipeline's inputs and its
@@ -1033,6 +1138,8 @@ it leaves, and it changes nothing in `tribunal/`, `prompts/`, `policy/`, `runs/`
 or `data/`.
 
 ## Concurrency
+
+This section describes version 6. Version 8 differs as "Version 8 at a glance" says.
 
 The agents are the only part of a case that waits on something outside this
 process -- the two advocates, the judge's four drafts, and the verifier, which
@@ -1172,6 +1279,8 @@ fresh build.
 
 ## The organisers' sample case
 
+This section describes version 6. Version 8 differs as "Version 8 at a glance" says.
+
 `eval/external/ryde/DISP-002.md` is the sample supplied to every team. It is
 answer-bearing, so it is not agent input. `eval/external/ryde/convert.py`
 converts it into this system's case format, recording every decision the
@@ -1218,6 +1327,8 @@ replay leaves a four-case report beside a twenty-nine-case directory.
 behind every number in this file.
 
 ## Running it
+
+This section describes version 6. Version 8 differs as "Version 8 at a glance" says.
 
 Everything here — the pipeline, the benchmark, the viewer and the suite — uses
 the Python standard library only, and the repository is kept runnable on **Python
@@ -1284,7 +1395,7 @@ Run the tests, from the repository root:
 
 `tests/` is a package, so that one command finds the whole suite; `python3 -m
 unittest discover -s tests -v` names the same tests with each one printed.
-Twenty-seven of the tests read the repository's git history, and without `.git`
+Twenty-nine of the tests read the repository's git history, and without `.git`
 — a zip download — or without `git` they skip, saying so, rather than failing
 against a history that is not there. On Linux the tests that rebuild case 111's
 brief skip for a second reason: glibc and macOS libm disagree in the last place

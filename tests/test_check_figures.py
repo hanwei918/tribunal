@@ -10,14 +10,16 @@ three things:
   rather than a quiet no-op.
 * **The check can fail.** A copy of one document with one figure altered, in a
   temporary directory, is reported as a mismatch; without that control a check
-  that returned nothing would pass the first test. Four figures are shown
+  that returned nothing would pass the first test. Six figures are shown
   failing that way: the version-6 median time in ``docs/record.md``, the
   version-7 sealed set's agreement in ``README.md``, the version-8 ``dev-v8``
-  agreement in ``README.md``, and the version-8 ``decided with no person``
-  measurement in ``docs/notes/2026-10-14-version-8-measurements.md``. Two
-  **claims** are shown failing the same way, each by putting the corrected
-  sentence back: ``split 2-2`` on the version-8 row of ``README.md``, and the
-  fare sentence in ``tests/test_ryde_v7.py``.
+  agreement in ``README.md``, the version-8 ``decided with no person``
+  measurement in ``docs/notes/2026-10-14-version-8-measurements.md``, the
+  position swap on ``ui/dist/index.html``, and the README's own count of the
+  tests that read the git history. Two **claims** are shown failing the same
+  way, each by putting the corrected sentence back: ``split 2-2`` on the
+  version-8 row of ``README.md``, and the fare sentence in
+  ``tests/test_ryde_v7.py``.
 * **The module is ASCII.** The sheet's rule is that the pattern table is written
   in ASCII, with the Chinese patterns as ``\\uXXXX`` escapes, so the module is
   read as bytes and every one is asserted below 128.
@@ -112,7 +114,7 @@ VERSION_EIGHT_SITE_FIGURES = (
     "dev-v8 ECE",
     "dev-v8 drafts",
     "dev-v8, cases that went to a person",
-    "dev-v8, the gate's three limbs",
+    "dev-v8, the gate's cases",
     "dev-v8, route deviation limit",
     "dev-v8, the value a person decides above",
     "dev-v8, confidence the policy asks",
@@ -130,6 +132,35 @@ SWAP_CONTROL_DOCUMENT = "ui/dist/index.html"
 SWAP_CONTROL_BEFORE = '<span data-count="33">33</span><small> of 34:</small>'
 SWAP_CONTROL_AFTER = '<span data-count="32">32</span><small> of 34:</small>'
 SWAP_CONTROL_FIGURE = "dev-v8 position swap"
+
+# The version-8 figures the README itself states, and the sixth control: the
+# README's own count of the tests that read the git history, altered back to the
+# number it carried before this part. The copy holds the README alone, so the
+# figures that read the other documents go dead -- a finding of its own and not
+# what this test is about. What it asserts is the mismatch: 27 is not one of that
+# figure's spellings.
+README_VERSION_EIGHT_FIGURES = (
+    "dev-v8 decided with no person",
+    "dev-v8 position swap",
+    "dev-v8 ECE",
+    "dev-v8 drafts",
+    "dev-v8, cases that went to a person",
+    "dev-v8, the gate's cases",
+    "dev-v8, the gate's 2 km limb",
+    "dev-v8, the gate's value limb",
+    "dev-v8, the gate's safety limb",
+    "dev-v8, the panel's escalations",
+    "dev-v8, the panels without a majority",
+    "dev-v8, route deviation limit",
+    "dev-v8, the value a person decides above",
+    "dev-v8, confidence the policy asks",
+    "case 5051, the dropped point",
+    "tests that read the git history",
+)
+README_HISTORY_CONTROL_DOCUMENT = "README.md"
+README_HISTORY_CONTROL_BEFORE = "29 tests read the git history"
+README_HISTORY_CONTROL_AFTER = "27 tests read the git history"
+README_HISTORY_CONTROL_FIGURE = "tests that read the git history"
 
 # The claim controls. Each copy puts back one sentence the part corrected and
 # shows the claim check reporting it. ``split 2-2`` goes back on the version-8
@@ -286,6 +317,28 @@ class TheCommittedTreeTests(unittest.TestCase):
                 self.assertIn(name, rows)
                 self.assertTrue(rows[name].value, "no computed value")
                 self.assertTrue(rows[name].documents, "stated in no document")
+                self.assertTrue(rows[name].ok, "a document states another value")
+
+    def test_the_readme_version_eight_figures_are_computed_stated_and_matching(
+        self,
+    ):
+        """The version-8 figures the README itself states, from the committed runs.
+
+        The same check the other version-8 rows get, with one more assertion:
+        each of these is read in ``README.md``, so a table that lost one of them
+        fails here rather than passing on the rows that remain.
+        """
+        rows = {row.figure: row for row in self.found.rows}
+        for name in README_VERSION_EIGHT_FIGURES:
+            with self.subTest(figure=name):
+                self.assertIn(name, check_figures.BY_NAME)
+                self.assertIn(name, rows)
+                self.assertTrue(rows[name].value, "no computed value")
+                self.assertIn(
+                    README_HISTORY_CONTROL_DOCUMENT,
+                    rows[name].documents,
+                    "the README does not state this figure",
+                )
                 self.assertTrue(rows[name].ok, "a document states another value")
 
     def test_the_version_eight_measurement_figures_are_computed_stated_and_matching(
@@ -504,6 +557,44 @@ class TheControlTests(unittest.TestCase):
             with self.subTest(document=mismatch.document):
                 self.assertEqual(SWAP_CONTROL_FIGURE, mismatch.figure)
                 self.assertEqual("33 of 34", mismatch.expected)
+        self.assertFalse(found.ok, "an altered figure left the check OK")
+
+    def test_the_old_test_count_put_back_in_the_readme_is_reported(self):
+        """The README's own count of the tests that read the git history.
+
+        The copy holds the README alone, so the figures that read the other
+        documents go dead -- a finding of its own and not what this test is
+        about. What it asserts is the mismatch: the count the README carried
+        before this part is not one of the figure's spellings.
+        """
+        portability.require_the_same_libm()
+        source = (PROJECT_ROOT / README_HISTORY_CONTROL_DOCUMENT).read_text(
+            encoding="utf-8"
+        )
+        altered = source.replace(
+            README_HISTORY_CONTROL_BEFORE, README_HISTORY_CONTROL_AFTER
+        )
+        self.assertNotEqual(
+            source,
+            altered,
+            "the control changed nothing in {0}".format(
+                README_HISTORY_CONTROL_DOCUMENT
+            ),
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / README_HISTORY_CONTROL_DOCUMENT
+            target.write_text(altered, encoding="utf-8")
+            found = check_figures.check(root)
+        named = [mismatch for mismatch in found.mismatches if mismatch.value == "27"]
+        self.assertTrue(
+            named,
+            "the altered test count was not reported: {0}".format(found.mismatches),
+        )
+        for mismatch in named:
+            with self.subTest(document=mismatch.document):
+                self.assertEqual(README_HISTORY_CONTROL_FIGURE, mismatch.figure)
+                self.assertEqual("29", mismatch.expected)
         self.assertFalse(found.ok, "an altered figure left the check OK")
 
     def test_a_two_two_split_put_back_on_the_version_eight_row_is_reported(self):

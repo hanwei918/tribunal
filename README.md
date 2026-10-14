@@ -28,54 +28,69 @@ Ryde challenge) by team Newbee, with WorkBuddy.
 
 **Start here.**
 
-- **Live demo:** <https://tribunal.edgeone.dev/> — the queue at `/queue.html`, case 208 at `/case-00208.html`, the organisers' sample case 901 at `/case-00901.html`.
+- **Live demo:** <https://tribunal.edgeone.dev/> — the organisers' two samples at version 8 at `/cases.html#ryde`, all 42 version-8 cases at `/v8-cases.html`, and case 5051 at `/v8-05051.html`.
+- **Version 6 history:** the queue at `/queue.html`, case 208 at `/case-00208.html` and the organisers' sample case 901 at `/case-00901.html` are the version-6 pages.
 - **Submission texts:** [`docs/submission/`](docs/submission/) · **Architecture:** [`docs/architecture.md`](docs/architecture.md)
 - **How it was built:** [`docs/submission/how-we-built-it.md`](docs/submission/how-we-built-it.md)
-- **What it does not do:** [Limitations and disclosures](docs/record.md#limitations-and-disclosures)
+- **What it does not do:** [Roadmap and known limits](#roadmap-and-known-limits), and [Limitations and disclosures](docs/record.md#limitations-and-disclosures)
 
 ## The product site
 
-The front page is the **product site** the policy owner, Ji Guofang, designed outside WorkBuddy: 22 pages, each in English (`*.html`) and Chinese (`*.zh.html`), with her images and a try-it page that runs this repository's own Python in the browser.
-The queue is at `/queue.html`, and the live try-it service stays **off**: `try-config.js` leaves its address empty, so the page's in-browser checks run and no live run is offered.
+The front page is the **product site** the policy owner, Ji Guofang, designed outside WorkBuddy: **eleven pages**, each in English (`*.html`) and Chinese (`*.zh.html`), with her images and a try-it page that runs this repository's own Python in the browser.
+The site holds three layers of pages. The **version-8 case pages** are what Tribunal applies now: `v8-cases.html` indexes all 42 version-8 cases, and each of them has a page of its own in both languages, 86 files in all, built by `python3 -m ui.v8.build` from the committed runs.
+The **version-6 pages** are history: the queue at `/queue.html` and the 151 version-6 case pages, built by `python3 -m ui.v2.build` from the four version-6 runs.
+And the try-it page runs the **version-6** policy in the browser: the live try-it service stays **off**, because `try-config.js` leaves its address empty, so the page's in-browser checks run and no live run is offered.
 Her design, her page text and her front-end code are hers, imported unchanged and built here by `ui/site/build.py`; the try-it service `tryit/` is hers too.
 
 ## In numbers
 
-**Every figure in this table is from the version-6 runs**, at the team's own
-policy frozen on 2026-10-11. 151 disputes at policy version 6 (the corpus,
-`dev-v2-ext`, case 1779 and the organisers' case 901), read off the committed
-runs by `python3 -m eval.business_value --report`. No figure below needs a key to
-recompute.
+**Version 8** — `dev-v8`, 40 cases of **development data** the team tuned
+against, read off the committed run by `python3 -m eval.v8_report --report`. No
+figure here is a generalisation figure.
 
-| | Tribunal | Today |
+| | Version 8 (`dev-v8`) | Today |
+|---|---|---|
+| Time to a decision | a median of **153.1 s** a case, and 299.4 s at the 90th percentile | 24–72 hours per dispute (the Ryde brief) |
+| Model cost per case | a median model cost of **0.0390 USD** a case | — |
+| Decided with no person needed | 28 of 40 ruled by the AI (70%) | every case |
+| Sent to a person | 12 to a person -- 5 stopped by a v2.1 rule before the judge (2 on the 2 km limit, 1 on the value, 2 on a safety flag), 6 the panel sent on, 1 without a majority | — |
+
+**Calibration, at version 8.** Expected calibration error 0.097 over 139 drafts,
+at the version-8 bar of 0.80 (`python3 -m eval.v8_report --report`).
+
+**At version 7** the sealed run's own median is **139.8 s** a case, with a median
+model cost of **0.0398 USD** a case, over the 30 cases of `sealed-v4`
+(`python3 -m eval.sealed_report --set sealed-v4`). A different set at a different
+policy version: none of the rows is pooled with another.
+
+**Version 6 (history).** Every figure in this table is from the version-6 runs,
+at the team's own policy frozen on 2026-10-11. 151 disputes at policy version 6
+(the corpus, `dev-v2-ext`, case 1779 and the organisers' case 901), read off the
+committed runs by `python3 -m eval.business_value --report`. No figure below
+needs a key to recompute.
+
+| | Tribunal (version 6) | Today |
 |---|---|---|
 | Time to a decision | **160.4 s** median, 286.9 s at the 90th percentile | 24–72 hours per dispute (the Ryde brief) |
 | Model cost per case | **0.0579 USD** median | — |
 | Decided with no person needed | **112 of 151** (74.2%) | every case |
 | Sent to a person | 26 with no ruling, 13 ruled but above SGD 8 so a person releases the money | — |
 
-**At version 7** the sealed run's own median is **139.8 s** a case, with a median
-model cost of **0.0398 USD** a case, over the 30 cases of `sealed-v4`
-(`python3 -m eval.sealed_report --set sealed-v4`). A different set at a different
-policy version: the two rows are never pooled.
-
-**At version 8** the `dev-v8` run records a median time of **153.1 s** a case and
-a median model cost of **0.0390 USD** a case, over its 40 cases of development
-data (`python3 -m eval.development_sets --report --set dev-v8`). A third set at a
-third policy version: none of the rows is pooled with another.
-
 ## What makes it different
+
+Every row below is true of **version 8**, except where the row itself says
+otherwise.
 
 | | |
 |---|---|
 | **Two sides, one judge** | A rider's AI lawyer and a driver's AI lawyer read byte-identical evidence. Their instructions differ only in whose side they are on, and the code checks that before any call. |
-| **No proof, no point** | A deterministic referee drops any claim that cites no evidence id or no clause id, or cites one that does not exist. It never picks a winner. |
-| **Never one shot** | The judge drafts four rulings, one with the parties' positions swapped. The swapped ruling matched the others on all four graded fields in 136 of 141 cases. |
-| **Money by code** | Distances, waiting time, fares, surge and promo lines are computed in `Decimal` and handed to the agents. A draft whose amount does not match a figure code allows is refused. |
-| **Knows its limits** | Below a confidence of 0.70, or when the drafts split, no ruling is issued. Safety-flagged disputes never reach a model. Either side may appeal once within 30 days, and `auto_rulings_enabled` switches automatic rulings off. |
-| **Hard to fool** | Six attacks planted in party text (a forged system message, a fake clause, base64, zero-width characters): 5 rulings unchanged, 1 sent to a person, none flipped. |
+| **No proof, no point** | Case 5051: 1 of 11 points thrown out by code before the judge saw them. A deterministic referee drops any claim that cites no evidence id or no clause id, or cites one that does not exist. It never picks a winner. |
+| **Never one shot** | The judge drafts four rulings, one with the parties' positions swapped. The swapped draft agreed with the panel on all four fields in 33 of 34 cases at version 8 (`dev-v8`, development data). |
+| **Money by code** | DISP-001's SGD 3.44 = 4.30 km x 0.80, worked out by code and handed to the person who decides. Distances, waiting time, fares, surge and promo lines are computed in `Decimal`, and a draft whose amount is not read off a figure the brief publishes is refused. |
+| **Knows its limits** | v2.1's gates in code: a safety flag, a value over SGD 50 or a route deviation over 2 km goes to a person after the lawyers have prepared the file and before the judge is asked; a ruling stands only at the confidence v2.1 asks (0.80; 0.95 where a party carries a fraud flag, on Tribunal's reading C15 for a no-show); a split panel goes to a person. The appeal and the switch are the version-6 operations layer, and bringing them to version 8 is on the roadmap. |
+| **Hard to fool** | Six attacks planted in party text (a forged system message, a fake clause, base64, zero-width characters): 5 rulings unchanged, 1 sent to a person, none flipped. **(version 6)** |
 | **On the record** | Every call and check goes into a hash-chained event log. An offline test replays 128 recorded cases with no model call and checks each request against the recording. |
-| **An operations layer** | A queue with service targets, an escalation packet for the reviewer, an evidence window, appeals, fraud signals, and a read-only WorkBuddy connector. |
+| **An operations layer** (version 6 runs) | A queue with service targets, an escalation packet for the reviewer, an evidence window, appeals, fraud signals, and a read-only WorkBuddy connector. |
 
 <p align="center"><img src="docs/architecture.svg" alt="Tribunal architecture" width="760"></p>
 
@@ -85,35 +100,45 @@ Python 3.9 and 3.13 (both tested) and nothing else: `requirements.txt` declares 
 
 ```bash
 git clone <this repository> && cd tribunal
-python3 -m tools.verify                   # every check below, in one command
-python3 -m eval.v6_runs --report          # every development figure, from the committed runs
-python3 -m eval.business_value --report   # the numbers above
-python3 -m unittest discover -s tests     # the full suite
+python3 -m tools.verify                         # every check below, in one command
+python3 -m eval.v8_report --report              # the version-8 figures above
+python3 -m eval.development_sets --report       # every registered set's own result
+python3 -m eval.sealed_report --set sealed-v4   # the version-7 sealed run
+python3 -m ui.v8.build --check                  # the version-8 case pages
+python3 -m unittest discover -s tests           # the full suite
 ```
 
 None of these makes a model call or needs a key. Clone rather than download a zip:
-27 tests read the git history and skip without it. On Linux, the tests that rebuild
+29 tests read the git history and skip without it. On Linux, the tests that rebuild
 case 111's brief also skip, because glibc and macOS libm differ in the last digit of
 one distance ([why](docs/record.md#limitations-and-disclosures)).
 
-To arbitrate a case for real you need a Tencent Cloud TokenHub key:
+To arbitrate a case for real at version 8 you need a Tencent Cloud TokenHub key:
 
 ```bash
 export TOKENHUB_API_KEY=...
-python3 -m eval.run_benchmark --cases 101 --policy-version 6 --runs-dir /tmp/tribunal-runs
+python3 -m eval.development_sets --set dev-v8 --cases 5051 --parallel-calls \
+    --concurrency 2 --timeout 900 --prompts-dir prompts/v2 --runs-dir /tmp/tribunal-runs
 ```
+
+Those are the set's own registered arguments: a version-8 set freezes its
+concurrency, its timeout and the prompt directory it pairs with.
 
 ## Commands
 
 | Command | What it does |
 |---|---|
-| `python3 -m eval.v6_runs --report` | Agreement, escalation precision and recall, cost and time for every version-6 run |
-| `python3 -m eval.fairness --report` | Errors by side, position-swap agreement, calibration |
-| `python3 -m eval.sealed_report --set sealed-v2` | One test set's result against its own key |
-| `python3 -m ops.queue --run-dir runs/policy-v6/deepseek-deepseek-flash` | The queue: lane, reason, due time for every case |
-| `python3 -m ops.escalation --run-dir <run> --case N --format md` | The packet a human reviewer is handed |
-| `python3 -m ops.risk --case N` | The fraud and bad-faith signals for one case |
-| `python3 -m tribunal.precedents list` | The precedent library |
+| `python3 -m eval.v8_report --report` | Version 8's measurements: the clock, the cost, the automatic share, the swap and the calibration |
+| `python3 -m eval.development_sets --report` | Every registered set's own result, at the policy version it was written for |
+| `python3 -m eval.sealed_report --set sealed-v4` | The version-7 sealed run's result against its own key |
+| `python3 -m ui.v8.build --check` | The 42 version-8 case pages, held to a fresh build |
+| `python3 -m tools.verify` | Every check this repository ships, in one command |
+| `python3 -m eval.v6_runs --report` (version-6 runs) | Agreement, escalation precision and recall, cost and time for every version-6 run |
+| `python3 -m eval.fairness --report` (version-6 runs) | Errors by side, position-swap agreement, calibration |
+| `python3 -m ops.queue --run-dir runs/policy-v6/deepseek-deepseek-flash` (version-6 runs) | The queue: lane, reason, due time for every case |
+| `python3 -m ops.escalation --run-dir <run> --case N --format md` (version-6 runs) | The packet a human reviewer is handed |
+| `python3 -m ops.risk --case N` (version-6 runs) | The fraud and bad-faith signals for one case |
+| `python3 -m tribunal.precedents list` (version-6 runs) | The precedent library |
 | `python3 -m tryit.server --recorded-test` | The try-it service, answering from a recording (no key) |
 
 ## Results
@@ -154,6 +179,35 @@ Development data, reported as such: `dev-v2-ext` 115/120 and the 29-case corpus
 26/29 at version 6. The full tables, every figure's recompute command, and each
 set's provenance are in [the full record](docs/record.md#results).
 
+## Roadmap and known limits
+
+One line each, plainly. None of them is a surprise, and each names the file or
+run that shows it.
+
+- **Fare and surge disputes are not covered.** v2.1 Section 3 and `DISP-003` name
+  them, and this prototype's own `POL-GEN-24` leaves them out -- that is the
+  prototype's scope and not v2.1's ([the record](docs/record.md#version-8-at-a-glance)).
+- **Property damage and image analysis are not covered.** v2.1 Section 4 needs
+  images the pipeline does not read ([the record](docs/record.md#limitations-and-disclosures)).
+- **The C15 question is with Ryde.** Tribunal reads v2.1 6.3 as setting a 0.95
+  bar on a no-show, where v2.1 6.2 makes a no-show ruling AI-final and Ryde's own
+  sample upholds the fee ([the version-8 runs](docs/notes/2026-10-14-version-8-runs.md)).
+- **Version 8 has no appeal clause**, and the operations layer -- appeal, queue,
+  review, risk and the escalation packet -- reads the version-6 runs (`ops/`).
+- **The try-it page runs version 6**, in the browser, with the live service off
+  (`tryit/`, `ui/dist/try-config.js`).
+- **The 151 version-6 case pages are history**: the team's own policy frozen on
+  2026-10-11, not what Tribunal applies now (`ui/dist/case-*.html`).
+- **The v2.1 precedents (7.1-7.3) are not in the precedent library**, and the
+  judge is not shown them by default (`precedents/precedents.jsonl`).
+- **Confidence is the judge's own figure capped by the evidence weights**, not
+  v2.1 6.3's four components (`prompts/v2/judge.system.md`, `tribunal/pipeline.py`).
+- **The sealed figure is at version 7**, and its author is the team's own
+  development assistant (`docs/notes/2026-10-14-version-7-runs.md`).
+- **One model family.** Every committed run was made with the one runtime model in
+  `tribunal/model.py`.
+- **Synthetic data**, except the organisers' samples 901, 902 and 903.
+
 ## Documentation
 
 | Document | What's covered |
@@ -170,10 +224,13 @@ set's provenance are in [the full record](docs/record.md#results).
 | [Governance](docs/governance/) | Threat model, privacy, incidents |
 | [Policy sources](docs/policy-sources.md) | Where each policy clause comes from |
 | [Dated notes](docs/notes/) | One note per change or run, written when it happened |
+| [Version-8 policy](docs/notes/2026-10-14-policy-v8.md) | What Ryde's answers of 2026-10-14 change, and what version 8 is |
+| [Version-8 runs](docs/notes/2026-10-14-version-8-runs.md) | The two version-8 sets' single runs, case by case |
+| [Version-8 measurements](docs/notes/2026-10-14-version-8-measurements.md) | The version-8 clock, cost, swap, calibration and escalation figures |
 | [WorkBuddy log](docs/buddy-log/README.md) | One row per WorkBuddy session, with screenshots |
 | [WorkBuddy connector](integrations/workbuddy/) | A read-only MCP server over the committed records |
 | [Try-it service](tryit/README.md) | The website's live-run service, its limits and how to run it |
-| [Changelog](CHANGELOG.md) | Every change since `freeze-2026-10-11`, one line per part, and the command that shows the frozen tree has not moved |
+| [Changelog](CHANGELOG.md) | Every change since `freeze-2026-10-11`, the three freezes (versions 6, 7 and 8) and the command that shows each frozen tree |
 
 ## Team and licence
 

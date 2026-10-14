@@ -18,8 +18,11 @@ version-8 figures come from the same :func:`eval.run_benchmark.grade_run` call
 over the directory each of those runs was written to; and the four version-8
 measurements -- decided with no person, the position swap, the calibration error
 and the draft count -- come from :func:`eval.v8_report.figures`, which measures
-them off the same two runs. No figure is typed in here and no figure is read
-from a second copy of itself.
+them off the same two runs; and the one figure that is not a measurement of a run
+-- the count of tests that read the repository's git history -- comes from
+:func:`tests_that_read_the_git_history`, which counts them in the test modules'
+own source, because this command runs no tests. No figure is typed in here and no
+figure is read from a second copy of itself.
 
 **How a figure is found.** Each figure carries a table of patterns, one per way
 the documents spell it -- ``160.4 s`` in one, ``2.7 min`` in another, ``2.7``
@@ -454,6 +457,8 @@ FIGURES: Tuple[Figure, ...] = (
             r" 2026-10-14, is (1 of 2):",
             r"stated outcomes as amended by Ryde's\s+answer of 2026-10-14"
             r" \(`ryde-v8`\), are (1 of 2):",
+            # the record's own glance table
+            r"\| agreement, `ryde-v8` \| (1 of 2) \|",
         ),
     ),
     Figure(
@@ -463,14 +468,18 @@ FIGURES: Tuple[Figure, ...] = (
             r"`dev-v8` \(40 cases\) \| (\d+/40) \|",
             r"`dev-v8` (\d+/40) and `dev-v7`",
             r"dev-v8 (\d+/40) and dev-v7",
+            # the record's own glance table
+            r"\| agreement, `dev-v8` \| (\d+/40) \|",
         ),
     ),
     Figure(
         "dev-v8, median time to a decision",
         ("153.1",),
         (
-            r"records a median time of \*\*(\d+\.\d+) s\*\* a case",
             r"Median time to a decision (\d+\.\d+) s a case",
+            # the README's version-8 table, and the record's own glance table
+            r"a median of \*\*(\d+\.\d+) s\*\* a case",
+            r"a median of (\d+\.\d+) s a case",
             # the product site's own statements of the same measurement
             r"median of (\d+\.\d+) s is slow for a chat reply",
             r"(\d+\.\d+) s at the median and \d+\.\d+ s at the 90th",
@@ -544,6 +553,8 @@ FIGURES: Tuple[Figure, ...] = (
             r"\| position swap, all four fields \| (\d+ of 34)\b",
             r"data-count=\"(\d+)\">\d+</span><small> of 34",
             r"(\d+ of 34) at version 8",
+            # the submission texts' own pain-point table
+            r"in (\d+ of 34) cases",
             r"class=\"big\">(\d+ of 34)</span><h3>Agreed when the sides were swapped",
         ),
     ),
@@ -646,6 +657,8 @@ FIGURES: Tuple[Figure, ...] = (
             r"\((\d+\.\d+); 0\.95 with a fraud flag\)",
             r"\uff08(\d+\.\d+)\uff1b\u5e26\u6b3a\u8bc8\u6807\u8bb0\u65f6 0\.95\uff09",
             r"the version-8 bar of (\d+\.\d+)",
+            # the README's own row, which spells the same bar out
+            r"\((\d+\.\d+); 0\.95 where a party carries a fraud flag",
         ),
     ),
     Figure(
@@ -718,6 +731,19 @@ FIGURES: Tuple[Figure, ...] = (
         (
             r"all (\d+) cases that needed a person got one",
             r"(\d+) \u4e2a\u8be5\u4ea4\u7ed9\u4eba\u7684\u6848\u5b50\u90fd\u4ea4\u4e86",
+        ),
+    ),
+    # The tests that read the repository's git history. It is counted from the
+    # test modules' own source -- this command runs no tests -- and the rule is
+    # written out in ``tests_that_read_the_git_history``. The README states the
+    # count as a numeral and the record spells it out, so both spellings are
+    # accepted and both are read.
+    Figure(
+        "tests that read the git history",
+        ("29", "Twenty-nine"),
+        (
+            r"(\d+) tests read the git history",
+            r"(Twenty-nine) of the tests read the repository's git history",
         ),
     ),
 )
@@ -830,6 +856,70 @@ def case_cost(document: Mapping[str, object]) -> Decimal:
         + Decimal(cached) * v6_runs.PRICE_CACHED_INPUT
         + Decimal(completion) * v6_runs.PRICE_OUTPUT
     ) / v6_runs.MILLION
+
+
+# --------------------------------------------------------------------------
+# The tests that read the repository's git history
+# --------------------------------------------------------------------------
+# The test modules whose whole subject is a record read out of git -- the two
+# sealed runs' manifests and the ignore rules -- and the module that reads the
+# history from one of its tests rather than from all of them. The helper the
+# suite calls is ``tests/portability.py``'s.
+_TEST_DEFINITION = re.compile(r"^\s+def (test_\w+)", re.MULTILINE)
+
+HISTORY_MODULES: Tuple[str, ...] = (
+    "tests/test_repository_hygiene.py",
+    "tests/test_wild_run_manifest.py",
+    "tests/test_wild_v2_run_manifest.py",
+)
+
+HISTORY_TEST_MODULES: Tuple[str, ...] = ("tests/test_known_limitations.py",)
+
+HISTORY_HELPER = "portability.require_git_history()"
+
+
+def _test_bodies(source: str) -> List[str]:
+    """Every test method's own source, in the module's order.
+
+    A body runs from its ``def`` to the next ``def test_`` at any indentation,
+    so a nested helper or a decorator between two tests stays with the test above
+    it and nothing is counted twice.
+    """
+    matches = list(_TEST_DEFINITION.finditer(source))
+    bodies: List[str] = []
+    for index, match in enumerate(matches):
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(source)
+        bodies.append(source[match.start() : end])
+    return bodies
+
+
+def _test_names(source: str) -> List[str]:
+    """Every test method's name, in the module's order."""
+    return [match.group(1) for match in _TEST_DEFINITION.finditer(source)]
+
+
+def tests_that_read_the_git_history() -> str:
+    """How many tests read the repository's git history.
+
+    The figure the README states and ``tests/portability.py`` names: the tests
+    that skip, saying why, when the history is not there to read. It is counted
+    from the test modules' own source rather than by running the suite -- this
+    command runs no tests -- and it is counted the way the suite meets it: every
+    test of a module whose whole subject is a record read out of git
+    (``HISTORY_MODULES``), and, in a module that reads the history from one test
+    rather than from all of them (``HISTORY_TEST_MODULES``), the tests whose own
+    body asks ``portability.require_git_history``. ``tests/test_portability.py``
+    is not counted: it tests the helper itself, and its tests answer with or
+    without a history because they patch the availability rather than call it.
+    """
+    total = 0
+    for name in HISTORY_MODULES:
+        total += len(_test_names((PROJECT_ROOT / name).read_text(encoding="utf-8")))
+    for name in HISTORY_TEST_MODULES:
+        for body in _test_bodies((PROJECT_ROOT / name).read_text(encoding="utf-8")):
+            if HISTORY_HELPER in body:
+                total += 1
+    return str(total)
 
 
 def _compute() -> Dict[str, str]:
@@ -964,6 +1054,9 @@ def _compute() -> Dict[str, str]:
         "case 5051, the wait and the free wait": values["case5051_wait_seconds"],
         "version-8 case pages": values["v8_case_pages"],
         "sealed-v4, cases that needed a person": values["sealed_v4_to_person"],
+        # The tests that read the repository's git history, counted from the test
+        # modules rather than by running them.
+        "tests that read the git history": tests_that_read_the_git_history(),
     }
 
 
