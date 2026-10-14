@@ -72,3 +72,8 @@ and `size` values: no other byte of any of those files differs.
 that runs with the suite: no file `git ls-files runs` lists contains
 `/private/tmp/`, and every entry of every `runs/*manifest*.json` matches its
 file's digest and size.
+
+The version-8 runs committed later the same day -- `ryde-v8` and `dev-v8` --
+had the same replacement applied when they were committed: 3 files and 6
+replacements in each, 6 files and 12 replacements in all, and no file under
+`runs/` holds a temporary-folder path.
