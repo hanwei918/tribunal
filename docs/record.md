@@ -5,7 +5,10 @@ recomputes it, the provenance of every test set, the limitations and disclosures
 how the system works, and how to run it. It was the repository README until
 2026-10-13, when the README became a short front page; it was moved here whole and
 only its relative links were changed. `tests/test_readme_figures.py` recomputes
-every figure in it from the committed runs and keys.
+every figure in it from the committed runs and keys. On 2026-10-14 the absolute
+path of the temporary checkout each run was launched from was replaced by
+`<checkout>` in the run records; no other byte of a run changed
+(docs/notes/2026-10-14-local-paths.md).
 
 
 ![Tribunal poster: a robot judge between a rider and a driver](../ui/assets/cover-1280.jpg)

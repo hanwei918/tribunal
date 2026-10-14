@@ -102,6 +102,10 @@ The owner's own `README.txt` is committed unchanged beside them as
 `runs/v7-runs-README.txt`, and `runs/sealed-v4-manifest.json` records every file
 under `runs/sealed-v4/` with its size and sha256, sorted by path.
 
+On 2026-10-14 the absolute path of the temporary checkout each run was launched
+from was replaced by `<checkout>` in the run records; no other byte of a run
+changed (docs/notes/2026-10-14-local-paths.md).
+
 ## 4. `dev-v7`, the first attempt (2026-10-13 23:45 - 2026-10-14 00:48, `ebcb753`)
 
 **35 of 40.** The report's figure, graded against the set's own key.
