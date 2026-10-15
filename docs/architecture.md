@@ -49,10 +49,10 @@ the case record and nothing else.
 
 **Operator.** The developer, **Zhou Hanwei**, who runs every set from the
 command line: there is no always-on service. `eval/run_benchmark.py` and
-`eval/development_sets.py` are the commands, and he is also the person who
-approved amendment `0003` and made both stored closures. He adopted Ryde's v2.1
-as version 7 on 2026-10-13, asked Ryde the team's three questions, and adopted
-Ryde's answers as version 8 on 2026-10-14.
+`eval/development_sets.py` are the commands, and the operator is also the
+person who approved amendment `0003` and made both stored closures, adopted
+Ryde's v2.1 as version 7 on 2026-10-13, asked Ryde the team's three questions,
+and adopted Ryde's answers as version 8 on 2026-10-14.
 
 **Policy owner.** The person who owned version 6's policy and wrote most of its
 answer keys. She wrote the dev-v2 and sealed-v2 keys and re-derived sealed-v1,

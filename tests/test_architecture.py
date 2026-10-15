@@ -328,7 +328,10 @@ class TheExtractorTests(unittest.TestCase):
         }
         for name, required in (
             ("1-system-context.svg", "eval/run_benchmark.py"),
-            ("1-system-context.svg", "ui/v2/build.py"),
+            ("1-system-context.svg", "ui/build.py"),
+            ("2b-containers-after-ruling.svg", "ui/site/build.py"),
+            ("2b-containers-after-ruling.svg", "ui/v8/build.py"),
+            ("2b-containers-after-ruling.svg", "ui/v2/build.py"),
             ("2a-containers-deciding.svg", "ops/evidence.py"),
             ("2a-containers-deciding.svg", "ui/build.py"),
             ("2b-containers-after-ruling.svg", "eval/policy_gaps.py"),
