@@ -502,6 +502,266 @@ class TheQueueTableTests(unittest.TestCase):
 
 
 # --------------------------------------------------------------------------
+# The layout: the pages close their tags, and no grid leaves a card alone
+# --------------------------------------------------------------------------
+# The elements that hold no content. An HTML parser meets no end tag for one, so
+# the nesting check skips it, and the grid check counts it as one child.
+VOID_ELEMENTS = frozenset(
+    {
+        "area",
+        "base",
+        "br",
+        "col",
+        "embed",
+        "hr",
+        "img",
+        "input",
+        "link",
+        "meta",
+        "param",
+        "source",
+        "track",
+        "wbr",
+    }
+)
+
+# The grid classes ``site.css`` states a column count for, most specific first:
+# ``.cards.c2`` and ``.cards.c4`` override the plain ``.cards`` rule, and the
+# count is read out of each rule rather than assumed.
+GRID_RULES = (("c2", ".cards.c2"), ("c4", ".cards.c4"))
+PLAIN_GRID = ".cards"
+TIMELINE_RULE = ".tl"
+
+REPEAT_RE = re.compile(r"repeat\((\d+),")
+
+# The version-8 section's first card, as the built results page carries it.
+# Removing it leaves five cards in a three-column grid, which is the gap the
+# control reports.
+VERSION_EIGHT_FIRST_CARD = (
+    '<div class="card" data-rise><span class="kicker">dev-v8</span>'
+    '<span class="big">39/40</span><h3>40 development cases</h3>'
+    "<p>Development data the team tuned against.</p></div>"
+)
+
+# DISP-001's closing on the cases page, as it stands and as it stood before this
+# part: the card's ``<a>`` was closed by ``</div>`` and an empty card div wrapped
+# DISP-002's. The control puts the broken markup back.
+CARD_END_FIXED = (
+    '</p><span class="foot-line">Open the version-8 case page '
+    '<span class="arr" aria-hidden="true">-&gt;</span></span></a>'
+)
+CARD_END_BROKEN = '</p></div><div class="card" data-rise></a>'
+
+
+def css_columns(selector: str) -> int:
+    """One ``site.css`` rule's own column count, read from its ``repeat(N,``."""
+    css = (site.SRC_DIR / "site.css").read_text(encoding="utf-8")
+    rule = re.search(re.escape(selector) + r"\{[^}]*", css)
+    if rule is None:
+        raise AssertionError("site.css states no {0} rule".format(selector))
+    counted = REPEAT_RE.search(rule.group(0))
+    if counted is None:
+        raise AssertionError("{0} states no repeat(N, columns".format(selector))
+    return int(counted.group(1))
+
+
+def grid_columns(classes: Tuple[str, ...]) -> int:
+    """The columns a grid's own class list is styled with."""
+    for token, selector in GRID_RULES:
+        if token in classes:
+            return css_columns(selector)
+    return css_columns(PLAIN_GRID)
+
+
+class _Nesting(HTMLParser):
+    """Every end tag that does not close the element opened most recently.
+
+    A void element opens nothing, so it is skipped; a ``<script>`` or ``<style>``
+    body is raw text to the parser and is never read as tags.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.stack: List[str] = []
+        self.errors: List[str] = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag not in VOID_ELEMENTS:
+            self.stack.append(tag)
+
+    def handle_startendtag(self, tag, attrs):
+        return
+
+    def handle_endtag(self, tag):
+        if not self.stack:
+            self.errors.append("</{0}> closes nothing".format(tag))
+        elif self.stack[-1] != tag:
+            self.errors.append("</{0}> closes {1}".format(tag, self.stack[-1]))
+        else:
+            self.stack.pop()
+
+
+def nesting_errors(markup: str) -> List[str]:
+    """Every end tag out of order, and every element left open at the end."""
+    parser = _Nesting()
+    parser.feed(markup)
+    return parser.errors + ["<{0}> is not closed".format(tag) for tag in parser.stack]
+
+
+class _Grid:
+    """One open element while the scan walks a page.
+
+    ``children`` counts the elements opened inside it and ``span2`` the ones that
+    carry ``span2`` -- a card the stylesheet gives a second column to, so it
+    fills two slots. ``items`` counts the ``<li>`` of a timeline.
+    """
+
+    __slots__ = ("tag", "classes", "children", "span2", "items")
+
+    def __init__(self, tag: str, classes: Tuple[str, ...]) -> None:
+        self.tag = tag
+        self.classes = classes
+        self.children = 0
+        self.span2 = 0
+        self.items = 0
+
+
+class _GridScan(HTMLParser):
+    """Every ``.cards`` grid and every ``ol.tl`` on a page, with its own count."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.stack: List[_Grid] = []
+        self.grids: List[Tuple[Tuple[str, ...], int]] = []
+        self.timelines: List[int] = []
+
+    def _open(self, tag, attrs, closed: bool) -> None:
+        classes = tuple((dict(attrs).get("class") or "").split())
+        if self.stack:
+            parent = self.stack[-1]
+            parent.children += 1
+            if "span2" in classes:
+                parent.span2 += 1
+            if tag == "li" and "tl" in parent.classes:
+                parent.items += 1
+        if closed:
+            self._record(_Grid(tag, classes))
+        else:
+            self.stack.append(_Grid(tag, classes))
+
+    def _record(self, frame: _Grid) -> None:
+        if "cards" in frame.classes:
+            self.grids.append((frame.classes, frame.children + frame.span2))
+        if frame.tag == "ol" and "tl" in frame.classes:
+            self.timelines.append(frame.items)
+
+    def handle_starttag(self, tag, attrs):
+        self._open(tag, attrs, tag in VOID_ELEMENTS)
+
+    def handle_startendtag(self, tag, attrs):
+        self._open(tag, attrs, True)
+
+    def handle_endtag(self, tag):
+        if self.stack:
+            self._record(self.stack.pop())
+
+
+def grid_gaps(markup: str) -> List[str]:
+    """Every grid on a page whose cards do not fill its columns, as a sentence."""
+    scan = _GridScan()
+    scan.feed(markup)
+    gaps: List[str] = []
+    for classes, count in scan.grids:
+        columns = grid_columns(classes)
+        if count % columns:
+            gaps.append(
+                "the {0} grid holds {1} card slots in {2} columns".format(
+                    " ".join(classes), count, columns
+                )
+            )
+    for items in scan.timelines:
+        columns = css_columns(TIMELINE_RULE)
+        if items % columns:
+            gaps.append(
+                "the timeline holds {0} entries in {1} columns".format(items, columns)
+            )
+    return gaps
+
+
+class TheLayoutTests(unittest.TestCase):
+    """The committed pages' markup: the tags nest, and no grid leaves a gap.
+
+    Both tests read ``ui/dist/`` and rebuild nothing -- the pages are the
+    builders' own committed output, so these run on a machine whose libm cannot
+    rebuild a recorded brief, and on Linux.
+    """
+
+    def test_every_page_closes_its_tags_in_order(self):
+        """Every page under ``ui/dist/`` is well formed.
+
+        Every end tag closes the element opened most recently and nothing is
+        left open at the end, for the pages all three builders write. The
+        control puts DISP-001's closing back the way it was before this part --
+        the card's ``<a>`` closed by ``</div>``, with an empty card div wrapping
+        DISP-002's -- and is reported.
+        """
+        pages = sorted(site.DIST_DIR.rglob("*.html"))
+        self.assertTrue(pages, "ui/dist holds no page")
+        for path in pages:
+            name = path.relative_to(site.DIST_DIR).as_posix()
+            with self.subTest(page=name):
+                self.assertEqual(
+                    [],
+                    nesting_errors(path.read_text(encoding="utf-8")),
+                    "{0} does not close its tags in order".format(name),
+                )
+        broken = (site.DIST_DIR / "cases.html").read_text(encoding="utf-8")
+        broken = broken.replace(CARD_END_FIXED, CARD_END_BROKEN, 1)
+        with self.subTest(page="cases.html, the card put back"):
+            self.assertNotEqual(
+                (site.DIST_DIR / "cases.html").read_text(encoding="utf-8"),
+                broken,
+                "the fixture did not break DISP-001's closing",
+            )
+            self.assertTrue(
+                nesting_errors(broken),
+                "a card closed by the wrong tag was not reported",
+            )
+
+    def test_no_card_grid_leaves_a_gap_on_a_wide_screen(self):
+        """Every grid a page writes fills its columns, and so does the timeline.
+
+        The column counts are the stylesheet's own, and a card carrying ``span2``
+        counts two, which is what that class does. The controls remove one
+        version-8 card -- five slots in three columns -- and take ``span2`` off
+        the fifth credit -- five slots in three columns -- and both are reported.
+        """
+        for source in site.page_sources():
+            name = source.name
+            markup = (site.DIST_DIR / name).read_text(encoding="utf-8")
+            with self.subTest(page=name):
+                self.assertEqual(
+                    [], grid_gaps(markup), "{0} leaves a card alone".format(name)
+                )
+        results = (site.DIST_DIR / "results.html").read_text(encoding="utf-8")
+        self.assertEqual([], grid_gaps(results))
+        short = results.replace(VERSION_EIGHT_FIRST_CARD, "", 1)
+        with self.subTest(page="results.html, a card short"):
+            self.assertNotEqual(results, short, "the fixture removed no card")
+            self.assertTrue(
+                grid_gaps(short), "a grid one card short of a row was not reported"
+            )
+        about = (site.DIST_DIR / "about.html").read_text(encoding="utf-8")
+        self.assertEqual([], grid_gaps(about))
+        flat = about.replace("card span2", "card", 1)
+        with self.subTest(page="about.html, span2 taken off"):
+            self.assertNotEqual(about, flat, "the fixture removed no span2")
+            self.assertTrue(
+                grid_gaps(flat), "a card that lost span2 was not reported"
+            )
+
+
+# --------------------------------------------------------------------------
 # The pages hold together as a site
 # --------------------------------------------------------------------------
 class TheLinksTests(unittest.TestCase):

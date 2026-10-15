@@ -142,7 +142,11 @@ FIGURES: Tuple[Figure, ...] = (
             r"median time to a decision of (\d+\.\d+) seconds",
             r"median of (\d+\.\d+) seconds",
             r"decision of (\d+\.\d+) s and a 90th",
-            r"class=\"big\">(\d+\.\d+) s</span><h3>",
+            # The results page's version-6 cards are list items now, part 98's
+            # item 2: "<b>160.4 s</b> Median per case. ...". The markup the
+            # pattern used to read -- a ``class="big"`` span and an ``<h3>`` --
+            # is the version-8 card's, which states the same measurement.
+            r"(\d+\.\d+) s</b> Median per case",
             r"At the (\d+\.\d+) s median",
             # The results page's own row in the development table, which is
             # where the version-6 median is stated now: "160.4 s; p90 286.9 s."
@@ -190,7 +194,9 @@ FIGURES: Tuple[Figure, ...] = (
             r"(\d+\.\d+) USD median",
             r"cost per case is (\d+\.\d+)\s+USD",
             r"published prices is (\d+\.\d+)",
-            r"class=\"big\">\$(\d+\.\d+)</span><h3>Model cost",
+            # The results page's version-6 list item, part 98's item 2:
+            # "<b>$0.0579</b> Model cost, median. ...".
+            r"\$(\d+\.\d+)</b> Model cost",
             # The results page's own row in the development table, which is
             # where the version-6 median cost is stated now: "$0.058", in both
             # languages. The front page's version-8 tile writes "$0.039" and
@@ -206,8 +212,8 @@ FIGURES: Tuple[Figure, ...] = (
             r"\*\*(\d+) of 151\*\*",
             r"Decided automatically \| (\d+)/151 = ",
             r"the 151, (\d+) are decided",
-            r"class=\"big\">(\d+)</span><h3>Decided and executed",
-            r"class=\"big\">(\d+)</span><h3>\u5224\u51b3\u5e76\u6267\u884c",
+            r"(\d+)</b> Decided and executed",
+            r"(\d+)</b> \u5224\u51b3\u5e76\u6267\u884c",
             # The results page's own row, which is where the 112 is stated now:
             # "74% (112 / 151)", in both languages. The front page's version-8
             # tile writes "28 of 40 (dev-v8)" and is the version-8 figure's.
@@ -219,8 +225,8 @@ FIGURES: Tuple[Figure, ...] = (
         ("13",),
         (
             r"(\d+) ruled but above SGD 8",            r"(\d+) are decided with the amount held",
-            r"class=\"big\">(\d+)</span><h3>Decided, money held",
-            r"class=\"big\">(\d+)</span><h3>\u5df2\u5224\u51b3\uff0c\u6b3e\u9879\u51bb\u7ed3",
+            r"(\d+)</b> Decided, money held",
+            r"(\d+)</b> \u5df2\u5224\u51b3\uff0c\u6b3e\u9879\u51bb\u7ed3",
         ),
     ),
     Figure(
@@ -228,8 +234,8 @@ FIGURES: Tuple[Figure, ...] = (
         ("26",),
         (
             r"\| (\d+) with no ruling",
-            r"class=\"big\">(\d+)</span><h3>No ruling issued",
-            r"class=\"big\">(\d+)</span><h3>\u4e0d\u51fa\u5224\u51b3",
+            r"(\d+)</b> No ruling issued",
+            r"(\d+)</b> \u4e0d\u51fa\u5224\u51b3",
         ),
     ),
     Figure(
@@ -263,7 +269,7 @@ FIGURES: Tuple[Figure, ...] = (
             r"graded fields in (\d+) of 141",
             r"graded fields \| (\d+)/141 = ",
             r"graded fields in (\d+) and on the ruling",
-            r"class=\"big\">(\d+)/141</span>",
+            r"(\d+)/141</b>",
         ),
     ),
     Figure(
@@ -288,10 +294,10 @@ FIGURES: Tuple[Figure, ...] = (
         "inject-v1, rulings flipped",
         ("0",),
         (
-            r"class=\"big\">(\d+)</span><h3>rulings flipped",
+            r"(\d+)</b> rulings flipped",
             r"(\d+) rulings flipped \(",
             r"data-count=\"(\d+)\">\d+</span></div><p>rulings flipped",
-            r"class=\"big\">(\d+)</span><h3>\u4e2a\u5224\u51b3\u88ab\u6539",
+            r"(\d+)</b> \u4e2a\u5224\u51b3\u88ab\u6ce8\u5165\u653b\u51fb\u6539\u53d8",
             r"(\d+) \u4e2a\u5224\u51b3\u88ab\u6539\u53cd",
             r"data-count=\"(\d+)\">\d+</span></div><p>\u4e2a\u5224\u51b3\u88ab",
         ),
@@ -355,7 +361,7 @@ FIGURES: Tuple[Figure, ...] = (
             r"\| (\d+)/12 = 100\.0% \|",
             r"graded fields in (\d+)/12 = 100",
             r"(\d+)/12 = 100\.0%",
-            r"class=\"big\">(\d+)/12</span>",
+            r"(\d+)/12</b>",
             # The sentence that closes the results page's panel on the hidden
             # tests, which is where the fourth sealed set's agreement is stated
             # now: "sealed-v2's 12/12 has a Wilson 95% interval of [75.8%,
@@ -390,7 +396,7 @@ FIGURES: Tuple[Figure, ...] = (
             r"table below: (\d+)/24",
             r"agrees in (\d+)/24 = 87\.5%",
             r"(\d+)/24 = 87\.5%",
-            r"class=\"big\">(\d+)/24</span>",
+            r"(\d+)/24</b>",
             r"rather than (\d+)/24",
         ),
     ),
@@ -415,7 +421,7 @@ FIGURES: Tuple[Figure, ...] = (
         (
             r"`wild-v2` \(20 cases\) \| (\d+)/20",
             r"\| (\d+)/20 = 90\.0% \|",
-            r"class=\"big\">(\d+)/20</span>",
+            r"(\d+)/20</b>",
             r"so (\d+)/20 is read as",
         ),
     ),

@@ -638,6 +638,24 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
             "v8_confidence_between",
         ),
     ),
+    # Part 98's version-8 grid states two figures the results page did not
+    # carry before: the cost tile and the calibration error, each in a short
+    # sentence of its own card. The long sentences the cards used to hold are
+    # rows above, and they moved verbatim.
+    (
+        "results.html",
+        "$0.039",
+        (
+            "v8_median_cost_dollars",
+        ),
+    ),
+    (
+        "results.html",
+        "Calibration error 0.097 (lower is better).",
+        (
+            "v8_ece",
+        ),
+    ),
     # The five version-6 figures the front page's tiles used to be the only
     # place for. They left the front page with version 8's own four tiles and
     # are stated here instead, each in a block that names version 6: the poster
@@ -883,6 +901,20 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
             "v8_ece",
             "v8_drafts",
             "v8_confidence_between",
+        ),
+    ),
+    (
+        "results.zh.html",
+        "$0.039",
+        (
+            "v8_median_cost_dollars",
+        ),
+    ),
+    (
+        "results.zh.html",
+        "\u6821\u51c6\u8bef\u5dee 0.097\uff08\u8d8a\u4f4e\u8d8a\u597d\uff09\u3002",
+        (
+            "v8_ece",
         ),
     ),
     (
@@ -1547,11 +1579,11 @@ VERSION_SEVEN_FIGURES: Tuple[str, ...] = (
 VERSION_SENTENCES: Tuple[Tuple[str, str], ...] = (
     (
         "results.html",
-        "The case pages show the version-6 development runs.",
+        "The team's own policy, frozen on 2026-10-11 and kept as history.",
     ),
     (
         "results.zh.html",
-        "\u6848\u4f8b\u9875\u5c55\u793a\u7684\u662f\u7b2c 6 \u7248\u7684\u5f00\u53d1\u8dd1\u5206\u3002",
+        "\u56e2\u961f\u81ea\u5b9a\u653f\u7b56\uff0c\u4e8e 2026-10-11 \u51bb\u7ed3\uff0c\u7559\u4f5c\u5386\u53f2\u3002",
     ),
     (
         "cases.html",
