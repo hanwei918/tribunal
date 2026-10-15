@@ -1373,7 +1373,7 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
     ),
     (
         "results.html",
-        "1/2: DISP-001 (route deviation, 4.3 km) escalated, as Ryde answered on 2026-10-14 that the 2 km limb applies; DISP-002 (no-show) escalated: the drafts did not agree on whether eight sparse GPS fixes reach the 0.95 confidence Tribunal's version-8 policy requires -- its reading of v2.1 6.3 (C15); v2.1 6.2 makes a no-show ruling AI-final and Ryde's outcome upholds the fee, so the question is with Ryde.",
+        "1/2: DISP-001 (route deviation, 4.3 km) escalated, as Ryde answered on 2026-10-14 that the 2 km limb applies; DISP-002 (no-show) escalated: the drafts did not agree on whether eight sparse GPS fixes reach the 0.95 confidence Tribunal's version-8 policy requires -- its reading of v2.1 6.3 (C15); v2.1 6.2 makes a no-show ruling AI-final and Ryde's outcome upholds the fee; Ryde has since said, through the organisers on 2026-10-15, that a team may use its own policy, so C15 stays Tribunal's stated reading.",
         (
             "ryde_v8_exact",
         ),
@@ -1387,7 +1387,7 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
     ),
     (
         "results.zh.html",
-        "Ryde \u5b98\u65b9\u6837\u4f8b 1/2\uff1aDISP-001\uff08\u7ed5\u8def 4.3 km\uff09\u8f6c\u4eba\u5de5\u2014\u2014Ryde \u4e8e 2026-10-14 \u7b54\u590d 2 km \u89c4\u5219\u9002\u7528\uff1bDISP-002\uff08\u672a\u51fa\u73b0\uff09\u8f6c\u4eba\u5de5\uff1a\u4e58\u5ba2\u5e26\u6b3a\u8bc8\u6807\u8bb0\u65f6\uff0cTribunal \u7684\u7b2c 8 \u7248\u653f\u7b56\u8981\u6c42 0.95 \u7684\u7f6e\u4fe1\u5ea6\u2014\u2014\u8fd9\u662f\u5b83\u5bf9 v2.1 \u7b2c 6.3 \u6761\u7684\u8bfb\u6cd5\uff08C15\uff09\uff1bv2.1 \u7b2c 6.2 \u6761\u4f7f\u672a\u51fa\u73b0\u88c1\u51b3\u6210\u4e3a\u6700\u7ec8\uff0c\u800c Ryde \u7ed9\u51fa\u7684\u7ed3\u679c\u662f\u7ef4\u6301\u6536\u8d39\uff0c\u6240\u4ee5\u8fd9\u4e2a\u95ee\u9898\u5728 Ryde \u90a3\u8fb9\u3002",
+        "Ryde \u5b98\u65b9\u6837\u4f8b 1/2\uff1aDISP-001\uff08\u7ed5\u8def 4.3 km\uff09\u8f6c\u4eba\u5de5\u2014\u2014Ryde \u4e8e 2026-10-14 \u7b54\u590d 2 km \u89c4\u5219\u9002\u7528\uff1bDISP-002\uff08\u672a\u51fa\u73b0\uff09\u8f6c\u4eba\u5de5\uff1a\u4e58\u5ba2\u5e26\u6b3a\u8bc8\u6807\u8bb0\u65f6\uff0cTribunal \u7684\u7b2c 8 \u7248\u653f\u7b56\u8981\u6c42 0.95 \u7684\u7f6e\u4fe1\u5ea6\u2014\u2014\u8fd9\u662f\u5b83\u5bf9 v2.1 \u7b2c 6.3 \u6761\u7684\u8bfb\u6cd5\uff08C15\uff09\uff1bv2.1 \u7b2c 6.2 \u6761\u4f7f\u672a\u51fa\u73b0\u88c1\u51b3\u6210\u4e3a\u6700\u7ec8\uff0c\u800c Ryde \u7ed9\u51fa\u7684\u7ed3\u679c\u662f\u7ef4\u6301\u6536\u8d39\uff0c\u4e3b\u529e\u65b9 2026-10-15 \u8f6c\u8fbe Ryde \u7684\u610f\u89c1\uff1a\u5404\u961f\u53ef\u4ee5\u7528\u81ea\u5df1\u7684\u653f\u7b56\uff0c\u6240\u4ee5 C15 \u4ecd\u662f Tribunal \u660e\u786e\u8bf4\u660e\u7684\u8bfb\u6cd5\u3002",
         (
             "ryde_v8_exact",
         ),
@@ -1413,7 +1413,7 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
     ),
     (
         "cases.html",
-        "The driver arrived at 08:43; the free wait ran to 08:48 and the trip was cancelled at 08:51, after it. The rider's profile carries a fraud flag, so Tribunal's version-8 policy requires a confidence of 0.95 -- its reading of v2.1 6.3 (C15); v2.1 6.2 makes a no-show ruling AI-final and Ryde's outcome upholds the fee, so the question is with Ryde -- and the arrival rests on 8 GPS fixes two to four minutes apart. Of the judge's four drafts, 2 escalated, 1 upheld the fee and 1 was voided for citing a clause that does not exist; three must agree, so the case went to a person with the fee held. Ryde's stated outcome is the fee upheld: this is our one known divergence.",
+        "The driver arrived at 08:43; the free wait ran to 08:48 and the trip was cancelled at 08:51, after it. The rider's profile carries a fraud flag, so Tribunal's version-8 policy requires a confidence of 0.95 -- its reading of v2.1 6.3 (C15); v2.1 6.2 makes a no-show ruling AI-final and Ryde's outcome upholds the fee, and Ryde has since said, through the organisers on 2026-10-15, that a team may use its own policy -- and the arrival rests on 8 GPS fixes two to four minutes apart. Of the judge's four drafts, 2 escalated, 1 upheld the fee and 1 was voided for citing a clause that does not exist; three must agree, so the case went to a person with the fee held. Ryde's stated outcome is the fee upheld: this is our one known divergence.",
         (
             "ryde903_arrived",
             "ryde903_free_wait_ends",
@@ -1446,7 +1446,7 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
     ),
     (
         "cases.zh.html",
-        "\u53f8\u673a 08:43 \u5230\u8fbe\uff0c\u514d\u8d39\u7b49\u5f85\u5230 08:48\uff0c\u884c\u7a0b\u5728 08:51 \u53d6\u6d88\uff0c\u5df2\u8fc7\u514d\u8d39\u7b49\u5f85\u3002\u4e58\u5ba2\u5e26\u6b3a\u8bc8\u6807\u8bb0\uff0cTribunal \u7684\u7b2c 8 \u7248\u653f\u7b56\u8981\u6c42\u7f6e\u4fe1\u5ea6 0.95\u2014\u2014\u8fd9\u662f\u5b83\u5bf9 v2.1 \u7b2c 6.3 \u6761\u7684\u8bfb\u6cd5\uff08C15\uff09\uff1bv2.1 \u7b2c 6.2 \u6761\u4f7f\u672a\u51fa\u73b0\u88c1\u51b3\u6210\u4e3a\u6700\u7ec8\uff0c\u800c Ryde \u7ed9\u51fa\u7684\u7ed3\u679c\u662f\u7ef4\u6301\u6536\u8d39\uff0c\u6240\u4ee5\u8fd9\u4e2a\u95ee\u9898\u5728 Ryde \u90a3\u8fb9\u2014\u2014\u800c\u5230\u8fbe\u53ea\u9760 8 \u4e2a\u76f8\u9694\u4e24\u5230\u56db\u5206\u949f\u7684 GPS \u70b9\u3002\u6cd5\u5b98\u7684\u56db\u4efd\u8349\u7a3f\u4e2d\uff0c2 \u4efd\u8f6c\u4eba\u5de5\uff0c1 \u4efd\u7ef4\u6301\u6536\u8d39\uff0c1 \u4efd\u56e0\u5f15\u7528\u4e0d\u5b58\u5728\u7684\u6761\u6b3e\u88ab\u4f5c\u5e9f\uff1b\u9700\u8981\u4e09\u4efd\u4e00\u81f4\uff0c\u6240\u4ee5\u8f6c\u7ed9\u4eba\uff0c\u8d39\u7528\u6682\u6263\u3002Ryde \u7ed9\u51fa\u7684\u7ed3\u679c\u662f\u7ef4\u6301\u6536\u8d39\uff1a\u8fd9\u662f\u6211\u4eec\u552f\u4e00\u5df2\u77e5\u7684\u5206\u6b67\u3002",
+        "\u53f8\u673a 08:43 \u5230\u8fbe\uff0c\u514d\u8d39\u7b49\u5f85\u5230 08:48\uff0c\u884c\u7a0b\u5728 08:51 \u53d6\u6d88\uff0c\u5df2\u8fc7\u514d\u8d39\u7b49\u5f85\u3002\u4e58\u5ba2\u5e26\u6b3a\u8bc8\u6807\u8bb0\uff0cTribunal \u7684\u7b2c 8 \u7248\u653f\u7b56\u8981\u6c42\u7f6e\u4fe1\u5ea6 0.95\u2014\u2014\u8fd9\u662f\u5b83\u5bf9 v2.1 \u7b2c 6.3 \u6761\u7684\u8bfb\u6cd5\uff08C15\uff09\uff1bv2.1 \u7b2c 6.2 \u6761\u4f7f\u672a\u51fa\u73b0\u88c1\u51b3\u6210\u4e3a\u6700\u7ec8\uff0c\u800c Ryde \u7ed9\u51fa\u7684\u7ed3\u679c\u662f\u7ef4\u6301\u6536\u8d39\uff0c\u4e3b\u529e\u65b9 2026-10-15 \u8f6c\u8fbe Ryde \u7684\u610f\u89c1\uff1a\u5404\u961f\u53ef\u4ee5\u7528\u81ea\u5df1\u7684\u653f\u7b56\u2014\u2014\u800c\u5230\u8fbe\u53ea\u9760 8 \u4e2a\u76f8\u9694\u4e24\u5230\u56db\u5206\u949f\u7684 GPS \u70b9\u3002\u6cd5\u5b98\u7684\u56db\u4efd\u8349\u7a3f\u4e2d\uff0c2 \u4efd\u8f6c\u4eba\u5de5\uff0c1 \u4efd\u7ef4\u6301\u6536\u8d39\uff0c1 \u4efd\u56e0\u5f15\u7528\u4e0d\u5b58\u5728\u7684\u6761\u6b3e\u88ab\u4f5c\u5e9f\uff1b\u9700\u8981\u4e09\u4efd\u4e00\u81f4\uff0c\u6240\u4ee5\u8f6c\u7ed9\u4eba\uff0c\u8d39\u7528\u6682\u6263\u3002Ryde \u7ed9\u51fa\u7684\u7ed3\u679c\u662f\u7ef4\u6301\u6536\u8d39\uff1a\u8fd9\u662f\u6211\u4eec\u552f\u4e00\u5df2\u77e5\u7684\u5206\u6b67\u3002",
         (
             "ryde903_arrived",
             "ryde903_free_wait_ends",
@@ -1903,6 +1903,13 @@ VERSION_SIX_PHRASES: Tuple[str, ...] = (
     "Hidden test",
     "The figures above are from version 6",
     "Collected before any model runs",
+    # Part 101's two. The C15 question was put to Ryde and both pages stated it
+    # as open, in each language. The organisers relayed Ryde's position on
+    # 2026-10-15, so C15 is Tribunal's own, stated reading, and a page that
+    # still said the question was with Ryde would be stating a reading the
+    # pages no longer hold.
+    "the question is with Ryde",
+    "\u8fd9\u4e2a\u95ee\u9898\u5728 Ryde \u90a3\u8fb9",
 )
 
 # The one phrase that is still stated, and the pages that state it. Both are the
@@ -1932,6 +1939,31 @@ def text_blocks(markup: str) -> Tuple[str, ...]:
     return tuple(block for block in blocks if block)
 
 
+def blocks_stating_a_phrase(markup: str) -> Tuple[Tuple[str, str], ...]:
+    """Every ``(phrase, block)`` a page's markup states, in block order."""
+    stated: list = []
+    for block in text_blocks(markup):
+        for phrase in VERSION_SIX_PHRASES:
+            if phrase in block:
+                stated.append((phrase, block))
+    return tuple(stated)
+
+
+def unlabelled_phrases(markup: str) -> Tuple[Tuple[str, str], ...]:
+    """The ``(phrase, block)`` pairs a page states without naming version 6.
+
+    A block that names version 6 for itself is where a version-6 rule may
+    stand, so those pairs are not findings. Every other pair is what
+    ``TheVersionSixPhrasesTests`` reports, and the control beside that test
+    shows the reporting can fire.
+    """
+    return tuple(
+        (phrase, block)
+        for phrase, block in blocks_stating_a_phrase(markup)
+        if not any(word in block for word in VERSION_SIX_WORDS)
+    )
+
+
 class TheVersionSixPhrasesTests(unittest.TestCase):
     """No built page states a version-6 rule as the one in force.
 
@@ -1958,32 +1990,50 @@ class TheVersionSixPhrasesTests(unittest.TestCase):
         for name, markup in sorted(self.raw.items()):
             if name not in self.site_pages:
                 continue
-            for block in text_blocks(markup):
-                for phrase in VERSION_SIX_PHRASES:
-                    if phrase not in block:
-                        continue
-                    with self.subTest(page=name, phrase=phrase):
-                        self.assertTrue(
-                            any(word in block for word in VERSION_SIX_WORDS),
-                            "{0} states {1!r} in a block that does not name version "
-                            "6: {2!r}".format(name, phrase, block),
-                        )
+            for phrase, block in unlabelled_phrases(markup):
+                with self.subTest(page=name, phrase=phrase):
+                    self.fail(
+                        "{0} states {1!r} in a block that does not name version "
+                        "6: {2!r}".format(name, phrase, block)
+                    )
 
     def test_the_blocks_that_state_one_are_the_ones_listed(self):
         found = set()
         for name, markup in sorted(self.raw.items()):
             if name not in self.site_pages:
                 continue
-            for block in text_blocks(markup):
-                for phrase in VERSION_SIX_PHRASES:
-                    if phrase in block:
-                        found.add((name, phrase))
+            for phrase, _block in blocks_stating_a_phrase(markup):
+                found.add((name, phrase))
         self.assertEqual(
             set(VERSION_SIX_PLACES),
             found,
             "the pages state version-6 phrases at {0}, and the table lists {1}".format(
                 sorted(found), sorted(VERSION_SIX_PLACES)
             ),
+        )
+
+    def test_the_check_fails_on_a_page_carrying_the_old_ending(self):
+        """The control: the results page's old ending, put back, is reported.
+
+        Part 101 settled C15, and the two phrases it removed are the ones the
+        old ending wrote -- "the question is with Ryde" in English and its
+        Chinese opposite number -- on the results page and the cases page. This
+        is the built results page's own markup with that ending put back, and
+        the check above must report it: the block states the question as open
+        and names version 6 nowhere.
+        """
+        markup = self.raw["results.html"]
+        self.assertNotIn("the question is with Ryde", markup)
+        restored = markup.replace(
+            "so C15 stays Tribunal's stated reading.",
+            "so the question is with Ryde.",
+        )
+        self.assertNotEqual(markup, restored, "the fixture did not restore the ending")
+        reported = unlabelled_phrases(restored)
+        self.assertEqual(
+            [phrase for phrase, _block in reported],
+            ["the question is with Ryde"],
+            "the copy is reported as {0!r}".format(reported),
         )
 
     def test_the_other_builders_pages_name_the_version_they_replay(self):

@@ -52,7 +52,8 @@ a fraud flag, so Tribunal's version-8 policy asks for a confidence of 0.95 --
 its reading C15 of v2.1 6.3. Eight sparse GPS fixes do not get there. Two drafts
 escalated, one upheld the fee and one was voided for citing a clause version 8
 does not have; three must agree. So a person decides, with the fee held. Ryde's
-own outcome upholds the fee, and the question is with Ryde."
+own outcome upholds the fee. Ryde lets a team use its own policy, so this is a
+choice we state, not a mistake."
 
 ## 5. The results page -- 30 s
 
@@ -71,8 +72,9 @@ team's own development assistant and run once from `freeze-2026-10-14`."
 - **Why is the sealed figure at version 7?** A sealed set is run once, and
   version 8 changes its key on one case, 6009, at a deviation of 2.4 km, which
   version 8's 2 km gate escalates before the judge is asked.
-- **Why does 903 escalate?** Tribunal's reading C15 of v2.1 6.3, put to Ryde;
-  Ryde's own outcome upholds the fee.
+- **Why does 903 escalate?** Tribunal's reading C15 of v2.1 6.3, a choice Ryde
+  allows (relayed by the organisers, 2026-10-15); Ryde's own outcome upholds the
+  fee.
 - **Why no fare disputes?** Scope: this prototype covers the two categories the
   brief asks for, route deviation and no-show, and leaves them out by its own
   choice.

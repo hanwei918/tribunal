@@ -74,8 +74,8 @@ prints all of the `dev-v8` column from the committed runs, and
 
 **What is still version 6.** Eleven things, each with the file or run that shows
 it, in [Limitations and disclosures](#limitations-and-disclosures): fare and surge
-disputes; property damage and image analysis; the C15 question, which is with
-Ryde; the absent appeal clause and the operations layer; the try-it page; the 151
+disputes; property damage and image analysis; C15, Tribunal's own reading; the
+absent appeal clause and the operations layer; the try-it page; the 151
 version-6 case pages; the v2.1 precedents; the confidence figure; the sealed
 figure and its author; one model family; and synthetic data.
 
@@ -769,9 +769,11 @@ subject to the PDPA without this repository making any compliance claim.
 - **Property damage and image analysis are not covered.** v2.1 Section 4 needs
   verifiable in-app photographs, which the pipeline does not read
   ([`policy/v8/general.json`](../policy/v8/general.json), `POL-GEN-24`).
-- **The C15 question is with Ryde.** Tribunal reads v2.1 6.3 as setting a 0.95 bar
+- **C15 is Tribunal's own reading.** Tribunal reads v2.1 6.3 as setting a 0.95 bar
   on a no-show, where v2.1 6.2 makes a no-show ruling AI-final and Ryde's own
-  sample upholds the fee; the question is with Ryde and is not settled here
+  sample upholds the fee. Ryde's position, relayed by the organisers on
+  2026-10-15: teams need not follow v2.1 strictly and may use their own policy for
+  testing. Tribunal keeps C15 and states it
   ([the policy-v8 note](notes/2026-10-14-policy-v8.md),
   [the version-8 runs](notes/2026-10-14-version-8-runs.md)).
 - **Version 8 has no appeal clause.** v2.1 has none, and the operations layer that

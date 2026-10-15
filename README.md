@@ -190,9 +190,12 @@ run that shows it.
   prototype's scope and not v2.1's ([the record](docs/record.md#version-8-at-a-glance)).
 - **Property damage and image analysis are not covered.** v2.1 Section 4 needs
   images the pipeline does not read ([the record](docs/record.md#limitations-and-disclosures)).
-- **The C15 question is with Ryde.** Tribunal reads v2.1 6.3 as setting a 0.95
+- **C15 is Tribunal's own reading.** Tribunal reads v2.1 6.3 as setting a 0.95
   bar on a no-show, where v2.1 6.2 makes a no-show ruling AI-final and Ryde's own
-  sample upholds the fee ([the version-8 runs](docs/notes/2026-10-14-version-8-runs.md)).
+  sample upholds the fee. Ryde's position, relayed by the organisers on
+  2026-10-15: teams need not follow v2.1 strictly and may use their own policy for
+  testing. Tribunal keeps C15 and states it
+  ([the version-8 runs](docs/notes/2026-10-14-version-8-runs.md)).
 - **Version 8 has no appeal clause**, and the operations layer -- appeal, queue,
   review, risk and the escalation packet -- reads the version-6 runs (`ops/`).
 - **The try-it page runs version 6**, in the browser, with the live service off

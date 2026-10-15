@@ -117,8 +117,9 @@ the gate escalates it with the 3.44 excess distance fare in the case file.
 requires a confidence of 0.95 when a party carries a fraud flag (POL-GEN-22),
 which is Tribunal's reading of v2.1 6.3; v2.1 6.2 makes a no-show ruling
 AI-final and Ryde's stated outcome upholds the fee, so the question was put to
-Ryde on 2026-10-14. A version with C15 turned off would follow if Ryde answers
-that a no-show ruling is AI-final whatever the fraud flag
+Ryde on 2026-10-14. Ryde's position, relayed by the organisers on 2026-10-15:
+teams need not follow v2.1 strictly and may use their own policy for testing, so
+Tribunal keeps C15 as its own, stated reading
 (`docs/notes/2026-10-14-version-7-runs.md`,
 `docs/notes/2026-10-14-version-8-runs.md`).
 
