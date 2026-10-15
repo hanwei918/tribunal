@@ -3612,28 +3612,39 @@ class RoutedTransport:
 
 
 class InterruptingTransport(RoutedTransport):
-    """A routed transport whose driver waits for the interrupt before answering.
+    """A routed transport that fixes the order the interrupt test depends on.
 
-    The driver's **first** attempt blocks, with a timeout, on the stop flag the
-    join sets -- the very flag the worker checks before its second attempt -- so
-    the second-attempt check is reached *after* the interrupt has landed rather
-    than in a race with it. ``arrived`` still counts every request that reached
-    the transport, which is what the interrupt test asserts on.
+    The rider's scripted interrupt waits for the driver's **first** request to
+    reach the transport, so the driver is in flight before the interrupt is
+    raised: neither the start of the driver's worker nor its second attempt is
+    a race. The driver's first attempt then blocks, with a timeout, on the stop
+    flag the join sets -- the very flag the worker checks before its second
+    attempt -- so the second-attempt check is reached *after* the interrupt has
+    landed rather than in a race with it. ``arrived`` still counts every
+    request that reached the transport, which is what the interrupt test
+    asserts on.
     """
 
     def __init__(self, answers):
         super().__init__(answers)
         self.driver_attempts = 0
+        self.driver_entered = threading.Event()
 
     def __call__(self, url, headers, body, timeout):
-        if self._key(body) == DRIVER_REQUEST:
+        key = self._key(body)
+        if key == DRIVER_REQUEST:
             self.driver_attempts += 1
             if self.driver_attempts == 1:
+                self.driver_entered.set()
                 stop = pipeline.STOP_PARALLEL_CALLS.get()
                 assert stop is not None, "the driver is not running inside a join"
                 assert stop.wait(5.0), (
                     "the rider's interrupt never reached the driver's worker"
                 )
+        elif key == RIDER_REQUEST:
+            assert self.driver_entered.wait(5.0), (
+                "the driver's first request never reached the transport"
+            )
         return super().__call__(url, headers, body, timeout)
 
 
@@ -4045,12 +4056,14 @@ class ParallelCallTests(unittest.TestCase):
         Driven through ``run_case`` with the switch on and a routed transport,
         not through ``_join_calls`` with a hand-written worker: what is under
         test is the real check inside the worker's two-attempt loop. The rider's
-        transport call raises ``KeyboardInterrupt``; the driver's first answer is
-        unusable, and the driver is held until the interrupt has landed, so the
-        worker reaches its second-attempt check after the stop is set rather
-        than in a race with it. The driver's second attempt must never be
-        requested -- and a worker whose stop check is deleted asks for it, which
-        is how this test is shown to bite.
+        transport call waits for the driver's first request and then raises
+        ``KeyboardInterrupt``; the driver's first answer is unusable, and the
+        driver is held until the interrupt has landed, so the worker reaches its
+        second-attempt check after the stop is set rather than in a race with
+        it. Neither the start of the driver's worker nor its second attempt is a
+        race. The driver's second attempt must never be requested -- and a
+        worker whose stop check is deleted asks for it, which is how this test
+        is shown to bite.
         """
         transport = InterruptingTransport(
             {
