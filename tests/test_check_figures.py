@@ -10,13 +10,14 @@ three things:
   rather than a quiet no-op.
 * **The check can fail.** A copy of one document with one figure altered, in a
   temporary directory, is reported as a mismatch; without that control a check
-  that returned nothing would pass the first test. Six figures are shown
+  that returned nothing would pass the first test. Seven figures are shown
   failing that way: the version-6 median time in ``docs/record.md``, the
   version-7 sealed set's agreement in ``README.md``, the version-8 ``dev-v8``
   agreement in ``README.md``, the version-8 ``decided with no person``
   measurement in ``docs/notes/2026-10-14-version-8-measurements.md``, the
-  position swap on ``ui/dist/index.html``, and the README's own count of the
-  tests that read the git history. Two **claims** are shown failing the same
+  position swap on ``ui/dist/index.html``, the version-8 cost tile on
+  ``ui/dist/index.html``, and the README's own count of the tests that read the
+  git history. Two **claims** are shown failing the same
   way, each by putting the corrected sentence back: ``split 2-2`` on the
   version-8 row of ``README.md``, and the fare sentence in
   ``tests/test_ryde_v7.py``.
@@ -166,6 +167,16 @@ README_HISTORY_CONTROL_DOCUMENT = "README.md"
 README_HISTORY_CONTROL_BEFORE = "29 tests read the git history"
 README_HISTORY_CONTROL_AFTER = "27 tests read the git history"
 README_HISTORY_CONTROL_FIGURE = "tests that read the git history"
+
+# The version-8 figures the product site states, and the seventh control: the
+# front page's cost tile, altered. The copy holds ``ui/dist/index.html`` alone,
+# so the figures that read the other documents go dead -- a finding of its own
+# and not what this test is about. What it asserts is the mismatch: ``$0.040``
+# is not one of the version-8 cost figure's spellings, the runs say 0.0390.
+FRONT_PAGE_COST_CONTROL_DOCUMENT = "ui/dist/index.html"
+FRONT_PAGE_COST_CONTROL_BEFORE = "$0.039"
+FRONT_PAGE_COST_CONTROL_AFTER = "$0.040"
+FRONT_PAGE_COST_CONTROL_FIGURE = "dev-v8, median model cost"
 
 # The claim controls. Each copy puts back one sentence the part corrected and
 # shows the claim check reporting it. ``split 2-2`` goes back on the version-8
@@ -600,6 +611,47 @@ class TheControlTests(unittest.TestCase):
             with self.subTest(document=mismatch.document):
                 self.assertEqual(README_HISTORY_CONTROL_FIGURE, mismatch.figure)
                 self.assertEqual("29", mismatch.expected)
+        self.assertFalse(found.ok, "an altered figure left the check OK")
+
+    def test_an_altered_front_page_cost_is_reported(self):
+        """The front page's version-8 cost tile is shown capable of failing.
+
+        The copy holds ``ui/dist/index.html`` alone, so the figures that read the
+        other documents go dead -- a finding of its own and not what this test is
+        about. What it asserts is the mismatch: the tile altered from ``$0.039``
+        to ``$0.040`` states a value the committed run does not give.
+        """
+        portability.require_the_same_libm()
+        source = (PROJECT_ROOT / FRONT_PAGE_COST_CONTROL_DOCUMENT).read_text(
+            encoding="utf-8"
+        )
+        altered = source.replace(
+            FRONT_PAGE_COST_CONTROL_BEFORE, FRONT_PAGE_COST_CONTROL_AFTER
+        )
+        self.assertNotEqual(
+            source,
+            altered,
+            "the control changed nothing in {0}".format(
+                FRONT_PAGE_COST_CONTROL_DOCUMENT
+            ),
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / FRONT_PAGE_COST_CONTROL_DOCUMENT
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(altered, encoding="utf-8")
+            found = check_figures.check(root)
+        named = [mismatch for mismatch in found.mismatches if mismatch.value == "0.04"]
+        self.assertTrue(
+            named,
+            "the altered front page cost was not reported: {0}".format(
+                found.mismatches
+            ),
+        )
+        for mismatch in named:
+            with self.subTest(document=mismatch.document):
+                self.assertEqual(FRONT_PAGE_COST_CONTROL_FIGURE, mismatch.figure)
+                self.assertEqual("0.0390", mismatch.expected)
         self.assertFalse(found.ok, "an altered figure left the check OK")
 
     def test_a_two_two_split_put_back_on_the_version_eight_row_is_reported(self):

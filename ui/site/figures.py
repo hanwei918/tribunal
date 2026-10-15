@@ -343,9 +343,10 @@ def figures() -> Dict[str, str]:
         "v8_cases": str(measured.cases),
         "v8_case_pages": str(version_eight_cases),
         "v8_median_seconds": "{0} s".format(v6_runs._seconds(measured.wall_median)),
-        "v8_median_minutes": "{0:.1f} min".format(measured.wall_median / 60),
+        "v8_median_minutes": "{0:.1f}".format(measured.wall_median / 60),
         "v8_p90_seconds": "{0} s".format(v6_runs._seconds(measured.wall_p90)),
         "v8_median_cost_usd": "{0:.4f}".format(measured.cost_median),
+        "v8_median_cost_dollars": "${0:.3f}".format(measured.cost_median),
         "v8_median_cost_cents": "about {0:.0f} cents".format(
             measured.cost_median * 100
         ),

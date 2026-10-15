@@ -8,9 +8,7 @@ below is also committed under `ui/dist/`, so it also runs locally with
 Every page in this walk is a **version-8** page. The version-6 material is named
 as such where it appears. The try-it page is not in the walk, because it runs
 version 6, and the version-6 facts it works out in the browser include the
-rider's phone 634-646 m from the pickup point. The front page's own tiles below
-the fold are version 6's too -- a decision in 2.7 min at the median, and
-160.4 s median time to a decision -- and the page labels them.
+rider's phone 634-646 m from the pickup point.
 
 ## 1. The front page -- 20 s
 

@@ -116,54 +116,53 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
     # pages here is the set that states a figure.
     (
         "index.html",
-        "160.4 s; p90 286.9 s.",
+        "153.1 s; p90 299.4 s (dev-v8).",
         (
-            "median_wall_seconds",
-            "p90_wall_seconds",
+            "v8_median_seconds",
+            "v8_p90_seconds",
         ),
     ),
     (
         "index.html",
-        "2.7 min",
+        "2.6 min",
         (
-            "median_wall_minutes",
+            "v8_median_minutes",
         ),
     ),
     (
         "index.html",
-        "$0.058",
+        "$0.039",
         (
-            "median_cost_dollars",
+            "v8_median_cost_dollars",
         ),
     ),
     (
         "index.html",
-        "0.0579 USD",
+        "0.0390 USD (dev-v8).",
         (
-            "median_cost_usd",
+            "v8_median_cost_usd",
         ),
     ),
     (
         "index.html",
-        "74%",
+        "70%",
         (
-            "decided_share",
+            "v8_decided_share",
         ),
     ),
     (
         "index.html",
-        "112 / 151",
+        "28 of 40 (dev-v8).",
         (
-            "decided_automatically",
-            "cases_total",
+            "v8_decided",
         ),
     ),
     (
         "index.html",
-        "12/12 right on test cases it had never seen sealed-v2, Wilson 95% [75.8%, 100%]",
+        "30/30 on the sealed set sealed-v4, run once at version 7, Wilson 95% [88.6%, 100%]; written by the team's own development assistant, so not an independent benchmark.",
         (
-            "sealed_v2_exact",
-            "sealed_v2_interval",
+            "sealed_v4_exact",
+            "sealed_v4_interval",
         ),
     ),
     (
@@ -275,54 +274,53 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
     ),
     (
         "index.zh.html",
-        "160.4 s; p90 286.9 s.",
+        "153.1 s; p90 299.4 s (dev-v8)\u3002",
         (
-            "median_wall_seconds",
-            "p90_wall_seconds",
+            "v8_median_seconds",
+            "v8_p90_seconds",
         ),
     ),
     (
         "index.zh.html",
-        "2.7 \u5206\u949f",
+        "2.6 \u5206\u949f",
         (
-            "median_wall_minutes",
+            "v8_median_minutes",
         ),
     ),
     (
         "index.zh.html",
-        "$0.058",
+        "$0.039",
         (
-            "median_cost_dollars",
+            "v8_median_cost_dollars",
         ),
     ),
     (
         "index.zh.html",
-        "0.0579 USD",
+        "0.0390 USD (dev-v8)\u3002",
         (
-            "median_cost_usd",
+            "v8_median_cost_usd",
         ),
     ),
     (
         "index.zh.html",
-        "74%",
+        "70%",
         (
-            "decided_share",
+            "v8_decided_share",
         ),
     ),
     (
         "index.zh.html",
-        "112 / 151",
+        "28 of 40 (dev-v8)\u3002",
         (
-            "decided_automatically",
-            "cases_total",
+            "v8_decided",
         ),
     ),
     (
         "index.zh.html",
-        "12/12 \u4ece\u6ca1\u89c1\u8fc7\u7684\u8003\u9898\u5168\u90e8\u5224\u5bf9 sealed-v2, Wilson 95% [75.8%, 100%]",
+        "30/30 \u5c01\u5b58\u96c6\u4e0a\u5168\u90e8\u5224\u5bf9 sealed-v4\uff0c\u5728\u7b2c 7 \u7248\u4e0a\u53ea\u8dd1\u8fc7\u4e00\u6b21\uff0cWilson 95% [88.6%, 100%]\uff1b\u7531\u56e2\u961f\u81ea\u5df1\u7684\u5f00\u53d1\u52a9\u624b\u51fa\u9898\uff0c\u4e0d\u662f\u72ec\u7acb\u57fa\u51c6\u3002",
         (
-            "sealed_v2_exact",
-            "sealed_v2_interval",
+            "sealed_v4_exact",
+            "sealed_v4_interval",
         ),
     ),
     (
@@ -640,6 +638,43 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
             "v8_confidence_between",
         ),
     ),
+    # The five version-6 figures the front page's tiles used to be the only
+    # place for. They left the front page with version 8's own four tiles and
+    # are stated here instead, each in a block that names version 6: the poster
+    # caption on the about page, the three rows at the end of the development
+    # table, and the sentence that closes the panel on the hidden tests.
+    (
+        "results.html",
+        "160.4 s; p90 286.9 s.",
+        (
+            "median_wall_seconds",
+            "p90_wall_seconds",
+        ),
+    ),
+    (
+        "results.html",
+        "$0.058",
+        (
+            "median_cost_dollars",
+        ),
+    ),
+    (
+        "results.html",
+        "74% (112 / 151)",
+        (
+            "decided_share",
+            "decided_automatically",
+            "cases_total",
+        ),
+    ),
+    (
+        "results.html",
+        "sealed-v2's 12/12 has a Wilson 95% interval of [75.8%, 100%].",
+        (
+            "sealed_v2_exact",
+            "sealed_v2_interval",
+        ),
+    ),
     (
         "results.zh.html",
         "160.4 s",
@@ -851,6 +886,38 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
         ),
     ),
     (
+        "results.zh.html",
+        "160.4 s\uff1bp90 286.9 s\u3002",
+        (
+            "median_wall_seconds",
+            "p90_wall_seconds",
+        ),
+    ),
+    (
+        "results.zh.html",
+        "$0.058",
+        (
+            "median_cost_dollars",
+        ),
+    ),
+    (
+        "results.zh.html",
+        "74% (112 / 151)",
+        (
+            "decided_share",
+            "decided_automatically",
+            "cases_total",
+        ),
+    ),
+    (
+        "results.zh.html",
+        "sealed-v2 \u7684 12/12 \u5bf9\u5e94\u7684 Wilson 95% \u533a\u95f4\u662f [75.8%, 100%]\u3002",
+        (
+            "sealed_v2_exact",
+            "sealed_v2_interval",
+        ),
+    ),
+    (
         "how-it-works.html",
         "Case 5051: 3 points for the rider, 8 for the driver.",
         (
@@ -899,7 +966,7 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
     ),
     (
         "how-it-works.html",
-        "Hidden test (version 7): 30/30.",
+        "Sealed set (version 7): 30/30, written by the team's own development assistant.",
         (
             "sealed_v4_exact",
         ),
@@ -1056,7 +1123,7 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
     ),
     (
         "how-it-works.zh.html",
-        "\u9690\u85cf\u8003\u9898\uff08\u7b2c 7 \u7248\uff09\uff1a30/30\u3002",
+        "\u5c01\u5b58\u96c6\uff08\u7b2c 7 \u7248\uff09\uff1a30/30\uff0c\u7531\u56e2\u961f\u81ea\u5df1\u7684\u5f00\u53d1\u52a9\u624b\u51fa\u9898\u3002",
         (
             "sealed_v4_exact",
         ),
@@ -1185,8 +1252,22 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
         ),
     ),
     (
+        "about.html",
+        "The poster's figures (2.7 min, US$0.06 a case) are version 6's.",
+        (
+            "median_wall_minutes",
+        ),
+    ),
+    (
+        "about.zh.html",
+        "\u6d77\u62a5\u4e0a\u7684\u6570\u5b57\uff082.7 \u5206\u949f\u3001\u6bcf\u6848 0.06 \u7f8e\u5143\uff09\u662f\u7b2c 6 \u7248\u7684\u3002",
+        (
+            "median_wall_minutes",
+        ),
+    ),
+    (
         "index.html",
-        "Applies Ryde's own Dispute Resolution Policy v2.1 with Ryde's answers of 2026-10-14 (policy version 8). Hidden test set, run at version 7: 30/30, Wilson 95% [88.6%, 100%].",
+        "Applies Ryde's own Dispute Resolution Policy v2.1 with Ryde's answers of 2026-10-14 (policy version 8). Sealed set, run at version 7: 30/30, Wilson 95% [88.6%, 100%] -- written by the team's own development assistant, so not an independent benchmark.",
         (
             "sealed_v4_exact",
             "sealed_v4_interval",
@@ -1194,7 +1275,7 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
     ),
     (
         "index.zh.html",
-        "\u6309 Ryde \u5b98\u65b9\u7684\u300a\u4e89\u8bae\u5904\u7406\u653f\u7b56 v2.1\u300b\u53ca Ryde 2026-10-14 \u7684\u7b54\u590d\u88c1\u51b3\uff08\u7b2c 8 \u7248\u653f\u7b56\uff09\u3002\u9690\u85cf\u9898\uff08\u5728\u7b2c 7 \u7248\u4e0a\u8dd1\uff09\uff1a30/30\uff0cWilson 95% [88.6%, 100%]\u3002",
+        "\u6309 Ryde \u5b98\u65b9\u7684\u300a\u4e89\u8bae\u5904\u7406\u653f\u7b56 v2.1\u300b\u53ca Ryde 2026-10-14 \u7684\u7b54\u590d\u88c1\u51b3\uff08\u7b2c 8 \u7248\u653f\u7b56\uff09\u3002\u5c01\u5b58\u96c6\uff08\u5728\u7b2c 7 \u7248\u4e0a\u8dd1\uff09\uff1a30/30\uff0cWilson 95% [88.6%, 100%]\u2014\u2014\u7531\u56e2\u961f\u81ea\u5df1\u7684\u5f00\u53d1\u52a9\u624b\u51fa\u9898\uff0c\u4e0d\u662f\u72ec\u7acb\u57fa\u51c6\u3002",
         (
             "sealed_v4_exact",
             "sealed_v4_interval",
@@ -1465,14 +1546,6 @@ VERSION_SEVEN_FIGURES: Tuple[str, ...] = (
 # which policy the browser runs against the one the submission applies.
 VERSION_SENTENCES: Tuple[Tuple[str, str], ...] = (
     (
-        "index.html",
-        "The figures above are from version 6, the team's own policy.",
-    ),
-    (
-        "index.zh.html",
-        "\u4ee5\u4e0a\u6570\u5b57\u6765\u81ea\u7b2c 6 \u7248\uff08\u56e2\u961f\u81ea\u5b9a\u653f\u7b56\uff09\u3002",
-    ),
-    (
         "results.html",
         "The case pages show the version-6 development runs.",
     ),
@@ -1607,18 +1680,20 @@ class SiteFigureTests(unittest.TestCase):
         """The control: both assertions are ones that can fail.
 
         Moving the figure in the page reddens the first assertion; moving it in
-        the record reddens the second. ``index.html``'s ``160.4 s; p90 286.9 s.``
-        is the row used, so the line the report names is this one.
+        the record reddens the second. The row used is ``results.html``'s
+        ``Version 6, time to a decision`` one -- the version-6 median and 90th
+        percentile, which left the front page's tiles for the fine print's
+        table -- so the line the report names is this one.
         """
         shown = "160.4 s; p90 286.9 s."
         names = ("median_wall_seconds", "p90_wall_seconds")
-        page = self.pages["index.html"]
+        page = self.pages["results.html"]
         moved_page = page.replace("160.4 s", "160.5 s")
         self.assertNotEqual(page, moved_page, "the fixture did not move the figure")
         with self.assertRaises(AssertionError):
-            self.assert_shows(moved_page, "index.html", shown, names)
+            self.assert_shows(moved_page, "results.html", shown, names)
         with self.assertRaises(AssertionError):
-            self.assert_shows(page, "index.html", "160.5 s; p90 286.9 s.", names)
+            self.assert_shows(page, "results.html", "160.5 s; p90 286.9 s.", names)
         # The record's own value is what the second assertion compares against,
         # so a record that moved is what makes a page fail rather than a page
         # that moved.
@@ -1692,6 +1767,33 @@ class SiteFigureTests(unittest.TestCase):
         finally:
             self.figures["ryde_v8_exact"] = figures.named("ryde_v8_exact")
 
+    def test_the_check_fails_on_a_page_carrying_a_different_front_page_cost(
+        self,
+    ) -> None:
+        """The control: ``index.html``'s version-8 cost tile, moved, is reported.
+
+        The row used is the front page's ``$0.039`` one -- the figure this part
+        adds, so that the tile's number is the number ``ui.site.figures``
+        computes and not a second copy of it. The figure is moved in the page
+        and then in the record, one after the other, and each reddens one of the
+        two assertions ``assert_shows`` makes.
+        """
+        shown = "$0.039"
+        names = ("v8_median_cost_dollars",)
+        page = self.pages["index.html"]
+        moved = page.replace("$0.039", "$0.040")
+        self.assertNotEqual(page, moved, "the fixture did not move the figure")
+        with self.assertRaises(AssertionError):
+            self.assert_shows(moved, "index.html", shown, names)
+        self.figures["v8_median_cost_dollars"] = "$0.040"
+        try:
+            with self.assertRaises(AssertionError):
+                self.assert_shows(page, "index.html", shown, names)
+        finally:
+            self.figures["v8_median_cost_dollars"] = figures.named(
+                "v8_median_cost_dollars"
+            )
+
     def test_the_index_links_to_the_samples_section_in_both_languages(self) -> None:
         """The front page's line to the new section resolves to that section.
 
@@ -1761,6 +1863,14 @@ VERSION_SIX_PHRASES: Tuple[str, ...] = (
     "prompts/v1",
     "within 30 days",
     "never reach the AI",
+    # Part 97's three. "Hidden test" was what the site called a sealed set and
+    # "The figures above are from version 6" the line under the front page's
+    # tiles; the tiles are version 8's now, so the line is gone and the phrase
+    # with it. "Collected before any model runs" was the evidence card's claim,
+    # and ``ops/evidence.py`` is a standalone command the pipeline never calls.
+    "Hidden test",
+    "The figures above are from version 6",
+    "Collected before any model runs",
 )
 
 # The one phrase that is still stated, and the pages that state it. Both are the

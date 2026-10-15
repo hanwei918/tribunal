@@ -100,6 +100,12 @@ DOCUMENTS: Tuple[str, ...] = (
     "ui/dist/how-it-works.zh.html",
     "ui/dist/safety.html",
     "ui/dist/safety.zh.html",
+    # The two about pages. Part 97 moved the five version-6 figures the front
+    # page's tiles used to be the only place for, and the poster caption is
+    # where the median in minutes is stated now -- in a sentence that names
+    # version 6 itself. The pages are named here for that one figure.
+    "ui/dist/about.html",
+    "ui/dist/about.zh.html",
     # The note part 90 adds, which states the table `eval.v8_report --report`
     # prints. It is named here so the version-8 measurements below are read out
     # of the document that states them rather than out of nothing.
@@ -133,16 +139,25 @@ FIGURES: Tuple[Figure, ...] = (
         (
             r"\*\*(\d+\.\d+) s\*\* median",
             r"median wall clock \| (\d+\.\d+) s",
-            r"(\d+\.\d+) s median time",
             r"median time to a decision of (\d+\.\d+) seconds",
             r"median of (\d+\.\d+) seconds",
             r"decision of (\d+\.\d+) s and a 90th",
             r"class=\"big\">(\d+\.\d+) s</span><h3>",
-            r"num\">(\d+\.\d+)<small>min</small>",
-            r"num\">(\d+\.\d+)<small>\u5206\u949f</small>",
-            r"in (\d+\.\d+) min at the median",
             r"At the (\d+\.\d+) s median",
-            r"(\d+\.\d+) s; p90",
+            # The results page's own row in the development table, which is
+            # where the version-6 median is stated now: "160.4 s; p90 286.9 s."
+            # in English and "160.4 s\uff1bp90 286.9 s\u3002" in Chinese. Each is
+            # anchored on what follows the second number, because the front
+            # page's version-8 tile writes the same two numbers as
+            # "153.1 s; p90 299.4 s (dev-v8)" and is the version-8 figure's.
+            r"(\d+\.\d+) s; p90 \d+\.\d+ s\.",
+            r"(\d+\.\d+) s\uff1bp90 \d+\.\d+ s\u3002",
+            # The about page's poster caption, where the median in minutes is
+            # stated now: "The poster's figures (2.7 min, US$0.06 a case) are
+            # version 6's." and "\u6d77\u62a5\u4e0a\u7684\u6570\u5b57\uff082.7
+            # \u5206\u949f\u3001\u6bcf\u6848 0.06 \u7f8e\u5143\uff09...".
+            r"figures \((\d+\.\d+) min,",
+            r"\u6570\u5b57\uff08(\d+\.\d+) \u5206\u949f\u3001",
         ),
     ),
     Figure(
@@ -154,7 +169,11 @@ FIGURES: Tuple[Figure, ...] = (
             r"p90 of (\d+\.\d+)\s+seconds",
             r"90th percentile\s+of (\d+\.\d+)\s+seconds",
             r"90th percentile of (\d+\.\d+) s",
-            r"p90 (\d+\.\d+) s",
+            # The results page's own row, anchored on the full stop the
+            # version-6 row ends with: the front page's version-8 tile writes
+            # "p90 299.4 s (dev-v8)" and is the version-8 figure's.
+            r"p90 (\d+\.\d+) s\.",
+            r"p90 (\d+\.\d+) s\u3002",
             r"within (\d+\.\d+) minutes",
             r"(\d+\.\d+) \u5206\u949f\u5185\u5b8c\u6210",
         ),
@@ -172,8 +191,11 @@ FIGURES: Tuple[Figure, ...] = (
             r"cost per case is (\d+\.\d+)\s+USD",
             r"published prices is (\d+\.\d+)",
             r"class=\"big\">\$(\d+\.\d+)</span><h3>Model cost",
-            r"num\">\$(\d+\.\d+)</div>",
-            r"src\">(\d+\.\d+) USD</span>",
+            # The results page's own row in the development table, which is
+            # where the version-6 median cost is stated now: "$0.058", in both
+            # languages. The front page's version-8 tile writes "$0.039" and
+            # "0.0390 USD (dev-v8)" and is the version-8 figure's.
+            r"\$(\d+\.\d+)</td>",
             r"\u4e2d\u4f4d\u6570 (\d+\.\d+) \u7f8e\u5143",
         ),
     ),
@@ -186,7 +208,10 @@ FIGURES: Tuple[Figure, ...] = (
             r"the 151, (\d+) are decided",
             r"class=\"big\">(\d+)</span><h3>Decided and executed",
             r"class=\"big\">(\d+)</span><h3>\u5224\u51b3\u5e76\u6267\u884c",
-            r"src\">(\d+) / 151</span>",
+            # The results page's own row, which is where the 112 is stated now:
+            # "74% (112 / 151)", in both languages. The front page's version-8
+            # tile writes "28 of 40 (dev-v8)" and is the version-8 figure's.
+            r"\((\d+) / 151\)",
         ),
     ),
     Figure(
@@ -225,7 +250,10 @@ FIGURES: Tuple[Figure, ...] = (
             r"\*\*112 of 151\*\* \((\d+\.\d)%\)",
             r"112/151 = (\d+\.\d)%",
             r"executed \((\d+\.\d)%\)",
-            r"num\">(\d+)%</div>",
+            # The results page's own row: "74% (112 / 151)", in both languages.
+            # The front page's version-8 tile writes "70%" and is the version-8
+            # share figure's.
+            r"(\d+)% \(112 / 151\)",
         ),
     ),
     Figure(
@@ -328,7 +356,13 @@ FIGURES: Tuple[Figure, ...] = (
             r"graded fields in (\d+)/12 = 100",
             r"(\d+)/12 = 100\.0%",
             r"class=\"big\">(\d+)/12</span>",
-            r"num\">(\d+)/12</div>",
+            # The sentence that closes the results page's panel on the hidden
+            # tests, which is where the fourth sealed set's agreement is stated
+            # now: "sealed-v2's 12/12 has a Wilson 95% interval of [75.8%,
+            # 100%]." and "sealed-v2 \u7684 12/12 \u5bf9\u5e94\u7684 Wilson 95%
+            # \u533a\u95f4\u662f [75.8%, 100%]\u3002"
+            r"sealed-v2's (\d+)/12",
+            r"sealed-v2 \u7684 (\d+)/12",
         ),
     ),
     Figure(
@@ -339,7 +373,11 @@ FIGURES: Tuple[Figure, ...] = (
             r"\| 12/12 = 100\.0% \| \[(\d+\.\d)%, (\d+\.\d+)%\]",
             r"12/12 = 100\.0%, Wilson 95% \[(\d+\.\d)%, (\d+\.\d+)%\]",
             r"interval \| \[(\d+\.\d)%, (\d+\.\d+)%\] \| `runs/sealed-v2",
-            r"sealed-v2, Wilson 95% \[(\d+\.\d)%, (\d+)%\]",
+            # The same sentence, read for the interval it states.
+            r"sealed-v2's 12/12 has a Wilson 95% interval of "
+            r"\[(\d+\.\d)%, (\d+)%\]",
+            r"sealed-v2 \u7684 12/12 \u5bf9\u5e94\u7684 Wilson 95% "
+            r"\u533a\u95f4\u662f \[(\d+\.\d)%, (\d+)%\]",
         ),
     ),
     Figure(
@@ -486,6 +524,9 @@ FIGURES: Tuple[Figure, ...] = (
             r"\u4e2d\u4f4d (\d+\.\d+) s\uff0c\u7b2c 90",
             r"\u4e2d\u4f4d (\d+\.\d+) s \u5bf9\u804a\u5929",
             r"\(\u4e2d\u4f4d (\d+\.\d+) s\)",
+            # The front page's own tile, which is where this measurement is
+            # stated now: "153.1 s; p90 299.4 s (dev-v8)", in both languages.
+            r"(\d+\.\d+) s; p90 \d+\.\d+ s \(dev-v8\)",
         ),
     ),
     Figure(
@@ -494,6 +535,8 @@ FIGURES: Tuple[Figure, ...] = (
         (
             r"and (\d+\.\d+) s at the 90th percentile",
             r"\u7b2c 90 \u767e\u5206\u4f4d (\d+\.\d+) s",
+            # The front page's own tile: "p90 299.4 s (dev-v8)".
+            r"p90 (\d+\.\d+) s \(dev-v8\)",
         ),
     ),
     Figure(
@@ -501,6 +544,10 @@ FIGURES: Tuple[Figure, ...] = (
         ("2.6",),
         (
             r"class=\"big\">(\d+\.\d+) min</span><h3>Median per case",
+            # The front page's own tile, which states the same median as the
+            # results page's card: "2.6 min" and "2.6 \u5206\u949f".
+            r"num\">(\d+\.\d+)<small>min</small>",
+            r"num\">(\d+\.\d+)<small>\u5206\u949f</small>",
         ),
     ),
     Figure(
@@ -511,6 +558,20 @@ FIGURES: Tuple[Figure, ...] = (
             r"a median model cost of (\d+\.\d+) USD a case",
             r"(\d+\.\d+) USD of model cost a case",
             r"\u6a21\u578b\u6210\u672c\u4e2d\u4f4d\u6570 (\d+\.\d+) USD",
+            # The front page's own tile, which is where this cost is stated
+            # now: "$0.039" and "0.0390 USD (dev-v8)".
+            r"num\">\$(\d+\.\d+)</div>",
+            r"src\">(\d+\.\d+) USD \(dev-v8\)",
+        ),
+    ),
+    Figure(
+        "dev-v8, share decided with no person",
+        ("70",),
+        (
+            # The front page's own tile: "70%" over "decided with no person
+            # needed". The share the version-8 measurement gives, as the tile
+            # writes it -- the number, with the page carrying the sign.
+            r"num\">(\d+)%</div>",
         ),
     ),
     # The no-show sample's four version-8 drafts, counted by what each one did.
@@ -1020,6 +1081,13 @@ def _compute() -> Dict[str, str]:
             v6_runs._percentile(v8_walls, Decimal("0.9"))
         ),
         "dev-v8, median model cost": "{0:.4f}".format(v6_runs._median(v8_costs)),
+        # The share the front page's tile states, read the way the other
+        # ``values[...]`` entries are: the figure carries the unit and the tile
+        # writes the number with the page's own sign, so the number is what is
+        # compared.
+        "dev-v8, share decided with no person": values["v8_decided_share"].split("%")[
+            0
+        ],
         "ryde-v8, 903's drafts counted by outcome": "{0} escalate, {1} fee, {2} voided".format(
             no_show_drafts["escalate"],
             no_show_drafts["fee"],
