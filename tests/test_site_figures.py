@@ -982,7 +982,7 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
     ),
     (
         "how-it-works.html",
-        "In the sixth hidden set (sealed-v4, version 7), all 9 cases that needed a person got one.",
+        "In the sixth sealed set (sealed-v4, version 7), all 9 cases that needed a person got one.",
         (
             "sealed_v4_to_person",
         ),
@@ -1139,7 +1139,7 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
     ),
     (
         "how-it-works.zh.html",
-        "\u7b2c\u516d\u5957\u9690\u85cf\u8003\u9898(sealed-v4\uff0c\u7b2c 7 \u7248)\u91cc\uff0c9 \u4e2a\u8be5\u4ea4\u7ed9\u4eba\u7684\u6848\u5b50\u90fd\u4ea4\u4e86\u3002",
+        "\u7b2c\u516d\u5957\u5c01\u5b58\u96c6(sealed-v4\uff0c\u7b2c 7 \u7248)\u91cc\uff0c9 \u4e2a\u8be5\u4ea4\u7ed9\u4eba\u7684\u6848\u5b50\u90fd\u4ea4\u4e86\u3002",
         (
             "sealed_v4_to_person",
         ),
@@ -1257,28 +1257,28 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
     ),
     (
         "about.html",
-        "the third hidden set (sealed-v1) run once: 21/24.",
+        "the third sealed set (sealed-v1) run once: 21/24.",
         (
             "sealed_v1_exact",
         ),
     ),
     (
         "about.html",
-        "the fourth hidden set (sealed-v2): 12/12.",
+        "the fourth sealed set (sealed-v2): 12/12.",
         (
             "sealed_v2_exact",
         ),
     ),
     (
         "about.zh.html",
-        "\u7b2c\u4e09\u5957\u9690\u85cf\u8003\u9898(sealed-v1)\u8dd1\u4e00\u6b21\uff1a21/24\u3002",
+        "\u7b2c\u4e09\u5957\u5c01\u5b58\u96c6(sealed-v1)\u8dd1\u4e00\u6b21\uff1a21/24\u3002",
         (
             "sealed_v1_exact",
         ),
     ),
     (
         "about.zh.html",
-        "\u7b2c\u56db\u5957\u9690\u85cf\u8003\u9898(sealed-v2)\uff1a12/12\u3002",
+        "\u7b2c\u56db\u5957\u5c01\u5b58\u96c6(sealed-v2)\uff1a12/12\u3002",
         (
             "sealed_v2_exact",
         ),
@@ -1315,7 +1315,7 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
     ),
     (
         "results.html",
-        "30/30 right on 30 hidden cases, Wilson 95% 88.6%, 100%; written by Claude (Opus 5.5) in a fresh claude.ai chat from Ryde's v2.1 and the version-7 files; run once from freeze-2026-10-14.",
+        "30/30 right on the 30 sealed cases, Wilson 95% 88.6%, 100%; written by Claude (Opus 5.5) in a fresh claude.ai chat from Ryde's v2.1 and the version-7 files; run once from freeze-2026-10-14.",
         (
             "sealed_v4_exact",
             "sealed_v4_interval",
@@ -1337,7 +1337,7 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
     ),
     (
         "results.zh.html",
-        "30 \u9053\u9690\u85cf\u9898\u5bf9\u4e86 30/30\uff0cWilson 95% 88.6%, 100%\uff1b\u7531 Claude\uff08Opus 5.5\uff09\u5728\u5168\u65b0\u7684 claude.ai \u5bf9\u8bdd\u4e2d\u6309 Ryde v2.1 \u4e0e\u7b2c 7 \u7248\u653f\u7b56\u51fa\u9898\uff1b\u4ece freeze-2026-10-14 \u53ea\u8dd1\u4e00\u6b21\u3002",
+        "30 \u9053\u5c01\u5b58\u9898\u5bf9\u4e86 30/30\uff0cWilson 95% 88.6%, 100%\uff1b\u7531 Claude\uff08Opus 5.5\uff09\u5728\u5168\u65b0\u7684 claude.ai \u5bf9\u8bdd\u4e2d\u6309 Ryde v2.1 \u4e0e\u7b2c 7 \u7248\u653f\u7b56\u51fa\u9898\uff1b\u4ece freeze-2026-10-14 \u53ea\u8dd1\u4e00\u6b21\u3002",
         (
             "sealed_v4_exact",
             "sealed_v4_interval",
@@ -1359,14 +1359,14 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
     ),
     (
         "about.html",
-        "Version 7 frozen; the sixth hidden set (sealed-v4): 30/30.",
+        "Version 7 frozen; the sixth sealed set (sealed-v4): 30/30.",
         (
             "sealed_v4_exact",
         ),
     ),
     (
         "about.zh.html",
-        "\u7b2c 7 \u7248\u51bb\u7ed3\uff1b\u7b2c\u516d\u5957\u9690\u85cf\u8003\u9898\uff08sealed-v4\uff09\uff1a30/30\u3002",
+        "\u7b2c 7 \u7248\u51bb\u7ed3\uff1b\u7b2c\u516d\u5957\u5c01\u5b58\u96c6\uff08sealed-v4\uff09\uff1a30/30\u3002",
         (
             "sealed_v4_exact",
         ),
@@ -1747,14 +1747,14 @@ class SiteFigureTests(unittest.TestCase):
         ``assert_shows`` makes.
         """
         shown = (
-            "30/30 right on 30 hidden cases, Wilson 95% 88.6%, 100%; written by "
+            "30/30 right on the 30 sealed cases, Wilson 95% 88.6%, 100%; written by "
             "Claude (Opus 5.5) in a fresh claude.ai chat from Ryde's v2.1 and the "
             "version-7 files; run once from freeze-2026-10-14."
         )
         names = ("sealed_v4_exact", "sealed_v4_interval")
         page = self.pages["results.html"]
         moved = page.replace(
-            "30/30 right on 30 hidden cases", "29/30 right on 30 hidden cases"
+            "30/30 right on the 30 sealed cases", "29/30 right on the 30 sealed cases"
         )
         self.assertNotEqual(page, moved, "the fixture did not move the figure")
         with self.assertRaises(AssertionError):
@@ -1910,6 +1910,20 @@ VERSION_SIX_PHRASES: Tuple[str, ...] = (
     # pages no longer hold.
     "the question is with Ryde",
     "\u8fd9\u4e2a\u95ee\u9898\u5728 Ryde \u90a3\u8fb9",
+    # Part 103's six. Part 97 renamed the hidden test set on the front page and
+    # left the same wording in twelve more sentences; part 103 finished the job,
+    # so no page calls a sealed set hidden and no Chinese page calls a no-show
+    # \u723d\u7ea6. "hidden set" is the two words the twelve English sentences shared;
+    # the other two English phrases are the plural and the case count, and the
+    # three Chinese ones are their own. A page that called a sealed set hidden
+    # would be describing the set the system was never developed against as one
+    # a reader cannot check, which is the reading part 97 removed.
+    "hidden set",
+    "hidden cases",
+    "hidden test sets",
+    "\u9690\u85cf\u8003\u9898",
+    "\u9690\u85cf\u9898",
+    "\u723d\u7ea6",
 )
 
 # The one phrase that is still stated, and the pages that state it. Both are the
@@ -2033,6 +2047,28 @@ class TheVersionSixPhrasesTests(unittest.TestCase):
         self.assertEqual(
             [phrase for phrase, _block in reported],
             ["the question is with Ryde"],
+            "the copy is reported as {0!r}".format(reported),
+        )
+
+    def test_the_check_fails_on_a_page_carrying_the_old_hidden_wording(self):
+        """The control: the about page's old wording, put back, is reported.
+
+        Part 97 renamed the hidden test set on the front page and part 103
+        finished the job on the twelve sentences that still called a sealed set
+        hidden. This is the built about page's own markup with "the sixth hidden
+        set" put back, and the check above must report it: the block calls a
+        sealed set hidden and names version 6 nowhere.
+        """
+        markup = self.raw["about.html"]
+        self.assertNotIn("hidden set", markup)
+        restored = markup.replace(
+            "the sixth sealed set (sealed-v4)", "the sixth hidden set (sealed-v4)"
+        )
+        self.assertNotEqual(markup, restored, "the fixture did not restore the wording")
+        reported = unlabelled_phrases(restored)
+        self.assertEqual(
+            [phrase for phrase, _block in reported],
+            ["hidden set"],
             "the copy is reported as {0!r}".format(reported),
         )
 
