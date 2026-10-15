@@ -548,19 +548,23 @@ WORDS: Mapping[str, Tuple[str, str]] = {
         "\u65e0\u9700\u4eba\u5de5\u51b3\u5b9a",
     ),
     "Gates": ("Gates", "\u95f8\u95e8"),
-    "Agreement per set": (
-        "Agreement per set",
-        "\u5404\u6570\u636e\u96c6\u4e00\u81f4\u6570",
+    "Stopped before the judge": (
+        "Stopped before the judge",
+        "\u5728\u6cd5\u5b98\u4e4b\u524d\u88ab\u62e6\u4e0b",
     ),
-    "Never pooled": (
-        "The two sets are never pooled.",
-        "\u4e24\u4e2a\u6570\u636e\u96c6\u4ece\u4e0d\u5408\u5e76\u3002",
+    "Agreement with the key, dev-v8": (
+        "Agreement with the key, dev-v8",
+        "\u4e0e\u7b54\u6848\u4e00\u81f4\uff08dev-v8\uff09",
+    ),
+    "No ruling carried": (
+        "\u2014 (no ruling carried)",
+        "\u2014\uff08\u672a\u51fa\u88c1\u51b3\uff09",
     ),
     "Statements note": (
         "The parties' statements, the claims and the ruling's explanation are "
         "quoted in English, the language the record was made in.",
-        "\u5f53\u4e8b\u4eba\u9648\u8ff0\u3001\u53cc\u65b9\u4e3b\u5f20\u4e0e\u88c1\u51b3"
-        "\u8bf4\u660e\u539f\u6587\u4e3a\u82f1\u6587\u3002",
+        "\u5f53\u4e8b\u4eba\u9648\u8ff0\u3001\u53cc\u65b9\u4e3b\u5f20\u548c\u6cd5\u5b98\u7684\u88c1\u51b3\u8bf4\u660e\u4fdd\u7559\u82f1\u6587\u539f\u6587\uff1b\u7cfb\u7edf\u81ea\u52a8\u751f\u6210\u7684\u53e5\u5b50\u5df2\u8bd1\u4e3a"
+        "\u4e2d\u6587\u3002",
     ),
     "Prices": (
         "At the repository's prices.",
@@ -666,27 +670,17 @@ TEXT: Mapping[str, Tuple[str, str]] = {
         "\u81ea\u5df1\u7684 {ryde} \u4e2a\uff0c\u6bcf\u4e2a\u4e00\u9875\uff0c"
         "\u653f\u7b56\u7248\u672c 8\u3002",
     ),
-    "count cases": ("{total} cases", "{total} \u4e2a\u6848\u4ef6"),
     "count sets": (
         "dev-v8 {dev}, ryde-v8 {ryde}",
         "dev-v8 {dev} \u4e2a\uff0cryde-v8 {ryde} \u4e2a",
-    ),
-    "count no person": (
-        "{total} of {cases} decided with no person",
-        "{cases} \u4e2a\u4e2d {total} \u4e2a\u65e0\u9700\u4eba\u5de5\u51b3\u5b9a",
     ),
     "count no person split": (
         "dev-v8 {dev} of {dev_total}, ryde-v8 {ryde} of {ryde_total}",
         "dev-v8 {dev} / {dev_total}\uff0cryde-v8 {ryde} / {ryde_total}",
     ),
-    "count gates": ("{total} gates", "{total} \u4e2a\u95f8\u95e8"),
     "count gate split": (
         "dev-v8 {dev}, ryde-v8 {ryde}",
         "dev-v8 {dev} \u4e2a\uff0cryde-v8 {ryde} \u4e2a",
-    ),
-    "count agreement": (
-        "dev-v8 {dev} of {dev_total}; ryde-v8 {ryde} of {ryde_total}",
-        "dev-v8 {dev} / {dev_total}\uff1bryde-v8 {ryde} / {ryde_total}",
     ),
     "col case": ("Case", "\u6848\u4ef6"),
     "col set": ("Set", "\u6570\u636e\u96c6"),
@@ -701,6 +695,89 @@ TEXT: Mapping[str, Tuple[str, str]] = {
         "\u8f93\u5165 {prompt}\uff0c\u7f13\u5b58 {cached}\uff0c\u8f93\u51fa "
         "{completion}\uff0c\u5408\u8ba1 {total}",
     ),
+    # The pipeline's own sentences, in part 6. The vote it appends to the judge's
+    # explanation has two forms, and a gated case's whole explanation is the
+    # pipeline's because the judge was never asked. On a Chinese page these are
+    # printed in Chinese, filled from what the run recorded.
+    "no bar": ("No bar \u2014 {basis}", "\u4e0d\u8bbe\u95e8\u69db\u2014\u2014{basis}"),
+    "count agreement note": (
+        "ryde-v8 {ryde} of {ryde_total}; the two sets are never pooled.",
+        "ryde-v8 {ryde} / {ryde_total}\uff1b\u4e24\u4e2a\u6570\u636e\u96c6\u4ece\u4e0d\u5408\u5e76\u3002",
+    ),
+    "vote unanimous": (
+        "The judge was asked {n} times on the same inputs and every draft agreed "
+        "on this ruling, so it is carried unanimously (vote agreement {a}).",
+        "\u6cd5\u5b98\u5c31\u540c\u6837\u7684\u6750\u6599\u88ab\u95ee\u4e86 {n} \u6b21\uff0c\u6bcf\u4efd\u8349\u7a3f\u90fd\u540c\u610f\u8fd9\u4e2a\u88c1\u51b3\uff0c\u56e0\u6b64\u4e00\u81f4\u901a\u8fc7"
+        "\uff08\u6295\u7968\u4e00\u81f4\u5ea6 {a}\uff09\u3002",
+    ),
+    "vote split": (
+        "The judge was asked {n} times on the same inputs and {k} of the {m} "
+        "drafts agreed on this ruling, so it is carried, not unanimous (vote "
+        "agreement {a}).",
+        "\u6cd5\u5b98\u5c31\u540c\u6837\u7684\u6750\u6599\u88ab\u95ee\u4e86 {n} \u6b21\uff0c{m} \u4efd\u8349\u7a3f\u4e2d\u6709 {k} \u4efd\u540c\u610f\u8fd9\u4e2a\u88c1\u51b3\uff0c\u56e0\u6b64"
+        "\u901a\u8fc7\uff0c\u4f46\u4e0d\u662f\u4e00\u81f4\u901a\u8fc7\uff08\u6295\u7968\u4e00\u81f4\u5ea6 {a}\uff09\u3002",
+    ),
+    "gated explanation": (
+        "Under {clause}, {basis}. The AI prepared the case file -- both advocates "
+        "were asked -- and no ruling is issued, so the dispute is escalated to a "
+        "human reviewer with both amounts null and no referral. The reason code "
+        "is {code}.",
+        "\u6309 {clause}\uff0c{basis}\u3002AI \u5df2\u5907\u597d\u6848\u5377\uff08\u53cc\u65b9\u5f8b\u5e08\u90fd\u5df2\u9648\u8ff0\uff09\uff0c\u4f46\u4e0d\u51fa\u88c1\u51b3\uff1a"
+        "\u4e89\u8bae\u8f6c\u7ed9\u4eba\u5de5\u5ba1\u6838\u5458\uff0c\u4e24\u4e2a\u91d1\u989d\u90fd\u4e3a\u7a7a\uff0c\u4e5f\u6ca1\u6709\u8f6c\u529e\u3002\u539f\u56e0\u4ee3\u7801\uff1a{code}\u3002",
+    ),
+}
+
+# The evidence codes the 42 cases carry, in the words a page writes them with.
+# The seven artifact types, the three admissibility statuses and the eight
+# issues are all here; a code this table does not know is refused, so a later run
+# cannot put a code on a page with no words beside it.
+EVIDENCE: Mapping[str, Tuple[str, str]] = {
+    "TRIP_RECORD": ("Trip record", "\u884c\u7a0b\u8bb0\u5f55"),
+    "GPS_TRACE": ("GPS trace", "GPS \u8f68\u8ff9"),
+    "CHAT_LOG": ("Chat log", "\u804a\u5929\u8bb0\u5f55"),
+    "FARE_BREAKDOWN": ("Fare breakdown", "\u8f66\u8d39\u660e\u7ec6"),
+    "RIDER_PROFILE": ("Rider profile", "\u4e58\u5ba2\u8d44\u6599"),
+    "DRIVER_PROFILE": ("Driver profile", "\u53f8\u673a\u8d44\u6599"),
+    "TRAFFIC_ADVISORY": ("Traffic advisory", "\u4ea4\u901a\u901a\u544a"),
+    "COMPLETE": ("complete", "\u5b8c\u6574"),
+    "MISSING": ("missing", "\u7f3a\u5931"),
+    "IMPAIRED": ("impaired", "\u53d7\u635f"),
+    "MISSING_ARTIFACT": ("the file is missing", "\u6587\u4ef6\u7f3a\u5931"),
+    "CROSS_SOURCE_CONFLICT": ("the sources disagree", "\u6765\u6e90\u4e92\u76f8\u77db\u76fe"),
+    "LANGUAGE_AMBIGUITY": ("ambiguous wording", "\u63aa\u8f9e\u6709\u6b67\u4e49"),
+    "TRUNCATED_LOG": ("the log is cut short", "\u8bb0\u5f55\u88ab\u622a\u65ad"),
+    "UNREAD_MESSAGE": ("a message was not read", "\u6709\u6d88\u606f\u672a\u8bfb"),
+    "GPS_GAP_STRADDLING_CANCELLATION": (
+        "a GPS gap across the cancellation",
+        "\u53d6\u6d88\u524d\u540e GPS \u4e2d\u65ad",
+    ),
+    "LOW_SAMPLE_RATE": ("sparse GPS fixes", "GPS \u91c7\u6837\u7a00\u758f"),
+    "PARTIAL_RECORD": ("a partial record", "\u8bb0\u5f55\u4e0d\u5b8c\u6574"),
+}
+
+# The sentences the code wrote rather than the model: the brief's authority
+# block, the version-8 gate's own basis, and the reason a trip record gives for
+# having no driver deadline. A Chinese page prints the Chinese; a recorded text
+# this table does not know is refused rather than printed in English, so a later
+# run cannot put English back on a Chinese page silently.
+RECORDED: Mapping[str, str] = {
+    "a route deviation (POL-RD-25)": "\u7ed5\u8def\u6848\u4ef6\uff08POL-RD-25\uff09",
+    "a no-show below POL-GEN-22's first band, where POL-NS-26 makes the AI "
+    "ruling final": "\u91d1\u989d\u4f4e\u4e8e POL-GEN-22 \u7b2c\u4e00\u6863\u7684\u672a\u5230\u573a\u6848\u4ef6\uff0c\u6309 POL-NS-26\uff0cAI \u7684"
+    "\u88c1\u51b3\u5373\u4e3a\u6700\u7ec8",
+    "a fraud flag on a party's profile (POL-GEN-22)": "\u4e00\u65b9\u8d44\u6599\u5e26\u6b3a\u8bc8\u6807\u8bb0"
+    "\uff08POL-GEN-22\uff09",
+    "neither a safety flag nor a value above POL-GEN-22's second band": "\u6ca1\u6709\u5b89\u5168"
+    "\u6807\u8bb0\uff0c\u91d1\u989d\u4e5f\u4e0d\u9ad8\u4e8e POL-GEN-22 \u7b2c\u4e8c\u6863",
+    "a safety flag on the dispute (POL-GEN-21)": "\u4e89\u8bae\u5e26\u5b89\u5168\u6807\u8bb0\uff08POL-GEN-21\uff09",
+    "a dispute value above POL-GEN-22's second band": "\u4e89\u8bae\u91d1\u989d\u9ad8\u4e8e POL-GEN-22 \u7b2c\u4e8c\u6863",
+    "the deviation is over the POL-RD-25 ceiling this policy applies to an AI "
+    "ruling, so the ruling does not stand": "\u7ed5\u8def\u8d85\u8fc7\u672c\u653f\u7b56\u7ed9 AI \u88c1\u51b3\u8bbe\u7684 POL-RD-25 "
+    "\u4e0a\u9650\uff0c\u56e0\u6b64 AI \u7684\u88c1\u51b3\u4e0d\u80fd\u6210\u7acb",
+    "the dispute carries dispute.safety_flag, and POL-GEN-21 makes a flagged "
+    "dispute a person's whatever the category and whatever the value": "\u4e89\u8bae\u5e26\u6709 "
+    "dispute.safety_flag\uff1b\u6309 POL-GEN-21\uff0c\u5e26\u6807\u8bb0\u7684\u4e89\u8bae\u4e0d\u8bba\u7c7b\u522b\u548c\u91d1\u989d\u90fd\u7531\u4eba\u51b3\u5b9a",
+    "on-demand trip: no scheduled time": "\u5373\u65f6\u884c\u7a0b\uff1a\u6ca1\u6709\u9884\u7ea6\u65f6\u95f4",
 }
 
 # The one number these pages need that the brief does not carry: the value above
@@ -737,6 +814,49 @@ def sentence(key: str, language: str, **fields: Any) -> str:
     if key not in TEXT:
         raise BuildError("{0!r} is not a sentence this module states".format(key))
     return TEXT[key][0 if language == EN else 1].format(**fields)
+
+
+def recorded_words(text: Any, language: str) -> str:
+    """One of the run's own sentences, in the language the page prints it in.
+
+    The brief's authority block, the gate's own basis and a trip record's reason
+    for having no driver deadline are sentences the code wrote rather than the
+    model, so a Chinese page prints the Chinese. English is what the run
+    recorded, and a recorded text this table does not know is refused rather than
+    printed in English on a Chinese page.
+    """
+    english = str(text)
+    if language == EN:
+        return english
+    try:
+        return RECORDED[english]
+    except KeyError as exc:
+        raise BuildError(
+            "the recorded text {0!r} has no Chinese and a Chinese page prints "
+            "it".format(english)
+        ) from exc
+
+
+def evidence_words(code: Any, language: str) -> str:
+    """One evidence code, in the words of the page's own language."""
+    key = str(code)
+    try:
+        words = EVIDENCE[key]
+    except KeyError as exc:
+        raise BuildError(
+            "the evidence code {0!r} has no words to print".format(key)
+        ) from exc
+    return words[0 if language == EN else 1]
+
+
+def codename(code: Any) -> str:
+    """A code after the words it stands for, in a small monospace parenthesis."""
+    return '<small class="codename">({0})</small>'.format(_t(code))
+
+
+def worded(words: Any, code: Any) -> str:
+    """The words first and the code in the small parenthesis after them."""
+    return "{0} {1}".format(_t(words), codename(code))
 
 
 def category_words(value: Any, language: str) -> str:
@@ -797,7 +917,9 @@ def gate_name(gate: Mapping[str, Any], language: str, with_basis: bool = True) -
     else:
         named = clause or str(gate.get("reason_code") or "")
     if with_basis and basis:
-        return sentence("gate basis", language, gate=named, basis=basis)
+        return sentence(
+            "gate basis", language, gate=named, basis=recorded_words(basis, language)
+        )
     return named
 
 
@@ -886,6 +1008,39 @@ def decision_of(case: V8Case) -> Decision:
     return Decision("no majority", agreeing, valid, votes, threshold)
 
 
+def carries_no_ruling(case: V8Case) -> bool:
+    """Whether the run published no ruling at all.
+
+    The six cases the version-8 gate stopped and the two the panel could not
+    agree on record a confidence of 0.0 because there is no ruling for one to
+    belong to; their page says so rather than printing "0.0". The judge's own
+    escalations carried a ruling and keep the confidence they record.
+    """
+    return decision_of(case).kind in ("gate", "no majority")
+
+
+def no_bar(case: V8Case) -> bool:
+    """Whether the policy sets no confidence bar: the AI's ruling is final.
+
+    The 18 no-show cases whose value is below POL-GEN-22's first band record a
+    required confidence of 0.0, because POL-NS-26 makes the AI's ruling final
+    there and no bar applies.
+    """
+    return v2._decimal(case.required_confidence) == 0
+
+
+def required_bar(case: V8Case, language: str) -> str:
+    """The bar a case had to meet and the basis for it, in one cell.
+
+    A case with no bar says so and names the clause; every other bar keeps the
+    number the run recorded and the basis the brief states.
+    """
+    basis = recorded_words(case.required_basis, language)
+    if no_bar(case):
+        return sentence("no bar", language, basis=_t(basis))
+    return "{0} \u2014 {1}".format(_t(case.required_confidence), _t(basis))
+
+
 # --------------------------------------------------------------------------
 # Rendering
 # --------------------------------------------------------------------------
@@ -934,6 +1089,22 @@ def _scroll(table: str) -> str:
     return '<div class="scroll-x">{0}</div>'.format(table)
 
 
+def _grid(cards: Sequence[str], classes: str = "cards c2", columns: int = 2) -> str:
+    """A grid of cards, the last one filling its row when the count is odd.
+
+    The two statements and each side's claims sit in ``.cards c2`` grids, two to
+    a row. When the count is odd the last card would be the only one in its row
+    and half the grid would be empty, so it takes ``span2`` -- part 98's class,
+    which ``site.css`` gives a second column -- and the row fills.
+    """
+    rendered = list(cards)
+    if rendered and len(rendered) % columns:
+        rendered[-1] = rendered[-1].replace(
+            '<div class="card"', '<div class="card span2"', 1
+        )
+    return '<div class="{0}">{1}</div>'.format(classes, "".join(rendered))
+
+
 def _table(rows: Sequence[Tuple[str, str]]) -> str:
     """A ``.dt`` table: a label and its value, one row each."""
     body = "".join(
@@ -979,8 +1150,8 @@ def _band_words(case: V8Case, language: str) -> str:
     elif band == brief_module.VALUE_BAND_HUMAN_ONLY:
         gloss = sentence("band HUMAN_ONLY", language)
     else:
-        gloss = ""
-    return "{0} ({1})".format(_t(band), _t(gloss)) if gloss else _t(band)
+        return _t(band)
+    return worded(gloss, band)
 
 
 def _money(value: Any, case: V8Case) -> str:
@@ -1004,11 +1175,7 @@ def _coded(value: str, clause: Optional[str]) -> str:
 def _ruling_line(case: V8Case, language: str) -> str:
     """The published ruling in words, with its amounts and its referrals."""
     ruling = case.ruling
-    parts = [
-        "{0} ({1})".format(
-            _t(ruling_words(case.ruling_value, language)), _t(case.ruling_value)
-        )
-    ]
+    parts = [worded(ruling_words(case.ruling_value, language), case.ruling_value)]
     if case.ruling_value in v2.REFUND_RULINGS:
         parts.append(
             "{0} {1}".format(
@@ -1023,11 +1190,12 @@ def _ruling_line(case: V8Case, language: str) -> str:
                 _money(ruling.get("driver_compensation_sgd"), case),
             )
         )
+    if carries_no_ruling(case):
+        confidence = label("No ruling carried", language)
+    else:
+        confidence = _t("none" if case.confidence is None else case.confidence)
     parts.append(
-        "{0} {1}".format(
-            _t(label("Confidence", language)),
-            _t("none" if case.confidence is None else case.confidence),
-        )
+        "{0} {1}".format(_t(label("Confidence", language)), confidence)
     )
     referrals = ruling.get("referrals") or []
     listed = "; ".join(_t(item) for item in referrals) or _t(label("None", language))
@@ -1045,9 +1213,7 @@ def outcome_body(case: V8Case, language: str) -> str:
         (label("Case", language), _t(case.case_no)),
         (
             label("Category", language),
-            "{0} ({1})".format(
-                _t(category_words(case.category, language)), _t(case.category)
-            ),
+            worded(category_words(case.category, language), case.category),
         ),
         (
             label("Set", language),
@@ -1057,12 +1223,7 @@ def outcome_body(case: V8Case, language: str) -> str:
         (label("Amount contested", language), _money(case.amount, case)),
         (label("Value band", language), _band_words(case, language)),
         (label("Published ruling", language), _ruling_line(case, language)),
-        (
-            label("Required confidence", language),
-            "{0} \u2014 {1}".format(
-                _t(case.required_confidence), _t(case.required_basis)
-            ),
-        ),
+        (label("Required confidence", language), required_bar(case, language)),
     ]
     decision = decision_of(case)
     how = gate_sentence(case, language) if decision.kind == "gate" else decision.words(language)
@@ -1081,14 +1242,18 @@ def outcome_body(case: V8Case, language: str) -> str:
     key_line = sentence(
         "key line",
         language,
-        ruling="{0} ({1}){2}".format(
-            ruling_words(key.ruling, language), key.ruling, key_amount
+        ruling="{0}{1}".format(
+            worded(ruling_words(key.ruling, language), key.ruling), key_amount
         ),
     )
     return (
         _table(rows)
         + '<p class="lede">{0}</p>'.format(_t(how))
-        + "<p>{0} {1}</p>".format(_t(agrees), _t(key_line))
+        # The key's ruling carries the code in the small parenthesis, so the
+        # sentence is inserted as it stands: the words, the code and the amount
+        # are escaped where they are written, and the template's own text holds
+        # no markup.
+        + "<p>{0} {1}</p>".format(_t(agrees), key_line)
     )
 
 
@@ -1118,14 +1283,18 @@ def dispute_body(case: V8Case, language: str) -> str:
     evidence_rows = []
     for artifact in case.brief["case"]["evidence"]:
         admissibility = artifact.get("admissibility") or {}
-        detail = _t(admissibility.get("status"))
-        issues = admissibility.get("issues") or []
-        if issues:
-            detail += " ({0})".format(", ".join(_t(issue) for issue in issues))
+        status = admissibility.get("status")
+        detail = worded(evidence_words(status, language), status)
+        for issue in admissibility.get("issues") or []:
+            detail += "; {0}".format(worded(evidence_words(issue, language), issue))
+        evidence_type = artifact.get("evidence_type")
         evidence_rows.append(
             (
                 artifact.get("evidence_id"),
-                "{0} &middot; {1}".format(_t(artifact.get("evidence_type")), detail),
+                "{0} &middot; {1}".format(
+                    worded(evidence_words(evidence_type, language), evidence_type),
+                    detail,
+                ),
             )
         )
     parts = [
@@ -1139,7 +1308,7 @@ def dispute_body(case: V8Case, language: str) -> str:
                 (label("Value band", language), _band_words(case, language)),
             ]
         ),
-        '<div class="cards c2">{0}</div>'.format("".join(cards)),
+        _grid(cards),
         _heading(label("Evidence", language), language),
         _scroll(
             '<table class="dt"><thead><tr><th>{0}</th><th>{1}</th></tr></thead>'
@@ -1249,7 +1418,9 @@ def _deadline_rows(deadline: Mapping[str, Any], language: str) -> List[Tuple[str
     return [
         (
             label("Driver deadline", language),
-            _sourced_instant(when) if when else _t(deadline.get("reason")),
+            _sourced_instant(when)
+            if when
+            else _t(recorded_words(deadline.get("reason"), language)),
         ),
         (
             label("Late seconds", language),
@@ -1373,12 +1544,7 @@ def derived_body(case: V8Case, language: str) -> str:
     authority_rows = [
         (label("Value band", language), _band_words(case, language)),
         (label("Fraud flags", language), _t(_leaf(case.authority, "fraud_flags"))),
-        (
-            label("Required confidence", language),
-            "{0} \u2014 {1}".format(
-                _t(case.required_confidence), _t(case.required_basis)
-            ),
-        ),
+        (label("Required confidence", language), required_bar(case, language)),
         (
             label("Safety flag", language),
             _yes_no(_leaf(case.authority, "safety_flag"), language),
@@ -1387,7 +1553,7 @@ def derived_body(case: V8Case, language: str) -> str:
             label("A person decides", language),
             "{0} ({1})".format(
                 _yes_no(_leaf(case.authority, "human_only"), language),
-                _t(case.authority.get("human_only_basis")),
+                _t(recorded_words(case.authority.get("human_only_basis"), language)),
             ),
         ),
     ]
@@ -1409,9 +1575,9 @@ def _claim_card(case: V8Case, claim: Mapping[str, Any], number: int, language: s
     if status is None:
         verdict = label("No referee verdict", language)
     elif status == "KEPT":
-        verdict = "{0} ({1})".format(label("Kept", language), reason or status)
+        verdict = worded(label("Kept", language), reason or status)
     else:
-        verdict = "{0} ({1})".format(label("Dropped", language), reason or status)
+        verdict = worded(label("Dropped", language), reason or status)
     evidence = ", ".join(_t(item) for item in claim.get("evidence_ids") or []) or _t(
         label("None", language)
     )
@@ -1430,7 +1596,7 @@ def _claim_card(case: V8Case, claim: Mapping[str, Any], number: int, language: s
         _t(label("Clause ids", language)),
         clauses,
         _t(label("Verdict", language)),
-        _t(verdict),
+        verdict,
     )
 
 
@@ -1446,11 +1612,11 @@ def sides_body(case: V8Case, language: str) -> str:
             parts.append('<p class="muted">{0}</p>'.format(_t(label("None", language))))
             continue
         parts.append(
-            '<div class="cards c2">{0}</div>'.format(
-                "".join(
+            _grid(
+                [
                     _claim_card(case, claim, number, language)
                     for number, claim in enumerate(claims, 1)
-                )
+                ]
             )
         )
     if language == ZH:
@@ -1546,9 +1712,108 @@ def drafts_body(case: V8Case, language: str) -> str:
 # --------------------------------------------------------------------------
 # Part 6: the ruling's explanation
 # --------------------------------------------------------------------------
+# The sentences the pipeline writes for itself in part 6: the vote it appends to
+# the judge's explanation, in its two forms, and the whole explanation of a case
+# the gate stopped before the judge was asked. Matching them is what lets the
+# code's own words be printed in Chinese while the model's own words are left
+# exactly as the run recorded them.
+VOTE_UNANIMOUS_EN = re.compile(
+    r"The judge was asked (?P<n>\d+) times on the same inputs and every draft "
+    r"agreed on this ruling, so it is carried unanimously "
+    r"\(vote agreement (?P<a>[0-9.]+)\)\."
+)
+VOTE_SPLIT_EN = re.compile(
+    r"The judge was asked (?P<n>\d+) times on the same inputs and (?P<k>\d+) of "
+    r"the (?P<m>\d+) drafts agreed on this ruling, so it is carried, not "
+    r"unanimous \(vote agreement (?P<a>[0-9.]+)\)\."
+)
+GATED_EN = re.compile(
+    r"Under (?P<clause>[A-Z0-9\-]+), (?P<basis>.+?)\. The AI prepared the case "
+    r"file -- both advocates were asked -- and no ruling is issued, so the "
+    r"dispute is escalated to a human reviewer with both amounts null and no "
+    r"referral\. The reason code is (?P<code>[A-Z0-9_]+)\."
+)
+
+
+def split_vote(explanation: str) -> Optional[Tuple[str, Mapping[str, str], bool]]:
+    """The reasoning, the vote sentence the pipeline appended, and its form.
+
+    The pipeline ends every judge-asked explanation with one sentence of its own
+    -- the vote the panel took -- and the judge's reasoning is everything before
+    it. The sentence is matched at the very end, so a run's prose that mentions
+    the vote in passing is left where it is.
+    """
+    text = explanation.rstrip()
+    for pattern, unanimous in ((VOTE_UNANIMOUS_EN, True), (VOTE_SPLIT_EN, False)):
+        match = pattern.search(text)
+        if match is not None and not text[match.end():].strip():
+            return text[: match.start()].rstrip(), match.groupdict(), unanimous
+    return None
+
+
+def chinese_explanation(case: V8Case, explanation: str) -> List[str]:
+    """Part 6 of a Chinese page: the reasoning, and the code's words in Chinese.
+
+    A gated case's explanation was written by the pipeline -- the judge was never
+    asked -- so it is printed whole in Chinese. Every other explanation is the
+    judge's own reasoning, which stays English, with the pipeline's vote sentence
+    split off the end and printed after it in Chinese. An explanation whose shape
+    this code does not know is refused rather than printed in English.
+    """
+    if case.gate is not None:
+        match = GATED_EN.match(explanation.strip())
+        if match is None:
+            raise BuildError(
+                "the gated explanation {0!r} is not the sentence this builder "
+                "knows".format(explanation)
+            )
+        fields = match.groupdict()
+        return [
+            _paragraphs(
+                sentence(
+                    "gated explanation",
+                    ZH,
+                    clause=fields["clause"],
+                    basis=recorded_words(fields["basis"], ZH),
+                    code=fields["code"],
+                )
+            )
+        ]
+    split = split_vote(explanation)
+    if split is None:
+        return [_paragraphs(explanation)]
+    reasoning, fields, unanimous = split
+    parts: List[str] = []
+    if reasoning.strip():
+        parts.append(_paragraphs(reasoning))
+    if unanimous:
+        words = sentence("vote unanimous", ZH, n=fields["n"], a=fields["a"])
+    else:
+        words = sentence(
+            "vote split",
+            ZH,
+            n=fields["n"],
+            k=fields["k"],
+            m=fields["m"],
+            a=fields["a"],
+        )
+    parts.append("<p>{0}</p>".format(_t(words)))
+    return parts
+
+
 def explanation_body(case: V8Case, language: str) -> str:
-    """The ruling's explanation, exactly as the run published it."""
-    parts = [_paragraphs(case.ruling.get("explanation"))]
+    """The ruling's explanation: the judge's own words, and the code's own.
+
+    The judge's reasoning is the model's text and stays English on both pages.
+    The pipeline writes one sentence of its own at the end of it -- the vote --
+    and writes a gated case's explanation whole, because the judge was never
+    asked; on a Chinese page those are printed in Chinese.
+    """
+    explanation = str(case.ruling.get("explanation") or "")
+    if language == EN:
+        parts = [_paragraphs(explanation)]
+    else:
+        parts = chinese_explanation(case, explanation)
     if language == ZH:
         parts.append(
             '<p class="muted">{0}</p>'.format(_t(label("Statements note", language)))
@@ -1697,20 +1962,18 @@ def index_main(cases: Sequence[V8Case], language: str) -> str:
     figures = counts(cases)
     dev = figures["sets"]["dev-v8"]
     ryde = figures["sets"]["ryde-v8"]
+    # The big line is the number alone: a sentence in the 56-pixel figure face
+    # wraps to a different height on each card. What the number counts is the
+    # kicker above it and the line below it.
     cards = [
         (
             label("Cases", language),
-            sentence("count cases", language, total=figures["total"]),
+            _t(figures["total"]),
             sentence("count sets", language, dev=dev["total"], ryde=ryde["total"]),
         ),
         (
             label("Decided with no person", language),
-            sentence(
-                "count no person",
-                language,
-                total=figures["no_person"],
-                cases=figures["total"],
-            ),
+            "{0}/{1}".format(figures["no_person"], figures["total"]),
             sentence(
                 "count no person split",
                 language,
@@ -1721,21 +1984,19 @@ def index_main(cases: Sequence[V8Case], language: str) -> str:
             ),
         ),
         (
-            label("Gates", language),
-            sentence("count gates", language, total=figures["gates"]),
+            label("Stopped before the judge", language),
+            _t(figures["gates"]),
             sentence("count gate split", language, dev=dev["gates"], ryde=ryde["gates"]),
         ),
         (
-            label("Agreement per set", language),
+            label("Agreement with the key, dev-v8", language),
+            "{0}/{1}".format(dev["agree"], dev["total"]),
             sentence(
-                "count agreement",
+                "count agreement note",
                 language,
-                dev=dev["agree"],
-                dev_total=dev["total"],
                 ryde=ryde["agree"],
                 ryde_total=ryde["total"],
             ),
-            label("Never pooled", language),
         ),
     ]
     cards_html = "".join(
@@ -1773,10 +2034,7 @@ def index_main(cases: Sequence[V8Case], language: str) -> str:
                 _t(category_words(case.category, language)),
                 _t(filed_by_words(case.filed_by, language)),
                 _t(case.value_band),
-                "{0} ({1})".format(
-                    _t(ruling_words(case.ruling_value, language)),
-                    _t(case.ruling_value),
-                ),
+                worded(ruling_words(case.ruling_value, language), case.ruling_value),
                 how,
                 _t(sentence("yes" if case.score.exact else "no", language)),
             )

@@ -1,7 +1,7 @@
 """The version-8 case pages, held to the runs they are drawn from.
 
 ``ui/v8/build.py`` gives each of the 42 version-8 cases a page of its own, in
-English and in Chinese, plus an index. This module holds it to seven things:
+English and in Chinese, plus an index. This module holds it to eleven things:
 
 * **The pages are there, and they are the ones the builder writes.** 42 case
   pages in each language plus the two index pages, every one of them committed
@@ -26,10 +26,29 @@ English and in Chinese, plus an index. This module holds it to seven things:
 * **The pages stay inside their own corner of ``ui/dist/``.** Every path this
   builder writes is disjoint from the product site's and from the version-6
   queue's, and the version-6 case pages are not touched.
+* **The code's own sentences are printed in Chinese.** The brief's authority
+  block, the version-8 gate's basis, a trip record's reason for having no driver
+  deadline, the vote the pipeline appends to the judge's explanation and a gated
+  case's whole explanation are sentences the code wrote, not the model, and a
+  Chinese page prints them in Chinese. Only the places the builder fills from
+  those fields are checked, because the parties' and the judge's own words stay
+  English and may quote them.
+* **The eight escalations that carry no ruling say so.** The six the gate
+  stopped and the two without a majority record a confidence of 0.0 because
+  there is no ruling for one to belong to, and their published line says
+  "\u2014 (no ruling carried)" rather than "0.0"; the eighteen no-show cases whose
+  band makes the AI's ruling final say "No bar" and name the clause.
+* **Every code on a page has words beside it.** The words come first and the
+  code follows in the small parenthesis, for the value band, the category, the
+  rulings, the referee's verdicts and every evidence code the 42 cases carry.
+* **The index's four cards state a number.** The big line is the count alone --
+  ``42``, ``28/42``, ``6``, ``39/40`` -- and what it counts is the kicker above
+  it and the line below it.
 * **The check can fail.** A temporary copy of the ``dev-v8`` run with one case's
   ruling changed makes that case's page differ, which is what shows the page is
-  drawn from the run document rather than written down; and a page string with
-  the dictionary put back is reported by the check for printed Python.
+  drawn from the run document rather than written down; a page string with the
+  dictionary put back is reported by the check for printed Python; and an
+  unknown recorded text, evidence code or index card is refused or reported.
 
 **No model call is made and no network is reached**: every reading is a
 committed run, a committed key or a committed case file. The build reads every
@@ -42,6 +61,7 @@ with::
 
 from __future__ import annotations
 
+import copy
 import html
 import json
 import re
@@ -50,8 +70,9 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Mapping, Set
 from unittest import mock
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -60,6 +81,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from eval import development_sets, grade, run_benchmark  # noqa: E402
 from tests import portability  # noqa: E402
+from tribunal import brief as brief_module  # noqa: E402
 from ui.site import build as site_build  # noqa: E402
 from ui.v2 import build as v2  # noqa: E402
 from ui.v8 import build as v8  # noqa: E402
@@ -232,6 +254,132 @@ def page_for(case: "v8.V8Case", language: str = v8.EN) -> str:
     return built_pages()[case.link if language == v8.EN else case.zh_link]
 
 
+# The nine sentences the code wrote rather than the model: the brief's authority
+# block, the version-8 gate's own basis, and a trip record's reason for having no
+# driver deadline. On a Chinese page every one of them is printed in Chinese, and
+# the check below reads only the places the builder fills from them -- the
+# parties' and the judge's own words stay as they were written and may quote any
+# of the nine (an advocate on case 5051 quotes "on-demand trip: no scheduled
+# time"), so the whole page is never scanned.
+RECORDED_TEXTS = (
+    "a route deviation (POL-RD-25)",
+    "a no-show below POL-GEN-22's first band, where POL-NS-26 makes the AI "
+    "ruling final",
+    "a fraud flag on a party's profile (POL-GEN-22)",
+    "neither a safety flag nor a value above POL-GEN-22's second band",
+    "a safety flag on the dispute (POL-GEN-21)",
+    "a dispute value above POL-GEN-22's second band",
+    "the deviation is over the POL-RD-25 ceiling this policy applies to an AI "
+    "ruling, so the ruling does not stand",
+    "the dispute carries dispute.safety_flag, and POL-GEN-21 makes a flagged "
+    "dispute a person's whatever the category and whatever the value",
+    "on-demand trip: no scheduled time",
+)
+
+# The eight escalations that carry no ruling at all: the six the version-8 gate
+# stopped and the two the panel could not agree on. And the eighteen no-show
+# cases whose band makes the AI's ruling final, so the policy sets no bar.
+NO_RULING_CASES = (902, 903, 5009, 5010, 5012, 5013, 5015, 5068)
+NO_BAR_CASES = 18
+
+SECTION_OPEN = '<section class="paper">'
+LEDE_RE = re.compile(r'<p class="lede">(.*?)</p>', re.S)
+BIG_RE = re.compile(r'<p class="big">(.*?)</p>')
+BIG_LINE_RE = re.compile(r"\A\d+(/\d+)?\Z")
+
+
+def as_written(text: str) -> "re.Pattern[str]":
+    """A pattern that finds ``text`` however a page writes a non-ASCII character.
+
+    A page writes a non-ASCII character as a numeric reference, and two writers
+    spell one: ``ui.v2.build``'s decimal ``&#8212;`` and ``ui.v8.build``'s own
+    hexadecimal ``&#x2014;``. Both render as the same character.
+    """
+    parts = []
+    for character in text:
+        if ord(character) < 128:
+            parts.append(re.escape(character))
+        else:
+            parts.append("&#(?:x{0:x}|{0});".format(ord(character)))
+    return re.compile("".join(parts))
+
+
+def case_parts(page: str) -> List[str]:
+    """A case page's seven numbered parts, in order."""
+    return page.split(SECTION_OPEN)[1:]
+
+
+def rows_labelled(page: str, label: str) -> List[List[str]]:
+    """Every ``.dt`` body row whose label cell is ``label`` (there may be none)."""
+    out: List[List[str]] = []
+    for table in tables_of(page):
+        for row in rows_of(table):
+            if row and row[0] == label:
+                out.append(row)
+    return out
+
+
+def builder_filled(page: str, language: str) -> List[str]:
+    """The places a page is filled from the run's recorded sentences.
+
+    Only these: the part 1 table and the sentence that says how the case was
+    decided, the authority block (the last table of part 3), the driver-deadline
+    row, and part 6, where the vote sentence or a gated case's whole explanation
+    is printed. The parties' and the judge's own text is not one of them and is
+    never read.
+    """
+    parts = case_parts(page)
+    placed = [tables_of(parts[0])[0]]
+    placed.extend(LEDE_RE.findall(parts[0]))
+    placed.append(tables_of(parts[2])[-1])
+    placed.extend(
+        " ".join(row) for row in rows_labelled(page, v8.label("Driver deadline", language))
+    )
+    placed.append(parts[5])
+    return placed
+
+
+def driver_deadline_reason(case: "v8.V8Case") -> str:
+    """The reason a trip record gives for having no deadline, or ``""``."""
+    trip = v8._derived(case.brief, "TRIP_RECORD", brief_module.V7_KEY) or {}
+    deadline = trip.get("driver_deadline")
+    if isinstance(deadline, Mapping) and not deadline.get("deadline"):
+        return str(deadline.get("reason") or "")
+    return ""
+
+
+def zero_confidence_rows(page: str, language: str) -> List[str]:
+    """Every published-ruling row that still prints a confidence of 0.0."""
+    label = v8.label("Published ruling", language)
+    out: List[str] = []
+    for table in tables_of(page):
+        for row in rows_of(table):
+            if row and row[0] == label and "0.0" in row[1]:
+                out.append(row[1])
+    return out
+
+
+def evidence_table(page: str, language: str) -> Dict[str, str]:
+    """Every evidence row: the artifact's id to the words and codes beside it."""
+    wanted = as_written(">" + v8.label("Evidence id", language) + "<")
+    for table in tables_of(page):
+        if wanted.search(table):
+            return {row[0]: row[1] for row in rows_of(table)}
+    raise AssertionError("the page carries no evidence table")
+
+
+def big_lines(page: str) -> List[str]:
+    """The index's four big lines, as a reader meets them."""
+    return [html.unescape(value) for value in BIG_RE.findall(page)]
+
+
+def index_card_offenders(page: str) -> List[str]:
+    """Every big line that is not a bare number, as the sentence it is."""
+    return [
+        value for value in big_lines(page) if not BIG_LINE_RE.match(value)
+    ]
+
+
 class ThePagesTests(unittest.TestCase):
     """The pages exist, they are the builder's own, and each is well-formed."""
 
@@ -369,7 +517,7 @@ class TheOutcomeTests(unittest.TestCase):
                             self.assertIn(
                                 v2._money(value, case.currency), page, field
                             )
-                    if case.confidence is not None:
+                    if case.confidence is not None and not v8.carries_no_ruling(case):
                         self.assertIn(str(case.confidence), page, "confidence")
 
     def test_the_gate_is_named_for_every_case_it_fired_on(self):
@@ -552,40 +700,49 @@ class TheIndexTests(unittest.TestCase):
         self.assertEqual(40, dev.total)
         self.assertEqual(1, ryde.exact_matches)
         self.assertEqual(2, ryde.total)
-        # And the page states exactly those.
-        for language, expects in (
+        # And the page states exactly those: each of the four big lines is a
+        # bare number, and the words that say what it counts are the kicker above
+        # it and the line below it.
+        counts = v8.counts(self.loaded)
+        bigs = [
+            str(counts["total"]),
+            "{0}/{1}".format(counts["no_person"], counts["total"]),
+            str(counts["gates"]),
+            "{0}/{1}".format(
+                counts["sets"]["dev-v8"]["agree"], counts["sets"]["dev-v8"]["total"]
+            ),
+        ]
+        self.assertEqual(["42", "28/42", "6", "39/40"], bigs)
+        for language, lines in (
             (
                 v8.EN,
                 (
-                    "42 cases",
-                    "28 of 42 decided with no person",
+                    "dev-v8 40, ryde-v8 2",
                     "dev-v8 28 of 40, ryde-v8 0 of 2",
-                    "6 gates",
                     "dev-v8 5, ryde-v8 1",
-                    "dev-v8 39 of 40; ryde-v8 1 of 2",
-                    "The two sets are never pooled.",
+                    "ryde-v8 1 of 2; the two sets are never pooled.",
                 ),
             ),
             (
                 v8.ZH,
                 (
-                    "42 \u4e2a\u6848\u4ef6",
+                    "dev-v8 40 \u4e2a\uff0cryde-v8 2 \u4e2a",
                     "dev-v8 28 / 40\uff0cryde-v8 0 / 2",
-                    "6 \u4e2a\u95f8\u95e8",
-                    "dev-v8 39 / 40\uff1bryde-v8 1 / 2",
+                    "dev-v8 5 \u4e2a\uff0cryde-v8 1 \u4e2a",
+                    "ryde-v8 1 / 2\uff1b\u4e24\u4e2a\u6570\u636e\u96c6\u4ece\u4e0d\u5408\u5e76\u3002",
                 ),
             ),
         ):
-            page = text_of(
-                built_pages()[
-                    v8.INDEX_PAGE
-                    if language == v8.EN
-                    else v8.INDEX_PAGE.replace(".html", ".zh.html")
-                ]
-            )
-            for expected in expects:
-                with self.subTest(language=language, text=expected):
-                    self.assertIn(expected, page)
+            page = built_pages()[
+                v8.INDEX_PAGE
+                if language == v8.EN
+                else v8.INDEX_PAGE.replace(".html", ".zh.html")
+            ]
+            with self.subTest(language=language):
+                self.assertEqual([], index_card_offenders(page))
+                self.assertEqual(bigs, big_lines(page))
+                for expected in lines:
+                    self.assertIn(expected, text_of(page))
 
     def test_the_index_agrees_column_is_the_graders_own(self):
         """A row's yes/no is the four-field verdict, not the ruling alone."""
@@ -600,6 +757,287 @@ class TheIndexTests(unittest.TestCase):
                     "yes" if case.score.exact else "no", row[7]
                 )
                 self.assertEqual(case.ruling_value, row[5].split("(", 1)[1].rstrip(")"))
+
+
+class TheRecordedSentencesTests(unittest.TestCase):
+    """The code's own sentences are printed in Chinese, and only they are."""
+
+    @classmethod
+    def setUpClass(cls):
+        portability.require_the_same_libm()
+        cls.loaded = cases()
+
+    def test_the_nine_recorded_texts_are_the_ones_the_builder_knows(self):
+        """The sheet's nine, and the builder's own table, are the same nine."""
+        self.assertEqual(9, len(RECORDED_TEXTS))
+        self.assertEqual(sorted(RECORDED_TEXTS), sorted(v8.RECORDED))
+
+    def test_no_english_recorded_sentence_survives_on_a_chinese_page(self):
+        """In the places the builder fills, on every one of the 42 pages."""
+        for case in self.loaded:
+            page = page_for(case, v8.ZH)
+            with self.subTest(case=case.case_no):
+                for place in builder_filled(page, v8.ZH):
+                    for text in RECORDED_TEXTS:
+                        self.assertNotIn(text, place)
+                    self.assertIsNone(v8.VOTE_UNANIMOUS_EN.search(place))
+                    self.assertIsNone(v8.VOTE_SPLIT_EN.search(place))
+                    self.assertIsNone(v8.GATED_EN.search(place))
+
+    def test_every_english_page_still_carries_the_recorded_text(self):
+        """The control for the line above: the English is what was recorded."""
+        for case in self.loaded:
+            places = " ".join(builder_filled(page_for(case, v8.EN), v8.EN))
+            with self.subTest(case=case.case_no):
+                self.assertIn(case.required_basis, places)
+                self.assertIn(
+                    str(case.authority.get("human_only_basis") or ""), places
+                )
+                if case.gate is not None:
+                    self.assertIn(str(case.gate.get("basis") or ""), places)
+
+    def test_a_chinese_page_says_the_recorded_sentence_in_chinese(self):
+        """And the Chinese it says it in is the table's own."""
+        for case in self.loaded:
+            page = text_of(page_for(case, v8.ZH))
+            with self.subTest(case=case.case_no):
+                self.assertIn(v8.recorded_words(case.required_basis, v8.ZH), page)
+                self.assertIn(
+                    v8.recorded_words(case.authority.get("human_only_basis"), v8.ZH),
+                    page,
+                )
+                if case.gate is not None:
+                    self.assertIn(
+                        v8.recorded_words(case.gate.get("basis"), v8.ZH), page
+                    )
+
+    def test_the_driver_deadline_row_is_the_reason_in_each_language(self):
+        """The 16 cases whose trip record gives a reason instead of a deadline."""
+        checked = 0
+        for case in self.loaded:
+            reason = driver_deadline_reason(case)
+            if not reason:
+                continue
+            checked += 1
+            for language in v8.LANGUAGES:
+                row = row_with_label(
+                    page_for(case, language), v8.label("Driver deadline", language)
+                )
+                with self.subTest(case=case.case_no, language=language):
+                    self.assertEqual(
+                        reason
+                        if language == v8.EN
+                        else v8.recorded_words(reason, v8.ZH),
+                        row[1],
+                    )
+        self.assertEqual(16, checked)
+
+    def test_an_unknown_recorded_text_is_refused_on_a_chinese_page(self):
+        """The control: a text the table does not know stops the build."""
+        case = next(case for case in self.loaded if case.case_no == 5051)
+        unknown = "an authority basis this builder does not know"
+        authority = dict(case.authority)
+        authority["required_confidence_basis"] = unknown
+        broken = replace(case, authority=authority)
+        with self.assertRaises(v8.BuildError):
+            v8.case_page(broken, v8.ZH)
+        # The English page still builds, and carries the text it was handed.
+        self.assertIn(unknown, text_of(v8.case_page(broken, v8.EN)))
+
+
+class TheNoRulingTests(unittest.TestCase):
+    """The eight escalations with no ruling, and the eighteen with no bar."""
+
+    @classmethod
+    def setUpClass(cls):
+        portability.require_the_same_libm()
+        cls.loaded = cases()
+
+    def no_ruling(self) -> List["v8.V8Case"]:
+        return [case for case in self.loaded if v8.carries_no_ruling(case)]
+
+    def test_eight_escalations_carry_no_ruling(self):
+        """The six the gate stopped and the two without a majority."""
+        self.assertEqual(
+            list(NO_RULING_CASES),
+            sorted(case.case_no for case in self.no_ruling()),
+        )
+        self.assertEqual(
+            6, len([case for case in self.no_ruling() if case.gate is not None])
+        )
+
+    def test_the_published_line_says_so_and_never_zero(self):
+        for case in self.no_ruling():
+            for language in v8.LANGUAGES:
+                page = page_for(case, language)
+                row = row_with_label(
+                    page, v8.label("Published ruling", language)
+                )
+                with self.subTest(case=case.case_no, language=language):
+                    self.assertEqual([], zero_confidence_rows(page, language))
+                    self.assertIn(v8.label("No ruling carried", language), row[1])
+
+    def test_the_judges_own_escalations_keep_their_confidence(self):
+        """A carried ruling still shows the confidence it carries."""
+        judge = [
+            case for case in self.loaded if v8.decision_of(case).kind == "judge"
+        ]
+        self.assertEqual(6, len(judge))
+        for case in judge:
+            for language in v8.LANGUAGES:
+                row = row_with_label(
+                    page_for(case, language), v8.label("Published ruling", language)
+                )
+                with self.subTest(case=case.case_no, language=language):
+                    self.assertIn(str(case.confidence), row[1])
+                    self.assertNotIn(
+                        v8.label("No ruling carried", language), row[1]
+                    )
+
+    def test_the_check_reports_a_page_that_still_carries_zero(self):
+        """The control: the same check on a page carrying "Confidence 0.0"."""
+        page = page_for(self.no_ruling()[0], v8.EN)
+        self.assertEqual([], zero_confidence_rows(page, v8.EN))
+        put_back = as_written(v8.label("No ruling carried", v8.EN)).sub(
+            "0.0", page, count=1
+        )
+        self.assertNotEqual(page, put_back, "the published line was not found")
+        self.assertTrue(zero_confidence_rows(put_back, v8.EN))
+
+    def test_the_eighteen_no_bar_pages_say_no_bar(self):
+        no_bar = [case for case in self.loaded if v8.no_bar(case)]
+        self.assertEqual(NO_BAR_CASES, len(no_bar))
+        for case in no_bar:
+            for language in v8.LANGUAGES:
+                page = page_for(case, language)
+                expected = v8.sentence(
+                    "no bar",
+                    language,
+                    basis=v8.recorded_words(case.required_basis, language),
+                )
+                with self.subTest(case=case.case_no, language=language):
+                    self.assertEqual(
+                        expected,
+                        row_with_label(
+                            page, v8.label("Required confidence", language)
+                        )[1],
+                    )
+                    # Part 1 and the authority block both say it.
+                    self.assertEqual(2, text_of(page).count(expected))
+
+    def test_the_other_bars_keep_their_number(self):
+        for case in self.loaded:
+            if v8.no_bar(case):
+                continue
+            for language in v8.LANGUAGES:
+                row = row_with_label(
+                    page_for(case, language),
+                    v8.label("Required confidence", language),
+                )
+                with self.subTest(case=case.case_no, language=language):
+                    self.assertTrue(row[1].startswith(str(case.required_confidence)))
+                    self.assertIn(
+                        v8.recorded_words(case.required_basis, language), row[1]
+                    )
+
+
+class TheEvidenceWordsTests(unittest.TestCase):
+    """Every evidence code on the 42 cases has words in both languages."""
+
+    @classmethod
+    def setUpClass(cls):
+        portability.require_the_same_libm()
+        cls.loaded = cases()
+
+    def codes(self) -> Set[str]:
+        out: Set[str] = set()
+        for case in self.loaded:
+            for artifact in case.brief["case"]["evidence"]:
+                out.add(str(artifact.get("evidence_type")))
+                admissibility = artifact.get("admissibility") or {}
+                out.add(str(admissibility.get("status")))
+                for issue in admissibility.get("issues") or []:
+                    out.add(str(issue))
+        return out
+
+    def test_every_code_the_cases_carry_has_words(self):
+        self.assertEqual(sorted(v8.EVIDENCE), sorted(self.codes()))
+
+    def test_every_evidence_row_is_the_words_and_the_code(self):
+        for case in self.loaded:
+            for language in v8.LANGUAGES:
+                rows = evidence_table(page_for(case, language), language)
+                with self.subTest(case=case.case_no, language=language):
+                    for artifact in case.brief["case"]["evidence"]:
+                        admissibility = artifact.get("admissibility") or {}
+                        expected = "{0} ({1}) \u00b7 {2} ({3})".format(
+                            v8.evidence_words(
+                                artifact.get("evidence_type"), language
+                            ),
+                            artifact.get("evidence_type"),
+                            v8.evidence_words(
+                                admissibility.get("status"), language
+                            ),
+                            admissibility.get("status"),
+                        )
+                        for issue in admissibility.get("issues") or []:
+                            expected += "; {0} ({1})".format(
+                                v8.evidence_words(issue, language), issue
+                            )
+                        self.assertEqual(
+                            expected, rows[artifact.get("evidence_id")]
+                        )
+
+    def test_an_unknown_evidence_code_is_refused(self):
+        """The control: a code with no words stops the build."""
+        case = next(case for case in self.loaded if case.case_no == 5051)
+        brief = copy.deepcopy(case.brief)
+        brief["case"]["evidence"][0]["evidence_type"] = "NO_SUCH_CODE"
+        with self.assertRaises(v8.BuildError):
+            v8.dispute_body(replace(case, brief=brief), v8.EN)
+
+
+class TheIndexCardTests(unittest.TestCase):
+    """The index's four cards: a number in the figure face, not a sentence."""
+
+    @classmethod
+    def setUpClass(cls):
+        portability.require_the_same_libm()
+        cls.loaded = cases()
+
+    def index_page(self, language: str) -> str:
+        name = (
+            v8.INDEX_PAGE
+            if language == v8.EN
+            else v8.INDEX_PAGE.replace(".html", ".zh.html")
+        )
+        return built_pages()[name]
+
+    def test_the_four_big_lines_are_the_counts(self):
+        counts = v8.counts(self.loaded)
+        expected = [
+            str(counts["total"]),
+            "{0}/{1}".format(counts["no_person"], counts["total"]),
+            str(counts["gates"]),
+            "{0}/{1}".format(
+                counts["sets"]["dev-v8"]["agree"], counts["sets"]["dev-v8"]["total"]
+            ),
+        ]
+        for language in v8.LANGUAGES:
+            page = self.index_page(language)
+            with self.subTest(language=language):
+                self.assertEqual([], index_card_offenders(page))
+                self.assertEqual(expected, big_lines(page))
+
+    def test_the_check_reports_the_old_sentence(self):
+        """The control: a big line that is a sentence again is reported."""
+        page = self.index_page(v8.EN)
+        self.assertEqual([], index_card_offenders(page))
+        old = page.replace(
+            '<p class="big">42</p>', '<p class="big">42 cases</p>', 1
+        )
+        self.assertNotEqual(page, old, "the first big line was not found")
+        self.assertEqual(["42 cases"], index_card_offenders(old))
 
 
 class TheBuildTests(unittest.TestCase):

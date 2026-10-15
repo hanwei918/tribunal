@@ -214,7 +214,7 @@ html:lang(zh) .card h3{font-size:21px;font-weight:500;line-height:1.35}
 .card .big{font-family:"Avenir Next Condensed","Arial Narrow","Roboto Condensed","Helvetica Neue",Arial,sans-serif;font-stretch:condensed;font-weight:200;font-size:56px;line-height:1;letter-spacing:-.04em}
 @media (max-width:1000px){.cards,.cards.c4{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (min-width:621px) and (max-width:1000px){.cards>:last-child:nth-child(odd){grid-column:span 2}}
-@media (max-width:620px){.cards,.cards.c2,.cards.c4{grid-template-columns:minmax(0,1fr)}.cards>.span2{grid-column:auto}}
+@media (max-width:620px){.cards,.cards.c2,.cards.c4{grid-template-columns:minmax(0,1fr)}.cards>.span2{grid-column:auto}.dt th[scope="row"]{width:40%}}
 
 /* numbered flow */
 .flow{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;counter-reset:f}
@@ -262,6 +262,14 @@ html:lang(zh) .row h3{font-size:clamp(28px,3vw,40px);font-weight:400;line-height
 .dt th{font:10.5px/1.4 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-align:left;padding:10px 10px 10px 0;border-bottom:1px solid var(--accent)}
 .dt td{padding:12px 10px 12px 0;border-bottom:1px solid var(--line);vertical-align:top}
 .dt td.n{font-family:var(--mono);white-space:nowrap}
+/* The version-8 case pages' key-value tables: one label column width, so a
+   case's nine small tables start their values at the same place. No site page
+   writes th scope="row". */
+.dt th[scope="row"]{width:15rem}
+/* The code a value stands for, after the words: the version-8 case pages write
+   words first and the code in one of these. Not ``.code``, which the site
+   already uses for its copyable code blocks. */
+small.codename{font:11.5px/1.3 var(--mono);color:var(--muted);letter-spacing:0;white-space:nowrap}
 .scroll-x{overflow-x:auto}
 
 /* code */
@@ -549,14 +557,14 @@ pre.expl{white-space:pre-wrap;font:14px/1.6 inherit;font-family:inherit;margin:8
 </div></section>
 <section class="paper"><div class="wrap">
 <div class="sh left"><p class="kicker">Part 1</p><h2 class="display">Outcome</h2></div>
-<div class="scroll-x"><table class="dt"><tbody><tr><th scope="row">Case</th><td>5012</td></tr><tr><th scope="row">Category</th><td>Route deviation (ROUTE_DEVIATION)</td></tr><tr><th scope="row">Set</th><td>dev-v8 (development data, version 8)</td></tr><tr><th scope="row">Filed by</th><td>Rider</td></tr><tr><th scope="row">Amount contested</th><td>SGD 90.99</td></tr><tr><th scope="row">Value band</th><td>HUMAN_ONLY (a person decides)</td></tr><tr><th scope="row">Published ruling</th><td>Sent to a human reviewer (ESCALATE) &middot; Confidence 0.0 &middot; Referrals none</td></tr><tr><th scope="row">Required confidence</th><td>0.80 &#x2014; a route deviation (POL-RD-25)</td></tr></tbody></table></div><p class="lede">The referee and the judge were not asked: a value above SGD 50 under POL-GEN-22 (a dispute value above POL-GEN-22's second band).</p><p>Agrees with the key on all 4 graded fields: yes. The key's ruling: Sent to a human reviewer (ESCALATE)</p>
+<div class="scroll-x"><table class="dt"><tbody><tr><th scope="row">Case</th><td>5012</td></tr><tr><th scope="row">Category</th><td>Route deviation <small class="codename">(ROUTE_DEVIATION)</small></td></tr><tr><th scope="row">Set</th><td>dev-v8 (development data, version 8)</td></tr><tr><th scope="row">Filed by</th><td>Rider</td></tr><tr><th scope="row">Amount contested</th><td>SGD 90.99</td></tr><tr><th scope="row">Value band</th><td>a person decides <small class="codename">(HUMAN_ONLY)</small></td></tr><tr><th scope="row">Published ruling</th><td>Sent to a human reviewer <small class="codename">(ESCALATE)</small> &middot; Confidence &#x2014; (no ruling carried) &middot; Referrals none</td></tr><tr><th scope="row">Required confidence</th><td>0.80 &#x2014; a route deviation (POL-RD-25)</td></tr></tbody></table></div><p class="lede">The referee and the judge were not asked: a value above SGD 50 under POL-GEN-22 (a dispute value above POL-GEN-22's second band).</p><p>Agrees with the key on all 4 graded fields: yes. The key's ruling: Sent to a human reviewer <small class="codename">(ESCALATE)</small></p>
 </div></section>
 <section class="paper"><div class="wrap">
 <div class="sh left"><p class="kicker">Part 2</p><h2 class="display">The dispute</h2></div>
-<div class="scroll-x"><table class="dt"><tbody><tr><th scope="row">Filed by</th><td>Rider</td></tr><tr><th scope="row">Amount contested</th><td>SGD 90.99</td></tr><tr><th scope="row">Value band</th><td>HUMAN_ONLY (a person decides)</td></tr></tbody></table></div>
+<div class="scroll-x"><table class="dt"><tbody><tr><th scope="row">Filed by</th><td>Rider</td></tr><tr><th scope="row">Amount contested</th><td>SGD 90.99</td></tr><tr><th scope="row">Value band</th><td>a person decides <small class="codename">(HUMAN_ONLY)</small></td></tr></tbody></table></div>
 <div class="cards c2"><div class="card"><span class="kicker">The filer's statement</span><p>Late flight, I booked a ride from Jurong Point to T4. Driver took the PIE all the way and then the KPE instead of the AYE and MCE route shown in the app. The fare was far more than I expected. I want the whole fare refunded.</p></div><div class="card"><span class="kicker">The other party's statement (Driver)</span><p>Night time PIE is faster, no difference much. Surge was high because it is late, not my fault.</p></div></div>
 <p class="kicker">Evidence</p>
-<div class="scroll-x"><table class="dt"><thead><tr><th>Evidence id</th><th>Evidence type</th></tr></thead><tbody><tr><td class="n">EV-TRIP-05012</td><td>TRIP_RECORD &middot; COMPLETE</td></tr><tr><td class="n">EV-GPS-05012</td><td>GPS_TRACE &middot; COMPLETE</td></tr><tr><td class="n">EV-CHAT-05012</td><td>CHAT_LOG &middot; COMPLETE</td></tr><tr><td class="n">EV-FARE-05012</td><td>FARE_BREAKDOWN &middot; COMPLETE</td></tr><tr><td class="n">EV-RPROF-05012</td><td>RIDER_PROFILE &middot; COMPLETE</td></tr><tr><td class="n">EV-DPROF-05012</td><td>DRIVER_PROFILE &middot; COMPLETE</td></tr><tr><td class="n">EV-ADVIS-05012-01</td><td>TRAFFIC_ADVISORY &middot; COMPLETE</td></tr></tbody></table></div>
+<div class="scroll-x"><table class="dt"><thead><tr><th>Evidence id</th><th>Evidence type</th></tr></thead><tbody><tr><td class="n">EV-TRIP-05012</td><td>Trip record <small class="codename">(TRIP_RECORD)</small> &middot; complete <small class="codename">(COMPLETE)</small></td></tr><tr><td class="n">EV-GPS-05012</td><td>GPS trace <small class="codename">(GPS_TRACE)</small> &middot; complete <small class="codename">(COMPLETE)</small></td></tr><tr><td class="n">EV-CHAT-05012</td><td>Chat log <small class="codename">(CHAT_LOG)</small> &middot; complete <small class="codename">(COMPLETE)</small></td></tr><tr><td class="n">EV-FARE-05012</td><td>Fare breakdown <small class="codename">(FARE_BREAKDOWN)</small> &middot; complete <small class="codename">(COMPLETE)</small></td></tr><tr><td class="n">EV-RPROF-05012</td><td>Rider profile <small class="codename">(RIDER_PROFILE)</small> &middot; complete <small class="codename">(COMPLETE)</small></td></tr><tr><td class="n">EV-DPROF-05012</td><td>Driver profile <small class="codename">(DRIVER_PROFILE)</small> &middot; complete <small class="codename">(COMPLETE)</small></td></tr><tr><td class="n">EV-ADVIS-05012-01</td><td>Traffic advisory <small class="codename">(TRAFFIC_ADVISORY)</small> &middot; complete <small class="codename">(COMPLETE)</small></td></tr></tbody></table></div>
 </div></section>
 <section class="paper"><div class="wrap">
 <div class="sh left"><p class="kicker">Part 3</p><h2 class="display">What the code worked out</h2></div>
@@ -565,7 +573,7 @@ pre.expl{white-space:pre-wrap;font:14px/1.6 inherit;font-family:inherit;margin:8
 <p class="kicker">Money</p>
 <div class="scroll-x"><table class="dt"><tbody><tr><th scope="row">Excess distance fare</th><td>SGD 1.66 (POL-RD-24)</td></tr><tr><th scope="row">Per km rate</th><td>SGD 0.92</td></tr><tr><th scope="row">Deviation</th><td>1.80 km</td></tr><tr><th scope="row">Refund already issued</th><td>SGD 0.00 (POL-GEN-03)</td></tr></tbody></table></div>
 <p class="kicker">The authority block</p>
-<div class="scroll-x"><table class="dt"><tbody><tr><th scope="row">Value band</th><td>HUMAN_ONLY (a person decides)</td></tr><tr><th scope="row">Fraud flags</th><td>0</td></tr><tr><th scope="row">Required confidence</th><td>0.80 &#x2014; a route deviation (POL-RD-25)</td></tr><tr><th scope="row">Safety flag</th><td>no</td></tr><tr><th scope="row">A person decides</th><td>yes (a dispute value above POL-GEN-22's second band)</td></tr></tbody></table></div>
+<div class="scroll-x"><table class="dt"><tbody><tr><th scope="row">Value band</th><td>a person decides <small class="codename">(HUMAN_ONLY)</small></td></tr><tr><th scope="row">Fraud flags</th><td>0</td></tr><tr><th scope="row">Required confidence</th><td>0.80 &#x2014; a route deviation (POL-RD-25)</td></tr><tr><th scope="row">Safety flag</th><td>no</td></tr><tr><th scope="row">A person decides</th><td>yes (a dispute value above POL-GEN-22's second band)</td></tr></tbody></table></div>
 </div></section>
 <section class="paper"><div class="wrap">
 <div class="sh left"><p class="kicker">Part 4</p><h2 class="display">The two sides</h2></div>

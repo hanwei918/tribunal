@@ -199,7 +199,7 @@ html:lang(zh) .card h3{font-size:21px;font-weight:500;line-height:1.35}
 .card .big{font-family:"Avenir Next Condensed","Arial Narrow","Roboto Condensed","Helvetica Neue",Arial,sans-serif;font-stretch:condensed;font-weight:200;font-size:56px;line-height:1;letter-spacing:-.04em}
 @media (max-width:1000px){.cards,.cards.c4{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (min-width:621px) and (max-width:1000px){.cards>:last-child:nth-child(odd){grid-column:span 2}}
-@media (max-width:620px){.cards,.cards.c2,.cards.c4{grid-template-columns:minmax(0,1fr)}.cards>.span2{grid-column:auto}}
+@media (max-width:620px){.cards,.cards.c2,.cards.c4{grid-template-columns:minmax(0,1fr)}.cards>.span2{grid-column:auto}.dt th[scope="row"]{width:40%}}
 
 /* numbered flow */
 .flow{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;counter-reset:f}
@@ -247,6 +247,14 @@ html:lang(zh) .row h3{font-size:clamp(28px,3vw,40px);font-weight:400;line-height
 .dt th{font:10.5px/1.4 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-align:left;padding:10px 10px 10px 0;border-bottom:1px solid var(--accent)}
 .dt td{padding:12px 10px 12px 0;border-bottom:1px solid var(--line);vertical-align:top}
 .dt td.n{font-family:var(--mono);white-space:nowrap}
+/* The version-8 case pages' key-value tables: one label column width, so a
+   case's nine small tables start their values at the same place. No site page
+   writes th scope="row". */
+.dt th[scope="row"]{width:15rem}
+/* The code a value stands for, after the words: the version-8 case pages write
+   words first and the code in one of these. Not ``.code``, which the site
+   already uses for its copyable code blocks. */
+small.codename{font:11.5px/1.3 var(--mono);color:var(--muted);letter-spacing:0;white-space:nowrap}
 .scroll-x{overflow-x:auto}
 
 /* code */

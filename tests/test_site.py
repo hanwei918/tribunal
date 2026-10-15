@@ -45,6 +45,7 @@ from tests import portability  # noqa: E402
 from ui import build as replay_build  # noqa: E402
 from ui.site import build as site  # noqa: E402
 from ui.v2 import build as v2  # noqa: E402
+from ui.v8 import build as v8  # noqa: E402
 
 # The film, which has not been delivered. It is the one file the **page
 # sources** name and the site does not carry: the build takes the two elements
@@ -552,6 +553,11 @@ CARD_END_FIXED = (
 )
 CARD_END_BROKEN = '</p></div><div class="card" data-rise></a>'
 
+# The version-8 case page the grid control reads: case 902 in Chinese, whose
+# statements grid holds one card and whose two claims grids hold nine and five,
+# so all three carry ``span2`` and taking it off the first leaves a gap.
+VERSION_EIGHT_CASE_PAGE = "v8-00902.zh.html"
+
 
 def css_columns(selector: str) -> int:
     """One ``site.css`` rule's own column count, read from its ``repeat(N,``."""
@@ -732,12 +738,21 @@ class TheLayoutTests(unittest.TestCase):
         """Every grid a page writes fills its columns, and so does the timeline.
 
         The column counts are the stylesheet's own, and a card carrying ``span2``
-        counts two, which is what that class does. The controls remove one
-        version-8 card -- five slots in three columns -- and take ``span2`` off
-        the fifth credit -- five slots in three columns -- and both are reported.
+        counts two, which is what that class does. Every page both builders write
+        is read: the site's 22 and the 86 version-8 case and index pages, whose
+        own ``.cards c2`` grids are odd by design and carry ``span2`` on the last
+        card. The controls remove one version-8 card from the results page -- five
+        slots in three columns -- take ``span2`` off the fifth credit, and take it
+        off a version-8 case page's own grid, and all three are reported.
         """
         for source in site.page_sources():
             name = source.name
+            markup = (site.DIST_DIR / name).read_text(encoding="utf-8")
+            with self.subTest(page=name):
+                self.assertEqual(
+                    [], grid_gaps(markup), "{0} leaves a card alone".format(name)
+                )
+        for name in sorted(v8.written_paths()):
             markup = (site.DIST_DIR / name).read_text(encoding="utf-8")
             with self.subTest(page=name):
                 self.assertEqual(
@@ -758,6 +773,16 @@ class TheLayoutTests(unittest.TestCase):
             self.assertNotEqual(about, flat, "the fixture removed no span2")
             self.assertTrue(
                 grid_gaps(flat), "a card that lost span2 was not reported"
+            )
+        case_page = (site.DIST_DIR / VERSION_EIGHT_CASE_PAGE).read_text(
+            encoding="utf-8"
+        )
+        self.assertEqual([], grid_gaps(case_page))
+        alone = case_page.replace('class="card span2"', 'class="card"', 1)
+        with self.subTest(page=VERSION_EIGHT_CASE_PAGE + ", span2 taken off"):
+            self.assertNotEqual(case_page, alone, "the fixture removed no span2")
+            self.assertTrue(
+                grid_gaps(alone), "a version-8 card left alone was not reported"
             )
 
 
