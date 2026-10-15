@@ -1148,7 +1148,7 @@ class TheControlTests(unittest.TestCase):
             "case {0}'s ruling was changed in the run and its page did not "
             "move".format(CONTROL_CASE),
         )
-        self.assertIn("Full refund (FULL_REFUND)", text_of(changed))
+        self.assertRegex(text_of(changed), r"Full refund\s+\(FULL_REFUND\)")
         self.assertIn("SGD 0.86", text_of(changed))
 
     @staticmethod

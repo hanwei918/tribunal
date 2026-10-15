@@ -104,7 +104,7 @@
 <text x="135" y="561" font-size="11.5" fill="#FFFFFF" text-anchor="middle" data-box="owner">[Person]</text>
 <text x="135" y="586" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="owner">Wrote dev-v2 and</text>
 <text x="135" y="603" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="owner">sealed-v2 keys;</text>
-<text x="135" y="620" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="owner">re-derived sealed-v1.</text>
+<text x="135" y="620" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="owner">re-derived sealed-v1 (v6).</text>
 <text x="135" y="716" font-size="16" fill="#FFFFFF" font-weight="bold" text-anchor="middle" data-box="eo">EdgeOne Pages</text>
 <text x="135" y="734" font-size="11.5" fill="#FFFFFF" text-anchor="middle" data-box="eo">[Software System, external]</text>
 <text x="135" y="759" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="eo">Static hosting,</text>
@@ -132,18 +132,20 @@
 <text x="880" y="427" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pipe">referee, four judge drafts, ten DRAFT_*</text>
 <text x="880" y="444" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pipe">checks and a 3-of-4 vote against the bar</text>
 <text x="880" y="461" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pipe">v2.1 states (POL-GEN-22, POL-RD-25).</text>
-<text x="880" y="478" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pipe">Returns a ruling or ESCALATE; 6 calls a case.</text>
+<text x="880" y="478" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pipe">Returns a ruling or ESCALATE; 2, 6 or 7 calls.</text>
 <text x="880" y="512" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pipe">Switches (off by default):</text>
 <text x="880" y="529" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pipe">--policy-version N (default 1; the</text>
 <text x="880" y="546" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pipe">product runs use 8), --parallel-calls,</text>
 <text x="880" y="563" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pipe">--verify-drafts, --precedents,</text>
 <text x="880" y="580" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pipe">--early-majority, --advocate-effort,</text>
 <text x="880" y="597" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pipe">--amount-rule, --ablate, --judge-votes.</text>
+<text x="880" y="614" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pipe">--prompts-dir prompts/v2: version 8</text>
+<text x="880" y="631" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pipe">needs it (the default is prompts/v1).</text>
 <text x="880" y="648" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="pipe">Step by step: sheet 3.</text>
 <text x="1280" y="338" font-size="16" fill="#FFFFFF" font-weight="bold" text-anchor="middle" data-box="case">Case store</text>
 <text x="1280" y="356" font-size="11.5" fill="#FFFFFF" text-anchor="middle" data-box="case">[Container: JSON files, data/]</text>
 <text x="1280" y="381" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="case">29-case corpus + index.json (7 or 8</text>
-<text x="1280" y="398" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="case">artifacts each); 12 more sets in</text>
+<text x="1280" y="398" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="case">artifacts each); 16 more sets in</text>
 <text x="1280" y="415" font-size="12.5" fill="#FFFFFF" text-anchor="middle" data-box="case">data/external/. No answers.</text>
 <text x="1280" y="488" font-size="16" fill="#FFFFFF" font-weight="bold" text-anchor="middle" data-box="pol">Policy store</text>
 <text x="1280" y="506" font-size="11.5" fill="#FFFFFF" text-anchor="middle" data-box="pol">[Container: JSON files, policy/]</text>
@@ -196,8 +198,8 @@
 <text x="285" y="720" font-size="12" fill="#1F2328" text-anchor="middle" data-label="L106">pages</text>
 <text x="285" y="735" font-size="12" fill="#1F2328" text-anchor="middle" data-label="L106">uploaded to</text>
 <text x="285" y="749" font-size="10.5" fill="#57606A" text-anchor="middle" data-label="L106">[static HTML]</text>
-<rect x="829.9" y="235" width="100.2" height="33" rx="4" fill="#FFFFFF" fill-opacity="0.94" data-plate="L110"/>
-<text x="880" y="248" font-size="12" fill="#1F2328" text-anchor="middle" data-label="L110">6 calls a case</text>
+<rect x="804.85" y="235" width="150.3" height="33" rx="4" fill="#FFFFFF" fill-opacity="0.94" data-plate="L110"/>
+<text x="880" y="248" font-size="12" fill="#1F2328" text-anchor="middle" data-label="L110">2, 6 or 7 calls a case</text>
 <text x="880" y="262" font-size="10.5" fill="#57606A" text-anchor="middle" data-label="L110">[HTTPS, JSON]</text>
 <rect x="1045.65" y="329" width="68.7" height="48" rx="4" fill="#FFFFFF" fill-opacity="0.94" data-plate="L113"/>
 <text x="1080" y="342" font-size="12" fill="#1F2328" text-anchor="middle" data-label="L113">loads one</text>
@@ -226,5 +228,5 @@
 <rect x="1332.85" y="132" width="144.3" height="33" rx="4" fill="#FFFFFF" fill-opacity="0.94" data-plate="L137"/>
 <text x="1405" y="145" font-size="12" fill="#1F2328" text-anchor="middle" data-label="L137">supplies case records</text>
 <text x="1405" y="159" font-size="10.5" fill="#57606A" text-anchor="middle" data-label="L137">[JSON, contract 1.2.0]</text>
-<text x="32" y="1072" font-size="12" fill="#57606A">Source: tribunal-main_4. Code trees as at freeze-2026-10-14-v8 (tribunal/, prompts/, policy/ equal commit af2b5ca); the product runs use --policy-version 8 (Ryde&#x27;s v2.1 + Ryde&#x27;s answers of 2026-10-14).</text>
+<text x="32" y="1072" font-size="12" fill="#57606A">Code trees as at freeze-2026-10-14-v8 (tribunal/, prompts/, policy/ equal commit af2b5ca); the product runs use --policy-version 8 (Ryde&#x27;s v2.1 + Ryde&#x27;s answers of 2026-10-14).</text>
 </svg>

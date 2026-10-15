@@ -47,15 +47,17 @@ one line each, in [Roadmap and known limits](../README.md#roadmap-and-known-limi
 is drawn outside the repository on purpose -- what crosses into the system is
 the case record and nothing else.
 
-**Operator.** The developer, who runs every set from the command line: there is
-no always-on service. `eval/run_benchmark.py` and `eval/development_sets.py` are
-the commands, and the operator is also the person who approved amendment `0003`
-and made both stored closures.
+**Operator.** The developer, **Zhou Hanwei**, who runs every set from the
+command line: there is no always-on service. `eval/run_benchmark.py` and
+`eval/development_sets.py` are the commands, and he is also the person who
+approved amendment `0003` and made both stored closures. He adopted Ryde's v2.1
+as version 7 on 2026-10-13, asked Ryde the team's three questions, and adopted
+Ryde's answers as version 8 on 2026-10-14.
 
-**Policy owner.** The person who owns the policy and most of the answer keys.
-She wrote the dev-v2 and sealed-v2 keys and re-derived sealed-v1, approved
-amendments `0001` and `0002`, and confirmed `0003`; the note that records the
-confirmation is
+**Policy owner.** The person who owned version 6's policy and wrote most of its
+answer keys. She wrote the dev-v2 and sealed-v2 keys and re-derived sealed-v1,
+approved amendments `0001` and `0002`, and confirmed `0003`; the note that
+records the confirmation is
 `docs/notes/2026-10-10-ns-12-confirmed-by-policy-owner.md`. The policy in force
 at version 8 is Ryde's, not hers: what version 7 and version 8 change is in
 [the version-7 note](notes/2026-10-13-policy-v7.md) and
@@ -94,7 +96,8 @@ money and checks appeals, through the commands under `ops/`.
 `eval/run_benchmark.py`, or from `eval/development_sets.py` for a named set.
 
 **Tencent Cloud TokenHub.** The model API, reached once per advocate and once
-per judge draft: six calls a case, the same six at version 8.
+per judge draft: two, six or seven calls a case, and at version 8 that is six
+calls a case for 34 of the 42 cases, seven for 2 and two for 6.
 
 **Ryde platform.** The committed case files again, supplying the record the run
 is made from.
@@ -102,7 +105,10 @@ is made from.
 **Policy owner.** Writes clauses and answer keys by hand, and approves an
 amendment, through `eval/policy_gaps.py approve` or by editing `policy/`.
 
-**EdgeOne Pages.** Where the replay's pages are uploaded.
+**EdgeOne Pages.** Where the pages are uploaded by hand: the product site
+`ui/site/build.py` builds, the 42 version-8 case pages `ui/v8/build.py` builds,
+the version-6 queue and case pages `ui/v2/build.py` builds, and the replay
+`ui/build.py` builds.
 
 **Evaluation and grading.** `eval/run_benchmark.py` runs a set and writes its
 records; `eval/development_sets.py` does the same for a named set; and
@@ -110,7 +116,10 @@ records; `eval/development_sets.py` does the same for a named set; and
 referral clauses by recall.
 
 **Answer keys.** The expected rulings per set, under `eval/answers/`, the sealed
-sets among them. Nothing under `tribunal/` may read them.
+sets among them. The version-6 keys are mostly the policy owner's; `dev-v7`,
+`dev-v8` and `sealed-v4` were written by Claude Opus 5.5, in a fresh claude.ai
+chat with no project folder or repository access; `ryde-v7` and `ryde-v8` are
+Ryde's two samples. Nothing under `tribunal/` may read them.
 
 **Evaluation replay build.** `ui/build.py` writes the static replay under
 `/replay/`: the version-1 corpus run, codex, wild, wild-v2 and case 901, each
@@ -120,13 +129,15 @@ agent's words beside the answer key.
 advocates, v2.1's authority gate, a citation referee, four judge drafts, the ten
 `DRAFT_*` checks and a 3-of-4 vote against the bar v2.1 states -- `POL-GEN-22`
 and `POL-RD-25`, not a single floor. It returns a ruling or `ESCALATE` to its
-caller, and it makes six model calls a case. The switches the container names
+caller, and it makes two, six or seven model calls a case: at version 8, six for
+34 of the 42 cases, seven for 2 and two for 6. The switches the container names
 are the command line's, and every one is off by default: `--policy-version N`
 (default 1, and the product runs use 8), `--parallel-calls`, `--verify-drafts`,
 `--precedents`, `--early-majority`, `--advocate-effort`, `--amount-rule`,
-`--ablate` and `--judge-votes`. `--integrity-gate` is not among them: it is the
-version-6 record-integrity gate, and version 8's policy carries no `POL-RD-10`
-for it to read.
+`--ablate` and `--judge-votes`. `--prompts-dir prompts/v2` is the one a
+version-8 run needs, and the default it replaces is `prompts/v1`.
+`--integrity-gate` is not among them: it is the version-6 record-integrity gate,
+and version 8's policy carries no `POL-RD-10` for it to read.
 
 **Case store.** `data/`: the 29-case corpus and its `index.json`, 7 or 8
 artifacts each, plus the sets under `data/external/`. No answers.
@@ -158,8 +169,8 @@ and a transcript of every call; per run an `events.jsonl` hash chain,
 
 ## 2b. Containers: after a ruling
 
-**Policy owner.** Owns the policy, approved amendments `0001` and `0002`, and
-confirmed `0003`.
+**Policy owner.** Owned version 6's policy, approved amendments `0001` and
+`0002`, and confirmed `0003`.
 
 **Policy store.** `policy/`: version 6 is the `v3` base plus `0001` to `0003`,
 placed by hand, with no policy-gap report behind any of them; `0003` was
@@ -197,12 +208,14 @@ named checks. Every threshold the layer uses is read from the policy or from
 `ops/config.json` rather than typed. Version 8's own appeal clause does not
 exist yet: this layer is on the roadmap.
 
-**Support site build.** `ui/v2/build.py`: the case pages, the queue and the
-review form, drawn from the version-6 runs. It also reads `data/` and `policy/`.
-The **version-8 case pages** are `ui/v8/build.py`'s: `ui/dist/v8-cases.html`
-indexes all 42 version-8 cases and each has a page of its own in both languages,
-86 files in all, built from the committed version-8 runs -- these are what a
-reviewer reads for a version-8 run.
+**Site builders.** Three of them write the static HTML a reviewer reads.
+`ui/site/build.py` writes the product site, every page in English and Chinese.
+`ui/v8/build.py` writes the 42 version-8 cases, two languages each, and their
+index, `ui/dist/v8-cases.html`: these are what a reviewer reads for a version-8
+run, 86 files in all, built from the committed version-8 runs. `ui/v2/build.py`
+writes the version-6 queue, the version-6 case pages and the review form, drawn
+from the version-6 runs. Between them they read `data/`, `policy/` and the
+committed runs.
 
 **WorkBuddy connector.** `integrations/workbuddy/`: a read-only MCP server whose
 tools are `tribunal_case`, `tribunal_queue` and `tribunal_packet`. It refuses
@@ -277,9 +290,10 @@ to three closures, with no amounts in them, shown to the judge only and only
 with `--precedents`. **Run records.** `runs/`, which the queue reads.
 
 **The rule the dynamic view states about calls.** Six model calls a case, seven
-with `--verify-drafts`, and **two** for a case the authority gate stops, because
-the gate sits after the advocates: an unusable answer is retried once, and an
-HTTP 429 or 5xx response is attempted up to four times.
+with `--verify-drafts` or when an unusable answer is retried, and **two** for a
+case the authority gate stops, because the gate sits after the advocates. At
+version 8 that is 34, 2 and 6 of the 42 cases; an HTTP 429 or 5xx response is
+attempted up to four times.
 
 ## What the arrows carry
 
@@ -292,15 +306,16 @@ pages uploaded to`, `asks about a case`, `reads cases, the queue, packets`,
 and one dashed arrow that is deliberately **not** built: `notice of the ruling:
 generated, not sent`. On **2a** they are `runs a set, grades it`, `writes keys`,
 `compares with`, `runs each case`, `writes the records, grades`, `reads`,
-`pages uploaded to`, `6 calls a case`, `loads one case`, `reads version N`,
-`reads prompts`, `up to 3 closures`, `records events into the run's log`,
-`reads via adapters, checks` and `supplies case records`. On **2b** they are
-`approves or rejects a proposal`, `writes clauses, places amendments`, `drafts a
-clause; rerun`, `writes an approved amendment`, `reads human closures`, `reads
-the drafter prompt`, `reads runs; rerun writes new ones`, `appends a closure
-(review.py)`, `reads rulings`, `rebuilds the packet from`, `works the queue`,
-`reads`, `pages uploaded to`, `reads`, `runs ops.queue, ops.escalation`, `reads
-the public case`, `asks about a case`, `calls the tools` and `reads case pages`.
+`pages uploaded to`, `2, 6 or 7 calls a case`, `loads one case`,
+`reads version N`, `reads prompts`, `up to 3 closures`, `records events into the
+run's log`, `reads via adapters, checks` and `supplies case records`. On **2b**
+they are `approves or rejects a proposal`, `writes clauses, places amendments`,
+`drafts a clause; rerun`, `writes an approved amendment`, `reads human
+closures`, `reads the drafter prompt`, `reads runs; rerun writes new ones`,
+`appends a closure (review.py)`, `reads rulings`, `rebuilds the packet from`,
+`works the queue`, `reads`, `pages uploaded to`, `reads`, `runs ops.queue,
+ops.escalation`, `reads the public case`, `asks about a case`, `calls the
+tools` and `reads case pages`.
 On the **dynamic** view they are `run_case(N)`, `reads`, `case`, `weights`,
 `facts`, `brief`, `integrity table (no_show.json)`, `reads version 8`, `both
 advocates ran: the brief, to the gate`, `stopped: ESCALATE after the advocates`,

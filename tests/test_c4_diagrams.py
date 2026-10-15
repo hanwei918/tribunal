@@ -29,9 +29,22 @@ halves together:
 
 The set draws **version 8**, so three more things are asserted here: no
 specification states a version-6 rule -- a clause, a path, a figure -- except
-inside a label that says version 6 for itself; the dynamic view's boxes are
-numbered in the order the sheet lists the steps, with the advocates before the
-authority gate; and every path a specification writes is a path that is here.
+inside a label that says version 6 for itself, the one exception being the
+pipeline box's switch list, which names ``prompts/v1`` to say which directory a
+version-8 run has to be handed instead (:data:`VERSION_SIX_PLACES`); the dynamic
+view's boxes are numbered in the order the sheet lists the steps, with the
+advocates before the authority gate; and every path a specification writes is a
+path that is here.
+
+Five more checks hold the drawings to the facts they state, each with a control:
+no specification carries the name of the archive the team passed around; the
+three call counts a version-8 case really makes -- two, six or seven, read off
+the 42 committed transcripts through ``ui.v8.build.read_every_case()`` -- are
+the counts the two views state, and no label or page line states six alone; the
+upload arrow and the container that builds the pages name every builder that
+uploads; the number of external sets the case store states is the number of
+directories under ``data/external/``; and the pipeline box carries the
+``--prompts-dir`` switch every version-8 run needs.
 
 The check is shown to be capable of failing: a render of one specification with
 one string changed is compared with the committed file and is required to
@@ -52,17 +65,51 @@ import copy
 import importlib.util
 import json
 import re
+import sys
 import unittest
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Sequence, Tuple
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from ui.v8 import build as v8  # noqa: E402
 
 SPEC_DIR = PROJECT_ROOT / "docs" / "architecture" / "spec"
 VIEW_DIR = PROJECT_ROOT / "docs" / "architecture"
 README_COPY = PROJECT_ROOT / "docs" / "architecture.svg"
 GENERATOR = PROJECT_ROOT / "tools" / "c4_diagrams.py"
+
+# The page that reads the drawings out to a reader, whose lines are held to the
+# same call counts the two views state.
+PAGE = PROJECT_ROOT / "docs" / "architecture.md"
+
+# The name of the archive the team passed around, which no specification may
+# carry: a reader who wants the source is sent to the tag and the commit.
+ARCHIVE_NAME = "tribunal-main_4"
+
+# The external sets, and the phrase the case store states their number in.
+EXTERNAL_DIR = PROJECT_ROOT / "data" / "external"
+MORE_SETS = re.compile(r"(\d+) more sets in")
+
+# The builders that upload static HTML, and the two labels that must name them:
+# sheet 1's upload arrow and sheet 2b's container.
+BUILDERS: Tuple[str, ...] = ("ui/site", "ui/v8")
+UPLOAD_LABEL = "1-system-context"
+BUILD_CONTAINER = "2b-containers-after-ruling"
+BUILD_CONTAINER_BOX = "site"
+
+# The switch a version-8 run needs, which the pipeline box carries.
+PROMPTS_SWITCH = "--prompts-dir prompts/v2"
+
+# The phrase that states a case's call count, and the two counts that must stand
+# beside it. A version-8 case makes two, six or seven model calls, so a label
+# that says six alone is stating the version-6 count as the rule in force.
+SIX_CALLS = re.compile(r"\b(?:6|six) calls a case", re.IGNORECASE)
+TWO_CALLS = re.compile(r"\b(?:2|two)\b", re.IGNORECASE)
+SEVEN_CALLS = re.compile(r"\b(?:7|seven)\b", re.IGNORECASE)
 
 # The scratch directory this module is about, assembled from pieces so that this
 # file does not itself carry the literal the check below looks for.
@@ -73,7 +120,7 @@ SCRATCH_DIR_NAME = "tm" + "p"
 # a drawing that lost or gained an element is reported against them.
 SPECS: Tuple[Tuple[str, int], ...] = (
     ("1-system-context", 137),
-    ("2a-containers-deciding", 227),
+    ("2a-containers-deciding", 229),
     ("2b-containers-after-ruling", 227),
     ("3-dynamic-one-dispute", 208),
 )
@@ -136,6 +183,17 @@ VERSION_SIX_WORDS: Tuple[str, ...] = (
     "Version-6",
 )
 
+# The one version-6 path a specification still names, and the label that names
+# it. The pipeline box's switch list states ``--prompts-dir``'s default, so that
+# a reader knows which directory a version-8 run has to be handed instead; the
+# label names no version of its own, so the rule above needs the exception
+# spelled out here rather than read out of the box. A label that names
+# ``prompts/v1`` anywhere else is still an offence, and the test below holds
+# this table to what the specifications actually carry.
+VERSION_SIX_PLACES: Tuple[Tuple[str, str], ...] = (
+    ("2a-containers-deciding", "needs it (the default is prompts/v1)."),
+)
+
 # The correction 2a carries, and the sentence it replaces. The first is what
 # ``ops/evidence.py`` does -- it is given the dispute and reads that dispute's
 # trip id -- and the second is what the drawing said before it was corrected.
@@ -195,23 +253,36 @@ def step_labels(elements: Any) -> List[str]:
     ]
 
 
-def unnamed_version_six_phrases(elements: Any) -> List[str]:
+def unnamed_version_six_phrases(
+    elements: Any, allowed: Sequence[str] = ()
+) -> List[str]:
     """Every version-6 phrase a specification states without naming version 6.
 
     A label that says version 6 for itself may name the freeze, the clause, the
     directory or the figure it belongs to -- that is what a history is. A label
     that does not is stating one as the rule in force, which is what the four
-    views were drawn at version 8 to stop doing.
+    views were drawn at version 8 to stop doing. ``allowed`` is the labels one
+    specification's own exception covers: a label in it states the default a
+    version-8 run overrides rather than the rule in force.
     """
     offences: List[str] = []
     for element in elements:
         text = element.get("text")
-        if not text or any(word in text for word in VERSION_SIX_WORDS):
+        if (
+            not text
+            or text in allowed
+            or any(word in text for word in VERSION_SIX_WORDS)
+        ):
             continue
         for phrase in VERSION_SIX_PHRASES:
             if phrase in text:
                 offences.append("{0}: {1}".format(phrase, text))
     return offences
+
+
+def allowed_version_six_labels(name: str) -> Tuple[str, ...]:
+    """The labels one specification may state a version-6 phrase in."""
+    return tuple(text for spec, text in VERSION_SIX_PLACES if spec == name)
 
 
 def placed_elements(path: Path) -> List[str]:
@@ -277,6 +348,76 @@ def scratch_offences_in_json(text: str) -> List[str]:
     return sorted(
         {value for value in json_strings(json.loads(text)) if names_a_scratch_path(value)}
     )
+
+
+def page_text() -> str:
+    """``docs/architecture.md``, as it is committed."""
+    return PAGE.read_text(encoding="utf-8")
+
+
+def page_sentences() -> List[str]:
+    """The page's prose as sentences, with its own wrapping joined.
+
+    The page is wrapped at eighty columns, so a source line is not the unit a
+    reader meets: a sentence is, and it is the unit the call counts are stated
+    in. The wrapping is joined before the split, so a sentence that was rewrapped
+    still reads as one.
+    """
+    joined = " ".join(page_text().split())
+    return [part.strip() for part in re.split(r"(?<=\.)\s+", joined) if part.strip()]
+
+
+def archive_name_offences(texts: Sequence[str]) -> List[str]:
+    """Every text that carries the archive's name."""
+    return [text for text in texts if ARCHIVE_NAME in text]
+
+
+def calls_offences(texts: Sequence[str]) -> List[str]:
+    """Every text that states six calls a case without the other two counts.
+
+    A version-8 case makes two, six or seven model calls -- at version 8, 34 of
+    the 42 cases made six, two made seven and six made two -- so a label or a
+    page line that says six alone is stating the version-6 count as the one in
+    force.
+    """
+    offences: List[str] = []
+    for text in texts:
+        if not SIX_CALLS.search(text):
+            continue
+        if TWO_CALLS.search(text) and SEVEN_CALLS.search(text):
+            continue
+        offences.append(text)
+    return offences
+
+
+def missing_builders(texts: Sequence[str]) -> List[str]:
+    """The builders one label does not name."""
+    joined = " ".join(texts)
+    return [name for name in BUILDERS if name not in joined]
+
+
+def more_sets_stated(texts: Sequence[str]) -> List[str]:
+    """Every number a text states as the count of the extra external sets."""
+    return MORE_SETS.findall(" ".join(texts))
+
+
+def external_set_count() -> int:
+    """The number of sets: the directories under ``data/external/``."""
+    return len([path for path in EXTERNAL_DIR.iterdir() if path.is_dir()])
+
+
+def upload_label_texts() -> List[str]:
+    """Sheet 1's upload arrow: the tech label naming what is uploaded."""
+    return [text for text in spec_texts(UPLOAD_LABEL) if text.startswith("[HTML")]
+
+
+def container_texts(name: str, box: str) -> List[str]:
+    """One container's own texts: its title, its tech line and its lines."""
+    return [
+        element["text"]
+        for element in spec_of(name)["elements"]
+        if element.get("text") and element["attrs"].get("data-box") == box
+    ]
 
 
 class TheRenderTests(unittest.TestCase):
@@ -409,7 +550,10 @@ class TheVersionSixTests(unittest.TestCase):
     the freeze of 2026-10-14 in place of the freeze of 2026-10-11. Where a
     version-6 fact still stands -- the operations layer reads version-6 runs,
     and its release threshold is version 6's -- it stands inside a label that
-    says so.
+    says so. The one path named without a version is ``--prompts-dir``'s
+    default, which the switch list states so that a reader knows which directory
+    a version-8 run has to be handed instead; that one label is
+    :data:`VERSION_SIX_PLACES`, and the test below holds the table to it.
     """
 
     def test_no_specification_states_one_without_naming_version_six(self):
@@ -417,7 +561,10 @@ class TheVersionSixTests(unittest.TestCase):
             with self.subTest(spec=name):
                 self.assertEqual(
                     [],
-                    unnamed_version_six_phrases(spec_of(name)["elements"]),
+                    unnamed_version_six_phrases(
+                        spec_of(name)["elements"],
+                        allowed=allowed_version_six_labels(name),
+                    ),
                     "{0} states a version-6 rule as the one in force".format(name),
                 )
 
@@ -436,6 +583,30 @@ class TheVersionSixTests(unittest.TestCase):
         texts = spec_texts("2b-containers-after-ruling")
         self.assertIn("Version 6 = policy/v3 + 0001-0003 by hand", texts)
         self.assertIn("review; kill switch; version 6: above SGD 8.00", texts)
+
+    def test_the_allowed_labels_are_the_ones_the_specifications_carry(self):
+        """The exception is a fact about the drawings, not a way round the rule.
+
+        A table that named a label no specification carries would excuse
+        nothing, and a specification that stopped carrying it would be excused
+        by a rule that no longer had anything to do with it.
+        """
+        for spec, text in VERSION_SIX_PLACES:
+            with self.subTest(spec=spec, label=text):
+                self.assertIn(text, spec_texts(spec))
+                self.assertNotEqual(
+                    [],
+                    [
+                        phrase
+                        for phrase in VERSION_SIX_PHRASES
+                        if phrase in text
+                    ],
+                    "the exception names a label that states no version-6 phrase",
+                )
+        for name, _count in SPECS:
+            with self.subTest(spec=name):
+                for text in allowed_version_six_labels(name):
+                    self.assertIn(text, spec_texts(name))
 
 
 class TheDynamicOrderTests(unittest.TestCase):
@@ -526,6 +697,172 @@ class TheScratchDirectoryTests(unittest.TestCase):
                     scratch_offences_in_json(path.read_text(encoding="utf-8")),
                     "{0} names a path under the scratch directory".format(path),
                 )
+
+
+class TheArchiveNameTests(unittest.TestCase):
+    """No specification sends a reader to the archive the team passed around.
+
+    ``tribunal-main_4`` was a working archive, not a source a reader can find.
+    Each view now says which trees it was checked against -- the annotated tag
+    ``freeze-2026-10-14-v8`` and its commit -- so the name is gone from all four.
+    """
+
+    def test_no_specification_carries_the_archive_name(self):
+        for name, _count in SPECS:
+            with self.subTest(spec=name):
+                self.assertEqual(
+                    [],
+                    archive_name_offences(spec_texts(name)),
+                    "{0} still names the archive".format(name),
+                )
+
+    def test_a_specification_carrying_it_is_reported(self):
+        """The control: the check above is shown capable of failing."""
+        texts = [
+            text + " " + ARCHIVE_NAME
+            if text.startswith("Checked against the code")
+            else text
+            for text in spec_texts(SPECS[0][0])
+        ]
+        self.assertEqual(1, len(archive_name_offences(texts)))
+        self.assertNotEqual([], archive_name_offences(texts))
+
+
+class TheCallCountTests(unittest.TestCase):
+    """The two views state the counts a version-8 case really makes.
+
+    The transcripts are the record of how many calls each case made, so the
+    counts are read off the committed runs rather than stated here: 34 of the 42
+    cases made six calls, two made seven (a judge draft retried) and six made
+    two (the authority gate stopped them after the advocates).
+    """
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.counts: Dict[int, int] = {}
+        for case in v8.read_every_case():
+            calls = len(case.transcript["entries"])
+            cls.counts[calls] = cls.counts.get(calls, 0) + 1
+
+    def test_the_counts_are_the_42_committed_transcripts(self):
+        self.assertEqual(
+            {2: 6, 6: 34, 7: 2},
+            self.counts,
+            "the version-8 transcripts do not hold the counts the views state",
+        )
+
+    def test_the_two_views_state_the_three_counts(self):
+        for name in ("1-system-context", "2a-containers-deciding"):
+            with self.subTest(spec=name):
+                self.assertTrue(
+                    any("2, 6 or 7" in text for text in spec_texts(name)),
+                    "{0} does not state the three counts".format(name),
+                )
+
+    def test_no_label_and_no_page_line_states_six_alone(self):
+        for name, _count in SPECS:
+            with self.subTest(spec=name):
+                self.assertEqual(
+                    [],
+                    calls_offences(spec_texts(name)),
+                    "{0} states six calls a case without the other two".format(name),
+                )
+        with self.subTest(page="docs/architecture.md"):
+            self.assertEqual([], calls_offences(page_sentences()))
+
+    def test_a_label_stating_six_alone_is_reported(self):
+        """The control: the check above is shown capable of failing."""
+        texts = list(spec_texts("2a-containers-deciding")) + ["6 calls a case"]
+        self.assertEqual(["6 calls a case"], calls_offences(texts))
+
+
+class TheBuildersTests(unittest.TestCase):
+    """The drawings name every builder that uploads static HTML.
+
+    Three builders write the pages that are uploaded by hand: the product site
+    (``ui/site/build.py``), the 42 version-8 case pages (``ui/v8/build.py``) and
+    the version-6 queue and case pages (``ui/v2/build.py``). Sheet 1's upload
+    arrow names them, and sheet 2b's container is the box that builds them.
+    """
+
+    def test_the_upload_label_names_the_builders(self):
+        self.assertEqual([], missing_builders(upload_label_texts()))
+
+    def test_the_container_names_the_builders(self):
+        texts = container_texts(BUILD_CONTAINER, BUILD_CONTAINER_BOX)
+        self.assertTrue(texts, "sheet 2b carries no site-build container")
+        self.assertEqual([], missing_builders(texts))
+
+    def test_a_label_without_ui_site_is_reported(self):
+        """The control: the check above is shown capable of failing."""
+        texts = [
+            text.replace("ui/site", "ui/other") for text in upload_label_texts()
+        ]
+        self.assertEqual(["ui/site"], missing_builders(texts))
+
+    def test_a_container_without_ui_v8_is_reported(self):
+        """The other half of the control."""
+        texts = [
+            text.replace("ui/v8", "ui/other")
+            for text in container_texts(BUILD_CONTAINER, BUILD_CONTAINER_BOX)
+        ]
+        self.assertEqual(["ui/v8"], missing_builders(texts))
+
+
+class TheExternalSetCountTests(unittest.TestCase):
+    """The case store's number is the number of directories under data/external/.
+
+    The number is a count of the tree, not a figure copied from somewhere else,
+    so a set imported without the label moving fails here.
+    """
+
+    def test_the_number_sheet_2a_states_is_the_tree(self):
+        self.assertEqual(
+            [str(external_set_count())],
+            more_sets_stated(spec_texts("2a-containers-deciding")),
+            "the case store's number is not the number of sets on disk",
+        )
+
+    def test_the_old_number_is_reported(self):
+        """The control: the check above is shown capable of failing."""
+        texts = [
+            text.replace("16 more sets in", "12 more sets in")
+            for text in spec_texts("2a-containers-deciding")
+        ]
+        self.assertEqual(["12"], more_sets_stated(texts))
+        self.assertNotEqual(
+            [str(external_set_count())],
+            more_sets_stated(texts),
+            "the control states the number the tree holds, so it cannot fail",
+        )
+
+
+class TheSwitchTests(unittest.TestCase):
+    """The pipeline box carries the switch every version-8 run needs.
+
+    ``--prompts-dir prompts/v2`` is the one switch that is not simply off by
+    default: a version-8 run handed the default directory is refused, so the box
+    states both the switch and the default it replaces.
+    """
+
+    def test_sheet_2a_carries_the_prompts_switch(self):
+        texts = spec_texts("2a-containers-deciding")
+        self.assertTrue(
+            any(PROMPTS_SWITCH in text for text in texts),
+            "the pipeline box does not carry {0!r}".format(PROMPTS_SWITCH),
+        )
+        self.assertTrue(
+            any("the default is prompts/v1" in text for text in texts),
+            "the pipeline box does not state the default the switch replaces",
+        )
+
+    def test_a_box_without_the_switch_is_reported(self):
+        """The control: the check above is shown capable of failing."""
+        texts = [
+            text.replace(PROMPTS_SWITCH, "--prompts-dir prompts/v1")
+            for text in spec_texts("2a-containers-deciding")
+        ]
+        self.assertFalse(any(PROMPTS_SWITCH in text for text in texts))
 
 
 if __name__ == "__main__":
