@@ -106,8 +106,10 @@ The queue and the replay are one self-contained file per page with no request of
 
 ## How it was built, and by whom
 
-**WorkBuddy (DeepSeek-V4.1-Flash) wrote and committed the application code, the
-tests and the documents**, one task per session. Every commit's row is in
+**WorkBuddy (DeepSeek-V4.1-Flash) wrote and committed the application code and
+the tests**, one task per session, and committed every document; the evaluation
+case sets and the product site's design were made outside it, as Results and
+"The product site" say. Every commit's row is in
 [`docs/buddy-log/README.md`](buddy-log/README.md), and the conversation
 records of those sessions are submitted to the organisers.
 

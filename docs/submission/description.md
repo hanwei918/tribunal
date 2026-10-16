@@ -127,13 +127,14 @@ an unresolvable clause id is not citable, and the `DRAFT_*` codes reject a draft
 with an unresolved clause, a money field that does not mirror, or an amount not
 read off the brief. <!-- prompts/v2 -->
 
-**Built on Tencent Cloud.** Built in WorkBuddy (a row per session in
+**Built on Tencent Cloud.** Built in WorkBuddy (a row per commit in
 `docs/buddy-log/README.md`); every model call goes to Tencent Cloud MaaS
 (TokenHub, endpoint measured in
 `docs/notes/2026-09-21-tokenhub-api-facts.md`) serving DeepSeek; the site is
 hosted on Tencent EdgeOne Pages; support staff reach the version-6 records
-through the read-only connector `integrations/workbuddy/`. The code, the tests and these
-documents were written in WorkBuddy session by session. <!-- buddy-log -->
+through the read-only connector `integrations/workbuddy/`. The code and the tests
+were built in WorkBuddy session by session; the evaluation case sets and the
+site's design were made outside it, as the README says. <!-- buddy-log -->
 
 **Responsible AI.** A person decides every case the panel cannot, and the money
 is held; a human can switch automatic rulings off with `auto_rulings_enabled` in

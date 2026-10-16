@@ -61,7 +61,7 @@ section{padding-block:128px}
 .arr{display:inline-block;font-family:var(--mono);transition:transform .45s var(--ease)}
 a:hover .arr{transform:translateX(4px)}
 
-/* buttons, with Hermes's travelling light on hover */
+/* buttons, with a travelling light on hover */
 .btn{position:relative;display:inline-flex;align-items:center;gap:10px;height:42px;padding:0 16px;border:1px solid var(--band-line);background:rgba(255,255,255,.06);
   font:12px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;text-decoration:none;color:inherit;cursor:pointer;isolation:isolate}
 .btn.solid{background:var(--on-band);color:var(--band);border-color:var(--on-band)}
@@ -117,7 +117,7 @@ html:lang(zh) .hero h1{font-size:clamp(44px,5.6vw,84px);line-height:1.12}
 .fine{font-size:12.5px;color:var(--band-2);margin:16px 0 0;max-width:60ch}
 @media (max-width:900px){.hero-grid{grid-template-columns:minmax(0,1fr);min-height:0}.hero .art{justify-self:start;width:min(100%,360px)}}
 
-/* centered section header, as Hermes sets them */
+/* centered section header */
 .sh{text-align:center;max-width:760px;margin:0 auto 64px}
 .sh .ico{display:inline-flex;margin-bottom:18px;color:var(--accent)}
 .band .sh .ico{color:var(--band-2)}
@@ -147,7 +147,7 @@ html:lang(zh) .sh h2{font-size:clamp(34px,4.2vw,56px);line-height:1.15}
 .soon{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font:11px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;background:var(--band);padding:12px 16px;border:1px solid var(--band-line)}
 .cap{font-size:12.5px;color:var(--band-2);margin:14px 0 0;text-align:center}
 
-/* image cards (Hermes platform cards) */
+/* image cards */
 .tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin-top:64px}
 .tile{position:relative;overflow:hidden;aspect-ratio:4/3;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px;padding:24px;text-decoration:none;isolation:isolate;border:1px solid var(--band-line)}
 .tile .art{position:absolute;inset:0;aspect-ratio:auto;z-index:-2;opacity:.9;transition:transform 1.1s var(--ease)}
@@ -352,7 +352,7 @@ html:lang(zh) .next .display{font-size:clamp(30px,3.6vw,48px)}
 .js-motion [data-rise]{opacity:0;transform:translateY(22px);transition:opacity 1s var(--ease),transform 1s var(--ease)}
 .js-motion [data-rise].in{opacity:1;transform:none}
 
-/* footer, after Hermes: a picture fading out, the sitemap in the middle, the name as a pale watermark */
+/* footer: a picture fading out, the sitemap in the middle, the name as a pale watermark */
 .page{position:relative;z-index:1;background:var(--paper)}
 .foot{position:relative;overflow:hidden;min-height:max(760px,100vh);display:flex;flex-direction:column;justify-content:flex-end;padding:0 0 40px;isolation:isolate}
 @media (min-width:861px) and (min-height:700px){.foot{position:sticky;bottom:0;z-index:0}}
