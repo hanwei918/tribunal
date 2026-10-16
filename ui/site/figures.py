@@ -277,7 +277,6 @@ def figures() -> Dict[str, str]:
         # differently -- "585 s" in English, "585 \u79d2" in Chinese -- and the page
         # is what carries the unit.
         "median_wall_seconds": v6_runs._seconds(median_wall),
-        "median_wall_minutes": "{0:.1f}".format(median_wall / 60),
         "p90_wall_seconds": v6_runs._seconds(p90_wall),
         "p90_wall_minutes": "{0:.1f}".format(p90_wall / 60),
         "median_cost_usd": "{0:.4f}".format(median_cost),

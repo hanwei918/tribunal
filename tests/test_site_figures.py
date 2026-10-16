@@ -1940,6 +1940,12 @@ VERSION_SIX_PHRASES: Tuple[str, ...] = (
     "\u672a\u51fa\u73b0",
 )
 
+
+def names_version_six(text: str) -> bool:
+    """Whether a page's visible text names version 6, in English or in Chinese."""
+    return "version 6" in text or "\u7b2c 6 \u7248" in text
+
+
 # The one phrase that is still stated, and the pages that state it. Both are the
 # appeal sentence, which names version 6 in its own words; every other phrase is
 # gone from the site.
@@ -2114,8 +2120,10 @@ class TheVersionSixPhrasesTests(unittest.TestCase):
         The version-6 support site and the version-8 case pages are the other
         two builders'; the support site's top bar reads "Recorded runs, policy
         version 6" and the case pages are named by the version their own index
-        states. A page that states one of the phrases and does not name version
-        6 would be a page stating a version-6 rule as the current one.
+        states. A Chinese page names the version in its own words, \u7b2c 6 \u7248,
+        which :func:`names_version_six` reads beside the English. A page that
+        states one of the phrases and does not name version 6 would be a page
+        stating a version-6 rule as the current one.
         """
         others = {
             name: markup for name, markup in self.raw.items() if name not in self.site_pages
@@ -2127,7 +2135,37 @@ class TheVersionSixPhrasesTests(unittest.TestCase):
             if not stated:
                 continue
             with self.subTest(page=name):
-                self.assertIn("version 6", text)
+                # A Chinese page names the version in its own words.
+                self.assertTrue(
+                    names_version_six(text),
+                    "{0} states a version-6 phrase and names no version".format(name),
+                )
+
+    def test_the_check_fails_on_a_chinese_page_naming_no_version(self):
+        """The control: a Chinese case page with its Chinese version taken out.
+
+        The pages the other builders write name the version in Chinese, in the
+        line under the title -- the built ``case-00102.zh.html`` writes it three
+        times -- and state a version-6 phrase in the record's own English. So
+        this is that page's visible text, held to stating one of the phrases and
+        to naming the version, and then the same text with every Chinese mention
+        of the version taken out, which :func:`names_version_six` must refuse.
+        """
+        text = visible_text(self.raw["case-00102.zh.html"])
+        self.assertTrue(
+            any(phrase in text for phrase in VERSION_SIX_PHRASES),
+            "case-00102.zh.html states none of the version-6 phrases",
+        )
+        self.assertTrue(
+            names_version_six(text),
+            "case-00102.zh.html names no version",
+        )
+        stripped = text.replace("\u7b2c 6 \u7248", "")
+        self.assertNotEqual(text, stripped, "the fixture did not remove the version")
+        self.assertFalse(
+            names_version_six(stripped),
+            "the copy names version 6 after every mention was removed",
+        )
 
 
 class TheChinesePagesLinkTests(unittest.TestCase):
