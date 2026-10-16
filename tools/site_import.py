@@ -38,6 +38,10 @@ named and the exit status is non-zero, so a transcription that loses a byte is
 reported by the tool that lost it rather than by a reader comparing two trees by
 hand.
 
+**It ran on her first package, of 2026-10-13, and is not run again.** Her
+update of 2026-10-16 came in at part 111 by hand, and the earlier try-it page's
+files it lists left the site at part 116; running it again would undo both.
+
 Usage::
 
     python3 tools/site_import.py --src DIR [--out ui/site]

@@ -60,7 +60,7 @@ eval.v8_report --report`). The sealed set `sealed-v4`, run once at version 7:
 The front page is the **product site** the policy owner, Ji Guofang, designed outside WorkBuddy: **twelve pages**, each in English (`*.html`) and Chinese (`*.zh.html`), with her images and a try-it page with a phone demo.
 The site holds three layers of pages. The **version-8 case pages** are what Tribunal applies now: `v8-cases.html` indexes all 42 version-8 cases, and each of them has a page of its own in both languages, 86 files in all, built by `python3 -m ui.v8.build` from the committed runs.
 The **version-6 pages** are history: the 151 version-6 case pages, each in English and Chinese in the site's own design (`case-<NNNNN>.html` and `case-<NNNNN>.zh.html`, 302 files, built by `python3 -m ui.v6.build`), each linking to the reviewer's page with every step of the decision, the escalation packet and the review form (`review-<NNNNN>.html`), and the queue at `/queue.html`, both built by `python3 -m ui.v2.build` from the four version-6 runs.
-The try-it page is her phone demo: it replays five committed version-8 runs (cases 5051, 5001 and 5013, and the organisers' samples 902 and 903), and runs a reader's changes through four version-8 rules in the browser -- the safety flag, the SGD 50 limit, the 2 km limit and the contact rule POL-NS-23 -- with no model call. Her script that generated `ui/site/static/try/phone.js` from the runs is not in this repository; the version-6 in-browser checks are still built under `try/`, and no page links them.
+The try-it page is her phone demo: it replays five committed version-8 runs (cases 5051, 5001 and 5013, and the organisers' samples 902 and 903), and runs a reader's changes through four version-8 rules in the browser -- the safety flag, the SGD 50 limit, the 2 km limit and the contact rule POL-NS-23 -- with no model call. Her script that generated `ui/site/static/try/phone.js` from the runs is not in this repository.
 Her design, her page text and her front-end code are hers, imported unchanged and built here by `ui/site/build.py`; the try-it service `tryit/` is hers too. Her update of 2026-10-16 -- the business page, the phone demo, the Business link and the footer's disclaimer -- came in at part 111, with three sentences of the business page corrected to version 8.
 
 ## In numbers
@@ -262,7 +262,7 @@ run that shows it.
 | [Version-8 measurements](docs/notes/2026-10-14-version-8-measurements.md) | The version-8 clock, cost, swap, calibration and escalation figures |
 | [WorkBuddy log](docs/buddy-log/README.md) | One row per WorkBuddy session, with screenshots |
 | [WorkBuddy connector](integrations/workbuddy/) | A read-only MCP server over the committed records |
-| [Try-it service](tryit/README.md) | The website's live-run service, its limits and how to run it |
+| [Try-it service](tryit/README.md) | A live-run service for one scenario, its limits and how to run it; the published site does not call it |
 | [Changelog](CHANGELOG.md) | Every change since `freeze-2026-10-11`, the three freezes (versions 6, 7 and 8) and the command that shows each frozen tree |
 
 ## Team and licence

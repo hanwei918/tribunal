@@ -5,7 +5,7 @@ standard-library HTTP server in front of
 `tribunal.pipeline.run_loaded_case`, run with the settings of the recorded
 version-6 runs — four judge drafts, policy version 6, parallel calls. It adds
 nothing to the arbitration: the scenario is built by `tryit/case.py`, the same
-code the website runs in the browser, and the pipeline is called as the
+code the earlier try-it page ran in the browser, and the pipeline is called as the
 benchmark calls it. Each run costs about 0.06 USD in model calls and takes two
 to five minutes.
 
@@ -44,20 +44,20 @@ All from the environment, so nobody edits code to change them:
   `"mode": "recorded-test"`. The answers are real recorded model output, but
   they were written for the unedited case, so a scenario run this way is a test
   of the plumbing and not a ruling on the scenario. No key, no cost.
-- `--once SCENARIO_JSON` runs one scenario file — the one the try-it page lets a
-  visitor download — prints the result and exits. Add `--recorded-test` to it
+- `--once SCENARIO_JSON` runs one scenario file — the kind the earlier try-it
+  page let a visitor download — prints the result and exits. Add `--recorded-test` to it
   for a keyless end-to-end check:
 
 ```
 python3 -m tryit.server --once scenario.json --recorded-test
 ```
 
-## On the published site the live service is off
+## The published site does not call it
 
-The site's try-it page loads `try/try-config.js`, and that file leaves
-`window.TRIBUNAL_TRY_API` empty. With no address the page offers no live run and
-only its in-browser checks run: the visitor's scenario is built and shown by
-`tryit/case.py` under Pyodide, with no model call and no server. Point
-`TRIBUNAL_TRY_API` at a running instance to switch live runs on. The page's own
-files and the bundle it loads are built by `ui/site/build.py`;
-`tryit/build_bundle.py` computes the same paths from this tree.
+The site's try-it page is the policy owner's phone demo (part 111): it replays
+recorded version-8 runs and calls neither a model nor this service. The earlier
+try-it page built a visitor's scenario with `tryit/case.py` under Pyodide in the
+browser and could call this service; its files, the Pyodide runtime and the
+bundle it loaded left the site at part 116. The service is kept, unchanged, for
+running a scenario from the command line; `tryit/build_bundle.py` still lists
+the files that bundle carried.

@@ -62,12 +62,6 @@ STRAY_DOCUMENTS = (
 
 # Paths the repository carries, one from each tree. An ignore rule that matched
 # one of these would be hiding repository content, so each is asserted visible.
-# The last three are `.zip` files, and they are here on purpose: `*.zip` ignores
-# a dropped deploy archive, and the product site ships three archives of its own
-# -- Pyodide's `python_stdlib.zip` as her source and as the copy the builder
-# publishes, and the bundle `ui/site/build.py` builds -- so the three negations
-# in `.gitignore` are what keeps them visible, and this is what holds those
-# negations in place.
 REPOSITORY_CONTENT = (
     "README.md",
     "START-HERE.md",
@@ -77,9 +71,6 @@ REPOSITORY_CONTENT = (
     "tests/test_ui_build.py",
     "docs/notes/2026-10-04-the-second-sealed-run.md",
     "docs/buddy-log/README.md",
-    "ui/site/static/try/pyodide/python_stdlib.zip",
-    "ui/dist/try/pyodide/python_stdlib.zip",
-    "ui/dist/try/tribunal-core.zip",
 )
 
 
@@ -171,9 +162,9 @@ class ThePublishedFilesAreTrackedTests(unittest.TestCase):
     ``ui/dist/try/pyodide/python_stdlib.zip`` was published and ignored at once:
     ``*.zip`` matched it, so the clean-clone run of part 53a had no copy of it,
     the build was not current, and a site deployed from the repository broke the
-    try-it page. The three negations in ``.gitignore`` are what keep the three
-    archives visible; this holds every published path to being one git tracks,
-    so a fourth cannot be added and hidden in the same way.
+    try-it page. That page and its archives left at part 116; this still holds
+    every published path to being one git tracks, so a file cannot be added and
+    hidden in the same way.
     """
 
     def tracked(self, relative: str) -> bool:
@@ -196,7 +187,7 @@ class ThePublishedFilesAreTrackedTests(unittest.TestCase):
         portability.require_git_history()
         published = sorted(site_build.written_paths())
         # The control: a set that named nothing would make the check vacuous.
-        for name in ("try/pyodide/python_stdlib.zip", "try/tribunal-core.zip"):
+        for name in ("index.html", "try/phone.js"):
             self.assertIn(name, published, "{0} is not published by the site".format(name))
         for name in published:
             with self.subTest(path=name):

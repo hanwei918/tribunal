@@ -6,9 +6,9 @@ below is also committed under `ui/dist/`, so it also runs locally with
 `python3 -m http.server --directory ui/dist`.
 
 Every page in this walk is a **version-8** page. The version-6 material is named
-as such where it appears. The try-it page is not in the walk, because it runs
-version 6, and the version-6 facts it works out in the browser include the
-rider's phone 634-646 m from the pickup point.
+as such where it appears. The try-it page is not in the walk: it is a phone
+demo that replays five recorded version-8 runs, and it can follow step 5 if
+there is time.
 
 ## 1. The front page -- 20 s
 

@@ -33,16 +33,17 @@ default. Each drawing's own legend names its swatches, and the colours are the
 C4-PlantUML defaults. Nothing in the set is a link, a script or an embedded
 image: each file stands alone.
 
-**Where a part is still version 6.** The views draw version 8, and three parts
+**Where a part is still version 6.** The views draw version 8, and two parts
 of the system are deliberately still version 6: the **operations layer** -- the
 queue, the escalation packet, the review, the appeal and the risk signals under
-`ops/`, which read the version-6 runs; the **try-it page**, a phone demo that
-replays recorded version-8 runs; and the **151 version-6 case pages**, which are
-history: each is written in English and Chinese in the site's own design
-(`case-<NNNNN>.html` and `case-<NNNNN>.zh.html`, 302 files), and each links to
-the reviewer's page (`review-<NNNNN>.html`) with every step of the decision, the
-escalation packet and the review form. The README says so in its own words,
-one line each, in [Roadmap and known limits](../README.md#roadmap-and-known-limits).
+`ops/`, which read the version-6 runs; and the **151 version-6 case pages**,
+which are history: each is written in English and Chinese in the site's own
+design (`case-<NNNNN>.html` and `case-<NNNNN>.zh.html`, 302 files), and each
+links to the reviewer's page (`review-<NNNNN>.html`) with every step of the
+decision, the escalation packet and the review form. The try-it page is
+version 8: the policy owner's phone demo, which replays recorded version-8
+runs. The README says so in its own words, one line each, in
+[Roadmap and known limits](../README.md#roadmap-and-known-limits).
 
 ## 1. System context: who uses it, and what it needs
 

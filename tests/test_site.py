@@ -2,12 +2,11 @@
 
 The policy owner, Ji Guofang, designed the product site outside WorkBuddy --
 24 pages, each in English and Chinese, with the images they carry and a try-it
-page that runs this repository's own Python in the browser.
-``tools/site_import.py`` transcribed her files into ``ui/site/src/`` and
-``ui/site/static/``, and ``ui/site/build.py`` builds the site back out of them
-into ``ui/dist/``. What is under test here is that the build is the one the
-sources say it is, that the pages hold together as a site, and that the bundle
-the browser runs is this repository's own code.
+page with a phone demo. ``tools/site_import.py`` transcribed her files into
+``ui/site/src/`` and ``ui/site/static/``, and ``ui/site/build.py`` builds the
+site back out of them into ``ui/dist/``. What is under test here is that the
+build is the one the sources say it is, and that the pages hold together as a
+site.
 
 No network, no browser, no credential, no model call, and no read of the
 gitignored scratch directory her files arrived in: every check below reads a
@@ -26,12 +25,10 @@ Run from the project root with::
 
 from __future__ import annotations
 
-import io
 import re
 import sys
 import tempfile
 import unittest
-import zipfile
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Dict, List, Set, Tuple
@@ -68,8 +65,7 @@ EXTERNAL_LINKS = frozenset(
 )
 
 # The four files her try-it service arrives as, and the path each is committed
-# at. They travel in the bundle the browser runs, and they are hers: this
-# repository imports them and does not edit them.
+# at. They are hers: this repository imports them and does not edit them.
 TRYIT_FILES = (
     "tryit/__init__.py",
     "tryit/build_bundle.py",
@@ -930,84 +926,37 @@ class TheFilmTests(unittest.TestCase):
 
 
 # --------------------------------------------------------------------------
-# The bundle the browser runs
-# --------------------------------------------------------------------------
-class TheBundleTests(unittest.TestCase):
-    """``try/tribunal-core.zip``: this repository's own Python, and nothing else."""
-
-    def test_the_list_is_the_forty_five_paths(self):
-        self.assertEqual(45, len(site.BUNDLE_PATHS))
-        self.assertEqual(sorted(site.BUNDLE_PATHS), list(site.BUNDLE_PATHS))
-        self.assertEqual(len(set(site.BUNDLE_PATHS)), len(site.BUNDLE_PATHS))
-
-    def test_the_list_is_what_her_own_bundle_builder_would_put_in_it(self):
-        """Her ``tryit/build_bundle.py`` computes the same paths, from this tree.
-
-        The constant in the builder is written out rather than globbed, so a
-        module that appeared beside the others cannot slip into the bundle; this
-        is what holds it to the set her own code would choose.
-        """
-        from tryit import build_bundle
-
-        expected = sorted(
-            path.relative_to(PROJECT_ROOT).as_posix() for path in build_bundle.core_files()
-        )
-        self.assertEqual(45, len(expected), expected)
-        self.assertEqual(expected, sorted(site.BUNDLE_PATHS))
-
-    def test_every_entry_is_the_repositorys_own_file(self):
-        with zipfile.ZipFile(io.BytesIO(site.bundle_bytes())) as archive:
-            self.assertEqual(sorted(site.BUNDLE_PATHS), archive.namelist())
-            for relative in site.BUNDLE_PATHS:
-                with self.subTest(path=relative):
-                    self.assertEqual(
-                        (PROJECT_ROOT / relative).read_bytes(),
-                        archive.read(relative),
-                        "{0} is not the repository's file".format(relative),
-                    )
-
-    def test_two_builds_give_the_same_bytes(self):
-        self.assertEqual(site.bundle_bytes(), site.bundle_bytes())
-
-    def test_the_committed_bundle_is_the_one_this_code_builds(self):
-        self.assertTrue(site.BUNDLE_PATH.is_file(), "the bundle is not committed")
-        self.assertEqual(site.bundle_bytes(), site.BUNDLE_PATH.read_bytes())
-
-    def test_every_entry_carries_the_same_fixed_time(self):
-        """A zip stamped from the files' own mtimes differs on every checkout."""
-        with zipfile.ZipFile(io.BytesIO(site.bundle_bytes())) as archive:
-            stamps = {info.date_time for info in archive.infolist()}
-        self.assertEqual({site.BUNDLE_TIMESTAMP}, stamps)
-
-
-# --------------------------------------------------------------------------
-# The try-it service
+# The try-it page and the try-it service
 # --------------------------------------------------------------------------
 class TheTryItServiceTests(unittest.TestCase):
-    """Her service is committed unchanged, and the live one is off."""
-
-    def test_the_committed_config_leaves_the_address_empty(self):
-        """The live service stays off until an owner sets the address."""
-        config = site.STATIC_DIR / "try-config.js"
-        text = config.read_text(encoding="utf-8")
-        self.assertIn('window.TRIBUNAL_TRY_API = "";', text)
-
-    def test_the_site_ships_the_config_it_is_checked_against(self):
-        self.assertEqual(
-            (site.STATIC_DIR / "try-config.js").read_bytes(),
-            (site.DIST_DIR / "try-config.js").read_bytes(),
-        )
+    """The page is her phone demo, and her service is committed unchanged."""
 
     def test_the_try_it_page_loads_her_phone_script(self):
         portability.require_the_same_libm()
         page = pages()["try.html"]
         self.assertIn('src="try/phone.js"', page)
 
-    def test_her_service_is_committed_and_travels_in_the_bundle(self):
+    def test_the_site_publishes_no_python_for_the_browser(self):
+        """The earlier try-it page's files left at part 116, and stay out.
+
+        That page loaded ``try-config.js``, a bundle of this repository's
+        modules and the Pyodide runtime; the phone demo loads its one script
+        from ``try/``. A file put back under ``try/``, the old config, or an
+        archive or WebAssembly file anywhere in the site is refused here.
+        """
+        published = site.written_paths()
+        self.assertEqual(
+            ["try/phone.js"], sorted(name for name in published if name.startswith("try/"))
+        )
+        self.assertNotIn("try-config.js", published)
+        self.assertEqual(
+            [], sorted(name for name in published if name.endswith((".zip", ".wasm")))
+        )
+
+    def test_her_service_is_committed(self):
         for relative in TRYIT_FILES:
             with self.subTest(path=relative):
                 self.assertTrue((PROJECT_ROOT / relative).is_file(), relative)
-                self.assertIn(relative, site.BUNDLE_PATHS)
 
     def test_the_service_is_the_four_files_and_nothing_else(self):
         found = sorted(

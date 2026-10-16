@@ -54,11 +54,6 @@ README = PROJECT_ROOT / "README.md"
 RECORD = PROJECT_ROOT / "docs" / "record.md"
 DESCRIPTION = PROJECT_ROOT / "docs" / "submission" / "description.md"
 
-# The try-it page's own committed facts. The demo script's step 2 says what that
-# page shows, so the numbers it states about the page are read from the page's
-# own file rather than from a second copy of them.
-TRY_PAGE_FACTS = PROJECT_ROOT / "ui" / "site" / "static" / "try" / "recorded.json"
-
 # The six documents part 55 adds, each named by the path the README links.
 NEW_DOCUMENTS: Tuple[str, ...] = (
     "docs/why-debate.md",
@@ -132,7 +127,7 @@ ADDED: Tuple[Tuple[str, str], ...] = (
     ("docs/submission/description-form.txt", "deterministic stand-alone tool"),
     (
         "docs/submission/demo-script.md",
-        "the rider's phone 634-646 m from the pickup point",
+        "demo that replays five recorded version-8 runs",
     ),
     (
         "docs/submission/demo-script.md",
@@ -276,11 +271,7 @@ def digit_runs(text: str) -> Set[str]:
 
 def sourced_numbers() -> Set[str]:
     """Every number a figure in these documents may be read from."""
-    return (
-        digit_runs(report_output())
-        | digit_runs(RECORD.read_text(encoding="utf-8"))
-        | digit_runs(TRY_PAGE_FACTS.read_text(encoding="utf-8"))
-    )
+    return digit_runs(report_output()) | digit_runs(RECORD.read_text(encoding="utf-8"))
 
 
 def unsourced(text: str, sourced: Set[str]) -> List[str]:
