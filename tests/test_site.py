@@ -55,10 +55,12 @@ from ui.v8 import build as v8  # noqa: E402
 FILM = "assets/tribunal-film.mp4"
 
 # The links off the site, by name. Every other link a page carries is a file
-# inside ``ui/dist/``, and is checked as one. The three are the sources the
-# safety page cites.
+# inside ``ui/dist/``, and is checked as one. Three are the sources the safety
+# page cites; the fourth is the demo video, which the front page's film box
+# opens on YouTube.
 EXTERNAL_LINKS = frozenset(
     {
+        "https://youtu.be/amkBjXyV1eg",
         "https://arxiv.org/abs/2403.14720",
         "https://arxiv.org/abs/1803.09010",
         "https://aclanthology.org/2020.acl-main.442",
@@ -844,7 +846,7 @@ class TheLinksTests(unittest.TestCase):
             "a page loads a resource from another host: {0}".format(found),
         )
 
-    def test_the_only_links_off_the_site_are_the_three_named_ones(self):
+    def test_the_only_links_off_the_site_are_the_four_named_ones(self):
         portability.require_the_same_libm()
         found: Set[str] = set()
         for text in pages().values():
