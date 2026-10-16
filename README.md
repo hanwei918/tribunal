@@ -6,6 +6,7 @@
 
 <p align="center">
   <a href="https://tribunal.edgeone.dev/"><img src="https://img.shields.io/badge/live%20demo-tribunal.edgeone.dev-6d28d9" alt="Live demo"></a>
+  <a href="https://youtu.be/amkBjXyV1eg"><img src="https://img.shields.io/badge/demo%20video-YouTube%2C%207%3A56-6d28d9" alt="Demo video on YouTube"></a>
   <a href="https://tribunal.edgeone.dev/try.html"><img src="https://img.shields.io/badge/try%20it-in%20your%20browser-6d28d9" alt="Try it"></a>
   <a href="https://github.com/hanwei918/tribunal/actions/workflows/tests.yml"><img src="https://github.com/hanwei918/tribunal/actions/workflows/tests.yml/badge.svg?branch=main" alt="Tests"></a>
   <img src="https://img.shields.io/badge/python-3.9%20%7C%203.13-blue" alt="Python 3.9 and 3.13 (both tested)">
@@ -40,6 +41,7 @@ the two could be compared on ([the decision](docs/notes/2026-09-23-runtime-model
 
 **Start here.**
 
+- **Demo video (7:56):** <https://youtu.be/amkBjXyV1eg> — the problem, case 5051 from complaint to ruling, a story at the airport, and how it was built.
 - **Live demo:** <https://tribunal.edgeone.dev/> — the organisers' two samples at version 8 at `/cases.html#ryde`, all 42 version-8 cases at `/v8-cases.html`, and case 5051 at `/v8-05051.html`.
 - **Version 6 history:** the queue at `/queue.html`, case 208 at `/case-00208.html` and the organisers' sample case 901 at `/case-00901.html` are the version-6 pages.
 - **Submission texts:** [`docs/submission/`](docs/submission/) · **Architecture:** [`docs/architecture.md`](docs/architecture.md)
