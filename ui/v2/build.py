@@ -698,7 +698,7 @@ WHAT_THE_FIGURES_ARE = "These figures are development data."
 # case.
 NOT_FOUND_TITLE = "Tribunal - page not found"
 NOT_FOUND_DESCRIPTION = (
-    "This page does not exist; the queue lists every dispute this site replays."
+    "This page does not exist; start from the home page or the version-8 cases."
 )
 
 # The set order, as an index. The queue's row order is this order and then the
@@ -2841,9 +2841,10 @@ def _mode_text(version: Any) -> str:
 
 
 def _topbar(mode: str, current: str) -> str:
-    """The top bar: the product, the queue, and the run being replayed.
+    """The top bar: the product, the way back to the site, and the queue.
 
-    The header carries the queue alone. The replay beside this site is the
+    The header carries the way back to the site -- the home page and the
+    version-8 cases -- and the queue. The replay beside this site is the
     benchmark replay at policy version 1 -- historical, and not the pipeline
     these pages show -- and a judge who met it in the header went to the
     historical figures first, so it sits in the footer with the label that says
@@ -2859,9 +2860,12 @@ def _topbar(mode: str, current: str) -> str:
     )
     return (
         '<header class="top">\n<div class="top-in">\n'
-        '<a class="brand" href="queue.html"><span class="mark">{0}</span>Tribunal'
+        '<a class="brand" href="index.html"><span class="mark">{0}</span>Tribunal'
         "</a>\n"
-        '<nav class="nav" aria-label="Sites">{1}</nav>\n'
+        '<nav class="nav" aria-label="Sites">'
+        '<a href="index.html">Home</a>'
+        '<a href="v8-cases.html">Version-8 cases</a>'
+        "{1}</nav>\n"
         '<span class="mode">{2}</span>\n'
         "</div>\n</header>\n"
     ).format(SCALES_MARK, queue, _text(mode))
@@ -3524,8 +3528,9 @@ def build_not_found(cases: Sequence[CaseData]) -> str:
 
     It is built with the pages rather than beside them, so ``--check`` covers it
     and a rebuild cannot leave it behind, and it is in the site's own style: the
-    same top bar, the same footer, and the two links a lost reader needs -- the
-    queue, and the no-show case the landing page sends a reader to.
+    same top bar, the same footer, and the four links a lost reader needs -- the
+    home page, the version-8 cases, the queue, and the no-show case the landing
+    page sends a reader to.
     """
     if not cases:
         raise BuildError("the 404 page needs a case to read the footer from")
@@ -3536,9 +3541,12 @@ def build_not_found(cases: Sequence[CaseData]) -> str:
         + '<header class="pagehead">\n'
         + "<h1>This page does not exist</h1>\n"
         + '<p class="lede">The address you followed is not one of this site\'s '
-        "pages. Every dispute is one page, and the queue lists them all.</p>\n"
+        "pages. Start from the home page or the version-8 cases; the queue and "
+        "case 208 are the version-6 history.</p>\n"
         + "</header>\n"
         + '<p class="links">'
+        + '<a href="index.html">The home page</a>'
+        + '<a href="v8-cases.html">Version-8 cases</a>'
         + '<a href="queue.html">The queue</a>'
         + '<a href="{0}">Case {1}: how it was decided</a>'
         "</p>\n".format(

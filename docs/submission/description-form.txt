@@ -13,9 +13,10 @@ Fare and surge disputes (v2.1 Section 3, the organisers' DISP-003) are out of
 this prototype's scope by our choice; v2.1 itself lets the AI rule them, and
 they are on the roadmap.
 
-The users are Ryde's support team and the two parties. An agent works the queue;
-a reviewer takes an escalation packet and opens an evidence window; both read
-the records through the read-only WorkBuddy connector. A decision is written to
+The users are Ryde's support team and the two parties. In the version-6
+operations layer, an agent works the queue, a reviewer takes an escalation
+packet and opens an evidence window, and both read the records through the
+read-only WorkBuddy connector. A decision is written to
 both sides: each ruling produces a notice text for both parties (shown on the
 case page; the prototype sends nothing), naming the evidence and the clause it
 rests on. Version 8 has no appeal clause yet; the version-6 operations layer
@@ -128,8 +129,8 @@ Built on Tencent Cloud. Built in WorkBuddy (a row per session in
 docs/buddy-log/README.md); every model call goes to Tencent Cloud MaaS
 (TokenHub, endpoint measured in
 docs/notes/2026-09-21-tokenhub-api-facts.md) serving DeepSeek; the site is
-hosted on Tencent EdgeOne Pages; support staff reach the records through the
-read-only connector integrations/workbuddy/. The code, the tests and these
+hosted on Tencent EdgeOne Pages; support staff reach the version-6 records
+through the read-only connector integrations/workbuddy/. The code, the tests and these
 documents were written in WorkBuddy session by session.
 
 Responsible AI. A person decides every case the panel cannot, and the money
@@ -161,7 +162,12 @@ development data the team tuned against: a median of 153.1 s a case and 299.4 s
 at the 90th percentile from filing to a decision, 28 of 40 ruled by the AI with
 no person needed, and a median model cost of 0.0390 USD a case. The baseline is
 the brief's: a human review takes 24 to 72 hours, so minutes are that work. At
-version 6, the team's own policy frozen on 2026-10-11, python3 -m
+1,000 disputes a day, the median cost comes to about 1,170 USD a month in model
+calls (0.039 x 1,000 x 30), before hosting and human review; and if that share
+held, 70%, with a reviewer spending 15 minutes a case (our assumption, not a
+measurement), the 700 decisions with no person would free about 175
+reviewer-hours a day, the work of about 22 reviewers on 8-hour days. At version
+6, the team's own policy frozen on 2026-10-11, python3 -m
 eval.business_value --report reads the 151 disputes of the four version-6 runs:
 the median time to a decision of 160.4 seconds and the 90th percentile of 286.9
 seconds, and the median cost per case is 0.0579 USD. Of the 151, 112 are decided

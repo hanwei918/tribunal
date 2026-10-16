@@ -707,12 +707,15 @@ class SelfContainedTests(unittest.TestCase):
                     self.assertNotIn(tag, text, "{0} embeds {1}".format(name, tag))
 
     def test_every_link_stays_inside_the_site(self):
-        """A link is a page here, the replay, a copied asset, one named URL, or a
-        fragment.
+        """A link is a page here, the replay, another builder's page, a copied
+        asset, one named URL, or a fragment.
 
         Every page carries a link to the evaluation replay beside it. That link
         is checked against the file on disk, because the replay is a second site
-        this builder does not write. The queue's results line points at the
+        this builder does not write. A link to a page in ``PRODUCT_SITE_PATHS``
+        -- the pages the other builders write -- is checked against the file on
+        disk the same way, because those pages share ``ui/dist/`` and are not
+        this builder's to build. The queue's results line points at the
         repository's own page, and is the one link a page carries that leaves the
         site; it is named in ``EXTERNAL_LINKS`` rather than passed over silently,
         and every other link is a file the builder copies in, one of the pages
@@ -743,6 +746,16 @@ class SelfContainedTests(unittest.TestCase):
                         self.assertTrue(
                             (v2.DIST_DIR / url).is_file(),
                             "the replay page {0} is not committed".format(url),
+                        )
+                        continue
+                    if url in PRODUCT_SITE_PATHS:
+                        # A page another builder writes, sharing ``ui/dist/``
+                        # with this one: it is not this builder's to build, so it
+                        # is checked against the file on disk the way the replay
+                        # link is.
+                        self.assertTrue(
+                            (v2.DIST_DIR / url).is_file(),
+                            "{0} links to {1}, which is not committed".format(name, url),
                         )
                         continue
                     if url in SITE_ASSETS:
@@ -1641,9 +1654,31 @@ class FrontDoorTests(unittest.TestCase):
                 self.assertNotIn("Evaluation replay", text)
                 self.assertIn(">Queue</a>", text)
                 self.assertIn('class="mark"', text)
-                # The nav is the queue alone: the replay link is not in it.
+                # The nav leads back to the site and to the queue: the replay link is not in it.
                 nav = text[text.index('<nav class="nav"'):text.index("</nav>")]
                 self.assertNotIn(v2.REPLAY_LABEL, nav)
+
+    def test_every_page_leads_back_to_the_site(self):
+        """Every page's header carries the way back to the site and the queue.
+
+        The brand and the nav both lead back: the brand to the home page, and
+        the nav to the home page, the version-8 cases and the queue, in that
+        order. These are the version-6 support pages, and a reader who arrives
+        from a version-6 case page has no other way back to the site.
+        """
+        home = '<a href="index.html">Home</a>'
+        cases = '<a href="v8-cases.html">Version-8 cases</a>'
+        for name, text in sorted(built_pages().items()):
+            with self.subTest(page=name):
+                self.assertIn('<a class="brand" href="index.html">', text)
+                nav = text[text.index('<nav class="nav"'):text.index("</nav>")]
+                self.assertIn(home, nav, "the nav does not lead to the home page")
+                self.assertIn(
+                    cases, nav, "the nav does not lead to the version-8 cases"
+                )
+                self.assertIn(">Queue</a>", nav, "the nav does not lead to the queue")
+                self.assertLess(nav.index(home), nav.index(cases))
+                self.assertLess(nav.index(cases), nav.index(">Queue</a>"))
 
     def test_the_top_bar_names_the_run_every_page_replays(self):
         """The bar says what the pages are; the model is named in the footer."""
@@ -2777,6 +2812,28 @@ class NotFoundTests(unittest.TestCase):
         self.assertIn(
             '<a href="case-{0:05d}.html">'.format(v2.HOW_IT_WAS_DECIDED_CASE), text
         )
+
+    def test_the_page_links_to_the_home_page_and_the_version_8_cases(self):
+        """The 404 page sends the reader to the site before it sends them on.
+
+        The home page and the version-8 cases come first, because they are what
+        the site applies now; the queue and case 208, which the other test holds,
+        are the version-6 history and follow them.
+        """
+        text = self.page()
+        home = '<a href="index.html">The home page</a>'
+        cases = '<a href="v8-cases.html">Version-8 cases</a>'
+        queue = '<a href="queue.html">The queue</a>'
+        self.assertIn(home, text)
+        self.assertIn(cases, text)
+        self.assertLess(text.index(home), text.index(queue))
+        self.assertLess(text.index(cases), text.index(queue))
+        for url in ("index.html", "v8-cases.html"):
+            with self.subTest(url=url):
+                self.assertTrue(
+                    (v2.DIST_DIR / url).is_file(),
+                    "{0} is not a file under ui/dist/".format(url),
+                )
 
     def test_the_page_is_in_the_site_s_own_shell(self):
         text = self.page()

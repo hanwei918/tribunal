@@ -15,6 +15,8 @@
 
 <p align="center"><sub>Poster made with Miora (Tencent); the people in it are generated, not real people.</sub></p>
 
+<p align="center"><sub>A hackathon prototype for the Ryde challenge of the 2026 Tencent Cloud AI Singapore Hackathon, not affiliated with or endorsed by Ryde. Every case except the organisers' samples 901, 902 and 903 is synthetic or semi-synthetic.</sub></p>
+
 <p align="center"><img src="docs/overview.svg" alt="Tribunal at a glance: the three core agents, the code around them and where a person decides" width="760"></p>
 
 **Tribunal applies Ryde's own Dispute Resolution Policy v2.1, with Ryde's
@@ -28,6 +30,13 @@ and a person decides.
 
 Built for the 2026 Tencent Cloud AI Singapore Hackathon (Digital Native track, the
 Ryde challenge) by team Newbee, with WorkBuddy.
+
+**On Tencent Cloud.** Every model call goes to Tencent Cloud TokenHub:
+`deepseek/deepseek-flash` in the Singapore region, set once in
+`tribunal/model.py`. The site is static pages on Tencent EdgeOne Pages. Two
+Tencent models were tried first and set aside: `hy3` failed the output contract
+on early cases, and `hy4-preview` took 4.6 times the wall clock on the one case
+the two could be compared on ([the decision](docs/notes/2026-09-23-runtime-model-decision.md)).
 
 **Start here.**
 
