@@ -701,6 +701,25 @@ NOT_FOUND_DESCRIPTION = (
     "This page does not exist; start from the home page or the version-8 cases."
 )
 
+# The 404 page's Chinese line, and its four links: where each goes, the card's
+# language when it is not the page's, its kicker, its title and its line. The
+# Chinese is written as escapes because this file is ASCII; the page escapes it
+# again, as every page the site's shell builds does.
+NOT_FOUND_ZH = (
+    "\u6b64\u9875\u9762\u4e0d\u5b58\u5728\uff1a\u4f60\u6253\u5f00\u7684"
+    "\u5730\u5740\u4e0d\u662f\u672c\u7ad9\u7684\u9875\u9762\u3002"
+)
+NOT_FOUND_LINKS: Tuple[Tuple[str, str, str, str, str], ...] = (
+    ("index.html", "", "Start here", "The home page",
+     "What Tribunal is, and how it decides a dispute."),
+    ("v8-cases.html", "", "Version 8", "The version-8 cases",
+     "Every case decided at the policy Tribunal applies now."),
+    ("cases.html#all", "", "History", "Version 6",
+     "Every version-6 dispute, in the cases page's table."),
+    ("index.zh.html", ' lang="zh-CN"', "\u4e2d\u6587",
+     "\u4e2d\u6587\u9996\u9875", "\u4ece\u4e2d\u6587\u9996\u9875\u5f00\u59cb\u3002"),
+)
+
 # The set order, as an index. The queue's row order is this order and then the
 # case number; nothing about a directory listing or an interpreter's string hash
 # seed may decide it.
@@ -3527,41 +3546,40 @@ def build_not_found(cases: Sequence[CaseData]) -> str:
     """The page a host serves for an address that is not one of the site's.
 
     It is built with the pages rather than beside them, so ``--check`` covers it
-    and a rebuild cannot leave it behind, and it is in the site's own style: the
-    same top bar, the same footer, and the four links a lost reader needs -- the
-    home page, the version-8 cases, the queue, and the no-show case the landing
-    page sends a reader to.
+    and a rebuild cannot leave it behind. It wears the product site's own shell
+    -- the header, the language switch and the footer every page of the site
+    carries, read from the cases page by :func:`ui.v8.build.page` -- and says so
+    in English and in Chinese, with the four links a lost reader needs: the home
+    page, the version-8 cases, the version-6 history and the Chinese home page.
+    ``cases`` is not read: the page is about the site, not about a run.
     """
-    if not cases:
-        raise BuildError("the 404 page needs a case to read the footer from")
-    configuration = cases[0].document.get("configuration") or {}
-    body = (
-        _topbar(_mode_text(configuration.get("policy_version")), "none")
-        + '<main class="wrap">\n'
-        + '<header class="pagehead">\n'
-        + "<h1>This page does not exist</h1>\n"
-        + '<p class="lede">The address you followed is not one of this site\'s '
-        "pages. Start from the home page or the version-8 cases; the queue and "
-        "case 208 are the version-6 history.</p>\n"
-        + "</header>\n"
-        + '<p class="links">'
-        + '<a href="index.html">The home page</a>'
-        + '<a href="v8-cases.html">Version-8 cases</a>'
-        + '<a href="queue.html">The queue</a>'
-        + '<a href="{0}">Case {1}: how it was decided</a>'
-        "</p>\n".format(
-            _attribute("case-{0:05d}.html".format(HOW_IT_WAS_DECIDED_CASE)),
-            _text(HOW_IT_WAS_DECIDED_CASE),
-        )
-        + _footer(cases[0])
-        + "\n</main>\n"
+    # Imported here rather than at the top: ``ui.v8.build`` imports this module.
+    from ui.v8 import build as v8
+
+    cards = "".join(
+        '<a class="card" href="{0}"{1}><span class="kicker">{2}</span>'
+        "<h3>{3}</h3><p>{4}</p></a>".format(href, lang, kicker, title, text)
+        for href, lang, kicker, title, text in NOT_FOUND_LINKS
     )
-    return _shell(
-        NOT_FOUND_TITLE,
-        body,
+    main = (
+        '<section class="band phero"><div class="wrap">\n'
+        '<p class="crumb"><a href="index.html">Home</a> / Page not found</p>\n'
+        '<h1 class="display">This page does not exist.</h1>\n'
+        '<p class="lede">The address you followed is not one of this site\'s '
+        "pages.</p>\n"
+        '<p class="lede" lang="zh-CN">{0}</p>\n'
+        "</div></section>\n"
+        '<section class="paper"><div class="wrap">\n'
+        '<div class="cards c4">{1}</div>\n'
+        "</div></section>"
+    ).format(NOT_FOUND_ZH, cards)
+    return v8.page(
+        v8.EN,
+        title=NOT_FOUND_TITLE,
         description=NOT_FOUND_DESCRIPTION,
-        canonical=SITE_ROOT + NOT_FOUND_LINK,
-        og_type=OG_TYPE_SITE,
+        main=main,
+        en_href="index.html",
+        zh_href="index.zh.html",
     )
 
 

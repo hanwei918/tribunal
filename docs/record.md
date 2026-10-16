@@ -780,8 +780,9 @@ subject to the PDPA without this repository making any compliance claim.
   [the version-8 runs](notes/2026-10-14-version-8-runs.md)).
 - **Version 8 has no appeal clause.** v2.1 has none, and the operations layer that
   offers one appeal within 30 days -- the appeal, the queue, the review, the risk
-  signals and the escalation packet -- reads the version-6 runs
-  ([`ops/appeal.py`](../ops/appeal.py), [`ops/queue.py`](../ops/queue.py),
+  signals and the escalation packet -- was written for version 6; the queue and
+  the packet read a version-8 run too, but the queue's reasons name version-6
+  clauses ([`ops/appeal.py`](../ops/appeal.py), [`ops/queue.py`](../ops/queue.py),
   [`ops/review.py`](../ops/review.py), [`ops/risk.py`](../ops/risk.py),
   [`ops/escalation.py`](../ops/escalation.py)).
 - **The try-it phone replays recorded runs.** Five version-8 cases; four

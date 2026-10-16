@@ -223,7 +223,9 @@ run that shows it.
   testing. Tribunal keeps C15 and states it
   ([the version-8 runs](docs/notes/2026-10-14-version-8-runs.md)).
 - **Version 8 has no appeal clause**, and the operations layer -- appeal, queue,
-  review, risk and the escalation packet -- reads the version-6 runs (`ops/`).
+  review, risk and the escalation packet -- was written for version 6 (`ops/`):
+  the queue and the packet read a version-8 run too, but the queue's reasons
+  name version-6 clauses.
 - **The try-it phone replays recorded runs**: five version-8 cases, with four
   version-8 rules applied in the browser to a reader's changes; its generator is
   not in this repository.
