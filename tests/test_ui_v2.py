@@ -107,6 +107,7 @@ from tribunal import pipeline as pipeline_module  # noqa: E402
 from tribunal import referee as referee_module  # noqa: E402
 from ui.site import build as site_build  # noqa: E402
 from ui.v2 import build as v2  # noqa: E402
+from ui.v6 import build as v6_build  # noqa: E402
 from ui.v8 import build as v8_build  # noqa: E402
 
 # The four runs the site is drawn from, and the case root each set loads through.
@@ -145,6 +146,10 @@ SEALED_ROOTS: Tuple[Path, ...] = (
 
 CASE_FILE_RE = re.compile(r"^case-(\d{5})\.json$")
 TRANSCRIPT_RE = re.compile(r"^case-(\d{5})\.transcript\.json$")
+
+# One page of this builder's, keyed by ``case.link``: ``case-<NNNNN>.html``.
+# :func:`as_written` reads the case number out of such a key.
+CASE_PAGE_KEY_RE = re.compile(r"^case-(\d{5})\.html$")
 
 # The four escalation reason codes, as the builder derives them. The first two
 # are the pipeline's own named codes; the other two are the names the builder
@@ -194,13 +199,15 @@ SITE_ASSET_PATHS = frozenset(
 )
 
 # The paths the other builders write, which share ``ui/dist/`` with this one.
-# Four builders write into that root -- the queue here, the evaluation replay
-# under ``replay/``, the product site ``ui.site.build`` and the version-8 case
-# pages ``ui.v8.build`` -- and each test module covers its own builder's files,
-# so the walk below reads the files this builder writes and skips theirs. The
-# lists are asked of the builders that write them rather than typed here, so
-# they cannot drift from what is built.
-PRODUCT_SITE_PATHS = site_build.written_paths() | v8_build.written_paths()
+# Five builders write into that root -- the queue here, the evaluation replay
+# under ``replay/``, the product site ``ui.site.build``, the version-8 case pages
+# ``ui.v8.build`` and the version-6 case pages ``ui.v6.build`` -- and each test
+# module covers its own builder's files, so the walk below reads the files this
+# builder writes and skips theirs. The lists are asked of the builders that
+# write them rather than typed here, so they cannot drift from what is built.
+PRODUCT_SITE_PATHS = (
+    site_build.written_paths() | v8_build.written_paths() | v6_build.written_paths()
+)
 
 
 # --------------------------------------------------------------------------
@@ -378,6 +385,25 @@ def built_pages() -> Dict[str, str]:
     return _PAGES
 
 
+def as_written(pages: Mapping[str, str]) -> Dict[str, str]:
+    """The pages keyed by the path this builder now writes each one at.
+
+    :func:`built_pages` keys a case page by ``case.link`` -- ``case-<NNNNN>.html``
+    -- because that is the name the queue, the tables and every link on the site
+    use. Part 106 moved the product view's **own** page for a case to
+    ``review-<NNNNN>.html``: the page a reader meets at ``case.link`` is
+    ``ui.v6.build``'s, in both languages, and it links on to the reviewer's page.
+    The two tests that compare ``built_pages()`` with what is in ``ui/dist/``
+    therefore compare this instead, so they still hold the builder's own bytes
+    to the files it wrote and to nothing else.
+    """
+    written: Dict[str, str] = {}
+    for name, text in pages.items():
+        match = CASE_PAGE_KEY_RE.match(name)
+        written[v2.review_link_for(int(match.group(1))) if match else name] = text
+    return written
+
+
 def loaded_cases() -> List[Any]:
     """The cases the one build read, as ``ui.v2``'s own data objects.
 
@@ -522,7 +548,7 @@ class DeterminismTests(unittest.TestCase):
         self.assertNotIn("does not exist", result.stdout)
 
     def test_two_builds_are_byte_identical(self):
-        first = built_pages()
+        first = as_written(built_pages())
         again = second_build()
         self.assertEqual(sorted(first), sorted(again), "the two builds made different files")
         differing = sorted(name for name in first if first[name] != again[name])
@@ -555,7 +581,7 @@ class DeterminismTests(unittest.TestCase):
 
     def test_every_committed_page_equals_a_fresh_build(self):
         committed = committed_pages()
-        built = built_pages()
+        built = as_written(built_pages())
         self.assertEqual(sorted(built), sorted(committed))
         for name in sorted(built):
             with self.subTest(page=name):

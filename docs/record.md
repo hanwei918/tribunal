@@ -786,8 +786,15 @@ subject to the PDPA without this repository making any compliance claim.
   policy and not v2.1, and the live service is off
   ([`ui/dist/try-config.js`](../ui/dist/try-config.js), [`tryit/`](../tryit/)).
 - **The 151 version-6 case pages are history.** They are the team's own policy
-  frozen on 2026-10-11, not what Tribunal applies now
-  ([`ui/dist/case-*.html`](../ui/dist), [`ui/v2/build.py`](../ui/v2/build.py)).
+  frozen on 2026-10-11, not what Tribunal applies now. Each is written in English
+  and Chinese in the site's own design (`case-<NNNNN>.html` and
+  `case-<NNNNN>.zh.html`, 302 files, built by `python3 -m ui.v6.build`), each
+  linking to the reviewer's page with every step of the decision, the escalation
+  packet and the review form (`review-<NNNNN>.html`), and the queue at
+  `/queue.html`, both built by `python3 -m ui.v2.build` from the four version-6
+  runs
+  ([`ui/dist/case-*.html`](../ui/dist), [`ui/v6/build.py`](../ui/v6/build.py),
+  [`ui/v2/build.py`](../ui/v2/build.py)).
 - **The v2.1 precedents are not in the precedent library.** v2.1 7.1, 7.2 and 7.3
   are named as precedents of this version, and none of the three is in
   [`precedents/precedents.jsonl`](../precedents/precedents.jsonl); the judge is

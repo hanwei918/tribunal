@@ -1,10 +1,10 @@
-"""One command for a judge -- the ten steps, and a stub that fails one of them.
+"""One command for a judge -- the eleven steps, and a stub that fails one of them.
 
 ``tools/verify.py`` runs the test suite, the four reports, the figure check and
-the four builders' currency checks, and prints one line each. This module holds
+the five builders' currency checks, and prints one line each. This module holds
 it to two things:
 
-* **The step list is exactly the ten the sheet names**, in order, and
+* **The step list is exactly the eleven the sheet names**, in order, and
   ``--quick`` drops the test suite and nothing else. A step added or dropped is a
   step a judge is not told about.
 * **A failing step is reported and makes the command fail.** Each step is
@@ -36,7 +36,7 @@ from tools import verify  # noqa: E402
 
 MODULE = PROJECT_ROOT / "tools" / "verify.py"
 
-# The ten steps, by the name the report gives each, in order. Stated here once
+# The eleven steps, by the name the report gives each, in order. Stated here once
 # so the command's own list and this one cannot drift apart silently.
 EXPECTED_STEPS = (
     "tests",
@@ -49,6 +49,7 @@ EXPECTED_STEPS = (
     "ui.build",
     "ui.site.build",
     "ui.v8.build",
+    "ui.v6.build",
 )
 
 
@@ -62,9 +63,9 @@ def stub_failing_at(index: int) -> Callable[[Sequence[str]], int]:
 
 
 class TheStepListTests(unittest.TestCase):
-    """The ten steps, in order, and what ``--quick`` drops."""
+    """The eleven steps, in order, and what ``--quick`` drops."""
 
-    def test_the_step_list_is_exactly_the_ten(self):
+    def test_the_step_list_is_exactly_the_eleven(self):
         self.assertEqual(EXPECTED_STEPS, tuple(step.name for step in verify.STEPS))
 
     def test_the_suite_is_the_first_step(self):
@@ -95,7 +96,7 @@ class TheStubTests(unittest.TestCase):
 
     def setUp(self):
         # These tests are about the step list and the exit code, not the
-        # platform: on Linux the platform skip reports the five case-reading
+        # platform: on Linux the platform skip reports the six case-reading
         # steps as SKIP before any stub is reached, so it is forced off here.
         patcher = mock.patch.object(
             verify, "the_platform_moves_a_recorded_brief", lambda: False

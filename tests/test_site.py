@@ -193,7 +193,7 @@ def queue_paths() -> Set[str]:
     names = {v2.INDEX_PATH.name, v2.NOT_FOUND_PATH.name}
     names |= {path.relative_to(v2.DIST_DIR).as_posix() for path, _ in v2.assets()}
     names |= {
-        "case-{0:05d}.html".format(case_no)
+        v2.review_link_for(case_no)
         for set_name in v2.SET_ORDER
         for case_no in v2._case_numbers(v2._run_for(set_name).run_dir)
     }
@@ -372,9 +372,12 @@ ENGLISH_QUEUE_WORDS = frozenset(
     }
 )
 
-# The four columns whose cells are the run's own values and are written the same
-# in both languages.
-SAME_IN_BOTH = ("case", "amount", "confidence", "time")
+# The three columns whose cells are the run's own values and are written the same
+# in both languages. The case column is the fourth, and it is compared by its own
+# rule: its text is the case number in both rows, but the cell is a link, and the
+# Chinese row's link names the Chinese twin of the case page the English row
+# links to.
+SAME_IN_BOTH = ("amount", "confidence", "time")
 
 
 class TheQueueTableTests(unittest.TestCase):
@@ -436,7 +439,12 @@ class TheQueueTableTests(unittest.TestCase):
         self.assertEqual(151, len(self.rows_of(pages()["cases.html"])))
 
     def test_the_chinese_table_is_the_same_rows_with_the_values_unchanged(self):
-        """Same case, amount, confidence, time and status class as the English row."""
+        """Same case, amount, confidence, time and status class as the English row.
+
+        The case cell is the one place the two rows differ, and only by the
+        language suffix on its link: the English row links to ``case-<NNNNN>.html``
+        and the Chinese row to its ``.zh.html`` twin.
+        """
         portability.require_the_same_libm()
         english = self.rows_of(pages()["cases.html"])
         chinese = self.rows_of(pages()["cases.zh.html"])
@@ -449,6 +457,11 @@ class TheQueueTableTests(unittest.TestCase):
                 self.assertEqual(self.chip_classes_of(one), self.chip_classes_of(other))
                 for column in SAME_IN_BOTH:
                     self.assertEqual(cells[column], self.cells_of(other)[column])
+                self.assertEqual(
+                    cells["case"],
+                    self.cells_of(other)["case"].replace(".zh.html", ".html"),
+                    "the case cell differs by more than the language suffix",
+                )
 
     def test_no_english_word_from_the_queue_is_left_in_a_chinese_row(self):
         portability.require_the_same_libm()

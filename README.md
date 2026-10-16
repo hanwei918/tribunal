@@ -15,6 +15,8 @@
 
 <p align="center"><sub>Poster made with Miora (Tencent); the people in it are generated, not real people.</sub></p>
 
+<p align="center"><img src="docs/overview.svg" alt="Tribunal at a glance: the three core agents, the code around them and where a person decides" width="760"></p>
+
 **Tribunal applies Ryde's own Dispute Resolution Policy v2.1, with Ryde's
 answers of 2026-10-14** (policy version 8). It settles ride-hail disputes in
 under three minutes at the median, and stops when it isn't sure.
@@ -39,7 +41,7 @@ Ryde challenge) by team Newbee, with WorkBuddy.
 
 The front page is the **product site** the policy owner, Ji Guofang, designed outside WorkBuddy: **eleven pages**, each in English (`*.html`) and Chinese (`*.zh.html`), with her images and a try-it page that runs this repository's own Python in the browser.
 The site holds three layers of pages. The **version-8 case pages** are what Tribunal applies now: `v8-cases.html` indexes all 42 version-8 cases, and each of them has a page of its own in both languages, 86 files in all, built by `python3 -m ui.v8.build` from the committed runs.
-The **version-6 pages** are history: the queue at `/queue.html` and the 151 version-6 case pages, built by `python3 -m ui.v2.build` from the four version-6 runs.
+The **version-6 pages** are history: the 151 version-6 case pages, each in English and Chinese in the site's own design (`case-<NNNNN>.html` and `case-<NNNNN>.zh.html`, 302 files, built by `python3 -m ui.v6.build`), each linking to the reviewer's page with every step of the decision, the escalation packet and the review form (`review-<NNNNN>.html`), and the queue at `/queue.html`, both built by `python3 -m ui.v2.build` from the four version-6 runs.
 And the try-it page runs the **version-6** policy in the browser: the live try-it service stays **off**, because `try-config.js` leaves its address empty, so the page's in-browser checks run and no live run is offered.
 Her design, her page text and her front-end code are hers, imported unchanged and built here by `ui/site/build.py`; the try-it service `tryit/` is hers too.
 
@@ -106,6 +108,7 @@ python3 -m eval.v8_report --report              # the version-8 figures above
 python3 -m eval.development_sets --report       # every registered set's own result
 python3 -m eval.sealed_report --set sealed-v4   # the version-7 sealed run
 python3 -m ui.v8.build --check                  # the version-8 case pages
+python3 -m ui.v6.build --check                  # the version-6 case pages, both languages
 python3 -m unittest discover -s tests           # the full suite
 ```
 
@@ -133,6 +136,7 @@ concurrency, its timeout and the prompt directory it pairs with.
 | `python3 -m eval.development_sets --report` | Every registered set's own result, at the policy version it was written for |
 | `python3 -m eval.sealed_report --set sealed-v4` | The version-7 sealed run's result against its own key |
 | `python3 -m ui.v8.build --check` | The 42 version-8 case pages, held to a fresh build |
+| `python3 -m ui.v6.build --check` | The 151 version-6 case pages in English and Chinese, held to a fresh build |
 | `python3 -m tools.verify` | Every check this repository ships, in one command |
 | `python3 -m eval.v6_runs --report` (version-6 runs) | Agreement, escalation precision and recall, cost and time for every version-6 run |
 | `python3 -m eval.fairness --report` (version-6 runs) | Errors by side, position-swap agreement, calibration |
@@ -201,7 +205,9 @@ run that shows it.
 - **The try-it page runs version 6**, in the browser, with the live service off
   (`tryit/`, `ui/dist/try-config.js`).
 - **The 151 version-6 case pages are history**: the team's own policy frozen on
-  2026-10-11, not what Tribunal applies now (`ui/dist/case-*.html`).
+  2026-10-11, not what Tribunal applies now
+  (`ui/dist/case-*.html`, in English and Chinese; the parties' words and the
+  agents' reasoning stay in English).
 - **The v2.1 precedents (7.1-7.3) are not in the precedent library**, and the
   judge is not shown them by default (`precedents/precedents.jsonl`).
 - **Confidence is the judge's own figure capped by the evidence weights**, not

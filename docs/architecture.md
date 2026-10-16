@@ -37,8 +37,11 @@ image: each file stands alone.
 of the system are deliberately still version 6: the **operations layer** -- the
 queue, the escalation packet, the review, the appeal and the risk signals under
 `ops/`, which read the version-6 runs; the **try-it page**, which briefs at
-version 6 in the browser; and the **151 version-6 case pages** under
-`ui/dist/case-*.html`, which are history. The README says so in its own words,
+version 6 in the browser; and the **151 version-6 case pages**, which are
+history: each is written in English and Chinese in the site's own design
+(`case-<NNNNN>.html` and `case-<NNNNN>.zh.html`, 302 files), and each links to
+the reviewer's page (`review-<NNNNN>.html`) with every step of the decision, the
+escalation packet and the review form. The README says so in its own words,
 one line each, in [Roadmap and known limits](../README.md#roadmap-and-known-limits).
 
 ## 1. System context: who uses it, and what it needs
@@ -208,13 +211,17 @@ named checks. Every threshold the layer uses is read from the policy or from
 `ops/config.json` rather than typed. Version 8's own appeal clause does not
 exist yet: this layer is on the roadmap.
 
-**Site builders.** Three of them write the static HTML a reviewer reads.
+**Site builders.** Four of them write the static HTML a reviewer reads.
 `ui/site/build.py` writes the product site, every page in English and Chinese.
 `ui/v8/build.py` writes the 42 version-8 cases, two languages each, and their
 index, `ui/dist/v8-cases.html`: these are what a reviewer reads for a version-8
-run, 86 files in all, built from the committed version-8 runs. `ui/v2/build.py`
-writes the version-6 queue, the version-6 case pages and the review form, drawn
-from the version-6 runs. Between them they read `data/`, `policy/` and the
+run, 86 files in all, built from the committed version-8 runs. `ui/v6/build.py`
+writes the 151 version-6 case pages, each in English and Chinese in the site's
+own design (`case-<NNNNN>.html` and `case-<NNNNN>.zh.html`, 302 files), each
+linking to the reviewer's page with every step of the decision, the escalation
+packet and the review form. `ui/v2/build.py` writes the version-6 queue, that
+reviewer's page (`review-<NNNNN>.html`) and the review form, drawn from the
+version-6 runs. Between them they read `data/`, `policy/` and the
 committed runs.
 
 **WorkBuddy connector.** `integrations/workbuddy/`: a read-only MCP server whose

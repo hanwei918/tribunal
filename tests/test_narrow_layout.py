@@ -52,8 +52,8 @@ CLOCK_RULE = ".clock{white-space:nowrap;overflow-wrap:normal;word-break:normal}"
 # The case page whose chat table is read -- its time cell is a clock that the
 # monospace style would otherwise break across two lines -- and the shared
 # stylesheet every built page carries the new rule in.
-CLOCK_CASE_PAGE = "case-02853.html"
-CLOCK_PAGES = ("case-02853.html", "queue.html")
+CLOCK_CASE_PAGE = "review-02853.html"
+CLOCK_PAGES = ("review-02853.html", "queue.html")
 
 # The note part 59 copies in beside this module's subject, and the digest it is
 # held to. The note's link to the 2026-10-12 scan resolves from the same folder.
@@ -114,8 +114,8 @@ class TheCasePageChipWrapsTests(unittest.TestCase):
     def test_the_built_case_page_carries_the_rule(self):
         self.assertIn(
             CHIP_RULE,
-            built("case-00207.html"),
-            "ui/dist/case-00207.html does not carry the item-1 chip rule",
+            built("review-00207.html"),
+            "ui/dist/review-00207.html does not carry the item-1 chip rule",
         )
 
     def test_the_built_queue_chip_rule_still_does_not_wrap(self):

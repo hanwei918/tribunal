@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Case 201 - No-show fee</title>
+<meta name="description" content="No-show fee - I was standing at Blk 118 Rivervale Drive downstairs from 7.55am.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns=&#x27;http://www.w3.org/2000/svg&#x27;%20viewBox=&#x27;0%200%2024%2024&#x27;%3E%3Crect%20width=&#x27;24&#x27;%20height=&#x27;24&#x27;%20rx=&#x27;5&#x27;%20fill=&#x27;%236d28d9&#x27;/%3E%3Cpath%20d=&#x27;M12%204v16M8%2020h8M5%207h14M5%207L2%2013h6zM19%207l-3%206h6z&#x27;%20fill=&#x27;none&#x27;%20stroke=&#x27;%23ffffff&#x27;%20stroke-width=&#x27;2&#x27;%20stroke-linecap=&#x27;round&#x27;%20stroke-linejoin=&#x27;round&#x27;/%3E%3C/svg%3E">
+<meta property="og:title" content="Case 201 - No-show fee">
+<meta property="og:description" content="No-show fee - I was standing at Blk 118 Rivervale Drive downstairs from 7.55am.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://tribunal.edgeone.dev/case-00201.html">
+<meta property="og:image" content="https://tribunal.edgeone.dev/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+/* The light theme is the default: the palette in :root is what a reader gets
+   when the system asks for no preference, and the dark palette below replaces
+   it only when the system asks for dark. The status colours move with it, so a
+   chip keeps the same contrast on either background. */
+/* 37a.6: the muted token is darker than the #6b7280 it was. That colour
+   measured 4.39:1 on the page background and 4.83:1 on a card, and 4.5:1 is the
+   floor body text is held to, so muted text on the page background was below
+   it. #5b6470 measures 5.45:1 on --bg, 6.00:1 on --card and 5.74:1 on --soft;
+   the three figures are recomputed from this file by tests/test_ui_v2.py. */
+/* 51b.5/51b.6: the accent is the poster's violet, not the blue it was, so the
+   site belongs to the poster it carries. Measured: #6d28d9 is 7.10:1 on --card
+   (#ffffff), 6.46:1 on --bg (#f3f4f6), 6.80:1 on --soft (#f9fafb) and 5.98:1 on
+   --accent-wash (#ede9fe), and white on #6d28d9 is 7.10:1. In the dark palette
+   #c4b5fd is 7.92:1 on --card (#1e293b), 9.67:1 on --bg (#0f172a) and 8.67:1
+   on --soft (#16213a). The header band is #160b0e in both themes: its right-hand
+   readout #c8b8be is 10.16:1 on it and white is 19.3:1. All ten pairs are in
+   tests/test_ui_v2.py's STATED_CONTRAST and are recomputed from this file. */
+/* 51c.1: the accent is a background too, and the text on it needs a token of
+   its own. In the light theme the accent is #6d28d9 and --on-accent is
+   #ffffff, 7.10:1 on it; in the dark theme the accent is #c4b5fd, a light
+   lavender, and --on-accent is #1e1035, 9.63:1 on it. White on the dark accent
+   measured 1.85:1 here, below the 4.5:1 floor, and two rules painted it that
+   way: the filled button and the five numbered circles of How it works. The
+   brand mark was the same -- a white glyph on the accent -- so its SVG strokes
+   take currentColor and the tile carries the token. Both figures are in
+   tests/test_ui_v2.py's STATED_CONTRAST and are recomputed from this file. */
+/* 51d.1: the case page's numbered step circles are a token background too, and
+   their text was white. In the dark theme --grey, --ok and --bad are #cbd5e1,
+   #86efac and #fca5a5, and white on them measured 1.48:1, 1.40:1 and 1.90:1
+   here, all below the 4.5:1 floor. A token --on-status is added -- #ffffff in
+   :root, 10.31:1 on --grey (#374151), 5.02:1 on --ok (#15803d) and 6.47:1 on
+   --bad (#b91c1c), and #0f172a in the dark block, 12.02:1, 12.71:1 and 9.41:1
+   on the same three -- and .stepper button .n i takes it. The model circle
+   keeps --on-accent, because that circle is drawn on the accent and not on one
+   of these. All six pairs are in tests/test_ui_v2.py's STATED_CONTRAST and are
+   recomputed from this file. */
+:root{
+  --bg:#f3f4f6;--card:#ffffff;--line:#e5e7eb;--ink:#111827;--muted:#5b6470;
+  --soft:#f9fafb;--accent:#6d28d9;--accent-wash:#ede9fe;--on-accent:#ffffff;
+  --on-status:#ffffff;
+  --ok:#15803d;--ok-wash:#dcfce7;--bad:#b91c1c;--bad-wash:#fee2e2;
+  --warn:#92400e;--warn-wash:#fef3c7;--grey:#374151;--grey-wash:#f3f4f6;
+  --band:#160b0e;--band-note:#c8b8be;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#0f172a;--card:#1e293b;--line:#334155;--ink:#f1f5f9;--muted:#94a3b8;
+    --soft:#16213a;--accent:#c4b5fd;--accent-wash:#2e1065;--on-accent:#1e1035;
+    --on-status:#0f172a;
+    --ok:#86efac;--ok-wash:#14532d;--bad:#fca5a5;--bad-wash:#7f1d1d;
+    --warn:#fcd34d;--warn-wash:#78350f;--grey:#cbd5e1;--grey-wash:#1e293b;}
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+h1{font-size:1.6rem;line-height:1.25;margin:0 0 6px}
+h2{font-size:1rem;margin:0 0 12px}
+h3{font-size:.92rem;margin:16px 0 6px}
+p{margin:.5em 0}
+/* 51b.6: the header is the poster's dark band in both themes, with a crimson to
+   violet rule along its foot. The brand and the nav are white on it and the
+   right-hand readout is #c8b8be, so the bar reads the same in either theme; the
+   focus ring on it is white rather than the accent, which on #160b0e would be a
+   ring a reader could not see. */
+/* 52b.1: the bar is sticky and 58 px tall -- .top-in's 56 px height and the
+   band's 2 px rule -- and an in-page link landed its target underneath it. The
+   owner measured three at a 1440 x 900 window: the queue's "Safeguards" put the
+   heading 15 px from the top, and "How it works" and a case page's "Why" put
+   their sections at 0 px, so the reader arrived at a section whose heading was
+   hidden. Every element an in-page link can target takes a scroll margin larger
+   than the bar, so the page stops with the heading in view. */
+[id]{scroll-margin-top:72px}
+.top{position:sticky;top:0;z-index:5;background:var(--band);
+  border-bottom:2px solid;border-image:linear-gradient(90deg,#b91c1c,#6d28d9) 1}
+.top-in{max-width:1280px;margin:0 auto;padding:0 24px;height:56px;display:flex;align-items:center;gap:20px}
+.top :focus-visible{outline-color:#ffffff}
+.brand{display:inline-flex;align-items:center;gap:9px;font-weight:700;font-size:17px;text-decoration:none;color:#ffffff}
+/* 51c.1: the mark is a glyph on the accent, so the tile carries --on-accent and
+   the drawing takes currentColor rather than a white of its own. */
+.mark{width:26px;height:26px;border-radius:7px;background:var(--accent);color:var(--on-accent);display:inline-flex;align-items:center;justify-content:center;flex:none}
+.nav{display:flex;align-items:center;gap:2px;flex-wrap:wrap}
+.nav a{padding:7px 12px;border:1px solid rgba(255,255,255,.28);border-radius:8px;text-decoration:none;color:#ffffff;font-weight:500;line-height:1.2}
+.nav a.on{color:#ffffff;background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.5)}
+.mode{margin-left:auto;font-size:13px;color:var(--band-note);white-space:nowrap}
+@media (max-width:700px){.mode{display:none}.top-in{gap:12px;padding:0 16px}}
+.wrap{max-width:1280px;margin:0 auto;padding:26px 24px 56px}
+@media (max-width:700px){.wrap{padding:18px 16px 40px}}
+.lede{color:var(--muted);margin:.3em 0 1.1em;max-width:78ch}
+.ids{color:var(--muted);font-size:.86rem;font-variant-numeric:tabular-nums;margin:0}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.85rem;overflow-wrap:anywhere;word-break:break-word}
+.clock{white-space:nowrap;overflow-wrap:normal;word-break:normal}
+.num{font-variant-numeric:tabular-nums}
+
+/* chips */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0}
+.chip{display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:999px;font-size:13px;font-weight:500;background:var(--grey-wash);color:var(--grey);border:1px solid var(--line);white-space:nowrap}
+.chip.ok{background:var(--ok-wash);color:var(--ok);border-color:transparent}
+.chip.bad{background:var(--bad-wash);color:var(--bad);border-color:transparent}
+.chip.warn{background:var(--warn-wash);color:var(--warn);border-color:transparent}
+/* 58a: on a case page the status chip carries the trigger and the time and can
+   be up to 460 px wide, so at 375 px it ran past the screen edge. The chip row
+   is the case page's own; the queue's Status column draws no .chips row, so its
+   chips still do not wrap. */
+@media (max-width:560px){.chips .chip{white-space:normal;height:auto;min-height:24px;max-width:100%;padding:3px 10px;line-height:1.35}}
+
+/* featured cards */
+.featured{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:18px 0 22px}
+@media (max-width:960px){.featured{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.featured{grid-template-columns:minmax(0,1fr)}}
+.fcard{display:block;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;text-decoration:none;color:var(--ink);
+  transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease}
+/* 51b.9: the whole card is one link, so it lifts under the pointer and carries
+   the way in at its foot. The lift is movement, and that is the one thing the
+   reduce preference takes; the focus ring is the stylesheet's own. */
+.fcard:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.16)}
+.fcard .fcase{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.fcard h2{font-size:.95rem;margin:2px 0 8px}
+.fcard p{margin:.25em 0;font-size:13px;color:var(--muted)}
+.fcard b{color:var(--ink);font-weight:600}
+.fcard .fopen{display:block;margin-top:10px;color:var(--accent);font-weight:600;font-size:.85rem}
+@media (prefers-reduced-motion:reduce){.fcard{transition:none}.fcard:hover{transform:none}}
+
+/* figures */
+.figures{display:flex;flex-wrap:wrap;gap:14px;margin:0 0 22px}
+.figure{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 18px;min-width:168px;flex:1 1 168px}
+.figure .k{color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;margin:0 0 6px}
+.figure .v{font-size:1.9rem;font-weight:650;margin:0}
+.figure .s{color:var(--muted);font-size:.85rem;margin:4px 0 0}
+.figure.wide{flex:1 1 100%}
+/* 51b.8: each lane tile carries its lane's own colour on a 3px top border, and
+   the three figures under them carry the accent. */
+/* 51c.3: the modifiers are named for the tile they draw and not for the colour
+   they use. They were `ok`, `warn`, `bad` and `accent`, and the stylesheet's
+   older global rule `.ok{color:var(--ok);font-weight:600}` -- the one the
+   claims and the notices use -- also matched `<div class="figure ok">`, so the
+   first lane tile's figure turned green and its small print turned semibold
+   while the other two lanes matched no such rule and stayed as they were. The
+   lane rules are `lane-*` now and the global `.ok` is left alone for whatever
+   else uses it; every lane rule is qualified by `.figure`. */
+.figure.lane-ok{border-top:3px solid var(--ok)}
+.figure.lane-warn{border-top:3px solid var(--warn)}
+.figure.lane-bad{border-top:3px solid var(--bad)}
+.figure.lane-accent{border-top:3px solid var(--accent)}
+.triggers{list-style:none;margin:0;padding:0}
+.triggers li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 14px;padding:4px 0;border-bottom:1px solid var(--line)}
+.triggers li:last-child{border-bottom:0}
+.triggers .n{font-weight:650;font-variant-numeric:tabular-nums}
+
+/* table */
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin:0 0 18px}
+.card.wide{padding:0;overflow:hidden}
+.card.wide>h2,.card.wide>p{padding:0 22px}
+.card.wide>h2{margin-top:18px}
+table{border-collapse:collapse;width:100%}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{color:var(--muted);font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover td{background:var(--soft)}
+th.sortable{cursor:pointer;user-select:none}
+td[data-column="time"],td[data-column="confidence"]{white-space:nowrap}
+/* 51b.10: the Outcome column wrapped into five lines -- "Sent to a reviewer -
+   the judge escalated under the policy" -- while Status had room to spare. The
+   column is given a floor, and the note under a status chip is allowed to wrap
+   rather than push the chip wider. The row hover is the --soft rule above. */
+td[data-column="outcome"]{min-width:11rem}
+td[data-column="status"]{white-space:normal;overflow-wrap:anywhere}
+td a{font-weight:600;text-decoration:none}
+
+/* case page */
+.pagehead{margin:0 0 18px}
+/* 51b.4: the queue's head is a hero -- the words on the left and the poster on
+   the right at 1000 px and wider, the poster under the words below that. The h1
+   grows only here, where the poster sits beside it. */
+.hero{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
+.hero h1{font-size:2rem}
+.hero-art{margin:0;min-width:0}
+.hero-art img{display:block;width:100%;height:auto;border-radius:14px;box-shadow:0 10px 26px rgba(0,0,0,.22)}
+.hero-cta{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 0}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:9px;
+  font-weight:600;font-size:.92rem;text-decoration:none;border:1px solid var(--accent)}
+.btn-fill{background:var(--accent);color:var(--on-accent)}
+.btn-out{background:transparent;color:var(--accent)}
+@media (min-width:1000px){
+  .hero{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:30px;align-items:center}
+}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;border-bottom:1px solid var(--line);margin:0 0 22px}
+.tabs button{appearance:none;border:0;background:transparent;color:var(--muted);font:inherit;font-weight:500;padding:9px 13px;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer}
+.tabs button.tab-on{color:var(--ink);border-bottom-color:var(--accent)}
+.verdict{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px 26px;display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:30px;margin:0 0 22px}
+.verdict .word{font-size:2.1rem;font-weight:700;letter-spacing:-.01em;line-height:1.1;margin:0}
+.verdict .code{color:var(--muted);margin:6px 0 0}
+.verdict .lbl{color:var(--muted);font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;margin:18px 0 4px}
+.verdict .why{margin:0;font-size:1rem}
+.verdict .after{margin:14px 0 0;font-size:.9rem;color:var(--muted)}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 20px;align-content:start;border-left:1px solid var(--line);padding-left:26px}
+.tiles div{display:flex;flex-direction:column;gap:2px}
+.tiles b{font-size:1.15rem;font-weight:650}
+.tiles span{font-size:.8rem;color:var(--muted)}
+@media (max-width:960px){.verdict{grid-template-columns:minmax(0,1fr)}.tiles{border-left:0;padding-left:0;border-top:1px solid var(--line);padding-top:16px}}
+.two{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:26px;align-items:start}
+@media (max-width:960px){.two{grid-template-columns:minmax(0,1fr)}}
+.sec{margin:0 0 22px}
+.sides{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:700px){.sides{grid-template-columns:minmax(0,1fr)}}
+.sides>*{min-width:0}
+.two>*{min-width:0}
+.side{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 18px;min-width:0;overflow-wrap:anywhere}
+.side header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.side header small{color:var(--muted)}
+.side ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px}
+.side li{line-height:1.5;overflow-wrap:anywhere}
+.side li s{color:var(--muted)}
+.side .ref{color:var(--muted);font-size:.78rem;margin-left:4px;overflow-wrap:anywhere}
+.side .why{display:block;font-size:.82rem;color:var(--bad);margin-top:2px}
+
+/* rail */
+.rail{display:flex;flex-direction:column;gap:14px}
+.rail details{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:0 16px}
+.rail summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 0;font-weight:600;cursor:pointer}
+.rail summary::-webkit-details-marker{display:none}
+.rail summary span{font-weight:400;color:var(--muted);font-size:.82rem}
+.rail .in{padding:0 0 14px;font-size:.9rem}
+.map{background:var(--soft);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.map svg{display:block;width:100%;height:auto}
+/* 51b.11: the driven trace was drawn in a literal blue that the accent change
+   did not reach, and on the dark map's --soft it measured under 2:1. It is the
+   accent now, so it follows the theme like everything else on the page. */
+.map .trace{stroke:var(--accent)}
+.cap{color:var(--muted);font-size:.78rem;margin:6px 0 0}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:.78rem;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:16px;height:3px;vertical-align:middle;margin-right:5px;border-radius:2px}
+.legend i.dot{width:9px;height:9px;border-radius:50%}
+.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 14px;font-size:.88rem}
+
+/* stepper */
+.stepper{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin:0 0 10px}
+.stepper button{appearance:none;text-align:left;border:0;border-left:1px solid var(--line);background:transparent;font:inherit;color:inherit;cursor:pointer;padding:14px 16px;display:flex;flex-direction:column;gap:5px;position:relative}
+.stepper button:first-child{border-left:0}
+.stepper button .n{display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--muted)}
+.stepper button .n i{width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--on-status);background:var(--grey);font-style:normal}
+.stepper button .n i.llm{background:var(--accent);color:var(--on-accent)}
+.stepper button .n i.ok{background:var(--ok)}
+.stepper button .n i.bad{background:var(--bad)}
+.stepper button .t{font-weight:600}
+.stepper button .s{font-size:.78rem;color:var(--muted)}
+.stepper button.on{background:var(--soft)}
+.stepper button.on::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--accent)}
+@media (max-width:900px){.stepper{grid-template-columns:repeat(3,minmax(0,1fr))}.stepper button{border-top:1px solid var(--line)}}
+/* On a phone, three to a row is narrower than the longest step title, so the
+   words broke mid-word ("Evidence" -> "Evidence" / "ce"). Two to a row, and the
+   button no longer breaks a word at all: it wraps at the spaces or not at all. */
+@media (max-width:640px){.stepper{grid-template-columns:repeat(2,minmax(0,1fr))}.stepper button{overflow-wrap:normal;word-break:normal}}
+.who{display:flex;flex-wrap:wrap;gap:16px;font-size:.8rem;color:var(--muted);margin:0 0 16px 4px}
+.who i{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:0;margin-right:5px}
+.detail{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 22px}
+.detail h3{margin:0 0 4px;font-size:1.05rem}
+.detail .lead{margin:0 0 12px;color:var(--muted)}
+.pane{display:none}.pane.on{display:block}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:12px 0}
+.grid3 div{background:var(--soft);border-radius:8px;padding:10px 12px}
+.grid3 b{display:block;font-size:1.15rem;font-weight:650}
+.grid3 span{font-size:.8rem;color:var(--muted)}
+@media (max-width:700px){.grid3{grid-template-columns:minmax(0,1fr)}}
+
+/* misc */
+.claim{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:0 0 10px}
+.claim p{margin:.3em 0}
+.pill{display:inline-block;border-radius:999px;padding:1px 9px;font-size:.78rem;font-weight:600}
+.pill.green{background:var(--ok-wash);color:var(--ok)}
+.pill.red{background:var(--bad-wash);color:var(--bad)}
+.pill.grey{background:var(--grey-wash);color:var(--muted)}
+.err{color:var(--bad);font-weight:600}
+.ok{color:var(--ok);font-weight:600}
+.empty{color:var(--muted)}
+blockquote{margin:8px 0;padding:10px 14px;border-left:3px solid var(--line);background:var(--soft);white-space:pre-wrap;overflow-wrap:anywhere}
+details.form{border:1px solid var(--line);border-radius:10px;padding:0 16px;margin:0 0 10px}
+details.form summary{cursor:pointer;padding:12px 0;font-weight:600}
+.filters{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 14px}
+.filters button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:6px 14px;font:inherit;cursor:pointer}
+.filters button.on{background:var(--ink);color:var(--card);border-color:var(--ink)}
+.filters select{font:inherit;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+.foot{border-top:1px solid var(--line);margin-top:32px;padding-top:14px;color:var(--muted);font-size:.82rem;display:flex;flex-wrap:wrap;gap:16px}
+pre{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:12px;overflow-wrap:anywhere;white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.85rem}
+textarea,input[type="text"]{font:inherit;color:inherit}
+
+/* the reviewer's decision form */
+.decision-fields{border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin:10px 0}
+.decision-fields[hidden]{display:none}
+.decision-fields label{margin-right:12px}
+.decision-fields select,.decision-fields input[type="text"]{font:inherit;color:inherit;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card)}
+.decision-fields select[multiple]{min-width:240px;vertical-align:top}
+.decision-fields .ev{display:inline-flex;align-items:center;gap:6px;margin:0 14px 6px 0;font-size:.9rem}
+
+/* 37a.5: a wide table scrolls inside its own container, and nothing else
+   overflows the page. The queue's table was clipped and could not scroll below
+   about 1230 px, and 23 case pages scrolled sideways at 390 px, so every table
+   now sits in a box that scrolls and every grid track is allowed to shrink. */
+html,body{max-width:100%}
+body{overflow-wrap:break-word}
+.tscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.wrap,.two,.maincol,.rail,.side,.card,.verdict,.tiles,.pagehead,.notice{min-width:0}
+.ids,.cap,.legend,.legend span,.kv span,.claim p,.tiles span{overflow-wrap:anywhere}
+svg{max-width:100%}
+pre{overflow-x:auto}
+
+/* the held reason, written under the chip as well as into its title */
+/* 51c.2: the note is one sentence naming a figure and the threshold it crossed
+   ("SGD 8.05 is above the POL-GEN-05 execution threshold of SGD 8.00"), and
+   with nothing to stop it, it ran on one line: the Status column took 414 px,
+   the table came to 1285 px inside a 1230 px wrapper at a 1440 px window, and
+   the Time column was cut off the right-hand edge. The note is capped at 16rem
+   so it wraps onto two lines and the table fits its wrapper from 1280 px up.
+   Below that the table scrolls inside .tscroll as it always did. */
+.held-why{display:block;color:var(--muted);font-size:.78rem;margin-top:4px;max-width:16rem}
+
+/* 37a.6: the header cells are buttons, so sorting is reachable by keyboard and
+   the state a sighted reader reads off the arrow is on the cell as aria-sort. */
+th .sort{appearance:none;border:0;background:transparent;color:inherit;font:inherit;
+  letter-spacing:inherit;text-transform:inherit;padding:0;cursor:pointer}
+th .sort::after{content:"\2195";margin-left:6px;opacity:.6}
+th[aria-sort="ascending"] .sort::after{content:"\2191"}
+th[aria-sort="descending"] .sort::after{content:"\2193"}
+
+/* every control keeps a focus ring a reader can see */
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* the notice to the parties */
+.notice{background:var(--soft);border:1px solid var(--line);border-left:3px solid var(--accent);
+  border-radius:10px;padding:14px 16px;margin:14px 0}
+.notice h2{margin:0 0 8px;font-size:.95rem}
+.notice p{margin:.3em 0;font-size:.88rem}
+.notice b{color:var(--ink)}
+.legend i.dash{background:none;border-top:3px dashed #6b7280;height:0}
+.legend i.ring{width:10px;height:10px;border-radius:50%;background:none;
+  border:1px dashed #9ca3af}
+
+/* 44.1: the debate. The two advocates' claims are drawn as cards, and the
+   panel's four drafts as four cards side by side (two by two on a phone), so
+   the step reads as an argument and not as the agents' raw answers. */
+.debate{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:14px 0 0}
+@media (max-width:700px){.debate{grid-template-columns:minmax(0,1fr)}}
+.claim{background:var(--soft)}
+.claim .cite{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.chip.ev,.chip.clause{height:auto;padding:3px 9px;white-space:normal;text-align:left}
+.chip.ev .k,.chip.clause .ct{font-weight:400;color:var(--muted);margin-left:6px}
+.chip.clause .ct{display:none}
+.chip.clause:focus .ct{display:inline}
+.claimv{margin:.45em 0 0;font-size:.86rem}
+.claimv .why{color:var(--bad)}
+.drafts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:12px 0}
+@media (max-width:900px){.drafts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.dcard{background:var(--soft);border:1px solid var(--line);border-radius:10px;
+  padding:10px 12px;min-width:0}
+.dcard h4{margin:0 0 6px;font-size:.84rem;color:var(--muted);font-weight:600}
+.dcard p{margin:.22em 0;font-size:.86rem}
+.dcard .d-ruling{margin:.3em 0 .5em}
+.d-void{margin:.4em 0 0;padding-left:18px;font-size:.82rem;color:var(--bad)}
+.pill.blue{background:var(--accent-wash);color:var(--accent)}
+
+/* 44.2: the landing page's how-it-works strip and its links row. */
+.how{background:var(--card);border:1px solid var(--line);border-radius:12px;
+  padding:14px 18px;margin:0 0 18px}
+.how h2{margin:0 0 10px;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.how ol{display:flex;flex-wrap:wrap;gap:10px 16px;list-style:none;margin:0;padding:0}
+.how li{display:flex;align-items:flex-start;gap:9px;font-size:.86rem;color:var(--muted)}
+/* 51b.7, and 51c.1 on top of it: a step is a numbered violet circle, its name
+   in bold on one line and its description under it in muted text. The number is
+   text on the accent, so it takes --on-accent rather than white. */
+.how .n{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;
+  border-radius:50%;background:var(--accent);color:var(--on-accent);font-size:11px;font-weight:700;
+  font-style:normal;flex:none}
+.how .st{display:block}
+.how .st b{display:block;color:var(--ink);font-weight:600}
+.how .arw{color:var(--muted);margin-left:8px}
+.links{display:flex;flex-wrap:wrap;gap:6px 18px;margin:0 0 20px;font-size:.9rem}
+
+/* 52.1: the safeguards card. It is the How-it-works card's surface and its h2
+   treatment -- the same border, radius and padding, the same small uppercase
+   heading -- because the two cards are the same kind of thing: what the system
+   is, said once. Each line's lead words are --ink and the rest of it is
+   --muted, and the list is two columns at 1000 px and wider and one below. */
+.safeguards{background:var(--card);border:1px solid var(--line);border-radius:12px;
+  padding:14px 18px;margin:0 0 18px}
+.safeguards h2{margin:0 0 10px;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.safeguards ul{list-style:none;margin:0;padding:0;display:grid;
+  grid-template-columns:minmax(0,1fr);gap:9px 26px;font-size:.86rem;color:var(--muted)}
+.safeguards li{margin:0}
+.safeguards b{color:var(--ink);font-weight:600}
+.safeguards .access{margin:12px 0 0;font-size:.86rem;color:var(--muted)}
+@media (min-width:1000px){
+  .safeguards ul{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+/* 46b.8, and 51b.7 on top of it: on a wide screen the five steps of "How it
+   works" wrapped into three ragged lines with the arrows stranded at the line
+   ends, so at 1000 px and wider they are five equal columns in one row, each
+   with its arrow at the column's right. The row is a flex row in both layouts
+   now: it was a block here, which dropped the gap and left the circle touching
+   the step's name. Below 1000 px the strip stacks as it did. */
+@media (min-width:1000px){
+  .how ol{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px 22px}
+  .how li{display:flex;position:relative;padding-right:20px}
+  .how .arw{position:absolute;right:0;top:3px;margin:0}
+}
+
+/* 46b.10: the trace's own box runs the width of the rail column, so the map is
+   drawn at the width the column has rather than 32 px narrower. */
+.rail details.full{padding:0}
+.rail details.full>summary{padding:12px 16px}
+.rail details.full .in{padding:0 0 14px}
+.rail details.full .cap{padding:6px 16px 0;margin:0}
+.rail details.full .legend{padding:8px 16px 0;margin-top:0}
+
+/* 46b.11: a claim is a paragraph of 80-200 words, so its first sentence is
+   shown and the rest of it sits behind a control that reads as one. */
+.claim details,.side details{margin:.3em 0 0}
+.claim details>summary,.side details>summary{color:var(--accent);cursor:pointer;font-size:.86rem}
+.claim details p,.side details p{margin:.3em 0 0}
+
+/* 44.3: on a 375 px phone the nav wrapped, which pushed its Queue pill against
+   the bar's top edge. The nav stays on one line now and scrolls sideways when
+   it has to, and the bar's three children are allowed to shrink around it. */
+.nav{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;min-width:0}
+.nav a{flex:none;white-space:nowrap}
+.brand{flex:none}
+.mode{flex:none}
+
+/* 47.1: the outcome first. A case page opened with the two parties' long
+   accounts and the chat, and the ruling came after them; the summary bar states
+   the outcome, the money and who decides in one line under the title, and its
+   "Why" link goes to the ruling panel. */
+.summarybar{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;
+  background:var(--soft);border:1px solid var(--line);border-radius:10px;
+  padding:9px 13px;margin:12px 0 0;font-size:.9rem;color:var(--muted)}
+.summarybar b{color:var(--ink);font-weight:650}
+
+/* 47.4: where the refund POL-RD-02 computes is larger than the amount the rider
+   contested, the figure is named for what it is and the clause it comes from. */
+.refundnote{margin:.5em 0 0;font-size:.86rem;color:var(--muted)}
+
+/* 47.3: the line under the queue's tiles, for "executed" and "confidence". */
+.figurewords{color:var(--muted);font-size:.86rem;margin:-10px 0 20px;max-width:78ch}
+
+/* 47.5/47.6: a table's scrolling box is reachable by keyboard, so it carries a
+   focus ring of its own rather than depending on the one a control gets. */
+.tscroll:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+<header class="top">
+<div class="top-in">
+<a class="brand" href="queue.html"><span class="mark"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v16M8 20h8M5 7h14M5 7L2 13h6zM19 7l-3 6h6z"/></svg></span>Tribunal</a>
+<nav class="nav" aria-label="Sites"><a href="queue.html">Queue</a></nav>
+<span class="mode">Recorded runs, policy version 6</span>
+</div>
+</header>
+<main class="wrap">
+<header class="pagehead">
+<p class="ids">DSP-00201 &middot; TRP-00201 &middot; filed 2026-07-23T08:14:20+08:00</p>
+<h1>No-show fee - I was standing at Blk 118 Rivervale Drive downstairs from 7.55am.</h1>
+<div class="chips"><span class="chip">No-show fee</span><span class="chip">Filed by rider</span><span class="chip">Contested SGD 4.00</span><span class="chip ok">Decided automatically - 122.5 s</span></div>
+<p class="summarybar"><b>Full refund</b> &middot; refund to the rider SGD 4.00 &middot; decided by the panel &middot; <a href="#panel-ruling">Why</a></p></header>
+<section class="card dispute" id="the-dispute"><h2>The dispute</h2><h3>Rider's account, as filed</h3><blockquote>I was standing at Blk 118 Rivervale Drive downstairs from 7.55am. The app said the driver arrived at 8.02 but there was no car at all, I never even saw one drive past. Then he cancelled and charged me $4. Please refund.</blockquote><h3>The driver's account</h3><p class="empty">No statement from the other party is recorded for this dispute.</p><h3>The chat, as the record carries it</h3><p class="cap">2026-07-23</p><div class="tscroll" tabindex="0" role="region" aria-label="The chat, as the record carries it"><table><thead><tr><th>Time</th><th>From</th><th>Message</th></tr></thead><tbody><tr><td class="mono clock">08:02:15</td><td>SYSTEM</td><td>Your driver has arrived</td></tr><tr><td class="mono clock">08:05:33</td><td>RIDER</td><td>hello? i dont see any car at 118</td></tr></tbody></table></div></section><div class="tabs" role="tablist"><button type="button" class="tab tab-on" role="tab" id="tab-ruling" aria-controls="panel-ruling" data-tab="ruling" aria-selected="true">Ruling</button><button type="button" class="tab" role="tab" id="tab-decision" aria-controls="panel-decision" data-tab="decision" aria-selected="false">How it was decided</button></div>
+<section role="tabpanel" id="panel-ruling" aria-labelledby="tab-ruling" data-panel="ruling"><div class="verdict"><div class="v-left"><p class="cap">This is a provisional ruling made by an automated system.</p><p class="word"><strong>Full refund</strong> <span class="mono">FULL_REFUND</span></p><p class="code mono">POL-NS-05(ii)</p><p>Refund to the rider: SGD 4.00</p><div class="notice" id="notice"><h2>Notice to the rider and the driver</h2><p class="preview">Preview: this page sends nothing.</p><p><b>Outcome.</b> The rider is refunded SGD 4.00 (FULL_REFUND).</p><p><b>The money.</b> Refund to the rider: SGD 4.00</p><p><b>Clauses named in the ruling.</b> POL-NS-05: False arrival marker; POL-NS-02: Arrival geofence and GPS proximity test</p><p><b>Evidence cited.</b> GPS trace, chat log, trip record, fare breakdown</p><p><b>Who decided.</b> An automated system made this decision. The judge answered four times and the majority carried.</p><p><b>Appeal.</b> You may appeal once within 30 days (POL-GEN-04). A different human reviewer hears it, and only record evidence may be added.</p></div><p class="lbl">Reviewer view: the judge's full reasoning</p><p class="why">Rider and Driver &#8212; the case turns on the driver's own GPS trace, and it decides both ways of looking at it against the driver.</p><p class="after">How to appeal: You may appeal once within 30 days (POL-GEN-04). A different human reviewer hears it, and only record evidence may be added.</p><p>POL-GEN-05: the monetary effect is SGD 4.00 against an execution threshold of SGD 8.00. It does not exceed the threshold, so the amount is executed automatically on issue, subject to POL-GEN-04.</p><details><summary>Read POL-GEN-04 in full</summary><blockquote>Every ruling issued without human review is a provisional ruling. Either party may appeal it once, within 30 days of the trip or of the ruling's issue, whichever is later, by lodging the appeal with the platform's help channel. An appeal (a) is heard by a human reviewer who did not take part in any earlier review of the same trip; (b) may add only record-type evidence - a GPS export, a fare or payment statement, an ERP gantry record with gantry name, entry time and cashcard statement, a call log, a photograph with its capture time - and may not add or amend a party statement; (c) suspends execution of any amount not yet executed and freezes it until decided, and where the amount was executed under POL-GEN-05 before the appeal, a successful appeal reverses it; (d) may not be withdrawn and re-lodged. A second appeal on the same trip, an appeal lodged after 30 days, or an appeal that adds only statements is refused. The appeal decision is recorded as a human closure under POL-GEN-06, enters the precedent store, and is final on the platform. This clause licenses no ruling value: an appeal is a route to human review, not a ruling, and it is lodged after a ruling has issued.</blockquote></details></div><div class="tiles"><div><b>100%</b><span>trace coverage</span></div><div><b>0.0 s</b><span>continuous in-geofence dwell, against the free wait in force (300.0 s)</span></div><div><b>779.93 m</b><span>closest approach to the pickup point, against the arrival radius (50 m)</span></div><div><b>SGD 4.00</b><span>refund to the filing party (POL-GEN-03)</span></div><div aria-label="confidence 0.95 against a floor of 0.7"><b>0.95</b><span>confidence against the floor of 0.7 (POL-GEN-02)</span></div></div></div><section class="sec" id="what-the-record-shows"><h2>What the record shows</h2><p class="cap">computed from the record, before any model &middot; 2026-07-23</p><div class="tscroll" tabindex="0" role="region" aria-label="What the record shows"><table><thead><tr><th>Fact</th><th>The record</th></tr></thead><tbody><tr><td>Time inside the arrival radius</td><td>0.0 s, against the free waiting period in force (300.0 s)</td></tr><tr><td>Closest approach to the pickup point</td><td>779.93 m, against the arrival radius (50 m)</td></tr><tr><td>Where the rider's device was</td><td>5.57 m to 24.92 m from the pickup point, from 07:55:02 to 08:11:30</td></tr><tr><td>Call-log entries</td><td>none recorded in the chat</td></tr></tbody></table></div></section><div class="two"><div class="maincol"><section class="sec"><h2>What each side argued</h2><div class="sides"><article class="side"><header><b>Rider advocate</b><small>11 claim(s), 11 kept</small></header><ol><li><p>The driver's own GPS track never comes within 780 m of the pickup pin: across all 98 driver fixes the closest he ever gets to the pin is 779.93 m (derived.driver_track.min_distance_m), so no fix falls inside the 50 m arrival radius for a STANDARD pickup.</p><details><summary>Read the whole claim</summary><p>The 'arrived' event recorded at 08:02:14 therefore cannot satisfy POL-NS-01 limb (b), which requires the trace to place the driver inside the pickup geofence at or before that timestamp. Limb (b) fails and the $4.00 cancellation fee is not chargeable.</p></details><span class="ref">EV-GPS-00201, EV-TRIP-00201 &middot; POL-NS-01, POL-NS-02</span></li><li><p>The arrival test in POL-NS-02 is failed outright, not merely degraded: the trace records 0 qualifying in-radius fixes over the whole trip (derived.arrival.qualifying_fix_count), against an arrival radius of 50 m for the STANDARD zone class recorded in the trip record.</p><details><summary>Read the whole claim</summary><p>POL-NS-02 provides that where the trace contains no qualifying in-radius fix at any point in the 15 minutes preceding the cancellation, the driver never arrived, POL-NS-01 limb (b) fails, and the rider is entitled to a full refund of the cancellation fee. That is this case exactly.</p></details><span class="ref">EV-GPS-00201, EV-TRIP-00201 &middot; POL-NS-02</span></li><li><p>The arrival marker is false under POL-NS-05.</p><details><summary>Read the whole claim</summary><p>The marker was pressed at 08:02:14, and at every fix in the track the driver is at least 779.93 m from the pin &#8212; the minimum over the entire track exceeds the clause's 300 m distance trigger by more than a factor of two &#8212; and the same track records a 50.6 km/h leg, well above the 15 km/h motion trigger, so the driver was not holding at the pickup point at the moment he marked arrival. Because no qualifying in-geofence fix exists anywhere in the trip, POL-NS-05(ii) applies: the fee is refunded in full, no driver compensation is payable, and the trip must be recorded in the ruling's referrals as a false-arrival event against the driver.</p></details><span class="ref">EV-GPS-00201, EV-TRIP-00201 &middot; POL-NS-05</span></li><li><p>POL-NS-03 cannot rescue this fee.</p><details><summary>Read the whole claim</summary><p>That clause is confined to a driver stationary for the required dwell outside the arrival radius but not more than 400 m from the pickup pin, and it measures everything from trip_record.pickup on coordinates alone. The driver's nearest approach on his own trace was 779.93 m &#8212; roughly twice the 400 m ceiling &#8212; so his stationary fixes are not merely outside the arrival radius, they are outside the wrong-entrance ceiling altogether, POL-NS-03 does not engage, and POL-NS-02 governs: the driver never arrived.</p></details><span class="ref">EV-GPS-00201, EV-TRIP-00201 &middot; POL-NS-03, POL-NS-02</span></li><li><p>The POL-NS-06 waiting-period arithmetic is a clean shortfall.</p><details><summary>Read the whole claim</summary><p>The free waiting period in force for this trip is 300 seconds (trip_record.platform_policy.free_wait_sec, matching the STANDARD minimum_dwell_sec), and the effective in-geofence dwell computed under POL-NS-02 and corrected under POL-NS-05 is 0 seconds, with a shortfall of the full 300 seconds (derived.arrival.shortfall_sec). Where the effective dwell is shorter than the free waiting period, POL-NS-06 refunds the cancellation fee in full whether or not the rider was present and whether or not she responded to messages.</p></details><span class="ref">EV-GPS-00201, EV-TRIP-00201, EV-FARE-00201 &middot; POL-NS-06, POL-NS-01</span></li><li><p>The driver has no route to accumulate or excuse the missing dwell under POL-NS-06(i).</p><details><summary>Read the whole claim</summary><p>Limb (i) permits separate in-geofence intervals to be summed only where a traffic_advisory whose geometry covers the pickup road and whose active window covers the waiting period is present and populated and carries a type of KERB_RESTRICTION, ENFORCEMENT, CLOSURE or ACCIDENT. EV-ADVIS-00201-01 is MISSING: no advisory covers Rivervale Drive in this window, the artifact carries weight_multiplier 0.0 and the issue code MISSING_ARTIFACT, and I disclose that impairment. A MISSING advisory makes limb (i) unavailable, no accumulation is possible on this record, and the shortfall stands.</p></details><span class="ref">EV-ADVIS-00201-01 &middot; POL-NS-06, POL-GEN-02</span></li><li><p>POL-NS-04 independently exonerates the rider on all three limbs.</p><details><summary>Read the whole claim</summary><p>(a) The chat log shows the rider sent a locating/coordinating message during the waiting window &#8212; 'hello? i dont see any car at 118' at 08:05:33, a statement that she cannot see the vehicle, naming the block. (b) The driver neither replied in the chat log at any point before terminating the trip at 08:09:40 (the log's last and only rider-side message is 08:05:33), nor placed any in-app voice call &#8212; trip_record.in_app_calls is empty. (c) The rider's track places her device well inside the 100 m STANDARD presence radius for the majority of qualifying fixes: 122 of 122 rider fixes qualify, with a mean distance of 16.08 m and a maximum of 24.92 m from the pin. The fee is refunded in full with no driver compensation payable.</p></details><span class="ref">EV-CHAT-00201, EV-GPS-00201, EV-TRIP-00201 &middot; POL-NS-04</span></li><li><p>The platform's own 7.4 minute wait timer in the trip record cannot be treated as independent confirmation that the driver waited at the pickup.</p><details><summary>Read the whole claim</summary><p>POL-NS-12 makes platform arrival and wait-timer events a carrier independent of the exported trace only where trip_record.platform_policy.arrival_marker is GPS_AUTO; this record's arrival_marker is BUTTON, and POL-NS-12 says in terms that a driver-pressed marker is not covered by it. The 7.4 minutes is simply the interval between the false 08:02:14 button-press and the 08:09:40 cancellation, and the admissible trace affirmatively places the driver outside the arrival radius throughout it, which is the only function POL-NS-12 leaves to the trace.</p></details><span class="ref">EV-TRIP-00201, EV-GPS-00201 &middot; POL-NS-12, POL-NS-05</span></li><li><p>The RIDER_NO_SHOW reason code on this cancelled trip is unsupported by the record.</p><details><summary>Read the whole claim</summary><p>POL-NS-01 limb (d) requires the trip to have been terminated by the driver under RIDER_NO_SHOW, RIDER_UNREACHABLE or EXCESSIVE_WAIT at or after the moment the required dwell elapsed; on a measured dwell of 0 seconds that moment never arrived, so the termination at 08:09:40 cannot satisfy limb (d) any more than it satisfies limb (b) or limb (c). With limbs (b), (c) and (d) all failing, no limb of the baseline chargeable no-show is made out and the fee falls to be refunded under POL-NS-02, POL-NS-05 and POL-NS-06.</p></details><span class="ref">EV-TRIP-00201, EV-GPS-00201 &middot; POL-NS-01</span></li><li><p>The remedy is a full refund of the cancellation-fee line and nothing more.</p><details><summary>Read the whole claim</summary><p>The fare breakdown shows cancellation_fee 4.00, total_charged 4.00, payment_status CHARGED and refund_issued_sgd 0.00, and the 4.00 reconciles with trip_record.platform_policy.cancellation_fee_sgd of 4.00, so no POL-NS-08(d) integrity defect is in play. The refund is confined to the cancellation-fee line &#8212; 4.00 SGD, the whole contested amount &#8212; and on POL-GEN-03 that is a FULL_REFUND of the filing rider's contested charge, with no driver compensation attached because POL-NS-04 and POL-NS-05 both exclude it.</p></details><span class="ref">EV-FARE-00201, EV-TRIP-00201 &middot; POL-GEN-03, POL-NS-06</span></li><li><p>Nothing on this record requires the case to be held for human review instead of decided.</p><details><summary>Read the whole claim</summary><p>No POL-NS-09 trigger is engaged: rider_profile.no_show_disputes_30d is 0, so limb (d) does not trip; rider_profile.disputes_with_counterparty_90d and driver_profile.disputes_with_counterparty_90d are both 0, so limb (c) does not trip; there is no direct contradiction between admissible artifacts, so limb (b) does not trip; and every artifact the rider's case rests on &#8212; EV-GPS-00201, EV-TRIP-00201, EV-CHAT-00201 and EV-FARE-00201 &#8212; carries weight_multiplier 1.0 with no issues at all, so limb (e) and the POL-GEN-02(2) confidence cap on the deciding facts are not engaged. The deciding fact (the driver's position) is carried by clean, full-weight evidence and the case is decidable now.</p></details><span class="ref">EV-RPROF-00201, EV-DPROF-00201, EV-GPS-00201 &middot; POL-NS-09, POL-GEN-02</span></li></ol></article><article class="side"><header><b>Driver advocate</b><small>5 claim(s), 5 kept</small></header><ol><li><p>The charge is the exact amount the policy fixes for this trip, so there is no quantum or fare-integrity defect for the rider to attack: EV-TRIP-00201's platform_policy carries cancellation_fee_sgd 4.00 for a STANDARD-zone RYDE_X trip with fee_goes_to DRIVER, and EV-FARE-00201 records total_charged 4.00 against a schedule fee of 4.00 with a derived difference of 0.00.</p><details><summary>Read the whole claim</summary><p>Under POL-NS-08(d) that reconciliation is precisely what integrity requires, and no line of the ledger is overstated.</p></details><span class="ref">EV-FARE-00201, EV-TRIP-00201 &middot; POL-NS-08, POL-NS-01</span></li><li><p>Limb (a) of POL-NS-01 is made out on the record, and the termination does not carry the driver's own admission of failure: EV-TRIP-00201 contains a driver 'arrived' event at 08:02:14, corroborated by the 08:02:15 system notice in EV-CHAT-00201, and the trip is terminated by the driver at 08:09:40 under reason code RIDER_NO_SHOW rather than DRIVER_UNABLE_TO_LOCATE.</p><details><summary>Read the whole claim</summary><p>The category's own carve-out for a driver who admits he could not find the rider therefore does not apply, and the case has to be decided on the geofence and dwell limbs rather than read as a confession.</p></details><span class="ref">EV-TRIP-00201, EV-CHAT-00201 &middot; POL-NS-01</span></li><li><p>The driver does not contest the decisive measurement, and it should be stated exactly: EV-GPS-00201's derived arrival block reports 0 qualifying in-radius fixes, a longest qualifying run of 0 seconds and a shortfall of 300 seconds against the 300-second minimum, while the driver's own track never comes closer than 779.93 m to the pickup pin.</p><details><summary>Read the whole claim</summary><p>POL-NS-01 limbs (b) and (c) therefore cannot be carried and POL-NS-02's proximity test fails. The same distance closes off the driver's only other money route: POL-NS-03 is bounded by a 400 m ceiling measured from the pin, and at 779.93 m the driver claims no pin-ambiguity goodwill under POL-NS-03(ii).</p></details><span class="ref">EV-GPS-00201, EV-TRIP-00201 &middot; POL-NS-01, POL-NS-02, POL-NS-03</span></li><li><p>Nothing on the driver's side would justify withholding a payout if one were due, and the anti-farming test is not tripped: POL-NS-07 requires BOTH limbs, and driver_profile.no_show_terminations_30d is 3, below the 4 the clause requires, while 3 terminations across 96 completed_trips_30d is 3.1 percent, below the 8 percent limb.</p><details><summary>Read the whole claim</summary><p>On the SGD 4.00 fee the 80 percent rate yields SGD 3.20, the figure the money block carries as driver_compensation. Those two counters, and no others, are what POL-NS-07 and POL-GEN-01 permit to be read for this test.</p></details><span class="ref">EV-DPROF-00201, EV-FARE-00201 &middot; POL-NS-07, POL-GEN-01</span></li><li><p>In the alternative only: if the judge cannot reconcile the trip record's own arrival and wait telemetry with the trace, the disposition is escalation rather than refund, because EV-TRIP-00201 records an arrival at 08:02:14 and a wait of 7.4 minutes to termination at 08:09:40 under RIDER_NO_SHOW, while EV-GPS-00201 places the driver no closer than 779.93 m throughout that same interval - a direct record-to-record contradiction on arrival and dwell of the kind POL-NS-09 addresses, on which the fee is held rather than refunded.</p><details><summary>Read the whole claim</summary><p>The driver accepts that if that conflict is resolved against the BUTTON arrival marker by POL-NS-05, there is no escalation and the fee does not stand.</p></details><span class="ref">EV-TRIP-00201, EV-GPS-00201 &middot; POL-NS-09, POL-NS-05</span></li></ol></article></div></section></div><aside class="rail"><details open class="full"><summary>Trace <span>98 fixes</span></summary><div class="in"><div class="map"><svg viewBox="0 0 360 250.0" role="img" aria-label="The trip trace: the driven route, the pickup point, the drop-off, the arrival radius of 50 m around the pickup, the driver&#x27;s 0.0 s inside that radius, the rider&#x27;s device 6-25 m away, joined to the pickup by a dashed line."><title>The trip trace: the driven route, the pickup point, the drop-off, the arrival radius of 50 m around the pickup, the driver's 0.0 s inside that radius, the rider's device 6-25 m away, joined to the pickup by a dashed line.</title><circle cx="207.85" cy="49.64" r="0.79" fill="none" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4 3"/><polyline points="207.89,49.71 207.99,49.76 207.99,49.77 207.98,49.77 208.01,49.79 207.99,49.69 207.92,49.77 208.01,49.83 207.94,49.83 208.01,49.82 208.05,49.85 207.99,49.73 207.95,49.84 207.99,49.86 207.99,49.79 207.98,49.78 207.99,49.8 207.92,49.78 208.0,49.77 207.92,49.77 207.99,49.8 207.91,49.74 208.01,49.79 207.97,49.71 208.09,49.73 208.01,49.9 207.99,49.83 208.01,49.79 207.96,49.74 207.98,49.83 208.03,49.77 208.03,49.78 208.03,49.78 208.08,49.78 208.02,49.8 208.01,49.76 208.05,49.73 208.11,49.83 208.01,49.82 208.08,49.73 208.06,49.74 208.01,49.79 208.01,49.77 208.02,49.85 207.96,49.82 208.09,49.74 208.01,49.81 208.07,49.8 208.11,49.85 208.04,49.79 208.01,49.86 207.97,49.76 208.09,49.84 208.03,49.82 208.05,49.73 208.03,49.78 208.12,49.84 208.06,49.85 208.06,49.74 208.06,49.74 208.0,49.81 207.99,49.72 208.04,49.8 208.09,49.9 208.03,49.81 208.02,49.81 208.06,49.83 208.05,49.91 208.03,49.78 208.01,49.79 207.99,49.74 207.99,49.9 208.04,49.82 208.04,49.82 208.01,49.86 207.99,49.87 207.96,49.8 208.03,49.83 208.04,49.91 208.12,49.82 208.05,49.78 207.97,49.83 207.96,49.82 208.05,49.78 208.08,49.74 208.04,49.83 208.02,49.83 208.01,49.91 208.09,49.83 208.08,49.91 208.02,49.78 208.06,49.83 208.05,49.84 207.99,49.82 208.13,49.79 208.14,49.78 208.04,49.93 208.06,49.85 208.01,49.78 208.05,49.84 208.09,49.82 208.01,49.8 208.06,49.83 208.1,49.9 208.01,49.77 207.99,49.93 208.11,49.83 208.16,49.82 207.96,49.87 208.07,49.9 208.08,49.9 208.04,49.8 208.06,49.84 208.12,49.75 208.09,49.86 208.13,49.91 208.08,49.87 208.09,49.76 207.97,49.84 208.07,49.86 208.08,49.86 208.06,49.9" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="4 3"/><circle cx="207.99" cy="49.72" r="3" fill="none" stroke="#6b7280" stroke-width="1.5"><title>the rider's device</title></circle><line x1="207.99" y1="49.72" x2="207.85" y2="49.64" stroke="#6b7280" stroke-width="1" stroke-dasharray="2 3"/><text x="207.92" y="45.68" text-anchor="middle" font-size="12" fill="currentColor">6-25 m</text><polyline class="trace" points="240.96,12.14 238.75,12.0 238.28,13.63 239.5,15.48 240.49,17.44 238.65,18.1 236.44,17.87 234.46,18.35 235.31,20.33 236.22,22.33 236.32,24.46 234.18,24.33 232.1,23.56 229.97,23.0 229.14,24.58 229.84,26.68 230.56,28.77 229.9,30.48 227.75,29.97 225.6,29.59 225.38,31.16 226.61,33.0 225.09,33.8 222.89,33.73 223.27,35.55 222.67,37.52 221.16,36.18 219.75,34.56 218.75,36.45 217.64,38.16 216.17,36.68 216.39,38.07 214.8,38.77 215.21,39.65 215.44,39.97 214.76,39.47 214.85,39.53 214.9,39.57 215.27,39.84 215.31,39.87 215.44,39.97 215.05,39.67 214.88,39.56 215.13,39.73 215.26,39.83 215.25,39.82 215.23,39.81 215.24,39.81 215.02,39.65 215.51,40.02 215.14,39.74 215.29,39.85 215.16,39.75 215.41,39.94 215.45,39.98 215.39,39.93 215.45,39.97 214.94,39.59 215.16,39.75 214.95,39.6 215.38,39.92 215.03,39.66 214.75,39.47 215.55,40.05 215.46,39.98 214.86,39.54 214.85,39.53 215.24,39.81 215.18,39.77 215.32,39.87 215.13,39.73 214.87,39.55 215.18,39.77 215.08,39.69 214.92,39.58 214.79,39.49 215.37,39.91 215.5,40.01 214.93,39.59 215.47,39.99 215.48,40.0 215.45,39.97 214.74,39.46 214.98,39.62 215.21,39.79 215.34,39.89 215.2,39.78 215.36,39.9 215.06,39.68 214.85,39.53 215.22,39.8 214.84,39.52 214.9,39.56 214.97,39.62 215.44,39.97 215.28,39.84 215.5,40.01 214.98,39.62" fill="none" stroke-width="2"/><circle cx="207.85" cy="49.64" r="4" fill="#15803d"><title>pickup</title></circle><circle cx="119.04" cy="238.0" r="4" fill="#b91c1c"><title>drop-off</title></circle></svg></div><p class="legend"><i style="background:var(--accent)"></i>driven trace<i class="dash"></i>rider's track<i class="dot" style="background:#15803d"></i>pickup<i class="dot" style="background:#b91c1c"></i>drop-off<i class="ring"></i>arrival radius (50 m)<i class="dash"></i>rider's device to the pickup (6-25 m)</p></div></details><details><summary>Evidence <span>7 item(s)</span></summary><div class="in"><p>EV-TRIP-00201<br><span class="ref">PLATFORM_TELEMETRY &middot; COMPLETE (weight 1.0)</span></p><p>EV-GPS-00201<br><span class="ref">PLATFORM_TELEMETRY &middot; COMPLETE (weight 1.0)</span></p><p>EV-CHAT-00201<br><span class="ref">PLATFORM_TELEMETRY &middot; COMPLETE (weight 1.0)</span></p><p>EV-FARE-00201<br><span class="ref">PAYMENTS_LEDGER &middot; COMPLETE (weight 1.0)</span></p><p>EV-RPROF-00201<br><span class="ref">PLATFORM_TELEMETRY &middot; COMPLETE (weight 1.0)</span></p><p>EV-DPROF-00201<br><span class="ref">PLATFORM_TELEMETRY &middot; COMPLETE (weight 1.0)</span></p><p>EV-ADVIS-00201-01<br><span class="ref">THIRD_PARTY_LTA &middot; MISSING (weight 0.0)</span></p></div></details><details><summary>Record <span>122.5 s</span></summary><div class="in"><div class="kv"><span>events</span><span>6 (one per agent call)</span><span>tokens</span><span>231659 (prompt 138964, cached 34048, completion 58647)</span><span>wall time</span><span>122.5 s</span></div></div></details></aside></div></section>
+<section role="tabpanel" id="panel-decision" aria-labelledby="tab-decision" data-panel="decision" hidden><div class="stepper"><button type="button" data-step="1" class="on"><span class="n"><i>1</i></span><span class="t">Evidence pack</span><span class="s">7 artifacts, brief d1b566742114</span></button><button type="button" data-step="2"><span class="n"><i class="llm">2</i>112.6 s</span><span class="t">Both sides argue</span><span class="s">rider 11 claims - driver 5</span></button><button type="button" data-step="3"><span class="n"><i>3</i></span><span class="t">Citation check</span><span class="s">16 kept, 0 discarded</span></button><button type="button" data-step="4"><span class="n"><i class="llm">4</i>154.5 s</span><span class="t">Judge</span><span class="s">4 drafts, 1.0</span></button><button type="button" data-step="5"><span class="n"><i>5</i></span><span class="t">Floor and triggers</span><span class="s">confidence 0.95 against the floor 0.7</span></button><button type="button" data-step="6"><span class="n"><i class="ok">6</i></span><span class="t">Outcome</span><span class="s">Full refund</span></button></div><p class="who"><span><i style="background:#374151"></i>code</span><span><i style="background:var(--accent)"></i>model</span><span><i style="background:#15803d"></i>outcome</span></p><div class="detail"><div class="pane on" data-pane="1"><h3>Evidence pack</h3><p class="lead">computed by code - 7 artifacts, brief d1b566742114</p><p>The brief was built from the case and the loaded policy. Its sha256 is <span class="mono">d1b5667421147d1b06c88e36623d8eee4fcc71a483aef650dfa879eaf1981cd0</span>.</p><p>Both advocates received these same bytes: yes, the recorded user_sha256 of each advocate is this digest.</p><p class="label">The derived facts each artifact carries</p><ul><li>EV-TRIP-00201 (TRIP_RECORD): no derived facts</li><li>EV-GPS-00201 (GPS_TRACE): arrival, driver_track, rider_presence</li><li>EV-CHAT-00201 (CHAT_LOG): no derived facts</li><li>EV-FARE-00201 (FARE_BREAKDOWN): money</li><li>EV-RPROF-00201 (RIDER_PROFILE): no derived facts</li><li>EV-DPROF-00201 (DRIVER_PROFILE): no derived facts</li><li>EV-ADVIS-00201-01 (TRAFFIC_ADVISORY): no derived facts</li></ul></div><div class="pane" data-pane="2"><h3>Both sides argue</h3><p class="lead">asked of the model - rider 11 claims - driver 5</p><p>The two advocates ran on the same brief and at the same time: the rider advocate made 11 claim(s) and the driver advocate made 5. Their instructions differ -- system_sha256 <span class="mono">b90cb450bbd10645bb645632dfa64bafaeb4f690787527ce2ec0743e9e2ac355</span> against <span class="mono">c317acbca01e30fca7b769c8d85d31333a756e601b25ca9ad2ede328c4607543</span> -- and their brief is one digest for both. Each claim is shown with the artifacts and clauses it cites and the referee's verdict on it.</p><div class="debate"><article class="side"><header><b>Rider advocate</b><small>11 claim(s), 11 kept</small></header><article class="claim"><p>The driver's own GPS track never comes within 780 m of the pickup pin: across all 98 driver fixes the closest he ever gets to the pin is 779.93 m (derived.driver_track.min_distance_m), so no fix falls inside the 50 m arrival radius for a STANDARD pickup.</p><details><summary>Read the whole claim</summary><p>The 'arrived' event recorded at 08:02:14 therefore cannot satisfy POL-NS-01 limb (b), which requires the trace to place the driver inside the pickup geofence at or before that timestamp. Limb (b) fails and the $4.00 cancellation fee is not chargeable.</p></details><p class="cite"><span class="chip ev" title="GPS trace">EV-GPS-00201<span class="k">GPS trace</span></span><span class="chip ev" title="trip record">EV-TRIP-00201<span class="k">trip record</span></span><span class="chip clause" tabindex="0" title="Baseline chargeable no-show">POL-NS-01<span class="ct">Baseline chargeable no-show</span></span><span class="chip clause" tabindex="0" title="Arrival geofence and GPS proximity test">POL-NS-02<span class="ct">Arrival geofence and GPS proximity test</span></span></p><p class="claimv"><span class="pill green">kept</span></p></article><article class="claim"><p>The arrival test in POL-NS-02 is failed outright, not merely degraded: the trace records 0 qualifying in-radius fixes over the whole trip (derived.arrival.qualifying_fix_count), against an arrival radius of 50 m for the STANDARD zone class recorded in the trip record.</p><details><summary>Read the whole claim</summary><p>POL-NS-02 provides that where the trace contains no qualifying in-radius fix at any point in the 15 minutes preceding the cancellation, the driver never arrived, POL-NS-01 limb (b) fails, and the rider is entitled to a full refund of the cancellation fee. That is this case exactly.</p></details><p class="cite"><span class="chip ev" title="GPS trace">EV-GPS-00201<span class="k">GPS trace</span></span><span class="chip ev" title="trip record">EV-TRIP-00201<span class="k">trip record</span></span><span class="chip clause" tabindex="0" title="Arrival geofence and GPS proximity test">POL-NS-02<span class="ct">Arrival geofence and GPS proximity test</span></span></p><p class="claimv"><span class="pill green">kept</span></p></article><article class="claim"><p>The arrival marker is false under POL-NS-05.</p><details><summary>Read the whole claim</summary><p>The marker was pressed at 08:02:14, and at every fix in the track the driver is at least 779.93 m from the pin &#8212; the minimum over the entire track exceeds the clause's 300 m distance trigger by more than a factor of two &#8212; and the same track records a 50.6 km/h leg, well above the 15 km/h motion trigger, so the driver was not holding at the pickup point at the moment he marked arrival. Because no qualifying in-geofence fix exists anywhere in the trip, POL-NS-05(ii) applies: the fee is refunded in full, no driver compensation is payable, and the trip must be recorded in the ruling's referrals as a false-arrival event against the driver.</p></details><p class="cite"><span class="chip ev" title="GPS trace">EV-GPS-00201<span class="k">GPS trace</span></span><span class="chip ev" title="trip record">EV-TRIP-00201<span class="k">trip record</span></span><span class="chip clause" tabindex="0" title="False arrival marker">POL-NS-05<span class="ct">False arrival marker</span></span></p><p class="claimv"><span class="pill green">kept</span></p></article><article class="claim"><p>POL-NS-03 cannot rescue this fee.</p><details><summary>Read the whole claim</summary><p>That clause is confined to a driver stationary for the required dwell outside the arrival radius but not more than 400 m from the pickup pin, and it measures everything from trip_record.pickup on coordinates alone. The driver's nearest approach on his own trace was 779.93 m &#8212; roughly twice the 400 m ceiling &#8212; so his stationary fixes are not merely outside the arrival radius, they are outside the wrong-entrance ceiling altogether, POL-NS-03 does not engage, and POL-NS-02 governs: the driver never arrived.</p></details><p class="cite"><span class="chip ev" title="GPS trace">EV-GPS-00201<span class="k">GPS trace</span></span><span class="chip ev" title="trip record">EV-TRIP-00201<span class="k">trip record</span></span><span class="chip clause" tabindex="0" title="Wrong-entrance and wrong-block arrival">POL-NS-03<span class="ct">Wrong-entrance and wrong-block arrival</span></span><span class="chip clause" tabindex="0" title="Arrival geofence and GPS proximity test">POL-NS-02<span class="ct">Arrival geofence and GPS proximity test</span></span></p><p class="claimv"><span class="pill green">kept</span></p></article><article class="claim"><p>The POL-NS-06 waiting-period arithmetic is a clean shortfall.</p><details><summary>Read the whole claim</summary><p>The free waiting period in force for this trip is 300 seconds (trip_record.platform_policy.free_wait_sec, matching the STANDARD minimum_dwell_sec), and the effective in-geofence dwell computed under POL-NS-02 and corrected under POL-NS-05 is 0 seconds, with a shortfall of the full 300 seconds (derived.arrival.shortfall_sec). Where the effective dwell is shorter than the free waiting period, POL-NS-06 refunds the cancellation fee in full whether or not the rider was present and whether or not she responded to messages.</p></details><p class="cite"><span class="chip ev" title="GPS trace">EV-GPS-00201<span class="k">GPS trace</span></span><span class="chip ev" title="trip record">EV-TRIP-00201<span class="k">trip record</span></span><span class="chip ev" title="fare breakdown">EV-FARE-00201<span class="k">fare breakdown</span></span><span class="chip clause" tabindex="0" title="Waiting-period shortfall and premature cancellation">POL-NS-06<span class="ct">Waiting-period shortfall and premature cancellation</span></span><span class="chip clause" tabindex="0" title="Baseline chargeable no-show">POL-NS-01<span class="ct">Baseline chargeable no-show</span></span></p><p class="claimv"><span class="pill green">kept</span></p></article><article class="claim"><p>The driver has no route to accumulate or excuse the missing dwell under POL-NS-06(i).</p><details><summary>Read the whole claim</summary><p>Limb (i) permits separate in-geofence intervals to be summed only where a traffic_advisory whose geometry covers the pickup road and whose active window covers the waiting period is present and populated and carries a type of KERB_RESTRICTION, ENFORCEMENT, CLOSURE or ACCIDENT. EV-ADVIS-00201-01 is MISSING: no advisory covers Rivervale Drive in this window, the artifact carries weight_multiplier 0.0 and the issue code MISSING_ARTIFACT, and I disclose that impairment. A MISSING advisory makes limb (i) unavailable, no accumulation is possible on this record, and the shortfall stands.</p></details><p class="cite"><span class="chip ev" title="traffic advisory">EV-ADVIS-00201-01<span class="k">traffic advisory</span></span><span class="chip clause" tabindex="0" title="Waiting-period shortfall and premature cancellation">POL-NS-06<span class="ct">Waiting-period shortfall and premature cancellation</span></span><span class="chip clause" tabindex="0" title="Admissibility weight, disclosure, and how impairment enters confidence">POL-GEN-02<span class="ct">Admissibility weight, disclosure, and how impairment enters confidence</span></span></p><p class="claimv"><span class="pill green">kept</span></p></article><article class="claim"><p>POL-NS-04 independently exonerates the rider on all three limbs.</p><details><summary>Read the whole claim</summary><p>(a) The chat log shows the rider sent a locating/coordinating message during the waiting window &#8212; 'hello? i dont see any car at 118' at 08:05:33, a statement that she cannot see the vehicle, naming the block. (b) The driver neither replied in the chat log at any point before terminating the trip at 08:09:40 (the log's last and only rider-side message is 08:05:33), nor placed any in-app voice call &#8212; trip_record.in_app_calls is empty. (c) The rider's track places her device well inside the 100 m STANDARD presence radius for the majority of qualifying fixes: 122 of 122 rider fixes qualify, with a mean distance of 16.08 m and a maximum of 24.92 m from the pin. The fee is refunded in full with no driver compensation payable.</p></details><p class="cite"><span class="chip ev" title="chat log">EV-CHAT-00201<span class="k">chat log</span></span><span class="chip ev" title="GPS trace">EV-GPS-00201<span class="k">GPS trace</span></span><span class="chip ev" title="trip record">EV-TRIP-00201<span class="k">trip record</span></span><span class="chip clause" tabindex="0" title="Rider contact unanswered by driver">POL-NS-04<span class="ct">Rider contact unanswered by driver</span></span></p><p class="claimv"><span class="pill green">kept</span></p></article><article class="claim"><p>The platform's own 7.4 minute wait timer in the trip record cannot be treated as independent confirmation that the driver waited at the pickup.</p><details><summary>Read the whole claim</summary><p>POL-NS-12 makes platform arrival and wait-timer events a carrier independent of the exported trace only where trip_record.platform_policy.arrival_marker is GPS_AUTO; this record's arrival_marker is BUTTON, and POL-NS-12 says in terms that a driver-pressed marker is not covered by it. The 7.4 minutes is simply the interval between the false 08:02:14 button-press and the 08:09:40 cancellation, and the admissible trace affirmatively places the driver outside the arrival radius throughout it, which is the only function POL-NS-12 leaves to the trace.</p></details><p class="cite"><span class="chip ev" title="trip record">EV-TRIP-00201<span class="k">trip record</span></span><span class="chip ev" title="GPS trace">EV-GPS-00201<span class="k">GPS trace</span></span><span class="chip clause" tabindex="0" title="Platform-confirmed arrival and waiting">POL-NS-12<span class="ct">Platform-confirmed arrival and waiting</span></span><span class="chip clause" tabindex="0" title="False arrival marker">POL-NS-05<span class="ct">False arrival marker</span></span></p><p class="claimv"><span class="pill green">kept</span></p></article><article class="claim"><p>The RIDER_NO_SHOW reason code on this cancelled trip is unsupported by the record.</p><details><summary>Read the whole claim</summary><p>POL-NS-01 limb (d) requires the trip to have been terminated by the driver under RIDER_NO_SHOW, RIDER_UNREACHABLE or EXCESSIVE_WAIT at or after the moment the required dwell elapsed; on a measured dwell of 0 seconds that moment never arrived, so the termination at 08:09:40 cannot satisfy limb (d) any more than it satisfies limb (b) or limb (c). With limbs (b), (c) and (d) all failing, no limb of the baseline chargeable no-show is made out and the fee falls to be refunded under POL-NS-02, POL-NS-05 and POL-NS-06.</p></details><p class="cite"><span class="chip ev" title="trip record">EV-TRIP-00201<span class="k">trip record</span></span><span class="chip ev" title="GPS trace">EV-GPS-00201<span class="k">GPS trace</span></span><span class="chip clause" tabindex="0" title="Baseline chargeable no-show">POL-NS-01<span class="ct">Baseline chargeable no-show</span></span></p><p class="claimv"><span class="pill green">kept</span></p></article><article class="claim"><p>The remedy is a full refund of the cancellation-fee line and nothing more.</p><details><summary>Read the whole claim</summary><p>The fare breakdown shows cancellation_fee 4.00, total_charged 4.00, payment_status CHARGED and refund_issued_sgd 0.00, and the 4.00 reconciles with trip_record.platform_policy.cancellation_fee_sgd of 4.00, so no POL-NS-08(d) integrity defect is in play. The refund is confined to the cancellation-fee line &#8212; 4.00 SGD, the whole contested amount &#8212; and on POL-GEN-03 that is a FULL_REFUND of the filing rider's contested charge, with no driver compensation attached because POL-NS-04 and POL-NS-05 both exclude it.</p></details><p class="cite"><span class="chip ev" title="fare breakdown">EV-FARE-00201<span class="k">fare breakdown</span></span><span class="chip ev" title="trip record">EV-TRIP-00201<span class="k">trip record</span></span><span class="chip clause" tabindex="0" title="Ruling vocabulary, party-relative outcomes and compound rulings">POL-GEN-03<span class="ct">Ruling vocabulary, party-relative outcomes and compound rulings</span></span><span class="chip clause" tabindex="0" title="Waiting-period shortfall and premature cancellation">POL-NS-06<span class="ct">Waiting-period shortfall and premature cancellation</span></span></p><p class="claimv"><span class="pill green">kept</span></p></article><article class="claim"><p>Nothing on this record requires the case to be held for human review instead of decided.</p><details><summary>Read the whole claim</summary><p>No POL-NS-09 trigger is engaged: rider_profile.no_show_disputes_30d is 0, so limb (d) does not trip; rider_profile.disputes_with_counterparty_90d and driver_profile.disputes_with_counterparty_90d are both 0, so limb (c) does not trip; there is no direct contradiction between admissible artifacts, so limb (b) does not trip; and every artifact the rider's case rests on &#8212; EV-GPS-00201, EV-TRIP-00201, EV-CHAT-00201 and EV-FARE-00201 &#8212; carries weight_multiplier 1.0 with no issues at all, so limb (e) and the POL-GEN-02(2) confidence cap on the deciding facts are not engaged. The deciding fact (the driver's position) is carried by clean, full-weight evidence and the case is decidable now.</p></details><p class="cite"><span class="chip ev" title="RIDER_PROFILE">EV-RPROF-00201<span class="k">RIDER_PROFILE</span></span><span class="chip ev" title="DRIVER_PROFILE">EV-DPROF-00201<span class="k">DRIVER_PROFILE</span></span><span class="chip ev" title="GPS trace">EV-GPS-00201<span class="k">GPS trace</span></span><span class="chip clause" tabindex="0" title="Escalation to human review">POL-NS-09<span class="ct">Escalation to human review</span></span><span class="chip clause" tabindex="0" title="Admissibility weight, disclosure, and how impairment enters confidence">POL-GEN-02<span class="ct">Admissibility weight, disclosure, and how impairment enters confidence</span></span></p><p class="claimv"><span class="pill green">kept</span></p></article></article><article class="side"><header><b>Driver advocate</b><small>5 claim(s), 5 kept</small></header><article class="claim"><p>The charge is the exact amount the policy fixes for this trip, so there is no quantum or fare-integrity defect for the rider to attack: EV-TRIP-00201's platform_policy carries cancellation_fee_sgd 4.00 for a STANDARD-zone RYDE_X trip with fee_goes_to DRIVER, and EV-FARE-00201 records total_charged 4.00 against a schedule fee of 4.00 with a derived difference of 0.00.</p><details><summary>Read the whole claim</summary><p>Under POL-NS-08(d) that reconciliation is precisely what integrity requires, and no line of the ledger is overstated.</p></details><p class="cite"><span class="chip ev" title="fare breakdown">EV-FARE-00201<span class="k">fare breakdown</span></span><span class="chip ev" title="trip record">EV-TRIP-00201<span class="k">trip record</span></span><span class="chip clause" tabindex="0" title="Evidence integrity: clock skew, trace gaps and truncated chat">POL-NS-08<span class="ct">Evidence integrity: clock skew, trace gaps and truncated chat</span></span><span class="chip clause" tabindex="0" title="Baseline chargeable no-show">POL-NS-01<span class="ct">Baseline chargeable no-show</span></span></p><p class="claimv"><span class="pill green">kept</span></p></article><article class="claim"><p>Limb (a) of POL-NS-01 is made out on the record, and the termination does not carry the driver's own admission of failure: EV-TRIP-00201 contains a driver 'arrived' event at 08:02:14, corroborated by the 08:02:15 system notice in EV-CHAT-00201, and the trip is terminated by the driver at 08:09:40 under reason code RIDER_NO_SHOW rather than DRIVER_UNABLE_TO_LOCATE.</p><details><summary>Read the whole claim</summary><p>The category's own carve-out for a driver who admits he could not find the rider therefore does not apply, and the case has to be decided on the geofence and dwell limbs rather than read as a confession.</p></details><p class="cite"><span class="chip ev" title="trip record">EV-TRIP-00201<span class="k">trip record</span></span><span class="chip ev" title="chat log">EV-CHAT-00201<span class="k">chat log</span></span><span class="chip clause" tabindex="0" title="Baseline chargeable no-show">POL-NS-01<span class="ct">Baseline chargeable no-show</span></span></p><p class="claimv"><span class="pill green">kept</span></p></article><article class="claim"><p>The driver does not contest the decisive measurement, and it should be stated exactly: EV-GPS-00201's derived arrival block reports 0 qualifying in-radius fixes, a longest qualifying run of 0 seconds and a shortfall of 300 seconds against the 300-second minimum, while the driver's own track never comes closer than 779.93 m to the pickup pin.</p><details><summary>Read the whole claim</summary><p>POL-NS-01 limbs (b) and (c) therefore cannot be carried and POL-NS-02's proximity test fails. The same distance closes off the driver's only other money route: POL-NS-03 is bounded by a 400 m ceiling measured from the pin, and at 779.93 m the driver claims no pin-ambiguity goodwill under POL-NS-03(ii).</p></details><p class="cite"><span class="chip ev" title="GPS trace">EV-GPS-00201<span class="k">GPS trace</span></span><span class="chip ev" title="trip record">EV-TRIP-00201<span class="k">trip record</span></span><span class="chip clause" tabindex="0" title="Baseline chargeable no-show">POL-NS-01<span class="ct">Baseline chargeable no-show</span></span><span class="chip clause" tabindex="0" title="Arrival geofence and GPS proximity test">POL-NS-02<span class="ct">Arrival geofence and GPS proximity test</span></span><span class="chip clause" tabindex="0" title="Wrong-entrance and wrong-block arrival">POL-NS-03<span class="ct">Wrong-entrance and wrong-block arrival</span></span></p><p class="claimv"><span class="pill green">kept</span></p></article><article class="claim"><p>Nothing on the driver's side would justify withholding a payout if one were due, and the anti-farming test is not tripped: POL-NS-07 requires BOTH limbs, and driver_profile.no_show_terminations_30d is 3, below the 4 the clause requires, while 3 terminations across 96 completed_trips_30d is 3.1 percent, below the 8 percent limb.</p><details><summary>Read the whole claim</summary><p>On the SGD 4.00 fee the 80 percent rate yields SGD 3.20, the figure the money block carries as driver_compensation. Those two counters, and no others, are what POL-NS-07 and POL-GEN-01 permit to be read for this test.</p></details><p class="cite"><span class="chip ev" title="DRIVER_PROFILE">EV-DPROF-00201<span class="k">DRIVER_PROFILE</span></span><span class="chip ev" title="fare breakdown">EV-FARE-00201<span class="k">fare breakdown</span></span><span class="chip clause" tabindex="0" title="Driver compensation on a verified rider no-show">POL-NS-07<span class="ct">Driver compensation on a verified rider no-show</span></span><span class="chip clause" tabindex="0" title="Party profiles are credibility weighting only">POL-GEN-01<span class="ct">Party profiles are credibility weighting only</span></span></p><p class="claimv"><span class="pill green">kept</span></p></article><article class="claim"><p>In the alternative only: if the judge cannot reconcile the trip record's own arrival and wait telemetry with the trace, the disposition is escalation rather than refund, because EV-TRIP-00201 records an arrival at 08:02:14 and a wait of 7.4 minutes to termination at 08:09:40 under RIDER_NO_SHOW, while EV-GPS-00201 places the driver no closer than 779.93 m throughout that same interval - a direct record-to-record contradiction on arrival and dwell of the kind POL-NS-09 addresses, on which the fee is held rather than refunded.</p><details><summary>Read the whole claim</summary><p>The driver accepts that if that conflict is resolved against the BUTTON arrival marker by POL-NS-05, there is no escalation and the fee does not stand.</p></details><p class="cite"><span class="chip ev" title="trip record">EV-TRIP-00201<span class="k">trip record</span></span><span class="chip ev" title="GPS trace">EV-GPS-00201<span class="k">GPS trace</span></span><span class="chip clause" tabindex="0" title="Escalation to human review">POL-NS-09<span class="ct">Escalation to human review</span></span><span class="chip clause" tabindex="0" title="False arrival marker">POL-NS-05<span class="ct">False arrival marker</span></span></p><p class="claimv"><span class="pill green">kept</span></p></article></article></div></div><div class="pane" data-pane="3"><h3>Citation check</h3><p class="lead">computed by code - 16 kept, 0 discarded</p><p>The referee checked every claim against the artifacts it cites, in code and with no model: 16 claim(s) kept, 0 discarded.</p><p class="label">Kept and discarded, by side</p><ul><li>Rider advocate: 11 kept, 0 discarded</li><li>Driver advocate: 5 kept, 0 discarded</li></ul><p class="label">Each discarded claim and the referee's reason</p><ul><li>No claim was discarded: every claim the referee checked cited what it said it did.</li></ul></div><div class="pane" data-pane="4"><h3>Judge</h3><p class="lead">asked of the model - 4 drafts, 1.0</p><p>The judge was asked 4 times on the same inputs: 3 sampled drafts and one with the parties' positions swapped. The vote agreement is 1.0, and the outcome recorded is carried.</p><div class="drafts"><article class="dcard"><h4>Draft 1 &middot; sampled</h4><p class="d-ruling">Full refund <span class="mono">FULL_REFUND</span></p><p>Amount SGD 4.00</p><p>Driver compensation none</p><p>Confidence 0.95</p><p><span class="pill green">carried</span> <span class="pill blue">in the majority</span></p></article><article class="dcard"><h4>Draft 2 &middot; sampled</h4><p class="d-ruling">Full refund <span class="mono">FULL_REFUND</span></p><p>Amount SGD 4.00</p><p>Driver compensation none</p><p>Confidence 1.0</p><p><span class="pill green">carried</span> <span class="pill blue">in the majority</span></p></article><article class="dcard"><h4>Draft 3 &middot; sampled</h4><p class="d-ruling">Full refund <span class="mono">FULL_REFUND</span></p><p>Amount SGD 4.00</p><p>Driver compensation none</p><p>Confidence 0.95</p><p><span class="pill green">carried</span> <span class="pill blue">in the majority</span></p></article><article class="dcard"><h4>Draft 4 &middot; parties' positions swapped</h4><p class="d-ruling">Full refund <span class="mono">FULL_REFUND</span></p><p>Amount SGD 4.00</p><p>Driver compensation none</p><p>Confidence 0.95</p><p><span class="pill green">carried</span> <span class="pill blue">in the majority</span></p></article></div><p class="label">Each draft's own explanation</p><details><summary>Draft 1 - sampled</summary><blockquote>Rider and Driver &#8212; the case turns on the driver's own GPS trace, and it decides both ways of looking at it against the driver.
+
+EV-TRIP-00201 records an 'arrived' event at 08:02:14 and a termination at 08:09:40 under RIDER_NO_SHOW, with 7.4 minutes of wait. EV-GPS-00201 contradicts that: across all 98 driver fixes over the whole window the closest the driver ever came to the pickup pin at Blk 118 Rivervale Drive was 779.93 m (derived.driver_track.min_distance_m), with 0 qualifying in-radius fixes and a longest qualifying run of 0 seconds. The arrival radius for a STANDARD pickup is 50 m (POL-NS-02). The driver never entered the geofence, so POL-NS-01 limb (b) fails; with 0 seconds of in-geofence dwell against the 300-second free waiting period in force (EV-TRIP-00201.platform_policy.free_wait_sec), limbs (c) and (d) fail as well. POL-NS-03 does not rescue the fee: its wrong-entrance ceiling is 400 m measured from the pin, and the nearest approach of 779.93 m is roughly double that.
+
+The arrival marker is FALSE under POL-NS-05: at 08:02:14 the driver was 779.93 m out, far beyond the clause's 300 m trigger, and the track also records a 50.6 km/h leg against the 15 km/h motion trigger. Because no qualifying in-geofence fix exists anywhere in the trip, POL-NS-05(ii) applies &#8212; the fee is refunded in full, no driver compensation is payable, and a false-arrival referral is recorded (see referrals). POL-NS-06 gives the same result independently: an effective dwell of 0 seconds against a 300-second minimum is a clean 300-second shortfall.
+
+The rider's POL-NS-04 case also succeeds on its own: EV-CHAT-00201 shows she wrote 'hello? i dont see any car at 118' at 08:05:33, naming the block; the driver neither replied within 120 seconds nor placed any in-app call (EV-TRIP-00201.in_app_calls is empty); and her device sat between 5.57 m and 24.92 m from the pin across 122 qualifying fixes, well inside the 100 m STANDARD presence radius.
+
+Amount: I refund the cancellation-fee line only &#8212; SGD 4.00 (EV-FARE-00201.cancellation_fee = 4.00, total_charged = 4.00, payment_status CHARGED, refund_issued_sgd 0.00), which reconciles exactly with the platform's SGD 4.00 fee, so there is no POL-NS-08(d) integrity defect to consider. That is the whole contested amount. No driver compensation attaches, because POL-NS-07 pays only where POL-NS-01 is satisfied in full and it is not, and POL-NS-05(ii) and POL-NS-06 both expressly exclude it; the driver's anti-farming counters (3 no-show terminations in 30 days, 3.1% of 96 completed trips) do not trip POL-NS-07, but that check only bites where a payout is otherwise due.
+
+On the driver's alternative argument for escalation: the contradiction between the trip record's arrival/wait telemetry and the trace is resolved by a clause, not left open &#8212; POL-NS-05 treats a marker pressed outside 300 m as false, and POL-NS-12 does not apply because the arrival marker is BUTTON rather than GPS_AUTO, so the platform wait timer is not an independent carrier here. The record's own reason code does not save limb (d) either. No POL-NS-09 trigger fires &#8212; confidence is above the 0.70 floor, no admissible pair of artifacts is left unreconciled, no repeat-party or abuse counter is engaged, and the deciding artifact (the driver's track) carries no impairment.
+
+Confidence: the deciding fact &#8212; the driver's position &#8212; is carried by EV-GPS-00201 at weight 1.0, with EV-CHAT-00201 and EV-TRIP-00201 also at 1.0, so the POL-GEN-02(2) cap is 1.0. The only sub-weight artifact, the MISSING advisory EV-ADVIS-00201-01 at 0.0, carries no deciding fact and is cited only to show that no accumulation under POL-NS-06(i) is possible.
+
+The monetary effect, SGD 4.00, is below the SGD 8.00 execution threshold, so this refund executes automatically.</blockquote></details><details><summary>Draft 2 - sampled</summary><blockquote>Rider and driver, the evidence decides this case. I award a FULL_REFUND of SGD 4.00 to the rider, with no driver compensation. The driver's GPS trace EV-GPS-00201 (weight 1.0, no issues) shows 98 driver fixes and no qualifying in-geofence fix: the longest qualifying run is 0 seconds, qualifying_fix_count is 0, and the driver's closest approach to the pickup pin is 779.93 m. The trip record EV-TRIP-00201 (weight 1.0) records a BUTTON arrival at 08:02:14 and cancellation at 08:09:40 under RIDER_NO_SHOW, with free_wait_sec 300. Because the arrival marker was pressed while the trace puts the driver at least 779.93 m away &#8212; far beyond the 300 m trigger &#8212; POL-NS-05 makes the marker false. Recomputing the waiting clock from the first qualifying in-geofence fix finds none, so POL-NS-05(ii) applies: full refund, no compensation, and a false-arrival referral against the driver. Independently, POL-NS-02 fails because there are 0 qualifying in-radius fixes against the 50 m STANDARD radius; POL-NS-01 limbs (b) and (c) fail (0 seconds dwell against the 300-second free waiting period); limb (d) also fails because no required dwell elapsed; and POL-NS-06 would refund the full 300-second shortfall. The fare ledger EV-FARE-00201 (weight 1.0) shows cancellation_fee and total_charged both 4.00, so the refund is confined to that line. POL-NS-03 does not engage because the driver's nearest approach is 779.93 m, beyond the 400 m wrong-entrance ceiling. POL-NS-04 also exonerates the rider (rider message at 08:05:33 saying she cannot see the car, no driver reply or in-app call, and 122/122 rider fixes within 100 m, max 24.92 m), but the refund does not depend on it. I reject the driver's alternative request for escalation under POL-NS-09: the trip-record arrival/wait telemetry and the GPS trace conflict, but POL-NS-05 is the clause that resolves it, so POL-NS-09(b) is not triggered; no other POL-NS-09 limb fires, and the anti-farming check is not tripped (no_show_terminations_30d 3, completed_trips_30d 96, rate 3.125%), so no compensation is due in any event. The missing advisory EV-ADVIS-00201-01 (weight 0.0, MISSING_ARTIFACT) was correctly disclosed; it makes POL-NS-06(i) accumulation unavailable and carries no deciding fact, so it does not lower the confidence cap. All deciding facts rest on full-weight artifacts, so confidence is 1.0. No context-only profile field was used as a ground of decision.</blockquote></details><details><summary>Draft 3 - sampled</summary><blockquote>To the rider and to the driver: the SGD 4.00 no-show cancellation fee charged on trip TRP-00201 (EV-FARE-00201, cancellation_fee 4.00, total_charged 4.00, payment_status CHARGED, refund_issued_sgd 0.00) is refunded to the rider in full. No driver compensation is payable. The monetary effect is SGD 4.00, below the SGD 8.00 execution threshold, so the refund executes automatically. Either party may appeal under POL-GEN-04.
+
+WHY THE FEE DOES NOT STAND. POL-NS-01 charges a no-show fee only if all four limbs hold. Limb (a) holds: EV-TRIP-00201 carries a driver 'arrived' event at 08:02:14, echoed by the system notice at 08:02:15 in EV-CHAT-00201. Limbs (b), (c) and (d) do not. The pickup zone is STANDARD (EV-TRIP-00201), so POL-NS-02 sets a 50 m arrival radius, and EV-GPS-00201 &#8212; 100% coverage, no gaps, weight 1.0 &#8212; reports 0 qualifying in-radius fixes, a longest qualifying run of 0 seconds, and a closest approach of 779.93 m (derived.driver_track.min_distance_m); the driver's own track never comes within 780 m of the pin. With no qualifying in-radius fix at any point in the 15 minutes before the 08:09:40 cancellation, POL-NS-02 gives that the driver never arrived and limb (b) fails. Limb (c) fails for the same reason: effective in-geofence dwell 0 s against the free waiting period of 300 s in force from trip_record.platform_policy (shortfall 300 s, derived.arrival.shortfall_sec). Limb (d) fails because the dwell that RIDER_NO_SHOW depends on never elapsed.
+
+THE ARRIVAL MARKER IS FALSE (POL-NS-05). The marker was pressed at 08:02:14 while the trace puts the driver at least 779.93 m away and, at points in the track, travelling at 50.6 km/h &#8212; both far past the clause's 300 m and 15 km/h triggers &#8212; so the marker is false and did not start the waiting clock. Recomputed from the first qualifying in-geofence fix there is none, so POL-NS-05(ii) applies: the fee is refunded in full, no compensation is payable, and the false-arrival is referred as above.
+
+THE RIDER IS ALSO EXONERATED (POL-NS-04). She messaged 'hello? i dont see any car at 118' at 08:05:33 (EV-CHAT-00201); the driver neither replied in the log before cancelling at 08:09:40 nor made an in-app call (trip_record.in_app_calls empty); and her own track sits within the 100 m STANDARD presence radius for all 122 qualifying fixes (mean 16.08 m, max 24.92 m). All three limbs hold, and POL-NS-04 likewise refunds in full with no compensation.
+
+WAITING-PERIOD SHORTFALL (POL-NS-06). Effective dwell 0 s against 300 s &#8212; full refund. The only counter available under limb (i), summing separate in-geofence intervals, is unavailable: EV-ADVIS-00201-01 is MISSING (weight 0.0, issue MISSING_ARTIFACT), and a missing advisory cannot excuse a shortfall.
+
+THE DRIVER'S POINTS. (1) Fare integrity is accepted: total_charged 4.00 reconciles with the platform_policy cancellation_fee_sgd of 4.00 (derived difference 0.00) and there is no POL-NS-08(d) defect &#8212; but the fee falls for want of arrival, not for a misstated amount. (2) Limb (a) and the absence of a DRIVER_UNABLE_TO_LOCATE admission are accepted, but limb (a) alone does not make the fee chargeable. (3) The anti-farming test is not tripped &#8212; no_show_terminations_30d is 3 (below 4) and the rate is 3/96 = 3.1% (below 8%) &#8212; so nothing would withhold a payout; but no payout arises because the fee itself does not stand, and POL-NS-07 requires POL-NS-01 to be satisfied first. (4) The alternative escalation under POL-NS-09 is rejected. The arrival tap and the 7.4-minute wait timer are a driver-set status, not a platform GPS_AUTO measurement (arrival_marker is BUTTON), so POL-NS-12 gives them no independent weight here; the apparent conflict between the trip record's 'arrived' event and the trace is exactly what POL-NS-05 exists to test, and that clause resolves it rather than leaving it open, so POL-NS-09(b) &#8212; which requires a conflict no clause resolves &#8212; is not engaged. No other trigger fires: both disputes_with_counterparty_90d values are 0, no_show_disputes_30d is 0, and every artifact the finding rests on carries weight 1.0 with no issues.
+
+CONFIDENCE. The deciding fact &#8212; the driver's position &#8212; is carried by EV-GPS-00201 at weight 1.0 and corroborated by the rider's contemporaneous in-window message in EV-CHAT-00201, also weight 1.0, so the POL-GEN-02(2) cap is 1.0. Confidence is 0.95, above the 0.70 floor.</blockquote></details><details><summary>Draft 4 - parties' positions swapped</summary><blockquote>Both parties: this is the $4.00 no-show cancellation fee on trip TRP-00201, charged to rider RDR-02073 and routed to driver DRV-01590.
+
+THE FEE CANNOT STAND. The driver's own GPS trace (EV-GPS-00201, weight 1.0, complete, 100% coverage, no gaps) never brings him closer than 779.93 m to the pickup pin at Blk 118 Rivervale Drive, and reports 0 qualifying fixes inside the 50 m STANDARD arrival radius anywhere in the trip. Under POL-NS-02 that means the driver never arrived and POL-NS-01 limb (b) fails. POL-NS-03 does not rescue the fee, because it is confined to a driver stationary within 400 m of the pin and the driver's nearest approach was 779.93 m &#8212; roughly twice that ceiling.
+
+The 'arrived' event at 08:02:14 is a false marker under POL-NS-05: it was pressed at a time the trace places the driver more than 300 m from the pin, and no qualifying in-geofence fix exists anywhere in the trip. POL-NS-05(ii) therefore refunds the fee in full and requires the false arrival to be recorded against the driver &#8212; that instruction is in the referrals list. The waiting-period arithmetic under POL-NS-06 reaches the same result: the free waiting period in force is 300 seconds and the measured in-geofence dwell is 0 seconds, a 300-second shortfall.
+
+Independently, POL-NS-04 exonerates the rider. She sent a coordinating message ('hello? i dont see any car at 118') at 08:05:33 that the driver never answered &#8212; no chat reply and no in-app call before he terminated at 08:09:40 &#8212; and her device sat a mean 16.08 m and a maximum 24.92 m from the pin across 122 qualifying fixes, far inside the 100 m presence radius. All three limbs hold.
+
+THE DRIVER'S POINTS. I accept that the $4.00 charge reconciles exactly with the fare ledger (total_charged 4.00, derived difference 0.00), so there is no billing-integrity defect under POL-NS-08(d); that the trip record does contain an 'arrived' event and a RIDER_NO_SHOW reason code, so limb (a) of POL-NS-01 is made out; and that your profile does not trip the POL-NS-07 anti-farming check (3 no-show terminations in 30 days against 96 completed trips, 3.1%, below both the count of 4 and the rate of 8%). None of this helps: limbs (b), (c) and (d) all fail, and POL-NS-07 pays only where POL-NS-01 is satisfied in full. POL-NS-12 does not assist you either &#8212; the arrival marker on this record is BUTTON, not GPS_AUTO, so the 7.4-minute wait timer is not an independent carrier of arrival; it is only the interval between the false marker and the cancellation, and the trace places you outside the radius throughout it.
+
+YOUR ALTERNATIVE REQUEST FOR ESCALATION IS DECLINED. POL-NS-09(b) requires a record-to-record contradiction that no clause resolves, but POL-NS-05 resolves this one by declaring the arrival marker false and re-running the clock. No other POL-NS-09 trigger is engaged: no repeat-party disputes (both 90-day counters are 0), no anti-farming trip, no POL-NS-08(b) rider-track problem (the rider track is present and clean), and every artifact the finding rests on carries weight 1.0 with no issue codes.
+
+RESULT: the $4.00 cancellation-fee line is refunded to the rider in full. That line is the only amount refunded &#8212; there was no booking or platform fee on this cancelled trip. No driver compensation attaches, because POL-NS-01 is not met and POL-NS-04 and POL-NS-05 each exclude it. The monetary effect ($4.00) is below the POL-GEN-05 execution threshold of $8.00, so it executes automatically. Confidence is 0.95, under the 1.0 weight of the GPS trace and trip record that carry the deciding fact.</blockquote></details></div><div class="pane" data-pane="5"><h3>Floor and triggers</h3><p class="lead">computed by code - confidence 0.95 against the floor 0.7</p><p>The confidence recorded for this case is 0.95 against the floor of 0.7 stated by POL-GEN-02.</p><p>No escalation reason is recorded: the case did not escalate.</p></div><div class="pane" data-pane="6"><h3>Outcome</h3><p class="lead">the outcome - Full refund</p><p><strong>Full refund</strong> <span class="mono">FULL_REFUND</span></p><p>Refund to the rider: SGD 4.00</p></div></div></section>
+<footer class="foot"><span>commit 9ca7313</span><span>Runs recorded at freeze-2026-10-09. The final code freeze is freeze-2026-10-11.</span><span>policy version 6</span><span>model deepseek/deepseek-flash</span><span><a href="replay/index.html">Earlier benchmark replay (policy v1 runs)</a></span></footer>
+</main>
+
+<script>
+(function(){
+  "use strict";
+  function each(selector, root){
+    return Array.prototype.slice.call((root || document).querySelectorAll(selector));
+  }
+
+  // Tabs: a button with data-tab shows the panel with the same data-panel.
+  var tabs = each("[data-tab]");
+  tabs.forEach(function(tab){
+    tab.addEventListener("click", function(){
+      var name = tab.getAttribute("data-tab");
+      tabs.forEach(function(other){
+        var on = other === tab;
+        other.setAttribute("aria-selected", on ? "true" : "false");
+        other.className = on ? "tab tab-on" : "tab";
+      });
+      each("[data-panel]").forEach(function(panel){
+        panel.hidden = panel.getAttribute("data-panel") !== name;
+      });
+    });
+  });
+
+  // The stepper: a button with data-step shows the pane with the same data-pane.
+  each(".stepper").forEach(function(stepper){
+    var buttons = each("button[data-step]", stepper);
+    buttons.forEach(function(button){
+      button.addEventListener("click", function(){
+        buttons.forEach(function(other){
+          other.className = other === button ? "on" : "";
+        });
+        var detail = stepper.parentElement.querySelector(".detail");
+        if (!detail){ return; }
+        each(".pane", detail).forEach(function(pane){
+          pane.className = pane.getAttribute("data-pane") === button.getAttribute("data-step") ? "pane on" : "pane";
+        });
+      });
+    });
+  });
+
+  var table = document.getElementById("queue");
+  if (table){
+    var body = table.tBodies[0];
+    var rows = Array.prototype.slice.call(body.rows);
+    var state = {column: null, up: true};
+
+    function value(row, column){
+      var cell = row.querySelector('td[data-column="' + column + '"]');
+      if (!cell){ return ""; }
+      var sort = cell.getAttribute("data-sort");
+      return sort === null ? cell.textContent.trim() : sort;
+    }
+
+    function numeric(text){
+      return /^-?[0-9]+(\.[0-9]+)?$/.test(text);
+    }
+
+    function sortBy(column){
+      if (state.column === column){ state.up = !state.up; }
+      else { state.column = column; state.up = true; }
+      rows.sort(function(a, b){
+        var x = value(a, column), y = value(b, column);
+        if (numeric(x) && numeric(y)){
+          return state.up ? Number(x) - Number(y) : Number(y) - Number(x);
+        }
+        if (x === y){ return 0; }
+        return state.up ? (x < y ? -1 : 1) : (x < y ? 1 : -1);
+      });
+      rows.forEach(function(row){ body.appendChild(row); });
+    }
+
+    // The header cell says which column the rows are ordered by and which way,
+    // so a reader who cannot see the arrow is told the same thing.
+    function markSort(column){
+      each("th[data-column]", table).forEach(function(head){
+        var mine = head.getAttribute("data-column") === column;
+        head.setAttribute("aria-sort", mine ? (state.up ? "ascending" : "descending") : "none");
+      });
+    }
+
+    each("th[data-column]", table).forEach(function(head){
+      head.classList.add("sortable");
+      function activate(){
+        var column = head.getAttribute("data-column");
+        sortBy(column);
+        markSort(column);
+      }
+      // The button in the cell is what a keyboard reaches -- Enter and Space
+      // fire its click -- and a header cell without one stays clickable.
+      var button = head.querySelector("button.sort");
+      if (button){ button.addEventListener("click", activate); }
+      else { head.addEventListener("click", activate); }
+    });
+
+    var chosen = {outcome: "all", set: "all"};
+    function apply(){
+      var shown = 0;
+      rows.forEach(function(row){
+        var okOutcome = chosen.outcome === "all" || row.getAttribute("data-outcome") === chosen.outcome;
+        var okSet = chosen.set === "all" || row.getAttribute("data-set") === chosen.set;
+        var ok = okOutcome && okSet;
+        row.hidden = !ok;
+        if (ok){ shown += 1; }
+      });
+      var count = document.getElementById("shown");
+      if (count){ count.textContent = String(shown); }
+    }
+
+    each("[data-filter]").forEach(function(button){
+      button.addEventListener("click", function(){
+        chosen.outcome = button.getAttribute("data-filter");
+        each("[data-filter]").forEach(function(other){
+          other.className = other === button ? "on" : "";
+        });
+        apply();
+      });
+    });
+
+    var picker = document.getElementById("set-picker");
+    if (picker){
+      picker.addEventListener("change", function(){
+        chosen.set = picker.value;
+        apply();
+      });
+    }
+    apply();
+  }
+
+  var form = document.getElementById("review-form");
+  if (form){
+    var reason = document.getElementById("reason");
+    var verdict = document.getElementById("verdict");
+    var output = document.getElementById("command");
+    var evidence = (form.getAttribute("data-evidence") || "").split(" ").filter(Boolean);
+    var clauses = (form.getAttribute("data-clauses") || "").split(" ").filter(Boolean);
+    var floor = Number(form.getAttribute("data-reason-min") || "0");
+    var runDir = form.getAttribute("data-run-dir") || "";
+    var caseNo = form.getAttribute("data-case") || "";
+    var packet = form.getAttribute("data-packet") || "";
+    var store = form.getAttribute("data-store") || "";
+
+    function cited(text, ids){
+      for (var i = 0; i < ids.length; i += 1){
+        if (text.indexOf(ids[i]) >= 0){ return true; }
+      }
+      return false;
+    }
+
+    function check(){
+      var text = reason.value.trim();
+      var problems = [];
+      if (text.length < floor){
+        problems.push("the reason is " + text.length + " characters; POL-GEN-06(6) requires at least " + floor);
+      }
+      if (!cited(text, evidence)){
+        problems.push("the reason cites no evidence id of this case");
+      }
+      if (!cited(text, clauses)){
+        problems.push("the reason cites no clause id of this case");
+      }
+      return {text: text, problems: problems};
+    }
+
+    function decision(){
+      var picked = form.querySelector('input[name="decision"]:checked');
+      return picked ? picked.value : "";
+    }
+
+    function valueOf(id){
+      var node = document.getElementById(id);
+      return node ? node.value : "";
+    }
+
+    // One value as one shell word. Double quotes leave $, a backtick and ! to
+    // the shell, so a reason carrying one would be rewritten before the command
+    // ran; a single-quoted word is literal, and the one character that cannot
+    // appear inside it is closed, escaped and reopened. This is the rule
+    // ``ui.v2.build.shell_quote`` applies in Python, so the command the page
+    // shows and the command the builder builds are the same word for word.
+    function quoted(text){
+      return "'" + String(text).replace(/'/g, "'\\''") + "'";
+    }
+
+    function who(){
+      return valueOf("reviewer") || "reviewer";
+    }
+
+    function chosenClauses(id){
+      var node = document.getElementById(id);
+      if (!node){ return []; }
+      return Array.prototype.slice.call(node.options)
+        .filter(function(option){ return option.selected; })
+        .map(function(option){ return option.value; });
+    }
+
+    function reviewCommand(){
+      var d = decision();
+      var ruling = "", amount = "", list = [], summary = d;
+      if (d === "ADOPT"){
+        ruling = form.getAttribute("data-adopt-ruling") || "";
+        amount = form.getAttribute("data-adopt-amount") || "";
+        list = (form.getAttribute("data-adopt-clauses") || "").split(" ").filter(Boolean);
+      } else {
+        var prefix = d === "REFER_COMPLIANCE" ? "refer-" : "vary-";
+        ruling = valueOf(prefix + "ruling");
+        amount = valueOf(prefix + "amount");
+        list = chosenClauses(prefix + "clauses");
+        if (d === "REFER_COMPLIANCE"){
+          var note = valueOf("refer-note").trim();
+          if (note){ summary = d + ": " + note; }
+        }
+      }
+      var parts = ["python3 -m ops.review", "--run-dir " + runDir,
+        "--case " + caseNo, "--packet-sha256 " + packet];
+      if (ruling){ parts.push("--ruling " + ruling); }
+      if (amount){ parts.push("--amount " + amount); }
+      list.forEach(function(clause){ parts.push("--clause " + clause); });
+      parts.push("--closed-by " + quoted(who()));
+      parts.push("--summary " + quoted(summary));
+      parts.push("--reason " + quoted(reason.value.trim()));
+      return parts.join(" ");
+    }
+
+    function windowCommand(){
+      var items = each('input[name="evidence"]:checked', form)
+        .map(function(box){ return box.value; });
+      return ["python3 -m ops.evidence_window", "open", "--store " + store,
+        "--run-dir " + runDir,
+        "--case " + caseNo, "--now " + quoted(valueOf("window-now")),
+        "--items " + items.join(","), "--opened-by " + quoted(who())].join(" ");
+    }
+
+    function command(){
+      return decision() === "REQUEST_EVIDENCE" ? windowCommand() : reviewCommand();
+    }
+
+    function showFields(){
+      var d = decision();
+      each("[data-for]", form).forEach(function(block){
+        block.hidden = block.getAttribute("data-for") !== d;
+      });
+    }
+
+    function refresh(){
+      showFields();
+      if (!decision()){
+        // Nothing is chosen, so there is nothing to build: the command appears
+        // once the reviewer has chosen one of the four decisions.
+        verdict.className = "empty";
+        verdict.textContent = "Choose one of the four decisions: the command is built once a decision is chosen.";
+        output.textContent = "";
+        return;
+      }
+      if (decision() === "REQUEST_EVIDENCE"){
+        verdict.className = "empty";
+        verdict.textContent = "The evidence-window command is part 26 (ops/evidence_window.py): it opens one window to both parties at once.";
+      } else {
+        var state = check();
+        if (state.problems.length){
+          verdict.className = "err";
+          verdict.textContent = state.problems.join("; ");
+        } else {
+          verdict.className = "ok";
+          verdict.textContent = "The reason is long enough and cites this case's own evidence and clause ids.";
+        }
+      }
+      output.textContent = command();
+    }
+
+    form.addEventListener("input", refresh);
+    form.addEventListener("change", refresh);
+
+    var copy = document.getElementById("copy");
+    if (copy){
+      copy.addEventListener("click", function(){
+        var text = command();
+        var done = function(){
+          var status = document.getElementById("copy-status");
+          if (status){ status.textContent = "Copied."; }
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText){
+          navigator.clipboard.writeText(text).then(done, function(){
+            var status = document.getElementById("copy-status");
+            if (status){ status.textContent = "Select the command above and copy it by hand."; }
+          });
+        } else {
+          var status = document.getElementById("copy-status");
+          if (status){ status.textContent = "Select the command above and copy it by hand."; }
+        }
+      });
+    }
+    refresh();
+  }
+})();
+</script>
+</body>
+</html>

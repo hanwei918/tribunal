@@ -1076,7 +1076,7 @@ class TheBuildTests(unittest.TestCase):
         case = v2._load_case("corpus", 208)
         self.assertEqual(
             v2.build_case_page(case).encode("utf-8"),
-            (v2.DIST_DIR / case.link).read_bytes(),
+            (v2.DIST_DIR / v2.review_link_for(case.case_no)).read_bytes(),
         )
 
 
@@ -1101,7 +1101,7 @@ def version_six_paths() -> set:
     for set_name in v2.SET_ORDER:
         run = v2._run_for(set_name)
         for case_no in v2._case_numbers(run.run_dir):
-            names.add("case-{0:05d}.html".format(case_no))
+            names.add(v2.review_link_for(case_no))
     return names
 
 

@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 900" width="1800" height="900" font-family="Inter, -apple-system, Segoe UI, Helvetica, Arial, sans-serif">
+  <title>Tribunal at a glance: the brief's three core agents, the code around them, and where a person decides</title>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#4C1D95"/></marker>
+    <marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#9A3412"/></marker>
+    <marker id="k" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#15803D"/></marker>
+  </defs>
+  <rect width="1800" height="900" fill="#F5F3FF"/>
+  <text x="40" y="58" font-size="30" font-weight="700" fill="#2E1065">Tribunal at a glance (policy version 8)</text>
+  <text x="40" y="90" font-size="17" fill="#4C1D95">The three core agents the Ryde brief requires (purple), the code that keeps them honest (white), and where a person decides (orange).</text>
+
+  <rect x="40" y="130" width="200" height="180" rx="14" fill="#fff" stroke="#7C3AED" stroke-width="2"/>
+  <text x="58" y="162" font-size="13" fill="#7C3AED" font-weight="700" letter-spacing="1">DISPUTE FILED</text>
+  <g font-size="16" fill="#2E1065"><text x="58" y="192">Route deviation or</text><text x="58" y="214">no-show charge; trip,</text><text x="58" y="236">GPS, chat, fare and</text><text x="58" y="258">both profiles</text></g>
+
+  <rect x="280" y="130" width="230" height="180" rx="14" fill="#fff" stroke="#7C3AED" stroke-width="2"/>
+  <text x="298" y="162" font-size="13" fill="#7C3AED" font-weight="700" letter-spacing="1">ONE BRIEF (code)</text>
+  <g font-size="16" fill="#2E1065"><text x="298" y="192">Weighs each artifact;</text><text x="298" y="214">route excess, dwell and</text><text x="298" y="236">fees worked out; plates</text><text x="298" y="258">and phones masked.</text><text x="298" y="280">No model.</text></g>
+
+  <rect x="550" y="120" width="250" height="90" rx="14" fill="#6D28D9"/>
+  <text x="568" y="150" font-size="13" fill="#EDE9FE" font-weight="700" letter-spacing="1">CORE AGENT</text>
+  <text x="568" y="180" font-size="20" fill="#fff" font-weight="700">Rider Advocate Agent</text>
+  <rect x="550" y="220" width="250" height="90" rx="14" fill="#6D28D9"/>
+  <text x="568" y="250" font-size="13" fill="#EDE9FE" font-weight="700" letter-spacing="1">CORE AGENT</text>
+  <text x="568" y="280" font-size="20" fill="#fff" font-weight="700">Driver Advocate Agent</text>
+
+  <rect x="840" y="130" width="200" height="180" rx="14" fill="#FFF7ED" stroke="#C2410C" stroke-width="2"/>
+  <text x="858" y="162" font-size="13" fill="#9A3412" font-weight="700" letter-spacing="1">AUTHORITY GATE</text>
+  <g font-size="16" fill="#7C2D12"><text x="858" y="192">Safety flag, over</text><text x="858" y="214">SGD 50, or a route</text><text x="858" y="236">deviation over 2 km:</text><text x="858" y="258">the judge is not</text><text x="858" y="280">asked (v2.1).</text></g>
+
+  <rect x="1080" y="130" width="210" height="180" rx="14" fill="#fff" stroke="#7C3AED" stroke-width="2"/>
+  <text x="1098" y="162" font-size="13" fill="#7C3AED" font-weight="700" letter-spacing="1">CITATION CHECK (code)</text>
+  <g font-size="16" fill="#2E1065"><text x="1098" y="192">Throws out a point</text><text x="1098" y="214">whose evidence or</text><text x="1098" y="236">clause does not exist,</text><text x="1098" y="258">before the judge</text><text x="1098" y="280">sees it.</text></g>
+
+  <rect x="1330" y="120" width="430" height="190" rx="14" fill="#4C1D95"/>
+  <text x="1350" y="150" font-size="13" fill="#EDE9FE" font-weight="700" letter-spacing="1">CORE AGENT</text>
+  <text x="1350" y="182" font-size="22" fill="#fff" font-weight="700">Judge Agent, four drafts</text>
+  <g font-size="16" fill="#EDE9FE"><text x="1350" y="212">Three as asked, one with the sides swapped; each</text><text x="1350" y="236">draft checked by code; 3 of 4 must agree. Ruling,</text><text x="1350" y="260">amount, confidence and reasoning that cites</text><text x="1350" y="284">the evidence and the clauses.</text></g>
+
+  <text x="550" y="336" font-size="14" fill="#4C1D95">Same brief bytes; only the stance differs.</text>
+  <text x="550" y="356" font-size="14" fill="#4C1D95">Every point names its evidence and clause.</text>
+
+  <rect x="550" y="400" width="740" height="130" rx="14" fill="#FFF7ED" stroke="#C2410C" stroke-width="2"/>
+  <text x="570" y="432" font-size="13" fill="#9A3412" font-weight="700" letter-spacing="1">ESCALATION PROTOCOL: A PERSON DECIDES, THE MONEY IS HELD</text>
+  <g font-size="16" fill="#7C2D12"><text x="570" y="460">The gate stops it, or no majority, no valid draft, the judge escalates, or the confidence</text><text x="570" y="482">is under the bar (0.80 for SGD 10-50; 0.95 with a fraud flag). The reviewer gets one packet:</text><text x="570" y="504">the evidence and weights, both advocates' points, every draft and the judge's words.</text></g>
+
+  <rect x="1330" y="400" width="430" height="130" rx="14" fill="#fff" stroke="#15803D" stroke-width="2"/>
+  <text x="1350" y="432" font-size="13" fill="#15803D" font-weight="700" letter-spacing="1">RULING AND NOTICE TO BOTH PARTIES</text>
+  <g font-size="16" fill="#14532D"><text x="1350" y="460">Refund, driver paid, or no change, with the</text><text x="1350" y="482">evidence and clause named. Under SGD 10 the</text><text x="1350" y="504">AI's ruling is final.</text></g>
+
+  <g stroke-width="2.5" fill="none">
+    <path d="M240 220 H276" stroke="#4C1D95" marker-end="url(#a)"/>
+    <path d="M510 190 H546" stroke="#4C1D95" marker-end="url(#a)"/>
+    <path d="M510 250 H546" stroke="#4C1D95" marker-end="url(#a)"/>
+    <path d="M800 165 H818 V220 H836" stroke="#4C1D95" marker-end="url(#a)"/>
+    <path d="M800 265 H818 V220" stroke="#4C1D95"/>
+    <path d="M1040 220 H1076" stroke="#4C1D95" marker-end="url(#a)"/>
+    <path d="M1290 220 H1326" stroke="#4C1D95" marker-end="url(#a)"/>
+    <path d="M940 310 V396" stroke="#9A3412" marker-end="url(#g)"/>
+    <path d="M1400 310 V365 H1200 V396" stroke="#9A3412" marker-end="url(#g)"/>
+    <path d="M1640 310 V396" stroke="#15803D" marker-end="url(#k)"/>
+  </g>
+  <text x="952" y="370" font-size="13" fill="#9A3412">stopped</text>
+  <text x="1210" y="358" font-size="13" fill="#9A3412">no ruling carried</text>
+  <text x="1652" y="370" font-size="13" fill="#15803D">ruling carried</text>
+
+  <rect x="40" y="590" width="1720" height="270" rx="16" fill="#fff" stroke="#DDD6FE" stroke-width="2"/>
+  <text x="64" y="626" font-size="15" fill="#4C1D95" font-weight="700" letter-spacing="1">AROUND THE PANEL: THE BRIEF'S STRETCH GOALS, AS BUILT</text>
+  <g font-size="15" fill="#2E1065">
+    <text x="64" y="664" font-weight="700">Evidence collection</text>
+    <text x="64" y="686">The brief is built by code; ops/evidence.py shows the record</text>
+    <text x="64" y="706">can be assembled from the source systems (not wired in).</text>
+    <text x="630" y="664" font-weight="700">Fraud and bad faith</text>
+    <text x="630" y="686">A fraud flag raises the bar to 0.95 (POL-GEN-22); a profile</text>
+    <text x="630" y="706">field is never a ground (the citation check throws it out).</text>
+    <text x="1196" y="664" font-weight="700">Policy and precedent</text>
+    <text x="1196" y="686">Versioned policy (version 8 = Ryde v2.1 with Ryde's answers);</text>
+    <text x="1196" y="706">a precedent library, off by default (--precedents).</text>
+    <text x="64" y="760" font-weight="700">Escalation protocol</text>
+    <text x="64" y="782">The gate, the vote and the bar above; the packet, the review</text>
+    <text x="64" y="802">form and the queue in ops/ (run on the version-6 runs).</text>
+    <text x="630" y="760" font-weight="700">Learning feedback loop</text>
+    <text x="630" y="782">A reviewer's closure can become a precedent; a policy gap</text>
+    <text x="630" y="802">becomes an amendment a person approves (eval/policy_gaps.py).</text>
+    <text x="1196" y="760" font-weight="700">SLA and routing</text>
+    <text x="1196" y="782">Queue lanes with targets (ops/config.json): safety 2 h,</text>
+    <text x="1196" y="802">review 24 h, close 48 h. Every step is logged and hashed.</text>
+  </g>
+  <text x="64" y="840" font-size="13" fill="#6B21A8">Not built: image analysis (property damage). Model: deepseek-flash through Tencent Cloud TokenHub (Singapore). Six model calls a case; two when the gate stops it.</text>
+</svg>

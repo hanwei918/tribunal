@@ -2131,18 +2131,19 @@ class TheVersionSixPhrasesTests(unittest.TestCase):
 
 
 class TheChinesePagesLinkTests(unittest.TestCase):
-    """No Chinese page source sends a reader to an English version-8 page.
+    """No Chinese page source sends a reader to an English page's own twin.
 
-    Version 8 is the policy the submission applies, and every version-8 page has
-    a Chinese twin: the index at ``v8-cases.zh.html`` and each case at
-    ``v8-<NNNNN>.zh.html``. A Chinese page that linked to the English one would
-    send a Chinese reader to a page in the other language where the page in
-    theirs exists, so this reads the pages' own source -- which is where the
-    links are written -- and refuses it. The version-6 case pages are English
-    only, so a link to ``case-<NNNNN>.html`` is not this check's business.
+    Every page a Chinese reader can be sent to has a Chinese twin. Version 8 is
+    the policy the submission applies: the index at ``v8-cases.zh.html`` and each
+    case at ``v8-<NNNNN>.zh.html``. And since part 106 the 151 version-6 case
+    pages are written in both languages too, so each case is at
+    ``case-<NNNNN>.zh.html`` as well. A Chinese page that linked to the English
+    one would send a Chinese reader to a page in the other language where the
+    page in theirs exists, so this reads the pages' own source -- which is where
+    the links are written -- and refuses it.
     """
 
-    LINK_RE = re.compile(r'href="(v8-[^"]+\.html)"')
+    LINK_RE = re.compile(r'href="((?:v8|case)-[^"]+\.html)"')
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -2153,7 +2154,7 @@ class TheChinesePagesLinkTests(unittest.TestCase):
         }
 
     def english_links(self, markup: str) -> Tuple[str, ...]:
-        """Every ``v8-*.html`` link a page's source carries without its twin."""
+        """Every ``v8-*.html`` or ``case-*.html`` link a source carries twinless."""
         return tuple(
             href
             for href in self.LINK_RE.findall(markup)
@@ -2186,6 +2187,25 @@ class TheChinesePagesLinkTests(unittest.TestCase):
         self.assertNotEqual(markup, restored, "the fixture did not restore the link")
         self.assertEqual(
             ("v8-05051.html",),
+            self.english_links(restored),
+            "the copy is reported as {0!r}".format(self.english_links(restored)),
+        )
+
+    def test_the_check_fails_on_a_page_carrying_the_old_case_link(self) -> None:
+        """The control: index.zh.html with one case link put back is reported.
+
+        The page linked to the English ``case-00208.html`` before part 106, when
+        the version-6 case pages were English only; this is its own source with
+        that link put back, and the check above must report it.
+        """
+        markup = self.sources["index.zh.html"]
+        self.assertNotIn('href="case-00208.html"', markup)
+        restored = markup.replace(
+            'href="case-00208.zh.html"', 'href="case-00208.html"', 1
+        )
+        self.assertNotEqual(markup, restored, "the fixture did not restore the link")
+        self.assertEqual(
+            ("case-00208.html",),
             self.english_links(restored),
             "the copy is reported as {0!r}".format(self.english_links(restored)),
         )

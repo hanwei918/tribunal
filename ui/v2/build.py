@@ -227,6 +227,12 @@ def architecture_link(view: str) -> str:
 
 ARCHITECTURE_LINK = architecture_link(ARCHITECTURE_VIEWS[0][0])
 
+
+def review_link_for(case_no: int) -> str:
+    """The reviewer's page for one case: this module's own case page."""
+    return "review-{0:05d}.html".format(case_no)
+
+
 # The link-preview image, copied into the site the same way and for the same
 # reason: ``og:image`` has to be an absolute URL a scraper can fetch, so the
 # file it names must be inside the published root. Its source is a committed
@@ -6278,7 +6284,11 @@ def pages() -> List[Tuple[Path, str]]:
         (NOT_FOUND_PATH, build_not_found(cases)),
     ]
     for case in cases:
-        out.append((DIST_DIR / case.link, build_case_page(case)))
+        # The product view's page for a case is the reviewer's page, at
+        # ``review-<NNNNN>.html``. The page a reader meets at ``case.link`` --
+        # ``case-<NNNNN>.html`` -- is ``ui.v6.build``'s, in both languages, and
+        # it links here.
+        out.append((DIST_DIR / review_link_for(case.case_no), build_case_page(case)))
     return out
 
 

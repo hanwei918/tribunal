@@ -40,6 +40,12 @@ The product site's design, page text and front-end code are the policy owner's
 `ui/site/build.py`, written in WorkBuddy, import them unchanged and build the
 site, and the try-it service `tryit/` is hers, imported unchanged.
 
+Four files were also made outside WorkBuddy, in a teammate's review of
+2026-10-16: `ui/v6/build.py` (with its empty `__init__.py`),
+`tests/test_v6_pages.py` and `docs/overview.svg`. Part 106 imported them
+unchanged except one line of the test, and WorkBuddy made the changes that
+connect them.
+
 ## Four tips, each a measured lesson
 
 **1. Run the tests outside the agent's sandbox.** The sandbox's file broker

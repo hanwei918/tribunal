@@ -3,7 +3,7 @@
 A judge who wants to know whether this repository is what it says it is should
 not have to read a sheet to find out which commands to run, in which order, and
 which of them need a key. This command runs them all and prints one line each.
-Ten steps, in order:
+Eleven steps, in order:
 
 1. the full test suite, ``python3 -m unittest discover -s tests``;
 2. ``python3 -m eval.v6_runs --report`` -- the version-6 runs, graded;
@@ -16,17 +16,19 @@ Ten steps, in order:
 7. ``python3 -m ui.v2.build --check`` -- the queue and the case pages are current;
 8. ``python3 -m ui.build --check`` -- the replay pages are current;
 9. ``python3 -m ui.site.build --check`` -- the product site is current;
-10. ``python3 -m ui.v8.build --check`` -- the version-8 case pages are current.
+10. ``python3 -m ui.v8.build --check`` -- the version-8 case pages are current;
+11. ``python3 -m ui.v6.build --check`` -- the version-6 case pages, both
+    languages, are current.
 
 **No key, no network, no model call.** Every step is read-only, and each of the
 reports says so in its own output. ``--quick`` skips the test suite, which is the
 one step that takes minutes rather than seconds.
 
-**One platform difference, reported as a skip.** Five of the ten steps read
+**One platform difference, reported as a skip.** Six of the eleven steps read
 every case of the four runs and rebuild every brief -- the figure check and the
-four builders' currency checks. glibc and macOS libm round case 111's
+five builders' currency checks. glibc and macOS libm round case 111's
 ``driver_track.mean_distance_m`` one unit in the last place apart, so on a Linux
-machine those five steps would each fail for a reason that is not a defect in
+machine those six steps would each fail for a reason that is not a defect in
 this repository (``tests/portability.py`` names the difference and the guard).
 When :func:`tests.portability.the_case_111_platform_difference` is true they are
 reported as ``SKIP`` with that reason instead of run, and the summary counts the
@@ -65,8 +67,8 @@ class Step(NamedTuple):
     command: Tuple[str, ...]
 
 
-# The ten steps, in the order a judge should read them: the suite first, then
-# the three reports that grade the runs, then the figure check, then the four
+# The eleven steps, in the order a judge should read them: the suite first, then
+# the three reports that grade the runs, then the figure check, then the five
 # builders' own currency checks. ``sys.executable`` is the interpreter running
 # this module, so the step and this command cannot come from different Pythons.
 STEPS: Tuple[Step, ...] = (
@@ -83,13 +85,14 @@ STEPS: Tuple[Step, ...] = (
     Step("ui.build", (sys.executable, "-m", "ui.build", "--check")),
     Step("ui.site.build", (sys.executable, "-m", "ui.site.build", "--check")),
     Step("ui.v8.build", (sys.executable, "-m", "ui.v8.build", "--check")),
+    Step("ui.v6.build", (sys.executable, "-m", "ui.v6.build", "--check")),
 )
 
 # The step ``--quick`` drops: the suite is the one that takes minutes.
 SUITE_STEP = "tests"
 
-# The five steps that read every case of the four runs: the figure check and the
-# four builders' own currency checks. Each rebuilds every brief, so each meets
+# The six steps that read every case of the four runs: the figure check and the
+# five builders' own currency checks. Each rebuilds every brief, so each meets
 # the platform difference ``tests.portability`` names, and on a machine whose
 # libm rounds case 111's mean distance away from the recorded one they are
 # reported as skipped rather than run. Nothing else is skipped: the suite runs
@@ -101,6 +104,7 @@ CASE_READING_STEPS: Tuple[str, ...] = (
     "ui.build",
     "ui.site.build",
     "ui.v8.build",
+    "ui.v6.build",
 )
 
 
@@ -195,7 +199,7 @@ def _build_parser() -> argparse.ArgumentParser:
         prog="python3 -m tools.verify",
         description=(
             "Run every check this repository makes -- the test suite, the four "
-            "reports, the figure check and the four builders' currency checks "
+            "reports, the figure check and the five builders' currency checks "
             "-- and print one line each. Reads and writes nothing, and makes no "
             "model call."
         ),

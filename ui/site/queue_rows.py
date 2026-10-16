@@ -231,7 +231,10 @@ def row(case: "v2.CaseData") -> str:
     cells = (
         (
             "case",
-            '<a href="{0}">{1}</a>'.format(attribute(case.link), words(case.case_no)),
+            '<a href="{0}">{1}</a>'.format(
+                attribute(case.link.replace(".html", ".zh.html")),
+                words(case.case_no),
+            ),
             str(case.case_no),
             ZH_LABEL["case"],
             "",
