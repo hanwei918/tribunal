@@ -212,8 +212,8 @@ escalated, and `POL-NS-12` was drafted after that
 revised so its rule states the geofence test in general terms rather than
 quoting the sample's event text, and the policy owner confirmed the wording on
 2026-10-10. At version 6 the sample is decided — `DRIVER_COMPENSATION` 4.00,
-confidence 0.9, unanimous (README, Results, "Sample case 901 at version 6") —
-which is the charge upheld, the organisers' own stated expectation (README,
+confidence 0.9, unanimous (docs/record.md, Results, "Sample case 901 at version 6") —
+which is the charge upheld, the organisers' own stated expectation (docs/record.md,
 "Sample case 901 — the organisers' stated expectation": Cancellation charge
 UPHELD). `POL-NS-07` pays the driver 80% of the fee; Ryde's published rule
 credits the whole fee to the driver, which the clause's own sources note says;

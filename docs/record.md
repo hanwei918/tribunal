@@ -910,7 +910,7 @@ a statement about version 8.
   macOS. The suite handles it: the tests that rebuild that brief skip on Linux,
   naming the case and the last place, and the counts that follow from it are
   taken over the set the platform can rebuild with the case it left out named.
-- **Synthetic data.** Every case except 901 is synthetic or semi-synthetic.
+- **Synthetic data.** Every case in the version-6 sets except 901 is synthetic or semi-synthetic.
 - **The confidence floor fails open on a draft whose confidence is not a
   number.** `tribunal/pipeline.py` applies the 0.70 floor only when a draft's
   `confidence` is a JSON number: `_as_number` returns `None` for a missing key,

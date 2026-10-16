@@ -37,6 +37,13 @@ Ryde challenge) by team Newbee, with WorkBuddy.
 - **How it was built:** [`docs/submission/how-we-built-it.md`](docs/submission/how-we-built-it.md)
 - **What it does not do:** [Roadmap and known limits](#roadmap-and-known-limits), and [Limitations and disclosures](docs/record.md#limitations-and-disclosures)
 
+**At a glance, policy version 8.** On `dev-v8`, 40 cases of development data
+the team tuned against: a median of 153.1 s and 0.0390 USD a case, 28 of 40
+decided with no person (70%), the swapped draft agreeing with the panel in 33
+of 34 cases, and an expected calibration error of 0.097 (`python3 -m
+eval.v8_report --report`). The sealed set `sealed-v4`, run once at version 7:
+30/30, Wilson 95% [88.6%, 100.0%].
+
 ## The product site
 
 The front page is the **product site** the policy owner, Ji Guofang, designed outside WorkBuddy: **eleven pages**, each in English (`*.html`) and Chinese (`*.zh.html`), with her images and a try-it page that runs this repository's own Python in the browser.
@@ -183,6 +190,10 @@ the other 29 were not run at version 8
 Development data, reported as such: `dev-v2-ext` 115/120 and the 29-case corpus
 26/29 at version 6. The full tables, every figure's recompute command, and each
 set's provenance are in [the full record](docs/record.md#results).
+
+The organisers' sample 901 at version 6: `DRIVER_COMPENSATION` SGD 4.00 at a
+confidence of 0.9, unanimous, which upholds the charge as the organisers
+expected (docs/record.md, Results).
 
 ## Roadmap and known limits
 

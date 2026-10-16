@@ -1595,11 +1595,11 @@ VERSION_SENTENCES: Tuple[Tuple[str, str], ...] = (
     ),
     (
         "cases.html",
-        "The case pages and the queue below show the version-6 runs.",
+        "Four version-8 cases: Ryde's two samples, a no-show the evidence settles, and a safety flag.",
     ),
     (
         "cases.zh.html",
-        "\u4e0b\u9762\u7684\u6848\u4ef6\u9875\u548c\u961f\u5217\u5c55\u793a\u7684\u662f\u7b2c 6 \u7248\u7684\u8dd1\u5206\u3002",
+        "\u56db\u4e2a\u7b2c 8 \u7248\u6848\u4ef6\uff1aRyde \u7684\u4e24\u9053\u6837\u4f8b\u3001\u4e00\u4e2a\u8bc1\u636e\u8bf4\u8bdd\u7684\u672a\u5230\u573a\u6848\uff0c\u548c\u4e00\u4e2a\u5e26\u5b89\u5168\u6807\u8bb0\u7684\u6848\u5b50\u3002",
     ),
     (
         "how-it-works.html",

@@ -235,5 +235,5 @@ not bind. The endpoint note does not record which way cached tokens count, so
 that is not known. Computed, not measured.
 <!-- tokenhub-api-facts -->
 
-What is not measured: real Ryde data. Every case except 901 is synthetic or
-semi-synthetic. <!-- README -->
+What is not measured: real Ryde data. Every case except the organisers' samples
+901, 902 and 903 is synthetic or semi-synthetic. <!-- README -->
